@@ -29,7 +29,9 @@ $excludes = @(
     "--glob", "!target/fret-diag/**",
     "--glob", "!.fret/diag/**",
     "--glob", "!**/bundle.json",
-    "--glob", "!**/*.bundle.json"
+    "--glob", "!**/*.bundle.json",
+    "--glob", "!**/bundle.schema2.json",
+    "--glob", "!**/*.bundle.schema2.json"
 )
 
 & rg @Args @excludes

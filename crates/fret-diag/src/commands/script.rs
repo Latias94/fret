@@ -469,10 +469,20 @@ pub(crate) fn cmd_script(
                 exit_path,
                 &launch_fs_transport_cfg,
                 wants_screenshots,
+                false,
                 timeout_ms,
                 poll_ms,
                 false,
-            )?;
+            )
+            .inspect_err(|err| {
+                crate::write_tooling_failure_script_result_if_missing(
+                    script_result_path,
+                    "tooling.launch.failed",
+                    err,
+                    "tooling_error",
+                    Some("maybe_launch_demo".to_string()),
+                );
+            })?;
 
             let baseline = run_script_and_wait(
                 &src,

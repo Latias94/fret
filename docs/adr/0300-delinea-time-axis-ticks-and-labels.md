@@ -1,4 +1,4 @@
-# ADR 0201: `delinea` Time Axis Contract (Ticks + Default Labels)
+# ADR 0300: `delinea` Time Axis Contract (Ticks + Default Labels)
 
 Status: Proposed
 

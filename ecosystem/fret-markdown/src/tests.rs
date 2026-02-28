@@ -655,6 +655,19 @@ fn code_block_max_height_prefers_fret_namespace() {
 }
 
 #[test]
+fn code_block_max_height_prefers_component_namespace() {
+    let theme = theme_with_metrics(&[
+        ("markdown.code_block.max_height", 111.0),
+        ("fret.markdown.code_block.max_height", 222.0),
+        ("component.markdown.code_block.max_height", 333.0),
+    ]);
+    let mut options = fret_code_view::CodeBlockUiOptions::default();
+    options.max_height = None;
+    resolve_code_block_ui(&theme, &mut options);
+    assert_eq!(options.max_height, Some(Px(333.0)));
+}
+
+#[test]
 fn code_block_max_height_falls_back_to_markdown_namespace() {
     let theme = theme_with_metrics(&[("markdown.code_block.max_height", 123.0)]);
     let mut options = fret_code_view::CodeBlockUiOptions::default();

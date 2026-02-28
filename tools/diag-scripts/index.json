@@ -64,6 +64,257 @@
       "target_hints": []
     },
     {
+      "id": "docking-arbitration-demo-default-layout-signature",
+      "path": "tools/diag-scripts/docking/arbitration/docking-arbitration-demo-default-layout-signature.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "docking-arbitration"
+      ],
+      "tags": [
+        "docking",
+        "gate",
+        "layout",
+        "signature"
+      ],
+      "target_hints": [
+        "Asserts the default dock graph shape for the docking arbitration demo (dockview-style).",
+        "This gate intentionally does not include split fractions/shares."
+      ]
+    },
+    {
+      "id": "docking-arbitration-demo-float-zone-floats-in-window",
+      "path": "tools/diag-scripts/docking/arbitration/docking-arbitration-demo-float-zone-floats-in-window.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "docking-arbitration"
+      ],
+      "tags": [
+        "docking",
+        "floating",
+        "gate"
+      ],
+      "target_hints": [
+        "Drag a docked tab to the float-zone affordance (top-right of the dock tab bar) and drop it.",
+        "Expected behavior: the panel becomes an in-window floating container (no OS window tear-off).",
+        "This gate is invariant-based (dock diagnostics), not pixel-based."
+      ]
+    },
+    {
+      "id": "docking-arbitration-demo-modal-dock-drag-viewport-capture",
+      "path": "tools/diag-scripts/docking/arbitration/docking-arbitration-demo-modal-dock-drag-viewport-capture.json",
+      "required_capabilities": [],
+      "suite_memberships": [
+        "docking-arbitration"
+      ],
+      "tags": [],
+      "target_hints": []
+    },
+    {
+      "id": "docking-arbitration-demo-multiwindow-chained-tearoff-two-tabs-merge",
+      "path": "tools/diag-scripts/docking/arbitration/docking-arbitration-demo-multiwindow-chained-tearoff-two-tabs-merge.json",
+      "required_capabilities": [
+        "diag.multi_window",
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "docking-arbitration"
+      ],
+      "tags": [
+        "docking",
+        "drag",
+        "gate",
+        "multiwindow",
+        "tearoff"
+      ],
+      "target_hints": [
+        "This script exercises an opt-in behavior: creating multiple DockFloating OS windows without merging the first one back.",
+        "It tears off two distinct tabs (left + right) from the main window, then drags them back one-by-one and asserts the dock graph returns to the canonical signature.",
+        "Note: cursor overrides are expressed in window-client logical pixels."
+      ]
+    },
+    {
+      "id": "docking-arbitration-demo-multiwindow-drag-tab-back-to-main",
+      "path": "tools/diag-scripts/docking/arbitration/docking-arbitration-demo-multiwindow-drag-tab-back-to-main.json",
+      "required_capabilities": [
+        "diag.multi_window",
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "docking-arbitration"
+      ],
+      "tags": [
+        "docking",
+        "drag",
+        "gate",
+        "multiwindow"
+      ],
+      "target_hints": [
+        "This script exercises a cross-window tab drag: tear off a tab to create a floating OS window, overlap the windows, then drag the tab back into the main window.",
+        "It relies on schema v2 window-targeted steps to migrate the active script across windows.",
+        "Note: cursor overrides are expressed in window-client logical pixels."
+      ]
+    },
+    {
+      "id": "docking-arbitration-demo-multiwindow-overlap-zorder-switch",
+      "path": "tools/diag-scripts/docking/arbitration/docking-arbitration-demo-multiwindow-overlap-zorder-switch.json",
+      "required_capabilities": [
+        "diag.multi_window",
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "docking-arbitration"
+      ],
+      "tags": [
+        "docking",
+        "gate",
+        "hover",
+        "multiwindow",
+        "zorder"
+      ],
+      "target_hints": [
+        "This script overlaps two OS windows and asserts that cross-window dock drag hover routing follows window z-order when the cursor is in the overlap region.",
+        "It raises each window without moving the cursor and expects `dock_drag_current_window_is` to switch accordingly (ImGui-style).",
+        "Cursor overrides use window-client logical coordinates to stay stable under DPI scaling."
+      ]
+    },
+    {
+      "id": "docking-arbitration-demo-multiwindow-release-outside-windows-poll-up",
+      "path": "tools/diag-scripts/docking/arbitration/docking-arbitration-demo-multiwindow-release-outside-windows-poll-up.json",
+      "required_capabilities": [
+        "diag.mouse_buttons_override",
+        "diag.multi_window",
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "docking-arbitration"
+      ],
+      "tags": [
+        "docking",
+        "gate",
+        "multiwindow",
+        "windows"
+      ],
+      "target_hints": [
+        "This script gates a Windows-specific fallback: finishing a cross-window dock drag when the left mouse release is not delivered to any window.",
+        "It starts a cross-window tab drag, intentionally omits pointer_up, then uses a diagnostics-only mouse-button override to make the runner believe the left button is down while the OS reports it as up.",
+        "The runner should detect this mismatch and finish the drag using cursor-based drop routing (ImGui-style)."
+      ]
+    },
+    {
+      "id": "docking-arbitration-demo-multiwindow-tearoff-merge-loop-no-leak",
+      "path": "tools/diag-scripts/docking/arbitration/docking-arbitration-demo-multiwindow-tearoff-merge-loop-no-leak.json",
+      "required_capabilities": [
+        "diag.multi_window",
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "docking-arbitration"
+      ],
+      "tags": [
+        "docking",
+        "drag",
+        "gate",
+        "multiwindow"
+      ],
+      "target_hints": [
+        "This script repeatedly tears off a tab to create a floating OS window, then drags it back into the main window.",
+        "Expected behavior: after each cycle the dock graph returns to the default canonical signature without deepening splits or growing node count.",
+        "Note: cursor overrides are expressed in window-client physical pixels."
+      ]
+    },
+    {
+      "id": "docking-arbitration-demo-nary-drop-zone-mask-disallow-left-edge",
+      "path": "tools/diag-scripts/docking/arbitration/docking-arbitration-demo-nary-drop-zone-mask-disallow-left-edge.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "docking-arbitration"
+      ],
+      "tags": [
+        "docking",
+        "gate",
+        "nary"
+      ],
+      "target_hints": []
+    },
+    {
+      "id": "docking-arbitration-demo-nary-escape-cancels-drag",
+      "path": "tools/diag-scripts/docking/arbitration/docking-arbitration-demo-nary-escape-cancels-drag.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "docking-arbitration"
+      ],
+      "tags": [
+        "docking",
+        "escape",
+        "gate",
+        "nary"
+      ],
+      "target_hints": [
+        "This script starts a tab drag, asserts the docking preview becomes active, then presses Escape mid-drag and asserts the drag session is no longer active."
+      ]
+    },
+    {
+      "id": "docking-arbitration-demo-nary-preview-insert-into-existing-split",
+      "path": "tools/diag-scripts/docking/arbitration/docking-arbitration-demo-nary-preview-insert-into-existing-split.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "docking-arbitration"
+      ],
+      "tags": [
+        "docking",
+        "gate",
+        "nary"
+      ],
+      "target_hints": []
+    },
+    {
+      "id": "docking-arbitration-demo-nary-repeated-edge-dock-no-deepen",
+      "path": "tools/diag-scripts/docking/arbitration/docking-arbitration-demo-nary-repeated-edge-dock-no-deepen.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "docking-arbitration"
+      ],
+      "tags": [
+        "docking",
+        "gate",
+        "nary"
+      ],
+      "target_hints": []
+    },
+    {
+      "id": "docking-arbitration-demo-nary-splitter-drag-clamps-to-viewport-min-size",
+      "path": "tools/diag-scripts/docking/arbitration/docking-arbitration-demo-nary-splitter-drag-clamps-to-viewport-min-size.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "docking-arbitration"
+      ],
+      "tags": [
+        "docking",
+        "gate",
+        "min_size",
+        "nary",
+        "splitter"
+      ],
+      "target_hints": [
+        "This script drags the splitter far beyond the window bounds in both directions.",
+        "Expected behavior: the adjacent viewport panels clamp at the docking policy minimum size and never collapse."
+      ]
+    },
+    {
       "id": "docking-arbitration-demo-nary-splitter-drag-perf-large-layout-steady",
       "path": "tools/diag-scripts/docking/arbitration/docking-arbitration-demo-nary-splitter-drag-perf-large-layout-steady.json",
       "required_capabilities": [
@@ -84,6 +335,22 @@
       ]
     },
     {
+      "id": "docking-arbitration-demo-nary-splitter-drag-resizes-viewports",
+      "path": "tools/diag-scripts/docking/arbitration/docking-arbitration-demo-nary-splitter-drag-resizes-viewports.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "docking-arbitration"
+      ],
+      "tags": [
+        "docking",
+        "gate",
+        "nary"
+      ],
+      "target_hints": []
+    },
+    {
       "id": "docking-arbitration-demo-nary-tab-drag-hover-perf-large-layout-steady",
       "path": "tools/diag-scripts/docking/arbitration/docking-arbitration-demo-nary-tab-drag-hover-perf-large-layout-steady.json",
       "required_capabilities": [
@@ -102,6 +369,76 @@
         "Run with env: FRET_DOCK_ARB_PRESET=large",
         "Recommended: FRET_DOCK_ARB_DISALLOW_DROP_TARGETS=1 (avoid layout mutation on drop)",
         "Optional: FRET_DOCK_ARB_NO_PERSIST=1 to avoid writing .fret/layout.json"
+      ]
+    },
+    {
+      "id": "docking-arbitration-demo-split-viewports",
+      "path": "tools/diag-scripts/docking/arbitration/docking-arbitration-demo-split-viewports.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "docking-arbitration"
+      ],
+      "tags": [
+        "docking",
+        "gate"
+      ],
+      "target_hints": []
+    },
+    {
+      "id": "docking-arbitration-demo-tab-bar-drop-end-insert-index",
+      "path": "tools/diag-scripts/docking/arbitration/docking-arbitration-demo-tab-bar-drop-end-insert-index.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "docking-arbitration"
+      ],
+      "tags": [
+        "docking",
+        "gate",
+        "tabbar"
+      ],
+      "target_hints": []
+    },
+    {
+      "id": "docking-arbitration-demo-tab-bar-drop-end-insert-index-overflow",
+      "path": "tools/diag-scripts/docking/arbitration/docking-arbitration-demo-tab-bar-drop-end-insert-index-overflow.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "docking-arbitration"
+      ],
+      "tags": [
+        "docking",
+        "gate",
+        "overflow",
+        "tabbar"
+      ],
+      "target_hints": [
+        "Builds a long tab stack by merging multiple single-tab viewports into one leaf, then asserts drop-at-end resolves insert_index == tab_count.",
+        "This gate avoids pixel-based tab rect assumptions; it relies on docking interaction diagnostics."
+      ]
+    },
+    {
+      "id": "docking-arbitration-demo-tab-bar-drop-end-insert-index-two-tabs",
+      "path": "tools/diag-scripts/docking/arbitration/docking-arbitration-demo-tab-bar-drop-end-insert-index-two-tabs.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "docking-arbitration"
+      ],
+      "tags": [
+        "docking",
+        "gate",
+        "tabbar"
+      ],
+      "target_hints": [
+        "This script first merges two viewports into a single tab stack, then asserts drop-at-end resolves insert_index == 2.",
+        "It cancels the final drag (Escape) to avoid mutating layout beyond the setup step."
       ]
     },
     {
@@ -2802,6 +3139,23 @@
       "target_hints": []
     },
     {
+      "id": "workspace-shell-demo-tab-cross-pane-move-to-end",
+      "path": "tools/diag-scripts/workspace/shell-demo/workspace-shell-demo-tab-cross-pane-move-to-end.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "workspace-shell-demo"
+      ],
+      "tags": [
+        "cross_pane",
+        "gate",
+        "tabstrip",
+        "workspace"
+      ],
+      "target_hints": []
+    },
+    {
       "id": "workspace-shell-demo-tab-drag-and-scroll",
       "path": "tools/diag-scripts/workspace/shell-demo/workspace-shell-demo-tab-drag-and-scroll.json",
       "required_capabilities": [],
@@ -2809,6 +3163,23 @@
         "workspace-shell-demo"
       ],
       "tags": [],
+      "target_hints": []
+    },
+    {
+      "id": "workspace-shell-demo-tab-drag-to-split-right",
+      "path": "tools/diag-scripts/workspace/shell-demo/workspace-shell-demo-tab-drag-to-split-right.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "workspace-shell-demo"
+      ],
+      "tags": [
+        "drag_to_split",
+        "gate",
+        "tabstrip",
+        "workspace"
+      ],
       "target_hints": []
     }
   ]

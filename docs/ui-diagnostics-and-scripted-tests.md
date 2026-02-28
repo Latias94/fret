@@ -273,7 +273,11 @@ Notes:
 
    Note:
    - When using `fretboard diag run --launch`, `--env KEY=VALUE` cannot override reserved variables
-     like `FRET_DIAG`. Set reserved vars in the parent shell environment instead.
+     like `FRET_DIAG`/`FRET_DIAG_DIR`/`FRET_DIAG_*_PATH`. Use CLI flags (e.g. `--dir`, `--*-path`),
+     a config file (`FRET_DIAG_CONFIG_PATH`), or non-reserved `--env` overrides instead.
+   - Tool-launched runs also scrub inherited diagnostics env vars from the parent shell; do not rely on
+     setting `FRET_DIAG_*` in the parent shell to affect a `--launch` run. If you truly need a one-off
+     override, pass it explicitly via `--env` (non-reserved keys only).
 
 2. (Recommended while authoring scripts) disable redaction so you can see semantics labels in bundles:
 
@@ -589,7 +593,13 @@ Core:
 - `FRET_DIAG_BUNDLE_JSON_FORMAT=pretty`: write pretty-printed raw `bundle.json` (when enabled; default: compact/minified).
 - `FRET_DIAG_CONFIG_PATH=...`: optional JSON config file (schema v1) for diagnostics runtime settings and paths.
   - Tooling writes `<dir>/diag.config.json` by default when launching via `fretboard diag run/suite/repro --launch`.
-  - When an env var is set, it overrides the config file (compat-first manual escape hatch).
+  - For most fields, an env var overrides the config file (compat-first manual escape hatch). A few size-control knobs
+    are intentionally config-only for tool-launched determinism (see `tools/diag-configs/README.md`).
+  - In `--launch` mode, the config file is expected to be writable. Tooling treats a failure to write `diag.config.json`
+    as a launch error (to avoid silently falling back to runtime defaults that may write a large `bundle.json`).
+  - In `--launch` mode, tooling scrubs inherited `FRET_DIAG_*` env vars from the parent shell before spawning the child
+    process, then re-applies explicit `--env KEY=VALUE` overrides. This reduces "works on my machine" drift and avoids
+    accidental output explosions caused by stale shell overrides.
   - In `--launch` mode, tooling-owned env vars and paths are reserved; `--env` cannot override them (use `--dir` / `--*-path` flags instead).
   - Example file to copy/modify: `tools/diag-configs/diag.config.example.json`.
   - Drift audit notes for the example file: `tools/diag-configs/README.md`.
@@ -599,9 +609,15 @@ Core:
   - Bundle artifact writing (size control):
     - Config file key: `write_bundle_json` (default: `true`; tooling typically writes `false` for launched runs).
     - Config file key: `write_bundle_schema2` (default: `false`; tooling typically writes `true` for launched runs).
+    - Note: if no config file is used, manual dumps may still write raw `bundle.json` for compatibility. Prefer a config
+      file for bounded, shareable artifacts.
+    - Tool-launched escape hatch: pass `--launch-write-bundle-json` (must appear before `--launch`) to make tooling
+      write a per-run config with `write_bundle_json=true` for that launched run.
   - Tip: print the effective merged config (and highlight unknown keys/envs):
     - `cargo run -p fretboard -- diag config doctor --mode launch --dir .fret/diag`
     - `cargo run -p fretboard -- diag config doctor --mode manual --report-json` (manual apps)
+  - The doctor also emits warnings for common “output explosion” risk factors (e.g. large snapshot caps, semantics on every
+    snapshot, pretty-printed `bundle.json`).
 
 Canonical env vars (recommended):
 
@@ -621,6 +637,25 @@ Config resolution order (runtime):
 2. If `FRET_DIAG_CONFIG_PATH` points to a readable config file, the runtime loads `UiDiagnosticsConfigFileV1` from it.
 3. For most fields, non-empty env vars override config file values (manual escape hatch).
 4. Any missing fields fall back to runtime defaults (for example `out_dir=target/fret-diag`, `max_events=2000`, `max_snapshots=300`).
+
+### Tool-launched (`--launch`) env policy
+
+`fretboard diag ... --launch` aims to be deterministic and small-by-default. To reduce drift and accidental output
+explosions:
+
+- **Reserved (tooling-owned) keys:** `--env KEY=VALUE` cannot override them (use `--dir` / `--*-path` flags instead).
+  - Examples: `FRET_DIAG`, `FRET_DIAG_DIR`, `FRET_DIAG_CONFIG_PATH`, and all `FRET_DIAG_*_PATH` keys.
+- **Scrubbed inherited keys:** tooling removes known diagnostics env vars from the parent shell before spawning the child.
+  - If you need a one-off override for a launched run, pass it explicitly via `--env`.
+- **High-risk overrides (discouraged):** prefer a config file + `diag config doctor` when changing bundle size knobs.
+  - Examples: `FRET_DIAG_MAX_SNAPSHOTS`, `FRET_DIAG_SCRIPT_DUMP_MAX_SNAPSHOTS`, `FRET_DIAG_SEMANTICS=all`,
+    `FRET_DIAG_BUNDLE_JSON_FORMAT=pretty`.
+- `diag config doctor --mode launch` surfaces the scrubbed/reserved key lists (via `--report-json`) and reports which
+  inherited keys were actually scrubbed for the current shell env.
+  - To simulate one-off `--env` overrides for a tool-launched run, pass them to the doctor as well:
+    `cargo run -p fretboard -- diag config doctor --mode launch --env FRET_DIAG_MAX_SNAPSHOTS=50`.
+  - For a quick human-readable list (no JSON), use:
+    `cargo run -p fretboard -- diag config doctor --mode launch --print-launch-policy`.
 
 - `FRET_DIAG_TRIGGER_PATH=...`: dump trigger file (default `<dir>/trigger.touch`).
   - The trigger uses a **stamp** (monotonic integer) rather than mtime. Write a new integer value
@@ -646,9 +681,7 @@ Semantics export:
   - `changed`: include semantics only when `semantics_fingerprint` changes (always keeps the last snapshot's semantics).
   - `last`: include semantics only on the last snapshot (default for script-driven dumps; useful for AI triage and very large UIs).
   - `off`: never include semantics in bundles (perf captures where semantics isn't needed).
-- `FRET_DIAG_BUNDLE_WRITE_SCHEMA2=1`: write a compact `bundle.schema2.json` during dumps (default disabled).
-  - Prefer setting `write_bundle_schema2=true` in the diagnostics config file (`FRET_DIAG_CONFIG_PATH`) for tooling-launched runs.
-  - Env vars override the config file (manual escape hatch).
+- Prefer setting `write_bundle_schema2=true` in the diagnostics config file (`FRET_DIAG_CONFIG_PATH`) when you want a compact schema2 artifact (`bundle.schema2.json`) to be written during dumps.
 - `FRET_UI_GALLERY_INSPECTOR_KEEP_ALIVE=...`: keep-alive budget for the UI Gallery Inspector torture (retained host; ADR 0177).
 
 Privacy / size:
@@ -1096,7 +1129,7 @@ The diagnostics harness also includes docking arbitration scripts (multi-viewpor
 
 You can run them as a built-in suite:
 
-- `cargo run -p fretboard -- diag suite docking-arbitration --launch -- cargo run -p fret-examples --bin docking_arbitration_demo --release`
+- `cargo run -p fretboard -- diag suite docking-arbitration --launch -- cargo run -p fret-demo --bin docking_arbitration_demo --release`
 
 There are also multi-window (tear-off) docking scripts (require `diag.multi_window` capability):
 
@@ -1106,7 +1139,7 @@ There are also multi-window (tear-off) docking scripts (require `diag.multi_wind
 
 Example (run one script against the demo, launching a fresh process):
 
-- `cargo run -p fretboard -- diag run tools/diag-scripts/docking-arbitration-demo-multiwindow-drag-tab-back-to-main.json --launch -- cargo run -p fret-examples --bin docking_arbitration_demo --release`
+- `cargo run -p fretboard -- diag run tools/diag-scripts/docking-arbitration-demo-multiwindow-drag-tab-back-to-main.json --launch -- cargo run -p fret-demo --bin docking_arbitration_demo --release`
 
 ### View-cache regression gating
 
@@ -1174,6 +1207,12 @@ Notes:
 - Use `--compare-ignore-scene-fingerprint` if the scene fingerprint is expected to differ (e.g. non-deterministic content).
 
 ## Troubleshooting
+
+**Tooling `--launch` fails**
+
+- `fretboard diag ... --launch` writes a per-run `diag.config.json` into `--dir` and expects it to be writable.
+- On launch failures, tooling writes a best-effort `script.result.json` with `reason_code=tooling.launch.failed` so triage
+  stays bounded and machine-readable.
 
 **The app never dumps bundles**
 

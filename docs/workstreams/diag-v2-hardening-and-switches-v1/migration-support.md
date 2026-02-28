@@ -89,3 +89,5 @@ For small-by-default artifacts (recommended for automation / AI loops), prefer:
 - `write_bundle_schema2=true` (write `bundle.schema2.json` + sidecars)
 
 Tool-launched runs (`fretboard diag ... --launch`) typically write these defaults via `diag.config.json`.
+If `diag.config.json` cannot be written (permissions / invalid `--dir`), treat it as a tooling/launch error rather than
+silently falling back to runtime defaults.

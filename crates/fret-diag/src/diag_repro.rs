@@ -34,6 +34,7 @@ pub(crate) struct ReproCmdContext {
     pub launch: Option<Vec<String>>,
     pub launch_env: Vec<(String, String)>,
     pub launch_high_priority: bool,
+    pub launch_write_bundle_json: bool,
     pub with_tracy: bool,
     pub with_renderdoc: bool,
     pub renderdoc_after_frames: Option<u32>,
@@ -72,6 +73,7 @@ pub(crate) fn cmd_repro(ctx: ReproCmdContext) -> Result<(), String> {
         launch,
         launch_env,
         launch_high_priority,
+        launch_write_bundle_json,
         with_tracy,
         with_renderdoc,
         renderdoc_after_frames,
@@ -219,6 +221,7 @@ pub(crate) fn cmd_repro(ctx: ReproCmdContext) -> Result<(), String> {
         pack_defaults.2
             || check_pixels_changed_test_id.is_some()
             || scripts.iter().any(|p| script_requests_screenshots(p)),
+        launch_write_bundle_json,
         timeout_ms,
         poll_ms,
         launch_high_priority,

@@ -157,6 +157,25 @@ Make configuration predictable:
 - A **single canonical config file** is the primary interface (`FRET_DIAG_CONFIG_PATH`).
 - Env vars remain supported but are explicitly treated as overrides and are minimally scoped.
 - Tooling writes per-run configs deterministically when it launches the app; “manual mode” remains possible.
+  - Status (2026-02-28): `diag run/suite/repro/perf --launch` all funnel through a single helper that writes
+    `<out_dir>/diag.config.json`, sets `FRET_DIAG_CONFIG_PATH` for the child, and treats config write failure as a hard
+    launch error (no silent fallback to large `bundle.json` defaults). Tool-launched runs also scrub inherited
+    `FRET_DIAG_*` env vars from the parent shell (pass explicit `diag --env KEY=VALUE` when you truly need a one-off
+    override).
+  - Audit (2026-02-28): all `--launch` entry points (`diag run/suite/repro/perf/repeat/script`) call the same helper
+    (`crates/fret-diag/src/compare.rs:maybe_launch_demo`) to ensure consistent per-run config + env policy.
+  - Smoke (2026-02-28): `ui-gallery-gesture-tap-smoke` passes under `--launch` and produces schema2-only bundle exports
+    by default (`bundle.schema2.json` present, raw `bundle.json` absent).
+  - Smoke (2026-02-28): `ui-gallery-table-smoke` passes again after relaxing a too-strict
+    `bounds_within_window` check to `visible_in_window` (some page roots can be taller than the window).
+  - Smoke (2026-02-28): `ui-gallery-empty-background-gradient-screenshot` passes under `--launch` and writes a PNG under
+    `target/fret-diag/screenshots/<bundle_dir>/` (tool-launched per-run config sets `screenshots_enabled=true` as needed).
+  - Convenience (2026-02-28): a tiny smoke suite exists at `tools/diag-scripts/suites/diag-hardening-smoke/` for quick
+    post-merge verification:
+    - `cargo run -p fretboard -- diag suite diag-hardening-smoke --launch -- cargo run -p fret-ui-gallery --release`
+  - Convenience (2026-02-28): a docking-focused smoke suite exists at
+    `tools/diag-scripts/suites/diag-hardening-smoke-docking/`:
+    - Recommended (smoke): `cargo run -p fretboard -- diag suite diag-hardening-smoke-docking --timeout-ms 900000 --launch -- cargo run -p fret-demo --bin docking_arbitration_demo --release`
 
 ### G3: Box compatibility logic behind seams
 
@@ -210,6 +229,7 @@ Exit plan:
 
 1) Prefer manifest + sidecars for all tooling flows.
 2) Stop materializing/writing `bundle.json` unless explicitly requested (`diag pack` / share flows should not require it).
+   - Tool-launched escape hatch: `--launch-write-bundle-json` (requires `--launch`; not supported for `diag matrix`).
 
 ## Non-goals
 

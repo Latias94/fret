@@ -130,6 +130,25 @@ fn eval_predicate_without_semantics(
                 .and_then(|d| d.dock_drop_resolve.as_ref())
                 .is_some_and(|d| d.resolved.is_some() == *some),
         ),
+        UiPredicateV1::DockDropResolvedZoneIs { zone } => {
+            let resolved = docking
+                .and_then(|d| d.dock_drop_resolve.as_ref())
+                .and_then(|d| d.resolved.as_ref())?;
+            let have = match resolved.zone {
+                fret_core::dock::DropZone::Center => "center",
+                fret_core::dock::DropZone::Left => "left",
+                fret_core::dock::DropZone::Right => "right",
+                fret_core::dock::DropZone::Top => "top",
+                fret_core::dock::DropZone::Bottom => "bottom",
+            };
+            Some(have == zone.as_str())
+        }
+        UiPredicateV1::DockDropResolvedInsertIndexIs { index } => {
+            let resolved = docking
+                .and_then(|d| d.dock_drop_resolve.as_ref())
+                .and_then(|d| d.resolved.as_ref())?;
+            Some(resolved.insert_index == Some(*index as usize))
+        }
         UiPredicateV1::DockGraphCanonicalIs { canonical } => Some(
             docking
                 .and_then(|d| d.dock_graph_stats)
@@ -883,6 +902,26 @@ fn eval_predicate(
         UiPredicateV1::DockDropResolvedIsSome { some } => docking
             .and_then(|d| d.dock_drop_resolve.as_ref())
             .is_some_and(|d| d.resolved.is_some() == *some),
+        UiPredicateV1::DockDropResolvedZoneIs { zone } => {
+            let Some(resolved) = docking
+                .and_then(|d| d.dock_drop_resolve.as_ref())
+                .and_then(|d| d.resolved.as_ref())
+            else {
+                return false;
+            };
+            let have = match resolved.zone {
+                fret_core::dock::DropZone::Center => "center",
+                fret_core::dock::DropZone::Left => "left",
+                fret_core::dock::DropZone::Right => "right",
+                fret_core::dock::DropZone::Top => "top",
+                fret_core::dock::DropZone::Bottom => "bottom",
+            };
+            have == zone.as_str()
+        }
+        UiPredicateV1::DockDropResolvedInsertIndexIs { index } => docking
+            .and_then(|d| d.dock_drop_resolve.as_ref())
+            .and_then(|d| d.resolved.as_ref())
+            .is_some_and(|d| d.insert_index == Some(*index as usize)),
         UiPredicateV1::DockGraphCanonicalIs { canonical } => docking
             .and_then(|d| d.dock_graph_stats)
             .is_some_and(|s| s.canonical_ok == *canonical),

@@ -18,11 +18,35 @@ Use `fret-ui-review` when the goal is an architecture/UX audit rather than produ
 
 - Do **not** run `rg` on `bundle.json` (or on `target/fret-diag/**` / `.fret/diag/**`) — it can explode to tens of
   thousands of lines.
+- Do **not** `cat` / `Get-Content` a raw `bundle.json` (same explosion risk; it is frequently megabytes-to-hundreds-of-MB).
 - Prefer bounded tooling queries:
   - `fretboard diag meta ...`
   - `fretboard diag query ...`
   - `fretboard diag slice ...`
-- When you need repository-wide search, use `tools/rg-safe.ps1` (excludes diag artifact directories).
+- When you need repository-wide search, use `tools/rg-safe.ps1` (excludes diag artifact directories and bundle artifacts).
+
+## Success criteria (what “good” looks like)
+
+- A repro runs end-to-end with `--launch` and produces a bounded share artifact (`ai.packet/`, sidecars, and optionally
+  `bundle.schema2.json`) without requiring `bundle.json` to be opened/grepped.
+- The failure is explained by stable `reason_code` + bounded evidence in `script.result.json` / `triage.json`.
+- If the issue is likely to regress: one landable gate exists (script suite and/or a Rust test).
+
+## Best practices (repeatable habits)
+
+- Prefer `--launch` for determinism; avoid relying on parent-shell `FRET_DIAG_*` for tool-launched runs.
+- Before rerunning a suspiciously large or inconsistent run:
+  - `fretboard diag config doctor --mode launch --print-launch-policy`
+  - `fretboard diag config doctor --mode launch --report-json` (inspect `launch_policy` + warnings)
+- Keep artifacts small by default:
+  - capture only a few bundles at key points (not after every step),
+  - prefer sidecars + `bundle.schema2.json` over raw `bundle.json`,
+  - avoid `FRET_DIAG_BUNDLE_JSON_FORMAT=pretty` unless you truly need it.
+- Use raw `bundle.json` only as an explicit escape hatch in tool-launched mode:
+  - `--launch-write-bundle-json` (never for `diag matrix`).
+- When triaging: prefer `diag meta/query/slice` over searching JSON.
+- When a script is flaky: replace sleeps with stabilization (`click_stable`, `wait_until`, bounds-stable), and shrink.
+- Always leave behind the 3-pack: repro script + bounded evidence bundle + regression gate (suite/check/test).
 
 ## When to use
 
@@ -56,6 +80,20 @@ Defaults if unclear:
 Run a promoted script by `script_id` (no path required):
 
 - `cargo run -p fretboard -- diag run ui-gallery-command-palette-shortcut-primary --launch -- cargo run -p fret-ui-gallery --release`
+
+Quick post-merge smoke (small, bounded, launch-mode):
+
+- `cargo run -p fretboard -- diag suite diag-hardening-smoke --launch -- cargo run -p fret-ui-gallery --release`
+- Docking (multiwindow tear-off):
+  - `cargo run -p fretboard -- diag suite diag-hardening-smoke-docking --timeout-ms 900000 --launch -- cargo run -p fret-demo --bin docking_arbitration_demo --release`
+
+Copy/paste checklist (safe, small-by-default):
+
+1) `cargo run -p fretboard -- diag config doctor --mode launch --print-launch-policy`
+2) `cargo run -p fretboard -- diag run <script.json|script_id> --pack --ai-packet --launch -- <cmd>`
+3) `cargo run -p fretboard -- diag meta <bundle_dir|bundle.schema2.json> --json`
+4) `cargo run -p fretboard -- diag pack <bundle_dir> --ai-only`
+5) (escape hatch) add `--launch-write-bundle-json` before `--launch` only when raw `bundle.json` is truly needed
 
 Common “share what happened” flow:
 
@@ -94,13 +132,21 @@ Check script library drift (taxonomy + redirects + registry):
    - Gestures: `diag.gesture_tap`, `diag.gesture_long_press`, `diag.gesture_swipe`, `diag.gesture_pinch`
 
 Tip: if the user says “it only happens with touch/pen”, use `pointer_kind` on pointer-driven steps (capability-gated).
+Supported `pointer_kind` values in scripts: `mouse`, `touch`, `pen`.
 
 ## Run + share artifacts (small-by-default)
 
 - Run one script:
   - `fretboard diag run <script.json|script_id> --launch -- <cmd>`
+- Deep debugging (opt-in raw `bundle.json` for tool-launched runs):
+  - `fretboard diag run <script.json|script_id> --launch-write-bundle-json --launch -- <cmd>`
+  - Notes:
+    - `--launch-write-bundle-json` must appear **before** `--launch`.
+    - Not supported for `diag matrix` (too many runs; high risk of output explosion).
 - Pack a bounded share artifact (preferred in chat/AI loops):
   - `fretboard diag pack <bundle_dir> --ai-only`
+- Optional (compat): pack a schema2-only zip (still includes the bundle artifact, but avoids raw `bundle.json`):
+  - `fretboard diag pack <bundle_dir> --include-all --pack-schema2-only`
 - Generate an AI packet directory (bounded, index-rich):
   - `fretboard diag ai-packet <bundle_dir|bundle.json|bundle.schema2.json> --packet-out <dir>`
   - If you only have sidecars: add `--sidecars-only`.
@@ -115,7 +161,18 @@ Prefer bounded queries over `rg bundle.json`:
 - `fretboard diag query test-id <bundle_dir|bundle.json|bundle.schema2.json> <pattern> --top 50`
 - `fretboard diag slice <bundle_dir|bundle.json|bundle.schema2.json> --test-id <test_id>`
 
-When searching the repository (not bundle artifacts), prefer `tools/rg-safe.ps1` (excludes `target/fret-diag/**` and `.fret/diag/**`).
+When searching the repository (not bundle artifacts), prefer `tools/rg-safe.ps1` (excludes `target/fret-diag/**`, `.fret/diag/**`, `bundle.json`, and `bundle.schema2.json`).
+
+Useful safe-search templates (PowerShell):
+
+- Find all mentions of a script id (bounded, avoids diag artifacts):
+  - `tools/rg-safe.ps1 -n -- "ui-gallery-command-palette-shortcut-primary"`
+- Find who writes a specific env var (limit to tooling + runtime config code):
+  - `tools/rg-safe.ps1 -n -- "FRET_DIAG_CONFIG_PATH" crates ecosystem`
+- Find `--launch` handling sites (limit to tooling crate):
+  - `tools/rg-safe.ps1 -n -- "\\-\\-launch" crates/fret-diag`
+- Find an error `reason_code` or warning code:
+  - `tools/rg-safe.ps1 -n -- "tooling.launch.failed" crates docs`
 
 For evidence-first triage (reason codes + bounded traces), see: `references/evidence-triage.md`.
 
@@ -125,11 +182,24 @@ For evidence-first triage (reason codes + bounded traces), see: `references/evid
   - Use a promoted `script_id` (recommended) or an explicit path under `tools/diag-scripts/`.
   - Run `diag list scripts` to confirm the id exists.
   - If scripts were recently moved, run `diag doctor scripts` to detect broken redirects / registry drift.
+- “no bundles are produced”
+  - Likely cause: diagnostics are not enabled or the app isn't wired to the diagnostics driver.
+  - Fix: launch via `fretboard diag run ... --launch -- <cmd>` (recommended) or set `FRET_DIAG=1` for manual runs.
+- “tooling.launch.failed”
+  - Check the `--dir` path is writable; tool-launched runs require writing `<dir>/diag.config.json`.
+  - Inspect `<dir>/script.result.json` for a bounded, machine-readable `reason_code` and error note.
 - “timeout”
   - Replace sleeps with `wait_until`, `wait_bounds_stable`, and `click_stable`.
   - Add an intermediate `capture_bundle` close to the suspected failure point.
+- “artifacts are unexpectedly huge”
+  - Quick self-check (launch policy): `fretboard diag config doctor --mode launch --print-launch-policy`
+  - Run `fretboard diag config doctor --mode launch` to spot output-explosion risks before rerunning.
+  - Check whether you enabled `--launch-write-bundle-json` or `FRET_DIAG_BUNDLE_JSON_FORMAT=pretty`.
+  - Note: tool-launched runs scrub inherited `FRET_DIAG_*` env vars (prefix-based) from the parent shell to avoid accidental overrides;
+    pass explicit `--env FRET_DIAG_...=...` if you truly need to override a runtime knob for one run.
 - “screenshot requested but capability missing”
-  - Ensure the runner advertises `diag.screenshot_png` and enable screenshots (`FRET_DIAG_GPU_SCREENSHOTS=1`).
+  - Ensure the runner advertises `diag.screenshot_png` and enable screenshots (prefer config `screenshots_enabled=true`
+    via `FRET_DIAG_CONFIG_PATH`; manual escape hatch: `FRET_DIAG_GPU_SCREENSHOTS=1`).
 - “selectors flaky”
   - Add/repair `test_id` in the component/recipe layer; run `diag lint` for duplicates/missing ids.
 
@@ -162,6 +232,9 @@ Ship a result that is reviewable and reusable:
   - `references/combobox-conformance.md`
   - `references/layout-sweep.md`
 
+Tip: when a run produces unexpectedly large artifacts, use `fretboard diag config doctor --mode launch` to spot
+high-risk env overrides before rerunning.
+
 Reason-code first triage:
 
 - `selector.not_found` ⇒ inspect `selector_resolution_trace` (wrong `test_id`, duplicated ids, hidden nodes)
@@ -188,6 +261,15 @@ Use invariants-first, evidence-first gates; avoid snapshotting every internal st
   - Run: `cargo run -p fretboard -- diag suite ui-gallery-combobox --launch -- cargo run -p fret-ui-gallery --release`
 - Layout sweep playbook (page-level): `references/layout-sweep.md`
 - Web runner transport notes: `references/web-runner.md`
+
+## Maintainer guardrails (keep `--launch` consistent)
+
+When adding or refactoring a diagnostics entrypoint that supports `--launch`:
+
+- Always funnel tool-launched execution through `maybe_launch_demo` so the per-run `<out_dir>/diag.config.json` write +
+  `FRET_DIAG_CONFIG_PATH` wiring stays consistent across `run/suite/repro/perf`.
+- Plumb `--launch-write-bundle-json` through the same path (never reintroduce a silent fallback to raw `bundle.json`).
+- On tooling failures, write a bounded `script.result.json` with a stable `reason_code` (e.g. `tooling.launch.failed`).
 
 ## Evidence anchors
 
@@ -220,22 +302,16 @@ Where the code lives:
 
 ## Common pitfalls
 
-- Scripts that call `capture_screenshot` without `FRET_DIAG_GPU_SCREENSHOTS=1`.
+- Scripts that call `capture_screenshot` without enabling screenshots (`screenshots_enabled=true` in
+  `FRET_DIAG_CONFIG_PATH`, or `FRET_DIAG_GPU_SCREENSHOTS=1` in manual runs).
 - Targeting pixels/coordinates instead of `test_id`/semantics selectors (scripts become brittle).
 - Running the “wrong” binary that isn’t wired through the diagnostics driver (no bundle/script execution).
 - Debugging an interaction bug with only geometry snapshots: add scripted steps + focused assertions.
+- Enabling raw `bundle.json` writing by accident (avoid `--launch-write-bundle-json` unless you truly need it).
 - Web runner:
   - Forgetting `fret_devtools_ws` / `fret_devtools_token` query params (no WS bridge, no scripts/bundles).
   - Assuming the web app can write `target/fret-diag/...` (it cannot; you must export via WS).
   - Running a script that never calls `capture_bundle` (nothing to export).
-
-## Troubleshooting
-
-- Symptom: no bundles are produced.
-  - Likely cause: diagnostics are not enabled.
-  - Fix: launch via `fretboard diag run ... --launch -- <cmd>` or set `FRET_DIAG=1`.
-- Symptom: selectors are flaky (misses, clicks wrong node).
-  - Fix: prefer `test_id` + v2 intent steps (`click_stable`, `ensure_visible`) over coordinates.
 
 ## Related skills
 

@@ -6,6 +6,8 @@ use std::time::{Duration, Instant};
 
 use fret_diag_protocol::{UiDiagnosticsConfigFileV1, UiDiagnosticsConfigPathsV1};
 
+use crate::launch_env_policy::{TOOL_LAUNCH_SCRUB_ENV_PREFIXES, tool_launch_env_key_is_reserved};
+
 use super::LaunchedDemo;
 use super::stats::BundleStatsSort;
 use super::util::{now_unix_ms, touch};
@@ -568,92 +570,15 @@ pub(crate) fn find_latest_export_dir(out_dir: &Path) -> Option<PathBuf> {
     best.map(|(_, p)| p)
 }
 
-#[allow(clippy::too_many_arguments)]
-pub(crate) fn maybe_launch_demo(
-    launch: &Option<Vec<String>>,
-    launch_env: &[(String, String)],
-    workspace_root: &Path,
+fn tool_launched_diag_config(
+    out_dir: &Path,
+    fs_transport_cfg: &crate::transport::FsDiagTransportConfig,
     ready_path: &Path,
     exit_path: &Path,
-    fs_transport_cfg: &crate::transport::FsDiagTransportConfig,
     wants_screenshots: bool,
-    timeout_ms: u64,
-    poll_ms: u64,
-    launch_high_priority: bool,
-) -> Result<Option<LaunchedDemo>, String> {
-    let Some(launch) = launch else {
-        return Ok(None);
-    };
-
-    let prev_ready_mtime = std::fs::metadata(ready_path)
-        .and_then(|m| m.modified())
-        .ok();
-
-    let exe = launch
-        .first()
-        .ok_or_else(|| "missing launch command".to_string())?;
-
-    let out_dir = &fs_transport_cfg.out_dir;
-
-    let mut cmd = Command::new(exe);
-    cmd.args(launch.iter().skip(1));
-    cmd.current_dir(workspace_root);
-    cmd.env("FRET_DIAG", "1");
-    cmd.env("FRET_DIAG_DIR", out_dir);
-    cmd.env("FRET_DIAG_TRIGGER_PATH", &fs_transport_cfg.trigger_path);
-    cmd.env("FRET_DIAG_READY_PATH", ready_path);
-    cmd.env("FRET_DIAG_EXIT_PATH", exit_path);
-    cmd.env("FRET_DIAG_SCRIPT_PATH", &fs_transport_cfg.script_path);
-    cmd.env(
-        "FRET_DIAG_SCRIPT_TRIGGER_PATH",
-        &fs_transport_cfg.script_trigger_path,
-    );
-    cmd.env(
-        "FRET_DIAG_SCRIPT_RESULT_PATH",
-        &fs_transport_cfg.script_result_path,
-    );
-    cmd.env(
-        "FRET_DIAG_SCRIPT_RESULT_TRIGGER_PATH",
-        &fs_transport_cfg.script_result_trigger_path,
-    );
-    cmd.env(
-        "FRET_DIAG_PICK_TRIGGER_PATH",
-        &fs_transport_cfg.pick_trigger_path,
-    );
-    cmd.env(
-        "FRET_DIAG_PICK_RESULT_PATH",
-        &fs_transport_cfg.pick_result_path,
-    );
-    cmd.env(
-        "FRET_DIAG_PICK_RESULT_TRIGGER_PATH",
-        &fs_transport_cfg.pick_result_trigger_path,
-    );
-    cmd.env("FRET_DIAG_INSPECT_PATH", &fs_transport_cfg.inspect_path);
-    cmd.env(
-        "FRET_DIAG_INSPECT_TRIGGER_PATH",
-        &fs_transport_cfg.inspect_trigger_path,
-    );
-    cmd.env(
-        "FRET_DIAG_SCREENSHOT_REQUEST_PATH",
-        &fs_transport_cfg.screenshots_request_path,
-    );
-    cmd.env(
-        "FRET_DIAG_SCREENSHOT_TRIGGER_PATH",
-        &fs_transport_cfg.screenshots_trigger_path,
-    );
-    cmd.env(
-        "FRET_DIAG_SCREENSHOT_RESULT_PATH",
-        &fs_transport_cfg.screenshots_result_path,
-    );
-    cmd.env(
-        "FRET_DIAG_SCREENSHOT_RESULT_TRIGGER_PATH",
-        &fs_transport_cfg.screenshots_result_trigger_path,
-    );
-
-    // Config file is the compat-first consolidation path for diagnostics runtime config.
-    // Best-effort: if the file can't be written, fall back to env-only behavior.
-    let config_path = out_dir.join("diag.config.json");
-    cmd.env("FRET_DIAG_CONFIG_PATH", &config_path);
+    launch_write_bundle_json: bool,
+    launch_env: &[(String, String)],
+) -> UiDiagnosticsConfigFileV1 {
     let mut cfg = UiDiagnosticsConfigFileV1 {
         schema_version: 1,
         enabled: Some(true),
@@ -739,7 +664,7 @@ pub(crate) fn maybe_launch_demo(
         // Keep default artifacts small-by-default for tool-launched runs:
         // - sidecars + manifest are sufficient for most triage flows
         // - compact schema2 view is useful for downstream tooling without the raw monolith
-        write_bundle_json: Some(false),
+        write_bundle_json: Some(launch_write_bundle_json),
         write_bundle_schema2: Some(true),
         // Keep script-driven bundle dumps reasonably small by default.
         //
@@ -751,6 +676,7 @@ pub(crate) fn maybe_launch_demo(
         max_debug_string_bytes: Some(2048),
         ..Default::default()
     };
+
     if let Some((_, v)) = launch_env
         .iter()
         .find(|(k, _)| k == "FRET_DIAG_FIXED_FRAME_DELTA_MS")
@@ -767,39 +693,189 @@ pub(crate) fn maybe_launch_demo(
             cfg.redact_text = Some(raw != "0");
         }
     }
-    if let Ok(bytes) = serde_json::to_vec_pretty(&cfg) {
-        let _ = std::fs::create_dir_all(out_dir);
-        let _ = std::fs::write(&config_path, bytes);
+
+    cfg
+}
+
+#[allow(clippy::too_many_arguments)]
+pub(crate) fn maybe_launch_demo(
+    launch: &Option<Vec<String>>,
+    launch_env: &[(String, String)],
+    workspace_root: &Path,
+    ready_path: &Path,
+    exit_path: &Path,
+    fs_transport_cfg: &crate::transport::FsDiagTransportConfig,
+    wants_screenshots: bool,
+    launch_write_bundle_json: bool,
+    timeout_ms: u64,
+    poll_ms: u64,
+    launch_high_priority: bool,
+) -> Result<Option<LaunchedDemo>, String> {
+    let Some(launch) = launch else {
+        return Ok(None);
+    };
+
+    // Tool-launched runs should be deterministic and small-by-default. The runtime's config
+    // resolution is "env overrides config", so inherited shell env vars can silently override the
+    // per-run `diag.config.json` that tooling writes. Scrub known diagnostics env keys from the
+    // inherited environment, then re-apply any explicit `--env KEY=VALUE` overrides below.
+    //
+    // This avoids "works on my machine" drift and reduces the chance of accidental output
+    // explosions (e.g. large snapshot caps or pretty-printed raw bundles) during tool-launched
+    // runs.
+    let scrub_env_prefixes = TOOL_LAUNCH_SCRUB_ENV_PREFIXES;
+
+    let prev_ready_mtime = std::fs::metadata(ready_path)
+        .and_then(|m| m.modified())
+        .ok();
+
+    let exe = launch
+        .first()
+        .ok_or_else(|| "missing launch command".to_string())?;
+
+    let out_dir = &fs_transport_cfg.out_dir;
+
+    let mut cmd = Command::new(exe);
+    cmd.args(launch.iter().skip(1));
+    cmd.current_dir(workspace_root);
+
+    let mut inherited_keys_to_remove: Vec<String> = std::env::vars()
+        .map(|(k, _)| k)
+        .filter(|k| scrub_env_prefixes.iter().any(|p| k.starts_with(p)))
+        .collect();
+    inherited_keys_to_remove.sort();
+    inherited_keys_to_remove.dedup();
+
+    let mut scrubbed_inherited_nonreserved_keys: Vec<String> = Vec::new();
+    for key in &inherited_keys_to_remove {
+        if !tool_launch_env_key_is_reserved(key) {
+            scrubbed_inherited_nonreserved_keys.push(key.clone());
+        }
+        cmd.env_remove(key);
     }
 
-    if wants_screenshots {
-        cmd.env("FRET_DIAG_GPU_SCREENSHOTS", "1");
+    let mut explicit_override_fret_keys: Vec<String> = Vec::new();
+    let mut explicit_override_other_keys_total: u64 = 0;
+    for (key, _) in launch_env {
+        if key.starts_with("FRET_") {
+            explicit_override_fret_keys.push(key.clone());
+        } else {
+            explicit_override_other_keys_total =
+                explicit_override_other_keys_total.saturating_add(1);
+        }
     }
-    for (key, value) in launch_env {
-        match key.as_str() {
-            "FRET_DIAG"
-            | "FRET_DIAG_DIR"
-            | "FRET_DIAG_TRIGGER_PATH"
-            | "FRET_DIAG_READY_PATH"
-            | "FRET_DIAG_EXIT_PATH"
-            | "FRET_DIAG_CONFIG_PATH"
-            | "FRET_DIAG_SCRIPT_PATH"
-            | "FRET_DIAG_SCRIPT_TRIGGER_PATH"
-            | "FRET_DIAG_SCRIPT_RESULT_PATH"
-            | "FRET_DIAG_SCRIPT_RESULT_TRIGGER_PATH"
-            | "FRET_DIAG_PICK_TRIGGER_PATH"
-            | "FRET_DIAG_PICK_RESULT_PATH"
-            | "FRET_DIAG_PICK_RESULT_TRIGGER_PATH"
-            | "FRET_DIAG_INSPECT_PATH"
-            | "FRET_DIAG_INSPECT_TRIGGER_PATH"
-            | "FRET_DIAG_SCREENSHOT_REQUEST_PATH"
-            | "FRET_DIAG_SCREENSHOT_TRIGGER_PATH"
-            | "FRET_DIAG_SCREENSHOT_RESULT_PATH"
-            | "FRET_DIAG_SCREENSHOT_RESULT_TRIGGER_PATH" => {
-                return Err(format!("--env cannot override reserved var: {key}"));
+    explicit_override_fret_keys.sort();
+    explicit_override_fret_keys.dedup();
+
+    if !scrubbed_inherited_nonreserved_keys.is_empty()
+        || !explicit_override_fret_keys.is_empty()
+        || explicit_override_other_keys_total > 0
+    {
+        fn format_keys(keys: &[String], max: usize) -> String {
+            let mut out: Vec<&str> = keys.iter().take(max).map(|s| s.as_str()).collect();
+            if keys.len() > max {
+                out.push("...");
             }
-            _ => cmd.env(key, value),
-        };
+            out.join(",")
+        }
+
+        scrubbed_inherited_nonreserved_keys.sort();
+        scrubbed_inherited_nonreserved_keys.dedup();
+
+        let scrubbed = format_keys(&scrubbed_inherited_nonreserved_keys, 8);
+        let overrides = format_keys(&explicit_override_fret_keys, 8);
+        eprintln!(
+            "diag --launch env: scrubbed_inherited_nonreserved=[{}] explicit_overrides_fret=[{}] explicit_overrides_other_total={} (see: fretboard diag config doctor --mode launch --report-json)",
+            scrubbed, overrides, explicit_override_other_keys_total,
+        );
+    }
+    cmd.env("FRET_DIAG", "1");
+    cmd.env("FRET_DIAG_DIR", out_dir);
+    cmd.env("FRET_DIAG_TRIGGER_PATH", &fs_transport_cfg.trigger_path);
+    cmd.env("FRET_DIAG_READY_PATH", ready_path);
+    cmd.env("FRET_DIAG_EXIT_PATH", exit_path);
+    cmd.env("FRET_DIAG_SCRIPT_PATH", &fs_transport_cfg.script_path);
+    cmd.env(
+        "FRET_DIAG_SCRIPT_TRIGGER_PATH",
+        &fs_transport_cfg.script_trigger_path,
+    );
+    cmd.env(
+        "FRET_DIAG_SCRIPT_RESULT_PATH",
+        &fs_transport_cfg.script_result_path,
+    );
+    cmd.env(
+        "FRET_DIAG_SCRIPT_RESULT_TRIGGER_PATH",
+        &fs_transport_cfg.script_result_trigger_path,
+    );
+    cmd.env(
+        "FRET_DIAG_PICK_TRIGGER_PATH",
+        &fs_transport_cfg.pick_trigger_path,
+    );
+    cmd.env(
+        "FRET_DIAG_PICK_RESULT_PATH",
+        &fs_transport_cfg.pick_result_path,
+    );
+    cmd.env(
+        "FRET_DIAG_PICK_RESULT_TRIGGER_PATH",
+        &fs_transport_cfg.pick_result_trigger_path,
+    );
+    cmd.env("FRET_DIAG_INSPECT_PATH", &fs_transport_cfg.inspect_path);
+    cmd.env(
+        "FRET_DIAG_INSPECT_TRIGGER_PATH",
+        &fs_transport_cfg.inspect_trigger_path,
+    );
+    cmd.env(
+        "FRET_DIAG_SCREENSHOT_REQUEST_PATH",
+        &fs_transport_cfg.screenshots_request_path,
+    );
+    cmd.env(
+        "FRET_DIAG_SCREENSHOT_TRIGGER_PATH",
+        &fs_transport_cfg.screenshots_trigger_path,
+    );
+    cmd.env(
+        "FRET_DIAG_SCREENSHOT_RESULT_PATH",
+        &fs_transport_cfg.screenshots_result_path,
+    );
+    cmd.env(
+        "FRET_DIAG_SCREENSHOT_RESULT_TRIGGER_PATH",
+        &fs_transport_cfg.screenshots_result_trigger_path,
+    );
+
+    // Config file is the compat-first consolidation path for diagnostics runtime config.
+    //
+    // For tool-launched runs we treat this as required: if it can't be written, abort rather than
+    // silently falling back to runtime defaults (which can re-enable large `bundle.json` writing).
+    let config_path = out_dir.join("diag.config.json");
+    cmd.env("FRET_DIAG_CONFIG_PATH", &config_path);
+    let cfg = tool_launched_diag_config(
+        out_dir,
+        fs_transport_cfg,
+        ready_path,
+        exit_path,
+        wants_screenshots,
+        launch_write_bundle_json,
+        launch_env,
+    );
+    let bytes = serde_json::to_vec_pretty(&cfg)
+        .map_err(|e| format!("failed to serialize diag config: {e}"))?;
+    std::fs::create_dir_all(out_dir).map_err(|e| {
+        format!(
+            "failed to create diagnostics out_dir (required for --launch): {} ({e})",
+            out_dir.display()
+        )
+    })?;
+    std::fs::write(&config_path, bytes).map_err(|e| {
+        format!(
+            "failed to write tool launch diag config (required for --launch): {} ({e})",
+            config_path.display()
+        )
+    })?;
+
+    for (key, value) in launch_env {
+        if tool_launch_env_key_is_reserved(key) {
+            return Err(format!("--env cannot override reserved var: {key}"));
+        }
+        cmd.env(key, value);
     }
 
     // When collecting redraw hitch logs under `diag repro`, default to writing into `FRET_DIAG_DIR`
@@ -913,6 +989,64 @@ pub(crate) fn maybe_launch_demo(
     }
 
     Ok(Some(demo))
+}
+
+#[cfg(test)]
+mod tool_launch_config_tests {
+    use std::path::PathBuf;
+
+    use crate::transport::FsDiagTransportConfig;
+
+    use super::tool_launched_diag_config;
+
+    #[test]
+    fn tool_launch_config_defaults_are_small_by_default() {
+        let out_dir = PathBuf::from("target/fret-diag/test-launch-config");
+        let fs_transport_cfg = FsDiagTransportConfig::from_out_dir(out_dir.clone());
+        let ready_path = PathBuf::from("target/fret-diag/test-launch-config/ready.touch");
+        let exit_path = PathBuf::from("target/fret-diag/test-launch-config/exit.touch");
+
+        let cfg = tool_launched_diag_config(
+            &out_dir,
+            &fs_transport_cfg,
+            &ready_path,
+            &exit_path,
+            true,
+            false,
+            &[("FRET_DIAG_REDACT_TEXT".to_string(), "0".to_string())],
+        );
+
+        assert_eq!(cfg.schema_version, 1);
+        assert_eq!(cfg.enabled, Some(true));
+        assert_eq!(cfg.allow_script_schema_v1, Some(false));
+        assert_eq!(cfg.screenshots_enabled, Some(true));
+        assert_eq!(cfg.write_bundle_json, Some(false));
+        assert_eq!(cfg.write_bundle_schema2, Some(true));
+        assert_eq!(cfg.script_dump_max_snapshots, Some(10));
+        assert_eq!(cfg.max_debug_string_bytes, Some(2048));
+        assert_eq!(cfg.redact_text, Some(false));
+    }
+
+    #[test]
+    fn tool_launch_config_allows_raw_bundle_json_when_requested() {
+        let out_dir = PathBuf::from("target/fret-diag/test-launch-config-raw");
+        let fs_transport_cfg = FsDiagTransportConfig::from_out_dir(out_dir.clone());
+        let ready_path = PathBuf::from("target/fret-diag/test-launch-config-raw/ready.touch");
+        let exit_path = PathBuf::from("target/fret-diag/test-launch-config-raw/exit.touch");
+
+        let cfg = tool_launched_diag_config(
+            &out_dir,
+            &fs_transport_cfg,
+            &ready_path,
+            &exit_path,
+            false,
+            true,
+            &[],
+        );
+
+        assert_eq!(cfg.write_bundle_json, Some(true));
+        assert_eq!(cfg.write_bundle_schema2, Some(true));
+    }
 }
 
 #[cfg_attr(windows, allow(dead_code))]

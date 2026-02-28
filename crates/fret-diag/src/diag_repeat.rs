@@ -18,6 +18,7 @@ pub(crate) struct RepeatCmdContext {
     pub launch: Option<Vec<String>>,
     pub launch_env: Vec<(String, String)>,
     pub launch_high_priority: bool,
+    pub launch_write_bundle_json: bool,
     pub perf_repeat: u64,
     pub compare_eps_px: f32,
     pub compare_ignore_bounds: bool,
@@ -49,6 +50,7 @@ pub(crate) fn cmd_repeat(ctx: RepeatCmdContext) -> Result<(), String> {
         launch,
         launch_env,
         launch_high_priority,
+        launch_write_bundle_json,
         perf_repeat,
         compare_eps_px,
         compare_ignore_bounds,
@@ -100,10 +102,20 @@ pub(crate) fn cmd_repeat(ctx: RepeatCmdContext) -> Result<(), String> {
             &resolved_exit_path,
             &launch_fs_transport_cfg,
             wants_screenshots,
+            launch_write_bundle_json,
             timeout_ms,
             poll_ms,
             launch_high_priority,
-        )?
+        )
+        .inspect_err(|err| {
+            write_tooling_failure_script_result_if_missing(
+                &resolved_script_result_path,
+                "tooling.launch.failed",
+                err,
+                "tooling_error",
+                Some("maybe_launch_demo".to_string()),
+            );
+        })?
     } else {
         None
     };
@@ -328,10 +340,20 @@ pub(crate) fn cmd_repeat(ctx: RepeatCmdContext) -> Result<(), String> {
                 &resolved_exit_path,
                 &launch_fs_transport_cfg,
                 wants_screenshots,
+                launch_write_bundle_json,
                 timeout_ms,
                 poll_ms,
                 launch_high_priority,
-            )?;
+            )
+            .inspect_err(|err| {
+                write_tooling_failure_script_result_if_missing(
+                    &resolved_script_result_path,
+                    "tooling.launch.failed",
+                    err,
+                    "tooling_error",
+                    Some("maybe_launch_demo".to_string()),
+                );
+            })?;
         }
 
         let mut summary = run_script_and_wait(

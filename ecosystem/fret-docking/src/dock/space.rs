@@ -1228,24 +1228,19 @@ impl DockSpace {
         }
         self.tab_drag_auto_scroll_last_frame.insert(tabs, frame_id);
 
-        let left_dist = position.x.0 - tab_bar.origin.x.0;
-        let right_dist = tab_bar.origin.x.0 + tab_bar.size.width.0 - position.x.0;
         let edge = Px(((tab_bar.size.height.0 * 0.6).max(font_size.0 * 1.25)).clamp(12.0, 28.0));
-
-        let (dir, t) = if left_dist >= 0.0 && left_dist < edge.0 {
-            (-1.0, 1.0 - left_dist / edge.0)
-        } else if right_dist >= 0.0 && right_dist < edge.0 {
-            (1.0, 1.0 - right_dist / edge.0)
-        } else {
+        let base = (font_size.0 * 0.9).clamp(8.0, 22.0);
+        let cfg = fret_dnd::AutoScrollConfig {
+            margin_px: edge.0,
+            min_speed_px_per_tick: base * 0.20,
+            max_speed_px_per_tick: base,
+        };
+        let Some(dx) = fret_dnd::compute_autoscroll_x(cfg, tab_bar, position) else {
             return false;
         };
-        let t = t.clamp(0.0, 1.0);
-
-        let base = (font_size.0 * 0.9).clamp(8.0, 22.0);
-        let step = base * (0.20 + 0.80 * t);
 
         let prev_scroll = self.tab_scroll_for(tabs);
-        let next_scroll = Px((prev_scroll.0 + dir * step).clamp(0.0, max_scroll.0));
+        let next_scroll = Px((prev_scroll.0 + dx.0).clamp(0.0, max_scroll.0));
         if (next_scroll.0 - prev_scroll.0).abs() < 0.01 {
             return false;
         }

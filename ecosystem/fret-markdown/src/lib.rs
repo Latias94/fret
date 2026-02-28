@@ -145,15 +145,19 @@ fn render_code_block<H: UiHost + 'static>(
 
 fn resolve_code_block_ui(theme: &Theme, options: &mut fret_code_view::CodeBlockUiOptions) {
     if options.max_height.is_none() {
+        let component = "component.markdown.code_block.max_height";
         let canonical = "fret.markdown.code_block.max_height";
         let compat = "markdown.code_block.max_height";
-        options.max_height = if theme.metric_key_configured(canonical) {
+        options.max_height = if theme.metric_key_configured(component) {
+            theme.metric_by_key(component)
+        } else if theme.metric_key_configured(canonical) {
             theme.metric_by_key(canonical)
         } else if theme.metric_key_configured(compat) {
             theme.metric_by_key(compat)
         } else {
             theme
-                .metric_by_key(canonical)
+                .metric_by_key(component)
+                .or_else(|| theme.metric_by_key(canonical))
                 .or_else(|| theme.metric_by_key(compat))
         };
     }

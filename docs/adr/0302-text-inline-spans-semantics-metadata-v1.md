@@ -4,7 +4,7 @@ status: Draft
 date: 2026-02-19
 ---
 
-# ADR 0283: Text Inline Spans Semantics Metadata v1
+# ADR 0302: Text Inline Spans Semantics Metadata v1
 
 ## Context
 
@@ -97,4 +97,3 @@ virtual nodes yet.
   - `crates/fret-ui/src/declarative/host_widget/semantics.rs`
 - Semantics snapshot builder:
   - `crates/fret-ui/src/tree/ui_tree_semantics.rs`
-
