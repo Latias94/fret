@@ -848,6 +848,17 @@ impl Calendar {
                                                         "{p}.caption-month-trigger"
                                                     ))
                                                 });
+
+                                            // shadcn/ui `Calendar` dropdown caption layout uses compact,
+                                            // input-like triggers (h-8, px-2) inside the month caption row.
+                                            let caption_select_chrome = ChromeRefinement::default()
+                                                .px(Space::N2)
+                                                .py(Space::N1);
+                                            let caption_select_layout = LayoutRefinement::default()
+                                                .h_px(day_size)
+                                                .min_w_0()
+                                                .min_h_0();
+
                                             let mut month_select =
                                                 Select::new_controllable::<H, Arc<str>>(
                                                     cx,
@@ -862,6 +873,9 @@ impl Calendar {
                                             }
 
                                             let month_select = month_select
+                                                .refine_style(caption_select_chrome.clone())
+                                                .refine_layout(caption_select_layout.clone())
+                                                .side_offset(Px(0.0))
                                                 .position(SelectPosition::Popper)
                                                 .on_value_change(move |host, _acx, raw| {
                                                     let Ok(month_num) = raw.parse::<u8>() else {
@@ -975,6 +989,9 @@ impl Calendar {
                                             }
 
                                             let year_select = year_select
+                                                .refine_style(caption_select_chrome.clone())
+                                                .refine_layout(caption_select_layout.clone())
+                                                .side_offset(Px(0.0))
                                                 .position(SelectPosition::Popper)
                                                 .on_value_change(move |host, _acx, raw| {
                                                     let Ok(year) = raw.parse::<i32>() else {
@@ -1019,7 +1036,7 @@ impl Calendar {
                                             stack::hstack(
                                                 cx,
                                                 stack::HStackProps::default()
-                                                    .gap(Space::N2)
+                                                    .gap(Space::N1p5)
                                                     .items_center(),
                                                 move |_cx| vec![month_select, year_select],
                                             )

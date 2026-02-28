@@ -2259,6 +2259,36 @@ fn select_impl<H: UiHost>(
                     let popper_layout = placement.popper_layout;
                     let placed = placement.placed;
 
+                    // shadcn/ui v4 (Radix Select, `position="popper"`) keeps the popper wrapper
+                    // flush to the trigger (`sideOffset=0`) but applies a small translate to the
+                    // visible content (`translate-x/y-1`) based on the resolved side.
+                    //
+                    // Model that by shifting the *panel* within the wrapper while keeping the
+                    // wrapper rect stable for placement diagnostics and goldens.
+                    let panel_insets = if position == SelectPosition::Popper {
+                        let gap = Px(4.0);
+                        match motion_side {
+                            Side::Bottom => Edges {
+                                top: Px(wrapper_insets.top.0 + gap.0),
+                                ..wrapper_insets
+                            },
+                            Side::Top => Edges {
+                                top: Px(wrapper_insets.top.0 - gap.0),
+                                ..wrapper_insets
+                            },
+                            Side::Left => Edges {
+                                left: Px(wrapper_insets.left.0 - gap.0),
+                                ..wrapper_insets
+                            },
+                            Side::Right => Edges {
+                                left: Px(wrapper_insets.left.0 + gap.0),
+                                ..wrapper_insets
+                            },
+                        }
+                    } else {
+                        wrapper_insets
+                    };
+
                     cx.diagnostics_record_overlay_placement_placed_rect(
                         Some(overlay_root_name.as_str()),
                         Some(trigger_id),
@@ -3393,7 +3423,7 @@ fn select_impl<H: UiHost>(
                                             PressableProps {
                                                 layout: popper_content::popper_panel_layout(
                                                     placed,
-                                                    wrapper_insets,
+                                                    panel_insets,
                                                     // Keep the panel itself unclipped so the Select surface shadow
                                                     // can extend beyond the panel rect (matching shadcn/ui).
                                                     Overflow::Visible,

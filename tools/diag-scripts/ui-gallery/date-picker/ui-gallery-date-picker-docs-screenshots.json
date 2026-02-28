@@ -1,214 +1,169 @@
 {
   "schema_version": 2,
   "meta": {
-    "name": "UI Gallery: Date Picker docs screenshots",
-    "tags": ["ui-gallery", "date-picker", "shadcn", "screenshots"],
-    "required_capabilities": ["diag.script_v2", "diag.screenshot_png"]
+    "name": "ui-gallery-date-picker-docs-screenshots",
+    "required_capabilities": ["diag.script_v2", "diag.screenshot_png"],
+    "tags": ["ui_gallery", "shadcn", "date_picker", "screenshots", "docs"]
   },
   "steps": [
     { "type": "reset_diagnostics" },
     {
       "type": "wait_until",
-      "timeout_frames": 1800,
       "predicate": {
         "kind": "exists",
-        "target": { "kind": "test_id", "id": "ui-gallery-date-picker-simple" }
-      }
+        "target": { "kind": "test_id", "id": "ui-gallery-nav-date-picker" }
+      },
+      "timeout_frames": 600
+    },
+    { "type": "press_key", "key": "escape" },
+    { "type": "wait_frames", "n": 2 },
+    { "type": "set_window_inner_size", "width_px": 1280.0, "height_px": 720.0 },
+    { "type": "wait_frames", "n": 20 },
+
+    {
+      "type": "scroll_into_view",
+      "container": { "kind": "test_id", "id": "ui-gallery-nav-scroll" },
+      "target": { "kind": "test_id", "id": "ui-gallery-nav-date-picker" },
+      "delta_y": 240.0,
+      "padding_px": 8.0,
+      "timeout_frames": 600
+    },
+    {
+      "type": "click_stable",
+      "target": { "kind": "test_id", "id": "ui-gallery-nav-date-picker.chrome" },
+      "stable_frames": 2,
+      "max_move_px": 1.0,
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-page-date-picker" }
+      },
+      "timeout_frames": 600
+    },
+    { "type": "wait_frames", "n": 20 },
+
+    {
+      "type": "scroll_into_view",
+      "container": { "kind": "test_id", "id": "ui-gallery-content-scroll" },
+      "target": { "kind": "test_id", "id": "ui-gallery-date-picker-demo" },
+      "delta_y": -200.0,
+      "padding_px": 16.0,
+      "timeout_frames": 1800
+    },
+    { "type": "wait_frames", "n": 10 },
+    { "type": "capture_screenshot", "label": "ui-gallery-date-picker-demo" },
+    {
+      "type": "click_stable",
+      "target": { "kind": "test_id", "id": "ui-gallery-date-picker-demo-trigger.chrome" }
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-date-picker-demo-content" }
+      },
+      "timeout_frames": 600
+    },
+    { "type": "wait_frames", "n": 10 },
+    { "type": "capture_screenshot", "label": "ui-gallery-date-picker-demo-open" },
+    { "type": "press_key", "key": "escape" },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "not_exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-date-picker-demo-content" }
+      },
+      "timeout_frames": 600
     },
 
     {
       "type": "scroll_into_view",
       "container": { "kind": "test_id", "id": "ui-gallery-content-scroll" },
-      "target": { "kind": "test_id", "id": "ui-gallery-date-picker-simple" },
-      "delta_x": 0.0,
-      "delta_y": -120.0,
-      "require_fully_within_container": true,
-      "require_fully_within_window": true,
-      "padding_px": 4.0,
-      "timeout_frames": 600
+      "target": { "kind": "test_id", "id": "ui-gallery-date-picker-basic-trigger" },
+      "delta_y": -200.0,
+      "padding_px": 16.0,
+      "timeout_frames": 1800
     },
-    { "type": "capture_bundle", "label": "ui-gallery-date-picker-docs-00-basic" },
-    { "type": "capture_screenshot", "label": "ui-gallery-date-picker-docs-00-basic" },
-
+    { "type": "wait_frames", "n": 10 },
+    { "type": "capture_screenshot", "label": "ui-gallery-date-picker-basic" },
     {
-      "type": "click",
-      "target": { "kind": "test_id", "id": "ui-gallery-date-picker-simple" }
+      "type": "click_stable",
+      "target": { "kind": "test_id", "id": "ui-gallery-date-picker-basic-trigger" }
     },
     {
       "type": "wait_until",
-      "timeout_frames": 1800,
-      "predicate": { "kind": "exists", "target": { "kind": "test_id", "id": "2024-02-01" } }
-    },
-    { "type": "capture_bundle", "label": "ui-gallery-date-picker-docs-01-basic-open" },
-    { "type": "capture_screenshot", "label": "ui-gallery-date-picker-docs-01-basic-open" },
-    { "type": "press_key", "key": "escape" },
-    { "type": "wait_frames", "n": 8 },
-
-    {
-      "type": "click",
-      "target": { "kind": "test_id", "id": "ui-gallery-date-picker-range" }
-    },
-    {
-      "type": "wait_until",
-      "timeout_frames": 1800,
       "predicate": {
         "kind": "exists",
-        "target": { "kind": "test_id", "id": "2024-02-13" }
-      }
+        "target": { "kind": "test_id", "id": "ui-gallery-date-picker-basic-content" }
+      },
+      "timeout_frames": 600
     },
-    { "type": "capture_bundle", "label": "ui-gallery-date-picker-docs-10-range-open" },
-    { "type": "capture_screenshot", "label": "ui-gallery-date-picker-docs-10-range-open" },
+    { "type": "wait_frames", "n": 10 },
+    { "type": "capture_screenshot", "label": "ui-gallery-date-picker-basic-open" },
     { "type": "press_key", "key": "escape" },
-    { "type": "wait_frames", "n": 8 },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "not_exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-date-picker-basic-content" }
+      },
+      "timeout_frames": 600
+    },
 
     {
       "type": "scroll_into_view",
       "container": { "kind": "test_id", "id": "ui-gallery-content-scroll" },
-      "target": { "kind": "test_id", "id": "ui-gallery-date-picker-dob" },
-      "delta_x": 0.0,
-      "delta_y": -120.0,
-      "require_fully_within_container": true,
-      "require_fully_within_window": true,
-      "padding_px": 4.0,
+      "target": { "kind": "test_id", "id": "ui-gallery-date-picker-dob-trigger" },
+      "delta_y": 240.0,
+      "padding_px": 16.0,
+      "timeout_frames": 1800
+    },
+    {
+      "type": "wait_bounds_stable",
+      "target": { "kind": "test_id", "id": "ui-gallery-date-picker-dob-trigger" },
+      "stable_frames": 4,
+      "max_move_px": 0.75,
       "timeout_frames": 600
     },
-    { "type": "capture_bundle", "label": "ui-gallery-date-picker-docs-20-dob" },
-    { "type": "capture_screenshot", "label": "ui-gallery-date-picker-docs-20-dob" },
-
     {
       "type": "click",
       "target": { "kind": "test_id", "id": "ui-gallery-date-picker-dob-trigger" }
     },
     {
       "type": "wait_until",
-      "timeout_frames": 1800,
-      "predicate": { "kind": "exists", "target": { "kind": "test_id", "id": "2024-02-01" } }
-    },
-    { "type": "capture_bundle", "label": "ui-gallery-date-picker-docs-21-dob-open" },
-    { "type": "capture_screenshot", "label": "ui-gallery-date-picker-docs-21-dob-open" },
-    { "type": "press_key", "key": "escape" },
-    { "type": "wait_frames", "n": 8 },
-
-    {
-      "type": "scroll_into_view",
-      "container": { "kind": "test_id", "id": "ui-gallery-content-scroll" },
-      "target": { "kind": "test_id", "id": "ui-gallery-date-picker-input" },
-      "delta_x": 0.0,
-      "delta_y": -120.0,
-      "require_fully_within_container": true,
-      "require_fully_within_window": true,
-      "padding_px": 4.0,
-      "timeout_frames": 600
-    },
-    { "type": "capture_bundle", "label": "ui-gallery-date-picker-docs-20-input" },
-    { "type": "capture_screenshot", "label": "ui-gallery-date-picker-docs-20-input" },
-
-    {
-      "type": "click",
-      "target": { "kind": "test_id", "id": "ui-gallery-date-picker-input-trigger" }
-    },
-    {
-      "type": "wait_until",
-      "timeout_frames": 600,
       "predicate": {
         "kind": "exists",
-        "target": { "kind": "test_id", "id": "ui-gallery-date-picker-input-calendar" }
-      }
-    },
-    { "type": "capture_bundle", "label": "ui-gallery-date-picker-docs-21-input-open" },
-    { "type": "capture_screenshot", "label": "ui-gallery-date-picker-docs-21-input-open" },
-    { "type": "press_key", "key": "escape" },
-    { "type": "wait_frames", "n": 8 },
-
-    {
-      "type": "scroll_into_view",
-      "container": { "kind": "test_id", "id": "ui-gallery-content-scroll" },
-      "target": { "kind": "test_id", "id": "ui-gallery-date-picker-time" },
-      "delta_x": 0.0,
-      "delta_y": -120.0,
-      "require_fully_within_container": true,
-      "require_fully_within_window": true,
-      "padding_px": 4.0,
+        "target": { "kind": "test_id", "id": "ui-gallery-date-picker-dob-content" }
+      },
       "timeout_frames": 600
     },
-    { "type": "capture_bundle", "label": "ui-gallery-date-picker-docs-30-time" },
-    { "type": "capture_screenshot", "label": "ui-gallery-date-picker-docs-30-time" },
+    { "type": "wait_frames", "n": 10 },
+    { "type": "capture_screenshot", "label": "ui-gallery-date-picker-dob-open" },
 
     {
-      "type": "click",
-      "target": { "kind": "test_id", "id": "ui-gallery-date-picker-time-date" }
-    },
-    {
-      "type": "wait_until",
-      "timeout_frames": 1800,
-      "predicate": { "kind": "exists", "target": { "kind": "test_id", "id": "2024-02-01" } }
-    },
-    { "type": "capture_bundle", "label": "ui-gallery-date-picker-docs-31-time-open" },
-    { "type": "capture_screenshot", "label": "ui-gallery-date-picker-docs-31-time-open" },
-    { "type": "press_key", "key": "escape" },
-    { "type": "wait_frames", "n": 8 },
-
-    {
-      "type": "scroll_into_view",
-      "container": { "kind": "test_id", "id": "ui-gallery-content-scroll" },
-      "target": { "kind": "test_id", "id": "ui-gallery-date-picker-natural-language" },
-      "delta_x": 0.0,
-      "delta_y": -120.0,
-      "require_fully_within_container": true,
-      "require_fully_within_window": true,
-      "padding_px": 4.0,
-      "timeout_frames": 600
-    },
-    {
-      "type": "capture_bundle",
-      "label": "ui-gallery-date-picker-docs-40-natural-language"
-    },
-    {
-      "type": "capture_screenshot",
-      "label": "ui-gallery-date-picker-docs-40-natural-language"
-    },
-
-    {
-      "type": "click",
+      "type": "click_stable",
       "target": {
         "kind": "test_id",
-        "id": "ui-gallery-date-picker-natural-language-trigger"
-      }
+        "id": "ui-gallery-date-picker-dob-calendar.caption-year-trigger"
+      },
+      "stable_frames": 2,
+      "max_move_px": 1.0,
+      "timeout_frames": 240
     },
     {
       "type": "wait_until",
-      "timeout_frames": 1800,
       "predicate": {
         "kind": "exists",
-        "target": {
-          "kind": "test_id",
-          "id": "ui-gallery-date-picker-natural-language-calendar"
-        }
-      }
+        "target": { "kind": "test_id", "id": "select-scroll-viewport" }
+      },
+      "timeout_frames": 240
     },
-    {
-      "type": "capture_bundle",
-      "label": "ui-gallery-date-picker-docs-41-natural-language-open"
-    },
-    {
-      "type": "capture_screenshot",
-      "label": "ui-gallery-date-picker-docs-41-natural-language-open"
-    },
-    { "type": "press_key", "key": "escape" },
-    { "type": "wait_frames", "n": 8 },
+    { "type": "wait_frames", "n": 10 },
+    { "type": "capture_screenshot", "label": "ui-gallery-date-picker-dob-year-open" },
 
-    {
-      "type": "scroll_into_view",
-      "container": { "kind": "test_id", "id": "ui-gallery-content-scroll" },
-      "target": { "kind": "test_id", "id": "ui-gallery-date-picker-rtl" },
-      "delta_x": 0.0,
-      "delta_y": -120.0,
-      "require_fully_within_container": true,
-      "require_fully_within_window": true,
-      "padding_px": 4.0,
-      "timeout_frames": 600
-    },
-    { "type": "capture_bundle", "label": "ui-gallery-date-picker-docs-50-rtl" },
-    { "type": "capture_screenshot", "label": "ui-gallery-date-picker-docs-50-rtl" }
+    { "type": "capture_bundle", "label": "ui-gallery-date-picker-docs-screenshots" }
   ]
 }
