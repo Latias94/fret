@@ -226,6 +226,30 @@ pub(super) fn handle_op(renderer: &Renderer, state: &mut EncodeState<'_>, op: &S
             );
         }
 
+        SceneOp::PushBackdropSourceGroupV1 {
+            bounds,
+            pyramid,
+            quality,
+        } => {
+            state.flush_quad_batch();
+            let scissor = effect_scissor(state, bounds);
+            state.effect_markers.push(EffectMarker {
+                draw_ix: state.ordered_draws.len(),
+                kind: EffectMarkerKind::BackdropSourceGroupPush {
+                    scissor,
+                    pyramid,
+                    quality,
+                },
+            });
+        }
+        SceneOp::PopBackdropSourceGroup => {
+            state.flush_quad_batch();
+            state.effect_markers.push(EffectMarker {
+                draw_ix: state.ordered_draws.len(),
+                kind: EffectMarkerKind::BackdropSourceGroupPop,
+            });
+        }
+
         SceneOp::PushCompositeGroup { desc } => {
             state.flush_quad_batch();
 

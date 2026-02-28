@@ -41,6 +41,10 @@ semantics (consistent with ADR 0030’s future option to prefer stroke primitive
 - `period = dash + gap`
 - No perimeter-fitting: the renderer does **not** adjust the pattern to evenly divide the perimeter.
 - If `dash <= 0` or `period <= 0`, the dash mask is disabled (stroke renders as solid).
+- Coverage rule (phase sign convention):
+  - Let `s` be the perimeter coordinate (in physical pixels) and `phase` be the dash phase (also in physical pixels).
+  - Define `m = (s + phase) mod period` (Euclidean modulo into `[0, period)`).
+  - The dash is **on** iff `m < dash`.
 
 ### Perimeter parameterization (rounded rect)
 
@@ -92,4 +96,3 @@ We define a stable perimeter coordinate `s` (in physical pixels):
 
 - ADR 0030: `docs/adr/0030-shape-rendering-and-sdf-semantics.md`
 - Workstream: `docs/workstreams/quad-border-styles-v1.md`
-

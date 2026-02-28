@@ -24,6 +24,8 @@ pub struct RendererCapabilities {
     pub max_texture_dimension_2d: u32,
     pub streaming_images: StreamingImageCapabilities,
     pub sampled_materials_catalog_textures: bool,
+    pub custom_effect_v1: bool,
+    pub custom_effect_v2_user_image: bool,
 }
 
 impl RendererCapabilities {
@@ -35,6 +37,14 @@ impl RendererCapabilities {
             i420_gpu_convert: false,
             external_texture_import: supports_external_texture_import(ctx),
         };
+
+        let sampled_materials_catalog_textures = supports_material_catalog_textures(&ctx.adapter);
+
+        // Custom effects are currently implemented for wgpu backends. V2 requires a filterable
+        // sampled texture for the user image input (we reuse the same conservative check as the
+        // renderer-owned catalog textures).
+        let custom_effect_v1 = true;
+        let custom_effect_v2_user_image = sampled_materials_catalog_textures;
 
         Self {
             adapter: AdapterCapabilities {
@@ -48,7 +58,9 @@ impl RendererCapabilities {
             },
             max_texture_dimension_2d: ctx.device.limits().max_texture_dimension_2d,
             streaming_images,
-            sampled_materials_catalog_textures: supports_material_catalog_textures(&ctx.adapter),
+            sampled_materials_catalog_textures,
+            custom_effect_v1,
+            custom_effect_v2_user_image,
         }
     }
 }

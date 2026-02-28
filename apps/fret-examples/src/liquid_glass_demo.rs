@@ -11,11 +11,12 @@ use std::sync::Arc;
 
 use fret::prelude::*;
 use fret_core::scene::{
-    BackdropWarpFieldV2, BackdropWarpKindV1, BackdropWarpV1, BackdropWarpV2, DitherMode,
-    EffectChain, EffectMode, EffectQuality, EffectStep, ImageSamplingHint, UvRect,
+    BackdropWarpFieldV2, BackdropWarpKindV1, BackdropWarpV1, BackdropWarpV2,
+    CustomEffectImageInputV1, CustomEffectPyramidRequestV1, CustomEffectSourcesV3, DitherMode,
+    EffectChain, EffectMode, EffectParamsV1, EffectQuality, EffectStep, ImageSamplingHint, UvRect,
     WarpMapEncodingV1,
 };
-use fret_core::{Color, Corners, Edges, ImageColorSpace, Px};
+use fret_core::{Color, Corners, Edges, EffectId, ImageColorSpace, Px};
 use fret_runtime::Model;
 use fret_ui::Invalidation;
 use fret_ui::element::{
@@ -24,7 +25,139 @@ use fret_ui::element::{
 };
 use fret_ui_assets::image_asset_cache::{ImageAssetCacheHostExt, ImageAssetKey};
 use fret_ui_kit::Space;
+use fret_ui_kit::custom_effects::{CustomEffectProgramV2, CustomEffectProgramV3};
 use fret_ui_shadcn as shadcn;
+
+use crate::custom_effect_v3_wgsl::CUSTOM_EFFECT_V3_LENS_WGSL;
+
+const CUSTOM_WARP_V2_WGSL: &str = r#"
+// Params packing (EffectParamsV1 is 64 bytes):
+// - vec4s[0].x: strength_px
+// - vec4s[0].y: scale_px
+// - vec4s[0].z: phase
+// - vec4s[0].w: chroma_px
+// - vec4s[1].x: edge_falloff_px (>= 0)
+// - vec4s[1].y: rim_strength (0..1)
+// - vec4s[1].z: shadow_strength (0..1)
+// - vec4s[2].x: grain_strength (0..1)
+// - vec4s[2].y: grain_scale (>= 0.1)
+// - vec4s[3]: corner_radii_px (tl, tr, br, bl)
+
+fn radius_at(centered: vec2<f32>, radii: vec4<f32>) -> f32 {
+  if (centered.x >= 0.0) {
+    if (centered.y <= 0.0) { return radii.y; } // top-right
+    return radii.z; // bottom-right
+  }
+  if (centered.y <= 0.0) { return radii.x; } // top-left
+  return radii.w; // bottom-left
+}
+
+fn sd_rounded_rect(centered: vec2<f32>, half_size: vec2<f32>, radius: f32) -> f32 {
+  let r = clamp(radius, 0.0, min(half_size.x, half_size.y));
+  let corner = abs(centered) - (half_size - vec2<f32>(r));
+  let outside = length(max(corner, vec2<f32>(0.0))) - r;
+  let inside = min(max(corner.x, corner.y), 0.0);
+  return outside + inside;
+}
+
+fn clamp_pixel_pos(p: vec2<f32>) -> vec2<f32> {
+  let dims_u = textureDimensions(src_texture);
+  let dims = vec2<f32>(f32(dims_u.x), f32(dims_u.y));
+  return clamp(p, vec2<f32>(0.5), dims - vec2<f32>(0.5));
+}
+
+fn sample_src_bilinear(pixel_pos: vec2<f32>) -> vec4<f32> {
+  let dims_u = textureDimensions(src_texture);
+  let px = clamp_pixel_pos(pixel_pos);
+
+  let base = floor(px - vec2<f32>(0.5));
+  let f = px - (base + vec2<f32>(0.5));
+
+  let x0 = clamp(i32(base.x), 0, i32(dims_u.x) - 1);
+  let y0 = clamp(i32(base.y), 0, i32(dims_u.y) - 1);
+  let x1 = clamp(x0 + 1, 0, i32(dims_u.x) - 1);
+  let y1 = clamp(y0 + 1, 0, i32(dims_u.y) - 1);
+
+  let c00 = textureLoad(src_texture, vec2<i32>(x0, y0), 0);
+  let c10 = textureLoad(src_texture, vec2<i32>(x1, y0), 0);
+  let c01 = textureLoad(src_texture, vec2<i32>(x0, y1), 0);
+  let c11 = textureLoad(src_texture, vec2<i32>(x1, y1), 0);
+
+  let top = mix(c00, c10, f.x);
+  let bot = mix(c01, c11, f.x);
+  return mix(top, bot, f.y);
+}
+
+fn fret_custom_effect(_src: vec4<f32>, _uv: vec2<f32>, pos_px: vec2<f32>, params: EffectParamsV1) -> vec4<f32> {
+  let strength_px = max(0.0, params.vec4s[0].x);
+  let scale_px = max(1.0, params.vec4s[0].y);
+  let phase = params.vec4s[0].z;
+  let chroma_px = max(0.0, params.vec4s[0].w);
+
+  let edge_falloff_px = max(0.0, params.vec4s[1].x);
+  let rim_strength = clamp(params.vec4s[1].y, 0.0, 1.0);
+  let shadow_strength = clamp(params.vec4s[1].z, 0.0, 1.0);
+
+  let grain_strength = max(0.0, params.vec4s[2].x);
+  let grain_scale = max(0.1, params.vec4s[2].y);
+
+  let local = fret_local_px(pos_px);
+  let size = max(render_space.size_px, vec2<f32>(1.0));
+
+  // Distance-to-edge inside a rounded rect. This keeps rim/shadow stable at corners even when the
+  // effect is additionally clipped by a rounded container.
+  let half_size = size * 0.5;
+  let centered = local - half_size;
+  let corner_radii = max(params.vec4s[3], vec4<f32>(0.0));
+  let radius = radius_at(centered, corner_radii);
+  let sd = sd_rounded_rect(centered, half_size, radius);
+  let dist_in = max(0.0, -sd);
+  var falloff = 1.0;
+  if (edge_falloff_px > 0.0) {
+    falloff = smoothstep(0.0, edge_falloff_px, dist_in);
+  }
+
+  // Sample a tiled displacement field from the user input (RGBA8 in our demo, linear color space).
+  // Encoding matches `WarpMapEncodingV1::RgSigned`: RG store dx/dy in [-1, 1].
+  let warp_uv = fract((local + vec2<f32>(phase * 17.0, phase * 11.0)) / scale_px);
+  let warp = fret_sample_input(warp_uv);
+  let disp = (warp.rg * 2.0 - vec2<f32>(1.0)) * (strength_px * falloff);
+
+  let warped_pos = pos_px + disp;
+  let base = sample_src_bilinear(warped_pos);
+
+  var rgb = base.rgb;
+  var a = base.a;
+
+  // Simple chromatic aberration around the warped direction.
+  if (chroma_px > 0.0) {
+    let len = length(disp);
+    let dir = select(vec2<f32>(1.0, 0.0), disp / len, len > 1e-3);
+    let o = dir * chroma_px;
+    let red = sample_src_bilinear(warped_pos + o);
+    let blue = sample_src_bilinear(warped_pos - o);
+    rgb = vec3<f32>(red.r, rgb.g, blue.b);
+    a = max(a, max(red.a, blue.a));
+  }
+
+  // Rim + inner shadow: this is a recipe-only visual, not part of core semantics.
+  let rim = smoothstep(1.5, 0.0, dist_in);
+  var inner = 1.0;
+  if (edge_falloff_px > 0.0) {
+    inner = smoothstep(edge_falloff_px * 0.25, edge_falloff_px, dist_in);
+  }
+  rgb += vec3<f32>(1.0) * rim * (0.04 + 0.16 * rim_strength);
+  rgb -= vec3<f32>(1.0) * (1.0 - inner) * (0.03 + 0.12 * shadow_strength);
+
+  // Deterministic grain anchored to effect-local space.
+  if (grain_strength > 0.0) {
+    let n = fret_catalog_hash_noise01(local * grain_scale) - 0.5;
+    rgb += vec3<f32>(n) * grain_strength;
+  }
+
+  return vec4<f32>(rgb, a);
+}
+"#;
 
 fn srgb(r: u8, g: u8, b: u8, a: f32) -> Color {
     let mut c = fret_ui_kit::colors::linear_from_hex_rgb(
@@ -127,10 +260,10 @@ fn generate_warp_map_rg_signed(width: u32, height: u32) -> Vec<u8> {
 fn lens_panel<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     label: Arc<str>,
+    radius: Px,
     mode: EffectMode,
     chain: EffectChain,
 ) -> AnyElement {
-    let radius = Px(20.0);
     let mut outer_layout = LayoutStyle::default();
     outer_layout.size.width = Length::Px(Px(320.0));
     outer_layout.size.height = Length::Px(Px(220.0));
@@ -203,11 +336,19 @@ fn lens_panel<H: UiHost>(
     )
 }
 
+#[derive(Clone, Copy)]
+struct LiquidGlassCustomV2Effect(Option<EffectId>);
+
+#[derive(Clone, Copy)]
+struct LiquidGlassCustomV3Effect(Option<EffectId>);
+
 #[derive(Clone)]
 struct LiquidGlassState {
     show_fake: Model<bool>,
     show_warp: Model<bool>,
     show_warp_v2: Model<bool>,
+    show_custom_v2: Model<bool>,
+    show_custom_v3: Model<bool>,
     show_inspector: Model<bool>,
     animate: Model<bool>,
     phase_speed: Model<Vec<f32>>,
@@ -220,6 +361,14 @@ struct LiquidGlassState {
     warp_scale_px: Model<Vec<f32>>,
     warp_phase: Model<Vec<f32>>,
     warp_chroma_px: Model<Vec<f32>>,
+
+    lens_radius_px: Model<Vec<f32>>,
+
+    custom_edge_falloff_px: Model<Vec<f32>>,
+    custom_rim_strength: Model<Vec<f32>>,
+    custom_shadow_strength: Model<Vec<f32>>,
+    custom_grain_strength: Model<Vec<f32>>,
+    custom_grain_scale: Model<Vec<f32>>,
 
     blur_radius_px: Model<Vec<f32>>,
     blur_downsample: Model<Vec<f32>>,
@@ -249,8 +398,31 @@ pub fn run() -> anyhow::Result<()> {
                 shadcn::shadcn_themes::ShadcnColorScheme::Dark,
             );
         })
+        .install_custom_effects(install_custom_effects)
         .run()?;
     Ok(())
+}
+
+fn install_custom_effects(app: &mut App, effects: &mut dyn fret_core::CustomEffectService) {
+    let mut program_v2 = CustomEffectProgramV2::wgsl_utf8(CUSTOM_WARP_V2_WGSL);
+    let v2 = match program_v2.ensure_registered(effects) {
+        Ok(id) => Some(id),
+        Err(err) => {
+            tracing::warn!(?err, "liquid-glass custom effect v2 registration failed");
+            None
+        }
+    };
+    app.set_global(LiquidGlassCustomV2Effect(v2));
+
+    let mut program_v3 = CustomEffectProgramV3::wgsl_utf8(CUSTOM_EFFECT_V3_LENS_WGSL);
+    let v3 = match program_v3.ensure_registered(effects) {
+        Ok(id) => Some(id),
+        Err(err) => {
+            tracing::warn!(?err, "liquid-glass custom effect v3 registration failed");
+            None
+        }
+    };
+    app.set_global(LiquidGlassCustomV3Effect(v3));
 }
 
 impl MvuProgram for LiquidGlassProgram {
@@ -275,6 +447,8 @@ impl MvuProgram for LiquidGlassProgram {
             show_fake: app.models_mut().insert(true),
             show_warp: app.models_mut().insert(true),
             show_warp_v2: app.models_mut().insert(false),
+            show_custom_v2: app.models_mut().insert(false),
+            show_custom_v3: app.models_mut().insert(false),
             show_inspector: app.models_mut().insert(false),
             animate: app.models_mut().insert(true),
             phase_speed: app.models_mut().insert(vec![0.65]),
@@ -287,6 +461,14 @@ impl MvuProgram for LiquidGlassProgram {
             warp_scale_px: app.models_mut().insert(vec![72.0]),
             warp_phase: app.models_mut().insert(vec![0.0]),
             warp_chroma_px: app.models_mut().insert(vec![2.0]),
+
+            lens_radius_px: app.models_mut().insert(vec![20.0]),
+
+            custom_edge_falloff_px: app.models_mut().insert(vec![18.0]),
+            custom_rim_strength: app.models_mut().insert(vec![0.65]),
+            custom_shadow_strength: app.models_mut().insert(vec![0.55]),
+            custom_grain_strength: app.models_mut().insert(vec![0.06]),
+            custom_grain_scale: app.models_mut().insert(vec![1.0]),
 
             // Keep defaults stable: perf scripts/baselines assume a visible blur chain.
             blur_radius_px: app.models_mut().insert(vec![16.0]),
@@ -305,6 +487,8 @@ impl MvuProgram for LiquidGlassProgram {
             let _ = app.models_mut().update(&st.show_fake, |v| *v = true);
             let _ = app.models_mut().update(&st.show_warp, |v| *v = true);
             let _ = app.models_mut().update(&st.show_warp_v2, |v| *v = false);
+            let _ = app.models_mut().update(&st.show_custom_v2, |v| *v = false);
+            let _ = app.models_mut().update(&st.show_custom_v3, |v| *v = false);
             let _ = app.models_mut().update(&st.show_inspector, |v| *v = false);
             let _ = app.models_mut().update(&st.animate, |v| *v = true);
             let _ = app
@@ -320,6 +504,24 @@ impl MvuProgram for LiquidGlassProgram {
             let _ = app
                 .models_mut()
                 .update(&st.warp_chroma_px, |v| *v = vec![2.0]);
+            let _ = app
+                .models_mut()
+                .update(&st.lens_radius_px, |v| *v = vec![20.0]);
+            let _ = app
+                .models_mut()
+                .update(&st.custom_edge_falloff_px, |v| *v = vec![18.0]);
+            let _ = app
+                .models_mut()
+                .update(&st.custom_rim_strength, |v| *v = vec![0.65]);
+            let _ = app
+                .models_mut()
+                .update(&st.custom_shadow_strength, |v| *v = vec![0.55]);
+            let _ = app
+                .models_mut()
+                .update(&st.custom_grain_strength, |v| *v = vec![0.06]);
+            let _ = app
+                .models_mut()
+                .update(&st.custom_grain_scale, |v| *v = vec![1.0]);
             let _ = app
                 .models_mut()
                 .update(&st.blur_radius_px, |v| *v = vec![16.0]);
@@ -361,6 +563,8 @@ fn view(
     let show_fake_model = st.show_fake.clone();
     let show_warp_model = st.show_warp.clone();
     let show_warp_v2_model = st.show_warp_v2.clone();
+    let show_custom_v2_model = st.show_custom_v2.clone();
+    let show_custom_v3_model = st.show_custom_v3.clone();
     let animate_model = st.animate.clone();
     let phase_speed_model = st.phase_speed.clone();
     let show_inspector_model = st.show_inspector.clone();
@@ -369,6 +573,14 @@ fn view(
     let warp_scale_model = st.warp_scale_px.clone();
     let warp_phase_model = st.warp_phase.clone();
     let warp_chroma_model = st.warp_chroma_px.clone();
+
+    let lens_radius_model = st.lens_radius_px.clone();
+
+    let custom_edge_model = st.custom_edge_falloff_px.clone();
+    let custom_rim_model = st.custom_rim_strength.clone();
+    let custom_shadow_model = st.custom_shadow_strength.clone();
+    let custom_grain_model = st.custom_grain_strength.clone();
+    let custom_grain_scale_model = st.custom_grain_scale.clone();
 
     let blur_radius_model = st.blur_radius_px.clone();
     let blur_downsample_model = st.blur_downsample.clone();
@@ -382,6 +594,8 @@ fn view(
     let show_fake = cx.watch_model(&st.show_fake).layout().copied_or(true);
     let show_warp = cx.watch_model(&st.show_warp).layout().copied_or(true);
     let show_warp_v2 = cx.watch_model(&st.show_warp_v2).layout().copied_or(false);
+    let show_custom_v2 = cx.watch_model(&st.show_custom_v2).layout().copied_or(false);
+    let show_custom_v3 = cx.watch_model(&st.show_custom_v3).layout().copied_or(false);
     let show_inspector = cx.watch_model(&st.show_inspector).layout().copied_or(true);
     let animate = cx.watch_model(&st.animate).layout().copied_or(true);
     let phase_speed = watch_first_f32(cx, &st.phase_speed, 0.65);
@@ -397,6 +611,15 @@ fn view(
     let warp_scale_px = watch_first_f32(cx, &st.warp_scale_px, 72.0);
     let warp_phase = watch_first_f32(cx, &st.warp_phase, 0.0);
     let warp_chroma_px = watch_first_f32(cx, &st.warp_chroma_px, 2.0);
+
+    let lens_radius_px = watch_first_f32(cx, &st.lens_radius_px, 20.0).clamp(0.0, 64.0);
+    let lens_radius = Px(lens_radius_px);
+
+    let custom_edge_falloff_px = watch_first_f32(cx, &st.custom_edge_falloff_px, 18.0);
+    let custom_rim_strength = watch_first_f32(cx, &st.custom_rim_strength, 0.65);
+    let custom_shadow_strength = watch_first_f32(cx, &st.custom_shadow_strength, 0.55);
+    let custom_grain_strength = watch_first_f32(cx, &st.custom_grain_strength, 0.06);
+    let custom_grain_scale = watch_first_f32(cx, &st.custom_grain_scale, 1.0);
 
     let use_backdrop = cx.watch_model(&st.use_backdrop).layout().copied_or(true);
     let use_dither = cx.watch_model(&st.use_dither).layout().copied_or(true);
@@ -425,6 +648,17 @@ fn view(
         )
     });
     let warp_map_loaded = warp_image.is_some();
+
+    let custom_v2_effect = cx
+        .app
+        .global::<LiquidGlassCustomV2Effect>()
+        .and_then(|v| v.0);
+    let custom_v2_supported = custom_v2_effect.is_some();
+    let custom_v3_effect = cx
+        .app
+        .global::<LiquidGlassCustomV3Effect>()
+        .and_then(|v| v.0);
+    let custom_v3_supported = custom_v3_effect.is_some();
 
     let warp_base = BackdropWarpV1 {
         strength_px: Px(warp_strength_px),
@@ -475,6 +709,160 @@ fn view(
         contrast,
         use_dither,
     );
+
+    let custom_v2_chain = {
+        let step = match (custom_v2_effect, warp_image) {
+            (Some(effect), Some(image)) => Some(EffectStep::CustomV2 {
+                id: effect,
+                params: EffectParamsV1 {
+                    vec4s: [
+                        [
+                            warp_base.strength_px.0,
+                            warp_base.scale_px.0,
+                            warp_base.phase,
+                            warp_base.chromatic_aberration_px.0,
+                        ],
+                        [
+                            custom_edge_falloff_px.clamp(0.0, 64.0),
+                            custom_rim_strength.clamp(0.0, 1.0),
+                            custom_shadow_strength.clamp(0.0, 1.0),
+                            0.0,
+                        ],
+                        [
+                            custom_grain_strength.clamp(0.0, 0.25),
+                            custom_grain_scale.clamp(0.1, 8.0),
+                            0.0,
+                            0.0,
+                        ],
+                        [
+                            lens_radius_px,
+                            lens_radius_px,
+                            lens_radius_px,
+                            lens_radius_px,
+                        ],
+                    ],
+                },
+                max_sample_offset_px: Px(warp_base.strength_px.0
+                    + warp_base.chromatic_aberration_px.0
+                    + 8.0),
+                input_image: Some(CustomEffectImageInputV1 {
+                    image,
+                    uv: UvRect::FULL,
+                    sampling: ImageSamplingHint::Linear,
+                }),
+            }),
+            // Keep the lens deterministic while the warp input image is still loading: the backend
+            // binds a renderer-owned fallback input texture for `input_image: None`.
+            (Some(effect), None) => Some(EffectStep::CustomV2 {
+                id: effect,
+                params: EffectParamsV1 {
+                    vec4s: [
+                        [
+                            warp_base.strength_px.0,
+                            warp_base.scale_px.0,
+                            warp_base.phase,
+                            warp_base.chromatic_aberration_px.0,
+                        ],
+                        [
+                            custom_edge_falloff_px.clamp(0.0, 64.0),
+                            custom_rim_strength.clamp(0.0, 1.0),
+                            custom_shadow_strength.clamp(0.0, 1.0),
+                            0.0,
+                        ],
+                        [
+                            custom_grain_strength.clamp(0.0, 0.25),
+                            custom_grain_scale.clamp(0.1, 8.0),
+                            0.0,
+                            0.0,
+                        ],
+                        [
+                            lens_radius_px,
+                            lens_radius_px,
+                            lens_radius_px,
+                            lens_radius_px,
+                        ],
+                    ],
+                },
+                max_sample_offset_px: Px(warp_base.strength_px.0
+                    + warp_base.chromatic_aberration_px.0
+                    + 8.0),
+                input_image: None,
+            }),
+            _ => None,
+        };
+
+        // Reuse the standard post chain (blur + adjust + optional dither).
+        build_chain(
+            step,
+            blur_radius_px,
+            blur_downsample,
+            saturation,
+            brightness,
+            contrast,
+            use_dither,
+        )
+    };
+
+    let custom_v3_chain = custom_v3_effect.map(|id| {
+        let sf = cx.environment_scale_factor(Invalidation::Paint).max(1.0e-6);
+        let refraction_height_px = custom_edge_falloff_px.clamp(0.0, 64.0);
+        // Map the demo's warp strength to a more noticeable refraction amount.
+        let refraction_amount_px = (warp_strength_px * 3.2 + 8.0).clamp(0.0, 96.0);
+        let noise_alpha = (custom_grain_strength * 0.2).clamp(0.0, 0.1);
+
+        let mut steps: Vec<EffectStep> = Vec::new();
+        if blur_radius_px > 0.0 && steps.len() < EffectChain::MAX_STEPS {
+            steps.push(EffectStep::GaussianBlur {
+                radius_px: Px(blur_radius_px.clamp(0.0, 64.0)),
+                downsample: blur_downsample.clamp(1, 4),
+            });
+        }
+        if steps.len() < EffectChain::MAX_STEPS {
+            steps.push(EffectStep::CustomV3 {
+                id,
+                params: EffectParamsV1 {
+                    vec4s: [
+                        // (refraction_height_px, refraction_amount_px, pyramid_level, frost_mix)
+                        [
+                            refraction_height_px * sf,
+                            refraction_amount_px * sf,
+                            3.0,
+                            0.75,
+                        ],
+                        // (corner_radius_px, depth_effect, dispersion, dispersion_quality)
+                        [lens_radius_px * sf, 0.18, 0.55, 1.0],
+                        // (noise_alpha, reserved, reserved, reserved)
+                        [noise_alpha, 0.0, 0.0, 0.0],
+                        // tint (rgb + alpha)
+                        [1.0, 1.0, 1.0, 0.08],
+                    ],
+                },
+                max_sample_offset_px: Px(96.0),
+                user0: None,
+                user1: None,
+                sources: CustomEffectSourcesV3 {
+                    want_raw: true,
+                    pyramid: Some(CustomEffectPyramidRequestV1 {
+                        max_levels: 6,
+                        max_radius_px: Px(32.0),
+                    }),
+                },
+            });
+        }
+        if steps.len() < EffectChain::MAX_STEPS {
+            steps.push(EffectStep::ColorAdjust {
+                saturation: saturation.clamp(0.0, 3.0),
+                brightness: brightness.clamp(0.0, 3.0),
+                contrast: contrast.clamp(0.0, 3.0),
+            });
+        }
+        if use_dither && steps.len() < EffectChain::MAX_STEPS {
+            steps.push(EffectStep::Dither {
+                mode: DitherMode::Bayer4x4,
+            });
+        }
+        EffectChain::from_steps(&steps).sanitize()
+    });
 
     let mut root_layout = LayoutStyle::default();
     root_layout.size = SizeStyle {
@@ -748,6 +1136,36 @@ fn view(
                                                     |cx| {
                                                         vec![
                                                             shadcn::Switch::new(
+                                                                show_custom_v2_model.clone(),
+                                                            )
+                                                            .a11y_label("Show custom v2 lens")
+                                                            .test_id(
+                                                                "liquid-glass-switch-show-custom-v2",
+                                                            )
+                                                            .into_element(cx),
+                                                            shadcn::Label::new("Custom v2")
+                                                                .into_element(cx),
+                                                            shadcn::Switch::new(
+                                                                show_custom_v3_model.clone(),
+                                                            )
+                                                            .a11y_label("Show custom v3 lens")
+                                                            .test_id(
+                                                                "liquid-glass-switch-show-custom-v3",
+                                                            )
+                                                            .into_element(cx),
+                                                            shadcn::Label::new("Custom v3")
+                                                                .into_element(cx),
+                                                        ]
+                                                    },
+                                                ),
+                                                shadcn::stack::hstack(
+                                                    cx,
+                                                    shadcn::stack::HStackProps::default()
+                                                        .gap(Space::N2)
+                                                        .items_center(),
+                                                    |cx| {
+                                                        vec![
+                                                            shadcn::Switch::new(
                                                                 use_backdrop_model.clone(),
                                                             )
                                                             .a11y_label("Backdrop mode")
@@ -835,6 +1253,7 @@ fn view(
                                             lens_panel(
                                                 cx,
                                                 Arc::from("Fake glass (blur + adjust)"),
+                                                lens_radius,
                                                 mode,
                                                 fake_chain,
                                             )
@@ -846,6 +1265,7 @@ fn view(
                                             lens_panel(
                                                 cx,
                                                 Arc::from("Warp v1 (procedural)"),
+                                                lens_radius,
                                                 mode,
                                                 warp_chain,
                                             )
@@ -857,10 +1277,36 @@ fn view(
                                             lens_panel(
                                                 cx,
                                                 Arc::from("Warp v2 (image field)"),
+                                                lens_radius,
                                                 mode,
                                                 warp_v2_chain,
                                             )
                                             .test_id("liquid-glass-lens-warp-v2"),
+                                        );
+                                    }
+                                    if show_custom_v2 {
+                                        let label = if !custom_v2_supported {
+                                            Arc::from("CustomV2 (unsupported)")
+                                        } else if warp_map_loaded {
+                                            Arc::from("CustomV2 (image warp + rim/grain)")
+                                        } else {
+                                            Arc::from("CustomV2 (loading input)")
+                                        };
+                                        out.push(
+                                            lens_panel(cx, label, lens_radius, mode, custom_v2_chain)
+                                                .test_id("liquid-glass-lens-custom-v2"),
+                                        );
+                                    }
+                                    if show_custom_v3 {
+                                        let label = if !custom_v3_supported {
+                                            Arc::from("CustomV3 (unsupported)")
+                                        } else {
+                                            Arc::from("CustomV3 (lens refraction; raw+pyramid)")
+                                        };
+                                        let chain = custom_v3_chain.unwrap_or(fake_chain.clone());
+                                        out.push(
+                                            lens_panel(cx, label, lens_radius, mode, chain)
+                                                .test_id("liquid-glass-lens-custom-v3"),
                                         );
                                     }
                                     out
@@ -896,11 +1342,12 @@ fn view(
                                 let header = shadcn::CardHeader::new([
                                     shadcn::CardTitle::new("Inspector").into_element(cx),
                                     shadcn::CardDescription::new(format!(
-                                        "mode={:?} steps(fake={}, v1={}, v2={}) warp_map_loaded={}",
+                                        "mode={:?} steps(fake={}, v1={}, v2={}, custom_v3={}) warp_map_loaded={}",
                                         mode,
                                         fake_chain.iter().count(),
                                         warp_chain.iter().count(),
                                         warp_v2_chain.iter().count(),
+                                        custom_v3_chain.as_ref().map_or(0, |c| c.iter().count()),
                                         warp_map_loaded
                                     ))
                                     .into_element(cx),
@@ -926,6 +1373,24 @@ fn view(
                                             },
                                         )
                                     };
+
+                                let lens_radius_row = shadcn::stack::vstack(
+                                    cx,
+                                    shadcn::stack::VStackProps::default().gap(Space::N2),
+                                    |cx| {
+                                        vec![
+                                            label_row(
+                                                cx,
+                                                "Lens radius (px)",
+                                                format!("{lens_radius_px:.1}"),
+                                            ),
+                                            shadcn::Slider::new(lens_radius_model.clone())
+                                                .range(0.0, 64.0)
+                                                .step(0.5)
+                                                .into_element(cx),
+                                        ]
+                                    },
+                                );
 
                                 let warp_strength_row = shadcn::stack::vstack(
                                     cx,
@@ -978,6 +1443,96 @@ fn view(
                                                     0.0,
                                                     BackdropWarpV1::MAX_CHROMATIC_ABERRATION_PX.0,
                                                 )
+                                                .step(0.05)
+                                                .into_element(cx),
+                                        ]
+                                    },
+                                );
+
+                                let custom_edge_row = shadcn::stack::vstack(
+                                    cx,
+                                    shadcn::stack::VStackProps::default().gap(Space::N2),
+                                    |cx| {
+                                        vec![
+                                            label_row(
+                                                cx,
+                                                "CustomV2 edge falloff (px)",
+                                                format!("{custom_edge_falloff_px:.1}"),
+                                            ),
+                                            shadcn::Slider::new(custom_edge_model.clone())
+                                                .range(0.0, 64.0)
+                                                .step(0.25)
+                                                .into_element(cx),
+                                        ]
+                                    },
+                                );
+
+                                let custom_rim_row = shadcn::stack::vstack(
+                                    cx,
+                                    shadcn::stack::VStackProps::default().gap(Space::N2),
+                                    |cx| {
+                                        vec![
+                                            label_row(
+                                                cx,
+                                                "CustomV2 rim strength",
+                                                format!("{custom_rim_strength:.2}"),
+                                            ),
+                                            shadcn::Slider::new(custom_rim_model.clone())
+                                                .range(0.0, 1.0)
+                                                .step(0.01)
+                                                .into_element(cx),
+                                        ]
+                                    },
+                                );
+
+                                let custom_shadow_row = shadcn::stack::vstack(
+                                    cx,
+                                    shadcn::stack::VStackProps::default().gap(Space::N2),
+                                    |cx| {
+                                        vec![
+                                            label_row(
+                                                cx,
+                                                "CustomV2 shadow strength",
+                                                format!("{custom_shadow_strength:.2}"),
+                                            ),
+                                            shadcn::Slider::new(custom_shadow_model.clone())
+                                                .range(0.0, 1.0)
+                                                .step(0.01)
+                                                .into_element(cx),
+                                        ]
+                                    },
+                                );
+
+                                let custom_grain_row = shadcn::stack::vstack(
+                                    cx,
+                                    shadcn::stack::VStackProps::default().gap(Space::N2),
+                                    |cx| {
+                                        vec![
+                                            label_row(
+                                                cx,
+                                                "CustomV2 grain strength",
+                                                format!("{custom_grain_strength:.2}"),
+                                            ),
+                                            shadcn::Slider::new(custom_grain_model.clone())
+                                                .range(0.0, 0.25)
+                                                .step(0.01)
+                                                .into_element(cx),
+                                        ]
+                                    },
+                                );
+
+                                let custom_grain_scale_row = shadcn::stack::vstack(
+                                    cx,
+                                    shadcn::stack::VStackProps::default().gap(Space::N2),
+                                    |cx| {
+                                        vec![
+                                            label_row(
+                                                cx,
+                                                "CustomV2 grain scale",
+                                                format!("{custom_grain_scale:.2}"),
+                                            ),
+                                            shadcn::Slider::new(custom_grain_scale_model.clone())
+                                                .range(0.25, 6.0)
                                                 .step(0.05)
                                                 .into_element(cx),
                                         ]
@@ -1120,11 +1675,19 @@ fn view(
                                         vec![
                                             header.into_element(cx),
                                             shadcn::Separator::new().into_element(cx),
+                                            lens_radius_row,
+                                            shadcn::Separator::new().into_element(cx),
                                             warp_strength_row,
                                             warp_scale_row,
                                             chroma_row,
                                             phase_row,
                                             speed_row,
+                                            shadcn::Separator::new().into_element(cx),
+                                            custom_edge_row,
+                                            custom_rim_row,
+                                            custom_shadow_row,
+                                            custom_grain_row,
+                                            custom_grain_scale_row,
                                             shadcn::Separator::new().into_element(cx),
                                             blur_row,
                                             downsample_row,

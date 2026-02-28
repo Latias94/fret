@@ -82,6 +82,45 @@ This TODO is ordered by implementation priority (P0 first), and is designed to b
     `crates/fret-render-wgpu/src/renderer/render_plan_effects.rs`,
     `crates/fret-render-wgpu/src/renderer/render_scene/plan_reporting.rs`.
 
+## P1.5 — Vector path semantics closure (paint + dash + MSAA)
+
+These are common “editor-grade UI” needs that often become a long-tail source of visual mismatch
+if left unspecified.
+
+- [x] Document the current path paint limitation and make it diagnosable:
+  - Historically `SceneOp::Path` encoding degraded `Paint::Material` to a solid base color.
+  - Keep a perf counter so any remaining deterministic degradations are visible (unknown id, budgets, etc.).
+  - Evidence (current behavior): `crates/fret-render-wgpu/src/renderer/render_scene/encode/draw/path.rs`.
+  - Evidence (perf counter): `crates/fret-render-wgpu/src/renderer/types.rs`,
+    `crates/fret-render-wgpu/src/renderer/render_scene/encode/state.rs`,
+    `crates/fret-render-wgpu/src/renderer/render_scene/perf_finalize.rs`.
+
+- [x] Support material/texture paints for `SceneOp::Path` (wgpu backend):
+  - Allow `PaintMaterialPolicy::Allow` for paths and implement material evaluation in the path shader.
+  - Evidence: `crates/fret-render-wgpu/src/renderer/render_scene/encode/draw/path.rs`,
+    `crates/fret-render-wgpu/src/renderer/shaders.rs` (`PATH_SHADER`),
+    `crates/fret-render-wgpu/tests/path_material_paint_conformance.rs`.
+
+- [x] Dash semantics consistency:
+  - `StrokeRRect` dashes are evaluated in the quad shader using an rrect-perimeter parameterization,
+    while `PathStyle::StrokeV2` uses CPU-side dash splitting before tessellation.
+  - Write down the expected semantics for `DashPatternV1` (units, phase origin/direction, scale-factor behavior)
+    and keep a targeted conformance test that compares rrect vs path outcomes for a “rect-like path” shape.
+  - Evidence (current implementations): `crates/fret-render-wgpu/src/renderer/shaders.rs` (rrect),
+    `crates/fret-render-wgpu/src/renderer/path.rs` (path dashes).
+  - Evidence (semantics): `docs/adr/0271-stroke-rrect-and-dashed-borders-v1.md`,
+    `docs/adr/0277-path-stroke-style-v2.md`.
+  - Evidence (conformance): `crates/fret-render-wgpu/tests/dash_semantics_rrect_vs_path_conformance.rs`.
+
+- [x] Path MSAA correctness on Vulkan:
+  - Default behavior matches GPUI: enable path MSAA when the target format supports resolves.
+  - Escape hatch: set `FRET_DISABLE_VULKAN_PATH_MSAA=1` to force the non-MSAA path pipeline if a driver
+    misbehaves.
+  - Evidence (config): `crates/fret-render-wgpu/src/renderer/config.rs`.
+  - Evidence (MSAA pass semantics): `crates/fret-render-wgpu/src/renderer/render_scene/recorders/path_msaa.rs`.
+  - Evidence (default + opt-out visibility): `crates/fret-render-wgpu/tests/vulkan_path_msaa_visibility_conformance.rs`.
+  - Evidence (multi-pass composite smoke): `crates/fret-render-wgpu/tests/path_msaa_composite_vulkan.rs`.
+
 ## P2 — Extensibility (bounded custom effects)
 
 - [x] Design a capability-gated custom effect extension point (wgpu-only first):
@@ -96,12 +135,37 @@ This TODO is ordered by implementation priority (P0 first), and is designed to b
   - Demo: `apps/fret-examples/src/custom_effect_v1_demo.rs` (wired via `apps/fret-demo`).
   - Conformance: `crates/fret-render-wgpu/tests/effect_custom_v1_conformance.rs`.
 
+- [x] Close CustomV1 semantics (“escape hatch with a ceiling”):
+  - [x] Define the stable WGSL contract surface (required entrypoint + premul rules + `render_space`):
+    - `docs/workstreams/renderer-effects-semantics-and-extensibility-v1/custom-effect-v1-semantics.md`
+  - [x] Ensure `render_space` is effect-local for CustomV1 (origin/size match the effect bounds scissor):
+    - `crates/fret-render-wgpu/src/renderer/render_scene/helpers.rs`
+    - Conformance: `crates/fret-render-wgpu/tests/effect_custom_v1_conformance.rs`
+  - [x] Provide a renderer-owned deterministic pattern atlas for v1 recipes (no user textures):
+    - WGSL helpers: `crates/fret-render-wgpu/src/renderer/pipelines/wgsl/custom_effect_*_part_a.wgsl`
+    - Upload: `crates/fret-render-wgpu/src/renderer/gpu_textures.rs`
+    - Conformance: `crates/fret-render-wgpu/tests/effect_custom_v1_conformance.rs`
+  - [x] Optimize “padded blur → final CustomV1” so clip/mask coverage is applied exactly once:
+    - `crates/fret-render-wgpu/src/renderer/render_plan_effects.rs` (unit test)
+
 - [x] Implement deterministic chain padding for sampling-extending effects:
   - Use `EffectStep::CustomV1.max_sample_offset_px` and warp/blur bounded parameters to expand earlier step scissors
     when later steps may sample outside their output pixel.
   - Keep clip/mask coverage applied exactly once (final commit back into `srcdst`) to avoid `clip^2` darkening.
   - Evidence: `crates/fret-render-wgpu/src/renderer/render_plan_effects.rs`,
     `crates/fret-render-wgpu/tests/effect_custom_v1_conformance.rs`.
+
+- [x] Add a “theme-like postprocess” demo to validate the CustomV1 ceiling (policy-only, no core changes):
+  - [x] Implement and wire: `apps/fret-examples/src/postprocess_theme_demo.rs` (via `apps/fret-demo`).
+  - [x] Add a `fretboard diag` script that captures a small, shareable baseline bundle (screenshots + perf snapshot):
+    - Evidence: `tools/diag-scripts/postprocess-theme-baseline.json`.
+
+- [x] Keep stitched effect shaders WebGPU/Tint-valid (uniformity + bindings):
+  - Ensure masked variants evaluate clip coverage before any non-uniform early returns so SDF AA derivatives remain
+    Tint-valid on WebGPU.
+  - Evidence: `crates/fret-render-wgpu/src/renderer/shaders.rs`,
+    `crates/fret-render-wgpu/src/renderer/pipelines/wgsl/*_masked_part_b.wgsl`,
+    `crates/fret-render-wgpu/src/renderer/tests.rs` (`shaders_validate_for_webgpu`).
 
 ## Suggested regression gates
 
@@ -116,3 +180,23 @@ This TODO is ordered by implementation priority (P0 first), and is designed to b
   - [ ] When output transfer is required, allow rendering into a float intermediate (e.g. `RGBA16Float`) under budgets,
         then encode once to `Rgba8Unorm` / `Bgra8Unorm`.
   - Rationale: avoid the extra unorm quantization step in linear space for display-referred non-sRGB outputs.
+
+- [x] CustomV2 ceiling bump (bounded):
+  - [x] Lock the “one extra input” story (chosen: single user image input via `ImageId`):
+    - `docs/adr/0303-custom-effect-v2-user-image-input.md`
+    - `docs/workstreams/renderer-effects-semantics-and-extensibility-v1/custom-effect-v2/README.md`
+  - [x] Versioned ABI + capability discovery + conformance exist (wgpu backend).
+  - Follow-ups: demo-oriented authoring templates + WebGPU/wasm runtime story tracked under
+    `docs/workstreams/renderer-effects-semantics-and-extensibility-v1/custom-effect-v2/README.md`.
+
+- [x] CustomV3 ceiling bump (bounded, renderer-provided sources):
+  - [x] Provide a renderer-owned `src_raw` source (chain root) with deterministic aliasing and diagnostics.
+  - [x] Provide an optional bounded `src_pyramid` derived from `src_raw` with explicit budgeting:
+    - Pyramid allocation must use **budget headroom** after accounting for base required allocations
+      (e.g. `srcdst` + scratch targets), and deterministically degrade to `levels = 1` when headroom is insufficient.
+  - [ ] M2 sharing/caching: deferred (requires an explicit mechanism-level design).
+  - Evidence:
+    - `docs/adr/0304-custom-effect-v3-renderer-provided-sources.md`
+    - `docs/workstreams/renderer-effects-semantics-and-extensibility-v1/custom-effect-v3/README.md`
+    - `crates/fret-render-wgpu/src/renderer/render_plan_effects.rs`
+    - `crates/fret-render-wgpu/tests/effect_custom_v3_conformance.rs`
