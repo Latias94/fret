@@ -68,6 +68,8 @@ This workstream now has a “v0 blueprint look” path using the existing render
   `EffectStep::DropShadowV1` (paint-only, zoom-stable via screen-px → canvas-unit conversion).
 - Wire glow: selected edges and drag preview wires can be wrapped in the same `DropShadowV1`
   effect with `offset=0`, producing a soft glow.
+- Wire highlight: selected/hovered edges can draw a thinner “inner stroke” on top of the core
+  stroke (paint-only, dual-path).
 - Wire outline: selected edges and drag preview wires can render a thicker outline stroke behind
   the core stroke (paint-only, dual-path).
 
@@ -95,6 +97,10 @@ Evidence anchors:
   - `ecosystem/fret-node/src/ui/skin.rs`
   - `ecosystem/fret-node/src/ui/canvas/widget/paint_edges/main.rs`
   - `ecosystem/fret-node/src/ui/canvas/widget/tests/skin_wire_glow_hints_conformance.rs`
+- Wire highlight hint + conformance:
+  - `ecosystem/fret-node/src/ui/skin.rs`
+  - `ecosystem/fret-node/src/ui/canvas/widget/paint_edges/main.rs`
+  - `ecosystem/fret-node/src/ui/canvas/widget/tests/skin_wire_highlight_hints_conformance.rs`
 - Visual iteration (demo):
   - `apps/fret-examples/src/node_graph_demo.rs` (`primary+shift+g` toggles wire glow)
 
