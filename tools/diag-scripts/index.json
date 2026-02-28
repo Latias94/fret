@@ -104,6 +104,26 @@
       ]
     },
     {
+      "id": "docking-arbitration-demo-incoming-open-inject-smoke",
+      "path": "tools/diag-scripts/docking/arbitration/docking-arbitration-demo-incoming-open-inject-smoke.json",
+      "required_capabilities": [
+        "diag.incoming_open_inject",
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "diag-hardening-smoke-docking"
+      ],
+      "tags": [
+        "docking",
+        "incoming_open",
+        "smoke"
+      ],
+      "target_hints": [
+        "Injects an IncomingOpenRequest event and asserts it is observable via event_kind_seen.",
+        "This gates that the app driver records platform-delivered events into the diagnostics ring buffer."
+      ]
+    },
+    {
       "id": "docking-arbitration-demo-modal-dock-drag-viewport-capture",
       "path": "tools/diag-scripts/docking/arbitration/docking-arbitration-demo-modal-dock-drag-viewport-capture.json",
       "required_capabilities": [],
