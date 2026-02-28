@@ -1075,6 +1075,66 @@ mod tests {
             let cfg_light = shadcn_new_york_v4_config(base, ShadcnColorScheme::Light);
             let cfg_dark = shadcn_new_york_v4_config(base, ShadcnColorScheme::Dark);
 
+            for cfg in [&cfg_light, &cfg_dark] {
+                for key in ["chart-1", "chart-2", "chart-3", "chart-4", "chart-5"] {
+                    assert!(
+                        cfg.colors.contains_key(key),
+                        "expected shadcn new-york-v4 preset to include `{key}`",
+                    );
+                }
+
+                assert_eq!(
+                    cfg.colors.get("color.syntax.comment").cloned(),
+                    cfg.colors.get("muted-foreground").cloned(),
+                    "expected syntax comment to match muted-foreground",
+                );
+                assert_eq!(
+                    cfg.colors.get("color.syntax.keyword").cloned(),
+                    cfg.colors.get("chart-3").cloned(),
+                    "expected syntax keyword to be chart-3 derived",
+                );
+                assert_eq!(
+                    cfg.colors.get("color.syntax.function").cloned(),
+                    cfg.colors.get("chart-1").cloned(),
+                    "expected syntax function to be chart-1 derived",
+                );
+                assert_eq!(
+                    cfg.colors.get("color.syntax.type").cloned(),
+                    cfg.colors.get("chart-4").cloned(),
+                    "expected syntax type to be chart-4 derived",
+                );
+                assert_eq!(
+                    cfg.colors.get("color.syntax.string").cloned(),
+                    cfg.colors.get("chart-2").cloned(),
+                    "expected syntax string to be chart-2 derived",
+                );
+                assert_eq!(
+                    cfg.colors.get("color.syntax.constant").cloned(),
+                    cfg.colors.get("chart-5").cloned(),
+                    "expected syntax constant to be chart-5 derived",
+                );
+                assert_eq!(
+                    cfg.colors.get("color.syntax.number").cloned(),
+                    cfg.colors.get("chart-5").cloned(),
+                    "expected syntax number to be chart-5 derived",
+                );
+                assert_eq!(
+                    cfg.colors.get("color.syntax.operator").cloned(),
+                    cfg.colors.get("muted-foreground").cloned(),
+                    "expected syntax operator to match muted-foreground",
+                );
+                assert_eq!(
+                    cfg.colors.get("color.syntax.punctuation").cloned(),
+                    cfg.colors.get("muted-foreground").cloned(),
+                    "expected syntax punctuation to match muted-foreground",
+                );
+                assert_eq!(
+                    cfg.colors.get("color.syntax.variable").cloned(),
+                    cfg.colors.get("foreground").cloned(),
+                    "expected syntax variable to match foreground",
+                );
+            }
+
             let destructive_light = cfg_light
                 .colors
                 .get("destructive")
