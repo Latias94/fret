@@ -75,6 +75,10 @@ Defaults if unclear:
 - Use a UI gallery page + stable `test_id` selectors.
 - Capture at least one `capture_bundle` step (screenshots only if they add signal).
 - Prefer `--launch` runs (tooling writes a per-run config and can isolate external pointer input during script playback).
+  - While a script is active, `--launch` defaults to ignoring external (non-script) pointer input so accidental real
+    mouse movement/clicks do not perturb deterministic playback (useful for multi-window docking/tear-off).
+  - Escape hatch: pass `--env FRET_DIAG_ISOLATE_POINTER_INPUT=0` if you intentionally need interactive pointer input
+    during a script run.
 
 ## Quick start (native, recommended)
 
