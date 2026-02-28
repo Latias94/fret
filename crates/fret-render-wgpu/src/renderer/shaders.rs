@@ -710,12 +710,14 @@ fn material_eval(p: Paint, local_pos: vec2<f32>, sample_catalog: bool) -> vec4<f
     u32(floor(pos.y / noise_scale + 0.5))
   );
   let noise_r0 = mat_rand01(noise_cell, seed);
-  let noise_xi = noise_cell.x & 63u;
-  let noise_yi = noise_cell.y & 63u;
-  let noise_uv = (vec2<f32>(f32(noise_xi) + 0.5, f32(noise_yi) + 0.5) / 64.0);
-  let noise_layer = i32(p.color_space);
-  let noise_sampled = textureSample(material_catalog_texture, material_catalog_sampler, noise_uv, noise_layer).r;
-  let noise_r = select(noise_r0, noise_sampled, sample_catalog);
+  var noise_r = noise_r0;
+  if (sample_catalog) {
+    let noise_xi = noise_cell.x & 63u;
+    let noise_yi = noise_cell.y & 63u;
+    let noise_uv = (vec2<f32>(f32(noise_xi) + 0.5, f32(noise_yi) + 0.5) / 64.0);
+    let noise_layer = i32(p.color_space);
+    noise_r = textureSample(material_catalog_texture, material_catalog_sampler, noise_uv, noise_layer).r;
+  }
   let noise_intensity = clamp(p.params2.y, 0.0, 1.0);
   let noise_cov = noise_intensity * noise_r;
   let mat4 = base * (1.0 - noise_cov) + fg * noise_cov;
@@ -4786,43 +4788,52 @@ fn material_eval(p: Paint, local_pos: vec2<f32>, sample_catalog: bool) -> vec4<f
 }
 
 fn paint_eval(p: Paint, local_pos: vec2<f32>) -> vec4<f32> {
-  if (p.kind == 0u) {
-    return p.params0;
-  }
-  if (p.kind == 1u) {
-    let start = p.params0.xy;
-    let end = p.params0.zw;
-    let dir = end - start;
-    let len2 = dot(dir, dir);
-    let t = select(0.0, dot(local_pos - start, dir) / len2, len2 > 1e-6);
-    let tt = gradient_tile_mode_apply(t, p.tile_mode);
-    return paint_sample_stops(p, tt);
-  }
-  if (p.kind == 2u) {
-    let center = p.params0.xy;
-    let radius = max(p.params0.zw, vec2<f32>(1e-6));
-    let d = (local_pos - center) / radius;
-    let t = length(d);
-    let tt = gradient_tile_mode_apply(t, p.tile_mode);
-    return paint_sample_stops(p, tt);
-  }
-  if (p.kind == 4u) {
-    let center = p.params0.xy;
-    let start = p.params0.z;
-    let span = max(p.params0.w, 1e-6);
-    let v = local_pos - center;
-    let a = atan2(v.y, v.x);
-    let turns = fract(a * (1.0 / 6.2831853) + 1.0);
-    let rel = fract(turns - fract(start) + 1.0);
-    let t = rel / span;
-    let tt = gradient_tile_mode_apply(t, p.tile_mode);
-    return paint_sample_stops(p, tt);
-  }
-  if (p.kind == 3u) {
-    let sampled = p.stop_count != 0u;
-    return material_eval(p, local_pos, sampled);
-  }
-  return vec4<f32>(0.0);
+  // WebGPU/WGSL constraint: derivative ops (fwidth/dpdx/dpdy) must only be used from uniform control flow.
+  // Because `p.kind` is per-instance (not uniform), we avoid control-flow branching on it here and instead
+  // compute candidate fills eagerly and select the final result.
+  let is_solid = p.kind == 0u;
+  let is_linear = p.kind == 1u;
+  let is_radial = p.kind == 2u;
+  let is_material = p.kind == 3u;
+  let is_conic = p.kind == 4u;
+
+  let solid = p.params0;
+
+  let start = p.params0.xy;
+  let end = p.params0.zw;
+  let dir = end - start;
+  let len2 = dot(dir, dir);
+  let lin_denom = max(len2, 1e-6);
+  let lin_t0 = dot(local_pos - start, dir) / lin_denom;
+  let lin_t = select(0.0, lin_t0, len2 > 1e-6);
+  let linear = paint_sample_stops(p, gradient_tile_mode_apply(lin_t, p.tile_mode));
+
+  let radial_center = p.params0.xy;
+  let radial_radius = max(p.params0.zw, vec2<f32>(1e-6));
+  let radial_d = (local_pos - radial_center) / radial_radius;
+  let radial_t = length(radial_d);
+  let radial = paint_sample_stops(p, gradient_tile_mode_apply(radial_t, p.tile_mode));
+
+  let conic_center = p.params0.xy;
+  let conic_start = p.params0.z;
+  let conic_span = max(p.params0.w, 1e-6);
+  let conic_v = local_pos - conic_center;
+  let conic_a = atan2(conic_v.y, conic_v.x);
+  let conic_turns = fract(conic_a * (1.0 / 6.2831853) + 1.0);
+  let conic_rel = fract(conic_turns - fract(conic_start) + 1.0);
+  let conic_t = conic_rel / conic_span;
+  let conic = paint_sample_stops(p, gradient_tile_mode_apply(conic_t, p.tile_mode));
+
+  let material_sampled = is_material && (p.stop_count != 0u);
+  let material = material_eval(p, local_pos, material_sampled);
+
+  var out = vec4<f32>(0.0);
+  out = select(out, solid, is_solid);
+  out = select(out, linear, is_linear);
+  out = select(out, radial, is_radial);
+  out = select(out, material, is_material);
+  out = select(out, conic, is_conic);
+  return out;
 }
 
 struct VsIn {
@@ -7106,3 +7117,20 @@ pub(super) fn noise_masked_shader_source() -> String {
 }
 
 pub(super) const NOISE_MASK_SHADER: &str = include_str!("pipelines/wgsl/noise_mask.wgsl");
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn path_shader_wgsl_validates_under_naga() {
+        let module = naga::front::wgsl::parse_str(PATH_SHADER).expect("PATH_SHADER must parse");
+        let mut validator = naga::valid::Validator::new(
+            naga::valid::ValidationFlags::all(),
+            naga::valid::Capabilities::all(),
+        );
+        validator
+            .validate(&module)
+            .expect("PATH_SHADER must validate under naga");
+    }
+}

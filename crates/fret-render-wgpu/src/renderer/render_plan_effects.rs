@@ -3008,6 +3008,7 @@ mod tests {
             &mut degradations,
             &mut blur_quality,
             ctx,
+            None,
         );
 
         let blur_masked = passes.iter().any(|p| match p {
@@ -3073,6 +3074,7 @@ mod tests {
             &mut degradations,
             &mut blur_quality,
             ctx,
+            None,
         );
 
         let copied_to_work = passes.iter().any(|p| {
@@ -3152,6 +3154,7 @@ mod tests {
             &mut degradations,
             &mut blur_quality,
             ctx,
+            None,
         );
 
         let custom_v3 = passes.iter().find_map(|p| match p {
@@ -3215,6 +3218,7 @@ mod tests {
             &mut degr_small,
             &mut blur_small,
             ctx,
+            None,
         );
 
         let mut passes_large = Vec::new();
@@ -3236,6 +3240,7 @@ mod tests {
             &mut degr_large,
             &mut blur_large,
             ctx,
+            None,
         );
 
         assert!(
@@ -3273,6 +3278,7 @@ mod tests {
             &mut degradations,
             &mut blur_quality,
             ctx,
+            None,
         );
 
         assert!(
@@ -3316,6 +3322,7 @@ mod tests {
             &mut degradations,
             &mut blur_quality,
             ctx,
+            None,
         );
 
         assert!(
@@ -3354,6 +3361,7 @@ mod tests {
             &mut degradations,
             &mut blur_quality,
             ctx,
+            None,
         );
 
         assert_eq!(degradations.gaussian_blur.requested, 1);
@@ -3396,6 +3404,7 @@ mod tests {
             &mut degradations,
             &mut blur_quality,
             ctx,
+            None,
         );
 
         assert_eq!(degradations.color_adjust.requested, 1);
@@ -3443,6 +3452,7 @@ mod tests {
             &mut degradations,
             &mut blur_quality,
             ctx,
+            None,
         );
 
         assert_eq!(blur_quality.gaussian_blur.applied, 1);
@@ -3495,6 +3505,7 @@ mod tests {
             &mut degradations,
             &mut blur_quality,
             ctx,
+            None,
         );
 
         assert_eq!(degradations.drop_shadow.requested, 1);
@@ -3549,6 +3560,7 @@ mod tests {
             &mut degradations,
             &mut blur_quality,
             ctx,
+            None,
         );
 
         assert_eq!(degradations.gaussian_blur.requested, 1);
