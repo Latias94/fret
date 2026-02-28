@@ -151,6 +151,7 @@ For evidence-first triage (reason codes + bounded traces), see: `references/evid
   - Replace sleeps with `wait_until`, `wait_bounds_stable`, and `click_stable`.
   - Add an intermediate `capture_bundle` close to the suspected failure point.
 - “artifacts are unexpectedly huge”
+  - Quick self-check (launch policy): `fretboard diag config doctor --mode launch --print-launch-policy`
   - Run `fretboard diag config doctor --mode launch` to spot output-explosion risks before rerunning.
   - Check whether you enabled `--launch-write-bundle-json` or `FRET_DIAG_BUNDLE_JSON_FORMAT=pretty`.
   - Note: tool-launched runs scrub inherited `FRET_DIAG_*` env vars from the parent shell to avoid accidental overrides;
