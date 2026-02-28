@@ -1,6 +1,9 @@
 use std::sync::Arc;
 
-use fret_core::{Color, Corners, Point, Px, SemanticsRole, Transform2D};
+use fret_core::{
+    Color, Corners, FontId, Point, Px, SemanticsRole, TextFontAxisSetting, TextFontFeatureSetting,
+    Transform2D,
+};
 use fret_icons::IconId;
 use fret_runtime::Effect;
 use fret_ui::ThemeNamedColorKey;
@@ -60,6 +63,9 @@ pub struct Badge {
     test_id: Option<Arc<str>>,
     leading_icon: Option<IconId>,
     trailing_icon: Option<IconId>,
+    label_font_override: Option<FontId>,
+    label_features_override: Vec<TextFontFeatureSetting>,
+    label_axes_override: Vec<TextFontAxisSetting>,
     children: Vec<AnyElement>,
     chrome: ChromeRefinement,
     layout: LayoutRefinement,
@@ -91,6 +97,9 @@ impl Badge {
             test_id: None,
             leading_icon: None,
             trailing_icon: None,
+            label_font_override: None,
+            label_features_override: Vec::new(),
+            label_axes_override: Vec::new(),
             children: Vec::new(),
             chrome: ChromeRefinement::default(),
             layout: LayoutRefinement::default(),
@@ -106,6 +115,23 @@ impl Badge {
     /// Adds a trailing icon rendered under the badge's `currentColor` scope.
     pub fn trailing_icon(mut self, icon: IconId) -> Self {
         self.trailing_icon = Some(icon);
+        self
+    }
+
+    pub fn label_font(mut self, font: FontId) -> Self {
+        self.label_font_override = Some(font);
+        self
+    }
+
+    pub fn label_font_monospace(self) -> Self {
+        self.label_font(FontId::monospace())
+    }
+
+    pub fn label_tabular_nums(mut self) -> Self {
+        self.label_features_override.push(TextFontFeatureSetting {
+            tag: "tnum".into(),
+            value: 1,
+        });
         self
     }
 
@@ -162,6 +188,9 @@ impl Badge {
             self.test_id,
             self.leading_icon,
             self.trailing_icon,
+            self.label_font_override,
+            self.label_features_override,
+            self.label_axes_override,
             self.children,
             self.chrome,
             self.layout,
@@ -295,6 +324,9 @@ pub fn badge<H: UiHost>(
         None,
         None,
         None,
+        None,
+        Vec::new(),
+        Vec::new(),
         Vec::new(),
         ChromeRefinement::default(),
         LayoutRefinement::default(),
@@ -311,6 +343,9 @@ fn badge_with_patch<H: UiHost>(
     test_id: Option<Arc<str>>,
     leading_icon: Option<IconId>,
     trailing_icon: Option<IconId>,
+    label_font_override: Option<FontId>,
+    label_features_override: Vec<TextFontFeatureSetting>,
+    label_axes_override: Vec<TextFontAxisSetting>,
     children: Vec<AnyElement>,
     chrome_override: ChromeRefinement,
     layout_override: LayoutRefinement,
@@ -368,14 +403,25 @@ fn badge_with_patch<H: UiHost>(
 
     let content_children = move |cx: &mut ElementContext<'_, H>| {
         current_color::scope_children(cx, ColorRef::Color(fg), |cx| {
-            let label = ui::text(cx, label_for_content.clone())
+            let mut label = ui::text(cx, label_for_content.clone())
                 .text_size_px(text_px)
                 .fixed_line_box_px(line_height)
                 .line_box_in_bounds()
                 .font_medium()
                 .nowrap()
-                .text_color(ColorRef::Color(fg))
-                .into_element(cx);
+                .text_color(ColorRef::Color(fg));
+
+            if let Some(font) = label_font_override {
+                label = label.font(font);
+            }
+            for feature in &label_features_override {
+                label = label.font_feature(feature.tag.to_string(), feature.value);
+            }
+            for axis in &label_axes_override {
+                label = label.font_axis(axis.tag.to_string(), axis.value);
+            }
+
+            let label = label.into_element(cx);
 
             // Upstream shadcn badge enforces `[&>svg]:size-3` (12px) for direct svg children.
             let icon_px = Px(12.0);
