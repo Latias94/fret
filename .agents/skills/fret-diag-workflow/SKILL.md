@@ -42,6 +42,8 @@ Use `fret-ui-review` when the goal is an architecture/UX audit rather than produ
   - Recommendation: always pass an explicit, unique `--dir` per agent/task.
     - Example: `--dir target/fret-diag-agent-a` and `--dir target/fret-diag-agent-b`
     - Example: `--dir target/fret-diag-issue-1234`
+  - If you are using `--launch`, prefer `--session-auto` so tooling creates an isolated session root under the base dir:
+    - Example: `--dir target/fret-diag-agent-a --session-auto --launch -- <cmd...>`
 - Before rerunning a suspiciously large or inconsistent run:
   - `fretboard diag config doctor --mode launch --print-launch-policy`
   - `fretboard diag config doctor --mode launch --report-json` (inspect `launch_policy` + warnings)

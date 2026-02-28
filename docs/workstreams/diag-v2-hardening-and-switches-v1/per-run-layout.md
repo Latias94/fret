@@ -39,6 +39,8 @@ Concurrency note:
   (`script.json`, `script.touch`, `script.result.json`, `trigger.touch`, `latest.txt`, etc).
 - Multiple concurrent runs must not share the same `out_dir` (multiple AI agents, multiple terminals, multiple demos),
   otherwise trigger/result files and `latest.txt` will race.
+- For tool-launched runs (`--launch`), prefer `--session-auto` so tooling allocates a fresh isolated session root under
+  the base `--dir` automatically.
 
 ## Canonical per-run directory
 

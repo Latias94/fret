@@ -116,6 +116,8 @@ Add an opt-in flag to create a session dir under `--dir` and run everything ther
   - tooling picks a fresh `session_id`
   - tooling uses `<base_dir>/sessions/<session_id>/` as the effective out dir
   - tooling prints the effective out dir at the start of the command
+  - note: session mode assumes the default filesystem control-plane layout under the session dir (no custom `*_PATH`
+    overrides).
 
 Optionally allow explicit reuse:
 
@@ -141,6 +143,7 @@ P1 (tooling support, additive):
 - Implement `--session-auto` / `--session` for tool-launched commands (`diag run/suite/repro/perf/repeat/script shrink`)
   to isolate control-plane files automatically.
 - Keep existing behavior unchanged when the flags are not used.
+- Status (2026-02-28): implemented in tooling (creates `<base_out_dir>/sessions/<session_id>/` and writes `session.json`).
 
 P2 (de-risk `latest.txt`):
 
@@ -174,4 +177,3 @@ P2 (de-risk `latest.txt`):
 - Should `--session-auto` become the default for tool-launched runs (`--launch`) in the future?
   - Pros: eliminates the biggest concurrency footgun.
   - Cons: changes default artifact locations; may surprise existing scripts relying on `target/fret-diag/latest.txt`.
-

@@ -64,6 +64,9 @@ Concurrency note (important for automation / AI agents):
 - Recommendation: treat `--dir` as a session boundary and always pass a unique out dir per agent/task:
   - `cargo run -p fretboard -- diag run <script> --dir target/fret-diag-agent-a --launch -- <cmd...>`
   - `cargo run -p fretboard -- diag suite <suite> --dir target/fret-diag-issue-1234 --launch -- <cmd...>`
+- If you are using `--launch`, prefer `--session-auto` so tooling allocates an isolated session dir automatically:
+  - `cargo run -p fretboard -- diag run <script> --dir target/fret-diag-agent-a --session-auto --launch -- <cmd...>`
+  - `cargo run -p fretboard -- diag suite <suite> --dir target/fret-diag-agent-a --session-auto --launch -- <cmd...>`
 
 ## Bundle schema (v2) and semantics mode
 

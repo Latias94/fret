@@ -51,9 +51,9 @@ This file is a check-list style tracker. Milestone framing lives in `milestones.
   - skill: `.agents/skills/fret-diag-workflow/SKILL.md`
 - [ ] Design and implement a session-root layout for tool-launched runs so agents can run in parallel without inventing
   directory naming conventions. Proposed design: `docs/workstreams/diag-v2-hardening-and-switches-v1/concurrency-and-sessions.md`.
-  - [ ] Add `--session-auto` / `--session <id>` for tool-launched commands (`--launch`) that makes the effective out dir
+  - [x] Add `--session-auto` / `--session <id>` for tool-launched commands (`--launch`) that makes the effective out dir
     `<base_dir>/sessions/<session_id>/`.
-  - [ ] Add a small `session.json` metadata file in the session root (best-effort).
+  - [x] Add a small `session.json` metadata file in the session root (best-effort).
   - [ ] Add a safe discovery command (bounded output): `diag list sessions --dir <base_dir>` (optional).
 
 ## P0.5: Script library modularization (UX scalability)
