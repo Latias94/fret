@@ -108,9 +108,7 @@ impl WorkspaceTabs {
     }
 
     pub fn is_tab_preview(&self, id: &str) -> bool {
-        self.preview_tab_id
-            .as_deref()
-            .is_some_and(|t| t == id)
+        self.preview_tab_id.as_deref().is_some_and(|t| t == id)
     }
 
     pub fn set_pinned_count(&mut self, count: usize) {
@@ -422,7 +420,11 @@ impl WorkspaceTabs {
         self.mru = vec![active.clone()];
         self.active = Some(active);
         self.pinned_tab_count = if active_was_pinned { 1 } else { 0 };
-        self.preview_tab_id = if active_was_preview { self.active.clone() } else { None };
+        self.preview_tab_id = if active_was_preview {
+            self.active.clone()
+        } else {
+            None
+        };
         self.tabs.len() != before
     }
 
@@ -442,7 +444,9 @@ impl WorkspaceTabs {
         self.tabs = self.tabs[keep_from..].to_vec();
         let pinned_count = self.pinned_count();
         let removed_pinned = keep_from.min(pinned_count);
-        self.pinned_tab_count = pinned_count.saturating_sub(removed_pinned).min(self.tabs.len());
+        self.pinned_tab_count = pinned_count
+            .saturating_sub(removed_pinned)
+            .min(self.tabs.len());
 
         for r in &removed {
             self.dirty.remove(r);
@@ -661,7 +665,10 @@ impl WorkspaceTabs {
             return self.pin_tab(id);
         }
 
-        if let Some(id) = command.as_str().strip_prefix(CMD_WORKSPACE_TAB_UNPIN_PREFIX) {
+        if let Some(id) = command
+            .as_str()
+            .strip_prefix(CMD_WORKSPACE_TAB_UNPIN_PREFIX)
+        {
             let id = id.trim();
             if id.is_empty() {
                 return false;
@@ -748,11 +755,13 @@ impl WorkspaceTabs {
         let (min_index, max_index) = if index < pinned_count {
             (0, pinned_count.saturating_sub(1))
         } else {
-            (pinned_count.min(self.tabs.len().saturating_sub(1)), self.tabs.len() - 1)
+            (
+                pinned_count.min(self.tabs.len().saturating_sub(1)),
+                self.tabs.len() - 1,
+            )
         };
         let new_index_i = index as isize + delta;
-        let new_index = new_index_i
-            .clamp(min_index as isize, max_index as isize) as usize;
+        let new_index = new_index_i.clamp(min_index as isize, max_index as isize) as usize;
         if new_index == index {
             return false;
         }
@@ -980,7 +989,10 @@ mod tests {
         assert!(state.is_tab_preview("a"));
 
         state.set_dirty(Arc::<str>::from("a"), true);
-        assert!(!state.is_tab_preview("a"), "dirty preview should be committed");
+        assert!(
+            !state.is_tab_preview("a"),
+            "dirty preview should be committed"
+        );
 
         assert!(state.open_preview_and_activate(Arc::<str>::from("b")));
         assert_eq!(state.preview_tab_id().unwrap().as_ref(), "b");
