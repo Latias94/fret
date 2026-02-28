@@ -24,6 +24,10 @@ behavioral parity:
 
 - cmdk (command palette scoring + selection math): https://github.com/pacocoursey/cmdk
   - See `src/cmdk_score.rs` and `src/cmdk_selection.rs`.
+- Floating UI (safe hover corridor inspiration): https://github.com/floating-ui/floating-ui
+  - See `src/safe_hover.rs` (inspired by Floating UI's `safePolygon` idea).
+- Flutter (physics/motion primitives): https://github.com/flutter/flutter
+  - See `src/motion/*` (spring/friction/tolerance shapes).
 - Embla Carousel (carousel behavior): https://github.com/davidjerleke/embla-carousel
   - See `src/embla/*`.
 
