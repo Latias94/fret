@@ -76,6 +76,10 @@ Read first:
 | ecosystem | CodeView / Syntax (tokens contrast) | (ecosystem / vscode-theme) | centralize `color.syntax.*` resolution + audit contrast | `color.syntax.*` (+ semantic fallbacks) | diag screenshot (zinc/dark) | [~] | `crates/fret-ui/src/theme/mod.rs`, `ecosystem/fret-code-view/src/syntax.rs`, `ecosystem/fret-code-editor/src/editor/paint/mod.rs`, `ecosystem/fret-vscode-theme/src/lib.rs`, `tools/diag-scripts/ui-gallery/code-view/ui-gallery-code-view-syntax-screenshot-zinc-dark.json` |
 | material3 | Overlay scrim + surface contrast | (spec / repo-ref/material-ui / compose) | audit literal/derived assumptions | tbd | tbd | [ ] |  |
 | charts/plot | Chart chrome + legend contrast | (ecosystem ports) | audit literal/derived assumptions | tbd | tbd | [ ] |  |
+| docking | Docking chrome (drag affordances) | (in-tree) | audit semantic vs literal usage | tbd | diag screenshot (zinc/dark) | [ ] | `ecosystem/fret-docking/src/` |
+| canvas/node | Node graph selection highlights | (in-tree) | audit selection + hover tokens | `selection.*`, `accent*` | diag screenshot (zinc/dark) | [ ] | `ecosystem/fret-node/src/`, `ecosystem/fret-canvas/src/` |
+| icons | Icon currentColor + muted defaults | `repo-ref/ui` icon recipes | `text-muted-foreground` + `currentColor` | `muted-foreground`, `currentColor` | Rust tests (props) | [ ] | `ecosystem/fret-icons*/src/` |
+| ui-assets | Image placeholders + skeletons | `repo-ref/ui` skeleton | `bg-muted` + `animate-pulse` | `muted` + alpha | diag screenshot (zinc/dark) | [ ] | `ecosystem/fret-ui-assets/src/`, `apps/fret-ui-gallery/src/ui/pages/skeleton.rs` |
 
 ## Open questions / decision gates
 
@@ -83,3 +87,5 @@ Read first:
   - Default: no. Only add with upstream evidence + multi-ecosystem need.
 - Do we standardize a cross-ecosystem namespace for “surface-on-accent” like `on_destructive`?
   - Default: prefer semantic palette keys where the intent is semantic; avoid duplicating roles.
+- Do we split syntax highlighting into its own workstream?
+  - Default: no. Keep it as a tracked row in this workstream until the `color.syntax.*` contract stabilizes and multiple editors/ports demand a dedicated milestone set.
