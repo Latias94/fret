@@ -55,6 +55,11 @@ See also:
 - `docs/reference-stack-ui-behavior.md` (what each reference is used for)
 - `docs/repo-ref.md` (`repo-ref/` policy + pinned SHAs)
 
+Other references used in specific workstreams (non-exhaustive):
+
+- Material UI / Material 3: https://github.com/mui/material-ui
+- Compose Multiplatform (Material 3 baseline): https://github.com/JetBrains/compose-multiplatform-core
+
 The goal is to provide a smooth, general-purpose application framework that scales from app UIs to editor-class products.
 
 ## Quick Start
