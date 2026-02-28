@@ -20,7 +20,7 @@ use fret_core::scene::{
     CustomEffectImageInputV1, EffectChain, EffectMode, EffectParamsV1, EffectQuality, EffectStep,
     ImageSamplingHint, Paint, UvRect,
 };
-use fret_core::{AppWindowId, Corners, CustomEffectService, Edges, EffectId, ImageId, KeyCode, Px};
+use fret_core::{AppWindowId, Corners, Edges, EffectId, ImageId, KeyCode, Px};
 use fret_launch::{WinitAppDriver, WinitEventContext, WinitRenderContext, WinitRunnerConfig};
 use fret_render::{
     ImageColorSpace, ImageDescriptor, Renderer, RendererCapabilities, WgpuContext,

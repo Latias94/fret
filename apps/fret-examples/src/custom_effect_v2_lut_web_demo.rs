@@ -17,10 +17,7 @@ use fret_core::scene::{
     CustomEffectImageInputV1, EffectChain, EffectMode, EffectParamsV1, EffectQuality, EffectStep,
     ImageSamplingHint, Paint, UvRect,
 };
-use fret_core::{
-    AppWindowId, Corners, CustomEffectDescriptorV2, CustomEffectService, Edges, EffectId, ImageId,
-    KeyCode, Px,
-};
+use fret_core::{AppWindowId, Corners, Edges, ImageId, KeyCode, Px};
 use fret_launch::{WinitAppDriver, WinitEventContext, WinitRenderContext, WinitRunnerConfig};
 use fret_render::{
     ImageColorSpace, ImageDescriptor, Renderer, RendererCapabilities, WgpuContext,
@@ -33,6 +30,7 @@ use fret_ui::element::{
     Length, MainAlign, Overflow, SpacerProps, SpacingLength, TextProps,
 };
 use fret_ui::{ElementContext, Invalidation, Theme, UiTree};
+use fret_ui_kit::custom_effects::CustomEffectProgramV2;
 use fret_ui_kit::declarative::ModelWatchExt as _;
 use fret_ui_kit::{Space, UiExt};
 use fret_ui_shadcn as shadcn;
@@ -110,11 +108,20 @@ fn fret_custom_effect(tex: vec4<f32>, _uv: vec2<f32>, pos_px: vec2<f32>, params:
 }
 "#;
 
-#[derive(Debug, Clone, Copy)]
-struct DemoEffect(Option<EffectId>);
+#[derive(Debug)]
+struct DemoEffectPack {
+    program: CustomEffectProgramV2,
+    input_image: Option<ImageId>,
+}
 
-#[derive(Debug, Clone, Copy)]
-struct DemoInputImage(Option<ImageId>);
+impl DemoEffectPack {
+    fn new() -> Self {
+        Self {
+            program: CustomEffectProgramV2::wgsl_utf8(WGSL),
+            input_image: None,
+        }
+    }
+}
 
 #[derive(Debug, Clone)]
 struct DemoControls {
@@ -291,72 +298,71 @@ impl CustomEffectV2LutWebDriver {
         context: &WgpuContext,
         renderer: &mut Renderer,
     ) {
-        let effect = renderer
-            .register_custom_effect_v2(CustomEffectDescriptorV2::wgsl_utf8(WGSL))
-            .ok();
-        app.set_global(DemoEffect(effect));
+        app.with_global_mut(DemoEffectPack::new, |pack, _app| {
+            let _ = pack.program.ensure_registered(renderer);
 
-        // 3D LUT encoded as 2D:
-        // - width = N*N
-        // - height = N
-        let n = 16u32;
-        let size = (n * n, n);
-        let texture = context.device.create_texture(&wgpu::TextureDescriptor {
-            label: Some("custom_effect_v2_lut_web_demo lut texture"),
-            size: wgpu::Extent3d {
-                width: size.0,
-                height: size.1,
-                depth_or_array_layers: 1,
-            },
-            mip_level_count: 1,
-            sample_count: 1,
-            dimension: wgpu::TextureDimension::D2,
-            format: wgpu::TextureFormat::Rgba8Unorm,
-            usage: wgpu::TextureUsages::TEXTURE_BINDING | wgpu::TextureUsages::COPY_DST,
-            view_formats: &[],
-        });
+            // 3D LUT encoded as 2D:
+            // - width = N*N
+            // - height = N
+            let n = 16u32;
+            let size = (n * n, n);
+            let texture = context.device.create_texture(&wgpu::TextureDescriptor {
+                label: Some("custom_effect_v2_lut_web_demo lut texture"),
+                size: wgpu::Extent3d {
+                    width: size.0,
+                    height: size.1,
+                    depth_or_array_layers: 1,
+                },
+                mip_level_count: 1,
+                sample_count: 1,
+                dimension: wgpu::TextureDimension::D2,
+                format: wgpu::TextureFormat::Rgba8Unorm,
+                usage: wgpu::TextureUsages::TEXTURE_BINDING | wgpu::TextureUsages::COPY_DST,
+                view_formats: &[],
+            });
 
-        let mut bytes = vec![0u8; (size.0 * size.1 * 4) as usize];
-        let m = [
-            [1.10f32, -0.05f32, 0.00f32],
-            [-0.03f32, 1.05f32, -0.02f32],
-            [0.08f32, -0.04f32, 1.18f32],
-        ];
-        let denom = (n - 1) as f32;
-        for g in 0..n {
-            for b in 0..n {
-                for r in 0..n {
-                    let x = b * n + r;
-                    let y = g;
-                    let i = ((y * size.0 + x) * 4) as usize;
+            let mut bytes = vec![0u8; (size.0 * size.1 * 4) as usize];
+            let m = [
+                [1.10f32, -0.05f32, 0.00f32],
+                [-0.03f32, 1.05f32, -0.02f32],
+                [0.08f32, -0.04f32, 1.18f32],
+            ];
+            let denom = (n - 1) as f32;
+            for g in 0..n {
+                for b in 0..n {
+                    for r in 0..n {
+                        let x = b * n + r;
+                        let y = g;
+                        let i = ((y * size.0 + x) * 4) as usize;
 
-                    let rf = (r as f32) / denom;
-                    let gf = (g as f32) / denom;
-                    let bf = (b as f32) / denom;
+                        let rf = (r as f32) / denom;
+                        let gf = (g as f32) / denom;
+                        let bf = (b as f32) / denom;
 
-                    let out_r = (m[0][0] * rf + m[0][1] * gf + m[0][2] * bf).clamp(0.0, 1.0);
-                    let out_g = (m[1][0] * rf + m[1][1] * gf + m[1][2] * bf).clamp(0.0, 1.0);
-                    let out_b = (m[2][0] * rf + m[2][1] * gf + m[2][2] * bf).clamp(0.0, 1.0);
+                        let out_r = (m[0][0] * rf + m[0][1] * gf + m[0][2] * bf).clamp(0.0, 1.0);
+                        let out_g = (m[1][0] * rf + m[1][1] * gf + m[1][2] * bf).clamp(0.0, 1.0);
+                        let out_b = (m[2][0] * rf + m[2][1] * gf + m[2][2] * bf).clamp(0.0, 1.0);
 
-                    bytes[i] = (out_r * 255.0).round() as u8;
-                    bytes[i + 1] = (out_g * 255.0).round() as u8;
-                    bytes[i + 2] = (out_b * 255.0).round() as u8;
-                    bytes[i + 3] = 255;
+                        bytes[i] = (out_r * 255.0).round() as u8;
+                        bytes[i + 1] = (out_g * 255.0).round() as u8;
+                        bytes[i + 2] = (out_b * 255.0).round() as u8;
+                        bytes[i + 3] = 255;
+                    }
                 }
             }
-        }
 
-        write_rgba8_texture_region(&context.queue, &texture, (0, 0), size, size.0 * 4, &bytes);
+            write_rgba8_texture_region(&context.queue, &texture, (0, 0), size, size.0 * 4, &bytes);
 
-        let view = texture.create_view(&wgpu::TextureViewDescriptor::default());
-        let image = renderer.register_image(ImageDescriptor {
-            view,
-            size,
-            format: wgpu::TextureFormat::Rgba8Unorm,
-            color_space: ImageColorSpace::Linear,
-            alpha_mode: fret_core::AlphaMode::Opaque,
+            let view = texture.create_view(&wgpu::TextureViewDescriptor::default());
+            let image = renderer.register_image(ImageDescriptor {
+                view,
+                size,
+                format: wgpu::TextureFormat::Rgba8Unorm,
+                color_space: ImageColorSpace::Linear,
+                alpha_mode: fret_core::AlphaMode::Opaque,
+            });
+            pack.input_image = Some(image);
         });
-        app.set_global(DemoInputImage(Some(image)));
     }
 
     fn stage_tile(
@@ -397,8 +403,9 @@ impl CustomEffectV2LutWebDriver {
         let caps = cx.app.global::<RendererCapabilities>().cloned();
         let supported = caps.map(|c| c.custom_effect_v2_user_image).unwrap_or(false);
 
-        let effect = cx.app.global::<DemoEffect>().copied().and_then(|x| x.0);
-        let input_image = cx.app.global::<DemoInputImage>().copied().and_then(|x| x.0);
+        let pack = cx.app.global::<DemoEffectPack>();
+        let effect = pack.and_then(|p| p.program.id());
+        let input_image = pack.and_then(|p| p.input_image);
 
         let enabled = cx.watch_model(&controls.enabled).paint().copied_or(true);
         let mode_value = Self::watch_opt_string(cx, &controls.mode, "backdrop");
@@ -1284,6 +1291,8 @@ pub fn build_app() -> App {
         shadcn::shadcn_themes::ShadcnBaseColor::Slate,
         shadcn::shadcn_themes::ShadcnColorScheme::Dark,
     );
+    // Install the demo pack early so consumers can treat it like a “one line install” library.
+    app.set_global(DemoEffectPack::new());
     app
 }
 

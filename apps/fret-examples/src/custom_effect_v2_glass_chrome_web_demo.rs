@@ -12,14 +12,11 @@
 use std::sync::Arc;
 
 use fret_app::{App, Effect};
-use fret_core::CustomEffectService as _;
 use fret_core::scene::{
     CustomEffectImageInputV1, EffectChain, EffectMode, EffectParamsV1, EffectQuality, EffectStep,
     ImageSamplingHint, Paint, UvRect,
 };
-use fret_core::{
-    AppWindowId, Corners, CustomEffectDescriptorV2, Edges, EffectId, ImageId, KeyCode, Px,
-};
+use fret_core::{AppWindowId, Corners, Edges, ImageId, KeyCode, Px};
 use fret_launch::{WinitAppDriver, WinitEventContext, WinitRenderContext, WinitRunnerConfig};
 use fret_render::{
     ImageColorSpace, ImageDescriptor, Renderer, RendererCapabilities, WgpuContext,
@@ -32,6 +29,7 @@ use fret_ui::element::{
     Length, MainAlign, Overflow, PositionStyle, SpacingLength, TextProps,
 };
 use fret_ui::{ElementContext, Invalidation, Theme, UiTree};
+use fret_ui_kit::custom_effects::CustomEffectProgramV2;
 use fret_ui_kit::declarative::ModelWatchExt as _;
 use fret_ui_kit::{Space, UiExt};
 use fret_ui_shadcn as shadcn;
@@ -81,11 +79,20 @@ fn fret_custom_effect(tex: vec4<f32>, _uv: vec2<f32>, pos_px: vec2<f32>, params:
 }
 "#;
 
-#[derive(Debug, Clone, Copy)]
-struct DemoEffect(Option<EffectId>);
+#[derive(Debug)]
+struct DemoEffectPack {
+    program: CustomEffectProgramV2,
+    input_image: Option<ImageId>,
+}
 
-#[derive(Debug, Clone, Copy)]
-struct DemoInputImage(Option<ImageId>);
+impl DemoEffectPack {
+    fn new() -> Self {
+        Self {
+            program: CustomEffectProgramV2::wgsl_utf8(WGSL),
+            input_image: None,
+        }
+    }
+}
 
 #[derive(Debug, Clone)]
 struct DemoControls {
@@ -193,85 +200,84 @@ impl CustomEffectV2GlassChromeWebDriver {
         context: &WgpuContext,
         renderer: &mut Renderer,
     ) {
-        let effect = renderer
-            .register_custom_effect_v2(CustomEffectDescriptorV2::wgsl_utf8(WGSL))
-            .ok();
-        app.set_global(DemoEffect(effect));
+        app.with_global_mut(DemoEffectPack::new, |pack, _app| {
+            let _ = pack.program.ensure_registered(renderer);
 
-        let size = (96u32, 96u32);
-        let texture = context.device.create_texture(&wgpu::TextureDescriptor {
-            label: Some("custom_effect_v2_glass_chrome_web_demo input texture"),
-            size: wgpu::Extent3d {
-                width: size.0,
-                height: size.1,
-                depth_or_array_layers: 1,
-            },
-            mip_level_count: 1,
-            sample_count: 1,
-            dimension: wgpu::TextureDimension::D2,
-            format: wgpu::TextureFormat::Rgba8Unorm,
-            usage: wgpu::TextureUsages::TEXTURE_BINDING | wgpu::TextureUsages::COPY_DST,
-            view_formats: &[],
-        });
+            let size = (96u32, 96u32);
+            let texture = context.device.create_texture(&wgpu::TextureDescriptor {
+                label: Some("custom_effect_v2_glass_chrome_web_demo input texture"),
+                size: wgpu::Extent3d {
+                    width: size.0,
+                    height: size.1,
+                    depth_or_array_layers: 1,
+                },
+                mip_level_count: 1,
+                sample_count: 1,
+                dimension: wgpu::TextureDimension::D2,
+                format: wgpu::TextureFormat::Rgba8Unorm,
+                usage: wgpu::TextureUsages::TEXTURE_BINDING | wgpu::TextureUsages::COPY_DST,
+                view_formats: &[],
+            });
 
-        fn hash_u32(mut x: u32) -> u32 {
-            x ^= x >> 16;
-            x = x.wrapping_mul(0x7FEB_352D);
-            x ^= x >> 15;
-            x = x.wrapping_mul(0x846C_A68B);
-            x ^= x >> 16;
-            x
-        }
-
-        let mut bytes = vec![0u8; (size.0 * size.1 * 4) as usize];
-        let cx = (size.0 as f32 - 1.0) * 0.5;
-        let cy = (size.1 as f32 - 1.0) * 0.5;
-        for y in 0..size.1 {
-            for x in 0..size.0 {
-                let i = ((y * size.0 + x) * 4) as usize;
-
-                let dx = (x as f32 - cx) / cx;
-                let dy = (y as f32 - cy) / cy;
-                let r2 = (dx * dx + dy * dy).min(1.0);
-
-                let mut nx = dx;
-                let mut ny = dy;
-                let mut nz = (1.0 - 0.65 * r2).max(0.05);
-
-                let h = hash_u32((x.wrapping_mul(73856093)) ^ (y.wrapping_mul(19349663)));
-                let n01 = (h as f32) / (u32::MAX as f32);
-                let noise = (n01 - 0.5) * 0.20;
-                nx += noise * 0.6;
-                ny -= noise * 0.4;
-                nz += noise * 0.8;
-
-                let len = (nx * nx + ny * ny + nz * nz).sqrt().max(1e-6);
-                nx /= len;
-                ny /= len;
-                nz /= len;
-
-                let r = (nx * 0.5 + 0.5).clamp(0.0, 1.0);
-                let g = (ny * 0.5 + 0.5).clamp(0.0, 1.0);
-                let b = (nz * 0.5 + 0.5).clamp(0.0, 1.0);
-
-                bytes[i] = (r * 255.0).round() as u8;
-                bytes[i + 1] = (g * 255.0).round() as u8;
-                bytes[i + 2] = (b * 255.0).round() as u8;
-                bytes[i + 3] = 255;
+            fn hash_u32(mut x: u32) -> u32 {
+                x ^= x >> 16;
+                x = x.wrapping_mul(0x7FEB_352D);
+                x ^= x >> 15;
+                x = x.wrapping_mul(0x846C_A68B);
+                x ^= x >> 16;
+                x
             }
-        }
 
-        write_rgba8_texture_region(&context.queue, &texture, (0, 0), size, size.0 * 4, &bytes);
+            let mut bytes = vec![0u8; (size.0 * size.1 * 4) as usize];
+            let cx = (size.0 as f32 - 1.0) * 0.5;
+            let cy = (size.1 as f32 - 1.0) * 0.5;
+            for y in 0..size.1 {
+                for x in 0..size.0 {
+                    let i = ((y * size.0 + x) * 4) as usize;
 
-        let view = texture.create_view(&wgpu::TextureViewDescriptor::default());
-        let image = renderer.register_image(ImageDescriptor {
-            view,
-            size,
-            format: wgpu::TextureFormat::Rgba8Unorm,
-            color_space: ImageColorSpace::Linear,
-            alpha_mode: fret_core::AlphaMode::Opaque,
+                    let dx = (x as f32 - cx) / cx;
+                    let dy = (y as f32 - cy) / cy;
+                    let r2 = (dx * dx + dy * dy).min(1.0);
+
+                    let mut nx = dx;
+                    let mut ny = dy;
+                    let mut nz = (1.0 - 0.65 * r2).max(0.05);
+
+                    let h = hash_u32((x.wrapping_mul(73856093)) ^ (y.wrapping_mul(19349663)));
+                    let n01 = (h as f32) / (u32::MAX as f32);
+                    let noise = (n01 - 0.5) * 0.20;
+                    nx += noise * 0.6;
+                    ny -= noise * 0.4;
+                    nz += noise * 0.8;
+
+                    let len = (nx * nx + ny * ny + nz * nz).sqrt().max(1e-6);
+                    nx /= len;
+                    ny /= len;
+                    nz /= len;
+
+                    let r = (nx * 0.5 + 0.5).clamp(0.0, 1.0);
+                    let g = (ny * 0.5 + 0.5).clamp(0.0, 1.0);
+                    let b = (nz * 0.5 + 0.5).clamp(0.0, 1.0);
+
+                    bytes[i] = (r * 255.0).round() as u8;
+                    bytes[i + 1] = (g * 255.0).round() as u8;
+                    bytes[i + 2] = (b * 255.0).round() as u8;
+                    bytes[i + 3] = 255;
+                }
+            }
+
+            write_rgba8_texture_region(&context.queue, &texture, (0, 0), size, size.0 * 4, &bytes);
+
+            let view = texture.create_view(&wgpu::TextureViewDescriptor::default());
+            let image = renderer.register_image(ImageDescriptor {
+                view,
+                size,
+                format: wgpu::TextureFormat::Rgba8Unorm,
+                color_space: ImageColorSpace::Linear,
+                alpha_mode: fret_core::AlphaMode::Opaque,
+            });
+            pack.input_image = Some(image);
         });
-        app.set_global(DemoInputImage(Some(image)));
     }
 
     fn label_row(cx: &mut ElementContext<'_, App>, label: &str, value: String) -> AnyElement {
@@ -316,8 +322,9 @@ impl CustomEffectV2GlassChromeWebDriver {
         let caps = cx.app.global::<RendererCapabilities>().cloned();
         let supported = caps.map(|c| c.custom_effect_v2_user_image).unwrap_or(false);
 
-        let effect = cx.app.global::<DemoEffect>().copied().and_then(|x| x.0);
-        let input_image = cx.app.global::<DemoInputImage>().copied().and_then(|x| x.0);
+        let pack = cx.app.global::<DemoEffectPack>();
+        let effect = pack.and_then(|p| p.program.id());
+        let input_image = pack.and_then(|p| p.input_image);
 
         let enabled = cx.watch_model(&controls.enabled).paint().copied_or(true);
         let mode_value = Self::watch_opt_string(cx, &controls.mode, "backdrop");
@@ -936,6 +943,8 @@ pub fn build_app() -> App {
         shadcn::shadcn_themes::ShadcnBaseColor::Slate,
         shadcn::shadcn_themes::ShadcnColorScheme::Dark,
     );
+    // Install the demo pack early so consumers can treat it like a “one line install” library.
+    app.set_global(DemoEffectPack::new());
     app
 }
 
