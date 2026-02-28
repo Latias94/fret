@@ -6,7 +6,7 @@
 use std::collections::HashMap;
 use std::sync::Arc;
 use std::sync::OnceLock;
-use std::sync::atomic::{AtomicU64, AtomicUsize, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicU64, AtomicUsize, Ordering};
 
 use fret_core::scene::DashPatternV1;
 use fret_core::window::ColorScheme;
@@ -19,7 +19,7 @@ use crate::core::{EdgeId, EdgeKind, Graph, NodeId, PortId, PortKind};
 use super::presenter::EdgeRenderHint;
 use super::skin::{
     CanvasChromeHint, InteractionChromeHint, NodeChromeHint, NodeGraphSkin, NodeRingHint,
-    NodeShadowHint, PortChromeHint, PortShapeHint,
+    NodeShadowHint, PortChromeHint, PortShapeHint, WireGlowHint,
 };
 use super::style::NodeGraphStyle;
 
@@ -60,6 +60,7 @@ impl NodeGraphPresetFamily {
 pub struct NodeGraphPresetSkinV1 {
     rev: AtomicU64,
     index: AtomicUsize,
+    wire_glow_enabled: AtomicBool,
     presets: Arc<NodeGraphThemePresetsV1>,
     id_to_index: HashMap<String, usize>,
 }
@@ -75,6 +76,7 @@ impl NodeGraphPresetSkinV1 {
         Arc::new(Self {
             rev: AtomicU64::new(1),
             index: AtomicUsize::new(index),
+            wire_glow_enabled: AtomicBool::new(true),
             presets,
             id_to_index,
         })
@@ -90,6 +92,7 @@ impl NodeGraphPresetSkinV1 {
         Arc::new(Self {
             rev: AtomicU64::new(theme.revision.max(1)),
             index: AtomicUsize::new(index),
+            wire_glow_enabled: AtomicBool::new(true),
             presets,
             id_to_index,
         })
@@ -128,6 +131,17 @@ impl NodeGraphPresetSkinV1 {
             .nth(1)
             .unwrap_or(NodeGraphPresetFamily::WorkflowClean);
         self.set_preset_family(next);
+        next
+    }
+
+    pub fn wire_glow_enabled(&self) -> bool {
+        self.wire_glow_enabled.load(Ordering::Relaxed)
+    }
+
+    pub fn toggle_wire_glow(&self) -> bool {
+        let next = !self.wire_glow_enabled();
+        self.wire_glow_enabled.store(next, Ordering::Relaxed);
+        self.rev.fetch_add(1, Ordering::Relaxed);
         next
     }
 
@@ -197,7 +211,51 @@ impl NodeGraphSkin for NodeGraphPresetSkinV1 {
         _graph: &Graph,
         _style: &NodeGraphStyle,
     ) -> InteractionChromeHint {
+        let wire_glow_enabled = self.wire_glow_enabled.load(Ordering::Relaxed);
         let tokens = &self.preset().paint_only_tokens;
+        let preset_id = self.preset().id.as_str();
+        let (wire_glow_selected, wire_glow_preview) = if wire_glow_enabled {
+            match preset_id {
+                "schematic_contrast" => (
+                    Some(WireGlowHint {
+                        blur_radius_px: 4.0,
+                        downsample: 1,
+                        alpha_mul: 0.55,
+                    }),
+                    Some(WireGlowHint {
+                        blur_radius_px: 4.0,
+                        downsample: 1,
+                        alpha_mul: 0.45,
+                    }),
+                ),
+                "graph_dark" => (
+                    Some(WireGlowHint {
+                        blur_radius_px: 10.0,
+                        downsample: 2,
+                        alpha_mul: 0.70,
+                    }),
+                    Some(WireGlowHint {
+                        blur_radius_px: 8.0,
+                        downsample: 2,
+                        alpha_mul: 0.60,
+                    }),
+                ),
+                _ => (
+                    Some(WireGlowHint {
+                        blur_radius_px: 6.0,
+                        downsample: 2,
+                        alpha_mul: 0.45,
+                    }),
+                    Some(WireGlowHint {
+                        blur_radius_px: 6.0,
+                        downsample: 2,
+                        alpha_mul: 0.35,
+                    }),
+                ),
+            }
+        } else {
+            (None, None)
+        };
         InteractionChromeHint {
             hover: Some(tokens.states.hover.color.into()),
             invalid: Some(tokens.states.invalid.color.into()),
@@ -206,6 +264,8 @@ impl NodeGraphSkin for NodeGraphPresetSkinV1 {
             dash_preview: Some(tokens.wire.dash_preview.into_dash()),
             dash_invalid: Some(tokens.wire.dash_invalid.into_dash()),
             dash_emphasis: Some(tokens.wire.dash_emphasis.into_dash()),
+            wire_glow_selected,
+            wire_glow_preview,
         }
     }
 

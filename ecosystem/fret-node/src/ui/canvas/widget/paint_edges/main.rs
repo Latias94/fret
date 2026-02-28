@@ -1,6 +1,8 @@
 use crate::ui::canvas::widget::paint_render_data::RenderData;
 use crate::ui::canvas::widget::*;
 use fret_core::scene::DashPatternV1;
+use fret_core::scene::DropShadowV1;
+use fret_core::{EffectChain, EffectMode, EffectQuality, EffectStep};
 
 impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
     pub(in super::super) fn paint_edges<H: UiHost>(
@@ -23,7 +25,130 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
             dash: Option<DashPatternV1>,
             start_marker: Option<crate::ui::presenter::EdgeMarker>,
             end_marker: Option<crate::ui::presenter::EdgeMarker>,
+            selected: bool,
         }
+
+        fn bounds_from_points(points: &[Point]) -> Option<Rect> {
+            if points.is_empty() {
+                return None;
+            }
+            let mut min_x = f32::INFINITY;
+            let mut min_y = f32::INFINITY;
+            let mut max_x = f32::NEG_INFINITY;
+            let mut max_y = f32::NEG_INFINITY;
+            for p in points {
+                if !p.x.0.is_finite() || !p.y.0.is_finite() {
+                    continue;
+                }
+                min_x = min_x.min(p.x.0);
+                min_y = min_y.min(p.y.0);
+                max_x = max_x.max(p.x.0);
+                max_y = max_y.max(p.y.0);
+            }
+            if !min_x.is_finite() || !min_y.is_finite() || !max_x.is_finite() || !max_y.is_finite()
+            {
+                return None;
+            }
+            Some(Rect::new(
+                Point::new(Px(min_x), Px(min_y)),
+                Size::new(Px((max_x - min_x).max(0.0)), Px((max_y - min_y).max(0.0))),
+            ))
+        }
+
+        fn inflate_rect(rect: Rect, pad: f32) -> Rect {
+            let pad = if pad.is_finite() && pad > 0.0 {
+                pad
+            } else {
+                0.0
+            };
+            Rect::new(
+                Point::new(Px(rect.origin.x.0 - pad), Px(rect.origin.y.0 - pad)),
+                Size::new(
+                    Px(rect.size.width.0 + 2.0 * pad),
+                    Px(rect.size.height.0 + 2.0 * pad),
+                ),
+            )
+        }
+
+        fn glow_bounds_for_edge_route(
+            route: EdgeRouteKind,
+            from: Point,
+            to: Point,
+            zoom: f32,
+            width_screen_px: f32,
+            blur_radius_screen_px: f32,
+        ) -> Option<Rect> {
+            let z = zoom.max(1.0e-6);
+            let mut points: [Point; 6] = [from, to, from, to, from, to];
+            let mut n = 2usize;
+            match route {
+                EdgeRouteKind::Bezier => {
+                    let dx = to.x.0 - from.x.0;
+                    let ctrl = (dx.abs() * 0.5).clamp(40.0 / z, 160.0 / z);
+                    let dir = if dx >= 0.0 { 1.0 } else { -1.0 };
+                    let c1 = Point::new(Px(from.x.0 + dir * ctrl), from.y);
+                    let c2 = Point::new(Px(to.x.0 - dir * ctrl), to.y);
+                    points[2] = c1;
+                    points[3] = c2;
+                    n = 4;
+                }
+                EdgeRouteKind::Step => {
+                    let mx = 0.5 * (from.x.0 + to.x.0);
+                    points[2] = Point::new(Px(mx), from.y);
+                    points[3] = Point::new(Px(mx), to.y);
+                    n = 4;
+                }
+                EdgeRouteKind::Straight => {}
+            }
+
+            let mut rect = bounds_from_points(&points[..n])?;
+            let pad_screen =
+                (blur_radius_screen_px.max(0.0) + 0.5 * width_screen_px.max(0.0)).max(0.0);
+            let pad = pad_screen / z;
+            rect = inflate_rect(rect, pad);
+            Some(rect)
+        }
+
+        fn glow_bounds_for_custom_path(
+            commands: &[fret_core::PathCommand],
+            zoom: f32,
+            width_screen_px: f32,
+            blur_radius_screen_px: f32,
+        ) -> Option<Rect> {
+            let z = zoom.max(1.0e-6);
+            let mut points: Vec<Point> = Vec::with_capacity(commands.len().saturating_mul(2));
+            for cmd in commands {
+                match *cmd {
+                    fret_core::PathCommand::MoveTo(p) => points.push(p),
+                    fret_core::PathCommand::LineTo(p) => points.push(p),
+                    fret_core::PathCommand::QuadTo { ctrl, to } => {
+                        points.push(ctrl);
+                        points.push(to);
+                    }
+                    fret_core::PathCommand::CubicTo { ctrl1, ctrl2, to } => {
+                        points.push(ctrl1);
+                        points.push(ctrl2);
+                        points.push(to);
+                    }
+                    fret_core::PathCommand::Close => {}
+                }
+            }
+            let mut rect = bounds_from_points(&points)?;
+            let pad_screen =
+                (blur_radius_screen_px.max(0.0) + 0.5 * width_screen_px.max(0.0)).max(0.0);
+            let pad = pad_screen / z;
+            rect = inflate_rect(rect, pad);
+            Some(rect)
+        }
+
+        let interaction_hint = if let Some(skin) = self.skin.as_ref() {
+            self.graph
+                .read_ref(cx.app, |g| skin.interaction_chrome_hint(g, &self.style))
+                .ok()
+                .unwrap_or_default()
+        } else {
+            crate::ui::InteractionChromeHint::default()
+        };
 
         let edge_insert_marker_request = self
             .interaction
@@ -112,6 +237,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                 dash: edge.hint.dash,
                 start_marker: edge.hint.start_marker.clone(),
                 end_marker: edge.hint.end_marker.clone(),
+                selected: edge.selected,
             };
 
             if edge.hovered {
@@ -133,6 +259,61 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
             .chain(edges_selected)
             .chain(edges_hovered)
         {
+            let glow = edge
+                .selected
+                .then_some(interaction_hint.wire_glow_selected)
+                .flatten();
+
+            let glow_bounds = glow.and_then(|g| {
+                if let Some(custom) = custom_paths.get(&edge.id) {
+                    glow_bounds_for_custom_path(
+                        &custom.commands,
+                        zoom,
+                        edge.width,
+                        g.blur_radius_px,
+                    )
+                } else {
+                    glow_bounds_for_edge_route(
+                        edge.route,
+                        edge.from,
+                        edge.to,
+                        zoom,
+                        edge.width,
+                        g.blur_radius_px,
+                    )
+                }
+            });
+
+            let mut glow_pushed = false;
+            if let Some(glow) = glow
+                && let Some(bounds) = glow_bounds
+            {
+                let z = zoom.max(1.0e-6);
+                let blur_canvas = (glow.blur_radius_px / z).max(0.0);
+                let mut color = edge.color;
+                let alpha_mul = if glow.alpha_mul.is_finite() {
+                    glow.alpha_mul.clamp(0.0, 1.0)
+                } else {
+                    0.0
+                };
+                color.a = (color.a * alpha_mul).clamp(0.0, 1.0);
+                cx.scene.push(SceneOp::PushEffect {
+                    bounds,
+                    mode: EffectMode::FilterContent,
+                    chain: EffectChain::from_steps(&[EffectStep::DropShadowV1(
+                        DropShadowV1 {
+                            offset_px: Point::new(Px(0.0), Px(0.0)),
+                            blur_radius_px: Px(blur_canvas),
+                            downsample: glow.downsample,
+                            color,
+                        }
+                        .sanitize(),
+                    )]),
+                    quality: EffectQuality::Auto,
+                });
+                glow_pushed = true;
+            }
+
             let (_stop, skipped) = if let Some(custom) = custom_paths.get(&edge.id) {
                 let fallback = Point::new(
                     Px(edge.to.x.0 - edge.from.x.0),
@@ -180,6 +361,10 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                 )
             };
             marker_budget_skipped = marker_budget_skipped.saturating_add(skipped);
+
+            if glow_pushed {
+                cx.scene.push(SceneOp::PopEffect);
+            }
         }
 
         if marker_budget_skipped > 0 {
@@ -317,15 +502,6 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
             let focused_port_valid = self.interaction.focused_port_valid;
             let focused_port_convertible = self.interaction.focused_port_convertible;
 
-            let interaction_hint = if let Some(skin) = self.skin.as_ref() {
-                self.graph
-                    .read_ref(cx.app, |g| skin.interaction_chrome_hint(g, &self.style))
-                    .ok()
-                    .unwrap_or_default()
-            } else {
-                crate::ui::InteractionChromeHint::default()
-            };
-
             let focused_target =
                 focused_port.filter(|_| focused_port_valid || focused_port_convertible);
             let to = hovered_port
@@ -374,6 +550,47 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                 };
 
             let mut draw_preview = |from: Point| {
+                let glow = interaction_hint.wire_glow_preview;
+                let glow_bounds = glow.and_then(|g| {
+                    glow_bounds_for_edge_route(
+                        EdgeRouteKind::Bezier,
+                        from,
+                        to,
+                        zoom,
+                        self.style.wire_width,
+                        g.blur_radius_px,
+                    )
+                });
+                let mut glow_pushed = false;
+                if let Some(glow) = glow
+                    && let Some(bounds) = glow_bounds
+                {
+                    let z = zoom.max(1.0e-6);
+                    let blur_canvas = (glow.blur_radius_px / z).max(0.0);
+                    let mut glow_color = color;
+                    let alpha_mul = if glow.alpha_mul.is_finite() {
+                        glow.alpha_mul.clamp(0.0, 1.0)
+                    } else {
+                        0.0
+                    };
+                    glow_color.a = (glow_color.a * alpha_mul).clamp(0.0, 1.0);
+                    cx.scene.push(SceneOp::PushEffect {
+                        bounds,
+                        mode: EffectMode::FilterContent,
+                        chain: EffectChain::from_steps(&[EffectStep::DropShadowV1(
+                            DropShadowV1 {
+                                offset_px: Point::new(Px(0.0), Px(0.0)),
+                                blur_radius_px: Px(blur_canvas),
+                                downsample: glow.downsample,
+                                color: glow_color,
+                            }
+                            .sanitize(),
+                        )]),
+                        quality: EffectQuality::Auto,
+                    });
+                    glow_pushed = true;
+                }
+
                 if let Some(path) = self.paint_cache.wire_path(
                     cx.services,
                     EdgeRouteKind::Bezier,
@@ -390,6 +607,10 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                         path,
                         paint: color.into(),
                     });
+                }
+
+                if glow_pushed {
+                    cx.scene.push(SceneOp::PopEffect);
                 }
             };
 

@@ -33,6 +33,18 @@ pub struct InteractionChromeHint {
     pub dash_preview: Option<DashPatternV1>,
     pub dash_invalid: Option<DashPatternV1>,
     pub dash_emphasis: Option<DashPatternV1>,
+    /// Optional wire glow applied to selected edges (paint-only effect).
+    pub wire_glow_selected: Option<WireGlowHint>,
+    /// Optional wire glow applied to drag preview wires (paint-only effect).
+    pub wire_glow_preview: Option<WireGlowHint>,
+}
+
+/// Paint-only wire glow parameters (screen-space logical px).
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct WireGlowHint {
+    pub blur_radius_px: f32,
+    pub downsample: u32,
+    pub alpha_mul: f32,
 }
 
 /// Per-node chrome overrides (UI-only).
