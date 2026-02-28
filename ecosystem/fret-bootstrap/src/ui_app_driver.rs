@@ -1349,29 +1349,7 @@ fn ui_app_handle_event<S>(
     }
 
     #[cfg(feature = "diagnostics")]
-    if app.with_global_mut_untracked(UiDiagnosticsService::default, |svc, _app| {
-        svc.should_ignore_external_pointer_event(event)
-            || svc.should_ignore_external_keyboard_event(event)
-    }) {
-        return;
-    }
-
-    #[cfg(feature = "diagnostics")]
-    app.with_global_mut_untracked(UiDiagnosticsService::default, |svc, app| {
-        svc.record_event(app, window, event);
-    });
-
-    #[cfg(feature = "diagnostics")]
-    if app.with_global_mut_untracked(UiDiagnosticsService::default, |svc, app| {
-        svc.maybe_intercept_event_for_picking(app, window, event)
-    }) {
-        return;
-    }
-
-    #[cfg(feature = "diagnostics")]
-    if app.with_global_mut_untracked(UiDiagnosticsService::default, |svc, app| {
-        svc.maybe_intercept_event_for_inspect_shortcuts(app, window, event)
-    }) {
+    if crate::ui_diagnostics::maybe_consume_event(app, window, event) {
         return;
     }
 

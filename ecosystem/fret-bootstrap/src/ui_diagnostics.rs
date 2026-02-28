@@ -116,6 +116,44 @@ mod config;
 pub use config::UiDiagnosticsConfig;
 include!("ui_diagnostics/service.rs");
 
+/// Returns `true` when UI diagnostics consumed the event (ignore/intercept).
+///
+/// This helper keeps app drivers consistent:
+/// - ignore external (non-script) pointer/keyboard input while a script is running (determinism),
+/// - record platform-delivered events into the diagnostics ring buffer (for `event_kind_seen`, etc),
+/// - intercept inspect/pick controls when enabled.
+pub fn maybe_consume_event(app: &mut App, window: AppWindowId, event: &Event) -> bool {
+    #[cfg(feature = "diagnostics")]
+    {
+        if app.with_global_mut_untracked(UiDiagnosticsService::default, |svc, _app| {
+            svc.should_ignore_external_pointer_event(event)
+                || svc.should_ignore_external_keyboard_event(event)
+        }) {
+            return true;
+        }
+
+        app.with_global_mut_untracked(UiDiagnosticsService::default, |svc, app| {
+            svc.record_event(app, window, event);
+        });
+
+        app.with_global_mut_untracked(UiDiagnosticsService::default, |svc, app| {
+            if !svc.is_enabled() {
+                return false;
+            }
+            if svc.maybe_intercept_event_for_picking(app, window, event) {
+                return true;
+            }
+            svc.maybe_intercept_event_for_inspect_shortcuts(app, window, event)
+        })
+    }
+
+    #[cfg(not(feature = "diagnostics"))]
+    {
+        let _ = (app, window, event);
+        false
+    }
+}
+
 #[derive(Debug, Clone)]
 struct PendingPick {
     run_id: u64,
