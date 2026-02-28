@@ -3289,16 +3289,23 @@ impl WinitAppDriver for UiGalleryDriver {
 
         #[cfg(not(target_arch = "wasm32"))]
         {
-            let consumed =
-                app.with_global_mut_untracked(UiDiagnosticsService::default, |svc, app| {
-                    if !svc.is_enabled() {
-                        return false;
-                    }
-                    if svc.maybe_intercept_event_for_inspect_shortcuts(app, window, event) {
-                        return true;
-                    }
-                    svc.maybe_intercept_event_for_picking(app, window, event)
-                });
+            let consumed = app.with_global_mut_untracked(UiDiagnosticsService::default, |svc, app| {
+                if svc.should_ignore_external_pointer_event(event)
+                    || svc.should_ignore_external_keyboard_event(event)
+                {
+                    return true;
+                }
+
+                svc.record_event(app, window, event);
+
+                if !svc.is_enabled() {
+                    return false;
+                }
+                if svc.maybe_intercept_event_for_inspect_shortcuts(app, window, event) {
+                    return true;
+                }
+                svc.maybe_intercept_event_for_picking(app, window, event)
+            });
             if consumed {
                 return;
             }

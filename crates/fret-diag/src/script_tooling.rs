@@ -488,6 +488,12 @@ fn infer_required_capabilities_v2(script: &UiActionScriptV2) -> Vec<String> {
         ) {
             push_cap(&mut caps, "diag.clipboard_text");
         }
+        if matches!(step, UiActionStepV2::SetClipboardForceUnavailable { .. }) {
+            push_cap(&mut caps, "diag.clipboard_force_unavailable");
+        }
+        if matches!(step, UiActionStepV2::InjectIncomingOpen { .. }) {
+            push_cap(&mut caps, "diag.incoming_open_inject");
+        }
         if matches!(step, UiActionStepV2::Tap { .. }) {
             push_cap(&mut caps, "diag.gesture_tap");
         }
