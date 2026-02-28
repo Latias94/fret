@@ -4,6 +4,28 @@
   "scope": "suites+prelude",
   "scripts": [
     {
+      "id": "node-graph-demo-preset-families-paint-only",
+      "path": "tools/diag-scripts/extras/node-graph-demo-preset-families-paint-only.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "fret-examples-node-graph"
+      ],
+      "tags": [
+        "gate",
+        "node_graph",
+        "preset",
+        "skin",
+        "wire_drag"
+      ],
+      "target_hints": [
+        "Cycles the built-in node graph preset families via shortcut (paint-only skin revision).",
+        "Starts a wire drag session and captures bundles for debugging skin-driven chrome.",
+        "Exercises invalid + convertible drops without mutating the graph (conversion picker forced)."
+      ]
+    },
+    {
       "id": "tooling-suite-prelude-reset-diagnostics",
       "path": "tools/diag-scripts/_prelude/tooling-suite-prelude-reset-diagnostics.json",
       "required_capabilities": [],

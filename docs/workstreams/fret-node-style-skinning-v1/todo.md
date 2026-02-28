@@ -24,7 +24,8 @@ scope: ecosystem/fret-node
 - [x] Demo toggle to switch presets at runtime (paint-only invalidation).
 - [x] Add in-tree presets derived from `ThemeSnapshot` (`NodeGraphPresetSkinV1::new_from_snapshot`).
 - [ ] Extract kit-level presets derived from `ThemeSnapshot` (pure function + documented token mapping).
-- [ ] Add one scripted/diag gate for “preset switch is paint-only” (optional but recommended).
+- [x] Add one scripted/diag gate for “preset switch is paint-only” (node graph demo script).
+  - Script: `node-graph-demo-preset-families-paint-only` (`tools/diag-scripts/extras/node-graph-demo-preset-families-paint-only.json`)
 
 ## Follow-ups (likely)
 

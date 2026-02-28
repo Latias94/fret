@@ -91,3 +91,7 @@ Add a diag/script gate (optional but recommended):
 
 - “switch preset does not rebuild derived geometry” (paint-only path)
 - “preset switch updates overlays correctly” (minimap/controls stay anchored)
+
+Current diag gate:
+
+- `tools/diag-scripts/extras/node-graph-demo-preset-families-paint-only.json`
