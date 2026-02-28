@@ -78,6 +78,10 @@ We are not porting DOM/CSS behavior 1:1. We are aligning **outcomes** in Fret’
 - **Testability**: every “hard to change” outcome must have a gate (test or diag script).
 - **Automation**: interactive targets must have stable `test_id` surfaces.
 
+## Decisions (v1)
+
+Decisions for v1 are recorded in `OPEN_QUESTIONS.md` (accepted).
+
 ## Proposed architecture
 
 ### 1) TabStrip kernel (ecosystem, headless-ish)
@@ -198,4 +202,3 @@ We consider v1 “done” when:
   - cross-pane drop intent,
   - pinned boundary behavior,
   - preview tab (if enabled).
-

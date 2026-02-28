@@ -20,9 +20,7 @@ This file is an execution checklist for the design in `DESIGN.md`.
 
 ## M1 — Overflow dropdown/list
 
-- [ ] Decide overflow list UX:
-  - [ ] “Show overflowed only” (dockview-style), or
-  - [ ] “Show all” with overflow grouping (VS Code-like).
+- [x] Decision: use “overflowed-only” list (dockview-style). See `OPEN_QUESTIONS.md`.
 - [ ] Add overflow computation based on measured tab rects + viewport.
 - [ ] Add overflow control button that appears only when overflowing.
 - [ ] Add overflow list panel:
@@ -35,9 +33,7 @@ This file is an execution checklist for the design in `DESIGN.md`.
 
 ## M2 — Pinned boundary
 
-- [ ] Choose pinned model:
-  - [ ] `pinned_tab_count` boundary (Zed-like), or
-  - [ ] per-tab pin flag (more flexible, slightly more complex).
+- [x] Decision: use `pinned_tab_count` boundary (Zed-like). See `OPEN_QUESTIONS.md`.
 - [ ] Add drop targets to allow moving tabs into/out of the pinned region.
 - [ ] Optional: add “separate pinned row” when pinned + unpinned exist.
 - [ ] Gates:
@@ -83,4 +79,3 @@ This file is an execution checklist for the design in `DESIGN.md`.
   - `repo-ref/dockview/packages/dockview-core/src/dockview/components/titlebar/tabs.ts`
   - `repo-ref/dockview/packages/dockview-core/src/dockview/components/titlebar/tabsContainer.ts`
 - gpui-component dock tab panel reference: `repo-ref/gpui-component/crates/ui/src/dock/tab_panel.rs`
-

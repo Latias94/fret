@@ -1,10 +1,12 @@
-# Workspace Shell TabStrip (Fearless Refactor v1) — Open Questions (with recommendations)
+# Workspace Shell TabStrip (Fearless Refactor v1) — Decisions (v1)
 
-This file lists decisions we should make explicitly to avoid churn during implementation.
+Status: **Accepted** (per maintainer direction).
 
-## Q1: Pinned model — `pinned_tab_count` boundary vs per-tab pinned flag
+This file records the explicit v1 decisions so implementation does not churn.
 
-**Recommendation:** start with **`pinned_tab_count`** (Zed-like boundary).
+## D1: Pinned model — `pinned_tab_count` boundary vs per-tab pinned flag
+
+**Decision:** start with **`pinned_tab_count`** (Zed-like boundary).
 
 Why:
 
@@ -16,9 +18,9 @@ Upgrade path:
 
 - We can later migrate to per-tab pin flags if we need non-contiguous pinned groups.
 
-## Q2: Overflow dropdown list — “overflowed only” vs “all tabs”
+## D2: Overflow dropdown list — “overflowed only” vs “all tabs”
 
-**Recommendation:** **overflowed-only** list (dockview-like) for v1.
+**Decision:** **overflowed-only** list (dockview-like) for v1.
 
 Why:
 
@@ -29,9 +31,9 @@ Optional later:
 
 - “All tabs” list with grouping and typeahead (VS Code-like).
 
-## Q3: Click focus policy — should clicking a tab move keyboard focus?
+## D3: Click focus policy — should clicking a tab move keyboard focus?
 
-**Recommendation:** clicking a tab **should not steal content focus** by default.
+**Decision:** clicking a tab **should not steal content focus** by default.
 
 Why:
 
@@ -43,9 +45,9 @@ Escape hatches:
 - Provide a command “Focus tab strip” for keyboard users.
 - When the content is empty/unfocused, allow tab strip to become focus owner.
 
-## Q4: Keyboard nav semantics — roving focus vs “selection without focus”
+## D4: Keyboard nav semantics — roving focus vs “selection without focus”
 
-**Recommendation:** **roving focus + activation on roving change** (APG-aligned).
+**Decision:** **roving focus + activation on roving change** (APG-aligned).
 
 Details:
 
@@ -54,9 +56,9 @@ Details:
   - v1 default: automatic (activates as roving moves) for editor tab strips.
   - optional: manual (Enter/Space) if a use-case appears.
 
-## Q5: Preview tab semantics — do we implement it in v1?
+## D5: Preview tab semantics — do we implement it in v1?
 
-**Recommendation:** **Yes (optional but recommended)**, modeled after Zed/VS Code.
+**Decision:** **Yes**, modeled after Zed/VS Code.
 
 Minimum contract:
 
@@ -68,39 +70,38 @@ Opt-out:
 
 - Preview can be disabled globally; behavior becomes “always open normal tab”.
 
-## Q6: Drag-to-split — where does the split policy live?
+## D6: Drag-to-split — where does the split policy live?
 
-**Recommendation:** split is **policy-owned** by workspace/docking; the kernel emits **intent only**.
+**Decision:** split is **policy-owned** by workspace/docking; the kernel emits **intent only**.
 
 Why:
 
 - Avoids bleeding shell policy into shared logic.
 - Different shells may disallow split (or vary thresholds/hysteresis).
 
-## Q7: Edge auto-scroll during drag reorder
+## D7: Edge auto-scroll during drag reorder
 
-**Recommendation:** implement in v1.
+**Decision:** implement in v1.
 
 Why:
 
 - Without it, reorder with many tabs is frustrating even if overflow list exists.
 - Mechanically straightforward if we already have tab rects + viewport + scroll handle.
 
-## Q8: Drop targets — do we add explicit “end of strip” targets?
+## D8: Drop targets — do we add explicit “end of strip” targets?
 
-**Recommendation:** Yes, add explicit end targets.
+**Decision:** Yes, add explicit end targets.
 
 Why:
 
 - Zed and gpui-component both rely on “empty space” / “drop target” nodes for robust “after last tab”.
 - It reduces reliance on fuzzy hit-testing near the last tab’s right edge.
 
-## Q9: Cross-pane drag — should we allow “drop into header space” (not on a tab)?
+## D9: Cross-pane drag — should we allow “drop into header space” (not on a tab)?
 
-**Recommendation:** Yes.
+**Decision:** Yes.
 
 Why:
 
 - dockview uses “header_space” as a first-class drop surface.
 - Enables “move to end” without requiring a specific tab as target.
-
