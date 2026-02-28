@@ -7,7 +7,9 @@ This document defines “reviewable slices” for deeper Embla alignment.
 Deliverables:
 
 - `contracts.md` (Embla option semantics vs Fret mapping)
-- ADR(s) for API/events and physics/time semantics
+- `api-and-events.md` (Rust-native API + event semantics direction)
+- (Optional later) Promote stable, hard-to-change pieces into ADRs only if/when these surfaces must
+  be treated as long-lived contracts outside `ecosystem/*`.
 
 Evidence:
 

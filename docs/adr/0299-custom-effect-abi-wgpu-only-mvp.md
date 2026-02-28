@@ -53,6 +53,8 @@ The MVP is intentionally small and landable:
 - single-pass fullscreen effect,
 - params-only (fixed 64B payload),
 - no user-provided textures in v1,
+- renderer-provided utility patterns MAY be exposed (e.g. a small noise/dither atlas) as part of the
+  renderer-owned prelude without expanding the portable core contract,
 - effect declares a bounded sampling extent (`max_sample_offset_px`) to enable deterministic padding when needed,
 - WGSL sources are size-capped and validated at registration time,
 - expressed only inside `EffectChain` between `PushEffect`/`PopEffect`,

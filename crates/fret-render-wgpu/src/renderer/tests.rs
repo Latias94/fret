@@ -4,16 +4,25 @@ use super::shaders::{
     BLUR_V_MASK_SHADER, BLUR_V_SHADER, COLOR_ADJUST_MASK_SHADER, COLOR_ADJUST_SHADER,
     COLOR_MATRIX_MASK_SHADER, COLOR_MATRIX_SHADER, COMPOSITE_PREMUL_MASK_SHADER,
     COMPOSITE_PREMUL_SHADER, DOWNSAMPLE_NEAREST_SHADER, DROP_SHADOW_MASK_SHADER,
-    DROP_SHADOW_SHADER, MASK_SHADER, PATH_CLIP_MASK_SHADER, PATH_SHADER, TEXT_COLOR_SHADER,
-    TEXT_SHADER, TEXT_SUBPIXEL_SHADER, UPSCALE_NEAREST_MASK_SHADER, UPSCALE_NEAREST_SHADER,
-    VIEWPORT_SHADER, alpha_threshold_masked_shader_source, backdrop_warp_masked_shader_source,
-    blur_h_masked_shader_source, blur_v_masked_shader_source, clip_mask_shader_source,
-    color_adjust_masked_shader_source, color_matrix_masked_shader_source,
-    drop_shadow_masked_shader_source, quad_shader_source, upscale_nearest_masked_shader_source,
+    DROP_SHADOW_SHADER, MASK_SHADER, MIP_DOWNSAMPLE_BOX_2X2_SHADER, PATH_CLIP_MASK_SHADER,
+    PATH_SHADER, TEXT_COLOR_SHADER, TEXT_SHADER, TEXT_SUBPIXEL_SHADER, UPSCALE_NEAREST_MASK_SHADER,
+    UPSCALE_NEAREST_SHADER, VIEWPORT_SHADER, alpha_threshold_masked_shader_source,
+    backdrop_warp_masked_shader_source, blur_h_masked_shader_source, blur_v_masked_shader_source,
+    clip_mask_shader_source, color_adjust_masked_shader_source, color_matrix_masked_shader_source,
+    custom_effect_mask_shader_source, custom_effect_masked_shader_source,
+    custom_effect_unmasked_shader_source, custom_effect_v2_mask_shader_source,
+    custom_effect_v2_masked_shader_source, custom_effect_v2_unmasked_shader_source,
+    custom_effect_v3_mask_shader_source, custom_effect_v3_masked_shader_source,
+    custom_effect_v3_unmasked_shader_source, drop_shadow_masked_shader_source, quad_shader_source,
+    upscale_nearest_masked_shader_source,
 };
 use super::{clamp_corner_radii_for_rect, svg_draw_rect_px};
+use fret_core::PathService as _;
 use fret_core::geometry::{Point, Px, Transform2D};
-use fret_core::{DrawOrder, Rect, Scene, SceneOp, Size, ViewportFit};
+use fret_core::{
+    DrawOrder, FillStyle, PathCommand, PathConstraints, PathStyle, Rect, Scene, SceneOp, Size,
+    ViewportFit,
+};
 
 fn assert_approx_eq(a: f32, b: f32) {
     assert!(
@@ -30,6 +39,25 @@ fn assert_vertex(v: &super::types::ViewportVertex, pos: (f32, f32), uv: (f32, f3
     assert_approx_eq(v.uv[1], uv.1);
 }
 
+const CUSTOM_EFFECT_IDENTITY_WGSL: &str = r#"
+fn fret_custom_effect(tex: vec4<f32>, uv: vec2<f32>, pos_px: vec2<f32>, params: EffectParamsV1) -> vec4<f32> {
+  // Keep this shader intentionally simple: it exists to validate that the custom effect ABI
+  // can be stitched into a complete module and compiled under WebGPU/Tint constraints.
+  return tex;
+}
+"#;
+
+#[allow(dead_code)]
+const CUSTOM_EFFECT_DERIVATIVES_SMOKE_WGSL: &str = r#"
+fn fret_custom_effect(tex: vec4<f32>, uv: vec2<f32>, pos_px: vec2<f32>, params: EffectParamsV1) -> vec4<f32> {
+  // WebGPU/Tint requires derivatives to be used from uniform control flow.
+  // This shader ensures the *host* custom effect fragment shaders do not guard the custom effect call
+  // behind non-uniform bounds checks or early returns.
+  let d = fwidth(pos_px.x);
+  return tex + vec4<f32>(0.0, 0.0, 0.0, 0.0) * d;
+}
+"#;
+
 #[test]
 fn shaders_parse_as_wgsl() {
     let quad_src = quad_shader_source();
@@ -42,11 +70,28 @@ fn shaders_parse_as_wgsl() {
     let drop_shadow_masked_src = drop_shadow_masked_shader_source();
     let blur_h_masked_src = blur_h_masked_shader_source();
     let blur_v_masked_src = blur_v_masked_shader_source();
+    let custom_effect_unmasked_src =
+        custom_effect_unmasked_shader_source(CUSTOM_EFFECT_IDENTITY_WGSL);
+    let custom_effect_masked_src = custom_effect_masked_shader_source(CUSTOM_EFFECT_IDENTITY_WGSL);
+    let custom_effect_mask_src = custom_effect_mask_shader_source(CUSTOM_EFFECT_IDENTITY_WGSL);
+    let custom_effect_v2_unmasked_src =
+        custom_effect_v2_unmasked_shader_source(CUSTOM_EFFECT_IDENTITY_WGSL);
+    let custom_effect_v2_masked_src =
+        custom_effect_v2_masked_shader_source(CUSTOM_EFFECT_IDENTITY_WGSL);
+    let custom_effect_v2_mask_src =
+        custom_effect_v2_mask_shader_source(CUSTOM_EFFECT_IDENTITY_WGSL);
+    let custom_effect_v3_unmasked_src =
+        custom_effect_v3_unmasked_shader_source(CUSTOM_EFFECT_IDENTITY_WGSL);
+    let custom_effect_v3_masked_src =
+        custom_effect_v3_masked_shader_source(CUSTOM_EFFECT_IDENTITY_WGSL);
+    let custom_effect_v3_mask_src =
+        custom_effect_v3_mask_shader_source(CUSTOM_EFFECT_IDENTITY_WGSL);
     for (name, src) in [
         ("viewport", VIEWPORT_SHADER),
         ("quad", quad_src.as_str()),
         ("blit", BLIT_SHADER),
         ("blit_srgb_encode", BLIT_SRGB_ENCODE_SHADER),
+        ("mip_downsample_box_2x2", MIP_DOWNSAMPLE_BOX_2X2_SHADER),
         ("drop_shadow", DROP_SHADOW_SHADER),
         ("drop_shadow_masked", drop_shadow_masked_src.as_str()),
         ("drop_shadow_mask", DROP_SHADOW_MASK_SHADER),
@@ -84,6 +129,21 @@ fn shaders_parse_as_wgsl() {
         ("text_color", TEXT_COLOR_SHADER),
         ("text_subpixel", TEXT_SUBPIXEL_SHADER),
         ("mask", MASK_SHADER),
+        ("custom_effect", custom_effect_unmasked_src.as_str()),
+        ("custom_effect_masked", custom_effect_masked_src.as_str()),
+        ("custom_effect_mask", custom_effect_mask_src.as_str()),
+        ("custom_effect_v2", custom_effect_v2_unmasked_src.as_str()),
+        (
+            "custom_effect_v2_masked",
+            custom_effect_v2_masked_src.as_str(),
+        ),
+        ("custom_effect_v2_mask", custom_effect_v2_mask_src.as_str()),
+        ("custom_effect_v3", custom_effect_v3_unmasked_src.as_str()),
+        (
+            "custom_effect_v3_masked",
+            custom_effect_v3_masked_src.as_str(),
+        ),
+        ("custom_effect_v3_mask", custom_effect_v3_mask_src.as_str()),
     ] {
         naga::front::wgsl::parse_str(src)
             .unwrap_or_else(|err| panic!("WGSL parse failed for {name} shader: {err}"));
@@ -104,11 +164,28 @@ fn shaders_validate_for_webgpu() {
     let drop_shadow_masked_src = drop_shadow_masked_shader_source();
     let blur_h_masked_src = blur_h_masked_shader_source();
     let blur_v_masked_src = blur_v_masked_shader_source();
+    let custom_effect_unmasked_src =
+        custom_effect_unmasked_shader_source(CUSTOM_EFFECT_IDENTITY_WGSL);
+    let custom_effect_masked_src = custom_effect_masked_shader_source(CUSTOM_EFFECT_IDENTITY_WGSL);
+    let custom_effect_mask_src = custom_effect_mask_shader_source(CUSTOM_EFFECT_IDENTITY_WGSL);
+    let custom_effect_v2_unmasked_src =
+        custom_effect_v2_unmasked_shader_source(CUSTOM_EFFECT_IDENTITY_WGSL);
+    let custom_effect_v2_masked_src =
+        custom_effect_v2_masked_shader_source(CUSTOM_EFFECT_IDENTITY_WGSL);
+    let custom_effect_v2_mask_src =
+        custom_effect_v2_mask_shader_source(CUSTOM_EFFECT_IDENTITY_WGSL);
+    let custom_effect_v3_unmasked_src =
+        custom_effect_v3_unmasked_shader_source(CUSTOM_EFFECT_IDENTITY_WGSL);
+    let custom_effect_v3_masked_src =
+        custom_effect_v3_masked_shader_source(CUSTOM_EFFECT_IDENTITY_WGSL);
+    let custom_effect_v3_mask_src =
+        custom_effect_v3_mask_shader_source(CUSTOM_EFFECT_IDENTITY_WGSL);
     for (name, src) in [
         ("viewport", VIEWPORT_SHADER),
         ("quad", quad_src.as_str()),
         ("blit", BLIT_SHADER),
         ("blit_srgb_encode", BLIT_SRGB_ENCODE_SHADER),
+        ("mip_downsample_box_2x2", MIP_DOWNSAMPLE_BOX_2X2_SHADER),
         ("drop_shadow", DROP_SHADOW_SHADER),
         ("drop_shadow_masked", drop_shadow_masked_src.as_str()),
         ("drop_shadow_mask", DROP_SHADOW_MASK_SHADER),
@@ -146,6 +223,21 @@ fn shaders_validate_for_webgpu() {
         ("text_color", TEXT_COLOR_SHADER),
         ("text_subpixel", TEXT_SUBPIXEL_SHADER),
         ("mask", MASK_SHADER),
+        ("custom_effect", custom_effect_unmasked_src.as_str()),
+        ("custom_effect_masked", custom_effect_masked_src.as_str()),
+        ("custom_effect_mask", custom_effect_mask_src.as_str()),
+        ("custom_effect_v2", custom_effect_v2_unmasked_src.as_str()),
+        (
+            "custom_effect_v2_masked",
+            custom_effect_v2_masked_src.as_str(),
+        ),
+        ("custom_effect_v2_mask", custom_effect_v2_mask_src.as_str()),
+        ("custom_effect_v3", custom_effect_v3_unmasked_src.as_str()),
+        (
+            "custom_effect_v3_masked",
+            custom_effect_v3_masked_src.as_str(),
+        ),
+        ("custom_effect_v3_mask", custom_effect_v3_mask_src.as_str()),
     ] {
         let module = naga::front::wgsl::parse_str(src)
             .unwrap_or_else(|err| panic!("WGSL parse failed for {name} shader: {err}"));
@@ -191,6 +283,23 @@ mod webgpu_tint_guardrail {
         let drop_shadow_masked_src = drop_shadow_masked_shader_source();
         let blur_h_masked_src = blur_h_masked_shader_source();
         let blur_v_masked_src = blur_v_masked_shader_source();
+        let custom_effect_unmasked_src =
+            custom_effect_unmasked_shader_source(CUSTOM_EFFECT_IDENTITY_WGSL);
+        let custom_effect_masked_src =
+            custom_effect_masked_shader_source(CUSTOM_EFFECT_IDENTITY_WGSL);
+        let custom_effect_mask_src = custom_effect_mask_shader_source(CUSTOM_EFFECT_IDENTITY_WGSL);
+        let custom_effect_v2_unmasked_src =
+            custom_effect_v2_unmasked_shader_source(CUSTOM_EFFECT_IDENTITY_WGSL);
+        let custom_effect_v2_masked_src =
+            custom_effect_v2_masked_shader_source(CUSTOM_EFFECT_IDENTITY_WGSL);
+        let custom_effect_v2_mask_src =
+            custom_effect_v2_mask_shader_source(CUSTOM_EFFECT_IDENTITY_WGSL);
+        let custom_effect_v2_unmasked_derivatives_src =
+            custom_effect_v2_unmasked_shader_source(CUSTOM_EFFECT_DERIVATIVES_SMOKE_WGSL);
+        let custom_effect_v2_masked_derivatives_src =
+            custom_effect_v2_masked_shader_source(CUSTOM_EFFECT_DERIVATIVES_SMOKE_WGSL);
+        let custom_effect_v2_mask_derivatives_src =
+            custom_effect_v2_mask_shader_source(CUSTOM_EFFECT_DERIVATIVES_SMOKE_WGSL);
         for (name, src) in [
             ("viewport", VIEWPORT_SHADER),
             ("quad", quad_src.as_str()),
@@ -229,6 +338,27 @@ mod webgpu_tint_guardrail {
             ("text_color", TEXT_COLOR_SHADER),
             ("text_subpixel", TEXT_SUBPIXEL_SHADER),
             ("mask", MASK_SHADER),
+            ("custom_effect", custom_effect_unmasked_src.as_str()),
+            ("custom_effect_masked", custom_effect_masked_src.as_str()),
+            ("custom_effect_mask", custom_effect_mask_src.as_str()),
+            ("custom_effect_v2", custom_effect_v2_unmasked_src.as_str()),
+            (
+                "custom_effect_v2_masked",
+                custom_effect_v2_masked_src.as_str(),
+            ),
+            ("custom_effect_v2_mask", custom_effect_v2_mask_src.as_str()),
+            (
+                "custom_effect_v2_derivatives",
+                custom_effect_v2_unmasked_derivatives_src.as_str(),
+            ),
+            (
+                "custom_effect_v2_masked_derivatives",
+                custom_effect_v2_masked_derivatives_src.as_str(),
+            ),
+            (
+                "custom_effect_v2_mask_derivatives",
+                custom_effect_v2_mask_derivatives_src.as_str(),
+            ),
         ] {
             device.push_error_scope(wgpu::ErrorFilter::Validation);
             let _module = device.create_shader_module(wgpu::ShaderModuleDescriptor {
@@ -586,4 +716,71 @@ fn scene_encoding_cache_is_busted_by_text_quality_changes() {
         renderer.perf.scene_encoding_cache_last_miss_reasons & (1 << 9),
         0
     );
+}
+
+#[test]
+fn perf_snapshot_counts_path_material_paint_degradation() {
+    let ctx = pollster::block_on(crate::WgpuContext::new()).expect("wgpu context");
+    let mut renderer = super::Renderer::new(&ctx.adapter, &ctx.device);
+    renderer.set_perf_enabled(true);
+
+    let format = wgpu::TextureFormat::Bgra8UnormSrgb;
+    let viewport_size = (64, 64);
+    let target = ctx.device.create_texture(&wgpu::TextureDescriptor {
+        label: Some("path material paint perf test target"),
+        size: wgpu::Extent3d {
+            width: viewport_size.0,
+            height: viewport_size.1,
+            depth_or_array_layers: 1,
+        },
+        mip_level_count: 1,
+        sample_count: 1,
+        dimension: wgpu::TextureDimension::D2,
+        format,
+        usage: wgpu::TextureUsages::RENDER_ATTACHMENT | wgpu::TextureUsages::TEXTURE_BINDING,
+        view_formats: &[],
+    });
+    let target_view = target.create_view(&Default::default());
+
+    let cmds = [
+        PathCommand::MoveTo(Point::new(Px(10.0), Px(10.0))),
+        PathCommand::LineTo(Point::new(Px(50.0), Px(10.0))),
+        PathCommand::LineTo(Point::new(Px(50.0), Px(50.0))),
+        PathCommand::LineTo(Point::new(Px(10.0), Px(50.0))),
+        PathCommand::Close,
+    ];
+    let constraints = PathConstraints { scale_factor: 1.0 };
+    let (path, _metrics) =
+        renderer.prepare(&cmds, PathStyle::Fill(FillStyle::default()), constraints);
+
+    let mut scene = Scene::default();
+    scene.push(SceneOp::Path {
+        order: DrawOrder(0),
+        origin: Point::new(Px(0.0), Px(0.0)),
+        path,
+        paint: fret_core::scene::Paint::Material {
+            id: fret_core::MaterialId::default(),
+            params: fret_core::scene::MaterialParams {
+                vec4s: [[1.0, 0.0, 0.0, 1.0], [0.0; 4], [0.0; 4], [0.0; 4]],
+            },
+        },
+    });
+
+    let _ = renderer.render_scene(
+        &ctx.device,
+        &ctx.queue,
+        super::RenderSceneParams {
+            format,
+            target_view: &target_view,
+            scene: &scene,
+            clear: super::ClearColor::default(),
+            scale_factor: 1.0,
+            viewport_size,
+        },
+    );
+
+    let snap = renderer
+        .take_last_frame_perf_snapshot()
+        .expect("perf snapshot");
+    assert_eq!(snap.path_material_paints_degraded_to_solid_base, 1);
 }

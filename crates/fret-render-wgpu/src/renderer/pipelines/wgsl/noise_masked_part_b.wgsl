@@ -49,6 +49,8 @@ fn noise_rgb(cell_x: i32, cell_y: i32, seed: u32) -> vec3<f32> {
 
 @fragment
 fn fs_main(@builtin(position) pos: vec4<f32>) -> @location(0) vec4<f32> {
+  let clip = clip_alpha(pos.xy);
+
   let dims = textureDimensions(src_texture);
   let x = i32(floor(pos.x));
   let y = i32(floor(pos.y));
@@ -70,6 +72,5 @@ fn fs_main(@builtin(position) pos: vec4<f32>) -> @location(0) vec4<f32> {
   let n = noise_rgb(cx, cy, seed) * noise.strength;
   let rgb = clamp(tex.rgb + n * a, vec3<f32>(0.0), vec3<f32>(1.0));
 
-  let clip = clip_alpha(pos.xy);
   return vec4<f32>(rgb * clip, clip);
 }

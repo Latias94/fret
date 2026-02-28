@@ -248,7 +248,9 @@ fn text_max_width_for_constraints(constraints: LayoutConstraints, wrap: TextWrap
             // For `TextWrap::Word`, we want min-content to approach the "longest unbreakable
             // segment" width (CSS-like). Using a near-zero wrap width achieves this as long as
             // the text backend does not break within tokens for word-wrap (no mid-word breaks).
-            TextWrap::Grapheme | TextWrap::WordBreak | TextWrap::Word => Some(Px(0.0)),
+            TextWrap::Grapheme | TextWrap::WordBreak | TextWrap::Word | TextWrap::Balance => {
+                Some(Px(0.0))
+            }
             TextWrap::None => None,
         },
     }
@@ -276,7 +278,7 @@ fn normalize_text_measure_constraints(
     }
 
     constraints.available.width = match wrap {
-        TextWrap::Word | TextWrap::None => AvailableSpace::MaxContent,
+        TextWrap::Word | TextWrap::Balance | TextWrap::None => AvailableSpace::MaxContent,
         TextWrap::Grapheme | TextWrap::WordBreak => AvailableSpace::MinContent,
     };
     constraints

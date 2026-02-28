@@ -1,6 +1,6 @@
 # Carousel Embla parity (v2) — TODO
 
-Status: Draft (needs scope confirmation)
+Status: In progress (contracts locked; deeper parity ongoing)
 
 Goal: Deeper Embla alignment for Carousel beyond the shadcn/ui docs outcomes, while keeping Fret’s
 layering contract intact (mechanism vs policy vs recipes).
@@ -40,12 +40,16 @@ Non-goals (v2):
   - Key point: Embla `duration` is a numeric integrator parameter (not a `Duration` in ms).
   - Deliverable: `docs/workstreams/carousel-embla-parity-v2/contracts.md`
   - Evidence: `docs/workstreams/carousel-embla-parity-v2/contracts.md`
-- [ ] CAR2-020 ADR: `CarouselApi` surface in Rust (methods + events + lifetimes).
-  - Deliverable: `docs/adr/xxxx-carousel-api-surface.md`
-- [ ] CAR2-030 ADR: Scroll physics determinism + reduced-motion behavior.
-  - Deliverable: `docs/adr/xxxx-carousel-scroll-physics.md`
-- [ ] CAR2-040 ADR: Seamless loop engine semantics (if in scope).
-  - Deliverable: `docs/adr/xxxx-carousel-loop-engine.md`
+- [x] CAR2-020 Workstream design: `CarouselApi` surface in Rust (methods + events + lifetimes).
+  - Deliverable: `docs/workstreams/carousel-embla-parity-v2/api-and-events.md`
+  - Note: promote to an ADR only if/when the surface becomes stable and/or must be treated as
+    a long-lived contract outside `ecosystem/*`.
+- [ ] CAR2-030 Workstream design: scroll physics determinism + reduced-motion behavior.
+  - Deliverable: `docs/workstreams/carousel-embla-parity-v2/contracts.md` (time model section) + gates
+  - Note: promote to an ADR only if/when the physics semantics become a stable public contract.
+- [ ] CAR2-040 Workstream design: seamless loop engine semantics (if in scope).
+  - Deliverable: `docs/workstreams/carousel-embla-parity-v2/contracts.md` (loop section) + gates
+  - Note: promote to an ADR only if/when we commit to a stable, long-lived loop contract.
 
 ---
 
@@ -78,17 +82,32 @@ Non-goals (v2):
 
 ### Loopers
 
-- [ ] CAR2-140 Implement `loop=true` as **seamless looping** (not selection wrap).
-  - Requires scroll looper + slide looper + translate wrapping semantics.
+- [x] CAR2-140 Implement `loop=true` as **seamless looping** (not selection wrap) (MVP).
+  - Implemented:
+    - scroll/body wrap normalization (loop distance applied without resetting velocity)
+    - per-slide translation recycling by `±content_size`
+  - Evidence:
+    - `ecosystem/fret-ui-headless/src/embla/engine.rs` (`Engine::normalize_loop_entities`)
+    - `ecosystem/fret-ui-headless/src/embla/scroll_body.rs` (`ScrollBody::add_loop_distance`)
+    - `ecosystem/fret-ui-headless/src/embla/slide_looper.rs`
+    - `ecosystem/fret-ui-shadcn/src/carousel.rs` (enables embla engine for loop + per-slide `RenderTransform`)
+  - Gates:
+    - `cargo test -p fret-ui-headless` (loop + slide looper unit tests)
+    - `tools/diag-scripts/ui-gallery/carousel/ui-gallery-carousel-loop-continuity-touch-gate.json`
 
 ### Slides in view
 
-- [ ] CAR2-150 Implement `slidesInView` with `inViewThreshold` + `inViewMargin`.
+- [x] CAR2-150 Implement `slidesInView` with `inViewThreshold` + `inViewMargin`.
   - Provide both: current in-view set and “changed since last frame” signals.
+  - Evidence:
+    - Headless tracker: `ecosystem/fret-ui-headless/src/embla/slides_in_view.rs`
+    - Recipe wiring + snapshot model: `ecosystem/fret-ui-shadcn/src/carousel.rs`
+  - Gate:
+    - `ecosystem/fret-ui-shadcn/tests/carousel_slides_in_view_snapshot.rs`
 
 ### ReInit + resize + slide changes
 
-- [ ] CAR2-160 Implement `reInit` event emission when geometry/options change.
+- [x] CAR2-160 Implement `reInit` event emission when geometry/options change (MVP).
   - Implemented (internal): headless `Engine::reinit` and shadcn recipe wiring on snap/viewport
     changes.
   - MVP: observable via monotonic generation counters published in `CarouselApiSnapshot`
@@ -98,35 +117,52 @@ Non-goals (v2):
   - Evidence:
     - `ecosystem/fret-ui-headless/src/embla/engine.rs` (`Engine::reinit`)
     - `ecosystem/fret-ui-shadcn/src/carousel.rs` (calls `engine.reinit(...)` when snaps/viewport change)
-- [ ] CAR2-170 Implement `resize` handling semantics (throttling + stable “reInit once” contract).
-  - Partial: re-init is triggered when `viewSize`/snaps/max offset change; no explicit throttling
-    contract yet.
+- [x] CAR2-170 Implement `resize` handling semantics (throttling + stable “reInit once” contract) (MVP).
+  - Implemented: observable `reInit` is throttled and coalesced (see `api-and-events.md`).
+  - Decision (v2 MVP): throttle observable `reInit` to “at most once per N frames” during continuous
+    geometry churn (see `api-and-events.md`).
+  - Gate: `ecosystem/fret-ui-shadcn/tests/carousel_api_generations.rs`
   - Gate (MVP): `tools/diag-scripts/ui-gallery/carousel/ui-gallery-carousel-demo-reinit-resize-gate.json`
-- [ ] CAR2-180 Implement `slideChanges` semantics (detect add/remove/reorder in retained tree).
+- [x] CAR2-180 Implement `slideChanges` semantics (detect add/remove/reorder in retained tree).
+  - Evidence:
+    - Content-id change detection: `ecosystem/fret-ui-shadcn/src/carousel.rs`
+  - Gate:
+    - `ecosystem/fret-ui-shadcn/tests/carousel_slide_changes_reinit.rs`
 
 ---
 
 ## P2 — API surface parity (recipe-level, Rust-native)
 
-- [ ] CAR2-210 Provide a `CarouselApi` handle with:
+- [x] CAR2-210 Provide a `CarouselApi` handle with:
   - `scrollPrev/scrollNext/scrollTo(index)`
   - `selectedScrollSnap`
   - `scrollSnapList`
   - `canScrollPrev/canScrollNext`
   - `slidesInView` (if implemented)
-- [ ] CAR2-220 Provide an event subscription surface:
+-  Evidence:
+  - `ecosystem/fret-ui-shadcn/src/carousel.rs` (`CarouselApi`)
+  - Gate: `ecosystem/fret-ui-shadcn/tests/carousel_api_handle.rs`
+- [x] CAR2-220 Provide an event subscription surface:
   - `on_select` and `on_reinit` (at least)
   - make it usable without storing arbitrary closures inside models
-- [ ] CAR2-230 Align shadcn `setApi` example ergonomics in Rust (state + effect-like updates).
+-  Evidence:
+  - `ecosystem/fret-ui-shadcn/src/carousel.rs` (`CarouselEventCursor` + `events_since`)
+  - UI gallery: `apps/fret-ui-gallery/src/ui/pages/carousel.rs` (API demo)
+- [x] CAR2-230 Align shadcn `setApi` example ergonomics in Rust (state + effect-like updates).
+  - Workstream design note: `docs/workstreams/carousel-embla-parity-v2/api-and-events.md`
 
 ---
 
 ## P3 — Breakpoints / responsive options
 
-- [ ] CAR2-310 Add a breakpoint evaluation mechanism (Rust-native; no CSS media query parsing).
+- [x] CAR2-310 Add a breakpoint evaluation mechanism (Rust-native; no CSS media query parsing).
   - Option A: explicit `Vec<(min_width_px, opts_override)>`
   - Option B: container query integration if already present in `fret-ui-kit`
-- [ ] CAR2-320 Regression gates for breakpoint changes (diag + tests).
+  - Implemented: `CarouselOptionsPatch` + `CarouselBreakpoint` evaluated from the measured carousel
+    viewport width (previous layout pass).
+  - Evidence: `ecosystem/fret-ui-shadcn/src/carousel.rs`
+- [x] CAR2-320 Regression gates for breakpoint changes (diag + tests).
+  - Gate: `ecosystem/fret-ui-shadcn/tests/carousel_breakpoints.rs`
 
 ---
 
@@ -135,7 +171,16 @@ Non-goals (v2):
 - [ ] CAR2-410 Implement Embla-like `focus` behavior:
   - focusing a slide (or focus entering slide) scrolls it into view
   - keyboard navigation remains predictable with roving focus policies
-- [ ] CAR2-420 A11y: role/roledescription + slide semantics parity audit.
+-  Evidence:
+  - `ecosystem/fret-ui-shadcn/src/carousel.rs` (`watch_focus`, Tab watcher)
+  - Gate: `ecosystem/fret-ui-shadcn/tests/carousel_focus_watch_tab_scrolls.rs`
+- [x] CAR2-410 Implement Embla-like `focus` behavior (MVP).
+- [x] CAR2-420 A11y: role/roledescription + slide semantics parity audit (with known gaps).
+  - Note: we currently stamp role/label/orientation, but do not yet have a portable
+    `aria-roledescription` equivalent in core semantics.
+  - Evidence:
+    - `ecosystem/fret-ui-shadcn/src/carousel.rs` (Region root + slide labels)
+    - Gate: `ecosystem/fret-ui-shadcn/tests/carousel_a11y_semantics.rs`
 
 ---
 

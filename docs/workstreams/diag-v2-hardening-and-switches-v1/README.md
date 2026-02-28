@@ -170,12 +170,25 @@ Make configuration predictable:
       `isolate_external_pointer_input_while_script_running=true` into the per-run `diag.config.json`.
     - Override (escape hatch): pass `--env FRET_DIAG_ISOLATE_POINTER_INPUT=0` when you need interactive input during a
       script run.
+    - Note: multi-window docking scripts may use runner cursor overrides (e.g. `set_cursor_in_window_logical`) to drive
+      window-hover routing. This updates the runner's internal cursor model and does **not** warp the OS cursor.
+    - Status (2026-02-28): cursor override steps are now capability-gated (`diag.cursor_screen_pos_override`) and are
+      included in the required-capabilities inference so missing runner support fails fast instead of timing out.
+  - Output safety (2026-02-28): tool-launched runs disable auto-dumping by default to avoid accidental output explosions.
+    - Tooling writes `script_auto_dump=false` and `pick_auto_dump=false` into `diag.config.json` for `--launch` runs.
+    - Escape hatch: pass `--env FRET_DIAG_SCRIPT_AUTO_DUMP=1` (or set `script_auto_dump=true` in config) when authoring
+      scripts and you intentionally want a dump after each injected step.
   - Smoke (2026-02-28): `ui-gallery-gesture-tap-smoke` passes under `--launch` and produces schema2-only bundle exports
     by default (`bundle.schema2.json` present, raw `bundle.json` absent).
   - Smoke (2026-02-28): `ui-gallery-table-smoke` passes again after relaxing a too-strict
     `bounds_within_window` check to `visible_in_window` (some page roots can be taller than the window).
   - Smoke (2026-02-28): `ui-gallery-empty-background-gradient-screenshot` passes under `--launch` and writes a PNG under
     `target/fret-diag/screenshots/<bundle_dir>/` (tool-launched per-run config sets `screenshots_enabled=true` as needed).
+  - Smoke (2026-02-28): `ui-gallery-clipboard-text-smoke` passes under `--launch` and validates
+    deterministic paste behavior by setting OS clipboard text, pasting into a focused textarea, and asserting the value
+    via semantics (note: native runners mutate the OS clipboard).
+  - Smoke (2026-02-28): `ui-gallery-incoming-open-inject-smoke` passes under `--launch` and validates deterministic
+    "incoming open" injection (surfaces an `IncomingOpenRequest` event without depending on OS file dialogs / drag-drop).
   - Convenience (2026-02-28): a tiny smoke suite exists at `tools/diag-scripts/suites/diag-hardening-smoke/` for quick
     post-merge verification:
     - `cargo run -p fretboard -- diag suite diag-hardening-smoke --launch -- cargo run -p fret-ui-gallery --release`

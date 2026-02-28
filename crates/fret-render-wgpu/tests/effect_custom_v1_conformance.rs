@@ -315,6 +315,149 @@ fn fret_custom_effect(src: vec4<f32>, _uv: vec2<f32>, pos_px: vec2<f32>, _params
 }
 
 #[test]
+fn gpu_custom_effect_v1_render_space_origin_matches_effect_bounds_scissor() {
+    let ctx = match pollster::block_on(WgpuContext::new()) {
+        Ok(ctx) => ctx,
+        Err(_err) => {
+            // No adapter/device available (common in some headless environments).
+            return;
+        }
+    };
+
+    let mut renderer = Renderer::new(&ctx.adapter, &ctx.device);
+    renderer.set_intermediate_budget_bytes(u64::MAX);
+
+    // If `render_space.origin_px` is the effect bounds origin (not the viewport origin),
+    // then the left-most column inside the effect bounds should see `local_x < 1.0`.
+    let wgsl = r#"
+fn fret_custom_effect(_src: vec4<f32>, _uv: vec2<f32>, pos_px: vec2<f32>, _params: EffectParamsV1) -> vec4<f32> {
+  let local = pos_px - render_space.origin_px;
+  let t = step(1.0, local.x);
+  return vec4<f32>(t, 0.0, 0.0, 1.0);
+}
+"#;
+
+    let effect = renderer
+        .register_custom_effect_v1(CustomEffectDescriptorV1::wgsl_utf8(wgsl))
+        .expect("custom effect registration must succeed on wgpu backends");
+
+    let size = (64u32, 64u32);
+    let mut scene = Scene::default();
+    scene.push(SceneOp::Quad {
+        order: DrawOrder(0),
+        rect: Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(64.0), Px(64.0))),
+        background: Paint::Solid(Color {
+            r: 1.0,
+            g: 1.0,
+            b: 1.0,
+            a: 1.0,
+        }),
+        border: Edges::all(Px(0.0)),
+        border_paint: Paint::Solid(Color::TRANSPARENT),
+        corner_radii: Default::default(),
+    });
+
+    // Offset bounds from the viewport origin so origin matters.
+    let bounds = Rect::new(Point::new(Px(16.0), Px(8.0)), Size::new(Px(24.0), Px(16.0)));
+    scene.push(SceneOp::PushEffect {
+        bounds,
+        mode: EffectMode::Backdrop,
+        chain: EffectChain::from_steps(&[EffectStep::CustomV1 {
+            id: effect,
+            params: EffectParamsV1 {
+                vec4s: [[0.0; 4]; 4],
+            },
+            max_sample_offset_px: Px(0.0),
+        }]),
+        quality: EffectQuality::Auto,
+    });
+    scene.push(SceneOp::PopEffect);
+
+    let pixels = render_and_readback(&ctx, &mut renderer, &scene, size);
+
+    // Pixel inside effect bounds at the left-most column should have t=0 (red=0),
+    // and a pixel a couple columns in should have t=1 (red>0).
+    let left = pixel_rgba(&pixels, size.0, 16, 8);
+    let inner = pixel_rgba(&pixels, size.0, 18, 8);
+    assert_eq!(
+        left[0], 0,
+        "expected render_space.origin_px to match effect bounds origin (left-most column local_x < 1)"
+    );
+    assert!(
+        inner[0] > 0,
+        "expected local_x to increase inside bounds (a couple columns in should cross the step threshold)"
+    );
+}
+
+#[test]
+fn gpu_custom_effect_v1_can_sample_renderer_pattern_atlas_helpers() {
+    let ctx = match pollster::block_on(WgpuContext::new()) {
+        Ok(ctx) => ctx,
+        Err(_err) => {
+            // No adapter/device available (common in some headless environments).
+            return;
+        }
+    };
+
+    let mut renderer = Renderer::new(&ctx.adapter, &ctx.device);
+    renderer.set_intermediate_budget_bytes(u64::MAX);
+
+    // Exercise `fret_catalog_*` helpers from the fragment stage.
+    let wgsl = r#"
+fn fret_custom_effect(_src: vec4<f32>, _uv: vec2<f32>, pos_px: vec2<f32>, _params: EffectParamsV1) -> vec4<f32> {
+  // Use screen-like coordinates for hash noise, and effect-local coordinates for Bayer to ensure
+  // `render_space` is also linked in.
+  let n = fret_catalog_hash_noise01(pos_px);
+  let b = fret_catalog_bayer8x8_01(fret_local_px(pos_px));
+  return vec4<f32>(b, n, 0.0, 1.0);
+}
+"#;
+
+    let effect = renderer
+        .register_custom_effect_v1(CustomEffectDescriptorV1::wgsl_utf8(wgsl))
+        .expect("custom effect registration must succeed on wgpu backends");
+
+    let size = (64u32, 64u32);
+    let mut scene = Scene::default();
+    scene.push(SceneOp::Quad {
+        order: DrawOrder(0),
+        rect: Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(64.0), Px(64.0))),
+        background: Paint::Solid(Color {
+            r: 1.0,
+            g: 1.0,
+            b: 1.0,
+            a: 1.0,
+        }),
+        border: Edges::all(Px(0.0)),
+        border_paint: Paint::Solid(Color::TRANSPARENT),
+        corner_radii: Default::default(),
+    });
+    scene.push(SceneOp::PushEffect {
+        bounds: Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(64.0), Px(64.0))),
+        mode: EffectMode::Backdrop,
+        chain: EffectChain::from_steps(&[EffectStep::CustomV1 {
+            id: effect,
+            params: EffectParamsV1 {
+                vec4s: [[0.0; 4]; 4],
+            },
+            max_sample_offset_px: Px(0.0),
+        }]),
+        quality: EffectQuality::Auto,
+    });
+    scene.push(SceneOp::PopEffect);
+
+    let pixels = render_and_readback(&ctx, &mut renderer, &scene, size);
+
+    // The Bayer matrix row 0 is known to differ between x=0 and x=1, so the red channel should differ.
+    let p00 = pixel_rgba(&pixels, size.0, 0, 0);
+    let p10 = pixel_rgba(&pixels, size.0, 1, 0);
+    assert_ne!(
+        p00[0], p10[0],
+        "expected Bayer helper to produce different values for adjacent pixels"
+    );
+}
+
+#[test]
 fn gpu_custom_effect_v1_chain_padding_matches_expanded_bounds_reference() {
     let ctx = match pollster::block_on(WgpuContext::new()) {
         Ok(ctx) => ctx,

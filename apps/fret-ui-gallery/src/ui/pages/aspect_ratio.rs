@@ -3,12 +3,41 @@ use super::super::*;
 use crate::ui::doc_layout::{self, DocSection};
 
 pub(super) fn preview_aspect_ratio(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
+    fn center_align_text(mut element: AnyElement) -> AnyElement {
+        use fret_ui::element::ElementKind;
+
+        match &mut element.kind {
+            ElementKind::Text(props) => props.align = fret_core::TextAlign::Center,
+            ElementKind::StyledText(props) => props.align = fret_core::TextAlign::Center,
+            ElementKind::SelectableText(props) => props.align = fret_core::TextAlign::Center,
+            _ => {}
+        }
+
+        element
+    }
+
     let ratio_example = |cx: &mut ElementContext<'_, App>,
                          ratio: f32,
                          max_w: Px,
                          ratio_label: &'static str,
                          caption: &'static str,
-                         test_id: &'static str| {
+                         test_id: &'static str,
+                         content_test_id: &'static str| {
+        let text_block = stack::vstack(
+            cx,
+            stack::VStackProps::default()
+                .layout(LayoutRefinement::default().w_full().min_w_0())
+                .gap(Space::N1)
+                .items_center(),
+            move |cx| {
+                vec![
+                    center_align_text(shadcn::typography::h4(cx, ratio_label)),
+                    center_align_text(shadcn::typography::muted(cx, caption)),
+                ]
+            },
+        )
+        .test_id(content_test_id);
+
         let content = stack::vstack(
             cx,
             stack::VStackProps::default()
@@ -16,12 +45,7 @@ pub(super) fn preview_aspect_ratio(cx: &mut ElementContext<'_, App>) -> Vec<AnyE
                 .items_center()
                 .justify_center()
                 .gap(Space::N1),
-            move |cx| {
-                vec![
-                    shadcn::typography::h4(cx, ratio_label),
-                    shadcn::typography::muted(cx, caption),
-                ]
-            },
+            move |_cx| vec![text_block],
         );
 
         let (muted_bg, border) =
@@ -47,6 +71,7 @@ pub(super) fn preview_aspect_ratio(cx: &mut ElementContext<'_, App>) -> Vec<AnyE
         "16:9",
         "Landscape media",
         "ui-gallery-aspect-ratio-demo",
+        "ui-gallery-aspect-ratio-demo-content",
     );
 
     let square = ratio_example(
@@ -56,6 +81,7 @@ pub(super) fn preview_aspect_ratio(cx: &mut ElementContext<'_, App>) -> Vec<AnyE
         "1:1",
         "Square media",
         "ui-gallery-aspect-ratio-square",
+        "ui-gallery-aspect-ratio-square-content",
     );
 
     let portrait = ratio_example(
@@ -65,6 +91,7 @@ pub(super) fn preview_aspect_ratio(cx: &mut ElementContext<'_, App>) -> Vec<AnyE
         "9:16",
         "Portrait media",
         "ui-gallery-aspect-ratio-portrait",
+        "ui-gallery-aspect-ratio-portrait-content",
     );
 
     let rtl = doc_layout::rtl(cx, |cx| {
@@ -75,6 +102,7 @@ pub(super) fn preview_aspect_ratio(cx: &mut ElementContext<'_, App>) -> Vec<AnyE
             "16:9",
             "RTL layout sample",
             "ui-gallery-aspect-ratio-rtl",
+            "ui-gallery-aspect-ratio-rtl-content",
         )
     });
 

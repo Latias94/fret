@@ -82,6 +82,14 @@ impl FontWeight {
 pub enum TextWrap {
     None,
     Word,
+    /// Attempt to balance line breaks for wrapped text.
+    ///
+    /// This is intended to approximate CSS `text-wrap: balance` / Tailwind `text-balance`:
+    /// keep the same overall wrapping behavior as `Word`, but avoid a very short last line when
+    /// possible.
+    ///
+    /// Note: this is an outcome-driven policy; implementations may use heuristics.
+    Balance,
     /// Wrap at word boundaries, but allow breaking long tokens when necessary.
     ///
     /// This is similar to CSS `overflow-wrap: break-word` (with `word-break: normal`): prefer

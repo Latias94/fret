@@ -1,100 +1,205 @@
 {
+  "meta": {
+    "required_capabilities": [
+      "diag.script_v2",
+      "diag.screenshot_png"
+    ]
+  },
   "schema_version": 2,
   "steps": [
-    { "type": "reset_diagnostics" },
-    { "type": "press_key", "key": "escape" },
-    { "type": "wait_frames", "n": 2 },
-    { "type": "set_window_inner_size", "width_px": 1120.0, "height_px": 760.0 },
-    { "type": "wait_frames", "n": 10 },
     {
-      "type": "wait_until",
+      "type": "reset_diagnostics"
+    },
+    {
+      "key": "escape",
+      "type": "press_key"
+    },
+    {
+      "n": 2,
+      "type": "wait_frames"
+    },
+    {
+      "height_px": 760.0,
+      "type": "set_window_inner_size",
+      "width_px": 1120.0
+    },
+    {
+      "n": 10,
+      "type": "wait_frames"
+    },
+    {
       "predicate": {
         "kind": "exists",
-        "target": { "kind": "test_id", "id": "ui-gallery-nav-search" }
+        "target": {
+          "id": "ui-gallery-nav-search",
+          "kind": "test_id"
+        }
       },
-      "timeout_frames": 240
+      "timeout_frames": 240,
+      "type": "wait_until"
     },
-    { "type": "click", "target": { "kind": "test_id", "id": "ui-gallery-nav-search" } },
-    { "type": "press_key", "key": "a", "modifiers": { "ctrl": true } },
-    { "type": "press_key", "key": "backspace" },
-    { "type": "type_text", "text": "checkbox" },
-    { "type": "wait_frames", "n": 2 },
     {
-      "type": "wait_until",
+      "target": {
+        "id": "ui-gallery-nav-search",
+        "kind": "test_id"
+      },
+      "type": "click"
+    },
+    {
+      "key": "a",
+      "modifiers": {
+        "ctrl": true
+      },
+      "type": "press_key"
+    },
+    {
+      "key": "backspace",
+      "type": "press_key"
+    },
+    {
+      "text": "checkbox",
+      "type": "type_text"
+    },
+    {
+      "n": 2,
+      "type": "wait_frames"
+    },
+    {
       "predicate": {
+        "eps_px": 1.0,
         "kind": "bounds_within_window",
-        "target": { "kind": "test_id", "id": "ui-gallery-nav-checkbox" },
         "padding_px": 8.0,
-        "eps_px": 1.0
+        "target": {
+          "id": "ui-gallery-nav-checkbox",
+          "kind": "test_id"
+        }
       },
-      "timeout_frames": 300
+      "timeout_frames": 300,
+      "type": "wait_until"
     },
-    { "type": "click", "target": { "kind": "test_id", "id": "ui-gallery-nav-checkbox" } },
     {
-      "type": "wait_until",
+      "target": {
+        "id": "ui-gallery-nav-checkbox",
+        "kind": "test_id"
+      },
+      "type": "click"
+    },
+    {
       "predicate": {
         "kind": "exists",
-        "target": { "kind": "test_id", "id": "ui-gallery-page-checkbox" }
+        "target": {
+          "id": "ui-gallery-page-checkbox",
+          "kind": "test_id"
+        }
       },
-      "timeout_frames": 240
+      "timeout_frames": 240,
+      "type": "wait_until"
     },
     {
-      "type": "wait_until",
       "predicate": {
         "kind": "exists",
-        "target": { "kind": "test_id", "id": "ui-gallery-checkbox-checked-state" }
+        "target": {
+          "id": "ui-gallery-checkbox-checked-state",
+          "kind": "test_id"
+        }
       },
-      "timeout_frames": 240
+      "timeout_frames": 240,
+      "type": "wait_until"
     },
     {
-      "type": "scroll_into_view",
-      "container": { "kind": "test_id", "id": "ui-gallery-content-scroll" },
-      "target": { "kind": "test_id", "id": "ui-gallery-checkbox-checked-state" },
+      "container": {
+        "id": "ui-gallery-content-scroll",
+        "kind": "test_id"
+      },
       "delta_y": -160.0,
-      "require_fully_within_window": true,
       "padding_px": 24.0,
-      "timeout_frames": 600
+      "require_fully_within_window": true,
+      "target": {
+        "id": "ui-gallery-checkbox-checked-state",
+        "kind": "test_id"
+      },
+      "timeout_frames": 600,
+      "type": "scroll_into_view"
     },
-    { "type": "wait_frames", "n": 10 },
-    { "type": "capture_screenshot", "label": "ui-gallery-checkbox-checked-state-wrap" },
     {
-      "type": "wait_until",
+      "n": 10,
+      "type": "wait_frames"
+    },
+    {
+      "label": "ui-gallery-checkbox-checked-state-wrap",
+      "type": "capture_screenshot"
+    },
+    {
       "predicate": {
         "kind": "exists",
-        "target": { "kind": "test_id", "id": "ui-gallery-checkbox-group" }
+        "target": {
+          "id": "ui-gallery-checkbox-group",
+          "kind": "test_id"
+        }
       },
-      "timeout_frames": 240
+      "timeout_frames": 240,
+      "type": "wait_until"
     },
     {
-      "type": "scroll_into_view",
-      "container": { "kind": "test_id", "id": "ui-gallery-content-scroll" },
-      "target": { "kind": "test_id", "id": "ui-gallery-checkbox-group" },
+      "container": {
+        "id": "ui-gallery-content-scroll",
+        "kind": "test_id"
+      },
       "delta_y": -160.0,
-      "require_fully_within_window": true,
       "padding_px": 24.0,
-      "timeout_frames": 600
+      "require_fully_within_window": true,
+      "target": {
+        "id": "ui-gallery-checkbox-group",
+        "kind": "test_id"
+      },
+      "timeout_frames": 600,
+      "type": "scroll_into_view"
     },
-    { "type": "wait_frames", "n": 10 },
-    { "type": "capture_screenshot", "label": "ui-gallery-checkbox-group-wrap" },
     {
-      "type": "wait_until",
+      "n": 10,
+      "type": "wait_frames"
+    },
+    {
+      "label": "ui-gallery-checkbox-group-wrap",
+      "type": "capture_screenshot"
+    },
+    {
       "predicate": {
         "kind": "exists",
-        "target": { "kind": "test_id", "id": "ui-gallery-checkbox-rtl-field" }
+        "target": {
+          "id": "ui-gallery-checkbox-rtl-field",
+          "kind": "test_id"
+        }
       },
-      "timeout_frames": 240
+      "timeout_frames": 240,
+      "type": "wait_until"
     },
     {
-      "type": "scroll_into_view",
-      "container": { "kind": "test_id", "id": "ui-gallery-content-scroll" },
-      "target": { "kind": "test_id", "id": "ui-gallery-checkbox-rtl-field" },
+      "container": {
+        "id": "ui-gallery-content-scroll",
+        "kind": "test_id"
+      },
       "delta_y": -160.0,
-      "require_fully_within_window": true,
       "padding_px": 24.0,
-      "timeout_frames": 600
+      "require_fully_within_window": true,
+      "target": {
+        "id": "ui-gallery-checkbox-rtl-field",
+        "kind": "test_id"
+      },
+      "timeout_frames": 600,
+      "type": "scroll_into_view"
     },
-    { "type": "wait_frames", "n": 10 },
-    { "type": "capture_bundle", "label": "ui-gallery-checkbox-rtl-and-checked-wrap" },
-    { "type": "capture_screenshot", "label": "ui-gallery-checkbox-rtl-and-checked-wrap" }
+    {
+      "n": 10,
+      "type": "wait_frames"
+    },
+    {
+      "label": "ui-gallery-checkbox-rtl-and-checked-wrap",
+      "type": "capture_bundle"
+    },
+    {
+      "label": "ui-gallery-checkbox-rtl-and-checked-wrap",
+      "type": "capture_screenshot"
+    }
   ]
 }

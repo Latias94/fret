@@ -106,48 +106,28 @@ fn change_type_bg(change_type: PackageInfoChangeKind) -> ColorRef {
     let (key, fallback) = match change_type {
         PackageInfoChangeKind::Added => (
             "color.ai.package_info.change.added.bg",
-            Color {
-                r: 219.0 / 255.0,
-                g: 234.0 / 255.0,
-                b: 254.0 / 255.0,
-                a: 1.0,
-            },
+            // Tailwind blue-100 (#dbeafe).
+            fret_ui_kit::colors::linear_from_hex_rgb(0xDB_EA_FE),
         ),
         PackageInfoChangeKind::Major => (
             "color.ai.package_info.change.major.bg",
-            Color {
-                r: 254.0 / 255.0,
-                g: 226.0 / 255.0,
-                b: 226.0 / 255.0,
-                a: 1.0,
-            },
+            // Tailwind red-100 (#fee2e2).
+            fret_ui_kit::colors::linear_from_hex_rgb(0xFE_E2_E2),
         ),
         PackageInfoChangeKind::Minor => (
             "color.ai.package_info.change.minor.bg",
-            Color {
-                r: 254.0 / 255.0,
-                g: 249.0 / 255.0,
-                b: 195.0 / 255.0,
-                a: 1.0,
-            },
+            // Tailwind yellow-100 (#fef9c3).
+            fret_ui_kit::colors::linear_from_hex_rgb(0xFE_F9_C3),
         ),
         PackageInfoChangeKind::Patch => (
             "color.ai.package_info.change.patch.bg",
-            Color {
-                r: 220.0 / 255.0,
-                g: 252.0 / 255.0,
-                b: 231.0 / 255.0,
-                a: 1.0,
-            },
+            // Tailwind green-100 (#dcfce7).
+            fret_ui_kit::colors::linear_from_hex_rgb(0xDC_FC_E7),
         ),
         PackageInfoChangeKind::Removed => (
             "color.ai.package_info.change.removed.bg",
-            Color {
-                r: 243.0 / 255.0,
-                g: 244.0 / 255.0,
-                b: 246.0 / 255.0,
-                a: 1.0,
-            },
+            // Tailwind gray-100 (#f3f4f6).
+            fret_ui_kit::colors::linear_from_hex_rgb(0xF3_F4_F6),
         ),
     };
     ColorRef::Token {
@@ -160,48 +140,28 @@ fn change_type_fg(change_type: PackageInfoChangeKind) -> ColorRef {
     let (key, fallback) = match change_type {
         PackageInfoChangeKind::Added => (
             "color.ai.package_info.change.added.fg",
-            Color {
-                r: 29.0 / 255.0,
-                g: 78.0 / 255.0,
-                b: 216.0 / 255.0,
-                a: 1.0,
-            },
+            // Tailwind blue-700 (#1d4ed8).
+            fret_ui_kit::colors::linear_from_hex_rgb(0x1D_4E_D8),
         ),
         PackageInfoChangeKind::Major => (
             "color.ai.package_info.change.major.fg",
-            Color {
-                r: 185.0 / 255.0,
-                g: 28.0 / 255.0,
-                b: 28.0 / 255.0,
-                a: 1.0,
-            },
+            // Tailwind red-700 (#b91c1c).
+            fret_ui_kit::colors::linear_from_hex_rgb(0xB9_1C_1C),
         ),
         PackageInfoChangeKind::Minor => (
             "color.ai.package_info.change.minor.fg",
-            Color {
-                r: 161.0 / 255.0,
-                g: 98.0 / 255.0,
-                b: 7.0 / 255.0,
-                a: 1.0,
-            },
+            // Tailwind amber-700 (#a16207).
+            fret_ui_kit::colors::linear_from_hex_rgb(0xA1_62_07),
         ),
         PackageInfoChangeKind::Patch => (
             "color.ai.package_info.change.patch.fg",
-            Color {
-                r: 21.0 / 255.0,
-                g: 128.0 / 255.0,
-                b: 61.0 / 255.0,
-                a: 1.0,
-            },
+            // Tailwind green-700 (#15803d).
+            fret_ui_kit::colors::linear_from_hex_rgb(0x15_80_3D),
         ),
         PackageInfoChangeKind::Removed => (
             "color.ai.package_info.change.removed.fg",
-            Color {
-                r: 55.0 / 255.0,
-                g: 65.0 / 255.0,
-                b: 81.0 / 255.0,
-                a: 1.0,
-            },
+            // Tailwind gray-700 (#374151).
+            fret_ui_kit::colors::linear_from_hex_rgb(0x37_41_51),
         ),
     };
     ColorRef::Token {

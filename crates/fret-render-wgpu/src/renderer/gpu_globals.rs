@@ -11,4 +11,6 @@ pub(super) struct GpuGlobals {
     pub(super) mask_image_sampler: wgpu::Sampler,
     pub(super) mask_image_sampler_nearest: wgpu::Sampler,
     pub(super) mask_image_identity_view: wgpu::TextureView,
+
+    pub(super) custom_effect_input_fallback_view: wgpu::TextureView,
 }

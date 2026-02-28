@@ -172,7 +172,7 @@ pub(in crate::ui) fn preview_button_group(cx: &mut ElementContext<'_, App>) -> V
                 .variant(shadcn::ButtonVariant::Outline)
                 .size(shadcn::ButtonSize::Sm)
                 .into(),
-            shadcn::Button::new("Add")
+            shadcn::Button::new("")
                 .a11y_label("Add")
                 .variant(shadcn::ButtonVariant::Outline)
                 .size(shadcn::ButtonSize::IconSm)
@@ -191,7 +191,7 @@ pub(in crate::ui) fn preview_button_group(cx: &mut ElementContext<'_, App>) -> V
             shadcn::Button::new("Group")
                 .variant(shadcn::ButtonVariant::Outline)
                 .into(),
-            shadcn::Button::new("Add")
+            shadcn::Button::new("")
                 .a11y_label("Add")
                 .variant(shadcn::ButtonVariant::Outline)
                 .size(shadcn::ButtonSize::Icon)
@@ -213,7 +213,7 @@ pub(in crate::ui) fn preview_button_group(cx: &mut ElementContext<'_, App>) -> V
                 .variant(shadcn::ButtonVariant::Outline)
                 .size(shadcn::ButtonSize::Lg)
                 .into(),
-            shadcn::Button::new("Add")
+            shadcn::Button::new("")
                 .a11y_label("Add")
                 .variant(shadcn::ButtonVariant::Outline)
                 .size(shadcn::ButtonSize::IconLg)

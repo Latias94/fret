@@ -128,6 +128,22 @@ pub(super) struct GpuPipelines {
         std::collections::HashMap<fret_core::EffectId, CustomEffectPipelines>,
     pub(super) custom_effect_bind_group_layout: Option<wgpu::BindGroupLayout>,
     pub(super) custom_effect_mask_bind_group_layout: Option<wgpu::BindGroupLayout>,
+
+    pub(super) custom_effect_v2_pipeline_format: Option<wgpu::TextureFormat>,
+    pub(super) custom_effect_v2_pipelines:
+        std::collections::HashMap<fret_core::EffectId, CustomEffectPipelines>,
+    pub(super) custom_effect_v2_bind_group_layout: Option<wgpu::BindGroupLayout>,
+    pub(super) custom_effect_v2_mask_bind_group_layout: Option<wgpu::BindGroupLayout>,
+
+    pub(super) custom_effect_v3_pipeline_format: Option<wgpu::TextureFormat>,
+    pub(super) custom_effect_v3_pipelines:
+        std::collections::HashMap<fret_core::EffectId, CustomEffectPipelines>,
+    pub(super) custom_effect_v3_bind_group_layout: Option<wgpu::BindGroupLayout>,
+    pub(super) custom_effect_v3_mask_bind_group_layout: Option<wgpu::BindGroupLayout>,
+
+    pub(super) mip_downsample_box_pipeline_format: Option<wgpu::TextureFormat>,
+    pub(super) mip_downsample_box_pipeline: Option<wgpu::RenderPipeline>,
+    pub(super) mip_downsample_box_bind_group_layout: Option<wgpu::BindGroupLayout>,
 }
 
 impl Default for GpuPipelines {
@@ -232,6 +248,20 @@ impl Default for GpuPipelines {
             custom_effect_pipelines: std::collections::HashMap::new(),
             custom_effect_bind_group_layout: None,
             custom_effect_mask_bind_group_layout: None,
+
+            custom_effect_v2_pipeline_format: None,
+            custom_effect_v2_pipelines: std::collections::HashMap::new(),
+            custom_effect_v2_bind_group_layout: None,
+            custom_effect_v2_mask_bind_group_layout: None,
+
+            custom_effect_v3_pipeline_format: None,
+            custom_effect_v3_pipelines: std::collections::HashMap::new(),
+            custom_effect_v3_bind_group_layout: None,
+            custom_effect_v3_mask_bind_group_layout: None,
+
+            mip_downsample_box_pipeline_format: None,
+            mip_downsample_box_pipeline: None,
+            mip_downsample_box_bind_group_layout: None,
         }
     }
 }

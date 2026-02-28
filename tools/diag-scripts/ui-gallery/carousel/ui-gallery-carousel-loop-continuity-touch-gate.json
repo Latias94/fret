@@ -1,0 +1,143 @@
+{
+  "schema_version": 2,
+  "meta": {
+    "name": "UI gallery: carousel loop continuity (touch gate)",
+    "tags": ["ui-gallery", "carousel", "loop", "touch", "gate", "screenshot"],
+    "required_capabilities": [
+      "diag.script_v2",
+      "diag.pointer_kind_touch",
+      "diag.screenshot_png"
+    ],
+    "target_hints": [
+      "Requires the UI gallery Carousel page to include a `Loop` section with `loop=true` + Embla engine enabled.",
+      "Expected behavior: repeated touch swipes do not clamp at ends or hang; content remains visible."
+    ]
+  },
+  "steps": [
+    { "type": "reset_diagnostics" },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-nav-search" }
+      },
+      "timeout_frames": 600
+    },
+    { "type": "press_key", "key": "escape" },
+    { "type": "wait_frames", "n": 2 },
+
+    { "type": "set_window_inner_size", "width_px": 1280.0, "height_px": 720.0 },
+    { "type": "wait_frames", "n": 10 },
+
+    { "type": "click", "target": { "kind": "test_id", "id": "ui-gallery-nav-search" } },
+    { "type": "press_key", "key": "a", "modifiers": { "ctrl": true } },
+    { "type": "press_key", "key": "backspace" },
+    { "type": "type_text", "text": "carousel" },
+    { "type": "wait_frames", "n": 2 },
+
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "bounds_within_window",
+        "target": { "kind": "test_id", "id": "ui-gallery-nav-carousel" },
+        "padding_px": 8.0,
+        "eps_px": 1.0
+      },
+      "timeout_frames": 240
+    },
+    { "type": "click", "target": { "kind": "test_id", "id": "ui-gallery-nav-carousel" } },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-page-carousel" }
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-carousel-loop" }
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "scroll_into_view",
+      "container": { "kind": "test_id", "id": "ui-gallery-content-scroll" },
+      "target": { "kind": "test_id", "id": "ui-gallery-carousel-loop" },
+      "delta_y": -120.0,
+      "require_fully_within_container": true,
+      "require_fully_within_window": true,
+      "padding_px": 16.0,
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "bounds_within_window",
+        "target": { "kind": "test_id", "id": "ui-gallery-carousel-loop" },
+        "padding_px": 16.0,
+        "eps_px": 1.0
+      },
+      "timeout_frames": 600
+    },
+
+    { "type": "capture_bundle", "label": "ui-gallery-carousel-loop-continuity-start" },
+    { "type": "capture_screenshot", "label": "ui-gallery-carousel-loop-continuity-start" },
+
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "visible_in_window",
+        "target": { "kind": "test_id", "id": "ui-gallery-carousel-loop-item-1" }
+      },
+      "timeout_frames": 240
+    },
+
+    { "type": "pointer_down", "pointer_kind": "touch", "target": { "kind": "test_id", "id": "ui-gallery-carousel-loop" } },
+    { "type": "pointer_move", "pointer_kind": "touch", "delta_x": -240.0, "delta_y": 0.0, "steps": 12 },
+    { "type": "pointer_up", "pointer_kind": "touch" },
+    { "type": "wait_frames", "n": 12 },
+
+    { "type": "pointer_down", "pointer_kind": "touch", "target": { "kind": "test_id", "id": "ui-gallery-carousel-loop" } },
+    { "type": "pointer_move", "pointer_kind": "touch", "delta_x": -240.0, "delta_y": 0.0, "steps": 12 },
+    { "type": "pointer_up", "pointer_kind": "touch" },
+    { "type": "wait_frames", "n": 12 },
+
+    { "type": "pointer_down", "pointer_kind": "touch", "target": { "kind": "test_id", "id": "ui-gallery-carousel-loop" } },
+    { "type": "pointer_move", "pointer_kind": "touch", "delta_x": -240.0, "delta_y": 0.0, "steps": 12 },
+    { "type": "pointer_up", "pointer_kind": "touch" },
+    { "type": "wait_frames", "n": 12 },
+
+    { "type": "pointer_down", "pointer_kind": "touch", "target": { "kind": "test_id", "id": "ui-gallery-carousel-loop" } },
+    { "type": "pointer_move", "pointer_kind": "touch", "delta_x": -240.0, "delta_y": 0.0, "steps": 12 },
+    { "type": "pointer_up", "pointer_kind": "touch" },
+    { "type": "wait_frames", "n": 12 },
+
+    { "type": "pointer_down", "pointer_kind": "touch", "target": { "kind": "test_id", "id": "ui-gallery-carousel-loop" } },
+    { "type": "pointer_move", "pointer_kind": "touch", "delta_x": -240.0, "delta_y": 0.0, "steps": 12 },
+    { "type": "pointer_up", "pointer_kind": "touch" },
+    { "type": "wait_frames", "n": 12 },
+
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-carousel-loop" }
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "visible_in_window",
+        "target": { "kind": "test_id", "id": "ui-gallery-carousel-loop-item-1" }
+      },
+      "timeout_frames": 600
+    },
+
+    { "type": "capture_bundle", "label": "ui-gallery-carousel-loop-continuity-end" },
+    { "type": "capture_screenshot", "label": "ui-gallery-carousel-loop-continuity-end" }
+  ]
+}

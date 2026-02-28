@@ -285,6 +285,14 @@ impl Renderer {
         self.perf
             .effect_blur_quality
             .saturating_add_assign(frame_perf.effect_blur_quality);
+        self.perf.custom_effect_v3_pyramid_cache_hits = self
+            .perf
+            .custom_effect_v3_pyramid_cache_hits
+            .saturating_add(frame_perf.custom_effect_v3_pyramid_cache_hits);
+        self.perf.custom_effect_v3_pyramid_cache_misses = self
+            .perf
+            .custom_effect_v3_pyramid_cache_misses
+            .saturating_add(frame_perf.custom_effect_v3_pyramid_cache_misses);
 
         self.perf.clip_path_mask_cache_bytes_live = self
             .perf
@@ -420,6 +428,12 @@ impl Renderer {
             .perf
             .scissor_sets
             .saturating_add(frame_perf.scissor_sets);
+        self.perf.path_msaa_samples_requested = frame_perf.path_msaa_samples_requested;
+        self.perf.path_msaa_samples_effective = frame_perf.path_msaa_samples_effective;
+        self.perf.path_msaa_vulkan_safety_valve_degradations = self
+            .perf
+            .path_msaa_vulkan_safety_valve_degradations
+            .saturating_add(frame_perf.path_msaa_vulkan_safety_valve_degradations);
         self.perf.uniform_bytes = self
             .perf
             .uniform_bytes
@@ -464,6 +478,10 @@ impl Renderer {
             .perf
             .material_degraded_due_to_budget
             .saturating_add(frame_perf.material_degraded_due_to_budget);
+        self.perf.path_material_paints_degraded_to_solid_base = self
+            .perf
+            .path_material_paints_degraded_to_solid_base
+            .saturating_add(frame_perf.path_material_paints_degraded_to_solid_base);
 
         self.last_frame_perf = Some(RenderPerfSnapshot {
             frames: frame_perf.frames,
@@ -550,6 +568,8 @@ impl Renderer {
                 .render_plan_degradations_composite_group_blend_to_over,
             effect_degradations: frame_perf.effect_degradations,
             effect_blur_quality: frame_perf.effect_blur_quality,
+            custom_effect_v3_pyramid_cache_hits: frame_perf.custom_effect_v3_pyramid_cache_hits,
+            custom_effect_v3_pyramid_cache_misses: frame_perf.custom_effect_v3_pyramid_cache_misses,
             draw_calls: frame_perf.draw_calls,
             quad_draw_calls: frame_perf.quad_draw_calls,
             viewport_draw_calls: frame_perf.viewport_draw_calls,
@@ -581,6 +601,10 @@ impl Renderer {
             uniform_bind_group_switches: frame_perf.uniform_bind_group_switches,
             texture_bind_group_switches: frame_perf.texture_bind_group_switches,
             scissor_sets: frame_perf.scissor_sets,
+            path_msaa_samples_requested: frame_perf.path_msaa_samples_requested,
+            path_msaa_samples_effective: frame_perf.path_msaa_samples_effective,
+            path_msaa_vulkan_safety_valve_degradations: frame_perf
+                .path_msaa_vulkan_safety_valve_degradations,
             uniform_bytes: frame_perf.uniform_bytes,
             instance_bytes: frame_perf.instance_bytes,
             vertex_bytes: frame_perf.vertex_bytes,
@@ -593,6 +617,8 @@ impl Renderer {
             material_distinct: frame_perf.material_distinct,
             material_unknown_ids: frame_perf.material_unknown_ids,
             material_degraded_due_to_budget: frame_perf.material_degraded_due_to_budget,
+            path_material_paints_degraded_to_solid_base: frame_perf
+                .path_material_paints_degraded_to_solid_base,
             clip_path_mask_cache_bytes_live: frame_perf.clip_path_mask_cache_bytes_live,
             clip_path_mask_cache_entries_live: frame_perf.clip_path_mask_cache_entries_live,
             clip_path_mask_cache_hits: frame_perf.clip_path_mask_cache_hits,

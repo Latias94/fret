@@ -104,6 +104,26 @@
       ]
     },
     {
+      "id": "docking-arbitration-demo-incoming-open-inject-smoke",
+      "path": "tools/diag-scripts/docking/arbitration/docking-arbitration-demo-incoming-open-inject-smoke.json",
+      "required_capabilities": [
+        "diag.incoming_open_inject",
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "diag-hardening-smoke-docking"
+      ],
+      "tags": [
+        "docking",
+        "incoming_open",
+        "smoke"
+      ],
+      "target_hints": [
+        "Injects an IncomingOpenRequest event and asserts it is observable via event_kind_seen.",
+        "This gates that the app driver records platform-delivered events into the diagnostics ring buffer."
+      ]
+    },
+    {
       "id": "docking-arbitration-demo-modal-dock-drag-viewport-capture",
       "path": "tools/diag-scripts/docking/arbitration/docking-arbitration-demo-modal-dock-drag-viewport-capture.json",
       "required_capabilities": [
@@ -677,6 +697,29 @@
       "target_hints": []
     },
     {
+      "id": "ui-gallery-button-group-size-screenshots-zinc-light-dark",
+      "path": "tools/diag-scripts/ui-gallery-button-group-size-screenshots-zinc-light-dark.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "ui-gallery-shadcn-conformance"
+      ],
+      "tags": [
+        "button-group",
+        "screenshots",
+        "shadcn",
+        "size",
+        "ui-gallery"
+      ],
+      "target_hints": [
+        "Sets theme preset to zinc/light then zinc/dark.",
+        "Navigates to the Button Group page.",
+        "Captures screenshots for the Size section (icon-only Add button should not be clipped)."
+      ]
+    },
+    {
       "id": "ui-gallery-button-link-render",
       "path": "tools/diag-scripts/ui-gallery/button/ui-gallery-button-link-render.json",
       "required_capabilities": [
@@ -803,6 +846,22 @@
       ],
       "tags": [],
       "target_hints": []
+    },
+    {
+      "id": "ui-gallery-clipboard-text-smoke",
+      "path": "tools/diag-scripts/ui-gallery/clipboard/ui-gallery-clipboard-text-smoke.json",
+      "required_capabilities": [
+        "diag.clipboard_text",
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "diag-hardening-smoke"
+      ],
+      "tags": [],
+      "target_hints": [
+        "Sets OS clipboard text and pastes into a focused textarea to validate the end-to-end paste flow deterministically.",
+        "Note: on native runners this mutates the OS clipboard (not a sandboxed clipboard)."
+      ]
     },
     {
       "id": "ui-gallery-code-editor-a11y-composition-baseline",
@@ -1859,6 +1918,19 @@
       "required_capabilities": [],
       "suite_memberships": [
         "perf-ui-gallery-steady"
+      ],
+      "tags": [],
+      "target_hints": []
+    },
+    {
+      "id": "ui-gallery-incoming-open-inject-smoke",
+      "path": "tools/diag-scripts/ui-gallery/incoming/ui-gallery-incoming-open-inject-smoke.json",
+      "required_capabilities": [
+        "diag.incoming_open_inject",
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "diag-hardening-smoke"
       ],
       "tags": [],
       "target_hints": []

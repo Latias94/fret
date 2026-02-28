@@ -652,6 +652,27 @@ pub mod ui_diagnostics;
 ))]
 mod ui_diagnostics_ws_bridge;
 
+/// Returns `true` when bootstrap diagnostics consumed the event (ignore/intercept).
+///
+/// App drivers should prefer this helper over reaching into `ui_diagnostics` directly so builds
+/// remain resilient when diagnostics modules are feature-gated.
+pub fn maybe_consume_event(
+    app: &mut fret_app::App,
+    window: fret_core::AppWindowId,
+    event: &fret_core::Event,
+) -> bool {
+    #[cfg(all(feature = "ui-app-driver", feature = "diagnostics"))]
+    {
+        crate::ui_diagnostics::maybe_consume_event(app, window, event)
+    }
+
+    #[cfg(not(all(feature = "ui-app-driver", feature = "diagnostics")))]
+    {
+        let _ = (app, window, event);
+        false
+    }
+}
+
 #[cfg(all(not(target_arch = "wasm32"), feature = "diagnostics"))]
 pub fn init_diagnostics() {
     init_tracing();

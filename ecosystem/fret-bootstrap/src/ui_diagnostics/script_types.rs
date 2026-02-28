@@ -118,6 +118,7 @@ pub(super) enum V2StepState {
     TypeTextInto(V2TypeTextIntoState),
     MenuSelect(V2MenuSelectState),
     MenuSelectPath(V2MenuSelectPathState),
+    AssertClipboardText(V2AssertClipboardTextState),
     DragPointer(V2DragPointerState),
     DragPointerUntil(V2DragPointerUntilState),
     DragTo(V2DragToState),
@@ -214,6 +215,34 @@ pub(super) struct V2MenuSelectPathState {
     pub(super) remaining_frames: u32,
     pub(super) phase: u32,
     pub(super) next_index: usize,
+}
+
+#[derive(Debug, Clone)]
+pub(super) struct V2AssertClipboardTextState {
+    pub(super) step_index: usize,
+    pub(super) window: AppWindowId,
+    pub(super) expected_text: String,
+    pub(super) remaining_frames: u32,
+    pub(super) request_issued: bool,
+    pub(super) token: Option<fret_core::ClipboardToken>,
+}
+
+impl V2AssertClipboardTextState {
+    pub(super) fn new(
+        step_index: usize,
+        window: AppWindowId,
+        expected_text: String,
+        timeout_frames: u32,
+    ) -> Self {
+        Self {
+            step_index,
+            window,
+            expected_text,
+            remaining_frames: timeout_frames.max(1),
+            request_issued: false,
+            token: None,
+        }
+    }
 }
 
 #[derive(Debug, Clone)]

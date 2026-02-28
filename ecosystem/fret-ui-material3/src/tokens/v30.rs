@@ -853,10 +853,16 @@ fn inject_comp_date_picker_docked_scalars(cfg: &mut ThemeConfig) {
 
 fn inject_comp_date_picker_modal_scalars(cfg: &mut ThemeConfig) {
     material_web_v30::inject_comp_date_picker_modal_scalars(cfg);
+    cfg.numbers
+        .entry("md.sys.fret.material.date-picker.modal.scrim.opacity".to_string())
+        .or_insert(0.32);
 }
 
 fn inject_comp_time_picker_scalars(cfg: &mut ThemeConfig) {
     material_web_v30::inject_comp_time_picker_scalars(cfg);
+    cfg.numbers
+        .entry("md.sys.fret.material.time-picker.scrim.opacity".to_string())
+        .or_insert(0.32);
 }
 
 fn inject_comp_time_input_scalars(cfg: &mut ThemeConfig) {
@@ -2133,6 +2139,11 @@ fn inject_comp_sheet_bottom_scalars(cfg: &mut ThemeConfig) {
         "md.comp.sheet.bottom.focus.indicator.thickness".to_string(),
         3.0,
     );
+
+    // Material guidance defaults around ~0.32 for modal scrims.
+    cfg.numbers
+        .entry("md.sys.fret.material.sheet.bottom.docked.modal.scrim.opacity".to_string())
+        .or_insert(0.32);
 }
 
 fn inject_comp_plain_tooltip_scalars(cfg: &mut ThemeConfig) {
@@ -2161,6 +2172,10 @@ fn inject_comp_carousel_item_scalars(cfg: &mut ThemeConfig) {
 
 fn inject_comp_dialog_scalars(cfg: &mut ThemeConfig) {
     material_web_v30::inject_comp_dialog_scalars(cfg);
+    // Material guidance defaults around ~0.32 for modal scrims.
+    cfg.numbers
+        .entry("md.sys.fret.material.dialog.scrim.opacity".to_string())
+        .or_insert(0.32);
 }
 
 fn inject_comp_full_screen_dialog_scalars(cfg: &mut ThemeConfig) {
@@ -3962,6 +3977,16 @@ mod tests {
             Some(40.0)
         );
         assert_eq!(
+            cfg.metrics.get("md.comp.button.small.icon.size").copied(),
+            Some(20.0)
+        );
+        assert_eq!(
+            cfg.metrics
+                .get("md.comp.button.small.icon-label-space")
+                .copied(),
+            Some(8.0)
+        );
+        assert_eq!(
             cfg.metrics
                 .get("md.comp.icon-button.small.container.height")
                 .copied(),
@@ -4215,5 +4240,51 @@ mod tests {
             .cloned()
             .expect("expected navigation-drawer scrim color token");
         assert_eq!(scrim, palette);
+    }
+
+    #[test]
+    fn v30_button_icon_color_tokens_are_injected_with_colors() {
+        let cfg =
+            theme_config_with_colors(TypographyOptions::default(), ColorSchemeOptions::default());
+
+        assert!(
+            cfg.colors.contains_key("md.comp.button.filled.icon.color"),
+            "expected button filled icon color token"
+        );
+        assert!(
+            cfg.colors
+                .contains_key("md.comp.button.filled.focused.icon.color"),
+            "expected button focused icon color token"
+        );
+    }
+
+    #[test]
+    fn v30_seeds_modal_scrim_opacity_tokens() {
+        let cfg = theme_config(TypographyOptions::default());
+
+        assert_eq!(
+            cfg.numbers
+                .get("md.sys.fret.material.dialog.scrim.opacity")
+                .copied(),
+            Some(0.32)
+        );
+        assert_eq!(
+            cfg.numbers
+                .get("md.sys.fret.material.sheet.bottom.docked.modal.scrim.opacity")
+                .copied(),
+            Some(0.32)
+        );
+        assert_eq!(
+            cfg.numbers
+                .get("md.sys.fret.material.date-picker.modal.scrim.opacity")
+                .copied(),
+            Some(0.32)
+        );
+        assert_eq!(
+            cfg.numbers
+                .get("md.sys.fret.material.time-picker.scrim.opacity")
+                .copied(),
+            Some(0.32)
+        );
     }
 }

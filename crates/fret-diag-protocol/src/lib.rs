@@ -331,6 +331,15 @@ pub struct UiDiagnosticsConfigFileV1 {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub isolate_external_pointer_input_while_script_running: Option<bool>,
 
+    /// When enabled, ignore external keyboard/text/IME events while a diagnostics script is
+    /// running.
+    ///
+    /// This is intended to keep scripted runs deterministic when a user accidentally types while
+    /// playback is in progress (especially when scripts are asserting shortcut routing or text
+    /// input outcomes).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub isolate_external_keyboard_input_while_script_running: Option<bool>,
+
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub frame_clock_fixed_delta_ms: Option<u64>,
 
@@ -840,6 +849,26 @@ pub enum UiActionStepV2 {
     SetClipboardForceUnavailable {
         enabled: bool,
     },
+    /// Set the OS clipboard text payload (best-effort).
+    ///
+    /// This is intended to make "paste" flows deterministic in scripted diagnostics by ensuring
+    /// the clipboard contents are known.
+    ///
+    /// Requires capability `diag.clipboard_text`.
+    SetClipboardText {
+        text: String,
+    },
+    /// Assert that the OS clipboard text payload equals `text` (best-effort).
+    ///
+    /// This is intended to make clipboard-driven regression scripts explainable without relying
+    /// on screenshots.
+    ///
+    /// Requires capability `diag.clipboard_text`.
+    AssertClipboardText {
+        text: String,
+        #[serde(default = "default_action_timeout_frames")]
+        timeout_frames: u32,
+    },
     /// Diagnostics-only incoming-open injection (best-effort).
     ///
     /// This simulates “open in…” / share-target flows by injecting an `IncomingOpenRequest` event.
@@ -860,6 +889,8 @@ pub enum UiActionStepV2 {
     ///
     /// Desktop runners may use this during scripted diagnostics to drive hover routing that is
     /// normally owned by OS cursor events (e.g. cross-window docking).
+    ///
+    /// Requires capability `diag.cursor_screen_pos_override`.
     SetCursorScreenPos {
         x_px: f32,
         y_px: f32,
@@ -870,6 +901,8 @@ pub enum UiActionStepV2 {
     /// global cursor location from window-local input.
     ///
     /// Coordinates are in window-client **physical pixels**.
+    ///
+    /// Requires capability `diag.cursor_screen_pos_override`.
     SetCursorInWindow {
         #[serde(default, skip_serializing_if = "Option::is_none")]
         window: Option<UiWindowTargetV1>,
@@ -883,6 +916,8 @@ pub enum UiActionStepV2 {
     /// current window scale factor.
     ///
     /// Prefer this for deterministic scripts that already express geometry in logical pixels.
+    ///
+    /// Requires capability `diag.cursor_screen_pos_override`.
     SetCursorInWindowLogical {
         #[serde(default, skip_serializing_if = "Option::is_none")]
         window: Option<UiWindowTargetV1>,

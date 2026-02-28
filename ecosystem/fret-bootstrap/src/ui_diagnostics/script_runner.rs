@@ -53,6 +53,10 @@ impl UiDiagnosticsService {
             ime_event_trace: Vec::new(),
         };
 
+        // Avoid leaking clipboard responses across runs. Script steps that assert clipboard state
+        // rely on a per-run token -> response map.
+        self.reset_clipboard_text_responses();
+
         push_script_event_log(
             &mut active_script,
             &self.cfg,
@@ -500,6 +504,7 @@ impl UiDiagnosticsService {
                 | UiActionStepV2::SetSliderValue { .. }
                 | UiActionStepV2::PointerMove { .. }
                 | UiActionStepV2::MovePointerSweep { .. }
+                | UiActionStepV2::AssertClipboardText { .. }
         );
         if !is_v2_intent_step {
             active.v2_step_state = None;

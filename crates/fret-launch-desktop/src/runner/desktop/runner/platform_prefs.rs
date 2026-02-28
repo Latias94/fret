@@ -421,6 +421,18 @@ fn read_desktop_accent_color() -> Option<fret_core::Color> {
     use windows_sys::Win32::Graphics::Dwm::DwmGetColorizationColor;
     use windows_sys::core::BOOL;
 
+    fn srgb_f32_to_linear(c: f32) -> f32 {
+        if c <= 0.04045 {
+            c / 12.92
+        } else {
+            ((c + 0.055) / 1.055).powf(2.4)
+        }
+    }
+
+    fn srgb_u8_to_linear(u: u8) -> f32 {
+        srgb_f32_to_linear(u as f32 / 255.0)
+    }
+
     unsafe {
         let mut argb: u32 = 0;
         let mut opaque: BOOL = 0;
@@ -431,9 +443,9 @@ fn read_desktop_accent_color() -> Option<fret_core::Color> {
         }
 
         let a = ((argb >> 24) & 0xFF) as f32 / 255.0;
-        let r = ((argb >> 16) & 0xFF) as f32 / 255.0;
-        let g = ((argb >> 8) & 0xFF) as f32 / 255.0;
-        let b = (argb & 0xFF) as f32 / 255.0;
+        let r = srgb_u8_to_linear(((argb >> 16) & 0xFF) as u8);
+        let g = srgb_u8_to_linear(((argb >> 8) & 0xFF) as u8);
+        let b = srgb_u8_to_linear((argb & 0xFF) as u8);
         Some(fret_core::Color { r, g, b, a })
     }
 }

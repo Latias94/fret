@@ -712,6 +712,12 @@ Script input isolation (recommended for deterministic playback, especially multi
   - `--launch` runs default this to `1` (tooling also writes
     `isolate_external_pointer_input_while_script_running=true` into the per-run `diag.config.json`).
   - Escape hatch: pass `--env FRET_DIAG_ISOLATE_POINTER_INPUT=0` when you need interactive input during a script run.
+- `FRET_DIAG_ISOLATE_KEYBOARD_INPUT=1`: while a script is active, ignore external (non-script) keyboard/text/IME events
+  so accidental typing doesn't perturb scripted runs.
+  - `--launch` runs default this to `1` (tooling also writes
+    `isolate_external_keyboard_input_while_script_running=true` into the per-run `diag.config.json`).
+  - Escape hatch: pass `--env FRET_DIAG_ISOLATE_KEYBOARD_INPUT=0` when you need interactive keyboard input during a
+    script run.
 
 Screenshot capture:
 
@@ -784,11 +790,17 @@ Supported selectors (v1 MVP):
 - `assert` (schema v2 only: optional `window` target)
 - `capture_bundle` (optional `label`, optional `max_snapshots`)
 - `capture_screenshot` (optional `label`, optional `timeout_frames`)
+- `set_clipboard_force_unavailable` (schema v2 only; simulates clipboard read denial; capability-gated behind `diag.clipboard_force_unavailable`)
+- `set_clipboard_text` (schema v2 only; sets OS clipboard text; capability-gated behind `diag.clipboard_text`)
+- `assert_clipboard_text` (schema v2 only; asserts OS clipboard text equals an expected value; capability-gated behind `diag.clipboard_text`)
 - `set_window_inner_size` (schema v2 only; optional `window` target)
+- `set_window_insets` (schema v2 only; overrides safe-area/occlusion insets; capability-gated behind `diag.window_insets_override`)
 - `set_window_outer_position` (schema v2 only; optional `window` target)
 - `raise_window` (schema v2 only; optional `window` target)
 - `set_cursor_screen_pos` (schema v2 only; runner-level cursor screen-position override, physical pixels; intended for cross-window routing in scripted runs)
 - `set_cursor_in_window` (schema v2 only; runner-level cursor override using window-client physical pixels; intended for cross-window routing without hardcoding DPI)
+- `set_mouse_buttons` (schema v2 only; runner-level mouse button state override; capability-gated behind `diag.mouse_buttons_override`)
+- `inject_incoming_open` (schema v2 only; simulates "open in..." / share-target flows; capability-gated behind `diag.incoming_open_inject`)
 - `drag_pointer_until` (schema v2 only; optional `window` target; drag across frames until a predicate passes or timeout; intended for cross-window routing)
 
 Pointer kind note (as of 2026-02-27):

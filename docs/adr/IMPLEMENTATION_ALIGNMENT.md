@@ -24,10 +24,10 @@ It is **non-normative**: the ADR itself remains the source of truth; this file i
 ## Summary
 
 - Last updated: 2026-02-28
-- ADR count (numbered): 302
+- ADR count (numbered): 305
 
 - Aligned: 112
-- Aligned (with known gaps): 95
+- Aligned (with known gaps): 98
 - N/A (superseded): 2
 - Not audited: 53
 - Not implemented: 4
@@ -37,6 +37,9 @@ It is **non-normative**: the ADR itself remains the source of truth; this file i
 
 | ADR | ADR Status | Implementation Alignment | Notes |
 | --- | --- | --- | --- |
+| [`0305-custom-effect-v3-backdrop-source-groups.md`](0305-custom-effect-v3-backdrop-source-groups.md) | Draft | Aligned (with known gaps) | Core surface exists (`SceneOp::PushBackdropSourceGroupV1` / `PopBackdropSourceGroup`) and wgpu implements group-level snapshot + shared raw source for Backdrop-mode CustomV3: `crates/fret-core/src/scene/{mod.rs,validate.rs,fingerprint.rs}`, `crates/fret-render-wgpu/src/renderer/{types.rs,render_scene/encode/ops.rs,render_plan_compiler.rs,render_plan_effects.rs}`. Group bounds/pyramid radius restrict GPU work by scissoring the group snapshot blit and pyramid generation ROI: `crates/fret-render-wgpu/src/renderer/render_plan_compiler.rs`, `crates/fret-render-wgpu/src/renderer/render_scene/recorders/effects.rs`. Conformance: `crates/fret-render-wgpu/tests/effect_custom_v3_conformance.rs` (group snapshot vs post-blur src, and perf snapshot counters). Known gaps: group pyramid sharing is implemented as a shared scratch pyramid derived from the group snapshot, but it remains a full-size scratch texture (ROI scissored, not a cropped allocation). |
+| [`0304-custom-effect-v3-renderer-provided-sources.md`](0304-custom-effect-v3-renderer-provided-sources.md) | Draft | Aligned (with known gaps) | CustomV3 exists end-to-end for wgpu (contract + pipeline + render-plan + plan dump): core surface `crates/fret-core/src/{effects.rs,lib.rs,scene/mod.rs,scene/validate.rs,scene/fingerprint.rs}`; wgpu backend `crates/fret-render-wgpu/src/renderer/{services.rs,shaders.rs,gpu_pipelines.rs,render_plan.rs,render_plan_compiler.rs,render_plan_effects.rs,render_plan_dump.rs,render_scene/recorders/effects.rs,v3_pyramid.rs,types.rs}`; pyramid downsample pipeline `crates/fret-render-wgpu/src/renderer/pipelines/mip_downsample.rs` + WGSL `crates/fret-render-wgpu/src/renderer/pipelines/wgsl/mip_downsample_box_2x2.wgsl`; and WGSL parts `crates/fret-render-wgpu/src/renderer/pipelines/wgsl/custom_effect_v3_*.wgsl`. Conformance: `crates/fret-render-wgpu/tests/effect_custom_v3_conformance.rs` (raw-vs-src, group snapshot, mip level 1, and perf snapshot counters). Known gaps: authoring demos/templates are still TODO; pyramid ROI scissoring relies on declared `max_radius_px` (if author shaders exceed it, artifacts are deterministic but possible). Dedicated v3 source counters exist (`EffectDegradationSnapshot.custom_effect_v3_sources.*`). |
+| [`0303-custom-effect-v2-user-image-input.md`](0303-custom-effect-v2-user-image-input.md) | Draft | Aligned (with known gaps) | Implements the CustomV2 “one extra input” story: a single user-provided image input referenced by `ImageId` (plus `UvRect` + `ImageSamplingHint`) to unlock LUT/noise/normal-map recipes while keeping the ABI bounded and capability-gated. Core surface: `crates/fret-core/src/{effects.rs,scene/mod.rs,scene/validate.rs,scene/fingerprint.rs}`. WGPU backend: fixed bind shape + registry + gating `crates/fret-render-wgpu/src/{capabilities.rs,renderer/services.rs,renderer/pipelines/custom_effect.rs,renderer/pipelines/wgsl/custom_effect_v2_*.wgsl,renderer/render_scene/recorders/effects.rs}`. Conformance: `crates/fret-render-wgpu/tests/effect_custom_v2_conformance.rs`. Ecosystem helper: `ecosystem/fret-ui-kit/src/custom_effects.rs` (`CustomEffectProgramV2`). Demo + diag harness: `apps/fret-examples/src/liquid_glass_demo.rs`, `tools/diag-scripts/liquid-glass-custom-v2-corners-screenshot.json`. Gaps: define the WebGPU/wasm runtime support + degradation story end-to-end (beyond WGSL validation), and ship additional authoring demos/templates that exercise the user image input (e.g. LUT/noise/normal-map). |
 | [`0302-text-inline-spans-semantics-metadata-v1.md`](0302-text-inline-spans-semantics-metadata-v1.md) | Draft | Not audited |  |
 | [`0301-fret-chart-link-mapping-policy-v1.md`](0301-fret-chart-link-mapping-policy-v1.md) | Proposed | Not audited |  |
 | [`0286-drop-shadow-effect-step-v1.md`](0286-drop-shadow-effect-step-v1.md) | Draft | Not audited |  |

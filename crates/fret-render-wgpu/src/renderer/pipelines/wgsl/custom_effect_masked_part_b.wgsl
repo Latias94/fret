@@ -22,6 +22,8 @@ fn clip_alpha(pixel_pos: vec2<f32>) -> f32 {
 
 @fragment
 fn fs_main(@builtin(position) pos: vec4<f32>) -> @location(0) vec4<f32> {
+  let clip = clip_alpha(pos.xy);
+
   let dims_u = textureDimensions(src_texture);
   let x = i32(floor(pos.x));
   let y = i32(floor(pos.y));
@@ -34,7 +36,5 @@ fn fs_main(@builtin(position) pos: vec4<f32>) -> @location(0) vec4<f32> {
   let pos_px = vec2<f32>(f32(x) + 0.5, f32(y) + 0.5);
   let uv = pos_px / dims;
   let out = fret_custom_effect(tex, uv, pos_px, params);
-  let clip = clip_alpha(pos.xy);
   return vec4<f32>(out.rgb * clip, out.a * clip);
 }
-

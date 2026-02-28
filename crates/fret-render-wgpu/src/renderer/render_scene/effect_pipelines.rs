@@ -63,12 +63,27 @@ impl Renderer {
 
         let mut custom_effects: std::collections::HashSet<fret_core::EffectId> =
             std::collections::HashSet::new();
+        let mut custom_effects_v2: std::collections::HashSet<fret_core::EffectId> =
+            std::collections::HashSet::new();
+        let mut custom_effects_v3: std::collections::HashSet<fret_core::EffectId> =
+            std::collections::HashSet::new();
         for pass in &plan.passes {
-            if let RenderPlanPass::CustomEffect(pass) = pass {
-                custom_effects.insert(pass.effect);
+            match pass {
+                RenderPlanPass::CustomEffect(pass) => {
+                    custom_effects.insert(pass.effect);
+                }
+                RenderPlanPass::CustomEffectV2(pass) => {
+                    custom_effects_v2.insert(pass.effect);
+                }
+                RenderPlanPass::CustomEffectV3(pass) => {
+                    custom_effects_v3.insert(pass.effect);
+                }
+                _ => {}
             }
         }
         let needs_custom_effect = !custom_effects.is_empty();
+        let needs_custom_effect_v2 = !custom_effects_v2.is_empty();
+        let needs_custom_effect_v3 = !custom_effects_v3.is_empty();
 
         if needs_blit || needs_blur {
             self.ensure_blit_pipeline(device, format);
@@ -112,6 +127,16 @@ impl Renderer {
         if needs_custom_effect {
             for id in custom_effects {
                 self.ensure_custom_effect_pipelines(device, format, id);
+            }
+        }
+        if needs_custom_effect_v2 {
+            for id in custom_effects_v2 {
+                self.ensure_custom_effect_v2_pipelines(device, format, id);
+            }
+        }
+        if needs_custom_effect_v3 {
+            for id in custom_effects_v3 {
+                self.ensure_custom_effect_v3_pipelines(device, format, id);
             }
         }
 

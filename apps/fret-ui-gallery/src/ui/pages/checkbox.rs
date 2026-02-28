@@ -172,15 +172,6 @@ pub(super) fn preview_checkbox(
         }
     };
 
-    let demo_checked = cx
-        .get_model_copied(&model, Invalidation::Layout)
-        .unwrap_or(false);
-    let controlled_checked = cx
-        .get_model_copied(&checked_controlled, Invalidation::Layout)
-        .unwrap_or(false);
-    let optional_checked = cx
-        .get_model_copied(&checked_optional, Invalidation::Layout)
-        .unwrap_or(None);
     let invalid_checked = cx
         .get_model_copied(&invalid, Invalidation::Layout)
         .unwrap_or(false);
@@ -202,15 +193,6 @@ pub(super) fn preview_checkbox(
                     .for_control("ui-gallery-checkbox-demo-toggle")
                     .test_id("ui-gallery-checkbox-demo-label")
                     .into_element(cx),
-                cx.spacer(fret_ui::element::SpacerProps::default()),
-                shadcn::typography::muted(
-                    cx,
-                    if demo_checked {
-                        "checked=true"
-                    } else {
-                        "checked=false"
-                    },
-                ),
             ]
         },
     )
@@ -223,12 +205,6 @@ pub(super) fn preview_checkbox(
             .items_start()
             .layout(LayoutRefinement::default().w_full().max_w(Px(420.0))),
         |cx| {
-            let optional_text = match optional_checked {
-                Some(true) => "state=Some(true)",
-                Some(false) => "state=Some(false)",
-                None => "state=None (indeterminate)",
-            };
-
             vec![
                 stack::hstack(
                     cx,
@@ -247,15 +223,6 @@ pub(super) fn preview_checkbox(
                                 .for_control("ui-gallery-checkbox-controlled")
                                 .test_id("ui-gallery-checkbox-controlled-label")
                                 .into_element(cx),
-                            cx.spacer(fret_ui::element::SpacerProps::default()),
-                            shadcn::typography::muted(
-                                cx,
-                                if controlled_checked {
-                                    "state=true"
-                                } else {
-                                    "state=false"
-                                },
-                            ),
                         ]
                     },
                 ),
@@ -276,8 +243,6 @@ pub(super) fn preview_checkbox(
                                 .for_control("ui-gallery-checkbox-optional")
                                 .test_id("ui-gallery-checkbox-optional-label")
                                 .into_element(cx),
-                            cx.spacer(fret_ui::element::SpacerProps::default()),
-                            shadcn::typography::muted(cx, optional_text),
                         ]
                     },
                 ),
@@ -426,12 +391,17 @@ pub(super) fn preview_checkbox(
             shadcn::FieldContent::new([
                 shadcn::FieldLabel::new(label)
                     .for_control(test_id)
+                    .refine_layout(LayoutRefinement::default().w_full().min_w_0())
+                    .test_id(format!("{test_id}.label"))
                     .into_element(cx),
-                shadcn::FieldDescription::new(desc).into_element(cx),
+                shadcn::FieldDescription::new(desc)
+                    .into_element(cx)
+                    .test_id(format!("{test_id}.desc")),
             ])
             .into_element(cx),
         ])
         .orientation(shadcn::FieldOrientation::Horizontal)
+        .refine_layout(LayoutRefinement::default().w_full())
         .into_element(cx)
     };
 
@@ -577,7 +547,7 @@ pub(super) fn preview_checkbox(
         ),
         vec![
             DocSection::new("Demo", demo)
-                .description("Single checkbox with a live state readout.")
+                .description("Single checkbox with a label.")
                 .code(
                     "rust",
                     r#"let accepted = cx.app.models_mut().insert(false);
