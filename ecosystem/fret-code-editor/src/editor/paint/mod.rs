@@ -1641,7 +1641,7 @@ pub(super) fn populate_syntax_row_cache_for_chunk(
 
 #[cfg(feature = "syntax")]
 pub(super) fn syntax_color(theme: &fret_ui::Theme, highlight: &str) -> Option<Color> {
-    fret_syntax_theme::syntax_color(theme, highlight)
+    theme.syntax_color(highlight)
 }
 
 #[cfg(feature = "syntax")]
