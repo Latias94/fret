@@ -41,6 +41,8 @@ pub struct InteractionChromeHint {
     pub wire_outline_selected: Option<WireOutlineHint>,
     /// Optional wire outline applied to drag preview wires (paint-only, drawn behind the core stroke).
     pub wire_outline_preview: Option<WireOutlineHint>,
+    /// Optional wire outline applied to all non-selected edges (paint-only, drawn behind the core stroke).
+    pub wire_outline_base: Option<WireOutlineHint>,
 }
 
 /// Paint-only wire glow parameters (screen-space logical px).

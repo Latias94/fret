@@ -262,29 +262,57 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
         let mut marker_budget = WorkBudget::new(marker_budget_limit);
         let mut marker_budget_skipped: u32 = 0;
         let mut wire_budget = WorkBudget::new(u32::MAX / 2);
+        let outline_budget_limit =
+            Self::EDGE_WIRE_OUTLINE_BUILD_BUDGET_PER_FRAME.select(view_interacting);
+        let mut outline_budget = WorkBudget::new(outline_budget_limit);
+        let mut outline_budget_skipped: u32 = 0;
 
         for edge in edges_normal
             .into_iter()
             .chain(edges_selected)
             .chain(edges_hovered)
         {
-            if edge.selected
-                && let Some(outline) = interaction_hint.wire_outline_selected
+            let outline = if edge.selected {
+                interaction_hint.wire_outline_selected
+            } else {
+                interaction_hint.wire_outline_base
+            };
+            if let Some(outline) = outline
                 && outline.width_mul.is_finite()
                 && outline.width_mul > 1.0e-3
                 && outline.color.a > 0.0
             {
-                let outline_width = edge.width * outline.width_mul.max(0.0);
-                if let Some(custom) = custom_paths.get(&edge.id) {
-                    let dash = edge
-                        .dash
-                        .map(|p| (p.dash.0.to_bits(), p.gap.0.to_bits(), p.phase.0.to_bits()));
-                    let key = (custom.cache_key, outline_width.to_bits(), dash);
-                    let outline_cache_key = stable_hash_u64(1, &key);
-                    if let Some(path) = self.paint_cache.wire_path_from_commands(
+                if !outline_budget.try_consume(1) {
+                    outline_budget_skipped = outline_budget_skipped.saturating_add(1);
+                } else {
+                    let outline_width = edge.width * outline.width_mul.max(0.0);
+                    if let Some(custom) = custom_paths.get(&edge.id) {
+                        let dash = edge
+                            .dash
+                            .map(|p| (p.dash.0.to_bits(), p.gap.0.to_bits(), p.phase.0.to_bits()));
+                        let key = (custom.cache_key, outline_width.to_bits(), dash);
+                        let outline_cache_key = stable_hash_u64(1, &key);
+                        if let Some(path) = self.paint_cache.wire_path_from_commands(
+                            cx.services,
+                            outline_cache_key,
+                            &custom.commands,
+                            zoom,
+                            cx.scale_factor,
+                            outline_width,
+                            edge.dash,
+                        ) {
+                            cx.scene.push(SceneOp::Path {
+                                order: DrawOrder(2),
+                                origin: Point::new(Px(0.0), Px(0.0)),
+                                path,
+                                paint: outline.color.into(),
+                            });
+                        }
+                    } else if let Some(path) = self.paint_cache.wire_path(
                         cx.services,
-                        outline_cache_key,
-                        &custom.commands,
+                        edge.route,
+                        edge.from,
+                        edge.to,
                         zoom,
                         cx.scale_factor,
                         outline_width,
@@ -297,22 +325,6 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                             paint: outline.color.into(),
                         });
                     }
-                } else if let Some(path) = self.paint_cache.wire_path(
-                    cx.services,
-                    edge.route,
-                    edge.from,
-                    edge.to,
-                    zoom,
-                    cx.scale_factor,
-                    outline_width,
-                    edge.dash,
-                ) {
-                    cx.scene.push(SceneOp::Path {
-                        order: DrawOrder(2),
-                        origin: Point::new(Px(0.0), Px(0.0)),
-                        path,
-                        paint: outline.color.into(),
-                    });
                 }
             }
 
@@ -425,6 +437,9 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
         }
 
         if marker_budget_skipped > 0 {
+            cx.request_redraw();
+        }
+        if outline_budget_skipped > 0 {
             cx.request_redraw();
         }
 
@@ -612,23 +627,27 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                     && outline.width_mul > 1.0e-3
                     && outline.color.a > 0.0
                 {
-                    let outline_width = self.style.wire_width * outline.width_mul.max(0.0);
-                    if let Some(path) = self.paint_cache.wire_path(
-                        cx.services,
-                        EdgeRouteKind::Bezier,
-                        from,
-                        to,
-                        zoom,
-                        cx.scale_factor,
-                        outline_width,
-                        dash,
-                    ) {
-                        cx.scene.push(SceneOp::Path {
-                            order: DrawOrder(2),
-                            origin: Point::new(Px(0.0), Px(0.0)),
-                            path,
-                            paint: outline.color.into(),
-                        });
+                    if !outline_budget.try_consume(1) {
+                        outline_budget_skipped = outline_budget_skipped.saturating_add(1);
+                    } else {
+                        let outline_width = self.style.wire_width * outline.width_mul.max(0.0);
+                        if let Some(path) = self.paint_cache.wire_path(
+                            cx.services,
+                            EdgeRouteKind::Bezier,
+                            from,
+                            to,
+                            zoom,
+                            cx.scale_factor,
+                            outline_width,
+                            dash,
+                        ) {
+                            cx.scene.push(SceneOp::Path {
+                                order: DrawOrder(2),
+                                origin: Point::new(Px(0.0), Px(0.0)),
+                                path,
+                                paint: outline.color.into(),
+                            });
+                        }
                     }
                 }
 

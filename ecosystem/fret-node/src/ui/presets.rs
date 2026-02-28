@@ -267,7 +267,17 @@ impl NodeGraphSkin for NodeGraphPresetSkinV1 {
                 _ => 0.25,
             },
         };
-        let (wire_outline_selected, wire_outline_preview) = (
+        let outline_base_color = Color {
+            r: 0.0,
+            g: 0.0,
+            b: 0.0,
+            a: match preset_id {
+                "schematic_contrast" => 0.18,
+                "graph_dark" => 0.24,
+                _ => 0.14,
+            },
+        };
+        let (wire_outline_selected, wire_outline_preview, wire_outline_base) = (
             Some(WireOutlineHint {
                 width_mul: 1.8,
                 color: outline_color,
@@ -275,6 +285,10 @@ impl NodeGraphSkin for NodeGraphPresetSkinV1 {
             Some(WireOutlineHint {
                 width_mul: 1.8,
                 color: outline_color,
+            }),
+            Some(WireOutlineHint {
+                width_mul: 1.35,
+                color: outline_base_color,
             }),
         );
         InteractionChromeHint {
@@ -289,6 +303,7 @@ impl NodeGraphSkin for NodeGraphPresetSkinV1 {
             wire_glow_preview,
             wire_outline_selected,
             wire_outline_preview,
+            wire_outline_base,
         }
     }
 
