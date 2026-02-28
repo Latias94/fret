@@ -15,7 +15,8 @@
     ],
     "target_hints": [
       "Sets theme preset to zinc/light and zinc/dark.",
-      "Captures screenshots of the closed theme preset Select trigger for baseline alignment review."
+      "Captures screenshots of the closed theme preset Select trigger for baseline alignment review.",
+      "Tip: when using `--launch -- cargo run ...`, pass a larger `--timeout-ms` or launch a prebuilt `target/release/fret-ui-gallery.exe` to avoid compile-time timeouts."
     ]
   },
   "steps": [
