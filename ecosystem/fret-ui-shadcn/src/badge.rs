@@ -523,6 +523,28 @@ mod tests {
     use fret_core::{AppWindowId, FontWeight, Point, Rect, Size};
     use fret_ui::element::ForegroundScopeProps;
 
+    fn blend_over(fg: Color, bg: Color) -> Color {
+        let a = fg.a.clamp(0.0, 1.0);
+        Color {
+            r: fg.r * a + bg.r * (1.0 - a),
+            g: fg.g * a + bg.g * (1.0 - a),
+            b: fg.b * a + bg.b * (1.0 - a),
+            a: 1.0,
+        }
+    }
+
+    fn relative_luminance(c: Color) -> f32 {
+        // Theme colors are stored in linear space, so we can use the WCAG coefficients directly.
+        (0.2126 * c.r + 0.7152 * c.g + 0.0722 * c.b).clamp(0.0, 1.0)
+    }
+
+    fn contrast_ratio(a: Color, b: Color) -> f32 {
+        let l1 = relative_luminance(a);
+        let l2 = relative_luminance(b);
+        let (hi, lo) = if l1 >= l2 { (l1, l2) } else { (l2, l1) };
+        (hi + 0.05) / (lo + 0.05)
+    }
+
     fn bounds() -> Rect {
         Rect::new(
             Point::new(Px(0.0), Px(0.0)),
@@ -642,5 +664,33 @@ mod tests {
                 "expected shadcn Badge label to use font-medium"
             );
         });
+    }
+
+    #[test]
+    fn destructive_badge_text_contrast_is_reasonable_in_zinc_dark() {
+        let mut app = App::new();
+        crate::shadcn_themes::apply_shadcn_new_york_v4(
+            &mut app,
+            crate::shadcn_themes::ShadcnBaseColor::Zinc,
+            crate::shadcn_themes::ShadcnColorScheme::Dark,
+        );
+
+        let theme = Theme::global(&app);
+        let snap = theme.snapshot();
+
+        let fg = fg_for(&snap, BadgeVariant::Destructive);
+        let bg = bg_for(&snap, BadgeVariant::Destructive).expect("missing destructive badge bg");
+        let surface = snap.color_token("background");
+        let bg_composited = blend_over(bg, surface);
+
+        let ratio = contrast_ratio(fg, bg_composited);
+        assert!(
+            ratio >= 4.5,
+            "expected destructive badge contrast >= 4.5, got {ratio:.2} (fg={:?} bg={:?} bg_composited={:?} surface={:?})",
+            fg,
+            bg,
+            bg_composited,
+            surface,
+        );
     }
 }

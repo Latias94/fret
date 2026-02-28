@@ -253,9 +253,9 @@ pub fn shadcn_new_york_v4_config(base: ShadcnBaseColor, scheme: ShadcnColorSchem
             ShadcnColorScheme::Light => destructive.clone(),
             // Note: CSS alpha blending is not perceptually identical across renderers.
             // Our GPU pipeline blends in linear space, which can make `*/60` backgrounds appear
-            // slightly brighter than upstream web screenshots. Nudge the derived token darker so
-            // `text-white` remains legible and closer to shadcn docs.
-            ShadcnColorScheme::Dark => with_oklch_alpha(&destructive, 0.4)
+            // slightly brighter than upstream web screenshots. Nudge the derived token darker to
+            // keep destructive chrome readable (white label + icons) in zinc dark.
+            ShadcnColorScheme::Dark => with_oklch_alpha(&destructive, 0.3)
                 .expect("shadcn new-york-v4 destructive token is oklch"),
         };
         colors.insert(
