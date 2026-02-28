@@ -3,7 +3,7 @@ use std::rc::Rc;
 use std::sync::Arc;
 
 use fret_core::{Edges, FontId, FontWeight, Point, Px, Rect, Size, TextStyle};
-use fret_icons::{ids, IconId};
+use fret_icons::{IconId, ids};
 use fret_runtime::{CommandId, Model};
 use fret_ui::action::{OnActivate, OnDismissRequest};
 use fret_ui::element::{
@@ -30,7 +30,7 @@ use fret_ui_kit::primitives::portal_inherited;
 use fret_ui_kit::primitives::presence as radix_presence;
 use fret_ui_kit::typography;
 use fret_ui_kit::{
-    ui, ColorRef, LayoutRefinement, MetricRef, OverlayController, OverlayPresence, Radius, Space,
+    ColorRef, LayoutRefinement, MetricRef, OverlayController, OverlayPresence, Radius, Space, ui,
 };
 
 use crate::overlay_motion;
@@ -40,6 +40,17 @@ use crate::shortcut_display::command_shortcut_label;
 fn alpha_mul(mut c: fret_core::Color, mul: f32) -> fret_core::Color {
     c.a = (c.a * mul).clamp(0.0, 1.0);
     c
+}
+
+fn dropdown_menu_overlay_id(window: fret_core::AppWindowId, open: &Model<bool>) -> GlobalElementId {
+    // Avoid `cx.root_id()` here: element ids can churn when the closed vs open render path creates
+    // different numbers of scoped states. Using the `open` model identity keeps overlay ids stable
+    // across open/close frames and prevents transient missing-anchor failures.
+    use std::hash::{Hash, Hasher};
+
+    let mut hasher = std::collections::hash_map::DefaultHasher::new();
+    ("fret-ui-shadcn::DropdownMenu", window, open.id()).hash(&mut hasher);
+    GlobalElementId(hasher.finish())
 }
 
 fn is_dark_background(theme: &ThemeSnapshot) -> bool {
@@ -957,154 +968,156 @@ fn checkable_menu_row_children<H: UiHost>(
     };
     let indicator_fg = effective_fg;
 
-    vec![cx.container(
-        ContainerProps {
-            layout: {
-                let mut layout = LayoutStyle::default();
-                layout.size.width = Length::Fill;
-                layout
+    vec![
+        cx.container(
+            ContainerProps {
+                layout: {
+                    let mut layout = LayoutStyle::default();
+                    layout.size.width = Length::Fill;
+                    layout
+                },
+                padding: Edges {
+                    top: pad_y,
+                    right: pad_x,
+                    bottom: pad_y,
+                    // new-york-v4: checkbox/radio items use `pl-8`.
+                    left: pad_x_inset,
+                }
+                .into(),
+                background: Some(row_bg),
+                corner_radii: fret_core::Corners::all(radius_sm),
+                ..Default::default()
             },
-            padding: Edges {
-                top: pad_y,
-                right: pad_x,
-                bottom: pad_y,
-                // new-york-v4: checkbox/radio items use `pl-8`.
-                left: pad_x_inset,
-            }
-            .into(),
-            background: Some(row_bg),
-            corner_radii: fret_core::Corners::all(radius_sm),
-            ..Default::default()
-        },
-        move |cx| {
-            current_color::scope_children(cx, ColorRef::Color(effective_fg), |cx| {
-                let indicator = cx.container(
-                    ContainerProps {
-                        layout: LayoutStyle {
-                            position: fret_ui::element::PositionStyle::Absolute,
-                            inset: fret_ui::element::InsetStyle {
-                                top: Some(Px(0.0)).into(),
-                                right: None.into(),
-                                bottom: Some(Px(0.0)).into(),
-                                // new-york-v4: indicator slot uses `left-2`.
-                                left: Some(pad_x).into(),
-                            },
-                            size: SizeStyle {
-                                width: Length::Px(Px(16.0)),
-                                height: Length::Fill,
+            move |cx| {
+                current_color::scope_children(cx, ColorRef::Color(effective_fg), |cx| {
+                    let indicator = cx.container(
+                        ContainerProps {
+                            layout: LayoutStyle {
+                                position: fret_ui::element::PositionStyle::Absolute,
+                                inset: fret_ui::element::InsetStyle {
+                                    top: Some(Px(0.0)).into(),
+                                    right: None.into(),
+                                    bottom: Some(Px(0.0)).into(),
+                                    // new-york-v4: indicator slot uses `left-2`.
+                                    left: Some(pad_x).into(),
+                                },
+                                size: SizeStyle {
+                                    width: Length::Px(Px(16.0)),
+                                    height: Length::Fill,
+                                    ..Default::default()
+                                },
                                 ..Default::default()
                             },
                             ..Default::default()
                         },
-                        ..Default::default()
-                    },
-                    move |cx| {
-                        vec![cx.flex(
-                            FlexProps {
-                                layout: LayoutStyle::default(),
-                                direction: fret_core::Axis::Horizontal,
-                                gap: Px(0.0).into(),
-                                padding: Edges::all(Px(0.0)).into(),
-                                justify: MainAlign::Center,
-                                align: CrossAlign::Center,
-                                wrap: false,
-                            },
-                            move |cx| {
-                                if !indicator_on {
-                                    return Vec::new();
-                                }
-
-                                match indicator_kind {
-                                    CheckableIndicatorKind::Check => {
-                                        vec![decl_icon::icon_with(
-                                            cx,
-                                            ids::ui::CHECK,
-                                            Some(Px(16.0)),
-                                            Some(ColorRef::Color(indicator_fg)),
-                                        )]
+                        move |cx| {
+                            vec![cx.flex(
+                                FlexProps {
+                                    layout: LayoutStyle::default(),
+                                    direction: fret_core::Axis::Horizontal,
+                                    gap: Px(0.0).into(),
+                                    padding: Edges::all(Px(0.0)).into(),
+                                    justify: MainAlign::Center,
+                                    align: CrossAlign::Center,
+                                    wrap: false,
+                                },
+                                move |cx| {
+                                    if !indicator_on {
+                                        return Vec::new();
                                     }
-                                    CheckableIndicatorKind::RadioDot => vec![cx.container(
-                                        ContainerProps {
-                                            layout: {
-                                                let mut layout = LayoutStyle::default();
-                                                layout.size.width = Length::Px(Px(8.0));
-                                                layout.size.height = Length::Px(Px(8.0));
-                                                layout
+
+                                    match indicator_kind {
+                                        CheckableIndicatorKind::Check => {
+                                            vec![decl_icon::icon_with(
+                                                cx,
+                                                ids::ui::CHECK,
+                                                Some(Px(16.0)),
+                                                Some(ColorRef::Color(indicator_fg)),
+                                            )]
+                                        }
+                                        CheckableIndicatorKind::RadioDot => vec![cx.container(
+                                            ContainerProps {
+                                                layout: {
+                                                    let mut layout = LayoutStyle::default();
+                                                    layout.size.width = Length::Px(Px(8.0));
+                                                    layout.size.height = Length::Px(Px(8.0));
+                                                    layout
+                                                },
+                                                padding: Edges::all(Px(0.0)).into(),
+                                                background: Some(indicator_fg),
+                                                shadow: None,
+                                                border: Edges::all(Px(0.0)),
+                                                border_color: None,
+                                                corner_radii: fret_core::Corners::all(Px(999.0)),
+                                                ..Default::default()
                                             },
-                                            padding: Edges::all(Px(0.0)).into(),
-                                            background: Some(indicator_fg),
-                                            shadow: None,
-                                            border: Edges::all(Px(0.0)),
-                                            border_color: None,
-                                            corner_radii: fret_core::Corners::all(Px(999.0)),
-                                            ..Default::default()
-                                        },
-                                        |_cx| Vec::new(),
-                                    )],
-                                }
-                            },
-                        )]
-                    },
-                );
-
-                let mut row: Vec<AnyElement> = Vec::with_capacity(
-                    2 + usize::from(
-                        leading.is_some() || leading_icon.is_some() || reserve_leading_slot,
-                    ) + usize::from(trailing.is_some()),
-                );
-
-                if let Some(l) = leading {
-                    row.push(menu_icon_slot(cx, l));
-                } else if let Some(icon) = leading_icon {
-                    let icon_el = decl_icon::icon_with(cx, icon, Some(Px(16.0)), None);
-                    row.push(menu_icon_slot(cx, icon_el));
-                } else if reserve_leading_slot {
-                    row.push(menu_icon_slot_empty(cx));
-                }
-
-                let style = text_style.clone();
-                let mut text = ui::text(cx, label.clone())
-                    .layout(LayoutRefinement::default().min_w_0().flex_1())
-                    .text_size_px(style.size)
-                    .font_weight(style.weight)
-                    .nowrap()
-                    .text_color(ColorRef::Color(effective_fg));
-
-                if let Some(line_height) = style.line_height {
-                    text = text.fixed_line_box_px(line_height).line_box_in_bounds();
-                }
-
-                if let Some(letter_spacing_em) = style.letter_spacing_em {
-                    text = text.letter_spacing_em(letter_spacing_em);
-                }
-
-                row.push(text.into_element(cx));
-
-                if let Some(t) = trailing {
-                    row.push(t);
-                }
-
-                let content = cx.flex(
-                    FlexProps {
-                        layout: {
-                            let mut layout = LayoutStyle::default();
-                            layout.size.width = Length::Fill;
-                            layout
+                                            |_cx| Vec::new(),
+                                        )],
+                                    }
+                                },
+                            )]
                         },
-                        direction: fret_core::Axis::Horizontal,
-                        gap: Px(8.0).into(),
-                        padding: Edges::all(Px(0.0)).into(),
-                        justify: MainAlign::Start,
-                        align: CrossAlign::Center,
-                        wrap: false,
-                    },
-                    move |_cx| row,
-                );
+                    );
 
-                vec![content, indicator]
-            })
-        },
-    )]
+                    let mut row: Vec<AnyElement> = Vec::with_capacity(
+                        2 + usize::from(
+                            leading.is_some() || leading_icon.is_some() || reserve_leading_slot,
+                        ) + usize::from(trailing.is_some()),
+                    );
+
+                    if let Some(l) = leading {
+                        row.push(menu_icon_slot(cx, l));
+                    } else if let Some(icon) = leading_icon {
+                        let icon_el = decl_icon::icon_with(cx, icon, Some(Px(16.0)), None);
+                        row.push(menu_icon_slot(cx, icon_el));
+                    } else if reserve_leading_slot {
+                        row.push(menu_icon_slot_empty(cx));
+                    }
+
+                    let style = text_style.clone();
+                    let mut text = ui::text(cx, label.clone())
+                        .layout(LayoutRefinement::default().min_w_0().flex_1())
+                        .text_size_px(style.size)
+                        .font_weight(style.weight)
+                        .nowrap()
+                        .text_color(ColorRef::Color(effective_fg));
+
+                    if let Some(line_height) = style.line_height {
+                        text = text.fixed_line_box_px(line_height).line_box_in_bounds();
+                    }
+
+                    if let Some(letter_spacing_em) = style.letter_spacing_em {
+                        text = text.letter_spacing_em(letter_spacing_em);
+                    }
+
+                    row.push(text.into_element(cx));
+
+                    if let Some(t) = trailing {
+                        row.push(t);
+                    }
+
+                    let content = cx.flex(
+                        FlexProps {
+                            layout: {
+                                let mut layout = LayoutStyle::default();
+                                layout.size.width = Length::Fill;
+                                layout
+                            },
+                            direction: fret_core::Axis::Horizontal,
+                            gap: Px(8.0).into(),
+                            padding: Edges::all(Px(0.0)).into(),
+                            justify: MainAlign::Start,
+                            align: CrossAlign::Center,
+                            wrap: false,
+                        },
+                        move |_cx| row,
+                    );
+
+                    vec![content, indicator]
+                })
+            },
+        ),
+    ]
 }
 
 fn submenu_chevron_right_text<H: UiHost>(
@@ -1397,11 +1410,15 @@ impl DropdownMenu {
         I: IntoIterator<Item = DropdownMenuEntry>,
     {
         cx.scope(|cx| {
-            let overlay_id = cx.root_id();
+            let overlay_id = dropdown_menu_overlay_id(cx.window, &self.open);
             let theme = Theme::global(&*cx.app).snapshot();
+            // `open` gates overlay request creation, so treat it as a structural/layout invalidation
+            // (not paint-only). This avoids view-cache reuse keeping the closed subtree when `open`
+            // flips between frames (notably in test harnesses that toggle `open` and snapshot
+            // semantics immediately on the next frame).
             let model_open = cx
                 .watch_model(&self.open)
-                .paint()
+                .layout()
                 .copied()
                 .unwrap_or(false);
             let is_open = model_open && !self.disabled;
@@ -3833,8 +3850,8 @@ mod tests {
     use fret_core::{Px, SemanticsRole, Size as CoreSize};
     use fret_core::{TextBlobId, TextConstraints, TextMetrics, TextService};
     use fret_runtime::{Effect, FrameId};
-    use fret_ui::element::PressableA11y;
     use fret_ui::UiTree;
+    use fret_ui::element::PressableA11y;
     use fret_ui_kit::primitives::direction as direction_prim;
     use fret_ui_kit::primitives::direction::LayoutDirection;
 
@@ -4350,59 +4367,66 @@ mod tests {
             "dropdown-menu-dir",
             move |cx| {
                 direction_prim::with_direction_provider(cx, dir, |cx| {
-                    vec![cx.container(
-                        ContainerProps {
-                            padding: Edges {
-                                top: Px(100.0),
-                                right: Px(0.0),
-                                bottom: Px(0.0),
-                                left: Px(500.0),
-                            }
-                            .into(),
-                            ..Default::default()
-                        },
-                        move |cx| {
-                            let trigger_id_out = trigger_id_out_for_render.clone();
-                            // See `render_frame_focusable_trigger_capture_id`: we need a non-modal
-                            // menu so trigger semantics remain visible while open.
-                            vec![DropdownMenu::new(open)
-                                .modal(false)
-                                .arrow(false)
-                                .into_element(
-                                    cx,
-                                    move |cx| {
-                                        cx.pressable_with_id_props(move |cx, _st, id| {
-                                            let _ = cx
-                                                .app
-                                                .models_mut()
-                                                .update(&trigger_id_out, |v| *v = Some(id));
-                                            (
-                                                PressableProps {
-                                                    layout: {
-                                                        let mut layout = LayoutStyle::default();
-                                                        layout.size.width = Length::Px(Px(120.0));
-                                                        layout.size.height = Length::Px(Px(40.0));
-                                                        layout
-                                                    },
-                                                    enabled: true,
-                                                    focusable: true,
-                                                    a11y: PressableA11y {
-                                                        label: Some(Arc::from("Trigger")),
-                                                        ..Default::default()
-                                                    },
-                                                    ..Default::default()
-                                                },
-                                                vec![cx
-                                                    .container(ContainerProps::default(), |_cx| {
-                                                        Vec::new()
-                                                    })],
-                                            )
-                                        })
-                                    },
-                                    move |_cx| entries,
-                                )]
-                        },
-                    )]
+                    vec![
+                        cx.container(
+                            ContainerProps {
+                                padding: Edges {
+                                    top: Px(100.0),
+                                    right: Px(0.0),
+                                    bottom: Px(0.0),
+                                    left: Px(500.0),
+                                }
+                                .into(),
+                                ..Default::default()
+                            },
+                            move |cx| {
+                                let trigger_id_out = trigger_id_out_for_render.clone();
+                                // See `render_frame_focusable_trigger_capture_id`: we need a non-modal
+                                // menu so trigger semantics remain visible while open.
+                                vec![
+                                    DropdownMenu::new(open)
+                                        .modal(false)
+                                        .arrow(false)
+                                        .into_element(
+                                            cx,
+                                            move |cx| {
+                                                cx.pressable_with_id_props(move |cx, _st, id| {
+                                                    let _ = cx
+                                                        .app
+                                                        .models_mut()
+                                                        .update(&trigger_id_out, |v| *v = Some(id));
+                                                    (
+                                                        PressableProps {
+                                                            layout: {
+                                                                let mut layout =
+                                                                    LayoutStyle::default();
+                                                                layout.size.width =
+                                                                    Length::Px(Px(120.0));
+                                                                layout.size.height =
+                                                                    Length::Px(Px(40.0));
+                                                                layout
+                                                            },
+                                                            enabled: true,
+                                                            focusable: true,
+                                                            a11y: PressableA11y {
+                                                                label: Some(Arc::from("Trigger")),
+                                                                ..Default::default()
+                                                            },
+                                                            ..Default::default()
+                                                        },
+                                                        vec![cx.container(
+                                                            ContainerProps::default(),
+                                                            |_cx| Vec::new(),
+                                                        )],
+                                                    )
+                                                })
+                                            },
+                                            move |_cx| entries,
+                                        ),
+                                ]
+                            },
+                        ),
+                    ]
                 })
             },
         );
@@ -4588,26 +4612,28 @@ mod tests {
             bounds,
             "dropdown-menu-dismiss-handler",
             move |cx| {
-                vec![DropdownMenu::new(open)
-                    .on_dismiss_request(on_dismiss_request)
-                    .into_element(
-                        cx,
-                        |cx| {
-                            cx.container(
-                                ContainerProps {
-                                    layout: {
-                                        let mut layout = LayoutStyle::default();
-                                        layout.size.width = Length::Px(Px(120.0));
-                                        layout.size.height = Length::Px(Px(40.0));
-                                        layout
+                vec![
+                    DropdownMenu::new(open)
+                        .on_dismiss_request(on_dismiss_request)
+                        .into_element(
+                            cx,
+                            |cx| {
+                                cx.container(
+                                    ContainerProps {
+                                        layout: {
+                                            let mut layout = LayoutStyle::default();
+                                            layout.size.width = Length::Px(Px(120.0));
+                                            layout.size.height = Length::Px(Px(40.0));
+                                            layout
+                                        },
+                                        ..Default::default()
                                     },
-                                    ..Default::default()
-                                },
-                                |_cx| Vec::new(),
-                            )
-                        },
-                        move |_cx| entries,
-                    )]
+                                    |_cx| Vec::new(),
+                                )
+                            },
+                            move |_cx| entries,
+                        ),
+                ]
             },
         );
         ui.set_root(root);

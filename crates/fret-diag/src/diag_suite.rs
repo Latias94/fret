@@ -635,7 +635,10 @@ hint: list suites via `fretboard diag list suites --contains {name}`\n\
 hint: list promoted scripts via `fretboard diag list scripts --contains {name}`"
             ));
         }
-        return Err(format!("script path does not exist: {}", scripts[0].display()));
+        return Err(format!(
+            "script path does not exist: {}",
+            scripts[0].display()
+        ));
     }
 
     let suite_wants_screenshots = pack_include_screenshots

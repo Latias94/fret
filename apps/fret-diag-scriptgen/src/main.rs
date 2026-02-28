@@ -923,6 +923,7 @@ fn ui_gallery_select_open_jitter_click_stable_v2() -> UiActionScriptV2 {
             timeout_frames: 240,
         })
         .push(UiActionStepV2::WaitBoundsStable {
+            window: None,
             target: test_id("select-scroll-viewport"),
             stable_frames: 4,
             max_move_px: 0.5,

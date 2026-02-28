@@ -692,6 +692,8 @@ impl WinitAppDriver for EffectsDemoDriver {
                     line_height_em: None,
                     line_height_policy: Default::default(),
                     letter_spacing_em: None,
+                    features: Vec::new(),
+                    axes: Vec::new(),
                     vertical_placement: TextVerticalPlacement::CenterMetricsBox,
                     leading_distribution: Default::default(),
                     strut_style: Default::default(),
