@@ -85,6 +85,11 @@ fn scroll_content_row_layout() -> LayoutStyle {
     let mut layout = LayoutStyle::default();
     layout.size.width = Length::Auto;
     layout.size.height = Length::Fill;
+    // Ensure the scroll content is at least as wide as the viewport so we have a stable
+    // "header space" region to the right of the last tab (dockview/Zed-style).
+    //
+    // This is the equivalent of CSS `min-width: 100%` on the scroll content row.
+    layout.size.min_width = Some(Length::Fraction(1.0));
     layout.flex.shrink = 0.0;
     layout
 }
@@ -187,6 +192,7 @@ struct WorkspaceTabStripDragState {
     drop_target: WorkspaceTabStripDropTarget,
     tab_rects: Vec<WorkspaceTabHitRect>,
     pinned_boundary_rect: Option<Rect>,
+    end_drop_target_rect: Option<Rect>,
     scroll_viewport_rect: Option<Rect>,
 }
 
@@ -578,6 +584,7 @@ impl WorkspaceTabStrip {
                 let active_tab_element = Cell::<Option<GlobalElementId>>::new(None);
                 let tab_elements: RefCell<Vec<(Arc<str>, GlobalElementId)>> = RefCell::new(Vec::new());
                 let pinned_boundary_element = Cell::<Option<GlobalElementId>>::new(None);
+                let end_drop_target_element = Cell::<Option<GlobalElementId>>::new(None);
 
                 let cross_drop_target: Option<(Arc<str>, WorkspaceTabInsertionSide)> = match (
                     tab_drag_model.as_ref(),
@@ -935,6 +942,7 @@ impl WorkspaceTabStrip {
                                                                 let mut dragged_tab: Option<Arc<str>> = None;
                                                                 let mut tab_rects: Vec<WorkspaceTabHitRect> = Vec::new();
                                                                 let mut pinned_boundary_rect: Option<Rect> = None;
+                                                                let mut end_drop_target_rect: Option<Rect> = None;
                                                                 let mut scroll_viewport_rect: Option<Rect> = None;
 
                                                                 let _ = host.models_mut().read(&drag_model, |st| {
@@ -947,6 +955,7 @@ impl WorkspaceTabStrip {
                                                                     dragged_tab = st.dragged_tab.clone();
                                                                     tab_rects = st.tab_rects.clone();
                                                                     pinned_boundary_rect = st.pinned_boundary_rect;
+                                                                    end_drop_target_rect = st.end_drop_target_rect;
                                                                     scroll_viewport_rect = st.scroll_viewport_rect;
                                                                 });
 
@@ -1018,6 +1027,7 @@ impl WorkspaceTabStrip {
                                                                         dragged.as_ref(),
                                                                         &tab_rects,
                                                                         pinned_boundary_rect,
+                                                                        end_drop_target_rect,
                                                                         scroll_viewport_rect,
                                                                     );
                                                                 if matches!(drop_target, WorkspaceTabStripDropTarget::End) {
@@ -1557,6 +1567,37 @@ impl WorkspaceTabStrip {
                                             out.push(element);
                                         }
 
+                                        // A stable drop surface that represents the "header space" to the right of
+                                        // the last tab (drop at end). This mirrors dockview's `VoidContainer` and
+                                        // Zed's explicit drop target element.
+                                        //
+                                        // Note: this element is intentionally not focusable/roving; it exists only
+                                        // for hit testing, DnD routing, and automation.
+                                        let end_drop_test_id = root_test_id.as_ref().map(|root| {
+                                            Arc::<str>::from(format!("{root}.drop_end"))
+                                        });
+                                        let end_drop = cx.keyed("workspace-tab-strip-drop-end", |cx| {
+                                            let mut layout = LayoutStyle::default();
+                                            layout.size.height = Length::Fill;
+                                            layout.size.width = Length::Px(Px(24.0));
+                                            layout.size.min_width = Some(Length::Px(Px(24.0)));
+                                            layout.flex.grow = 1.0;
+                                            layout.flex.shrink = 1.0;
+                                            let mut el = cx.container(
+                                                ContainerProps {
+                                                    layout,
+                                                    ..Default::default()
+                                                },
+                                                |_cx| Vec::new(),
+                                            );
+                                            if let Some(id) = end_drop_test_id.clone() {
+                                                el = el.test_id(id);
+                                            }
+                                            end_drop_target_element.set(Some(el.id));
+                                            el
+                                        });
+                                        out.push(end_drop);
+
                                         out
                                     },
                                 )];
@@ -1660,6 +1701,9 @@ impl WorkspaceTabStrip {
                             let pinned_boundary_rect_now = pinned_boundary_element
                                 .get()
                                 .and_then(|id| cx.last_bounds_for_element(id));
+                            let end_drop_target_rect_now = end_drop_target_element
+                                .get()
+                                .and_then(|id| cx.last_bounds_for_element(id));
 
                             #[cfg(feature = "shadcn-context-menu")]
                             let (overflow_is_overflowing, overflow_button_test_id, overflow_entries) = {
@@ -1737,14 +1781,20 @@ impl WorkspaceTabStrip {
                             let pinned_boundary_changed =
                                 pinned_boundary_rect_now != drag_snapshot.pinned_boundary_rect;
                             let viewport_changed = viewport_for_hit != drag_snapshot.scroll_viewport_rect;
+                            let end_drop_changed =
+                                end_drop_target_rect_now != drag_snapshot.end_drop_target_rect;
 
                             if should_clear
                                 || (should_sync_rects
-                                    && (rects_changed || pinned_boundary_changed || viewport_changed))
+                                    && (rects_changed
+                                        || pinned_boundary_changed
+                                        || viewport_changed
+                                        || end_drop_changed))
                             {
                                 let rects_for_model = rects_for_hit.clone();
                                 let pinned_boundary_rect_for_model = pinned_boundary_rect_now;
                                 let viewport_for_model = viewport_for_hit;
+                                let end_drop_target_rect_for_model = end_drop_target_rect_now;
                                 let _ = cx.app.models_mut().update(&drag_model, move |st| {
                                     if should_clear {
                                         *st = WorkspaceTabStripDragState::default();
@@ -1754,6 +1804,7 @@ impl WorkspaceTabStrip {
                                     st.tab_rects = rects_for_model;
                                     st.pinned_boundary_rect = pinned_boundary_rect_for_model;
                                     st.scroll_viewport_rect = viewport_for_model;
+                                    st.end_drop_target_rect = end_drop_target_rect_for_model;
                                     match st.drop_target.clone() {
                                         WorkspaceTabStripDropTarget::None => {}
                                         WorkspaceTabStripDropTarget::PinnedBoundary => {
@@ -1794,6 +1845,7 @@ impl WorkspaceTabStrip {
                                         dragged,
                                         &rects_for_hit,
                                         pinned_boundary_rect_now,
+                                        end_drop_target_rect_now,
                                         viewport_for_hit,
                                     );
                                     let next = match next {

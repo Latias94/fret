@@ -27,10 +27,15 @@ pub(crate) fn compute_workspace_tab_strip_drop_target(
     dragged_tab_id: &str,
     tab_rects: &[WorkspaceTabHitRect],
     pinned_boundary_rect: Option<Rect>,
+    end_drop_target_rect: Option<Rect>,
     scroll_viewport_rect: Option<Rect>,
 ) -> WorkspaceTabStripDropTarget {
     if pinned_boundary_rect.is_some_and(|rect| rect_contains_point(rect, position)) {
         return WorkspaceTabStripDropTarget::PinnedBoundary;
+    }
+
+    if end_drop_target_rect.is_some_and(|rect| rect_contains_point(rect, position)) {
+        return WorkspaceTabStripDropTarget::End;
     }
 
     if let Some(viewport) = scroll_viewport_rect
@@ -96,10 +101,7 @@ mod tests {
     use fret_core::{Px, Size};
 
     fn rect(x: f32, y: f32, w: f32, h: f32) -> Rect {
-        Rect::new(
-            Point::new(Px(x), Px(y)),
-            Size::new(Px(w), Px(h)),
-        )
+        Rect::new(Point::new(Px(x), Px(y)), Size::new(Px(w), Px(h)))
     }
 
     #[test]
@@ -116,6 +118,7 @@ mod tests {
             "b",
             &tab_rects,
             Some(pinned_boundary),
+            None,
             Some(rect(0.0, 0.0, 200.0, 20.0)),
         );
         assert!(
@@ -144,6 +147,28 @@ mod tests {
             "c",
             &tab_rects,
             None,
+            None,
+            Some(viewport),
+        );
+        assert!(matches!(target, WorkspaceTabStripDropTarget::End));
+    }
+
+    #[test]
+    fn end_target_triggers_when_pointer_is_inside_end_drop_rect() {
+        let tab_rects = vec![WorkspaceTabHitRect {
+            id: Arc::from("a"),
+            rect: rect(0.0, 0.0, 100.0, 20.0),
+        }];
+        let viewport = rect(0.0, 0.0, 200.0, 20.0);
+        let end_rect = rect(120.0, 0.0, 80.0, 20.0);
+        let pos = Point::new(Px(150.0), Px(10.0));
+
+        let target = compute_workspace_tab_strip_drop_target(
+            pos,
+            "b",
+            &tab_rects,
+            None,
+            Some(end_rect),
             Some(viewport),
         );
         assert!(matches!(target, WorkspaceTabStripDropTarget::End));
@@ -162,8 +187,7 @@ mod tests {
                 Px(10.0),
                 max,
             )
-            .0
-                < 0.0
+            .0 < 0.0
         );
 
         // At left edge but already at 0 doesn't scroll.
@@ -185,8 +209,7 @@ mod tests {
                 Px(10.0),
                 max,
             )
-            .0
-                > 0.0
+            .0 > 0.0
         );
 
         // Near right edge but already at max doesn't scroll.

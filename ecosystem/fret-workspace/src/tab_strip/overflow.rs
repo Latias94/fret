@@ -3,8 +3,8 @@ use std::sync::Arc;
 
 use fret_core::{Px, Rect};
 
-use crate::tab_drag::WorkspaceTabHitRect;
 use super::WorkspaceTab;
+use crate::tab_drag::WorkspaceTabHitRect;
 
 pub(crate) fn compute_overflowed_tab_ids(
     tabs: &[WorkspaceTab],
@@ -12,10 +12,7 @@ pub(crate) fn compute_overflowed_tab_ids(
     viewport: Rect,
     margin: Px,
 ) -> Vec<Arc<str>> {
-    let by_id: HashMap<&str, Rect> = tab_rects
-        .iter()
-        .map(|r| (r.id.as_ref(), r.rect))
-        .collect();
+    let by_id: HashMap<&str, Rect> = tab_rects.iter().map(|r| (r.id.as_ref(), r.rect)).collect();
 
     let view_left = viewport.origin.x.0 + margin.0;
     let view_right = viewport.origin.x.0 + viewport.size.width.0 - margin.0;
