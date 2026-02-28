@@ -36,6 +36,8 @@ This file is a check-list style tracker. Milestone framing lives in `milestones.
 - [x] Add a `diag config doctor` (tooling-side) that prints an effective merged config + highlights deprecated keys/envs.
 - [x] Eliminate docking multi-window lint false negatives by ensuring focus repair runs before semantics refresh (and on
   layout fast-path frames), so bundles never capture a focused node with empty bounds.
+- [x] Add an opt-in pointer input isolation knob for tool-launched scripted runs so accidental real mouse movement/clicks
+  do not perturb deterministic playback (especially for cross-window docking/tear-off).
 
 ## P0.5: Script library modularization (UX scalability)
 

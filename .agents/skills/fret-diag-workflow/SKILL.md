@@ -74,6 +74,7 @@ Defaults if unclear:
 
 - Use a UI gallery page + stable `test_id` selectors.
 - Capture at least one `capture_bundle` step (screenshots only if they add signal).
+- Prefer `--launch` runs (tooling writes a per-run config and can isolate external pointer input during script playback).
 
 ## Quick start (native, recommended)
 
@@ -91,6 +92,8 @@ Copy/paste checklist (safe, small-by-default):
 
 1) `cargo run -p fretboard -- diag config doctor --mode launch --print-launch-policy`
 2) `cargo run -p fretboard -- diag run <script.json|script_id> --pack --ai-packet --launch -- <cmd>`
+   - If you need to interact with the app while a script is running, add:
+     - `--env FRET_DIAG_ISOLATE_POINTER_INPUT=0`
 3) `cargo run -p fretboard -- diag meta <bundle_dir|bundle.schema2.json> --json`
 4) `cargo run -p fretboard -- diag pack <bundle_dir> --ai-only`
 5) (escape hatch) add `--launch-write-bundle-json` before `--launch` only when raw `bundle.json` is truly needed
