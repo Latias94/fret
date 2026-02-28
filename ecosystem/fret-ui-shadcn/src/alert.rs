@@ -331,7 +331,7 @@ mod tests {
     use super::*;
 
     use fret_app::App;
-    use fret_core::{AppWindowId, Point, Px, Rect, Size};
+    use fret_core::{AppWindowId, Point, Px, Rect, Size, TextOverflow};
     use fret_ui::element::ElementKind;
 
     #[test]

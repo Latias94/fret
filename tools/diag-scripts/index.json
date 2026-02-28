@@ -760,16 +760,6 @@
       "target_hints": []
     },
     {
-      "id": "ui-gallery-card-meeting-notes-list-no-early-wrap",
-      "path": "tools/diag-scripts/ui-gallery/card/ui-gallery-card-meeting-notes-list-no-early-wrap.json",
-      "required_capabilities": [],
-      "suite_memberships": [
-        "ui-gallery-shadcn-conformance"
-      ],
-      "tags": [],
-      "target_hints": []
-    },
-    {
       "id": "ui-gallery-carousel-expandable-fixed-frame-delta",
       "path": "tools/diag-scripts/ui-gallery/carousel/ui-gallery-carousel-expandable-fixed-frame-delta.json",
       "required_capabilities": [],
@@ -2490,6 +2480,16 @@
       "required_capabilities": [],
       "suite_memberships": [
         "ui-gallery"
+      ],
+      "tags": [],
+      "target_hints": []
+    },
+    {
+      "id": "ui-gallery-radio-group-description-layout",
+      "path": "tools/diag-scripts/ui-gallery/radio-group/ui-gallery-radio-group-description-layout.json",
+      "required_capabilities": [],
+      "suite_memberships": [
+        "ui-gallery-shadcn-conformance"
       ],
       "tags": [],
       "target_hints": []
