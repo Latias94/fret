@@ -75,6 +75,7 @@ mod script_runner;
 mod script_step_index;
 mod script_steps;
 mod script_steps_assert;
+mod script_steps_clipboard;
 mod script_steps_drag;
 mod script_steps_input;
 mod script_steps_menu;

@@ -849,6 +849,26 @@ pub enum UiActionStepV2 {
     SetClipboardForceUnavailable {
         enabled: bool,
     },
+    /// Set the OS clipboard text payload (best-effort).
+    ///
+    /// This is intended to make "paste" flows deterministic in scripted diagnostics by ensuring
+    /// the clipboard contents are known.
+    ///
+    /// Requires capability `diag.clipboard_text`.
+    SetClipboardText {
+        text: String,
+    },
+    /// Assert that the OS clipboard text payload equals `text` (best-effort).
+    ///
+    /// This is intended to make clipboard-driven regression scripts explainable without relying
+    /// on screenshots.
+    ///
+    /// Requires capability `diag.clipboard_text`.
+    AssertClipboardText {
+        text: String,
+        #[serde(default = "default_action_timeout_frames")]
+        timeout_frames: u32,
+    },
     /// Diagnostics-only incoming-open injection (best-effort).
     ///
     /// This simulates “open in…” / share-target flows by injecting an `IncomingOpenRequest` event.

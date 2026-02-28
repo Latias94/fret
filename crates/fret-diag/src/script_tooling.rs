@@ -482,6 +482,12 @@ fn infer_required_capabilities_v2(script: &UiActionScriptV2) -> Vec<String> {
         if matches!(step, UiActionStepV2::SetMouseButtons { .. }) {
             push_cap(&mut caps, "diag.mouse_buttons_override");
         }
+        if matches!(
+            step,
+            UiActionStepV2::SetClipboardText { .. } | UiActionStepV2::AssertClipboardText { .. }
+        ) {
+            push_cap(&mut caps, "diag.clipboard_text");
+        }
         if matches!(step, UiActionStepV2::Tap { .. }) {
             push_cap(&mut caps, "diag.gesture_tap");
         }

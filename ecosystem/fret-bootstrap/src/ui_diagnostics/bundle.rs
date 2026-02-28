@@ -299,6 +299,9 @@ impl UiDiagnosticsEnvFingerprintV1 {
         capabilities.push("diag.text_input_snapshot".to_string());
         capabilities.push("diag.shortcut_routing_trace".to_string());
         capabilities.push("diag.overlay_placement_trace".to_string());
+        if !cfg!(target_arch = "wasm32") {
+            capabilities.push("diag.clipboard_text".to_string());
+        }
         capabilities.sort();
         capabilities.dedup();
 
