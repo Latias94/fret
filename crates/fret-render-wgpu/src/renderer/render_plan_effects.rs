@@ -33,6 +33,8 @@ pub(super) struct CustomV3PyramidChoice {
 pub(super) struct BackdropSourceGroupCtx {
     pub(super) raw_target: PlanTarget,
     pub(super) pyramid: Option<CustomV3PyramidChoice>,
+    pub(super) scissor: ScissorRect,
+    pub(super) pyramid_pad_px: u32,
 }
 
 pub(super) fn available_scratch_targets(
@@ -83,6 +85,8 @@ pub(super) fn apply_chain_in_place(
 
     let group_raw = backdrop_source_group.map(|g| g.raw_target);
     let group_pyramid = backdrop_source_group.and_then(|g| g.pyramid);
+    let group_pyramid_roi =
+        backdrop_source_group.and_then(|g| g.pyramid.map(|_| (g.scissor, g.pyramid_pad_px)));
 
     let mut budget_bytes = ctx.intermediate_budget_bytes;
     let srcdst_bytes = estimate_texture_bytes(ctx.viewport_size, ctx.format, 1);
@@ -399,11 +403,27 @@ pub(super) fn apply_chain_in_place(
                             }
                         }
 
+                        let pyramid_build_scissor =
+                            sources.pyramid.filter(|_| pyramid_levels >= 2).map(|req| {
+                                let roi = if let Some((g_scissor, g_pad_px)) = group_pyramid_roi {
+                                    inflate_scissor_to_viewport(
+                                        g_scissor,
+                                        g_pad_px,
+                                        ctx.viewport_size,
+                                    )
+                                } else {
+                                    let pad_px = pyramid_radius_pad_px(req, ctx.scale_factor);
+                                    inflate_scissor_to_viewport(scissor, pad_px, ctx.viewport_size)
+                                };
+                                LocalScissorRect(roi)
+                            });
+
                         passes.push(RenderPlanPass::CustomEffectV3(CustomEffectV3Pass {
                             src: work,
                             src_raw,
                             src_pyramid,
                             pyramid_levels,
+                            pyramid_build_scissor,
                             raw_wanted: sources.want_raw,
                             pyramid_wanted: sources.pyramid.is_some(),
                             dst: srcdst,
@@ -1613,6 +1633,16 @@ pub(super) fn apply_chain_in_place(
                         v3.raw_distinct = v3.raw_distinct.saturating_add(1);
                     }
                 }
+                let pyramid_build_scissor =
+                    sources.pyramid.filter(|_| pyramid_levels >= 2).map(|req| {
+                        let roi = if let Some((g_scissor, g_pad_px)) = group_pyramid_roi {
+                            inflate_scissor_to_viewport(g_scissor, g_pad_px, ctx.viewport_size)
+                        } else {
+                            let pad_px = pyramid_radius_pad_px(req, ctx.scale_factor);
+                            inflate_scissor_to_viewport(scissor, pad_px, ctx.viewport_size)
+                        };
+                        LocalScissorRect(roi)
+                    });
                 append_custom_effect_v3_in_place_single_scratch(
                     passes,
                     srcdst,
@@ -1630,6 +1660,7 @@ pub(super) fn apply_chain_in_place(
                     sources,
                     raw_needed,
                     pyramid_levels,
+                    pyramid_build_scissor,
                     group_raw.or(chain_raw),
                     ctx.clear,
                     mask_uniform_index,
@@ -2387,6 +2418,8 @@ fn apply_step_in_place_with_scratch_targets(
             let raw_needed = sources.want_raw || sources.pyramid.is_some();
             let group_raw = backdrop_source_group.map(|g| g.raw_target);
             let group_pyramid = backdrop_source_group.and_then(|g| g.pyramid);
+            let group_pyramid_roi = backdrop_source_group
+                .and_then(|g| g.pyramid.map(|_| (g.scissor, g.pyramid_pad_px)));
             let pyramid_levels = if sources.pyramid.is_some()
                 && let Some(choice) = group_pyramid
             {
@@ -2429,6 +2462,16 @@ fn apply_step_in_place_with_scratch_targets(
                     v3.raw_distinct = v3.raw_distinct.saturating_add(1);
                 }
             }
+            let pyramid_build_scissor =
+                sources.pyramid.filter(|_| pyramid_levels >= 2).map(|req| {
+                    let roi = if let Some((g_scissor, g_pad_px)) = group_pyramid_roi {
+                        inflate_scissor_to_viewport(g_scissor, g_pad_px, ctx.viewport_size)
+                    } else {
+                        let pad_px = pyramid_radius_pad_px(req, ctx.scale_factor);
+                        inflate_scissor_to_viewport(scissor, pad_px, ctx.viewport_size)
+                    };
+                    LocalScissorRect(roi)
+                });
             append_custom_effect_v3_in_place_single_scratch(
                 passes,
                 srcdst,
@@ -2446,6 +2489,7 @@ fn apply_step_in_place_with_scratch_targets(
                 sources,
                 raw_needed,
                 pyramid_levels,
+                pyramid_build_scissor,
                 group_raw.or(custom_v3_chain_raw),
                 ctx.clear,
                 None,
@@ -2491,6 +2535,19 @@ fn inflate_scissor_to_viewport(
         w: x1 - x0,
         h: y1 - y0,
     }
+}
+
+fn pyramid_radius_pad_px(
+    req: fret_core::scene::CustomEffectPyramidRequestV1,
+    scale_factor: f32,
+) -> u32 {
+    if !req.max_radius_px.0.is_finite() || req.max_radius_px.0 <= 0.0 {
+        return 0;
+    }
+    if !scale_factor.is_finite() || scale_factor <= 0.0 {
+        return 0;
+    }
+    (req.max_radius_px.0 * scale_factor).ceil().max(0.0) as u32
 }
 
 fn compile_gaussian_blur_in_place(
@@ -3885,6 +3942,7 @@ fn append_custom_effect_v3_in_place_single_scratch(
     sources: fret_core::scene::CustomEffectSourcesV3,
     raw_needed: bool,
     pyramid_levels: u32,
+    pyramid_build_scissor: Option<LocalScissorRect>,
     chain_raw: Option<PlanTarget>,
     clear: wgpu::Color,
     mask_uniform_index: Option<u32>,
@@ -3921,6 +3979,7 @@ fn append_custom_effect_v3_in_place_single_scratch(
             src_raw,
             src_pyramid,
             pyramid_levels,
+            pyramid_build_scissor,
             raw_wanted: sources.want_raw,
             pyramid_wanted: sources.pyramid.is_some(),
             dst: srcdst,
@@ -3954,6 +4013,7 @@ fn append_custom_effect_v3_in_place_single_scratch(
         src_raw,
         src_pyramid,
         pyramid_levels,
+        pyramid_build_scissor,
         raw_wanted: sources.want_raw,
         pyramid_wanted: sources.pyramid.is_some(),
         dst: scratch,

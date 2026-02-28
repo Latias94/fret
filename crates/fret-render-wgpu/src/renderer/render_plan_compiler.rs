@@ -6,8 +6,8 @@
 use super::render_plan_effects as effects;
 use super::{
     BlurQualitySnapshot, EffectDegradationSnapshot, EffectMarkerKind, FullscreenBlitPass,
-    OrderedDraw, RenderPlanDegradation, RenderPlanDegradationKind, RenderPlanDegradationReason,
-    RenderPlanPass, SceneDrawRangePass, SceneEncoding, ScissorRect,
+    LocalScissorRect, OrderedDraw, RenderPlanDegradation, RenderPlanDegradationKind,
+    RenderPlanDegradationReason, RenderPlanPass, SceneDrawRangePass, SceneEncoding, ScissorRect,
 };
 use crate::renderer::estimate_texture_bytes;
 use slotmap::Key;
@@ -78,6 +78,7 @@ struct ClipPathScope {
 struct BackdropSourceGroupScope {
     scissor: ScissorRect,
     pyramid_choice: Option<effects::CustomV3PyramidChoice>,
+    pyramid_pad_px: u32,
     raw_target: Option<super::PlanTarget>,
     reserved_bytes: u64,
 }
@@ -536,6 +537,8 @@ fn compile_for_scene_inner(
                                             effects::BackdropSourceGroupCtx {
                                                 raw_target,
                                                 pyramid: s.pyramid_choice,
+                                                scissor: s.scissor,
+                                                pyramid_pad_px: s.pyramid_pad_px,
                                             }
                                         })
                                     });
@@ -971,6 +974,21 @@ fn compile_for_scene_inner(
                             g.pyramid_requested = g.pyramid_requested.saturating_add(1);
                         }
 
+                        let pyramid_pad_px = pyramid
+                            .map(|req| {
+                                if !req.max_radius_px.0.is_finite()
+                                    || req.max_radius_px.0 <= 0.0
+                                    || !scale_factor.is_finite()
+                                    || scale_factor <= 0.0
+                                {
+                                    return 0u32;
+                                }
+                                let pad =
+                                    (req.max_radius_px.0 * scale_factor).ceil().max(0.0) as u32;
+                                pad.min(viewport_size.0.max(viewport_size.1))
+                            })
+                            .unwrap_or(0);
+
                         let parent_scope = draw_scopes.last().expect("draw scope");
                         let parent_target = parent_scope.target;
 
@@ -1023,12 +1041,40 @@ fn compile_for_scene_inner(
 
                         if let Some(raw_target) = raw_target {
                             g.applied_raw = g.applied_raw.saturating_add(1);
+
+                            let snapshot_scissor = pyramid.map(|_| {
+                                let max_w = viewport_size.0;
+                                let max_h = viewport_size.1;
+                                let x0 = scissor.x.saturating_sub(pyramid_pad_px).min(max_w);
+                                let y0 = scissor.y.saturating_sub(pyramid_pad_px).min(max_h);
+                                let x1 = scissor
+                                    .x
+                                    .saturating_add(scissor.w)
+                                    .saturating_add(pyramid_pad_px)
+                                    .min(max_w);
+                                let y1 = scissor
+                                    .y
+                                    .saturating_add(scissor.h)
+                                    .saturating_add(pyramid_pad_px)
+                                    .min(max_h);
+                                if x1 <= x0 || y1 <= y0 {
+                                    LocalScissorRect(scissor)
+                                } else {
+                                    LocalScissorRect(ScissorRect {
+                                        x: x0,
+                                        y: y0,
+                                        w: x1 - x0,
+                                        h: y1 - y0,
+                                    })
+                                }
+                            });
+
                             passes.push(RenderPlanPass::FullscreenBlit(FullscreenBlitPass {
                                 src: parent_target,
                                 dst: raw_target,
                                 src_size: viewport_size,
                                 dst_size: viewport_size,
-                                dst_scissor: None,
+                                dst_scissor: snapshot_scissor,
                                 encode_output_srgb: false,
                                 load: wgpu::LoadOp::Clear(wgpu::Color::TRANSPARENT),
                             }));
@@ -1101,6 +1147,7 @@ fn compile_for_scene_inner(
                         backdrop_source_group_scopes.push(BackdropSourceGroupScope {
                             scissor,
                             pyramid_choice,
+                            pyramid_pad_px,
                             raw_target,
                             reserved_bytes,
                         });

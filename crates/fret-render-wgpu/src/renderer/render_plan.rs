@@ -327,6 +327,10 @@ pub(super) struct CustomEffectV3Pass {
     pub(super) src_raw: PlanTarget,
     pub(super) src_pyramid: PlanTarget,
     pub(super) pyramid_levels: u32,
+    /// Optional ROI scissor for building the `src_pyramid` scratch (level 0 is in `src_size`
+    /// space). When present, the renderer may restrict pyramid generation work to the scissor (and
+    /// its downsampled projections) instead of building a full-viewport pyramid.
+    pub(super) pyramid_build_scissor: Option<LocalScissorRect>,
     pub(super) raw_wanted: bool,
     pub(super) pyramid_wanted: bool,
     pub(super) dst: PlanTarget,
