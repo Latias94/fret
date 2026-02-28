@@ -590,7 +590,7 @@ impl PaginationEllipsis {
                     move |cx| {
                         vec![decl_icon::icon_with(
                             cx,
-                            IconId::new_static("lucide.more-horizontal"),
+                            IconId::new_static("lucide.ellipsis"),
                             Some(Px(16.0)),
                             Some(fret_ui_kit::ColorRef::Color(fg)),
                         )]

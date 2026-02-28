@@ -195,7 +195,7 @@ fn render_column_actions_menu<H: UiHost>(
                         .a11y_label(trigger_label.clone())
                         .variant(ButtonVariant::Ghost)
                         .size(ButtonSize::IconSm)
-                        .icon(fret_icons::IconId::new_static("lucide.more-horizontal"))
+                        .icon(fret_icons::IconId::new_static("lucide.ellipsis"))
                         .into_element(cx)
                 },
                 move |cx| {
