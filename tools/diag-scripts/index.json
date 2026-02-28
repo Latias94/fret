@@ -2786,6 +2786,23 @@
       ],
       "tags": [],
       "target_hints": []
+    },
+    {
+      "id": "workspace-shell-demo-tab-drag-to-split-right",
+      "path": "tools/diag-scripts/workspace/shell-demo/workspace-shell-demo-tab-drag-to-split-right.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "workspace-shell-demo"
+      ],
+      "tags": [
+        "drag_to_split",
+        "gate",
+        "tabstrip",
+        "workspace"
+      ],
+      "target_hints": []
     }
   ]
 }

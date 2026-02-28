@@ -101,4 +101,5 @@ layering (mechanism in `crates/*`, policy in `ecosystem/*`).
 
 **Gates**
 
-- Diag script: drag tab to edge, drop, assert a second pane exists and tab moved.
+- Diag script: drag tab to edge, drop, assert a second pane exists and tab moved:
+  - `tools/diag-scripts/workspace-shell-demo-tab-drag-to-split-right.json`

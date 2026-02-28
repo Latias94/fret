@@ -75,10 +75,11 @@ This file is an execution checklist for the design in `DESIGN.md`.
 
 ## M5 — Drag-to-split integration
 
-- [ ] Define split target geometry (edge thresholds + hysteresis).
+- [x] Define split target geometry (edge thresholds + hysteresis).
 - [ ] Emit `SplitPane` intents from kernel; execute split in workspace/docking policy layer.
 - [ ] Gates:
-  - [ ] diag script: drag tab to edge and drop, assert split + tab moved
+  - [x] diag script: drag tab to edge and drop, assert split + tab moved
+  - [x] stable `test_id` for drop preview overlays (`workspace-pane-{pane_id}.drop_preview.{zone}`)
 
 ## Notes / Evidence anchors
 

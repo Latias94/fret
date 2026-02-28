@@ -128,13 +128,14 @@ fn compute_drop_zone_for_position(
 fn drop_preview_element<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     zone: WorkspaceTabDropZone,
+    test_id: Option<Arc<str>>,
     fill: Option<Color>,
     border_color: Option<Color>,
     corner_radii: Corners,
 ) -> AnyElement {
     let border = Edges::all(Px(1.0));
 
-    match zone {
+    let mut el = match zone {
         WorkspaceTabDropZone::Center => cx.container(
             ContainerProps {
                 layout: absolute_fill_layout(),
@@ -218,7 +219,27 @@ fn drop_preview_element<H: UiHost>(
                 },
             )
         }
+    };
+
+    if let Some(id) = test_id {
+        el = el.test_id(id);
     }
+
+    el
+}
+
+fn drop_preview_test_id(pane_id: &Arc<str>, zone: WorkspaceTabDropZone) -> Arc<str> {
+    let zone = match zone {
+        WorkspaceTabDropZone::Center => "center",
+        WorkspaceTabDropZone::Left => "left",
+        WorkspaceTabDropZone::Right => "right",
+        WorkspaceTabDropZone::Up => "up",
+        WorkspaceTabDropZone::Down => "down",
+    };
+    Arc::<str>::from(format!(
+        "workspace-pane-{}.drop_preview.{zone}",
+        pane_id.as_ref()
+    ))
 }
 
 fn pane_border_color(theme: &Theme, is_active: bool) -> Option<Color> {
@@ -952,6 +973,7 @@ where
                             drop_preview_element(
                                 cx,
                                 zone,
+                                Some(drop_preview_test_id(&pane_id, zone)),
                                 drop_preview_fill(theme),
                                 drop_preview_border(theme),
                                 corner_radii,

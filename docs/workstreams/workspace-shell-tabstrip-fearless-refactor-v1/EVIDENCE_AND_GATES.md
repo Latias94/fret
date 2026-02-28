@@ -7,20 +7,23 @@ This document turns milestones into concrete, reviewable evidence and regression
 We should keep selectors stable across refactors. Suggested shapes:
 
 - Root:
-  - `workspace-tabstrip` (via `WorkspaceTabStrip::test_id_root`)
+  - `{root}` (via `WorkspaceTabStrip::test_id_root`)
 - Per-tab:
-  - tab trigger: `workspace-tabstrip-tab-{tab_id}` (via `WorkspaceTabStrip::tab_test_id_prefix("workspace-tabstrip-tab")`)
-  - tab chrome container: `workspace-tabstrip-tab-{tab_id}.chrome`
-  - close button: `workspace-tabstrip-tab-{tab_id}.close`
-  - dirty indicator: `workspace-tabstrip-tab-{tab_id}.dirty`
+  - tab trigger: `{tab_prefix}-{tab_id}` (via `WorkspaceTabStrip::tab_test_id_prefix`)
+  - tab chrome container: `{tab_prefix}-{tab_id}.chrome`
+  - close button: `{tab_prefix}-{tab_id}.close`
+  - dirty indicator: `{tab_prefix}-{tab_id}.dirty`
 - Overflow:
   - overflow button: `{root}.overflow_button`
   - overflow entry: `{root}.overflow_entry.{tab_id}`
   - overflow entry close (future): `{root}.overflow_entry.{tab_id}.close`
 - Drop targets:
-  - end-of-strip: `workspace-tabstrip-drop-end`
+  - end-of-strip: `{root}.drop_end`
   - pinned boundary: `{root}.drop_pinned_boundary`
-  - pinned row border (if separate row): `workspace-tabstrip-drop-pinned-row`
+  - pinned row border (if separate row, TODO): `{root}.drop_pinned_row`
+- Drag-to-split (workspace panes):
+  - drop preview overlay: `workspace-pane-{pane_id}.drop_preview.{zone}`
+    - `{zone}`: `left | right | up | down | center`
 
 Notes:
 
@@ -65,7 +68,7 @@ For drag/drop and overflow UX, scripted `fretboard diag` gates are preferred:
 - `tools/diag-scripts/workspace-tabstrip-overflow-open-select.json`
 - `tools/diag-scripts/workspace-tabstrip-drag-reorder.json`
 - `tools/diag-scripts/workspace-tabstrip-cross-pane-move.json`
-- `tools/diag-scripts/workspace-tabstrip-drag-to-split.json`
+- `tools/diag-scripts/workspace-shell-demo-tab-drag-to-split-right.json`
 - `tools/diag-scripts/workspace-tabstrip-pinned-boundary.json`
 
 ### Determinism knobs
