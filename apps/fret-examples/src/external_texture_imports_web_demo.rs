@@ -466,7 +466,7 @@ impl WinitAppDriver for ExternalTextureImportsWebDriver {
             app.with_global_mut_untracked(UiDiagnosticsService::default, |svc, _| svc.is_enabled());
         state.ui.set_debug_enabled(diag_enabled);
 
-        if fret_bootstrap::ui_diagnostics::maybe_consume_event(app, window, event) {
+        if fret_bootstrap::maybe_consume_event(app, window, event) {
             return;
         }
 

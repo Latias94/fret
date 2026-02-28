@@ -1730,7 +1730,7 @@ impl WinitAppDriver for ComponentsGalleryDriver {
             state,
         } = context;
 
-        if fret_bootstrap::ui_diagnostics::maybe_consume_event(app, window, event) {
+        if fret_bootstrap::maybe_consume_event(app, window, event) {
             return;
         }
         if matches!(event, Event::WindowCloseRequested) {

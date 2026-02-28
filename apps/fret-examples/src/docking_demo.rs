@@ -484,7 +484,7 @@ impl WinitAppDriver for DockingDemoDriver {
             state,
         } = context;
 
-        if fret_bootstrap::ui_diagnostics::maybe_consume_event(app, window, event) {
+        if fret_bootstrap::maybe_consume_event(app, window, event) {
             return;
         }
 

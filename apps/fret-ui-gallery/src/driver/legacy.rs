@@ -3289,7 +3289,7 @@ impl WinitAppDriver for UiGalleryDriver {
 
         #[cfg(not(target_arch = "wasm32"))]
         {
-            let consumed = fret_bootstrap::ui_diagnostics::maybe_consume_event(app, window, event);
+            let consumed = fret_bootstrap::maybe_consume_event(app, window, event);
             if consumed {
                 return;
             }
