@@ -8,11 +8,12 @@ use std::sync::Arc;
 use std::sync::OnceLock;
 use std::sync::atomic::{AtomicBool, AtomicU64, AtomicUsize, Ordering};
 
-use fret_core::scene::DashPatternV1;
-use fret_core::window::ColorScheme;
-use fret_core::{Color, Px};
+use fret_core::Color;
 use fret_ui::ThemeSnapshot;
-use serde::Deserialize;
+use fret_ui_kit::node_graph::presets::{
+    EdgeMarkerKindTokensV1, EdgeMarkerTokensV1, NodeGraphThemePresetV1, NodeGraphThemePresetsV1,
+    NodeRingTokensV1, PortShapeKindV1, PortTokensV1, WireHighlightTokensV1,
+};
 
 use crate::core::{EdgeId, EdgeKind, Graph, NodeId, PortId, PortKind};
 
@@ -25,36 +26,38 @@ use super::skin::{
 };
 use super::style::NodeGraphStyle;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub enum NodeGraphPresetFamily {
-    WorkflowClean,
-    SchematicContrast,
-    GraphDark,
+pub use fret_ui_kit::node_graph::presets::NodeGraphPresetFamily;
+
+fn node_ring_tokens_into_hint(tokens: NodeRingTokensV1) -> NodeRingHint {
+    NodeRingHint {
+        color: tokens.color.into(),
+        width: tokens.width_px,
+        pad: tokens.pad_px,
+    }
 }
 
-impl NodeGraphPresetFamily {
-    pub fn all() -> [Self; 3] {
-        [
-            Self::WorkflowClean,
-            Self::SchematicContrast,
-            Self::GraphDark,
-        ]
+fn port_shape_kind_into_hint(shape: PortShapeKindV1) -> PortShapeHint {
+    match shape {
+        PortShapeKindV1::Circle => PortShapeHint::Circle,
+        PortShapeKindV1::Diamond => PortShapeHint::Diamond,
+        PortShapeKindV1::Triangle => PortShapeHint::Triangle,
     }
+}
 
-    pub fn display_name(self) -> &'static str {
-        match self {
-            Self::WorkflowClean => "WorkflowClean",
-            Self::SchematicContrast => "SchematicContrast",
-            Self::GraphDark => "GraphDark",
-        }
+fn edge_marker_tokens_into_marker(tokens: EdgeMarkerTokensV1) -> EdgeMarker {
+    EdgeMarker {
+        kind: match tokens.kind {
+            EdgeMarkerKindTokensV1::Arrow => EdgeMarkerKind::Arrow,
+        },
+        size: tokens.size_px,
     }
+}
 
-    fn preset_id(self) -> &'static str {
-        match self {
-            Self::WorkflowClean => "workflow_clean",
-            Self::SchematicContrast => "schematic_contrast",
-            Self::GraphDark => "graph_dark",
-        }
+fn wire_highlight_tokens_into_hint(tokens: WireHighlightTokensV1) -> WireHighlightHint {
+    WireHighlightHint {
+        width_mul: tokens.width_mul,
+        alpha_mul: tokens.alpha_mul,
+        color: tokens.color.map(|c| c.into()),
     }
 }
 
@@ -89,7 +92,9 @@ impl NodeGraphPresetSkinV1 {
     }
 
     pub fn new_from_snapshot(theme: ThemeSnapshot, initial: NodeGraphPresetFamily) -> Arc<Self> {
-        let presets = Arc::new(theme_derived_presets(&theme));
+        let presets = Arc::new(fret_ui_kit::node_graph::presets::theme_derived_presets(
+            &theme,
+        ));
         let mut id_to_index: HashMap<String, usize> = HashMap::new();
         for (i, p) in presets.presets.iter().enumerate() {
             id_to_index.insert(p.id.clone(), i);
@@ -294,7 +299,7 @@ impl NodeGraphSkin for NodeGraphPresetSkinV1 {
                     tokens
                         .wire
                         .highlight_selected
-                        .map(WireHighlightTokensV1::into_hint)
+                        .map(wire_highlight_tokens_into_hint)
                 })
                 .flatten(),
             wire_highlight_enabled
@@ -302,7 +307,7 @@ impl NodeGraphSkin for NodeGraphPresetSkinV1 {
                     tokens
                         .wire
                         .highlight_hovered
-                        .map(WireHighlightTokensV1::into_hint)
+                        .map(wire_highlight_tokens_into_hint)
                 })
                 .flatten(),
         );
@@ -398,11 +403,11 @@ impl NodeGraphSkin for NodeGraphPresetSkinV1 {
                     }
                 }
                 _ => {
-                    black.a = 0.14;
+                    black.a = 0.18;
                     NodeShadowHint {
                         offset_x_px: 0.0,
-                        offset_y_px: 1.5,
-                        blur_radius_px: 8.0,
+                        offset_y_px: 1.0,
+                        blur_radius_px: 6.0,
                         downsample: 2,
                         color: black,
                     }
@@ -415,7 +420,8 @@ impl NodeGraphSkin for NodeGraphPresetSkinV1 {
             border_selected: Some(tokens.node.border_selected.into()),
             header_background: Some(self.node_header_color(graph, node)),
             title_text: Some(tokens.node.title_text.into()),
-            ring_selected: selected.then_some(tokens.node.ring_selected.into_ring()),
+            ring_selected: selected
+                .then_some(node_ring_tokens_into_hint(tokens.node.ring_selected)),
             shadow,
             ..NodeChromeHint::default()
         }
@@ -431,13 +437,9 @@ impl NodeGraphSkin for NodeGraphPresetSkinV1 {
     ) -> NodeChromeHint {
         let mut hint = self.node_chrome_hint(graph, node, style, selected);
         if focused {
-            hint.ring_focused = Some(
-                self.preset()
-                    .paint_only_tokens
-                    .node
-                    .ring_focused
-                    .into_ring(),
-            );
+            hint.ring_focused = Some(node_ring_tokens_into_hint(
+                self.preset().paint_only_tokens.node.ring_focused,
+            ));
             if hint.shadow.is_none() {
                 hint.shadow = Some(NodeShadowHint {
                     offset_x_px: 0.0,
@@ -464,7 +466,7 @@ impl NodeGraphSkin for NodeGraphPresetSkinV1 {
             stroke: Some(tokens.stroke.into()),
             stroke_width: Some(tokens.stroke_width_px),
             inner_scale: Some(tokens.inner_scale),
-            shape: Some(tokens.shape),
+            shape: Some(port_shape_kind_into_hint(tokens.shape)),
         }
     }
 
@@ -474,8 +476,8 @@ impl NodeGraphSkin for NodeGraphPresetSkinV1 {
         edge: EdgeId,
         _style: &NodeGraphStyle,
         base: &EdgeRenderHint,
-        _selected: bool,
-        _hovered: bool,
+        selected: bool,
+        hovered: bool,
     ) -> EdgeRenderHint {
         let tokens = &self.preset().paint_only_tokens.wire;
         let kind = graph
@@ -497,9 +499,9 @@ impl NodeGraphSkin for NodeGraphPresetSkinV1 {
                 .marker_size_mul_hovered
                 .unwrap_or(1.0)
                 .clamp(0.0, 4.0);
-            let state_mul = if _hovered {
+            let state_mul = if hovered {
                 hovered_mul
-            } else if _selected {
+            } else if selected {
                 selected_mul
             } else {
                 1.0
@@ -510,14 +512,14 @@ impl NodeGraphSkin for NodeGraphPresetSkinV1 {
                     if out.start_marker.is_none()
                         && let Some(marker) = tokens.marker_exec_start
                     {
-                        let mut marker = marker.into_marker();
+                        let mut marker = edge_marker_tokens_into_marker(marker);
                         marker.size *= state_mul;
                         out.start_marker = Some(marker);
                     }
                     if out.end_marker.is_none()
                         && let Some(marker) = tokens.marker_exec_end
                     {
-                        let mut marker = marker.into_marker();
+                        let mut marker = edge_marker_tokens_into_marker(marker);
                         marker.size *= state_mul;
                         out.end_marker = Some(marker);
                     }
@@ -526,14 +528,14 @@ impl NodeGraphSkin for NodeGraphPresetSkinV1 {
                     if out.start_marker.is_none()
                         && let Some(marker) = tokens.marker_data_start
                     {
-                        let mut marker = marker.into_marker();
+                        let mut marker = edge_marker_tokens_into_marker(marker);
                         marker.size *= state_mul;
                         out.start_marker = Some(marker);
                     }
                     if out.end_marker.is_none()
                         && let Some(marker) = tokens.marker_data_end
                     {
-                        let mut marker = marker.into_marker();
+                        let mut marker = edge_marker_tokens_into_marker(marker);
                         marker.size *= state_mul;
                         out.end_marker = Some(marker);
                     }
@@ -552,768 +554,10 @@ fn builtin_presets() -> &'static NodeGraphThemePresetsV1 {
     })
 }
 
-fn theme_derived_presets(theme: &ThemeSnapshot) -> NodeGraphThemePresetsV1 {
-    NodeGraphThemePresetsV1 {
-        schema_version: "node_graph_theme_presets.v1".to_string(),
-        notes: "derived from ThemeSnapshot (with opt-out for GraphDark on light themes)"
-            .to_string(),
-        presets: vec![
-            theme_derived_preset(theme, NodeGraphPresetFamily::WorkflowClean),
-            theme_derived_preset(theme, NodeGraphPresetFamily::SchematicContrast),
-            theme_derived_preset(theme, NodeGraphPresetFamily::GraphDark),
-        ],
-    }
-}
-
-fn theme_derived_preset(
-    theme: &ThemeSnapshot,
-    family: NodeGraphPresetFamily,
-) -> NodeGraphThemePresetV1 {
-    fn alpha(mut c: Color, a: f32) -> Color {
-        c.a = a;
-        c
-    }
-
-    fn mix(a: Color, b: Color, t: f32) -> Color {
-        let t = t.clamp(0.0, 1.0);
-        Color {
-            r: a.r + (b.r - a.r) * t,
-            g: a.g + (b.g - a.g) * t,
-            b: a.b + (b.b - a.b) * t,
-            a: a.a + (b.a - a.a) * t,
-        }
-    }
-
-    fn tint(base: Color, accent: Color, amount: f32) -> Color {
-        let mut out = mix(base, accent, amount);
-        out.a = 1.0;
-        out
-    }
-
-    let scheme_is_dark = theme.color_scheme == Some(ColorScheme::Dark);
-
-    let background = theme.color_token("background");
-    let foreground = theme.color_token("foreground");
-    let border = theme.color_token("border");
-    let ring = theme.color_token("ring");
-    let card = theme.color_token("card");
-    let card_foreground = theme.color_token("card-foreground");
-    let muted_foreground = theme.color_token("muted-foreground");
-    let accent = theme.color_token("accent");
-    let primary = theme.color_token("primary");
-    let destructive = theme.color_token("destructive");
-
-    let chart_1 = theme.color_token("chart-1");
-    let chart_2 = theme.color_token("chart-2");
-    let chart_3 = theme.color_token("chart-3");
-    let chart_4 = theme.color_token("chart-4");
-    let chart_5 = theme.color_token("chart-5");
-
-    let kind_colors = [
-        ("source", chart_1),
-        ("compute", chart_2),
-        ("condition", chart_3),
-        ("output", chart_4),
-        ("utility", chart_5),
-        ("preview", destructive),
-    ];
-
-    let (canvas_bg, grid_minor, grid_major, node_bg, node_border, node_border_selected, title_text) =
-        match family {
-            NodeGraphPresetFamily::WorkflowClean => (
-                background,
-                alpha(border, 0.50),
-                alpha(border, 0.80),
-                card,
-                alpha(border, 1.0),
-                alpha(ring, 1.0),
-                card_foreground,
-            ),
-            NodeGraphPresetFamily::SchematicContrast => (
-                background,
-                alpha(border, 0.90),
-                alpha(border, 1.0),
-                card,
-                alpha(foreground, 1.0),
-                alpha(foreground, 1.0),
-                theme.color_token("primary-foreground"),
-            ),
-            NodeGraphPresetFamily::GraphDark => {
-                if scheme_is_dark {
-                    (
-                        background,
-                        alpha(border, 0.80),
-                        alpha(border, 1.0),
-                        alpha(card, 0.95),
-                        alpha(border, 1.0),
-                        alpha(ring, 1.0),
-                        foreground,
-                    )
-                } else {
-                    // Opt-out baseline for a guaranteed dark canvas on light themes.
-                    (
-                        Color {
-                            r: 0.07,
-                            g: 0.09,
-                            b: 0.15,
-                            a: 1.0,
-                        },
-                        Color {
-                            r: 0.12,
-                            g: 0.16,
-                            b: 0.22,
-                            a: 1.0,
-                        },
-                        Color {
-                            r: 0.22,
-                            g: 0.25,
-                            b: 0.32,
-                            a: 1.0,
-                        },
-                        Color {
-                            r: 0.12,
-                            g: 0.16,
-                            b: 0.22,
-                            a: 0.95,
-                        },
-                        Color {
-                            r: 0.29,
-                            g: 0.33,
-                            b: 0.39,
-                            a: 1.0,
-                        },
-                        alpha(ring, 1.0),
-                        Color {
-                            r: 0.95,
-                            g: 0.96,
-                            b: 0.96,
-                            a: 1.0,
-                        },
-                    )
-                }
-            }
-        };
-
-    let header_default = match family {
-        NodeGraphPresetFamily::WorkflowClean => tint(card, border, 0.10),
-        NodeGraphPresetFamily::SchematicContrast => alpha(theme.color_token("secondary"), 1.0),
-        NodeGraphPresetFamily::GraphDark => tint(node_bg, border, 0.20),
-    };
-
-    let header_by_kind: HashMap<String, RgbaV1> = kind_colors
-        .into_iter()
-        .map(|(k, c)| {
-            let c = match family {
-                NodeGraphPresetFamily::WorkflowClean => tint(card, c, 0.22),
-                NodeGraphPresetFamily::SchematicContrast => alpha(c, 1.0),
-                NodeGraphPresetFamily::GraphDark => {
-                    if scheme_is_dark {
-                        tint(node_bg, c, 0.35)
-                    } else {
-                        alpha(c, 1.0)
-                    }
-                }
-            };
-            (k.to_string(), c.into())
-        })
-        .collect();
-
-    let (ring_selected, ring_focused) = match family {
-        NodeGraphPresetFamily::WorkflowClean => (
-            NodeRingTokensV1 {
-                color: alpha(ring, 0.40).into(),
-                width_px: 3.0,
-                pad_px: 2.0,
-            },
-            NodeRingTokensV1 {
-                color: alpha(ring, 0.60).into(),
-                width_px: 2.0,
-                pad_px: 1.0,
-            },
-        ),
-        NodeGraphPresetFamily::SchematicContrast => (
-            NodeRingTokensV1 {
-                color: theme.color_token("chart-4").into(),
-                width_px: 4.0,
-                pad_px: 0.0,
-            },
-            NodeRingTokensV1 {
-                color: theme.color_token("chart-1").into(),
-                width_px: 4.0,
-                pad_px: 0.0,
-            },
-        ),
-        NodeGraphPresetFamily::GraphDark => (
-            NodeRingTokensV1 {
-                color: alpha(ring, 1.0).into(),
-                width_px: 3.0,
-                pad_px: 2.0,
-            },
-            NodeRingTokensV1 {
-                color: alpha(theme.color_token("chart-1"), 1.0).into(),
-                width_px: 3.0,
-                pad_px: 2.0,
-            },
-        ),
-    };
-
-    let (port_data, port_exec, port_preview) = match family {
-        NodeGraphPresetFamily::WorkflowClean => (
-            PortTokensV1 {
-                fill: tint(card, primary, 0.35).into(),
-                stroke: alpha(muted_foreground, 0.90).into(),
-                stroke_width_px: 1.0,
-                inner_scale: 1.0,
-                shape: PortShapeHint::Circle,
-            },
-            PortTokensV1 {
-                fill: card.into(),
-                stroke: alpha(foreground, 0.80).into(),
-                stroke_width_px: 1.5,
-                inner_scale: 0.0,
-                shape: PortShapeHint::Triangle,
-            },
-            PortTokensV1 {
-                fill: tint(card, accent, 0.35).into(),
-                stroke: alpha(muted_foreground, 0.90).into(),
-                stroke_width_px: 1.0,
-                inner_scale: 0.5,
-                shape: PortShapeHint::Diamond,
-            },
-        ),
-        NodeGraphPresetFamily::SchematicContrast => (
-            PortTokensV1 {
-                fill: alpha(theme.color_token("chart-2"), 1.0).into(),
-                stroke: alpha(foreground, 1.0).into(),
-                stroke_width_px: 2.0,
-                inner_scale: 1.0,
-                shape: PortShapeHint::Circle,
-            },
-            PortTokensV1 {
-                fill: alpha(theme.color_token("chart-3"), 1.0).into(),
-                stroke: alpha(foreground, 1.0).into(),
-                stroke_width_px: 2.0,
-                inner_scale: 0.0,
-                shape: PortShapeHint::Triangle,
-            },
-            PortTokensV1 {
-                fill: alpha(theme.color_token("chart-4"), 1.0).into(),
-                stroke: alpha(foreground, 1.0).into(),
-                stroke_width_px: 2.0,
-                inner_scale: 1.0,
-                shape: PortShapeHint::Diamond,
-            },
-        ),
-        NodeGraphPresetFamily::GraphDark => (
-            PortTokensV1 {
-                fill: alpha(theme.color_token("chart-2"), 0.65).into(),
-                stroke: alpha(theme.color_token("chart-2"), 1.0).into(),
-                stroke_width_px: 1.5,
-                inner_scale: 1.0,
-                shape: PortShapeHint::Circle,
-            },
-            PortTokensV1 {
-                fill: alpha(destructive, 0.65).into(),
-                stroke: alpha(destructive, 1.0).into(),
-                stroke_width_px: 1.5,
-                inner_scale: 0.0,
-                shape: PortShapeHint::Triangle,
-            },
-            PortTokensV1 {
-                fill: alpha(theme.color_token("chart-4"), 0.65).into(),
-                stroke: alpha(theme.color_token("chart-4"), 1.0).into(),
-                stroke_width_px: 1.5,
-                inner_scale: 0.5,
-                shape: PortShapeHint::Diamond,
-            },
-        ),
-    };
-
-    let (wire_data, wire_exec, wire_preview, dash_preview, dash_invalid, dash_emphasis) =
-        match family {
-            NodeGraphPresetFamily::WorkflowClean => (
-                alpha(muted_foreground, 1.0),
-                alpha(foreground, 1.0),
-                alpha(border, 1.0),
-                DashPatternTokensV1 {
-                    dash_px: 4.0,
-                    gap_px: 4.0,
-                    phase_px: 0.0,
-                },
-                DashPatternTokensV1 {
-                    dash_px: 6.0,
-                    gap_px: 3.0,
-                    phase_px: 0.0,
-                },
-                DashPatternTokensV1 {
-                    dash_px: 2.0,
-                    gap_px: 2.0,
-                    phase_px: 0.0,
-                },
-            ),
-            NodeGraphPresetFamily::SchematicContrast => (
-                alpha(theme.color_token("chart-2"), 1.0),
-                alpha(theme.color_token("chart-3"), 1.0),
-                alpha(theme.color_token("chart-4"), 1.0),
-                DashPatternTokensV1 {
-                    dash_px: 8.0,
-                    gap_px: 4.0,
-                    phase_px: 0.0,
-                },
-                DashPatternTokensV1 {
-                    dash_px: 6.0,
-                    gap_px: 3.0,
-                    phase_px: 0.0,
-                },
-                DashPatternTokensV1 {
-                    dash_px: 2.0,
-                    gap_px: 2.0,
-                    phase_px: 0.0,
-                },
-            ),
-            NodeGraphPresetFamily::GraphDark => (
-                alpha(theme.color_token("chart-2"), 1.0),
-                alpha(destructive, 1.0),
-                alpha(theme.color_token("chart-4"), 1.0),
-                DashPatternTokensV1 {
-                    dash_px: 6.0,
-                    gap_px: 6.0,
-                    phase_px: 0.0,
-                },
-                DashPatternTokensV1 {
-                    dash_px: 6.0,
-                    gap_px: 3.0,
-                    phase_px: 0.0,
-                },
-                DashPatternTokensV1 {
-                    dash_px: 10.0,
-                    gap_px: 2.0,
-                    phase_px: 0.0,
-                },
-            ),
-        };
-
-    let (hover, invalid, convertible) = match family {
-        NodeGraphPresetFamily::WorkflowClean => {
-            (alpha(ring, 1.0), alpha(destructive, 1.0), primary)
-        }
-        NodeGraphPresetFamily::SchematicContrast => (
-            alpha(foreground, 1.0),
-            alpha(destructive, 1.0),
-            alpha(theme.color_token("chart-2"), 1.0),
-        ),
-        NodeGraphPresetFamily::GraphDark => (
-            alpha(theme.color_token("chart-1"), 1.0),
-            alpha(destructive, 1.0),
-            alpha(theme.color_token("chart-2"), 1.0),
-        ),
-    };
-
-    NodeGraphThemePresetV1 {
-        id: family.preset_id().to_string(),
-        display_name: family.display_name().to_string(),
-        intent: match family {
-            NodeGraphPresetFamily::WorkflowClean => "theme-derived, clean, minimal".to_string(),
-            NodeGraphPresetFamily::SchematicContrast => "theme-derived, high contrast".to_string(),
-            NodeGraphPresetFamily::GraphDark => {
-                "theme-derived (or opt-out), dark editor chrome".to_string()
-            }
-        },
-        paint_only_tokens: PaintOnlyTokensV1 {
-            canvas: CanvasTokensV1 {
-                background: canvas_bg.into(),
-            },
-            grid: GridTokensV1 {
-                minor_color: grid_minor.into(),
-                major_color: grid_major.into(),
-            },
-            text: TextTokensV1 {
-                primary: foreground.into(),
-                muted: muted_foreground.into(),
-            },
-            node: NodeTokensV1 {
-                body_background: node_bg.into(),
-                border: node_border.into(),
-                border_selected: node_border_selected.into(),
-                header_background_default: header_default.into(),
-                header_by_kind,
-                title_text: title_text.into(),
-                ring_selected,
-                ring_focused,
-            },
-            port: PortThemeTokensV1 {
-                by_port_kind: PortKindTokensV1 {
-                    data: port_data,
-                    exec: port_exec,
-                    preview: port_preview,
-                },
-            },
-            wire: WireTokensV1 {
-                data_color: wire_data.into(),
-                exec_color: wire_exec.into(),
-                preview_color: wire_preview.into(),
-                dash_preview,
-                dash_invalid,
-                dash_emphasis,
-                highlight_selected: Some(match family {
-                    NodeGraphPresetFamily::WorkflowClean => WireHighlightTokensV1 {
-                        width_mul: 0.65,
-                        alpha_mul: 0.80,
-                        color: None,
-                    },
-                    NodeGraphPresetFamily::SchematicContrast => WireHighlightTokensV1 {
-                        width_mul: 0.70,
-                        alpha_mul: 0.90,
-                        color: None,
-                    },
-                    NodeGraphPresetFamily::GraphDark => WireHighlightTokensV1 {
-                        width_mul: 0.65,
-                        alpha_mul: 0.85,
-                        color: None,
-                    },
-                }),
-                highlight_hovered: Some(match family {
-                    NodeGraphPresetFamily::WorkflowClean => WireHighlightTokensV1 {
-                        width_mul: 0.70,
-                        alpha_mul: 0.95,
-                        color: None,
-                    },
-                    NodeGraphPresetFamily::SchematicContrast => WireHighlightTokensV1 {
-                        width_mul: 0.75,
-                        alpha_mul: 1.0,
-                        color: None,
-                    },
-                    NodeGraphPresetFamily::GraphDark => WireHighlightTokensV1 {
-                        width_mul: 0.70,
-                        alpha_mul: 0.95,
-                        color: None,
-                    },
-                }),
-                marker_exec_end: Some(EdgeMarkerTokensV1 {
-                    kind: EdgeMarkerKindTokensV1::Arrow,
-                    size_px: 12.0,
-                }),
-                marker_exec_start: Some(EdgeMarkerTokensV1 {
-                    kind: EdgeMarkerKindTokensV1::Arrow,
-                    size_px: 8.0,
-                }),
-                marker_data_end: None,
-                marker_data_start: None,
-                marker_size_mul_selected: Some(1.15),
-                marker_size_mul_hovered: Some(1.25),
-            },
-            states: StateTokensV1 {
-                hover: StateColorV1 {
-                    color: hover.into(),
-                },
-                invalid: StateColorV1 {
-                    color: invalid.into(),
-                },
-                convertible: StateColorV1 {
-                    color: convertible.into(),
-                },
-                disabled: DisabledStateV1 { alpha_mul: 0.5 },
-            },
-        },
-        layout_tokens: None,
-        interaction_state_matrix: serde_json::Value::Null,
-        example_compositions: serde_json::Value::Null,
-        a11y_notes: serde_json::Value::Null,
-    }
-}
-
-#[derive(Debug, Clone, Copy, Deserialize)]
-struct RgbaV1 {
-    r: f32,
-    g: f32,
-    b: f32,
-    a: f32,
-}
-
-impl From<RgbaV1> for Color {
-    fn from(v: RgbaV1) -> Self {
-        Color {
-            r: v.r,
-            g: v.g,
-            b: v.b,
-            a: v.a,
-        }
-    }
-}
-
-impl From<Color> for RgbaV1 {
-    fn from(v: Color) -> Self {
-        RgbaV1 {
-            r: v.r,
-            g: v.g,
-            b: v.b,
-            a: v.a,
-        }
-    }
-}
-
-#[derive(Debug, Clone, Copy, Deserialize)]
-struct DashPatternTokensV1 {
-    dash_px: f32,
-    gap_px: f32,
-    phase_px: f32,
-}
-
-impl DashPatternTokensV1 {
-    fn into_dash(self) -> DashPatternV1 {
-        DashPatternV1::new(Px(self.dash_px), Px(self.gap_px), Px(self.phase_px))
-    }
-}
-
-#[derive(Debug, Clone, Copy, Deserialize)]
-struct NodeRingTokensV1 {
-    color: RgbaV1,
-    width_px: f32,
-    pad_px: f32,
-}
-
-impl NodeRingTokensV1 {
-    fn into_ring(self) -> NodeRingHint {
-        NodeRingHint {
-            color: self.color.into(),
-            width: self.width_px,
-            pad: self.pad_px,
-        }
-    }
-}
-
-#[derive(Debug, Clone, Deserialize)]
-struct NodeGraphThemePresetsV1 {
-    #[allow(dead_code)]
-    schema_version: String,
-    #[allow(dead_code)]
-    notes: String,
-    presets: Vec<NodeGraphThemePresetV1>,
-}
-
-#[derive(Debug, Clone, Deserialize)]
-struct NodeGraphThemePresetV1 {
-    id: String,
-    #[allow(dead_code)]
-    display_name: String,
-    #[allow(dead_code)]
-    intent: String,
-    paint_only_tokens: PaintOnlyTokensV1,
-    #[serde(default)]
-    layout_tokens: Option<LayoutTokensV1>,
-    #[serde(default)]
-    #[allow(dead_code)]
-    interaction_state_matrix: serde_json::Value,
-    #[serde(default)]
-    #[allow(dead_code)]
-    example_compositions: serde_json::Value,
-    #[serde(default)]
-    #[allow(dead_code)]
-    a11y_notes: serde_json::Value,
-}
-
-#[derive(Debug, Clone, Deserialize)]
-struct LayoutTokensV1 {
-    #[allow(dead_code)]
-    optional: bool,
-    #[serde(default)]
-    grid_minor_width_px: Option<f32>,
-    #[serde(default)]
-    #[allow(dead_code)]
-    grid_major_width_px: Option<f32>,
-    #[allow(dead_code)]
-    node_corner_radius_px: Option<f32>,
-    #[allow(dead_code)]
-    node_header_height_px: Option<f32>,
-    #[allow(dead_code)]
-    pin_radius_px: Option<f32>,
-    #[allow(dead_code)]
-    wire_width_px: Option<f32>,
-}
-
-#[derive(Debug, Clone, Deserialize)]
-struct PaintOnlyTokensV1 {
-    canvas: CanvasTokensV1,
-    grid: GridTokensV1,
-    #[allow(dead_code)]
-    text: TextTokensV1,
-    node: NodeTokensV1,
-    port: PortThemeTokensV1,
-    wire: WireTokensV1,
-    states: StateTokensV1,
-}
-
-#[derive(Debug, Clone, Copy, Deserialize)]
-struct CanvasTokensV1 {
-    background: RgbaV1,
-}
-
-#[derive(Debug, Clone, Copy, Deserialize)]
-struct GridTokensV1 {
-    minor_color: RgbaV1,
-    major_color: RgbaV1,
-}
-
-#[derive(Debug, Clone, Copy, Deserialize)]
-struct TextTokensV1 {
-    #[allow(dead_code)]
-    primary: RgbaV1,
-    #[allow(dead_code)]
-    muted: RgbaV1,
-}
-
-#[derive(Debug, Clone, Deserialize)]
-struct NodeTokensV1 {
-    body_background: RgbaV1,
-    border: RgbaV1,
-    border_selected: RgbaV1,
-    header_background_default: RgbaV1,
-    header_by_kind: HashMap<String, RgbaV1>,
-    title_text: RgbaV1,
-    ring_selected: NodeRingTokensV1,
-    ring_focused: NodeRingTokensV1,
-}
-
-#[derive(Debug, Clone, Deserialize)]
-struct PortThemeTokensV1 {
-    by_port_kind: PortKindTokensV1,
-}
-
-#[derive(Debug, Clone, Deserialize)]
-struct PortKindTokensV1 {
-    data: PortTokensV1,
-    exec: PortTokensV1,
-    #[allow(dead_code)]
-    preview: PortTokensV1,
-}
-
-#[derive(Debug, Clone, Copy, Deserialize)]
-struct PortTokensV1 {
-    fill: RgbaV1,
-    stroke: RgbaV1,
-    stroke_width_px: f32,
-    inner_scale: f32,
-    shape: PortShapeHint,
-}
-
-#[derive(Debug, Clone, Deserialize)]
-struct WireTokensV1 {
-    data_color: RgbaV1,
-    exec_color: RgbaV1,
-    preview_color: RgbaV1,
-    dash_preview: DashPatternTokensV1,
-    dash_invalid: DashPatternTokensV1,
-    dash_emphasis: DashPatternTokensV1,
-    #[serde(default)]
-    highlight_selected: Option<WireHighlightTokensV1>,
-    #[serde(default)]
-    highlight_hovered: Option<WireHighlightTokensV1>,
-    #[serde(default)]
-    marker_exec_end: Option<EdgeMarkerTokensV1>,
-    #[serde(default)]
-    marker_exec_start: Option<EdgeMarkerTokensV1>,
-    #[serde(default)]
-    marker_data_end: Option<EdgeMarkerTokensV1>,
-    #[serde(default)]
-    marker_data_start: Option<EdgeMarkerTokensV1>,
-    #[serde(default)]
-    marker_size_mul_selected: Option<f32>,
-    #[serde(default)]
-    marker_size_mul_hovered: Option<f32>,
-}
-
-#[derive(Debug, Clone, Copy, Deserialize)]
-struct EdgeMarkerTokensV1 {
-    kind: EdgeMarkerKindTokensV1,
-    size_px: f32,
-}
-
-impl EdgeMarkerTokensV1 {
-    fn into_marker(self) -> EdgeMarker {
-        EdgeMarker {
-            kind: match self.kind {
-                EdgeMarkerKindTokensV1::Arrow => EdgeMarkerKind::Arrow,
-            },
-            size: self.size_px,
-        }
-    }
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-enum EdgeMarkerKindTokensV1 {
-    Arrow,
-}
-
-impl<'de> Deserialize<'de> for EdgeMarkerKindTokensV1 {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: serde::Deserializer<'de>,
-    {
-        let s = String::deserialize(deserializer)?;
-        match s.as_str() {
-            "Arrow" => Ok(EdgeMarkerKindTokensV1::Arrow),
-            _ => Ok(EdgeMarkerKindTokensV1::Arrow),
-        }
-    }
-}
-
-#[derive(Debug, Clone, Copy, Deserialize)]
-struct WireHighlightTokensV1 {
-    width_mul: f32,
-    alpha_mul: f32,
-    #[serde(default)]
-    color: Option<RgbaV1>,
-}
-
-impl WireHighlightTokensV1 {
-    fn into_hint(self) -> WireHighlightHint {
-        WireHighlightHint {
-            width_mul: self.width_mul,
-            alpha_mul: self.alpha_mul,
-            color: self.color.map(Into::into),
-        }
-    }
-}
-
-#[derive(Debug, Clone, Deserialize)]
-struct StateTokensV1 {
-    hover: StateColorV1,
-    invalid: StateColorV1,
-    convertible: StateColorV1,
-    #[allow(dead_code)]
-    disabled: DisabledStateV1,
-}
-
-#[derive(Debug, Clone, Copy, Deserialize)]
-struct StateColorV1 {
-    color: RgbaV1,
-}
-
-#[derive(Debug, Clone, Copy, Deserialize)]
-struct DisabledStateV1 {
-    #[allow(dead_code)]
-    alpha_mul: f32,
-}
-
-// Satisfy `serde` for `PortShapeHint` without exposing a serde dependency from the type itself.
-impl<'de> Deserialize<'de> for PortShapeHint {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: serde::Deserializer<'de>,
-    {
-        let s = String::deserialize(deserializer)?;
-        match s.as_str() {
-            "Circle" => Ok(PortShapeHint::Circle),
-            "Diamond" => Ok(PortShapeHint::Diamond),
-            "Triangle" => Ok(PortShapeHint::Triangle),
-            _ => Ok(PortShapeHint::Circle),
-        }
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
+    use fret_ui_kit::node_graph::presets::RgbaV1;
 
     fn assert_close(a: f32, b: f32) {
         assert!(
