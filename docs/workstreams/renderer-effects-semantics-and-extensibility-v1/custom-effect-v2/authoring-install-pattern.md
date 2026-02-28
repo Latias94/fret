@@ -37,7 +37,7 @@ In native desktop apps that use the integrated `fret` builder, you can genuinely
 wrapping the builder:
 
 ```rust
-pub fn install_into<S: 'static>(builder: fret::mvu::UiAppBuilder<S>) -> fret::mvu::UiAppBuilder<S> {
+pub fn install_into<S: 'static>(builder: fret::UiAppBuilder<S>) -> fret::UiAppBuilder<S> {
     builder
         .install_app(install_app_globals)
         .install_custom_effects(register_custom_effects)
@@ -86,7 +86,6 @@ Example shape:
 #[derive(Debug)]
 pub struct MyEffects {
     program: CustomEffectProgramV2,
-    effect: Option<EffectId>,
     input_image: Option<ImageId>,
 }
 
@@ -94,7 +93,6 @@ impl MyEffects {
     pub fn new() -> Self {
         Self {
             program: CustomEffectProgramV2::wgsl_utf8(include_str!("my_effect.wgsl")),
-            effect: None,
             input_image: None,
         }
     }
@@ -105,7 +103,7 @@ impl MyEffects {
         context: &WgpuContext,
         renderer: &mut Renderer,
     ) {
-        self.effect = self.program.ensure_registered(effects).ok();
+        let _ = self.program.ensure_registered(effects);
         self.input_image = Some(upload_my_input_image(context, renderer));
     }
 }
@@ -130,4 +128,5 @@ impl MyEffects {
 - CustomV2 implementation tracker: `docs/workstreams/renderer-effects-semantics-and-extensibility-v1/custom-effect-v2/README.md`
 - A Web/WASM “starter” demo that follows this pattern:
   - `apps/fret-examples/src/custom_effect_v2_identity_web_demo.rs`
-
+- A native desktop demo that shows a true “one call install” wrapper:
+  - `apps/fret-examples/src/custom_effect_v2_demo.rs` (`install_into`)
