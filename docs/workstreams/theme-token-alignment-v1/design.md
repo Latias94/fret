@@ -51,6 +51,27 @@ Rules:
 - Literal colors must remain stable across presets unless a preset explicitly overrides them.
 - Prefer a typed key (`ThemeNamedColorKey`) over ad-hoc string tokens in recipes.
 
+### Adding a new named literal color (decision gate)
+
+Only add a new `ThemeNamedColorKey` when all of the following are true:
+
+1) **Upstream evidence:** the source of truth uses a literal Tailwind class (e.g. `text-<color>` /
+   `bg-<color>`) rather than a semantic role token.
+2) **Cross-ecosystem need:** at least two in-tree ecosystems need the same literal (or one ecosystem
+   needs it in multiple independent components), and representing it as a semantic role would be
+   misleading.
+3) **No palette creep:** the literal is not part of a large family that would imply importing an
+   entire Tailwind palette into the theme contract.
+
+Implementation checklist:
+
+- Add the enum case to `crates/fret-ui/src/theme/keys.rs` and seed a stable default in
+  `crates/fret-ui/src/theme/mod.rs` (`default_color_tokens`).
+- Prefer `Theme::named_color(ThemeNamedColorKey::...)` / `ColorRef::Named(...)` at call sites.
+- Add at least one gate:
+  - a Rust test asserting the default named color resolves as expected, and/or
+  - a `fretboard diag` screenshot scenario for the upstream parity surface that required the literal.
+
 ### 3) Component-derived tokens (component-scoped overrides)
 
 Use component-scoped tokens when upstream expresses a variant rule that is not purely semantic and
