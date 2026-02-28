@@ -1993,6 +1993,7 @@ impl WinitAppDriver for DockingArbitrationDriver {
 
         if app.with_global_mut_untracked(UiDiagnosticsService::default, |svc, _app| {
             svc.should_ignore_external_pointer_event(event)
+                || svc.should_ignore_external_keyboard_event(event)
         }) {
             return;
         }

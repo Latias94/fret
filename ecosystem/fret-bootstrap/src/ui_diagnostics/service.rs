@@ -98,6 +98,26 @@ impl UiDiagnosticsService {
         matches!(event, Event::Pointer(_) | Event::InternalDrag(_))
     }
 
+    pub fn should_ignore_external_keyboard_event(&self, event: &Event) -> bool {
+        if !self.is_enabled() {
+            return false;
+        }
+        if !self.cfg.isolate_external_keyboard_input_while_script_running {
+            return false;
+        }
+        if Self::in_script_injection_scope() {
+            return false;
+        }
+        if !self.any_script_running() {
+            return false;
+        }
+
+        matches!(
+            event,
+            Event::KeyDown { .. } | Event::KeyUp { .. } | Event::TextInput(_) | Event::Ime(_)
+        )
+    }
+
     fn is_wasm_ws_only(&self) -> bool {
         cfg!(target_arch = "wasm32") && self.ws_is_configured()
     }

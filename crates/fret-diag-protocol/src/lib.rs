@@ -331,6 +331,15 @@ pub struct UiDiagnosticsConfigFileV1 {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub isolate_external_pointer_input_while_script_running: Option<bool>,
 
+    /// When enabled, ignore external keyboard/text/IME events while a diagnostics script is
+    /// running.
+    ///
+    /// This is intended to keep scripted runs deterministic when a user accidentally types while
+    /// playback is in progress (especially when scripts are asserting shortcut routing or text
+    /// input outcomes).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub isolate_external_keyboard_input_while_script_running: Option<bool>,
+
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub frame_clock_fixed_delta_ms: Option<u64>,
 

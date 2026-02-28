@@ -677,6 +677,9 @@ fn tool_launched_diag_config(
         // Keep tool-launched scripted runs deterministic even if the user moves/clicks the real
         // mouse while playback is active (especially for cross-window docking/tear-off).
         isolate_external_pointer_input_while_script_running: Some(true),
+        // Keep tool-launched scripted runs deterministic even if the user types while playback
+        // is active (keyboard/text/IME interference).
+        isolate_external_keyboard_input_while_script_running: Some(true),
         ..Default::default()
     };
 
@@ -846,6 +849,9 @@ pub(crate) fn maybe_launch_demo(
     // Runner-visible knob: used to best-effort isolate OS cursor/device events during scripted
     // docking drags. The diagnostics runtime also reads this as an env override.
     cmd.env("FRET_DIAG_ISOLATE_POINTER_INPUT", "1");
+    // Keep tool-launched scripted runs deterministic even if the user types while playback is
+    // active. The diagnostics runtime reads this as an env override.
+    cmd.env("FRET_DIAG_ISOLATE_KEYBOARD_INPUT", "1");
 
     // Config file is the compat-first consolidation path for diagnostics runtime config.
     //
