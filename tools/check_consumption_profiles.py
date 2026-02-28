@@ -53,10 +53,8 @@ def main(argv: list[str]) -> int:
         ],
     )
 
-    # Profile D — launcher crates (intentionally modular)
-    _run_checked("launch: fret-launch-core", ["cargo", "check", "-p", "fret-launch-core", "--locked"])
-    _run_checked("launch: fret-launch-desktop", ["cargo", "check", "-p", "fret-launch-desktop", "--locked"])
-    _run_checked("launch: fret-launch-web (native stub)", ["cargo", "check", "-p", "fret-launch-web", "--locked"])
+    # Profile D — launcher facade
+    _run_checked("launch: fret-launch", ["cargo", "check", "-p", "fret-launch", "--locked"])
 
     print("[profiles] done")
     return 0

@@ -4,6 +4,12 @@ default-members = ["crates/*", "ecosystem/*"]
 exclude = [
     # Not part of the default workspace yet (maybe promoted or moved to `apps/` later).
     # Incomplete / incubating.
+    # Removed crates (kept excluded even if directories linger locally).
+    "crates/fret-launch-core",
+    "crates/fret-launch-desktop",
+    "crates/fret-launch-web",
+    "ecosystem/fret-asset-cache",
+    "ecosystem/fret-ui-literals",
     "ecosystem/fret-webview",
     "ecosystem/fret-webview-wry",
 ]

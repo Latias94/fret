@@ -4,8 +4,8 @@ use fret_render::{
     RenderTargetMetadata, Renderer,
 };
 
-use crate::common::{EngineFrameKeepalive, EngineFrameUpdate};
-use crate::native_external_import::{NativeExternalImportError, NativeExternalTextureFrame};
+use super::common::{EngineFrameKeepalive, EngineFrameUpdate};
+use super::native_external_import::{NativeExternalImportError, NativeExternalTextureFrame};
 
 #[derive(Debug)]
 pub enum NativeExternalImportOutcome {

@@ -1,6 +1,6 @@
 use thiserror::Error;
 
-use crate::common::EngineFrameKeepalive;
+use super::common::EngineFrameKeepalive;
 use fret_render::RenderTargetIngestStrategy;
 
 /// Error returned by a native external texture import attempt (ADR 0234 D1/D3).

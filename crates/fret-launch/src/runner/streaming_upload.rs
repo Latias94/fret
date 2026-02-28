@@ -3,7 +3,7 @@ use std::collections::{HashMap, VecDeque};
 use fret_core::{AppWindowId, FrameId, ImageId, ImageUpdateDropReason, ImageUpdateToken, RectPx};
 use fret_runtime::Effect;
 
-use crate::yuv;
+use super::yuv;
 
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
 #[doc(hidden)]

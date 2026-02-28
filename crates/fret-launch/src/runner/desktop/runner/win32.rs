@@ -41,7 +41,6 @@ unsafe extern "system" {
     fn WindowFromPoint(point: Point) -> isize;
     fn GetAncestor(hwnd: isize, ga_flags: u32) -> isize;
     fn GetWindow(hwnd: isize, cmd: u32) -> isize;
-    fn GetTopWindow(hwnd: isize) -> isize;
     fn GetWindowRect(hwnd: isize, lp_rect: *mut Rect) -> i32;
     fn ClientToScreen(hwnd: isize, lp_point: *mut Point) -> i32;
     fn GetWindowLongW(hwnd: isize, index: i32) -> i32;
@@ -110,11 +109,6 @@ pub(super) fn root_hwnd(hwnd: isize) -> isize {
     }
     let root = unsafe { GetAncestor(hwnd, GA_ROOT) };
     if root == 0 { hwnd } else { root }
-}
-
-pub(super) fn top_window() -> Option<isize> {
-    let hwnd = unsafe { GetTopWindow(0) };
-    if hwnd == 0 { None } else { Some(hwnd) }
 }
 
 pub(super) fn enum_windows_z_order() -> Vec<isize> {
