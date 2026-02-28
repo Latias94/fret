@@ -894,6 +894,10 @@ pub struct Select {
     arrow_padding_override: Option<Px>,
     trigger_border_width_override: BorderWidthOverride,
     trigger_corner_radii_override: Option<Corners>,
+    trigger_gap_override: Option<Space>,
+    trigger_chevron_size_override: Option<Px>,
+    trigger_chevron_opacity_override: Option<f32>,
+    trigger_font_weight_override: Option<FontWeight>,
 }
 
 impl Select {
@@ -926,6 +930,10 @@ impl Select {
             arrow_padding_override: None,
             trigger_border_width_override: BorderWidthOverride::default(),
             trigger_corner_radii_override: None,
+            trigger_gap_override: None,
+            trigger_chevron_size_override: None,
+            trigger_chevron_opacity_override: None,
+            trigger_font_weight_override: None,
         }
     }
 
@@ -1092,6 +1100,30 @@ impl Select {
         self
     }
 
+    /// Overrides the spacing between the trigger label and the chevron icon.
+    pub fn trigger_gap(mut self, gap: Space) -> Self {
+        self.trigger_gap_override = Some(gap);
+        self
+    }
+
+    /// Overrides the chevron icon size in the Select trigger.
+    pub fn trigger_chevron_size(mut self, size: Px) -> Self {
+        self.trigger_chevron_size_override = Some(size);
+        self
+    }
+
+    /// Overrides the chevron icon opacity in the Select trigger (clamped to 0..=1).
+    pub fn trigger_chevron_opacity(mut self, opacity: f32) -> Self {
+        self.trigger_chevron_opacity_override = Some(opacity);
+        self
+    }
+
+    /// Overrides the font weight used for the trigger label.
+    pub fn trigger_font_weight(mut self, weight: FontWeight) -> Self {
+        self.trigger_font_weight_override = Some(weight);
+        self
+    }
+
     /// Overrides per-edge border widths (in px) for the Select trigger's chrome.
     ///
     /// This is primarily used by shadcn recipe compositions that merge borders (e.g. input groups).
@@ -1171,6 +1203,10 @@ impl Select {
             self.arrow_padding_override,
             self.trigger_border_width_override,
             self.trigger_corner_radii_override,
+            self.trigger_gap_override,
+            self.trigger_chevron_size_override,
+            self.trigger_chevron_opacity_override,
+            self.trigger_font_weight_override,
         )
     }
 }
@@ -1215,6 +1251,10 @@ pub fn select<H: UiHost>(
         None,
         BorderWidthOverride::default(),
         None,
+        None,
+        None,
+        None,
+        None,
     )
 }
 
@@ -1249,6 +1289,10 @@ fn select_impl<H: UiHost>(
     arrow_padding_override: Option<Px>,
     trigger_border_width_override: BorderWidthOverride,
     trigger_corner_radii_override: Option<Corners>,
+    trigger_gap_override: Option<Space>,
+    trigger_chevron_size_override: Option<Px>,
+    trigger_chevron_opacity_override: Option<f32>,
+    trigger_font_weight_override: Option<FontWeight>,
 ) -> AnyElement {
     let chrome = ChromeRefinement::default()
         .pl(Space::N2p5)
@@ -1353,10 +1397,11 @@ fn select_impl<H: UiHost>(
         let radius = resolved.radius;
         let mut ring = decl_style::focus_ring(&theme, radius);
 
+        let trigger_font_weight = trigger_font_weight_override.unwrap_or(FontWeight::NORMAL);
         let text_style = TextStyle {
             font: FontId::default(),
             size: resolved.text_px,
-            weight: FontWeight::NORMAL,
+            weight: trigger_font_weight,
             line_height: theme
                 .metric_by_key("font.line_height")
                 .or(Some(theme.metric_token("font.line_height"))),
@@ -3761,6 +3806,11 @@ fn select_impl<H: UiHost>(
             let state_for_value_node = trigger_state.clone();
             let placeholder_for_value_node = placeholder.clone();
             let model_for_value_node = model.clone();
+            let trigger_gap = trigger_gap_override.unwrap_or(Space::N2);
+            let trigger_chevron_size = trigger_chevron_size_override.unwrap_or(Px(16.0));
+            let trigger_chevron_opacity = trigger_chevron_opacity_override
+                .unwrap_or(0.5)
+                .clamp(0.0, 1.0);
 
             let content = move |cx: &mut ElementContext<'_, H>| {
                 vec![cx.flex(
@@ -3771,7 +3821,7 @@ fn select_impl<H: UiHost>(
                             layout
                         },
                         direction: fret_core::Axis::Horizontal,
-                        gap: MetricRef::space(Space::N2).resolve(&theme).into(),
+                        gap: MetricRef::space(trigger_gap).resolve(&theme).into(),
                         padding: Edges::all(Px(0.0)).into(),
                         justify: MainAlign::SpaceBetween,
                         align: CrossAlign::Center,
@@ -3864,11 +3914,11 @@ fn select_impl<H: UiHost>(
 
                                 value_node
                             },
-                                                        cx.opacity(0.5, |cx| {
+                            cx.opacity(trigger_chevron_opacity, |cx| {
                                 vec![decl_icon::icon_with(
                                     cx,
                                     ids::ui::CHEVRON_DOWN,
-                                    Some(Px(16.0)),
+                                    Some(trigger_chevron_size),
                                     Some(ColorRef::Color(fg_muted)),
                                 )]
                             }),
