@@ -33,24 +33,18 @@ impl Default for MagicCardProps {
             corner_radii: Corners::all(Px(12.0)),
             base: Color::TRANSPARENT,
             highlight: Color {
-                r: 0.9,
-                g: 0.9,
-                b: 1.0,
                 a: 0.35,
+                ..Color::from_srgb_hex_rgb(0xe6_e6_ff)
             },
             highlight_radius: Px(180.0),
             border: Edges::all(Px(1.0)),
             border_base: Color {
-                r: 1.0,
-                g: 1.0,
-                b: 1.0,
                 a: 0.12,
+                ..Color::from_srgb_hex_rgb(0xff_ff_ff)
             },
             border_highlight: Color {
-                r: 0.95,
-                g: 0.95,
-                b: 1.0,
                 a: 0.55,
+                ..Color::from_srgb_hex_rgb(0xf2_f2_ff)
             },
             border_highlight_radius: Px(220.0),
         }
