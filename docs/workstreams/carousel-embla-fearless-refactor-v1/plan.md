@@ -21,9 +21,12 @@ This plan summarizes what is already landed and proposes the next, highest-lever
   - Autoplay policy surface: `ecosystem/fret-ui-shadcn/src/carousel.rs` (`CarouselAutoplayConfig`)
   - UI gallery demo: `apps/fret-ui-gallery/src/ui/pages/carousel.rs` ("Plugin (Autoplay)")
   - Gate: `tools/diag-scripts/ui-gallery/carousel/ui-gallery-carousel-plugin-autoplay-pixels-changed.json`
-- M4 (partial): Motion alignment for `duration` (settle timeline driver)
+- M4: Motion alignment for `duration` (settle timeline driver)
   - `ecosystem/fret-ui-shadcn/src/carousel.rs` (duration-driven settle; reduced-motion aware)
   - `ecosystem/fret-ui-kit/src/declarative/transition.rs` (duration → 60Hz ticks + frame scaling)
+- M4.5: Embla option parity (best-effort, policy-level)
+  - `startSnap` + `draggable`: `ecosystem/fret-ui-shadcn/src/carousel.rs` (`CarouselOptions`)
+  - `direction` (RTL): `ecosystem/fret-ui-headless/src/carousel.rs` (drag sign) + `ecosystem/fret-ui-shadcn/src/carousel.rs` (controls/keys)
 - P4: Carousel × DnD pointer arbitration (mouse handle path)
   - Decision + notes: `docs/workstreams/carousel-embla-fearless-refactor-v1/dnd-arbitration.md`
   - Policy hook: `fret-ui-shadcn::Carousel` skips swiping while a DnD sensor tracks the pointer.
@@ -33,20 +36,19 @@ This plan summarizes what is already landed and proposes the next, highest-lever
 
 ## Next steps (recommended order)
 
-### 1) Motion alignment: `duration` semantics (P2) ✅
+### 1) Close remaining UI gallery drift (P2)
 
-Goal: ensure carousel settle timing uses the same motion foundations as other shadcn/Radix-like
-surfaces (duration-based API, deterministic timeline, refresh-rate scaling, reduced-motion).
+Goal: ensure the Carousel page demos match shadcn/ui docs composition outcomes (constraints first,
+then styling), especially for the most visible mismatch reports.
 
-- Replace the carousel-specific fixed-tick settle with a duration-driven transition driver:
-  - source: `ecosystem/fret-ui-kit/src/declarative/transition.rs`
-  - use `Duration` inputs and map via `ticks_60hz_for_duration(...)`
-  - keep deterministic behavior in tests/diags (fixed delta support)
+Focus areas:
+
+- Expandable demo: avoid unexpected text wrapping (usually missing `min-w-0` / `flex` constraints).
+- Vertical orientation demo: verify track/item constraints match upstream intent.
 
 Exit criteria:
 
-- Carousel `duration` feels stable across 60/120/144Hz.
-- Reduced-motion disables settle animation (snaps instantly).
+- UI gallery matches shadcn docs for Expandable + Vertical demos.
 - Existing carousel gates remain green (web-vs-fret layout + diag scripts).
 
 ### 2) Evidence hardening (P3)
@@ -66,16 +68,18 @@ Exit criteria:
 - A minimal diag suite can be executed in one command and produces screenshots/bundles with stable
   `test_id` selectors.
 
-### 2.5) Close any remaining visual drift (UI gallery)
+### 3) Additional Embla options (P3/P4, selective)
 
-Goal: resolve any remaining shadcn docs mismatches found in the Carousel page demos.
+Goal: keep extending option parity where it produces real recipe outcomes, without pulling in
+momentum physics or a seamless loop engine.
 
-- If text wraps unexpectedly (e.g. “Item 1” splitting), treat it as a constraints/text-wrap
-  contract issue and gate it with a screenshot script.
-- If vertical orientation layout drifts, prefer fixing recipe constraints over adding new
-  layout-engine defaults.
+Candidates to audit next:
 
-### 3) Shared snap utilities (P4, optional but likely valuable)
+- `watchDrag` / `watchSlides`-like re-init knobs (likely not applicable outside the DOM).
+- `inViewThreshold` / in-view detection (only if a recipe/demo depends on it).
+- `dragThreshold` mapping (if we want 1:1 default feel).
+
+### 4) Shared snap utilities (P4, optional but likely valuable)
 
 Goal: reduce duplicated “nearest snap point” math across components without conflating semantics.
 

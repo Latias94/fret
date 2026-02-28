@@ -94,6 +94,17 @@ In-tree surfaces:
   - Gate:
     - `tools/diag-scripts/ui-gallery/carousel/ui-gallery-carousel-api-screenshot.json`
     - `tools/diag-scripts/ui-gallery/carousel/ui-gallery-carousel-plugin-autoplay-pixels-changed.json`
+- [x] CAR-226 Support Embla `startSnap` + `draggable` options at the recipe level (best-effort):
+  - `startSnap` selects the initial index once snaps are measurable
+  - `draggable=false` disables pointer swiping while keeping buttons/keys active
+  - Evidence: `ecosystem/fret-ui-shadcn/src/carousel.rs` (`CarouselOptions.start_snap`, `draggable`)
+  - Gate: `ecosystem/fret-ui-shadcn/tests/carousel_start_snap_draggable.rs`
+- [x] CAR-227 Support Embla `direction` (RTL) at the recipe level (best-effort):
+  - Mirrors horizontal drag delta, key mapping, and prev/next control placement/icons
+  - Evidence:
+    - `ecosystem/fret-ui-shadcn/src/carousel.rs` (`CarouselOptions.direction`)
+    - `ecosystem/fret-ui-headless/src/carousel.rs` (`axis_delta_with_direction`)
+  - Gate: `ecosystem/fret-ui-shadcn/tests/carousel_direction_rtl.rs`
 
 ## P3 — Evidence + guardrails
 
@@ -107,6 +118,8 @@ In-tree surfaces:
     - `tools/diag-scripts/ui-gallery/carousel/ui-gallery-carousel-orientation-vertical-screenshot.json`
     - `tools/diag-scripts/ui-gallery/carousel/ui-gallery-carousel-expandable-screenshot.json`
     - `tools/diag-scripts/ui-gallery/carousel/ui-gallery-carousel-plugin-autoplay-pixels-changed.json`
+  - Note: the expandable scripts click the per-item toggle button test ids (not the draggable item)
+    to avoid accidental drag/scroll drift.
 - [x] CAR-320 Update `docs/audits/carousel-shadcn-embla-parity.md` with new evidence anchors.
   - Evidence: `docs/audits/carousel-shadcn-embla-parity.md`
 - [x] CAR-330 Run layering checks if any cross-crate refactors are required.

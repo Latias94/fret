@@ -59,8 +59,8 @@
     { "type": "capture_screenshot", "label": "ui-gallery-carousel-expandable-before" },
 
     {
-      "type": "click_stable",
-      "target": { "kind": "test_id", "id": "ui-gallery-carousel-expandable-item-1" }
+      "type": "click",
+      "target": { "kind": "test_id", "id": "ui-gallery-carousel-expandable-item-1-toggle" }
     },
     { "type": "wait_frames", "n": 40 },
     { "type": "capture_bundle", "label": "ui-gallery-carousel-expandable-after" },

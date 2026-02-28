@@ -175,6 +175,7 @@ pub(crate) fn ui_gallery_script_pixels_changed_test_id(script: &Path) -> Option<
         "ui-gallery-code-view-scroll-refresh-pixels-changed.json" => {
             Some("ui-gallery-code-view-root")
         }
+        "ui-gallery-carousel-demo-inertia-pixels-changed.json" => Some("ui-gallery-carousel-demo"),
         _ => None,
     }
 }

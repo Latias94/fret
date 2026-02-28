@@ -7,6 +7,7 @@ pub use fret_ui_headless::checked_state;
 pub use fret_ui_headless::cmdk_score;
 pub use fret_ui_headless::cmdk_selection;
 pub use fret_ui_headless::easing;
+pub use fret_ui_headless::embla;
 pub use fret_ui_headless::form_state;
 pub use fret_ui_headless::form_validation;
 pub use fret_ui_headless::grid_viewport;
