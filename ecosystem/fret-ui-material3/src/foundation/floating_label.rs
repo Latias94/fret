@@ -73,6 +73,16 @@ pub fn interpolated_label_text_style(
         line_height_em,
         line_height_policy,
         letter_spacing_em,
+        features: if is_floated(progress) {
+            small.features.clone()
+        } else {
+            large.features.clone()
+        },
+        axes: if is_floated(progress) {
+            small.axes.clone()
+        } else {
+            large.axes.clone()
+        },
         vertical_placement,
         leading_distribution: if is_floated(progress) {
             small.leading_distribution
