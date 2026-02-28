@@ -415,6 +415,28 @@ pub fn shadcn_new_york_v4_config(base: ShadcnBaseColor, scheme: ShadcnColorSchem
         colors.insert("component.navigation_menu.trigger.bg_open".to_string(), v);
     }
 
+    // Editor-like ecosystem surfaces (node graph, code editors) consume Fret viewport selection
+    // tokens from the typed theme baseline.
+    //
+    // Seed them from shadcn's `ring` to avoid the default Fret blue selection when a shadcn theme
+    // is installed.
+    if let Some(ring) = colors.get("ring").cloned() {
+        let mut seed_ring_alpha = |key: &str, alpha: f32| {
+            if colors.contains_key(key) {
+                return;
+            }
+            let v = with_oklch_alpha(&ring, alpha).unwrap_or_else(|| ring.clone());
+            colors.insert(key.to_string(), v);
+        };
+
+        seed_ring_alpha("color.viewport.selection.fill", 0.16);
+        seed_ring_alpha("color.viewport.selection.stroke", 0.80);
+
+        if !colors.contains_key("color.viewport.marker") {
+            colors.insert("color.viewport.marker".to_string(), ring);
+        }
+    }
+
     // AI Elements + some shadcn recipes use `dark:hover:bg-accent/50` to soften hover in dark
     // schemes (e.g. attachment chips/rows). Our baseline theme defaults `color.menu.item.hover` to
     // `accent` when not explicitly configured, so we seed an explicit dark alpha here to keep
@@ -1089,6 +1111,34 @@ mod tests {
                 Some(outline_bg_hover_light.clone()),
                 "expected skeleton bg to match accent in light scheme"
             );
+            let ring_light = cfg_light.colors.get("ring").cloned().expect("missing ring");
+            assert_eq!(
+                cfg_light
+                    .colors
+                    .get("color.viewport.selection.fill")
+                    .cloned(),
+                Some(
+                    with_oklch_alpha(&ring_light, 0.16)
+                        .expect("shadcn new-york-v4 ring token is oklch")
+                ),
+                "expected viewport selection fill to be ring-derived in light scheme"
+            );
+            assert_eq!(
+                cfg_light
+                    .colors
+                    .get("color.viewport.selection.stroke")
+                    .cloned(),
+                Some(
+                    with_oklch_alpha(&ring_light, 0.80)
+                        .expect("shadcn new-york-v4 ring token is oklch")
+                ),
+                "expected viewport selection stroke to be ring-derived in light scheme"
+            );
+            assert_eq!(
+                cfg_light.colors.get("color.viewport.marker").cloned(),
+                Some(ring_light),
+                "expected viewport marker to match ring in light scheme"
+            );
             assert_eq!(
                 cfg_light.colors.get("component.button.outline.bg").cloned(),
                 Some(outline_bg_light),
@@ -1132,6 +1182,34 @@ mod tests {
                 cfg_dark.colors.get("component.skeleton.bg").cloned(),
                 Some(accent_dark),
                 "expected skeleton bg to match accent in dark scheme"
+            );
+            let ring_dark = cfg_dark.colors.get("ring").cloned().expect("missing ring");
+            assert_eq!(
+                cfg_dark
+                    .colors
+                    .get("color.viewport.selection.fill")
+                    .cloned(),
+                Some(
+                    with_oklch_alpha(&ring_dark, 0.16)
+                        .expect("shadcn new-york-v4 ring token is oklch")
+                ),
+                "expected viewport selection fill to be ring-derived in dark scheme"
+            );
+            assert_eq!(
+                cfg_dark
+                    .colors
+                    .get("color.viewport.selection.stroke")
+                    .cloned(),
+                Some(
+                    with_oklch_alpha(&ring_dark, 0.80)
+                        .expect("shadcn new-york-v4 ring token is oklch")
+                ),
+                "expected viewport selection stroke to be ring-derived in dark scheme"
+            );
+            assert_eq!(
+                cfg_dark.colors.get("color.viewport.marker").cloned(),
+                Some(ring_dark),
+                "expected viewport marker to match ring in dark scheme"
             );
             assert_eq!(
                 cfg_dark.colors.get("component.button.outline.bg").cloned(),
