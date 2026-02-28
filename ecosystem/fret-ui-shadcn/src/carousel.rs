@@ -29,6 +29,17 @@ pub struct CarouselApiSnapshot {
     pub snap_count: usize,
     pub can_scroll_prev: bool,
     pub can_scroll_next: bool,
+    /// Monotonically increasing counter that increments when the selected index changes.
+    ///
+    /// This is an MVP event surface intended to support shadcn-style `api.on("select", ...)`
+    /// outcomes without storing closures inside models.
+    pub select_generation: u64,
+    /// Monotonically increasing counter that increments when the carousel re-initializes due to
+    /// geometry changes (snaps/limits/view size).
+    ///
+    /// This is an MVP event surface intended to support shadcn-style `api.on("reInit", ...)`
+    /// outcomes without storing closures inside models.
+    pub reinit_generation: u64,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -297,6 +308,9 @@ struct CarouselRuntime {
     autoplay_token: Option<TimerToken>,
     autoplay_paused: bool,
     autoplay_hovered: bool,
+    api_select_generation: u64,
+    api_reinit_generation: u64,
+    api_last_selected_index: usize,
 }
 
 impl Default for CarouselRuntime {
@@ -312,6 +326,9 @@ impl Default for CarouselRuntime {
             autoplay_token: None,
             autoplay_paused: false,
             autoplay_hovered: false,
+            api_select_generation: 0,
+            api_reinit_generation: 0,
+            api_last_selected_index: 0,
         }
     }
 }
@@ -353,6 +370,10 @@ fn carousel_models<H: UiHost>(
         let index = cx.app.models_mut().insert(start_snap);
         let offset = cx.app.models_mut().insert(Px(0.0));
         let runtime = cx.app.models_mut().insert(CarouselRuntime::default());
+        let _ = cx
+            .app
+            .models_mut()
+            .update(&runtime, |st| st.api_last_selected_index = start_snap);
         let extent = cx.app.models_mut().insert(Px(0.0));
         let snaps: Arc<[Px]> = Arc::from(Vec::<Px>::new());
         let snaps = cx.app.models_mut().insert(snaps);
@@ -1763,7 +1784,13 @@ impl Carousel {
                     .any(|(a, b)| (a.0 - b.0).abs() > eps);
             let max_offset_changed = (max_offset_prev.0 - max_offset_now.0).abs() > eps;
             let view_size_changed = (view_size_prev.0 - view_size_now.0).abs() > eps;
-            if (snaps_changed || max_offset_changed || view_size_changed) && snaps_now.len() > 1 {
+
+            let mut did_reinit = false;
+            if (snaps_changed || max_offset_changed || view_size_changed) && view_size_now.0 > 0.0 {
+                did_reinit = true;
+            }
+
+            if did_reinit && snaps_now.len() > 1 {
                 let scroll_snaps = snaps_now.iter().map(|px| -px.0).collect::<Vec<_>>();
                 let content_size = max_offset_now.0.max(0.0);
                 let view_size = view_size_now.0.max(0.0);
@@ -1825,6 +1852,20 @@ impl Carousel {
             // measures and emits `select`/`reInit`).
             let extent_ready = view_size_now.0 > 0.0 && snaps_len > 0;
 
+            if did_reinit
+                || (extent_ready && clamped_index != runtime_snapshot.api_last_selected_index)
+            {
+                let _ = cx.app.models_mut().update(&runtime_model, |st| {
+                    if did_reinit {
+                        st.api_reinit_generation = st.api_reinit_generation.saturating_add(1);
+                    }
+                    if extent_ready && clamped_index != st.api_last_selected_index {
+                        st.api_last_selected_index = clamped_index;
+                        st.api_select_generation = st.api_select_generation.saturating_add(1);
+                    }
+                });
+            }
+
             // Embla's `startSnap` selects the initial snap before the user interacts. Because this
             // recipe derives snaps from measured geometry (available after at least one layout
             // pass), we apply the initial snap once snaps become available.
@@ -1852,11 +1893,14 @@ impl Carousel {
                 || (!options.loop_enabled && clamped_index + 1 >= snaps_len);
 
             if let Some(api_snapshot) = self.api_snapshot {
+                let runtime_now = cx.watch_model(&runtime_model).copied().unwrap_or_default();
                 let snapshot = CarouselApiSnapshot {
                     selected_index: clamped_index,
                     snap_count: if extent_ready { snaps_len } else { 0 },
                     can_scroll_prev: !prev_disabled,
                     can_scroll_next: !next_disabled,
+                    select_generation: runtime_now.api_select_generation,
+                    reinit_generation: runtime_now.api_reinit_generation,
                 };
                 let _ = cx.app.models_mut().update(&api_snapshot, |v| *v = snapshot);
             }
