@@ -58,6 +58,7 @@ hash or query string:
 - `?demo=custom_effect_v2_web_demo` (or `#custom_effect_v2_web_demo`) — CustomV2 end-to-end WebGPU smoke (register + user image input)
 - `?demo=custom_effect_v2_lut_web_demo` (or `#custom_effect_v2_lut_web_demo`) — CustomV2 LUT authoring template (input image used as LUT)
 - `?demo=custom_effect_v2_identity_web_demo` (or `#custom_effect_v2_identity_web_demo`) — CustomV2 minimal starter template (mix + input debug)
+- `?demo=custom_effect_v3_web_demo` (or `#custom_effect_v3_web_demo`) — CustomV3 renderer-provided sources (src_raw + bounded pyramid)
 
 ## Optional bundled fonts (WASM)
 
