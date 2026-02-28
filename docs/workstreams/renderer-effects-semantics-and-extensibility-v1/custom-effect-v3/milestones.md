@@ -25,7 +25,7 @@ Current status:
   bounded attempt to preserve a chain-root `src_raw` scratch copy under budgets.
 - Conformance exists for `src_raw` vs `src` correctness in a blur→custom chain.
 - Plan dumps include raw alias/distinct summaries per effect.
-- Gaps: no explicit degradation counters yet beyond plan dumps.
+- Per-frame counters report requested vs applied raw/pyramid outcomes and deterministic degradation reasons.
 
 ## M1 — Bounded blur pyramid (optional)
 
@@ -48,3 +48,7 @@ Outcome:
 
 - A mechanism-level way to share pyramid/capture work across multiple glass surfaces exists,
   without hidden implicit caches.
+
+Design status:
+
+- Drafted in `m2-sharing-and-caching-design.md` (Option B: contract-backed glass groups; M2.0: chain-local reuse).

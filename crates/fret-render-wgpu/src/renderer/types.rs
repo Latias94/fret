@@ -438,6 +438,8 @@ pub struct RenderPerfSnapshot {
     pub render_plan_degradations_composite_group_blend_to_over: u64,
     pub effect_degradations: EffectDegradationSnapshot,
     pub effect_blur_quality: BlurQualitySnapshot,
+    pub custom_effect_v3_pyramid_cache_hits: u64,
+    pub custom_effect_v3_pyramid_cache_misses: u64,
 
     pub clip_path_mask_cache_bytes_live: u64,
     pub clip_path_mask_cache_entries_live: u64,
@@ -586,6 +588,8 @@ pub(super) struct RenderPerfStats {
     pub(super) render_plan_degradations_composite_group_blend_to_over: u64,
     pub(super) effect_degradations: EffectDegradationSnapshot,
     pub(super) effect_blur_quality: BlurQualitySnapshot,
+    pub(super) custom_effect_v3_pyramid_cache_hits: u64,
+    pub(super) custom_effect_v3_pyramid_cache_misses: u64,
 
     pub(super) clip_path_mask_cache_bytes_live: u64,
     pub(super) clip_path_mask_cache_entries_live: u64,

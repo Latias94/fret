@@ -100,6 +100,8 @@ pub struct Renderer {
     pipelines: GpuPipelines,
 
     custom_effect_v3_pyramid_scratch: Option<v3_pyramid::CustomEffectV3PyramidScratch>,
+    custom_effect_v3_pyramid_cache: Option<CustomEffectV3PyramidCache>,
+    plan_target_write_epochs: [u32; 8],
 
     quad_instances: buffers::StorageRingBuffer<QuadInstance>,
 
@@ -184,12 +186,90 @@ pub struct Renderer {
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+struct CustomEffectV3PyramidCache {
+    src_raw: PlanTarget,
+    src_size: (u32, u32),
+    format: wgpu::TextureFormat,
+    levels: u32,
+    src_raw_epoch: u32,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 struct RenderPlanSegmentReport {
     draw_range: (usize, usize),
     start_uniform_fingerprint: u64,
     flags_mask: u8,
     scene_draw_range_passes: u32,
     path_msaa_batch_passes: u32,
+}
+
+impl Renderer {
+    pub(in crate::renderer) fn reset_frame_local_custom_effect_v3_caches(&mut self) {
+        self.custom_effect_v3_pyramid_cache = None;
+        self.plan_target_write_epochs = [0; 8];
+    }
+
+    pub(in crate::renderer) fn bump_plan_target_write_epoch(&mut self, target: PlanTarget) {
+        let ix = plan_target_epoch_slot(target);
+        self.plan_target_write_epochs[ix] = self.plan_target_write_epochs[ix].saturating_add(1);
+        if self
+            .custom_effect_v3_pyramid_cache
+            .is_some_and(|c| c.src_raw == target)
+        {
+            self.custom_effect_v3_pyramid_cache = None;
+        }
+    }
+
+    pub(in crate::renderer) fn can_reuse_custom_effect_v3_pyramid(
+        &self,
+        src_raw: PlanTarget,
+        src_size: (u32, u32),
+        format: wgpu::TextureFormat,
+        levels: u32,
+    ) -> bool {
+        let Some(cache) = self.custom_effect_v3_pyramid_cache else {
+            return false;
+        };
+        if cache.src_raw != src_raw
+            || cache.src_size != src_size
+            || cache.format != format
+            || cache.levels != levels
+        {
+            return false;
+        }
+        let ix = plan_target_epoch_slot(src_raw);
+        cache.src_raw_epoch == self.plan_target_write_epochs[ix]
+    }
+
+    pub(in crate::renderer) fn set_custom_effect_v3_pyramid_cache(
+        &mut self,
+        src_raw: PlanTarget,
+        src_size: (u32, u32),
+        format: wgpu::TextureFormat,
+        levels: u32,
+    ) {
+        let ix = plan_target_epoch_slot(src_raw);
+        self.custom_effect_v3_pyramid_cache = Some(CustomEffectV3PyramidCache {
+            src_raw,
+            src_size,
+            format,
+            levels,
+            src_raw_epoch: self.plan_target_write_epochs[ix],
+        });
+    }
+}
+
+fn plan_target_epoch_slot(target: PlanTarget) -> usize {
+    match target {
+        PlanTarget::Output => 0,
+        PlanTarget::Intermediate0 => 1,
+        PlanTarget::Intermediate1 => 2,
+        PlanTarget::Intermediate2 => 3,
+        PlanTarget::Intermediate3 => 4,
+        PlanTarget::Mask0 => 5,
+        PlanTarget::Mask1 => 6,
+        PlanTarget::Mask2 => 7,
+    }
 }
 
 #[derive(Clone, Copy, Debug)]

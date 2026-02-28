@@ -561,6 +561,8 @@ impl Renderer {
             effect_params,
             pipelines: GpuPipelines::default(),
             custom_effect_v3_pyramid_scratch: None,
+            custom_effect_v3_pyramid_cache: None,
+            plan_target_write_epochs: [0; 8],
             quad_instances,
             path_paints,
             text_paints,

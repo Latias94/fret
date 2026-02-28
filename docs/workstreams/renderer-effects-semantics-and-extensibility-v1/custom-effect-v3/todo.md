@@ -35,6 +35,10 @@ This TODO tracks the V3 work as landable steps. It intentionally starts with “
   - whether raw is distinct or aliased,
   - requested/applied pyramid levels,
   - degradation reasons surfaced in plan dumps (counters remain TODO).
+- [x] `fret-render-wgpu`: add per-frame counters for v3 source outcomes:
+  - requested vs applied raw distinctness,
+  - requested vs applied pyramid levels (>=2),
+  - deterministic degradation reasons.
 - [x] Add conformance test: `src_raw` differs from `src` when a prior step modifies the chain (e.g. blur),
       and the shader can sample both deterministically under scissor/mask.
 
@@ -61,8 +65,9 @@ This TODO tracks the V3 work as landable steps. It intentionally starts with “
 
 ## Deferred — Group sharing / caching (M2)
 
-- [ ] Define a mechanism-level “glass group” concept (scene-level, not custom WGSL):
-  - cache key and invalidation,
-  - compositing/ordering semantics,
-  - determinism under partial reuse.
-- [ ] Only pursue after M0/M1 are stable and diagnosable.
+- [x] Write down a design space and recommended sequence:
+  - `m2-sharing-and-caching-design.md`
+- [ ] M2.0 (reversible): implement chain-local pyramid reuse (same frame, same `src_raw`, no intervening writes),
+      with per-frame counters.
+- [ ] M2.1 (contract): propose an explicit scene-level “glass group” primitive (ADR) to share snapshot/pyramid
+      across multiple surfaces deterministically.

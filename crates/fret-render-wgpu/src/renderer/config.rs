@@ -140,6 +140,8 @@ impl Renderer {
                 .render_plan_degradations_composite_group_blend_to_over,
             effect_degradations: self.perf.effect_degradations,
             effect_blur_quality: self.perf.effect_blur_quality,
+            custom_effect_v3_pyramid_cache_hits: self.perf.custom_effect_v3_pyramid_cache_hits,
+            custom_effect_v3_pyramid_cache_misses: self.perf.custom_effect_v3_pyramid_cache_misses,
             clip_path_mask_cache_bytes_live: self.perf.clip_path_mask_cache_bytes_live,
             clip_path_mask_cache_entries_live: self.perf.clip_path_mask_cache_entries_live,
             clip_path_mask_cache_hits: self.perf.clip_path_mask_cache_hits,

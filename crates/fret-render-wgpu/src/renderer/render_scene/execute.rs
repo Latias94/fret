@@ -12,6 +12,7 @@ impl Renderer {
     ) -> wgpu::CommandBuffer {
         self.render_scene_frame_index = self.render_scene_frame_index.saturating_add(1);
         let frame_index = self.render_scene_frame_index;
+        self.reset_frame_local_custom_effect_v3_caches();
 
         let RenderSceneParams {
             format,
