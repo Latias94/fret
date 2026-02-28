@@ -24,7 +24,7 @@ use fret_ui_kit::{
     ChromeRefinement, ColorRef, Items, Justify, LayoutRefinement, MetricRef, Radius, Space,
 };
 
-use crate::copy_button::{render_copy_button, render_copy_button_overlay, CopyFeedbackRef};
+use crate::copy_button::{CopyFeedbackRef, render_copy_button, render_copy_button_overlay};
 use crate::prepare::CodeBlockPreparedState;
 use crate::syntax::syntax_color;
 
