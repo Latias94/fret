@@ -31,6 +31,7 @@ use crate::tab_drag::{
 };
 
 mod drag_state;
+mod geometry;
 mod intent;
 mod kernel;
 mod layouts;
@@ -51,6 +52,7 @@ use kernel::{
 };
 
 use drag_state::{WorkspaceTabStripDragState, get_drag_model};
+use geometry::{bounds_for_optional_element_id, collect_tab_hit_rects};
 use intent::{WorkspaceTabStripIntent, dispatch_intent};
 use layouts::{
     centered_row, fill_grow_layout, fill_layout, fixed_square_layout, row_layout,
@@ -1380,21 +1382,18 @@ impl WorkspaceTabStrip {
                                 )
                             };
 
-                            let mut rects: Vec<WorkspaceTabHitRect> = Vec::new();
-                            for (id, el) in tab_elements.borrow().iter() {
-                                if let Some(rect) = cx.last_bounds_for_element(*el) {
-                                    rects.push(WorkspaceTabHitRect {
-                                        id: id.clone(),
-                                        rect,
-                                    });
-                                }
-                            }
-                            let pinned_boundary_rect_now = pinned_boundary_element
-                                .get()
-                                .and_then(|id| cx.last_bounds_for_element(id));
-                            let end_drop_target_rect_now = end_drop_target_element
-                                .get()
-                                .and_then(|id| cx.last_bounds_for_element(id));
+                            let rects = {
+                                let elements = tab_elements.borrow();
+                                collect_tab_hit_rects(cx, elements.as_slice())
+                            };
+                            let pinned_boundary_rect_now = bounds_for_optional_element_id(
+                                cx,
+                                pinned_boundary_element.get(),
+                            );
+                            let end_drop_target_rect_now = bounds_for_optional_element_id(
+                                cx,
+                                end_drop_target_element.get(),
+                            );
 
                             #[cfg(feature = "shadcn-context-menu")]
                             let (overflow_is_overflowing, overflow_button_test_id, overflow_entries) = {
