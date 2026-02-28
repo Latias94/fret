@@ -287,6 +287,7 @@ pub(super) struct V2DragPointerUntilState {
     pub(super) remaining_frames: u32,
     pub(super) playback: V2DragPointerState,
     pub(super) predicate: UiPredicateV1,
+    pub(super) release_on_success: bool,
     /// If true, the step has issued a pointer down and should release on completion.
     pub(super) down_issued: bool,
     /// If true, a runner-visible mouse button override has been emitted to mirror the pressed

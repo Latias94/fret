@@ -265,6 +265,7 @@ pub(super) fn handle_drag_pointer_until_step(
         pointer_kind,
         target,
         button,
+        release_on_success,
         delta_x,
         delta_y,
         steps,
@@ -333,6 +334,7 @@ pub(super) fn handle_drag_pointer_until_step(
                     frame: 0,
                 },
                 predicate: predicate.clone(),
+                release_on_success,
                 down_issued: false,
                 mouse_buttons_override_issued: false,
                 release_armed: false,
@@ -513,6 +515,24 @@ pub(super) fn handle_drag_pointer_until_step(
                         release_pos.x.0,
                         release_pos.y.0,
                     );
+
+                    if !state.release_on_success {
+                        active.pointer_session = Some(V2PointerSessionState {
+                            window: state.playback.window,
+                            button: state.playback.button,
+                            pointer_type,
+                            modifiers: Modifiers::default(),
+                            position: release_pos,
+                        });
+                        active.v2_step_state = None;
+                        active.next_step = active.next_step.saturating_add(1);
+                        output.request_redraw = true;
+                        if svc.cfg.script_auto_dump {
+                            *force_dump_label =
+                                Some(format!("script-step-{step_index:04}-drag_pointer_until"));
+                        }
+                        return true;
+                    }
 
                     if !state.release_armed {
                         // The runner polls cursor overrides at the top of the event loop. If we

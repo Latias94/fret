@@ -813,7 +813,7 @@ Supported selectors (v1 MVP):
 - `set_cursor_in_window` (schema v2 only; runner-level cursor override using window-client physical pixels; intended for cross-window routing without hardcoding DPI)
 - `set_mouse_buttons` (schema v2 only; runner-level mouse button state override; capability-gated behind `diag.mouse_buttons_override`)
 - `inject_incoming_open` (schema v2 only; simulates "open in..." / share-target flows; capability-gated behind `diag.incoming_open_inject`)
-- `drag_pointer_until` (schema v2 only; optional `window` target; drag across frames until a predicate passes or timeout; intended for cross-window routing)
+- `drag_pointer_until` (schema v2 only; optional `window` target; drag across frames until a predicate passes or timeout; intended for cross-window routing; optional `release_on_success` to end while keeping the pointer pressed)
 
 Pointer kind note (as of 2026-02-27):
 
@@ -898,7 +898,7 @@ Supported intent steps (v2):
 - `raise_window` (emit `WindowRequest::Raise`)
 - `set_cursor_screen_pos` (write a best-effort cursor override for desktop runners to consume during cross-window drags; screen-space physical pixels)
 - `set_cursor_in_window` (write a window-targeted cursor override for desktop runners to consume during cross-window drags; window-client physical pixels)
-- `drag_pointer_until` (drag until a predicate passes, holding the session active across frames)
+- `drag_pointer_until` (drag until a predicate passes, holding the session active across frames; optional `release_on_success: false` to keep the drag pressed for follow-up evidence steps like screenshots)
 
 Desktop runner note (cursor override wire format):
 
