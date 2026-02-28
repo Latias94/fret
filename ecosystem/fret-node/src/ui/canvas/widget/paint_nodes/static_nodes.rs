@@ -1,3 +1,4 @@
+use crate::ui::PortShapeHint;
 use crate::ui::canvas::widget::paint_render_data::RenderData;
 use crate::ui::canvas::widget::*;
 
@@ -182,10 +183,12 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
             });
         }
 
-        for (_port_id, rect, color, hint) in &render.pins {
+        for (port_id, rect, color, hint) in &render.pins {
             let outer_rect = *rect;
             let mut fill_rect = outer_rect;
             let color = *color;
+            let shape = hint.shape.unwrap_or(PortShapeHint::Circle);
+            let dir = render.port_labels.get(port_id).map(|l| l.dir);
 
             if let Some(scale) = hint.inner_scale {
                 if scale.is_finite() {
@@ -203,35 +206,101 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                 }
             }
 
-            // v1: only circle is guaranteed. Other shapes may fall back to circle.
             if hint.inner_scale.unwrap_or(1.0) > 0.0 {
-                let r = Px(0.5 * fill_rect.size.width.0);
-                scene.push(SceneOp::Quad {
-                    order: DrawOrder(4),
-                    rect: fill_rect,
-                    background: fret_core::Paint::Solid(color),
+                match shape {
+                    PortShapeHint::Circle => {
+                        let r = Px(0.5 * fill_rect.size.width.0);
+                        scene.push(SceneOp::Quad {
+                            order: DrawOrder(4),
+                            rect: fill_rect,
+                            background: fret_core::Paint::Solid(color),
 
-                    border: Edges::all(Px(0.0)),
-                    border_paint: fret_core::Paint::TRANSPARENT,
+                            border: Edges::all(Px(0.0)),
+                            border_paint: fret_core::Paint::TRANSPARENT,
 
-                    corner_radii: Corners::all(r),
-                });
+                            corner_radii: Corners::all(r),
+                        });
+                    }
+                    PortShapeHint::Diamond | PortShapeHint::Triangle => {
+                        if let Some(path) = self.paint_cache.port_shape_fill_path(
+                            services,
+                            shape,
+                            fill_rect.size,
+                            dir,
+                            zoom,
+                            scale_factor,
+                        ) {
+                            scene.push(SceneOp::Path {
+                                order: DrawOrder(4),
+                                origin: fill_rect.origin,
+                                path,
+                                paint: color.into(),
+                            });
+                        } else {
+                            let r = Px(0.5 * fill_rect.size.width.0);
+                            scene.push(SceneOp::Quad {
+                                order: DrawOrder(4),
+                                rect: fill_rect,
+                                background: fret_core::Paint::Solid(color),
+
+                                border: Edges::all(Px(0.0)),
+                                border_paint: fret_core::Paint::TRANSPARENT,
+
+                                corner_radii: Corners::all(r),
+                            });
+                        }
+                    }
+                }
             }
 
             if let Some(stroke) = hint.stroke {
                 let w = hint.stroke_width.unwrap_or(1.0);
                 if w.is_finite() && w > 0.0 {
-                    let r = Px(0.5 * outer_rect.size.width.0);
-                    scene.push(SceneOp::Quad {
-                        order: DrawOrder(4),
-                        rect: outer_rect,
-                        background: fret_core::Paint::TRANSPARENT,
+                    match shape {
+                        PortShapeHint::Circle => {
+                            let r = Px(0.5 * outer_rect.size.width.0);
+                            scene.push(SceneOp::Quad {
+                                order: DrawOrder(4),
+                                rect: outer_rect,
+                                background: fret_core::Paint::TRANSPARENT,
 
-                        border: Edges::all(Px(w / zoom)),
-                        border_paint: fret_core::Paint::Solid(stroke),
+                                border: Edges::all(Px(w / zoom)),
+                                border_paint: fret_core::Paint::Solid(stroke),
 
-                        corner_radii: Corners::all(r),
-                    });
+                                corner_radii: Corners::all(r),
+                            });
+                        }
+                        PortShapeHint::Diamond | PortShapeHint::Triangle => {
+                            if let Some(path) = self.paint_cache.port_shape_stroke_path(
+                                services,
+                                shape,
+                                outer_rect.size,
+                                dir,
+                                zoom,
+                                scale_factor,
+                                w,
+                            ) {
+                                scene.push(SceneOp::Path {
+                                    order: DrawOrder(4),
+                                    origin: outer_rect.origin,
+                                    path,
+                                    paint: stroke.into(),
+                                });
+                            } else {
+                                let r = Px(0.5 * outer_rect.size.width.0);
+                                scene.push(SceneOp::Quad {
+                                    order: DrawOrder(4),
+                                    rect: outer_rect,
+                                    background: fret_core::Paint::TRANSPARENT,
+
+                                    border: Edges::all(Px(w / zoom)),
+                                    border_paint: fret_core::Paint::Solid(stroke),
+
+                                    corner_radii: Corners::all(r),
+                                });
+                            }
+                        }
+                    }
                 }
             }
         }

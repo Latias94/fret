@@ -4,7 +4,7 @@ use fret_core::{Color, DrawOrder, Point, Px, Rect, Scene, SceneOp, Size, Transfo
 use fret_ui::retained_bridge::Widget as _;
 use fret_ui::{Invalidation, UiTree};
 
-use crate::ui::{NodeGraphCanvas, NodeGraphSkin, NodeGraphStyle, PortChromeHint};
+use crate::ui::{NodeGraphCanvas, NodeGraphSkin, NodeGraphStyle, PortChromeHint, PortShapeHint};
 
 use super::{NullServices, TestUiHostImpl, insert_view, make_test_graph_two_nodes_with_ports};
 
@@ -75,6 +75,47 @@ impl NodeGraphSkin for PortHintSkin {
             PortChromeHint {
                 // Prove that non-target ports remain based on the presenter default unless
                 // overridden.
+                fill: Some(base_fill),
+                ..PortChromeHint::default()
+            }
+        }
+    }
+}
+
+#[derive(Debug)]
+struct PortShapeHintSkin {
+    target: crate::core::PortId,
+    shape: PortShapeHint,
+}
+
+impl NodeGraphSkin for PortShapeHintSkin {
+    fn port_chrome_hint(
+        &self,
+        _graph: &crate::core::Graph,
+        port: crate::core::PortId,
+        _style: &NodeGraphStyle,
+        base_fill: Color,
+    ) -> PortChromeHint {
+        if port == self.target {
+            PortChromeHint {
+                fill: Some(Color {
+                    r: 0.20,
+                    g: 0.55,
+                    b: 0.95,
+                    a: 1.0,
+                }),
+                stroke: Some(Color {
+                    r: 1.0,
+                    g: 1.0,
+                    b: 1.0,
+                    a: 1.0,
+                }),
+                stroke_width: Some(2.0),
+                inner_scale: Some(0.6),
+                shape: Some(self.shape),
+            }
+        } else {
+            PortChromeHint {
                 fill: Some(base_fill),
                 ..PortChromeHint::default()
             }
@@ -201,4 +242,102 @@ fn skin_port_chrome_hints_apply_fill_stroke_and_inner_scale_paint_only() {
 
     assert_eq!(fill_hits, 1, "expected exactly one inner-scaled fill quad");
     assert_eq!(stroke_hits, 1, "expected exactly one stroke overlay quad");
+}
+
+#[test]
+fn skin_port_shape_hint_renders_path_ops_for_non_circle_shapes() {
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(800.0), Px(600.0)),
+    );
+
+    let mut host = TestUiHostImpl::default();
+    let (graph_value, _a, _a_in, a_out, _b, _b_in) = make_test_graph_two_nodes_with_ports();
+    let graph = host.models.insert(graph_value);
+    let view = insert_view(&mut host);
+    let _ = view.update(&mut host, |s, _cx| {
+        s.zoom = 1.0;
+        s.interaction.only_render_visible_elements = false;
+        s.interaction.frame_view_duration_ms = 0;
+    });
+
+    let style = NodeGraphStyle::default();
+    let mut canvas = NodeGraphCanvas::new(graph, view)
+        .with_style(style)
+        .with_skin(Arc::new(PortShapeHintSkin {
+            target: a_out,
+            shape: PortShapeHint::Diamond,
+        }));
+
+    let snapshot = canvas.sync_view_state(&mut host);
+    let (geom, _index) = canvas.canvas_derived(&host, &snapshot);
+    let port_bounds = geom.ports.get(&a_out).expect("port exists").bounds;
+
+    let mut tree = UiTree::<TestUiHostImpl>::default();
+    let mut services = NullServices::default();
+    let scene = paint_once(&mut canvas, &mut host, &mut tree, &mut services, bounds);
+
+    let expected_fill = Color {
+        r: 0.20,
+        g: 0.55,
+        b: 0.95,
+        a: 1.0,
+    };
+    let expected_stroke = Color {
+        r: 1.0,
+        g: 1.0,
+        b: 1.0,
+        a: 1.0,
+    };
+
+    let cx = port_bounds.origin.x.0 + 0.5 * port_bounds.size.width.0;
+    let cy = port_bounds.origin.y.0 + 0.5 * port_bounds.size.height.0;
+    let expected_w = port_bounds.size.width.0 * 0.6;
+    let expected_h = port_bounds.size.height.0 * 0.6;
+    let expected_rect = Rect::new(
+        Point::new(Px(cx - 0.5 * expected_w), Px(cy - 0.5 * expected_h)),
+        Size::new(Px(expected_w), Px(expected_h)),
+    );
+    let expected_outer_rect = port_bounds;
+
+    let approx = |a: f32, b: f32| (a - b).abs() <= 1.0e-3;
+
+    let mut fill_path_hits = 0usize;
+    let mut stroke_path_hits = 0usize;
+    for op in scene.ops() {
+        match op {
+            SceneOp::Path {
+                order: DrawOrder(4),
+                origin,
+                paint,
+                ..
+            } => match paint {
+                fret_core::Paint::Solid(c) if *c == expected_fill => {
+                    if approx(origin.x.0, expected_rect.origin.x.0)
+                        && approx(origin.y.0, expected_rect.origin.y.0)
+                    {
+                        fill_path_hits += 1;
+                    }
+                }
+                fret_core::Paint::Solid(c) if *c == expected_stroke => {
+                    if approx(origin.x.0, expected_outer_rect.origin.x.0)
+                        && approx(origin.y.0, expected_outer_rect.origin.y.0)
+                    {
+                        stroke_path_hits += 1;
+                    }
+                }
+                _ => {}
+            },
+            _ => {}
+        }
+    }
+
+    assert!(
+        fill_path_hits >= 1,
+        "expected at least one fill Path op for the shaped pin"
+    );
+    assert!(
+        stroke_path_hits >= 1,
+        "expected at least one stroke Path op for the shaped pin"
+    );
 }
