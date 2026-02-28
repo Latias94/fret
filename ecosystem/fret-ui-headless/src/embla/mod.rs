@@ -3,5 +3,6 @@ pub mod scroll_target;
 pub mod utils;
 
 pub mod drag_release;
+pub mod engine;
 pub mod limit;
 pub mod scroll_limit;
