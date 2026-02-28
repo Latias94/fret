@@ -160,11 +160,14 @@ When the measured geometry changes in a way that affects snaps/limits (`scrollSn
 - The selected index becomes the snap closest to the current scroll target vector after re-init.
 - The operation is idempotent and safe to call multiple times during continuous resize.
 
-### Event contract (still missing in-tree)
+### Event contract (MVP implemented; full API still pending)
 
-- A `reInit` event must be observable by recipe-level code.
-- If re-init changes the selected index, `select` must also fire (order: `reInit` then `select` is
-  acceptable as long as it is stable and documented).
+- MVP: `reInit` and `select` are observable via monotonic generation counters published in
+  `CarouselApiSnapshot` (`reinit_generation` / `select_generation`).
+- Full parity: a `CarouselApi` handle should expose `on_select` / `on_reinit` (or a safe event queue)
+  without requiring callers to store arbitrary closures inside models.
+- If re-init changes the selected index, `select` must also fire. Order is not required to match
+  Embla exactly, but it must be stable and documented.
 
 ## Events + API surface
 

@@ -91,7 +91,10 @@ Non-goals (v2):
 - [ ] CAR2-160 Implement `reInit` event emission when geometry/options change.
   - Implemented (internal): headless `Engine::reinit` and shadcn recipe wiring on snap/viewport
     changes.
-  - Missing: a public event surface / API hook to observe `reInit`.
+  - MVP: observable via monotonic generation counters published in `CarouselApiSnapshot`
+    (`reinit_generation` / `select_generation`).
+  - Missing: a full event subscription API surface (`on_reinit` / `on_select`) on a stable
+    `CarouselApi` handle.
   - Evidence:
     - `ecosystem/fret-ui-headless/src/embla/engine.rs` (`Engine::reinit`)
     - `ecosystem/fret-ui-shadcn/src/carousel.rs` (calls `engine.reinit(...)` when snaps/viewport change)

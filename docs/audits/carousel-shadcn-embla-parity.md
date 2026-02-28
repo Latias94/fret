@@ -60,9 +60,12 @@ that should be addressed at the correct layer (mechanism vs policy/recipes).
 - Upstream supports `opts`, `plugins`, and `setApi` (Embla API instance). Fret currently exposes a
   deterministic “snap + buttons + swipe” surface only; `opts` is supported only for snap model
   semantics (not for the full Embla options set).
-- No event hook surface (e.g. `select`, `reInit`) because there is no `setApi` equivalent yet.
-- No Embla-style imperative API surface. Fret does expose a small, deterministic snapshot surface
-  (`CarouselApiSnapshot`) that supports slide counters without introducing event subscriptions.
+- No callback subscription surface (e.g. Embla `api.on('select')` / `api.on('reInit')`) because there
+  is no `setApi`-style handle yet.
+- MVP event observability exists via monotonic generation counters published in
+  `CarouselApiSnapshot` (`select_generation` / `reinit_generation`).
+- No Embla-style imperative API surface. Fret exposes a small, deterministic snapshot surface
+  (`CarouselApiSnapshot`) for slide counters and basic state.
 
 ### Behavior/physics
 
