@@ -147,8 +147,8 @@ This file tracks tasks for `docs/workstreams/diag-fearless-refactor-v1.md`.
 - [x] Deduplicate latest bundle resolution helpers outside `commands/*`.
   - Evidence: `crates/fret-diag/src/latest.rs`, `crates/fret-diag/src/diag_perf.rs`, `crates/fret-diag/src/post_run_checks.rs`,
     `crates/fret-diag/src/paths.rs`.
-- [ ] Decide how far to push schema2-first:
-  - [ ] Decide the runtime emission policy for `bundle.schema2.json` (tooling-derived today):
+- [x] Decide how far to push schema2-first:
+  - [x] Decide the runtime emission policy for `bundle.schema2.json` (tooling-derived today):
     - Proposed policy draft: `docs/workstreams/diag-fearless-refactor-v1/schema2-first-decision.md`.
     - [x] Implement an opt-in runtime companion artifact (`bundle.schema2.json`) emission path.
       - Evidence: `ecosystem/fret-bootstrap/src/ui_diagnostics/config.rs` (`write_bundle_schema2`),
@@ -158,17 +158,20 @@ This file tracks tasks for `docs/workstreams/diag-fearless-refactor-v1.md`.
         for tool-launched runs).
     - [x] Make `write_bundle_schema2` config-only (no env override) to shrink the “switch” surface for launched runs.
       - Evidence: `ecosystem/fret-bootstrap/src/ui_diagnostics/config.rs`, `crates/fret-diag/src/commands/config.rs`.
-    - [ ] Decide whether scripted runs should default to emitting schema2, and whether raw `bundle.json` can be skipped.
-  - [ ] Decide when it is acceptable to stop treating raw `bundle.json` as a required artifact for common flows
-    (keep it supported for deep debugging).
+    - [x] Decide whether scripted runs should default to emitting schema2, and whether raw `bundle.json` can be skipped.
+      - Decision: tool-launched runs default to `write_bundle_json=false` and `write_bundle_schema2=true` (manual runs keep compat defaults unless configured).
+  - [ ] Decide when it is acceptable to stop treating raw `bundle.json` as a required artifact for common flows.
+    - Decision: treat raw as optional for tool-launched flows; keep it supported for deep debugging and for manual runs that do not use a config file.
+    - Follow-up: add an explicit “raw required” inventory list (where `bundle.json` is still the only viable view) before flipping more defaults.
 
 ## Schema migration hygiene
 
 - [ ] Decide the migration policy for schema v1 → v2:
   - [x] Document a conservative draft policy (phases + exit criteria):
     - `docs/workstreams/diag-fearless-refactor-v1.md`
-  - [ ] Decide when to flip manual dump defaults to v2 (owner decision).
-  - [ ] Decide deprecation messaging + migration recipes for older v1 repros.
+  - [x] Decide when to flip manual dump defaults to v2 (owner decision).
+    - Decision: do not flip manual defaults yet; revisit once exit criteria in `schema2-first-decision.md` are met.
+  - [ ] Decide deprecation messaging + migration recipes for older v1 repros (still pending).
 - [x] Add one regression guard that prevents re-introducing forked protocol types in the runtime runner.
   - Evidence: `crates/fret-diag-protocol/src/lib.rs` (`DiagScreenshotRequestV1` / `DiagScreenshotResultFileV1`),
     `ecosystem/fret-bootstrap/src/ui_diagnostics/script_steps.rs` (request writer),

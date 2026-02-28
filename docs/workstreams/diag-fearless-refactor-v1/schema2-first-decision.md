@@ -5,7 +5,7 @@ date: 2026-02-24
 scope: diagnostics, bundle-artifacts, schema-evolution, ai-first
 ---
 
-# Schema2-first decision draft (Plan 1)
+# Schema2-first policy (Plan 1)
 
 This note proposes a conservative path to make **schema2-first** the default for day-to-day
 diagnostics workflows without breaking existing tooling or offline viewer usage.
@@ -34,7 +34,31 @@ Terminology:
 3. Reduce the number of workflows that *require* raw `bundle.json`:
    - raw remains supported for deep debugging, but stops being a default dependency.
 
-## Proposed policy (recommended)
+## Policy (decision)
+
+This section is the **current recommended policy** for in-repo workflows (2026-02-28). It is intentionally conservative:
+it makes tool-launched runs small-by-default without forcing a breaking change on manual/ad-hoc dumps.
+
+### Tool-launched runs (`fretboard diag ... --launch`)
+
+- Tooling MUST write a per-run `diag.config.json` under `--dir` and set `FRET_DIAG_CONFIG_PATH` to it.
+- If tooling cannot write `diag.config.json`, treat it as a launch failure (avoid silently falling back to runtime defaults).
+- Default per-run config for launched runs SHOULD be small-by-default:
+  - `write_bundle_json=false`
+  - `write_bundle_schema2=true`
+  - `script_dump_max_snapshots<=10`
+  - `max_debug_string_bytes<=2048`
+
+### Manual/ad-hoc runs (no tooling)
+
+- If no config file is present, keep runtime defaults compatibility-first (raw `bundle.json` may be written).
+- If you want small-by-default manual dumps, use `FRET_DIAG_CONFIG_PATH` and set:
+  - `write_bundle_json=false`
+  - `write_bundle_schema2=true`
+  - (recommended) `script_dump_max_snapshots<=10`
+  - (recommended) `max_debug_string_bytes<=2048`
+
+## Proposed knobs (capture-time)
 
 ### A) Keep writing `bundle.json` (compat), but optionally emit `bundle.schema2.json` at capture time
 
@@ -70,6 +94,18 @@ We should only move “raw is optional” from docs into defaults when all are t
    - `ai.packet/` is generated automatically in `run|pack|repro` workflows (`--ai-packet` / `--ai-only`).
 3. `diag pack --include-all --pack-schema2-only` works without requiring `bundle.json` in the share zip.
 4. Any remaining “deep debugging” workflows that truly require raw `bundle.json` are documented as such.
+
+## Exit criteria to flip manual defaults (future)
+
+Flipping manual dumps to be small-by-default is higher risk because manual workflows often rely on “whatever dumps land on
+disk” without tooling context. Do not flip until all are true:
+
+1. `docs/ui-diagnostics-and-scripted-tests.md` clearly documents the new default and the “deep debug” escape hatch.
+2. At least one “materialize raw on demand” path exists (tooling or runtime) for the rare cases that truly need raw JSON.
+3. Common CLI tooling flows (`meta/query/slice/triage/ai-packet/pack/repro`) remain schema2-first and do not regress to
+   raw-only assumptions.
+4. `diag config doctor --mode manual` provides a clear warning when manual runs are about to produce large artifacts
+   (help users self-correct without reading this doc).
 
 ## Risks / cautions
 
