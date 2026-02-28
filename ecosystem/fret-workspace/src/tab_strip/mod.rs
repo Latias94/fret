@@ -17,7 +17,7 @@ use fret_ui::element::{
     ScrollAxis, ScrollProps, SemanticsProps, TextInkOverflow, TextProps,
 };
 use fret_ui::elements::GlobalElementId;
-use fret_ui::{ElementContext, Invalidation, Theme, UiHost};
+use fret_ui::{ElementContext, Invalidation, UiHost};
 use fret_ui_kit::declarative::action_hooks::ActionHooksExt as _;
 use fret_ui_kit::dnd as ui_dnd;
 
@@ -35,6 +35,7 @@ mod intent;
 mod kernel;
 mod layouts;
 mod state;
+mod theme;
 mod utils;
 
 #[cfg(feature = "shadcn-context-menu")]
@@ -55,7 +56,8 @@ use layouts::{
     tab_list_semantics_layout, tab_strip_scroll_content_layout,
 };
 use state::WorkspaceTabStripState;
-use utils::{dnd_scope_for_pane, resolve_end_drop_target, scroll_rect_into_view_x, tab_text_style};
+use theme::WorkspaceTabStripTheme;
+use utils::{dnd_scope_for_pane, resolve_end_drop_target, scroll_rect_into_view_x};
 
 use crate::tab_drag::compute_tab_drop_target;
 
@@ -248,7 +250,8 @@ impl WorkspaceTabStrip {
         let dragged_tab = drag_snapshot.dragged_tab.clone();
         let drop_target = drag_snapshot.drop_target.clone();
 
-        let (
+        let theme = WorkspaceTabStripTheme::resolve(cx);
+        let WorkspaceTabStripTheme {
             bar_bg,
             bar_border,
             active_bg,
@@ -261,60 +264,7 @@ impl WorkspaceTabStrip {
             tab_radius,
             scroll_button_fg,
             tab_max_width,
-        ) = {
-            let theme = Theme::global(cx.app);
-
-            let bar_bg = theme
-                .color_by_key("workspace.tab_strip.bg")
-                .or_else(|| theme.color_by_key("muted"))
-                .or_else(|| theme.color_by_key("background"));
-            let bar_border = theme.color_by_key("border");
-
-            let active_bg = theme
-                .color_by_key("workspace.tab.active_bg")
-                .or_else(|| theme.color_by_key("background"));
-            let active_fg = theme.color_token("foreground");
-            let inactive_fg = theme.color_by_key("muted-foreground").unwrap_or(active_fg);
-            let dirty_fg = theme
-                .color_by_key("workspace.tab.dirty_fg")
-                .or_else(|| theme.color_by_key("ring"))
-                .or_else(|| theme.color_by_key("primary"))
-                .unwrap_or(active_fg);
-            let hover_bg = theme
-                .color_by_key("accent")
-                .or_else(|| theme.color_by_key("workspace.tab.hover_bg"))
-                .unwrap_or(Color::TRANSPARENT);
-
-            let indicator_color = theme
-                .color_by_key("workspace.tab.drop_indicator")
-                .or_else(|| theme.color_by_key("ring"))
-                .or_else(|| theme.color_by_key("accent"));
-
-            let text_style = tab_text_style(theme);
-            let tab_radius = theme.metric_by_key("radius").unwrap_or(Px(6.0));
-            let scroll_button_fg = theme
-                .color_by_key("workspace.tab_strip.scroll_fg")
-                .or_else(|| theme.color_by_key("muted-foreground"))
-                .unwrap_or(active_fg);
-            let tab_max_width = theme
-                .metric_by_key("workspace.tab.max_width")
-                .unwrap_or(Px(240.0));
-
-            (
-                bar_bg,
-                bar_border,
-                active_bg,
-                active_fg,
-                inactive_fg,
-                dirty_fg,
-                hover_bg,
-                indicator_color,
-                text_style,
-                tab_radius,
-                scroll_button_fg,
-                tab_max_width,
-            )
-        };
+        } = theme;
 
         cx.semantics(
             SemanticsProps {
