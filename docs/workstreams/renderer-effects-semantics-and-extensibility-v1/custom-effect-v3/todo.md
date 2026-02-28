@@ -15,12 +15,10 @@ This TODO tracks the V3 work as landable steps. It intentionally starts with “
 - [x] Decide the exact portable surface names and sanitization rules:
   - `CustomEffectSourcesV3` fields (raw request + pyramid request),
   - pyramid bounds (`max_levels`, `max_radius_px`) and clamp constants.
-- [ ] Add an explicit “degradation vocabulary” for v3 sources in diagnostics (beyond plan dumps):
-  - `raw_aliased_to_src`,
-  - `pyramid_degraded_to_one`,
-  - `pyramid_budget_insufficient`,
-  - `user1_unsupported`,
-  - etc.
+- [x] Add an explicit “degradation vocabulary” for v3 sources in diagnostics (beyond plan dumps):
+  - `raw_aliased_to_src` (counter: `custom_effect_v3_sources.raw_aliased_to_src`)
+  - `pyramid_degraded_to_one_budget_zero` / `pyramid_degraded_to_one_budget_insufficient`
+  - Note: `user1_unsupported` remains TODO (capability gating vocabulary is not finalized).
 
 - [x] Define cache-key and generation implications:
   - ensure v3 registration generations and any source-prep knobs that affect encode output contribute to

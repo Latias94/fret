@@ -24,6 +24,19 @@ with explicit budgeting and deterministic degradation.
 - M1 (bounded pyramid `src_pyramid`): implemented in `fret-render-wgpu` with plan dump reporting and conformance.
 - M2 (sharing/caching): deferred (requires an explicit mechanism-level design).
 
+## Diagnostics vocabulary (wgpu)
+
+CustomV3 source outcomes are visible in two places:
+
+- RenderPlan dump summaries (per-effect): requested vs distinct/aliased raw, and requested vs degraded pyramid.
+- Per-frame perf counters (aggregate): `RenderPerfSnapshot.effect_degradations.custom_effect_v3_sources.*`.
+
+Counters:
+
+- `raw_requested`, `raw_distinct`, `raw_aliased_to_src`
+- `pyramid_requested`, `pyramid_applied_levels_ge2`
+- `pyramid_degraded_to_one_budget_zero`, `pyramid_degraded_to_one_budget_insufficient`
+
 ## Design anchor
 
 Normative contract:
