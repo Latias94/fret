@@ -32,6 +32,22 @@ Use `fret-ui-review` when the goal is an architecture/UX audit rather than produ
 - The failure is explained by stable `reason_code` + bounded evidence in `script.result.json` / `triage.json`.
 - If the issue is likely to regress: one landable gate exists (script suite and/or a Rust test).
 
+## Best practices (repeatable habits)
+
+- Prefer `--launch` for determinism; avoid relying on parent-shell `FRET_DIAG_*` for tool-launched runs.
+- Before rerunning a suspiciously large or inconsistent run:
+  - `fretboard diag config doctor --mode launch --print-launch-policy`
+  - `fretboard diag config doctor --mode launch --report-json` (inspect `launch_policy` + warnings)
+- Keep artifacts small by default:
+  - capture only a few bundles at key points (not after every step),
+  - prefer sidecars + `bundle.schema2.json` over raw `bundle.json`,
+  - avoid `FRET_DIAG_BUNDLE_JSON_FORMAT=pretty` unless you truly need it.
+- Use raw `bundle.json` only as an explicit escape hatch in tool-launched mode:
+  - `--launch-write-bundle-json` (never for `diag matrix`).
+- When triaging: prefer `diag meta/query/slice` over searching JSON.
+- When a script is flaky: replace sleeps with stabilization (`click_stable`, `wait_until`, bounds-stable), and shrink.
+- Always leave behind the 3-pack: repro script + bounded evidence bundle + regression gate (suite/check/test).
+
 ## When to use
 
 - A UI bug is hard to reproduce, flaky, or requires “human timing”.
