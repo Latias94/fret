@@ -78,7 +78,7 @@ Read first:
 | charts/plot | Chart chrome + legend contrast | (ecosystem ports) | audit literal/derived assumptions | tbd | tbd | [ ] |  |
 | docking | Docking chrome (drag affordances) | (in-tree) | audit semantic vs literal usage | tbd | diag screenshot (zinc/dark) | [ ] | `ecosystem/fret-docking/src/` |
 | canvas/node | Node graph selection highlights | (in-tree) | audit selection + hover tokens | `selection.*`, `accent*` | diag screenshot (zinc/dark) | [ ] | `ecosystem/fret-node/src/`, `ecosystem/fret-canvas/src/` |
-| icons | Icon currentColor + muted defaults | `repo-ref/ui` icon recipes | `text-muted-foreground` + `currentColor` | `muted-foreground`, `currentColor` | Rust tests (props) | [ ] | `ecosystem/fret-icons*/src/` |
+| icons | Icon currentColor + muted defaults | `repo-ref/ui` icon recipes | `text-muted-foreground` + `currentColor` | `muted-foreground`, `currentColor` | Rust tests (props) | [x] | `ecosystem/fret-ui-kit/src/declarative/icon.rs`, `crates/fret-ui/src/declarative/tests/foreground_inheritance.rs`, `ecosystem/fret-ui-shadcn/src/badge.rs` |
 | ui-assets | Image placeholders + skeletons | `repo-ref/ui` skeleton | `bg-muted` + `animate-pulse` | `muted` + alpha | diag screenshot (zinc/dark) | [ ] | `ecosystem/fret-ui-assets/src/`, `apps/fret-ui-gallery/src/ui/pages/skeleton.rs` |
 
 ## Open questions / decision gates
