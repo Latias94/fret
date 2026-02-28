@@ -99,6 +99,54 @@
       },
       "timeout_frames": 600
     },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "docsec-demo-content" }
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_bounds_stable",
+      "target": { "kind": "test_id", "id": "docsec-demo-content" },
+      "stable_frames": 10,
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "bounds_center_approx_equal",
+        "a": { "kind": "test_id", "id": "docsec-demo-content" },
+        "b": { "kind": "test_id", "id": "ui-gallery-aspect-ratio-demo" },
+        "eps_px": 48.0
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "docsec-square-content" }
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_bounds_stable",
+      "target": { "kind": "test_id", "id": "docsec-square-content" },
+      "stable_frames": 10,
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "bounds_center_approx_equal",
+        "a": { "kind": "test_id", "id": "docsec-square-content" },
+        "b": { "kind": "test_id", "id": "ui-gallery-aspect-ratio-square" },
+        "eps_px": 64.0
+      },
+      "timeout_frames": 600
+    },
     { "type": "capture_bundle", "label": "ui-gallery-aspect-ratio-docs-smoke" }
   ]
 }
