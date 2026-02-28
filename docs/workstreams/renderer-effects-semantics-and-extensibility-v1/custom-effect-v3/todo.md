@@ -11,51 +11,46 @@ This TODO tracks the V3 work as landable steps. It intentionally starts with “
 
 ## P0 — Lock the contract
 
-- [ ] Review ADR 0301 for boundedness, WebGPU constraints, and cache-key implications.
-- [ ] Decide the exact portable surface names and sanitization rules:
+- [x] Review ADR 0301 for boundedness, WebGPU constraints, and cache-key implications.
+- [x] Decide the exact portable surface names and sanitization rules:
   - `CustomEffectSourcesV3` fields (raw request + pyramid request),
   - pyramid bounds (`max_levels`, `max_radius_px`) and clamp constants.
-- [ ] Add an explicit “degradation vocabulary” for v3 sources in diagnostics:
+- [ ] Add an explicit “degradation vocabulary” for v3 sources in diagnostics (beyond plan dumps):
   - `raw_aliased_to_src`,
-  - `pyramid_unavailable`,
+  - `pyramid_degraded_to_one`,
   - `pyramid_budget_insufficient`,
   - `user1_unsupported`,
   - etc.
 
-- [ ] Define cache-key and generation implications:
+- [x] Define cache-key and generation implications:
   - ensure v3 registration generations and any source-prep knobs that affect encode output contribute to
     the scene encoding cache key.
 
 ## P1 — M0: Dual-source (`src_raw`) plumbing
 
 - [x] `fret-core`: add `EffectStep::CustomV3` + fingerprint/validate.
-- [ ] `fret-render-wgpu`: introduce a “source preparation” step for V3:
+- [x] `fret-render-wgpu`: introduce a “source preparation” step for V3:
   - ensure `src_raw` is read-only (cannot alias a render attachment being written this pass),
   - decide whether to preserve a scratch copy or render into an intermediate then composite back,
   - add deterministic degradation when scratch/budgets are insufficient (`src_raw == src`).
-  - Status: **partial** — the backend preserves a chain-root copy when scratch+budget allow and otherwise aliases;
-    pyramid prep is not implemented yet.
-- [ ] `fret-render-wgpu`: add render-plan reporting for v3 source prep outcomes:
+- [x] `fret-render-wgpu`: add render-plan reporting for v3 source prep outcomes:
   - whether raw is distinct or aliased,
-  - requested/applied pyramid levels (once implemented),
-  - degradation reasons surfaced in counters and plan dumps.
-  - Status: **partial** — plan dump includes v3 passes and `pyramid_levels`, but it does not yet surface raw-alias
-    outcomes or degradation counters.
+  - requested/applied pyramid levels,
+  - degradation reasons surfaced in plan dumps (counters remain TODO).
 - [x] Add conformance test: `src_raw` differs from `src` when a prior step modifies the chain (e.g. blur),
       and the shader can sample both deterministically under scissor/mask.
 
 ## P2 — M1: Optional bounded pyramid (`src_pyramid`)
 
-- [ ] Define pyramid generation strategy (bounded, deterministic):
+- [x] Define pyramid generation strategy (bounded, deterministic):
   - fixed max levels,
   - deterministic downsample/upsample passes,
   - stable clamping for sampling outside bounds.
-- [ ] `fret-render-wgpu`: implement pyramid allocation and populate mip levels under budgets.
-- [ ] Add plan dump reporting:
+- [x] `fret-render-wgpu`: implement pyramid allocation and populate mip levels under budgets.
+- [x] Add plan dump reporting:
   - requested vs applied pyramid levels,
-  - bytes allocated per pyramid,
   - degradation reasons.
-- [ ] Add conformance:
+- [x] Add conformance:
   - correct dimensions per level,
   - deterministic sampling clamps and alias behavior when pyramid is missing.
 

@@ -24,8 +24,8 @@ Current status:
 - Implemented `EffectStep::CustomV3` + validation/fingerprint and a wgpu pipeline/pass for CustomV3, including a
   bounded attempt to preserve a chain-root `src_raw` scratch copy under budgets.
 - Conformance exists for `src_raw` vs `src` correctness in a blur→custom chain.
-- Gaps: no explicit degradation counters yet (raw-alias outcomes are not surfaced), and the pyramid path is not
-  implemented (the backend currently aliases `src_pyramid` and reports `pyramid_levels` as 0/1 only).
+- Plan dumps include raw alias/distinct summaries per effect.
+- Gaps: no explicit degradation counters yet beyond plan dumps.
 
 ## M1 — Bounded blur pyramid (optional)
 
@@ -34,6 +34,13 @@ Outcome:
 - CustomV3 can request a bounded pyramid with explicit upper bounds.
 - wgpu backend builds a deterministic mip chain under budgets.
 - Plan dump + counters report requested/applied levels and degradation reasons.
+
+Current status:
+
+- Implemented pyramid generation in wgpu via a deterministic 2×2 box downsample chain into a renderer-owned mipped
+  scratch texture.
+- Conformance verifies that mip level 1 sampling differs from raw near an unaligned edge.
+- Plan dumps report requested count and degraded-to-1 outcomes.
 
 ## M2 — Optional sharing/caching (deferred)
 
