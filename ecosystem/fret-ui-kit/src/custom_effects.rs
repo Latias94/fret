@@ -1,6 +1,6 @@
 use fret_core::{
-    CustomEffectDescriptorV1, CustomEffectDescriptorV2, CustomEffectRegistrationError,
-    CustomEffectService, EffectId,
+    CustomEffectDescriptorV1, CustomEffectDescriptorV2, CustomEffectDescriptorV3,
+    CustomEffectRegistrationError, CustomEffectService, EffectId,
 };
 
 /// Lazily registers a custom effect program (v1) and caches its `EffectId`.
@@ -70,6 +70,61 @@ impl CustomEffectProgramV1 {
 pub struct CustomEffectProgramV2 {
     desc: CustomEffectDescriptorV2,
     id: Option<EffectId>,
+}
+
+/// Lazily registers a custom effect program (v3) and caches its `EffectId`.
+///
+/// V3 programs may request renderer-provided sources (e.g. `src_raw` + an optional bounded pyramid).
+///
+/// Notes:
+/// - The cached `EffectId` is tied to the current renderer instance. If the renderer is recreated
+///   (e.g. device loss), call `invalidate()` and re-register.
+#[derive(Debug, Clone)]
+pub struct CustomEffectProgramV3 {
+    desc: CustomEffectDescriptorV3,
+    id: Option<EffectId>,
+}
+
+impl CustomEffectProgramV3 {
+    pub fn wgsl_utf8(source: impl Into<String>) -> Self {
+        Self {
+            desc: CustomEffectDescriptorV3::wgsl_utf8(source),
+            id: None,
+        }
+    }
+
+    pub fn descriptor(&self) -> &CustomEffectDescriptorV3 {
+        &self.desc
+    }
+
+    pub fn id(&self) -> Option<EffectId> {
+        self.id
+    }
+
+    pub fn invalidate(&mut self) {
+        self.id = None;
+    }
+
+    pub fn ensure_registered(
+        &mut self,
+        effects: &mut dyn CustomEffectService,
+    ) -> Result<EffectId, CustomEffectRegistrationError> {
+        if let Some(id) = self.id {
+            return Ok(id);
+        }
+
+        let id = effects.register_custom_effect_v3(self.desc.clone())?;
+        self.id = Some(id);
+        Ok(id)
+    }
+
+    pub fn unregister(&mut self, effects: &mut dyn CustomEffectService) -> bool {
+        let Some(id) = self.id else {
+            return false;
+        };
+        self.id = None;
+        effects.unregister_custom_effect(id)
+    }
 }
 
 impl CustomEffectProgramV2 {
