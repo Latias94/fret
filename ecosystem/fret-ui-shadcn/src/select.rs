@@ -47,6 +47,10 @@ fn alpha_mul(mut c: Color, mul: f32) -> Color {
     c
 }
 
+fn select_overlay_background(theme: &ThemeSnapshot) -> Color {
+    theme.color_token("popover.background")
+}
+
 type OnOpenChange = Arc<dyn Fn(bool) + Send + Sync + 'static>;
 
 #[derive(Default)]
@@ -2496,7 +2500,7 @@ fn select_impl<H: UiHost>(
                         }
 
                         let shadow = decl_style::shadow_md(&theme_for_overlay, radius);
-                        let arrow_bg = theme_for_overlay.colors.panel_background;
+                        let arrow_bg = select_overlay_background(&theme_for_overlay);
                         let overlay_border = theme_for_overlay
                             .color_by_key("border")
                             .unwrap_or_else(|| theme_for_overlay.color_token("border"));
@@ -3436,9 +3440,7 @@ fn select_impl<H: UiHost>(
                                                 layout
                                             },
                                             padding: Edges::all(Px(0.0)).into(),
-                                            background: Some(
-                                                theme_for_overlay.colors.panel_background,
-                                            ),
+                                            background: Some(select_overlay_background(&theme_for_overlay)),
                                             shadow: Some(shadow),
                                             border: Edges::all(border_width),
                                             border_color: Some(overlay_border),

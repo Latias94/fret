@@ -2202,6 +2202,19 @@
       "target_hints": []
     },
     {
+      "id": "ui-gallery-theme-preset-select-open-screenshot-zinc-light",
+      "path": "tools/diag-scripts/ui-gallery/select/ui-gallery-theme-preset-select-open-screenshot-zinc-light.json",
+      "required_capabilities": [
+        "diag.script_v2",
+        "diag.screenshot_png"
+      ],
+      "suite_memberships": [
+        "ui-gallery-select"
+      ],
+      "tags": [],
+      "target_hints": []
+    },
+    {
       "id": "ui-gallery-shadcn-extras-kanban-dnd",
       "path": "tools/diag-scripts/ui-gallery/shadcn-conformance/ui-gallery-shadcn-extras-kanban-dnd.json",
       "required_capabilities": [],
