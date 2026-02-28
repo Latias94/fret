@@ -18,6 +18,12 @@ This is a strong baseline for bounded extensibility, but the “high fidelity li
 CustomV3 is the next bounded ceiling bump: it introduces **renderer-provided sources** (raw + optional pyramid)
 with explicit budgeting and deterministic degradation.
 
+## Status
+
+- M0 (dual-source `src_raw`): implemented in `fret-core` + `fret-render-wgpu` with conformance coverage.
+- M1 (bounded pyramid `src_pyramid`): implemented in `fret-render-wgpu` with plan dump reporting and conformance.
+- M2 (sharing/caching): deferred (requires an explicit mechanism-level design).
+
 ## Design anchor
 
 Normative contract:
