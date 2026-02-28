@@ -11,6 +11,7 @@ pub(crate) struct ConfigCmdContext {
     pub(crate) resolved_ready_path: PathBuf,
     pub(crate) resolved_exit_path: PathBuf,
     pub(crate) fs_transport_cfg: crate::transport::FsDiagTransportConfig,
+    pub(crate) launch_env: Vec<(String, String)>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -909,7 +910,6 @@ fn cmd_config_doctor(ctx: ConfigCmdContext, rest: &[String]) -> Result<(), Strin
     let mut report_json: bool = false;
     let mut config_path_override: Option<PathBuf> = None;
     let mut show_env_all: bool = false;
-    let mut launch_env_overrides: Vec<(String, String)> = Vec::new();
 
     let mut i: usize = 0;
     while i < rest.len() {
@@ -952,26 +952,13 @@ fn cmd_config_doctor(ctx: ConfigCmdContext, rest: &[String]) -> Result<(), Strin
                     Some(crate::resolve_path(&ctx.workspace_root, PathBuf::from(v)));
                 i += 1;
             }
-            "--env" => {
-                i += 1;
-                let Some(v) = rest.get(i).cloned() else {
-                    return Err("missing value for --env (expected KEY=VALUE)".to_string());
-                };
-                let (key, value) = v
-                    .split_once('=')
-                    .ok_or_else(|| "invalid value for --env (expected KEY=VALUE)".to_string())?;
-                let key = key.trim();
-                if key.is_empty() {
-                    return Err("invalid value for --env (empty KEY)".to_string());
-                }
-                launch_env_overrides.push((key.to_string(), value.to_string()));
-                i += 1;
-            }
             "--help" | "-h" => {
                 println!(
-                    "Usage: fretboard diag config doctor [--mode launch|manual] [--config-path <path>] [--env KEY=VALUE ...] [--show-env set|all] [--report-json]\n\n\
+                    "Usage: fretboard diag config doctor [--mode launch|manual] [--config-path <path>] [--show-env set|all] [--report-json]\n\n\
 Default mode is `launch`, which overlays the tooling-reserved env vars (FRET_DIAG*, ready/exit paths) as if you were using `--launch`.\n\
-Use `--mode manual` to report what the runtime would see from the current process env only."
+Use `--mode manual` to report what the runtime would see from the current process env only.\n\
+\n\
+Tip: pass global `diag --env KEY=VALUE` flags to simulate one-off overrides for launched runs."
                 );
                 return Ok(());
             }
@@ -989,9 +976,10 @@ Use `--mode manual` to report what the runtime would see from the current proces
     let env_base = env_snapshot_from_process();
     let (effective_env, overridden_reserved, scrubbed_inherited) = match mode {
         DoctorMode::Manual => {
-            if !launch_env_overrides.is_empty() {
+            if !ctx.launch_env.is_empty() {
                 return Err(
-                    "--env is only supported with `diag config doctor --mode launch`".to_string(),
+                    "`--env KEY=VALUE` is only supported with `diag config doctor --mode launch`"
+                        .to_string(),
                 );
             }
             (env_base, Vec::new(), Vec::new())
@@ -1004,7 +992,7 @@ Use `--mode manual` to report what the runtime would see from the current proces
                 &ctx.resolved_exit_path,
                 &ctx.fs_transport_cfg,
             );
-            for (k, v) in &launch_env_overrides {
+            for (k, v) in &ctx.launch_env {
                 if crate::launch_env_policy::tool_launch_env_key_is_reserved(k) {
                     return Err(format!("--env cannot override reserved var: {k}"));
                 }
@@ -1183,10 +1171,8 @@ Use `--mode manual` to report what the runtime would see from the current proces
     );
 
     if report_json {
-        let mut launch_env_override_keys: Vec<String> = launch_env_overrides
-            .iter()
-            .map(|(k, _)| k.clone())
-            .collect();
+        let mut launch_env_override_keys: Vec<String> =
+            ctx.launch_env.iter().map(|(k, _)| k.clone()).collect();
         launch_env_override_keys.sort();
         let report = config_doctor_report_json(
             &effective_env,
@@ -1222,10 +1208,8 @@ Use `--mode manual` to report what the runtime would see from the current proces
             "tool_launch_env_reserved_keys_total: {}",
             crate::launch_env_policy::TOOL_LAUNCH_RESERVED_ENV_KEYS.len()
         );
-        let mut override_keys: Vec<String> = launch_env_overrides
-            .iter()
-            .map(|(k, _)| k.clone())
-            .collect();
+        let mut override_keys: Vec<String> =
+            ctx.launch_env.iter().map(|(k, _)| k.clone()).collect();
         override_keys.sort();
         if override_keys.is_empty() {
             println!("tool_launch_env_explicit_override_keys: (none)");

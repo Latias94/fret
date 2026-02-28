@@ -2839,6 +2839,7 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
             resolved_ready_path: resolved_ready_path.clone(),
             resolved_exit_path: resolved_exit_path.clone(),
             fs_transport_cfg: fs_transport_cfg.clone(),
+            launch_env: launch_env.clone(),
         }),
         "pick-arm" => commands::pick::cmd_pick_arm(&rest, &resolved_pick_trigger_path),
         "pick" => commands::pick::cmd_pick(
