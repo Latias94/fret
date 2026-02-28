@@ -817,10 +817,18 @@ impl FieldLabel {
         let pressable_layout_default = if wrap_children.is_some() {
             LayoutRefinement::default().w_full().min_w_0()
         } else {
-            LayoutRefinement::default().flex_1().min_w_0()
+            // `FieldLabel` is commonly used inside `FieldContent` (a vertical column). Using
+            // `flex-1` here makes the label a main-axis flex item, which can collapse to a zero
+            // main size in auto-sized columns and cause visible overlap with sibling text.
+            //
+            // Keep the default layout non-flex; parent recipes can opt into `flex-1` explicitly
+            // when they truly need a horizontally flexible label in a row.
+            LayoutRefinement::default().min_w_0()
         };
         let pressable_layout =
             decl_style::layout_style(&theme, pressable_layout_default.merge(self.layout));
+        let render_text_block =
+            !matches!(pressable_layout.size.width, fret_ui::element::Length::Auto);
         let control_registry = control_registry_model(cx);
         let text = self.text.clone();
         let fg = fg.clone();
@@ -943,16 +951,19 @@ impl FieldLabel {
                     direction_prim::LayoutDirection::Rtl => TextAlign::End,
                     direction_prim::LayoutDirection::Ltr => TextAlign::Start,
                 };
-                vec![
-                    ui::label(cx, text.clone())
-                        .text_size_px(px)
-                        .line_height_px(line_height)
-                        .font_medium()
-                        .text_color(fg.clone())
-                        .wrap(TextWrap::Word)
-                        .text_align(align)
-                        .into_element(cx),
-                ]
+                let mut builder = ui::label(cx, text.clone());
+                if render_text_block {
+                    builder = builder.w_full().min_w_0();
+                }
+                let mut label = builder
+                    .text_size_px(px)
+                    .line_height_px(line_height)
+                    .font_medium()
+                    .text_color(fg.clone())
+                    .wrap(TextWrap::Word)
+                    .text_align(align)
+                    .into_element(cx);
+                vec![label]
             } else {
                 Vec::new()
             };
