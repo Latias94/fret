@@ -147,7 +147,7 @@ fn finalize_dump(
     let bundle_json_bytes = if service.cfg.write_bundle_json {
         write_bundle_json_bytes(service, bundle_json_path, want_pretty, bundle)?
     } else {
-        Some(None)
+        None
     };
 
     let window_count = windows.len() as u64;
@@ -229,9 +229,8 @@ fn dump_schema_v2(
         //
         // We intentionally keep this file name stable (`bundle.schema2.json`) so tooling can
         // consume it directly without reparsing the larger raw `bundle.json`.
-        let mut compact = bundle.clone();
-        compact.apply_semantics_mode_v1(bundle::BundleSemanticsModeV1::Last);
-        let _ = write_json_compact(dir.join("bundle.schema2.json"), &compact);
+        bundle.apply_semantics_mode_v1(bundle::BundleSemanticsModeV1::Last);
+        let _ = write_json_compact(dir.join("bundle.schema2.json"), &bundle);
     }
 
     Some(stats)
