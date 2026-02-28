@@ -216,6 +216,24 @@ Evidence anchors:
 Embla emits a `reInit` event when it re-initializes due to geometry or option changes (e.g. resize,
 breakpoints, slide list changes).
 
+## Breakpoints / responsive options
+
+Embla supports responsive option overrides via `breakpoints` (media queries). Fret v2 provides a
+Rust-native equivalent that is evaluated based on the measured carousel viewport width.
+
+Contract:
+
+- Breakpoints are evaluated by selecting the last entry where `min_width_px <= viewport_width_px`.
+- The recipe applies an options patch on top of the base `CarouselOptions`.
+- `start_snap` is intentionally not overridden by breakpoint patches (it is an initial selection
+  input, not a responsive option).
+- When breakpoint selection changes, it is treated as a `reInit` trigger (observable via
+  `reinit_generation` / `CarouselEvent::ReInit`).
+
+Evidence anchors:
+
+- Breakpoint evaluation + patching: `ecosystem/fret-ui-shadcn/src/carousel.rs`
+
 ### Contract: geometry-driven re-init is safe and preserves motion
 
 When the measured geometry changes in a way that affects snaps/limits (`scrollSnaps`, `contentSize`,

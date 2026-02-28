@@ -154,10 +154,14 @@ Non-goals (v2):
 
 ## P3 — Breakpoints / responsive options
 
-- [ ] CAR2-310 Add a breakpoint evaluation mechanism (Rust-native; no CSS media query parsing).
+- [x] CAR2-310 Add a breakpoint evaluation mechanism (Rust-native; no CSS media query parsing).
   - Option A: explicit `Vec<(min_width_px, opts_override)>`
   - Option B: container query integration if already present in `fret-ui-kit`
-- [ ] CAR2-320 Regression gates for breakpoint changes (diag + tests).
+  - Implemented: `CarouselOptionsPatch` + `CarouselBreakpoint` evaluated from the measured carousel
+    viewport width (previous layout pass).
+  - Evidence: `ecosystem/fret-ui-shadcn/src/carousel.rs`
+- [x] CAR2-320 Regression gates for breakpoint changes (diag + tests).
+  - Gate: `ecosystem/fret-ui-shadcn/tests/carousel_breakpoints.rs`
 
 ---
 
