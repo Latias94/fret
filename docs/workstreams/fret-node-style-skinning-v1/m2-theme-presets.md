@@ -31,6 +31,10 @@ Recent additions (2026-02-28):
   remain `Circle`.
 - Wire glow is supported for selected edges and drag preview wires (renderer effect-based) and can
   be toggled in the demo via `primary+shift+g` (skin revision bump, paint-only).
+- Wire highlight (“inner stroke”) is parameterized via preset tokens:
+  - `themes/node-graph-presets.v1.json`: `paint_only_tokens.wire.highlight_selected` /
+    `highlight_hovered` (`width_mul`, `alpha_mul`, optional `color`)
+  - Theme-derived presets (`NodeGraphPresetSkinV1::new_from_snapshot`) also populate defaults.
 
 ## Goals
 
