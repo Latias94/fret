@@ -146,6 +146,13 @@ fn find_best_quad(scene: &Scene, target: Rect) -> Option<PaintedQuad> {
         let fret_core::Paint::Solid(border_color) = border_paint else {
             continue;
         };
+        let border_widths = [border.top.0, border.right.0, border.bottom.0, border.left.0];
+        let draws_border = border_widths.iter().any(|w| *w > 0.0);
+        let draws_background = background.a > 0.0;
+        if !draws_border && !draws_background {
+            // Skip paint-noop quads (common for shadow-only wrappers).
+            continue;
+        }
 
         let score = (rect.origin.x.0 - target.origin.x.0).abs()
             + (rect.origin.y.0 - target.origin.y.0).abs()
@@ -157,7 +164,7 @@ fn find_best_quad(scene: &Scene, target: Rect) -> Option<PaintedQuad> {
             best = Some(PaintedQuad {
                 rect,
                 background,
-                border: [border.top.0, border.right.0, border.bottom.0, border.left.0],
+                border: border_widths,
                 border_color,
                 corners: [
                     corner_radii.top_left.0,

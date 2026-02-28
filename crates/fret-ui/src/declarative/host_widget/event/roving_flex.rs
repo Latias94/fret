@@ -25,6 +25,10 @@ pub(super) fn handle_roving_flex<H: UiHost>(
         instance: &crate::declarative::frame::ElementInstance,
     ) -> bool {
         match instance {
+            // PointerRegion is a structural wrapper used by many composites (e.g. context menu
+            // triggers). Treat it as transparent so roving navigation can still find the
+            // interactive descendants it wraps.
+            crate::declarative::frame::ElementInstance::PointerRegion(_) => true,
             crate::declarative::frame::ElementInstance::Semantics(props) => matches!(
                 props.role,
                 fret_core::SemanticsRole::Group | fret_core::SemanticsRole::RadioGroup

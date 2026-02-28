@@ -1,5 +1,6 @@
 use crate::layout as shadcn_layout;
 use crate::popper_arrow::{self, DiamondArrowStyle};
+use crate::surface_slot::{ShadcnSurfaceSlot, with_surface_slot_provider};
 use fret_ui_kit::declarative::ModelWatchExt;
 use fret_ui_kit::declarative::scheduling;
 use fret_ui_kit::declarative::style as decl_style;
@@ -32,11 +33,18 @@ use fret_ui::{ElementContext, Invalidation, Theme, ThemeSnapshot, UiHost};
 
 use crate::overlay_motion;
 
-fn apply_tooltip_inherited_fg(mut element: AnyElement, fg: fret_core::Color) -> AnyElement {
+fn apply_tooltip_inherited_defaults(
+    mut element: AnyElement,
+    fg: fret_core::Color,
+    text_style: &TextStyle,
+) -> AnyElement {
     match &mut element.kind {
         ElementKind::Text(props) => {
             if props.color.is_none() {
                 props.color = Some(fg);
+            }
+            if props.style.is_none() {
+                props.style = Some(text_style.clone());
             }
         }
         ElementKind::SvgIcon(SvgIconProps { color, .. }) => {
@@ -54,13 +62,29 @@ fn apply_tooltip_inherited_fg(mut element: AnyElement, fg: fret_core::Color) -> 
         ElementKind::Spinner(SpinnerProps { color, .. }) => {
             color.get_or_insert(fg);
         }
+        ElementKind::StyledText(props) => {
+            if props.color.is_none() {
+                props.color = Some(fg);
+            }
+            if props.style.is_none() {
+                props.style = Some(text_style.clone());
+            }
+        }
+        ElementKind::SelectableText(props) => {
+            if props.color.is_none() {
+                props.color = Some(fg);
+            }
+            if props.style.is_none() {
+                props.style = Some(text_style.clone());
+            }
+        }
         _ => {}
     }
 
     element.children = element
         .children
         .into_iter()
-        .map(|child| apply_tooltip_inherited_fg(child, fg))
+        .map(|child| apply_tooltip_inherited_defaults(child, fg, text_style))
         .collect();
     element
 }
@@ -1379,6 +1403,21 @@ impl TooltipContent {
         }
     }
 
+    /// Builds a `TooltipContent` element in the `TooltipContent` surface slot scope.
+    ///
+    /// Upstream shadcn/ui uses `data-slot=tooltip-content` selectors to refine nested defaults
+    /// (e.g. `Kbd` uses `bg-background/20 text-background` inside tooltips). Fret models these
+    /// selectors via inherited state, so this helper ensures descendants can observe the slot.
+    #[track_caller]
+    pub fn with<H: UiHost>(
+        cx: &mut ElementContext<'_, H>,
+        f: impl FnOnce(&mut ElementContext<'_, H>) -> Vec<AnyElement>,
+    ) -> AnyElement {
+        with_surface_slot_provider(cx, ShadcnSurfaceSlot::TooltipContent, |cx| {
+            TooltipContent::new(f(cx)).into_element(cx)
+        })
+    }
+
     pub fn text<H: UiHost>(
         cx: &mut ElementContext<'_, H>,
         text: impl Into<Arc<str>>,
@@ -1421,10 +1460,11 @@ impl TooltipContent {
         let chrome = tooltip_content_chrome(&theme).merge(self.chrome);
         let props = decl_style::container_props(&theme, chrome, base_layout.merge(self.layout));
         let fg = tooltip_text_fg(&theme);
+        let text_style = tooltip_text_style(&theme);
         let children = self
             .children
             .into_iter()
-            .map(|child| apply_tooltip_inherited_fg(child, fg))
+            .map(|child| apply_tooltip_inherited_defaults(child, fg, &text_style))
             .collect();
         let container = shadcn_layout::container_flow(cx, props, children);
         container.attach_semantics(
@@ -1517,6 +1557,7 @@ mod tests {
         use fret_ui::element::ElementKind;
         use fret_ui::elements::GlobalElementId;
 
+        let text_style = TextStyle::default();
         let fg = Color {
             r: 0.1,
             g: 0.2,
@@ -1548,7 +1589,7 @@ mod tests {
             vec![text_no_color, text_with_color],
         );
 
-        let out = apply_tooltip_inherited_fg(root, fg);
+        let out = apply_tooltip_inherited_defaults(root, fg, &text_style);
         let colors: Vec<Option<Color>> = out
             .children
             .iter()
@@ -1561,6 +1602,59 @@ mod tests {
         assert_eq!(colors.len(), 2);
         assert_eq!(colors[0], Some(fg));
         assert_ne!(colors[1], Some(fg));
+    }
+
+    #[test]
+    fn tooltip_content_applies_default_text_style_to_descendant_text() {
+        use fret_ui::element::ElementKind;
+        use fret_ui::elements::GlobalElementId;
+
+        let fg = fret_core::Color {
+            r: 0.1,
+            g: 0.2,
+            b: 0.3,
+            a: 0.4,
+        };
+        let style = TextStyle {
+            size: Px(11.0),
+            ..Default::default()
+        };
+
+        let text_no_style = AnyElement::new(
+            GlobalElementId(1),
+            ElementKind::Text(TextProps::new("tip")),
+            Vec::new(),
+        );
+
+        let mut text_with_style = TextProps::new("fixed");
+        text_with_style.style = Some(TextStyle {
+            size: Px(18.0),
+            ..Default::default()
+        });
+        let text_with_style = AnyElement::new(
+            GlobalElementId(2),
+            ElementKind::Text(text_with_style),
+            Vec::new(),
+        );
+
+        let root = AnyElement::new(
+            GlobalElementId(3),
+            ElementKind::Container(ContainerProps::default()),
+            vec![text_no_style, text_with_style],
+        );
+
+        let out = apply_tooltip_inherited_defaults(root, fg, &style);
+        let (first, second) = (&out.children[0], &out.children[1]);
+
+        let ElementKind::Text(first_props) = &first.kind else {
+            panic!("expected first child to be Text, got {:?}", first.kind);
+        };
+        let ElementKind::Text(second_props) = &second.kind else {
+            panic!("expected second child to be Text, got {:?}", second.kind);
+        };
+
+        assert_eq!(first_props.style.as_ref().map(|s| s.size), Some(style.size));
+        assert_eq!(second_props.style.as_ref().map(|s| s.size), Some(Px(18.0)));
     }
 
     #[test]

@@ -1,29 +1,224 @@
 use std::sync::Arc;
+use std::time::Duration;
 
 use fret_core::{Edges, KeyCode, MouseButton, Point, Px, SemanticsRole};
 use fret_icons::ids;
-use fret_runtime::Model;
+use fret_runtime::{Effect, Model, TimerToken};
 use fret_ui::action::{ActionCx, ActivateReason, KeyDownCx, OnKeyDown, UiActionHost};
 use fret_ui::element::{
-    AnyElement, ContainerProps, CrossAlign, ElementKind, FlexProps, LayoutStyle, MainAlign,
-    PointerRegionProps, RenderTransformProps, SemanticsDecoration, VisualTransformProps,
+    AnyElement, ContainerProps, CrossAlign, ElementKind, FlexProps, HoverRegionProps, LayoutStyle,
+    MainAlign, PointerRegionProps, RenderTransformProps, SemanticsDecoration, VisualTransformProps,
 };
-use fret_ui::{ElementContext, Theme, UiHost};
+use fret_ui::{ElementContext, Invalidation, Theme, UiHost};
 use fret_ui_kit::declarative::icon as decl_icon;
 use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
 use fret_ui_kit::declarative::style as decl_style;
+use fret_ui_kit::declarative::transition as decl_transition;
 use fret_ui_kit::headless::carousel as headless_carousel;
+use fret_ui_kit::headless::snap_points as headless_snap_points;
 use fret_ui_kit::{ChromeRefinement, LayoutRefinement, LengthRefinement, MetricRef, Radius, Space};
 
 use crate::{Button, ButtonSize, ButtonVariant};
 
-const CAROUSEL_SETTLE_TICKS: u64 = 12;
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub struct CarouselApiSnapshot {
+    /// Zero-based selected slide index.
+    pub selected_index: usize,
+    /// Total snap count (when measurable).
+    pub snap_count: usize,
+    pub can_scroll_prev: bool,
+    pub can_scroll_next: bool,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct CarouselAutoplayConfig {
+    pub delay: Duration,
+    pub stop_on_interaction: bool,
+    pub pause_on_hover: bool,
+    pub reset_on_hover_leave: bool,
+}
+
+impl Default for CarouselAutoplayConfig {
+    fn default() -> Self {
+        Self {
+            delay: Duration::from_millis(2000),
+            stop_on_interaction: true,
+            pause_on_hover: true,
+            reset_on_hover_leave: true,
+        }
+    }
+}
+
+impl CarouselAutoplayConfig {
+    pub fn new(delay: Duration) -> Self {
+        Self {
+            delay,
+            ..Default::default()
+        }
+    }
+
+    pub fn stop_on_interaction(mut self, stop_on_interaction: bool) -> Self {
+        self.stop_on_interaction = stop_on_interaction;
+        self
+    }
+
+    pub fn pause_on_hover(mut self, pause_on_hover: bool) -> Self {
+        self.pause_on_hover = pause_on_hover;
+        self
+    }
+
+    pub fn reset_on_hover_leave(mut self, reset_on_hover_leave: bool) -> Self {
+        self.reset_on_hover_leave = reset_on_hover_leave;
+        self
+    }
+}
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum CarouselOrientation {
     #[default]
     Horizontal,
     Vertical,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum CarouselAlign {
+    Start,
+    #[default]
+    Center,
+    End,
+}
+
+impl CarouselAlign {
+    fn to_headless(self) -> headless_carousel::CarouselSnapAlign {
+        match self {
+            CarouselAlign::Start => headless_carousel::CarouselSnapAlign::Start,
+            CarouselAlign::Center => headless_carousel::CarouselSnapAlign::Center,
+            CarouselAlign::End => headless_carousel::CarouselSnapAlign::End,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum CarouselSlidesToScroll {
+    Fixed(usize),
+    Auto,
+}
+
+impl Default for CarouselSlidesToScroll {
+    fn default() -> Self {
+        Self::Fixed(1)
+    }
+}
+
+impl CarouselSlidesToScroll {
+    fn to_headless(self) -> headless_carousel::CarouselSlidesToScrollOption {
+        match self {
+            CarouselSlidesToScroll::Fixed(n) => {
+                headless_carousel::CarouselSlidesToScrollOption::Fixed(n.max(1))
+            }
+            CarouselSlidesToScroll::Auto => headless_carousel::CarouselSlidesToScrollOption::Auto,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum CarouselContainScroll {
+    None,
+    KeepSnaps,
+    #[default]
+    TrimSnaps,
+}
+
+impl CarouselContainScroll {
+    fn to_headless(self) -> headless_carousel::CarouselContainScrollOption {
+        match self {
+            CarouselContainScroll::None => headless_carousel::CarouselContainScrollOption::None,
+            CarouselContainScroll::KeepSnaps => {
+                headless_carousel::CarouselContainScrollOption::KeepSnaps
+            }
+            CarouselContainScroll::TrimSnaps => {
+                headless_carousel::CarouselContainScrollOption::TrimSnaps
+            }
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy)]
+pub struct CarouselOptions {
+    pub align: CarouselAlign,
+    pub slides_to_scroll: CarouselSlidesToScroll,
+    pub contain_scroll: CarouselContainScroll,
+    /// Wrap prev/next selection (note: this is *not* a seamless loop engine yet).
+    pub loop_enabled: bool,
+    /// Embla-style skipSnaps (best-effort without momentum physics).
+    pub skip_snaps: bool,
+    /// Drag-free release (settle to the projected offset instead of the nearest snap).
+    pub drag_free: bool,
+    /// Settle animation duration (Embla `duration`, milliseconds).
+    pub duration: Duration,
+    pub pixel_tolerance_px: f32,
+}
+
+impl Default for CarouselOptions {
+    fn default() -> Self {
+        Self {
+            // Match Embla defaults unless examples override via `opts`.
+            align: CarouselAlign::Center,
+            slides_to_scroll: CarouselSlidesToScroll::Fixed(1),
+            contain_scroll: CarouselContainScroll::TrimSnaps,
+            loop_enabled: false,
+            skip_snaps: false,
+            drag_free: false,
+            duration: Duration::from_millis(25),
+            pixel_tolerance_px: 2.0,
+        }
+    }
+}
+
+impl CarouselOptions {
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    pub fn align(mut self, align: CarouselAlign) -> Self {
+        self.align = align;
+        self
+    }
+
+    pub fn slides_to_scroll(mut self, slides_to_scroll: CarouselSlidesToScroll) -> Self {
+        self.slides_to_scroll = slides_to_scroll;
+        self
+    }
+
+    pub fn contain_scroll(mut self, contain_scroll: CarouselContainScroll) -> Self {
+        self.contain_scroll = contain_scroll;
+        self
+    }
+
+    pub fn loop_enabled(mut self, loop_enabled: bool) -> Self {
+        self.loop_enabled = loop_enabled;
+        self
+    }
+
+    pub fn skip_snaps(mut self, skip_snaps: bool) -> Self {
+        self.skip_snaps = skip_snaps;
+        self
+    }
+
+    pub fn drag_free(mut self, drag_free: bool) -> Self {
+        self.drag_free = drag_free;
+        self
+    }
+
+    pub fn duration(mut self, duration: Duration) -> Self {
+        self.duration = duration;
+        self
+    }
+
+    pub fn pixel_tolerance_px(mut self, pixel_tolerance_px: f32) -> Self {
+        self.pixel_tolerance_px = pixel_tolerance_px;
+        self
+    }
 }
 
 #[derive(Debug)]
@@ -37,7 +232,10 @@ pub struct Carousel {
     track_start_neg_margin: Space,
     item_padding_start: Space,
     item_basis_main_px: Option<Px>,
+    options: CarouselOptions,
     drag_config: headless_carousel::CarouselDragConfig,
+    api_snapshot: Option<Model<CarouselApiSnapshot>>,
+    autoplay: Option<CarouselAutoplayConfig>,
     test_id: Option<Arc<str>>,
 }
 
@@ -47,7 +245,10 @@ struct CarouselRuntime {
     settling: bool,
     settle_from: Px,
     settle_to: Px,
-    settle_tick: u64,
+    settle_generation: u64,
+    autoplay_token: Option<TimerToken>,
+    autoplay_paused: bool,
+    autoplay_hovered: bool,
 }
 
 #[derive(Default)]
@@ -56,13 +257,27 @@ struct CarouselState {
     offset: Option<Model<Px>>,
     runtime: Option<Model<CarouselRuntime>>,
     extent: Option<Model<Px>>,
+    snaps: Option<Model<Arc<[Px]>>>,
+    max_offset: Option<Model<Px>>,
 }
 
 fn carousel_models<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
-) -> (Model<usize>, Model<Px>, Model<CarouselRuntime>, Model<Px>) {
+) -> (
+    Model<usize>,
+    Model<Px>,
+    Model<CarouselRuntime>,
+    Model<Px>,
+    Model<Arc<[Px]>>,
+    Model<Px>,
+) {
     let needs_init = cx.with_state(CarouselState::default, |st| {
-        st.index.is_none() || st.offset.is_none() || st.runtime.is_none() || st.extent.is_none()
+        st.index.is_none()
+            || st.offset.is_none()
+            || st.runtime.is_none()
+            || st.extent.is_none()
+            || st.snaps.is_none()
+            || st.max_offset.is_none()
     });
 
     if needs_init {
@@ -70,24 +285,32 @@ fn carousel_models<H: UiHost>(
         let offset = cx.app.models_mut().insert(Px(0.0));
         let runtime = cx.app.models_mut().insert(CarouselRuntime::default());
         let extent = cx.app.models_mut().insert(Px(0.0));
+        let snaps: Arc<[Px]> = Arc::from(Vec::<Px>::new());
+        let snaps = cx.app.models_mut().insert(snaps);
+        let max_offset = cx.app.models_mut().insert(Px(0.0));
         cx.with_state(CarouselState::default, |st| {
             st.index = Some(index.clone());
             st.offset = Some(offset.clone());
             st.runtime = Some(runtime.clone());
             st.extent = Some(extent.clone());
+            st.snaps = Some(snaps.clone());
+            st.max_offset = Some(max_offset.clone());
         });
-        return (index, offset, runtime, extent);
+        return (index, offset, runtime, extent, snaps, max_offset);
     }
 
-    let (index, offset, runtime, extent) = cx.with_state(CarouselState::default, |st| {
-        (
-            st.index.clone().expect("index"),
-            st.offset.clone().expect("offset"),
-            st.runtime.clone().expect("runtime"),
-            st.extent.clone().expect("extent"),
-        )
-    });
-    (index, offset, runtime, extent)
+    let (index, offset, runtime, extent, snaps, max_offset) =
+        cx.with_state(CarouselState::default, |st| {
+            (
+                st.index.clone().expect("index"),
+                st.offset.clone().expect("offset"),
+                st.runtime.clone().expect("runtime"),
+                st.extent.clone().expect("extent"),
+                st.snaps.clone().expect("snaps"),
+                st.max_offset.clone().expect("max_offset"),
+            )
+        });
+    (index, offset, runtime, extent, snaps, max_offset)
 }
 
 impl Default for Carousel {
@@ -108,7 +331,10 @@ impl Carousel {
             track_start_neg_margin: Space::N4,
             item_padding_start: Space::N4,
             item_basis_main_px: None,
+            options: CarouselOptions::default(),
             drag_config: headless_carousel::CarouselDragConfig::default(),
+            api_snapshot: None,
+            autoplay: None,
             test_id: None,
         }
     }
@@ -143,6 +369,12 @@ impl Carousel {
         self
     }
 
+    /// Embla-style options that influence snap model generation (alignment, containment, etc).
+    pub fn opts(mut self, opts: CarouselOptions) -> Self {
+        self.options = opts;
+        self
+    }
+
     pub fn drag_config(mut self, config: headless_carousel::CarouselDragConfig) -> Self {
         self.drag_config = config;
         self
@@ -165,6 +397,21 @@ impl Carousel {
 
     pub fn touch_scroll_lock_threshold_px(mut self, threshold: Px) -> Self {
         self.drag_config.touch_scroll_lock_threshold_px = threshold.0;
+        self
+    }
+
+    /// Exposes a small, deterministic API surface as a snapshot model (policy-only).
+    ///
+    /// This exists to support shadcn-style "API" examples (slide counters, etc.) without exposing
+    /// Embla's full imperative API surface.
+    pub fn api_snapshot_model(mut self, model: Model<CarouselApiSnapshot>) -> Self {
+        self.api_snapshot = Some(model);
+        self
+    }
+
+    /// Adds an Embla-style autoplay policy surface (shadcn `carousel-plugin` outcome).
+    pub fn autoplay(mut self, config: CarouselAutoplayConfig) -> Self {
+        self.autoplay = Some(config);
         self
     }
 
@@ -193,9 +440,20 @@ impl Carousel {
         cx.scope(|cx| {
             let theme = Theme::global(&*cx.app).snapshot();
             let orientation = self.orientation;
+            let options = self.options;
+            let autoplay_cfg = self.autoplay;
+            let autoplay_stop_on_interaction =
+                autoplay_cfg.is_some_and(|cfg| cfg.stop_on_interaction);
             let root_test_id = self.test_id.unwrap_or_else(|| Arc::from("carousel"));
 
-            let (index_model, offset_model, runtime_model, extent_model) = carousel_models(cx);
+            let (
+                index_model,
+                offset_model,
+                runtime_model,
+                extent_model,
+                snaps_model,
+                max_offset_model,
+            ) = carousel_models(cx);
 
             let root_layout = decl_style::layout_style(
                 &theme,
@@ -245,20 +503,28 @@ impl Carousel {
             let mut offset_now = cx.watch_model(&offset_model).copied().unwrap_or(Px(0.0));
             let runtime_snapshot = cx.watch_model(&runtime_model).copied().unwrap_or_default();
             if runtime_snapshot.settling {
-                let tick = runtime_snapshot.settle_tick.saturating_add(1);
-                let t = (tick as f32 / CAROUSEL_SETTLE_TICKS as f32).min(1.0);
-                let eased = crate::overlay_motion::shadcn_ease(t);
+                let duration = options.duration;
+                let settle_generation = runtime_snapshot.settle_generation;
+                let motion = cx.keyed(("carousel-settle", settle_generation), |cx| {
+                    decl_transition::drive_transition_with_durations_and_easing_duration_with_mount_behavior(
+                        cx,
+                        true,
+                        duration,
+                        duration,
+                        crate::overlay_motion::shadcn_ease,
+                        true,
+                    )
+                });
                 let next = Px(runtime_snapshot.settle_from.0
-                    + (runtime_snapshot.settle_to.0 - runtime_snapshot.settle_from.0) * eased);
+                    + (runtime_snapshot.settle_to.0 - runtime_snapshot.settle_from.0)
+                        * motion.progress);
                 offset_now = next;
                 let _ = cx.app.models_mut().update(&offset_model, |v| *v = next);
                 let _ = cx.app.models_mut().update(&runtime_model, |st| {
-                    st.settle_tick = tick;
-                    if t >= 1.0 {
+                    if !motion.animating {
                         st.settling = false;
                     }
                 });
-                cx.request_frame();
             }
 
             let axis_offset = offset_now;
@@ -273,6 +539,7 @@ impl Carousel {
 
             let offset_for_down = offset_model.clone();
             let runtime_for_down = runtime_model.clone();
+            let autoplay_stop_for_down = autoplay_stop_on_interaction;
             let on_down: fret_ui::action::OnPointerDown = Arc::new(move |host, _cx, down| {
                 if down.button != MouseButton::Left {
                     return false;
@@ -280,6 +547,22 @@ impl Carousel {
                 if down.hit_is_text_input {
                     return false;
                 }
+
+                if autoplay_stop_for_down {
+                    let token = host
+                        .models_mut()
+                        .read(&runtime_for_down, |st| st.autoplay_token)
+                        .ok()
+                        .flatten();
+                    if let Some(token) = token {
+                        host.push_effect(Effect::CancelTimer { token });
+                    }
+                    let _ = host.models_mut().update(&runtime_for_down, |st| {
+                        st.autoplay_token = None;
+                        st.autoplay_paused = true;
+                    });
+                }
+
                 let start_offset = host
                     .models_mut()
                     .read(&offset_for_down, |v| *v)
@@ -293,13 +576,14 @@ impl Carousel {
                         start_offset,
                     );
                     st.settling = false;
-                    st.settle_tick = 0;
                 });
                 false
             });
 
             let runtime_for_move = runtime_model.clone();
             let offset_for_move = offset_model.clone();
+            let max_offset_for_move = max_offset_model.clone();
+            let dnd_service_for_move = fret_ui_kit::dnd::dnd_service_model(cx);
             let on_move: fret_ui::action::OnPointerMove = Arc::new(move |host, _cx, mv| {
                 let runtime = host
                     .models_mut()
@@ -310,6 +594,18 @@ impl Carousel {
                     return false;
                 }
 
+                if fret_ui_kit::dnd::pointer_is_tracking_any_sensor(
+                    host.models_mut(),
+                    &dnd_service_for_move,
+                    _cx.window,
+                    mv.pointer_id,
+                ) {
+                    let _ = host.models_mut().update(&runtime_for_move, |st| {
+                        st.drag = headless_carousel::CarouselDragState::default();
+                    });
+                    return false;
+                }
+
                 if !mv.buttons.left {
                     let _ = host.models_mut().update(&runtime_for_move, |st| {
                         st.drag = headless_carousel::CarouselDragState::default();
@@ -317,18 +613,35 @@ impl Carousel {
                     return false;
                 }
 
-                let bounds = host.bounds();
-                let extent = match item_basis {
-                    Some(px) => px,
-                    None => match track_direction {
-                        fret_core::Axis::Horizontal => bounds.size.width,
-                        fret_core::Axis::Vertical => bounds.size.height,
-                    },
+                let max_offset = host
+                    .models_mut()
+                    .read(&max_offset_for_move, |v| *v)
+                    .ok()
+                    .unwrap_or(Px(0.0));
+
+                let max_offset = if max_offset.0 > 0.0 {
+                    max_offset
+                } else {
+                    // Fall back to the legacy extent-based max offset when snap geometry has not
+                    // been measured yet (common in single-frame tests and before the first render
+                    // loop settles).
+                    let bounds = host.bounds();
+                    let extent = match item_basis {
+                        Some(px) => px,
+                        None => match track_direction {
+                            fret_core::Axis::Horizontal => bounds.size.width,
+                            fret_core::Axis::Vertical => bounds.size.height,
+                        },
+                    };
+                    Px((extent.0 * (items_len.saturating_sub(1) as f32)).max(0.0))
                 };
-                if extent.0 <= 0.0 {
-                    return true;
+
+                if max_offset.0 <= 0.0 {
+                    let _ = host.models_mut().update(&runtime_for_move, |st| {
+                        st.drag = headless_carousel::CarouselDragState::default();
+                    });
+                    return false;
                 }
-                let max_offset = Px((extent.0 * (items_len.saturating_sub(1) as f32)).max(0.0));
 
                 let mut steal_capture = false;
                 let mut consumed = false;
@@ -369,6 +682,11 @@ impl Carousel {
             let runtime_for_up = runtime_model.clone();
             let offset_for_up = offset_model.clone();
             let index_for_up = index_model.clone();
+            let snaps_for_up = snaps_model.clone();
+            let max_offset_for_up = max_offset_model.clone();
+            let skip_snaps_for_up = options.skip_snaps;
+            let drag_free_for_up = options.drag_free;
+            let loop_for_up = options.loop_enabled;
             let on_up: fret_ui::action::OnPointerUp = Arc::new(move |host, cx, up| {
                 let runtime = host
                     .models_mut()
@@ -384,31 +702,55 @@ impl Carousel {
 
                 host.release_pointer_capture();
 
-                let bounds = host.bounds();
-                let extent = match item_basis {
-                    Some(px) => px,
-                    None => match track_direction {
-                        fret_core::Axis::Horizontal => bounds.size.width,
-                        fret_core::Axis::Vertical => bounds.size.height,
-                    },
-                };
-
                 let offset = host
                     .models_mut()
                     .read(&offset_for_up, |v| *v)
                     .ok()
                     .unwrap_or(Px(0.0));
+                let max_offset = host
+                    .models_mut()
+                    .read(&max_offset_for_up, |v| *v)
+                    .ok()
+                    .unwrap_or(Px(0.0));
 
                 let mut drag = runtime.drag;
-                let release = headless_carousel::on_pointer_up(
-                    drag_config,
-                    &mut drag,
-                    track_direction,
-                    up.position,
-                    extent,
-                    items_len,
-                )
-                .expect("release output when dragging");
+                let snaps: Arc<[Px]> = host
+                    .models_mut()
+                    .read(&snaps_for_up, |v| v.clone())
+                    .ok()
+                    .unwrap_or_else(|| Arc::from(Vec::<Px>::new()));
+                let release = if snaps.len() > 1 {
+                    headless_carousel::on_pointer_up_with_snaps_options(
+                        drag_config,
+                        &mut drag,
+                        track_direction,
+                        up.position,
+                        &snaps,
+                        max_offset,
+                        loop_for_up,
+                        skip_snaps_for_up,
+                        drag_free_for_up,
+                    )
+                    .expect("release output when dragging")
+                } else {
+                    let bounds = host.bounds();
+                    let extent = match item_basis {
+                        Some(px) => px,
+                        None => match track_direction {
+                            fret_core::Axis::Horizontal => bounds.size.width,
+                            fret_core::Axis::Vertical => bounds.size.height,
+                        },
+                    };
+                    headless_carousel::on_pointer_up(
+                        drag_config,
+                        &mut drag,
+                        track_direction,
+                        up.position,
+                        extent,
+                        items_len,
+                    )
+                    .expect("release output when dragging")
+                };
 
                 let _ = host
                     .models_mut()
@@ -418,7 +760,7 @@ impl Carousel {
                     st.settling = true;
                     st.settle_from = offset;
                     st.settle_to = release.target_offset;
-                    st.settle_tick = 0;
+                    st.settle_generation = st.settle_generation.saturating_add(1);
                 });
                 host.request_redraw(cx.window);
                 true
@@ -439,7 +781,6 @@ impl Carousel {
                 let _ = host.models_mut().update(&runtime_for_cancel, |st| {
                     st.drag = headless_carousel::CarouselDragState::default();
                     st.settling = false;
-                    st.settle_tick = 0;
                 });
                 host.request_redraw(cx.window);
                 true
@@ -448,29 +789,52 @@ impl Carousel {
             let offset_for_prev = offset_model.clone();
             let runtime_for_prev = runtime_model.clone();
             let index_for_prev = index_model.clone();
-            let extent_for_prev = extent_model.clone();
+            let snaps_for_prev = snaps_model.clone();
+            let autoplay_stop_for_prev = autoplay_stop_on_interaction;
+            let loop_for_prev = options.loop_enabled;
             let on_prev: fret_ui::action::OnActivate = Arc::new(
                 move |host: &mut dyn UiActionHost, cx: ActionCx, _reason: ActivateReason| {
+                    if autoplay_stop_for_prev {
+                        let token = host
+                            .models_mut()
+                            .read(&runtime_for_prev, |st| st.autoplay_token)
+                            .ok()
+                            .flatten();
+                        if let Some(token) = token {
+                            host.push_effect(Effect::CancelTimer { token });
+                        }
+                        let _ = host.models_mut().update(&runtime_for_prev, |st| {
+                            st.autoplay_token = None;
+                            st.autoplay_paused = true;
+                        });
+                    }
+
+                    let snaps: Arc<[Px]> = host
+                        .models_mut()
+                        .read(&snaps_for_prev, |v| v.clone())
+                        .ok()
+                        .unwrap_or_else(|| Arc::from(Vec::<Px>::new()));
                     let index: usize = host
                         .models_mut()
                         .read(&index_for_prev, |v| *v)
                         .ok()
                         .unwrap_or(0);
-                    if index == 0 {
+                    if snaps.len() <= 1 {
                         return;
                     }
 
-                    let extent = host
-                        .models_mut()
-                        .read(&extent_for_prev, |v| *v)
-                        .ok()
-                        .unwrap_or(Px(0.0));
-                    if extent.0 <= 0.0 {
+                    let target_index = if loop_for_prev {
+                        headless_snap_points::step_index_wrapped(snaps.len(), index, -1)
+                    } else {
+                        headless_snap_points::step_index_clamped(snaps.len(), index, -1)
+                    };
+                    let Some(target_index) = target_index else {
+                        return;
+                    };
+                    if target_index == index {
                         return;
                     }
-
-                    let target_index = index.saturating_sub(1);
-                    let target = Px((target_index as f32) * extent.0);
+                    let target = snaps[target_index];
                     let cur = host
                         .models_mut()
                         .read(&offset_for_prev, |v| *v)
@@ -484,7 +848,7 @@ impl Carousel {
                         st.settling = true;
                         st.settle_from = cur;
                         st.settle_to = target;
-                        st.settle_tick = 0;
+                        st.settle_generation = st.settle_generation.saturating_add(1);
                     });
                     host.request_redraw(cx.window);
                 },
@@ -493,29 +857,52 @@ impl Carousel {
             let offset_for_next = offset_model.clone();
             let runtime_for_next = runtime_model.clone();
             let index_for_next = index_model.clone();
-            let extent_for_next = extent_model.clone();
+            let snaps_for_next = snaps_model.clone();
+            let autoplay_stop_for_next = autoplay_stop_on_interaction;
+            let loop_for_next = options.loop_enabled;
             let on_next: fret_ui::action::OnActivate = Arc::new(
                 move |host: &mut dyn UiActionHost, cx: ActionCx, _reason: ActivateReason| {
+                    if autoplay_stop_for_next {
+                        let token = host
+                            .models_mut()
+                            .read(&runtime_for_next, |st| st.autoplay_token)
+                            .ok()
+                            .flatten();
+                        if let Some(token) = token {
+                            host.push_effect(Effect::CancelTimer { token });
+                        }
+                        let _ = host.models_mut().update(&runtime_for_next, |st| {
+                            st.autoplay_token = None;
+                            st.autoplay_paused = true;
+                        });
+                    }
+
+                    let snaps: Arc<[Px]> = host
+                        .models_mut()
+                        .read(&snaps_for_next, |v| v.clone())
+                        .ok()
+                        .unwrap_or_else(|| Arc::from(Vec::<Px>::new()));
                     let index: usize = host
                         .models_mut()
                         .read(&index_for_next, |v| *v)
                         .ok()
                         .unwrap_or(0);
-                    if index + 1 >= items_len {
+                    if snaps.len() <= 1 {
                         return;
                     }
 
-                    let extent = host
-                        .models_mut()
-                        .read(&extent_for_next, |v| *v)
-                        .ok()
-                        .unwrap_or(Px(0.0));
-                    if extent.0 <= 0.0 {
+                    let target_index = if loop_for_next {
+                        headless_snap_points::step_index_wrapped(snaps.len(), index, 1)
+                    } else {
+                        headless_snap_points::step_index_clamped(snaps.len(), index, 1)
+                    };
+                    let Some(target_index) = target_index else {
+                        return;
+                    };
+                    if target_index == index {
                         return;
                     }
-
-                    let target_index = (index + 1).min(items_len.saturating_sub(1));
-                    let target = Px((target_index as f32) * extent.0);
+                    let target = snaps[target_index];
                     let cur = host
                         .models_mut()
                         .read(&offset_for_next, |v| *v)
@@ -529,7 +916,7 @@ impl Carousel {
                         st.settling = true;
                         st.settle_from = cur;
                         st.settle_to = target;
-                        st.settle_tick = 0;
+                        st.settle_generation = st.settle_generation.saturating_add(1);
                     });
                     host.request_redraw(cx.window);
                 },
@@ -538,12 +925,19 @@ impl Carousel {
             let index_for_key = index_model.clone();
             let offset_for_key = offset_model.clone();
             let runtime_for_key = runtime_model.clone();
-            let extent_for_key = extent_model.clone();
+            let snaps_for_key = snaps_model.clone();
+            let autoplay_stop_for_key = autoplay_stop_on_interaction;
+            let loop_for_key = options.loop_enabled;
             let on_key_down: OnKeyDown = Arc::new(
                 move |host: &mut dyn fret_ui::action::UiFocusActionHost,
                       cx: ActionCx,
                       down: KeyDownCx| {
-                    if items_len <= 1 {
+                    let snaps: Arc<[Px]> = host
+                        .models_mut()
+                        .read(&snaps_for_key, |v| v.clone())
+                        .ok()
+                        .unwrap_or_else(|| Arc::from(Vec::<Px>::new()));
+                    if snaps.len() <= 1 {
                         return false;
                     }
 
@@ -555,33 +949,41 @@ impl Carousel {
                         return false;
                     }
 
+                    if autoplay_stop_for_key {
+                        let token = host
+                            .models_mut()
+                            .read(&runtime_for_key, |st| st.autoplay_token)
+                            .ok()
+                            .flatten();
+                        if let Some(token) = token {
+                            host.push_effect(Effect::CancelTimer { token });
+                        }
+                        let _ = host.models_mut().update(&runtime_for_key, |st| {
+                            st.autoplay_token = None;
+                            st.autoplay_paused = true;
+                        });
+                    }
+
                     let index: usize = host
                         .models_mut()
                         .read(&index_for_key, |v| *v)
                         .ok()
                         .unwrap_or(0);
-                    let extent = host
-                        .models_mut()
-                        .read(&extent_for_key, |v| *v)
-                        .ok()
-                        .unwrap_or(Px(0.0));
-                    if extent.0 <= 0.0 {
+
+                    let delta = if down.key == prev_key { -1 } else { 1 };
+                    let target_index = if loop_for_key {
+                        headless_snap_points::step_index_wrapped(snaps.len(), index, delta)
+                    } else {
+                        headless_snap_points::step_index_clamped(snaps.len(), index, delta)
+                    };
+                    let Some(target_index) = target_index else {
+                        return true;
+                    };
+                    if target_index == index {
                         return true;
                     }
 
-                    let target_index = if down.key == prev_key {
-                        if index == 0 {
-                            return true;
-                        }
-                        index.saturating_sub(1)
-                    } else {
-                        if index + 1 >= items_len {
-                            return true;
-                        }
-                        (index + 1).min(items_len.saturating_sub(1))
-                    };
-
-                    let target = Px((target_index as f32) * extent.0);
+                    let target = snaps[target_index];
                     let cur = host
                         .models_mut()
                         .read(&offset_for_key, |v| *v)
@@ -595,13 +997,15 @@ impl Carousel {
                         st.settling = true;
                         st.settle_from = cur;
                         st.settle_to = target;
-                        st.settle_tick = 0;
+                        st.settle_generation = st.settle_generation.saturating_add(1);
                     });
                     host.request_redraw(cx.window);
                     true
                 },
             );
 
+            let mut item_ids = Vec::with_capacity(items_len);
+            let item_ids_ref = &mut item_ids;
             let track = cx.flex(
                 FlexProps {
                     layout: track_layout,
@@ -680,6 +1084,8 @@ impl Carousel {
                                 move |_cx| vec![content],
                             );
 
+                            item_ids_ref.push(item.id);
+
                             item.attach_semantics(
                                 SemanticsDecoration::default()
                                     .role(SemanticsRole::Group)
@@ -731,27 +1137,165 @@ impl Carousel {
                 )
             });
 
-            let extent_now = match item_basis {
-                Some(px) => px,
-                None => cx
-                    .last_bounds_for_element(viewport_id)
-                    .map(|b| match orientation {
-                        CarouselOrientation::Horizontal => b.size.width,
-                        CarouselOrientation::Vertical => b.size.height,
-                    })
-                    .unwrap_or(Px(0.0)),
-            };
+            let viewport_bounds = cx.last_bounds_for_element(viewport_id);
+            let view_size_now = viewport_bounds
+                .map(|b| match orientation {
+                    CarouselOrientation::Horizontal => b.size.width,
+                    CarouselOrientation::Vertical => b.size.height,
+                })
+                .unwrap_or(Px(0.0));
             let _ = cx
                 .app
                 .models_mut()
-                .update(&extent_model, |v| *v = extent_now);
+                .update(&extent_model, |v| *v = view_size_now);
+
+            let mut snaps_now: Vec<Px> = vec![Px(0.0)];
+            let mut max_offset_now = Px(0.0);
+
+            if view_size_now.0 > 0.0 {
+                if let Some(viewport_bounds) = viewport_bounds {
+                    let mut slides = Vec::with_capacity(items_len);
+                    for id in &item_ids {
+                        let Some(bounds) = cx.last_bounds_for_element(*id) else {
+                            continue;
+                        };
+
+                        let (start, size) = match orientation {
+                            CarouselOrientation::Horizontal => (
+                                Px(bounds.origin.x.0 - viewport_bounds.origin.x.0),
+                                bounds.size.width,
+                            ),
+                            CarouselOrientation::Vertical => (
+                                Px(bounds.origin.y.0 - viewport_bounds.origin.y.0),
+                                bounds.size.height,
+                            ),
+                        };
+                        slides.push(headless_carousel::CarouselSlide1D { start, size });
+                    }
+
+                    let mut start_gap = Px(0.0);
+                    if slides.len() == items_len {
+                        let min_start = slides
+                            .iter()
+                            .map(|s| s.start)
+                            .fold(Px(f32::INFINITY), |a, b| Px(a.0.min(b.0)));
+                        if min_start.0.is_finite() && min_start.0 > 0.0 {
+                            start_gap = min_start;
+                            for s in &mut slides {
+                                s.start = Px(s.start.0 - min_start.0);
+                            }
+                        }
+                    }
+
+                    let slides_ready =
+                        slides.len() == items_len && slides.iter().all(|s| s.size.0 > 0.0);
+
+                    if slides_ready {
+                        let model = headless_carousel::snap_model_1d(
+                            view_size_now,
+                            &slides,
+                            start_gap,
+                            Px(0.0),
+                            options.slides_to_scroll.to_headless(),
+                            false,
+                            options.align.to_headless(),
+                            options.contain_scroll.to_headless(),
+                            options.pixel_tolerance_px.max(0.0),
+                        );
+                        snaps_now = model.snaps_px;
+                        max_offset_now = model.max_offset_px;
+                    } else if let Some(first_item_id) = item_ids.first().copied()
+                        && let Some(first_bounds) = cx.last_bounds_for_element(first_item_id)
+                    {
+                        // Fallback: keep the previous "uniform item" approximation when we don't
+                        // have stable bounds for all items yet (e.g. first frame).
+                        let (first_start, item_main_size) = match orientation {
+                            CarouselOrientation::Horizontal => (
+                                Px(first_bounds.origin.x.0 - viewport_bounds.origin.x.0),
+                                first_bounds.size.width,
+                            ),
+                            CarouselOrientation::Vertical => (
+                                Px(first_bounds.origin.y.0 - viewport_bounds.origin.y.0),
+                                first_bounds.size.height,
+                            ),
+                        };
+
+                        if item_main_size.0 > 0.0 {
+                            let slides = (0..items_len)
+                                .map(|i| headless_carousel::CarouselSlide1D {
+                                    start: Px(first_start.0 + (i as f32) * item_main_size.0),
+                                    size: item_main_size,
+                                })
+                                .collect::<Vec<_>>();
+
+                            let model = headless_carousel::snap_model_1d(
+                                view_size_now,
+                                &slides,
+                                Px(0.0),
+                                Px(0.0),
+                                options.slides_to_scroll.to_headless(),
+                                false,
+                                options.align.to_headless(),
+                                options.contain_scroll.to_headless(),
+                                options.pixel_tolerance_px.max(0.0),
+                            );
+                            snaps_now = model.snaps_px;
+                            max_offset_now = model.max_offset_px;
+                        }
+                    }
+                };
+            }
+
+            let snaps_arc: Arc<[Px]> = Arc::from(snaps_now.clone().into_boxed_slice());
+            let _ = cx
+                .app
+                .models_mut()
+                .update(&snaps_model, |v| *v = snaps_arc.clone());
+            let _ = cx
+                .app
+                .models_mut()
+                .update(&max_offset_model, |v| *v = max_offset_now);
+
+            // Clamp index/offset when snaps change (e.g. window resize).
+            let snaps_len = snaps_now.len();
+            let clamped_index = if snaps_len == 0 {
+                0
+            } else {
+                index_now.min(snaps_len.saturating_sub(1))
+            };
+            if clamped_index != index_now {
+                let _ = cx
+                    .app
+                    .models_mut()
+                    .update(&index_model, |v| *v = clamped_index);
+            }
+            let offset_clamped = Px(offset_now.0.clamp(0.0, max_offset_now.0.max(0.0)));
+            if offset_clamped != offset_now {
+                let _ = cx
+                    .app
+                    .models_mut()
+                    .update(&offset_model, |v| *v = offset_clamped);
+            }
 
             // Match upstream behavior: controls are disabled until the carousel has a measurable
             // viewport/item extent (Embla initializes canScrollPrev/Next to false until it
             // measures and emits `select`/`reInit`).
-            let extent_ready = extent_now.0 > 0.0;
-            let prev_disabled = !extent_ready || index_now == 0 || items_len <= 1;
-            let next_disabled = !extent_ready || index_now + 1 >= items_len || items_len <= 1;
+            let extent_ready = view_size_now.0 > 0.0 && snaps_len > 0;
+            let prev_disabled =
+                !extent_ready || snaps_len <= 1 || (!options.loop_enabled && clamped_index == 0);
+            let next_disabled = !extent_ready
+                || snaps_len <= 1
+                || (!options.loop_enabled && clamped_index + 1 >= snaps_len);
+
+            if let Some(api_snapshot) = self.api_snapshot {
+                let snapshot = CarouselApiSnapshot {
+                    selected_index: clamped_index,
+                    snap_count: if extent_ready { snaps_len } else { 0 },
+                    can_scroll_prev: !prev_disabled,
+                    can_scroll_next: !next_disabled,
+                };
+                let _ = cx.app.models_mut().update(&api_snapshot, |v| *v = snapshot);
+            }
 
             let prev_test_id = Arc::from(format!("{}-previous", root_test_id.as_ref()));
             let next_test_id = Arc::from(format!("{}-next", root_test_id.as_ref()));
@@ -862,13 +1406,203 @@ impl Carousel {
                 move |_cx| vec![next_button],
             );
 
+            let pointer_can_hover =
+                fret_ui_kit::declarative::primary_pointer_can_hover(cx, Invalidation::Layout, true);
+            let runtime_for_hover = runtime_model.clone();
+            let snaps_for_hover = snaps_model.clone();
+            let theme_for_hover = theme.clone();
             let root = cx.container(
-                fret_ui::element::ContainerProps {
+                ContainerProps {
                     layout: root_layout,
                     ..Default::default()
                 },
-                move |_cx| vec![viewport, prev_wrapper, next_wrapper],
+                move |cx| {
+                    let hover_overlay = autoplay_cfg.map(|cfg| {
+                        cx.hover_region(
+                            HoverRegionProps {
+                                layout: decl_style::layout_style(
+                                    &theme_for_hover,
+                                    LayoutRefinement::default()
+                                        .absolute()
+                                        .top(Space::N0)
+                                        .right(Space::N0)
+                                        .bottom(Space::N0)
+                                        .left(Space::N0),
+                                ),
+                            },
+                            move |cx, hovered| {
+                                let hovered = hovered && pointer_can_hover;
+
+                                let runtime_snapshot = cx
+                                    .watch_model(&runtime_for_hover)
+                                    .copied()
+                                    .unwrap_or_default();
+
+                                let was_hovered = runtime_snapshot.autoplay_hovered;
+                                let left_hover = was_hovered && !hovered;
+                                let entered_hover = !was_hovered && hovered;
+
+                                if was_hovered != hovered {
+                                    let _ = cx.app.models_mut().update(&runtime_for_hover, |st| {
+                                        st.autoplay_hovered = hovered;
+                                    });
+                                }
+
+                                if entered_hover && cfg.pause_on_hover {
+                                    if let Some(token) = runtime_snapshot.autoplay_token {
+                                        cx.app.push_effect(Effect::CancelTimer { token });
+                                    }
+                                    let _ = cx.app.models_mut().update(&runtime_for_hover, |st| {
+                                        st.autoplay_token = None;
+                                    });
+                                }
+
+                                if left_hover
+                                    && cfg.reset_on_hover_leave
+                                    && !runtime_snapshot.autoplay_paused
+                                {
+                                    let snaps: Arc<[Px]> = cx
+                                        .watch_model(&snaps_for_hover)
+                                        .layout()
+                                        .cloned()
+                                        .unwrap_or_else(|| Arc::from(Vec::<Px>::new()));
+
+                                    if snaps.len() > 1 && runtime_snapshot.autoplay_token.is_none()
+                                    {
+                                        let token = cx.app.next_timer_token();
+                                        let _ =
+                                            cx.app.models_mut().update(&runtime_for_hover, |st| {
+                                                st.autoplay_token = Some(token);
+                                            });
+                                        cx.app.push_effect(Effect::SetTimer {
+                                            window: Some(cx.window),
+                                            token,
+                                            after: cfg.delay,
+                                            repeat: None,
+                                        });
+                                    }
+                                }
+
+                                if !hovered
+                                    && !runtime_snapshot.autoplay_paused
+                                    && runtime_snapshot.autoplay_token.is_none()
+                                {
+                                    let snaps: Arc<[Px]> = cx
+                                        .watch_model(&snaps_for_hover)
+                                        .layout()
+                                        .cloned()
+                                        .unwrap_or_else(|| Arc::from(Vec::<Px>::new()));
+
+                                    if snaps.len() > 1 {
+                                        let token = cx.app.next_timer_token();
+                                        let _ =
+                                            cx.app.models_mut().update(&runtime_for_hover, |st| {
+                                                st.autoplay_token = Some(token);
+                                            });
+                                        cx.app.push_effect(Effect::SetTimer {
+                                            window: Some(cx.window),
+                                            token,
+                                            after: cfg.delay,
+                                            repeat: None,
+                                        });
+                                    }
+                                }
+
+                                Vec::new()
+                            },
+                        )
+                    });
+
+                    let mut children = vec![viewport, prev_wrapper, next_wrapper];
+                    if let Some(hover_overlay) = hover_overlay {
+                        children.push(hover_overlay);
+                    }
+                    children
+                },
             );
+
+            if let Some(cfg) = autoplay_cfg {
+                let runtime_for_timer = runtime_model.clone();
+                let snaps_for_timer = snaps_model.clone();
+                let index_for_timer = index_model.clone();
+                let offset_for_timer = offset_model.clone();
+                let loop_for_timer = options.loop_enabled;
+                cx.timer_on_timer_for(
+                    root.id,
+                    Arc::new(move |host, action_cx, token| {
+                        let runtime = host
+                            .models_mut()
+                            .read(&runtime_for_timer, |st| *st)
+                            .ok()
+                            .unwrap_or_default();
+                        if runtime.autoplay_token.as_ref() != Some(&token) {
+                            return false;
+                        }
+                        if runtime.autoplay_paused
+                            || (cfg.pause_on_hover && runtime.autoplay_hovered)
+                        {
+                            let _ = host.models_mut().update(&runtime_for_timer, |st| {
+                                st.autoplay_token = None;
+                            });
+                            return true;
+                        }
+
+                        let snaps: Arc<[Px]> = host
+                            .models_mut()
+                            .read(&snaps_for_timer, |v| v.clone())
+                            .ok()
+                            .unwrap_or_else(|| Arc::from(Vec::<Px>::new()));
+                        if snaps.len() <= 1 {
+                            let _ = host.models_mut().update(&runtime_for_timer, |st| {
+                                st.autoplay_token = None;
+                            });
+                            return true;
+                        }
+
+                        let index: usize = host
+                            .models_mut()
+                            .read(&index_for_timer, |v| *v)
+                            .ok()
+                            .unwrap_or(0);
+                        let target_index = if index + 1 < snaps.len() {
+                            index + 1
+                        } else if loop_for_timer {
+                            0
+                        } else {
+                            let _ = host.models_mut().update(&runtime_for_timer, |st| {
+                                st.autoplay_token = None;
+                            });
+                            return true;
+                        };
+
+                        let target = snaps[target_index];
+                        let cur = host
+                            .models_mut()
+                            .read(&offset_for_timer, |v| *v)
+                            .ok()
+                            .unwrap_or(Px(0.0));
+                        let _ = host
+                            .models_mut()
+                            .update(&index_for_timer, |v| *v = target_index);
+                        let _ = host.models_mut().update(&runtime_for_timer, |st| {
+                            st.drag = headless_carousel::CarouselDragState::default();
+                            st.settling = true;
+                            st.settle_from = cur;
+                            st.settle_to = target;
+                            st.settle_generation = st.settle_generation.saturating_add(1);
+                        });
+                        host.request_redraw(action_cx.window);
+
+                        host.push_effect(Effect::SetTimer {
+                            window: Some(action_cx.window),
+                            token,
+                            after: cfg.delay,
+                            repeat: None,
+                        });
+                        true
+                    }),
+                );
+            }
 
             cx.key_add_on_key_down_capture_for(root.id, on_key_down);
 

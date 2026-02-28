@@ -417,7 +417,7 @@ pub fn run() -> anyhow::Result<()> {
 
     let config = WinitRunnerConfig {
         main_window_title: "fret-demo form_demo".to_string(),
-        main_window_size: winit::dpi::LogicalSize::new(880.0, 560.0),
+        main_window_size: fret_launch::WindowLogicalSize::new(880.0, 560.0),
         ..Default::default()
     };
 

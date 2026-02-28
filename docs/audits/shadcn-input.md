@@ -28,6 +28,8 @@ This audit compares Fret’s shadcn-aligned `Input` against the upstream shadcn/
 
 - Pass: Default height matches `h-9` from the web golden (`input-demo`).
 - Note: Width is typically `w-full`, so we gate width only in scenarios with deterministic parent bounds.
+- Pass (best-effort): Selection highlight background uses `primary` (`selection:bg-primary`).
+  Fret currently does not model the selection text color (`selection:text-primary-foreground`).
 
 ### States (`aria-invalid`)
 

@@ -777,12 +777,8 @@ impl CommitCopyButton {
             pressable.a11y.test_id = test_id.clone();
 
             let fg = theme.color_token("muted-foreground");
-            let bg_hover = theme
-                .color_by_key("color.menu.item.hover")
-                .unwrap_or_else(|| theme.color_token("secondary"));
-            let bg_pressed = theme
-                .color_by_key("accent")
-                .unwrap_or_else(|| theme.color_token("secondary"));
+            let bg_hover = theme.color_token("color.menu.item.hover");
+            let bg_pressed = theme.color_token("accent");
 
             let bg = if st.pressed {
                 alpha(bg_pressed, 0.9)

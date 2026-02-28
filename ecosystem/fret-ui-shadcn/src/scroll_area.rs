@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use fret_core::{Color, Px};
+use fret_core::{Color, Corners, Edges, Px, SemanticsRole};
 use fret_ui::element::AnyElement;
 use fret_ui::element::ContainerProps;
 use fret_ui::element::HoverRegionProps;
@@ -15,6 +15,7 @@ use fret_ui::element::ScrollProps;
 use fret_ui::element::ScrollbarAxis;
 use fret_ui::element::ScrollbarProps;
 use fret_ui::element::ScrollbarStyle;
+use fret_ui::element::SemanticsProps;
 use fret_ui::element::SizeStyle;
 use fret_ui::element::StackProps;
 use fret_ui::scroll::ScrollHandle;
@@ -52,6 +53,8 @@ pub struct ScrollAreaViewport {
     axis: ScrollAxis,
     probe_unbounded: bool,
     viewport_test_id: Option<Arc<str>>,
+    focus_ring: bool,
+    focus_ring_radius: Option<Px>,
     intrinsic_measure_mode: ScrollIntrinsicMeasureMode,
 }
 
@@ -63,6 +66,8 @@ impl ScrollAreaViewport {
             axis: ScrollAxis::Y,
             probe_unbounded: true,
             viewport_test_id: None,
+            focus_ring: true,
+            focus_ring_radius: None,
             intrinsic_measure_mode: ScrollIntrinsicMeasureMode::Content,
         }
     }
@@ -79,6 +84,24 @@ impl ScrollAreaViewport {
 
     pub fn viewport_test_id(mut self, test_id: impl Into<Arc<str>>) -> Self {
         self.viewport_test_id = Some(test_id.into());
+        self
+    }
+
+    /// When true (default), the viewport mounts a focus-visible ring (shadcn v4 parity).
+    ///
+    /// Note: Fret's `Scroll` mechanism is not focusable today, so we model the upstream outcome
+    /// with a focusable `Pressable` wrapper that paints the ring and hosts the scroll subtree.
+    pub fn focus_ring(mut self, enabled: bool) -> Self {
+        self.focus_ring = enabled;
+        self
+    }
+
+    /// Overrides the corner radius used for the focus ring.
+    ///
+    /// Upstream uses `rounded-[inherit]` on the viewport; in Fret we default to
+    /// `metric.radius.md`, but recipes can override this when the root is rounded differently.
+    pub fn focus_ring_radius(mut self, radius: Px) -> Self {
+        self.focus_ring_radius = Some(radius);
         self
     }
 
@@ -249,6 +272,8 @@ impl ScrollAreaRoot {
                 axis: viewport_axis,
                 probe_unbounded: viewport_probe_unbounded,
                 viewport_test_id,
+                focus_ring: viewport_focus_ring,
+                focus_ring_radius: viewport_focus_ring_radius,
                 intrinsic_measure_mode,
                 ..
             } = viewport;
@@ -322,10 +347,49 @@ impl ScrollAreaRoot {
                 );
 
                 let scroll_id = scroll.id;
-                let viewport = match viewport_test_id {
+                let viewport_scroll = match viewport_test_id {
                     Some(test_id) => scroll.test_id(test_id),
                     None => scroll,
                 };
+
+                let viewport = if viewport_focus_ring {
+                    let radius = viewport_focus_ring_radius
+                        .unwrap_or_else(|| theme.metric_token("metric.radius.md"));
+                    let ring = decl_style::focus_ring(&theme, radius);
+                    let viewport_layout = {
+                        let mut layout = scroll_layout;
+                        layout.overflow = Overflow::Visible;
+                        layout
+                    };
+                    cx.container(
+                        ContainerProps {
+                            layout: viewport_layout,
+                            padding: Edges::all(Px(0.0)).into(),
+                            background: None,
+                            shadow: None,
+                            border: Edges::all(Px(0.0)),
+                            border_color: None,
+                            focus_ring: Some(ring),
+                            focus_within: true,
+                            corner_radii: Corners::all(radius),
+                            ..Default::default()
+                        },
+                        move |cx| {
+                            vec![cx.semantics(
+                                SemanticsProps {
+                                    layout: viewport_layout,
+                                    role: SemanticsRole::Viewport,
+                                    focusable: true,
+                                    ..Default::default()
+                                },
+                                move |_cx| vec![viewport_scroll],
+                            )]
+                        },
+                    )
+                } else {
+                    viewport_scroll
+                };
+
                 let mut children = vec![viewport];
 
                 let thumb = shadcn_scrollbar_thumb(&theme);
@@ -680,7 +744,7 @@ mod tests {
     use fret_core::{PathCommand, PathConstraints, PathId, PathMetrics, PathService, PathStyle};
     use fret_core::{TextBlobId, TextConstraints, TextMetrics, TextService};
     use fret_runtime::TickId;
-    use fret_ui::element::{ColumnProps, ContainerProps, LayoutStyle, Length};
+    use fret_ui::element::{ColumnProps, ContainerProps, ElementKind, LayoutStyle, Length};
     use fret_ui::tree::UiTree;
 
     #[derive(Default)]
@@ -745,6 +809,63 @@ mod tests {
             Point::new(Px(0.0), Px(0.0)),
             Size::new(Px(400.0), Px(240.0)),
         )
+    }
+
+    #[test]
+    fn scroll_area_viewport_mounts_focus_ring_wrapper_by_default() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        crate::shadcn_themes::apply_shadcn_new_york_v4(
+            &mut app,
+            crate::shadcn_themes::ShadcnBaseColor::Neutral,
+            crate::shadcn_themes::ShadcnColorScheme::Light,
+        );
+
+        let mut services = FakeServices::default();
+
+        let root = fret_ui::declarative::render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds(),
+            "sa_viewport_focus_ring",
+            |cx| {
+                let theme = Theme::global(&*cx.app).snapshot();
+                let expected_radius = theme.metric_token("metric.radius.md");
+                let expected_ring = decl_style::focus_ring(&theme, expected_radius);
+
+                let el = ScrollArea::new([cx.text("Row")])
+                    .refine_layout(LayoutRefinement::default().size_full())
+                    .into_element(cx);
+
+                let stack = el.children.first().expect("hover region child stack");
+                let viewport = stack.children.first().expect("stack child viewport");
+
+                let ElementKind::Container(container) = &viewport.kind else {
+                    panic!(
+                        "expected viewport focus ring container, got {:?}",
+                        viewport.kind
+                    );
+                };
+
+                assert_eq!(
+                    container.focus_ring,
+                    Some(expected_ring),
+                    "expected shadcn ScrollArea viewport to mount focus ring wrapper by default"
+                );
+                assert!(
+                    container.focus_within,
+                    "expected scroll area viewport wrapper to use focus-within"
+                );
+
+                vec![el]
+            },
+        );
+        ui.set_root(root);
     }
 
     fn render_with<C, I>(

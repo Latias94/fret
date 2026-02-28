@@ -709,7 +709,7 @@ pub fn run() -> anyhow::Result<()> {
     let config = WinitRunnerConfig {
         main_window_title: "fret-demo container_queries_docking_demo".to_string(),
         // Ensure the left panel starts above md (>=768px) and can be dragged below it.
-        main_window_size: winit::dpi::LogicalSize::new(1400.0, 760.0),
+        main_window_size: fret_launch::WindowLogicalSize::new(1400.0, 760.0),
         ..Default::default()
     };
 

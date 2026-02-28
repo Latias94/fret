@@ -15,6 +15,69 @@ fn mk_service(app: &mut App) -> DndServiceModel {
 }
 
 #[test]
+fn pointer_is_tracking_any_sensor_reflects_sensor_lifecycle() {
+    let mut app = App::new();
+    let svc = mk_service(&mut app);
+    let window = fret_core::AppWindowId::default();
+    let frame = FrameId(1);
+
+    let kind = DragKindId(1);
+    let scope = DndScopeId(1);
+    let pointer = PointerId(0);
+
+    assert!(!pointer_is_tracking_any_sensor(
+        app.models(),
+        &svc,
+        window,
+        pointer
+    ));
+
+    let _ = handle_pointer_down_in_scope(
+        app.models_mut(),
+        &svc,
+        window,
+        frame,
+        kind,
+        scope,
+        pointer,
+        Point::new(Px(0.0), Px(0.0)),
+        TickId(0),
+        ActivationConstraint::None,
+        CollisionStrategy::ClosestCenter,
+        None,
+    );
+
+    assert!(pointer_is_tracking_any_sensor(
+        app.models(),
+        &svc,
+        window,
+        pointer
+    ));
+
+    let _ = handle_pointer_up_in_scope(
+        app.models_mut(),
+        &svc,
+        window,
+        frame,
+        kind,
+        scope,
+        pointer,
+        Point::new(Px(1.0), Px(0.0)),
+        TickId(1),
+        ActivationConstraint::None,
+        CollisionStrategy::ClosestCenter,
+        None,
+    );
+
+    assert!(!pointer_is_tracking_any_sensor(
+        app.models(),
+        &svc,
+        window,
+        pointer
+    ));
+}
+
+#[test]
 fn registry_isolated_by_scope() {
     let mut app = App::new();
     let svc = mk_service(&mut app);

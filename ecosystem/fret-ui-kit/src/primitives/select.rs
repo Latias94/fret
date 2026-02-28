@@ -661,6 +661,11 @@ pub struct SelectItemAlignedElementInputs {
     pub viewport: GlobalElementId,
     pub listbox: GlobalElementId,
     pub content_panel: GlobalElementId,
+    /// Optional scroll max offset (Y) for the viewport.
+    ///
+    /// When provided, it is used to derive a stable `items_height` (`viewport.scrollHeight`) even
+    /// when the listbox content element's bounds are clipped by the scroll viewport.
+    pub scroll_max_offset_y: Option<Px>,
     /// Optional probe element that represents the intrinsic content width (e.g. max item label).
     ///
     /// When present, the measured width is used as an additional lower bound for the item-aligned
@@ -704,11 +709,16 @@ pub fn select_item_aligned_layout_from_elements<H: UiHost>(
         .or_else(|| overlay::anchor_bounds_for_element(cx, inputs.selected_item_text))?;
     // The headless solver expects `items_height` to match Radix `viewport.scrollHeight`.
     //
-    // In our shadcn ports `inputs.listbox` typically points at the element that lays out the full
-    // listbox content (including the `SelectViewport` padding such as `p-1`). Because this element
-    // grows to fit all rows even when clipped by the scroll viewport, its laid-out height is the
-    // closest analogue to `scrollHeight`.
-    let items_height = listbox.size.height;
+    // Prefer deriving this from the viewport height plus its max scroll offset when available,
+    // since scroll implementations may clip content element bounds in a way that makes "content
+    // height" appear equal to the viewport height for short lists.
+    let items_height = if let Some(max_y) = inputs.scroll_max_offset_y {
+        Px((viewport.size.height.0 + max_y.0).max(0.0))
+    } else {
+        // Fallback to content bounds: in many shadcn ports `inputs.listbox` points at the element
+        // that lays out the full listbox content (including viewport padding such as `p-1`).
+        listbox.size.height
+    };
 
     if let Some(probe_id) = inputs.content_width_probe
         && let Some(probe) = cx.last_bounds_for_element(probe_id)
@@ -2157,6 +2167,7 @@ mod tests {
                         viewport: viewport_id.get().expect("viewport id"),
                         listbox: listbox_id.get().expect("listbox id"),
                         content_panel: content_panel_id.get().expect("content_panel id"),
+                        scroll_max_offset_y: None,
                         content_width_probe: None,
                         selected_item: selected_item_id.get().expect("selected_item id"),
                         selected_item_text: selected_item_text_id

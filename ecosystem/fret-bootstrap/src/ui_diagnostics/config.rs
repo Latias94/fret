@@ -538,9 +538,8 @@ impl Default for UiDiagnosticsConfig {
             .as_ref()
             .and_then(|c| c.write_bundle_json)
             .unwrap_or(true);
-        let write_bundle_schema2 = config_file
-            .as_ref()
-            .and_then(|c| c.write_bundle_schema2)
+        let write_bundle_schema2 = env_flag_override("FRET_DIAG_BUNDLE_WRITE_SCHEMA2")
+            .or_else(|| config_file.as_ref().and_then(|c| c.write_bundle_schema2))
             .unwrap_or(false);
         let frame_clock_fixed_delta_ms = fret_core::WindowFrameClockService::fixed_delta_from_env()
             .map(|d| d.as_millis())

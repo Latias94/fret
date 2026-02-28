@@ -76,38 +76,67 @@ impl HttpMethod {
         }
     }
 
-    fn accent_color(self) -> Color {
+    fn accent_color(self, theme: &Theme) -> Color {
+        fn token(theme: &Theme, key: &'static str, fallback: Color) -> Color {
+            theme.color_by_key(key).unwrap_or(fallback)
+        }
+
         match self {
-            Self::Get => Color {
-                r: 0.086,
-                g: 0.639,
-                b: 0.290,
-                a: 1.0,
-            },
-            Self::Post => Color {
-                r: 0.145,
-                g: 0.388,
-                b: 0.922,
-                a: 1.0,
-            },
-            Self::Put => Color {
-                r: 0.792,
-                g: 0.541,
-                b: 0.016,
-                a: 1.0,
-            },
-            Self::Patch => Color {
-                r: 0.792,
-                g: 0.541,
-                b: 0.016,
-                a: 1.0,
-            },
-            Self::Delete => Color {
-                r: 0.863,
-                g: 0.149,
-                b: 0.149,
-                a: 1.0,
-            },
+            Self::Get => token(
+                theme,
+                "component.schema_display.method.get",
+                Color {
+                    // Tailwind: green-600 (#16a34a).
+                    r: 0.086,
+                    g: 0.639,
+                    b: 0.290,
+                    a: 1.0,
+                },
+            ),
+            Self::Post => token(
+                theme,
+                "component.schema_display.method.post",
+                Color {
+                    // Tailwind: blue-600 (#2563eb).
+                    r: 0.145,
+                    g: 0.388,
+                    b: 0.922,
+                    a: 1.0,
+                },
+            ),
+            Self::Put => token(
+                theme,
+                "component.schema_display.method.put",
+                Color {
+                    // Tailwind: yellow-600 (#ca8a04).
+                    r: 0.792,
+                    g: 0.541,
+                    b: 0.016,
+                    a: 1.0,
+                },
+            ),
+            Self::Patch => token(
+                theme,
+                "component.schema_display.method.patch",
+                Color {
+                    // Tailwind: yellow-600 (#ca8a04).
+                    r: 0.792,
+                    g: 0.541,
+                    b: 0.016,
+                    a: 1.0,
+                },
+            ),
+            Self::Delete => token(
+                theme,
+                "component.schema_display.method.delete",
+                Color {
+                    // Tailwind: red-600 (#dc2626).
+                    r: 0.863,
+                    g: 0.149,
+                    b: 0.149,
+                    a: 1.0,
+                },
+            ),
         }
     }
 }
@@ -514,7 +543,7 @@ impl SchemaDisplayMethod {
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app).clone();
 
-        let accent = self.method.accent_color();
+        let accent = self.method.accent_color(&theme);
         let bg = alpha(accent, 0.18);
 
         let text_px = theme

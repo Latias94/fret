@@ -20,6 +20,7 @@ pub use fret_ui_headless::scroll_area;
 pub use fret_ui_headless::scroll_area_visibility;
 pub use fret_ui_headless::select_item_aligned;
 pub use fret_ui_headless::slider;
+pub use fret_ui_headless::snap_points;
 pub use fret_ui_headless::table;
 pub use fret_ui_headless::tooltip_delay_group;
 pub use fret_ui_headless::tooltip_intent;

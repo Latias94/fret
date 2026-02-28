@@ -188,10 +188,20 @@ pub(in crate::ui) fn preview_ai_web_preview_demo(
             let nav = ui_ai::WebPreviewNavigation::new([back, forward, url]).into_element(cx);
 
             let console = ui_ai::WebPreviewConsole::new()
-                .logs(Arc::from([ui_ai::WebPreviewConsoleLog::new(
-                    ui_ai::WebPreviewConsoleLogLevel::Log,
-                    "Console output (demo)",
-                )]))
+                .logs(Arc::from([
+                    ui_ai::WebPreviewConsoleLog::new(
+                        ui_ai::WebPreviewConsoleLogLevel::Log,
+                        "Console output (demo)",
+                    ),
+                    ui_ai::WebPreviewConsoleLog::new(
+                        ui_ai::WebPreviewConsoleLogLevel::Warn,
+                        "Warning output (demo)",
+                    ),
+                    ui_ai::WebPreviewConsoleLog::new(
+                        ui_ai::WebPreviewConsoleLogLevel::Error,
+                        "Error output (demo)",
+                    ),
+                ]))
                 .test_id_trigger("ui-ai-web-preview-demo-console-trigger")
                 .test_id_marker("ui-ai-web-preview-demo-console-content-marker")
                 .into_element(cx);

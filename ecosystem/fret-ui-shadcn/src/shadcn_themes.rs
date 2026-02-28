@@ -251,7 +251,11 @@ pub fn shadcn_new_york_v4_config(base: ShadcnBaseColor, scheme: ShadcnColorSchem
         // - dark: `dark:bg-destructive/60`
         let destructive_bg = match scheme {
             ShadcnColorScheme::Light => destructive.clone(),
-            ShadcnColorScheme::Dark => with_oklch_alpha(&destructive, 0.6)
+            // Note: CSS alpha blending is not perceptually identical across renderers.
+            // Our GPU pipeline blends in linear space, which can make `*/60` backgrounds appear
+            // slightly brighter than upstream web screenshots. Nudge the derived token darker so
+            // `text-white` remains legible and closer to shadcn docs.
+            ShadcnColorScheme::Dark => with_oklch_alpha(&destructive, 0.5)
                 .expect("shadcn new-york-v4 destructive token is oklch"),
         };
         colors.insert(
@@ -373,6 +377,18 @@ pub fn shadcn_new_york_v4_config(base: ShadcnBaseColor, scheme: ShadcnColorSchem
         colors.insert("component.navigation_menu.trigger.bg_open".to_string(), v);
     }
 
+    // AI Elements + some shadcn recipes use `dark:hover:bg-accent/50` to soften hover in dark
+    // schemes (e.g. attachment chips/rows). Our baseline theme defaults `color.menu.item.hover` to
+    // `accent` when not explicitly configured, so we seed an explicit dark alpha here to keep
+    // zinc/dark parity consistent.
+    if scheme == ShadcnColorScheme::Dark
+        && !colors.contains_key("color.menu.item.hover")
+        && let Some(accent) = colors.get("accent").cloned()
+    {
+        let v = with_oklch_alpha(&accent, 0.5).unwrap_or(accent);
+        colors.insert("color.menu.item.hover".to_string(), v);
+    }
+
     let mut metrics: HashMap<String, f32> = HashMap::new();
     if let Some(radius) = colors.remove("radius") {
         if let Some(px) = parse_css_length_px(&radius) {
@@ -443,6 +459,14 @@ pub fn shadcn_new_york_v4_config(base: ShadcnBaseColor, scheme: ShadcnColorSchem
     metrics
         .entry(theme_tokens::metric::COMPONENT_TEXT_PROSE_LINE_HEIGHT.to_string())
         .or_insert(24.0);
+
+    // Kbd (new-york-v4): `text-xs` inside a fixed `h-5` keycap.
+    metrics
+        .entry("component.kbd.text_px".to_string())
+        .or_insert(12.0);
+    metrics
+        .entry("component.kbd.line_height".to_string())
+        .or_insert(16.0);
 
     // Calendar (shadcn `Calendar` uses `h-8 w-8` day cells with `space-y-2` between week rows).
     metrics
@@ -868,6 +892,31 @@ mod tests {
     }
 
     #[test]
+    fn new_york_v4_seeds_kbd_metrics() {
+        let cfg = shadcn_new_york_v4_config(ShadcnBaseColor::Neutral, ShadcnColorScheme::Light);
+        assert_eq!(
+            cfg.metrics.get("component.kbd.text_px").copied(),
+            Some(12.0)
+        );
+        assert_eq!(
+            cfg.metrics.get("component.kbd.line_height").copied(),
+            Some(16.0)
+        );
+
+        let mut app = fret_app::App::new();
+        apply_shadcn_new_york_v4(&mut app, ShadcnBaseColor::Neutral, ShadcnColorScheme::Light);
+        let theme = Theme::global(&app);
+        assert_eq!(
+            theme.metric_by_key("component.kbd.text_px"),
+            Some(fret_core::Px(12.0))
+        );
+        assert_eq!(
+            theme.metric_by_key("component.kbd.line_height"),
+            Some(fret_core::Px(16.0))
+        );
+    }
+
+    #[test]
     fn new_york_v4_seeds_control_sizing_metrics() {
         let cfg = shadcn_new_york_v4_config(ShadcnBaseColor::Neutral, ShadcnColorScheme::Light);
         assert_eq!(
@@ -963,7 +1012,7 @@ mod tests {
                 "expected destructive badge bg to match destructive in light scheme"
             );
 
-            let expected_destructive_dark_bg = with_oklch_alpha(&destructive_dark, 0.6)
+            let expected_destructive_dark_bg = with_oklch_alpha(&destructive_dark, 0.5)
                 .expect("shadcn new-york-v4 destructive token is oklch");
             assert_eq!(
                 cfg_dark
@@ -971,7 +1020,7 @@ mod tests {
                     .get("component.button.destructive.bg")
                     .cloned(),
                 Some(expected_destructive_dark_bg.clone()),
-                "expected destructive button bg to match destructive/60 in dark scheme"
+                "expected destructive button bg to match destructive-derived dark token"
             );
             assert_eq!(
                 cfg_dark
@@ -979,7 +1028,7 @@ mod tests {
                     .get("component.badge.destructive.bg")
                     .cloned(),
                 Some(expected_destructive_dark_bg),
-                "expected destructive badge bg to match destructive/60 in dark scheme"
+                "expected destructive badge bg to match destructive-derived dark token"
             );
 
             let outline_bg_light = cfg_light
@@ -1221,6 +1270,17 @@ mod tests {
                 "expected choice-card checked bg to match primary/10 in dark scheme"
             );
         }
+    }
+
+    #[test]
+    fn new_york_v4_seeds_menu_item_hover_in_dark_scheme() {
+        let cfg = shadcn_new_york_v4_config(ShadcnBaseColor::Neutral, ShadcnColorScheme::Dark);
+        let accent = cfg.colors.get("accent").cloned().expect("missing accent");
+        let expected = with_oklch_alpha(&accent, 0.5).expect("accent token is oklch");
+        assert_eq!(
+            cfg.colors.get("color.menu.item.hover").cloned(),
+            Some(expected)
+        );
     }
 
     #[test]

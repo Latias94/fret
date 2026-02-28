@@ -1,6 +1,9 @@
 use std::sync::Arc;
 
-use fret_core::{Color, Corners, Point, Px, SemanticsRole, Transform2D};
+use fret_core::{
+    Color, Corners, FontId, Point, Px, SemanticsRole, TextFontAxisSetting, TextFontFeatureSetting,
+    Transform2D,
+};
 use fret_icons::IconId;
 use fret_runtime::Effect;
 use fret_ui::ThemeNamedColorKey;
@@ -60,6 +63,9 @@ pub struct Badge {
     test_id: Option<Arc<str>>,
     leading_icon: Option<IconId>,
     trailing_icon: Option<IconId>,
+    label_font_override: Option<FontId>,
+    label_features_override: Vec<TextFontFeatureSetting>,
+    label_axes_override: Vec<TextFontAxisSetting>,
     children: Vec<AnyElement>,
     chrome: ChromeRefinement,
     layout: LayoutRefinement,
@@ -91,6 +97,9 @@ impl Badge {
             test_id: None,
             leading_icon: None,
             trailing_icon: None,
+            label_font_override: None,
+            label_features_override: Vec::new(),
+            label_axes_override: Vec::new(),
             children: Vec::new(),
             chrome: ChromeRefinement::default(),
             layout: LayoutRefinement::default(),
@@ -106,6 +115,23 @@ impl Badge {
     /// Adds a trailing icon rendered under the badge's `currentColor` scope.
     pub fn trailing_icon(mut self, icon: IconId) -> Self {
         self.trailing_icon = Some(icon);
+        self
+    }
+
+    pub fn label_font(mut self, font: FontId) -> Self {
+        self.label_font_override = Some(font);
+        self
+    }
+
+    pub fn label_font_monospace(self) -> Self {
+        self.label_font(FontId::monospace())
+    }
+
+    pub fn label_tabular_nums(mut self) -> Self {
+        self.label_features_override.push(TextFontFeatureSetting {
+            tag: "tnum".into(),
+            value: 1,
+        });
         self
     }
 
@@ -162,6 +188,9 @@ impl Badge {
             self.test_id,
             self.leading_icon,
             self.trailing_icon,
+            self.label_font_override,
+            self.label_features_override,
+            self.label_axes_override,
             self.children,
             self.chrome,
             self.layout,
@@ -295,6 +324,9 @@ pub fn badge<H: UiHost>(
         None,
         None,
         None,
+        None,
+        Vec::new(),
+        Vec::new(),
         Vec::new(),
         ChromeRefinement::default(),
         LayoutRefinement::default(),
@@ -311,6 +343,9 @@ fn badge_with_patch<H: UiHost>(
     test_id: Option<Arc<str>>,
     leading_icon: Option<IconId>,
     trailing_icon: Option<IconId>,
+    label_font_override: Option<FontId>,
+    label_features_override: Vec<TextFontFeatureSetting>,
+    label_axes_override: Vec<TextFontAxisSetting>,
     children: Vec<AnyElement>,
     chrome_override: ChromeRefinement,
     layout_override: LayoutRefinement,
@@ -321,8 +356,15 @@ fn badge_with_patch<H: UiHost>(
     let a11y_label = label.clone();
     let label_for_content = label.clone();
 
-    let pressable_layout =
-        decl_style::layout_style(&theme, LayoutRefinement::default().merge(layout_override));
+    // Upstream shadcn badge:
+    // - uses `inline-flex ... shrink-0 w-fit whitespace-nowrap overflow-hidden`
+    // - relies on `shrink-0` so badges don't collapse inside constrained flex rows.
+    let pressable_layout = decl_style::layout_style(
+        &theme,
+        LayoutRefinement::default()
+            .flex_shrink_0()
+            .merge(layout_override),
+    );
 
     let mut chrome = ChromeRefinement::default()
         .px(Space::N2)
@@ -348,6 +390,7 @@ fn badge_with_patch<H: UiHost>(
 
     let mut chrome_props = decl_style::container_props(&theme, chrome, LayoutRefinement::default());
     chrome_props.layout.size = pressable_layout.size;
+    chrome_props.layout.overflow = fret_ui::element::Overflow::Clip;
 
     let text_px = theme
         .metric_by_key("component.badge.text_px")
@@ -360,18 +403,25 @@ fn badge_with_patch<H: UiHost>(
 
     let content_children = move |cx: &mut ElementContext<'_, H>| {
         current_color::scope_children(cx, ColorRef::Color(fg), |cx| {
-            let label = ui::text(cx, label_for_content.clone())
+            let mut label = ui::text(cx, label_for_content.clone())
                 .text_size_px(text_px)
                 .fixed_line_box_px(line_height)
                 .line_box_in_bounds()
-                .font_semibold()
+                .font_medium()
                 .nowrap()
-                .text_color(ColorRef::Color(fg))
-                .into_element(cx);
+                .text_color(ColorRef::Color(fg));
 
-            if children.is_empty() && leading_icon.is_none() && trailing_icon.is_none() {
-                return vec![label];
+            if let Some(font) = label_font_override {
+                label = label.font(font);
             }
+            for feature in &label_features_override {
+                label = label.font_feature(feature.tag.to_string(), feature.value);
+            }
+            for axis in &label_axes_override {
+                label = label.font_axis(axis.tag.to_string(), axis.value);
+            }
+
+            let label = label.into_element(cx);
 
             // Upstream shadcn badge enforces `[&>svg]:size-3` (12px) for direct svg children.
             let icon_px = Px(12.0);
@@ -467,6 +517,7 @@ fn badge_with_patch<H: UiHost>(
 
     let mut root_props = chrome_props;
     root_props.layout = pressable_layout;
+    root_props.layout.overflow = fret_ui::element::Overflow::Clip;
     let mut out = cx.container(root_props, content_children);
     if let Some(test_id) = test_id {
         out = out.test_id(test_id);
@@ -479,7 +530,7 @@ mod tests {
     use super::*;
 
     use fret_app::App;
-    use fret_core::{AppWindowId, Point, Rect, Size};
+    use fret_core::{AppWindowId, FontWeight, Point, Rect, Size};
 
     fn bounds() -> Rect {
         Rect::new(
@@ -530,6 +581,50 @@ mod tests {
             assert!(
                 icons.len() >= 2 && icons.iter().all(|c| *c == expected_fg),
                 "expected badge icon(s) to resolve to variant fg"
+            );
+        });
+    }
+
+    fn find_text<'a>(el: &'a AnyElement, needle: &str) -> Option<&'a fret_ui::element::TextProps> {
+        match &el.kind {
+            ElementKind::Text(props) if props.text.as_ref() == needle => return Some(props),
+            _ => {}
+        }
+        for child in &el.children {
+            if let Some(found) = find_text(child, needle) {
+                return Some(found);
+            }
+        }
+        None
+    }
+
+    #[test]
+    fn badge_defaults_to_font_medium_and_shrink_0() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+
+        fret_ui::elements::with_element_cx(&mut app, window, bounds(), "test", |cx| {
+            let el = Badge::new("Draft").into_element(cx);
+            let ElementKind::Container(root) = &el.kind else {
+                panic!("expected Badge root to be a Container, got {:?}", el.kind);
+            };
+
+            assert_eq!(
+                root.layout.flex.shrink, 0.0,
+                "expected shadcn Badge to default to shrink-0"
+            );
+            assert_eq!(
+                root.layout.overflow,
+                fret_ui::element::Overflow::Clip,
+                "expected shadcn Badge to default to overflow-hidden (clip)"
+            );
+
+            let label = find_text(&el, "Draft").expect("badge label text element");
+            let style = label.style.as_ref().expect("badge label has a text style");
+            assert_eq!(
+                style.weight,
+                FontWeight::MEDIUM,
+                "expected shadcn Badge label to use font-medium"
             );
         });
     }

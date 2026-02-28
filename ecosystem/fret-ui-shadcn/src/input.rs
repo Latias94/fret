@@ -70,6 +70,7 @@ pub struct Input {
     model: Model<String>,
     a11y_label: Option<Arc<str>>,
     a11y_role: Option<SemanticsRole>,
+    test_id: Option<Arc<str>>,
     placeholder: Option<Arc<str>>,
     aria_invalid: bool,
     aria_required: bool,
@@ -93,6 +94,7 @@ impl Input {
             model,
             a11y_label: None,
             a11y_role: None,
+            test_id: None,
             placeholder: None,
             aria_invalid: false,
             aria_required: false,
@@ -118,6 +120,16 @@ impl Input {
 
     pub fn a11y_role(mut self, role: SemanticsRole) -> Self {
         self.a11y_role = Some(role);
+        self
+    }
+
+    /// Sets a stable `test_id` on the underlying `TextInput` element (not the outer chrome wrapper).
+    ///
+    /// This is preferred over calling `.test_id(...)` on the returned `AnyElement`, because
+    /// diagnostics scripts (`type_text_into`, focus assertions) need to target the focusable
+    /// text input node directly.
+    pub fn test_id(mut self, id: impl Into<Arc<str>>) -> Self {
+        self.test_id = Some(id.into());
         self
     }
 
@@ -231,6 +243,7 @@ impl Input {
             self.model,
             self.a11y_label,
             self.a11y_role,
+            self.test_id,
             self.placeholder,
             self.aria_invalid,
             self.aria_required,
@@ -266,6 +279,7 @@ pub fn input<H: UiHost>(
         model,
         a11y_label,
         a11y_role,
+        None,
         placeholder,
         false,
         false,
@@ -291,6 +305,7 @@ fn input_with_style_and_submit<H: UiHost>(
     model: Model<String>,
     a11y_label: Option<Arc<str>>,
     a11y_role: Option<SemanticsRole>,
+    test_id: Option<Arc<str>>,
     placeholder: Option<Arc<str>>,
     aria_invalid: bool,
     aria_required: bool,
@@ -321,7 +336,9 @@ fn input_with_style_and_submit<H: UiHost>(
             border: Some("input"),
             border_focus: Some("ring"),
             fg: Some("foreground"),
-            selection: Some("ring/50"),
+            // shadcn/ui v4 `Input` uses `selection:bg-primary selection:text-primary-foreground`.
+            // We currently model the background color only.
+            selection: Some("primary"),
             ..InputTokenKeys::none()
         },
     );
@@ -393,6 +410,7 @@ fn input_with_style_and_submit<H: UiHost>(
     props.focusable = !disabled;
     props.a11y_label = a11y_label;
     props.a11y_role = a11y_role;
+    props.test_id = test_id;
     props.placeholder = placeholder;
     props.a11y_required = aria_required;
     props.a11y_invalid = aria_invalid.then_some(fret_core::SemanticsInvalid::True);
@@ -481,7 +499,7 @@ mod tests {
     use fret_ui::elements;
 
     #[test]
-    fn input_selection_color_uses_ring_50_in_shadcn_light_theme() {
+    fn input_selection_color_uses_primary_in_shadcn_light_theme() {
         let mut app = fret_app::App::new();
         crate::shadcn_themes::apply_shadcn_new_york_v4(
             &mut app,
@@ -490,9 +508,7 @@ mod tests {
         );
 
         let theme = Theme::global(&app);
-        let expected = theme
-            .color_by_key("ring/50")
-            .expect("shadcn new-york-v4 seeds ring/50");
+        let expected = theme.color_token("primary");
 
         let resolved = resolve_input_chrome(
             theme,
@@ -503,7 +519,7 @@ mod tests {
                 border: Some("input"),
                 border_focus: Some("ring"),
                 fg: Some("foreground"),
-                selection: Some("ring/50"),
+                selection: Some("primary"),
                 ..InputTokenKeys::none()
             },
         );

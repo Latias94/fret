@@ -15,6 +15,34 @@ use fret_ui_kit::{
     ChromeRefinement, ColorFallback, ColorRef, LayoutRefinement, MetricRef, Radius, Space, ui,
 };
 
+use crate::test_id::attach_test_id;
+
+const AVATAR_BADGE_MARKER_PREFIX: &str = "fret-ui-shadcn.avatar-badge";
+
+fn matches_marker(test_id: &str, prefix: &str) -> bool {
+    test_id == prefix
+        || (test_id.starts_with(prefix)
+            && test_id
+                .as_bytes()
+                .get(prefix.len())
+                .is_some_and(|b| *b == b':'))
+}
+
+fn is_avatar_badge_marker(element: &AnyElement) -> bool {
+    element
+        .semantics_decoration
+        .as_ref()
+        .and_then(|d| d.test_id.as_deref())
+        .is_some_and(|id| matches_marker(id, AVATAR_BADGE_MARKER_PREFIX))
+        || match &element.kind {
+            ElementKind::Semantics(props) => props
+                .test_id
+                .as_deref()
+                .is_some_and(|id| matches_marker(id, AVATAR_BADGE_MARKER_PREFIX)),
+            _ => false,
+        }
+}
+
 #[derive(Debug, Default)]
 struct AvatarSizeProviderState {
     current: Option<AvatarSize>,
@@ -57,9 +85,9 @@ pub enum AvatarSize {
 /// This is a fixed-size, fully-rounded container intended to host exactly one `AvatarImage` and
 /// one `AvatarFallback` (order controls paint stacking).
 ///
-/// Note: The root does not clip overflow by default, matching shadcn's `radix-nova` avatar styling
-/// where `AvatarImage` handles rounding/clipping and `AvatarBadge` can paint its ring outside the
-/// avatar circle.
+/// Note: Upstream shadcn/ui sets `overflow-hidden` on the avatar root. When an [`AvatarBadge`] is
+/// present, Fret wraps the clipped core in an overflow-visible wrapper so the badge can render
+/// outside the circle without being clipped.
 #[derive(Debug)]
 pub struct Avatar {
     children: Vec<AnyElement>,
@@ -113,14 +141,45 @@ impl Avatar {
                 .h_px(MetricRef::space(size))
                 .flex_shrink_0();
 
-            let props = decl_style::container_props(
-                &theme,
-                base_chrome.merge(self.chrome),
-                base_layout.merge(self.layout),
-            );
+            let mut badge: Option<AnyElement> = None;
+            let mut core_children: Vec<AnyElement> = Vec::with_capacity(self.children.len());
+            for child in self.children {
+                if badge.is_none() && is_avatar_badge_marker(&child) {
+                    badge = Some(child);
+                } else {
+                    core_children.push(child);
+                }
+            }
 
-            let children = self.children;
-            cx.container(props, move |_cx| children)
+            let (core_layout, wrapper_layout) = match badge.as_ref() {
+                None => (base_layout.merge(self.layout), None),
+                Some(_) => (
+                    LayoutRefinement::default()
+                        .absolute()
+                        .inset(Space::N0)
+                        .size_full(),
+                    Some(base_layout.merge(self.layout)),
+                ),
+            };
+
+            let mut core_props =
+                decl_style::container_props(&theme, base_chrome.merge(self.chrome), core_layout);
+            core_props.layout.overflow = Overflow::Clip;
+
+            let core = cx.container(core_props, move |_cx| core_children);
+
+            match (wrapper_layout, badge) {
+                (None, None) => core,
+                (Some(wrapper_layout), Some(badge)) => {
+                    let wrapper_props = decl_style::container_props(
+                        &theme,
+                        ChromeRefinement::default(),
+                        wrapper_layout,
+                    );
+                    cx.container(wrapper_props, move |_cx| vec![core, badge])
+                }
+                _ => core,
+            }
         })
     }
 }
@@ -194,7 +253,7 @@ impl AvatarBadge {
 
         let children = if hide_icon { Vec::new() } else { self.children };
 
-        cx.container(props, move |cx| {
+        let el = cx.container(props, move |cx| {
             vec![cx.flex(
                 FlexProps {
                     layout: LayoutStyle::default(),
@@ -227,7 +286,10 @@ impl AvatarBadge {
                     }
                 },
             )]
-        })
+        });
+
+        let marker: Arc<str> = Arc::from(format!("{}:{}", AVATAR_BADGE_MARKER_PREFIX, el.id.0));
+        attach_test_id(el, marker)
     }
 }
 
@@ -727,6 +789,7 @@ mod tests {
         TextConstraints, TextMetrics, TextService,
     };
     use fret_runtime::{Effect, FrameId};
+    use fret_ui::element::ElementKind;
     use fret_ui::tree::UiTree;
 
     #[derive(Default)]
@@ -903,6 +966,65 @@ mod tests {
         ui.request_semantics_snapshot();
         let snap = ui.semantics_snapshot().expect("semantics snapshot");
         assert!(!snapshot_contains_label(&snap, "JD"));
+    }
+
+    #[test]
+    fn avatar_root_clips_overflow_like_shadcn() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(200.0), Px(120.0)),
+        );
+
+        let el = fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            Avatar::new([AvatarFallback::new("JD").into_element(cx)]).into_element(cx)
+        });
+
+        let ElementKind::Container(props) = &el.kind else {
+            panic!("expected Avatar root to be a Container, got {:?}", el.kind);
+        };
+        assert_eq!(props.layout.overflow, Overflow::Clip);
+    }
+
+    #[test]
+    fn avatar_with_badge_uses_wrapper_to_avoid_clipping_badge() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(200.0), Px(120.0)),
+        );
+
+        let el = fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            let badge = AvatarBadge::new().into_element(cx);
+            Avatar::new([AvatarFallback::new("JD").into_element(cx), badge]).into_element(cx)
+        });
+
+        let ElementKind::Container(wrapper) = &el.kind else {
+            panic!(
+                "expected Avatar+Badge root to be a wrapper Container, got {:?}",
+                el.kind
+            );
+        };
+        assert_eq!(
+            wrapper.layout.overflow,
+            Overflow::Visible,
+            "expected wrapper overflow to remain visible"
+        );
+
+        let core = el.children.first().expect("wrapper core child");
+        let ElementKind::Container(core_props) = &core.kind else {
+            panic!(
+                "expected wrapper first child (core) to be a Container, got {:?}",
+                core.kind
+            );
+        };
+        assert_eq!(
+            core_props.layout.overflow,
+            Overflow::Clip,
+            "expected avatar core to clip overflow"
+        );
     }
 
     #[test]
