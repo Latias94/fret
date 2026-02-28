@@ -147,7 +147,7 @@ fn finalize_dump(
     let bundle_json_bytes = if service.cfg.write_bundle_json {
         write_bundle_json_bytes(service, bundle_json_path, want_pretty, bundle)?
     } else {
-        Some(None)
+        None
     };
 
     let window_count = windows.len() as u64;
