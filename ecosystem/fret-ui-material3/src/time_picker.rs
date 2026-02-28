@@ -34,9 +34,9 @@ use time::Time;
 use crate::button::{Button, ButtonVariant};
 use crate::foundation::focus_ring::material_focus_ring_for_component;
 use crate::foundation::indication::{
-    RippleClip, material_ink_layer_for_pressable, material_pressable_indication_config,
+    material_ink_layer_for_pressable, material_pressable_indication_config, RippleClip,
 };
-use crate::foundation::interaction::{PressableInteraction, pressable_interaction};
+use crate::foundation::interaction::{pressable_interaction, PressableInteraction};
 use crate::foundation::surface::material_surface_style;
 use crate::icon_button::{IconButton, IconButtonVariant};
 use crate::motion;
@@ -474,7 +474,11 @@ impl TimePickerDialog {
                 let open_model_for_request = self.open.clone();
                 let open_model_for_overlay = self.open.clone();
 
-                let scrim_alpha = (scrim_base.a * self.scrim_opacity * transition.progress)
+                let scrim_opacity = Theme::global(&*cx.app)
+                    .number_by_key("md.sys.fret.material.time-picker.scrim.opacity")
+                    .unwrap_or(self.scrim_opacity)
+                    .clamp(0.0, 1.0);
+                let scrim_alpha = (scrim_base.a * scrim_opacity * transition.progress)
                     .clamp(0.0, 1.0);
                 let scrim_color = with_alpha(scrim_base, scrim_alpha);
 

@@ -332,7 +332,10 @@ impl<H: fret_ui::UiHost> Widget<H> for DockingArbitrationHarnessRoot {
         }
 
         let _ = cx.layout_in(self.left_anchor, rect(left_anchor_pos.0, left_anchor_pos.1));
-        let _ = cx.layout_in(self.right_anchor, rect(right_anchor_pos.0, right_anchor_pos.1));
+        let _ = cx.layout_in(
+            self.right_anchor,
+            rect(right_anchor_pos.0, right_anchor_pos.1),
+        );
         for (anchor, (x, y)) in self
             .extra_anchors
             .iter()
@@ -1816,9 +1819,11 @@ impl DockingArbitrationDriver {
                 ));
             let extra_anchors: Vec<fret_core::NodeId> = (0..10)
                 .map(|ix| {
-                    state.ui.create_node_retained(DockingArbitrationDragAnchor::new(format!(
-                        "dock-arb-tab-drag-anchor-extra-{ix}"
-                    )))
+                    state
+                        .ui
+                        .create_node_retained(DockingArbitrationDragAnchor::new(format!(
+                            "dock-arb-tab-drag-anchor-extra-{ix}"
+                        )))
                 })
                 .collect();
             let viewport_split_handle_anchor =
@@ -1983,6 +1988,12 @@ impl WinitAppDriver for DockingArbitrationDriver {
 
         if matches!(event, Event::WindowCloseRequested) {
             app.push_effect(Effect::Window(WindowRequest::Close(window)));
+            return;
+        }
+
+        if app.with_global_mut_untracked(UiDiagnosticsService::default, |svc, _app| {
+            svc.should_ignore_external_pointer_event(event)
+        }) {
             return;
         }
 

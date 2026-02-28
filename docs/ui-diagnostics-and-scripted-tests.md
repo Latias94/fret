@@ -705,6 +705,14 @@ Script harness:
 - `FRET_DIAG_SCRIPT_AUTO_DUMP=0`: disable auto-dump after steps (default enabled).
 - `FRET_DIAG_SCRIPT_DUMP_MAX_SNAPSHOTS=...`: cap snapshots included in script-driven bundle dumps (default 30).
 
+Script input isolation (recommended for deterministic playback, especially multi-window docking/tear-off):
+
+- `FRET_DIAG_ISOLATE_POINTER_INPUT=1`: while a script is active, ignore external (non-script) pointer input events so
+  accidental real mouse movement/clicks don't perturb scripted runs.
+  - `--launch` runs default this to `1` (tooling also writes
+    `isolate_external_pointer_input_while_script_running=true` into the per-run `diag.config.json`).
+  - Escape hatch: pass `--env FRET_DIAG_ISOLATE_POINTER_INPUT=0` when you need interactive input during a script run.
+
 Screenshot capture:
 
 - Requires the running app to enable the `fret-launch/diag-screenshots` feature (runner-side readback + PNG encode).

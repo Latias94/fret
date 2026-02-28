@@ -164,6 +164,12 @@ Make configuration predictable:
     override).
   - Audit (2026-02-28): all `--launch` entry points (`diag run/suite/repro/perf/repeat/script`) call the same helper
     (`crates/fret-diag/src/compare.rs:maybe_launch_demo`) to ensure consistent per-run config + env policy.
+  - Determinism (2026-02-28): tool-launched runs default to isolating external pointer input while a script is active
+    (so accidental real mouse moves/clicks don't perturb cross-window docking/tear-off playback).
+    - Tooling sets `FRET_DIAG_ISOLATE_POINTER_INPUT=1` and writes
+      `isolate_external_pointer_input_while_script_running=true` into the per-run `diag.config.json`.
+    - Override (escape hatch): pass `--env FRET_DIAG_ISOLATE_POINTER_INPUT=0` when you need interactive input during a
+      script run.
   - Smoke (2026-02-28): `ui-gallery-gesture-tap-smoke` passes under `--launch` and produces schema2-only bundle exports
     by default (`bundle.schema2.json` present, raw `bundle.json` absent).
   - Smoke (2026-02-28): `ui-gallery-table-smoke` passes again after relaxing a too-strict

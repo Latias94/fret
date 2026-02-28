@@ -126,6 +126,11 @@ Candidates:
   - `alpha(theme.color_token("accent"), ...)` in recipes that should use a shared key.
 - Expand `tools/check_theme_token_coverage.py` to include a small denylist and/or report “new required keys”.
 
+Current guardrail (small-by-default):
+
+- `tools/check_theme_token_drift.py` fails if ecosystem/app code reads named literal colors via
+  `theme.color_token("white")` / `theme.color_token("black")` (prefer `ThemeNamedColorKey` at call sites).
+
 ## Checklist for porting a new component (copy/paste)
 
 1) Identify upstream intent:
@@ -155,4 +160,3 @@ Candidates:
 - Inventory: `docs/workstreams/theme-token-alignment-v1/todo.md`
 - Baseline theme keys: `docs/adr/0050-theme-config-schema-and-baseline-tokens.md`
 - Named colors policy: `docs/adr/0101-semantic-theme-keys-and-extensible-token-registry.md`
-

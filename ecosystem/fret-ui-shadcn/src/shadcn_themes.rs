@@ -415,6 +415,59 @@ pub fn shadcn_new_york_v4_config(base: ShadcnBaseColor, scheme: ShadcnColorSchem
         colors.insert("component.navigation_menu.trigger.bg_open".to_string(), v);
     }
 
+    // Editor-like ecosystem surfaces (node graph, code editors) consume Fret viewport selection
+    // tokens from the typed theme baseline.
+    //
+    // Seed them from shadcn's `ring` to avoid the default Fret blue selection when a shadcn theme
+    // is installed.
+    if let Some(ring) = colors.get("ring").cloned() {
+        let mut seed_ring_alpha = |key: &str, alpha: f32| {
+            if colors.contains_key(key) {
+                return;
+            }
+            let v = with_oklch_alpha(&ring, alpha).unwrap_or_else(|| ring.clone());
+            colors.insert(key.to_string(), v);
+        };
+
+        seed_ring_alpha("color.viewport.selection.fill", 0.16);
+        seed_ring_alpha("color.viewport.selection.stroke", 0.80);
+
+        if !colors.contains_key("color.viewport.marker") {
+            colors.insert("color.viewport.marker".to_string(), ring);
+        }
+    }
+
+    // `fret-chart` accepts shadcn `chart-*` tokens, but some retained paths use
+    // `chart.palette.<n>` directly (tests and fixed-style overrides). Seed a small alias set so
+    // chart demos do not fall back to the default theme when the palette keys are absent.
+    for (idx, shadcn_key) in ["chart-1", "chart-2", "chart-3", "chart-4", "chart-5"]
+        .into_iter()
+        .enumerate()
+    {
+        let key = format!("chart.palette.{idx}");
+        if colors.contains_key(&key) {
+            continue;
+        }
+        if let Some(v) = colors.get(shadcn_key).cloned() {
+            colors.insert(key, v);
+        }
+    }
+
+    // `fret-plot` historically reads `plot.palette.<n>` / `fret.plot.palette.<n>`.
+    // Seed a small alias set from shadcn's chart tokens so plot demos match the same palette
+    // baseline as `fret-chart` when a shadcn theme preset is installed.
+    for (idx, shadcn_key) in ["chart-1", "chart-2", "chart-3", "chart-4", "chart-5"]
+        .into_iter()
+        .enumerate()
+    {
+        if let Some(v) = colors.get(shadcn_key).cloned() {
+            let key = format!("plot.palette.{idx}");
+            colors.entry(key).or_insert_with(|| v.clone());
+            let key = format!("fret.plot.palette.{idx}");
+            colors.entry(key).or_insert_with(|| v.clone());
+        }
+    }
+
     // AI Elements + some shadcn recipes use `dark:hover:bg-accent/50` to soften hover in dark
     // schemes (e.g. attachment chips/rows). Our baseline theme defaults `color.menu.item.hover` to
     // `accent` when not explicitly configured, so we seed an explicit dark alpha here to keep
@@ -1022,6 +1075,66 @@ mod tests {
             let cfg_light = shadcn_new_york_v4_config(base, ShadcnColorScheme::Light);
             let cfg_dark = shadcn_new_york_v4_config(base, ShadcnColorScheme::Dark);
 
+            for cfg in [&cfg_light, &cfg_dark] {
+                for key in ["chart-1", "chart-2", "chart-3", "chart-4", "chart-5"] {
+                    assert!(
+                        cfg.colors.contains_key(key),
+                        "expected shadcn new-york-v4 preset to include `{key}`",
+                    );
+                }
+
+                assert_eq!(
+                    cfg.colors.get("color.syntax.comment").cloned(),
+                    cfg.colors.get("muted-foreground").cloned(),
+                    "expected syntax comment to match muted-foreground",
+                );
+                assert_eq!(
+                    cfg.colors.get("color.syntax.keyword").cloned(),
+                    cfg.colors.get("chart-3").cloned(),
+                    "expected syntax keyword to be chart-3 derived",
+                );
+                assert_eq!(
+                    cfg.colors.get("color.syntax.function").cloned(),
+                    cfg.colors.get("chart-1").cloned(),
+                    "expected syntax function to be chart-1 derived",
+                );
+                assert_eq!(
+                    cfg.colors.get("color.syntax.type").cloned(),
+                    cfg.colors.get("chart-4").cloned(),
+                    "expected syntax type to be chart-4 derived",
+                );
+                assert_eq!(
+                    cfg.colors.get("color.syntax.string").cloned(),
+                    cfg.colors.get("chart-2").cloned(),
+                    "expected syntax string to be chart-2 derived",
+                );
+                assert_eq!(
+                    cfg.colors.get("color.syntax.constant").cloned(),
+                    cfg.colors.get("chart-5").cloned(),
+                    "expected syntax constant to be chart-5 derived",
+                );
+                assert_eq!(
+                    cfg.colors.get("color.syntax.number").cloned(),
+                    cfg.colors.get("chart-5").cloned(),
+                    "expected syntax number to be chart-5 derived",
+                );
+                assert_eq!(
+                    cfg.colors.get("color.syntax.operator").cloned(),
+                    cfg.colors.get("muted-foreground").cloned(),
+                    "expected syntax operator to match muted-foreground",
+                );
+                assert_eq!(
+                    cfg.colors.get("color.syntax.punctuation").cloned(),
+                    cfg.colors.get("muted-foreground").cloned(),
+                    "expected syntax punctuation to match muted-foreground",
+                );
+                assert_eq!(
+                    cfg.colors.get("color.syntax.variable").cloned(),
+                    cfg.colors.get("foreground").cloned(),
+                    "expected syntax variable to match foreground",
+                );
+            }
+
             let destructive_light = cfg_light
                 .colors
                 .get("destructive")
@@ -1089,6 +1202,57 @@ mod tests {
                 Some(outline_bg_hover_light.clone()),
                 "expected skeleton bg to match accent in light scheme"
             );
+            let ring_light = cfg_light.colors.get("ring").cloned().expect("missing ring");
+            assert_eq!(
+                cfg_light
+                    .colors
+                    .get("color.viewport.selection.fill")
+                    .cloned(),
+                Some(
+                    with_oklch_alpha(&ring_light, 0.16)
+                        .expect("shadcn new-york-v4 ring token is oklch")
+                ),
+                "expected viewport selection fill to be ring-derived in light scheme"
+            );
+            assert_eq!(
+                cfg_light
+                    .colors
+                    .get("color.viewport.selection.stroke")
+                    .cloned(),
+                Some(
+                    with_oklch_alpha(&ring_light, 0.80)
+                        .expect("shadcn new-york-v4 ring token is oklch")
+                ),
+                "expected viewport selection stroke to be ring-derived in light scheme"
+            );
+            assert_eq!(
+                cfg_light.colors.get("color.viewport.marker").cloned(),
+                Some(ring_light),
+                "expected viewport marker to match ring in light scheme"
+            );
+            for (idx, shadcn_key) in ["chart-1", "chart-2", "chart-3", "chart-4", "chart-5"]
+                .into_iter()
+                .enumerate()
+            {
+                let palette_key = format!("chart.palette.{idx}");
+                assert_eq!(
+                    cfg_light.colors.get(&palette_key).cloned(),
+                    cfg_light.colors.get(shadcn_key).cloned(),
+                    "expected {palette_key} to match {shadcn_key} in light scheme"
+                );
+                let palette_key = format!("plot.palette.{idx}");
+                assert_eq!(
+                    cfg_light.colors.get(&palette_key).cloned(),
+                    cfg_light.colors.get(shadcn_key).cloned(),
+                    "expected {palette_key} to match {shadcn_key} in light scheme"
+                );
+                let palette_key = format!("fret.plot.palette.{idx}");
+                assert_eq!(
+                    cfg_light.colors.get(&palette_key).cloned(),
+                    cfg_light.colors.get(shadcn_key).cloned(),
+                    "expected {palette_key} to match {shadcn_key} in light scheme"
+                );
+            }
             assert_eq!(
                 cfg_light.colors.get("component.button.outline.bg").cloned(),
                 Some(outline_bg_light),
@@ -1133,6 +1297,57 @@ mod tests {
                 Some(accent_dark),
                 "expected skeleton bg to match accent in dark scheme"
             );
+            let ring_dark = cfg_dark.colors.get("ring").cloned().expect("missing ring");
+            assert_eq!(
+                cfg_dark
+                    .colors
+                    .get("color.viewport.selection.fill")
+                    .cloned(),
+                Some(
+                    with_oklch_alpha(&ring_dark, 0.16)
+                        .expect("shadcn new-york-v4 ring token is oklch")
+                ),
+                "expected viewport selection fill to be ring-derived in dark scheme"
+            );
+            assert_eq!(
+                cfg_dark
+                    .colors
+                    .get("color.viewport.selection.stroke")
+                    .cloned(),
+                Some(
+                    with_oklch_alpha(&ring_dark, 0.80)
+                        .expect("shadcn new-york-v4 ring token is oklch")
+                ),
+                "expected viewport selection stroke to be ring-derived in dark scheme"
+            );
+            assert_eq!(
+                cfg_dark.colors.get("color.viewport.marker").cloned(),
+                Some(ring_dark),
+                "expected viewport marker to match ring in dark scheme"
+            );
+            for (idx, shadcn_key) in ["chart-1", "chart-2", "chart-3", "chart-4", "chart-5"]
+                .into_iter()
+                .enumerate()
+            {
+                let palette_key = format!("chart.palette.{idx}");
+                assert_eq!(
+                    cfg_dark.colors.get(&palette_key).cloned(),
+                    cfg_dark.colors.get(shadcn_key).cloned(),
+                    "expected {palette_key} to match {shadcn_key} in dark scheme"
+                );
+                let palette_key = format!("plot.palette.{idx}");
+                assert_eq!(
+                    cfg_dark.colors.get(&palette_key).cloned(),
+                    cfg_dark.colors.get(shadcn_key).cloned(),
+                    "expected {palette_key} to match {shadcn_key} in dark scheme"
+                );
+                let palette_key = format!("fret.plot.palette.{idx}");
+                assert_eq!(
+                    cfg_dark.colors.get(&palette_key).cloned(),
+                    cfg_dark.colors.get(shadcn_key).cloned(),
+                    "expected {palette_key} to match {shadcn_key} in dark scheme"
+                );
+            }
             assert_eq!(
                 cfg_dark.colors.get("component.button.outline.bg").cloned(),
                 Some(outline_bg_dark),
