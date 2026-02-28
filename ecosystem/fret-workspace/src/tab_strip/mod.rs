@@ -2,10 +2,10 @@ use std::cell::{Cell, RefCell};
 use std::sync::Arc;
 
 use fret_core::{
-    Color, Corners, Edges, Modifiers, MouseButton, Point, Px, Rect, SemanticsRole, TextOverflow,
-    TextSlant, TextWrap,
+    Color, Corners, Edges, Modifiers, MouseButton, Point, Px, SemanticsRole, TextOverflow, TextSlant,
+    TextWrap,
 };
-use fret_runtime::{CommandId, Model, TickId};
+use fret_runtime::{CommandId, Model};
 use fret_ui::action::{
     OnActivate, OnPressablePointerDown, OnPressablePointerMove, OnPressablePointerUp, OnWheel,
     PressablePointerDownResult, PressablePointerUpResult,
@@ -26,8 +26,7 @@ use crate::commands::{
     tab_pin_command, tab_unpin_command,
 };
 use crate::tab_drag::{
-    DRAG_KIND_WORKSPACE_TAB, WorkspaceTabDragState, WorkspaceTabDropZone, WorkspaceTabHitRect,
-    WorkspaceTabInsertionSide,
+    DRAG_KIND_WORKSPACE_TAB, WorkspaceTabDragState, WorkspaceTabDropZone, WorkspaceTabInsertionSide,
 };
 
 mod drag_state;
@@ -51,7 +50,9 @@ use kernel::{
     compute_workspace_tab_strip_drop_target,
 };
 
-use drag_state::{WorkspaceTabStripDragState, get_drag_model};
+use drag_state::{
+    WorkspaceTabStripDragState, get_drag_model, read_drag_snapshot_for_pointer,
+};
 use geometry::{bounds_for_optional_element_id, collect_tab_hit_rects};
 use intent::{WorkspaceTabStripIntent, dispatch_intent};
 use layouts::{
@@ -686,32 +687,30 @@ impl WorkspaceTabStrip {
                                                             let scroll_handle = scroll_handle.clone();
                                                             let pinned_by_id = pinned_by_id.clone();
                                                             Arc::new(move |host, acx, mv| {
-                                                                let mut start_tick = TickId::default();
-                                                                let mut start_position = Point::default();
-                                                                let mut dragging = false;
-                                                                let mut dragged_tab: Option<Arc<str>> = None;
-                                                                let mut tab_rects: Vec<WorkspaceTabHitRect> = Vec::new();
-                                                                let mut pinned_boundary_rect: Option<Rect> = None;
-                                                                let mut end_drop_target_rect: Option<Rect> = None;
-                                                                let mut scroll_viewport_rect: Option<Rect> = None;
-
-                                                                let _ = host.models_mut().read(&drag_model, |st| {
-                                                                    if st.pointer != Some(mv.pointer_id) {
-                                                                        return;
-                                                                    }
-                                                                    start_tick = st.start_tick;
-                                                                    start_position = st.start_position;
-                                                                    dragging = st.dragging;
-                                                                    dragged_tab = st.dragged_tab.clone();
-                                                                    tab_rects = st.tab_rects.clone();
-                                                                    pinned_boundary_rect = st.pinned_boundary_rect;
-                                                                    end_drop_target_rect = st.end_drop_target_rect;
-                                                                    scroll_viewport_rect = st.scroll_viewport_rect;
-                                                                });
-
-                                                                if dragged_tab.is_none() {
+                                                                let Some(snapshot) =
+                                                                    read_drag_snapshot_for_pointer(
+                                                                        host.models_mut(),
+                                                                        &drag_model,
+                                                                        mv.pointer_id,
+                                                                    )
+                                                                else {
                                                                     return false;
-                                                                }
+                                                                };
+                                                                let start_tick = snapshot.start_tick;
+                                                                let start_position = snapshot.start_position;
+                                                                let dragging = snapshot.dragging;
+                                                                let dragged_tab = snapshot.dragged_tab;
+                                                                let tab_rects = snapshot.tab_rects;
+                                                                let pinned_boundary_rect =
+                                                                    snapshot.pinned_boundary_rect;
+                                                                let end_drop_target_rect =
+                                                                    snapshot.end_drop_target_rect;
+                                                                let scroll_viewport_rect =
+                                                                    snapshot.scroll_viewport_rect;
+
+                                                                let Some(dragged_tab) = dragged_tab else {
+                                                                    return false;
+                                                                };
 
                                                                 if !mv.buttons.left {
                                                                     ui_dnd::clear_pointer_in_scope(
@@ -770,7 +769,7 @@ impl WorkspaceTabStrip {
                                                                     );
                                                                 }
 
-                                                                let dragged = dragged_tab.expect("checked above");
+                                                                let dragged = dragged_tab;
                                                                 let mut drop_target =
                                                                     compute_workspace_tab_strip_drop_target(
                                                                         mv.position,
