@@ -118,6 +118,7 @@ Non-goals (v2):
   - `on_select` and `on_reinit` (at least)
   - make it usable without storing arbitrary closures inside models
 - [ ] CAR2-230 Align shadcn `setApi` example ergonomics in Rust (state + effect-like updates).
+  - Workstream design note (draft): `docs/workstreams/carousel-embla-parity-v2/api-and-events.md`
 
 ---
 
