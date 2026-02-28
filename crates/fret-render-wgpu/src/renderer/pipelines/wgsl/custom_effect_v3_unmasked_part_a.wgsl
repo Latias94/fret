@@ -101,8 +101,11 @@ fn fret_sample_src_pyramid_at_pos(level: u32, pos_px: vec2<f32>) -> vec4<f32> {
   if (dims_u.x == 0u || dims_u.y == 0u) {
     return vec4<f32>(0.0);
   }
-  let x = clamp(i32(floor(pos_px.x)), 0, i32(dims_u.x) - 1);
-  let y = clamp(i32(floor(pos_px.y)), 0, i32(dims_u.y) - 1);
+  let scale_u = 1u << l;
+  let scale = max(f32(scale_u), 1.0);
+  let p = pos_px / vec2<f32>(scale);
+  let x = clamp(i32(floor(p.x)), 0, i32(dims_u.x) - 1);
+  let y = clamp(i32(floor(p.y)), 0, i32(dims_u.y) - 1);
   return textureLoad(src_pyramid_texture, vec2<i32>(x, y), i32(l));
 }
 

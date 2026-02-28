@@ -560,6 +560,7 @@ impl Renderer {
             textures,
             effect_params,
             pipelines: GpuPipelines::default(),
+            custom_effect_v3_pyramid_scratch: None,
             quad_instances,
             path_paints,
             text_paints,

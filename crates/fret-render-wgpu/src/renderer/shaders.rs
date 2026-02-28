@@ -1264,6 +1264,9 @@ pub(super) const BLIT_SHADER: &str = include_str!("pipelines/wgsl/blit.wgsl");
 pub(super) const BLIT_SRGB_ENCODE_SHADER: &str =
     include_str!("pipelines/wgsl/blit_srgb_encode.wgsl");
 
+pub(super) const MIP_DOWNSAMPLE_BOX_2X2_SHADER: &str =
+    include_str!("pipelines/wgsl/mip_downsample_box_2x2.wgsl");
+
 pub(super) const DROP_SHADOW_SHADER: &str = include_str!("pipelines/wgsl/drop_shadow.wgsl");
 
 const DROP_SHADOW_MASKED_SHADER_PART_A: &str =

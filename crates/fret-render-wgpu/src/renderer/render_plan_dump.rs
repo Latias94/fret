@@ -847,7 +847,7 @@ struct JsonDumpCustomEffectSummary {
     #[serde(skip_serializing_if = "Option::is_none")]
     pyramid_requested: Option<usize>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pyramid_degraded_to_zero: Option<usize>,
+    pyramid_degraded_to_one: Option<usize>,
 }
 
 #[derive(Debug, serde::Serialize)]
@@ -881,7 +881,7 @@ fn summarize_custom_effects(passes: &[RenderPlanPass]) -> Vec<JsonDumpCustomEffe
         raw_distinct: usize,
         raw_aliased: usize,
         pyramid_requested: usize,
-        pyramid_degraded_to_zero: usize,
+        pyramid_degraded_to_one: usize,
     }
 
     let mut by_effect: HashMap<(fret_core::EffectId, Abi), Acc> = HashMap::new();
@@ -923,8 +923,8 @@ fn summarize_custom_effects(passes: &[RenderPlanPass]) -> Vec<JsonDumpCustomEffe
                 }
                 if p.pyramid_wanted {
                     acc.pyramid_requested += 1;
-                    if p.pyramid_levels == 0 {
-                        acc.pyramid_degraded_to_zero += 1;
+                    if p.pyramid_levels <= 1 {
+                        acc.pyramid_degraded_to_one += 1;
                     }
                 }
             }
@@ -952,7 +952,7 @@ fn summarize_custom_effects(passes: &[RenderPlanPass]) -> Vec<JsonDumpCustomEffe
             raw_distinct: (abi == Abi::V3).then_some(acc.raw_distinct),
             raw_aliased: (abi == Abi::V3).then_some(acc.raw_aliased),
             pyramid_requested: (abi == Abi::V3).then_some(acc.pyramid_requested),
-            pyramid_degraded_to_zero: (abi == Abi::V3).then_some(acc.pyramid_degraded_to_zero),
+            pyramid_degraded_to_one: (abi == Abi::V3).then_some(acc.pyramid_degraded_to_one),
         })
         .collect();
 

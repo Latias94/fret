@@ -1,6 +1,6 @@
 use super::blur_primitive;
 use super::frame_targets::downsampled_size;
-use super::intermediate_pool::estimate_texture_bytes;
+use super::intermediate_pool::{estimate_mipped_texture_bytes, estimate_texture_bytes};
 use super::{
     AlphaThresholdPass, BackdropWarpPass, BlurAxis, BlurPass, ClipMaskPass, ColorAdjustPass,
     ColorMatrixPass, CustomEffectPass, CustomEffectV2Pass, CustomEffectV3Pass, DitherPass,
@@ -323,20 +323,26 @@ pub(super) fn apply_chain_in_place(
                             Some(input) => (Some(input.image), input.uv, input.sampling),
                         };
 
-                        let src_raw = if sources.want_raw {
+                        let raw_needed = sources.want_raw || sources.pyramid.is_some();
+                        let src_raw = if raw_needed {
                             chain_raw.unwrap_or(work)
                         } else {
                             work
                         };
                         let src_pyramid = src_raw;
-                        let pyramid_levels = sources.pyramid.map(|_| 1).unwrap_or(0);
+                        let pyramid_levels = choose_custom_v3_pyramid_levels_and_charge(
+                            sources,
+                            ctx.viewport_size,
+                            ctx.format,
+                            &mut work_budget_bytes,
+                        );
 
                         passes.push(RenderPlanPass::CustomEffectV3(CustomEffectV3Pass {
                             src: work,
                             src_raw,
                             src_pyramid,
                             pyramid_levels,
-                            raw_wanted: sources.want_raw,
+                            raw_wanted: raw_needed,
                             pyramid_wanted: sources.pyramid.is_some(),
                             dst: srcdst,
                             src_size: ctx.viewport_size,
@@ -1499,6 +1505,13 @@ pub(super) fn apply_chain_in_place(
                     Some(input) => (Some(input.image), input.uv, input.sampling),
                 };
 
+                let raw_needed = sources.want_raw || sources.pyramid.is_some();
+                let pyramid_levels = choose_custom_v3_pyramid_levels_and_charge(
+                    sources,
+                    ctx.viewport_size,
+                    ctx.format,
+                    &mut budget_bytes,
+                );
                 append_custom_effect_v3_in_place_single_scratch(
                     passes,
                     srcdst,
@@ -1514,6 +1527,8 @@ pub(super) fn apply_chain_in_place(
                     user1_uv,
                     user1_sampling,
                     sources,
+                    raw_needed,
+                    pyramid_levels,
                     chain_raw,
                     ctx.clear,
                     mask_uniform_index,
@@ -1577,6 +1592,49 @@ fn effect_step_max_sample_pad_px(step: fret_core::EffectStep, scale_factor: f32)
     }
 
     ((logical_px * scale_factor).max(0.0)).ceil() as u32
+}
+
+fn max_mip_levels_for_size(size: (u32, u32)) -> u32 {
+    let mut w = size.0.max(1);
+    let mut h = size.1.max(1);
+    let mut levels: u32 = 1;
+    while w > 1 || h > 1 {
+        w = (w / 2).max(1);
+        h = (h / 2).max(1);
+        levels = levels.saturating_add(1);
+        if levels >= 32 {
+            break;
+        }
+    }
+    levels
+}
+
+fn choose_custom_v3_pyramid_levels_and_charge(
+    sources: fret_core::scene::CustomEffectSourcesV3,
+    size: (u32, u32),
+    format: wgpu::TextureFormat,
+    budget_bytes: &mut u64,
+) -> u32 {
+    let Some(req) = sources.pyramid else {
+        return 1;
+    };
+
+    let max_for_size = max_mip_levels_for_size(size);
+    let mut levels = (req.max_levels as u32).max(1).min(max_for_size).min(7);
+    if levels < 2 {
+        return 1;
+    }
+
+    while levels >= 2 {
+        let required = estimate_mipped_texture_bytes(size, format, 1, levels);
+        if required <= *budget_bytes {
+            *budget_bytes = (*budget_bytes).saturating_sub(required);
+            return levels;
+        }
+        levels = levels.saturating_sub(1);
+    }
+
+    1
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -2162,6 +2220,13 @@ fn apply_step_in_place_with_scratch_targets(
                 Some(input) => (Some(input.image), input.uv, input.sampling),
             };
 
+            let raw_needed = sources.want_raw || sources.pyramid.is_some();
+            let pyramid_levels = choose_custom_v3_pyramid_levels_and_charge(
+                sources,
+                ctx.viewport_size,
+                ctx.format,
+                budget_bytes,
+            );
             append_custom_effect_v3_in_place_single_scratch(
                 passes,
                 srcdst,
@@ -2177,6 +2242,8 @@ fn apply_step_in_place_with_scratch_targets(
                 user1_uv,
                 user1_sampling,
                 sources,
+                raw_needed,
+                pyramid_levels,
                 custom_v3_chain_raw,
                 ctx.clear,
                 None,
@@ -3534,6 +3601,8 @@ fn append_custom_effect_v3_in_place_single_scratch(
     user1_uv: fret_core::scene::UvRect,
     user1_sampling: fret_core::scene::ImageSamplingHint,
     sources: fret_core::scene::CustomEffectSourcesV3,
+    raw_needed: bool,
+    pyramid_levels: u32,
     chain_raw: Option<PlanTarget>,
     clear: wgpu::Color,
     mask_uniform_index: Option<u32>,
@@ -3542,8 +3611,6 @@ fn append_custom_effect_v3_in_place_single_scratch(
     debug_assert_ne!(srcdst, PlanTarget::Output);
     debug_assert_ne!(scratch, PlanTarget::Output);
     debug_assert_ne!(srcdst, scratch);
-
-    let pyramid_levels = sources.pyramid.map(|_| 1).unwrap_or(0);
 
     if let Some(scissor) = scissor {
         if scissor.w == 0 || scissor.h == 0 {
@@ -3560,7 +3627,7 @@ fn append_custom_effect_v3_in_place_single_scratch(
             load: wgpu::LoadOp::Clear(clear),
         }));
 
-        let src_raw = if sources.want_raw {
+        let src_raw = if raw_needed {
             chain_raw.unwrap_or(scratch)
         } else {
             scratch
@@ -3572,7 +3639,7 @@ fn append_custom_effect_v3_in_place_single_scratch(
             src_raw,
             src_pyramid,
             pyramid_levels,
-            raw_wanted: sources.want_raw,
+            raw_wanted: raw_needed,
             pyramid_wanted: sources.pyramid.is_some(),
             dst: srcdst,
             src_size: size,
@@ -3593,7 +3660,7 @@ fn append_custom_effect_v3_in_place_single_scratch(
         return;
     }
 
-    let src_raw = if sources.want_raw {
+    let src_raw = if raw_needed {
         chain_raw.unwrap_or(srcdst)
     } else {
         srcdst
@@ -3605,7 +3672,7 @@ fn append_custom_effect_v3_in_place_single_scratch(
         src_raw,
         src_pyramid,
         pyramid_levels,
-        raw_wanted: sources.want_raw,
+        raw_wanted: raw_needed,
         pyramid_wanted: sources.pyramid.is_some(),
         dst: scratch,
         src_size: size,

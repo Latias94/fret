@@ -45,6 +45,8 @@ mod svg;
 #[cfg(test)]
 mod tests;
 
+mod v3_pyramid;
+
 use clip_path_mask_cache::*;
 use fullscreen::*;
 use gpu_effect_params::GpuEffectParams;
@@ -94,6 +96,8 @@ pub struct Renderer {
     textures: GpuTextures,
     effect_params: GpuEffectParams,
     pipelines: GpuPipelines,
+
+    custom_effect_v3_pyramid_scratch: Option<v3_pyramid::CustomEffectV3PyramidScratch>,
 
     quad_instances: buffers::StorageRingBuffer<QuadInstance>,
 
