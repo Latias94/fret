@@ -63,7 +63,9 @@ impl Skeleton {
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app).snapshot();
 
-        let mut bg = theme.color_token("accent");
+        let mut bg = theme
+            .color_by_key("component.skeleton.bg")
+            .unwrap_or_else(|| theme.color_token("accent"));
 
         let reduced_motion = prefers_reduced_motion(cx, Invalidation::Paint, false);
         let animate_pulse = self.animate_pulse && !reduced_motion;

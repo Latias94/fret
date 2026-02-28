@@ -398,6 +398,14 @@ pub fn shadcn_new_york_v4_config(base: ShadcnBaseColor, scheme: ShadcnColorSchem
         colors.insert("sidebar-ring".to_string(), "oklch(0.439 0 0)".to_string());
     }
 
+    // shadcn new-york-v4 `Skeleton`:
+    // - `bg-accent`
+    if !colors.contains_key("component.skeleton.bg")
+        && let Some(accent) = colors.get("accent").cloned()
+    {
+        colors.insert("component.skeleton.bg".to_string(), accent);
+    }
+
     // shadcn new-york-v4 `NavigationMenuTrigger` open background:
     // - `data-[state=open]:bg-accent/50`
     if !colors.contains_key("component.navigation_menu.trigger.bg_open")
@@ -1077,6 +1085,11 @@ mod tests {
                 .cloned()
                 .expect("missing accent");
             assert_eq!(
+                cfg_light.colors.get("component.skeleton.bg").cloned(),
+                Some(outline_bg_hover_light.clone()),
+                "expected skeleton bg to match accent in light scheme"
+            );
+            assert_eq!(
                 cfg_light.colors.get("component.button.outline.bg").cloned(),
                 Some(outline_bg_light),
                 "expected outline button bg to match background in light scheme"
@@ -1108,8 +1121,18 @@ mod tests {
                 .get("component.input.bg")
                 .cloned()
                 .expect("missing component.input.bg");
+            let accent_dark = cfg_dark
+                .colors
+                .get("accent")
+                .cloned()
+                .expect("missing accent");
             let outline_bg_hover_dark = with_oklch_alpha(&input_dark, 0.5)
                 .expect("shadcn new-york-v4 input token is oklch");
+            assert_eq!(
+                cfg_dark.colors.get("component.skeleton.bg").cloned(),
+                Some(accent_dark),
+                "expected skeleton bg to match accent in dark scheme"
+            );
             assert_eq!(
                 cfg_dark.colors.get("component.button.outline.bg").cloned(),
                 Some(outline_bg_dark),
