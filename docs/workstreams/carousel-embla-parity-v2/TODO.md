@@ -1,6 +1,6 @@
 # Carousel Embla parity (v2) — TODO
 
-Status: Draft (needs scope confirmation)
+Status: In progress (contracts locked; deeper parity ongoing)
 
 Goal: Deeper Embla alignment for Carousel beyond the shadcn/ui docs outcomes, while keeping Fret’s
 layering contract intact (mechanism vs policy vs recipes).
@@ -40,12 +40,16 @@ Non-goals (v2):
   - Key point: Embla `duration` is a numeric integrator parameter (not a `Duration` in ms).
   - Deliverable: `docs/workstreams/carousel-embla-parity-v2/contracts.md`
   - Evidence: `docs/workstreams/carousel-embla-parity-v2/contracts.md`
-- [ ] CAR2-020 ADR: `CarouselApi` surface in Rust (methods + events + lifetimes).
-  - Deliverable: `docs/adr/xxxx-carousel-api-surface.md`
-- [ ] CAR2-030 ADR: Scroll physics determinism + reduced-motion behavior.
-  - Deliverable: `docs/adr/xxxx-carousel-scroll-physics.md`
-- [ ] CAR2-040 ADR: Seamless loop engine semantics (if in scope).
-  - Deliverable: `docs/adr/xxxx-carousel-loop-engine.md`
+- [ ] CAR2-020 Workstream design: `CarouselApi` surface in Rust (methods + events + lifetimes).
+  - Deliverable: `docs/workstreams/carousel-embla-parity-v2/api-and-events.md`
+  - Note: promote to an ADR only if/when the surface becomes stable and/or must be treated as
+    a long-lived contract outside `ecosystem/*`.
+- [ ] CAR2-030 Workstream design: scroll physics determinism + reduced-motion behavior.
+  - Deliverable: `docs/workstreams/carousel-embla-parity-v2/contracts.md` (time model section) + gates
+  - Note: promote to an ADR only if/when the physics semantics become a stable public contract.
+- [ ] CAR2-040 Workstream design: seamless loop engine semantics (if in scope).
+  - Deliverable: `docs/workstreams/carousel-embla-parity-v2/contracts.md` (loop section) + gates
+  - Note: promote to an ADR only if/when we commit to a stable, long-lived loop contract.
 
 ---
 
@@ -88,7 +92,7 @@ Non-goals (v2):
 
 ### ReInit + resize + slide changes
 
-- [ ] CAR2-160 Implement `reInit` event emission when geometry/options change.
+- [x] CAR2-160 Implement `reInit` event emission when geometry/options change (MVP).
   - Implemented (internal): headless `Engine::reinit` and shadcn recipe wiring on snap/viewport
     changes.
   - MVP: observable via monotonic generation counters published in `CarouselApiSnapshot`

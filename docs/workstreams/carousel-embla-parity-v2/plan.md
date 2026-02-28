@@ -22,16 +22,17 @@ snap model.
   - focus semantics
 - Write down the non-goals explicitly so review stays tractable.
 
-## Step 1 — Contracts + ADRs (2–5 days)
+## Step 1 — Contracts + workstream design notes (2–5 days)
 
-- ADR: `CarouselApi` in Rust.
-- ADR: time/physics semantics (determinism + reduced motion).
-- ADR: loop engine semantics (if in scope).
+- Lock `contracts.md` (observable outcomes + option semantics).
+- Update `api-and-events.md` with a Rust-native `CarouselApi` direction and the MVP event semantics.
 - Update `docs/audits/carousel-shadcn-embla-parity.md` with a v2 parity matrix section.
+- (Optional later) Promote stable, hard-to-change pieces into ADRs **only** if/when these surfaces
+  must be treated as long-lived contracts outside `ecosystem/*`.
 
 Definition of done:
 
-- Each ADR has 1–3 evidence anchors (expected code locations + gating approach).
+- Each doc has 1–3 evidence anchors (expected code locations + gating approach).
 
 ## Step 2 — Headless engine MVP (5–10 days)
 
