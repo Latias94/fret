@@ -118,24 +118,9 @@ pub(in crate::ui) fn preview_text_measure_overlay(
                     return;
                 }
 
-                let green = fret_core::Color {
-                    r: 0.20,
-                    g: 0.85,
-                    b: 0.35,
-                    a: 1.0,
-                };
-                let yellow = fret_core::Color {
-                    r: 0.95,
-                    g: 0.85,
-                    b: 0.10,
-                    a: 1.0,
-                };
-                let cyan = fret_core::Color {
-                    r: 0.10,
-                    g: 0.80,
-                    b: 0.95,
-                    a: 1.0,
-                };
+                let green = fret_ui_kit::colors::linear_from_hex_rgb(0x33_d9_59);
+                let yellow = fret_ui_kit::colors::linear_from_hex_rgb(0xf2_d9_1a);
+                let cyan = fret_ui_kit::colors::linear_from_hex_rgb(0x1a_cc_f2);
 
                 let fg = p.theme().color_token("foreground");
                 let muted = p.theme().color_token("muted-foreground");

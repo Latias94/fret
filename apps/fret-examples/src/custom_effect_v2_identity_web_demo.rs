@@ -105,12 +105,11 @@ pub struct CustomEffectV2IdentityWebDriver;
 
 impl CustomEffectV2IdentityWebDriver {
     fn srgb(r: u8, g: u8, b: u8, a: f32) -> fret_core::Color {
-        fret_core::Color {
-            r: (r as f32) / 255.0,
-            g: (g as f32) / 255.0,
-            b: (b as f32) / 255.0,
-            a: a.clamp(0.0, 1.0),
-        }
+        let mut c = fret_ui_kit::colors::linear_from_hex_rgb(
+            ((r as u32) << 16) | ((g as u32) << 8) | (b as u32),
+        );
+        c.a = a.clamp(0.0, 1.0);
+        c
     }
 
     fn with_alpha(mut c: fret_core::Color, a: f32) -> fret_core::Color {
