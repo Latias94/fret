@@ -68,17 +68,21 @@ fn fret_menubar_menu_tracks_trigger_when_underlay_scrolls() {
                                 ..Default::default()
                             },
                             move |cx| {
-                                vec![Menubar::new(vec![
-                                    MenubarMenu::new("File").test_id(file_test_id).entries(vec![
-                                        MenubarEntry::Item(MenubarItem::new("New")),
-                                        MenubarEntry::Item(MenubarItem::new("Open")),
-                                        MenubarEntry::Item(MenubarItem::new("Exit")),
-                                    ]),
-                                    MenubarMenu::new("Edit").entries(vec![MenubarEntry::Item(
-                                        MenubarItem::new("Undo"),
-                                    )]),
-                                ])
-                                .into_element(cx)]
+                                vec![
+                                    Menubar::new(vec![
+                                        MenubarMenu::new("File").test_id(file_test_id).entries(
+                                            vec![
+                                                MenubarEntry::Item(MenubarItem::new("New")),
+                                                MenubarEntry::Item(MenubarItem::new("Open")),
+                                                MenubarEntry::Item(MenubarItem::new("Exit")),
+                                            ],
+                                        ),
+                                        MenubarMenu::new("Edit").entries(vec![MenubarEntry::Item(
+                                            MenubarItem::new("Undo"),
+                                        )]),
+                                    ])
+                                    .into_element(cx),
+                                ]
                             },
                         )]
                     },

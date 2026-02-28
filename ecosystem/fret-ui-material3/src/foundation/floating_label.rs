@@ -30,7 +30,12 @@ pub fn interpolated_label_text_style(
     let large = theme.text_style_by_key(large_key)?;
     let small = theme.text_style_by_key(small_key)?;
 
-    if large.font != small.font || large.weight != small.weight || large.slant != small.slant {
+    if large.font != small.font
+        || large.weight != small.weight
+        || large.slant != small.slant
+        || large.features != small.features
+        || large.axes != small.axes
+    {
         return Some(if is_floated(progress) { small } else { large });
     }
 

@@ -93,23 +93,6 @@ fn select_open_change_events(
     (changed, completed)
 }
 
-fn select_list_desired_height(
-    item_height: Px,
-    item_count: usize,
-    max_height: Px,
-    outer_height: Px,
-) -> Px {
-    let outer_height = Px(outer_height.0.max(0.0));
-    let max_height = Px(max_height.0.max(0.0).min(outer_height.0));
-
-    // Radix/shadcn: keep the list at least one row tall when possible, but never exceed the
-    // computed max height (derived from available space) since the content scrolls internally.
-    let min_height = Px(item_height.0.max(0.0).min(max_height.0));
-    let content_height = Px(item_height.0.max(0.0) * item_count as f32);
-
-    Px(content_height.0.min(max_height.0).max(min_height.0))
-}
-
 fn select_list_desired_height_from_content_height(
     min_row_height: Px,
     content_height: Px,
@@ -159,6 +142,7 @@ fn select_scroll_with_buttons<H: UiHost, C, I>(
     allow_hover_scroll_arrows: bool,
     scroll_handle: fret_ui::scroll::ScrollHandle,
     initial_scroll_to_y: Option<Px>,
+    clear_initial_scroll_to_y: impl Fn() + Clone + 'static,
     viewport_id_out: &Cell<Option<GlobalElementId>>,
     active_element_id_out: &Cell<Option<GlobalElementId>>,
     consume_pending_active_scroll_into_view: impl Fn() -> bool + Clone + 'static,
@@ -176,23 +160,32 @@ where
     C: FnOnce(&mut ElementContext<'_, H>, &Cell<Option<GlobalElementId>>) -> I,
     I: IntoIterator<Item = AnyElement>,
 {
-    cx.container(
-        ContainerProps {
+    cx.flex(
+        FlexProps {
             layout: {
                 let mut layout = LayoutStyle::default();
-                layout.position = PositionStyle::Relative;
                 layout.size.width = Length::Fill;
                 layout.size.height = Length::Fill;
                 layout
             },
-            ..Default::default()
+            direction: fret_core::Axis::Vertical,
+            gap: Px(0.0).into(),
+            padding: Edges::all(Px(0.0)).into(),
+            justify: MainAlign::Start,
+            align: CrossAlign::Stretch,
+            wrap: false,
         },
         move |cx| {
             let handle = scroll_handle.clone();
             let did_initial_scroll = initial_scroll_to_y.is_some();
             if let Some(y) = initial_scroll_to_y {
                 let prev = handle.offset();
+                let before_y = prev.y;
                 handle.scroll_to_offset(Point::new(prev.x, y));
+                let after_y = handle.offset().y;
+                if (after_y.0 - y.0).abs() <= 0.01 || (after_y.0 - before_y.0).abs() > 0.01 {
+                    clear_initial_scroll_to_y();
+                }
             }
 
             let scroll_button_h = theme
@@ -219,16 +212,16 @@ where
                 );
             }
 
-            // Base UI scroll arrows are absolutely positioned and do not affect popup flow layout.
-            // Keep item-aligned state from assuming that scroll-arrow visibility shifts the viewport.
-            set_scroll_up_visible(false);
+            // Radix Select scroll buttons participate in layout, shifting the viewport when present.
+            // Track the scroll-up button visibility so item-aligned placement can model Radix's
+            // follow-up scroll after the button mounts.
+            set_scroll_up_visible(has_scroll && allow_hover_scroll_arrows && show_up);
 
             let scroll_button = |cx: &mut ElementContext<'_, H>,
                                  icon: fret_icons::IconId,
                                  test_id: &'static str,
                                  dir: f32,
-                                 visible: bool,
-                                 inset: InsetStyle| {
+                                 visible: bool| {
                 if !visible {
                     return None;
                 }
@@ -450,11 +443,7 @@ where
                             let mut layout = LayoutStyle::default();
                             layout.size.width = Length::Fill;
                             layout.size.height = Length::Px(scroll_button_h);
-                            layout.position = PositionStyle::Absolute;
-                            layout.inset.left = inset.left;
-                            layout.inset.right = inset.right;
-                            layout.inset.top = inset.top;
-                            layout.inset.bottom = inset.bottom;
+                            layout.flex.shrink = 0.0;
                             layout
                         },
                         axis: ScrollAxis::Y,
@@ -472,7 +461,10 @@ where
 
             let mut scroll_layout = LayoutStyle::default();
             scroll_layout.size.width = Length::Fill;
-            scroll_layout.size.height = Length::Fill;
+            scroll_layout.size.height = Length::Auto;
+            scroll_layout.size.min_height = Some(Length::Px(Px(0.0)));
+            scroll_layout.flex.grow = 1.0;
+            scroll_layout.flex.basis = Length::Px(Px(0.0));
             scroll_layout.overflow = Overflow::Clip;
 
             let handle_for_scroll = handle.clone();
@@ -583,7 +575,6 @@ where
             }
 
             let mut out = Vec::with_capacity(3);
-            out.push(scroll);
             if has_scroll && allow_hover_scroll_arrows {
                 if let Some(btn) = scroll_button(
                     cx,
@@ -591,27 +582,18 @@ where
                     "select-scroll-up-button",
                     -1.0,
                     show_up,
-                    InsetStyle {
-                        left: Some(Px(0.0)).into(),
-                        right: Some(Px(0.0)).into(),
-                        top: Some(Px(0.0)).into(),
-                        bottom: None.into(),
-                    },
                 ) {
                     out.push(btn);
                 }
+            }
+            out.push(scroll);
+            if has_scroll && allow_hover_scroll_arrows {
                 if let Some(btn) = scroll_button(
                     cx,
                     ids::ui::CHEVRON_DOWN,
                     "select-scroll-down-button",
                     1.0,
                     show_down,
-                    InsetStyle {
-                        left: Some(Px(0.0)).into(),
-                        right: Some(Px(0.0)).into(),
-                        top: None.into(),
-                        bottom: Some(Px(0.0)).into(),
-                    },
                 ) {
                     out.push(btn);
                 }
@@ -2014,6 +1996,7 @@ fn select_impl<H: UiHost>(
                             viewport,
                             listbox,
                             content_panel,
+                            scroll_max_offset_y,
                             width_probe,
                             selected_item,
                             selected_item_text,
@@ -2030,6 +2013,7 @@ fn select_impl<H: UiHost>(
                                 state.viewport,
                                 state.listbox,
                                 state.content_panel,
+                                state.scroll_handle.max_offset().y,
                                 state.width_probe,
                                 state.selected_item,
                                 state.selected_item_text,
@@ -2114,6 +2098,7 @@ fn select_impl<H: UiHost>(
                                 viewport,
                                 listbox,
                                 content_panel,
+                                scroll_max_offset_y: Some(scroll_max_offset_y),
                                 content_width_probe: width_probe,
                                 selected_item,
                                 selected_item_text,
@@ -2291,25 +2276,7 @@ fn select_impl<H: UiHost>(
                                 ),
                                 item_aligned_layout: Some(layout),
                             };
-                        } else if let Some(layout) = resolved.item_aligned_layout
-                            && width_probe_ready_for_lock
-                        {
-                            let mut state = trigger_state.lock().unwrap_or_else(|e| e.into_inner());
-                            if state.last_item_aligned_layout.is_none() {
-                                state.last_item_aligned_layout = Some(layout);
-                                item_aligned_layout_locked_this_frame = true;
-                            }
                         }
-                    }
-                    if debug_item_aligned {
-                        eprintln!(
-                            "select item-aligned placement: computed_layout={} cached_layout_present={} cached_used={} locked_now={} placed_y={}",
-                            resolved.item_aligned_layout.is_some(),
-                            last_item_aligned_layout.is_some(),
-                            item_aligned_layout_is_cached_fallback,
-                            item_aligned_layout_locked_this_frame,
-                            resolved.placement.placed.origin.y.0,
-                        );
                     }
                     if let Some(layout) = resolved.item_aligned_layout
                         && let Some(scroll_to) = layout.outputs.scroll_to_y
@@ -2357,6 +2324,31 @@ fn select_impl<H: UiHost>(
                                 state.did_item_aligned_scroll_reposition = true;
                             }
                         }
+                    }
+                    if position == SelectPosition::ItemAligned
+                        && is_open
+                        && last_item_aligned_layout.is_none()
+                        && width_probe_ready_for_lock
+                        && let Some(layout) = resolved.item_aligned_layout
+                    {
+                        let mut state = trigger_state.lock().unwrap_or_else(|e| e.into_inner());
+                        let should_lock_layout = state.pending_item_aligned_scroll_to_y.is_none()
+                            && (!state.item_aligned_scroll_up_visible
+                                || state.did_item_aligned_scroll_reposition);
+                        if should_lock_layout && state.last_item_aligned_layout.is_none() {
+                            state.last_item_aligned_layout = Some(layout);
+                            item_aligned_layout_locked_this_frame = true;
+                        }
+                    }
+                    if debug_item_aligned {
+                        eprintln!(
+                            "select item-aligned placement: computed_layout={} cached_layout_present={} cached_used={} locked_now={} placed_y={}",
+                            resolved.item_aligned_layout.is_some(),
+                            last_item_aligned_layout.is_some(),
+                            item_aligned_layout_is_cached_fallback,
+                            item_aligned_layout_locked_this_frame,
+                            resolved.placement.placed.origin.y.0,
+                        );
                     }
                     let placement = resolved.placement;
                     let wrapper_insets = placement.wrapper_insets;
@@ -2579,10 +2571,19 @@ fn select_impl<H: UiHost>(
                             .unwrap_or_else(|| theme_for_overlay.color_token("border"));
                         let arrow_border = overlay_border;
                                         let initial_scroll_to_y = {
-                                            let mut state = trigger_state_for_overlay
+                                            let state = trigger_state_for_overlay
                                                 .lock()
                                                 .unwrap_or_else(|e| e.into_inner());
-                                            state.pending_item_aligned_scroll_to_y.take()
+                                            state.pending_item_aligned_scroll_to_y
+                                        };
+                                        let clear_initial_scroll_to_y = {
+                                            let state_for_clear = trigger_state_for_overlay.clone();
+                                            move || {
+                                                let mut state = state_for_clear
+                                                    .lock()
+                                                    .unwrap_or_else(|e| e.into_inner());
+                                                state.pending_item_aligned_scroll_to_y = None;
+                                            }
                                         };
                                         let scroll_handle = {
                                             let state = trigger_state_for_overlay
@@ -2757,6 +2758,7 @@ fn select_impl<H: UiHost>(
                                             allow_hover_scroll_arrows,
                                             scroll_handle,
                                             initial_scroll_to_y,
+                                            clear_initial_scroll_to_y,
                                             viewport_id_out,
                                             active_element_id_out,
                                             move || {
@@ -8609,7 +8611,12 @@ mod tests {
         let outer_h = Px(600.0);
         let max_h = Px(12.0);
 
-        let desired = super::select_list_desired_height(item_h, 20, max_h, outer_h);
+        let desired = super::select_list_desired_height_from_content_height(
+            item_h,
+            Px(item_h.0 * 20.0),
+            max_h,
+            outer_h,
+        );
         assert_eq!(desired, max_h);
     }
 }

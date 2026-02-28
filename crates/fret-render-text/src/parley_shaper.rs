@@ -1456,7 +1456,9 @@ fn shaping_properties_for_base_style(
 
         if let Some(wght) = wght_axis_override {
             let wght = wght.clamp(1.0, 1000.0).round() as u16;
-            out.push(StyleProperty::FontWeight(ParleyFontWeight::new(wght as f32)));
+            out.push(StyleProperty::FontWeight(ParleyFontWeight::new(
+                wght as f32,
+            )));
         }
     }
 
@@ -1619,7 +1621,9 @@ mod tests {
             shaping_properties_for_base_style(&base).expect("expected base shaping properties");
 
         assert!(
-            props.iter().any(|p| matches!(p, StyleProperty::FontWeight(_))),
+            props
+                .iter()
+                .any(|p| matches!(p, StyleProperty::FontWeight(_))),
             "expected base `wght` axis to map to FontWeight"
         );
         assert!(

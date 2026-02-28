@@ -1,8 +1,8 @@
 use super::*;
 
 #[test]
-fn web_vs_fret_date_picker_with_presets_select_listbox_scroll_matches_web_scrolled_tiny_viewport_160h(
-) {
+fn web_vs_fret_date_picker_with_presets_select_listbox_scroll_matches_web_scrolled_tiny_viewport_160h()
+ {
     let web = read_web_golden_open("date-picker-with-presets.select-open-vp375x160-scrolled-80");
     let theme = web_theme(&web);
     let web_listbox = web_select_listbox(&theme);
@@ -40,46 +40,50 @@ fn web_vs_fret_date_picker_with_presets_select_listbox_scroll_matches_web_scroll
             let select_open = select_open.clone();
             let value = value.clone();
 
-            vec![fret_ui_shadcn::Popover::new(popover_open)
-                .align(fret_ui_shadcn::PopoverAlign::Start)
-                .side(fret_ui_shadcn::PopoverSide::Bottom)
-                .into_element(
-                    cx,
-                    |cx| {
-                        fret_ui_shadcn::Button::new("Pick a date")
-                            .variant(fret_ui_shadcn::ButtonVariant::Outline)
-                            .refine_layout(
-                                LayoutRefinement::default().w_px(MetricRef::Px(Px(240.0))),
-                            )
-                            .into_element(cx)
-                    },
-                    move |cx| {
-                        let value = value.clone();
-                        let select_open = select_open.clone();
+            vec![
+                fret_ui_shadcn::Popover::new(popover_open)
+                    .align(fret_ui_shadcn::PopoverAlign::Start)
+                    .side(fret_ui_shadcn::PopoverSide::Bottom)
+                    .into_element(
+                        cx,
+                        |cx| {
+                            fret_ui_shadcn::Button::new("Pick a date")
+                                .variant(fret_ui_shadcn::ButtonVariant::Outline)
+                                .refine_layout(
+                                    LayoutRefinement::default().w_px(MetricRef::Px(Px(240.0))),
+                                )
+                                .into_element(cx)
+                        },
+                        move |cx| {
+                            let value = value.clone();
+                            let select_open = select_open.clone();
 
-                        let select = fret_ui_shadcn::Select::new(value, select_open)
-                            .placeholder("Select")
-                            .position(SelectPosition::Popper)
-                            .items([
-                                fret_ui_shadcn::SelectItem::new("0", "Today"),
-                                fret_ui_shadcn::SelectItem::new("1", "Tomorrow"),
-                                fret_ui_shadcn::SelectItem::new("3", "In 3 days"),
-                                fret_ui_shadcn::SelectItem::new("7", "In a week"),
-                            ])
-                            .into_element(cx);
+                            let select = fret_ui_shadcn::Select::new(value, select_open)
+                                .placeholder("Select")
+                                .position(SelectPosition::Popper)
+                                .items([
+                                    fret_ui_shadcn::SelectItem::new("0", "Today"),
+                                    fret_ui_shadcn::SelectItem::new("1", "Tomorrow"),
+                                    fret_ui_shadcn::SelectItem::new("3", "In 3 days"),
+                                    fret_ui_shadcn::SelectItem::new("7", "In a week"),
+                                ])
+                                .into_element(cx);
 
-                        let body = stack::vstack(
-                            cx,
-                            stack::VStackProps::default().gap(Space::N2).items_stretch(),
-                            move |_cx| vec![select],
-                        );
+                            let body = stack::vstack(
+                                cx,
+                                stack::VStackProps::default().gap(Space::N2).items_stretch(),
+                                move |_cx| vec![select],
+                            );
 
-                        fret_ui_shadcn::PopoverContent::new([body])
-                            .refine_style(ChromeRefinement::default().p(Space::N2))
-                            .refine_layout(LayoutRefinement::default().w(LengthRefinement::Auto))
-                            .into_element(cx)
-                    },
-                )]
+                            fret_ui_shadcn::PopoverContent::new([body])
+                                .refine_style(ChromeRefinement::default().p(Space::N2))
+                                .refine_layout(
+                                    LayoutRefinement::default().w(LengthRefinement::Auto),
+                                )
+                                .into_element(cx)
+                        },
+                    ),
+            ]
         }
     };
 
