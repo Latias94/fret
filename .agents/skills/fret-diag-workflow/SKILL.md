@@ -85,7 +85,7 @@ Quick post-merge smoke (small, bounded, launch-mode):
 
 - `cargo run -p fretboard -- diag suite diag-hardening-smoke --launch -- cargo run -p fret-ui-gallery --release`
 - Docking (multiwindow tear-off):
-  - `cargo run -p fretboard -- diag suite diag-hardening-smoke-docking --timeout-ms 900000 --no-lint --launch -- cargo run -p fret-demo --bin docking_arbitration_demo --release`
+  - `cargo run -p fretboard -- diag suite diag-hardening-smoke-docking --timeout-ms 900000 --launch -- cargo run -p fret-demo --bin docking_arbitration_demo --release`
 
 Copy/paste checklist (safe, small-by-default):
 

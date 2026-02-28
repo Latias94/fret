@@ -12,5 +12,4 @@ Notes:
 
 - Requires desktop runners with `diag.multi_window` capability.
 - Some scripts rely on reliable window hover detection (`ui.window_hover_detection=Reliable`).
-- This suite may hit known lint findings in the docking demo bundles; use `--no-lint` for smoke verification:
-  - `cargo run -p fretboard -- diag suite diag-hardening-smoke-docking --timeout-ms 900000 --no-lint --launch -- cargo run -p fret-demo --bin docking_arbitration_demo --release`
+- `diag suite` runs `diag lint` for captured bundles by default and fails on error-level findings.

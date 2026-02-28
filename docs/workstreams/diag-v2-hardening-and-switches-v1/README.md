@@ -175,7 +175,7 @@ Make configuration predictable:
     - `cargo run -p fretboard -- diag suite diag-hardening-smoke --launch -- cargo run -p fret-ui-gallery --release`
   - Convenience (2026-02-28): a docking-focused smoke suite exists at
     `tools/diag-scripts/suites/diag-hardening-smoke-docking/`:
-    - Recommended (smoke, avoid lint false negatives): `cargo run -p fretboard -- diag suite diag-hardening-smoke-docking --timeout-ms 900000 --no-lint --launch -- cargo run -p fret-demo --bin docking_arbitration_demo --release`
+    - Recommended (smoke): `cargo run -p fretboard -- diag suite diag-hardening-smoke-docking --timeout-ms 900000 --launch -- cargo run -p fret-demo --bin docking_arbitration_demo --release`
 
 ### G3: Box compatibility logic behind seams
 

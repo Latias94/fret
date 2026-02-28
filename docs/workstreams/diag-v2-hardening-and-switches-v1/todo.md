@@ -34,6 +34,8 @@ This file is a check-list style tracker. Milestone framing lives in `milestones.
 - [x] Audit `--launch` entry points to ensure a single per-run config writer is used (`diag run/suite/repro/perf/repeat`
   funnel through `maybe_launch_demo`).
 - [x] Add a `diag config doctor` (tooling-side) that prints an effective merged config + highlights deprecated keys/envs.
+- [x] Eliminate docking multi-window lint false negatives by ensuring focus repair runs before semantics refresh (and on
+  layout fast-path frames), so bundles never capture a focused node with empty bounds.
 
 ## P0.5: Script library modularization (UX scalability)
 
