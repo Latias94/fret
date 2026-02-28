@@ -63,12 +63,14 @@ struct DockingArbitrationDevStateGate {
 }
 
 struct DockingArbitrationDragAnchor {
-    test_id: &'static str,
+    test_id: Arc<str>,
 }
 
 impl DockingArbitrationDragAnchor {
-    fn new(test_id: &'static str) -> Self {
-        Self { test_id }
+    fn new(test_id: impl Into<Arc<str>>) -> Self {
+        Self {
+            test_id: test_id.into(),
+        }
     }
 }
 
@@ -79,7 +81,7 @@ impl<H: fret_ui::UiHost> Widget<H> for DockingArbitrationDragAnchor {
 
     fn semantics(&mut self, cx: &mut SemanticsCx<'_, H>) {
         cx.set_role(fret_core::SemanticsRole::Group);
-        cx.set_test_id(self.test_id);
+        cx.set_test_id(self.test_id.as_ref());
     }
 }
 
@@ -129,6 +131,7 @@ struct DockingArbitrationHarnessRoot {
     dock_space: fret_core::NodeId,
     left_anchor: fret_core::NodeId,
     right_anchor: fret_core::NodeId,
+    extra_anchors: Vec<fret_core::NodeId>,
     float_zone_anchor: fret_core::NodeId,
     viewport_split_handle_anchor: fret_core::NodeId,
     floating_title_bar_anchor: fret_core::NodeId,
@@ -173,6 +176,9 @@ impl<H: fret_ui::UiHost> Widget<H> for DockingArbitrationHarnessRoot {
         let fallback_pad_x = 48.0_f32.min((bounds.size.width.0 * 0.25).max(0.0));
         let mut left_anchor_pos = (bounds.origin.x.0 + fallback_pad_x, fallback_y);
         let mut right_anchor_pos = (fallback_mid_x + fallback_pad_x, fallback_y);
+        let mut extra_anchor_pos: Vec<(f32, f32)> = (0..self.extra_anchors.len())
+            .map(|ix| (bounds.origin.x.0 + 24.0 + (ix as f32 * 4.0), fallback_y))
+            .collect();
 
         if let Some(dock) = cx.app.global::<DockManager>() {
             use fret_core::{DockGraph, DockNode, DockNodeId, PanelKey};
@@ -309,13 +315,32 @@ impl<H: fret_ui::UiHost> Widget<H> for DockingArbitrationHarnessRoot {
             ) {
                 right_anchor_pos = p;
             }
+
+            for (ix, pos) in extra_anchor_pos.iter_mut().enumerate() {
+                let panel = PanelKey::new(format!("demo.viewport.extra.{ix}"));
+                if let Some(p) = tab_bar_anchor_for_panel(
+                    dock,
+                    self.window,
+                    bounds,
+                    split_handle_gap,
+                    split_handle_hit_thickness,
+                    &panel,
+                ) {
+                    *pos = p;
+                }
+            }
         }
 
         let _ = cx.layout_in(self.left_anchor, rect(left_anchor_pos.0, left_anchor_pos.1));
-        let _ = cx.layout_in(
-            self.right_anchor,
-            rect(right_anchor_pos.0, right_anchor_pos.1),
-        );
+        let _ = cx.layout_in(self.right_anchor, rect(right_anchor_pos.0, right_anchor_pos.1));
+        for (anchor, (x, y)) in self
+            .extra_anchors
+            .iter()
+            .copied()
+            .zip(extra_anchor_pos.iter().copied())
+        {
+            let _ = cx.layout_in(anchor, rect(x, y));
+        }
 
         let float_zone_anchor_rect = {
             // Mirror `fret_docking::dock::layout::float_zone(...)` logic for stable, pixel-free
@@ -1789,6 +1814,13 @@ impl DockingArbitrationDriver {
                 .create_node_retained(DockingArbitrationDragAnchor::new(
                     "dock-arb-tab-drag-anchor-right",
                 ));
+            let extra_anchors: Vec<fret_core::NodeId> = (0..10)
+                .map(|ix| {
+                    state.ui.create_node_retained(DockingArbitrationDragAnchor::new(format!(
+                        "dock-arb-tab-drag-anchor-extra-{ix}"
+                    )))
+                })
+                .collect();
             let viewport_split_handle_anchor =
                 state
                     .ui
@@ -1814,6 +1846,7 @@ impl DockingArbitrationDriver {
                     dock_space: *dock_space,
                     left_anchor,
                     right_anchor,
+                    extra_anchors: extra_anchors.clone(),
                     float_zone_anchor,
                     viewport_split_handle_anchor,
                     floating_title_bar_anchor,
@@ -1822,17 +1855,15 @@ impl DockingArbitrationDriver {
             // Ensure the retained harness nodes participate in hit-testing and event routing.
             // Without explicit parent/child wiring, `layout_in` can position nodes for paint, but
             // pointer hit-testing will not descend into them (it only follows the UI tree).
-            state.ui.set_children(
-                root,
-                vec![
-                    *dock_space,
-                    left_anchor,
-                    right_anchor,
-                    float_zone_anchor,
-                    viewport_split_handle_anchor,
-                    floating_title_bar_anchor,
-                ],
-            );
+            let children: Vec<fret_core::NodeId> = std::iter::once(*dock_space)
+                .chain(std::iter::once(left_anchor))
+                .chain(std::iter::once(right_anchor))
+                .chain(extra_anchors.iter().copied())
+                .chain(std::iter::once(float_zone_anchor))
+                .chain(std::iter::once(viewport_split_handle_anchor))
+                .chain(std::iter::once(floating_title_bar_anchor))
+                .collect();
+            state.ui.set_children(root, children);
             root
         });
 
