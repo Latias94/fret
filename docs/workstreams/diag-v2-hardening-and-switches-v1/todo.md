@@ -170,6 +170,12 @@ This file is a check-list style tracker. Milestone framing lives in `milestones.
   - [x] add optional `window` targeting to selector-driven steps that currently lacked it (e.g. `click_stable`, `wheel`, pointer moves),
   - [x] update capability inference (keep using `diag.multi_window`) and ensure fail-fast gating.
   - [ ] (optional) consider adding `window` to `capture_screenshot` for “no-opinion” per-window evidence collection.
+- [ ] Input determinism: optionally isolate external (non-script) keyboard input during scripted runs (parallel to pointer isolation),
+  with an explicit escape hatch for interactive debugging.
+- [ ] Clipboard determinism: add script steps to set/assert clipboard text (capability-gated), so paste flows can be tested
+  without depending on ambient OS clipboard contents.
+- [ ] OS integration determinism: add a capability-gated script step to inject "incoming open" payloads (paths/tokens) to
+  cover "open with..." flows deterministically (runner already has a diagnostics injection path; scripts should be able to drive it).
 - [x] Extend `FilesystemCapabilitiesV1` with optional identity fields (additive):
   - [x] `runner_kind`, `runner_version`,
   - [x] optional `protocol_versions`/`schemas` hints for tooling.
