@@ -1628,6 +1628,14 @@ impl Carousel {
                 )
             });
 
+            let snaps_prev: Arc<[Px]> = cx
+                .watch_model(&snaps_model)
+                .layout()
+                .cloned()
+                .unwrap_or_else(|| Arc::from(Vec::<Px>::new()));
+            let max_offset_prev = cx.watch_model(&max_offset_model).copied().unwrap_or(Px(0.0));
+            let view_size_prev = cx.watch_model(&extent_model).copied().unwrap_or(Px(0.0));
+
             let viewport_bounds = cx.last_bounds_for_element(viewport_id);
             let view_size_now = viewport_bounds
                 .map(|b| match orientation {
@@ -1746,6 +1754,41 @@ impl Carousel {
                 .app
                 .models_mut()
                 .update(&max_offset_model, |v| *v = max_offset_now);
+
+            let eps = 0.001;
+            let snaps_changed = snaps_prev.len() != snaps_now.len()
+                || snaps_prev
+                    .iter()
+                    .zip(snaps_now.iter())
+                    .any(|(a, b)| (a.0 - b.0).abs() > eps);
+            let max_offset_changed = (max_offset_prev.0 - max_offset_now.0).abs() > eps;
+            let view_size_changed = (view_size_prev.0 - view_size_now.0).abs() > eps;
+            if (snaps_changed || max_offset_changed || view_size_changed) && snaps_now.len() > 1 {
+                let scroll_snaps = snaps_now.iter().map(|px| -px.0).collect::<Vec<_>>();
+                let content_size = max_offset_now.0.max(0.0);
+                let view_size = view_size_now.0.max(0.0);
+
+                let pointer_down =
+                    runtime_snapshot.drag.armed || runtime_snapshot.drag.dragging;
+
+                let mut selected = None;
+                let _ = cx.app.models_mut().update(&embla_engine_model, |v| {
+                    let Some(engine) = v.as_mut() else {
+                        return;
+                    };
+
+                    let _ev = engine.reinit(scroll_snaps, content_size, view_size);
+                    engine.constrain_bounds(pointer_down);
+                    selected = Some(engine.index_current);
+                });
+
+                if let Some(selected) = selected {
+                    let _ = cx.app.models_mut().update(&index_model, |v| *v = selected);
+                    let _ = cx.app.models_mut().update(&runtime_model, |st| {
+                        st.settling = false;
+                    });
+                }
+            }
 
             // Clamp index/offset when snaps change (e.g. window resize).
             let snaps_len = snaps_now.len();

@@ -86,6 +86,75 @@ impl Engine {
         }
     }
 
+    pub fn reinit(
+        &mut self,
+        scroll_snaps: Vec<f32>,
+        content_size: f32,
+        view_size: f32,
+    ) -> Option<SelectEvent> {
+        let content_size = content_size.max(0.0);
+        let view_size = view_size.max(0.0);
+
+        self.config.view_size = view_size;
+
+        let mut scroll_snaps = scroll_snaps;
+        if scroll_snaps.is_empty() {
+            scroll_snaps.push(0.0);
+        }
+
+        let limit = scroll_limit(content_size, &scroll_snaps, self.config.loop_enabled);
+
+        // A geometry-driven re-init should keep motion state but ensure the integrator stays within
+        // the updated limits. Otherwise the recipe can end up displaying a clamped offset while the
+        // engine continues integrating from an out-of-bounds location/target.
+        if self.config.loop_enabled {
+            if limit.length != 0.0 {
+                self.scroll_body
+                    .set_location(limit.remove_offset(self.scroll_body.location()));
+                self.scroll_body
+                    .set_target(limit.remove_offset(self.scroll_body.target()));
+            }
+        } else {
+            self.scroll_body
+                .set_location(limit.clamp(self.scroll_body.location()));
+            self.scroll_body
+                .set_target(limit.clamp(self.scroll_body.target()));
+        }
+
+        let scroll_target = ScrollTarget::new(
+            self.config.loop_enabled,
+            scroll_snaps,
+            content_size,
+            limit,
+            self.scroll_body.target(),
+        );
+
+        self.limit = limit;
+        self.content_size = content_size;
+        self.scroll_target = scroll_target;
+        self.scroll_bounds = ScrollBounds::new(ScrollBoundsConfig { view_size });
+        self.scroll_bounds.toggle_active(!self.config.loop_enabled);
+
+        self.sync_target_vector();
+
+        let next = self
+            .scroll_target
+            .by_distance(0.0, true)
+            .index
+            .min(self.scroll_target.max_index());
+        if next != self.index_current {
+            let source_snap = self.index_current;
+            self.index_previous = source_snap;
+            self.index_current = next;
+            Some(SelectEvent {
+                target_snap: next,
+                source_snap,
+            })
+        } else {
+            None
+        }
+    }
+
     #[inline]
     fn sync_target_vector(&mut self) {
         self.scroll_target
@@ -250,5 +319,33 @@ mod tests {
         let (release, _ev) = engine.on_drag_release(PointerKind::Mouse, -0.25, |v| v);
         assert!(release.duration <= 25.0);
         assert!(release.friction >= 0.68);
+    }
+
+    #[test]
+    fn reinit_updates_limit_and_keeps_location() {
+        let snaps = vec![0.0, -100.0, -200.0, -300.0];
+        let mut engine = Engine::new(
+            snaps,
+            300.0,
+            EngineConfig {
+                loop_enabled: false,
+                drag_free: false,
+                skip_snaps: false,
+                duration: 25.0,
+                base_friction: 0.68,
+                view_size: 320.0,
+                start_snap: 0,
+            },
+        );
+
+        engine.scroll_body.set_location(-250.0);
+        engine.scroll_body.set_target(-250.0);
+
+        let ev = engine.reinit(vec![0.0, -120.0, -240.0], 240.0, 320.0);
+        assert!(ev.is_some());
+        assert_eq!(engine.config.view_size, 320.0);
+        assert_eq!(engine.scroll_body.location(), -240.0);
+        assert_eq!(engine.scroll_body.target(), -240.0);
+        assert_eq!(engine.index_current, 2);
     }
 }
