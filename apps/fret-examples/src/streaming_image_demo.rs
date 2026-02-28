@@ -215,7 +215,7 @@ pub fn run() -> anyhow::Result<()> {
 
     let builder = BootstrapBuilder::new(App::new(), driver).configure(|config| {
         config.main_window_title = "streaming_image_demo".to_string();
-        config.main_window_size = winit::dpi::LogicalSize::new(720.0, 480.0);
+        config.main_window_size = fret_launch::WindowLogicalSize::new(720.0, 480.0);
     });
 
     let builder = builder.with_default_config_files()?;

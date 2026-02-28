@@ -2568,7 +2568,7 @@ pub fn build_app() -> App {
 }
 
 pub fn build_runner_config() -> WinitRunnerConfig {
-    fn parse_main_window_size_override() -> Option<winit::dpi::LogicalSize<f64>> {
+    fn parse_main_window_size_override() -> Option<fret_launch::WindowLogicalSize> {
         let raw = std::env::var("FRET_UI_GALLERY_MAIN_WINDOW_SIZE").ok()?;
         let trimmed = raw.trim();
         if trimmed.is_empty() {
@@ -2585,7 +2585,7 @@ pub fn build_runner_config() -> WinitRunnerConfig {
             return None;
         }
 
-        Some(winit::dpi::LogicalSize::new(w, h))
+        Some(fret_launch::WindowLogicalSize::new(w, h))
     }
 
     let main_window_size = match parse_main_window_size_override() {
@@ -2597,7 +2597,7 @@ pub fn build_runner_config() -> WinitRunnerConfig {
             );
             size
         }
-        None => winit::dpi::LogicalSize::new(1080.0, 720.0),
+        None => fret_launch::WindowLogicalSize::new(1080.0, 720.0),
     };
 
     WinitRunnerConfig {
@@ -3289,16 +3289,7 @@ impl WinitAppDriver for UiGalleryDriver {
 
         #[cfg(not(target_arch = "wasm32"))]
         {
-            let consumed =
-                app.with_global_mut_untracked(UiDiagnosticsService::default, |svc, app| {
-                    if !svc.is_enabled() {
-                        return false;
-                    }
-                    if svc.maybe_intercept_event_for_inspect_shortcuts(app, window, event) {
-                        return true;
-                    }
-                    svc.maybe_intercept_event_for_picking(app, window, event)
-                });
+            let consumed = fret_bootstrap::maybe_consume_event(app, window, event);
             if consumed {
                 return;
             }
@@ -3865,7 +3856,7 @@ impl WinitAppDriver for UiGalleryDriver {
         match &request.kind {
             CreateWindowKind::DockRestore { logical_window_id } => Some(WindowCreateSpec::new(
                 format!("fret-ui-gallery - {logical_window_id}"),
-                winit::dpi::LogicalSize::new(980.0, 720.0),
+                fret_launch::WindowLogicalSize::new(980.0, 720.0),
             )),
             CreateWindowKind::DockFloating { .. } => None,
         }

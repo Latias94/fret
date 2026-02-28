@@ -1,5 +1,9 @@
 {
   "schema_version": 2,
+  "meta": {
+    "name": "ui-gallery incoming-open: inject smoke",
+    "required_capabilities": ["diag.incoming_open_inject", "diag.script_v2"]
+  },
   "steps": [
     { "type": "reset_diagnostics" },
     {

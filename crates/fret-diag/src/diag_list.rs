@@ -3,7 +3,7 @@ use std::path::Path;
 use crate::script_registry::{PromotedScriptRegistry, promoted_registry_default_path};
 
 #[derive(Debug, Default)]
-struct ListScriptsOptions {
+struct ListFilterOptions {
     contains: Option<String>,
     case_sensitive: bool,
     all: bool,
@@ -21,6 +21,7 @@ pub(crate) fn cmd_list(
 
     match kind {
         "scripts" | "script" => cmd_list_scripts(&rest[1..], workspace_root, json, top_override),
+        "suites" | "suite" => cmd_list_suites(&rest[1..], workspace_root, json, top_override),
         other => Err(format!("unknown diag list target: {other}")),
     }
 }
@@ -31,7 +32,7 @@ fn cmd_list_scripts(
     json: bool,
     top_override: Option<usize>,
 ) -> Result<(), String> {
-    let opts = parse_list_scripts_options(rest)?;
+    let opts = parse_list_filter_options("scripts", rest)?;
 
     let registry_path = promoted_registry_default_path(workspace_root);
     if !registry_path.is_file() {
@@ -84,8 +85,76 @@ hint: generate it via `python tools/check_diag_scripts_registry.py --write`",
     Ok(())
 }
 
-fn parse_list_scripts_options(rest: &[String]) -> Result<ListScriptsOptions, String> {
-    let mut out = ListScriptsOptions::default();
+fn cmd_list_suites(
+    rest: &[String],
+    workspace_root: &Path,
+    json: bool,
+    top_override: Option<usize>,
+) -> Result<(), String> {
+    let opts = parse_list_filter_options("suites", rest)?;
+
+    let registry_path = promoted_registry_default_path(workspace_root);
+    if !registry_path.is_file() {
+        return Err(format!(
+            "promoted scripts registry is missing: {}\n\
+hint: generate it via `python tools/check_diag_scripts_registry.py --write`",
+            registry_path.display()
+        ));
+    }
+
+    let registry = PromotedScriptRegistry::load_from_path(&registry_path)?;
+
+    use std::collections::BTreeMap;
+    let mut counts: BTreeMap<&str, usize> = BTreeMap::new();
+    for e in registry.entries() {
+        for s in &e.suite_memberships {
+            *counts.entry(s.as_str()).or_insert(0) += 1;
+        }
+    }
+    let mut suites: Vec<(String, usize)> = counts
+        .into_iter()
+        .map(|(k, v)| (k.to_string(), v))
+        .collect();
+
+    if let Some(needle) = opts.contains.as_deref() {
+        let needle_lower = needle.to_ascii_lowercase();
+        suites.retain(|(suite, _count)| {
+            if opts.case_sensitive {
+                suite.contains(needle)
+            } else {
+                suite.to_ascii_lowercase().contains(&needle_lower)
+            }
+        });
+    }
+
+    if !opts.all {
+        let limit = top_override.unwrap_or(50);
+        suites.truncate(limit);
+    }
+
+    if json {
+        let payload = serde_json::json!({
+            "suites": suites.iter().map(|(suite, scripts_total)| serde_json::json!({
+                "suite": suite,
+                "scripts_total": scripts_total,
+            })).collect::<Vec<_>>(),
+        });
+        println!(
+            "{}",
+            serde_json::to_string_pretty(&payload).map_err(|e| e.to_string())?
+        );
+        return Ok(());
+    }
+
+    for (suite, scripts_total) in suites {
+        println!("{suite} ({scripts_total} scripts)");
+    }
+
+    Ok(())
+}
+
+fn parse_list_filter_options(kind: &str, rest: &[String]) -> Result<ListFilterOptions, String> {
+    let mut out = ListFilterOptions::default();
 
     let mut i: usize = 0;
     while i < rest.len() {
@@ -107,11 +176,11 @@ fn parse_list_scripts_options(rest: &[String]) -> Result<ListScriptsOptions, Str
                 i += 2;
             }
             other if other.starts_with('-') => {
-                return Err(format!("unknown diag list scripts flag: {other}"));
+                return Err(format!("unknown diag list {kind} flag: {other}"));
             }
             other => {
                 return Err(format!(
-                    "unexpected positional for `diag list scripts`: {other}\n\
+                    "unexpected positional for `diag list {kind}`: {other}\n\
 hint: use flags like --contains <needle>, --all, or global flags like --top <n> / --json"
                 ));
             }
@@ -130,16 +199,16 @@ mod tests {
     }
 
     #[test]
-    fn parse_list_scripts_options_happy_path() {
-        let opts = parse_list_scripts_options(&s(&["--contains", "ui-gallery"])).unwrap();
+    fn parse_list_filter_options_happy_path() {
+        let opts = parse_list_filter_options("scripts", &s(&["--contains", "ui-gallery"])).unwrap();
         assert_eq!(opts.contains.as_deref(), Some("ui-gallery"));
         assert!(!opts.case_sensitive);
         assert!(!opts.all);
     }
 
     #[test]
-    fn parse_list_scripts_options_rejects_unknown_flag() {
-        let err = parse_list_scripts_options(&s(&["--nope"])).unwrap_err();
+    fn parse_list_filter_options_rejects_unknown_flag() {
+        let err = parse_list_filter_options("scripts", &s(&["--nope"])).unwrap_err();
         assert!(err.contains("unknown"));
     }
 }

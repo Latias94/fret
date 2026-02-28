@@ -133,7 +133,7 @@ impl CodeBlock {
         let options = fret_code_view::CodeBlockUiOptions {
             show_header: self.show_header,
             header_divider: self.show_header,
-            header_background: fret_code_view::CodeBlockHeaderBackground::Secondary,
+            header_background: fret_code_view::CodeBlockHeaderBackground::Muted80,
             show_copy_button: false,
             copy_button_on_hover: true,
             copy_button_placement: fret_code_view::CodeBlockCopyButtonPlacement::Overlay,
@@ -354,12 +354,8 @@ impl CodeBlockCopyButton {
             props.a11y.test_id = test_id.clone();
 
             let fg = theme.color_token("muted-foreground");
-            let bg_hover = theme
-                .color_by_key("color.menu.item.hover")
-                .unwrap_or_else(|| theme.color_token("secondary"));
-            let bg_pressed = theme
-                .color_by_key("accent")
-                .unwrap_or_else(|| theme.color_token("secondary"));
+            let bg_hover = theme.color_token("color.menu.item.hover");
+            let bg_pressed = theme.color_token("accent");
 
             let bg = if st.pressed {
                 alpha(bg_pressed, 0.9)

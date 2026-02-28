@@ -1,0 +1,36 @@
+{
+  "schema_version": 2,
+  "meta": {
+    "name": "Docking arbitration demo: incoming-open inject smoke (event recording)",
+    "tags": ["docking", "incoming_open", "smoke"],
+    "required_capabilities": ["diag.incoming_open_inject", "diag.script_v2"],
+    "target_hints": [
+      "Injects an IncomingOpenRequest event and asserts it is observable via event_kind_seen.",
+      "This gates that the app driver records platform-delivered events into the diagnostics ring buffer."
+    ]
+  },
+  "steps": [
+    { "type": "reset_diagnostics" },
+    {
+      "type": "inject_incoming_open",
+      "items": [
+        {
+          "kind": "text",
+          "text": "hello from diag incoming-open (docking-arbitration-demo)",
+          "media_type": "text/plain"
+        }
+      ]
+    },
+    {
+      "type": "wait_until",
+      "window": { "kind": "first_seen" },
+      "predicate": { "kind": "event_kind_seen", "event_kind": "IncomingOpenRequest" },
+      "timeout_frames": 120
+    },
+    {
+      "type": "capture_bundle",
+      "label": "docking-arbitration-demo-incoming-open-inject-smoke"
+    }
+  ]
+}
+

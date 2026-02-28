@@ -301,12 +301,44 @@ pub struct UiDiagnosticsConfigFileV1 {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub screenshot_on_dump: Option<bool>,
 
+    /// Whether the diagnostics runtime should write the large raw bundle artifact (`bundle.json`)
+    /// during dumps.
+    ///
+    /// Tooling typically sets this to `false` for launched runs so default artifacts stay
+    /// small-by-default (manifest + sidecars + optional compact bundle view).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub write_bundle_json: Option<bool>,
+    /// Whether the diagnostics runtime should write the compact bundle view (`bundle.schema2.json`)
+    /// alongside sidecars during dumps.
+    ///
+    /// This is intended for schema2-first + AI/sidecar-first workflows to avoid requiring tooling
+    /// to parse large raw bundles just to produce a portable artifact.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub write_bundle_schema2: Option<bool>,
+
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub redact_text: Option<bool>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub max_debug_string_bytes: Option<u32>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub max_gating_trace_entries: Option<u32>,
+
+    /// When enabled, ignore external pointer input events (mouse/touch/pen) while a diagnostics
+    /// script is running.
+    ///
+    /// This is intended to keep scripted runs deterministic when a user accidentally moves or
+    /// clicks the real mouse during playback (especially for cross-window docking/tear-off).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub isolate_external_pointer_input_while_script_running: Option<bool>,
+
+    /// When enabled, ignore external keyboard/text/IME events while a diagnostics script is
+    /// running.
+    ///
+    /// This is intended to keep scripted runs deterministic when a user accidentally types while
+    /// playback is in progress (especially when scripts are asserting shortcut routing or text
+    /// input outcomes).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub isolate_external_keyboard_input_while_script_running: Option<bool>,
 
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub frame_clock_fixed_delta_ms: Option<u64>,
@@ -416,6 +448,46 @@ pub enum UiActionStepV2 {
         #[serde(default, skip_serializing_if = "Option::is_none")]
         modifiers: Option<UiKeyModifiersV1>,
     },
+    /// A high-level “long press” gesture (touch-first) resolved via semantics selectors.
+    ///
+    /// Runtime injection emits a `pointer_down`, holds until `duration_ms` elapses, then emits
+    /// `pointer_up` with `is_click=false`.
+    LongPress {
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        window: Option<UiWindowTargetV1>,
+        /// Optional override; when omitted, defaults to `touch`.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        pointer_kind: Option<UiPointerKindV1>,
+        target: UiSelectorV1,
+        #[serde(
+            default = "default_long_press_duration_ms",
+            skip_serializing_if = "is_default_long_press_duration_ms"
+        )]
+        duration_ms: u64,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        modifiers: Option<UiKeyModifiersV1>,
+    },
+    /// A high-level “swipe” gesture (touch-first) resolved via semantics selectors.
+    ///
+    /// Runtime injection emits a `pointer_down` at the target's center, then a sequence of
+    /// `pointer_move` events to the end position, then a `pointer_up` with `is_click=false`.
+    Swipe {
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        window: Option<UiWindowTargetV1>,
+        /// Optional override; when omitted, defaults to `touch`.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        pointer_kind: Option<UiPointerKindV1>,
+        target: UiSelectorV1,
+        delta_x: f32,
+        delta_y: f32,
+        #[serde(
+            default = "default_drag_steps",
+            skip_serializing_if = "is_default_drag_steps"
+        )]
+        steps: u32,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        modifiers: Option<UiKeyModifiersV1>,
+    },
     /// A pinch/zoom gesture emitted at the target's center.
     ///
     /// `delta` is positive for zoom in and negative for zoom out (matches `PointerEvent::PinchGesture`).
@@ -428,7 +500,10 @@ pub enum UiActionStepV2 {
         target: UiSelectorV1,
         /// Total delta across all steps.
         delta: f32,
-        #[serde(default = "default_drag_steps")]
+        #[serde(
+            default = "default_drag_steps",
+            skip_serializing_if = "is_default_drag_steps"
+        )]
         steps: u32,
         #[serde(default, skip_serializing_if = "Option::is_none")]
         modifiers: Option<UiKeyModifiersV1>,
@@ -774,6 +849,26 @@ pub enum UiActionStepV2 {
     SetClipboardForceUnavailable {
         enabled: bool,
     },
+    /// Set the OS clipboard text payload (best-effort).
+    ///
+    /// This is intended to make "paste" flows deterministic in scripted diagnostics by ensuring
+    /// the clipboard contents are known.
+    ///
+    /// Requires capability `diag.clipboard_text`.
+    SetClipboardText {
+        text: String,
+    },
+    /// Assert that the OS clipboard text payload equals `text` (best-effort).
+    ///
+    /// This is intended to make clipboard-driven regression scripts explainable without relying
+    /// on screenshots.
+    ///
+    /// Requires capability `diag.clipboard_text`.
+    AssertClipboardText {
+        text: String,
+        #[serde(default = "default_action_timeout_frames")]
+        timeout_frames: u32,
+    },
     /// Diagnostics-only incoming-open injection (best-effort).
     ///
     /// This simulates “open in…” / share-target flows by injecting an `IncomingOpenRequest` event.
@@ -794,6 +889,8 @@ pub enum UiActionStepV2 {
     ///
     /// Desktop runners may use this during scripted diagnostics to drive hover routing that is
     /// normally owned by OS cursor events (e.g. cross-window docking).
+    ///
+    /// Requires capability `diag.cursor_screen_pos_override`.
     SetCursorScreenPos {
         x_px: f32,
         y_px: f32,
@@ -804,6 +901,8 @@ pub enum UiActionStepV2 {
     /// global cursor location from window-local input.
     ///
     /// Coordinates are in window-client **physical pixels**.
+    ///
+    /// Requires capability `diag.cursor_screen_pos_override`.
     SetCursorInWindow {
         #[serde(default, skip_serializing_if = "Option::is_none")]
         window: Option<UiWindowTargetV1>,
@@ -817,6 +916,8 @@ pub enum UiActionStepV2 {
     /// current window scale factor.
     ///
     /// Prefer this for deterministic scripts that already express geometry in logical pixels.
+    ///
+    /// Requires capability `diag.cursor_screen_pos_override`.
     SetCursorInWindowLogical {
         #[serde(default, skip_serializing_if = "Option::is_none")]
         window: Option<UiWindowTargetV1>,
@@ -959,6 +1060,10 @@ fn default_drag_steps() -> u32 {
     8
 }
 
+fn is_default_drag_steps(v: &u32) -> bool {
+    *v == default_drag_steps()
+}
+
 fn default_move_frames_per_step() -> u32 {
     1
 }
@@ -969,6 +1074,14 @@ fn default_click_count() -> u8 {
 
 fn is_default_click_count(v: &u8) -> bool {
     *v == 1
+}
+
+fn default_long_press_duration_ms() -> u64 {
+    500
+}
+
+fn is_default_long_press_duration_ms(v: &u64) -> bool {
+    *v == 500
 }
 
 fn default_click_stable_frames() -> u32 {
@@ -1494,6 +1607,26 @@ pub enum UiPredicateV1 {
     /// a *candidate* region (via `dock_drop_resolve_source_is`) while `resolved` stays `None`.
     DockDropResolvedIsSome {
         some: bool,
+    },
+    /// True when the current docking drop resolve has a resolved target whose `zone` matches
+    /// `zone`.
+    ///
+    /// Supported zones:
+    /// - `center`
+    /// - `left`
+    /// - `right`
+    /// - `top`
+    /// - `bottom`
+    DockDropResolvedZoneIs {
+        zone: String,
+    },
+    /// True when the current docking drop resolve has a resolved target whose `insert_index`
+    /// matches `index`.
+    ///
+    /// This is intended to gate "drop at end" semantics (e.g. `index == tab_count`) without
+    /// relying on pixels.
+    DockDropResolvedInsertIndexIs {
+        index: u32,
     },
     /// True when the latest dock graph stats snapshot reports a canonical-form layout.
     DockGraphCanonicalIs {
@@ -2614,6 +2747,86 @@ mod tests {
             parsed,
             UiActionStepV2::Tap {
                 pointer_kind: Some(UiPointerKindV1::Pen),
+                ..
+            }
+        ));
+    }
+
+    #[test]
+    fn long_press_step_round_trips_and_omits_defaults() {
+        let step = UiActionStepV2::LongPress {
+            window: None,
+            pointer_kind: None,
+            target: UiSelectorV1::TestId {
+                id: "a".to_string(),
+            },
+            duration_ms: default_long_press_duration_ms(),
+            modifiers: None,
+        };
+        let value = serde_json::to_value(step.clone()).unwrap();
+        assert_eq!(
+            value,
+            serde_json::json!({
+              "type": "long_press",
+              "target": {"kind":"test_id","id":"a"}
+            })
+        );
+
+        let parsed: UiActionStepV2 = serde_json::from_value(serde_json::json!({
+          "type": "long_press",
+          "pointer_kind": "pen",
+          "target": {"kind":"test_id","id":"a"},
+          "duration_ms": 125
+        }))
+        .unwrap();
+        assert!(matches!(
+            parsed,
+            UiActionStepV2::LongPress {
+                pointer_kind: Some(UiPointerKindV1::Pen),
+                duration_ms: 125,
+                ..
+            }
+        ));
+    }
+
+    #[test]
+    fn swipe_step_round_trips_and_omits_defaults() {
+        let step = UiActionStepV2::Swipe {
+            window: None,
+            pointer_kind: None,
+            target: UiSelectorV1::TestId {
+                id: "a".to_string(),
+            },
+            delta_x: 12.0,
+            delta_y: -8.0,
+            steps: default_drag_steps(),
+            modifiers: None,
+        };
+        let value = serde_json::to_value(step.clone()).unwrap();
+        assert_eq!(
+            value,
+            serde_json::json!({
+              "type": "swipe",
+              "target": {"kind":"test_id","id":"a"},
+              "delta_x": 12.0,
+              "delta_y": -8.0
+            })
+        );
+
+        let parsed: UiActionStepV2 = serde_json::from_value(serde_json::json!({
+          "type": "swipe",
+          "pointer_kind": "pen",
+          "target": {"kind":"test_id","id":"a"},
+          "delta_x": 1.0,
+          "delta_y": 2.0,
+          "steps": 3
+        }))
+        .unwrap();
+        assert!(matches!(
+            parsed,
+            UiActionStepV2::Swipe {
+                pointer_kind: Some(UiPointerKindV1::Pen),
+                steps: 3,
                 ..
             }
         ));

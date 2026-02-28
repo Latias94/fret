@@ -19,6 +19,22 @@ fn move_pointer_event(position: Point, pointer_type: PointerType) -> Event {
     })
 }
 
+fn move_pointer_event_with_modifiers(
+    position: Point,
+    modifiers: Modifiers,
+    pointer_type: PointerType,
+) -> Event {
+    let pointer_id = PointerId(0);
+
+    Event::Pointer(PointerEvent::Move {
+        pointer_id,
+        position,
+        buttons: MouseButtons::default(),
+        modifiers,
+        pointer_type,
+    })
+}
+
 fn wheel_event(position: Point, delta_x: f32, delta_y: f32, pointer_type: PointerType) -> Event {
     let pointer_id = PointerId(0);
     let modifiers = Modifiers::default();
@@ -100,6 +116,58 @@ fn click_events_with_modifiers(
     });
 
     [move_event, down, up]
+}
+
+fn pointer_down_event_with_modifiers(
+    position: Point,
+    button: UiMouseButtonV1,
+    click_count: u8,
+    modifiers: Modifiers,
+    pointer_type: PointerType,
+) -> Event {
+    let pointer_id = PointerId(0);
+    let click_count = click_count.max(1);
+    let button = match button {
+        UiMouseButtonV1::Left => MouseButton::Left,
+        UiMouseButtonV1::Right => MouseButton::Right,
+        UiMouseButtonV1::Middle => MouseButton::Middle,
+    };
+
+    Event::Pointer(PointerEvent::Down {
+        pointer_id,
+        position,
+        button,
+        modifiers,
+        click_count,
+        pointer_type,
+    })
+}
+
+fn pointer_up_event_with_modifiers(
+    position: Point,
+    button: UiMouseButtonV1,
+    click_count: u8,
+    modifiers: Modifiers,
+    pointer_type: PointerType,
+    is_click: bool,
+) -> Event {
+    let pointer_id = PointerId(0);
+    let click_count = click_count.max(1);
+    let button = match button {
+        UiMouseButtonV1::Left => MouseButton::Left,
+        UiMouseButtonV1::Right => MouseButton::Right,
+        UiMouseButtonV1::Middle => MouseButton::Middle,
+    };
+
+    Event::Pointer(PointerEvent::Up {
+        pointer_id,
+        position,
+        button,
+        modifiers,
+        is_click,
+        click_count,
+        pointer_type,
+    })
 }
 
 fn drag_events(
@@ -227,6 +295,38 @@ fn pointer_move_with_internal_over_events(
         modifiers,
     });
     [move_event, over]
+}
+
+fn pointer_move_event_with_buttons_modifiers(
+    button: UiMouseButtonV1,
+    position: Point,
+    modifiers: Modifiers,
+    pointer_type: PointerType,
+) -> Event {
+    let pointer_id = PointerId(0);
+
+    let pressed_buttons = match button {
+        UiMouseButtonV1::Left => MouseButtons {
+            left: true,
+            ..Default::default()
+        },
+        UiMouseButtonV1::Right => MouseButtons {
+            right: true,
+            ..Default::default()
+        },
+        UiMouseButtonV1::Middle => MouseButtons {
+            middle: true,
+            ..Default::default()
+        },
+    };
+
+    Event::Pointer(PointerEvent::Move {
+        pointer_id,
+        position,
+        buttons: pressed_buttons,
+        modifiers,
+        pointer_type,
+    })
 }
 
 fn pointer_up_with_internal_drop_events(

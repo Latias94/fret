@@ -440,12 +440,122 @@ pub(super) fn mix_scene_op(state: u64, op: SceneOp) -> u64 {
                         }
                         state
                     }
+                    EffectStep::CustomV2 {
+                        id,
+                        params,
+                        max_sample_offset_px,
+                        input_image,
+                    } => {
+                        let mut state = mix_u64(state, 12);
+                        state = mix_u64(state, id.data().as_ffi());
+                        state = mix_px(state, max_sample_offset_px);
+                        for v in &params.vec4s {
+                            for x in v {
+                                state = mix_f32(state, *x);
+                            }
+                        }
+                        match input_image {
+                            None => mix_u64(state, 0),
+                            Some(input) => {
+                                let mut state = mix_u64(state, 1);
+                                state = mix_u64(state, input.image.data().as_ffi());
+                                state = mix_f32(state, input.uv.u0);
+                                state = mix_f32(state, input.uv.v0);
+                                state = mix_f32(state, input.uv.u1);
+                                state = mix_f32(state, input.uv.v1);
+                                mix_u64(
+                                    state,
+                                    match input.sampling {
+                                        ImageSamplingHint::Default => 0,
+                                        ImageSamplingHint::Linear => 1,
+                                        ImageSamplingHint::Nearest => 2,
+                                    },
+                                )
+                            }
+                        }
+                    }
+                    EffectStep::CustomV3 {
+                        id,
+                        params,
+                        max_sample_offset_px,
+                        user0,
+                        user1,
+                        sources,
+                    } => {
+                        let mut state = mix_u64(state, 13);
+                        state = mix_u64(state, id.data().as_ffi());
+                        state = mix_px(state, max_sample_offset_px);
+                        for v in &params.vec4s {
+                            for x in v {
+                                state = mix_f32(state, *x);
+                            }
+                        }
+
+                        let mix_input =
+                            |mut state: u64, input: Option<CustomEffectImageInputV1>| match input {
+                                None => mix_u64(state, 0),
+                                Some(input) => {
+                                    state = mix_u64(state, 1);
+                                    state = mix_u64(state, input.image.data().as_ffi());
+                                    state = mix_f32(state, input.uv.u0);
+                                    state = mix_f32(state, input.uv.v0);
+                                    state = mix_f32(state, input.uv.u1);
+                                    state = mix_f32(state, input.uv.v1);
+                                    mix_u64(
+                                        state,
+                                        match input.sampling {
+                                            ImageSamplingHint::Default => 0,
+                                            ImageSamplingHint::Linear => 1,
+                                            ImageSamplingHint::Nearest => 2,
+                                        },
+                                    )
+                                }
+                            };
+
+                        state = mix_input(state, user0);
+                        state = mix_input(state, user1);
+                        state = mix_u64(state, u64::from(sources.want_raw));
+                        match sources.pyramid {
+                            None => mix_u64(state, 0),
+                            Some(req) => {
+                                let mut state = mix_u64(state, 1);
+                                state = mix_u64(state, u64::from(req.max_levels));
+                                mix_px(state, req.max_radius_px)
+                            }
+                        }
+                    }
                 };
             }
 
             state
         }
         SceneOp::PopEffect => mix_u64(state, 107),
+        SceneOp::PushBackdropSourceGroupV1 {
+            bounds,
+            pyramid,
+            quality,
+        } => {
+            let mut state = mix_u64(state, 112);
+            state = mix_rect(state, bounds);
+            state = mix_u64(
+                state,
+                match quality {
+                    EffectQuality::Auto => 1,
+                    EffectQuality::Low => 2,
+                    EffectQuality::Medium => 3,
+                    EffectQuality::High => 4,
+                },
+            );
+            match pyramid {
+                None => mix_u64(state, 0),
+                Some(req) => {
+                    let mut state = mix_u64(state, 1);
+                    state = mix_u64(state, u64::from(req.max_levels));
+                    mix_px(state, req.max_radius_px)
+                }
+            }
+        }
+        SceneOp::PopBackdropSourceGroup => mix_u64(state, 113),
         SceneOp::PushCompositeGroup { desc } => {
             let mut state = mix_u64(state, 110);
             state = mix_rect(state, desc.bounds);

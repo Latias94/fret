@@ -33,19 +33,9 @@ pub(super) fn preview_badge(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement>
         let scheme = cx.environment_color_scheme(Invalidation::Paint);
         let blue = match scheme.unwrap_or(ColorScheme::Light) {
             // Tailwind: `bg-blue-600`.
-            ColorScheme::Dark => CoreColor {
-                r: 0x25 as f32 / 255.0,
-                g: 0x63 as f32 / 255.0,
-                b: 0xEB as f32 / 255.0,
-                a: 1.0,
-            },
+            ColorScheme::Dark => fret_ui_kit::colors::linear_from_hex_rgb(0x25_63_EB),
             // Tailwind: `bg-blue-500`.
-            ColorScheme::Light => CoreColor {
-                r: 0x3B as f32 / 255.0,
-                g: 0x82 as f32 / 255.0,
-                b: 0xF6 as f32 / 255.0,
-                a: 1.0,
-            },
+            ColorScheme::Light => fret_ui_kit::colors::linear_from_hex_rgb(0x3B_82_F6),
         };
 
         let row2 = doc_layout::wrap_controls_row_snapshot(cx, &theme, Space::N2, |cx| {
@@ -61,20 +51,35 @@ pub(super) fn preview_badge(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement>
                     .test_id("ui-gallery-badge-demo-verified")
                     .into_element(cx),
                 shadcn::Badge::new("8")
-                    .refine_style(ChromeRefinement::default().rounded(Radius::Full))
-                    .refine_layout(LayoutRefinement::default().h_px(Px(20.0)).min_w(Px(20.0)))
+                    .label_tabular_nums()
+                    .refine_style(
+                        ChromeRefinement::default()
+                            .rounded(Radius::Full)
+                            .px(Space::N1),
+                    )
+                    .refine_layout(LayoutRefinement::default().min_w(Px(20.0)))
                     .test_id("ui-gallery-badge-demo-count")
                     .into_element(cx),
                 shadcn::Badge::new("99")
                     .variant(shadcn::BadgeVariant::Destructive)
-                    .refine_style(ChromeRefinement::default().rounded(Radius::Full))
-                    .refine_layout(LayoutRefinement::default().h_px(Px(20.0)).min_w(Px(20.0)))
+                    .label_tabular_nums()
+                    .refine_style(
+                        ChromeRefinement::default()
+                            .rounded(Radius::Full)
+                            .px(Space::N1),
+                    )
+                    .refine_layout(LayoutRefinement::default().min_w(Px(20.0)))
                     .test_id("ui-gallery-badge-demo-count-destructive")
                     .into_element(cx),
                 shadcn::Badge::new("20+")
                     .variant(shadcn::BadgeVariant::Outline)
-                    .refine_style(ChromeRefinement::default().rounded(Radius::Full))
-                    .refine_layout(LayoutRefinement::default().h_px(Px(20.0)).min_w(Px(20.0)))
+                    .label_tabular_nums()
+                    .refine_style(
+                        ChromeRefinement::default()
+                            .rounded(Radius::Full)
+                            .px(Space::N1),
+                    )
+                    .refine_layout(LayoutRefinement::default().min_w(Px(20.0)))
                     .test_id("ui-gallery-badge-demo-count-outline")
                     .into_element(cx),
             ]

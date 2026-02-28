@@ -88,7 +88,7 @@ The script runner/tooling must make “what is supported” explicit. Examples:
 
 - `diag.screenshot_png` (on-demand PNG screenshots used by `capture_screenshot`)
 - `diag.multi_window` (window targeting and cross-window assertions)
-- `diag.pointer_kind_touch` / `diag.pointer_kind_pen` / `diag.gesture_tap` / `diag.gesture_pinch` (touch-first input)
+- `diag.pointer_kind_touch` / `diag.pointer_kind_pen` / `diag.gesture_tap` / `diag.gesture_long_press` / `diag.gesture_swipe` / `diag.gesture_pinch` (touch-first input)
 
 Pointer kind status (2026-02-27):
 
@@ -97,6 +97,8 @@ Pointer kind status (2026-02-27):
 - `fret-bootstrap` advertises `diag.pointer_kind_touch` / `diag.pointer_kind_pen` via both `capabilities.json` and the DevTools WS hello.
 - Script schema v2 also exposes touch-first gesture steps, capability-gated behind explicit capabilities:
   - `tap` (`diag.gesture_tap`)
+  - `long_press` (`diag.gesture_long_press`)
+  - `swipe` (`diag.gesture_swipe`)
   - `pinch` (`diag.gesture_pinch`)
 
 Tooling should:

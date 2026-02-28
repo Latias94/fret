@@ -56,13 +56,13 @@
     { "type": "capture_bundle", "label": "ui-gallery-carousel-expandable-before" },
 
     {
-      "type": "click_stable",
-      "target": { "kind": "test_id", "id": "ui-gallery-carousel-expandable-item-3" }
+      "type": "click",
+      "target": { "kind": "test_id", "id": "ui-gallery-carousel-expandable-item-3-toggle" }
     },
     { "type": "wait_frames", "n": 30 },
     {
       "type": "click",
-      "target": { "kind": "test_id", "id": "ui-gallery-carousel-expandable-item-4" }
+      "target": { "kind": "test_id", "id": "ui-gallery-carousel-expandable-item-4-toggle" }
     },
 
     { "type": "wait_frames", "n": 30 },

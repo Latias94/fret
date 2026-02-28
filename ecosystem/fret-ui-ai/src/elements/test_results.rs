@@ -83,28 +83,36 @@ impl TestStatusKind {
     }
 
     pub fn color(self, theme: &Theme) -> Color {
+        fn token(theme: &Theme, key: &'static str, fallback: Color) -> Color {
+            theme.color_by_key(key).unwrap_or(fallback)
+        }
+
         match self {
             Self::Failed => theme
-                .color_by_key("destructive")
-                .unwrap_or_else(|| theme.color_token("foreground")),
-            Self::Passed => Color {
-                r: 0.086,
-                g: 0.639,
-                b: 0.290,
-                a: 1.0,
-            },
-            Self::Skipped => Color {
-                r: 0.792,
-                g: 0.541,
-                b: 0.016,
-                a: 1.0,
-            },
-            Self::Running => Color {
-                r: 0.145,
-                g: 0.388,
-                b: 0.922,
-                a: 1.0,
-            },
+                .color_by_key("component.test_results.status.failed")
+                .unwrap_or_else(|| {
+                    theme
+                        .color_by_key("destructive")
+                        .unwrap_or_else(|| theme.color_token("foreground"))
+                }),
+            Self::Passed => token(
+                theme,
+                "component.test_results.status.passed",
+                // Tailwind: green-600 (#16a34a).
+                fret_ui_kit::colors::linear_from_hex_rgb(0x16_a3_4a),
+            ),
+            Self::Skipped => token(
+                theme,
+                "component.test_results.status.skipped",
+                // Tailwind: yellow-600 (#ca8a04).
+                fret_ui_kit::colors::linear_from_hex_rgb(0xca_8a_04),
+            ),
+            Self::Running => token(
+                theme,
+                "component.test_results.status.running",
+                // Tailwind: blue-600 (#2563eb).
+                fret_ui_kit::colors::linear_from_hex_rgb(0x25_63_eb),
+            ),
         }
     }
 }

@@ -52,16 +52,18 @@ Implementation pointers (where the code lives today):
 4. Locate the most recent bundle directory:
 
    - `cargo run -p fretboard -- diag latest`
-   - The full bundle file is `bundle.json` under that directory.
-   - Tooling may also write a compact schema2 view: `bundle.schema2.json` (preferred by tooling when present).
+   - The primary bundle artifact is `bundle.schema2.json` (preferred) or `bundle.json` under that directory.
 
 By default bundles go under `target/fret-diag/<timestamp>/` and `target/fret-diag/latest.txt` is updated.
 
 ## Bundle schema (v2) and semantics mode
 
-The runtime now always exports `bundle.json` schema v2:
+The runtime exports **schema v2** bundles (semantics tables + per-snapshot fingerprints).
 
-- `bundle.json` schema v2: semantics tables (`tables.semantics`) + per-snapshot fingerprints.
+Artifact note:
+
+- `bundle.json` is the large “raw” view (optional; can be disabled by tooling via config).
+- `bundle.schema2.json` is the compact schema2 view (recommended; preferred by tooling when present).
 
 Legacy note:
 
@@ -83,7 +85,7 @@ Overrides (both manual and script dumps):
 
 ## Sidecars (index/meta/test-id index)
 
-On native filesystem dumps, the runtime also writes bounded sidecars next to `bundle.json`:
+On native filesystem dumps, the runtime also writes bounded sidecars next to the bundle artifact:
 
 - `bundle.meta.json`: compact per-window counts (snapshots, semantics inline vs table, test-id totals for a considered snapshot).
 - `bundle.index.json`: per-window/per-snapshot index (frame ids, timestamps, semantics presence/source, and a bounded `test_id` bloom).
@@ -167,12 +169,12 @@ enable bundle screenshots:
 - `FRET_DIAG_BUNDLE_SCREENSHOT=1`
 
 When a bundle is dumped, the runner writes `frame.bmp` into the bundle directory (same folder as
-`bundle.json`).
+the bundle artifact).
 
 Notes:
 
 - This is **bundle-scoped** and **dump-triggered**:
-  - The runtime writes a `screenshot.request` file into the bundle directory when dumping `bundle.json`.
+  - The runtime writes a `screenshot.request` file into the bundle directory when dumping a bundle export.
   - The desktop runner detects that request and writes `frame.bmp` (and `screenshot.done`) as best-effort.
 - This is intentionally separate from the on-demand PNG screenshot protocol used by scripted steps
   like `capture_screenshot` (see below).
@@ -261,7 +263,8 @@ Notes:
 
 - The GUI prints a ready-to-copy `ws://.../?fret_devtools_token=...` URL on startup.
 - `FRET_DEVTOOLS_WS_PORT` overrides the default port (`7331`).
-- This is workspace-internal and versioned but not yet stabilized; the portable “source of truth” remains `bundle.json`.
+- This is workspace-internal and versioned but not yet stabilized; the portable “source of truth” remains the schema v2 bundle artifact
+  (`bundle.schema2.json` preferred, with `bundle.json` as an optional large raw view).
 ## Quick Start (scripted repro)
 
 1. Run the app with diagnostics enabled:
@@ -270,7 +273,11 @@ Notes:
 
    Note:
    - When using `fretboard diag run --launch`, `--env KEY=VALUE` cannot override reserved variables
-     like `FRET_DIAG`. Set reserved vars in the parent shell environment instead.
+     like `FRET_DIAG`/`FRET_DIAG_DIR`/`FRET_DIAG_*_PATH`. Use CLI flags (e.g. `--dir`, `--*-path`),
+     a config file (`FRET_DIAG_CONFIG_PATH`), or non-reserved `--env` overrides instead.
+   - Tool-launched runs also scrub inherited diagnostics env vars from the parent shell; do not rely on
+     setting `FRET_DIAG_*` in the parent shell to affect a `--launch` run. If you truly need a one-off
+     override, pass it explicitly via `--env` (non-reserved keys only).
 
 2. (Recommended while authoring scripts) disable redaction so you can see semantics labels in bundles:
 
@@ -322,6 +329,7 @@ Script tooling (no app required):
 - Upgrade legacy schema v1 → v2 (schema-only; does not rewrite v2 scripts):
   - `cargo run -p fretboard -- diag script upgrade .\\script.json --write`
   - `cargo run -p fretboard -- diag script upgrade .\\script.json --check`
+  - Note: tool-launched runs (`--launch` / `--reuse-launch`) reject `schema_version=1` scripts by default; upgrade first.
 - PowerShell note: `diag script validate|lint` accept globs and directories (the CLI expands them):
   - `cargo run -p fretboard -- diag script lint tools/diag-scripts/ui-gallery-select-*.json`
   - `cargo run -p fretboard -- diag script validate tools/diag-scripts`
@@ -482,7 +490,7 @@ This is the fastest way to author stable selectors (GPUI/Zed-style inspect):
 
 3. Click the UI element you want to target.
 
-4. The app writes `pick.result.json` (and, by default, also dumps a `bundle.json` labelled `pick`).
+4. The app writes `pick.result.json` (and, by default, also dumps a bundle export labelled `pick`).
 
 Notes:
 
@@ -543,7 +551,7 @@ When UI structure or labels change, use pick to update a script step's selector 
 
 By default this overwrites the script file; use `--out <path>` to write to a new file.
 
-## What's inside `bundle.json`
+## What's inside bundle artifacts (`bundle.schema2.json` / `bundle.json`)
 
 Bundles are a per-window ring history plus snapshots (schema is versioned and intended to evolve).
 
@@ -582,19 +590,34 @@ Core:
 
 - `FRET_DIAG=1`: enable diagnostics collection.
 - `FRET_DIAG_DIR=...`: output directory (default `target/fret-diag`).
-- `FRET_DIAG_BUNDLE_JSON_FORMAT=pretty`: write pretty-printed `bundle.json` (default: compact/minified).
+- `FRET_DIAG_BUNDLE_JSON_FORMAT=pretty`: write pretty-printed raw `bundle.json` (when enabled; default: compact/minified).
 - `FRET_DIAG_CONFIG_PATH=...`: optional JSON config file (schema v1) for diagnostics runtime settings and paths.
   - Tooling writes `<dir>/diag.config.json` by default when launching via `fretboard diag run/suite/repro --launch`.
-  - When an env var is set, it overrides the config file (compat-first manual escape hatch).
+  - For most fields, an env var overrides the config file (compat-first manual escape hatch). A few size-control knobs
+    are intentionally config-only for tool-launched determinism (see `tools/diag-configs/README.md`).
+  - In `--launch` mode, the config file is expected to be writable. Tooling treats a failure to write `diag.config.json`
+    as a launch error (to avoid silently falling back to runtime defaults that may write a large `bundle.json`).
+  - In `--launch` mode, tooling scrubs inherited `FRET_DIAG_*` env vars from the parent shell before spawning the child
+    process, then re-applies explicit `--env KEY=VALUE` overrides. This reduces "works on my machine" drift and avoids
+    accidental output explosions caused by stale shell overrides.
   - In `--launch` mode, tooling-owned env vars and paths are reserved; `--env` cannot override them (use `--dir` / `--*-path` flags instead).
   - Example file to copy/modify: `tools/diag-configs/diag.config.example.json`.
   - Drift audit notes for the example file: `tools/diag-configs/README.md`.
   - Schema v1 script compatibility:
     - Config file key: `allow_script_schema_v1` (default: `true`).
     - Tool-launched runs write `allow_script_schema_v1=false` so the runtime stays v2-only.
+  - Bundle artifact writing (size control):
+    - Config file key: `write_bundle_json` (default: `true`; tooling typically writes `false` for launched runs).
+    - Config file key: `write_bundle_schema2` (default: `false`; tooling typically writes `true` for launched runs).
+    - Note: if no config file is used, manual dumps may still write raw `bundle.json` for compatibility. Prefer a config
+      file for bounded, shareable artifacts.
+    - Tool-launched escape hatch: pass `--launch-write-bundle-json` (must appear before `--launch`) to make tooling
+      write a per-run config with `write_bundle_json=true` for that launched run.
   - Tip: print the effective merged config (and highlight unknown keys/envs):
     - `cargo run -p fretboard -- diag config doctor --mode launch --dir .fret/diag`
     - `cargo run -p fretboard -- diag config doctor --mode manual --report-json` (manual apps)
+  - The doctor also emits warnings for common “output explosion” risk factors (e.g. large snapshot caps, semantics on every
+    snapshot, pretty-printed `bundle.json`).
 
 Canonical env vars (recommended):
 
@@ -614,6 +637,25 @@ Config resolution order (runtime):
 2. If `FRET_DIAG_CONFIG_PATH` points to a readable config file, the runtime loads `UiDiagnosticsConfigFileV1` from it.
 3. For most fields, non-empty env vars override config file values (manual escape hatch).
 4. Any missing fields fall back to runtime defaults (for example `out_dir=target/fret-diag`, `max_events=2000`, `max_snapshots=300`).
+
+### Tool-launched (`--launch`) env policy
+
+`fretboard diag ... --launch` aims to be deterministic and small-by-default. To reduce drift and accidental output
+explosions:
+
+- **Reserved (tooling-owned) keys:** `--env KEY=VALUE` cannot override them (use `--dir` / `--*-path` flags instead).
+  - Examples: `FRET_DIAG`, `FRET_DIAG_DIR`, `FRET_DIAG_CONFIG_PATH`, and all `FRET_DIAG_*_PATH` keys.
+- **Scrubbed inherited keys:** tooling removes known diagnostics env vars from the parent shell before spawning the child.
+  - If you need a one-off override for a launched run, pass it explicitly via `--env`.
+- **High-risk overrides (discouraged):** prefer a config file + `diag config doctor` when changing bundle size knobs.
+  - Examples: `FRET_DIAG_MAX_SNAPSHOTS`, `FRET_DIAG_SCRIPT_DUMP_MAX_SNAPSHOTS`, `FRET_DIAG_SEMANTICS=all`,
+    `FRET_DIAG_BUNDLE_JSON_FORMAT=pretty`.
+- `diag config doctor --mode launch` surfaces the scrubbed/reserved key lists (via `--report-json`) and reports which
+  inherited keys were actually scrubbed for the current shell env.
+  - To simulate one-off `--env` overrides for a tool-launched run, pass them to the doctor as well:
+    `cargo run -p fretboard -- diag config doctor --mode launch --env FRET_DIAG_MAX_SNAPSHOTS=50`.
+  - For a quick human-readable list (no JSON), use:
+    `cargo run -p fretboard -- diag config doctor --mode launch --print-launch-policy`.
 
 - `FRET_DIAG_TRIGGER_PATH=...`: dump trigger file (default `<dir>/trigger.touch`).
   - The trigger uses a **stamp** (monotonic integer) rather than mtime. Write a new integer value
@@ -639,9 +681,7 @@ Semantics export:
   - `changed`: include semantics only when `semantics_fingerprint` changes (always keeps the last snapshot's semantics).
   - `last`: include semantics only on the last snapshot (default for script-driven dumps; useful for AI triage and very large UIs).
   - `off`: never include semantics in bundles (perf captures where semantics isn't needed).
-- `FRET_DIAG_BUNDLE_WRITE_SCHEMA2=1`: also write a compact `bundle.schema2.json` alongside `bundle.json` during dumps (default disabled).
-  - When launching via `fretboard diag ... --launch`, schema2/AI-focused flows may auto-enable this (e.g. `--ai-packet`, `--ai-only`,
-    `--pack-schema2-only`), unless you already set an explicit value.
+- Prefer setting `write_bundle_schema2=true` in the diagnostics config file (`FRET_DIAG_CONFIG_PATH`) when you want a compact schema2 artifact (`bundle.schema2.json`) to be written during dumps.
 - `FRET_UI_GALLERY_INSPECTOR_KEEP_ALIVE=...`: keep-alive budget for the UI Gallery Inspector torture (retained host; ADR 0177).
 
 Privacy / size:
@@ -665,6 +705,20 @@ Script harness:
 - `FRET_DIAG_SCRIPT_AUTO_DUMP=0`: disable auto-dump after steps (default enabled).
 - `FRET_DIAG_SCRIPT_DUMP_MAX_SNAPSHOTS=...`: cap snapshots included in script-driven bundle dumps (default 30).
 
+Script input isolation (recommended for deterministic playback, especially multi-window docking/tear-off):
+
+- `FRET_DIAG_ISOLATE_POINTER_INPUT=1`: while a script is active, ignore external (non-script) pointer input events so
+  accidental real mouse movement/clicks don't perturb scripted runs.
+  - `--launch` runs default this to `1` (tooling also writes
+    `isolate_external_pointer_input_while_script_running=true` into the per-run `diag.config.json`).
+  - Escape hatch: pass `--env FRET_DIAG_ISOLATE_POINTER_INPUT=0` when you need interactive input during a script run.
+- `FRET_DIAG_ISOLATE_KEYBOARD_INPUT=1`: while a script is active, ignore external (non-script) keyboard/text/IME events
+  so accidental typing doesn't perturb scripted runs.
+  - `--launch` runs default this to `1` (tooling also writes
+    `isolate_external_keyboard_input_while_script_running=true` into the per-run `diag.config.json`).
+  - Escape hatch: pass `--env FRET_DIAG_ISOLATE_KEYBOARD_INPUT=0` when you need interactive keyboard input during a
+    script run.
+
 Screenshot capture:
 
 - Requires the running app to enable the `fret-launch/diag-screenshots` feature (runner-side readback + PNG encode).
@@ -679,7 +733,7 @@ The screenshot completion log is append-only (bounded) and includes a `request_i
 
 Bundle screenshots (frame dump):
 
-- `FRET_DIAG_BUNDLE_SCREENSHOT=1`: write `frame.bmp` into each bundle directory when dumping `bundle.json`.
+- `FRET_DIAG_BUNDLE_SCREENSHOT=1`: write `frame.bmp` into each bundle directory when dumping a bundle export.
 
 Picking:
 
@@ -709,6 +763,8 @@ Supported selectors (v1 MVP):
 
 - `click` (optional `button`: `left`/`right`/`middle`; default `left`; optional `pointer_kind`; schema v2 only: optional `window` target)
 - `tap` (schema v2 only; touch-first gesture; optional `pointer_kind`; default `touch`; optional `window` target; capability-gated behind `diag.gesture_tap`)
+- `long_press` (schema v2 only; touch-first gesture; optional `duration_ms` (default 500); optional `pointer_kind`; default `touch`; optional `window` target; capability-gated behind `diag.gesture_long_press`)
+- `swipe` (schema v2 only; touch-first gesture; `delta_x`, `delta_y` movement; optional `steps` (default 8); optional `pointer_kind`; default `touch`; optional `window` target; capability-gated behind `diag.gesture_swipe`)
 - `pinch` (schema v2 only; touch-first gesture; `delta` zoom amount (positive=in, negative=out); optional `steps` (default 8); optional `pointer_kind`; default `touch`; optional `window` target; capability-gated behind `diag.gesture_pinch`)
 - `move_pointer` (schema v2 only: optional `window` target)
 - `pointer_down` (schema v2 only; optional `window` target; starts a cross-step pointer session for "drag + key" flows)
@@ -734,11 +790,17 @@ Supported selectors (v1 MVP):
 - `assert` (schema v2 only: optional `window` target)
 - `capture_bundle` (optional `label`, optional `max_snapshots`)
 - `capture_screenshot` (optional `label`, optional `timeout_frames`)
+- `set_clipboard_force_unavailable` (schema v2 only; simulates clipboard read denial; capability-gated behind `diag.clipboard_force_unavailable`)
+- `set_clipboard_text` (schema v2 only; sets OS clipboard text; capability-gated behind `diag.clipboard_text`)
+- `assert_clipboard_text` (schema v2 only; asserts OS clipboard text equals an expected value; capability-gated behind `diag.clipboard_text`)
 - `set_window_inner_size` (schema v2 only; optional `window` target)
+- `set_window_insets` (schema v2 only; overrides safe-area/occlusion insets; capability-gated behind `diag.window_insets_override`)
 - `set_window_outer_position` (schema v2 only; optional `window` target)
 - `raise_window` (schema v2 only; optional `window` target)
 - `set_cursor_screen_pos` (schema v2 only; runner-level cursor screen-position override, physical pixels; intended for cross-window routing in scripted runs)
 - `set_cursor_in_window` (schema v2 only; runner-level cursor override using window-client physical pixels; intended for cross-window routing without hardcoding DPI)
+- `set_mouse_buttons` (schema v2 only; runner-level mouse button state override; capability-gated behind `diag.mouse_buttons_override`)
+- `inject_incoming_open` (schema v2 only; simulates "open in..." / share-target flows; capability-gated behind `diag.incoming_open_inject`)
 - `drag_pointer_until` (schema v2 only; optional `window` target; drag across frames until a predicate passes or timeout; intended for cross-window routing)
 
 Pointer kind note (as of 2026-02-27):
@@ -779,7 +841,7 @@ Recent additions:
 
 Notes:
 
-- `capture_bundle` always writes a new `bundle.json` directory.
+- `capture_bundle` always writes a new bundle export directory (primary artifact: `bundle.schema2.json` preferred, with `bundle.json` as an optional large raw view depending on config).
   - When `FRET_DIAG_GPU_SCREENSHOTS=1`, the dump includes a screenshot and the step waits until it is written (so downstream automation can rely on it deterministically).
   - If you want an explicit screenshot step, follow with `capture_screenshot`.
   - Optional `max_snapshots` caps how many snapshots are included in this export (clamped to `FRET_DIAG_MAX_SNAPSHOTS`).
@@ -1078,6 +1140,10 @@ Note:
   `python tools/check_diag_scripts_registry.py --write`).
   `fretboard diag run` accepts either an explicit path or a promoted `script_id` from this registry.
   For discoverability, use `fretboard diag list scripts` to print `script_id -> path` mappings.
+  Use `fretboard diag list suites` to print known suites (derived from promoted registry `suite_memberships`).
+  To detect taxonomy/registry drift without grepping, use `fretboard diag doctor scripts` (read-only;
+  suggests repair commands like `migrate-script-library.py --apply --write-redirects` and
+  `check_diag_scripts_registry.py --write`). Use `--strict` to fail when promoted scripts drift back to schema v1.
   Prefer directory- and glob-based inputs (`--script-dir`, `--glob`) for ad-hoc runs, and avoid assuming scripts live
   only at the top-level. See: `docs/workstreams/diag-v2-hardening-and-switches-v1/README.md`.
 - Built-in suites are defined as curated directory inputs under `tools/diag-scripts/suites/<suite-name>/`.
@@ -1119,7 +1185,7 @@ The diagnostics harness also includes docking arbitration scripts (multi-viewpor
 
 You can run them as a built-in suite:
 
-- `cargo run -p fretboard -- diag suite docking-arbitration --launch -- cargo run -p fret-examples --bin docking_arbitration_demo --release`
+- `cargo run -p fretboard -- diag suite docking-arbitration --launch -- cargo run -p fret-demo --bin docking_arbitration_demo --release`
 
 There are also multi-window (tear-off) docking scripts (require `diag.multi_window` capability):
 
@@ -1129,7 +1195,7 @@ There are also multi-window (tear-off) docking scripts (require `diag.multi_wind
 
 Example (run one script against the demo, launching a fresh process):
 
-- `cargo run -p fretboard -- diag run tools/diag-scripts/docking-arbitration-demo-multiwindow-drag-tab-back-to-main.json --launch -- cargo run -p fret-examples --bin docking_arbitration_demo --release`
+- `cargo run -p fretboard -- diag run tools/diag-scripts/docking-arbitration-demo-multiwindow-drag-tab-back-to-main.json --launch -- cargo run -p fret-demo --bin docking_arbitration_demo --release`
 
 ### View-cache regression gating
 
@@ -1197,6 +1263,12 @@ Notes:
 - Use `--compare-ignore-scene-fingerprint` if the scene fingerprint is expected to differ (e.g. non-deterministic content).
 
 ## Troubleshooting
+
+**Tooling `--launch` fails**
+
+- `fretboard diag ... --launch` writes a per-run `diag.config.json` into `--dir` and expects it to be writable.
+- On launch failures, tooling writes a best-effort `script.result.json` with `reason_code=tooling.launch.failed` so triage
+  stays bounded and machine-readable.
 
 **The app never dumps bundles**
 

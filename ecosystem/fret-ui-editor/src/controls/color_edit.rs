@@ -481,9 +481,10 @@ fn request_popup_overlay<H: UiHost>(
 }
 
 fn format_hex(color: Color, show_alpha: bool) -> Arc<str> {
-    let r = (color.r.clamp(0.0, 1.0) * 255.0).round() as u8;
-    let g = (color.g.clamp(0.0, 1.0) * 255.0).round() as u8;
-    let b = (color.b.clamp(0.0, 1.0) * 255.0).round() as u8;
+    let rgb = fret_ui_kit::colors::hex_rgb_from_linear(color);
+    let r = ((rgb >> 16) & 0xff) as u8;
+    let g = ((rgb >> 8) & 0xff) as u8;
+    let b = (rgb & 0xff) as u8;
     let a = (color.a.clamp(0.0, 1.0) * 255.0).round() as u8;
     if show_alpha {
         Arc::from(format!("#{r:02X}{g:02X}{b:02X}{a:02X}"))
@@ -510,12 +511,10 @@ fn parse_hex(text: &str, show_alpha: bool) -> Option<Color> {
         255
     };
 
-    Some(Color {
-        r: r as f32 / 255.0,
-        g: g as f32 / 255.0,
-        b: b as f32 / 255.0,
-        a: a as f32 / 255.0,
-    })
+    let mut out =
+        fret_ui_kit::colors::linear_from_hex_rgb(((r as u32) << 16) | ((g as u32) << 8) | b as u32);
+    out.a = a as f32 / 255.0;
+    Some(out)
 }
 
 fn popup_open_model<H: UiHost>(cx: &mut ElementContext<'_, H>) -> Model<bool> {

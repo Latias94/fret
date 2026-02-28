@@ -1708,6 +1708,7 @@ impl DataTablePagination {
                 Button::new(Arc::from(format!("Rows per page: {current_size}")))
                     .variant(ButtonVariant::Outline)
                     .size(ButtonSize::Sm)
+                    .label_tabular_nums()
                     .into_element(cx)
             },
             move |_cx| {
@@ -1731,7 +1732,10 @@ impl DataTablePagination {
             move |cx| {
                 let theme = Theme::global(&*cx.app);
                 let muted_fg = theme.color_by_key("muted-foreground");
-                let mut text = ui::raw_text(cx, selected_label.clone()).nowrap();
+                let mut text = ui::text(cx, selected_label.clone())
+                    .text_sm()
+                    .tabular_nums()
+                    .nowrap();
                 if let Some(color) = muted_fg {
                     text = text.text_color(ColorRef::Color(color));
                 }
@@ -1762,6 +1766,7 @@ impl DataTablePagination {
                     Button::new(page_label.clone())
                         .variant(ButtonVariant::Ghost)
                         .size(ButtonSize::Sm)
+                        .label_tabular_nums()
                         .into_element(cx),
                     Button::new("Go to next page")
                         .variant(ButtonVariant::Outline)

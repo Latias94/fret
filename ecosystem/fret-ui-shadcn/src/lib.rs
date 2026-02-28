@@ -147,7 +147,12 @@ pub use calendar_range::CalendarRange;
 pub use card::{
     Card, CardAction, CardContent, CardDescription, CardFooter, CardHeader, CardSize, CardTitle,
 };
-pub use carousel::{Carousel, CarouselOrientation};
+pub use carousel::{
+    Carousel, CarouselAlign, CarouselApi, CarouselApiSnapshot, CarouselAutoplayConfig,
+    CarouselBreakpoint, CarouselContainScroll, CarouselEvent, CarouselEventCursor, CarouselOptions,
+    CarouselOptionsPatch, CarouselOrientation, CarouselSlidesInViewSnapshot,
+    CarouselSlidesToScroll,
+};
 pub use chart::{
     ChartLegendContent, ChartLegendItem, ChartLegendVerticalAlign, ChartTooltipContent,
     ChartTooltipContentKind, ChartTooltipIndicator, ChartTooltipItem,

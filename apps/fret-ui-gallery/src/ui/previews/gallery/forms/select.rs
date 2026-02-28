@@ -67,7 +67,19 @@ pub(in crate::ui) fn preview_select(
                 .into_element(cx)
         };
 
-        // Keep the primary demo select stable for existing diag scripts.
+        stack::vstack(
+            cx,
+            stack::VStackProps::default()
+                .gap(Space::N2)
+                .items_start()
+                .layout(LayoutRefinement::default().w_full().min_w_0()),
+            |_cx| vec![shadcn_demo],
+        )
+        .test_id("ui-gallery-select-demo")
+    };
+
+    let diag_surface = {
+        // Keep the long-list select stable for existing diag scripts (trigger + item test_ids).
         let entries: Vec<shadcn::SelectEntry> = std::iter::once(
             shadcn::SelectGroup::new([
                 shadcn::SelectLabel::new("Fruits").into(),
@@ -125,9 +137,9 @@ pub(in crate::ui) fn preview_select(
                 .gap(Space::N2)
                 .items_start()
                 .layout(LayoutRefinement::default().w_full().min_w_0()),
-            |_cx| vec![shadcn_demo, select, selected_label],
+            |_cx| vec![select, selected_label],
         )
-        .test_id("ui-gallery-select-demo")
+        .test_id("ui-gallery-select-diag-surface")
     };
 
     let align_item = {
@@ -404,11 +416,21 @@ pub(in crate::ui) fn preview_select(
         ),
         vec![
             DocSection::new("Demo", demo)
-                .description("Top: minimal shadcn-aligned demo. Below: a long-list surface (stable test_ids) used by diag scripts.")
+                .description("Minimal shadcn-aligned demo (matches the upstream `select-demo.tsx` example).")
                 .test_id_prefix("ui-gallery-select-demo")
                 .code(
                     "rust",
-                    r#"let entries: Vec<shadcn::SelectEntry> = vec![
+                    r#"use std::sync::Arc;
+
+use fret_core::Px;
+use fret_runtime::Model;
+use fret_ui_kit::LayoutRefinement;
+use fret_ui_shadcn as shadcn;
+
+let value: Model<Option<Arc<str>>> = cx.app.models_mut().insert(None);
+let open: Model<bool> = cx.app.models_mut().insert(false);
+
+let entries: Vec<shadcn::SelectEntry> = vec![
     shadcn::SelectGroup::new([
         shadcn::SelectLabel::new("Fruits").into(),
         shadcn::SelectItem::new("apple", "Apple").into(),
@@ -426,6 +448,51 @@ let select = shadcn::Select::new(value, open)
     .refine_layout(LayoutRefinement::default().w_px(Px(180.0)))
     .into_element(cx);"#,
                 ),
+            DocSection::new("Diag Surface", diag_surface)
+                .description("Long-list surface with stable test_ids used by UI diagnostics scripts.")
+                .test_id_prefix("ui-gallery-select-diag-surface")
+                .code(
+                    "rust",
+                    r#"use std::sync::Arc;
+
+use fret_core::Px;
+use fret_runtime::Model;
+use fret_ui_kit::LayoutRefinement;
+use fret_ui_shadcn as shadcn;
+
+let value: Model<Option<Arc<str>>> = cx.app.models_mut().insert(None);
+let open: Model<bool> = cx.app.models_mut().insert(false);
+
+let entries: Vec<shadcn::SelectEntry> = std::iter::once(
+    shadcn::SelectGroup::new([
+        shadcn::SelectLabel::new("Fruits").into(),
+        shadcn::SelectItem::new("apple", "Apple")
+            .test_id("my-select-item-apple")
+            .into(),
+    ])
+    .into(),
+)
+.chain(std::iter::once(shadcn::SelectSeparator::default().into()))
+.chain(std::iter::once(
+    shadcn::SelectGroup::new(
+        std::iter::once(shadcn::SelectLabel::new("More").into()).chain((1..=40).map(|i| {
+            let value: Arc<str> = Arc::from(format!("item-{i:02}"));
+            let label: Arc<str> = Arc::from(format!("Item {i:02}"));
+            shadcn::SelectItem::new(value, label).into()
+        })),
+    )
+    .into(),
+))
+.collect();
+
+let select = shadcn::Select::new(value, open)
+    .trigger_test_id("my-select-trigger")
+    .placeholder("Select a fruit")
+    .entries(entries)
+    .refine_layout(LayoutRefinement::default().w_px(Px(180.0)))
+    .into_element(cx);"#,
+                )
+                .max_w(Px(540.0)),
             DocSection::new("Align Item With Trigger", align_item)
                 .description("Toggle between item-aligned positioning and popper-style positioning.")
                 .test_id_prefix("ui-gallery-select-align-item")

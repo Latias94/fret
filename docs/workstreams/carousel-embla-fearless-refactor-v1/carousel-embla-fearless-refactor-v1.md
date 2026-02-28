@@ -37,7 +37,7 @@ Policy/physics/scroll math does **not** belong in `crates/fret-ui`.
 - Existing geometry parity tests (web vs fret):
   - `ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout/carousel.rs`
 - Existing diag script (swipe/buttons):
-  - `tools/diag-scripts/ui-gallery-carousel-demo-swipe-and-buttons.json`
+  - `tools/diag-scripts/ui-gallery/carousel/ui-gallery-carousel-demo-swipe-and-buttons.json`
 
 ## Goal
 
@@ -161,4 +161,3 @@ V1 is “P0 done + at least one P1 item”:
 - P0: geometry-derived snaps + align + containScroll(trimSnaps) + drag/click prevention outcomes are green.
 - At least one additional behavior gate exists beyond demo swipes (e.g. interactive-descendant drag gate).
 - UI gallery Carousel page is docs-aligned and demonstrates the parity surface.
-

@@ -42,6 +42,8 @@ fn dither_u8(rgb: vec3<f32>, x: i32, y: i32) -> vec3<f32> {
 
 @fragment
 fn fs_main(@builtin(position) pos: vec4<f32>) -> @location(0) vec4<f32> {
+  let clip = clip_alpha(pos.xy);
+
   let dims = textureDimensions(src_texture);
   let x = i32(floor(pos.x));
   let y = i32(floor(pos.y));
@@ -58,6 +60,5 @@ fn fs_main(@builtin(position) pos: vec4<f32>) -> @location(0) vec4<f32> {
   rgb = dither_u8(rgb, x, y);
   let out = vec4<f32>(rgb * a, a);
 
-  let clip = clip_alpha(pos.xy);
   return vec4<f32>(out.rgb * clip, clip);
 }

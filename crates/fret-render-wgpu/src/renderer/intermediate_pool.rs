@@ -240,6 +240,26 @@ pub(super) fn estimate_texture_bytes(
         .saturating_mul(sample_count.max(1) as u64)
 }
 
+pub(super) fn estimate_mipped_texture_bytes(
+    size: (u32, u32),
+    format: wgpu::TextureFormat,
+    sample_count: u32,
+    mip_level_count: u32,
+) -> u64 {
+    let mut bytes: u64 = 0;
+    let mut w = size.0.max(1);
+    let mut h = size.1.max(1);
+    let mut level: u32 = 0;
+    let levels = mip_level_count.max(1);
+    while level < levels {
+        bytes = bytes.saturating_add(estimate_texture_bytes((w, h), format, sample_count));
+        w = (w / 2).max(1);
+        h = (h / 2).max(1);
+        level = level.saturating_add(1);
+    }
+    bytes
+}
+
 fn bytes_per_pixel(format: wgpu::TextureFormat) -> u32 {
     match format {
         wgpu::TextureFormat::R8Unorm

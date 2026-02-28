@@ -76,38 +76,42 @@ impl HttpMethod {
         }
     }
 
-    fn accent_color(self) -> Color {
+    fn accent_color(self, theme: &Theme) -> Color {
+        fn token(theme: &Theme, key: &'static str, fallback: Color) -> Color {
+            theme.color_by_key(key).unwrap_or(fallback)
+        }
+
         match self {
-            Self::Get => Color {
-                r: 0.086,
-                g: 0.639,
-                b: 0.290,
-                a: 1.0,
-            },
-            Self::Post => Color {
-                r: 0.145,
-                g: 0.388,
-                b: 0.922,
-                a: 1.0,
-            },
-            Self::Put => Color {
-                r: 0.792,
-                g: 0.541,
-                b: 0.016,
-                a: 1.0,
-            },
-            Self::Patch => Color {
-                r: 0.792,
-                g: 0.541,
-                b: 0.016,
-                a: 1.0,
-            },
-            Self::Delete => Color {
-                r: 0.863,
-                g: 0.149,
-                b: 0.149,
-                a: 1.0,
-            },
+            Self::Get => token(
+                theme,
+                "component.schema_display.method.get",
+                // Tailwind: green-600 (#16a34a).
+                fret_ui_kit::colors::linear_from_hex_rgb(0x16_a3_4a),
+            ),
+            Self::Post => token(
+                theme,
+                "component.schema_display.method.post",
+                // Tailwind: blue-600 (#2563eb).
+                fret_ui_kit::colors::linear_from_hex_rgb(0x25_63_eb),
+            ),
+            Self::Put => token(
+                theme,
+                "component.schema_display.method.put",
+                // Tailwind: yellow-600 (#ca8a04).
+                fret_ui_kit::colors::linear_from_hex_rgb(0xca_8a_04),
+            ),
+            Self::Patch => token(
+                theme,
+                "component.schema_display.method.patch",
+                // Tailwind: yellow-600 (#ca8a04).
+                fret_ui_kit::colors::linear_from_hex_rgb(0xca_8a_04),
+            ),
+            Self::Delete => token(
+                theme,
+                "component.schema_display.method.delete",
+                // Tailwind: red-600 (#dc2626).
+                fret_ui_kit::colors::linear_from_hex_rgb(0xdc_26_26),
+            ),
         }
     }
 }
@@ -514,7 +518,7 @@ impl SchemaDisplayMethod {
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app).clone();
 
-        let accent = self.method.accent_color();
+        let accent = self.method.accent_color(&theme);
         let bg = alpha(accent, 0.18);
 
         let text_px = theme
@@ -578,12 +582,10 @@ impl SchemaDisplayPath {
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app).clone();
         let base_color = theme.color_token("foreground");
-        let highlight = theme.color_by_key("primary").unwrap_or_else(|| Color {
-            r: 0.145,
-            g: 0.388,
-            b: 0.922,
-            a: 1.0,
-        });
+        let highlight = theme
+            .color_by_key("primary")
+            // Tailwind: blue-600 (#2563eb).
+            .unwrap_or_else(|| fret_ui_kit::colors::linear_from_hex_rgb(0x25_63_eb));
 
         let (text, spans) = highlighted_path_attributed_text(&self.path, base_color, highlight);
 
@@ -1315,12 +1317,10 @@ fn with_top_divider<H: UiHost>(cx: &mut ElementContext<'_, H>, child: AnyElement
 fn required_badge<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
     let theme = Theme::global(&*cx.app).clone();
 
-    let red = theme.color_by_key("destructive").unwrap_or_else(|| Color {
-        r: 0.863,
-        g: 0.149,
-        b: 0.149,
-        a: 1.0,
-    });
+    let red = theme
+        .color_by_key("destructive")
+        // Tailwind: red-600 (#dc2626).
+        .unwrap_or_else(|| fret_ui_kit::colors::linear_from_hex_rgb(0xdc_26_26));
 
     Badge::new("required")
         .variant(BadgeVariant::Secondary)

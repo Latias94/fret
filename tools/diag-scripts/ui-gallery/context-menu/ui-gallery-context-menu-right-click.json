@@ -1,37 +1,70 @@
 {
-  "schema_version": 1,
+  "schema_version": 2,
   "steps": [
-    { "type": "press_key", "key": "escape" },
-    { "type": "wait_frames", "n": 2 },
     {
-      "type": "click",
-      "target": { "kind": "test_id", "id": "ui-gallery-overlay-reset" }
+      "key": "escape",
+      "modifiers": {
+        "alt": false,
+        "ctrl": false,
+        "meta": false,
+        "shift": false
+      },
+      "repeat": false,
+      "type": "press_key"
     },
-    { "type": "wait_frames", "n": 10 },
     {
-      "type": "move_pointer",
-      "target": { "kind": "test_id", "id": "ui-gallery-context-trigger" }
+      "n": 2,
+      "type": "wait_frames"
     },
     {
-      "type": "click",
+      "button": "left",
+      "target": {
+        "id": "ui-gallery-overlay-reset",
+        "kind": "test_id"
+      },
+      "type": "click"
+    },
+    {
+      "n": 10,
+      "type": "wait_frames"
+    },
+    {
+      "target": {
+        "id": "ui-gallery-context-trigger",
+        "kind": "test_id"
+      },
+      "type": "move_pointer"
+    },
+    {
       "button": "right",
       "target": {
-        "kind": "test_id",
-        "id": "ui-gallery-context-trigger"
-      }
+        "id": "ui-gallery-context-trigger",
+        "kind": "test_id"
+      },
+      "type": "click"
     },
     {
-      "type": "wait_until",
       "predicate": {
         "kind": "exists",
-        "target": { "kind": "test_id", "id": "ui-gallery-context-item-action" }
+        "target": {
+          "id": "ui-gallery-context-item-action",
+          "kind": "test_id"
+        }
       },
-      "timeout_frames": 180
+      "timeout_frames": 180,
+      "type": "wait_until"
     },
     {
-      "type": "click",
-      "target": { "kind": "test_id", "id": "ui-gallery-context-item-action" }
+      "button": "left",
+      "target": {
+        "id": "ui-gallery-context-item-action",
+        "kind": "test_id"
+      },
+      "type": "click"
     },
-    { "type": "capture_bundle", "label": "ui-gallery-context-action" }
+    {
+      "label": "ui-gallery-context-action",
+      "type": "capture_bundle"
+    }
   ]
 }

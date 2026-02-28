@@ -1,6 +1,8 @@
 use crate::popper_arrow::{self, DiamondArrowStyle};
 use crate::test_id::attach_test_id;
-use fret_core::{Color, Corners, Edges, FontId, FontWeight, Point, Px, SemanticsRole, TextStyle};
+use fret_core::{
+    Color, Corners, Edges, FontId, FontWeight, Point, Px, Rect, SemanticsRole, TextStyle,
+};
 use fret_icons::ids;
 use fret_runtime::{Effect, Model, TimerToken};
 use fret_ui::action::{ActionCx, OnDismissRequest};
@@ -45,6 +47,10 @@ fn alpha_mul(mut c: Color, mul: f32) -> Color {
     c
 }
 
+fn select_overlay_background(theme: &ThemeSnapshot) -> Color {
+    theme.color_token("popover.background")
+}
+
 type OnOpenChange = Arc<dyn Fn(bool) + Send + Sync + 'static>;
 
 #[derive(Default)]
@@ -87,21 +93,45 @@ fn select_open_change_events(
     (changed, completed)
 }
 
-fn select_list_desired_height(
-    item_height: Px,
-    item_count: usize,
+fn select_list_desired_height_from_content_height(
+    min_row_height: Px,
+    content_height: Px,
     max_height: Px,
     outer_height: Px,
 ) -> Px {
     let outer_height = Px(outer_height.0.max(0.0));
     let max_height = Px(max_height.0.max(0.0).min(outer_height.0));
 
-    // Radix/shadcn: keep the list at least one row tall when possible, but never exceed the
-    // computed max height (derived from available space) since the content scrolls internally.
-    let min_height = Px(item_height.0.max(0.0).min(max_height.0));
-    let content_height = Px(item_height.0.max(0.0) * item_count as f32);
+    let min_height = Px(min_row_height.0.max(0.0).min(max_height.0));
+    let content_height = Px(content_height.0.max(0.0));
 
     Px(content_height.0.min(max_height.0).max(min_height.0))
+}
+
+fn select_content_desired_width_with_probe(
+    outer: Rect,
+    anchor: Rect,
+    min_width: Px,
+    border_width: Px,
+    width_probe_w: Option<Px>,
+    position: SelectPosition,
+) -> Px {
+    let base = radix_select::select_popper_desired_width(outer, anchor, min_width);
+    let probe = width_probe_w.map(|probe_w| {
+        let border_extra = Px(border_width.0 * 2.0);
+        Px(probe_w.0 + border_extra.0)
+    });
+
+    let desired = match (position, probe) {
+        // Upstream shadcn/radix `position="popper"` keeps the content at least as wide as the
+        // trigger (`min-w-[var(--radix-select-trigger-width)]`). Do not let the width probe shrink
+        // the popup below the trigger-derived base width once it becomes available a frame later.
+        (SelectPosition::Popper, Some(probe)) => Px(base.0.max(probe.0)),
+        (_, Some(probe)) => probe,
+        (_, None) => base,
+    };
+
+    Px(desired.0.max(min_width.0).min(outer.size.width.0))
 }
 
 fn select_scroll_with_buttons<H: UiHost, C, I>(
@@ -112,6 +142,7 @@ fn select_scroll_with_buttons<H: UiHost, C, I>(
     allow_hover_scroll_arrows: bool,
     scroll_handle: fret_ui::scroll::ScrollHandle,
     initial_scroll_to_y: Option<Px>,
+    clear_initial_scroll_to_y: impl Fn() + Clone + 'static,
     viewport_id_out: &Cell<Option<GlobalElementId>>,
     active_element_id_out: &Cell<Option<GlobalElementId>>,
     consume_pending_active_scroll_into_view: impl Fn() -> bool + Clone + 'static,
@@ -129,23 +160,32 @@ where
     C: FnOnce(&mut ElementContext<'_, H>, &Cell<Option<GlobalElementId>>) -> I,
     I: IntoIterator<Item = AnyElement>,
 {
-    cx.container(
-        ContainerProps {
+    cx.flex(
+        FlexProps {
             layout: {
                 let mut layout = LayoutStyle::default();
-                layout.position = PositionStyle::Relative;
                 layout.size.width = Length::Fill;
                 layout.size.height = Length::Fill;
                 layout
             },
-            ..Default::default()
+            direction: fret_core::Axis::Vertical,
+            gap: Px(0.0).into(),
+            padding: Edges::all(Px(0.0)).into(),
+            justify: MainAlign::Start,
+            align: CrossAlign::Stretch,
+            wrap: false,
         },
         move |cx| {
             let handle = scroll_handle.clone();
             let did_initial_scroll = initial_scroll_to_y.is_some();
             if let Some(y) = initial_scroll_to_y {
                 let prev = handle.offset();
+                let before_y = prev.y;
                 handle.scroll_to_offset(Point::new(prev.x, y));
+                let after_y = handle.offset().y;
+                if (after_y.0 - y.0).abs() <= 0.01 || (after_y.0 - before_y.0).abs() > 0.01 {
+                    clear_initial_scroll_to_y();
+                }
             }
 
             let scroll_button_h = theme
@@ -172,16 +212,16 @@ where
                 );
             }
 
-            // Base UI scroll arrows are absolutely positioned and do not affect popup flow layout.
-            // Keep item-aligned state from assuming that scroll-arrow visibility shifts the viewport.
-            set_scroll_up_visible(false);
+            // Radix Select scroll buttons participate in layout, shifting the viewport when present.
+            // Track the scroll-up button visibility so item-aligned placement can model Radix's
+            // follow-up scroll after the button mounts.
+            set_scroll_up_visible(has_scroll && allow_hover_scroll_arrows && show_up);
 
             let scroll_button = |cx: &mut ElementContext<'_, H>,
                                  icon: fret_icons::IconId,
                                  test_id: &'static str,
                                  dir: f32,
-                                 visible: bool,
-                                 inset: InsetStyle| {
+                                 visible: bool| {
                 if !visible {
                     return None;
                 }
@@ -403,11 +443,7 @@ where
                             let mut layout = LayoutStyle::default();
                             layout.size.width = Length::Fill;
                             layout.size.height = Length::Px(scroll_button_h);
-                            layout.position = PositionStyle::Absolute;
-                            layout.inset.left = inset.left;
-                            layout.inset.right = inset.right;
-                            layout.inset.top = inset.top;
-                            layout.inset.bottom = inset.bottom;
+                            layout.flex.shrink = 0.0;
                             layout
                         },
                         axis: ScrollAxis::Y,
@@ -425,7 +461,10 @@ where
 
             let mut scroll_layout = LayoutStyle::default();
             scroll_layout.size.width = Length::Fill;
-            scroll_layout.size.height = Length::Fill;
+            scroll_layout.size.height = Length::Auto;
+            scroll_layout.size.min_height = Some(Length::Px(Px(0.0)));
+            scroll_layout.flex.grow = 1.0;
+            scroll_layout.flex.basis = Length::Px(Px(0.0));
             scroll_layout.overflow = Overflow::Clip;
 
             let handle_for_scroll = handle.clone();
@@ -536,7 +575,6 @@ where
             }
 
             let mut out = Vec::with_capacity(3);
-            out.push(scroll);
             if has_scroll && allow_hover_scroll_arrows {
                 if let Some(btn) = scroll_button(
                     cx,
@@ -544,27 +582,18 @@ where
                     "select-scroll-up-button",
                     -1.0,
                     show_up,
-                    InsetStyle {
-                        left: Some(Px(0.0)).into(),
-                        right: Some(Px(0.0)).into(),
-                        top: Some(Px(0.0)).into(),
-                        bottom: None.into(),
-                    },
                 ) {
                     out.push(btn);
                 }
+            }
+            out.push(scroll);
+            if has_scroll && allow_hover_scroll_arrows {
                 if let Some(btn) = scroll_button(
                     cx,
                     ids::ui::CHEVRON_DOWN,
                     "select-scroll-down-button",
                     1.0,
                     show_down,
-                    InsetStyle {
-                        left: Some(Px(0.0)).into(),
-                        right: Some(Px(0.0)).into(),
-                        top: None.into(),
-                        bottom: Some(Px(0.0)).into(),
-                    },
                 ) {
                     out.push(btn);
                 }
@@ -618,6 +647,8 @@ pub struct SelectItem {
     pub label: Arc<str>,
     pub test_id: Option<Arc<str>>,
     pub disabled: bool,
+    pub label_features_override: Vec<fret_core::TextFontFeatureSetting>,
+    pub label_axes_override: Vec<fret_core::TextFontAxisSetting>,
 }
 
 impl SelectItem {
@@ -627,6 +658,8 @@ impl SelectItem {
             label: label.into(),
             test_id: None,
             disabled: false,
+            label_features_override: Vec::new(),
+            label_axes_override: Vec::new(),
         }
     }
 
@@ -638,6 +671,29 @@ impl SelectItem {
     pub fn disabled(mut self, disabled: bool) -> Self {
         self.disabled = disabled;
         self
+    }
+
+    pub fn label_font_feature(mut self, tag: impl Into<String>, value: u32) -> Self {
+        self.label_features_override
+            .push(fret_core::TextFontFeatureSetting {
+                tag: tag.into().into(),
+                value,
+            });
+        self
+    }
+
+    pub fn label_font_axis(mut self, tag: impl Into<String>, value: f32) -> Self {
+        self.label_axes_override
+            .push(fret_core::TextFontAxisSetting {
+                tag: tag.into().into(),
+                value,
+            });
+        self
+    }
+
+    /// Enables OpenType tabular numbers (`font-variant-numeric: tabular-nums`) for this item's label.
+    pub fn label_tabular_nums(self) -> Self {
+        self.label_font_feature("tnum", 1)
     }
 }
 
@@ -705,6 +761,45 @@ impl From<SelectSeparator> for SelectEntry {
     fn from(value: SelectSeparator) -> Self {
         Self::Separator(value)
     }
+}
+
+fn select_label_estimated_height(theme: &ThemeSnapshot) -> Px {
+    let base_size = theme.metric_token(theme_tokens::metric::COMPONENT_TEXT_SM_PX);
+    let base_line_height = theme.metric_token(theme_tokens::metric::COMPONENT_TEXT_SM_LINE_HEIGHT);
+    let label_text_px = Px((base_size.0 - 2.0).max(10.0));
+    let label_line_height = Px((base_line_height.0 - 4.0).max(label_text_px.0));
+
+    // new-york-v4 `SelectLabel`: `px-2 py-1.5 text-xs`
+    Px(label_line_height.0 + 6.0 * 2.0)
+}
+
+fn select_separator_estimated_height() -> Px {
+    // new-york-v4 `SelectSeparator`: `h-px my-1` (margins participate in flow height).
+    Px(1.0 + 4.0 * 2.0)
+}
+
+fn select_entries_estimated_height(
+    theme: &ThemeSnapshot,
+    entries: &[SelectEntry],
+    item_h: Px,
+) -> Px {
+    fn add_entries(theme: &ThemeSnapshot, entries: &[SelectEntry], item_h: Px, total: &mut f32) {
+        let label_h = select_label_estimated_height(theme);
+        let separator_h = select_separator_estimated_height();
+
+        for entry in entries {
+            match entry {
+                SelectEntry::Item(_) => *total += item_h.0.max(0.0),
+                SelectEntry::Label(_) => *total += label_h.0.max(0.0),
+                SelectEntry::Separator(_) => *total += separator_h.0.max(0.0),
+                SelectEntry::Group(group) => add_entries(theme, &group.entries, item_h, total),
+            }
+        }
+    }
+
+    let mut total = 0.0;
+    add_entries(theme, entries, item_h, &mut total);
+    Px(total.max(0.0))
 }
 
 /// Matches Radix Select `position`: item-aligned (default upstream) vs popper.
@@ -1163,17 +1258,28 @@ fn select_impl<H: UiHost>(
 
     cx.scope(|cx| {
         let trigger_test_id = trigger_test_id.clone();
-        fn find_item_label(entries: &[SelectEntry], value: &str) -> Option<Arc<str>> {
+        fn find_item_label_overrides(
+            entries: &[SelectEntry],
+            value: &str,
+        ) -> Option<(
+            Arc<str>,
+            Vec<fret_core::TextFontFeatureSetting>,
+            Vec<fret_core::TextFontAxisSetting>,
+        )> {
             for entry in entries {
                 match entry {
                     SelectEntry::Item(it) => {
                         if it.value.as_ref() == value {
-                            return Some(it.label.clone());
+                            return Some((
+                                it.label.clone(),
+                                it.label_features_override.clone(),
+                                it.label_axes_override.clone(),
+                            ));
                         }
                     }
                     SelectEntry::Group(group) => {
-                        if let Some(label) = find_item_label(&group.entries, value) {
-                            return Some(label);
+                        if let Some(out) = find_item_label_overrides(&group.entries, value) {
+                            return Some(out);
                         }
                     }
                     SelectEntry::Label(_) | SelectEntry::Separator(_) => {}
@@ -1928,6 +2034,7 @@ fn select_impl<H: UiHost>(
                             viewport,
                             listbox,
                             content_panel,
+                            scroll_max_offset_y,
                             width_probe,
                             selected_item,
                             selected_item_text,
@@ -1944,6 +2051,7 @@ fn select_impl<H: UiHost>(
                                 state.viewport,
                                 state.listbox,
                                 state.content_panel,
+                                state.scroll_handle.max_offset().y,
                                 state.width_probe,
                                 state.selected_item,
                                 state.selected_item_text,
@@ -2028,6 +2136,7 @@ fn select_impl<H: UiHost>(
                                 viewport,
                                 listbox,
                                 content_panel,
+                                scroll_max_offset_y: Some(scroll_max_offset_y),
                                 content_width_probe: width_probe,
                                 selected_item,
                                 selected_item_text,
@@ -2097,13 +2206,14 @@ fn select_impl<H: UiHost>(
                             .and_then(|id| cx.last_bounds_for_element(id))
                             .map(|rect| rect.size.width)
                     };
-                    let desired_w = if let Some(probe_w) = width_probe_w {
-                        let border_extra = Px(border_width.0 * 2.0);
-                        Px(probe_w.0 + border_extra.0)
-                    } else {
-                        radix_select::select_popper_desired_width(outer, anchor, min_width)
-                    };
-                    let desired_w = Px(desired_w.0.max(min_width.0).min(outer.size.width.0));
+                    let desired_w = select_content_desired_width_with_probe(
+                        outer,
+                        anchor,
+                        min_width,
+                        border_width,
+                        width_probe_w,
+                        position,
+                    );
                     if std::env::var("FRET_DEBUG_SELECT_POPPER_WIDTH")
                         .ok()
                         .is_some_and(|v| v == "1")
@@ -2152,14 +2262,33 @@ fn select_impl<H: UiHost>(
 
                     let max_content_h = Px((max_h.0 - chrome_extra_y.0).max(0.0));
                     let outer_content_h = Px((outer.size.height.0 - chrome_extra_y.0).max(0.0));
-                    let desired_content_h = select_list_desired_height(
+                    let estimated_entries_h =
+                        select_entries_estimated_height(&theme, entries, item_h);
+                    let desired_content_h = select_list_desired_height_from_content_height(
                         item_h,
-                        item_len,
+                        estimated_entries_h,
                         max_content_h,
                         outer_content_h,
                     );
                     let desired_h = Px(desired_content_h.0 + chrome_extra_y.0);
                     let desired = fret_core::Size::new(desired_w, desired_h);
+                    if std::env::var("FRET_DEBUG_SELECT_DESIRED_SIZE")
+                        .ok()
+                        .is_some_and(|v| v == "1")
+                    {
+                        eprintln!(
+                            "select desired size: position={:?} item_h={} item_len={} entries_h={} chrome_extra_y={} max_h={} available_h={} desired_h={} border_w={}",
+                            position,
+                            item_h.0,
+                            item_len,
+                            estimated_entries_h.0,
+                            chrome_extra_y.0,
+                            max_h.0,
+                            available_h.0,
+                            desired_h.0,
+                            border_width.0,
+                        );
+                    }
 
                     let item_aligned_inputs_snapshot = item_aligned_inputs;
                     let mut resolved = radix_select::select_resolve_content_placement_from_elements(
@@ -2185,25 +2314,7 @@ fn select_impl<H: UiHost>(
                                 ),
                                 item_aligned_layout: Some(layout),
                             };
-                        } else if let Some(layout) = resolved.item_aligned_layout
-                            && width_probe_ready_for_lock
-                        {
-                            let mut state = trigger_state.lock().unwrap_or_else(|e| e.into_inner());
-                            if state.last_item_aligned_layout.is_none() {
-                                state.last_item_aligned_layout = Some(layout);
-                                item_aligned_layout_locked_this_frame = true;
-                            }
                         }
-                    }
-                    if debug_item_aligned {
-                        eprintln!(
-                            "select item-aligned placement: computed_layout={} cached_layout_present={} cached_used={} locked_now={} placed_y={}",
-                            resolved.item_aligned_layout.is_some(),
-                            last_item_aligned_layout.is_some(),
-                            item_aligned_layout_is_cached_fallback,
-                            item_aligned_layout_locked_this_frame,
-                            resolved.placement.placed.origin.y.0,
-                        );
                     }
                     if let Some(layout) = resolved.item_aligned_layout
                         && let Some(scroll_to) = layout.outputs.scroll_to_y
@@ -2252,12 +2363,67 @@ fn select_impl<H: UiHost>(
                             }
                         }
                     }
+                    if position == SelectPosition::ItemAligned
+                        && is_open
+                        && last_item_aligned_layout.is_none()
+                        && width_probe_ready_for_lock
+                        && let Some(layout) = resolved.item_aligned_layout
+                    {
+                        let mut state = trigger_state.lock().unwrap_or_else(|e| e.into_inner());
+                        let should_lock_layout = state.pending_item_aligned_scroll_to_y.is_none()
+                            && (!state.item_aligned_scroll_up_visible
+                                || state.did_item_aligned_scroll_reposition);
+                        if should_lock_layout && state.last_item_aligned_layout.is_none() {
+                            state.last_item_aligned_layout = Some(layout);
+                            item_aligned_layout_locked_this_frame = true;
+                        }
+                    }
+                    if debug_item_aligned {
+                        eprintln!(
+                            "select item-aligned placement: computed_layout={} cached_layout_present={} cached_used={} locked_now={} placed_y={}",
+                            resolved.item_aligned_layout.is_some(),
+                            last_item_aligned_layout.is_some(),
+                            item_aligned_layout_is_cached_fallback,
+                            item_aligned_layout_locked_this_frame,
+                            resolved.placement.placed.origin.y.0,
+                        );
+                    }
                     let placement = resolved.placement;
                     let wrapper_insets = placement.wrapper_insets;
                     let motion_side = placement.side;
                     let transform_origin = placement.transform_origin;
                     let popper_layout = placement.popper_layout;
                     let placed = placement.placed;
+
+                    // shadcn/ui v4 (Radix Select, `position="popper"`) keeps the popper wrapper
+                    // flush to the trigger (`sideOffset=0`) but applies a small translate to the
+                    // visible content (`translate-x/y-1`) based on the resolved side.
+                    //
+                    // Model that by shifting the *panel* within the wrapper while keeping the
+                    // wrapper rect stable for placement diagnostics and goldens.
+                    let panel_insets = if position == SelectPosition::Popper {
+                        let gap = Px(4.0);
+                        match motion_side {
+                            Side::Bottom => Edges {
+                                top: Px(wrapper_insets.top.0 + gap.0),
+                                ..wrapper_insets
+                            },
+                            Side::Top => Edges {
+                                top: Px(wrapper_insets.top.0 - gap.0),
+                                ..wrapper_insets
+                            },
+                            Side::Left => Edges {
+                                left: Px(wrapper_insets.left.0 - gap.0),
+                                ..wrapper_insets
+                            },
+                            Side::Right => Edges {
+                                left: Px(wrapper_insets.left.0 + gap.0),
+                                ..wrapper_insets
+                            },
+                        }
+                    } else {
+                        wrapper_insets
+                    };
 
                     cx.diagnostics_record_overlay_placement_placed_rect(
                         Some(overlay_root_name.as_str()),
@@ -2437,16 +2603,25 @@ fn select_impl<H: UiHost>(
                         }
 
                         let shadow = decl_style::shadow_md(&theme_for_overlay, radius);
-                        let arrow_bg = theme_for_overlay.colors.panel_background;
+                        let arrow_bg = select_overlay_background(&theme_for_overlay);
                         let overlay_border = theme_for_overlay
                             .color_by_key("border")
                             .unwrap_or_else(|| theme_for_overlay.color_token("border"));
                         let arrow_border = overlay_border;
                                         let initial_scroll_to_y = {
-                                            let mut state = trigger_state_for_overlay
+                                            let state = trigger_state_for_overlay
                                                 .lock()
                                                 .unwrap_or_else(|e| e.into_inner());
-                                            state.pending_item_aligned_scroll_to_y.take()
+                                            state.pending_item_aligned_scroll_to_y
+                                        };
+                                        let clear_initial_scroll_to_y = {
+                                            let state_for_clear = trigger_state_for_overlay.clone();
+                                            move || {
+                                                let mut state = state_for_clear
+                                                    .lock()
+                                                    .unwrap_or_else(|e| e.into_inner());
+                                                state.pending_item_aligned_scroll_to_y = None;
+                                            }
                                         };
                                         let scroll_handle = {
                                             let state = trigger_state_for_overlay
@@ -2475,6 +2650,8 @@ fn select_impl<H: UiHost>(
                                         continue;
                                     };
                                     let label = item.label.clone();
+                                    let label_features_override = item.label_features_override.clone();
+                                    let label_axes_override = item.label_axes_override.clone();
                                     let style = text_style_for_overlay.clone();
                                     out.push(cx.container(
                                         ContainerProps {
@@ -2501,6 +2678,13 @@ fn select_impl<H: UiHost>(
                                             }
                                             if let Some(letter_spacing_em) = style.letter_spacing_em {
                                                 text = text.letter_spacing_em(letter_spacing_em);
+                                            }
+                                            for feature in &label_features_override {
+                                                text = text
+                                                    .font_feature(feature.tag.to_string(), feature.value);
+                                            }
+                                            for axis in &label_axes_override {
+                                                text = text.font_axis(axis.tag.to_string(), axis.value);
                                             }
                                             vec![text.into_element(cx)]
                                         },
@@ -2610,12 +2794,18 @@ fn select_impl<H: UiHost>(
                                             cx,
                                             theme_for_overlay.clone(),
                                             item_h,
-                                            item_len > 0
-                                                && Px(item_h.0 * item_len as f32).0
-                                                    > desired_content_h.0 + 0.5,
+                                            {
+                                                let estimated = select_entries_estimated_height(
+                                                    &theme_for_overlay,
+                                                    entries,
+                                                    item_h,
+                                                );
+                                                estimated.0 > desired_content_h.0 + 0.5
+                                            },
                                             allow_hover_scroll_arrows,
                                             scroll_handle,
                                             initial_scroll_to_y,
+                                            clear_initial_scroll_to_y,
                                             viewport_id_out,
                                             active_element_id_out,
                                             move || {
@@ -2858,6 +3048,10 @@ fn select_impl<H: UiHost>(
 
                                                                                     let item_value = item.value.clone();
                                                                                     let item_label = item.label.clone();
+                                                                                    let label_features_override =
+                                                                                        item.label_features_override.clone();
+                                                                                    let label_axes_override =
+                                                                                        item.label_axes_override.clone();
                                                                                     cx.pressable_set_option_arc_str(
                                                                                         &model,
                                                                                         item_value.clone(),
@@ -3147,6 +3341,18 @@ fn select_impl<H: UiHost>(
                                                                                                     if let Some(letter_spacing_em) = text_style.letter_spacing_em {
                                                                                                         text = text.letter_spacing_em(letter_spacing_em);
                                                                                                     }
+                                                                                                    for feature in &label_features_override {
+                                                                                                        text = text.font_feature(
+                                                                                                            feature.tag.to_string(),
+                                                                                                            feature.value,
+                                                                                                        );
+                                                                                                    }
+                                                                                                    for axis in &label_axes_override {
+                                                                                                        text = text.font_axis(
+                                                                                                            axis.tag.to_string(),
+                                                                                                            axis.value,
+                                                                                                        );
+                                                                                                    }
                                                                                                     vec![text.into_element(cx)]
                                                                                                 },
                                                                                             );
@@ -3377,9 +3583,7 @@ fn select_impl<H: UiHost>(
                                                 layout
                                             },
                                             padding: Edges::all(Px(0.0)).into(),
-                                            background: Some(
-                                                theme_for_overlay.colors.panel_background,
-                                            ),
+                                            background: Some(select_overlay_background(&theme_for_overlay)),
                                             shadow: Some(shadow),
                                             border: Edges::all(border_width),
                                             border_color: Some(overlay_border),
@@ -3393,7 +3597,7 @@ fn select_impl<H: UiHost>(
                                             PressableProps {
                                                 layout: popper_content::popper_panel_layout(
                                                     placed,
-                                                    wrapper_insets,
+                                                    panel_insets,
                                                     // Keep the panel itself unclipped so the Select surface shadow
                                                     // can extend beyond the panel rect (matching shadcn/ui).
                                                     Overflow::Visible,
@@ -3602,10 +3806,19 @@ fn select_impl<H: UiHost>(
                                                 fret_ui::Invalidation::Paint,
                                             )
                                             .unwrap_or_default();
-                                        let label = selected
-                                            .as_ref()
-                                            .and_then(|v| find_item_label(entries, v.as_ref()))
-                                            .unwrap_or_else(|| placeholder_for_value_node.clone());
+                                        let (label, label_features_override, label_axes_override) =
+                                            selected
+                                                .as_ref()
+                                                .and_then(|v| {
+                                                    find_item_label_overrides(entries, v.as_ref())
+                                                })
+                                                .unwrap_or_else(|| {
+                                                    (
+                                                        placeholder_for_value_node.clone(),
+                                                        Vec::new(),
+                                                        Vec::new(),
+                                                    )
+                                                });
 
                                         let mut text = ui::text(cx, label)
                                             .text_size_px(text_style.size)
@@ -3622,9 +3835,20 @@ fn select_impl<H: UiHost>(
                                                 .line_height_policy(
                                                     fret_core::TextLineHeightPolicy::FixedFromStyle,
                                                 );
+                                            // Match shadcn's `items-center` outcome for fixed-height triggers:
+                                            // place the baseline using a line-box model rather than centering the
+                                            // shaped metrics box (which can read bottom-heavy).
+                                            text = text.line_box_in_bounds();
                                         }
                                         if let Some(letter_spacing_em) = text_style.letter_spacing_em {
                                             text = text.letter_spacing_em(letter_spacing_em);
+                                        }
+                                        for feature in &label_features_override {
+                                            text = text
+                                                .font_feature(feature.tag.to_string(), feature.value);
+                                        }
+                                        for axis in &label_axes_override {
+                                            text = text.font_axis(axis.tag.to_string(), axis.value);
                                         }
                                         if !auto_width_trigger {
                                             text = text.w_full();
@@ -3833,6 +4057,54 @@ mod tests {
 
         assert_eq!(changed, Some(true));
         assert_eq!(completed, Some(true));
+    }
+
+    #[test]
+    fn select_popper_width_probe_does_not_shrink_below_trigger_base() {
+        let outer = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(800.0), Px(600.0)),
+        );
+        let anchor = Rect::new(
+            Point::new(Px(100.0), Px(100.0)),
+            Size::new(Px(240.0), Px(36.0)),
+        );
+
+        let min_width = Px(128.0);
+        let border_width = Px(1.0);
+        let base = radix_select::select_popper_desired_width(outer, anchor, min_width);
+
+        let probe_smaller = Some(Px(120.0));
+        let w_smaller = select_content_desired_width_with_probe(
+            outer,
+            anchor,
+            min_width,
+            border_width,
+            probe_smaller,
+            SelectPosition::Popper,
+        );
+        assert!(
+            (w_smaller.0 - base.0).abs() <= 0.01,
+            "expected popper width to remain at base when probe is smaller (base={}, got={})",
+            base.0,
+            w_smaller.0
+        );
+
+        let probe_larger = Some(Px(320.0));
+        let w_larger = select_content_desired_width_with_probe(
+            outer,
+            anchor,
+            min_width,
+            border_width,
+            probe_larger,
+            SelectPosition::Popper,
+        );
+        assert!(
+            w_larger.0 > base.0 + 0.01,
+            "expected popper width to grow when probe is larger (base={}, got={})",
+            base.0,
+            w_larger.0
+        );
     }
 
     #[derive(Default)]
@@ -8418,7 +8690,12 @@ mod tests {
         let outer_h = Px(600.0);
         let max_h = Px(12.0);
 
-        let desired = super::select_list_desired_height(item_h, 20, max_h, outer_h);
+        let desired = super::select_list_desired_height_from_content_height(
+            item_h,
+            Px(item_h.0 * 20.0),
+            max_h,
+            outer_h,
+        );
         assert_eq!(desired, max_h);
     }
 }

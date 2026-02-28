@@ -808,6 +808,39 @@ impl Theme {
         self.color_required(key)
     }
 
+    /// Resolve a syntax highlight tag (e.g. `keyword.operator`) into a theme color.
+    ///
+    /// Lookup order:
+    ///
+    /// 1) `color.syntax.<highlight>`
+    /// 2) prefix fallback: `color.syntax.keyword.operator` -> `color.syntax.keyword`
+    /// 3) built-in semantic fallbacks for common highlight roots
+    pub fn syntax_color(&self, highlight: &str) -> Option<Color> {
+        let mut cur = Some(highlight);
+        while let Some(name) = cur {
+            let mut key = String::with_capacity("color.syntax.".len() + name.len());
+            key.push_str("color.syntax.");
+            key.push_str(name);
+            if let Some(c) = self.color_by_key(key.as_str()) {
+                return Some(c);
+            }
+            cur = name.rsplit_once('.').map(|(prefix, _)| prefix);
+        }
+
+        let fallback = highlight.split('.').next().unwrap_or(highlight);
+        match fallback {
+            "comment" => Some(self.color_token("muted-foreground")),
+            "keyword" | "operator" => Some(self.color_token("primary")),
+            "property" | "variable" => Some(self.color_token("foreground")),
+            "punctuation" => Some(self.color_token("muted-foreground")),
+
+            "string" => Some(self.color_token("foreground")),
+            "number" | "boolean" | "constant" => Some(self.color_token("primary")),
+            "type" | "constructor" | "function" => Some(self.color_token("foreground")),
+            _ => None,
+        }
+    }
+
     /// Resolves a named (non-semantic) color token used by upstream ecosystems (e.g. `text-white`).
     pub fn named_color(&self, key: ThemeNamedColorKey) -> Color {
         self.color_token(key.canonical_name())
@@ -2189,6 +2222,28 @@ mod tests {
     use std::collections::HashMap;
 
     #[test]
+    fn syntax_color_resolves_prefix_fallback_tokens() {
+        let mut host = crate::test_host::TestHost::default();
+        Theme::with_global_mut(&mut host, |theme| {
+            let mut colors = HashMap::<String, String>::new();
+            colors.insert("color.syntax.keyword".to_string(), "#ff0000".to_string());
+            theme.apply_config(&ThemeConfig {
+                name: "test".to_string(),
+                colors,
+                ..Default::default()
+            });
+
+            let exact = theme
+                .syntax_color("keyword")
+                .expect("exact token should resolve");
+            let prefixed = theme
+                .syntax_color("keyword.operator")
+                .expect("prefixed tag should resolve via prefix fallback");
+            assert_eq!(exact, prefixed);
+        });
+    }
+
+    #[test]
     fn shadcn_semantic_palette_aliases_exist_on_default_theme() {
         let host = crate::test_host::TestHost::default();
         let theme = Theme::global(&host);
@@ -2650,6 +2705,8 @@ mod tests {
                     line_height_em: None,
                     line_height_policy: Default::default(),
                     letter_spacing_em: None,
+                    features: Vec::new(),
+                    axes: Vec::new(),
                     vertical_placement: fret_core::TextVerticalPlacement::CenterMetricsBox,
                     leading_distribution: Default::default(),
                     strut_style: None,

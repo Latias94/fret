@@ -11,6 +11,7 @@ pub(crate) struct ConfigCmdContext {
     pub(crate) resolved_ready_path: PathBuf,
     pub(crate) resolved_exit_path: PathBuf,
     pub(crate) fs_transport_cfg: crate::transport::FsDiagTransportConfig,
+    pub(crate) launch_env: Vec<(String, String)>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -82,6 +83,9 @@ struct EffectiveConfig {
     inspect_path: SourcedPath,
     inspect_trigger_path: SourcedPath,
     screenshots_enabled: SourcedBool,
+    screenshot_on_dump: SourcedBool,
+    write_bundle_json: SourcedBool,
+    write_bundle_schema2: SourcedBool,
     redact_text: SourcedBool,
     max_events: SourcedUsize,
     max_snapshots: SourcedUsize,
@@ -158,13 +162,14 @@ fn runtime_known_env_vars() -> BTreeSet<&'static str> {
         "FRET_DIAG_REDACT_TEXT",
         "FRET_DIAG_MAX_DEBUG_STRING_BYTES",
         "FRET_DIAG_MAX_GATING_TRACE_ENTRIES",
+        "FRET_DIAG_ISOLATE_POINTER_INPUT",
+        "FRET_DIAG_ISOLATE_KEYBOARD_INPUT",
         "FRET_DIAG_BUNDLE_SCREENSHOT",
         "FRET_DIAG_BUNDLE_JSON_FORMAT",
         "FRET_DIAG_BUNDLE_SEMANTICS_MODE",
         "FRET_DIAG_BUNDLE_WRITE_INDEX",
         "FRET_DIAG_BUNDLE_DUMP_MAX_SEMANTICS_NODES",
         "FRET_DIAG_BUNDLE_DUMP_SEMANTICS_TEST_IDS_ONLY",
-        "FRET_DIAG_BUNDLE_WRITE_SCHEMA2",
         "FRET_DEVTOOLS_WS",
         "FRET_DEVTOOLS_TOKEN",
         // Fixed frame delta override is handled by `fret-core`:
@@ -206,9 +211,13 @@ fn runtime_known_config_keys() -> BTreeSet<&'static str> {
         "semantics_test_ids_only",
         "screenshots_enabled",
         "screenshot_on_dump",
+        "write_bundle_json",
+        "write_bundle_schema2",
         "redact_text",
         "max_debug_string_bytes",
         "max_gating_trace_entries",
+        "isolate_external_pointer_input_while_script_running",
+        "isolate_external_keyboard_input_while_script_running",
         "frame_clock_fixed_delta_ms",
         "devtools_embed_bundle",
     ])
@@ -464,6 +473,48 @@ fn compute_effective_runtime_config(
         }
     };
 
+    let screenshot_on_dump = if let Some(v) = env_flag_override(env, "FRET_DIAG_BUNDLE_SCREENSHOT")
+    {
+        SourcedBool {
+            value: v,
+            source: ValueSource::Env("env:FRET_DIAG_BUNDLE_SCREENSHOT"),
+        }
+    } else if let Some(v) = config_file.and_then(|c| c.screenshot_on_dump) {
+        SourcedBool {
+            value: v,
+            source: ValueSource::ConfigFile("config:screenshot_on_dump"),
+        }
+    } else {
+        SourcedBool {
+            value: false,
+            source: ValueSource::Default,
+        }
+    };
+
+    let write_bundle_json = if let Some(v) = config_file.and_then(|c| c.write_bundle_json) {
+        SourcedBool {
+            value: v,
+            source: ValueSource::ConfigFile("config:write_bundle_json"),
+        }
+    } else {
+        SourcedBool {
+            value: true,
+            source: ValueSource::Default,
+        }
+    };
+
+    let write_bundle_schema2 = if let Some(v) = config_file.and_then(|c| c.write_bundle_schema2) {
+        SourcedBool {
+            value: v,
+            source: ValueSource::ConfigFile("config:write_bundle_schema2"),
+        }
+    } else {
+        SourcedBool {
+            value: false,
+            source: ValueSource::Default,
+        }
+    };
+
     let redact_text = if let Some(v) = env_flag_override(env, "FRET_DIAG_REDACT_TEXT") {
         SourcedBool {
             value: v,
@@ -627,6 +678,9 @@ fn compute_effective_runtime_config(
         inspect_path,
         inspect_trigger_path,
         screenshots_enabled,
+        screenshot_on_dump,
+        write_bundle_json,
+        write_bundle_schema2,
         redact_text,
         max_events,
         max_snapshots,
@@ -638,6 +692,12 @@ fn compute_effective_runtime_config(
 
 fn env_snapshot_from_process() -> BTreeMap<String, String> {
     std::env::vars().collect()
+}
+
+fn scrub_inherited_env_for_tool_launch(
+    base: &BTreeMap<String, String>,
+) -> (BTreeMap<String, String>, Vec<String>) {
+    crate::launch_env_policy::scrub_inherited_env_for_tool_launch(base)
 }
 
 fn overlay_launch_reserved_env(
@@ -750,6 +810,8 @@ fn config_doctor_report_json(
     config_file: Option<&UiDiagnosticsConfigFileV1>,
     effective: &EffectiveConfig,
     warnings: &[serde_json::Value],
+    mode: DoctorMode,
+    launch_env_override_keys: &[String],
 ) -> serde_json::Value {
     let mut env_set: Vec<serde_json::Value> = effective_env
         .iter()
@@ -779,6 +841,24 @@ fn config_doctor_report_json(
             })
         });
 
+    let launch_policy = if mode == DoctorMode::Launch {
+        let scrubbed_keys_legacy: Vec<String> =
+            crate::launch_env_policy::TOOL_LAUNCH_SCRUB_ENV_PREFIXES
+                .iter()
+                .map(|p| format!("{p}*"))
+                .collect();
+        serde_json::json!({
+            "reserved_env_keys": crate::launch_env_policy::TOOL_LAUNCH_RESERVED_ENV_KEYS,
+            "scrubbed_inherited_env_prefixes": crate::launch_env_policy::TOOL_LAUNCH_SCRUB_ENV_PREFIXES,
+            // Back-compat for older doctor parsers: this used to be an explicit key list; it is now
+            // a pattern list since scrubbing is prefix-based.
+            "scrubbed_inherited_env_keys": scrubbed_keys_legacy,
+            "explicit_env_override_keys": launch_env_override_keys,
+        })
+    } else {
+        serde_json::Value::Null
+    };
+
     serde_json::json!({
         "schema_version": 1,
         "kind": "diag_config_doctor_report",
@@ -787,6 +867,7 @@ fn config_doctor_report_json(
             "config_loaded": config_file.is_some(),
             "env_set": env_set,
         },
+        "launch_policy": launch_policy,
         "config_file": {
             "schema_version": config_file.map(|c| c.schema_version),
             "unknown_keys": config_unknown_keys,
@@ -841,6 +922,7 @@ fn cmd_config_doctor(ctx: ConfigCmdContext, rest: &[String]) -> Result<(), Strin
     let mut report_json: bool = false;
     let mut config_path_override: Option<PathBuf> = None;
     let mut show_env_all: bool = false;
+    let mut print_launch_policy: bool = false;
 
     let mut i: usize = 0;
     while i < rest.len() {
@@ -864,6 +946,10 @@ fn cmd_config_doctor(ctx: ConfigCmdContext, rest: &[String]) -> Result<(), Strin
                 };
                 i += 1;
             }
+            "--print-launch-policy" => {
+                print_launch_policy = true;
+                i += 1;
+            }
             "--mode" => {
                 i += 1;
                 let Some(v) = rest.get(i).map(|s| s.as_str()) else {
@@ -885,9 +971,11 @@ fn cmd_config_doctor(ctx: ConfigCmdContext, rest: &[String]) -> Result<(), Strin
             }
             "--help" | "-h" => {
                 println!(
-                    "Usage: fretboard diag config doctor [--mode launch|manual] [--config-path <path>] [--show-env set|all] [--report-json]\n\n\
+                    "Usage: fretboard diag config doctor [--mode launch|manual] [--config-path <path>] [--show-env set|all] [--report-json] [--print-launch-policy]\n\n\
 Default mode is `launch`, which overlays the tooling-reserved env vars (FRET_DIAG*, ready/exit paths) as if you were using `--launch`.\n\
-Use `--mode manual` to report what the runtime would see from the current process env only."
+Use `--mode manual` to report what the runtime would see from the current process env only.\n\
+\n\
+Tip: pass global `diag --env KEY=VALUE` flags to simulate one-off overrides for launched runs."
                 );
                 return Ok(());
             }
@@ -903,14 +991,32 @@ Use `--mode manual` to report what the runtime would see from the current proces
     }
 
     let env_base = env_snapshot_from_process();
-    let (effective_env, overridden_reserved) = match mode {
-        DoctorMode::Manual => (env_base, Vec::new()),
-        DoctorMode::Launch => overlay_launch_reserved_env(
-            &env_base,
-            &ctx.resolved_ready_path,
-            &ctx.resolved_exit_path,
-            &ctx.fs_transport_cfg,
-        ),
+    let (effective_env, overridden_reserved, scrubbed_inherited) = match mode {
+        DoctorMode::Manual => {
+            if !ctx.launch_env.is_empty() {
+                return Err(
+                    "`--env KEY=VALUE` is only supported with `diag config doctor --mode launch`"
+                        .to_string(),
+                );
+            }
+            (env_base, Vec::new(), Vec::new())
+        }
+        DoctorMode::Launch => {
+            let (scrubbed_env, scrubbed_inherited) = scrub_inherited_env_for_tool_launch(&env_base);
+            let (mut effective_env, overridden_reserved) = overlay_launch_reserved_env(
+                &scrubbed_env,
+                &ctx.resolved_ready_path,
+                &ctx.resolved_exit_path,
+                &ctx.fs_transport_cfg,
+            );
+            for (k, v) in &ctx.launch_env {
+                if crate::launch_env_policy::tool_launch_env_key_is_reserved(k) {
+                    return Err(format!("--env cannot override reserved var: {k}"));
+                }
+                effective_env.insert(k.clone(), v.clone());
+            }
+            (effective_env, overridden_reserved, scrubbed_inherited)
+        }
     };
 
     let default_launch_cfg_path = ctx.fs_transport_cfg.out_dir.join("diag.config.json");
@@ -935,6 +1041,15 @@ Use `--mode manual` to report what the runtime would see from the current proces
             "code": "diag.config.tooling_reserved_env_overrides",
             "message": "tooling-reserved env vars would override values from the current shell env in --launch mode",
             "keys": overridden_reserved,
+        }));
+    }
+
+    if mode == DoctorMode::Launch && !scrubbed_inherited.is_empty() {
+        warnings.push(serde_json::json!({
+            "severity": "info",
+            "code": "diag.config.tooling_env_scrubbed",
+            "message": "tooling would scrub inherited diagnostics env vars from the parent shell before spawning the child process",
+            "keys": scrubbed_inherited,
         }));
     }
 
@@ -1064,8 +1179,45 @@ Use `--mode manual` to report what the runtime would see from the current proces
     }
 
     let effective = compute_effective_runtime_config(&effective_env, config_file.as_ref());
+    push_output_risk_warnings(
+        mode,
+        &effective_env,
+        config_file.as_ref(),
+        &effective,
+        &mut warnings,
+    );
+
+    if print_launch_policy {
+        if mode != DoctorMode::Launch {
+            return Err("--print-launch-policy requires --mode launch".to_string());
+        }
+        let mut override_keys: Vec<String> =
+            ctx.launch_env.iter().map(|(k, _)| k.clone()).collect();
+        override_keys.sort();
+        println!("diag config doctor: launch policy");
+        println!("explicit_env_override_keys:");
+        if override_keys.is_empty() {
+            println!("  (none)");
+        } else {
+            for k in &override_keys {
+                println!("  - {k}");
+            }
+        }
+        println!("reserved_env_keys:");
+        for k in crate::launch_env_policy::TOOL_LAUNCH_RESERVED_ENV_KEYS {
+            println!("  - {k}");
+        }
+        println!("scrubbed_inherited_env_prefixes:");
+        for p in crate::launch_env_policy::TOOL_LAUNCH_SCRUB_ENV_PREFIXES {
+            println!("  - {p}*");
+        }
+        return Ok(());
+    }
 
     if report_json {
+        let mut launch_env_override_keys: Vec<String> =
+            ctx.launch_env.iter().map(|(k, _)| k.clone()).collect();
+        launch_env_override_keys.sort();
         let report = config_doctor_report_json(
             &effective_env,
             config_path.as_deref(),
@@ -1073,6 +1225,8 @@ Use `--mode manual` to report what the runtime would see from the current proces
             config_file.as_ref(),
             &effective,
             &warnings,
+            mode,
+            &launch_env_override_keys,
         );
         println!(
             "{}",
@@ -1089,6 +1243,38 @@ Use `--mode manual` to report what the runtime would see from the current proces
             DoctorMode::Manual => "manual",
         }
     );
+    if mode == DoctorMode::Launch {
+        println!(
+            "tool_launch_env_scrub_prefixes_total: {}",
+            crate::launch_env_policy::TOOL_LAUNCH_SCRUB_ENV_PREFIXES.len()
+        );
+        println!(
+            "tool_launch_env_reserved_keys_total: {}",
+            crate::launch_env_policy::TOOL_LAUNCH_RESERVED_ENV_KEYS.len()
+        );
+        let mut override_keys: Vec<String> =
+            ctx.launch_env.iter().map(|(k, _)| k.clone()).collect();
+        override_keys.sort();
+        if override_keys.is_empty() {
+            println!("tool_launch_env_explicit_override_keys: (none)");
+        } else {
+            println!(
+                "tool_launch_env_explicit_override_keys: {}",
+                override_keys.join(", ")
+            );
+        }
+        if scrubbed_inherited.is_empty() {
+            println!("tool_launch_env_scrubbed_inherited_keys_present: (none)");
+        } else {
+            println!(
+                "tool_launch_env_scrubbed_inherited_keys_present: {}",
+                scrubbed_inherited.join(", ")
+            );
+        }
+        println!(
+            "tool_launch_env_policy_note: use --report-json to see the full reserved keys and scrub prefixes"
+        );
+    }
     println!("workspace_root: {}", ctx.workspace_root.display());
     println!("tooling_out_dir: {}", ctx.resolved_out_dir.display());
     if let Some(p) = config_path.as_deref() {
@@ -1155,6 +1341,9 @@ Use `--mode manual` to report what the runtime would see from the current proces
     print_sourced_path("inspect_path", &effective.inspect_path);
     print_sourced_path("inspect_trigger_path", &effective.inspect_trigger_path);
     print_sourced_bool("screenshots_enabled", &effective.screenshots_enabled);
+    print_sourced_bool("screenshot_on_dump", &effective.screenshot_on_dump);
+    print_sourced_bool("write_bundle_json", &effective.write_bundle_json);
+    print_sourced_bool("write_bundle_schema2", &effective.write_bundle_schema2);
     print_sourced_bool("redact_text", &effective.redact_text);
     print_sourced_usize("max_events", &effective.max_events);
     print_sourced_usize("max_snapshots", &effective.max_snapshots);
@@ -1173,6 +1362,148 @@ Use `--mode manual` to report what the runtime would see from the current proces
     print_sourced_bool("devtools_ws_enabled", &effective.devtools_ws_enabled);
 
     Ok(())
+}
+
+fn parse_env_u64(env: &BTreeMap<String, String>, key: &'static str) -> Option<u64> {
+    let raw = env.get(key)?.trim();
+    if raw.is_empty() {
+        return None;
+    }
+    raw.parse::<u64>().ok()
+}
+
+fn push_output_risk_warnings(
+    mode: DoctorMode,
+    effective_env: &BTreeMap<String, String>,
+    config_file: Option<&UiDiagnosticsConfigFileV1>,
+    effective: &EffectiveConfig,
+    warnings: &mut Vec<serde_json::Value>,
+) {
+    let launch_like = mode == DoctorMode::Launch;
+
+    if launch_like && config_file.is_none() {
+        warnings.push(serde_json::json!({
+            "severity": "warning",
+            "code": "diag.config.launch_missing_config_file",
+            "message": "launch-mode config file is missing/unreadable; runtime defaults may write large bundle.json artifacts",
+            "suggest": "ensure tooling can write <dir>/diag.config.json (or pass --config-path to config doctor)",
+        }));
+    }
+
+    if launch_like && effective.write_bundle_json.value {
+        warnings.push(serde_json::json!({
+            "severity": "warning",
+            "code": "diag.config.large_bundle_json_enabled",
+            "message": "write_bundle_json=true can produce very large bundle.json artifacts; prefer small-by-default settings for tool-launched runs",
+            "suggest": "set write_bundle_json=false and write_bundle_schema2=true in diag.config.json",
+            "source": effective.write_bundle_json.source.as_str(),
+        }));
+    }
+
+    if launch_like && !effective.write_bundle_schema2.value {
+        warnings.push(serde_json::json!({
+            "severity": "info",
+            "code": "diag.config.schema2_companion_disabled",
+            "message": "write_bundle_schema2=false disables the compact schema2 companion artifact; tooling prefers bundle.schema2.json when present",
+            "suggest": "set write_bundle_schema2=true in diag.config.json for launched runs",
+            "source": effective.write_bundle_schema2.source.as_str(),
+        }));
+    }
+
+    if launch_like
+        && effective.write_bundle_json.value
+        && effective_env
+            .get("FRET_DIAG_BUNDLE_JSON_FORMAT")
+            .is_some_and(|v| v.trim() == "pretty")
+    {
+        warnings.push(serde_json::json!({
+            "severity": "warning",
+            "code": "diag.config.bundle_json_pretty_print",
+            "message": "FRET_DIAG_BUNDLE_JSON_FORMAT=pretty can significantly increase bundle.json size",
+            "suggest": "use compact JSON (unset the env var) or disable bundle.json via write_bundle_json=false",
+        }));
+    }
+
+    if launch_like && effective.max_snapshots.value > 600 {
+        warnings.push(serde_json::json!({
+            "severity": "warning",
+            "code": "diag.config.max_snapshots_high",
+            "message": "max_snapshots is high; large rings increase memory use and can inflate bundle exports",
+            "max_snapshots": effective.max_snapshots.value,
+            "source": effective.max_snapshots.source.as_str(),
+            "suggest": "keep max_snapshots near the default unless you have a specific need",
+        }));
+    }
+
+    if launch_like && effective.script_dump_max_snapshots.value > 30 {
+        warnings.push(serde_json::json!({
+            "severity": "warning",
+            "code": "diag.config.script_dump_max_snapshots_high",
+            "message": "script_dump_max_snapshots is high; scripted dumps can easily produce very large bundles",
+            "script_dump_max_snapshots": effective.script_dump_max_snapshots.value,
+            "source": effective.script_dump_max_snapshots.source.as_str(),
+            "suggest": "for shareable repros, prefer <= 10 (tool-launched default)",
+        }));
+    }
+
+    if launch_like
+        && effective_env
+            .get("FRET_DIAG_BUNDLE_SEMANTICS_MODE")
+            .is_some_and(|v| v.trim() == "all")
+    {
+        warnings.push(serde_json::json!({
+            "severity": "warning",
+            "code": "diag.config.semantics_mode_all",
+            "message": "FRET_DIAG_BUNDLE_SEMANTICS_MODE=all exports semantics on every snapshot and can massively increase bundle size",
+            "suggest": "prefer mode=last for script-driven dumps unless you need per-frame semantics",
+        }));
+    }
+
+    let max_semantics_nodes = parse_env_u64(effective_env, "FRET_DIAG_MAX_SEMANTICS_NODES");
+    if launch_like && max_semantics_nodes.is_some_and(|v| v > 100_000) {
+        warnings.push(serde_json::json!({
+            "severity": "warning",
+            "code": "diag.config.max_semantics_nodes_high",
+            "message": "FRET_DIAG_MAX_SEMANTICS_NODES is high; semantics exports can dominate bundle size for large UIs",
+            "max_semantics_nodes": max_semantics_nodes,
+            "suggest": "consider a lower cap or enable FRET_DIAG_SEMANTICS_TEST_IDS_ONLY=1 for test_id-focused triage",
+        }));
+    }
+
+    let dump_max_semantics_nodes =
+        parse_env_u64(effective_env, "FRET_DIAG_BUNDLE_DUMP_MAX_SEMANTICS_NODES");
+    if launch_like && dump_max_semantics_nodes.is_some_and(|v| v > 100_000) {
+        warnings.push(serde_json::json!({
+            "severity": "warning",
+            "code": "diag.config.bundle_dump_max_semantics_nodes_high",
+            "message": "FRET_DIAG_BUNDLE_DUMP_MAX_SEMANTICS_NODES is high; bundle dumps can become huge for large UIs",
+            "max_semantics_nodes": dump_max_semantics_nodes,
+            "suggest": "prefer a smaller cap for shareable scripted repros",
+        }));
+    }
+
+    let max_debug_string_bytes = parse_env_u64(effective_env, "FRET_DIAG_MAX_DEBUG_STRING_BYTES");
+    if launch_like && max_debug_string_bytes.is_some_and(|v| v > 16 * 1024) {
+        warnings.push(serde_json::json!({
+            "severity": "info",
+            "code": "diag.config.max_debug_string_bytes_high",
+            "message": "FRET_DIAG_MAX_DEBUG_STRING_BYTES is high; large debug strings can inflate exports",
+            "max_debug_string_bytes": max_debug_string_bytes,
+            "suggest": "prefer 2048 (tool-launched default) for shareable artifacts",
+        }));
+    }
+
+    let max_gating_trace_entries =
+        parse_env_u64(effective_env, "FRET_DIAG_MAX_GATING_TRACE_ENTRIES");
+    if launch_like && max_gating_trace_entries.is_some_and(|v| v > 500) {
+        warnings.push(serde_json::json!({
+            "severity": "info",
+            "code": "diag.config.max_gating_trace_entries_high",
+            "message": "FRET_DIAG_MAX_GATING_TRACE_ENTRIES is high; large traces can inflate exports",
+            "max_gating_trace_entries": max_gating_trace_entries,
+            "suggest": "prefer 200 (default) unless you need deeper command gating traces",
+        }));
+    }
 }
 
 pub(crate) fn cmd_config(ctx: ConfigCmdContext) -> Result<(), String> {

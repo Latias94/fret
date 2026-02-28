@@ -1,5 +1,6 @@
 use std::sync::Arc;
 
+use fret_core::window::ColorScheme;
 use fret_core::{FontWeight, Px};
 use fret_icons::IconId;
 use fret_ui::element::{
@@ -10,6 +11,8 @@ use fret_ui_kit::declarative::icon as decl_icon;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::primitives::direction as direction_prim;
 use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, Radius, Space, ui};
+
+use crate::surface_slot::{ShadcnSurfaceSlot, surface_slot_in_scope};
 
 #[derive(Debug)]
 enum KbdContent {
@@ -93,7 +96,25 @@ fn kbd_with_patch<H: UiHost>(
 ) -> AnyElement {
     let theme = Theme::global(&*cx.app).snapshot();
 
-    let bg = theme.color_token("muted");
+    let (bg, fg) = if surface_slot_in_scope(cx) == Some(ShadcnSurfaceSlot::TooltipContent) {
+        // Upstream shadcn/ui (new-york-v4):
+        // - default: `[[data-slot=tooltip-content]_&]:bg-background/20`
+        // - dark: `dark:[[data-slot=tooltip-content]_&]:bg-background/10`
+        let alpha = if theme.color_scheme == Some(ColorScheme::Dark) {
+            0.10
+        } else {
+            0.20
+        };
+        (
+            alpha_mul(theme.color_token("background"), alpha),
+            theme.color_token("background"),
+        )
+    } else {
+        (
+            theme.color_token("muted"),
+            theme.color_token("muted-foreground"),
+        )
+    };
 
     let chrome = ChromeRefinement::default()
         .px(Space::N1)
@@ -110,7 +131,6 @@ fn kbd_with_patch<H: UiHost>(
 
     let props = decl_style::container_props(&theme, chrome, layout_override);
 
-    let fg = theme.color_token("muted-foreground");
     let gap = MetricRef::space(Space::N1).resolve(&theme);
 
     let px = theme
@@ -151,6 +171,11 @@ fn kbd_with_patch<H: UiHost>(
             },
         )]
     })
+}
+
+fn alpha_mul(mut c: fret_core::Color, mul: f32) -> fret_core::Color {
+    c.a = (c.a * mul).clamp(0.0, 1.0);
+    c
 }
 
 #[derive(Debug)]

@@ -1524,12 +1524,12 @@ fn window_create_spec(
     match &request.kind {
         CreateWindowKind::DockFloating { panel, .. } => Some(fret_launch::WindowCreateSpec::new(
             format!("fret-demo imui_editor_proof_demo — {}", panel.kind.0),
-            winit::dpi::LogicalSize::new(720.0, 520.0),
+            fret_launch::WindowLogicalSize::new(720.0, 520.0),
         )),
         CreateWindowKind::DockRestore { logical_window_id } => {
             Some(fret_launch::WindowCreateSpec::new(
                 format!("fret-demo imui_editor_proof_demo — {logical_window_id}"),
-                winit::dpi::LogicalSize::new(980.0, 720.0),
+                fret_launch::WindowLogicalSize::new(980.0, 720.0),
             ))
         }
     }

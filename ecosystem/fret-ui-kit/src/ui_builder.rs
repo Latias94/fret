@@ -201,6 +201,66 @@ impl UiBuilder<crate::ui::TextBox> {
         self
     }
 
+    pub fn font_feature(mut self, tag: impl Into<String>, value: u32) -> Self {
+        self.inner
+            .features_override
+            .push(fret_core::TextFontFeatureSetting {
+                tag: tag.into().into(),
+                value,
+            });
+        self
+    }
+
+    pub fn font_axis(mut self, tag: impl Into<String>, value: f32) -> Self {
+        self.inner
+            .axes_override
+            .push(fret_core::TextFontAxisSetting {
+                tag: tag.into().into(),
+                value,
+            });
+        self
+    }
+
+    /// Enables OpenType tabular numbers (`font-variant-numeric: tabular-nums`).
+    pub fn tabular_nums(self) -> Self {
+        self.font_feature("tnum", 1)
+    }
+
+    /// Enables OpenType proportional numbers (`font-variant-numeric: proportional-nums`).
+    pub fn proportional_nums(self) -> Self {
+        self.font_feature("pnum", 1)
+    }
+
+    /// Enables OpenType lining numbers (`font-variant-numeric: lining-nums`).
+    pub fn lining_nums(self) -> Self {
+        self.font_feature("lnum", 1)
+    }
+
+    /// Enables OpenType oldstyle numbers (`font-variant-numeric: oldstyle-nums`).
+    pub fn oldstyle_nums(self) -> Self {
+        self.font_feature("onum", 1)
+    }
+
+    /// Enables OpenType slashed zero (`font-variant-numeric: slashed-zero`).
+    pub fn slashed_zero(self) -> Self {
+        self.font_feature("zero", 1)
+    }
+
+    /// Enables OpenType ordinal forms (`font-variant-numeric: ordinal`).
+    pub fn ordinal(self) -> Self {
+        self.font_feature("ordn", 1)
+    }
+
+    /// Enables OpenType diagonal fractions (`font-variant-numeric: diagonal-fractions`).
+    pub fn diagonal_fractions(self) -> Self {
+        self.font_feature("frac", 1)
+    }
+
+    /// Enables OpenType stacked fractions (`font-variant-numeric: stacked-fractions`).
+    pub fn stacked_fractions(self) -> Self {
+        self.font_feature("afrc", 1)
+    }
+
     pub fn font_ui(self) -> Self {
         self.font(FontId::ui())
     }
@@ -325,6 +385,11 @@ impl UiBuilder<crate::ui::TextBox> {
         self.wrap(TextWrap::WordBreak).overflow(TextOverflow::Clip)
     }
 
+    /// Enables balanced line breaking (Tailwind `text-balance`).
+    pub fn text_balance(self) -> Self {
+        self.wrap(TextWrap::Balance)
+    }
+
     /// Opt into "bounds-as-line-box" baseline placement for fixed-height controls.
     ///
     /// This is intended for single-line labels that should look vertically centered inside a
@@ -380,6 +445,11 @@ impl UiBuilder<crate::ui::RawTextBox> {
     /// breaks inside long tokens such as URLs, paths, and identifiers).
     pub fn break_words(self) -> Self {
         self.wrap(TextWrap::WordBreak).overflow(TextOverflow::Clip)
+    }
+
+    /// Enables balanced line breaking (Tailwind `text-balance`).
+    pub fn text_balance(self) -> Self {
+        self.wrap(TextWrap::Balance)
     }
 }
 

@@ -58,11 +58,75 @@ Exit criteria:
   - apply a single final explicit sRGB transfer blit when writing to `Rgba8Unorm` / `Bgra8Unorm`.
 - At least one targeted test/diag gate catches regressions (explicit output transfer + representative effects).
 
-## M4 — Bounded custom effect design (wgpu-only MVP)
+## M4 — Bounded custom effects (CustomV1, wgpu-only MVP)
 
 Exit criteria:
 
 - A design for a bounded, capability-gated custom effect extension point exists and is reviewed.
 - A minimal MVP can render one custom effect (e.g. “glass tint + subtle blur + warp”) without touching core contracts.
 - Budgeting/degradation is deterministic and diagnosable.
- - Evidence: `docs/workstreams/renderer-effects-semantics-and-extensibility-v1/custom-effect-abi-wgpu-mvp.md`.
+ - CustomV1 semantics are documented (stable WGSL contract surface + rules):
+   - `docs/workstreams/renderer-effects-semantics-and-extensibility-v1/custom-effect-v1-semantics.md`
+ - `render_space` is effect-local for CustomV1 (origin/size match bounds scissor).
+ - A renderer-owned deterministic pattern atlas is available for v1 recipes (no user textures).
+ - Conformance tests exist for:
+   - determinism + scissoring + ordering,
+   - `render_space` origin/size semantics,
+   - pattern atlas helper availability.
+ - Optional demo evidence:
+   - `apps/fret-examples/src/postprocess_theme_demo.rs` (wired via `apps/fret-demo`).
+ - Evidence:
+   - `docs/workstreams/renderer-effects-semantics-and-extensibility-v1/custom-effect-abi-wgpu-mvp.md`
+   - `crates/fret-render-wgpu/tests/effect_custom_v1_conformance.rs`
+
+## M5 — CustomV2 ceiling bump
+
+Exit criteria:
+
+- [x] The CustomV2 “one extra input” story is locked (with rationale and capability gating):
+  - Decision ADR: `docs/adr/0303-custom-effect-v2-user-image-input.md`
+  - Workstream: `docs/workstreams/renderer-effects-semantics-and-extensibility-v1/custom-effect-v2/README.md`
+- [x] A versioned ABI exists with deterministic degradation rules and capability gating (wgpu backend).
+- [x] Conformance tests cover the extra input and scissor/mask semantics.
+- [x] At least one demo/harness uses CustomV2 with a stable `fretboard diag` script gate.
+- [x] WebGPU/Tint validation passes for stitched CustomV1/V2 modules and masked variants (regression gate).
+- [ ] Optional follow-up: extract a “recipe” crate into ecosystem once the authoring patterns stabilize.
+- Evidence:
+  - `docs/workstreams/renderer-effects-semantics-and-extensibility-v1/custom-effect-v2/README.md`
+  - `crates/fret-render-wgpu/tests/effect_custom_v2_conformance.rs`
+
+## M5.1 (Optional) — CustomV3 ceiling bump (renderer-provided sources)
+
+Exit criteria:
+
+- A versioned CustomV3 ADR is reviewed and locked:
+  - Decision ADR: `docs/adr/0304-custom-effect-v3-renderer-provided-sources.md`
+  - Workstream: `docs/workstreams/renderer-effects-semantics-and-extensibility-v1/custom-effect-v3/README.md`
+- `EffectStep::CustomV3` exists in `fret-core` with deterministic validation/fingerprint behavior.
+- wgpu backend binds the renderer-provided sources deterministically:
+  - `src` (current chain input),
+  - `src_raw` (chain root) or deterministic alias when not requested/unsupported,
+  - optional `src_pyramid` with explicit budgeting and deterministic degradation.
+- Conformance tests cover:
+  - `src_raw` correctness (differs from `src` after prior steps),
+  - pyramid level determinism and alias fallbacks,
+  - scissor/mask correctness and no undefined out-of-bounds reads.
+- Plan dump + counters report requested vs applied source features and degradation reasons.
+
+## M6 (Optional) — Vector path + dash semantics closure
+
+Exit criteria:
+
+- `SceneOp::Path` paint semantics are explicit:
+  - Either sampled/material paints are supported (capability-gated, tested), or they deterministically degrade with
+    an observable counter in perf/diagnostics.
+  - Evidence: `crates/fret-render-wgpu/src/renderer/render_scene/encode/draw/path.rs` and reporting in
+    `crates/fret-render-wgpu/src/renderer/render_scene/plan_reporting.rs`.
+
+- Dash semantics are consistent and tested across primitives:
+  - One targeted conformance test compares a rect-like dashed path with a dashed `StrokeRRect`.
+  - Evidence: `crates/fret-render-wgpu/tests/*dash*` and `crates/fret-render-wgpu/tests/path_stroke_style_v2_conformance.rs`.
+
+- Path MSAA correctness on Vulkan is fixed (enabled by default when supported), with an emergency opt-out:
+  - Escape hatch: `FRET_DISABLE_VULKAN_PATH_MSAA=1`.
+  - Evidence: `crates/fret-render-wgpu/src/renderer/config.rs` and `crates/fret-render-wgpu/tests/vulkan_path_msaa_visibility_conformance.rs`.

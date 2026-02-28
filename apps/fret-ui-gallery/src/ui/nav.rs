@@ -86,8 +86,8 @@ pub(crate) fn sidebar_view(
         shadcn::Input::new(nav_query.clone())
             .a11y_label("Search components")
             .placeholder("Search (id / tag)")
-            .into_element(cx)
             .test_id("ui-gallery-nav-search")
+            .into_element(cx)
     };
 
     let push_group = |cx: &mut ElementContext<'_, App>,

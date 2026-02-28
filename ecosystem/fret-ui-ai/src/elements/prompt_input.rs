@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use fret_core::{Axis, Edges, ExternalDragKind, Px};
+use fret_core::{Axis, Color, Edges, ExternalDragKind, Px};
 use fret_icons::IconId;
 use fret_runtime::{Effect, Model};
 use fret_ui::action::{ActivateReason, OnActivate, OnExternalDrag, OnKeyDown};
@@ -9,8 +9,11 @@ use fret_ui::{ElementContext, Invalidation, Theme, UiHost};
 use fret_ui_kit::declarative::controllable_state;
 use fret_ui_kit::declarative::icon as decl_icon;
 use fret_ui_kit::declarative::style as decl_style;
-use fret_ui_kit::{LayoutRefinement, MetricRef, Space};
+use fret_ui_kit::{
+    ColorFallback, ColorRef, LayoutRefinement, MetricRef, Space, WidgetStateProperty, WidgetStates,
+};
 
+use fret_ui_shadcn::button::ButtonStyle;
 use fret_ui_shadcn::{
     Button, ButtonSize, ButtonVariant, DropdownMenu, DropdownMenuAlign, DropdownMenuEntry,
     DropdownMenuItem, DropdownMenuSide, InputGroup,
@@ -1791,6 +1794,7 @@ pub struct PromptInputButton {
     disabled: bool,
     on_activate: Option<OnActivate>,
     variant: ButtonVariant,
+    expanded: bool,
     size: Option<ButtonSize>,
     test_id: Option<Arc<str>>,
     layout: LayoutRefinement,
@@ -1805,6 +1809,7 @@ impl PromptInputButton {
             disabled: false,
             on_activate: None,
             variant: ButtonVariant::Ghost,
+            expanded: false,
             size: None,
             test_id: None,
             layout: LayoutRefinement::default(),
@@ -1836,6 +1841,11 @@ impl PromptInputButton {
         self
     }
 
+    pub fn expanded(mut self, expanded: bool) -> Self {
+        self.expanded = expanded;
+        self
+    }
+
     pub fn size(mut self, size: ButtonSize) -> Self {
         self.size = Some(size);
         self
@@ -1863,10 +1873,79 @@ impl PromptInputButton {
             }
         });
 
+        let expanded = self.expanded;
+        let mut style = ButtonStyle::default();
+        if self.variant == ButtonVariant::Ghost {
+            // Upstream AI Elements `PromptInputButton`:
+            // - base: `text-muted-foreground`, `bg-transparent`, `border-none`, `shadow-none`
+            // - hover: `bg-accent`, `text-foreground`
+            // - expanded: `bg-accent`, `text-foreground`
+            //
+            // Reference: `repo-ref/ai-elements/packages/elements/src/prompt-input.tsx`
+            let transparent = ColorRef::Color(Color::TRANSPARENT);
+            let bg_base = if expanded {
+                ColorRef::Token {
+                    key: "accent",
+                    fallback: ColorFallback::ThemeHoverBackground,
+                }
+            } else {
+                transparent.clone()
+            };
+            let fg_base = if expanded {
+                ColorRef::Token {
+                    key: "foreground",
+                    fallback: ColorFallback::ThemeTextPrimary,
+                }
+            } else {
+                ColorRef::Token {
+                    key: "muted-foreground",
+                    fallback: ColorFallback::ThemeTextMuted,
+                }
+            };
+
+            style = style
+                .background(
+                    WidgetStateProperty::new(Some(bg_base))
+                        .when(
+                            WidgetStates::HOVERED,
+                            Some(ColorRef::Token {
+                                key: "accent",
+                                fallback: ColorFallback::ThemeHoverBackground,
+                            }),
+                        )
+                        .when(
+                            WidgetStates::ACTIVE,
+                            Some(ColorRef::Token {
+                                key: "accent",
+                                fallback: ColorFallback::ThemeHoverBackground,
+                            }),
+                        ),
+                )
+                .foreground(
+                    WidgetStateProperty::new(Some(fg_base))
+                        .when(
+                            WidgetStates::HOVERED,
+                            Some(ColorRef::Token {
+                                key: "foreground",
+                                fallback: ColorFallback::ThemeTextPrimary,
+                            }),
+                        )
+                        .when(
+                            WidgetStates::ACTIVE,
+                            Some(ColorRef::Token {
+                                key: "foreground",
+                                fallback: ColorFallback::ThemeTextPrimary,
+                            }),
+                        ),
+                )
+                .border_color(WidgetStateProperty::new(Some(transparent)));
+        }
+
         let mut btn = if icon_only {
             Button::new("")
                 .a11y_label(self.label)
                 .variant(self.variant)
+                .style(style)
                 .size(size)
                 .disabled(self.disabled)
                 .icon(self.icon.expect("icon_only implies icon is Some"))
@@ -1874,6 +1953,7 @@ impl PromptInputButton {
         } else {
             Button::new(self.label)
                 .variant(self.variant)
+                .style(style)
                 .size(size)
                 .disabled(self.disabled)
                 .children(self.children)
@@ -1920,17 +2000,21 @@ impl PromptInputActionMenuTrigger {
     pub fn into_element_with_open<H: UiHost + 'static>(
         self,
         cx: &mut ElementContext<'_, H>,
-        _open: Model<bool>,
+        open: Model<bool>,
     ) -> AnyElement {
         let cfg = use_prompt_input_config(cx);
         let disabled = cfg
             .as_ref()
             .map(|c| c.disabled || c.loading)
             .unwrap_or(false);
+        let expanded = cx
+            .get_model_cloned(&open, Invalidation::Paint)
+            .unwrap_or(false);
 
         let mut btn = PromptInputButton::new("Prompt actions")
             .icon(IconId::new("lucide.plus"))
             .disabled(disabled)
+            .expanded(expanded)
             .refine_layout(self.layout);
 
         if let Some(id) = self.test_id {

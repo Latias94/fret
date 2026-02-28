@@ -44,6 +44,8 @@ Today:
 - ad-hoc runs should prefer `--script-dir` / `--glob` inputs.
 - `diag run` accepts either an explicit script path or a promoted `script_id` (resolved via `tools/diag-scripts/index.json`).
 - `diag list scripts` prints `script_id -> path` for promoted scripts (same registry; intended for discoverability).
+- `diag perf` suite expansion selects scripts by `suite_memberships` in the promoted registry, so perf suite naming stays
+  stable as scripts move (as long as suite memberships are maintained via suite directories/redirect stubs).
 
 Long-term:
 
@@ -83,6 +85,9 @@ Tip (maintenance):
 
 3) Validate closures:
 
+- Tooling-side health check (bounded, read-only; no Python required):
+  - `cargo run -p fretboard -- diag doctor scripts`
+
 - Taxonomy drift check (for already-migrated areas):
   - `python tools/diag-scripts/migrate-script-library.py --check-root`
   - (optional) for incremental adoption, scope it:
@@ -106,3 +111,50 @@ Tip (maintenance):
 
 - Moving every script immediately (“big bang”).
 - Forcing a registry before the taxonomy settles.
+
+## Where to put new scripts (v1 guidance)
+
+Goal: keep `tools/diag-scripts/` navigable as the library grows, and avoid dumping hundreds of unrelated scripts into a
+single folder.
+
+If in doubt, follow the filename prefix rules in `tools/diag-scripts/migrate-script-library.py` (`categorize_script`)
+(the migrator is the source of truth for the current taxonomy).
+
+### UI Gallery
+
+Prefer placing UI Gallery scripts under `tools/diag-scripts/ui-gallery/<bucket>/` where `<bucket>` matches the component
+or behavior area:
+
+- `tools/diag-scripts/ui-gallery/select/` (prefix: `ui-gallery-select-`)
+- `tools/diag-scripts/ui-gallery/combobox/` (prefix: `ui-gallery-combobox-`)
+- `tools/diag-scripts/ui-gallery/overlay/` (prefix: `ui-gallery-…dialog|popover|tooltip|sheet|modal…`)
+- `tools/diag-scripts/ui-gallery/perf/` (suffix: `-steady.json`, or tokens like `perf`, `resize`, `torture`)
+- `tools/diag-scripts/ui-gallery/diag/` (prefix: `ui-gallery-diag-`, `ui-gallery-view-cache-`)
+- Everything else (temporary compatibility only): `tools/diag-scripts/ui-gallery/misc/`
+
+### Docking
+
+Prefer placing docking scripts under `tools/diag-scripts/docking/<bucket>/`:
+
+- `tools/diag-scripts/docking/arbitration/` (prefix: `docking-arbitration-`)
+- `tools/diag-scripts/docking/motion-pilot/` (prefix: `docking-motion-pilot-`)
+- `tools/diag-scripts/docking/demo/` (prefix: `docking-demo-`)
+- `tools/diag-scripts/docking/container-queries/` (prefix: `container-queries-docking-`)
+
+### Tooling / demos
+
+Prefer placing non-UI-gallery scripts under `tools/diag-scripts/tooling/` (or the more specific top-level buckets when
+they exist):
+
+- Prelude/prewarm suite helpers: `tools/diag-scripts/_prelude/` (prefix: `tooling-suite-prelude-`, `tooling-suite-prewarm-`)
+- `tools/diag-scripts/tooling/todo/` (prefix: `todo-`)
+- `tools/diag-scripts/router/query-demo/` (prefix: `router-query-demo-`)
+- `tools/diag-scripts/workspace/shell-demo/` (prefix: `workspace-shell-demo-`)
+- `tools/diag-scripts/viewport/embedded-demo/` (prefix: `embedded-viewport-demo-`)
+
+## Guardrails
+
+After adding/moving scripts, keep drift visible and bounded:
+
+- `cargo run -p fretboard -- diag doctor scripts`
+- `python tools/diag-scripts/migrate-script-library.py --check-root`

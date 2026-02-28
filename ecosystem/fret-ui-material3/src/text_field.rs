@@ -33,6 +33,7 @@ use crate::foundation::icon::svg_source_for_icon;
 use crate::foundation::indication::{
     RippleClip, material_ink_layer_for_pressable, material_pressable_indication_config,
 };
+use crate::foundation::interactive_size::minimum_interactive_size;
 use crate::foundation::motion_scheme::{MotionSchemeKey, sys_spring_in_scope};
 use crate::motion::SpringAnimator;
 use crate::tokens::autocomplete as autocomplete_tokens;
@@ -238,6 +239,10 @@ pub struct TextField {
     supporting_text: Option<Arc<str>>,
     style: TextFieldStyle,
     field_id_out: Option<Rc<Cell<Option<GlobalElementId>>>>,
+    leading_icon: Option<IconId>,
+    leading_icon_a11y_label: Option<Arc<str>>,
+    leading_icon_test_id: Option<Arc<str>>,
+    on_leading_icon_pointer_down: Option<OnPressablePointerDown>,
     trailing_icon: Option<IconId>,
     trailing_icon_a11y_label: Option<Arc<str>>,
     trailing_icon_test_id: Option<Arc<str>>,
@@ -266,6 +271,10 @@ impl std::fmt::Debug for TextField {
             .field("placeholder", &self.placeholder)
             .field("supporting_text", &self.supporting_text)
             .field("style", &self.style)
+            .field(
+                "leading_icon",
+                &self.leading_icon.as_ref().map(|i| i.as_str()),
+            )
             .field("disabled", &self.disabled)
             .field("error", &self.error)
             .field("multiline", &self.multiline)
@@ -288,6 +297,10 @@ impl TextField {
             supporting_text: None,
             style: TextFieldStyle::default(),
             field_id_out: None,
+            leading_icon: None,
+            leading_icon_a11y_label: None,
+            leading_icon_test_id: None,
+            on_leading_icon_pointer_down: None,
             trailing_icon: None,
             trailing_icon_a11y_label: None,
             trailing_icon_test_id: None,
@@ -357,6 +370,26 @@ impl TextField {
 
     pub fn style(mut self, style: TextFieldStyle) -> Self {
         self.style = self.style.merged(style);
+        self
+    }
+
+    pub fn leading_icon(mut self, icon: IconId) -> Self {
+        self.leading_icon = Some(icon);
+        self
+    }
+
+    pub fn leading_icon_a11y_label(mut self, label: impl Into<Arc<str>>) -> Self {
+        self.leading_icon_a11y_label = Some(label.into());
+        self
+    }
+
+    pub fn leading_icon_test_id(mut self, id: impl Into<Arc<str>>) -> Self {
+        self.leading_icon_test_id = Some(id.into());
+        self
+    }
+
+    pub fn on_leading_icon_pointer_down(mut self, on_pointer_down: OnPressablePointerDown) -> Self {
+        self.on_leading_icon_pointer_down = Some(on_pointer_down);
         self
     }
 
@@ -449,6 +482,10 @@ impl TextField {
                 supporting_text,
                 style: style_override,
                 field_id_out,
+                leading_icon,
+                leading_icon_a11y_label,
+                leading_icon_test_id,
+                on_leading_icon_pointer_down,
                 trailing_icon,
                 trailing_icon_a11y_label,
                 trailing_icon_test_id,
@@ -597,11 +634,19 @@ impl TextField {
                                         chrome
                                     };
 
-                                    let trailing_icon_hit_width = if trailing_icon.is_some() {
-                                        Px(48.0)
-                                    } else {
-                                        Px(0.0)
+                                    let (leading_icon_hit_width, trailing_icon_hit_width) = {
+                                        let theme = Theme::global(&*cx.app);
+                                        let min_touch_target = minimum_interactive_size(theme);
+                                        let leading =
+                                            leading_icon.is_some().then_some(min_touch_target);
+                                        let trailing =
+                                            trailing_icon.is_some().then_some(min_touch_target);
+                                        (leading.unwrap_or(Px(0.0)), trailing.unwrap_or(Px(0.0)))
                                     };
+                                    if leading_icon_hit_width.0 > 0.0 {
+                                        chrome.padding.left =
+                                            Px(chrome.padding.left.0.max(leading_icon_hit_width.0));
+                                    }
                                     if trailing_icon_hit_width.0 > 0.0 {
                                         chrome.padding.right = Px(chrome
                                             .padding
@@ -728,11 +773,19 @@ impl TextField {
                                         (chrome, spatial, fast_effects, slow_effects)
                                     };
 
-                                    let trailing_icon_hit_width = if trailing_icon.is_some() {
-                                        Px(48.0)
-                                    } else {
-                                        Px(0.0)
+                                    let (leading_icon_hit_width, trailing_icon_hit_width) = {
+                                        let theme = Theme::global(&*cx.app);
+                                        let min_touch_target = minimum_interactive_size(theme);
+                                        let leading =
+                                            leading_icon.is_some().then_some(min_touch_target);
+                                        let trailing =
+                                            trailing_icon.is_some().then_some(min_touch_target);
+                                        (leading.unwrap_or(Px(0.0)), trailing.unwrap_or(Px(0.0)))
                                     };
+                                    if leading_icon_hit_width.0 > 0.0 {
+                                        chrome.padding.left =
+                                            Px(chrome.padding.left.0.max(leading_icon_hit_width.0));
+                                    }
                                     if trailing_icon_hit_width.0 > 0.0 {
                                         chrome.padding.right = Px(chrome
                                             .padding
@@ -961,87 +1014,217 @@ impl TextField {
                                 cx.container(overlay, |_cx| Vec::new())
                             };
 
-                            let trailing_icon_el =
-                                trailing_icon.map(|icon| {
-                                    let (
+                            let leading_icon_el = leading_icon.map(|icon| {
+                                let (hit_width, size, color, opacity) = {
+                                    let theme = Theme::global(&*cx.app);
+                                    let hit_width = minimum_interactive_size(theme);
+                                    let size = match token_namespace {
+                                        TextFieldTokenNamespace::TextField => {
+                                            text_field_tokens::leading_icon_size(
+                                                theme,
+                                                variant_for_children,
+                                            )
+                                        }
+                                        TextFieldTokenNamespace::Autocomplete => {
+                                            autocomplete_tokens::leading_icon_size(
+                                                theme,
+                                                variant_for_children,
+                                            )
+                                        }
+                                    };
+                                    let (color, opacity) = match token_namespace {
+                                        TextFieldTokenNamespace::TextField => {
+                                            text_field_tokens::leading_icon_color(
+                                                theme,
+                                                variant_for_children,
+                                                hovered,
+                                                disabled,
+                                                error,
+                                                focused,
+                                            )
+                                        }
+                                        TextFieldTokenNamespace::Autocomplete => {
+                                            autocomplete_tokens::leading_icon_color(
+                                                theme,
+                                                variant_for_children,
+                                                hovered,
+                                                disabled,
+                                                error,
+                                                focused,
+                                            )
+                                        }
+                                    };
+                                    (hit_width, size, color, opacity)
+                                };
+
+                                let svg = svg_source_for_icon(cx, &icon);
+                                let mut icon_props = SvgIconProps::new(svg);
+                                icon_props.fit = SvgFit::Contain;
+                                icon_props.color = color;
+                                icon_props.opacity = opacity;
+                                icon_props.layout.size.width = Length::Px(size);
+                                icon_props.layout.size.height = Length::Px(size);
+                                let icon_el = cx.svg_icon_props(icon_props);
+
+                                #[derive(Default)]
+                                struct DerivedTestIds {
+                                    base: Option<Arc<str>>,
+                                    explicit: Option<Arc<str>>,
+                                    icon: Option<Arc<str>>,
+                                }
+
+                                let icon_test_id = cx.with_state(DerivedTestIds::default, |st| {
+                                    if st.base.as_deref() != test_id.as_deref()
+                                        || st.explicit.as_deref() != leading_icon_test_id.as_deref()
+                                    {
+                                        st.base = test_id.clone();
+                                        st.explicit = leading_icon_test_id.clone();
+                                        st.icon = st.explicit.clone().or_else(|| {
+                                            st.base.as_ref().map(|id| {
+                                                Arc::<str>::from(format!(
+                                                    "{}-leading-icon",
+                                                    id.as_ref()
+                                                ))
+                                            })
+                                        });
+                                    }
+                                    st.icon.clone()
+                                });
+
+                                let icon_a11y_label = leading_icon_a11y_label.clone();
+
+                                let input_id_for_focus = input_id;
+                                let handler = on_leading_icon_pointer_down.clone();
+                                let enabled = !disabled;
+
+                                let mut layout = fret_ui::element::LayoutStyle::default();
+                                layout.position = fret_ui::element::PositionStyle::Absolute;
+                                layout.inset.top = Some(Px(0.0)).into();
+                                layout.inset.left = Some(Px(0.0)).into();
+                                layout.inset.bottom = Some(Px(0.0)).into();
+                                layout.size.width = Length::Px(hit_width);
+                                layout.size.height = Length::Fill;
+
+                                let has_action = handler.is_some() || icon_a11y_label.is_some();
+                                let role = has_action.then_some(SemanticsRole::Button);
+
+                                cx.pressable(
+                                    PressableProps {
+                                        layout,
+                                        enabled,
+                                        focusable: false,
+                                        a11y: PressableA11y {
+                                            role,
+                                            label: icon_a11y_label,
+                                            test_id: icon_test_id,
+                                            ..Default::default()
+                                        },
+                                        ..Default::default()
+                                    },
+                                    move |cx, _state| {
+                                        if enabled {
+                                            let handler = handler.clone();
+                                            cx.pressable_on_pointer_down(Arc::new(
+                                                move |host, action_cx, down: PointerDownCx| {
+                                                    host.request_focus(input_id_for_focus);
+                                                    if let Some(ref h) = handler {
+                                                        return h(host, action_cx, down);
+                                                    }
+                                                    PressablePointerDownResult::Continue
+                                                },
+                                            ));
+                                        }
+
+                                        let mut row = FlexProps::default();
+                                        row.direction = Axis::Horizontal;
+                                        row.justify = MainAlign::Center;
+                                        row.align = CrossAlign::Center;
+                                        row.layout.size.width = Length::Fill;
+                                        row.layout.size.height = Length::Fill;
+                                        vec![cx.flex(row, move |_cx| vec![icon_el])]
+                                    },
+                                )
+                            });
+
+                            let trailing_icon_el = trailing_icon.map(|icon| {
+                                let (
+                                    hit_width,
+                                    size,
+                                    color,
+                                    opacity,
+                                    hover_opacity,
+                                    pressed_opacity,
+                                    config,
+                                ) = {
+                                    let theme = Theme::global(&*cx.app);
+                                    let hit_width = minimum_interactive_size(theme);
+                                    let size = match token_namespace {
+                                        TextFieldTokenNamespace::TextField => {
+                                            text_field_tokens::trailing_icon_size(
+                                                theme,
+                                                variant_for_children,
+                                            )
+                                        }
+                                        TextFieldTokenNamespace::Autocomplete => {
+                                            autocomplete_tokens::trailing_icon_size(
+                                                theme,
+                                                variant_for_children,
+                                            )
+                                        }
+                                    };
+                                    let (color, opacity) = match token_namespace {
+                                        TextFieldTokenNamespace::TextField => {
+                                            text_field_tokens::trailing_icon_color(
+                                                theme,
+                                                variant_for_children,
+                                                hovered,
+                                                disabled,
+                                                error,
+                                                focused,
+                                            )
+                                        }
+                                        TextFieldTokenNamespace::Autocomplete => {
+                                            autocomplete_tokens::trailing_icon_color(
+                                                theme,
+                                                variant_for_children,
+                                                hovered,
+                                                disabled,
+                                                error,
+                                                focused,
+                                            )
+                                        }
+                                    };
+
+                                    let hover_opacity = theme
+                                        .number_by_key("md.sys.state.hover.state-layer-opacity")
+                                        .unwrap_or(0.08);
+                                    let pressed_opacity = theme
+                                        .number_by_key("md.sys.state.pressed.state-layer-opacity")
+                                        .unwrap_or(0.1);
+                                    let config = material_pressable_indication_config(theme, None);
+
+                                    (
+                                        hit_width,
                                         size,
                                         color,
                                         opacity,
                                         hover_opacity,
                                         pressed_opacity,
                                         config,
-                                    ) = {
-                                        let theme = Theme::global(&*cx.app);
-                                        let size = match token_namespace {
-                                            TextFieldTokenNamespace::TextField => {
-                                                text_field_tokens::trailing_icon_size(
-                                                    theme,
-                                                    variant_for_children,
-                                                )
-                                            }
-                                            TextFieldTokenNamespace::Autocomplete => {
-                                                autocomplete_tokens::trailing_icon_size(
-                                                    theme,
-                                                    variant_for_children,
-                                                )
-                                            }
-                                        };
-                                        let (color, opacity) = match token_namespace {
-                                            TextFieldTokenNamespace::TextField => {
-                                                text_field_tokens::trailing_icon_color(
-                                                    theme,
-                                                    variant_for_children,
-                                                    hovered,
-                                                    disabled,
-                                                    error,
-                                                    focused,
-                                                )
-                                            }
-                                            TextFieldTokenNamespace::Autocomplete => {
-                                                autocomplete_tokens::trailing_icon_color(
-                                                    theme,
-                                                    variant_for_children,
-                                                    hovered,
-                                                    disabled,
-                                                    error,
-                                                    focused,
-                                                )
-                                            }
-                                        };
+                                    )
+                                };
 
-                                        let hover_opacity = theme
-                                            .number_by_key("md.sys.state.hover.state-layer-opacity")
-                                            .unwrap_or(0.08);
-                                        let pressed_opacity = theme
-                                            .number_by_key(
-                                                "md.sys.state.pressed.state-layer-opacity",
-                                            )
-                                            .unwrap_or(0.1);
-                                        let config =
-                                            material_pressable_indication_config(theme, None);
+                                let svg = svg_source_for_icon(cx, &icon);
+                                let mut icon_props = SvgIconProps::new(svg);
+                                icon_props.fit = SvgFit::Contain;
+                                icon_props.color = color;
+                                icon_props.opacity = opacity;
+                                icon_props.layout.size.width = Length::Px(size);
+                                icon_props.layout.size.height = Length::Px(size);
+                                let icon_el = cx.svg_icon_props(icon_props);
 
-                                        (
-                                            size,
-                                            color,
-                                            opacity,
-                                            hover_opacity,
-                                            pressed_opacity,
-                                            config,
-                                        )
-                                    };
-
-                                    let svg = svg_source_for_icon(cx, &icon);
-                                    let mut icon_props = SvgIconProps::new(svg);
-                                    icon_props.fit = SvgFit::Contain;
-                                    icon_props.color = color;
-                                    icon_props.opacity = opacity;
-                                    icon_props.layout.size.width = Length::Px(size);
-                                    icon_props.layout.size.height = Length::Px(size);
-                                    let icon_el = cx.svg_icon_props(icon_props);
-
-                                    let icon_el = if let Some(progress) =
-                                        trailing_icon_rotation_progress
-                                    {
+                                let icon_el =
+                                    if let Some(progress) = trailing_icon_rotation_progress {
                                         let degrees = 180.0 * progress.clamp(0.0, 1.0);
                                         let mut layout = fret_ui::element::LayoutStyle::default();
                                         layout.size.width = Length::Px(size);
@@ -1060,134 +1243,133 @@ impl TextField {
                                         icon_el
                                     };
 
-                                    #[derive(Default)]
-                                    struct DerivedTestIds {
-                                        base: Option<Arc<str>>,
-                                        explicit: Option<Arc<str>>,
-                                        icon: Option<Arc<str>>,
-                                    }
+                                #[derive(Default)]
+                                struct DerivedTestIds {
+                                    base: Option<Arc<str>>,
+                                    explicit: Option<Arc<str>>,
+                                    icon: Option<Arc<str>>,
+                                }
 
-                                    let icon_test_id =
-                                        cx.with_state(DerivedTestIds::default, |st| {
-                                            if st.base.as_deref() != test_id.as_deref()
-                                                || st.explicit.as_deref()
-                                                    != trailing_icon_test_id.as_deref()
-                                            {
-                                                st.base = test_id.clone();
-                                                st.explicit = trailing_icon_test_id.clone();
-                                                st.icon = st.explicit.clone().or_else(|| {
-                                                    st.base.as_ref().map(|id| {
-                                                        Arc::<str>::from(format!(
-                                                            "{}-trailing-icon",
-                                                            id.as_ref()
-                                                        ))
-                                                    })
-                                                });
-                                            }
-                                            st.icon.clone()
+                                let icon_test_id = cx.with_state(DerivedTestIds::default, |st| {
+                                    if st.base.as_deref() != test_id.as_deref()
+                                        || st.explicit.as_deref()
+                                            != trailing_icon_test_id.as_deref()
+                                    {
+                                        st.base = test_id.clone();
+                                        st.explicit = trailing_icon_test_id.clone();
+                                        st.icon = st.explicit.clone().or_else(|| {
+                                            st.base.as_ref().map(|id| {
+                                                Arc::<str>::from(format!(
+                                                    "{}-trailing-icon",
+                                                    id.as_ref()
+                                                ))
+                                            })
                                         });
+                                    }
+                                    st.icon.clone()
+                                });
 
-                                    let icon_a11y_label = trailing_icon_a11y_label.clone();
+                                let icon_a11y_label = trailing_icon_a11y_label.clone();
 
-                                    let input_id_for_focus = input_id;
-                                    let handler = on_trailing_icon_pointer_down.clone();
-                                    let enabled = !disabled;
-                                    let ripple_base_opacity = pressed_opacity;
-                                    let corner_radii = Corners::all(Px(24.0));
-                                    let state_layer_color = alpha_mul(color, opacity);
+                                let input_id_for_focus = input_id;
+                                let handler = on_trailing_icon_pointer_down.clone();
+                                let enabled = !disabled;
+                                let ripple_base_opacity = pressed_opacity;
+                                let corner_radii = Corners::all(Px(hit_width.0 * 0.5));
+                                let state_layer_color = alpha_mul(color, opacity);
 
-                                    let mut layout = fret_ui::element::LayoutStyle::default();
-                                    layout.position = fret_ui::element::PositionStyle::Absolute;
-                                    layout.inset.top = Some(Px(0.0)).into();
-                                    layout.inset.right = Some(Px(0.0)).into();
-                                    layout.inset.bottom = Some(Px(0.0)).into();
-                                    layout.size.width = Length::Px(Px(48.0));
-                                    layout.size.height = Length::Fill;
+                                let mut layout = fret_ui::element::LayoutStyle::default();
+                                layout.position = fret_ui::element::PositionStyle::Absolute;
+                                layout.inset.top = Some(Px(0.0)).into();
+                                layout.inset.right = Some(Px(0.0)).into();
+                                layout.inset.bottom = Some(Px(0.0)).into();
+                                layout.size.width = Length::Px(hit_width);
+                                layout.size.height = Length::Fill;
 
-                                    cx.pressable(
-                                        PressableProps {
-                                            layout,
-                                            enabled,
-                                            focusable: false,
-                                            a11y: PressableA11y {
-                                                role: Some(SemanticsRole::Button),
-                                                label: icon_a11y_label,
-                                                test_id: icon_test_id,
-                                                ..Default::default()
-                                            },
+                                cx.pressable(
+                                    PressableProps {
+                                        layout,
+                                        enabled,
+                                        focusable: false,
+                                        a11y: PressableA11y {
+                                            role: Some(SemanticsRole::Button),
+                                            label: icon_a11y_label,
+                                            test_id: icon_test_id,
                                             ..Default::default()
                                         },
-                                        move |cx, state| {
-                                            if enabled {
-                                                let handler = handler.clone();
-                                                cx.pressable_on_pointer_down(Arc::new(
-                                                    move |host, action_cx, down: PointerDownCx| {
-                                                        host.request_focus(input_id_for_focus);
-                                                        if let Some(ref h) = handler {
-                                                            return h(host, action_cx, down);
-                                                        }
-                                                        PressablePointerDownResult::Continue
-                                                    },
-                                                ));
-                                            }
+                                        ..Default::default()
+                                    },
+                                    move |cx, state| {
+                                        if enabled {
+                                            let handler = handler.clone();
+                                            cx.pressable_on_pointer_down(Arc::new(
+                                                move |host, action_cx, down: PointerDownCx| {
+                                                    host.request_focus(input_id_for_focus);
+                                                    if let Some(ref h) = handler {
+                                                        return h(host, action_cx, down);
+                                                    }
+                                                    PressablePointerDownResult::Continue
+                                                },
+                                            ));
+                                        }
 
-                                            let pressable_id = cx.root_id();
-                                            let now_frame = cx.frame_id.0;
+                                        let pressable_id = cx.root_id();
+                                        let now_frame = cx.frame_id.0;
 
-                                            let mut props = PointerRegionProps::default();
-                                            props.enabled = enabled;
-                                            props.layout.size.width = Length::Fill;
-                                            props.layout.size.height = Length::Fill;
+                                        let mut props = PointerRegionProps::default();
+                                        props.enabled = enabled;
+                                        props.layout.size.width = Length::Fill;
+                                        props.layout.size.height = Length::Fill;
 
-                                            vec![cx.pointer_region(props, move |cx| {
-                                                cx.pointer_region_on_pointer_down(Arc::new(
-                                                    |_host, _cx, _down| false,
-                                                ));
+                                        vec![cx.pointer_region(props, move |cx| {
+                                            cx.pointer_region_on_pointer_down(Arc::new(
+                                                |_host, _cx, _down| false,
+                                            ));
 
-                                                let pressed = enabled && state.pressed;
-                                                let hovered = enabled && state.hovered;
-                                                let state_layer_target = if pressed {
-                                                    pressed_opacity
-                                                } else if hovered {
-                                                    hover_opacity
-                                                } else {
-                                                    0.0
-                                                };
+                                            let pressed = enabled && state.pressed;
+                                            let hovered = enabled && state.hovered;
+                                            let state_layer_target = if pressed {
+                                                pressed_opacity
+                                            } else if hovered {
+                                                hover_opacity
+                                            } else {
+                                                0.0
+                                            };
 
-                                                let overlay = material_ink_layer_for_pressable(
-                                                    cx,
-                                                    pressable_id,
-                                                    now_frame,
-                                                    corner_radii,
-                                                    RippleClip::Bounded,
-                                                    state_layer_color,
-                                                    pressed,
-                                                    state_layer_target,
-                                                    ripple_base_opacity,
-                                                    config,
-                                                    false,
-                                                );
+                                            let overlay = material_ink_layer_for_pressable(
+                                                cx,
+                                                pressable_id,
+                                                now_frame,
+                                                corner_radii,
+                                                RippleClip::Bounded,
+                                                state_layer_color,
+                                                pressed,
+                                                state_layer_target,
+                                                ripple_base_opacity,
+                                                config,
+                                                false,
+                                            );
 
-                                                let mut row = FlexProps::default();
-                                                row.direction = Axis::Horizontal;
-                                                row.justify = MainAlign::Center;
-                                                row.align = CrossAlign::Center;
-                                                row.layout.size.width = Length::Fill;
-                                                row.layout.size.height = Length::Fill;
-                                                vec![
-                                                    overlay,
-                                                    cx.flex(row, move |_cx| vec![icon_el]),
-                                                ]
-                                            })]
-                                        },
-                                    )
-                                });
+                                            let mut row = FlexProps::default();
+                                            row.direction = Axis::Horizontal;
+                                            row.justify = MainAlign::Center;
+                                            row.align = CrossAlign::Center;
+                                            row.layout.size.width = Length::Fill;
+                                            row.layout.size.height = Length::Fill;
+                                            vec![overlay, cx.flex(row, move |_cx| vec![icon_el])]
+                                        })]
+                                    },
+                                )
+                            });
 
                             cx.container(container, move |cx| {
                                 if let Some(out) = field_id_out.as_ref() {
                                     out.set(Some(cx.root_id()));
                                 }
                                 let mut out = vec![overlay, text_input];
+                                if let Some(icon) = leading_icon_el {
+                                    out.push(icon);
+                                }
                                 if let Some(icon) = trailing_icon_el {
                                     out.push(icon);
                                 }

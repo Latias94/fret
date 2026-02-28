@@ -31,6 +31,8 @@ pub(super) fn tab_strip_view(
             .unwrap_or_default();
 
         WorkspaceTabStrip::new(selected.clone())
+            .test_id_root("ui-gallery-workspace-tabstrip")
+            .tab_test_id_prefix("ui-gallery-workspace-tab")
             .tabs(workspace_tab_ids.iter().map(|tab_id| {
                 let (title, _origin) = page_meta(tab_id.as_ref());
                 let dirty = workspace_dirty_ids

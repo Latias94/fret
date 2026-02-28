@@ -6621,85 +6621,88 @@ fn build_dropdown_menu_demo_submenu_snapshot(web_name: &str) -> (WebGolden, Sema
     }
     frame += settle_frames;
 
-    if web_name.contains("submenu-kbd") {
-        // Match the web golden extraction script behavior:
-        // - `scrollIntoView({ block: "center" })` on the submenu trigger element
-        // - focus the trigger and press ArrowRight
-        let mut snap = ui.semantics_snapshot().expect("semantics snapshot").clone();
-        for _ in 0..3 {
-            let root_menu = snap
-                .nodes
-                .iter()
-                .find(|n| n.role == SemanticsRole::Menu)
-                .expect("fret root menu semantics");
-            let trigger = snap
-                .nodes
-                .iter()
-                .find(|n| {
-                    n.role == SemanticsRole::MenuItem && n.label.as_deref() == Some("Invite users")
-                })
-                .expect("fret submenu trigger semantics (Invite users)");
+    // Match the web golden extraction script behavior:
+    // - `scrollIntoView({ block: "center" })` on the submenu trigger element.
+    //
+    // For the `submenu-kbd` variant we also focus + press ArrowRight after this scroll. For the
+    // hover-open variant we must still ensure the trigger is visible before dispatching pointer
+    // moves (Playwright scrolls into view; our harness emulates that via wheel).
+    let mut snap = ui.semantics_snapshot().expect("semantics snapshot").clone();
+    for _ in 0..3 {
+        let root_menu = snap
+            .nodes
+            .iter()
+            .find(|n| n.role == SemanticsRole::Menu)
+            .expect("fret root menu semantics");
+        let trigger = snap
+            .nodes
+            .iter()
+            .find(|n| {
+                n.role == SemanticsRole::MenuItem && n.label.as_deref() == Some("Invite users")
+            })
+            .expect("fret submenu trigger semantics (Invite users)");
 
-            let root_center_y = root_menu.bounds.origin.y.0 + root_menu.bounds.size.height.0 * 0.5;
-            let trigger_center_y = trigger.bounds.origin.y.0 + trigger.bounds.size.height.0 * 0.5;
-            let dy = trigger_center_y - root_center_y;
-            if dy.abs() <= 1.0 {
-                break;
-            }
-
-            // Wheel scrolling inside the menu should update the scroll viewport without moving the
-            // menu panel itself (i.e. it should remain anchored to the trigger).
-            let prev_root_menu_bounds = root_menu.bounds;
-            let wheel_pos = Point::new(
-                Px(root_menu.bounds.origin.x.0 + root_menu.bounds.size.width.0 * 0.5),
-                Px(root_menu.bounds.origin.y.0 + root_menu.bounds.size.height.0 * 0.5),
-            );
-            ui.dispatch_event(
-                &mut app,
-                &mut services,
-                &Event::Pointer(PointerEvent::Wheel {
-                    pointer_id: fret_core::PointerId::default(),
-                    position: wheel_pos,
-                    delta: Point::new(Px(0.0), Px(-dy)),
-                    modifiers: Modifiers::default(),
-                    pointer_type: PointerType::Mouse,
-                }),
-            );
-            render_frame(
-                &mut ui,
-                &mut app,
-                &mut services,
-                window,
-                bounds,
-                FrameId(frame),
-                true,
-                |cx| {
-                    let el = render(cx);
-                    vec![pad_root(cx, Px(0.0), el)]
-                },
-            );
-            frame += 1;
-            let next = ui.semantics_snapshot().expect("semantics snapshot").clone();
-            let next_root_menu = next
-                .nodes
-                .iter()
-                .find(|n| n.role == SemanticsRole::Menu)
-                .expect("fret root menu semantics (after wheel)");
-            assert_close(
-                &format!("{web_name} root menu x stable under wheel"),
-                next_root_menu.bounds.origin.x.0,
-                prev_root_menu_bounds.origin.x.0,
-                1.0,
-            );
-            assert_close(
-                &format!("{web_name} root menu y stable under wheel"),
-                next_root_menu.bounds.origin.y.0,
-                prev_root_menu_bounds.origin.y.0,
-                1.0,
-            );
-            snap = next;
+        let root_center_y = root_menu.bounds.origin.y.0 + root_menu.bounds.size.height.0 * 0.5;
+        let trigger_center_y = trigger.bounds.origin.y.0 + trigger.bounds.size.height.0 * 0.5;
+        let dy = trigger_center_y - root_center_y;
+        if dy.abs() <= 1.0 {
+            break;
         }
 
+        // Wheel scrolling inside the menu should update the scroll viewport without moving the
+        // menu panel itself (i.e. it should remain anchored to the trigger).
+        let prev_root_menu_bounds = root_menu.bounds;
+        let wheel_pos = Point::new(
+            Px(root_menu.bounds.origin.x.0 + root_menu.bounds.size.width.0 * 0.5),
+            Px(root_menu.bounds.origin.y.0 + root_menu.bounds.size.height.0 * 0.5),
+        );
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::Pointer(PointerEvent::Wheel {
+                pointer_id: fret_core::PointerId::default(),
+                position: wheel_pos,
+                delta: Point::new(Px(0.0), Px(-dy)),
+                modifiers: Modifiers::default(),
+                pointer_type: PointerType::Mouse,
+            }),
+        );
+        render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            FrameId(frame),
+            true,
+            |cx| {
+                let el = render(cx);
+                vec![pad_root(cx, Px(0.0), el)]
+            },
+        );
+        frame += 1;
+        let next = ui.semantics_snapshot().expect("semantics snapshot").clone();
+        let next_root_menu = next
+            .nodes
+            .iter()
+            .find(|n| n.role == SemanticsRole::Menu)
+            .expect("fret root menu semantics (after wheel)");
+        assert_close(
+            &format!("{web_name} root menu x stable under wheel"),
+            next_root_menu.bounds.origin.x.0,
+            prev_root_menu_bounds.origin.x.0,
+            1.0,
+        );
+        assert_close(
+            &format!("{web_name} root menu y stable under wheel"),
+            next_root_menu.bounds.origin.y.0,
+            prev_root_menu_bounds.origin.y.0,
+            1.0,
+        );
+        snap = next;
+    }
+
+    if web_name.contains("submenu-kbd") {
         let trigger = snap
             .nodes
             .iter()

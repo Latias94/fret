@@ -411,16 +411,7 @@ impl WinitAppDriver for ContainerQueriesDockingDemoDriver {
             state,
         } = context;
 
-        let consumed = app.with_global_mut_untracked(UiDiagnosticsService::default, |svc, app| {
-            if !svc.is_enabled() {
-                return false;
-            }
-            if svc.maybe_intercept_event_for_inspect_shortcuts(app, window, event) {
-                return true;
-            }
-            svc.maybe_intercept_event_for_picking(app, window, event)
-        });
-        if consumed {
+        if fret_bootstrap::maybe_consume_event(app, window, event) {
             return;
         }
 
@@ -709,7 +700,7 @@ pub fn run() -> anyhow::Result<()> {
     let config = WinitRunnerConfig {
         main_window_title: "fret-demo container_queries_docking_demo".to_string(),
         // Ensure the left panel starts above md (>=768px) and can be dragged below it.
-        main_window_size: winit::dpi::LogicalSize::new(1400.0, 760.0),
+        main_window_size: fret_launch::WindowLogicalSize::new(1400.0, 760.0),
         ..Default::default()
     };
 

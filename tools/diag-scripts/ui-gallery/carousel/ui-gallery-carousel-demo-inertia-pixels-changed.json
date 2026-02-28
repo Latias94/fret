@@ -1,0 +1,95 @@
+{
+  "schema_version": 2,
+  "meta": {
+    "name": "UI gallery: carousel demo inertia pixels changed",
+    "tags": ["ui-gallery", "carousel", "inertia", "pixels-changed", "screenshot"],
+    "required_capabilities": ["diag.script_v2", "diag.screenshot_png"],
+    "target_hints": [
+      "Requires Embla engine MVP to be enabled (set FRET_DEBUG_CAROUSEL_EMBLA_ENGINE=1).",
+      "Expected behavior: after releasing a flick, the carousel continues moving for a short time."
+    ]
+  },
+  "steps": [
+    { "type": "reset_diagnostics" },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-nav-search" }
+      },
+      "timeout_frames": 600
+    },
+    { "type": "press_key", "key": "escape" },
+    { "type": "wait_frames", "n": 2 },
+
+    { "type": "set_window_inner_size", "width_px": 1280.0, "height_px": 720.0 },
+    { "type": "wait_frames", "n": 10 },
+
+    { "type": "click", "target": { "kind": "test_id", "id": "ui-gallery-nav-search" } },
+    { "type": "press_key", "key": "a", "modifiers": { "ctrl": true } },
+    { "type": "press_key", "key": "backspace" },
+    { "type": "type_text", "text": "carousel" },
+    { "type": "wait_frames", "n": 2 },
+
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "bounds_within_window",
+        "target": { "kind": "test_id", "id": "ui-gallery-nav-carousel" },
+        "padding_px": 8.0,
+        "eps_px": 1.0
+      },
+      "timeout_frames": 240
+    },
+    { "type": "click", "target": { "kind": "test_id", "id": "ui-gallery-nav-carousel" } },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-page-carousel" }
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-carousel-demo" }
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "scroll_into_view",
+      "container": { "kind": "test_id", "id": "ui-gallery-content-scroll" },
+      "target": { "kind": "test_id", "id": "ui-gallery-carousel-demo" },
+      "delta_y": -120.0,
+      "require_fully_within_container": true,
+      "require_fully_within_window": true,
+      "padding_px": 16.0,
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "bounds_within_window",
+        "target": { "kind": "test_id", "id": "ui-gallery-carousel-demo" },
+        "padding_px": 16.0,
+        "eps_px": 1.0
+      },
+      "timeout_frames": 600
+    },
+
+    { "type": "pointer_down", "target": { "kind": "test_id", "id": "ui-gallery-carousel-demo-item-1" } },
+    { "type": "pointer_move", "delta_x": -220.0, "delta_y": 0.0, "steps": 10 },
+    { "type": "pointer_up" },
+
+    { "type": "wait_frames", "n": 6 },
+    { "type": "capture_bundle", "label": "ui-gallery-carousel-demo-inertia-start" },
+    { "type": "capture_screenshot", "label": "ui-gallery-carousel-demo-inertia-start" },
+
+    { "type": "wait_frames", "n": 18 },
+    { "type": "capture_bundle", "label": "ui-gallery-carousel-demo-inertia-end" },
+    { "type": "capture_screenshot", "label": "ui-gallery-carousel-demo-inertia-end" }
+  ]
+}
+

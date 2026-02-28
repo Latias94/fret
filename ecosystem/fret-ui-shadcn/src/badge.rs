@@ -1,6 +1,9 @@
 use std::sync::Arc;
 
-use fret_core::{Color, Corners, Point, Px, SemanticsRole, Transform2D};
+use fret_core::{
+    Color, Corners, FontId, Point, Px, SemanticsRole, TextFontAxisSetting, TextFontFeatureSetting,
+    Transform2D,
+};
 use fret_icons::IconId;
 use fret_runtime::Effect;
 use fret_ui::ThemeNamedColorKey;
@@ -60,6 +63,9 @@ pub struct Badge {
     test_id: Option<Arc<str>>,
     leading_icon: Option<IconId>,
     trailing_icon: Option<IconId>,
+    label_font_override: Option<FontId>,
+    label_features_override: Vec<TextFontFeatureSetting>,
+    label_axes_override: Vec<TextFontAxisSetting>,
     children: Vec<AnyElement>,
     chrome: ChromeRefinement,
     layout: LayoutRefinement,
@@ -91,6 +97,9 @@ impl Badge {
             test_id: None,
             leading_icon: None,
             trailing_icon: None,
+            label_font_override: None,
+            label_features_override: Vec::new(),
+            label_axes_override: Vec::new(),
             children: Vec::new(),
             chrome: ChromeRefinement::default(),
             layout: LayoutRefinement::default(),
@@ -106,6 +115,23 @@ impl Badge {
     /// Adds a trailing icon rendered under the badge's `currentColor` scope.
     pub fn trailing_icon(mut self, icon: IconId) -> Self {
         self.trailing_icon = Some(icon);
+        self
+    }
+
+    pub fn label_font(mut self, font: FontId) -> Self {
+        self.label_font_override = Some(font);
+        self
+    }
+
+    pub fn label_font_monospace(self) -> Self {
+        self.label_font(FontId::monospace())
+    }
+
+    pub fn label_tabular_nums(mut self) -> Self {
+        self.label_features_override.push(TextFontFeatureSetting {
+            tag: "tnum".into(),
+            value: 1,
+        });
         self
     }
 
@@ -162,6 +188,9 @@ impl Badge {
             self.test_id,
             self.leading_icon,
             self.trailing_icon,
+            self.label_font_override,
+            self.label_features_override,
+            self.label_axes_override,
             self.children,
             self.chrome,
             self.layout,
@@ -295,6 +324,9 @@ pub fn badge<H: UiHost>(
         None,
         None,
         None,
+        None,
+        Vec::new(),
+        Vec::new(),
         Vec::new(),
         ChromeRefinement::default(),
         LayoutRefinement::default(),
@@ -311,6 +343,9 @@ fn badge_with_patch<H: UiHost>(
     test_id: Option<Arc<str>>,
     leading_icon: Option<IconId>,
     trailing_icon: Option<IconId>,
+    label_font_override: Option<FontId>,
+    label_features_override: Vec<TextFontFeatureSetting>,
+    label_axes_override: Vec<TextFontAxisSetting>,
     children: Vec<AnyElement>,
     chrome_override: ChromeRefinement,
     layout_override: LayoutRefinement,
@@ -368,30 +403,32 @@ fn badge_with_patch<H: UiHost>(
 
     let content_children = move |cx: &mut ElementContext<'_, H>| {
         current_color::scope_children(cx, ColorRef::Color(fg), |cx| {
-            let label = ui::text(cx, label_for_content.clone())
+            let mut label = ui::text(cx, label_for_content.clone())
                 .text_size_px(text_px)
                 .fixed_line_box_px(line_height)
                 .line_box_in_bounds()
                 .font_medium()
                 .nowrap()
-                .text_color(ColorRef::Color(fg))
-                .into_element(cx);
+                .text_color(ColorRef::Color(fg));
 
-            if children.is_empty() && leading_icon.is_none() && trailing_icon.is_none() {
-                return vec![label];
+            if let Some(font) = label_font_override {
+                label = label.font(font);
             }
+            for feature in &label_features_override {
+                label = label.font_feature(feature.tag.to_string(), feature.value);
+            }
+            for axis in &label_axes_override {
+                label = label.font_axis(axis.tag.to_string(), axis.value);
+            }
+
+            let label = label.into_element(cx);
 
             // Upstream shadcn badge enforces `[&>svg]:size-3` (12px) for direct svg children.
             let icon_px = Px(12.0);
             let mut content = Vec::with_capacity(children.len() + 3);
 
             if let Some(icon) = leading_icon.clone() {
-                content.push(decl_icon::icon_with(
-                    cx,
-                    icon,
-                    Some(icon_px),
-                    Some(ColorRef::Color(fg)),
-                ));
+                content.push(decl_icon::icon_with(cx, icon, Some(icon_px), None));
             }
 
             let children = children
@@ -403,12 +440,7 @@ fn badge_with_patch<H: UiHost>(
             content.push(label);
 
             if let Some(icon) = trailing_icon.clone() {
-                content.push(decl_icon::icon_with(
-                    cx,
-                    icon,
-                    Some(icon_px),
-                    Some(ColorRef::Color(fg)),
-                ));
+                content.push(decl_icon::icon_with(cx, icon, Some(icon_px), None));
             }
 
             vec![stack::hstack(
@@ -489,6 +521,29 @@ mod tests {
 
     use fret_app::App;
     use fret_core::{AppWindowId, FontWeight, Point, Rect, Size};
+    use fret_ui::element::ForegroundScopeProps;
+
+    fn blend_over(fg: Color, bg: Color) -> Color {
+        let a = fg.a.clamp(0.0, 1.0);
+        Color {
+            r: fg.r * a + bg.r * (1.0 - a),
+            g: fg.g * a + bg.g * (1.0 - a),
+            b: fg.b * a + bg.b * (1.0 - a),
+            a: 1.0,
+        }
+    }
+
+    fn relative_luminance(c: Color) -> f32 {
+        // Theme colors are stored in linear space, so we can use the WCAG coefficients directly.
+        (0.2126 * c.r + 0.7152 * c.g + 0.0722 * c.b).clamp(0.0, 1.0)
+    }
+
+    fn contrast_ratio(a: Color, b: Color) -> f32 {
+        let l1 = relative_luminance(a);
+        let l2 = relative_luminance(b);
+        let (hi, lo) = if l1 >= l2 { (l1, l2) } else { (l2, l1) };
+        (hi + 0.05) / (lo + 0.05)
+    }
 
     fn bounds() -> Rect {
         Rect::new(
@@ -500,16 +555,33 @@ mod tests {
     fn collect_colors(
         el: &AnyElement,
         out_text: &mut Vec<(Arc<str>, Option<Color>)>,
-        out_svg: &mut Vec<Color>,
+        out_svg: &mut Vec<(Color, bool)>,
     ) {
         match &el.kind {
             ElementKind::Text(props) => out_text.push((props.text.clone(), props.color)),
-            ElementKind::SvgIcon(SvgIconProps { color, .. }) => out_svg.push(*color),
+            ElementKind::SvgIcon(SvgIconProps {
+                color,
+                inherit_color,
+                ..
+            }) => out_svg.push((*color, *inherit_color)),
             _ => {}
         }
         for child in &el.children {
             collect_colors(child, out_text, out_svg);
         }
+    }
+
+    fn find_foreground_scope(el: &AnyElement) -> Option<ForegroundScopeProps> {
+        match &el.kind {
+            ElementKind::ForegroundScope(props) => return Some(*props),
+            _ => {}
+        }
+        for child in &el.children {
+            if let Some(found) = find_foreground_scope(child) {
+                return Some(found);
+            }
+        }
+        None
     }
 
     #[test]
@@ -530,6 +602,13 @@ mod tests {
             let mut icons = Vec::new();
             collect_colors(&el, &mut texts, &mut icons);
 
+            let scope = find_foreground_scope(&el).expect("expected a ForegroundScope wrapper");
+            assert_eq!(
+                scope.foreground,
+                Some(expected_fg),
+                "expected badge currentColor scope to resolve to variant fg"
+            );
+
             assert!(
                 texts
                     .iter()
@@ -537,8 +616,8 @@ mod tests {
                 "expected badge label to resolve to variant fg"
             );
             assert!(
-                icons.len() >= 2 && icons.iter().all(|c| *c == expected_fg),
-                "expected badge icon(s) to resolve to variant fg"
+                icons.len() >= 2 && icons.iter().all(|(_, inherit)| *inherit),
+                "expected badge icon(s) to inherit currentColor via ForegroundScope"
             );
         });
     }
@@ -585,5 +664,33 @@ mod tests {
                 "expected shadcn Badge label to use font-medium"
             );
         });
+    }
+
+    #[test]
+    fn destructive_badge_text_contrast_is_reasonable_in_zinc_dark() {
+        let mut app = App::new();
+        crate::shadcn_themes::apply_shadcn_new_york_v4(
+            &mut app,
+            crate::shadcn_themes::ShadcnBaseColor::Zinc,
+            crate::shadcn_themes::ShadcnColorScheme::Dark,
+        );
+
+        let theme = Theme::global(&app);
+        let snap = theme.snapshot();
+
+        let fg = fg_for(&snap, BadgeVariant::Destructive);
+        let bg = bg_for(&snap, BadgeVariant::Destructive).expect("missing destructive badge bg");
+        let surface = snap.color_token("background");
+        let bg_composited = blend_over(bg, surface);
+
+        let ratio = contrast_ratio(fg, bg_composited);
+        assert!(
+            ratio >= 4.5,
+            "expected destructive badge contrast >= 4.5, got {ratio:.2} (fg={:?} bg={:?} bg_composited={:?} surface={:?})",
+            fg,
+            bg,
+            bg_composited,
+            surface,
+        );
     }
 }

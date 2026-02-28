@@ -97,7 +97,7 @@ See: `docs/workstreams/text-interactive-spans-v1-todo.md`.
   - `crates/fret-diag-protocol/src/lib.rs` (`UiActionStepV2::ClickSelectableTextSpanStable`)
   - `ecosystem/fret-bootstrap/src/ui_diagnostics.rs`
 - Inline span semantics metadata (v1):
-  - `docs/adr/0283-text-inline-spans-semantics-metadata-v1.md`
+  - `docs/adr/0302-text-inline-spans-semantics-metadata-v1.md`
 - Text wrap semantics + intrinsic sizing:
   - `docs/adr/0251-text-intrinsic-sizing-min-max-content-v1.md`
   - `docs/workstreams/text-line-breaking-v1.md`

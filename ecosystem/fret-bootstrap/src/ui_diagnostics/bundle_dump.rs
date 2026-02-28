@@ -144,8 +144,11 @@ fn finalize_dump(
     #[cfg(not(feature = "diagnostics-ws"))]
     let _ = request_id;
 
-    let bundle_json_bytes =
-        write_bundle_json_bytes(service, bundle_json_path, want_pretty, bundle)?;
+    let bundle_json_bytes = if service.cfg.write_bundle_json {
+        write_bundle_json_bytes(service, bundle_json_path, want_pretty, bundle)?
+    } else {
+        None
+    };
 
     let window_count = windows.len() as u64;
     let event_count = windows.iter().map(|w| w.events.len() as u64).sum();
@@ -201,11 +204,17 @@ fn dump_schema_v2(
     }
 
     let semantics_table = bundle.tables.semantics.as_ref();
+    let wants_compact_schema2 = service.cfg.write_bundle_schema2 || !service.cfg.write_bundle_json;
+    let primary_bundle_path = if service.cfg.write_bundle_json {
+        bundle_json_path.clone()
+    } else {
+        dir.join("bundle.schema2.json")
+    };
     let stats = finalize_dump(
         service,
         exported_unix_ms,
         dir,
-        bundle_json_path,
+        &primary_bundle_path,
         want_pretty,
         &bundle,
         &bundle.windows,
@@ -215,11 +224,11 @@ fn dump_schema_v2(
         request_id,
     )?;
 
-    if !cfg!(target_arch = "wasm32") && service.cfg.write_bundle_schema2 {
-        // Opt-in compact artifact for schema2-first workflows.
+    if !cfg!(target_arch = "wasm32") && wants_compact_schema2 {
+        // Compact artifact for schema2-first workflows.
         //
         // We intentionally keep this file name stable (`bundle.schema2.json`) so tooling can
-        // consume it directly without reparsing raw `bundle.json`.
+        // consume it directly without reparsing the larger raw `bundle.json`.
         bundle.apply_semantics_mode_v1(bundle::BundleSemanticsModeV1::Last);
         let _ = write_json_compact(dir.join("bundle.schema2.json"), &bundle);
     }

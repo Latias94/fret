@@ -75,6 +75,7 @@ mod script_runner;
 mod script_step_index;
 mod script_steps;
 mod script_steps_assert;
+mod script_steps_clipboard;
 mod script_steps_drag;
 mod script_steps_input;
 mod script_steps_menu;
@@ -114,6 +115,44 @@ pub use snapshot_types::*;
 mod config;
 pub use config::UiDiagnosticsConfig;
 include!("ui_diagnostics/service.rs");
+
+/// Returns `true` when UI diagnostics consumed the event (ignore/intercept).
+///
+/// This helper keeps app drivers consistent:
+/// - ignore external (non-script) pointer/keyboard input while a script is running (determinism),
+/// - record platform-delivered events into the diagnostics ring buffer (for `event_kind_seen`, etc),
+/// - intercept inspect/pick controls when enabled.
+pub fn maybe_consume_event(app: &mut App, window: AppWindowId, event: &Event) -> bool {
+    #[cfg(feature = "diagnostics")]
+    {
+        if app.with_global_mut_untracked(UiDiagnosticsService::default, |svc, _app| {
+            svc.should_ignore_external_pointer_event(event)
+                || svc.should_ignore_external_keyboard_event(event)
+        }) {
+            return true;
+        }
+
+        app.with_global_mut_untracked(UiDiagnosticsService::default, |svc, app| {
+            svc.record_event(app, window, event);
+        });
+
+        app.with_global_mut_untracked(UiDiagnosticsService::default, |svc, app| {
+            if !svc.is_enabled() {
+                return false;
+            }
+            if svc.maybe_intercept_event_for_picking(app, window, event) {
+                return true;
+            }
+            svc.maybe_intercept_event_for_inspect_shortcuts(app, window, event)
+        })
+    }
+
+    #[cfg(not(feature = "diagnostics"))]
+    {
+        let _ = (app, window, event);
+        false
+    }
+}
 
 #[derive(Debug, Clone)]
 struct PendingPick {
@@ -1918,14 +1957,50 @@ mod tests {
             resolved: Some(fret_runtime::DockDropTargetDiagnostics {
                 layout_root: dock_node_id(1),
                 tabs: dock_node_id(2),
-                zone: fret_core::dock::DropZone::Left,
-                insert_index: None,
-                outer: true,
+                zone: fret_core::dock::DropZone::Center,
+                insert_index: Some(3),
+                outer: false,
             }),
             ..docking.dock_drop_resolve.unwrap()
         });
 
         let pred = UiPredicateV1::DockDropResolvedIsSome { some: true };
+        assert!(eval_predicate(
+            &snapshot,
+            window_bounds,
+            window_id(1),
+            None,
+            None,
+            None,
+            None,
+            &[],
+            Some(&docking),
+            0,
+            false,
+            true,
+            &pred
+        ));
+
+        let pred = UiPredicateV1::DockDropResolvedZoneIs {
+            zone: "center".to_string(),
+        };
+        assert!(eval_predicate(
+            &snapshot,
+            window_bounds,
+            window_id(1),
+            None,
+            None,
+            None,
+            None,
+            &[],
+            Some(&docking),
+            0,
+            false,
+            true,
+            &pred
+        ));
+
+        let pred = UiPredicateV1::DockDropResolvedInsertIndexIs { index: 3 };
         assert!(eval_predicate(
             &snapshot,
             window_bounds,

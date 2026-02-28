@@ -43,7 +43,10 @@ Optional (future-proofing, gate first):
 - `diag.pointer_kind_touch`: touch pointer injection supported.
 - `diag.pointer_kind_pen`: pen pointer injection supported.
 - `diag.gesture_tap`: tap gesture step supported.
+- `diag.gesture_long_press`: long-press gesture step supported.
+- `diag.gesture_swipe`: swipe gesture step supported.
 - `diag.gesture_pinch`: pinch/zoom gesture steps supported.
+- `diag.cursor_screen_pos_override`: runner cursor override surface supported (used by `set_cursor_*` steps; critical for cross-window docking).
 - `diag.text_ime_trace`: IME/composition evidence available in bundles/triage (not a step).
 - `diag.text_input_snapshot`: focused text input snapshot evidence available (selection/composition/cursor area).
 - `diag.shortcut_routing_trace`: keydown shortcut routing evidence available (IME reserved vs command dispatch).
@@ -157,9 +160,12 @@ This file is a stable contract for CI and for automation/AI triage.
 Tooling can infer required capabilities from the presence of step variants:
 
 - `capture_screenshot` ⇒ `diag.screenshot_png`
+- `set_cursor_screen_pos` / `set_cursor_in_window` / `set_cursor_in_window_logical` ⇒ `diag.cursor_screen_pos_override`
 - steps that explicitly target non-default windows ⇒ `diag.multi_window`
 - coordinate-based steps (if added) ⇒ `diag.pointer_injection`
 - `tap` ⇒ `diag.gesture_tap`
+- `long_press` ⇒ `diag.gesture_long_press`
+- `swipe` ⇒ `diag.gesture_swipe`
 - `pinch` ⇒ `diag.gesture_pinch`
 
 Note: inference is “best effort”; `meta.required_capabilities` remains the explicit escape hatch.

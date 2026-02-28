@@ -261,7 +261,7 @@ pub fn run() -> anyhow::Result<()> {
 
     let builder = BootstrapBuilder::new(App::new(), driver).configure(|config| {
         config.main_window_title = "streaming_i420_demo".to_string();
-        config.main_window_size = winit::dpi::LogicalSize::new(720.0, 480.0);
+        config.main_window_size = fret_launch::WindowLogicalSize::new(720.0, 480.0);
         config.streaming_nv12_gpu_convert_enabled = true;
     });
 

@@ -35,7 +35,7 @@ impl BundleSemanticsModeV1 {
     }
 }
 
-#[derive(Debug, Default, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct UiDiagnosticsBundleTablesV1 {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub semantics: Option<UiBundleSemanticsTableV1>,
@@ -47,13 +47,13 @@ impl UiDiagnosticsBundleTablesV1 {
     }
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct UiBundleSemanticsTableV1 {
     pub schema_version: u32,
     pub entries: Vec<UiBundleSemanticsEntryV1>,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct UiBundleSemanticsEntryV1 {
     pub window: u64,
     pub semantics_fingerprint: u64,
@@ -98,7 +98,7 @@ pub struct UiDiagnosticsEnvDiagnosticsV1 {
     pub devtools_ws_configured: bool,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct UiDiagnosticsBundleConfigV1 {
     pub trigger_path: String,
     pub max_events: usize,
@@ -129,14 +129,14 @@ pub struct UiDiagnosticsBundleConfigV1 {
     pub frame_clock_fixed_delta_ms: Option<u64>,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct UiDiagnosticsWindowBundleV1 {
     pub window: u64,
     pub events: Vec<RecordedUiEventV1>,
     pub snapshots: Vec<UiDiagnosticsSnapshotV1>,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct UiDiagnosticsBundleV2 {
     pub schema_version: u32,
     pub exported_unix_ms: u64,
@@ -291,12 +291,25 @@ impl UiDiagnosticsEnvFingerprintV1 {
         capabilities.push("diag.pointer_kind_touch".to_string());
         capabilities.push("diag.pointer_kind_pen".to_string());
         capabilities.push("diag.gesture_tap".to_string());
+        capabilities.push("diag.gesture_long_press".to_string());
+        capabilities.push("diag.gesture_swipe".to_string());
         capabilities.push("diag.gesture_pinch".to_string());
         capabilities.push("diag.inject_ime".to_string());
         capabilities.push("diag.text_ime_trace".to_string());
         capabilities.push("diag.text_input_snapshot".to_string());
         capabilities.push("diag.shortcut_routing_trace".to_string());
         capabilities.push("diag.overlay_placement_trace".to_string());
+        if cfg!(any(
+            target_os = "windows",
+            target_os = "macos",
+            target_os = "linux"
+        )) {
+            capabilities.push("diag.cursor_screen_pos_override".to_string());
+            capabilities.push("diag.mouse_buttons_override".to_string());
+        }
+        if !cfg!(target_arch = "wasm32") {
+            capabilities.push("diag.clipboard_text".to_string());
+        }
         capabilities.sort();
         capabilities.dedup();
 

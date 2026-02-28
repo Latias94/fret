@@ -207,6 +207,7 @@ pub(crate) struct RunCmdContext {
     pub launch_env: Vec<(String, String)>,
     pub reuse_launch: bool,
     pub launch_high_priority: bool,
+    pub launch_write_bundle_json: bool,
     pub keep_open: bool,
     pub checks: RunChecks,
 }
@@ -244,6 +245,7 @@ pub(crate) fn cmd_run(ctx: RunCmdContext) -> Result<(), String> {
         launch_env,
         reuse_launch,
         launch_high_priority,
+        launch_write_bundle_json,
         keep_open,
         checks,
     } = ctx;
@@ -407,24 +409,16 @@ pub(crate) fn cmd_run(ctx: RunCmdContext) -> Result<(), String> {
         })?;
 
         std::fs::create_dir_all(&resolved_out_dir).map_err(|e| e.to_string())?;
-        let script_value: serde_json::Value =
-            serde_json::from_slice(&std::fs::read(&src).map_err(|e| e.to_string())?)
-                .map_err(|e| e.to_string())?;
-        let resolved_script =
-            crate::script_tooling::resolve_script_json_redirects_from_value(&src, script_value)
-                .map_err(|e| e.to_string())?;
-        let (mut script_json, upgraded) =
-            crate::compat::script::upgrade_script_json_value_to_v2_if_needed(resolved_script.value)
-                .inspect_err(|err| {
-                    write_tooling_failure_script_result_if_missing(
-                        &resolved_script_result_path,
-                        "tooling.script.upgrade_failed",
-                        err,
-                        "tooling_error",
-                        Some("upgrade_script_json_value_to_v2_if_needed".to_string()),
-                    );
-                })?;
-        crate::script_tooling::canonicalize_json_value(&mut script_json);
+        let (script_json, upgraded) = crate::script_execution::load_script_json_for_execution(
+            &src,
+            crate::script_execution::ScriptLoadPolicy {
+                tool_launched: false,
+                write_failure: write_tooling_failure_script_result_if_missing,
+                failure_note: None,
+                include_stage_in_note: true,
+            },
+            &resolved_script_result_path,
+        )?;
         if upgraded {
             eprintln!(
                 "warning: script schema_version=1 detected; tooling upgraded to schema_version=2 for execution (source={})",
@@ -710,10 +704,20 @@ pub(crate) fn cmd_run(ctx: RunCmdContext) -> Result<(), String> {
         &resolved_exit_path,
         &fs_transport_cfg,
         pack_defaults.2 || check_pixels_changed_test_id.is_some() || script_wants_screenshots,
+        launch_write_bundle_json,
         timeout_ms,
         poll_ms,
         launch_high_priority,
-    )?;
+    )
+    .inspect_err(|err| {
+        write_tooling_failure_script_result_if_missing(
+            &resolved_script_result_path,
+            "tooling.launch.failed",
+            err,
+            "tooling_error",
+            Some("maybe_launch_demo".to_string()),
+        );
+    })?;
     let _stop_guard = if keep_open {
         None
     } else {
@@ -740,54 +744,17 @@ pub(crate) fn cmd_run(ctx: RunCmdContext) -> Result<(), String> {
             Some("connect_filesystem_tooling".to_string()),
         );
     })?;
-    let script_value: serde_json::Value =
-        serde_json::from_slice(&std::fs::read(&src).map_err(|e| {
-            let err = e.to_string();
-            write_tooling_failure_script_result_if_missing(
-                &resolved_script_result_path,
-                "tooling.script.read_failed",
-                &err,
-                "tooling_error",
-                Some("read script json".to_string()),
-            );
-            err
-        })?)
-        .map_err(|e| {
-            let err = e.to_string();
-            write_tooling_failure_script_result_if_missing(
-                &resolved_script_result_path,
-                "tooling.script.parse_failed",
-                &err,
-                "tooling_error",
-                Some("parse script json".to_string()),
-            );
-            err
-        })?;
-    let script_json =
-        crate::script_tooling::resolve_script_json_redirects_from_value(&src, script_value)
-            .inspect_err(|err| {
-                write_tooling_failure_script_result_if_missing(
-                    &resolved_script_result_path,
-                    "tooling.script.redirect_failed",
-                    err,
-                    "tooling_error",
-                    Some("resolve_script_json_redirects".to_string()),
-                );
-            })?
-            .value;
-    let (mut script_json, upgraded) =
-        crate::compat::script::upgrade_script_json_value_to_v2_if_needed(script_json).inspect_err(
-            |err| {
-                write_tooling_failure_script_result_if_missing(
-                    &resolved_script_result_path,
-                    "tooling.script.upgrade_failed",
-                    err,
-                    "tooling_error",
-                    Some("upgrade_script_json_value_to_v2_if_needed".to_string()),
-                );
-            },
-        )?;
-    crate::script_tooling::canonicalize_json_value(&mut script_json);
+    let tool_launched = launch.is_some() || reuse_launch;
+    let (script_json, upgraded) = crate::script_execution::load_script_json_for_execution(
+        &src,
+        crate::script_execution::ScriptLoadPolicy {
+            tool_launched,
+            write_failure: write_tooling_failure_script_result_if_missing,
+            failure_note: None,
+            include_stage_in_note: true,
+        },
+        &resolved_script_result_path,
+    )?;
     if upgraded {
         eprintln!(
             "warning: script schema_version=1 detected; tooling upgraded to schema_version=2 for execution (source={})",
