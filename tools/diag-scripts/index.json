@@ -3252,6 +3252,29 @@
         "workspace"
       ],
       "target_hints": []
+    },
+    {
+      "id": "workspace-shell-demo-tab-drag-to-split-right-drop-preview-screenshot",
+      "path": "tools/diag-scripts/workspace/shell-demo/workspace-shell-demo-tab-drag-to-split-right-drop-preview-screenshot.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "diag-hardening-smoke-workspace"
+      ],
+      "tags": [
+        "drop_preview",
+        "gate",
+        "screenshots",
+        "tabstrip",
+        "workspace"
+      ],
+      "target_hints": [
+        "Drags a tab from pane A toward the right edge of pane B.",
+        "Waits for the right-edge drop preview indicator to appear.",
+        "Captures a screenshot while the preview is visible (used to gate docking drop overlay tokens)."
+      ]
     }
   ]
 }
