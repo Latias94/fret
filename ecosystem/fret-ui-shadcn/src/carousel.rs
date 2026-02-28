@@ -1,7 +1,9 @@
 use std::sync::Arc;
 use std::time::Duration;
 
-use fret_core::{Edges, KeyCode, LayoutDirection, MouseButton, Point, Px, SemanticsRole};
+use fret_core::{
+    Edges, KeyCode, LayoutDirection, MouseButton, Point, Px, SemanticsOrientation, SemanticsRole,
+};
 use fret_icons::ids;
 use fret_runtime::{Effect, Model, ModelHost, TimerToken};
 use fret_ui::action::{ActionCx, ActivateReason, KeyDownCx, OnKeyDown, UiActionHost};
@@ -306,6 +308,9 @@ pub struct CarouselOptions {
     pub in_view_threshold: f32,
     /// Viewport margin (px) applied on both ends for slidesInView intersection tests.
     pub in_view_margin_px: Px,
+    /// Embla-style `focus` watcher (default `true`): when focus moves into a slide via keyboard
+    /// traversal, scroll the focused slide into view.
+    pub watch_focus: bool,
     pub pixel_tolerance_px: f32,
 }
 
@@ -327,6 +332,7 @@ impl Default for CarouselOptions {
             embla_duration: 25.0,
             in_view_threshold: 0.0,
             in_view_margin_px: Px(0.0),
+            watch_focus: true,
             pixel_tolerance_px: 2.0,
         }
     }
@@ -407,6 +413,11 @@ impl CarouselOptions {
         self
     }
 
+    pub fn watch_focus(mut self, enabled: bool) -> Self {
+        self.watch_focus = enabled;
+        self
+    }
+
     pub fn pixel_tolerance_px(mut self, pixel_tolerance_px: f32) -> Self {
         self.pixel_tolerance_px = pixel_tolerance_px;
         self
@@ -450,6 +461,9 @@ struct CarouselRuntime {
     api_last_reinit_emit_frame: Option<u64>,
     api_reinit_pending: bool,
     api_last_selected_index: usize,
+    focus_tab_generation: u64,
+    focus_last_handled_tab_generation: u64,
+    focus_last_focused_element: Option<fret_ui::elements::GlobalElementId>,
 }
 
 impl Default for CarouselRuntime {
@@ -470,6 +484,9 @@ impl Default for CarouselRuntime {
             api_last_reinit_emit_frame: None,
             api_reinit_pending: false,
             api_last_selected_index: 0,
+            focus_tab_generation: 0,
+            focus_last_handled_tab_generation: 0,
+            focus_last_focused_element: None,
         }
     }
 }
@@ -1889,11 +1906,20 @@ impl Carousel {
             let embla_duration_for_key = options.embla_duration;
             let skip_snaps_for_key = options.skip_snaps;
             let drag_free_for_key = options.drag_free;
+            let watch_focus_for_key = options.watch_focus;
             let direction_for_key = layout_direction;
             let on_key_down: OnKeyDown = Arc::new(
                 move |host: &mut dyn fret_ui::action::UiFocusActionHost,
                       cx: ActionCx,
                       down: KeyDownCx| {
+                    if watch_focus_for_key && down.key == KeyCode::Tab {
+                        let _ = host.models_mut().update(&runtime_for_key, |st| {
+                            st.focus_tab_generation = st.focus_tab_generation.saturating_add(1);
+                        });
+                        host.request_redraw(cx.window);
+                        return false;
+                    }
+
                     let snaps: Arc<[Px]> = host
                         .models_mut()
                         .read(&snaps_for_key, |v| v.clone())
@@ -2148,6 +2174,7 @@ impl Carousel {
                             let item = item.attach_semantics(
                                 SemanticsDecoration::default()
                                     .role(SemanticsRole::Group)
+                                    .label(Arc::from(format!("Slide {} of {}", idx + 1, items_len)))
                                     .test_id(test_id),
                             );
 
@@ -2242,6 +2269,7 @@ impl Carousel {
             let mut snaps_now: Vec<Px> = vec![Px(0.0)];
             let mut max_offset_now = Px(0.0);
             let mut slides_now: Vec<headless_carousel::CarouselSlide1D> = Vec::new();
+            let mut snap_by_slide_now: Vec<usize> = Vec::new();
 
             if view_size_now.0 > 0.0 {
                 if let Some(viewport_bounds) = viewport_bounds {
@@ -2296,6 +2324,7 @@ impl Carousel {
                         );
                         snaps_now = model.snaps_px;
                         max_offset_now = model.max_offset_px;
+                        snap_by_slide_now = model.snap_by_slide;
                     } else if let Some(first_item_id) = item_ids.first().copied()
                         && let Some(first_bounds) = cx.last_bounds_for_element(first_item_id)
                     {
@@ -2334,9 +2363,167 @@ impl Carousel {
                             );
                             snaps_now = model.snaps_px;
                             max_offset_now = model.max_offset_px;
+                            snap_by_slide_now = model.snap_by_slide;
                         }
                     }
                 };
+            }
+
+            if options.watch_focus && view_size_now.0 > 0.0 && !snap_by_slide_now.is_empty() {
+                let pointer_down = runtime_snapshot.drag.armed || runtime_snapshot.drag.dragging;
+                let focused_now = cx.focused_element();
+                let focus_changed = focused_now != runtime_snapshot.focus_last_focused_element;
+                if !pointer_down && focus_changed {
+                    let tab_pending = runtime_snapshot.focus_tab_generation
+                        != runtime_snapshot.focus_last_handled_tab_generation;
+                    let maybe_slide_index_and_center = (|| {
+                        let focused = focused_now?;
+                        let focused_bounds = cx
+                            .last_visual_bounds_for_element(focused)
+                            .or_else(|| cx.last_bounds_for_element(focused))?;
+                        let center = Point::new(
+                            Px(focused_bounds.origin.x.0 + focused_bounds.size.width.0 * 0.5),
+                            Px(focused_bounds.origin.y.0 + focused_bounds.size.height.0 * 0.5),
+                        );
+
+                        for (idx, item_id) in item_ids.iter().enumerate() {
+                            let bounds = cx
+                                .last_visual_bounds_for_element(*item_id)
+                                .or_else(|| cx.last_bounds_for_element(*item_id));
+                            if bounds.is_some_and(|b| b.contains(center)) {
+                                return Some((idx, center));
+                            }
+                        }
+                        None
+                    })();
+
+                    if let Some((slide_index, center)) = maybe_slide_index_and_center {
+                        let focus_offscreen = viewport_bounds.is_some_and(|b| !b.contains(center));
+                        let snap_index = snap_by_slide_now
+                            .get(slide_index)
+                            .copied()
+                            .unwrap_or(slide_index)
+                            .min(snaps_now.len().saturating_sub(1));
+                        if (tab_pending || focus_offscreen)
+                            && let Some(target_snap) = snaps_now.get(snap_index).copied()
+                        {
+                            let offset_max = if options.loop_enabled {
+                                (max_offset_now.0 + view_size_now.0).max(0.0)
+                            } else {
+                                max_offset_now.0.max(0.0)
+                            };
+                            let target_offset = Px(target_snap.0.clamp(0.0, offset_max));
+
+                            if embla_engine_enabled {
+                                let content_size =
+                                    (max_offset_now.0.max(0.0) + view_size_now.0.max(0.0)).max(0.0);
+                                let mut scroll_snaps = snaps_now.iter().map(|px| -px.0).collect::<Vec<_>>();
+                                if scroll_snaps.is_empty() {
+                                    scroll_snaps.push(0.0);
+                                }
+
+                                let cur = cx.watch_model(&offset_model).copied().unwrap_or(Px(0.0));
+                                let start_snap = cx.watch_model(&index_model).copied().unwrap_or(0);
+
+                                let mut next_selected = None;
+                                let mut next_offset = None;
+                                let _ = cx.app.models_mut().update(&embla_engine_model, |v| {
+                                    if let Some(engine) = v.as_mut() {
+                                        engine.scroll_body.use_duration(0.0);
+                                        let _ = engine.scroll_to_index(
+                                            snap_index,
+                                            headless_embla::utils::DIRECTION_NONE,
+                                        );
+                                        engine.tick(false);
+                                        engine.scroll_body.use_base_duration();
+
+                                        next_selected = Some(engine.index_current);
+                                        next_offset = Some(Px((-engine.scroll_body.location()).clamp(
+                                            0.0,
+                                            offset_max,
+                                        )));
+                                        return;
+                                    }
+
+                                    let mut engine = headless_embla::engine::Engine::new(
+                                        scroll_snaps,
+                                        content_size,
+                                        headless_embla::engine::EngineConfig {
+                                            loop_enabled: options.loop_enabled,
+                                            drag_free: options.drag_free,
+                                            skip_snaps: options.skip_snaps,
+                                            duration: 0.0,
+                                            base_friction: 0.68,
+                                            view_size: view_size_now.0.max(0.0),
+                                            start_snap,
+                                        },
+                                    );
+                                    let loc = -cur.0;
+                                    engine.scroll_body.set_location(loc);
+                                    engine.scroll_body.set_target(loc);
+                                    engine.scroll_target.set_target_vector(loc);
+                                    let _ = engine.scroll_to_index(
+                                        snap_index,
+                                        headless_embla::utils::DIRECTION_NONE,
+                                    );
+                                    engine.tick(false);
+                                    engine.scroll_body.use_base_duration();
+
+                                    next_selected = Some(engine.index_current);
+                                    next_offset = Some(Px((-engine.scroll_body.location()).clamp(
+                                        0.0,
+                                        offset_max,
+                                    )));
+
+                                    *v = Some(engine);
+                                });
+
+                                if let Some(selected) = next_selected {
+                                    let _ = cx.app.models_mut().update(&index_model, |v| *v = selected);
+                                } else {
+                                    let _ = cx.app.models_mut().update(&index_model, |v| *v = snap_index);
+                                }
+                                if let Some(next_offset) = next_offset {
+                                    let _ = cx.app.models_mut().update(&offset_model, |v| *v = next_offset);
+                                } else {
+                                    let _ = cx.app.models_mut().update(&offset_model, |v| *v = target_offset);
+                                }
+                                let _ = cx.app.models_mut().update(&runtime_model, |st| {
+                                    st.drag = headless_carousel::CarouselDragState::default();
+                                    st.settling = false;
+                                    st.embla_settling = false;
+                                    st.selection_initialized = true;
+                                });
+                            } else {
+                                let _ = cx.app.models_mut().update(&embla_engine_model, |v| *v = None);
+                                let _ = cx.app.models_mut().update(&index_model, |v| *v = snap_index);
+                                let _ = cx.app.models_mut().update(&offset_model, |v| *v = target_offset);
+                                let _ = cx.app.models_mut().update(&runtime_model, |st| {
+                                    st.drag = headless_carousel::CarouselDragState::default();
+                                    st.settling = false;
+                                    st.embla_settling = false;
+                                    st.selection_initialized = true;
+                                });
+                            }
+
+                            cx.request_frame();
+                        }
+                    }
+
+                    if tab_pending {
+                        let _ = cx.app.models_mut().update(&runtime_model, |st| {
+                            st.focus_last_handled_tab_generation =
+                                runtime_snapshot.focus_tab_generation;
+                        });
+                    }
+                }
+            }
+
+            let focused_now = cx.focused_element();
+            if focused_now != runtime_snapshot.focus_last_focused_element {
+                let _ = cx.app.models_mut().update(&runtime_model, |st| {
+                    st.focus_last_focused_element = focused_now;
+                });
             }
 
             if let Some(snapshot_model) = slides_in_view_snapshot_model.clone() {
@@ -2939,9 +3126,15 @@ impl Carousel {
 
             cx.key_add_on_key_down_capture_for(root.id, on_key_down);
 
+            let orientation_semantics = match orientation {
+                CarouselOrientation::Horizontal => SemanticsOrientation::Horizontal,
+                CarouselOrientation::Vertical => SemanticsOrientation::Vertical,
+            };
             root.attach_semantics(
                 SemanticsDecoration::default()
-                    .role(SemanticsRole::Group)
+                    .role(SemanticsRole::Panel)
+                    .label("Carousel")
+                    .orientation(orientation_semantics)
                     .test_id(root_test_id),
             )
         })
