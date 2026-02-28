@@ -10,6 +10,10 @@ Recommendation:
 - Use Zed as the primary UX reference for *workspace/editor* tabs.
 - Use Dockview as the reference for *docking-style* drop target semantics and test strategy.
 
+Note:
+- Prefer invariants-based gates (diagnostics snapshots) over screenshot baselines. Use screenshots as
+  a temporary bridge when the invariant surface is not yet stable or expressible.
+
 ## 2) Where should reusable pieces live (without making tiny crates)?
 
 Candidates:
@@ -53,4 +57,3 @@ Open questions:
 Recommendation:
 - Support both modes, keep default as “single row + pinned boundary” (simpler).
 - Add a “separate pinned row” mode once geometry/overflow is stable.
-

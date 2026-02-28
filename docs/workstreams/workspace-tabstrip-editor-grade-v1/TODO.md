@@ -50,10 +50,12 @@ Non-goals:
 ## Diagnostics + regression gates
 
 - [ ] Add/extend promoted diag scripts under `tools/diag-scripts/workspace/**`:
-  - drag reorder within strip
-  - drag tab to split-zone (drop preview) in workspace shell demo
+  - drag reorder within strip (invariants-first)
+  - drag tab to split-zone (drop preview) in workspace shell demo (start with screenshot, then invariants)
   - pinned boundary behavior (pin/unpin + reorder)
+- [ ] Promote at least one workspace shell script into a smoke suite:
+  - suite: `diag-hardening-smoke-workspace`
+  - initial script: `workspace-shell-demo-tab-drag-to-split-right-drop-preview-screenshot`
 - [ ] For each new behavior, add at least one gate:
   - invariants (preferred) via diagnostics snapshots
   - screenshots only when invariants are insufficient
-

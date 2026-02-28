@@ -9,8 +9,10 @@ Outcomes:
 - `WorkspaceTabStrip` implementation is split into small modules (view/interaction/geometry/kernel).
 - Stable `test_id` anchors exist for scriptability (root + tabs + pinned boundary + overflow).
 - At least 2 promoted diagnostics scripts gate:
-  - reorder within a single strip
+  - reorder within a single strip (invariants-first)
   - drag-to-split “drop preview” in workspace shell demo
+    - initial: `workspace-shell-demo-tab-drag-to-split-right-drop-preview-screenshot`
+    - follow-up: replace with an invariants-based gate once the drop preview snapshot surface is stable
 
 Acceptance:
 - `python3 tools/check_diag_scripts_registry.py` passes.
@@ -41,4 +43,3 @@ Outcomes:
 Acceptance:
 - A small perf/correctness gate exists for “worst-frame while dragging tabs” (optional, if needed).
 - All new scripts are promoted (suite membership) and stable across DPI scaling.
-
