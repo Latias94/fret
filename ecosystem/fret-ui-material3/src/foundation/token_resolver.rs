@@ -62,65 +62,15 @@ impl<'a> MaterialTokenResolver<'a> {
 
 fn fallback_color_for_sys(sys_key: &str) -> Color {
     match sys_key {
-        "md.sys.color.primary" => Color {
-            r: 0.403,
-            g: 0.314,
-            b: 0.643,
-            a: 1.0,
-        },
-        "md.sys.color.on-primary" => Color {
-            r: 1.0,
-            g: 1.0,
-            b: 1.0,
-            a: 1.0,
-        },
-        "md.sys.color.surface" => Color {
-            r: 0.11,
-            g: 0.11,
-            b: 0.12,
-            a: 1.0,
-        },
-        "md.sys.color.surface-container" => Color {
-            r: 0.16,
-            g: 0.16,
-            b: 0.17,
-            a: 1.0,
-        },
-        "md.sys.color.surface-container-highest" => Color {
-            r: 0.2,
-            g: 0.2,
-            b: 0.21,
-            a: 1.0,
-        },
-        "md.sys.color.on-surface" => Color {
-            r: 1.0,
-            g: 1.0,
-            b: 1.0,
-            a: 1.0,
-        },
-        "md.sys.color.on-surface-variant" => Color {
-            r: 0.75,
-            g: 0.75,
-            b: 0.78,
-            a: 1.0,
-        },
-        "md.sys.color.outline" => Color {
-            r: 0.55,
-            g: 0.55,
-            b: 0.58,
-            a: 1.0,
-        },
-        "md.sys.color.outline-variant" => Color {
-            r: 0.35,
-            g: 0.35,
-            b: 0.38,
-            a: 1.0,
-        },
-        _ => Color {
-            r: 1.0,
-            g: 0.0,
-            b: 1.0,
-            a: 1.0,
-        },
+        "md.sys.color.primary" => Color::from_srgb_hex_rgb(0x67_50_a4),
+        "md.sys.color.on-primary" => Color::from_srgb_hex_rgb(0xff_ff_ff),
+        "md.sys.color.surface" => Color::from_srgb_hex_rgb(0x1c_1c_1f),
+        "md.sys.color.surface-container" => Color::from_srgb_hex_rgb(0x29_29_2b),
+        "md.sys.color.surface-container-highest" => Color::from_srgb_hex_rgb(0x33_33_36),
+        "md.sys.color.on-surface" => Color::from_srgb_hex_rgb(0xff_ff_ff),
+        "md.sys.color.on-surface-variant" => Color::from_srgb_hex_rgb(0xbf_bf_c7),
+        "md.sys.color.outline" => Color::from_srgb_hex_rgb(0x8c_8c_94),
+        "md.sys.color.outline-variant" => Color::from_srgb_hex_rgb(0x59_59_61),
+        _ => Color::from_srgb_hex_rgb(0xff_00_ff),
     }
 }
