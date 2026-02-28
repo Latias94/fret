@@ -712,6 +712,12 @@ Script input isolation (recommended for deterministic playback, especially multi
   - `--launch` runs default this to `1` (tooling also writes
     `isolate_external_pointer_input_while_script_running=true` into the per-run `diag.config.json`).
   - Escape hatch: pass `--env FRET_DIAG_ISOLATE_POINTER_INPUT=0` when you need interactive input during a script run.
+- `FRET_DIAG_ISOLATE_KEYBOARD_INPUT=1`: while a script is active, ignore external (non-script) keyboard/text/IME events
+  so accidental typing doesn't perturb scripted runs.
+  - `--launch` runs default this to `1` (tooling also writes
+    `isolate_external_keyboard_input_while_script_running=true` into the per-run `diag.config.json`).
+  - Escape hatch: pass `--env FRET_DIAG_ISOLATE_KEYBOARD_INPUT=0` when you need interactive keyboard input during a
+    script run.
 
 Screenshot capture:
 

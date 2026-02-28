@@ -79,6 +79,9 @@ Defaults if unclear:
     mouse movement/clicks do not perturb deterministic playback (useful for multi-window docking/tear-off).
   - Escape hatch: pass `--env FRET_DIAG_ISOLATE_POINTER_INPUT=0` if you intentionally need interactive pointer input
     during a script run.
+  - `--launch` also defaults to ignoring external (non-script) keyboard/text/IME events during script playback.
+  - Escape hatch: pass `--env FRET_DIAG_ISOLATE_KEYBOARD_INPUT=0` if you intentionally need interactive keyboard input
+    during a script run.
 
 ## Quick start (native, recommended)
 
