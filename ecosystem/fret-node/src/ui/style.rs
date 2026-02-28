@@ -176,28 +176,13 @@ pub struct NodeGraphStyle {
 impl Default for NodeGraphStyle {
     fn default() -> Self {
         Self {
-            background: Color {
-                r: 0.08,
-                g: 0.09,
-                b: 0.10,
-                a: 1.0,
-            },
+            background: Color::from_srgb_hex_rgb(0x14_17_1a),
 
             grid_pattern: NodeGraphBackgroundPattern::Lines,
             grid_spacing: 64.0,
-            grid_minor_color: Color {
-                r: 0.14,
-                g: 0.15,
-                b: 0.16,
-                a: 1.0,
-            },
+            grid_minor_color: Color::from_srgb_hex_rgb(0x24_26_29),
             grid_major_every: 4,
-            grid_major_color: Color {
-                r: 0.20,
-                g: 0.21,
-                b: 0.22,
-                a: 1.0,
-            },
+            grid_major_color: Color::from_srgb_hex_rgb(0x33_36_38),
             grid_line_width: 1.0,
             grid_dot_size: 1.0,
             grid_cross_size: 6.0,
@@ -209,84 +194,39 @@ impl Default for NodeGraphStyle {
             pin_row_height: 22.0,
             pin_radius: 6.0,
 
-            node_background: Color {
-                r: 0.12,
-                g: 0.13,
-                b: 0.14,
-                a: 1.0,
-            },
-            node_border: Color {
-                r: 0.24,
-                g: 0.25,
-                b: 0.26,
-                a: 1.0,
-            },
-            node_border_selected: Color {
-                r: 0.20,
-                g: 0.55,
-                b: 0.95,
-                a: 1.0,
-            },
+            node_background: Color::from_srgb_hex_rgb(0x1f_21_24),
+            node_border: Color::from_srgb_hex_rgb(0x3d_40_42),
+            node_border_selected: Color::from_srgb_hex_rgb(0x33_8c_f2),
 
             group_background: Color {
-                r: 0.10,
-                g: 0.11,
-                b: 0.12,
                 a: 0.25,
+                ..Color::from_srgb_hex_rgb(0x1a_1c_1f)
             },
             group_border: Color {
-                r: 0.24,
-                g: 0.25,
-                b: 0.26,
                 a: 0.90,
+                ..Color::from_srgb_hex_rgb(0x3d_40_42)
             },
 
             resize_handle_size: 12.0,
             resize_handle_background: Color {
-                r: 0.14,
-                g: 0.15,
-                b: 0.16,
                 a: 0.95,
+                ..Color::from_srgb_hex_rgb(0x24_26_29)
             },
             resize_handle_border: Color {
-                r: 0.60,
-                g: 0.62,
-                b: 0.64,
                 a: 0.90,
+                ..Color::from_srgb_hex_rgb(0x99_9e_a3)
             },
 
-            pin_color_data: Color {
-                r: 0.20,
-                g: 0.55,
-                b: 0.95,
-                a: 1.0,
-            },
-            pin_color_exec: Color {
-                r: 0.95,
-                g: 0.75,
-                b: 0.20,
-                a: 1.0,
-            },
+            pin_color_data: Color::from_srgb_hex_rgb(0x33_8c_f2),
+            pin_color_exec: Color::from_srgb_hex_rgb(0xf2_bf_33),
 
             wire_width: 3.0,
             wire_interaction_width: 14.0,
-            wire_color_data: Color {
-                r: 0.20,
-                g: 0.55,
-                b: 0.95,
-                a: 1.0,
-            },
-            wire_color_exec: Color {
-                r: 0.95,
-                g: 0.75,
-                b: 0.20,
-                a: 1.0,
-            },
+            wire_color_data: Color::from_srgb_hex_rgb(0x33_8c_f2),
+            wire_color_exec: Color::from_srgb_hex_rgb(0xf2_bf_33),
             wire_color_preview: Color {
-                r: 0.95,
-                g: 0.95,
-                b: 0.95,
                 a: 0.85,
+                ..Color::from_srgb_hex_rgb(0xf2_f2_f2)
             },
 
             wire_width_selected_mul: 1.6,
@@ -297,48 +237,33 @@ impl Default for NodeGraphStyle {
             edge_label_offset: 10.0,
             edge_label_max_width: 220.0,
             edge_label_background: Color {
-                r: 0.14,
-                g: 0.15,
-                b: 0.16,
                 a: 0.98,
+                ..Color::from_srgb_hex_rgb(0x24_26_29)
             },
             edge_label_border: Color {
-                r: 0.60,
-                g: 0.62,
-                b: 0.64,
                 a: 0.90,
+                ..Color::from_srgb_hex_rgb(0x99_9e_a3)
             },
             edge_label_border_width: 1.0,
-            edge_label_text: Color {
-                r: 0.92,
-                g: 0.93,
-                b: 0.94,
-                a: 1.0,
-            },
+            edge_label_text: Color::from_srgb_hex_rgb(0xeb_ed_f0),
             edge_label_text_style: TextStyle {
                 size: Px(12.0),
                 ..TextStyle::default()
             },
 
             marquee_fill: Color {
-                r: 0.20,
-                g: 0.55,
-                b: 0.95,
                 a: 0.18,
+                ..Color::from_srgb_hex_rgb(0x33_8c_f2)
             },
             marquee_border: Color {
-                r: 0.20,
-                g: 0.55,
-                b: 0.95,
                 a: 0.90,
+                ..Color::from_srgb_hex_rgb(0x33_8c_f2)
             },
             marquee_border_width: 1.0,
 
             snapline_color: Color {
-                r: 0.20,
-                g: 0.55,
-                b: 0.95,
                 a: 0.90,
+                ..Color::from_srgb_hex_rgb(0x33_8c_f2)
             },
             snapline_width: 1.0,
 
@@ -347,35 +272,13 @@ impl Default for NodeGraphStyle {
             context_menu_item_height: 26.0,
             context_menu_corner_radius: 6.0,
             context_menu_background: Color {
-                r: 0.10,
-                g: 0.11,
-                b: 0.12,
                 a: 0.98,
+                ..Color::from_srgb_hex_rgb(0x1a_1c_1f)
             },
-            context_menu_border: Color {
-                r: 0.26,
-                g: 0.27,
-                b: 0.28,
-                a: 1.0,
-            },
-            context_menu_hover_background: Color {
-                r: 0.17,
-                g: 0.18,
-                b: 0.19,
-                a: 1.0,
-            },
-            context_menu_text: Color {
-                r: 0.92,
-                g: 0.93,
-                b: 0.94,
-                a: 1.0,
-            },
-            context_menu_text_disabled: Color {
-                r: 0.60,
-                g: 0.62,
-                b: 0.64,
-                a: 1.0,
-            },
+            context_menu_border: Color::from_srgb_hex_rgb(0x42_45_47),
+            context_menu_hover_background: Color::from_srgb_hex_rgb(0x2b_2e_30),
+            context_menu_text: Color::from_srgb_hex_rgb(0xeb_ed_f0),
+            context_menu_text_disabled: Color::from_srgb_hex_rgb(0x99_9e_a3),
             context_menu_text_style: TextStyle {
                 size: Px(13.0),
                 ..TextStyle::default()
@@ -390,27 +293,15 @@ impl Default for NodeGraphStyle {
             controls_gap: 6.0,
             controls_margin: 12.0,
             controls_padding: 6.0,
-            controls_text: Color {
-                r: 0.92,
-                g: 0.93,
-                b: 0.94,
-                a: 1.0,
-            },
+            controls_text: Color::from_srgb_hex_rgb(0xeb_ed_f0),
             controls_text_style: TextStyle {
                 size: Px(12.0),
                 ..TextStyle::default()
             },
-            controls_hover_background: Color {
-                r: 0.17,
-                g: 0.18,
-                b: 0.19,
-                a: 1.0,
-            },
+            controls_hover_background: Color::from_srgb_hex_rgb(0x2b_2e_30),
             controls_active_background: Color {
-                r: 0.20,
-                g: 0.55,
-                b: 0.95,
                 a: 0.25,
+                ..Color::from_srgb_hex_rgb(0x33_8c_f2)
             },
 
             render_cull_margin_px: 256.0,
@@ -437,102 +328,45 @@ impl NodeGraphStyle {
     pub fn xyflow_light_defaults() -> Self {
         let mut s = Self::default();
 
-        s.background = Color {
-            r: 0.98,
-            g: 0.98,
-            b: 0.98,
-            a: 1.0,
-        };
+        s.background = Color::from_srgb_hex_rgb(0xfa_fa_fa);
 
-        s.grid_minor_color = Color {
-            r: 0.90,
-            g: 0.90,
-            b: 0.90,
-            a: 1.0,
-        };
-        s.grid_major_color = Color {
-            r: 0.84,
-            g: 0.84,
-            b: 0.84,
-            a: 1.0,
-        };
+        s.grid_minor_color = Color::from_srgb_hex_rgb(0xe6_e6_e6);
+        s.grid_major_color = Color::from_srgb_hex_rgb(0xd6_d6_d6);
 
-        s.node_background = Color {
-            r: 1.0,
-            g: 1.0,
-            b: 1.0,
-            a: 1.0,
-        };
-        s.node_border = Color {
-            r: 0.78,
-            g: 0.78,
-            b: 0.78,
-            a: 1.0,
-        };
+        s.node_background = Color::from_srgb_hex_rgb(0xff_ff_ff);
+        s.node_border = Color::from_srgb_hex_rgb(0xc7_c7_c7);
 
         s.group_background = Color {
-            r: 0.90,
-            g: 0.90,
-            b: 0.90,
             a: 0.45,
+            ..Color::from_srgb_hex_rgb(0xe6_e6_e6)
         };
         s.group_border = Color {
-            r: 0.78,
-            g: 0.78,
-            b: 0.78,
             a: 0.90,
+            ..Color::from_srgb_hex_rgb(0xc7_c7_c7)
         };
 
         s.resize_handle_background = Color {
-            r: 0.96,
-            g: 0.96,
-            b: 0.96,
             a: 0.98,
+            ..Color::from_srgb_hex_rgb(0xf5_f5_f5)
         };
         s.resize_handle_border = Color {
-            r: 0.70,
-            g: 0.70,
-            b: 0.70,
             a: 0.90,
+            ..Color::from_srgb_hex_rgb(0xb3_b3_b3)
         };
 
         s.wire_color_preview = Color {
-            r: 0.10,
-            g: 0.10,
-            b: 0.10,
             a: 0.60,
+            ..Color::from_srgb_hex_rgb(0x1a_1a_1a)
         };
 
         s.context_menu_background = Color {
-            r: 1.0,
-            g: 1.0,
-            b: 1.0,
             a: 0.98,
+            ..Color::from_srgb_hex_rgb(0xff_ff_ff)
         };
-        s.context_menu_border = Color {
-            r: 0.78,
-            g: 0.78,
-            b: 0.78,
-            a: 1.0,
-        };
-        s.context_menu_hover_background = Color {
-            r: 0.92,
-            g: 0.95,
-            b: 1.0,
-            a: 1.0,
-        };
-        s.context_menu_text = Color {
-            r: 0.12,
-            g: 0.12,
-            b: 0.12,
-            a: 1.0,
-        };
-        s.context_menu_text_disabled = Color {
-            r: 0.45,
-            g: 0.45,
-            b: 0.45,
-            a: 1.0,
-        };
+        s.context_menu_border = Color::from_srgb_hex_rgb(0xc7_c7_c7);
+        s.context_menu_hover_background = Color::from_srgb_hex_rgb(0xeb_f2_ff);
+        s.context_menu_text = Color::from_srgb_hex_rgb(0x1f_1f_1f);
+        s.context_menu_text_disabled = Color::from_srgb_hex_rgb(0x73_73_73);
 
         s.edge_label_background = s.context_menu_background;
         s.edge_label_border = s.context_menu_border;
@@ -542,10 +376,8 @@ impl NodeGraphStyle {
         s.controls_text = s.context_menu_text;
         s.controls_hover_background = s.context_menu_hover_background;
         s.controls_active_background = Color {
-            r: 0.20,
-            g: 0.55,
-            b: 0.95,
             a: 0.22,
+            ..Color::from_srgb_hex_rgb(0x33_8c_f2)
         };
 
         s
