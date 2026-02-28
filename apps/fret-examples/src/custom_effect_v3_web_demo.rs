@@ -17,138 +17,9 @@ use fret_launch::{WinitAppDriver, WinitEventContext, WinitRenderContext, WinitRu
 use fret_render::{Renderer, WgpuContext};
 use fret_runtime::PlatformCapabilities;
 
-const WGSL: &str = r#"
-fn radius_at(centered: vec2<f32>, radii: vec4<f32>) -> f32 {
-  if (centered.x >= 0.0) {
-    if (centered.y <= 0.0) { return radii.y; }
-    return radii.z;
-  }
-  if (centered.y <= 0.0) { return radii.x; }
-  return radii.w;
-}
+use crate::custom_effect_v3_wgsl::CUSTOM_EFFECT_V3_LENS_WGSL;
 
-fn sd_rounded_rect(centered: vec2<f32>, half_size: vec2<f32>, radius: f32) -> f32 {
-  let corner = abs(centered) - (half_size - vec2<f32>(radius));
-  let outside = length(max(corner, vec2<f32>(0.0))) - radius;
-  let inside = min(max(corner.x, corner.y), 0.0);
-  return outside + inside;
-}
-
-fn grad_sd_rounded_rect(centered: vec2<f32>, half_size: vec2<f32>, radius: f32) -> vec2<f32> {
-  let corner = abs(centered) - (half_size - vec2<f32>(radius));
-  if (corner.x >= 0.0 || corner.y >= 0.0) {
-    return sign(centered) * normalize(max(corner, vec2<f32>(0.0)) + vec2<f32>(1.0e-6, 0.0));
-  }
-  let grad_x = select(0.0, 1.0, corner.y <= corner.x);
-  return sign(centered) * vec2<f32>(grad_x, 1.0 - grad_x);
-}
-
-fn circle_map(x: f32) -> f32 {
-  let xx = clamp(x, 0.0, 1.0);
-  return 1.0 - sqrt(max(1.0 - xx * xx, 0.0));
-}
-
-fn hash01(p: vec2<f32>) -> f32 {
-  // Deterministic, derivative-free "hash noise" for subtle grain.
-  let u = dot(p, vec2<f32>(12.9898, 78.233));
-  return fract(sin(u) * 43758.5453);
-}
-
-fn fret_custom_effect(src: vec4<f32>, _uv: vec2<f32>, pos_px: vec2<f32>, params: EffectParamsV1) -> vec4<f32> {
-  // params.vec4s[0]:
-  // - x: refraction_height_px (controls edge thickness; caller should scale to render px)
-  // - y: refraction_amount_px (controls displacement; caller should scale to render px)
-  // - z: pyramid_level
-  // - w: frost_mix (0..1)
-  let refraction_height_px = clamp(params.vec4s[0].x, 0.0, 96.0);
-  let refraction_amount_px = clamp(params.vec4s[0].y, 0.0, 96.0);
-  let pyramid_level = u32(clamp(params.vec4s[0].z, 0.0, 6.0));
-  let frost_mix = clamp(params.vec4s[0].w, 0.0, 1.0);
-
-  // params.vec4s[1]:
-  // - x: corner_radius_px (caller should scale to render px)
-  // - y: depth_effect (0..1)
-  // - z: dispersion (0..1)
-  // - w: reserved (v1 demo)
-  let corner_radius_px = clamp(params.vec4s[1].x, 0.0, 256.0);
-  let depth_effect = clamp(params.vec4s[1].y, 0.0, 1.0);
-  let dispersion = clamp(params.vec4s[1].z, 0.0, 1.0);
-
-  // params.vec4s[2]:
-  // - x: noise_alpha (0..0.1)
-  // - y/z/w: reserved (v1 demo)
-  let noise_alpha = clamp(params.vec4s[2].x, 0.0, 0.1);
-
-  // params.vec4s[3]: tint (premul-ish RGB + alpha)
-  let tint = vec4<f32>(
-    clamp(params.vec4s[3].x, 0.0, 1.0),
-    clamp(params.vec4s[3].y, 0.0, 1.0),
-    clamp(params.vec4s[3].z, 0.0, 1.0),
-    clamp(params.vec4s[3].w, 0.0, 1.0)
-  );
-
-  let local = fret_local_px(pos_px);
-  let size = max(render_space.size_px, vec2<f32>(1.0));
-  let half_size = size * 0.5;
-  let centered = local - half_size;
-
-  // Rounded-rect SDF (AndroidLiquidGlass-like).
-  let radii = vec4<f32>(corner_radius_px, corner_radius_px, corner_radius_px, corner_radius_px);
-  let radius = radius_at(centered, radii);
-  let sd = sd_rounded_rect(centered, half_size, radius);
-  if (sd > 0.0) {
-    // Outside the rounded rect (but still within the effect bounds). Returning the unmodified chain
-    // input avoids bright fringes when clip coverage is applied at the chain end.
-    return src;
-  }
-  let inside_px = clamp(-sd, 0.0, 4096.0);
-  let inside01 = select(
-    0.0,
-    inside_px / max(refraction_height_px, 1.0),
-    refraction_height_px > 0.0
-  );
-
-  // Frosted source: prior blur (`src`) + optional extra pyramid sampling.
-  let pyr = fret_sample_src_pyramid_at_pos(pyramid_level, pos_px);
-  let frosted = mix(src, pyr, frost_mix);
-
-  // Match AndroidLiquidGlass semantics: only the "rim" (within `refraction_height_px`) refracts.
-  if (inside_px >= refraction_height_px || refraction_height_px <= 0.0 || refraction_amount_px <= 0.0) {
-    let out_rgb = mix(frosted.rgb, tint.rgb, tint.a);
-    let n = hash01(floor(pos_px) + vec2<f32>(17.0, 91.0)) - 0.5;
-    return vec4<f32>(clamp(out_rgb + vec3<f32>(n) * noise_alpha, vec3<f32>(0.0), vec3<f32>(1.0)), frosted.a);
-  }
-
-  // Refraction direction from SDF gradient (optionally with "depth" pull toward center).
-  let grad_radius = min(radius * 1.5, min(half_size.x, half_size.y));
-  let g0 = grad_sd_rounded_rect(centered, half_size, grad_radius);
-  let g1 = normalize(g0 + depth_effect * normalize(centered + vec2<f32>(1.0e-6, 0.0)));
-
-  // Displacement magnitude (circle-map taper like AndroidLiquidGlass).
-  // Note: AndroidLiquidGlass uses a negated refraction amount so the rim refracts inward.
-  let d = circle_map(1.0 - inside01) * refraction_amount_px;
-  let refract = -d * g1;
-
-  // Chromatic dispersion (3 taps; cheaper than the full 7-tap Android shader).
-  let disp_k = dispersion * abs((centered.x * centered.y) / max(half_size.x * half_size.y, 1.0));
-  let disp = refract * disp_k;
-  let raw_r = fret_sample_src_raw_at_pos(pos_px + refract + disp);
-  let raw_g = fret_sample_src_raw_at_pos(pos_px + refract);
-  let raw_b = fret_sample_src_raw_at_pos(pos_px + refract - disp);
-  let raw = vec4<f32>(raw_r.r, raw_g.g, raw_b.b, raw_g.a);
-
-  // Combine: blend refracted raw into frosted as we move away from the rim.
-  let rim = 1.0 - smoothstep(0.0, 1.0, inside01);
-  var out_rgb = mix(frosted.rgb, raw.rgb, rim);
-
-  // Tint + subtle grain.
-  out_rgb = mix(out_rgb, tint.rgb, tint.a);
-  let n = hash01(floor(pos_px) + vec2<f32>(17.0, 91.0)) - 0.5;
-  out_rgb = out_rgb + vec3<f32>(n) * noise_alpha;
-
-  return vec4<f32>(clamp(out_rgb, vec3<f32>(0.0), vec3<f32>(1.0)), frosted.a);
-}
-"#;
+const WGSL: &str = CUSTOM_EFFECT_V3_LENS_WGSL;
 
 #[derive(Debug, Default)]
 pub struct CustomEffectV3WebDriver {
@@ -335,6 +206,10 @@ impl WinitAppDriver for CustomEffectV3WebDriver {
                     chain: chain.clone(),
                     quality: EffectQuality::Auto,
                 });
+                scene.push(SceneOp::PopEffect);
+
+                // Draw chrome *after* the backdrop effect so it doesn't get sampled/warped by the
+                // chain itself (matches the authoring pattern used by `liquid_glass_demo`).
                 scene.push(SceneOp::Quad {
                     order: DrawOrder(base),
                     rect: lens,
@@ -348,7 +223,6 @@ impl WinitAppDriver for CustomEffectV3WebDriver {
                     border_paint: Paint::Solid(Color::TRANSPARENT),
                     corner_radii: Corners::all(Px(24.0)),
                 });
-                scene.push(SceneOp::PopEffect);
                 scene.push(SceneOp::PopClip);
 
                 // Outline highlight.
