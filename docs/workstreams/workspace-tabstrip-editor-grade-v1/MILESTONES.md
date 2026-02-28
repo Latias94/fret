@@ -15,6 +15,8 @@ Outcomes:
     - follow-up: replace with an invariants-based gate once the drop preview snapshot surface is stable
   - middle-click close behavior (smoke):
     - `workspace-shell-demo-tab-middle-click-close-smoke`
+  - close button behavior (smoke):
+    - `workspace-shell-demo-tab-close-button-closes-tab-smoke`
 
 Acceptance:
 - `python3 tools/check_diag_scripts_registry.py` passes.
