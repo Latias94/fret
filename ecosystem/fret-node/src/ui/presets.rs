@@ -62,6 +62,7 @@ pub struct NodeGraphPresetSkinV1 {
     rev: AtomicU64,
     index: AtomicUsize,
     wire_glow_enabled: AtomicBool,
+    wire_highlight_enabled: AtomicBool,
     presets: Arc<NodeGraphThemePresetsV1>,
     id_to_index: HashMap<String, usize>,
 }
@@ -78,6 +79,7 @@ impl NodeGraphPresetSkinV1 {
             rev: AtomicU64::new(1),
             index: AtomicUsize::new(index),
             wire_glow_enabled: AtomicBool::new(true),
+            wire_highlight_enabled: AtomicBool::new(true),
             presets,
             id_to_index,
         })
@@ -94,6 +96,7 @@ impl NodeGraphPresetSkinV1 {
             rev: AtomicU64::new(theme.revision.max(1)),
             index: AtomicUsize::new(index),
             wire_glow_enabled: AtomicBool::new(true),
+            wire_highlight_enabled: AtomicBool::new(true),
             presets,
             id_to_index,
         })
@@ -142,6 +145,17 @@ impl NodeGraphPresetSkinV1 {
     pub fn toggle_wire_glow(&self) -> bool {
         let next = !self.wire_glow_enabled();
         self.wire_glow_enabled.store(next, Ordering::Relaxed);
+        self.rev.fetch_add(1, Ordering::Relaxed);
+        next
+    }
+
+    pub fn wire_highlight_enabled(&self) -> bool {
+        self.wire_highlight_enabled.load(Ordering::Relaxed)
+    }
+
+    pub fn toggle_wire_highlight(&self) -> bool {
+        let next = !self.wire_highlight_enabled();
+        self.wire_highlight_enabled.store(next, Ordering::Relaxed);
         self.rev.fetch_add(1, Ordering::Relaxed);
         next
     }
@@ -213,6 +227,7 @@ impl NodeGraphSkin for NodeGraphPresetSkinV1 {
         _style: &NodeGraphStyle,
     ) -> InteractionChromeHint {
         let wire_glow_enabled = self.wire_glow_enabled.load(Ordering::Relaxed);
+        let wire_highlight_enabled = self.wire_highlight_enabled.load(Ordering::Relaxed);
         let tokens = &self.preset().paint_only_tokens;
         let preset_id = self.preset().id.as_str();
         let (wire_glow_selected, wire_glow_preview) = if wire_glow_enabled {
@@ -259,14 +274,22 @@ impl NodeGraphSkin for NodeGraphPresetSkinV1 {
         };
 
         let (wire_highlight_selected, wire_highlight_hovered) = (
-            tokens
-                .wire
-                .highlight_selected
-                .map(WireHighlightTokensV1::into_hint),
-            tokens
-                .wire
-                .highlight_hovered
-                .map(WireHighlightTokensV1::into_hint),
+            wire_highlight_enabled
+                .then(|| {
+                    tokens
+                        .wire
+                        .highlight_selected
+                        .map(WireHighlightTokensV1::into_hint)
+                })
+                .flatten(),
+            wire_highlight_enabled
+                .then(|| {
+                    tokens
+                        .wire
+                        .highlight_hovered
+                        .map(WireHighlightTokensV1::into_hint)
+                })
+                .flatten(),
         );
 
         let outline_color = Color {
