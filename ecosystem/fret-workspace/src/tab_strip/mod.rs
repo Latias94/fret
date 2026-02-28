@@ -39,7 +39,10 @@ mod overflow;
 #[cfg(feature = "shadcn-context-menu")]
 use overflow::compute_overflowed_tab_ids;
 
-use kernel::{WorkspaceTabStripDropTarget, compute_workspace_tab_strip_drop_target};
+use kernel::{
+    WorkspaceTabStripDropTarget, compute_tab_strip_edge_auto_scroll_delta_x,
+    compute_workspace_tab_strip_drop_target,
+};
 
 use crate::tab_drag::compute_tab_drop_target;
 
@@ -184,6 +187,7 @@ struct WorkspaceTabStripDragState {
     drop_target: WorkspaceTabStripDropTarget,
     tab_rects: Vec<WorkspaceTabHitRect>,
     pinned_boundary_rect: Option<Rect>,
+    scroll_viewport_rect: Option<Rect>,
 }
 
 #[derive(Debug, Default)]
@@ -876,6 +880,7 @@ impl WorkspaceTabStrip {
                                                             let source_pane = pane_id_for_drag.clone();
                                                             let dragged_tab_id = tab_id.clone();
                                                             let dnd = dnd.clone();
+                                                            let scroll_handle = scroll_handle.clone();
                                                             Arc::new(move |host, acx, mv| {
                                                                 let mut start_tick = TickId::default();
                                                                 let mut start_position = Point::default();
@@ -883,6 +888,7 @@ impl WorkspaceTabStrip {
                                                                 let mut dragged_tab: Option<Arc<str>> = None;
                                                                 let mut tab_rects: Vec<WorkspaceTabHitRect> = Vec::new();
                                                                 let mut pinned_boundary_rect: Option<Rect> = None;
+                                                                let mut scroll_viewport_rect: Option<Rect> = None;
 
                                                                 let _ = host.models_mut().read(&drag_model, |st| {
                                                                     if st.pointer != Some(mv.pointer_id) {
@@ -894,6 +900,7 @@ impl WorkspaceTabStrip {
                                                                     dragged_tab = st.dragged_tab.clone();
                                                                     tab_rects = st.tab_rects.clone();
                                                                     pinned_boundary_rect = st.pinned_boundary_rect;
+                                                                    scroll_viewport_rect = st.scroll_viewport_rect;
                                                                 });
 
                                                                 if dragged_tab.is_none() {
@@ -958,13 +965,35 @@ impl WorkspaceTabStrip {
                                                                 }
 
                                                                 let dragged = dragged_tab.expect("checked above");
-                                                                let drop_target =
+                                                                let mut drop_target =
                                                                     compute_workspace_tab_strip_drop_target(
                                                                         mv.position,
                                                                         dragged.as_ref(),
                                                                         &tab_rects,
                                                                         pinned_boundary_rect,
+                                                                        scroll_viewport_rect,
                                                                     );
+                                                                if matches!(drop_target, WorkspaceTabStripDropTarget::End) {
+                                                                    let mut best: Option<(Arc<str>, f32)> = None;
+                                                                    for r in tab_rects.iter().filter(|r| r.id.as_ref() != dragged.as_ref()) {
+                                                                        let right = r.rect.origin.x.0 + r.rect.size.width.0;
+                                                                        if best
+                                                                            .as_ref()
+                                                                            .map(|(_id, prev)| right > *prev)
+                                                                            .unwrap_or(true)
+                                                                        {
+                                                                            best = Some((r.id.clone(), right));
+                                                                        }
+                                                                    }
+                                                                    drop_target = best
+                                                                        .map(|(id, _)| {
+                                                                            WorkspaceTabStripDropTarget::Tab(
+                                                                                id,
+                                                                                WorkspaceTabInsertionSide::After,
+                                                                            )
+                                                                        })
+                                                                        .unwrap_or(WorkspaceTabStripDropTarget::None);
+                                                                }
 
                                                                 let _ = host.models_mut().update(&drag_model, |st| {
                                                                     if st.pointer != Some(mv.pointer_id) {
@@ -1012,6 +1041,11 @@ impl WorkspaceTabStrip {
                                                                         drag.position = mv.position;
                                                                         drag.dragging = true;
                                                                     }
+                                                                }
+                                                                // Best-effort: if we changed the scroll offset due to an earlier
+                                                                // auto-scroll, make sure we keep requesting redraws while dragging.
+                                                                if dragging && scroll_handle.max_offset().x.0 > 0.5 {
+                                                                    host.request_redraw(acx.window);
                                                                 }
                                                                 host.request_redraw(acx.window);
                                                                 true
@@ -1125,6 +1159,7 @@ impl WorkspaceTabStrip {
                                                                         }
                                                                         host.request_redraw(acx.window);
                                                                     }
+                                                                    WorkspaceTabStripDropTarget::End => {}
                                                                 }
 
                                                                 outcome
@@ -1626,6 +1661,12 @@ impl WorkspaceTabStrip {
                             let viewport_now = scroll_element
                                 .get()
                                 .and_then(|id| cx.last_bounds_for_element(id));
+                            let viewport_for_hit = viewport_now.or(cached_scroll_viewport);
+                            let rects_for_hit = if rects.is_empty() {
+                                cached_tab_rects.clone()
+                            } else {
+                                rects.clone()
+                            };
                             if !rects.is_empty() || viewport_now.is_some() {
                                 let rects_for_cache = rects.clone();
                                 cx.with_state(WorkspaceTabStripState::default, |state| {
@@ -1641,17 +1682,20 @@ impl WorkspaceTabStrip {
                             let should_sync_rects =
                                 drag_snapshot.pointer.is_some() || drag_snapshot.dragged_tab.is_some();
                             let should_clear = drag_snapshot.dragged_tab.as_ref().is_some_and(|dragged| {
-                                !rects.iter().any(|r| r.id.as_ref() == dragged.as_ref())
+                                !rects_for_hit.iter().any(|r| r.id.as_ref() == dragged.as_ref())
                             });
-                            let rects_changed = rects != drag_snapshot.tab_rects;
+                            let rects_changed = rects_for_hit != drag_snapshot.tab_rects;
                             let pinned_boundary_changed =
                                 pinned_boundary_rect_now != drag_snapshot.pinned_boundary_rect;
+                            let viewport_changed = viewport_for_hit != drag_snapshot.scroll_viewport_rect;
 
                             if should_clear
-                                || (should_sync_rects && (rects_changed || pinned_boundary_changed))
+                                || (should_sync_rects
+                                    && (rects_changed || pinned_boundary_changed || viewport_changed))
                             {
-                                let rects_for_model = rects.clone();
+                                let rects_for_model = rects_for_hit.clone();
                                 let pinned_boundary_rect_for_model = pinned_boundary_rect_now;
+                                let viewport_for_model = viewport_for_hit;
                                 let _ = cx.app.models_mut().update(&drag_model, move |st| {
                                     if should_clear {
                                         *st = WorkspaceTabStripDragState::default();
@@ -1660,6 +1704,7 @@ impl WorkspaceTabStrip {
 
                                     st.tab_rects = rects_for_model;
                                     st.pinned_boundary_rect = pinned_boundary_rect_for_model;
+                                    st.scroll_viewport_rect = viewport_for_model;
                                     match st.drop_target.clone() {
                                         WorkspaceTabStripDropTarget::None => {}
                                         WorkspaceTabStripDropTarget::PinnedBoundary => {
@@ -1672,8 +1717,81 @@ impl WorkspaceTabStrip {
                                                 st.drop_target = WorkspaceTabStripDropTarget::None;
                                             }
                                         }
+                                        WorkspaceTabStripDropTarget::End => {
+                                            st.drop_target = WorkspaceTabStripDropTarget::None;
+                                        }
                                     }
                                 });
+                            }
+
+                            // While dragging, recompute the local drop target every frame so it stays in
+                            // sync with edge auto-scroll and scroll-to-reveal changes.
+                            if drag_snapshot.dragging
+                                && let Some(pointer_id) = drag_snapshot.pointer
+                                && let Some(dragged) = drag_snapshot.dragged_tab.as_deref()
+                            {
+                                if let Some(session) = cx.app.drag(pointer_id) {
+                                    let session_kind = session.kind;
+                                    let session_dragging = session.dragging;
+                                    let session_current_window = session.current_window;
+                                    let session_position = session.position;
+
+                                    if session_kind == DRAG_KIND_WORKSPACE_TAB
+                                        && session_dragging
+                                        && session_current_window == cx.window
+                                    {
+                                    let next = compute_workspace_tab_strip_drop_target(
+                                        session_position,
+                                        dragged,
+                                        &rects_for_hit,
+                                        pinned_boundary_rect_now,
+                                        viewport_for_hit,
+                                    );
+                                    let next = match next {
+                                        WorkspaceTabStripDropTarget::End => rects_for_hit
+                                            .iter()
+                                            .filter(|r| r.id.as_ref() != dragged)
+                                            .max_by(|a, b| {
+                                                let ar = a.rect.origin.x.0 + a.rect.size.width.0;
+                                                let br = b.rect.origin.x.0 + b.rect.size.width.0;
+                                                ar.total_cmp(&br)
+                                            })
+                                            .map(|r| {
+                                                WorkspaceTabStripDropTarget::Tab(
+                                                    r.id.clone(),
+                                                    WorkspaceTabInsertionSide::After,
+                                                )
+                                            })
+                                            .unwrap_or(WorkspaceTabStripDropTarget::None),
+                                        other => other,
+                                    };
+                                    if next != drag_snapshot.drop_target {
+                                        let _ = cx.app.models_mut().update(&drag_model, |st| {
+                                            if st.pointer != Some(pointer_id) {
+                                                return;
+                                            }
+                                            st.drop_target = next.clone();
+                                        });
+                                    }
+
+                                    if let Some(viewport) = viewport_for_hit {
+                                        let current = scroll_handle.offset();
+                                        let max_x = scroll_handle.max_offset().x;
+                                        let delta = compute_tab_strip_edge_auto_scroll_delta_x(
+                                            viewport,
+                                            session_position,
+                                            current.x,
+                                            max_x,
+                                        );
+                                        if delta.0.abs() > 0.01 {
+                                            let next_x = (current.x.0 + delta.0).clamp(0.0, max_x.0);
+                                            if (next_x - current.x.0).abs() > 0.01 {
+                                                scroll_handle.set_offset(Point::new(Px(next_x), current.y));
+                                            }
+                                        }
+                                    }
+                                    }
+                                }
                             }
 
                             if let (Some(tab_drag_model), Some(pane_id)) =
@@ -1706,16 +1824,21 @@ impl WorkspaceTabStrip {
 
                                     let (next_tab, next_side, next_rects) = if inside_tab_strip {
                                         let session = session.expect("checked above");
+                                        let rects_for_cross = if rects.is_empty() {
+                                            cached_tab_rects.clone()
+                                        } else {
+                                            rects.clone()
+                                        };
                                         let drop_target = tab_drag_snapshot
                                             .dragged_tab
                                             .as_deref()
                                             .and_then(|dragged| {
-                                                compute_tab_drop_target(session.position, dragged, &rects)
+                                                compute_tab_drop_target(session.position, dragged, &rects_for_cross)
                                             });
                                         (
                                             drop_target.as_ref().map(|(id, _)| id.clone()),
                                             drop_target.as_ref().map(|(_, side)| *side),
-                                            rects.clone(),
+                                            rects_for_cross,
                                         )
                                     } else {
                                         (None, None, Vec::new())
