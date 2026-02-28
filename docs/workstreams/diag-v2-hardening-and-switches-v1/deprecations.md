@@ -22,6 +22,20 @@ Prefer a config file (`FRET_DIAG_CONFIG_PATH`) plus a small set of explicit over
 Other `FRET_DIAG_*` env vars remain supported as compatibility/escape hatches, but should not be
 required for the common `fretboard diag ... --launch` flows.
 
+## Tool-launched (`--launch`) env policy (recommended)
+
+`--launch` runs are intended to be deterministic and small-by-default:
+
+- Tooling writes a per-run `diag.config.json` and sets `FRET_DIAG_CONFIG_PATH` for the child process.
+- Tooling scrubs inherited `FRET_DIAG_*` env vars from the parent shell to avoid accidental overrides (env usually
+  overrides config in the runtime resolution order).
+- `--env KEY=VALUE` cannot override tooling-owned reserved keys (notably `FRET_DIAG_DIR` and all `FRET_DIAG_*_PATH`
+  variables); use CLI flags like `--dir` / `--*-path` instead.
+- If a launched run needs a one-off override, pass it explicitly via `--env` (non-reserved keys), then confirm the
+  effective merged config via `diag config doctor --mode launch`.
+
+See also: `docs/ui-diagnostics-and-scripted-tests.md` (“Tool-launched env policy”).
+
 ## Deprecated env var aliases
 
 ### `FRET_FRAME_CLOCK_FIXED_DELTA_MS` → `FRET_DIAG_FIXED_FRAME_DELTA_MS`

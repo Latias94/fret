@@ -273,7 +273,11 @@ Notes:
 
    Note:
    - When using `fretboard diag run --launch`, `--env KEY=VALUE` cannot override reserved variables
-     like `FRET_DIAG`. Set reserved vars in the parent shell environment instead.
+     like `FRET_DIAG`/`FRET_DIAG_DIR`/`FRET_DIAG_*_PATH`. Use CLI flags (e.g. `--dir`, `--*-path`),
+     a config file (`FRET_DIAG_CONFIG_PATH`), or non-reserved `--env` overrides instead.
+   - Tool-launched runs also scrub inherited diagnostics env vars from the parent shell; do not rely on
+     setting `FRET_DIAG_*` in the parent shell to affect a `--launch` run. If you truly need a one-off
+     override, pass it explicitly via `--env` (non-reserved keys only).
 
 2. (Recommended while authoring scripts) disable redaction so you can see semantics labels in bundles:
 
@@ -633,6 +637,19 @@ Config resolution order (runtime):
 2. If `FRET_DIAG_CONFIG_PATH` points to a readable config file, the runtime loads `UiDiagnosticsConfigFileV1` from it.
 3. For most fields, non-empty env vars override config file values (manual escape hatch).
 4. Any missing fields fall back to runtime defaults (for example `out_dir=target/fret-diag`, `max_events=2000`, `max_snapshots=300`).
+
+### Tool-launched (`--launch`) env policy
+
+`fretboard diag ... --launch` aims to be deterministic and small-by-default. To reduce drift and accidental output
+explosions:
+
+- **Reserved (tooling-owned) keys:** `--env KEY=VALUE` cannot override them (use `--dir` / `--*-path` flags instead).
+  - Examples: `FRET_DIAG`, `FRET_DIAG_DIR`, `FRET_DIAG_CONFIG_PATH`, and all `FRET_DIAG_*_PATH` keys.
+- **Scrubbed inherited keys:** tooling removes known diagnostics env vars from the parent shell before spawning the child.
+  - If you need a one-off override for a launched run, pass it explicitly via `--env`.
+- **High-risk overrides (discouraged):** prefer a config file + `diag config doctor` when changing bundle size knobs.
+  - Examples: `FRET_DIAG_MAX_SNAPSHOTS`, `FRET_DIAG_SCRIPT_DUMP_MAX_SNAPSHOTS`, `FRET_DIAG_SEMANTICS=all`,
+    `FRET_DIAG_BUNDLE_JSON_FORMAT=pretty`.
 
 - `FRET_DIAG_TRIGGER_PATH=...`: dump trigger file (default `<dir>/trigger.touch`).
   - The trigger uses a **stamp** (monotonic integer) rather than mtime. Write a new integer value
