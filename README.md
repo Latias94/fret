@@ -38,8 +38,22 @@ Long-term, ecosystem crates may move to a separate components repository.
 
 Fret draws inspiration from:
 
-- `Zed` / `GPUI` style UX and editor workflows.
-- Mature web UI design systems (shadcn/Radix patterns) translated into Rust-native APIs.
+- `Zed` / `GPUI` style UX and editor workflows. (https://github.com/zed-industries/zed)
+- Mature web UI design systems translated into Rust-native APIs:
+  - shadcn/ui (docs + recipes): https://github.com/shadcn-ui/ui
+  - Radix Primitives (overlay + interaction semantics): https://github.com/radix-ui/primitives
+  - Base UI (headless composition patterns): https://github.com/mui/base-ui
+
+Behavioral reference stack (used as sources of truth for parity work):
+
+- WAI-ARIA Authoring Practices (APG): https://github.com/w3c/aria-practices
+- Floating UI (placement vocabulary + collision/shift/flip outcomes): https://github.com/floating-ui/floating-ui
+- cmdk (command palette behavior): https://github.com/pacocoursey/cmdk
+
+See also:
+
+- `docs/reference-stack-ui-behavior.md` (what each reference is used for)
+- `docs/repo-ref.md` (`repo-ref/` policy + pinned SHAs)
 
 The goal is to provide a smooth, general-purpose application framework that scales from app UIs to editor-class products.
 
