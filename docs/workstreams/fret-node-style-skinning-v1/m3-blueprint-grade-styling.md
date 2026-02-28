@@ -51,6 +51,7 @@ paint-first and cache-safe.
   - optional arrowheads/markers (policy-level).
 - Blueprint-grade extras:
   - soft glow around active wires,
+  - outline stroke for wire readability on busy canvases,
   - depth cueing (selected wire drawn above others, subtle shadow).
 
 ### Ports
@@ -67,6 +68,8 @@ This workstream now has a “v0 blueprint look” path using the existing render
   `EffectStep::DropShadowV1` (paint-only, zoom-stable via screen-px → canvas-unit conversion).
 - Wire glow: selected edges and drag preview wires can be wrapped in the same `DropShadowV1`
   effect with `offset=0`, producing a soft glow.
+- Wire outline: selected edges and drag preview wires can render a thicker outline stroke behind
+  the core stroke (paint-only, dual-path).
 
 This is intentionally an approximation:
 

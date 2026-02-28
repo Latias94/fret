@@ -31,8 +31,9 @@ scope: ecosystem/fret-node
 
 - [x] Node shadow/glow via renderer effect (`PushEffect` + `DropShadowV1`) under `NodeChromeHint.shadow`.
 - [x] Wire glow via renderer effect (`PushEffect` + `DropShadowV1`) for selected edges and drag preview wires.
+- [x] Wire outline (paint-only) for selected edges and drag preview wires (dual-stroke readability).
 - [x] Add demo toggle for wire glow (`primary+shift+g`) and capture both variants in the diag gate script.
-- [ ] Wire outline / dual-stroke strategy (cheap “blueprint readability” baseline, even when effects degrade).
+- [ ] Extend wire outline to non-selected edges (optional), and define degradation behavior when budgets are tight.
 - [ ] Wire gradients (mechanism-level) or a policy-level approximation (two-pass stroke with cached paths).
 
 ## Follow-ups (likely)

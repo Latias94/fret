@@ -76,6 +76,7 @@ Acceptance (v0):
 
 - Node shadow/glow can be expressed as a skin hint and implemented via renderer effects.
 - Selected wires and drag preview wires can render with a soft glow for editor-grade readability.
+- Selected wires and drag preview wires can render with an outline stroke for blueprint-style contrast.
 
 Evidence anchors:
 
