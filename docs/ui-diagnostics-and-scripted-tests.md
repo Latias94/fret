@@ -591,6 +591,8 @@ Core:
   - Tooling writes `<dir>/diag.config.json` by default when launching via `fretboard diag run/suite/repro --launch`.
   - For most fields, an env var overrides the config file (compat-first manual escape hatch). A few size-control knobs
     are intentionally config-only for tool-launched determinism (see `tools/diag-configs/README.md`).
+  - In `--launch` mode, the config file is expected to be writable. Tooling treats a failure to write `diag.config.json`
+    as a launch error (to avoid silently falling back to runtime defaults that may write a large `bundle.json`).
   - In `--launch` mode, tooling-owned env vars and paths are reserved; `--env` cannot override them (use `--dir` / `--*-path` flags instead).
   - Example file to copy/modify: `tools/diag-configs/diag.config.example.json`.
   - Drift audit notes for the example file: `tools/diag-configs/README.md`.
