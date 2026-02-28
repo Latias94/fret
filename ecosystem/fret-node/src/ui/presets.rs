@@ -489,10 +489,35 @@ impl NodeGraphSkin for NodeGraphPresetSkinV1 {
             EdgeKind::Exec => tokens.exec_color.into(),
         });
         if self.edge_markers_enabled.load(Ordering::Relaxed) && kind == EdgeKind::Exec {
+            let selected_mul = tokens
+                .marker_size_mul_selected
+                .unwrap_or(1.0)
+                .clamp(0.0, 4.0);
+            let hovered_mul = tokens
+                .marker_size_mul_hovered
+                .unwrap_or(1.0)
+                .clamp(0.0, 4.0);
+            let state_mul = if _hovered {
+                hovered_mul
+            } else if _selected {
+                selected_mul
+            } else {
+                1.0
+            };
+
+            if out.start_marker.is_none()
+                && let Some(marker) = tokens.marker_exec_start
+            {
+                let mut marker = marker.into_marker();
+                marker.size *= state_mul;
+                out.start_marker = Some(marker);
+            }
             if out.end_marker.is_none()
                 && let Some(marker) = tokens.marker_exec_end
             {
-                out.end_marker = Some(marker.into_marker());
+                let mut marker = marker.into_marker();
+                marker.size *= state_mul;
+                out.end_marker = Some(marker);
             }
         }
         out
@@ -948,6 +973,12 @@ fn theme_derived_preset(
                     kind: EdgeMarkerKindTokensV1::Arrow,
                     size_px: 12.0,
                 }),
+                marker_exec_start: Some(EdgeMarkerTokensV1 {
+                    kind: EdgeMarkerKindTokensV1::Arrow,
+                    size_px: 8.0,
+                }),
+                marker_size_mul_selected: Some(1.15),
+                marker_size_mul_hovered: Some(1.25),
             },
             states: StateTokensV1 {
                 hover: StateColorV1 {
@@ -1157,6 +1188,12 @@ struct WireTokensV1 {
     highlight_hovered: Option<WireHighlightTokensV1>,
     #[serde(default)]
     marker_exec_end: Option<EdgeMarkerTokensV1>,
+    #[serde(default)]
+    marker_exec_start: Option<EdgeMarkerTokensV1>,
+    #[serde(default)]
+    marker_size_mul_selected: Option<f32>,
+    #[serde(default)]
+    marker_size_mul_hovered: Option<f32>,
 }
 
 #[derive(Debug, Clone, Copy, Deserialize)]
@@ -1344,10 +1381,32 @@ mod tests {
             let marker = preset
                 .paint_only_tokens
                 .wire
+                .marker_exec_start
+                .unwrap_or_else(|| panic!("expected wire.marker_exec_start for {id:?}"));
+            assert_eq!(marker.kind, EdgeMarkerKindTokensV1::Arrow);
+            assert_close(marker.size_px, 8.0);
+
+            let marker = preset
+                .paint_only_tokens
+                .wire
                 .marker_exec_end
                 .unwrap_or_else(|| panic!("expected wire.marker_exec_end for {id:?}"));
             assert_eq!(marker.kind, EdgeMarkerKindTokensV1::Arrow);
             assert_close(marker.size_px, 12.0);
+
+            let selected_mul = preset
+                .paint_only_tokens
+                .wire
+                .marker_size_mul_selected
+                .unwrap_or_else(|| panic!("expected wire.marker_size_mul_selected for {id:?}"));
+            assert_close(selected_mul, 1.15);
+
+            let hovered_mul = preset
+                .paint_only_tokens
+                .wire
+                .marker_size_mul_hovered
+                .unwrap_or_else(|| panic!("expected wire.marker_size_mul_hovered for {id:?}"));
+            assert_close(hovered_mul, 1.25);
         }
     }
 }
