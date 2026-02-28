@@ -121,6 +121,7 @@ Done (evidence anchors):
 - Web demo (inspector harness): `apps/fret-examples/src/custom_effect_v2_web_demo.rs` (run via
   `apps/fret-demo-web` with `?demo=custom_effect_v2_web_demo`, or via `fretboard` with
   `cargo run -p fretboard -- dev web --demo custom_effect_v2_web_demo`).
+  - Note: `fretboard dev web` opens the browser by default; use `--no-open` to disable.
   - Purpose: a parameter validation harness for CustomV2 authoring (sampling, `UvRect`, blur radius/downsample,
     strength/tint, mode/quality, rounded clips).
   - Keys: `V` toggles the lens surface, `R` resets the controls.
