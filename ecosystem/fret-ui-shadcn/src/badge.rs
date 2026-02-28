@@ -377,10 +377,6 @@ fn badge_with_patch<H: UiHost>(
                 .text_color(ColorRef::Color(fg))
                 .into_element(cx);
 
-            if children.is_empty() && leading_icon.is_none() && trailing_icon.is_none() {
-                return vec![label];
-            }
-
             // Upstream shadcn badge enforces `[&>svg]:size-3` (12px) for direct svg children.
             let icon_px = Px(12.0);
             let mut content = Vec::with_capacity(children.len() + 3);
