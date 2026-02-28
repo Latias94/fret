@@ -91,25 +91,25 @@ impl ToolStatus {
                 theme,
                 "component.tool.status.approval_requested.icon",
                 // Tailwind: yellow-600 (#ca8a04).
-                super::colors::linear_from_hex_rgb(0xca_8a_04),
+                fret_ui_kit::colors::linear_from_hex_rgb(0xca_8a_04),
             )),
             Self::ApprovalResponded => Some(token(
                 theme,
                 "component.tool.status.approval_responded.icon",
                 // Tailwind: blue-600 (#2563eb).
-                super::colors::linear_from_hex_rgb(0x25_63_eb),
+                fret_ui_kit::colors::linear_from_hex_rgb(0x25_63_eb),
             )),
             Self::OutputAvailable => Some(token(
                 theme,
                 "component.tool.status.output_available.icon",
                 // Tailwind: green-600 (#16a34a).
-                super::colors::linear_from_hex_rgb(0x16_a3_4a),
+                fret_ui_kit::colors::linear_from_hex_rgb(0x16_a3_4a),
             )),
             Self::OutputDenied => Some(token(
                 theme,
                 "component.tool.status.output_denied.icon",
                 // Tailwind: orange-600 (#ea580c).
-                super::colors::linear_from_hex_rgb(0xea_58_0c),
+                fret_ui_kit::colors::linear_from_hex_rgb(0xea_58_0c),
             )),
             Self::OutputError => Some(
                 theme
@@ -117,7 +117,7 @@ impl ToolStatus {
                     .unwrap_or_else(|| {
                         theme.color_by_key("destructive").unwrap_or(Color {
                             // Tailwind: red-600 (#dc2626).
-                            ..super::colors::linear_from_hex_rgb(0xdc_26_26)
+                            ..fret_ui_kit::colors::linear_from_hex_rgb(0xdc_26_26)
                         })
                     }),
             ),

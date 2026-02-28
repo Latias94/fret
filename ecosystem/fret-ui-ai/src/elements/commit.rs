@@ -47,22 +47,22 @@ fn status_color(status: CommitFileStatusKind) -> ColorRef {
         CommitFileStatusKind::Added => ColorRef::Token {
             key: "color.commit.file.added",
             // Tailwind: green-600 (#16a34a).
-            fallback: ColorFallback::Color(super::colors::linear_from_hex_rgb(0x16_a3_4a)),
+            fallback: ColorFallback::Color(fret_ui_kit::colors::linear_from_hex_rgb(0x16_a3_4a)),
         },
         CommitFileStatusKind::Deleted => ColorRef::Token {
             key: "color.commit.file.deleted",
             // Tailwind: red-600 (#dc2626).
-            fallback: ColorFallback::Color(super::colors::linear_from_hex_rgb(0xdc_26_26)),
+            fallback: ColorFallback::Color(fret_ui_kit::colors::linear_from_hex_rgb(0xdc_26_26)),
         },
         CommitFileStatusKind::Modified => ColorRef::Token {
             key: "color.commit.file.modified",
             // Tailwind: yellow-600 (#ca8a04).
-            fallback: ColorFallback::Color(super::colors::linear_from_hex_rgb(0xca_8a_04)),
+            fallback: ColorFallback::Color(fret_ui_kit::colors::linear_from_hex_rgb(0xca_8a_04)),
         },
         CommitFileStatusKind::Renamed => ColorRef::Token {
             key: "color.commit.file.renamed",
             // Tailwind: blue-600 (#2563eb).
-            fallback: ColorFallback::Color(super::colors::linear_from_hex_rgb(0x25_63_eb)),
+            fallback: ColorFallback::Color(fret_ui_kit::colors::linear_from_hex_rgb(0x25_63_eb)),
         },
     }
 }

@@ -1266,7 +1266,7 @@ impl WebPreviewConsole {
                         WebPreviewConsoleLogLevel::Warn => theme
                             .color_by_key("component.web_preview.console.warn_fg")
                             // Tailwind: yellow-600 (#ca8a04).
-                            .unwrap_or(super::colors::linear_from_hex_rgb(0xca_8a_04)),
+                            .unwrap_or(fret_ui_kit::colors::linear_from_hex_rgb(0xca_8a_04)),
                         WebPreviewConsoleLogLevel::Log => theme
                             .color_by_key("component.web_preview.console.log_fg")
                             .unwrap_or_else(|| theme.color_token("foreground")),

@@ -7,7 +7,6 @@ mod audio_player;
 mod chain_of_thought;
 mod checkpoint;
 mod code_block;
-mod colors;
 mod commit;
 mod confirmation;
 mod context;

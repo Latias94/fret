@@ -86,31 +86,31 @@ impl HttpMethod {
                 theme,
                 "component.schema_display.method.get",
                 // Tailwind: green-600 (#16a34a).
-                super::colors::linear_from_hex_rgb(0x16_a3_4a),
+                fret_ui_kit::colors::linear_from_hex_rgb(0x16_a3_4a),
             ),
             Self::Post => token(
                 theme,
                 "component.schema_display.method.post",
                 // Tailwind: blue-600 (#2563eb).
-                super::colors::linear_from_hex_rgb(0x25_63_eb),
+                fret_ui_kit::colors::linear_from_hex_rgb(0x25_63_eb),
             ),
             Self::Put => token(
                 theme,
                 "component.schema_display.method.put",
                 // Tailwind: yellow-600 (#ca8a04).
-                super::colors::linear_from_hex_rgb(0xca_8a_04),
+                fret_ui_kit::colors::linear_from_hex_rgb(0xca_8a_04),
             ),
             Self::Patch => token(
                 theme,
                 "component.schema_display.method.patch",
                 // Tailwind: yellow-600 (#ca8a04).
-                super::colors::linear_from_hex_rgb(0xca_8a_04),
+                fret_ui_kit::colors::linear_from_hex_rgb(0xca_8a_04),
             ),
             Self::Delete => token(
                 theme,
                 "component.schema_display.method.delete",
                 // Tailwind: red-600 (#dc2626).
-                super::colors::linear_from_hex_rgb(0xdc_26_26),
+                fret_ui_kit::colors::linear_from_hex_rgb(0xdc_26_26),
             ),
         }
     }
@@ -585,7 +585,7 @@ impl SchemaDisplayPath {
         let highlight = theme
             .color_by_key("primary")
             // Tailwind: blue-600 (#2563eb).
-            .unwrap_or_else(|| super::colors::linear_from_hex_rgb(0x25_63_eb));
+            .unwrap_or_else(|| fret_ui_kit::colors::linear_from_hex_rgb(0x25_63_eb));
 
         let (text, spans) = highlighted_path_attributed_text(&self.path, base_color, highlight);
 
@@ -1320,7 +1320,7 @@ fn required_badge<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
     let red = theme
         .color_by_key("destructive")
         // Tailwind: red-600 (#dc2626).
-        .unwrap_or_else(|| super::colors::linear_from_hex_rgb(0xdc_26_26));
+        .unwrap_or_else(|| fret_ui_kit::colors::linear_from_hex_rgb(0xdc_26_26));
 
     Badge::new("required")
         .variant(BadgeVariant::Secondary)

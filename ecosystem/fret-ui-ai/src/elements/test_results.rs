@@ -99,19 +99,19 @@ impl TestStatusKind {
                 theme,
                 "component.test_results.status.passed",
                 // Tailwind: green-600 (#16a34a).
-                super::colors::linear_from_hex_rgb(0x16_a3_4a),
+                fret_ui_kit::colors::linear_from_hex_rgb(0x16_a3_4a),
             ),
             Self::Skipped => token(
                 theme,
                 "component.test_results.status.skipped",
                 // Tailwind: yellow-600 (#ca8a04).
-                super::colors::linear_from_hex_rgb(0xca_8a_04),
+                fret_ui_kit::colors::linear_from_hex_rgb(0xca_8a_04),
             ),
             Self::Running => token(
                 theme,
                 "component.test_results.status.running",
                 // Tailwind: blue-600 (#2563eb).
-                super::colors::linear_from_hex_rgb(0x25_63_eb),
+                fret_ui_kit::colors::linear_from_hex_rgb(0x25_63_eb),
             ),
         }
     }
