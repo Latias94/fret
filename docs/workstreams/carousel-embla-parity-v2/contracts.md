@@ -90,6 +90,47 @@ Embla release computes:
 The v2 engine will reproduce this shaping (best-effort) so that “fast swipe” and “slow drag”
 produce observably different settle behavior.
 
+## Focus watcher semantics (`focus=true`)
+
+Embla option `focus` (default `true`) enables `SlideFocus`:
+
+- when the user presses **Tab** and focus moves into a slide, Embla scrolls the focused slide into
+  view instantly (`useDuration(0)` + `scrollTo.index(...)`).
+- Embla uses a small time window (≈10ms) between the Tab keydown and the focus event to avoid
+  reacting to non-keyboard focus changes.
+
+Fret mapping (v2 MVP):
+
+- `CarouselOptions.watch_focus` (default `true`) is the recipe-level equivalent of Embla `focus`.
+- The shadcn recipe infers the focused slide by comparing the **focused element's visual bounds**
+  against per-slide visual bounds from the previous frame.
+- When focus changes and either:
+  - a Tab press was observed recently, **or**
+  - the focused element is outside the viewport bounds (programmatic focus support),
+  then the recipe scrolls instantly to the snap that contains the focused slide.
+
+Evidence + gates:
+
+- Implementation: `ecosystem/fret-ui-shadcn/src/carousel.rs` (watch focus block in the geometry pass)
+- Gate: `ecosystem/fret-ui-shadcn/tests/carousel_focus_watch_tab_scrolls.rs`
+
+## Accessibility semantics (role/labels)
+
+Recipe-level stamping (v2 MVP):
+
+- Root: `SemanticsRole::Panel`, `label="Carousel"`, `orientation={horizontal|vertical}`.
+- Slides: `SemanticsRole::Group`, `label="Slide N of M"`.
+
+Known gap:
+
+- Core semantics does not currently expose a portable `aria-roledescription` equivalent, so we
+  cannot represent `aria-roledescription="carousel"` / `"slide"` yet.
+
+Evidence + gates:
+
+- Implementation: `ecosystem/fret-ui-shadcn/src/carousel.rs` (root + slide semantics decorations)
+- Gate: `ecosystem/fret-ui-shadcn/tests/carousel_a11y_semantics.rs`
+
 ## Contain scroll semantics
 
 Embla option `containScroll` influences the **scroll snap list** and the effective **scroll limit**
@@ -132,6 +173,19 @@ Fret v2 intent:
 If we cannot implement seamless loop safely, we must explicitly keep `loop` as “selection wrap”
 and **not** claim Embla parity for looping.
 
+Implementation (MVP shipped):
+
+- Headless engine wraps `location`/`target` by applying the loop distance without resetting motion.
+- The shadcn recipe applies an additional per-slide `RenderTransform` translation (`±content_size`)
+  so the viewport remains visually continuous when the scroll location wraps.
+
+Evidence anchors:
+
+- Scroll loop normalization: `ecosystem/fret-ui-headless/src/embla/engine.rs`
+- Loop distance application: `ecosystem/fret-ui-headless/src/embla/scroll_body.rs`
+- Slide translation helper: `ecosystem/fret-ui-headless/src/embla/slide_looper.rs`
+- Recipe wiring: `ecosystem/fret-ui-shadcn/src/carousel.rs`
+
 ## Slides in view semantics
 
 Embla options:
@@ -144,10 +198,41 @@ Contract:
 - The engine exposes “slides currently in view” and “changed” signals.
 - Threshold/margin influence inclusion in the in-view set.
 
+Implementation (MVP shipped):
+
+- Headless: a deterministic 1D viewport intersection tracker that approximates Embla’s
+  `IntersectionObserver`-driven behavior.
+- Recipe: exposes a policy-only snapshot model (`CarouselSlidesInViewSnapshot`) whose `generation`
+  increments when the in-view set changes (and carries enter/leave indices for that generation).
+
+Evidence anchors:
+
+- Headless tracker: `ecosystem/fret-ui-headless/src/embla/slides_in_view.rs`
+- Recipe wiring: `ecosystem/fret-ui-shadcn/src/carousel.rs`
+- Gate: `ecosystem/fret-ui-shadcn/tests/carousel_slides_in_view_snapshot.rs`
+
 ## ReInit + resize contract
 
 Embla emits a `reInit` event when it re-initializes due to geometry or option changes (e.g. resize,
 breakpoints, slide list changes).
+
+## Breakpoints / responsive options
+
+Embla supports responsive option overrides via `breakpoints` (media queries). Fret v2 provides a
+Rust-native equivalent that is evaluated based on the measured carousel viewport width.
+
+Contract:
+
+- Breakpoints are evaluated by selecting the last entry where `min_width_px <= viewport_width_px`.
+- The recipe applies an options patch on top of the base `CarouselOptions`.
+- `start_snap` is intentionally not overridden by breakpoint patches (it is an initial selection
+  input, not a responsive option).
+- When breakpoint selection changes, it is treated as a `reInit` trigger (observable via
+  `reinit_generation` / `CarouselEvent::ReInit`).
+
+Evidence anchors:
+
+- Breakpoint evaluation + patching: `ecosystem/fret-ui-shadcn/src/carousel.rs`
 
 ### Contract: geometry-driven re-init is safe and preserves motion
 

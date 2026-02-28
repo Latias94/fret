@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use fret_core::{Color, FontWeight, Px, SemanticsRole, TextOverflow, TextWrap};
+use fret_core::{Color, FontWeight, Px, SemanticsRole, TextWrap};
 use fret_ui::element::{
     AnyElement, ContainerProps, ElementKind, InsetStyle, LayoutStyle, Length, PositionStyle,
     SemanticsDecoration,

@@ -15,7 +15,10 @@ pub(super) fn preview_carousel(cx: &mut ElementContext<'_, App>) -> Vec<AnyEleme
             demo_dnd_pointer: Option<Model<Option<fret_core::PointerId>>>,
             demo_dnd_dragging: Option<Model<bool>>,
             demo_dnd_long_press_pointer: Option<Model<Option<fret_core::PointerId>>>,
-            api_snapshot: Option<Model<shadcn::CarouselApiSnapshot>>,
+            api_handle: Option<Model<Option<shadcn::CarouselApi>>>,
+            api_cursor: Option<Model<shadcn::CarouselEventCursor>>,
+            api_effect_current: Option<Model<usize>>,
+            api_effect_count: Option<Model<usize>>,
             expandable_selected: Option<Model<Option<usize>>>,
         }
 
@@ -734,24 +737,78 @@ pub(super) fn preview_carousel(cx: &mut ElementContext<'_, App>) -> Vec<AnyEleme
         .test_id("ui-gallery-carousel-spacing")
         .into_element(cx);
 
-    // API: expose a small snapshot surface so demos can render slide counters without wiring an
-    // Embla-like imperative API.
-    let api_snapshot = cx.with_state(CarouselPageState::default, |st| st.api_snapshot.clone());
-    let api_snapshot = match api_snapshot {
+    // Shadcn uses `setApi` + `api.on("select"|"reInit", ...)` to update counters.
+    // In Rust we expose a handle model and poll a cursor for the same outcomes.
+    let api_handle = cx.with_state(CarouselPageState::default, |st| st.api_handle.clone());
+    let api_handle = match api_handle {
         Some(model) => model,
         None => {
-            let model: Model<shadcn::CarouselApiSnapshot> =
-                cx.app.models_mut().insert(shadcn::CarouselApiSnapshot::default());
+            let model: Model<Option<shadcn::CarouselApi>> = cx.app.models_mut().insert(None);
             cx.with_state(CarouselPageState::default, |st| {
-                st.api_snapshot = Some(model.clone());
+                st.api_handle = Some(model.clone());
             });
             model
         }
     };
-    let api_snapshot_now = cx
-        .watch_model(&api_snapshot)
-        .copied()
-        .unwrap_or_default();
+    let api_cursor = cx.with_state(CarouselPageState::default, |st| st.api_cursor.clone());
+    let api_cursor = match api_cursor {
+        Some(model) => model,
+        None => {
+            let model: Model<shadcn::CarouselEventCursor> =
+                cx.app.models_mut().insert(shadcn::CarouselEventCursor::default());
+            cx.with_state(CarouselPageState::default, |st| {
+                st.api_cursor = Some(model.clone());
+            });
+            model
+        }
+    };
+
+    let api_effect_current =
+        cx.with_state(CarouselPageState::default, |st| st.api_effect_current.clone());
+    let api_effect_current = match api_effect_current {
+        Some(model) => model,
+        None => {
+            let model = cx.app.models_mut().insert(0usize);
+            cx.with_state(CarouselPageState::default, |st| {
+                st.api_effect_current = Some(model.clone());
+            });
+            model
+        }
+    };
+    let api_effect_count = cx.with_state(CarouselPageState::default, |st| st.api_effect_count.clone());
+    let api_effect_count = match api_effect_count {
+        Some(model) => model,
+        None => {
+            let model = cx.app.models_mut().insert(0usize);
+            cx.with_state(CarouselPageState::default, |st| {
+                st.api_effect_count = Some(model.clone());
+            });
+            model
+        }
+    };
+
+    let api_now = cx.watch_model(&api_handle).cloned().flatten();
+    if let Some(api_now) = api_now {
+        let mut cursor_now = cx.watch_model(&api_cursor).copied().unwrap_or_default();
+        let events = api_now.events_since(&mut *cx.app, &mut cursor_now);
+        let snapshot = api_now.snapshot(&mut *cx.app);
+        let count_now = cx.watch_model(&api_effect_count).copied().unwrap_or(0);
+
+        if !events.is_empty() || (count_now == 0 && snapshot.snap_count > 0) {
+            let next_count = snapshot.snap_count;
+            let next_current = if next_count > 0 {
+                snapshot.selected_index.saturating_add(1)
+            } else {
+                0
+            };
+            let _ = cx.app.models_mut().update(&api_cursor, |v| *v = cursor_now);
+            let _ = cx.app.models_mut().update(&api_effect_count, |v| *v = next_count);
+            let _ = cx
+                .app
+                .models_mut()
+                .update(&api_effect_current, |v| *v = next_current);
+        }
+    }
 
     let api_visual = SlideVisual {
         text_px: Px(36.0),
@@ -761,7 +818,7 @@ pub(super) fn preview_carousel(cx: &mut ElementContext<'_, App>) -> Vec<AnyEleme
         .map(|idx| slide_unwrapped(cx, idx, api_visual))
         .collect::<Vec<_>>();
     let api_carousel = shadcn::Carousel::new(api_items)
-        .api_snapshot_model(api_snapshot.clone())
+        .api_handle_model(api_handle.clone())
         .refine_track_layout(LayoutRefinement::default().w_px(Px(336.0)))
         .refine_layout(
             LayoutRefinement::default().w_full().max_w(max_w_xs),
@@ -769,15 +826,9 @@ pub(super) fn preview_carousel(cx: &mut ElementContext<'_, App>) -> Vec<AnyEleme
         .test_id("ui-gallery-carousel-api")
         .into_element(cx);
 
-    let api_counter_text = if api_snapshot_now.snap_count > 0 {
-        format!(
-            "Slide {} of {}",
-            api_snapshot_now.selected_index.saturating_add(1),
-            api_snapshot_now.snap_count
-        )
-    } else {
-        "Slide 0 of 0".to_string()
-    };
+    let current = cx.watch_model(&api_effect_current).copied().unwrap_or(0);
+    let count = cx.watch_model(&api_effect_count).copied().unwrap_or(0);
+    let api_counter_text = format!("Slide {} of {}", current, count);
     let api_counter = {
         let theme = Theme::global(&*cx.app);
         let style = fret_ui_kit::typography::control_text_style(
@@ -1060,26 +1111,33 @@ shadcn::Carousel::new(items)
                 .test_id_prefix("ui-gallery-carousel-api")
                 .code(
                     "rust",
-                    r#"let api = cx.app.models_mut().insert(shadcn::CarouselApiSnapshot::default());
-let api_now = cx.watch_model(&api).copied().unwrap_or_default();
+                    r#"let api = cx.app.models_mut().insert(None::<shadcn::CarouselApi>);
+let cursor = cx
+    .app
+    .models_mut()
+    .insert(shadcn::CarouselEventCursor::default());
 
 // Upstream `carousel-api` does not wrap each card in `p-1`.
 let carousel = shadcn::Carousel::new(items_without_p1)
-    .api_snapshot_model(api.clone())
+    .api_handle_model(api.clone())
     .refine_track_layout(LayoutRefinement::default().w_px(Px(336.0)))
     .refine_layout(LayoutRefinement::default().w_full().max_w(Px(320.0)))
     .into_element(cx);
 
-let counter = ui::text(
-    cx,
-    format!(
-        \"Slide {} of {}\",
-        api_now.selected_index + 1,
-        api_now.snap_count
-    ),
-)
- .text_sm()
- .into_element(cx);"#,
+if let Some(api) = cx.watch_model(&api).cloned().flatten() {
+    let mut cursor_now = cx.watch_model(&cursor).copied().unwrap_or_default();
+    let events = api.events_since(&mut *cx.app, &mut cursor_now);
+    if !events.is_empty() {
+        let snap = api.snapshot(&mut *cx.app);
+        count = snap.snap_count;
+        current = if count > 0 { snap.selected_index + 1 } else { 0 };
+        let _ = cx.app.models_mut().update(&cursor, |v| *v = cursor_now);
+    }
+}
+
+let counter = ui::text(cx, format!(\"Slide {} of {}\", current, count))
+    .text_sm()
+    .into_element(cx);"#,
                 ),
             DocSection::new("Plugin (Autoplay)", plugin)
                 .description("Autoplay: 2000ms delay; hover pauses; interaction stops.")
