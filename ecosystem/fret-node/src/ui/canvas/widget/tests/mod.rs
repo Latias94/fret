@@ -32,6 +32,7 @@ mod derived_geometry_updates_conformance;
 mod drag_preview_conformance;
 mod draw_order_invalidation_conformance;
 mod edge_drag_conformance;
+mod edge_hint_resolution_order_conformance;
 mod edge_hit_width_conformance;
 mod edge_insert_conformance;
 mod edge_insert_gestures_conformance;

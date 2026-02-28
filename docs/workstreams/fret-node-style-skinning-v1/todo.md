@@ -16,7 +16,7 @@ scope: ecosystem/fret-node
 - [x] Node chrome: selected/focus ring contract (paint-only) with conformance tests.
 - [x] Port chrome hints: shape enum + Diamond/Triangle paint implementation (paint-only).
 - [ ] Edge chrome hints: marker/arrowhead overrides (policy stays in ecosystem).
-- [ ] Ensure skin ordering is explicit and deterministic (style → presenter → edgeTypes → skin).
+- [x] Ensure skin ordering is explicit and deterministic (style → presenter → edgeTypes → skin).
 
 ## M2 (theme integration + presets)
 
