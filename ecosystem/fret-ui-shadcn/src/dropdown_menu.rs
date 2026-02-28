@@ -42,6 +42,17 @@ fn alpha_mul(mut c: fret_core::Color, mul: f32) -> fret_core::Color {
     c
 }
 
+fn dropdown_menu_overlay_id(window: fret_core::AppWindowId, open: &Model<bool>) -> GlobalElementId {
+    // Avoid `cx.root_id()` here: element ids can churn when the closed vs open render path creates
+    // different numbers of scoped states. Using the `open` model identity keeps overlay ids stable
+    // across open/close frames and prevents transient missing-anchor failures.
+    use std::hash::{Hash, Hasher};
+
+    let mut hasher = std::collections::hash_map::DefaultHasher::new();
+    ("fret-ui-shadcn::DropdownMenu", window, open.id()).hash(&mut hasher);
+    GlobalElementId(hasher.finish())
+}
+
 fn is_dark_background(theme: &ThemeSnapshot) -> bool {
     let bg = theme.color_token("background");
     let luma = 0.2126 * bg.r + 0.7152 * bg.g + 0.0722 * bg.b;
@@ -1397,11 +1408,15 @@ impl DropdownMenu {
         I: IntoIterator<Item = DropdownMenuEntry>,
     {
         cx.scope(|cx| {
-            let overlay_id = cx.root_id();
+            let overlay_id = dropdown_menu_overlay_id(cx.window, &self.open);
             let theme = Theme::global(&*cx.app).snapshot();
+            // `open` gates overlay request creation, so treat it as a structural/layout invalidation
+            // (not paint-only). This avoids view-cache reuse keeping the closed subtree when `open`
+            // flips between frames (notably in test harnesses that toggle `open` and snapshot
+            // semantics immediately on the next frame).
             let model_open = cx
                 .watch_model(&self.open)
-                .paint()
+                .layout()
                 .copied()
                 .unwrap_or(false);
             let is_open = model_open && !self.disabled;
