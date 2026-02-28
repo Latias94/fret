@@ -69,21 +69,15 @@ fn fret_custom_effect(src: vec4<f32>, _uv: vec2<f32>, pos_px: vec2<f32>, params:
   // - x: corner_radius_px (caller should scale to render px)
   // - y: depth_effect (0..1)
   // - z: dispersion (0..1)
-  // - w: highlight_alpha (0..1)
+  // - w: reserved (v1 demo)
   let corner_radius_px = clamp(params.vec4s[1].x, 0.0, 256.0);
   let depth_effect = clamp(params.vec4s[1].y, 0.0, 1.0);
   let dispersion = clamp(params.vec4s[1].z, 0.0, 1.0);
-  let highlight_alpha = clamp(params.vec4s[1].w, 0.0, 1.0);
 
   // params.vec4s[2]:
-  // - x: inner_shadow_alpha (0..1)
-  // - y: inner_shadow_radius_px (caller should scale to render px)
-  // - z: vignette_strength (0..1)
-  // - w: noise_alpha (0..0.1)
-  let inner_shadow_alpha = clamp(params.vec4s[2].x, 0.0, 1.0);
-  let inner_shadow_radius_px = clamp(params.vec4s[2].y, 0.0, 96.0);
-  let vignette_strength = clamp(params.vec4s[2].z, 0.0, 1.0);
-  let noise_alpha = clamp(params.vec4s[2].w, 0.0, 0.1);
+  // - x: noise_alpha (0..0.1)
+  // - y/z/w: reserved (v1 demo)
+  let noise_alpha = clamp(params.vec4s[2].x, 0.0, 0.1);
 
   // params.vec4s[3]: tint (premul-ish RGB + alpha)
   let tint = vec4<f32>(
@@ -108,14 +102,22 @@ fn fret_custom_effect(src: vec4<f32>, _uv: vec2<f32>, pos_px: vec2<f32>, params:
     return src;
   }
   let inside_px = clamp(-sd, 0.0, 4096.0);
-  let inside01 = select(0.0, inside_px / max(refraction_height_px, 1.0), refraction_height_px > 0.0);
-
-  // Edge weight (1 at edge -> 0 at center).
-  let edge = 1.0 - smoothstep(0.15, 0.95, inside01);
+  let inside01 = select(
+    0.0,
+    inside_px / max(refraction_height_px, 1.0),
+    refraction_height_px > 0.0
+  );
 
   // Frosted source: prior blur (`src`) + optional extra pyramid sampling.
   let pyr = fret_sample_src_pyramid_at_pos(pyramid_level, pos_px);
   let frosted = mix(src, pyr, frost_mix);
+
+  // Match AndroidLiquidGlass semantics: only the "rim" (within `refraction_height_px`) refracts.
+  if (inside_px >= refraction_height_px || refraction_height_px <= 0.0 || refraction_amount_px <= 0.0) {
+    let out_rgb = mix(frosted.rgb, tint.rgb, tint.a);
+    let n = hash01(floor(pos_px) + vec2<f32>(17.0, 91.0)) - 0.5;
+    return vec4<f32>(clamp(out_rgb + vec3<f32>(n) * noise_alpha, vec3<f32>(0.0), vec3<f32>(1.0)), frosted.a);
+  }
 
   // Refraction direction from SDF gradient (optionally with "depth" pull toward center).
   let grad_radius = min(radius * 1.5, min(half_size.x, half_size.y));
@@ -123,8 +125,9 @@ fn fret_custom_effect(src: vec4<f32>, _uv: vec2<f32>, pos_px: vec2<f32>, params:
   let g1 = normalize(g0 + depth_effect * normalize(centered + vec2<f32>(1.0e-6, 0.0)));
 
   // Displacement magnitude (circle-map taper like AndroidLiquidGlass).
+  // Note: AndroidLiquidGlass uses a negated refraction amount so the rim refracts inward.
   let d = circle_map(1.0 - inside01) * refraction_amount_px;
-  let refract = d * g1;
+  let refract = -d * g1;
 
   // Chromatic dispersion (3 taps; cheaper than the full 7-tap Android shader).
   let disp_k = dispersion * abs((centered.x * centered.y) / max(half_size.x * half_size.y, 1.0));
@@ -134,31 +137,16 @@ fn fret_custom_effect(src: vec4<f32>, _uv: vec2<f32>, pos_px: vec2<f32>, params:
   let raw_b = fret_sample_src_raw_at_pos(pos_px + refract - disp);
   let raw = vec4<f32>(raw_r.r, raw_g.g, raw_b.b, raw_g.a);
 
-  // Combine: crisp edge refraction over frosted center.
-  var out_rgb = mix(frosted.rgb, raw.rgb, edge);
-
-  // Specular-like highlight driven by edge normal (AndroidLiquidGlass highlight flavor).
-  let light = normalize(vec2<f32>(-0.55, -0.85));
-  let ndotl = abs(dot(g1, light));
-  let hl = pow(ndotl, 2.8) * highlight_alpha * edge;
-  out_rgb = out_rgb + vec3<f32>(1.0, 1.0, 1.0) * hl;
-
-  // Inner shadow (darken near the edge).
-  let shadow = (1.0 - smoothstep(0.0, max(inner_shadow_radius_px, 1.0), inside_px)) * inner_shadow_alpha;
-  out_rgb = mix(out_rgb, out_rgb * (1.0 - 0.35 * shadow), 1.0);
-
-  // Vignette (subtle center lift + edge falloff).
-  let t = centered / max(half_size, vec2<f32>(1.0));
-  let v = clamp(length(t), 0.0, 1.0);
-  let vig = vignette_strength * smoothstep(0.35, 1.0, v);
-  out_rgb = mix(out_rgb, out_rgb * (1.0 - 0.25 * vig), 1.0);
+  // Combine: blend refracted raw into frosted as we move away from the rim.
+  let rim = 1.0 - smoothstep(0.0, 1.0, inside01);
+  var out_rgb = mix(frosted.rgb, raw.rgb, rim);
 
   // Tint + subtle grain.
-  out_rgb = mix(out_rgb, mix(out_rgb, tint.rgb, tint.a), 1.0);
+  out_rgb = mix(out_rgb, tint.rgb, tint.a);
   let n = hash01(floor(pos_px) + vec2<f32>(17.0, 91.0)) - 0.5;
   out_rgb = out_rgb + vec3<f32>(n) * noise_alpha;
 
-  return vec4<f32>(clamp(out_rgb, vec3<f32>(0.0), vec3<f32>(1.0)), src.a);
+  return vec4<f32>(clamp(out_rgb, vec3<f32>(0.0), vec3<f32>(1.0)), frosted.a);
 }
 "#;
 
@@ -275,10 +263,10 @@ impl WinitAppDriver for CustomEffectV3WebDriver {
                 vec4s: [
                     // (refraction_height_px, refraction_amount_px, pyramid_level, frost_mix)
                     [22.0 * sf, 34.0 * sf, 3.0, 0.75],
-                    // (corner_radius_px, depth_effect, dispersion, highlight_alpha)
-                    [24.0 * sf, 0.18, 0.55, 0.32],
-                    // (inner_shadow_alpha, inner_shadow_radius_px, vignette_strength, noise_alpha)
-                    [0.22, 28.0 * sf, 0.25, 0.012],
+                    // (corner_radius_px, depth_effect, dispersion, reserved)
+                    [24.0 * sf, 0.18, 0.55, 0.0],
+                    // (noise_alpha, reserved, reserved, reserved)
+                    [0.012, 0.0, 0.0, 0.0],
                     // tint (rgb + alpha)
                     [1.0, 1.0, 1.0, 0.08],
                 ],
