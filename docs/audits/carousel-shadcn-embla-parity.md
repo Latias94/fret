@@ -95,7 +95,7 @@ Legend:
 | `dragFree` | `false` | `CarouselOptions.drag_free` | **Partial** | Settles to projected offset; no inertia scroll body. |
 | `loop` | `false` | `CarouselOptions.loop_enabled` | **Partial** | Wraps prev/next/keys and release neighbor selection; **not** Embla's seamless loop engine. |
 | `axis` | `"x"` | `CarouselOrientation` | **Partial** | Horizontal/vertical supported; not a generic axis + direction model. |
-| `direction` | `"ltr"` | (none) | **Not implemented** | RTL parity not audited yet. |
+| `direction` | `"ltr"` | `CarouselOptions.direction` | **Partial** | Mirrors horizontal drag/key/control placement in RTL; does **not** reflow slide layout like CSS `direction` yet. |
 | `startSnap` | `0` | `CarouselOptions.start_snap` | **Partial** | Applied once snaps are measurable (recipe derives snaps from geometry). |
 | `draggable` | `true` | `CarouselOptions.draggable` | **Aligned** | Disables pointer dragging; buttons/keys remain active. |
 | `resize` | `true` | (none) | **Not implemented** | Re-init semantics are implicit via layout passes; no explicit option. |
