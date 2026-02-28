@@ -25,6 +25,7 @@ Related / prerequisites:
 - Script library modularization (taxonomy + suites): `docs/workstreams/diag-v2-hardening-and-switches-v1/script-library.md`
 - Canonical per-run artifact layout: `docs/workstreams/diag-v2-hardening-and-switches-v1/per-run-layout.md`
 - Concurrency / multiple agents (sessions design): `docs/workstreams/diag-v2-hardening-and-switches-v1/concurrency-and-sessions.md`
+- Agent-era debugging stack (roadmap): `docs/workstreams/diag-v2-hardening-and-switches-v1/ai-era-debugging-stack.md`
 - Migration runbook + guardrails: `docs/workstreams/diag-v2-hardening-and-switches-v1/migration-support.md`
 - Compatibility inventory table: `docs/workstreams/diag-v2-hardening-and-switches-v1/compat-matrix.md`
 

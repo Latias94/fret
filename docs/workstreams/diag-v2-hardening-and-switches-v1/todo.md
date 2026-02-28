@@ -57,6 +57,30 @@ This file is a check-list style tracker. Milestone framing lives in `milestones.
   - [x] Add a safe discovery command (bounded output): `diag list sessions --dir <base_dir>`.
   - [x] Add a safe cleanup command (dry-run by default): `diag sessions clean --dir <base_dir> --keep <n> [--apply]`.
 
+## P1: Agent-native script ergonomics (ImGui-alignment outcomes)
+
+Track design + roadmap:
+
+- `docs/workstreams/diag-v2-hardening-and-switches-v1/ai-era-debugging-stack.md`
+
+Planned outcomes:
+
+- [ ] Named references / scopes (ImGui `SetRef(...)`-style ergonomics, but semantics-first).
+  - [ ] Add a script-level `ref` concept (a named selector + optional `window` target).
+  - [ ] Add steps to set/clear a base ref so subsequent selector steps can use relative paths.
+  - [ ] Ensure the feature is capability-gated (tooling-side) and does not leak policy into `fret-ui`.
+- [ ] Fast mode policy (determinism + speed):
+  - [ ] Make “fast mode vs human-speed” explicit via config (stabilization defaults, animation handling).
+  - [ ] Add a bounded “fast mode” smoke suite (runs faster than today without introducing flake).
+- [ ] Headless seed (CI-friendly):
+  - [ ] Define the minimum supported headless target for native runners.
+  - [ ] Add one end-to-end headless smoke suite that produces the same bounded artifacts (manifest + sidecars).
+
+## P2: Time-series visual evidence (optional, evidence UX)
+
+- [ ] Add an opt-in export for bounded time-series screenshots (PNG sequence around failure).
+- [ ] Optional: add tooling-side GIF encoding as a post-process (not required for core correctness gates).
+
 ## P0.5: Script library modularization (UX scalability)
 
 - [x] Define a folder taxonomy for `tools/diag-scripts/` (by product area + suite intent). See: `docs/workstreams/diag-v2-hardening-and-switches-v1/script-library.md`.

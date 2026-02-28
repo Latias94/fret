@@ -32,6 +32,9 @@ Exit criteria:
   - `diag list suites` prints known `suite_memberships` (registry-derived).
 - Script library drift is detectable via a bounded, read-only tooling command:
   - `diag doctor scripts` checks for root canonical scripts, broken redirects, and registry drift.
+- Tool-launched runs have a first-class “parallel agents” escape hatch:
+  - `--session-auto` allocates an isolated session root under `<base_dir>/sessions/<session_id>/` for `--launch` runs,
+  - sessions are discoverable (`diag list sessions`) and cleanable (`diag sessions clean`).
 
 Evidence anchors:
 
@@ -39,6 +42,7 @@ Evidence anchors:
 - Example config: `tools/diag-configs/diag.config.example.json`
 - Suites: `tools/diag-scripts/suites/README.md`
 - Concurrency hygiene: `docs/workstreams/diag-v2-hardening-and-switches-v1/concurrency-and-sessions.md`
+- Agent-era plan: `docs/workstreams/diag-v2-hardening-and-switches-v1/ai-era-debugging-stack.md`
 
 ## M1: Manifest exists for every run (P1)
 
