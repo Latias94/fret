@@ -44,6 +44,19 @@ Therefore:
 - The observable outcome is “snappiness”/convergence speed, and it depends on how often `seek()`
   is called (frame rate).
 
+### Contract: fixed-step engine ticks (v2 MVP)
+
+Fret v2 MVP intentionally mirrors Embla's *fixed-step* integration model:
+
+- Each `Engine::tick(...)` is one seek step (typically one rendered frame).
+- There is no wall-clock `dt` parameter in the headless engine.
+- Therefore, “time to settle” is best specified in **ticks/frames**, not milliseconds.
+
+Gates should avoid relying on real-time; prefer:
+
+- unit tests that assert invariants in a bounded number of ticks, and/or
+- `fretboard diag run --fixed-frame-delta-ms 16` when screenshot/pixel gates are needed.
+
 ### Fret mapping (v2 decision)
 
 We will support two duration concepts:
@@ -57,8 +70,29 @@ but “Embla parity” claims should be based on (1).
 
 Reduced motion:
 
-- When reduced motion is enabled, the engine should converge faster (or instantly) while remaining
-  logically consistent (events still fire; indices update).
+- When reduced motion is enabled, scroll motion should be reduced/removed while remaining logically
+  consistent (events still fire; indices update).
+
+### Contract: prefers-reduced-motion behavior (v2 decision)
+
+When `prefers-reduced-motion: reduce` is active for the window:
+
+- Carousel does not run inertia/physics settling loops (no continuous RAF churn).
+- Release and programmatic navigation converge immediately (single frame/tick).
+- Observable state still converges:
+  - selected index updates,
+  - `reInit`/`select` remain observable (generations/events).
+
+Implementation guidance (recipe-level policy):
+
+- Disable the Embla-style engine driver for reduced-motion windows (fallback to deterministic path).
+- Force settle duration to `0ms` for reduced-motion windows.
+
+Gates:
+
+- unit test: after a navigation interaction, reduced-motion carousel does not keep requesting
+  `Effect::RequestAnimationFrame` continuously (no animation loop)
+  (`ecosystem/fret-ui-shadcn/tests/carousel_reduced_motion.rs`).
 
 ## Drag semantics
 

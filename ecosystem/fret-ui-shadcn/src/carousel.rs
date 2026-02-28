@@ -14,6 +14,7 @@ use fret_ui::element::{
 use fret_ui::{ElementContext, Invalidation, Theme, UiHost};
 use fret_ui_kit::declarative::icon as decl_icon;
 use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
+use fret_ui_kit::declarative::prefers_reduced_motion;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::declarative::transition as decl_transition;
 use fret_ui_kit::headless::carousel as headless_carousel;
@@ -1037,10 +1038,13 @@ impl Carousel {
             let offset_now = cx.watch_model(&offset_model).copied().unwrap_or(Px(0.0));
             let runtime_snapshot = cx.watch_model(&runtime_model).copied().unwrap_or_default();
 
+            let reduced_motion = prefers_reduced_motion(cx, Invalidation::Paint, false);
+
             let embla_engine_enabled = options.embla_engine
                 || std::env::var("FRET_DEBUG_CAROUSEL_EMBLA_ENGINE")
                     .ok()
                     .is_some_and(|v| v == "1" || v.eq_ignore_ascii_case("true"));
+            let embla_engine_enabled = embla_engine_enabled && !reduced_motion;
 
             let mut applied_api_command = false;
             if let Some(api_commands_model) = api_commands_model.as_ref() {
@@ -1220,6 +1224,12 @@ impl Carousel {
             };
 
             if runtime_snapshot.embla_settling {
+                if reduced_motion {
+                    let _ = cx.app.models_mut().update(&embla_engine_model, |v| *v = None);
+                    let _ = cx.app.models_mut().update(&runtime_model, |st| {
+                        st.embla_settling = false;
+                    });
+                } else {
                 let _frames = cx.begin_continuous_frames();
 
                 let max_offset = cx
@@ -1258,9 +1268,19 @@ impl Carousel {
                         st.embla_settling = false;
                     }
                 });
+                }
             }
 
             if runtime_snapshot.settling {
+                if reduced_motion {
+                    let _ = cx.app.models_mut().update(&offset_model, |v| {
+                        *v = runtime_snapshot.settle_to;
+                    });
+                    offset_now = runtime_snapshot.settle_to;
+                    let _ = cx.app.models_mut().update(&runtime_model, |st| {
+                        st.settling = false;
+                    });
+                } else {
                 let duration = options.duration;
                 let settle_generation = runtime_snapshot.settle_generation;
                 let motion = cx.keyed(("carousel-settle", settle_generation), |cx| {
@@ -1283,6 +1303,7 @@ impl Carousel {
                         st.settling = false;
                     }
                 });
+                }
             }
 
             let axis_offset = offset_now;
@@ -2374,7 +2395,7 @@ impl Carousel {
                 },
             );
 
-            let (viewport_id, viewport) = cx.scope(|cx| {
+            let (viewport_id, viewport) = cx.keyed((root_test_id.clone(), "viewport"), |cx| {
                 let id = cx.root_id();
                 (
                     id,

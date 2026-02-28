@@ -44,8 +44,12 @@ Non-goals (v2):
   - Deliverable: `docs/workstreams/carousel-embla-parity-v2/api-and-events.md`
   - Note: promote to an ADR only if/when the surface becomes stable and/or must be treated as
     a long-lived contract outside `ecosystem/*`.
-- [ ] CAR2-030 Workstream design: scroll physics determinism + reduced-motion behavior.
-  - Deliverable: `docs/workstreams/carousel-embla-parity-v2/contracts.md` (time model section) + gates
+- [x] CAR2-030 Workstream design: scroll physics determinism + reduced-motion behavior (MVP).
+  - Deliverable:
+    - `docs/workstreams/carousel-embla-parity-v2/contracts.md` (fixed-step time model + reduced motion)
+  - Evidence:
+    - `ecosystem/fret-ui-shadcn/src/carousel.rs` (reduced-motion disables embla engine + instant settle)
+    - Gate: `ecosystem/fret-ui-shadcn/tests/carousel_reduced_motion.rs`
   - Note: promote to an ADR only if/when the physics semantics become a stable public contract.
 - [ ] CAR2-040 Workstream design: seamless loop engine semantics (if in scope).
   - Deliverable: `docs/workstreams/carousel-embla-parity-v2/contracts.md` (loop section) + gates
