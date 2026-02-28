@@ -35,10 +35,11 @@ This file is an execution checklist for the design in `DESIGN.md`.
 
 - [x] Decision: use `pinned_tab_count` boundary (Zed-like). See `OPEN_QUESTIONS.md`.
 - [x] Add `pinned_tab_count` to `WorkspaceTabs` with pin/unpin commands.
-- [ ] Add drop targets to allow moving tabs into/out of the pinned region.
+- [x] Add drop targets to allow moving tabs into/out of the pinned region.
 - [ ] Optional: add “separate pinned row” when pinned + unpinned exist.
 - [ ] Gates:
   - [x] test: pin/unpin preserves active, pinned count, and order
+  - [x] test: pinned boundary exposes stable `test_id`
   - [ ] diag: drag a tab across pinned boundary
 
 ## M3 — Preview tabs

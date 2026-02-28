@@ -19,7 +19,7 @@ We should keep selectors stable across refactors. Suggested shapes:
   - overflow entry close (future): `{root}.overflow_entry.{tab_id}.close`
 - Drop targets:
   - end-of-strip: `workspace-tabstrip-drop-end`
-  - pinned boundary: `workspace-tabstrip-drop-pinned-boundary`
+  - pinned boundary: `{root}.drop_pinned_boundary`
   - pinned row border (if separate row): `workspace-tabstrip-drop-pinned-row`
 
 Notes:
