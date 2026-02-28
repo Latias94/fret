@@ -1093,9 +1093,9 @@ The diagnostics harness also includes docking arbitration scripts (multi-viewpor
 - `tools/diag-scripts/docking-arbitration-demo-split-viewports.json`
 - `tools/diag-scripts/docking-arbitration-demo-modal-dock-drag-viewport-capture.json`
 - `tools/diag-scripts/docking-arbitration-demo-float-zone-floats-in-window.json`
-- `tools/diag-scripts/docking-arbitration/common/docking-arbitration-demo-tab-bar-drop-end-insert-index.json`
-- `tools/diag-scripts/docking-arbitration/common/docking-arbitration-demo-tab-bar-drop-end-insert-index-two-tabs.json`
-- `tools/diag-scripts/docking-arbitration/common/docking-arbitration-demo-tab-bar-drop-end-insert-index-overflow.json`
+- `tools/diag-scripts/docking-arbitration-demo-tab-bar-drop-end-insert-index.json`
+- `tools/diag-scripts/docking-arbitration-demo-tab-bar-drop-end-insert-index-two-tabs.json`
+- `tools/diag-scripts/docking-arbitration-demo-tab-bar-drop-end-insert-index-overflow.json`
 
 You can run them as a built-in suite:
 

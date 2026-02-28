@@ -6,9 +6,9 @@ This workstream is gated primarily by `fretboard diag` scripted regressions and 
 
 Baseline “drop-end resolves insert_index” gates:
 
-- `tools/diag-scripts/docking-arbitration/common/docking-arbitration-demo-tab-bar-drop-end-insert-index.json`
-- `tools/diag-scripts/docking-arbitration/common/docking-arbitration-demo-tab-bar-drop-end-insert-index-two-tabs.json`
-- `tools/diag-scripts/docking-arbitration/common/docking-arbitration-demo-tab-bar-drop-end-insert-index-overflow.json`
+- `tools/diag-scripts/docking-arbitration-demo-tab-bar-drop-end-insert-index.json`
+- `tools/diag-scripts/docking-arbitration-demo-tab-bar-drop-end-insert-index-two-tabs.json`
+- `tools/diag-scripts/docking-arbitration-demo-tab-bar-drop-end-insert-index-overflow.json`
 
 Run as suite:
 
