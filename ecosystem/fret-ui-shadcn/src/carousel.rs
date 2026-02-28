@@ -1,7 +1,7 @@
 use std::sync::Arc;
 use std::time::Duration;
 
-use fret_core::{Edges, KeyCode, MouseButton, Point, Px, SemanticsRole};
+use fret_core::{Edges, KeyCode, LayoutDirection, MouseButton, Point, Px, SemanticsRole};
 use fret_icons::ids;
 use fret_runtime::{Effect, Model, TimerToken};
 use fret_ui::action::{ActionCx, ActivateReason, KeyDownCx, OnKeyDown, UiActionHost};
@@ -148,6 +148,8 @@ pub struct CarouselOptions {
     pub align: CarouselAlign,
     pub slides_to_scroll: CarouselSlidesToScroll,
     pub contain_scroll: CarouselContainScroll,
+    /// Layout direction (Embla `direction`).
+    pub direction: LayoutDirection,
     /// Initial selected snap index (Embla `startSnap`).
     pub start_snap: usize,
     /// Whether pointer dragging is enabled (Embla `draggable`).
@@ -170,6 +172,7 @@ impl Default for CarouselOptions {
             align: CarouselAlign::Center,
             slides_to_scroll: CarouselSlidesToScroll::Fixed(1),
             contain_scroll: CarouselContainScroll::TrimSnaps,
+            direction: LayoutDirection::Ltr,
             start_snap: 0,
             draggable: true,
             loop_enabled: false,
@@ -198,6 +201,11 @@ impl CarouselOptions {
 
     pub fn contain_scroll(mut self, contain_scroll: CarouselContainScroll) -> Self {
         self.contain_scroll = contain_scroll;
+        self
+    }
+
+    pub fn direction(mut self, direction: LayoutDirection) -> Self {
+        self.direction = direction;
         self
     }
 
@@ -524,6 +532,7 @@ impl Carousel {
                     (fret_core::Axis::Vertical, fret_core::Axis::Horizontal)
                 }
             };
+            let layout_direction = options.direction;
 
             let items_len = self.items.len();
             let item_basis = self.item_basis_main_px;
@@ -618,6 +627,7 @@ impl Carousel {
             let offset_for_move = offset_model.clone();
             let max_offset_for_move = max_offset_model.clone();
             let dnd_service_for_move = fret_ui_kit::dnd::dnd_service_model(cx);
+            let direction_for_move = layout_direction;
             let on_move: fret_ui::action::OnPointerMove = Arc::new(move |host, _cx, mv| {
                 let runtime = host
                     .models_mut()
@@ -686,6 +696,7 @@ impl Carousel {
                         drag_config,
                         &mut st.drag,
                         track_direction,
+                        direction_for_move,
                         mv.position,
                         mv.buttons.left,
                         match mv.pointer_type {
@@ -721,6 +732,7 @@ impl Carousel {
             let skip_snaps_for_up = options.skip_snaps;
             let drag_free_for_up = options.drag_free;
             let loop_for_up = options.loop_enabled;
+            let direction_for_up = layout_direction;
             let on_up: fret_ui::action::OnPointerUp = Arc::new(move |host, cx, up| {
                 let runtime = host
                     .models_mut()
@@ -758,6 +770,7 @@ impl Carousel {
                         drag_config,
                         &mut drag,
                         track_direction,
+                        direction_for_up,
                         up.position,
                         &snaps,
                         max_offset,
@@ -779,6 +792,7 @@ impl Carousel {
                         drag_config,
                         &mut drag,
                         track_direction,
+                        direction_for_up,
                         up.position,
                         extent,
                         items_len,
@@ -962,6 +976,7 @@ impl Carousel {
             let snaps_for_key = snaps_model.clone();
             let autoplay_stop_for_key = autoplay_stop_on_interaction;
             let loop_for_key = options.loop_enabled;
+            let direction_for_key = layout_direction;
             let on_key_down: OnKeyDown = Arc::new(
                 move |host: &mut dyn fret_ui::action::UiFocusActionHost,
                       cx: ActionCx,
@@ -977,7 +992,10 @@ impl Carousel {
 
                     // shadcn/ui v4 Carousel uses left/right keys even when `orientation="vertical"`
                     // (it rotates the controls instead of switching the key mapping).
-                    let (prev_key, next_key) = (KeyCode::ArrowLeft, KeyCode::ArrowRight);
+                    let (prev_key, next_key) = match direction_for_key {
+                        LayoutDirection::Rtl => (KeyCode::ArrowRight, KeyCode::ArrowLeft),
+                        LayoutDirection::Ltr => (KeyCode::ArrowLeft, KeyCode::ArrowRight),
+                    };
 
                     if down.key != prev_key && down.key != next_key {
                         return false;
@@ -1378,6 +1396,14 @@ impl Carousel {
                     .flex_shrink_0(),
             );
 
+            let rtl_controls =
+                layout_direction == LayoutDirection::Rtl && orientation == CarouselOrientation::Horizontal;
+            let (prev_icon, next_icon) = if rtl_controls {
+                (ids::ui::ARROW_RIGHT, ids::ui::ARROW_LEFT)
+            } else {
+                (ids::ui::ARROW_LEFT, ids::ui::ARROW_RIGHT)
+            };
+
             let prev_button = Button::new("Previous slide")
                 .variant(ButtonVariant::Outline)
                 .size(ButtonSize::IconSm)
@@ -1389,7 +1415,7 @@ impl Carousel {
                         layout: arrow_layout,
                         transform: arrow_transform,
                     },
-                    move |cx| vec![decl_icon::icon(cx, ids::ui::ARROW_LEFT)],
+                    move |cx| vec![decl_icon::icon(cx, prev_icon)],
                 )])
                 .on_activate(on_prev)
                 .into_element(cx);
@@ -1405,7 +1431,7 @@ impl Carousel {
                         layout: arrow_layout,
                         transform: arrow_transform,
                     },
-                    move |cx| vec![decl_icon::icon(cx, ids::ui::ARROW_RIGHT)],
+                    move |cx| vec![decl_icon::icon(cx, next_icon)],
                 )])
                 .on_activate(on_next)
                 .into_element(cx);
@@ -1414,20 +1440,39 @@ impl Carousel {
             let button_size = MetricRef::Px(Px(32.0));
 
             let (prev_layout, next_layout) = match orientation {
-                CarouselOrientation::Horizontal => (
-                    LayoutRefinement::default()
-                        .absolute()
-                        .top(Space::N0)
-                        .bottom(Space::N0)
-                        .left_neg_px(offset.clone())
-                        .w_px(button_size.clone()),
-                    LayoutRefinement::default()
-                        .absolute()
-                        .top(Space::N0)
-                        .bottom(Space::N0)
-                        .right_neg_px(offset)
-                        .w_px(button_size),
-                ),
+                CarouselOrientation::Horizontal => {
+                    if rtl_controls {
+                        (
+                            LayoutRefinement::default()
+                                .absolute()
+                                .top(Space::N0)
+                                .bottom(Space::N0)
+                                .right_neg_px(offset.clone())
+                                .w_px(button_size.clone()),
+                            LayoutRefinement::default()
+                                .absolute()
+                                .top(Space::N0)
+                                .bottom(Space::N0)
+                                .left_neg_px(offset)
+                                .w_px(button_size),
+                        )
+                    } else {
+                        (
+                            LayoutRefinement::default()
+                                .absolute()
+                                .top(Space::N0)
+                                .bottom(Space::N0)
+                                .left_neg_px(offset.clone())
+                                .w_px(button_size.clone()),
+                            LayoutRefinement::default()
+                                .absolute()
+                                .top(Space::N0)
+                                .bottom(Space::N0)
+                                .right_neg_px(offset)
+                                .w_px(button_size),
+                        )
+                    }
+                }
                 CarouselOrientation::Vertical => (
                     LayoutRefinement::default()
                         .absolute()

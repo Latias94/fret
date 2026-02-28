@@ -3,7 +3,7 @@
 //! This module intentionally does not depend on `fret-ui` so it can be reused across composition
 //! layers without pulling in runtime/rendering contracts.
 
-use fret_core::{Axis, Point, Px};
+use fret_core::{Axis, LayoutDirection, Point, Px};
 
 use crate::snap_points as headless_snap_points;
 
@@ -67,6 +67,24 @@ fn axis_delta(axis: Axis, from: Point, to: Point) -> f32 {
 }
 
 #[inline]
+fn axis_direction_sign(axis: Axis, direction: LayoutDirection) -> f32 {
+    match (axis, direction) {
+        (Axis::Horizontal, LayoutDirection::Rtl) => -1.0,
+        _ => 1.0,
+    }
+}
+
+#[inline]
+fn axis_delta_with_direction(
+    axis: Axis,
+    direction: LayoutDirection,
+    from: Point,
+    to: Point,
+) -> f32 {
+    axis_delta(axis, from, to) * axis_direction_sign(axis, direction)
+}
+
+#[inline]
 fn cross_axis(axis: Axis) -> Axis {
     match axis {
         Axis::Horizontal => Axis::Vertical,
@@ -94,6 +112,7 @@ pub fn on_pointer_move(
     config: CarouselDragConfig,
     state: &mut CarouselDragState,
     axis: Axis,
+    direction: LayoutDirection,
     position: Point,
     buttons_left: bool,
     input_kind: CarouselDragInputKind,
@@ -121,7 +140,7 @@ pub fn on_pointer_move(
         && state.armed
         && !state.dragging
     {
-        let primary_abs = axis_delta(axis, state.start, position).abs();
+        let primary_abs = axis_delta_with_direction(axis, direction, state.start, position).abs();
         let cross_abs = axis_delta(cross_axis(axis), state.start, position).abs();
         if primary_abs.max(cross_abs) >= config.touch_scroll_lock_threshold_px
             && primary_abs <= cross_abs
@@ -135,7 +154,7 @@ pub fn on_pointer_move(
         }
     }
 
-    let delta = axis_delta(axis, state.start, position);
+    let delta = axis_delta_with_direction(axis, direction, state.start, position);
     if !state.dragging && state.armed && delta.abs() < config.drag_threshold_px {
         return CarouselDragMoveOutput {
             steal_capture: false,
@@ -172,6 +191,7 @@ pub fn on_pointer_up(
     config: CarouselDragConfig,
     state: &mut CarouselDragState,
     axis: Axis,
+    direction: LayoutDirection,
     position: Point,
     extent: Px,
     items_len: usize,
@@ -191,7 +211,7 @@ pub fn on_pointer_up(
         0
     };
 
-    let delta = axis_delta(axis, state.start, position);
+    let delta = axis_delta_with_direction(axis, direction, state.start, position);
     let mut next_index = start_index;
     if extent.0 > 0.0 {
         let threshold = extent.0 * config.snap_threshold_fraction;
@@ -221,6 +241,7 @@ pub fn on_pointer_up_with_snaps(
     config: CarouselDragConfig,
     state: &mut CarouselDragState,
     axis: Axis,
+    direction: LayoutDirection,
     position: Point,
     snaps: &[Px],
 ) -> Option<CarouselDragReleaseOutput> {
@@ -250,7 +271,7 @@ pub fn on_pointer_up_with_snaps(
         })
         .expect("non-empty snaps");
 
-    let delta = axis_delta(axis, state.start, position);
+    let delta = axis_delta_with_direction(axis, direction, state.start, position);
     let mut next_index = start_index;
 
     if snaps.len() > 1 {
@@ -285,6 +306,7 @@ pub fn on_pointer_up_with_snaps_options(
     config: CarouselDragConfig,
     state: &mut CarouselDragState,
     axis: Axis,
+    direction: LayoutDirection,
     position: Point,
     snaps: &[Px],
     max_offset: Px,
@@ -311,7 +333,7 @@ pub fn on_pointer_up_with_snaps_options(
     let start_index = start_index.min(snaps.len().saturating_sub(1));
     let start_snap = snaps[start_index];
 
-    let delta = axis_delta(axis, state.start, position);
+    let delta = axis_delta_with_direction(axis, direction, state.start, position);
     let projected_offset = Px(start_offset.0 - delta);
     let projected_offset = clamp_px(projected_offset, Px(0.0), max_offset);
     let projected_offset = round_3(projected_offset);
@@ -803,6 +825,7 @@ mod tests {
             CarouselDragConfig::default(),
             &mut state,
             Axis::Horizontal,
+            LayoutDirection::Ltr,
             Point::new(Px(9.0), Px(0.0)),
             true,
             CarouselDragInputKind::Mouse,
@@ -821,6 +844,7 @@ mod tests {
             CarouselDragConfig::default(),
             &mut state,
             Axis::Horizontal,
+            LayoutDirection::Ltr,
             Point::new(Px(10.0), Px(0.0)),
             true,
             CarouselDragInputKind::Mouse,
@@ -841,12 +865,35 @@ mod tests {
             CarouselDragConfig::default(),
             &mut state,
             Axis::Horizontal,
+            LayoutDirection::Ltr,
             Point::new(Px(-50.0), Px(0.0)),
             true,
             CarouselDragInputKind::Mouse,
             Px(60.0),
         );
         assert_eq!(out.next_offset, Some(Px(60.0)));
+    }
+
+    #[test]
+    fn move_mirrors_horizontal_delta_in_rtl() {
+        let mut state = CarouselDragState::default();
+        on_pointer_down(&mut state, true, Point::new(Px(0.0), Px(0.0)), Px(50.0));
+
+        // In RTL, dragging right should increase the offset (mirror Embla's `direction` sign).
+        let out = on_pointer_move(
+            CarouselDragConfig {
+                drag_threshold_px: 0.0,
+                ..Default::default()
+            },
+            &mut state,
+            Axis::Horizontal,
+            LayoutDirection::Rtl,
+            Point::new(Px(20.0), Px(0.0)),
+            true,
+            CarouselDragInputKind::Mouse,
+            Px(100.0),
+        );
+        assert_eq!(out.next_offset, Some(Px(70.0)));
     }
 
     #[test]
@@ -857,6 +904,7 @@ mod tests {
             CarouselDragConfig::default(),
             &mut state,
             Axis::Horizontal,
+            LayoutDirection::Ltr,
             Point::new(Px(-20.0), Px(0.0)),
             true,
             CarouselDragInputKind::Mouse,
@@ -867,6 +915,7 @@ mod tests {
             CarouselDragConfig::default(),
             &mut state,
             Axis::Horizontal,
+            LayoutDirection::Ltr,
             Point::new(Px(-30.0), Px(0.0)),
             Px(100.0),
             5,
@@ -888,6 +937,7 @@ mod tests {
             },
             &mut state,
             Axis::Horizontal,
+            LayoutDirection::Ltr,
             Point::new(Px(-40.0), Px(0.0)),
             true,
             CarouselDragInputKind::Mouse,
@@ -903,6 +953,7 @@ mod tests {
             },
             &mut state,
             Axis::Horizontal,
+            LayoutDirection::Ltr,
             Point::new(Px(-40.0), Px(0.0)),
             &snaps,
         )
@@ -924,6 +975,7 @@ mod tests {
             },
             &mut state,
             Axis::Horizontal,
+            LayoutDirection::Ltr,
             Point::new(Px(-12.0), Px(0.0)),
             true,
             CarouselDragInputKind::Mouse,
@@ -939,6 +991,7 @@ mod tests {
             },
             &mut state,
             Axis::Horizontal,
+            LayoutDirection::Ltr,
             Point::new(Px(-240.0), Px(0.0)),
             &snaps,
             Px(300.0),
@@ -960,6 +1013,7 @@ mod tests {
             },
             &mut state,
             Axis::Horizontal,
+            LayoutDirection::Ltr,
             Point::new(Px(-12.0), Px(0.0)),
             true,
             CarouselDragInputKind::Mouse,
@@ -973,6 +1027,7 @@ mod tests {
             },
             &mut state,
             Axis::Horizontal,
+            LayoutDirection::Ltr,
             Point::new(Px(-240.0), Px(0.0)),
             &snaps,
             Px(300.0),
@@ -998,6 +1053,7 @@ mod tests {
             },
             &mut state,
             Axis::Horizontal,
+            LayoutDirection::Ltr,
             Point::new(Px(-12.0), Px(0.0)),
             true,
             CarouselDragInputKind::Mouse,
@@ -1013,6 +1069,7 @@ mod tests {
             },
             &mut state,
             Axis::Horizontal,
+            LayoutDirection::Ltr,
             Point::new(Px(-160.0), Px(0.0)),
             &snaps,
             Px(300.0),
@@ -1035,6 +1092,7 @@ mod tests {
             CarouselDragConfig::default(),
             &mut state,
             Axis::Horizontal,
+            LayoutDirection::Ltr,
             Point::new(Px(1.0), Px(5.0)),
             true,
             CarouselDragInputKind::Touch,
