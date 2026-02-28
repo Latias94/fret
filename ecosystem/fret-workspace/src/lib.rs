@@ -11,7 +11,6 @@ pub mod menu;
 pub mod panes;
 pub mod tab_drag;
 mod tab_strip;
-mod tab_strip_overflow;
 pub mod tabs;
 
 pub use frame::{WorkspaceFrame, WorkspaceStatusBar, WorkspaceTopBar};
