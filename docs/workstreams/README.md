@@ -16,6 +16,15 @@ Active workstreams:
 - `docs/workstreams/workspace-shell-tabstrip-fearless-refactor-v1/PARITY_MATRIX.md`
 - `docs/workstreams/workspace-shell-tabstrip-fearless-refactor-v1/OPEN_QUESTIONS.md`
 - `docs/workstreams/workspace-shell-tabstrip-fearless-refactor-v1/EVIDENCE_AND_GATES.md`
+- `docs/workstreams/docking-tabbar-fearless-refactor-v1/DESIGN.md`
+- `docs/workstreams/docking-tabbar-fearless-refactor-v1/TODO.md`
+- `docs/workstreams/docking-tabbar-fearless-refactor-v1/M1_FOUNDATION.md`
+- `docs/workstreams/docking-tabbar-fearless-refactor-v1/M2_OVERFLOW_AND_DROP_SURFACES.md`
+- `docs/workstreams/docking-tabbar-fearless-refactor-v1/M3_A11Y_KEYBOARD_EDITOR_SEMANTICS.md`
+- `docs/workstreams/docking-tabbar-fearless-refactor-v1/OPEN_QUESTIONS.md`
+- `docs/workstreams/docking-tabbar-fearless-refactor-v1/PARITY_MATRIX.md`
+- `docs/workstreams/docking-tabbar-fearless-refactor-v1/EVIDENCE_AND_GATES.md`
+- `docs/workstreams/docking-tabbar-fearless-refactor-v1/REFERENCE_NOTES.md`
 - `docs/workstreams/genui-json-render-v1.md`
 - `docs/workstreams/genui-json-render-v1-todo.md`
 - `docs/workstreams/genui-json-render-v1-milestones.md`

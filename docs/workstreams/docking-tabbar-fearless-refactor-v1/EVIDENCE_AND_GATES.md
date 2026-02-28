@@ -1,0 +1,27 @@
+# Docking TabBar Fearless Refactor v1 (Evidence and Gates)
+
+This workstream is gated primarily by `fretboard diag` scripted regressions and a small set of unit tests.
+
+## Diagnostics scripts (docking)
+
+Baseline “drop-end resolves insert_index” gates:
+
+- `tools/diag-scripts/docking-arbitration/common/docking-arbitration-demo-tab-bar-drop-end-insert-index.json`
+- `tools/diag-scripts/docking-arbitration/common/docking-arbitration-demo-tab-bar-drop-end-insert-index-two-tabs.json`
+- `tools/diag-scripts/docking-arbitration/common/docking-arbitration-demo-tab-bar-drop-end-insert-index-overflow.json`
+
+Run as suite:
+
+- `cargo run -p fretboard -- diag suite docking-arbitration --launch -- cargo run -p fret-examples --bin docking_arbitration_demo --release`
+
+## Unit tests
+
+- `cargo nextest run -p fret-bootstrap -p fret-diag-protocol`
+
+## Script registry sanity check
+
+- `python3 tools/check_diag_scripts_registry.py`
+
+## Evidence bundles (fill in after running locally)
+
+- Docking arbitration suite bundle: TODO (record `target/.../bundle.json` path here)
