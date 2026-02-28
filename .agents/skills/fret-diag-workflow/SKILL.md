@@ -133,6 +133,17 @@ Prefer bounded queries over `rg bundle.json`:
 
 When searching the repository (not bundle artifacts), prefer `tools/rg-safe.ps1` (excludes `target/fret-diag/**` and `.fret/diag/**`).
 
+Useful safe-search templates (PowerShell):
+
+- Find all mentions of a script id (bounded, avoids diag artifacts):
+  - `tools/rg-safe.ps1 -n -- "ui-gallery-command-palette-shortcut-primary"`
+- Find who writes a specific env var (limit to tooling + runtime config code):
+  - `tools/rg-safe.ps1 -n -- "FRET_DIAG_CONFIG_PATH" crates ecosystem`
+- Find `--launch` handling sites (limit to tooling crate):
+  - `tools/rg-safe.ps1 -n -- "\\-\\-launch" crates/fret-diag`
+- Find an error `reason_code` or warning code:
+  - `tools/rg-safe.ps1 -n -- "tooling.launch.failed" crates docs`
+
 For evidence-first triage (reason codes + bounded traces), see: `references/evidence-triage.md`.
 
 ## Troubleshooting (common issues)
