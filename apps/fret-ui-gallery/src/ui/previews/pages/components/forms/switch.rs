@@ -155,12 +155,7 @@ pub(in crate::ui) fn preview_switch(
     };
 
     let bluetooth = {
-        let blue = ColorRef::Color(CoreColor {
-            r: 0.23,
-            g: 0.51,
-            b: 0.96,
-            a: 1.0,
-        });
+        let blue = ColorRef::Color(fret_ui_kit::colors::linear_from_hex_rgb(0x3B_82_F6));
         let style = shadcn::switch::SwitchStyle::default().track_background(
             fret_ui_kit::WidgetStateProperty::new(None)
                 .when(fret_ui_kit::WidgetStates::SELECTED, Some(blue)),
@@ -186,12 +181,7 @@ pub(in crate::ui) fn preview_switch(
     };
 
     let label_card = {
-        let blue = ColorRef::Color(CoreColor {
-            r: 0.23,
-            g: 0.51,
-            b: 0.96,
-            a: 1.0,
-        });
+        let blue = ColorRef::Color(fret_ui_kit::colors::linear_from_hex_rgb(0x3B_82_F6));
         let style = shadcn::switch::SwitchStyle::default().track_background(
             fret_ui_kit::WidgetStateProperty::new(None)
                 .when(fret_ui_kit::WidgetStates::SELECTED, Some(blue)),

@@ -458,19 +458,10 @@ pub struct CanvasMarqueeStyle {
 
 impl Default for CanvasMarqueeStyle {
     fn default() -> Self {
+        let base = fret_core::Color::from_srgb_hex_rgb(0x33_8c_f2);
         Self {
-            fill: fret_core::Color {
-                r: 0.20,
-                g: 0.55,
-                b: 0.95,
-                a: 0.15,
-            },
-            border: fret_core::Color {
-                r: 0.20,
-                g: 0.55,
-                b: 0.95,
-                a: 0.85,
-            },
+            fill: fret_core::Color { a: 0.15, ..base },
+            border: fret_core::Color { a: 0.85, ..base },
             border_width_px: 1.0,
         }
     }

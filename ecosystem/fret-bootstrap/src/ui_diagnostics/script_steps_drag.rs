@@ -385,31 +385,29 @@ pub(super) fn handle_drag_pointer_until_step(
                     .is_some_and(|c| c.ui.window_hover_detection.as_str() == quality.as_str()),
                 UiPredicateV1::DockDragCurrentWindowIs {
                     window: target_window,
-                } => {
-                    resolve_window_target_from_known_windows(
-                        window,
-                        svc.known_windows.as_slice(),
-                        *target_window,
-                    )
-                    .is_some_and(|target_window| {
-                        dock_drag_runtime.as_ref().is_some_and(|drag| {
-                            drag.dragging && drag.current_window == target_window
-                        })
-                    })
-                }
+                } => resolve_window_target_from_known_windows(
+                    window,
+                    svc.known_windows.as_slice(),
+                    *target_window,
+                )
+                .is_some_and(|target_window| {
+                    dock_drag_runtime
+                        .as_ref()
+                        .is_some_and(|drag| drag.dragging && drag.current_window == target_window)
+                }),
                 UiPredicateV1::DockDragActiveIs { active } => {
                     let dragging = dock_drag_runtime.as_ref().is_some_and(|drag| drag.dragging);
                     dragging == *active
                 }
                 UiPredicateV1::DockDropResolveSourceIs { source } => {
-                    if let Some(resolve) =
-                        docking_diag.and_then(|d| d.dock_drop_resolve.as_ref())
-                    {
+                    if let Some(resolve) = docking_diag.and_then(|d| d.dock_drop_resolve.as_ref()) {
                         let have = match resolve.source {
                             fret_runtime::DockDropResolveSource::InvertDocking => "invert_docking",
                             fret_runtime::DockDropResolveSource::OutsideWindow => "outside_window",
                             fret_runtime::DockDropResolveSource::FloatZone => "float_zone",
-                            fret_runtime::DockDropResolveSource::EmptyDockSpace => "empty_dock_space",
+                            fret_runtime::DockDropResolveSource::EmptyDockSpace => {
+                                "empty_dock_space"
+                            }
                             fret_runtime::DockDropResolveSource::LayoutBoundsMiss => {
                                 "layout_bounds_miss"
                             }

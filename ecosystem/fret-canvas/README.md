@@ -7,6 +7,14 @@ charts, editors) without pushing interaction policy into `crates/fret-ui`.
 
 Design reference: `docs/adr/0128-canvas-widgets-and-interactive-surfaces.md`.
 
+## Upstream references (non-normative)
+
+This crate aims to stay policy-light, but some geometry and interaction conventions are informed by
+common editor UIs:
+
+- XyFlow (React Flow): https://github.com/xyflow/xyflow
+- Dear ImGui (editor interaction vocabulary): https://github.com/ocornut/imgui
+
 ## Goals
 
 - Provide reusable building blocks for canvas widgets:

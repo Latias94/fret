@@ -83,10 +83,7 @@ impl DiagCursorScreenPosOverride {
         let Some(stamp) = stamp else {
             return false;
         };
-        if self
-            .last_trigger_stamp
-            .is_some_and(|prev| prev >= stamp)
-        {
+        if self.last_trigger_stamp.is_some_and(|prev| prev >= stamp) {
             return false;
         }
         self.last_trigger_stamp = Some(stamp);

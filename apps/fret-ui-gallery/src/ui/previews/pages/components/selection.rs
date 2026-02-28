@@ -92,6 +92,7 @@ pub(in crate::ui) fn preview_radio_group(cx: &mut ElementContext<'_, App>) -> Ve
                     ),
                 )
                 .into_element(cx)
+                .test_id("ui-gallery-radio-group-description")
         };
 
         let fieldset = {

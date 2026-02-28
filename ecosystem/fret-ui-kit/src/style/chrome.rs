@@ -550,12 +550,7 @@ impl ChromeRefinement {
     pub fn debug_border_destructive(self) -> Self {
         self.debug_border(ColorRef::Token {
             key: "destructive",
-            fallback: ColorFallback::Color(fret_core::Color {
-                r: 0.937,
-                g: 0.267,
-                b: 0.267,
-                a: 1.0,
-            }),
+            fallback: ColorFallback::Color(fret_core::Color::from_srgb_hex_rgb(0xef_44_44)),
         })
     }
 

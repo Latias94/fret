@@ -1014,7 +1014,6 @@ impl FieldDescription {
             direction_prim::LayoutDirection::Ltr => TextAlign::Start,
         };
         ui::text(cx, self.text)
-            .w_full()
             .text_size_px(px)
             .line_height_px(line_height)
             .font_normal()

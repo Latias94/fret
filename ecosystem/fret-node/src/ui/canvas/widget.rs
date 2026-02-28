@@ -68,7 +68,8 @@ use crate::ui::style::{NodeGraphBackgroundStyle, NodeGraphColorMode, NodeGraphSt
 use crate::ui::{
     FallbackMeasuredNodeGraphPresenter, GroupRenameOverlay, MeasuredGeometryStore,
     NodeGraphCanvasTransform, NodeGraphEdgeTypes, NodeGraphEditQueue, NodeGraphFitViewOptions,
-    NodeGraphInternalsSnapshot, NodeGraphInternalsStore, NodeGraphOverlayState, NodeGraphViewQueue,
+    NodeGraphInternalsSnapshot, NodeGraphInternalsStore, NodeGraphOverlayState, NodeGraphSkinRef,
+    NodeGraphViewQueue,
 };
 
 use super::middleware::{
@@ -240,6 +241,8 @@ pub struct NodeGraphCanvasWith<M> {
     color_mode: Option<NodeGraphColorMode>,
     color_mode_last: Option<NodeGraphColorMode>,
     color_mode_theme_rev: Option<u64>,
+    skin: Option<NodeGraphSkinRef>,
+    skin_last_rev: Option<u64>,
     close_command: Option<CommandId>,
 
     auto_measured: Arc<MeasuredGeometryStore>,
@@ -259,6 +262,8 @@ pub struct NodeGraphCanvasWith<M> {
 
     internals: Option<Arc<NodeGraphInternalsStore>>,
     internals_key: Option<InternalsCacheKey>,
+
+    diagnostics_anchor_ports: Option<DiagnosticsAnchorPorts>,
 
     cached_pan: CanvasPoint,
     cached_zoom: f32,
@@ -280,6 +285,12 @@ pub struct NodeGraphCanvasWith<M> {
     edge_labels_build_states: HashMap<u64, EdgeLabelsBuildState>,
     edge_labels_build_state: Option<EdgeLabelsBuildState>,
     interaction: InteractionState,
+}
+
+#[derive(Debug, Clone)]
+struct DiagnosticsAnchorPorts {
+    child_offset: usize,
+    ports: Vec<PortId>,
 }
 
 #[derive(Debug, Clone)]
@@ -323,6 +334,10 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
     const EDGE_LABEL_TILE_BUILD_BUDGET_TILES_PER_FRAME: InteractionBudget =
         InteractionBudget::new(2, 1);
     const EDGE_WIRE_BUILD_BUDGET_PER_FRAME: InteractionBudget = InteractionBudget::new(256, 64);
+    const EDGE_WIRE_HIGHLIGHT_BUILD_BUDGET_PER_FRAME: InteractionBudget =
+        InteractionBudget::new(256, 64);
+    const EDGE_WIRE_OUTLINE_BUILD_BUDGET_PER_FRAME: InteractionBudget =
+        InteractionBudget::new(256, 64);
     const EDGE_MARKER_BUILD_BUDGET_PER_FRAME: InteractionBudget = InteractionBudget::new(96, 24);
     const EDGE_LABEL_BUILD_BUDGET_PER_FRAME: InteractionBudget = InteractionBudget::new(16, 4);
     const STATIC_SCENE_TILE_CACHE_MAX_AGE_FRAMES: u64 = 60 * 30;
@@ -460,6 +475,8 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
             color_mode: None,
             color_mode_last: None,
             color_mode_theme_rev: None,
+            skin: None,
+            skin_last_rev: None,
             close_command: None,
             auto_measured,
             auto_measured_key: None,
@@ -474,6 +491,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
             measured_output_key: None,
             internals: None,
             internals_key: None,
+            diagnostics_anchor_ports: None,
             cached_pan: CanvasPoint::default(),
             cached_zoom: 1.0,
             last_cull_window_key: None,
@@ -501,6 +519,13 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
             presenter,
             self.auto_measured.clone(),
         ));
+        self
+    }
+
+    /// Attaches a UI-only skin resolver for per-node/per-edge chrome overrides.
+    pub fn with_skin(mut self, skin: NodeGraphSkinRef) -> Self {
+        self.skin = Some(skin);
+        self.skin_last_rev = None;
         self
     }
 
@@ -537,6 +562,8 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
             color_mode: self.color_mode,
             color_mode_last: self.color_mode_last,
             color_mode_theme_rev: self.color_mode_theme_rev,
+            skin: self.skin,
+            skin_last_rev: self.skin_last_rev,
             close_command: self.close_command,
             auto_measured: self.auto_measured,
             auto_measured_key: self.auto_measured_key,
@@ -551,6 +578,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
             measured_output_key: self.measured_output_key,
             internals: self.internals,
             internals_key: self.internals_key,
+            diagnostics_anchor_ports: self.diagnostics_anchor_ports,
             cached_pan: self.cached_pan,
             cached_zoom: self.cached_zoom,
             last_cull_window_key: self.last_cull_window_key,
@@ -587,6 +615,32 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
 
     pub fn with_internals_store(mut self, store: Arc<NodeGraphInternalsStore>) -> Self {
         self.internals = Some(store);
+        self
+    }
+
+    /// Attaches diagnostics-only port anchors.
+    ///
+    /// This is a UI-only helper to make pointer-driven `fretboard diag` scripts deterministic
+    /// without depending on pixels. Anchors are represented as child nodes whose bounds are laid
+    /// out to match the current port bounds in window space.
+    ///
+    /// Contract:
+    /// - Anchors must be paint-only and must not affect hit-testing (anchors should be semantics-
+    ///   only widgets).
+    /// - The provided `child_offset` must match how the caller mounts children under the canvas.
+    pub fn with_diagnostics_anchor_ports(
+        mut self,
+        child_offset: usize,
+        ports: Vec<PortId>,
+    ) -> Self {
+        self.diagnostics_anchor_ports = if ports.is_empty() {
+            None
+        } else {
+            Some(DiagnosticsAnchorPorts {
+                child_offset,
+                ports,
+            })
+        };
         self
     }
 
@@ -667,6 +721,27 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
             self.paint_cache.clear(services);
         }
 
+        self.grid_scene_cache.clear();
+        self.groups_scene_cache.clear();
+        self.nodes_scene_cache.clear();
+        self.edges_scene_cache.clear();
+        self.edge_labels_scene_cache.clear();
+        self.edges_build_states.clear();
+        self.edge_labels_build_states.clear();
+        self.edge_labels_build_state = None;
+    }
+
+    fn sync_skin(&mut self, _services: Option<&mut dyn fret_core::UiServices>) {
+        let Some(skin) = self.skin.as_ref() else {
+            self.skin_last_rev = None;
+            return;
+        };
+
+        let rev = skin.revision();
+        if self.skin_last_rev == Some(rev) {
+            return;
+        }
+        self.skin_last_rev = Some(rev);
         self.grid_scene_cache.clear();
         self.groups_scene_cache.clear();
         self.nodes_scene_cache.clear();

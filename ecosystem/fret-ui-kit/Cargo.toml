@@ -25,6 +25,8 @@ tracing.workspace = true
 time.workspace = true
 virtualizer.workspace = true
 smallvec.workspace = true
+serde.workspace = true
+serde_json.workspace = true
 
 [features]
 # Default to a minimal, third-party-friendly foundation surface.

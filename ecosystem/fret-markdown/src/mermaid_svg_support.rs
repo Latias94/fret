@@ -121,12 +121,7 @@ fn render_mermaid_svg<H: UiHost + 'static>(
             cx.scroll(scroll, |cx| {
                 let mut icon = SvgIconProps::new(SvgSource::Bytes(ready.svg_bytes));
                 icon.fit = SvgFit::Contain;
-                icon.color = fret_core::Color {
-                    r: 1.0,
-                    g: 1.0,
-                    b: 1.0,
-                    a: 1.0,
-                };
+                icon.color = theme.color_token("foreground");
                 // Use the SVG's own viewBox as a "natural size" hint. This keeps diagrams readable
                 // without forcing them to shrink to fit the Markdown column.
                 if let (Some(w), Some(h)) = (ready.viewbox_w, ready.viewbox_h) {
