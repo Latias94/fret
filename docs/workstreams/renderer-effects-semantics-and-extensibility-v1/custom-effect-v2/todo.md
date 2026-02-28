@@ -72,3 +72,9 @@ Constraints:
     - Evidence: `apps/fret-examples/src/custom_effect_v2_lut_web_demo.rs` (web runner via `apps/fret-demo-web`)
   - [x] a simple “glass chrome” highlight driven by a normal/noise map input:
     - Evidence: `apps/fret-examples/src/custom_effect_v2_glass_chrome_web_demo.rs` (web runner via `apps/fret-demo-web`)
+
+## P4 — Author docs (install + portability)
+
+- [x] Write down a practical install/registration pattern for component authors (including “one line install”
+      via builder wrappers on native) and a short WebGPU portability checklist.
+  - Evidence: `docs/workstreams/renderer-effects-semantics-and-extensibility-v1/custom-effect-v2/authoring-install-pattern.md`
