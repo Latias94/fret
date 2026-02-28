@@ -189,6 +189,30 @@ impl Engine {
     pub fn tick(&mut self, pointer_down: bool) {
         self.scroll_body.seek();
         self.constrain_bounds(pointer_down);
+        self.normalize_loop_entities();
+        self.sync_target_vector();
+    }
+
+    /// Keeps loop-enabled motion values within the scroll limit by applying Embla-style loop distances.
+    ///
+    /// Unlike `ScrollBounds`, this is only active for `loop=true` and does not clamp; it wraps the
+    /// location/target by the loop length while keeping integrator velocity intact.
+    pub fn normalize_loop_entities(&mut self) {
+        if !self.config.loop_enabled {
+            return;
+        }
+        if self.limit.length == 0.0 {
+            return;
+        }
+
+        let location = self.scroll_body.location();
+        let wrapped = self.limit.remove_offset(location);
+        let delta = wrapped - location;
+        if delta == 0.0 {
+            return;
+        }
+
+        self.scroll_body.add_loop_distance(delta);
         self.sync_target_vector();
     }
 
@@ -347,5 +371,66 @@ mod tests {
         assert_eq!(engine.scroll_body.location(), -240.0);
         assert_eq!(engine.scroll_body.target(), -240.0);
         assert_eq!(engine.index_current, 2);
+    }
+
+    #[test]
+    fn loop_normalization_wraps_location_without_resetting_motion() {
+        // 5 uniform slides, view size 100 => content size 500, scroll snaps 0..-400.
+        let snaps = vec![0.0, -100.0, -200.0, -300.0, -400.0];
+        let mut engine = Engine::new(
+            snaps,
+            500.0,
+            EngineConfig {
+                loop_enabled: true,
+                drag_free: false,
+                skip_snaps: false,
+                duration: 25.0,
+                base_friction: 0.9,
+                view_size: 100.0,
+                start_snap: 0,
+            },
+        );
+
+        // Simulate a drag past max bound (location > 0).
+        engine.scroll_body.set_location(20.0);
+        engine.scroll_body.set_target(20.0);
+        engine.scroll_target.set_target_vector(20.0);
+
+        engine.normalize_loop_entities();
+
+        assert!(
+            engine.scroll_body.location() <= engine.limit.max,
+            "expected wrapped location within max bound; loc={}",
+            engine.scroll_body.location()
+        );
+        assert!(
+            engine.scroll_body.location() >= engine.limit.min,
+            "expected wrapped location within min bound; loc={}",
+            engine.scroll_body.location()
+        );
+    }
+
+    #[test]
+    fn loop_scroll_to_next_wraps_selection_index() {
+        let snaps = vec![0.0, -100.0, -200.0, -300.0, -400.0];
+        let mut engine = Engine::new(
+            snaps,
+            500.0,
+            EngineConfig {
+                loop_enabled: true,
+                drag_free: false,
+                skip_snaps: false,
+                duration: 0.0,
+                base_friction: 0.9,
+                view_size: 100.0,
+                start_snap: 0,
+            },
+        );
+
+        for _ in 0..5 {
+            let _ = engine.scroll_to_next();
+        }
+
+        assert_eq!(engine.index_current, 0);
     }
 }

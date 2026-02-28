@@ -344,6 +344,7 @@ struct CarouselState {
     runtime: Option<Model<CarouselRuntime>>,
     extent: Option<Model<Px>>,
     snaps: Option<Model<Arc<[Px]>>>,
+    slides: Option<Model<Arc<[headless_carousel::CarouselSlide1D]>>>,
     max_offset: Option<Model<Px>>,
     embla_engine: Option<Model<Option<headless_embla::engine::Engine>>>,
 }
@@ -357,6 +358,7 @@ fn carousel_models<H: UiHost>(
     Model<CarouselRuntime>,
     Model<Px>,
     Model<Arc<[Px]>>,
+    Model<Arc<[headless_carousel::CarouselSlide1D]>>,
     Model<Px>,
     Model<Option<headless_embla::engine::Engine>>,
 ) {
@@ -366,6 +368,7 @@ fn carousel_models<H: UiHost>(
             || st.runtime.is_none()
             || st.extent.is_none()
             || st.snaps.is_none()
+            || st.slides.is_none()
             || st.max_offset.is_none()
             || st.embla_engine.is_none()
     });
@@ -381,6 +384,9 @@ fn carousel_models<H: UiHost>(
         let extent = cx.app.models_mut().insert(Px(0.0));
         let snaps: Arc<[Px]> = Arc::from(Vec::<Px>::new());
         let snaps = cx.app.models_mut().insert(snaps);
+        let slides: Arc<[headless_carousel::CarouselSlide1D]> =
+            Arc::from(Vec::<headless_carousel::CarouselSlide1D>::new());
+        let slides = cx.app.models_mut().insert(slides);
         let max_offset = cx.app.models_mut().insert(Px(0.0));
         let embla_engine: Option<headless_embla::engine::Engine> = None;
         let embla_engine = cx.app.models_mut().insert(embla_engine);
@@ -390,6 +396,7 @@ fn carousel_models<H: UiHost>(
             st.runtime = Some(runtime.clone());
             st.extent = Some(extent.clone());
             st.snaps = Some(snaps.clone());
+            st.slides = Some(slides.clone());
             st.max_offset = Some(max_offset.clone());
             st.embla_engine = Some(embla_engine.clone());
         });
@@ -399,12 +406,13 @@ fn carousel_models<H: UiHost>(
             runtime,
             extent,
             snaps,
+            slides,
             max_offset,
             embla_engine,
         );
     }
 
-    let (index, offset, runtime, extent, snaps, max_offset, embla_engine) =
+    let (index, offset, runtime, extent, snaps, slides, max_offset, embla_engine) =
         cx.with_state(CarouselState::default, |st| {
             (
                 st.index.clone().expect("index"),
@@ -412,6 +420,7 @@ fn carousel_models<H: UiHost>(
                 st.runtime.clone().expect("runtime"),
                 st.extent.clone().expect("extent"),
                 st.snaps.clone().expect("snaps"),
+                st.slides.clone().expect("slides"),
                 st.max_offset.clone().expect("max_offset"),
                 st.embla_engine.clone().expect("embla_engine"),
             )
@@ -422,6 +431,7 @@ fn carousel_models<H: UiHost>(
         runtime,
         extent,
         snaps,
+        slides,
         max_offset,
         embla_engine,
     )
@@ -566,6 +576,7 @@ impl Carousel {
                 runtime_model,
                 extent_model,
                 snaps_model,
+                slides_model,
                 max_offset_model,
                 embla_engine_model,
             ) = carousel_models(cx, options.start_snap);
@@ -631,6 +642,7 @@ impl Carousel {
                     .watch_model(&max_offset_model)
                     .copied()
                     .unwrap_or(Px(0.0));
+                let view_size = cx.watch_model(&extent_model).copied().unwrap_or(Px(0.0));
                 let mut next_offset = None;
                 let mut settled = false;
                 let pointer_down = runtime_snapshot.drag.armed || runtime_snapshot.drag.dragging;
@@ -643,7 +655,12 @@ impl Carousel {
                     engine.tick(pointer_down);
                     settled = engine.scroll_body.settled();
                     let loc = engine.scroll_body.location();
-                    let mapped = Px((-loc).clamp(0.0, max_offset.0.max(0.0)));
+                    let max = if options.loop_enabled {
+                        (max_offset.0 + view_size.0).max(0.0)
+                    } else {
+                        max_offset.0.max(0.0)
+                    };
+                    let mapped = Px((-loc).clamp(0.0, max));
                     next_offset = Some(mapped);
                 });
 
@@ -767,8 +784,7 @@ impl Carousel {
                     .ok()
                     .unwrap_or(0);
 
-                let can_use_embla_engine =
-                    embla_engine_enabled_for_down && !loop_for_down && snaps.len() > 1;
+                let can_use_embla_engine = embla_engine_enabled_for_down && snaps.len() > 1;
 
                 let _ = host.models_mut().update(&embla_engine_for_down, |v| {
                     if !can_use_embla_engine || view_size <= 0.0 {
@@ -776,7 +792,7 @@ impl Carousel {
                         return;
                     }
 
-                    let content_size = max_offset.0.max(0.0);
+                    let content_size = (max_offset.0.max(0.0) + view_size.max(0.0)).max(0.0);
                     let mut scroll_snaps = snaps.iter().map(|px| -px.0).collect::<Vec<_>>();
                     if scroll_snaps.is_empty() {
                         scroll_snaps.push(0.0);
@@ -786,7 +802,7 @@ impl Carousel {
                         scroll_snaps,
                         content_size,
                         headless_embla::engine::EngineConfig {
-                            loop_enabled: false,
+                            loop_enabled: loop_for_down,
                             drag_free: drag_free_for_down,
                             skip_snaps: skip_snaps_for_down,
                             duration: embla_duration_for_down.max(0.0),
@@ -932,6 +948,7 @@ impl Carousel {
                         engine.scroll_body.set_location(location);
                         engine.scroll_body.set_target(target);
                         engine.constrain_bounds(true);
+                        engine.normalize_loop_entities();
 
                         let constrained = engine.scroll_body.target();
                         next_offset = Some(Px(-constrained));
@@ -995,10 +1012,8 @@ impl Carousel {
                     .ok()
                     .unwrap_or_else(|| Arc::from(Vec::<Px>::new()));
 
-                let can_use_embla_engine = embla_engine_enabled_for_up
-                    && !loop_for_up
-                    && snaps.len() > 1
-                    && up.velocity_window.is_some();
+                let can_use_embla_engine =
+                    embla_engine_enabled_for_up && snaps.len() > 1 && up.velocity_window.is_some();
 
                 if can_use_embla_engine {
                     let bounds = host.bounds();
@@ -1008,7 +1023,7 @@ impl Carousel {
                     };
 
                     let content_size = if max_offset.0 > 0.0 {
-                        max_offset.0
+                        max_offset.0 + view_size
                     } else {
                         let extent = match item_basis {
                             Some(px) => px,
@@ -1017,7 +1032,7 @@ impl Carousel {
                                 fret_core::Axis::Vertical => bounds.size.height,
                             },
                         };
-                        (extent.0 * (items_len.saturating_sub(1) as f32)).max(0.0)
+                        (extent.0 * (items_len as f32)).max(0.0)
                     };
 
                     let mut scroll_snaps = snaps.iter().map(|px| -px.0).collect::<Vec<_>>();
@@ -1035,7 +1050,7 @@ impl Carousel {
                         scroll_snaps,
                         content_size,
                         headless_embla::engine::EngineConfig {
-                            loop_enabled: false,
+                            loop_enabled: loop_for_up,
                             drag_free: drag_free_for_up,
                             skip_snaps: skip_snaps_for_up,
                             duration: embla_duration_for_up.max(0.0),
@@ -1211,7 +1226,7 @@ impl Carousel {
                         return;
                     }
 
-                    if embla_engine_enabled_for_prev && !loop_for_prev {
+                    if embla_engine_enabled_for_prev {
                         let view_size = host
                             .models_mut()
                             .read(&extent_for_prev, |v| v.0.max(0.0))
@@ -1222,7 +1237,7 @@ impl Carousel {
                             .read(&max_offset_for_prev, |v| *v)
                             .ok()
                             .unwrap_or(Px(0.0));
-                        let content_size = max_offset.0.max(0.0);
+                        let content_size = (max_offset.0.max(0.0) + view_size.max(0.0)).max(0.0);
                         let mut scroll_snaps = snaps.iter().map(|px| -px.0).collect::<Vec<_>>();
                         if scroll_snaps.is_empty() {
                             scroll_snaps.push(0.0);
@@ -1232,7 +1247,7 @@ impl Carousel {
                             scroll_snaps,
                             content_size,
                             headless_embla::engine::EngineConfig {
-                                loop_enabled: false,
+                                loop_enabled: loop_for_prev,
                                 drag_free: false,
                                 skip_snaps: false,
                                 duration: embla_duration_for_prev.max(0.0),
@@ -1343,7 +1358,7 @@ impl Carousel {
                         return;
                     }
 
-                    if embla_engine_enabled_for_next && !loop_for_next {
+                    if embla_engine_enabled_for_next {
                         let view_size = host
                             .models_mut()
                             .read(&extent_for_next, |v| v.0.max(0.0))
@@ -1354,7 +1369,7 @@ impl Carousel {
                             .read(&max_offset_for_next, |v| *v)
                             .ok()
                             .unwrap_or(Px(0.0));
-                        let content_size = max_offset.0.max(0.0);
+                        let content_size = (max_offset.0.max(0.0) + view_size.max(0.0)).max(0.0);
                         let mut scroll_snaps = snaps.iter().map(|px| -px.0).collect::<Vec<_>>();
                         if scroll_snaps.is_empty() {
                             scroll_snaps.push(0.0);
@@ -1364,7 +1379,7 @@ impl Carousel {
                             scroll_snaps,
                             content_size,
                             headless_embla::engine::EngineConfig {
-                                loop_enabled: false,
+                                loop_enabled: loop_for_next,
                                 drag_free: false,
                                 skip_snaps: false,
                                 duration: embla_duration_for_next.max(0.0),
@@ -1437,8 +1452,13 @@ impl Carousel {
             let offset_for_key = offset_model.clone();
             let runtime_for_key = runtime_model.clone();
             let snaps_for_key = snaps_model.clone();
+            let embla_engine_for_key = embla_engine_model.clone();
+            let max_offset_for_key = max_offset_model.clone();
+            let extent_for_key = extent_model.clone();
             let autoplay_stop_for_key = autoplay_stop_on_interaction;
             let loop_for_key = options.loop_enabled;
+            let embla_engine_enabled_for_key = embla_engine_enabled;
+            let embla_duration_for_key = options.embla_duration;
             let direction_for_key = layout_direction;
             let on_key_down: OnKeyDown = Arc::new(
                 move |host: &mut dyn fret_ui::action::UiFocusActionHost,
@@ -1504,6 +1524,62 @@ impl Carousel {
                         .read(&offset_for_key, |v| *v)
                         .ok()
                         .unwrap_or(Px(0.0));
+
+                    if embla_engine_enabled_for_key {
+                        let view_size = host
+                            .models_mut()
+                            .read(&extent_for_key, |v| v.0.max(0.0))
+                            .ok()
+                            .unwrap_or(0.0);
+                        let max_offset = host
+                            .models_mut()
+                            .read(&max_offset_for_key, |v| *v)
+                            .ok()
+                            .unwrap_or(Px(0.0));
+                        let content_size =
+                            (max_offset.0.max(0.0) + view_size.max(0.0)).max(0.0);
+                        let mut scroll_snaps = snaps.iter().map(|px| -px.0).collect::<Vec<_>>();
+                        if scroll_snaps.is_empty() {
+                            scroll_snaps.push(0.0);
+                        }
+
+                        let mut engine = headless_embla::engine::Engine::new(
+                            scroll_snaps,
+                            content_size,
+                            headless_embla::engine::EngineConfig {
+                                loop_enabled: loop_for_key,
+                                drag_free: false,
+                                skip_snaps: false,
+                                duration: embla_duration_for_key.max(0.0),
+                                base_friction: 0.68,
+                                view_size,
+                                start_snap: index,
+                            },
+                        );
+                        let loc = -cur.0;
+                        engine.scroll_body.set_location(loc);
+                        engine.scroll_body.set_target(loc);
+                        engine.scroll_target.set_target_vector(loc);
+
+                        let select = engine.scroll_to_index(target_index, headless_embla::utils::DIRECTION_NONE);
+
+                        let _ = host.models_mut().update(&embla_engine_for_key, |v| {
+                            *v = Some(engine);
+                        });
+                        if let Some(select) = select {
+                            let _ = host
+                                .models_mut()
+                                .update(&index_for_key, |v| *v = select.target_snap);
+                        }
+                        let _ = host.models_mut().update(&runtime_for_key, |st| {
+                            st.drag = headless_carousel::CarouselDragState::default();
+                            st.settling = false;
+                            st.embla_settling = true;
+                        });
+                        host.request_redraw(cx.window);
+                        return true;
+                    }
+
                     let _ = host
                         .models_mut()
                         .update(&index_for_key, |v| *v = target_index);
@@ -1518,6 +1594,39 @@ impl Carousel {
                     true
                 },
             );
+
+            let slides_prev: Arc<[headless_carousel::CarouselSlide1D]> = cx
+                .watch_model(&slides_model)
+                .layout()
+                .cloned()
+                .unwrap_or_else(|| Arc::from(Vec::<headless_carousel::CarouselSlide1D>::new()));
+            let view_size_prev = cx.watch_model(&extent_model).copied().unwrap_or(Px(0.0));
+            let content_size_prev = slides_prev
+                .iter()
+                .map(|s| s.start.0 + s.size.0)
+                .fold(0.0f32, |a, b| a.max(b));
+            let loop_translates = if options.loop_enabled
+                && embla_engine_enabled
+                && slides_prev.len() == items_len
+                && content_size_prev > 0.0
+                && view_size_prev.0 > 0.0
+            {
+                let slides = slides_prev
+                    .iter()
+                    .map(|s| headless_embla::slide_looper::Slide1D {
+                        start: s.start.0,
+                        size: s.size.0,
+                    })
+                    .collect::<Vec<_>>();
+                headless_embla::slide_looper::compute_slide_translates(
+                    &slides,
+                    axis_offset.0,
+                    content_size_prev,
+                    view_size_prev.0,
+                )
+            } else {
+                Vec::new()
+            };
 
             let mut item_ids = Vec::with_capacity(items_len);
             let item_ids_ref = &mut item_ids;
@@ -1601,10 +1710,31 @@ impl Carousel {
 
                             item_ids_ref.push(item.id);
 
-                            item.attach_semantics(
+                            let item = item.attach_semantics(
                                 SemanticsDecoration::default()
                                     .role(SemanticsRole::Group)
                                     .test_id(test_id),
+                            );
+
+                            let translate = loop_translates.get(idx).copied().unwrap_or(0.0);
+                            if translate == 0.0 {
+                                return item;
+                            }
+
+                            let transform = match orientation {
+                                CarouselOrientation::Horizontal => fret_core::Transform2D::translation(
+                                    Point::new(Px(translate), Px(0.0)),
+                                ),
+                                CarouselOrientation::Vertical => fret_core::Transform2D::translation(
+                                    Point::new(Px(0.0), Px(translate)),
+                                ),
+                            };
+                            cx.render_transform_props(
+                                RenderTransformProps {
+                                    layout: LayoutStyle::default(),
+                                    transform,
+                                },
+                                move |_cx| vec![item],
                             )
                         })
                         .collect::<Vec<_>>()
@@ -1675,6 +1805,7 @@ impl Carousel {
 
             let mut snaps_now: Vec<Px> = vec![Px(0.0)];
             let mut max_offset_now = Px(0.0);
+            let mut slides_now: Vec<headless_carousel::CarouselSlide1D> = Vec::new();
 
             if view_size_now.0 > 0.0 {
                 if let Some(viewport_bounds) = viewport_bounds {
@@ -1715,6 +1846,7 @@ impl Carousel {
                         slides.len() == items_len && slides.iter().all(|s| s.size.0 > 0.0);
 
                     if slides_ready {
+                        slides_now = slides.clone();
                         let model = headless_carousel::snap_model_1d(
                             view_size_now,
                             &slides,
@@ -1751,6 +1883,7 @@ impl Carousel {
                                     size: item_main_size,
                                 })
                                 .collect::<Vec<_>>();
+                            slides_now = slides.clone();
 
                             let model = headless_carousel::snap_model_1d(
                                 view_size_now,
@@ -1775,6 +1908,12 @@ impl Carousel {
                 .app
                 .models_mut()
                 .update(&snaps_model, |v| *v = snaps_arc.clone());
+            let slides_arc: Arc<[headless_carousel::CarouselSlide1D]> =
+                Arc::from(slides_now.into_boxed_slice());
+            let _ = cx
+                .app
+                .models_mut()
+                .update(&slides_model, |v| *v = slides_arc.clone());
             let _ = cx
                 .app
                 .models_mut()
@@ -1796,7 +1935,7 @@ impl Carousel {
 
             if did_reinit && snaps_now.len() > 1 {
                 let scroll_snaps = snaps_now.iter().map(|px| -px.0).collect::<Vec<_>>();
-                let content_size = max_offset_now.0.max(0.0);
+                let content_size = (max_offset_now.0 + view_size_now.0).max(0.0);
                 let view_size = view_size_now.0.max(0.0);
 
                 let pointer_down =
@@ -1843,7 +1982,12 @@ impl Carousel {
                     .models_mut()
                     .update(&index_model, |v| *v = clamped_index);
             }
-            let offset_clamped = Px(offset_now.0.clamp(0.0, max_offset_now.0.max(0.0)));
+            let offset_max = if options.loop_enabled {
+                (max_offset_now.0 + view_size_now.0).max(0.0)
+            } else {
+                max_offset_now.0.max(0.0)
+            };
+            let offset_clamped = Px(offset_now.0.clamp(0.0, offset_max));
             if offset_clamped != offset_now {
                 let _ = cx
                     .app
@@ -1906,7 +2050,12 @@ impl Carousel {
                     .get(clamped_index)
                     .copied()
                     .unwrap_or(Px(0.0));
-                let target = Px(target.0.clamp(0.0, max_offset_now.0.max(0.0)));
+                let offset_max = if options.loop_enabled {
+                    (max_offset_now.0 + view_size_now.0).max(0.0)
+                } else {
+                    max_offset_now.0.max(0.0)
+                };
+                let target = Px(target.0.clamp(0.0, offset_max));
                 let _ = cx.app.models_mut().update(&offset_model, |v| *v = target);
                 let _ = cx.app.models_mut().update(&runtime_model, |st| {
                     st.selection_initialized = true;

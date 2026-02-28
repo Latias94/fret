@@ -82,8 +82,17 @@ Non-goals (v2):
 
 ### Loopers
 
-- [ ] CAR2-140 Implement `loop=true` as **seamless looping** (not selection wrap).
-  - Requires scroll looper + slide looper + translate wrapping semantics.
+- [x] CAR2-140 Implement `loop=true` as **seamless looping** (not selection wrap) (MVP).
+  - Implemented:
+    - scroll/body wrap normalization (loop distance applied without resetting velocity)
+    - per-slide translation recycling by `±content_size`
+  - Evidence:
+    - `ecosystem/fret-ui-headless/src/embla/engine.rs` (`Engine::normalize_loop_entities`)
+    - `ecosystem/fret-ui-headless/src/embla/scroll_body.rs` (`ScrollBody::add_loop_distance`)
+    - `ecosystem/fret-ui-headless/src/embla/slide_looper.rs`
+    - `ecosystem/fret-ui-shadcn/src/carousel.rs` (enables embla engine for loop + per-slide `RenderTransform`)
+  - Gates:
+    - `cargo test -p fret-ui-headless` (loop + slide looper unit tests)
 
 ### Slides in view
 

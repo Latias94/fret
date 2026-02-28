@@ -307,3 +307,45 @@ fn carousel_api_reinit_generation_throttles_during_continuous_geometry_changes()
         "expected re-init to be throttled during continuous geometry churn; before={before:?} after={after:?}"
     );
 }
+
+#[test]
+fn carousel_api_loop_enabled_keeps_controls_enabled() {
+    let window = AppWindowId::default();
+    let bounds = window_bounds();
+
+    let mut app = App::new();
+    let mut ui: UiTree<App> = UiTree::new();
+    ui.set_window(window);
+    let mut services = StyleAwareServices::default();
+
+    let api = app
+        .models_mut()
+        .insert(fret_ui_shadcn::CarouselApiSnapshot::default());
+    let mut opts = fret_ui_shadcn::CarouselOptions::default();
+    opts.embla_engine = true;
+    opts.loop_enabled = true;
+
+    for _ in 0..4 {
+        render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            api.clone(),
+            opts,
+            Px(200.0),
+            Px(200.0),
+        );
+    }
+
+    let start = app.models().get_copied(&api).expect("api snapshot");
+    assert!(
+        start.snap_count > 0,
+        "expected measurable snaps; snapshot={start:?}"
+    );
+    assert!(
+        start.can_scroll_prev && start.can_scroll_next,
+        "expected loop-enabled carousel to keep controls enabled; snapshot={start:?}"
+    );
+}

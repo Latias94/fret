@@ -132,6 +132,19 @@ Fret v2 intent:
 If we cannot implement seamless loop safely, we must explicitly keep `loop` as “selection wrap”
 and **not** claim Embla parity for looping.
 
+Implementation (MVP shipped):
+
+- Headless engine wraps `location`/`target` by applying the loop distance without resetting motion.
+- The shadcn recipe applies an additional per-slide `RenderTransform` translation (`±content_size`)
+  so the viewport remains visually continuous when the scroll location wraps.
+
+Evidence anchors:
+
+- Scroll loop normalization: `ecosystem/fret-ui-headless/src/embla/engine.rs`
+- Loop distance application: `ecosystem/fret-ui-headless/src/embla/scroll_body.rs`
+- Slide translation helper: `ecosystem/fret-ui-headless/src/embla/slide_looper.rs`
+- Recipe wiring: `ecosystem/fret-ui-shadcn/src/carousel.rs`
+
 ## Slides in view semantics
 
 Embla options:
