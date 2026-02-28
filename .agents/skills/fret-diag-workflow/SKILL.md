@@ -225,6 +225,8 @@ For evidence-first triage (reason codes + bounded traces), see: `references/evid
   - Likely cause: the app driver is not recording platform-delivered events into the diagnostics ring buffer.
   - Fix: ensure the harness calls `UiDiagnosticsService::record_event(...)` (and runs ignore/intercept checks) from its
     main event handler, not only for script-injected events.
+  - Recommended: use `fret_bootstrap::ui_diagnostics::maybe_consume_event(app, window, event)` to keep ordering
+    consistent (ignore external input → record event → intercept pick/inspect).
 
 ## Performance gates (when the issue is a hitch)
 

@@ -187,6 +187,8 @@ This file is a check-list style tracker. Milestone framing lives in `milestones.
   cover "open with..." flows deterministically.
 - [x] Harness integration: ensure `fret-ui-gallery` records diagnostics events for platform-delivered events (not just
   script-injected ones) so `event_kind_seen` predicates can observe injected OS integration events.
+  - Evidence: `fret_bootstrap::ui_diagnostics::maybe_consume_event` and key app drivers call it from `handle_event`
+    before dispatching to the UI tree (consistent ignore → record → intercept ordering).
 - [x] Extend `FilesystemCapabilitiesV1` with optional identity fields (additive):
   - [x] `runner_kind`, `runner_version`,
   - [x] optional `protocol_versions`/`schemas` hints for tooling.
