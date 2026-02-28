@@ -37,6 +37,7 @@ mod layouts;
 mod state;
 mod theme;
 mod utils;
+mod widgets;
 
 #[cfg(feature = "shadcn-context-menu")]
 mod overflow;
@@ -58,6 +59,7 @@ use layouts::{
 use state::WorkspaceTabStripState;
 use theme::WorkspaceTabStripTheme;
 use utils::{dnd_scope_for_pane, resolve_end_drop_target, scroll_rect_into_view_x};
+use widgets::{tab_close_button, tab_dirty_indicator, tab_trailing_slot_placeholder};
 
 use crate::tab_drag::compute_tab_drop_target;
 
@@ -1138,111 +1140,24 @@ impl WorkspaceTabStrip {
                                                                                 if let Some(close_command) =
                                                                                     tab_close_command.clone()
                                                                                 {
-                                                                                    children.push(cx.pressable(
-                                                                                        PressableProps {
-                                                                                            layout: fixed_square_layout(Px(18.0)),
-                                                                                            focusable: false,
-                                                                                            a11y: PressableA11y {
-                                                                                                role: Some(SemanticsRole::Button),
-                                                                                                label: Some(Arc::from("Close tab")),
-                                                                                                test_id: tab_close_test_id.clone(),
-                                                                                                ..Default::default()
-                                                                                            },
-                                                                                            ..Default::default()
-                                                                                        },
-                                                                                        move |cx, close_state| {
-                                                                                            let close_handler: OnActivate = Arc::new(
-                                                                                                move |host, acx, _reason| {
-                                                                                                    if let Some(cmd) =
-                                                                                                        pane_activate_cmd_for_close.clone()
-                                                                                                    {
-                                                                                                        dispatch_intent(
-                                                                                                            host,
-                                                                                                            acx.window,
-                                                                                                            WorkspaceTabStripIntent::Activate(cmd),
-                                                                                                        );
-                                                                                                    }
-                                                                                                    dispatch_intent(
-                                                                                                        host,
-                                                                                                        acx.window,
-                                                                                                        WorkspaceTabStripIntent::Close(close_command.clone()),
-                                                                                                    );
-                                                                                                },
-                                                                                            );
-                                                                                            cx.pressable_on_activate(close_handler);
-
-                                                                                            let bg = if close_state.hovered || close_state.pressed {
-                                                                                                Some(hover_bg)
-                                                                                            } else {
-                                                                                                None
-                                                                                            };
-
-                                                                                            vec![cx.container(
-                                                                                                ContainerProps {
-                                                                                                    layout: fill_layout(),
-                                                                                                    background: bg,
-                                                                                                    corner_radii: Corners::all(Px(4.0)),
-                                                                                                    ..Default::default()
-                                                                                                },
-                                                                                                |cx| {
-                                                                                                    vec![cx.text_props(TextProps {
-                                                                                                        layout: LayoutStyle::default(),
-                                                                                                        text: Arc::from("×"),
-                                                                                                        style: Some(text_style.clone()),
-                                                                                                        color: Some(tab_fg),
-                                                                                                        wrap: TextWrap::None,
-                                                                                                        overflow: TextOverflow::Clip,
-                                                                                                        align: fret_core::TextAlign::Start,
-                                                                                                        ink_overflow: TextInkOverflow::None,
-                                                                                                    })]
-                                                                                                },
-                                                                                            )]
-                                                                                        },
+                                                                                    children.push(tab_close_button(
+                                                                                        cx,
+                                                                                        close_command,
+                                                                                        pane_activate_cmd_for_close.clone(),
+                                                                                        hover_bg,
+                                                                                        text_style.clone(),
+                                                                                        tab_fg,
+                                                                                        tab_close_test_id.clone(),
                                                                                     ));
                                                                                 }
                                                                             } else if tab_dirty {
-                                                                                let mut dot_style = text_style.clone();
-                                                                                dot_style.size =
-                                                                                    Px((dot_style.size.0 - 1.0).max(10.0));
-                                                                                children.push(cx.container(
-                                                                                    ContainerProps {
-                                                                                        layout: fixed_square_layout(Px(18.0)),
-                                                                                        ..Default::default()
-                                                                                    },
-                                                                                    |cx| {
-                                                                                        vec![cx.flex(
-                                                                                            FlexProps {
-                                                                                                layout: fill_layout(),
-                                                                                                direction:
-                                                                                                    fret_core::Axis::Horizontal,
-                                                                                                justify:
-                                                                                                    MainAlign::Center,
-                                                                                                align: CrossAlign::Center,
-                                                                                                ..Default::default()
-                                                                                            },
-                                                                                            |cx| {
-                                                                                                vec![cx.text_props(TextProps {
-                                                                                                    layout: LayoutStyle::default(),
-                                                                                                    text: Arc::from("•"),
-                                                                                                    style: Some(dot_style),
-                                                                                                    color: Some(dirty_fg),
-                                                                                                    wrap: TextWrap::None,
-                                                                                                    overflow: TextOverflow::Clip,
-                                                                                                    align: fret_core::TextAlign::Start,
-                                                                                                    ink_overflow: TextInkOverflow::None,
-                                                                                                })]
-                                                                                            },
-                                                                                        )]
-                                                                                    },
+                                                                                children.push(tab_dirty_indicator(
+                                                                                    cx,
+                                                                                    dirty_fg,
+                                                                                    text_style.clone(),
                                                                                 ));
                                                                             } else {
-                                                                                children.push(cx.container(
-                                                                                    ContainerProps {
-                                                                                        layout: fixed_square_layout(Px(18.0)),
-                                                                                        ..Default::default()
-                                                                                    },
-                                                                                    |_cx| Vec::new(),
-                                                                                ));
+                                                                                children.push(tab_trailing_slot_placeholder(cx));
                                                                             }
                                                                         }
 
