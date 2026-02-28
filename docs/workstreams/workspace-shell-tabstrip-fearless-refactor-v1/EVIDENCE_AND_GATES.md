@@ -7,17 +7,16 @@ This document turns milestones into concrete, reviewable evidence and regression
 We should keep selectors stable across refactors. Suggested shapes:
 
 - Root:
-  - `workspace-tabstrip`
+  - `workspace-tabstrip` (via `WorkspaceTabStrip::test_id_root`)
 - Per-tab:
-  - tab trigger: `workspace-tabstrip-tab-{tab_id}`
+  - tab trigger: `workspace-tabstrip-tab-{tab_id}` (via `WorkspaceTabStrip::tab_test_id_prefix("workspace-tabstrip-tab")`)
   - tab chrome container: `workspace-tabstrip-tab-{tab_id}.chrome`
   - close button: `workspace-tabstrip-tab-{tab_id}.close`
   - dirty indicator: `workspace-tabstrip-tab-{tab_id}.dirty`
 - Overflow:
-  - overflow button: `workspace-tabstrip-overflow-button`
-  - overflow panel: `workspace-tabstrip-overflow-panel`
-  - overflow entry: `workspace-tabstrip-overflow-entry-{tab_id}`
-  - overflow entry close: `workspace-tabstrip-overflow-entry-{tab_id}.close`
+  - overflow button: `{root}.overflow_button`
+  - overflow entry: `{root}.overflow_entry.{tab_id}`
+  - overflow entry close (future): `{root}.overflow_entry.{tab_id}.close`
 - Drop targets:
   - end-of-strip: `workspace-tabstrip-drop-end`
   - pinned boundary: `workspace-tabstrip-drop-pinned-boundary`
@@ -87,4 +86,3 @@ Reference anchors:
 - dockview overflow list pipeline:
   - `repo-ref/dockview/packages/dockview-core/src/dockview/components/titlebar/tabs.ts`
   - `repo-ref/dockview/packages/dockview-core/src/dockview/components/titlebar/tabsContainer.ts`
-

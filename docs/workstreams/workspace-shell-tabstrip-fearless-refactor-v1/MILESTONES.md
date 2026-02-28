@@ -21,7 +21,7 @@ layering (mechanism in `crates/*`, policy in `ecosystem/*`).
 **Outcome**
 
 - When the tab strip overflows, show an overflow control (e.g. “More” button).
-- Overflow list renders only overflowed tabs (or “all tabs” with overflow highlighted; decision).
+- Overflow list renders overflowed tabs (fallback: list all tabs if overflow geometry is not yet available).
 - Selecting a tab from the overflow list activates it and scrolls it into view.
 - Optional: close buttons inside overflow list.
 
@@ -29,11 +29,14 @@ layering (mechanism in `crates/*`, policy in `ecosystem/*`).
 
 - dockview overflow pipeline: `repo-ref/dockview/.../tabs.ts` + `tabsContainer.ts`
 - Zed behavior reference: `repo-ref/zed/.../pane.rs` (drop targets + scroll policies)
+- Fret adapter + overflow UI: `ecosystem/fret-workspace/src/tab_strip.rs`
+- Fret overflow computation helper: `ecosystem/fret-workspace/src/tab_strip_overflow.rs`
 
 **Gates**
 
-- Unit/integration test: overflow membership computation is stable under resize + scroll offset.
-- Diag script (preferred): open overflow list, select an overflowed tab, assert active tab test id.
+- Unit test: overflow membership computation is stable under viewport changes.
+- Integration test: overflow menu opens and renders deterministic entries.
+- Diag script (preferred, TODO): open overflow list, select an overflowed tab, assert active tab test id.
 
 ## M2 — Pinned boundary + (optional) separate pinned row (Zed-inspired)
 
@@ -98,4 +101,3 @@ layering (mechanism in `crates/*`, policy in `ecosystem/*`).
 **Gates**
 
 - Diag script: drag tab to edge, drop, assert a second pane exists and tab moved.
-

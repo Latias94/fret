@@ -21,14 +21,14 @@ This file is an execution checklist for the design in `DESIGN.md`.
 ## M1 — Overflow dropdown/list
 
 - [x] Decision: use “overflowed-only” list (dockview-style). See `OPEN_QUESTIONS.md`.
-- [ ] Add overflow computation based on measured tab rects + viewport.
-- [ ] Add overflow control button that appears only when overflowing.
-- [ ] Add overflow list panel:
-  - [ ] stable `test_id` for open button and entries
-  - [ ] select entry activates tab and scrolls into view
+- [x] Add overflow computation based on measured tab rects + viewport.
+- [x] Add overflow control button that appears only when overflowing.
+- [x] Add overflow list panel:
+  - [x] stable `test_id` for open button and entries
+  - [x] select entry activates tab and scrolls into view
   - [ ] optional close button in overflow list
 - [ ] Gates:
-  - [ ] test: overflow membership stable under resize + scroll offset changes
+  - [x] test: overflow membership stable under resize + scroll offset changes
   - [ ] diag script: open overflow list, select an overflowed tab, assert active
 
 ## M2 — Pinned boundary
