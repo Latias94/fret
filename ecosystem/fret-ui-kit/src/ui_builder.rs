@@ -226,9 +226,39 @@ impl UiBuilder<crate::ui::TextBox> {
         self.font_feature("tnum", 1)
     }
 
+    /// Enables OpenType proportional numbers (`font-variant-numeric: proportional-nums`).
+    pub fn proportional_nums(self) -> Self {
+        self.font_feature("pnum", 1)
+    }
+
+    /// Enables OpenType lining numbers (`font-variant-numeric: lining-nums`).
+    pub fn lining_nums(self) -> Self {
+        self.font_feature("lnum", 1)
+    }
+
+    /// Enables OpenType oldstyle numbers (`font-variant-numeric: oldstyle-nums`).
+    pub fn oldstyle_nums(self) -> Self {
+        self.font_feature("onum", 1)
+    }
+
     /// Enables OpenType slashed zero (`font-variant-numeric: slashed-zero`).
     pub fn slashed_zero(self) -> Self {
         self.font_feature("zero", 1)
+    }
+
+    /// Enables OpenType ordinal forms (`font-variant-numeric: ordinal`).
+    pub fn ordinal(self) -> Self {
+        self.font_feature("ordn", 1)
+    }
+
+    /// Enables OpenType diagonal fractions (`font-variant-numeric: diagonal-fractions`).
+    pub fn diagonal_fractions(self) -> Self {
+        self.font_feature("frac", 1)
+    }
+
+    /// Enables OpenType stacked fractions (`font-variant-numeric: stacked-fractions`).
+    pub fn stacked_fractions(self) -> Self {
+        self.font_feature("afrc", 1)
     }
 
     pub fn font_ui(self) -> Self {
