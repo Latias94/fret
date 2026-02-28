@@ -85,6 +85,7 @@ const CMD_LOG_MEASURED: &str = "node_graph_demo.log_measured";
 const CMD_BUMP_FLOAT_VALUE: &str = "node_graph_demo.bump_float_value";
 const CMD_CYCLE_BACKGROUND_PATTERN: &str = "node_graph_demo.cycle_background_pattern";
 const CMD_CYCLE_PRESET_FAMILY: &str = "node_graph_demo.cycle_preset_family";
+const CMD_TOGGLE_WIRE_GLOW: &str = "node_graph_demo.toggle_wire_glow";
 const CMD_RESET_GRAPH: &str = "node_graph_demo.reset_graph";
 const CMD_SPAWN_STRESS_1K: &str = "node_graph_demo.spawn_stress_1k";
 const CMD_SPAWN_STRESS_5K: &str = "node_graph_demo.spawn_stress_5k";
@@ -2080,6 +2081,18 @@ impl WinitAppDriver for NodeGraphDemoDriver {
             return;
         }
 
+        if command.as_str() == CMD_TOGGLE_WIRE_GLOW {
+            let Some(skin) = app.global::<Arc<NodeGraphPresetSkinV1>>().cloned() else {
+                return;
+            };
+
+            let enabled = skin.toggle_wire_glow();
+            tracing::info!(enabled, "node graph demo wire glow toggled");
+
+            app.request_redraw(window);
+            return;
+        }
+
         if command.as_str() == CMD_TOGGLE_HELP_OVERLAY {
             let Some(toggles) = app.global::<Arc<NodeGraphDemoOverlayToggles>>().cloned() else {
                 return;
@@ -2674,6 +2687,21 @@ fn register_demo_commands(registry: &mut CommandRegistry) {
                 win_ctrl_shift(KeyCode::KeyP),
                 linux_ctrl_shift(KeyCode::KeyP),
                 web_ctrl_shift(KeyCode::KeyP),
+            ]),
+    );
+
+    registry.register(
+        CommandId::new(CMD_TOGGLE_WIRE_GLOW),
+        CommandMeta::new("Toggle NodeGraph Wire Glow")
+            .with_category("Demo")
+            .with_keywords(["wire", "glow", "effect", "shadow"])
+            .with_scope(CommandScope::App)
+            .with_when(WhenExpr::parse("!focus.is_text_input").expect("valid when expr"))
+            .with_default_keybindings([
+                mac_cmd_shift(KeyCode::KeyG),
+                win_ctrl_shift(KeyCode::KeyG),
+                linux_ctrl_shift(KeyCode::KeyG),
+                web_ctrl_shift(KeyCode::KeyG),
             ]),
     );
 
