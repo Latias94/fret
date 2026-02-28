@@ -461,7 +461,7 @@ fn demo_shell(cx: &mut ElementContext<'_, App>, max_w: Px, body: AnyElement) -> 
             LayoutRefinement::default().w_full().min_w_0().max_w(max_w),
         )
     });
-    cx.container(props, move |_cx| [body])
+    cx.container(props, move |cx| [centered(cx, body)])
 }
 
 fn layout_only_shell(cx: &mut ElementContext<'_, App>, max_w: Px, body: AnyElement) -> AnyElement {
@@ -527,6 +527,9 @@ fn preview_code_tabs(
     let code_el = centered(cx, code_shell);
 
     let base = shadcn::Tabs::uncontrolled(Some("preview"))
+        // `shadcn/ui` styles `TabsContent` with `flex-1`. In the UI gallery docs scaffold, tab
+        // roots often live in auto-sized stacks; keep the docs layout tight by default.
+        .content_fill_remaining(false)
         .refine_layout(LayoutRefinement::default().w_full().min_w_0());
 
     let tabs = if let Some(prefix) = test_id_prefix {
