@@ -1129,7 +1129,7 @@ The diagnostics harness also includes docking arbitration scripts (multi-viewpor
 
 You can run them as a built-in suite:
 
-- `cargo run -p fretboard -- diag suite docking-arbitration --launch -- cargo run -p fret-examples --bin docking_arbitration_demo --release`
+- `cargo run -p fretboard -- diag suite docking-arbitration --launch -- cargo run -p fret-demo --bin docking_arbitration_demo --release`
 
 There are also multi-window (tear-off) docking scripts (require `diag.multi_window` capability):
 
@@ -1139,7 +1139,7 @@ There are also multi-window (tear-off) docking scripts (require `diag.multi_wind
 
 Example (run one script against the demo, launching a fresh process):
 
-- `cargo run -p fretboard -- diag run tools/diag-scripts/docking-arbitration-demo-multiwindow-drag-tab-back-to-main.json --launch -- cargo run -p fret-examples --bin docking_arbitration_demo --release`
+- `cargo run -p fretboard -- diag run tools/diag-scripts/docking-arbitration-demo-multiwindow-drag-tab-back-to-main.json --launch -- cargo run -p fret-demo --bin docking_arbitration_demo --release`
 
 ### View-cache regression gating
 
