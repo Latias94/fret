@@ -738,8 +738,52 @@ pub(crate) fn maybe_launch_demo(
     let mut cmd = Command::new(exe);
     cmd.args(launch.iter().skip(1));
     cmd.current_dir(workspace_root);
+
+    let mut scrubbed_inherited_nonreserved_keys: Vec<&str> = Vec::new();
     for key in scrub_env_keys {
+        if !tool_launch_env_key_is_reserved(key) {
+            let present = std::env::var_os(key).is_some_and(|v| !v.is_empty());
+            if present {
+                scrubbed_inherited_nonreserved_keys.push(*key);
+            }
+        }
         cmd.env_remove(key);
+    }
+
+    let mut explicit_override_fret_keys: Vec<&str> = Vec::new();
+    let mut explicit_override_other_keys_total: u64 = 0;
+    for (key, _) in launch_env {
+        if key.starts_with("FRET_") {
+            explicit_override_fret_keys.push(key);
+        } else {
+            explicit_override_other_keys_total =
+                explicit_override_other_keys_total.saturating_add(1);
+        }
+    }
+    explicit_override_fret_keys.sort();
+    explicit_override_fret_keys.dedup();
+
+    if !scrubbed_inherited_nonreserved_keys.is_empty()
+        || !explicit_override_fret_keys.is_empty()
+        || explicit_override_other_keys_total > 0
+    {
+        fn format_keys(keys: &[&str], max: usize) -> String {
+            let mut out: Vec<&str> = keys.iter().take(max).copied().collect();
+            if keys.len() > max {
+                out.push("...");
+            }
+            out.join(",")
+        }
+
+        scrubbed_inherited_nonreserved_keys.sort();
+        scrubbed_inherited_nonreserved_keys.dedup();
+
+        let scrubbed = format_keys(&scrubbed_inherited_nonreserved_keys, 8);
+        let overrides = format_keys(&explicit_override_fret_keys, 8);
+        eprintln!(
+            "diag --launch env: scrubbed_inherited_nonreserved=[{}] explicit_overrides_fret=[{}] explicit_overrides_other_total={} (see: fretboard diag config doctor --mode launch --report-json)",
+            scrubbed, overrides, explicit_override_other_keys_total,
+        );
     }
     cmd.env("FRET_DIAG", "1");
     cmd.env("FRET_DIAG_DIR", out_dir);
