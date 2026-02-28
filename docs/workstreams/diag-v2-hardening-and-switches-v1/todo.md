@@ -179,12 +179,7 @@ This file is a check-list style tracker. Milestone framing lives in `milestones.
 
 ## Migration support (fearless refactor safety)
 
-- [ ] Provide a script migration guide:
-  - [ ] `diag pick-apply` workflows,
-  - [ ] `diag script normalize --check` in CI,
-  - [ ] “upgrade script v1 → v2” helper (if any v1 scripts remain).
-- [ ] Add a “compat matrix” table for:
-  - [ ] bundle schema variants,
-  - [ ] script schema variants,
-  - [ ] transports,
-  - [ ] required capabilities.
+- [x] Provide a script migration guide (runbook + guardrails): `docs/workstreams/diag-v2-hardening-and-switches-v1/migration-support.md`
+  - [ ] (optional) document `diag pick-apply` workflows (when they stabilize).
+  - [ ] (optional) add `diag script normalize --check` to CI once script churn stabilizes.
+- [x] Add a “compat matrix” table: `docs/workstreams/diag-v2-hardening-and-switches-v1/compat-matrix.md`
