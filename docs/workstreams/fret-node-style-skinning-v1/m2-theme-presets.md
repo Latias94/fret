@@ -38,6 +38,8 @@ Recent additions (2026-02-28):
 - Edge markers are parameterized via preset tokens and can be toggled in the demo:
   - `themes/node-graph-presets.v1.json`: `paint_only_tokens.wire.marker_exec_start` /
     `marker_exec_end` + `marker_size_mul_selected` / `marker_size_mul_hovered`
+  - Optional: `paint_only_tokens.wire.marker_data_start` / `marker_data_end` (currently enabled
+    for `GraphDark` as a blueprint-style readability tweak).
   - Demo: `primary+shift+j` toggles markers (skin revision bump, paint-only).
 
 ## Goals

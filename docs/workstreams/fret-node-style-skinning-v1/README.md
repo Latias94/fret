@@ -43,6 +43,7 @@ Milestone design notes (implementation-oriented):
   - Loader + skin impl: `ecosystem/fret-node/src/ui/presets.rs`
   - Wire highlight tokens: `paint_only_tokens.wire.highlight_selected` / `highlight_hovered`
   - Edge marker tokens: `paint_only_tokens.wire.marker_exec_start` / `marker_exec_end`
+  - Optional data marker tokens: `paint_only_tokens.wire.marker_data_start` / `marker_data_end`
 - Per-node header palette paints via the main node paint path:
   - `ecosystem/fret-node/src/ui/canvas/widget/paint_render_data/collect.rs`
   - `ecosystem/fret-node/src/ui/canvas/widget/paint_nodes/static_nodes.rs`
