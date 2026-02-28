@@ -49,6 +49,7 @@ mod hotspots_lite;
 mod json_bundle;
 mod json_stream;
 mod latest;
+mod launch_env_policy;
 mod lint;
 mod math;
 mod pack_zip;

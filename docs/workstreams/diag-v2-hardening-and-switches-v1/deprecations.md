@@ -33,6 +33,8 @@ required for the common `fretboard diag ... --launch` flows.
   variables); use CLI flags like `--dir` / `--*-path` instead.
 - If a launched run needs a one-off override, pass it explicitly via `--env` (non-reserved keys), then confirm the
   effective merged config via `diag config doctor --mode launch`.
+  - Tip: you can pass the same `--env KEY=VALUE` overrides to `diag config doctor --mode launch` to simulate how they
+    would apply for a launched run.
 
 See also: `docs/ui-diagnostics-and-scripted-tests.md` (“Tool-launched env policy”).
 

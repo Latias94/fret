@@ -650,6 +650,10 @@ explosions:
 - **High-risk overrides (discouraged):** prefer a config file + `diag config doctor` when changing bundle size knobs.
   - Examples: `FRET_DIAG_MAX_SNAPSHOTS`, `FRET_DIAG_SCRIPT_DUMP_MAX_SNAPSHOTS`, `FRET_DIAG_SEMANTICS=all`,
     `FRET_DIAG_BUNDLE_JSON_FORMAT=pretty`.
+- `diag config doctor --mode launch` surfaces the scrubbed/reserved key lists (via `--report-json`) and reports which
+  inherited keys were actually scrubbed for the current shell env.
+  - To simulate one-off `--env` overrides for a tool-launched run, pass them to the doctor as well:
+    `cargo run -p fretboard -- diag config doctor --mode launch --env FRET_DIAG_MAX_SNAPSHOTS=50`.
 
 - `FRET_DIAG_TRIGGER_PATH=...`: dump trigger file (default `<dir>/trigger.touch`).
   - The trigger uses a **stamp** (monotonic integer) rather than mtime. Write a new integer value

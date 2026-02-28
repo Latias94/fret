@@ -689,6 +689,12 @@ fn env_snapshot_from_process() -> BTreeMap<String, String> {
     std::env::vars().collect()
 }
 
+fn scrub_inherited_env_for_tool_launch(
+    base: &BTreeMap<String, String>,
+) -> (BTreeMap<String, String>, Vec<String>) {
+    crate::launch_env_policy::scrub_inherited_env_for_tool_launch(base)
+}
+
 fn overlay_launch_reserved_env(
     base: &BTreeMap<String, String>,
     ready_path: &Path,
@@ -799,6 +805,8 @@ fn config_doctor_report_json(
     config_file: Option<&UiDiagnosticsConfigFileV1>,
     effective: &EffectiveConfig,
     warnings: &[serde_json::Value],
+    mode: DoctorMode,
+    launch_env_override_keys: &[String],
 ) -> serde_json::Value {
     let mut env_set: Vec<serde_json::Value> = effective_env
         .iter()
@@ -828,6 +836,16 @@ fn config_doctor_report_json(
             })
         });
 
+    let launch_policy = if mode == DoctorMode::Launch {
+        serde_json::json!({
+            "reserved_env_keys": crate::launch_env_policy::TOOL_LAUNCH_RESERVED_ENV_KEYS,
+            "scrubbed_inherited_env_keys": crate::launch_env_policy::TOOL_LAUNCH_SCRUB_ENV_KEYS,
+            "explicit_env_override_keys": launch_env_override_keys,
+        })
+    } else {
+        serde_json::Value::Null
+    };
+
     serde_json::json!({
         "schema_version": 1,
         "kind": "diag_config_doctor_report",
@@ -836,6 +854,7 @@ fn config_doctor_report_json(
             "config_loaded": config_file.is_some(),
             "env_set": env_set,
         },
+        "launch_policy": launch_policy,
         "config_file": {
             "schema_version": config_file.map(|c| c.schema_version),
             "unknown_keys": config_unknown_keys,
@@ -890,6 +909,7 @@ fn cmd_config_doctor(ctx: ConfigCmdContext, rest: &[String]) -> Result<(), Strin
     let mut report_json: bool = false;
     let mut config_path_override: Option<PathBuf> = None;
     let mut show_env_all: bool = false;
+    let mut launch_env_overrides: Vec<(String, String)> = Vec::new();
 
     let mut i: usize = 0;
     while i < rest.len() {
@@ -932,9 +952,24 @@ fn cmd_config_doctor(ctx: ConfigCmdContext, rest: &[String]) -> Result<(), Strin
                     Some(crate::resolve_path(&ctx.workspace_root, PathBuf::from(v)));
                 i += 1;
             }
+            "--env" => {
+                i += 1;
+                let Some(v) = rest.get(i).cloned() else {
+                    return Err("missing value for --env (expected KEY=VALUE)".to_string());
+                };
+                let (key, value) = v
+                    .split_once('=')
+                    .ok_or_else(|| "invalid value for --env (expected KEY=VALUE)".to_string())?;
+                let key = key.trim();
+                if key.is_empty() {
+                    return Err("invalid value for --env (empty KEY)".to_string());
+                }
+                launch_env_overrides.push((key.to_string(), value.to_string()));
+                i += 1;
+            }
             "--help" | "-h" => {
                 println!(
-                    "Usage: fretboard diag config doctor [--mode launch|manual] [--config-path <path>] [--show-env set|all] [--report-json]\n\n\
+                    "Usage: fretboard diag config doctor [--mode launch|manual] [--config-path <path>] [--env KEY=VALUE ...] [--show-env set|all] [--report-json]\n\n\
 Default mode is `launch`, which overlays the tooling-reserved env vars (FRET_DIAG*, ready/exit paths) as if you were using `--launch`.\n\
 Use `--mode manual` to report what the runtime would see from the current process env only."
                 );
@@ -952,14 +987,31 @@ Use `--mode manual` to report what the runtime would see from the current proces
     }
 
     let env_base = env_snapshot_from_process();
-    let (effective_env, overridden_reserved) = match mode {
-        DoctorMode::Manual => (env_base, Vec::new()),
-        DoctorMode::Launch => overlay_launch_reserved_env(
-            &env_base,
-            &ctx.resolved_ready_path,
-            &ctx.resolved_exit_path,
-            &ctx.fs_transport_cfg,
-        ),
+    let (effective_env, overridden_reserved, scrubbed_inherited) = match mode {
+        DoctorMode::Manual => {
+            if !launch_env_overrides.is_empty() {
+                return Err(
+                    "--env is only supported with `diag config doctor --mode launch`".to_string(),
+                );
+            }
+            (env_base, Vec::new(), Vec::new())
+        }
+        DoctorMode::Launch => {
+            let (scrubbed_env, scrubbed_inherited) = scrub_inherited_env_for_tool_launch(&env_base);
+            let (mut effective_env, overridden_reserved) = overlay_launch_reserved_env(
+                &scrubbed_env,
+                &ctx.resolved_ready_path,
+                &ctx.resolved_exit_path,
+                &ctx.fs_transport_cfg,
+            );
+            for (k, v) in &launch_env_overrides {
+                if crate::launch_env_policy::tool_launch_env_key_is_reserved(k) {
+                    return Err(format!("--env cannot override reserved var: {k}"));
+                }
+                effective_env.insert(k.clone(), v.clone());
+            }
+            (effective_env, overridden_reserved, scrubbed_inherited)
+        }
     };
 
     let default_launch_cfg_path = ctx.fs_transport_cfg.out_dir.join("diag.config.json");
@@ -984,6 +1036,15 @@ Use `--mode manual` to report what the runtime would see from the current proces
             "code": "diag.config.tooling_reserved_env_overrides",
             "message": "tooling-reserved env vars would override values from the current shell env in --launch mode",
             "keys": overridden_reserved,
+        }));
+    }
+
+    if mode == DoctorMode::Launch && !scrubbed_inherited.is_empty() {
+        warnings.push(serde_json::json!({
+            "severity": "info",
+            "code": "diag.config.tooling_env_scrubbed",
+            "message": "tooling would scrub inherited diagnostics env vars from the parent shell before spawning the child process",
+            "keys": scrubbed_inherited,
         }));
     }
 
@@ -1122,6 +1183,11 @@ Use `--mode manual` to report what the runtime would see from the current proces
     );
 
     if report_json {
+        let mut launch_env_override_keys: Vec<String> = launch_env_overrides
+            .iter()
+            .map(|(k, _)| k.clone())
+            .collect();
+        launch_env_override_keys.sort();
         let report = config_doctor_report_json(
             &effective_env,
             config_path.as_deref(),
@@ -1129,6 +1195,8 @@ Use `--mode manual` to report what the runtime would see from the current proces
             config_file.as_ref(),
             &effective,
             &warnings,
+            mode,
+            &launch_env_override_keys,
         );
         println!(
             "{}",
@@ -1145,6 +1213,40 @@ Use `--mode manual` to report what the runtime would see from the current proces
             DoctorMode::Manual => "manual",
         }
     );
+    if mode == DoctorMode::Launch {
+        println!(
+            "tool_launch_env_scrub_keys_total: {}",
+            crate::launch_env_policy::TOOL_LAUNCH_SCRUB_ENV_KEYS.len()
+        );
+        println!(
+            "tool_launch_env_reserved_keys_total: {}",
+            crate::launch_env_policy::TOOL_LAUNCH_RESERVED_ENV_KEYS.len()
+        );
+        let mut override_keys: Vec<String> = launch_env_overrides
+            .iter()
+            .map(|(k, _)| k.clone())
+            .collect();
+        override_keys.sort();
+        if override_keys.is_empty() {
+            println!("tool_launch_env_explicit_override_keys: (none)");
+        } else {
+            println!(
+                "tool_launch_env_explicit_override_keys: {}",
+                override_keys.join(", ")
+            );
+        }
+        if scrubbed_inherited.is_empty() {
+            println!("tool_launch_env_scrubbed_inherited_keys_present: (none)");
+        } else {
+            println!(
+                "tool_launch_env_scrubbed_inherited_keys_present: {}",
+                scrubbed_inherited.join(", ")
+            );
+        }
+        println!(
+            "tool_launch_env_policy_note: use --report-json to see the full reserved/scrubbed key lists"
+        );
+    }
     println!("workspace_root: {}", ctx.workspace_root.display());
     println!("tooling_out_dir: {}", ctx.resolved_out_dir.display());
     if let Some(p) = config_path.as_deref() {
