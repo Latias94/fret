@@ -35,7 +35,7 @@ impl BundleSemanticsModeV1 {
     }
 }
 
-#[derive(Debug, Default, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct UiDiagnosticsBundleTablesV1 {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub semantics: Option<UiBundleSemanticsTableV1>,
@@ -47,13 +47,13 @@ impl UiDiagnosticsBundleTablesV1 {
     }
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct UiBundleSemanticsTableV1 {
     pub schema_version: u32,
     pub entries: Vec<UiBundleSemanticsEntryV1>,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct UiBundleSemanticsEntryV1 {
     pub window: u64,
     pub semantics_fingerprint: u64,
@@ -98,7 +98,7 @@ pub struct UiDiagnosticsEnvDiagnosticsV1 {
     pub devtools_ws_configured: bool,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct UiDiagnosticsBundleConfigV1 {
     pub trigger_path: String,
     pub max_events: usize,
@@ -129,14 +129,14 @@ pub struct UiDiagnosticsBundleConfigV1 {
     pub frame_clock_fixed_delta_ms: Option<u64>,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct UiDiagnosticsWindowBundleV1 {
     pub window: u64,
     pub events: Vec<RecordedUiEventV1>,
     pub snapshots: Vec<UiDiagnosticsSnapshotV1>,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct UiDiagnosticsBundleV2 {
     pub schema_version: u32,
     pub exported_unix_ms: u64,

@@ -14,6 +14,8 @@ pub const CMD_WORKSPACE_TAB_CLOSE_RIGHT: &str = "workspace.tab.close.right";
 pub const CMD_WORKSPACE_TAB_MOVE_LEFT: &str = "workspace.tab.move.left";
 pub const CMD_WORKSPACE_TAB_MOVE_RIGHT: &str = "workspace.tab.move.right";
 
+pub const CMD_WORKSPACE_TAB_TOGGLE_PIN: &str = "workspace.tab.toggle_pin";
+
 /// Prefix for "move the active tab before another tab" commands.
 ///
 /// Shape: `workspace.tab.move_before.<target_tab_id>`
@@ -62,6 +64,16 @@ pub const CMD_WORKSPACE_TAB_ACTIVATE_PREFIX: &str = "workspace.tab.activate.";
 /// without exposing internal IDs via generic enum payloads.
 pub const CMD_WORKSPACE_TAB_CLOSE_PREFIX: &str = "workspace.tab.close.";
 
+/// Prefix for "pin a specific tab" commands.
+///
+/// Shape: `workspace.tab.pin.<tab_id>`
+pub const CMD_WORKSPACE_TAB_PIN_PREFIX: &str = "workspace.tab.pin.";
+
+/// Prefix for "unpin a specific tab" commands.
+///
+/// Shape: `workspace.tab.unpin.<tab_id>`
+pub const CMD_WORKSPACE_TAB_UNPIN_PREFIX: &str = "workspace.tab.unpin.";
+
 /// Prefix for "activate a specific pane" commands.
 ///
 /// This is prefix-based so apps can use their own stable pane IDs (strings) without adding a
@@ -102,6 +114,26 @@ pub fn tab_close_command(id: &str) -> Option<CommandId> {
     }
     Some(CommandId::new(Arc::<str>::from(format!(
         "{CMD_WORKSPACE_TAB_CLOSE_PREFIX}{id}"
+    ))))
+}
+
+pub fn tab_pin_command(id: &str) -> Option<CommandId> {
+    let id = id.trim();
+    if id.is_empty() {
+        return None;
+    }
+    Some(CommandId::new(Arc::<str>::from(format!(
+        "{CMD_WORKSPACE_TAB_PIN_PREFIX}{id}"
+    ))))
+}
+
+pub fn tab_unpin_command(id: &str) -> Option<CommandId> {
+    let id = id.trim();
+    if id.is_empty() {
+        return None;
+    }
+    Some(CommandId::new(Arc::<str>::from(format!(
+        "{CMD_WORKSPACE_TAB_UNPIN_PREFIX}{id}"
     ))))
 }
 
@@ -402,6 +434,13 @@ pub fn register_workspace_commands(registry: &mut CommandRegistry) {
                     },
                 ),
             ]),
+    );
+
+    registry.register(
+        CommandId::new(CMD_WORKSPACE_TAB_TOGGLE_PIN),
+        CommandMeta::new("Toggle Tab Pin")
+            .with_category("Workspace")
+            .with_keywords(["tab", "pin", "unpin", "workspace"]),
     );
 
     registry.register(

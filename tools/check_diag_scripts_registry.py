@@ -110,12 +110,12 @@ def build_registry(repo_root: Path) -> dict[str, Any]:
 
     canonical_to_suites: dict[Path, set[str]] = {}
 
-    # 1) Suites: stubs under tools/diag-scripts/suites/<suite>/*.json
+    # 1) Suites: stubs under tools/diag-scripts/suites/<suite>/**/*.json
     for suite_dir in sorted((repo_root / SUITES_DIR).iterdir()):
         if not suite_dir.is_dir():
             continue
         suite_name = suite_dir.name
-        for stub in sorted(suite_dir.glob("*.json")):
+        for stub in sorted(suite_dir.rglob("*.json")):
             stub_obj = read_json(stub)
             if not is_redirect_stub(stub_obj):
                 raise SystemExit(

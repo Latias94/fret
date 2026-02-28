@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use crate::layout::SplitSide;
-use fret_core::{AppWindowId, Axis, Point, PointerId, Rect};
+use fret_core::{AppWindowId, Axis, Point, PointerId, Px, Rect};
 use fret_runtime::DragKindId;
 
 /// Drag kind for cross-pane workspace tab drags.
@@ -26,6 +26,13 @@ pub enum WorkspaceTabInsertionSide {
 pub struct WorkspaceTabHitRect {
     pub id: Arc<str>,
     pub rect: Rect,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct WorkspacePaneDragGeometry {
+    pub bounds: Rect,
+    pub edge_margin: Px,
+    pub edge_hysteresis: Px,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -154,6 +161,7 @@ pub struct WorkspaceTabDragState {
     pub hovered_tab: Option<Arc<str>>,
     pub hovered_tab_side: Option<WorkspaceTabInsertionSide>,
     pub hovered_pane_tab_rects: Vec<WorkspaceTabHitRect>,
+    pub pane_geometry: Vec<(Arc<str>, WorkspacePaneDragGeometry)>,
 }
 
 #[cfg(test)]

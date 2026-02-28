@@ -1918,14 +1918,50 @@ mod tests {
             resolved: Some(fret_runtime::DockDropTargetDiagnostics {
                 layout_root: dock_node_id(1),
                 tabs: dock_node_id(2),
-                zone: fret_core::dock::DropZone::Left,
-                insert_index: None,
-                outer: true,
+                zone: fret_core::dock::DropZone::Center,
+                insert_index: Some(3),
+                outer: false,
             }),
             ..docking.dock_drop_resolve.unwrap()
         });
 
         let pred = UiPredicateV1::DockDropResolvedIsSome { some: true };
+        assert!(eval_predicate(
+            &snapshot,
+            window_bounds,
+            window_id(1),
+            None,
+            None,
+            None,
+            None,
+            &[],
+            Some(&docking),
+            0,
+            false,
+            true,
+            &pred
+        ));
+
+        let pred = UiPredicateV1::DockDropResolvedZoneIs {
+            zone: "center".to_string(),
+        };
+        assert!(eval_predicate(
+            &snapshot,
+            window_bounds,
+            window_id(1),
+            None,
+            None,
+            None,
+            None,
+            &[],
+            Some(&docking),
+            0,
+            false,
+            true,
+            &pred
+        ));
+
+        let pred = UiPredicateV1::DockDropResolvedInsertIndexIs { index: 3 };
         assert!(eval_predicate(
             &snapshot,
             window_bounds,

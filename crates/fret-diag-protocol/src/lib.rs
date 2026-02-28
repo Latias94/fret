@@ -1565,6 +1565,26 @@ pub enum UiPredicateV1 {
     DockDropResolvedIsSome {
         some: bool,
     },
+    /// True when the current docking drop resolve has a resolved target whose `zone` matches
+    /// `zone`.
+    ///
+    /// Supported zones:
+    /// - `center`
+    /// - `left`
+    /// - `right`
+    /// - `top`
+    /// - `bottom`
+    DockDropResolvedZoneIs {
+        zone: String,
+    },
+    /// True when the current docking drop resolve has a resolved target whose `insert_index`
+    /// matches `index`.
+    ///
+    /// This is intended to gate "drop at end" semantics (e.g. `index == tab_count`) without
+    /// relying on pixels.
+    DockDropResolvedInsertIndexIs {
+        index: u32,
+    },
     /// True when the latest dock graph stats snapshot reports a canonical-form layout.
     DockGraphCanonicalIs {
         canonical: bool,

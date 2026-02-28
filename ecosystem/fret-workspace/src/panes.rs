@@ -1,13 +1,17 @@
+use std::cell::Cell;
 use std::sync::Arc;
 
-use fret_core::{Axis, Color, Corners, Edges, InternalDragKind, Px};
+use fret_core::{Axis, Color, Corners, Edges, InternalDragKind, Point, Px};
 use fret_runtime::Model;
 use fret_ui::action::{OnInternalDrag, OnPointerDown};
 use fret_ui::element::{
     AnyElement, ContainerProps, FlexProps, InsetStyle, InternalDragRegionProps, LayoutStyle,
     Length, PointerRegionProps, PositionStyle, ResizablePanelGroupProps, ViewCacheProps,
 };
+use fret_ui::elements::GlobalElementId;
 use fret_ui::{ElementContext, Invalidation, ResizablePanelGroupStyle, Theme, UiHost};
+
+use fret_dnd::{EdgeDropZone, compute_edge_drop_zone};
 
 use crate::commands::{
     pane_activate_command, pane_move_active_tab_to_command, pane_split_command,
@@ -15,8 +19,9 @@ use crate::commands::{
 };
 use crate::layout::{WorkspacePaneLayout, WorkspacePaneTree, WorkspaceWindowLayout};
 use crate::tab_drag::{
-    DRAG_KIND_WORKSPACE_TAB, WorkspaceTabDragState, WorkspaceTabDropIntent, WorkspaceTabDropZone,
-    WorkspaceTabInsertionSide, resolve_workspace_tab_drop_intent,
+    DRAG_KIND_WORKSPACE_TAB, WorkspacePaneDragGeometry, WorkspaceTabDragState,
+    WorkspaceTabDropIntent, WorkspaceTabDropZone, WorkspaceTabInsertionSide,
+    resolve_workspace_tab_drop_intent,
 };
 
 fn fill_layout() -> LayoutStyle {
@@ -38,54 +43,8 @@ fn absolute_fill_layout() -> LayoutStyle {
     layout
 }
 
-fn absolute_edge_layout(zone: WorkspaceTabDropZone, edge: Px) -> LayoutStyle {
-    let mut layout = LayoutStyle::default();
-    layout.position = PositionStyle::Absolute;
-    layout.size.width = Length::Fill;
-    layout.size.height = Length::Fill;
-
-    match zone {
-        WorkspaceTabDropZone::Left => {
-            layout.size.width = Length::Px(edge);
-            layout.inset = InsetStyle {
-                top: Some(Px(0.0)).into(),
-                bottom: Some(Px(0.0)).into(),
-                left: Some(Px(0.0)).into(),
-                right: None.into(),
-            };
-        }
-        WorkspaceTabDropZone::Right => {
-            layout.size.width = Length::Px(edge);
-            layout.inset = InsetStyle {
-                top: Some(Px(0.0)).into(),
-                bottom: Some(Px(0.0)).into(),
-                left: None.into(),
-                right: Some(Px(0.0)).into(),
-            };
-        }
-        WorkspaceTabDropZone::Up => {
-            layout.size.height = Length::Px(edge);
-            layout.inset = InsetStyle {
-                top: Some(Px(0.0)).into(),
-                bottom: None.into(),
-                left: Some(Px(0.0)).into(),
-                right: Some(Px(0.0)).into(),
-            };
-        }
-        WorkspaceTabDropZone::Down => {
-            layout.size.height = Length::Px(edge);
-            layout.inset = InsetStyle {
-                top: None.into(),
-                bottom: Some(Px(0.0)).into(),
-                left: Some(Px(0.0)).into(),
-                right: Some(Px(0.0)).into(),
-            };
-        }
-        WorkspaceTabDropZone::Center => layout = absolute_fill_layout(),
-    }
-
-    layout
-}
+// Note: edge drop zones are computed from pane geometry (nearest-edge-with-margin), rather than
+// via overlapping edge regions. See `WorkspacePaneDragGeometry`.
 
 fn split_container_layout() -> LayoutStyle {
     let mut layout = LayoutStyle::default();
@@ -130,16 +89,53 @@ fn drop_preview_border(theme: &Theme) -> Option<Color> {
         .or_else(|| theme.color_by_key("ring"))
 }
 
+fn edge_for_drop_zone(zone: WorkspaceTabDropZone) -> Option<EdgeDropZone> {
+    match zone {
+        WorkspaceTabDropZone::Left => Some(EdgeDropZone::Left),
+        WorkspaceTabDropZone::Right => Some(EdgeDropZone::Right),
+        WorkspaceTabDropZone::Up => Some(EdgeDropZone::Up),
+        WorkspaceTabDropZone::Down => Some(EdgeDropZone::Down),
+        WorkspaceTabDropZone::Center => None,
+    }
+}
+
+fn drop_zone_for_edge(edge: EdgeDropZone) -> WorkspaceTabDropZone {
+    match edge {
+        EdgeDropZone::Left => WorkspaceTabDropZone::Left,
+        EdgeDropZone::Right => WorkspaceTabDropZone::Right,
+        EdgeDropZone::Up => WorkspaceTabDropZone::Up,
+        EdgeDropZone::Down => WorkspaceTabDropZone::Down,
+    }
+}
+
+fn compute_drop_zone_for_position(
+    geom: WorkspacePaneDragGeometry,
+    position: Point,
+    previous: Option<WorkspaceTabDropZone>,
+) -> WorkspaceTabDropZone {
+    let prev_edge = previous.and_then(edge_for_drop_zone);
+    compute_edge_drop_zone(
+        geom.bounds,
+        position,
+        geom.edge_margin,
+        prev_edge,
+        geom.edge_hysteresis,
+    )
+    .map(drop_zone_for_edge)
+    .unwrap_or(WorkspaceTabDropZone::Center)
+}
+
 fn drop_preview_element<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     zone: WorkspaceTabDropZone,
+    test_id: Option<Arc<str>>,
     fill: Option<Color>,
     border_color: Option<Color>,
     corner_radii: Corners,
 ) -> AnyElement {
     let border = Edges::all(Px(1.0));
 
-    match zone {
+    let mut el = match zone {
         WorkspaceTabDropZone::Center => cx.container(
             ContainerProps {
                 layout: absolute_fill_layout(),
@@ -223,7 +219,27 @@ fn drop_preview_element<H: UiHost>(
                 },
             )
         }
+    };
+
+    if let Some(id) = test_id {
+        el = el.test_id(id);
     }
+
+    el
+}
+
+fn drop_preview_test_id(pane_id: &Arc<str>, zone: WorkspaceTabDropZone) -> Arc<str> {
+    let zone = match zone {
+        WorkspaceTabDropZone::Center => "center",
+        WorkspaceTabDropZone::Left => "left",
+        WorkspaceTabDropZone::Right => "right",
+        WorkspaceTabDropZone::Up => "up",
+        WorkspaceTabDropZone::Down => "down",
+    };
+    Arc::<str>::from(format!(
+        "workspace-pane-{}.drop_preview.{zone}",
+        pane_id.as_ref()
+    ))
 }
 
 fn pane_border_color(theme: &Theme, is_active: bool) -> Option<Color> {
@@ -680,7 +696,7 @@ where
     let window_model = window.clone();
     let tab_drag_model = tab_drag.clone();
 
-    let make_drag_handler = |zone: WorkspaceTabDropZone| -> OnInternalDrag {
+    let drag_handler: OnInternalDrag = {
         let pane_id = pane_id.clone();
         let tab_drag_model = tab_drag_model.clone();
         let window_model = window_model.clone();
@@ -707,14 +723,27 @@ where
                         {
                             return;
                         }
+                        let geom = st
+                            .pane_geometry
+                            .iter()
+                            .find(|(id, _)| id.as_ref() == pane_id.as_ref())
+                            .map(|(_, g)| *g);
+                        let next_zone = geom
+                            .map(|geom| {
+                                compute_drop_zone_for_position(geom, drag.position, st.hovered_zone)
+                            })
+                            .unwrap_or(WorkspaceTabDropZone::Center);
+
                         if st.hovered_pane.as_deref() != Some(pane_id.as_ref())
-                            || st.hovered_zone != Some(zone)
+                            || st.hovered_zone != Some(next_zone)
                         {
                             st.hovered_pane = Some(pane_id.clone());
-                            st.hovered_zone = Some(zone);
-                            st.hovered_tab = None;
-                            st.hovered_tab_side = None;
-                            st.hovered_pane_tab_rects = Vec::new();
+                            st.hovered_zone = Some(next_zone);
+                            if next_zone != WorkspaceTabDropZone::Center {
+                                st.hovered_tab = None;
+                                st.hovered_tab_side = None;
+                                st.hovered_pane_tab_rects = Vec::new();
+                            }
                             handled = true;
                         }
                     });
@@ -731,9 +760,7 @@ where
                         {
                             return;
                         }
-                        if st.hovered_pane.as_deref() == Some(pane_id.as_ref())
-                            && st.hovered_zone == Some(zone)
-                        {
+                        if st.hovered_pane.as_deref() == Some(pane_id.as_ref()) {
                             st.hovered_pane = None;
                             st.hovered_zone = None;
                             st.hovered_tab = None;
@@ -771,11 +798,22 @@ where
                         {
                             return;
                         }
-                        if st.hovered_pane.as_deref() != Some(pane_id.as_ref())
-                            || st.hovered_zone != Some(zone)
-                        {
+                        if st.hovered_pane.as_deref() != Some(pane_id.as_ref()) {
                             return;
                         }
+
+                        let geom = st
+                            .pane_geometry
+                            .iter()
+                            .find(|(id, _)| id.as_ref() == pane_id.as_ref())
+                            .map(|(_, g)| *g);
+                        let zone = geom
+                            .map(|geom| {
+                                compute_drop_zone_for_position(geom, drag.position, st.hovered_zone)
+                            })
+                            .unwrap_or_else(|| {
+                                st.hovered_zone.unwrap_or(WorkspaceTabDropZone::Center)
+                            });
 
                         intent = resolve_workspace_tab_drop_intent(st, &pane_id, zone);
 
@@ -897,15 +935,7 @@ where
                 cx.pointer_region_add_on_pointer_down(handler);
             }
 
-            let edge_px = Theme::global(cx.app)
-                .metric_by_key("workspace.pane.drop_edge_px")
-                .unwrap_or(Px(24.0));
-
-            let center_handler = make_drag_handler(WorkspaceTabDropZone::Center);
-            let left_handler = make_drag_handler(WorkspaceTabDropZone::Left);
-            let right_handler = make_drag_handler(WorkspaceTabDropZone::Right);
-            let up_handler = make_drag_handler(WorkspaceTabDropZone::Up);
-            let down_handler = make_drag_handler(WorkspaceTabDropZone::Down);
+            let pane_bounds_element = Cell::<Option<GlobalElementId>>::new(None);
 
             vec![cx.internal_drag_region(
                 InternalDragRegionProps {
@@ -913,7 +943,7 @@ where
                     enabled: true,
                 },
                 |cx| {
-                    cx.internal_drag_region_on_internal_drag(center_handler.clone());
+                    cx.internal_drag_region_on_internal_drag(drag_handler.clone());
 
                     let inner = cx.container(
                         ContainerProps {
@@ -935,6 +965,7 @@ where
                             )]
                         },
                     );
+                    pane_bounds_element.set(Some(inner.id));
 
                     let preview = if can_drop {
                         drop_zone.map(|zone| {
@@ -942,6 +973,7 @@ where
                             drop_preview_element(
                                 cx,
                                 zone,
+                                Some(drop_preview_test_id(&pane_id, zone)),
                                 drop_preview_fill(theme),
                                 drop_preview_border(theme),
                                 corner_radii,
@@ -956,48 +988,58 @@ where
                         children.push(preview);
                     }
 
-                    children.extend([
-                        cx.internal_drag_region(
-                            InternalDragRegionProps {
-                                layout: absolute_edge_layout(WorkspaceTabDropZone::Left, edge_px),
-                                enabled: true,
-                            },
-                            |cx| {
-                                cx.internal_drag_region_on_internal_drag(left_handler.clone());
-                                Vec::new()
-                            },
-                        ),
-                        cx.internal_drag_region(
-                            InternalDragRegionProps {
-                                layout: absolute_edge_layout(WorkspaceTabDropZone::Right, edge_px),
-                                enabled: true,
-                            },
-                            |cx| {
-                                cx.internal_drag_region_on_internal_drag(right_handler.clone());
-                                Vec::new()
-                            },
-                        ),
-                        cx.internal_drag_region(
-                            InternalDragRegionProps {
-                                layout: absolute_edge_layout(WorkspaceTabDropZone::Up, edge_px),
-                                enabled: true,
-                            },
-                            |cx| {
-                                cx.internal_drag_region_on_internal_drag(up_handler.clone());
-                                Vec::new()
-                            },
-                        ),
-                        cx.internal_drag_region(
-                            InternalDragRegionProps {
-                                layout: absolute_edge_layout(WorkspaceTabDropZone::Down, edge_px),
-                                enabled: true,
-                            },
-                            |cx| {
-                                cx.internal_drag_region_on_internal_drag(down_handler.clone());
-                                Vec::new()
-                            },
-                        ),
-                    ]);
+                    if let Some(bounds) = pane_bounds_element
+                        .get()
+                        .and_then(|id| cx.last_bounds_for_element(id))
+                    {
+                        let theme = Theme::global(cx.app);
+                        let max_px = theme
+                            .metric_by_key("workspace.pane.drop_edge_px")
+                            .unwrap_or(Px(24.0))
+                            .0;
+                        let ratio = theme
+                            .number_by_key("workspace.pane.drop_edge_ratio")
+                            .filter(|r| r.is_finite() && *r > 0.0);
+                        let min_px = theme
+                            .metric_by_key("workspace.pane.drop_edge_min_px")
+                            .unwrap_or(Px(18.0))
+                            .0;
+                        let hysteresis_px = theme
+                            .metric_by_key("workspace.pane.drop_edge_hysteresis_px")
+                            .unwrap_or(Px(0.0));
+
+                        let edge_margin = if let Some(ratio) = ratio {
+                            let base = bounds.size.width.0.min(bounds.size.height.0) * ratio;
+                            Px(base.clamp(min_px, max_px.max(min_px)))
+                        } else {
+                            Px(max_px.max(0.0))
+                        };
+
+                        let geom = WorkspacePaneDragGeometry {
+                            bounds,
+                            edge_margin,
+                            edge_hysteresis: hysteresis_px,
+                        };
+
+                        let pane_id_for_geom = pane_id.clone();
+                        let tab_drag_for_geom = tab_drag.clone();
+                        let _ = cx.app.models_mut().update(&tab_drag_for_geom, |st| {
+                            if st.pointer.is_none() {
+                                return;
+                            }
+                            if let Some(existing) = st
+                                .pane_geometry
+                                .iter_mut()
+                                .find(|(id, _)| id.as_ref() == pane_id_for_geom.as_ref())
+                            {
+                                if existing.1 != geom {
+                                    existing.1 = geom;
+                                }
+                            } else {
+                                st.pane_geometry.push((pane_id_for_geom.clone(), geom));
+                            }
+                        });
+                    }
 
                     children
                 },

@@ -17,6 +17,7 @@ shadcn-context-menu = ["dep:fret-ui-shadcn"]
 
 [dependencies]
 fret-core = { path = "../../crates/fret-core" }
+fret-dnd = { path = "../fret-dnd" }
 fret-runtime = { path = "../../crates/fret-runtime" }
 fret-ui = { path = "../../crates/fret-ui" }
 fret-ui-kit = { path = "../fret-ui-kit", features = ["dnd"] }
