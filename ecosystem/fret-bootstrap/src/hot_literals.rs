@@ -1,8 +1,8 @@
 //! Hot-reloadable string literals for UI development workflows.
 //!
 //! This is an ecosystem-level convenience that intentionally keeps the core UI runtime policy-free.
-//! The literals live in a host global and can be updated at runtime by the app driver (e.g. a
-//! polling watcher that reloads `.fret/literals.json`).
+//! The literals live in a host global and can be updated at runtime by the app driver (for example
+//! a polling watcher that reloads `.fret/literals.json`).
 
 use std::collections::HashMap;
 use std::sync::{Arc, OnceLock};
@@ -55,7 +55,6 @@ fn default_hot_literals() -> &'static HotLiterals {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct HotLiteralsFile(pub HashMap<String, String>);
 
-#[cfg(feature = "ui")]
 pub mod ui;
 
 #[cfg(test)]

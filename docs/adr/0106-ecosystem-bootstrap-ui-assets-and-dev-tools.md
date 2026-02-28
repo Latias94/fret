@@ -16,7 +16,7 @@ As the repository grows, we need to make "how do I build an app with Fret?" obvi
 
 Today there is a mild cognition issue in the ecosystem area:
 
-- `ecosystem/fret-asset-cache` provides `use_asset`-style caching for render resources (Image/SVG) and budgeting/eviction.
+- `ecosystem/fret-ui-assets` provides `use_asset`-style caching for render resources (Image/SVG) and budgeting/eviction.
   The name can be misread as "editor asset pipeline", which is explicitly out-of-scope for the framework kernel
   (ADR 0027 / `docs/architecture.md`).
 - Demo apps often re-implement the same startup steps: settings load, theme selection, icon pack registration, optional
@@ -100,8 +100,8 @@ We introduce a clearer naming surface:
 Migration path:
 
 - Short term: keep `fret-asset-cache` as-is, but document it as "UI render assets". (Implemented.)
-- Medium term: add `fret-ui-assets` as a new crate that re-exports `fret-asset-cache` modules, then migrate call sites. (Implemented; migration in progress.)
-- Long term: deprecate `fret-asset-cache` name if desired, keeping API paths stable where possible.
+- Medium term: add `fret-ui-assets` as a new crate that re-exports `fret-asset-cache` modules, then migrate call sites. (Implemented.)
+- Long term: deprecate the `fret-asset-cache` name by merging it into `fret-ui-assets` prior to the first crates.io release. (Implemented.)
 
 ### 3) Remove `fret-app-kit` and keep responsibilities split
 
@@ -109,7 +109,7 @@ Migration path:
 is still pre-OSS and has no external users yet, we remove it entirely and keep the story crisp:
 
 - App defaults / startup glue live in `ecosystem/fret-bootstrap`.
-- UI render-asset caches and helpers live in `ecosystem/fret-ui-assets` (re-export surface over `fret-asset-cache`).
+- UI render-asset caches and helpers live in `ecosystem/fret-ui-assets`.
 
 ### 4) Introduce a dev-tools layer as a separate distribution: `fretboard` (CLI)
 
@@ -132,7 +132,7 @@ Implementation status (in this workspace):
 
 Implemented:
 
-- `ecosystem/fret-ui-assets` exists as the preferred UI render-asset surface (re-export wrapper over `fret-asset-cache`).
+- `ecosystem/fret-ui-assets` exists as the preferred UI render-asset surface (images/SVG caches and upload helpers).
 - `ecosystem/fret-bootstrap` exists as the ecosystem "golden path" startup layer (wrapper over `fret-launch`).
 - `apps/fretboard` exists as a dev-tools binary for running native/web demos with consistent flags.
 - `fretboard init todo` provides a starter template for new apps (see `docs/examples/todo-app-golden-path.md`).

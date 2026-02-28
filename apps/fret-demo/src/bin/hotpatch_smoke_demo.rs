@@ -2,12 +2,12 @@
 mod hotpatch {
     use fret_app::{App, CommandId};
     use fret_bootstrap::BootstrapBuilder;
+    use fret_bootstrap::HotLiterals;
     use fret_bootstrap::ui_app_driver::UiAppDriver;
     use fret_core::{AppWindowId, UiServices};
     use fret_runtime::Model;
     use fret_ui::{ElementContext, Invalidation};
     use fret_ui_kit::declarative::ElementContextThemeExt as _;
-    use fret_ui_literals::HotLiterals;
     use fret_ui_shadcn as shadcn;
 
     use std::sync::Arc;

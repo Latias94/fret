@@ -238,12 +238,6 @@ publish = true
 version_group = "fret-0-1"
 
 [[package]]
-name = "fret-asset-cache"
-release = true
-publish = true
-version_group = "fret-0-1"
-
-[[package]]
 name = "fret-diag-ws"
 release = true
 publish = true
@@ -269,12 +263,6 @@ version_group = "fret-0-1"
 
 [[package]]
 name = "fret-ui-assets"
-release = true
-publish = true
-version_group = "fret-0-1"
-
-[[package]]
-name = "fret-ui-literals"
 release = true
 publish = true
 version_group = "fret-0-1"

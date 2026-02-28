@@ -6,7 +6,7 @@ use fret_core::AppWindowId;
 use fret_runtime::{Effect, TimerToken};
 use fret_ui::{Theme, ThemeConfig};
 
-use fret_ui_literals::HotLiterals;
+use crate::HotLiterals;
 
 #[derive(Debug, Clone, Default)]
 struct FontsManifest {

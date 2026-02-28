@@ -1,9 +1,8 @@
 //! Optional `fret-ui` sugar for reading hot literals from an `ElementContext`.
 
-use fret_runtime::GlobalsHost;
 use fret_ui::{ElementContext, Invalidation, UiHost};
 
-use crate::HotLiterals;
+use super::HotLiterals;
 
 pub trait HotLiteralsElementContextExt {
     fn hot_literal(&mut self, key: &str) -> Option<String>;

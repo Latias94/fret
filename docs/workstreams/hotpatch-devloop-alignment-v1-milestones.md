@@ -89,5 +89,5 @@ Exit criteria:
 
 Evidence anchors:
 
-- `ecosystem/fret-ui-literals/src/lib.rs`
+- `ecosystem/fret-bootstrap/src/hot_literals.rs`
 - `ecosystem/fret-bootstrap/src/dev_reload.rs`

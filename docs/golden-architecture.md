@@ -273,6 +273,7 @@ flowchart LR
 - ADR 0009 (ordering/batching): `docs/adr/0009-renderer-ordering-and-batching.md`
 - ADR 0030 (shape semantics over SDF): `docs/adr/0030-shape-rendering-and-sdf-semantics.md`
 - ADR 0029 (text pipeline): `docs/adr/0029-text-pipeline-and-atlas-strategy.md`
+- Renderer contract surface summary: `docs/renderer-contracts.md`
 - Scene transform/clip: ADR 0078/0079
 
 **Code entry points**
