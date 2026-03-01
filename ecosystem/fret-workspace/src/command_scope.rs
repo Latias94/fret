@@ -13,6 +13,9 @@ use crate::commands::{
 };
 use crate::focus_registry::{WorkspaceTabElementKey, workspace_tab_element_registry_model};
 use crate::layout::WorkspaceWindowLayout;
+use crate::pane_content_focus::{
+    WorkspacePaneContentElementKey, workspace_pane_content_element_registry_model,
+};
 
 fn fill_layout() -> LayoutStyle {
     let mut layout = LayoutStyle::default();
@@ -77,6 +80,7 @@ impl WorkspaceCommandScope {
         let window_layout = self.window_layout;
         let child = self.child;
         let tab_element_registry = workspace_tab_element_registry_model(cx);
+        let pane_content_registry = workspace_pane_content_element_registry_model(cx);
         let focus_state = workspace_command_scope_focus_model(cx);
 
         // Best-effort: keep a snapshot of the latest focused element for the window so command
@@ -115,6 +119,7 @@ impl WorkspaceCommandScope {
 
         let window_layout_for_command = window_layout.clone();
         let tab_element_registry_for_command = tab_element_registry.clone();
+        let pane_content_registry_for_command = pane_content_registry.clone();
         let focus_state_for_command = focus_state.clone();
         cx.command_on_command_for(
             root.id,
@@ -146,8 +151,20 @@ impl WorkspaceCommandScope {
                             return false;
                         };
 
+                        let content_fallback = host
+                            .models_mut()
+                            .read(&pane_content_registry_for_command, |reg| {
+                                reg.get(&WorkspacePaneContentElementKey {
+                                    window: acx.window,
+                                    pane_id: pane_id.clone(),
+                                })
+                            })
+                            .ok()
+                            .flatten();
+
                         // Record the last focused element (best-effort) so `focus_content` can
-                        // restore it after keyboard use of the tab strip.
+                        // restore it after keyboard use of the tab strip. If no prior focus target
+                        // is known, fall back to the pane's registered content target (if any).
                         let last_focus = host
                             .models_mut()
                             .read(&focus_state_for_command, |st| {
@@ -156,7 +173,8 @@ impl WorkspaceCommandScope {
                                     .copied()
                             })
                             .ok()
-                            .flatten();
+                            .flatten()
+                            .or(content_fallback);
                         if let Some(last_focus) = last_focus {
                             if last_focus != target {
                                 let _ = host.models_mut().update(&focus_state_for_command, |st| {
@@ -167,6 +185,9 @@ impl WorkspaceCommandScope {
                         }
 
                         host.request_focus(target);
+                        let _ = host.models_mut().update(&focus_state_for_command, |st| {
+                            st.last_focused_by_window.insert(acx.window, Some(target));
+                        });
                         host.request_redraw(acx.window);
                         true
                     }
@@ -189,16 +210,35 @@ impl WorkspaceCommandScope {
                             })
                             .ok()
                             .flatten();
+                        let target = match target {
+                            Some(target) => {
+                                let _ = host.models_mut().update(&focus_state_for_command, |st| {
+                                    st.return_focus_by_window_and_pane
+                                        .remove(&(acx.window, pane_id.clone()));
+                                });
+                                Some(target)
+                            }
+                            None => host
+                                .models_mut()
+                                .read(&pane_content_registry_for_command, |reg| {
+                                    reg.get(&WorkspacePaneContentElementKey {
+                                        window: acx.window,
+                                        pane_id: pane_id.clone(),
+                                    })
+                                })
+                                .ok()
+                                .flatten(),
+                        };
                         let Some(target) = target else {
                             return false;
                         };
 
-                        let _ = host.models_mut().update(&focus_state_for_command, |st| {
-                            st.return_focus_by_window_and_pane
-                                .remove(&(acx.window, pane_id));
-                        });
-
                         host.request_focus(target);
+                        let _ = host.models_mut().update(&focus_state_for_command, |st| {
+                            st.last_focused_by_window.insert(acx.window, Some(target));
+                            st.last_non_tabstrip_focused_by_window
+                                .insert(acx.window, target);
+                        });
                         host.request_redraw(acx.window);
                         true
                     }
@@ -213,15 +253,30 @@ impl WorkspaceCommandScope {
                             return false;
                         };
 
-                        let has_return_target = host
+                        let focused_now = host
                             .models_mut()
                             .read(&focus_state_for_command, |st| {
-                                st.return_focus_by_window_and_pane
-                                    .contains_key(&(acx.window, pane_id.clone()))
+                                st.last_focused_by_window
+                                    .get(&acx.window)
+                                    .copied()
+                                    .flatten()
                             })
-                            .unwrap_or(false);
+                            .ok()
+                            .flatten();
+                        let focused_in_active_pane_tabstrip = focused_now.is_some_and(|focused| {
+                            host.models_mut()
+                                .read(&tab_element_registry_for_command, |reg| {
+                                    reg.contains_element_for_window_and_pane(
+                                        acx.window, &pane_id, focused,
+                                    )
+                                })
+                                .unwrap_or(false)
+                        });
 
-                        if has_return_target {
+                        // If we're already in the tab strip, this is an "exit" gesture (back to
+                        // content). If a return target was recorded, use it; otherwise, fall back
+                        // to the registered pane content focus target (if any).
+                        if focused_in_active_pane_tabstrip {
                             let target = host
                                 .models_mut()
                                 .read(&focus_state_for_command, |st| {
@@ -230,7 +285,18 @@ impl WorkspaceCommandScope {
                                         .copied()
                                 })
                                 .ok()
-                                .flatten();
+                                .flatten()
+                                .or_else(|| {
+                                    host.models_mut()
+                                        .read(&pane_content_registry_for_command, |reg| {
+                                            reg.get(&WorkspacePaneContentElementKey {
+                                                window: acx.window,
+                                                pane_id: pane_id.clone(),
+                                            })
+                                        })
+                                        .ok()
+                                        .flatten()
+                                });
                             let Some(target) = target else {
                                 return false;
                             };
@@ -241,6 +307,11 @@ impl WorkspaceCommandScope {
                             });
 
                             host.request_focus(target);
+                            let _ = host.models_mut().update(&focus_state_for_command, |st| {
+                                st.last_focused_by_window.insert(acx.window, Some(target));
+                                st.last_non_tabstrip_focused_by_window
+                                    .insert(acx.window, target);
+                            });
                             host.request_redraw(acx.window);
                             return true;
                         }
@@ -260,7 +331,20 @@ impl WorkspaceCommandScope {
                             return false;
                         };
 
+                        let content_fallback = host
+                            .models_mut()
+                            .read(&pane_content_registry_for_command, |reg| {
+                                reg.get(&WorkspacePaneContentElementKey {
+                                    window: acx.window,
+                                    pane_id: pane_id.clone(),
+                                })
+                            })
+                            .ok()
+                            .flatten();
+
                         // Record the last focused element (best-effort) so toggle can restore it.
+                        // If no prior focus target is known, fall back to the pane's registered
+                        // content target (if any).
                         let focused = host
                             .models_mut()
                             .read(&focus_state_for_command, |st| {
@@ -269,7 +353,8 @@ impl WorkspaceCommandScope {
                                     .copied()
                             })
                             .ok()
-                            .flatten();
+                            .flatten()
+                            .or(content_fallback);
                         if let Some(last_focus) = focused {
                             if last_focus != target {
                                 let _ = host.models_mut().update(&focus_state_for_command, |st| {
@@ -280,6 +365,9 @@ impl WorkspaceCommandScope {
                         }
 
                         host.request_focus(target);
+                        let _ = host.models_mut().update(&focus_state_for_command, |st| {
+                            st.last_focused_by_window.insert(acx.window, Some(target));
+                        });
                         host.request_redraw(acx.window);
                         true
                     }

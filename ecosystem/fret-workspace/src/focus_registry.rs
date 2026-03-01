@@ -33,6 +33,22 @@ impl WorkspaceTabElementRegistry {
             .any(|(key, value)| key.window == window && *value == element)
     }
 
+    pub(crate) fn contains_element_for_window_and_pane(
+        &self,
+        window: AppWindowId,
+        pane_id: &Arc<str>,
+        element: GlobalElementId,
+    ) -> bool {
+        self.entries.iter().any(|(key, value)| {
+            key.window == window
+                && key
+                    .pane_id
+                    .as_ref()
+                    .is_some_and(|id| id.as_ref() == pane_id.as_ref())
+                && *value == element
+        })
+    }
+
     pub(crate) fn set_if_changed(
         &mut self,
         key: WorkspaceTabElementKey,

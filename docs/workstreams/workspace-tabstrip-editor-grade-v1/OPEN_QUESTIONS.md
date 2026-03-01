@@ -119,11 +119,15 @@ Recommendation (v1):
 - Prefer **(1)**: `Escape` dispatches `workspace.pane.focus_content`.
 - Implement `workspace.pane.focus_content` as a **shell policy** in `WorkspaceCommandScope` that
   restores the last focus target observed before `workspace.pane.focus_tab_strip` was invoked.
-- If no prior focus target is known, do nothing (best-effort).
+- If no prior focus target is known, fall back to a pane-registered “content focus target”
+  (best-effort). See `WorkspacePaneContentFocusTarget`.
 
 Gate:
 - Unit: focus `outside` → `workspace.pane.focus_tab_strip` → `workspace.pane.focus_content`
   restores focus to `outside`.
+- Unit: if the tab strip is focused but no return target was recorded,
+  `workspace.pane.focus_content` falls back to the registered pane content target:
+  `ecosystem/fret-workspace/tests/workspace_command_scope_focus_content_fallbacks_to_registered_pane_content.rs`.
 
 ## Q8: Should `Ctrl+F6` be a one-way “focus tab strip” or a toggle?
 
