@@ -18,6 +18,7 @@ pub mod drawer;
 pub mod dropdown_menu;
 pub mod hover_card;
 pub mod input_group;
+pub mod kbd;
 pub mod label;
 pub mod menubar;
 pub mod popover;
