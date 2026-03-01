@@ -159,5 +159,5 @@ drift-free (preview ≡ copyable code).
 | date-picker | `apps/fret-ui-gallery/src/ui/pages/date_picker.rs` | No | Not started | Calendar models + popover; align with ongoing select/combobox work. |
 | navigation-menu | `apps/fret-ui-gallery/src/ui/pages/navigation_menu.rs` | Yes | Done | Snippet-backed previews + region-sliced code tabs (preview ≡ code). Keep `ui-gallery-navigation-menu-*` `test_id`s stable for diag scripts. |
 | form | `apps/fret-ui-gallery/src/ui/pages/form.rs` | No | Not started | Composite page; migrate last. |
-| shadcn-extras | `apps/fret-ui-gallery/src/ui/pages/shadcn_extras.rs` | No | Not started | Misc recipes; may split into separate pages/modules. |
+| shadcn-extras | `apps/fret-ui-gallery/src/ui/pages/shadcn_extras.rs` | Yes | Done | Snippet-backed previews + region-sliced code tabs (preview ≡ code). |
 | combobox | `apps/fret-ui-gallery/src/ui/pages/combobox.rs` | Partial | Deferred | Component refactor in progress; migrate when API stabilizes. |

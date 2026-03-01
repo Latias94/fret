@@ -41,6 +41,7 @@ pub mod popover;
 pub mod scroll_area;
 pub mod select;
 pub mod sheet;
+pub mod shadcn_extras;
 pub mod skeleton;
 pub mod slider;
 pub mod toggle;
