@@ -20,7 +20,9 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
             |_cx| {
                 vec![
                     shadcn::ContextMenuEntry::Group(shadcn::ContextMenuGroup::new(vec![
-                        shadcn::ContextMenuEntry::Label(shadcn::ContextMenuLabel::new("My Account")),
+                        shadcn::ContextMenuEntry::Label(shadcn::ContextMenuLabel::new(
+                            "My Account",
+                        )),
                         shadcn::ContextMenuEntry::Item(shadcn::ContextMenuItem::new("Profile")),
                         shadcn::ContextMenuEntry::Item(shadcn::ContextMenuItem::new("Billing")),
                         shadcn::ContextMenuEntry::Separator,
@@ -37,4 +39,3 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
         .test_id("ui-gallery-context-menu-groups")
 }
 // endregion: example
-

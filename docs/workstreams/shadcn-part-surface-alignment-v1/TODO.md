@@ -34,6 +34,11 @@ Last audit snapshot: **2026-03-01**.
 | `navigation-menu` | many parts + a style helper `navigationMenuTriggerStyle` | `NavigationMenu*` parts + `NavigationMenuTriggerStyle` + `navigation_menu_trigger_style(...)` | helper only encodes base layout (interactive states still recipe-owned) | Low | Keep helper as a typed, mergeable refinement surface; reuse it for trigger/link base layout | unit tests in `ecosystem/fret-ui-shadcn/src/navigation_menu.rs` | P2 | Done (with known gaps) |
 | `tabs` | parts + `tabsListVariants` style helper | `Tabs*` parts + `TabsListVariant` + `tabs_list_variants(...)` | line variant uses shared indicator line (approx) | Low | Provide typed variant surface + helper returning mergeable refinements | unit tests in `ecosystem/fret-ui-shadcn/src/tabs.rs` | P2 | Done (with known gaps) |
 | `carousel` | `Carousel, CarouselContent, CarouselItem, CarouselPrevious, CarouselNext, useCarousel` | `Carousel` facade + part adapters (`CarouselContent/Item/Previous/Next`, `use_carousel`) | per-item basis/class surface remains Rust-native | Low-Med | Keep current engine; add part surface adapter + gallery demo + gate | diag script `ui-gallery-carousel-part-surface-smoke` | P1 | Done (with known gaps) |
+| `popover` | `Popover, PopoverTrigger, PopoverContent, PopoverAnchor, PopoverHeader, PopoverTitle, PopoverDescription` | `Popover*` parts | Not audited in this workstream | Low | Audit part names + ensure Portal/overlay composition matches upstream examples | tbd | P1 | Not started |
+| `tooltip` | `TooltipProvider, Tooltip, TooltipTrigger, TooltipContent` | `Tooltip*` parts (+ `TooltipAnchor`) | Not audited in this workstream | Medium | Audit provider inheritance (delay/skip), safe-hover corridors, and content arrow parity | tbd | P1 | Not started |
+| `hover-card` | `HoverCard, HoverCardTrigger, HoverCardContent` | `HoverCard*` parts | Not audited in this workstream | Medium | Audit trigger/content parity and hover intent (Radix/Base UI outcomes) | tbd | P2 | Not started |
+| `select` | `Select, SelectTrigger, SelectValue, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectSeparator, SelectScrollUpButton, SelectScrollDownButton` | `Select*` parts | Not audited in this workstream | High | Audit parts + a11y semantics + scroll buttons and viewport clamping | tbd | P0 | Not started |
+| `context-menu` | `ContextMenu, Trigger, Portal, Content, Item, CheckboxItem, RadioItem, Label, Separator, Shortcut, Group, Sub, SubTrigger, SubContent, RadioGroup` | `ContextMenu*` parts | Not audited in this workstream | High | Audit submenu part composition + roving focus + outside-press dismissal | tbd | P0 | Not started |
 
 ## Notes / recurring hazards
 
@@ -43,3 +48,17 @@ Last audit snapshot: **2026-03-01**.
 - overlay families that install “side” scopes: `sheet`, `drawer`.
 
 Preferred mitigation: scoped builders first, explicit overrides second.
+
+## Upstream exported style helpers (optional)
+
+Upstream `bases/radix` exports a small number of Tailwind/CVA helpers. In Fret we only port these
+when they are useful **authoring surfaces** (mergeable refinements) rather than implementation
+details.
+
+| Helper (upstream) | Where it comes from | Fret mapping | Status |
+|---|---|---|---|
+| `tabsListVariants({ variant })` | `repo-ref/ui/apps/v4/registry/bases/radix/ui/tabs.tsx` | `TabsListVariant` + `tabs_list_variants(...)` | Done (with known gaps) |
+| `navigationMenuTriggerStyle()` | `repo-ref/ui/apps/v4/registry/bases/radix/ui/navigation-menu.tsx` | `NavigationMenuTriggerStyle` + `navigation_menu_trigger_style(...)` | Done (with known gaps) |
+| `buttonVariants({ variant, size })` | `repo-ref/ui/apps/v4/registry/bases/radix/ui/button.tsx` | Prefer `Button` + typed enums (`ButtonVariant`, `ButtonSize`) | Not planned (for now) |
+| `badgeVariants({ variant })` | `repo-ref/ui/apps/v4/registry/bases/radix/ui/badge.tsx` | Prefer `Badge` + typed enums (`BadgeVariant`) | Not planned (for now) |
+| `toggleVariants({ variant, size })` | `repo-ref/ui/apps/v4/registry/bases/radix/ui/toggle.tsx` | Prefer `Toggle` + typed enums (`ToggleVariant`, `ToggleSize`) | Not planned (for now) |

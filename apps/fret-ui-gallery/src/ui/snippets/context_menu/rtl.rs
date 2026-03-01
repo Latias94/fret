@@ -25,9 +25,8 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
                         shadcn::ContextMenuEntry::Item(shadcn::ContextMenuItem::new("Settings")),
                         shadcn::ContextMenuEntry::Separator,
                         shadcn::ContextMenuEntry::Item(
-                            shadcn::ContextMenuItem::new("Delete").variant(
-                                shadcn::context_menu::ContextMenuItemVariant::Destructive,
-                            ),
+                            shadcn::ContextMenuItem::new("Delete")
+                                .variant(shadcn::context_menu::ContextMenuItemVariant::Destructive),
                         ),
                     ]
                 },
@@ -36,4 +35,3 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
     .test_id("ui-gallery-context-menu-rtl")
 }
 // endregion: example
-

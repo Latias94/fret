@@ -1481,8 +1481,10 @@ impl<H: UiHost> UiTree<H> {
                                 // causing pointer activation to miss/cancel (especially for nested pressables).
                                 //
                                 // Keyboard traversal still scrolls focused nodes into view.
-                                if !matches!(event_for_node, Event::Pointer(_) | Event::PointerCancel(_))
-                                {
+                                if !matches!(
+                                    event_for_node,
+                                    Event::Pointer(_) | Event::PointerCancel(_)
+                                ) {
                                     self.scroll_node_into_view(app, focus);
                                 }
                             } else if requested_focus.is_some() {

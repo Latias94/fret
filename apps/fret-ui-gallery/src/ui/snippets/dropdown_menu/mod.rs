@@ -20,4 +20,3 @@ pub mod radio_icons;
 pub mod rtl;
 pub mod shortcuts;
 pub mod submenu;
-

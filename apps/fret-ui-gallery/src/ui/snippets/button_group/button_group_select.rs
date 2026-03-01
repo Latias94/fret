@@ -52,21 +52,20 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
         &[("$", "US Dollar"), ("€", "Euro"), ("£", "British Pound")];
 
     let currency = {
-        let entries: Vec<shadcn::SelectEntry> =
-            vec![
-                shadcn::SelectGroup::new(currencies.iter().map(|(value, label)| {
-                    shadcn::SelectItem::new(*value, *label)
-                        .item_text(shadcn::SelectItemText::new([
-                            shadcn::SelectTextRun::new(
-                                Arc::<str>::from(format!("{value} ")),
-                                shadcn::SelectTextTone::Normal,
-                            ),
-                            shadcn::SelectTextRun::new(*label, shadcn::SelectTextTone::Muted),
-                        ]))
-                        .into()
-                }))
-                .into(),
-            ];
+        let entries: Vec<shadcn::SelectEntry> = vec![
+            shadcn::SelectGroup::new(currencies.iter().map(|(value, label)| {
+                shadcn::SelectItem::new(*value, *label)
+                    .item_text(shadcn::SelectItemText::new([
+                        shadcn::SelectTextRun::new(
+                            Arc::<str>::from(format!("{value} ")),
+                            shadcn::SelectTextTone::Normal,
+                        ),
+                        shadcn::SelectTextRun::new(*label, shadcn::SelectTextTone::Muted),
+                    ]))
+                    .into()
+            }))
+            .into(),
+        ];
 
         shadcn::Select::new(currency_value.clone(), currency_open.clone())
             .trigger_test_id("ui-gallery-button-group-select-currency-trigger")

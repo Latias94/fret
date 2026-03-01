@@ -38,7 +38,10 @@ pub(super) fn preview_context_menu(
                 .description("Right click on the trigger surface to open the menu.")
                 .max_w(Px(760.0))
                 .test_id_prefix("ui-gallery-context-menu-basic")
-                .code_rust_from_file_region(include_str!("../snippets/context_menu/basic.rs"), "example"),
+                .code_rust_from_file_region(
+                    include_str!("../snippets/context_menu/basic.rs"),
+                    "example",
+                ),
             DocSection::new("Submenu", submenu)
                 .description("Nested submenu entries for grouped actions.")
                 .max_w(Px(760.0))
@@ -67,7 +70,10 @@ pub(super) fn preview_context_menu(
                 .description("Combine icons with labels for quick scanning.")
                 .max_w(Px(760.0))
                 .test_id_prefix("ui-gallery-context-menu-icons")
-                .code_rust_from_file_region(include_str!("../snippets/context_menu/icons.rs"), "example"),
+                .code_rust_from_file_region(
+                    include_str!("../snippets/context_menu/icons.rs"),
+                    "example",
+                ),
             DocSection::new("Checkboxes", checkboxes)
                 .description("Use checkbox items for toggles.")
                 .max_w(Px(760.0))
@@ -80,7 +86,10 @@ pub(super) fn preview_context_menu(
                 .description("Use a radio group for exclusive choices.")
                 .max_w(Px(760.0))
                 .test_id_prefix("ui-gallery-context-menu-radio")
-                .code_rust_from_file_region(include_str!("../snippets/context_menu/radio.rs"), "example"),
+                .code_rust_from_file_region(
+                    include_str!("../snippets/context_menu/radio.rs"),
+                    "example",
+                ),
             DocSection::new("Destructive", destructive)
                 .description("Use `variant=Destructive` for irreversible actions.")
                 .max_w(Px(760.0))
@@ -93,11 +102,13 @@ pub(super) fn preview_context_menu(
                 .description("RTL layout keeps spacing and submenu direction parity-auditable.")
                 .max_w(Px(760.0))
                 .test_id_prefix("ui-gallery-context-menu-rtl")
-                .code_rust_from_file_region(include_str!("../snippets/context_menu/rtl.rs"), "example"),
+                .code_rust_from_file_region(
+                    include_str!("../snippets/context_menu/rtl.rs"),
+                    "example",
+                ),
             DocSection::new("Notes", notes).max_w(Px(820.0)),
         ],
     );
 
     vec![body.test_id("ui-gallery-page-context-menu")]
 }
-

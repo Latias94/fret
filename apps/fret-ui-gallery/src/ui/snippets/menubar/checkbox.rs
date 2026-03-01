@@ -21,7 +21,9 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
         Some(model) => model,
         None => {
             let model = cx.app.models_mut().insert(false);
-            cx.with_state(Models::default, |st| st.view_bookmarks_bar = Some(model.clone()));
+            cx.with_state(Models::default, |st| {
+                st.view_bookmarks_bar = Some(model.clone())
+            });
             model
         }
     };
@@ -30,7 +32,9 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
         Some(model) => model,
         None => {
             let model = cx.app.models_mut().insert(true);
-            cx.with_state(Models::default, |st| st.view_full_urls = Some(model.clone()));
+            cx.with_state(Models::default, |st| {
+                st.view_full_urls = Some(model.clone())
+            });
             model
         }
     };
@@ -39,7 +43,9 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
         Some(model) => model,
         None => {
             let model = cx.app.models_mut().insert(true);
-            cx.with_state(Models::default, |st| st.format_strikethrough = Some(model.clone()));
+            cx.with_state(Models::default, |st| {
+                st.format_strikethrough = Some(model.clone())
+            });
             model
         }
     };
@@ -57,7 +63,9 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
         Some(model) => model,
         None => {
             let model = cx.app.models_mut().insert(false);
-            cx.with_state(Models::default, |st| st.format_superscript = Some(model.clone()));
+            cx.with_state(Models::default, |st| {
+                st.format_superscript = Some(model.clone())
+            });
             model
         }
     };
@@ -105,4 +113,3 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
         .into_element(cx)
 }
 // endregion: example
-

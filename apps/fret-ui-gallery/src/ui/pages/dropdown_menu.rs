@@ -143,4 +143,3 @@ pub(super) fn preview_dropdown_menu(
 
     vec![body.test_id("ui-gallery-dropdown-menu")]
 }
-

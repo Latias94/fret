@@ -22,7 +22,9 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
         Some(model) => model,
         None => {
             let model = cx.app.models_mut().insert(true);
-            cx.with_state(Models::default, |st| st.show_status_bar = Some(model.clone()));
+            cx.with_state(Models::default, |st| {
+                st.show_status_bar = Some(model.clone())
+            });
             model
         }
     };
@@ -31,7 +33,9 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
         Some(model) => model,
         None => {
             let model = cx.app.models_mut().insert(true);
-            cx.with_state(Models::default, |st| st.show_activity_bar = Some(model.clone()));
+            cx.with_state(Models::default, |st| {
+                st.show_activity_bar = Some(model.clone())
+            });
             model
         }
     };
@@ -40,7 +44,9 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
         Some(model) => model,
         None => {
             let model = cx.app.models_mut().insert(false);
-            cx.with_state(Models::default, |st| st.show_line_numbers = Some(model.clone()));
+            cx.with_state(Models::default, |st| {
+                st.show_line_numbers = Some(model.clone())
+            });
             model
         }
     };
@@ -59,22 +65,17 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
                         shadcn::ContextMenuCheckboxItem::new(show_status_bar.clone(), "Status Bar")
                             .test_id("ui-gallery-context-menu-checkboxes-status-bar"),
                     ),
-                    shadcn::ContextMenuEntry::CheckboxItem(
-                        shadcn::ContextMenuCheckboxItem::new(
-                            show_activity_bar.clone(),
-                            "Activity Bar",
-                        ),
-                    ),
-                    shadcn::ContextMenuEntry::CheckboxItem(
-                        shadcn::ContextMenuCheckboxItem::new(
-                            show_line_numbers.clone(),
-                            "Show Line Numbers",
-                        ),
-                    ),
+                    shadcn::ContextMenuEntry::CheckboxItem(shadcn::ContextMenuCheckboxItem::new(
+                        show_activity_bar.clone(),
+                        "Activity Bar",
+                    )),
+                    shadcn::ContextMenuEntry::CheckboxItem(shadcn::ContextMenuCheckboxItem::new(
+                        show_line_numbers.clone(),
+                        "Show Line Numbers",
+                    )),
                 ]
             },
         )
         .test_id("ui-gallery-context-menu-checkboxes")
 }
 // endregion: example
-

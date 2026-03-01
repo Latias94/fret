@@ -372,7 +372,13 @@ impl InputGroup {
                 root
             });
 
-            let root_shadow = decl_style::shadow_xs(theme, resolved.radius);
+            let root_shadow = {
+                let mut shadow = decl_style::shadow_xs(theme, resolved.radius);
+                if let Some(corners) = self.corner_radii_override {
+                    shadow.corner_radii = corners;
+                }
+                shadow
+            };
 
             let (border_color, focus_border_color, focus_ring) = {
                 let mut ring = decl_style::focus_ring(theme, resolved.radius);

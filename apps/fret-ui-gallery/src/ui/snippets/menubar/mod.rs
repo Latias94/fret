@@ -13,4 +13,3 @@ pub mod radio;
 pub mod rtl;
 pub mod submenu;
 pub mod with_icons;
-

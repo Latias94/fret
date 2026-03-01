@@ -15,4 +15,3 @@ pub mod radio;
 pub mod rtl;
 pub mod shortcuts;
 pub mod submenu;
-

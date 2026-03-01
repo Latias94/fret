@@ -42,7 +42,10 @@ pub(super) fn preview_menubar(cx: &mut ElementContext<'_, App>) -> Vec<AnyElemen
             DocSection::new("Radio", radio)
                 .max_w(Px(520.0))
                 .test_id_prefix("ui-gallery-menubar-radio")
-                .code_rust_from_file_region(include_str!("../snippets/menubar/radio.rs"), "example"),
+                .code_rust_from_file_region(
+                    include_str!("../snippets/menubar/radio.rs"),
+                    "example",
+                ),
             DocSection::new("Submenu", submenu)
                 .max_w(Px(520.0))
                 .test_id_prefix("ui-gallery-menubar-submenu")
@@ -64,11 +67,13 @@ pub(super) fn preview_menubar(cx: &mut ElementContext<'_, App>) -> Vec<AnyElemen
             DocSection::new("Parts", parts)
                 .max_w(Px(520.0))
                 .test_id_prefix("ui-gallery-menubar-parts")
-                .code_rust_from_file_region(include_str!("../snippets/menubar/parts.rs"), "example"),
+                .code_rust_from_file_region(
+                    include_str!("../snippets/menubar/parts.rs"),
+                    "example",
+                ),
             DocSection::new("Notes", notes).max_w(Px(820.0)),
         ],
     );
 
     vec![body.test_id("ui-gallery-menubar-component")]
 }
-

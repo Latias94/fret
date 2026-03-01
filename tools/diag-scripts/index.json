@@ -894,28 +894,6 @@
       "target_hints": []
     },
     {
-      "id": "ui-gallery-carousel-duration-fast-vs-slow-settling-gate",
-      "path": "tools/diag-scripts/ui-gallery/carousel/ui-gallery-carousel-duration-fast-vs-slow-settling-gate.json",
-      "required_capabilities": [
-        "diag.script_v2"
-      ],
-      "suite_memberships": [
-        "ui-gallery-motion-pilot"
-      ],
-      "tags": [
-        "carousel",
-        "duration",
-        "embla",
-        "gate",
-        "settling",
-        "ui_gallery"
-      ],
-      "target_hints": [
-        "UI gallery Carousel page: Duration (Embla) section (two carousels, different `embla_duration`).",
-        "Expected: after one Next click, the fast carousel stops settling (checked=false) while the slow carousel remains settling for longer."
-      ]
-    },
-    {
       "id": "ui-gallery-carousel-loop-continuity-touch-gate",
       "path": "tools/diag-scripts/ui-gallery/carousel/ui-gallery-carousel-loop-continuity-touch-gate.json",
       "required_capabilities": [
@@ -930,12 +908,13 @@
         "carousel",
         "gate",
         "loop",
+        "screenshot",
         "touch",
-        "ui_gallery"
+        "ui-gallery"
       ],
       "target_hints": [
-        "UI gallery Carousel page: Loop section (`loop=true` + Embla engine).",
-        "Expected: repeated swipes do not clamp or hang; content remains visible."
+        "Requires the UI gallery Carousel page to include a `Loop` section with `loop=true` + Embla engine enabled.",
+        "Expected behavior: repeated touch swipes do not clamp at ends or hang; content remains visible."
       ]
     },
     {
@@ -1632,6 +1611,26 @@
       "target_hints": []
     },
     {
+      "id": "ui-gallery-data-table-guide-demo-checkbox-only-selection",
+      "path": "tools/diag-scripts/ui-gallery/data-table/ui-gallery-data-table-guide-demo-checkbox-only-selection.json",
+      "required_capabilities": [],
+      "suite_memberships": [
+        "ui-gallery-data-table"
+      ],
+      "tags": [],
+      "target_hints": []
+    },
+    {
+      "id": "ui-gallery-data-table-listlike-pointer-selection",
+      "path": "tools/diag-scripts/ui-gallery/data-table/ui-gallery-data-table-listlike-pointer-selection.json",
+      "required_capabilities": [],
+      "suite_memberships": [
+        "ui-gallery-data-table"
+      ],
+      "tags": [],
+      "target_hints": []
+    },
+    {
       "id": "ui-gallery-data-table-retained-column-actions-menu",
       "path": "tools/diag-scripts/ui-gallery/data-table/ui-gallery-data-table-retained-column-actions-menu.json",
       "required_capabilities": [],
@@ -1747,7 +1746,8 @@
       "path": "tools/diag-scripts/ui-gallery/data-table/ui-gallery-data-table-smoke.json",
       "required_capabilities": [],
       "suite_memberships": [
-        "ui-gallery"
+        "ui-gallery",
+        "ui-gallery-data-table"
       ],
       "tags": [],
       "target_hints": []

@@ -16,9 +16,8 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
                     .into(),
                 shadcn::MenubarSeparator::new().into(),
                 shadcn::MenubarSub::new(
-                    shadcn::MenubarSubTrigger::new("Share").refine(|item| {
-                        item.test_id("ui-gallery-menubar-parts-item-share")
-                    }),
+                    shadcn::MenubarSubTrigger::new("Share")
+                        .refine(|item| item.test_id("ui-gallery-menubar-parts-item-share")),
                     shadcn::MenubarSubContent::new([
                         shadcn::MenubarItem::new("Email link")
                             .test_id("ui-gallery-menubar-parts-sub-email")
@@ -37,4 +36,3 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
         .into_element(cx)
 }
 // endregion: example
-
