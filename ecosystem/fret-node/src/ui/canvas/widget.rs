@@ -708,14 +708,22 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
             NodeGraphColorMode::Light | NodeGraphColorMode::Dark => None,
         };
 
-        self.style = NodeGraphStyle::from_snapshot_with_color_mode(theme, mode);
+        let prev_geometry_fp = self.style.geometry_fingerprint();
+
+        let mut next_style = NodeGraphStyle::from_snapshot_with_color_mode(theme, mode);
         if let Some(background) = self.background_override {
-            let style = std::mem::take(&mut self.style);
-            self.style = style.with_background_style(background);
+            next_style = next_style.with_background_style(background);
         }
-        self.geometry.geom_key = None;
-        self.geometry.index_key = None;
-        self.geometry.drag_preview = None;
+
+        let next_geometry_fp = next_style.geometry_fingerprint();
+        let geometry_changed = prev_geometry_fp != next_geometry_fp;
+        self.style = next_style;
+
+        if geometry_changed {
+            self.geometry.geom_key = None;
+            self.geometry.index_key = None;
+            self.geometry.drag_preview = None;
+        }
 
         if let Some(services) = services {
             self.paint_cache.clear(services);

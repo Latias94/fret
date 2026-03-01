@@ -24,6 +24,7 @@ mod cached_edge_labels_tile_equivalence_conformance;
 mod cached_edges_tile_equivalence_conformance;
 mod callbacks_conformance;
 mod color_mode_conformance;
+mod compact_style_conformance;
 mod connect_conformance;
 mod connection_mode_conformance;
 mod custom_edge_path_conformance;
@@ -100,11 +101,11 @@ mod skin_wire_glow_hints_conformance;
 mod skin_wire_highlight_hints_conformance;
 mod skin_wire_outline_hints_conformance;
 mod spatial_index_equivalence_conformance;
+mod theme_style_invalidation_conformance;
 mod threshold_zoom_conformance;
 mod translate_extent_conformance;
 mod viewport_animation_conformance;
 mod viewport_helper_conformance;
-mod xyflow_style_conformance;
 mod z_order_conformance;
 
 use harness::{

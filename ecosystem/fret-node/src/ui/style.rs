@@ -320,12 +320,16 @@ impl NodeGraphStyle {
     pub fn from_snapshot_with_color_mode(theme: ThemeSnapshot, mode: NodeGraphColorMode) -> Self {
         match mode {
             NodeGraphColorMode::System => Self::from_snapshot(theme),
-            NodeGraphColorMode::Light => Self::xyflow_light_defaults(),
-            NodeGraphColorMode::Dark => Self::default(),
+            NodeGraphColorMode::Light => Self::light_defaults(),
+            NodeGraphColorMode::Dark => Self::dark_defaults(),
         }
     }
 
-    pub fn xyflow_light_defaults() -> Self {
+    /// Light defaults tuned for node editor canvases.
+    ///
+    /// Note: This is intentionally neutral naming. See `docs/workstreams/xyflow-gap-analysis.md`
+    /// for upstream comparisons.
+    pub fn light_defaults() -> Self {
         let mut s = Self::default();
 
         s.background = Color::from_srgb_hex_rgb(0xfa_fa_fa);
@@ -383,14 +387,15 @@ impl NodeGraphStyle {
         s
     }
 
-    /// Applies XyFlow default node style tokens (width/padding/radius/handle size/font size).
+    pub fn dark_defaults() -> Self {
+        Self::default()
+    }
+
+    /// Applies compact node style defaults (width/padding/radius/pin size/font size).
     ///
-    /// This only touches node-related sizing/chrome fields. Colors remain unchanged so callers
-    /// can combine it with theme-driven palettes or `colorMode` overrides.
-    pub fn apply_xyflow_default_node_style(&mut self) {
-        // From `@xyflow/system` style defaults (adapted to fret-node's retained rendering):
-        // - node: width 150, padding 10, border radius 3, font-size 12
-        // - handle: 6x6 circle
+    /// This only touches node-related sizing/chrome fields. Colors remain unchanged so callers can
+    /// combine it with theme-driven palettes or `colorMode` overrides.
+    pub fn apply_compact_node_style(&mut self) {
         self.node_width = 150.0;
         self.node_padding = 10.0;
         self.node_corner_radius = 3.0;
@@ -399,8 +404,8 @@ impl NodeGraphStyle {
         self.edge_label_text_style.size = Px(12.0);
     }
 
-    pub fn with_xyflow_default_node_style(mut self) -> Self {
-        self.apply_xyflow_default_node_style();
+    pub fn with_compact_node_style(mut self) -> Self {
+        self.apply_compact_node_style();
         self
     }
 
@@ -557,5 +562,31 @@ impl NodeGraphStyle {
         self.grid_dot_size = background.grid_dot_size;
         self.grid_cross_size = background.grid_cross_size;
         self
+    }
+
+    /// Fingerprint of geometry-affecting tokens.
+    ///
+    /// This is intended for cache invalidation decisions (derived geometry / spatial index).
+    /// It must stay stable across platforms and should only include tokens that change node/port
+    /// bounds or anchors.
+    pub fn geometry_fingerprint(&self) -> u64 {
+        fn mix_u64(mut state: u64, value: u64) -> u64 {
+            state ^= value.wrapping_add(0x9E37_79B9_7F4A_7C15);
+            state = state.rotate_left(7);
+            state = state.wrapping_mul(0xD6E8_FEB8_6659_FD93);
+            state
+        }
+
+        fn mix_f32(state: u64, value: f32) -> u64 {
+            mix_u64(state, u64::from(value.to_bits()))
+        }
+
+        let mut state = 0u64;
+        state = mix_f32(state, self.node_width);
+        state = mix_f32(state, self.node_header_height);
+        state = mix_f32(state, self.node_padding);
+        state = mix_f32(state, self.pin_row_height);
+        state = mix_f32(state, self.pin_radius);
+        state
     }
 }

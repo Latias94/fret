@@ -76,7 +76,7 @@ fn color_mode_light_forces_light_palette() {
 
     assert_eq!(
         canvas.style.background,
-        NodeGraphStyle::xyflow_light_defaults().background
+        NodeGraphStyle::light_defaults().background
     );
 }
 
