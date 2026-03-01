@@ -1,4 +1,5 @@
 use std::cell::{Cell, RefCell};
+use std::rc::Rc;
 use std::sync::Arc;
 
 use fret_core::{
@@ -59,7 +60,9 @@ use layouts::{
 };
 use state::WorkspaceTabStripState;
 use theme::WorkspaceTabStripTheme;
-use utils::{dnd_scope_for_pane, resolve_end_drop_target_in_canonical_order, scroll_rect_into_view_x};
+use utils::{
+    dnd_scope_for_pane, resolve_end_drop_target_in_canonical_order, scroll_rect_into_view_x,
+};
 use widgets::{tab_close_button, tab_dirty_indicator, tab_trailing_slot_placeholder};
 
 use crate::tab_drag::compute_tab_drop_target;
@@ -131,6 +134,12 @@ impl WorkspaceTab {
 pub struct WorkspaceTabStrip {
     active: Option<Arc<str>>,
     tabs: Vec<WorkspaceTab>,
+    /// Most-recently-used ordering (including the active tab at index 0) when the strip is backed
+    /// by `WorkspaceTabs`.
+    ///
+    /// This is used for editor-grade focus restore policies (e.g. close active tab while the tab
+    /// strip is focused).
+    mru: Option<Arc<[Arc<str>]>>,
     height: Px,
     pane_id: Option<Arc<str>>,
     tab_drag: Option<Model<WorkspaceTabDragState>>,
@@ -143,6 +152,7 @@ impl WorkspaceTabStrip {
         Self {
             active: Some(active.into()),
             tabs: Vec::new(),
+            mru: None,
             height: Px(28.0),
             pane_id: None,
             tab_drag: None,
@@ -155,6 +165,7 @@ impl WorkspaceTabStrip {
         Self {
             active,
             tabs: Vec::new(),
+            mru: None,
             height: Px(28.0),
             pane_id: None,
             tab_drag: None,
@@ -202,12 +213,19 @@ impl WorkspaceTabStrip {
         self
     }
 
+    /// Provide MRU ordering for editor-grade behaviors (e.g. focus restore after close).
+    pub fn mru(mut self, mru: impl IntoIterator<Item = Arc<str>>) -> Self {
+        self.mru = Some(mru.into_iter().collect::<Vec<_>>().into());
+        self
+    }
+
     pub fn from_workspace_tabs(
         state: &crate::tabs::WorkspaceTabs,
         title: impl Fn(&str) -> Arc<str>,
     ) -> Self {
         let active = state.active().cloned();
         let mut out = WorkspaceTabStrip::new_optional(active);
+        out.mru = Some(state.mru().to_vec().into());
         out.tabs = state
             .tabs()
             .iter()
@@ -232,6 +250,7 @@ impl WorkspaceTabStrip {
         let tabs = self.tabs;
         let set_size = tabs.len() as u32;
         let active = self.active;
+        let mru = self.mru;
         let pane_id = self.pane_id;
         let pane_activate_cmd = pane_id
             .as_deref()
@@ -312,7 +331,8 @@ impl WorkspaceTabStrip {
                 );
                 let scroll_element = Cell::<Option<GlobalElementId>>::new(None);
                 let active_tab_element = Cell::<Option<GlobalElementId>>::new(None);
-                let tab_elements: RefCell<Vec<(Arc<str>, GlobalElementId)>> = RefCell::new(Vec::new());
+                let tab_elements: Rc<RefCell<Vec<(Arc<str>, GlobalElementId)>>> =
+                    Rc::new(RefCell::new(Vec::new()));
                 let pinned_boundary_element = Cell::<Option<GlobalElementId>>::new(None);
                 let end_drop_target_element = Cell::<Option<GlobalElementId>>::new(None);
 
@@ -541,7 +561,9 @@ impl WorkspaceTabStrip {
                                                         ..Default::default()
                                                     },
                                                     |cx, press_state, element_id| {
-                                                        tab_elements.borrow_mut().push((tab_id.clone(), element_id));
+                                                        tab_elements
+                                                            .borrow_mut()
+                                                            .push((tab_id.clone(), element_id));
                                                         if is_active {
                                                             active_tab_element.set(Some(element_id));
                                                         }
@@ -1731,6 +1753,64 @@ impl WorkspaceTabStrip {
                     cx.with_state(WorkspaceTabStripState::default, |state| {
                         state.last_active = active.clone();
                     });
+
+                    // Editor-grade focus restore:
+                    //
+                    // When the tab strip is focused (keyboard-first), closing the active tab
+                    // should keep focus within the strip by pre-focusing the tab that is expected
+                    // to become active next.
+                    {
+                        use crate::commands::{CMD_WORKSPACE_TAB_CLOSE, CMD_WORKSPACE_TAB_CLOSE_PREFIX};
+
+                        let active_for_hook = active.clone();
+                        let mru_for_hook = mru.clone();
+                        let canonical_for_hook = canonical_tab_order.clone();
+                        let tab_elements_for_hook = tab_elements.clone();
+
+                        cx.command_on_command_for(
+                            root.id,
+                            Arc::new(move |host, acx, command| {
+                                let Some(active_id) = active_for_hook.clone() else {
+                                    return false;
+                                };
+
+                                let cmd = command.as_str();
+                                let closing_active = if cmd == CMD_WORKSPACE_TAB_CLOSE {
+                                    true
+                                } else if let Some(id) =
+                                    cmd.strip_prefix(CMD_WORKSPACE_TAB_CLOSE_PREFIX)
+                                {
+                                    id.trim() == active_id.as_ref()
+                                } else {
+                                    false
+                                };
+
+                                if !closing_active {
+                                    return false;
+                                }
+
+                                let next = utils::predict_next_active_tab_after_close(
+                                    &active_id,
+                                    canonical_for_hook.as_ref(),
+                                    mru_for_hook.as_deref(),
+                                );
+
+                                if let Some(next_id) = next {
+                                    let target = tab_elements_for_hook
+                                        .borrow()
+                                        .iter()
+                                        .find(|(id, _)| id.as_ref() == next_id.as_ref())
+                                        .map(|(_, el)| *el);
+                                    if let Some(target) = target {
+                                        host.request_focus(target);
+                                        host.request_redraw(acx.window);
+                                    }
+                                }
+
+                                false
+                            }),
+                        );
+                    }
 
                     vec![root]
             },

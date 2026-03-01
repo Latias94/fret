@@ -80,6 +80,28 @@ pub(super) fn resolve_end_drop_target_in_canonical_order(
     best
 }
 
+pub(super) fn predict_next_active_tab_after_close(
+    active: &Arc<str>,
+    canonical_order: &[Arc<str>],
+    mru: Option<&[Arc<str>]>,
+) -> Option<Arc<str>> {
+    if let Some(mru) = mru {
+        for id in mru {
+            if id.as_ref() == active.as_ref() {
+                continue;
+            }
+            if canonical_order.iter().any(|t| t.as_ref() == id.as_ref()) {
+                return Some(id.clone());
+            }
+        }
+    }
+
+    canonical_order
+        .iter()
+        .find(|t| t.as_ref() != active.as_ref())
+        .cloned()
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -101,13 +123,11 @@ mod tests {
         .collect();
 
         assert_eq!(
-            resolve_end_drop_target_in_canonical_order(&pinned_by_id, &canonical, "a")
-                .as_deref(),
+            resolve_end_drop_target_in_canonical_order(&pinned_by_id, &canonical, "a").as_deref(),
             Some("b")
         );
         assert_eq!(
-            resolve_end_drop_target_in_canonical_order(&pinned_by_id, &canonical, "c")
-                .as_deref(),
+            resolve_end_drop_target_in_canonical_order(&pinned_by_id, &canonical, "c").as_deref(),
             Some("d")
         );
     }
@@ -116,11 +136,35 @@ mod tests {
     fn end_drop_target_returns_none_when_dragged_is_only_member_of_group() {
         let canonical: Vec<Arc<str>> = vec![arc("only"), arc("other")];
         let pinned_by_id: std::collections::HashMap<Arc<str>, bool> =
-            [(arc("only"), true), (arc("other"), false)].into_iter().collect();
+            [(arc("only"), true), (arc("other"), false)]
+                .into_iter()
+                .collect();
 
         assert_eq!(
             resolve_end_drop_target_in_canonical_order(&pinned_by_id, &canonical, "only"),
             None
+        );
+    }
+
+    #[test]
+    fn predict_next_active_tab_after_close_prefers_mru_fallback() {
+        let canonical: Vec<Arc<str>> = vec![arc("a"), arc("b"), arc("c")];
+        let mru: Vec<Arc<str>> = vec![arc("a"), arc("c"), arc("b")];
+
+        assert_eq!(
+            predict_next_active_tab_after_close(&arc("a"), &canonical, Some(&mru)).as_deref(),
+            Some("c")
+        );
+    }
+
+    #[test]
+    fn predict_next_active_tab_after_close_falls_back_to_tab_order() {
+        let canonical: Vec<Arc<str>> = vec![arc("a"), arc("b"), arc("c")];
+        let mru: Vec<Arc<str>> = vec![arc("a")];
+
+        assert_eq!(
+            predict_next_active_tab_after_close(&arc("a"), &canonical, Some(&mru)).as_deref(),
+            Some("b")
         );
     }
 }
