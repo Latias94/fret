@@ -21,9 +21,9 @@ use super::services::{
 use super::tab_bar_geometry::TabBarGeometry;
 use super::tab_bar_geometry::dock_tab_width_for_title;
 use super::tab_overflow::{
-    TabOverflowMenuState, overflow_menu_max_scroll, overflow_menu_row_at_pos,
-    overflow_menu_row_count, overflow_menu_row_height, tab_overflow_button_rect,
-    tab_overflow_menu_rect, tab_strip_rect_with_overflow_button,
+    TabOverflowMenuState, compute_tab_overflow_menu_items, overflow_menu_max_scroll,
+    overflow_menu_row_at_pos, overflow_menu_row_count, overflow_menu_row_height,
+    tab_overflow_button_rect, tab_overflow_menu_rect, tab_strip_rect_with_overflow_button,
 };
 use super::viewport::{
     ViewportCaptureState, hit_test_active_viewport_panel, viewport_input_from_hit,
@@ -3399,7 +3399,7 @@ impl<H: UiHost> Widget<H> for DockSpace {
                                     }
                                 }
 
-                                if let Some(menu) = self.tab_overflow_menu {
+                                if let Some(menu) = self.tab_overflow_menu.clone() {
                                     let mut keep_open = true;
 
                                     let tabs_rect = layout_all.get(&menu.tabs).copied();
@@ -3408,27 +3408,34 @@ impl<H: UiHost> Widget<H> for DockSpace {
                                         (tabs_rect, node)
                                     {
                                         let (tab_bar, _content) = split_tab_bar(tabs_rect);
-                                        let button_rect = tab_overflow_button_rect(theme.clone(), tab_bar);
-                                        let menu_rect =
-                                            tab_overflow_menu_rect(theme.clone(), tab_bar, tabs.len());
+                                        let button_rect =
+                                            tab_overflow_button_rect(theme.clone(), tab_bar);
+                                        let item_count = menu.items.len();
+                                        let menu_rect = tab_overflow_menu_rect(
+                                            theme.clone(),
+                                            tab_bar,
+                                            item_count,
+                                        );
 
                                         if menu_rect.contains(*position) {
                                             let row = overflow_menu_row_at_pos(
                                                 menu_rect,
                                                 tab_bar,
-                                                tabs.len(),
+                                                item_count,
                                                 menu.scroll,
                                                 *position,
                                             );
-                                            if let Some(ix) = row {
+                                            if let Some(row) = row
+                                                && let Some(&tab_ix) = menu.items.get(row)
+                                            {
                                                 self.last_active_tabs = Some(menu.tabs);
                                                 pending_effects.push(Effect::Dock(
                                                     DockOp::SetActiveTab {
                                                         tabs: menu.tabs,
-                                                        active: ix,
+                                                        active: tab_ix,
                                                     },
                                                 ));
-                                                if let Some(panel) = tabs.get(ix) {
+                                                if let Some(panel) = tabs.get(tab_ix) {
                                                     request_focus_panel = Some(panel.clone());
                                                 }
                                                 invalidate_layout = true;
@@ -3488,17 +3495,34 @@ impl<H: UiHost> Widget<H> for DockSpace {
                                             continue;
                                         }
 
+                                        let items = compute_tab_overflow_menu_items(
+                                            theme.clone(),
+                                            tab_bar,
+                                            tabs.len(),
+                                            self.tab_widths.get(&node_id),
+                                            self.tab_scroll_for(node_id),
+                                            *active,
+                                        );
+                                        if items.is_empty() {
+                                            continue;
+                                        }
+                                        let item_count = items.len();
+                                        let active_row = items
+                                            .iter()
+                                            .position(|ix| *ix == *active)
+                                            .unwrap_or(0);
                                         let row_h = overflow_menu_row_height(tab_bar).0;
-                                        let visible = overflow_menu_row_count(tabs.len()) as f32;
-                                        let active_y = *active as f32 * row_h;
+                                        let visible = overflow_menu_row_count(item_count) as f32;
+                                        let active_y = active_row as f32 * row_h;
                                         let min_scroll = active_y - (visible - 1.0) * row_h;
                                         let max_scroll_menu =
-                                            overflow_menu_max_scroll(tab_bar, tabs.len());
+                                            overflow_menu_max_scroll(tab_bar, item_count);
                                         let scroll =
                                             Px(min_scroll.clamp(0.0, max_scroll_menu.0.max(0.0)));
 
                                         self.tab_overflow_menu = Some(TabOverflowMenuState {
                                             tabs: node_id,
+                                            items,
                                             scroll,
                                             hovered: None,
                                         });
@@ -4551,54 +4575,58 @@ impl<H: UiHost> Widget<H> for DockSpace {
                                         pending_redraws.push(self.window);
                                     }
 
-                                    if let Some(mut menu) = self.tab_overflow_menu {
-                                        let mut close_menu = false;
+                                    let mut close_menu = false;
+                                    if let Some(menu) = self.tab_overflow_menu.as_mut() {
                                         if let Some(&tabs_rect) = layout.get(&menu.tabs) {
-                                            if let Some(DockNode::Tabs { tabs, .. }) =
+                                            if let Some(DockNode::Tabs { .. }) =
                                                 dock.graph.node(menu.tabs)
                                             {
-                                                let (tab_bar, _content) = split_tab_bar(tabs_rect);
-                                                let menu_rect = tab_overflow_menu_rect(
-                                                    theme,
-                                                    tab_bar,
-                                                    tabs.len(),
-                                                );
-                                                let next_hovered = if menu_rect.contains(*position)
-                                                {
-                                                    overflow_menu_row_at_pos(
-                                                        menu_rect,
-                                                        tab_bar,
-                                                        tabs.len(),
-                                                        menu.scroll,
-                                                        *position,
-                                                    )
+                                                let (tab_bar, _content) =
+                                                    split_tab_bar(tabs_rect);
+                                                let item_count = menu.items.len();
+                                                if item_count == 0 {
+                                                    close_menu = true;
                                                 } else {
-                                                    None
-                                                };
-                                                if next_hovered != menu.hovered {
-                                                    menu.hovered = next_hovered;
-                                                    invalidate_paint = true;
-                                                    pending_redraws.push(self.window);
-                                                }
-                                                if menu_rect.contains(*position) {
-                                                    request_cursor =
-                                                        Some(fret_core::CursorIcon::Pointer);
+                                                    let menu_rect =
+                                                        tab_overflow_menu_rect(
+                                                            theme.clone(),
+                                                            tab_bar,
+                                                            item_count,
+                                                        );
+                                                    let next_hovered =
+                                                        if menu_rect.contains(*position) {
+                                                            overflow_menu_row_at_pos(
+                                                                menu_rect,
+                                                                tab_bar,
+                                                                item_count,
+                                                                menu.scroll,
+                                                                *position,
+                                                            )
+                                                        } else {
+                                                            None
+                                                        };
+                                                    if next_hovered != menu.hovered {
+                                                        menu.hovered = next_hovered;
+                                                        invalidate_paint = true;
+                                                        pending_redraws.push(self.window);
+                                                    }
+                                                    if menu_rect.contains(*position) {
+                                                        request_cursor = Some(
+                                                            fret_core::CursorIcon::Pointer,
+                                                        );
+                                                    }
                                                 }
                                             } else {
                                                 close_menu = true;
                                             }
-                                        } else if menu.hovered.take().is_some() {
-                                            invalidate_paint = true;
-                                            pending_redraws.push(self.window);
-                                        }
-
-                                        if close_menu {
-                                            self.tab_overflow_menu = None;
-                                            invalidate_paint = true;
-                                            pending_redraws.push(self.window);
                                         } else {
-                                            self.tab_overflow_menu = Some(menu);
+                                            close_menu = true;
                                         }
+                                    }
+                                    if close_menu {
+                                        self.tab_overflow_menu = None;
+                                        invalidate_paint = true;
+                                        pending_redraws.push(self.window);
                                     }
                                 } else if self.hovered_tab.is_some()
                                     || self.hovered_tab_close
@@ -4783,33 +4811,51 @@ impl<H: UiHost> Widget<H> for DockSpace {
                                 split_handle_hit_thickness,
                             );
 
-                            if let Some(mut menu) = self.tab_overflow_menu
+                            if let Some(menu) = self.tab_overflow_menu.clone()
                                 && let Some(&tabs_rect) = layout.get(&menu.tabs)
-                                && let Some(DockNode::Tabs { tabs, .. }) = dock.graph.node(menu.tabs)
+                                && let Some(DockNode::Tabs { .. }) = dock.graph.node(menu.tabs)
                             {
                                 let (tab_bar, _content) = split_tab_bar(tabs_rect);
-                                let menu_rect =
-                                    tab_overflow_menu_rect(theme.clone(), tab_bar, tabs.len());
-                                if menu_rect.contains(*position) {
-                                    let max_scroll = overflow_menu_max_scroll(tab_bar, tabs.len());
-                                    let wheel = delta.x.0 + delta.y.0;
-                                    let next =
-                                        Px((menu.scroll.0 - wheel).clamp(0.0, max_scroll.0));
-                                    if (next.0 - menu.scroll.0).abs() >= 0.01 {
-                                        menu.scroll = next;
-                                        menu.hovered = overflow_menu_row_at_pos(
-                                            menu_rect,
-                                            tab_bar,
-                                            tabs.len(),
-                                            menu.scroll,
-                                            *position,
+                                let item_count = menu.items.len();
+                                if item_count == 0 {
+                                    self.tab_overflow_menu = None;
+                                    invalidate_paint = true;
+                                    pending_redraws.push(self.window);
+                                } else {
+                                    let menu_rect = tab_overflow_menu_rect(
+                                        theme.clone(),
+                                        tab_bar,
+                                        item_count,
+                                    );
+                                    if menu_rect.contains(*position) {
+                                        let max_scroll =
+                                            overflow_menu_max_scroll(tab_bar, item_count);
+                                        let wheel = delta.x.0 + delta.y.0;
+                                        let next_scroll = Px(
+                                            (menu.scroll.0 - wheel)
+                                                .clamp(0.0, max_scroll.0),
                                         );
-                                        self.tab_overflow_menu = Some(menu);
-                                        invalidate_paint = true;
-                                        pending_redraws.push(self.window);
+                                        if (next_scroll.0 - menu.scroll.0).abs() >= 0.01 {
+                                            let hovered = overflow_menu_row_at_pos(
+                                                menu_rect,
+                                                tab_bar,
+                                                item_count,
+                                                next_scroll,
+                                                *position,
+                                            );
+                                            self.tab_overflow_menu = Some(
+                                                TabOverflowMenuState {
+                                                    scroll: next_scroll,
+                                                    hovered,
+                                                    ..menu
+                                                },
+                                            );
+                                            invalidate_paint = true;
+                                            pending_redraws.push(self.window);
+                                        }
+                                        stop_propagation = true;
+                                        return;
                                     }
-                                    stop_propagation = true;
-                                    return;
                                 }
                             }
                             let mut scrolled_tabs = false;
@@ -6438,7 +6484,7 @@ impl<H: UiHost> Widget<H> for DockSpace {
                     tab_overflow_glyph: self.tab_overflow_glyph,
                     tab_close_svg: self.tab_close_svg,
                     tab_overflow_svg: self.tab_overflow_svg,
-                    tab_overflow_menu: self.tab_overflow_menu,
+                    tab_overflow_menu: self.tab_overflow_menu.clone(),
                 },
                 overlay_hooks.as_deref(),
                 scene,
@@ -6560,7 +6606,7 @@ impl<H: UiHost> Widget<H> for DockSpace {
                         tab_overflow_glyph: self.tab_overflow_glyph,
                         tab_close_svg: self.tab_close_svg,
                         tab_overflow_svg: self.tab_overflow_svg,
-                        tab_overflow_menu: self.tab_overflow_menu,
+                        tab_overflow_menu: self.tab_overflow_menu.clone(),
                     },
                     overlay_hooks.as_deref(),
                     scene,

@@ -304,7 +304,9 @@ pub(super) fn paint_dock(
         if overflow {
             let button_rect = tab_overflow_button_rect(theme.clone(), tab_bar);
             let hovered = hovered_tab_overflow_button == Some(node_id);
-            let open = tab_overflow_menu.is_some_and(|m| m.tabs == node_id);
+            let open = tab_overflow_menu
+                .as_ref()
+                .is_some_and(|m| m.tabs == node_id);
             if hovered || open {
                 scene.push(SceneOp::Quad {
                     order: fret_core::DrawOrder(10),
@@ -353,11 +355,15 @@ pub(super) fn paint_dock(
             }
         }
 
-        if let Some(menu) = tab_overflow_menu
+        if let Some(menu) = tab_overflow_menu.as_ref()
             && menu.tabs == node_id
         {
-            let menu_rect = tab_overflow_menu_rect(theme.clone(), tab_bar, tabs.len());
-            let max_scroll = overflow_menu_max_scroll(tab_bar, tabs.len());
+            let item_count = menu.items.len();
+            if item_count == 0 {
+                continue;
+            }
+            let menu_rect = tab_overflow_menu_rect(theme.clone(), tab_bar, item_count);
+            let max_scroll = overflow_menu_max_scroll(tab_bar, item_count);
             let scroll = Px(menu.scroll.0.clamp(0.0, max_scroll.0));
             let row_h = overflow_menu_row_height(tab_bar).0;
             if row_h > 0.0 {
@@ -375,10 +381,13 @@ pub(super) fn paint_dock(
                 scene.push(SceneOp::PushClipRect { rect: menu_rect });
                 let first = (scroll.0 / row_h).floor().max(0.0) as usize;
                 let offset = scroll.0 - first as f32 * row_h;
-                let visible = overflow_menu_row_count(tabs.len());
+                let visible = overflow_menu_row_count(item_count);
                 for row in 0..visible {
                     let idx = first + row;
-                    let Some(panel) = tabs.get(idx) else {
+                    let Some(&tab_ix) = menu.items.get(idx) else {
+                        break;
+                    };
+                    let Some(panel) = tabs.get(tab_ix) else {
                         break;
                     };
                     let y = menu_rect.origin.y.0 + row as f32 * row_h - offset;
@@ -388,7 +397,7 @@ pub(super) fn paint_dock(
                     );
 
                     let is_hovered = menu.hovered == Some(idx);
-                    let is_active = idx == *active;
+                    let is_active = tab_ix == *active;
                     if is_hovered {
                         scene.push(SceneOp::Quad {
                             order: fret_core::DrawOrder(101),

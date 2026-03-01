@@ -19,6 +19,8 @@ Run as suite:
 - `cargo nextest run -p fret-docking`
   - Evidence: `ecosystem/fret-docking/src/dock/tab_bar_drop_target.rs`
   - Evidence: `ecosystem/fret-ui-headless/src/tab_strip_surface.rs`
+  - Evidence: `ecosystem/fret-ui-headless/src/tab_strip_overflow.rs`
+  - Evidence: `ecosystem/fret-docking/src/dock/tab_overflow.rs`
 - `cargo nextest run -p fret-bootstrap -p fret-diag-protocol` (script plumbing / protocol)
 
 ## Script registry sanity check
