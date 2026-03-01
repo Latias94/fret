@@ -4,8 +4,9 @@ use crate::ui::doc_layout::{self, DocSection};
 
 pub(super) fn preview_menubar(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
     use shadcn::{
-        Menubar, MenubarCheckboxItem, MenubarEntry, MenubarGroup, MenubarItem, MenubarMenu,
-        MenubarRadioGroup, MenubarRadioItemSpec, MenubarShortcut,
+        Menubar, MenubarCheckboxItem, MenubarContent, MenubarEntry, MenubarGroup, MenubarItem,
+        MenubarMenu, MenubarRadioGroup, MenubarRadioItemSpec, MenubarSeparator, MenubarShortcut,
+        MenubarSub, MenubarSubContent, MenubarSubTrigger, MenubarTrigger,
     };
 
     #[derive(Default)]
@@ -288,10 +289,41 @@ pub(super) fn preview_menubar(cx: &mut ElementContext<'_, App>) -> Vec<AnyElemen
             .into_element(cx)
     });
 
+    let parts = {
+        let file = MenubarTrigger::new("File")
+            .test_id("ui-gallery-menubar-parts-trigger-file")
+            .into_menu()
+            .entries_parts(
+                MenubarContent::new(),
+                [
+                    MenubarItem::new("New Tab")
+                        .test_id("ui-gallery-menubar-parts-item-new-tab")
+                        .into(),
+                    MenubarSeparator::new().into(),
+                    MenubarSub::new(
+                        MenubarSubTrigger::new("Share")
+                            .refine(|item| item.test_id("ui-gallery-menubar-parts-item-share")),
+                        MenubarSubContent::new([
+                            MenubarItem::new("Email link")
+                                .test_id("ui-gallery-menubar-parts-sub-email")
+                                .into(),
+                            MenubarItem::new("Messages")
+                                .test_id("ui-gallery-menubar-parts-sub-messages")
+                                .into(),
+                        ]),
+                    )
+                    .into(),
+                ],
+            );
+        Menubar::new([file])
+            .refine_layout(width.clone())
+            .into_element(cx)
+    };
+
     let body = doc_layout::render_doc_page(
         cx,
         Some(
-            "Preview follows shadcn Menubar docs order: Demo, Checkbox, Radio, Submenu, With Icons, RTL.",
+            "Preview follows shadcn Menubar docs order: Demo, Checkbox, Radio, Submenu, With Icons, RTL (plus Parts adapter).",
         ),
         vec![
             DocSection::new("Demo", demo)
@@ -410,6 +442,32 @@ Menubar::new([file]).into_element(cx);"#,
         shadcn::Menubar::new([file]).into_element(cx)
     },
 );"#,
+                ),
+            DocSection::new("Parts", parts)
+                .max_w(Px(520.0))
+                .code(
+                    "rust",
+                    r#"use shadcn::{
+    Menubar, MenubarContent, MenubarItem, MenubarMenu, MenubarSeparator, MenubarSub,
+    MenubarSubContent, MenubarSubTrigger, MenubarTrigger,
+};
+
+let file: shadcn::MenubarMenuEntries = MenubarTrigger::new("File")
+    .into_menu()
+    .entries_parts(
+        MenubarContent::new(),
+        [
+            MenubarItem::new("New Tab").into(),
+            MenubarSeparator::new().into(),
+            MenubarSub::new(
+                MenubarSubTrigger::new("Share"),
+                MenubarSubContent::new([MenubarItem::new("Email link").into()]),
+            )
+            .into(),
+        ],
+    );
+
+Menubar::new([file]).into_element(cx);"#,
                 ),
         ],
     );
