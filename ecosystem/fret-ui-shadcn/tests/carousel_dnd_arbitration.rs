@@ -42,108 +42,47 @@ fn render_frame(
             let dnd_service = fret_ui_kit::dnd::dnd_service_model(cx);
             let frame_id = cx.frame_id;
 
+            let on_update_started = dnd_started.clone();
+            let on_update = Arc::new(
+                move |host: &mut dyn fret_ui::action::UiPointerActionHost,
+                      _action_cx,
+                      update: &fret_ui_kit::dnd::DndUpdate| {
+                    if matches!(
+                        update.sensor,
+                        fret_ui_kit::dnd::SensorOutput::DragStart { .. }
+                            | fret_ui_kit::dnd::SensorOutput::DragMove { .. }
+                    ) {
+                        let _ = host.models_mut().update(&on_update_started, |v| *v = true);
+                    }
+                },
+            );
+
+            let forwarders = fret_ui_kit::dnd::DndPointerForwarders::new(
+                dnd_service,
+                frame_id,
+                fret_ui_kit::dnd::DndPointerForwardersConfig::for_kind(TEST_DND_KIND)
+                    .activation_constraint(fret_ui_kit::dnd::ActivationConstraint::Distance {
+                        px: 2.0,
+                    })
+                    .collision_strategy(fret_ui_kit::dnd::CollisionStrategy::ClosestCenter)
+                    .capture_pointer_on_down(handle_captures_pointer)
+                    // Important: do *not* consume events. This keeps the underlying Carousel
+                    // armed on pointer down so it would steal capture on move if we didn't
+                    // explicitly arbitrate against DnD tracking.
+                    .consume_events(false)
+                    .on_update(on_update),
+            );
+
+            let down_forwarder = forwarders.on_pointer_down();
             let on_down_started = dnd_started.clone();
-            let on_down_service = dnd_service.clone();
             let on_down: fret_ui::action::OnPointerDown = Arc::new(move |host, action_cx, down| {
-                if down.button != fret_core::MouseButton::Left {
-                    return false;
-                }
-
                 let _ = host.models_mut().update(&on_down_started, |v| *v = false);
-
-                if handle_captures_pointer {
-                    host.capture_pointer();
-                }
-
-                let _ = fret_ui_kit::dnd::handle_pointer_down(
-                    host.models_mut(),
-                    &on_down_service,
-                    action_cx.window,
-                    frame_id,
-                    TEST_DND_KIND,
-                    down.pointer_id,
-                    down.position,
-                    down.tick_id,
-                    fret_ui_kit::dnd::ActivationConstraint::Distance { px: 2.0 },
-                    fret_ui_kit::dnd::CollisionStrategy::ClosestCenter,
-                    None,
-                );
-
-                // Important: do *not* consume the event. This keeps the underlying Carousel
-                // armed on pointer down so it would steal capture on move if we didn't
-                // explicitly arbitrate against DnD tracking.
-                false
+                (down_forwarder)(host, action_cx, down)
             });
 
-            let on_move_started = dnd_started.clone();
-            let on_move_service = dnd_service.clone();
-            let on_move: fret_ui::action::OnPointerMove = Arc::new(move |host, action_cx, mv| {
-                let update = fret_ui_kit::dnd::handle_pointer_move(
-                    host.models_mut(),
-                    &on_move_service,
-                    action_cx.window,
-                    frame_id,
-                    TEST_DND_KIND,
-                    mv.pointer_id,
-                    mv.position,
-                    mv.tick_id,
-                    fret_ui_kit::dnd::ActivationConstraint::Distance { px: 2.0 },
-                    fret_ui_kit::dnd::CollisionStrategy::ClosestCenter,
-                    None,
-                );
-
-                if matches!(
-                    update.sensor,
-                    fret_ui_kit::dnd::SensorOutput::DragStart { .. }
-                        | fret_ui_kit::dnd::SensorOutput::DragMove { .. }
-                ) {
-                    let _ = host.models_mut().update(&on_move_started, |v| *v = true);
-                }
-
-                false
-            });
-
-            let on_up_service = dnd_service.clone();
-            let on_up: fret_ui::action::OnPointerUp = Arc::new(move |host, action_cx, up| {
-                let _ = fret_ui_kit::dnd::handle_pointer_up(
-                    host.models_mut(),
-                    &on_up_service,
-                    action_cx.window,
-                    frame_id,
-                    TEST_DND_KIND,
-                    up.pointer_id,
-                    up.position,
-                    up.tick_id,
-                    fret_ui_kit::dnd::ActivationConstraint::Distance { px: 2.0 },
-                    fret_ui_kit::dnd::CollisionStrategy::ClosestCenter,
-                    None,
-                );
-
-                host.release_pointer_capture();
-                false
-            });
-
-            let on_cancel_service = dnd_service.clone();
-            let on_cancel: fret_ui::action::OnPointerCancel =
-                Arc::new(move |host, action_cx, cancel| {
-                    let position = cancel.position.unwrap_or_else(|| host.bounds().origin);
-                    let _ = fret_ui_kit::dnd::handle_pointer_cancel(
-                        host.models_mut(),
-                        &on_cancel_service,
-                        action_cx.window,
-                        frame_id,
-                        TEST_DND_KIND,
-                        cancel.pointer_id,
-                        position,
-                        cancel.tick_id,
-                        fret_ui_kit::dnd::ActivationConstraint::Distance { px: 2.0 },
-                        fret_ui_kit::dnd::CollisionStrategy::ClosestCenter,
-                        None,
-                    );
-
-                    host.release_pointer_capture();
-                    false
-                });
+            let on_move = forwarders.on_pointer_move();
+            let on_up = forwarders.on_pointer_up();
+            let on_cancel = forwarders.on_pointer_cancel();
 
             let mut handle_layout = LayoutStyle::default();
             handle_layout.position = PositionStyle::Absolute;
