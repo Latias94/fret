@@ -107,13 +107,19 @@ impl MvuProgram for ThemeSwitchingBasicsProgram {
                     .a11y_label("Dark")
                     .test_id(TEST_ID_TOGGLE_DARK),
             ])
+            .refine_layout(LayoutRefinement::default().flex_none())
             .into_element(cx)
             .test_id(TEST_ID_TOGGLE);
 
-        // Keep the toggle's hit box tight even when parent stacks default to stretch sizing.
-        let toggle_row = ui::h_flex(cx, |_cx| [scheme_toggle])
-            .items_center()
-            .into_element(cx);
+        // Avoid `ui::h_flex` here: its internal flex sizing is always `width: fill`, which can
+        // cause children to get a much larger hit box than intended.
+        let toggle_row = stack::hstack(
+            cx,
+            stack::HStackProps::default()
+                .justify_center()
+                .layout(LayoutRefinement::default().w_full()),
+            |_cx| [scheme_toggle],
+        );
 
         let sample = shadcn::Card::new([
             shadcn::CardHeader::new([
@@ -143,7 +149,7 @@ impl MvuProgram for ThemeSwitchingBasicsProgram {
         .test_id(TEST_ID_SAMPLE_CARD);
 
         let content_body = ui::v_flex(cx, |_cx| [scheme_row, toggle_row, sample])
-            .gap(Space::N4)
+            .gap(Space::N5)
             .w_full()
             .into_element(cx);
         let content = shadcn::CardContent::new([content_body]).into_element(cx);

@@ -1767,12 +1767,15 @@ mod tests {
     use fret_app::App;
     use fret_core::{AppWindowId, Point, Px, Rect, Size};
     use fret_runtime::Model;
-    use fret_ui::element::{ElementKind, TextProps, TextInputProps};
+    use fret_ui::element::{ElementKind, TextInputProps, TextProps};
 
     use crate::shadcn_themes::{ShadcnBaseColor, ShadcnColorScheme, apply_shadcn_new_york_v4};
 
     fn bounds() -> Rect {
-        Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(800.0), Px(200.0)))
+        Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(800.0), Px(200.0)),
+        )
     }
 
     fn find_text_input<'a>(node: &'a AnyElement) -> Option<&'a TextInputProps> {
@@ -1814,9 +1817,10 @@ mod tests {
             let model: Model<String> = cx.app.models_mut().insert(String::new());
             let el = InputGroup::new(model).into_element_parts(cx, |cx| {
                 vec![
-                    InputGroupPart::addon(InputGroupAddon::new([cx.text("lead")]).align(
-                        InputGroupAddonAlign::InlineStart,
-                    )),
+                    InputGroupPart::addon(
+                        InputGroupAddon::new([cx.text("lead")])
+                            .align(InputGroupAddonAlign::InlineStart),
+                    ),
                     InputGroupPart::input(InputGroupInput::new().placeholder("placeholder")),
                 ]
             });
@@ -1832,28 +1836,36 @@ mod tests {
         let mut app = App::new();
         apply_shadcn_new_york_v4(&mut app, ShadcnBaseColor::Neutral, ShadcnColorScheme::Light);
 
-        fret_ui::elements::with_element_cx(&mut app, window, bounds(), "input_group_addons", |cx| {
-            let model: Model<String> = cx.app.models_mut().insert(String::new());
-            let el = InputGroup::new(model).into_element_parts(cx, |cx| {
-                vec![
-                    InputGroupPart::addon(
-                        InputGroupAddon::new([cx.text("lead")]).align(InputGroupAddonAlign::InlineStart),
-                    ),
-                    InputGroupPart::addon(
-                        InputGroupAddon::new([cx.text("trail")]).align(InputGroupAddonAlign::InlineEnd),
-                    ),
-                    InputGroupPart::input(InputGroupInput::new()),
-                ]
-            });
+        fret_ui::elements::with_element_cx(
+            &mut app,
+            window,
+            bounds(),
+            "input_group_addons",
+            |cx| {
+                let model: Model<String> = cx.app.models_mut().insert(String::new());
+                let el = InputGroup::new(model).into_element_parts(cx, |cx| {
+                    vec![
+                        InputGroupPart::addon(
+                            InputGroupAddon::new([cx.text("lead")])
+                                .align(InputGroupAddonAlign::InlineStart),
+                        ),
+                        InputGroupPart::addon(
+                            InputGroupAddon::new([cx.text("trail")])
+                                .align(InputGroupAddonAlign::InlineEnd),
+                        ),
+                        InputGroupPart::input(InputGroupInput::new()),
+                    ]
+                });
 
-            assert!(
-                find_flex_with_text_and_order(&el, "lead", -1),
-                "expected inline-start addon flex to carry order=-1"
-            );
-            assert!(
-                find_flex_with_text_and_order(&el, "trail", 1),
-                "expected inline-end addon flex to carry order=1"
-            );
-        });
+                assert!(
+                    find_flex_with_text_and_order(&el, "lead", -1),
+                    "expected inline-start addon flex to carry order=-1"
+                );
+                assert!(
+                    find_flex_with_text_and_order(&el, "trail", 1),
+                    "expected inline-end addon flex to carry order=1"
+                );
+            },
+        );
     }
 }
