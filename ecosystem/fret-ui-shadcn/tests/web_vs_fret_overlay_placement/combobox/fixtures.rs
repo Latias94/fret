@@ -54,22 +54,22 @@ fn build_combobox_responsive_overlay(
     cx: &mut ElementContext<'_, App>,
     open: &Model<bool>,
 ) -> AnyElement {
-    use fret_ui_shadcn::{Combobox, ComboboxItem};
+    use fret_ui_shadcn::{Combobox, combobox_option};
 
     let value: Model<Option<Arc<str>>> = cx.app.models_mut().insert(None);
     let items = vec![
-        ComboboxItem::new("nextjs", "Next.js"),
-        ComboboxItem::new("sveltekit", "SvelteKit"),
-        ComboboxItem::new("nuxt", "Nuxt.js"),
-        ComboboxItem::new("remix", "Remix"),
-        ComboboxItem::new("astro", "Astro"),
+        combobox_option("nextjs", "Next.js"),
+        combobox_option("sveltekit", "SvelteKit"),
+        combobox_option("nuxt", "Nuxt.js"),
+        combobox_option("remix", "Remix"),
+        combobox_option("astro", "Astro"),
     ];
 
     Combobox::new(value, open.clone())
         .a11y_label("Select a framework")
         .width(Px(200.0))
         .responsive(true)
-        .items(items)
+        .options(items)
         .into_element(cx)
 }
 
