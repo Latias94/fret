@@ -1,7 +1,7 @@
 ---
 title: "paint eval spaces v1 (Local / Viewport / StrokeS01)"
 status: draft
-date: 2026-02-28
+date: 2026-03-01
 scope: crates/fret-core (scene contract), crates/fret-render-wgpu (path/quad/text pipelines)
 ---
 

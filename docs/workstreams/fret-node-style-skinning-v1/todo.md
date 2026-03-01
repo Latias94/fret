@@ -1,7 +1,7 @@
 ---
 title: fret-node style/skin layer v1 — TODO
 status: active
-date: 2026-02-27
+date: 2026-03-01
 scope: ecosystem/fret-node
 ---
 
@@ -37,7 +37,9 @@ scope: ecosystem/fret-node
 - [x] Add demo toggle for wire glow (`primary+shift+g`) and capture both variants in the diag gate script.
 - [x] Extend wire outline to non-selected edges (optional), with deterministic WorkBudget degradation.
 - [x] Add demo toggle for wire highlight (`primary+shift+h`) and capture both variants in the diag gate script.
-- [ ] Wire gradients (mechanism-level) or a policy-level approximation (two-pass stroke with cached paths).
+- [ ] Wire gradients (mechanism-level).
+  - Deferred: do not land a policy-level approximation in v1.
+  - Track paint contracts in `docs/workstreams/paint-eval-space-v1/README.md`.
 
 ## Follow-ups (likely)
 
