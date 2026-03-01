@@ -89,7 +89,7 @@ Related docs:
      - Select: commit/dismiss/focus-restore scripts landed (scoped assertions).
      - Combobox: commit/dismiss/focus-restore scripts landed (scoped assertions + state rows).
      - Menus: DropdownMenu + ContextMenu scripts landed (open/close, keyboard nav/typeahead, last-action assertions).
-     - Pending: Docking (tab drag, drop targets, split, close tab).
+     - Docking: regression gates live in `tools/diag-scripts/docking/arbitration/*` (tab drag/drop, split, close panel).
 
 ## Milestone M3: “AI debugging ergonomics”
 
