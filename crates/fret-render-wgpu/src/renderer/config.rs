@@ -387,13 +387,47 @@ impl Renderer {
         });
     }
 
+    fn intermediate_budget_override_bytes_from_env() -> Option<u64> {
+        static OVERRIDE: OnceLock<Option<u64>> = OnceLock::new();
+        *OVERRIDE.get_or_init(|| {
+            let Ok(raw) = std::env::var("FRET_RENDER_WGPU_INTERMEDIATE_BUDGET_BYTES") else {
+                return None;
+            };
+
+            let trimmed = raw.trim();
+            if trimmed.is_empty() {
+                return None;
+            }
+
+            match trimmed.parse::<u64>() {
+                Ok(bytes) => {
+                    tracing::warn!(
+                        intermediate_budget_bytes = bytes,
+                        "Renderer intermediate budget overridden via FRET_RENDER_WGPU_INTERMEDIATE_BUDGET_BYTES."
+                    );
+                    Some(bytes)
+                }
+                Err(_) => {
+                    tracing::warn!(
+                        raw = trimmed,
+                        "Invalid FRET_RENDER_WGPU_INTERMEDIATE_BUDGET_BYTES; ignoring override."
+                    );
+                    None
+                }
+            }
+        })
+    }
+
     pub fn intermediate_budget_bytes(&self) -> u64 {
         self.intermediate_budget_bytes
     }
 
     pub fn set_intermediate_budget_bytes(&mut self, bytes: u64) {
-        // Keep a small non-zero floor so callers can't accidentally force unbounded thrash.
-        self.intermediate_budget_bytes = bytes.max(1024);
+        let bytes = Self::intermediate_budget_override_bytes_from_env().unwrap_or(bytes);
+
+        // Allow 0 for deterministic "no intermediates" modes (diagnostics, conformance, low-end).
+        // Otherwise keep a small non-zero floor so callers can't accidentally force unbounded thrash.
+        self.intermediate_budget_bytes = if bytes == 0 { 0 } else { bytes.max(1024) };
         self.intermediate_pool
             .enforce_budget(self.intermediate_budget_bytes);
         self.clip_path_mask_cache.enforce_budget(
