@@ -99,8 +99,13 @@
       "type": "wait_until"
     },
     {
-      "n": 30,
-      "type": "wait_frames"
+      "predicate": {
+        "kind": "exists_under",
+        "scope": { "kind": "test_id", "id": "select-scroll-viewport" },
+        "target": { "kind": "test_id", "id": "ui-gallery-select-item-banana" }
+      },
+      "timeout_frames": 240,
+      "type": "wait_until"
     },
     {
       "target": {
@@ -113,9 +118,18 @@
       "predicate": {
         "kind": "not_exists",
         "target": {
-          "id": "ui-gallery-select-item-banana",
+          "id": "select-scroll-viewport",
           "kind": "test_id"
         }
+      },
+      "timeout_frames": 240,
+      "type": "wait_until"
+    },
+    {
+      "predicate": {
+        "kind": "label_contains",
+        "target": { "kind": "test_id", "id": "ui-gallery-select-selected-label" },
+        "text": "Selected: banana"
       },
       "timeout_frames": 240,
       "type": "wait_until"
