@@ -53,6 +53,29 @@
       "value": null,
       "bounds": {
         "origin": {
+          "x": 0.0,
+          "y": 0.0
+        },
+        "size": {
+          "w": 420.0,
+          "h": 98.0
+        }
+      },
+      "flags": {
+        "focused": false,
+        "captured": false,
+        "disabled": false,
+        "selected": false,
+        "expanded": false,
+        "checked": null
+      }
+    },
+    {
+      "role": "Generic",
+      "label": null,
+      "value": null,
+      "bounds": {
+        "origin": {
           "x": 4.0,
           "y": 28.0
         },
@@ -81,7 +104,7 @@
         },
         "size": {
           "w": 412.0,
-          "h": 32.0
+          "h": 22.0
         }
       },
       "flags": {
@@ -103,7 +126,30 @@
           "y": 68.0
         },
         "size": {
-          "w": 396.0,
+          "w": 0.0,
+          "h": 10.0
+        }
+      },
+      "flags": {
+        "focused": false,
+        "captured": false,
+        "disabled": false,
+        "selected": false,
+        "expanded": false,
+        "checked": null
+      }
+    },
+    {
+      "role": "Generic",
+      "label": null,
+      "value": null,
+      "bounds": {
+        "origin": {
+          "x": 12.0,
+          "y": 68.0
+        },
+        "size": {
+          "w": 0.0,
           "h": 10.0
         }
       },
@@ -202,7 +248,7 @@
           "y": 68.0
         },
         "size": {
-          "w": 396.0,
+          "w": 0.0,
           "h": 10.0
         }
       },
@@ -227,6 +273,29 @@
         "size": {
           "w": 10.0,
           "h": 10.0
+        }
+      },
+      "flags": {
+        "focused": false,
+        "captured": false,
+        "disabled": false,
+        "selected": false,
+        "expanded": false,
+        "checked": null
+      }
+    },
+    {
+      "role": "Viewport",
+      "label": null,
+      "value": null,
+      "bounds": {
+        "origin": {
+          "x": 0.0,
+          "y": 0.0
+        },
+        "size": {
+          "w": 420.0,
+          "h": 98.0
         }
       },
       "flags": {
