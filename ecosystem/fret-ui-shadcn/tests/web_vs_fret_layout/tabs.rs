@@ -123,7 +123,7 @@ fn web_vs_fret_layout_tabs_demo_inactive_tab_text_color_matches_web() {
         if let SceneOp::Text { origin, paint, .. } = *op
             && tab.bounds.contains(origin)
         {
-            if let Paint::Solid(color) = paint {
+            if let Paint::Solid(color) = paint.paint {
                 actual = Some(color_to_rgba(color));
                 break;
             }
@@ -174,7 +174,7 @@ fn web_vs_fret_layout_tabs_demo_active_tab_text_color_matches_web() {
         if let SceneOp::Text { origin, paint, .. } = *op
             && tab.bounds.contains(origin)
         {
-            if let Paint::Solid(color) = paint {
+            if let Paint::Solid(color) = paint.paint {
                 actual = Some(color_to_rgba(color));
                 break;
             }

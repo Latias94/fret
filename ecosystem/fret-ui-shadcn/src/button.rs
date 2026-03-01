@@ -1784,10 +1784,10 @@ mod tests {
             else {
                 continue;
             };
-            let fret_core::Paint::Solid(background) = *background else {
+            let fret_core::Paint::Solid(bg_color) = background.paint else {
                 continue;
             };
-            if background.a < 0.5 {
+            if bg_color.a < 0.5 {
                 continue;
             }
             let score = overlap_area(*rect, button_bounds);
@@ -1796,7 +1796,7 @@ mod tests {
             }
             let replace = best_quad.is_none_or(|(_, _, best)| score > best);
             if replace {
-                best_quad = Some((*rect, background, score));
+                best_quad = Some((*rect, bg_color, score));
             }
         }
 

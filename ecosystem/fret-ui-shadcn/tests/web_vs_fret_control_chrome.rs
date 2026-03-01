@@ -140,15 +140,20 @@ fn find_best_quad(scene: &Scene, target: Rect) -> Option<PaintedQuad> {
         else {
             continue;
         };
-        let fret_core::Paint::Solid(background) = background else {
-            continue;
+        let background_color = match background.paint {
+            fret_core::Paint::Solid(c) => c,
+            _ => Color::TRANSPARENT,
         };
-        let fret_core::Paint::Solid(border_color) = border_paint else {
-            continue;
+        let border_color = match border_paint.paint {
+            fret_core::Paint::Solid(c) => c,
+            _ => Color::TRANSPARENT,
         };
         let border_widths = [border.top.0, border.right.0, border.bottom.0, border.left.0];
         let draws_border = border_widths.iter().any(|w| *w > 0.0);
-        let draws_background = background.a > 0.0;
+        let draws_background = match background.paint {
+            fret_core::Paint::Solid(c) => c.a > 0.0,
+            _ => true,
+        };
         if !draws_border && !draws_background {
             // Skip paint-noop quads (common for shadow-only wrappers).
             continue;
@@ -163,7 +168,7 @@ fn find_best_quad(scene: &Scene, target: Rect) -> Option<PaintedQuad> {
             best_score = score;
             best = Some(PaintedQuad {
                 rect,
-                background,
+                background: background_color,
                 border: border_widths,
                 border_color,
                 corners: [
@@ -484,10 +489,10 @@ fn find_focus_ring_quad(scene: &Scene, target: Rect, spread: f32) -> Option<Pain
             continue;
         };
 
-        if background != Paint::TRANSPARENT {
+        if background.paint != Paint::TRANSPARENT {
             continue;
         }
-        let fret_core::Paint::Solid(border_color) = border_paint else {
+        let fret_core::Paint::Solid(border_color) = border_paint.paint else {
             continue;
         };
         let bw = [border.top.0, border.right.0, border.bottom.0, border.left.0];
@@ -3601,6 +3606,40 @@ fn web_vs_fret_toggle_group_demo_chrome_matches() {
         ]
     });
 
+    if debug {
+        // Helpful when the best-quad heuristic picks the wrong background quad.
+        // Prints candidate quads near the first item (0,0).
+        for op in scene.ops() {
+            let SceneOp::Quad {
+                rect,
+                border,
+                corner_radii,
+                ..
+            } = *op
+            else {
+                continue;
+            };
+            if rect.origin.x.0.abs() > 0.1 || rect.origin.y.0.abs() > 0.1 {
+                continue;
+            }
+            if (rect.size.width.0 - 42.0).abs() > 0.1 {
+                continue;
+            }
+            let border_w = [border.top.0, border.right.0, border.bottom.0, border.left.0];
+            eprintln!(
+                "toggle-group candidate quad: rect=({},{} {}x{}) border={border_w:?} corners=({},{} {} {})",
+                rect.origin.x.0,
+                rect.origin.y.0,
+                rect.size.width.0,
+                rect.size.height.0,
+                corner_radii.top_left.0,
+                corner_radii.top_right.0,
+                corner_radii.bottom_right.0,
+                corner_radii.bottom_left.0,
+            );
+        }
+    }
+
     for (idx, web_item) in web_items.into_iter().enumerate() {
         let web_w = web_item.rect.w;
         let web_h = web_item.rect.h;
@@ -5570,10 +5609,10 @@ fn web_vs_fret_radio_group_demo_control_chrome_matches() {
             else {
                 continue;
             };
-            let fret_core::Paint::Solid(background) = background else {
+            let fret_core::Paint::Solid(background) = background.paint else {
                 continue;
             };
-            let fret_core::Paint::Solid(border_color) = border_paint else {
+            let fret_core::Paint::Solid(border_color) = border_paint.paint else {
                 continue;
             };
             let score = (rect.origin.x.0 - target.origin.x.0).abs()

@@ -4833,10 +4833,10 @@ mod tests {
             else {
                 continue;
             };
-            let fret_core::Paint::Solid(background) = *background else {
+            let fret_core::Paint::Solid(bg_color) = background.paint else {
                 continue;
             };
-            if background.a <= 0.01 {
+            if bg_color.a <= 0.01 {
                 continue;
             }
             let score = overlap_area(*rect, new_item.bounds);
@@ -4844,7 +4844,7 @@ mod tests {
                 continue;
             }
             if best.is_none_or(|(_, _, best_score)| score > best_score) {
-                best = Some((*rect, background, score));
+                best = Some((*rect, bg_color, score));
             }
         }
         let (_, bg, _) = best.expect("hovered menu item background quad");
