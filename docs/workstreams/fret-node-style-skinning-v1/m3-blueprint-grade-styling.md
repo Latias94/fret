@@ -99,7 +99,7 @@ open for a future mechanism-level gradient/material wire surface:
 
 This is intentionally an approximation:
 
-- It does not yet implement true gradient strokes or multi-stop wire materials.
+- It does not yet implement “stroke-space” gradients along curve length, or multi-stop wire materials.
 - It uses bounded effect chains (`EffectChain` max 4) and can degrade deterministically under
   budgets (ADR 0118/ADR 0117).
 
