@@ -24,6 +24,7 @@ impl UiDiagnosticsService {
             self.last_hovered_selector_json.clear();
             self.last_picked_node_id.clear();
             self.last_picked_selector_json.clear();
+            self.inspect_help_search_query.clear();
         }
     }
 
@@ -41,6 +42,13 @@ impl UiDiagnosticsService {
 
     pub fn inspect_help_is_open(&self, window: AppWindowId) -> bool {
         self.inspect_help_open_windows.contains(&window)
+    }
+
+    pub fn inspect_help_search_query(&self, window: AppWindowId) -> Option<&str> {
+        self.inspect_help_search_query
+            .get(&window)
+            .map(|s| s.as_str())
+            .filter(|s| !s.trim().is_empty())
     }
 
     pub fn inspect_focus_node_id(&self, window: AppWindowId) -> Option<u64> {
@@ -194,6 +202,7 @@ impl UiDiagnosticsService {
                 }
 
                 let help_open = if self.inspect_help_open_windows.remove(&window) {
+                    self.inspect_help_search_query.remove(&window);
                     false
                 } else {
                     self.inspect_help_open_windows.insert(window);
@@ -215,6 +224,49 @@ impl UiDiagnosticsService {
         let inspection_active = self.pick_armed_run_id.is_some() || self.inspect_enabled;
         if !inspection_active {
             return false;
+        }
+
+        if self.inspect_help_is_open(window)
+            && !(modifiers.ctrl || modifiers.meta || modifiers.alt || modifiers.alt_gr)
+        {
+            const MAX_QUERY_BYTES: usize = 64;
+            match *key {
+                KeyCode::Backspace => {
+                    if let Some(q) = self.inspect_help_search_query.get_mut(&window) {
+                        q.pop();
+                        if q.trim().is_empty() {
+                            self.inspect_help_search_query.remove(&window);
+                        }
+                    }
+                    app.request_redraw(window);
+                    return true;
+                }
+                KeyCode::Enter => {
+                    if self.inspect_help_search_query.remove(&window).is_some() {
+                        self.push_inspect_toast(window, "inspect: search cleared".to_string());
+                    }
+                    app.request_redraw(window);
+                    return true;
+                }
+                KeyCode::Space => {
+                    let q = self.inspect_help_search_query.entry(window).or_default();
+                    if q.len() < MAX_QUERY_BYTES {
+                        q.push(' ');
+                    }
+                    app.request_redraw(window);
+                    return true;
+                }
+                _ => {
+                    if let Some(ch) = fret_core::keycode_to_ascii_lowercase(*key) {
+                        let q = self.inspect_help_search_query.entry(window).or_default();
+                        if q.len() < MAX_QUERY_BYTES {
+                            q.push(ch);
+                        }
+                        app.request_redraw(window);
+                        return true;
+                    }
+                }
+            }
         }
 
         match *key {

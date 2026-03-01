@@ -4,6 +4,7 @@ use fret_core::AppWindowId;
 
 use super::UiDiagnosticsService;
 use super::inspect_explain::build_inspect_explainability_lines;
+use super::inspect_neighborhood::build_inspect_neighborhood_lines;
 use super::selector::SemanticsIndex;
 
 #[cfg(feature = "diagnostics")]
@@ -59,6 +60,7 @@ pub(crate) fn render_diag_inspect_overlay(
         help_open,
         consume_clicks,
         locked,
+        help_search_query,
     ) = app.with_global_mut_untracked(UiDiagnosticsService::default, |svc, _app| {
         (
             svc.last_pointer_position(window),
@@ -71,6 +73,7 @@ pub(crate) fn render_diag_inspect_overlay(
             svc.inspect_help_is_open(window),
             svc.inspect_consume_clicks(),
             svc.inspect_is_locked(window),
+            svc.inspect_help_search_query(window).map(|s| s.to_string()),
         )
     });
 
@@ -88,7 +91,7 @@ pub(crate) fn render_diag_inspect_overlay(
     }
 
     let snapshot = ui.semantics_snapshot();
-    let (hovered, picked, focus) = if let Some(snapshot) = snapshot {
+    let (hovered, picked, focus, neighborhood_lines) = if let Some(snapshot) = snapshot {
         let index = SemanticsIndex::new(snapshot);
 
         let hovered = pointer_pos.and_then(|pos| {
@@ -126,9 +129,24 @@ pub(crate) fn render_diag_inspect_overlay(
                 label: node.label.clone(),
             });
 
-        (hovered, picked, focus)
+        let neighborhood_lines = help_open.then(|| {
+            build_inspect_neighborhood_lines(
+                snapshot,
+                &index,
+                focus_node_id.or(picked_node_id),
+                help_search_query.as_deref(),
+                redact_text,
+            )
+        });
+
+        (
+            hovered,
+            picked,
+            focus,
+            neighborhood_lines.unwrap_or_default(),
+        )
     } else {
-        (None, None, None)
+        (None, None, None, Vec::new())
     };
 
     let hovered = if locked || !(pick_armed || inspect_enabled) {
@@ -228,6 +246,11 @@ pub(crate) fn render_diag_inspect_overlay(
                         if !explainability_lines.is_empty() {
                             lines.push(String::new());
                             lines.extend(explainability_lines.iter().cloned());
+                        }
+
+                        if !neighborhood_lines.is_empty() {
+                            lines.push(String::new());
+                            lines.extend(neighborhood_lines.iter().cloned());
                         }
                     } else {
                         lines.push(format!(

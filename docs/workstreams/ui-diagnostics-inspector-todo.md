@@ -40,7 +40,8 @@ Related docs:
      - In-app toggle/help implemented (diagnostics-only): `Ctrl/Cmd+Alt+I` toggles inspect, `Ctrl/Cmd+Alt+H` shows shortcut help.
      - In-app shortcuts implemented (diagnostics-only): `Esc` exit, `Ctrl+C` copy selector, `Ctrl+Shift+C` copy details, `L` lock/unlock selection.
      - Locked navigation implemented (diagnostics-only): `Alt+Up/Down` walks the semantics parent chain with a small “back to child” stack.
-     - Gaps: no richer tree view (children list / siblings / search).
+     - Local neighborhood view implemented in help mode: parent + siblings + children + type-to-filter.
+     - Remaining gaps: no full semantics tree browser (expand/collapse, virtualization, global search).
 
 2. **Pick modes**
    - One-shot pick (already): click once and write `pick.result.json`.

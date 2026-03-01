@@ -38,6 +38,7 @@ pub struct UiDiagnosticsService {
     inspect_focus_path_line: HashMap<AppWindowId, String>,
     inspect_locked_windows: HashSet<AppWindowId>,
     inspect_help_open_windows: HashSet<AppWindowId>,
+    inspect_help_search_query: HashMap<AppWindowId, String>,
     inspect_pending_copy_details_windows: HashSet<AppWindowId>,
     inspect_pending_copy_details_payload: HashMap<AppWindowId, String>,
     inspect_toast: HashMap<AppWindowId, inspect::InspectToast>,

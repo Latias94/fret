@@ -58,6 +58,8 @@ mod inspect;
 #[cfg(feature = "diagnostics")]
 mod inspect_explain;
 #[cfg(feature = "diagnostics")]
+mod inspect_neighborhood;
+#[cfg(feature = "diagnostics")]
 mod inspect_overlay;
 mod pick;
 mod pick_flow;
@@ -2823,6 +2825,43 @@ mod tests {
         assert!(
             svc.inspect_best_selector_json(window)
                 .is_some_and(|s| s.contains("test_id"))
+        );
+    }
+
+    #[test]
+    fn inspect_help_search_typeahead_updates_query() {
+        let window = window_id(1);
+
+        let mut svc = UiDiagnosticsService::default();
+        svc.cfg.enabled = true;
+        svc.inspect_enabled = true;
+        svc.inspect_help_open_windows.insert(window);
+
+        let mut app = App::new();
+
+        let event = Event::KeyDown {
+            key: KeyCode::KeyA,
+            modifiers: Modifiers::default(),
+            repeat: false,
+        };
+        assert!(
+            svc.maybe_intercept_event_for_inspect_shortcuts(&mut app, window, &event),
+            "expected inspect help to consume typed keys"
+        );
+        assert_eq!(svc.inspect_help_search_query(window), Some("a"));
+
+        let event = Event::KeyDown {
+            key: KeyCode::Backspace,
+            modifiers: Modifiers::default(),
+            repeat: false,
+        };
+        assert!(
+            svc.maybe_intercept_event_for_inspect_shortcuts(&mut app, window, &event),
+            "expected backspace to be consumed by inspect help search"
+        );
+        assert!(
+            svc.inspect_help_search_query(window).is_none(),
+            "expected backspace to clear the query"
         );
     }
 
