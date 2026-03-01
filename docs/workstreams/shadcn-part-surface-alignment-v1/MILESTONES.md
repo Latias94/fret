@@ -84,14 +84,16 @@ then tighten behavior and add gates.
 ## Milestone 5 — Combobox v4 part surface convergence
 
 `combobox` is the largest remaining surface gap because upstream is Base UI-rooted and the shadcn
-v4 part names conflict with Fret's current data-model naming (`ComboboxItem`).
+v4 part surface is not yet represented in Rust. The prior naming conflict (`ComboboxItem` as a
+data model) has been resolved by moving option structs to `ComboboxOption` /
+`ComboboxOptionGroup`.
 
 **Scope**
 
-- Stage 1 (non-breaking): publish data-model aliases (`ComboboxOption`, `ComboboxOptionGroup`) and
-  migrate in-tree call sites to the alias names.
-- Stage 2 (breaking, workstream-scoped): introduce v4-aligned parts (`ComboboxInput/Content/List/...`)
-  and resolve the `ComboboxItem` naming conflict.
+- Stage 1 (done): publish the option data model (`ComboboxOption`, `ComboboxOptionGroup`) and
+  migrate in-tree call sites to `options(...)` + `combobox_option(...)` style construction.
+- Stage 2 (workstream-scoped): introduce v4-aligned parts (`ComboboxInput/Content/List/Item/...`)
+  and provide an `into_element_parts(...)` adapter over the existing Popover + Command recipe.
 - Stage 3 (gates): lock at least one high-signal invariant:
   - clear button visibility rules,
   - responsive drawer vs popover switch (viewport breakpoint),

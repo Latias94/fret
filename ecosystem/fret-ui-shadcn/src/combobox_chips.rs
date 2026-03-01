@@ -22,7 +22,8 @@ use fret_ui_kit::{
     Size, Space, WidgetState, WidgetStateProperty, WidgetStates, resolve_override_slot, ui,
 };
 
-use crate::combobox::{ComboboxGroup, ComboboxItem, ComboboxOpenChangeReason, ComboboxStyle};
+use crate::combobox::{ComboboxOpenChangeReason, ComboboxStyle};
+use crate::combobox_data::{ComboboxOption, ComboboxOptionGroup};
 use crate::command::CommandPaletteA11ySelectedMode;
 use crate::{
     CommandEntry, CommandGroup, CommandItem, CommandPalette, CommandSeparator, Popover,
@@ -59,8 +60,8 @@ pub struct ComboboxChips {
     values: Model<Vec<Arc<str>>>,
     open: Model<bool>,
     query: Option<Model<String>>,
-    items: Vec<ComboboxItem>,
-    groups: Vec<ComboboxGroup>,
+    items: Vec<ComboboxOption>,
+    groups: Vec<ComboboxOptionGroup>,
     test_id_prefix: Option<Arc<str>>,
     trigger_test_id: Option<Arc<str>>,
     width: Option<Px>,
@@ -109,39 +110,33 @@ impl ComboboxChips {
         self
     }
 
-    pub fn items(mut self, items: impl IntoIterator<Item = ComboboxItem>) -> Self {
+    pub fn items(mut self, items: impl IntoIterator<Item = ComboboxOption>) -> Self {
         self.items.extend(items);
         self
     }
 
     /// Migration-friendly alias for [`ComboboxChips::items`].
-    pub fn options(
-        self,
-        options: impl IntoIterator<Item = crate::combobox::ComboboxOption>,
-    ) -> Self {
+    pub fn options(self, options: impl IntoIterator<Item = ComboboxOption>) -> Self {
         self.items(options)
     }
 
-    pub fn group(mut self, group: ComboboxGroup) -> Self {
+    pub fn group(mut self, group: ComboboxOptionGroup) -> Self {
         self.groups.push(group);
         self
     }
 
     /// Migration-friendly alias for [`ComboboxChips::group`].
-    pub fn option_group(self, group: crate::combobox::ComboboxOptionGroup) -> Self {
+    pub fn option_group(self, group: ComboboxOptionGroup) -> Self {
         self.group(group)
     }
 
-    pub fn groups(mut self, groups: impl IntoIterator<Item = ComboboxGroup>) -> Self {
+    pub fn groups(mut self, groups: impl IntoIterator<Item = ComboboxOptionGroup>) -> Self {
         self.groups.extend(groups);
         self
     }
 
     /// Migration-friendly alias for [`ComboboxChips::groups`].
-    pub fn option_groups(
-        self,
-        groups: impl IntoIterator<Item = crate::combobox::ComboboxOptionGroup>,
-    ) -> Self {
+    pub fn option_groups(self, groups: impl IntoIterator<Item = ComboboxOptionGroup>) -> Self {
         self.groups(groups)
     }
 
@@ -257,8 +252,8 @@ fn combobox_chips_with_patch<H: UiHost>(
     values: Model<Vec<Arc<str>>>,
     open: Model<bool>,
     query: Option<Model<String>>,
-    items: &[ComboboxItem],
-    groups: &[ComboboxGroup],
+    items: &[ComboboxOption],
+    groups: &[ComboboxOptionGroup],
     test_id_prefix: Option<Arc<str>>,
     trigger_test_id: Option<Arc<str>>,
     width: Option<Px>,
@@ -356,8 +351,8 @@ fn combobox_chips_with_patch<H: UiHost>(
                 let open_for_trigger = open.clone();
                 let values_for_trigger = values.clone();
                 let selected_values_for_trigger = _selected_values.clone();
-                let items_for_trigger: Vec<ComboboxItem> = items.to_vec();
-                let groups_for_trigger: Vec<ComboboxGroup> = groups.to_vec();
+                let items_for_trigger: Vec<ComboboxOption> = items.to_vec();
+                let groups_for_trigger: Vec<ComboboxOptionGroup> = groups.to_vec();
                 let test_id_prefix_for_trigger = test_id_prefix.clone();
                 let trigger_test_id_for_trigger = trigger_test_id.clone();
                 let placeholder_for_trigger = placeholder.clone();
@@ -759,8 +754,8 @@ fn combobox_chips_with_patch<H: UiHost>(
                 let query_model = query_model.clone();
                 let open_change_reason_model = open_change_reason_model.clone();
                 let selected_values = _selected_values.clone();
-                let items: Vec<ComboboxItem> = items.to_vec();
-                let groups: Vec<ComboboxGroup> = groups.to_vec();
+                let items: Vec<ComboboxOption> = items.to_vec();
+                let groups: Vec<ComboboxOptionGroup> = groups.to_vec();
                 let test_id_prefix = test_id_prefix.clone();
                 let search_placeholder = search_placeholder.clone();
                 let empty_text = empty_text.clone();
@@ -788,7 +783,7 @@ fn combobox_chips_with_patch<H: UiHost>(
 
                     let mut entries: Vec<CommandEntry> =
                         Vec::with_capacity(items.len() + groups.len());
-                    let make_item = |item: ComboboxItem| -> CommandItem {
+                    let make_item = |item: ComboboxOption| -> CommandItem {
                         let item_disabled = disabled || item.disabled;
                         let is_selected = selected_values
                             .iter()
@@ -822,7 +817,7 @@ fn combobox_chips_with_patch<H: UiHost>(
                         entries.push(CommandEntry::Item(make_item(item)));
                     }
 
-                    let non_empty_groups: Vec<ComboboxGroup> = groups
+                    let non_empty_groups: Vec<ComboboxOptionGroup> = groups
                         .iter()
                         .cloned()
                         .filter(|group| !group.items.is_empty())

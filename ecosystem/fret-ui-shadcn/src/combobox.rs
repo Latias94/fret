@@ -31,6 +31,7 @@ use crate::{
     CommandEntry, CommandGroup, CommandItem, CommandList, CommandPalette, CommandSeparator, Drawer,
     DrawerContent, Popover, PopoverContent,
 };
+use crate::combobox_data::{ComboboxOption, ComboboxOptionGroup};
 
 fn alpha_mul(mut c: Color, mul: f32) -> Color {
     c.a = (c.a * mul).clamp(0.0, 1.0);
@@ -86,82 +87,9 @@ impl ComboboxStyle {
     }
 }
 
-#[derive(Debug, Clone)]
-pub struct ComboboxItem {
-    pub value: Arc<str>,
-    pub label: Arc<str>,
-    /// Optional structured detail for display, typically rendered as a suffix (e.g. `(React)`).
-    ///
-    /// This is primarily meant to support "object item" adapters without forcing callers to
-    /// pre-format richer labels into a single string.
-    pub detail: Option<Arc<str>>,
-    pub disabled: bool,
-    /// Additional strings that participate in cmdk-style filtering/ranking.
-    ///
-    /// This aligns with `CommandItem::keywords(...)` and cmdk's `keywords` prop.
-    pub keywords: Vec<Arc<str>>,
-}
-
-impl ComboboxItem {
-    pub fn new(value: impl Into<Arc<str>>, label: impl Into<Arc<str>>) -> Self {
-        Self {
-            value: value.into(),
-            label: label.into(),
-            detail: None,
-            disabled: false,
-            keywords: Vec::new(),
-        }
-    }
-
-    /// Sets a structured detail suffix and appends it to the visible label as `(<detail>)`.
-    ///
-    /// This preserves the existing string-based label contract while letting callers keep the
-    /// underlying data model structured.
-    pub fn detail(mut self, detail: impl Into<Arc<str>>) -> Self {
-        let detail = detail.into();
-        self.detail = Some(detail.clone());
-        self.keywords.push(detail.clone());
-        self.label = Arc::<str>::from(format!("{} ({})", self.label, detail));
-        self
-    }
-
-    /// Additional strings used for cmdk-style filtering/ranking.
-    pub fn keywords<I, S>(mut self, keywords: I) -> Self
-    where
-        I: IntoIterator<Item = S>,
-        S: Into<Arc<str>>,
-    {
-        self.keywords = keywords.into_iter().map(Into::into).collect();
-        self
-    }
-
-    pub fn disabled(mut self, disabled: bool) -> Self {
-        self.disabled = disabled;
-        self
-    }
-}
-
-#[derive(Debug, Clone)]
-pub struct ComboboxGroup {
-    pub heading: Arc<str>,
-    pub items: Vec<ComboboxItem>,
-}
-
-impl ComboboxGroup {
-    pub fn new(
-        heading: impl Into<Arc<str>>,
-        items: impl IntoIterator<Item = ComboboxItem>,
-    ) -> Self {
-        Self {
-            heading: heading.into(),
-            items: items.into_iter().collect(),
-        }
-    }
-}
-
 /// Migration-friendly constructor for the combobox option data model.
 pub fn combobox_option(value: impl Into<Arc<str>>, label: impl Into<Arc<str>>) -> ComboboxOption {
-    ComboboxItem::new(value, label)
+    ComboboxOption::new(value, label)
 }
 
 /// Migration-friendly constructor for the combobox group data model.
@@ -169,7 +97,7 @@ pub fn combobox_option_group(
     heading: impl Into<Arc<str>>,
     items: impl IntoIterator<Item = ComboboxOption>,
 ) -> ComboboxOptionGroup {
-    ComboboxGroup::new(heading, items)
+    ComboboxOptionGroup::new(heading, items)
 }
 
 #[derive(Default)]
@@ -204,8 +132,8 @@ pub struct Combobox {
     model: Model<Option<Arc<str>>>,
     open: Model<bool>,
     query: Option<Model<String>>,
-    items: Vec<ComboboxItem>,
-    groups: Vec<ComboboxGroup>,
+    items: Vec<ComboboxOption>,
+    groups: Vec<ComboboxOptionGroup>,
     group_separators: bool,
     auto_highlight: bool,
     test_id_prefix: Option<Arc<str>>,
@@ -362,7 +290,7 @@ impl Combobox {
         self
     }
 
-    pub fn item(mut self, item: ComboboxItem) -> Self {
+    pub fn item(mut self, item: ComboboxOption) -> Self {
         self.items.push(item);
         self
     }
@@ -372,7 +300,7 @@ impl Combobox {
         self.item(option)
     }
 
-    pub fn items(mut self, items: impl IntoIterator<Item = ComboboxItem>) -> Self {
+    pub fn items(mut self, items: impl IntoIterator<Item = ComboboxOption>) -> Self {
         self.items.extend(items);
         self
     }
@@ -382,7 +310,7 @@ impl Combobox {
         self.items(options)
     }
 
-    pub fn group(mut self, group: ComboboxGroup) -> Self {
+    pub fn group(mut self, group: ComboboxOptionGroup) -> Self {
         self.groups.push(group);
         self
     }
@@ -392,7 +320,7 @@ impl Combobox {
         self.group(group)
     }
 
-    pub fn groups(mut self, groups: impl IntoIterator<Item = ComboboxGroup>) -> Self {
+    pub fn groups(mut self, groups: impl IntoIterator<Item = ComboboxOptionGroup>) -> Self {
         self.groups.extend(groups);
         self
     }
@@ -586,7 +514,7 @@ pub fn combobox<H: UiHost>(
     model: Model<Option<Arc<str>>>,
     open: Model<bool>,
     query: Option<Model<String>>,
-    items: &[ComboboxItem],
+    items: &[ComboboxOption],
     width: Option<Px>,
     placeholder: Arc<str>,
     search_placeholder: Arc<str>,
@@ -642,8 +570,8 @@ fn combobox_with_patch<H: UiHost>(
     model: Model<Option<Arc<str>>>,
     open: Model<bool>,
     query: Option<Model<String>>,
-    items: &[ComboboxItem],
-    groups: &[ComboboxGroup],
+    items: &[ComboboxOption],
+    groups: &[ComboboxOptionGroup],
     test_id_prefix: Option<Arc<str>>,
     trigger_test_id: Option<Arc<str>>,
     width: Option<Px>,
@@ -910,8 +838,8 @@ fn combobox_with_patch<H: UiHost>(
             .when(WidgetStates::FOCUS_VISIBLE, ColorRef::Color(ring_border));
 
         let enabled = !disabled;
-        let items: Vec<ComboboxItem> = items.to_vec();
-        let groups: Vec<ComboboxGroup> = groups.to_vec();
+        let items: Vec<ComboboxOption> = items.to_vec();
+        let groups: Vec<ComboboxOptionGroup> = groups.to_vec();
         let open_for_trigger = open.clone();
         let trigger_gap = MetricRef::space(Space::N2).resolve(&theme);
         let a11y_label_for_trigger = a11y_label.clone();
@@ -1277,7 +1205,7 @@ fn combobox_with_patch<H: UiHost>(
                             let mut entries: Vec<CommandEntry> =
                                 Vec::with_capacity(items.len() + groups.len());
 
-                            let make_item = |item: ComboboxItem| -> CommandItem {
+                            let make_item = |item: ComboboxOption| -> CommandItem {
                                 let item_disabled = disabled || item.disabled;
                                 let is_selected = selected
                                     .as_ref()
@@ -1318,7 +1246,7 @@ fn combobox_with_patch<H: UiHost>(
                                 entries.push(CommandEntry::Item(make_item(item)));
                             }
 
-                            let non_empty_groups: Vec<ComboboxGroup> = groups
+                            let non_empty_groups: Vec<ComboboxOptionGroup> = groups
                                 .iter()
                                 .cloned()
                                 .filter(|group| !group.items.is_empty())
@@ -1388,7 +1316,7 @@ fn combobox_with_patch<H: UiHost>(
                             let fg_disabled = alpha_mul(fg, 0.5);
                             let item_text_style = crate::command::item_text_style(&theme);
 
-                            let mut make_item = |item: ComboboxItem| -> CommandItem {
+                            let mut make_item = |item: ComboboxOption| -> CommandItem {
                                 let item_disabled = disabled || item.disabled;
                                 let is_selected = selected
                                     .as_ref()
@@ -1471,7 +1399,7 @@ fn combobox_with_patch<H: UiHost>(
                                 entries.push(CommandEntry::Item(make_item(item)));
                             }
 
-                            let non_empty_groups: Vec<ComboboxGroup> = groups
+                            let non_empty_groups: Vec<ComboboxOptionGroup> = groups
                                 .iter()
                                 .cloned()
                                 .filter(|group| !group.items.is_empty())
@@ -1865,7 +1793,7 @@ fn combobox_with_patch<H: UiHost>(
                     let mut entries: Vec<CommandEntry> =
                         Vec::with_capacity(items.len() + groups.len());
 
-                    let make_item = |item: ComboboxItem| -> CommandItem {
+                    let make_item = |item: ComboboxOption| -> CommandItem {
                         let item_disabled = disabled || item.disabled;
                         let is_selected = selected
                             .as_ref()
@@ -1905,7 +1833,7 @@ fn combobox_with_patch<H: UiHost>(
                         entries.push(CommandEntry::Item(make_item(item)));
                     }
 
-                    let non_empty_groups: Vec<ComboboxGroup> = groups
+                    let non_empty_groups: Vec<ComboboxOptionGroup> = groups
                         .iter()
                         .cloned()
                         .filter(|group| !group.items.is_empty())
@@ -1974,7 +1902,7 @@ fn combobox_with_patch<H: UiHost>(
                     let fg_disabled = alpha_mul(fg, 0.5);
                     let item_text_style = crate::command::item_text_style(&theme);
 
-                    let mut make_item = |item: ComboboxItem| -> CommandItem {
+                    let mut make_item = |item: ComboboxOption| -> CommandItem {
                         let item_disabled = disabled || item.disabled;
                         let is_selected = selected
                             .as_ref()
@@ -2054,7 +1982,7 @@ fn combobox_with_patch<H: UiHost>(
                         entries.push(CommandEntry::Item(make_item(item)));
                     }
 
-                    let non_empty_groups: Vec<ComboboxGroup> = groups
+                    let non_empty_groups: Vec<ComboboxOptionGroup> = groups
                         .iter()
                         .cloned()
                         .filter(|group| !group.items.is_empty())
@@ -2127,16 +2055,6 @@ fn combobox_content_placement(
         .with_shift_cross_axis(true)
         .with_sticky(popper::StickyMode::Partial)
 }
-
-/// Migration alias for the combobox item data model.
-///
-/// Upstream shadcn/ui v4 exports an element part named `ComboboxItem`. In Fret, `ComboboxItem` is
-/// currently the **data** type. Callers that want to prepare for a future v4 part-surface refactor
-/// can start using `ComboboxOption` in their own APIs today.
-pub type ComboboxOption = ComboboxItem;
-
-/// Migration alias for the combobox group data model.
-pub type ComboboxOptionGroup = ComboboxGroup;
 
 #[cfg(test)]
 mod tests {
@@ -2230,8 +2148,8 @@ mod tests {
     }
 
     #[test]
-    fn combobox_item_detail_appends_label_and_keywords() {
-        let item = ComboboxItem::new("next", "Next.js").detail("React");
+    fn combobox_option_detail_appends_label_and_keywords() {
+        let item = ComboboxOption::new("next", "Next.js").detail("React");
         assert_eq!(item.detail.as_deref(), Some("React"));
         assert_eq!(item.label.as_ref(), "Next.js (React)");
         assert!(
@@ -2248,7 +2166,7 @@ mod tests {
         bounds: Rect,
         model: Model<Option<Arc<str>>>,
         open: Model<bool>,
-        items: Vec<ComboboxItem>,
+        items: Vec<ComboboxOption>,
     ) -> fret_core::NodeId {
         let next_frame = FrameId(app.frame_id().0.saturating_add(1));
         app.set_frame_id(next_frame);
@@ -2278,7 +2196,7 @@ mod tests {
         bounds: Rect,
         model: Model<Option<Arc<str>>>,
         open: Model<bool>,
-        items: Vec<ComboboxItem>,
+        items: Vec<ComboboxOption>,
         underlay_clicked: Model<bool>,
     ) -> fret_core::NodeId {
         let next_frame = FrameId(app.frame_id().0.saturating_add(1));
@@ -2348,8 +2266,8 @@ mod tests {
         let open_out: RefCell<Option<Model<bool>>> = RefCell::new(None);
 
         let items = vec![
-            ComboboxItem::new("alpha", "Alpha"),
-            ComboboxItem::new("beta", "Beta"),
+            ComboboxOption::new("alpha", "Alpha"),
+            ComboboxOption::new("beta", "Beta"),
         ];
 
         let render = |ui: &mut UiTree<App>,
@@ -2540,9 +2458,9 @@ mod tests {
         let mut services = FakeServices::default();
 
         let items = vec![
-            ComboboxItem::new("alpha", "Alpha"),
-            ComboboxItem::new("beta", "Beta"),
-            ComboboxItem::new("gamma", "Gamma"),
+            ComboboxOption::new("alpha", "Alpha"),
+            ComboboxOption::new("beta", "Beta"),
+            ComboboxOption::new("gamma", "Gamma"),
         ];
 
         // First frame: establish stable trigger bounds.
@@ -2668,9 +2586,9 @@ mod tests {
         let mut services = FakeServices::default();
 
         let items = vec![
-            ComboboxItem::new("alpha", "Alpha"),
-            ComboboxItem::new("beta", "Beta"),
-            ComboboxItem::new("gamma", "Gamma"),
+            ComboboxOption::new("alpha", "Alpha"),
+            ComboboxOption::new("beta", "Beta"),
+            ComboboxOption::new("gamma", "Gamma"),
         ];
 
         // Frame 1: establish stable trigger bounds.
@@ -2783,9 +2701,9 @@ mod tests {
         let mut services = FakeServices::default();
 
         let items = vec![
-            ComboboxItem::new("alpha", "Alpha"),
-            ComboboxItem::new("beta", "Beta"),
-            ComboboxItem::new("gamma", "Gamma"),
+            ComboboxOption::new("alpha", "Alpha"),
+            ComboboxOption::new("beta", "Beta"),
+            ComboboxOption::new("gamma", "Gamma"),
         ];
 
         let root = render_frame(
@@ -2879,9 +2797,9 @@ mod tests {
         let mut services = FakeServices::default();
 
         let items = vec![
-            ComboboxItem::new("alpha", "Alpha"),
-            ComboboxItem::new("beta", "Beta"),
-            ComboboxItem::new("gamma", "Gamma"),
+            ComboboxOption::new("alpha", "Alpha"),
+            ComboboxOption::new("beta", "Beta"),
+            ComboboxOption::new("gamma", "Gamma"),
         ];
 
         let root = render_frame(
@@ -3005,9 +2923,9 @@ mod tests {
         let mut services = FakeServices::default();
 
         let items = vec![
-            ComboboxItem::new("alpha", "Alpha"),
-            ComboboxItem::new("beta", "Beta"),
-            ComboboxItem::new("gamma", "Gamma"),
+            ComboboxOption::new("alpha", "Alpha"),
+            ComboboxOption::new("beta", "Beta"),
+            ComboboxOption::new("gamma", "Gamma"),
         ];
 
         // Frame 1: closed.
@@ -3152,8 +3070,8 @@ mod tests {
         );
         let mut services = FakeServices::default();
 
-        let items: Vec<ComboboxItem> = (0..40)
-            .map(|i| ComboboxItem::new(format!("v{i}"), format!("Item {i}")))
+        let items: Vec<ComboboxOption> = (0..40)
+            .map(|i| ComboboxOption::new(format!("v{i}"), format!("Item {i}")))
             .collect();
 
         // First frame: establish stable trigger bounds.
