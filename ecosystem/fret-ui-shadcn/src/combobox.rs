@@ -27,11 +27,11 @@ use fret_ui_kit::{
     resolve_override_slot, ui,
 };
 
+use crate::combobox_data::{ComboboxOption, ComboboxOptionGroup};
 use crate::{
     CommandEntry, CommandGroup, CommandItem, CommandList, CommandPalette, CommandSeparator, Drawer,
     DrawerContent, Popover, PopoverContent,
 };
-use crate::combobox_data::{ComboboxOption, ComboboxOptionGroup};
 
 fn alpha_mul(mut c: Color, mul: f32) -> Color {
     c.a = (c.a * mul).clamp(0.0, 1.0);
@@ -127,6 +127,450 @@ pub enum ComboboxTriggerVariant {
     Button,
 }
 
+/// Part-based authoring surface aligned with shadcn/ui v4 exports.
+///
+/// Upstream uses Base UI render props to map `items` → list rows. In Fret we expose a structured
+/// adapter that maps part configuration onto the existing Popover + Command recipe so upstream
+/// “Usage” shapes remain expressible in Rust.
+#[derive(Debug)]
+pub enum ComboboxPart {
+    Input(ComboboxInput),
+    Content(ComboboxContent),
+}
+
+impl ComboboxPart {
+    pub fn input(input: ComboboxInput) -> Self {
+        Self::Input(input)
+    }
+
+    pub fn content(content: ComboboxContent) -> Self {
+        Self::Content(content)
+    }
+}
+
+impl From<ComboboxInput> for ComboboxPart {
+    fn from(value: ComboboxInput) -> Self {
+        Self::Input(value)
+    }
+}
+
+impl From<ComboboxContent> for ComboboxPart {
+    fn from(value: ComboboxContent) -> Self {
+        Self::Content(value)
+    }
+}
+
+/// shadcn/ui `ComboboxInput` (v4).
+#[derive(Debug, Default)]
+pub struct ComboboxInput {
+    placeholder: Option<Arc<str>>,
+    disabled: Option<bool>,
+    show_trigger: Option<bool>,
+    show_clear: Option<bool>,
+}
+
+impl ComboboxInput {
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    pub fn placeholder(mut self, placeholder: impl Into<Arc<str>>) -> Self {
+        self.placeholder = Some(placeholder.into());
+        self
+    }
+
+    pub fn disabled(mut self, disabled: bool) -> Self {
+        self.disabled = Some(disabled);
+        self
+    }
+
+    pub fn show_trigger(mut self, show_trigger: bool) -> Self {
+        self.show_trigger = Some(show_trigger);
+        self
+    }
+
+    pub fn show_clear(mut self, show_clear: bool) -> Self {
+        self.show_clear = Some(show_clear);
+        self
+    }
+}
+
+/// shadcn/ui `ComboboxContent` (v4) (Base UI `Popup` + `Positioner`).
+#[derive(Debug)]
+pub struct ComboboxContent {
+    side: Option<popper::Side>,
+    align: Option<popper::Align>,
+    side_offset: Option<Px>,
+    align_offset: Option<Px>,
+    children: Vec<ComboboxContentPart>,
+}
+
+impl ComboboxContent {
+    pub fn new(children: impl IntoIterator<Item = ComboboxContentPart>) -> Self {
+        Self {
+            side: None,
+            align: None,
+            side_offset: None,
+            align_offset: None,
+            children: children.into_iter().collect(),
+        }
+    }
+
+    pub fn side(mut self, side: popper::Side) -> Self {
+        self.side = Some(side);
+        self
+    }
+
+    pub fn align(mut self, align: popper::Align) -> Self {
+        self.align = Some(align);
+        self
+    }
+
+    pub fn side_offset_px(mut self, offset: Px) -> Self {
+        self.side_offset = Some(offset);
+        self
+    }
+
+    pub fn align_offset_px(mut self, offset: Px) -> Self {
+        self.align_offset = Some(offset);
+        self
+    }
+}
+
+/// Part-based children inside `ComboboxContent`.
+#[derive(Debug)]
+pub enum ComboboxContentPart {
+    Empty(ComboboxEmpty),
+    List(ComboboxList),
+    Separator(ComboboxSeparator),
+}
+
+impl ComboboxContentPart {
+    pub fn empty(empty: ComboboxEmpty) -> Self {
+        Self::Empty(empty)
+    }
+
+    pub fn list(list: ComboboxList) -> Self {
+        Self::List(list)
+    }
+
+    pub fn separator(sep: ComboboxSeparator) -> Self {
+        Self::Separator(sep)
+    }
+}
+
+impl From<ComboboxEmpty> for ComboboxContentPart {
+    fn from(value: ComboboxEmpty) -> Self {
+        Self::Empty(value)
+    }
+}
+
+impl From<ComboboxList> for ComboboxContentPart {
+    fn from(value: ComboboxList) -> Self {
+        Self::List(value)
+    }
+}
+
+impl From<ComboboxSeparator> for ComboboxContentPart {
+    fn from(value: ComboboxSeparator) -> Self {
+        Self::Separator(value)
+    }
+}
+
+/// shadcn/ui `ComboboxEmpty` (v4).
+#[derive(Debug)]
+pub struct ComboboxEmpty {
+    text: Arc<str>,
+}
+
+impl ComboboxEmpty {
+    pub fn new(text: impl Into<Arc<str>>) -> Self {
+        Self { text: text.into() }
+    }
+}
+
+/// shadcn/ui `ComboboxSeparator` (v4).
+#[derive(Debug, Default)]
+pub struct ComboboxSeparator;
+
+impl ComboboxSeparator {
+    pub fn new() -> Self {
+        Self
+    }
+}
+
+/// shadcn/ui `ComboboxList` (v4).
+///
+/// Upstream uses render props (`(item) => <ComboboxItem ... />`). In Rust, callers can prepare an
+/// explicit list of items/groups, or leave it empty and continue using `Combobox::options(...)`.
+#[derive(Debug, Default)]
+pub struct ComboboxList {
+    items: Vec<ComboboxItem>,
+    groups: Vec<ComboboxGroup>,
+    group_separators: bool,
+}
+
+impl ComboboxList {
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    pub fn items(mut self, items: impl IntoIterator<Item = ComboboxItem>) -> Self {
+        self.items = items.into_iter().collect();
+        self
+    }
+
+    pub fn groups(mut self, groups: impl IntoIterator<Item = ComboboxGroup>) -> Self {
+        self.groups = groups.into_iter().collect();
+        self
+    }
+
+    pub fn group_separators(mut self, enabled: bool) -> Self {
+        self.group_separators = enabled;
+        self
+    }
+}
+
+/// shadcn/ui `ComboboxItem` (v4).
+#[derive(Debug)]
+pub struct ComboboxItem {
+    value: Arc<str>,
+    label: Arc<str>,
+    detail: Option<Arc<str>>,
+    disabled: bool,
+    keywords: Vec<Arc<str>>,
+}
+
+impl ComboboxItem {
+    pub fn new(value: impl Into<Arc<str>>, label: impl Into<Arc<str>>) -> Self {
+        Self {
+            value: value.into(),
+            label: label.into(),
+            detail: None,
+            disabled: false,
+            keywords: Vec::new(),
+        }
+    }
+
+    pub fn detail(mut self, detail: impl Into<Arc<str>>) -> Self {
+        self.detail = Some(detail.into());
+        self
+    }
+
+    pub fn disabled(mut self, disabled: bool) -> Self {
+        self.disabled = disabled;
+        self
+    }
+
+    pub fn keywords<I, S>(mut self, keywords: I) -> Self
+    where
+        I: IntoIterator<Item = S>,
+        S: Into<Arc<str>>,
+    {
+        self.keywords = keywords.into_iter().map(Into::into).collect();
+        self
+    }
+}
+
+/// shadcn/ui `ComboboxLabel` (v4).
+#[derive(Debug)]
+pub struct ComboboxLabel {
+    text: Arc<str>,
+}
+
+impl ComboboxLabel {
+    pub fn new(text: impl Into<Arc<str>>) -> Self {
+        Self { text: text.into() }
+    }
+}
+
+/// shadcn/ui `ComboboxCollection` (v4).
+#[derive(Debug, Default)]
+pub struct ComboboxCollection {
+    items: Vec<ComboboxItem>,
+}
+
+impl ComboboxCollection {
+    pub fn new(items: impl IntoIterator<Item = ComboboxItem>) -> Self {
+        Self {
+            items: items.into_iter().collect(),
+        }
+    }
+}
+
+/// shadcn/ui `ComboboxGroup` (v4).
+#[derive(Debug, Default)]
+pub struct ComboboxGroup {
+    label: Option<ComboboxLabel>,
+    collection: Option<ComboboxCollection>,
+    items: Vec<ComboboxItem>,
+    separator: bool,
+}
+
+impl ComboboxGroup {
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    pub fn label(mut self, label: ComboboxLabel) -> Self {
+        self.label = Some(label);
+        self
+    }
+
+    pub fn collection(mut self, collection: ComboboxCollection) -> Self {
+        self.collection = Some(collection);
+        self
+    }
+
+    pub fn items(mut self, items: impl IntoIterator<Item = ComboboxItem>) -> Self {
+        self.items = items.into_iter().collect();
+        self
+    }
+
+    pub fn separator(mut self, enabled: bool) -> Self {
+        self.separator = enabled;
+        self
+    }
+}
+
+#[derive(Debug, Default)]
+struct ComboboxPartsPatch {
+    placeholder: Option<Arc<str>>,
+    disabled: Option<bool>,
+    show_clear: Option<bool>,
+    content_side: Option<popper::Side>,
+    content_align: Option<popper::Align>,
+    content_side_offset: Option<Px>,
+    content_align_offset: Option<Px>,
+    empty_text: Option<Arc<str>>,
+    list_items: Option<Vec<ComboboxOption>>,
+    list_groups: Option<Vec<ComboboxOptionGroup>>,
+    group_separators: Option<bool>,
+}
+
+fn combobox_parts_patch(parts: Vec<ComboboxPart>) -> ComboboxPartsPatch {
+    let mut patch = ComboboxPartsPatch::default();
+    let mut content: Option<ComboboxContent> = None;
+
+    for part in parts {
+        match part {
+            ComboboxPart::Input(input) => {
+                if input.placeholder.is_some() {
+                    patch.placeholder = input.placeholder;
+                }
+                if input.disabled.is_some() {
+                    patch.disabled = input.disabled;
+                }
+                if input.show_clear.is_some() {
+                    patch.show_clear = input.show_clear;
+                }
+
+                // `showTrigger` exists upstream because Base UI allows hiding the trigger affordance
+                // on the input. Fret's Popover + Command recipe always needs a trigger control, so
+                // we treat this as an advisory/no-op for now.
+                let _ = input.show_trigger;
+            }
+            ComboboxPart::Content(next) => {
+                content = Some(next);
+            }
+        }
+    }
+
+    if let Some(content) = content {
+        if content.side.is_some() {
+            patch.content_side = content.side;
+        }
+        if content.align.is_some() {
+            patch.content_align = content.align;
+        }
+        if content.side_offset.is_some() {
+            patch.content_side_offset = content.side_offset;
+        }
+        if content.align_offset.is_some() {
+            patch.content_align_offset = content.align_offset;
+        }
+
+        let mut saw_separator = false;
+        for child in content.children {
+            match child {
+                ComboboxContentPart::Empty(empty) => {
+                    patch.empty_text = Some(empty.text);
+                }
+                ComboboxContentPart::Separator(_) => {
+                    saw_separator = true;
+                }
+                ComboboxContentPart::List(list) => {
+                    if !list.items.is_empty() {
+                        let items = list
+                            .items
+                            .into_iter()
+                            .map(|item| {
+                                let mut option =
+                                    ComboboxOption::new(item.value.clone(), item.label.clone())
+                                        .disabled(item.disabled)
+                                        .keywords(item.keywords);
+                                if let Some(detail) = item.detail {
+                                    option = option.detail(detail);
+                                }
+                                option
+                            })
+                            .collect();
+                        patch.list_items = Some(items);
+                    }
+
+                    if !list.groups.is_empty() {
+                        let group_separators_requested = saw_separator
+                            || list.group_separators
+                            || list.groups.iter().any(|g| g.separator);
+
+                        let groups = list
+                            .groups
+                            .into_iter()
+                            .filter_map(|group| {
+                                let heading = group.label.map(|l| l.text)?;
+                                let items = if !group.items.is_empty() {
+                                    group.items
+                                } else {
+                                    group.collection.map(|c| c.items).unwrap_or_default()
+                                };
+                                if items.is_empty() {
+                                    return None;
+                                }
+                                let items = items
+                                    .into_iter()
+                                    .map(|item| {
+                                        let mut option =
+                                            ComboboxOption::new(item.value.clone(), item.label)
+                                                .disabled(item.disabled)
+                                                .keywords(item.keywords);
+                                        if let Some(detail) = item.detail {
+                                            option = option.detail(detail);
+                                        }
+                                        option
+                                    })
+                                    .collect::<Vec<_>>();
+                                Some(ComboboxOptionGroup::new(heading, items))
+                            })
+                            .collect::<Vec<_>>();
+                        if !groups.is_empty() {
+                            patch.list_groups = Some(groups);
+                        }
+
+                        // Upstream uses an explicit `ComboboxSeparator` part inside the group.
+                        if group_separators_requested {
+                            patch.group_separators = Some(true);
+                        }
+                    } else if saw_separator || list.group_separators {
+                        patch.group_separators = Some(true);
+                    }
+                }
+            }
+        }
+    }
+
+    patch
+}
+
 #[derive(Clone)]
 pub struct Combobox {
     model: Model<Option<Arc<str>>>,
@@ -207,6 +651,55 @@ impl Combobox {
             layout: LayoutRefinement::default(),
             style: ComboboxStyle::default(),
         }
+    }
+
+    /// Render the combobox using shadcn/ui v4 part-based composition.
+    ///
+    /// This is a compatibility adapter that maps upstream-like `ComboboxInput` /
+    /// `ComboboxContent` / `ComboboxEmpty` / `ComboboxList` parts onto Fret's Popover + Command
+    /// recipe.
+    #[track_caller]
+    pub fn into_element_parts<H: UiHost>(
+        mut self,
+        cx: &mut ElementContext<'_, H>,
+        parts: impl FnOnce(&mut ElementContext<'_, H>) -> Vec<ComboboxPart>,
+    ) -> AnyElement {
+        let patch = combobox_parts_patch(parts(cx));
+        if let Some(placeholder) = patch.placeholder {
+            self.placeholder = placeholder;
+        }
+        if let Some(disabled) = patch.disabled {
+            self.disabled = disabled;
+        }
+        if let Some(show_clear) = patch.show_clear {
+            self.show_clear = show_clear;
+        }
+        if let Some(side) = patch.content_side {
+            self.content_side = side;
+        }
+        if let Some(align) = patch.content_align {
+            self.content_align = align;
+        }
+        if let Some(offset) = patch.content_side_offset {
+            self.content_side_offset = offset;
+        }
+        if let Some(offset) = patch.content_align_offset {
+            self.content_align_offset = offset;
+        }
+        if let Some(empty_text) = patch.empty_text {
+            self.empty_text = empty_text;
+        }
+        if let Some(items) = patch.list_items {
+            self.items = items;
+        }
+        if let Some(groups) = patch.list_groups {
+            self.groups = groups;
+        }
+        if let Some(group_separators) = patch.group_separators {
+            self.group_separators = group_separators;
+        }
+
+        self.into_element(cx)
     }
 
     /// Creates a combobox with controlled/uncontrolled models:
@@ -2088,6 +2581,64 @@ mod tests {
         assert_eq!(placement.align_offset, Px(12.0));
         assert!(placement.shift_cross_axis);
         assert_eq!(placement.sticky, popper::StickyMode::Partial);
+    }
+
+    #[test]
+    fn combobox_parts_patch_maps_input_content_and_list() {
+        let parts = vec![
+            ComboboxPart::input(
+                ComboboxInput::new()
+                    .placeholder("Pick one")
+                    .disabled(true)
+                    .show_clear(true),
+            ),
+            ComboboxPart::content(
+                ComboboxContent::new([
+                    ComboboxContentPart::empty(ComboboxEmpty::new("Nothing found.")),
+                    ComboboxContentPart::list(
+                        ComboboxList::new()
+                            .items([ComboboxItem::new("a", "Alpha").keywords(["alpha"])])
+                            .groups([ComboboxGroup::new()
+                                .label(ComboboxLabel::new("Group 1"))
+                                .items([ComboboxItem::new("b", "Beta").detail("React")])
+                                .separator(true)]),
+                    ),
+                ])
+                .side(popper::Side::Top)
+                .align(popper::Align::Start)
+                .side_offset_px(Px(6.0))
+                .align_offset_px(Px(7.0)),
+            ),
+        ];
+
+        let patch = combobox_parts_patch(parts);
+        assert_eq!(patch.placeholder.as_deref(), Some("Pick one"));
+        assert_eq!(patch.disabled, Some(true));
+        assert_eq!(patch.show_clear, Some(true));
+        assert_eq!(patch.content_side, Some(popper::Side::Top));
+        assert_eq!(patch.content_align, Some(popper::Align::Start));
+        assert_eq!(patch.content_side_offset, Some(Px(6.0)));
+        assert_eq!(patch.content_align_offset, Some(Px(7.0)));
+        assert_eq!(patch.empty_text.as_deref(), Some("Nothing found."));
+        assert_eq!(patch.group_separators, Some(true));
+
+        let items = patch.list_items.expect("expected items from list");
+        assert_eq!(items.len(), 1);
+        assert_eq!(items[0].value.as_ref(), "a");
+        assert_eq!(items[0].label.as_ref(), "Alpha");
+        assert_eq!(items[0].disabled, false);
+        assert_eq!(items[0].keywords.len(), 1);
+        assert_eq!(items[0].keywords[0].as_ref(), "alpha");
+
+        let groups = patch.list_groups.expect("expected groups from list");
+        assert_eq!(groups.len(), 1);
+        assert_eq!(groups[0].heading.as_ref(), "Group 1");
+        assert_eq!(groups[0].items.len(), 1);
+        assert_eq!(groups[0].items[0].value.as_ref(), "b");
+        assert_eq!(groups[0].items[0].detail.as_deref(), Some("React"));
+        assert_eq!(groups[0].items[0].label.as_ref(), "Beta (React)");
+        assert_eq!(groups[0].items[0].keywords.len(), 1);
+        assert_eq!(groups[0].items[0].keywords[0].as_ref(), "React");
     }
 
     #[derive(Default)]
