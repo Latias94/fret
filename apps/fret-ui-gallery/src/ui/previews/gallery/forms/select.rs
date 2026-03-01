@@ -43,7 +43,11 @@ pub(in crate::ui) fn preview_select(cx: &mut ElementContext<'_, App>) -> Vec<Any
                     "Minimal shadcn-aligned demo (matches the upstream `select-demo.tsx` example).",
                 )
                 .test_id_prefix("ui-gallery-select-demo")
-                .code_from_file("rust", include_str!("../../../snippets/select/demo.rs")),
+                .code_from_file_region(
+                    "rust",
+                    include_str!("../../../snippets/select/demo.rs"),
+                    "example",
+                ),
             DocSection::new("Diag Surface", diag_surface)
                 .description(
                     "Long-list surface with stable test_ids used by UI diagnostics scripts.",

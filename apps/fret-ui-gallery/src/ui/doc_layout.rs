@@ -13,7 +13,7 @@ pub(in crate::ui) struct DocSection {
 
 pub(in crate::ui) struct DocCodeBlock {
     pub language: &'static str,
-    pub code: &'static str,
+    pub code: Arc<str>,
 }
 
 impl DocSection {
@@ -48,13 +48,27 @@ impl DocSection {
         self
     }
 
-    pub(in crate::ui) fn code(mut self, language: &'static str, code: &'static str) -> Self {
-        self.code = Some(DocCodeBlock { language, code });
+    pub(in crate::ui) fn code(mut self, language: &'static str, code: impl Into<Arc<str>>) -> Self {
+        self.code = Some(DocCodeBlock {
+            language,
+            code: code.into(),
+        });
         self
     }
 
     pub(in crate::ui) fn code_from_file(self, language: &'static str, file: &'static str) -> Self {
-        self.code(language, file)
+        self.code(language, Arc::<str>::from(file))
+    }
+
+    pub(in crate::ui) fn code_from_file_region(
+        self,
+        language: &'static str,
+        file: &'static str,
+        region: &'static str,
+    ) -> Self {
+        let sliced = slice_code_region(file, region)
+            .unwrap_or_else(|| format!("// region `{region}` not found\n{file}"));
+        self.code(language, Arc::<str>::from(sliced))
     }
 
     pub(in crate::ui) fn max_w(mut self, max_w: Px) -> Self {
@@ -566,7 +580,7 @@ fn code_block_shell(
     max_w: Px,
     block: DocCodeBlock,
 ) -> AnyElement {
-    let code: Arc<str> = Arc::from(block.code);
+    let code: Arc<str> = block.code;
     let copy = match test_id_prefix {
         Some(prefix) => ui_ai::CodeBlockCopyButton::new(code.clone())
             .test_id(format!("{prefix}-code-block-copy"))
@@ -597,6 +611,42 @@ fn code_block_shell(
         )
     });
     cx.container(props, move |_cx| [code_block])
+}
+
+fn slice_code_region(code: &str, region: &str) -> Option<String> {
+    let mut inside = false;
+    let mut out: Vec<&str> = Vec::new();
+
+    for line in code.lines() {
+        let trimmed = line.trim();
+        if let Some(name) = trimmed.strip_prefix("// region:") {
+            inside = name.trim() == region;
+            continue;
+        }
+        if trimmed == "// endregion" {
+            if inside {
+                break;
+            }
+            continue;
+        }
+        if let Some(name) = trimmed.strip_prefix("// endregion:") {
+            if inside && (name.trim().is_empty() || name.trim() == region) {
+                break;
+            }
+            continue;
+        }
+        if inside {
+            out.push(line);
+        }
+    }
+
+    if out.is_empty() {
+        return None;
+    }
+
+    let mut joined = out.join("\n");
+    joined.push('\n');
+    Some(joined)
 }
 
 fn section_title(cx: &mut ElementContext<'_, App>, title: &'static str) -> AnyElement {

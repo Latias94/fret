@@ -1,3 +1,4 @@
+// region: example
 use fret_core::Px;
 use fret_ui_shadcn::{self as shadcn, prelude::*};
 use std::sync::Arc;
@@ -51,3 +52,4 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
         .entries(entries)
         .into_element(cx)
 }
+// endregion: example
