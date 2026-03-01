@@ -1,0 +1,34 @@
+{
+  "schema_version": 2,
+  "meta": {
+    "name": "Cookbook: effects_layer_basics screenshots",
+    "tags": ["cookbook", "effects_layer_basics", "effects", "smoke", "screenshots"],
+    "required_capabilities": ["diag.script_v2", "diag.screenshot_png"],
+    "target_hints": [
+      "Waits for the example root to exist.",
+      "Toggles Pixelate/Blur/None and captures screenshots + bundle."
+    ]
+  },
+  "steps": [
+    { "type": "reset_diagnostics" },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "cookbook.effects_layer_basics.root" }
+      },
+      "timeout_frames": 600
+    },
+    { "type": "click_stable", "target": { "kind": "test_id", "id": "cookbook.effects_layer_basics.effect.pixelate" } },
+    { "type": "wait_frames", "n": 10 },
+    { "type": "capture_screenshot", "label": "cookbook-effects-layer-basics-pixelate" },
+    { "type": "click_stable", "target": { "kind": "test_id", "id": "cookbook.effects_layer_basics.effect.blur" } },
+    { "type": "wait_frames", "n": 10 },
+    { "type": "capture_screenshot", "label": "cookbook-effects-layer-basics-blur" },
+    { "type": "click_stable", "target": { "kind": "test_id", "id": "cookbook.effects_layer_basics.effect.none" } },
+    { "type": "wait_frames", "n": 10 },
+    { "type": "capture_screenshot", "label": "cookbook-effects-layer-basics-none" },
+    { "type": "capture_bundle", "label": "cookbook-effects-layer-basics-screenshots" }
+  ]
+}
+

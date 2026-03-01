@@ -64,6 +64,28 @@
       "target_hints": []
     },
     {
+      "id": "cookbook-effects-layer-basics-screenshots",
+      "path": "tools/diag-scripts/cookbook/effects-layer-basics/cookbook-effects-layer-basics-screenshots.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "cookbook-effects-layer-basics"
+      ],
+      "tags": [
+        "cookbook",
+        "effects",
+        "effects_layer_basics",
+        "screenshots",
+        "smoke"
+      ],
+      "target_hints": [
+        "Waits for the example root to exist.",
+        "Toggles Pixelate/Blur/None and captures screenshots + bundle."
+      ]
+    },
+    {
       "id": "cookbook-hello-baseline",
       "path": "tools/diag-scripts/cookbook/hello/cookbook-hello-baseline.json",
       "required_capabilities": [
@@ -149,6 +171,28 @@
         "Clicks the dialog trigger.",
         "Waits for the content node to exist.",
         "Captures a screenshot + bundle."
+      ]
+    },
+    {
+      "id": "cookbook-theme-switching-basics-screenshots",
+      "path": "tools/diag-scripts/cookbook/theme-switching-basics/cookbook-theme-switching-basics-screenshots.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "cookbook-theme-switching-basics"
+      ],
+      "tags": [
+        "cookbook",
+        "screenshots",
+        "smoke",
+        "theme",
+        "theme_switching_basics"
+      ],
+      "target_hints": [
+        "Waits for the example root to exist.",
+        "Captures Light and Dark screenshots + bundle."
       ]
     },
     {
