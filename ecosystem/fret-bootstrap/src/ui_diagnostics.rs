@@ -1779,6 +1779,113 @@ mod tests {
     }
 
     #[test]
+    fn predicate_focused_descendant_is_matches_focus_within_scope() {
+        let window_bounds = rect(0.0, 0.0, 500.0, 500.0);
+        let snapshot = SemanticsSnapshot {
+            window: window_id(1),
+            roots: vec![SemanticsRoot {
+                root: node_id(1),
+                visible: true,
+                blocks_underlay_input: false,
+                hit_testable: true,
+                z_index: 0,
+            }],
+            barrier_root: None,
+            focus_barrier_root: None,
+            focus: Some(node_id(3)),
+            captured: None,
+            nodes: vec![
+                semantics_node(
+                    1,
+                    None,
+                    SemanticsRole::Panel,
+                    rect(0.0, 0.0, 500.0, 500.0),
+                    "r",
+                ),
+                semantics_node_with_test_id(
+                    2,
+                    Some(1),
+                    SemanticsRole::Dialog,
+                    rect(0.0, 0.0, 200.0, 200.0),
+                    "dialog",
+                    "dialog",
+                ),
+                semantics_node_with_test_id(
+                    3,
+                    Some(2),
+                    SemanticsRole::Button,
+                    rect(0.0, 0.0, 20.0, 20.0),
+                    "close",
+                    "close",
+                ),
+                semantics_node_with_test_id(
+                    4,
+                    Some(1),
+                    SemanticsRole::Button,
+                    rect(0.0, 0.0, 20.0, 20.0),
+                    "close-outside",
+                    "close_outside",
+                ),
+            ],
+        };
+
+        let pred = UiPredicateV1::FocusedDescendantIs {
+            scope: UiSelectorV1::TestId {
+                id: "dialog".to_string(),
+                root_z_index: None,
+            },
+            target: UiSelectorV1::TestId {
+                id: "close".to_string(),
+                root_z_index: None,
+            },
+        };
+        assert!(eval_predicate(
+            &snapshot,
+            window_bounds,
+            window_id(1),
+            None,
+            None,
+            None,
+            None,
+            &[],
+            None,
+            0,
+            false,
+            true,
+            &pred
+        ));
+
+        let pred = UiPredicateV1::FocusedDescendantIs {
+            scope: UiSelectorV1::TestId {
+                id: "dialog".to_string(),
+                root_z_index: None,
+            },
+            target: UiSelectorV1::TestId {
+                id: "close_outside".to_string(),
+                root_z_index: None,
+            },
+        };
+        assert!(
+            !eval_predicate(
+                &snapshot,
+                window_bounds,
+                window_id(1),
+                None,
+                None,
+                None,
+                None,
+                &[],
+                None,
+                0,
+                false,
+                true,
+                &pred
+            ),
+            "expected focused descendant predicate to be strict on focus target"
+        );
+    }
+
+    #[test]
     fn bounds_min_size_predicate_accepts_large_enough_nodes() {
         let window_bounds = rect(0.0, 0.0, 100.0, 100.0);
         let snapshot = SemanticsSnapshot {

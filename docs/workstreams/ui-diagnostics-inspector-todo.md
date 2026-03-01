@@ -74,7 +74,7 @@ Related docs:
    - Clipboard paste via `ClipboardText` and/or higher-level “paste” action.
 
 2. **More predicates and assertions**
-   - `focused_descendant_is` (TODO)
+   - `focused_descendant_is` (done)
    - `active_descendant_is` (done: `ActiveItemIs` / `active_item_is`)
    - `exists_under` / `not_exists_under` (done)
    - `value_equals` for text fields (done; note locale sensitivity of `value` strings)

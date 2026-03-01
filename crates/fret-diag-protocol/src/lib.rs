@@ -1222,6 +1222,16 @@ pub enum UiPredicateV1 {
         scope: UiSelectorV1,
         target: UiSelectorV1,
     },
+    /// True when the currently focused semantics node equals `target` and is a descendant of
+    /// (or equal to) `scope`.
+    ///
+    /// This is a convenience predicate for focus-trap / focus-restore assertions:
+    /// - "focus stays within this dialog root"
+    /// - "after open, focus moves to the dialog's close button"
+    FocusedDescendantIs {
+        scope: UiSelectorV1,
+        target: UiSelectorV1,
+    },
     FocusIs {
         target: UiSelectorV1,
     },
@@ -2752,6 +2762,36 @@ mod tests {
 
         let roundtrip: UiPredicateV1 = serde_json::from_value(value).unwrap();
         assert!(matches!(roundtrip, UiPredicateV1::ValueEquals { .. }));
+    }
+
+    #[test]
+    fn predicate_focused_descendant_is_serializes_minimally() {
+        let value = serde_json::to_value(UiPredicateV1::FocusedDescendantIs {
+            scope: UiSelectorV1::TestId {
+                id: "dialog".to_string(),
+                root_z_index: None,
+            },
+            target: UiSelectorV1::TestId {
+                id: "close".to_string(),
+                root_z_index: None,
+            },
+        })
+        .unwrap();
+
+        assert_eq!(
+            value,
+            serde_json::json!({
+                "kind": "focused_descendant_is",
+                "scope": { "kind": "test_id", "id": "dialog" },
+                "target": { "kind": "test_id", "id": "close" },
+            })
+        );
+
+        let roundtrip: UiPredicateV1 = serde_json::from_value(value).unwrap();
+        assert!(matches!(
+            roundtrip,
+            UiPredicateV1::FocusedDescendantIs { .. }
+        ));
     }
 
     #[test]

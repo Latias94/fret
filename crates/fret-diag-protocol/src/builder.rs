@@ -46,6 +46,10 @@ pub fn focus_is(target: UiSelectorV1) -> UiPredicateV1 {
     UiPredicateV1::FocusIs { target }
 }
 
+pub fn focused_descendant_is(scope: UiSelectorV1, target: UiSelectorV1) -> UiPredicateV1 {
+    UiPredicateV1::FocusedDescendantIs { scope, target }
+}
+
 pub fn active_item_is(container: UiSelectorV1, item: UiSelectorV1) -> UiPredicateV1 {
     UiPredicateV1::ActiveItemIs { container, item }
 }
