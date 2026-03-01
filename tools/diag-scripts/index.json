@@ -3260,6 +3260,28 @@
       ]
     },
     {
+      "id": "workspace-shell-demo-tab-close-mru-fallback-smoke",
+      "path": "tools/diag-scripts/workspace/shell-demo/workspace-shell-demo-tab-close-mru-fallback-smoke.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "diag-hardening-smoke-workspace"
+      ],
+      "tags": [
+        "close",
+        "gate",
+        "smoke",
+        "tabstrip",
+        "workspace"
+      ],
+      "target_hints": [
+        "Activates doc-a-1 (pane A) so MRU is deterministic.",
+        "Closes doc-a-1 via the close button.",
+        "Asserts doc-a-1 is removed and selection falls back to doc-a-2 (MRU fallback)."
+      ]
+    },
+    {
       "id": "workspace-shell-demo-tab-cross-pane-move-to-end",
       "path": "tools/diag-scripts/workspace/shell-demo/workspace-shell-demo-tab-cross-pane-move-to-end.json",
       "required_capabilities": [
