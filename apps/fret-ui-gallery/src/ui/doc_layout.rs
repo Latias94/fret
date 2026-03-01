@@ -566,6 +566,19 @@ fn preview_code_tabs(
     let code_shell = code_block_shell(cx, test_id_prefix, max_w, code);
     let code_el = code_shell;
 
+    // Guardrail: tab panels (and their wrapper containers) can be laid out under definite-size
+    // ancestors (e.g. scroll viewports). Keep the docs scaffold faithful to shadcn/ui by ensuring
+    // preview/code payloads keep their intrinsic height rather than stretching vertically.
+    let wrap_panel = |cx: &mut ElementContext<'_, App>, body: AnyElement| {
+        stack::vstack(
+            cx,
+            stack::VStackProps::default()
+                .items_start()
+                .layout(LayoutRefinement::default().w_full().min_w_0()),
+            move |_cx| vec![body],
+        )
+    };
+
     let base = shadcn::Tabs::uncontrolled(Some("preview"))
         // `shadcn/ui` styles `TabsContent` with `flex-1`. In the UI gallery docs scaffold, tab
         // roots often live in auto-sized stacks; keep the docs layout tight by default.
@@ -575,15 +588,15 @@ fn preview_code_tabs(
     let tabs = if let Some(prefix) = test_id_prefix {
         let tabs_test_id = format!("{prefix}-tabs");
         base.test_id(tabs_test_id.clone()).items([
-            shadcn::TabsItem::new("preview", "Preview", [preview])
+            shadcn::TabsItem::new("preview", "Preview", [wrap_panel(cx, preview)])
                 .trigger_test_id(format!("{tabs_test_id}-trigger-preview")),
-            shadcn::TabsItem::new("code", "Code", [code_el])
+            shadcn::TabsItem::new("code", "Code", [wrap_panel(cx, code_el)])
                 .trigger_test_id(format!("{tabs_test_id}-trigger-code")),
         ])
     } else {
         base.items([
-            shadcn::TabsItem::new("preview", "Preview", [preview]),
-            shadcn::TabsItem::new("code", "Code", [code_el]),
+            shadcn::TabsItem::new("preview", "Preview", [wrap_panel(cx, preview)]),
+            shadcn::TabsItem::new("code", "Code", [wrap_panel(cx, code_el)]),
         ])
     };
 
