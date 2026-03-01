@@ -165,6 +165,12 @@ impl ScrollAreaScrollbar {
     }
 }
 
+/// shadcn/ui `ScrollBar` (v4).
+///
+/// Upstream exports this as `ScrollBar`. In Fret the underlying implementation is
+/// [`ScrollAreaScrollbar`]; this alias exists to improve copy/paste parity with shadcn docs.
+pub type ScrollBar = ScrollAreaScrollbar;
+
 /// shadcn/ui `ScrollArea.Corner` (v4).
 #[derive(Debug, Clone, Default)]
 pub struct ScrollAreaCorner;
@@ -809,6 +815,18 @@ mod tests {
             Point::new(Px(0.0), Px(0.0)),
             Size::new(Px(400.0), Px(240.0)),
         )
+    }
+
+    #[test]
+    fn scroll_bar_alias_matches_scroll_area_scrollbar_surface() {
+        let bar = ScrollBar::new()
+            .orientation(ScrollAreaScrollbarOrientation::Horizontal)
+            .track_padding(Px(2.0))
+            .thumb_idle_alpha(0.6);
+
+        assert_eq!(bar.orientation, ScrollAreaScrollbarOrientation::Horizontal);
+        assert_eq!(bar.track_padding, Px(2.0));
+        assert!((bar.thumb_idle_alpha - 0.6).abs() < f32::EPSILON);
     }
 
     #[test]

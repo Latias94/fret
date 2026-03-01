@@ -79,13 +79,19 @@ When a `PointerEvent::Down` occurs and there is no pointer capture, the runtime 
     respects branches (see below).
 - The observer pass must be **side-effect free** for input routing:
   - it must not change pointer capture,
-  - it must not override focus,
+  - it must not set focus to a new target (focus assignment remains hit-tested / policy-owned),
   - it must not block/bubble-stop the subsequent normal dispatch *except* when the layer is
     explicitly configured to consume outside pointer-down events as described above.
   - Implementation note: observer dispatch runs through the normal widget event entrypoint with
-    `InputDispatchPhase::Observer`; the runtime ignores focus/capture/propagation requests during
+    `InputDispatchPhase::Preview` (observer); the runtime ignores focus/capture/propagation requests during
     this pass (except for the explicit consume-on-outside-pointer-down suppression described
     above).
+- Focus clearing: to match Radix/DOM “click outside blurs” outcomes, the runtime applies a
+  **default side effect** after outside-press observer dispatch: clear focus (set it to `None`).
+  This is intentionally a *mechanism-level* effect that enables the subsequent hit-tested
+  dispatch to move focus to the underlay target without fighting “stale overlay focus”.
+  - If the dismiss handler calls `prevent_default()`, the runtime must not apply this default
+    focus-clearing side effect for that outside-press interaction.
 - Touch pointers are treated differently to preserve scroll/drag ergonomics:
   - the runtime records a touch pointer-down-outside candidate on `PointerDown`,
   - cancels it once the pointer moves beyond a small slop threshold,
@@ -93,6 +99,16 @@ When a `PointerEvent::Down` occurs and there is no pointer capture, the runtime 
     valid.
   - When `consume_pointer_down_outside_events = true`, the runtime suppresses the normal hit-tested
     **pointer-up** dispatch for the same touch interaction.
+
+#### Containment and reachability (robustness under retained/view-cache reuse)
+
+Containment checks used for outside-press routing must be resilient to temporarily stale parent
+pointers (e.g. retained/view-cache reuse). Therefore:
+
+- “Hit is inside layer” must be determined by structural reachability from the layer root via
+  child edges (not by walking parent pointers from the hit target).
+- “Hit is inside a branch” must be determined by reachability from the branch root via child
+  edges.
 
 This is the minimal contract needed to express Radix-like dismissal behavior without adding a
 matrix of per-component runtime toggles.
@@ -106,6 +122,8 @@ In Fret, the overlay substrate expresses this outcome via an optional dismiss ha
 
 - `OnDismissRequest` receives a mutable `DismissRequestCx { reason, ... }`.
 - Handlers may call `req.prevent_default()` to keep the overlay open.
+- For outside press, `prevent_default()` also suppresses the runtime’s default focus-clearing side
+  effect (see “Outside press observer pass”).
 - When default is not prevented, overlay orchestration closes the `open` model automatically.
 
 ### Disable outside pointer events (Radix `disableOutsidePointerEvents`)

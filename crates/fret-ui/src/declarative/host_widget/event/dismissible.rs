@@ -120,6 +120,20 @@ pub(super) fn handle_dismissible_layer_observer<H: UiHost>(
                     },
                     &mut req,
                 );
+                let tick_id = cx.app.tick_id();
+                let reason = req.reason;
+                let default_prevented = req.default_prevented();
+                crate::elements::with_element_state(
+                    &mut *cx.app,
+                    window,
+                    this.element,
+                    crate::action::DismissibleLastDismissRequest::default,
+                    |st| {
+                        st.tick_id = tick_id;
+                        st.reason = Some(reason);
+                        st.default_prevented = default_prevented;
+                    },
+                );
                 cx.invalidate_self(Invalidation::Paint);
                 cx.request_redraw();
             }
@@ -300,6 +314,20 @@ pub(super) fn handle_dismissible_layer<H: UiHost>(
                         target: this.element,
                     },
                     &mut req,
+                );
+                let tick_id = cx.app.tick_id();
+                let reason = req.reason;
+                let default_prevented = req.default_prevented();
+                crate::elements::with_element_state(
+                    &mut *cx.app,
+                    window,
+                    this.element,
+                    crate::action::DismissibleLastDismissRequest::default,
+                    |st| {
+                        st.tick_id = tick_id;
+                        st.reason = Some(reason);
+                        st.default_prevented = default_prevented;
+                    },
                 );
                 cx.invalidate_self(Invalidation::Paint);
                 cx.request_redraw();

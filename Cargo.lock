@@ -1888,7 +1888,9 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "fret",
+ "fret-app",
  "fret-core",
+ "fret-ui",
 ]
 
 [[package]]
@@ -2327,6 +2329,19 @@ dependencies = [
  "merman",
  "pulldown-cmark 0.13.0",
  "tracing",
+]
+
+[[package]]
+name = "fret-minimal"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "fret-app",
+ "fret-bootstrap",
+ "fret-core",
+ "fret-ui",
+ "fret-ui-kit",
+ "wgpu",
 ]
 
 [[package]]

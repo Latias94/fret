@@ -1,6 +1,6 @@
 // region: example
 use fret_core::Px;
-use fret_ui_kit::primitives::direction::{with_direction_provider, LayoutDirection};
+use fret_ui_kit::primitives::direction::{LayoutDirection, with_direction_provider};
 use fret_ui_shadcn::{self as shadcn, prelude::*};
 
 #[derive(Default, Clone)]

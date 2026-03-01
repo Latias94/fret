@@ -1,0 +1,38 @@
+// region: example
+use fret_core::Px;
+use fret_ui_shadcn::{self as shadcn, prelude::*};
+
+pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
+    let width = LayoutRefinement::default().w_px(Px(288.0)).min_w_0();
+
+    let file = shadcn::MenubarTrigger::new("File")
+        .test_id("ui-gallery-menubar-parts-trigger-file")
+        .into_menu()
+        .entries_parts(
+            shadcn::MenubarContent::new(),
+            [
+                shadcn::MenubarItem::new("New Tab")
+                    .test_id("ui-gallery-menubar-parts-item-new-tab")
+                    .into(),
+                shadcn::MenubarSeparator::new().into(),
+                shadcn::MenubarSub::new(
+                    shadcn::MenubarSubTrigger::new("Share")
+                        .refine(|item| item.test_id("ui-gallery-menubar-parts-item-share")),
+                    shadcn::MenubarSubContent::new([
+                        shadcn::MenubarItem::new("Email link")
+                            .test_id("ui-gallery-menubar-parts-sub-email")
+                            .into(),
+                        shadcn::MenubarItem::new("Messages")
+                            .test_id("ui-gallery-menubar-parts-sub-messages")
+                            .into(),
+                    ]),
+                )
+                .into(),
+            ],
+        );
+
+    shadcn::Menubar::new([file])
+        .refine_layout(width)
+        .into_element(cx)
+}
+// endregion: example

@@ -89,6 +89,7 @@ struct State {
     script_predicate_other_selector_json: Model<String>,
     script_predicate_role: Model<String>,
     script_predicate_checked: Model<bool>,
+    script_predicate_len_bytes: Model<String>,
     script_predicate_padding_px: Model<String>,
     script_predicate_eps_px: Model<String>,
     script_predicate_min_w_px: Model<String>,
@@ -234,6 +235,7 @@ fn init_window(app: &mut App, _window: AppWindowId) -> State {
     let script_predicate_other_selector_json = app.models_mut().insert(String::new());
     let script_predicate_role = app.models_mut().insert("button".to_string());
     let script_predicate_checked = app.models_mut().insert(false);
+    let script_predicate_len_bytes = app.models_mut().insert("0".to_string());
     let script_predicate_padding_px = app.models_mut().insert("0".to_string());
     let script_predicate_eps_px = app.models_mut().insert("0".to_string());
     let script_predicate_min_w_px = app.models_mut().insert("0".to_string());
@@ -350,6 +352,7 @@ fn init_window(app: &mut App, _window: AppWindowId) -> State {
         script_predicate_other_selector_json,
         script_predicate_role,
         script_predicate_checked,
+        script_predicate_len_bytes,
         script_predicate_padding_px,
         script_predicate_eps_px,
         script_predicate_min_w_px,
@@ -462,6 +465,7 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut State) -> ViewElements {
     );
     cx.observe_model(&st.script_predicate_role, Invalidation::Paint);
     cx.observe_model(&st.script_predicate_checked, Invalidation::Paint);
+    cx.observe_model(&st.script_predicate_len_bytes, Invalidation::Paint);
     cx.observe_model(&st.script_predicate_padding_px, Invalidation::Paint);
     cx.observe_model(&st.script_predicate_eps_px, Invalidation::Paint);
     cx.observe_model(&st.script_predicate_min_w_px, Invalidation::Paint);
@@ -1601,6 +1605,10 @@ fn center_panel(
         shadcn::SelectItem::new("role_is", "role_is"),
         shadcn::SelectItem::new("checked_is", "checked_is"),
         shadcn::SelectItem::new("checked_is_none", "checked_is_none"),
+        shadcn::SelectItem::new("label_len_is", "label_len_is"),
+        shadcn::SelectItem::new("label_len_ge", "label_len_ge"),
+        shadcn::SelectItem::new("value_len_is", "value_len_is"),
+        shadcn::SelectItem::new("value_len_ge", "value_len_ge"),
         shadcn::SelectItem::new("barrier_roots", "barrier_roots"),
         shadcn::SelectItem::new("visible_in_window", "visible_in_window"),
         shadcn::SelectItem::new("bounds_within_window", "bounds_within_window"),
@@ -3021,6 +3029,14 @@ fn predicate_fields(cx: &mut ElementContext<'_, App>, st: &State, kind: &str) ->
     let checked = shadcn::Checkbox::new(st.script_predicate_checked.clone())
         .a11y_label("checked")
         .into_element(cx);
+    let len_bytes = shadcn::Input::new(st.script_predicate_len_bytes.clone())
+        .a11y_label("len_bytes")
+        .placeholder("0")
+        .into_element(cx);
+    let min_len_bytes = shadcn::Input::new(st.script_predicate_len_bytes.clone())
+        .a11y_label("min_len_bytes")
+        .placeholder("0")
+        .into_element(cx);
     let padding = shadcn::Input::new(st.script_predicate_padding_px.clone())
         .a11y_label("padding_px")
         .placeholder("0")
@@ -3041,6 +3057,8 @@ fn predicate_fields(cx: &mut ElementContext<'_, App>, st: &State, kind: &str) ->
     match kind {
         "role_is" => role,
         "checked_is" => checked,
+        "label_len_is" | "value_len_is" => len_bytes,
+        "label_len_ge" | "value_len_ge" => min_len_bytes,
         "barrier_roots" => {
             let barrier_root_items = [
                 shadcn::SelectItem::new("any", "any"),
@@ -3155,6 +3173,7 @@ fn predicate_value_from_models(
         .models()
         .read(&st.script_predicate_checked, |v| *v)
         .unwrap_or(false);
+    let len_bytes = parse_u32_model(cx, &st.script_predicate_len_bytes);
     let padding_px = parse_f32_model(cx, &st.script_predicate_padding_px);
     let eps_px = parse_f32_model(cx, &st.script_predicate_eps_px);
     let min_w_px = parse_f32_model(cx, &st.script_predicate_min_w_px);
@@ -3190,6 +3209,26 @@ fn predicate_value_from_models(
         "checked_is_none" => serde_json::json!({
             "kind": "checked_is_none",
             "target": selector,
+        }),
+        "label_len_is" => serde_json::json!({
+            "kind": "label_len_is",
+            "target": selector,
+            "len_bytes": len_bytes,
+        }),
+        "label_len_ge" => serde_json::json!({
+            "kind": "label_len_ge",
+            "target": selector,
+            "min_len_bytes": len_bytes,
+        }),
+        "value_len_is" => serde_json::json!({
+            "kind": "value_len_is",
+            "target": selector,
+            "len_bytes": len_bytes,
+        }),
+        "value_len_ge" => serde_json::json!({
+            "kind": "value_len_ge",
+            "target": selector,
+            "min_len_bytes": len_bytes,
         }),
         "barrier_roots" => {
             let barrier_root = cx
@@ -3286,6 +3325,15 @@ fn parse_f32_model(cx: &mut ElementContext<'_, App>, m: &Model<String>) -> f32 {
         .ok()
         .flatten()
         .unwrap_or(0.0)
+}
+
+fn parse_u32_model(cx: &mut ElementContext<'_, App>, m: &Model<String>) -> u32 {
+    cx.app
+        .models()
+        .read(m, |v| v.trim().parse::<u32>().ok())
+        .ok()
+        .flatten()
+        .unwrap_or(0)
 }
 
 fn parse_ancestors_lines(text: &str) -> Vec<serde_json::Value> {

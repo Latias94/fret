@@ -1,110 +1,13 @@
 use super::super::*;
 
 use crate::ui::doc_layout::{self, DocSection};
+use crate::ui::snippets::aspect_ratio as snippets;
 
 pub(super) fn preview_aspect_ratio(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
-    fn center_align_text(mut element: AnyElement) -> AnyElement {
-        use fret_ui::element::ElementKind;
-
-        match &mut element.kind {
-            ElementKind::Text(props) => props.align = fret_core::TextAlign::Center,
-            ElementKind::StyledText(props) => props.align = fret_core::TextAlign::Center,
-            ElementKind::SelectableText(props) => props.align = fret_core::TextAlign::Center,
-            _ => {}
-        }
-
-        element
-    }
-
-    let ratio_example = |cx: &mut ElementContext<'_, App>,
-                         ratio: f32,
-                         max_w: Px,
-                         ratio_label: &'static str,
-                         caption: &'static str,
-                         test_id: &'static str,
-                         content_test_id: &'static str| {
-        let text_block = stack::vstack(
-            cx,
-            stack::VStackProps::default()
-                .layout(LayoutRefinement::default().w_full().min_w_0())
-                .gap(Space::N1)
-                .items_center(),
-            move |cx| {
-                vec![
-                    center_align_text(shadcn::typography::h4(cx, ratio_label)),
-                    center_align_text(shadcn::typography::muted(cx, caption)),
-                ]
-            },
-        )
-        .test_id(content_test_id);
-
-        let content = stack::vstack(
-            cx,
-            stack::VStackProps::default()
-                .layout(LayoutRefinement::default().w_full().h_full())
-                .items_center()
-                .justify_center()
-                .gap(Space::N1),
-            move |_cx| vec![text_block],
-        );
-
-        let (muted_bg, border) =
-            cx.with_theme(|theme| (theme.color_token("muted"), theme.color_token("border")));
-
-        shadcn::AspectRatio::new(ratio, content)
-            .refine_style(
-                ChromeRefinement::default()
-                    .rounded(Radius::Lg)
-                    .border_1()
-                    .bg(ColorRef::Color(muted_bg))
-                    .border_color(ColorRef::Color(border)),
-            )
-            .refine_layout(LayoutRefinement::default().w_full().max_w(max_w))
-            .into_element(cx)
-            .test_id(test_id)
-    };
-
-    let demo = ratio_example(
-        cx,
-        16.0 / 9.0,
-        Px(384.0),
-        "16:9",
-        "Landscape media",
-        "ui-gallery-aspect-ratio-demo",
-        "ui-gallery-aspect-ratio-demo-content",
-    );
-
-    let square = ratio_example(
-        cx,
-        1.0,
-        Px(192.0),
-        "1:1",
-        "Square media",
-        "ui-gallery-aspect-ratio-square",
-        "ui-gallery-aspect-ratio-square-content",
-    );
-
-    let portrait = ratio_example(
-        cx,
-        9.0 / 16.0,
-        Px(160.0),
-        "9:16",
-        "Portrait media",
-        "ui-gallery-aspect-ratio-portrait",
-        "ui-gallery-aspect-ratio-portrait-content",
-    );
-
-    let rtl = doc_layout::rtl(cx, |cx| {
-        ratio_example(
-            cx,
-            16.0 / 9.0,
-            Px(384.0),
-            "16:9",
-            "RTL layout sample",
-            "ui-gallery-aspect-ratio-rtl",
-            "ui-gallery-aspect-ratio-rtl-content",
-        )
-    });
+    let demo = snippets::demo::render(cx);
+    let square = snippets::square::render(cx);
+    let portrait = snippets::portrait::render(cx);
+    let rtl = snippets::rtl::render(cx);
 
     let notes = doc_layout::notes(
         cx,
@@ -123,43 +26,27 @@ pub(super) fn preview_aspect_ratio(cx: &mut ElementContext<'_, App>) -> Vec<AnyE
         vec![
             DocSection::new("Demo", demo)
                 .description("16:9 landscape media frame with an inline caption.")
-                .code(
-                    "rust",
-                    r#"let content = cx.text("...");
-shadcn::AspectRatio::new(16.0 / 9.0, content)
-    .refine_layout(LayoutRefinement::default().max_w(Px(384.0)))
-    .into_element(cx);"#,
+                .code_rust_from_file_region(
+                    include_str!("../snippets/aspect_ratio/demo.rs"),
+                    "example",
                 ),
             DocSection::new("Square", square)
                 .description("1:1 square media for avatars/thumbnails.")
-                .code(
-                    "rust",
-                    r#"let content = cx.text("1:1");
-shadcn::AspectRatio::new(1.0, content)
-    .refine_layout(LayoutRefinement::default().max_w(Px(320.0)))
-    .into_element(cx);"#,
+                .code_rust_from_file_region(
+                    include_str!("../snippets/aspect_ratio/square.rs"),
+                    "example",
                 ),
             DocSection::new("Portrait", portrait)
                 .description("9:16 portrait media for reels/short video cards.")
-                .code(
-                    "rust",
-                    r#"let content = cx.text("9:16");
-shadcn::AspectRatio::new(9.0 / 16.0, content)
-    .refine_layout(LayoutRefinement::default().max_w(Px(240.0)))
-    .into_element(cx);"#,
+                .code_rust_from_file_region(
+                    include_str!("../snippets/aspect_ratio/portrait.rs"),
+                    "example",
                 ),
             DocSection::new("RTL", rtl)
                 .description("AspectRatio should remain direction-agnostic.")
-                .code(
-                    "rust",
-                    r#"fret_ui_kit::primitives::direction::with_direction_provider(
-    cx,
-    fret_ui_kit::primitives::direction::LayoutDirection::Rtl,
-    |cx| {
-        let content = cx.text("RTL layout sample");
-        shadcn::AspectRatio::new(16.0 / 9.0, content).into_element(cx)
-    },
-);"#,
+                .code_rust_from_file_region(
+                    include_str!("../snippets/aspect_ratio/rtl.rs"),
+                    "example",
                 ),
             DocSection::new("Notes", notes).description("API reference pointers and usage notes."),
         ],
