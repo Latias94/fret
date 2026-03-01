@@ -259,7 +259,9 @@ pub(super) fn preview_dropdown_menu(
                         .on_select(CMD_MENU_DROPDOWN_APPLE),
                 ),
                 shadcn::DropdownMenuEntry::Item(
-                    shadcn::DropdownMenuItem::new("Billing").on_select(CMD_MENU_DROPDOWN_ORANGE),
+                    shadcn::DropdownMenuItem::new("Billing")
+                        .test_id("ui-gallery-dropdown-menu-basic-billing")
+                        .on_select(CMD_MENU_DROPDOWN_ORANGE),
                 ),
             ]
         },
@@ -317,7 +319,7 @@ pub(super) fn preview_dropdown_menu(
     let icons = shadcn::DropdownMenu::new(icons_open.clone()).into_element(
         cx,
         |cx| button_trigger(cx, "Icons", "ui-gallery-dropdown-menu-icons-trigger"),
-        |cx| {
+        |_cx| {
             vec![
                 shadcn::DropdownMenuEntry::Item(
                     shadcn::DropdownMenuItem::new("Profile")
@@ -367,7 +369,7 @@ pub(super) fn preview_dropdown_menu(
                 "ui-gallery-dropdown-menu-checkboxes-icons-trigger",
             )
         },
-        |cx| {
+        |_cx| {
             vec![
                 shadcn::DropdownMenuEntry::CheckboxItem(
                     shadcn::DropdownMenuCheckboxItem::new(show_status_bar.clone(), "Status Bar")
@@ -409,7 +411,7 @@ pub(super) fn preview_dropdown_menu(
                 "ui-gallery-dropdown-menu-radio-icons-trigger",
             )
         },
-        |cx| {
+        |_cx| {
             vec![shadcn::DropdownMenuEntry::RadioGroup(
                 shadcn::DropdownMenuRadioGroup::new(theme_mode.clone())
                     .item(
@@ -482,7 +484,7 @@ pub(super) fn preview_dropdown_menu(
         .into_element(
             cx,
             |cx| button_trigger(cx, "Complex", "ui-gallery-dropdown-menu-complex-trigger"),
-            |cx| {
+            |_cx| {
                 vec![
                     shadcn::DropdownMenuEntry::Label(shadcn::DropdownMenuLabel::new("Actions")),
                     shadcn::DropdownMenuEntry::Separator,

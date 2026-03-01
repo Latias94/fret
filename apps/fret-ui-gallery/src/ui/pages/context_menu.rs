@@ -182,10 +182,13 @@ pub(super) fn preview_context_menu(
                         ),
                         shadcn::ContextMenuEntry::Item(
                             shadcn::ContextMenuItem::new("Billing")
-                                .on_select(CMD_MENU_CONTEXT_ACTION),
+                                .on_select(CMD_MENU_CONTEXT_ACTION)
+                                .test_id("ui-gallery-context-menu-basic-billing"),
                         ),
                         shadcn::ContextMenuEntry::Item(
-                            shadcn::ContextMenuItem::new("Team").on_select(CMD_MENU_CONTEXT_ACTION),
+                            shadcn::ContextMenuItem::new("Team")
+                                .on_select(CMD_MENU_CONTEXT_ACTION)
+                                .test_id("ui-gallery-context-menu-basic-team"),
                         ),
                         shadcn::ContextMenuEntry::Separator,
                         shadcn::ContextMenuEntry::Item(
@@ -370,7 +373,7 @@ pub(super) fn preview_context_menu(
                         "ui-gallery-context-menu-icons-trigger",
                     )
                 },
-                |cx| {
+                |_cx| {
                     vec![
                         shadcn::ContextMenuEntry::Item(
                             shadcn::ContextMenuItem::new("Profile")
