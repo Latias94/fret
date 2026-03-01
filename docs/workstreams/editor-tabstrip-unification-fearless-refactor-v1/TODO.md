@@ -26,10 +26,14 @@ This workstream is intentionally scoped to “editor-grade tab UX”:
   - Clicking close dispatches close without implicitly activating.
   - Evidence: `ecosystem/fret-ui-shadcn/src/dropdown_menu.rs` + workspace/docking tests.
 - [ ] Add diag script coverage:
-  - overflow dropdown open/close
-  - select tab from dropdown keeps active visible
-  - overflow dropdown close does not activate (workspace shell demo)
-  - drag end-drop on overflow header space resolves canonical insert_index
+  - [x] Workspace: overflow dropdown close does not activate:
+    - `tools/diag-scripts/workspace/shell-demo/workspace-shell-demo-tab-overflow-close-does-not-activate.json`
+  - [x] Docking: overflow dropdown open + select row activates:
+    - `tools/diag-scripts/docking/arbitration/docking-arbitration-demo-tab-overflow-menu-select-row-1-activates.json`
+  - [ ] Select-from-dropdown keeps active visible (explicit assert / evidence):
+    - Docking already scrolls active into view, but we do not assert scroll/visibility yet.
+  - [ ] Drag end-drop on overflow header space resolves canonical insert_index:
+    - Existing docking gate covers end-drop under overflow; workspace coverage still needed.
 - [x] Add minimal unit tests where headless helpers are used by adapters.
 
 ## Non-goals

@@ -29,6 +29,7 @@ Gates:
 - Add a `fretboard diag` script that opens overflow dropdown, selects a tab, and records evidence.
   - Workspace: `tools/diag-scripts/workspace/shell-demo/workspace-shell-demo-tab-overflow-activate-hidden-smoke.json`
   - Workspace (close parity): `tools/diag-scripts/workspace/shell-demo/workspace-shell-demo-tab-overflow-close-does-not-activate.json`
+  - Docking (select row activates): `tools/diag-scripts/docking/arbitration/docking-arbitration-demo-tab-overflow-menu-select-row-1-activates.json`
 
 ## M2 — Drag/drop + end-drop surfaces closure
 
