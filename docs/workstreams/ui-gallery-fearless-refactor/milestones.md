@@ -13,6 +13,7 @@ This file defines milestones and acceptance criteria for the UI Gallery refactor
   - Code tab: show `include_str!(...)` content.
 - A documented pattern for “region slicing” (optional) to display only a portion of the snippet.
 - Tracker table (`todo.md`) records upstream doc paths (Base + Radix) for each component.
+- Snippets use user-facing imports (default: `use fret_ui_shadcn::prelude::*;`).
 
 **Acceptance criteria**
 

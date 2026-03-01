@@ -13,7 +13,7 @@ Legend:
 
 - [ ] Add `apps/fret-ui-gallery/src/ui/snippets/` with a minimal example.
 - [ ] Add a helper for `DocSection` to load code from a snippet file (and optionally a named region).
-- [ ] Document snippet conventions (file naming, required function signatures).
+- [ ] Document snippet conventions (file naming, user-facing `use` stanza, required function signatures).
 
 ### Migration batches
 

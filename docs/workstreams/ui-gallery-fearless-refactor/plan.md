@@ -79,9 +79,10 @@ Each snippet is real, compiled Rust code. Prefer snippets that are **self-contai
 their own models/state) so the copy/paste outcome is usable without hidden page-level plumbing.
 
 ```rust
-use super::super::super::super::*;
+use fret_ui_shadcn::prelude::*;
+use std::sync::Arc;
 
-pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
+pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
     // Create models/state here (or in a small helper) so the snippet is standalone.
     // Ensure any layout constraints required for parity are explicit (e.g. flex_1 + min_w_0).
     todo!()
@@ -90,6 +91,19 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
 
 If a snippet must integrate with page-level models (e.g. to keep existing diag scripts stable),
 prefer passing explicit inputs and still displaying the same file in the Code tab.
+
+#### Import policy (user-facing by default)
+
+Snippet files are the *copy/paste surface* for end users, so avoid internal-only imports like
+`super::*` or `crate::ui::*` in displayed code.
+
+Default to the “golden path” import stanza:
+
+- `use fret_ui_shadcn::prelude::*;`
+- plus small std imports as needed (`Arc`, `Rc`, etc.)
+
+If an example genuinely needs additional crates (e.g. `fret_icons` icon packs), prefer importing the
+public, user-facing symbols rather than reaching into UI Gallery internals.
 
 ### 2) Optional region slicing (for nicer displayed code)
 
