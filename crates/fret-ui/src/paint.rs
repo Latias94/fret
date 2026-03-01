@@ -306,7 +306,7 @@ mod tests {
         assert_eq!(scene.ops().len(), 1);
         match scene.ops()[0] {
             fret_core::SceneOp::Quad { background, .. } => {
-                let Paint::Solid(c) = background else {
+                let Paint::Solid(c) = background.paint else {
                     panic!("expected solid paint");
                 };
                 assert!((c.a - 0.1).abs() < 1e-6);
@@ -355,7 +355,7 @@ mod tests {
                 assert!((rect.origin.y.0 - 1.0).abs() < 1e-6);
                 assert!((rect.size.width.0 - 8.0).abs() < 1e-6);
                 assert!((corner_radii.top_left.0 - 4.0).abs() < 1e-6);
-                let Paint::Solid(c) = background else {
+                let Paint::Solid(c) = background.paint else {
                     panic!("expected solid paint");
                 };
                 assert!((c.a - 0.25).abs() < 1e-6);
@@ -393,7 +393,7 @@ mod tests {
         assert_eq!(scene.ops().len(), 1);
         match scene.ops()[0] {
             fret_core::SceneOp::Quad { background, .. } => {
-                let Paint::Solid(c) = background else {
+                let Paint::Solid(c) = background.paint else {
                     panic!("expected solid paint");
                 };
                 assert!((c.a - 0.1).abs() < 1e-6);
