@@ -65,6 +65,24 @@ touch pointer stream while still being deterministic in desktop runners.
 
 - Out of scope for v1 (DnD keyboard sensors are explicitly non-goals in ADR 0157).
 
+## Why pointer capture matters (implementation reality)
+
+`fret-dnd` sensors are advanced by whichever UI region forwards pointer events to the controller.
+If a "handle" region does **not** capture the pointer on down, then once the pointer leaves the
+handle bounds:
+
+- the handle may stop receiving move/up/cancel events,
+- the sensor will stay in "tracking" (pending) state until it sees an up/cancel,
+- Carousel will (by design) refuse to start swiping while any sensor is tracking the pointer,
+  resulting in an "inert" drag where neither DnD nor Carousel makes progress.
+
+Therefore, the recommended recipe pattern is:
+
+- the DnD handle captures the pointer on down,
+- the handle forwards move/up/cancel events to `fret-ui-kit::dnd`,
+- Carousel uses `pointer_is_tracking_any_sensor(...)` as a safety net to avoid accidental scroll
+  capture when a DnD session is pending/active.
+
 ## Concrete activation constraints (suggested)
 
 These are not hard contracts; they are defaults for recipes that need both behaviors.
@@ -107,3 +125,9 @@ Existing gates (ui-gallery):
 - Body swipe + buttons: `tools/diag-scripts/ui-gallery/carousel/ui-gallery-carousel-demo-swipe-and-buttons.json`
 - Handle DnD arbitration: `tools/diag-scripts/ui-gallery/carousel/ui-gallery-carousel-demo-dnd-handle-gate.json`
 - Long-press DnD arbitration: `tools/diag-scripts/ui-gallery/carousel/ui-gallery-carousel-demo-dnd-long-press-gate.json`
+
+Unit gates (recipe-level):
+
+- `ecosystem/fret-ui-shadcn/tests/carousel_dnd_arbitration.rs`
+  - `carousel_dnd_tracking_blocks_carousel_drag_when_handle_does_not_capture`
+  - `carousel_dnd_handle_capture_enables_dnd_activation_without_carousel_scroll`
