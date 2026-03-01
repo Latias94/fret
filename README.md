@@ -39,7 +39,13 @@ Long-term, ecosystem crates may move to a separate components repository.
 Fret draws inspiration from:
 
 - `Zed` / `GPUI` style UX and editor workflows.
-- Mature web UI design systems (shadcn/Radix patterns) translated into Rust-native APIs.
+- Mature web UI design systems translated into Rust-native APIs (shadcn/Radix-style patterns).
+
+Upstream/reference links live closer to the code that uses them:
+
+- [`ecosystem/fret-ui-shadcn/README.md`](ecosystem/fret-ui-shadcn/README.md) (shadcn/Radix/cmdk/Base UI references)
+- [`ecosystem/fret-ui-headless/README.md`](ecosystem/fret-ui-headless/README.md) (behavioral ports like cmdk score + Embla)
+- [`docs/reference-stack-ui-behavior.md`](docs/reference-stack-ui-behavior.md) (APG + Radix + Floating UI + cmdk)
 
 The goal is to provide a smooth, general-purpose application framework that scales from app UIs to editor-class products.
 

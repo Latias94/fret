@@ -76,6 +76,7 @@ pub(super) fn handle_ensure_visible_step(
         snapshot,
         window_bounds,
         window,
+        active.scope_root_for_window(window),
         input_ctx,
         element_runtime,
         app.global::<fret_runtime::WindowTextInputSnapshotService>()

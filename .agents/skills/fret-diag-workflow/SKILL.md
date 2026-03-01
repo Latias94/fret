@@ -21,6 +21,7 @@ Use `fret-ui-review` when the goal is an architecture/UX audit rather than produ
 - Do **not** `cat` / `Get-Content` a raw `bundle.json` (same explosion risk; it is frequently megabytes-to-hundreds-of-MB).
 - Prefer bounded tooling queries:
   - `fretboard diag meta ...`
+  - `fretboard diag windows ...`
   - `fretboard diag query ...`
   - `fretboard diag slice ...`
 - When you need repository-wide search, use `tools/rg-safe.ps1` (excludes diag artifact directories and bundle artifacts).
@@ -35,6 +36,19 @@ Use `fret-ui-review` when the goal is an architecture/UX audit rather than produ
 ## Best practices (repeatable habits)
 
 - Prefer `--launch` for determinism; avoid relying on parent-shell `FRET_DIAG_*` for tool-launched runs.
+- Treat `--dir` (`FRET_DIAG_DIR`) as a **session boundary**:
+  - Do not share the same out dir between multiple concurrent runs (multiple terminals, multiple AI agents, or multiple
+    demos at once). The filesystem transport uses shared control-plane files (`*.touch`, `script.json`, `script.result.json`,
+    `latest.txt`), so concurrent runs in the same directory will race and produce misleading results.
+  - Recommendation: always pass an explicit, unique `--dir` per agent/task.
+    - Example: `--dir target/fret-diag-agent-a` and `--dir target/fret-diag-agent-b`
+    - Example: `--dir target/fret-diag-issue-1234`
+  - If you are using `--launch`, prefer `--session-auto` so tooling creates an isolated session root under the base dir:
+    - Example: `--dir target/fret-diag-agent-a --session-auto --launch -- <cmd...>`
+    - Discover sessions (bounded): `fretboard diag list sessions --dir target/fret-diag-agent-a`
+    - Clean old sessions (dry-run by default): `fretboard diag sessions clean --dir target/fret-diag-agent-a --keep 50`
+  - Avoid relying on a global `latest.txt` outside a session; prefer per-run `manifest.json` + `script.result.json` and
+    session listing commands.
 - Before rerunning a suspiciously large or inconsistent run:
   - `fretboard diag config doctor --mode launch --print-launch-policy`
   - `fretboard diag config doctor --mode launch --report-json` (inspect `launch_policy` + warnings)

@@ -17,3 +17,6 @@ Experimental learning project (not production-ready).
 - Sortable insertion helpers
 - Auto-scroll request computation
 
+## Upstream references (non-normative)
+
+- dnd-kit (headless drag-and-drop patterns and vocabulary): https://github.com/clauderic/dnd-kit

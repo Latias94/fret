@@ -104,33 +104,21 @@ pub(in crate::ui) fn preview_material3_text_field(
     .refine_layout(LayoutRefinement::default().w_full().min_w_0())
     .into_element(cx);
 
+    let focus_accent = fret_ui_kit::colors::linear_from_hex_rgb(0x33_cc_66);
+    let hover_accent = fret_ui_kit::colors::linear_from_hex_rgb(0xe5_33_e5);
+
     let override_style = material3::TextFieldStyle::default()
         .outline_color(WidgetStateProperty::new(None).when(
             WidgetStates::FOCUS_VISIBLE,
-            Some(ColorRef::Color(fret_core::Color {
-                r: 0.2,
-                g: 0.8,
-                b: 0.4,
-                a: 1.0,
-            })),
+            Some(ColorRef::Color(focus_accent)),
         ))
         .caret_color(WidgetStateProperty::new(Some(ColorRef::Color(
-            fret_core::Color {
-                r: 0.2,
-                g: 0.8,
-                b: 0.4,
-                a: 1.0,
-            },
+            focus_accent,
         ))))
-        .placeholder_color(WidgetStateProperty::new(None).when(
-            WidgetStates::HOVERED,
-            Some(ColorRef::Color(fret_core::Color {
-                r: 0.9,
-                g: 0.2,
-                b: 0.9,
-                a: 1.0,
-            })),
-        ));
+        .placeholder_color(
+            WidgetStateProperty::new(None)
+                .when(WidgetStates::HOVERED, Some(ColorRef::Color(hover_accent))),
+        );
     let override_field = material3::TextField::new(value)
         .variant(material3::TextFieldVariant::Outlined)
         .label("Override")

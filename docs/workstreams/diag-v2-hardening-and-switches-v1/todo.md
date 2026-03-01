@@ -32,7 +32,7 @@ This file is a check-list style tracker. Milestone framing lives in `milestones.
 - [x] Scrub all inherited `FRET_DIAG_*` env vars in `--launch` mode (prefix-based) so parent-shell overrides cannot
   silently drift tool-launched runs.
 - [x] Audit `--launch` entry points to ensure a single per-run config writer is used (`diag run/suite/repro/perf/repeat`
-  funnel through `maybe_launch_demo`).
+  funnel through `maybe_launch_demo`; evidence: `crates/fret-diag/src/compare.rs:maybe_launch_demo`).
 - [x] Tool-launched output safety defaults:
   - [x] `script_auto_dump=false` (avoid "dump on every injected step" explosions)
   - [x] `pick_auto_dump=false` (avoid "dump on every pick" explosions)
@@ -41,6 +41,51 @@ This file is a check-list style tracker. Milestone framing lives in `milestones.
   layout fast-path frames), so bundles never capture a focused node with empty bounds.
 - [x] Add an opt-in pointer input isolation knob for tool-launched scripted runs so accidental real mouse movement/clicks
   do not perturb deterministic playback (especially for cross-window docking/tear-off).
+
+## P0.6: Concurrency hygiene (multiple agents)
+
+- [x] Document that `--dir` / `FRET_DIAG_DIR` is a session boundary and must not be shared across concurrent runs
+  (multiple terminals, multiple AI agents). Evidence:
+  - `docs/ui-diagnostics-and-scripted-tests.md`
+  - `docs/workstreams/diag-v2-hardening-and-switches-v1/per-run-layout.md`
+  - skill: `.agents/skills/fret-diag-workflow/SKILL.md`
+- [x] Design and implement a session-root layout for tool-launched runs so agents can run in parallel without inventing
+  directory naming conventions. Proposed design: `docs/workstreams/diag-v2-hardening-and-switches-v1/concurrency-and-sessions.md`.
+  - [x] Add `--session-auto` / `--session <id>` for tool-launched commands (`--launch`) that makes the effective out dir
+    `<base_dir>/sessions/<session_id>/`.
+  - [x] Add a small `session.json` metadata file in the session root (best-effort).
+  - [x] Add a safe discovery command (bounded output): `diag list sessions --dir <base_dir>`.
+  - [x] Add a safe cleanup command (dry-run by default): `diag sessions clean --dir <base_dir> --keep <n> [--apply]`.
+
+## P1: Agent-native script ergonomics (ImGui-alignment outcomes)
+
+Track design + roadmap:
+
+- `docs/workstreams/diag-v2-hardening-and-switches-v1/ai-era-debugging-stack.md`
+
+Planned outcomes:
+
+- [ ] Named references / scopes (ImGui `SetRef(...)`-style ergonomics, but semantics-first).
+  - [ ] Add a script-level `ref` concept (a named selector + optional `window` target).
+  - [x] Add steps to set/clear a base ref so subsequent selector-driven steps can be scoped to a subtree:
+    - `set_base_ref` / `clear_base_ref` (schema v2)
+    - runtime scopes selector resolution while a base ref is active
+  - [ ] Ensure the feature is capability-gated (tooling-side) and does not leak policy into `fret-ui`.
+- [ ] Multi-viewport docking evidence (make cross-window failures explainable, not just “timeout”):
+  - [x] Export a bounded `window.map.json` sidecar in bundle export dirs (window ids + last bounds + hover detection).
+  - [ ] Record input routing decisions for dock/tear-out flows (why a hover/click went to a different window).
+  - [x] Add a bounded `diag windows <bundle_dir|bundle.schema2.json>` query to avoid opening large artifacts.
+- [ ] Fast mode policy (determinism + speed):
+  - [ ] Make “fast mode vs human-speed” explicit via config (stabilization defaults, animation handling).
+  - [ ] Add a bounded “fast mode” smoke suite (runs faster than today without introducing flake).
+- [ ] Headless seed (CI-friendly):
+  - [ ] Define the minimum supported headless target for native runners.
+  - [ ] Add one end-to-end headless smoke suite that produces the same bounded artifacts (manifest + sidecars).
+
+## P2: Time-series visual evidence (optional, evidence UX)
+
+- [ ] Add an opt-in export for bounded time-series screenshots (PNG sequence around failure).
+- [ ] Optional: add tooling-side GIF encoding as a post-process (not required for core correctness gates).
 
 ## P0.5: Script library modularization (UX scalability)
 

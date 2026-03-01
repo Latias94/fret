@@ -203,7 +203,10 @@ pub(super) fn preview_card(
 
         let list = stack::vstack(
             cx,
-            stack::VStackProps::default().gap(Space::N2).items_start(),
+            stack::VStackProps::default()
+                .gap(Space::N2)
+                .items_stretch()
+                .layout(LayoutRefinement::default().w_full()),
             |cx| {
                 let paragraph = ui::text(
                     cx,
@@ -245,24 +248,28 @@ pub(super) fn preview_card(
                                      n: &str,
                                      content: &str,
                                      test_id: Option<&'static str>| {
-                                        let body = ui::text(cx, content)
-                                            .text_sm()
-                                            .flex_1()
-                                            .min_w_0()
-                                            .into_element(cx);
-                                        let body = match test_id {
-                                            Some(id) => body.test_id(id),
-                                            None => body,
-                                        };
-
-                                        stack::hstack(
+                                        let row = stack::hstack(
                                             cx,
                                             stack::HStackProps::default()
                                                 .gap(Space::N2)
                                                 .items_start()
                                                 .layout(LayoutRefinement::default().w_full()),
-                                            |cx| vec![marker(cx, n), body],
-                                        )
+                                            |cx| {
+                                                vec![
+                                                    marker(cx, n),
+                                                    ui::text(cx, content)
+                                                        .text_sm()
+                                                        .flex_1()
+                                                        .min_w_0()
+                                                        .into_element(cx),
+                                                ]
+                                            },
+                                        );
+
+                                        match test_id {
+                                            Some(id) => row.test_id(id),
+                                            None => row,
+                                        }
                                     };
 
                                 vec![
@@ -381,10 +388,8 @@ pub(super) fn preview_card(
                     decl_style::container_props(
                         &theme,
                         ChromeRefinement::default().bg(ColorRef::Color(CoreColor {
-                            r: 0.0,
-                            g: 0.0,
-                            b: 0.0,
                             a: 0.35,
+                            ..CoreColor::from_srgb_hex_rgb(0x00_00_00)
                         })),
                         LayoutRefinement::default()
                             .absolute()
@@ -735,16 +740,16 @@ pub(super) fn preview_card(
     ])
     .into_element(cx),
     shadcn::CardContent::new(vec![
-        ui::text_block(
-            cx,
-            "Client requested dashboard redesign with focus on mobile responsiveness.",
-        )
+        ui::text(cx, "Client requested dashboard redesign with focus on mobile responsiveness.")
             .text_sm()
             .into_element(cx),
         // `ol.list-decimal.pl-6`-style: keep the marker out of the text flow.
         stack::vstack(
             cx,
-            stack::VStackProps::default().gap(Space::N2).items_stretch(),
+            stack::VStackProps::default()
+                .gap(Space::N2)
+                .items_stretch()
+                .layout(LayoutRefinement::default().w_full()),
             |cx| {
                 let marker = |cx: &mut ElementContext<'_, App>, n: &str| {
                     ui::text(cx, n)

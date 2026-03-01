@@ -637,17 +637,13 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                 .or(focused_target)
                 .and_then(|port| geom.port_center(port))
                 .unwrap_or(w.pos);
-            let invalid = interaction_hint.invalid.unwrap_or(Color {
-                r: 0.90,
-                g: 0.35,
-                b: 0.35,
+            let invalid = interaction_hint.invalid.unwrap_or_else(|| Color {
                 a: 0.95,
+                ..Color::from_srgb_hex_rgb(0xe6_59_59)
             });
-            let convertible = interaction_hint.convertible.unwrap_or(Color {
-                r: 0.95,
-                g: 0.75,
-                b: 0.20,
+            let convertible = interaction_hint.convertible.unwrap_or_else(|| Color {
                 a: 0.95,
+                ..Color::from_srgb_hex_rgb(0xf2_bf_33)
             });
             let preview = interaction_hint
                 .preview_wire

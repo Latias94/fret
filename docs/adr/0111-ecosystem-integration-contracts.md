@@ -170,7 +170,7 @@ This repository already contains exemplars:
 - Markdown: `ecosystem/fret-markdown`
 - Docking policy: `ecosystem/fret-docking`
 - Design system surface: `ecosystem/fret-ui-shadcn`
-- UI render asset caches: `ecosystem/fret-ui-assets` (re-export wrapper over `fret-asset-cache`)
+- UI render asset caches: `ecosystem/fret-ui-assets`
 
 As these stabilize, we can tighten this ADR into a more prescriptive guide and/or extract a “third-party checklist”.
 

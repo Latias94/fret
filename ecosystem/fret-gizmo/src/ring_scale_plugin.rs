@@ -28,16 +28,12 @@ impl Default for RingScaleGizmoConfig {
             segments: 64,
             depth: DepthMode::Always,
             color: Color {
-                r: 0.95,
-                g: 0.82,
-                b: 0.25,
                 a: 0.75,
+                ..Color::from_srgb_hex_rgb(0xf2_d1_40)
             },
             hover_color: Color {
-                r: 1.0,
-                g: 0.92,
-                b: 0.42,
                 a: 0.95,
+                ..Color::from_srgb_hex_rgb(0xff_eb_6b)
             },
             scale_snap_step: Some(0.1),
         }

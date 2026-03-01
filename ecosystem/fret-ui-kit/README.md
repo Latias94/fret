@@ -28,6 +28,9 @@ This project is inspired by many open-source projects. Thanks to the authors and
 - shadcn/ui: https://github.com/shadcn-ui/ui
 - Radix UI Primitives: https://github.com/radix-ui/primitives
 - MUI Base UI: https://github.com/mui/base-ui
+- Floating UI: https://github.com/floating-ui/floating-ui
 - Animata: https://github.com/codse/animata
 - Motion (motion.dev): https://github.com/motiondivision/motion
 - Flutter: https://github.com/flutter/flutter
+- Dear ImGui: https://github.com/ocornut/imgui
+- dear-imgui-rs: https://github.com/Latias94/dear-imgui-rs

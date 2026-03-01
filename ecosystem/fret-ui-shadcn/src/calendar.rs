@@ -132,6 +132,39 @@ impl CalendarLocale {
         }
     }
 
+    pub(crate) fn month_name_short(self, month: Month) -> &'static str {
+        match self {
+            Self::En => match month {
+                Month::January => "Jan",
+                Month::February => "Feb",
+                Month::March => "Mar",
+                Month::April => "Apr",
+                Month::May => "May",
+                Month::June => "Jun",
+                Month::July => "Jul",
+                Month::August => "Aug",
+                Month::September => "Sep",
+                Month::October => "Oct",
+                Month::November => "Nov",
+                Month::December => "Dec",
+            },
+            Self::Es => match month {
+                Month::January => "ene",
+                Month::February => "feb",
+                Month::March => "mar",
+                Month::April => "abr",
+                Month::May => "may",
+                Month::June => "jun",
+                Month::July => "jul",
+                Month::August => "ago",
+                Month::September => "sep",
+                Month::October => "oct",
+                Month::November => "nov",
+                Month::December => "dic",
+            },
+        }
+    }
+
     pub(crate) fn weekday_name(self, weekday: Weekday) -> &'static str {
         match self {
             Self::En => match weekday {
@@ -849,10 +882,12 @@ impl Calendar {
                                                     ))
                                                 });
 
-                                            // shadcn/ui `Calendar` dropdown caption layout uses compact,
-                                            // input-like triggers (h-8, px-2) inside the month caption row.
+                                            // shadcn/ui v4 `Calendar` dropdown caption layout uses compact,
+                                            // input-like triggers (h-8, pl-2 pr-1, gap-1, font-medium) inside
+                                            // the month caption row.
                                             let caption_select_chrome = ChromeRefinement::default()
-                                                .px(Space::N2)
+                                                .pl(Space::N2)
+                                                .pr(Space::N1)
                                                 .py(Space::N1);
                                             let caption_select_layout = LayoutRefinement::default()
                                                 .h_px(day_size)
@@ -875,6 +910,10 @@ impl Calendar {
                                             let month_select = month_select
                                                 .refine_style(caption_select_chrome.clone())
                                                 .refine_layout(caption_select_layout.clone())
+                                                .trigger_gap(Space::N1)
+                                                .trigger_chevron_size(Px(14.0))
+                                                .trigger_chevron_opacity(1.0)
+                                                .trigger_font_weight(FontWeight::MEDIUM)
                                                 .side_offset(Px(0.0))
                                                 .position(SelectPosition::Popper)
                                                 .on_value_change(move |host, _acx, raw| {
@@ -920,51 +959,51 @@ impl Calendar {
                                                 .items([
                                                     SelectItem::new(
                                                         "1",
-                                                        locale.month_name(Month::January),
+                                                        locale.month_name_short(Month::January),
                                                     ),
                                                     SelectItem::new(
                                                         "2",
-                                                        locale.month_name(Month::February),
+                                                        locale.month_name_short(Month::February),
                                                     ),
                                                     SelectItem::new(
                                                         "3",
-                                                        locale.month_name(Month::March),
+                                                        locale.month_name_short(Month::March),
                                                     ),
                                                     SelectItem::new(
                                                         "4",
-                                                        locale.month_name(Month::April),
+                                                        locale.month_name_short(Month::April),
                                                     ),
                                                     SelectItem::new(
                                                         "5",
-                                                        locale.month_name(Month::May),
+                                                        locale.month_name_short(Month::May),
                                                     ),
                                                     SelectItem::new(
                                                         "6",
-                                                        locale.month_name(Month::June),
+                                                        locale.month_name_short(Month::June),
                                                     ),
                                                     SelectItem::new(
                                                         "7",
-                                                        locale.month_name(Month::July),
+                                                        locale.month_name_short(Month::July),
                                                     ),
                                                     SelectItem::new(
                                                         "8",
-                                                        locale.month_name(Month::August),
+                                                        locale.month_name_short(Month::August),
                                                     ),
                                                     SelectItem::new(
                                                         "9",
-                                                        locale.month_name(Month::September),
+                                                        locale.month_name_short(Month::September),
                                                     ),
                                                     SelectItem::new(
                                                         "10",
-                                                        locale.month_name(Month::October),
+                                                        locale.month_name_short(Month::October),
                                                     ),
                                                     SelectItem::new(
                                                         "11",
-                                                        locale.month_name(Month::November),
+                                                        locale.month_name_short(Month::November),
                                                     ),
                                                     SelectItem::new(
                                                         "12",
-                                                        locale.month_name(Month::December),
+                                                        locale.month_name_short(Month::December),
                                                     ),
                                                 ])
                                                 .into_element(cx);
@@ -991,6 +1030,10 @@ impl Calendar {
                                             let year_select = year_select
                                                 .refine_style(caption_select_chrome.clone())
                                                 .refine_layout(caption_select_layout.clone())
+                                                .trigger_gap(Space::N1)
+                                                .trigger_chevron_size(Px(14.0))
+                                                .trigger_chevron_opacity(1.0)
+                                                .trigger_font_weight(FontWeight::MEDIUM)
                                                 .side_offset(Px(0.0))
                                                 .position(SelectPosition::Popper)
                                                 .on_value_change(move |host, _acx, raw| {

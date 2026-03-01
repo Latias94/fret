@@ -28,7 +28,6 @@ ui-app-driver = [
   "fret-ui/diagnostics",
   "dep:fret-ui-app",
   "dep:fret-ui-kit",
-  "dep:fret-ui-literals",
 ]
 ui-app-command-palette = ["ui-app-driver", "dep:fret-ui-shadcn"]
 tracing = ["dep:tracing", "dep:tracing-subscriber"]
@@ -63,7 +62,6 @@ fret-i18n-fluent = { version = "0.1.0", path = "../fret-i18n-fluent" }
 fret-ui-kit = { version = "0.1.0", path = "../fret-ui-kit", optional = true }
 fret-ui-shadcn = { version = "0.1.0", path = "../fret-ui-shadcn", optional = true }
 fret-ui-assets = { version = "0.1.0", path = "../fret-ui-assets", optional = true }
-fret-ui-literals = { version = "0.1.0", path = "../fret-ui-literals", optional = true }
 fret-icons-lucide = { version = "0.1.0", path = "../fret-icons-lucide", optional = true, default-features = false }
 fret-icons-radix = { version = "0.1.0", path = "../fret-icons-radix", optional = true, default-features = false }
 subsecond = { version = "0.7.2", optional = true }

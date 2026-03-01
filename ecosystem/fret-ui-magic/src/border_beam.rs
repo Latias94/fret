@@ -42,16 +42,12 @@ impl Default for BorderBeamProps {
             background: Color::TRANSPARENT,
             border: Edges::all(Px(1.0)),
             border_base: Color {
-                r: 1.0,
-                g: 1.0,
-                b: 1.0,
                 a: 0.12,
+                ..Color::from_srgb_hex_rgb(0xff_ff_ff)
             },
             beam_color: Color {
-                r: 0.95,
-                g: 0.95,
-                b: 1.0,
                 a: 0.8,
+                ..Color::from_srgb_hex_rgb(0xf2_f2_ff)
             },
             beam_radius: Px(140.0),
             speed_rps: 0.25,

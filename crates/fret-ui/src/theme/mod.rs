@@ -309,12 +309,7 @@ fn default_color_tokens(colors: ThemeColors) -> HashMap<String, Color> {
     // These are used by engine-pass gizmos and are theme-overridable via JSON theme configs.
     out.insert(
         "color.viewport.gizmo.z".to_string(),
-        Color {
-            r: 0.2,
-            g: 0.5,
-            b: 1.0,
-            a: 1.0,
-        },
+        Color::from_srgb_hex_rgb(0x33_80_ff),
     );
     out.insert(
         "color.viewport.gizmo.hover".to_string(),
@@ -323,19 +318,15 @@ fn default_color_tokens(colors: ThemeColors) -> HashMap<String, Color> {
     out.insert(
         "color.viewport.view_gizmo.face".to_string(),
         Color {
-            r: 0.22,
-            g: 0.22,
-            b: 0.24,
             a: 0.35,
+            ..Color::from_srgb_hex_rgb(0x38_38_3d)
         },
     );
     out.insert(
         "color.viewport.view_gizmo.edge".to_string(),
         Color {
-            r: 0.95,
-            g: 0.95,
-            b: 0.98,
             a: 0.90,
+            ..Color::from_srgb_hex_rgb(0xf2_f2_fa)
         },
     );
 

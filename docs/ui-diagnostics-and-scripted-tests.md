@@ -56,6 +56,18 @@ Implementation pointers (where the code lives today):
 
 By default bundles go under `target/fret-diag/<timestamp>/` and `target/fret-diag/latest.txt` is updated.
 
+Concurrency note (important for automation / AI agents):
+
+- The filesystem transport uses shared control-plane files under the out dir (`script.json`, `script.touch`,
+  `script.result.json`, `trigger.touch`, `latest.txt`, etc). **Do not** point multiple concurrent runs (multiple
+  terminals, multiple agents, or multiple demos) at the same `FRET_DIAG_DIR`.
+- Recommendation: treat `--dir` as a session boundary and always pass a unique out dir per agent/task:
+  - `cargo run -p fretboard -- diag run <script> --dir target/fret-diag-agent-a --launch -- <cmd...>`
+  - `cargo run -p fretboard -- diag suite <suite> --dir target/fret-diag-issue-1234 --launch -- <cmd...>`
+- If you are using `--launch`, prefer `--session-auto` so tooling allocates an isolated session dir automatically:
+  - `cargo run -p fretboard -- diag run <script> --dir target/fret-diag-agent-a --session-auto --launch -- <cmd...>`
+  - `cargo run -p fretboard -- diag suite <suite> --dir target/fret-diag-agent-a --session-auto --launch -- <cmd...>`
+
 ## Bundle schema (v2) and semantics mode
 
 The runtime exports **schema v2** bundles (semantics tables + per-snapshot fingerprints).
@@ -801,7 +813,7 @@ Supported selectors (v1 MVP):
 - `set_cursor_in_window` (schema v2 only; runner-level cursor override using window-client physical pixels; intended for cross-window routing without hardcoding DPI)
 - `set_mouse_buttons` (schema v2 only; runner-level mouse button state override; capability-gated behind `diag.mouse_buttons_override`)
 - `inject_incoming_open` (schema v2 only; simulates "open in..." / share-target flows; capability-gated behind `diag.incoming_open_inject`)
-- `drag_pointer_until` (schema v2 only; optional `window` target; drag across frames until a predicate passes or timeout; intended for cross-window routing)
+- `drag_pointer_until` (schema v2 only; optional `window` target; drag across frames until a predicate passes or timeout; intended for cross-window routing; optional `release_on_success` to end while keeping the pointer pressed)
 
 Pointer kind note (as of 2026-02-27):
 
@@ -886,7 +898,7 @@ Supported intent steps (v2):
 - `raise_window` (emit `WindowRequest::Raise`)
 - `set_cursor_screen_pos` (write a best-effort cursor override for desktop runners to consume during cross-window drags; screen-space physical pixels)
 - `set_cursor_in_window` (write a window-targeted cursor override for desktop runners to consume during cross-window drags; window-client physical pixels)
-- `drag_pointer_until` (drag until a predicate passes, holding the session active across frames)
+- `drag_pointer_until` (drag until a predicate passes, holding the session active across frames; optional `release_on_success: false` to keep the drag pressed for follow-up evidence steps like screenshots)
 
 Desktop runner note (cursor override wire format):
 

@@ -27,6 +27,7 @@ impl UiDiagnosticsService {
             run_id,
             anchor_window,
             next_step: 0,
+            base_ref: None,
             event_log: Vec::new(),
             event_log_dropped: 0,
             event_log_active_step: None,

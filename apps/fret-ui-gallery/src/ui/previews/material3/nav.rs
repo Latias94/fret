@@ -10,6 +10,9 @@ pub(in crate::ui) fn preview_material3_tabs(
         .get_model_cloned(&value, Invalidation::Layout)
         .unwrap_or_else(|| Arc::<str>::from("<none>"));
 
+    let hover_accent = fret_ui_kit::colors::linear_from_hex_rgb(0xe5_33_e5);
+    let active_accent = fret_ui_kit::colors::linear_from_hex_rgb(0x33_cc_66);
+
     let fixed_tabs = material3::Tabs::new(value.clone())
         .a11y_label("Material 3 Tabs")
         .test_id("ui-gallery-material3-tabs")
@@ -28,33 +31,18 @@ pub(in crate::ui) fn preview_material3_tabs(
         .into_element(cx);
 
     let override_style = material3::TabsStyle::default()
-        .label_color(WidgetStateProperty::new(None).when(
-            WidgetStates::HOVERED,
-            Some(ColorRef::Color(fret_core::Color {
-                r: 0.9,
-                g: 0.2,
-                b: 0.9,
-                a: 1.0,
-            })),
-        ))
-        .state_layer_color(WidgetStateProperty::new(None).when(
-            WidgetStates::HOVERED,
-            Some(ColorRef::Color(fret_core::Color {
-                r: 0.9,
-                g: 0.2,
-                b: 0.9,
-                a: 1.0,
-            })),
-        ))
-        .active_indicator_color(WidgetStateProperty::new(None).when(
-            WidgetStates::SELECTED,
-            Some(ColorRef::Color(fret_core::Color {
-                r: 0.2,
-                g: 0.8,
-                b: 0.4,
-                a: 1.0,
-            })),
-        ));
+        .label_color(
+            WidgetStateProperty::new(None)
+                .when(WidgetStates::HOVERED, Some(ColorRef::Color(hover_accent))),
+        )
+        .state_layer_color(
+            WidgetStateProperty::new(None)
+                .when(WidgetStates::HOVERED, Some(ColorRef::Color(hover_accent))),
+        )
+        .active_indicator_color(
+            WidgetStateProperty::new(None)
+                .when(WidgetStates::SELECTED, Some(ColorRef::Color(active_accent))),
+        );
     let fixed_tabs_overridden = material3::Tabs::new(value.clone())
         .a11y_label("Material 3 Tabs (overridden)")
         .test_id("ui-gallery-material3-tabs-overridden")

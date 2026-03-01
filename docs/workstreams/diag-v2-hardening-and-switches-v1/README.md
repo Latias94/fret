@@ -24,6 +24,8 @@ Related / prerequisites:
 - Contracts: `docs/adr/0159-ui-diagnostics-snapshot-and-scripted-interaction-tests.md`, `docs/adr/0189-ui-diagnostics-extensibility-and-capabilities-v1.md`
 - Script library modularization (taxonomy + suites): `docs/workstreams/diag-v2-hardening-and-switches-v1/script-library.md`
 - Canonical per-run artifact layout: `docs/workstreams/diag-v2-hardening-and-switches-v1/per-run-layout.md`
+- Concurrency / multiple agents (sessions design): `docs/workstreams/diag-v2-hardening-and-switches-v1/concurrency-and-sessions.md`
+- Agent-era debugging stack (roadmap): `docs/workstreams/diag-v2-hardening-and-switches-v1/ai-era-debugging-stack.md`
 - Migration runbook + guardrails: `docs/workstreams/diag-v2-hardening-and-switches-v1/migration-support.md`
 - Compatibility inventory table: `docs/workstreams/diag-v2-hardening-and-switches-v1/compat-matrix.md`
 
@@ -164,6 +166,22 @@ Make configuration predictable:
     override).
   - Audit (2026-02-28): all `--launch` entry points (`diag run/suite/repro/perf/repeat/script`) call the same helper
     (`crates/fret-diag/src/compare.rs:maybe_launch_demo`) to ensure consistent per-run config + env policy.
+  - Launch entry points (2026-02-28):
+    - `diag run`: `crates/fret-diag/src/diag_run.rs` (calls `maybe_launch_demo` once per run)
+    - `diag suite`: `crates/fret-diag/src/diag_suite.rs` (calls `maybe_launch_demo` either once per suite when reusing,
+      or per-script when not reusing)
+    - `diag repro`: `crates/fret-diag/src/diag_repro.rs` (calls `maybe_launch_demo` after `launch::prepare_repro_launch`)
+    - `diag perf`: `crates/fret-diag/src/diag_perf.rs` (calls `maybe_launch_demo` per-suite/per-script depending on reuse)
+    - `diag repeat`: `crates/fret-diag/src/diag_repeat.rs`
+    - `diag script shrink`: `crates/fret-diag/src/commands/script.rs`
+    - `diag matrix`: `crates/fret-diag/src/lib.rs` (internal helper `run_script_suite_collect_bundles`)
+  - Launch invariants (enforced by `maybe_launch_demo`):
+    - tooling writes `<out_dir>/diag.config.json` and sets `FRET_DIAG_CONFIG_PATH` for the child process,
+    - failures to write the config are treated as hard `--launch` errors (no silent fallback to runtime defaults),
+    - tool-launched defaults are small-by-default (`write_bundle_json=false`, `write_bundle_schema2=true`,
+      `script_auto_dump=false`, `pick_auto_dump=false`),
+    - inherited `FRET_DIAG_*` env vars are scrubbed in `--launch` mode and tooling blocks overrides of reserved keys,
+    - tool-launched runs default to isolating external (non-script) pointer + keyboard input while scripts are active.
   - Determinism (2026-02-28): tool-launched runs default to isolating external pointer input while a script is active
     (so accidental real mouse moves/clicks don't perturb cross-window docking/tear-off playback).
     - Tooling sets `FRET_DIAG_ISOLATE_POINTER_INPUT=1` and writes

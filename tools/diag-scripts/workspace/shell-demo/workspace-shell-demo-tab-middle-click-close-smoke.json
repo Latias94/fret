@@ -1,0 +1,48 @@
+{
+  "schema_version": 2,
+  "meta": {
+    "name": "Workspace shell demo: middle click closes tab (smoke)",
+    "tags": ["workspace", "tabstrip", "close", "smoke", "gate"],
+    "required_capabilities": ["diag.script_v2"],
+    "target_hints": [
+      "Waits for a known tab in pane A to exist.",
+      "Middle-clicks the tab.",
+      "Asserts the tab is removed from the UI tree (not_exists)."
+    ]
+  },
+  "steps": [
+    { "type": "set_window_inner_size", "width_px": 1280.0, "height_px": 720.0 },
+    { "type": "wait_frames", "n": 10 },
+
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "workspace-shell-pane-pane-a-tab-doc-a-1" }
+      },
+      "timeout_frames": 240
+    },
+
+    {
+      "type": "pointer_down",
+      "window": { "kind": "current" },
+      "target": { "kind": "test_id", "id": "workspace-shell-pane-pane-a-tab-doc-a-1" },
+      "button": "middle"
+    },
+    { "type": "wait_frames", "n": 2 },
+    { "type": "pointer_up", "window": { "kind": "current" } },
+    { "type": "wait_frames", "n": 10 },
+
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "not_exists",
+        "target": { "kind": "test_id", "id": "workspace-shell-pane-pane-a-tab-doc-a-1" }
+      },
+      "timeout_frames": 240
+    },
+
+    { "type": "capture_bundle", "label": "workspace-shell-demo-tab-middle-click-close-smoke" }
+  ]
+}
+

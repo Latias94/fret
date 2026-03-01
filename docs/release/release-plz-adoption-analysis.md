@@ -65,7 +65,7 @@ Reason: app harnesses, incubating editor modules, diagnostics tools, or crates o
 - `apps/*` crates (already mostly `publish = false`):
   - `fret-demo`, `fret-demo-web`, `fret-editor`, `fret-examples`, `fretboard`, `fret-ui-gallery`, `fret-ui-gallery-web`, `fret-svg-atlas-stress`
 - Incubating ecosystem/editor crates:
-  - `fret-docking`, `fret-code-editor*`, `fret-code-view`, `fret-markdown`, `fret-plot*`, `fret-chart`, `delinea`, `fret-ui-material3`, `fret-ui-ai`, `fret-undo`, `fret-gizmo`, `fret-workspace`, `fret-renderdoc`, `fret-asset-cache`, `fret-bootstrap`, `fret-ui-assets`, `fret-i18n-fluent`, `fret-icons-lucide`, `fret-icons-radix`
+  - `fret-docking`, `fret-code-editor*`, `fret-code-view`, `fret-markdown`, `fret-plot*`, `fret-chart`, `delinea`, `fret-ui-material3`, `fret-ui-ai`, `fret-undo`, `fret-gizmo`, `fret-workspace`, `fret-renderdoc`, `fret-bootstrap`, `fret-ui-assets`, `fret-i18n-fluent`, `fret-icons-lucide`, `fret-icons-radix`
 
 Special note for `v0.1`:
 

@@ -20,7 +20,7 @@ use crate::commands::{
 use crate::layout::{WorkspacePaneLayout, WorkspacePaneTree, WorkspaceWindowLayout};
 use crate::tab_drag::{
     DRAG_KIND_WORKSPACE_TAB, WorkspacePaneDragGeometry, WorkspaceTabDragState,
-    WorkspaceTabDropIntent, WorkspaceTabDropZone, WorkspaceTabInsertionSide,
+    WorkspaceTabDropIntent, WorkspaceTabDropZone, WorkspaceTabHitRect, WorkspaceTabInsertionSide,
     resolve_workspace_tab_drop_intent,
 };
 
@@ -123,6 +123,23 @@ fn compute_drop_zone_for_position(
     )
     .map(drop_zone_for_edge)
     .unwrap_or(WorkspaceTabDropZone::Center)
+}
+
+fn tab_strip_row_contains_pointer(pointer: Point, tab_rects: &[WorkspaceTabHitRect]) -> bool {
+    if tab_rects.is_empty() {
+        return false;
+    }
+    let mut min_y: Option<f32> = None;
+    let mut max_y: Option<f32> = None;
+    for r in tab_rects {
+        let top = r.rect.origin.y.0;
+        let bottom = r.rect.origin.y.0 + r.rect.size.height.0;
+        min_y = Some(min_y.map_or(top, |prev| prev.min(top)));
+        max_y = Some(max_y.map_or(bottom, |prev| prev.max(bottom)));
+    }
+    min_y.is_some_and(|min_y| {
+        max_y.is_some_and(|max_y| pointer.y.0 >= min_y && pointer.y.0 <= max_y)
+    })
 }
 
 fn drop_preview_element<H: UiHost>(
@@ -728,11 +745,19 @@ where
                             .iter()
                             .find(|(id, _)| id.as_ref() == pane_id.as_ref())
                             .map(|(_, g)| *g);
-                        let next_zone = geom
+                        let mut next_zone = geom
                             .map(|geom| {
                                 compute_drop_zone_for_position(geom, drag.position, st.hovered_zone)
                             })
                             .unwrap_or(WorkspaceTabDropZone::Center);
+                        if next_zone != WorkspaceTabDropZone::Center
+                            && tab_strip_row_contains_pointer(
+                                drag.position,
+                                &st.hovered_pane_tab_rects,
+                            )
+                        {
+                            next_zone = WorkspaceTabDropZone::Center;
+                        }
 
                         if st.hovered_pane.as_deref() != Some(pane_id.as_ref())
                             || st.hovered_zone != Some(next_zone)
@@ -814,6 +839,15 @@ where
                             .unwrap_or_else(|| {
                                 st.hovered_zone.unwrap_or(WorkspaceTabDropZone::Center)
                             });
+                        let zone = if zone != WorkspaceTabDropZone::Center
+                            && tab_strip_row_contains_pointer(
+                                drag.position,
+                                &st.hovered_pane_tab_rects,
+                            ) {
+                            WorkspaceTabDropZone::Center
+                        } else {
+                            zone
+                        };
 
                         intent = resolve_workspace_tab_drop_intent(st, &pane_id, zone);
 

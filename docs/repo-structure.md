@@ -46,10 +46,7 @@ Notes:
   - `fret-runner-web` (compat shim re-exporting `fret-platform-web`)
   - `fret-render` (wgpu-based renderer)
 - Integration / wiring:
-  - `fret-launch-core` (shared launcher surface; platform-SDK-free)
-  - `fret-launch-desktop` (desktop-first native launcher implementation)
-  - `fret-launch-web` (web/wasm launcher implementation)
-  - `fret-launch` (thin cross-platform facade over per-target launchers)
+  - `fret-launch` (cross-platform launcher glue: desktop-first native runner + wasm/WebGPU runner)
 - Public facade:
   - `fret` (re-exports)
 - Other core glue:
@@ -72,7 +69,7 @@ Common examples:
   - `fret-ui-shadcn`
 - "App kit" / default app policies:
   - `fret-bootstrap` (opinionated startup glue over `fret-launch`)
-  - `fret-ui-assets` (UI render asset caches; re-export surface over `fret-asset-cache`)
+  - `fret-ui-assets` (UI render asset caches and upload helpers)
 - Icons:
   - `fret-icons` (primitives/registry)
   - `fret-icons-lucide` (icon set)

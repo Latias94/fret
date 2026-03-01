@@ -26,7 +26,7 @@ In practice, new users want a GPUI-style experience:
 - minimal boilerplate to keep caches driven by the event pipeline,
 - no drift into an editor-grade asset database/import pipeline (ADR 0026 remains out of scope).
 
-We already have cache primitives in `ecosystem/fret-asset-cache` (images/SVGs), and a re-export surface
+We already have cache primitives in `ecosystem/fret-ui-assets` (images/SVGs), and a stable facade surface
 `ecosystem/fret-ui-assets` (ADR 0106), but wiring is still easy to get wrong:
 
 - `ImageAssetCache` requires `handle_event` to observe `Event::ImageRegistered` / `Event::ImageRegisterFailed`.

@@ -137,6 +137,13 @@ pub(crate) fn dispatch_simple(
             stats_json,
             meta_report,
         ),
+        "windows" => commands::windows::cmd_windows(
+            rest,
+            pack_after_run,
+            workspace_root,
+            warmup_frames,
+            stats_json,
+        ),
         "index" => commands::index::cmd_index(
             rest,
             pack_after_run,

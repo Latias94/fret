@@ -33,6 +33,15 @@ Related trackers:
 
 Important: **per-run dirs and bundle export dirs are not the same thing**.
 
+Concurrency note:
+
+- Treat `out_dir` as a **session boundary**. The filesystem transport uses shared control-plane files under `out_dir`
+  (`script.json`, `script.touch`, `script.result.json`, `trigger.touch`, `latest.txt`, etc).
+- Multiple concurrent runs must not share the same `out_dir` (multiple AI agents, multiple terminals, multiple demos),
+  otherwise trigger/result files and `latest.txt` will race.
+- For tool-launched runs (`--launch`), prefer `--session-auto` so tooling allocates a fresh isolated session root under
+  the base `--dir` automatically.
+
 ## Canonical per-run directory
 
 Required:
@@ -48,6 +57,7 @@ Optional (best-effort, may be missing depending on the run):
 - sidecars for fast queries (usually written when a bundle artifact is aliased):
   - `<out_dir>/<run_id>/bundle.meta.json`
   - `<out_dir>/<run_id>/bundle.index.json`
+  - `<out_dir>/<run_id>/window.map.json`
   - `<out_dir>/<run_id>/frames.index.json`
   - `<out_dir>/<run_id>/test_ids.index.json`
   - `<out_dir>/<run_id>/test_ids.json`
@@ -66,6 +76,7 @@ target/fret-diag/
     bundle.schema2.json          (optional alias)
     bundle.meta.json             (optional sidecar)
     bundle.index.json            (optional sidecar)
+    window.map.json              (optional sidecar)
     frames.index.json            (optional sidecar)
     test_ids.index.json          (optional sidecar)
     chunks/
@@ -85,6 +96,7 @@ target/fret-diag/
     bundle.schema2.json          (preferred)
     bundle.json                  (optional, large raw view)
     bundle.dumped.json           (optional, WS materialization metadata)
+    window.map.json              (optional sidecar)
 ```
 
 `target/fret-diag/latest.txt` contains the directory name of the most recently materialized bundle

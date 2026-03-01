@@ -1175,17 +1175,13 @@ fn editor_demo_gradient_stops_model<H: UiHost>(
     named_demo_state(cx, "imui_editor_proof_demo.model.gradient_stops", |cx| {
         let stop_0_pos = cx.app.models_mut().insert(0.0_f64);
         let stop_0_color = cx.app.models_mut().insert(Color {
-            r: 0.95,
-            g: 0.35,
-            b: 0.20,
             a: 1.0,
+            ..Color::from_srgb_hex_rgb(0xf2_59_33)
         });
         let stop_1_pos = cx.app.models_mut().insert(1.0_f64);
         let stop_1_color = cx.app.models_mut().insert(Color {
-            r: 0.20,
-            g: 0.45,
-            b: 0.95,
             a: 1.0,
+            ..Color::from_srgb_hex_rgb(0x33_73_f2)
         });
         cx.app.models_mut().insert(vec![
             GradientDemoStop {

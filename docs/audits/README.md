@@ -30,3 +30,4 @@ For current priorities and milestones, prefer:
 - Charts: `docs/audits/echarts-alignment.md`, `docs/delinea-echarts-alignment.md`
 - Plot alignment: `docs/audits/implot-alignment.md`, `docs/audits/implot3d-alignment.md`
 - Text system comparison (Fret vs Zed): `docs/audits/text-system-fret-vs-zed.md`
+- Renderer parity (Fret vs reference sources): `docs/audits/renderer-parity-2026-02.md`

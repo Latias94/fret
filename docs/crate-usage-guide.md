@@ -202,7 +202,7 @@ These crates are “real” but **policy-heavy and fast-moving**. They should re
 - **Apps:** enable `fret-bootstrap/icons-lucide` or `fret-bootstrap/icons-radix` and call the corresponding builder helper
   (`with_lucide_icons()` / `with_radix_icons()`). For custom packs, call `BootstrapBuilder::register_icon_pack(...)`.
 
-### `fret-ui-assets` / `fret-asset-cache`
+### `fret-ui-assets`
 
 **What they are:** UI render asset caches and upload helpers (images/SVG), aligned with the “resource handles + flush point” model.
 

@@ -40,6 +40,7 @@ pub(super) fn active_script_needs_semantics_snapshot(active: &ActiveScript) -> b
         | UiActionStepV2::LongPress { .. }
         | UiActionStepV2::Swipe { .. }
         | UiActionStepV2::Pinch { .. }
+        | UiActionStepV2::SetBaseRef { .. }
         | UiActionStepV2::ClickStable { .. }
         | UiActionStepV2::ClickSelectableTextSpanStable { .. }
         | UiActionStepV2::WaitBoundsStable { .. }
@@ -60,6 +61,7 @@ pub(super) fn active_script_needs_semantics_snapshot(active: &ActiveScript) -> b
         | UiActionStepV2::DragTo { .. }
         | UiActionStepV2::SetSliderValue { .. } => true,
         UiActionStepV2::ResetDiagnostics
+        | UiActionStepV2::ClearBaseRef
         | UiActionStepV2::PressKey { .. }
         | UiActionStepV2::PressShortcut { .. }
         | UiActionStepV2::TypeText { .. }
@@ -92,6 +94,8 @@ pub(super) fn script_step_kind_name(step: &UiActionStepV2) -> &'static str {
         UiActionStepV2::LongPress { .. } => "long_press",
         UiActionStepV2::Swipe { .. } => "swipe",
         UiActionStepV2::Pinch { .. } => "pinch",
+        UiActionStepV2::SetBaseRef { .. } => "set_base_ref",
+        UiActionStepV2::ClearBaseRef => "clear_base_ref",
         UiActionStepV2::ClickStable { .. } => "click_stable",
         UiActionStepV2::ClickSelectableTextSpanStable { .. } => "click_selectable_text_span_stable",
         UiActionStepV2::DragPointer { .. } => "drag_pointer",
@@ -193,6 +197,128 @@ pub(super) fn dispatch_drive_script_step(
     failure_reason: &mut Option<String>,
 ) -> DriveScriptStepDispatchOutcome {
     match step {
+        UiActionStepV2::SetBaseRef {
+            window: target_window,
+            target,
+        } => {
+            if let Some(target_window) = service.resolve_window_target_for_active_step(
+                window,
+                anchor_window,
+                target_window.as_ref(),
+            ) {
+                if target_window != window {
+                    *handoff_to = Some(target_window);
+                    output
+                        .effects
+                        .push(Effect::RequestAnimationFrame(target_window));
+                    output.request_redraw = true;
+                    active.v2_step_state = None;
+                    active.wait_until = None;
+                    active.screenshot_wait = None;
+                    return DriveScriptStepDispatchOutcome::Continue;
+                }
+            } else if target_window.is_some() {
+                *force_dump_label = Some(format!(
+                    "script-step-{step_index:04}-set_base_ref-window-not-found"
+                ));
+                *stop_script = true;
+                *failure_reason = Some("window_target_unresolved".to_string());
+                output.request_redraw = true;
+                active.v2_step_state = None;
+                active.wait_until = None;
+                active.screenshot_wait = None;
+                return DriveScriptStepDispatchOutcome::Continue;
+            }
+
+            let Some(snapshot) = semantics_snapshot else {
+                *force_dump_label = Some(format!(
+                    "script-step-{step_index:04}-set_base_ref-no-semantics"
+                ));
+                *stop_script = true;
+                *failure_reason = Some("no_semantics_snapshot".to_string());
+                active.v2_step_state = None;
+                active.wait_until = None;
+                active.screenshot_wait = None;
+                output.request_redraw = true;
+                return DriveScriptStepDispatchOutcome::Continue;
+            };
+
+            let Some(node) = select_semantics_node_with_trace(
+                snapshot,
+                window,
+                element_runtime,
+                &target,
+                None,
+                step_index as u32,
+                service.cfg.redact_text,
+                &mut active.selector_resolution_trace,
+            ) else {
+                *force_dump_label = Some(format!(
+                    "script-step-{step_index:04}-set_base_ref-no-semantics-match"
+                ));
+                *stop_script = true;
+                *failure_reason = Some("set_base_ref_no_semantics_match".to_string());
+                active.v2_step_state = None;
+                active.wait_until = None;
+                active.screenshot_wait = None;
+                output.request_redraw = true;
+                return DriveScriptStepDispatchOutcome::Continue;
+            };
+
+            active.base_ref = Some(ScriptBaseRefState {
+                window,
+                scope_root: node.id.data().as_ffi(),
+            });
+            push_script_event_log(
+                active,
+                &service.cfg,
+                UiScriptEventLogEntryV1 {
+                    unix_ms: unix_ms_now(),
+                    kind: "base_ref.set".to_string(),
+                    step_index: Some(step_index as u32),
+                    note: Some(format!(
+                        "window={} scope_root={} test_id={:?}",
+                        window.data().as_ffi(),
+                        node.id.data().as_ffi(),
+                        node.test_id
+                    )),
+                    bundle_dir: None,
+                    window: Some(window.data().as_ffi()),
+                    tick_id: Some(app.tick_id().0),
+                    frame_id: Some(app.frame_id().0),
+                    window_snapshot_seq: None,
+                },
+            );
+
+            active.v2_step_state = None;
+            active.wait_until = None;
+            active.screenshot_wait = None;
+            active.next_step = active.next_step.saturating_add(1);
+            output.request_redraw = true;
+        }
+        UiActionStepV2::ClearBaseRef => {
+            active.base_ref = None;
+            push_script_event_log(
+                active,
+                &service.cfg,
+                UiScriptEventLogEntryV1 {
+                    unix_ms: unix_ms_now(),
+                    kind: "base_ref.cleared".to_string(),
+                    step_index: Some(step_index as u32),
+                    note: None,
+                    bundle_dir: None,
+                    window: Some(window.data().as_ffi()),
+                    tick_id: Some(app.tick_id().0),
+                    frame_id: Some(app.frame_id().0),
+                    window_snapshot_seq: None,
+                },
+            );
+            active.v2_step_state = None;
+            active.wait_until = None;
+            active.screenshot_wait = None;
+            active.next_step = active.next_step.saturating_add(1);
+            output.request_redraw = true;
+        }
         step @ (UiActionStepV2::SetWindowInnerSize { .. }
         | UiActionStepV2::SetWindowOuterPosition { .. }
         | UiActionStepV2::SetCursorScreenPos { .. }

@@ -77,40 +77,16 @@ pub(in crate::ui) fn preview_material3_touch_targets(
                         });
                     }
 
-                    outline(
-                        p,
-                        0,
-                        bounds,
-                        CoreColor {
-                            r: 0.1,
-                            g: 0.8,
-                            b: 0.2,
-                            a: 0.8,
-                        },
-                    );
-                    outline(
-                        p,
-                        1,
-                        min_rect,
-                        CoreColor {
-                            r: 0.95,
-                            g: 0.75,
-                            b: 0.2,
-                            a: 0.9,
-                        },
-                    );
+                    fn srgb(hex: u32, a: f32) -> CoreColor {
+                        let mut c = fret_core::Color::from_srgb_hex_rgb(hex);
+                        c.a = a.clamp(0.0, 1.0);
+                        c
+                    }
+
+                    outline(p, 0, bounds, srgb(0x1a_cc_33, 0.8));
+                    outline(p, 1, min_rect, srgb(0xf2_bf_33, 0.9));
                     if let Some(chrome_rect) = chrome_rect {
-                        outline(
-                            p,
-                            2,
-                            chrome_rect,
-                            CoreColor {
-                                r: 0.2,
-                                g: 0.75,
-                                b: 0.95,
-                                a: 0.9,
-                            },
-                        );
+                        outline(p, 2, chrome_rect, srgb(0x33_bf_f2, 0.9));
                     }
                 });
 

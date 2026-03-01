@@ -21,19 +21,12 @@
     },
 
     {
-      "type": "pointer_down",
-      "window": { "kind": "current" },
-      "target": { "kind": "test_id", "id": "workspace-shell-pane-pane-a-tab-doc-a-0" },
-      "button": "left"
+      "type": "drag_to",
+      "from": { "kind": "test_id", "id": "workspace-shell-pane-pane-a-tab-doc-a-0" },
+      "to": { "kind": "test_id", "id": "workspace-shell-pane-pane-b-tab-strip.drop_end" },
+      "steps": 84,
+      "timeout_frames": 240
     },
-    { "type": "pointer_move", "window": { "kind": "current" }, "delta_x": 18.0, "delta_y": 0.0, "steps": 10 },
-    {
-      "type": "move_pointer",
-      "window": { "kind": "current" },
-      "target": { "kind": "test_id", "id": "workspace-shell-pane-pane-b-tab-strip.drop_end" }
-    },
-    { "type": "wait_frames", "n": 2 },
-    { "type": "pointer_up", "window": { "kind": "current" } },
 
     {
       "type": "wait_until",
@@ -49,4 +42,3 @@
     { "type": "capture_bundle", "label": "workspace-shell-demo-tab-cross-pane-move-to-end" }
   ]
 }
-
