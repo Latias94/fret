@@ -46,11 +46,11 @@ pub(super) fn state_rows(
     )
 }
 
-pub(super) fn base_items() -> Vec<shadcn::ComboboxItem> {
+pub(super) fn base_items() -> Vec<shadcn::ComboboxOption> {
     vec![
-        shadcn::ComboboxItem::new("apple", "Apple"),
-        shadcn::ComboboxItem::new("banana", "Banana"),
-        shadcn::ComboboxItem::new("orange", "Orange"),
-        shadcn::ComboboxItem::new("disabled", "Disabled").disabled(true),
+        shadcn::combobox_option("apple", "Apple"),
+        shadcn::combobox_option("banana", "Banana"),
+        shadcn::combobox_option("orange", "Orange"),
+        shadcn::combobox_option("disabled", "Disabled").disabled(true),
     ]
 }
