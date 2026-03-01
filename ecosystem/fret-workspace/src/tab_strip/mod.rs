@@ -40,6 +40,7 @@ mod interaction;
 mod kernel;
 mod layouts;
 mod state;
+mod surface;
 mod theme;
 mod utils;
 mod widgets;
@@ -343,6 +344,8 @@ impl WorkspaceTabStrip {
                     Rc::new(RefCell::new(Vec::new()));
                 let pinned_boundary_element = Cell::<Option<GlobalElementId>>::new(None);
                 let end_drop_target_element = Cell::<Option<GlobalElementId>>::new(None);
+                let overflow_control_element: Rc<Cell<Option<GlobalElementId>>> =
+                    Rc::new(Cell::new(None));
 
                 let cross_drop_target: Option<(Arc<str>, WorkspaceTabInsertionSide)> = match (
                     tab_drag_model.as_ref(),
@@ -693,6 +696,8 @@ impl WorkspaceTabStrip {
                                                                     snapshot.end_drop_target_rect;
                                                                 let scroll_viewport_rect =
                                                                     snapshot.scroll_viewport_rect;
+                                                                let overflow_control_rect =
+                                                                    snapshot.overflow_control_rect;
 
                                                                 let Some(dragged_tab) = dragged_tab else {
                                                                     return false;
@@ -755,6 +760,7 @@ impl WorkspaceTabStrip {
                                                                         pinned_boundary_rect,
                                                                         end_drop_target_rect,
                                                                         scroll_viewport_rect,
+                                                                        overflow_control_rect,
                                                                     );
                                                                 if matches!(drop_target, WorkspaceTabStripDropTarget::End) {
                                                                     drop_target = resolve_end_drop_target_in_canonical_order(
@@ -1382,6 +1388,10 @@ impl WorkspaceTabStrip {
                                 cx,
                                 end_drop_target_element.get(),
                             );
+                            let overflow_control_rect_now = bounds_for_optional_element_id(
+                                cx,
+                                overflow_control_element.get(),
+                            );
 
                             #[cfg(feature = "shadcn-context-menu")]
                             let (overflow_is_overflowing, overflow_button_test_id, overflow_entries) = {
@@ -1463,18 +1473,22 @@ impl WorkspaceTabStrip {
                             let viewport_changed = viewport_for_hit != drag_snapshot.scroll_viewport_rect;
                             let end_drop_changed =
                                 end_drop_target_rect_now != drag_snapshot.end_drop_target_rect;
+                            let overflow_control_changed =
+                                overflow_control_rect_now != drag_snapshot.overflow_control_rect;
 
                             if should_clear
                                 || (should_sync_rects
                                     && (rects_changed
                                         || pinned_boundary_changed
                                         || viewport_changed
-                                        || end_drop_changed))
+                                        || end_drop_changed
+                                        || overflow_control_changed))
                             {
                                 let rects_for_model = rects_for_hit.clone();
                                 let pinned_boundary_rect_for_model = pinned_boundary_rect_now;
                                 let viewport_for_model = viewport_for_hit;
                                 let end_drop_target_rect_for_model = end_drop_target_rect_now;
+                                let overflow_control_rect_for_model = overflow_control_rect_now;
                                 let _ = cx.app.models_mut().update(&drag_model, move |st| {
                                     if should_clear {
                                         *st = WorkspaceTabStripDragState::default();
@@ -1485,6 +1499,7 @@ impl WorkspaceTabStrip {
                                     st.pinned_boundary_rect = pinned_boundary_rect_for_model;
                                     st.scroll_viewport_rect = viewport_for_model;
                                     st.end_drop_target_rect = end_drop_target_rect_for_model;
+                                    st.overflow_control_rect = overflow_control_rect_for_model;
                                     match st.drop_target.clone() {
                                         WorkspaceTabStripDropTarget::None => {}
                                         WorkspaceTabStripDropTarget::PinnedBoundary => {
@@ -1520,14 +1535,16 @@ impl WorkspaceTabStrip {
                                         && session_dragging
                                         && session_current_window == cx.window
                                     {
-                                    let next = compute_workspace_tab_strip_drop_target(
-                                        session_position,
-                                        dragged,
-                                        &rects_for_hit,
-                                        pinned_boundary_rect_now,
-                                        end_drop_target_rect_now,
-                                        viewport_for_hit,
-                                    );
+                                        let overflow_rect = overflow_control_rect_now;
+                                        let next = compute_workspace_tab_strip_drop_target(
+                                            session_position,
+                                            dragged,
+                                            &rects_for_hit,
+                                            pinned_boundary_rect_now,
+                                            end_drop_target_rect_now,
+                                            viewport_for_hit,
+                                            overflow_rect,
+                                        );
                                     let next = match next {
                                         WorkspaceTabStripDropTarget::End => resolve_end_drop_target_in_canonical_order(
                                             pinned_by_id.as_ref(),
@@ -1716,9 +1733,15 @@ impl WorkspaceTabStrip {
                                             ];
 
                                             #[cfg(feature = "shadcn-context-menu")]
+                                            overflow_control_element.set(None);
+                                            #[cfg(feature = "shadcn-context-menu")]
                                             if overflow_is_overflowing {
                                                 let enabled = !overflow_entries.is_empty();
+                                                let overflow_control_element_for_trigger =
+                                                    overflow_control_element.clone();
                                                 let trigger = move |cx: &mut ElementContext<'_, H>| {
+                                                    overflow_control_element_for_trigger
+                                                        .set(Some(cx.root_id()));
                                                     let on_down: OnPressablePointerDown = Arc::new(|host, _acx, _down| {
                                                         host.prevent_default(
                                                             fret_runtime::DefaultAction::FocusOnPointerDown,

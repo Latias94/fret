@@ -20,6 +20,7 @@ pub(super) struct WorkspaceTabStripDragState {
     pub(super) pinned_boundary_rect: Option<Rect>,
     pub(super) end_drop_target_rect: Option<Rect>,
     pub(super) scroll_viewport_rect: Option<Rect>,
+    pub(super) overflow_control_rect: Option<Rect>,
 }
 
 #[derive(Debug, Clone)]
@@ -32,6 +33,7 @@ pub(super) struct WorkspaceTabStripDragSnapshot {
     pub(super) pinned_boundary_rect: Option<Rect>,
     pub(super) end_drop_target_rect: Option<Rect>,
     pub(super) scroll_viewport_rect: Option<Rect>,
+    pub(super) overflow_control_rect: Option<Rect>,
 }
 
 pub(super) fn read_drag_snapshot_for_pointer(
@@ -53,6 +55,7 @@ pub(super) fn read_drag_snapshot_for_pointer(
             pinned_boundary_rect: st.pinned_boundary_rect,
             end_drop_target_rect: st.end_drop_target_rect,
             scroll_viewport_rect: st.scroll_viewport_rect,
+            overflow_control_rect: st.overflow_control_rect,
         });
     });
     out

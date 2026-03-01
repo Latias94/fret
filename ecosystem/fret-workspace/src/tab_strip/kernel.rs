@@ -5,6 +5,8 @@ use fret_dnd::{AutoScrollConfig, compute_autoscroll_x};
 
 use crate::tab_drag::{WorkspaceTabHitRect, WorkspaceTabInsertionSide, compute_tab_drop_target};
 
+use super::surface::{WorkspaceTabStripSurface, classify_workspace_tab_strip_surface};
+
 #[derive(Debug, Default, Clone, PartialEq, Eq)]
 pub(crate) enum WorkspaceTabStripDropTarget {
     #[default]
@@ -14,14 +16,6 @@ pub(crate) enum WorkspaceTabStripDropTarget {
     End,
 }
 
-fn rect_contains_point(rect: Rect, point: Point) -> bool {
-    let left = rect.origin.x.0;
-    let top = rect.origin.y.0;
-    let right = rect.origin.x.0 + rect.size.width.0;
-    let bottom = rect.origin.y.0 + rect.size.height.0;
-    point.x.0 >= left && point.x.0 <= right && point.y.0 >= top && point.y.0 <= bottom
-}
-
 pub(crate) fn compute_workspace_tab_strip_drop_target(
     position: Point,
     dragged_tab_id: &str,
@@ -29,41 +23,30 @@ pub(crate) fn compute_workspace_tab_strip_drop_target(
     pinned_boundary_rect: Option<Rect>,
     end_drop_target_rect: Option<Rect>,
     scroll_viewport_rect: Option<Rect>,
+    overflow_control_rect: Option<Rect>,
 ) -> WorkspaceTabStripDropTarget {
-    if pinned_boundary_rect.is_some_and(|rect| rect_contains_point(rect, position)) {
-        return WorkspaceTabStripDropTarget::PinnedBoundary;
-    }
+    let surface = classify_workspace_tab_strip_surface(
+        position,
+        dragged_tab_id,
+        tab_rects,
+        pinned_boundary_rect,
+        end_drop_target_rect,
+        scroll_viewport_rect,
+        overflow_control_rect,
+    );
 
-    if end_drop_target_rect.is_some_and(|rect| rect_contains_point(rect, position)) {
-        return WorkspaceTabStripDropTarget::End;
-    }
-
-    if let Some(viewport) = scroll_viewport_rect
-        && rect_contains_point(viewport, position)
-    {
-        let mut max_right: Option<f32> = None;
-        for r in tab_rects.iter().filter(|r| r.id.as_ref() != dragged_tab_id) {
-            let right = r.rect.origin.x.0 + r.rect.size.width.0;
-            max_right = Some(max_right.map_or(right, |prev| prev.max(right)));
+    match surface {
+        WorkspaceTabStripSurface::Outside | WorkspaceTabStripSurface::OverflowControl => {
+            WorkspaceTabStripDropTarget::None
         }
-
-        if let Some(max_right) = max_right {
-            // If the pointer is in the "header space" to the right of the last tab, prefer an
-            // explicit "end of strip" target so shells can treat this as "insert at end" without
-            // relying on the last tab's hit-testing.
-            if position.x.0 > max_right {
-                return WorkspaceTabStripDropTarget::End;
-            }
-        } else {
-            // No measurable tabs (or only the dragged tab). When the pointer is still inside the
-            // strip, treat it as an "end" target so reorders can fall back to "append".
-            return WorkspaceTabStripDropTarget::End;
+        WorkspaceTabStripSurface::PinnedBoundary => WorkspaceTabStripDropTarget::PinnedBoundary,
+        WorkspaceTabStripSurface::HeaderSpace => WorkspaceTabStripDropTarget::End,
+        WorkspaceTabStripSurface::TabsViewport => {
+            compute_tab_drop_target(position, dragged_tab_id, tab_rects)
+                .map(|(target, side)| WorkspaceTabStripDropTarget::Tab(target, side))
+                .unwrap_or(WorkspaceTabStripDropTarget::None)
         }
     }
-
-    compute_tab_drop_target(position, dragged_tab_id, tab_rects)
-        .map(|(target, side)| WorkspaceTabStripDropTarget::Tab(target, side))
-        .unwrap_or(WorkspaceTabStripDropTarget::None)
 }
 
 pub(crate) fn compute_tab_strip_edge_auto_scroll_delta_x(
@@ -120,6 +103,7 @@ mod tests {
             Some(pinned_boundary),
             None,
             Some(rect(0.0, 0.0, 200.0, 20.0)),
+            None,
         );
         assert!(
             matches!(target, WorkspaceTabStripDropTarget::PinnedBoundary),
@@ -149,6 +133,7 @@ mod tests {
             None,
             None,
             Some(viewport),
+            None,
         );
         assert!(matches!(target, WorkspaceTabStripDropTarget::End));
     }
@@ -170,8 +155,44 @@ mod tests {
             None,
             Some(end_rect),
             Some(viewport),
+            None,
         );
         assert!(matches!(target, WorkspaceTabStripDropTarget::End));
+    }
+
+    #[test]
+    fn tab_drop_target_can_be_computed_without_scroll_viewport_bounds() {
+        let tab_rects = vec![WorkspaceTabHitRect {
+            id: Arc::from("a"),
+            rect: rect(0.0, 0.0, 100.0, 20.0),
+        }];
+        let pos = Point::new(Px(10.0), Px(10.0));
+
+        let target =
+            compute_workspace_tab_strip_drop_target(pos, "b", &tab_rects, None, None, None, None);
+        assert!(matches!(target, WorkspaceTabStripDropTarget::Tab(id, _) if id.as_ref() == "a"));
+    }
+
+    #[test]
+    fn overflow_control_is_not_treated_as_header_space() {
+        let tab_rects = vec![WorkspaceTabHitRect {
+            id: Arc::from("a"),
+            rect: rect(0.0, 0.0, 100.0, 20.0),
+        }];
+        let viewport = rect(0.0, 0.0, 300.0, 20.0);
+        let overflow = rect(240.0, 0.0, 20.0, 20.0);
+        let pos = Point::new(Px(250.0), Px(10.0));
+
+        let target = compute_workspace_tab_strip_drop_target(
+            pos,
+            "b",
+            &tab_rects,
+            None,
+            None,
+            Some(viewport),
+            Some(overflow),
+        );
+        assert!(matches!(target, WorkspaceTabStripDropTarget::None));
     }
 
     #[test]

@@ -8,6 +8,7 @@ Goal: keep the tab strip refactor **fearless** by locking outcomes behind unit t
 - `ecosystem/fret-workspace/src/tab_strip/mod.rs` (workspace tab strip implementation)
 - `ecosystem/fret-workspace/src/tab_strip/kernel.rs` (drop target computation)
 - `ecosystem/fret-workspace/src/tab_strip/geometry.rs` (tab rect collection / hit testing helpers)
+- `ecosystem/fret-workspace/src/tab_strip/surface.rs` (hit-test surface classification)
 - `ecosystem/fret-workspace/src/tab_strip/utils.rs` (canonical end-drop resolution)
 - `ecosystem/fret-workspace/src/focus_registry.rs` (cross-frame element id registry for focus restore)
 - `ecosystem/fret-workspace/src/pane_content_focus.rs` (pane content focus target seam for exiting tab strip)
