@@ -1738,6 +1738,26 @@
       "target_hints": []
     },
     {
+      "id": "ui-gallery-dialog-focus-trap-tab-cycle",
+      "path": "tools/diag-scripts/ui-gallery/overlay/ui-gallery-dialog-focus-trap-tab-cycle.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "ui-gallery",
+        "ui-gallery-shadcn-conformance"
+      ],
+      "tags": [
+        "dialog",
+        "focus",
+        "trap",
+        "ui-gallery"
+      ],
+      "target_hints": [
+        "Opens the overlay demo Dialog and asserts Tab cycles focus within the modal content (focus trap), then Escape restores focus to the trigger."
+      ]
+    },
+    {
       "id": "ui-gallery-dialog-escape-focus-restore-steady",
       "path": "tools/diag-scripts/ui-gallery/perf/ui-gallery-dialog-escape-focus-restore-steady.json",
       "required_capabilities": [],
