@@ -135,7 +135,7 @@ pub(in crate::ui) fn preview_windowed_rows_surface_interactive_torture(
                             painter.scene().push(fret_core::SceneOp::Quad {
                                 order: DrawOrder(0),
                                 rect,
-                                background: fret_core::Paint::Solid(background),
+                                background: fret_core::Paint::Solid(background).into(),
                                 border: if selected {
                                     Edges::all(Px(1.0))
                                 } else {
@@ -145,7 +145,8 @@ pub(in crate::ui) fn preview_windowed_rows_surface_interactive_torture(
                                     fg
                                 } else {
                                     fret_core::Color::TRANSPARENT
-                                }),
+                                })
+                                .into(),
                                 corner_radii: Corners::all(Px(0.0)),
                             });
 

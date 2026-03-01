@@ -198,8 +198,10 @@ fn skin_port_chrome_hints_apply_fill_stroke_and_inner_scale_paint_only() {
         if *order != DrawOrder(4) {
             continue;
         }
+        let background = background.paint;
+        let border_paint = border_paint.paint;
         match (background, border_paint) {
-            (&fret_core::Paint::Solid(c), _) if *border == fret_core::Edges::all(Px(0.0)) => {
+            (fret_core::Paint::Solid(c), _) if *border == fret_core::Edges::all(Px(0.0)) => {
                 if !approx(rect.origin.x.0, expected_rect.origin.x.0)
                     || !approx(rect.origin.y.0, expected_rect.origin.y.0)
                 {
@@ -218,7 +220,7 @@ fn skin_port_chrome_hints_apply_fill_stroke_and_inner_scale_paint_only() {
                     fill_hits += 1;
                 }
             }
-            (&fret_core::Paint::TRANSPARENT, &fret_core::Paint::Solid(c))
+            (fret_core::Paint::TRANSPARENT, fret_core::Paint::Solid(c))
                 if *border == fret_core::Edges::all(Px(2.0)) =>
             {
                 if !approx(rect.origin.x.0, expected_outer_rect.origin.x.0)
@@ -314,15 +316,15 @@ fn skin_port_shape_hint_renders_path_ops_for_non_circle_shapes() {
                 origin,
                 paint,
                 ..
-            } => match paint {
-                fret_core::Paint::Solid(c) if *c == expected_fill => {
+            } => match paint.paint {
+                fret_core::Paint::Solid(c) if c == expected_fill => {
                     if approx(origin.x.0, expected_rect.origin.x.0)
                         && approx(origin.y.0, expected_rect.origin.y.0)
                     {
                         fill_path_hits += 1;
                     }
                 }
-                fret_core::Paint::Solid(c) if *c == expected_stroke => {
+                fret_core::Paint::Solid(c) if c == expected_stroke => {
                     if approx(origin.x.0, expected_outer_rect.origin.x.0)
                         && approx(origin.y.0, expected_outer_rect.origin.y.0)
                     {

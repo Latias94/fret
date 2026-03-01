@@ -140,10 +140,10 @@ fn find_best_quad(scene: &Scene, target: Rect) -> Option<PaintedQuad> {
         else {
             continue;
         };
-        let fret_core::Paint::Solid(background) = background else {
+        let fret_core::Paint::Solid(background) = background.paint else {
             continue;
         };
-        let fret_core::Paint::Solid(border_color) = border_paint else {
+        let fret_core::Paint::Solid(border_color) = border_paint.paint else {
             continue;
         };
         let border_widths = [border.top.0, border.right.0, border.bottom.0, border.left.0];
@@ -484,10 +484,10 @@ fn find_focus_ring_quad(scene: &Scene, target: Rect, spread: f32) -> Option<Pain
             continue;
         };
 
-        if background != Paint::TRANSPARENT {
+        if background.paint != Paint::TRANSPARENT {
             continue;
         }
-        let fret_core::Paint::Solid(border_color) = border_paint else {
+        let fret_core::Paint::Solid(border_color) = border_paint.paint else {
             continue;
         };
         let bw = [border.top.0, border.right.0, border.bottom.0, border.left.0];
@@ -1943,7 +1943,7 @@ fn web_vs_fret_button_group_dropdown_geometry_and_chrome_match() {
         // We express that via `ChromeRefinement` without changing global button sizing rules.
         let trigger = fret_ui_shadcn::Button::new("")
             .variant(fret_ui_shadcn::ButtonVariant::Outline)
-            .refine_style(ChromeRefinement::default().pl(Space::N2))
+            .refine_style(ChromeRefinement::default().pl(Space::N2).pr(Space::N3))
             .children(vec![decl_icon::icon(cx, ids::ui::CHEVRON_DOWN)])
             .test_id("button-group-dropdown.trigger")
             .into();
@@ -5570,10 +5570,10 @@ fn web_vs_fret_radio_group_demo_control_chrome_matches() {
             else {
                 continue;
             };
-            let fret_core::Paint::Solid(background) = background else {
+            let fret_core::Paint::Solid(background) = background.paint else {
                 continue;
             };
-            let fret_core::Paint::Solid(border_color) = border_paint else {
+            let fret_core::Paint::Solid(border_color) = border_paint.paint else {
                 continue;
             };
             let score = (rect.origin.x.0 - target.origin.x.0).abs()

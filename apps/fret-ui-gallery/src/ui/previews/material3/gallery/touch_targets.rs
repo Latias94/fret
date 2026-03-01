@@ -68,10 +68,10 @@ pub(in crate::ui) fn preview_material3_touch_targets(
                         p.scene().push(SceneOp::Quad {
                             order: DrawOrder(order),
                             rect,
-                            background: fret_core::Paint::TRANSPARENT,
+                            background: fret_core::Paint::TRANSPARENT.into(),
 
                             border: Edges::all(Px(1.0)),
-                            border_paint: fret_core::Paint::Solid(color),
+                            border_paint: fret_core::Paint::Solid(color).into(),
 
                             corner_radii: Corners::all(Px(0.0)),
                         });

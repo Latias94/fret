@@ -129,9 +129,8 @@ pub(super) fn begin_frame(
     let hud_on = inspector_on
         || std::env::var_os("FRET_UI_DEBUG_STATS").is_some_and(|v| !v.is_empty())
         || (!perf_mode && std::env::var_os("FRET_DIAG").is_some_and(|v| !v.is_empty()));
-    let diag_enabled = app.with_global_mut_untracked(UiDiagnosticsService::default, |svc, _app| {
-        svc.is_enabled()
-    });
+    let diag_enabled =
+        app.with_global_mut_untracked(UiDiagnosticsService::default, |svc, _app| svc.is_enabled());
     state.ui.set_debug_enabled(diag_enabled || hud_on);
     if hud_on {
         app.request_redraw(window);

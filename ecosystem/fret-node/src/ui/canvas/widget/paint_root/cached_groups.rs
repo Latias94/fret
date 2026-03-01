@@ -94,10 +94,10 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                 cx.scene.push(SceneOp::Quad {
                     order: DrawOrder(1),
                     rect,
-                    background: fret_core::Paint::Solid(self.style.group_background),
+                    background: fret_core::Paint::Solid(self.style.group_background).into(),
 
                     border: Edges::all(Px(1.0 / zoom)),
-                    border_paint: fret_core::Paint::Solid(self.style.node_border_selected),
+                    border_paint: fret_core::Paint::Solid(self.style.node_border_selected).into(),
 
                     corner_radii: Corners::all(group_corner),
                 });

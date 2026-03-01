@@ -2,6 +2,7 @@ use std::path::{Path, PathBuf};
 
 use serde_json::Value;
 
+use super::resolve;
 use super::sidecars;
 
 pub(crate) fn cmd_windows(
@@ -25,6 +26,7 @@ pub(crate) fn cmd_windows(
     }
 
     let src = crate::resolve_path(workspace_root, PathBuf::from(src));
+    let src = resolve::maybe_resolve_base_or_session_out_dir_to_latest_bundle_dir(&src);
 
     let (window_map_path, bundle_path) = if src.is_file()
         && src

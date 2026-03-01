@@ -1465,9 +1465,9 @@ impl<H: UiHost> Widget<H> for TextArea {
         cx.scene.push(SceneOp::Quad {
             order: DrawOrder(0),
             rect: cx.bounds,
-            background: Paint::Solid(self.style.background),
+            background: Paint::Solid(self.style.background).into(),
             border: self.style.border,
-            border_paint: Paint::Solid(border_color),
+            border_paint: Paint::Solid(border_color).into(),
             corner_radii: self.style.corner_radii,
         });
 
@@ -1536,9 +1536,9 @@ impl<H: UiHost> Widget<H> for TextArea {
             cx.scene.push(SceneOp::Quad {
                 order: DrawOrder(0),
                 rect,
-                background: Paint::Solid(selection_color),
+                background: Paint::Solid(selection_color).into(),
                 border: Edges::all(Px(0.0)),
-                border_paint: Paint::Solid(Color::TRANSPARENT),
+                border_paint: Paint::Solid(Color::TRANSPARENT).into(),
                 corner_radii: Corners::all(Px(0.0)),
             });
         }
@@ -1557,9 +1557,9 @@ impl<H: UiHost> Widget<H> for TextArea {
                 cx.scene.push(SceneOp::Quad {
                     order: DrawOrder(0),
                     rect,
-                    background: Paint::Solid(self.style.preedit_bg_color),
+                    background: Paint::Solid(self.style.preedit_bg_color).into(),
                     border: Edges::all(Px(0.0)),
-                    border_paint: Paint::Solid(Color::TRANSPARENT),
+                    border_paint: Paint::Solid(Color::TRANSPARENT).into(),
                     corner_radii: Corners::all(Px(0.0)),
                 });
             }
@@ -1580,7 +1580,7 @@ impl<H: UiHost> Widget<H> for TextArea {
             order: DrawOrder(0),
             origin: text_origin,
             text,
-            paint,
+            paint: paint.into(),
             outline: None,
             shadow: None,
         });
@@ -1723,9 +1723,9 @@ impl<H: UiHost> Widget<H> for TextArea {
                     cx.scene.push(SceneOp::Quad {
                         order: DrawOrder(0),
                         rect: underline,
-                        background: Paint::Solid(self.style.preedit_underline_color),
+                        background: Paint::Solid(self.style.preedit_underline_color).into(),
                         border: Edges::all(Px(0.0)),
-                        border_paint: Paint::Solid(Color::TRANSPARENT),
+                        border_paint: Paint::Solid(Color::TRANSPARENT).into(),
                         corner_radii: Corners::all(Px(0.0)),
                     });
                 }
@@ -1734,9 +1734,9 @@ impl<H: UiHost> Widget<H> for TextArea {
             cx.scene.push(SceneOp::Quad {
                 order: DrawOrder(0),
                 rect: caret_rect,
-                background: Paint::Solid(self.style.caret_color),
+                background: Paint::Solid(self.style.caret_color).into(),
                 border: Edges::all(Px(0.0)),
-                border_paint: Paint::Solid(Color::TRANSPARENT),
+                border_paint: Paint::Solid(Color::TRANSPARENT).into(),
                 corner_radii: Corners::all(Px(0.0)),
             });
         } else {
@@ -1758,9 +1758,9 @@ impl<H: UiHost> Widget<H> for TextArea {
             cx.scene.push(SceneOp::Quad {
                 order: DrawOrder(100),
                 rect: track,
-                background: Paint::Solid(track_bg),
+                background: Paint::Solid(track_bg).into(),
                 border: Edges::all(Px(0.0)),
-                border_paint: Paint::Solid(Color::TRANSPARENT),
+                border_paint: Paint::Solid(Color::TRANSPARENT).into(),
                 corner_radii: Corners::all(radius),
             });
 
@@ -1773,9 +1773,9 @@ impl<H: UiHost> Widget<H> for TextArea {
             cx.scene.push(SceneOp::Quad {
                 order: DrawOrder(101),
                 rect: thumb,
-                background: Paint::Solid(thumb_bg),
+                background: Paint::Solid(thumb_bg).into(),
                 border: Edges::all(Px(0.0)),
-                border_paint: Paint::Solid(Color::TRANSPARENT),
+                border_paint: Paint::Solid(Color::TRANSPARENT).into(),
                 corner_radii: Corners::all(radius),
             });
         }

@@ -169,9 +169,9 @@ fn dash_pattern_phase_matches_between_stroke_rrect_and_path_stroke_v2_for_rects(
             Point::new(Px(0.0), Px(0.0)),
             Size::new(Px(560.0), Px(480.0)),
         ),
-        background: Paint::TRANSPARENT,
+        background: (Paint::TRANSPARENT).into(),
         border: Edges::all(Px(0.0)),
-        border_paint: Paint::TRANSPARENT,
+        border_paint: (Paint::TRANSPARENT).into(),
         corner_radii: Corners::all(Px(0.0)),
     });
 

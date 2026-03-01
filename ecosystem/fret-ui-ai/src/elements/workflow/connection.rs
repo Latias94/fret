@@ -137,9 +137,9 @@ impl WorkflowConnection {
             p.scene().push(SceneOp::Quad {
                 order: DrawOrder(1),
                 rect,
-                background: Paint::Solid(background),
+                background: Paint::Solid(background).into(),
                 border: Edges::all(stroke_width),
-                border_paint: Paint::Solid(ring),
+                border_paint: Paint::Solid(ring).into(),
                 corner_radii: Corners::all(radius),
             });
         });

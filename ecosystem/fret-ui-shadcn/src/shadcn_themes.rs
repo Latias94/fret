@@ -656,18 +656,10 @@ pub fn shadcn_new_york_v4_config(base: ShadcnBaseColor, scheme: ShadcnColorSchem
     // new-york-v4 `Empty` defaults:
     // - Title uses `text-lg` (18px) and Tailwind default leading (28px).
     // - Description uses `text-sm/relaxed` (14px, 22.75px line-height).
-    metrics
-        .entry("component.empty.title_px".to_string())
-        .or_insert(18.0);
-    metrics
-        .entry("component.empty.title_line_height".to_string())
-        .or_insert(28.0);
-    metrics
-        .entry("component.empty.description_px".to_string())
-        .or_insert(14.0);
-    metrics
-        .entry("component.empty.description_line_height".to_string())
-        .or_insert(22.75);
+    metrics.insert("component.empty.title_px".to_string(), 18.0);
+    metrics.insert("component.empty.title_line_height".to_string(), 28.0);
+    metrics.insert("component.empty.description_px".to_string(), 14.0);
+    metrics.insert("component.empty.description_line_height".to_string(), 22.75);
 
     // new-york-v4 `Resizable` defaults:
     // - Handle uses `w-px` / `h-px` (1px layout gap), with a larger hit area.
@@ -1163,7 +1155,7 @@ mod tests {
                 "expected destructive badge bg to match destructive in light scheme"
             );
 
-            let expected_destructive_dark_bg = with_oklch_alpha(&destructive_dark, 0.4)
+            let expected_destructive_dark_bg = with_oklch_alpha(&destructive_dark, 0.3)
                 .expect("shadcn new-york-v4 destructive token is oklch");
             assert_eq!(
                 cfg_dark

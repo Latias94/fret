@@ -2368,13 +2368,14 @@ where
                     },
                     move |cx, st| {
                         let focus_target = focus_target_for_row;
-                        cx.pressable_add_on_pointer_down(Arc::new(
-                            move |host, action_cx, _down| {
-                                host.request_focus(focus_target);
-                                host.request_redraw(action_cx.window);
-                                PressablePointerDownResult::Continue
-                            },
-                        ));
+                        cx.pressable_add_on_pointer_up(Arc::new(move |host, action_cx, up| {
+                            if up.button != fret_core::MouseButton::Left || !up.is_click {
+                                return PressablePointerUpResult::Continue;
+                            }
+                            host.request_focus(focus_target);
+                            host.request_redraw(action_cx.window);
+                            PressablePointerUpResult::Continue
+                        }));
 
                         cx.key_on_key_down_for(cx.root_id(), key_handler_for_row.clone());
                         let state = state_model.clone();
@@ -2713,7 +2714,10 @@ where
             let content =
                 cx.pointer_region(fret_ui::element::PointerRegionProps::default(), move |cx| {
                     let focus_id = list_id;
-                    cx.pointer_region_on_pointer_down(Arc::new(move |host, action_cx, _down| {
+                    cx.pointer_region_on_pointer_up(Arc::new(move |host, action_cx, up| {
+                        if up.button != fret_core::MouseButton::Left || !up.is_click {
+                            return false;
+                        }
                         host.request_focus(focus_id);
                         host.request_redraw(action_cx.window);
                         false
@@ -4556,43 +4560,55 @@ where
                                                                 .with_collection_position(i, set_size),
                                                                 ..Default::default()
                                                             },
-                                                            |cx, st| {
-                                                                let active_index_for_pointer =
-                                                                    active_index.clone();
-                                                                let anchor_index_for_pointer =
-                                                                    anchor_index.clone();
-                                                                let active_command_for_pointer =
-                                                                    active_command.clone();
-                                                                let typeahead_for_pointer =
-                                                                    typeahead.clone();
-                                                                let typeahead_timer_for_pointer =
-                                                                    typeahead_timer.clone();
-                                                                cx.pressable_on_pointer_down(
-                                                                    Arc::new(move |host, action_cx, _down| {
-                                                                        host.request_focus(focus_target);
-                                                                        active_index_for_pointer.set(Some(i));
-                                                                        anchor_index_for_pointer.set(Some(i));
-                                                                        typeahead_for_pointer.borrow_mut().clear();
-                                                                        if let Some(token) =
-                                                                            typeahead_timer_for_pointer.get()
-                                                                        {
-                                                                            host.push_effect(Effect::CancelTimer { token });
-                                                                            typeahead_timer_for_pointer.set(None);
-                                                                        }
-                                                                        *active_command_for_pointer.borrow_mut() = None;
-                                                                        host.request_redraw(action_cx.window);
-                                                                        PressablePointerDownResult::Continue
-                                                                    }),
-                                                                );
+															|cx, st| {
+																let active_index_for_pointer =
+																	active_index.clone();
+																let anchor_index_for_pointer =
+																	anchor_index.clone();
+																let active_command_for_pointer =
+																	active_command.clone();
+																let typeahead_for_pointer =
+																	typeahead.clone();
+																let typeahead_timer_for_pointer =
+																	typeahead_timer.clone();
+																cx.pressable_on_pointer_down(
+																	Arc::new(move |host, action_cx, _down| {
+																		active_index_for_pointer.set(Some(i));
+																		anchor_index_for_pointer.set(Some(i));
+																		typeahead_for_pointer.borrow_mut().clear();
+																		if let Some(token) =
+																			typeahead_timer_for_pointer.get()
+																		{
+																			host.push_effect(Effect::CancelTimer { token });
+																			typeahead_timer_for_pointer.set(None);
+																		}
+																		*active_command_for_pointer.borrow_mut() = None;
+																		host.request_redraw(action_cx.window);
+																		PressablePointerDownResult::Continue
+																	}),
+																);
+																cx.pressable_add_on_pointer_up(Arc::new(
+																	move |host, action_cx, up| {
+																		if up.button
+																			!= fret_core::MouseButton::Left
+																			|| !up.is_click
+																		{
+																			return PressablePointerUpResult::Continue;
+																		}
+																		host.request_focus(focus_target);
+																		host.request_redraw(action_cx.window);
+																		PressablePointerUpResult::Continue
+																	},
+																));
 
-                                                                if active_index.get() == Some(i) {
-                                                                    active_element.set(Some(cx.root_id()));
-                                                                    *active_command.borrow_mut() = None;
-                                                                }
-                                                                let state_model = state.clone();
-                                                                cx.pressable_update_model(
-                                                                    &state_model,
-                                                                    move |st| match &mut st.expanding
+																if active_index.get() == Some(i) {
+																	active_element.set(Some(cx.root_id()));
+																	*active_command.borrow_mut() = None;
+																}
+																let state_model = state.clone();
+																cx.pressable_update_model(
+																	&state_model,
+																	move |st| match &mut st.expanding
                                                                     {
                                                                         ExpandingState::All => {
                                                                             st.expanding =
@@ -5135,7 +5151,6 @@ where
                                                         typeahead_timer.clone();
                                                     cx.pressable_on_pointer_down(Arc::new(
                                                         move |host, action_cx, _down| {
-                                                            host.request_focus(focus_target);
                                                             active_index_for_pointer.set(Some(i));
                                                             anchor_index_for_pointer.set(Some(i));
                                                             typeahead_for_pointer.borrow_mut().clear();
@@ -5147,6 +5162,19 @@ where
                                                             }
                                                             host.request_redraw(action_cx.window);
                                                             PressablePointerDownResult::Continue
+                                                        },
+                                                    ));
+                                                    cx.pressable_add_on_pointer_up(Arc::new(
+                                                        move |host, action_cx, up| {
+                                                            if up.button
+                                                                != fret_core::MouseButton::Left
+                                                                || !up.is_click
+                                                            {
+                                                                return PressablePointerUpResult::Continue;
+                                                            }
+                                                            host.request_focus(focus_target);
+                                                            host.request_redraw(action_cx.window);
+                                                            PressablePointerUpResult::Continue
                                                         },
                                                     ));
 

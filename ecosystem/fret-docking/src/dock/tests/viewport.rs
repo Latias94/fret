@@ -533,9 +533,10 @@ fn viewport_overlay_hooks_can_implement_layout_api_only() {
                     g: 0.0,
                     b: 0.0,
                     a: 0.35,
-                }),
+                })
+                .into(),
                 border: Edges::all(Px(0.0)),
-                border_paint: fret_core::Paint::Solid(Color::TRANSPARENT),
+                border_paint: fret_core::Paint::Solid(Color::TRANSPARENT).into(),
                 corner_radii: fret_core::Corners::all(Px(0.0)),
             });
         }

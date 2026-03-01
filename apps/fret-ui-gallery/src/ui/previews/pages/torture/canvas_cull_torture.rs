@@ -97,9 +97,9 @@ pub(in crate::ui) fn preview_canvas_cull_torture(
                                     painter.scene().push(fret_core::SceneOp::Quad {
                                         order: DrawOrder(0),
                                         rect,
-                                        background: fret_core::Paint::Solid(background),
+                                        background: fret_core::Paint::Solid(background).into(),
                                         border: Edges::all(Px(1.0)),
-                                        border_paint: fret_core::Paint::Solid(grid),
+                                        border_paint: fret_core::Paint::Solid(grid).into(),
 
                                         corner_radii: Corners::all(Px(4.0)),
                                     });
@@ -108,10 +108,10 @@ pub(in crate::ui) fn preview_canvas_cull_torture(
                                         painter.scene().push(fret_core::SceneOp::Quad {
                                             order: DrawOrder(1),
                                             rect,
-                                            background: fret_core::Paint::TRANSPARENT,
+                                            background: fret_core::Paint::TRANSPARENT.into(),
 
                                             border: Edges::all(Px(2.0)),
-                                            border_paint: fret_core::Paint::Solid(fg),
+                                            border_paint: fret_core::Paint::Solid(fg).into(),
 
                                             corner_radii: Corners::all(Px(4.0)),
                                         });

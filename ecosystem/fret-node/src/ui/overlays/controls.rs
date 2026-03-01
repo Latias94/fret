@@ -425,10 +425,10 @@ impl<H: UiHost> Widget<H> for NodeGraphControlsOverlay {
         cx.scene.push(SceneOp::Quad {
             order: DrawOrder(21_000),
             rect: layout.panel,
-            background: fret_core::Paint::Solid(bg),
+            background: fret_core::Paint::Solid(bg).into(),
 
             border: Edges::all(Px(1.0)),
-            border_paint: fret_core::Paint::Solid(border),
+            border_paint: fret_core::Paint::Solid(border).into(),
 
             corner_radii: Corners::all(Px(corner)),
         });
@@ -460,10 +460,10 @@ impl<H: UiHost> Widget<H> for NodeGraphControlsOverlay {
             cx.scene.push(SceneOp::Quad {
                 order: DrawOrder(21_001),
                 rect: *rect,
-                background: fret_core::Paint::Solid(button_bg),
+                background: fret_core::Paint::Solid(button_bg).into(),
 
                 border: Edges::all(Px(0.0)),
-                border_paint: fret_core::Paint::TRANSPARENT,
+                border_paint: fret_core::Paint::TRANSPARENT.into(),
 
                 corner_radii: Corners::all(Px(corner.max(4.0))),
             });

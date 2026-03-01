@@ -209,10 +209,10 @@ pub(in crate::ui) fn preview_text_selection_perf(
                             scene.push(SceneOp::Quad {
                                 order: DrawOrder(0),
                                 rect,
-                                background: fret_core::Paint::Solid(selection_bg),
+                                background: fret_core::Paint::Solid(selection_bg).into(),
 
                                 border: Edges::all(Px(0.0)),
-                                border_paint: fret_core::Paint::TRANSPARENT,
+                                border_paint: fret_core::Paint::TRANSPARENT.into(),
 
                                 corner_radii: Corners::all(Px(0.0)),
                             });
@@ -277,7 +277,7 @@ pub(in crate::ui) fn preview_text_selection_perf(
                                 order: DrawOrder(2),
                                 origin,
                                 text: gblob,
-                                paint: fret_core::Paint::LinearGradient(gradient),
+                                paint: fret_core::Paint::LinearGradient(gradient).into(),
                                 outline: None,
                                 shadow: None,
                             });

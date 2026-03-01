@@ -302,6 +302,270 @@ pub enum MenubarEntry {
     Separator,
 }
 
+/// shadcn/ui `MenubarTrigger` (v4).
+///
+/// Upstream exposes a distinct trigger part. Fret's current `MenubarMenu` surface owns the trigger
+/// label and state; this type is a thin adapter to keep the part-based authoring model close to
+/// shadcn docs/examples without changing the underlying representation.
+#[derive(Debug, Clone)]
+pub struct MenubarTrigger {
+    label: Arc<str>,
+    disabled: bool,
+    test_id: Option<Arc<str>>,
+}
+
+impl MenubarTrigger {
+    pub fn new(label: impl Into<Arc<str>>) -> Self {
+        Self {
+            label: label.into(),
+            disabled: false,
+            test_id: None,
+        }
+    }
+
+    pub fn disabled(mut self, disabled: bool) -> Self {
+        self.disabled = disabled;
+        self
+    }
+
+    pub fn test_id(mut self, id: impl Into<Arc<str>>) -> Self {
+        self.test_id = Some(id.into());
+        self
+    }
+
+    pub fn into_menu(self) -> MenubarMenu {
+        let mut menu = MenubarMenu::new(self.label).disabled(self.disabled);
+        if let Some(id) = self.test_id {
+            menu = menu.test_id(id);
+        }
+        menu
+    }
+}
+
+/// shadcn/ui `MenubarContent` (v4).
+///
+/// Upstream exposes placement/behavior knobs on the `Content` part (`sideOffset`, etc). Fret's
+/// current `MenubarMenu`/`MenubarMenuEntries` surfaces own these knobs. This type is an adapter to
+/// attach configuration in a shadcn-like location.
+#[derive(Clone, Default)]
+pub struct MenubarContent {
+    window_margin: Option<Px>,
+    side_offset: Option<Px>,
+    typeahead_timeout_ticks: Option<u64>,
+    modal: Option<bool>,
+    align_leading_icons: Option<bool>,
+    on_dismiss_request: Option<OnDismissRequest>,
+    on_open_auto_focus: Option<OnOpenAutoFocus>,
+    on_close_auto_focus: Option<OnCloseAutoFocus>,
+}
+
+impl std::fmt::Debug for MenubarContent {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("MenubarContent")
+            .field("window_margin", &self.window_margin)
+            .field("side_offset", &self.side_offset)
+            .field("typeahead_timeout_ticks", &self.typeahead_timeout_ticks)
+            .field("modal", &self.modal)
+            .field("align_leading_icons", &self.align_leading_icons)
+            .field("on_dismiss_request", &self.on_dismiss_request.is_some())
+            .field("on_open_auto_focus", &self.on_open_auto_focus.is_some())
+            .field("on_close_auto_focus", &self.on_close_auto_focus.is_some())
+            .finish()
+    }
+}
+
+impl MenubarContent {
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    pub fn window_margin(mut self, margin: Px) -> Self {
+        self.window_margin = Some(margin);
+        self
+    }
+
+    pub fn side_offset(mut self, offset: Px) -> Self {
+        self.side_offset = Some(offset);
+        self
+    }
+
+    pub fn typeahead_timeout_ticks(mut self, ticks: u64) -> Self {
+        self.typeahead_timeout_ticks = Some(ticks);
+        self
+    }
+
+    pub fn modal(mut self, modal: bool) -> Self {
+        self.modal = Some(modal);
+        self
+    }
+
+    pub fn align_leading_icons(mut self, align: bool) -> Self {
+        self.align_leading_icons = Some(align);
+        self
+    }
+
+    /// Sets an optional dismiss request handler (Radix `DismissableLayer`).
+    ///
+    /// When set, Escape/outside-press dismissals route through this handler. To prevent default
+    /// dismissal, call `req.prevent_default()`.
+    pub fn on_dismiss_request(mut self, on_dismiss_request: Option<OnDismissRequest>) -> Self {
+        self.on_dismiss_request = on_dismiss_request;
+        self
+    }
+
+    /// Sets an optional open autofocus handler (Radix `onOpenAutoFocus`).
+    pub fn on_open_auto_focus(mut self, hook: Option<OnOpenAutoFocus>) -> Self {
+        self.on_open_auto_focus = hook;
+        self
+    }
+
+    /// Sets an optional close autofocus handler (Radix `onCloseAutoFocus`).
+    pub fn on_close_auto_focus(mut self, hook: Option<OnCloseAutoFocus>) -> Self {
+        self.on_close_auto_focus = hook;
+        self
+    }
+
+    fn apply_to(self, mut menu: MenubarMenuEntries) -> MenubarMenuEntries {
+        if let Some(v) = self.window_margin {
+            menu.menu.window_margin = v;
+        }
+        if let Some(v) = self.side_offset {
+            menu.menu.side_offset = v;
+        }
+        if let Some(v) = self.typeahead_timeout_ticks {
+            menu.menu.typeahead_timeout_ticks = v;
+        }
+        if let Some(v) = self.modal {
+            menu.modal = v;
+        }
+        if let Some(v) = self.align_leading_icons {
+            menu.align_leading_icons = v;
+        }
+        if self.on_dismiss_request.is_some() {
+            menu.on_dismiss_request = self.on_dismiss_request;
+        }
+        if self.on_open_auto_focus.is_some() {
+            menu.on_open_auto_focus = self.on_open_auto_focus;
+        }
+        if self.on_close_auto_focus.is_some() {
+            menu.on_close_auto_focus = self.on_close_auto_focus;
+        }
+        menu
+    }
+}
+
+/// shadcn/ui `MenubarSeparator` (v4).
+#[derive(Debug, Clone, Copy, Default)]
+pub struct MenubarSeparator;
+
+impl MenubarSeparator {
+    pub fn new() -> Self {
+        Self
+    }
+}
+
+/// shadcn/ui `MenubarSub*` helpers (v4).
+///
+/// Upstream exposes `Sub` / `SubTrigger` / `SubContent` as distinct parts. Fret's current menubar
+/// model represents submenus as `MenubarEntry::Submenu(MenubarSubmenu { ... })`. These helpers
+/// bridge the authoring model without changing the underlying representation.
+#[derive(Debug)]
+pub struct MenubarSubTrigger {
+    item: MenubarItem,
+}
+
+impl MenubarSubTrigger {
+    pub fn new(label: impl Into<Arc<str>>) -> Self {
+        Self {
+            item: MenubarItem::new(label).close_on_select(false),
+        }
+    }
+
+    pub fn refine(mut self, f: impl FnOnce(MenubarItem) -> MenubarItem) -> Self {
+        self.item = f(self.item);
+        // Sub triggers should not close on select.
+        self.item.close_on_select = false;
+        self
+    }
+}
+
+#[derive(Debug)]
+pub struct MenubarSubContent {
+    entries: Vec<MenubarEntry>,
+}
+
+impl MenubarSubContent {
+    pub fn new(entries: impl IntoIterator<Item = MenubarEntry>) -> Self {
+        Self {
+            entries: entries.into_iter().collect(),
+        }
+    }
+}
+
+#[derive(Debug)]
+pub struct MenubarSub {
+    trigger: MenubarSubTrigger,
+    content: MenubarSubContent,
+}
+
+impl MenubarSub {
+    pub fn new(trigger: MenubarSubTrigger, content: MenubarSubContent) -> Self {
+        Self { trigger, content }
+    }
+
+    pub fn into_entry(self) -> MenubarEntry {
+        MenubarEntry::Submenu(MenubarSubmenu::new(self.trigger.item, self.content.entries))
+    }
+}
+
+impl From<MenubarItem> for MenubarEntry {
+    fn from(value: MenubarItem) -> Self {
+        Self::Item(value)
+    }
+}
+
+impl From<MenubarCheckboxItem> for MenubarEntry {
+    fn from(value: MenubarCheckboxItem) -> Self {
+        Self::CheckboxItem(value)
+    }
+}
+
+impl From<MenubarRadioGroup> for MenubarEntry {
+    fn from(value: MenubarRadioGroup) -> Self {
+        Self::RadioGroup(value)
+    }
+}
+
+impl From<MenubarRadioItem> for MenubarEntry {
+    fn from(value: MenubarRadioItem) -> Self {
+        Self::RadioItem(value)
+    }
+}
+
+impl From<MenubarLabel> for MenubarEntry {
+    fn from(value: MenubarLabel) -> Self {
+        Self::Label(value)
+    }
+}
+
+impl From<MenubarGroup> for MenubarEntry {
+    fn from(value: MenubarGroup) -> Self {
+        Self::Group(value)
+    }
+}
+
+impl From<MenubarSeparator> for MenubarEntry {
+    fn from(_value: MenubarSeparator) -> Self {
+        Self::Separator
+    }
+}
+
+impl From<MenubarSub> for MenubarEntry {
+    fn from(value: MenubarSub) -> Self {
+        value.into_entry()
+    }
+}
+
 /// shadcn/ui `MenubarLabel` (v4).
 #[derive(Debug, Clone)]
 pub struct MenubarLabel {
@@ -1192,6 +1456,18 @@ impl MenubarMenu {
             on_open_auto_focus: None,
             on_close_auto_focus: None,
         }
+    }
+
+    /// Part-based authoring surface aligned with shadcn/ui v4 exports.
+    ///
+    /// This is a thin adapter over `MenubarMenu::entries(...)` that allows call sites to attach
+    /// placement/behavior configuration on a `MenubarContent` part (shadcn-style).
+    pub fn entries_parts(
+        self,
+        content: MenubarContent,
+        entries: impl IntoIterator<Item = MenubarEntry>,
+    ) -> MenubarMenuEntries {
+        content.apply_to(self.entries(entries))
     }
 
     pub fn disabled(mut self, disabled: bool) -> Self {
@@ -4833,7 +5109,7 @@ mod tests {
             else {
                 continue;
             };
-            let fret_core::Paint::Solid(background) = *background else {
+            let fret_core::Paint::Solid(background) = background.paint else {
                 continue;
             };
             if background.a <= 0.01 {

@@ -257,9 +257,10 @@ fn canvas_scoped_ops_keep_scene_stacks_balanced() {
                                     g: 0.0,
                                     b: 0.0,
                                     a: 1.0,
-                                }),
+                                })
+                                .into(),
                                 border: fret_core::Edges::all(Px(0.0)),
-                                border_paint: fret_core::Paint::Solid(Color::TRANSPARENT),
+                                border_paint: fret_core::Paint::Solid(Color::TRANSPARENT).into(),
                                 corner_radii: fret_core::Corners::default(),
                             });
                         });

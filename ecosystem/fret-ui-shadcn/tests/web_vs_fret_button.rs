@@ -300,10 +300,10 @@ fn find_button_quad_style(
                 corner_radii,
                 ..
             } if rect == button_bounds => {
-                let fret_core::Paint::Solid(background) = background else {
+                let fret_core::Paint::Solid(background) = background.paint else {
                     continue;
                 };
-                let fret_core::Paint::Solid(border_color) = border_paint else {
+                let fret_core::Paint::Solid(border_color) = border_paint.paint else {
                     continue;
                 };
                 return (
@@ -379,7 +379,7 @@ fn extract_fret_button_style(variant: fret_ui_shadcn::ButtonVariant) -> FretButt
     for op in scene.ops() {
         if let SceneOp::Text { origin, paint, .. } = *op {
             if rect.contains(origin) {
-                if let Paint::Solid(color) = paint {
+                if let Paint::Solid(color) = paint.paint {
                     text_color = Some(color_to_rgba(color));
                     break;
                 }
@@ -504,7 +504,7 @@ fn extract_fret_button_style_pressed(variant: fret_ui_shadcn::ButtonVariant) -> 
     for op in scene.ops() {
         if let SceneOp::Text { origin, paint, .. } = *op {
             if rect.contains(origin) {
-                if let Paint::Solid(color) = paint {
+                if let Paint::Solid(color) = paint.paint {
                     text_color = Some(color_to_rgba(color));
                     break;
                 }
@@ -617,7 +617,7 @@ fn extract_fret_button_style_hovered(variant: fret_ui_shadcn::ButtonVariant) -> 
     for op in scene.ops() {
         if let SceneOp::Text { origin, paint, .. } = *op {
             if rect.contains(origin) {
-                if let Paint::Solid(color) = paint {
+                if let Paint::Solid(color) = paint.paint {
                     text_color = Some(color_to_rgba(color));
                     break;
                 }
@@ -708,7 +708,7 @@ fn extract_fret_button_style_disabled(variant: fret_ui_shadcn::ButtonVariant) ->
     for op in scene.ops() {
         if let SceneOp::Text { origin, paint, .. } = *op {
             if rect.contains(origin) {
-                if let Paint::Solid(color) = paint {
+                if let Paint::Solid(color) = paint.paint {
                     text_color = Some(color_to_rgba(color));
                     break;
                 }

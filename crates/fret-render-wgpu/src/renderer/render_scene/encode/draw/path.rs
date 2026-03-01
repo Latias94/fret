@@ -21,7 +21,7 @@ pub(in super::super) fn encode_path(
     state: &mut EncodeState<'_>,
     origin: Point,
     path: fret_core::PathId,
-    paint: fret_core::scene::Paint,
+    paint: fret_core::scene::PaintBindingV1,
 ) {
     state.flush_quad_batch();
 
@@ -29,9 +29,7 @@ pub(in super::super) fn encode_path(
     if group_opacity <= 0.0 {
         return;
     }
-    if !paint_is_visible(paint, group_opacity) {
-        return;
-    }
+
     let Some(prepared) = renderer.paths.get(path) else {
         if debug_path_draw_enabled() {
             eprintln!(
@@ -41,6 +39,24 @@ pub(in super::super) fn encode_path(
         }
         return;
     };
+
+    let stroke_s01_supported = paint.eval_space == fret_core::scene::PaintEvalSpaceV1::StrokeS01
+        && prepared.stroke_s01_mode == crate::renderer::path::StrokeS01ModeV1::Continuous;
+
+    let paint = if paint.eval_space == fret_core::scene::PaintEvalSpaceV1::StrokeS01
+        && !stroke_s01_supported
+    {
+        fret_core::scene::PaintBindingV1 {
+            paint: paint.paint,
+            eval_space: fret_core::scene::PaintEvalSpaceV1::LocalPx,
+        }
+    } else {
+        paint
+    };
+
+    if !paint_is_visible(paint, group_opacity) {
+        return;
+    }
     if prepared.triangles.is_empty() {
         if debug_path_draw_enabled() {
             let b = prepared.metrics.bounds;
@@ -60,7 +76,7 @@ pub(in super::super) fn encode_path(
     }
     let t_px = state.current_transform_px();
 
-    let material_requested = matches!(paint, fret_core::scene::Paint::Material { .. });
+    let material_requested = matches!(paint.paint, fret_core::scene::Paint::Material { .. });
     let paint_gpu = paint_to_gpu(
         renderer,
         state,
@@ -142,13 +158,17 @@ pub(in super::super) fn encode_path(
     let paint_index = state.path_paints.len().min(u32::MAX as usize) as u32;
     state.path_paints.push(paint_gpu);
 
-    for p in &prepared.triangles {
-        let lx = ox + p[0] * state.scale_factor;
-        let ly = oy + p[1] * state.scale_factor;
+    for v in &prepared.triangles {
+        let lx = ox + v.pos[0] * state.scale_factor;
+        let ly = oy + v.pos[1] * state.scale_factor;
         let (wx, wy) = apply_transform_px(t_px, lx, ly);
         state.path_vertices.push(PathVertex {
             pos_px: [wx, wy],
-            local_pos_px: [lx, ly],
+            local_pos_px: if stroke_s01_supported {
+                [v.stroke_s01, 0.0]
+            } else {
+                [lx, ly]
+            },
         });
     }
 
@@ -183,9 +203,9 @@ pub(in super::super) fn encode_clip_path_mask(
     let ox = origin.x.0 * state.scale_factor;
     let oy = origin.y.0 * state.scale_factor;
 
-    for p in &prepared.triangles {
-        let lx = ox + p[0] * state.scale_factor;
-        let ly = oy + p[1] * state.scale_factor;
+    for v in &prepared.triangles {
+        let lx = ox + v.pos[0] * state.scale_factor;
+        let ly = oy + v.pos[1] * state.scale_factor;
         let (wx, wy) = apply_transform_px(t_px, lx, ly);
         state.path_vertices.push(PathVertex {
             pos_px: [wx, wy],

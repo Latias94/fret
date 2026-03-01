@@ -46,6 +46,19 @@ impl TextService for StyleAwareServices {
             constraints,
         });
 
+        if std::env::var_os("FRET_DEBUG_WEB_VS_FRET_LAYOUT").is_some() && text.chars().count() >= 24
+        {
+            eprintln!(
+                "debug text_prepare: wrap={:?} max_width={:?} size_px={:?} line_height_px={:?} text_len={} text={:?}",
+                constraints.wrap,
+                constraints.max_width,
+                style.size,
+                style.line_height,
+                text.chars().count(),
+                text
+            );
+        }
+
         let line_height = style
             .line_height
             .unwrap_or(Px((style.size.0 * 1.4).max(0.0)));
@@ -55,7 +68,9 @@ impl TextService for StyleAwareServices {
 
         let max_w = constraints.max_width.unwrap_or(est_w);
         let (lines, w) = match constraints.wrap {
-            TextWrap::Word if max_w.0.is_finite() && max_w.0 > 0.0 => {
+            TextWrap::Word | TextWrap::Balance | TextWrap::WordBreak
+                if max_w.0.is_finite() && max_w.0 > 0.0 =>
+            {
                 let lines = (est_w.0 / max_w.0).ceil().max(1.0) as u32;
                 (lines, Px(est_w.0.min(max_w.0)))
             }

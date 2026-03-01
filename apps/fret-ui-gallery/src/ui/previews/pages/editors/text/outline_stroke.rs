@@ -239,9 +239,9 @@ pub(in crate::ui) fn preview_text_outline_stroke(
                             scene.push(SceneOp::Quad {
                                 order: DrawOrder(0),
                                 rect,
-                                background: fret_core::Paint::Solid(c),
+                                background: fret_core::Paint::Solid(c).into(),
                                 border: Edges::all(Px(0.0)),
-                                border_paint: fret_core::Paint::TRANSPARENT,
+                                border_paint: fret_core::Paint::TRANSPARENT.into(),
                                 corner_radii: Corners::all(Px(0.0)),
                             });
                         }
@@ -265,7 +265,7 @@ pub(in crate::ui) fn preview_text_outline_stroke(
                         .copied()
                         .unwrap_or(Px(3.0));
                     let outline_desc = st.outline_enabled.then_some(TextOutlineV1 {
-                        paint: fret_core::Paint::Solid(outline),
+                        paint: fret_core::Paint::Solid(outline).into(),
                         width_px: outline_width,
                     });
 
@@ -273,7 +273,7 @@ pub(in crate::ui) fn preview_text_outline_stroke(
                         order: DrawOrder(2),
                         origin: Point::new(x0, baseline_y0),
                         text: blob,
-                        paint: fret_core::Paint::Solid(fill),
+                        paint: fret_core::Paint::Solid(fill).into(),
                         outline: None,
                         shadow: None,
                     });
@@ -282,7 +282,7 @@ pub(in crate::ui) fn preview_text_outline_stroke(
                         order: DrawOrder(2),
                         origin: Point::new(x0, baseline_y1),
                         text: blob,
-                        paint: fret_core::Paint::Solid(fill),
+                        paint: fret_core::Paint::Solid(fill).into(),
                         outline: outline_desc,
                         shadow: None,
                     });

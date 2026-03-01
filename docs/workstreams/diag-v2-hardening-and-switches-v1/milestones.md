@@ -35,6 +35,9 @@ Exit criteria:
 - Tool-launched runs have a first-class “parallel agents” escape hatch:
   - `--session-auto` allocates an isolated session root under `<base_dir>/sessions/<session_id>/` for `--launch` runs,
   - sessions are discoverable (`diag list sessions`) and cleanable (`diag sessions clean`).
+- Tooling can resolve “what just happened” without humans/agents reading pointer files:
+  - `diag resolve latest --dir <base_or_session_dir> [--within-session <id|latest>]`
+  - most bounded inspection commands accept `<base_or_session_out_dir>` directly and resolve it to the latest bundle dir.
 
 Evidence anchors:
 
@@ -132,8 +135,9 @@ Exit criteria:
   - failures report a stable `reason_code` when a ref is missing or resolves to multiple nodes.
 - Multi-viewport docking evidence exists (bounded, queryable):
   - a bounded `window.map.json` sidecar is exported (window ids + last bounds + hover detection),
-  - routing decisions that matter for docking (hover/click target window selection) are recorded in a bounded log,
-  - tooling offers a bounded query (e.g. `diag windows`) to inspect this without opening large artifacts.
+  - routing decisions that matter for docking (hover/click target window selection) are recorded in a bounded log
+    (`dock.routing.json`),
+  - tooling offers bounded queries to inspect this without opening large artifacts (`diag windows`, `diag dock-routing`).
 - Fast mode is an explicit policy (config-driven) and has a small smoke suite proving it doesn’t introduce flake.
 
 Evidence anchors (expected):
@@ -146,3 +150,8 @@ Status (2026-02-28):
 
 - Base ref steps (`set_base_ref` / `clear_base_ref`) exist and runtime scopes selector resolution while active.
 - Named ref map + relative selector syntax are still pending (v1 covers the most common “scope to panel” case).
+- Bundles export a bounded `window.map.json` (window ids + last bounds + hover detection) and `dock.routing.json` (routing
+  evidence for docking/tear-out); tooling provides bounded reports (`diag windows`, `diag dock-routing`).
+- Script runtime hardening reduces avoidable “timeout” flakes by failing fast with stable `reason_code`:
+  - oversized targets (`scroll_into_view`, `ensure_visible(within_window=true)`),
+  - impossible stability configs (`stable_frames > timeout_frames` for stability-gated steps).

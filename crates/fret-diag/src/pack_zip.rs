@@ -287,6 +287,10 @@ pub(crate) fn pack_bundle_dir_to_zip(
             crate::bundle_index::ensure_test_ids_json(&bundle_artifact, warmup_frames, 500)?;
         let frames_index_path =
             crate::frames_index::ensure_frames_index_json(&bundle_artifact, warmup_frames)?;
+        let window_map_path =
+            crate::bundle_index::ensure_window_map_json(&bundle_artifact, warmup_frames)?;
+        let dock_routing_path =
+            crate::bundle_index::ensure_dock_routing_json(&bundle_artifact, warmup_frames)?;
 
         for (src, rel) in [
             (meta_path, "bundle.meta.json"),
@@ -294,6 +298,8 @@ pub(crate) fn pack_bundle_dir_to_zip(
             (test_ids_index_path, "test_ids.index.json"),
             (test_ids_path, "test_ids.json"),
             (frames_index_path, "frames.index.json"),
+            (window_map_path, "window.map.json"),
+            (dock_routing_path, "dock.routing.json"),
         ] {
             if src.is_file() {
                 let dst = format!("{bundle_name}/_root/{rel}");
@@ -476,6 +482,10 @@ pub(crate) fn pack_repro_zip_multi(
                 crate::bundle_index::ensure_test_ids_json(&bundle_artifact, warmup_frames, 500)?;
             let frames_index_path =
                 crate::frames_index::ensure_frames_index_json(&bundle_artifact, warmup_frames)?;
+            let window_map_path =
+                crate::bundle_index::ensure_window_map_json(&bundle_artifact, warmup_frames)?;
+            let dock_routing_path =
+                crate::bundle_index::ensure_dock_routing_json(&bundle_artifact, warmup_frames)?;
 
             for (src, rel) in [
                 (meta_path, "bundle.meta.json"),
@@ -483,6 +493,8 @@ pub(crate) fn pack_repro_zip_multi(
                 (test_ids_index_path, "test_ids.index.json"),
                 (test_ids_path, "test_ids.json"),
                 (frames_index_path, "frames.index.json"),
+                (window_map_path, "window.map.json"),
+                (dock_routing_path, "dock.routing.json"),
             ] {
                 if src.is_file() {
                     let dst = format!("{}/_root/{rel}", item.prefix);

@@ -1045,6 +1045,7 @@ mod tests {
             window_bounds,
             window,
             None,
+            None,
             element_runtime,
             text_input_snapshot,
             render_text,
@@ -1259,7 +1260,10 @@ mod tests {
         svc.cfg.pick_trigger_path = dir.join("pick.touch");
         svc.cfg.inspect_trigger_path = dir.join("inspect.touch");
         svc.cfg.inspect_path = dir.join("inspect.json");
-        svc.pending_script = Some(PendingScript { steps: Vec::new() });
+        svc.pending_script = Some(PendingScript {
+            steps: Vec::new(),
+            legacy_schema_v1: false,
+        });
 
         assert!(
             !svc.wants_inspection_active(AppWindowId::default()),

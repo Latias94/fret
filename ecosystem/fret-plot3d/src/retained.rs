@@ -131,9 +131,9 @@ impl<H: UiHost> Widget<H> for Plot3dCanvas {
         cx.scene.push(SceneOp::Quad {
             order: DrawOrder(1),
             rect: bounds,
-            background: fret_core::Paint::Solid(background),
+            background: fret_core::Paint::Solid(background).into(),
             border: fret_core::Edges::all(border_width),
-            border_paint: fret_core::Paint::Solid(border),
+            border_paint: fret_core::Paint::Solid(border).into(),
             corner_radii: fret_core::Corners::all(Px(0.0)),
         });
 

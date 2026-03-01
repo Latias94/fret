@@ -118,9 +118,10 @@ fn record_scene(scene: &mut Scene, bounds: Rect, mats: Materials, group_n: u32) 
             g: 0.07,
             b: 0.08,
             a: 1.0,
-        }),
+        })
+        .into(),
         border: Edges::all(Px(0.0)),
-        border_paint: Paint::TRANSPARENT,
+        border_paint: Paint::TRANSPARENT.into(),
         corner_radii: Corners::all(Px(0.0)),
     });
 
@@ -149,9 +150,9 @@ fn record_scene(scene: &mut Scene, bounds: Rect, mats: Materials, group_n: u32) 
             scene.push(SceneOp::Quad {
                 order: DrawOrder(1),
                 rect,
-                background,
+                background: background.into(),
                 border: Edges::all(Px(0.0)),
-                border_paint: Paint::TRANSPARENT,
+                border_paint: Paint::TRANSPARENT.into(),
                 corner_radii: Corners::all(Px(6.0)),
             });
         }
@@ -165,9 +166,9 @@ fn record_scene(scene: &mut Scene, bounds: Rect, mats: Materials, group_n: u32) 
                 scene.push(SceneOp::Quad {
                     order: DrawOrder(1),
                     rect,
-                    background,
+                    background: background.into(),
                     border: Edges::all(Px(1.5)),
-                    border_paint,
+                    border_paint: border_paint.into(),
                     corner_radii: Corners::all(Px(6.0)),
                 });
             }
@@ -185,7 +186,7 @@ fn record_scene(scene: &mut Scene, bounds: Rect, mats: Materials, group_n: u32) 
                     order: DrawOrder(2),
                     rect,
                     stroke: Edges::all(Px(1.5)),
-                    stroke_paint,
+                    stroke_paint: stroke_paint.into(),
                     corner_radii: Corners::all(Px(6.0)),
                     style: fret_core::scene::StrokeStyleV1 { dash },
                 });
@@ -202,9 +203,9 @@ fn record_scene(scene: &mut Scene, bounds: Rect, mats: Materials, group_n: u32) 
             scene.push(SceneOp::Quad {
                 order: DrawOrder(3),
                 rect,
-                background,
+                background: background.into(),
                 border: Edges::all(Px(0.0)),
-                border_paint: Paint::TRANSPARENT,
+                border_paint: Paint::TRANSPARENT.into(),
                 corner_radii: Corners::all(Px(6.0)),
             });
         }

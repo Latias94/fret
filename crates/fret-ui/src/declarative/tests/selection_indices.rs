@@ -71,13 +71,13 @@ fn selectable_text_paints_span_background_quads() {
     ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
 
     let quad_index = scene.ops().iter().position(|op| match op {
-        SceneOp::Quad { background, .. } => *background == fret_core::Paint::Solid(bg),
+        SceneOp::Quad { background, .. } => *background == fret_core::Paint::Solid(bg).into(),
         _ => false,
     });
     let quad_y = scene.ops().iter().find_map(|op| match op {
         SceneOp::Quad {
             background, rect, ..
-        } if *background == fret_core::Paint::Solid(bg) => Some(rect.origin.y),
+        } if *background == fret_core::Paint::Solid(bg).into() => Some(rect.origin.y),
         _ => None,
     });
     let text_index = scene
@@ -168,13 +168,13 @@ fn styled_text_paints_span_background_quads() {
     ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
 
     let quad_index = scene.ops().iter().position(|op| match op {
-        SceneOp::Quad { background, .. } => *background == fret_core::Paint::Solid(bg),
+        SceneOp::Quad { background, .. } => *background == fret_core::Paint::Solid(bg).into(),
         _ => false,
     });
     let quad_y = scene.ops().iter().find_map(|op| match op {
         SceneOp::Quad {
             background, rect, ..
-        } if *background == fret_core::Paint::Solid(bg) => Some(rect.origin.y),
+        } if *background == fret_core::Paint::Solid(bg).into() => Some(rect.origin.y),
         _ => None,
     });
     let text_index = scene

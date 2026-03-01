@@ -1,7 +1,9 @@
 use super::super::state::EncodeState;
 use super::super::*;
 
-use fret_core::scene::{ColorSpace, MAX_STOPS, MaterialParams, Paint, TileMode};
+use fret_core::scene::{
+    ColorSpace, MAX_STOPS, MaterialParams, Paint, PaintBindingV1, PaintEvalSpaceV1, TileMode,
+};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(super) enum PaintMaterialPolicy {
@@ -15,7 +17,7 @@ pub(super) enum PaintMaterialPolicy {
     DegradeToSolidBase,
 }
 
-pub(super) fn paint_is_visible(p: Paint, opacity: f32) -> bool {
+pub(super) fn paint_is_visible(p: PaintBindingV1, opacity: f32) -> bool {
     fn material_colors_from_params(params: MaterialParams) -> (Color, Color) {
         let base = params.vec4s[0];
         let fg = params.vec4s[1];
@@ -35,7 +37,7 @@ pub(super) fn paint_is_visible(p: Paint, opacity: f32) -> bool {
         )
     }
 
-    match p {
+    match p.paint {
         Paint::Solid(c) => (c.a * opacity) > 0.0,
         Paint::LinearGradient(g) => {
             let n = usize::from(g.stop_count).min(MAX_STOPS);
@@ -68,6 +70,14 @@ pub(super) fn paint_is_visible(p: Paint, opacity: f32) -> bool {
             let (base, fg) = material_colors_from_params(params);
             (base.a * opacity) > 0.0 || (fg.a * opacity) > 0.0
         }
+    }
+}
+
+fn eval_space_to_u32(s: PaintEvalSpaceV1) -> u32 {
+    match s {
+        PaintEvalSpaceV1::LocalPx => 0,
+        PaintEvalSpaceV1::ViewportPx => 1,
+        PaintEvalSpaceV1::StrokeS01 => 2,
     }
 }
 
@@ -134,7 +144,7 @@ fn material_colors_from_params(params: MaterialParams) -> (Color, Color) {
 pub(super) fn paint_to_gpu(
     renderer: &Renderer,
     state: &mut EncodeState<'_>,
-    paint: Paint,
+    paint: PaintBindingV1,
     opacity: f32,
     scale_factor: f32,
     material_policy: PaintMaterialPolicy,
@@ -146,6 +156,8 @@ pub(super) fn paint_to_gpu(
         tile_mode: 0,
         color_space: 0,
         stop_count: 0,
+        eval_space: 0,
+        _pad_eval_space: [0; 3],
         params0: [0.0; 4],
         params1: [0.0; 4],
         params2: [0.0; 4],
@@ -155,7 +167,8 @@ pub(super) fn paint_to_gpu(
         stop_offsets1: [0.0; 4],
     };
 
-    let paint = match (material_policy, paint) {
+    out.eval_space = eval_space_to_u32(paint.eval_space);
+    let paint = match (material_policy, paint.paint) {
         (PaintMaterialPolicy::DegradeToSolidBase, Paint::Material { params, .. }) => {
             let base = params.vec4s[0];
             Paint::Solid(Color {

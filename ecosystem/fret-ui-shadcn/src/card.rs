@@ -97,7 +97,10 @@ fn card_chrome(theme: &Theme, _size: CardSize) -> ChromeRefinement {
         .radius(rounded_xl)
         .border_1()
         .shadow_sm()
-        .py(Space::N6)
+        .py(match _size {
+            CardSize::Default => Space::N6,
+            CardSize::Sm => Space::N4,
+        })
         .bg(ColorRef::Color(bg))
         .border_color(ColorRef::Color(border))
 }
@@ -141,6 +144,10 @@ impl Card {
         let size = self.size;
         with_card_size_provider(cx, size, |cx| {
             let children = self.children;
+            let gap = match size {
+                CardSize::Default => Space::N6,
+                CardSize::Sm => Space::N4,
+            };
 
             let props = {
                 let theme = Theme::global(&*cx.app);
@@ -160,7 +167,7 @@ impl Card {
                 cx,
                 props,
                 stack::VStackProps::default()
-                    .gap(Space::N6)
+                    .gap(gap)
                     .layout(LayoutRefinement::default().w_full()),
                 children,
             )
@@ -178,6 +185,22 @@ where
     Card::new(f(cx)).into_element(cx)
 }
 
+/// Build a card and its sections inside a size provider.
+///
+/// This avoids footguns where callers construct `CardHeader` / `CardContent` / `CardFooter`
+/// elements outside the `Card` subtree and accidentally miss inherited size defaults.
+pub fn card_sized<H: UiHost, I>(
+    cx: &mut ElementContext<'_, H>,
+    size: CardSize,
+    f: impl FnOnce(&mut ElementContext<'_, H>) -> I,
+) -> AnyElement
+where
+    I: IntoIterator<Item = AnyElement>,
+{
+    let children = with_card_size_provider(cx, size, |cx| f(cx).into_iter().collect::<Vec<_>>());
+    Card::new(children).size(size).into_element(cx)
+}
+
 pub fn card_content<H: UiHost, I>(
     cx: &mut ElementContext<'_, H>,
     f: impl FnOnce(&mut ElementContext<'_, H>) -> I,
@@ -193,7 +216,9 @@ where
 #[derive(Debug)]
 pub struct CardHeader {
     children: Vec<AnyElement>,
+    size: Option<CardSize>,
     chrome: ChromeRefinement,
+    layout: LayoutRefinement,
     border_bottom: bool,
 }
 
@@ -202,13 +227,31 @@ impl CardHeader {
         let children = children.into_iter().collect();
         Self {
             children,
+            size: None,
             chrome: ChromeRefinement::default(),
+            layout: LayoutRefinement::default(),
             border_bottom: false,
         }
     }
 
+    /// Explicitly set the card size for this section.
+    ///
+    /// Most compositions rely on `Card` installing a size provider; however, some callers build
+    /// `CardHeader` / `CardContent` / `CardFooter` elements before they are inserted into a
+    /// `Card` subtree. In those cases, inherited size is unavailable, so callers can pass an
+    /// explicit size to match upstream shadcn behavior.
+    pub fn size(mut self, size: CardSize) -> Self {
+        self.size = Some(size);
+        self
+    }
+
     pub fn refine_style(mut self, style: ChromeRefinement) -> Self {
         self.chrome = self.chrome.merge(style);
+        self
+    }
+
+    pub fn refine_layout(mut self, layout: LayoutRefinement) -> Self {
+        self.layout = self.layout.merge(layout);
         self
     }
 
@@ -219,17 +262,23 @@ impl CardHeader {
 
     #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        let size = card_size_in_scope(cx);
+        let size = self.size.unwrap_or_else(|| card_size_in_scope(cx));
         let p = match size {
             CardSize::Default => Space::N6,
             CardSize::Sm => Space::N4,
         };
+        let pb = match size {
+            CardSize::Default => Space::N6,
+            CardSize::Sm => Space::N4,
+        };
         let border_bottom = self.border_bottom;
+        let layout = self.layout;
         let props = {
             let theme = Theme::global(&*cx.app);
             let base = if border_bottom {
-                // shadcn/ui v4: when the header has a bottom border it also adds `pb-6`.
-                ChromeRefinement::default().px(p).pb(Space::N6)
+                // shadcn/ui v4: when the header has a bottom border it also adds `pb-6`, and uses a
+                // smaller `pb-4` on `size=sm`.
+                ChromeRefinement::default().px(p).pb(pb)
             } else {
                 // shadcn/ui v4: `px-6` (and `px-4` for smaller cards).
                 ChromeRefinement::default().px(p)
@@ -237,7 +286,7 @@ impl CardHeader {
             decl_style::container_props(
                 theme,
                 base.merge(self.chrome),
-                LayoutRefinement::default().w_full(),
+                LayoutRefinement::default().w_full().merge(layout),
             )
         };
 
@@ -312,6 +361,7 @@ impl CardHeader {
 #[derive(Debug)]
 pub struct CardAction {
     children: Vec<AnyElement>,
+    chrome: ChromeRefinement,
     layout: LayoutRefinement,
 }
 
@@ -319,8 +369,14 @@ impl CardAction {
     pub fn new(children: impl IntoIterator<Item = AnyElement>) -> Self {
         Self {
             children: children.into_iter().collect(),
+            chrome: ChromeRefinement::default(),
             layout: LayoutRefinement::default(),
         }
+    }
+
+    pub fn refine_style(mut self, style: ChromeRefinement) -> Self {
+        self.chrome = self.chrome.merge(style);
+        self
     }
 
     pub fn refine_layout(mut self, layout: LayoutRefinement) -> Self {
@@ -334,7 +390,7 @@ impl CardAction {
             let theme = Theme::global(&*cx.app);
             decl_style::container_props(
                 theme,
-                ChromeRefinement::default(),
+                ChromeRefinement::default().merge(self.chrome),
                 LayoutRefinement::default().merge(self.layout),
             )
         };
@@ -466,6 +522,133 @@ mod tests {
     }
 
     #[test]
+    fn card_sections_can_inherit_or_override_size() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(400.0), Px(300.0)),
+        );
+
+        fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            let theme = Theme::global(&*cx.app);
+            let px_default = MetricRef::space(Space::N6).resolve(theme);
+            let px_sm = MetricRef::space(Space::N4).resolve(theme);
+
+            let default_header_el = CardHeader::new(Vec::<AnyElement>::new()).into_element(cx);
+            let ElementKind::Container(ContainerProps {
+                padding: default_header_padding,
+                ..
+            }) = &default_header_el.kind
+            else {
+                panic!("expected CardHeader to be a container element");
+            };
+            assert_eq!(default_header_padding.left, px_default.into());
+            assert_eq!(default_header_padding.right, px_default.into());
+
+            let explicit_header_el = CardHeader::new(Vec::<AnyElement>::new())
+                .size(CardSize::Sm)
+                .into_element(cx);
+            let ElementKind::Container(ContainerProps {
+                padding: explicit_header_padding,
+                ..
+            }) = &explicit_header_el.kind
+            else {
+                panic!("expected CardHeader(size=Sm) to be a container element");
+            };
+            assert_eq!(explicit_header_padding.left, px_sm.into());
+            assert_eq!(explicit_header_padding.right, px_sm.into());
+
+            let inherited_header_el = with_card_size_provider(cx, CardSize::Sm, |cx| {
+                CardHeader::new(Vec::<AnyElement>::new()).into_element(cx)
+            });
+            let ElementKind::Container(ContainerProps {
+                padding: inherited_header_padding,
+                ..
+            }) = &inherited_header_el.kind
+            else {
+                panic!("expected CardHeader(inherited Sm) to be a container element");
+            };
+            assert_eq!(inherited_header_padding.left, px_sm.into());
+            assert_eq!(inherited_header_padding.right, px_sm.into());
+
+            let default_el = CardContent::new(Vec::<AnyElement>::new()).into_element(cx);
+            let ElementKind::Container(ContainerProps {
+                padding: default_padding,
+                ..
+            }) = &default_el.kind
+            else {
+                panic!("expected CardContent to be a container element");
+            };
+            assert_eq!(default_padding.left, px_default.into());
+            assert_eq!(default_padding.right, px_default.into());
+
+            let explicit_el = CardContent::new(Vec::<AnyElement>::new())
+                .size(CardSize::Sm)
+                .into_element(cx);
+            let ElementKind::Container(ContainerProps {
+                padding: explicit_padding,
+                ..
+            }) = &explicit_el.kind
+            else {
+                panic!("expected CardContent(size=Sm) to be a container element");
+            };
+            assert_eq!(explicit_padding.left, px_sm.into());
+            assert_eq!(explicit_padding.right, px_sm.into());
+
+            let inherited_el = with_card_size_provider(cx, CardSize::Sm, |cx| {
+                CardContent::new(Vec::<AnyElement>::new()).into_element(cx)
+            });
+            let ElementKind::Container(ContainerProps {
+                padding: inherited_padding,
+                ..
+            }) = &inherited_el.kind
+            else {
+                panic!("expected CardContent(inherited Sm) to be a container element");
+            };
+            assert_eq!(inherited_padding.left, px_sm.into());
+            assert_eq!(inherited_padding.right, px_sm.into());
+
+            let default_footer_el = CardFooter::new(Vec::<AnyElement>::new()).into_element(cx);
+            let ElementKind::Container(ContainerProps {
+                padding: default_footer_padding,
+                ..
+            }) = &default_footer_el.kind
+            else {
+                panic!("expected CardFooter to be a container element");
+            };
+            assert_eq!(default_footer_padding.left, px_default.into());
+            assert_eq!(default_footer_padding.right, px_default.into());
+
+            let explicit_footer_el = CardFooter::new(Vec::<AnyElement>::new())
+                .size(CardSize::Sm)
+                .into_element(cx);
+            let ElementKind::Container(ContainerProps {
+                padding: explicit_footer_padding,
+                ..
+            }) = &explicit_footer_el.kind
+            else {
+                panic!("expected CardFooter(size=Sm) to be a container element");
+            };
+            assert_eq!(explicit_footer_padding.left, px_sm.into());
+            assert_eq!(explicit_footer_padding.right, px_sm.into());
+
+            let inherited_footer_el = with_card_size_provider(cx, CardSize::Sm, |cx| {
+                CardFooter::new(Vec::<AnyElement>::new()).into_element(cx)
+            });
+            let ElementKind::Container(ContainerProps {
+                padding: inherited_footer_padding,
+                ..
+            }) = &inherited_footer_el.kind
+            else {
+                panic!("expected CardFooter(inherited Sm) to be a container element");
+            };
+            assert_eq!(inherited_footer_padding.left, px_sm.into());
+            assert_eq!(inherited_footer_padding.right, px_sm.into());
+        });
+    }
+
+    #[test]
     fn card_header_border_bottom_adds_pb_6() {
         let window = AppWindowId::default();
         let mut app = App::new();
@@ -509,11 +692,106 @@ mod tests {
             );
         });
     }
+
+    #[test]
+    fn card_header_border_bottom_uses_smaller_pb_for_sm_cards() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(400.0), Px(300.0)),
+        );
+
+        fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            let theme = Theme::global(&*cx.app);
+            let pb_sm = MetricRef::space(Space::N4).resolve(theme);
+
+            let el = with_card_size_provider(cx, CardSize::Sm, |cx| {
+                CardHeader::new(Vec::<AnyElement>::new())
+                    .border_bottom(true)
+                    .into_element(cx)
+            });
+
+            fn has_header_padding(el: &AnyElement, pb: Px) -> bool {
+                let mut stack = vec![el];
+                while let Some(node) = stack.pop() {
+                    if let ElementKind::Container(ContainerProps { padding, .. }) = &node.kind {
+                        if padding.bottom == pb.into()
+                            && padding.left == padding.right
+                            && matches!(
+                                padding.left,
+                                fret_ui::element::SpacingLength::Px(px) if px.0 > 0.0
+                            )
+                        {
+                            return true;
+                        }
+                    }
+                    for child in &node.children {
+                        stack.push(child);
+                    }
+                }
+                false
+            }
+
+            assert!(
+                has_header_padding(&el, pb_sm),
+                "expected CardHeader(border_bottom=true,size=sm) to apply pb-4 to the padded header container"
+            );
+        });
+    }
+
+    #[test]
+    fn card_footer_border_top_uses_smaller_pt_for_sm_cards() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(400.0), Px(300.0)),
+        );
+
+        fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            let theme = Theme::global(&*cx.app);
+            let pt_sm = MetricRef::space(Space::N4).resolve(theme);
+
+            let el = with_card_size_provider(cx, CardSize::Sm, |cx| {
+                CardFooter::new(Vec::<AnyElement>::new())
+                    .border_top(true)
+                    .into_element(cx)
+            });
+
+            fn has_footer_padding(el: &AnyElement, pt: Px) -> bool {
+                let mut stack = vec![el];
+                while let Some(node) = stack.pop() {
+                    if let ElementKind::Container(ContainerProps { padding, .. }) = &node.kind {
+                        if padding.top == pt.into()
+                            && padding.left == padding.right
+                            && matches!(
+                                padding.left,
+                                fret_ui::element::SpacingLength::Px(px) if px.0 > 0.0
+                            )
+                        {
+                            return true;
+                        }
+                    }
+                    for child in &node.children {
+                        stack.push(child);
+                    }
+                }
+                false
+            }
+
+            assert!(
+                has_footer_padding(&el, pt_sm),
+                "expected CardFooter(border_top=true,size=sm) to apply pt-4 to the padded footer container"
+            );
+        });
+    }
 }
 
 #[derive(Debug)]
 pub struct CardContent {
     children: Vec<AnyElement>,
+    size: Option<CardSize>,
     chrome: ChromeRefinement,
     layout: LayoutRefinement,
 }
@@ -523,9 +801,21 @@ impl CardContent {
         let children = children.into_iter().collect();
         Self {
             children,
+            size: None,
             chrome: ChromeRefinement::default(),
             layout: LayoutRefinement::default(),
         }
+    }
+
+    /// Explicitly set the card size for this section.
+    ///
+    /// Most compositions rely on `Card` installing a size provider; however, some callers build
+    /// `CardHeader` / `CardContent` / `CardFooter` elements before they are inserted into a
+    /// `Card` subtree. In those cases, inherited size is unavailable, so callers can pass an
+    /// explicit size to match upstream shadcn behavior.
+    pub fn size(mut self, size: CardSize) -> Self {
+        self.size = Some(size);
+        self
     }
 
     pub fn refine_style(mut self, style: ChromeRefinement) -> Self {
@@ -540,7 +830,7 @@ impl CardContent {
 
     #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        let size = card_size_in_scope(cx);
+        let size = self.size.unwrap_or_else(|| card_size_in_scope(cx));
         let p = match size {
             CardSize::Default => Space::N6,
             CardSize::Sm => Space::N4,
@@ -569,6 +859,7 @@ impl CardContent {
 #[derive(Debug)]
 pub struct CardFooter {
     children: Vec<AnyElement>,
+    size: Option<CardSize>,
     chrome: ChromeRefinement,
     layout: LayoutRefinement,
     border_top: bool,
@@ -581,12 +872,21 @@ impl CardFooter {
         let children = children.into_iter().collect();
         Self {
             children,
+            size: None,
             chrome: ChromeRefinement::default(),
             layout: LayoutRefinement::default(),
             border_top: false,
             gap: Space::N0.into(),
             wrap: false,
         }
+    }
+
+    /// Explicitly set the card size for this section.
+    ///
+    /// See `CardContent::size(...)` for why some call sites need this.
+    pub fn size(mut self, size: CardSize) -> Self {
+        self.size = Some(size);
+        self
     }
 
     pub fn refine_style(mut self, style: ChromeRefinement) -> Self {
@@ -616,8 +916,12 @@ impl CardFooter {
 
     #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        let size = card_size_in_scope(cx);
+        let size = self.size.unwrap_or_else(|| card_size_in_scope(cx));
         let p = match size {
+            CardSize::Default => Space::N6,
+            CardSize::Sm => Space::N4,
+        };
+        let pt = match size {
             CardSize::Default => Space::N6,
             CardSize::Sm => Space::N4,
         };
@@ -643,10 +947,7 @@ impl CardFooter {
                 // lives on Card).
                 decl_style::container_props(
                     theme,
-                    ChromeRefinement::default()
-                        .px(p)
-                        .pt(Space::N6)
-                        .merge(chrome),
+                    ChromeRefinement::default().px(p).pt(pt).merge(chrome),
                     LayoutRefinement::default().w_full().merge(layout),
                 )
             };

@@ -202,16 +202,19 @@ pub use date_picker::DatePicker;
 pub use date_picker_with_presets::DatePickerWithPresets;
 pub use date_range_picker::DateRangePicker;
 pub use dialog::{
-    Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
+    Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, DialogHeader,
+    DialogOverlay, DialogPortal, DialogTitle, DialogTrigger,
 };
 pub use drawer::{
     Drawer, DrawerClose, DrawerContent, DrawerDescription, DrawerFooter, DrawerHeader, DrawerSide,
     DrawerSnapPoint, DrawerTitle, DrawerTrigger, drawer,
 };
 pub use dropdown_menu::{
-    DropdownMenu, DropdownMenuAlign, DropdownMenuCheckboxItem, DropdownMenuEntry,
-    DropdownMenuGroup, DropdownMenuItem, DropdownMenuLabel, DropdownMenuRadioGroup,
-    DropdownMenuRadioItem, DropdownMenuRadioItemSpec, DropdownMenuShortcut, DropdownMenuSide,
+    DropdownMenu, DropdownMenuAlign, DropdownMenuCheckboxItem, DropdownMenuContent,
+    DropdownMenuEntry, DropdownMenuGroup, DropdownMenuItem, DropdownMenuLabel,
+    DropdownMenuRadioGroup, DropdownMenuRadioItem, DropdownMenuRadioItemSpec,
+    DropdownMenuSeparator, DropdownMenuShortcut, DropdownMenuSide, DropdownMenuSub,
+    DropdownMenuSubContent, DropdownMenuSubTrigger, DropdownMenuTrigger,
 };
 pub use empty::Empty;
 pub use field::{
@@ -239,9 +242,10 @@ pub use item::{
 pub use kbd::{Kbd, KbdGroup};
 pub use label::Label;
 pub use menubar::{
-    Menubar, MenubarCheckboxItem, MenubarEntry, MenubarGroup, MenubarItem, MenubarLabel,
-    MenubarMenu, MenubarMenuEntries, MenubarRadioGroup, MenubarRadioItem, MenubarRadioItemSpec,
-    MenubarShortcut, menubar,
+    Menubar, MenubarCheckboxItem, MenubarContent, MenubarEntry, MenubarGroup, MenubarItem,
+    MenubarLabel, MenubarMenu, MenubarMenuEntries, MenubarRadioGroup, MenubarRadioItem,
+    MenubarRadioItemSpec, MenubarSeparator, MenubarShortcut, MenubarSub, MenubarSubContent,
+    MenubarSubTrigger, MenubarTrigger, menubar,
 };
 pub use native_select::{
     NativeSelect, NativeSelectOptGroup, NativeSelectOption, NativeSelectSize, native_select,
@@ -271,8 +275,10 @@ pub use scroll_area::{
     ScrollAreaScrollbarOrientation, ScrollAreaViewport, scroll_area,
 };
 pub use select::{
-    Select, SelectAlign, SelectEntry, SelectGroup, SelectItem, SelectLabel, SelectSeparator,
-    SelectSide, select,
+    Select, SelectAlign, SelectContent, SelectEntry, SelectGroup, SelectItem, SelectItemIndicator,
+    SelectItemText, SelectLabel, SelectScrollButtons, SelectScrollDownButton, SelectScrollUpButton,
+    SelectSeparator, SelectSide, SelectTextRun, SelectTextTone, SelectTrigger,
+    SelectTriggerLabelPolicy, SelectTriggerSize, SelectValue, select,
 };
 pub use separator::{Separator, SeparatorOrientation, separator};
 pub use sheet::{
@@ -348,6 +354,12 @@ pub mod prelude {
     pub use crate::{
         ChromeRefinement, ColorRef, Corners4, Edges4, LayoutRefinement, MarginEdge, MetricRef,
         Radius, ShadowPreset, SignedMetricRef, Size, Space, UiExt,
+    };
+    pub use crate::{
+        Select, SelectAlign, SelectContent, SelectEntry, SelectGroup, SelectItem,
+        SelectItemIndicator, SelectItemText, SelectLabel, SelectScrollButtons,
+        SelectScrollDownButton, SelectScrollUpButton, SelectSeparator, SelectSide, SelectTextRun,
+        SelectTextTone, SelectTrigger, SelectTriggerLabelPolicy, SelectTriggerSize, SelectValue,
     };
     pub use crate::{decl_style, icon, stack, ui};
 

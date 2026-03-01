@@ -4776,9 +4776,9 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
         cx.scene.push(SceneOp::Quad {
             order: DrawOrder(0),
             rect: cx.bounds,
-            background: fret_core::Paint::Solid(background),
+            background: fret_core::Paint::Solid(background).into(),
             border: fret_core::Edges::all(resolved_style.border_width),
-            border_paint: fret_core::Paint::Solid(border),
+            border_paint: fret_core::Paint::Solid(border).into(),
 
             corner_radii: fret_core::Corners::all(Px(0.0)),
         });
@@ -4961,9 +4961,9 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                         Point::new(x, layout.plot.origin.y),
                         Size::new(Px(1.0), layout.plot.size.height),
                     ),
-                    background: fret_core::Paint::Solid(background),
+                    background: fret_core::Paint::Solid(background).into(),
                     border: fret_core::Edges::all(Px(0.0)),
-                    border_paint: fret_core::Paint::TRANSPARENT,
+                    border_paint: fret_core::Paint::TRANSPARENT.into(),
 
                     corner_radii: fret_core::Corners::all(Px(0.0)),
                 });
@@ -4986,9 +4986,9 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                         Point::new(layout.plot.origin.x, y),
                         Size::new(layout.plot.size.width, Px(1.0)),
                     ),
-                    background: fret_core::Paint::Solid(background),
+                    background: fret_core::Paint::Solid(background).into(),
                     border: fret_core::Edges::all(Px(0.0)),
-                    border_paint: fret_core::Paint::TRANSPARENT,
+                    border_paint: fret_core::Paint::TRANSPARENT.into(),
 
                     corner_radii: fret_core::Corners::all(Px(0.0)),
                 });
@@ -5068,10 +5068,10 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                             cx.scene.push(SceneOp::Quad {
                                 order: quad.order,
                                 rect: offset_rect(quad.rect_local, layout.plot.origin),
-                                background: fret_core::Paint::Solid(quad.background),
+                                background: fret_core::Paint::Solid(quad.background).into(),
 
                                 border: fret_core::Edges::all(Px(0.0)),
-                                border_paint: fret_core::Paint::TRANSPARENT,
+                                border_paint: fret_core::Paint::TRANSPARENT.into(),
 
                                 corner_radii: fret_core::Corners::all(Px(0.0)),
                             });
@@ -5115,10 +5115,10 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                                 ops.push(SceneOp::Quad {
                                     order: quad.order,
                                     rect: quad.rect_local,
-                                    background: fret_core::Paint::Solid(quad.background),
+                                    background: fret_core::Paint::Solid(quad.background).into(),
 
                                     border: fret_core::Edges::all(Px(0.0)),
-                                    border_paint: fret_core::Paint::TRANSPARENT,
+                                    border_paint: fret_core::Paint::TRANSPARENT.into(),
 
                                     corner_radii: fret_core::Corners::all(Px(0.0)),
                                 });
@@ -5296,9 +5296,10 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                         background: fret_core::Paint::Solid(Color {
                             a: 0.88,
                             ..tooltip_background
-                        }),
+                        })
+                        .into(),
                         border: fret_core::Edges::all(Px(1.0)),
-                        border_paint: fret_core::Paint::Solid(tooltip_border),
+                        border_paint: fret_core::Paint::Solid(tooltip_border).into(),
 
                         corner_radii: fret_core::Corners::all(panel_radius),
                     });
@@ -5337,10 +5338,10 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                                                 Point::new(Px(bar_left), Px(y0)),
                                                 Size::new(Px(bar_w), Px(h.max(1.0))),
                                             ),
-                                            background: fret_core::Paint::Solid(color),
+                                            background: fret_core::Paint::Solid(color).into(),
 
                                             border: fret_core::Edges::all(Px(0.0)),
-                                            border_paint: fret_core::Paint::TRANSPARENT,
+                                            border_paint: fret_core::Paint::TRANSPARENT.into(),
 
                                             corner_radii: fret_core::Corners::all(Px(0.0)),
                                         });
@@ -5370,10 +5371,10 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                                     Point::new(Px(bar_left), Px(bar_top)),
                                     Size::new(Px(bar_w), Px(bar_h)),
                                 ),
-                                background: fret_core::Paint::TRANSPARENT,
+                                background: fret_core::Paint::TRANSPARENT.into(),
 
                                 border: fret_core::Edges::all(Px(1.0)),
-                                border_paint: fret_core::Paint::Solid(tooltip_border),
+                                border_paint: fret_core::Paint::Solid(tooltip_border).into(),
 
                                 corner_radii: fret_core::Corners::all(Px(0.0)),
                             });
@@ -5547,10 +5548,11 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                             ),
                             background: fret_core::Paint::Solid(
                                 line.color.unwrap_or(default_color),
-                            ),
+                            )
+                            .into(),
 
                             border: fret_core::Edges::all(Px(0.0)),
-                            border_paint: fret_core::Paint::TRANSPARENT,
+                            border_paint: fret_core::Paint::TRANSPARENT.into(),
 
                             corner_radii: fret_core::Corners::all(Px(0.0)),
                         });
@@ -5585,10 +5587,11 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                             ),
                             background: fret_core::Paint::Solid(
                                 line.color.unwrap_or(default_color),
-                            ),
+                            )
+                            .into(),
 
                             border: fret_core::Edges::all(Px(0.0)),
-                            border_paint: fret_core::Paint::TRANSPARENT,
+                            border_paint: fret_core::Paint::TRANSPARENT.into(),
 
                             corner_radii: fret_core::Corners::all(Px(0.0)),
                         });
@@ -5662,10 +5665,10 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                         cx.scene.push(SceneOp::Quad {
                             order: DrawOrder(3),
                             rect: abs_rect,
-                            background: fret_core::Paint::Solid(fill),
+                            background: fret_core::Paint::Solid(fill).into(),
 
                             border: fret_core::Edges::all(Px(border_w)),
-                            border_paint: fret_core::Paint::Solid(color),
+                            border_paint: fret_core::Paint::Solid(color).into(),
 
                             corner_radii: fret_core::Corners::all(Px(0.0)),
                         });
@@ -5702,10 +5705,11 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                             ),
                             background: fret_core::Paint::Solid(
                                 line.color.unwrap_or(annotation_stroke),
-                            ),
+                            )
+                            .into(),
 
                             border: fret_core::Edges::all(Px(0.0)),
-                            border_paint: fret_core::Paint::TRANSPARENT,
+                            border_paint: fret_core::Paint::TRANSPARENT.into(),
 
                             corner_radii: fret_core::Corners::all(Px(0.0)),
                         });
@@ -5748,10 +5752,11 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                             ),
                             background: fret_core::Paint::Solid(
                                 line.color.unwrap_or(annotation_stroke),
-                            ),
+                            )
+                            .into(),
 
                             border: fret_core::Edges::all(Px(0.0)),
-                            border_paint: fret_core::Paint::TRANSPARENT,
+                            border_paint: fret_core::Paint::TRANSPARENT.into(),
 
                             corner_radii: fret_core::Corners::all(Px(0.0)),
                         });
@@ -5803,10 +5808,10 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                         cx.scene.push(SceneOp::Quad {
                             order: DrawOrder(3),
                             rect: abs_rect,
-                            background: fret_core::Paint::Solid(color),
+                            background: fret_core::Paint::Solid(color).into(),
 
                             border: fret_core::Edges::all(Px(1.0)),
-                            border_paint: fret_core::Paint::Solid(annotation_border),
+                            border_paint: fret_core::Paint::Solid(annotation_border).into(),
 
                             corner_radii: fret_core::Corners::all(Px(r)),
                         });
@@ -6263,10 +6268,11 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                                 cx.scene.push(SceneOp::Quad {
                                     order: DrawOrder(3),
                                     rect,
-                                    background: fret_core::Paint::Solid(annotation_background),
+                                    background: fret_core::Paint::Solid(annotation_background)
+                                        .into(),
 
                                     border: fret_core::Edges::all(Px(1.0)),
-                                    border_paint: fret_core::Paint::Solid(annotation_border),
+                                    border_paint: fret_core::Paint::Solid(annotation_border).into(),
 
                                     corner_radii: fret_core::Corners::all(annotation_radius),
                                 });
@@ -6301,10 +6307,10 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                                         Point::new(Px(marker_left), Px(marker_top)),
                                         Size::new(marker_w, marker_h),
                                     ),
-                                    background: fret_core::Paint::Solid(*color),
+                                    background: fret_core::Paint::Solid(*color).into(),
 
                                     border: fret_core::Edges::all(Px(0.0)),
-                                    border_paint: fret_core::Paint::TRANSPARENT,
+                                    border_paint: fret_core::Paint::TRANSPARENT.into(),
 
                                     corner_radii: fret_core::Corners::all(Px(0.0)),
                                 });
@@ -6332,10 +6338,11 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                                 cx.scene.push(SceneOp::Quad {
                                     order: DrawOrder(3),
                                     rect,
-                                    background: fret_core::Paint::Solid(annotation_background),
+                                    background: fret_core::Paint::Solid(annotation_background)
+                                        .into(),
 
                                     border: fret_core::Edges::all(Px(1.0)),
-                                    border_paint: fret_core::Paint::Solid(annotation_border),
+                                    border_paint: fret_core::Paint::Solid(annotation_border).into(),
 
                                     corner_radii: fret_core::Corners::all(annotation_radius),
                                 });
@@ -6372,10 +6379,10 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                                         Point::new(Px(marker_left), Px(marker_top)),
                                         Size::new(marker_w, marker_h),
                                     ),
-                                    background: fret_core::Paint::Solid(*color),
+                                    background: fret_core::Paint::Solid(*color).into(),
 
                                     border: fret_core::Edges::all(Px(0.0)),
-                                    border_paint: fret_core::Paint::TRANSPARENT,
+                                    border_paint: fret_core::Paint::TRANSPARENT.into(),
 
                                     corner_radii: fret_core::Corners::all(Px(0.0)),
                                 });
@@ -6407,12 +6414,13 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                                     cx.scene.push(SceneOp::Quad {
                                         order: DrawOrder(3),
                                         rect,
-                                        background: fret_core::Paint::Solid(bg),
+                                        background: fret_core::Paint::Solid(bg).into(),
 
                                         border: fret_core::Edges::all(Px(1.0)),
                                         border_paint: fret_core::Paint::Solid(
                                             border.unwrap_or(annotation_border),
-                                        ),
+                                        )
+                                        .into(),
 
                                         corner_radii: fret_core::Corners::all(*corner_radius),
                                     });
@@ -6445,10 +6453,10 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                         Point::new(x, layout.plot.origin.y),
                         Size::new(Px(1.0), layout.plot.size.height),
                     ),
-                    background: fret_core::Paint::Solid(crosshair_color),
+                    background: fret_core::Paint::Solid(crosshair_color).into(),
 
                     border: fret_core::Edges::all(Px(0.0)),
-                    border_paint: fret_core::Paint::TRANSPARENT,
+                    border_paint: fret_core::Paint::TRANSPARENT.into(),
 
                     corner_radii: fret_core::Corners::all(Px(0.0)),
                 });
@@ -6459,10 +6467,10 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                         Point::new(layout.plot.origin.x, y),
                         Size::new(layout.plot.size.width, Px(1.0)),
                     ),
-                    background: fret_core::Paint::Solid(crosshair_color),
+                    background: fret_core::Paint::Solid(crosshair_color).into(),
 
                     border: fret_core::Edges::all(Px(0.0)),
-                    border_paint: fret_core::Paint::TRANSPARENT,
+                    border_paint: fret_core::Paint::TRANSPARENT.into(),
 
                     corner_radii: fret_core::Corners::all(Px(0.0)),
                 });
@@ -6492,10 +6500,10 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                             Point::new(x, layout.plot.origin.y),
                             Size::new(Px(1.0), layout.plot.size.height),
                         ),
-                        background: fret_core::Paint::Solid(linked_color),
+                        background: fret_core::Paint::Solid(linked_color).into(),
 
                         border: fret_core::Edges::all(Px(0.0)),
-                        border_paint: fret_core::Paint::TRANSPARENT,
+                        border_paint: fret_core::Paint::TRANSPARENT.into(),
 
                         corner_radii: fret_core::Corners::all(Px(0.0)),
                     });
@@ -6530,10 +6538,10 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                 cx.scene.push(SceneOp::Quad {
                     order: DrawOrder(4),
                     rect: Rect::new(outer_origin, Size::new(outer_size, outer_size)),
-                    background: fret_core::Paint::TRANSPARENT,
+                    background: fret_core::Paint::TRANSPARENT.into(),
 
                     border: fret_core::Edges::all(Px(2.0)),
-                    border_paint: fret_core::Paint::Solid(hover_color),
+                    border_paint: fret_core::Paint::Solid(hover_color).into(),
 
                     corner_radii: fret_core::Corners::all(Px(outer_size.0 * 0.5)),
                 });
@@ -6544,10 +6552,10 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                 cx.scene.push(SceneOp::Quad {
                     order: DrawOrder(5),
                     rect: Rect::new(dot_origin, Size::new(dot_size, dot_size)),
-                    background: fret_core::Paint::Solid(hover_color),
+                    background: fret_core::Paint::Solid(hover_color).into(),
 
                     border: fret_core::Edges::all(Px(1.0)),
-                    border_paint: fret_core::Paint::Solid(tooltip_border),
+                    border_paint: fret_core::Paint::Solid(tooltip_border).into(),
 
                     corner_radii: fret_core::Corners::all(Px(dot_size.0 * 0.5)),
                 });
@@ -6695,10 +6703,10 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                                         outer_origin,
                                         Size::new(outer_size, outer_size),
                                     ),
-                                    background: fret_core::Paint::TRANSPARENT,
+                                    background: fret_core::Paint::TRANSPARENT.into(),
 
                                     border: fret_core::Edges::all(Px(2.0)),
-                                    border_paint: fret_core::Paint::Solid(series_color),
+                                    border_paint: fret_core::Paint::Solid(series_color).into(),
 
                                     corner_radii: fret_core::Corners::all(Px(outer_size.0 * 0.5)),
                                 });
@@ -6711,10 +6719,10 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                                 cx.scene.push(SceneOp::Quad {
                                     order: DrawOrder(5),
                                     rect: Rect::new(dot_origin, Size::new(dot_size, dot_size)),
-                                    background: fret_core::Paint::Solid(series_color),
+                                    background: fret_core::Paint::Solid(series_color).into(),
 
                                     border: fret_core::Edges::all(Px(1.0)),
-                                    border_paint: fret_core::Paint::Solid(tooltip_border),
+                                    border_paint: fret_core::Paint::Solid(tooltip_border).into(),
 
                                     corner_radii: fret_core::Corners::all(Px(dot_size.0 * 0.5)),
                                 });
@@ -6758,10 +6766,10 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                             ),
                             Size::new(Px(w), Px(h)),
                         ),
-                        background: fret_core::Paint::Solid(selection_fill),
+                        background: fret_core::Paint::Solid(selection_fill).into(),
 
                         border: fret_core::Edges::all(Px(1.0)),
-                        border_paint: fret_core::Paint::Solid(selection_border),
+                        border_paint: fret_core::Paint::Solid(selection_border).into(),
 
                         corner_radii: fret_core::Corners::all(Px(0.0)),
                     });
@@ -6785,10 +6793,10 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                             ),
                             Size::new(Px(w), Px(h)),
                         ),
-                        background: fret_core::Paint::Solid(selection_fill),
+                        background: fret_core::Paint::Solid(selection_fill).into(),
 
                         border: fret_core::Edges::all(Px(1.0)),
-                        border_paint: fret_core::Paint::Solid(selection_border),
+                        border_paint: fret_core::Paint::Solid(selection_border).into(),
 
                         corner_radii: fret_core::Corners::all(Px(0.0)),
                     });
@@ -6812,10 +6820,10 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                             ),
                             Size::new(Px(w), Px(h)),
                         ),
-                        background: fret_core::Paint::Solid(selection_fill),
+                        background: fret_core::Paint::Solid(selection_fill).into(),
 
                         border: fret_core::Edges::all(Px(1.0)),
-                        border_paint: fret_core::Paint::Solid(selection_border),
+                        border_paint: fret_core::Paint::Solid(selection_border).into(),
 
                         corner_radii: fret_core::Corners::all(Px(0.0)),
                     });
@@ -6906,9 +6914,10 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                                     g: 1.0,
                                     b: 1.0,
                                     a: 0.9,
-                                }),
+                                })
+                                .into(),
                                 border: fret_core::Edges::all(Px(0.0)),
-                                border_paint: fret_core::Paint::TRANSPARENT,
+                                border_paint: fret_core::Paint::TRANSPARENT.into(),
 
                                 corner_radii: fret_core::Corners::all(r),
                             });
@@ -6974,14 +6983,16 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                             g: 0.0,
                             b: 0.0,
                             a: 0.65,
-                        }),
+                        })
+                        .into(),
                         border: fret_core::Edges::all(Px(1.0)),
                         border_paint: fret_core::Paint::Solid(Color {
                             r: 1.0,
                             g: 1.0,
                             b: 1.0,
                             a: 0.18,
-                        }),
+                        })
+                        .into(),
                         corner_radii: fret_core::Corners::all(Px(4.0)),
                     });
 
@@ -7028,10 +7039,10 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
             cx.scene.push(SceneOp::Quad {
                 order: DrawOrder(6),
                 rect,
-                background: fret_core::Paint::Solid(tooltip_background),
+                background: fret_core::Paint::Solid(tooltip_background).into(),
 
                 border: fret_core::Edges::all(Px(1.0)),
-                border_paint: fret_core::Paint::Solid(tooltip_border),
+                border_paint: fret_core::Paint::Solid(tooltip_border).into(),
 
                 corner_radii: fret_core::Corners::all(Px(6.0)),
             });
@@ -7059,10 +7070,10 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                     cx.scene.push(SceneOp::Quad {
                         order: DrawOrder(6),
                         rect: highlight_rect,
-                        background: fret_core::Paint::Solid(highlight),
+                        background: fret_core::Paint::Solid(highlight).into(),
 
                         border: fret_core::Edges::all(Px(0.0)),
-                        border_paint: fret_core::Paint::TRANSPARENT,
+                        border_paint: fret_core::Paint::TRANSPARENT.into(),
 
                         corner_radii: fret_core::Corners::all(Px(4.0)),
                     });
@@ -7098,10 +7109,10 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                         Point::new(swatch_x, swatch_y),
                         Size::new(swatch_w, swatch_h),
                     ),
-                    background: fret_core::Paint::Solid(swatch_color),
+                    background: fret_core::Paint::Solid(swatch_color).into(),
 
                     border: fret_core::Edges::all(Px(0.0)),
-                    border_paint: fret_core::Paint::TRANSPARENT,
+                    border_paint: fret_core::Paint::TRANSPARENT.into(),
 
                     corner_radii: fret_core::Corners::all(Px(0.0)),
                 });
@@ -7129,10 +7140,10 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                     layout.plot.origin,
                     Size::new(Px(1.0), layout.plot.size.height),
                 ),
-                background: fret_core::Paint::Solid(axis_color),
+                background: fret_core::Paint::Solid(axis_color).into(),
 
                 border: fret_core::Edges::all(Px(0.0)),
-                border_paint: fret_core::Paint::TRANSPARENT,
+                border_paint: fret_core::Paint::TRANSPARENT.into(),
 
                 corner_radii: fret_core::Corners::all(Px(0.0)),
             });
@@ -7150,10 +7161,10 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                         Point::new(x, layout.plot.origin.y),
                         Size::new(Px(1.0), layout.plot.size.height),
                     ),
-                    background: fret_core::Paint::Solid(axis_color),
+                    background: fret_core::Paint::Solid(axis_color).into(),
 
                     border: fret_core::Edges::all(Px(0.0)),
-                    border_paint: fret_core::Paint::TRANSPARENT,
+                    border_paint: fret_core::Paint::TRANSPARENT.into(),
 
                     corner_radii: fret_core::Corners::all(Px(0.0)),
                 });
@@ -7167,10 +7178,10 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                     Point::new(layout.plot.origin.x, y),
                     Size::new(layout.plot.size.width, Px(1.0)),
                 ),
-                background: fret_core::Paint::Solid(axis_color),
+                background: fret_core::Paint::Solid(axis_color).into(),
 
                 border: fret_core::Edges::all(Px(0.0)),
-                border_paint: fret_core::Paint::TRANSPARENT,
+                border_paint: fret_core::Paint::TRANSPARENT.into(),
 
                 corner_radii: fret_core::Corners::all(Px(0.0)),
             });
@@ -7741,10 +7752,10 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                 cx.scene.push(SceneOp::Quad {
                     order: DrawOrder(12),
                     rect,
-                    background: fret_core::Paint::Solid(tooltip_background),
+                    background: fret_core::Paint::Solid(tooltip_background).into(),
 
                     border: fret_core::Edges::all(Px(1.0)),
-                    border_paint: fret_core::Paint::Solid(tooltip_border),
+                    border_paint: fret_core::Paint::Solid(tooltip_border).into(),
 
                     corner_radii: fret_core::Corners::all(Px(6.0)),
                 });
@@ -7819,10 +7830,10 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                     cx.scene.push(SceneOp::Quad {
                         order: DrawOrder(12),
                         rect,
-                        background: fret_core::Paint::Solid(tooltip_background),
+                        background: fret_core::Paint::Solid(tooltip_background).into(),
 
                         border: fret_core::Edges::all(Px(1.0)),
-                        border_paint: fret_core::Paint::Solid(tooltip_border),
+                        border_paint: fret_core::Paint::Solid(tooltip_border).into(),
 
                         corner_radii: fret_core::Corners::all(Px(6.0)),
                     });
@@ -8218,10 +8229,10 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                 cx.scene.push(SceneOp::Quad {
                     order: DrawOrder(20),
                     rect,
-                    background: fret_core::Paint::Solid(tooltip_background),
+                    background: fret_core::Paint::Solid(tooltip_background).into(),
 
                     border: fret_core::Edges::all(Px(1.0)),
-                    border_paint: fret_core::Paint::Solid(tooltip_border),
+                    border_paint: fret_core::Paint::Solid(tooltip_border).into(),
 
                     corner_radii: fret_core::Corners::all(Px(6.0)),
                 });
@@ -8234,10 +8245,10 @@ impl<H: UiHost, L: PlotLayer + 'static> Widget<H> for PlotCanvas<L> {
                             Point::new(Px(rect.origin.x.0 + pad.0), Px(swatch_top)),
                             Size::new(swatch_size, swatch_size),
                         ),
-                        background: fret_core::Paint::Solid(swatch_color),
+                        background: fret_core::Paint::Solid(swatch_color).into(),
 
                         border: fret_core::Edges::all(Px(1.0)),
-                        border_paint: fret_core::Paint::Solid(tooltip_border),
+                        border_paint: fret_core::Paint::Solid(tooltip_border).into(),
 
                         corner_radii: fret_core::Corners::all(Px(2.0)),
                     });

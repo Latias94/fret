@@ -132,6 +132,10 @@ impl SceneRecording {
             }
         }
 
+        fn paint_binding_is_finite(p: PaintBindingV1) -> bool {
+            paint_is_finite(p.paint)
+        }
+
         fn text_shadow_is_finite(s: TextShadowV1) -> bool {
             point_is_finite(s.offset) && color_is_finite(s.color)
         }
@@ -530,9 +534,9 @@ impl SceneRecording {
                     ..
                 } => {
                     if !rect_is_finite(rect)
-                        || !paint_is_finite(background)
+                        || !paint_binding_is_finite(background)
                         || !edges_is_finite(border)
-                        || !paint_is_finite(border_paint)
+                        || !paint_binding_is_finite(border_paint)
                         || !corners_is_finite(corner_radii)
                     {
                         return Err(SceneValidationError {
@@ -552,7 +556,7 @@ impl SceneRecording {
                 } => {
                     let mut ok = rect_is_finite(rect)
                         && edges_is_finite(stroke)
-                        && paint_is_finite(stroke_paint)
+                        && paint_binding_is_finite(stroke_paint)
                         && corners_is_finite(corner_radii);
                     if let Some(dash) = style.dash {
                         ok = ok
@@ -638,9 +642,10 @@ impl SceneRecording {
                     ..
                 } => {
                     if !point_is_finite(origin)
-                        || !paint_is_finite(paint)
-                        || outline
-                            .is_some_and(|o| !paint_is_finite(o.paint) || !o.width_px.0.is_finite())
+                        || !paint_binding_is_finite(paint)
+                        || outline.is_some_and(|o| {
+                            !paint_binding_is_finite(o.paint) || !o.width_px.0.is_finite()
+                        })
                         || shadow.is_some_and(|s| !text_shadow_is_finite(s))
                     {
                         return Err(SceneValidationError {
@@ -651,7 +656,7 @@ impl SceneRecording {
                     }
                 }
                 SceneOp::Path { origin, paint, .. } => {
-                    if !point_is_finite(origin) || !paint_is_finite(paint) {
+                    if !point_is_finite(origin) || !paint_binding_is_finite(paint) {
                         return Err(SceneValidationError {
                             index,
                             op,

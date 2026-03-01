@@ -104,7 +104,7 @@ fn edge_path_solid_colors(scene: &Scene) -> Vec<Color> {
         if *order != DrawOrder(2) {
             continue;
         }
-        if let Paint::Solid(color) = *paint {
+        if let Paint::Solid(color) = paint.paint {
             out.push(color);
         }
     }

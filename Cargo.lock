@@ -1883,6 +1883,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "fret-cookbook"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "fret",
+ "fret-core",
+]
+
+[[package]]
 name = "fret-core"
 version = "0.1.0"
 dependencies = [

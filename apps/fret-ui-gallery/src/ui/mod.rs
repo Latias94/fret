@@ -54,6 +54,7 @@ mod models;
 mod nav;
 mod pages;
 mod previews;
+pub(in crate::ui) mod snippets;
 
 pub(crate) use content::content_view;
 pub(crate) use models::UiGalleryModels;

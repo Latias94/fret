@@ -774,10 +774,18 @@ impl ElementHostWidget {
             LayoutSize::new(
                 if props.axis.scroll_x() && props.probe_unbounded {
                     AvailableSpace::MaxContent
+                } else if props.probe_unbounded && available.width.0 <= 0.0 {
+                    // Intrinsic sizing flows may pass `available.width = 0` as a placeholder for
+                    // "unknown" even when the scroll axis is vertical. Treat it as unbounded so
+                    // the child can contribute its intrinsic cross size.
+                    AvailableSpace::MaxContent
                 } else {
                     AvailableSpace::Definite(available.width)
                 },
                 if props.axis.scroll_y() && props.probe_unbounded {
+                    AvailableSpace::MaxContent
+                } else if props.probe_unbounded && available.height.0 <= 0.0 {
+                    // Same as above, but for the vertical cross axis.
                     AvailableSpace::MaxContent
                 } else {
                     AvailableSpace::Definite(available.height)

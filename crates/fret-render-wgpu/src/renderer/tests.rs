@@ -758,12 +758,13 @@ fn perf_snapshot_counts_path_material_paint_degradation() {
         order: DrawOrder(0),
         origin: Point::new(Px(0.0), Px(0.0)),
         path,
-        paint: fret_core::scene::Paint::Material {
+        paint: (fret_core::scene::Paint::Material {
             id: fret_core::MaterialId::default(),
             params: fret_core::scene::MaterialParams {
                 vec4s: [[1.0, 0.0, 0.0, 1.0], [0.0; 4], [0.0; 4], [0.0; 4]],
             },
-        },
+        })
+        .into(),
     });
 
     let _ = renderer.render_scene(

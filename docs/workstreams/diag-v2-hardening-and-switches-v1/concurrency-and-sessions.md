@@ -160,6 +160,11 @@ P2 (de-risk `latest.txt`):
 
 - Make tooling prefer per-run `manifest.json` + `script.result.json` for “what just happened”, with `latest.txt` as a
   best-effort convenience pointer inside a session dir.
+- Add a bounded “resolve” helper so humans/agents can avoid reading `latest.txt` manually:
+  - `diag resolve latest --dir <base_or_session_dir> [--within-session <id|latest>]` (returns the latest run id and the
+    latest bundle export dir, if any)
+  - rule of thumb: if `<base_dir>/sessions/*` exists, base-level “latest” should be derived from session metadata, not
+    by writing a global `latest.txt`.
 
 ## Agent workflows (recommended patterns)
 
@@ -182,6 +187,11 @@ P2 (de-risk `latest.txt`):
 - If users forget `--dir` and all agents write to `target/fret-diag/`, runs will race.
   - Mitigation (P0): skill/docs + `diag config doctor` warnings.
   - Mitigation (P1): `--session-auto` makes it easy to avoid shared roots without inventing naming conventions.
+- If a base dir already contains `sessions/` but a tool-launched run (`--launch`) targets the base root directly (no
+  `--session-auto` / `--session`), control-plane files will be written at the base root, which is a concurrency footgun.
+  - Mitigation (P0): tooling emits an actionable warning with a copy-paste `--session-auto` command template.
+  - Mitigation (P0): `diag config doctor --mode launch --report-json` surfaces a structured warning so triage/AI packets
+    can ingest it.
 
 ## Open questions
 

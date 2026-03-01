@@ -68,6 +68,7 @@ mod stats;
 mod suite_summary;
 mod test_id_bloom;
 mod tooling_failures;
+mod tooling_warnings;
 mod trace;
 pub mod transport;
 mod triage_json;
@@ -2241,6 +2242,34 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
     } else {
         resolved_base_out_dir.clone()
     };
+
+    // Concurrency hygiene for tool-launched runs:
+    //
+    // The filesystem transport uses shared control-plane files under `out_dir` (`script.json`,
+    // `script.result.json`, `trigger.touch`, `latest.txt`, etc). If multiple concurrent runs share
+    // the same out dir (multiple terminals / multiple AI agents), they will race and produce
+    // misleading results.
+    //
+    // `--session-auto` is the preferred escape hatch: it isolates each tool-launched invocation
+    // under `<base_out_dir>/sessions/<session_id>/`.
+    if launch.is_some() && !session_enabled {
+        let sessions_root = resolved_out_dir.join(session::SESSIONS_DIRNAME);
+        if sessions_root.is_dir() {
+            eprintln!(
+                "warning: diag --launch is writing control-plane files directly under a base dir that contains `sessions/`.\n\
+  base_out_dir: {}\n\
+  out_dir: {}\n\
+  hint: prefer `--session-auto` (or `--session <id>`) to isolate concurrent runs under `{}`\n\
+  example:\n\
+    cargo run -p fretboard -- diag {} --dir {} --session-auto --launch -- <cmd...>",
+                resolved_base_out_dir.display(),
+                resolved_out_dir.display(),
+                sessions_root.display(),
+                sub,
+                resolved_base_out_dir.display(),
+            );
+        }
+    }
 
     let resolved_trigger_path = {
         let raw = if session_enabled {

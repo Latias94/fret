@@ -112,9 +112,9 @@ fn paint_shadow_layer(
         scene.push(SceneOp::Quad {
             order,
             rect,
-            background: Paint::Solid(background),
+            background: Paint::Solid(background).into(),
             border: Edges::all(Px(0.0)),
-            border_paint: Paint::Solid(Color::TRANSPARENT),
+            border_paint: Paint::Solid(Color::TRANSPARENT).into(),
             corner_radii: corners_expand(corner_radii, Px(layer_spread)),
         });
     }
@@ -151,9 +151,9 @@ pub fn paint_focus_ring(scene: &mut Scene, order: DrawOrder, bounds: Rect, ring:
             scene.push(SceneOp::Quad {
                 order,
                 rect,
-                background: Paint::Solid(Color::TRANSPARENT),
+                background: Paint::Solid(Color::TRANSPARENT).into(),
                 border: Edges::all(width),
-                border_paint: Paint::Solid(color),
+                border_paint: Paint::Solid(color).into(),
                 corner_radii: corners_deflate(ring.corner_radii, offset),
             });
         }
@@ -166,9 +166,9 @@ pub fn paint_focus_ring(scene: &mut Scene, order: DrawOrder, bounds: Rect, ring:
                 scene.push(SceneOp::Quad {
                     order,
                     rect,
-                    background: Paint::Solid(Color::TRANSPARENT),
+                    background: Paint::Solid(Color::TRANSPARENT).into(),
                     border: Edges::all(offset),
-                    border_paint: Paint::Solid(offset_color),
+                    border_paint: Paint::Solid(offset_color).into(),
                     corner_radii: corners_inflate(ring.corner_radii, offset),
                 });
             }
@@ -179,9 +179,9 @@ pub fn paint_focus_ring(scene: &mut Scene, order: DrawOrder, bounds: Rect, ring:
                 scene.push(SceneOp::Quad {
                     order,
                     rect,
-                    background: Paint::Solid(Color::TRANSPARENT),
+                    background: Paint::Solid(Color::TRANSPARENT).into(),
                     border: Edges::all(width),
-                    border_paint: Paint::Solid(color),
+                    border_paint: Paint::Solid(color).into(),
                     corner_radii: corners_inflate(ring.corner_radii, outer),
                 });
             }
@@ -213,9 +213,9 @@ pub fn paint_state_layer(
     scene.push(SceneOp::Quad {
         order,
         rect: bounds,
-        background: Paint::Solid(Color { a, ..color }),
+        background: Paint::Solid(Color { a, ..color }).into(),
         border: Edges::all(Px(0.0)),
-        border_paint: Paint::Solid(Color::TRANSPARENT),
+        border_paint: Paint::Solid(Color::TRANSPARENT).into(),
         corner_radii,
     });
 }
@@ -267,9 +267,9 @@ pub fn paint_ripple(
     scene.push(SceneOp::Quad {
         order,
         rect: circle,
-        background: Paint::Solid(Color { a, ..color }),
+        background: Paint::Solid(Color { a, ..color }).into(),
         border: Edges::all(Px(0.0)),
-        border_paint: Paint::Solid(Color::TRANSPARENT),
+        border_paint: Paint::Solid(Color::TRANSPARENT).into(),
         corner_radii: Corners::all(Px(r)),
     });
 
@@ -306,7 +306,7 @@ mod tests {
         assert_eq!(scene.ops().len(), 1);
         match scene.ops()[0] {
             fret_core::SceneOp::Quad { background, .. } => {
-                let Paint::Solid(c) = background else {
+                let Paint::Solid(c) = background.paint else {
                     panic!("expected solid paint");
                 };
                 assert!((c.a - 0.1).abs() < 1e-6);
@@ -355,7 +355,7 @@ mod tests {
                 assert!((rect.origin.y.0 - 1.0).abs() < 1e-6);
                 assert!((rect.size.width.0 - 8.0).abs() < 1e-6);
                 assert!((corner_radii.top_left.0 - 4.0).abs() < 1e-6);
-                let Paint::Solid(c) = background else {
+                let Paint::Solid(c) = background.paint else {
                     panic!("expected solid paint");
                 };
                 assert!((c.a - 0.25).abs() < 1e-6);
@@ -393,7 +393,7 @@ mod tests {
         assert_eq!(scene.ops().len(), 1);
         match scene.ops()[0] {
             fret_core::SceneOp::Quad { background, .. } => {
-                let Paint::Solid(c) = background else {
+                let Paint::Solid(c) = background.paint else {
                     panic!("expected solid paint");
                 };
                 assert!((c.a - 0.1).abs() < 1e-6);

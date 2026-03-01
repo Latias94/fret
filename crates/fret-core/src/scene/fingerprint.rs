@@ -38,6 +38,17 @@ fn mix_color(mut state: u64, c: Color) -> u64 {
     state
 }
 
+fn mix_eval_space(state: u64, s: PaintEvalSpaceV1) -> u64 {
+    mix_u64(
+        state,
+        match s {
+            PaintEvalSpaceV1::LocalPx => 1,
+            PaintEvalSpaceV1::ViewportPx => 2,
+            PaintEvalSpaceV1::StrokeS01 => 3,
+        },
+    )
+}
+
 fn mix_paint(mut state: u64, p: Paint) -> u64 {
     match p {
         Paint::Solid(c) => {
@@ -138,6 +149,12 @@ fn mix_paint(mut state: u64, p: Paint) -> u64 {
             state
         }
     }
+}
+
+fn mix_paint_binding(mut state: u64, p: PaintBindingV1) -> u64 {
+    state = mix_u64(state, 0xB11D);
+    state = mix_eval_space(state, p.eval_space);
+    mix_paint(state, p.paint)
 }
 
 fn mix_mask(mut state: u64, m: Mask) -> u64 {
@@ -593,9 +610,9 @@ pub(super) fn mix_scene_op(state: u64, op: SceneOp) -> u64 {
             let mut state = mix_u64(state, 3);
             state = mix_u64(state, u64::from(order.0));
             state = mix_rect(state, rect);
-            state = mix_paint(state, background);
+            state = mix_paint_binding(state, background);
             state = mix_edges(state, border);
-            state = mix_paint(state, border_paint);
+            state = mix_paint_binding(state, border_paint);
             mix_corners(state, corner_radii)
         }
         SceneOp::StrokeRRect {
@@ -610,7 +627,7 @@ pub(super) fn mix_scene_op(state: u64, op: SceneOp) -> u64 {
             state = mix_u64(state, u64::from(order.0));
             state = mix_rect(state, rect);
             state = mix_edges(state, stroke);
-            state = mix_paint(state, stroke_paint);
+            state = mix_paint_binding(state, stroke_paint);
             state = mix_corners(state, corner_radii);
             match style.dash {
                 None => mix_u64(state, 0),
@@ -762,10 +779,10 @@ pub(super) fn mix_scene_op(state: u64, op: SceneOp) -> u64 {
             state = mix_u64(state, u64::from(order.0));
             state = mix_point(state, origin);
             state = mix_u64(state, text.data().as_ffi());
-            let mut state = mix_paint(state, paint);
+            let mut state = mix_paint_binding(state, paint);
             state = mix_u64(state, u64::from(outline.is_some()));
             if let Some(o) = outline {
-                state = mix_paint(state, o.paint);
+                state = mix_paint_binding(state, o.paint);
                 state = mix_f32(state, o.width_px.0);
             }
             state = mix_u64(state, u64::from(shadow.is_some()));
@@ -785,7 +802,7 @@ pub(super) fn mix_scene_op(state: u64, op: SceneOp) -> u64 {
             state = mix_u64(state, u64::from(order.0));
             state = mix_point(state, origin);
             state = mix_u64(state, path.data().as_ffi());
-            mix_paint(state, paint)
+            mix_paint_binding(state, paint)
         }
         SceneOp::ViewportSurface {
             order,

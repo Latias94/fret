@@ -53,6 +53,29 @@
       "value": null,
       "bounds": {
         "origin": {
+          "x": 207.0,
+          "y": 0.0
+        },
+        "size": {
+          "w": 6.0,
+          "h": 180.0
+        }
+      },
+      "flags": {
+        "focused": false,
+        "captured": false,
+        "disabled": false,
+        "selected": false,
+        "expanded": false,
+        "checked": null
+      }
+    },
+    {
+      "role": "Generic",
+      "label": null,
+      "value": null,
+      "bounds": {
+        "origin": {
           "x": 210.0,
           "y": 0.0
         },
@@ -216,7 +239,7 @@
         "r": 0.042,
         "g": 0.054,
         "b": 0.074,
-        "a": 0.162
+        "a": 1.0
       },
       "border": {
         "top": 0.0,

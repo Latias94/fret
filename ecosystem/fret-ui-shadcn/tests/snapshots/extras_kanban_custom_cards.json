@@ -35,7 +35,7 @@
         },
         "size": {
           "w": 920.0,
-          "h": 0.0
+          "h": 160.0
         }
       },
       "flags": {
@@ -58,7 +58,7 @@
         },
         "size": {
           "w": 920.0,
-          "h": 0.0
+          "h": 160.0
         }
       },
       "flags": {
@@ -81,7 +81,7 @@
         },
         "size": {
           "w": 920.0,
-          "h": 0.0
+          "h": 160.0
         }
       },
       "flags": {
@@ -104,7 +104,30 @@
         },
         "size": {
           "w": 920.0,
-          "h": 0.0
+          "h": 160.0
+        }
+      },
+      "flags": {
+        "focused": false,
+        "captured": false,
+        "disabled": false,
+        "selected": false,
+        "expanded": false,
+        "checked": null
+      }
+    },
+    {
+      "role": "Generic",
+      "label": null,
+      "value": null,
+      "bounds": {
+        "origin": {
+          "x": 0.0,
+          "y": 0.0
+        },
+        "size": {
+          "w": 920.0,
+          "h": 160.0
         }
       },
       "flags": {
@@ -404,6 +427,98 @@
         "size": {
           "w": 236.0,
           "h": 22.0
+        }
+      },
+      "flags": {
+        "focused": false,
+        "captured": false,
+        "disabled": false,
+        "selected": false,
+        "expanded": false,
+        "checked": null
+      }
+    },
+    {
+      "role": "Generic",
+      "label": null,
+      "value": null,
+      "bounds": {
+        "origin": {
+          "x": 31.0,
+          "y": 39.0
+        },
+        "size": {
+          "w": 10.0,
+          "h": 16.0
+        }
+      },
+      "flags": {
+        "focused": false,
+        "captured": false,
+        "disabled": false,
+        "selected": false,
+        "expanded": false,
+        "checked": null
+      }
+    },
+    {
+      "role": "Generic",
+      "label": null,
+      "value": null,
+      "bounds": {
+        "origin": {
+          "x": 31.0,
+          "y": 39.0
+        },
+        "size": {
+          "w": 10.0,
+          "h": 16.0
+        }
+      },
+      "flags": {
+        "focused": false,
+        "captured": false,
+        "disabled": false,
+        "selected": false,
+        "expanded": false,
+        "checked": null
+      }
+    },
+    {
+      "role": "Generic",
+      "label": null,
+      "value": null,
+      "bounds": {
+        "origin": {
+          "x": 31.0,
+          "y": 109.0
+        },
+        "size": {
+          "w": 10.0,
+          "h": 16.0
+        }
+      },
+      "flags": {
+        "focused": false,
+        "captured": false,
+        "disabled": false,
+        "selected": false,
+        "expanded": false,
+        "checked": null
+      }
+    },
+    {
+      "role": "Generic",
+      "label": null,
+      "value": null,
+      "bounds": {
+        "origin": {
+          "x": 31.0,
+          "y": 109.0
+        },
+        "size": {
+          "w": 10.0,
+          "h": 16.0
         }
       },
       "flags": {
@@ -743,6 +858,98 @@
       "value": null,
       "bounds": {
         "origin": {
+          "x": 327.0,
+          "y": 39.0
+        },
+        "size": {
+          "w": 10.0,
+          "h": 16.0
+        }
+      },
+      "flags": {
+        "focused": false,
+        "captured": false,
+        "disabled": false,
+        "selected": false,
+        "expanded": false,
+        "checked": null
+      }
+    },
+    {
+      "role": "Generic",
+      "label": null,
+      "value": null,
+      "bounds": {
+        "origin": {
+          "x": 327.0,
+          "y": 39.0
+        },
+        "size": {
+          "w": 10.0,
+          "h": 16.0
+        }
+      },
+      "flags": {
+        "focused": false,
+        "captured": false,
+        "disabled": false,
+        "selected": false,
+        "expanded": false,
+        "checked": null
+      }
+    },
+    {
+      "role": "Generic",
+      "label": null,
+      "value": null,
+      "bounds": {
+        "origin": {
+          "x": 327.0,
+          "y": 109.0
+        },
+        "size": {
+          "w": 10.0,
+          "h": 16.0
+        }
+      },
+      "flags": {
+        "focused": false,
+        "captured": false,
+        "disabled": false,
+        "selected": false,
+        "expanded": false,
+        "checked": null
+      }
+    },
+    {
+      "role": "Generic",
+      "label": null,
+      "value": null,
+      "bounds": {
+        "origin": {
+          "x": 327.0,
+          "y": 109.0
+        },
+        "size": {
+          "w": 10.0,
+          "h": 16.0
+        }
+      },
+      "flags": {
+        "focused": false,
+        "captured": false,
+        "disabled": false,
+        "selected": false,
+        "expanded": false,
+        "checked": null
+      }
+    },
+    {
+      "role": "Generic",
+      "label": null,
+      "value": null,
+      "bounds": {
+        "origin": {
           "x": 592.0,
           "y": 0.0
         },
@@ -933,6 +1140,52 @@
         "size": {
           "w": 236.0,
           "h": 22.0
+        }
+      },
+      "flags": {
+        "focused": false,
+        "captured": false,
+        "disabled": false,
+        "selected": false,
+        "expanded": false,
+        "checked": null
+      }
+    },
+    {
+      "role": "Generic",
+      "label": null,
+      "value": null,
+      "bounds": {
+        "origin": {
+          "x": 623.0,
+          "y": 39.0
+        },
+        "size": {
+          "w": 10.0,
+          "h": 16.0
+        }
+      },
+      "flags": {
+        "focused": false,
+        "captured": false,
+        "disabled": false,
+        "selected": false,
+        "expanded": false,
+        "checked": null
+      }
+    },
+    {
+      "role": "Generic",
+      "label": null,
+      "value": null,
+      "bounds": {
+        "origin": {
+          "x": 623.0,
+          "y": 39.0
+        },
+        "size": {
+          "w": 10.0,
+          "h": 16.0
         }
       },
       "flags": {
@@ -1254,7 +1507,30 @@
         },
         "size": {
           "w": 920.0,
-          "h": 0.0
+          "h": 160.0
+        }
+      },
+      "flags": {
+        "focused": false,
+        "captured": false,
+        "disabled": false,
+        "selected": false,
+        "expanded": false,
+        "checked": null
+      }
+    },
+    {
+      "role": "Viewport",
+      "label": null,
+      "value": null,
+      "bounds": {
+        "origin": {
+          "x": 0.0,
+          "y": 0.0
+        },
+        "size": {
+          "w": 920.0,
+          "h": 160.0
         }
       },
       "flags": {
@@ -1308,7 +1584,7 @@
         },
         "size": {
           "w": 920.0,
-          "h": 0.0
+          "h": 160.0
         }
       }
     },
@@ -1704,6 +1980,25 @@
       }
     },
     {
+      "kind": "PushClipRRect",
+      "rect": {
+        "origin": {
+          "x": 22.0,
+          "y": 36.0
+        },
+        "size": {
+          "w": 236.0,
+          "h": 22.0
+        }
+      },
+      "corner_radii": {
+        "top_left": 999.0,
+        "top_right": 999.0,
+        "bottom_right": 999.0,
+        "bottom_left": 999.0
+      }
+    },
+    {
       "kind": "Text",
       "origin": {
         "x": 31.0,
@@ -1715,6 +2010,9 @@
         "b": 0.815,
         "a": 1.0
       }
+    },
+    {
+      "kind": "PopClip"
     },
     {
       "kind": "Quad",
@@ -1915,6 +2213,25 @@
       }
     },
     {
+      "kind": "PushClipRRect",
+      "rect": {
+        "origin": {
+          "x": 22.0,
+          "y": 106.0
+        },
+        "size": {
+          "w": 236.0,
+          "h": 22.0
+        }
+      },
+      "corner_radii": {
+        "top_left": 999.0,
+        "top_right": 999.0,
+        "bottom_right": 999.0,
+        "bottom_left": 999.0
+      }
+    },
+    {
       "kind": "Text",
       "origin": {
         "x": 31.0,
@@ -1926,6 +2243,9 @@
         "b": 0.815,
         "a": 1.0
       }
+    },
+    {
+      "kind": "PopClip"
     },
     {
       "kind": "PopClip"
@@ -2325,6 +2645,25 @@
       }
     },
     {
+      "kind": "PushClipRRect",
+      "rect": {
+        "origin": {
+          "x": 318.0,
+          "y": 36.0
+        },
+        "size": {
+          "w": 236.0,
+          "h": 22.0
+        }
+      },
+      "corner_radii": {
+        "top_left": 999.0,
+        "top_right": 999.0,
+        "bottom_right": 999.0,
+        "bottom_left": 999.0
+      }
+    },
+    {
       "kind": "Text",
       "origin": {
         "x": 327.0,
@@ -2336,6 +2675,9 @@
         "b": 0.815,
         "a": 1.0
       }
+    },
+    {
+      "kind": "PopClip"
     },
     {
       "kind": "Quad",
@@ -2536,6 +2878,25 @@
       }
     },
     {
+      "kind": "PushClipRRect",
+      "rect": {
+        "origin": {
+          "x": 318.0,
+          "y": 106.0
+        },
+        "size": {
+          "w": 236.0,
+          "h": 22.0
+        }
+      },
+      "corner_radii": {
+        "top_left": 999.0,
+        "top_right": 999.0,
+        "bottom_right": 999.0,
+        "bottom_left": 999.0
+      }
+    },
+    {
       "kind": "Text",
       "origin": {
         "x": 327.0,
@@ -2547,6 +2908,9 @@
         "b": 0.815,
         "a": 1.0
       }
+    },
+    {
+      "kind": "PopClip"
     },
     {
       "kind": "PopClip"
@@ -2946,6 +3310,25 @@
       }
     },
     {
+      "kind": "PushClipRRect",
+      "rect": {
+        "origin": {
+          "x": 614.0,
+          "y": 36.0
+        },
+        "size": {
+          "w": 236.0,
+          "h": 22.0
+        }
+      },
+      "corner_radii": {
+        "top_left": 999.0,
+        "top_right": 999.0,
+        "bottom_right": 999.0,
+        "bottom_left": 999.0
+      }
+    },
+    {
       "kind": "Text",
       "origin": {
         "x": 623.0,
@@ -2957,6 +3340,9 @@
         "b": 0.815,
         "a": 1.0
       }
+    },
+    {
+      "kind": "PopClip"
     },
     {
       "kind": "PopClip"

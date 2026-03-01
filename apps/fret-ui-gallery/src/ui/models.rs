@@ -27,9 +27,6 @@ pub(crate) struct UiGalleryModels {
     pub(crate) sheet_open: Model<bool>,
     pub(crate) portal_geometry_popover_open: Model<bool>,
 
-    pub(crate) select_value: Model<Option<Arc<str>>>,
-    pub(crate) select_open: Model<bool>,
-
     pub(crate) combobox_value: Model<Option<Arc<str>>>,
     pub(crate) combobox_open: Model<bool>,
     pub(crate) combobox_query: Model<String>,
