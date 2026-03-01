@@ -25,6 +25,52 @@
       }
     },
     {
+      "role": "Generic",
+      "label": null,
+      "value": null,
+      "bounds": {
+        "origin": {
+          "x": 9.0,
+          "y": 3.0
+        },
+        "size": {
+          "w": 10.0,
+          "h": 16.0
+        }
+      },
+      "flags": {
+        "focused": false,
+        "captured": false,
+        "disabled": false,
+        "selected": false,
+        "expanded": false,
+        "checked": null
+      }
+    },
+    {
+      "role": "Generic",
+      "label": null,
+      "value": null,
+      "bounds": {
+        "origin": {
+          "x": 9.0,
+          "y": 3.0
+        },
+        "size": {
+          "w": 10.0,
+          "h": 16.0
+        }
+      },
+      "flags": {
+        "focused": false,
+        "captured": false,
+        "disabled": false,
+        "selected": false,
+        "expanded": false,
+        "checked": null
+      }
+    },
+    {
       "role": "Link",
       "label": "Docs",
       "value": null,

@@ -145,6 +145,29 @@
       "value": null,
       "bounds": {
         "origin": {
+          "x": 12.0,
+          "y": 9.0
+        },
+        "size": {
+          "w": 10.0,
+          "h": 18.0
+        }
+      },
+      "flags": {
+        "focused": false,
+        "captured": false,
+        "disabled": false,
+        "selected": false,
+        "expanded": false,
+        "checked": null
+      }
+    },
+    {
+      "role": "Generic",
+      "label": null,
+      "value": null,
+      "bounds": {
+        "origin": {
           "x": 31.0,
           "y": 4.0
         },
@@ -191,12 +214,58 @@
       "value": null,
       "bounds": {
         "origin": {
+          "x": 40.0,
+          "y": 9.0
+        },
+        "size": {
+          "w": 10.0,
+          "h": 18.0
+        }
+      },
+      "flags": {
+        "focused": false,
+        "captured": false,
+        "disabled": false,
+        "selected": false,
+        "expanded": false,
+        "checked": null
+      }
+    },
+    {
+      "role": "Generic",
+      "label": null,
+      "value": null,
+      "bounds": {
+        "origin": {
           "x": 59.0,
           "y": 4.0
         },
         "size": {
           "w": 28.0,
           "h": 28.0
+        }
+      },
+      "flags": {
+        "focused": false,
+        "captured": false,
+        "disabled": false,
+        "selected": false,
+        "expanded": false,
+        "checked": null
+      }
+    },
+    {
+      "role": "Generic",
+      "label": null,
+      "value": null,
+      "bounds": {
+        "origin": {
+          "x": 68.0,
+          "y": 9.0
+        },
+        "size": {
+          "w": 10.0,
+          "h": 18.0
         }
       },
       "flags": {
@@ -746,9 +815,9 @@
         "y": 21.0
       },
       "color": {
-        "r": 0.68,
-        "g": 0.73,
-        "b": 0.815,
+        "r": 0.402,
+        "g": 0.451,
+        "b": 0.539,
         "a": 1.0
       }
     },
@@ -818,9 +887,9 @@
         "y": 21.0
       },
       "color": {
-        "r": 0.68,
-        "g": 0.73,
-        "b": 0.815,
+        "r": 0.402,
+        "g": 0.451,
+        "b": 0.539,
         "a": 1.0
       }
     },
