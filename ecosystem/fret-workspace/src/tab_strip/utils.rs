@@ -3,6 +3,7 @@ use std::sync::Arc;
 use fret_core::{FontId, FontWeight, Point, Px, Rect, TextStyle};
 use fret_ui::Theme;
 use fret_ui::scroll::ScrollHandle;
+use fret_ui_headless::tab_strip_canonical::resolve_end_drop_insert_index_in_canonical_order;
 use fret_ui_kit::dnd as ui_dnd;
 
 pub(super) fn tab_text_style(theme: &Theme) -> TextStyle {
@@ -67,17 +68,13 @@ pub(super) fn resolve_end_drop_target_in_canonical_order(
     canonical_order: &[Arc<str>],
     dragged: &str,
 ) -> Option<Arc<str>> {
-    let dragged_pinned = tab_pinned_flag_for_id(pinned_by_id, dragged);
+    let insert_index = resolve_end_drop_insert_index_in_canonical_order(
+        canonical_order,
+        |id| id.as_ref() == dragged,
+        |id| tab_pinned_flag_for_id(pinned_by_id, id.as_ref()),
+    )?;
 
-    let mut best: Option<Arc<str>> = None;
-    for id in canonical_order.iter().filter(|id| id.as_ref() != dragged) {
-        if tab_pinned_flag_for_id(pinned_by_id, id.as_ref()) != dragged_pinned {
-            continue;
-        }
-        best = Some(id.clone());
-    }
-
-    best
+    canonical_order.get(insert_index.saturating_sub(1)).cloned()
 }
 
 pub(super) fn predict_next_active_tab_after_close(
