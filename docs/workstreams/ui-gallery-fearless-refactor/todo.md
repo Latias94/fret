@@ -111,7 +111,7 @@ Source list: upstream shadcn v4 Base/Radix doc trees:
 | toast | `repo-ref/ui/apps/v4/content/docs/components/base/toast.mdx` | `repo-ref/ui/apps/v4/content/docs/components/radix/toast.mdx` | `toast` | TBD | No | Not started |  |  |
 | toggle | `repo-ref/ui/apps/v4/content/docs/components/base/toggle.mdx` | `repo-ref/ui/apps/v4/content/docs/components/radix/toggle.mdx` | `toggle` | TBD | No | Not started |  |  |
 | toggle-group | `repo-ref/ui/apps/v4/content/docs/components/base/toggle-group.mdx` | `repo-ref/ui/apps/v4/content/docs/components/radix/toggle-group.mdx` | `toggle_group` | TBD | No | Not started |  |  |
-| tooltip | `repo-ref/ui/apps/v4/content/docs/components/base/tooltip.mdx` | `repo-ref/ui/apps/v4/content/docs/components/radix/tooltip.mdx` | `tooltip` | TBD | No | Not started |  | Overlay family; add interaction gates. |
+| tooltip | `repo-ref/ui/apps/v4/content/docs/components/base/tooltip.mdx` | `repo-ref/ui/apps/v4/content/docs/components/radix/tooltip.mdx` | `tooltip` | `apps/fret-ui-gallery/src/ui/pages/tooltip.rs` | Yes | Done | `tools/diag-scripts/ui-gallery/overlay/ui-gallery-tooltip-*` | Snippet-backed previews + region-sliced code tabs for all sections (preview ≡ code). Keep demo/focus/keyboard/rtl `test_id`s stable for diag scripts. |
 | typography | `repo-ref/ui/apps/v4/content/docs/components/base/typography.mdx` | `repo-ref/ui/apps/v4/content/docs/components/radix/typography.mdx` | `typography` | TBD | No | Not started |  |  |
 
 ## Fret-only modules (extensions)

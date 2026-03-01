@@ -14,3 +14,4 @@ pub mod menubar;
 pub mod popover;
 pub mod select;
 pub mod sheet;
+pub mod tooltip;
