@@ -10,11 +10,8 @@ pub(in crate::ui) fn preview_button_group(cx: &mut ElementContext<'_, App>) -> V
         search_value: Option<Model<String>>,
         url_value: Option<Model<String>>,
         message_value: Option<Model<String>>,
-        amount_value: Option<Model<String>>,
         voice_enabled: Option<Model<bool>>,
         dropdown_open: Option<Model<bool>>,
-        select_open: Option<Model<bool>>,
-        select_value: Option<Model<Option<Arc<str>>>>,
         popover_open: Option<Model<bool>>,
         popover_text: Option<Model<String>>,
     }
@@ -83,18 +80,6 @@ pub(in crate::ui) fn preview_button_group(cx: &mut ElementContext<'_, App>) -> V
         }
     };
 
-    let amount_value = cx.with_state(ButtonGroupModels::default, |st| st.amount_value.clone());
-    let amount_value = match amount_value {
-        Some(model) => model,
-        None => {
-            let model = cx.app.models_mut().insert(String::new());
-            cx.with_state(ButtonGroupModels::default, |st| {
-                st.amount_value = Some(model.clone());
-            });
-            model
-        }
-    };
-
     let voice_enabled = cx.with_state(ButtonGroupModels::default, |st| st.voice_enabled.clone());
     let voice_enabled = match voice_enabled {
         Some(model) => model,
@@ -114,30 +99,6 @@ pub(in crate::ui) fn preview_button_group(cx: &mut ElementContext<'_, App>) -> V
             let model = cx.app.models_mut().insert(false);
             cx.with_state(ButtonGroupModels::default, |st| {
                 st.dropdown_open = Some(model.clone());
-            });
-            model
-        }
-    };
-
-    let select_open = cx.with_state(ButtonGroupModels::default, |st| st.select_open.clone());
-    let select_open = match select_open {
-        Some(model) => model,
-        None => {
-            let model = cx.app.models_mut().insert(false);
-            cx.with_state(ButtonGroupModels::default, |st| {
-                st.select_open = Some(model.clone());
-            });
-            model
-        }
-    };
-
-    let select_value = cx.with_state(ButtonGroupModels::default, |st| st.select_value.clone());
-    let select_value = match select_value {
-        Some(model) => model,
-        None => {
-            let model = cx.app.models_mut().insert(Some(Arc::<str>::from("$")));
-            cx.with_state(ButtonGroupModels::default, |st| {
-                st.select_value = Some(model.clone());
             });
             model
         }
@@ -640,44 +601,8 @@ pub(in crate::ui) fn preview_button_group(cx: &mut ElementContext<'_, App>) -> V
         .test_id("ui-gallery-button-group-dropdown")
     };
 
-    let select = {
-        let currency = shadcn::Select::new(select_value.clone(), select_open.clone())
-            .placeholder("$")
-            .trigger_value_as_label()
-            .trigger_font_monospace()
-            .content(shadcn::SelectContent::new().align_item_with_trigger(false))
-            .align(shadcn::SelectAlign::Start)
-            .items([
-                shadcn::SelectItem::new("$", "US Dollar").show_value_in_list(true),
-                shadcn::SelectItem::new("€", "Euro").show_value_in_list(true),
-                shadcn::SelectItem::new("£", "British Pound").show_value_in_list(true),
-            ]);
-
-        let amount = shadcn::Input::new(amount_value.clone())
-            .a11y_label("Amount")
-            .placeholder("10.00");
-
-        let send = shadcn::Button::new("")
-            .a11y_label("Send")
-            .variant(shadcn::ButtonVariant::Outline)
-            .size(shadcn::ButtonSize::Icon)
-            .icon(icon_id("lucide.arrow-right"));
-
-        shadcn::ButtonGroup::new([
-            shadcn::ButtonGroup::new([currency.into(), amount.into()])
-                .refine_layout(LayoutRefinement::default().flex_1().min_w_0())
-                .into(),
-            shadcn::ButtonGroup::new([send.into()]).into(),
-        ])
-        .refine_layout(
-            LayoutRefinement::default()
-                .w_full()
-                .min_w_0()
-                .max_w(Px(760.0)),
-        )
-        .into_element(cx)
-        .test_id("ui-gallery-button-group-select")
-    };
+    let select = crate::ui::snippets::button_group::button_group_select::render(cx)
+        .test_id("ui-gallery-button-group-select");
 
     let popover = {
         let radius = fret_ui::Theme::global(&*cx.app).metric_token("metric.radius.md");
@@ -1261,44 +1186,9 @@ shadcn::ButtonGroup::new([
             DocSection::new("Select", select)
                 .max_w(Px(820.0))
                 .test_id_prefix("ui-gallery-button-group-select")
-                .code(
+                .code_from_file(
                     "rust",
-                    r#"let select_open = cx.app.models_mut().insert(false);
-	let select_value = cx.app.models_mut().insert(Some("$".into()));
-	let amount_value = cx.app.models_mut().insert(String::new());
-
-	let currency = shadcn::Select::new(select_value.clone(), select_open.clone())
-	    .placeholder("$")
-	    .trigger_value_as_label()
-	    .trigger_font_monospace()
-	    .content(shadcn::SelectContent::new().align_item_with_trigger(false))
-	    .align(shadcn::SelectAlign::Start)
-	    .items([
-	        shadcn::SelectItem::new("$", "US Dollar").show_value_in_list(true),
-	        shadcn::SelectItem::new("€", "Euro").show_value_in_list(true),
-	        shadcn::SelectItem::new("£", "British Pound").show_value_in_list(true),
-	    ])
-	    ;
-
-let amount = shadcn::Input::new(amount_value)
-    .a11y_label("Amount")
-    .placeholder("10.00")
-    ;
-
-let send = shadcn::Button::new("")
-    .a11y_label("Send")
-    .variant(shadcn::ButtonVariant::Outline)
-    .size(shadcn::ButtonSize::Icon)
-    .icon(fret_icons::IconId::new_static("lucide.arrow-right"));
-
-shadcn::ButtonGroup::new([
-    shadcn::ButtonGroup::new([currency.into(), amount.into()])
-        .refine_layout(LayoutRefinement::default().flex_1().min_w_0())
-        .into(),
-    shadcn::ButtonGroup::new([send.into()]).into(),
-])
-.refine_layout(LayoutRefinement::default().w_full().min_w_0().max_w(Px(760.0)))
-.into_element(cx);"#,
+                    include_str!("../../../../snippets/button_group/button_group_select.rs"),
                 ),
             DocSection::new("Popover", popover)
                 .max_w(Px(820.0))

@@ -10,8 +10,6 @@ pub(in crate::ui) fn preview_select(
     #[derive(Default)]
     struct SelectPageModels {
         align_item_with_trigger: Option<Model<bool>>,
-        shadcn_demo_value: Option<Model<Option<Arc<str>>>>,
-        shadcn_demo_open: Option<Model<bool>>,
     }
 
     let align_item_with_trigger = cx.with_state(SelectPageModels::default, |st| {
@@ -30,45 +28,7 @@ pub(in crate::ui) fn preview_select(
 
     let demo = {
         // A minimal shadcn-aligned demo (matches the upstream `select-demo.tsx` example).
-        let shadcn_demo = {
-            let (demo_value, demo_open) = cx.with_state(SelectPageModels::default, |st| {
-                (st.shadcn_demo_value.clone(), st.shadcn_demo_open.clone())
-            });
-            let (demo_value, demo_open) = match (demo_value, demo_open) {
-                (Some(value), Some(open)) => (value, open),
-                _ => {
-                    let demo_value = cx.app.models_mut().insert(None::<Arc<str>>);
-                    let demo_open = cx.app.models_mut().insert(false);
-                    cx.with_state(SelectPageModels::default, |st| {
-                        st.shadcn_demo_value = Some(demo_value.clone());
-                        st.shadcn_demo_open = Some(demo_open.clone());
-                    });
-                    (demo_value, demo_open)
-                }
-            };
-
-            let entries: Vec<shadcn::SelectEntry> = vec![
-                shadcn::SelectGroup::new([
-                    shadcn::SelectLabel::new("Fruits").into(),
-                    shadcn::SelectItem::new("apple", "Apple").into(),
-                    shadcn::SelectItem::new("banana", "Banana").into(),
-                    shadcn::SelectItem::new("blueberry", "Blueberry").into(),
-                    shadcn::SelectItem::new("grapes", "Grapes").into(),
-                    shadcn::SelectItem::new("pineapple", "Pineapple").into(),
-                ])
-                .into(),
-            ];
-
-            shadcn::Select::new(demo_value, demo_open)
-                .trigger_test_id("ui-gallery-select-shadcn-demo-trigger")
-                .trigger(
-                    shadcn::SelectTrigger::new()
-                        .refine_layout(LayoutRefinement::default().w_px(Px(180.0)))
-                        .value(shadcn::SelectValue::new().placeholder("Select a fruit")),
-                )
-                .entries(entries)
-                .into_element(cx)
-        };
+        let shadcn_demo = crate::ui::snippets::select::demo::render(cx);
 
         stack::vstack(
             cx,
@@ -434,39 +394,7 @@ pub(in crate::ui) fn preview_select(
             DocSection::new("Demo", demo)
                 .description("Minimal shadcn-aligned demo (matches the upstream `select-demo.tsx` example).")
                 .test_id_prefix("ui-gallery-select-demo")
-                .code(
-                    "rust",
-                    r#"use std::sync::Arc;
-
-use fret_core::Px;
-use fret_runtime::Model;
-use fret_ui_kit::LayoutRefinement;
-use fret_ui_shadcn as shadcn;
-
-let value: Model<Option<Arc<str>>> = cx.app.models_mut().insert(None);
-let open: Model<bool> = cx.app.models_mut().insert(false);
-
-let entries: Vec<shadcn::SelectEntry> = vec![
-    shadcn::SelectGroup::new([
-        shadcn::SelectLabel::new("Fruits").into(),
-        shadcn::SelectItem::new("apple", "Apple").into(),
-        shadcn::SelectItem::new("banana", "Banana").into(),
-        shadcn::SelectItem::new("blueberry", "Blueberry").into(),
-        shadcn::SelectItem::new("grapes", "Grapes").into(),
-        shadcn::SelectItem::new("pineapple", "Pineapple").into(),
-    ])
-    .into(),
-];
-
-let select = shadcn::Select::new(value, open)
-    .trigger(
-        shadcn::SelectTrigger::new()
-            .refine_layout(LayoutRefinement::default().w_px(Px(180.0)))
-            .value(shadcn::SelectValue::new().placeholder("Select a fruit")),
-    )
-    .entries(entries)
-    .into_element(cx);"#,
-                ),
+                .code_from_file("rust", include_str!("../../../snippets/select/demo.rs")),
             DocSection::new("Diag Surface", diag_surface)
                 .description("Long-list surface with stable test_ids used by UI diagnostics scripts.")
                 .test_id_prefix("ui-gallery-select-diag-surface")

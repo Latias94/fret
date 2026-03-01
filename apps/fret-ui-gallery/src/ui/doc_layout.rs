@@ -53,6 +53,10 @@ impl DocSection {
         self
     }
 
+    pub(in crate::ui) fn code_from_file(self, language: &'static str, file: &'static str) -> Self {
+        self.code(language, file)
+    }
+
     pub(in crate::ui) fn max_w(mut self, max_w: Px) -> Self {
         self.max_w = max_w;
         self
