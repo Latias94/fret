@@ -5,7 +5,7 @@ use fret_runtime::CommandId;
 use fret_ui::action::OnActivate;
 use fret_ui::element::{
     AnyElement, ContainerProps, FlexProps, LayoutStyle, MainAlign, PressableA11y, PressableProps,
-    TextInkOverflow, TextProps,
+    SemanticsDecoration, TextInkOverflow, TextProps,
 };
 use fret_ui::{ElementContext, UiHost};
 
@@ -78,6 +78,45 @@ pub(super) fn tab_close_button<H: UiHost>(
             )]
         },
     )
+}
+
+#[cfg(feature = "shadcn-context-menu")]
+pub(super) fn overflow_menu_close_slot<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    text_style: TextStyle,
+    tab_fg: Color,
+    test_id: Option<Arc<str>>,
+) -> AnyElement {
+    let mut el = cx.container(
+        ContainerProps {
+            layout: fixed_square_layout(Px(18.0)),
+            corner_radii: Corners::all(Px(4.0)),
+            ..Default::default()
+        },
+        move |cx| {
+            vec![cx.text_props(TextProps {
+                layout: LayoutStyle::default(),
+                text: Arc::from("×"),
+                style: Some(text_style.clone()),
+                color: Some(tab_fg),
+                wrap: TextWrap::None,
+                overflow: TextOverflow::Clip,
+                align: fret_core::TextAlign::Start,
+                ink_overflow: TextInkOverflow::None,
+            })]
+        },
+    );
+
+    el = el.attach_semantics({
+        let mut deco = SemanticsDecoration::default()
+            .role(SemanticsRole::Button)
+            .label("Close tab");
+        if let Some(id) = test_id {
+            deco = deco.test_id(id);
+        }
+        deco
+    });
+    el
 }
 
 pub(super) fn tab_dirty_indicator<H: UiHost>(

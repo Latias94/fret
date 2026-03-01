@@ -71,10 +71,16 @@ use utils::{
 };
 use widgets::{tab_close_button, tab_dirty_indicator, tab_trailing_slot_placeholder};
 
+#[cfg(feature = "shadcn-context-menu")]
+use widgets::overflow_menu_close_slot;
+
 use crate::tab_drag::compute_tab_drop_target;
 
 #[cfg(feature = "shadcn-context-menu")]
 use state::get_context_menu_open_model;
+
+#[cfg(feature = "shadcn-context-menu")]
+use state::get_overflow_menu_open_model;
 
 #[cfg(feature = "shadcn-context-menu")]
 use fret_ui_shadcn::{
@@ -1441,17 +1447,43 @@ impl WorkspaceTabStrip {
                                 let entries = overflowed
                                     .iter()
                                     .filter_map(|id| {
-                                        let tab = tabs.iter().find(|t| t.id.as_ref() == id.as_ref())?;
+                                        let tab_ix = tabs
+                                            .iter()
+                                            .position(|t| t.id.as_ref() == id.as_ref())?;
+                                        let tab = tabs.get(tab_ix)?;
                                         let test_id = root_test_id.as_ref().map(|root| {
                                             Arc::<str>::from(format!(
                                                 "{root}.overflow_entry.{}",
                                                 tab.id.as_ref()
                                             ))
                                         });
+                                        let close_test_id = root_test_id.as_ref().map(|root| {
+                                            Arc::<str>::from(format!(
+                                                "{root}.overflow_entry.{}.close",
+                                                tab.id.as_ref()
+                                            ))
+                                        });
+
+                                        let close_slot = tab.close_command.as_ref().map(|_cmd| {
+                                            overflow_menu_close_slot(
+                                                cx,
+                                                text_style.clone(),
+                                                inactive_fg,
+                                                close_test_id,
+                                            )
+                                        });
+
                                         let mut item = DropdownMenuItem::new(tab.title.clone())
+                                            .close_on_select(true)
                                             .on_select(tab.command.clone());
                                         if let Some(id) = test_id {
                                             item = item.test_id(id);
+                                        }
+                                        if let Some(close_cmd) = tab.close_command.clone() {
+                                            item = item.trailing_on_select(close_cmd);
+                                        }
+                                        if let Some(close_slot) = close_slot {
+                                            item = item.trailing(close_slot);
                                         }
                                         Some(DropdownMenuEntry::Item(item))
                                     })
@@ -1839,7 +1871,9 @@ impl WorkspaceTabStrip {
                                                 };
 
                                                 let entries = overflow_entries;
-                                                let menu = DropdownMenu::new_controllable(cx, None, false)
+                                                let overflow_open = get_overflow_menu_open_model(cx);
+                                                let menu =
+                                                    DropdownMenu::new_controllable(cx, Some(overflow_open), false)
                                                     .align(DropdownMenuAlign::End)
                                                     .side(DropdownMenuSide::Bottom)
                                                     .into_element(cx, trigger, move |_cx| entries);
