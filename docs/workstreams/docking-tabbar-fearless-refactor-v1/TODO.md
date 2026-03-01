@@ -27,6 +27,9 @@
   - one tab
   - drop at end (must produce `insert_index == tab_count`)
   - overflow visible subset (insert index stable in canonical list)
+- Harden overflow control surfaces:
+  - overflow button is not treated as a drop surface
+  - reserved header space between strip and overflow control resolves to an explicit end-drop (`insert_index == tab_count`)
 
 ### Overflow
 
