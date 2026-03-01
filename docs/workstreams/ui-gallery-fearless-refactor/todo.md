@@ -19,6 +19,7 @@ Legend:
 
 - [x] Migrate Button Group page(s) to snippet-backed sections.
 - [x] Migrate Select page(s) to snippet-backed sections.
+- [x] Migrate Input Group page(s) to snippet-backed sections.
 - [ ] Migrate overlay family pages (Dropdown Menu, Menubar, Context Menu, Popover, Tooltip, Dialog, Sheet, Drawer).
 - [ ] Migrate form family pages (Input, Input Group, Textarea, Checkbox, Radio Group, Switch, Slider, Toggle, Toggle Group, Select, Combobox).
 - [ ] Migrate layout + data-display pages (Tabs, Table, Data Table, Chart, Calendar, Carousel, Scroll Area, Navigation Menu, Pagination, etc).
@@ -70,18 +71,18 @@ Source list: upstream shadcn v4 Base/Radix doc trees:
 | collapsible | `repo-ref/ui/apps/v4/content/docs/components/base/collapsible.mdx` | `repo-ref/ui/apps/v4/content/docs/components/radix/collapsible.mdx` | `collapsible` | TBD | No | Not started |  |  |
 | combobox | `repo-ref/ui/apps/v4/content/docs/components/base/combobox.mdx` | `repo-ref/ui/apps/v4/content/docs/components/radix/combobox.mdx` | `combobox` | TBD | No | Not started |  |  |
 | command | `repo-ref/ui/apps/v4/content/docs/components/base/command.mdx` | `repo-ref/ui/apps/v4/content/docs/components/radix/command.mdx` | `command` | TBD | No | Not started |  |  |
-| context-menu | `repo-ref/ui/apps/v4/content/docs/components/base/context-menu.mdx` | `repo-ref/ui/apps/v4/content/docs/components/radix/context-menu.mdx` | `context_menu` | TBD | No | Not started |  | Overlay family; add interaction gates. |
+| context-menu | `repo-ref/ui/apps/v4/content/docs/components/base/context-menu.mdx` | `repo-ref/ui/apps/v4/content/docs/components/radix/context-menu.mdx` | `context_menu` | `apps/fret-ui-gallery/src/ui/pages/context_menu.rs` | Yes | Done | `tools/diag-scripts/ui-gallery/context-menu/*` | Snippet-backed previews + region-sliced code tabs for all sections (preview ≡ code). Keep trigger/item `test_id`s stable for existing diag scripts. |
 | data-table | `repo-ref/ui/apps/v4/content/docs/components/base/data-table.mdx` | `repo-ref/ui/apps/v4/content/docs/components/radix/data-table.mdx` | `data_table` | TBD | No | Not started |  |  |
 | date-picker | `repo-ref/ui/apps/v4/content/docs/components/base/date-picker.mdx` | `repo-ref/ui/apps/v4/content/docs/components/radix/date-picker.mdx` | `date_picker` | TBD | No | Not started |  |  |
 | dialog | `repo-ref/ui/apps/v4/content/docs/components/base/dialog.mdx` | `repo-ref/ui/apps/v4/content/docs/components/radix/dialog.mdx` | `dialog` | TBD | No | Not started |  | Overlay family; add interaction gates. |
 | direction | `repo-ref/ui/apps/v4/content/docs/components/base/direction.mdx` | `repo-ref/ui/apps/v4/content/docs/components/radix/direction.mdx` | — | TBD | No | Not started |  | Doc-only (directionality guidance), not a component. |
 | drawer | `repo-ref/ui/apps/v4/content/docs/components/base/drawer.mdx` | `repo-ref/ui/apps/v4/content/docs/components/radix/drawer.mdx` | `drawer` | TBD | No | Not started |  | Overlay family; add interaction gates. |
-| dropdown-menu | `repo-ref/ui/apps/v4/content/docs/components/base/dropdown-menu.mdx` | `repo-ref/ui/apps/v4/content/docs/components/radix/dropdown-menu.mdx` | `dropdown_menu` | TBD | No | Not started |  | Overlay family; add interaction gates. |
+| dropdown-menu | `repo-ref/ui/apps/v4/content/docs/components/base/dropdown-menu.mdx` | `repo-ref/ui/apps/v4/content/docs/components/radix/dropdown-menu.mdx` | `dropdown_menu` | `apps/fret-ui-gallery/src/ui/pages/dropdown_menu.rs` | Yes | Done | `tools/diag-scripts/ui-gallery/dropdown-menu/*` | Snippet-backed previews + region-sliced code tabs for all sections (preview ≡ code). Keep trigger/item `test_id`s stable for existing diag scripts. |
 | empty | `repo-ref/ui/apps/v4/content/docs/components/base/empty.mdx` | `repo-ref/ui/apps/v4/content/docs/components/radix/empty.mdx` | `empty` | TBD | No | Not started |  |  |
 | field | `repo-ref/ui/apps/v4/content/docs/components/base/field.mdx` | `repo-ref/ui/apps/v4/content/docs/components/radix/field.mdx` | `field` | TBD | No | Not started |  |  |
 | hover-card | `repo-ref/ui/apps/v4/content/docs/components/base/hover-card.mdx` | `repo-ref/ui/apps/v4/content/docs/components/radix/hover-card.mdx` | `hover_card` | TBD | No | Not started |  |  |
 | input | `repo-ref/ui/apps/v4/content/docs/components/base/input.mdx` | `repo-ref/ui/apps/v4/content/docs/components/radix/input.mdx` | `input` | TBD | No | Not started |  |  |
-| input-group | `repo-ref/ui/apps/v4/content/docs/components/base/input-group.mdx` | `repo-ref/ui/apps/v4/content/docs/components/radix/input-group.mdx` | `input_group` | TBD | No | Not started |  |  |
+| input-group | `repo-ref/ui/apps/v4/content/docs/components/base/input-group.mdx` | `repo-ref/ui/apps/v4/content/docs/components/radix/input-group.mdx` | `input_group` | `apps/fret-ui-gallery/src/ui/pages/input_group.rs` | Yes | Done |  | Snippet-backed previews + region-sliced code tabs (preview ≡ code). |
 | input-otp | `repo-ref/ui/apps/v4/content/docs/components/base/input-otp.mdx` | `repo-ref/ui/apps/v4/content/docs/components/radix/input-otp.mdx` | `input_otp` | TBD | No | Not started |  |  |
 | item | `repo-ref/ui/apps/v4/content/docs/components/base/item.mdx` | `repo-ref/ui/apps/v4/content/docs/components/radix/item.mdx` | `item` | TBD | No | Not started |  |  |
 | kbd | `repo-ref/ui/apps/v4/content/docs/components/base/kbd.mdx` | `repo-ref/ui/apps/v4/content/docs/components/radix/kbd.mdx` | `kbd` | TBD | No | Not started |  |  |
