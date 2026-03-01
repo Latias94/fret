@@ -499,21 +499,6 @@ pub(in crate::ui) fn preview_button_group(cx: &mut ElementContext<'_, App>) -> V
     .test_id("ui-gallery-button-group-input");
 
     let input_group = {
-        let voice_tooltip = shadcn::Tooltip::new(
-            shadcn::Button::new("")
-                .a11y_label("Voice Mode")
-                .variant(shadcn::ButtonVariant::Ghost)
-                .size(shadcn::ButtonSize::IconSm)
-                .icon(icon_id("lucide.audio-lines"))
-                .toggle_model(voice_enabled.clone())
-                .into_element(cx),
-            shadcn::TooltipContent::new(vec![shadcn::TooltipContent::text(cx, "Voice Mode")])
-                .into_element(cx),
-        )
-        .arrow(true)
-        .side(shadcn::TooltipSide::Top)
-        .into_element(cx);
-
         let voice_enabled_now = cx
             .get_model_cloned(&voice_enabled, fret_ui::Invalidation::Paint)
             .unwrap_or(false);
@@ -522,6 +507,32 @@ pub(in crate::ui) fn preview_button_group(cx: &mut ElementContext<'_, App>) -> V
         } else {
             "Send a message..."
         };
+
+        let voice_button = {
+            let mut button = shadcn::InputGroupButton::new("")
+                .a11y_label("Voice Mode")
+                .size(shadcn::InputGroupButtonSize::IconXs)
+                .icon(icon_id("lucide.audio-lines"))
+                .toggle_model(voice_enabled.clone());
+            if voice_enabled_now {
+                let theme = Theme::global(&*cx.app).snapshot();
+                button = button.refine_style(
+                    ChromeRefinement::default()
+                        .bg(ColorRef::Color(theme.color_token("accent")))
+                        .text_color(ColorRef::Color(theme.color_token("accent.foreground"))),
+                );
+            }
+            button.into_element(cx)
+        };
+
+        let voice_tooltip = shadcn::Tooltip::new(
+            voice_button,
+            shadcn::TooltipContent::new(vec![shadcn::TooltipContent::text(cx, "Voice Mode")])
+                .into_element(cx),
+        )
+        .arrow(true)
+        .side(shadcn::TooltipSide::Top)
+        .into_element(cx);
 
         let group = shadcn::InputGroup::new(message_value.clone())
             .a11y_label("Message")
@@ -653,7 +664,9 @@ pub(in crate::ui) fn preview_button_group(cx: &mut ElementContext<'_, App>) -> V
             .icon(icon_id("lucide.arrow-right"));
 
         shadcn::ButtonGroup::new([
-            shadcn::ButtonGroup::new([currency.into(), amount.into()]).into(),
+            shadcn::ButtonGroup::new([currency.into(), amount.into()])
+                .refine_layout(LayoutRefinement::default().flex_1().min_w_0())
+                .into(),
             shadcn::ButtonGroup::new([send.into()]).into(),
         ])
         .refine_layout(
@@ -1101,21 +1114,6 @@ shadcn::ButtonGroup::new([
                     r#"let model = cx.app.models_mut().insert(String::new());
 	let voice_enabled = cx.app.models_mut().insert(false);
 
-	let voice_tooltip = shadcn::Tooltip::new(
-	    shadcn::Button::new("")
-	        .a11y_label("Voice Mode")
-	        .variant(shadcn::ButtonVariant::Ghost)
-	        .size(shadcn::ButtonSize::IconSm)
-	        .icon(fret_icons::IconId::new_static("lucide.audio-lines"))
-	        .toggle_model(voice_enabled.clone())
-	        .into_element(cx),
-	    shadcn::TooltipContent::new(vec![shadcn::TooltipContent::text(cx, "Voice Mode")])
-	        .into_element(cx),
-	)
-	.arrow(true)
-	.side(shadcn::TooltipSide::Top)
-	.into_element(cx);
-
 	let voice_enabled_now = cx
 	    .get_model_cloned(&voice_enabled, fret_ui::Invalidation::Paint)
 	    .unwrap_or(false);
@@ -1124,6 +1122,34 @@ shadcn::ButtonGroup::new([
 	} else {
 	    "Send a message..."
 	};
+
+	let voice_button = {
+	    let mut button = shadcn::InputGroupButton::new("")
+	        .a11y_label("Voice Mode")
+	        .size(shadcn::InputGroupButtonSize::IconXs)
+	        .icon(fret_icons::IconId::new_static("lucide.audio-lines"))
+	        .toggle_model(voice_enabled.clone());
+	    if voice_enabled_now {
+	        let theme = fret_ui::Theme::global(&*cx.app).snapshot();
+	        button = button.refine_style(
+	            ChromeRefinement::default()
+	                .bg(fret_ui_kit::ColorRef::Color(theme.color_token("accent")))
+	                .text_color(fret_ui_kit::ColorRef::Color(
+	                    theme.color_token("accent.foreground"),
+	                )),
+	        );
+	    }
+	    button.into_element(cx)
+	};
+
+	let voice_tooltip = shadcn::Tooltip::new(
+	    voice_button,
+	    shadcn::TooltipContent::new(vec![shadcn::TooltipContent::text(cx, "Voice Mode")])
+	        .into_element(cx),
+	)
+	.arrow(true)
+	.side(shadcn::TooltipSide::Top)
+	.into_element(cx);
 
 	let group = shadcn::InputGroup::new(model)
 	    .a11y_label("Message")
@@ -1266,7 +1292,9 @@ let send = shadcn::Button::new("")
     .icon(fret_icons::IconId::new_static("lucide.arrow-right"));
 
 shadcn::ButtonGroup::new([
-    shadcn::ButtonGroup::new([currency.into(), amount.into()]).into(),
+    shadcn::ButtonGroup::new([currency.into(), amount.into()])
+        .refine_layout(LayoutRefinement::default().flex_1().min_w_0())
+        .into(),
     shadcn::ButtonGroup::new([send.into()]).into(),
 ])
 .refine_layout(LayoutRefinement::default().w_full().min_w_0().max_w(Px(760.0)))

@@ -1036,6 +1036,7 @@ pub struct InputGroupButton {
     leading_icon: Option<IconId>,
     trailing_icon: Option<IconId>,
     command: Option<CommandId>,
+    toggle_model: Option<Model<bool>>,
     disabled: bool,
     variant: ButtonVariant,
     size: InputGroupButtonSize,
@@ -1054,6 +1055,7 @@ impl InputGroupButton {
             leading_icon: None,
             trailing_icon: None,
             command: None,
+            toggle_model: None,
             disabled: false,
             variant: ButtonVariant::Ghost,
             size: InputGroupButtonSize::default(),
@@ -1099,6 +1101,11 @@ impl InputGroupButton {
 
     pub fn on_click(mut self, command: impl Into<CommandId>) -> Self {
         self.command = Some(command.into());
+        self
+    }
+
+    pub fn toggle_model(mut self, model: Model<bool>) -> Self {
+        self.toggle_model = Some(model);
         self
     }
 
@@ -1211,11 +1218,12 @@ impl InputGroupButton {
             };
 
             let command = self.command;
+            let toggle_model = self.toggle_model;
             let disabled = self.disabled
                 || command
                     .as_ref()
                     .is_some_and(|cmd| !cx.command_is_enabled(cmd));
-            let _chrome = self.chrome;
+            let user_chrome = self.chrome;
             let label = self.label;
             let a11y_label = self.a11y_label;
             let children = self.children;
@@ -1230,6 +1238,9 @@ impl InputGroupButton {
 
             control_chrome_pressable_with_id_props(cx, move |cx, st, _id| {
                 cx.pressable_dispatch_command_if_enabled_opt(command);
+                if let Some(model) = toggle_model.clone() {
+                    cx.pressable_toggle_bool(&model);
+                }
 
                 let hovered = st.hovered && !disabled;
                 let pressed = st.pressed && !disabled;
@@ -1240,6 +1251,22 @@ impl InputGroupButton {
                     bg_hover
                 } else {
                     bg
+                };
+
+                let (bg, fg) = {
+                    let theme = Theme::global(&*cx.app).snapshot();
+
+                    let bg = user_chrome
+                        .background
+                        .clone()
+                        .map(|c| c.resolve(&theme))
+                        .unwrap_or(bg);
+                    let fg = user_chrome
+                        .text_color
+                        .clone()
+                        .map(|c| c.resolve(&theme))
+                        .unwrap_or(fg);
+                    (bg, fg)
                 };
 
                 let mut pressable_props = PressableProps {
