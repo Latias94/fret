@@ -894,7 +894,15 @@ impl Button {
                                     + usize::from(trailing_icon.is_some()),
                             );
 
-                            let icon_px = leading_icon_size.unwrap_or(Px(16.0));
+                            let icon_px = leading_icon_size.unwrap_or_else(|| match size {
+                                // Upstream shadcn/ui v4:
+                                // - `xs` / `icon-xs` => `size-3` (12px)
+                                // - `sm` => `size-3.5` (14px)
+                                // - default => `size-4` (16px)
+                                ComponentSize::XSmall => Px(12.0),
+                                ComponentSize::Small => Px(14.0),
+                                ComponentSize::Medium | ComponentSize::Large => Px(16.0),
+                            });
                             if let Some(icon) = leading_icon.clone() {
                                 let icon = crate::icon::icon_with(cx, icon, Some(icon_px), None);
                                 content.push(crate::test_id::attach_test_id_suffix(
