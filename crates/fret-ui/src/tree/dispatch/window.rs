@@ -1294,7 +1294,7 @@ impl<H: UiHost> UiTree<H> {
                                 // causing pointer activation to miss/cancel (especially for nested pressables).
                                 //
                                 // Keyboard traversal still scrolls focused nodes into view.
-                                if !matches!(event, Event::Pointer(_)) {
+                                if !matches!(event, Event::Pointer(_) | Event::PointerCancel(_)) {
                                     self.scroll_node_into_view(app, focus);
                                 }
                             } else if requested_focus.is_some() {
@@ -1476,7 +1476,15 @@ impl<H: UiHost> UiTree<H> {
                                 }
                                 self.focus = Some(focus);
                                 self.mark_invalidation(focus, Invalidation::Paint);
-                                self.scroll_node_into_view(app, focus);
+                                // Avoid scrolling during pointer-driven focus changes:
+                                // programmatic scroll-to-focus can move content under a stationary cursor,
+                                // causing pointer activation to miss/cancel (especially for nested pressables).
+                                //
+                                // Keyboard traversal still scrolls focused nodes into view.
+                                if !matches!(event_for_node, Event::Pointer(_) | Event::PointerCancel(_))
+                                {
+                                    self.scroll_node_into_view(app, focus);
+                                }
                             } else if requested_focus.is_some() {
                                 focus_requested = true;
                             }
@@ -1963,7 +1971,14 @@ impl<H: UiHost> UiTree<H> {
                     }
                     self.focus = Some(focus);
                     self.mark_invalidation(focus, Invalidation::Paint);
-                    self.scroll_node_into_view(app, focus);
+                    // Avoid scrolling during pointer-driven focus changes:
+                    // programmatic scroll-to-focus can move content under a stationary cursor,
+                    // causing pointer activation to miss/cancel (especially for nested pressables).
+                    //
+                    // Keyboard traversal still scrolls focused nodes into view.
+                    if !matches!(event, Event::Pointer(_) | Event::PointerCancel(_)) {
+                        self.scroll_node_into_view(app, focus);
+                    }
                 } else if requested_focus.is_some() {
                     focus_requested = true;
                 }
