@@ -56,6 +56,21 @@ Notes:
 - Prefer `click_stable` when clicking controls with potential hover/press transitions.
 - Prefer `scroll_into_view` + `require_fully_within_window` for screenshot stability.
 
+## Text redaction: stable predicates
+
+Diagnostics may run with text redaction enabled (for example via `FRET_DIAG_REDACT_TEXT=1`), where
+`label` / `value` strings can be replaced with placeholders like `<redacted len=123>`.
+
+Guidelines:
+
+- Avoid `label_contains` / `value_contains` when redaction can be enabled.
+- Prefer redaction-safe predicates:
+  - `label_len_is` / `label_len_ge`
+  - `value_len_is` / `value_len_ge`
+- Prefer structured semantics over localized strings when possible:
+  - `semantics_numeric_*` for range/progress-like controls
+  - `checked_is`, `selected_is`, `role_is` for interaction state
+
 ## Suite membership (redirect stub)
 
 Suites are curated directories of redirect stubs.
@@ -86,4 +101,3 @@ For reference apps (app-scale):
   - overlay conformance
   - docking basics
   - perf steady (optional)
-
