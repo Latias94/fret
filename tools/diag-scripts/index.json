@@ -648,6 +648,26 @@
       "target_hints": []
     },
     {
+      "id": "ui-gallery-alert-dialog-focus-trap-tab-cycle",
+      "path": "tools/diag-scripts/ui-gallery/overlay/ui-gallery-alert-dialog-focus-trap-tab-cycle.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "ui-gallery",
+        "ui-gallery-shadcn-conformance"
+      ],
+      "tags": [
+        "alert_dialog",
+        "focus",
+        "trap",
+        "ui_gallery"
+      ],
+      "target_hints": [
+        "Opens the overlay demo AlertDialog and asserts Tab/Shift+Tab cycles focus within the modal content (focus trap), then Escape restores focus to the trigger."
+      ]
+    },
+    {
       "id": "ui-gallery-alert-tabs-shared-indicator-pixels-changed-fixed-frame-delta",
       "path": "tools/diag-scripts/ui-gallery/alert/ui-gallery-alert-tabs-shared-indicator-pixels-changed-fixed-frame-delta.json",
       "required_capabilities": [
