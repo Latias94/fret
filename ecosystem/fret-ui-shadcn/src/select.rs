@@ -3,7 +3,7 @@ use crate::test_id::attach_test_id;
 use fret_core::{
     Color, Corners, Edges, FontId, FontWeight, Point, Px, Rect, SemanticsRole, TextStyle,
 };
-use fret_icons::ids;
+use fret_icons::{IconId, ids};
 use fret_runtime::{Effect, Model, TimerToken};
 use fret_ui::action::{ActionCx, OnDismissRequest};
 use fret_ui::element::{
@@ -36,7 +36,8 @@ use fret_ui_kit::recipes::input::{
 use fret_ui_kit::theme_tokens;
 use fret_ui_kit::{
     ChromeRefinement, ColorFallback, ColorRef, LayoutRefinement, MetricRef, OverlayPresence,
-    OverrideSlot, Space, WidgetState, WidgetStateProperty, WidgetStates, resolve_override_slot, ui,
+    OverrideSlot, Size as ComponentSize, Space, WidgetState, WidgetStateProperty, WidgetStates,
+    resolve_override_slot, ui,
 };
 use std::cell::Cell;
 use std::sync::{Arc, Mutex};
@@ -140,6 +141,8 @@ fn select_scroll_with_buttons<H: UiHost, C, I>(
     item_step: Px,
     predicted_has_scroll: bool,
     allow_hover_scroll_arrows: bool,
+    scroll_up_icon: IconId,
+    scroll_down_icon: IconId,
     scroll_handle: fret_ui::scroll::ScrollHandle,
     initial_scroll_to_y: Option<Px>,
     clear_initial_scroll_to_y: impl Fn() + Clone + 'static,
@@ -578,7 +581,7 @@ where
             if has_scroll && allow_hover_scroll_arrows {
                 if let Some(btn) = scroll_button(
                     cx,
-                    ids::ui::CHEVRON_UP,
+                    scroll_up_icon,
                     "select-scroll-up-button",
                     -1.0,
                     show_up,
@@ -590,7 +593,7 @@ where
             if has_scroll && allow_hover_scroll_arrows {
                 if let Some(btn) = scroll_button(
                     cx,
-                    ids::ui::CHEVRON_DOWN,
+                    scroll_down_icon,
                     "select-scroll-down-button",
                     1.0,
                     show_down,
@@ -641,12 +644,74 @@ impl From<SelectSide> for Side {
     }
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum SelectTextTone {
+    #[default]
+    Normal,
+    Muted,
+}
+
+#[derive(Debug, Clone)]
+pub struct SelectTextRun {
+    pub text: Arc<str>,
+    pub tone: SelectTextTone,
+}
+
+impl SelectTextRun {
+    pub fn new(text: impl Into<Arc<str>>, tone: SelectTextTone) -> Self {
+        Self {
+            text: text.into(),
+            tone,
+        }
+    }
+}
+
+/// A shadcn/ui v4-inspired representation of `SelectItemText` children.
+///
+/// In the DOM version this is arbitrary ReactNode content. In Fret we encode it as a small set of
+/// styled text runs so items can remain data-only and cheaply cloneable.
+#[derive(Debug, Clone, Default)]
+pub struct SelectItemText {
+    pub runs: Arc<[SelectTextRun]>,
+}
+
+impl SelectItemText {
+    pub fn new(runs: impl IntoIterator<Item = SelectTextRun>) -> Self {
+        Self {
+            runs: runs.into_iter().collect::<Vec<_>>().into(),
+        }
+    }
+
+    pub fn plain(text: impl Into<Arc<str>>) -> Self {
+        Self::new([SelectTextRun::new(text, SelectTextTone::Normal)])
+    }
+
+    pub fn value_and_label(value: impl Into<Arc<str>>, label: impl Into<Arc<str>>) -> Self {
+        Self::new([
+            SelectTextRun::new(value, SelectTextTone::Normal),
+            SelectTextRun::new(label, SelectTextTone::Muted),
+        ])
+    }
+}
+
+#[derive(Debug, Clone, Default)]
+pub enum SelectItemIndicator {
+    /// Default shadcn-style check indicator.
+    #[default]
+    Check,
+    None,
+    Icon(IconId),
+}
+
 #[derive(Debug, Clone)]
 pub struct SelectItem {
     pub value: Arc<str>,
     pub label: Arc<str>,
     pub test_id: Option<Arc<str>>,
     pub disabled: bool,
+    pub show_value_in_list: bool,
+    pub item_text: Option<SelectItemText>,
+    pub indicator: SelectItemIndicator,
     pub label_features_override: Vec<fret_core::TextFontFeatureSetting>,
     pub label_axes_override: Vec<fret_core::TextFontAxisSetting>,
 }
@@ -658,6 +723,9 @@ impl SelectItem {
             label: label.into(),
             test_id: None,
             disabled: false,
+            show_value_in_list: false,
+            item_text: None,
+            indicator: SelectItemIndicator::default(),
             label_features_override: Vec::new(),
             label_axes_override: Vec::new(),
         }
@@ -670,6 +738,23 @@ impl SelectItem {
 
     pub fn disabled(mut self, disabled: bool) -> Self {
         self.disabled = disabled;
+        self
+    }
+
+    /// When true, renders the item's value before its label (useful for currency/unit pickers).
+    pub fn show_value_in_list(mut self, show: bool) -> Self {
+        self.show_value_in_list = show;
+        self
+    }
+
+    /// Overrides the rendered `SelectItemText` contents for this item.
+    pub fn item_text(mut self, text: SelectItemText) -> Self {
+        self.item_text = Some(text);
+        self
+    }
+
+    pub fn indicator(mut self, indicator: SelectItemIndicator) -> Self {
+        self.indicator = indicator;
         self
     }
 
@@ -864,6 +949,280 @@ impl SelectStyle {
     }
 }
 
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub enum SelectTriggerLabelPolicy {
+    /// Use the selected item's label (default).
+    #[default]
+    Label,
+    /// Use the selected item's raw value (useful for compact pickers like currency symbols).
+    Value,
+}
+
+/// Matches shadcn/ui v4 `SelectTrigger` sizing vocabulary (`sm` vs `default`).
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub enum SelectTriggerSize {
+    Sm,
+    #[default]
+    Default,
+}
+
+impl SelectTriggerSize {
+    fn to_component_size(self) -> ComponentSize {
+        match self {
+            Self::Sm => ComponentSize::Small,
+            Self::Default => ComponentSize::Medium,
+        }
+    }
+}
+
+/// shadcn/ui v4 `SelectValue`.
+#[derive(Debug, Clone, Default)]
+pub struct SelectValue {
+    placeholder: Option<Arc<str>>,
+}
+
+impl SelectValue {
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    pub fn placeholder(mut self, placeholder: impl Into<Arc<str>>) -> Self {
+        self.placeholder = Some(placeholder.into());
+        self
+    }
+}
+
+/// shadcn/ui v4 `SelectTrigger` (configuration wrapper for Fret's `Select` recipe).
+#[derive(Debug, Clone)]
+pub struct SelectTrigger {
+    size: SelectTriggerSize,
+    chrome: ChromeRefinement,
+    layout: LayoutRefinement,
+    value: SelectValue,
+    chevron_icon_override: Option<IconId>,
+    chevron_size_override: Option<Px>,
+    chevron_opacity_override: Option<f32>,
+    gap_override: Option<Space>,
+    font_weight_override: Option<FontWeight>,
+    font_override: Option<FontId>,
+    label_policy: SelectTriggerLabelPolicy,
+}
+
+impl Default for SelectTrigger {
+    fn default() -> Self {
+        Self {
+            size: SelectTriggerSize::default(),
+            chrome: ChromeRefinement::default(),
+            layout: LayoutRefinement::default(),
+            value: SelectValue::default(),
+            chevron_icon_override: None,
+            chevron_size_override: None,
+            chevron_opacity_override: None,
+            gap_override: None,
+            font_weight_override: None,
+            font_override: None,
+            label_policy: SelectTriggerLabelPolicy::default(),
+        }
+    }
+}
+
+impl SelectTrigger {
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    pub fn size(mut self, size: SelectTriggerSize) -> Self {
+        self.size = size;
+        self
+    }
+
+    pub fn refine_style(mut self, style: ChromeRefinement) -> Self {
+        self.chrome = self.chrome.merge(style);
+        self
+    }
+
+    pub fn refine_layout(mut self, layout: LayoutRefinement) -> Self {
+        self.layout = self.layout.merge(layout);
+        self
+    }
+
+    pub fn value(mut self, value: SelectValue) -> Self {
+        self.value = value;
+        self
+    }
+
+    pub fn chevron_icon(mut self, icon: IconId) -> Self {
+        self.chevron_icon_override = Some(icon);
+        self
+    }
+
+    pub fn chevron_size(mut self, size: Px) -> Self {
+        self.chevron_size_override = Some(size);
+        self
+    }
+
+    pub fn chevron_opacity(mut self, opacity: f32) -> Self {
+        self.chevron_opacity_override = Some(opacity);
+        self
+    }
+
+    pub fn gap(mut self, gap: Space) -> Self {
+        self.gap_override = Some(gap);
+        self
+    }
+
+    pub fn font_weight(mut self, weight: FontWeight) -> Self {
+        self.font_weight_override = Some(weight);
+        self
+    }
+
+    pub fn font(mut self, font: FontId) -> Self {
+        self.font_override = Some(font);
+        self
+    }
+
+    pub fn label_policy(mut self, policy: SelectTriggerLabelPolicy) -> Self {
+        self.label_policy = policy;
+        self
+    }
+}
+
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub enum SelectScrollButtons {
+    #[default]
+    Auto,
+    Off,
+    On,
+}
+
+#[derive(Debug, Clone, Default)]
+pub struct SelectScrollUpButton {
+    icon_override: Option<IconId>,
+}
+
+impl SelectScrollUpButton {
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    pub fn icon(mut self, icon: IconId) -> Self {
+        self.icon_override = Some(icon);
+        self
+    }
+}
+
+#[derive(Debug, Clone, Default)]
+pub struct SelectScrollDownButton {
+    icon_override: Option<IconId>,
+}
+
+impl SelectScrollDownButton {
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    pub fn icon(mut self, icon: IconId) -> Self {
+        self.icon_override = Some(icon);
+        self
+    }
+}
+
+/// shadcn/ui v4 `SelectContent` (configuration wrapper for Fret's `Select` recipe).
+#[derive(Debug, Clone)]
+pub struct SelectContent {
+    align: SelectAlign,
+    side: SelectSide,
+    align_offset: Px,
+    side_offset: Option<Px>,
+    align_item_with_trigger: bool,
+    arrow: bool,
+    arrow_size_override: Option<Px>,
+    arrow_padding_override: Option<Px>,
+    scroll_buttons: SelectScrollButtons,
+    scroll_up_button: Option<SelectScrollUpButton>,
+    scroll_down_button: Option<SelectScrollDownButton>,
+}
+
+impl Default for SelectContent {
+    fn default() -> Self {
+        Self {
+            align: SelectAlign::default(),
+            side: SelectSide::default(),
+            align_offset: Px(0.0),
+            side_offset: Some(Px(4.0)),
+            align_item_with_trigger: true,
+            arrow: false,
+            arrow_size_override: None,
+            arrow_padding_override: None,
+            scroll_buttons: SelectScrollButtons::Auto,
+            scroll_up_button: None,
+            scroll_down_button: None,
+        }
+    }
+}
+
+impl SelectContent {
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    pub fn align(mut self, align: SelectAlign) -> Self {
+        self.align = align;
+        self
+    }
+
+    pub fn side(mut self, side: SelectSide) -> Self {
+        self.side = side;
+        self
+    }
+
+    pub fn align_offset(mut self, offset: Px) -> Self {
+        self.align_offset = offset;
+        self
+    }
+
+    pub fn side_offset(mut self, offset: Px) -> Self {
+        self.side_offset = Some(offset);
+        self
+    }
+
+    /// When true (default), positions the popup so the selected item aligns with the trigger.
+    pub fn align_item_with_trigger(mut self, align: bool) -> Self {
+        self.align_item_with_trigger = align;
+        self
+    }
+
+    pub fn arrow(mut self, arrow: bool) -> Self {
+        self.arrow = arrow;
+        self
+    }
+
+    pub fn arrow_size(mut self, size: Px) -> Self {
+        self.arrow_size_override = Some(size);
+        self
+    }
+
+    pub fn arrow_padding(mut self, padding: Px) -> Self {
+        self.arrow_padding_override = Some(padding);
+        self
+    }
+
+    pub fn scroll_buttons(mut self, buttons: SelectScrollButtons) -> Self {
+        self.scroll_buttons = buttons;
+        self
+    }
+
+    pub fn scroll_up_button(mut self, button: SelectScrollUpButton) -> Self {
+        self.scroll_up_button = Some(button);
+        self
+    }
+
+    pub fn scroll_down_button(mut self, button: SelectScrollDownButton) -> Self {
+        self.scroll_down_button = Some(button);
+        self
+    }
+}
+
 #[derive(Clone)]
 pub struct Select {
     model: Model<Option<Arc<str>>>,
@@ -882,6 +1241,7 @@ pub struct Select {
     on_open_change_complete: Option<OnOpenChange>,
     chrome: ChromeRefinement,
     layout: LayoutRefinement,
+    trigger_size: ComponentSize,
     style: SelectStyle,
     align: SelectAlign,
     side: SelectSide,
@@ -892,12 +1252,18 @@ pub struct Select {
     arrow: bool,
     arrow_size_override: Option<Px>,
     arrow_padding_override: Option<Px>,
+    scroll_buttons: SelectScrollButtons,
+    scroll_up_icon_override: Option<IconId>,
+    scroll_down_icon_override: Option<IconId>,
     trigger_border_width_override: BorderWidthOverride,
     trigger_corner_radii_override: Option<Corners>,
     trigger_gap_override: Option<Space>,
+    trigger_chevron_icon_override: Option<IconId>,
     trigger_chevron_size_override: Option<Px>,
     trigger_chevron_opacity_override: Option<f32>,
     trigger_font_weight_override: Option<FontWeight>,
+    trigger_font_override: Option<FontId>,
+    trigger_label_policy: SelectTriggerLabelPolicy,
 }
 
 impl Select {
@@ -918,6 +1284,7 @@ impl Select {
             on_open_change_complete: None,
             chrome: ChromeRefinement::default(),
             layout: LayoutRefinement::default(),
+            trigger_size: ComponentSize::default(),
             style: SelectStyle::default(),
             align: SelectAlign::default(),
             side: SelectSide::default(),
@@ -928,12 +1295,18 @@ impl Select {
             arrow: false,
             arrow_size_override: None,
             arrow_padding_override: None,
+            scroll_buttons: SelectScrollButtons::default(),
+            scroll_up_icon_override: None,
+            scroll_down_icon_override: None,
             trigger_border_width_override: BorderWidthOverride::default(),
             trigger_corner_radii_override: None,
             trigger_gap_override: None,
+            trigger_chevron_icon_override: None,
             trigger_chevron_size_override: None,
             trigger_chevron_opacity_override: None,
             trigger_font_weight_override: None,
+            trigger_font_override: None,
+            trigger_label_policy: SelectTriggerLabelPolicy::default(),
         }
     }
 
@@ -973,6 +1346,83 @@ impl Select {
         f: impl Fn(&mut dyn fret_ui::action::UiActionHost, ActionCx, Arc<str>) + 'static,
     ) -> Self {
         self.on_value_change = Some(Arc::new(f));
+        self
+    }
+
+    /// Applies a shadcn/ui v4-style `SelectTrigger` configuration.
+    pub fn trigger(mut self, trigger: SelectTrigger) -> Self {
+        self.trigger_size = trigger.size.to_component_size();
+        self.chrome = self.chrome.merge(trigger.chrome);
+        self.layout = self.layout.merge(trigger.layout);
+
+        if let Some(placeholder) = trigger.value.placeholder {
+            self.placeholder = placeholder;
+        }
+        if trigger.gap_override.is_some() {
+            self.trigger_gap_override = trigger.gap_override;
+        }
+        if trigger.chevron_icon_override.is_some() {
+            self.trigger_chevron_icon_override = trigger.chevron_icon_override;
+        }
+        if trigger.chevron_size_override.is_some() {
+            self.trigger_chevron_size_override = trigger.chevron_size_override;
+        }
+        if trigger.chevron_opacity_override.is_some() {
+            self.trigger_chevron_opacity_override = trigger.chevron_opacity_override;
+        }
+        if trigger.font_weight_override.is_some() {
+            self.trigger_font_weight_override = trigger.font_weight_override;
+        }
+        if trigger.font_override.is_some() {
+            self.trigger_font_override = trigger.font_override;
+        }
+        self.trigger_label_policy = trigger.label_policy;
+
+        self
+    }
+
+    /// Applies a shadcn/ui v4-style `SelectValue` configuration.
+    pub fn value(mut self, value: SelectValue) -> Self {
+        if let Some(placeholder) = value.placeholder {
+            self.placeholder = placeholder;
+        }
+        self
+    }
+
+    /// Applies a shadcn/ui v4-style `SelectContent` configuration.
+    pub fn content(mut self, content: SelectContent) -> Self {
+        self.align = content.align;
+        self.side = content.side;
+        self.align_offset = content.align_offset;
+        self.side_offset_override = content.side_offset;
+        self.position = if content.align_item_with_trigger {
+            SelectPosition::ItemAligned
+        } else {
+            SelectPosition::Popper
+        };
+
+        self.arrow = content.arrow;
+        if content.arrow_size_override.is_some() {
+            self.arrow_size_override = content.arrow_size_override;
+        }
+        if content.arrow_padding_override.is_some() {
+            self.arrow_padding_override = content.arrow_padding_override;
+        }
+
+        self.scroll_buttons = content.scroll_buttons;
+        if let Some(up) = content.scroll_up_button {
+            self.scroll_up_icon_override = up.icon_override;
+            if self.scroll_buttons == SelectScrollButtons::Auto {
+                self.scroll_buttons = SelectScrollButtons::On;
+            }
+        }
+        if let Some(down) = content.scroll_down_button {
+            self.scroll_down_icon_override = down.icon_override;
+            if self.scroll_buttons == SelectScrollButtons::Auto {
+                self.scroll_buttons = SelectScrollButtons::On;
+            }
+        }
+
         self
     }
 
@@ -1124,6 +1574,22 @@ impl Select {
         self
     }
 
+    /// Overrides the font used for the trigger label.
+    pub fn trigger_font(mut self, font: FontId) -> Self {
+        self.trigger_font_override = Some(font);
+        self
+    }
+
+    pub fn trigger_font_monospace(self) -> Self {
+        self.trigger_font(FontId::monospace())
+    }
+
+    /// Makes the trigger display the selected item's value instead of its label.
+    pub fn trigger_value_as_label(mut self) -> Self {
+        self.trigger_label_policy = SelectTriggerLabelPolicy::Value;
+        self
+    }
+
     /// Overrides per-edge border widths (in px) for the Select trigger's chrome.
     ///
     /// This is primarily used by shadcn recipe compositions that merge borders (e.g. input groups).
@@ -1191,6 +1657,7 @@ impl Select {
             self.on_open_change_complete,
             self.chrome,
             self.layout,
+            self.trigger_size,
             self.style,
             self.align,
             self.side,
@@ -1201,12 +1668,18 @@ impl Select {
             self.arrow,
             self.arrow_size_override,
             self.arrow_padding_override,
+            self.scroll_buttons,
+            self.scroll_up_icon_override,
+            self.scroll_down_icon_override,
             self.trigger_border_width_override,
             self.trigger_corner_radii_override,
             self.trigger_gap_override,
+            self.trigger_chevron_icon_override,
             self.trigger_chevron_size_override,
             self.trigger_chevron_opacity_override,
             self.trigger_font_weight_override,
+            self.trigger_font_override,
+            self.trigger_label_policy,
         )
     }
 }
@@ -1239,6 +1712,7 @@ pub fn select<H: UiHost>(
         None,
         ChromeRefinement::default(),
         layout,
+        ComponentSize::default(),
         SelectStyle::default(),
         SelectAlign::default(),
         SelectSide::default(),
@@ -1249,12 +1723,18 @@ pub fn select<H: UiHost>(
         false,
         None,
         None,
+        SelectScrollButtons::default(),
+        None,
+        None,
         BorderWidthOverride::default(),
         None,
         None,
         None,
         None,
         None,
+        None,
+        None,
+        SelectTriggerLabelPolicy::default(),
     )
 }
 
@@ -1277,6 +1757,7 @@ fn select_impl<H: UiHost>(
     on_open_change_complete: Option<OnOpenChange>,
     chrome: ChromeRefinement,
     layout: LayoutRefinement,
+    trigger_size: ComponentSize,
     style: SelectStyle,
     align: SelectAlign,
     side: SelectSide,
@@ -1287,12 +1768,18 @@ fn select_impl<H: UiHost>(
     arrow: bool,
     arrow_size_override: Option<Px>,
     arrow_padding_override: Option<Px>,
+    scroll_buttons: SelectScrollButtons,
+    scroll_up_icon_override: Option<IconId>,
+    scroll_down_icon_override: Option<IconId>,
     trigger_border_width_override: BorderWidthOverride,
     trigger_corner_radii_override: Option<Corners>,
     trigger_gap_override: Option<Space>,
+    trigger_chevron_icon_override: Option<IconId>,
     trigger_chevron_size_override: Option<Px>,
     trigger_chevron_opacity_override: Option<f32>,
     trigger_font_weight_override: Option<FontWeight>,
+    trigger_font_override: Option<FontId>,
+    trigger_label_policy: SelectTriggerLabelPolicy,
 ) -> AnyElement {
     let chrome = ChromeRefinement::default()
         .pl(Space::N2p5)
@@ -1389,7 +1876,7 @@ fn select_impl<H: UiHost>(
 
         let resolved = resolve_input_chrome(
             Theme::global(&*cx.app),
-            fret_ui_kit::Size::default(),
+            trigger_size,
             &chrome,
             InputTokenKeys::none(),
         );
@@ -2834,6 +3321,15 @@ fn select_impl<H: UiHost>(
                                                 .unwrap_or_else(|e| e.into_inner());
                                             !state.opened_by_touch
                                         };
+                                        let allow_hover_scroll_arrows = match scroll_buttons {
+                                            SelectScrollButtons::Off => false,
+                                            SelectScrollButtons::Auto => allow_hover_scroll_arrows,
+                                            SelectScrollButtons::On => true,
+                                        };
+                                        let scroll_up_icon =
+                                            scroll_up_icon_override.unwrap_or(ids::ui::CHEVRON_UP);
+                                        let scroll_down_icon =
+                                            scroll_down_icon_override.unwrap_or(ids::ui::CHEVRON_DOWN);
 
                                         let scroll = select_scroll_with_buttons(
                                             cx,
@@ -2848,6 +3344,8 @@ fn select_impl<H: UiHost>(
                                                 estimated.0 > desired_content_h.0 + 0.5
                                             },
                                             allow_hover_scroll_arrows,
+                                            scroll_up_icon,
+                                            scroll_down_icon,
                                             scroll_handle,
                                             initial_scroll_to_y,
                                             clear_initial_scroll_to_y,
@@ -3093,6 +3591,12 @@ fn select_impl<H: UiHost>(
 
                                                                                     let item_value = item.value.clone();
                                                                                     let item_label = item.label.clone();
+                                                                                    let item_show_value_in_list =
+                                                                                        item.show_value_in_list;
+                                                                                    let item_text_override =
+                                                                                        item.item_text.clone();
+                                                                                    let item_indicator =
+                                                                                        item.indicator.clone();
                                                                                     let label_features_override =
                                                                                         item.label_features_override.clone();
                                                                                     let label_axes_override =
@@ -3304,16 +3808,36 @@ fn select_impl<H: UiHost>(
                                                                                         fg_muted
                                                                                     };
 
-                                                                                    let icon = decl_icon::icon_with(
-                                                                                        cx,
-                                                                                        ids::ui::CHECK,
-                                                                                        Some(Px(16.0)),
-                                                                                        Some(ColorRef::Color(indicator_fg)),
-                                                                                    );
-                                                                                    let icon = cx.opacity(
-                                                                                        if is_selected { 1.0 } else { 0.0 },
-                                                                                        move |_cx| vec![icon],
-                                                                                    );
+                                                                                    let icon = match item_indicator.clone() {
+                                                                                        SelectItemIndicator::None => cx.container(
+                                                                                            ContainerProps::default(),
+                                                                                            |_cx| Vec::new(),
+                                                                                        ),
+                                                                                        SelectItemIndicator::Check => {
+                                                                                            let icon = decl_icon::icon_with(
+                                                                                                cx,
+                                                                                                ids::ui::CHECK,
+                                                                                                Some(Px(16.0)),
+                                                                                                Some(ColorRef::Color(indicator_fg)),
+                                                                                            );
+                                                                                            cx.opacity(
+                                                                                                if is_selected { 1.0 } else { 0.0 },
+                                                                                                move |_cx| vec![icon],
+                                                                                            )
+                                                                                        }
+                                                                                        SelectItemIndicator::Icon(icon_id) => {
+                                                                                            let icon = decl_icon::icon_with(
+                                                                                                cx,
+                                                                                                icon_id,
+                                                                                                Some(Px(16.0)),
+                                                                                                Some(ColorRef::Color(indicator_fg)),
+                                                                                            );
+                                                                                            cx.opacity(
+                                                                                                if is_selected { 1.0 } else { 0.0 },
+                                                                                                move |_cx| vec![icon],
+                                                                                            )
+                                                                                        }
+                                                                                    };
 
                                                                                     vec![cx.pointer_region(
                                                                                         PointerRegionProps {
@@ -3370,35 +3894,71 @@ fn select_impl<H: UiHost>(
                                                                                                     ..Default::default()
                                                                                                 },
                                                                                                 |cx| {
-                                                                                                    let mut text = ui::text(cx, item_label.clone())
-                                                                                                        .w_full()
-                                                                                                        .text_size_px(text_style.size)
-                                                                                                        .font_weight(text_style.weight)
-                                                                                                        .text_color(ColorRef::Color(fg))
-                                                                                                        .nowrap();
-                                                                                                    if let Some(line_height) = text_style.line_height {
-                                                                                                        text = text
-                                                                                                            .line_height_px(line_height)
-                                                                                                            .line_height_policy(
-                                                                                                                fret_core::TextLineHeightPolicy::FixedFromStyle,
-                                                                                                            );
-                                                                                                    }
-                                                                                                    if let Some(letter_spacing_em) = text_style.letter_spacing_em {
-                                                                                                        text = text.letter_spacing_em(letter_spacing_em);
-                                                                                                    }
-                                                                                                    for feature in &label_features_override {
-                                                                                                        text = text.font_feature(
-                                                                                                            feature.tag.to_string(),
-                                                                                                            feature.value,
-                                                                                                        );
-                                                                                                    }
-                                                                                                    for axis in &label_axes_override {
-                                                                                                        text = text.font_axis(
-                                                                                                            axis.tag.to_string(),
-                                                                                                            axis.value,
-                                                                                                        );
-                                                                                                    }
-                                                                                                    vec![text.into_element(cx)]
+                                                                                                    let item_text = item_text_override.clone().unwrap_or_else(|| {
+                                                                                                        if item_show_value_in_list {
+                                                                                                            SelectItemText::value_and_label(
+                                                                                                                item_value.clone(),
+                                                                                                                item_label.clone(),
+                                                                                                            )
+                                                                                                        } else {
+                                                                                                            SelectItemText::plain(item_label.clone())
+                                                                                                        }
+                                                                                                    });
+
+                                                                                                    let runs = item_text.runs.clone();
+                                                                                                    vec![cx.flex(
+                                                                                                        FlexProps {
+                                                                                                            layout: LayoutStyle::default(),
+                                                                                                            direction: fret_core::Axis::Horizontal,
+                                                                                                            gap: Px(8.0).into(),
+                                                                                                            padding: Edges::all(Px(0.0)).into(),
+                                                                                                            justify: MainAlign::Start,
+                                                                                                            align: CrossAlign::Center,
+                                                                                                            wrap: false,
+                                                                                                        },
+                                                                                                        move |cx| {
+                                                                                                            runs.iter()
+                                                                                                                .enumerate()
+                                                                                                                .map(|(idx, run)| {
+                                                                                                                    let color = match run.tone {
+                                                                                                                        SelectTextTone::Normal => fg,
+                                                                                                                        SelectTextTone::Muted => fg_muted,
+                                                                                                                    };
+                                                                                                                    let mut text = ui::text(cx, run.text.clone())
+                                                                                                                        .text_size_px(text_style.size)
+                                                                                                                        .font_weight(text_style.weight)
+                                                                                                                        .text_color(ColorRef::Color(color))
+                                                                                                                        .nowrap();
+                                                                                                                    if idx + 1 == runs.len() {
+                                                                                                                        text = text.w_full();
+                                                                                                                    }
+                                                                                                                    if let Some(line_height) = text_style.line_height {
+                                                                                                                        text = text
+                                                                                                                            .line_height_px(line_height)
+                                                                                                                            .line_height_policy(
+                                                                                                                                fret_core::TextLineHeightPolicy::FixedFromStyle,
+                                                                                                                            );
+                                                                                                                    }
+                                                                                                                    if let Some(letter_spacing_em) = text_style.letter_spacing_em {
+                                                                                                                        text = text.letter_spacing_em(letter_spacing_em);
+                                                                                                                    }
+                                                                                                                    for feature in &label_features_override {
+                                                                                                                        text = text.font_feature(
+                                                                                                                            feature.tag.to_string(),
+                                                                                                                            feature.value,
+                                                                                                                        );
+                                                                                                                    }
+                                                                                                                    for axis in &label_axes_override {
+                                                                                                                        text = text.font_axis(
+                                                                                                                            axis.tag.to_string(),
+                                                                                                                            axis.value,
+                                                                                                                        );
+                                                                                                                    }
+                                                                                                                    text.into_element(cx)
+                                                                                                                })
+                                                                                                                .collect::<Vec<_>>()
+                                                                                                        },
+                                                                                                    )]
                                                                                                 },
                                                                                             );
                                                                                             if is_alignment_item {
@@ -3796,11 +4356,31 @@ fn select_impl<H: UiHost>(
             };
             chrome.shadow = match trigger_shadow_preset {
                 fret_ui_kit::ShadowPreset::None => None,
-                fret_ui_kit::ShadowPreset::Xs => Some(decl_style::shadow_xs(&theme, shadow_radius)),
-                fret_ui_kit::ShadowPreset::Sm => Some(decl_style::shadow_sm(&theme, shadow_radius)),
-                fret_ui_kit::ShadowPreset::Md => Some(decl_style::shadow_md(&theme, shadow_radius)),
-                fret_ui_kit::ShadowPreset::Lg => Some(decl_style::shadow_lg(&theme, shadow_radius)),
-                fret_ui_kit::ShadowPreset::Xl => Some(decl_style::shadow_xl(&theme, shadow_radius)),
+                fret_ui_kit::ShadowPreset::Xs => Some({
+                    let mut shadow = decl_style::shadow_xs(&theme, shadow_radius);
+                    shadow.corner_radii = chrome.corner_radii;
+                    shadow
+                }),
+                fret_ui_kit::ShadowPreset::Sm => Some({
+                    let mut shadow = decl_style::shadow_sm(&theme, shadow_radius);
+                    shadow.corner_radii = chrome.corner_radii;
+                    shadow
+                }),
+                fret_ui_kit::ShadowPreset::Md => Some({
+                    let mut shadow = decl_style::shadow_md(&theme, shadow_radius);
+                    shadow.corner_radii = chrome.corner_radii;
+                    shadow
+                }),
+                fret_ui_kit::ShadowPreset::Lg => Some({
+                    let mut shadow = decl_style::shadow_lg(&theme, shadow_radius);
+                    shadow.corner_radii = chrome.corner_radii;
+                    shadow
+                }),
+                fret_ui_kit::ShadowPreset::Xl => Some({
+                    let mut shadow = decl_style::shadow_xl(&theme, shadow_radius);
+                    shadow.corner_radii = chrome.corner_radii;
+                    shadow
+                }),
             };
 
             let state_for_value_node = trigger_state.clone();
@@ -3857,20 +4437,33 @@ fn select_impl<H: UiHost>(
                                             )
                                             .unwrap_or_default();
                                         let (label, label_features_override, label_axes_override) =
-                                            selected
-                                                .as_ref()
-                                                .and_then(|v| {
-                                                    find_item_label_overrides(entries, v.as_ref())
-                                                })
-                                                .unwrap_or_else(|| {
-                                                    (
-                                                        placeholder_for_value_node.clone(),
-                                                        Vec::new(),
-                                                        Vec::new(),
-                                                    )
-                                                });
+                                            if trigger_label_policy == SelectTriggerLabelPolicy::Value
+                                                && let Some(value) = selected.as_ref()
+                                            {
+                                                (value.clone(), Vec::new(), Vec::new())
+                                            } else {
+                                                selected
+                                                    .as_ref()
+                                                    .and_then(|v| {
+                                                        find_item_label_overrides(
+                                                            entries,
+                                                            v.as_ref(),
+                                                        )
+                                                    })
+                                                    .unwrap_or_else(|| {
+                                                        (
+                                                            placeholder_for_value_node.clone(),
+                                                            Vec::new(),
+                                                            Vec::new(),
+                                                        )
+                                                    })
+                                            };
 
-                                        let mut text = ui::text(cx, label)
+                                        let mut text = ui::text(cx, label);
+                                        if let Some(font) = trigger_font_override {
+                                            text = text.font(font);
+                                        }
+                                        text = text
                                             .text_size_px(text_style.size)
                                             .font_weight(text_style.weight)
                                             .text_color(ColorRef::Color(if selected.is_some() {
@@ -3917,7 +4510,7 @@ fn select_impl<H: UiHost>(
                             cx.opacity(trigger_chevron_opacity, |cx| {
                                 vec![decl_icon::icon_with(
                                     cx,
-                                    ids::ui::CHEVRON_DOWN,
+                                    trigger_chevron_icon_override.unwrap_or(ids::ui::CHEVRON_DOWN),
                                     Some(trigger_chevron_size),
                                     Some(ColorRef::Color(fg_muted)),
                                 )]
@@ -4078,6 +4671,27 @@ mod tests {
 
             assert_eq!(value.as_deref(), Some("alpha"));
             assert!(open);
+        });
+    }
+
+    #[test]
+    fn select_content_align_item_with_trigger_false_sets_position_popper() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(400.0), Px(240.0)),
+        );
+
+        fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            let select = Select::new_controllable(cx, None, None::<Arc<str>>, None, false).content(
+                SelectContent::new()
+                    .align_item_with_trigger(false)
+                    .side_offset(Px(7.0)),
+            );
+
+            assert_eq!(select.position, SelectPosition::Popper);
+            assert_eq!(select.side_offset_override, Some(Px(7.0)));
         });
     }
 

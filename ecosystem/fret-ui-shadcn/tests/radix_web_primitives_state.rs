@@ -376,7 +376,33 @@ fn find_semantics<'a>(
     snap.nodes
         .iter()
         .find(|n| n.role == role && n.label.as_deref() == Some(label))
-        .unwrap_or_else(|| panic!("missing semantics node role={role:?} label={label:?}"))
+        .unwrap_or_else(|| {
+            let mut role_counts: Vec<(SemanticsRole, usize)> = Vec::new();
+            for node in &snap.nodes {
+                if let Some(entry) = role_counts.iter_mut().find(|(r, _)| *r == node.role) {
+                    entry.1 = entry.1.saturating_add(1);
+                } else {
+                    role_counts.push((node.role, 1));
+                }
+            }
+            role_counts.sort_by(|a, b| b.1.cmp(&a.1));
+
+            let candidates: Vec<&str> = snap
+                .nodes
+                .iter()
+                .filter(|n| n.role == role)
+                .filter_map(|n| n.label.as_deref())
+                .collect();
+            let button_labels: Vec<&str> = snap
+                .nodes
+                .iter()
+                .filter(|n| n.role == SemanticsRole::Button)
+                .filter_map(|n| n.label.as_deref())
+                .collect();
+            panic!(
+                "missing semantics node role={role:?} label={label:?} candidates={candidates:?} role_counts={role_counts:?} buttons={button_labels:?}"
+            )
+        })
 }
 
 fn find_semantics_by_role<'a>(
@@ -773,11 +799,7 @@ fn radix_web_dropdown_menu_open_navigate_select_matches_fret() {
     let build = |cx: &mut ElementContext<'_, App>, open: &Model<bool>| {
         fret_ui_shadcn::DropdownMenu::new(open.clone()).into_element(
             cx,
-            |cx| {
-                fret_ui_shadcn::Button::new("Open")
-                    .toggle_model(open.clone())
-                    .into_element(cx)
-            },
+            |cx| fret_ui_shadcn::Button::new("Open").into_element(cx),
             |_cx| {
                 vec![fret_ui_shadcn::DropdownMenuEntry::Group(
                     fret_ui_shadcn::DropdownMenuGroup::new(vec![
@@ -2314,11 +2336,7 @@ fn radix_web_dropdown_menu_submenu_hover_select_matches_fret() {
     let build = |cx: &mut ElementContext<'_, App>, open: &Model<bool>| {
         fret_ui_shadcn::DropdownMenu::new(open.clone()).into_element(
             cx,
-            |cx| {
-                fret_ui_shadcn::Button::new("Open")
-                    .toggle_model(open.clone())
-                    .into_element(cx)
-            },
+            |cx| fret_ui_shadcn::Button::new("Open").into_element(cx),
             |_cx| {
                 vec![fret_ui_shadcn::DropdownMenuEntry::Group(
                     fret_ui_shadcn::DropdownMenuGroup::new(vec![
@@ -3321,11 +3339,7 @@ fn radix_web_dropdown_menu_submenu_grace_corridor_matches_fret() {
     let build = |cx: &mut ElementContext<'_, App>, open: &Model<bool>| {
         fret_ui_shadcn::DropdownMenu::new(open.clone()).into_element(
             cx,
-            |cx| {
-                fret_ui_shadcn::Button::new("Open")
-                    .toggle_model(open.clone())
-                    .into_element(cx)
-            },
+            |cx| fret_ui_shadcn::Button::new("Open").into_element(cx),
             |_cx| {
                 vec![fret_ui_shadcn::DropdownMenuEntry::Group(
                     fret_ui_shadcn::DropdownMenuGroup::new(vec![
@@ -3546,11 +3560,7 @@ fn radix_web_dropdown_menu_submenu_unsafe_leave_matches_fret() {
     let build = |cx: &mut ElementContext<'_, App>, open: &Model<bool>| {
         fret_ui_shadcn::DropdownMenu::new(open.clone()).into_element(
             cx,
-            |cx| {
-                fret_ui_shadcn::Button::new("Open")
-                    .toggle_model(open.clone())
-                    .into_element(cx)
-            },
+            |cx| fret_ui_shadcn::Button::new("Open").into_element(cx),
             |_cx| {
                 vec![fret_ui_shadcn::DropdownMenuEntry::Group(
                     fret_ui_shadcn::DropdownMenuGroup::new(vec![
@@ -3764,11 +3774,7 @@ fn radix_web_dropdown_menu_submenu_keyboard_open_close_matches_fret() {
     let build = |cx: &mut ElementContext<'_, App>, open: &Model<bool>| {
         fret_ui_shadcn::DropdownMenu::new(open.clone()).into_element(
             cx,
-            |cx| {
-                fret_ui_shadcn::Button::new("Open")
-                    .toggle_model(open.clone())
-                    .into_element(cx)
-            },
+            |cx| fret_ui_shadcn::Button::new("Open").into_element(cx),
             |_cx| {
                 vec![fret_ui_shadcn::DropdownMenuEntry::Group(
                     fret_ui_shadcn::DropdownMenuGroup::new(vec![
@@ -6150,11 +6156,7 @@ fn radix_web_dropdown_menu_submenu_arrowleft_escape_close_matches_fret() {
     let build = |cx: &mut ElementContext<'_, App>, open: &Model<bool>| {
         fret_ui_shadcn::DropdownMenu::new(open.clone()).into_element(
             cx,
-            |cx| {
-                fret_ui_shadcn::Button::new("Open")
-                    .toggle_model(open.clone())
-                    .into_element(cx)
-            },
+            |cx| fret_ui_shadcn::Button::new("Open").into_element(cx),
             |_cx| {
                 vec![fret_ui_shadcn::DropdownMenuEntry::Group(
                     fret_ui_shadcn::DropdownMenuGroup::new(vec![
@@ -6759,11 +6761,7 @@ fn radix_web_dropdown_menu_outside_click_close_matches_fret() {
     let build = |cx: &mut ElementContext<'_, App>, open: &Model<bool>| {
         fret_ui_shadcn::DropdownMenu::new(open.clone()).into_element(
             cx,
-            |cx| {
-                fret_ui_shadcn::Button::new("Open")
-                    .toggle_model(open.clone())
-                    .into_element(cx)
-            },
+            |cx| fret_ui_shadcn::Button::new("Open").into_element(cx),
             |_cx| {
                 vec![fret_ui_shadcn::DropdownMenuEntry::Group(
                     fret_ui_shadcn::DropdownMenuGroup::new(vec![
@@ -6942,11 +6940,7 @@ fn radix_web_dropdown_menu_submenu_outside_click_close_matches_fret() {
     let build = |cx: &mut ElementContext<'_, App>, open: &Model<bool>| {
         fret_ui_shadcn::DropdownMenu::new(open.clone()).into_element(
             cx,
-            |cx| {
-                fret_ui_shadcn::Button::new("Open")
-                    .toggle_model(open.clone())
-                    .into_element(cx)
-            },
+            |cx| fret_ui_shadcn::Button::new("Open").into_element(cx),
             |_cx| {
                 vec![fret_ui_shadcn::DropdownMenuEntry::Group(
                     fret_ui_shadcn::DropdownMenuGroup::new(vec![

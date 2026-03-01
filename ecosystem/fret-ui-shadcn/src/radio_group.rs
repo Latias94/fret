@@ -868,14 +868,14 @@ mod tests {
 
             let is_dot = (rect.size.width.0 - indicator.0).abs() <= 0.1
                 && (rect.size.height.0 - indicator.0).abs() <= 0.1
-                && *background == fret_core::Paint::Solid(dot).into();
+                && background.paint == fret_core::Paint::Solid(dot);
             if is_dot {
                 dot_rect = Some(*rect);
             }
 
             let is_icon = (rect.size.width.0 - icon.0).abs() <= 0.1
                 && (rect.size.height.0 - icon.0).abs() <= 0.1
-                && *background == fret_core::Paint::TRANSPARENT.into()
+                && background.paint == fret_core::Paint::TRANSPARENT
                 && border.left.0 > 0.0
                 && border.top.0 > 0.0
                 && border.right.0 > 0.0
@@ -978,7 +978,7 @@ mod tests {
 
             let is_icon = (rect.size.width.0 - icon.0).abs() <= 0.1
                 && (rect.size.height.0 - icon.0).abs() <= 0.1
-                && *background == fret_core::Paint::TRANSPARENT.into()
+                && background.paint == fret_core::Paint::TRANSPARENT
                 && border.left.0 > 0.0
                 && border.top.0 > 0.0
                 && border.right.0 > 0.0
@@ -1079,20 +1079,20 @@ mod tests {
             if sample_quad.is_none() {
                 sample_quad = Some((background.paint, *border, border_paint.paint));
             }
-            if *background == fret_core::Paint::Solid(expected_bg).into() {
+            if background.paint == fret_core::Paint::Solid(expected_bg) {
                 bg_matches = bg_matches.saturating_add(1);
             }
-            if *border_paint == fret_core::Paint::Solid(primary).into() {
+            if border_paint.paint == fret_core::Paint::Solid(primary) {
                 border_paint_matches = border_paint_matches.saturating_add(1);
             }
-            if *background == fret_core::Paint::Solid(expected_bg).into()
-                && *border_paint == fret_core::Paint::Solid(primary).into()
+            if background.paint == fret_core::Paint::Solid(expected_bg)
+                && border_paint.paint == fret_core::Paint::Solid(primary)
             {
                 bg_and_border_paint_matches = bg_and_border_paint_matches.saturating_add(1);
             }
 
-            if *background == fret_core::Paint::Solid(expected_bg).into()
-                && *border_paint == fret_core::Paint::Solid(primary).into()
+            if background.paint == fret_core::Paint::Solid(expected_bg)
+                && border_paint.paint == fret_core::Paint::Solid(primary)
                 && border.left.0 > 0.0
                 && border.top.0 > 0.0
                 && border.right.0 > 0.0

@@ -50,6 +50,12 @@ pub(super) fn preview_card(
                 shadcn::CardDescription::new("Enter your email below to login to your account")
                     .into_element(cx)
                     .test_id("ui-gallery-card-demo-description"),
+                shadcn::CardAction::new([shadcn::Button::new("Sign Up")
+                    .variant(shadcn::ButtonVariant::Link)
+                    .size(shadcn::ButtonSize::Sm)
+                    .into_element(cx)
+                    .test_id("ui-gallery-card-demo-sign-up")])
+                .into_element(cx),
             ])
             .into_element(cx),
             shadcn::CardContent::new(vec![stack::vstack(
@@ -99,48 +105,131 @@ pub(super) fn preview_card(
                 },
             )])
             .into_element(cx),
-            shadcn::CardFooter::new(vec![stack::vstack(
-                cx,
-                stack::VStackProps::default()
-                    .gap(Space::N2)
-                    .layout(LayoutRefinement::default().w_full()),
-                |cx| {
-                    let sign_up = stack::hstack(
-                        cx,
-                        stack::HStackProps::default()
-                            .layout(LayoutRefinement::default().w_full().mt(Space::N4))
-                            .items_center()
-                            .justify_center()
-                            .gap(Space::N1),
-                        |cx| {
-                            vec![
-                                ui::text(cx, "Don't have an account?")
-                                    .text_sm()
-                                    .into_element(cx),
-                                shadcn::Button::new("Sign up")
-                                    .variant(shadcn::ButtonVariant::Link)
-                                    .size(shadcn::ButtonSize::Sm)
-                                    .into_element(cx),
-                            ]
-                        },
-                    );
-                    vec![
-                        shadcn::Button::new("Login")
-                            .refine_layout(LayoutRefinement::default().w_full())
-                            .into_element(cx),
-                        shadcn::Button::new("Login with Google")
-                            .variant(shadcn::ButtonVariant::Outline)
-                            .refine_layout(LayoutRefinement::default().w_full())
-                            .into_element(cx),
-                        sign_up,
-                    ]
-                },
-            )])
+            shadcn::CardFooter::new(vec![
+                shadcn::Button::new("Login")
+                    .refine_layout(LayoutRefinement::default().w_full())
+                    .into_element(cx),
+                shadcn::Button::new("Login with Google")
+                    .variant(shadcn::ButtonVariant::Outline)
+                    .refine_layout(LayoutRefinement::default().w_full())
+                    .into_element(cx),
+            ])
+            .direction(shadcn::CardFooterDirection::Column)
+            .gap(Space::N2)
             .into_element(cx),
         ])
         .refine_layout(max_w_sm.clone())
         .into_element(cx)
         .test_id("ui-gallery-card-demo")
+    };
+
+    let usage = {
+        shadcn::Card::new(vec![
+            shadcn::CardHeader::new(vec![
+                shadcn::CardTitle::new("Card Title").into_element(cx),
+                shadcn::CardDescription::new("Card Description").into_element(cx),
+                shadcn::CardAction::new([ui::text(cx, "Card Action").text_sm().into_element(cx)])
+                    .into_element(cx),
+            ])
+            .into_element(cx),
+            shadcn::CardContent::new(vec![
+                ui::text(cx, "Card Content").text_sm().into_element(cx),
+            ])
+            .into_element(cx),
+            shadcn::CardFooter::new(vec![ui::text(cx, "Card Footer").text_sm().into_element(cx)])
+                .into_element(cx),
+        ])
+        .refine_layout(max_w_sm.clone())
+        .into_element(cx)
+        .test_id("ui-gallery-card-usage")
+    };
+
+    let size = {
+        let default_card = shadcn::Card::new(vec![
+            shadcn::CardHeader::new(vec![
+                shadcn::CardTitle::new("Default spacing").into_element(cx),
+                shadcn::CardDescription::new("CardSize::Default (py-6, px-6, gap-6).")
+                    .into_element(cx),
+            ])
+            .into_element(cx),
+            shadcn::CardContent::new(vec![
+                ui::text(cx, "Card Content").text_sm().into_element(cx),
+            ])
+            .into_element(cx),
+        ])
+        .refine_layout(max_w_sm.clone())
+        .into_element(cx)
+        .test_id("ui-gallery-card-size-default");
+
+        let sm_card = shadcn::Card::new(vec![
+            shadcn::CardHeader::new(vec![
+                shadcn::CardTitle::new("Small spacing").into_element(cx),
+                shadcn::CardDescription::new("CardSize::Sm (py-4, px-4, gap-4).").into_element(cx),
+            ])
+            .into_element(cx),
+            shadcn::CardContent::new(vec![
+                ui::text(cx, "Card Content").text_sm().into_element(cx),
+            ])
+            .into_element(cx),
+        ])
+        .size(shadcn::CardSize::Sm)
+        .refine_layout(max_w_sm.clone())
+        .into_element(cx)
+        .test_id("ui-gallery-card-size-sm");
+
+        stack::vstack(
+            cx,
+            stack::VStackProps::default()
+                .gap(Space::N4)
+                .items_start()
+                .layout(LayoutRefinement::default().w_full().min_w_0()),
+            |_cx| vec![default_card, sm_card],
+        )
+        .test_id("ui-gallery-card-size")
+    };
+
+    let rtl = doc_layout::rtl(cx, |cx| {
+        shadcn::Card::new(vec![
+            shadcn::CardHeader::new(vec![
+                shadcn::CardTitle::new("نموذج بطاقة").into_element(cx),
+                shadcn::CardDescription::new("تأكد من أن Card يحترم اتجاه RTL.").into_element(cx),
+                shadcn::CardAction::new([shadcn::Button::new("إجراء")
+                    .variant(shadcn::ButtonVariant::Outline)
+                    .size(shadcn::ButtonSize::Sm)
+                    .into_element(cx)])
+                .into_element(cx),
+            ])
+            .into_element(cx),
+            shadcn::CardContent::new(vec![
+                ui::text(cx, "محتوى البطاقة").text_sm().into_element(cx),
+            ])
+            .into_element(cx),
+        ])
+        .refine_layout(max_w_sm.clone())
+        .into_element(cx)
+    })
+    .test_id("ui-gallery-card-rtl");
+
+    let card_content_inline_button = {
+        shadcn::Card::new(vec![
+            shadcn::CardHeader::new(vec![
+                shadcn::CardTitle::new("CardContent inline children").into_element(cx),
+                shadcn::CardDescription::new(
+                    "CardContent should not stretch inline-sized children (e.g. buttons).",
+                )
+                .into_element(cx),
+            ])
+            .into_element(cx),
+            shadcn::CardContent::new(vec![
+                shadcn::Button::new("Inline Button")
+                    .into_element(cx)
+                    .test_id("ui-gallery-card-content-inline-button"),
+            ])
+            .into_element(cx),
+        ])
+        .refine_layout(max_w_sm.clone())
+        .into_element(cx)
+        .test_id("ui-gallery-card-content-inline-button-demo")
     };
 
     let meeting_notes = {
@@ -702,22 +791,93 @@ pub(super) fn preview_card(
 
     let body = doc_layout::render_doc_page(
         cx,
-        Some("Preview follows shadcn Card docs order: Login, Meeting Notes, Image, Compositions."),
+        Some(
+            "Preview follows shadcn Card docs order: Demo, Usage, Size, Image, RTL (plus extra regression-focused sections).",
+        ),
         vec![
-            DocSection::new("Login", login)
+            DocSection::new("Demo", login)
                 .no_shell()
                 .max_w(Px(980.0))
-                .description("Login card layout (CardHeader + CardContent + CardFooter).")
+                .description("Login card layout (CardHeader + CardAction + CardContent + CardFooter).")
                 .code(
                     "rust",
                     r#"shadcn::Card::new(vec![
     shadcn::CardHeader::new(vec![
         shadcn::CardTitle::new("...").into_element(cx),
         shadcn::CardDescription::new("...").into_element(cx),
+        shadcn::CardAction::new([shadcn::Button::new("Sign Up")
+            .variant(shadcn::ButtonVariant::Link)
+            .size(shadcn::ButtonSize::Sm)
+            .into_element(cx)])
+        .into_element(cx),
     ])
     .into_element(cx),
     shadcn::CardContent::new(vec![/* ... */]).into_element(cx),
-    shadcn::CardFooter::new(vec![/* actions */]).into_element(cx),
+    shadcn::CardFooter::new(vec![/* actions */])
+        .direction(shadcn::CardFooterDirection::Column)
+        .gap(Space::N2)
+        .into_element(cx),
+])
+.into_element(cx);"#,
+                ),
+            DocSection::new("Usage", usage)
+                .no_shell()
+                .max_w(Px(980.0))
+                .description("Basic structure (header/content/footer) with an optional action slot.")
+                .code(
+                    "rust",
+                    r#"shadcn::Card::new(vec![
+    shadcn::CardHeader::new(vec![
+        shadcn::CardTitle::new("Card Title").into_element(cx),
+        shadcn::CardDescription::new("Card Description").into_element(cx),
+        shadcn::CardAction::new([ui::text(cx, "Card Action")
+            .text_sm()
+            .into_element(cx)])
+        .into_element(cx),
+    ])
+    .into_element(cx),
+    shadcn::CardContent::new(vec![ui::text(cx, "Card Content")
+        .text_sm()
+        .into_element(cx)])
+    .into_element(cx),
+    shadcn::CardFooter::new(vec![ui::text(cx, "Card Footer")
+        .text_sm()
+        .into_element(cx)])
+    .into_element(cx),
+])
+.into_element(cx);"#,
+                ),
+            DocSection::new("Size", size)
+                .no_shell()
+                .max_w(Px(980.0))
+                .description("Use `CardSize::Sm` for a more compact spacing preset.")
+                .code(
+                    "rust",
+                    r#"shadcn::Card::new(vec![
+    shadcn::CardHeader::new(vec![
+        shadcn::CardTitle::new("Small spacing").into_element(cx),
+        shadcn::CardDescription::new("CardSize::Sm (py-4, px-4, gap-4).").into_element(cx),
+    ])
+    .into_element(cx),
+    shadcn::CardContent::new(vec![ui::text(cx, "Card Content")
+        .text_sm()
+        .into_element(cx)])
+    .into_element(cx),
+])
+.size(shadcn::CardSize::Sm)
+.into_element(cx);"#,
+                ),
+            DocSection::new("CardContent", card_content_inline_button)
+                .no_shell()
+                .max_w(Px(980.0))
+                .description("CardContent should preserve intrinsic sizes for inline children.")
+                .code(
+                    "rust",
+                    r#"shadcn::Card::new(vec![
+    shadcn::CardContent::new(vec![
+        shadcn::Button::new("Inline Button").into_element(cx),
+    ])
+    .into_element(cx),
 ])
 .into_element(cx);"#,
                 ),
@@ -814,6 +974,26 @@ pub(super) fn preview_card(
         .into_element(cx),
 )
 .into_element(cx);"#,
+                ),
+            DocSection::new("RTL", rtl)
+                .no_shell()
+                .max_w(Px(980.0))
+                .description("Card should respect right-to-left direction context.")
+                .code(
+                    "rust",
+                    r#"use fret_ui_kit::primitives::direction::{LayoutDirection, with_direction_provider};
+
+with_direction_provider(cx, LayoutDirection::Rtl, |cx| {
+    shadcn::Card::new(vec![
+        shadcn::CardHeader::new(vec![
+            shadcn::CardTitle::new("...").into_element(cx),
+            shadcn::CardDescription::new("...").into_element(cx),
+        ])
+        .into_element(cx),
+        shadcn::CardContent::new(vec![/* ... */]).into_element(cx),
+    ])
+    .into_element(cx)
+})"#,
                 ),
             DocSection::new("Compositions", compositions)
                 .no_shell()

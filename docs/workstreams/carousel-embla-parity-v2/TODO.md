@@ -44,8 +44,12 @@ Non-goals (v2):
   - Deliverable: `docs/workstreams/carousel-embla-parity-v2/api-and-events.md`
   - Note: promote to an ADR only if/when the surface becomes stable and/or must be treated as
     a long-lived contract outside `ecosystem/*`.
-- [ ] CAR2-030 Workstream design: scroll physics determinism + reduced-motion behavior.
-  - Deliverable: `docs/workstreams/carousel-embla-parity-v2/contracts.md` (time model section) + gates
+- [x] CAR2-030 Workstream design: scroll physics determinism + reduced-motion behavior (MVP).
+  - Deliverable:
+    - `docs/workstreams/carousel-embla-parity-v2/contracts.md` (fixed-step time model + reduced motion)
+  - Evidence:
+    - `ecosystem/fret-ui-shadcn/src/carousel.rs` (reduced-motion disables embla engine + instant settle)
+    - Gate: `ecosystem/fret-ui-shadcn/tests/carousel_reduced_motion.rs`
   - Note: promote to an ADR only if/when the physics semantics become a stable public contract.
 - [ ] CAR2-040 Workstream design: seamless loop engine semantics (if in scope).
   - Deliverable: `docs/workstreams/carousel-embla-parity-v2/contracts.md` (loop section) + gates
@@ -64,6 +68,24 @@ Non-goals (v2):
   - Evidence:
     - `ecosystem/fret-ui-headless/src/embla/drag_release.rs`
     - `ecosystem/fret-ui-headless/src/embla/engine.rs` (`Engine::on_drag_release`)
+- [x] CAR2-121 DragFree: prevent mouse “click-to-stop” from activating slide content.
+  - Evidence:
+    - `ecosystem/fret-ui-shadcn/src/carousel.rs` (`CarouselRuntime.prevent_click` + pointer capture on down)
+    - Gate: `ecosystem/fret-ui-shadcn/tests/carousel_drag_free_prevent_click.rs`
+- [x] CAR2-122 SkipSnaps: lock Embla `skipSnaps` release shaping semantics.
+  - Evidence:
+    - `ecosystem/fret-ui-headless/src/embla/drag_release.rs` (`skipSnaps && indexChanged()` branch)
+    - Gate: `ecosystem/fret-ui-headless/src/embla/drag_release.rs` (`skip_snaps_halves_base_force_when_index_changed`)
+- [x] CAR2-123 Duration: lock Embla `duration` as a fixed-step integrator parameter.
+  - Evidence:
+    - `ecosystem/fret-ui-headless/src/embla/scroll_body.rs` (`seek` divides by `scroll_duration`)
+  - Gate: `ecosystem/fret-ui-headless/src/embla/scroll_body.rs` (`lower_duration_moves_faster_per_tick`)
+- [x] CAR2-124 Duration (UI): gate that `embla_duration` affects button-navigation settling speed.
+  - Evidence:
+    - `apps/fret-ui-gallery/src/ui/pages/carousel.rs` ("Duration (Embla)" section)
+    - `ecosystem/fret-ui-shadcn/src/carousel.rs` (`CarouselApiSnapshot.settling`)
+  - Gate:
+    - `tools/diag-scripts/ui-gallery/carousel/ui-gallery-carousel-duration-fast-vs-slow-settling-gate.json`
 - [x] CAR2-125 Port core targeting helpers (snap selection + limits) needed by the engine.
   - Evidence:
     - `ecosystem/fret-ui-headless/src/embla/scroll_target.rs`

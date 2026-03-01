@@ -1,4 +1,7 @@
 use super::*;
+use crate::widget::{ScrollIntoViewCx, ScrollIntoViewResult};
+use std::sync::Arc;
+use std::sync::atomic::{AtomicUsize, Ordering};
 
 #[test]
 fn focus_on_pointer_down_defaults_to_first_focusable_ancestor() {
@@ -51,6 +54,114 @@ fn focus_on_pointer_down_defaults_to_first_focusable_ancestor() {
     );
 
     assert_eq!(ui.focus(), Some(root));
+}
+
+#[test]
+fn pointer_driven_focus_requests_do_not_scroll_into_view() {
+    struct SpyScroll {
+        scroll_calls: Arc<AtomicUsize>,
+    }
+
+    impl<H: UiHost> Widget<H> for SpyScroll {
+        fn can_scroll_descendant_into_view(&self) -> bool {
+            true
+        }
+
+        fn scroll_descendant_into_view(
+            &mut self,
+            _cx: &mut ScrollIntoViewCx<'_, H>,
+            _descendant_bounds: Rect,
+        ) -> ScrollIntoViewResult {
+            self.scroll_calls.fetch_add(1, Ordering::SeqCst);
+            ScrollIntoViewResult::Handled { did_scroll: true }
+        }
+
+        fn layout(&mut self, cx: &mut LayoutCx<'_, H>) -> Size {
+            let bounds = cx.bounds;
+            for &child in cx.children {
+                let _ = cx.layout_in(child, bounds);
+            }
+            cx.available
+        }
+    }
+
+    struct FocusOnPointerUp;
+
+    impl<H: UiHost> Widget<H> for FocusOnPointerUp {
+        fn is_focusable(&self) -> bool {
+            true
+        }
+
+        fn event(&mut self, cx: &mut EventCx<'_, H>, event: &Event) {
+            if matches!(event, Event::Pointer(PointerEvent::Up { .. })) {
+                cx.request_focus(cx.node);
+            }
+        }
+
+        fn layout(&mut self, cx: &mut LayoutCx<'_, H>) -> Size {
+            cx.available
+        }
+    }
+
+    let window = AppWindowId::default();
+
+    let mut app = crate::test_host::TestHost::new();
+    app.set_global(PlatformCapabilities::default());
+
+    let scroll_calls = Arc::new(AtomicUsize::new(0));
+
+    let mut ui = UiTree::new();
+    ui.set_window(window);
+    let scroll = ui.create_node(SpyScroll {
+        scroll_calls: scroll_calls.clone(),
+    });
+    let leaf = ui.create_node(FocusOnPointerUp);
+    ui.set_root(scroll);
+    ui.add_child(scroll, leaf);
+
+    let mut services = FakeUiServices;
+    ui.layout_all(
+        &mut app,
+        &mut services,
+        Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(100.0), Px(100.0)),
+        ),
+        1.0,
+    );
+
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &Event::Pointer(PointerEvent::Down {
+            position: Point::new(Px(10.0), Px(10.0)),
+            button: fret_core::MouseButton::Left,
+            modifiers: fret_core::Modifiers::default(),
+            click_count: 1,
+            pointer_id: fret_core::PointerId(0),
+            pointer_type: fret_core::PointerType::Mouse,
+        }),
+    );
+
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &Event::Pointer(PointerEvent::Up {
+            position: Point::new(Px(10.0), Px(10.0)),
+            button: fret_core::MouseButton::Left,
+            modifiers: fret_core::Modifiers::default(),
+            click_count: 1,
+            is_click: true,
+            pointer_id: fret_core::PointerId(0),
+            pointer_type: fret_core::PointerType::Mouse,
+        }),
+    );
+
+    assert_eq!(
+        scroll_calls.load(Ordering::SeqCst),
+        0,
+        "expected pointer-driven focus requests to avoid scroll-into-view"
+    );
 }
 
 #[test]

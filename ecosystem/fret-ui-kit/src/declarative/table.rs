@@ -3,7 +3,8 @@ use fret_runtime::{CommandId, Effect, Model, ModelStore, TimerToken};
 use fret_ui::action::{PressablePointerDownResult, PressablePointerUpResult, UiActionHostExt};
 use fret_ui::element::{
     AnyElement, ContainerProps, LayoutStyle, Length, Overflow, PointerRegionProps, PressableA11y,
-    PressableProps, ScrollAxis, ScrollProps, SemanticsProps, SpacerProps, VirtualListOptions,
+    PressableProps, RingPlacement, RingStyle, ScrollAxis, ScrollProps, SemanticsProps, SpacerProps,
+    VirtualListOptions,
 };
 use fret_ui::scroll::{ScrollHandle, VirtualListScrollHandle};
 use fret_ui::{ElementContext, GlobalElementId, Theme, UiHost, scroll::ScrollStrategy};
@@ -182,6 +183,13 @@ pub struct TableViewProps {
     pub grouped_column_mode: GroupedColumnMode,
     pub enable_row_selection: bool,
     pub single_row_selection: bool,
+    /// When `true` (default), pointer-activating a row toggles its selection state.
+    ///
+    /// Set this to `false` for shadcn-style recipes where selection is driven by an explicit
+    /// checkbox column (and row clicks should not toggle selection).
+    pub pointer_row_selection: bool,
+    /// Pointer selection policy (when `pointer_row_selection` is enabled).
+    pub pointer_row_selection_policy: PointerRowSelectionPolicy,
     /// When `false`, pinned rows are only rendered if they are part of the current
     /// filtered/sorted/paginated row model (TanStack `keepPinnedRows=false`).
     ///
@@ -233,6 +241,18 @@ pub enum TableRowMeasureMode {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum PointerRowSelectionPolicy {
+    /// Legacy behavior: a row click toggles membership in `row_selection`.
+    #[default]
+    Toggle,
+    /// List-like behavior:
+    /// - no modifiers: exclusive selection (clears then selects)
+    /// - Ctrl/Meta: additive toggle
+    /// - Shift: range selection from anchor
+    ListLike,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum GroupedRowPinningPolicy {
     /// Promote pinned rows into top/bottom bands and remove duplicates from the paged center rows.
     #[default]
@@ -261,6 +281,8 @@ impl Default for TableViewProps {
             grouped_column_mode: GroupedColumnMode::Reorder,
             enable_row_selection: true,
             single_row_selection: true,
+            pointer_row_selection: true,
+            pointer_row_selection_policy: PointerRowSelectionPolicy::Toggle,
             keep_pinned_rows: true,
             draw_frame: true,
             optimize_paint_order: false,
@@ -282,8 +304,9 @@ mod tests {
     use super::*;
     use fret_app::App;
     use fret_core::{
-        AppWindowId, PathCommand, SvgId, SvgService, TextBlobId, TextConstraints, TextInput,
-        TextMetrics, TextService,
+        AppWindowId, Event, Modifiers, MouseButton, PathCommand, PointerEvent, PointerId,
+        PointerType, SvgId, SvgService, TextBlobId, TextConstraints, TextInput, TextMetrics,
+        TextService,
     };
     use fret_core::{PathConstraints, PathId, PathMetrics, PathService, PathStyle};
     use fret_core::{Point, Px, Rect, TextWrap};
@@ -950,6 +973,529 @@ mod tests {
     }
 
     #[test]
+    fn table_virtualized_pointer_select_does_not_shift_row_bounds() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        Theme::with_global_mut(&mut app, |theme| {
+            theme.apply_config(&ThemeConfig {
+                name: "Test".to_string(),
+                ..ThemeConfig::default()
+            });
+        });
+
+        let mut state_value = TableState::default();
+        state_value.pagination.page_size = 5;
+        let state = app.models_mut().insert(state_value);
+
+        let data = vec![0u32, 1u32, 2u32, 3u32, 4u32];
+        let mut col = ColumnDef::new("name");
+        col.size = 220.0;
+        let columns = vec![col];
+        let scroll = VirtualListScrollHandle::new();
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(320.0), Px(200.0)),
+        );
+        let mut services = FakeServices;
+
+        let props = TableViewProps {
+            draw_frame: false,
+            enable_column_resizing: false,
+            enable_row_selection: true,
+            single_row_selection: true,
+            row_height: Some(Px(40.0)),
+            header_height: Some(Px(40.0)),
+            ..Default::default()
+        };
+
+        let render = |ui: &mut UiTree<App>,
+                      app: &mut App,
+                      services: &mut FakeServices|
+         -> fret_core::NodeId {
+            fret_ui::declarative::render_root(ui, app, services, window, bounds, "test", |cx| {
+                vec![table_virtualized(
+                    cx,
+                    &data,
+                    &columns,
+                    state.clone(),
+                    &scroll,
+                    0,
+                    &|_row, i| RowKey::from_index(i),
+                    None,
+                    props.clone(),
+                    |_row| None,
+                    |cx, _col, _sort| [cx.text("")],
+                    |cx, row, _col| {
+                        let mut fill = LayoutStyle::default();
+                        fill.size.width = Length::Fill;
+                        fill.size.height = Length::Fill;
+                        let marker = cx.container(
+                            ContainerProps {
+                                layout: fill,
+                                ..Default::default()
+                            },
+                            |_| Vec::new(),
+                        );
+                        if row.index == 1 {
+                            [cx.semantics(
+                                SemanticsProps {
+                                    test_id: Some(Arc::<str>::from("table-test-row-1-marker")),
+                                    ..Default::default()
+                                },
+                                move |_cx| vec![marker],
+                            )]
+                        } else {
+                            [marker]
+                        }
+                    },
+                    None,
+                )]
+            })
+        };
+
+        for _ in 0..2 {
+            let root = render(&mut ui, &mut app, &mut services);
+            ui.set_root(root);
+            ui.request_semantics_snapshot();
+            ui.layout_all(&mut app, &mut services, bounds, 1.0);
+            let mut scene = fret_core::Scene::default();
+            ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
+        }
+
+        let snap = ui
+            .semantics_snapshot()
+            .expect("expected a semantics snapshot");
+        let before = snap
+            .nodes
+            .iter()
+            .find(|n| n.test_id.as_deref() == Some("table-test-row-1-marker"))
+            .map(|n| n.bounds)
+            .expect("expected marker node");
+
+        let click_pos = Point::new(
+            Px(before.origin.x.0 + before.size.width.0 * 0.5),
+            Px(before.origin.y.0 + before.size.height.0 * 0.5),
+        );
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::Pointer(PointerEvent::Down {
+                position: click_pos,
+                button: MouseButton::Left,
+                modifiers: Modifiers::default(),
+                click_count: 1,
+                pointer_id: PointerId(0),
+                pointer_type: PointerType::Mouse,
+            }),
+        );
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::Pointer(PointerEvent::Up {
+                position: click_pos,
+                button: MouseButton::Left,
+                modifiers: Modifiers::default(),
+                click_count: 1,
+                is_click: true,
+                pointer_id: PointerId(0),
+                pointer_type: PointerType::Mouse,
+            }),
+        );
+
+        for _ in 0..2 {
+            let root = render(&mut ui, &mut app, &mut services);
+            ui.set_root(root);
+            ui.request_semantics_snapshot();
+            ui.layout_all(&mut app, &mut services, bounds, 1.0);
+            let mut scene = fret_core::Scene::default();
+            ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
+        }
+
+        let snap = ui
+            .semantics_snapshot()
+            .expect("expected a semantics snapshot");
+        let after = snap
+            .nodes
+            .iter()
+            .find(|n| n.test_id.as_deref() == Some("table-test-row-1-marker"))
+            .map(|n| n.bounds)
+            .expect("expected marker node");
+
+        assert!(
+            (after.origin.y.0 - before.origin.y.0).abs() <= 0.1,
+            "expected row marker to keep stable y; before={:?} after={:?}",
+            before,
+            after
+        );
+    }
+
+    #[test]
+    fn table_virtualized_can_disable_pointer_row_selection() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        Theme::with_global_mut(&mut app, |theme| {
+            theme.apply_config(&ThemeConfig {
+                name: "Test".to_string(),
+                ..ThemeConfig::default()
+            });
+        });
+
+        let mut state_value = TableState::default();
+        state_value.pagination.page_size = 5;
+        let state = app.models_mut().insert(state_value);
+
+        let data = vec![0u32, 1u32, 2u32, 3u32, 4u32];
+        let mut col = ColumnDef::new("name");
+        col.size = 220.0;
+        let columns = vec![col];
+        let scroll = VirtualListScrollHandle::new();
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(320.0), Px(200.0)),
+        );
+        let mut services = FakeServices;
+
+        let props = TableViewProps {
+            draw_frame: false,
+            enable_column_resizing: false,
+            enable_row_selection: true,
+            pointer_row_selection: false,
+            single_row_selection: true,
+            row_height: Some(Px(40.0)),
+            header_height: Some(Px(40.0)),
+            ..Default::default()
+        };
+
+        let render = |ui: &mut UiTree<App>,
+                      app: &mut App,
+                      services: &mut FakeServices|
+         -> fret_core::NodeId {
+            fret_ui::declarative::render_root(ui, app, services, window, bounds, "test", |cx| {
+                vec![table_virtualized(
+                    cx,
+                    &data,
+                    &columns,
+                    state.clone(),
+                    &scroll,
+                    0,
+                    &|_row, i| RowKey::from_index(i),
+                    None,
+                    props.clone(),
+                    |_row| None,
+                    |cx, _col, _sort| [cx.text("")],
+                    |cx, row, _col| {
+                        let mut fill = LayoutStyle::default();
+                        fill.size.width = Length::Fill;
+                        fill.size.height = Length::Fill;
+                        let marker = cx.container(
+                            ContainerProps {
+                                layout: fill,
+                                ..Default::default()
+                            },
+                            |_| Vec::new(),
+                        );
+                        if row.index == 1 {
+                            [cx.semantics(
+                                SemanticsProps {
+                                    test_id: Some(Arc::<str>::from("table-test-row-1-marker")),
+                                    ..Default::default()
+                                },
+                                move |_cx| vec![marker],
+                            )]
+                        } else {
+                            [marker]
+                        }
+                    },
+                    None,
+                )]
+            })
+        };
+
+        for _ in 0..2 {
+            let root = render(&mut ui, &mut app, &mut services);
+            ui.set_root(root);
+            ui.request_semantics_snapshot();
+            ui.layout_all(&mut app, &mut services, bounds, 1.0);
+            let mut scene = fret_core::Scene::default();
+            ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
+        }
+
+        let snap = ui
+            .semantics_snapshot()
+            .expect("expected a semantics snapshot");
+        let marker_bounds = snap
+            .nodes
+            .iter()
+            .find(|n| n.test_id.as_deref() == Some("table-test-row-1-marker"))
+            .map(|n| n.bounds)
+            .expect("expected marker node");
+
+        let click_pos = Point::new(
+            Px(marker_bounds.origin.x.0 + marker_bounds.size.width.0 * 0.5),
+            Px(marker_bounds.origin.y.0 + marker_bounds.size.height.0 * 0.5),
+        );
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::Pointer(PointerEvent::Down {
+                position: click_pos,
+                button: MouseButton::Left,
+                modifiers: Modifiers::default(),
+                click_count: 1,
+                pointer_id: PointerId(0),
+                pointer_type: PointerType::Mouse,
+            }),
+        );
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::Pointer(PointerEvent::Up {
+                position: click_pos,
+                button: MouseButton::Left,
+                modifiers: Modifiers::default(),
+                click_count: 1,
+                is_click: true,
+                pointer_id: PointerId(0),
+                pointer_type: PointerType::Mouse,
+            }),
+        );
+
+        let selection = app
+            .models()
+            .read(&state, |st| st.row_selection.clone())
+            .ok()
+            .unwrap_or_default();
+        assert!(
+            !selection.contains(&RowKey::from_index(1)),
+            "expected row click not to toggle selection when pointer_row_selection=false"
+        );
+    }
+
+    #[test]
+    fn table_virtualized_pointer_row_selection_policy_list_like() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        Theme::with_global_mut(&mut app, |theme| {
+            theme.apply_config(&ThemeConfig {
+                name: "Test".to_string(),
+                ..ThemeConfig::default()
+            });
+        });
+
+        let mut state_value = TableState::default();
+        state_value.pagination.page_size = 5;
+        let state = app.models_mut().insert(state_value);
+
+        let data = vec![0u32, 1u32, 2u32, 3u32, 4u32];
+        let mut col = ColumnDef::new("name");
+        col.size = 220.0;
+        let columns = vec![col];
+        let scroll = VirtualListScrollHandle::new();
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(320.0), Px(240.0)),
+        );
+        let mut services = FakeServices;
+
+        let props = TableViewProps {
+            draw_frame: false,
+            enable_column_resizing: false,
+            enable_row_selection: true,
+            pointer_row_selection: true,
+            pointer_row_selection_policy: PointerRowSelectionPolicy::ListLike,
+            single_row_selection: false,
+            row_height: Some(Px(40.0)),
+            header_height: Some(Px(40.0)),
+            ..Default::default()
+        };
+
+        let render = |ui: &mut UiTree<App>,
+                      app: &mut App,
+                      services: &mut FakeServices|
+         -> fret_core::NodeId {
+            fret_ui::declarative::render_root(ui, app, services, window, bounds, "test", |cx| {
+                vec![table_virtualized(
+                    cx,
+                    &data,
+                    &columns,
+                    state.clone(),
+                    &scroll,
+                    0,
+                    &|_row, i| RowKey::from_index(i),
+                    None,
+                    props.clone(),
+                    |_row| None,
+                    |cx, _col, _sort| [cx.text("")],
+                    |cx, row, _col| {
+                        let mut fill = LayoutStyle::default();
+                        fill.size.width = Length::Fill;
+                        fill.size.height = Length::Fill;
+                        let marker = cx.container(
+                            ContainerProps {
+                                layout: fill,
+                                ..Default::default()
+                            },
+                            |_| Vec::new(),
+                        );
+                        let test_id =
+                            Arc::<str>::from(format!("table-test-row-{}-marker", row.index));
+                        [cx.semantics(
+                            SemanticsProps {
+                                test_id: Some(test_id),
+                                ..Default::default()
+                            },
+                            move |_cx| vec![marker],
+                        )]
+                    },
+                    None,
+                )]
+            })
+        };
+
+        // VirtualList computes the visible window based on viewport metrics populated during layout,
+        // so it takes two frames for the first set of rows to mount.
+        for _ in 0..2 {
+            let root = render(&mut ui, &mut app, &mut services);
+            ui.set_root(root);
+            ui.request_semantics_snapshot();
+            ui.layout_all(&mut app, &mut services, bounds, 1.0);
+            let mut scene = fret_core::Scene::default();
+            ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
+        }
+
+        let click_pos_for_row: Vec<Point> = {
+            let snap = ui
+                .semantics_snapshot()
+                .expect("expected a semantics snapshot");
+            (0..5)
+                .map(|row_index| {
+                    let id = format!("table-test-row-{}-marker", row_index);
+                    let bounds = snap
+                        .nodes
+                        .iter()
+                        .find(|n| n.test_id.as_deref() == Some(id.as_str()))
+                        .map(|n| n.bounds)
+                        .unwrap_or_else(|| panic!("expected marker node {id}"));
+                    Point::new(
+                        Px(bounds.origin.x.0 + bounds.size.width.0 * 0.5),
+                        Px(bounds.origin.y.0 + bounds.size.height.0 * 0.5),
+                    )
+                })
+                .collect()
+        };
+
+        let click_row = |ui: &mut UiTree<App>,
+                         app: &mut App,
+                         services: &mut FakeServices,
+                         row_index: usize,
+                         modifiers: Modifiers| {
+            let click_pos = click_pos_for_row[row_index];
+            ui.dispatch_event(
+                app,
+                services,
+                &Event::Pointer(PointerEvent::Down {
+                    position: click_pos,
+                    button: MouseButton::Left,
+                    modifiers,
+                    click_count: 1,
+                    pointer_id: PointerId(0),
+                    pointer_type: PointerType::Mouse,
+                }),
+            );
+            ui.dispatch_event(
+                app,
+                services,
+                &Event::Pointer(PointerEvent::Up {
+                    position: click_pos,
+                    button: MouseButton::Left,
+                    modifiers,
+                    click_count: 1,
+                    is_click: true,
+                    pointer_id: PointerId(0),
+                    pointer_type: PointerType::Mouse,
+                }),
+            );
+        };
+
+        let assert_selected = |app: &App, expected: &[RowKey]| {
+            let selection = app
+                .models()
+                .read(&state, |st| st.row_selection.clone())
+                .ok()
+                .unwrap_or_default();
+            assert_eq!(
+                selection.len(),
+                expected.len(),
+                "expected selection len {} but got {}",
+                expected.len(),
+                selection.len()
+            );
+            for k in expected {
+                assert!(selection.contains(k), "expected selection to contain {k:?}");
+            }
+        };
+
+        click_row(&mut ui, &mut app, &mut services, 1, Modifiers::default());
+        assert_selected(&app, &[RowKey::from_index(1)]);
+
+        click_row(
+            &mut ui,
+            &mut app,
+            &mut services,
+            3,
+            Modifiers {
+                shift: true,
+                ..Default::default()
+            },
+        );
+        assert_selected(
+            &app,
+            &[
+                RowKey::from_index(1),
+                RowKey::from_index(2),
+                RowKey::from_index(3),
+            ],
+        );
+
+        click_row(
+            &mut ui,
+            &mut app,
+            &mut services,
+            4,
+            Modifiers {
+                ctrl: true,
+                ..Default::default()
+            },
+        );
+        assert_selected(
+            &app,
+            &[
+                RowKey::from_index(1),
+                RowKey::from_index(2),
+                RowKey::from_index(3),
+                RowKey::from_index(4),
+            ],
+        );
+
+        click_row(&mut ui, &mut app, &mut services, 2, Modifiers::default());
+        assert_selected(&app, &[RowKey::from_index(2)]);
+    }
+
+    #[test]
     fn table_virtualized_allows_header_height_override() {
         let window = AppWindowId::default();
         let mut app = App::new();
@@ -1051,6 +1597,207 @@ mod tests {
             (body_h - 36.0).abs() <= eps,
             "expected body height ~36px (got {body_h:.2}px)"
         );
+    }
+
+    #[test]
+    fn table_virtualized_retained_pointer_row_selection_policy_list_like() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        Theme::with_global_mut(&mut app, |theme| {
+            theme.apply_config(&ThemeConfig {
+                name: "Test".to_string(),
+                ..ThemeConfig::default()
+            });
+        });
+
+        let mut state_value = TableState::default();
+        state_value.pagination.page_size = 5;
+        let state = app.models_mut().insert(state_value);
+
+        let data: Arc<[u32]> = Arc::from((0u32..5).collect::<Vec<_>>());
+        let columns: Arc<[ColumnDef<u32>]> = Arc::from(vec![{
+            let mut col = ColumnDef::new("name");
+            col.size = 220.0;
+            col
+        }]);
+
+        let scroll = VirtualListScrollHandle::new();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(320.0), Px(240.0)),
+        );
+        let mut services = FakeServices;
+
+        let props = TableViewProps {
+            draw_frame: false,
+            enable_column_resizing: false,
+            enable_row_selection: true,
+            pointer_row_selection: true,
+            pointer_row_selection_policy: PointerRowSelectionPolicy::ListLike,
+            single_row_selection: false,
+            row_height: Some(Px(40.0)),
+            header_height: Some(Px(40.0)),
+            ..Default::default()
+        };
+
+        let render = |ui: &mut UiTree<App>,
+                      app: &mut App,
+                      services: &mut FakeServices|
+         -> fret_core::NodeId {
+            fret_ui::declarative::render_root(ui, app, services, window, bounds, "test", |cx| {
+                vec![table_virtualized_retained_v0(
+                    cx,
+                    data.clone(),
+                    columns.clone(),
+                    state.clone(),
+                    &scroll,
+                    0,
+                    Arc::new(|_row: &u32, index: usize| RowKey::from_index(index)),
+                    None,
+                    props.clone(),
+                    Arc::new(|col: &ColumnDef<u32>| Arc::from(col.id.as_ref())),
+                    None,
+                    Arc::new(
+                        |cx: &mut ElementContext<'_, App>, _col: &ColumnDef<u32>, row: &u32| {
+                            crate::ui::text(cx, format!("Row {row}")).into_element(cx)
+                        },
+                    ),
+                    Some(Arc::<str>::from("table-test-header-")),
+                    Some(Arc::<str>::from("table-test-row-")),
+                )]
+            })
+        };
+
+        // VirtualList computes the visible window based on viewport metrics populated during layout,
+        // so it takes two frames for the first set of rows to mount.
+        for _ in 0..2 {
+            let root = render(&mut ui, &mut app, &mut services);
+            ui.set_root(root);
+            ui.request_semantics_snapshot();
+            ui.layout_all(&mut app, &mut services, bounds, 1.0);
+            let mut scene = fret_core::Scene::default();
+            ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
+        }
+
+        let click_pos_for_row: Vec<Point> = {
+            let snap = ui
+                .semantics_snapshot()
+                .expect("expected a semantics snapshot");
+            (0..5)
+                .map(|row_index| {
+                    let id = format!("table-test-row-{row_index}");
+                    let bounds = snap
+                        .nodes
+                        .iter()
+                        .find(|n| n.test_id.as_deref() == Some(id.as_str()))
+                        .map(|n| n.bounds)
+                        .unwrap_or_else(|| panic!("expected row node {id}"));
+                    Point::new(
+                        Px(bounds.origin.x.0 + bounds.size.width.0 * 0.5),
+                        Px(bounds.origin.y.0 + bounds.size.height.0 * 0.5),
+                    )
+                })
+                .collect()
+        };
+
+        let click_row = |ui: &mut UiTree<App>,
+                         app: &mut App,
+                         services: &mut FakeServices,
+                         row_index: usize,
+                         modifiers: Modifiers| {
+            let click_pos = click_pos_for_row[row_index];
+            ui.dispatch_event(
+                app,
+                services,
+                &Event::Pointer(PointerEvent::Down {
+                    position: click_pos,
+                    button: MouseButton::Left,
+                    modifiers,
+                    click_count: 1,
+                    pointer_id: PointerId(0),
+                    pointer_type: PointerType::Mouse,
+                }),
+            );
+            ui.dispatch_event(
+                app,
+                services,
+                &Event::Pointer(PointerEvent::Up {
+                    position: click_pos,
+                    button: MouseButton::Left,
+                    modifiers,
+                    click_count: 1,
+                    is_click: true,
+                    pointer_id: PointerId(0),
+                    pointer_type: PointerType::Mouse,
+                }),
+            );
+        };
+
+        let assert_selected = |app: &App, expected: &[RowKey]| {
+            let selection = app
+                .models()
+                .read(&state, |st| st.row_selection.clone())
+                .ok()
+                .unwrap_or_default();
+            assert_eq!(
+                selection.len(),
+                expected.len(),
+                "expected selection len {} but got {}",
+                expected.len(),
+                selection.len()
+            );
+            for k in expected {
+                assert!(selection.contains(k), "expected selection to contain {k:?}");
+            }
+        };
+
+        click_row(&mut ui, &mut app, &mut services, 1, Modifiers::default());
+        assert_selected(&app, &[RowKey::from_index(1)]);
+
+        click_row(
+            &mut ui,
+            &mut app,
+            &mut services,
+            3,
+            Modifiers {
+                shift: true,
+                ..Default::default()
+            },
+        );
+        assert_selected(
+            &app,
+            &[
+                RowKey::from_index(1),
+                RowKey::from_index(2),
+                RowKey::from_index(3),
+            ],
+        );
+
+        click_row(
+            &mut ui,
+            &mut app,
+            &mut services,
+            4,
+            Modifiers {
+                ctrl: true,
+                ..Default::default()
+            },
+        );
+        assert_selected(
+            &app,
+            &[
+                RowKey::from_index(1),
+                RowKey::from_index(2),
+                RowKey::from_index(3),
+                RowKey::from_index(4),
+            ],
+        );
+
+        click_row(&mut ui, &mut app, &mut services, 2, Modifiers::default());
+        assert_selected(&app, &[RowKey::from_index(2)]);
     }
 
     #[test]
@@ -1562,7 +2309,7 @@ fn table_collect_leaf_keys_in_range(meta: &[TableNavRowMeta], a: usize, b: usize
 
 struct TableKeyboardNavState {
     active_index: Rc<Cell<Option<usize>>>,
-    anchor_index: Rc<Cell<Option<usize>>>,
+    anchor_index: Rc<Cell<Option<RowKey>>>,
     row_meta: Rc<RefCell<Arc<[TableNavRowMeta]>>>,
     active_element: Rc<Cell<Option<fret_ui::GlobalElementId>>>,
     active_command: Rc<RefCell<Option<CommandId>>>,
@@ -2241,7 +2988,7 @@ where
 
     struct RetainedTableKeyboardNavState {
         active_index: Rc<Cell<Option<usize>>>,
-        anchor_index: Rc<Cell<Option<usize>>>,
+        anchor_index: Rc<Cell<Option<RowKey>>>,
         labels: Rc<RefCell<Arc<[Arc<str>]>>>,
         disabled: Rc<RefCell<Arc<[bool]>>>,
         last_labels_revision: Cell<Option<u64>>,
@@ -2323,8 +3070,10 @@ where
         let center_col_indices = center_col_indices.clone();
         let right_col_indices = right_col_indices.clone();
         let scroll_x = scroll_x.clone();
+        let anchor_index_for_row_builder = anchor_index.clone();
 
         move |key_handler: fret_ui::action::OnKeyDown, focus_target: GlobalElementId| {
+            let anchor_index_for_row = anchor_index_for_row_builder.clone();
             Arc::new(move |cx: &mut ElementContext<'_, H>, i: usize| {
                 let entry = entries[i];
                 let row_key = entry.key;
@@ -2342,6 +3091,8 @@ where
                     .map(|prefix| Arc::<str>::from(format!("{}{id}", prefix, id = row_key.0)));
 
                 let state_model = state.clone();
+                let entries = entries.clone();
+                let anchor_index = anchor_index_for_row.clone();
                 let data_for_row = Arc::clone(&data);
                 let columns_for_row = Arc::clone(&visible_columns);
                 let col_widths_for_row = col_widths.clone();
@@ -2368,28 +3119,129 @@ where
                     },
                     move |cx, st| {
                         let focus_target = focus_target_for_row;
-                        cx.pressable_add_on_pointer_down(Arc::new(
-                            move |host, action_cx, _down| {
-                                host.request_focus(focus_target);
-                                host.request_redraw(action_cx.window);
-                                PressablePointerDownResult::Continue
-                            },
-                        ));
+                        let row_key = row_key;
+                        let single = props.single_row_selection;
+                        let policy = props.pointer_row_selection_policy;
+                        let pointer_row_selection_enabled =
+                            props.enable_row_selection && props.pointer_row_selection;
 
-                        cx.key_on_key_down_for(cx.root_id(), key_handler_for_row.clone());
-                        let state = state_model.clone();
-                        cx.pressable_update_model(&state, move |st| {
-                            if st.row_selection.contains(&row_key) {
-                                st.row_selection.remove(&row_key);
-                            } else {
-                                st.row_selection.insert(row_key);
+                        if pointer_row_selection_enabled
+                            && policy == PointerRowSelectionPolicy::ListLike
+                        {
+                            let anchor_index_for_pointer_down = anchor_index.clone();
+                            let row_key_for_anchor = row_key;
+                            cx.pressable_add_on_pointer_down(Arc::new(
+                                move |_host, _action_cx, down| {
+                                    if down.button != fret_core::MouseButton::Left {
+                                        return PressablePointerDownResult::Continue;
+                                    }
+                                    let next_anchor = if down.modifiers.shift {
+                                        anchor_index_for_pointer_down
+                                            .get()
+                                            .or(Some(row_key_for_anchor))
+                                    } else {
+                                        Some(row_key_for_anchor)
+                                    };
+                                    anchor_index_for_pointer_down.set(next_anchor);
+                                    PressablePointerDownResult::Continue
+                                },
+                            ));
+                        }
+
+                        cx.pressable_on_pointer_up(Arc::new(move |host, action_cx, up| {
+                            if up.button != fret_core::MouseButton::Left || !up.is_click {
+                                return PressablePointerUpResult::Continue;
                             }
-                        });
+                            host.request_focus(focus_target);
+                            if pointer_row_selection_enabled {
+                                let modifiers = up.modifiers;
+                                let mut range_keys: Option<Vec<RowKey>> = None;
+                                if policy == PointerRowSelectionPolicy::ListLike
+                                    && !single
+                                    && modifiers.shift
+                                {
+                                    let anchor_key = anchor_index.get().unwrap_or(row_key);
+                                    let anchor = entries
+                                        .iter()
+                                        .position(|entry| entry.key == anchor_key)
+                                        .unwrap_or(i);
+                                    let (a, b) = if anchor <= i {
+                                        (anchor, i)
+                                    } else {
+                                        (i, anchor)
+                                    };
+                                    let keys = entries
+                                        .iter()
+                                        .enumerate()
+                                        .filter_map(|(idx, entry)| {
+                                            (idx >= a && idx <= b).then_some(entry.key)
+                                        })
+                                        .collect::<Vec<_>>();
+                                    if !keys.is_empty() {
+                                        range_keys = Some(keys);
+                                    }
+                                }
 
-                        let bg = if selected || st.pressed {
-                            Some(row_active_bg)
-                        } else if st.hovered {
-                            Some(row_hover_bg)
+                                let anchor_index_for_update = anchor_index.clone();
+                                let _ = host.models_mut().update(&state_model, move |st| {
+                                    match policy {
+                                        PointerRowSelectionPolicy::Toggle => {
+                                            let selected = st.row_selection.contains(&row_key);
+                                            if single {
+                                                st.row_selection.clear();
+                                            }
+                                            if selected {
+                                                st.row_selection.remove(&row_key);
+                                            } else {
+                                                st.row_selection.insert(row_key);
+                                            }
+                                        }
+                                        PointerRowSelectionPolicy::ListLike => {
+                                            if let Some(range_keys) = range_keys.clone() {
+                                                if modifiers.ctrl || modifiers.meta {
+                                                    st.row_selection
+                                                        .extend(range_keys.iter().copied());
+                                                } else {
+                                                    st.row_selection.clear();
+                                                    st.row_selection
+                                                        .extend(range_keys.iter().copied());
+                                                }
+                                            } else if !single
+                                                && (modifiers.ctrl || modifiers.meta)
+                                            {
+                                                if st.row_selection.contains(&row_key) {
+                                                    st.row_selection.remove(&row_key);
+                                                } else {
+                                                    st.row_selection.insert(row_key);
+                                                }
+                                            } else {
+                                                st.row_selection.clear();
+                                                st.row_selection.insert(row_key);
+                                            }
+                                        }
+                                    }
+                                });
+                                if policy == PointerRowSelectionPolicy::ListLike {
+                                    let next_anchor = if modifiers.shift {
+                                        anchor_index_for_update.get().or(Some(row_key))
+                                    } else {
+                                        Some(row_key)
+                                    };
+                                    anchor_index_for_update.set(next_anchor);
+                                } else {
+                                    anchor_index_for_update.set(Some(row_key));
+                                }
+                            }
+                            host.request_redraw(action_cx.window);
+                            PressablePointerUpResult::SkipActivate
+                        }));
+
+	                        cx.key_on_key_down_for(cx.root_id(), key_handler_for_row.clone());
+
+	                        let bg = if selected || st.pressed {
+	                            Some(row_active_bg)
+	                        } else if st.hovered {
+	                            Some(row_hover_bg)
                         } else {
                             None
                         };
@@ -2583,7 +3435,7 @@ where
                     KeyCode::ArrowDown => {
                         let next = (current + 1).min(len);
                         active_index_for_keys.set(Some(next));
-                        anchor_index_for_keys.set(Some(next));
+                        anchor_index_for_keys.set(Some(entries_for_keys[next].key));
                         cancel_typeahead_timer(host, &typeahead_timer_for_keys);
                         typeahead_for_keys.borrow_mut().clear();
                         vertical_scroll_for_keys.scroll_to_item(next, ScrollStrategy::Nearest);
@@ -2593,7 +3445,7 @@ where
                     KeyCode::ArrowUp => {
                         let next = current.saturating_sub(1);
                         active_index_for_keys.set(Some(next));
-                        anchor_index_for_keys.set(Some(next));
+                        anchor_index_for_keys.set(Some(entries_for_keys[next].key));
                         cancel_typeahead_timer(host, &typeahead_timer_for_keys);
                         typeahead_for_keys.borrow_mut().clear();
                         vertical_scroll_for_keys.scroll_to_item(next, ScrollStrategy::Nearest);
@@ -2602,7 +3454,7 @@ where
                     }
                     KeyCode::Home => {
                         active_index_for_keys.set(Some(0));
-                        anchor_index_for_keys.set(Some(0));
+                        anchor_index_for_keys.set(Some(entries_for_keys[0].key));
                         cancel_typeahead_timer(host, &typeahead_timer_for_keys);
                         typeahead_for_keys.borrow_mut().clear();
                         vertical_scroll_for_keys.scroll_to_item(0, ScrollStrategy::Nearest);
@@ -2611,7 +3463,7 @@ where
                     }
                     KeyCode::End => {
                         active_index_for_keys.set(Some(len));
-                        anchor_index_for_keys.set(Some(len));
+                        anchor_index_for_keys.set(Some(entries_for_keys[len].key));
                         cancel_typeahead_timer(host, &typeahead_timer_for_keys);
                         typeahead_for_keys.borrow_mut().clear();
                         vertical_scroll_for_keys.scroll_to_item(len, ScrollStrategy::Nearest);
@@ -2640,6 +3492,7 @@ where
                                 st.row_selection.insert(row_key);
                             }
                         });
+                        anchor_index_for_keys.set(Some(row_key));
                         cancel_typeahead_timer(host, &typeahead_timer_for_keys);
                         typeahead_for_keys.borrow_mut().clear();
                         host.request_redraw(action_cx.window);
@@ -2667,7 +3520,7 @@ where
                             && next != current
                         {
                             active_index_for_keys.set(Some(next));
-                            anchor_index_for_keys.set(Some(next));
+                            anchor_index_for_keys.set(Some(entries_for_keys[next].key));
                             // Typeahead should ensure the matched row becomes *visibly* in-view,
                             // not just "present in overscan".
                             vertical_scroll_for_keys.scroll_to_item(next, ScrollStrategy::Start);
@@ -2709,11 +3562,13 @@ where
                 );
             }
 
-            let is_focused = cx.is_focused_element(list_id);
             let content =
                 cx.pointer_region(fret_ui::element::PointerRegionProps::default(), move |cx| {
                     let focus_id = list_id;
-                    cx.pointer_region_on_pointer_down(Arc::new(move |host, action_cx, _down| {
+                    cx.pointer_region_on_pointer_up(Arc::new(move |host, action_cx, up| {
+                        if up.button != fret_core::MouseButton::Left || !up.is_click {
+                            return false;
+                        }
                         host.request_focus(focus_id);
                         host.request_redraw(action_cx.window);
                         false
@@ -2742,33 +3597,37 @@ where
                     )]
                 });
 
-            if props.draw_frame || is_focused {
-                vec![cx.container(
-                    ContainerProps {
-                        layout: fill_layout,
-                        background: Some(table_bg),
-                        border: if is_focused {
-                            Edges::all(Px(2.0))
-                        } else if props.draw_frame {
-                            Edges::all(Px(1.0))
-                        } else {
-                            Edges::all(Px(0.0))
-                        },
-                        border_color: if is_focused {
-                            Some(ring)
-                        } else if props.draw_frame {
-                            Some(border)
-                        } else {
-                            None
-                        },
-                        corner_radii: Corners::all(radius),
-                        ..Default::default()
+            let focus_ring = RingStyle {
+                placement: RingPlacement::Inset,
+                width: Px(2.0),
+                offset: Px(0.0),
+                color: ring,
+                offset_color: None,
+                corner_radii: Corners::all(radius),
+            };
+
+            vec![cx.container(
+                ContainerProps {
+                    layout: fill_layout,
+                    background: Some(table_bg),
+                    border: if props.draw_frame {
+                        Edges::all(Px(1.0))
+                    } else {
+                        Edges::all(Px(0.0))
                     },
-                    move |_cx| vec![content],
-                )]
-            } else {
-                vec![content]
-            }
+                    border_color: if props.draw_frame { Some(border) } else { None },
+                    focus_border_color: if props.draw_frame { Some(ring) } else { None },
+                    focus_ring: Some(focus_ring),
+                    focus_within: true,
+                    corner_radii: if props.draw_frame {
+                        Corners::all(radius)
+                    } else {
+                        Corners::all(Px(0.0))
+                    },
+                    ..Default::default()
+                },
+                move |_cx| vec![content],
+            )]
         },
     )
 }
@@ -3641,10 +4500,15 @@ where
                                 && let Some(m) = meta.get(next)
                                 && m.kind == TableNavRowKind::Leaf
                             {
-                                let anchor = anchor_index.get().unwrap_or(current);
+                                let anchor_key =
+                                    anchor_index.get().unwrap_or(meta[current].row_key);
                                 if anchor_index.get().is_none() {
-                                    anchor_index.set(Some(anchor));
+                                    anchor_index.set(Some(anchor_key));
                                 }
+                                let anchor = meta
+                                    .iter()
+                                    .position(|m| m.row_key == anchor_key)
+                                    .unwrap_or(current);
                                 let (a, b) = if anchor <= next {
                                     (anchor, next)
                                 } else {
@@ -3665,7 +4529,7 @@ where
                                 }
                             }
                         } else {
-                            anchor_index.set(Some(next));
+                            anchor_index.set(Some(meta[next].row_key));
                         }
 
                         clear_typeahead(host);
@@ -3724,7 +4588,7 @@ where
                                     st.row_selection.insert(row_key);
                                 }
                             });
-                            anchor_index.set(Some(current));
+                            anchor_index.set(Some(row_key));
                             clear_typeahead(host);
                             host.request_redraw(action_cx.window);
                             true
@@ -3757,7 +4621,7 @@ where
                         && next != current
                     {
                         active_index.set(Some(next));
-                        anchor_index.set(Some(next));
+                        anchor_index.set(Some(meta[next].row_key));
                         *active_command.borrow_mut() = None;
                         vertical_scroll.scroll_to_item(next, ScrollStrategy::Nearest);
                     }
@@ -3884,7 +4748,14 @@ where
                     }),
                 );
             }
-            let is_focused = cx.is_focused_element(list_id);
+            let focus_ring = RingStyle {
+                placement: RingPlacement::Inset,
+                width: Px(2.0),
+                offset: Px(0.0),
+                color: ring,
+                offset_color: None,
+                corner_radii: Corners::all(radius),
+            };
             vec![cx.container(
                 ContainerProps {
                     layout: {
@@ -3897,21 +4768,16 @@ where
                         layout
                     },
                     background: Some(table_bg),
-                    border: if is_focused {
-                        Edges::all(Px(2.0))
-                    } else if props.draw_frame {
+                    border: if props.draw_frame {
                         Edges::all(Px(1.0))
                     } else {
                         Edges::all(Px(0.0))
                     },
-                    border_color: if is_focused {
-                        Some(ring)
-                    } else if props.draw_frame {
-                        Some(border)
-                    } else {
-                        None
-                    },
-                    corner_radii: if props.draw_frame || is_focused {
+                    border_color: if props.draw_frame { Some(border) } else { None },
+                    focus_border_color: if props.draw_frame { Some(ring) } else { None },
+                    focus_ring: Some(focus_ring),
+                    focus_within: true,
+                    corner_radii: if props.draw_frame {
                         Corners::all(radius)
                     } else {
                         Corners::all(Px(0.0))
@@ -4556,43 +5422,65 @@ where
                                                                 .with_collection_position(i, set_size),
                                                                 ..Default::default()
                                                             },
-                                                            |cx, st| {
-                                                                let active_index_for_pointer =
-                                                                    active_index.clone();
-                                                                let anchor_index_for_pointer =
-                                                                    anchor_index.clone();
-                                                                let active_command_for_pointer =
-                                                                    active_command.clone();
-                                                                let typeahead_for_pointer =
-                                                                    typeahead.clone();
-                                                                let typeahead_timer_for_pointer =
-                                                                    typeahead_timer.clone();
-                                                                cx.pressable_on_pointer_down(
-                                                                    Arc::new(move |host, action_cx, _down| {
-                                                                        host.request_focus(focus_target);
-                                                                        active_index_for_pointer.set(Some(i));
-                                                                        anchor_index_for_pointer.set(Some(i));
-                                                                        typeahead_for_pointer.borrow_mut().clear();
-                                                                        if let Some(token) =
-                                                                            typeahead_timer_for_pointer.get()
-                                                                        {
-                                                                            host.push_effect(Effect::CancelTimer { token });
-                                                                            typeahead_timer_for_pointer.set(None);
-                                                                        }
-                                                                        *active_command_for_pointer.borrow_mut() = None;
-                                                                        host.request_redraw(action_cx.window);
-                                                                        PressablePointerDownResult::Continue
-                                                                    }),
-                                                                );
+															|cx, st| {
+																let active_index_for_pointer =
+																	active_index.clone();
+																let anchor_index_for_pointer =
+																	anchor_index.clone();
+																let active_command_for_pointer =
+																	active_command.clone();
+																let typeahead_for_pointer =
+																	typeahead.clone();
+																let typeahead_timer_for_pointer =
+																	typeahead_timer.clone();
+                                                            cx.pressable_on_pointer_down(Arc::new(
+                                                                move |host, action_cx, down| {
+                                                                    active_index_for_pointer.set(Some(i));
+                                                                    let next_anchor = if down.modifiers.shift {
+                                                                        anchor_index_for_pointer
+                                                                            .get()
+                                                                            .or(Some(row_key))
+                                                                    } else {
+                                                                        Some(row_key)
+                                                                    };
+                                                                    anchor_index_for_pointer
+                                                                        .set(next_anchor);
+                                                                    typeahead_for_pointer
+                                                                        .borrow_mut()
+                                                                        .clear();
+                                                                    if let Some(token) =
+                                                                        typeahead_timer_for_pointer.get()
+                                                                    {
+                                                                        host.push_effect(Effect::CancelTimer { token });
+                                                                        typeahead_timer_for_pointer.set(None);
+                                                                    }
+                                                                    *active_command_for_pointer.borrow_mut() = None;
+                                                                    host.request_redraw(action_cx.window);
+                                                                    PressablePointerDownResult::Continue
+                                                                },
+                                                            ));
+																cx.pressable_add_on_pointer_up(Arc::new(
+																	move |host, action_cx, up| {
+																		if up.button
+																			!= fret_core::MouseButton::Left
+																			|| !up.is_click
+																		{
+																			return PressablePointerUpResult::Continue;
+																		}
+																		host.request_focus(focus_target);
+																		host.request_redraw(action_cx.window);
+																		PressablePointerUpResult::Continue
+																	},
+																));
 
-                                                                if active_index.get() == Some(i) {
-                                                                    active_element.set(Some(cx.root_id()));
-                                                                    *active_command.borrow_mut() = None;
-                                                                }
-                                                                let state_model = state.clone();
-                                                                cx.pressable_update_model(
-                                                                    &state_model,
-                                                                    move |st| match &mut st.expanding
+																if active_index.get() == Some(i) {
+																	active_element.set(Some(cx.root_id()));
+																	*active_command.borrow_mut() = None;
+																}
+																let state_model = state.clone();
+																cx.pressable_update_model(
+																	&state_model,
+																	move |st| match &mut st.expanding
                                                                     {
                                                                         ExpandingState::All => {
                                                                             st.expanding =
@@ -4633,9 +5521,20 @@ where
                                                                 vec![cx.container(
                                                                     ContainerProps {
                                                                         background: bg,
-                                                                        border: Edges::default(),
-                                                                        border_color: None,
-                                                                    layout: LayoutStyle {
+                                                                        border: Edges {
+                                                                            left: if is_active {
+                                                                                Px(2.0)
+                                                                            } else {
+                                                                                Px(0.0)
+                                                                            },
+                                                                            ..Default::default()
+                                                                        },
+                                                                        border_color: if is_active {
+                                                                            Some(ring)
+                                                                        } else {
+                                                                            None
+                                                                        },
+                                                                        layout: LayoutStyle {
                                                                         size:
                                                                             fret_ui::element::SizeStyle {
                                                                                 width: Length::Fill,
@@ -4643,7 +5542,7 @@ where
                                                                                 ..Default::default()
                                                                             },
                                                                         ..Default::default()
-                                                                    },
+                                                                        },
                                                                         ..Default::default()
                                                                     },
                                                                     |cx| {
@@ -4968,34 +5867,7 @@ where
                                                                                 }
                                                                             };
 
-                                                                        let mut out: Vec<AnyElement> = Vec::new();
-                                                                        if is_active {
-                                                                            out.push(cx.container(
-                                                                                ContainerProps {
-                                                                                    background: Some(ring),
-                                                                                    layout: LayoutStyle {
-                                                                                        size: fret_ui::element::SizeStyle {
-                                                                                            width: Length::Px(Px(2.0)),
-                                                                                            height: Length::Fill,
-                                                                                            ..Default::default()
-                                                                                        },
-                                                                                        position:
-                                                                                            fret_ui::element::PositionStyle::Absolute,
-                                                                                        inset: fret_ui::element::InsetStyle {
-                                                                                            top: Some(Px(0.0)).into(),
-                                                                                            bottom: Some(Px(0.0)).into(),
-                                                                                            left: Some(Px(0.0)).into(),
-                                                                                            ..Default::default()
-                                                                                        },
-                                                                                        ..Default::default()
-                                                                                    },
-                                                                                    ..Default::default()
-                                                                                },
-                                                                                |_| Vec::new(),
-                                                                            ));
-                                                                        }
-
-                                                                        out.push(stack::hstack(
+                                                                        vec![stack::hstack(
                                                                             cx,
                                                                             stack::HStackProps::default()
                                                                                 .gap_x(Space::N0)
@@ -5082,8 +5954,7 @@ where
 
                                                                                 vec![left, center, right]
                                                                             },
-                                                                        ));
-                                                                        out
+                                                                        )]
                                                                     },
                                                                 )]
                                                             },
@@ -5128,53 +5999,186 @@ where
                                                     ..Default::default()
                                                 },
                                                 |cx, st| {
-                                                    let active_index_for_pointer = active_index.clone();
-                                                    let anchor_index_for_pointer = anchor_index.clone();
+                                                    let active_index_for_pointer =
+                                                        active_index.clone();
+                                                    let anchor_index_for_pointer_down =
+                                                        anchor_index.clone();
+                                                    let anchor_index_for_pointer_up =
+                                                        anchor_index.clone();
+                                                    let row_meta_for_pointer = row_meta.clone();
                                                     let typeahead_for_pointer = typeahead.clone();
                                                     let typeahead_timer_for_pointer =
                                                         typeahead_timer.clone();
+                                                    let state_model_for_pointer = state.clone();
+                                                    let row_key_for_pointer = data_row.key;
+
                                                     cx.pressable_on_pointer_down(Arc::new(
-                                                        move |host, action_cx, _down| {
-                                                            host.request_focus(focus_target);
+                                                        move |host, action_cx, down| {
                                                             active_index_for_pointer.set(Some(i));
-                                                            anchor_index_for_pointer.set(Some(i));
-                                                            typeahead_for_pointer.borrow_mut().clear();
+                                                            let next_anchor = if down.modifiers.shift {
+                                                                anchor_index_for_pointer_down
+                                                                    .get()
+                                                                    .or(Some(row_key_for_pointer))
+                                                            } else {
+                                                                Some(row_key_for_pointer)
+                                                            };
+                                                            anchor_index_for_pointer_down
+                                                                .set(next_anchor);
+                                                            typeahead_for_pointer
+                                                                .borrow_mut()
+                                                                .clear();
                                                             if let Some(token) =
                                                                 typeahead_timer_for_pointer.get()
                                                             {
-                                                                host.push_effect(Effect::CancelTimer { token });
-                                                                typeahead_timer_for_pointer.set(None);
+                                                                host.push_effect(
+                                                                    Effect::CancelTimer { token },
+                                                                );
+                                                                typeahead_timer_for_pointer
+                                                                    .set(None);
                                                             }
                                                             host.request_redraw(action_cx.window);
                                                             PressablePointerDownResult::Continue
                                                         },
                                                     ));
 
-                                                    if active_index.get() == Some(i) {
-                                                        active_element.set(Some(cx.root_id()));
-                                                        *active_command.borrow_mut() = cmd.clone();
-                                                    }
-                                                    cx.pressable_dispatch_command_if_enabled_opt(cmd.clone());
-                                                    if props.enable_row_selection {
-                                                        let state_model = state.clone();
-                                                        let row_key = data_row.key;
-                                                        let single = props.single_row_selection;
-                                                        cx.pressable_update_model(&state_model, move |st| {
-                                                            let selected = st.row_selection.contains(&row_key);
-                                                            if single {
-                                                                st.row_selection.clear();
-                                                            }
-                                                            if selected {
-                                                                st.row_selection.remove(&row_key);
-                                                            } else {
-                                                                st.row_selection.insert(row_key);
-                                                            }
-                                                        });
-                                                    }
+                                                    cx.pressable_add_on_pointer_up(Arc::new(
+                                                        move |host, action_cx, up| {
+															if up.button
+																!= fret_core::MouseButton::Left
+																|| !up.is_click
+															{
+																return PressablePointerUpResult::Continue;
+															}
+															host.request_focus(focus_target);
+                                                            let pointer_row_selection_enabled = props.enable_row_selection
+                                                                && props.pointer_row_selection;
+															if pointer_row_selection_enabled {
+																let policy =
+																	props.pointer_row_selection_policy;
+																let modifiers = up.modifiers;
+																let row_key = row_key_for_pointer;
+																let single = props.single_row_selection;
+															let meta = row_meta_for_pointer
+																	.borrow()
+																	.clone();
+																let range_keys = if policy
+																	== PointerRowSelectionPolicy::ListLike
+																	&& !single
+																	&& modifiers.shift
+																{
+                                                                    let anchor_key = anchor_index_for_pointer_up
+                                                                        .get()
+                                                                        .unwrap_or(row_key);
+                                                                    let anchor = meta
+                                                                        .iter()
+                                                                        .position(|m| m.row_key == anchor_key)
+                                                                        .unwrap_or(i);
+																	let (a, b) = if anchor <= i {
+																		(anchor, i)
+																	} else {
+																		(i, anchor)
+																	};
+																	let keys = if single {
+																		vec![row_key]
+																	} else {
+																		table_collect_leaf_keys_in_range(
+																			&meta, a, b,
+																		)
+																	};
+																	(!keys.is_empty()).then_some(keys)
+																} else {
+																	None
+																};
 
-                                                    let is_active = active_index.get() == Some(i);
-                                                    let bg = if is_selected || (enabled && st.pressed) {
-                                                        Some(row_active_bg)
+																let _ = host.models_mut().update(
+																	&state_model_for_pointer,
+																	move |st| match policy {
+																		PointerRowSelectionPolicy::Toggle => {
+																			let selected =
+																				st.row_selection
+																					.contains(&row_key);
+																			if single {
+																				st.row_selection.clear();
+																			}
+																			if selected {
+																				st.row_selection
+																					.remove(&row_key);
+																			} else {
+																				st.row_selection
+																					.insert(row_key);
+																			}
+																		}
+																		PointerRowSelectionPolicy::ListLike => {
+																			if let Some(range_keys) =
+																				range_keys.as_ref()
+																			{
+																				if modifiers.ctrl
+																					|| modifiers.meta
+																				{
+																					st.row_selection.extend(
+																						range_keys
+																							.iter()
+																							.copied(),
+																					);
+																				} else {
+																					st.row_selection.clear();
+																					st.row_selection.extend(
+																						range_keys
+																							.iter()
+																							.copied(),
+																					);
+																				}
+																			} else if !single
+																				&& (modifiers.ctrl
+																					|| modifiers.meta)
+																			{
+																				if st.row_selection
+																					.contains(&row_key)
+																				{
+																					st.row_selection
+																						.remove(&row_key);
+																				} else {
+																					st.row_selection
+																						.insert(row_key);
+																				}
+																			} else {
+																				st.row_selection.clear();
+																				st.row_selection
+																					.insert(row_key);
+																			}
+																		}
+																	},
+																);
+
+																	let next_anchor = if policy
+																		== PointerRowSelectionPolicy::ListLike
+																		&& modifiers.shift
+																{
+																	anchor_index_for_pointer_up
+																		.get()
+																		.or(Some(row_key))
+																} else {
+																	Some(row_key)
+																};
+																anchor_index_for_pointer_up
+																	.set(next_anchor);
+															}
+															host.request_redraw(action_cx.window);
+                                                            // When pointer-driven row selection is enabled, a click should not
+                                                            // also activate the row command (avoid "selection + activate" conflicts).
+															PressablePointerUpResult::SkipActivate
+	                                                        },
+	                                                    ));
+
+														if active_index.get() == Some(i) {
+															active_element.set(Some(cx.root_id()));
+															*active_command.borrow_mut() = cmd.clone();
+														}
+													cx.pressable_dispatch_command_if_enabled_opt(cmd.clone());
+
+													let is_active = active_index.get() == Some(i);
+													let bg = if is_selected || (enabled && st.pressed) {
+														Some(row_active_bg)
                                                     } else if enabled && st.hovered {
                                                         Some(row_hover_bg)
                                                     } else {
@@ -5184,8 +6188,11 @@ where
                                                         vec![cx.container(
                                                             ContainerProps {
                                                                 background: bg,
-                                                                border: Edges::default(),
-                                                                border_color: None,
+                                                                border: Edges {
+                                                                    left: if is_active { Px(2.0) } else { Px(0.0) },
+                                                                    ..Default::default()
+                                                                },
+                                                                border_color: if is_active { Some(ring) } else { None },
                                                                 layout: LayoutStyle {
                                                                     size: fret_ui::element::SizeStyle {
                                                                         width: Length::Fill,
@@ -5195,15 +6202,15 @@ where
                                                                     ..Default::default()
                                                                 },
                                                                 ..Default::default()
-                                                        },
-                                                        |cx| {
+                                                            },
+                                                            |cx| {
                                                             let mut render_row_group =
                                                                 |cx: &mut ElementContext<'_, H>,
                                                                  cols: &[&ColumnDef<TData>],
                                                                  scroll_x: Option<ScrollHandle>| {
                                                                     let column_width_by_id =
                                                                         column_width_by_id.clone();
-                                                                    let row = if props.optimize_paint_order {
+                                                                let row = if props.optimize_paint_order {
                                                                         cx.container(
                                                                             ContainerProps {
                                                                                 layout: LayoutStyle {
@@ -5429,34 +6436,7 @@ where
                                                                     }
                                                                 };
 
-                                                            let mut out: Vec<AnyElement> = Vec::new();
-                                                            if is_active {
-                                                                out.push(cx.container(
-                                                                    ContainerProps {
-                                                                        background: Some(ring),
-                                                                        layout: LayoutStyle {
-                                                                            size: fret_ui::element::SizeStyle {
-                                                                                width: Length::Px(Px(2.0)),
-                                                                                height: Length::Fill,
-                                                                                ..Default::default()
-                                                                            },
-                                                                            position:
-                                                                                fret_ui::element::PositionStyle::Absolute,
-                                                                            inset: fret_ui::element::InsetStyle {
-                                                                                top: Some(Px(0.0)).into(),
-                                                                                bottom: Some(Px(0.0)).into(),
-                                                                                left: Some(Px(0.0)).into(),
-                                                                                ..Default::default()
-                                                                            },
-                                                                            ..Default::default()
-                                                                        },
-                                                                        ..Default::default()
-                                                                    },
-                                                                    |_| Vec::new(),
-                                                                ));
-                                                            }
-
-                                                            out.push(stack::hstack(
+                                                            vec![stack::hstack(
                                                                 cx,
                                                                 stack::HStackProps::default()
                                                                     .gap_x(Space::N0)
@@ -5530,8 +6510,7 @@ where
                                                                         render_row_group(cx, &right_cols, None);
                                                                     vec![left, center, right]
                                                                 },
-                                                            ));
-                                                            out
+                                                            )]
                                                         },
                                                     )]
                                                 },

@@ -1066,7 +1066,7 @@ impl FieldLabel {
                 if render_text_block {
                     builder = builder.w_full().min_w_0();
                 }
-                let mut label = builder
+                let label = builder
                     .text_size_px(px)
                     .line_height_px(line_height)
                     .font_medium()
@@ -1227,11 +1227,14 @@ impl FieldError {
         ui::text(cx, self.text)
             .text_size_px(px)
             .line_height_px(line_height)
+            .line_height_policy(fret_core::TextLineHeightPolicy::FixedFromStyle)
             .font_normal()
             .text_color(ColorRef::Color(fg))
             .wrap(wrap)
             .overflow(overflow)
             .text_align(align)
+            .w_full()
+            .min_w_0()
             .into_element(cx)
     }
 }
@@ -1651,7 +1654,7 @@ mod tests {
     }
 
     #[test]
-    fn field_vertical_defaults_to_gap_2() {
+    fn field_vertical_defaults_to_gap_3() {
         let window = AppWindowId::default();
         let mut app = App::new();
         let bounds = Rect::new(
@@ -1660,7 +1663,7 @@ mod tests {
         );
 
         let theme = Theme::global(&app).snapshot();
-        let expected = MetricRef::space(Space::N2).resolve(&theme);
+        let expected = MetricRef::space(Space::N3).resolve(&theme);
 
         let element = fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
             Field::new([cx.text("Label"), cx.text("Control")])

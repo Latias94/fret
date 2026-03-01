@@ -122,6 +122,284 @@ pub enum DropdownMenuEntry {
     Separator,
 }
 
+/// shadcn/ui `DropdownMenuTrigger` (v4).
+///
+/// In the upstream DOM implementation this is a Radix primitive part. In Fret, the trigger element
+/// itself is still authored by the caller; this wrapper exists to align the part surface with
+/// shadcn docs/examples and to keep room for future trigger-specific defaults.
+#[derive(Debug)]
+pub struct DropdownMenuTrigger {
+    child: AnyElement,
+}
+
+impl DropdownMenuTrigger {
+    pub fn new(child: AnyElement) -> Self {
+        Self { child }
+    }
+
+    #[track_caller]
+    pub fn into_element<H: UiHost>(self, _cx: &mut ElementContext<'_, H>) -> AnyElement {
+        self.child
+    }
+}
+
+/// shadcn/ui `DropdownMenuContent` (v4).
+///
+/// Upstream exposes placement-related props on the `Content` part (e.g. `align`, `sideOffset`).
+/// Fret's current `DropdownMenu` surface owns these configuration knobs. This type provides an
+/// adapter surface so call sites can be authored in a part-based style while keeping the current
+/// implementation intact.
+#[derive(Debug, Clone, Default)]
+pub struct DropdownMenuContent {
+    align: Option<DropdownMenuAlign>,
+    align_offset: Option<Px>,
+    side: Option<DropdownMenuSide>,
+    side_offset: Option<Px>,
+    window_margin: Option<Px>,
+    min_width: Option<Px>,
+    submenu_min_width: Option<Px>,
+    arrow: Option<bool>,
+    arrow_size: Option<Px>,
+    arrow_padding: Option<Px>,
+    align_leading_icons: Option<bool>,
+}
+
+impl DropdownMenuContent {
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    pub fn align(mut self, align: DropdownMenuAlign) -> Self {
+        self.align = Some(align);
+        self
+    }
+
+    pub fn align_offset(mut self, offset: Px) -> Self {
+        self.align_offset = Some(offset);
+        self
+    }
+
+    pub fn side(mut self, side: DropdownMenuSide) -> Self {
+        self.side = Some(side);
+        self
+    }
+
+    pub fn side_offset(mut self, offset: Px) -> Self {
+        self.side_offset = Some(offset);
+        self
+    }
+
+    pub fn window_margin(mut self, margin: Px) -> Self {
+        self.window_margin = Some(margin);
+        self
+    }
+
+    pub fn min_width(mut self, min_width: Px) -> Self {
+        self.min_width = Some(min_width);
+        self
+    }
+
+    pub fn submenu_min_width(mut self, min_width: Px) -> Self {
+        self.submenu_min_width = Some(min_width);
+        self
+    }
+
+    pub fn align_leading_icons(mut self, align: bool) -> Self {
+        self.align_leading_icons = Some(align);
+        self
+    }
+
+    pub fn arrow(mut self, arrow: bool) -> Self {
+        self.arrow = Some(arrow);
+        self
+    }
+
+    pub fn arrow_size(mut self, size: Px) -> Self {
+        self.arrow_size = Some(size);
+        self
+    }
+
+    pub fn arrow_padding(mut self, padding: Px) -> Self {
+        self.arrow_padding = Some(padding);
+        self
+    }
+
+    fn apply_to(self, mut menu: DropdownMenu) -> DropdownMenu {
+        if let Some(v) = self.align {
+            menu.align = v;
+        }
+        if let Some(v) = self.align_offset {
+            menu.align_offset = v;
+        }
+        if let Some(v) = self.side {
+            menu.side = v;
+        }
+        if let Some(v) = self.side_offset {
+            menu.side_offset = v;
+        }
+        if let Some(v) = self.window_margin {
+            menu.window_margin = v;
+        }
+        if let Some(v) = self.min_width {
+            menu.min_width = v;
+        }
+        if let Some(v) = self.submenu_min_width {
+            menu.submenu_min_width = v;
+        }
+        if let Some(v) = self.align_leading_icons {
+            menu.align_leading_icons = v;
+        }
+        if let Some(v) = self.arrow {
+            menu.arrow = v;
+        }
+        if let Some(v) = self.arrow_size {
+            menu.arrow_size_override = Some(v);
+        }
+        if let Some(v) = self.arrow_padding {
+            menu.arrow_padding_override = Some(v);
+        }
+        menu
+    }
+}
+
+/// shadcn/ui `DropdownMenuPortal` (v4).
+///
+/// Upstream exports a distinct portal part even though `DropdownMenuContent` mounts itself in a
+/// portal by default. In Fret the overlay is already rendered in an overlay root, so this is a
+/// no-op wrapper that exists for part surface parity (copy/paste examples).
+#[derive(Debug, Clone, Default)]
+pub struct DropdownMenuPortal {
+    content: DropdownMenuContent,
+}
+
+impl DropdownMenuPortal {
+    pub fn new(content: DropdownMenuContent) -> Self {
+        Self { content }
+    }
+}
+
+impl From<DropdownMenuPortal> for DropdownMenuContent {
+    fn from(value: DropdownMenuPortal) -> Self {
+        value.content
+    }
+}
+
+/// shadcn/ui `DropdownMenuSeparator` (v4).
+///
+/// In upstream this is a primitive part. In Fret menus we model it as an entry variant.
+#[derive(Debug, Clone, Copy, Default)]
+pub struct DropdownMenuSeparator;
+
+impl DropdownMenuSeparator {
+    pub fn new() -> Self {
+        Self
+    }
+}
+
+/// shadcn/ui `DropdownMenuSub*` helpers (v4).
+///
+/// Upstream exposes `Sub` / `SubTrigger` / `SubContent` as distinct parts. Fret's current menu
+/// model represents submenus as `DropdownMenuItem { submenu: Some(Vec<DropdownMenuEntry>) }`.
+/// These helpers bridge the authoring model without changing the underlying representation.
+#[derive(Debug)]
+pub struct DropdownMenuSubTrigger {
+    item: DropdownMenuItem,
+}
+
+impl DropdownMenuSubTrigger {
+    pub fn new(label: impl Into<Arc<str>>) -> Self {
+        Self {
+            item: DropdownMenuItem::new(label).close_on_select(false),
+        }
+    }
+
+    pub fn refine(mut self, f: impl FnOnce(DropdownMenuItem) -> DropdownMenuItem) -> Self {
+        self.item = f(self.item);
+        // Sub triggers should not close on select.
+        self.item.close_on_select = false;
+        self
+    }
+}
+
+#[derive(Debug)]
+pub struct DropdownMenuSubContent {
+    entries: Vec<DropdownMenuEntry>,
+}
+
+impl DropdownMenuSubContent {
+    pub fn new(entries: impl IntoIterator<Item = DropdownMenuEntry>) -> Self {
+        Self {
+            entries: entries.into_iter().collect(),
+        }
+    }
+}
+
+#[derive(Debug)]
+pub struct DropdownMenuSub {
+    trigger: DropdownMenuSubTrigger,
+    content: DropdownMenuSubContent,
+}
+
+impl DropdownMenuSub {
+    pub fn new(trigger: DropdownMenuSubTrigger, content: DropdownMenuSubContent) -> Self {
+        Self { trigger, content }
+    }
+
+    pub fn into_entry(self) -> DropdownMenuEntry {
+        let mut item = self.trigger.item;
+        item.submenu = Some(self.content.entries);
+        DropdownMenuEntry::Item(item)
+    }
+}
+
+impl From<DropdownMenuItem> for DropdownMenuEntry {
+    fn from(value: DropdownMenuItem) -> Self {
+        Self::Item(value)
+    }
+}
+
+impl From<DropdownMenuCheckboxItem> for DropdownMenuEntry {
+    fn from(value: DropdownMenuCheckboxItem) -> Self {
+        Self::CheckboxItem(value)
+    }
+}
+
+impl From<DropdownMenuRadioGroup> for DropdownMenuEntry {
+    fn from(value: DropdownMenuRadioGroup) -> Self {
+        Self::RadioGroup(value)
+    }
+}
+
+impl From<DropdownMenuRadioItem> for DropdownMenuEntry {
+    fn from(value: DropdownMenuRadioItem) -> Self {
+        Self::RadioItem(value)
+    }
+}
+
+impl From<DropdownMenuLabel> for DropdownMenuEntry {
+    fn from(value: DropdownMenuLabel) -> Self {
+        Self::Label(value)
+    }
+}
+
+impl From<DropdownMenuGroup> for DropdownMenuEntry {
+    fn from(value: DropdownMenuGroup) -> Self {
+        Self::Group(value)
+    }
+}
+
+impl From<DropdownMenuSeparator> for DropdownMenuEntry {
+    fn from(_value: DropdownMenuSeparator) -> Self {
+        Self::Separator
+    }
+}
+
+impl From<DropdownMenuSub> for DropdownMenuEntry {
+    fn from(value: DropdownMenuSub) -> Self {
+        value.into_entry()
+    }
+}
+
 pub struct DropdownMenuItem {
     pub label: Arc<str>,
     pub value: Arc<str>,
@@ -1397,6 +1675,26 @@ impl DropdownMenu {
     ) -> Self {
         self.on_open_change_complete = on_open_change_complete;
         self
+    }
+
+    /// Part-based authoring surface aligned with shadcn/ui v4 exports.
+    ///
+    /// This is a thin adapter over `DropdownMenu::into_element(...)` that allows call sites to use
+    /// `DropdownMenuTrigger` and `DropdownMenuContent` parts (and to attach content placement
+    /// options in a shadcn-like location).
+    #[track_caller]
+    pub fn into_element_parts<H: UiHost, I>(
+        self,
+        cx: &mut ElementContext<'_, H>,
+        trigger: impl FnOnce(&mut ElementContext<'_, H>) -> DropdownMenuTrigger,
+        content: impl Into<DropdownMenuContent>,
+        entries: impl FnOnce(&mut ElementContext<'_, H>) -> I,
+    ) -> AnyElement
+    where
+        I: IntoIterator<Item = DropdownMenuEntry>,
+    {
+        let menu = content.into().apply_to(self);
+        menu.into_element(cx, |cx| trigger(cx).into_element(cx), entries)
     }
 
     #[track_caller]
@@ -3870,6 +4168,17 @@ mod tests {
             let menu = DropdownMenu::new_controllable(cx, Some(controlled.clone()), false);
             assert_eq!(menu.open, controlled);
         });
+    }
+
+    #[test]
+    fn dropdown_menu_portal_wraps_content_config() {
+        let mut app = App::new();
+        let open = app.models_mut().insert(false);
+
+        let content = DropdownMenuPortal::new(DropdownMenuContent::new().side_offset(Px(9.0)));
+        let menu = DropdownMenuContent::from(content).apply_to(DropdownMenu::new(open));
+
+        assert_eq!(menu.side_offset, Px(9.0));
     }
 
     #[test]

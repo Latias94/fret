@@ -1724,6 +1724,7 @@ dependencies = [
  "fret-ui",
  "fret-ui-kit",
  "fret-ui-shadcn",
+ "fret-workspace",
  "slotmap",
  "thiserror 2.0.18",
  "wgpu",
@@ -1879,6 +1880,19 @@ dependencies = [
  "fret-ui",
  "fret-ui-kit",
  "fret-ui-shadcn",
+]
+
+[[package]]
+name = "fret-cookbook"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "fret",
+ "fret-app",
+ "fret-core",
+ "fret-icons-radix",
+ "fret-ui",
+ "fret-ui-assets",
 ]
 
 [[package]]
@@ -2318,6 +2332,19 @@ dependencies = [
  "merman",
  "pulldown-cmark 0.13.0",
  "tracing",
+]
+
+[[package]]
+name = "fret-minimal"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "fret-app",
+ "fret-bootstrap",
+ "fret-core",
+ "fret-ui",
+ "fret-ui-kit",
+ "wgpu",
 ]
 
 [[package]]
@@ -2946,6 +2973,7 @@ dependencies = [
  "fret-dnd",
  "fret-runtime",
  "fret-ui",
+ "fret-ui-headless",
  "fret-ui-kit",
  "fret-ui-shadcn",
  "serde",

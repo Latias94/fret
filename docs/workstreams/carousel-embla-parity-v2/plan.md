@@ -47,6 +47,8 @@ Gates:
 
 - `nextest` unit tests for integrator invariants.
 - A diag script that asserts “drag produces continued motion after release” (inertia presence).
+- A diag script that asserts `embla_duration` affects settling speed (fast vs slow duration)
+  (`tools/diag-scripts/ui-gallery/carousel/ui-gallery-carousel-duration-fast-vs-slow-settling-gate.json`).
 - A diag script that resizes during engine-driven motion without panics/hangs
   (`tools/diag-scripts/ui-gallery/carousel/ui-gallery-carousel-demo-reinit-resize-gate.json`).
 

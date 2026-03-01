@@ -3,6 +3,10 @@
 This file is a “where to look” index for reference implementations and what each is best at
 teaching us (behavior outcomes, not pixels).
 
+See also:
+
+- `GAP_ANALYSIS.md` (prioritized gaps vs references)
+
 ## In-repo references (`repo-ref/`)
 
 ### Zed (editor semantics)
@@ -57,4 +61,3 @@ We should treat these as outcome references and encode the outcomes as:
 - unit-tested invariants (kernel),
 - `fretboard diag` scripts (full-stack integration),
 - and only then visual polish.
-

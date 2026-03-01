@@ -16,6 +16,7 @@ mod prelude_core;
 mod prelude_runtime;
 mod prelude_ui;
 mod services;
+mod tab_bar_drop_target;
 mod tab_bar_geometry;
 mod tab_overflow;
 mod types;

@@ -29,4 +29,14 @@ This TODO list is scoped to this workstream folder and is intended to keep the r
 - [x] Overflow activation scrolls the newly active tab into view (gated).
 - [ ] Overflow menu: deterministic scroll-into-view under repeated resize/scroll (stress).
 - [ ] Close policies: close button vs middle click vs keyboard (policy-layer ownership documented).
-- [ ] Keyboard nav: decide roving focus + MRU vs in-order cycling contract surface.
+- [x] Focus restore after close when the tab strip is focused (unit test gate).
+- [x] Keyboard focus transfer into the tab strip (`workspace.pane.focus_tab_strip`) (unit test gate).
+- [x] Default keybinding for `workspace.pane.toggle_tab_strip_focus` (`Ctrl+F6`).
+- [x] Escape exits the focused tab strip (`workspace.pane.focus_content`) (unit test gate).
+- [x] `focus_content` / `Ctrl+F6` can exit even if no return target was recorded (pane content fallback).
+- [x] Keyboard nav: baseline roving ArrowLeft/ArrowRight auto-activates (unit test gate).
+- [ ] Keyboard nav: decide MRU vs in-order for `workspace.tab.next/prev` and lock with gates.
+- [x] Make tab strip hit-test surfaces explicit (tab row vs header space vs overflow control / scroll controls) and gate it via unit tests.
+- [x] Adopt `WorkspacePaneContentFocusTarget` in workspace shells (real pane content), so exit fallback works in demos.
+  - Evidence: `apps/fret-examples/src/workspace_shell_demo.rs`.
+  - Evidence: `ecosystem/fret/src/workspace_shell.rs` (golden-path shell registers pane content target).

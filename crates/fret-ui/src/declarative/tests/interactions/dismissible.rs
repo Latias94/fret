@@ -230,3 +230,135 @@ fn dismissible_on_dismiss_request_hook_runs_on_outside_press_observer() {
 
     assert_eq!(app.models().get_copied(&dismissed), Some(true));
 }
+
+#[test]
+fn dismissible_outside_press_prevent_default_keeps_focus() {
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+
+    let bounds = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(200.0), Px(80.0)));
+    let mut services = FakeTextService::default();
+
+    // Base root provides a hit-test target so the pointer down is "outside" the overlay.
+    let base_root = ui.create_node(FillStack);
+    ui.set_root(base_root);
+
+    let overlay_root = crate::declarative::render_dismissible_root_with_hooks(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "dismissible-outside-press-prevent-default-keeps-focus",
+        |cx| {
+            cx.dismissible_on_dismiss_request(Arc::new(move |_host, _cx, req| {
+                if matches!(req.reason, DismissReason::OutsidePress { .. }) {
+                    req.prevent_default();
+                }
+            }));
+
+            let mut props = crate::element::PressableProps {
+                enabled: true,
+                focusable: true,
+                ..Default::default()
+            };
+            props.layout.size.width = crate::element::Length::Px(Px(10.0));
+            props.layout.size.height = crate::element::Length::Px(Px(10.0));
+            vec![cx.pressable(props, |cx, _| vec![cx.text("child")])]
+        },
+    );
+
+    let layer = ui.push_overlay_root_ex(overlay_root, false, true);
+    ui.set_layer_wants_pointer_down_outside_events(layer, true);
+    ui.set_layer_visible(layer, true);
+
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    let focused = ui.children(overlay_root)[0];
+    ui.set_focus(Some(focused));
+
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &fret_core::Event::Pointer(fret_core::PointerEvent::Down {
+            position: Point::new(Px(190.0), Px(70.0)),
+            button: MouseButton::Left,
+            modifiers: Modifiers::default(),
+            click_count: 1,
+            pointer_id: fret_core::PointerId(0),
+            pointer_type: fret_core::PointerType::Mouse,
+        }),
+    );
+
+    assert_eq!(
+        ui.focus(),
+        Some(focused),
+        "expected preventDefault outside-press dismissal to keep focus stable"
+    );
+}
+
+#[test]
+fn dismissible_outside_press_without_prevent_default_clears_focus() {
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+
+    let bounds = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(200.0), Px(80.0)));
+    let mut services = FakeTextService::default();
+
+    // Base root provides a hit-test target so the pointer down is "outside" the overlay.
+    let base_root = ui.create_node(FillStack);
+    ui.set_root(base_root);
+
+    let overlay_root = crate::declarative::render_dismissible_root_with_hooks(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "dismissible-outside-press-without-prevent-default-clears-focus",
+        |cx| {
+            cx.dismissible_on_dismiss_request(Arc::new(move |_host, _cx, _req| {}));
+
+            let mut props = crate::element::PressableProps {
+                enabled: true,
+                focusable: true,
+                ..Default::default()
+            };
+            props.layout.size.width = crate::element::Length::Px(Px(10.0));
+            props.layout.size.height = crate::element::Length::Px(Px(10.0));
+            vec![cx.pressable(props, |cx, _| vec![cx.text("child")])]
+        },
+    );
+
+    let layer = ui.push_overlay_root_ex(overlay_root, false, true);
+    ui.set_layer_wants_pointer_down_outside_events(layer, true);
+    ui.set_layer_visible(layer, true);
+
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    let focused = ui.children(overlay_root)[0];
+    ui.set_focus(Some(focused));
+
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &fret_core::Event::Pointer(fret_core::PointerEvent::Down {
+            position: Point::new(Px(190.0), Px(70.0)),
+            button: MouseButton::Left,
+            modifiers: Modifiers::default(),
+            click_count: 1,
+            pointer_id: fret_core::PointerId(0),
+            pointer_type: fret_core::PointerType::Mouse,
+        }),
+    );
+
+    assert_eq!(
+        ui.focus(),
+        None,
+        "expected outside-press default behavior to clear focus when policy does not prevent it"
+    );
+}

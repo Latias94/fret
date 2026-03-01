@@ -1,0 +1,20 @@
+[package]
+name = "fret-cookbook"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+documentation.workspace = true
+publish = false
+
+[dependencies]
+anyhow.workspace = true
+fret = { path = "../../ecosystem/fret", default-features = false, features = ["desktop", "diagnostics", "shadcn", "ui-assets", "icons", "preload-icon-svgs"] }
+fret-app = { path = "../../crates/fret-app" }
+fret-core = { path = "../../crates/fret-core" }
+fret-ui = { path = "../../crates/fret-ui" }
+fret-icons-radix = { path = "../../ecosystem/fret-icons-radix", default-features = false, features = ["app-integration"] }
+fret-ui-assets = { path = "../../ecosystem/fret-ui-assets", default-features = false, features = ["ui", "image-decode"] }
