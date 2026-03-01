@@ -90,7 +90,7 @@ fn fret_custom_effect(src: vec4<f32>, _uv: vec2<f32>, pos_px: vec2<f32>, params:
   }
 
   // Frosted source: chain input (blurred) + optional extra pyramid sampling from raw.
-  let pyr = fret_sample_src_pyramid_at_pos(pyramid_level, pos_px);
+  let pyr = fret_sample_src_pyramid_bilinear_at_pos(pyramid_level, pos_px);
   let frosted = mix(src, pyr, frost_mix);
 
   let inside_px = clamp(-sd, 0.0, 4096.0);
@@ -117,23 +117,23 @@ fn fret_custom_effect(src: vec4<f32>, _uv: vec2<f32>, pos_px: vec2<f32>, params:
   let disp = refract * disp_k;
   let use_7tap = dispersion_quality > 0.5;
 
-  var raw = fret_sample_src_raw_at_pos(pos_px + refract);
+  var raw = fret_sample_src_raw_bilinear_at_pos(pos_px + refract);
   if (dispersion > 0.0 && disp_k > 1.0e-6) {
     if (!use_7tap) {
-      let raw_r = fret_sample_src_raw_at_pos(pos_px + refract + disp);
+      let raw_r = fret_sample_src_raw_bilinear_at_pos(pos_px + refract + disp);
       let raw_g = raw;
-      let raw_b = fret_sample_src_raw_at_pos(pos_px + refract - disp);
+      let raw_b = fret_sample_src_raw_bilinear_at_pos(pos_px + refract - disp);
       raw = vec4<f32>(raw_r.r, raw_g.g, raw_b.b, raw_g.a);
     } else {
       // Match AndroidLiquidGlass channel accumulation weights (7 taps):
       // red, orange, yellow, green, cyan, blue, purple.
-      let red = fret_sample_src_raw_at_pos(pos_px + refract + disp);
-      let orange = fret_sample_src_raw_at_pos(pos_px + refract + disp * (2.0 / 3.0));
-      let yellow = fret_sample_src_raw_at_pos(pos_px + refract + disp * (1.0 / 3.0));
+      let red = fret_sample_src_raw_bilinear_at_pos(pos_px + refract + disp);
+      let orange = fret_sample_src_raw_bilinear_at_pos(pos_px + refract + disp * (2.0 / 3.0));
+      let yellow = fret_sample_src_raw_bilinear_at_pos(pos_px + refract + disp * (1.0 / 3.0));
       let green = raw;
-      let cyan = fret_sample_src_raw_at_pos(pos_px + refract - disp * (1.0 / 3.0));
-      let blue = fret_sample_src_raw_at_pos(pos_px + refract - disp * (2.0 / 3.0));
-      let purple = fret_sample_src_raw_at_pos(pos_px + refract - disp);
+      let cyan = fret_sample_src_raw_bilinear_at_pos(pos_px + refract - disp * (1.0 / 3.0));
+      let blue = fret_sample_src_raw_bilinear_at_pos(pos_px + refract - disp * (2.0 / 3.0));
+      let purple = fret_sample_src_raw_bilinear_at_pos(pos_px + refract - disp);
 
       var c = vec4<f32>(0.0);
 
