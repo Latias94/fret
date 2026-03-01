@@ -33,6 +33,8 @@ Gates:
 
 - `nextest` unit test: velocity decays to ~0 and settles within bounded frames.
 - `diag` script: swipe → post-release pixel change continues for N frames.
+- `diag` script: fast vs slow duration settles at different speeds
+  (`tools/diag-scripts/ui-gallery/carousel/ui-gallery-carousel-duration-fast-vs-slow-settling-gate.json`).
 
 ## M2 — API + events (select/reInit)
 

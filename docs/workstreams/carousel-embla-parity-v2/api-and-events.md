@@ -49,6 +49,18 @@ It now includes MVP event observability:
 This provides an “effect-like” hook in Rust: render code can remember the last generation and react
 when it changes.
 
+Diagnostics-only fields:
+
+- `offset_px`, `selected_snap_px`, `at_selected_snap`: help validate “settle speed” and snap mapping
+  without scraping a diag bundle.
+- `recipe_settling` vs `embla_settling`: disambiguate which driver is currently active.
+- `embla_engine_enabled` vs `embla_engine_present`: distinguish option intent vs runtime availability
+  (e.g. reduced-motion may suppress engine usage).
+- `embla_duration`, `embla_scroll_duration`: help validate duration shaping outcomes.
+
+These fields are explicitly **not** a long-lived public contract; they exist to keep gates and demos
+small and reviewable while parity work is ongoing.
+
 ### `CarouselApi` handle (shipping today)
 
 `ecosystem/fret-ui-shadcn::CarouselApi` is a Rust-native handle published via a model:
@@ -197,3 +209,4 @@ then promote the key parts to an ADR.
 - Diag scripts:
   - `tools/diag-scripts/ui-gallery/carousel/ui-gallery-carousel-demo-inertia-pixels-changed.json`
   - `tools/diag-scripts/ui-gallery/carousel/ui-gallery-carousel-demo-reinit-resize-gate.json`
+  - `tools/diag-scripts/ui-gallery/carousel/ui-gallery-carousel-duration-fast-vs-slow-settling-gate.json`
