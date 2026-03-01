@@ -103,25 +103,38 @@ pub(super) fn select_semantics_node_scoped<'a>(
     scope_root: Option<u64>,
 ) -> Option<&'a fret_core::SemanticsNode> {
     let index = SemanticsIndex::new(snapshot);
+    let want_root_z_index = match selector {
+        UiSelectorV1::RoleAndName { root_z_index, .. } => *root_z_index,
+        UiSelectorV1::RoleAndPath { root_z_index, .. } => *root_z_index,
+        UiSelectorV1::TestId { root_z_index, .. } => *root_z_index,
+        UiSelectorV1::GlobalElementId { root_z_index, .. } => *root_z_index,
+        UiSelectorV1::NodeId { root_z_index, .. } => *root_z_index,
+    };
 
     let in_scope = |id: u64| -> bool {
         scope_root
             .map(|root| index.is_descendant_of_or_self(id, root))
             .unwrap_or(true)
     };
+    let matches_root_z = |id: u64| -> bool {
+        want_root_z_index
+            .map(|z| index.root_z_for(id) == z)
+            .unwrap_or(true)
+    };
 
     match selector {
-        UiSelectorV1::NodeId { node } => index.by_id.get(node).copied().filter(|n| {
+        UiSelectorV1::NodeId { node, .. } => index.by_id.get(node).copied().filter(|n| {
             let id = n.id.data().as_ffi();
-            index.is_selectable(id) && in_scope(id)
+            index.is_selectable(id) && in_scope(id) && matches_root_z(id)
         }),
-        UiSelectorV1::RoleAndName { role, name } => {
+        UiSelectorV1::RoleAndName { role, name, .. } => {
             let role = parse_semantics_role(role)?;
             super::pick::pick_best_match(
                 snapshot.nodes.iter().filter(|n| {
                     let id = n.id.data().as_ffi();
                     index.is_selectable(id)
                         && in_scope(id)
+                        && matches_root_z(id)
                         && n.role == role
                         && n.label.as_deref().is_some_and(|label| label == name)
                 }),
@@ -132,6 +145,7 @@ pub(super) fn select_semantics_node_scoped<'a>(
             role,
             name,
             ancestors,
+            ..
         } => {
             let role = parse_semantics_role(role)?;
 
@@ -146,6 +160,7 @@ pub(super) fn select_semantics_node_scoped<'a>(
                     let id = n.id.data().as_ffi();
                     index.is_selectable(id)
                         && in_scope(id)
+                        && matches_root_z(id)
                         && n.role == role
                         && n.label.as_deref().is_some_and(|label| label == name)
                         && index.ancestors_match_subsequence(n.parent, &parsed_ancestors)
@@ -153,11 +168,12 @@ pub(super) fn select_semantics_node_scoped<'a>(
                 &index,
             )
         }
-        UiSelectorV1::TestId { id } => super::pick::pick_best_match(
+        UiSelectorV1::TestId { id, .. } => super::pick::pick_best_match(
             snapshot.nodes.iter().filter(|n| {
                 let node_id = n.id.data().as_ffi();
                 index.is_selectable(node_id)
                     && in_scope(node_id)
+                    && matches_root_z(node_id)
                     && n.test_id.as_deref().is_some_and(|v| v == id)
             }),
             &index,
@@ -167,19 +183,21 @@ pub(super) fn select_semantics_node_scoped<'a>(
             super::pick::pick_best_match(
                 snapshot.nodes.iter().filter(|n| {
                     let node_id = n.id.data().as_ffi();
-                    in_scope(node_id) && n.test_id.as_deref().is_some_and(|v| v == id)
+                    in_scope(node_id)
+                        && matches_root_z(node_id)
+                        && n.test_id.as_deref().is_some_and(|v| v == id)
                 }),
                 &index,
             )
         }),
-        UiSelectorV1::GlobalElementId { element } => {
+        UiSelectorV1::GlobalElementId { element, .. } => {
             let node = element_runtime.and_then(|runtime| {
                 runtime.node_for_element(window, fret_ui::elements::GlobalElementId(*element))
             })?;
             let node_id = node.data().as_ffi();
             index.by_id.get(&node_id).copied().filter(|n| {
                 let id = n.id.data().as_ffi();
-                index.is_selectable(id) && in_scope(id)
+                index.is_selectable(id) && in_scope(id) && matches_root_z(id)
             })
         }
     }
@@ -425,7 +443,10 @@ pub(super) fn suggest_selectors(
     let mut out = Vec::new();
 
     if let Some(id) = raw_node.test_id.as_deref() {
-        out.push(UiSelectorV1::TestId { id: id.to_string() });
+        out.push(UiSelectorV1::TestId {
+            id: id.to_string(),
+            root_z_index: None,
+        });
     }
 
     let role = semantics_role_label(raw_node.role).to_string();
@@ -437,21 +458,27 @@ pub(super) fn suggest_selectors(
                     role: role.clone(),
                     name: name.to_string(),
                     ancestors,
+                    root_z_index: None,
                 });
             }
             out.push(UiSelectorV1::RoleAndName {
                 role: role.clone(),
                 name: name.to_string(),
+                root_z_index: None,
             });
         }
     }
 
     if let Some(element) = element {
-        out.push(UiSelectorV1::GlobalElementId { element });
+        out.push(UiSelectorV1::GlobalElementId {
+            element,
+            root_z_index: None,
+        });
     }
 
     out.push(UiSelectorV1::NodeId {
         node: raw_node.id.data().as_ffi(),
+        root_z_index: None,
     });
     out
 }
@@ -479,7 +506,10 @@ fn candidate_selectors_for_node(
     let mut out = Vec::new();
 
     if let Some(id) = raw_node.test_id.as_deref() {
-        out.push(UiSelectorV1::TestId { id: id.to_string() });
+        out.push(UiSelectorV1::TestId {
+            id: id.to_string(),
+            root_z_index: None,
+        });
     }
 
     let role = semantics_role_label(raw_node.role).to_string();
@@ -494,21 +524,27 @@ fn candidate_selectors_for_node(
                     role: role.clone(),
                     name: name.to_string(),
                     ancestors: suffix,
+                    root_z_index: None,
                 });
             }
             out.push(UiSelectorV1::RoleAndName {
                 role: role.clone(),
                 name: name.to_string(),
+                root_z_index: None,
             });
         }
     }
 
     if let Some(element) = element {
-        out.push(UiSelectorV1::GlobalElementId { element });
+        out.push(UiSelectorV1::GlobalElementId {
+            element,
+            root_z_index: None,
+        });
     }
 
     out.push(UiSelectorV1::NodeId {
         node: raw_node.id.data().as_ffi(),
+        root_z_index: None,
     });
     out
 }
@@ -530,23 +566,35 @@ fn eval_selector_scoped(
     let index = SemanticsIndex::new(snapshot);
     let mut matches: Vec<&fret_core::SemanticsNode> = Vec::new();
     let mut note: Option<&'static str> = None;
+    let want_root_z_index = match selector {
+        UiSelectorV1::RoleAndName { root_z_index, .. } => *root_z_index,
+        UiSelectorV1::RoleAndPath { root_z_index, .. } => *root_z_index,
+        UiSelectorV1::TestId { root_z_index, .. } => *root_z_index,
+        UiSelectorV1::GlobalElementId { root_z_index, .. } => *root_z_index,
+        UiSelectorV1::NodeId { root_z_index, .. } => *root_z_index,
+    };
 
     let in_scope = |id: u64| -> bool {
         scope_root
             .map(|root| index.is_descendant_of_or_self(id, root))
             .unwrap_or(true)
     };
+    let matches_root_z = |id: u64| -> bool {
+        want_root_z_index
+            .map(|z| index.root_z_for(id) == z)
+            .unwrap_or(true)
+    };
 
     match selector {
-        UiSelectorV1::NodeId { node } => {
+        UiSelectorV1::NodeId { node, .. } => {
             if let Some(n) = index.by_id.get(node).copied().filter(|n| {
                 let id = n.id.data().as_ffi();
-                index.is_selectable(id) && in_scope(id)
+                index.is_selectable(id) && in_scope(id) && matches_root_z(id)
             }) {
                 matches.push(n);
             }
         }
-        UiSelectorV1::RoleAndName { role, name } => {
+        UiSelectorV1::RoleAndName { role, name, .. } => {
             let Some(role) = parse_semantics_role(role) else {
                 return SelectorEvalSummary {
                     match_count: 0,
@@ -559,6 +607,7 @@ fn eval_selector_scoped(
                 let id = n.id.data().as_ffi();
                 index.is_selectable(id)
                     && in_scope(id)
+                    && matches_root_z(id)
                     && n.role == role
                     && n.label.as_deref() == Some(name)
             }));
@@ -567,6 +616,7 @@ fn eval_selector_scoped(
             role,
             name,
             ancestors,
+            ..
         } => {
             let Some(role) = parse_semantics_role(role) else {
                 return SelectorEvalSummary {
@@ -593,16 +643,18 @@ fn eval_selector_scoped(
                 let id = n.id.data().as_ffi();
                 index.is_selectable(id)
                     && in_scope(id)
+                    && matches_root_z(id)
                     && n.role == role
                     && n.label.as_deref() == Some(name)
                     && index.ancestors_match_subsequence(n.parent, &parsed_ancestors)
             }));
         }
-        UiSelectorV1::TestId { id } => {
+        UiSelectorV1::TestId { id, .. } => {
             matches.extend(snapshot.nodes.iter().filter(|n| {
                 let node_id = n.id.data().as_ffi();
                 index.is_selectable(node_id)
                     && in_scope(node_id)
+                    && matches_root_z(node_id)
                     && n.test_id.as_deref() == Some(id)
             }));
             if matches.is_empty() {
@@ -610,11 +662,11 @@ fn eval_selector_scoped(
                 note = Some("fallback_hidden_nodes");
                 matches.extend(snapshot.nodes.iter().filter(|n| {
                     let node_id = n.id.data().as_ffi();
-                    in_scope(node_id) && n.test_id.as_deref() == Some(id)
+                    in_scope(node_id) && matches_root_z(node_id) && n.test_id.as_deref() == Some(id)
                 }));
             }
         }
-        UiSelectorV1::GlobalElementId { element } => {
+        UiSelectorV1::GlobalElementId { element, .. } => {
             let Some(node) = element_runtime.and_then(|runtime| {
                 runtime.node_for_element(window, fret_ui::elements::GlobalElementId(*element))
             }) else {
@@ -627,7 +679,7 @@ fn eval_selector_scoped(
             let node_id = node.data().as_ffi();
             if let Some(n) = index.by_id.get(&node_id).copied().filter(|n| {
                 let id = n.id.data().as_ffi();
-                index.is_selectable(id) && in_scope(id)
+                index.is_selectable(id) && in_scope(id) && matches_root_z(id)
             }) {
                 matches.push(n);
             }
@@ -657,6 +709,8 @@ pub(super) fn best_selector_for_node_validated(
         UiSemanticsNodeV1::from_node(raw_node, cfg.redact_text, cfg.max_debug_string_bytes);
     let candidates = candidate_selectors_for_node(snapshot, raw_node, &exported, element, cfg);
     let target_node_id = raw_node.id.data().as_ffi();
+    let index = SemanticsIndex::new(snapshot);
+    let target_root_z_index = index.root_z_for(target_node_id);
 
     for selector in candidates {
         // `NodeId` is always unique but is intentionally an in-run-only reference.
@@ -667,6 +721,57 @@ pub(super) fn best_selector_for_node_validated(
         let eval = eval_selector_scoped(snapshot, window, element_runtime, &selector, None);
         if eval.match_count == 1 && eval.chosen_node_id == Some(target_node_id) {
             return Some(selector);
+        }
+    }
+
+    // If nothing is unique across multiple roots, try again with root-z gating.
+    let candidates = candidate_selectors_for_node(snapshot, raw_node, &exported, element, cfg);
+    for selector in candidates {
+        if matches!(selector, UiSelectorV1::NodeId { .. }) {
+            continue;
+        }
+
+        let gated = match selector {
+            UiSelectorV1::RoleAndName {
+                role,
+                name,
+                root_z_index: None,
+            } => UiSelectorV1::RoleAndName {
+                role,
+                name,
+                root_z_index: Some(target_root_z_index),
+            },
+            UiSelectorV1::RoleAndPath {
+                role,
+                name,
+                ancestors,
+                root_z_index: None,
+            } => UiSelectorV1::RoleAndPath {
+                role,
+                name,
+                ancestors,
+                root_z_index: Some(target_root_z_index),
+            },
+            UiSelectorV1::TestId {
+                id,
+                root_z_index: None,
+            } => UiSelectorV1::TestId {
+                id,
+                root_z_index: Some(target_root_z_index),
+            },
+            UiSelectorV1::GlobalElementId {
+                element,
+                root_z_index: None,
+            } => UiSelectorV1::GlobalElementId {
+                element,
+                root_z_index: Some(target_root_z_index),
+            },
+            other => other,
+        };
+
+        let eval = eval_selector_scoped(snapshot, window, element_runtime, &gated, None);
+        if eval.match_count == 1 && eval.chosen_node_id == Some(target_node_id) {
+            return Some(gated);
         }
     }
 
@@ -881,5 +986,84 @@ mod tests {
             }
             other => panic!("expected role+path selector, got {other:?}"),
         }
+    }
+
+    #[test]
+    fn selector_root_z_index_gates_test_id_resolution() {
+        let window = window_id(1);
+
+        let snapshot = SemanticsSnapshot {
+            window,
+            roots: vec![
+                SemanticsRoot {
+                    root: node_id(1),
+                    visible: true,
+                    blocks_underlay_input: false,
+                    hit_testable: true,
+                    z_index: 0,
+                },
+                SemanticsRoot {
+                    root: node_id(100),
+                    visible: true,
+                    blocks_underlay_input: false,
+                    hit_testable: true,
+                    z_index: 10,
+                },
+            ],
+            barrier_root: None,
+            focus_barrier_root: None,
+            focus: None,
+            captured: None,
+            nodes: vec![
+                semantics_node(
+                    1,
+                    None,
+                    SemanticsRole::Window,
+                    rect(0.0, 0.0, 100.0, 100.0),
+                    "root-a",
+                    None,
+                ),
+                semantics_node(
+                    100,
+                    None,
+                    SemanticsRole::Window,
+                    rect(0.0, 0.0, 100.0, 100.0),
+                    "root-b",
+                    None,
+                ),
+                semantics_node(
+                    2,
+                    Some(1),
+                    SemanticsRole::Button,
+                    rect(0.0, 0.0, 10.0, 10.0),
+                    "OK",
+                    Some("dup"),
+                ),
+                semantics_node(
+                    3,
+                    Some(100),
+                    SemanticsRole::Button,
+                    rect(0.0, 0.0, 10.0, 10.0),
+                    "OK",
+                    Some("dup"),
+                ),
+            ],
+        };
+
+        let selector = UiSelectorV1::TestId {
+            id: "dup".to_string(),
+            root_z_index: Some(0),
+        };
+        let picked =
+            select_semantics_node_scoped(&snapshot, window, None, &selector, None).unwrap();
+        assert_eq!(picked.id, node_id(2));
+
+        let selector = UiSelectorV1::TestId {
+            id: "dup".to_string(),
+            root_z_index: Some(10),
+        };
+        let picked =
+            select_semantics_node_scoped(&snapshot, window, None, &selector, None).unwrap();
+        assert_eq!(picked.id, node_id(3));
     }
 }

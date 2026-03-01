@@ -1725,20 +1725,30 @@ pub enum UiSelectorV1 {
     RoleAndName {
         role: String,
         name: String,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        root_z_index: Option<u32>,
     },
     RoleAndPath {
         role: String,
         name: String,
         ancestors: Vec<UiRoleAndNameV1>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        root_z_index: Option<u32>,
     },
     TestId {
         id: String,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        root_z_index: Option<u32>,
     },
     GlobalElementId {
         element: u64,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        root_z_index: Option<u32>,
     },
     NodeId {
         node: u64,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        root_z_index: Option<u32>,
     },
 }
 
@@ -2614,9 +2624,11 @@ mod tests {
         let value = serde_json::to_value(UiPredicateV1::BoundsApproxEqual {
             a: UiSelectorV1::TestId {
                 id: "a".to_string(),
+                root_z_index: None,
             },
             b: UiSelectorV1::TestId {
                 id: "b".to_string(),
+                root_z_index: None,
             },
             eps_px: 1.0,
         })
@@ -2641,9 +2653,11 @@ mod tests {
         let value = serde_json::to_value(UiPredicateV1::BoundsCenterApproxEqual {
             a: UiSelectorV1::TestId {
                 id: "a".to_string(),
+                root_z_index: None,
             },
             b: UiSelectorV1::TestId {
                 id: "b".to_string(),
+                root_z_index: None,
             },
             eps_px: 1.0,
         })
@@ -2706,6 +2720,7 @@ mod tests {
             pointer_kind: None,
             target: UiSelectorV1::TestId {
                 id: "a".to_string(),
+                root_z_index: None,
             },
             button: UiMouseButtonV1::Left,
             click_count: 1,
@@ -2745,6 +2760,7 @@ mod tests {
             pointer_kind: None,
             target: UiSelectorV1::TestId {
                 id: "a".to_string(),
+                root_z_index: None,
             },
             modifiers: None,
         };
@@ -2779,6 +2795,7 @@ mod tests {
             pointer_kind: None,
             target: UiSelectorV1::TestId {
                 id: "a".to_string(),
+                root_z_index: None,
             },
             duration_ms: default_long_press_duration_ms(),
             modifiers: None,
@@ -2816,6 +2833,7 @@ mod tests {
             pointer_kind: None,
             target: UiSelectorV1::TestId {
                 id: "a".to_string(),
+                root_z_index: None,
             },
             delta_x: 12.0,
             delta_y: -8.0,

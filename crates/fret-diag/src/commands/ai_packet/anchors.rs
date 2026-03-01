@@ -38,7 +38,7 @@ pub(super) fn pick_candidate_test_ids_for_failed_step(script: &UiScriptResultV1)
         .iter()
         .filter(|e| e.step_index == step_index)
     {
-        if let UiSelectorV1::TestId { id } = &entry.selector {
+        if let UiSelectorV1::TestId { id, .. } = &entry.selector {
             bump(id, 100);
         }
         for cand in &entry.candidates {

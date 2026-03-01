@@ -53,6 +53,7 @@ Related docs:
    - Avoid using redacted labels when `FRET_DIAG_REDACT_TEXT=1`.
    - Status:
      - In-app copy-details (`Ctrl+Shift+C`) now includes a scored selector-candidates list (match count + chosen node).
+     - Runtime selector resolution honors `root_z_index` when present; validated selectors may add it when needed to become unique.
 
 ## Milestone M2: “Script stability + coverage”
 

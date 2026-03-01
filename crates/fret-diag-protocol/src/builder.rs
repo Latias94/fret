@@ -12,13 +12,17 @@ use crate::{
 };
 
 pub fn test_id(id: impl Into<String>) -> UiSelectorV1 {
-    UiSelectorV1::TestId { id: id.into() }
+    UiSelectorV1::TestId {
+        id: id.into(),
+        root_z_index: None,
+    }
 }
 
 pub fn role_and_name(role: impl Into<String>, name: impl Into<String>) -> UiSelectorV1 {
     UiSelectorV1::RoleAndName {
         role: role.into(),
         name: name.into(),
+        root_z_index: None,
     }
 }
 

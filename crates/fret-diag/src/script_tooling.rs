@@ -672,6 +672,7 @@ mod tests {
                 pointer_kind: Some(UiPointerKindV1::Touch),
                 target: UiSelectorV1::TestId {
                     id: "touch-target".to_string(),
+                    root_z_index: None,
                 },
                 button: UiMouseButtonV1::Left,
                 click_count: 1,
@@ -692,6 +693,7 @@ mod tests {
                 pointer_kind: Some(UiPointerKindV1::Pen),
                 target: UiSelectorV1::TestId {
                     id: "pen-target".to_string(),
+                    root_z_index: None,
                 },
                 button: UiMouseButtonV1::Left,
                 click_count: 1,
@@ -712,6 +714,7 @@ mod tests {
                 pointer_kind: None,
                 target: UiSelectorV1::TestId {
                     id: "tap-target".to_string(),
+                    root_z_index: None,
                 },
                 modifiers: None,
             }],
@@ -730,6 +733,7 @@ mod tests {
                 pointer_kind: None,
                 target: UiSelectorV1::TestId {
                     id: "pinch-target".to_string(),
+                    root_z_index: None,
                 },
                 delta: 0.25,
                 steps: 8,
@@ -750,6 +754,7 @@ mod tests {
                 pointer_kind: None,
                 target: UiSelectorV1::TestId {
                     id: "press-target".to_string(),
+                    root_z_index: None,
                 },
                 duration_ms: 125,
                 modifiers: None,
@@ -769,6 +774,7 @@ mod tests {
                 pointer_kind: None,
                 target: UiSelectorV1::TestId {
                     id: "swipe-target".to_string(),
+                    root_z_index: None,
                 },
                 delta_x: 0.0,
                 delta_y: 100.0,

@@ -100,6 +100,9 @@ The “best selector” must be stable under refactors:
 3. Fall back to `global_element_id` when available (harness-quality, but not author-friendly).
 4. Use `node_id` only as a last resort (in-run reference only).
 
+When multiple visible roots exist (multiple overlays / viewports), the selector may include an optional
+`root_z_index` gate to disambiguate otherwise-ambiguous matches.
+
 ## Non-goals (v1)
 
 - A full semantics tree browser inside the target app.

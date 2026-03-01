@@ -1493,6 +1493,7 @@ mod tests {
 
         let selector = UiSelectorV1::TestId {
             id: "open".to_string(),
+            root_z_index: None,
         };
         let picked = select_semantics_node_scoped(&snapshot, window_id(1), None, &selector, None)
             .expect("expected a pick");
@@ -1502,7 +1503,7 @@ mod tests {
         let best = best_selector_for_node(&snapshot, &snapshot.nodes[1], None, &cfg)
             .expect("expected a selector");
         match best {
-            UiSelectorV1::TestId { id } => assert_eq!(id, "open"),
+            UiSelectorV1::TestId { id, .. } => assert_eq!(id, "open"),
             other => panic!("expected TestId selector, got: {other:?}"),
         }
     }
@@ -1545,6 +1546,7 @@ mod tests {
         let pred = UiPredicateV1::BoundsWithinWindow {
             target: UiSelectorV1::TestId {
                 id: "content".to_string(),
+                root_z_index: None,
             },
             padding_px: 0.0,
             padding_insets_px: None,
@@ -1569,6 +1571,7 @@ mod tests {
         let pred = UiPredicateV1::BoundsWithinWindow {
             target: UiSelectorV1::TestId {
                 id: "content".to_string(),
+                root_z_index: None,
             },
             padding_px: 12.0,
             padding_insets_px: None,
@@ -1623,6 +1626,7 @@ mod tests {
         let pred = UiPredicateV1::BoundsMinSize {
             target: UiSelectorV1::TestId {
                 id: "ui-gallery-resizable-panels".to_string(),
+                root_z_index: None,
             },
             min_w_px: 200.0,
             min_h_px: 200.0,
@@ -1697,9 +1701,11 @@ mod tests {
         let pred = UiPredicateV1::ActiveItemIs {
             container: UiSelectorV1::TestId {
                 id: "listbox".to_string(),
+                root_z_index: None,
             },
             item: UiSelectorV1::TestId {
                 id: "a".to_string(),
+                root_z_index: None,
             },
         };
         assert!(
@@ -1742,9 +1748,11 @@ mod tests {
         let pred = UiPredicateV1::ActiveItemIs {
             container: UiSelectorV1::TestId {
                 id: "listbox".to_string(),
+                root_z_index: None,
             },
             item: UiSelectorV1::TestId {
                 id: "b".to_string(),
+                root_z_index: None,
             },
         };
         assert!(
@@ -1806,6 +1814,7 @@ mod tests {
         let pred = UiPredicateV1::ActiveItemIsNone {
             container: UiSelectorV1::TestId {
                 id: "listbox".to_string(),
+                root_z_index: None,
             },
         };
         assert!(eval_predicate(
@@ -2270,6 +2279,7 @@ mod tests {
         let pred = UiPredicateV1::BoundsMinSize {
             target: UiSelectorV1::TestId {
                 id: "ui-gallery-resizable-panels".to_string(),
+                root_z_index: None,
             },
             min_w_px: 200.0,
             min_h_px: 200.0,
@@ -2342,9 +2352,11 @@ mod tests {
         let pred = UiPredicateV1::BoundsNonOverlapping {
             a: UiSelectorV1::TestId {
                 id: "a".to_string(),
+                root_z_index: None,
             },
             b: UiSelectorV1::TestId {
                 id: "b".to_string(),
+                root_z_index: None,
             },
             eps_px: 0.0,
         };
@@ -2370,9 +2382,11 @@ mod tests {
         let pred = UiPredicateV1::BoundsNonOverlapping {
             a: UiSelectorV1::TestId {
                 id: "a".to_string(),
+                root_z_index: None,
             },
             b: UiSelectorV1::TestId {
                 id: "b".to_string(),
+                root_z_index: None,
             },
             eps_px: 16.0,
         };
@@ -2424,6 +2438,7 @@ mod tests {
         let pred = UiPredicateV1::NotExists {
             target: UiSelectorV1::TestId {
                 id: "missing".to_string(),
+                root_z_index: None,
             },
         };
         assert!(
@@ -2492,9 +2507,11 @@ mod tests {
         let pred = UiPredicateV1::BoundsOverlapping {
             a: UiSelectorV1::TestId {
                 id: "a".to_string(),
+                root_z_index: None,
             },
             b: UiSelectorV1::TestId {
                 id: "b".to_string(),
+                root_z_index: None,
             },
             eps_px: 0.0,
         };
@@ -2520,9 +2537,11 @@ mod tests {
         let pred = UiPredicateV1::BoundsOverlapping {
             a: UiSelectorV1::TestId {
                 id: "a".to_string(),
+                root_z_index: None,
             },
             b: UiSelectorV1::TestId {
                 id: "b".to_string(),
+                root_z_index: None,
             },
             eps_px: 16.0,
         };
@@ -2592,9 +2611,11 @@ mod tests {
         let pred = UiPredicateV1::BoundsOverlappingX {
             a: UiSelectorV1::TestId {
                 id: "a".to_string(),
+                root_z_index: None,
             },
             b: UiSelectorV1::TestId {
                 id: "b".to_string(),
+                root_z_index: None,
             },
             eps_px: 0.0,
         };
@@ -2620,9 +2641,11 @@ mod tests {
         let pred = UiPredicateV1::BoundsOverlappingX {
             a: UiSelectorV1::TestId {
                 id: "a".to_string(),
+                root_z_index: None,
             },
             b: UiSelectorV1::TestId {
                 id: "b".to_string(),
+                root_z_index: None,
             },
             eps_px: 8.0,
         };
@@ -2692,9 +2715,11 @@ mod tests {
         let pred = UiPredicateV1::BoundsOverlappingY {
             a: UiSelectorV1::TestId {
                 id: "a".to_string(),
+                root_z_index: None,
             },
             b: UiSelectorV1::TestId {
                 id: "b".to_string(),
+                root_z_index: None,
             },
             eps_px: 0.0,
         };
@@ -2720,9 +2745,11 @@ mod tests {
         let pred = UiPredicateV1::BoundsOverlappingY {
             a: UiSelectorV1::TestId {
                 id: "a".to_string(),
+                root_z_index: None,
             },
             b: UiSelectorV1::TestId {
                 id: "b".to_string(),
+                root_z_index: None,
             },
             eps_px: 8.0,
         };
