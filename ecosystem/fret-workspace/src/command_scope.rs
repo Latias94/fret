@@ -26,6 +26,7 @@ fn fill_layout() -> LayoutStyle {
 #[derive(Debug, Default)]
 struct WorkspaceCommandScopeFocusState {
     last_focused_by_window: HashMap<AppWindowId, Option<GlobalElementId>>,
+    last_non_tabstrip_focused_by_window: HashMap<AppWindowId, GlobalElementId>,
     return_focus_by_window_and_pane: HashMap<(AppWindowId, Arc<str>), GlobalElementId>,
 }
 
@@ -82,10 +83,25 @@ impl WorkspaceCommandScope {
         // handlers can record/restore focus transfer outcomes without needing a runtime focus query.
         let focused_now = cx.focused_element();
         let window = cx.window;
+        let focused_is_tabstrip = focused_now.is_some_and(|focused| {
+            cx.app
+                .models_mut()
+                .read(&tab_element_registry, |reg| {
+                    reg.contains_element_for_window(window, focused)
+                })
+                .unwrap_or(false)
+        });
         let _ = cx.app.models_mut().update(&focus_state, |st| {
             let entry = st.last_focused_by_window.entry(window).or_insert(None);
             if *entry != focused_now {
                 *entry = focused_now;
+            }
+
+            if let Some(focused) = focused_now
+                && !focused_is_tabstrip
+            {
+                st.last_non_tabstrip_focused_by_window
+                    .insert(window, focused);
             }
         });
 
@@ -135,10 +151,9 @@ impl WorkspaceCommandScope {
                         let last_focus = host
                             .models_mut()
                             .read(&focus_state_for_command, |st| {
-                                st.last_focused_by_window
+                                st.last_non_tabstrip_focused_by_window
                                     .get(&acx.window)
                                     .copied()
-                                    .flatten()
                             })
                             .ok()
                             .flatten();
@@ -249,10 +264,9 @@ impl WorkspaceCommandScope {
                         let focused = host
                             .models_mut()
                             .read(&focus_state_for_command, |st| {
-                                st.last_focused_by_window
+                                st.last_non_tabstrip_focused_by_window
                                     .get(&acx.window)
                                     .copied()
-                                    .flatten()
                             })
                             .ok()
                             .flatten();

@@ -18,6 +18,7 @@ Goal: keep the tab strip refactor **fearless** by locking outcomes behind unit t
 - `ecosystem/fret-workspace/tests/workspace_command_scope_focus_tab_strip_from_outside_pane.rs` (focus transfer from outside pane subtree)
 - `ecosystem/fret-workspace/tests/workspace_command_scope_focus_content_restores_previous_focus.rs` (exit tab strip restores previous focus)
 - `ecosystem/fret-workspace/tests/workspace_command_scope_toggle_tab_strip_focus_toggles_between_content_and_tab_strip.rs` (toggle focus between content and tab strip)
+- `ecosystem/fret-workspace/tests/workspace_command_scope_toggle_tab_strip_focus_multi_pane_returns_to_last_non_tabstrip_focus.rs` (toggle focus across panes)
 - `ecosystem/fret-workspace/tests/workspace_commands_default_keybindings_include_ctrl_f6_toggle.rs` (default keybinding contract)
 
 ## M1 gates (must exist before/while refactoring)

@@ -23,6 +23,16 @@ impl WorkspaceTabElementRegistry {
         self.entries.get(key).copied()
     }
 
+    pub(crate) fn contains_element_for_window(
+        &self,
+        window: AppWindowId,
+        element: GlobalElementId,
+    ) -> bool {
+        self.entries
+            .iter()
+            .any(|(key, value)| key.window == window && *value == element)
+    }
+
     pub(crate) fn set_if_changed(
         &mut self,
         key: WorkspaceTabElementKey,

@@ -100,6 +100,7 @@ Current anchors:
 - Shell scope gate: `ecosystem/fret-workspace/tests/workspace_command_scope_focus_tab_strip_from_outside_pane.rs`
 - Exit tab strip gate: `ecosystem/fret-workspace/tests/workspace_command_scope_focus_content_restores_previous_focus.rs`
 - Toggle focus gate: `ecosystem/fret-workspace/tests/workspace_command_scope_toggle_tab_strip_focus_toggles_between_content_and_tab_strip.rs`
+- Toggle (multi-pane) gate: `ecosystem/fret-workspace/tests/workspace_command_scope_toggle_tab_strip_focus_multi_pane_returns_to_last_non_tabstrip_focus.rs`
 
 Reference anchors:
 
