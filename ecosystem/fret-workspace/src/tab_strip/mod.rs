@@ -1,11 +1,12 @@
 use std::cell::{Cell, RefCell};
 use std::rc::Rc;
 use std::sync::Arc;
+use std::time::Duration;
 
 use fret_core::{
     Color, Corners, Edges, MouseButton, Point, Px, SemanticsRole, TextOverflow, TextSlant, TextWrap,
 };
-use fret_runtime::{CommandId, Model};
+use fret_runtime::{CommandId, Effect, Model};
 use fret_ui::action::{
     OnActivate, OnPressablePointerDown, OnPressablePointerMove, OnPressablePointerUp, OnWheel,
     PressablePointerDownResult, PressablePointerUpResult,
@@ -20,6 +21,8 @@ use fret_ui::elements::GlobalElementId;
 use fret_ui::{ElementContext, Invalidation, UiHost};
 use fret_ui_kit::declarative::action_hooks::ActionHooksExt as _;
 use fret_ui_kit::dnd as ui_dnd;
+
+use crate::focus_registry::{WorkspaceTabElementKey, workspace_tab_element_registry_model};
 
 use crate::commands::{
     tab_activate_command, tab_close_command, tab_pin_command, tab_unpin_command,
@@ -58,7 +61,7 @@ use layouts::{
     centered_row, fill_grow_layout, fill_layout, fixed_square_layout, row_layout,
     tab_list_semantics_layout, tab_strip_scroll_content_layout,
 };
-use state::WorkspaceTabStripState;
+use state::{WorkspaceTabStripState, get_focus_restore_model};
 use theme::WorkspaceTabStripTheme;
 use utils::{
     dnd_scope_for_pane, resolve_end_drop_target_in_canonical_order, scroll_rect_into_view_x,
@@ -313,6 +316,9 @@ impl WorkspaceTabStrip {
                     .into();
                 let roving_disabled: Arc<[bool]> = vec![false; tabs.len()].into();
 
+                let tab_element_registry = workspace_tab_element_registry_model(cx);
+                let focus_restore_model = get_focus_restore_model(cx);
+
                 let (
                     scroll_handle,
                     last_active,
@@ -511,6 +517,8 @@ impl WorkspaceTabStrip {
                                             let tab_dirty = tab.dirty;
                                             let tab_pinned = tab.pinned;
                                             let tab_preview = tab.preview;
+                                            let pane_id_for_registry = pane_id.clone();
+                                            let tab_element_registry_for_tab = tab_element_registry.clone();
                                             let tab_test_id_prefix_for_tab = tab_test_id_prefix.clone();
                                             #[cfg(feature = "shadcn-context-menu")]
                                             let has_left = index > 0;
@@ -566,6 +574,31 @@ impl WorkspaceTabStrip {
                                                             .push((tab_id.clone(), element_id));
                                                         if is_active {
                                                             active_tab_element.set(Some(element_id));
+                                                        }
+
+                                                        // Registry for cross-frame focus restore.
+                                                        //
+                                                        // We avoid updating the model unless the mapping actually
+                                                        // changes, because `ModelStore::update` always marks dirty.
+                                                        let registry_key = WorkspaceTabElementKey {
+                                                            window: cx.window,
+                                                            pane_id: pane_id_for_registry.clone(),
+                                                            tab_id: tab_id.clone(),
+                                                        };
+                                                        let needs_registry_update = cx
+                                                            .app
+                                                            .models_mut()
+                                                            .read(&tab_element_registry_for_tab, |reg| {
+                                                                reg.get(&registry_key) != Some(element_id)
+                                                            })
+                                                            .unwrap_or(true);
+                                                        if needs_registry_update {
+                                                            let _ = cx.app.models_mut().update(
+                                                                &tab_element_registry_for_tab,
+                                                                |reg| {
+                                                                    reg.set_if_changed(registry_key, element_id);
+                                                                },
+                                                            );
                                                         }
 
                                                         let tab_activate_cmd_for_activate =
@@ -1766,6 +1799,95 @@ impl WorkspaceTabStrip {
                         let mru_for_hook = mru.clone();
                         let canonical_for_hook = canonical_tab_order.clone();
                         let tab_elements_for_hook = tab_elements.clone();
+                        let pane_id_for_hook = pane_id.clone();
+                        let tab_element_registry_for_timer = tab_element_registry.clone();
+                        let focus_restore_model_for_timer = focus_restore_model.clone();
+                        let tab_element_registry_for_command = tab_element_registry.clone();
+                        let focus_restore_model_for_command = focus_restore_model.clone();
+
+                        cx.timer_on_timer_for(
+                            root.id,
+                            Arc::new(move |host, acx, token| {
+                                const MAX_ATTEMPTS: u32 = 4;
+
+                                let Ok((pending_timer, pane_id, tab_id, attempts)) =
+                                    host.models_mut().read(&focus_restore_model_for_timer, |st| {
+                                        (st.timer, st.target_pane_id.clone(), st.tab_id.clone(), st.attempts)
+                                    })
+                                else {
+                                    return false;
+                                };
+
+                                if pending_timer != Some(token) {
+                                    return false;
+                                }
+
+                                let Some(tab_id) = tab_id else {
+                                    return false;
+                                };
+
+                                let key = WorkspaceTabElementKey {
+                                    window: acx.window,
+                                    pane_id,
+                                    tab_id: tab_id.clone(),
+                                };
+
+                                let target = host
+                                    .models_mut()
+                                    .read(&tab_element_registry_for_timer, |reg| reg.get(&key))
+                                    .ok()
+                                    .flatten();
+
+                                if let Some(target) = target {
+                                    host.request_focus(target);
+                                    host.request_redraw(acx.window);
+                                    let _ = host.models_mut().update(&focus_restore_model_for_timer, |st| {
+                                        if st.timer == Some(token) {
+                                            st.timer = None;
+                                            st.target_pane_id = None;
+                                            st.tab_id = None;
+                                            st.attempts = 0;
+                                        }
+                                    });
+                                    return false;
+                                }
+
+                                if attempts >= MAX_ATTEMPTS {
+                                    let _ = host.models_mut().update(&focus_restore_model_for_timer, |st| {
+                                        if st.timer == Some(token) {
+                                            st.timer = None;
+                                            st.target_pane_id = None;
+                                            st.tab_id = None;
+                                            st.attempts = 0;
+                                        }
+                                    });
+                                    return false;
+                                }
+
+                                let retry_token = host.next_timer_token();
+                                let retry_after = if attempts == 0 {
+                                    Duration::from_millis(0)
+                                } else {
+                                    Duration::from_millis(16)
+                                };
+
+                                let _ = host.models_mut().update(&focus_restore_model_for_timer, |st| {
+                                    if st.timer == Some(token) {
+                                        st.timer = Some(retry_token);
+                                        st.attempts = attempts.saturating_add(1);
+                                    }
+                                });
+
+                                host.push_effect(Effect::SetTimer {
+                                    window: Some(acx.window),
+                                    token: retry_token,
+                                    after: retry_after,
+                                    repeat: None,
+                                });
+
+                                false
+                            }),
+                        );
 
                         cx.command_on_command_for(
                             root.id,
@@ -1796,6 +1918,19 @@ impl WorkspaceTabStrip {
                                 );
 
                                 if let Some(next_id) = next {
+                                    // Drop the closing tab entry (best-effort) so the registry
+                                    // doesn't grow unbounded in long sessions.
+                                    let closing_key = WorkspaceTabElementKey {
+                                        window: acx.window,
+                                        pane_id: pane_id_for_hook.clone(),
+                                        tab_id: active_id.clone(),
+                                    };
+                                    let _ = host
+                                        .models_mut()
+                                        .update(&tab_element_registry_for_command, |reg| {
+                                            reg.remove(&closing_key);
+                                        });
+
                                     let target = tab_elements_for_hook
                                         .borrow()
                                         .iter()
@@ -1805,6 +1940,36 @@ impl WorkspaceTabStrip {
                                         host.request_focus(target);
                                         host.request_redraw(acx.window);
                                     }
+
+                                    // The tab we want to focus is typically not focusable until it
+                                    // becomes the new active tab (roving focus policy). Defer an
+                                    // additional focus attempt to a timer tick so it runs after
+                                    // the close command has updated selection.
+                                    let existing = host
+                                        .models_mut()
+                                        .read(&focus_restore_model_for_command, |st| st.timer)
+                                        .ok()
+                                        .flatten();
+                                    if let Some(prev) = existing {
+                                        host.push_effect(Effect::CancelTimer { token: prev });
+                                    }
+
+                                    let token = host.next_timer_token();
+                                    let _ = host.models_mut().update(
+                                        &focus_restore_model_for_command,
+                                        |st| {
+                                            st.timer = Some(token);
+                                            st.target_pane_id = pane_id_for_hook.clone();
+                                            st.tab_id = Some(next_id.clone());
+                                            st.attempts = 0;
+                                        },
+                                    );
+                                    host.push_effect(Effect::SetTimer {
+                                        window: Some(acx.window),
+                                        token,
+                                        after: Duration::from_millis(0),
+                                        repeat: None,
+                                    });
                                 }
 
                                 false

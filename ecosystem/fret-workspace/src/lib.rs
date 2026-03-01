@@ -5,6 +5,7 @@
 //! - It should not expand the `fret-ui` runtime contract surface (ADR 0066).
 
 pub mod commands;
+mod focus_registry;
 mod frame;
 pub mod layout;
 pub mod menu;

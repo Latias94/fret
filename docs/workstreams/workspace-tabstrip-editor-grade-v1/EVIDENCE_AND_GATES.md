@@ -9,6 +9,7 @@ Goal: keep the tab strip refactor **fearless** by locking outcomes behind unit t
 - `ecosystem/fret-workspace/src/tab_strip/kernel.rs` (drop target computation)
 - `ecosystem/fret-workspace/src/tab_strip/geometry.rs` (tab rect collection / hit testing helpers)
 - `ecosystem/fret-workspace/src/tab_strip/utils.rs` (canonical end-drop resolution)
+- `ecosystem/fret-workspace/src/focus_registry.rs` (cross-frame element id registry for focus restore)
 - `ecosystem/fret-workspace/tests/tab_strip_pointer_down_does_not_steal_focus.rs` (focus stability)
 - `ecosystem/fret-workspace/tests/tab_strip_focus_restore_after_close_command.rs` (close focus restore)
 - `ecosystem/fret-workspace/tests/tab_strip_keyboard_roving_arrow_activates_tab.rs` (roving keyboard activation)

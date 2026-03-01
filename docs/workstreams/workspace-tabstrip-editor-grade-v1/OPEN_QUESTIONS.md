@@ -58,3 +58,22 @@ Recommendation (default for v1):
 Gate:
 - Unit: `ecosystem/fret-workspace/tests/tab_strip_keyboard_roving_arrow_activates_tab.rs`
   (focus moves + `workspace.tab.activate.<id>` is dispatched).
+
+## Q5: Should focus restore after close rely on “temporarily focusable” non-active tabs?
+
+Why it matters:
+- Our tab strip uses a roving focus policy where only the active tab is focusable.
+- When closing the active tab, the predicted next tab is typically **not** focusable until the
+  selection has updated (next frame).
+
+Options:
+1) Temporarily make the predicted next tab focusable in the same frame (render-time policy).
+2) Defer focus restore to a timer tick (post-command, after selection update).
+
+Recommendation:
+- Prefer **(2)** for v1: keep the roving focus policy simple and deterministic, and use a
+  best-effort deferred focus attempt (timer + retries) to restore focus within the strip.
+
+Gate:
+- Keep `ecosystem/fret-workspace/tests/tab_strip_focus_restore_after_close_command.rs` green and
+  add a diagnostics script if this becomes flaky across runners.
