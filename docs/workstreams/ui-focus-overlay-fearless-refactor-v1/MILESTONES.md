@@ -31,3 +31,8 @@ Done when:
 - Evidence plan exists (diag script or debug report) to prove parity with Phase A/B invariants.
 
 Status: Draft (design exists; migration breakdown drafted; diagnostics + implementation still TODO).
+
+Notes:
+
+- PR0 (types + builder entrypoint) is landed: `crates/fret-ui/src/tree/dispatch_snapshot.rs` and
+  `crates/fret-ui/src/tree/ui_tree_debug/query.rs` (`debug_dispatch_snapshot`).

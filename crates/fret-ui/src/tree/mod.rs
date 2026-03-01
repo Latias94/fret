@@ -27,6 +27,7 @@ mod bounds_tree;
 mod commands;
 mod debug;
 mod dispatch;
+mod dispatch_snapshot;
 mod frame_arena;
 mod hit_test;
 mod invalidation_dedup;
@@ -99,6 +100,7 @@ use util::{
 
 #[cfg(feature = "diagnostics")]
 pub use debug::{
+    UiDebugDispatchSnapshot, UiDebugDispatchSnapshotNode,
     UiDebugOverlayPolicyDecisionWrite, UiDebugParentSeverWrite, UiDebugRemoveSubtreeFrameContext,
     UiDebugRemoveSubtreeOutcome, UiDebugRemoveSubtreeRecord, UiDebugSetChildrenWrite,
     UiDebugSetLayerVisibleWrite,
@@ -116,6 +118,9 @@ use shortcuts::{
     KeydownShortcutParams, PendingShortcut, PointerDownOutsideOutcome, PointerDownOutsideParams,
 };
 use small_list::{SmallCopyList, SmallNodeList};
+
+#[cfg(feature = "diagnostics")]
+pub(crate) use dispatch_snapshot::UiDispatchSnapshot;
 
 fn type_id_sort_key(id: TypeId) -> u64 {
     use std::hash::{Hash, Hasher};
@@ -279,6 +284,8 @@ pub struct UiTree<H: UiHost> {
     debug_removed_subtrees: Vec<UiDebugRemoveSubtreeRecord>,
     #[cfg(feature = "diagnostics")]
     debug_reachable_from_layer_roots: Option<(FrameId, HashSet<NodeId>)>,
+    #[cfg(feature = "diagnostics")]
+    debug_dispatch_snapshot: Option<UiDispatchSnapshot>,
     #[cfg(feature = "diagnostics")]
     debug_text_constraints_measured: HashMap<NodeId, TextConstraints>,
     #[cfg(feature = "diagnostics")]

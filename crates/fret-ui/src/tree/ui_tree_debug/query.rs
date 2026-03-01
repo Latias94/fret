@@ -583,4 +583,24 @@ impl<H: UiHost> UiTree<H> {
             barrier_root,
         }
     }
+
+    #[cfg(feature = "diagnostics")]
+    pub fn debug_dispatch_snapshot(&mut self, frame_id: FrameId) -> UiDebugDispatchSnapshot {
+        if self
+            .debug_dispatch_snapshot
+            .as_ref()
+            .is_some_and(|s| s.frame_id == frame_id)
+        {
+            let snapshot = self
+                .debug_dispatch_snapshot
+                .as_ref()
+                .expect("snapshot presence checked");
+            return UiDebugDispatchSnapshot::from_snapshot(snapshot);
+        }
+
+        let snapshot = self.build_dispatch_snapshot(frame_id);
+        let debug = UiDebugDispatchSnapshot::from_snapshot(&snapshot);
+        self.debug_dispatch_snapshot = Some(snapshot);
+        debug
+    }
 }

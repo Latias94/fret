@@ -138,6 +138,11 @@ impl<H: UiHost> UiTree<H> {
 
         self.debug_view_cache_roots.clear();
         self.debug_view_cache_contained_relayout_roots.clear();
+
+        #[cfg(feature = "diagnostics")]
+        {
+            self.debug_dispatch_snapshot = None;
+        }
         self.debug_paint_cache_replays.clear();
         self.debug_layout_engine_solves.clear();
         self.debug_layout_hotspots.clear();

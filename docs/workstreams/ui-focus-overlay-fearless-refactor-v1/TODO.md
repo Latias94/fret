@@ -18,6 +18,7 @@
 ## Phase C (Dispatch snapshot)
 
 - [x] Write `MILESTONES.md`-driven detailed design + migration breakdown (`M2_DISPATCH_SNAPSHOT_DESIGN.md`).
+- [x] PR0: Introduce `UiDispatchSnapshot` types + builder entrypoint (debug-only; no behavior change).
 - [ ] Introduce a snapshot struct (per window, per frame) capturing:
   - [ ] focus containment relationships
   - [ ] hit-test primitives + transforms

@@ -17,6 +17,11 @@
 - Focus scope trap: `crates/fret-ui/src/tree/tests/focus_scope.rs`
 - Declarative dismissible interactions: `crates/fret-ui/src/declarative/tests/interactions/dismissible.rs`
 
+## Phase C anchors (snapshot PR0)
+
+- Snapshot types + builder: `crates/fret-ui/src/tree/dispatch_snapshot.rs`
+- Debug entrypoint (no behavior change): `crates/fret-ui/src/tree/ui_tree_debug/query.rs` (`debug_dispatch_snapshot`)
+
 ## New artifacts (Phase A/B)
 
 - Unit test: stale parent pointers do not break outside-press branch exclusion.
