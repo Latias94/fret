@@ -8,6 +8,7 @@ Goal: keep the tab strip refactor **fearless** by locking outcomes behind unit t
 - `ecosystem/fret-workspace/src/tab_strip/mod.rs` (workspace tab strip implementation)
 - `ecosystem/fret-workspace/src/tab_strip/kernel.rs` (drop target computation)
 - `ecosystem/fret-workspace/src/tab_strip/geometry.rs` (tab rect collection / hit testing helpers)
+- `ecosystem/fret-workspace/src/tab_strip/utils.rs` (canonical end-drop resolution)
 - `ecosystem/fret-workspace/tests/tab_strip_pointer_down_does_not_steal_focus.rs` (focus stability)
 
 ## M1 gates (must exist before/while refactoring)
@@ -40,6 +41,10 @@ Add promoted scripts under `tools/diag-scripts/workspace/**`:
 3) Overflow (resize) (invariants-first)
    - shrink tab strip width until overflow occurs
    - open overflow menu, activate a hidden tab, assert it becomes active and scrolls into view
+   - promoted script:
+     - `workspace-shell-demo-tab-overflow-activate-hidden-smoke`
+   - drag-to-end reorder while overflowed:
+     - `workspace-shell-demo-tab-reorder-first-to-end-overflow-smoke`
 
 4) Drag-to-split preview (bridge)
    - promoted scripts:

@@ -147,6 +147,10 @@ struct Paint {
   tile_mode: u32,
   color_space: u32,
   stop_count: u32,
+  eval_space: u32,
+  _pad_eval0: u32,
+  _pad_eval1: u32,
+  _pad_eval2: u32,
   params0: vec4<f32>,
   params1: vec4<f32>,
   params2: vec4<f32>,
@@ -372,6 +376,26 @@ fn rrect_perimeter_s(p: vec2<f32>, rect: vec4<f32>, corner_radii: vec4<f32>) -> 
   }
 
   return best_s;
+}
+
+fn rrect_perimeter_len(rect: vec4<f32>, corner_radii: vec4<f32>) -> f32 {
+  let half_pi = 1.5707963267948966;
+
+  let w = rect.z;
+  let h = rect.w;
+
+  let r_tl = max(corner_radii.x, 0.0);
+  let r_tr = max(corner_radii.y, 0.0);
+  let r_br = max(corner_radii.z, 0.0);
+  let r_bl = max(corner_radii.w, 0.0);
+
+  let l_top = max(0.0, w - r_tl - r_tr);
+  let l_right = max(0.0, h - r_tr - r_br);
+  let l_bottom = max(0.0, w - r_bl - r_br);
+  let l_left = max(0.0, h - r_tl - r_bl);
+
+  let l_corners = half_pi * (r_tl + r_tr + r_br + r_bl);
+  return l_top + l_right + l_bottom + l_left + l_corners;
 }
 
 fn clip_alpha(pixel_pos: vec2<f32>) -> f32 {
@@ -783,7 +807,8 @@ fn material_eval(p: Paint, local_pos: vec2<f32>, sample_catalog: bool) -> vec4<f
   return material;
 }
 
-fn paint_eval_fill(p: Paint, local_pos: vec2<f32>) -> vec4<f32> {
+fn paint_eval_fill(p: Paint, local_pos: vec2<f32>, pixel_pos: vec2<f32>) -> vec4<f32> {
+  let pos = select(local_pos, pixel_pos, p.eval_space == 1u);
   if (FRET_FILL_KIND == 0u) {
     return p.params0;
   }
@@ -792,14 +817,14 @@ fn paint_eval_fill(p: Paint, local_pos: vec2<f32>) -> vec4<f32> {
     let end = p.params0.zw;
     let dir = end - start;
     let len2 = dot(dir, dir);
-    let t = select(0.0, dot(local_pos - start, dir) / len2, len2 > 1e-6);
+    let t = select(0.0, dot(pos - start, dir) / len2, len2 > 1e-6);
     let tt = gradient_tile_mode_apply(t, p.tile_mode);
     return paint_sample_stops(p, tt);
   }
   if (FRET_FILL_KIND == 2u) {
     let center = p.params0.xy;
     let radius = max(p.params0.zw, vec2<f32>(1e-6));
-    let d = (local_pos - center) / radius;
+    let d = (pos - center) / radius;
     let t = length(d);
     let tt = gradient_tile_mode_apply(t, p.tile_mode);
     return paint_sample_stops(p, tt);
@@ -808,7 +833,7 @@ fn paint_eval_fill(p: Paint, local_pos: vec2<f32>) -> vec4<f32> {
     let center = p.params0.xy;
     let start = p.params0.z;
     let span = max(p.params0.w, 1e-6);
-    let v = local_pos - center;
+    let v = pos - center;
     let a = atan2(v.y, v.x);
     let turns = fract(a * (1.0 / 6.2831853) + 1.0);
     let rel = fract(turns - fract(start) + 1.0);
@@ -818,12 +843,13 @@ fn paint_eval_fill(p: Paint, local_pos: vec2<f32>) -> vec4<f32> {
   }
   if (FRET_FILL_KIND == 3u) {
     let sampled = FRET_FILL_MATERIAL_SAMPLED != 0u;
-    return material_eval(p, local_pos, sampled);
+    return material_eval(p, pos, sampled);
   }
   return vec4<f32>(0.0);
 }
 
-fn paint_eval_border(p: Paint, local_pos: vec2<f32>) -> vec4<f32> {
+fn paint_eval_border(p: Paint, local_pos: vec2<f32>, pixel_pos: vec2<f32>) -> vec4<f32> {
+  let pos = select(local_pos, pixel_pos, p.eval_space == 1u);
   if (FRET_BORDER_KIND == 0u) {
     return p.params0;
   }
@@ -832,14 +858,14 @@ fn paint_eval_border(p: Paint, local_pos: vec2<f32>) -> vec4<f32> {
     let end = p.params0.zw;
     let dir = end - start;
     let len2 = dot(dir, dir);
-    let t = select(0.0, dot(local_pos - start, dir) / len2, len2 > 1e-6);
+    let t = select(0.0, dot(pos - start, dir) / len2, len2 > 1e-6);
     let tt = gradient_tile_mode_apply(t, p.tile_mode);
     return paint_sample_stops(p, tt);
   }
   if (FRET_BORDER_KIND == 2u) {
     let center = p.params0.xy;
     let radius = max(p.params0.zw, vec2<f32>(1e-6));
-    let d = (local_pos - center) / radius;
+    let d = (pos - center) / radius;
     let t = length(d);
     let tt = gradient_tile_mode_apply(t, p.tile_mode);
     return paint_sample_stops(p, tt);
@@ -848,7 +874,7 @@ fn paint_eval_border(p: Paint, local_pos: vec2<f32>) -> vec4<f32> {
     let center = p.params0.xy;
     let start = p.params0.z;
     let span = max(p.params0.w, 1e-6);
-    let v = local_pos - center;
+    let v = pos - center;
     let a = atan2(v.y, v.x);
     let turns = fract(a * (1.0 / 6.2831853) + 1.0);
     let rel = fract(turns - fract(start) + 1.0);
@@ -858,7 +884,7 @@ fn paint_eval_border(p: Paint, local_pos: vec2<f32>) -> vec4<f32> {
   }
   if (FRET_BORDER_KIND == 3u) {
     let sampled = FRET_BORDER_MATERIAL_SAMPLED != 0u;
-    return material_eval(p, local_pos, sampled);
+    return material_eval(p, pos, sampled);
   }
   return vec4<f32>(0.0);
 }
@@ -903,7 +929,7 @@ fn fs_main(input: VsOut) -> @location(0) vec4<f32> {
     border_cov = alpha_outer * (1.0 - alpha_inner);
   }
 
-  let fill = paint_eval_fill(inst.fill_paint, input.local_pos) * alpha_fill;
+  let fill = paint_eval_fill(inst.fill_paint, input.local_pos, input.pixel_pos) * alpha_fill;
   var border = vec4<f32>(0.0);
   if (FRET_BORDER_PRESENT != 0u) {
     var dash_mask = 1.0;
@@ -921,7 +947,14 @@ fn fs_main(input: VsOut) -> @location(0) vec4<f32> {
       let on_end = 1.0 - smoothstep(dash - aa, dash + aa, m);
       dash_mask = on_start * on_end;
     }
-    border = paint_eval_border(inst.border_paint, input.local_pos) * border_cov * dash_mask;
+    var border_local_pos = input.local_pos;
+    if (inst.border_paint.eval_space == 2u) {
+      let s = rrect_perimeter_s(input.local_pos, input.rect, input.corner_radii);
+      let len = rrect_perimeter_len(input.rect, input.corner_radii);
+      let s01 = select(0.0, clamp(s / len, 0.0, 1.0), len > 1e-6);
+      border_local_pos = vec2<f32>(s01, 0.0);
+    }
+    border = paint_eval_border(inst.border_paint, border_local_pos, input.pixel_pos) * border_cov * dash_mask;
   }
 
   let out = (fill + border) * clip * mask;
@@ -4525,6 +4558,10 @@ struct Paint {
   tile_mode: u32,
   color_space: u32,
   stop_count: u32,
+  eval_space: u32,
+  _pad_eval0: u32,
+  _pad_eval1: u32,
+  _pad_eval2: u32,
   params0: vec4<f32>,
   params1: vec4<f32>,
   params2: vec4<f32>,
@@ -4795,10 +4832,11 @@ fn material_eval(p: Paint, local_pos: vec2<f32>, sample_catalog: bool) -> vec4<f
   return material;
 }
 
-fn paint_eval(p: Paint, local_pos: vec2<f32>) -> vec4<f32> {
+fn paint_eval(p: Paint, local_pos: vec2<f32>, pixel_pos: vec2<f32>) -> vec4<f32> {
   // WebGPU/WGSL constraint: derivative ops (fwidth/dpdx/dpdy) must only be used from uniform control flow.
   // Because `p.kind` is per-instance (not uniform), we avoid control-flow branching on it here and instead
   // compute candidate fills eagerly and select the final result.
+  let pos = select(local_pos, pixel_pos, p.eval_space == 1u);
   let is_solid = p.kind == 0u;
   let is_linear = p.kind == 1u;
   let is_radial = p.kind == 2u;
@@ -4812,20 +4850,20 @@ fn paint_eval(p: Paint, local_pos: vec2<f32>) -> vec4<f32> {
   let dir = end - start;
   let len2 = dot(dir, dir);
   let lin_denom = max(len2, 1e-6);
-  let lin_t0 = dot(local_pos - start, dir) / lin_denom;
+  let lin_t0 = dot(pos - start, dir) / lin_denom;
   let lin_t = select(0.0, lin_t0, len2 > 1e-6);
   let linear = paint_sample_stops(p, gradient_tile_mode_apply(lin_t, p.tile_mode));
 
   let radial_center = p.params0.xy;
   let radial_radius = max(p.params0.zw, vec2<f32>(1e-6));
-  let radial_d = (local_pos - radial_center) / radial_radius;
+  let radial_d = (pos - radial_center) / radial_radius;
   let radial_t = length(radial_d);
   let radial = paint_sample_stops(p, gradient_tile_mode_apply(radial_t, p.tile_mode));
 
   let conic_center = p.params0.xy;
   let conic_start = p.params0.z;
   let conic_span = max(p.params0.w, 1e-6);
-  let conic_v = local_pos - conic_center;
+  let conic_v = pos - conic_center;
   let conic_a = atan2(conic_v.y, conic_v.x);
   let conic_turns = fract(conic_a * (1.0 / 6.2831853) + 1.0);
   let conic_rel = fract(conic_turns - fract(conic_start) + 1.0);
@@ -4833,7 +4871,7 @@ fn paint_eval(p: Paint, local_pos: vec2<f32>) -> vec4<f32> {
   let conic = paint_sample_stops(p, gradient_tile_mode_apply(conic_t, p.tile_mode));
 
   let material_sampled = is_material && (p.stop_count != 0u);
-  let material = material_eval(p, local_pos, material_sampled);
+  let material = material_eval(p, pos, material_sampled);
 
   var out = vec4<f32>(0.0);
   out = select(out, solid, is_solid);
@@ -5091,7 +5129,7 @@ fn fs_main(input: VsOut) -> @location(0) vec4<f32> {
   let clip = clip_alpha(input.pixel_pos);
   let mask = mask_alpha(input.pixel_pos);
   let paint = path_paints.paints[input.paint_index];
-  let fill = paint_eval(paint, input.local_pos_px);
+  let fill = paint_eval(paint, input.local_pos_px, input.pixel_pos);
   let out = fill * clip * mask;
   return encode_output_premul(out);
 }
@@ -5174,6 +5212,10 @@ struct Paint {
   tile_mode: u32,
   color_space: u32,
   stop_count: u32,
+  eval_space: u32,
+  _pad_eval0: u32,
+  _pad_eval1: u32,
+  _pad_eval2: u32,
   params0: vec4<f32>,
   params1: vec4<f32>,
   params2: vec4<f32>,
@@ -5371,7 +5413,8 @@ fn paint_sample_stops(p: Paint, t: f32) -> vec4<f32> {
   return prev_color;
 }
 
-fn paint_eval(p: Paint, local_pos: vec2<f32>) -> vec4<f32> {
+fn paint_eval(p: Paint, local_pos: vec2<f32>, pixel_pos: vec2<f32>) -> vec4<f32> {
+  let pos = select(local_pos, pixel_pos, p.eval_space == 1u);
   if (p.kind == 0u) {
     return p.params0;
   }
@@ -5380,14 +5423,14 @@ fn paint_eval(p: Paint, local_pos: vec2<f32>) -> vec4<f32> {
     let end = p.params0.zw;
     let dir = end - start;
     let len2 = dot(dir, dir);
-    let t = select(0.0, dot(local_pos - start, dir) / len2, len2 > 1e-6);
+    let t = select(0.0, dot(pos - start, dir) / len2, len2 > 1e-6);
     let tt = gradient_tile_mode_apply(t, p.tile_mode);
     return paint_sample_stops(p, tt);
   }
   if (p.kind == 2u) {
     let center = p.params0.xy;
     let radius = max(p.params0.zw, vec2<f32>(1e-6));
-    let d = (local_pos - center) / radius;
+    let d = (pos - center) / radius;
     let t = length(d);
     let tt = gradient_tile_mode_apply(t, p.tile_mode);
     return paint_sample_stops(p, tt);
@@ -5396,7 +5439,7 @@ fn paint_eval(p: Paint, local_pos: vec2<f32>) -> vec4<f32> {
     let center = p.params0.xy;
     let start = p.params0.z;
     let span = max(p.params0.w, 1e-6);
-    let v = local_pos - center;
+    let v = pos - center;
     let a = atan2(v.y, v.x);
     let turns = fract(a * (1.0 / 6.2831853) + 1.0);
     let rel = fract(turns - fract(start) + 1.0);
@@ -5676,7 +5719,7 @@ fn fs_main(input: VsOut) -> @location(0) vec4<f32> {
   let tex = textureSample(glyph_atlas, glyph_sampler, input.uv);
   let fill_sample = tex.r;
   let p = text_paints.paints[input.paint_index];
-  let base = paint_eval(p, input.local_pos_px) * input.color;
+  let base = paint_eval(p, input.local_pos_px, input.pixel_pos) * input.color;
   let base_un = select(vec3<f32>(0.0), base.rgb / base.a, base.a > 1e-6);
   let fill_cov = apply_contrast_and_gamma_correction(fill_sample, base_un);
   var out = vec4<f32>(base.rgb * fill_cov, base.a * fill_cov);
@@ -5690,7 +5733,7 @@ fn fs_main(input: VsOut) -> @location(0) vec4<f32> {
     let outline_paint_index = outline_params >> 2u;
     let op = text_paints.paints[outline_paint_index];
     let outline_mul = vec4<f32>(1.0, 1.0, 1.0, input.color.a);
-    let outline_base = paint_eval(op, input.local_pos_px) * outline_mul;
+    let outline_base = paint_eval(op, input.local_pos_px, input.pixel_pos) * outline_mul;
     let outline_un = select(
       vec3<f32>(0.0),
       outline_base.rgb / outline_base.a,
@@ -5780,6 +5823,10 @@ struct Paint {
   tile_mode: u32,
   color_space: u32,
   stop_count: u32,
+  eval_space: u32,
+  _pad_eval0: u32,
+  _pad_eval1: u32,
+  _pad_eval2: u32,
   params0: vec4<f32>,
   params1: vec4<f32>,
   params2: vec4<f32>,
@@ -5977,7 +6024,8 @@ fn paint_sample_stops(p: Paint, t: f32) -> vec4<f32> {
   return prev_color;
 }
 
-fn paint_eval(p: Paint, local_pos: vec2<f32>) -> vec4<f32> {
+fn paint_eval(p: Paint, local_pos: vec2<f32>, pixel_pos: vec2<f32>) -> vec4<f32> {
+  let pos = select(local_pos, pixel_pos, p.eval_space == 1u);
   if (p.kind == 0u) {
     return p.params0;
   }
@@ -5986,14 +6034,14 @@ fn paint_eval(p: Paint, local_pos: vec2<f32>) -> vec4<f32> {
     let end = p.params0.zw;
     let dir = end - start;
     let len2 = dot(dir, dir);
-    let t = select(0.0, dot(local_pos - start, dir) / len2, len2 > 1e-6);
+    let t = select(0.0, dot(pos - start, dir) / len2, len2 > 1e-6);
     let tt = gradient_tile_mode_apply(t, p.tile_mode);
     return paint_sample_stops(p, tt);
   }
   if (p.kind == 2u) {
     let center = p.params0.xy;
     let radius = max(p.params0.zw, vec2<f32>(1e-6));
-    let d = (local_pos - center) / radius;
+    let d = (pos - center) / radius;
     let t = length(d);
     let tt = gradient_tile_mode_apply(t, p.tile_mode);
     return paint_sample_stops(p, tt);
@@ -6002,7 +6050,7 @@ fn paint_eval(p: Paint, local_pos: vec2<f32>) -> vec4<f32> {
     let center = p.params0.xy;
     let start = p.params0.z;
     let span = max(p.params0.w, 1e-6);
-    let v = local_pos - center;
+    let v = pos - center;
     let a = atan2(v.y, v.x);
     let turns = fract(a * (1.0 / 6.2831853) + 1.0);
     let rel = fract(turns - fract(start) + 1.0);
@@ -6175,7 +6223,7 @@ fn fs_main(input: VsOut) -> @location(0) vec4<f32> {
   let mask = mask_alpha(input.pixel_pos);
   let tex = textureSample(glyph_atlas, glyph_sampler, input.uv);
   let p = text_paints.paints[input.paint_index];
-  let base = paint_eval(p, input.local_pos_px) * input.color;
+  let base = paint_eval(p, input.local_pos_px, input.pixel_pos) * input.color;
   let a = tex.a * base.a;
   let out = vec4<f32>(tex.rgb * a, a) * clip * mask;
   return encode_output_premul(out);
@@ -6257,6 +6305,10 @@ struct Paint {
   tile_mode: u32,
   color_space: u32,
   stop_count: u32,
+  eval_space: u32,
+  _pad_eval0: u32,
+  _pad_eval1: u32,
+  _pad_eval2: u32,
   params0: vec4<f32>,
   params1: vec4<f32>,
   params2: vec4<f32>,
@@ -6454,7 +6506,8 @@ fn paint_sample_stops(p: Paint, t: f32) -> vec4<f32> {
   return prev_color;
 }
 
-fn paint_eval(p: Paint, local_pos: vec2<f32>) -> vec4<f32> {
+fn paint_eval(p: Paint, local_pos: vec2<f32>, pixel_pos: vec2<f32>) -> vec4<f32> {
+  let pos = select(local_pos, pixel_pos, p.eval_space == 1u);
   if (p.kind == 0u) {
     return p.params0;
   }
@@ -6463,14 +6516,14 @@ fn paint_eval(p: Paint, local_pos: vec2<f32>) -> vec4<f32> {
     let end = p.params0.zw;
     let dir = end - start;
     let len2 = dot(dir, dir);
-    let t = select(0.0, dot(local_pos - start, dir) / len2, len2 > 1e-6);
+    let t = select(0.0, dot(pos - start, dir) / len2, len2 > 1e-6);
     let tt = gradient_tile_mode_apply(t, p.tile_mode);
     return paint_sample_stops(p, tt);
   }
   if (p.kind == 2u) {
     let center = p.params0.xy;
     let radius = max(p.params0.zw, vec2<f32>(1e-6));
-    let d = (local_pos - center) / radius;
+    let d = (pos - center) / radius;
     let t = length(d);
     let tt = gradient_tile_mode_apply(t, p.tile_mode);
     return paint_sample_stops(p, tt);
@@ -6479,7 +6532,7 @@ fn paint_eval(p: Paint, local_pos: vec2<f32>) -> vec4<f32> {
     let center = p.params0.xy;
     let start = p.params0.z;
     let span = max(p.params0.w, 1e-6);
-    let v = local_pos - center;
+    let v = pos - center;
     let a = atan2(v.y, v.x);
     let turns = fract(a * (1.0 / 6.2831853) + 1.0);
     let rel = fract(turns - fract(start) + 1.0);
@@ -6757,7 +6810,7 @@ fn fs_main(input: VsOut) -> @location(0) vec4<f32> {
   let mask = mask_alpha(input.pixel_pos);
   let tex = textureSample(glyph_atlas, glyph_sampler, input.uv);
   let p = text_paints.paints[input.paint_index];
-  let base = paint_eval(p, input.local_pos_px) * input.color;
+  let base = paint_eval(p, input.local_pos_px, input.pixel_pos) * input.color;
   let base_un = select(vec3<f32>(0.0), base.rgb / base.a, base.a > 1e-6);
   let coverage = apply_contrast_and_gamma_correction3(tex.rgb, base_un);
   let a = max(max(coverage.r, coverage.g), coverage.b);
@@ -6773,7 +6826,7 @@ fn fs_main(input: VsOut) -> @location(0) vec4<f32> {
     let outline_paint_index = outline_params >> 2u;
     let op = text_paints.paints[outline_paint_index];
     let outline_mul = vec4<f32>(1.0, 1.0, 1.0, input.color.a);
-    let outline_base = paint_eval(op, input.local_pos_px) * outline_mul;
+    let outline_base = paint_eval(op, input.local_pos_px, input.pixel_pos) * outline_mul;
     let outline_un = select(
       vec3<f32>(0.0),
       outline_base.rgb / outline_base.a,

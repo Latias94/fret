@@ -767,7 +767,6 @@ where
                             if next_zone != WorkspaceTabDropZone::Center {
                                 st.hovered_tab = None;
                                 st.hovered_tab_side = None;
-                                st.hovered_pane_tab_rects = Vec::new();
                             }
                             handled = true;
                         }

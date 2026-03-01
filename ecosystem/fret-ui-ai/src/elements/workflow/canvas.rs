@@ -126,9 +126,9 @@ impl WorkflowCanvas {
                     p.scene().push(SceneOp::Quad {
                         order: DrawOrder(0),
                         rect: bounds,
-                        background: Paint::Solid(sidebar),
+                        background: Paint::Solid(sidebar).into(),
                         border: Edges::all(Px(0.0)),
-                        border_paint: Paint::Solid(sidebar),
+                        border_paint: Paint::Solid(sidebar).into(),
                         corner_radii: Corners::all(Px(0.0)),
                     });
                 }

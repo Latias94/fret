@@ -13,6 +13,7 @@ use fret_ui::element::{
     SemanticsProps, ViewCacheProps,
 };
 use fret_ui::{Invalidation, UiTree, VirtualListScrollHandle};
+use fret_ui_kit::OverlayController;
 use fret_ui_kit::declarative::ElementContextThemeExt as _;
 use fret_ui_kit::declarative::file_tree::{FileTreeViewProps, file_tree_view_retained_v0};
 use fret_ui_kit::{TreeItem, TreeState};
@@ -397,7 +398,9 @@ impl WinitAppDriver for WorkspaceShellDemoDriver {
             scene,
         } = context;
 
+        OverlayController::begin_frame(app, window);
         Self::render_ui(app, services, window, state, bounds);
+        OverlayController::render(&mut state.ui, app, services, window, bounds);
 
         state.ui.request_semantics_snapshot();
         state.ui.ingest_paint_cache_source(scene);

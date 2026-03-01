@@ -95,6 +95,8 @@ impl Interpreter {
             | SceneOp::PopMask
             | SceneOp::PushEffect { .. }
             | SceneOp::PopEffect
+            | SceneOp::PushBackdropSourceGroupV1 { .. }
+            | SceneOp::PopBackdropSourceGroup
             | SceneOp::PushCompositeGroup { .. }
             | SceneOp::PopCompositeGroup
             | SceneOp::Quad { .. }
@@ -115,9 +117,9 @@ fn quad(rect: Rect) -> SceneOp {
     SceneOp::Quad {
         order: DrawOrder(0),
         rect,
-        background: Paint::Solid(Color::TRANSPARENT),
+        background: Paint::Solid(Color::TRANSPARENT).into(),
         border: Edges::all(Px(0.0)),
-        border_paint: Paint::Solid(Color::TRANSPARENT),
+        border_paint: Paint::Solid(Color::TRANSPARENT).into(),
         corner_radii: Corners::all(Px(0.0)),
     }
 }

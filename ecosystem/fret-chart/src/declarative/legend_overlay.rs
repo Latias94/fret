@@ -417,10 +417,10 @@ pub(crate) fn legend_overlay_tool(
             painter.scene().push(fret_core::SceneOp::Quad {
                 order: legend_order,
                 rect: legend_rect,
-                background: fret_core::Paint::Solid(legend_style.legend_background),
+                background: fret_core::Paint::Solid(legend_style.legend_background).into(),
 
                 border: Edges::all(legend_style.legend_border_width),
-                border_paint: fret_core::Paint::Solid(legend_style.legend_border_color),
+                border_paint: fret_core::Paint::Solid(legend_style.legend_border_color).into(),
 
                 corner_radii: Corners::all(legend_style.legend_corner_radius),
             });
@@ -443,10 +443,11 @@ pub(crate) fn legend_overlay_tool(
                             rect,
                             background: fret_core::Paint::Solid(
                                 legend_style.legend_hover_background,
-                            ),
+                            )
+                            .into(),
 
                             border: Edges::all(Px(0.0)),
-                            border_paint: fret_core::Paint::TRANSPARENT,
+                            border_paint: fret_core::Paint::TRANSPARENT.into(),
 
                             corner_radii: Corners::all(Px(4.0)),
                         });
@@ -487,10 +488,11 @@ pub(crate) fn legend_overlay_tool(
                                 rect: item_rect,
                                 background: fret_core::Paint::Solid(
                                     legend_style.legend_hover_background,
-                                ),
+                                )
+                                .into(),
 
                                 border: Edges::all(Px(0.0)),
-                                border_paint: fret_core::Paint::TRANSPARENT,
+                                border_paint: fret_core::Paint::TRANSPARENT.into(),
 
                                 corner_radii: Corners::all(Px(0.0)),
                             });
@@ -507,10 +509,10 @@ pub(crate) fn legend_overlay_tool(
                                 Point::new(Px(sw_x), Px(sw_y)),
                                 Size::new(Px(sw), Px(sw)),
                             ),
-                            background: fret_core::Paint::Solid(swatch),
+                            background: fret_core::Paint::Solid(swatch).into(),
 
                             border: Edges::all(Px(0.0)),
-                            border_paint: fret_core::Paint::TRANSPARENT,
+                            border_paint: fret_core::Paint::TRANSPARENT.into(),
 
                             corner_radii: Corners::all(Px(2.0)),
                         });

@@ -54,6 +54,22 @@ paint-first and cache-safe.
   - outline stroke for wire readability on busy canvases,
   - depth cueing (selected wire drawn above others, subtle shadow).
 
+#### Renderer baseline: stroke paint already supports gradients
+
+At the scene/renderer contract level, stroke-like primitives already carry `Paint` (not just a solid
+`Color`), and the WGPU backend evaluates `Paint::LinearGradient` for both:
+
+- `SceneOp::StrokeRRect` (stroke paint routed through the quad border paint surface)
+- `SceneOp::Path` when prepared with `PathStyle::StrokeV2` (stroke path paint)
+
+This is enough to express XYFlow-style “endpoint chord” gradients today by choosing gradient
+`start/end` points in canvas space.
+
+What is *not* covered by this baseline is a “stroke-space” gradient that follows curve length
+(`s` along the path). That requires an explicit mapping contract (mechanism) and extra vertex data
+in the path pipeline. That work is intentionally deferred and should be introduced behind a
+contracted extension point (see “Future” notes below).
+
 ### Ports
 
 - Port shapes (circle/diamond/triangle) are already represented in the hint surface; implement the
@@ -160,3 +176,4 @@ Extend the existing hint structs rather than inventing ad-hoc style knobs:
   - Scene op: `crates/fret-render-wgpu/src/renderer/render_scene/encode/ops.rs`
   - Path dash: `crates/fret-core/src/vector_path.rs`
   - Path dash tessellation: `crates/fret-render-wgpu/src/renderer/path.rs`
+  - Stroke paint gradient conformance: `crates/fret-render-wgpu/tests/stroke_paint_conformance.rs`

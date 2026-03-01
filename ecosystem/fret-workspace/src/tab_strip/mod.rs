@@ -59,7 +59,7 @@ use layouts::{
 };
 use state::WorkspaceTabStripState;
 use theme::WorkspaceTabStripTheme;
-use utils::{dnd_scope_for_pane, resolve_end_drop_target, scroll_rect_into_view_x};
+use utils::{dnd_scope_for_pane, resolve_end_drop_target_in_canonical_order, scroll_rect_into_view_x};
 use widgets::{tab_close_button, tab_dirty_indicator, tab_trailing_slot_placeholder};
 
 use crate::tab_drag::compute_tab_drop_target;
@@ -282,6 +282,11 @@ impl WorkspaceTabStrip {
                         .map(|tab| (tab.id.clone(), tab.pinned))
                         .collect(),
                 );
+                let canonical_tab_order: Arc<[Arc<str>]> = tabs
+                    .iter()
+                    .map(|tab| tab.id.clone())
+                    .collect::<Vec<_>>()
+                    .into();
                 let roving_tab_commands: Arc<[CommandId]> = tabs
                     .iter()
                     .map(|tab| tab.command.clone())
@@ -590,6 +595,7 @@ impl WorkspaceTabStrip {
                                                             let dnd = dnd.clone();
                                                             let scroll_handle = scroll_handle.clone();
                                                             let pinned_by_id = pinned_by_id.clone();
+                                                            let canonical_tab_order = canonical_tab_order.clone();
                                                             Arc::new(move |host, acx, mv| {
                                                                 let Some(snapshot) =
                                                                     read_drag_snapshot_for_pointer(
@@ -675,9 +681,9 @@ impl WorkspaceTabStrip {
                                                                         scroll_viewport_rect,
                                                                     );
                                                                 if matches!(drop_target, WorkspaceTabStripDropTarget::End) {
-                                                                    drop_target = resolve_end_drop_target(
+                                                                    drop_target = resolve_end_drop_target_in_canonical_order(
                                                                         pinned_by_id.as_ref(),
-                                                                        &tab_rects,
+                                                                        canonical_tab_order.as_ref(),
                                                                         dragged.as_ref(),
                                                                     )
                                                                     .map(|id| {
@@ -1447,9 +1453,9 @@ impl WorkspaceTabStrip {
                                         viewport_for_hit,
                                     );
                                     let next = match next {
-                                        WorkspaceTabStripDropTarget::End => resolve_end_drop_target(
+                                        WorkspaceTabStripDropTarget::End => resolve_end_drop_target_in_canonical_order(
                                             pinned_by_id.as_ref(),
-                                            &rects_for_hit,
+                                            canonical_tab_order.as_ref(),
                                             dragged,
                                         )
                                         .map(|id| {

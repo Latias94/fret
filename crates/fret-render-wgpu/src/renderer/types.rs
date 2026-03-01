@@ -97,6 +97,8 @@ pub(super) struct PaintGpu {
     pub(super) tile_mode: u32,
     pub(super) color_space: u32,
     pub(super) stop_count: u32,
+    pub(super) eval_space: u32,
+    pub(super) _pad_eval_space: [u32; 3],
     pub(super) params0: [f32; 4],
     pub(super) params1: [f32; 4],
     pub(super) params2: [f32; 4],

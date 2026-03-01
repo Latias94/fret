@@ -166,7 +166,7 @@ fn path_material_paint_renders_and_is_not_degraded() {
         order: DrawOrder(0),
         origin: Point::new(Px(0.0), Px(0.0)),
         path,
-        paint: Paint::Material {
+        paint: (Paint::Material {
             id: material_id,
             params: fret_core::scene::MaterialParams {
                 vec4s: [
@@ -176,7 +176,8 @@ fn path_material_paint_renders_and_is_not_degraded() {
                     [0.0, 0.0, 0.0, 0.0],
                 ],
             },
-        },
+        })
+        .into(),
     });
 
     let pixels = render_and_readback(&ctx, &mut renderer, &scene, size);

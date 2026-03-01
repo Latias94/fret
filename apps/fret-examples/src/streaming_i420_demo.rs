@@ -178,9 +178,10 @@ fn render(_driver: &mut (), context: WinitRenderContext<'_, StreamingI420DemoSta
             g: 0.11,
             b: 0.13,
             a: 1.0,
-        }),
+        })
+        .into(),
         border: Edges::all(Px(0.0)),
-        border_paint: fret_core::Paint::TRANSPARENT,
+        border_paint: fret_core::Paint::TRANSPARENT.into(),
 
         corner_radii: Corners::all(Px(0.0)),
     });

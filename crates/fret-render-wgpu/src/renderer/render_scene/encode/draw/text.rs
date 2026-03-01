@@ -10,7 +10,7 @@ pub(in super::super) fn encode_text(
     state: &mut EncodeState<'_>,
     origin: Point,
     blob_id: fret_core::TextBlobId,
-    paint: fret_core::scene::Paint,
+    paint: fret_core::scene::PaintBindingV1,
     outline: Option<fret_core::scene::TextOutlineV1>,
     shadow: Option<fret_core::scene::TextShadowV1>,
 ) {
@@ -30,7 +30,7 @@ pub(in super::super) fn encode_text(
             state,
             shadow_origin,
             blob,
-            fret_core::scene::Paint::Solid(shadow.color),
+            fret_core::scene::Paint::Solid(shadow.color).into(),
             None,
             false,
         );
@@ -44,7 +44,7 @@ fn encode_text_blob(
     state: &mut EncodeState<'_>,
     origin: Point,
     blob: &crate::text::TextBlob,
-    paint: fret_core::scene::Paint,
+    paint: fret_core::scene::PaintBindingV1,
     outline: Option<fret_core::scene::TextOutlineV1>,
     draw_decorations: bool,
 ) {
@@ -111,7 +111,15 @@ fn encode_text_blob(
         false
     }
 
-    let base_color_hint = paint_representative_color(paint);
+    let paint = match paint.eval_space {
+        fret_core::scene::PaintEvalSpaceV1::StrokeS01 => fret_core::scene::PaintBindingV1 {
+            paint: paint.paint,
+            eval_space: fret_core::scene::PaintEvalSpaceV1::LocalPx,
+        },
+        _ => paint,
+    };
+
+    let base_color_hint = paint_representative_color(paint.paint);
     let paint_opacity = group_opacity * base_color_hint.a;
 
     let resolve_decoration_color = |paint_span: Option<u16>, explicit: Option<Color>| -> Color {
@@ -152,9 +160,9 @@ fn encode_text_blob(
                 renderer,
                 state,
                 rect,
-                fret_core::Paint::Solid(bg),
+                fret_core::Paint::Solid(bg).into(),
                 Edges::all(Px(0.0)),
-                fret_core::Paint::Solid(Color::TRANSPARENT),
+                fret_core::Paint::Solid(Color::TRANSPARENT).into(),
                 Corners::all(Px(0.0)),
                 None,
             );
@@ -201,6 +209,8 @@ fn encode_text_blob(
             tile_mode: 0,
             color_space: 0,
             stop_count: 0,
+            eval_space: 0,
+            _pad_eval_space: [0; 3],
             params0: [1.0, 1.0, 1.0, 1.0],
             params1: [0.0; 4],
             params2: [0.0; 4],
@@ -495,9 +505,9 @@ fn encode_text_blob(
                 renderer,
                 state,
                 rect,
-                fret_core::Paint::Solid(bg),
+                fret_core::Paint::Solid(bg).into(),
                 Edges::all(Px(0.0)),
-                fret_core::Paint::Solid(Color::TRANSPARENT),
+                fret_core::Paint::Solid(Color::TRANSPARENT).into(),
                 Corners::all(Px(0.0)),
                 None,
             );

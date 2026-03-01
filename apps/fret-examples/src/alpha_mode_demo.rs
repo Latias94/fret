@@ -159,9 +159,10 @@ fn render(_driver: &mut (), context: WinitRenderContext<'_, AlphaModeDemoState>)
             g: 0.09,
             b: 0.10,
             a: 1.0,
-        }),
+        })
+        .into(),
         border: Edges::all(Px(0.0)),
-        border_paint: fret_core::Paint::TRANSPARENT,
+        border_paint: fret_core::Paint::TRANSPARENT.into(),
 
         corner_radii: Corners::all(Px(0.0)),
     });
@@ -185,14 +186,16 @@ fn render(_driver: &mut (), context: WinitRenderContext<'_, AlphaModeDemoState>)
                 g: 0.16,
                 b: 0.18,
                 a: 1.0,
-            }),
+            })
+            .into(),
             border: Edges::all(Px(1.0)),
             border_paint: fret_core::Paint::Solid(Color {
                 r: 1.0,
                 g: 1.0,
                 b: 1.0,
                 a: 0.10,
-            }),
+            })
+            .into(),
             corner_radii: Corners::all(Px(12.0)),
         });
     }

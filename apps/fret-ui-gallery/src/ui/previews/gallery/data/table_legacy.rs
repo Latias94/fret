@@ -359,9 +359,9 @@ pub(in crate::ui) fn preview_data_table_legacy(
     let state_for_header_checkbox = state.clone();
     let assets_for_header_checkbox = assets.clone();
     let table = shadcn::DataTable::new()
-        .row_height(Px(36.0))
+        .row_height(Px(40.0))
         .header_height(Px(40.0))
-        .column_actions_menu(true)
+        .column_actions_menu(false)
         .output_model(output.clone())
         .refine_layout(LayoutRefinement::default().w_full().h_px(Px(280.0)))
         .into_element_with_header_cell(
@@ -490,7 +490,7 @@ pub(in crate::ui) fn preview_data_table_legacy(
                                 "ui-gallery-data-table-row-actions-open-{}",
                                 row.id
                             )))
-                            .icon(fret_icons::IconId::new_static("lucide.more-horizontal"))
+                            .icon(fret_icons::IconId::new_static("lucide.ellipsis"))
                             .into_element(cx);
 
                             shadcn::DropdownMenu::new(open)
@@ -539,10 +539,14 @@ pub(in crate::ui) fn preview_data_table_legacy(
                     _ => cx.text("?"),
                 };
 
-                cell.test_id(Arc::<str>::from(format!(
-                    "ui-gallery-data-table-cell-{}-{}",
-                    row.id, col_id
-                )))
+                if col_id.as_ref() == "actions" {
+                    cell
+                } else {
+                    cell.test_id(Arc::<str>::from(format!(
+                        "ui-gallery-data-table-cell-{}-{}",
+                        row.id, col_id
+                    )))
+                }
             },
         );
 

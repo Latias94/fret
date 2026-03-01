@@ -108,9 +108,9 @@ pub fn paint_viewport_crosshair(
         scene.push(SceneOp::Quad {
             order: DrawOrder(5),
             rect,
-            background: Paint::Solid(color),
+            background: Paint::Solid(color).into(),
             border: Edges::all(Px(0.0)),
-            border_paint: Paint::TRANSPARENT,
+            border_paint: Paint::TRANSPARENT.into(),
             corner_radii: Corners::all(Px(0.0)),
         });
     }
@@ -194,17 +194,17 @@ fn paint_viewport_translate_gizmo(
     scene.push(SceneOp::Quad {
         order: DrawOrder(6),
         rect: x_axis,
-        background: Paint::Solid(x_color),
+        background: Paint::Solid(x_color).into(),
         border: Edges::all(Px(0.0)),
-        border_paint: Paint::TRANSPARENT,
+        border_paint: Paint::TRANSPARENT.into(),
         corner_radii: Corners::all(Px(0.0)),
     });
     scene.push(SceneOp::Quad {
         order: DrawOrder(6),
         rect: y_axis,
-        background: Paint::Solid(y_color),
+        background: Paint::Solid(y_color).into(),
         border: Edges::all(Px(0.0)),
-        border_paint: Paint::TRANSPARENT,
+        border_paint: Paint::TRANSPARENT.into(),
         corner_radii: Corners::all(Px(0.0)),
     });
 
@@ -220,12 +220,14 @@ fn paint_viewport_translate_gizmo(
         background: Paint::Solid(Color {
             a: 0.85,
             ..theme.color_token("color.viewport.gizmo.handle.background")
-        }),
+        })
+        .into(),
         border: Edges::all(handle_border),
         border_paint: Paint::Solid(Color {
             a: 0.90,
             ..theme.color_token("color.viewport.gizmo.handle.border")
-        }),
+        })
+        .into(),
         corner_radii: Corners::all(Px(2.0)),
     });
 }
@@ -254,9 +256,9 @@ fn paint_viewport_rotate_gizmo(
             Point::new(Px(x - r.0), Px(y - r.0)),
             Size::new(Px(r.0 * 2.0), Px(r.0 * 2.0)),
         ),
-        background: Paint::TRANSPARENT,
+        background: Paint::TRANSPARENT.into(),
         border: Edges::all(t),
-        border_paint: Paint::Solid(color),
+        border_paint: Paint::Solid(color).into(),
         corner_radii: Corners::all(r),
     });
 }
@@ -281,9 +283,9 @@ fn paint_viewport_selection_rect(content: Rect, rect: ViewportSelectionRect, sce
     scene.push(SceneOp::Quad {
         order: DrawOrder(4),
         rect: inner,
-        background: Paint::Solid(rect.fill),
+        background: Paint::Solid(rect.fill).into(),
         border: Edges::all(Px(0.0)),
-        border_paint: Paint::TRANSPARENT,
+        border_paint: Paint::TRANSPARENT.into(),
         corner_radii: Corners::all(Px(0.0)),
     });
 
@@ -307,9 +309,9 @@ fn paint_viewport_selection_rect(content: Rect, rect: ViewportSelectionRect, sce
         scene.push(SceneOp::Quad {
             order: DrawOrder(5),
             rect: r,
-            background: Paint::Solid(rect.stroke),
+            background: Paint::Solid(rect.stroke).into(),
             border: Edges::all(Px(0.0)),
-            border_paint: Paint::TRANSPARENT,
+            border_paint: Paint::TRANSPARENT.into(),
             corner_radii: Corners::all(Px(0.0)),
         });
     }
@@ -356,9 +358,9 @@ fn paint_viewport_marker(content: Rect, marker: ViewportMarker, scene: &mut Scen
         scene.push(SceneOp::Quad {
             order: DrawOrder(11),
             rect,
-            background: Paint::Solid(color),
+            background: Paint::Solid(color).into(),
             border: Edges::all(Px(0.0)),
-            border_paint: Paint::TRANSPARENT,
+            border_paint: Paint::TRANSPARENT.into(),
             corner_radii: Corners::all(Px(0.0)),
         });
     }
@@ -375,9 +377,10 @@ fn paint_viewport_marker(content: Rect, marker: ViewportMarker, scene: &mut Scen
             g: color.g,
             b: color.b,
             a: (color.a * 0.25).min(1.0),
-        }),
+        })
+        .into(),
         border: Edges::all(Px(1.5)),
-        border_paint: Paint::Solid(color),
+        border_paint: Paint::Solid(color).into(),
         corner_radii: Corners::all(Px(2.0)),
     });
 }
@@ -422,9 +425,9 @@ fn paint_viewport_marquee(
     scene.push(SceneOp::Quad {
         order: DrawOrder(6),
         rect,
-        background: Paint::Solid(fill),
+        background: Paint::Solid(fill).into(),
         border: Edges::all(Px(0.0)),
-        border_paint: Paint::TRANSPARENT,
+        border_paint: Paint::TRANSPARENT.into(),
         corner_radii: Corners::all(Px(0.0)),
     });
 
@@ -446,9 +449,9 @@ fn paint_viewport_marquee(
         scene.push(SceneOp::Quad {
             order: DrawOrder(7),
             rect: r,
-            background: Paint::Solid(stroke),
+            background: Paint::Solid(stroke).into(),
             border: Edges::all(Px(0.0)),
-            border_paint: Paint::TRANSPARENT,
+            border_paint: Paint::TRANSPARENT.into(),
             corner_radii: Corners::all(Px(0.0)),
         });
     }
@@ -481,9 +484,9 @@ fn paint_viewport_drag_line(content: Rect, line: ViewportDragLine, scene: &mut S
         scene.push(SceneOp::Quad {
             order: DrawOrder(8),
             rect,
-            background: Paint::Solid(color),
+            background: Paint::Solid(color).into(),
             border: Edges::all(Px(0.0)),
-            border_paint: Paint::TRANSPARENT,
+            border_paint: Paint::TRANSPARENT.into(),
             corner_radii: Corners::all(Px(0.0)),
         });
     }
@@ -496,9 +499,9 @@ fn paint_viewport_drag_line(content: Rect, line: ViewportDragLine, scene: &mut S
                 Point::new(Px(x - p.0 * 0.5), Px(y - p.0 * 0.5)),
                 Size::new(p, p),
             ),
-            background: Paint::Solid(color),
+            background: Paint::Solid(color).into(),
             border: Edges::all(Px(0.0)),
-            border_paint: Paint::TRANSPARENT,
+            border_paint: Paint::TRANSPARENT.into(),
             corner_radii: Corners::all(Px(2.0)),
         });
     }

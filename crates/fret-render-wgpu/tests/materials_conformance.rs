@@ -153,9 +153,9 @@ fn gpu_dot_grid_material_smoke_conformance() {
     scene.push(SceneOp::Quad {
         order: DrawOrder(0),
         rect,
-        background: Paint::Material { id, params },
+        background: (Paint::Material { id, params }).into(),
         border: Edges::all(Px(0.0)),
-        border_paint: Paint::TRANSPARENT,
+        border_paint: (Paint::TRANSPARENT).into(),
         corner_radii: Corners::all(Px(0.0)),
     });
 
@@ -201,12 +201,13 @@ fn unknown_material_id_degrades_to_transparent() {
     scene.push(SceneOp::Quad {
         order: DrawOrder(0),
         rect,
-        background: Paint::Material {
+        background: (Paint::Material {
             id: fret_core::MaterialId::null(),
             params,
-        },
+        })
+        .into(),
         border: Edges::all(Px(0.0)),
-        border_paint: Paint::TRANSPARENT,
+        border_paint: (Paint::TRANSPARENT).into(),
         corner_radii: Corners::all(Px(0.0)),
     });
 
@@ -249,9 +250,9 @@ fn material_paint_budget_pressure_degrades_to_base_color() {
     scene.push(SceneOp::Quad {
         order: DrawOrder(0),
         rect,
-        background: Paint::Material { id, params },
+        background: (Paint::Material { id, params }).into(),
         border: Edges::all(Px(0.0)),
-        border_paint: Paint::TRANSPARENT,
+        border_paint: (Paint::TRANSPARENT).into(),
         corner_radii: Corners::all(Px(0.0)),
     });
 

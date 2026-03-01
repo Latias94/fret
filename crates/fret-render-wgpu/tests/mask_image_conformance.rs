@@ -174,14 +174,15 @@ fn gpu_image_mask_basic_conformance() {
     scene.push(SceneOp::Quad {
         order: DrawOrder(0),
         rect,
-        background: Paint::Solid(Color {
+        background: (Paint::Solid(Color {
             r: 1.0,
             g: 1.0,
             b: 1.0,
             a: 1.0,
-        }),
+        }))
+        .into(),
         border: Edges::all(Px(0.0)),
-        border_paint: Paint::TRANSPARENT,
+        border_paint: (Paint::TRANSPARENT).into(),
         corner_radii: Corners::all(Px(0.0)),
     });
     scene.push(SceneOp::PopMask);
@@ -226,14 +227,15 @@ fn gpu_image_mask_switches_sources_between_scopes() {
     scene.push(SceneOp::Quad {
         order: DrawOrder(0),
         rect: rect_top,
-        background: Paint::Solid(Color {
+        background: (Paint::Solid(Color {
             r: 1.0,
             g: 1.0,
             b: 1.0,
             a: 1.0,
-        }),
+        }))
+        .into(),
         border: Edges::all(Px(0.0)),
-        border_paint: Paint::TRANSPARENT,
+        border_paint: (Paint::TRANSPARENT).into(),
         corner_radii: Corners::all(Px(0.0)),
     });
     scene.push(SceneOp::PopMask);
@@ -245,14 +247,15 @@ fn gpu_image_mask_switches_sources_between_scopes() {
     scene.push(SceneOp::Quad {
         order: DrawOrder(1),
         rect: rect_bot,
-        background: Paint::Solid(Color {
+        background: (Paint::Solid(Color {
             r: 1.0,
             g: 1.0,
             b: 1.0,
             a: 1.0,
-        }),
+        }))
+        .into(),
         border: Edges::all(Px(0.0)),
-        border_paint: Paint::TRANSPARENT,
+        border_paint: (Paint::TRANSPARENT).into(),
         corner_radii: Corners::all(Px(0.0)),
     });
     scene.push(SceneOp::PopMask);
@@ -302,14 +305,15 @@ fn gpu_nested_image_masks_degrade_deterministically() {
     scene.push(SceneOp::Quad {
         order: DrawOrder(0),
         rect,
-        background: Paint::Solid(Color {
+        background: (Paint::Solid(Color {
             r: 1.0,
             g: 1.0,
             b: 1.0,
             a: 1.0,
-        }),
+        }))
+        .into(),
         border: Edges::all(Px(0.0)),
-        border_paint: Paint::TRANSPARENT,
+        border_paint: (Paint::TRANSPARENT).into(),
         corner_radii: Corners::all(Px(0.0)),
     });
     scene.push(SceneOp::PopMask);

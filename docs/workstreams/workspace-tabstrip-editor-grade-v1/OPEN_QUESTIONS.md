@@ -18,6 +18,10 @@ Gate:
 - Keep `workspace-shell-demo-tab-drag-to-split-right-drop-preview-screenshot` (screenshot) and add
   an invariants-based split gate once preview routing is stable.
 
+Status:
+- Implemented (best-effort) in workspace pane drop-zone arbitration so split zones do not latch
+  while the pointer is still over the tab strip row.
+
 ## Q2: Should diagnostics scripts rely on pixel deltas for editor-grade drag interactions?
 
 Why it matters:
@@ -38,4 +42,3 @@ Recommendation:
 - Treat this as a **mechanism** concern. Long-term, move “drag session position tracking” into the
   DnD/runtime layer (so non-tab surfaces don’t depend on tab-strip-local pointer capture).
 - Until then, keep the current workaround and gate it via scripts.
-

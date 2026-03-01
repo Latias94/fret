@@ -183,9 +183,10 @@ fn record_scene(
             g: 0.07,
             b: 0.08,
             a: 1.0,
-        }),
+        })
+        .into(),
         border: fret_core::Edges::all(Px(0.0)),
-        border_paint: fret_core::Paint::TRANSPARENT,
+        border_paint: fret_core::Paint::TRANSPARENT.into(),
         corner_radii: fret_core::Corners::all(Px(0.0)),
     });
 
@@ -305,9 +306,10 @@ fn run_headless(
                 g: 0.07,
                 b: 0.08,
                 a: 1.0,
-            }),
+            })
+            .into(),
             border: fret_core::Edges::all(Px(0.0)),
-            border_paint: fret_core::Paint::TRANSPARENT,
+            border_paint: fret_core::Paint::TRANSPARENT.into(),
             corner_radii: fret_core::Corners::all(Px(0.0)),
         });
 

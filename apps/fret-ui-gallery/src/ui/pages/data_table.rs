@@ -70,7 +70,7 @@ stack::vstack(
                     "rust",
                     r#"// Basic Table
 let table = shadcn::DataTable::new()
-    .row_height(Px(36.0))
+    .row_height(Px(40.0))
     .header_height(Px(40.0))
     .refine_layout(LayoutRefinement::default().w_full().h_px(Px(280.0)))
     .into_element(cx, data, 1, state, columns, row_key, col_key, render_cell, render_header);

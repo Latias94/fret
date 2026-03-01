@@ -532,10 +532,10 @@ impl<H: UiHost> Widget<H> for NodeGraphMiniMapOverlay {
         cx.scene.push(SceneOp::Quad {
             order: DrawOrder(20_000),
             rect: minimap,
-            background: fret_core::Paint::Solid(self.style.context_menu_background),
+            background: fret_core::Paint::Solid(self.style.context_menu_background).into(),
 
             border: Edges::all(Px(1.0)),
-            border_paint: fret_core::Paint::Solid(self.style.context_menu_border),
+            border_paint: fret_core::Paint::Solid(self.style.context_menu_border).into(),
 
             corner_radii: Corners::all(Px(corner)),
         });
@@ -549,10 +549,10 @@ impl<H: UiHost> Widget<H> for NodeGraphMiniMapOverlay {
             cx.scene.push(SceneOp::Quad {
                 order: DrawOrder(20_001),
                 rect: rr,
-                background: fret_core::Paint::Solid(node_fill),
+                background: fret_core::Paint::Solid(node_fill).into(),
 
                 border: Edges::all(Px(0.5)),
-                border_paint: fret_core::Paint::Solid(node_border),
+                border_paint: fret_core::Paint::Solid(node_border).into(),
 
                 corner_radii: Corners::all(Px(2.0)),
             });
@@ -566,9 +566,10 @@ impl<H: UiHost> Widget<H> for NodeGraphMiniMapOverlay {
             background: fret_core::Paint::Solid(Color {
                 a: 0.12,
                 ..self.style.node_border_selected
-            }),
+            })
+            .into(),
             border: Edges::all(Px(1.0)),
-            border_paint: fret_core::Paint::Solid(self.style.node_border_selected),
+            border_paint: fret_core::Paint::Solid(self.style.node_border_selected).into(),
 
             corner_radii: Corners::all(Px(2.0)),
         });

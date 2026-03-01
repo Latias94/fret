@@ -1076,9 +1076,9 @@ fn select_trigger_element<H: UiHost>(
                         p.scene().push(fret_core::SceneOp::Quad {
                             order: fret_core::DrawOrder(0),
                             rect,
-                            background: fret_core::Paint::Solid(c),
+                            background: fret_core::Paint::Solid(c).into(),
                             border: Edges::all(Px(0.0)),
-                            border_paint: fret_core::Paint::TRANSPARENT,
+                            border_paint: fret_core::Paint::TRANSPARENT.into(),
                             corner_radii: Corners::all(Px(0.0)),
                         });
                     })

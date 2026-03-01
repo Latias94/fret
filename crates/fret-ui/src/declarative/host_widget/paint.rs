@@ -69,9 +69,9 @@ fn push_attributed_span_background_quads(
             scene.push(SceneOp::Quad {
                 order: DrawOrder(0),
                 rect,
-                background: Paint::Solid(bg),
+                background: Paint::Solid(bg).into(),
                 border: fret_core::Edges::all(fret_core::Px(0.0)),
-                border_paint: Paint::Solid(Color::TRANSPARENT),
+                border_paint: Paint::Solid(Color::TRANSPARENT).into(),
                 corner_radii: fret_core::Corners::all(fret_core::Px(0.0)),
             });
         }
@@ -172,9 +172,9 @@ impl ElementHostWidget {
                         cx.scene.push(SceneOp::Quad {
                             order: DrawOrder(0),
                             rect: bounds,
-                            background,
+                            background: background.into(),
                             border: Edges::all(Px(0.0)),
-                            border_paint: Paint::Solid(Color::TRANSPARENT),
+                            border_paint: Paint::Solid(Color::TRANSPARENT).into(),
                             corner_radii: props.corner_radii,
                         });
                         cx.scene.push(SceneOp::StrokeRRect {
@@ -182,16 +182,16 @@ impl ElementHostWidget {
                             rect: bounds,
                             corner_radii: props.corner_radii,
                             stroke: props.border,
-                            stroke_paint: border_paint,
+                            stroke_paint: border_paint.into(),
                             style: fret_core::scene::StrokeStyleV1 { dash: Some(dash) },
                         });
                     } else {
                         cx.scene.push(SceneOp::Quad {
                             order: DrawOrder(0),
                             rect: bounds,
-                            background,
+                            background: background.into(),
                             border: props.border,
-                            border_paint,
+                            border_paint: border_paint.into(),
                             corner_radii: props.corner_radii,
                         });
                     }
@@ -221,16 +221,16 @@ impl ElementHostWidget {
                                 rect: bounds,
                                 corner_radii: props.corner_radii,
                                 stroke: props.border,
-                                stroke_paint: Paint::Solid(border_color),
+                                stroke_paint: Paint::Solid(border_color).into(),
                                 style: fret_core::scene::StrokeStyleV1 { dash: Some(dash) },
                             });
                         } else {
                             cx.scene.push(SceneOp::Quad {
                                 order: DrawOrder(1),
                                 rect: bounds,
-                                background: Paint::Solid(Color::TRANSPARENT),
+                                background: Paint::Solid(Color::TRANSPARENT).into(),
                                 border: props.border,
-                                border_paint: Paint::Solid(border_color),
+                                border_paint: Paint::Solid(border_color).into(),
                                 corner_radii: props.corner_radii,
                             });
                         }
@@ -733,7 +733,7 @@ impl ElementHostWidget {
                     order: DrawOrder(0),
                     origin,
                     text: blob,
-                    paint: fret_core::scene::Paint::Solid(color),
+                    paint: fret_core::scene::Paint::Solid(color).into(),
                     outline: None,
                     shadow: None,
                 });
@@ -979,7 +979,7 @@ impl ElementHostWidget {
                     order: DrawOrder(0),
                     origin,
                     text: blob,
-                    paint: fret_core::scene::Paint::Solid(color),
+                    paint: fret_core::scene::Paint::Solid(color).into(),
                     outline: None,
                     shadow: None,
                 });
@@ -1367,9 +1367,9 @@ impl ElementHostWidget {
                         cx.scene.push(SceneOp::Quad {
                             order: DrawOrder(0),
                             rect,
-                            background: Paint::Solid(sel_color),
+                            background: Paint::Solid(sel_color).into(),
                             border: fret_core::Edges::all(fret_core::Px(0.0)),
-                            border_paint: Paint::Solid(Color::TRANSPARENT),
+                            border_paint: Paint::Solid(Color::TRANSPARENT).into(),
                             corner_radii: fret_core::Corners::all(fret_core::Px(0.0)),
                         });
                     }
@@ -1380,7 +1380,7 @@ impl ElementHostWidget {
                     order: DrawOrder(0),
                     origin,
                     text: blob,
-                    paint: fret_core::scene::Paint::Solid(color),
+                    paint: fret_core::scene::Paint::Solid(color).into(),
                     outline: None,
                     shadow: None,
                 });
@@ -1813,9 +1813,9 @@ impl ElementHostWidget {
                     cx.scene.push(SceneOp::Quad {
                         order: DrawOrder(0),
                         rect,
-                        background: Paint::Solid(color),
+                        background: Paint::Solid(color).into(),
                         border: Edges::all(Px(0.0)),
-                        border_paint: Paint::Solid(Color::TRANSPARENT),
+                        border_paint: Paint::Solid(Color::TRANSPARENT).into(),
                         corner_radii: fret_core::Corners::all(r),
                     });
                 }
@@ -2046,9 +2046,9 @@ impl ElementHostWidget {
                 cx.scene.push(SceneOp::Quad {
                     order: DrawOrder(20_000),
                     rect,
-                    background: Paint::Solid(bg),
+                    background: Paint::Solid(bg).into(),
                     border: Edges::all(Px(0.0)),
-                    border_paint: Paint::Solid(Color::TRANSPARENT),
+                    border_paint: Paint::Solid(Color::TRANSPARENT).into(),
                     corner_radii: fret_core::Corners::all(Px(999.0)),
                 });
             }

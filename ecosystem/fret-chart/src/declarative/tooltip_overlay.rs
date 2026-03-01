@@ -138,10 +138,10 @@ pub(crate) fn tooltip_overlay_tool(
                     painter.scene().push(fret_core::SceneOp::Quad {
                         order: label_order,
                         rect,
-                        background: fret_core::Paint::Solid(style.tooltip_background),
+                        background: fret_core::Paint::Solid(style.tooltip_background).into(),
 
                         border: Edges::all(style.tooltip_border_width),
-                        border_paint: fret_core::Paint::Solid(style.tooltip_border_color),
+                        border_paint: fret_core::Paint::Solid(style.tooltip_border_color).into(),
 
                         corner_radii: Corners::all(Px(4.0)),
                     });
@@ -374,10 +374,10 @@ pub(crate) fn tooltip_overlay_tool(
             painter.scene().push(fret_core::SceneOp::Quad {
                 order: tooltip_order,
                 rect: Rect::new(Point::new(Px(tip_x), Px(tip_y)), Size::new(Px(w), Px(h))),
-                background: fret_core::Paint::Solid(style.tooltip_background),
+                background: fret_core::Paint::Solid(style.tooltip_background).into(),
 
                 border: Edges::all(style.tooltip_border_width),
-                border_paint: fret_core::Paint::Solid(style.tooltip_border_color),
+                border_paint: fret_core::Paint::Solid(style.tooltip_border_color).into(),
 
                 corner_radii: Corners::all(style.tooltip_corner_radius),
             });
@@ -428,10 +428,10 @@ pub(crate) fn tooltip_overlay_tool(
                             Point::new(Px(swatch_x), Px(marker_y)),
                             Size::new(Px(side), Px(side)),
                         ),
-                        background: fret_core::Paint::Solid(color),
+                        background: fret_core::Paint::Solid(color).into(),
 
                         border: Edges::all(Px(0.0)),
-                        border_paint: fret_core::Paint::TRANSPARENT,
+                        border_paint: fret_core::Paint::TRANSPARENT.into(),
 
                         corner_radii: Corners::all(Px((side * 0.25).max(0.0))),
                     });
