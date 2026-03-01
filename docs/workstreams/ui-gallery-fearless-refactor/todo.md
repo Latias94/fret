@@ -28,6 +28,11 @@ Legend:
 - [ ] Add a lint/test that forbids new `DocSection::code("rust", r#"...")` on migrated pages.
 - [ ] Add a small “drift audit” doc section in UI Gallery (optional) to list remaining legacy sections.
 
+Notes:
+
+- Use `tools/check_ui_gallery_code_literals.py --deny --only <page.rs>` to enforce “no multi-line Rust literals”
+  on snippet-backed/migrated pages.
+
 ## Shadcn component tracker (gallery refactor status)
 
 Columns:
