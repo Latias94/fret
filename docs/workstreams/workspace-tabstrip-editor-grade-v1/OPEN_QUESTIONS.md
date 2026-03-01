@@ -97,7 +97,8 @@ Recommendation (v1):
   the active tab in the pane's `WorkspaceTabStrip`.
 - Keep “exit tab strip back to editor surface” as an app-owned decision for now (depends on editor
   widget focus semantics).
-- Default keybinding: `Ctrl+F6` (can be overridden via keymap layering).
+- Default keybinding: bind `Ctrl+F6` to `workspace.pane.toggle_tab_strip_focus` (can be overridden
+  via keymap layering).
 
 Gate:
 - Unit: `ecosystem/fret-workspace/tests/pane_focus_tab_strip_command_focuses_active_tab.rs`.
@@ -123,3 +124,18 @@ Recommendation (v1):
 Gate:
 - Unit: focus `outside` → `workspace.pane.focus_tab_strip` → `workspace.pane.focus_content`
   restores focus to `outside`.
+
+## Q8: Should `Ctrl+F6` be a one-way “focus tab strip” or a toggle?
+
+Why it matters:
+- A one-way command requires users to learn a separate “exit” gesture.
+- Editors commonly use a “cycle focus” / “toggle focus” chord that is symmetric.
+
+Recommendation (v1):
+- Bind `Ctrl+F6` to `workspace.pane.toggle_tab_strip_focus`.
+- Keep `workspace.pane.focus_tab_strip` and `workspace.pane.focus_content` as explicit, scriptable
+  commands (useful for automation and future command palette integration).
+
+Gates:
+- `ecosystem/fret-workspace/tests/workspace_command_scope_toggle_tab_strip_focus_toggles_between_content_and_tab_strip.rs`
+- `ecosystem/fret-workspace/tests/workspace_commands_default_keybindings_include_ctrl_f6_toggle.rs`

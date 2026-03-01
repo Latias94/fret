@@ -18,6 +18,7 @@ Legend:
 | Context menu (close/close others/close left/right) | Yes | Partial | Partial | Partial (feature-flagged) | Yes |
 | Keyboard nav (roving, APG-like) | Yes | Partial | Partial | Yes | Yes |
 | Focus tab strip (command) | Yes | N/A | Partial | Yes (unit) | Yes |
+| Toggle tab strip focus (Ctrl+F6) | Yes | N/A | Partial | Yes (unit) | Yes |
 | Exit tab strip (Escape → content) | Yes | N/A | Partial | Yes (unit) | Yes |
 | Do not steal editor focus on click (editor chrome rule) | Yes | N/A | N/A | Yes | Yes |
 | Drag reorder within strip | Yes | Yes | Yes (dock tab panel) | Yes | Yes |

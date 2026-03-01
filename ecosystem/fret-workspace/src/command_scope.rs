@@ -7,7 +7,10 @@ use fret_ui::element::{AnyElement, ContainerProps, LayoutStyle, Length};
 use fret_ui::elements::GlobalElementId;
 use fret_ui::{ElementContext, UiHost};
 
-use crate::commands::{CMD_WORKSPACE_PANE_FOCUS_CONTENT, CMD_WORKSPACE_PANE_FOCUS_TAB_STRIP};
+use crate::commands::{
+    CMD_WORKSPACE_PANE_FOCUS_CONTENT, CMD_WORKSPACE_PANE_FOCUS_TAB_STRIP,
+    CMD_WORKSPACE_PANE_TOGGLE_TAB_STRIP_FOCUS,
+};
 use crate::focus_registry::{WorkspaceTabElementKey, workspace_tab_element_registry_model};
 use crate::layout::WorkspaceWindowLayout;
 
@@ -179,6 +182,88 @@ impl WorkspaceCommandScope {
                             st.return_focus_by_window_and_pane
                                 .remove(&(acx.window, pane_id));
                         });
+
+                        host.request_focus(target);
+                        host.request_redraw(acx.window);
+                        true
+                    }
+                    CMD_WORKSPACE_PANE_TOGGLE_TAB_STRIP_FOCUS => {
+                        let active = host.models_mut().read(&window_layout_for_command, |w| {
+                            let pane_id = w.active_pane_id().cloned()?;
+                            let pane = w.pane_tree.find_pane(pane_id.as_ref())?;
+                            let tab_id = pane.tabs.active().cloned()?;
+                            Some((pane_id, tab_id))
+                        });
+                        let Some((pane_id, tab_id)) = active.ok().flatten() else {
+                            return false;
+                        };
+
+                        let has_return_target = host
+                            .models_mut()
+                            .read(&focus_state_for_command, |st| {
+                                st.return_focus_by_window_and_pane
+                                    .contains_key(&(acx.window, pane_id.clone()))
+                            })
+                            .unwrap_or(false);
+
+                        if has_return_target {
+                            let target = host
+                                .models_mut()
+                                .read(&focus_state_for_command, |st| {
+                                    st.return_focus_by_window_and_pane
+                                        .get(&(acx.window, pane_id.clone()))
+                                        .copied()
+                                })
+                                .ok()
+                                .flatten();
+                            let Some(target) = target else {
+                                return false;
+                            };
+
+                            let _ = host.models_mut().update(&focus_state_for_command, |st| {
+                                st.return_focus_by_window_and_pane
+                                    .remove(&(acx.window, pane_id));
+                            });
+
+                            host.request_focus(target);
+                            host.request_redraw(acx.window);
+                            return true;
+                        }
+
+                        let key = WorkspaceTabElementKey {
+                            window: acx.window,
+                            pane_id: Some(pane_id.clone()),
+                            tab_id,
+                        };
+
+                        let target: Option<GlobalElementId> = host
+                            .models_mut()
+                            .read(&tab_element_registry_for_command, |reg| reg.get(&key))
+                            .ok()
+                            .flatten();
+                        let Some(target) = target else {
+                            return false;
+                        };
+
+                        // Record the last focused element (best-effort) so toggle can restore it.
+                        let focused = host
+                            .models_mut()
+                            .read(&focus_state_for_command, |st| {
+                                st.last_focused_by_window
+                                    .get(&acx.window)
+                                    .copied()
+                                    .flatten()
+                            })
+                            .ok()
+                            .flatten();
+                        if let Some(last_focus) = focused {
+                            if last_focus != target {
+                                let _ = host.models_mut().update(&focus_state_for_command, |st| {
+                                    st.return_focus_by_window_and_pane
+                                        .insert((acx.window, pane_id.clone()), last_focus);
+                                });
+                            }
+                        }
 
                         host.request_focus(target);
                         host.request_redraw(acx.window);

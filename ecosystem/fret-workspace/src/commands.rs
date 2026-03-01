@@ -54,6 +54,7 @@ pub const CMD_WORKSPACE_PANE_MOVE_ACTIVE_TAB_DOWN: &str = "workspace.pane.move_a
 
 pub const CMD_WORKSPACE_PANE_FOCUS_TAB_STRIP: &str = "workspace.pane.focus_tab_strip";
 pub const CMD_WORKSPACE_PANE_FOCUS_CONTENT: &str = "workspace.pane.focus_content";
+pub const CMD_WORKSPACE_PANE_TOGGLE_TAB_STRIP_FOCUS: &str = "workspace.pane.toggle_tab_strip_focus";
 
 /// Prefix for "activate a specific tab" commands.
 ///
@@ -478,12 +479,7 @@ pub fn register_workspace_commands(registry: &mut CommandRegistry) {
         CommandId::new(CMD_WORKSPACE_PANE_FOCUS_TAB_STRIP),
         CommandMeta::new("Focus Tab Strip")
             .with_category("Workspace")
-            .with_keywords(["focus", "tab", "tabstrip", "pane", "workspace"])
-            .with_default_keybindings([
-                win_ctrl(KeyCode::F6, false),
-                linux_ctrl(KeyCode::F6, false),
-                mac_ctrl(KeyCode::F6, false),
-            ]),
+            .with_keywords(["focus", "tab", "tabstrip", "pane", "workspace"]),
     );
 
     registry.register(
@@ -491,6 +487,18 @@ pub fn register_workspace_commands(registry: &mut CommandRegistry) {
         CommandMeta::new("Focus Pane Content")
             .with_category("Workspace")
             .with_keywords(["focus", "content", "pane", "workspace"]),
+    );
+
+    registry.register(
+        CommandId::new(CMD_WORKSPACE_PANE_TOGGLE_TAB_STRIP_FOCUS),
+        CommandMeta::new("Toggle Tab Strip Focus")
+            .with_category("Workspace")
+            .with_keywords(["toggle", "focus", "tab", "tabstrip", "pane", "workspace"])
+            .with_default_keybindings([
+                win_ctrl(KeyCode::F6, false),
+                linux_ctrl(KeyCode::F6, false),
+                mac_ctrl(KeyCode::F6, false),
+            ]),
     );
 
     registry.register(
