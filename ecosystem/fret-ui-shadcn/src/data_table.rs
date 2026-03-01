@@ -11,7 +11,8 @@ use fret_ui::{ElementContext, Theme, ThemeSnapshot, UiHost};
 use fret_ui_kit::declarative::icon as decl_icon;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::declarative::table::{
-    TableRowMeasureMode, TableViewOutput, TableViewProps, table_virtualized,
+    PointerRowSelectionPolicy, TableRowMeasureMode, TableViewOutput, TableViewProps,
+    table_virtualized,
 };
 use fret_ui_kit::typography;
 use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, Radius, ui};
@@ -196,7 +197,7 @@ fn render_column_actions_menu<H: UiHost>(
                     Button::new("")
                         .a11y_label(trigger_label.clone())
                         .variant(ButtonVariant::Ghost)
-                        .size(ButtonSize::IconSm)
+                        .size(ButtonSize::IconXs)
                         .icon(fret_icons::IconId::new_static("lucide.ellipsis"))
                         .into_element(cx)
                 },
@@ -274,6 +275,8 @@ pub struct DataTable {
     header_height: Option<Px>,
     measure_rows: bool,
     row_click_selection: bool,
+    row_click_selection_policy: PointerRowSelectionPolicy,
+    single_row_selection: bool,
     column_actions_menu: bool,
     chrome: ChromeRefinement,
     layout: LayoutRefinement,
@@ -289,6 +292,8 @@ impl Default for DataTable {
             header_height: None,
             measure_rows: false,
             row_click_selection: true,
+            row_click_selection_policy: PointerRowSelectionPolicy::Toggle,
+            single_row_selection: true,
             column_actions_menu: false,
             chrome: ChromeRefinement::default(),
             layout: LayoutRefinement::default(),
@@ -338,6 +343,23 @@ impl DataTable {
     /// clicking inside the row.
     pub fn row_click_selection(mut self, enabled: bool) -> Self {
         self.row_click_selection = enabled;
+        self
+    }
+
+    /// Configures how pointer-activating a body row mutates `TableState.row_selection` when
+    /// [`Self::row_click_selection`] is enabled.
+    pub fn row_click_selection_policy(mut self, policy: PointerRowSelectionPolicy) -> Self {
+        self.row_click_selection_policy = policy;
+        self
+    }
+
+    /// Controls whether the view enforces single-row selection when mutating `row_selection` via
+    /// pointer-driven row activation.
+    ///
+    /// Note: headless state can still contain multiple keys; this only affects how pointer
+    /// interactions update selection.
+    pub fn single_row_selection(mut self, enabled: bool) -> Self {
+        self.single_row_selection = enabled;
         self
     }
 
@@ -392,6 +414,8 @@ impl DataTable {
             header_height,
             measure_rows,
             row_click_selection,
+            row_click_selection_policy,
+            single_row_selection,
             column_actions_menu,
             chrome,
             layout,
@@ -452,6 +476,8 @@ impl DataTable {
                 TableRowMeasureMode::Fixed
             };
             view_props.pointer_row_selection = row_click_selection;
+            view_props.pointer_row_selection_policy = row_click_selection_policy;
+            view_props.single_row_selection = single_row_selection;
             view_props.enable_column_grouping = false;
             view_props.enable_column_resizing = false;
             view_props.draw_frame = false;
@@ -583,6 +609,8 @@ impl DataTable {
             header_height,
             measure_rows,
             row_click_selection,
+            row_click_selection_policy,
+            single_row_selection,
             column_actions_menu,
             chrome,
             layout,
@@ -631,6 +659,8 @@ impl DataTable {
                 TableRowMeasureMode::Fixed
             };
             view_props.pointer_row_selection = row_click_selection;
+            view_props.pointer_row_selection_policy = row_click_selection_policy;
+            view_props.single_row_selection = single_row_selection;
             view_props.enable_column_grouping = false;
             view_props.enable_column_resizing = true;
             view_props.draw_frame = false;

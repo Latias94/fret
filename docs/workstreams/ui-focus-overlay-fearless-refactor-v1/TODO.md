@@ -17,7 +17,7 @@
 
 ## Phase C (Dispatch snapshot)
 
-- [x] Write `MILESTONES.md`-driven detailed design + data model (`M2_DISPATCH_SNAPSHOT_DESIGN.md`).
+- [x] Write `MILESTONES.md`-driven detailed design + migration breakdown (`M2_DISPATCH_SNAPSHOT_DESIGN.md`).
 - [ ] Introduce a snapshot struct (per window, per frame) capturing:
   - [ ] focus containment relationships
   - [ ] hit-test primitives + transforms
@@ -26,4 +26,3 @@
 - [ ] Add a “snapshot parity” debug view/diagnostic:
   - [ ] compare snapshot containment vs Phase A reachability
   - [ ] report divergences with evidence anchors
-

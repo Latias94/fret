@@ -24,3 +24,20 @@ See:
 - `OPEN_QUESTIONS.md` for unresolved semantics
 - Related ADRs: `docs/adr/0069-outside-press-and-dismissable-non-modal-overlays.md`
 
+## Current status
+
+- Phase A shipped: containment and branch exclusion use child-edge reachability (not parent pointers).
+- Phase B shipped: `prevent_default()` suppresses the runtime’s default focus-clearing side effect on
+  outside press.
+- Phase C is in design and decomposition: `M2_DISPATCH_SNAPSHOT_DESIGN.md` (dispatch snapshot).
+
+Evidence anchors live in:
+
+- `docs/adr/IMPLEMENTATION_ALIGNMENT.md` (row for ADR 0069)
+- `crates/fret-ui/src/tree/tests/outside_press.rs`
+- `crates/fret-ui/src/declarative/tests/interactions/dismissible.rs`
+
+## Fast local gates
+
+For local iteration (especially when the full `cargo nextest run -p fret-ui` suite is slow), prefer
+the targeted gates in `EVIDENCE_AND_GATES.md`.

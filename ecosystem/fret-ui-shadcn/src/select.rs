@@ -4356,11 +4356,31 @@ fn select_impl<H: UiHost>(
             };
             chrome.shadow = match trigger_shadow_preset {
                 fret_ui_kit::ShadowPreset::None => None,
-                fret_ui_kit::ShadowPreset::Xs => Some(decl_style::shadow_xs(&theme, shadow_radius)),
-                fret_ui_kit::ShadowPreset::Sm => Some(decl_style::shadow_sm(&theme, shadow_radius)),
-                fret_ui_kit::ShadowPreset::Md => Some(decl_style::shadow_md(&theme, shadow_radius)),
-                fret_ui_kit::ShadowPreset::Lg => Some(decl_style::shadow_lg(&theme, shadow_radius)),
-                fret_ui_kit::ShadowPreset::Xl => Some(decl_style::shadow_xl(&theme, shadow_radius)),
+                fret_ui_kit::ShadowPreset::Xs => Some({
+                    let mut shadow = decl_style::shadow_xs(&theme, shadow_radius);
+                    shadow.corner_radii = chrome.corner_radii;
+                    shadow
+                }),
+                fret_ui_kit::ShadowPreset::Sm => Some({
+                    let mut shadow = decl_style::shadow_sm(&theme, shadow_radius);
+                    shadow.corner_radii = chrome.corner_radii;
+                    shadow
+                }),
+                fret_ui_kit::ShadowPreset::Md => Some({
+                    let mut shadow = decl_style::shadow_md(&theme, shadow_radius);
+                    shadow.corner_radii = chrome.corner_radii;
+                    shadow
+                }),
+                fret_ui_kit::ShadowPreset::Lg => Some({
+                    let mut shadow = decl_style::shadow_lg(&theme, shadow_radius);
+                    shadow.corner_radii = chrome.corner_radii;
+                    shadow
+                }),
+                fret_ui_kit::ShadowPreset::Xl => Some({
+                    let mut shadow = decl_style::shadow_xl(&theme, shadow_radius);
+                    shadow.corner_radii = chrome.corner_radii;
+                    shadow
+                }),
             };
 
             let state_for_value_node = trigger_state.clone();
@@ -4651,6 +4671,27 @@ mod tests {
 
             assert_eq!(value.as_deref(), Some("alpha"));
             assert!(open);
+        });
+    }
+
+    #[test]
+    fn select_content_align_item_with_trigger_false_sets_position_popper() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(400.0), Px(240.0)),
+        );
+
+        fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            let select = Select::new_controllable(cx, None, None::<Arc<str>>, None, false).content(
+                SelectContent::new()
+                    .align_item_with_trigger(false)
+                    .side_offset(Px(7.0)),
+            );
+
+            assert_eq!(select.position, SelectPosition::Popper);
+            assert_eq!(select.side_offset_override, Some(Px(7.0)));
         });
     }
 

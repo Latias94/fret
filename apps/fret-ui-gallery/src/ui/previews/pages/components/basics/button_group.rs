@@ -35,7 +35,10 @@ pub(in crate::ui) fn preview_button_group(cx: &mut ElementContext<'_, App>) -> V
         vec![
             DocSection::new("Demo", demo)
                 .test_id_prefix("ui-gallery-button-group-demo")
-                .code_rust_from_file_region(include_str!("../../../../snippets/button_group/demo.rs"), "example"),
+                .code_rust_from_file_region(
+                    include_str!("../../../../snippets/button_group/demo.rs"),
+                    "example",
+                ),
             DocSection::new("Orientation", orientation)
                 .test_id_prefix("ui-gallery-button-group-orientation")
                 .code_rust_from_file_region(
@@ -44,10 +47,16 @@ pub(in crate::ui) fn preview_button_group(cx: &mut ElementContext<'_, App>) -> V
                 ),
             DocSection::new("Size", size)
                 .test_id_prefix("ui-gallery-button-group-size")
-                .code_rust_from_file_region(include_str!("../../../../snippets/button_group/size.rs"), "example"),
+                .code_rust_from_file_region(
+                    include_str!("../../../../snippets/button_group/size.rs"),
+                    "example",
+                ),
             DocSection::new("Nested", nested)
                 .test_id_prefix("ui-gallery-button-group-nested")
-                .code_rust_from_file_region(include_str!("../../../../snippets/button_group/nested.rs"), "example"),
+                .code_rust_from_file_region(
+                    include_str!("../../../../snippets/button_group/nested.rs"),
+                    "example",
+                ),
             DocSection::new("Separator", separator)
                 .test_id_prefix("ui-gallery-button-group-separator")
                 .code_rust_from_file_region(
@@ -56,10 +65,16 @@ pub(in crate::ui) fn preview_button_group(cx: &mut ElementContext<'_, App>) -> V
                 ),
             DocSection::new("Split", split)
                 .test_id_prefix("ui-gallery-button-group-split")
-                .code_rust_from_file_region(include_str!("../../../../snippets/button_group/split.rs"), "example"),
+                .code_rust_from_file_region(
+                    include_str!("../../../../snippets/button_group/split.rs"),
+                    "example",
+                ),
             DocSection::new("Text", text)
                 .test_id_prefix("ui-gallery-button-group-text")
-                .code_rust_from_file_region(include_str!("../../../../snippets/button_group/text.rs"), "example"),
+                .code_rust_from_file_region(
+                    include_str!("../../../../snippets/button_group/text.rs"),
+                    "example",
+                ),
             DocSection::new("Flex-1 items", flex_1)
                 .max_w(Px(980.0))
                 .test_id_prefix("ui-gallery-button-group-flex1")
@@ -70,7 +85,10 @@ pub(in crate::ui) fn preview_button_group(cx: &mut ElementContext<'_, App>) -> V
             DocSection::new("Input", input)
                 .max_w(Px(760.0))
                 .test_id_prefix("ui-gallery-button-group-input")
-                .code_rust_from_file_region(include_str!("../../../../snippets/button_group/input.rs"), "example"),
+                .code_rust_from_file_region(
+                    include_str!("../../../../snippets/button_group/input.rs"),
+                    "example",
+                ),
             DocSection::new("Input Group", input_group)
                 .max_w(Px(820.0))
                 .test_id_prefix("ui-gallery-button-group-input-group")
@@ -101,7 +119,10 @@ pub(in crate::ui) fn preview_button_group(cx: &mut ElementContext<'_, App>) -> V
                 ),
             DocSection::new("RTL", rtl)
                 .test_id_prefix("ui-gallery-button-group-rtl")
-                .code_rust_from_file_region(include_str!("../../../../snippets/button_group/rtl.rs"), "example"),
+                .code_rust_from_file_region(
+                    include_str!("../../../../snippets/button_group/rtl.rs"),
+                    "example",
+                ),
             DocSection::new("Notes", notes)
                 .no_shell()
                 .test_id_prefix("ui-gallery-button-group-notes"),

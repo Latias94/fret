@@ -291,11 +291,31 @@ pub fn container_props(
 
     let shadow = match chrome.shadow {
         Some(ShadowPreset::None) => None,
-        Some(ShadowPreset::Xs) => Some(shadow_xs(theme, shadow_radius)),
-        Some(ShadowPreset::Sm) => Some(shadow_sm(theme, shadow_radius)),
-        Some(ShadowPreset::Md) => Some(shadow_md(theme, shadow_radius)),
-        Some(ShadowPreset::Lg) => Some(shadow_lg(theme, shadow_radius)),
-        Some(ShadowPreset::Xl) => Some(shadow_xl(theme, shadow_radius)),
+        Some(ShadowPreset::Xs) => Some({
+            let mut shadow = shadow_xs(theme, shadow_radius);
+            shadow.corner_radii = corner_radii;
+            shadow
+        }),
+        Some(ShadowPreset::Sm) => Some({
+            let mut shadow = shadow_sm(theme, shadow_radius);
+            shadow.corner_radii = corner_radii;
+            shadow
+        }),
+        Some(ShadowPreset::Md) => Some({
+            let mut shadow = shadow_md(theme, shadow_radius);
+            shadow.corner_radii = corner_radii;
+            shadow
+        }),
+        Some(ShadowPreset::Lg) => Some({
+            let mut shadow = shadow_lg(theme, shadow_radius);
+            shadow.corner_radii = corner_radii;
+            shadow
+        }),
+        Some(ShadowPreset::Xl) => Some({
+            let mut shadow = shadow_xl(theme, shadow_radius);
+            shadow.corner_radii = corner_radii;
+            shadow
+        }),
         None => None,
     };
 

@@ -217,6 +217,24 @@ fn nav_menu_trigger_fg_muted(theme: &ThemeSnapshot) -> Color {
     theme.color_token("muted-foreground")
 }
 
+#[derive(Debug, Clone)]
+pub struct NavigationMenuTriggerStyle {
+    pub chrome: ChromeRefinement,
+    pub layout: LayoutRefinement,
+}
+
+/// A shadcn/ui-aligned helper that mirrors `navigationMenuTriggerStyle()`.
+///
+/// Upstream returns a Tailwind/CVA class string. In Fret we return mergeable refinements.
+pub fn navigation_menu_trigger_style(_theme: &ThemeSnapshot) -> NavigationMenuTriggerStyle {
+    // Upstream base: `inline-flex h-9 w-max items-center justify-center ...`.
+    // Interaction states (hover/open) are applied by the recipe.
+    NavigationMenuTriggerStyle {
+        chrome: ChromeRefinement::default(),
+        layout: LayoutRefinement::default().h_px(Px(36.0)).flex_shrink_0(),
+    }
+}
+
 fn nav_menu_viewport_bg(theme: &ThemeSnapshot) -> Color {
     theme.color_token("popover")
 }
@@ -1358,6 +1376,10 @@ impl NavigationMenu {
                             let mut pressable = PressableProps::default();
                             pressable.enabled = !disabled;
                             pressable.focusable = !disabled;
+                            pressable.layout = decl_style::layout_style(
+                                &theme_for_item,
+                                navigation_menu_trigger_style(&theme_for_item).layout,
+                            );
                             pressable.a11y = PressableA11y {
                                 role: Some(SemanticsRole::Button),
                                 label: Some(label.clone()),
@@ -1389,7 +1411,7 @@ impl NavigationMenu {
                                     let bg = (hovered || pressed).then_some(trigger_bg_hover);
 
                                     let mut layout = LayoutStyle::default();
-                                    layout.size.width = Length::Auto;
+                                    layout.size.height = Length::Fill;
 
                                     let wrapper = ContainerProps {
                                         layout,
@@ -1431,7 +1453,11 @@ impl NavigationMenu {
 
                                     let row = cx.flex(
                                         FlexProps {
-                                            layout: LayoutStyle::default(),
+                                            layout: {
+                                                let mut layout = LayoutStyle::default();
+                                                layout.size.height = Length::Fill;
+                                                layout
+                                            },
                                             direction: fret_core::Axis::Horizontal,
                                             gap: Px(0.0).into(),
                                             padding: Edges::all(Px(0.0)).into(),
@@ -1480,7 +1506,7 @@ impl NavigationMenu {
                                             .map(|color| color.resolve(&theme_for_item));
 
                                         let mut layout = LayoutStyle::default();
-                                        layout.size.width = Length::Auto;
+                                        layout.size.height = Length::Fill;
 
                                         let wrapper = ContainerProps {
                                             layout,
@@ -1584,7 +1610,11 @@ impl NavigationMenu {
                                         row_children.push(chevron);
                                         let row = cx.flex(
                                             FlexProps {
-                                                layout: LayoutStyle::default(),
+                                                layout: {
+                                                    let mut layout = LayoutStyle::default();
+                                                    layout.size.height = Length::Fill;
+                                                    layout
+                                                },
                                                 direction: fret_core::Axis::Horizontal,
                                                 gap: Px(0.0).into(),
                                                 padding: Edges::all(Px(0.0)).into(),
@@ -2375,6 +2405,17 @@ mod tests {
             menu.config.skip_delay_duration,
             std::time::Duration::from_millis(360)
         );
+    }
+
+    #[test]
+    fn navigation_menu_trigger_style_applies_h_9_and_flex_shrink_0() {
+        let app = App::new();
+        let theme = Theme::global(&app).snapshot();
+        let style = navigation_menu_trigger_style(&theme);
+        let layout = decl_style::layout_style(&theme, style.layout);
+
+        assert_eq!(layout.size.height, Length::Px(Px(36.0)));
+        assert_eq!(layout.flex.shrink, 0.0);
     }
 
     #[test]

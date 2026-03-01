@@ -12,6 +12,12 @@ pub(super) fn handle_wheel_region<H: UiHost>(
     props: crate::element::WheelRegionProps,
     event: &Event,
 ) -> bool {
+    // Wheel regions are an explicit policy hook. Still, avoid consuming in capture so nested
+    // scrollables under the pointer get first refusal.
+    if cx.input_ctx.dispatch_phase == fret_runtime::InputDispatchPhase::Capture {
+        return true;
+    }
+
     let Event::Pointer(pe) = event else {
         return true;
     };

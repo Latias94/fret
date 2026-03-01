@@ -1888,7 +1888,9 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "fret",
+ "fret-app",
  "fret-core",
+ "fret-ui",
 ]
 
 [[package]]

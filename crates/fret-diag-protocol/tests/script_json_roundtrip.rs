@@ -214,6 +214,13 @@ fn script_v2_roundtrip_ui_gallery_data_table_retained_column_actions_menu() {
 }
 
 #[test]
+fn script_v2_roundtrip_ui_gallery_data_table_listlike_pointer_selection() {
+    assert_script_v2_roundtrip(include_str!(
+        "../../../tools/diag-scripts/ui-gallery-data-table-listlike-pointer-selection.json"
+    ));
+}
+
+#[test]
 fn script_v2_roundtrip_ui_gallery_data_table_retained_global_filter() {
     assert_script_v2_roundtrip(include_str!(
         "../../../tools/diag-scripts/ui-gallery-data-table-retained-global-filter.json"
