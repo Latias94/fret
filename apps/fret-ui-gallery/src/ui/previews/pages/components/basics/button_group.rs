@@ -10,7 +10,6 @@ pub(in crate::ui) fn preview_button_group(cx: &mut ElementContext<'_, App>) -> V
         search_value: Option<Model<String>>,
         url_value: Option<Model<String>>,
         message_value: Option<Model<String>>,
-        voice_enabled: Option<Model<bool>>,
         dropdown_open: Option<Model<bool>>,
         popover_open: Option<Model<bool>>,
         popover_text: Option<Model<String>>,
@@ -75,18 +74,6 @@ pub(in crate::ui) fn preview_button_group(cx: &mut ElementContext<'_, App>) -> V
             let model = cx.app.models_mut().insert(String::new());
             cx.with_state(ButtonGroupModels::default, |st| {
                 st.message_value = Some(model.clone());
-            });
-            model
-        }
-    };
-
-    let voice_enabled = cx.with_state(ButtonGroupModels::default, |st| st.voice_enabled.clone());
-    let voice_enabled = match voice_enabled {
-        Some(model) => model,
-        None => {
-            let model = cx.app.models_mut().insert(false);
-            cx.with_state(ButtonGroupModels::default, |st| {
-                st.voice_enabled = Some(model.clone());
             });
             model
         }
@@ -459,71 +446,7 @@ pub(in crate::ui) fn preview_button_group(cx: &mut ElementContext<'_, App>) -> V
     .into_element(cx)
     .test_id("ui-gallery-button-group-input");
 
-    let input_group = {
-        let voice_enabled_now = cx
-            .get_model_cloned(&voice_enabled, fret_ui::Invalidation::Paint)
-            .unwrap_or(false);
-        let placeholder = if voice_enabled_now {
-            "Record and send audio..."
-        } else {
-            "Send a message..."
-        };
-
-        let voice_button = {
-            let mut button = shadcn::InputGroupButton::new("")
-                .a11y_label("Voice Mode")
-                .size(shadcn::InputGroupButtonSize::IconXs)
-                .icon(icon_id("lucide.audio-lines"))
-                .toggle_model(voice_enabled.clone());
-            if voice_enabled_now {
-                let theme = Theme::global(&*cx.app).snapshot();
-                button = button.refine_style(
-                    ChromeRefinement::default()
-                        .bg(ColorRef::Color(theme.color_token("accent")))
-                        .text_color(ColorRef::Color(theme.color_token("accent.foreground"))),
-                );
-            }
-            button.into_element(cx)
-        };
-
-        let voice_tooltip = shadcn::Tooltip::new(
-            voice_button,
-            shadcn::TooltipContent::new(vec![shadcn::TooltipContent::text(cx, "Voice Mode")])
-                .into_element(cx),
-        )
-        .arrow(true)
-        .side(shadcn::TooltipSide::Top)
-        .into_element(cx);
-
-        let group = shadcn::InputGroup::new(message_value.clone())
-            .a11y_label("Message")
-            .placeholder(placeholder)
-            .disabled(voice_enabled_now)
-            .trailing([voice_tooltip])
-            .trailing_has_button(true)
-            .refine_layout(LayoutRefinement::default().w_full().min_w_0());
-
-        let plus = shadcn::ButtonGroup::new([shadcn::Button::new("")
-            .a11y_label("Add")
-            .variant(shadcn::ButtonVariant::Outline)
-            .size(shadcn::ButtonSize::Icon)
-            .icon(icon_id("lucide.plus"))
-            .into()]);
-
-        let message = shadcn::ButtonGroup::new([group.into()])
-            .refine_layout(LayoutRefinement::default().flex_1().min_w_0());
-
-        shadcn::ButtonGroup::new([plus.into(), message.into()])
-            .radius_override(Radius::Full)
-            .refine_layout(
-                LayoutRefinement::default()
-                    .w_full()
-                    .min_w_0()
-                    .max_w(Px(760.0)),
-            )
-            .into_element(cx)
-            .test_id("ui-gallery-button-group-input-group")
-    };
+    let input_group = crate::ui::snippets::button_group::input_group::render(cx);
 
     let dropdown = {
         let radius = fret_ui::Theme::global(&*cx.app).metric_token("metric.radius.md");
@@ -1034,73 +957,9 @@ shadcn::ButtonGroup::new([
             DocSection::new("Input Group", input_group)
                 .max_w(Px(820.0))
                 .test_id_prefix("ui-gallery-button-group-input-group")
-                .code(
+                .code_from_file(
                     "rust",
-                    r#"let model = cx.app.models_mut().insert(String::new());
-	let voice_enabled = cx.app.models_mut().insert(false);
-
-	let voice_enabled_now = cx
-	    .get_model_cloned(&voice_enabled, fret_ui::Invalidation::Paint)
-	    .unwrap_or(false);
-	let placeholder = if voice_enabled_now {
-	    "Record and send audio..."
-	} else {
-	    "Send a message..."
-	};
-
-	let voice_button = {
-	    let mut button = shadcn::InputGroupButton::new("")
-	        .a11y_label("Voice Mode")
-	        .size(shadcn::InputGroupButtonSize::IconXs)
-	        .icon(fret_icons::IconId::new_static("lucide.audio-lines"))
-	        .toggle_model(voice_enabled.clone());
-	    if voice_enabled_now {
-	        let theme = fret_ui::Theme::global(&*cx.app).snapshot();
-	        button = button.refine_style(
-	            ChromeRefinement::default()
-	                .bg(fret_ui_kit::ColorRef::Color(theme.color_token("accent")))
-	                .text_color(fret_ui_kit::ColorRef::Color(
-	                    theme.color_token("accent.foreground"),
-	                )),
-	        );
-	    }
-	    button.into_element(cx)
-	};
-
-	let voice_tooltip = shadcn::Tooltip::new(
-	    voice_button,
-	    shadcn::TooltipContent::new(vec![shadcn::TooltipContent::text(cx, "Voice Mode")])
-	        .into_element(cx),
-	)
-	.arrow(true)
-	.side(shadcn::TooltipSide::Top)
-	.into_element(cx);
-
-	let group = shadcn::InputGroup::new(model)
-	    .a11y_label("Message")
-	    .placeholder(placeholder)
-	    .disabled(voice_enabled_now)
-	    .trailing([voice_tooltip])
-	    .trailing_has_button(true)
-	    .refine_layout(LayoutRefinement::default().w_full().min_w_0());
-
-	let plus = shadcn::ButtonGroup::new([shadcn::Button::new("")
-	    .a11y_label("Add")
-	    .variant(shadcn::ButtonVariant::Outline)
-	    .size(shadcn::ButtonSize::Icon)
-	    .icon(fret_icons::IconId::new_static("lucide.plus"))
-	    .into()]);
-
-	let message = shadcn::ButtonGroup::new([group.into()])
-	    .refine_layout(LayoutRefinement::default().flex_1().min_w_0());
-
-	shadcn::ButtonGroup::new([
-	    plus.into(),
-	    message.into(),
-	])
-.radius_override(Radius::Full)
-.refine_layout(LayoutRefinement::default().w_full().min_w_0().max_w(Px(760.0)))
-.into_element(cx);"#,
+                    include_str!("../../../../snippets/button_group/input_group.rs"),
                 ),
             DocSection::new("Dropdown Menu", dropdown)
                 .max_w(Px(820.0))
