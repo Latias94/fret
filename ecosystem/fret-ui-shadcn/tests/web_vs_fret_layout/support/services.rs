@@ -111,7 +111,11 @@ impl fret_core::TextService for StyleAwareServices {
 
         let max_w = constraints.max_width.unwrap_or(est_w);
         let (lines, w) = match constraints.wrap {
-            fret_core::TextWrap::Word if max_w.0.is_finite() && max_w.0 > 0.0 => {
+            fret_core::TextWrap::Word
+            | fret_core::TextWrap::Balance
+            | fret_core::TextWrap::WordBreak
+                if max_w.0.is_finite() && max_w.0 > 0.0 =>
+            {
                 let lines = (est_w.0 / max_w.0).ceil().max(1.0) as u32;
                 (lines, Px(est_w.0.min(max_w.0)))
             }

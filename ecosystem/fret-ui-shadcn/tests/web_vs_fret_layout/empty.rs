@@ -161,6 +161,15 @@ fn web_vs_fret_layout_empty_geometry_matches_web_fixtures() {
                 )
                 .expect("fret empty description");
 
+                if std::env::var_os("FRET_DEBUG_WEB_VS_FRET_LAYOUT").is_some() {
+                    eprintln!("fret empty-demo root={:?}", root.bounds);
+                    eprintln!("fret empty-demo header={:?}", header.bounds);
+                    eprintln!("fret empty-demo description={:?}", description.bounds);
+                    eprintln!("web empty-demo root={:?}", web_empty.rect);
+                    eprintln!("web empty-demo header={:?}", web_header.rect);
+                    eprintln!("web empty-demo description={:?}", web_description.rect);
+                }
+
                 assert_close_px(
                     "empty-demo root x",
                     root.bounds.origin.x,
