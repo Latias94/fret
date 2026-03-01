@@ -11,14 +11,14 @@ Legend:
 
 ### Foundations
 
-- [ ] Add `apps/fret-ui-gallery/src/ui/snippets/` with a minimal example.
-- [ ] Add a helper for `DocSection` to load code from a snippet file (and optionally a named region).
-- [ ] Document snippet conventions (file naming, user-facing `use` stanza, required function signatures).
+- [x] Add `apps/fret-ui-gallery/src/ui/snippets/` with a minimal example.
+- [x] Add a helper for `DocSection` to load code from a snippet file (and optionally a named region).
+- [x] Document snippet conventions (file naming, user-facing `use` stanza, required function signatures).
 
 ### Migration batches
 
-- [ ] Migrate Button Group page(s) to snippet-backed sections.
-- [ ] Migrate Select page(s) to snippet-backed sections.
+- [x] Migrate Button Group page(s) to snippet-backed sections.
+- [x] Migrate Select page(s) to snippet-backed sections.
 - [ ] Migrate overlay family pages (Dropdown Menu, Menubar, Context Menu, Popover, Tooltip, Dialog, Sheet, Drawer).
 - [ ] Migrate form family pages (Input, Input Group, Textarea, Checkbox, Radio Group, Switch, Slider, Toggle, Toggle Group, Select, Combobox).
 - [ ] Migrate layout + data-display pages (Tabs, Table, Data Table, Chart, Calendar, Carousel, Scroll Area, Navigation Menu, Pagination, etc).
@@ -56,7 +56,7 @@ Source list: upstream shadcn v4 Base/Radix doc trees:
 | badge | `repo-ref/ui/apps/v4/content/docs/components/base/badge.mdx` | `repo-ref/ui/apps/v4/content/docs/components/radix/badge.mdx` | `badge` | TBD | No | Not started |  |  |
 | breadcrumb | `repo-ref/ui/apps/v4/content/docs/components/base/breadcrumb.mdx` | `repo-ref/ui/apps/v4/content/docs/components/radix/breadcrumb.mdx` | `breadcrumb` | TBD | No | Not started |  |  |
 | button | `repo-ref/ui/apps/v4/content/docs/components/base/button.mdx` | `repo-ref/ui/apps/v4/content/docs/components/radix/button.mdx` | `button` | TBD | No | Not started |  |  |
-| button-group | `repo-ref/ui/apps/v4/content/docs/components/base/button-group.mdx` | `repo-ref/ui/apps/v4/content/docs/components/radix/button-group.mdx` | `button_group` | `apps/fret-ui-gallery/src/ui/previews/pages/components/basics/button_group.rs` | Partial | In progress |  | Migrated Select + Input Group to snippet-backed; finish remaining sections. |
+| button-group | `repo-ref/ui/apps/v4/content/docs/components/base/button-group.mdx` | `repo-ref/ui/apps/v4/content/docs/components/radix/button-group.mdx` | `button_group` | `apps/fret-ui-gallery/src/ui/previews/pages/components/basics/button_group.rs` | Yes | Done | `tools/diag-scripts/ui-gallery/button/ui-gallery-button-group-demo-screenshots.json`, `tools/diag-scripts/ui-gallery/button/ui-gallery-button-group-select-screenshots.json` | Snippet-backed previews + region-sliced code tabs for all Button Group sections (preview ≡ code). |
 | calendar | `repo-ref/ui/apps/v4/content/docs/components/base/calendar.mdx` | `repo-ref/ui/apps/v4/content/docs/components/radix/calendar.mdx` | `calendar` | TBD | No | Not started |  |  |
 | card | `repo-ref/ui/apps/v4/content/docs/components/base/card.mdx` | `repo-ref/ui/apps/v4/content/docs/components/radix/card.mdx` | `card` | TBD | No | Not started |  |  |
 | carousel | `repo-ref/ui/apps/v4/content/docs/components/base/carousel.mdx` | `repo-ref/ui/apps/v4/content/docs/components/radix/carousel.mdx` | `carousel` | TBD | No | Not started |  |  |
