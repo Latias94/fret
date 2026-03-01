@@ -58,7 +58,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
             ))
         }
 
-        let mut node_text_style = self.style.context_menu_text_style.clone();
+        let mut node_text_style = self.style.geometry.context_menu_text_style.clone();
         node_text_style.size = Px(node_text_style.size.0 / zoom);
         if let Some(lh) = node_text_style.line_height.as_mut() {
             lh.0 /= zoom;
@@ -165,7 +165,10 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                     order: DrawOrder(4),
                     origin: Point::new(text_x, text_y),
                     text: blob,
-                    paint: (hint.title_text.unwrap_or(self.style.context_menu_text)).into(),
+                    paint: (hint
+                        .title_text
+                        .unwrap_or(self.style.paint.context_menu_text))
+                    .into(),
                     outline: None,
                     shadow: None,
                 });
@@ -203,7 +206,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                     order: DrawOrder(4),
                     origin: Point::new(text_x, Px(inner_y)),
                     text: blob,
-                    paint: (self.style.context_menu_text).into(),
+                    paint: (self.style.paint.context_menu_text).into(),
                     outline: None,
                     shadow: None,
                 });
@@ -241,7 +244,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                 order: DrawOrder(4),
                 origin: Point::new(x, y),
                 text: blob,
-                paint: (self.style.context_menu_text).into(),
+                paint: (self.style.paint.context_menu_text).into(),
                 outline: None,
                 shadow: None,
             });

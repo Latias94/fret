@@ -462,9 +462,9 @@ impl NodeGraphPresenter for DemoPresenter {
         };
         if n.kind.0.as_str() == "demo.float" {
             let extra_body = 30.0;
-            let pins = style.pin_row_height;
-            let base = style.node_header_height + 2.0 * style.node_padding + pins;
-            return Some((style.node_width, base + extra_body));
+            let pins = style.geometry.pin_row_height;
+            let base = style.geometry.node_header_height + 2.0 * style.geometry.node_padding + pins;
+            return Some((style.geometry.node_width, base + extra_body));
         }
 
         None
@@ -484,7 +484,7 @@ impl NodeGraphPresenter for DemoPresenter {
         let p = graph.ports.get(&port)?;
         let key = p.key.0.as_str();
         let (w, h) = self.weird_size_px();
-        Self::weird_anchor_for_key(false, key, (w, h), style.pin_radius)
+        Self::weird_anchor_for_key(false, key, (w, h), style.geometry.pin_radius)
     }
 }
 
@@ -1675,7 +1675,7 @@ impl NodeGraphDemoDriver {
             portal_root,
             node_types.into_portal_renderer(),
         )
-        .with_cull_margin_px(style.render_cull_margin_px)
+        .with_cull_margin_px(style.paint.render_cull_margin_px)
         .with_edit_queue(models.edits.clone())
         .with_canvas_focus_target(canvas_node)
         .with_command_handler(PortalNumberEditHandler::new(
@@ -1696,7 +1696,7 @@ impl NodeGraphDemoDriver {
             let controls_overlay_node = ui.create_node_retained(controls_overlay);
 
             let controls_panel = NodeGraphPanel::new(NodeGraphPanelPosition::TopRight)
-                .with_margin_px(style.controls_margin);
+                .with_margin_px(style.paint.controls_margin);
             let controls_node = ui.create_node_retained(controls_panel);
             ui.set_children(controls_node, vec![controls_overlay_node]);
             Some(controls_node)
@@ -1748,7 +1748,7 @@ impl NodeGraphDemoDriver {
             let minimap_overlay_node = ui.create_node_retained(minimap_overlay);
 
             let minimap_panel = NodeGraphPanel::new(NodeGraphPanelPosition::BottomRight)
-                .with_margin_px(style.minimap_margin);
+                .with_margin_px(style.paint.minimap_margin);
             let minimap_node = ui.create_node_retained(minimap_panel);
             ui.set_children(minimap_node, vec![minimap_overlay_node]);
             Some(minimap_node)
@@ -3145,20 +3145,20 @@ impl<H: UiHost> Widget<H> for DemoHelpOverlay {
         }
 
         let rect = self.rect(cx.bounds);
-        let corner = self.style.context_menu_corner_radius.max(6.0);
+        let corner = self.style.paint.context_menu_corner_radius.max(6.0);
 
         cx.scene.push(SceneOp::Quad {
             order: DrawOrder(21_600),
             rect,
-            background: fret_core::Paint::Solid(self.style.context_menu_background),
+            background: fret_core::Paint::Solid(self.style.paint.context_menu_background).into(),
 
             border: Edges::all(Px(1.0)),
-            border_paint: fret_core::Paint::Solid(self.style.context_menu_border),
+            border_paint: fret_core::Paint::Solid(self.style.paint.context_menu_border).into(),
 
             corner_radii: Corners::all(Px(corner)),
         });
 
-        let text_style = self.style.controls_text_style.clone();
+        let text_style = self.style.paint.controls_text_style.clone();
         let constraints = TextConstraints {
             max_width: Some(Px(rect.size.width.0 - 2.0 * Self::PAD_PX)),
             wrap: TextWrap::Word,
@@ -3215,7 +3215,7 @@ impl<H: UiHost> Widget<H> for DemoHelpOverlay {
                 order: DrawOrder(21_601),
                 text: id,
                 origin: Point::new(Px(rect.origin.x.0 + Self::PAD_PX), Px(cy)),
-                paint: self.style.controls_text.into(),
+                paint: self.style.paint.controls_text.into(),
                 outline: None,
                 shadow: None,
             });
@@ -3298,20 +3298,20 @@ impl<H: UiHost> Widget<H> for DemoToolbarStrip {
         }
 
         let layout = self.compute_layout(cx.bounds);
-        let corner = self.style.context_menu_corner_radius.max(6.0);
+        let corner = self.style.paint.context_menu_corner_radius.max(6.0);
 
         cx.scene.push(SceneOp::Quad {
             order: DrawOrder(21_500),
             rect: layout.panel,
-            background: fret_core::Paint::Solid(self.style.context_menu_background),
+            background: fret_core::Paint::Solid(self.style.paint.context_menu_background).into(),
 
             border: Edges::all(Px(1.0)),
-            border_paint: fret_core::Paint::Solid(self.style.context_menu_border),
+            border_paint: fret_core::Paint::Solid(self.style.paint.context_menu_border).into(),
 
             corner_radii: Corners::all(Px(corner)),
         });
 
-        let text_style = self.style.controls_text_style.clone();
+        let text_style = self.style.paint.controls_text_style.clone();
         let constraints = TextConstraints {
             max_width: None,
             wrap: TextWrap::None,
@@ -3332,7 +3332,7 @@ impl<H: UiHost> Widget<H> for DemoToolbarStrip {
             order: DrawOrder(21_501),
             text: label_id,
             origin: Point::new(Px(lx), Px(ly)),
-            paint: self.style.controls_text.into(),
+            paint: self.style.paint.controls_text.into(),
             outline: None,
             shadow: None,
         });
@@ -3345,9 +3345,9 @@ impl<H: UiHost> Widget<H> for DemoToolbarStrip {
             let hovered = self.hovered == Some(btn);
             let pressed = self.pressed == Some(btn);
             let bg = if pressed {
-                self.style.controls_active_background
+                self.style.paint.controls_active_background
             } else if hovered {
-                self.style.controls_hover_background
+                self.style.paint.controls_hover_background
             } else {
                 Color::TRANSPARENT
             };
@@ -3355,10 +3355,10 @@ impl<H: UiHost> Widget<H> for DemoToolbarStrip {
             cx.scene.push(SceneOp::Quad {
                 order: DrawOrder(21_501),
                 rect,
-                background: fret_core::Paint::Solid(bg),
+                background: fret_core::Paint::Solid(bg).into(),
 
                 border: Edges::all(Px(0.0)),
-                border_paint: fret_core::Paint::TRANSPARENT,
+                border_paint: fret_core::Paint::TRANSPARENT.into(),
 
                 corner_radii: Corners::all(Px((corner - 2.0).max(4.0))),
             });
@@ -3375,7 +3375,7 @@ impl<H: UiHost> Widget<H> for DemoToolbarStrip {
                 order: DrawOrder(21_502),
                 text: id,
                 origin: Point::new(Px(tx), Px(ty)),
-                paint: self.style.controls_text.into(),
+                paint: self.style.paint.controls_text.into(),
                 outline: None,
                 shadow: None,
             });

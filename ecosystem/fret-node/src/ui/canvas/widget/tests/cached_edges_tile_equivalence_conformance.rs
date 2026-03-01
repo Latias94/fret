@@ -182,7 +182,7 @@ fn capture_edge_wire_and_markers_for_bounds(bounds: Rect) -> (Vec<Vec<PathComman
         "expected edge cache warmup to complete within a few frames"
     );
 
-    let wire_width_bits = Px(canvas.style.wire_width).0.to_bits();
+    let wire_width_bits = Px(canvas.style.geometry.wire_width).0.to_bits();
 
     let mut out = Vec::new();
     for (cmds, style, _constraints) in &services.path_prepares {

@@ -357,7 +357,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
         let viewport_rect = viewport.visible_canvas_rect();
         let viewport_w = viewport_rect.size.width.0;
         let viewport_h = viewport_rect.size.height.0;
-        let margin_screen = self.style.render_cull_margin_px;
+        let margin_screen = self.style.paint.render_cull_margin_px;
 
         if !margin_screen.is_finite()
             || margin_screen <= 0.0

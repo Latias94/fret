@@ -32,7 +32,9 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
             && v > 0.0
         {
             v
-        } else if self.style.paint.grid_line_width.is_finite() && self.style.paint.grid_line_width > 0.0 {
+        } else if self.style.paint.grid_line_width.is_finite()
+            && self.style.paint.grid_line_width > 0.0
+        {
             self.style.paint.grid_line_width
         } else {
             1.0

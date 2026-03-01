@@ -1,6 +1,6 @@
 # ADR 0307: Node Graph Geometry-Affecting Style Surface (v1)
 
-Status: Proposed
+Status: Accepted
 
 ## Context
 
@@ -143,4 +143,3 @@ Likely shape (exact naming may vary):
 - Add conformance tests:
   - geometry token change rebuilds derived geometry + spatial index,
   - paint token change does not.
-

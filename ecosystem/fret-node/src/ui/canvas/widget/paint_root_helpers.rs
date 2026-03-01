@@ -47,7 +47,9 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
         b.add_f32_bits(self.style.geometry.pin_row_height);
         b.add_f32_bits(self.style.geometry.pin_radius);
         b.add_u32(self.style.geometry.context_menu_text_style.size.0.to_bits());
-        b.add_u32(u32::from(self.style.geometry.context_menu_text_style.weight.0));
+        b.add_u32(u32::from(
+            self.style.geometry.context_menu_text_style.weight.0,
+        ));
         b.add_u32(scale_factor.to_bits());
         b.finish()
     }

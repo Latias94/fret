@@ -210,6 +210,7 @@ impl WorkspaceShellDemoDriver {
                     });
 
                     let theme_for_center = theme.clone();
+                    let window_layout_for_center = window_layout.clone();
                     let center = cx.keyed("workspace_shell.center", move |cx| {
                         let mut render_pane =
                             move |cx: &mut fret_ui::ElementContext<'_, App>,
@@ -279,7 +280,7 @@ impl WorkspaceShellDemoDriver {
                                                         },
                                                         ..Default::default()
                                                     },
-                                                    move |cx| {
+                                                    move |cx, _state| {
                                                         vec![cx.container(
                                                             ContainerProps {
                                                                 layout: fill_layout(),
@@ -324,7 +325,7 @@ impl WorkspaceShellDemoDriver {
 
                         workspace_pane_tree_element_with_resize(
                             cx,
-                            window_layout.clone(),
+                            window_layout_for_center.clone(),
                             &mut render_pane,
                         )
                     });

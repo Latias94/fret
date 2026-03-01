@@ -9,6 +9,8 @@ scope: ecosystem/fret-node
 
 ## M0 — Contracts + invalidation gates
 
+Status: Done (2026-03-01).
+
 Acceptance:
 
 - An ADR defines the split between paint-only vs geometry-affecting styling surfaces.
@@ -23,6 +25,8 @@ Evidence anchors (target):
 - Conformance tests under: `ecosystem/fret-node/src/ui/canvas/widget/tests/`
 
 ## M1 — Geometry tokens are first-class
+
+Status: Done (2026-03-01).
 
 Acceptance:
 
@@ -39,4 +43,3 @@ Acceptance:
 - There is a UI-only override surface for per-node/per-edge geometry (like XyFlow `node.style` /
   `edge.style`), but type-safe and contract-bounded.
 - Overrides participate in geometry invalidation and do not leak into `Graph` persistence.
-

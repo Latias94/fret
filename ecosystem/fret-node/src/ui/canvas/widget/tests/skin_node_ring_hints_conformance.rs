@@ -120,7 +120,7 @@ fn skin_node_ring_hints_draws_focused_ring_outside_node_rect() {
             Px(rect_a.size.height.0 + 12.0),
         ),
     );
-    let expected_corner = Corners::all(Px(style.node_corner_radius + 6.0));
+    let expected_corner = Corners::all(Px(style.paint.node_corner_radius + 6.0));
 
     let approx = |a: f32, b: f32| (a - b).abs() <= 1.0e-3;
 

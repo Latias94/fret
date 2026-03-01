@@ -38,20 +38,20 @@ fn rect_contains_rect(outer: Rect, inner: Rect) -> bool {
 #[test]
 fn context_menu_rect_scales_in_canvas_space_to_keep_screen_size_constant() {
     let mut style = NodeGraphStyle::default();
-    style.context_menu_width = 240.0;
-    style.context_menu_item_height = 20.0;
-    style.context_menu_padding = 6.0;
+    style.paint.context_menu_width = 240.0;
+    style.paint.context_menu_item_height = 20.0;
+    style.paint.context_menu_padding = 6.0;
 
     let origin = Point::new(Px(10.0), Px(20.0));
     let item_count = 4;
 
     for zoom in [0.5, 1.0, 2.0, 4.0] {
         let rect = overlay_hit::context_menu_rect_at(&style, origin, item_count, zoom);
-        assert!((rect.size.width.0 * zoom - style.context_menu_width).abs() <= 1.0e-6);
+        assert!((rect.size.width.0 * zoom - style.paint.context_menu_width).abs() <= 1.0e-6);
         assert!(
             (rect.size.height.0 * zoom
-                - (2.0 * style.context_menu_padding
-                    + style.context_menu_item_height * item_count as f32))
+                - (2.0 * style.paint.context_menu_padding
+                    + style.paint.context_menu_item_height * item_count as f32))
                 .abs()
                 <= 1.0e-6
         );
@@ -61,9 +61,9 @@ fn context_menu_rect_scales_in_canvas_space_to_keep_screen_size_constant() {
 #[test]
 fn hit_context_menu_item_returns_expected_item_index() {
     let mut style = NodeGraphStyle::default();
-    style.context_menu_width = 200.0;
-    style.context_menu_item_height = 10.0;
-    style.context_menu_padding = 2.0;
+    style.paint.context_menu_width = 200.0;
+    style.paint.context_menu_item_height = 10.0;
+    style.paint.context_menu_padding = 2.0;
 
     let origin = Point::new(Px(100.0), Px(50.0));
     let menu = ContextMenuState {
@@ -94,8 +94,8 @@ fn hit_context_menu_item_returns_expected_item_index() {
     };
 
     let zoom = 2.0;
-    let pad = style.context_menu_padding / zoom;
-    let item_h = style.context_menu_item_height / zoom;
+    let pad = style.paint.context_menu_padding / zoom;
+    let item_h = style.paint.context_menu_item_height / zoom;
 
     // Inside first item.
     let p0 = Point::new(Px(origin.x.0 + 1.0), Px(origin.y.0 + pad + 0.5 * item_h));
@@ -129,9 +129,9 @@ fn hit_context_menu_item_returns_expected_item_index() {
 #[test]
 fn hit_searcher_row_respects_scroll_and_header_region() {
     let mut style = NodeGraphStyle::default();
-    style.context_menu_width = 200.0;
-    style.context_menu_item_height = 10.0;
-    style.context_menu_padding = 2.0;
+    style.paint.context_menu_width = 200.0;
+    style.paint.context_menu_item_height = 10.0;
+    style.paint.context_menu_padding = 2.0;
 
     let origin = Point::new(Px(10.0), Px(20.0));
     let rows: Vec<SearcherRow> = (0..20)
@@ -165,8 +165,8 @@ fn hit_searcher_row_respects_scroll_and_header_region() {
     };
 
     let zoom = 1.0;
-    let pad = style.context_menu_padding / zoom;
-    let item_h = style.context_menu_item_height / zoom;
+    let pad = style.paint.context_menu_padding / zoom;
+    let item_h = style.paint.context_menu_item_height / zoom;
     let list_top = origin.y.0 + pad + item_h + pad;
 
     // Header region (title + padding) should not hit any row.

@@ -50,7 +50,8 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
         cx.scene.push(SceneOp::Quad {
             order: DrawOrder(56),
             rect: query_rect,
-            background: fret_core::Paint::Solid(self.style.paint.context_menu_hover_background).into(),
+            background: fret_core::Paint::Solid(self.style.paint.context_menu_hover_background)
+                .into(),
 
             border: Edges::all(Px(0.0)),
             border_paint: fret_core::Paint::TRANSPARENT.into(),
@@ -100,8 +101,10 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                 cx.scene.push(SceneOp::Quad {
                     order: DrawOrder(56),
                     rect: item_rect,
-                    background: fret_core::Paint::Solid(self.style.paint.context_menu_hover_background)
-                        .into(),
+                    background: fret_core::Paint::Solid(
+                        self.style.paint.context_menu_hover_background,
+                    )
+                    .into(),
 
                     border: Edges::all(Px(0.0)),
                     border_paint: fret_core::Paint::TRANSPARENT.into(),

@@ -55,7 +55,10 @@ fn color_mode_system_syncs_style_from_theme() {
     let mut services = NullServices::default();
     let theme = paint_once(&mut canvas, &mut host, &mut tree, &mut services, bounds);
 
-    assert_eq!(canvas.style.background, theme.color_token("background"));
+    assert_eq!(
+        canvas.style.paint.background,
+        theme.color_token("background")
+    );
 }
 
 #[test]
@@ -75,8 +78,8 @@ fn color_mode_light_forces_light_palette() {
     let _ = paint_once(&mut canvas, &mut host, &mut tree, &mut services, bounds);
 
     assert_eq!(
-        canvas.style.background,
-        NodeGraphStyle::light_defaults().background
+        canvas.style.paint.background,
+        NodeGraphStyle::light_defaults().paint.background
     );
 }
 
@@ -97,7 +100,7 @@ fn color_mode_dark_forces_dark_palette() {
     let _ = paint_once(&mut canvas, &mut host, &mut tree, &mut services, bounds);
 
     assert_eq!(
-        canvas.style.background,
-        NodeGraphStyle::default().background
+        canvas.style.paint.background,
+        NodeGraphStyle::default().paint.background
     );
 }

@@ -887,7 +887,7 @@ impl NodeGraphDomainDemoDriver {
             portal_root,
             node_types.into_portal_renderer(),
         )
-        .with_cull_margin_px(style.render_cull_margin_px)
+        .with_cull_margin_px(style.paint.render_cull_margin_px)
         .with_edit_queue(models.edits.clone())
         .with_canvas_focus_target(canvas_node)
         .with_command_handler(PortalNumberEditHandler::new(

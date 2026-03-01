@@ -31,9 +31,9 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
 
                 let geom = geom.as_ref();
                 let index = index.as_ref();
-                let node_pad = this.style.node_padding;
+                let node_pad = this.style.geometry.node_padding;
                 let pin_gap = 8.0;
-                let pin_r = this.style.pin_radius;
+                let pin_r = this.style.geometry.pin_radius;
                 let label_overhead = 2.0 * node_pad + 2.0 * (pin_r + pin_gap);
 
                 if include_groups {
@@ -270,8 +270,14 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                             let pad = (snapshot
                                 .interaction
                                 .edge_interaction_width
-                                .max(this.style.wire_width * this.style.wire_width_selected_mul)
-                                .max(this.style.wire_width * this.style.wire_width_hover_mul))
+                                .max(
+                                    this.style.geometry.wire_width
+                                        * this.style.paint.wire_width_selected_mul,
+                                )
+                                .max(
+                                    this.style.geometry.wire_width
+                                        * this.style.paint.wire_width_hover_mul,
+                                ))
                                 / zoom;
                             let bounds = if let Some(custom) =
                                 this.edge_custom_path(graph, edge_id, &hint, from, to, zoom)

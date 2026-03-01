@@ -97,7 +97,8 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                     background: fret_core::Paint::Solid(self.style.paint.group_background).into(),
 
                     border: Edges::all(Px(1.0 / zoom)),
-                    border_paint: fret_core::Paint::Solid(self.style.paint.node_border_selected).into(),
+                    border_paint: fret_core::Paint::Solid(self.style.paint.node_border_selected)
+                        .into(),
 
                     corner_radii: Corners::all(group_corner),
                 });

@@ -115,13 +115,13 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
         start_edge: usize,
         budget: &mut WorkBudget,
     ) -> (usize, bool) {
-        let pad_screen = self.style.edge_label_padding;
-        let corner_screen = self.style.edge_label_corner_radius;
-        let offset_screen = self.style.edge_label_offset;
-        let max_width_screen = self.style.edge_label_max_width;
-        let border_width_screen = self.style.edge_label_border_width;
+        let pad_screen = self.style.paint.edge_label_padding;
+        let corner_screen = self.style.paint.edge_label_corner_radius;
+        let offset_screen = self.style.paint.edge_label_offset;
+        let max_width_screen = self.style.paint.edge_label_max_width;
+        let border_width_screen = self.style.paint.edge_label_border_width;
 
-        let mut edge_text_style = self.style.edge_label_text_style.clone();
+        let mut edge_text_style = self.style.paint.edge_label_text_style.clone();
         edge_text_style.size = Px(edge_text_style.size.0 / zoom);
         if let Some(lh) = edge_text_style.line_height.as_mut() {
             lh.0 /= zoom;
@@ -206,12 +206,15 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                 Size::new(Px(w + 2.0 * pad), Px(h + 2.0 * pad)),
             );
 
-            let border_color = edge.hint.color.unwrap_or(self.style.edge_label_border);
+            let border_color = edge
+                .hint
+                .color
+                .unwrap_or(self.style.paint.edge_label_border);
             let border_w = border_width_screen.max(0.0) / z;
             scene.push(SceneOp::Quad {
                 order: DrawOrder(2),
                 rect,
-                background: fret_core::Paint::Solid(self.style.edge_label_background).into(),
+                background: fret_core::Paint::Solid(self.style.paint.edge_label_background).into(),
 
                 border: Edges::all(Px(border_w)),
                 border_paint: fret_core::Paint::Solid(border_color).into(),
@@ -224,7 +227,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                 order: DrawOrder(2),
                 origin: Point::new(text_x, text_y),
                 text: blob,
-                paint: (self.style.edge_label_text).into(),
+                paint: (self.style.paint.edge_label_text).into(),
                 outline: None,
                 shadow: None,
             });
