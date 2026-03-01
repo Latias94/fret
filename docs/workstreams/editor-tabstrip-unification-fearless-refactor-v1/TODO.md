@@ -30,8 +30,16 @@ This workstream is intentionally scoped to “editor-grade tab UX”:
     - `tools/diag-scripts/workspace/shell-demo/workspace-shell-demo-tab-overflow-close-does-not-activate.json`
   - [x] Docking: overflow dropdown open + select row activates:
     - `tools/diag-scripts/docking/arbitration/docking-arbitration-demo-tab-overflow-menu-select-row-1-activates.json`
-  - [ ] Select-from-dropdown keeps active visible (explicit assert / evidence):
-    - Docking already scrolls active into view, but we do not assert scroll/visibility yet.
+  - [x] Select-from-dropdown keeps active visible (explicit assert / evidence):
+    - Gate: `dock_tab_strip_active_visible_is visible=true` after selecting a row.
+    - Evidence:
+      - Script: `tools/diag-scripts/docking/arbitration/docking-arbitration-demo-tab-overflow-menu-select-row-1-activates.json`
+      - Snapshot plumbing:
+        - Runtime: `crates/fret-runtime/src/interaction_diagnostics.rs`
+        - Docking publisher: `ecosystem/fret-docking/src/dock/space.rs`
+        - Bundle snapshot mapping: `ecosystem/fret-bootstrap/src/ui_diagnostics/docking_diagnostics.rs`
+        - Predicates: `ecosystem/fret-bootstrap/src/ui_diagnostics/predicates.rs`
+        - Protocol: `crates/fret-diag-protocol/src/lib.rs`
   - [ ] Drag end-drop on overflow header space resolves canonical insert_index:
     - Existing docking gate covers end-drop under overflow; workspace coverage still needed.
 - [x] Add minimal unit tests where headless helpers are used by adapters.

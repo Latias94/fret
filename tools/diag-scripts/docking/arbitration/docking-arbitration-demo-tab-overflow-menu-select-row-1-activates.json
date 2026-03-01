@@ -43,6 +43,17 @@
 
     {
       "type": "wait_until",
+      "predicate": { "kind": "dock_tab_strip_active_overflow_is", "overflow": true },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": { "kind": "dock_tab_strip_active_visible_is", "visible": true },
+      "timeout_frames": 240
+    },
+
+    {
+      "type": "wait_until",
       "predicate": { "kind": "dock_graph_signature_contains", "needle": "tabs(a=1:" },
       "timeout_frames": 240
     },

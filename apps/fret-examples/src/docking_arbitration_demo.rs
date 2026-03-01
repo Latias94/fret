@@ -2540,27 +2540,6 @@ impl WinitAppDriver for DockingArbitrationDriver {
                 fret_runtime::WindowInteractionDiagnosticsStore::default,
                 |store, app| store.begin_frame(window, app.frame_id()),
             );
-            let (dock_graph_stats, dock_graph_signature) =
-                app.with_global_mut_untracked(DockManager::default, |dock, _app| {
-                    (
-                        fret_docking::dock::dock_graph_stats_for_window(&dock.graph, window),
-                        fret_docking::dock::dock_graph_signature_for_window(&dock.graph, window),
-                    )
-                });
-            app.with_global_mut_untracked(
-                fret_runtime::WindowInteractionDiagnosticsStore::default,
-                |store, app| {
-                    store.record_docking(
-                        window,
-                        app.frame_id(),
-                        fret_runtime::DockingInteractionDiagnostics {
-                            dock_graph_stats: Some(dock_graph_stats),
-                            dock_graph_signature: Some(dock_graph_signature),
-                            ..Default::default()
-                        },
-                    );
-                },
-            );
         }
 
         scene.clear();

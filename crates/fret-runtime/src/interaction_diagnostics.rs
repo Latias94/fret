@@ -34,12 +34,37 @@ pub struct ViewportCaptureDiagnostics {
     pub target: RenderTargetId,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum DockTabStripActiveVisibilityStatusDiagnostics {
+    Ok,
+    MissingWindowRoot,
+    NoTabsFound,
+    MissingLayoutRect,
+    MissingTabsNode,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct DockTabStripActiveVisibilityDiagnostics {
+    pub status: DockTabStripActiveVisibilityStatusDiagnostics,
+    pub tabs_node: Option<DockNodeId>,
+    /// True when the tab strip reports overflow (i.e. `max_scroll > 0`).
+    pub overflow: bool,
+    pub tab_count: usize,
+    pub active: usize,
+    pub scroll: fret_core::geometry::Px,
+    pub max_scroll: fret_core::geometry::Px,
+    /// True when `active` is visible at the current `scroll` (best-effort).
+    pub active_visible: bool,
+}
+
 #[derive(Debug, Clone, PartialEq, Default)]
 pub struct DockingInteractionDiagnostics {
     pub dock_drag: Option<DockDragDiagnostics>,
     pub floating_drag: Option<DockFloatingDragDiagnostics>,
     pub dock_drop_resolve: Option<DockDropResolveDiagnostics>,
     pub viewport_capture: Option<ViewportCaptureDiagnostics>,
+    /// Best-effort diagnostics for ensuring the active tab remains visible after selection.
+    pub tab_strip_active_visibility: Option<DockTabStripActiveVisibilityDiagnostics>,
     /// Best-effort dock graph stats snapshot for the current window.
     pub dock_graph_stats: Option<DockGraphStatsDiagnostics>,
     /// Best-effort stable signature for the current window's dock graph.

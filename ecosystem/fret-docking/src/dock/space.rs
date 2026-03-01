@@ -1186,6 +1186,154 @@ impl DockSpace {
         self.set_tab_scroll_for(tabs, scroll);
     }
 
+    fn tab_strip_active_visibility_diagnostics(
+        &self,
+        theme: fret_ui::ThemeSnapshot,
+        dock: &DockManager,
+        window_bounds: Rect,
+        split_handle_gap: Px,
+        split_handle_hit_thickness: Px,
+    ) -> Option<fret_runtime::DockTabStripActiveVisibilityDiagnostics> {
+        let (_chrome, dock_bounds) = dock_space_regions(window_bounds);
+        let Some(root) = dock.graph.window_root(self.window) else {
+            return Some(fret_runtime::DockTabStripActiveVisibilityDiagnostics {
+                status: fret_runtime::DockTabStripActiveVisibilityStatusDiagnostics::MissingWindowRoot,
+                tabs_node: None,
+                overflow: false,
+                tab_count: 0,
+                active: 0,
+                scroll: Px(0.0),
+                max_scroll: Px(0.0),
+                active_visible: false,
+            });
+        };
+
+        let mut layout_all = compute_layout_map(
+            &dock.graph,
+            root,
+            dock_bounds,
+            split_handle_gap,
+            split_handle_hit_thickness,
+        );
+        for floating in dock.graph.floating_windows(self.window) {
+            let chrome = Self::floating_chrome(floating.rect);
+            let floating_layout = compute_layout_map(
+                &dock.graph,
+                floating.floating,
+                chrome.inner,
+                split_handle_gap,
+                split_handle_hit_thickness,
+            );
+            for (k, v) in floating_layout {
+                layout_all.insert(k, v);
+            }
+        }
+
+        let is_valid_tabs_node = |tabs_node: DockNodeId| {
+            layout_all.contains_key(&tabs_node)
+                && dock.graph.node(tabs_node).is_some_and(|n| match n {
+                    DockNode::Tabs { tabs, .. } => !tabs.is_empty(),
+                    _ => false,
+                })
+        };
+
+        let tabs_node = self
+            .last_active_tabs
+            .filter(|tabs_node| is_valid_tabs_node(*tabs_node))
+            .or_else(|| {
+                Self::find_first_tabs(&dock.graph, root).filter(|tabs_node| {
+                    // Defensive: avoid selecting a tabstrip from a different window.
+                    is_valid_tabs_node(*tabs_node)
+                })
+            })
+            .or_else(|| {
+                dock.graph
+                    .floating_windows(self.window)
+                    .iter()
+                    .map(|w| w.floating)
+                    .find_map(|floating_root| {
+                        Self::find_first_tabs(&dock.graph, floating_root)
+                            .filter(|tabs_node| is_valid_tabs_node(*tabs_node))
+                    })
+            });
+
+        let Some(tabs_node) = tabs_node else {
+            return Some(fret_runtime::DockTabStripActiveVisibilityDiagnostics {
+                status: fret_runtime::DockTabStripActiveVisibilityStatusDiagnostics::NoTabsFound,
+                tabs_node: None,
+                overflow: false,
+                tab_count: 0,
+                active: 0,
+                scroll: Px(0.0),
+                max_scroll: Px(0.0),
+                active_visible: false,
+            });
+        };
+
+        let Some(&rect) = layout_all.get(&tabs_node) else {
+            return Some(fret_runtime::DockTabStripActiveVisibilityDiagnostics {
+                status: fret_runtime::DockTabStripActiveVisibilityStatusDiagnostics::MissingLayoutRect,
+                tabs_node: Some(tabs_node),
+                overflow: false,
+                tab_count: 0,
+                active: 0,
+                scroll: Px(0.0),
+                max_scroll: Px(0.0),
+                active_visible: false,
+            });
+        };
+        let Some(DockNode::Tabs { tabs, active }) = dock.graph.node(tabs_node) else {
+            return Some(fret_runtime::DockTabStripActiveVisibilityDiagnostics {
+                status: fret_runtime::DockTabStripActiveVisibilityStatusDiagnostics::MissingTabsNode,
+                tabs_node: Some(tabs_node),
+                overflow: false,
+                tab_count: 0,
+                active: 0,
+                scroll: Px(0.0),
+                max_scroll: Px(0.0),
+                active_visible: false,
+            });
+        };
+        let tab_count = tabs.len();
+        if tab_count == 0 {
+            return Some(fret_runtime::DockTabStripActiveVisibilityDiagnostics {
+                status: fret_runtime::DockTabStripActiveVisibilityStatusDiagnostics::NoTabsFound,
+                tabs_node: Some(tabs_node),
+                overflow: false,
+                tab_count: 0,
+                active: 0,
+                scroll: Px(0.0),
+                max_scroll: Px(0.0),
+                active_visible: false,
+            });
+        }
+        let active = (*active).min(tab_count.saturating_sub(1));
+
+        let (tab_bar, _content) = split_tab_bar(rect);
+        let (geom, _overflow) = self.tab_bar_geometry_for_node(theme, tabs_node, tab_bar, tab_count);
+        let scroll = self.tab_scroll_for(tabs_node);
+        let max_scroll = geom.max_scroll();
+        let overflow = max_scroll.0 > 0.0;
+
+        let tab_bar_width = Px((geom.total_width().0 - max_scroll.0).max(0.0));
+        let view_start = scroll;
+        let view_end = Px(scroll.0 + tab_bar_width.0);
+        let tab_start = geom.tab_start_x_unscrolled(active);
+        let tab_end = geom.tab_end_x_unscrolled(active);
+        let active_visible = tab_start.0 < view_end.0 && tab_end.0 > view_start.0;
+
+        Some(fret_runtime::DockTabStripActiveVisibilityDiagnostics {
+            status: fret_runtime::DockTabStripActiveVisibilityStatusDiagnostics::Ok,
+            tabs_node: Some(tabs_node),
+            overflow,
+            tab_count,
+            active,
+            scroll,
+            max_scroll,
+            active_visible,
+        })
+    }
+
     #[allow(clippy::too_many_arguments)]
     fn apply_tab_bar_drag_auto_scroll(
         &mut self,
@@ -2017,6 +2165,12 @@ impl<H: UiHost> Widget<H> for DockSpace {
                 .is_some()
         {
             let frame_id = cx.app.frame_id();
+            let theme = fret_ui::Theme::global(&*cx.app).snapshot();
+            let settings = cx
+                .app
+                .global::<fret_runtime::DockingInteractionSettings>()
+                .copied()
+                .unwrap_or_default();
             let dock_drag_pointer_id = cx.app.find_drag_pointer_id(|d| {
                 (d.kind == fret_runtime::DRAG_KIND_DOCK_PANEL
                     || d.kind == fret_runtime::DRAG_KIND_DOCK_TABS)
@@ -2063,6 +2217,17 @@ impl<H: UiHost> Widget<H> for DockSpace {
                     });
             let dock_graph_stats = Some(dock_graph_stats);
             let dock_graph_signature = Some(dock_graph_signature);
+            let tab_strip_active_visibility =
+                cx.app
+                    .with_global_mut_untracked(DockManager::default, |dock, _app| {
+                        self.tab_strip_active_visibility_diagnostics(
+                            theme.clone(),
+                            dock,
+                            cx.bounds,
+                            settings.split_handle_gap,
+                            settings.split_handle_hit_thickness,
+                        )
+                    });
 
             cx.app.with_global_mut_untracked(
                 fret_runtime::WindowInteractionDiagnosticsStore::default,
@@ -2075,6 +2240,7 @@ impl<H: UiHost> Widget<H> for DockSpace {
                             floating_drag,
                             dock_drop_resolve,
                             viewport_capture,
+                            tab_strip_active_visibility,
                             dock_graph_stats,
                             dock_graph_signature,
                         },
@@ -5983,6 +6149,12 @@ impl<H: UiHost> Widget<H> for DockSpace {
                 .is_some()
         {
             let frame_id = cx.app.frame_id();
+            let theme = cx.theme().snapshot();
+            let settings = cx
+                .app
+                .global::<fret_runtime::DockingInteractionSettings>()
+                .copied()
+                .unwrap_or_default();
             let dock_drag_pointer_id = cx.app.find_drag_pointer_id(|d| {
                 (d.kind == fret_runtime::DRAG_KIND_DOCK_PANEL
                     || d.kind == fret_runtime::DRAG_KIND_DOCK_TABS)
@@ -6029,6 +6201,17 @@ impl<H: UiHost> Widget<H> for DockSpace {
                     });
             let dock_graph_stats = Some(dock_graph_stats);
             let dock_graph_signature = Some(dock_graph_signature);
+            let tab_strip_active_visibility =
+                cx.app
+                    .with_global_mut_untracked(DockManager::default, |dock, _app| {
+                        self.tab_strip_active_visibility_diagnostics(
+                            theme.clone(),
+                            dock,
+                            cx.bounds,
+                            settings.split_handle_gap,
+                            settings.split_handle_hit_thickness,
+                        )
+                    });
 
             cx.app.with_global_mut_untracked(
                 fret_runtime::WindowInteractionDiagnosticsStore::default,
@@ -6041,6 +6224,7 @@ impl<H: UiHost> Widget<H> for DockSpace {
                             floating_drag,
                             dock_drop_resolve,
                             viewport_capture,
+                            tab_strip_active_visibility,
                             dock_graph_stats,
                             dock_graph_signature,
                         },
@@ -6276,6 +6460,21 @@ impl<H: UiHost> Widget<H> for DockSpace {
                     });
             let dock_graph_stats = Some(dock_graph_stats);
             let dock_graph_signature = Some(dock_graph_signature);
+            let tab_strip_active_visibility =
+                cx.app
+                    .with_global_mut_untracked(DockManager::default, |dock, app| {
+                        let settings = app
+                            .global::<fret_runtime::DockingInteractionSettings>()
+                            .copied()
+                            .unwrap_or_default();
+                        self.tab_strip_active_visibility_diagnostics(
+                            theme.clone(),
+                            dock,
+                            cx.bounds,
+                            settings.split_handle_gap,
+                            settings.split_handle_hit_thickness,
+                        )
+                    });
 
             cx.app.with_global_mut_untracked(
                 fret_runtime::WindowInteractionDiagnosticsStore::default,
@@ -6288,6 +6487,7 @@ impl<H: UiHost> Widget<H> for DockSpace {
                             floating_drag,
                             dock_drop_resolve,
                             viewport_capture,
+                            tab_strip_active_visibility,
                             dock_graph_stats,
                             dock_graph_signature,
                         },

@@ -149,6 +149,16 @@ fn eval_predicate_without_semantics(
                 .and_then(|d| d.resolved.as_ref())?;
             Some(resolved.insert_index == Some(*index as usize))
         }
+        UiPredicateV1::DockTabStripActiveOverflowIs { overflow } => Some(
+            docking
+                .and_then(|d| d.tab_strip_active_visibility.as_ref())
+                .is_some_and(|s| s.overflow == *overflow),
+        ),
+        UiPredicateV1::DockTabStripActiveVisibleIs { visible } => Some(
+            docking
+                .and_then(|d| d.tab_strip_active_visibility.as_ref())
+                .is_some_and(|s| s.active_visible == *visible),
+        ),
         UiPredicateV1::DockGraphCanonicalIs { canonical } => Some(
             docking
                 .and_then(|d| d.dock_graph_stats)
@@ -904,6 +914,12 @@ fn eval_predicate(
             .and_then(|d| d.dock_drop_resolve.as_ref())
             .and_then(|d| d.resolved.as_ref())
             .is_some_and(|d| d.insert_index == Some(*index as usize)),
+        UiPredicateV1::DockTabStripActiveOverflowIs { overflow } => docking
+            .and_then(|d| d.tab_strip_active_visibility.as_ref())
+            .is_some_and(|s| s.overflow == *overflow),
+        UiPredicateV1::DockTabStripActiveVisibleIs { visible } => docking
+            .and_then(|d| d.tab_strip_active_visibility.as_ref())
+            .is_some_and(|s| s.active_visible == *visible),
         UiPredicateV1::DockGraphCanonicalIs { canonical } => docking
             .and_then(|d| d.dock_graph_stats)
             .is_some_and(|s| s.canonical_ok == *canonical),

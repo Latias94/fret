@@ -32,6 +32,10 @@ Recommendation:
 Recommendation:
 - Mechanism: a headless helper that computes “required scroll delta to make rect visible”.
 - Policy: when to call it (on active change, on dropdown selection, after drop).
+- Diagnostics/gates: treat “active tab is visible” as a first-class invariant for editor-grade UX
+  and lock it with a `fretboard diag` gate (non-pixel, no semantics required).
+  - Current docking gate: `dock_tab_strip_active_visible_is visible=true` after selecting from
+    the overflow dropdown.
 
 ## Q5: Input arbitration priority (close vs activate vs overflow vs other affordances)
 
@@ -72,3 +76,13 @@ Open questions:
 - Should trailing actions fire on pointer-down (current) or pointer-up (click/activate)?
 - Do we need keyboard-accessible trailing actions (separate focus target / APG-aligned semantics)?
 - Should this stay a `fret-ui-shadcn`-only capability, or be generalized in a headless menu primitive?
+
+## Q8: What does “visible” mean for the active tab?
+
+Options:
+1) Fully visible (tab bounds entirely inside the strip viewport).
+2) Partially visible (tab bounds intersects the strip viewport).
+
+Recommendation:
+- Use (2) for diagnostics gates to avoid false failures when a tab is wider than the viewport.
+- Keep “fully visible” as a UI/behavior goal where feasible, but do not over-constrain early gates.
