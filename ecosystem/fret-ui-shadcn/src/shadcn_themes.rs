@@ -1155,7 +1155,7 @@ mod tests {
                 "expected destructive badge bg to match destructive in light scheme"
             );
 
-            let expected_destructive_dark_bg = with_oklch_alpha(&destructive_dark, 0.4)
+            let expected_destructive_dark_bg = with_oklch_alpha(&destructive_dark, 0.3)
                 .expect("shadcn new-york-v4 destructive token is oklch");
             assert_eq!(
                 cfg_dark
