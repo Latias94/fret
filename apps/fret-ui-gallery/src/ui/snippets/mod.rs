@@ -8,11 +8,11 @@
 
 pub mod button_group;
 pub mod context_menu;
+pub mod dialog;
 pub mod dropdown_menu;
+pub mod hover_card;
 pub mod input_group;
 pub mod menubar;
-pub mod hover_card;
-pub mod dialog;
 pub mod popover;
 pub mod select;
 pub mod sheet;

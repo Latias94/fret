@@ -12,7 +12,8 @@ fn make_tooltip<H: UiHost>(
         shadcn::Button::new(label)
             .variant(shadcn::ButtonVariant::Outline)
             .into_element(cx),
-        shadcn::TooltipContent::new(vec![shadcn::TooltipContent::text(cx, content)]).into_element(cx),
+        shadcn::TooltipContent::new(vec![shadcn::TooltipContent::text(cx, content)])
+            .into_element(cx),
     )
     .arrow(true)
     .side(side)
@@ -24,23 +25,29 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
         .delay(Duration::ZERO)
         .timeout_duration(Duration::from_millis(400))
         .with(cx, |cx| {
-            vec![stack::hstack(
-                cx,
-                stack::HStackProps::default().gap(Space::N2).items_center(),
-                |cx| {
-                    vec![
-                        make_tooltip(cx, "Left", shadcn::TooltipSide::Left, "Add to library"),
-                        make_tooltip(cx, "Top", shadcn::TooltipSide::Top, "Add to library"),
-                        make_tooltip(cx, "Bottom", shadcn::TooltipSide::Bottom, "Add to library"),
-                        make_tooltip(cx, "Right", shadcn::TooltipSide::Right, "Add to library"),
-                    ]
-                },
-            )
-            .test_id("ui-gallery-tooltip-sides")]
+            vec![
+                stack::hstack(
+                    cx,
+                    stack::HStackProps::default().gap(Space::N2).items_center(),
+                    |cx| {
+                        vec![
+                            make_tooltip(cx, "Left", shadcn::TooltipSide::Left, "Add to library"),
+                            make_tooltip(cx, "Top", shadcn::TooltipSide::Top, "Add to library"),
+                            make_tooltip(
+                                cx,
+                                "Bottom",
+                                shadcn::TooltipSide::Bottom,
+                                "Add to library",
+                            ),
+                            make_tooltip(cx, "Right", shadcn::TooltipSide::Right, "Add to library"),
+                        ]
+                    },
+                )
+                .test_id("ui-gallery-tooltip-sides"),
+            ]
         })
         .into_iter()
         .next()
         .expect("tooltip provider returns one root element")
 }
 // endregion: example
-
