@@ -570,10 +570,11 @@ fn preview_code_tabs(
     // ancestors (e.g. scroll viewports). Keep the docs scaffold faithful to shadcn/ui by ensuring
     // preview/code payloads keep their intrinsic height rather than stretching vertically.
     let wrap_panel = |cx: &mut ElementContext<'_, App>, body: AnyElement| {
-        stack::vstack(
+        stack::hstack(
             cx,
-            stack::VStackProps::default()
+            stack::HStackProps::default()
                 .items_start()
+                .justify_center()
                 .layout(LayoutRefinement::default().w_full().min_w_0()),
             move |_cx| vec![body],
         )
