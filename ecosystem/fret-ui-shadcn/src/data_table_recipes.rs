@@ -894,13 +894,10 @@ impl<TData> DataTableToolbar<TData> {
                             Button::new(columns_button_label.clone())
                                 .variant(ButtonVariant::Outline)
                                 .size(ButtonSize::Sm)
-                                .children([
-                                    crate::icon::icon(
-                                        cx,
-                                        fret_icons::IconId::new_static("lucide.settings-2"),
-                                    ),
-                                    ui::text(cx, columns_button_label.clone()).into_element(cx),
-                                ])
+                                // Upstream shadcn: "Columns <ChevronDown />"
+                                .trailing_icon(fret_icons::IconId::new_static(
+                                    "lucide.chevron-down",
+                                ))
                                 .into_element(cx)
                         },
                         move |_cx| {
