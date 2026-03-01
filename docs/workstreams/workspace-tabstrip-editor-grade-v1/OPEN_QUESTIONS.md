@@ -143,3 +143,23 @@ Recommendation (v1):
 Gates:
 - `ecosystem/fret-workspace/tests/workspace_command_scope_toggle_tab_strip_focus_toggles_between_content_and_tab_strip.rs`
 - `ecosystem/fret-workspace/tests/workspace_commands_default_keybindings_include_ctrl_f6_toggle.rs`
+
+## Q9: Should “pane content focus target” be a required seam for editor shells?
+
+Why it matters:
+- Pointer interactions in chrome are intentionally focus-neutral; focus may enter the tab strip via
+  non-command paths (tests, automation, or future focus traversal rules).
+- `workspace.pane.focus_content` / `Ctrl+F6` toggle should still have a deterministic “exit” target.
+
+Options:
+1) Require shells to register a focusable “content target” per pane (recommended).
+2) Keep it best-effort and allow `focus_content` to no-op if no return target exists.
+
+Recommendation (v1):
+- Prefer **(1)** for editor shells: register a focusable content target per pane using
+  `WorkspacePaneContentFocusTarget`.
+- Treat missing registration as a soft failure (no hard panic), but gate the behavior in unit
+  tests so it does not regress.
+
+Gates:
+- `ecosystem/fret-workspace/tests/workspace_command_scope_focus_content_fallbacks_to_registered_pane_content.rs`.

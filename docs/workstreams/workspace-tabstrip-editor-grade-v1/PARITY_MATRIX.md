@@ -27,6 +27,7 @@ Legend:
 | Focus tab strip (command) | ✅ (unit) | ❌ | ✅ | 🟡 | 🟡 |
 | Toggle tab strip focus (Ctrl+F6) | ✅ (unit) | ❌ | ✅ | 🟡 | 🟡 |
 | Exit tab strip (Escape → content) | ✅ (unit) | ❌ | ✅ | 🟡 | 🟡 |
+| Exit tab strip fallback (pane content target) | ✅ (unit) | ❌ | ✅ | 🟡 | 🟡 |
 | Focus restore after close/move | ✅ (unit) | ❌ | ✅ | 🟡 | 🟡 |
 | Diagnostics gates (scripts) | ✅ | 🟡 | n/a | n/a | n/a |
 
