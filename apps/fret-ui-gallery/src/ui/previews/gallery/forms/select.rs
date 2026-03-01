@@ -1,10 +1,6 @@
 use super::super::super::super::*;
 
-pub(in crate::ui) fn preview_select(
-    cx: &mut ElementContext<'_, App>,
-    value: Model<Option<Arc<str>>>,
-    open: Model<bool>,
-) -> Vec<AnyElement> {
+pub(in crate::ui) fn preview_select(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
     use crate::ui::doc_layout::{self, DocSection};
 
     let demo = {
@@ -22,7 +18,7 @@ pub(in crate::ui) fn preview_select(
         .test_id("ui-gallery-select-demo")
     };
 
-    let diag_surface = crate::ui::snippets::select::diag_surface::render(cx, value.clone(), open);
+    let diag_surface = crate::ui::snippets::select::diag_surface::render(cx);
 
     let align_item = crate::ui::snippets::select::align_item_with_trigger::render(cx);
 
