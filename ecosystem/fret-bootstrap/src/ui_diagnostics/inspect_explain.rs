@@ -21,20 +21,26 @@ pub(super) fn build_inspect_explainability_lines(
         .map(|layer| (layer.id, layer.root))
         .collect::<std::collections::HashMap<_, _>>();
 
+    let mut hit_node: Option<u64> = None;
+
     if let Some(pos) = pointer_pos {
         let hit = ui.debug_hit_test_routing(pos);
-        let hit_node = hit.hit.map(|id| id.data().as_ffi());
-        let hit_barrier = hit.barrier_root.map(|id| id.data().as_ffi());
+        hit_node = hit.hit.map(|id| id.data().as_ffi());
+        let hit_barrier_root = hit.barrier_root.map(|id| id.data().as_ffi());
+        let active_layer_roots = hit
+            .active_layer_roots
+            .iter()
+            .map(|id| id.data().as_ffi())
+            .collect::<Vec<_>>();
         lines.push(format!(
             "pointer: {pos:?} hit_node={:?} barrier_root={:?}",
-            hit_node, hit_barrier
+            hit_node, hit_barrier_root
         ));
 
-        if !hit.active_layer_roots.is_empty() {
-            let roots = hit
-                .active_layer_roots
+        if !active_layer_roots.is_empty() {
+            let roots = active_layer_roots
                 .iter()
-                .map(|id| id.data().as_ffi().to_string())
+                .map(|id| id.to_string())
                 .collect::<Vec<_>>()
                 .join(", ");
             lines.push(format!("active_layer_roots: [{roots}]"));
@@ -70,10 +76,47 @@ pub(super) fn build_inspect_explainability_lines(
         "modal_barrier_active"
     } else if pointer_pos.is_none() {
         "pointer_unknown"
+    } else if hit_node.is_none() {
+        "no_hit_target"
     } else {
         "unblocked_or_hit_test_specific"
     };
     lines.push(format!("likely_reason: {likely_reason}"));
+
+    let mut suggestions: Vec<String> = Vec::new();
+    if arbitration.pointer_capture_active {
+        suggestions.push(
+            "suggest: a pointer is captured; inspect pointer_capture_root and ensure the app receives a matching pointer-up to release capture".to_string(),
+        );
+    } else if !matches!(arbitration.pointer_occlusion, PointerOcclusion::None) {
+        suggestions.push(format!(
+            "suggest: underlay is occluded; inspect layer root {:?} and its pointer_occlusion/blocks_underlay_input flags",
+            pointer_occlusion_root
+        ));
+    } else if arbitration.modal_barrier_root.is_some() {
+        suggestions.push(
+            "suggest: a modal barrier is active; close the modal/overlay or inspect modal_barrier_root reachability"
+                .to_string(),
+        );
+    } else if hit_node.is_none() && pointer_pos.is_some() {
+        suggestions.push(
+            "suggest: no hit-test target under pointer; check layer visibility/hit_testable flags and whether the pointer is inside any bounds"
+                .to_string(),
+        );
+    }
+
+    if suggestions.is_empty() && arbitration.focus_barrier_root.is_some() {
+        suggestions.push(
+            "suggest: focus barrier active; keyboard focus may not reach underlay until the barrier is cleared"
+                .to_string(),
+        );
+    }
+
+    if !suggestions.is_empty() {
+        lines.push(String::new());
+        lines.push("suggestions:".to_string());
+        lines.extend(suggestions.into_iter().take(3));
+    }
 
     if let Some(snapshot) = ui.semantics_snapshot() {
         let barrier_root = snapshot.barrier_root.map(|id| id.data().as_ffi());
