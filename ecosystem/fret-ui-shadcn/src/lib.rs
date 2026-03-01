@@ -271,8 +271,10 @@ pub use scroll_area::{
     ScrollAreaScrollbarOrientation, ScrollAreaViewport, scroll_area,
 };
 pub use select::{
-    Select, SelectAlign, SelectEntry, SelectGroup, SelectItem, SelectLabel, SelectSeparator,
-    SelectSide, select,
+    Select, SelectAlign, SelectContent, SelectEntry, SelectGroup, SelectItem, SelectItemIndicator,
+    SelectItemText, SelectLabel, SelectScrollButtons, SelectScrollDownButton, SelectScrollUpButton,
+    SelectSeparator, SelectSide, SelectTextRun, SelectTextTone, SelectTrigger,
+    SelectTriggerLabelPolicy, SelectTriggerSize, SelectValue, select,
 };
 pub use separator::{Separator, SeparatorOrientation, separator};
 pub use sheet::{
@@ -348,6 +350,12 @@ pub mod prelude {
     pub use crate::{
         ChromeRefinement, ColorRef, Corners4, Edges4, LayoutRefinement, MarginEdge, MetricRef,
         Radius, ShadowPreset, SignedMetricRef, Size, Space, UiExt,
+    };
+    pub use crate::{
+        Select, SelectAlign, SelectContent, SelectEntry, SelectGroup, SelectItem,
+        SelectItemIndicator, SelectItemText, SelectLabel, SelectScrollButtons,
+        SelectScrollDownButton, SelectScrollUpButton, SelectSeparator, SelectSide, SelectTextRun,
+        SelectTextTone, SelectTrigger, SelectTriggerLabelPolicy, SelectTriggerSize, SelectValue,
     };
     pub use crate::{decl_style, icon, stack, ui};
 

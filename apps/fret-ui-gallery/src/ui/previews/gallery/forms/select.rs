@@ -61,9 +61,12 @@ pub(in crate::ui) fn preview_select(
 
             shadcn::Select::new(demo_value, demo_open)
                 .trigger_test_id("ui-gallery-select-shadcn-demo-trigger")
-                .placeholder("Select a fruit")
+                .trigger(
+                    shadcn::SelectTrigger::new()
+                        .refine_layout(LayoutRefinement::default().w_px(Px(180.0)))
+                        .value(shadcn::SelectValue::new().placeholder("Select a fruit")),
+                )
                 .entries(entries)
-                .refine_layout(LayoutRefinement::default().w_px(Px(180.0)))
                 .into_element(cx)
         };
 
@@ -116,9 +119,12 @@ pub(in crate::ui) fn preview_select(
 
         let select = shadcn::Select::new(value.clone(), open)
             .trigger_test_id("ui-gallery-select-trigger")
-            .placeholder("Select a fruit")
+            .trigger(
+                shadcn::SelectTrigger::new()
+                    .refine_layout(LayoutRefinement::default().w_px(Px(180.0)))
+                    .value(shadcn::SelectValue::new().placeholder("Select a fruit")),
+            )
             .entries(entries)
-            .refine_layout(LayoutRefinement::default().w_px(Px(180.0)))
             .into_element(cx);
 
         let selected_value = value.clone();
@@ -147,14 +153,9 @@ pub(in crate::ui) fn preview_select(
             .watch_model(&align_item_with_trigger)
             .cloned()
             .unwrap_or(true);
-        let position = if align {
-            shadcn::select::SelectPosition::ItemAligned
-        } else {
-            shadcn::select::SelectPosition::Popper
-        };
-
         let select = shadcn::Select::new_controllable(cx, None, Some("banana"), None, false)
-            .position(position)
+            .trigger(shadcn::SelectTrigger::new().value(shadcn::SelectValue::new()))
+            .content(shadcn::SelectContent::new().align_item_with_trigger(align))
             .entries([shadcn::SelectGroup::new([
                 shadcn::SelectItem::new("apple", "Apple").into(),
                 shadcn::SelectItem::new("banana", "Banana").into(),
@@ -195,7 +196,10 @@ pub(in crate::ui) fn preview_select(
 
     let groups = {
         let select = shadcn::Select::new_controllable(cx, None, None::<Arc<str>>, None, false)
-            .placeholder("Select a fruit")
+            .trigger(
+                shadcn::SelectTrigger::new()
+                    .value(shadcn::SelectValue::new().placeholder("Select a fruit")),
+            )
             .entries([
                 shadcn::SelectGroup::new([
                     shadcn::SelectLabel::new("Fruits").into(),
@@ -221,7 +225,10 @@ pub(in crate::ui) fn preview_select(
 
     let scrollable = {
         let select = shadcn::Select::new_controllable(cx, None, None::<Arc<str>>, None, false)
-            .placeholder("Select a timezone")
+            .trigger(
+                shadcn::SelectTrigger::new()
+                    .value(shadcn::SelectValue::new().placeholder("Select a timezone")),
+            )
             .entries([
                 shadcn::SelectGroup::new([
                     shadcn::SelectLabel::new("North America").into(),
@@ -286,7 +293,10 @@ pub(in crate::ui) fn preview_select(
 
     let disabled = {
         let select = shadcn::Select::new_controllable(cx, None, None::<Arc<str>>, None, false)
-            .placeholder("Select a fruit")
+            .trigger(
+                shadcn::SelectTrigger::new()
+                    .value(shadcn::SelectValue::new().placeholder("Select a fruit")),
+            )
             .disabled(true)
             .entries([shadcn::SelectGroup::new([
                 shadcn::SelectItem::new("apple", "Apple").into(),
@@ -345,7 +355,10 @@ pub(in crate::ui) fn preview_select(
 
         let select =
             shadcn::Select::new_controllable(cx, Some(value), None::<Arc<str>>, Some(open), false)
-                .placeholder("Select a fruit")
+                .trigger(
+                    shadcn::SelectTrigger::new()
+                        .value(shadcn::SelectValue::new().placeholder("Select a fruit")),
+                )
                 .aria_invalid(invalid)
                 .entries([shadcn::SelectGroup::new([
                     shadcn::SelectItem::new("apple", "Apple")
@@ -383,7 +396,10 @@ pub(in crate::ui) fn preview_select(
             fret_ui_kit::primitives::direction::LayoutDirection::Rtl,
             |cx| {
                 shadcn::Select::new_controllable(cx, None, None::<Arc<str>>, None, false)
-                    .placeholder("اختر فاكهة")
+                    .trigger(
+                        shadcn::SelectTrigger::new()
+                            .value(shadcn::SelectValue::new().placeholder("اختر فاكهة")),
+                    )
                     .entries([
                         shadcn::SelectGroup::new([
                             shadcn::SelectLabel::new("الفواكه").into(),
@@ -443,9 +459,12 @@ let entries: Vec<shadcn::SelectEntry> = vec![
 ];
 
 let select = shadcn::Select::new(value, open)
-    .placeholder("Select a fruit")
+    .trigger(
+        shadcn::SelectTrigger::new()
+            .refine_layout(LayoutRefinement::default().w_px(Px(180.0)))
+            .value(shadcn::SelectValue::new().placeholder("Select a fruit")),
+    )
     .entries(entries)
-    .refine_layout(LayoutRefinement::default().w_px(Px(180.0)))
     .into_element(cx);"#,
                 ),
             DocSection::new("Diag Surface", diag_surface)
@@ -487,9 +506,12 @@ let entries: Vec<shadcn::SelectEntry> = std::iter::once(
 
 let select = shadcn::Select::new(value, open)
     .trigger_test_id("my-select-trigger")
-    .placeholder("Select a fruit")
+    .trigger(
+        shadcn::SelectTrigger::new()
+            .refine_layout(LayoutRefinement::default().w_px(Px(180.0)))
+            .value(shadcn::SelectValue::new().placeholder("Select a fruit")),
+    )
     .entries(entries)
-    .refine_layout(LayoutRefinement::default().w_px(Px(180.0)))
     .into_element(cx);"#,
                 )
                 .max_w(Px(540.0)),
@@ -498,10 +520,8 @@ let select = shadcn::Select::new(value, open)
                 .test_id_prefix("ui-gallery-select-align-item")
                 .code(
                     "rust",
-                    r#"use fret_ui_shadcn::select::SelectPosition;
-
-let select = shadcn::Select::new_controllable(cx, None, Some("banana"), None, false)
-    .position(SelectPosition::ItemAligned)
+                    r#"let select = shadcn::Select::new_controllable(cx, None, Some("banana"), None, false)
+    .content(shadcn::SelectContent::new().align_item_with_trigger(true))
     .entries([...])
     .into_element(cx);"#,
                 )
@@ -512,7 +532,10 @@ let select = shadcn::Select::new_controllable(cx, None, Some("banana"), None, fa
                 .code(
                     "rust",
                     r#"let select = shadcn::Select::new_controllable(cx, None, None::<Arc<str>>, None, false)
-    .placeholder("Select a fruit")
+    .trigger(
+        shadcn::SelectTrigger::new()
+            .value(shadcn::SelectValue::new().placeholder("Select a fruit")),
+    )
     .entries([
         shadcn::SelectGroup::new([...]).into(),
         shadcn::SelectSeparator::default().into(),
@@ -527,7 +550,10 @@ let select = shadcn::Select::new_controllable(cx, None, Some("banana"), None, fa
                 .code(
                     "rust",
                     r#"let select = shadcn::Select::new_controllable(cx, None, None::<Arc<str>>, None, false)
-    .placeholder("Select a timezone")
+    .trigger(
+        shadcn::SelectTrigger::new()
+            .value(shadcn::SelectValue::new().placeholder("Select a timezone")),
+    )
     .entries([...])
     .into_element(cx);"#,
                 )
@@ -538,7 +564,10 @@ let select = shadcn::Select::new_controllable(cx, None, Some("banana"), None, fa
                 .code(
                     "rust",
                     r#"let select = shadcn::Select::new_controllable(cx, None, None::<Arc<str>>, None, false)
-    .placeholder("Select a fruit")
+    .trigger(
+        shadcn::SelectTrigger::new()
+            .value(shadcn::SelectValue::new().placeholder("Select a fruit")),
+    )
     .disabled(true)
     .entries([...])
     .into_element(cx);"#,
@@ -552,6 +581,7 @@ let select = shadcn::Select::new_controllable(cx, None, Some("banana"), None, fa
                     r#"let field = shadcn::Field::new([
     shadcn::FieldLabel::new("Fruit").into_element(cx),
     shadcn::Select::new_controllable(cx, None, None::<Arc<str>>, None, false)
+        .trigger(shadcn::SelectTrigger::new().value(shadcn::SelectValue::new()))
         .aria_invalid(true)
         .entries([...])
         .into_element(cx),
@@ -567,7 +597,10 @@ let select = shadcn::Select::new_controllable(cx, None, Some("banana"), None, fa
                     "rust",
                     r#"with_direction_provider(LayoutDirection::Rtl, |cx| {
     shadcn::Select::new_controllable(cx, None, None::<Arc<str>>, None, false)
-        .placeholder("اختر فاكهة")
+        .trigger(
+            shadcn::SelectTrigger::new()
+                .value(shadcn::SelectValue::new().placeholder("اختر فاكهة")),
+        )
         .entries([...])
         .into_element(cx)
 });"#,
