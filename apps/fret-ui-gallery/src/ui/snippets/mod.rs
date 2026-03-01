@@ -7,8 +7,10 @@
 //! Prefer user-facing imports in snippet files (typically `use fret_ui_shadcn::prelude::*;`).
 
 pub mod button_group;
+pub mod alert_dialog;
 pub mod context_menu;
 pub mod dropdown_menu;
+pub mod drawer;
 pub mod input_group;
 pub mod menubar;
 pub mod hover_card;

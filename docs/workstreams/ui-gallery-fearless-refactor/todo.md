@@ -20,7 +20,7 @@ Legend:
 - [x] Migrate Button Group page(s) to snippet-backed sections.
 - [x] Migrate Select page(s) to snippet-backed sections.
 - [x] Migrate Input Group page(s) to snippet-backed sections.
-- [ ] Migrate overlay family pages (Dropdown Menu, Menubar, Context Menu, Popover, Tooltip, Dialog, Sheet, Drawer).
+- [x] Migrate overlay family pages (Alert Dialog, Dropdown Menu, Menubar, Context Menu, Popover, Tooltip, Dialog, Sheet, Drawer).
 - [ ] Migrate form family pages (Input, Input Group, Textarea, Checkbox, Radio Group, Switch, Slider, Toggle, Toggle Group, Select, Combobox).
 - [ ] Migrate layout + data-display pages (Tabs, Table, Data Table, Chart, Calendar, Carousel, Scroll Area, Navigation Menu, Pagination, etc).
 
@@ -56,7 +56,7 @@ Source list: upstream shadcn v4 Base/Radix doc trees:
 |---|---|---|---|---:|---:|---:|---|---|
 | accordion | `repo-ref/ui/apps/v4/content/docs/components/base/accordion.mdx` | `repo-ref/ui/apps/v4/content/docs/components/radix/accordion.mdx` | `accordion` | TBD | No | Not started |  |  |
 | alert | `repo-ref/ui/apps/v4/content/docs/components/base/alert.mdx` | `repo-ref/ui/apps/v4/content/docs/components/radix/alert.mdx` | `alert` | TBD | No | Not started |  |  |
-| alert-dialog | `repo-ref/ui/apps/v4/content/docs/components/base/alert-dialog.mdx` | `repo-ref/ui/apps/v4/content/docs/components/radix/alert-dialog.mdx` | `alert_dialog` | TBD | No | Not started |  |  |
+| alert-dialog | `repo-ref/ui/apps/v4/content/docs/components/base/alert-dialog.mdx` | `repo-ref/ui/apps/v4/content/docs/components/radix/alert-dialog.mdx` | `alert_dialog` | `apps/fret-ui-gallery/src/ui/pages/alert_dialog.rs` | Yes | Done | `tools/diag-scripts/ui-gallery/overlay/ui-gallery-alert-dialog-*`, `tools/diag-scripts/ui-gallery/alert-dialog/ui-gallery-alert-dialog-part-surface-smoke.json` | Snippet-backed previews + region-sliced code tabs (preview ≡ code). Keep Basic/RTL doc section IDs stable for diag scripts. |
 | aspect-ratio | `repo-ref/ui/apps/v4/content/docs/components/base/aspect-ratio.mdx` | `repo-ref/ui/apps/v4/content/docs/components/radix/aspect-ratio.mdx` | `aspect_ratio` | TBD | No | Not started |  |  |
 | avatar | `repo-ref/ui/apps/v4/content/docs/components/base/avatar.mdx` | `repo-ref/ui/apps/v4/content/docs/components/radix/avatar.mdx` | `avatar` | TBD | No | Not started |  |  |
 | badge | `repo-ref/ui/apps/v4/content/docs/components/base/badge.mdx` | `repo-ref/ui/apps/v4/content/docs/components/radix/badge.mdx` | `badge` | TBD | No | Not started |  |  |
@@ -76,7 +76,7 @@ Source list: upstream shadcn v4 Base/Radix doc trees:
 | date-picker | `repo-ref/ui/apps/v4/content/docs/components/base/date-picker.mdx` | `repo-ref/ui/apps/v4/content/docs/components/radix/date-picker.mdx` | `date_picker` | TBD | No | Not started |  |  |
 | dialog | `repo-ref/ui/apps/v4/content/docs/components/base/dialog.mdx` | `repo-ref/ui/apps/v4/content/docs/components/radix/dialog.mdx` | `dialog` | `apps/fret-ui-gallery/src/ui/pages/dialog.rs` | Yes | Done | `tools/diag-scripts/ui-gallery/dialog/*`, `tools/diag-scripts/ui-gallery/overlay/ui-gallery-dialog-*` | Snippet-backed previews + region-sliced code tabs for all sections (preview ≡ code). Keep parts/custom-close/no-close/sticky/scrollable/rtl `test_id`s stable for existing diag scripts. |
 | direction | `repo-ref/ui/apps/v4/content/docs/components/base/direction.mdx` | `repo-ref/ui/apps/v4/content/docs/components/radix/direction.mdx` | — | TBD | No | Not started |  | Doc-only (directionality guidance), not a component. |
-| drawer | `repo-ref/ui/apps/v4/content/docs/components/base/drawer.mdx` | `repo-ref/ui/apps/v4/content/docs/components/radix/drawer.mdx` | `drawer` | TBD | No | Not started |  | Overlay family; add interaction gates. |
+| drawer | `repo-ref/ui/apps/v4/content/docs/components/base/drawer.mdx` | `repo-ref/ui/apps/v4/content/docs/components/radix/drawer.mdx` | `drawer` | `apps/fret-ui-gallery/src/ui/pages/drawer.rs` | Yes | Done | `tools/diag-scripts/ui-gallery/drawer/ui-gallery-drawer-*.json` | Snippet-backed previews + region-sliced code tabs (preview ≡ code). Keep `ui-gallery-drawer-*` `test_id`s stable for diag scripts. |
 | dropdown-menu | `repo-ref/ui/apps/v4/content/docs/components/base/dropdown-menu.mdx` | `repo-ref/ui/apps/v4/content/docs/components/radix/dropdown-menu.mdx` | `dropdown_menu` | `apps/fret-ui-gallery/src/ui/pages/dropdown_menu.rs` | Yes | Done | `tools/diag-scripts/ui-gallery/dropdown-menu/*` | Snippet-backed previews + region-sliced code tabs for all sections (preview ≡ code). Keep trigger/item `test_id`s stable for existing diag scripts. |
 | empty | `repo-ref/ui/apps/v4/content/docs/components/base/empty.mdx` | `repo-ref/ui/apps/v4/content/docs/components/radix/empty.mdx` | `empty` | TBD | No | Not started |  |  |
 | field | `repo-ref/ui/apps/v4/content/docs/components/base/field.mdx` | `repo-ref/ui/apps/v4/content/docs/components/radix/field.mdx` | `field` | TBD | No | Not started |  |  |
