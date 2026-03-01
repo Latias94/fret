@@ -6,6 +6,7 @@ use super::prelude_core::*;
 use super::tab_bar_geometry::TabBarGeometry;
 use super::tab_overflow::{tab_overflow_button_rect, tab_strip_rect_with_overflow_button};
 use fret_ui::ThemeSnapshot;
+use fret_ui_headless::tab_strip_surface::{TabStripSurface, classify_tab_strip_surface_no_tabs};
 
 pub(super) fn tab_bar_insert_index_for_drop(
     theme: ThemeSnapshot,
@@ -31,17 +32,34 @@ pub(super) fn tab_bar_insert_index_for_drop(
 
     if overflow {
         let overflow_button = tab_overflow_button_rect(theme.clone(), tab_bar);
-        if overflow_button.contains(position) {
-            return None;
-        }
+        let reserved_header_space_rect = {
+            let x0 = strip_candidate.origin.x.0 + strip_candidate.size.width.0;
+            let x1 = tab_bar.origin.x.0 + tab_bar.size.width.0;
+            let w = (x1 - x0).max(0.0);
+            Rect::new(
+                Point::new(Px(x0), tab_bar.origin.y),
+                Size::new(Px(w), tab_bar.size.height),
+            )
+        };
 
-        if !strip_candidate.contains(position) {
-            // Treat the reserved header space (gap between strip and overflow button) as an
-            // explicit end-drop surface.
-            return Some(tab_count);
-        }
-
-        return Some(geom_candidate.compute_insert_index(position, scroll));
+        return match classify_tab_strip_surface_no_tabs(
+            position,
+            None,
+            Some(reserved_header_space_rect),
+            Some(strip_candidate),
+            Some(overflow_button),
+            None,
+            None,
+        ) {
+            TabStripSurface::OverflowControl => None,
+            TabStripSurface::HeaderSpace => Some(tab_count),
+            TabStripSurface::TabsViewport => {
+                Some(geom_candidate.compute_insert_index(position, scroll))
+            }
+            TabStripSurface::Outside
+            | TabStripSurface::ScrollControls
+            | TabStripSurface::PinnedBoundary => None,
+        };
     }
 
     let geom_full = tab_widths

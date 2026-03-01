@@ -2946,6 +2946,7 @@ dependencies = [
  "fret-dnd",
  "fret-runtime",
  "fret-ui",
+ "fret-ui-headless",
  "fret-ui-kit",
  "fret-ui-shadcn",
  "serde",
