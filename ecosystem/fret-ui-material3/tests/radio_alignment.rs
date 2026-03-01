@@ -428,6 +428,8 @@ enum SceneOpSigV1 {
     PopMask,
     PushEffect,
     PopEffect,
+    PushBackdropSourceGroup,
+    PopBackdropSourceGroup,
     PushCompositeGroup,
     PopCompositeGroup,
     StrokeRRect { order: u32 },
@@ -459,6 +461,8 @@ impl From<SceneSig> for SceneOpSigV1 {
             SceneSig::PopMask => Self::PopMask,
             SceneSig::PushEffect => Self::PushEffect,
             SceneSig::PopEffect => Self::PopEffect,
+            SceneSig::PushBackdropSourceGroup => Self::PushBackdropSourceGroup,
+            SceneSig::PopBackdropSourceGroup => Self::PopBackdropSourceGroup,
             SceneSig::PushCompositeGroup => Self::PushCompositeGroup,
             SceneSig::PopCompositeGroup => Self::PopCompositeGroup,
             SceneSig::StrokeRRect(order) => Self::StrokeRRect { order: order.0 },
@@ -2881,7 +2885,7 @@ fn radio_selected_dot_is_centered_in_outline() {
 
                 let border_any =
                     border.top.0 > 0.0 || border.right.0 > 0.0 || border.bottom.0 > 0.0;
-                if border_any && paint_alpha(background) <= 0.01 {
+                if border_any && paint_alpha(&background.paint) <= 0.01 {
                     if outline.is_none_or(|r| rect.size.width.0 < r.size.width.0 + 1e-3) {
                         outline = Some(*rect);
                     }
@@ -2889,7 +2893,7 @@ fn radio_selected_dot_is_centered_in_outline() {
                 }
 
                 if border == &Edges::all(Px(0.0))
-                    && paint_alpha(background) > 0.5
+                    && paint_alpha(&background.paint) > 0.5
                     && rect.size.width.0 <= 12.0
                     && rect.size.height.0 <= 12.0
                 {
@@ -3009,7 +3013,7 @@ fn radio_ripple_origin_tracks_pointer_down_position() {
                 if order != &DrawOrder(1) {
                     continue;
                 }
-                if border != &Edges::all(Px(0.0)) || paint_alpha(background) <= 0.01 {
+                if border != &Edges::all(Px(0.0)) || paint_alpha(&background.paint) <= 0.01 {
                     continue;
                 }
                 if circle.size.width.0 <= 14.0 || circle.size.height.0 <= 14.0 {
@@ -3149,7 +3153,7 @@ fn switch_ripple_origin_tracks_pointer_down_position() {
                 if order != &DrawOrder(1) {
                     continue;
                 }
-                if border != &Edges::all(Px(0.0)) || paint_alpha(background) <= 0.01 {
+                if border != &Edges::all(Px(0.0)) || paint_alpha(&background.paint) <= 0.01 {
                     continue;
                 }
                 if circle.size.width.0 <= 14.0 || circle.size.height.0 <= 14.0 {
@@ -3355,8 +3359,8 @@ fn switch_keyboard_ripple_origin_ignores_stale_pointer_down() {
                     };
                     if order != DrawOrder(1)
                         || border != Edges::all(Px(0.0))
-                        || paint_alpha(&background) <= 0.001
-                        || paint_alpha(&background) >= 0.9
+                        || paint_alpha(&background.paint) <= 0.001
+                        || paint_alpha(&background.paint) >= 0.9
                         || (rect.size.width.0 - rect.size.height.0).abs() >= 0.25
                     {
                         continue;
@@ -3508,7 +3512,7 @@ fn switch_ripple_holds_for_minimum_press_duration_before_fade() {
                     border,
                     ..
                 } if *order == DrawOrder(1) && *border == Edges::all(Px(0.0)) => {
-                    Some(paint_alpha(background))
+                    Some(paint_alpha(&background.paint))
                 }
                 _ => None,
             })
@@ -4830,7 +4834,10 @@ fn menu_style_overrides_apply_to_container_and_label() {
 
     assert!(
         scene.ops().iter().any(|op| {
-            matches!(op, SceneOp::Quad { background, .. } if *background == fret_core::Paint::Solid(override_bg))
+            matches!(
+                op,
+                SceneOp::Quad { background, .. } if background.paint == fret_core::Paint::Solid(override_bg)
+            )
         }),
         "expected MenuStyle.container_background to affect at least one quad background"
     );
@@ -4839,7 +4846,10 @@ fn menu_style_overrides_apply_to_container_and_label() {
             .ops()
             .iter()
             .any(|op| {
-                matches!(op, SceneOp::Text { paint, .. } if *paint == fret_core::Paint::Solid(override_label))
+                matches!(
+                    op,
+                    SceneOp::Text { paint, .. } if paint.paint == fret_core::Paint::Solid(override_label)
+                )
             }),
         "expected MenuStyle.item_label_color to affect at least one text draw op"
     );
@@ -5112,7 +5122,10 @@ fn dialog_style_overrides_apply_to_container_and_text() {
 
     assert!(
         scene.ops().iter().any(|op| {
-            matches!(op, SceneOp::Quad { background, .. } if *background == fret_core::Paint::Solid(override_bg))
+            matches!(
+                op,
+                SceneOp::Quad { background, .. } if background.paint == fret_core::Paint::Solid(override_bg)
+            )
         }),
         "expected DialogStyle.container_background to affect at least one quad background"
     );
@@ -5121,13 +5134,19 @@ fn dialog_style_overrides_apply_to_container_and_text() {
             .ops()
             .iter()
             .any(|op| {
-                matches!(op, SceneOp::Text { paint, .. } if *paint == fret_core::Paint::Solid(override_headline))
+                matches!(
+                    op,
+                    SceneOp::Text { paint, .. } if paint.paint == fret_core::Paint::Solid(override_headline)
+                )
             }),
         "expected DialogStyle.headline_color to affect at least one text draw op"
     );
     assert!(
         scene.ops().iter().any(|op| {
-            matches!(op, SceneOp::Text { paint, .. } if *paint == fret_core::Paint::Solid(override_supporting))
+            matches!(
+                op,
+                SceneOp::Text { paint, .. } if paint.paint == fret_core::Paint::Solid(override_supporting)
+            )
         }),
         "expected DialogStyle.supporting_text_color to affect at least one text draw op"
     );
