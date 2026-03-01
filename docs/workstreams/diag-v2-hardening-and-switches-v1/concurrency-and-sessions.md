@@ -187,6 +187,11 @@ P2 (de-risk `latest.txt`):
 - If users forget `--dir` and all agents write to `target/fret-diag/`, runs will race.
   - Mitigation (P0): skill/docs + `diag config doctor` warnings.
   - Mitigation (P1): `--session-auto` makes it easy to avoid shared roots without inventing naming conventions.
+- If a base dir already contains `sessions/` but a tool-launched run (`--launch`) targets the base root directly (no
+  `--session-auto` / `--session`), control-plane files will be written at the base root, which is a concurrency footgun.
+  - Mitigation (P0): tooling emits an actionable warning with a copy-paste `--session-auto` command template.
+  - Mitigation (P0): `diag config doctor --mode launch --report-json` surfaces a structured warning so triage/AI packets
+    can ingest it.
 
 ## Open questions
 

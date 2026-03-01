@@ -1054,19 +1054,8 @@ Tip: pass global `diag --env KEY=VALUE` flags to simulate one-off overrides for 
     }
 
     if mode == DoctorMode::Launch {
-        let sessions_root = ctx
-            .fs_transport_cfg
-            .out_dir
-            .join(crate::session::SESSIONS_DIRNAME);
-        if sessions_root.is_dir() {
-            warnings.push(serde_json::json!({
-                "severity": "warning",
-                "code": "diag.config.launch_dir_contains_sessions_without_session_isolation",
-                "message": "the chosen diagnostics out_dir contains a `sessions/` folder; tool-launched runs should prefer --session-auto/--session to avoid writing control-plane files at the base root (concurrency footgun)",
-                "base_out_dir": ctx.fs_transport_cfg.out_dir.display().to_string(),
-                "sessions_root": sessions_root.display().to_string(),
-                "hint": "prefer: fretboard diag <run|suite|repro|perf|repeat|matrix> --dir <base_out_dir> --session-auto --launch -- <cmd...>",
-            }));
+        if let Some(w) = launch_dir_sessions_concurrency_warning(&ctx.fs_transport_cfg.out_dir) {
+            warnings.push(w);
         }
     }
 
@@ -1538,6 +1527,21 @@ pub(crate) fn cmd_config(ctx: ConfigCmdContext) -> Result<(), String> {
     }
 }
 
+fn launch_dir_sessions_concurrency_warning(out_dir: &Path) -> Option<serde_json::Value> {
+    let sessions_root = out_dir.join(crate::session::SESSIONS_DIRNAME);
+    if !sessions_root.is_dir() {
+        return None;
+    }
+    Some(serde_json::json!({
+        "severity": "warning",
+        "code": "diag.config.launch_dir_contains_sessions_without_session_isolation",
+        "message": "the chosen diagnostics out_dir contains a `sessions/` folder; tool-launched runs should prefer --session-auto/--session to avoid writing control-plane files at the base root (concurrency footgun)",
+        "base_out_dir": out_dir.display().to_string(),
+        "sessions_root": sessions_root.display().to_string(),
+        "hint": "prefer: fretboard diag <run|suite|repro|perf|repeat|matrix> --dir <base_out_dir> --session-auto --launch -- <cmd...>",
+    }))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -1605,5 +1609,51 @@ mod tests {
         let cfg: UiDiagnosticsConfigFileV1 =
             serde_json::from_value(value).expect("parse example config");
         assert_eq!(cfg.schema_version, 1);
+    }
+
+    #[test]
+    fn config_doctor_warns_when_launch_dir_contains_sessions_folder() {
+        let root = std::env::temp_dir().join(format!(
+            "fret-diag-config-doctor-sessions-warning-{}-{}",
+            crate::util::now_unix_ms(),
+            std::process::id()
+        ));
+        let _ = std::fs::remove_dir_all(&root);
+        std::fs::create_dir_all(root.join(crate::session::SESSIONS_DIRNAME))
+            .expect("create sessions dir");
+
+        let w = launch_dir_sessions_concurrency_warning(&root).expect("expected warning");
+        assert_eq!(
+            w.get("code").and_then(|v| v.as_str()).unwrap_or(""),
+            "diag.config.launch_dir_contains_sessions_without_session_isolation"
+        );
+        assert_eq!(
+            w.get("severity").and_then(|v| v.as_str()).unwrap_or(""),
+            "warning"
+        );
+        assert_eq!(
+            w.get("base_out_dir").and_then(|v| v.as_str()).unwrap_or(""),
+            root.display().to_string()
+        );
+
+        let _ = std::fs::remove_dir_all(&root);
+    }
+
+    #[test]
+    fn config_doctor_does_not_warn_when_no_sessions_folder_exists() {
+        let root = std::env::temp_dir().join(format!(
+            "fret-diag-config-doctor-no-sessions-warning-{}-{}",
+            crate::util::now_unix_ms(),
+            std::process::id()
+        ));
+        let _ = std::fs::remove_dir_all(&root);
+        std::fs::create_dir_all(&root).expect("create out dir");
+
+        assert!(
+            launch_dir_sessions_concurrency_warning(&root).is_none(),
+            "expected no warning"
+        );
+
+        let _ = std::fs::remove_dir_all(&root);
     }
 }
