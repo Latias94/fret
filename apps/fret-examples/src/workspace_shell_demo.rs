@@ -9,8 +9,8 @@ use fret_launch::{
 use fret_runtime::PlatformCapabilities;
 use fret_ui::declarative;
 use fret_ui::element::{
-    ContainerProps, CrossAlign, FlexProps, LayoutStyle, Length, MainAlign, Overflow,
-    SemanticsProps, ViewCacheProps,
+    ContainerProps, CrossAlign, FlexProps, LayoutStyle, Length, MainAlign, Overflow, PressableA11y,
+    PressableProps, SemanticsProps, ViewCacheProps,
 };
 use fret_ui::{Invalidation, UiTree, VirtualListScrollHandle};
 use fret_ui_kit::OverlayController;
@@ -18,7 +18,10 @@ use fret_ui_kit::declarative::ElementContextThemeExt as _;
 use fret_ui_kit::declarative::file_tree::{FileTreeViewProps, file_tree_view_retained_v0};
 use fret_ui_kit::{TreeItem, TreeState};
 use fret_workspace::layout::{WorkspacePaneTree, WorkspaceWindowLayout};
-use fret_workspace::{WorkspaceFrame, WorkspaceTabStrip, workspace_pane_tree_element_with_resize};
+use fret_workspace::{
+    WorkspaceCommandScope, WorkspaceFrame, WorkspacePaneContentFocusTarget, WorkspaceTabStrip,
+    workspace_pane_tree_element_with_resize,
+};
 use std::collections::HashSet;
 use std::sync::Arc;
 
@@ -260,27 +263,58 @@ impl WorkspaceShellDemoDriver {
                                                 ..Default::default()
                                             },
                                             move |cx| {
-                                                let content = cx.container(
-                                                    ContainerProps {
+                                                let content = cx.pressable(
+                                                    PressableProps {
                                                         layout: body_layout,
-                                                        background: pane_content_bg,
+                                                        enabled: true,
+                                                        focusable: true,
+                                                        a11y: PressableA11y {
+                                                            role: Some(SemanticsRole::TextField),
+                                                            label: Some(Arc::from("Pane content")),
+                                                            test_id: Some(Arc::from(format!(
+                                                                "workspace-shell-pane-{}-content",
+                                                                pane.id.as_ref()
+                                                            ))),
+                                                            ..Default::default()
+                                                        },
                                                         ..Default::default()
                                                     },
                                                     move |cx| {
-                                                        let active_label: Arc<str> = pane
-                                                            .tabs
-                                                            .active()
-                                                            .cloned()
-                                                            .unwrap_or_else(|| Arc::from("<none>"));
-                                                        let msg: Arc<str> = Arc::from(format!(
-                                                            "pane={} active={} {}",
-                                                            pane.id.as_ref(),
-                                                            active_label.as_ref(),
-                                                            if is_active { "(active)" } else { "" }
-                                                        ));
-                                                        vec![cx.text(msg)]
+                                                        vec![cx.container(
+                                                            ContainerProps {
+                                                                layout: fill_layout(),
+                                                                background: pane_content_bg,
+                                                                ..Default::default()
+                                                            },
+                                                            move |cx| {
+                                                                let active_label: Arc<str> = pane
+                                                                    .tabs
+                                                                    .active()
+                                                                    .cloned()
+                                                                    .unwrap_or_else(|| {
+                                                                        Arc::from("<none>")
+                                                                    });
+                                                                let msg: Arc<str> =
+                                                                    Arc::from(format!(
+                                                                        "pane={} active={} {}",
+                                                                        pane.id.as_ref(),
+                                                                        active_label.as_ref(),
+                                                                        if is_active {
+                                                                            "(active)"
+                                                                        } else {
+                                                                            ""
+                                                                        }
+                                                                    ));
+                                                                vec![cx.text(msg)]
+                                                            },
+                                                        )]
                                                     },
                                                 );
+                                                let content = WorkspacePaneContentFocusTarget::new(
+                                                    pane.id.clone(),
+                                                    content,
+                                                )
+                                                .into_element(cx);
                                                 vec![strip, content]
                                             },
                                         )]
@@ -309,7 +343,7 @@ impl WorkspaceShellDemoDriver {
                         frame
                     };
 
-                    vec![out]
+                    vec![WorkspaceCommandScope::new(window_layout.clone(), out).into_element(cx)]
                 });
     }
 }

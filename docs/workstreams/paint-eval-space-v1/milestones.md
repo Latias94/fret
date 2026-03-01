@@ -1,7 +1,7 @@
 ---
 title: "paint eval spaces v1 — milestones"
 status: draft
-date: 2026-02-28
+date: 2026-03-01
 ---
 
 # Milestones

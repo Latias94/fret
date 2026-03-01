@@ -369,7 +369,7 @@ fn caret_is_visible_when_text_area_is_focused_and_empty() {
     let caret_rect = scene.ops().iter().rev().find_map(|op| match op {
         SceneOp::Quad {
             rect, background, ..
-        } if *background == Paint::Solid(caret_color) => Some(*rect),
+        } if *background == Paint::Solid(caret_color).into() => Some(*rect),
         _ => None,
     });
 
@@ -441,7 +441,7 @@ fn focused_border_color_switches_when_focus_visible_is_enabled() {
     ui.paint_all(&mut app, &mut text, bounds, &mut scene, 1.0);
     assert_eq!(
         border_paint(&scene),
-        Some(Paint::Solid(border_color)),
+        Some(Paint::Solid(border_color).into()),
         "expected base border color before focus-visible is enabled"
     );
 
@@ -463,7 +463,7 @@ fn focused_border_color_switches_when_focus_visible_is_enabled() {
     ui.paint_all(&mut app, &mut text, bounds, &mut scene, 1.0);
     assert_eq!(
         border_paint(&scene),
-        Some(Paint::Solid(border_color_focused)),
+        Some(Paint::Solid(border_color_focused).into()),
         "expected focused border color when focus-visible is active"
     );
 }

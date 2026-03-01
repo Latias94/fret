@@ -4,9 +4,10 @@ use fret_runtime::{CommandId, InputContext, MenuBar, Model, Platform, WindowMenu
 use fret_ui::element::{AnyElement, ContainerProps, FlexProps, LayoutStyle, Length, StackProps};
 use fret_ui::{ElementContext, GlobalElementId, PendingShortcutOverlayState, UiHost};
 
-use crate::workspace::layout::WorkspacePaneLayout;
-use crate::workspace::{
-    WorkspaceFrame, WorkspaceTabStrip, WorkspaceTopBar, workspace_pane_tree_element_with_resize,
+use fret_workspace::layout::{WorkspacePaneLayout, WorkspaceWindowLayout};
+use fret_workspace::{
+    WorkspaceFrame, WorkspacePaneContentFocusTarget, WorkspaceTabStrip, WorkspaceTopBar,
+    workspace_pane_tree_element_with_resize,
 };
 
 use crate::pending_shortcut_overlay::pending_shortcut_hint_overlay;
@@ -29,7 +30,7 @@ fn fill_layout() -> LayoutStyle {
 pub fn workspace_shell_model<H: UiHost, FTitle, FPane>(
     cx: &mut ElementContext<'_, H>,
     menu_bar: Option<&MenuBar>,
-    window: Model<crate::workspace::layout::WorkspaceWindowLayout>,
+    window: Model<WorkspaceWindowLayout>,
     tab_title: FTitle,
     mut render_pane_content: FPane,
 ) -> AnyElement
@@ -152,6 +153,8 @@ where
                     .tab_drag_model(tab_drag.clone())
                     .into_element(cx);
                 let content = render_pane_content(cx, pane, is_active);
+                let content =
+                    WorkspacePaneContentFocusTarget::new(pane.id.clone(), content).into_element(cx);
 
                 cx.flex(
                     FlexProps {
@@ -235,7 +238,7 @@ where
 /// provided by `fret-workspace`.
 pub fn workspace_shell_model_default_menu<H: UiHost, FTitle, FPane>(
     cx: &mut ElementContext<'_, H>,
-    window: Model<crate::workspace::layout::WorkspaceWindowLayout>,
+    window: Model<WorkspaceWindowLayout>,
     tab_title: FTitle,
     render_pane_content: FPane,
 ) -> AnyElement
@@ -243,7 +246,7 @@ where
     FTitle: Fn(&str) -> Arc<str> + Clone,
     FPane: FnMut(&mut ElementContext<'_, H>, &WorkspacePaneLayout, bool) -> AnyElement,
 {
-    let mut cmds = crate::workspace::menu::WorkspaceMenuCommands::default();
+    let mut cmds = fret_workspace::menu::WorkspaceMenuCommands::default();
     if Platform::current() == Platform::Macos {
         cmds.app_menu_title = cx
             .app
@@ -259,7 +262,7 @@ where
         cmds.quit_app = Some(CommandId::new(fret_app::core_commands::APP_QUIT));
     }
 
-    let menu_bar = crate::workspace::menu::workspace_default_menu_bar(cmds);
+    let menu_bar = fret_workspace::menu::workspace_default_menu_bar(cmds);
 
     workspace_shell_model(cx, Some(&menu_bar), window, tab_title, render_pane_content)
 }

@@ -140,20 +140,15 @@ fn find_best_quad(scene: &Scene, target: Rect) -> Option<PaintedQuad> {
         else {
             continue;
         };
-        let background_color = match background.paint {
-            fret_core::Paint::Solid(c) => c,
-            _ => Color::TRANSPARENT,
+        let fret_core::Paint::Solid(background_color) = background.paint else {
+            continue;
         };
-        let border_color = match border_paint.paint {
-            fret_core::Paint::Solid(c) => c,
-            _ => Color::TRANSPARENT,
+        let fret_core::Paint::Solid(border_color) = border_paint.paint else {
+            continue;
         };
         let border_widths = [border.top.0, border.right.0, border.bottom.0, border.left.0];
         let draws_border = border_widths.iter().any(|w| *w > 0.0);
-        let draws_background = match background.paint {
-            fret_core::Paint::Solid(c) => c.a > 0.0,
-            _ => true,
-        };
+        let draws_background = background_color.a > 0.0;
         if !draws_border && !draws_background {
             // Skip paint-noop quads (common for shadow-only wrappers).
             continue;
@@ -1948,7 +1943,7 @@ fn web_vs_fret_button_group_dropdown_geometry_and_chrome_match() {
         // We express that via `ChromeRefinement` without changing global button sizing rules.
         let trigger = fret_ui_shadcn::Button::new("")
             .variant(fret_ui_shadcn::ButtonVariant::Outline)
-            .refine_style(ChromeRefinement::default().pl(Space::N2))
+            .refine_style(ChromeRefinement::default().pl(Space::N2).pr(Space::N3))
             .children(vec![decl_icon::icon(cx, ids::ui::CHEVRON_DOWN)])
             .test_id("button-group-dropdown.trigger")
             .into();

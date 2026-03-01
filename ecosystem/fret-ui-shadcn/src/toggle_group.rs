@@ -744,7 +744,10 @@ impl ToggleGroup {
                     let model_single = model_single.clone();
                     let model_multi = model_multi.clone();
                     let pressable_layout = {
-                        let mut refinement = LayoutRefinement::default().h_px(item_h).min_w_0();
+                        let mut refinement = LayoutRefinement::default()
+                            .h_px(item_h)
+                            .min_h(item_h)
+                            .min_w_0();
                         if items_flex_1 && matches!(orientation, ToggleGroupOrientation::Horizontal)
                         {
                             refinement = refinement.flex_1();

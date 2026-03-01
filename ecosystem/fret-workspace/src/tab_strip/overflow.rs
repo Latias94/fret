@@ -2,6 +2,7 @@ use std::collections::HashMap;
 use std::sync::Arc;
 
 use fret_core::{Px, Rect};
+use fret_ui_headless::tab_strip_overflow::compute_overflowed_tab_indices;
 
 use super::WorkspaceTab;
 use crate::tab_drag::WorkspaceTabHitRect;
@@ -13,20 +14,15 @@ pub(crate) fn compute_overflowed_tab_ids(
     margin: Px,
 ) -> Vec<Arc<str>> {
     let by_id: HashMap<&str, Rect> = tab_rects.iter().map(|r| (r.id.as_ref(), r.rect)).collect();
-
-    let view_left = viewport.origin.x.0 + margin.0;
-    let view_right = viewport.origin.x.0 + viewport.size.width.0 - margin.0;
-    let epsilon = 0.5f32;
-
-    tabs.iter()
-        .filter_map(|tab| {
-            let rect = by_id.get(tab.id.as_ref())?;
-            let tab_left = rect.origin.x.0;
-            let tab_right = rect.origin.x.0 + rect.size.width.0;
-            let overflowed = tab_left < view_left - epsilon || tab_right > view_right + epsilon;
-            overflowed.then(|| tab.id.clone())
-        })
-        .collect()
+    compute_overflowed_tab_indices(
+        tabs,
+        |tab| by_id.get(tab.id.as_ref()).copied(),
+        viewport,
+        margin,
+    )
+    .into_iter()
+    .filter_map(|ix| tabs.get(ix).map(|tab| tab.id.clone()))
+    .collect()
 }
 
 #[cfg(test)]

@@ -1,7 +1,7 @@
 ---
 title: "paint eval spaces v1 — TODO"
 status: draft
-date: 2026-02-28
+date: 2026-03-01
 ---
 
 # TODO
@@ -18,6 +18,10 @@ date: 2026-02-28
 - [x] Update `Scene::validate()` rules for unsupported combinations (deterministic degradation vs
   hard reject).
 - [x] Update `Scene::fingerprint()` to include evaluation space.
+- [x] Sweep in-tree callsites (tests/demos) for missing `.into()` conversions after the binding
+  migration.
+  - Includes updates in `ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout/support/scene.rs` and
+    related layout golden tests to read `PaintBindingV1.paint` when comparing colors/alpha.
 
 ## Renderer (wgpu)
 

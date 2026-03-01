@@ -8,8 +8,25 @@ Goal: keep the tab strip refactor **fearless** by locking outcomes behind unit t
 - `ecosystem/fret-workspace/src/tab_strip/mod.rs` (workspace tab strip implementation)
 - `ecosystem/fret-workspace/src/tab_strip/kernel.rs` (drop target computation)
 - `ecosystem/fret-workspace/src/tab_strip/geometry.rs` (tab rect collection / hit testing helpers)
+- `ecosystem/fret-workspace/src/tab_strip/surface.rs` (hit-test surface classification)
 - `ecosystem/fret-workspace/src/tab_strip/utils.rs` (canonical end-drop resolution)
+- `ecosystem/fret-workspace/src/focus_registry.rs` (cross-frame element id registry for focus restore)
+- `ecosystem/fret-workspace/src/pane_content_focus.rs` (pane content focus target seam for exiting tab strip)
+- `ecosystem/fret-ui-headless/src/tab_strip_surface.rs` (shared hit-test surface vocabulary)
+- `ecosystem/fret-ui-headless/src/tab_strip_drop_target.rs` (shared midpoint drop target helper)
+- `ecosystem/fret-ui-headless/src/tab_strip_canonical.rs` (shared canonical end-drop insert index helper)
+- `ecosystem/fret-ui-headless/src/tab_strip_overflow.rs` (shared overflow membership helper)
+- `ecosystem/fret-workspace/src/command_scope.rs` (workspace-shell command routing scope)
 - `ecosystem/fret-workspace/tests/tab_strip_pointer_down_does_not_steal_focus.rs` (focus stability)
+- `ecosystem/fret-workspace/tests/tab_strip_focus_restore_after_close_command.rs` (close focus restore)
+- `ecosystem/fret-workspace/tests/tab_strip_keyboard_roving_arrow_activates_tab.rs` (roving keyboard activation)
+- `ecosystem/fret-workspace/tests/pane_focus_tab_strip_command_focuses_active_tab.rs` (focus transfer into tab strip)
+- `ecosystem/fret-workspace/tests/workspace_command_scope_focus_tab_strip_from_outside_pane.rs` (focus transfer from outside pane subtree)
+- `ecosystem/fret-workspace/tests/workspace_command_scope_focus_content_restores_previous_focus.rs` (exit tab strip restores previous focus)
+- `ecosystem/fret-workspace/tests/workspace_command_scope_focus_content_fallbacks_to_registered_pane_content.rs` (exit tab strip falls back to pane content)
+- `ecosystem/fret-workspace/tests/workspace_command_scope_toggle_tab_strip_focus_toggles_between_content_and_tab_strip.rs` (toggle focus between content and tab strip)
+- `ecosystem/fret-workspace/tests/workspace_command_scope_toggle_tab_strip_focus_multi_pane_returns_to_last_non_tabstrip_focus.rs` (toggle focus across panes)
+- `ecosystem/fret-workspace/tests/workspace_commands_default_keybindings_include_ctrl_f6_toggle.rs` (default keybinding contract)
 
 ## M1 gates (must exist before/while refactoring)
 
@@ -17,6 +34,7 @@ Goal: keep the tab strip refactor **fearless** by locking outcomes behind unit t
 
 - `insert_index` is canonical (full list index space).
 - end-drop surface resolves to `insert_index == tab_count`.
+- scroll controls are not classified as header-space drop surfaces when viewport bounds are missing.
 - pinned boundary prevents crossing on reorder (unless pin/unpin intent).
 - overflow mapping preserves canonical order.
 

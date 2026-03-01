@@ -74,7 +74,7 @@ pub(crate) fn dispatch_simple(
             (|| -> Result<(), String> {
                 let Some(src) = rest.first().cloned() else {
                     return Err(
-                        "missing bundle artifact path (try: fretboard diag trace <bundle_dir|bundle.json|bundle.schema2.json>)"
+                        "missing bundle artifact path (try: fretboard diag trace <base_or_session_out_dir|bundle_dir|bundle.json|bundle.schema2.json>)"
                             .to_string(),
                     );
                 };
@@ -83,6 +83,10 @@ pub(crate) fn dispatch_simple(
                 }
 
                 let src = crate::resolve_path(workspace_root, PathBuf::from(src));
+                let src =
+                    commands::resolve::maybe_resolve_base_or_session_out_dir_to_latest_bundle_dir(
+                        &src,
+                    );
                 let bundle_path = crate::resolve_bundle_artifact_path(&src);
                 let bundle_dir = crate::resolve_bundle_root_dir(&bundle_path)?;
                 let out = trace_out
@@ -142,6 +146,23 @@ pub(crate) fn dispatch_simple(
             pack_after_run,
             workspace_root,
             warmup_frames,
+            stats_json,
+        ),
+        "dock-routing" => commands::dock_routing::cmd_dock_routing(
+            rest,
+            pack_after_run,
+            workspace_root,
+            warmup_frames,
+            stats_json,
+        ),
+        "screenshots" => {
+            commands::screenshots::cmd_screenshots(rest, pack_after_run, workspace_root, stats_json)
+        }
+        "resolve" => commands::resolve::cmd_resolve(
+            rest,
+            pack_after_run,
+            workspace_root,
+            resolved_out_dir,
             stats_json,
         ),
         "index" => commands::index::cmd_index(

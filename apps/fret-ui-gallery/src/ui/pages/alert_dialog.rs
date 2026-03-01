@@ -12,27 +12,45 @@ pub(super) fn preview_alert_dialog(
         media_open: Option<Model<bool>>,
         small_media_open: Option<Model<bool>>,
         destructive_open: Option<Model<bool>>,
+        parts_open: Option<Model<bool>>,
         rtl_open: Option<Model<bool>>,
     }
 
-    let (basic_open, small_open, media_open, small_media_open, destructive_open, rtl_open) = cx
-        .with_state(AlertDialogModels::default, |state| {
-            (
-                state.basic_open.clone(),
-                state.small_open.clone(),
-                state.media_open.clone(),
-                state.small_media_open.clone(),
-                state.destructive_open.clone(),
-                state.rtl_open.clone(),
-            )
-        });
-
-    let (basic_open, small_open, media_open, small_media_open, destructive_open, rtl_open) = match (
+    let (
         basic_open,
         small_open,
         media_open,
         small_media_open,
         destructive_open,
+        parts_open,
+        rtl_open,
+    ) = cx.with_state(AlertDialogModels::default, |state| {
+        (
+            state.basic_open.clone(),
+            state.small_open.clone(),
+            state.media_open.clone(),
+            state.small_media_open.clone(),
+            state.destructive_open.clone(),
+            state.parts_open.clone(),
+            state.rtl_open.clone(),
+        )
+    });
+
+    let (
+        basic_open,
+        small_open,
+        media_open,
+        small_media_open,
+        destructive_open,
+        parts_open,
+        rtl_open,
+    ) = match (
+        basic_open,
+        small_open,
+        media_open,
+        small_media_open,
+        destructive_open,
+        parts_open,
         rtl_open,
     ) {
         (
@@ -41,6 +59,7 @@ pub(super) fn preview_alert_dialog(
             Some(media_open),
             Some(small_media_open),
             Some(destructive_open),
+            Some(parts_open),
             Some(rtl_open),
         ) => (
             basic_open,
@@ -48,6 +67,7 @@ pub(super) fn preview_alert_dialog(
             media_open,
             small_media_open,
             destructive_open,
+            parts_open,
             rtl_open,
         ),
         _ => {
@@ -56,6 +76,7 @@ pub(super) fn preview_alert_dialog(
             let media_open = cx.app.models_mut().insert(false);
             let small_media_open = cx.app.models_mut().insert(false);
             let destructive_open = cx.app.models_mut().insert(false);
+            let parts_open = cx.app.models_mut().insert(false);
             let rtl_open = cx.app.models_mut().insert(false);
             cx.with_state(AlertDialogModels::default, |state| {
                 state.basic_open = Some(basic_open.clone());
@@ -63,6 +84,7 @@ pub(super) fn preview_alert_dialog(
                 state.media_open = Some(media_open.clone());
                 state.small_media_open = Some(small_media_open.clone());
                 state.destructive_open = Some(destructive_open.clone());
+                state.parts_open = Some(parts_open.clone());
                 state.rtl_open = Some(rtl_open.clone());
             });
             (
@@ -71,6 +93,7 @@ pub(super) fn preview_alert_dialog(
                 media_open,
                 small_media_open,
                 destructive_open,
+                parts_open,
                 rtl_open,
             )
         }
@@ -223,6 +246,48 @@ pub(super) fn preview_alert_dialog(
         Some("lucide.trash-2"),
     );
 
+    let parts_content = {
+        let open_for_trigger = parts_open.clone();
+        let open_for_children = parts_open.clone();
+        shadcn::AlertDialog::new(parts_open).into_element_parts(
+            cx,
+            move |cx| {
+                let trigger = shadcn::Button::new("Show Dialog (Parts)")
+                    .variant(shadcn::ButtonVariant::Outline)
+                    .test_id("ui-gallery-alert-dialog-parts-trigger")
+                    .toggle_model(open_for_trigger.clone())
+                    .into_element(cx);
+                shadcn::AlertDialogTrigger::new(trigger)
+            },
+            shadcn::AlertDialogPortal::new(),
+            shadcn::AlertDialogOverlay::new(),
+            move |cx| {
+                let header = shadcn::AlertDialogHeader::new(vec![
+                    shadcn::AlertDialogTitle::new("Part-based AlertDialog").into_element(cx),
+                    shadcn::AlertDialogDescription::new(
+                        "Thin adapters for shadcn-style authoring (Trigger/Portal/Overlay).",
+                    )
+                    .into_element(cx),
+                ])
+                .into_element(cx);
+
+                let footer = shadcn::AlertDialogFooter::new(vec![
+                    shadcn::AlertDialogCancel::new("Cancel", open_for_children.clone())
+                        .test_id("ui-gallery-alert-dialog-parts-cancel")
+                        .into_element(cx),
+                    shadcn::AlertDialogAction::new("Continue", open_for_children.clone())
+                        .test_id("ui-gallery-alert-dialog-parts-action")
+                        .into_element(cx),
+                ])
+                .into_element(cx);
+
+                shadcn::AlertDialogContent::new(vec![header, footer])
+                    .into_element(cx)
+                    .test_id("ui-gallery-alert-dialog-parts-content")
+            },
+        )
+    };
+
     let rtl_dialog = doc_layout::rtl(cx, |cx| {
         build_dialog(
             cx,
@@ -372,6 +437,22 @@ build_dialog(
                     r#"shadcn::AlertDialogAction::new("Delete", open.clone())
     .variant(shadcn::ButtonVariant::Destructive)
     .into_element(cx);"#,
+                )
+                .max_w(Px(760.0)),
+            DocSection::new("Parts", parts_content)
+                .description("Part surface adapters for shadcn-style call sites.")
+                .test_id_prefix("ui-gallery-alert-dialog-parts-docsec")
+                .code(
+                    "rust",
+                    r#"use shadcn::{AlertDialog, AlertDialogOverlay, AlertDialogPortal, AlertDialogTrigger};
+
+let dialog = AlertDialog::new(open).into_element_parts(
+    cx,
+    |cx| AlertDialogTrigger::new(shadcn::Button::new("Open").toggle_model(open.clone()).into_element(cx)),
+    AlertDialogPortal::new(),
+    AlertDialogOverlay::new(),
+    |cx| shadcn::AlertDialogContent::new([/* content */]).into_element(cx),
+);"#,
                 )
                 .max_w(Px(760.0)),
             DocSection::new("RTL", rtl_dialog)

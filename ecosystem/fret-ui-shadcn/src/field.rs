@@ -3,15 +3,15 @@ use std::sync::Arc;
 use fret_core::{Edges, Px, SemanticsRole, TextAlign, TextOverflow, TextWrap};
 use fret_ui::element::{
     AnyElement, ColumnProps, ContainerProps, CrossAlign, ElementKind, LayoutQueryRegionProps,
-    MainAlign, PressableA11y, PressableProps, RowProps, SemanticsDecoration,
+    LayoutStyle, MainAlign, PressableA11y, PressableProps, RowProps, SemanticsDecoration,
 };
 use fret_ui::{ElementContext, Invalidation, Theme, ThemeSnapshot, UiHost};
 use fret_ui_kit::declarative::style as decl_style;
-use fret_ui_kit::primitives::control_registry::{ControlId, LabelEntry, control_registry_model};
+use fret_ui_kit::primitives::control_registry::{control_registry_model, ControlId, LabelEntry};
 use fret_ui_kit::primitives::direction as direction_prim;
 use fret_ui_kit::primitives::field_state as field_state_prim;
 use fret_ui_kit::theme_tokens;
-use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, Space, ui};
+use fret_ui_kit::{ui, ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, Space};
 
 fn muted_foreground(theme: &ThemeSnapshot) -> fret_core::Color {
     theme
@@ -166,8 +166,66 @@ fn subtree_has_flex_grow(element: &AnyElement) -> bool {
     element.children.iter().any(subtree_has_flex_grow)
 }
 
+fn kind_layout_mut(kind: &mut ElementKind) -> Option<&mut LayoutStyle> {
+    match kind {
+        ElementKind::Container(props) => Some(&mut props.layout),
+        ElementKind::Semantics(props) => Some(&mut props.layout),
+        ElementKind::SemanticFlex(props) => Some(&mut props.flex.layout),
+        ElementKind::Pressable(props) => Some(&mut props.layout),
+        ElementKind::PointerRegion(props) => Some(&mut props.layout),
+        ElementKind::TextInputRegion(props) => Some(&mut props.layout),
+        ElementKind::InternalDragRegion(props) => Some(&mut props.layout),
+        ElementKind::Opacity(props) => Some(&mut props.layout),
+        ElementKind::InteractivityGate(props) => Some(&mut props.layout),
+        ElementKind::VisualTransform(props) => Some(&mut props.layout),
+        ElementKind::RenderTransform(props) => Some(&mut props.layout),
+        ElementKind::FractionalRenderTransform(props) => Some(&mut props.layout),
+        ElementKind::Anchored(props) => Some(&mut props.layout),
+        ElementKind::Column(props) => Some(&mut props.layout),
+        ElementKind::Row(props) => Some(&mut props.layout),
+        ElementKind::Stack(props) => Some(&mut props.layout),
+        ElementKind::Flex(props) => Some(&mut props.layout),
+        ElementKind::Grid(props) => Some(&mut props.layout),
+        ElementKind::Text(props) => Some(&mut props.layout),
+        ElementKind::StyledText(props) => Some(&mut props.layout),
+        ElementKind::SelectableText(props) => Some(&mut props.layout),
+        ElementKind::TextInput(props) => Some(&mut props.layout),
+        ElementKind::TextArea(props) => Some(&mut props.layout),
+        ElementKind::Image(props) => Some(&mut props.layout),
+        ElementKind::Canvas(props) => Some(&mut props.layout),
+        ElementKind::SvgIcon(props) => Some(&mut props.layout),
+        ElementKind::Spinner(props) => Some(&mut props.layout),
+        ElementKind::Scroll(props) => Some(&mut props.layout),
+        ElementKind::Scrollbar(props) => Some(&mut props.layout),
+        ElementKind::Spacer(props) => Some(&mut props.layout),
+        ElementKind::HoverRegion(props) => Some(&mut props.layout),
+        ElementKind::WheelRegion(props) => Some(&mut props.layout),
+        ElementKind::EffectLayer(props) => Some(&mut props.layout),
+        ElementKind::FocusScope(props) => Some(&mut props.layout),
+        ElementKind::RovingFlex(props) => Some(&mut props.flex.layout),
+        ElementKind::VirtualList(props) => Some(&mut props.layout),
+        ElementKind::ResizablePanelGroup(props) => Some(&mut props.layout),
+        ElementKind::ViewportSurface(props) => Some(&mut props.layout),
+        ElementKind::ViewCache(props) => Some(&mut props.layout),
+        _ => None,
+    }
+}
+
+fn responsive_md_content_flex_1_min_w_0(mut element: AnyElement) -> AnyElement {
+    let Some(layout) = kind_layout_mut(&mut element.kind) else {
+        return element;
+    };
+
+    layout.flex.grow = 1.0;
+    layout.flex.shrink = 1.0;
+    layout.flex.basis = fret_ui::element::Length::Px(Px(0.0));
+    layout.size.min_width = Some(fret_ui::element::Length::Px(Px(0.0)));
+
+    element
+}
+
 fn responsive_md_width_auto(mut element: AnyElement) -> AnyElement {
-    if subtree_has_flex_grow(&element) {
+    if kind_flex_grow(&element.kind).is_some_and(|grow| grow > 0.0) {
         return element;
     }
 
@@ -206,6 +264,15 @@ fn responsive_md_width_auto(mut element: AnyElement) -> AnyElement {
             props.layout.size.width = fret_ui::element::Length::Px(Px(ch * cols + chrome_w));
         }
         _ => {}
+    }
+
+    if matches!(
+        element.kind,
+        ElementKind::Semantics(_) | ElementKind::Container(_) | ElementKind::Pressable(_)
+    ) && element.children.len() == 1
+    {
+        let child = element.children.remove(0);
+        element.children.push(responsive_md_width_auto(child));
     }
 
     element
@@ -1091,6 +1158,8 @@ impl FieldDescription {
             .wrap(wrap)
             .overflow(overflow)
             .text_align(align)
+            .w_full()
+            .min_w_0()
             .into_element(cx)
     }
 }
@@ -1158,6 +1227,8 @@ impl FieldError {
         ui::text(cx, self.text)
             .text_size_px(px)
             .line_height_px(line_height)
+            .line_height_policy(fret_core::TextLineHeightPolicy::FixedFromStyle)
+            .line_box_in_bounds()
             .font_normal()
             .text_color(ColorRef::Color(fg))
             .wrap(wrap)
@@ -1357,8 +1428,8 @@ impl Field {
         field_state_prim::with_field_state_provider(cx, field_state, |cx| {
             let (gap, wrapper, inner_layout, muted, desc_mt_neg, desc_line_height) = {
                 let theme = Theme::global(&*cx.app).snapshot();
-                // shadcn/ui v4 `FormItem`: `grid gap-2`.
-                let gap = MetricRef::space(Space::N2).resolve(&theme);
+                // shadcn-web fixture: label->input and input->desc gaps settle at ~12px.
+                let gap = MetricRef::space(Space::N3).resolve(&theme);
                 let wrapper = decl_style::container_props(
                     &theme,
                     self.chrome,
@@ -1471,9 +1542,27 @@ impl Field {
                             ),
                             FieldOrientation::Responsive => {
                                 if md_breakpoint {
-                                    let children_row = children
+                                    let mut children_row = children.into_iter().collect::<Vec<_>>();
+                                    let first_has_flex_grow = children_row
+                                        .first()
+                                        .and_then(|e| kind_flex_grow(&e.kind))
+                                        .is_some_and(|grow| grow > 0.0);
+                                    if children_row.len() >= 2 && !first_has_flex_grow {
+                                        let first = children_row.remove(0);
+                                        children_row
+                                            .insert(0, responsive_md_content_flex_1_min_w_0(first));
+                                    }
+
+                                    let children_row = children_row
                                         .into_iter()
-                                        .map(responsive_md_width_auto)
+                                        .enumerate()
+                                        .map(|(idx, child)| {
+                                            if idx == 0 {
+                                                child
+                                            } else {
+                                                responsive_md_width_auto(child)
+                                            }
+                                        })
                                         .collect::<Vec<_>>();
                                     cx.row(
                                         RowProps {
@@ -1564,7 +1653,7 @@ mod tests {
     }
 
     #[test]
-    fn field_vertical_defaults_to_gap_2() {
+    fn field_vertical_defaults_to_gap_3() {
         let window = AppWindowId::default();
         let mut app = App::new();
         let bounds = Rect::new(
@@ -1573,7 +1662,7 @@ mod tests {
         );
 
         let theme = Theme::global(&app).snapshot();
-        let expected = MetricRef::space(Space::N2).resolve(&theme);
+        let expected = MetricRef::space(Space::N3).resolve(&theme);
 
         let element = fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
             Field::new([cx.text("Label"), cx.text("Control")])

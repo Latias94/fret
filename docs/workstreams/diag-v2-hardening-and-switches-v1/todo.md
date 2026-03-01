@@ -33,6 +33,8 @@ This file is a check-list style tracker. Milestone framing lives in `milestones.
   silently drift tool-launched runs.
 - [x] Audit `--launch` entry points to ensure a single per-run config writer is used (`diag run/suite/repro/perf/repeat`
   funnel through `maybe_launch_demo`; evidence: `crates/fret-diag/src/compare.rs:maybe_launch_demo`).
+- [x] Ensure `diag perf --launch` enables screenshots when required for gates (notably `--check-pixels-changed`) or when
+  any perf script/prelude/prewarm requests screenshots (align with `diag run/suite/repro` behavior).
 - [x] Tool-launched output safety defaults:
   - [x] `script_auto_dump=false` (avoid "dump on every injected step" explosions)
   - [x] `pick_auto_dump=false` (avoid "dump on every pick" explosions)
@@ -56,6 +58,23 @@ This file is a check-list style tracker. Milestone framing lives in `milestones.
   - [x] Add a small `session.json` metadata file in the session root (best-effort).
   - [x] Add a safe discovery command (bounded output): `diag list sessions --dir <base_dir>`.
   - [x] Add a safe cleanup command (dry-run by default): `diag sessions clean --dir <base_dir> --keep <n> [--apply]`.
+- [x] Add a bounded resolver so humans/agents can avoid reading `latest.txt` manually (and avoid base-dir races):
+  - `diag resolve latest --dir <base_or_session_dir> [--within-session <id|latest>]`
+  - resolution prefers `<out_dir>/script.result.json:last_bundle_dir` and falls back to `<out_dir>/latest.txt`/scan.
+- [x] Make bounded “read-only” commands accept base/session out dirs directly (so agents can pass `--dir` without an extra
+  resolve step), and resolve them to the latest bundle dir under the chosen session:
+  - `diag meta`, `diag windows`, `diag dock-routing`, `diag screenshots`, `diag trace`, `diag stats`, `diag index`
+  - `diag pack`, `diag triage`, `diag lint`, `diag test-ids`, `diag frames-index`, `diag ai-packet`, `diag compare`
+- [x] Centralize base/session out dir resolution helpers in tooling to avoid per-command drift (e.g. pack/meta/stats/etc
+  share a single resolver in `crates/fret-diag/src/commands/resolve.rs`).
+- [x] Emit a warning when `--launch` targets a base dir that already contains `sessions/` but the user did not enable
+  `--session-auto`/`--session` (avoid writing control-plane files at the base root, which is a concurrency footgun).
+- [x] Make the warning actionable:
+  - [x] include a copy-paste `--session-auto` command template in stderr,
+  - [x] surface a structured warning in `diag config doctor --mode launch --report-json` so AI packets/triage can ingest it.
+- [x] Ensure share artifacts carry the warning without re-running tooling commands:
+  - [x] `diag ai-packet` writes `tooling.warnings.json` and includes it in `ai.packet.json`,
+  - [x] `diag triage` writes `tooling_warnings` into `triage.json`.
 
 ## P1: Agent-native script ergonomics (ImGui-alignment outcomes)
 
@@ -73,8 +92,26 @@ Planned outcomes:
   - [ ] Ensure the feature is capability-gated (tooling-side) and does not leak policy into `fret-ui`.
 - [ ] Multi-viewport docking evidence (make cross-window failures explainable, not just “timeout”):
   - [x] Export a bounded `window.map.json` sidecar in bundle export dirs (window ids + last bounds + hover detection).
-  - [ ] Record input routing decisions for dock/tear-out flows (why a hover/click went to a different window).
-  - [x] Add a bounded `diag windows <bundle_dir|bundle.schema2.json>` query to avoid opening large artifacts.
+  - [x] Record input routing decisions for dock/tear-out flows (why a hover/click went to a different window):
+    - runtime sidecar: `dock.routing.json` (bounded; max 512 entries),
+    - tooling: `fretboard diag dock-routing <bundle_dir|bundle.schema2.json> [--json]` (bounded report).
+- [x] Add bounded queries to avoid opening large artifacts:
+  - `diag windows <bundle_dir|bundle.schema2.json>`
+  - `diag dock-routing <bundle_dir|bundle.schema2.json>`
+- [x] Add a bounded `diag screenshots <bundle_dir|bundle.schema2.json>` query to locate and summarize GPU screenshots without
+  hunting through directories.
+- [x] Hardening: guard non-convergent scroll scripts (reduce “scroll forever until timeout” flake):
+  - detect impossible `require_fully_within_window=true` when the target is larger than the padded window inner rect,
+  - fail fast with a stable `reason_code` and bounded evidence (instead of spamming wheel events until timeout).
+  - Evidence: `ecosystem/fret-bootstrap/src/ui_diagnostics/script_steps_scroll.rs`, `ecosystem/fret-bootstrap/src/ui_diagnostics/labels.rs`.
+- [x] Hardening: guard impossible “stable frames” configs (reduce avoidable timeouts):
+  - detect `stable_frames > timeout_frames` for stability-gated steps (`wait_bounds_stable`, `click_stable`, `click_selectable_text_span_stable`),
+  - fail fast with stable `reason_code` (instead of waiting to timeout).
+  - Evidence: `ecosystem/fret-bootstrap/src/ui_diagnostics/script_steps_wait.rs`, `ecosystem/fret-bootstrap/src/ui_diagnostics/script_steps_pointer.rs`, `ecosystem/fret-bootstrap/src/ui_diagnostics/labels.rs`.
+- [x] Hardening: guard impossible `ensure_visible(within_window=true)` on oversized targets (reduce avoidable timeouts):
+  - detect when the target bounds exceed the padded inner window rect,
+  - fail fast with stable `reason_code` (instead of waiting to timeout).
+  - Evidence: `ecosystem/fret-bootstrap/src/ui_diagnostics/script_steps_visibility.rs`, `ecosystem/fret-bootstrap/src/ui_diagnostics/labels.rs`.
 - [ ] Fast mode policy (determinism + speed):
   - [ ] Make “fast mode vs human-speed” explicit via config (stabilization defaults, animation handling).
   - [ ] Add a bounded “fast mode” smoke suite (runs faster than today without introducing flake).

@@ -731,7 +731,14 @@ impl Button {
             let text_line_height = text_style
                 .line_height
                 .unwrap_or_else(|| theme.metric_token("font.line_height"));
-            let is_icon = is_icon_button;
+            let is_icon = {
+                let label_is_empty = self.label.is_empty();
+                is_icon_button
+                    || (label_is_empty
+                        && (self.leading_icon.is_some()
+                            || self.trailing_icon.is_some()
+                            || !self.children.is_empty()))
+            };
             let has_svg_icon_like_children = !is_icon_button
                 && (self.children.iter().any(contains_svg_icon_like)
                     || self.leading_icon.is_some()

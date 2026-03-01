@@ -181,6 +181,16 @@ fn web_vs_fret_layout_field_responsive_orientation_places_input_beside_content()
 
     let fret_dx = fret_input.bounds.origin.x.0 - fret_content.bounds.origin.x.0;
 
+    if std::env::var("FRET_DEBUG_WEB_VS_FRET_LAYOUT")
+        .ok()
+        .is_some_and(|v| v == "1")
+    {
+        eprintln!(
+            "field-responsive debug: web_dx={web_dx:?} fret_dx={fret_dx} content={:?} input={:?}",
+            fret_content.bounds, fret_input.bounds
+        );
+    }
+
     assert!(
         fret_dx >= 1.0,
         "expected responsive field to place input beside content; dx={fret_dx} (content={:?} input={:?})",

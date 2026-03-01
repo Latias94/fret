@@ -2159,6 +2159,20 @@ fn web_vs_fret_layout_input_group_button_geometry_matches() {
     )
     .expect("fret icon");
 
+    if std::env::var("FRET_DEBUG_WEB_VS_FRET_LAYOUT")
+        .ok()
+        .is_some_and(|v| v == "1")
+    {
+        eprintln!(
+            "input-group-button debug: web_group={:?} web_input={:?} web_svg={:?}",
+            web_group.rect, web_input.rect, web_svg.rect
+        );
+        eprintln!(
+            "input-group-button debug: fret_group={:?} fret_input={:?} fret_icon={:?}",
+            group.bounds, input.bounds, icon.bounds
+        );
+    }
+
     assert_close_px(
         "input-group-button group w",
         group.bounds.size.width,

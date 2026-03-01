@@ -1724,6 +1724,7 @@ dependencies = [
  "fret-ui",
  "fret-ui-kit",
  "fret-ui-shadcn",
+ "fret-workspace",
  "slotmap",
  "thiserror 2.0.18",
  "wgpu",
@@ -1879,6 +1880,15 @@ dependencies = [
  "fret-ui",
  "fret-ui-kit",
  "fret-ui-shadcn",
+]
+
+[[package]]
+name = "fret-cookbook"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "fret",
+ "fret-core",
 ]
 
 [[package]]
@@ -2945,6 +2955,7 @@ dependencies = [
  "fret-dnd",
  "fret-runtime",
  "fret-ui",
+ "fret-ui-headless",
  "fret-ui-kit",
  "fret-ui-shadcn",
  "serde",

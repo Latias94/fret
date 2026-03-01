@@ -845,7 +845,7 @@ fn cmd_query_test_id(
             let maybe_path = crate::resolve_path(workspace_root, PathBuf::from(pattern));
             if looks_like_path(pattern) && (maybe_path.is_file() || maybe_path.is_dir()) {
                 return Err(
-                    "missing pattern (try: fretboard diag query test-id <bundle_dir|bundle.json|bundle.schema2.json> <pattern>)"
+                    "missing pattern (try: fretboard diag query test-id <base_or_session_out_dir|bundle_dir|bundle.json|bundle.schema2.json> <pattern>)"
                         .to_string(),
                 );
             }

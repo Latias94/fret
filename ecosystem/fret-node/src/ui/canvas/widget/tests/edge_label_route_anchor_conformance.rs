@@ -120,8 +120,8 @@ fn extract_label_text_origin(scene: &Scene, style: &NodeGraphStyle) -> Option<Po
         if order != fret_core::DrawOrder(2) {
             continue;
         }
-        if background != fret_core::Paint::Solid(style.edge_label_background)
-            || border_paint != fret_core::Paint::Solid(style.edge_label_border)
+        if background.paint != fret_core::Paint::Solid(style.edge_label_background)
+            || border_paint.paint != fret_core::Paint::Solid(style.edge_label_border)
         {
             continue;
         }

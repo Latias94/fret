@@ -28,6 +28,79 @@ fn default_overlay_color(theme: &ThemeSnapshot) -> Color {
     scrim
 }
 
+/// shadcn/ui `SheetPortal` (v4).
+///
+/// Fret installs sheets through the overlay controller, which implies a portal-like boundary
+/// already. This type is a no-op marker that exists to align the shadcn part surface and leave room
+/// for future portal configuration.
+#[derive(Debug, Clone, Copy, Default)]
+pub struct SheetPortal;
+
+impl SheetPortal {
+    pub fn new() -> Self {
+        Self
+    }
+}
+
+/// shadcn/ui `SheetOverlay` (v4).
+///
+/// Upstream exposes the overlay (scrim/backdrop) as a distinct part with styling concerns.
+/// Fret's sheet surface currently owns the overlay policy knobs on [`Sheet`]. This type is a thin
+/// adapter so part-based call sites can keep configuration in a shadcn-like location.
+#[derive(Debug, Clone, Default)]
+pub struct SheetOverlay {
+    closable: Option<bool>,
+    color: Option<Color>,
+}
+
+impl SheetOverlay {
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// Controls whether outside pointer press dismisses the sheet.
+    pub fn closable(mut self, closable: bool) -> Self {
+        self.closable = Some(closable);
+        self
+    }
+
+    pub fn color(mut self, color: Color) -> Self {
+        self.color = Some(color);
+        self
+    }
+
+    fn apply_to(self, mut sheet: Sheet) -> Sheet {
+        if let Some(v) = self.closable {
+            sheet.overlay_closable = v;
+        }
+        if let Some(v) = self.color {
+            sheet.overlay_color = Some(v);
+        }
+        sheet
+    }
+}
+
+/// shadcn/ui `SheetTrigger` (v4).
+///
+/// In the upstream DOM implementation this is a Radix primitive part. In Fret, the trigger element
+/// itself is still authored by the caller; this wrapper exists to align the part surface with
+/// shadcn docs/examples and to keep room for future trigger-specific defaults.
+#[derive(Debug)]
+pub struct SheetTrigger {
+    child: AnyElement,
+}
+
+impl SheetTrigger {
+    pub fn new(child: AnyElement) -> Self {
+        Self { child }
+    }
+
+    #[track_caller]
+    pub fn into_element<H: UiHost>(self, _cx: &mut ElementContext<'_, H>) -> AnyElement {
+        self.child
+    }
+}
+
 type OnOpenChange = Arc<dyn Fn(bool) + Send + Sync + 'static>;
 
 #[derive(Default)]
@@ -652,6 +725,23 @@ impl Sheet {
 
             trigger
         })
+    }
+
+    /// Part-based authoring surface aligned with shadcn/ui v4 exports.
+    ///
+    /// This is a thin adapter over [`Sheet::into_element`] that accepts shadcn-style parts
+    /// (`SheetTrigger`, `SheetPortal`, `SheetOverlay`).
+    #[track_caller]
+    pub fn into_element_parts<H: UiHost>(
+        self,
+        cx: &mut ElementContext<'_, H>,
+        trigger: impl FnOnce(&mut ElementContext<'_, H>) -> SheetTrigger,
+        _portal: SheetPortal,
+        overlay: SheetOverlay,
+        content: impl FnOnce(&mut ElementContext<'_, H>) -> AnyElement,
+    ) -> AnyElement {
+        let sheet = overlay.apply_to(self);
+        sheet.into_element(cx, |cx| trigger(cx).into_element(cx), content)
     }
 }
 

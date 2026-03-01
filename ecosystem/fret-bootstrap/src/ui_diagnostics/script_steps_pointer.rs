@@ -1137,6 +1137,18 @@ pub(super) fn handle_click_stable_step(
             let stable_required = stable_frames.max(1);
             let max_move_px = max_move_px.max(0.0);
 
+            if timeout_frames != 0 && stable_required > timeout_frames {
+                *force_dump_label = Some(format!(
+                    "script-step-{step_index:04}-click_stable-impossible-stable-frames-gt-timeout"
+                ));
+                *stop_script = true;
+                *failure_reason =
+                    Some("click_stable_impossible_stable_frames_gt_timeout_frames".to_string());
+                active.v2_step_state = None;
+                output.request_redraw = true;
+                return true;
+            }
+
             let mut state = match active.v2_step_state.take() {
                 Some(V2StepState::ClickStable(mut state)) if state.step_index == step_index => {
                     state.remaining_frames = state.remaining_frames.min(timeout_frames);
@@ -1359,6 +1371,20 @@ pub(super) fn handle_click_selectable_text_span_stable_step(
         ) {
             let stable_required = stable_frames.max(1);
             let max_move_px = max_move_px.max(0.0);
+
+            if timeout_frames != 0 && stable_required > timeout_frames {
+                *force_dump_label = Some(format!(
+                    "script-step-{step_index:04}-click_selectable_span-impossible-stable-frames-gt-timeout"
+                ));
+                *stop_script = true;
+                *failure_reason = Some(
+                    "click_selectable_text_span_stable_impossible_stable_frames_gt_timeout_frames"
+                        .to_string(),
+                );
+                active.v2_step_state = None;
+                output.request_redraw = true;
+                return true;
+            }
 
             let mut state = match active.v2_step_state.take() {
                 Some(V2StepState::ClickSelectableTextSpanStable(mut state))

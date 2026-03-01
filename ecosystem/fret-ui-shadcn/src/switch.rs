@@ -728,9 +728,9 @@ mod tests {
         ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
 
         let theme = Theme::global(&app);
-        let track_bg = fret_core::Paint::Solid(switch_bg_off(theme));
+        let track_bg = fret_core::Paint::Solid(switch_bg_off(theme)).into();
         let thumb_size = switch_thumb(theme, SwitchSize::Default);
-        let thumb_bg = fret_core::Paint::Solid(switch_thumb_bg(theme));
+        let thumb_bg = fret_core::Paint::Solid(switch_thumb_bg(theme)).into();
 
         let mut track_rect: Option<Rect> = None;
         let mut thumb_rect: Option<Rect> = None;
@@ -1205,9 +1205,9 @@ mod tests {
         ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
 
         let theme = Theme::global(&app);
-        let track_bg = fret_core::Paint::Solid(switch_bg_off(theme));
+        let track_bg = fret_core::Paint::Solid(switch_bg_off(theme)).into();
         let thumb_size = switch_thumb(theme, SwitchSize::Sm);
-        let thumb_bg = fret_core::Paint::Solid(switch_thumb_bg(theme));
+        let thumb_bg = fret_core::Paint::Solid(switch_thumb_bg(theme)).into();
 
         let mut track_rect: Option<Rect> = None;
         let mut thumb_rect: Option<Rect> = None;

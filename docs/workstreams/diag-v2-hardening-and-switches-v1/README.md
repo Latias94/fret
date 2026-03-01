@@ -166,6 +166,15 @@ Make configuration predictable:
     override).
   - Audit (2026-02-28): all `--launch` entry points (`diag run/suite/repro/perf/repeat/script`) call the same helper
     (`crates/fret-diag/src/compare.rs:maybe_launch_demo`) to ensure consistent per-run config + env policy.
+  - Audit (2026-03-01): `diag perf` now enables screenshots when they are required for gates (`--check-pixels-changed`)
+    or when any perf script/prelude/prewarm requests screenshots, aligning with `diag run/suite/repro` launch behavior.
+  - Audit (2026-03-01): `diag --launch` emits a warning when the chosen `--dir` already contains `sessions/` but
+    `--session-auto`/`--session` is not enabled (to reduce multi-agent concurrency footguns).
+  - Audit (2026-03-01): the warning includes a copy-paste command template, and `diag config doctor --mode launch --report-json`
+    surfaces a structured warning so AI packets/triage can ingest it.
+  - Audit (2026-03-01): share artifacts now carry the warning by default:
+    - `diag ai-packet` writes `tooling.warnings.json` and includes it in `ai.packet.json`,
+    - `diag triage` writes `tooling_warnings` into `triage.json`.
   - Launch entry points (2026-02-28):
     - `diag run`: `crates/fret-diag/src/diag_run.rs` (calls `maybe_launch_demo` once per run)
     - `diag suite`: `crates/fret-diag/src/diag_suite.rs` (calls `maybe_launch_demo` either once per suite when reusing,

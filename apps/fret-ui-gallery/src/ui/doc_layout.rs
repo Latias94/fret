@@ -13,7 +13,7 @@ pub(in crate::ui) struct DocSection {
 
 pub(in crate::ui) struct DocCodeBlock {
     pub language: &'static str,
-    pub code: &'static str,
+    pub code: Arc<str>,
 }
 
 impl DocSection {
@@ -48,9 +48,43 @@ impl DocSection {
         self
     }
 
-    pub(in crate::ui) fn code(mut self, language: &'static str, code: &'static str) -> Self {
-        self.code = Some(DocCodeBlock { language, code });
+    pub(in crate::ui) fn code(mut self, language: &'static str, code: impl Into<Arc<str>>) -> Self {
+        self.code = Some(DocCodeBlock {
+            language,
+            code: code.into(),
+        });
         self
+    }
+
+    pub(in crate::ui) fn code_rust(self, code: impl Into<Arc<str>>) -> Self {
+        self.code("rust", code)
+    }
+
+    pub(in crate::ui) fn code_from_file(self, language: &'static str, file: &'static str) -> Self {
+        self.code(language, Arc::<str>::from(file))
+    }
+
+    pub(in crate::ui) fn code_rust_from_file(self, file: &'static str) -> Self {
+        self.code_from_file("rust", file)
+    }
+
+    pub(in crate::ui) fn code_from_file_region(
+        self,
+        language: &'static str,
+        file: &'static str,
+        region: &'static str,
+    ) -> Self {
+        let sliced = slice_code_region(file, region)
+            .unwrap_or_else(|| format!("// region `{region}` not found\n{file}"));
+        self.code(language, Arc::<str>::from(sliced))
+    }
+
+    pub(in crate::ui) fn code_rust_from_file_region(
+        self,
+        file: &'static str,
+        region: &'static str,
+    ) -> Self {
+        self.code_from_file_region("rust", file, region)
     }
 
     pub(in crate::ui) fn max_w(mut self, max_w: Px) -> Self {
@@ -113,11 +147,9 @@ pub(in crate::ui) fn wrap_preview_page(
     render_doc_page(
         cx,
         intro,
-        vec![
-            DocSection::new(section_title, preview)
-                .no_shell()
-                .max_w(Px(980.0)),
-        ],
+        vec![DocSection::new(section_title, preview)
+            .no_shell()
+            .max_w(Px(980.0))],
     )
 }
 
@@ -394,12 +426,18 @@ fn render_section(cx: &mut ElementContext<'_, App>, section: DocSection) -> AnyE
         None => preview,
     };
 
+    let section_max_w = Px(max_w.0.max(Px(820.0).0));
     let section_body = stack::vstack(
         cx,
         stack::VStackProps::default()
             .gap(Space::N2)
             .items_start()
-            .layout(LayoutRefinement::default().w_full().min_w_0().max_w(max_w)),
+            .layout(
+                LayoutRefinement::default()
+                    .w_full()
+                    .min_w_0()
+                    .max_w(section_max_w),
+            ),
         move |cx| {
             let mut out: Vec<AnyElement> = Vec::with_capacity(3);
             let title_el = section_title(cx, title);
@@ -524,7 +562,7 @@ fn preview_code_tabs(
     code: DocCodeBlock,
 ) -> AnyElement {
     let code_shell = code_block_shell(cx, test_id_prefix, max_w, code);
-    let code_el = centered(cx, code_shell);
+    let code_el = code_shell;
 
     let base = shadcn::Tabs::uncontrolled(Some("preview"))
         // `shadcn/ui` styles `TabsContent` with `flex-1`. In the UI gallery docs scaffold, tab
@@ -556,7 +594,7 @@ fn code_block_shell(
     max_w: Px,
     block: DocCodeBlock,
 ) -> AnyElement {
-    let code: Arc<str> = Arc::from(block.code);
+    let code: Arc<str> = block.code;
     let copy = match test_id_prefix {
         Some(prefix) => ui_ai::CodeBlockCopyButton::new(code.clone())
             .test_id(format!("{prefix}-code-block-copy"))
@@ -571,6 +609,7 @@ fn code_block_shell(
         .show_language(true)
         .show_line_numbers(true)
         .max_height(Px(400.0))
+        .windowed_lines(true)
         .header_right([copy])
         .into_element(cx);
 
@@ -586,6 +625,42 @@ fn code_block_shell(
         )
     });
     cx.container(props, move |_cx| [code_block])
+}
+
+fn slice_code_region(code: &str, region: &str) -> Option<String> {
+    let mut inside = false;
+    let mut out: Vec<&str> = Vec::new();
+
+    for line in code.lines() {
+        let trimmed = line.trim();
+        if let Some(name) = trimmed.strip_prefix("// region:") {
+            inside = name.trim() == region;
+            continue;
+        }
+        if trimmed == "// endregion" {
+            if inside {
+                break;
+            }
+            continue;
+        }
+        if let Some(name) = trimmed.strip_prefix("// endregion:") {
+            if inside && (name.trim().is_empty() || name.trim() == region) {
+                break;
+            }
+            continue;
+        }
+        if inside {
+            out.push(line);
+        }
+    }
+
+    if out.is_empty() {
+        return None;
+    }
+
+    let mut joined = out.join("\n");
+    joined.push('\n');
+    Some(joined)
 }
 
 fn section_title(cx: &mut ElementContext<'_, App>, title: &'static str) -> AnyElement {

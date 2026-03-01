@@ -142,9 +142,16 @@ let buttons = vec![
 ];
 
 shadcn::Card::new(vec![
-    shadcn::CardContent::new(vec![calendar]).into_element(cx),
-    shadcn::CardFooter::new(buttons).into_element(cx),
-])"#,
+    // `CardContent` / `CardFooter` can be built outside the `Card` subtree, so pass an explicit
+    // section size to match the card's `size`.
+    shadcn::CardContent::new(vec![calendar])
+        .size(shadcn::CardSize::Sm)
+        .into_element(cx),
+    shadcn::CardFooter::new(buttons)
+        .size(shadcn::CardSize::Sm)
+        .into_element(cx),
+])
+.size(shadcn::CardSize::Sm)"#,
                 ),
             DocSection::new("Date and Time Picker", date_and_time_picker)
                 .no_shell()

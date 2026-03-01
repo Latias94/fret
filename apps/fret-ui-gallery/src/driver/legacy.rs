@@ -9,6 +9,7 @@ use fret_core::{
     AlphaMode, AppWindowId, Event, ExternalDropReadLimits, FileDialogFilter, FileDialogOptions,
     ImageColorInfo, ImageId, ImageUploadToken, RectPx, TimerToken, UiServices,
 };
+use fret_icons::IconRegistry;
 use fret_launch::{
     WindowCreateSpec, WinitAppDriver, WinitCommandContext, WinitEventContext, WinitRenderContext,
     WinitRunnerConfig, WinitWindowContext,
@@ -18,16 +19,15 @@ use fret_runtime::{
     ImageUpdateToken, MenuItemToggle, MenuItemToggleKind, PlatformCapabilities,
     WindowCommandAvailabilityService, WindowCommandEnabledService,
 };
-use fret_ui::{PaintCachePolicy, UiTree};
 use fret_ui::action::{UiActionHost, UiActionHostAdapter};
 use fret_ui::scroll::VirtualListScrollHandle;
+use fret_ui::{PaintCachePolicy, UiTree};
 use fret_ui_shadcn as shadcn;
 use fret_undo::{CoalesceKey, DocumentId, UndoRecord, UndoService, ValueTx};
 use fret_workspace::commands::{
     CMD_WORKSPACE_TAB_CLOSE, CMD_WORKSPACE_TAB_CLOSE_PREFIX, CMD_WORKSPACE_TAB_NEXT,
     CMD_WORKSPACE_TAB_PREV,
 };
-use fret_icons::IconRegistry;
 use std::collections::HashMap;
 use std::sync::Arc;
 use std::time::Duration;
@@ -62,14 +62,21 @@ use router::{
 fn apply_ui_gallery_text_font_fallback_overrides(config: &mut fret_render::TextFontFamilyConfig) {
     #[cfg(target_os = "windows")]
     {
-        if config.common_fallback_injection == fret_core::TextCommonFallbackInjection::PlatformDefault
+        if config.common_fallback_injection
+            == fret_core::TextCommonFallbackInjection::PlatformDefault
         {
             // UI gallery demos intentionally include symbol glyphs (e.g. "⌘") to align with shadcn
             // docs. On Windows, relying on system fallback can yield tofu squares. Prefer injecting
             // the curated common fallback stack so missing glyphs can resolve via "Segoe UI Symbol"
             // / "Segoe UI Emoji" when available.
-            config.common_fallback_injection = fret_core::TextCommonFallbackInjection::CommonFallback;
+            config.common_fallback_injection =
+                fret_core::TextCommonFallbackInjection::CommonFallback;
         }
+    }
+
+    #[cfg(not(target_os = "windows"))]
+    {
+        let _ = config;
     }
 }
 
@@ -194,8 +201,6 @@ struct UiGalleryWindowState {
     settings_edit_can_redo: Model<bool>,
     undo_doc: DocumentId,
 
-    select_value: Model<Option<Arc<str>>>,
-    select_open: Model<bool>,
     combobox_value: Model<Option<Arc<str>>>,
     combobox_open: Model<bool>,
     combobox_query: Model<String>,
@@ -288,8 +293,6 @@ impl UiGalleryWindowState {
             alert_dialog_open: self.alert_dialog_open.clone(),
             sheet_open: self.sheet_open.clone(),
             portal_geometry_popover_open: self.portal_geometry_popover_open.clone(),
-            select_value: self.select_value.clone(),
-            select_open: self.select_open.clone(),
             combobox_value: self.combobox_value.clone(),
             combobox_open: self.combobox_open.clone(),
             combobox_query: self.combobox_query.clone(),
@@ -1007,10 +1010,6 @@ impl UiGalleryDriver {
         let settings_edit_can_undo = app.models_mut().insert(true);
         let settings_edit_can_redo = app.models_mut().insert(true);
         let undo_doc: DocumentId = "ui_gallery.window".into();
-        let select_value = app
-            .models_mut()
-            .insert(Option::<Arc<str>>::Some(Arc::from("apple")));
-        let select_open = app.models_mut().insert(false);
         let combobox_value = app.models_mut().insert(None::<Arc<str>>);
         let combobox_open = app.models_mut().insert(false);
         let combobox_query = app.models_mut().insert(String::new());
@@ -1179,8 +1178,11 @@ impl UiGalleryDriver {
             }
         };
 
-        let view_cache_enabled_value =
-            config_bool("FRET_UI_GALLERY_VIEW_CACHE", "fret_ui_gallery_view_cache", false);
+        let view_cache_enabled_value = config_bool(
+            "FRET_UI_GALLERY_VIEW_CACHE",
+            "fret_ui_gallery_view_cache",
+            false,
+        );
         let view_cache_enabled = app.models_mut().insert(view_cache_enabled_value);
 
         // On web targets, env vars are not available and evidence runs often rely on URL flags.
@@ -1197,28 +1199,22 @@ impl UiGalleryDriver {
             view_cache_shell_default,
         );
         let view_cache_cache_shell = app.models_mut().insert(view_cache_cache_shell_value);
-        let view_cache_cache_content = app
-            .models_mut()
-            .insert(config_bool(
-                "FRET_UI_GALLERY_VIEW_CACHE_CONTENT",
-                "fret_ui_gallery_view_cache_content",
-                true,
-            ));
-        let view_cache_inner_enabled = app
-            .models_mut()
-            .insert(config_bool(
-                "FRET_UI_GALLERY_VIEW_CACHE_INNER",
-                "fret_ui_gallery_view_cache_inner",
-                true,
-            ));
+        let view_cache_cache_content = app.models_mut().insert(config_bool(
+            "FRET_UI_GALLERY_VIEW_CACHE_CONTENT",
+            "fret_ui_gallery_view_cache_content",
+            true,
+        ));
+        let view_cache_inner_enabled = app.models_mut().insert(config_bool(
+            "FRET_UI_GALLERY_VIEW_CACHE_INNER",
+            "fret_ui_gallery_view_cache_inner",
+            true,
+        ));
         let view_cache_popover_open = app.models_mut().insert(false);
-        let view_cache_continuous = app
-            .models_mut()
-            .insert(config_bool(
-                "FRET_UI_GALLERY_VIEW_CACHE_CONTINUOUS",
-                "fret_ui_gallery_view_cache_continuous",
-                false,
-            ));
+        let view_cache_continuous = app.models_mut().insert(config_bool(
+            "FRET_UI_GALLERY_VIEW_CACHE_CONTINUOUS",
+            "fret_ui_gallery_view_cache_continuous",
+            false,
+        ));
         let view_cache_counter = app.models_mut().insert(0u64);
 
         // Perf suites set `FRET_DIAG_RENDERER_PERF=1`. Avoid enabling the inspector/debug HUD by
@@ -1291,8 +1287,6 @@ impl UiGalleryDriver {
             settings_edit_can_undo,
             settings_edit_can_redo,
             undo_doc,
-            select_value,
-            select_open,
             combobox_value,
             combobox_open,
             combobox_query,
@@ -2507,7 +2501,10 @@ fn bool_from_window_query(key: &str) -> Option<bool> {
     }
 
     let global_key = format!("__{}", key.to_ascii_uppercase());
-    if let Ok(v) = js_sys::Reflect::get(window.as_ref(), &wasm_bindgen::JsValue::from_str(&global_key)) {
+    if let Ok(v) = js_sys::Reflect::get(
+        window.as_ref(),
+        &wasm_bindgen::JsValue::from_str(&global_key),
+    ) {
         if let Some(b) = v.as_bool() {
             return Some(b);
         }
