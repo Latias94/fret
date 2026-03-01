@@ -16,8 +16,18 @@ fn wrap_row<H: UiHost>(
         .into_element(cx)
 }
 
-fn icon<H: UiHost>(cx: &mut ElementContext<'_, H>, name: &'static str, size: Px, fg: ColorRef) -> AnyElement {
-    shadcn::icon::icon_with(cx, fret_icons::IconId::new_static(name), Some(size), Some(fg))
+fn icon<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    name: &'static str,
+    size: Px,
+    fg: ColorRef,
+) -> AnyElement {
+    shadcn::icon::icon_with(
+        cx,
+        fret_icons::IconId::new_static(name),
+        Some(size),
+        Some(fg),
+    )
 }
 
 fn avatar_with_badge<H: UiHost>(
@@ -48,9 +58,8 @@ pub fn render<H: UiHost>(
     let primary_fg = Theme::global(&*cx.app).color_token("primary-foreground");
 
     let dot_row = wrap_row(cx, |cx| {
-        let custom_badge = shadcn::AvatarBadge::new().refine_style(ChromeRefinement::default().bg(
-            ColorRef::Color(destructive),
-        ));
+        let custom_badge = shadcn::AvatarBadge::new()
+            .refine_style(ChromeRefinement::default().bg(ColorRef::Color(destructive)));
 
         vec![
             avatar_with_badge(

@@ -4,8 +4,18 @@ use fret_ui::Theme;
 use fret_ui_kit::ColorRef;
 use fret_ui_shadcn::{self as shadcn, prelude::*};
 
-fn icon<H: UiHost>(cx: &mut ElementContext<'_, H>, name: &'static str, size: Px, fg: ColorRef) -> AnyElement {
-    shadcn::icon::icon_with(cx, fret_icons::IconId::new_static(name), Some(size), Some(fg))
+fn icon<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    name: &'static str,
+    size: Px,
+    fg: ColorRef,
+) -> AnyElement {
+    shadcn::icon::icon_with(
+        cx,
+        fret_icons::IconId::new_static(name),
+        Some(size),
+        Some(fg),
+    )
 }
 
 fn avatar_with_image<H: UiHost>(
@@ -34,11 +44,9 @@ fn group_with_count<H: UiHost>(
         .map(|idx| avatar_with_image(cx, avatar_image.clone(), size, ["CN", "ML", "ER"][idx]))
         .collect::<Vec<_>>();
 
-    let count = shadcn::AvatarGroupCount::new([ui::text(cx, "+3")
-        .font_medium()
-        .nowrap()
-        .into_element(cx)])
-    .into_element(cx);
+    let count =
+        shadcn::AvatarGroupCount::new([ui::text(cx, "+3").font_medium().nowrap().into_element(cx)])
+            .into_element(cx);
 
     shadcn::AvatarGroup::new(avatars.into_iter().chain([count]).collect::<Vec<_>>())
         .size(size)
@@ -58,8 +66,8 @@ fn group_with_icon_count<H: UiHost>(
 
     let muted_fg = Theme::global(&*cx.app).color_token("muted-foreground");
     let fg = ColorRef::Color(muted_fg);
-    let count = shadcn::AvatarGroupCount::new([icon(cx, "lucide.plus", Px(18.0), fg)])
-        .into_element(cx);
+    let count =
+        shadcn::AvatarGroupCount::new([icon(cx, "lucide.plus", Px(18.0), fg)]).into_element(cx);
 
     shadcn::AvatarGroup::new(avatars.into_iter().chain([count]).collect::<Vec<_>>())
         .size(size)
@@ -79,14 +87,24 @@ pub fn render<H: UiHost>(
             .layout(LayoutRefinement::default().w_full().min_w_0()),
         move |cx| {
             vec![
-                group_with_count(cx, avatar_image.clone(), shadcn::AvatarSize::Sm, "ui-gallery-avatar-group-count-sm"),
+                group_with_count(
+                    cx,
+                    avatar_image.clone(),
+                    shadcn::AvatarSize::Sm,
+                    "ui-gallery-avatar-group-count-sm",
+                ),
                 group_with_count(
                     cx,
                     avatar_image.clone(),
                     shadcn::AvatarSize::Default,
                     "ui-gallery-avatar-group-count-default",
                 ),
-                group_with_count(cx, avatar_image.clone(), shadcn::AvatarSize::Lg, "ui-gallery-avatar-group-count-lg"),
+                group_with_count(
+                    cx,
+                    avatar_image.clone(),
+                    shadcn::AvatarSize::Lg,
+                    "ui-gallery-avatar-group-count-lg",
+                ),
                 group_with_icon_count(
                     cx,
                     avatar_image.clone(),

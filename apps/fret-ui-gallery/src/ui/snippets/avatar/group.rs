@@ -49,18 +49,27 @@ pub fn render<H: UiHost>(
             .layout(LayoutRefinement::default().w_full().min_w_0()),
         move |cx| {
             vec![
-                group(cx, avatar_image.clone(), shadcn::AvatarSize::Sm, "ui-gallery-avatar-group-sm"),
+                group(
+                    cx,
+                    avatar_image.clone(),
+                    shadcn::AvatarSize::Sm,
+                    "ui-gallery-avatar-group-sm",
+                ),
                 group(
                     cx,
                     avatar_image.clone(),
                     shadcn::AvatarSize::Default,
                     "ui-gallery-avatar-group-default",
                 ),
-                group(cx, avatar_image.clone(), shadcn::AvatarSize::Lg, "ui-gallery-avatar-group-lg"),
+                group(
+                    cx,
+                    avatar_image.clone(),
+                    shadcn::AvatarSize::Lg,
+                    "ui-gallery-avatar-group-lg",
+                ),
             ]
         },
     )
     .test_id("ui-gallery-avatar-group")
 }
 // endregion: example
-

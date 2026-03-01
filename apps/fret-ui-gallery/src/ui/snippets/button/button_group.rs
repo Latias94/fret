@@ -15,20 +15,21 @@ fn wrap_row<H: UiHost>(
 
 pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
     wrap_row(cx, |cx| {
-        vec![shadcn::ButtonGroup::new(
-            [
-                shadcn::Button::new("Left").variant(shadcn::ButtonVariant::Outline),
-                shadcn::Button::new("Middle").variant(shadcn::ButtonVariant::Outline),
-                shadcn::Button::new("Right").variant(shadcn::ButtonVariant::Outline),
-            ]
-            .into_iter()
-            .map(Into::into),
-        )
-        .a11y_label("Button group")
-        .into_element(cx)
-        .test_id("ui-gallery-button-button-group")]
+        vec![
+            shadcn::ButtonGroup::new(
+                [
+                    shadcn::Button::new("Left").variant(shadcn::ButtonVariant::Outline),
+                    shadcn::Button::new("Middle").variant(shadcn::ButtonVariant::Outline),
+                    shadcn::Button::new("Right").variant(shadcn::ButtonVariant::Outline),
+                ]
+                .into_iter()
+                .map(Into::into),
+            )
+            .a11y_label("Button group")
+            .into_element(cx)
+            .test_id("ui-gallery-button-button-group"),
+        ]
     })
     .test_id("ui-gallery-button-button-group-row")
 }
 // endregion: example
-

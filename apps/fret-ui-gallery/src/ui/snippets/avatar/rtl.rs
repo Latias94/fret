@@ -31,4 +31,3 @@ pub fn render<H: UiHost>(
     .test_id("ui-gallery-avatar-rtl-row")
 }
 // endregion: example
-

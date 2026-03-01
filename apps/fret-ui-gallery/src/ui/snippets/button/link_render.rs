@@ -16,19 +16,20 @@ fn wrap_row<H: UiHost>(
 
 pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
     wrap_row(cx, |cx| {
-        vec![shadcn::Button::new("Dashboard")
-            .render(shadcn::ButtonRender::Link {
-                href: Arc::<str>::from("https://example.com/dashboard"),
-                target: None,
-                rel: None,
-            })
-            // Keep the gallery deterministic: demonstrate link semantics without opening the
-            // browser during scripted runs.
-            .on_click("ui_gallery.app.open")
-            .test_id("ui-gallery-button-render-link")
-            .into_element(cx)]
+        vec![
+            shadcn::Button::new("Dashboard")
+                .render(shadcn::ButtonRender::Link {
+                    href: Arc::<str>::from("https://example.com/dashboard"),
+                    target: None,
+                    rel: None,
+                })
+                // Keep the gallery deterministic: demonstrate link semantics without opening the
+                // browser during scripted runs.
+                .on_click("ui_gallery.app.open")
+                .test_id("ui-gallery-button-render-link")
+                .into_element(cx),
+        ]
     })
     .test_id("ui-gallery-button-render-link-row")
 }
 // endregion: example
-

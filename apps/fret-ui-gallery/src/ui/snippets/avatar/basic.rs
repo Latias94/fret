@@ -18,4 +18,3 @@ pub fn render<H: UiHost>(
         .test_id("ui-gallery-avatar-basic")
 }
 // endregion: example
-

@@ -22,7 +22,8 @@ pub fn render<H: UiHost>(
     wrap_row(cx, |cx| {
         let avatar_image_for_trigger = avatar_image.clone();
         let trigger = move |cx: &mut ElementContext<'_, H>| {
-            let image = shadcn::AvatarImage::model(avatar_image_for_trigger.clone()).into_element(cx);
+            let image =
+                shadcn::AvatarImage::model(avatar_image_for_trigger.clone()).into_element(cx);
             let fallback = shadcn::AvatarFallback::new("CN")
                 .when_image_missing_model(avatar_image_for_trigger.clone())
                 .delay_ms(120)
@@ -72,4 +73,3 @@ pub fn render<H: UiHost>(
     .test_id("ui-gallery-avatar-dropdown-row")
 }
 // endregion: example
-

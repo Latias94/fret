@@ -65,4 +65,3 @@ pub fn render<H: UiHost>(
     .test_id("ui-gallery-avatar-sizes")
 }
 // endregion: example
-

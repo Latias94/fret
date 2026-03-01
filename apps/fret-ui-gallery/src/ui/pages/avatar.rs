@@ -48,8 +48,8 @@ pub(super) fn preview_avatar(
         ),
         vec![
             DocSection::new("Basic", basic)
-            .description("A basic avatar with an image + fallback.")
-            .code_rust_from_file_region(include_str!("../snippets/avatar/basic.rs"), "example"),
+                .description("A basic avatar with an image + fallback.")
+                .code_rust_from_file_region(include_str!("../snippets/avatar/basic.rs"), "example"),
             DocSection::new("With Badge", with_badge)
                 .description(
                     "`AvatarBadge` overlays a status dot or icon at the avatar's bottom-right.",
@@ -71,7 +71,9 @@ pub(super) fn preview_avatar(
                 .description("Upstream: `size=\"sm\" | \"default\" | \"lg\"`.")
                 .code_rust_from_file_region(include_str!("../snippets/avatar/sizes.rs"), "example"),
             DocSection::new("Dropdown", dropdown)
-                .description("Use Avatar as a DropdownMenu trigger (shadcn `asChild`-style composition).")
+                .description(
+                    "Use Avatar as a DropdownMenu trigger (shadcn `asChild`-style composition).",
+                )
                 .code_rust_from_file_region(
                     include_str!("../snippets/avatar/dropdown.rs"),
                     "example",
