@@ -62,6 +62,25 @@ Evidence anchors (required):
 - The chosen gate file(s) and the entrypoint that runs the scenario.
 - The primary state machine code paths under test.
 
+Suggested baseline artifacts (current v1 worktree):
+
+- Minimal runnable entrypoint (native):
+  - `cargo run -p fretboard -- dev native --bin node_graph_demo`
+  - (feature wiring: `apps/fretboard/src/dev.rs` auto-enables `fret-demo/node-graph-demos` for `node_graph_demo`)
+- Gate (Rust conformance):
+  - `ecosystem/fret-node/src/ui/canvas/widget/tests/escape_cancel_releases_pointer_capture_conformance.rs`
+- Repro + bundle capture (diag script):
+  - `tools/diag-scripts/node-graph/node-graph-pan-middle-escape-cancel.json`
+
+Primary evidence anchors (why this is meaningful):
+
+- Panning starts + capture is requested:
+  - `ecosystem/fret-node/src/ui/canvas/widget/pan_zoom.rs` (`begin_panning`)
+- Escape cancel clears gesture state and releases capture:
+  - `ecosystem/fret-node/src/ui/canvas/widget/cancel.rs` (`handle_escape_cancel`)
+- The scripted repro asserts panning state via viewport semantics `value`:
+  - `ecosystem/fret-node/src/ui/canvas/widget/retained_widget.rs` (semantics `test_id=node_graph.canvas`, `value` includes `panning {bool}`)
+
 ## M1 — Declarative surface skeleton (paint-first)
 
 Goal: build the declarative composition shell that can render and pan/zoom smoothly.
@@ -135,4 +154,3 @@ Compatibility hatch acceptance criteria:
 - Exit criteria must be stated up front:
   - what contract/caching change removes the need for retained,
   - what tests/diag scripts must remain green after removal.
-
