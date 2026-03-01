@@ -146,6 +146,166 @@ fn render_and_bind_dock_panels_includes_viewport_panel_when_registry_returns_a_n
 }
 
 #[test]
+fn overflow_menu_close_does_not_activate_tab() {
+    let window = AppWindowId::default();
+
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    ui.set_window(window);
+    let dock_space = ui.create_node_retained(DockSpace::new(window));
+    ui.set_root(dock_space);
+
+    let mut app = TestHost::new();
+    app.set_global(PlatformCapabilities::default());
+    app.with_global_mut(DockManager::default, |dock, _app| {
+        let tabs: Vec<PanelKey> = (0..12)
+            .map(|i| PanelKey::new(format!("core.{i}")))
+            .collect();
+        let tabs_node = dock.graph.insert_node(DockNode::Tabs {
+            tabs: tabs.clone(),
+            active: 0,
+        });
+        dock.graph.set_window_root(window, tabs_node);
+
+        for panel in tabs {
+            dock.panels.insert(
+                panel.clone(),
+                DockPanel {
+                    title: panel.kind.0.clone(),
+                    color: Color::TRANSPARENT,
+                    viewport: None,
+                },
+            );
+        }
+    });
+
+    let mut services = FakeTextService;
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(420.0), Px(240.0)),
+    );
+
+    // Drive at least one layout so the dock space has stable last-bounds.
+    //
+    // Avoid binding panel nodes here so pointer events over the overflow menu surface are routed to
+    // the dock space (the menu is painted as an overlay, not a separate node).
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    let root = app
+        .global::<DockManager>()
+        .and_then(|dock| dock.graph.window_root(window))
+        .expect("expected dock window root");
+    let settings = fret_runtime::DockingInteractionSettings::default();
+    let (_chrome, dock_bounds) = dock_space_regions(bounds);
+    let layout = compute_layout_map(
+        &app.global::<DockManager>().unwrap().graph,
+        root,
+        dock_bounds,
+        settings.split_handle_gap,
+        settings.split_handle_hit_thickness,
+    );
+    let root_rect = layout.get(&root).copied().expect("expected root rect");
+    let (tab_bar, _content) = split_tab_bar(root_rect);
+
+    let theme = fret_ui::Theme::global(&app).snapshot();
+    let items = super::super::tab_overflow::compute_tab_overflow_menu_items(
+        theme.clone(),
+        tab_bar,
+        12,
+        None,
+        Px(0.0),
+        0,
+    );
+    assert!(
+        items.len() >= 2,
+        "expected overflow menu items to include at least one non-active tab, got: {items:?}"
+    );
+    let tab_ix_to_close = *items.get(1).expect("items has at least 2 rows");
+    let item_count = items.len();
+
+    // 1) Open the overflow menu by clicking the overflow control.
+    let button_rect = super::super::tab_overflow::tab_overflow_button_rect(theme.clone(), tab_bar);
+    let open_pos = Point::new(
+        Px(button_rect.origin.x.0 + button_rect.size.width.0 * 0.5),
+        Px(button_rect.origin.y.0 + button_rect.size.height.0 * 0.5),
+    );
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &Event::Pointer(fret_core::PointerEvent::Down {
+            position: open_pos,
+            button: fret_core::MouseButton::Left,
+            modifiers: Modifiers::default(),
+            click_count: 1,
+            pointer_id: fret_core::PointerId(0),
+            pointer_type: fret_core::PointerType::Unknown,
+        }),
+    );
+    let open_effects = app.take_effects();
+    assert!(
+        !open_effects
+            .iter()
+            .any(|e| matches!(e, Effect::Dock(DockOp::FloatTabsInWindow { .. }))),
+        "expected clicking overflow control to not be interpreted as float-zone interaction, got: {open_effects:?}"
+    );
+
+    let occlusion = app
+        .global::<fret_runtime::WindowInputContextService>()
+        .and_then(|svc| svc.snapshot(window))
+        .map(|ctx| ctx.window_pointer_occlusion())
+        .unwrap_or_default();
+    let menu_rect =
+        super::super::tab_overflow::tab_overflow_menu_rect(theme.clone(), tab_bar, item_count);
+    let mut scene = Scene::default();
+    ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
+    assert!(
+        scene.ops().iter().any(|op| matches!(
+            op,
+            SceneOp::Quad { order, rect, .. }
+                if *order == fret_core::DrawOrder(100) && *rect == menu_rect
+        )),
+        "expected overflow menu to be painted after opening it (pointer occlusion: {occlusion:?})"
+    );
+
+    // 2) Click the close affordance in the first non-active row (row 1).
+    let row_rect =
+        super::super::tab_overflow::overflow_menu_row_rect(menu_rect, tab_bar, Px(0.0), 1);
+    let close_rect = super::super::tab_overflow::overflow_menu_close_rect(theme.clone(), row_rect);
+    let close_pos = Point::new(
+        Px(close_rect.origin.x.0 + close_rect.size.width.0 * 0.5),
+        Px(close_rect.origin.y.0 + close_rect.size.height.0 * 0.5),
+    );
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &Event::Pointer(fret_core::PointerEvent::Down {
+            position: close_pos,
+            button: fret_core::MouseButton::Left,
+            modifiers: Modifiers::default(),
+            click_count: 1,
+            pointer_id: fret_core::PointerId(0),
+            pointer_type: fret_core::PointerType::Unknown,
+        }),
+    );
+
+    let effects = app.take_effects();
+    let close_panel = effects.iter().find_map(|e| match e {
+        Effect::Dock(DockOp::ClosePanel { panel, .. }) => Some(panel.kind.0.clone()),
+        _ => None,
+    });
+    let expected = format!("core.{tab_ix_to_close}");
+    assert!(
+        close_panel.as_deref() == Some(expected.as_str()),
+        "expected ClosePanel for overflow menu row 1, got: {effects:?}"
+    );
+    assert!(
+        !effects
+            .iter()
+            .any(|e| matches!(e, Effect::Dock(DockOp::SetActiveTab { .. }))),
+        "expected overflow menu close to not activate tabs, got: {effects:?}"
+    );
+}
+
+#[test]
 fn dock_space_layout_assigns_active_panel_content_bounds_via_panel_nodes() {
     let window = AppWindowId::default();
     let panel = fret_core::PanelKey::new("demo.controls");

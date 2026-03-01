@@ -17,6 +17,7 @@ are hidden (dropdown / scroll).
   - the overflow button is excluded
   - the reserved header space is treated as an end-drop surface
 - Selecting a tab from the overflow menu scrolls the strip to make the active tab visible.
+- Overflow menu rows expose a close affordance; clicking close does not activate the tab.
 - Auto-scroll on drag near edges is hardened and (ideally) diag-gated (docking already has unit coverage).
 
 ## Exit criteria

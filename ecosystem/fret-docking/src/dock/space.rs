@@ -21,9 +21,10 @@ use super::services::{
 use super::tab_bar_geometry::TabBarGeometry;
 use super::tab_bar_geometry::dock_tab_width_for_title;
 use super::tab_overflow::{
-    TabOverflowMenuState, compute_tab_overflow_menu_items, overflow_menu_max_scroll,
-    overflow_menu_row_at_pos, overflow_menu_row_count, overflow_menu_row_height,
-    tab_overflow_button_rect, tab_overflow_menu_rect, tab_strip_rect_with_overflow_button,
+    TabOverflowMenuState, compute_tab_overflow_menu_items, overflow_menu_close_rect,
+    overflow_menu_max_scroll, overflow_menu_row_at_pos, overflow_menu_row_count,
+    overflow_menu_row_height, overflow_menu_row_rect, tab_overflow_button_rect,
+    tab_overflow_menu_rect, tab_strip_rect_with_overflow_button,
 };
 use super::viewport::{
     ViewportCaptureState, hit_test_active_viewport_panel, viewport_input_from_hit,
@@ -3356,24 +3357,6 @@ impl<H: UiHost> Widget<H> for DockSpace {
                             if *button == fret_core::MouseButton::Left
                                 && dock_bounds.contains(*position)
                             {
-                                if float_zone_rect.contains(*position)
-                                    && let Some(root) = root
-                                    && let Some(op) = self.float_zone_click_op(
-                                        &dock.graph,
-                                        root,
-                                        dock_bounds,
-                                        self.last_bounds,
-                                    )
-                                {
-                                    pending_effects.push(Effect::Dock(op));
-                                    invalidate_layout = true;
-                                    invalidate_paint = true;
-                                    pending_redraws.push(self.window);
-                                    dock.hover = None;
-                                    stop_propagation = true;
-                                    handled = true;
-                                }
-
                                 let mut layout_all = root
                                     .map(|root| {
                                         compute_layout_map(
@@ -3399,6 +3382,47 @@ impl<H: UiHost> Widget<H> for DockSpace {
                                     }
                                 }
 
+                                let hits_overflow_button = layout_all.iter().any(|(&node_id, &rect)| {
+                                    let Some(DockNode::Tabs { tabs, .. }) = dock.graph.node(node_id)
+                                    else {
+                                        return false;
+                                    };
+                                    if tabs.is_empty() {
+                                        return false;
+                                    }
+                                    let (tab_bar, _content) = split_tab_bar(rect);
+                                    let max_scroll = self.max_tab_scroll(
+                                        theme.clone(),
+                                        node_id,
+                                        tab_bar,
+                                        tabs.len(),
+                                    );
+                                    if max_scroll.0 <= 0.0 {
+                                        return false;
+                                    }
+                                    tab_overflow_button_rect(theme.clone(), tab_bar)
+                                        .contains(*position)
+                                });
+
+                                if float_zone_rect.contains(*position)
+                                    && !hits_overflow_button
+                                    && let Some(root) = root
+                                    && let Some(op) = self.float_zone_click_op(
+                                        &dock.graph,
+                                        root,
+                                        dock_bounds,
+                                        self.last_bounds,
+                                    )
+                                {
+                                    pending_effects.push(Effect::Dock(op));
+                                    invalidate_layout = true;
+                                    invalidate_paint = true;
+                                    pending_redraws.push(self.window);
+                                    dock.hover = None;
+                                    stop_propagation = true;
+                                    handled = true;
+                                }
+
                                 if let Some(menu) = self.tab_overflow_menu.clone() {
                                     let mut keep_open = true;
 
@@ -3418,37 +3442,67 @@ impl<H: UiHost> Widget<H> for DockSpace {
                                         );
 
                                         if menu_rect.contains(*position) {
+                                            let max_scroll =
+                                                overflow_menu_max_scroll(tab_bar, item_count);
+                                            let scroll = Px(
+                                                menu.scroll.0.clamp(0.0, max_scroll.0),
+                                            );
                                             let row = overflow_menu_row_at_pos(
                                                 menu_rect,
                                                 tab_bar,
                                                 item_count,
-                                                menu.scroll,
+                                                scroll,
                                                 *position,
                                             );
                                             if let Some(row) = row
                                                 && let Some(&tab_ix) = menu.items.get(row)
                                             {
-                                                self.last_active_tabs = Some(menu.tabs);
-                                                pending_effects.push(Effect::Dock(
-                                                    DockOp::SetActiveTab {
-                                                        tabs: menu.tabs,
-                                                        active: tab_ix,
-                                                    },
-                                                ));
-                                                self.clamp_and_ensure_active_visible(
-                                                    theme.clone(),
-                                                    menu.tabs,
+                                                let row_rect = overflow_menu_row_rect(
+                                                    menu_rect,
                                                     tab_bar,
-                                                    tabs.len(),
-                                                    tab_ix,
+                                                    scroll,
+                                                    row,
                                                 );
-                                                if let Some(panel) = tabs.get(tab_ix) {
-                                                    request_focus_panel = Some(panel.clone());
+                                                let close_rect = overflow_menu_close_rect(
+                                                    theme.clone(),
+                                                    row_rect,
+                                                );
+                                                if close_rect.contains(*position) {
+                                                    if let Some(panel) = tabs.get(tab_ix) {
+                                                        pending_effects.push(Effect::Dock(
+                                                            DockOp::ClosePanel {
+                                                                window: self.window,
+                                                                panel: panel.clone(),
+                                                            },
+                                                        ));
+                                                        invalidate_layout = true;
+                                                        invalidate_paint = true;
+                                                        pending_redraws.push(self.window);
+                                                        keep_open = false;
+                                                    }
+                                                } else {
+                                                    self.last_active_tabs = Some(menu.tabs);
+                                                    pending_effects.push(Effect::Dock(
+                                                        DockOp::SetActiveTab {
+                                                            tabs: menu.tabs,
+                                                            active: tab_ix,
+                                                        },
+                                                    ));
+                                                    self.clamp_and_ensure_active_visible(
+                                                        theme.clone(),
+                                                        menu.tabs,
+                                                        tab_bar,
+                                                        tabs.len(),
+                                                        tab_ix,
+                                                    );
+                                                    if let Some(panel) = tabs.get(tab_ix) {
+                                                        request_focus_panel = Some(panel.clone());
+                                                    }
+                                                    invalidate_layout = true;
+                                                    invalidate_paint = true;
+                                                    pending_redraws.push(self.window);
+                                                    keep_open = false;
                                                 }
-                                                invalidate_layout = true;
-                                                invalidate_paint = true;
-                                                pending_redraws.push(self.window);
-                                                keep_open = false;
                                             }
                                             handled = true;
                                         } else if button_rect.contains(*position) {

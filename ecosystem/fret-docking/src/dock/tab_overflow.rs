@@ -83,6 +83,30 @@ pub(super) fn overflow_menu_row_at_pos(
     (idx < item_count).then_some(idx)
 }
 
+pub(super) fn overflow_menu_row_rect(
+    menu_rect: Rect,
+    tab_bar: Rect,
+    scroll: Px,
+    row: usize,
+) -> Rect {
+    let row_h = overflow_menu_row_height(tab_bar);
+    let y = menu_rect.origin.y.0 + row as f32 * row_h.0 - scroll.0;
+    Rect::new(
+        Point::new(menu_rect.origin.x, Px(y)),
+        Size::new(menu_rect.size.width, row_h),
+    )
+}
+
+pub(super) fn overflow_menu_close_rect(theme: ThemeSnapshot, row_rect: Rect) -> Rect {
+    let pad = theme.metric_token("metric.padding.sm").0.max(0.0);
+    let x = row_rect.origin.x.0 + row_rect.size.width.0 - pad - DOCK_TAB_CLOSE_SIZE.0;
+    let y = row_rect.origin.y.0 + (row_rect.size.height.0 - DOCK_TAB_CLOSE_SIZE.0) * 0.5;
+    Rect::new(
+        Point::new(Px(x), Px(y)),
+        Size::new(DOCK_TAB_CLOSE_SIZE, DOCK_TAB_CLOSE_SIZE),
+    )
+}
+
 pub(super) fn compute_tab_overflow_menu_items(
     theme: ThemeSnapshot,
     tab_bar: Rect,
