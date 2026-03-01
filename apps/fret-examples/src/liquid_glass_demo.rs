@@ -389,6 +389,8 @@ struct LiquidGlassState {
 #[derive(Debug, Clone)]
 enum Msg {
     Reset,
+    ApplyCustomV3BevelPreset,
+    DisableCustomV3Bevel,
     ToggleInspector,
 }
 
@@ -478,7 +480,7 @@ impl MvuProgram for LiquidGlassProgram {
             custom_grain_strength: app.models_mut().insert(vec![0.06]),
             custom_grain_scale: app.models_mut().insert(vec![1.0]),
 
-            custom_v3_bevel_strength: app.models_mut().insert(vec![0.0]),
+            custom_v3_bevel_strength: app.models_mut().insert(vec![1.0]),
             custom_v3_bevel_angle_deg: app.models_mut().insert(vec![45.0]),
             custom_v3_bevel_secondary: app.models_mut().insert(vec![1.0]),
 
@@ -540,7 +542,7 @@ impl MvuProgram for LiquidGlassProgram {
                 .update(&st.custom_grain_scale, |v| *v = vec![1.0]);
             let _ = app
                 .models_mut()
-                .update(&st.custom_v3_bevel_strength, |v| *v = vec![0.0]);
+                .update(&st.custom_v3_bevel_strength, |v| *v = vec![1.0]);
             let _ = app
                 .models_mut()
                 .update(&st.custom_v3_bevel_angle_deg, |v| *v = vec![45.0]);
@@ -558,6 +560,20 @@ impl MvuProgram for LiquidGlassProgram {
             let _ = app.models_mut().update(&st.contrast, |v| *v = vec![1.02]);
             let _ = app.models_mut().update(&st.use_backdrop, |v| *v = true);
             let _ = app.models_mut().update(&st.use_dither, |v| *v = true);
+        } else if matches!(message, Msg::ApplyCustomV3BevelPreset) {
+            let _ = app
+                .models_mut()
+                .update(&st.custom_v3_bevel_strength, |v| *v = vec![1.0]);
+            let _ = app
+                .models_mut()
+                .update(&st.custom_v3_bevel_angle_deg, |v| *v = vec![45.0]);
+            let _ = app
+                .models_mut()
+                .update(&st.custom_v3_bevel_secondary, |v| *v = vec![1.0]);
+        } else if matches!(message, Msg::DisableCustomV3Bevel) {
+            let _ = app
+                .models_mut()
+                .update(&st.custom_v3_bevel_strength, |v| *v = vec![0.0]);
         } else if matches!(message, Msg::ToggleInspector) {
             let _ = app.models_mut().update(&st.show_inspector, |v| *v = !*v);
         }
@@ -922,6 +938,8 @@ fn view(
     let reset_stage = msg.cmd(Msg::Reset);
     let reset_inspector = msg.cmd(Msg::Reset);
     let toggle_inspector = msg.cmd(Msg::ToggleInspector);
+    let bevel_preset = msg.cmd(Msg::ApplyCustomV3BevelPreset);
+    let bevel_off = msg.cmd(Msg::DisableCustomV3Bevel);
 
     let root = cx
         .container(
@@ -1851,6 +1869,22 @@ fn view(
                                         .items_center(),
                                     |cx| {
                                         vec![
+                                            shadcn::Button::new("Bevel preset")
+                                                .variant(shadcn::ButtonVariant::Secondary)
+                                                .size(shadcn::ButtonSize::Sm)
+                                                .on_click(bevel_preset)
+                                                .test_id(
+                                                    "liquid-glass-button-custom-v3-bevel-preset",
+                                                )
+                                                .into_element(cx),
+                                            shadcn::Button::new("Bevel off")
+                                                .variant(shadcn::ButtonVariant::Secondary)
+                                                .size(shadcn::ButtonSize::Sm)
+                                                .on_click(bevel_off)
+                                                .test_id(
+                                                    "liquid-glass-button-custom-v3-bevel-off",
+                                                )
+                                                .into_element(cx),
                                             cx.spacer(SpacerProps::default()),
                                             shadcn::Button::new("Reset")
                                                 .variant(shadcn::ButtonVariant::Secondary)
