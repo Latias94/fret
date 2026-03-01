@@ -681,6 +681,12 @@ pub fn input_otp<H: UiHost>(cx: &mut ElementContext<'_, H>, otp: InputOtp) -> An
     otp.into_element(cx)
 }
 
+/// shadcn/ui `InputOTP` (v4).
+///
+/// Upstream exports this type as `InputOTP`. Fret's canonical Rust name is [`InputOtp`]; this
+/// alias exists to improve copy/paste parity with shadcn docs/examples.
+pub type InputOTP = InputOtp;
+
 #[cfg(test)]
 mod tests {
     use super::*;

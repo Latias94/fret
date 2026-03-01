@@ -246,7 +246,7 @@ pub use input_group::{
     InputGroupInput, InputGroupPart, InputGroupText, InputGroupTextSize, InputGroupTextarea,
     input_group,
 };
-pub use input_otp::{InputOtp, input_otp};
+pub use input_otp::{InputOTP, InputOtp, input_otp};
 pub use item::{
     Item, ItemActions, ItemContent, ItemDescription, ItemFooter, ItemGroup, ItemHeader, ItemMedia,
     ItemMediaVariant, ItemRender, ItemSeparator, ItemSize, ItemTitle, ItemVariant, item_group,
