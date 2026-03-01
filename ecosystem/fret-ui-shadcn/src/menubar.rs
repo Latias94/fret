@@ -4833,7 +4833,7 @@ mod tests {
             else {
                 continue;
             };
-            let fret_core::Paint::Solid(background) = *background else {
+            let fret_core::Paint::Solid(background) = background.paint else {
                 continue;
             };
             if background.a <= 0.01 {

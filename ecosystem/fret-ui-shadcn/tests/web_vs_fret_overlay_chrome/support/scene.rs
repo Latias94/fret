@@ -523,7 +523,7 @@ pub(crate) fn find_best_text_color_near(
         let SceneOp::Text { origin, paint, .. } = *op else {
             return;
         };
-        let Paint::Solid(color) = paint else {
+        let Paint::Solid(color) = paint.paint else {
             return;
         };
         let raw_origin = origin;

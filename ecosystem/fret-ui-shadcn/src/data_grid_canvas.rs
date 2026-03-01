@@ -585,15 +585,15 @@ fn paint_grid_canvas(p: &mut fret_ui::canvas::CanvasPainter<'_>, data: &DataGrid
 
     let raster_scale_factor = (p.scale_factor() * data.raster_scale_factor).max(1.0);
 
-        p.with_clip_rect(viewport, |p| {
-            p.scene().push(SceneOp::Quad {
-                order: DrawOrder(0),
-                rect: viewport,
-                background: fret_core::Paint::Solid(data.bg).into(),
-                border: Edges::default(),
-                border_paint: fret_core::Paint::TRANSPARENT.into(),
-                corner_radii: Corners::default(),
-            });
+    p.with_clip_rect(viewport, |p| {
+        p.scene().push(SceneOp::Quad {
+            order: DrawOrder(0),
+            rect: viewport,
+            background: fret_core::Paint::Solid(data.bg).into(),
+            border: Edges::default(),
+            border_paint: fret_core::Paint::TRANSPARENT.into(),
+            corner_radii: Corners::default(),
+        });
 
         // Grid lines (1px quads).
         let line_w = Px(1.0);

@@ -42,7 +42,7 @@ fn find_best_solid_quad(scene: &Scene, target: Rect) -> Option<(Rect, Color)> {
         else {
             continue;
         };
-        let Paint::Solid(color) = background else {
+        let Paint::Solid(color) = background.paint else {
             continue;
         };
         if color.a <= 0.0 {
@@ -201,7 +201,7 @@ fn fret_kbd_in_tooltip_content_overrides_bg_and_fg() {
         .ops()
         .iter()
         .find_map(|op| match *op {
-            SceneOp::Text { paint, .. } => match paint {
+            SceneOp::Text { paint, .. } => match paint.paint {
                 Paint::Solid(c) => Some(c),
                 _ => None,
             },
