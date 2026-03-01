@@ -1780,6 +1780,13 @@ fn ui_app_render<S>(
     let mut hitch_paint_ms: Option<u64> = None;
 
     // Note: diagnostics may enable inspection mode (disables caching) on demand.
+    #[cfg(feature = "diagnostics")]
+    let diag_inspection_active = app
+        .with_global_mut_untracked(UiDiagnosticsService::default, |svc, _app| {
+            svc.wants_inspection_active(window)
+        });
+    #[cfg(feature = "diagnostics")]
+    state.ui.set_inspection_active(diag_inspection_active);
 
     let render_depth = RENDER_DEPTH.with(|d| {
         let next = d.get().saturating_add(1);
@@ -2053,11 +2060,6 @@ fn ui_app_render<S>(
 
     #[cfg(feature = "diagnostics")]
     {
-        let diag_inspection_active = app
-            .with_global_mut_untracked(UiDiagnosticsService::default, |svc, _app| {
-                svc.wants_inspection_active(window)
-            });
-        state.ui.set_inspection_active(diag_inspection_active);
         crate::ui_diagnostics::render_diag_inspect_overlay(
             &mut state.ui,
             app,
