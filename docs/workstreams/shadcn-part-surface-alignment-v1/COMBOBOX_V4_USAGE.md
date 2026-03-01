@@ -77,6 +77,24 @@ ComboboxInput::new()
     .show_clear(true)
 ```
 
+## Anchor override (`useComboboxAnchor`)
+
+Upstream v4 uses `useComboboxAnchor()` (a DOM ref) and passes it to `ComboboxContent` as
+`anchor={anchor}` (Base UI `Positioner.anchor`) to control popup positioning.
+
+In Fret, we model the same outcome via a layout-only wrapper (`useComboboxAnchor(child)`) that
+exposes a stable element ID. Pass the ID to `ComboboxContent::anchor_element_id(...)`:
+
+```rust
+use fret_ui_shadcn::{ComboboxContent, useComboboxAnchor};
+
+let anchor = useComboboxAnchor(cx.text("anchor"));
+let anchor_id = anchor.element_id();
+let _anchor_el = anchor.into_element(cx);
+
+let content = ComboboxContent::new([]).anchor_element_id(anchor_id);
+```
+
 ## Groups (+ separator)
 
 Upstream uses `ComboboxGroup`, `ComboboxLabel`, `ComboboxCollection`, and an optional
@@ -166,3 +184,5 @@ pub fn example_combobox_multiple(cx: &mut ElementContext<'_, App>) -> AnyElement
 - Render-prop ergonomics are not modeled; lists are provided explicitly.
 - `ComboboxInput.show_trigger(false)` is currently advisory (Fret’s recipe always needs a trigger
   affordance).
+- Base UI anchor refs (`useComboboxAnchor()`) are modeled via `useComboboxAnchor(child)` +
+  `ComboboxContent::anchor_element_id(...)` (element ID), not a DOM ref.

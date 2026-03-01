@@ -30,7 +30,7 @@ use fret_ui_kit::{
 use crate::combobox_data::{ComboboxOption, ComboboxOptionGroup};
 use crate::{
     CommandEntry, CommandGroup, CommandItem, CommandList, CommandPalette, CommandSeparator, Drawer,
-    DrawerContent, Popover, PopoverContent,
+    DrawerContent, Popover, PopoverAnchor, PopoverContent,
 };
 
 fn alpha_mul(mut c: Color, mul: f32) -> Color {
@@ -98,6 +98,15 @@ pub fn combobox_option_group(
     items: impl IntoIterator<Item = ComboboxOption>,
 ) -> ComboboxOptionGroup {
     ComboboxOptionGroup::new(heading, items)
+}
+
+/// shadcn/ui v4 `useComboboxAnchor`.
+///
+/// Upstream returns a DOM ref used to anchor the popup. In Fret, we model the same outcome via a
+/// layout-only wrapper that exposes a stable element ID.
+#[allow(non_snake_case)]
+pub fn useComboboxAnchor(child: AnyElement) -> PopoverAnchor {
+    PopoverAnchor::new(child)
 }
 
 #[derive(Default)]
@@ -202,6 +211,7 @@ pub struct ComboboxContent {
     pub(crate) align: Option<popper::Align>,
     pub(crate) side_offset: Option<Px>,
     pub(crate) align_offset: Option<Px>,
+    pub(crate) anchor_element_id: Option<GlobalElementId>,
     pub(crate) children: Vec<ComboboxContentPart>,
 }
 
@@ -212,6 +222,7 @@ impl ComboboxContent {
             align: None,
             side_offset: None,
             align_offset: None,
+            anchor_element_id: None,
             children: children.into_iter().collect(),
         }
     }
@@ -233,6 +244,12 @@ impl ComboboxContent {
 
     pub fn align_offset_px(mut self, offset: Px) -> Self {
         self.align_offset = Some(offset);
+        self
+    }
+
+    /// Overrides which element the popup is anchored to (Base UI `Positioner.anchor`).
+    pub fn anchor_element_id(mut self, anchor: GlobalElementId) -> Self {
+        self.anchor_element_id = Some(anchor);
         self
     }
 }
@@ -442,6 +459,7 @@ struct ComboboxPartsPatch {
     content_align: Option<popper::Align>,
     content_side_offset: Option<Px>,
     content_align_offset: Option<Px>,
+    anchor_element_id: Option<GlobalElementId>,
     empty_text: Option<Arc<str>>,
     list_items: Option<Vec<ComboboxOption>>,
     list_groups: Option<Vec<ComboboxOptionGroup>>,
@@ -488,6 +506,9 @@ fn combobox_parts_patch(parts: Vec<ComboboxPart>) -> ComboboxPartsPatch {
         }
         if content.align_offset.is_some() {
             patch.content_align_offset = content.align_offset;
+        }
+        if content.anchor_element_id.is_some() {
+            patch.anchor_element_id = content.anchor_element_id;
         }
 
         let mut saw_separator = false;
@@ -587,6 +608,7 @@ pub struct Combobox {
     content_align: popper::Align,
     content_side_offset: Px,
     content_align_offset: Px,
+    anchor_element_id: Option<GlobalElementId>,
     responsive: bool,
     responsive_device_md_breakpoint: Px,
     placeholder: Arc<str>,
@@ -627,6 +649,7 @@ impl Combobox {
             content_align: popper::Align::Center,
             content_side_offset: Px(4.0),
             content_align_offset: Px(0.0),
+            anchor_element_id: None,
             responsive: false,
             responsive_device_md_breakpoint: fret_ui_kit::declarative::viewport_tailwind::MD,
             placeholder: Arc::from("Select..."),
@@ -685,6 +708,9 @@ impl Combobox {
         }
         if let Some(offset) = patch.content_align_offset {
             self.content_align_offset = offset;
+        }
+        if let Some(anchor_element_id) = patch.anchor_element_id {
+            self.anchor_element_id = Some(anchor_element_id);
         }
         if let Some(empty_text) = patch.empty_text {
             self.empty_text = empty_text;
@@ -759,6 +785,12 @@ impl Combobox {
     /// Default matches the existing shadcn recipe behavior (`0px`).
     pub fn content_align_offset_px(mut self, offset: Px) -> Self {
         self.content_align_offset = offset;
+        self
+    }
+
+    /// Overrides the anchor element used for popper positioning.
+    pub fn anchor_element_id(mut self, anchor: GlobalElementId) -> Self {
+        self.anchor_element_id = Some(anchor);
         self
     }
 
@@ -974,6 +1006,7 @@ impl Combobox {
             self.content_align,
             self.content_side_offset,
             self.content_align_offset,
+            self.anchor_element_id,
             self.placeholder,
             self.search_placeholder,
             self.empty_text,
@@ -1031,6 +1064,7 @@ pub fn combobox<H: UiHost>(
         popper::Align::Center,
         Px(4.0),
         Px(0.0),
+        None,
         placeholder,
         search_placeholder,
         empty_text,
@@ -1072,6 +1106,7 @@ fn combobox_with_patch<H: UiHost>(
     content_align: popper::Align,
     content_side_offset: Px,
     content_align_offset: Px,
+    anchor_element_id: Option<GlobalElementId>,
     placeholder: Arc<str>,
     search_placeholder: Arc<str>,
     empty_text: Arc<str>,
@@ -1971,6 +2006,9 @@ fn combobox_with_patch<H: UiHost>(
         if let Some(cell) = search_input_id.clone() {
             popover = popover.initial_focus_from_cell(cell);
         }
+        if let Some(anchor_element_id) = anchor_element_id {
+            popover = popover.anchor_element(anchor_element_id);
+        }
 
         popover.into_element_with_anchor(
             cx,
@@ -2607,7 +2645,8 @@ mod tests {
                 .side(popper::Side::Top)
                 .align(popper::Align::Start)
                 .side_offset_px(Px(6.0))
-                .align_offset_px(Px(7.0)),
+                .align_offset_px(Px(7.0))
+                .anchor_element_id(GlobalElementId(42)),
             ),
         ];
 
@@ -2619,6 +2658,7 @@ mod tests {
         assert_eq!(patch.content_align, Some(popper::Align::Start));
         assert_eq!(patch.content_side_offset, Some(Px(6.0)));
         assert_eq!(patch.content_align_offset, Some(Px(7.0)));
+        assert_eq!(patch.anchor_element_id, Some(GlobalElementId(42)));
         assert_eq!(patch.empty_text.as_deref(), Some("Nothing found."));
         assert_eq!(patch.group_separators, Some(true));
 
