@@ -420,7 +420,16 @@ impl UiDiagnosticsService {
         let element = element_runtime
             .and_then(|runtime| runtime.element_for_node(window, node.id))
             .map(|id| id.0);
-        let Some(selector) = best_selector_for_node(snapshot, node, element, &self.cfg) else {
+        let selector = best_selector_for_node_validated(
+            snapshot,
+            window,
+            element_runtime,
+            node,
+            element,
+            &self.cfg,
+        )
+        .or_else(|| best_selector_for_node(snapshot, node, element, &self.cfg));
+        let Some(selector) = selector else {
             return;
         };
         if let Ok(json) = serde_json::to_string(&selector) {

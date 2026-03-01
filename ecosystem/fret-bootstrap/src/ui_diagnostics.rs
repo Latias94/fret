@@ -62,7 +62,6 @@ mod pick_flow;
 mod snapshot_recording;
 mod snapshot_types;
 mod test_id_bloom;
-pub(crate) use pick::pick_semantics_node_by_bounds;
 use pick::{pick_best_match, pick_semantics_node_at};
 mod script_engine;
 use script_engine::{
@@ -1428,7 +1427,7 @@ mod tests {
             ],
         };
 
-        let picked = pick_semantics_node_by_bounds(&snapshot, Point::new(Px(10.0), Px(10.0)))
+        let picked = pick::pick_semantics_node_by_bounds(&snapshot, Point::new(Px(10.0), Px(10.0)))
             .expect("expected a pick");
         assert_eq!(picked.id, node_id(4));
     }
@@ -2881,7 +2880,7 @@ mod tests {
             ],
         };
 
-        let picked = pick_semantics_node_by_bounds(&snapshot, Point::new(Px(10.0), Px(10.0)))
+        let picked = pick::pick_semantics_node_by_bounds(&snapshot, Point::new(Px(10.0), Px(10.0)))
             .expect("expected a pick");
         assert_eq!(picked.id, node_id(4));
     }

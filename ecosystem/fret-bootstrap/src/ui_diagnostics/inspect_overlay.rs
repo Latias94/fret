@@ -87,7 +87,7 @@ pub(crate) fn render_diag_inspect_overlay(
         let index = SemanticsIndex::new(snapshot);
 
         let hovered = pointer_pos.and_then(|pos| {
-            let node = crate::ui_diagnostics::pick_semantics_node_by_bounds(snapshot, pos)?;
+            let node = super::pick::pick_semantics_node_at(snapshot, ui, pos)?;
             let id = node.id.data().as_ffi();
             Some(InspectNodeInfo {
                 bounds: node.bounds,

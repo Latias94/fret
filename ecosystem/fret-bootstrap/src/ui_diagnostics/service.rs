@@ -750,7 +750,7 @@ impl UiDiagnosticsService {
         if self.inspect_enabled {
             let hovered = last_pointer_position.and_then(|pos| {
                 raw_semantics.and_then(|snap| {
-                    pick_semantics_node_by_bounds(snap, pos).map(|n| n.id.data().as_ffi())
+                    pick::pick_semantics_node_at(snap, ui, pos).map(|n| n.id.data().as_ffi())
                 })
             });
             self.update_inspect_hover(window, raw_semantics, hovered, element_runtime);
