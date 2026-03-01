@@ -501,6 +501,23 @@
       "target_hints": []
     },
     {
+      "id": "liquid-glass-lens-custom-v3-source-group-screenshot",
+      "path": "tools/diag-scripts/liquid-glass-lens-custom-v3-source-group-screenshot.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "suite_memberships": [],
+      "tags": [
+        "effects",
+        "gate",
+        "liquid_glass"
+      ],
+      "target_hints": [
+        "Enables the CustomV3 pair and BackdropSourceGroup toggles in the liquid glass demo.",
+        "Captures a screenshot and diagnostics bundle for ordering drift vs shared snapshot debugging."
+      ]
+    },
+    {
       "id": "node-graph-demo-preset-families-paint-only",
       "path": "tools/diag-scripts/extras/node-graph-demo-preset-families-paint-only.json",
       "required_capabilities": [

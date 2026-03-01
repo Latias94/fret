@@ -349,6 +349,8 @@ struct LiquidGlassState {
     show_warp_v2: Model<bool>,
     show_custom_v2: Model<bool>,
     show_custom_v3: Model<bool>,
+    custom_v3_pair: Model<bool>,
+    custom_v3_source_group: Model<bool>,
     show_inspector: Model<bool>,
     animate: Model<bool>,
     phase_speed: Model<Vec<f32>>,
@@ -449,6 +451,8 @@ impl MvuProgram for LiquidGlassProgram {
             show_warp_v2: app.models_mut().insert(false),
             show_custom_v2: app.models_mut().insert(false),
             show_custom_v3: app.models_mut().insert(false),
+            custom_v3_pair: app.models_mut().insert(false),
+            custom_v3_source_group: app.models_mut().insert(false),
             show_inspector: app.models_mut().insert(false),
             animate: app.models_mut().insert(true),
             phase_speed: app.models_mut().insert(vec![0.65]),
@@ -489,6 +493,10 @@ impl MvuProgram for LiquidGlassProgram {
             let _ = app.models_mut().update(&st.show_warp_v2, |v| *v = false);
             let _ = app.models_mut().update(&st.show_custom_v2, |v| *v = false);
             let _ = app.models_mut().update(&st.show_custom_v3, |v| *v = false);
+            let _ = app.models_mut().update(&st.custom_v3_pair, |v| *v = false);
+            let _ = app
+                .models_mut()
+                .update(&st.custom_v3_source_group, |v| *v = false);
             let _ = app.models_mut().update(&st.show_inspector, |v| *v = false);
             let _ = app.models_mut().update(&st.animate, |v| *v = true);
             let _ = app
@@ -565,6 +573,8 @@ fn view(
     let show_warp_v2_model = st.show_warp_v2.clone();
     let show_custom_v2_model = st.show_custom_v2.clone();
     let show_custom_v3_model = st.show_custom_v3.clone();
+    let custom_v3_pair_model = st.custom_v3_pair.clone();
+    let custom_v3_source_group_model = st.custom_v3_source_group.clone();
     let animate_model = st.animate.clone();
     let phase_speed_model = st.phase_speed.clone();
     let show_inspector_model = st.show_inspector.clone();
@@ -596,6 +606,11 @@ fn view(
     let show_warp_v2 = cx.watch_model(&st.show_warp_v2).layout().copied_or(false);
     let show_custom_v2 = cx.watch_model(&st.show_custom_v2).layout().copied_or(false);
     let show_custom_v3 = cx.watch_model(&st.show_custom_v3).layout().copied_or(false);
+    let custom_v3_pair = cx.watch_model(&st.custom_v3_pair).layout().copied_or(false);
+    let custom_v3_source_group = cx
+        .watch_model(&st.custom_v3_source_group)
+        .layout()
+        .copied_or(false);
     let show_inspector = cx.watch_model(&st.show_inspector).layout().copied_or(true);
     let animate = cx.watch_model(&st.animate).layout().copied_or(true);
     let phase_speed = watch_first_f32(cx, &st.phase_speed, 0.65);
@@ -1166,6 +1181,41 @@ fn view(
                                                     |cx| {
                                                         vec![
                                                             shadcn::Switch::new(
+                                                                custom_v3_pair_model.clone(),
+                                                            )
+                                                            .a11y_label(
+                                                                "Show two custom v3 lenses",
+                                                            )
+                                                            .test_id(
+                                                                "liquid-glass-switch-custom-v3-pair",
+                                                            )
+                                                            .into_element(cx),
+                                                            shadcn::Label::new("V3 pair")
+                                                                .into_element(cx),
+                                                            shadcn::Switch::new(
+                                                                custom_v3_source_group_model
+                                                                    .clone(),
+                                                            )
+                                                            .a11y_label(
+                                                                "Use custom v3 backdrop source group",
+                                                            )
+                                                            .test_id(
+                                                                "liquid-glass-switch-custom-v3-source-group",
+                                                            )
+                                                            .into_element(cx),
+                                                            shadcn::Label::new("V3 group")
+                                                                .into_element(cx),
+                                                        ]
+                                                    },
+                                                ),
+                                                shadcn::stack::hstack(
+                                                    cx,
+                                                    shadcn::stack::HStackProps::default()
+                                                        .gap(Space::N2)
+                                                        .items_center(),
+                                                    |cx| {
+                                                        vec![
+                                                            shadcn::Switch::new(
                                                                 use_backdrop_model.clone(),
                                                             )
                                                             .a11y_label("Backdrop mode")
@@ -1304,10 +1354,56 @@ fn view(
                                             Arc::from("CustomV3 (lens refraction; raw+pyramid)")
                                         };
                                         let chain = custom_v3_chain.unwrap_or(fake_chain.clone());
-                                        out.push(
-                                            lens_panel(cx, label, lens_radius, mode, chain)
-                                                .test_id("liquid-glass-lens-custom-v3"),
-                                        );
+                                        if custom_v3_pair {
+                                            let lens_a = lens_panel(
+                                                cx,
+                                                label.clone(),
+                                                lens_radius,
+                                                mode,
+                                                chain.clone(),
+                                            )
+                                                    .test_id("liquid-glass-lens-custom-v3");
+                                            let lens_b = lens_panel(
+                                                cx,
+                                                Arc::from("CustomV3 (lens B; ordering drift)"),
+                                                lens_radius,
+                                                mode,
+                                                chain,
+                                            )
+                                            .test_id("liquid-glass-lens-custom-v3-b");
+
+                                            let pair = cx.row(
+                                                RowProps {
+                                                    layout: LayoutStyle::default(),
+                                                    gap: SpacingLength::Px(Px(14.0)),
+                                                    justify: MainAlign::Start,
+                                                    align: CrossAlign::Start,
+                                                    ..Default::default()
+                                                },
+                                                move |_cx| vec![lens_a, lens_b],
+                                            );
+
+                                            let wants_group = custom_v3_source_group
+                                                && custom_v3_supported
+                                                && mode == EffectMode::Backdrop;
+                                            if wants_group {
+                                                out.push(cx.backdrop_source_group_v1(
+                                                    Some(CustomEffectPyramidRequestV1 {
+                                                        max_levels: 6,
+                                                        max_radius_px: Px(32.0),
+                                                    }),
+                                                    EffectQuality::Auto,
+                                                    move |_cx| vec![pair],
+                                                ));
+                                            } else {
+                                                out.push(pair);
+                                            }
+                                        } else {
+                                            out.push(
+                                                lens_panel(cx, label, lens_radius, mode, chain)
+                                                    .test_id("liquid-glass-lens-custom-v3"),
+                                            );
+                                        }
                                     }
                                     out
                                 },
