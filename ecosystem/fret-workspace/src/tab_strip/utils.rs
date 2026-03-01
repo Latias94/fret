@@ -5,8 +5,6 @@ use fret_ui::Theme;
 use fret_ui::scroll::ScrollHandle;
 use fret_ui_kit::dnd as ui_dnd;
 
-use crate::tab_drag::WorkspaceTabHitRect;
-
 pub(super) fn tab_text_style(theme: &Theme) -> TextStyle {
     let px = theme.metric_by_key("font.size").unwrap_or(Px(13.0));
     TextStyle {
@@ -64,27 +62,65 @@ fn tab_pinned_flag_for_id(
     pinned_by_id.get(id).copied().unwrap_or(false)
 }
 
-pub(super) fn resolve_end_drop_target(
+pub(super) fn resolve_end_drop_target_in_canonical_order(
     pinned_by_id: &std::collections::HashMap<Arc<str>, bool>,
-    rects: &[WorkspaceTabHitRect],
+    canonical_order: &[Arc<str>],
     dragged: &str,
 ) -> Option<Arc<str>> {
     let dragged_pinned = tab_pinned_flag_for_id(pinned_by_id, dragged);
 
-    let mut best: Option<(Arc<str>, f32)> = None;
-    for r in rects.iter().filter(|r| r.id.as_ref() != dragged) {
-        if tab_pinned_flag_for_id(pinned_by_id, r.id.as_ref()) != dragged_pinned {
+    let mut best: Option<Arc<str>> = None;
+    for id in canonical_order.iter().filter(|id| id.as_ref() != dragged) {
+        if tab_pinned_flag_for_id(pinned_by_id, id.as_ref()) != dragged_pinned {
             continue;
         }
-        let right = r.rect.origin.x.0 + r.rect.size.width.0;
-        if best
-            .as_ref()
-            .map(|(_id, prev)| right > *prev)
-            .unwrap_or(true)
-        {
-            best = Some((r.id.clone(), right));
-        }
+        best = Some(id.clone());
     }
 
-    best.map(|(id, _)| id)
+    best
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn arc(s: &str) -> Arc<str> {
+        Arc::<str>::from(s)
+    }
+
+    #[test]
+    fn end_drop_target_uses_canonical_order_and_respects_pinned_group() {
+        let canonical: Vec<Arc<str>> = vec![arc("a"), arc("b"), arc("c"), arc("d")];
+        let pinned_by_id: std::collections::HashMap<Arc<str>, bool> = [
+            (arc("a"), true),
+            (arc("b"), true),
+            (arc("c"), false),
+            (arc("d"), false),
+        ]
+        .into_iter()
+        .collect();
+
+        assert_eq!(
+            resolve_end_drop_target_in_canonical_order(&pinned_by_id, &canonical, "a")
+                .as_deref(),
+            Some("b")
+        );
+        assert_eq!(
+            resolve_end_drop_target_in_canonical_order(&pinned_by_id, &canonical, "c")
+                .as_deref(),
+            Some("d")
+        );
+    }
+
+    #[test]
+    fn end_drop_target_returns_none_when_dragged_is_only_member_of_group() {
+        let canonical: Vec<Arc<str>> = vec![arc("only"), arc("other")];
+        let pinned_by_id: std::collections::HashMap<Arc<str>, bool> =
+            [(arc("only"), true), (arc("other"), false)].into_iter().collect();
+
+        assert_eq!(
+            resolve_end_drop_target_in_canonical_order(&pinned_by_id, &canonical, "only"),
+            None
+        );
+    }
 }

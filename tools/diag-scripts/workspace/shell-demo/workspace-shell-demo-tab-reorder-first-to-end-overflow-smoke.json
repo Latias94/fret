@@ -1,0 +1,76 @@
+{
+  "schema_version": 2,
+  "meta": {
+    "name": "Workspace shell demo: reorder tab to end while overflowed (smoke)",
+    "tags": ["workspace", "tabstrip", "reorder", "overflow", "smoke", "gate"],
+    "required_capabilities": ["diag.script_v2"],
+    "target_hints": [
+      "Shrinks the window to force tab strip overflow.",
+      "Drags the first tab onto the explicit end-drop surface.",
+      "Asserts the tab becomes the last tab (pos_in_set == set_size)."
+    ]
+  },
+  "steps": [
+    { "type": "set_window_inner_size", "width_px": 420.0, "height_px": 720.0 },
+    { "type": "wait_frames", "n": 10 },
+
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "workspace-shell-pane-pane-a-tab-strip.overflow_button" }
+      },
+      "timeout_frames": 240
+    },
+
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "pos_in_set_is",
+        "target": { "kind": "test_id", "id": "workspace-shell-pane-pane-a-tab-doc-a-0" },
+        "pos_in_set": 1
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "set_size_is",
+        "target": { "kind": "test_id", "id": "workspace-shell-pane-pane-a-tab-doc-a-0" },
+        "set_size": 3
+      },
+      "timeout_frames": 240
+    },
+
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "workspace-shell-pane-pane-a-tab-strip.drop_end" }
+      },
+      "timeout_frames": 240
+    },
+
+    {
+      "type": "drag_to",
+      "from": { "kind": "test_id", "id": "workspace-shell-pane-pane-a-tab-doc-a-0" },
+      "to": { "kind": "test_id", "id": "workspace-shell-pane-pane-a-tab-strip.drop_end" },
+      "steps": 84,
+      "timeout_frames": 240
+    },
+    { "type": "wait_frames", "n": 12 },
+
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "pos_in_set_is",
+        "target": { "kind": "test_id", "id": "workspace-shell-pane-pane-a-tab-doc-a-0" },
+        "pos_in_set": 3
+      },
+      "timeout_frames": 240
+    },
+
+    { "type": "capture_bundle", "label": "workspace-shell-demo-tab-reorder-first-to-end-overflow-smoke" }
+  ]
+}
+

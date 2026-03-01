@@ -11,6 +11,7 @@ Outcomes:
 - At least 2 promoted diagnostics scripts gate:
   - reorder within a single strip (invariants-first):
     - `workspace-shell-demo-tab-reorder-first-to-end-smoke` (currently: first -> after second)
+    - `workspace-shell-demo-tab-reorder-first-to-end-overflow-smoke` (end-drop under overflow)
   - drag-to-split in workspace shell demo:
     - invariants gate: `workspace-shell-demo-tab-drag-to-split-right`
     - screenshot evidence gate: `workspace-shell-demo-tab-drag-to-split-right-drop-preview-screenshot`

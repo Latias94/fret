@@ -19,7 +19,7 @@ Legend:
 | Header-space drop surface | 🟡 | 🟡 | ✅ | ✅ | 🟡 |
 | Overflow detection | 🟡 | 🟡 | ✅ | ✅ | 🟡 |
 | Overflow menu/list | ✅ (unit) | 🟡 | ✅ | ✅ | ❌ |
-| Canonical index mapping under overflow | ❌ | ❌ | ✅ | ✅ | 🟡 |
+| Canonical index mapping under overflow | 🟡 | ❌ | ✅ | ✅ | 🟡 |
 | Scroll-to-active | 🟡 | 🟡 | ✅ | 🟡 | 🟡 |
 | Edge auto-scroll during drag | 🟡 | 🟡 | ✅ | 🟡 | 🟡 |
 | Drag-to-split integration | ✅ | 🟡 | ✅ | ✅ | 🟡 |

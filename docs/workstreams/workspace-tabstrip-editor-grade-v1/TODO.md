@@ -6,6 +6,7 @@ This TODO list is scoped to this workstream folder and is intended to keep the r
 
 - [x] Stabilize cross-pane move gate (`workspace-shell-demo-tab-cross-pane-move-to-end`).
 - [x] Stabilize reorder smoke gate (`workspace-shell-demo-tab-reorder-first-to-end-smoke`).
+- [x] Add an end-drop reorder gate under overflow (`workspace-shell-demo-tab-reorder-first-to-end-overflow-smoke`).
 - [x] Stabilize drag-to-split gates:
   - [x] `workspace-shell-demo-tab-drag-to-split-right`
   - [x] `workspace-shell-demo-tab-drag-to-split-right-drop-preview-screenshot`
@@ -24,6 +25,8 @@ This TODO list is scoped to this workstream folder and is intended to keep the r
 ## Behavior parity (editor-grade)
 
 - [ ] Drag-to-split: define when split zones are allowed while dragging a tab (tab strip row vs content area).
-- [ ] Overflow menu: deterministic scroll-into-view behavior under resize/scroll.
+- [x] End-drop resolution uses canonical order under overflow (does not depend on tab bounds).
+- [x] Overflow activation scrolls the newly active tab into view (gated).
+- [ ] Overflow menu: deterministic scroll-into-view under repeated resize/scroll (stress).
 - [ ] Close policies: close button vs middle click vs keyboard (policy-layer ownership documented).
 - [ ] Keyboard nav: decide roving focus + MRU vs in-order cycling contract surface.
