@@ -25,6 +25,7 @@ Related docs:
 - In-app inspect shortcuts (diagnostics-only): `Esc` exit, `Ctrl+C` copy selector, `Ctrl+Shift+C` copy details, `L` lock/unlock, `Alt+Up/Down` parent-chain navigation
 - In-app hover/pick prefer hit-test routing when available (fallback to bounds-based pick).
 - Selector validation exists (uniqueness + optional `root_z_index` gating) and is used by in-app “copy details” and focus selection.
+- Explainability panel (“why is input blocked?”) implemented and shown in help mode (cheap: bounded lists; no label printing).
 - View cache frame stats exported in bundles (`debug.stats.view_cache_*`, `debug.stats.invalidation_*`)
 
 ## Milestone M1: “Inspect UX parity” (highest ROI)
@@ -63,15 +64,18 @@ Related docs:
      - hit-test target under pointer (best-effort),
      - barrier roots (semantics ids),
      - visible roots summary: `(root_id, z_index, blocks_underlay_input, hit_testable)`.
-   - Keep it cheap (no per-frame full tree dumps; bounded string work).
-   - Respect redaction (`FRET_DIAG_REDACT_TEXT=1`).
+    - Keep it cheap (no per-frame full tree dumps; bounded string work).
+    - Respect redaction (`FRET_DIAG_REDACT_TEXT=1`).
+    - Status:
+      - Implemented in `ecosystem/fret-bootstrap/src/ui_diagnostics/inspect_explain.rs` and rendered in help mode.
+      - Note: current output intentionally avoids labels/text, so it remains safe under redaction by construction.
 
 ## Milestone M2: “Script stability + coverage”
 
 1. **More scripted actions**
-   - Drag: pointer down/move/up with configurable steps.
-   - Wheel/scroll, double click, long press, hover move.
-   - Clipboard paste via `ClipboardText` and/or higher-level “paste” action.
+   - Status:
+     - Implemented (v2): pointer move/down/up/drag, wheel, scroll-into-view, long press, pointer sweeps.
+     - Remaining gaps: double-click action, and a higher-level “paste” action (beyond `set_clipboard_text`).
 
 2. **More predicates and assertions**
    - `focused_descendant_is` (done)
@@ -80,10 +84,12 @@ Related docs:
    - `value_equals` for text fields (done; note locale sensitivity of `value` strings)
 
 3. **Golden “first regression pack” expansion**
-   - Menus: open/close, keyboard nav, typeahead.
-   - Dialog: escape close + focus restore (already), focus trap, default action.
-   - Select: open, filter, pick, close, restore.
-   - Docking: tab drag, drop target, split, close tab.
+   - Status:
+     - Dialog: escape close + focus restore, focus trap tab-cycle scripts landed.
+     - Select: commit/dismiss/focus-restore scripts landed (scoped assertions).
+     - Combobox: commit/dismiss/focus-restore scripts landed (scoped assertions + state rows).
+     - Menus: DropdownMenu + ContextMenu scripts landed (open/close, keyboard nav/typeahead, last-action assertions).
+     - Pending: Docking (tab drag, drop targets, split, close tab).
 
 ## Milestone M3: “AI debugging ergonomics”
 

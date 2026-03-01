@@ -140,6 +140,8 @@ This workstream intentionally keeps “evidence anchors” stable so future refa
 
 - In-app inspector shortcuts + state machine: `ecosystem/fret-bootstrap/src/ui_diagnostics/inspect.rs`
 - In-app overlay rendering: `ecosystem/fret-bootstrap/src/ui_diagnostics/inspect_overlay.rs`
+- Explainability panel lines (why input is blocked): `ecosystem/fret-bootstrap/src/ui_diagnostics/inspect_explain.rs`
+- Help neighborhood view lines (parent/siblings/children + filter): `ecosystem/fret-bootstrap/src/ui_diagnostics/inspect_neighborhood.rs`
 - “Inspection active” wiring (view-cache correctness): `ecosystem/fret-bootstrap/src/ui_app_driver.rs`
 - Selector scoring/validation: `ecosystem/fret-bootstrap/src/ui_diagnostics/selector/validate.rs`
 
