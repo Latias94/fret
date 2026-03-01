@@ -1929,6 +1929,13 @@ where
                     size: fret_ui::element::SizeStyle {
                         width: Length::Fill,
                         height: Length::Px(header_h),
+                        min_height: Some(Length::Px(header_h)),
+                        max_height: Some(Length::Px(header_h)),
+                        ..Default::default()
+                    },
+                    flex: fret_ui::element::FlexItemStyle {
+                        shrink: 0.0,
+                        basis: Length::Px(header_h),
                         ..Default::default()
                     },
                     ..Default::default()
@@ -3928,14 +3935,21 @@ where
                                                 ..Default::default()
                                             },
                                             border_color: Some(border),
-                                                        layout: LayoutStyle {
-                                                            size: fret_ui::element::SizeStyle {
-                                                                width: Length::Fill,
-                                                                height: Length::Px(header_h),
-                                                                ..Default::default()
-                                                            },
-                                                            ..Default::default()
-                                                        },
+                                            layout: LayoutStyle {
+                                                size: fret_ui::element::SizeStyle {
+                                                    width: Length::Fill,
+                                                    height: Length::Px(header_h),
+                                                    min_height: Some(Length::Px(header_h)),
+                                                    max_height: Some(Length::Px(header_h)),
+                                                    ..Default::default()
+                                                },
+                                                flex: fret_ui::element::FlexItemStyle {
+                                                    shrink: 0.0,
+                                                    basis: Length::Px(header_h),
+                                                    ..Default::default()
+                                                },
+                                                ..Default::default()
+                                            },
                                                         ..Default::default()
                                                     },
                                         |cx| {
@@ -4140,6 +4154,8 @@ where
                                                                                                         Length::Fill;
                                                                                                     layout.size.height =
                                                                                                         Length::Fill;
+                                                                                                    layout.overflow =
+                                                                                                        Overflow::Clip;
                                                                                                     layout
                                                                                                 },
                                                                                                 ..Default::default()
@@ -4464,8 +4480,8 @@ where
                                         {
                                             let mut layout = LayoutStyle::default();
                                             layout.size.width = Length::Fill;
-                                            layout.size.height = Length::Fill;
                                             layout.flex.grow = 1.0;
+                                            layout.flex.shrink = 1.0;
                                             layout.flex.basis = Length::Px(Px(0.0));
                                             layout
                                         },
@@ -5303,6 +5319,7 @@ where
                                                                                                                         height: Length::Fill,
                                                                                                                         ..Default::default()
                                                                                                                     },
+                                                                                                                    overflow: Overflow::Clip,
                                                                                                                     flex: fret_ui::element::FlexItemStyle {
                                                                                                                         shrink: 0.0,
                                                                                                                         ..Default::default()
@@ -5365,6 +5382,7 @@ where
                                                                                                             max_width: Some(Length::Px(col_w)),
                                                                                                            ..Default::default()
                                                                                                        },
+                                                                                                   overflow: Overflow::Clip,
                                                                                                    flex: fret_ui::element::FlexItemStyle {
                                                                                                        shrink: 0.0,
                                                                                                        ..Default::default()
