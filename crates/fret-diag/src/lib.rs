@@ -2258,10 +2258,14 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                 "warning: diag --launch is writing control-plane files directly under a base dir that contains `sessions/`.\n\
   base_out_dir: {}\n\
   out_dir: {}\n\
-  hint: prefer `--session-auto` (or `--session <id>`) to isolate concurrent runs under `{}`",
+  hint: prefer `--session-auto` (or `--session <id>`) to isolate concurrent runs under `{}`\n\
+  example:\n\
+    cargo run -p fretboard -- diag {} --dir {} --session-auto --launch -- <cmd...>",
                 resolved_base_out_dir.display(),
                 resolved_out_dir.display(),
                 sessions_root.display(),
+                sub,
+                resolved_base_out_dir.display(),
             );
         }
     }

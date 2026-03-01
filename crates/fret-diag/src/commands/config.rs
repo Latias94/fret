@@ -1053,6 +1053,23 @@ Tip: pass global `diag --env KEY=VALUE` flags to simulate one-off overrides for 
         }));
     }
 
+    if mode == DoctorMode::Launch {
+        let sessions_root = ctx
+            .fs_transport_cfg
+            .out_dir
+            .join(crate::session::SESSIONS_DIRNAME);
+        if sessions_root.is_dir() {
+            warnings.push(serde_json::json!({
+                "severity": "warning",
+                "code": "diag.config.launch_dir_contains_sessions_without_session_isolation",
+                "message": "the chosen diagnostics out_dir contains a `sessions/` folder; tool-launched runs should prefer --session-auto/--session to avoid writing control-plane files at the base root (concurrency footgun)",
+                "base_out_dir": ctx.fs_transport_cfg.out_dir.display().to_string(),
+                "sessions_root": sessions_root.display().to_string(),
+                "hint": "prefer: fretboard diag <run|suite|repro|perf|repeat|matrix> --dir <base_out_dir> --session-auto --launch -- <cmd...>",
+            }));
+        }
+    }
+
     let mut config_value: Option<serde_json::Value> = None;
     let mut config_file: Option<UiDiagnosticsConfigFileV1> = None;
     if let Some(path) = config_path.as_ref() {

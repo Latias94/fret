@@ -69,6 +69,9 @@ This file is a check-list style tracker. Milestone framing lives in `milestones.
   share a single resolver in `crates/fret-diag/src/commands/resolve.rs`).
 - [x] Emit a warning when `--launch` targets a base dir that already contains `sessions/` but the user did not enable
   `--session-auto`/`--session` (avoid writing control-plane files at the base root, which is a concurrency footgun).
+- [x] Make the warning actionable:
+  - [x] include a copy-paste `--session-auto` command template in stderr,
+  - [x] surface a structured warning in `diag config doctor --mode launch --report-json` so AI packets/triage can ingest it.
 
 ## P1: Agent-native script ergonomics (ImGui-alignment outcomes)
 
