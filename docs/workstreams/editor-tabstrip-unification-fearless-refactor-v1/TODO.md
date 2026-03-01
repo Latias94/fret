@@ -28,6 +28,7 @@ This workstream is intentionally scoped to “editor-grade tab UX”:
 - [ ] Add diag script coverage:
   - overflow dropdown open/close
   - select tab from dropdown keeps active visible
+  - overflow dropdown close does not activate (workspace shell demo)
   - drag end-drop on overflow header space resolves canonical insert_index
 - [x] Add minimal unit tests where headless helpers are used by adapters.
 
