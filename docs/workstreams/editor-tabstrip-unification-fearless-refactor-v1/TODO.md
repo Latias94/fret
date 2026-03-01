@@ -15,6 +15,7 @@ This workstream is intentionally scoped to “editor-grade tab UX”:
   - `repo-ref/zed` (editor pane tab bar, pinned/unpinned, scroll handle)
   - `repo-ref/dockview` (overflow list membership + dropdown behaviors)
   - Fret: `ecosystem/fret-workspace` + `ecosystem/fret-docking`
+-   Output: `docs/workstreams/editor-tabstrip-unification-fearless-refactor-v1/PARITY_MATRIX.md`
 - [ ] Normalize terminology in code and docs:
   - “tabs viewport”, “header space”, “overflow control”, “end-drop surface”
 - [ ] Decide overflow dropdown policy:
@@ -40,4 +41,3 @@ This workstream is intentionally scoped to “editor-grade tab UX”:
 - Headless mechanism helpers:
   - `ecosystem/fret-ui-headless/src/tab_strip_surface.rs`
   - `ecosystem/fret-ui-headless/src/tab_strip_overflow.rs`
-

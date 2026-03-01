@@ -17,6 +17,7 @@ Dockview has explicit tests for “overflow dropdown with close buttons”.
 
 Recommendation:
 - Yes for editor-grade UX, but implement as policy in docking/workspace layers, not headless.
+- Docking is aligned (overflow dropdown rows expose a close affordance; close does not activate).
 
 ## Q3: Do we need pinned tabs / multi-row?
 
@@ -32,3 +33,27 @@ Recommendation:
 - Mechanism: a headless helper that computes “required scroll delta to make rect visible”.
 - Policy: when to call it (on active change, on dropdown selection, after drop).
 
+## Q5: Input arbitration priority (close vs activate vs overflow vs other affordances)
+
+Observed bug class: hit targets can overlap (e.g. docking's float-zone affordance overlaps the tab
+bar corner), so the ordering must be explicit and tested.
+
+Recommendation:
+- Treat this as adapter policy, but document and test the priority ordering.
+- Proposed ordering for editor-grade tab UX:
+  1) overflow dropdown/menu surface (rows, close vs content)
+  2) overflow control button (toggle)
+  3) tab close affordance
+  4) tab activation (content)
+  5) non-tabstrip affordances in the same corner (e.g. float-zone)
+
+## Q6: Where should shared tabstrip controller code live?
+
+Options:
+1) `fret-ui-headless` (mechanism) — maximally reusable, but risks pulling policy into the contract layer.
+2) `fret-ui-kit` (policy toolbox) — shared implementation without expanding `fret-ui` contracts.
+3) Keep duplicated per adapter — simplest short-term, but drifts quickly.
+
+Recommendation:
+- Put the **TabStripController** in `fret-ui-kit` (option 2).
+- Keep pure geometry/helpers in `fret-ui-headless` (e.g. surface classification, canonical end-drop).

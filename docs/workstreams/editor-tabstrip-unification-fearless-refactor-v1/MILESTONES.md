@@ -5,6 +5,7 @@
 Deliverables:
 - A written “Fret vs Zed vs Dockview” parity matrix focused on editor tab UX.
 - A list of missing behaviors (ranked by user-impact and implementation risk).
+- A written “owner layer map” for each behavior (mechanism vs policy).
 
 Exit criteria:
 - All gaps have an owner layer decision (mechanism in `fret-ui-headless` vs policy in ecosystem).
@@ -15,6 +16,7 @@ Deliverables:
 - Consistent overflow membership (viewport + margin) across workspace and docking.
 - Overflow dropdown items are deterministic and policy-driven per adapter.
 - Selecting an item scrolls the strip so the tab becomes visible.
+- Overflow dropdown close affordances (if enabled) do not implicitly activate tabs.
 
 Gates:
 - `cargo nextest run -p fret-docking -p fret-workspace`
@@ -40,4 +42,3 @@ Deliverables:
 Gates:
 - Unit tests for headless helpers remain stable.
 - Diag evidence bundle recorded for one “keyboard navigation” scenario.
-
