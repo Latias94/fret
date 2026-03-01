@@ -17,6 +17,11 @@ Tradeoff:
 
 - A is cheaper now; B is cleaner long-term for DSL/spec frontends.
 
+Decision (v1):
+
+- Choose A for v1: treat `ActionId` as an alias/wrapper over `CommandId` (no keymap schema churn).
+- Revisit B only after adoption, if payload actions or a DSL/frontend requires an explicit schema distinction.
+
 ---
 
 ## Q2 — Structured action payloads (v2)?
@@ -53,6 +58,10 @@ Recommendation:
 
 - keep MVU initially; decide deprecation only after adoption evidence and a full cleanup milestone.
 
+Decision (v1):
+
+- Land the view runtime in `ecosystem/fret` (golden path). Defer a split crate until after M2/M3 adoption.
+
 ---
 
 ## Q5 — Diagnostics and picking mode interaction with view cache reuse
@@ -67,4 +76,3 @@ This must stay aligned with:
 
 - ADR 0159 (selectors + scripted interaction),
 - ADR 0213 (cache roots).
-

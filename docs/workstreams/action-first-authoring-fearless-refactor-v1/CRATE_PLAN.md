@@ -119,6 +119,10 @@ Decision gate:
 
 - ADR 0308 (where view runtime lives) should pick A or B before implementation scales.
 
+Decision (v1):
+
+- Choose Option A for v1: no new crates; land `actions` + `view` modules under `ecosystem/fret`.
+
 ---
 
 ## 4) Fearless refactor boundaries (what is allowed to change)
@@ -153,4 +157,3 @@ Candidate cleanup targets:
 Note:
 
 - MVU deprecation (if desired) must be its own explicit decision after adoption evidence.
-

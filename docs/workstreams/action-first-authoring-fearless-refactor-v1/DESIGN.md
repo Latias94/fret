@@ -95,6 +95,16 @@ Plan an explicit “delete legacy” milestone:
 
 ---
 
+## 2.1) Decision Snapshot (v1)
+
+These v1 decisions are locked to keep the implementation plan executable:
+
+- `ActionId` is an alias/wrapper over `CommandId` (no keymap schema churn in v1).
+- The v1 view runtime lands in `ecosystem/fret` (golden path). Splitting into dedicated crates is deferred.
+- Typed unit actions only (no structured payload actions in v1).
+
+---
+
 ## 3) References (Sources of truth)
 
 ### ADRs

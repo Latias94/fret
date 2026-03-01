@@ -32,11 +32,10 @@ ID format:
 - [ ] AFA-adr-001 Review ADR 0307 (actions) for scope/ownership boundaries.
 - [ ] AFA-adr-002 Review ADR 0308 (view runtime) for hook order/keying rules and cache boundary semantics.
 - [ ] AFA-adr-003 Update `docs/adr/README.md` jump table with new action/view ADR anchors.
-- [ ] AFA-adr-004 Decide keymap strategy (v1):
-  - Option A: `ActionId == CommandId` (no keymap schema churn).
-  - Option B: keymap adds an explicit “action binding” variant (schema churn, but clearer).
-  - Evidence target: ADR 0307 “Decision” section must be explicit.
-- [ ] AFA-adr-005 Add a short action naming convention note (namespace + `.v1` suffix).
+- [x] AFA-adr-004 Decide keymap strategy (v1):
+  - Decision: `ActionId == CommandId` (alias/wrapper; no keymap schema churn in v1).
+  - Evidence: ADR 0307 “v1 decision (locked)”.
+- [x] AFA-adr-005 Add a short action naming convention note (namespace + `.v1` suffix).
   - Goal: keep IDs predictable for GenUI and future frontends.
 - [ ] AFA-adr-006 Add an observability checklist for action dispatch + view dirty/reuse.
   - Evidence: `docs/workstreams/action-first-authoring-fearless-refactor-v1/EVIDENCE_AND_GATES.md`
@@ -64,10 +63,9 @@ ID format:
 
 ## C. View Runtime + Hooks (Ecosystem)
 
-- [ ] AFA-view-020 Decide crate placement for the view runtime:
-  - Option A: `ecosystem/fret` (golden path).
-  - Option B: new `ecosystem/fret-view` crate re-exported by `fret`.
-  - Evidence: ADR 0308 “Where this lives”.
+- [x] AFA-view-020 Decide crate placement for the view runtime:
+  - Decision: land in `ecosystem/fret` for v1; defer split crate until after adoption.
+  - Evidence: ADR 0308 “v1 decision (locked)”.
 - [ ] AFA-view-021 Implement a minimal `View` trait + `ViewCx` with:
   - action handler registration,
   - `notify()` dirty marking,
