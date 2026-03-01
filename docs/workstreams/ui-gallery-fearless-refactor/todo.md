@@ -150,7 +150,7 @@ drift-free (preview ≡ copyable code).
 | empty | `apps/fret-ui-gallery/src/ui/pages/empty.rs` | No | Not started | Includes advanced paint/layout demos; migrate after overlay/layout baseline stabilizes. |
 | card | `apps/fret-ui-gallery/src/ui/pages/card.rs` | No | Deferred | Local edits in progress; migrate after card examples stabilize. |
 | item | `apps/fret-ui-gallery/src/ui/pages/item.rs` | No | Not started | Large page; split into focused snippets per section. |
-| image-object-fit | `apps/fret-ui-gallery/src/ui/pages/image_object_fit.rs` | No | Not started | Media assets + layout constraints. |
+| image-object-fit | `apps/fret-ui-gallery/src/ui/pages/image_object_fit.rs` | Yes | Done | Snippet-backed previews + region-sliced code tabs (preview ≡ code). |
 | motion-presets | `apps/fret-ui-gallery/src/ui/pages/motion_presets.rs` | No | Not started | Animation surfaces; add minimal diag hooks before migrating. |
 | collapsible | `apps/fret-ui-gallery/src/ui/pages/collapsible.rs` | No | Not started | Multiple sub-demos + controlled/uncontrolled models. |
 | carousel | `apps/fret-ui-gallery/src/ui/pages/carousel.rs` | No | Not started | Media-heavy; likely needs screenshot gates. |
