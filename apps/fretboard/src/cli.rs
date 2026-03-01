@@ -80,7 +80,7 @@ Usage:
     fretboard diag test-ids <bundle_dir|bundle.json|bundle.schema2.json> [--warmup-frames <n>] [--max-test-ids <n>] [--json] [--out <path>]
     fretboard diag windows <bundle_dir|bundle.json|bundle.schema2.json> [--warmup-frames <n>] [--json]
     fretboard diag dock-routing <bundle_dir|bundle.json|bundle.schema2.json> [--warmup-frames <n>] [--json]
-    fretboard diag screenshots <bundle_dir|bundle.json|bundle.schema2.json> [--json]
+    fretboard diag screenshots <out_dir|bundle_dir|bundle.json|bundle.schema2.json> [--json]
   fretboard diag ai-packet [<bundle_dir|bundle.json|bundle.schema2.json>] [--test-id <test_id>] [--packet-out <dir>] [--sidecars-only] [--include-triage] [--warmup-frames <n>]
   fretboard diag query test-id [<bundle_dir|bundle.json|bundle.schema2.json>] <pattern> [--mode <contains|prefix|glob>] [--top <n>] [--case-sensitive] [--json] [--out <path>]
   fretboard diag slice [<bundle_dir|bundle.json|bundle.schema2.json>] --test-id <test_id> [--frame-id <n>] [--snapshot-seq <n>] [--window <id>] [--max-matches <n>] [--max-ancestors <n>] [--json] [--out <path>]

@@ -195,7 +195,7 @@ Prefer bounded queries over `rg bundle.json`:
 - `fretboard diag meta <bundle_dir|bundle.json|bundle.schema2.json> --json`
 - `fretboard diag windows <bundle_dir|bundle.json|bundle.schema2.json>`
 - `fretboard diag dock-routing <bundle_dir|bundle.json|bundle.schema2.json>`
-- `fretboard diag screenshots <bundle_dir|bundle.json|bundle.schema2.json>`
+- `fretboard diag screenshots <out_dir|bundle_dir|bundle.json|bundle.schema2.json>`
 - `fretboard diag query test-id <bundle_dir|bundle.json|bundle.schema2.json> <pattern> --top 50`
 - `fretboard diag slice <bundle_dir|bundle.json|bundle.schema2.json> --test-id <test_id>`
 

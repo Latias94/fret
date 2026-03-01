@@ -14,7 +14,7 @@ pub(crate) fn cmd_screenshots(
     }
     let Some(src) = rest.first().cloned() else {
         return Err(
-            "missing bundle artifact path (try: fretboard diag screenshots <bundle_dir|bundle.json|bundle.schema2.json>)"
+            "missing bundle artifact path (try: fretboard diag screenshots <out_dir|bundle_dir|bundle.json|bundle.schema2.json>)"
                 .to_string(),
         );
     };
@@ -23,9 +23,18 @@ pub(crate) fn cmd_screenshots(
     }
 
     let src = crate::resolve_path(workspace_root, PathBuf::from(src));
-    let Some((screenshots_dir, manifest_path)) = resolve_screenshots_manifest_path(&src) else {
+    let resolved = resolve_screenshots_manifest_path(&src).or_else(|| {
+        if src.is_dir() {
+            resolve_latest_bundle_dir(src.as_path())
+                .and_then(|bundle_dir| resolve_screenshots_manifest_path(&bundle_dir))
+        } else {
+            None
+        }
+    });
+
+    let Some((screenshots_dir, manifest_path)) = resolved else {
         return Err(format!(
-            "unable to locate screenshots manifest for: {}\n  tried: <bundle_dir>/_root/screenshots/manifest.json, <bundle_dir_parent>/screenshots/<bundle_name>/manifest.json, and direct manifest paths",
+            "unable to locate screenshots manifest for: {}\n  tried: <bundle_dir>/_root/screenshots/manifest.json, <bundle_dir_parent>/screenshots/<bundle_name>/manifest.json, direct manifest paths, and (for out dirs) <out_dir>/latest.txt",
             src.display()
         ));
     };
@@ -100,6 +109,22 @@ fn resolve_screenshots_manifest_path(src: &Path) -> Option<(PathBuf, PathBuf)> {
     }
 
     None
+}
+
+fn resolve_latest_bundle_dir(out_dir: &Path) -> Option<PathBuf> {
+    let latest_txt = out_dir.join("latest.txt");
+    if !latest_txt.is_file() {
+        return None;
+    }
+
+    let raw = std::fs::read_to_string(&latest_txt).ok()?;
+    let first = raw.lines().next().map(|s| s.trim()).unwrap_or("");
+    if first.is_empty() {
+        return None;
+    }
+    let p = PathBuf::from(first);
+    let out = if p.is_absolute() { p } else { out_dir.join(p) };
+    if out.is_dir() { Some(out) } else { None }
 }
 
 fn print_screenshots_report(manifest: &Value, screenshots_dir: &Path, manifest_path: &Path) {
