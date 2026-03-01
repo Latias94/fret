@@ -1,6 +1,7 @@
 use fret_app::App;
 use fret_core::{AppWindowId, Point};
 use fret_ui::UiTree;
+use fret_ui::tree::PointerOcclusion;
 use slotmap::Key as _;
 
 pub(super) fn build_inspect_explainability_lines(
@@ -12,6 +13,13 @@ pub(super) fn build_inspect_explainability_lines(
 
     let mut lines: Vec<String> = Vec::new();
     lines.push("explain:".to_string());
+
+    let arbitration = ui.input_arbitration_snapshot();
+    let layer_roots = ui
+        .debug_layers_in_paint_order()
+        .into_iter()
+        .map(|layer| (layer.id, layer.root))
+        .collect::<std::collections::HashMap<_, _>>();
 
     if let Some(pos) = pointer_pos {
         let hit = ui.debug_hit_test_routing(pos);
@@ -34,6 +42,38 @@ pub(super) fn build_inspect_explainability_lines(
     } else {
         lines.push("pointer: <unknown>".to_string());
     }
+
+    let pointer_occlusion_root = arbitration
+        .pointer_occlusion_layer
+        .and_then(|layer| layer_roots.get(&layer).copied())
+        .map(|id| id.data().as_ffi());
+    let pointer_capture_root = arbitration
+        .pointer_capture_layer
+        .and_then(|layer| layer_roots.get(&layer).copied())
+        .map(|id| id.data().as_ffi());
+    lines.push(format!(
+        "arbitration: modal_barrier_root={:?} focus_barrier_root={:?} pointer_occlusion={:?} pointer_occlusion_root={:?} pointer_capture_active={} pointer_capture_root={:?} pointer_capture_multiple_layers={}",
+        arbitration.modal_barrier_root.map(|id| id.data().as_ffi()),
+        arbitration.focus_barrier_root.map(|id| id.data().as_ffi()),
+        arbitration.pointer_occlusion,
+        pointer_occlusion_root,
+        arbitration.pointer_capture_active,
+        pointer_capture_root,
+        arbitration.pointer_capture_multiple_layers
+    ));
+
+    let likely_reason = if arbitration.pointer_capture_active {
+        "pointer_capture"
+    } else if !matches!(arbitration.pointer_occlusion, PointerOcclusion::None) {
+        "pointer_occlusion"
+    } else if arbitration.modal_barrier_root.is_some() {
+        "modal_barrier_active"
+    } else if pointer_pos.is_none() {
+        "pointer_unknown"
+    } else {
+        "unblocked_or_hit_test_specific"
+    };
+    lines.push(format!("likely_reason: {likely_reason}"));
 
     if let Some(snapshot) = ui.semantics_snapshot() {
         let barrier_root = snapshot.barrier_root.map(|id| id.data().as_ffi());
