@@ -107,9 +107,13 @@ pub enum ButtonVariant {
 pub enum ButtonSize {
     #[default]
     Default,
+    /// Upstream shadcn/ui v4: `size="xs"` (`h-6`, `text-xs`).
+    Xs,
     Sm,
     Lg,
     Icon,
+    /// Upstream shadcn/ui v4: `size="icon-xs"` (`size-6`).
+    IconXs,
     IconSm,
     IconLg,
 }
@@ -118,9 +122,11 @@ impl ButtonSize {
     fn component_size(self) -> ComponentSize {
         match self {
             Self::Default => ComponentSize::Medium,
+            Self::Xs => ComponentSize::XSmall,
             Self::Sm => ComponentSize::Small,
             Self::Lg => ComponentSize::Large,
             Self::Icon => ComponentSize::Medium,
+            Self::IconXs => ComponentSize::XSmall,
             Self::IconSm => ComponentSize::Small,
             Self::IconLg => ComponentSize::Large,
         }
@@ -648,7 +654,7 @@ impl Button {
             let test_id = self.test_id.clone();
             let is_icon_button = matches!(
                 self.size,
-                ButtonSize::Icon | ButtonSize::IconSm | ButtonSize::IconLg
+                ButtonSize::Icon | ButtonSize::IconXs | ButtonSize::IconSm | ButtonSize::IconLg
             );
             if is_icon_button {
                 let icon = size.icon_button_size(Theme::global(&*cx.app));
