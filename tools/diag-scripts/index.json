@@ -501,12 +501,33 @@
       "target_hints": []
     },
     {
+      "id": "liquid-glass-lens-custom-v3-corners-screenshot",
+      "path": "tools/diag-scripts/liquid-glass-lens-custom-v3-corners-screenshot.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "liquid-glass-custom-v3"
+      ],
+      "tags": [
+        "effects",
+        "gate",
+        "liquid_glass"
+      ],
+      "target_hints": [
+        "Shows the CustomV3 lens corners without other effect variants.",
+        "Sets bevel sliders to deterministic values and captures a screenshot + diagnostics bundle."
+      ]
+    },
+    {
       "id": "liquid-glass-lens-custom-v3-source-group-screenshot",
       "path": "tools/diag-scripts/liquid-glass-lens-custom-v3-source-group-screenshot.json",
       "required_capabilities": [
         "diag.script_v2"
       ],
-      "suite_memberships": [],
+      "suite_memberships": [
+        "liquid-glass-custom-v3"
+      ],
       "tags": [
         "effects",
         "gate",
@@ -523,7 +544,9 @@
       "required_capabilities": [
         "diag.script_v2"
       ],
-      "suite_memberships": [],
+      "suite_memberships": [
+        "liquid-glass-custom-v3"
+      ],
       "tags": [
         "effects",
         "gate",
