@@ -117,7 +117,12 @@ Not implemented / not applicable (expected gaps for native retained UI):
 - `active` (Embla instance enable/disable as a first-class option)
 - Embla's DOM-observer-driven `resize`/`slideChanges` behavior and exact timing
 - `ssr` (Embla SSR snap list injection)
-- `dragThreshold` parity (Embla uses px threshold; Fret uses retained pointer capture + drag-arms thresholds; needs explicit alignment work)
+- [x] CAR2-128 Align `dragThreshold` boundary semantics (strict `>`) and gate pointer arbitration.
+  - Embla sets `preventClick` when `diffScroll > dragThreshold` (see `DragHandler.ts`).
+  - Fret maps this to "start dragging / steal capture only once we exceed `drag_threshold_px`".
+  - Evidence:
+    - `ecosystem/fret-ui-headless/src/carousel.rs` (`on_pointer_move` threshold check)
+    - `ecosystem/fret-ui-shadcn/tests/carousel_pointer_passthrough.rs` (boundary regression tests)
 - [x] CAR2-125 Port core targeting helpers (snap selection + limits) needed by the engine.
   - Evidence:
     - `ecosystem/fret-ui-headless/src/embla/scroll_target.rs`

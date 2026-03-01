@@ -16,7 +16,7 @@ Scope:
 Carousel expects:
 
 - Pointer down reaches interactive descendants (pressables/buttons).
-- If movement exceeds `drag_threshold_px`, Carousel steals capture and converts the gesture into a
+- If movement exceeds `drag_threshold_px` (strictly `>`), Carousel steals capture and converts the gesture into a
   scroll drag.
 
 DnD expects:
@@ -90,7 +90,8 @@ the current pointer and opt out of swiping while a sensor is tracking it.
 Implementation notes:
 
 - `fret-ui-kit::dnd::pointer_is_tracking_any_sensor(...)` checks whether the current pointer is
-  being tracked by any DnD sensor for the window.
+  being tracked by any DnD sensor for the window. Note: the underlying sensor enters "tracking"
+  state immediately on pointer down (pending) and remains tracked until up/cancel.
 - `fret-ui-shadcn::Carousel` uses that check inside its move handler to avoid stealing capture /
   updating the offset while a DnD sensor tracks the pointer.
 
