@@ -202,7 +202,8 @@ pub use date_picker::DatePicker;
 pub use date_picker_with_presets::DatePickerWithPresets;
 pub use date_range_picker::DateRangePicker;
 pub use dialog::{
-    Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
+    Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, DialogHeader,
+    DialogOverlay, DialogPortal, DialogTitle, DialogTrigger,
 };
 pub use drawer::{
     Drawer, DrawerClose, DrawerContent, DrawerDescription, DrawerFooter, DrawerHeader, DrawerSide,

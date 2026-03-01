@@ -48,6 +48,88 @@ pub enum DialogOverlayBackdrop {
     Glass(DialogGlassBackdropRefinement),
 }
 
+/// shadcn/ui `DialogPortal` (v4).
+///
+/// Fret installs modal dialogs through the overlay controller, which implies a portal-like
+/// boundary already. This type is a no-op marker that exists to align the shadcn part surface and
+/// leave room for future portal configuration.
+#[derive(Debug, Clone, Copy, Default)]
+pub struct DialogPortal;
+
+impl DialogPortal {
+    pub fn new() -> Self {
+        Self
+    }
+}
+
+/// shadcn/ui `DialogOverlay` (v4).
+///
+/// Upstream exposes the overlay (scrim/backdrop) as a distinct part with styling concerns.
+/// Fret's dialog surface currently owns the overlay policy knobs on [`Dialog`]. This type is a
+/// thin adapter so part-based call sites can keep configuration in a shadcn-like location.
+#[derive(Debug, Clone, Default)]
+pub struct DialogOverlay {
+    closable: Option<bool>,
+    color: Option<Color>,
+    backdrop: Option<DialogOverlayBackdrop>,
+}
+
+impl DialogOverlay {
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// Controls whether outside pointer press dismisses the dialog.
+    pub fn closable(mut self, closable: bool) -> Self {
+        self.closable = Some(closable);
+        self
+    }
+
+    pub fn color(mut self, color: Color) -> Self {
+        self.color = Some(color);
+        self
+    }
+
+    pub fn backdrop(mut self, backdrop: DialogOverlayBackdrop) -> Self {
+        self.backdrop = Some(backdrop);
+        self
+    }
+
+    fn apply_to(self, mut dialog: Dialog) -> Dialog {
+        if let Some(v) = self.closable {
+            dialog.overlay_closable = v;
+        }
+        if let Some(v) = self.color {
+            dialog.overlay_color = Some(v);
+        }
+        if let Some(v) = self.backdrop {
+            dialog.overlay_backdrop = v;
+        }
+        dialog
+    }
+}
+
+/// shadcn/ui `DialogTrigger` (v4).
+///
+/// In the upstream DOM implementation this is a Radix primitive part. In Fret, the trigger element
+/// itself is still authored by the caller; this wrapper exists to align the part surface with
+/// shadcn docs/examples and to keep room for future trigger-specific defaults.
+#[derive(Debug)]
+pub struct DialogTrigger {
+    child: AnyElement,
+}
+
+impl DialogTrigger {
+    pub fn new(child: AnyElement) -> Self {
+        Self { child }
+    }
+
+    #[track_caller]
+    pub fn into_element<H: UiHost>(self, _cx: &mut ElementContext<'_, H>) -> AnyElement {
+        self.child
+    }
+}
+
 #[derive(Debug, Clone, Copy)]
 pub struct DialogGlassBackdropRefinement {
     pub blur_radius_px: Px,
@@ -514,6 +596,23 @@ impl Dialog {
             let content_element = content_element_for_trigger.get().or(prev_content_element);
             radix_dialog::apply_dialog_trigger_a11y(trigger, is_open, content_element)
         })
+    }
+
+    /// Part-based authoring surface aligned with shadcn/ui v4 exports.
+    ///
+    /// This is a thin adapter over [`Dialog::into_element`] that accepts shadcn-style parts
+    /// (`DialogTrigger`, `DialogPortal`, `DialogOverlay`).
+    #[track_caller]
+    pub fn into_element_parts<H: UiHost>(
+        self,
+        cx: &mut ElementContext<'_, H>,
+        trigger: impl FnOnce(&mut ElementContext<'_, H>) -> DialogTrigger,
+        _portal: DialogPortal,
+        overlay: DialogOverlay,
+        content: impl FnOnce(&mut ElementContext<'_, H>) -> AnyElement,
+    ) -> AnyElement {
+        let dialog = overlay.apply_to(self);
+        dialog.into_element(cx, |cx| trigger(cx).into_element(cx), content)
     }
 }
 
