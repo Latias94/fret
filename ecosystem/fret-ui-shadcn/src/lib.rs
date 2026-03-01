@@ -150,9 +150,10 @@ pub use card::{
 };
 pub use carousel::{
     Carousel, CarouselAlign, CarouselApi, CarouselApiSnapshot, CarouselAutoplayConfig,
-    CarouselBreakpoint, CarouselContainScroll, CarouselEvent, CarouselEventCursor, CarouselOptions,
-    CarouselOptionsPatch, CarouselOrientation, CarouselSlidesInViewSnapshot,
-    CarouselSlidesToScroll,
+    CarouselBreakpoint, CarouselContainScroll, CarouselContent, CarouselContext, CarouselEvent,
+    CarouselEventCursor, CarouselItem, CarouselNext, CarouselOptions, CarouselOptionsPatch,
+    CarouselOrientation, CarouselPrevious, CarouselSlidesInViewSnapshot, CarouselSlidesToScroll,
+    carousel_context, use_carousel,
 };
 pub use chart::{
     ChartLegendContent, ChartLegendItem, ChartLegendVerticalAlign, ChartTooltipContent,

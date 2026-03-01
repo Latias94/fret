@@ -695,6 +695,25 @@ pub(super) fn preview_carousel(cx: &mut ElementContext<'_, App>) -> Vec<AnyEleme
         .test_id("ui-gallery-carousel-basic")
         .into_element(cx);
 
+    let parts_items = (1..=5)
+        .map(|idx| shadcn::CarouselItem::new(slide(cx, idx, basic_visual)))
+        .collect::<Vec<_>>();
+    let parts = shadcn::Carousel::default()
+        .refine_track_layout(LayoutRefinement::default().w_px(Px(336.0)))
+        .refine_layout(
+            LayoutRefinement::default()
+                .w_full()
+                .max_w(max_w_xs)
+                .mx_auto(),
+        )
+        .test_id("ui-gallery-carousel-parts")
+        .into_element_parts(
+            cx,
+            |_cx| shadcn::CarouselContent::new(parts_items),
+            shadcn::CarouselPrevious::new(),
+            shadcn::CarouselNext::new(),
+        );
+
     let align_start_visual = SlideVisual {
         text_px: Px(30.0),
         line_height_px: Px(36.0),
@@ -1097,6 +1116,26 @@ shadcn::Carousel::new(items)
     .refine_track_layout(LayoutRefinement::default().w_px(Px(336.0)))
     .refine_layout(LayoutRefinement::default().w_full().max_w(Px(320.0)).mx_auto())
     .into_element(cx);"#,
+                ),
+            DocSection::new("Parts", parts)
+                .description("Part-based authoring surface aligned with shadcn/ui v4 exports.")
+                .max_w(Px(760.0))
+                .test_id_prefix("ui-gallery-carousel-parts")
+                .code(
+                    "rust",
+                    r#"let items = (1..=5)
+    .map(|idx| shadcn::CarouselItem::new(slide(cx, idx)))
+    .collect::<Vec<_>>();
+
+shadcn::Carousel::default()
+    .refine_track_layout(LayoutRefinement::default().w_px(Px(336.0)))
+    .refine_layout(LayoutRefinement::default().w_full().max_w(Px(320.0)).mx_auto())
+    .into_element_parts(
+        cx,
+        |_cx| shadcn::CarouselContent::new(items),
+        shadcn::CarouselPrevious::new(),
+        shadcn::CarouselNext::new(),
+    );"#,
                 ),
             DocSection::new("Sizes", sizes)
                 .description("Three active items (`basis-1/3`) to mirror the docs layout.")
