@@ -23,6 +23,8 @@ Related docs:
 - Picking (one-shot): `diag pick`, `diag pick-script`, `diag pick-apply`
 - Continuous inspect mode: `diag inspect on|off|toggle|status` (file-triggered, AI-friendly)
 - In-app inspect shortcuts (diagnostics-only): `Esc` exit, `Ctrl+C` copy selector, `Ctrl+Shift+C` copy details, `L` lock/unlock, `Alt+Up/Down` parent-chain navigation
+- In-app hover/pick prefer hit-test routing when available (fallback to bounds-based pick).
+- Selector validation exists (uniqueness + optional `root_z_index` gating) and is used by in-app “copy details” and focus selection.
 - View cache frame stats exported in bundles (`debug.stats.view_cache_*`, `debug.stats.invalidation_*`)
 
 ## Milestone M1: “Inspect UX parity” (highest ROI)
@@ -54,6 +56,14 @@ Related docs:
    - Status:
      - In-app copy-details (`Ctrl+Shift+C`) now includes a scored selector-candidates list (match count + chosen node).
      - Runtime selector resolution honors `root_z_index` when present; validated selectors may add it when needed to become unique.
+
+4. **Explainability: “why is input blocked?”**
+   - Add a minimal in-app explanation panel (shown in help mode) that surfaces:
+     - hit-test target under pointer (best-effort),
+     - barrier roots (semantics ids),
+     - visible roots summary: `(root_id, z_index, blocks_underlay_input, hit_testable)`.
+   - Keep it cheap (no per-frame full tree dumps; bounded string work).
+   - Respect redaction (`FRET_DIAG_REDACT_TEXT=1`).
 
 ## Milestone M2: “Script stability + coverage”
 
