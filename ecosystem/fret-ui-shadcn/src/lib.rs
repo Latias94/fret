@@ -282,8 +282,8 @@ pub use select::{
 };
 pub use separator::{Separator, SeparatorOrientation, separator};
 pub use sheet::{
-    Sheet, SheetClose, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetSide,
-    SheetTitle,
+    Sheet, SheetClose, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetOverlay,
+    SheetPortal, SheetSide, SheetTitle, SheetTrigger,
 };
 pub use shortcut_hint::ShortcutHint;
 pub use sidebar::{
