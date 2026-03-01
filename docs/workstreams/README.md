@@ -10,6 +10,17 @@ milestones, use:
 
 Active workstreams:
 
+- `docs/workstreams/action-first-authoring-fearless-refactor-v1/DESIGN.md`
+- `docs/workstreams/action-first-authoring-fearless-refactor-v1/TODO.md`
+- `docs/workstreams/action-first-authoring-fearless-refactor-v1/MILESTONES.md`
+- `docs/workstreams/action-first-authoring-fearless-refactor-v1/EVIDENCE_AND_GATES.md`
+- `docs/workstreams/action-first-authoring-fearless-refactor-v1/OPEN_QUESTIONS.md`
+- `docs/workstreams/action-first-authoring-fearless-refactor-v1/PARITY_MATRIX.md`
+- `docs/workstreams/action-first-authoring-fearless-refactor-v1/REFERENCE_NOTES.md`
+- `docs/workstreams/action-first-authoring-fearless-refactor-v1/MIGRATION_GUIDE.md`
+- `docs/workstreams/action-first-authoring-fearless-refactor-v1/CLEANUP_PLAN.md`
+- `docs/workstreams/action-first-authoring-fearless-refactor-v1/CRATE_PLAN.md`
+- `docs/workstreams/action-first-authoring-fearless-refactor-v1/RISK_MATRIX.md`
 - `docs/workstreams/workspace-shell-tabstrip-fearless-refactor-v1/DESIGN.md`
 - `docs/workstreams/workspace-shell-tabstrip-fearless-refactor-v1/TODO.md`
 - `docs/workstreams/workspace-shell-tabstrip-fearless-refactor-v1/MILESTONES.md`
