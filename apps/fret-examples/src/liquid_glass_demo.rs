@@ -17,6 +17,7 @@ use fret_core::scene::{
     WarpMapEncodingV1,
 };
 use fret_core::{Color, Corners, Edges, EffectId, ImageColorSpace, Px};
+use fret_render::RendererCapabilities;
 use fret_runtime::Model;
 use fret_ui::Invalidation;
 use fret_ui::element::{
@@ -705,6 +706,16 @@ fn view(
     });
     let warp_map_loaded = warp_image.is_some();
 
+    let renderer_caps = cx.app.global::<RendererCapabilities>().cloned();
+    let custom_v2_capable = renderer_caps
+        .as_ref()
+        .map(|c| c.custom_effect_v2_user_image)
+        .unwrap_or(false);
+    let custom_v3_capable = renderer_caps
+        .as_ref()
+        .map(|c| c.custom_effect_v3)
+        .unwrap_or(false);
+
     let custom_v2_effect = cx
         .app
         .global::<LiquidGlassCustomV2Effect>()
@@ -1384,7 +1395,11 @@ fn view(
                                     }
                                     if show_custom_v2 {
                                         let label = if !custom_v2_supported {
-                                            Arc::from("CustomV2 (unsupported)")
+                                            if !custom_v2_capable {
+                                                Arc::from("CustomV2 (unsupported backend)")
+                                            } else {
+                                                Arc::from("CustomV2 (registration failed)")
+                                            }
                                         } else if warp_map_loaded {
                                             Arc::from("CustomV2 (image warp + rim/grain)")
                                         } else {
@@ -1397,7 +1412,11 @@ fn view(
                                     }
                                     if show_custom_v3 {
                                         let label: Arc<str> = if !custom_v3_supported {
-                                            Arc::from("CustomV3 (unsupported)")
+                                            if !custom_v3_capable {
+                                                Arc::from("CustomV3 (unsupported backend)")
+                                            } else {
+                                                Arc::from("CustomV3 (registration failed)")
+                                            }
                                         } else {
                                             Arc::from("CustomV3 (lens refraction; raw+pyramid)")
                                         };
