@@ -76,7 +76,9 @@ fn toggle_group_item_h(theme: &ThemeSnapshot, size: ToggleSize) -> Px {
         ToggleSize::Sm => ("component.toggle_group.item_h_sm", Px(32.0)),
         ToggleSize::Lg => ("component.toggle_group.item_h_lg", Px(40.0)),
     };
-    theme.metric_by_key(key).unwrap_or(fallback)
+    theme.metric_by_key(key)
+        .map(|v| Px(v.0.max(fallback.0)))
+        .unwrap_or(fallback)
 }
 
 fn toggle_group_item_pad_x(theme: &ThemeSnapshot) -> Px {

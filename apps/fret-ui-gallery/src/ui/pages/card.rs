@@ -143,6 +143,28 @@ pub(super) fn preview_card(
         .test_id("ui-gallery-card-demo")
     };
 
+    let card_content_inline_button = {
+        shadcn::Card::new(vec![
+            shadcn::CardHeader::new(vec![
+                shadcn::CardTitle::new("CardContent inline children").into_element(cx),
+                shadcn::CardDescription::new(
+                    "CardContent should not stretch inline-sized children (e.g. buttons).",
+                )
+                .into_element(cx),
+            ])
+            .into_element(cx),
+            shadcn::CardContent::new(vec![
+                shadcn::Button::new("Inline Button")
+                    .into_element(cx)
+                    .test_id("ui-gallery-card-content-inline-button"),
+            ])
+            .into_element(cx),
+        ])
+        .refine_layout(max_w_sm.clone())
+        .into_element(cx)
+        .test_id("ui-gallery-card-content-inline-button-demo")
+    };
+
     let meeting_notes = {
         let avatars = {
             // Upstream shadcn Card docs use GitHub avatar images. In the in-tree gallery we prefer
@@ -702,7 +724,9 @@ pub(super) fn preview_card(
 
     let body = doc_layout::render_doc_page(
         cx,
-        Some("Preview follows shadcn Card docs order: Login, Meeting Notes, Image, Compositions."),
+        Some(
+            "Preview follows shadcn Card docs order: Login, CardContent, Meeting Notes, Image, Compositions.",
+        ),
         vec![
             DocSection::new("Login", login)
                 .no_shell()
@@ -718,6 +742,20 @@ pub(super) fn preview_card(
     .into_element(cx),
     shadcn::CardContent::new(vec![/* ... */]).into_element(cx),
     shadcn::CardFooter::new(vec![/* actions */]).into_element(cx),
+])
+.into_element(cx);"#,
+                ),
+            DocSection::new("CardContent", card_content_inline_button)
+                .no_shell()
+                .max_w(Px(980.0))
+                .description("CardContent should preserve intrinsic sizes for inline children.")
+                .code(
+                    "rust",
+                    r#"shadcn::Card::new(vec![
+    shadcn::CardContent::new(vec![
+        shadcn::Button::new("Inline Button").into_element(cx),
+    ])
+    .into_element(cx),
 ])
 .into_element(cx);"#,
                 ),

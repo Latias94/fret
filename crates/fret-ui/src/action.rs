@@ -87,6 +87,23 @@ impl DismissRequestCx {
     }
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) struct DismissibleLastDismissRequest {
+    pub tick_id: TickId,
+    pub reason: Option<DismissReason>,
+    pub default_prevented: bool,
+}
+
+impl Default for DismissibleLastDismissRequest {
+    fn default() -> Self {
+        Self {
+            tick_id: TickId(0),
+            reason: None,
+            default_prevented: false,
+        }
+    }
+}
+
 /// Context passed to auto-focus handlers.
 ///
 /// This mirrors the DOM/Radix contract where `onOpenAutoFocus` / `onCloseAutoFocus` may "prevent

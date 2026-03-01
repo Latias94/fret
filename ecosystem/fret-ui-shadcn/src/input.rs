@@ -439,7 +439,13 @@ fn input_with_style_and_submit<H: UiHost>(
             .merge(layout_override),
     );
     root_layout.overflow = fret_ui::element::Overflow::Visible;
-    let root_shadow = decl_style::shadow_xs(theme, resolved.radius);
+    let root_shadow = {
+        let mut shadow = decl_style::shadow_xs(theme, resolved.radius);
+        if let Some(corners) = corner_radii_override {
+            shadow.corner_radii = corners;
+        }
+        shadow
+    };
 
     let model_for_hook = props.model.clone();
     let on_submit_hook = on_submit.clone();
