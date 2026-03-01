@@ -1943,7 +1943,7 @@ fn web_vs_fret_button_group_dropdown_geometry_and_chrome_match() {
         // We express that via `ChromeRefinement` without changing global button sizing rules.
         let trigger = fret_ui_shadcn::Button::new("")
             .variant(fret_ui_shadcn::ButtonVariant::Outline)
-            .refine_style(ChromeRefinement::default().pl(Space::N2))
+            .refine_style(ChromeRefinement::default().pl(Space::N2).pr(Space::N3))
             .children(vec![decl_icon::icon(cx, ids::ui::CHEVRON_DOWN)])
             .test_id("button-group-dropdown.trigger")
             .into();
