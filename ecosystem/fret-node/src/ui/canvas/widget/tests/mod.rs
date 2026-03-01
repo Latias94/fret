@@ -45,6 +45,7 @@ mod edge_marker_tangent_fallback_conformance;
 mod edge_types_invalidation_conformance;
 mod edit_command_availability_conformance;
 mod elevate_on_select_conformance;
+mod escape_cancel_releases_pointer_capture_conformance;
 mod fit_view_nodes_conformance;
 mod fit_view_on_mount_conformance;
 mod fit_view_options_conformance;
