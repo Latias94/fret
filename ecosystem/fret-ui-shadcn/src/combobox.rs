@@ -2641,6 +2641,82 @@ mod tests {
         assert_eq!(groups[0].items[0].keywords[0].as_ref(), "React");
     }
 
+    #[test]
+    fn combobox_show_clear_renders_only_when_selected() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(360.0), Px(200.0)),
+        );
+        let mut services = FakeServices::default();
+
+        let model = app.models_mut().insert(None::<Arc<str>>);
+        let open = app.models_mut().insert(false);
+
+        let items = vec![ComboboxOption::new("alpha", "Alpha")];
+
+        let mut render_frame =
+            |ui: &mut UiTree<App>, app: &mut App, model: Model<Option<Arc<str>>>| {
+                let next_frame = FrameId(app.frame_id().0.saturating_add(1));
+                app.set_frame_id(next_frame);
+
+                fret_ui_kit::OverlayController::begin_frame(app, window);
+                let root = fret_ui::declarative::render_root(
+                    ui,
+                    app,
+                    &mut services,
+                    window,
+                    bounds,
+                    "combobox-clear",
+                    |cx| {
+                        vec![
+                            Combobox::new(model, open.clone())
+                                .a11y_label("Combobox")
+                                .test_id_prefix("combobox-clear")
+                                .show_clear(true)
+                                .items(items.clone())
+                                .into_element(cx),
+                        ]
+                    },
+                );
+                ui.set_root(root);
+                fret_ui_kit::OverlayController::render(ui, app, &mut services, window, bounds);
+                ui.request_semantics_snapshot();
+                ui.layout_all(app, &mut services, bounds, 1.0);
+            };
+
+        // Frame 1: no selection, clear should not render.
+        render_frame(&mut ui, &mut app, model.clone());
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        assert!(
+            !snap.nodes.iter().any(|n| {
+                n.test_id
+                    .as_deref()
+                    .is_some_and(|id| id == "combobox-clear-clear-button")
+            }),
+            "expected clear button to be hidden when no value is selected"
+        );
+
+        // Frame 2: selection present, clear should render.
+        let _ = app
+            .models_mut()
+            .update(&model, |v| *v = Some(Arc::from("alpha")));
+        render_frame(&mut ui, &mut app, model);
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        assert!(
+            snap.nodes.iter().any(|n| {
+                n.test_id
+                    .as_deref()
+                    .is_some_and(|id| id == "combobox-clear-clear-button")
+            }),
+            "expected clear button to be visible when a value is selected"
+        );
+    }
+
     #[derive(Default)]
     struct FakeServices;
 
