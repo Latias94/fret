@@ -10,11 +10,42 @@ use std::collections::hash_map::Entry;
 
 const MAX_CUSTOM_EFFECT_WGSL_BYTES: usize = 64 * 1024;
 
+fn validate_custom_effect_wgsl_triplet(
+    user_source: &str,
+    wgsl_unmasked: &str,
+    wgsl_masked: &str,
+    wgsl_mask: &str,
+    parse_failed_msg: &'static str,
+    validation_failed_msg: &'static str,
+) -> Result<(), fret_core::CustomEffectRegistrationError> {
+    use naga::valid::{Capabilities, ValidationFlags, Validator};
+
+    if user_source.len() > MAX_CUSTOM_EFFECT_WGSL_BYTES {
+        return Err(fret_core::CustomEffectRegistrationError::InvalidSource);
+    }
+
+    let mut validator = Validator::new(ValidationFlags::all(), Capabilities::empty());
+    for (label, src) in [
+        ("unmasked", wgsl_unmasked),
+        ("masked", wgsl_masked),
+        ("mask", wgsl_mask),
+    ] {
+        let module = naga::front::wgsl::parse_str(src).map_err(|err| {
+            tracing::warn!(?err, %label, "{parse_failed_msg}");
+            fret_core::CustomEffectRegistrationError::InvalidSource
+        })?;
+        validator.validate(&module).map_err(|err| {
+            tracing::warn!(?err, %label, "{validation_failed_msg}");
+            fret_core::CustomEffectRegistrationError::InvalidSource
+        })?;
+    }
+
+    Ok(())
+}
+
 fn build_and_validate_custom_effect_wgsl_v1(
     user_source: &str,
 ) -> Result<(String, String, String), fret_core::CustomEffectRegistrationError> {
-    use naga::valid::{Capabilities, ValidationFlags, Validator};
-
     if user_source.len() > MAX_CUSTOM_EFFECT_WGSL_BYTES {
         return Err(fret_core::CustomEffectRegistrationError::InvalidSource);
     }
@@ -23,21 +54,14 @@ fn build_and_validate_custom_effect_wgsl_v1(
     let wgsl_masked = custom_effect_masked_shader_source(user_source);
     let wgsl_mask = custom_effect_mask_shader_source(user_source);
 
-    let mut validator = Validator::new(ValidationFlags::all(), Capabilities::empty());
-    for (label, src) in [
-        ("unmasked", &wgsl_unmasked),
-        ("masked", &wgsl_masked),
-        ("mask", &wgsl_mask),
-    ] {
-        let module = naga::front::wgsl::parse_str(src).map_err(|err| {
-            tracing::warn!(?err, %label, "custom effect v1 wgsl parse failed");
-            fret_core::CustomEffectRegistrationError::InvalidSource
-        })?;
-        validator.validate(&module).map_err(|err| {
-            tracing::warn!(?err, %label, "custom effect v1 wgsl validation failed");
-            fret_core::CustomEffectRegistrationError::InvalidSource
-        })?;
-    }
+    validate_custom_effect_wgsl_triplet(
+        user_source,
+        &wgsl_unmasked,
+        &wgsl_masked,
+        &wgsl_mask,
+        "custom effect v1 wgsl parse failed",
+        "custom effect v1 wgsl validation failed",
+    )?;
 
     Ok((wgsl_unmasked, wgsl_masked, wgsl_mask))
 }
@@ -45,8 +69,6 @@ fn build_and_validate_custom_effect_wgsl_v1(
 fn build_and_validate_custom_effect_wgsl_v2(
     user_source: &str,
 ) -> Result<(String, String, String), fret_core::CustomEffectRegistrationError> {
-    use naga::valid::{Capabilities, ValidationFlags, Validator};
-
     if user_source.len() > MAX_CUSTOM_EFFECT_WGSL_BYTES {
         return Err(fret_core::CustomEffectRegistrationError::InvalidSource);
     }
@@ -55,21 +77,14 @@ fn build_and_validate_custom_effect_wgsl_v2(
     let wgsl_masked = custom_effect_v2_masked_shader_source(user_source);
     let wgsl_mask = custom_effect_v2_mask_shader_source(user_source);
 
-    let mut validator = Validator::new(ValidationFlags::all(), Capabilities::empty());
-    for (label, src) in [
-        ("unmasked", &wgsl_unmasked),
-        ("masked", &wgsl_masked),
-        ("mask", &wgsl_mask),
-    ] {
-        let module = naga::front::wgsl::parse_str(src).map_err(|err| {
-            tracing::warn!(?err, %label, "custom effect v2 wgsl parse failed");
-            fret_core::CustomEffectRegistrationError::InvalidSource
-        })?;
-        validator.validate(&module).map_err(|err| {
-            tracing::warn!(?err, %label, "custom effect v2 wgsl validation failed");
-            fret_core::CustomEffectRegistrationError::InvalidSource
-        })?;
-    }
+    validate_custom_effect_wgsl_triplet(
+        user_source,
+        &wgsl_unmasked,
+        &wgsl_masked,
+        &wgsl_mask,
+        "custom effect v2 wgsl parse failed",
+        "custom effect v2 wgsl validation failed",
+    )?;
 
     Ok((wgsl_unmasked, wgsl_masked, wgsl_mask))
 }
@@ -77,8 +92,6 @@ fn build_and_validate_custom_effect_wgsl_v2(
 fn build_and_validate_custom_effect_wgsl_v3(
     user_source: &str,
 ) -> Result<(String, String, String), fret_core::CustomEffectRegistrationError> {
-    use naga::valid::{Capabilities, ValidationFlags, Validator};
-
     if user_source.len() > MAX_CUSTOM_EFFECT_WGSL_BYTES {
         return Err(fret_core::CustomEffectRegistrationError::InvalidSource);
     }
@@ -87,21 +100,14 @@ fn build_and_validate_custom_effect_wgsl_v3(
     let wgsl_masked = custom_effect_v3_masked_shader_source(user_source);
     let wgsl_mask = custom_effect_v3_mask_shader_source(user_source);
 
-    let mut validator = Validator::new(ValidationFlags::all(), Capabilities::empty());
-    for (label, src) in [
-        ("unmasked", &wgsl_unmasked),
-        ("masked", &wgsl_masked),
-        ("mask", &wgsl_mask),
-    ] {
-        let module = naga::front::wgsl::parse_str(src).map_err(|err| {
-            tracing::warn!(?err, %label, "custom effect v3 wgsl parse failed");
-            fret_core::CustomEffectRegistrationError::InvalidSource
-        })?;
-        validator.validate(&module).map_err(|err| {
-            tracing::warn!(?err, %label, "custom effect v3 wgsl validation failed");
-            fret_core::CustomEffectRegistrationError::InvalidSource
-        })?;
-    }
+    validate_custom_effect_wgsl_triplet(
+        user_source,
+        &wgsl_unmasked,
+        &wgsl_masked,
+        &wgsl_mask,
+        "custom effect v3 wgsl parse failed",
+        "custom effect v3 wgsl validation failed",
+    )?;
 
     Ok((wgsl_unmasked, wgsl_masked, wgsl_mask))
 }
