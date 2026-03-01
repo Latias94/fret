@@ -74,7 +74,7 @@ pub(crate) fn dispatch_simple(
             (|| -> Result<(), String> {
                 let Some(src) = rest.first().cloned() else {
                     return Err(
-                        "missing bundle artifact path (try: fretboard diag trace <bundle_dir|bundle.json|bundle.schema2.json>)"
+                        "missing bundle artifact path (try: fretboard diag trace <base_or_session_out_dir|bundle_dir|bundle.json|bundle.schema2.json>)"
                             .to_string(),
                     );
                 };
