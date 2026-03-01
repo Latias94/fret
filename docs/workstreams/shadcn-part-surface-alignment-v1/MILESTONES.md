@@ -103,3 +103,27 @@ data model) has been resolved by moving option structs to `ComboboxOption` /
 
 - The upstream docs “Usage” snippet shape can be expressed in Rust with a part-based API (even if
   some Tailwind constraints map to explicit `.w_full()` / `.min_w_0()` calls).
+
+## Milestone 6 — Select v4 part surface convergence (Deferred)
+
+`select` is currently implemented as a configuration + entries surface. This is productive, but it
+is structurally different from shadcn/ui v4’s part-based composition model (Trigger/Value/Content
+as real nested parts).
+
+This milestone is intentionally **deferred** because it is higher-risk and touches a wide surface
+area (focus, scroll buttons, typeahead, list virtualization constraints, and entry modeling).
+
+**Scope**
+
+- Stage 1: document the desired Rust part surface mirroring upstream parts (Trigger/Value/Content/
+  Group/Item/Label/Separator/ScrollUpButton/ScrollDownButton), including which parts are “thin
+  adapters” vs “real elements”.
+- Stage 2: migrate `Select` internals to support true part composition while preserving the
+  existing high-level `Select` facade as a compatibility layer.
+- Stage 3: add at least one deterministic gate that fails if the part-based usage snippet cannot
+  be expressed (copy/paste parity), plus keep the current unit tests as behavior baselines.
+
+**Acceptance criteria**
+
+- The upstream docs “Usage” snippet shape can be expressed in Rust with part-based composition.
+- The existing `Select` tests still pass (or are intentionally superseded with equivalent gates).
