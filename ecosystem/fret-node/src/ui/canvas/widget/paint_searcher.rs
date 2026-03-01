@@ -10,26 +10,26 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
         let visible_rows = searcher_visible_rows(searcher);
         let rect = searcher_rect_at(&self.style, searcher.origin, visible_rows, zoom);
         let border_w = Px(1.0 / zoom);
-        let radius = Px(self.style.context_menu_corner_radius / zoom);
+        let radius = Px(self.style.paint.context_menu_corner_radius / zoom);
 
         cx.scene.push(SceneOp::Quad {
             order: DrawOrder(55),
             rect,
-            background: fret_core::Paint::Solid(self.style.context_menu_background).into(),
+            background: fret_core::Paint::Solid(self.style.paint.context_menu_background).into(),
 
             border: Edges::all(border_w),
-            border_paint: fret_core::Paint::Solid(self.style.context_menu_border).into(),
+            border_paint: fret_core::Paint::Solid(self.style.paint.context_menu_border).into(),
 
             corner_radii: Corners::all(radius),
         });
 
-        let pad = self.style.context_menu_padding / zoom;
-        let item_h = self.style.context_menu_item_height / zoom;
+        let pad = self.style.paint.context_menu_padding / zoom;
+        let item_h = self.style.paint.context_menu_item_height / zoom;
         let inner_x = rect.origin.x.0 + pad;
         let inner_y = rect.origin.y.0 + pad;
         let inner_w = (rect.size.width.0 - 2.0 * pad).max(0.0);
 
-        let mut text_style = self.style.context_menu_text_style.clone();
+        let mut text_style = self.style.geometry.context_menu_text_style.clone();
         text_style.size = Px(text_style.size.0 / zoom);
         if let Some(lh) = text_style.line_height.as_mut() {
             lh.0 /= zoom;
@@ -50,7 +50,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
         cx.scene.push(SceneOp::Quad {
             order: DrawOrder(56),
             rect: query_rect,
-            background: fret_core::Paint::Solid(self.style.context_menu_hover_background).into(),
+            background: fret_core::Paint::Solid(self.style.paint.context_menu_hover_background).into(),
 
             border: Edges::all(Px(0.0)),
             border_paint: fret_core::Paint::TRANSPARENT.into(),
@@ -71,9 +71,9 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
             + (query_rect.size.height.0 - metrics.size.height.0) * 0.5
             + metrics.baseline.0);
         let query_color = if searcher.query.is_empty() {
-            self.style.context_menu_text_disabled
+            self.style.paint.context_menu_text_disabled
         } else {
-            self.style.context_menu_text
+            self.style.paint.context_menu_text
         };
         cx.scene.push(SceneOp::Text {
             order: DrawOrder(57),
@@ -100,7 +100,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                 cx.scene.push(SceneOp::Quad {
                     order: DrawOrder(56),
                     rect: item_rect,
-                    background: fret_core::Paint::Solid(self.style.context_menu_hover_background)
+                    background: fret_core::Paint::Solid(self.style.paint.context_menu_hover_background)
                         .into(),
 
                     border: Edges::all(Px(0.0)),
@@ -122,9 +122,9 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                 + (item_rect.size.height.0 - metrics.size.height.0) * 0.5
                 + metrics.baseline.0);
             let color = if row.enabled {
-                self.style.context_menu_text
+                self.style.paint.context_menu_text
             } else {
-                self.style.context_menu_text_disabled
+                self.style.paint.context_menu_text_disabled
             };
 
             cx.scene.push(SceneOp::Text {

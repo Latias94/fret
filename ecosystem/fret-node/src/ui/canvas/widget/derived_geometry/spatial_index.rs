@@ -5,7 +5,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
         let tuning = snapshot.interaction.spatial_index;
         let mut pad = tuning.edge_aabb_pad_screen_px;
         pad = pad.max(snapshot.interaction.edge_interaction_width);
-        pad = pad.max(self.style.wire_width);
+        pad = pad.max(self.style.geometry.wire_width);
         if pad.is_finite() { pad.max(0.0) } else { 0.0 }
     }
 
@@ -50,7 +50,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
         }
 
         let z = zoom.max(1.0e-6);
-        let pin_pad = (edge_ctx.style.pin_radius.max(0.0) / z).max(0.0);
+        let pin_pad = (edge_ctx.style.geometry.pin_radius.max(0.0) / z).max(0.0);
 
         for (&edge_id, edge) in &graph.edges {
             let Some(from) = geom.port_center(edge.from) else {

@@ -18,7 +18,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
         let mut next_edge = next_edge.min(edges.len());
 
         for edge in edges.iter().skip(next_edge) {
-            let width = self.style.wire_width * edge.hint.width_mul.max(0.0);
+            let width = self.style.geometry.wire_width * edge.hint.width_mul.max(0.0);
             let (stop, _marker_skipped) = if let Some(custom) = custom_paths.get(&edge.id) {
                 let fallback = Point::new(
                     Px(edge.to.x.0 - edge.from.x.0),

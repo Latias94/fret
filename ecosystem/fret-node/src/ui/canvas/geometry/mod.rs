@@ -133,7 +133,7 @@ impl CanvasGeometry {
                         ),
                     };
                     let center = port_center(rect, dir, row, style, zoom);
-                    let pin_r = style.pin_radius / zoom;
+                    let pin_r = style.geometry.pin_radius / zoom;
                     let bounds = Rect::new(
                         Point::new(Px(center.x.0 - pin_r), Px(center.y.0 - pin_r)),
                         Size::new(Px(2.0 * pin_r), Px(2.0 * pin_r)),

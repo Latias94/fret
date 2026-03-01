@@ -60,14 +60,14 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                     color = override_color;
                 }
 
-                let mut width = style.wire_width * hint.width_mul;
+                let mut width = style.geometry.wire_width * hint.width_mul;
                 let is_selected = selected_edges.contains(edge_id);
                 let is_hovered = hovered_edge == Some(*edge_id);
                 if is_selected {
-                    width *= style.wire_width_selected_mul;
+                    width *= style.paint.wire_width_selected_mul;
                 }
                 if is_hovered {
-                    width *= style.wire_width_hover_mul;
+                    width *= style.paint.wire_width_hover_mul;
                 }
 
                 edges_to_draw.push(OverlayEdgeDraw {
@@ -110,7 +110,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                     zoom,
                     cx.scale_factor,
                     marker,
-                    self.style.pin_radius,
+                    self.style.geometry.pin_radius,
                     &mut marker_budget,
                 );
                 if let Some(path) = path {
@@ -132,7 +132,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                     zoom,
                     cx.scale_factor,
                     marker,
-                    self.style.pin_radius,
+                    self.style.geometry.pin_radius,
                     &mut marker_budget,
                 );
                 if let Some(path) = path {

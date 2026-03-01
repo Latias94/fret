@@ -13,7 +13,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
         let z = zoom_z(zoom);
         let hit_w =
             hit_test_canvas_units_from_screen_px(snapshot.interaction.edge_interaction_width, z)
-                .max(self.style.wire_width / z);
+                .max(self.style.geometry.wire_width / z);
         let threshold2 = hit_w * hit_w;
 
         let candidates = ctx

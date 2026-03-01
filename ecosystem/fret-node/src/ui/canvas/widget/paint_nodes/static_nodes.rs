@@ -64,21 +64,21 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
             lh.0 /= zoom;
         }
 
-        let corner = Px(self.style.node_corner_radius / zoom);
-        let title_pad = self.style.node_padding / zoom;
-        let title_h = self.style.node_header_height / zoom;
+        let corner = Px(self.style.paint.node_corner_radius / zoom);
+        let title_pad = self.style.geometry.node_padding / zoom;
+        let title_h = self.style.geometry.node_header_height / zoom;
 
         for (_node, rect, is_selected, title, body, pin_rows, _resize_handles, hint) in
             &render.nodes
         {
             let rect = *rect;
-            let background = hint.background.unwrap_or(self.style.node_background);
+            let background = hint.background.unwrap_or(self.style.paint.node_background);
             let border = if *is_selected {
                 hint.border_selected
                     .or(hint.border)
-                    .unwrap_or(self.style.node_border_selected)
+                    .unwrap_or(self.style.paint.node_border_selected)
             } else {
-                hint.border.unwrap_or(self.style.node_border)
+                hint.border.unwrap_or(self.style.paint.node_border)
             };
             let border_w = Px(1.0 / zoom);
 
@@ -176,10 +176,10 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
             {
                 let pin_rows = (*pin_rows).max(0) as f32;
                 let body_top = rect.origin.y.0
-                    + (self.style.node_header_height
-                        + self.style.node_padding
-                        + pin_rows * self.style.pin_row_height
-                        + self.style.node_padding)
+                    + (self.style.geometry.node_header_height
+                        + self.style.geometry.node_padding
+                        + pin_rows * self.style.geometry.pin_row_height
+                        + self.style.geometry.node_padding)
                         / zoom;
 
                 let max_w = (rect.size.width.0 - 2.0 * title_pad).max(0.0);
@@ -210,7 +210,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
             }
         }
 
-        let pin_r = self.style.pin_radius / zoom;
+        let pin_r = self.style.geometry.pin_radius / zoom;
         let pin_gap = 8.0 / zoom;
 
         for (port_id, info) in &render.port_labels {

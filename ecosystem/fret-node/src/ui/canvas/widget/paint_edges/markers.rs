@@ -43,7 +43,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                     zoom,
                     scale_factor,
                     marker,
-                    self.style.pin_radius,
+                    self.style.geometry.pin_radius,
                     marker_budget,
                 );
                 if skipped_by_budget {
@@ -67,7 +67,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                     zoom,
                     scale_factor,
                     marker,
-                    self.style.pin_radius,
+                    self.style.geometry.pin_radius,
                     marker_budget,
                 );
                 if skipped_by_budget {
@@ -143,7 +143,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                     zoom,
                     scale_factor,
                     marker,
-                    self.style.pin_radius,
+                    self.style.geometry.pin_radius,
                     marker_budget,
                 );
                 if skipped_by_budget {
@@ -168,7 +168,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                     zoom,
                     scale_factor,
                     marker,
-                    self.style.pin_radius,
+                    self.style.geometry.pin_radius,
                     marker_budget,
                 );
                 if skipped_by_budget {
@@ -226,7 +226,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                         zoom,
                         scale_factor,
                         marker,
-                        self.style.pin_radius,
+                        self.style.geometry.pin_radius,
                         marker_budget,
                     );
                 if skipped_by_budget {
@@ -251,7 +251,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                         zoom,
                         scale_factor,
                         marker,
-                        self.style.pin_radius,
+                        self.style.geometry.pin_radius,
                         marker_budget,
                     );
                 if skipped_by_budget {
@@ -331,7 +331,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                         zoom,
                         scale_factor,
                         marker,
-                        self.style.pin_radius,
+                        self.style.geometry.pin_radius,
                         marker_budget,
                     );
                 if skipped_by_budget {
@@ -357,7 +357,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                         zoom,
                         scale_factor,
                         marker,
-                        self.style.pin_radius,
+                        self.style.geometry.pin_radius,
                         marker_budget,
                     );
                 if skipped_by_budget {

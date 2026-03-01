@@ -14,7 +14,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
             return;
         }
 
-        let mut group_text_style = self.style.context_menu_text_style.clone();
+        let mut group_text_style = self.style.geometry.context_menu_text_style.clone();
         group_text_style.size = Px(group_text_style.size.0 / zoom);
         if let Some(lh) = group_text_style.line_height.as_mut() {
             lh.0 /= zoom;
@@ -26,10 +26,10 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
             scene.push(SceneOp::Quad {
                 order: DrawOrder(1),
                 rect: *rect,
-                background: fret_core::Paint::Solid(self.style.group_background).into(),
+                background: fret_core::Paint::Solid(self.style.paint.group_background).into(),
 
                 border: Edges::all(Px(1.0 / zoom)),
-                border_paint: fret_core::Paint::Solid(self.style.group_border).into(),
+                border_paint: fret_core::Paint::Solid(self.style.paint.group_border).into(),
 
                 corner_radii: Corners::all(group_corner),
             });
@@ -56,7 +56,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                     order: DrawOrder(1),
                     origin: Point::new(text_x, text_y),
                     text: blob,
-                    paint: (self.style.context_menu_text).into(),
+                    paint: (self.style.paint.context_menu_text).into(),
                     outline: None,
                     shadow: None,
                 });
@@ -82,10 +82,10 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
             scene.push(SceneOp::Quad {
                 order: DrawOrder(1),
                 rect: *rect,
-                background: fret_core::Paint::Solid(self.style.group_background).into(),
+                background: fret_core::Paint::Solid(self.style.paint.group_background).into(),
 
                 border: Edges::all(Px(1.0 / zoom)),
-                border_paint: fret_core::Paint::Solid(self.style.node_border_selected).into(),
+                border_paint: fret_core::Paint::Solid(self.style.paint.node_border_selected).into(),
 
                 corner_radii: Corners::all(group_corner),
             });

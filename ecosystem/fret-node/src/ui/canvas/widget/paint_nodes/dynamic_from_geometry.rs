@@ -71,9 +71,9 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
             lh.0 /= zoom;
         }
 
-        let corner = Px(self.style.node_corner_radius / zoom);
-        let title_pad = self.style.node_padding / zoom;
-        let title_h = self.style.node_header_height / zoom;
+        let corner = Px(self.style.paint.node_corner_radius / zoom);
+        let title_pad = self.style.geometry.node_padding / zoom;
+        let title_h = self.style.geometry.node_header_height / zoom;
 
         if let Some(preview) = insert_node_drag_preview.as_ref() {
             let z = zoom.max(1.0e-6);
@@ -85,9 +85,9 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                 Size::new(Px(w), Px(h)),
             );
 
-            let mut bg = self.style.node_background;
+            let mut bg = self.style.paint.node_background;
             bg.a *= 0.55;
-            let mut border_color = self.style.node_border_selected;
+            let mut border_color = self.style.paint.node_border_selected;
             border_color.a *= 0.85;
             cx.scene.push(SceneOp::Quad {
                 order: DrawOrder(3),
@@ -170,11 +170,11 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                 paint_node_ring(cx.scene, rect, corner, ring, zoom);
             }
 
-            let background = hint.background.unwrap_or(self.style.node_background);
+            let background = hint.background.unwrap_or(self.style.paint.node_background);
             let border_color = hint
                 .border_selected
                 .or(hint.border)
-                .unwrap_or(self.style.node_border_selected);
+                .unwrap_or(self.style.paint.node_border_selected);
 
             cx.scene.push(SceneOp::Quad {
                 order: DrawOrder(3),
@@ -377,7 +377,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                         .unwrap_or_else(|| Color::from_srgb_hex_rgb(0xe6_59_59))
                 }
             } else {
-                self.style.node_border_selected
+                self.style.paint.node_border_selected
             };
 
             let pad = 2.0 / zoom;

@@ -9,26 +9,26 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
     ) {
         let rect = context_menu_rect_at(&self.style, menu.origin, menu.items.len(), zoom);
         let border_w = Px(1.0 / zoom);
-        let radius = Px(self.style.context_menu_corner_radius / zoom);
+        let radius = Px(self.style.paint.context_menu_corner_radius / zoom);
 
         cx.scene.push(SceneOp::Quad {
             order: DrawOrder(50),
             rect,
-            background: fret_core::Paint::Solid(self.style.context_menu_background).into(),
+            background: fret_core::Paint::Solid(self.style.paint.context_menu_background).into(),
 
             border: Edges::all(border_w),
-            border_paint: fret_core::Paint::Solid(self.style.context_menu_border).into(),
+            border_paint: fret_core::Paint::Solid(self.style.paint.context_menu_border).into(),
 
             corner_radii: Corners::all(radius),
         });
 
-        let pad = self.style.context_menu_padding / zoom;
-        let item_h = self.style.context_menu_item_height / zoom;
+        let pad = self.style.paint.context_menu_padding / zoom;
+        let item_h = self.style.paint.context_menu_item_height / zoom;
         let inner_x = rect.origin.x.0 + pad;
         let inner_y = rect.origin.y.0 + pad;
         let inner_w = (rect.size.width.0 - 2.0 * pad).max(0.0);
 
-        let mut text_style = self.style.context_menu_text_style.clone();
+        let mut text_style = self.style.geometry.context_menu_text_style.clone();
         text_style.size = Px(text_style.size.0 / zoom);
         if let Some(lh) = text_style.line_height.as_mut() {
             lh.0 /= zoom;
@@ -54,7 +54,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                 cx.scene.push(SceneOp::Quad {
                     order: DrawOrder(51),
                     rect: item_rect,
-                    background: fret_core::Paint::Solid(self.style.context_menu_hover_background)
+                    background: fret_core::Paint::Solid(self.style.paint.context_menu_hover_background)
                         .into(),
 
                     border: Edges::all(Px(0.0)),
@@ -76,9 +76,9 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                 item_rect.origin.y.0 + (item_rect.size.height.0 - metrics.size.height.0) * 0.5;
             let text_y = Px(inner_y + metrics.baseline.0);
             let color = if item.enabled {
-                self.style.context_menu_text
+                self.style.paint.context_menu_text
             } else {
-                self.style.context_menu_text_disabled
+                self.style.paint.context_menu_text_disabled
             };
 
             cx.scene.push(SceneOp::Text {
@@ -99,15 +99,15 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
         zoom: f32,
     ) {
         let rect = rect_from_points(marquee.start_pos, marquee.pos);
-        let border_w = Px(self.style.marquee_border_width / zoom);
+        let border_w = Px(self.style.paint.marquee_border_width / zoom);
 
         cx.scene.push(SceneOp::Quad {
             order: DrawOrder(49),
             rect,
-            background: fret_core::Paint::Solid(self.style.marquee_fill).into(),
+            background: fret_core::Paint::Solid(self.style.paint.marquee_fill).into(),
 
             border: Edges::all(border_w),
-            border_paint: fret_core::Paint::Solid(self.style.marquee_border).into(),
+            border_paint: fret_core::Paint::Solid(self.style.paint.marquee_border).into(),
 
             corner_radii: Corners::all(Px(0.0)),
         });
@@ -123,7 +123,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
         viewport_w: f32,
         viewport_h: f32,
     ) {
-        let w = Px((self.style.snapline_width / zoom).max(0.5 / zoom));
+        let w = Px((self.style.paint.snapline_width / zoom).max(0.5 / zoom));
         let half = 0.5 * w.0;
 
         if let Some(x) = guides.x {
@@ -133,7 +133,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                     Point::new(Px(x - half), Px(viewport_origin_y)),
                     Size::new(w, Px(viewport_h)),
                 ),
-                background: fret_core::Paint::Solid(self.style.snapline_color).into(),
+                background: fret_core::Paint::Solid(self.style.paint.snapline_color).into(),
 
                 border: Edges::all(Px(0.0)),
                 border_paint: fret_core::Paint::TRANSPARENT.into(),
@@ -149,7 +149,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                     Point::new(Px(viewport_origin_x), Px(y - half)),
                     Size::new(Px(viewport_w), w),
                 ),
-                background: fret_core::Paint::Solid(self.style.snapline_color).into(),
+                background: fret_core::Paint::Solid(self.style.paint.snapline_color).into(),
 
                 border: Edges::all(Px(0.0)),
                 border_paint: fret_core::Paint::TRANSPARENT.into(),
@@ -172,7 +172,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
         let pad = 10.0 / zoom;
         let max_w = 420.0 / zoom;
 
-        let mut text_style = self.style.context_menu_text_style.clone();
+        let mut text_style = self.style.geometry.context_menu_text_style.clone();
         text_style.size = Px(text_style.size.0 / zoom);
         if let Some(lh) = text_style.line_height.as_mut() {
             lh.0 /= zoom;
@@ -209,7 +209,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
         cx.scene.push(SceneOp::Quad {
             order: DrawOrder(70),
             rect,
-            background: fret_core::Paint::Solid(self.style.context_menu_background).into(),
+            background: fret_core::Paint::Solid(self.style.paint.context_menu_background).into(),
 
             border: Edges::all(Px(1.0 / zoom)),
             border_paint: fret_core::Paint::Solid(border_color).into(),
@@ -222,7 +222,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
             order: DrawOrder(71),
             origin: Point::new(text_x, text_y),
             text: blob,
-            paint: (self.style.context_menu_text).into(),
+            paint: (self.style.paint.context_menu_text).into(),
             outline: None,
             shadow: None,
         });
@@ -255,7 +255,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
             }
         };
 
-        let mut text_style = self.style.context_menu_text_style.clone();
+        let mut text_style = self.style.geometry.context_menu_text_style.clone();
         text_style.size = Px(text_style.size.0 / zoom);
         if let Some(lh) = text_style.line_height.as_mut() {
             lh.0 /= zoom;
@@ -305,13 +305,13 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                 }
             }
         } else {
-            self.style.context_menu_border
+            self.style.paint.context_menu_border
         };
 
         cx.scene.push(SceneOp::Quad {
             order: DrawOrder(69),
             rect,
-            background: fret_core::Paint::Solid(self.style.context_menu_background).into(),
+            background: fret_core::Paint::Solid(self.style.paint.context_menu_background).into(),
 
             border: Edges::all(Px(1.0 / zoom)),
             border_paint: fret_core::Paint::Solid(border_color).into(),
@@ -324,7 +324,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
             order: DrawOrder(70),
             origin: Point::new(text_x, text_y),
             text: blob,
-            paint: (self.style.context_menu_text).into(),
+            paint: (self.style.paint.context_menu_text).into(),
             outline: None,
             shadow: None,
         });
