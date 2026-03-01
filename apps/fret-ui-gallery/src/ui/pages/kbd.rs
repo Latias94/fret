@@ -55,4 +55,3 @@ pub(super) fn preview_kbd(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
 
     vec![body]
 }
-

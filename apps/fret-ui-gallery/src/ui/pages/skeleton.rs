@@ -27,7 +27,10 @@ pub(super) fn preview_skeleton(cx: &mut ElementContext<'_, App>) -> Vec<AnyEleme
         vec![
             DocSection::new("Demo", demo)
                 .description("Avatar row + card list.")
-                .code_rust_from_file_region(include_str!("../snippets/skeleton/demo.rs"), "example"),
+                .code_rust_from_file_region(
+                    include_str!("../snippets/skeleton/demo.rs"),
+                    "example",
+                ),
             DocSection::new("Avatar", avatar)
                 .description("Smaller avatar placeholder.")
                 .code_rust_from_file_region(
@@ -36,16 +39,28 @@ pub(super) fn preview_skeleton(cx: &mut ElementContext<'_, App>) -> Vec<AnyEleme
                 ),
             DocSection::new("Card", card)
                 .description("Skeletons inside a card layout.")
-                .code_rust_from_file_region(include_str!("../snippets/skeleton/card.rs"), "example"),
+                .code_rust_from_file_region(
+                    include_str!("../snippets/skeleton/card.rs"),
+                    "example",
+                ),
             DocSection::new("Text", text_section)
                 .description("Multiple lines with varying widths.")
-                .code_rust_from_file_region(include_str!("../snippets/skeleton/text.rs"), "example"),
+                .code_rust_from_file_region(
+                    include_str!("../snippets/skeleton/text.rs"),
+                    "example",
+                ),
             DocSection::new("Form", form)
                 .description("Form-like blocks.")
-                .code_rust_from_file_region(include_str!("../snippets/skeleton/form.rs"), "example"),
+                .code_rust_from_file_region(
+                    include_str!("../snippets/skeleton/form.rs"),
+                    "example",
+                ),
             DocSection::new("Table", table)
                 .description("Row skeletons.")
-                .code_rust_from_file_region(include_str!("../snippets/skeleton/table.rs"), "example"),
+                .code_rust_from_file_region(
+                    include_str!("../snippets/skeleton/table.rs"),
+                    "example",
+                ),
             DocSection::new("RTL", rtl)
                 .description("Direction provider should not break layout.")
                 .code_rust_from_file_region(include_str!("../snippets/skeleton/rtl.rs"), "example"),
@@ -55,4 +70,3 @@ pub(super) fn preview_skeleton(cx: &mut ElementContext<'_, App>) -> Vec<AnyEleme
 
     vec![body.test_id("ui-gallery-skeleton")]
 }
-

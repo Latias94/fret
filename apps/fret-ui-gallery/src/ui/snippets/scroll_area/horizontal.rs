@@ -47,7 +47,10 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
 
     let props = decl_style::container_props(
         cx.theme(),
-        ChromeRefinement::default().border_1().rounded(Radius::Md).p(Space::N4),
+        ChromeRefinement::default()
+            .border_1()
+            .rounded(Radius::Md)
+            .p(Space::N4),
         LayoutRefinement::default()
             .w_full()
             .max_w(Px(384.0))

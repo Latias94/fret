@@ -42,21 +42,33 @@ pub(super) fn preview_alert_dialog(
             DocSection::new("Demo", demo)
                 .description("Default-sized modal alert dialog.")
                 .test_id_prefix("ui-gallery-alert-dialog-demo-docsec")
-                .code_rust_from_file_region(include_str!("../snippets/alert_dialog/demo.rs"), "example")
+                .code_rust_from_file_region(
+                    include_str!("../snippets/alert_dialog/demo.rs"),
+                    "example",
+                )
                 .max_w(Px(760.0)),
             DocSection::new("Basic", basic)
                 .description("A minimal alert dialog with default buttons.")
-                .code_rust_from_file_region(include_str!("../snippets/alert_dialog/basic.rs"), "example")
+                .code_rust_from_file_region(
+                    include_str!("../snippets/alert_dialog/basic.rs"),
+                    "example",
+                )
                 .max_w(Px(760.0)),
             DocSection::new("Small", small)
                 .description("Compact dialog size for short copy.")
                 .test_id_prefix("ui-gallery-alert-dialog-small-docsec")
-                .code_rust_from_file_region(include_str!("../snippets/alert_dialog/small.rs"), "example")
+                .code_rust_from_file_region(
+                    include_str!("../snippets/alert_dialog/small.rs"),
+                    "example",
+                )
                 .max_w(Px(760.0)),
             DocSection::new("Media", media)
                 .description("Dialogs can optionally show a leading media/icon in the header.")
                 .test_id_prefix("ui-gallery-alert-dialog-media-docsec")
-                .code_rust_from_file_region(include_str!("../snippets/alert_dialog/media.rs"), "example")
+                .code_rust_from_file_region(
+                    include_str!("../snippets/alert_dialog/media.rs"),
+                    "example",
+                )
                 .max_w(Px(760.0)),
             DocSection::new("Small with Media", small_with_media)
                 .description("Small size + media variant.")
@@ -76,11 +88,17 @@ pub(super) fn preview_alert_dialog(
             DocSection::new("Parts", parts)
                 .description("Part surface adapters for shadcn-style call sites.")
                 .test_id_prefix("ui-gallery-alert-dialog-parts-docsec")
-                .code_rust_from_file_region(include_str!("../snippets/alert_dialog/parts.rs"), "example")
+                .code_rust_from_file_region(
+                    include_str!("../snippets/alert_dialog/parts.rs"),
+                    "example",
+                )
                 .max_w(Px(760.0)),
             DocSection::new("RTL", rtl)
                 .description("All shadcn components should work under an RTL direction provider.")
-                .code_rust_from_file_region(include_str!("../snippets/alert_dialog/rtl.rs"), "example")
+                .code_rust_from_file_region(
+                    include_str!("../snippets/alert_dialog/rtl.rs"),
+                    "example",
+                )
                 .max_w(Px(760.0)),
             DocSection::new("Usage", usage)
                 .title_test_id("ui-gallery-section-usage-title")
@@ -95,4 +113,3 @@ pub(super) fn preview_alert_dialog(
 
     vec![body]
 }
-

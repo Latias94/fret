@@ -58,4 +58,3 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
     )
 }
 // endregion: example
-

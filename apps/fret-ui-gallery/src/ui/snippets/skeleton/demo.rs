@@ -69,12 +69,19 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
                         .into_element(cx),
                 ])
                 .into_element(cx),
-                shadcn::CardContent::new(vec![shadcn::Skeleton::new()
-                    .refine_layout(LayoutRefinement::default().w_full().aspect_ratio(1.0))
-                    .into_element(cx)])
+                shadcn::CardContent::new(vec![
+                    shadcn::Skeleton::new()
+                        .refine_layout(LayoutRefinement::default().w_full().aspect_ratio(1.0))
+                        .into_element(cx),
+                ])
                 .into_element(cx),
             ])
-            .refine_layout(LayoutRefinement::default().w_full().max_w(Px(320.0)).min_w_0())
+            .refine_layout(
+                LayoutRefinement::default()
+                    .w_full()
+                    .max_w(Px(320.0))
+                    .min_w_0(),
+            )
             .into_element(cx)
             .test_id(format!("ui-gallery-skeleton-demo-card-{idx}"))
         };
@@ -97,4 +104,3 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
     )
 }
 // endregion: example
-

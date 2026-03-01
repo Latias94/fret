@@ -16,7 +16,12 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
                     vec![stack::hstack(
                         cx,
                         stack::HStackProps::default().gap(Space::N2).items_center(),
-                        |cx| vec![ui::text(cx, "Save Changes").into_element(cx), shadcn::Kbd::new("S").into_element(cx)],
+                        |cx| {
+                            vec![
+                                ui::text(cx, "Save Changes").into_element(cx),
+                                shadcn::Kbd::new("S").into_element(cx),
+                            ]
+                        },
                     )]
                 }),
             )
@@ -63,4 +68,3 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
         .expect("kbd tooltip provider should return one root")
 }
 // endregion: example
-
