@@ -60,6 +60,7 @@ Prefer nextest tests for “hard” behaviors that do not require real rendering
   - `workspace.pane.focus_tab_strip` focuses the active tab in the focused pane.
   - `workspace.pane.focus_tab_strip` works when focus starts outside the pane subtree (shell scope).
   - `workspace.pane.focus_content` restores the pre-tabstrip focus target after keyboard use of the strip.
+  - Default keybinding suggestion: `Ctrl+F6` (apps can override via keymap layering).
 - Roving keyboard navigation:
   - arrow keys move roving focus and activate correct tab.
 

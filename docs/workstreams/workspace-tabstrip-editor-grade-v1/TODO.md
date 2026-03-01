@@ -31,6 +31,7 @@ This TODO list is scoped to this workstream folder and is intended to keep the r
 - [ ] Close policies: close button vs middle click vs keyboard (policy-layer ownership documented).
 - [x] Focus restore after close when the tab strip is focused (unit test gate).
 - [x] Keyboard focus transfer into the tab strip (`workspace.pane.focus_tab_strip`) (unit test gate).
+- [x] Default keybinding for `workspace.pane.focus_tab_strip` (`Ctrl+F6`).
 - [x] Escape exits the focused tab strip (`workspace.pane.focus_content`) (unit test gate).
 - [x] Keyboard nav: baseline roving ArrowLeft/ArrowRight auto-activates (unit test gate).
 - [ ] Keyboard nav: decide MRU vs in-order for `workspace.tab.next/prev` and lock with gates.

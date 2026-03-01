@@ -478,7 +478,12 @@ pub fn register_workspace_commands(registry: &mut CommandRegistry) {
         CommandId::new(CMD_WORKSPACE_PANE_FOCUS_TAB_STRIP),
         CommandMeta::new("Focus Tab Strip")
             .with_category("Workspace")
-            .with_keywords(["focus", "tab", "tabstrip", "pane", "workspace"]),
+            .with_keywords(["focus", "tab", "tabstrip", "pane", "workspace"])
+            .with_default_keybindings([
+                win_ctrl(KeyCode::F6, false),
+                linux_ctrl(KeyCode::F6, false),
+                mac_ctrl(KeyCode::F6, false),
+            ]),
     );
 
     registry.register(

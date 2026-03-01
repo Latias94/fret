@@ -97,6 +97,7 @@ Recommendation (v1):
   the active tab in the pane's `WorkspaceTabStrip`.
 - Keep “exit tab strip back to editor surface” as an app-owned decision for now (depends on editor
   widget focus semantics).
+- Default keybinding: `Ctrl+F6` (can be overridden via keymap layering).
 
 Gate:
 - Unit: `ecosystem/fret-workspace/tests/pane_focus_tab_strip_command_focuses_active_tab.rs`.

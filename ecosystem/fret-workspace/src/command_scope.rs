@@ -175,6 +175,11 @@ impl WorkspaceCommandScope {
                             return false;
                         };
 
+                        let _ = host.models_mut().update(&focus_state_for_command, |st| {
+                            st.return_focus_by_window_and_pane
+                                .remove(&(acx.window, pane_id));
+                        });
+
                         host.request_focus(target);
                         host.request_redraw(acx.window);
                         true
