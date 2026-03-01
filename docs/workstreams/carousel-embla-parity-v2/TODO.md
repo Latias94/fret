@@ -51,8 +51,11 @@ Non-goals (v2):
     - `ecosystem/fret-ui-shadcn/src/carousel.rs` (reduced-motion disables embla engine + instant settle)
     - Gate: `ecosystem/fret-ui-shadcn/tests/carousel_reduced_motion.rs`
   - Note: promote to an ADR only if/when the physics semantics become a stable public contract.
-- [ ] CAR2-040 Workstream design: seamless loop engine semantics (if in scope).
+- [x] CAR2-040 Workstream design: seamless loop engine semantics.
   - Deliverable: `docs/workstreams/carousel-embla-parity-v2/contracts.md` (loop section) + gates
+  - Evidence:
+    - `docs/workstreams/carousel-embla-parity-v2/contracts.md` (Loop semantics)
+    - Gate: `tools/diag-scripts/ui-gallery/carousel/ui-gallery-carousel-loop-continuity-touch-gate.json`
   - Note: promote to an ADR only if/when we commit to a stable, long-lived loop contract.
 
 ---
@@ -227,13 +230,11 @@ Not implemented / not applicable (expected gaps for native retained UI):
 
 ## P4 — Focus semantics
 
-- [ ] CAR2-410 Implement Embla-like `focus` behavior:
-  - focusing a slide (or focus entering slide) scrolls it into view
-  - keyboard navigation remains predictable with roving focus policies
--  Evidence:
-  - `ecosystem/fret-ui-shadcn/src/carousel.rs` (`watch_focus`, Tab watcher)
-  - Gate: `ecosystem/fret-ui-shadcn/tests/carousel_focus_watch_tab_scrolls.rs`
 - [x] CAR2-410 Implement Embla-like `focus` behavior (MVP).
+  - Focusing a slide (or focus entering a slide) scrolls it into view.
+  - Evidence:
+    - `ecosystem/fret-ui-shadcn/src/carousel.rs` (`watch_focus`, Tab watcher)
+    - Gate: `ecosystem/fret-ui-shadcn/tests/carousel_focus_watch_tab_scrolls.rs`
 - [x] CAR2-420 A11y: role/roledescription + slide semantics parity audit (with known gaps).
   - Note: we currently stamp role/label/orientation, but do not yet have a portable
     `aria-roledescription` equivalent in core semantics.
@@ -250,6 +251,7 @@ Not implemented / not applicable (expected gaps for native retained UI):
   - loop wrapping invariants
   - slidesInView thresholds + margins
 - [ ] CAR2-520 Add `fretboard diag` scripts for:
-  - inertial swipe (touch + mouse)
-  - loop visual continuity
-  - focus-in triggers scroll-to-view
+  - [ ] inertial swipe (touch + mouse)
+  - [x] loop visual continuity
+    - Gate: `tools/diag-scripts/ui-gallery/carousel/ui-gallery-carousel-loop-continuity-touch-gate.json`
+  - [ ] focus-in triggers scroll-to-view
