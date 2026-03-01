@@ -391,6 +391,9 @@ impl ElementHostWidget {
             ElementInstance::EffectLayer(props) => {
                 self.measure_passthrough_box(cx, window, props.layout)
             }
+            ElementInstance::BackdropSourceGroup(props) => {
+                self.measure_passthrough_box(cx, window, props.layout)
+            }
             ElementInstance::MaskLayer(props) => {
                 self.measure_passthrough_box(cx, window, props.layout)
             }
