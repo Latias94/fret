@@ -398,12 +398,18 @@ fn render_section(cx: &mut ElementContext<'_, App>, section: DocSection) -> AnyE
         None => preview,
     };
 
+    let section_max_w = Px(max_w.0.max(Px(820.0).0));
     let section_body = stack::vstack(
         cx,
         stack::VStackProps::default()
             .gap(Space::N2)
             .items_start()
-            .layout(LayoutRefinement::default().w_full().min_w_0().max_w(max_w)),
+            .layout(
+                LayoutRefinement::default()
+                    .w_full()
+                    .min_w_0()
+                    .max_w(section_max_w),
+            ),
         move |cx| {
             let mut out: Vec<AnyElement> = Vec::with_capacity(3);
             let title_el = section_title(cx, title);
@@ -528,7 +534,7 @@ fn preview_code_tabs(
     code: DocCodeBlock,
 ) -> AnyElement {
     let code_shell = code_block_shell(cx, test_id_prefix, max_w, code);
-    let code_el = centered(cx, code_shell);
+    let code_el = code_shell;
 
     let base = shadcn::Tabs::uncontrolled(Some("preview"))
         // `shadcn/ui` styles `TabsContent` with `flex-1`. In the UI gallery docs scaffold, tab
@@ -575,6 +581,7 @@ fn code_block_shell(
         .show_language(true)
         .show_line_numbers(true)
         .max_height(Px(400.0))
+        .windowed_lines(true)
         .header_right([copy])
         .into_element(cx);
 

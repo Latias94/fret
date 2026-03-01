@@ -28,6 +28,7 @@ pub struct CodeBlock {
     show_line_numbers: bool,
     show_language: bool,
     max_height: Option<Px>,
+    windowed_lines: bool,
     header_left: Vec<AnyElement>,
     header_right: Vec<AnyElement>,
     test_id: Option<Arc<str>>,
@@ -43,6 +44,7 @@ impl std::fmt::Debug for CodeBlock {
             .field("show_line_numbers", &self.show_line_numbers)
             .field("show_language", &self.show_language)
             .field("max_height", &self.max_height)
+            .field("windowed_lines", &self.windowed_lines)
             .field("header_left_len", &self.header_left.len())
             .field("header_right_len", &self.header_right.len())
             .field("test_id", &self.test_id.as_deref())
@@ -60,6 +62,7 @@ impl CodeBlock {
             show_line_numbers: false,
             show_language: false,
             max_height: None,
+            windowed_lines: false,
             header_left: Vec::new(),
             header_right: Vec::new(),
             test_id: None,
@@ -93,6 +96,15 @@ impl CodeBlock {
 
     pub fn max_height(mut self, max_height: Px) -> Self {
         self.max_height = Some(Px(max_height.0.max(0.0)));
+        self
+    }
+
+    /// Enables a virtualized/windowed vertical list for long snippets.
+    ///
+    /// This keeps the UI gallery responsive for large examples while preserving shadcn-aligned
+    /// scrollbar + max-height behavior.
+    pub fn windowed_lines(mut self, enabled: bool) -> Self {
+        self.windowed_lines = enabled;
         self
     }
 
@@ -148,6 +160,10 @@ impl CodeBlock {
             scrollbar_x_on_hover: true,
             show_scrollbar_y: true,
             scrollbar_y_on_hover: true,
+        };
+        let options = fret_code_view::CodeBlockUiOptions {
+            windowed_lines: self.windowed_lines,
+            ..options
         };
 
         let code = self.code;
