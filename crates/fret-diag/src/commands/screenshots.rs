@@ -1,8 +1,9 @@
 use std::collections::HashSet;
 use std::path::{Path, PathBuf};
 
-use fret_diag_protocol::UiScriptResultV1;
 use serde_json::Value;
+
+use super::resolve;
 
 pub(crate) fn cmd_screenshots(
     rest: &[String],
@@ -26,7 +27,9 @@ pub(crate) fn cmd_screenshots(
     let src = crate::resolve_path(workspace_root, PathBuf::from(src));
     let resolved = resolve_screenshots_manifest_path(&src).or_else(|| {
         if src.is_dir() {
-            resolve_latest_bundle_dir_from_out_dir(src.as_path())
+            resolve::resolve_latest_bundle_dir_from_base_or_session_out_dir(src.as_path(), None)
+                .ok()
+                .map(|(bundle_dir, _session_id, _source)| bundle_dir)
                 .and_then(|bundle_dir| resolve_screenshots_manifest_path(&bundle_dir))
         } else {
             None
@@ -35,7 +38,7 @@ pub(crate) fn cmd_screenshots(
 
     let Some((screenshots_dir, manifest_path)) = resolved else {
         return Err(format!(
-            "unable to locate screenshots manifest for: {}\n  tried: <bundle_dir>/_root/screenshots/manifest.json, <bundle_dir_parent>/screenshots/<bundle_name>/manifest.json, direct manifest paths, and (for out dirs) <out_dir>/script.result.json (last_bundle_dir) or <out_dir>/latest.txt",
+            "unable to locate screenshots manifest for: {}\n  tried: <bundle_dir>/_root/screenshots/manifest.json, <bundle_dir_parent>/screenshots/<bundle_name>/manifest.json, direct manifest paths, and (for out dirs) <out_dir>/script.result.json (last_bundle_dir) or <out_dir>/latest.txt (and for base dirs: <base_dir>/sessions/<latest>/...)",
             src.display()
         ));
     };
@@ -110,26 +113,6 @@ fn resolve_screenshots_manifest_path(src: &Path) -> Option<(PathBuf, PathBuf)> {
     }
 
     None
-}
-
-fn resolve_latest_bundle_dir_from_out_dir(out_dir: &Path) -> Option<PathBuf> {
-    resolve_latest_bundle_dir_from_script_result(out_dir)
-        .or_else(|| crate::latest::latest_bundle_dir_path_opt(out_dir))
-}
-
-fn resolve_latest_bundle_dir_from_script_result(out_dir: &Path) -> Option<PathBuf> {
-    let bytes = std::fs::read(out_dir.join("script.result.json")).ok()?;
-    let parsed = serde_json::from_slice::<UiScriptResultV1>(&bytes).ok()?;
-    let Some(dir) = parsed.last_bundle_dir.as_deref() else {
-        return None;
-    };
-    let raw = dir.trim();
-    if raw.is_empty() {
-        return None;
-    }
-    let p = PathBuf::from(raw);
-    let out = if p.is_absolute() { p } else { out_dir.join(p) };
-    out.is_dir().then_some(out)
 }
 
 fn print_screenshots_report(manifest: &Value, screenshots_dir: &Path, manifest_path: &Path) {

@@ -6,6 +6,7 @@ use crate::run_artifacts::{write_run_id_bundle_json, write_run_id_script_result}
 use crate::util::{now_unix_ms, touch};
 
 use super::args::resolve_latest_bundle_dir_path;
+use super::resolve;
 
 pub(crate) fn cmd_poke(
     rest: &[String],
@@ -213,7 +214,9 @@ pub(crate) fn cmd_latest(
     if !rest.is_empty() {
         return Err(format!("unexpected arguments: {}", rest.join(" ")));
     }
-    let path = resolve_latest_bundle_dir_path(out_dir)?;
+    let path = resolve::resolve_latest_bundle_dir_from_base_or_session_out_dir(out_dir, None)
+        .map(|(p, _session_id, _source)| p)
+        .or_else(|_| resolve_latest_bundle_dir_path(out_dir))?;
     println!("{}", path.display());
     Ok(())
 }

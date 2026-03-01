@@ -56,6 +56,9 @@ This file is a check-list style tracker. Milestone framing lives in `milestones.
   - [x] Add a small `session.json` metadata file in the session root (best-effort).
   - [x] Add a safe discovery command (bounded output): `diag list sessions --dir <base_dir>`.
   - [x] Add a safe cleanup command (dry-run by default): `diag sessions clean --dir <base_dir> --keep <n> [--apply]`.
+- [x] Add a bounded resolver so humans/agents can avoid reading `latest.txt` manually (and avoid base-dir races):
+  - `diag resolve latest --dir <base_or_session_dir> [--within-session <id|latest>]`
+  - resolution prefers `<out_dir>/script.result.json:last_bundle_dir` and falls back to `<out_dir>/latest.txt`/scan.
 
 ## P1: Agent-native script ergonomics (ImGui-alignment outcomes)
 

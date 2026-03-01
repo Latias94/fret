@@ -13,6 +13,7 @@ pub(crate) mod index;
 pub(crate) mod inspect;
 pub(crate) mod pick;
 pub(crate) mod query;
+pub(crate) mod resolve;
 pub(crate) mod screenshots;
 pub(crate) mod script;
 pub(crate) mod session;

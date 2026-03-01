@@ -154,6 +154,13 @@ pub(crate) fn dispatch_simple(
         "screenshots" => {
             commands::screenshots::cmd_screenshots(rest, pack_after_run, workspace_root, stats_json)
         }
+        "resolve" => commands::resolve::cmd_resolve(
+            rest,
+            pack_after_run,
+            workspace_root,
+            resolved_out_dir,
+            stats_json,
+        ),
         "index" => commands::index::cmd_index(
             rest,
             pack_after_run,

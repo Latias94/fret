@@ -52,6 +52,9 @@ Implementation pointers (where the code lives today):
 4. Locate the most recent bundle directory:
 
    - `cargo run -p fretboard -- diag latest`
+   - If you are using sessions (`--session-auto`) or you have a base dir with multiple session dirs:
+     - `cargo run -p fretboard -- diag resolve latest --dir <base_or_session_dir>`
+     - Optional: `--within-session <id|latest>` to pin a specific session under `<base_dir>/sessions/`.
    - The primary bundle artifact is `bundle.schema2.json` (preferred) or `bundle.json` under that directory.
 
 By default bundles go under `target/fret-diag/<timestamp>/` and `target/fret-diag/latest.txt` is updated.
