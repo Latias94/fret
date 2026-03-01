@@ -1652,7 +1652,7 @@ mod tests {
     }
 
     #[test]
-    fn field_vertical_defaults_to_gap_2() {
+    fn field_vertical_defaults_to_gap_3() {
         let window = AppWindowId::default();
         let mut app = App::new();
         let bounds = Rect::new(
@@ -1661,7 +1661,7 @@ mod tests {
         );
 
         let theme = Theme::global(&app).snapshot();
-        let expected = MetricRef::space(Space::N2).resolve(&theme);
+        let expected = MetricRef::space(Space::N3).resolve(&theme);
 
         let element = fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
             Field::new([cx.text("Label"), cx.text("Control")])

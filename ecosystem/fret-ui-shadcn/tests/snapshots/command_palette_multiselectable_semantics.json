@@ -100,6 +100,75 @@
       "bounds": {
         "origin": {
           "x": 1.0,
+          "y": 1.0
+        },
+        "size": {
+          "w": 418.0,
+          "h": 108.0
+        }
+      },
+      "flags": {
+        "focused": false,
+        "captured": false,
+        "disabled": false,
+        "selected": false,
+        "expanded": false,
+        "checked": null
+      }
+    },
+    {
+      "role": "Generic",
+      "label": null,
+      "value": null,
+      "bounds": {
+        "origin": {
+          "x": 1.0,
+          "y": 1.0
+        },
+        "size": {
+          "w": 418.0,
+          "h": 108.0
+        }
+      },
+      "flags": {
+        "focused": false,
+        "captured": false,
+        "disabled": false,
+        "selected": false,
+        "expanded": false,
+        "checked": null
+      }
+    },
+    {
+      "role": "Generic",
+      "label": null,
+      "value": null,
+      "bounds": {
+        "origin": {
+          "x": 1.0,
+          "y": 37.0
+        },
+        "size": {
+          "w": 418.0,
+          "h": 72.0
+        }
+      },
+      "flags": {
+        "focused": false,
+        "captured": false,
+        "disabled": false,
+        "selected": false,
+        "expanded": false,
+        "checked": null
+      }
+    },
+    {
+      "role": "Generic",
+      "label": null,
+      "value": null,
+      "bounds": {
+        "origin": {
+          "x": 1.0,
           "y": 37.0
         },
         "size": {
@@ -150,7 +219,7 @@
         },
         "size": {
           "w": 410.0,
-          "h": 32.0
+          "h": 22.0
         }
       },
       "flags": {
@@ -173,7 +242,7 @@
         },
         "size": {
           "w": 410.0,
-          "h": 32.0
+          "h": 22.0
         }
       },
       "flags": {
@@ -285,6 +354,52 @@
         "origin": {
           "x": 13.0,
           "y": 47.0
+        },
+        "size": {
+          "w": 394.0,
+          "h": 10.0
+        }
+      },
+      "flags": {
+        "focused": false,
+        "captured": false,
+        "disabled": false,
+        "selected": false,
+        "expanded": false,
+        "checked": null
+      }
+    },
+    {
+      "role": "Generic",
+      "label": null,
+      "value": null,
+      "bounds": {
+        "origin": {
+          "x": 13.0,
+          "y": 47.0
+        },
+        "size": {
+          "w": 394.0,
+          "h": 10.0
+        }
+      },
+      "flags": {
+        "focused": false,
+        "captured": false,
+        "disabled": false,
+        "selected": false,
+        "expanded": false,
+        "checked": null
+      }
+    },
+    {
+      "role": "Generic",
+      "label": null,
+      "value": null,
+      "bounds": {
+        "origin": {
+          "x": 13.0,
+          "y": 79.0
         },
         "size": {
           "w": 394.0,
@@ -451,6 +566,29 @@
         "size": {
           "w": 394.0,
           "h": 10.0
+        }
+      },
+      "flags": {
+        "focused": false,
+        "captured": false,
+        "disabled": false,
+        "selected": false,
+        "expanded": false,
+        "checked": null
+      }
+    },
+    {
+      "role": "Viewport",
+      "label": null,
+      "value": null,
+      "bounds": {
+        "origin": {
+          "x": 1.0,
+          "y": 37.0
+        },
+        "size": {
+          "w": 418.0,
+          "h": 72.0
         }
       },
       "flags": {
