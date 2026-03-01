@@ -191,6 +191,7 @@ impl<H: fret_ui::UiHost> Widget<H> for DockingArbitrationHarnessRoot {
                 split_handle_hit_thickness: Px,
                 panel: &PanelKey,
             ) -> Option<Rect> {
+                #[allow(unreachable_patterns)]
                 match graph.node(node)? {
                     DockNode::Tabs { tabs, .. } => tabs.iter().any(|p| p == panel).then_some(rect),
                     DockNode::Floating { child } => tabs_rect_for_panel(
@@ -953,6 +954,25 @@ impl DockPanelRegistry<App> for DockingArbitrationDockPanelRegistry {
                                 .layout(LayoutRefinement::default().w_full()),
                             |cx| {
                                 vec![
+                                    cx.keyed("dock-arb-action-close-left", |cx| {
+                                        shadcn::Button::new("Close viewport left (panel)")
+                                            .variant(shadcn::ButtonVariant::Outline)
+                                            .test_id("dock-arb-close-viewport-left")
+                                            .on_activate(Arc::new(
+                                                move |host, action_cx, _reason| {
+                                                    host.push_effect(Effect::Dock(
+                                                        fret_core::DockOp::ClosePanel {
+                                                            window: action_cx.window,
+                                                            panel: fret_core::PanelKey::new(
+                                                                "demo.viewport.left",
+                                                            ),
+                                                        },
+                                                    ));
+                                                    host.request_redraw(action_cx.window);
+                                                },
+                                            ))
+                                            .into_element(cx)
+                                    }),
                                     cx.keyed("dock-arb-action-drop-mask", |cx| {
                                         shadcn::Button::new("Toggle drop mask (left edge)")
                                             .variant(shadcn::ButtonVariant::Outline)
