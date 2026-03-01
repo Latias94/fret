@@ -218,6 +218,29 @@
       ]
     },
     {
+      "id": "cookbook-text-input-basics-submit-and-clear",
+      "path": "tools/diag-scripts/cookbook/text-input-basics/cookbook-text-input-basics-submit-and-clear.json",
+      "required_capabilities": [
+        "diag.script_v2",
+        "diag.screenshot_png"
+      ],
+      "suite_memberships": [
+        "cookbook-text-input-basics"
+      ],
+      "tags": [
+        "commands",
+        "cookbook",
+        "input",
+        "smoke",
+        "text_input"
+      ],
+      "target_hints": [
+        "Types into the input and asserts length via numeric semantics.",
+        "Presses Enter to submit and asserts the submit counter increments.",
+        "Presses Escape to clear and asserts the length returns to 0."
+      ]
+    },
+    {
       "id": "docking-arbitration-demo-default-layout-signature",
       "path": "tools/diag-scripts/docking/arbitration/docking-arbitration-demo-default-layout-signature.json",
       "required_capabilities": [
