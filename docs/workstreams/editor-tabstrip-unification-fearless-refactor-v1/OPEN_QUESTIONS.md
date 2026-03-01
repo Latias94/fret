@@ -17,7 +17,7 @@ Dockview has explicit tests for “overflow dropdown with close buttons”.
 
 Recommendation:
 - Yes for editor-grade UX, but implement as policy in docking/workspace layers, not headless.
-- Docking is aligned (overflow dropdown rows expose a close affordance; close does not activate).
+- Docking + workspace are aligned (overflow dropdown rows expose a close affordance; close does not activate).
 
 ## Q3: Do we need pinned tabs / multi-row?
 
@@ -57,3 +57,18 @@ Options:
 Recommendation:
 - Put the **TabStripController** in `fret-ui-kit` (option 2).
 - Keep pure geometry/helpers in `fret-ui-headless` (e.g. surface classification, canonical end-drop).
+
+## Q7: How should dropdown menu rows support trailing “action slots” (close, pin, etc.)?
+
+Observed constraint:
+- `DropdownMenuItem` is a row-level `Pressable`; nested pressables in `trailing(...)` do not
+  currently behave as independent hit targets in all scenarios.
+
+Current implementation:
+- `fret-ui-shadcn` supports a trailing action command + hit region on `DropdownMenuItem`.
+  - Evidence: `ecosystem/fret-ui-shadcn/src/dropdown_menu.rs`
+
+Open questions:
+- Should trailing actions fire on pointer-down (current) or pointer-up (click/activate)?
+- Do we need keyboard-accessible trailing actions (separate focus target / APG-aligned semantics)?
+- Should this stay a `fret-ui-shadcn`-only capability, or be generalized in a headless menu primitive?

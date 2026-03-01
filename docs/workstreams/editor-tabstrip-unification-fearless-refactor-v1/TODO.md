@@ -11,7 +11,7 @@ This workstream is intentionally scoped to “editor-grade tab UX”:
 
 ## Scope
 
-- [ ] Write a cross-reference parity matrix:
+- [x] Write a cross-reference parity matrix:
   - `repo-ref/zed` (editor pane tab bar, pinned/unpinned, scroll handle)
   - `repo-ref/dockview` (overflow list membership + dropdown behaviors)
   - Fret: `ecosystem/fret-workspace` + `ecosystem/fret-docking`
@@ -21,11 +21,15 @@ This workstream is intentionally scoped to “editor-grade tab UX”:
 - [ ] Decide overflow dropdown policy:
   - list overflowed-only vs overflowed+active (current docking policy)
   - include close buttons in overflow list (dockview has tests for this)
+- [x] Enable overflow dropdown close parity (workspace + docking):
+  - Close affordance is visible in overflow menu rows.
+  - Clicking close dispatches close without implicitly activating.
+  - Evidence: `ecosystem/fret-ui-shadcn/src/dropdown_menu.rs` + workspace/docking tests.
 - [ ] Add diag script coverage:
   - overflow dropdown open/close
   - select tab from dropdown keeps active visible
   - drag end-drop on overflow header space resolves canonical insert_index
-- [ ] Add minimal unit tests where headless helpers are used by adapters.
+- [x] Add minimal unit tests where headless helpers are used by adapters.
 
 ## Non-goals
 

@@ -45,10 +45,10 @@ Legend:
 |---|---:|---:|---:|---:|---|---|
 | Tab strip overflow mechanism | ✅ scrollable strip | ✅ (with dropdown control) | ✅ (scroll + overflow control) | ✅ (scroll + overflow control) | `fret-ui-headless` (mechanism) | Ensure both use the same “viewport + margin” overflow membership helper. |
 | Overflow item membership | N/A (no dropdown) | ✅ overflowed-only | ✅ overflowed-only or overflowed+active (policy) | ✅ overflowed+active (policy) | Adapter policy | Keep policy per adapter; record default in `OPEN_QUESTIONS.md`. |
-| Overflow dropdown close button visible | N/A | ✅ (explicit test) | ⚠️ TBD | ✅ | Adapter policy | Docking has unit coverage; workspace needs parity decision + gate. |
-| Overflow close does **not** activate | N/A | ✅ (explicit test) | ⚠️ TBD | ✅ | Adapter policy | Docking: `dock::tests::dock_space::overflow_menu_close_does_not_activate_tab`. |
+| Overflow dropdown close button visible | N/A | ✅ (explicit test) | ✅ | ✅ | Adapter policy | Workspace gate: `ecosystem/fret-workspace/tests/tab_strip_overflow_menu_lists_overflowed_tabs.rs`. |
+| Overflow close does **not** activate | N/A | ✅ (explicit test) | ✅ | ✅ | Adapter policy | Docking gate: `dock::tests::dock_space::overflow_menu_close_does_not_activate_tab`. Workspace gate: `ecosystem/fret-workspace/tests/tab_strip_overflow_menu_lists_overflowed_tabs.rs`. |
 | Selecting overflow item activates + ensures visible | N/A | ✅ | ⚠️ likely | ✅ | Adapter policy + shared helper | Docking already ensures visible on selection; workspace should match. |
-| Close vs activate hit-test arbitration | ✅ (tab-specific) | ✅ | ⚠️ differs | ✅ (explicit in overflow menu) | Adapter policy | Explicit priority ordering must be documented (see Q5). |
+| Close vs activate hit-test arbitration | ✅ (tab-specific) | ✅ | ✅ (overflow menu) | ✅ (overflow menu) | Adapter policy | Uses `fret-ui-shadcn` dropdown item trailing action hook: `ecosystem/fret-ui-shadcn/src/dropdown_menu.rs`. Priority ordering still needs to be documented (see Q5). |
 | Overflow control excluded from drop surfaces | ✅ (no dedicated control) | ✅ | ✅ | ✅ | `fret-ui-headless` | Both already treat overflow control as non-drop surface. |
 | Header space treated as end-drop surface | ✅ | ✅ | ✅ | ✅ | `fret-ui-headless` | Canonical end-drop insert index must be deterministic across both. |
 | Tab halves decide insert-index on drop | ✅ | ✅ | ✅ | ✅ | `fret-ui-headless` | Existing docking tests; workspace needs diag or unit gate. |
@@ -68,4 +68,3 @@ Legend:
 2) Introduce a shared **TabStripController** module in `fret-ui-kit` (policy toolbox), so that:
    - workspace and docking can share close/activate arbitration rules
    - tests/diag scripts can reference the same intent vocabulary
-

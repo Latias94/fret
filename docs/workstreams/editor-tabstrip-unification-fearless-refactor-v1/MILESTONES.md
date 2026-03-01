@@ -18,6 +18,12 @@ Deliverables:
 - Selecting an item scrolls the strip so the tab becomes visible.
 - Overflow dropdown close affordances (if enabled) do not implicitly activate tabs.
 
+Status (implemented):
+- Overflow dropdown close affordance parity for docking + workspace:
+  - Docking: `dock::tests::dock_space::overflow_menu_close_does_not_activate_tab`
+  - Workspace: `ecosystem/fret-workspace/tests/tab_strip_overflow_menu_lists_overflowed_tabs.rs`
+  - Shared menu-row support: `ecosystem/fret-ui-shadcn/src/dropdown_menu.rs`
+
 Gates:
 - `cargo nextest run -p fret-docking -p fret-workspace`
 - Add a `fretboard diag` script that opens overflow dropdown, selects a tab, and records evidence.
