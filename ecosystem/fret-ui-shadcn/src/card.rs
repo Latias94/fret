@@ -149,6 +149,11 @@ impl Card {
                 CardSize::Sm => Space::N4,
             };
 
+            let fg = {
+                let theme = Theme::global(&*cx.app);
+                theme.color_token("card-foreground")
+            };
+
             let props = {
                 let theme = Theme::global(&*cx.app);
                 let chrome = card_chrome(theme, size).merge(self.chrome);
@@ -163,14 +168,16 @@ impl Card {
 
             // Cards behave like block containers in shadcn/ui examples: their sections are expected to
             // stretch to the card width unless explicitly constrained.
-            shadcn_layout::container_vstack(
-                cx,
-                props,
-                stack::VStackProps::default()
-                    .gap(gap)
-                    .layout(LayoutRefinement::default().w_full()),
-                children,
-            )
+            cx.foreground_scope(fg, |cx| {
+                [shadcn_layout::container_vstack(
+                    cx,
+                    props,
+                    stack::VStackProps::default()
+                        .gap(gap)
+                        .layout(LayoutRefinement::default().w_full()),
+                    children,
+                )]
+            })
         })
     }
 }
@@ -419,7 +426,10 @@ mod tests {
 
     use fret_app::App;
     use fret_core::{AppWindowId, Point, Rect, Size};
-    use fret_ui::element::{ContainerProps, Length, Overflow, SemanticsProps};
+    use fret_ui::element::{
+        ColumnProps, ContainerProps, CrossAlign, ForegroundScopeProps, Length, Overflow,
+        SemanticsProps,
+    };
     use fret_ui::elements::GlobalElementId;
     use fret_ui_kit::MetricRef;
 
@@ -472,14 +482,29 @@ mod tests {
 
         fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
             let theme = Theme::global(&*cx.app);
+            let fg = theme.color_token("card-foreground");
             let py = fret_ui_kit::MetricRef::space(Space::N6).resolve(theme);
             let el = Card::new([cx.text("body")]).into_element(cx);
 
+            let ElementKind::ForegroundScope(ForegroundScopeProps { foreground, .. }) = &el.kind
+            else {
+                panic!("expected Card root to install a ForegroundScope wrapper");
+            };
+            assert_eq!(
+                *foreground,
+                Some(fg),
+                "expected Card to install `text-card-foreground` behavior via ForegroundScope"
+            );
+
+            let card = el
+                .children
+                .first()
+                .unwrap_or_else(|| panic!("expected ForegroundScope wrapper to have one child"));
             let ElementKind::Container(ContainerProps {
                 layout, padding, ..
-            }) = &el.kind
+            }) = &card.kind
             else {
-                panic!("expected Card root to be a container element");
+                panic!("expected Card surface to be a container element");
             };
 
             assert_eq!(layout.overflow, Overflow::Visible);
@@ -517,6 +542,36 @@ mod tests {
                 ),
                 "expected CardContent horizontal padding to be px-only and positive, got {:?}",
                 padding.left
+            );
+        });
+    }
+
+    #[test]
+    fn card_content_does_not_stretch_children_by_default() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(400.0), Px(300.0)),
+        );
+
+        fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            let button = crate::Button::new("Inline").into_element(cx);
+            let el = CardContent::new([button]).into_element(cx);
+
+            let child = el
+                .children
+                .first()
+                .unwrap_or_else(|| panic!("expected CardContent to have a single vstack child"));
+
+            let ElementKind::Column(ColumnProps { align, .. }) = &child.kind else {
+                panic!("expected CardContent child to be a column element");
+            };
+
+            assert_eq!(
+                *align,
+                CrossAlign::Start,
+                "expected CardContent to avoid cross-axis stretch so inline-sized children (e.g. buttons) do not fill the card width"
             );
         });
     }
@@ -849,7 +904,12 @@ impl CardContent {
             shadcn_layout::container_vstack(
                 cx,
                 props,
-                stack::VStackProps::default().layout(LayoutRefinement::default().w_full()),
+                // Upstream shadcn/ui `CardContent` is a plain `div` (`px-6`) rather than a flex
+                // container, so avoid the default `items: stretch` behavior that would expand
+                // inline-sized children (e.g. buttons) to fill the card width.
+                stack::VStackProps::default()
+                    .items_start()
+                    .layout(LayoutRefinement::default().w_full()),
                 children,
             )
         })
@@ -1038,7 +1098,6 @@ impl CardTitle {
             .text_size_px(px)
             .line_height_px(line_height)
             .font_semibold()
-            .letter_spacing_em(-0.02)
             .wrap(TextWrap::Word)
             .text_color(ColorRef::Color(fg))
             .into_element(cx)
