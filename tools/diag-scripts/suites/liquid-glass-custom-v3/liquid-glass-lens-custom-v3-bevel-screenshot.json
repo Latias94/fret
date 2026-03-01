@@ -1,6 +1,9 @@
 {
   "schema_version": 2,
   "meta": {
+    "env_defaults": {
+      "FRET_DIAG_RENDERER_PERF": 1
+    },
     "notes": [
       "Liquid glass CustomV3 bevel lighting screenshot.",
       "Opens the inspector and sets bevel sliders to deterministic values."

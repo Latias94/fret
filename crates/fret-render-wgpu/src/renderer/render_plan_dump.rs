@@ -868,7 +868,13 @@ struct JsonDumpCustomEffectSummary {
     #[serde(skip_serializing_if = "Option::is_none")]
     pyramid_requested: Option<usize>,
     #[serde(skip_serializing_if = "Option::is_none")]
+    pyramid_applied_levels_ge2: Option<usize>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pyramid_degraded_to_one: Option<usize>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pyramid_levels_max: Option<u32>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pyramid_build_scissor_some: Option<usize>,
 }
 
 #[derive(Debug, serde::Serialize)]
@@ -902,7 +908,10 @@ fn summarize_custom_effects(passes: &[RenderPlanPass]) -> Vec<JsonDumpCustomEffe
         raw_distinct: usize,
         raw_aliased: usize,
         pyramid_requested: usize,
+        pyramid_applied_levels_ge2: usize,
         pyramid_degraded_to_one: usize,
+        pyramid_levels_max: u32,
+        pyramid_build_scissor_some: usize,
     }
 
     let mut by_effect: HashMap<(fret_core::EffectId, Abi), Acc> = HashMap::new();
@@ -946,6 +955,12 @@ fn summarize_custom_effects(passes: &[RenderPlanPass]) -> Vec<JsonDumpCustomEffe
                     acc.pyramid_requested += 1;
                     if p.pyramid_levels <= 1 {
                         acc.pyramid_degraded_to_one += 1;
+                    } else {
+                        acc.pyramid_applied_levels_ge2 += 1;
+                        acc.pyramid_levels_max = acc.pyramid_levels_max.max(p.pyramid_levels);
+                        if p.pyramid_build_scissor.is_some() {
+                            acc.pyramid_build_scissor_some += 1;
+                        }
                     }
                 }
             }
@@ -973,7 +988,11 @@ fn summarize_custom_effects(passes: &[RenderPlanPass]) -> Vec<JsonDumpCustomEffe
             raw_distinct: (abi == Abi::V3).then_some(acc.raw_distinct),
             raw_aliased: (abi == Abi::V3).then_some(acc.raw_aliased),
             pyramid_requested: (abi == Abi::V3).then_some(acc.pyramid_requested),
+            pyramid_applied_levels_ge2: (abi == Abi::V3).then_some(acc.pyramid_applied_levels_ge2),
             pyramid_degraded_to_one: (abi == Abi::V3).then_some(acc.pyramid_degraded_to_one),
+            pyramid_levels_max: (abi == Abi::V3 && acc.pyramid_levels_max > 0)
+                .then_some(acc.pyramid_levels_max),
+            pyramid_build_scissor_some: (abi == Abi::V3).then_some(acc.pyramid_build_scissor_some),
         })
         .collect();
 

@@ -503,6 +503,43 @@ pub struct UiFrameStatsV1 {
     pub renderer_material_unknown_ids: u64,
     #[serde(default)]
     pub renderer_material_degraded_due_to_budget: u64,
+
+    // Renderer effect degradation counters (best-effort). These are only populated when
+    // `FRET_DIAG_RENDERER_PERF=1` and the runner records perf samples.
+    #[serde(default)]
+    pub renderer_custom_effect_v3_sources_raw_requested: u64,
+    #[serde(default)]
+    pub renderer_custom_effect_v3_sources_raw_distinct: u64,
+    #[serde(default)]
+    pub renderer_custom_effect_v3_sources_raw_aliased_to_src: u64,
+    #[serde(default)]
+    pub renderer_custom_effect_v3_sources_pyramid_requested: u64,
+    #[serde(default)]
+    pub renderer_custom_effect_v3_sources_pyramid_applied_levels_ge2: u64,
+    #[serde(default)]
+    pub renderer_custom_effect_v3_sources_pyramid_degraded_to_one_budget_zero: u64,
+    #[serde(default)]
+    pub renderer_custom_effect_v3_sources_pyramid_degraded_to_one_budget_insufficient: u64,
+    #[serde(default)]
+    pub renderer_backdrop_source_groups_requested: u64,
+    #[serde(default)]
+    pub renderer_backdrop_source_groups_applied_raw: u64,
+    #[serde(default)]
+    pub renderer_backdrop_source_groups_raw_degraded_budget_zero: u64,
+    #[serde(default)]
+    pub renderer_backdrop_source_groups_raw_degraded_budget_insufficient: u64,
+    #[serde(default)]
+    pub renderer_backdrop_source_groups_raw_degraded_target_exhausted: u64,
+    #[serde(default)]
+    pub renderer_backdrop_source_groups_pyramid_requested: u64,
+    #[serde(default)]
+    pub renderer_backdrop_source_groups_pyramid_applied_levels_ge2: u64,
+    #[serde(default)]
+    pub renderer_backdrop_source_groups_pyramid_degraded_to_one_budget_zero: u64,
+    #[serde(default)]
+    pub renderer_backdrop_source_groups_pyramid_degraded_to_one_budget_insufficient: u64,
+    #[serde(default)]
+    pub renderer_backdrop_source_groups_pyramid_skipped_raw_unavailable: u64,
 }
 
 impl UiFrameStatsV1 {
@@ -823,6 +860,23 @@ impl UiFrameStatsV1 {
             renderer_material_distinct: 0,
             renderer_material_unknown_ids: 0,
             renderer_material_degraded_due_to_budget: 0,
+            renderer_custom_effect_v3_sources_raw_requested: 0,
+            renderer_custom_effect_v3_sources_raw_distinct: 0,
+            renderer_custom_effect_v3_sources_raw_aliased_to_src: 0,
+            renderer_custom_effect_v3_sources_pyramid_requested: 0,
+            renderer_custom_effect_v3_sources_pyramid_applied_levels_ge2: 0,
+            renderer_custom_effect_v3_sources_pyramid_degraded_to_one_budget_zero: 0,
+            renderer_custom_effect_v3_sources_pyramid_degraded_to_one_budget_insufficient: 0,
+            renderer_backdrop_source_groups_requested: 0,
+            renderer_backdrop_source_groups_applied_raw: 0,
+            renderer_backdrop_source_groups_raw_degraded_budget_zero: 0,
+            renderer_backdrop_source_groups_raw_degraded_budget_insufficient: 0,
+            renderer_backdrop_source_groups_raw_degraded_target_exhausted: 0,
+            renderer_backdrop_source_groups_pyramid_requested: 0,
+            renderer_backdrop_source_groups_pyramid_applied_levels_ge2: 0,
+            renderer_backdrop_source_groups_pyramid_degraded_to_one_budget_zero: 0,
+            renderer_backdrop_source_groups_pyramid_degraded_to_one_budget_insufficient: 0,
+            renderer_backdrop_source_groups_pyramid_skipped_raw_unavailable: 0,
         };
 
         if let Some(sample) = renderer_perf {
@@ -930,6 +984,43 @@ impl UiFrameStatsV1 {
             out.renderer_material_unknown_ids = sample.perf.material_unknown_ids;
             out.renderer_material_degraded_due_to_budget =
                 sample.perf.material_degraded_due_to_budget;
+
+            let effects = sample.perf.effect_degradations;
+            out.renderer_custom_effect_v3_sources_raw_requested =
+                effects.custom_effect_v3_sources.raw_requested;
+            out.renderer_custom_effect_v3_sources_raw_distinct =
+                effects.custom_effect_v3_sources.raw_distinct;
+            out.renderer_custom_effect_v3_sources_raw_aliased_to_src =
+                effects.custom_effect_v3_sources.raw_aliased_to_src;
+            out.renderer_custom_effect_v3_sources_pyramid_requested =
+                effects.custom_effect_v3_sources.pyramid_requested;
+            out.renderer_custom_effect_v3_sources_pyramid_applied_levels_ge2 =
+                effects.custom_effect_v3_sources.pyramid_applied_levels_ge2;
+            out.renderer_custom_effect_v3_sources_pyramid_degraded_to_one_budget_zero =
+                effects.custom_effect_v3_sources.pyramid_degraded_to_one_budget_zero;
+            out.renderer_custom_effect_v3_sources_pyramid_degraded_to_one_budget_insufficient =
+                effects
+                    .custom_effect_v3_sources
+                    .pyramid_degraded_to_one_budget_insufficient;
+
+            out.renderer_backdrop_source_groups_requested = effects.backdrop_source_groups.requested;
+            out.renderer_backdrop_source_groups_applied_raw = effects.backdrop_source_groups.applied_raw;
+            out.renderer_backdrop_source_groups_raw_degraded_budget_zero =
+                effects.backdrop_source_groups.raw_degraded_budget_zero;
+            out.renderer_backdrop_source_groups_raw_degraded_budget_insufficient =
+                effects.backdrop_source_groups.raw_degraded_budget_insufficient;
+            out.renderer_backdrop_source_groups_raw_degraded_target_exhausted =
+                effects.backdrop_source_groups.raw_degraded_target_exhausted;
+            out.renderer_backdrop_source_groups_pyramid_requested =
+                effects.backdrop_source_groups.pyramid_requested;
+            out.renderer_backdrop_source_groups_pyramid_applied_levels_ge2 =
+                effects.backdrop_source_groups.pyramid_applied_levels_ge2;
+            out.renderer_backdrop_source_groups_pyramid_degraded_to_one_budget_zero =
+                effects.backdrop_source_groups.pyramid_degraded_to_one_budget_zero;
+            out.renderer_backdrop_source_groups_pyramid_degraded_to_one_budget_insufficient =
+                effects.backdrop_source_groups.pyramid_degraded_to_one_budget_insufficient;
+            out.renderer_backdrop_source_groups_pyramid_skipped_raw_unavailable =
+                effects.backdrop_source_groups.pyramid_skipped_raw_unavailable;
         }
 
         out

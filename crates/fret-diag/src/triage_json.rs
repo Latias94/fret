@@ -368,6 +368,138 @@ pub(crate) fn triage_json_from_stats(
             }));
         }
 
+        // renderer.custom_effect_v3_sources_degraded
+        //
+        // These are correctness/ceiling signals: for liquid-glass-like looks, losing `src_raw` or
+        // degrading the pyramid to 1 level can materially change the appearance.
+        let sum_v3_raw_aliased = stats_json
+            .get("sum")
+            .and_then(|v| v.get("renderer_custom_effect_v3_sources_raw_aliased_to_src"))
+            .and_then(|v| v.as_u64())
+            .unwrap_or(0);
+        let sum_v3_pyr_degraded = stats_json
+            .get("sum")
+            .and_then(|v| {
+                v.get("renderer_custom_effect_v3_sources_pyramid_degraded_to_one_budget_zero")
+            })
+            .and_then(|v| v.as_u64())
+            .unwrap_or(0)
+            .saturating_add(
+                stats_json
+                    .get("sum")
+                    .and_then(|v| {
+                        v.get(
+                            "renderer_custom_effect_v3_sources_pyramid_degraded_to_one_budget_insufficient",
+                        )
+                    })
+                    .and_then(|v| v.as_u64())
+                    .unwrap_or(0),
+            );
+
+        let worst_v3_pyr_degraded = worst
+            .renderer_custom_effect_v3_sources_pyramid_degraded_to_one_budget_zero
+            .saturating_add(
+                worst.renderer_custom_effect_v3_sources_pyramid_degraded_to_one_budget_insufficient,
+            );
+        if worst_v3_pyr_degraded > 0 {
+            out.push(json!({
+                "code": "renderer.custom_effect_v3_pyramid_degraded_to_one",
+                "severity": "warn",
+                "message": "CustomEffectV3 pyramid was degraded to 1 level in the worst frame (budget pressure).",
+                "evidence": {
+                    "custom_effect_v3_sources_pyramid_requested": worst.renderer_custom_effect_v3_sources_pyramid_requested,
+                    "custom_effect_v3_sources_pyramid_applied_levels_ge2": worst.renderer_custom_effect_v3_sources_pyramid_applied_levels_ge2,
+                    "custom_effect_v3_sources_pyramid_degraded_to_one_budget_zero": worst.renderer_custom_effect_v3_sources_pyramid_degraded_to_one_budget_zero,
+                    "custom_effect_v3_sources_pyramid_degraded_to_one_budget_insufficient": worst.renderer_custom_effect_v3_sources_pyramid_degraded_to_one_budget_insufficient,
+                    "renderer_intermediate_budget_bytes": worst.renderer_intermediate_budget_bytes,
+                    "renderer_intermediate_peak_in_use_bytes": worst.renderer_intermediate_peak_in_use_bytes,
+                    "sum_custom_effect_v3_sources_pyramid_degraded_to_one": sum_v3_pyr_degraded,
+                }
+            }));
+        }
+
+        if worst.renderer_custom_effect_v3_sources_raw_requested > 0
+            && worst.renderer_custom_effect_v3_sources_raw_aliased_to_src > 0
+        {
+            out.push(json!({
+                "code": "renderer.custom_effect_v3_raw_aliased_to_src",
+                "severity": "info",
+                "message": "CustomEffectV3 `src_raw` was aliased to `src` in the worst frame (raw snapshot unavailable).",
+                "evidence": {
+                    "custom_effect_v3_sources_raw_requested": worst.renderer_custom_effect_v3_sources_raw_requested,
+                    "custom_effect_v3_sources_raw_distinct": worst.renderer_custom_effect_v3_sources_raw_distinct,
+                    "custom_effect_v3_sources_raw_aliased_to_src": worst.renderer_custom_effect_v3_sources_raw_aliased_to_src,
+                    "sum_custom_effect_v3_sources_raw_aliased_to_src": sum_v3_raw_aliased,
+                }
+            }));
+        }
+
+        // renderer.backdrop_source_group_degraded
+        let sum_bsg_raw_degraded = stats_json
+            .get("sum")
+            .and_then(|v| v.get("renderer_backdrop_source_groups_raw_degraded_budget_zero"))
+            .and_then(|v| v.as_u64())
+            .unwrap_or(0)
+            .saturating_add(
+                stats_json
+                    .get("sum")
+                    .and_then(|v| {
+                        v.get("renderer_backdrop_source_groups_raw_degraded_budget_insufficient")
+                    })
+                    .and_then(|v| v.as_u64())
+                    .unwrap_or(0),
+            )
+            .saturating_add(
+                stats_json
+                    .get("sum")
+                    .and_then(|v| {
+                        v.get("renderer_backdrop_source_groups_raw_degraded_target_exhausted")
+                    })
+                    .and_then(|v| v.as_u64())
+                    .unwrap_or(0),
+            );
+        let worst_bsg_raw_degraded = worst
+            .renderer_backdrop_source_groups_raw_degraded_budget_zero
+            .saturating_add(worst.renderer_backdrop_source_groups_raw_degraded_budget_insufficient)
+            .saturating_add(worst.renderer_backdrop_source_groups_raw_degraded_target_exhausted);
+        if worst.renderer_backdrop_source_groups_requested > 0 && worst_bsg_raw_degraded > 0 {
+            out.push(json!({
+                "code": "renderer.backdrop_source_groups_raw_degraded",
+                "severity": "warn",
+                "message": "Backdrop source group raw snapshot was degraded in the worst frame (sharing ceiling reduced).",
+                "evidence": {
+                    "backdrop_source_groups_requested": worst.renderer_backdrop_source_groups_requested,
+                    "backdrop_source_groups_applied_raw": worst.renderer_backdrop_source_groups_applied_raw,
+                    "backdrop_source_groups_raw_degraded_budget_zero": worst.renderer_backdrop_source_groups_raw_degraded_budget_zero,
+                    "backdrop_source_groups_raw_degraded_budget_insufficient": worst.renderer_backdrop_source_groups_raw_degraded_budget_insufficient,
+                    "backdrop_source_groups_raw_degraded_target_exhausted": worst.renderer_backdrop_source_groups_raw_degraded_target_exhausted,
+                    "sum_backdrop_source_group_raw_degraded": sum_bsg_raw_degraded,
+                }
+            }));
+        }
+
+        let worst_bsg_pyr_degraded = worst
+            .renderer_backdrop_source_groups_pyramid_degraded_to_one_budget_zero
+            .saturating_add(
+                worst.renderer_backdrop_source_groups_pyramid_degraded_to_one_budget_insufficient,
+            )
+            .saturating_add(worst.renderer_backdrop_source_groups_pyramid_skipped_raw_unavailable);
+        if worst.renderer_backdrop_source_groups_pyramid_requested > 0 && worst_bsg_pyr_degraded > 0
+        {
+            out.push(json!({
+                "code": "renderer.backdrop_source_groups_pyramid_degraded",
+                "severity": "info",
+                "message": "Backdrop source group pyramid sharing was degraded in the worst frame.",
+                "evidence": {
+                    "backdrop_source_groups_pyramid_requested": worst.renderer_backdrop_source_groups_pyramid_requested,
+                    "backdrop_source_groups_pyramid_applied_levels_ge2": worst.renderer_backdrop_source_groups_pyramid_applied_levels_ge2,
+                    "backdrop_source_groups_pyramid_degraded_to_one_budget_zero": worst.renderer_backdrop_source_groups_pyramid_degraded_to_one_budget_zero,
+                    "backdrop_source_groups_pyramid_degraded_to_one_budget_insufficient": worst.renderer_backdrop_source_groups_pyramid_degraded_to_one_budget_insufficient,
+                    "backdrop_source_groups_pyramid_skipped_raw_unavailable": worst.renderer_backdrop_source_groups_pyramid_skipped_raw_unavailable,
+                }
+            }));
+        }
+
         // view_cache.cache_key_mismatch
         if worst.view_cache_roots_cache_key_mismatch > 0 {
             let examples: Vec<serde_json::Value> = worst

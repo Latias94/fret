@@ -1,5 +1,10 @@
 {
   "schema_version": 2,
+  "meta": {
+    "env_defaults": {
+      "FRET_DIAG_RENDERER_PERF": 1
+    }
+  },
   "steps": [
     { "type": "set_window_inner_size", "width_px": 1280.0, "height_px": 720.0 },
     {

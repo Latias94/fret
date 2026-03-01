@@ -333,6 +333,23 @@ pub(super) struct BundleStatsSnapshotRow {
     pub(super) renderer_material_distinct: u64,
     pub(super) renderer_material_unknown_ids: u64,
     pub(super) renderer_material_degraded_due_to_budget: u64,
+    pub(super) renderer_custom_effect_v3_sources_raw_requested: u64,
+    pub(super) renderer_custom_effect_v3_sources_raw_distinct: u64,
+    pub(super) renderer_custom_effect_v3_sources_raw_aliased_to_src: u64,
+    pub(super) renderer_custom_effect_v3_sources_pyramid_requested: u64,
+    pub(super) renderer_custom_effect_v3_sources_pyramid_applied_levels_ge2: u64,
+    pub(super) renderer_custom_effect_v3_sources_pyramid_degraded_to_one_budget_zero: u64,
+    pub(super) renderer_custom_effect_v3_sources_pyramid_degraded_to_one_budget_insufficient: u64,
+    pub(super) renderer_backdrop_source_groups_requested: u64,
+    pub(super) renderer_backdrop_source_groups_applied_raw: u64,
+    pub(super) renderer_backdrop_source_groups_raw_degraded_budget_zero: u64,
+    pub(super) renderer_backdrop_source_groups_raw_degraded_budget_insufficient: u64,
+    pub(super) renderer_backdrop_source_groups_raw_degraded_target_exhausted: u64,
+    pub(super) renderer_backdrop_source_groups_pyramid_requested: u64,
+    pub(super) renderer_backdrop_source_groups_pyramid_applied_levels_ge2: u64,
+    pub(super) renderer_backdrop_source_groups_pyramid_degraded_to_one_budget_zero: u64,
+    pub(super) renderer_backdrop_source_groups_pyramid_degraded_to_one_budget_insufficient: u64,
+    pub(super) renderer_backdrop_source_groups_pyramid_skipped_raw_unavailable: u64,
     pub(super) layout_engine_solves: u64,
     pub(super) layout_engine_solve_time_us: u64,
     pub(super) changed_models: u32,
@@ -3690,4 +3707,3 @@ impl BundleStatsReport {
         Value::Object(root)
     }
 }
-
