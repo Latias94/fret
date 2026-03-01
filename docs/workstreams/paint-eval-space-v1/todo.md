@@ -18,6 +18,8 @@ date: 2026-02-28
 - [x] Update `Scene::validate()` rules for unsupported combinations (deterministic degradation vs
   hard reject).
 - [x] Update `Scene::fingerprint()` to include evaluation space.
+- [x] Sweep in-tree callsites (tests/demos) for missing `.into()` conversions after the binding
+  migration.
 
 ## Renderer (wgpu)
 
