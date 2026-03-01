@@ -17,6 +17,15 @@ use fret_ui_kit::{
 };
 use std::sync::Arc;
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+enum InputOtpSeparatorMode {
+    /// Legacy behavior: when `group_size` yields multiple groups, render a separator between every
+    /// pair of adjacent groups.
+    AutoBetweenGroups,
+    /// Render separators only after the group indices listed here.
+    ExplicitAfterGroups(Vec<usize>),
+}
+
 fn otp_gap(theme: &ThemeSnapshot) -> Px {
     theme
         .metric_by_key("component.input_otp.gap")
@@ -105,6 +114,8 @@ pub struct InputOtp {
     length: usize,
     numeric_only: bool,
     group_size: Option<usize>,
+    explicit_groups: Option<Vec<Vec<usize>>>,
+    separator_mode: InputOtpSeparatorMode,
     aria_invalid: bool,
     disabled: bool,
     size: ComponentSize,
@@ -126,6 +137,11 @@ impl std::fmt::Debug for InputOtp {
             .field("length", &self.length)
             .field("numeric_only", &self.numeric_only)
             .field("group_size", &self.group_size)
+            .field(
+                "explicit_groups",
+                &self.explicit_groups.as_ref().map(|g| g.len()),
+            )
+            .field("separator_mode", &self.separator_mode)
             .field("aria_invalid", &self.aria_invalid)
             .field("disabled", &self.disabled)
             .field("size", &self.size)
@@ -155,6 +171,8 @@ impl InputOtp {
             length: 6,
             numeric_only: true,
             group_size: None,
+            explicit_groups: None,
+            separator_mode: InputOtpSeparatorMode::AutoBetweenGroups,
             aria_invalid: false,
             disabled: false,
             size: ComponentSize::default(),
@@ -247,6 +265,35 @@ impl InputOtp {
         self
     }
 
+    /// Render the OTP input using shadcn/ui v4 part-based composition.
+    ///
+    /// This is a compatibility adapter that maps upstream-like `InputOTPGroup` / `InputOTPSlot` /
+    /// `InputOTPSeparator` compositions onto Fret's single `InputOtp` recipe.
+    ///
+    /// Notes:
+    /// - Slot indices are treated as the source of truth.
+    /// - The inferred length becomes `max(self.length, max_slot_index + 1)` to reduce copy/paste
+    ///   friction when porting examples.
+    #[track_caller]
+    pub fn into_element_parts<H: UiHost>(
+        mut self,
+        cx: &mut ElementContext<'_, H>,
+        parts: impl FnOnce(&mut ElementContext<'_, H>) -> Vec<InputOtpPart>,
+    ) -> AnyElement {
+        let parsed = parse_input_otp_parts(parts(cx));
+        if let Some(inferred_length) = parsed.inferred_length {
+            self.length = self.length.max(inferred_length);
+        }
+
+        if !parsed.groups.is_empty() {
+            self.explicit_groups = Some(parsed.groups);
+            self.separator_mode =
+                InputOtpSeparatorMode::ExplicitAfterGroups(parsed.separators_after_groups);
+        }
+
+        self.into_element(cx)
+    }
+
     #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app).snapshot();
@@ -305,14 +352,20 @@ impl InputOtp {
                     .as_ref()
                     .map(|prefix| Arc::from(format!("{prefix}.input")));
 
-                let group_size = self.group_size.unwrap_or(length).max(1);
-                let mut groups: Vec<(usize, usize)> = Vec::new();
-                let mut start = 0;
-                while start < length {
-                    let end = (start + group_size).min(length);
-                    groups.push((start, end));
-                    start = end;
-                }
+                let groups: Vec<Vec<usize>> =
+                    if let Some(explicit_groups) = self.explicit_groups.as_ref() {
+                        explicit_groups.clone()
+                    } else {
+                        let group_size = self.group_size.unwrap_or(length).max(1);
+                        let mut out: Vec<Vec<usize>> = Vec::new();
+                        let mut start = 0;
+                        while start < length {
+                            let end = (start + group_size).min(length);
+                            out.push((start..end).collect());
+                            start = end;
+                        }
+                        out
+                    };
 
                 let mut chrome = TextInputStyle::from_theme(theme.clone());
                 chrome.padding = Edges::all(Px(0.0));
@@ -366,15 +419,19 @@ impl InputOtp {
                     false
                 };
 
-                let mut slot_ids: Vec<fret_ui::elements::GlobalElementId> =
-                    Vec::with_capacity(length);
-                let mut slot_corners: Vec<Corners> = Vec::with_capacity(length);
+                let mut slot_ids: Vec<Option<fret_ui::elements::GlobalElementId>> =
+                    vec![None; length];
+                let mut slot_corners: Vec<Option<Corners>> = vec![None; length];
                 let mut pieces: Vec<AnyElement> = Vec::new();
-                for (group_idx, (start, end)) in groups.iter().copied().enumerate() {
+                for (group_idx, group_slots) in groups.iter().enumerate() {
                     let mut slots: Vec<AnyElement> = Vec::new();
-                    for idx in start..end {
-                        let is_first = idx == start;
-                        let is_last = idx + 1 == end;
+                    for (slot_pos, idx) in group_slots.iter().copied().enumerate() {
+                        if idx >= length {
+                            continue;
+                        }
+
+                        let is_first = slot_pos == 0;
+                        let is_last = slot_pos + 1 == group_slots.len();
                         let is_active = active_slot_idx == Some(idx);
                         let has_fake_caret = fake_caret_idx == Some(idx);
 
@@ -545,8 +602,8 @@ impl InputOtp {
                             },
                         );
 
-                        slot_ids.push(slot_el.id);
-                        slot_corners.push(corner_radii);
+                        slot_ids[idx] = Some(slot_el.id);
+                        slot_corners[idx] = Some(corner_radii);
 
                         let mut decoration = SemanticsDecoration::default().selected(is_active);
                         if let Some(test_id) = slot_test_id {
@@ -570,7 +627,14 @@ impl InputOtp {
                         move |_cx| slots,
                     ));
 
-                    if group_idx + 1 < groups.len() {
+                    let show_separator = match &self.separator_mode {
+                        InputOtpSeparatorMode::AutoBetweenGroups => group_idx + 1 < groups.len(),
+                        InputOtpSeparatorMode::ExplicitAfterGroups(indices) => {
+                            indices.contains(&group_idx)
+                        }
+                    };
+
+                    if show_separator {
                         pieces.push(cx.flex(
                             FlexProps {
                                 layout: LayoutStyle {
@@ -620,13 +684,16 @@ impl InputOtp {
                         let root_bounds = cx.last_bounds_for_element(cx.root_id());
                         let slot_bounds = slot_ids
                             .get(active_idx)
-                            .and_then(|id| cx.last_bounds_for_element(*id));
+                            .copied()
+                            .flatten()
+                            .and_then(|id| cx.last_bounds_for_element(id));
                         if let (Some(root_bounds), Some(slot_bounds)) = (root_bounds, slot_bounds) {
                             let ring_w = otp_active_ring_width(&theme);
                             let ring_color = otp_slot_ring_color(&theme, self.aria_invalid);
                             let corners = slot_corners
                                 .get(active_idx)
                                 .copied()
+                                .flatten()
                                 .unwrap_or_else(|| Corners::all(resolved.radius));
                             let left =
                                 Px((slot_bounds.origin.x.0 - root_bounds.origin.x.0).max(0.0));
@@ -677,6 +744,116 @@ impl InputOtp {
     }
 }
 
+#[derive(Debug, Clone)]
+struct ParsedInputOtpParts {
+    groups: Vec<Vec<usize>>,
+    separators_after_groups: Vec<usize>,
+    inferred_length: Option<usize>,
+}
+
+fn parse_input_otp_parts(parts: Vec<InputOtpPart>) -> ParsedInputOtpParts {
+    let mut groups: Vec<Vec<usize>> = Vec::new();
+    let mut current_group: Vec<usize> = Vec::new();
+    let mut separators_after_groups: Vec<usize> = Vec::new();
+    let mut max_index: Option<usize> = None;
+
+    for part in parts {
+        match part {
+            InputOtpPart::Group(group) => {
+                if !current_group.is_empty() {
+                    groups.push(std::mem::take(&mut current_group));
+                }
+
+                let mut indices: Vec<usize> = Vec::new();
+                for slot in group.slots {
+                    max_index = Some(max_index.map_or(slot.index, |m| m.max(slot.index)));
+                    indices.push(slot.index);
+                }
+                if !indices.is_empty() {
+                    groups.push(indices);
+                }
+            }
+            InputOtpPart::Slot(slot) => {
+                max_index = Some(max_index.map_or(slot.index, |m| m.max(slot.index)));
+                current_group.push(slot.index);
+            }
+            InputOtpPart::Separator(_) => {
+                if !current_group.is_empty() {
+                    groups.push(std::mem::take(&mut current_group));
+                }
+
+                if let Some(idx) = groups.len().checked_sub(1) {
+                    if !separators_after_groups.contains(&idx) {
+                        separators_after_groups.push(idx);
+                    }
+                }
+            }
+        }
+    }
+
+    if !current_group.is_empty() {
+        groups.push(current_group);
+    }
+
+    ParsedInputOtpParts {
+        groups,
+        separators_after_groups,
+        inferred_length: max_index.map(|idx| idx.saturating_add(1)),
+    }
+}
+
+/// shadcn/ui `InputOTPGroup` (v4).
+#[derive(Debug, Clone)]
+pub struct InputOtpGroup {
+    slots: Vec<InputOtpSlot>,
+}
+
+impl InputOtpGroup {
+    pub fn new(slots: impl IntoIterator<Item = InputOtpSlot>) -> Self {
+        Self {
+            slots: slots.into_iter().collect(),
+        }
+    }
+}
+
+/// shadcn/ui `InputOTPSlot` (v4).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct InputOtpSlot {
+    index: usize,
+}
+
+impl InputOtpSlot {
+    pub fn new(index: usize) -> Self {
+        Self { index }
+    }
+}
+
+/// shadcn/ui `InputOTPSeparator` (v4).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub struct InputOtpSeparator;
+
+/// shadcn/ui v4 part surface for `InputOtp`.
+#[derive(Debug, Clone)]
+pub enum InputOtpPart {
+    Group(InputOtpGroup),
+    Slot(InputOtpSlot),
+    Separator(InputOtpSeparator),
+}
+
+impl InputOtpPart {
+    pub fn group(group: InputOtpGroup) -> Self {
+        Self::Group(group)
+    }
+
+    pub fn slot(slot: InputOtpSlot) -> Self {
+        Self::Slot(slot)
+    }
+
+    pub fn separator(separator: InputOtpSeparator) -> Self {
+        Self::Separator(separator)
+    }
+}
+
 pub fn input_otp<H: UiHost>(cx: &mut ElementContext<'_, H>, otp: InputOtp) -> AnyElement {
     otp.into_element(cx)
 }
@@ -686,6 +863,15 @@ pub fn input_otp<H: UiHost>(cx: &mut ElementContext<'_, H>, otp: InputOtp) -> An
 /// Upstream exports this type as `InputOTP`. Fret's canonical Rust name is [`InputOtp`]; this
 /// alias exists to improve copy/paste parity with shadcn docs/examples.
 pub type InputOTP = InputOtp;
+
+/// shadcn/ui `InputOTPGroup` (v4).
+pub type InputOTPGroup = InputOtpGroup;
+
+/// shadcn/ui `InputOTPSlot` (v4).
+pub type InputOTPSlot = InputOtpSlot;
+
+/// shadcn/ui `InputOTPSeparator` (v4).
+pub type InputOTPSeparator = InputOtpSeparator;
 
 #[cfg(test)]
 mod tests {
@@ -846,5 +1032,57 @@ mod tests {
         );
 
         assert_eq!(invalid, theme.color_token("destructive"));
+    }
+
+    fn count_svg_icons(node: &AnyElement) -> usize {
+        let mut out = match &node.kind {
+            fret_ui::element::ElementKind::SvgIcon(_) => 1,
+            _ => 0,
+        };
+        for child in &node.children {
+            out += count_svg_icons(child);
+        }
+        out
+    }
+
+    #[test]
+    fn input_otp_parts_infer_length_and_respect_explicit_separators() {
+        use crate::shadcn_themes::{ShadcnBaseColor, ShadcnColorScheme, apply_shadcn_new_york_v4};
+        use fret_core::{AppWindowId, Point, Px, Rect, Size};
+
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        apply_shadcn_new_york_v4(&mut app, ShadcnBaseColor::Neutral, ShadcnColorScheme::Light);
+        let model = app.models_mut().insert("12a 34-5678".to_string());
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(640.0), Px(120.0)),
+        );
+
+        let element =
+            fret_ui::elements::with_element_cx(&mut app, window, bounds, "input_otp_parts", |cx| {
+                InputOtp::new(model.clone())
+                    .length(4)
+                    .numeric_only(true)
+                    .into_element_parts(cx, |_cx| {
+                        vec![
+                            InputOtpPart::group(InputOtpGroup::new([
+                                InputOtpSlot::new(0),
+                                InputOtpSlot::new(1),
+                                InputOtpSlot::new(2),
+                            ])),
+                            InputOtpPart::separator(InputOtpSeparator),
+                            InputOtpPart::group(InputOtpGroup::new([
+                                InputOtpSlot::new(3),
+                                InputOtpSlot::new(4),
+                                InputOtpSlot::new(5),
+                            ])),
+                        ]
+                    })
+            });
+
+        assert_eq!(app.models().get_cloned(&model).as_deref(), Some("123456"));
+        assert_eq!(count_svg_icons(&element), 1);
     }
 }
