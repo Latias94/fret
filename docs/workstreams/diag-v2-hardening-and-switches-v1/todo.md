@@ -67,6 +67,8 @@ This file is a check-list style tracker. Milestone framing lives in `milestones.
   - `diag pack`, `diag triage`, `diag lint`, `diag test-ids`, `diag frames-index`, `diag ai-packet`, `diag compare`
 - [x] Centralize base/session out dir resolution helpers in tooling to avoid per-command drift (e.g. pack/meta/stats/etc
   share a single resolver in `crates/fret-diag/src/commands/resolve.rs`).
+- [x] Emit a warning when `--launch` targets a base dir that already contains `sessions/` but the user did not enable
+  `--session-auto`/`--session` (avoid writing control-plane files at the base root, which is a concurrency footgun).
 
 ## P1: Agent-native script ergonomics (ImGui-alignment outcomes)
 
