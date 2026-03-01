@@ -466,6 +466,59 @@ mod tests {
     }
 
     #[test]
+    fn card_sections_can_inherit_or_override_size() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(400.0), Px(300.0)),
+        );
+
+        fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            let theme = Theme::global(&*cx.app);
+            let px_default = MetricRef::space(Space::N6).resolve(theme);
+            let px_sm = MetricRef::space(Space::N4).resolve(theme);
+
+            let default_el = CardContent::new(Vec::<AnyElement>::new()).into_element(cx);
+            let ElementKind::Container(ContainerProps {
+                padding: default_padding,
+                ..
+            }) = &default_el.kind
+            else {
+                panic!("expected CardContent to be a container element");
+            };
+            assert_eq!(default_padding.left, px_default.into());
+            assert_eq!(default_padding.right, px_default.into());
+
+            let explicit_el = CardContent::new(Vec::<AnyElement>::new())
+                .size(CardSize::Sm)
+                .into_element(cx);
+            let ElementKind::Container(ContainerProps {
+                padding: explicit_padding,
+                ..
+            }) = &explicit_el.kind
+            else {
+                panic!("expected CardContent(size=Sm) to be a container element");
+            };
+            assert_eq!(explicit_padding.left, px_sm.into());
+            assert_eq!(explicit_padding.right, px_sm.into());
+
+            let inherited_el = with_card_size_provider(cx, CardSize::Sm, |cx| {
+                CardContent::new(Vec::<AnyElement>::new()).into_element(cx)
+            });
+            let ElementKind::Container(ContainerProps {
+                padding: inherited_padding,
+                ..
+            }) = &inherited_el.kind
+            else {
+                panic!("expected CardContent(inherited Sm) to be a container element");
+            };
+            assert_eq!(inherited_padding.left, px_sm.into());
+            assert_eq!(inherited_padding.right, px_sm.into());
+        });
+    }
+
+    #[test]
     fn card_header_border_bottom_adds_pb_6() {
         let window = AppWindowId::default();
         let mut app = App::new();
@@ -514,6 +567,7 @@ mod tests {
 #[derive(Debug)]
 pub struct CardContent {
     children: Vec<AnyElement>,
+    size: Option<CardSize>,
     chrome: ChromeRefinement,
     layout: LayoutRefinement,
 }
@@ -523,9 +577,21 @@ impl CardContent {
         let children = children.into_iter().collect();
         Self {
             children,
+            size: None,
             chrome: ChromeRefinement::default(),
             layout: LayoutRefinement::default(),
         }
+    }
+
+    /// Explicitly set the card size for this section.
+    ///
+    /// Most compositions rely on `Card` installing a size provider; however, some callers build
+    /// `CardHeader` / `CardContent` / `CardFooter` elements before they are inserted into a
+    /// `Card` subtree. In those cases, inherited size is unavailable, so callers can pass an
+    /// explicit size to match upstream shadcn behavior.
+    pub fn size(mut self, size: CardSize) -> Self {
+        self.size = Some(size);
+        self
     }
 
     pub fn refine_style(mut self, style: ChromeRefinement) -> Self {
@@ -540,7 +606,7 @@ impl CardContent {
 
     #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        let size = card_size_in_scope(cx);
+        let size = self.size.unwrap_or_else(|| card_size_in_scope(cx));
         let p = match size {
             CardSize::Default => Space::N6,
             CardSize::Sm => Space::N4,
@@ -569,6 +635,7 @@ impl CardContent {
 #[derive(Debug)]
 pub struct CardFooter {
     children: Vec<AnyElement>,
+    size: Option<CardSize>,
     chrome: ChromeRefinement,
     layout: LayoutRefinement,
     border_top: bool,
@@ -581,12 +648,21 @@ impl CardFooter {
         let children = children.into_iter().collect();
         Self {
             children,
+            size: None,
             chrome: ChromeRefinement::default(),
             layout: LayoutRefinement::default(),
             border_top: false,
             gap: Space::N0.into(),
             wrap: false,
         }
+    }
+
+    /// Explicitly set the card size for this section.
+    ///
+    /// See `CardContent::size(...)` for why some call sites need this.
+    pub fn size(mut self, size: CardSize) -> Self {
+        self.size = Some(size);
+        self
     }
 
     pub fn refine_style(mut self, style: ChromeRefinement) -> Self {
@@ -616,7 +692,7 @@ impl CardFooter {
 
     #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        let size = card_size_in_scope(cx);
+        let size = self.size.unwrap_or_else(|| card_size_in_scope(cx));
         let p = match size {
             CardSize::Default => Space::N6,
             CardSize::Sm => Space::N4,

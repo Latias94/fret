@@ -231,8 +231,11 @@ pub(super) fn presets(
     ];
 
     let card = shadcn::Card::new(vec![
-        shadcn::CardContent::new(vec![calendar]).into_element(cx),
+        shadcn::CardContent::new(vec![calendar])
+            .size(shadcn::CardSize::Sm)
+            .into_element(cx),
         shadcn::CardFooter::new(footer_buttons)
+            .size(shadcn::CardSize::Sm)
             .border_top(true)
             .wrap(true)
             .gap(Space::N2)
@@ -297,8 +300,12 @@ pub(super) fn date_and_time_picker(
     .into_element(cx);
 
     let card = shadcn::Card::new(vec![
-        shadcn::CardContent::new(vec![calendar]).into_element(cx),
-        shadcn::CardFooter::new(vec![footer]).into_element(cx),
+        shadcn::CardContent::new(vec![calendar])
+            .size(shadcn::CardSize::Sm)
+            .into_element(cx),
+        shadcn::CardFooter::new(vec![footer])
+            .size(shadcn::CardSize::Sm)
+            .into_element(cx),
     ])
     .size(shadcn::CardSize::Sm)
     .refine_layout(LayoutRefinement::default().min_w_0())

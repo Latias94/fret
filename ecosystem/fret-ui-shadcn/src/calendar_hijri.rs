@@ -8,7 +8,7 @@ use fret_ui::element::{
     RovingFlexProps, RovingFocusProps, TextProps,
 };
 use fret_ui::{ElementContext, Theme, ThemeSnapshot, UiHost};
-use fret_ui_headless::calendar_solar_hijri::{solar_hijri_month_grid_compact, SolarHijriMonth};
+use fret_ui_headless::calendar_solar_hijri::{SolarHijriMonth, solar_hijri_month_grid_compact};
 use fret_ui_kit::declarative::chrome::control_chrome_pressable_with_id_props;
 use fret_ui_kit::declarative::icon as decl_icon;
 use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
@@ -21,7 +21,7 @@ use fret_ui_kit::{
 };
 use time::{Date, Weekday};
 
-use crate::surface_slot::{surface_slot_in_scope, ShadcnSurfaceSlot};
+use crate::surface_slot::{ShadcnSurfaceSlot, surface_slot_in_scope};
 use crate::test_id::attach_test_id_suffix;
 
 fn persian_digit(c: char) -> char {
