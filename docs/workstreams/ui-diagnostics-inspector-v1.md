@@ -74,7 +74,7 @@ While inspection is active:
 - `Ctrl/Cmd+Alt+H`: toggle help (in-app; enables inspect if needed)
 - `Esc`: exit inspect (disarm pick first if armed)
 - `Ctrl/Cmd+C`: copy best selector JSON (prefer `test_id`)
-- `Ctrl/Cmd+Shift+C`: copy “selector + focus + path” details
+- `Ctrl/Cmd+Shift+C`: copy “selector + focus + path” details (including selector candidates + scores)
 - `F`: jump selection to the focused semantics node (locks selection)
 - `L`: lock/unlock selection
 - `Alt+Up/Down`: walk semantics parent chain, with a small “down stack” history

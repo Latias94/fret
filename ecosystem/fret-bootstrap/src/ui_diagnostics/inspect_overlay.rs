@@ -1,4 +1,5 @@
 use fret_app::App;
+use fret_app::Effect;
 use fret_core::AppWindowId;
 
 use super::UiDiagnosticsService;
@@ -16,6 +17,14 @@ pub(crate) fn render_diag_inspect_overlay(
     use slotmap::Key as _;
 
     const ROOT_NAME: &str = "__diag_inspect";
+
+    let pending_copy_payload = app
+        .with_global_mut_untracked(UiDiagnosticsService::default, |svc, _app| {
+            svc.inspect_pending_copy_details_payload.remove(&window)
+        });
+    if let Some(text) = pending_copy_payload {
+        app.push_effect(Effect::ClipboardSetText { text });
+    }
 
     if !inspection_active {
         let root_node = fret_ui::declarative::render_root(

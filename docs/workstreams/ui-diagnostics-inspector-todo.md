@@ -51,6 +51,8 @@ Related docs:
      - Otherwise prefer `(role + label + ancestors)` with minimal ancestor chain that is still unique under barrier/root.
    - Add optional `root_z_index` gating so scripts pick the right overlay.
    - Avoid using redacted labels when `FRET_DIAG_REDACT_TEXT=1`.
+   - Status:
+     - In-app copy-details (`Ctrl+Shift+C`) now includes a scored selector-candidates list (match count + chosen node).
 
 ## Milestone M2: “Script stability + coverage”
 

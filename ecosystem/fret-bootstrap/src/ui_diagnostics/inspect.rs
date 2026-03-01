@@ -272,17 +272,8 @@ impl UiDiagnosticsService {
                     return false;
                 }
                 if modifiers.shift {
-                    let payload = self.inspect_copy_details_payload(window);
-                    if payload.is_empty() {
-                        self.push_inspect_toast(
-                            window,
-                            "inspect: no details available to copy".to_string(),
-                        );
-                        app.request_redraw(window);
-                        return true;
-                    }
-                    app.push_effect(Effect::ClipboardSetText { text: payload });
-                    self.push_inspect_toast(window, "inspect: copied inspect details".to_string());
+                    self.inspect_pending_copy_details_windows.insert(window);
+                    self.push_inspect_toast(window, "inspect: copy requested".to_string());
                     app.request_redraw(window);
                     return true;
                 }
@@ -555,7 +546,16 @@ impl UiDiagnosticsService {
         let element = element_runtime
             .and_then(|runtime| runtime.element_for_node(window, node.id))
             .map(|id| id.0);
-        let Some(selector) = best_selector_for_node(snapshot, node, element, &self.cfg) else {
+        let selector = best_selector_for_node_validated(
+            snapshot,
+            window,
+            element_runtime,
+            node,
+            element,
+            &self.cfg,
+        )
+        .or_else(|| best_selector_for_node(snapshot, node, element, &self.cfg));
+        let Some(selector) = selector else {
             return;
         };
         if let Ok(json) = serde_json::to_string(&selector) {
@@ -579,6 +579,9 @@ impl UiDiagnosticsService {
         let Some(snapshot) = snapshot else {
             self.inspect_focus_summary_line.remove(&window);
             self.inspect_focus_path_line.remove(&window);
+            if self.inspect_pending_copy_details_windows.remove(&window) {
+                self.push_inspect_toast(window, "inspect: no semantics snapshot".to_string());
+            }
             return;
         };
 
@@ -591,6 +594,9 @@ impl UiDiagnosticsService {
         let Some(node_id) = node_id else {
             self.inspect_focus_summary_line.remove(&window);
             self.inspect_focus_path_line.remove(&window);
+            if self.inspect_pending_copy_details_windows.remove(&window) {
+                self.push_inspect_toast(window, "inspect: no focused node".to_string());
+            }
             return;
         };
 
@@ -601,6 +607,9 @@ impl UiDiagnosticsService {
         else {
             self.inspect_focus_summary_line.remove(&window);
             self.inspect_focus_path_line.remove(&window);
+            if self.inspect_pending_copy_details_windows.remove(&window) {
+                self.push_inspect_toast(window, "inspect: focused node missing".to_string());
+            }
             return;
         };
 
@@ -634,23 +643,58 @@ impl UiDiagnosticsService {
         } else {
             self.inspect_focus_path_line.remove(&window);
         }
-    }
 
-    fn inspect_copy_details_payload(&self, window: AppWindowId) -> String {
-        let selector = self.inspect_best_selector_json(window);
-        let summary = self.inspect_focus_summary_line(window);
-        let path = self.inspect_focus_path_line(window);
+        if !self.inspect_pending_copy_details_windows.remove(&window) {
+            return;
+        }
+
+        let element = element_runtime
+            .and_then(|runtime| runtime.element_for_node(window, node.id))
+            .map(|id| id.0);
+
+        let best = best_selector_for_node_validated(
+            snapshot,
+            window,
+            element_runtime,
+            node,
+            element,
+            &self.cfg,
+        )
+        .or_else(|| best_selector_for_node(snapshot, node, element, &self.cfg));
 
         let mut lines: Vec<String> = Vec::new();
-        if let Some(selector) = selector {
-            lines.push(format!("selector: {selector}"));
+        if let Some(best) = best.as_ref().and_then(|s| serde_json::to_string(s).ok()) {
+            lines.push(format!("selector: {best}"));
         }
-        if let Some(summary) = summary {
+        if let Some(summary) = self.inspect_focus_summary_line(window) {
             lines.push(summary.to_string());
         }
-        if let Some(path) = path {
+        if let Some(path) = self.inspect_focus_path_line(window) {
             lines.push(path.to_string());
         }
-        lines.join("\n")
+
+        let report = inspect_selector_candidates_report(
+            snapshot,
+            window,
+            element_runtime,
+            node,
+            element,
+            &self.cfg,
+        );
+        if !report.trim().is_empty() {
+            lines.push(String::new());
+            lines.push("selector_candidates:".to_string());
+            lines.extend(report.lines().map(|l| l.to_string()));
+        }
+
+        let payload = lines.join("\n");
+        if payload.trim().is_empty() {
+            self.push_inspect_toast(window, "inspect: no details available".to_string());
+            return;
+        }
+
+        self.inspect_pending_copy_details_payload
+            .insert(window, payload);
+        self.push_inspect_toast(window, "inspect: details copied".to_string());
     }
 }

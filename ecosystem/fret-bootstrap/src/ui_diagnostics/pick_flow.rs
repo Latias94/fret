@@ -56,8 +56,8 @@ impl UiDiagnosticsService {
                 .map(|p| display_path(&self.cfg.out_dir, p)),
         };
 
-        let selection = match raw_semantics {
-            Some(snapshot) => pick_semantics_node_at(snapshot, ui, position).map(|node| {
+        if let Some(snapshot) = raw_semantics {
+            let selection = pick_semantics_node_at(snapshot, ui, position).map(|node| {
                 let (element, element_path) = element_runtime
                     .and_then(|runtime| {
                         runtime.element_for_node(window, node.id).map(|id| {
@@ -67,28 +67,50 @@ impl UiDiagnosticsService {
                     })
                     .unwrap_or((None, None));
                 UiPickSelectionV1::from_node(snapshot, node, element, element_path, &self.cfg)
-            }),
-            None => None,
-        };
+            });
 
-        match selection {
-            Some(sel) => {
-                result.stage = UiPickStageV1::Picked;
-                self.last_picked_node_id.insert(window, sel.node.id);
-                if let Some(best) = sel.selectors.first()
-                    && let Ok(json) = serde_json::to_string(best)
-                {
-                    self.last_picked_selector_json.insert(window, json.clone());
-                    self.inspect_focus_node_id.insert(window, sel.node.id);
-                    self.inspect_focus_selector_json.insert(window, json);
-                    self.inspect_focus_down_stack.insert(window, Vec::new());
+            match selection {
+                Some(sel) => {
+                    result.stage = UiPickStageV1::Picked;
+                    self.last_picked_node_id.insert(window, sel.node.id);
+
+                    let selector_json = snapshot
+                        .nodes
+                        .iter()
+                        .find(|n| n.id.data().as_ffi() == sel.node.id)
+                        .and_then(|node| {
+                            let element = element_runtime
+                                .and_then(|runtime| runtime.element_for_node(window, node.id))
+                                .map(|id| id.0);
+                            best_selector_for_node_validated(
+                                snapshot,
+                                window,
+                                element_runtime,
+                                node,
+                                element,
+                                &self.cfg,
+                            )
+                            .or_else(|| best_selector_for_node(snapshot, node, element, &self.cfg))
+                        })
+                        .or_else(|| sel.selectors.first().cloned())
+                        .and_then(|sel| serde_json::to_string(&sel).ok());
+
+                    if let Some(json) = selector_json {
+                        self.last_picked_selector_json.insert(window, json.clone());
+                        self.inspect_focus_node_id.insert(window, sel.node.id);
+                        self.inspect_focus_selector_json.insert(window, json);
+                        self.inspect_focus_down_stack.insert(window, Vec::new());
+                    }
+
+                    self.pick_overlay_grace_frames.insert(window, 10);
+                    result.selection = Some(sel);
                 }
-                self.pick_overlay_grace_frames.insert(window, 10);
-                result.selection = Some(sel);
+                None => {
+                    result.reason = Some("no matching semantics node under pointer".to_string());
+                }
             }
-            None => {
-                result.reason = Some("no matching semantics node under pointer".to_string());
-            }
+        } else {
+            result.reason = Some("no semantics snapshot".to_string());
         }
 
         if self.cfg.pick_auto_dump {

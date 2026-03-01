@@ -95,7 +95,8 @@ mod selector;
 use selector::SemanticsIndex;
 pub(crate) use selector::semantics_role_label;
 use selector::{
-    best_selector_for_node, format_inspect_path, parent_node_id, parse_semantics_role,
+    best_selector_for_node, best_selector_for_node_validated, format_inspect_path,
+    inspect_selector_candidates_report, parent_node_id, parse_semantics_role,
     select_semantics_node_scoped, suggest_selectors, truncate_debug_value,
 };
 
