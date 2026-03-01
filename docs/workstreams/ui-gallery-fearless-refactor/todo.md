@@ -151,7 +151,7 @@ drift-free (preview ≡ copyable code).
 | card | `apps/fret-ui-gallery/src/ui/pages/card.rs` | Yes | Done | Snippet-backed previews + region-sliced code tabs (preview ≡ code). |
 | item | `apps/fret-ui-gallery/src/ui/pages/item.rs` | Yes | Done | Snippet-backed previews + region-sliced code tabs (preview ≡ code). Gates: `tools/diag-scripts/ui-gallery/item/ui-gallery-item-*.json`. |
 | image-object-fit | `apps/fret-ui-gallery/src/ui/pages/image_object_fit.rs` | Yes | Done | Snippet-backed previews + region-sliced code tabs (preview ≡ code). |
-| motion-presets | `apps/fret-ui-gallery/src/ui/pages/motion_presets.rs` | No | Not started | Animation surfaces; add minimal diag hooks before migrating. |
+| motion-presets | `apps/fret-ui-gallery/src/ui/pages/motion_presets.rs` | Yes | Done | Snippet-backed previews + region-sliced code tabs (preview ≡ code). Gates: `tools/diag-scripts/ui-gallery/motion-presets/ui-gallery-motion-presets-*.json`. Keep `ui-gallery-motion-presets-*` `test_id`s stable. |
 | collapsible | `apps/fret-ui-gallery/src/ui/pages/collapsible.rs` | Yes | Done | Snippet-backed previews + region-sliced code tabs (preview ≡ code). Keep `ui-gallery-collapsible-*` `test_id`s stable for diag scripts. |
 | carousel | `apps/fret-ui-gallery/src/ui/pages/carousel.rs` | Yes | Done | Snippet-backed previews + region-sliced code tabs (preview ≡ code). Gates: `tools/diag-scripts/ui-gallery/carousel/ui-gallery-carousel-*.json`. |
 | chart | `apps/fret-ui-gallery/src/ui/pages/chart.rs` | Yes | Done | Snippet-backed previews + region-sliced code tabs (preview ≡ code). Keep `ui-gallery-chart-*` `test_id`s stable for diag scripts. |
