@@ -2309,7 +2309,7 @@ fn table_collect_leaf_keys_in_range(meta: &[TableNavRowMeta], a: usize, b: usize
 
 struct TableKeyboardNavState {
     active_index: Rc<Cell<Option<usize>>>,
-    anchor_index: Rc<Cell<Option<usize>>>,
+    anchor_index: Rc<Cell<Option<RowKey>>>,
     row_meta: Rc<RefCell<Arc<[TableNavRowMeta]>>>,
     active_element: Rc<Cell<Option<fret_ui::GlobalElementId>>>,
     active_command: Rc<RefCell<Option<CommandId>>>,
@@ -2988,7 +2988,7 @@ where
 
     struct RetainedTableKeyboardNavState {
         active_index: Rc<Cell<Option<usize>>>,
-        anchor_index: Rc<Cell<Option<usize>>>,
+        anchor_index: Rc<Cell<Option<RowKey>>>,
         labels: Rc<RefCell<Arc<[Arc<str>]>>>,
         disabled: Rc<RefCell<Arc<[bool]>>>,
         last_labels_revision: Cell<Option<u64>>,
@@ -3117,53 +3117,59 @@ where
                         },
                         ..Default::default()
                     },
-	                    move |cx, st| {
-	                        if props.enable_row_selection
-	                            && props.pointer_row_selection
-	                            && props.pointer_row_selection_policy
-	                                == PointerRowSelectionPolicy::ListLike
-	                        {
-	                            let anchor_index_for_pointer_down = anchor_index.clone();
-	                            cx.pressable_add_on_pointer_down(Arc::new(
-	                                move |_host, _action_cx, down| {
-	                                    if down.button != fret_core::MouseButton::Left {
-	                                        return PressablePointerDownResult::Continue;
-	                                    }
-	                                    let next_anchor = if down.modifiers.shift {
-	                                        anchor_index_for_pointer_down.get().or(Some(i))
-	                                    } else {
-	                                        Some(i)
-	                                    };
-	                                    anchor_index_for_pointer_down.set(next_anchor);
-	                                    PressablePointerDownResult::Continue
-	                                },
-	                            ));
-	                        }
+                    move |cx, st| {
+                        let focus_target = focus_target_for_row;
+                        let row_key = row_key;
+                        let single = props.single_row_selection;
+                        let policy = props.pointer_row_selection_policy;
+                        let pointer_row_selection_enabled =
+                            props.enable_row_selection && props.pointer_row_selection;
 
-	                        let focus_target = focus_target_for_row;
-	                        let row_key = row_key;
-	                        let single = props.single_row_selection;
-	                        let policy = props.pointer_row_selection_policy;
-	                        let pointer_row_selection_enabled =
-	                            props.enable_row_selection && props.pointer_row_selection;
-	                        cx.pressable_add_on_pointer_up(Arc::new(move |host, action_cx, up| {
-	                            if up.button != fret_core::MouseButton::Left || !up.is_click {
-	                                return PressablePointerUpResult::Continue;
-	                            }
-	                            host.request_focus(focus_target);
-	                            if pointer_row_selection_enabled {
-	                                let modifiers = up.modifiers;
-	                                let mut range_keys: Option<Vec<RowKey>> = None;
-	                                if policy == PointerRowSelectionPolicy::ListLike
-	                                    && !single
-	                                    && modifiers.shift
-	                                {
-	                                    let anchor = anchor_index.get().unwrap_or(i);
-	                                    let (a, b) = if anchor <= i { (anchor, i) } else { (i, anchor) };
-	                                    let keys = entries
-	                                        .iter()
-	                                        .enumerate()
-	                                        .filter_map(|(idx, entry)| {
+                        if pointer_row_selection_enabled
+                            && policy == PointerRowSelectionPolicy::ListLike
+                        {
+                            let anchor_index_for_pointer_down = anchor_index.clone();
+                            let row_key_for_anchor = row_key;
+                            cx.pressable_add_on_pointer_down(Arc::new(
+                                move |_host, _action_cx, down| {
+                                    if down.button != fret_core::MouseButton::Left {
+                                        return PressablePointerDownResult::Continue;
+                                    }
+                                    let next_anchor = if down.modifiers.shift {
+                                        anchor_index_for_pointer_down
+                                            .get()
+                                            .or(Some(row_key_for_anchor))
+                                    } else {
+                                        Some(row_key_for_anchor)
+                                    };
+                                    anchor_index_for_pointer_down.set(next_anchor);
+                                    PressablePointerDownResult::Continue
+                                },
+                            ));
+                        }
+
+                        cx.pressable_add_on_pointer_up(Arc::new(move |host, action_cx, up| {
+                            if up.button != fret_core::MouseButton::Left || !up.is_click {
+                                return PressablePointerUpResult::Continue;
+                            }
+                            host.request_focus(focus_target);
+                            if pointer_row_selection_enabled {
+                                let modifiers = up.modifiers;
+                                let mut range_keys: Option<Vec<RowKey>> = None;
+                                if policy == PointerRowSelectionPolicy::ListLike
+                                    && !single
+                                    && modifiers.shift
+                                {
+                                    let anchor_key = anchor_index.get().unwrap_or(row_key);
+                                    let anchor = entries
+                                        .iter()
+                                        .position(|entry| entry.key == anchor_key)
+                                        .unwrap_or(i);
+                                    let (a, b) = if anchor <= i { (anchor, i) } else { (i, anchor) };
+                                    let keys = entries
+                                        .iter()
+                                        .enumerate()
+                                        .filter_map(|(idx, entry)| {
 	                                            (idx >= a && idx <= b).then_some(entry.key)
 	                                        })
 	                                        .collect::<Vec<_>>();
@@ -3206,21 +3212,21 @@ where
 	                                            }
 	                                        }
 	                                    }
-	                                });
-	                                if policy == PointerRowSelectionPolicy::ListLike {
-	                                    let next_anchor = if modifiers.shift {
-	                                        anchor_index_for_update.get().or(Some(i))
-	                                    } else {
-	                                        Some(i)
-	                                    };
-	                                    anchor_index_for_update.set(next_anchor);
-	                                } else {
-	                                    anchor_index_for_update.set(Some(i));
-	                                }
-	                            }
-	                            host.request_redraw(action_cx.window);
-	                            PressablePointerUpResult::Continue
-		                        }));
+                                });
+                                if policy == PointerRowSelectionPolicy::ListLike {
+                                    let next_anchor = if modifiers.shift {
+                                        anchor_index_for_update.get().or(Some(row_key))
+                                    } else {
+                                        Some(row_key)
+                                    };
+                                    anchor_index_for_update.set(next_anchor);
+                                } else {
+                                    anchor_index_for_update.set(Some(row_key));
+                                }
+                            }
+                            host.request_redraw(action_cx.window);
+                            PressablePointerUpResult::Continue
+                        }));
 
 	                        cx.key_on_key_down_for(cx.root_id(), key_handler_for_row.clone());
 
@@ -3421,7 +3427,7 @@ where
                     KeyCode::ArrowDown => {
                         let next = (current + 1).min(len);
                         active_index_for_keys.set(Some(next));
-                        anchor_index_for_keys.set(Some(next));
+                        anchor_index_for_keys.set(Some(entries_for_keys[next].key));
                         cancel_typeahead_timer(host, &typeahead_timer_for_keys);
                         typeahead_for_keys.borrow_mut().clear();
                         vertical_scroll_for_keys.scroll_to_item(next, ScrollStrategy::Nearest);
@@ -3431,7 +3437,7 @@ where
                     KeyCode::ArrowUp => {
                         let next = current.saturating_sub(1);
                         active_index_for_keys.set(Some(next));
-                        anchor_index_for_keys.set(Some(next));
+                        anchor_index_for_keys.set(Some(entries_for_keys[next].key));
                         cancel_typeahead_timer(host, &typeahead_timer_for_keys);
                         typeahead_for_keys.borrow_mut().clear();
                         vertical_scroll_for_keys.scroll_to_item(next, ScrollStrategy::Nearest);
@@ -3440,7 +3446,7 @@ where
                     }
                     KeyCode::Home => {
                         active_index_for_keys.set(Some(0));
-                        anchor_index_for_keys.set(Some(0));
+                        anchor_index_for_keys.set(Some(entries_for_keys[0].key));
                         cancel_typeahead_timer(host, &typeahead_timer_for_keys);
                         typeahead_for_keys.borrow_mut().clear();
                         vertical_scroll_for_keys.scroll_to_item(0, ScrollStrategy::Nearest);
@@ -3449,7 +3455,7 @@ where
                     }
                     KeyCode::End => {
                         active_index_for_keys.set(Some(len));
-                        anchor_index_for_keys.set(Some(len));
+                        anchor_index_for_keys.set(Some(entries_for_keys[len].key));
                         cancel_typeahead_timer(host, &typeahead_timer_for_keys);
                         typeahead_for_keys.borrow_mut().clear();
                         vertical_scroll_for_keys.scroll_to_item(len, ScrollStrategy::Nearest);
@@ -3478,6 +3484,7 @@ where
                                 st.row_selection.insert(row_key);
                             }
                         });
+                        anchor_index_for_keys.set(Some(row_key));
                         cancel_typeahead_timer(host, &typeahead_timer_for_keys);
                         typeahead_for_keys.borrow_mut().clear();
                         host.request_redraw(action_cx.window);
@@ -3505,7 +3512,7 @@ where
                             && next != current
                         {
                             active_index_for_keys.set(Some(next));
-                            anchor_index_for_keys.set(Some(next));
+                            anchor_index_for_keys.set(Some(entries_for_keys[next].key));
                             // Typeahead should ensure the matched row becomes *visibly* in-view,
                             // not just "present in overscan".
                             vertical_scroll_for_keys.scroll_to_item(next, ScrollStrategy::Start);
@@ -4485,10 +4492,15 @@ where
                                 && let Some(m) = meta.get(next)
                                 && m.kind == TableNavRowKind::Leaf
                             {
-                                let anchor = anchor_index.get().unwrap_or(current);
+                                let anchor_key =
+                                    anchor_index.get().unwrap_or(meta[current].row_key);
                                 if anchor_index.get().is_none() {
-                                    anchor_index.set(Some(anchor));
+                                    anchor_index.set(Some(anchor_key));
                                 }
+                                let anchor = meta
+                                    .iter()
+                                    .position(|m| m.row_key == anchor_key)
+                                    .unwrap_or(current);
                                 let (a, b) = if anchor <= next {
                                     (anchor, next)
                                 } else {
@@ -4509,7 +4521,7 @@ where
                                 }
                             }
                         } else {
-                            anchor_index.set(Some(next));
+                            anchor_index.set(Some(meta[next].row_key));
                         }
 
                         clear_typeahead(host);
@@ -4568,7 +4580,7 @@ where
                                     st.row_selection.insert(row_key);
                                 }
                             });
-                            anchor_index.set(Some(current));
+                            anchor_index.set(Some(row_key));
                             clear_typeahead(host);
                             host.request_redraw(action_cx.window);
                             true
@@ -4601,7 +4613,7 @@ where
                         && next != current
                     {
                         active_index.set(Some(next));
-                        anchor_index.set(Some(next));
+                        anchor_index.set(Some(meta[next].row_key));
                         *active_command.borrow_mut() = None;
                         vertical_scroll.scroll_to_item(next, ScrollStrategy::Nearest);
                     }
@@ -5413,22 +5425,32 @@ where
 																	typeahead.clone();
 																let typeahead_timer_for_pointer =
 																	typeahead_timer.clone();
-																cx.pressable_on_pointer_down(
-																	Arc::new(move |host, action_cx, _down| {
-																		active_index_for_pointer.set(Some(i));
-																		anchor_index_for_pointer.set(Some(i));
-																		typeahead_for_pointer.borrow_mut().clear();
-																		if let Some(token) =
-																			typeahead_timer_for_pointer.get()
-																		{
-																			host.push_effect(Effect::CancelTimer { token });
-																			typeahead_timer_for_pointer.set(None);
-																		}
-																		*active_command_for_pointer.borrow_mut() = None;
-																		host.request_redraw(action_cx.window);
-																		PressablePointerDownResult::Continue
-																	}),
-																);
+                                                            cx.pressable_on_pointer_down(Arc::new(
+                                                                move |host, action_cx, down| {
+                                                                    active_index_for_pointer.set(Some(i));
+                                                                    let next_anchor = if down.modifiers.shift {
+                                                                        anchor_index_for_pointer
+                                                                            .get()
+                                                                            .or(Some(row_key))
+                                                                    } else {
+                                                                        Some(row_key)
+                                                                    };
+                                                                    anchor_index_for_pointer
+                                                                        .set(next_anchor);
+                                                                    typeahead_for_pointer
+                                                                        .borrow_mut()
+                                                                        .clear();
+                                                                    if let Some(token) =
+                                                                        typeahead_timer_for_pointer.get()
+                                                                    {
+                                                                        host.push_effect(Effect::CancelTimer { token });
+                                                                        typeahead_timer_for_pointer.set(None);
+                                                                    }
+                                                                    *active_command_for_pointer.borrow_mut() = None;
+                                                                    host.request_redraw(action_cx.window);
+                                                                    PressablePointerDownResult::Continue
+                                                                },
+                                                            ));
 																cx.pressable_add_on_pointer_up(Arc::new(
 																	move |host, action_cx, up| {
 																		if up.button
@@ -5980,17 +6002,17 @@ where
                                                     let typeahead_timer_for_pointer =
                                                         typeahead_timer.clone();
                                                     let state_model_for_pointer = state.clone();
+                                                    let row_key_for_pointer = data_row.key;
 
                                                     cx.pressable_on_pointer_down(Arc::new(
                                                         move |host, action_cx, down| {
                                                             active_index_for_pointer.set(Some(i));
-                                                            let next_anchor = if down.modifiers.shift
-                                                            {
+                                                            let next_anchor = if down.modifiers.shift {
                                                                 anchor_index_for_pointer_down
                                                                     .get()
-                                                                    .or(Some(i))
+                                                                    .or(Some(row_key_for_pointer))
                                                             } else {
-                                                                Some(i)
+                                                                Some(row_key_for_pointer)
                                                             };
                                                             anchor_index_for_pointer_down
                                                                 .set(next_anchor);
@@ -6026,11 +6048,8 @@ where
 																	let policy =
 																		props.pointer_row_selection_policy;
 																	let modifiers = up.modifiers;
-																	let row_key = data_row.key;
+																	let row_key = row_key_for_pointer;
 																	let single = props.single_row_selection;
-																let anchor = anchor_index_for_pointer_up
-																	.get()
-																	.unwrap_or(i);
 																let meta = row_meta_for_pointer
 																	.borrow()
 																	.clone();
@@ -6039,6 +6058,13 @@ where
 																	&& !single
 																	&& modifiers.shift
 																{
+                                                                    let anchor_key = anchor_index_for_pointer_up
+                                                                        .get()
+                                                                        .unwrap_or(row_key);
+                                                                    let anchor = meta
+                                                                        .iter()
+                                                                        .position(|m| m.row_key == anchor_key)
+                                                                        .unwrap_or(i);
 																	let (a, b) = if anchor <= i {
 																		(anchor, i)
 																	} else {
@@ -6116,18 +6142,18 @@ where
 																	},
 																);
 
-																let next_anchor = if policy
-																	== PointerRowSelectionPolicy::ListLike
-																	&& modifiers.shift
+																	let next_anchor = if policy
+																		== PointerRowSelectionPolicy::ListLike
+																		&& modifiers.shift
 																{
 																	anchor_index_for_pointer_up
 																		.get()
-																		.or(Some(i))
+																		.or(Some(row_key))
 																} else {
-																	Some(i)
+																	Some(row_key)
 																};
-																anchor_index_for_pointer_up
-																	.set(next_anchor);
+																	anchor_index_for_pointer_up
+																		.set(next_anchor);
 															}
 															host.request_redraw(action_cx.window);
 															PressablePointerUpResult::Continue
