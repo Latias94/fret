@@ -36,4 +36,5 @@ This TODO list is scoped to this workstream folder and is intended to keep the r
 - [x] `focus_content` / `Ctrl+F6` can exit even if no return target was recorded (pane content fallback).
 - [x] Keyboard nav: baseline roving ArrowLeft/ArrowRight auto-activates (unit test gate).
 - [ ] Keyboard nav: decide MRU vs in-order for `workspace.tab.next/prev` and lock with gates.
-- [ ] Adopt `WorkspacePaneContentFocusTarget` in workspace shells (real pane content), so exit fallback works in demos.
+- [x] Adopt `WorkspacePaneContentFocusTarget` in workspace shells (real pane content), so exit fallback works in demos.
+  - Evidence: `apps/fret-examples/src/workspace_shell_demo.rs`.
