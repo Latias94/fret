@@ -3435,6 +3435,13 @@ impl<H: UiHost> Widget<H> for DockSpace {
                                                         active: tab_ix,
                                                     },
                                                 ));
+                                                self.clamp_and_ensure_active_visible(
+                                                    theme.clone(),
+                                                    menu.tabs,
+                                                    tab_bar,
+                                                    tabs.len(),
+                                                    tab_ix,
+                                                );
                                                 if let Some(panel) = tabs.get(tab_ix) {
                                                     request_focus_panel = Some(panel.clone());
                                                 }
