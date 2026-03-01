@@ -162,10 +162,12 @@ impl<H: UiHost> UiTree<H> {
                         UiDebugInvalidationSource::Focus,
                         UiDebugInvalidationDetail::from_source(UiDebugInvalidationSource::Focus),
                     );
-                    // Avoid scrolling during pointer-down sequences (e.g. click):
+                    // Avoid scrolling during pointer-driven focus changes:
                     // programmatic scroll-to-focus can move content under a stationary cursor,
-                    // causing pressable activation to fail on pointer-up.
-                    if !matches!(event, Event::Pointer(PointerEvent::Down { .. })) {
+                    // causing pointer activation to miss/cancel (especially for nested pressables).
+                    //
+                    // Keyboard traversal still scrolls focused nodes into view.
+                    if !matches!(event, Event::Pointer(_) | Event::PointerCancel(_)) {
                         self.scroll_node_into_view(app, focus);
                     }
                 }
@@ -331,10 +333,12 @@ impl<H: UiHost> UiTree<H> {
                     UiDebugInvalidationSource::Focus,
                     UiDebugInvalidationDetail::from_source(UiDebugInvalidationSource::Focus),
                 );
-                // Avoid scrolling during pointer-down sequences (e.g. click):
+                // Avoid scrolling during pointer-driven focus changes:
                 // programmatic scroll-to-focus can move content under a stationary cursor,
-                // causing pressable activation to fail on pointer-up.
-                if !matches!(event, Event::Pointer(PointerEvent::Down { .. })) {
+                // causing pointer activation to miss/cancel (especially for nested pressables).
+                //
+                // Keyboard traversal still scrolls focused nodes into view.
+                if !matches!(event, Event::Pointer(_) | Event::PointerCancel(_)) {
                     self.scroll_node_into_view(app, focus);
                 }
             }

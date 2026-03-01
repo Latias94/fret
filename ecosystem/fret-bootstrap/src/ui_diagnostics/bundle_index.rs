@@ -428,6 +428,141 @@ pub(super) fn build_window_map_json(
     })
 }
 
+pub(super) fn build_dock_routing_json(
+    bundle_label: &str,
+    windows: &[UiDiagnosticsWindowBundleV1],
+) -> Value {
+    const MAX_ENTRIES: usize = 512;
+    let warmup_frames = DEFAULT_WARMUP_FRAMES;
+
+    let mut entries: Vec<Value> = Vec::new();
+    let mut last_fingerprint_by_window: HashMap<u64, u64> = HashMap::new();
+
+    for w in windows {
+        for (idx, s) in w.snapshots.iter().enumerate() {
+            if (idx as u64) < warmup_frames {
+                continue;
+            }
+
+            let Some(docking) = s.debug.docking_interaction.as_ref() else {
+                continue;
+            };
+            let dock_drag = docking.dock_drag.as_ref();
+            let dock_drop = docking.dock_drop_resolve.as_ref();
+
+            let interesting = dock_drag.is_some_and(|d| d.dragging)
+                || dock_drag.is_some_and(|d| d.cross_window_hover)
+                || dock_drop.is_some();
+            if !interesting {
+                continue;
+            }
+
+            let hover_detection = s
+                .caps
+                .as_ref()
+                .map(|c| c.ui_window_hover_detection.as_str())
+                .unwrap_or("unknown");
+
+            let mut fp: u64 = 14695981039346656037;
+            let mix = |fp: &mut u64, v: u64| {
+                *fp ^= v;
+                *fp = fp.wrapping_mul(1099511628211);
+            };
+
+            mix(&mut fp, w.window);
+            mix(&mut fp, hash_str_64(hover_detection));
+
+            if let Some(d) = dock_drag {
+                mix(&mut fp, d.pointer_id);
+                mix(&mut fp, d.source_window);
+                mix(&mut fp, d.current_window);
+                mix(&mut fp, d.dragging as u64);
+                mix(&mut fp, d.cross_window_hover as u64);
+                mix(&mut fp, d.transparent_payload_applied as u64);
+                mix(&mut fp, hash_str_64(d.window_under_cursor_source.as_str()));
+            }
+            if let Some(d) = dock_drop {
+                mix(&mut fp, d.pointer_id);
+                if let Ok(label) = serde_json::to_string(&d.source) {
+                    mix(&mut fp, hash_str_64(&label));
+                }
+                if let Some(r) = d.resolved.as_ref() {
+                    mix(&mut fp, r.layout_root);
+                    mix(&mut fp, r.tabs);
+                    if let Ok(label) = serde_json::to_string(&r.zone) {
+                        mix(&mut fp, hash_str_64(&label));
+                    }
+                    mix(&mut fp, r.outer as u64);
+                }
+                if let Some(p) = d.preview.as_ref() {
+                    if let Ok(label) = serde_json::to_string(&p.kind) {
+                        mix(&mut fp, hash_str_64(&label));
+                    }
+                }
+            }
+
+            if last_fingerprint_by_window.get(&w.window).copied() == Some(fp) {
+                continue;
+            }
+            last_fingerprint_by_window.insert(w.window, fp);
+
+            entries.push(json!({
+                "window": w.window,
+                "tick_id": s.tick_id,
+                "frame_id": s.frame_id,
+                "timestamp_unix_ms": s.timestamp_unix_ms,
+                "window_snapshot_seq": s.window_snapshot_seq,
+                "ui_window_hover_detection": hover_detection,
+                "dock_drag": dock_drag.map(|d| json!({
+                    "pointer_id": d.pointer_id,
+                    "source_window": d.source_window,
+                    "current_window": d.current_window,
+                    "dragging": d.dragging,
+                    "cross_window_hover": d.cross_window_hover,
+                    "transparent_payload_applied": d.transparent_payload_applied,
+                    "window_under_cursor_source": d.window_under_cursor_source,
+                })),
+                "dock_drop_resolve": dock_drop.map(|d| json!({
+                    "pointer_id": d.pointer_id,
+                    "source": d.source,
+                    "resolved": d.resolved.as_ref().map(|r| json!({
+                        "layout_root": r.layout_root,
+                        "tabs": r.tabs,
+                        "zone": r.zone,
+                        "outer": r.outer,
+                    })),
+                    "preview": d.preview.as_ref().map(|p| json!({
+                        "kind": &p.kind,
+                    })),
+                })),
+            }));
+
+            if entries.len() > MAX_ENTRIES {
+                let extra = entries.len().saturating_sub(MAX_ENTRIES);
+                entries.drain(0..extra);
+            }
+        }
+    }
+
+    json!({
+        "schema_version": 1,
+        "kind": "dock_routing",
+        "bundle": bundle_label,
+        "warmup_frames": warmup_frames,
+        "entries_total": entries.len(),
+        "entries": entries,
+    })
+}
+
+fn hash_str_64(s: &str) -> u64 {
+    let mut fp: u64 = 14695981039346656037;
+    for b in s.as_bytes() {
+        fp ^= *b as u64;
+        fp = fp.wrapping_mul(1099511628211);
+    }
+    fp
+}
+
 pub(super) fn build_test_ids_index_json(
     bundle_label: &str,
     windows: &[UiDiagnosticsWindowBundleV1],

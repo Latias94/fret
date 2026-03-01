@@ -49,11 +49,11 @@
       "container": { "kind": "test_id", "id": "ui-gallery-content-scroll" },
       "target": {
         "kind": "test_id",
-        "id": "ui-gallery.calendar.presets:2026-02-12"
+        "id": "ui-gallery-calendar-presets-card"
       },
       "delta_y": -240.0,
-      "require_fully_within_container": true,
-      "require_fully_within_window": true,
+      "require_fully_within_container": false,
+      "require_fully_within_window": false,
       "padding_px": 16.0,
       "padding_insets_px": {
         "left_px": 16.0,
@@ -68,7 +68,7 @@
       "timeout_frames": 240,
       "predicate": {
         "kind": "exists",
-        "target": { "kind": "role_and_name", "role": "button", "name": "Today" }
+        "target": { "kind": "test_id", "id": "ui-gallery-calendar-presets-card" }
       }
     },
     {
@@ -76,16 +76,22 @@
       "timeout_frames": 240,
       "predicate": {
         "kind": "exists",
-        "target": { "kind": "role_and_name", "role": "button", "name": "In 2 weeks" }
+        "target": {
+          "kind": "test_id",
+          "id": "ui-gallery-calendar-presets-button-in-2-weeks"
+        }
       }
     },
     {
       "type": "scroll_into_view",
       "container": { "kind": "test_id", "id": "ui-gallery-content-scroll" },
-      "target": { "kind": "role_and_name", "role": "button", "name": "In 2 weeks" },
+      "target": {
+        "kind": "test_id",
+        "id": "ui-gallery-calendar-presets-button-in-2-weeks"
+      },
       "delta_y": -240.0,
       "require_fully_within_container": true,
-      "require_fully_within_window": true,
+      "require_fully_within_window": false,
       "padding_px": 16.0,
       "padding_insets_px": {
         "left_px": 16.0,
@@ -97,9 +103,60 @@
     },
     {
       "type": "wait_bounds_stable",
-      "target": { "kind": "role_and_name", "role": "button", "name": "In 2 weeks" },
+      "target": {
+        "kind": "test_id",
+        "id": "ui-gallery-calendar-presets-button-in-2-weeks"
+      },
       "stable_frames": 4,
       "max_move_px": 0.5,
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "bounds_min_size",
+        "target": {
+          "kind": "test_id",
+          "id": "ui-gallery-calendar-presets-button-in-2-weeks"
+        },
+        "min_w_px": 72.0,
+        "min_h_px": 0.0,
+        "eps_px": 1.0
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "scroll_into_view",
+      "container": { "kind": "test_id", "id": "ui-gallery-content-scroll" },
+      "target": { "kind": "test_id", "id": "ui-gallery-calendar-presets-button-tomorrow" },
+      "delta_y": -240.0,
+      "require_fully_within_container": true,
+      "require_fully_within_window": false,
+      "padding_px": 16.0,
+      "padding_insets_px": {
+        "left_px": 16.0,
+        "top_px": 40.0,
+        "right_px": 16.0,
+        "bottom_px": 200.0
+      },
+      "timeout_frames": 900
+    },
+    {
+      "type": "wait_bounds_stable",
+      "target": { "kind": "test_id", "id": "ui-gallery-calendar-presets-button-tomorrow" },
+      "stable_frames": 4,
+      "max_move_px": 0.5,
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "bounds_min_size",
+        "target": { "kind": "test_id", "id": "ui-gallery-calendar-presets-button-tomorrow" },
+        "min_w_px": 72.0,
+        "min_h_px": 0.0,
+        "eps_px": 1.0
+      },
       "timeout_frames": 240
     },
     { "type": "capture_bundle", "label": "ui-gallery-calendar-presets-buttons" },

@@ -5,16 +5,43 @@ pub(in crate::ui) fn preview_button_group(cx: &mut ElementContext<'_, App>) -> V
 
     #[derive(Default)]
     struct ButtonGroupModels {
+        demo_menu_open: Option<Model<bool>>,
+        demo_label_value: Option<Model<Option<Arc<str>>>>,
         search_value: Option<Model<String>>,
         url_value: Option<Model<String>>,
         message_value: Option<Model<String>>,
-        amount_value: Option<Model<String>>,
         dropdown_open: Option<Model<bool>>,
-        select_open: Option<Model<bool>>,
-        select_value: Option<Model<Option<Arc<str>>>>,
         popover_open: Option<Model<bool>>,
         popover_text: Option<Model<String>>,
     }
+
+    let demo_menu_open = cx.with_state(ButtonGroupModels::default, |st| st.demo_menu_open.clone());
+    let demo_menu_open = match demo_menu_open {
+        Some(model) => model,
+        None => {
+            let model = cx.app.models_mut().insert(false);
+            cx.with_state(ButtonGroupModels::default, |st| {
+                st.demo_menu_open = Some(model.clone());
+            });
+            model
+        }
+    };
+
+    let demo_label_value =
+        cx.with_state(ButtonGroupModels::default, |st| st.demo_label_value.clone());
+    let demo_label_value = match demo_label_value {
+        Some(model) => model,
+        None => {
+            let model = cx
+                .app
+                .models_mut()
+                .insert(Some(Arc::<str>::from("personal")));
+            cx.with_state(ButtonGroupModels::default, |st| {
+                st.demo_label_value = Some(model.clone());
+            });
+            model
+        }
+    };
 
     let search_value = cx.with_state(ButtonGroupModels::default, |st| st.search_value.clone());
     let search_value = match search_value {
@@ -52,18 +79,6 @@ pub(in crate::ui) fn preview_button_group(cx: &mut ElementContext<'_, App>) -> V
         }
     };
 
-    let amount_value = cx.with_state(ButtonGroupModels::default, |st| st.amount_value.clone());
-    let amount_value = match amount_value {
-        Some(model) => model,
-        None => {
-            let model = cx.app.models_mut().insert(String::new());
-            cx.with_state(ButtonGroupModels::default, |st| {
-                st.amount_value = Some(model.clone());
-            });
-            model
-        }
-    };
-
     let dropdown_open = cx.with_state(ButtonGroupModels::default, |st| st.dropdown_open.clone());
     let dropdown_open = match dropdown_open {
         Some(model) => model,
@@ -71,30 +86,6 @@ pub(in crate::ui) fn preview_button_group(cx: &mut ElementContext<'_, App>) -> V
             let model = cx.app.models_mut().insert(false);
             cx.with_state(ButtonGroupModels::default, |st| {
                 st.dropdown_open = Some(model.clone());
-            });
-            model
-        }
-    };
-
-    let select_open = cx.with_state(ButtonGroupModels::default, |st| st.select_open.clone());
-    let select_open = match select_open {
-        Some(model) => model,
-        None => {
-            let model = cx.app.models_mut().insert(false);
-            cx.with_state(ButtonGroupModels::default, |st| {
-                st.select_open = Some(model.clone());
-            });
-            model
-        }
-    };
-
-    let select_value = cx.with_state(ButtonGroupModels::default, |st| st.select_value.clone());
-    let select_value = match select_value {
-        Some(model) => model,
-        None => {
-            let model = cx.app.models_mut().insert(Some(Arc::<str>::from("$")));
-            cx.with_state(ButtonGroupModels::default, |st| {
-                st.select_value = Some(model.clone());
             });
             model
         }
@@ -116,10 +107,7 @@ pub(in crate::ui) fn preview_button_group(cx: &mut ElementContext<'_, App>) -> V
     let popover_text = match popover_text {
         Some(model) => model,
         None => {
-            let model = cx
-                .app
-                .models_mut()
-                .insert(String::from("Describe your task in natural language."));
+            let model = cx.app.models_mut().insert(String::new());
             cx.with_state(ButtonGroupModels::default, |st| {
                 st.popover_text = Some(model.clone());
             });
@@ -129,15 +117,119 @@ pub(in crate::ui) fn preview_button_group(cx: &mut ElementContext<'_, App>) -> V
 
     let icon_id = |id: &'static str| fret_icons::IconId::new_static(id);
 
-    let demo = shadcn::ButtonGroup::new([
-        shadcn::Button::new("Button").into(),
-        shadcn::Button::new("Get Started")
-            .trailing_icon(icon_id("lucide.arrow-right"))
-            .into(),
-    ])
-    .a11y_label("Button group")
-    .into_element(cx)
-    .test_id("ui-gallery-button-group-demo");
+    let demo = {
+        let radius = fret_ui::Theme::global(&*cx.app).metric_token("metric.radius.md");
+        let corners_last = Corners {
+            top_left: Px(0.0),
+            bottom_left: Px(0.0),
+            top_right: radius,
+            bottom_right: radius,
+        };
+
+        let menu_trigger = shadcn::Button::new("")
+            .a11y_label("More Options")
+            .variant(shadcn::ButtonVariant::Outline)
+            .size(shadcn::ButtonSize::Icon)
+            .icon(icon_id("lucide.more-horizontal"))
+            .toggle_model(demo_menu_open.clone())
+            .border_left_width_override(Px(0.0))
+            .corner_radii_override(corners_last)
+            .into_element(cx);
+
+        let menu = shadcn::DropdownMenu::new(demo_menu_open.clone())
+            .align(shadcn::DropdownMenuAlign::End)
+            .into_element(
+                cx,
+                |_cx| menu_trigger,
+                |_cx| {
+                    vec![
+                        shadcn::DropdownMenuEntry::Group(shadcn::DropdownMenuGroup::new([
+                            shadcn::DropdownMenuEntry::Item(
+                                shadcn::DropdownMenuItem::new("Mark as Read")
+                                    .leading_icon(icon_id("lucide.mail-check")),
+                            ),
+                            shadcn::DropdownMenuEntry::Item(
+                                shadcn::DropdownMenuItem::new("Archive")
+                                    .leading_icon(icon_id("lucide.archive")),
+                            ),
+                        ])),
+                        shadcn::DropdownMenuEntry::Separator,
+                        shadcn::DropdownMenuEntry::Group(shadcn::DropdownMenuGroup::new([
+                            shadcn::DropdownMenuEntry::Item(
+                                shadcn::DropdownMenuItem::new("Snooze")
+                                    .leading_icon(icon_id("lucide.clock")),
+                            ),
+                            shadcn::DropdownMenuEntry::Item(
+                                shadcn::DropdownMenuItem::new("Add to Calendar")
+                                    .leading_icon(icon_id("lucide.calendar-plus")),
+                            ),
+                            shadcn::DropdownMenuEntry::Item(
+                                shadcn::DropdownMenuItem::new("Add to List")
+                                    .leading_icon(icon_id("lucide.list-filter")),
+                            ),
+                            shadcn::DropdownMenuEntry::Item(
+                                shadcn::DropdownMenuItem::new("Label As...")
+                                    .leading_icon(icon_id("lucide.tag"))
+                                    .submenu([shadcn::DropdownMenuEntry::RadioGroup(
+                                        shadcn::DropdownMenuRadioGroup::new(
+                                            demo_label_value.clone(),
+                                        )
+                                        .item(shadcn::DropdownMenuRadioItemSpec::new(
+                                            "personal", "Personal",
+                                        ))
+                                        .item(shadcn::DropdownMenuRadioItemSpec::new(
+                                            "work", "Work",
+                                        ))
+                                        .item(
+                                            shadcn::DropdownMenuRadioItemSpec::new(
+                                                "other", "Other",
+                                            ),
+                                        ),
+                                    )]),
+                            ),
+                        ])),
+                        shadcn::DropdownMenuEntry::Separator,
+                        shadcn::DropdownMenuEntry::Group(shadcn::DropdownMenuGroup::new([
+                            shadcn::DropdownMenuEntry::Item(
+                                shadcn::DropdownMenuItem::new("Trash")
+                                    .variant(
+                                        shadcn::dropdown_menu::DropdownMenuItemVariant::Destructive,
+                                    )
+                                    .leading_icon(icon_id("lucide.trash")),
+                            ),
+                        ])),
+                    ]
+                },
+            );
+
+        let back = shadcn::ButtonGroup::new([shadcn::Button::new("")
+            .a11y_label("Go Back")
+            .variant(shadcn::ButtonVariant::Outline)
+            .size(shadcn::ButtonSize::Icon)
+            .icon(icon_id("lucide.arrow-left"))
+            .into()]);
+
+        let actions = shadcn::ButtonGroup::new([
+            shadcn::Button::new("Archive")
+                .variant(shadcn::ButtonVariant::Outline)
+                .into(),
+            shadcn::Button::new("Report")
+                .variant(shadcn::ButtonVariant::Outline)
+                .into(),
+        ]);
+
+        let snooze = shadcn::ButtonGroup::new([
+            shadcn::Button::new("Snooze")
+                .variant(shadcn::ButtonVariant::Outline)
+                .into(),
+            menu.into(),
+        ]);
+
+        shadcn::ButtonGroup::new([back.into(), actions.into(), snooze.into()])
+            .a11y_label("Button group")
+            .into_element(cx)
+            .test_id("ui-gallery-button-group-demo")
+    };
 
     let orientation = shadcn::ButtonGroup::new([
         shadcn::Button::new("")
@@ -234,45 +326,40 @@ pub(in crate::ui) fn preview_button_group(cx: &mut ElementContext<'_, App>) -> V
     };
 
     let nested = {
-        let digits = shadcn::ButtonGroup::new([
-            shadcn::Button::new("1")
-                .variant(shadcn::ButtonVariant::Outline)
-                .size(shadcn::ButtonSize::Sm)
-                .into(),
-            shadcn::Button::new("2")
-                .variant(shadcn::ButtonVariant::Outline)
-                .size(shadcn::ButtonSize::Sm)
-                .into(),
-            shadcn::Button::new("3")
-                .variant(shadcn::ButtonVariant::Outline)
-                .size(shadcn::ButtonSize::Sm)
-                .into(),
-            shadcn::Button::new("4")
-                .variant(shadcn::ButtonVariant::Outline)
-                .size(shadcn::ButtonSize::Sm)
-                .into(),
-            shadcn::Button::new("5")
-                .variant(shadcn::ButtonVariant::Outline)
-                .size(shadcn::ButtonSize::Sm)
-                .into(),
-        ]);
+        let voice_tooltip = shadcn::Tooltip::new(
+            shadcn::InputGroupButton::new("")
+                .a11y_label("Voice Mode")
+                .size(shadcn::InputGroupButtonSize::IconSm)
+                .icon(icon_id("lucide.audio-lines"))
+                .into_element(cx),
+            shadcn::TooltipContent::new(vec![shadcn::TooltipContent::text(cx, "Voice Mode")])
+                .into_element(cx),
+        )
+        .arrow(true)
+        .side(shadcn::TooltipSide::Top)
+        .into_element(cx);
 
-        let nav = shadcn::ButtonGroup::new([
-            shadcn::Button::new("")
-                .a11y_label("Previous")
-                .variant(shadcn::ButtonVariant::Outline)
-                .size(shadcn::ButtonSize::IconSm)
-                .icon(icon_id("lucide.arrow-left"))
-                .into(),
-            shadcn::Button::new("")
-                .a11y_label("Next")
-                .variant(shadcn::ButtonVariant::Outline)
-                .size(shadcn::ButtonSize::IconSm)
-                .icon(icon_id("lucide.arrow-right"))
-                .into(),
-        ]);
+        let input_group = shadcn::InputGroup::new(message_value.clone())
+            .a11y_label("Message")
+            .trailing([voice_tooltip])
+            .trailing_has_button(true);
 
-        shadcn::ButtonGroup::new([digits.into(), nav.into()])
+        let plus = shadcn::ButtonGroup::new([shadcn::Button::new("")
+            .variant(shadcn::ButtonVariant::Outline)
+            .size(shadcn::ButtonSize::Icon)
+            .icon(icon_id("lucide.plus"))
+            .into()]);
+
+        let message = shadcn::ButtonGroup::new([input_group.into()])
+            .refine_layout(LayoutRefinement::default().flex_1().min_w_0());
+
+        shadcn::ButtonGroup::new([plus.into(), message.into()])
+            .refine_layout(
+                LayoutRefinement::default()
+                    .w_full()
+                    .min_w_0()
+                    .max_w(Px(560.0)),
+            )
             .into_element(cx)
             .test_id("ui-gallery-button-group-nested")
     };
@@ -312,7 +399,6 @@ pub(in crate::ui) fn preview_button_group(cx: &mut ElementContext<'_, App>) -> V
             .a11y_label("URL")
             .placeholder("example")
             .refine_layout(LayoutRefinement::default().w_px(Px(220.0)).min_w_0())
-            .into_element(cx)
             .into(),
         shadcn::ButtonGroupText::new(".com").into(),
     ])
@@ -344,69 +430,89 @@ pub(in crate::ui) fn preview_button_group(cx: &mut ElementContext<'_, App>) -> V
         shadcn::Input::new(search_value.clone())
             .a11y_label("Search")
             .placeholder("Search...")
-            .refine_layout(LayoutRefinement::default().w_px(Px(220.0)))
-            .into_element(cx)
             .into(),
         shadcn::Button::new("")
             .a11y_label("Search")
             .variant(shadcn::ButtonVariant::Outline)
-            .size(shadcn::ButtonSize::Icon)
-            .icon(icon_id("lucide.search"))
+            .children([doc_layout::icon(cx, "lucide.search")])
             .into(),
     ])
+    .refine_layout(
+        LayoutRefinement::default()
+            .w_full()
+            .min_w_0()
+            .max_w(Px(420.0)),
+    )
     .into_element(cx)
     .test_id("ui-gallery-button-group-input");
 
-    let input_group = {
-        let group = shadcn::InputGroup::new(message_value.clone())
-            .a11y_label("Message")
-            .leading([shadcn::InputGroupText::new("To").into_element(cx)])
-            .trailing([shadcn::InputGroupButton::new("Send").into_element(cx)]);
-
-        shadcn::ButtonGroup::new([
-            shadcn::Button::new("")
-                .a11y_label("Add")
-                .variant(shadcn::ButtonVariant::Outline)
-                .size(shadcn::ButtonSize::Icon)
-                .icon(icon_id("lucide.plus"))
-                .into(),
-            group.into(),
-        ])
-        .into_element(cx)
-        .test_id("ui-gallery-button-group-input-group")
-    };
+    let input_group = crate::ui::snippets::button_group::input_group::render(cx);
 
     let dropdown = {
-        let dropdown = shadcn::DropdownMenu::new(dropdown_open.clone()).into_element(
-            cx,
-            |cx| {
-                shadcn::Button::new("")
-                    .a11y_label("More")
-                    .variant(shadcn::ButtonVariant::Outline)
-                    .size(shadcn::ButtonSize::Icon)
-                    .icon(icon_id("lucide.chevron-down"))
-                    .toggle_model(dropdown_open.clone())
-                    .into_element(cx)
-            },
-            |_cx| {
-                vec![
-                    shadcn::DropdownMenuEntry::Item(
-                        shadcn::DropdownMenuItem::new("Mute Conversation")
-                            .leading_icon(icon_id("lucide.volume-x")),
-                    ),
-                    shadcn::DropdownMenuEntry::Item(
-                        shadcn::DropdownMenuItem::new("Mark as Read")
-                            .leading_icon(icon_id("lucide.check")),
-                    ),
-                    shadcn::DropdownMenuEntry::Separator,
-                    shadcn::DropdownMenuEntry::Item(
-                        shadcn::DropdownMenuItem::new("Delete Conversation")
-                            .variant(shadcn::dropdown_menu::DropdownMenuItemVariant::Destructive)
-                            .leading_icon(icon_id("lucide.trash")),
-                    ),
-                ]
-            },
-        );
+        let radius = fret_ui::Theme::global(&*cx.app).metric_token("metric.radius.md");
+        let corners_last = Corners {
+            top_left: Px(0.0),
+            bottom_left: Px(0.0),
+            top_right: radius,
+            bottom_right: radius,
+        };
+
+        let dropdown_trigger = shadcn::Button::new("")
+            .a11y_label("More")
+            .variant(shadcn::ButtonVariant::Outline)
+            .refine_style(ChromeRefinement::default().pl(Space::N2))
+            .children([doc_layout::icon(cx, "lucide.chevron-down")])
+            .toggle_model(dropdown_open.clone())
+            .border_left_width_override(Px(0.0))
+            .corner_radii_override(corners_last)
+            .into_element(cx);
+
+        let dropdown = shadcn::DropdownMenu::new(dropdown_open.clone())
+            .align(shadcn::DropdownMenuAlign::End)
+            .into_element(
+                cx,
+                |_cx| dropdown_trigger,
+                |_cx| {
+                    vec![
+                        shadcn::DropdownMenuEntry::Group(shadcn::DropdownMenuGroup::new([
+                            shadcn::DropdownMenuEntry::Item(
+                                shadcn::DropdownMenuItem::new("Mute Conversation")
+                                    .leading_icon(icon_id("lucide.volume-x")),
+                            ),
+                            shadcn::DropdownMenuEntry::Item(
+                                shadcn::DropdownMenuItem::new("Mark as Read")
+                                    .leading_icon(icon_id("lucide.check")),
+                            ),
+                            shadcn::DropdownMenuEntry::Item(
+                                shadcn::DropdownMenuItem::new("Report Conversation")
+                                    .leading_icon(icon_id("lucide.alert-triangle")),
+                            ),
+                            shadcn::DropdownMenuEntry::Item(
+                                shadcn::DropdownMenuItem::new("Block User")
+                                    .leading_icon(icon_id("lucide.user-round-x")),
+                            ),
+                            shadcn::DropdownMenuEntry::Item(
+                                shadcn::DropdownMenuItem::new("Share Conversation")
+                                    .leading_icon(icon_id("lucide.share")),
+                            ),
+                            shadcn::DropdownMenuEntry::Item(
+                                shadcn::DropdownMenuItem::new("Copy Conversation")
+                                    .leading_icon(icon_id("lucide.copy")),
+                            ),
+                        ])),
+                        shadcn::DropdownMenuEntry::Separator,
+                        shadcn::DropdownMenuEntry::Group(shadcn::DropdownMenuGroup::new([
+                            shadcn::DropdownMenuEntry::Item(
+                                shadcn::DropdownMenuItem::new("Delete Conversation")
+                                    .variant(
+                                        shadcn::dropdown_menu::DropdownMenuItemVariant::Destructive,
+                                    )
+                                    .leading_icon(icon_id("lucide.trash")),
+                            ),
+                        ])),
+                    ]
+                },
+            );
 
         shadcn::ButtonGroup::new([
             shadcn::Button::new("Follow")
@@ -418,38 +524,18 @@ pub(in crate::ui) fn preview_button_group(cx: &mut ElementContext<'_, App>) -> V
         .test_id("ui-gallery-button-group-dropdown")
     };
 
-    let select = {
-        let currency = shadcn::Select::new(select_value.clone(), select_open.clone())
-            .placeholder("$")
-            .refine_layout(LayoutRefinement::default().w_px(Px(96.0)))
-            .items([
-                shadcn::SelectItem::new("$", "US Dollar"),
-                shadcn::SelectItem::new("€", "Euro"),
-                shadcn::SelectItem::new("£", "British Pound"),
-            ])
-            .into_element(cx);
-
-        let amount = shadcn::Input::new(amount_value.clone())
-            .a11y_label("Amount")
-            .placeholder("10.00")
-            .refine_layout(LayoutRefinement::default().w_px(Px(140.0)))
-            .into_element(cx);
-
-        let send = shadcn::Button::new("")
-            .a11y_label("Send")
-            .variant(shadcn::ButtonVariant::Outline)
-            .size(shadcn::ButtonSize::Icon)
-            .icon(icon_id("lucide.arrow-right"));
-
-        shadcn::ButtonGroup::new([
-            shadcn::ButtonGroup::new([currency.into(), amount.into()]).into(),
-            shadcn::ButtonGroup::new([send.into()]).into(),
-        ])
-        .into_element(cx)
-        .test_id("ui-gallery-button-group-select")
-    };
+    let select = crate::ui::snippets::button_group::button_group_select::render(cx)
+        .test_id("ui-gallery-button-group-select");
 
     let popover = {
+        let radius = fret_ui::Theme::global(&*cx.app).metric_token("metric.radius.md");
+        let corners_last = Corners {
+            top_left: Px(0.0),
+            bottom_left: Px(0.0),
+            top_right: radius,
+            bottom_right: radius,
+        };
+
         let popover = shadcn::Popover::new(popover_open.clone())
             .side(shadcn::PopoverSide::Bottom)
             .align(shadcn::PopoverAlign::End)
@@ -462,17 +548,39 @@ pub(in crate::ui) fn preview_button_group(cx: &mut ElementContext<'_, App>) -> V
                         .size(shadcn::ButtonSize::Icon)
                         .icon(icon_id("lucide.chevron-down"))
                         .toggle_model(popover_open.clone())
+                        .border_left_width_override(Px(0.0))
+                        .corner_radii_override(corners_last)
                         .into_element(cx)
                 },
                 |cx| {
                     shadcn::PopoverContent::new(vec![
-                        shadcn::PopoverTitle::new("Agent Tasks").into_element(cx),
-                        shadcn::Separator::new().into_element(cx),
-                        shadcn::Textarea::new(popover_text.clone())
-                            .a11y_label("Task")
-                            .refine_layout(LayoutRefinement::default().w_px(Px(260.0)))
+                        shadcn::PopoverHeader::new([
+                            shadcn::PopoverTitle::new("Start a new task with Copilot")
+                                .into_element(cx),
+                            shadcn::PopoverDescription::new(
+                                "Describe your task in natural language.",
+                            )
                             .into_element(cx),
+                        ])
+                        .into_element(cx),
+                        shadcn::Field::new([
+                            fret_ui_kit::primitives::visually_hidden::visually_hidden_label(
+                                cx,
+                                "Task Description",
+                            ),
+                            shadcn::Textarea::new(popover_text.clone())
+                                .a11y_label("Task Description")
+                                .placeholder("I need to...")
+                                .resizable(false)
+                                .into_element(cx),
+                            shadcn::FieldDescription::new(
+                                "Copilot will open a pull request for review.",
+                            )
+                            .into_element(cx),
+                        ])
+                        .into_element(cx),
                     ])
+                    .refine_style(ChromeRefinement::default().rounded(Radius::Lg))
                     .into_element(cx)
                 },
             );
@@ -520,16 +628,116 @@ pub(in crate::ui) fn preview_button_group(cx: &mut ElementContext<'_, App>) -> V
                 .code(
                     "rust",
                     r#"use fret_ui_shadcn as shadcn;
-use shadcn::{Button, ButtonGroup};
+use std::sync::Arc;
 
-ButtonGroup::new([
-    Button::new("Button").into(),
-    Button::new("Get Started")
-        .trailing_icon(fret_icons::IconId::new_static("lucide.arrow-right"))
+let menu_open = cx.app.models_mut().insert(false);
+let label = cx
+    .app
+    .models_mut()
+    .insert(Some(Arc::<str>::from("personal")));
+
+let radius = fret_ui::Theme::global(&*cx.app).metric_token("metric.radius.md");
+let corners_last = fret_core::Corners {
+    top_left: fret_core::Px(0.0),
+    bottom_left: fret_core::Px(0.0),
+    top_right: radius,
+    bottom_right: radius,
+};
+
+let menu_trigger = shadcn::Button::new("")
+    .a11y_label("More Options")
+    .variant(shadcn::ButtonVariant::Outline)
+    .size(shadcn::ButtonSize::Icon)
+    .icon(fret_icons::IconId::new_static("lucide.more-horizontal"))
+    .toggle_model(menu_open.clone())
+    .border_left_width_override(fret_core::Px(0.0))
+    .corner_radii_override(corners_last)
+    .into_element(cx);
+
+let menu = shadcn::DropdownMenu::new(menu_open.clone())
+    .align(shadcn::DropdownMenuAlign::End)
+    .into_element(
+        cx,
+        |_cx| menu_trigger,
+        |_cx| {
+            vec![
+                shadcn::DropdownMenuEntry::Group(shadcn::DropdownMenuGroup::new([
+                    shadcn::DropdownMenuEntry::Item(
+                        shadcn::DropdownMenuItem::new("Mark as Read")
+                            .leading_icon(fret_icons::IconId::new_static("lucide.mail-check")),
+                    ),
+                    shadcn::DropdownMenuEntry::Item(
+                        shadcn::DropdownMenuItem::new("Archive")
+                            .leading_icon(fret_icons::IconId::new_static("lucide.archive")),
+                    ),
+                ])),
+                shadcn::DropdownMenuEntry::Separator,
+                shadcn::DropdownMenuEntry::Group(shadcn::DropdownMenuGroup::new([
+                    shadcn::DropdownMenuEntry::Item(
+                        shadcn::DropdownMenuItem::new("Snooze")
+                            .leading_icon(fret_icons::IconId::new_static("lucide.clock")),
+                    ),
+                    shadcn::DropdownMenuEntry::Item(
+                        shadcn::DropdownMenuItem::new("Add to Calendar")
+                            .leading_icon(fret_icons::IconId::new_static("lucide.calendar-plus")),
+                    ),
+                    shadcn::DropdownMenuEntry::Item(
+                        shadcn::DropdownMenuItem::new("Add to List")
+                            .leading_icon(fret_icons::IconId::new_static("lucide.list-filter")),
+                    ),
+                    shadcn::DropdownMenuEntry::Item(
+                        shadcn::DropdownMenuItem::new("Label As...")
+                            .leading_icon(fret_icons::IconId::new_static("lucide.tag"))
+                            .submenu([shadcn::DropdownMenuEntry::RadioGroup(
+                                shadcn::DropdownMenuRadioGroup::new(label.clone())
+                                    .item(shadcn::DropdownMenuRadioItemSpec::new(
+                                        "personal", "Personal",
+                                    ))
+                                    .item(shadcn::DropdownMenuRadioItemSpec::new("work", "Work"))
+                                    .item(shadcn::DropdownMenuRadioItemSpec::new(
+                                        "other", "Other",
+                                    )),
+                            )]),
+                    ),
+                ])),
+                shadcn::DropdownMenuEntry::Separator,
+                shadcn::DropdownMenuEntry::Group(shadcn::DropdownMenuGroup::new([
+                    shadcn::DropdownMenuEntry::Item(
+                        shadcn::DropdownMenuItem::new("Trash")
+                            .variant(shadcn::dropdown_menu::DropdownMenuItemVariant::Destructive)
+                            .leading_icon(fret_icons::IconId::new_static("lucide.trash")),
+                    ),
+                ])),
+            ]
+        },
+    );
+
+let back = shadcn::ButtonGroup::new([shadcn::Button::new("")
+    .a11y_label("Go Back")
+    .variant(shadcn::ButtonVariant::Outline)
+    .size(shadcn::ButtonSize::Icon)
+    .icon(fret_icons::IconId::new_static("lucide.arrow-left"))
+    .into()]);
+
+let actions = shadcn::ButtonGroup::new([
+    shadcn::Button::new("Archive")
+        .variant(shadcn::ButtonVariant::Outline)
         .into(),
-])
-.a11y_label("Button group")
-.into_element(cx);"#,
+    shadcn::Button::new("Report")
+        .variant(shadcn::ButtonVariant::Outline)
+        .into(),
+]);
+
+let snooze = shadcn::ButtonGroup::new([
+    shadcn::Button::new("Snooze")
+        .variant(shadcn::ButtonVariant::Outline)
+        .into(),
+    menu.into(),
+]);
+
+shadcn::ButtonGroup::new([back.into(), actions.into(), snooze.into()])
+    .a11y_label("Button group")
+    .into_element(cx);"#,
                 ),
             DocSection::new("Orientation", orientation)
                 .test_id_prefix("ui-gallery-button-group-orientation")
@@ -628,27 +836,37 @@ stack::vstack(
                 .test_id_prefix("ui-gallery-button-group-nested")
                 .code(
                     "rust",
-                    r#"let digits = shadcn::ButtonGroup::new([
-    shadcn::Button::new("1").variant(shadcn::ButtonVariant::Outline).into(),
-    shadcn::Button::new("2").variant(shadcn::ButtonVariant::Outline).into(),
-]);
+                    r#"let model = cx.app.models_mut().insert(String::new());
 
-let nav = shadcn::ButtonGroup::new([
-    shadcn::Button::new("")
-        .a11y_label("Previous")
-        .variant(shadcn::ButtonVariant::Outline)
-        .size(shadcn::ButtonSize::IconSm)
-        .icon(fret_icons::IconId::new_static("lucide.arrow-left"))
-        .into(),
-    shadcn::Button::new("")
-        .a11y_label("Next")
-        .variant(shadcn::ButtonVariant::Outline)
-        .size(shadcn::ButtonSize::IconSm)
-        .icon(fret_icons::IconId::new_static("lucide.arrow-right"))
-        .into(),
-]);
+let voice_tooltip = shadcn::Tooltip::new(
+    shadcn::InputGroupButton::new("")
+        .a11y_label("Voice Mode")
+        .size(shadcn::InputGroupButtonSize::IconSm)
+        .icon(fret_icons::IconId::new_static("lucide.audio-lines"))
+        .into_element(cx),
+    shadcn::TooltipContent::new(vec![shadcn::TooltipContent::text(cx, "Voice Mode")])
+        .into_element(cx),
+)
+.arrow(true)
+.side(shadcn::TooltipSide::Top)
+.into_element(cx);
 
-shadcn::ButtonGroup::new([digits.into(), nav.into()]).into_element(cx);"#,
+let input_group = shadcn::InputGroup::new(model)
+    .a11y_label("Message")
+    .trailing([voice_tooltip])
+    .trailing_has_button(true);
+
+let plus = shadcn::ButtonGroup::new([shadcn::Button::new("")
+    .variant(shadcn::ButtonVariant::Outline)
+    .size(shadcn::ButtonSize::Icon)
+    .icon(fret_icons::IconId::new_static("lucide.plus"))
+    .into()]);
+
+let message = shadcn::ButtonGroup::new([input_group.into()]);
+
+shadcn::ButtonGroup::new([plus.into(), message.into()])
+    .refine_layout(LayoutRefinement::default().w_full().min_w_0().max_w(Px(560.0)))
+    .into_element(cx);"#,
                 ),
             DocSection::new("Separator", separator)
                 .test_id_prefix("ui-gallery-button-group-separator")
@@ -681,12 +899,14 @@ shadcn::ButtonGroup::new([digits.into(), nav.into()]).into_element(cx);"#,
                 .test_id_prefix("ui-gallery-button-group-text")
                 .code(
                     "rust",
-                    r#"shadcn::ButtonGroup::new([
+                    r#"let model = cx.app.models_mut().insert(String::new());
+
+shadcn::ButtonGroup::new([
     shadcn::ButtonGroupText::new("https://").into(),
     shadcn::Input::new(model)
         .a11y_label("URL")
         .placeholder("example")
-        .into_element(cx)
+        .refine_layout(LayoutRefinement::default().w_px(Px(220.0)).min_w_0())
         .into(),
     shadcn::ButtonGroupText::new(".com").into(),
 ])
@@ -721,40 +941,25 @@ shadcn::ButtonGroup::new([
     shadcn::Input::new(model)
         .a11y_label("Search")
         .placeholder("Search...")
-        .refine_layout(LayoutRefinement::default().w_px(Px(220.0)))
-        .into_element(cx)
         .into(),
     shadcn::Button::new("")
         .a11y_label("Search")
         .variant(shadcn::ButtonVariant::Outline)
-        .size(shadcn::ButtonSize::Icon)
-        .icon(fret_icons::IconId::new_static("lucide.search"))
+        .children([shadcn::icon::icon(
+            cx,
+            fret_icons::IconId::new_static("lucide.search"),
+        )])
         .into(),
 ])
+.refine_layout(LayoutRefinement::default().w_full().min_w_0().max_w(Px(420.0)))
 .into_element(cx);"#,
                 ),
             DocSection::new("Input Group", input_group)
                 .max_w(Px(820.0))
                 .test_id_prefix("ui-gallery-button-group-input-group")
-                .code(
+                .code_from_file(
                     "rust",
-                    r#"let model = cx.app.models_mut().insert(String::new());
-
-let group = shadcn::InputGroup::new(model)
-    .a11y_label("Message")
-    .leading([shadcn::InputGroupText::new("To").into_element(cx)])
-    .trailing([shadcn::InputGroupButton::new("Send").into_element(cx)]);
-
-shadcn::ButtonGroup::new([
-    shadcn::Button::new("")
-        .a11y_label("Add")
-        .variant(shadcn::ButtonVariant::Outline)
-        .size(shadcn::ButtonSize::Icon)
-        .icon(fret_icons::IconId::new_static("lucide.plus"))
-        .into(),
-    group.into(),
-])
-.into_element(cx);"#,
+                    include_str!("../../../../snippets/button_group/input_group.rs"),
                 ),
             DocSection::new("Dropdown Menu", dropdown)
                 .max_w(Px(820.0))
@@ -763,36 +968,71 @@ shadcn::ButtonGroup::new([
                     "rust",
                     r#"let open_model = cx.app.models_mut().insert(false);
 
-let menu = shadcn::DropdownMenu::new(open_model.clone()).into_element(
-    cx,
-    |cx| {
-        shadcn::Button::new("")
-            .a11y_label("More")
-            .variant(shadcn::ButtonVariant::Outline)
-            .size(shadcn::ButtonSize::Icon)
-            .icon(fret_icons::IconId::new_static("lucide.chevron-down"))
-            .toggle_model(open_model.clone())
-            .into_element(cx)
-    },
-    |cx| {
-        vec![
-            shadcn::DropdownMenuEntry::Item(
-                shadcn::DropdownMenuItem::new("Mute Conversation")
-                    .leading_icon(fret_icons::IconId::new_static("lucide.volume-x")),
-            ),
-            shadcn::DropdownMenuEntry::Item(
-                shadcn::DropdownMenuItem::new("Mark as Read")
-                    .leading_icon(fret_icons::IconId::new_static("lucide.check")),
-            ),
-            shadcn::DropdownMenuEntry::Separator,
-            shadcn::DropdownMenuEntry::Item(
-                shadcn::DropdownMenuItem::new("Delete Conversation")
-                    .variant(shadcn::dropdown_menu::DropdownMenuItemVariant::Destructive)
-                    .leading_icon(fret_icons::IconId::new_static("lucide.trash")),
-            ),
-        ]
-    },
-);
+let radius = fret_ui::Theme::global(&*cx.app).metric_token("metric.radius.md");
+let corners_last = fret_core::Corners {
+    top_left: fret_core::Px(0.0),
+    bottom_left: fret_core::Px(0.0),
+    top_right: radius,
+    bottom_right: radius,
+};
+
+let menu_trigger = shadcn::Button::new("")
+    .a11y_label("More")
+    .variant(shadcn::ButtonVariant::Outline)
+    .refine_style(ChromeRefinement::default().pl(Space::N2))
+    .children([shadcn::icon::icon(
+        cx,
+        fret_icons::IconId::new_static("lucide.chevron-down"),
+    )])
+    .toggle_model(open_model.clone())
+    .border_left_width_override(fret_core::Px(0.0))
+    .corner_radii_override(corners_last)
+    .into_element(cx);
+
+let menu = shadcn::DropdownMenu::new(open_model.clone())
+    .align(shadcn::DropdownMenuAlign::End)
+    .into_element(
+        cx,
+        |_cx| menu_trigger,
+        |_cx| {
+            vec![
+                shadcn::DropdownMenuEntry::Group(shadcn::DropdownMenuGroup::new([
+                    shadcn::DropdownMenuEntry::Item(
+                        shadcn::DropdownMenuItem::new("Mute Conversation")
+                            .leading_icon(fret_icons::IconId::new_static("lucide.volume-x")),
+                    ),
+                    shadcn::DropdownMenuEntry::Item(
+                        shadcn::DropdownMenuItem::new("Mark as Read")
+                            .leading_icon(fret_icons::IconId::new_static("lucide.check")),
+                    ),
+                    shadcn::DropdownMenuEntry::Item(
+                        shadcn::DropdownMenuItem::new("Report Conversation")
+                            .leading_icon(fret_icons::IconId::new_static("lucide.alert-triangle")),
+                    ),
+                    shadcn::DropdownMenuEntry::Item(
+                        shadcn::DropdownMenuItem::new("Block User")
+                            .leading_icon(fret_icons::IconId::new_static("lucide.user-round-x")),
+                    ),
+                    shadcn::DropdownMenuEntry::Item(
+                        shadcn::DropdownMenuItem::new("Share Conversation")
+                            .leading_icon(fret_icons::IconId::new_static("lucide.share")),
+                    ),
+                    shadcn::DropdownMenuEntry::Item(
+                        shadcn::DropdownMenuItem::new("Copy Conversation")
+                            .leading_icon(fret_icons::IconId::new_static("lucide.copy")),
+                    ),
+                ])),
+                shadcn::DropdownMenuEntry::Separator,
+                shadcn::DropdownMenuEntry::Group(shadcn::DropdownMenuGroup::new([
+                    shadcn::DropdownMenuEntry::Item(
+                        shadcn::DropdownMenuItem::new("Delete Conversation")
+                            .variant(shadcn::dropdown_menu::DropdownMenuItemVariant::Destructive)
+                            .leading_icon(fret_icons::IconId::new_static("lucide.trash")),
+                    ),
+                ])),
+            ]
+        },
+    );
 
 shadcn::ButtonGroup::new([
     shadcn::Button::new("Follow")
@@ -805,39 +1045,9 @@ shadcn::ButtonGroup::new([
             DocSection::new("Select", select)
                 .max_w(Px(820.0))
                 .test_id_prefix("ui-gallery-button-group-select")
-                .code(
+                .code_from_file(
                     "rust",
-                    r#"let select_open = cx.app.models_mut().insert(false);
-let select_value = cx.app.models_mut().insert(Some("$".into()));
-let amount_value = cx.app.models_mut().insert(String::new());
-
-let currency = shadcn::Select::new(select_value.clone(), select_open.clone())
-    .placeholder("$")
-    .refine_layout(LayoutRefinement::default().w_px(Px(96.0)))
-    .items([
-        shadcn::SelectItem::new("$", "US Dollar"),
-        shadcn::SelectItem::new("€", "Euro"),
-        shadcn::SelectItem::new("£", "British Pound"),
-    ])
-    .into_element(cx);
-
-let amount = shadcn::Input::new(amount_value)
-    .a11y_label("Amount")
-    .placeholder("10.00")
-    .refine_layout(LayoutRefinement::default().w_px(Px(140.0)))
-    .into_element(cx);
-
-let send = shadcn::Button::new("")
-    .a11y_label("Send")
-    .variant(shadcn::ButtonVariant::Outline)
-    .size(shadcn::ButtonSize::Icon)
-    .icon(fret_icons::IconId::new_static("lucide.arrow-right"));
-
-shadcn::ButtonGroup::new([
-    shadcn::ButtonGroup::new([currency.into(), amount.into()]).into(),
-    shadcn::ButtonGroup::new([send.into()]).into(),
-])
-.into_element(cx);"#,
+                    include_str!("../../../../snippets/button_group/button_group_select.rs"),
                 ),
             DocSection::new("Popover", popover)
                 .max_w(Px(820.0))
@@ -845,35 +1055,61 @@ shadcn::ButtonGroup::new([
                 .code(
                     "rust",
                     r#"let open_model = cx.app.models_mut().insert(false);
-let text_model =
-    cx.app.models_mut().insert(String::from("Describe your task in natural language."));
+		let text_model = cx.app.models_mut().insert(String::new());
 
-let popover = shadcn::Popover::new(open_model.clone())
-    .side(shadcn::PopoverSide::Bottom)
-    .align(shadcn::PopoverAlign::End)
-    .into_element(
-        cx,
-        |cx| {
-            shadcn::Button::new("")
-                .a11y_label("Open popover")
-                .variant(shadcn::ButtonVariant::Outline)
-                .size(shadcn::ButtonSize::Icon)
-                .icon(fret_icons::IconId::new_static("lucide.chevron-down"))
-                .toggle_model(open_model.clone())
-                .into_element(cx)
-        },
-        |cx| {
-            shadcn::PopoverContent::new(vec![
-                shadcn::PopoverTitle::new("Agent Tasks").into_element(cx),
-                shadcn::Separator::new().into_element(cx),
-                shadcn::Textarea::new(text_model.clone())
-                    .a11y_label("Task")
-                    .refine_layout(LayoutRefinement::default().w_px(Px(260.0)))
-                    .into_element(cx),
-            ])
-            .into_element(cx)
-        },
-    );
+let radius = fret_ui::Theme::global(&*cx.app).metric_token("metric.radius.md");
+let corners_last = fret_core::Corners {
+    top_left: fret_core::Px(0.0),
+    bottom_left: fret_core::Px(0.0),
+    top_right: radius,
+    bottom_right: radius,
+};
+	
+	let popover = shadcn::Popover::new(open_model.clone())
+	    .side(shadcn::PopoverSide::Bottom)
+	    .align(shadcn::PopoverAlign::End)
+	    .into_element(
+	        cx,
+	        |cx| {
+	            shadcn::Button::new("")
+	                .a11y_label("Open popover")
+	                .variant(shadcn::ButtonVariant::Outline)
+	                .size(shadcn::ButtonSize::Icon)
+	                .icon(fret_icons::IconId::new_static("lucide.chevron-down"))
+	                .toggle_model(open_model.clone())
+	                .border_left_width_override(fret_core::Px(0.0))
+	                .corner_radii_override(corners_last)
+	                .into_element(cx)
+	        },
+	        |cx| {
+	            shadcn::PopoverContent::new(vec![
+	                shadcn::PopoverHeader::new([
+	                    shadcn::PopoverTitle::new("Start a new task with Copilot").into_element(cx),
+	                    shadcn::PopoverDescription::new("Describe your task in natural language.")
+	                        .into_element(cx),
+	                ])
+	                .into_element(cx),
+	                shadcn::Field::new([
+	                    fret_ui_kit::primitives::visually_hidden::visually_hidden_label(
+	                        cx,
+	                        "Task Description",
+	                    ),
+	                    shadcn::Textarea::new(text_model.clone())
+	                        .a11y_label("Task Description")
+	                        .placeholder("I need to...")
+	                        .resizable(false)
+	                        .into_element(cx),
+	                    shadcn::FieldDescription::new(
+	                        "Copilot will open a pull request for review.",
+	                    )
+	                    .into_element(cx),
+	                ])
+	                .into_element(cx),
+	            ])
+	            .refine_style(ChromeRefinement::default().rounded(Radius::Xl))
+	            .into_element(cx)
+	        },
+	    );
 
 shadcn::ButtonGroup::new([
     shadcn::Button::new("Copilot")

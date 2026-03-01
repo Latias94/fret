@@ -9,6 +9,7 @@ pub(super) fn preview_dropdown_menu(
     #[derive(Default)]
     struct DropdownMenuPageModels {
         basic_open: Option<Model<bool>>,
+        parts_open: Option<Model<bool>>,
         submenu_open: Option<Model<bool>>,
         shortcuts_open: Option<Model<bool>>,
         icons_open: Option<Model<bool>>,
@@ -27,6 +28,7 @@ pub(super) fn preview_dropdown_menu(
 
     let (
         basic_open,
+        parts_open,
         submenu_open,
         shortcuts_open,
         icons_open,
@@ -44,6 +46,7 @@ pub(super) fn preview_dropdown_menu(
     ) = cx.with_state(DropdownMenuPageModels::default, |st| {
         (
             st.basic_open.clone(),
+            st.parts_open.clone(),
             st.submenu_open.clone(),
             st.shortcuts_open.clone(),
             st.icons_open.clone(),
@@ -63,6 +66,7 @@ pub(super) fn preview_dropdown_menu(
 
     let (
         basic_open,
+        parts_open,
         submenu_open,
         shortcuts_open,
         icons_open,
@@ -79,6 +83,7 @@ pub(super) fn preview_dropdown_menu(
         theme_mode,
     ) = match (
         basic_open,
+        parts_open,
         submenu_open,
         shortcuts_open,
         icons_open,
@@ -96,6 +101,7 @@ pub(super) fn preview_dropdown_menu(
     ) {
         (
             Some(basic_open),
+            Some(parts_open),
             Some(submenu_open),
             Some(shortcuts_open),
             Some(icons_open),
@@ -112,6 +118,7 @@ pub(super) fn preview_dropdown_menu(
             Some(theme_mode),
         ) => (
             basic_open,
+            parts_open,
             submenu_open,
             shortcuts_open,
             icons_open,
@@ -129,6 +136,7 @@ pub(super) fn preview_dropdown_menu(
         ),
         _ => {
             let basic_open = cx.app.models_mut().insert(false);
+            let parts_open = cx.app.models_mut().insert(false);
             let submenu_open = cx.app.models_mut().insert(false);
             let shortcuts_open = cx.app.models_mut().insert(false);
             let icons_open = cx.app.models_mut().insert(false);
@@ -146,6 +154,7 @@ pub(super) fn preview_dropdown_menu(
 
             cx.with_state(DropdownMenuPageModels::default, |st| {
                 st.basic_open = Some(basic_open.clone());
+                st.parts_open = Some(parts_open.clone());
                 st.submenu_open = Some(submenu_open.clone());
                 st.shortcuts_open = Some(shortcuts_open.clone());
                 st.icons_open = Some(icons_open.clone());
@@ -164,6 +173,7 @@ pub(super) fn preview_dropdown_menu(
 
             (
                 basic_open,
+                parts_open,
                 submenu_open,
                 shortcuts_open,
                 icons_open,
@@ -227,6 +237,50 @@ pub(super) fn preview_dropdown_menu(
                         ),
                     ],
                 )),
+            ]
+        },
+    );
+
+    let parts = shadcn::DropdownMenu::new(parts_open.clone()).into_element_parts(
+        cx,
+        |cx| {
+            shadcn::DropdownMenuTrigger::new(
+                shadcn::Button::new("Parts")
+                    .variant(shadcn::ButtonVariant::Outline)
+                    .test_id("ui-gallery-dropdown-menu-parts-trigger")
+                    .into_element(cx),
+            )
+        },
+        shadcn::DropdownMenuContent::new()
+            .align(shadcn::DropdownMenuAlign::Start)
+            .side_offset(Px(4.0)),
+        |cx| {
+            vec![
+                shadcn::DropdownMenuLabel::new("My Account").into(),
+                shadcn::DropdownMenuSeparator::new().into(),
+                shadcn::DropdownMenuItem::new("Profile")
+                    .leading_icon(fret_icons::IconId::new_static("lucide.user"))
+                    .trailing(shadcn::DropdownMenuShortcut::new("Cmd+P").into_element(cx))
+                    .on_select(CMD_MENU_DROPDOWN_APPLE)
+                    .test_id("ui-gallery-dropdown-menu-parts-profile")
+                    .into(),
+                shadcn::DropdownMenuSub::new(
+                    shadcn::DropdownMenuSubTrigger::new("More tools").refine(|item| {
+                        item.test_id("ui-gallery-dropdown-menu-parts-more")
+                            .close_on_select(false)
+                    }),
+                    shadcn::DropdownMenuSubContent::new(vec![
+                        shadcn::DropdownMenuItem::new("Rename")
+                            .on_select(CMD_MENU_DROPDOWN_APPLE)
+                            .test_id("ui-gallery-dropdown-menu-parts-sub-rename")
+                            .into(),
+                        shadcn::DropdownMenuItem::new("Duplicate")
+                            .on_select(CMD_MENU_DROPDOWN_ORANGE)
+                            .test_id("ui-gallery-dropdown-menu-parts-sub-duplicate")
+                            .into(),
+                    ]),
+                )
+                .into(),
             ]
         },
     );
@@ -543,7 +597,7 @@ pub(super) fn preview_dropdown_menu(
     let body = doc_layout::render_doc_page(
         cx,
         Some(
-            "Preview follows shadcn Dropdown Menu docs order: Demo, Basic, Submenu, Shortcuts, Icons, Checkboxes, Checkboxes Icons, Radio Group, Radio Icons, Destructive, Avatar, Complex, RTL.",
+            "Preview follows shadcn Dropdown Menu docs order: Demo, Parts, Basic, Submenu, Shortcuts, Icons, Checkboxes, Checkboxes Icons, Radio Group, Radio Icons, Destructive, Avatar, Complex, RTL.",
         ),
         vec![
             DocSection::new("Demo", demo)
@@ -555,6 +609,39 @@ let menu = shadcn::DropdownMenu::new(open).into_element(
     cx,
     |cx| shadcn::Button::new("Open").toggle_model(open.clone()).into_element(cx),
     |_cx| vec![/* entries */],
+);"#,
+                ),
+            DocSection::new("Parts", parts)
+                .description("Part-based authoring surface aligned with shadcn/ui v4 exports.")
+                .code(
+                    "rust",
+                    r#"let open = app.models_mut().insert(false);
+
+shadcn::DropdownMenu::new(open).into_element_parts(
+    cx,
+    |cx| shadcn::DropdownMenuTrigger::new(
+        shadcn::Button::new("Open")
+            .toggle_model(open.clone())
+            .into_element(cx),
+    ),
+    shadcn::DropdownMenuContent::new()
+        .align(shadcn::DropdownMenuAlign::Start)
+        .side_offset(fret_core::Px(4.0)),
+    |cx| {
+        vec![
+            shadcn::DropdownMenuLabel::new("My Account").into(),
+            shadcn::DropdownMenuSeparator::new().into(),
+            shadcn::DropdownMenuItem::new("Profile").into(),
+            shadcn::DropdownMenuSub::new(
+                shadcn::DropdownMenuSubTrigger::new("More tools"),
+                shadcn::DropdownMenuSubContent::new(vec![
+                    shadcn::DropdownMenuItem::new("Rename").into(),
+                    shadcn::DropdownMenuItem::new("Duplicate").into(),
+                ]),
+            )
+            .into(),
+        ]
+    },
 );"#,
                 ),
             DocSection::new("Basic", basic)

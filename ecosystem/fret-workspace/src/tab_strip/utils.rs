@@ -101,13 +101,11 @@ mod tests {
         .collect();
 
         assert_eq!(
-            resolve_end_drop_target_in_canonical_order(&pinned_by_id, &canonical, "a")
-                .as_deref(),
+            resolve_end_drop_target_in_canonical_order(&pinned_by_id, &canonical, "a").as_deref(),
             Some("b")
         );
         assert_eq!(
-            resolve_end_drop_target_in_canonical_order(&pinned_by_id, &canonical, "c")
-                .as_deref(),
+            resolve_end_drop_target_in_canonical_order(&pinned_by_id, &canonical, "c").as_deref(),
             Some("d")
         );
     }
@@ -116,7 +114,9 @@ mod tests {
     fn end_drop_target_returns_none_when_dragged_is_only_member_of_group() {
         let canonical: Vec<Arc<str>> = vec![arc("only"), arc("other")];
         let pinned_by_id: std::collections::HashMap<Arc<str>, bool> =
-            [(arc("only"), true), (arc("other"), false)].into_iter().collect();
+            [(arc("only"), true), (arc("other"), false)]
+                .into_iter()
+                .collect();
 
         assert_eq!(
             resolve_end_drop_target_in_canonical_order(&pinned_by_id, &canonical, "only"),

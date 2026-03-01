@@ -252,6 +252,11 @@ pub(crate) fn run_doctor_for_bundle_dir(
         let _ = crate::bundle_index::ensure_bundle_index_json(&bundle_artifact, warmup_frames).map(
             |p| fixes_applied.push(format!("regenerated bundle.index.json ({})", p.display())),
         );
+        let _ = crate::bundle_index::ensure_window_map_json(&bundle_artifact, warmup_frames)
+            .map(|p| fixes_applied.push(format!("regenerated window.map.json ({})", p.display())));
+        let _ = crate::bundle_index::ensure_dock_routing_json(&bundle_artifact, warmup_frames).map(
+            |p| fixes_applied.push(format!("regenerated dock.routing.json ({})", p.display())),
+        );
         let _ = crate::frames_index::ensure_frames_index_json(&bundle_artifact, warmup_frames).map(
             |p| fixes_applied.push(format!("regenerated frames.index.json ({})", p.display())),
         );
@@ -628,6 +633,30 @@ fn doctor_items(bundle_dir: &Path, warmup_frames: u64) -> (Vec<DoctorItem>, bool
     ));
     items.push(build_item(
         bundle_dir,
+        "window.map.json",
+        "window_map",
+        "window.map.json",
+        warmup_frames,
+        format!(
+            "fretboard diag windows {} --warmup-frames {}",
+            bundle_dir.display(),
+            warmup_frames
+        ),
+    ));
+    items.push(build_item(
+        bundle_dir,
+        "dock.routing.json",
+        "dock_routing",
+        "dock.routing.json",
+        warmup_frames,
+        format!(
+            "fretboard diag dock-routing {} --warmup-frames {}",
+            bundle_dir.display(),
+            warmup_frames
+        ),
+    ));
+    items.push(build_item(
+        bundle_dir,
         "test_ids.index.json",
         "test_ids_index",
         "test_ids.index.json",
@@ -653,7 +682,12 @@ fn doctor_items(bundle_dir: &Path, warmup_frames: u64) -> (Vec<DoctorItem>, bool
 
     let required_ok = items
         .iter()
-        .filter(|it| it.kind != "test_ids_index" && it.kind != "frames_index")
+        .filter(|it| {
+            it.kind != "test_ids_index"
+                && it.kind != "frames_index"
+                && it.kind != "window_map"
+                && it.kind != "dock_routing"
+        })
         .all(|it| it.status == DoctorStatus::Ok);
     let ok = items.iter().all(|it| it.status == DoctorStatus::Ok);
     (items, required_ok, ok)

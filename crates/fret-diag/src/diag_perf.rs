@@ -384,6 +384,17 @@ hint: list promoted scripts via `fretboard diag list scripts --contains {name}`"
     launch_fs_transport_cfg.script_result_trigger_path =
         resolved_script_result_trigger_path.clone();
 
+    let perf_wants_screenshots = check_pixels_changed_test_id.is_some()
+        || scripts
+            .iter()
+            .any(|src| crate::script_requests_screenshots(src))
+        || perf_suite_prewarm_scripts
+            .iter()
+            .any(|src| crate::script_requests_screenshots(src))
+        || perf_suite_prelude_scripts
+            .iter()
+            .any(|src| crate::script_requests_screenshots(src));
+
     if launched_by_fretboard && !reuse_process_per_script {
         child = maybe_launch_demo(
             &launch,
@@ -392,7 +403,7 @@ hint: list promoted scripts via `fretboard diag list scripts --contains {name}`"
             &resolved_ready_path,
             &resolved_exit_path,
             &launch_fs_transport_cfg,
-            false,
+            perf_wants_screenshots,
             launch_write_bundle_json,
             timeout_ms,
             poll_ms,
@@ -440,7 +451,7 @@ hint: list promoted scripts via `fretboard diag list scripts --contains {name}`"
                 &resolved_ready_path,
                 &resolved_exit_path,
                 &launch_fs_transport_cfg,
-                false,
+                perf_wants_screenshots,
                 launch_write_bundle_json,
                 timeout_ms,
                 poll_ms,
@@ -482,7 +493,7 @@ hint: list promoted scripts via `fretboard diag list scripts --contains {name}`"
                     &resolved_ready_path,
                     &resolved_exit_path,
                     &launch_fs_transport_cfg,
-                    false,
+                    perf_wants_screenshots,
                     launch_write_bundle_json,
                     timeout_ms,
                     poll_ms,
@@ -993,7 +1004,7 @@ hint: list promoted scripts via `fretboard diag list scripts --contains {name}`"
                     &resolved_ready_path,
                     &resolved_exit_path,
                     &launch_fs_transport_cfg,
-                    false,
+                    perf_wants_screenshots,
                     launch_write_bundle_json,
                     timeout_ms,
                     poll_ms,

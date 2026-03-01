@@ -88,6 +88,8 @@ pub(super) fn handle_scroll_into_view_step(
         _ => V2ScrollIntoViewState {
             step_index,
             remaining_frames: timeout_frames,
+            no_progress_frames: 0,
+            last_target_bounds: None,
         },
     };
 
@@ -210,6 +212,73 @@ pub(super) fn handle_scroll_into_view_step(
             let mut effective_dx = delta_x;
             let mut effective_dy = delta_y;
             if let Some(target_node) = target_node {
+                if require_fully_within_window {
+                    let inner_window = rect_inset(window_bounds, insets);
+                    let target_w = target_node.bounds.size.width.0.max(0.0);
+                    let target_h = target_node.bounds.size.height.0.max(0.0);
+                    let inner_w = inner_window.size.width.0.max(0.0);
+                    let inner_h = inner_window.size.height.0.max(0.0);
+                    if inner_w > 1.0
+                        && inner_h > 1.0
+                        && (target_w > inner_w + 0.5 || target_h > inner_h + 0.5)
+                    {
+                        *force_dump_label = Some(format!(
+                            "script-step-{step_index:04}-scroll_into_view-impossible-oversized"
+                        ));
+                        *stop_script = true;
+                        *failure_reason =
+                            Some("scroll_into_view_impossible_oversized_target".to_string());
+                        active.v2_step_state = None;
+                        output.request_redraw = true;
+                        return true;
+                    }
+                }
+
+                if require_fully_within_container {
+                    let inner_container = rect_inset(container_node.bounds, insets);
+                    let target_w = target_node.bounds.size.width.0.max(0.0);
+                    let target_h = target_node.bounds.size.height.0.max(0.0);
+                    let inner_w = inner_container.size.width.0.max(0.0);
+                    let inner_h = inner_container.size.height.0.max(0.0);
+                    if inner_w > 1.0
+                        && inner_h > 1.0
+                        && (target_w > inner_w + 0.5 || target_h > inner_h + 0.5)
+                    {
+                        *force_dump_label = Some(format!(
+                            "script-step-{step_index:04}-scroll_into_view-impossible-oversized"
+                        ));
+                        *stop_script = true;
+                        *failure_reason = Some(
+                            "scroll_into_view_impossible_oversized_target_for_container"
+                                .to_string(),
+                        );
+                        active.v2_step_state = None;
+                        output.request_redraw = true;
+                        return true;
+                    }
+                }
+
+                if state
+                    .last_target_bounds
+                    .is_some_and(|prev| prev == target_node.bounds)
+                {
+                    state.no_progress_frames = state.no_progress_frames.saturating_add(1);
+                } else {
+                    state.no_progress_frames = 0;
+                }
+                state.last_target_bounds = Some(target_node.bounds);
+
+                if state.no_progress_frames >= 20 {
+                    *force_dump_label = Some(format!(
+                        "script-step-{step_index:04}-scroll_into_view-stuck-no-progress"
+                    ));
+                    *stop_script = true;
+                    *failure_reason = Some("scroll_into_view_stuck_no_progress".to_string());
+                    active.v2_step_state = None;
+                    output.request_redraw = true;
+                    return true;
+                }
+
                 if effective_dx.abs() > 0.01 {
                     let abs_dx = effective_dx.abs();
                     let target_left = target_node.bounds.origin.x.0;

@@ -1,0 +1,16 @@
+[package]
+name = "fret-cookbook"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+documentation.workspace = true
+publish = false
+
+[dependencies]
+anyhow.workspace = true
+fret = { path = "../../ecosystem/fret", default-features = false, features = ["desktop", "diagnostics", "shadcn", "icons", "preload-icon-svgs"] }
+fret-core = { path = "../../crates/fret-core" }

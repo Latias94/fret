@@ -1,0 +1,133 @@
+# UI Gallery Fearless Refactor (TODO + Tracker)
+
+This file is the active checklist and component tracker for the UI Gallery refactor.
+
+Legend:
+
+- **Snippet-backed**: preview renders compiled snippet code; code tab displays `include_str!` from the same file.
+- **Drift-free**: code cannot diverge from preview by construction.
+
+## TODO (phased)
+
+### Foundations
+
+- [ ] Add `apps/fret-ui-gallery/src/ui/snippets/` with a minimal example.
+- [ ] Add a helper for `DocSection` to load code from a snippet file (and optionally a named region).
+- [ ] Document snippet conventions (file naming, user-facing `use` stanza, required function signatures).
+
+### Migration batches
+
+- [ ] Migrate Button Group page(s) to snippet-backed sections.
+- [ ] Migrate Select page(s) to snippet-backed sections.
+- [ ] Migrate overlay family pages (Dropdown Menu, Menubar, Context Menu, Popover, Tooltip, Dialog, Sheet, Drawer).
+- [ ] Migrate form family pages (Input, Input Group, Textarea, Checkbox, Radio Group, Switch, Slider, Toggle, Toggle Group, Select, Combobox).
+- [ ] Migrate layout + data-display pages (Tabs, Table, Data Table, Chart, Calendar, Carousel, Scroll Area, Navigation Menu, Pagination, etc).
+
+### Enforcement
+
+- [ ] Add a lint/test that forbids new `DocSection::code("rust", r#"...")` on migrated pages.
+- [ ] Add a small “drift audit” doc section in UI Gallery (optional) to list remaining legacy sections.
+
+## Shadcn component tracker (gallery refactor status)
+
+Columns:
+
+- **Component**: upstream shadcn component name (kebab-case).
+- **Base MDX / Radix MDX**: upstream doc paths (explicitly tracked to avoid “which variant?” ambiguity).
+- **Fret module**: `kebab-case` → `snake_case` module name in `ecosystem/fret-ui-shadcn`.
+- **Gallery Page**: where the component is showcased (initially “TBD” until we normalize page taxonomy).
+- **Snippet-backed**: `No | Partial | Yes` (preview + code tab share a single compiled snippet file).
+- **Status**: `Not started | In progress | Done`
+- **Gates**: optional regression hooks (`test_id`, `fretboard diag` scripts, conformance fixtures).
+- **Notes**: drift risks, known gaps, migration hints, or doc-variant notes.
+
+Source list: upstream shadcn v4 Base/Radix doc trees:
+
+- Base: `repo-ref/ui/apps/v4/content/docs/components/base/*.mdx`
+- Radix: `repo-ref/ui/apps/v4/content/docs/components/radix/*.mdx`
+
+| Component | Base MDX | Radix MDX | Fret module | Gallery Page | Snippet-backed | Status | Gates | Notes |
+|---|---|---|---|---:|---:|---:|---|---|
+| accordion | `repo-ref/ui/apps/v4/content/docs/components/base/accordion.mdx` | `repo-ref/ui/apps/v4/content/docs/components/radix/accordion.mdx` | `accordion` | TBD | No | Not started |  |  |
+| alert | `repo-ref/ui/apps/v4/content/docs/components/base/alert.mdx` | `repo-ref/ui/apps/v4/content/docs/components/radix/alert.mdx` | `alert` | TBD | No | Not started |  |  |
+| alert-dialog | `repo-ref/ui/apps/v4/content/docs/components/base/alert-dialog.mdx` | `repo-ref/ui/apps/v4/content/docs/components/radix/alert-dialog.mdx` | `alert_dialog` | TBD | No | Not started |  |  |
+| aspect-ratio | `repo-ref/ui/apps/v4/content/docs/components/base/aspect-ratio.mdx` | `repo-ref/ui/apps/v4/content/docs/components/radix/aspect-ratio.mdx` | `aspect_ratio` | TBD | No | Not started |  |  |
+| avatar | `repo-ref/ui/apps/v4/content/docs/components/base/avatar.mdx` | `repo-ref/ui/apps/v4/content/docs/components/radix/avatar.mdx` | `avatar` | TBD | No | Not started |  |  |
+| badge | `repo-ref/ui/apps/v4/content/docs/components/base/badge.mdx` | `repo-ref/ui/apps/v4/content/docs/components/radix/badge.mdx` | `badge` | TBD | No | Not started |  |  |
+| breadcrumb | `repo-ref/ui/apps/v4/content/docs/components/base/breadcrumb.mdx` | `repo-ref/ui/apps/v4/content/docs/components/radix/breadcrumb.mdx` | `breadcrumb` | TBD | No | Not started |  |  |
+| button | `repo-ref/ui/apps/v4/content/docs/components/base/button.mdx` | `repo-ref/ui/apps/v4/content/docs/components/radix/button.mdx` | `button` | TBD | No | Not started |  |  |
+| button-group | `repo-ref/ui/apps/v4/content/docs/components/base/button-group.mdx` | `repo-ref/ui/apps/v4/content/docs/components/radix/button-group.mdx` | `button_group` | `apps/fret-ui-gallery/src/ui/previews/pages/components/basics/button_group.rs` | Partial | In progress |  | Migrated Select + Input Group to snippet-backed; finish remaining sections. |
+| calendar | `repo-ref/ui/apps/v4/content/docs/components/base/calendar.mdx` | `repo-ref/ui/apps/v4/content/docs/components/radix/calendar.mdx` | `calendar` | TBD | No | Not started |  |  |
+| card | `repo-ref/ui/apps/v4/content/docs/components/base/card.mdx` | `repo-ref/ui/apps/v4/content/docs/components/radix/card.mdx` | `card` | TBD | No | Not started |  |  |
+| carousel | `repo-ref/ui/apps/v4/content/docs/components/base/carousel.mdx` | `repo-ref/ui/apps/v4/content/docs/components/radix/carousel.mdx` | `carousel` | TBD | No | Not started |  |  |
+| chart | `repo-ref/ui/apps/v4/content/docs/components/base/chart.mdx` | `repo-ref/ui/apps/v4/content/docs/components/radix/chart.mdx` | `chart` | TBD | No | Not started |  |  |
+| checkbox | `repo-ref/ui/apps/v4/content/docs/components/base/checkbox.mdx` | `repo-ref/ui/apps/v4/content/docs/components/radix/checkbox.mdx` | `checkbox` | TBD | No | Not started |  |  |
+| collapsible | `repo-ref/ui/apps/v4/content/docs/components/base/collapsible.mdx` | `repo-ref/ui/apps/v4/content/docs/components/radix/collapsible.mdx` | `collapsible` | TBD | No | Not started |  |  |
+| combobox | `repo-ref/ui/apps/v4/content/docs/components/base/combobox.mdx` | `repo-ref/ui/apps/v4/content/docs/components/radix/combobox.mdx` | `combobox` | TBD | No | Not started |  |  |
+| command | `repo-ref/ui/apps/v4/content/docs/components/base/command.mdx` | `repo-ref/ui/apps/v4/content/docs/components/radix/command.mdx` | `command` | TBD | No | Not started |  |  |
+| context-menu | `repo-ref/ui/apps/v4/content/docs/components/base/context-menu.mdx` | `repo-ref/ui/apps/v4/content/docs/components/radix/context-menu.mdx` | `context_menu` | TBD | No | Not started |  | Overlay family; add interaction gates. |
+| data-table | `repo-ref/ui/apps/v4/content/docs/components/base/data-table.mdx` | `repo-ref/ui/apps/v4/content/docs/components/radix/data-table.mdx` | `data_table` | TBD | No | Not started |  |  |
+| date-picker | `repo-ref/ui/apps/v4/content/docs/components/base/date-picker.mdx` | `repo-ref/ui/apps/v4/content/docs/components/radix/date-picker.mdx` | `date_picker` | TBD | No | Not started |  |  |
+| dialog | `repo-ref/ui/apps/v4/content/docs/components/base/dialog.mdx` | `repo-ref/ui/apps/v4/content/docs/components/radix/dialog.mdx` | `dialog` | TBD | No | Not started |  | Overlay family; add interaction gates. |
+| direction | `repo-ref/ui/apps/v4/content/docs/components/base/direction.mdx` | `repo-ref/ui/apps/v4/content/docs/components/radix/direction.mdx` | — | TBD | No | Not started |  | Doc-only (directionality guidance), not a component. |
+| drawer | `repo-ref/ui/apps/v4/content/docs/components/base/drawer.mdx` | `repo-ref/ui/apps/v4/content/docs/components/radix/drawer.mdx` | `drawer` | TBD | No | Not started |  | Overlay family; add interaction gates. |
+| dropdown-menu | `repo-ref/ui/apps/v4/content/docs/components/base/dropdown-menu.mdx` | `repo-ref/ui/apps/v4/content/docs/components/radix/dropdown-menu.mdx` | `dropdown_menu` | TBD | No | Not started |  | Overlay family; add interaction gates. |
+| empty | `repo-ref/ui/apps/v4/content/docs/components/base/empty.mdx` | `repo-ref/ui/apps/v4/content/docs/components/radix/empty.mdx` | `empty` | TBD | No | Not started |  |  |
+| field | `repo-ref/ui/apps/v4/content/docs/components/base/field.mdx` | `repo-ref/ui/apps/v4/content/docs/components/radix/field.mdx` | `field` | TBD | No | Not started |  |  |
+| hover-card | `repo-ref/ui/apps/v4/content/docs/components/base/hover-card.mdx` | `repo-ref/ui/apps/v4/content/docs/components/radix/hover-card.mdx` | `hover_card` | TBD | No | Not started |  |  |
+| input | `repo-ref/ui/apps/v4/content/docs/components/base/input.mdx` | `repo-ref/ui/apps/v4/content/docs/components/radix/input.mdx` | `input` | TBD | No | Not started |  |  |
+| input-group | `repo-ref/ui/apps/v4/content/docs/components/base/input-group.mdx` | `repo-ref/ui/apps/v4/content/docs/components/radix/input-group.mdx` | `input_group` | TBD | No | Not started |  |  |
+| input-otp | `repo-ref/ui/apps/v4/content/docs/components/base/input-otp.mdx` | `repo-ref/ui/apps/v4/content/docs/components/radix/input-otp.mdx` | `input_otp` | TBD | No | Not started |  |  |
+| item | `repo-ref/ui/apps/v4/content/docs/components/base/item.mdx` | `repo-ref/ui/apps/v4/content/docs/components/radix/item.mdx` | `item` | TBD | No | Not started |  |  |
+| kbd | `repo-ref/ui/apps/v4/content/docs/components/base/kbd.mdx` | `repo-ref/ui/apps/v4/content/docs/components/radix/kbd.mdx` | `kbd` | TBD | No | Not started |  |  |
+| label | `repo-ref/ui/apps/v4/content/docs/components/base/label.mdx` | `repo-ref/ui/apps/v4/content/docs/components/radix/label.mdx` | `label` | TBD | No | Not started |  |  |
+| menubar | `repo-ref/ui/apps/v4/content/docs/components/base/menubar.mdx` | `repo-ref/ui/apps/v4/content/docs/components/radix/menubar.mdx` | `menubar` | TBD | No | Not started |  | Overlay family; add interaction gates. |
+| native-select | `repo-ref/ui/apps/v4/content/docs/components/base/native-select.mdx` | `repo-ref/ui/apps/v4/content/docs/components/radix/native-select.mdx` | `native_select` | TBD | No | Not started |  |  |
+| navigation-menu | `repo-ref/ui/apps/v4/content/docs/components/base/navigation-menu.mdx` | `repo-ref/ui/apps/v4/content/docs/components/radix/navigation-menu.mdx` | `navigation_menu` | TBD | No | Not started |  |  |
+| pagination | `repo-ref/ui/apps/v4/content/docs/components/base/pagination.mdx` | `repo-ref/ui/apps/v4/content/docs/components/radix/pagination.mdx` | `pagination` | TBD | No | Not started |  |  |
+| popover | `repo-ref/ui/apps/v4/content/docs/components/base/popover.mdx` | `repo-ref/ui/apps/v4/content/docs/components/radix/popover.mdx` | `popover` | TBD | No | Not started |  | Overlay family; add interaction gates. |
+| progress | `repo-ref/ui/apps/v4/content/docs/components/base/progress.mdx` | `repo-ref/ui/apps/v4/content/docs/components/radix/progress.mdx` | `progress` | TBD | No | Not started |  |  |
+| radio-group | `repo-ref/ui/apps/v4/content/docs/components/base/radio-group.mdx` | `repo-ref/ui/apps/v4/content/docs/components/radix/radio-group.mdx` | `radio_group` | TBD | No | Not started |  |  |
+| resizable | `repo-ref/ui/apps/v4/content/docs/components/base/resizable.mdx` | `repo-ref/ui/apps/v4/content/docs/components/radix/resizable.mdx` | `resizable` | TBD | No | Not started |  |  |
+| scroll-area | `repo-ref/ui/apps/v4/content/docs/components/base/scroll-area.mdx` | `repo-ref/ui/apps/v4/content/docs/components/radix/scroll-area.mdx` | `scroll_area` | TBD | No | Not started |  |  |
+| select | `repo-ref/ui/apps/v4/content/docs/components/base/select.mdx` | `repo-ref/ui/apps/v4/content/docs/components/radix/select.mdx` | `select` | `apps/fret-ui-gallery/src/ui/previews/gallery/forms/select.rs` | Yes | Done |  | Snippet-backed previews + code tabs for all Select sections. |
+| separator | `repo-ref/ui/apps/v4/content/docs/components/base/separator.mdx` | `repo-ref/ui/apps/v4/content/docs/components/radix/separator.mdx` | `separator` | TBD | No | Not started |  |  |
+| sheet | `repo-ref/ui/apps/v4/content/docs/components/base/sheet.mdx` | `repo-ref/ui/apps/v4/content/docs/components/radix/sheet.mdx` | `sheet` | TBD | No | Not started |  | Overlay family; add interaction gates. |
+| sidebar | `repo-ref/ui/apps/v4/content/docs/components/base/sidebar.mdx` | `repo-ref/ui/apps/v4/content/docs/components/radix/sidebar.mdx` | `sidebar` | TBD | No | Not started |  |  |
+| skeleton | `repo-ref/ui/apps/v4/content/docs/components/base/skeleton.mdx` | `repo-ref/ui/apps/v4/content/docs/components/radix/skeleton.mdx` | `skeleton` | TBD | No | Not started |  |  |
+| slider | `repo-ref/ui/apps/v4/content/docs/components/base/slider.mdx` | `repo-ref/ui/apps/v4/content/docs/components/radix/slider.mdx` | `slider` | TBD | No | Not started |  |  |
+| sonner | `repo-ref/ui/apps/v4/content/docs/components/base/sonner.mdx` | `repo-ref/ui/apps/v4/content/docs/components/radix/sonner.mdx` | `sonner` | TBD | No | Not started |  |  |
+| spinner | `repo-ref/ui/apps/v4/content/docs/components/base/spinner.mdx` | `repo-ref/ui/apps/v4/content/docs/components/radix/spinner.mdx` | `spinner` | TBD | No | Not started |  |  |
+| switch | `repo-ref/ui/apps/v4/content/docs/components/base/switch.mdx` | `repo-ref/ui/apps/v4/content/docs/components/radix/switch.mdx` | `switch` | TBD | No | Not started |  |  |
+| table | `repo-ref/ui/apps/v4/content/docs/components/base/table.mdx` | `repo-ref/ui/apps/v4/content/docs/components/radix/table.mdx` | `table` | TBD | No | Not started |  |  |
+| tabs | `repo-ref/ui/apps/v4/content/docs/components/base/tabs.mdx` | `repo-ref/ui/apps/v4/content/docs/components/radix/tabs.mdx` | `tabs` | TBD | No | Not started |  |  |
+| textarea | `repo-ref/ui/apps/v4/content/docs/components/base/textarea.mdx` | `repo-ref/ui/apps/v4/content/docs/components/radix/textarea.mdx` | `textarea` | TBD | No | Not started |  |  |
+| toast | `repo-ref/ui/apps/v4/content/docs/components/base/toast.mdx` | `repo-ref/ui/apps/v4/content/docs/components/radix/toast.mdx` | `toast` | TBD | No | Not started |  |  |
+| toggle | `repo-ref/ui/apps/v4/content/docs/components/base/toggle.mdx` | `repo-ref/ui/apps/v4/content/docs/components/radix/toggle.mdx` | `toggle` | TBD | No | Not started |  |  |
+| toggle-group | `repo-ref/ui/apps/v4/content/docs/components/base/toggle-group.mdx` | `repo-ref/ui/apps/v4/content/docs/components/radix/toggle-group.mdx` | `toggle_group` | TBD | No | Not started |  |  |
+| tooltip | `repo-ref/ui/apps/v4/content/docs/components/base/tooltip.mdx` | `repo-ref/ui/apps/v4/content/docs/components/radix/tooltip.mdx` | `tooltip` | TBD | No | Not started |  | Overlay family; add interaction gates. |
+| typography | `repo-ref/ui/apps/v4/content/docs/components/base/typography.mdx` | `repo-ref/ui/apps/v4/content/docs/components/radix/typography.mdx` | `typography` | TBD | No | Not started |  |  |
+
+## Fret-only modules (extensions)
+
+These are present in `ecosystem/fret-ui-shadcn` but do not have 1:1 upstream MDX pages. We track
+their closest upstream anchor (if any) to keep parity discussions explicit.
+
+| Fret module | Upstream anchor | Gallery Page | Notes |
+|---|---|---:|---|
+| `app_integration` | — | TBD | App wiring helpers; not a shadcn component. |
+| `calendar_hijri` | `calendar.mdx` | TBD | Variant recipe; anchor to Calendar docs. |
+| `calendar_multiple` | `calendar.mdx` | TBD | Variant recipe; anchor to Calendar docs. |
+| `calendar_range` | `calendar.mdx` | TBD | Variant recipe; anchor to Calendar docs. |
+| `combobox_chips` | `combobox.mdx` | TBD | Variant recipe; anchor to Combobox docs. |
+| `data_grid_canvas` | — | TBD | Fret-specific; no upstream shadcn page. |
+| `date_picker_with_presets` | `date-picker.mdx` | TBD | Variant recipe; anchor to Date Picker docs. |
+| `date_range_picker` | `date-picker.mdx` | TBD | Variant recipe; anchor to Date Picker docs. |
+| `experimental` | — | TBD | Non-normative incubations; migrate last. |
+| `extras` | — | TBD | Non-normative shadcn-styled blocks; tracked separately. |
+| `form` | — | TBD | Large composite demo; treat as “page-level example”, not a component. |
+| `media_image` | — | TBD | Fret-specific media utilities; not in upstream shadcn MDX. |
+| `recharts_geometry` | `chart.mdx` | TBD | Implementation detail/bridge; anchor to Chart docs. |
+| `shadcn_themes` | — | TBD | Theme/catalog wiring; not a component. |
+| `shortcut_hint` | — | TBD | Fret-specific; not in upstream shadcn MDX. |
+| `state` | — | TBD | Internal/shared state glue; not a component. |
