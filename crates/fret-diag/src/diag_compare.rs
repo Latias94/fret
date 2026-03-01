@@ -1,4 +1,5 @@
 use super::*;
+use crate::commands::resolve;
 
 #[derive(Debug, Clone)]
 pub(crate) struct CompareCmdContext {
@@ -24,13 +25,13 @@ pub(crate) fn cmd_compare(ctx: CompareCmdContext) -> Result<(), String> {
 
     let Some(a_src) = rest.first().cloned() else {
         return Err(
-            "missing bundle A path (try: fretboard diag compare <bundle_a_dir|bundle_a.json|bundle_a.schema2.json> <bundle_b_dir|bundle_b.json|bundle_b.schema2.json>)"
+            "missing bundle A path (try: fretboard diag compare <base_or_session_out_dir|bundle_a_dir|bundle_a.json|bundle_a.schema2.json> <base_or_session_out_dir|bundle_b_dir|bundle_b.json|bundle_b.schema2.json>)"
                 .to_string(),
         );
     };
     let Some(b_src) = rest.get(1).cloned() else {
         return Err(
-            "missing bundle B path (try: fretboard diag compare <bundle_a_dir|bundle_a.json|bundle_a.schema2.json> <bundle_b_dir|bundle_b.json|bundle_b.schema2.json>)"
+            "missing bundle B path (try: fretboard diag compare <base_or_session_out_dir|bundle_a_dir|bundle_a.json|bundle_a.schema2.json> <base_or_session_out_dir|bundle_b_dir|bundle_b.json|bundle_b.schema2.json>)"
                 .to_string(),
         );
     };
@@ -40,6 +41,8 @@ pub(crate) fn cmd_compare(ctx: CompareCmdContext) -> Result<(), String> {
 
     let a_src = resolve_path(&workspace_root, PathBuf::from(a_src));
     let b_src = resolve_path(&workspace_root, PathBuf::from(b_src));
+    let a_src = resolve::maybe_resolve_base_or_session_out_dir_to_latest_bundle_dir(&a_src);
+    let b_src = resolve::maybe_resolve_base_or_session_out_dir_to_latest_bundle_dir(&b_src);
     let a_bundle_path = resolve_bundle_artifact_path(&a_src);
     let b_bundle_path = resolve_bundle_artifact_path(&b_src);
 

@@ -128,7 +128,9 @@ This layer is primarily about **reducing diff noise and flake surface**, not add
 Status (2026-02-28):
 
 - Base reference scoping exists in schema v2 scripts via `set_base_ref` / `clear_base_ref`.
-- A bounded `window.map.json` sidecar exists for bundle export dirs, and tooling can print a bounded report via `diag windows`.
+- Bounded docking/multi-window evidence sidecars exist for bundle export dirs:
+  - `window.map.json` + `diag windows` (window ids + last bounds + hover detection),
+  - `dock.routing.json` + `diag dock-routing` (bounded routing evidence for docking/tear-out).
 
 ### Layer 5: Human GUI (DevTools) + agent integration
 
@@ -152,7 +154,8 @@ This is intentionally outcome-focused:
 - Fast mode semantics: we have cursor overrides + isolation, but no single “fast mode policy” contract.
 - Video/GIF capture: we have screenshots; time-series capture is missing.
 - Named references/scopes: we have selectors; scoping/naming is missing.
-- Multi-viewport evidence: multi-window failures are still hard to explain without a window map + routing logs.
+- Multi-viewport evidence: we now have a window map + bounded routing logs, but still need richer per-frame probes
+  (e.g. viewport capture, drop candidate summaries, explicit target window selection traces).
 - App-level probes: we can test via UI semantics; a structured “app probe surface” is still immature.
 
 ## Development plan (fearless refactor)

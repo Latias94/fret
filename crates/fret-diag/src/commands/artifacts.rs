@@ -1,6 +1,7 @@
 use std::path::{Path, PathBuf};
 
 use super::args::resolve_latest_bundle_dir_path;
+use super::resolve;
 use super::sidecars;
 
 use crate::lint::{LintOptions, lint_bundle_from_path};
@@ -29,6 +30,7 @@ pub(crate) fn cmd_pack(
     let bundle_dir = match rest.first() {
         Some(src) => {
             let src = crate::resolve_path(workspace_root, PathBuf::from(src));
+            let src = resolve::resolve_base_or_session_out_dir_to_latest_bundle_dir_or_err(&src)?;
             crate::resolve_bundle_root_dir(&src)?
         }
         None => resolve_latest_bundle_dir_path(out_dir).map_err(|_err| {
@@ -279,7 +281,7 @@ pub(crate) fn cmd_triage(
 
     let Some(src) = positionals.first().cloned() else {
         return Err(
-            "missing bundle artifact path (try: fretboard diag triage <bundle_dir|bundle.json|bundle.schema2.json>)"
+            "missing bundle artifact path (try: fretboard diag triage <base_or_session_out_dir|bundle_dir|bundle.json|bundle.schema2.json>)"
                 .to_string(),
         );
     };
@@ -291,9 +293,10 @@ pub(crate) fn cmd_triage(
     }
 
     let src = crate::resolve_path(workspace_root, PathBuf::from(src));
+    let src = resolve::maybe_resolve_base_or_session_out_dir_to_latest_bundle_dir(&src);
     let bundle_path = crate::resolve_bundle_artifact_path(&src);
 
-    let payload = if lite {
+    let mut payload = if lite {
         let index_path = crate::frames_index::default_frames_index_path(&bundle_path);
         let mut v = crate::frames_index::read_frames_index_json_v1(&index_path, warmup_frames);
         if v.is_none() {
@@ -325,6 +328,19 @@ pub(crate) fn cmd_triage(
         )?;
         crate::triage_json_from_stats(&bundle_path, &report, sort, warmup_frames)
     };
+
+    // Add bounded tooling warnings (concurrency footguns, etc) so triage artifacts are self-explanatory.
+    if let Some(bundle_dir) = bundle_path.parent() {
+        let warnings = crate::tooling_warnings::tooling_warnings_for_bundle_dir(bundle_dir);
+        if !warnings.is_empty()
+            && let Some(obj) = payload.as_object_mut()
+        {
+            obj.insert(
+                "tooling_warnings".to_string(),
+                serde_json::Value::Array(warnings),
+            );
+        }
+    }
 
     let out = triage_out
         .map(|p| crate::resolve_path(workspace_root, p))
@@ -367,7 +383,7 @@ pub(crate) fn cmd_lint(
     }
     let Some(src) = rest.first().cloned() else {
         return Err(
-            "missing bundle artifact path (try: fretboard diag lint <bundle_dir|bundle.json|bundle.schema2.json>)"
+            "missing bundle artifact path (try: fretboard diag lint <base_or_session_out_dir|bundle_dir|bundle.json|bundle.schema2.json>)"
                 .to_string(),
         );
     };
@@ -376,6 +392,7 @@ pub(crate) fn cmd_lint(
     }
 
     let src = crate::resolve_path(workspace_root, PathBuf::from(src));
+    let src = resolve::maybe_resolve_base_or_session_out_dir_to_latest_bundle_dir(&src);
     let bundle_path = crate::resolve_bundle_artifact_path(&src);
 
     let report = lint_bundle_from_path(
@@ -424,7 +441,7 @@ pub(crate) fn cmd_test_ids(
     }
     let Some(src) = rest.first().cloned() else {
         return Err(
-            "missing bundle artifact path (try: fretboard diag test-ids <bundle_dir|bundle.json|bundle.schema2.json>)"
+            "missing bundle artifact path (try: fretboard diag test-ids <base_or_session_out_dir|bundle_dir|bundle.json|bundle.schema2.json>)"
                 .to_string(),
         );
     };
@@ -433,6 +450,7 @@ pub(crate) fn cmd_test_ids(
     }
 
     let src = crate::resolve_path(workspace_root, PathBuf::from(src));
+    let src = resolve::maybe_resolve_base_or_session_out_dir_to_latest_bundle_dir(&src);
     let bundle_path = crate::resolve_bundle_artifact_path(&src);
 
     let out = test_ids_out
@@ -484,7 +502,7 @@ pub(crate) fn cmd_test_ids_index(
     }
     let Some(src) = rest.first().cloned() else {
         return Err(
-            "missing bundle artifact path (try: fretboard diag test-ids-index <bundle_dir|bundle.json|bundle.schema2.json>)"
+            "missing bundle artifact path (try: fretboard diag test-ids-index <base_or_session_out_dir|bundle_dir|bundle.json|bundle.schema2.json>)"
                 .to_string(),
         );
     };
@@ -493,6 +511,7 @@ pub(crate) fn cmd_test_ids_index(
     }
 
     let src = crate::resolve_path(workspace_root, PathBuf::from(src));
+    let src = resolve::maybe_resolve_base_or_session_out_dir_to_latest_bundle_dir(&src);
     let bundle_path = crate::resolve_bundle_artifact_path(&src);
     let out = crate::bundle_index::ensure_test_ids_index_json(&bundle_path, warmup_frames)?;
 
@@ -520,7 +539,7 @@ pub(crate) fn cmd_frames_index(
     }
     let Some(src) = rest.first().cloned() else {
         return Err(
-            "missing bundle artifact path (try: fretboard diag frames-index <bundle_dir|bundle.json|bundle.schema2.json>)"
+            "missing bundle artifact path (try: fretboard diag frames-index <base_or_session_out_dir|bundle_dir|bundle.json|bundle.schema2.json>)"
                 .to_string(),
         );
     };
@@ -529,6 +548,7 @@ pub(crate) fn cmd_frames_index(
     }
 
     let src = crate::resolve_path(workspace_root, PathBuf::from(src));
+    let src = resolve::maybe_resolve_base_or_session_out_dir_to_latest_bundle_dir(&src);
     let bundle_path = crate::resolve_bundle_artifact_path(&src);
     let out = crate::frames_index::ensure_frames_index_json(&bundle_path, warmup_frames)?;
 
@@ -569,7 +589,8 @@ pub(crate) fn cmd_meta(
         return Err(format!("unexpected arguments: {}", rest[1..].join(" ")));
     }
 
-    let src = crate::resolve_path(workspace_root, PathBuf::from(src));
+    let mut src = crate::resolve_path(workspace_root, PathBuf::from(src));
+    src = resolve::maybe_resolve_base_or_session_out_dir_to_latest_bundle_dir(&src);
 
     let (meta_path, default_out) = if src.is_file()
         && src

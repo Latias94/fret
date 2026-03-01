@@ -1,5 +1,6 @@
 use std::path::{Path, PathBuf};
 
+use super::resolve;
 use super::sidecars;
 
 fn try_read_bundle_index_json(path: &Path, warmup_frames: u64) -> Option<serde_json::Value> {
@@ -20,7 +21,7 @@ pub(crate) fn cmd_index(
     }
     let Some(src) = rest.first().cloned() else {
         return Err(
-            "missing bundle artifact path (try: fretboard diag index <bundle_dir|bundle.json|bundle.schema2.json>)"
+            "missing bundle artifact path (try: fretboard diag index <base_or_session_out_dir|bundle_dir|bundle.json|bundle.schema2.json>)"
                 .to_string(),
         );
     };
@@ -29,6 +30,7 @@ pub(crate) fn cmd_index(
     }
 
     let src = crate::resolve_path(workspace_root, PathBuf::from(src));
+    let src = resolve::maybe_resolve_base_or_session_out_dir_to_latest_bundle_dir(&src);
 
     let (index_path, default_out) = if src.is_file()
         && src

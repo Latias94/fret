@@ -31,6 +31,35 @@ pub(super) fn handle_wait_bounds_stable_step(
         let stable_required = stable_frames.max(1);
         let max_move_px = max_move_px.max(0.0);
 
+        if timeout_frames != 0 && stable_required > timeout_frames {
+            push_bounds_stable_trace(
+                &mut active.bounds_stable_trace,
+                UiBoundsStableTraceEntryV1 {
+                    step_index: step_index as u32,
+                    selector: target.clone(),
+                    stable_required,
+                    stable_count: 0,
+                    moved_px: 0.0,
+                    max_move_px,
+                    remaining_frames: timeout_frames,
+                    bounds: None,
+                    note: Some(
+                        "wait_bounds_stable.impossible.stable_frames_gt_timeout_frames".to_string(),
+                    ),
+                },
+            );
+
+            *force_dump_label = Some(format!(
+                "script-step-{step_index:04}-wait_bounds_stable-impossible-stable-frames-gt-timeout"
+            ));
+            *stop_script = true;
+            *failure_reason =
+                Some("wait_bounds_stable_impossible_stable_frames_gt_timeout_frames".to_string());
+            active.v2_step_state = None;
+            output.request_redraw = true;
+            return true;
+        }
+
         let mut state = match active.v2_step_state.take() {
             Some(V2StepState::WaitBoundsStable(mut state)) if state.step_index == step_index => {
                 state.remaining_frames = state.remaining_frames.min(timeout_frames);

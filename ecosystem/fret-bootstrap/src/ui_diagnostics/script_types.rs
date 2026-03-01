@@ -206,6 +206,8 @@ pub(super) struct V2EnsureVisibleState {
 pub(super) struct V2ScrollIntoViewState {
     pub(super) step_index: usize,
     pub(super) remaining_frames: u32,
+    pub(super) no_progress_frames: u32,
+    pub(super) last_target_bounds: Option<fret_core::Rect>,
 }
 
 #[derive(Debug, Clone)]
