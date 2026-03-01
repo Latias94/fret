@@ -27,4 +27,5 @@ pub mod scroll_area;
 pub mod select;
 pub mod sheet;
 pub mod skeleton;
+pub mod slider;
 pub mod tooltip;
