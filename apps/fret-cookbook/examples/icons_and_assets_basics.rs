@@ -53,10 +53,6 @@ impl MvuProgram for IconsAndAssetsBasicsProgram {
     type Message = ();
 
     fn init(app: &mut App, window: AppWindowId) -> Self::State {
-        // Install an additional icon pack (Radix) to show how icon sources compose.
-        // Lucide is already installed by `fret` defaults when `icons` is enabled.
-        fret_icons_radix::install_app(app);
-
         // Ensure the UI assets caches exist and set budgets explicitly (optional).
         fret_ui_assets::UiAssets::configure(
             app,
@@ -77,7 +73,10 @@ impl MvuProgram for IconsAndAssetsBasicsProgram {
             ImageColorSpace::Srgb,
         );
 
-        let svg_file = fret_ui_assets::SvgFileSource::from_path(file_path("assets/fret-icon.svg"));
+        // `SvgIconProps` is an icon-style SVG element (monochrome + currentColor), not a full SVG
+        // image renderer. Use an icon-like SVG (stroke=currentColor, fill=none) for this demo.
+        let svg_file =
+            fret_ui_assets::SvgFileSource::from_path(file_path("assets/demo/icon-search.svg"));
 
         Self::State {
             window,
@@ -369,9 +368,9 @@ impl MvuProgram for IconsAndAssetsBasicsProgram {
 
         let svg_panel = shadcn::Card::new([
             shadcn::CardHeader::new([
-                shadcn::CardTitle::new("SVG from file").into_element(cx),
+                shadcn::CardTitle::new("SVG icon from file").into_element(cx),
                 shadcn::CardDescription::new(
-                    "Uses `SvgFileSource` + `UiAssetsReloadEpoch` so dev reload is ViewCache-safe.",
+                    "Loads an icon-style SVG from disk via `SvgFileSource` + `UiAssetsReloadEpoch` (ViewCache-safe dev reload).",
                 )
                 .into_element(cx),
             ])
@@ -440,6 +439,9 @@ impl MvuProgram for IconsAndAssetsBasicsProgram {
 fn main() -> anyhow::Result<()> {
     FretApp::new("cookbook-icons-and-assets-basics")
         .window("cookbook-icons-and-assets-basics", (960.0, 860.0))
+        // Register Radix vendor icons during bootstrap so the icon SVG preload step (if enabled)
+        // includes them.
+        .register_icon_pack(fret_icons_radix::register_vendor_icons)
         .install_app(fret_cookbook::install_cookbook_defaults)
         .run_mvu::<IconsAndAssetsBasicsProgram>()
         .map_err(anyhow::Error::from)
