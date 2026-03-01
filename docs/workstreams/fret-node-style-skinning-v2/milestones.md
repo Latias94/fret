@@ -43,3 +43,9 @@ Acceptance:
 - There is a UI-only override surface for per-node/per-edge geometry (like XyFlow `node.style` /
   `edge.style`), but type-safe and contract-bounded.
 - Overrides participate in geometry invalidation and do not leak into `Graph` persistence.
+- ADR 0308 is the source-of-truth contract for the override surface and invalidation behavior.
+
+Evidence anchors (target):
+
+- ADR: `docs/adr/0308-node-graph-per-entity-geometry-overrides-v1.md`
+- Conformance tests under: `ecosystem/fret-node/src/ui/canvas/widget/tests/`

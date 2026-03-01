@@ -26,11 +26,16 @@ scope: ecosystem/fret-node
 
 ## M2 (per-entity geometry overrides, optional)
 
-- [ ] Define a UI-only per-node/per-edge override surface for geometry (width/height/constraints,
-      port metrics overrides, per-edge interaction width).
+- [ ] Land ADR 0308 (UI-only per-entity geometry overrides + invalidation rules).
+- [ ] Define a UI-only per-node/per-edge override surface for geometry:
+  - node size overrides (width/height, screen-space px),
+  - per-edge interaction-width overrides (screen-space px).
 - [ ] Keep overrides out of the serialized graph document (same rule as `NodeGraphSkin`).
 - [ ] Define deterministic resolution order:
-  - base style → presenter → override provider → middleware (if any).
+  - graph document size → overrides → presenter/measured hints → style defaults.
+- [ ] Add conformance gates:
+  - overrides revision invalidates derived geometry + spatial index,
+  - overrides do not leak into `Graph` persistence.
 
 ## Explicitly out of scope (v2)
 

@@ -45,6 +45,7 @@ Canonical tracking docs:
 Design contract (source of truth):
 
 - ADR: `docs/adr/0307-node-graph-geometry-style-surface-v1.md`
+- ADR (M2): `docs/adr/0308-node-graph-per-entity-geometry-overrides-v1.md`
 
 ## Current status (2026-03-01)
 
