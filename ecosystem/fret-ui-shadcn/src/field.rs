@@ -1232,6 +1232,7 @@ impl FieldError {
             .wrap(wrap)
             .overflow(overflow)
             .text_align(align)
+            .auto_pad_ink_overflow()
             .into_element(cx)
     }
 }
