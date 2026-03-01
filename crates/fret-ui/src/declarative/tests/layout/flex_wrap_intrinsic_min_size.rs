@@ -141,6 +141,41 @@ fn flex_1_item(
     })
 }
 
+fn flex_1_pressable_row_item(
+    cx: &mut ElementContext<'_, TestHost>,
+    label: &'static str,
+    min_w_0: bool,
+) -> AnyElement {
+    let mut pressable = crate::element::PressableProps::default();
+    pressable.layout.flex.grow = 1.0;
+    pressable.layout.flex.shrink = 1.0;
+    pressable.layout.flex.basis = Length::Px(Px(0.0));
+    pressable.layout.size.height = Length::Px(Px(20.0));
+    if min_w_0 {
+        pressable.layout.size.min_width = Some(Length::Px(Px(0.0)));
+    }
+
+    let text = Arc::<str>::from(label);
+    cx.pressable(pressable, move |cx, _state| {
+        let mut container = crate::element::ContainerProps::default();
+        container.layout = crate::element::LayoutStyle::default();
+        vec![cx.container(container, move |cx| {
+            vec![cx.row(crate::element::RowProps::default(), move |cx| {
+                vec![cx.text_props(crate::element::TextProps {
+                    layout: crate::element::LayoutStyle::default(),
+                    text: text.clone(),
+                    style: None,
+                    color: None,
+                    wrap: fret_core::TextWrap::None,
+                    overflow: fret_core::TextOverflow::Clip,
+                    align: fret_core::TextAlign::Center,
+                    ink_overflow: Default::default(),
+                })]
+            })]
+        })]
+    })
+}
+
 #[test]
 fn flex_wrap_keeps_flex_1_items_above_intrinsic_min_content_width() {
     let mut app = TestHost::new();
@@ -202,6 +237,66 @@ fn flex_wrap_keeps_flex_1_items_above_intrinsic_min_content_width() {
 }
 
 #[test]
+fn flex_wrap_keeps_nested_flex_items_above_intrinsic_min_content_width() {
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(100.0), Px(200.0)),
+    );
+    let mut services = VariableWidthTextService::default();
+
+    let root = render_root(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "flex-wrap-intrinsic-min-nested-flex",
+        |cx| {
+            let mut props = crate::element::FlexProps::default();
+            props.layout.size.width = crate::element::Length::Fill;
+            props.wrap = true;
+            vec![cx.flex(props, |cx| {
+                vec![
+                    flex_1_pressable_row_item(cx, "123456", false),
+                    flex_1_pressable_row_item(cx, "123456", false),
+                ]
+            })]
+        },
+    );
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    let flex_node = ui.children(root)[0];
+    let children = ui.children(flex_node);
+    assert_eq!(children.len(), 2);
+
+    let b0 = ui.debug_node_bounds(children[0]).expect("child0 bounds");
+    let b1 = ui.debug_node_bounds(children[1]).expect("child1 bounds");
+
+    let min_w = VariableWidthTextService::width_for_text("123456").0;
+    assert!(
+        b0.size.width.0 + 0.01 >= min_w,
+        "expected child0 width >= intrinsic min-content width, got {:?}",
+        b0.size.width
+    );
+    assert!(
+        b1.size.width.0 + 0.01 >= min_w,
+        "expected child1 width >= intrinsic min-content width, got {:?}",
+        b1.size.width
+    );
+    assert!(
+        b1.origin.y.0 > 0.01,
+        "expected child1 to wrap onto a new line; got y={:?}",
+        b1.origin.y
+    );
+}
+
+#[test]
 fn flex_wrap_allows_opt_out_with_min_w_0() {
     let mut app = TestHost::new();
     let mut ui: UiTree<TestHost> = UiTree::new();
@@ -229,6 +324,66 @@ fn flex_wrap_allows_opt_out_with_min_w_0() {
                 vec![
                     flex_1_item(cx, "123456", false),
                     flex_1_item(cx, "123456", true),
+                ]
+            })]
+        },
+    );
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    let flex_node = ui.children(root)[0];
+    let children = ui.children(flex_node);
+    assert_eq!(children.len(), 2);
+
+    let b0 = ui.debug_node_bounds(children[0]).expect("child0 bounds");
+    let b1 = ui.debug_node_bounds(children[1]).expect("child1 bounds");
+
+    let min_w = VariableWidthTextService::width_for_text("123456").0;
+    assert!(
+        b0.size.width.0 + 0.01 >= min_w,
+        "expected child0 width >= intrinsic min-content width, got {:?}",
+        b0.size.width
+    );
+    assert!(
+        b1.origin.y.0.abs() < 0.01,
+        "expected child1 not to wrap with min-w-0; got y={:?}",
+        b1.origin.y
+    );
+    assert!(
+        b1.size.width.0 + 0.01 < min_w,
+        "expected child1 to be allowed to shrink below intrinsic width; got {:?}",
+        b1.size.width
+    );
+}
+
+#[test]
+fn flex_wrap_allows_opt_out_with_min_w_0_for_nested_flex_items() {
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(100.0), Px(200.0)),
+    );
+    let mut services = VariableWidthTextService::default();
+
+    let root = render_root(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "flex-wrap-intrinsic-min-optout-nested-flex",
+        |cx| {
+            let mut props = crate::element::FlexProps::default();
+            props.layout.size.width = crate::element::Length::Fill;
+            props.wrap = true;
+            vec![cx.flex(props, |cx| {
+                vec![
+                    flex_1_pressable_row_item(cx, "123456", false),
+                    flex_1_pressable_row_item(cx, "123456", true),
                 ]
             })]
         },
