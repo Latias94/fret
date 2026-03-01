@@ -21,6 +21,7 @@ pub mod input_group;
 pub mod kbd;
 pub mod label;
 pub mod menubar;
+pub mod native_select;
 pub mod popover;
 pub mod scroll_area;
 pub mod select;
