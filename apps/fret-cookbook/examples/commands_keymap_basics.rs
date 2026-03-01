@@ -19,6 +19,7 @@ const TEST_ID_SHORTCUT: &str = "cookbook.commands_keymap_basics.shortcut";
 const TEST_ID_ENABLED: &str = "cookbook.commands_keymap_basics.enabled";
 const TEST_ID_DISPATCH: &str = "cookbook.commands_keymap_basics.dispatch";
 const TEST_ID_PANEL_STATE: &str = "cookbook.commands_keymap_basics.panel_state";
+const TEST_ID_PANEL_OPEN: &str = "cookbook.commands_keymap_basics.panel_open";
 const TEST_ID_PANEL: &str = "cookbook.commands_keymap_basics.panel";
 
 fn install_commands(app: &mut App) {
@@ -53,6 +54,10 @@ fn install_commands(app: &mut App) {
         ]);
 
     app.commands_mut().register(cmd, meta);
+
+    // Ensure keybindings are installed after registering the command (the app may have already
+    // installed defaults for previously-known commands during bootstrap).
+    fret_app::install_command_default_keybindings_into_keymap(app);
 }
 
 fn toggle_panel(host: &mut dyn UiActionHost, window: AppWindowId, panel_open: &Model<bool>) {
@@ -129,6 +134,10 @@ impl MvuProgram for CommandsKeymapBasicsProgram {
         state: &mut Self::State,
         _msg: &mut MessageRouter<Self::Message>,
     ) -> Elements {
+        // Attach command handlers to the window's declarative root so shortcuts work even when
+        // nothing inside the view has focus (the dispatch path doesn't walk descendants).
+        let base_root = cx.root_id();
+
         let theme = Theme::global(&*cx.app).snapshot();
         let cmd = CommandId::from(CMD_TOGGLE_PANEL);
 
@@ -193,8 +202,8 @@ impl MvuProgram for CommandsKeymapBasicsProgram {
             [
                 shadcn::Label::new("Allow command:").into_element(cx),
                 shadcn::Switch::new(state.allow_command.clone())
-                    .into_element(cx)
-                    .test_id(TEST_ID_ALLOW),
+                    .test_id(TEST_ID_ALLOW)
+                    .into_element(cx),
             ]
         })
         .gap(Space::N2)
@@ -221,6 +230,10 @@ impl MvuProgram for CommandsKeymapBasicsProgram {
                 if panel_open { "Open" } else { "Closed" }
             ))
             .test_id(TEST_ID_PANEL_STATE);
+        let panel_open_indicator = shadcn::Switch::new(state.panel_open.clone())
+            .disabled(true)
+            .test_id(TEST_ID_PANEL_OPEN)
+            .into_element(cx);
 
         let panel_body = ui::v_flex(cx, |cx| {
             let desc = if panel_open {
@@ -230,6 +243,15 @@ impl MvuProgram for CommandsKeymapBasicsProgram {
             };
             [
                 panel_state_text,
+                ui::h_flex(cx, |cx| {
+                    [
+                        shadcn::Label::new("Open:").into_element(cx),
+                        panel_open_indicator,
+                    ]
+                })
+                .gap(Space::N2)
+                .items_center()
+                .into_element(cx),
                 shadcn::Separator::new().into_element(cx),
                 cx.text(desc),
             ]
@@ -278,8 +300,8 @@ impl MvuProgram for CommandsKeymapBasicsProgram {
         .into_element(cx)
         .test_id(TEST_ID_ROOT);
 
-        cx.command_on_command_for(root.id, on_command);
-        cx.command_on_command_availability_for(root.id, on_command_availability);
+        cx.command_on_command_for(base_root, on_command);
+        cx.command_on_command_availability_for(base_root, on_command_availability);
 
         root.into()
     }
@@ -288,6 +310,7 @@ impl MvuProgram for CommandsKeymapBasicsProgram {
 fn main() -> anyhow::Result<()> {
     FretApp::new("cookbook-commands-keymap-basics")
         .window("cookbook-commands-keymap-basics", (920.0, 560.0))
+        .config_files(false)
         .install_app(install_commands)
         .install_app(fret_cookbook::install_cookbook_defaults)
         .run_mvu::<CommandsKeymapBasicsProgram>()

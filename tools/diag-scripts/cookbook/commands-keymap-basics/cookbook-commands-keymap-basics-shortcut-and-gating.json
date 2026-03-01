@@ -23,9 +23,9 @@
     {
       "type": "wait_until",
       "predicate": {
-        "kind": "label_contains",
-        "target": { "kind": "test_id", "id": "cookbook.commands_keymap_basics.panel_state" },
-        "text": "Closed"
+        "kind": "checked_is",
+        "target": { "kind": "test_id", "id": "cookbook.commands_keymap_basics.panel_open" },
+        "checked": false
       },
       "timeout_frames": 240
     },
@@ -33,9 +33,9 @@
     {
       "type": "wait_until",
       "predicate": {
-        "kind": "label_contains",
-        "target": { "kind": "test_id", "id": "cookbook.commands_keymap_basics.panel_state" },
-        "text": "Open"
+        "kind": "checked_is",
+        "target": { "kind": "test_id", "id": "cookbook.commands_keymap_basics.panel_open" },
+        "checked": true
       },
       "timeout_frames": 240
     },
@@ -43,22 +43,31 @@
     {
       "type": "wait_until",
       "predicate": {
-        "kind": "label_contains",
-        "target": { "kind": "test_id", "id": "cookbook.commands_keymap_basics.panel_state" },
-        "text": "Closed"
+        "kind": "checked_is",
+        "target": { "kind": "test_id", "id": "cookbook.commands_keymap_basics.panel_open" },
+        "checked": false
       },
       "timeout_frames": 240
     },
     { "type": "click_stable", "target": { "kind": "test_id", "id": "cookbook.commands_keymap_basics.allow" } },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "checked_is",
+        "target": { "kind": "test_id", "id": "cookbook.commands_keymap_basics.allow" },
+        "checked": false
+      },
+      "timeout_frames": 240
+    },
     { "type": "wait_frames", "n": 10 },
     { "type": "press_shortcut", "shortcut": "primary+shift+k" },
     { "type": "wait_frames", "n": 20 },
     {
       "type": "assert",
       "predicate": {
-        "kind": "label_contains",
-        "target": { "kind": "test_id", "id": "cookbook.commands_keymap_basics.panel_state" },
-        "text": "Closed"
+        "kind": "checked_is",
+        "target": { "kind": "test_id", "id": "cookbook.commands_keymap_basics.panel_open" },
+        "checked": false
       }
     },
     {
@@ -67,4 +76,3 @@
     }
   ]
 }
-
