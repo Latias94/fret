@@ -729,6 +729,28 @@ mod tests {
     }
 
     #[test]
+    fn custom_effect_v2_wgsl_minimal_program_validates() {
+        let src = r#"
+fn fret_custom_effect(src: vec4<f32>, _uv: vec2<f32>, _pos_px: vec2<f32>, _params: EffectParamsV1) -> vec4<f32> {
+  return src;
+}
+"#;
+        build_and_validate_custom_effect_wgsl_v2(src)
+            .expect("expected valid custom effect v2 WGSL");
+    }
+
+    #[test]
+    fn custom_effect_v3_wgsl_minimal_program_validates() {
+        let src = r#"
+fn fret_custom_effect(src: vec4<f32>, _uv: vec2<f32>, _pos_px: vec2<f32>, _params: EffectParamsV1) -> vec4<f32> {
+  return src;
+}
+"#;
+        build_and_validate_custom_effect_wgsl_v3(src)
+            .expect("expected valid custom effect v3 WGSL");
+    }
+
+    #[test]
     fn unregister_custom_effect_evicts_custom_v3_pipelines() {
         let ctx = match pollster::block_on(crate::WgpuContext::new()) {
             Ok(ctx) => ctx,
