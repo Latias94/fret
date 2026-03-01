@@ -56,6 +56,8 @@ mod bundle_sidecars;
 mod fs_triggers;
 mod inspect;
 #[cfg(feature = "diagnostics")]
+mod inspect_explain;
+#[cfg(feature = "diagnostics")]
 mod inspect_overlay;
 mod pick;
 mod pick_flow;
