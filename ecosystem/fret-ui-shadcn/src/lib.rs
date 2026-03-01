@@ -162,9 +162,9 @@ pub use carousel::{
     carousel_context, useCarousel, use_carousel,
 };
 pub use chart::{
-    ChartConfig, ChartConfigItem, ChartContainer, ChartContext, ChartLegendContent,
-    ChartLegendItem, ChartLegendVerticalAlign, ChartTooltipContent, ChartTooltipContentKind,
-    ChartStyle, ChartTooltipIndicator, ChartTooltipItem, chart_context, use_chart,
+    ChartConfig, ChartConfigItem, ChartContainer, ChartContext, ChartLegend, ChartLegendContent,
+    ChartLegendItem, ChartLegendVerticalAlign, ChartStyle, ChartTooltip, ChartTooltipContent,
+    ChartTooltipContentKind, ChartTooltipIndicator, ChartTooltipItem, chart_context, use_chart,
 };
 pub use checkbox::{Checkbox, checkbox};
 pub use collapsible::{

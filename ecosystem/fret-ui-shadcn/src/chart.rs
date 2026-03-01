@@ -77,6 +77,48 @@ pub fn use_chart<H: UiHost>(cx: &ElementContext<'_, H>) -> ChartContext {
     chart_context(cx).expect("use_chart must be used within a `ChartContainer`")
 }
 
+/// shadcn/ui v4 `ChartTooltip`.
+///
+/// Upstream exports the Recharts `Tooltip` primitive. Fret does not yet wire chart engine tooltips,
+/// so this is a thin wrapper that exists to preserve the part surface shape. Today it simply
+/// renders the configured [`ChartTooltipContent`].
+#[derive(Debug, Clone)]
+pub struct ChartTooltip {
+    content: ChartTooltipContent,
+}
+
+impl ChartTooltip {
+    pub fn new(content: ChartTooltipContent) -> Self {
+        Self { content }
+    }
+
+    #[track_caller]
+    pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        self.content.into_element(cx)
+    }
+}
+
+/// shadcn/ui v4 `ChartLegend`.
+///
+/// Upstream exports the Recharts `Legend` primitive. Fret does not yet wire chart engine legends,
+/// so this is a thin wrapper that exists to preserve the part surface shape. Today it simply
+/// renders the configured [`ChartLegendContent`].
+#[derive(Debug, Clone)]
+pub struct ChartLegend {
+    content: ChartLegendContent,
+}
+
+impl ChartLegend {
+    pub fn new(content: ChartLegendContent) -> Self {
+        Self { content }
+    }
+
+    #[track_caller]
+    pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        self.content.into_element(cx)
+    }
+}
+
 /// shadcn/ui v4 `ChartStyle`.
 ///
 /// Upstream uses `<style>` injection to define `--color-*` CSS variables under a chart-scoped
@@ -165,16 +207,18 @@ impl ChartContainer {
         let theme = Theme::global(&*cx.app).snapshot();
         let layout = decl_style::layout_style(&theme, self.layout);
         let config = self.config.clone();
+        let config_for_state = config.clone();
         let chart_id: Arc<str> = self
             .id
             .clone()
             .map(|id| Arc::<str>::from(format!("chart-{id}")))
             .unwrap_or_else(|| Arc::<str>::from("chart"));
+        let chart_id_for_state = chart_id.clone();
 
         cx.with_state(ChartContextProviderState::default, |st| {
             st.current = Some(ChartContext {
-                chart_id: chart_id.clone(),
-                config,
+                chart_id: chart_id_for_state,
+                config: config_for_state,
             });
         });
 
@@ -183,7 +227,12 @@ impl ChartContainer {
                 layout,
                 ..Default::default()
             },
-            move |cx| vec![child(cx)],
+            move |cx| {
+                vec![
+                    ChartStyle::new(chart_id.clone(), config.clone()).into_element(cx),
+                    child(cx),
+                ]
+            },
         );
 
         if let Some(test_id) = self.test_id {
