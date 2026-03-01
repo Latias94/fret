@@ -1206,7 +1206,8 @@ pub(super) fn preview_carousel(cx: &mut ElementContext<'_, App>) -> Vec<AnyEleme
             shadcn::CarouselOptions::new()
                 .embla_engine(true)
                 .embla_duration(6.0)
-                .ignore_reduced_motion(true),
+                .ignore_reduced_motion(true)
+                .watch_focus(false),
         )
         .api_snapshot_model(duration_fast_api_snapshot.clone())
         .refine_layout(LayoutRefinement::default().w_full())
@@ -1217,7 +1218,8 @@ pub(super) fn preview_carousel(cx: &mut ElementContext<'_, App>) -> Vec<AnyEleme
             shadcn::CarouselOptions::new()
                 .embla_engine(true)
                 .embla_duration(200.0)
-                .ignore_reduced_motion(true),
+                .ignore_reduced_motion(true)
+                .watch_focus(false),
         )
         .api_snapshot_model(duration_slow_api_snapshot.clone())
         .refine_layout(LayoutRefinement::default().w_full())

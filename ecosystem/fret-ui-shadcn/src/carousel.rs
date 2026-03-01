@@ -1476,6 +1476,9 @@ impl Carousel {
                         st.embla_settling = false;
                     }
                 });
+                if !settled {
+                    cx.request_frame();
+                }
                 }
             }
 
@@ -1962,6 +1965,7 @@ impl Carousel {
                         st.prevent_click = false;
                         st.selection_initialized = true;
                     });
+                    host.push_effect(Effect::RequestAnimationFrame(cx.window));
                     host.request_redraw(cx.window);
                     return true;
                 }
@@ -2141,6 +2145,7 @@ impl Carousel {
                             st.embla_settling = true;
                             st.selection_initialized = true;
                         });
+                        host.push_effect(Effect::RequestAnimationFrame(cx.window));
                         host.request_redraw(cx.window);
                         return;
                     }
@@ -2276,6 +2281,7 @@ impl Carousel {
                             st.embla_settling = true;
                             st.selection_initialized = true;
                         });
+                        host.push_effect(Effect::RequestAnimationFrame(cx.window));
                         host.request_redraw(cx.window);
                         return;
                     }
@@ -2452,6 +2458,7 @@ impl Carousel {
                             st.embla_settling = true;
                             st.selection_initialized = true;
                         });
+                        host.push_effect(Effect::RequestAnimationFrame(cx.window));
                         host.request_redraw(cx.window);
                         return true;
                     }
