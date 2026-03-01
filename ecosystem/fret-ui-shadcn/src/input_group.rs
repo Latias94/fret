@@ -43,6 +43,8 @@ pub struct InputGroup {
     test_id: Option<Arc<str>>,
     control_test_id: Option<Arc<str>>,
     control_on_key_down: Option<OnKeyDown>,
+    placeholder: Option<Arc<str>>,
+    disabled: bool,
     leading: Vec<AnyElement>,
     trailing: Vec<AnyElement>,
     block_start: Vec<AnyElement>,
@@ -105,6 +107,8 @@ impl InputGroup {
             test_id: None,
             control_test_id: None,
             control_on_key_down: None,
+            placeholder: None,
+            disabled: false,
             leading: Vec::new(),
             trailing: Vec::new(),
             block_start: Vec::new(),
@@ -150,6 +154,16 @@ impl InputGroup {
 
     pub fn control_on_key_down(mut self, handler: OnKeyDown) -> Self {
         self.control_on_key_down = Some(handler);
+        self
+    }
+
+    pub fn placeholder(mut self, placeholder: impl Into<Arc<str>>) -> Self {
+        self.placeholder = Some(placeholder.into());
+        self
+    }
+
+    pub fn disabled(mut self, disabled: bool) -> Self {
+        self.disabled = disabled;
         self
     }
 
@@ -407,11 +421,13 @@ impl InputGroup {
         let submit_command = self.submit_command;
         let cancel_command = self.cancel_command;
         let model = self.model;
+        let placeholder = self.placeholder;
         let textarea_min_height = self.textarea_min_height;
         let textarea_max_height = self.textarea_max_height;
         let test_id = self.test_id;
         let control_test_id = self.control_test_id;
         let control_on_key_down = self.control_on_key_down;
+        let disabled = self.disabled;
         let border_width_override = self.border_width_override;
         let corner_radii_override = self.corner_radii_override;
 
@@ -549,8 +565,11 @@ impl InputGroup {
                             let mut input = TextInputProps::new(model.clone());
                             input.a11y_label = a11y_label.clone();
                             input.test_id = control_test_id.clone();
+                            input.placeholder = placeholder.clone();
                             input.submit_command = submit_command;
                             input.cancel_command = cancel_command;
+                            input.enabled = !disabled;
+                            input.focusable = !disabled;
                             input.chrome = chrome;
                             input.text_style = input_text_style.clone();
                             input.layout = {
@@ -584,6 +603,9 @@ impl InputGroup {
                             let mut props = TextAreaProps::new(model.clone());
                             props.a11y_label = a11y_label.clone();
                             props.test_id = control_test_id.clone();
+                            props.placeholder = placeholder.clone();
+                            props.enabled = !disabled;
+                            props.focusable = !disabled;
                             props.chrome = chrome;
                             props.text_style = textarea_text_style.clone();
                             props.min_height = textarea_min_height;
@@ -845,8 +867,11 @@ impl InputGroup {
                     let mut input = TextInputProps::new(model.clone());
                     input.a11y_label = a11y_label.clone();
                     input.test_id = control_test_id.clone();
+                    input.placeholder = placeholder.clone();
                     input.submit_command = submit_command;
                     input.cancel_command = cancel_command;
+                    input.enabled = !disabled;
+                    input.focusable = !disabled;
                     input.chrome = chrome;
                     input.text_style = input_text_style.clone();
                     input.layout = {
