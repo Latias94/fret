@@ -97,7 +97,10 @@ fn card_chrome(theme: &Theme, _size: CardSize) -> ChromeRefinement {
         .radius(rounded_xl)
         .border_1()
         .shadow_sm()
-        .py(Space::N6)
+        .py(match _size {
+            CardSize::Default => Space::N6,
+            CardSize::Sm => Space::N4,
+        })
         .bg(ColorRef::Color(bg))
         .border_color(ColorRef::Color(border))
 }
@@ -141,6 +144,10 @@ impl Card {
         let size = self.size;
         with_card_size_provider(cx, size, |cx| {
             let children = self.children;
+            let gap = match size {
+                CardSize::Default => Space::N6,
+                CardSize::Sm => Space::N4,
+            };
 
             let props = {
                 let theme = Theme::global(&*cx.app);
@@ -160,7 +167,7 @@ impl Card {
                 cx,
                 props,
                 stack::VStackProps::default()
-                    .gap(Space::N6)
+                    .gap(gap)
                     .layout(LayoutRefinement::default().w_full()),
                 children,
             )
@@ -260,13 +267,18 @@ impl CardHeader {
             CardSize::Default => Space::N6,
             CardSize::Sm => Space::N4,
         };
+        let pb = match size {
+            CardSize::Default => Space::N6,
+            CardSize::Sm => Space::N4,
+        };
         let border_bottom = self.border_bottom;
         let layout = self.layout;
         let props = {
             let theme = Theme::global(&*cx.app);
             let base = if border_bottom {
-                // shadcn/ui v4: when the header has a bottom border it also adds `pb-6`.
-                ChromeRefinement::default().px(p).pb(Space::N6)
+                // shadcn/ui v4: when the header has a bottom border it also adds `pb-6`, and uses a
+                // smaller `pb-4` on `size=sm`.
+                ChromeRefinement::default().px(p).pb(pb)
             } else {
                 // shadcn/ui v4: `px-6` (and `px-4` for smaller cards).
                 ChromeRefinement::default().px(p)
@@ -349,6 +361,7 @@ impl CardHeader {
 #[derive(Debug)]
 pub struct CardAction {
     children: Vec<AnyElement>,
+    chrome: ChromeRefinement,
     layout: LayoutRefinement,
 }
 
@@ -356,8 +369,14 @@ impl CardAction {
     pub fn new(children: impl IntoIterator<Item = AnyElement>) -> Self {
         Self {
             children: children.into_iter().collect(),
+            chrome: ChromeRefinement::default(),
             layout: LayoutRefinement::default(),
         }
+    }
+
+    pub fn refine_style(mut self, style: ChromeRefinement) -> Self {
+        self.chrome = self.chrome.merge(style);
+        self
     }
 
     pub fn refine_layout(mut self, layout: LayoutRefinement) -> Self {
@@ -371,7 +390,7 @@ impl CardAction {
             let theme = Theme::global(&*cx.app);
             decl_style::container_props(
                 theme,
-                ChromeRefinement::default(),
+                ChromeRefinement::default().merge(self.chrome),
                 LayoutRefinement::default().merge(self.layout),
             )
         };
@@ -673,6 +692,100 @@ mod tests {
             );
         });
     }
+
+    #[test]
+    fn card_header_border_bottom_uses_smaller_pb_for_sm_cards() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(400.0), Px(300.0)),
+        );
+
+        fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            let theme = Theme::global(&*cx.app);
+            let pb_sm = MetricRef::space(Space::N4).resolve(theme);
+
+            let el = with_card_size_provider(cx, CardSize::Sm, |cx| {
+                CardHeader::new(Vec::<AnyElement>::new())
+                    .border_bottom(true)
+                    .into_element(cx)
+            });
+
+            fn has_header_padding(el: &AnyElement, pb: Px) -> bool {
+                let mut stack = vec![el];
+                while let Some(node) = stack.pop() {
+                    if let ElementKind::Container(ContainerProps { padding, .. }) = &node.kind {
+                        if padding.bottom == pb.into()
+                            && padding.left == padding.right
+                            && matches!(
+                                padding.left,
+                                fret_ui::element::SpacingLength::Px(px) if px.0 > 0.0
+                            )
+                        {
+                            return true;
+                        }
+                    }
+                    for child in &node.children {
+                        stack.push(child);
+                    }
+                }
+                false
+            }
+
+            assert!(
+                has_header_padding(&el, pb_sm),
+                "expected CardHeader(border_bottom=true,size=sm) to apply pb-4 to the padded header container"
+            );
+        });
+    }
+
+    #[test]
+    fn card_footer_border_top_uses_smaller_pt_for_sm_cards() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(400.0), Px(300.0)),
+        );
+
+        fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            let theme = Theme::global(&*cx.app);
+            let pt_sm = MetricRef::space(Space::N4).resolve(theme);
+
+            let el = with_card_size_provider(cx, CardSize::Sm, |cx| {
+                CardFooter::new(Vec::<AnyElement>::new())
+                    .border_top(true)
+                    .into_element(cx)
+            });
+
+            fn has_footer_padding(el: &AnyElement, pt: Px) -> bool {
+                let mut stack = vec![el];
+                while let Some(node) = stack.pop() {
+                    if let ElementKind::Container(ContainerProps { padding, .. }) = &node.kind {
+                        if padding.top == pt.into()
+                            && padding.left == padding.right
+                            && matches!(
+                                padding.left,
+                                fret_ui::element::SpacingLength::Px(px) if px.0 > 0.0
+                            )
+                        {
+                            return true;
+                        }
+                    }
+                    for child in &node.children {
+                        stack.push(child);
+                    }
+                }
+                false
+            }
+
+            assert!(
+                has_footer_padding(&el, pt_sm),
+                "expected CardFooter(border_top=true,size=sm) to apply pt-4 to the padded footer container"
+            );
+        });
+    }
 }
 
 #[derive(Debug)]
@@ -808,6 +921,10 @@ impl CardFooter {
             CardSize::Default => Space::N6,
             CardSize::Sm => Space::N4,
         };
+        let pt = match size {
+            CardSize::Default => Space::N6,
+            CardSize::Sm => Space::N4,
+        };
         let children = self.children;
         let chrome = self.chrome;
         let layout = self.layout;
@@ -830,10 +947,7 @@ impl CardFooter {
                 // lives on Card).
                 decl_style::container_props(
                     theme,
-                    ChromeRefinement::default()
-                        .px(p)
-                        .pt(Space::N6)
-                        .merge(chrome),
+                    ChromeRefinement::default().px(p).pt(pt).merge(chrome),
                     LayoutRefinement::default().w_full().merge(layout),
                 )
             };
