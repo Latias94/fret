@@ -21,8 +21,8 @@ date: 2026-02-28
 
 ## M2 — WGPU: viewport-space evaluation
 
-- [ ] Quad/text/path pipelines support `ViewportPx` evaluation (or deterministic degradation).
-- [ ] Add a conformance test that distinguishes Local vs Viewport evaluation.
+- [x] Quad/text/path pipelines support `ViewportPx` evaluation (or deterministic degradation).
+- [x] Add a conformance test that distinguishes Local vs Viewport evaluation.
 
 ## M3 — WGPU: stroke-space evaluation (StrokeS01)
 

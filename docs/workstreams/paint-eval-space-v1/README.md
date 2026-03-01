@@ -94,3 +94,4 @@ Evidence anchors:
 - WGPU packing: `crates/fret-render-wgpu/src/renderer/render_scene/encode/draw/paint.rs`
 - WGPU shader struct: `crates/fret-render-wgpu/src/renderer/shaders.rs`
 - Baseline gradient stroke conformance: `crates/fret-render-wgpu/tests/stroke_paint_conformance.rs`
+- ViewportPx vs LocalPx conformance: `crates/fret-render-wgpu/tests/paint_eval_space_viewport_conformance.rs`

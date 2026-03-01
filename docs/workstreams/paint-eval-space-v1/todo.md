@@ -21,7 +21,7 @@ date: 2026-02-28
 
 ## Renderer (wgpu)
 
-- [ ] Quad shader: introduce a single `paint_pos` selection based on eval space.
+- [x] Quad shader: introduce a single `paint_pos` selection based on eval space.
 - [ ] StrokeRRect: compute `s01` and bind `paint_pos = vec2(s01, 0)`.
 - [ ] Path pipeline:
   - [ ] extend `PathVertex` with an `s01` attribute for stroke-prepared paths,
@@ -34,6 +34,6 @@ date: 2026-02-28
 
 - [ ] Add cache/fingerprint conformance tests for eval space changes.
 - [ ] Add rendering conformance tests for:
-  - [ ] `ViewportPx` vs `LocalPx` (should differ under transforms/panning),
+  - [x] `ViewportPx` vs `LocalPx` (should differ under transforms/panning),
   - [ ] `StrokeS01` gradient directionality (monotonic along stroke).
 - [ ] Add a small diag script (optional) to toggle eval spaces and record bundles.
