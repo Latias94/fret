@@ -178,6 +178,22 @@ where
     Card::new(f(cx)).into_element(cx)
 }
 
+/// Build a card and its sections inside a size provider.
+///
+/// This avoids footguns where callers construct `CardHeader` / `CardContent` / `CardFooter`
+/// elements outside the `Card` subtree and accidentally miss inherited size defaults.
+pub fn card_sized<H: UiHost, I>(
+    cx: &mut ElementContext<'_, H>,
+    size: CardSize,
+    f: impl FnOnce(&mut ElementContext<'_, H>) -> I,
+) -> AnyElement
+where
+    I: IntoIterator<Item = AnyElement>,
+{
+    let children = with_card_size_provider(cx, size, |cx| f(cx).into_iter().collect::<Vec<_>>());
+    Card::new(children).size(size).into_element(cx)
+}
+
 pub fn card_content<H: UiHost, I>(
     cx: &mut ElementContext<'_, H>,
     f: impl FnOnce(&mut ElementContext<'_, H>) -> I,
@@ -193,7 +209,9 @@ where
 #[derive(Debug)]
 pub struct CardHeader {
     children: Vec<AnyElement>,
+    size: Option<CardSize>,
     chrome: ChromeRefinement,
+    layout: LayoutRefinement,
     border_bottom: bool,
 }
 
@@ -202,13 +220,31 @@ impl CardHeader {
         let children = children.into_iter().collect();
         Self {
             children,
+            size: None,
             chrome: ChromeRefinement::default(),
+            layout: LayoutRefinement::default(),
             border_bottom: false,
         }
     }
 
+    /// Explicitly set the card size for this section.
+    ///
+    /// Most compositions rely on `Card` installing a size provider; however, some callers build
+    /// `CardHeader` / `CardContent` / `CardFooter` elements before they are inserted into a
+    /// `Card` subtree. In those cases, inherited size is unavailable, so callers can pass an
+    /// explicit size to match upstream shadcn behavior.
+    pub fn size(mut self, size: CardSize) -> Self {
+        self.size = Some(size);
+        self
+    }
+
     pub fn refine_style(mut self, style: ChromeRefinement) -> Self {
         self.chrome = self.chrome.merge(style);
+        self
+    }
+
+    pub fn refine_layout(mut self, layout: LayoutRefinement) -> Self {
+        self.layout = self.layout.merge(layout);
         self
     }
 
@@ -219,12 +255,13 @@ impl CardHeader {
 
     #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        let size = card_size_in_scope(cx);
+        let size = self.size.unwrap_or_else(|| card_size_in_scope(cx));
         let p = match size {
             CardSize::Default => Space::N6,
             CardSize::Sm => Space::N4,
         };
         let border_bottom = self.border_bottom;
+        let layout = self.layout;
         let props = {
             let theme = Theme::global(&*cx.app);
             let base = if border_bottom {
@@ -237,7 +274,7 @@ impl CardHeader {
             decl_style::container_props(
                 theme,
                 base.merge(self.chrome),
-                LayoutRefinement::default().w_full(),
+                LayoutRefinement::default().w_full().merge(layout),
             )
         };
 
@@ -479,6 +516,43 @@ mod tests {
             let px_default = MetricRef::space(Space::N6).resolve(theme);
             let px_sm = MetricRef::space(Space::N4).resolve(theme);
 
+            let default_header_el = CardHeader::new(Vec::<AnyElement>::new()).into_element(cx);
+            let ElementKind::Container(ContainerProps {
+                padding: default_header_padding,
+                ..
+            }) = &default_header_el.kind
+            else {
+                panic!("expected CardHeader to be a container element");
+            };
+            assert_eq!(default_header_padding.left, px_default.into());
+            assert_eq!(default_header_padding.right, px_default.into());
+
+            let explicit_header_el = CardHeader::new(Vec::<AnyElement>::new())
+                .size(CardSize::Sm)
+                .into_element(cx);
+            let ElementKind::Container(ContainerProps {
+                padding: explicit_header_padding,
+                ..
+            }) = &explicit_header_el.kind
+            else {
+                panic!("expected CardHeader(size=Sm) to be a container element");
+            };
+            assert_eq!(explicit_header_padding.left, px_sm.into());
+            assert_eq!(explicit_header_padding.right, px_sm.into());
+
+            let inherited_header_el = with_card_size_provider(cx, CardSize::Sm, |cx| {
+                CardHeader::new(Vec::<AnyElement>::new()).into_element(cx)
+            });
+            let ElementKind::Container(ContainerProps {
+                padding: inherited_header_padding,
+                ..
+            }) = &inherited_header_el.kind
+            else {
+                panic!("expected CardHeader(inherited Sm) to be a container element");
+            };
+            assert_eq!(inherited_header_padding.left, px_sm.into());
+            assert_eq!(inherited_header_padding.right, px_sm.into());
+
             let default_el = CardContent::new(Vec::<AnyElement>::new()).into_element(cx);
             let ElementKind::Container(ContainerProps {
                 padding: default_padding,
@@ -515,6 +589,43 @@ mod tests {
             };
             assert_eq!(inherited_padding.left, px_sm.into());
             assert_eq!(inherited_padding.right, px_sm.into());
+
+            let default_footer_el = CardFooter::new(Vec::<AnyElement>::new()).into_element(cx);
+            let ElementKind::Container(ContainerProps {
+                padding: default_footer_padding,
+                ..
+            }) = &default_footer_el.kind
+            else {
+                panic!("expected CardFooter to be a container element");
+            };
+            assert_eq!(default_footer_padding.left, px_default.into());
+            assert_eq!(default_footer_padding.right, px_default.into());
+
+            let explicit_footer_el = CardFooter::new(Vec::<AnyElement>::new())
+                .size(CardSize::Sm)
+                .into_element(cx);
+            let ElementKind::Container(ContainerProps {
+                padding: explicit_footer_padding,
+                ..
+            }) = &explicit_footer_el.kind
+            else {
+                panic!("expected CardFooter(size=Sm) to be a container element");
+            };
+            assert_eq!(explicit_footer_padding.left, px_sm.into());
+            assert_eq!(explicit_footer_padding.right, px_sm.into());
+
+            let inherited_footer_el = with_card_size_provider(cx, CardSize::Sm, |cx| {
+                CardFooter::new(Vec::<AnyElement>::new()).into_element(cx)
+            });
+            let ElementKind::Container(ContainerProps {
+                padding: inherited_footer_padding,
+                ..
+            }) = &inherited_footer_el.kind
+            else {
+                panic!("expected CardFooter(inherited Sm) to be a container element");
+            };
+            assert_eq!(inherited_footer_padding.left, px_sm.into());
+            assert_eq!(inherited_footer_padding.right, px_sm.into());
         });
     }
 
