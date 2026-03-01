@@ -83,6 +83,10 @@ Therefore, the recommended recipe pattern is:
 - Carousel uses `pointer_is_tracking_any_sensor(...)` as a safety net to avoid accidental scroll
   capture when a DnD session is pending/active.
 
+In-tree helper:
+
+- Prefer `fret-ui-kit::dnd::DndPointerForwarders` to avoid duplicating the event-forwarding boilerplate.
+
 ## Concrete activation constraints (suggested)
 
 These are not hard contracts; they are defaults for recipes that need both behaviors.
