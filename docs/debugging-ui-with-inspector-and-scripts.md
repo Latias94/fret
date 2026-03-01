@@ -143,6 +143,10 @@ Fret’s scripted actions are *selector-driven* and run inside the app via file 
 - Prefer `{"kind":"test_id","id":"..."}` whenever possible.
 - Avoid relying on `label` when localization or wording is expected to change.
 - Use `wait_until`/`assert` instead of fixed delays when testing overlay open/close and focus restore.
+- When multiple widgets can match the same selector, scope assertions to a container:
+  - `exists_under(scope, target)` / `not_exists_under(scope, target)`
+  - `focused_descendant_is(scope, target)` for focus-trap / focus-restore checks
+- Use `value_equals` only when `FRET_DIAG_REDACT_TEXT=0` (tool-launched `diag run`/`diag suite` defaults to unredacted).
 - When UI structure changes, update selectors using:
   - `cargo run -p fretboard -- diag pick-apply <script> --ptr <json-pointer>`
 

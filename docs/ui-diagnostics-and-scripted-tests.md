@@ -1001,7 +1001,7 @@ Implementation pointers:
 
 Script authoring tip:
 
-- Avoid `value_contains` gates when `FRET_DIAG_REDACT_TEXT=1` (default): text/value fields may be
+- Avoid `value_contains` / `value_equals` gates when `FRET_DIAG_REDACT_TEXT=1` (default): text/value fields may be
   redacted. Prefer `exists(test_id)` + intent steps, or add a value-free semantics flag that uses
   `semantics_present()` (see `NodeGraphDiagConnectingFlag`).
 
@@ -1030,10 +1030,14 @@ Predicates (v1 MVP):
 
 - `{"kind":"exists","target":<selector>}`
 - `{"kind":"not_exists","target":<selector>}`
+- `{"kind":"exists_under","scope":<selector>,"target":<selector>}` (scoped existence; disambiguates when multiple widgets match)
+- `{"kind":"not_exists_under","scope":<selector>,"target":<selector>}` (scoped absence; returns false if `scope` does not exist)
 - `{"kind":"focus_is","target":<selector>}`
+- `{"kind":"focused_descendant_is","scope":<selector>,"target":<selector>}` (focused node equals `target` and is under `scope`)
 - `{"kind":"role_is","target":<selector>,"role":"button"}`
 - `{"kind":"label_contains","target":<selector>,"text":"Search"}`
 - `{"kind":"value_contains","target":<selector>,"text":"foo"}`
+- `{"kind":"value_equals","target":<selector>,"text":"foo"}` (exact value match; requires unredacted `value`)
 - `{"kind":"pos_in_set_is","target":<selector>,"pos_in_set":2}`
 - `{"kind":"set_size_is","target":<selector>,"set_size":10}`
 - `{"kind":"checked_is","target":<selector>,"checked":true}`
