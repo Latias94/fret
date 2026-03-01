@@ -38,3 +38,4 @@ This TODO list is scoped to this workstream folder and is intended to keep the r
 - [ ] Keyboard nav: decide MRU vs in-order for `workspace.tab.next/prev` and lock with gates.
 - [x] Adopt `WorkspacePaneContentFocusTarget` in workspace shells (real pane content), so exit fallback works in demos.
   - Evidence: `apps/fret-examples/src/workspace_shell_demo.rs`.
+  - Evidence: `ecosystem/fret/src/workspace_shell.rs` (golden-path shell registers pane content target).
