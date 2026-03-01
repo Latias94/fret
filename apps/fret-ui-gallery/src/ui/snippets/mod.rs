@@ -24,4 +24,5 @@ pub mod menubar;
 pub mod popover;
 pub mod select;
 pub mod sheet;
+pub mod skeleton;
 pub mod tooltip;
