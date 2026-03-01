@@ -275,7 +275,7 @@ pub use resizable::{
     ResizableEntry, ResizableHandle, ResizablePanel, ResizablePanelGroup, resizable_panel_group,
 };
 pub use scroll_area::{
-    ScrollArea, ScrollAreaCorner, ScrollAreaRoot, ScrollAreaScrollbar,
+    ScrollArea, ScrollAreaCorner, ScrollAreaRoot, ScrollAreaScrollbar, ScrollBar,
     ScrollAreaScrollbarOrientation, ScrollAreaViewport, scroll_area,
 };
 pub use select::{
