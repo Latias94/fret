@@ -3148,7 +3148,7 @@ where
                             ));
                         }
 
-                        cx.pressable_add_on_pointer_up(Arc::new(move |host, action_cx, up| {
+                        cx.pressable_on_pointer_up(Arc::new(move |host, action_cx, up| {
                             if up.button != fret_core::MouseButton::Left || !up.is_click {
                                 return PressablePointerUpResult::Continue;
                             }
@@ -3165,53 +3165,61 @@ where
                                         .iter()
                                         .position(|entry| entry.key == anchor_key)
                                         .unwrap_or(i);
-                                    let (a, b) = if anchor <= i { (anchor, i) } else { (i, anchor) };
+                                    let (a, b) = if anchor <= i {
+                                        (anchor, i)
+                                    } else {
+                                        (i, anchor)
+                                    };
                                     let keys = entries
                                         .iter()
                                         .enumerate()
                                         .filter_map(|(idx, entry)| {
-	                                            (idx >= a && idx <= b).then_some(entry.key)
-	                                        })
-	                                        .collect::<Vec<_>>();
-	                                    if !keys.is_empty() {
-	                                        range_keys = Some(keys);
-	                                    }
-	                                }
+                                            (idx >= a && idx <= b).then_some(entry.key)
+                                        })
+                                        .collect::<Vec<_>>();
+                                    if !keys.is_empty() {
+                                        range_keys = Some(keys);
+                                    }
+                                }
 
-	                                let anchor_index_for_update = anchor_index.clone();
-	                                let _ = host.models_mut().update(&state_model, move |st| {
-	                                    match policy {
-	                                        PointerRowSelectionPolicy::Toggle => {
-	                                            let selected = st.row_selection.contains(&row_key);
-	                                            if single {
-	                                                st.row_selection.clear();
-	                                            }
-	                                            if selected {
-	                                                st.row_selection.remove(&row_key);
-	                                            } else {
-	                                                st.row_selection.insert(row_key);
-	                                            }
-	                                        }
-	                                        PointerRowSelectionPolicy::ListLike => {
-	                                            if let Some(range_keys) = range_keys.clone() {
-	                                                if modifiers.ctrl || modifiers.meta {
-	                                                    st.row_selection.extend(range_keys.iter().copied());
-	                                                } else {
-	                                                    st.row_selection.clear();
-	                                                    st.row_selection.extend(range_keys.iter().copied());
-	                                                }
-	                                            } else if !single && (modifiers.ctrl || modifiers.meta) {
-	                                                if st.row_selection.contains(&row_key) {
-	                                                    st.row_selection.remove(&row_key);
-	                                                } else {
-	                                                    st.row_selection.insert(row_key);
-	                                                }
-	                                            } else {
-	                                                st.row_selection.clear();
-	                                                st.row_selection.insert(row_key);
-	                                            }
-	                                        }
-	                                    }
+                                let anchor_index_for_update = anchor_index.clone();
+                                let _ = host.models_mut().update(&state_model, move |st| {
+                                    match policy {
+                                        PointerRowSelectionPolicy::Toggle => {
+                                            let selected = st.row_selection.contains(&row_key);
+                                            if single {
+                                                st.row_selection.clear();
+                                            }
+                                            if selected {
+                                                st.row_selection.remove(&row_key);
+                                            } else {
+                                                st.row_selection.insert(row_key);
+                                            }
+                                        }
+                                        PointerRowSelectionPolicy::ListLike => {
+                                            if let Some(range_keys) = range_keys.clone() {
+                                                if modifiers.ctrl || modifiers.meta {
+                                                    st.row_selection
+                                                        .extend(range_keys.iter().copied());
+                                                } else {
+                                                    st.row_selection.clear();
+                                                    st.row_selection
+                                                        .extend(range_keys.iter().copied());
+                                                }
+                                            } else if !single
+                                                && (modifiers.ctrl || modifiers.meta)
+                                            {
+                                                if st.row_selection.contains(&row_key) {
+                                                    st.row_selection.remove(&row_key);
+                                                } else {
+                                                    st.row_selection.insert(row_key);
+                                                }
+                                            } else {
+                                                st.row_selection.clear();
+                                                st.row_selection.insert(row_key);
+                                            }
+                                        }
+                                    }
                                 });
                                 if policy == PointerRowSelectionPolicy::ListLike {
                                     let next_anchor = if modifiers.shift {
@@ -3225,7 +3233,7 @@ where
                                 }
                             }
                             host.request_redraw(action_cx.window);
-                            PressablePointerUpResult::Continue
+                            PressablePointerUpResult::SkipActivate
                         }));
 
 	                        cx.key_on_key_down_for(cx.root_id(), key_handler_for_row.clone());
