@@ -86,6 +86,7 @@ See:
 - Custom effect semantics (CustomV1 WGSL contract): `docs/workstreams/renderer-effects-semantics-and-extensibility-v1/custom-effect-v1-semantics.md`
 - Custom effect v2 design tracker: `docs/workstreams/renderer-effects-semantics-and-extensibility-v1/custom-effect-v2/README.md`
 - Custom effect v3 design tracker: `docs/workstreams/renderer-effects-semantics-and-extensibility-v1/custom-effect-v3/README.md`
+- Custom effects (V1/V2/V3) audit + fearless refactor plan: `docs/workstreams/renderer-effects-semantics-and-extensibility-v1/custom-effect-v1-v2-v3-audit.md`
 
 ## Proposed sequencing (recommended)
 
