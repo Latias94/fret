@@ -159,6 +159,19 @@ impl ComboboxGroup {
     }
 }
 
+/// Migration-friendly constructor for the combobox option data model.
+pub fn combobox_option(value: impl Into<Arc<str>>, label: impl Into<Arc<str>>) -> ComboboxOption {
+    ComboboxItem::new(value, label)
+}
+
+/// Migration-friendly constructor for the combobox group data model.
+pub fn combobox_option_group(
+    heading: impl Into<Arc<str>>,
+    items: impl IntoIterator<Item = ComboboxOption>,
+) -> ComboboxOptionGroup {
+    ComboboxGroup::new(heading, items)
+}
+
 #[derive(Default)]
 struct ComboboxState {
     query: Option<Model<String>>,

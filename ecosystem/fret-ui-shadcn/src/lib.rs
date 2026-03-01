@@ -170,7 +170,7 @@ pub use collapsible::{
 };
 pub use combobox::{
     Combobox, ComboboxGroup, ComboboxItem, ComboboxOption, ComboboxOptionGroup,
-    ComboboxTriggerVariant, combobox,
+    ComboboxTriggerVariant, combobox, combobox_option, combobox_option_group,
 };
 pub use combobox_chips::ComboboxChips;
 pub use command::{
