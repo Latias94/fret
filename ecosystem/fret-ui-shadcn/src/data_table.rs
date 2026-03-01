@@ -3,7 +3,9 @@ use std::sync::Arc;
 use fret_core::geometry::Edges;
 use fret_core::{Axis, Color, FontId, FontWeight, Px, TextStyle};
 use fret_runtime::{CommandId, Model};
-use fret_ui::element::{AnyElement, CrossAlign, FlexProps, MainAlign, Overflow};
+use fret_ui::element::{
+    AnyElement, ContainerProps, CrossAlign, FlexProps, LayoutStyle, Length, MainAlign, Overflow,
+};
 use fret_ui::scroll::VirtualListScrollHandle;
 use fret_ui::{ElementContext, Theme, ThemeSnapshot, UiHost};
 use fret_ui_kit::declarative::icon as decl_icon;
@@ -659,7 +661,7 @@ impl DataTable {
                                     LayoutRefinement::default().w_full().h_full(),
                                 ),
                                 direction: Axis::Horizontal,
-                                gap: Px(2.0).into(),
+                                gap: Px(8.0).into(),
                                 padding: Edges::all(Px(0.0)).into(),
                                 justify: MainAlign::Start,
                                 align: CrossAlign::Center,
@@ -668,20 +670,40 @@ impl DataTable {
                             move |cx| {
                                 let mut pieces: Vec<AnyElement> = Vec::new();
                                 {
-                                    let mut text = ui::label(cx, label.clone())
-                                        .text_size_px(style.size)
-                                        .font_weight(style.weight)
-                                        .text_color(ColorRef::Color(header_fg))
-                                        .nowrap();
-                                    if let Some(line_height) = style.line_height {
-                                        text = text.line_height_px(line_height).line_height_policy(
-                                            fret_core::TextLineHeightPolicy::FixedFromStyle,
-                                        );
-                                    }
-                                    if let Some(letter_spacing_em) = style.letter_spacing_em {
-                                        text = text.letter_spacing_em(letter_spacing_em);
-                                    }
-                                    pieces.push(text.into_element(cx));
+                                    let label = label.clone();
+                                    let style = style.clone();
+                                    let el = cx.container(
+                                        ContainerProps {
+                                            layout: LayoutStyle {
+                                                size: fret_ui::element::SizeStyle {
+                                                    min_width: Some(Length::Px(Px(0.0))),
+                                                    ..Default::default()
+                                                },
+                                                overflow: Overflow::Clip,
+                                                ..Default::default()
+                                            },
+                                            ..Default::default()
+                                        },
+                                        move |cx| {
+                                            let mut text = ui::label(cx, label.clone())
+                                                .text_size_px(style.size)
+                                                .font_weight(style.weight)
+                                                .text_color(ColorRef::Color(header_fg))
+                                                .nowrap();
+                                            if let Some(line_height) = style.line_height {
+                                                text = text
+                                                    .line_height_px(line_height)
+                                                    .line_height_policy(
+                                                        fret_core::TextLineHeightPolicy::FixedFromStyle,
+                                                    );
+                                            }
+                                            if let Some(letter_spacing_em) = style.letter_spacing_em {
+                                                text = text.letter_spacing_em(letter_spacing_em);
+                                            }
+                                            vec![text.into_element(cx)]
+                                        },
+                                    );
+                                    pieces.push(el);
                                 }
 
                                 if can_sort {
@@ -746,82 +768,124 @@ impl DataTable {
                                 LayoutRefinement::default().w_full().h_full(),
                             ),
                             direction: Axis::Horizontal,
-                            gap: Px(2.0).into(),
+                            gap: Px(4.0).into(),
                             padding: Edges::all(Px(0.0)).into(),
                             justify: MainAlign::Start,
                             align: CrossAlign::Center,
                             wrap: false,
                         },
                         move |cx| {
-                            let mut pieces: Vec<AnyElement> = Vec::new();
-                            {
-                                let mut text = ui::label(cx, label.clone())
-                                    .text_size_px(style.size)
-                                    .font_weight(style.weight)
-                                    .text_color(ColorRef::Color(header_fg))
-                                    .nowrap();
-                                if let Some(line_height) = style.line_height {
-                                    text = text.line_height_px(line_height).line_height_policy(
-                                        fret_core::TextLineHeightPolicy::FixedFromStyle,
-                                    );
-                                }
-                                if let Some(letter_spacing_em) = style.letter_spacing_em {
-                                    text = text.letter_spacing_em(letter_spacing_em);
-                                }
-                                pieces.push(text.into_element(cx));
-                            }
+                            let left = cx.flex(
+                                FlexProps {
+                                    layout: decl_style::layout_style(
+                                        &theme,
+                                        LayoutRefinement::default().min_w_0().h_full().flex_1(),
+                                    ),
+                                    direction: Axis::Horizontal,
+                                    gap: Px(8.0).into(),
+                                    padding: Edges::all(Px(0.0)).into(),
+                                    justify: MainAlign::Start,
+                                    align: CrossAlign::Center,
+                                    wrap: false,
+                                },
+                                {
+                                    let label = label.clone();
+                                    let style = style.clone();
+                                    let state_for_header = state_for_header.clone();
+                                    let col_id_for_left = col_id.clone();
+                                    move |cx| {
+                                        let mut pieces: Vec<AnyElement> = Vec::new();
+                                        {
+                                            let label = label.clone();
+                                            let style = style.clone();
+                                            let el = cx.container(
+                                                ContainerProps {
+                                                    layout: LayoutStyle {
+                                                        size: fret_ui::element::SizeStyle {
+                                                            min_width: Some(Length::Px(Px(0.0))),
+                                                            ..Default::default()
+                                                        },
+                                                        overflow: Overflow::Clip,
+                                                        ..Default::default()
+                                                    },
+                                                    ..Default::default()
+                                                },
+                                                move |cx| {
+                                                    let mut text = ui::label(cx, label.clone())
+                                                        .text_size_px(style.size)
+                                                        .font_weight(style.weight)
+                                                        .text_color(ColorRef::Color(header_fg))
+                                                        .nowrap();
+                                                    if let Some(line_height) = style.line_height {
+                                                        text = text
+                                                            .line_height_px(line_height)
+                                                            .line_height_policy(
+                                                                fret_core::TextLineHeightPolicy::FixedFromStyle,
+                                                            );
+                                                    }
+                                                    if let Some(letter_spacing_em) = style.letter_spacing_em {
+                                                        text = text.letter_spacing_em(letter_spacing_em);
+                                                    }
+                                                    vec![text.into_element(cx)]
+                                                },
+                                            );
+                                            pieces.push(el);
+                                        }
 
-                            if can_sort {
-                                let sorting = cx
-                                    .app
-                                    .models()
-                                    .read(&state_for_header, |st| st.sorting.clone())
-                                    .ok()
-                                    .unwrap_or_default();
-                                let order = if sorting.len() > 1 {
-                                    sorting
-                                        .iter()
-                                        .position(|s| s.column.as_ref() == col.id.as_ref())
-                                        .map(|idx| idx + 1)
-                                } else {
-                                    None
-                                };
+                                        if can_sort {
+                                            let sorting = cx
+                                                .app
+                                                .models()
+                                                .read(&state_for_header, |st| st.sorting.clone())
+                                                .ok()
+                                                .unwrap_or_default();
+                                            let order = if sorting.len() > 1 {
+                                                sorting
+                                                    .iter()
+                                                    .position(|s| s.column.as_ref() == col_id_for_left.as_ref())
+                                                    .map(|idx| idx + 1)
+                                            } else {
+                                                None
+                                            };
 
-                                let icon_id = match sort_state {
-                                    Some(true) => "lucide.arrow-down",
-                                    Some(false) => "lucide.arrow-up",
-                                    None => "lucide.chevrons-up-down",
-                                };
-                                pieces.push(decl_icon::icon_with(
-                                    cx,
-                                    fret_icons::IconId::new_static(icon_id),
-                                    Some(Px(16.0)),
-                                    Some(ColorRef::Color(sort_fg)),
-                                ));
+                                            let icon_id = match sort_state {
+                                                Some(true) => "lucide.arrow-down",
+                                                Some(false) => "lucide.arrow-up",
+                                                None => "lucide.chevrons-up-down",
+                                            };
+                                            pieces.push(decl_icon::icon_with(
+                                                cx,
+                                                fret_icons::IconId::new_static(icon_id),
+                                                Some(Px(16.0)),
+                                                Some(ColorRef::Color(sort_fg)),
+                                            ));
 
-                                if let Some(order) = order {
-                                    pieces.push(
-                                        ui::label(cx, Arc::<str>::from(order.to_string()))
-                                            .text_xs()
-                                            .text_color(ColorRef::Color(sort_fg))
-                                            .nowrap()
-                                            .into_element(cx),
-                                    );
-                                }
-                            }
+                                            if let Some(order) = order {
+                                                pieces.push(
+                                                    ui::label(cx, Arc::<str>::from(order.to_string()))
+                                                        .text_xs()
+                                                        .text_color(ColorRef::Color(sort_fg))
+                                                        .nowrap()
+                                                        .into_element(cx),
+                                                );
+                                            }
+                                        }
 
-                            pieces.push(cx.spacer(fret_ui::element::SpacerProps::default()));
+                                        pieces
+                                    }
+                                },
+                            );
 
-                            pieces.push(render_column_actions_menu(
+                            let menu = render_column_actions_menu(
                                 cx,
                                 state_for_column_actions.clone(),
                                 col_id.clone(),
-                                col.enable_sorting,
+                                can_sort,
                                 can_hide,
                                 can_pin,
-                            ));
+                            );
 
-                            pieces
+                            vec![left, menu]
                         },
                     )]
                 },
