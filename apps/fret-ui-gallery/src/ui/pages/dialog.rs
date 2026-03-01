@@ -12,6 +12,7 @@ pub(super) fn preview_dialog(
         sticky_open: Option<Model<bool>>,
         scrollable_open: Option<Model<bool>>,
         rtl_open: Option<Model<bool>>,
+        parts_open: Option<Model<bool>>,
         demo_name: Option<Model<String>>,
         demo_username: Option<Model<String>>,
         rtl_name: Option<Model<String>>,
@@ -25,6 +26,7 @@ pub(super) fn preview_dialog(
         sticky_open,
         scrollable_open,
         rtl_open,
+        parts_open,
         demo_name,
         demo_username,
         rtl_name,
@@ -37,6 +39,7 @@ pub(super) fn preview_dialog(
             st.sticky_open.clone(),
             st.scrollable_open.clone(),
             st.rtl_open.clone(),
+            st.parts_open.clone(),
             st.demo_name.clone(),
             st.demo_username.clone(),
             st.rtl_name.clone(),
@@ -51,6 +54,7 @@ pub(super) fn preview_dialog(
         sticky_open,
         scrollable_open,
         rtl_open,
+        parts_open,
         demo_name,
         demo_username,
         rtl_name,
@@ -62,6 +66,7 @@ pub(super) fn preview_dialog(
         sticky_open,
         scrollable_open,
         rtl_open,
+        parts_open,
         demo_name,
         demo_username,
         rtl_name,
@@ -74,6 +79,7 @@ pub(super) fn preview_dialog(
             Some(sticky_open),
             Some(scrollable_open),
             Some(rtl_open),
+            Some(parts_open),
             Some(demo_name),
             Some(demo_username),
             Some(rtl_name),
@@ -85,6 +91,7 @@ pub(super) fn preview_dialog(
             sticky_open,
             scrollable_open,
             rtl_open,
+            parts_open,
             demo_name,
             demo_username,
             rtl_name,
@@ -97,6 +104,7 @@ pub(super) fn preview_dialog(
             let sticky_open = cx.app.models_mut().insert(false);
             let scrollable_open = cx.app.models_mut().insert(false);
             let rtl_open = cx.app.models_mut().insert(false);
+            let parts_open = cx.app.models_mut().insert(false);
             let demo_name = cx.app.models_mut().insert(String::from("Pedro Duarte"));
             let demo_username = cx.app.models_mut().insert(String::from("@peduarte"));
             let rtl_name = cx.app.models_mut().insert(String::from("RTL user"));
@@ -112,6 +120,7 @@ pub(super) fn preview_dialog(
                 st.sticky_open = Some(sticky_open.clone());
                 st.scrollable_open = Some(scrollable_open.clone());
                 st.rtl_open = Some(rtl_open.clone());
+                st.parts_open = Some(parts_open.clone());
                 st.demo_name = Some(demo_name.clone());
                 st.demo_username = Some(demo_username.clone());
                 st.rtl_name = Some(rtl_name.clone());
@@ -125,6 +134,7 @@ pub(super) fn preview_dialog(
                 sticky_open,
                 scrollable_open,
                 rtl_open,
+                parts_open,
                 demo_name,
                 demo_username,
                 rtl_name,
@@ -228,6 +238,43 @@ pub(super) fn preview_dialog(
             },
         );
         content
+    };
+
+    let parts = {
+        let trigger_open = parts_open.clone();
+        let close_open = parts_open.clone();
+
+        shadcn::Dialog::new(parts_open.clone()).into_element_parts(
+            cx,
+            move |cx| {
+                shadcn::DialogTrigger::new(
+                    shadcn::Button::new("Open Dialog (Parts)")
+                        .variant(shadcn::ButtonVariant::Outline)
+                        .test_id("ui-gallery-dialog-parts-trigger")
+                        .toggle_model(trigger_open.clone())
+                        .into_element(cx),
+                )
+            },
+            shadcn::DialogPortal::new(),
+            shadcn::DialogOverlay::new(),
+            move |cx| {
+                shadcn::DialogContent::new([
+                    shadcn::DialogClose::new(close_open.clone())
+                        .into_element(cx)
+                        .test_id("ui-gallery-dialog-parts-close"),
+                    shadcn::DialogHeader::new([
+                        shadcn::DialogTitle::new("Parts dialog").into_element(cx),
+                        shadcn::DialogDescription::new(
+                            "Part surface adapter for shadcn-style authoring.",
+                        )
+                        .into_element(cx),
+                    ])
+                    .into_element(cx),
+                ])
+                .into_element(cx)
+                .test_id("ui-gallery-dialog-parts-content")
+            },
+        )
     };
 
     let custom_close = {
@@ -447,6 +494,7 @@ pub(super) fn preview_dialog(
         cx,
         [
             "Docs parity uses the same section sequence as upstream: custom close, no close, sticky footer, scrollable content, then RTL.",
+            "Part surface adapters exist for shadcn-style call sites (DialogTrigger/DialogPortal/DialogOverlay).",
             "Current Fret API models close controls explicitly with DialogClose; omitting it is equivalent to showCloseButton={false} in shadcn docs.",
             "Scrollable examples isolate long content in ScrollArea so footer/header placement remains predictable under constrained viewport sizes.",
             "Each scenario has stable test IDs to support fretboard diag scripts and regression screenshots.",
@@ -456,7 +504,7 @@ pub(super) fn preview_dialog(
     let body = doc_layout::render_doc_page(
         cx,
         Some(
-            "Preview follows shadcn Dialog docs order: Demo, Custom Close Button, No Close Button, Sticky Footer, Scrollable Content, RTL.",
+            "Preview follows shadcn Dialog docs order: Demo, Custom Close Button, No Close Button, Sticky Footer, Scrollable Content, RTL (plus Parts adapter).",
         ),
         vec![
             DocSection::new("Demo", demo)
@@ -478,6 +526,20 @@ pub(super) fn preview_dialog(
         ])
         .into_element(cx)
     },
+	);"#,
+                ),
+            DocSection::new("Parts", parts)
+                .description("shadcn-style part surface adapters (Trigger/Portal/Overlay).")
+                .code(
+                    "rust",
+                    r#"use shadcn::{Dialog, DialogContent, DialogOverlay, DialogPortal, DialogTrigger};
+
+let dialog = Dialog::new(open).into_element_parts(
+    cx,
+    |cx| DialogTrigger::new(shadcn::Button::new("Open").toggle_model(open.clone()).into_element(cx)),
+    DialogPortal::new(),
+    DialogOverlay::new(),
+    |cx| DialogContent::new([/* content */]).into_element(cx),
 );"#,
                 ),
             DocSection::new("Custom Close Button", custom_close)
