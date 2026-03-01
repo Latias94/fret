@@ -70,6 +70,8 @@ These invariants should hold across all transports (filesystem triggers, DevTool
 
 While inspection is active:
 
+- `Ctrl/Cmd+Alt+I`: toggle inspect (in-app)
+- `Ctrl/Cmd+Alt+H`: toggle help (in-app; enables inspect if needed)
 - `Esc`: exit inspect (disarm pick first if armed)
 - `Ctrl/Cmd+C`: copy best selector JSON (prefer `test_id`)
 - `Ctrl/Cmd+Shift+C`: copy “selector + focus + path” details
@@ -82,6 +84,7 @@ While inspection is active:
 The overlay provides:
 
 - A compact HUD panel (top-left) with status text and the best selector.
+- An optional help view (togglable) that lists shortcuts and current mode flags.
 - Outlines for:
   - `focus` (cyan),
   - `picked` (magenta),
@@ -102,4 +105,3 @@ The “best selector” must be stable under refactors:
 - A full semantics tree browser inside the target app.
 - Script authoring/editing inside the target app.
 - Remote debugging across machines as a supported feature.
-

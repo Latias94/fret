@@ -39,6 +39,10 @@ impl UiDiagnosticsService {
         self.inspect_locked_windows.contains(&window)
     }
 
+    pub fn inspect_help_is_open(&self, window: AppWindowId) -> bool {
+        self.inspect_help_open_windows.contains(&window)
+    }
+
     pub fn inspect_focus_node_id(&self, window: AppWindowId) -> Option<u64> {
         self.inspect_focus_node_id.get(&window).copied()
     }
@@ -140,6 +144,74 @@ impl UiDiagnosticsService {
             return false;
         }
 
+        let wants_command = modifiers.ctrl || modifiers.meta;
+        let wants_diag_command = wants_command && modifiers.alt;
+
+        // Allow toggling inspection without filesystem triggers / DevTools WS.
+        //
+        // Keep this chord gated (Alt required) so we don't conflict with common app shortcuts.
+        match *key {
+            KeyCode::KeyI if wants_diag_command => {
+                let next_enabled = !self.inspect_enabled;
+                if !next_enabled {
+                    self.pick_armed_run_id.take();
+                }
+
+                self.set_inspect_enabled(next_enabled, self.inspect_consume_clicks);
+
+                let _ = write_json(
+                    self.cfg.inspect_path.clone(),
+                    &UiInspectConfigV1 {
+                        schema_version: 1,
+                        enabled: next_enabled,
+                        consume_clicks: self.inspect_consume_clicks,
+                    },
+                );
+                let _ = touch_file(&self.cfg.inspect_trigger_path);
+
+                let msg = if next_enabled {
+                    "inspect: enabled"
+                } else {
+                    "inspect: disabled"
+                };
+                self.push_inspect_toast(window, msg.to_string());
+                app.request_redraw(window);
+                return true;
+            }
+            KeyCode::KeyH if wants_diag_command => {
+                if !self.inspect_enabled {
+                    self.set_inspect_enabled(true, self.inspect_consume_clicks);
+
+                    let _ = write_json(
+                        self.cfg.inspect_path.clone(),
+                        &UiInspectConfigV1 {
+                            schema_version: 1,
+                            enabled: true,
+                            consume_clicks: self.inspect_consume_clicks,
+                        },
+                    );
+                    let _ = touch_file(&self.cfg.inspect_trigger_path);
+                }
+
+                let help_open = if self.inspect_help_open_windows.remove(&window) {
+                    false
+                } else {
+                    self.inspect_help_open_windows.insert(window);
+                    true
+                };
+
+                let msg = if help_open {
+                    "inspect: help shown"
+                } else {
+                    "inspect: help hidden"
+                };
+                self.push_inspect_toast(window, msg.to_string());
+                app.request_redraw(window);
+                return true;
+            }
+            _ => {}
+        }
+
         let inspection_active = self.pick_armed_run_id.is_some() || self.inspect_enabled;
         if !inspection_active {
             return false;
@@ -195,7 +267,7 @@ impl UiDiagnosticsService {
                 true
             }
             KeyCode::KeyC => {
-                let wants_copy = modifiers.ctrl || modifiers.meta;
+                let wants_copy = wants_command;
                 if !wants_copy {
                     return false;
                 }

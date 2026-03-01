@@ -46,6 +46,7 @@ pub(crate) fn render_diag_inspect_overlay(
         pick_armed,
         pick_pending,
         inspect_enabled,
+        help_open,
         consume_clicks,
         locked,
     ) = app.with_global_mut_untracked(UiDiagnosticsService::default, |svc, _app| {
@@ -57,6 +58,7 @@ pub(crate) fn render_diag_inspect_overlay(
             svc.pick_is_armed(),
             svc.pick_is_pending(window),
             svc.inspect_is_enabled(),
+            svc.inspect_help_is_open(window),
             svc.inspect_consume_clicks(),
             svc.inspect_is_locked(window),
         )
@@ -157,6 +159,7 @@ pub(crate) fn render_diag_inspect_overlay(
             if pick_armed
                 || pick_pending
                 || inspect_enabled
+                || help_open
                 || toast.is_some()
                 || best_selector.is_some()
                 || focus_summary.is_some()
@@ -190,11 +193,28 @@ pub(crate) fn render_diag_inspect_overlay(
 
                 let mut lines: Vec<String> = Vec::new();
                 if pick_armed || pick_pending {
-                    lines.push("INSPECT: click to pick a target (Esc to cancel)".to_string());
+                    lines.push(
+                        "INSPECT: click to pick a target (Esc to cancel, Ctrl+Alt+H help)"
+                            .to_string(),
+                    );
                 } else {
-                    lines.push(format!(
-                        "INSPECT: Esc exit | Ctrl+C copy selector | Ctrl+Shift+C copy details | F focus | L lock | Alt+Up/Down nav (consume_clicks={consume_clicks}, locked={locked})"
-                    ));
+                    if help_open {
+                        lines.push(format!(
+                            "INSPECT (enabled={inspect_enabled}, consume_clicks={consume_clicks}, locked={locked})"
+                        ));
+                        lines.push("Ctrl/Cmd+Alt+I: toggle inspect".to_string());
+                        lines.push("Ctrl/Cmd+Alt+H: toggle help".to_string());
+                        lines.push("Esc: exit inspect / disarm pick".to_string());
+                        lines.push("Ctrl/Cmd+C: copy best selector".to_string());
+                        lines.push("Ctrl/Cmd+Shift+C: copy inspect details".to_string());
+                        lines.push("F: select focused node".to_string());
+                        lines.push("L: lock/unlock selection".to_string());
+                        lines.push("Alt+Up/Down: navigate parent chain (locked)".to_string());
+                    } else {
+                        lines.push(format!(
+                            "INSPECT: Ctrl+Alt+I toggle | Ctrl+Alt+H help | Esc exit | Ctrl+C copy selector | F focus | L lock | Alt+Up/Down nav (consume_clicks={consume_clicks}, locked={locked})"
+                        ));
+                    }
                 }
                 if let Some(t) = toast.as_deref() {
                     lines.push(format!("status: {t}"));

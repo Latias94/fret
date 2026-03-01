@@ -37,6 +37,7 @@ pub struct UiDiagnosticsService {
     inspect_focus_summary_line: HashMap<AppWindowId, String>,
     inspect_focus_path_line: HashMap<AppWindowId, String>,
     inspect_locked_windows: HashSet<AppWindowId>,
+    inspect_help_open_windows: HashSet<AppWindowId>,
     inspect_toast: HashMap<AppWindowId, inspect::InspectToast>,
     pick_overlay_grace_frames: HashMap<AppWindowId, u32>,
     pick_armed_run_id: Option<u64>,
@@ -591,6 +592,7 @@ impl UiDiagnosticsService {
         self.inspect_focus_summary_line.remove(&window);
         self.inspect_focus_path_line.remove(&window);
         self.inspect_locked_windows.remove(&window);
+        self.inspect_help_open_windows.remove(&window);
         self.inspect_toast.remove(&window);
     }
 
@@ -601,6 +603,7 @@ impl UiDiagnosticsService {
         }
 
         self.inspect_locked_windows.clear();
+        self.inspect_help_open_windows.clear();
         self.inspect_focus_node_id.clear();
         self.inspect_focus_selector_json.clear();
         self.inspect_focus_down_stack.clear();
