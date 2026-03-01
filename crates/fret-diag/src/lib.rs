@@ -68,6 +68,7 @@ mod stats;
 mod suite_summary;
 mod test_id_bloom;
 mod tooling_failures;
+mod tooling_warnings;
 mod trace;
 pub mod transport;
 mod triage_json;

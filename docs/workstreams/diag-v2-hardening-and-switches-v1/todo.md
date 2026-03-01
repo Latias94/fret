@@ -72,6 +72,9 @@ This file is a check-list style tracker. Milestone framing lives in `milestones.
 - [x] Make the warning actionable:
   - [x] include a copy-paste `--session-auto` command template in stderr,
   - [x] surface a structured warning in `diag config doctor --mode launch --report-json` so AI packets/triage can ingest it.
+- [x] Ensure share artifacts carry the warning without re-running tooling commands:
+  - [x] `diag ai-packet` writes `tooling.warnings.json` and includes it in `ai.packet.json`,
+  - [x] `diag triage` writes `tooling_warnings` into `triage.json`.
 
 ## P1: Agent-native script ergonomics (ImGui-alignment outcomes)
 

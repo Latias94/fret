@@ -279,6 +279,12 @@ pub(crate) fn generate_ai_packet_dir(
         "manifest.json",
     )?;
 
+    let warnings = crate::tooling_warnings::tooling_warnings_for_bundle_dir(bundle_dir);
+    crate::util::write_json_value(
+        &packet_dir.join("tooling.warnings.json"),
+        &serde_json::Value::Array(warnings),
+    )?;
+
     crate::util::write_json_value(
         &packet_dir.join("doctor.json"),
         &doctor::doctor_report_json(bundle_path, warmup_frames),
@@ -519,6 +525,12 @@ pub(crate) fn generate_ai_packet_dir_sidecars_only(
         &bundle_dir.join("manifest.json"),
         packet_dir,
         "manifest.json",
+    )?;
+
+    let warnings = crate::tooling_warnings::tooling_warnings_for_bundle_dir(bundle_dir);
+    crate::util::write_json_value(
+        &packet_dir.join("tooling.warnings.json"),
+        &serde_json::Value::Array(warnings),
     )?;
 
     anchors::write_packet_anchors_if_possible(packet_dir)?;

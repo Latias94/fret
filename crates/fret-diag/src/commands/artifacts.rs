@@ -296,7 +296,7 @@ pub(crate) fn cmd_triage(
     let src = resolve::maybe_resolve_base_or_session_out_dir_to_latest_bundle_dir(&src);
     let bundle_path = crate::resolve_bundle_artifact_path(&src);
 
-    let payload = if lite {
+    let mut payload = if lite {
         let index_path = crate::frames_index::default_frames_index_path(&bundle_path);
         let mut v = crate::frames_index::read_frames_index_json_v1(&index_path, warmup_frames);
         if v.is_none() {
@@ -328,6 +328,19 @@ pub(crate) fn cmd_triage(
         )?;
         crate::triage_json_from_stats(&bundle_path, &report, sort, warmup_frames)
     };
+
+    // Add bounded tooling warnings (concurrency footguns, etc) so triage artifacts are self-explanatory.
+    if let Some(bundle_dir) = bundle_path.parent() {
+        let warnings = crate::tooling_warnings::tooling_warnings_for_bundle_dir(bundle_dir);
+        if !warnings.is_empty()
+            && let Some(obj) = payload.as_object_mut()
+        {
+            obj.insert(
+                "tooling_warnings".to_string(),
+                serde_json::Value::Array(warnings),
+            );
+        }
+    }
 
     let out = triage_out
         .map(|p| crate::resolve_path(workspace_root, p))
