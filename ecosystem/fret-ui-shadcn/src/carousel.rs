@@ -2668,7 +2668,6 @@ impl Carousel {
 
             let snaps_prev: Arc<[Px]> = cx
                 .watch_model(&snaps_model)
-                .layout()
                 .cloned()
                 .unwrap_or_else(|| Arc::from(Vec::<Px>::new()));
             let max_offset_prev = cx.watch_model(&max_offset_model).copied().unwrap_or(Px(0.0));
@@ -3054,7 +3053,6 @@ impl Carousel {
                 let slide_content_ids_model = carousel_slide_content_ids_model(cx);
                 let prev: Arc<[fret_ui::elements::GlobalElementId]> = cx
                     .watch_model(&slide_content_ids_model)
-                    .layout()
                     .cloned()
                     .unwrap_or_else(|| Arc::from(Vec::<fret_ui::elements::GlobalElementId>::new()));
                 let now: Arc<[fret_ui::elements::GlobalElementId]> =
