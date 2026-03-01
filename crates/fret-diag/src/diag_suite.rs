@@ -173,6 +173,12 @@ pub(crate) fn cmd_suite(ctx: SuiteCmdContext) -> Result<(), String> {
         env.push((key.to_string(), value.to_string()));
     }
 
+    // Tool-launched suites default to *not* redacting text to keep authoring/debugging ergonomic.
+    //
+    // Privacy-sensitive workflows (pack/share/CI) should explicitly opt back into redaction via:
+    // `--env FRET_DIAG_REDACT_TEXT=1` (or by inheriting it from the parent environment).
+    push_env_if_missing(&mut launch_env, "FRET_DIAG_REDACT_TEXT", "0");
+
     if pack_after_run {
         return Err("--pack is only supported with `diag run`".to_string());
     }
@@ -347,8 +353,8 @@ hint: list suites via `fretboard diag list suites`"
         let scripts = expand_script_inputs(&workspace_root, &inputs)?;
         (scripts, Some(BuiltinSuite::UiGallery))
     } else if is_ui_gallery_select_suite {
-        // Keep this suite redaction-friendly: scripts should prefer `test_id` selectors
-        // so we can share bundles by default without leaking labels/values.
+        // Keep this suite redaction-friendly: scripts should prefer `test_id` selectors so we can
+        // safely share bundles when redaction is enabled.
         let inputs = diag_suite_scripts::ui_gallery_select_suite_scripts();
         let scripts = expand_script_inputs(&workspace_root, &inputs)?;
         (scripts, Some(BuiltinSuite::UiGallery))
