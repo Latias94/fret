@@ -251,7 +251,10 @@ Not implemented / not applicable (expected gaps for native retained UI):
   - loop wrapping invariants
   - slidesInView thresholds + margins
 - [ ] CAR2-520 Add `fretboard diag` scripts for:
-  - [ ] inertial swipe (touch + mouse)
+  - [x] inertial swipe (mouse)
+    - Gate: `tools/diag-scripts/ui-gallery/carousel/ui-gallery-carousel-demo-inertia-pixels-changed.json`
+  - [x] inertial swipe (touch)
+    - Gate: `tools/diag-scripts/ui-gallery/carousel/ui-gallery-carousel-demo-inertia-touch-pixels-changed.json`
   - [x] loop visual continuity
     - Gate: `tools/diag-scripts/ui-gallery/carousel/ui-gallery-carousel-loop-continuity-touch-gate.json`
   - [ ] focus-in triggers scroll-to-view
