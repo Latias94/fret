@@ -105,6 +105,13 @@ pub(crate) fn cmd_poke(
         wait_for_new_latest_dump_dir(out_dir, prev_latest.as_deref(), timeout_ms, poll_ms)?;
     if !record_run {
         println!("{}", bundle_dir.display());
+        if out_dir.join(crate::session::SESSIONS_DIRNAME).is_dir() {
+            eprintln!(
+                "hint: if `{}` is a base dir with multiple sessions, prefer `fretboard diag resolve latest --dir {}` to avoid relying on base-level latest.txt",
+                out_dir.display(),
+                out_dir.display()
+            );
+        }
         return Ok(());
     }
 
@@ -214,9 +221,20 @@ pub(crate) fn cmd_latest(
     if !rest.is_empty() {
         return Err(format!("unexpected arguments: {}", rest.join(" ")));
     }
-    let path = resolve::resolve_latest_bundle_dir_from_base_or_session_out_dir(out_dir, None)
-        .map(|(p, _session_id, _source)| p)
+    let resolved = resolve::resolve_latest_bundle_dir_from_base_or_session_out_dir(out_dir, None);
+    let path = resolved
+        .as_ref()
+        .map(|(p, _session_id, _source)| p.clone())
         .or_else(|_| resolve_latest_bundle_dir_path(out_dir))?;
     println!("{}", path.display());
+
+    if let Ok((_p, session_id, source)) = resolved {
+        if let Some(session_id) = session_id {
+            eprintln!(
+                "diag latest: resolved via sessions (session_id={} source={})",
+                session_id, source
+            );
+        }
+    }
     Ok(())
 }

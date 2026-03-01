@@ -51,7 +51,7 @@ Implementation pointers (where the code lives today):
 
 4. Locate the most recent bundle directory:
 
-   - `cargo run -p fretboard -- diag latest`
+   - `cargo run -p fretboard -- diag latest` (session-aware when `<dir>/sessions/*` exists)
    - If you are using sessions (`--session-auto`) or you have a base dir with multiple session dirs:
      - `cargo run -p fretboard -- diag resolve latest --dir <base_or_session_dir>`
      - Optional: `--within-session <id|latest>` to pin a specific session under `<base_dir>/sessions/`.

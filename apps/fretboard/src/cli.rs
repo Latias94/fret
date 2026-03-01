@@ -62,7 +62,7 @@ Usage:
   fretboard hotpatch watch [--path <path>...] [--trigger-path <path>] [--poll-ms <ms>] [--debounce-ms <ms>]
   fretboard diag path [--trigger-path <path>] [--dir <dir>]
   fretboard diag poke [--trigger-path <path>] [--dir <dir>] [--label <label>] [--max-snapshots <n>] [--wait] [--record-run] [--run-id <id>]
-  fretboard diag latest [--dir <dir>]
+  fretboard diag latest [--dir <dir>]               # prints the latest bundle dir (session-aware when <dir>/sessions/* exists)
   fretboard diag resolve latest [--dir <base_or_session_dir>] [--within-session <id|latest>] [--json]
   fretboard diag list scripts [--contains <needle>] [--all] [--top <n>] [--case-sensitive] [--json]
   fretboard diag list sessions [--dir <dir>] [--contains <needle>] [--all] [--top <n>] [--case-sensitive] [--json]
