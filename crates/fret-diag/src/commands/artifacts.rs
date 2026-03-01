@@ -30,7 +30,18 @@ pub(crate) fn cmd_pack(
     let bundle_dir = match rest.first() {
         Some(src) => {
             let src = crate::resolve_path(workspace_root, PathBuf::from(src));
-            crate::resolve_bundle_root_dir(&src)?
+            if src.is_dir() && crate::resolve_bundle_artifact_path_no_materialize(&src).is_none() {
+                if resolve::looks_like_diag_session_root(&src)
+                    || src.join(crate::session::SESSIONS_DIRNAME).is_dir()
+                {
+                    resolve::resolve_latest_bundle_dir_from_base_or_session_out_dir(&src, None)
+                        .map(|(p, _session_id, _source)| p)?
+                } else {
+                    crate::resolve_bundle_root_dir(&src)?
+                }
+            } else {
+                crate::resolve_bundle_root_dir(&src)?
+            }
         }
         None => resolve_latest_bundle_dir_path(out_dir).map_err(|_err| {
             format!(
