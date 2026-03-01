@@ -4,8 +4,9 @@ use std::time::{Duration, Instant, SystemTime};
 
 use crate::cli::{help, workspace_root};
 use crate::demos::{
-    display_path, list_native_demos_from, prompt_choose_demo, validate_native_demo,
-    validate_web_demo, web_demos_as_vec,
+    display_path, list_cookbook_examples_from, list_native_demos_from, official_native_demos,
+    prompt_choose_demo, validate_cookbook_example, validate_native_demo, validate_web_demo,
+    web_demos_as_vec,
 };
 use crate::hotpatch::{
     HotpatchBuildIdArg, ensure_hotpatch_trigger_file_initialized, parse_hotpatch_build_id,
@@ -209,11 +210,14 @@ fn append_subsecond_main_export_rustflags(cmd: &mut Command) {
 pub(crate) fn dev_native(args: Vec<String>) -> Result<(), String> {
     let root = workspace_root()?;
     let demos = list_native_demos_from(&root)?;
+    let cookbook_examples = list_cookbook_examples_from(&root)?;
 
     let mut bin: Option<String> = None;
     let mut demo: Option<String> = None;
+    let mut example: Option<String> = None;
     let mut cargo_profile: Option<String> = None;
     let mut choose = false;
+    let mut include_maintainer = false;
     let mut hotpatch = false;
     let mut hotpatch_reload_only = false;
     let mut hotpatch_trigger_path: Option<String> = None;
@@ -243,6 +247,12 @@ pub(crate) fn dev_native(args: Vec<String>) -> Result<(), String> {
                         .ok_or_else(|| "--demo requires a value".to_string())?,
                 );
             }
+            "--example" => {
+                example = Some(
+                    it.next()
+                        .ok_or_else(|| "--example requires a value".to_string())?,
+                );
+            }
             "--cargo-profile" | "--profile" => {
                 cargo_profile = Some(
                     it.next()
@@ -250,6 +260,7 @@ pub(crate) fn dev_native(args: Vec<String>) -> Result<(), String> {
                 );
             }
             "--choose" => choose = true,
+            "--all" => include_maintainer = true,
             "--hotpatch" => hotpatch = true,
             "--hotpatch-reload" => {
                 hotpatch = true;
@@ -306,12 +317,64 @@ pub(crate) fn dev_native(args: Vec<String>) -> Result<(), String> {
         }
     }
 
-    if demo.is_some() && bin.is_some() {
-        return Err("cannot combine --demo and --bin".to_string());
+    let selection_count = demo.is_some() as u32 + bin.is_some() as u32 + example.is_some() as u32;
+    if selection_count > 1 {
+        return Err("cannot combine --demo/--bin/--example (choose exactly one)".to_string());
     }
 
-    if demo.is_some() && choose {
-        return Err("cannot combine --demo and --choose (use --demo <name>)".to_string());
+    if (demo.is_some() || example.is_some()) && choose {
+        return Err("cannot combine --choose with --demo/--example".to_string());
+    }
+
+    if example.is_some()
+        && (hotpatch
+            || hotpatch_devserver_ws.is_some()
+            || hotpatch_dx
+            || watch.unwrap_or(false)
+            || hotpatch_trigger_path.is_some()
+            || hotpatch_poll_ms.is_some()
+            || hotpatch_build_id.is_some())
+    {
+        return Err(
+            "cookbook examples do not support --hotpatch/--watch yet (use `--bin` demos for now)"
+                .to_string(),
+        );
+    }
+
+    if let Some(example) = example.as_deref() {
+        validate_cookbook_example(&cookbook_examples, example)?;
+
+        let mut cmd = Command::new("cargo");
+        cmd.current_dir(&root).args(["run"]);
+
+        let default_profile = cfg!(windows).then_some("dev-fast");
+        if let Some(profile) = cargo_profile.as_deref().or(default_profile) {
+            #[cfg(windows)]
+            if cargo_profile.is_none() {
+                eprintln!(
+                    "Note: Windows default uses `--profile dev-fast` for faster builds (override with: --profile dev)."
+                );
+            }
+            cmd.args(["--profile", profile]);
+        }
+
+        cmd.args(["-p", "fret-cookbook", "--example", example]);
+
+        if dev_state_reset {
+            cmd.env("FRET_DEV_STATE", "1");
+            cmd.env("FRET_DEV_STATE_DEBOUNCE_MS", "0");
+            cmd.env("FRET_DEV_STATE_RESET", "1");
+        }
+
+        if !passthrough.is_empty() {
+            cmd.arg("--").args(passthrough);
+        }
+
+        let status = cmd.status().map_err(|e| e.to_string())?;
+        if !status.success() {
+            return Err(format!("cargo exited with status: {status}"));
+        }
+        return Ok(());
     }
 
     // Prefer running native demos by `--bin` even when the user passed a web-style `--demo` id.
@@ -391,6 +454,12 @@ pub(crate) fn dev_native(args: Vec<String>) -> Result<(), String> {
         );
     }
 
+    let choose_demos = if include_maintainer {
+        demos.clone()
+    } else {
+        official_native_demos(&demos)
+    };
+
     let bin = match (bin.as_deref(), choose) {
         (Some(name), _) => {
             validate_native_demo(&demos, name)?;
@@ -398,8 +467,8 @@ pub(crate) fn dev_native(args: Vec<String>) -> Result<(), String> {
         }
         (None, true) => prompt_choose_demo(
             "Select a native demo",
-            &demos,
-            Some("components_gallery"),
+            &choose_demos,
+            Some("todo_demo"),
             |name| validate_native_demo(&demos, name),
         )?,
         (None, false) => "todo_demo".to_string(),

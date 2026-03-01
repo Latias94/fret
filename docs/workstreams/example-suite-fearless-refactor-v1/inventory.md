@@ -32,6 +32,7 @@ Legend:
 |---|---|---|---|---|
 | cookbook.hello | Keep | `apps/fret-cookbook/examples/hello.rs` | `cargo run -p fret-cookbook --example hello` | Minimal “hello” runnable. |
 | cookbook.hello_counter | Keep | `apps/fret-cookbook/examples/hello_counter.rs` | `cargo run -p fret-cookbook --example hello_counter` | Small MVU + Model counter; stable `test_id` set. |
+| cookbook.overlay_basics | Keep | `apps/fret-cookbook/examples/overlay_basics.rs` | `cargo run -p fret-cookbook --example overlay_basics` | Minimal dialog example with stable `test_id` stamps. |
 
 ## Interop + renderer “high ceiling” mapping
 
