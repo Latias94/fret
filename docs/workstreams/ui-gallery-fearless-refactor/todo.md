@@ -137,3 +137,27 @@ their closest upstream anchor (if any) to keep parity discussions explicit.
 | `shadcn_themes` | — | TBD | Theme/catalog wiring; not a component. |
 | `shortcut_hint` | — | TBD | Fret-specific; not in upstream shadcn MDX. |
 | `state` | — | TBD | Internal/shared state glue; not a component. |
+
+## UI Gallery legacy pages tracker (non-shadcn)
+
+These pages use the same `DocSection` infrastructure but are not directly tracked in the shadcn v4
+component table above. We still migrate them to snippet-backed sections so the gallery stays
+drift-free (preview ≡ copyable code).
+
+| Page | Gallery Page | Snippet-backed | Status | Notes |
+|---|---:|---:|---:|---|
+| icons | `apps/fret-ui-gallery/src/ui/pages/icons.rs` | Yes | Done | Snippet-backed previews + region-sliced code tabs (preview ≡ code). |
+| empty | `apps/fret-ui-gallery/src/ui/pages/empty.rs` | No | Not started | Includes advanced paint/layout demos; migrate after overlay/layout baseline stabilizes. |
+| card | `apps/fret-ui-gallery/src/ui/pages/card.rs` | No | Deferred | Local edits in progress; migrate after card examples stabilize. |
+| item | `apps/fret-ui-gallery/src/ui/pages/item.rs` | No | Not started | Large page; split into focused snippets per section. |
+| image-object-fit | `apps/fret-ui-gallery/src/ui/pages/image_object_fit.rs` | No | Not started | Media assets + layout constraints. |
+| motion-presets | `apps/fret-ui-gallery/src/ui/pages/motion_presets.rs` | No | Not started | Animation surfaces; add minimal diag hooks before migrating. |
+| collapsible | `apps/fret-ui-gallery/src/ui/pages/collapsible.rs` | No | Not started | Multiple sub-demos + controlled/uncontrolled models. |
+| carousel | `apps/fret-ui-gallery/src/ui/pages/carousel.rs` | No | Not started | Media-heavy; likely needs screenshot gates. |
+| chart | `apps/fret-ui-gallery/src/ui/pages/chart.rs` | No | Not started | Data+render complexity; keep gates stable. |
+| data-table | `apps/fret-ui-gallery/src/ui/pages/data_table.rs` | No | Not started | Table state + scrolling; migrate with fixture-driven snippets. |
+| date-picker | `apps/fret-ui-gallery/src/ui/pages/date_picker.rs` | No | Not started | Calendar models + popover; align with ongoing select/combobox work. |
+| navigation-menu | `apps/fret-ui-gallery/src/ui/pages/navigation_menu.rs` | No | Not started | Menu/overlay semantics; coordinate with overlay policies. |
+| form | `apps/fret-ui-gallery/src/ui/pages/form.rs` | No | Not started | Composite page; migrate last. |
+| shadcn-extras | `apps/fret-ui-gallery/src/ui/pages/shadcn_extras.rs` | No | Not started | Misc recipes; may split into separate pages/modules. |
+| combobox | `apps/fret-ui-gallery/src/ui/pages/combobox.rs` | Partial | Deferred | Component refactor in progress; migrate when API stabilizes. |
