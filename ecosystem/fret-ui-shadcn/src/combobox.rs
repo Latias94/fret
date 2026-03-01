@@ -354,9 +354,19 @@ impl Combobox {
         self
     }
 
+    /// Migration-friendly alias for [`Combobox::item`].
+    pub fn option(self, option: ComboboxOption) -> Self {
+        self.item(option)
+    }
+
     pub fn items(mut self, items: impl IntoIterator<Item = ComboboxItem>) -> Self {
         self.items.extend(items);
         self
+    }
+
+    /// Migration-friendly alias for [`Combobox::items`].
+    pub fn options(self, options: impl IntoIterator<Item = ComboboxOption>) -> Self {
+        self.items(options)
     }
 
     pub fn group(mut self, group: ComboboxGroup) -> Self {
@@ -364,9 +374,19 @@ impl Combobox {
         self
     }
 
+    /// Migration-friendly alias for [`Combobox::group`].
+    pub fn option_group(self, group: ComboboxOptionGroup) -> Self {
+        self.group(group)
+    }
+
     pub fn groups(mut self, groups: impl IntoIterator<Item = ComboboxGroup>) -> Self {
         self.groups.extend(groups);
         self
+    }
+
+    /// Migration-friendly alias for [`Combobox::groups`].
+    pub fn option_groups(self, groups: impl IntoIterator<Item = ComboboxOptionGroup>) -> Self {
+        self.groups(groups)
     }
 
     /// When enabled, inserts visual separators between `items` and `groups`, and between

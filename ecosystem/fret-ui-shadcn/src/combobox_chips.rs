@@ -114,14 +114,35 @@ impl ComboboxChips {
         self
     }
 
+    /// Migration-friendly alias for [`ComboboxChips::items`].
+    pub fn options(
+        self,
+        options: impl IntoIterator<Item = crate::combobox::ComboboxOption>,
+    ) -> Self {
+        self.items(options)
+    }
+
     pub fn group(mut self, group: ComboboxGroup) -> Self {
         self.groups.push(group);
         self
     }
 
+    /// Migration-friendly alias for [`ComboboxChips::group`].
+    pub fn option_group(self, group: crate::combobox::ComboboxOptionGroup) -> Self {
+        self.group(group)
+    }
+
     pub fn groups(mut self, groups: impl IntoIterator<Item = ComboboxGroup>) -> Self {
         self.groups.extend(groups);
         self
+    }
+
+    /// Migration-friendly alias for [`ComboboxChips::groups`].
+    pub fn option_groups(
+        self,
+        groups: impl IntoIterator<Item = crate::combobox::ComboboxOptionGroup>,
+    ) -> Self {
+        self.groups(groups)
     }
 
     pub fn test_id_prefix(mut self, prefix: impl Into<Arc<str>>) -> Self {
