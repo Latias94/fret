@@ -38,6 +38,8 @@ Acceptance:
 
 ## M2 — Per-entity layout overrides (optional)
 
+Status: Done (2026-03-01).
+
 Acceptance:
 
 - There is a UI-only override surface for per-node/per-edge geometry (like XyFlow `node.style` /

@@ -68,8 +68,8 @@ use crate::ui::style::{NodeGraphBackgroundStyle, NodeGraphColorMode, NodeGraphSt
 use crate::ui::{
     FallbackMeasuredNodeGraphPresenter, GroupRenameOverlay, MeasuredGeometryStore,
     NodeGraphCanvasTransform, NodeGraphEdgeTypes, NodeGraphEditQueue, NodeGraphFitViewOptions,
-    NodeGraphInternalsSnapshot, NodeGraphInternalsStore, NodeGraphOverlayState, NodeGraphSkinRef,
-    NodeGraphViewQueue,
+    NodeGraphGeometryOverridesRef, NodeGraphInternalsSnapshot, NodeGraphInternalsStore,
+    NodeGraphOverlayState, NodeGraphSkinRef, NodeGraphViewQueue,
 };
 
 use super::middleware::{
@@ -243,6 +243,7 @@ pub struct NodeGraphCanvasWith<M> {
     color_mode_theme_rev: Option<u64>,
     skin: Option<NodeGraphSkinRef>,
     skin_last_rev: Option<u64>,
+    geometry_overrides: Option<NodeGraphGeometryOverridesRef>,
     close_command: Option<CommandId>,
 
     auto_measured: Arc<MeasuredGeometryStore>,
@@ -477,6 +478,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
             color_mode_theme_rev: None,
             skin: None,
             skin_last_rev: None,
+            geometry_overrides: None,
             close_command: None,
             auto_measured,
             auto_measured_key: None,
@@ -529,6 +531,15 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
         self
     }
 
+    /// Attaches a UI-only per-entity geometry override provider (ADR 0308).
+    pub fn with_geometry_overrides(mut self, overrides: NodeGraphGeometryOverridesRef) -> Self {
+        self.geometry_overrides = Some(overrides);
+        self.geometry.geom_key = None;
+        self.geometry.index_key = None;
+        self.geometry.drag_preview = None;
+        self
+    }
+
     /// Attaches a B-layer `edgeTypes` registry to override edge render hints.
     pub fn with_edge_types(mut self, edge_types: NodeGraphEdgeTypes) -> Self {
         self.edge_types = Some(edge_types);
@@ -564,6 +575,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
             color_mode_theme_rev: self.color_mode_theme_rev,
             skin: self.skin,
             skin_last_rev: self.skin_last_rev,
+            geometry_overrides: self.geometry_overrides,
             close_command: self.close_command,
             auto_measured: self.auto_measured,
             auto_measured_key: self.auto_measured_key,

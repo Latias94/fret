@@ -51,6 +51,7 @@ mod fit_view_on_mount_conformance;
 mod fit_view_options_conformance;
 mod fit_view_padding_conformance;
 mod focus_auto_pan_conformance;
+mod geometry_overrides_invalidation_conformance;
 mod group_preview_conformance;
 mod harness;
 mod hit_testing_conformance;

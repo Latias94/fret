@@ -10,6 +10,7 @@ pub mod edge_types;
 pub mod edit_queue;
 pub mod editor;
 pub mod editors;
+pub mod geometry_overrides;
 pub mod internals;
 pub mod measured;
 pub mod overlays;
@@ -42,6 +43,10 @@ pub use editors::{
     PortalNumberEditHandler, PortalNumberEditSpec, PortalNumberEditSubmit, PortalNumberEditor,
     PortalTextEditHandler, PortalTextEditSpec, PortalTextEditSubmit, PortalTextEditor,
     PortalTextEditorUi,
+};
+pub use geometry_overrides::{
+    EdgeGeometryOverrideV1, NodeGeometryOverrideV1, NodeGraphGeometryOverrides,
+    NodeGraphGeometryOverridesMap, NodeGraphGeometryOverridesRef,
 };
 pub use internals::{
     NodeGraphCanvasTransform, NodeGraphInternalsSnapshot, NodeGraphInternalsStore,

@@ -53,6 +53,7 @@ fn geometry_uses_default_node_size_for_portless_nodes() {
         1.0,
         origin,
         &mut presenter,
+        None,
     );
 
     let expected = {

@@ -11,6 +11,11 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
         let graph_rev = self.graph.revision(host).unwrap_or(0);
         let presenter_rev = self.presenter.geometry_revision();
         let edge_types_rev = self.edge_types.as_ref().map(|t| t.revision()).unwrap_or(0);
+        let overrides_rev = self
+            .geometry_overrides
+            .as_ref()
+            .map(|o| o.revision())
+            .unwrap_or(0);
         GeometryCacheKey {
             base: DerivedBaseKey {
                 graph_rev,
@@ -20,6 +25,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                 draw_order: Self::draw_order_fingerprint(&snapshot.draw_order),
                 presenter_rev,
                 edge_types_rev,
+                overrides_rev,
             },
         }
     }

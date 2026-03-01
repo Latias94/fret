@@ -20,6 +20,7 @@ use fret_core::{Point, Px, Rect, Size};
 
 use crate::core::{Graph, NodeId, PortDirection, PortId};
 use crate::io::NodeGraphNodeOrigin;
+use crate::ui::geometry_overrides::NodeGraphGeometryOverrides;
 use crate::ui::presenter::{NodeGraphPresenter, PortAnchorHint};
 use crate::ui::style::NodeGraphStyle;
 
@@ -55,6 +56,7 @@ impl CanvasGeometry {
         zoom: f32,
         node_origin: NodeGraphNodeOrigin,
         presenter: &mut dyn NodeGraphPresenter,
+        overrides: Option<&dyn NodeGraphGeometryOverrides>,
     ) -> Self {
         let mut out = Self::default();
         if !zoom.is_finite() || zoom <= 0.0 {
@@ -77,9 +79,13 @@ impl CanvasGeometry {
             };
 
             let (inputs, outputs) = node_ports(graph, node_id);
+            let size_override = overrides
+                .map(|o| o.node_geometry_override(node_id).normalized())
+                .and_then(|o| o.size_px);
             let (w_px, h_px) = node
                 .size
                 .map(|s| (s.width, s.height))
+                .or(size_override)
                 .or_else(|| presenter.node_size_hint_px(graph, node_id, style))
                 .unwrap_or_else(|| node_size_default_px(inputs.len(), outputs.len(), style));
 
@@ -357,6 +363,7 @@ mod tests {
             zoom_a,
             origin,
             &mut presenter,
+            None,
         );
         let node_rect_a = geom_a.nodes.get(&node_id).unwrap().rect;
         let port_a = geom_a.ports.get(&port_id).unwrap();
@@ -374,6 +381,7 @@ mod tests {
             zoom_b,
             origin,
             &mut presenter,
+            None,
         );
         let node_rect_b = geom_b.nodes.get(&node_id).unwrap().rect;
         let port_b = geom_b.ports.get(&port_id).unwrap();

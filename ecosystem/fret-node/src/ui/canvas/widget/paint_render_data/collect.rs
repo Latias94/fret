@@ -267,9 +267,14 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                             hint
                         };
                         if let Some(c) = cull {
-                            let pad = (snapshot
-                                .interaction
-                                .edge_interaction_width
+                            let interaction_width_px = this
+                                .geometry_overrides
+                                .as_ref()
+                                .and_then(|o| {
+                                    o.edge_geometry_override(edge_id).interaction_width_px
+                                })
+                                .unwrap_or(snapshot.interaction.edge_interaction_width);
+                            let pad = (interaction_width_px
                                 .max(
                                     this.style.geometry.wire_width
                                         * this.style.paint.wire_width_selected_mul,

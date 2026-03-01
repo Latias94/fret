@@ -52,4 +52,5 @@ Design contract (source of truth):
 - M0 is complete: ADR + invalidation conformance gates are in place.
 - M1 is complete: `NodeGraphStyle` is split into paint vs geometry token bundles and geometry
   caches key off the geometry fingerprint only.
-- Next: M2 (optional) — add a UI-only per-entity geometry override surface (type-safe, bounded).
+- M2 (optional) is complete: a UI-only per-entity geometry override surface is implemented with
+  explicit revision invalidation and conformance gates (see ADR 0308).

@@ -5,6 +5,9 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
         let tuning = snapshot.interaction.spatial_index;
         let mut pad = tuning.edge_aabb_pad_screen_px;
         pad = pad.max(snapshot.interaction.edge_interaction_width);
+        if let Some(overrides) = self.geometry_overrides.as_ref() {
+            pad = pad.max(overrides.max_edge_interaction_width_override_px());
+        }
         pad = pad.max(self.style.geometry.wire_width);
         if pad.is_finite() { pad.max(0.0) } else { 0.0 }
     }
