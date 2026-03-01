@@ -29,7 +29,9 @@ fn ensure_open<H: UiHost>(
 
 pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
     let st = models(cx);
-    let desktop_open = ensure_open(cx, st.desktop_open, |st, model| st.desktop_open = Some(model));
+    let desktop_open = ensure_open(cx, st.desktop_open, |st, model| {
+        st.desktop_open = Some(model)
+    });
     let mobile_open = ensure_open(cx, st.mobile_open, |st, model| st.mobile_open = Some(model));
 
     let desktop_open_trigger = desktop_open.clone();
@@ -56,12 +58,10 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
                     .into_element(cx),
                 ])
                 .into_element(cx),
-                shadcn::DialogFooter::new([
-                    shadcn::Button::new("Close")
-                        .variant(shadcn::ButtonVariant::Outline)
-                        .toggle_model(desktop_open_close.clone())
-                        .into_element(cx),
-                ])
+                shadcn::DialogFooter::new([shadcn::Button::new("Close")
+                    .variant(shadcn::ButtonVariant::Outline)
+                    .toggle_model(desktop_open_close.clone())
+                    .into_element(cx)])
                 .into_element(cx),
             ])
             .into_element(cx)
@@ -88,12 +88,10 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
                     .into_element(cx),
                 ])
                 .into_element(cx),
-                shadcn::DrawerFooter::new([
-                    shadcn::Button::new("Close")
-                        .variant(shadcn::ButtonVariant::Outline)
-                        .toggle_model(mobile_open_close.clone())
-                        .into_element(cx),
-                ])
+                shadcn::DrawerFooter::new([shadcn::Button::new("Close")
+                    .variant(shadcn::ButtonVariant::Outline)
+                    .toggle_model(mobile_open_close.clone())
+                    .into_element(cx)])
                 .into_element(cx),
             ])
             .into_element(cx)
@@ -109,4 +107,3 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
         .into_element(cx)
 }
 // endregion: example
-

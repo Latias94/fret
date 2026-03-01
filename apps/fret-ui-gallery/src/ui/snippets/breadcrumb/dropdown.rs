@@ -39,15 +39,17 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
         let list = shadcn::breadcrumb::primitives::BreadcrumbList::new().into_element(cx, |cx| {
             let home =
                 shadcn::breadcrumb::primitives::BreadcrumbItem::new().into_element(cx, |cx| {
-                    vec![shadcn::breadcrumb::primitives::BreadcrumbLink::new("Home")
-                        .href("/home")
-                        .on_activate(Arc::new(|_host, _acx, _reason| {}))
-                        .into_element(cx)
-                        .test_id("ui-gallery-breadcrumb-dropdown-home-link")]
+                    vec![
+                        shadcn::breadcrumb::primitives::BreadcrumbLink::new("Home")
+                            .href("/home")
+                            .on_activate(Arc::new(|_host, _acx, _reason| {}))
+                            .into_element(cx)
+                            .test_id("ui-gallery-breadcrumb-dropdown-home-link"),
+                    ]
                 });
 
-            let components_dropdown =
-                shadcn::breadcrumb::primitives::BreadcrumbItem::new().into_element(cx, |cx| {
+            let components_dropdown = shadcn::breadcrumb::primitives::BreadcrumbItem::new()
+                .into_element(cx, |cx| {
                     let menu = shadcn::DropdownMenu::new(open.clone())
                         .align(shadcn::DropdownMenuAlign::Start)
                         .into_element(
@@ -107,11 +109,19 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
 
             let page =
                 shadcn::breadcrumb::primitives::BreadcrumbItem::new().into_element(cx, |cx| {
-                    vec![shadcn::breadcrumb::primitives::BreadcrumbPage::new("Breadcrumb")
-                        .into_element(cx)]
+                    vec![
+                        shadcn::breadcrumb::primitives::BreadcrumbPage::new("Breadcrumb")
+                            .into_element(cx),
+                    ]
                 });
 
-            vec![home, dot_separator(cx), components_dropdown, dot_separator(cx), page]
+            vec![
+                home,
+                dot_separator(cx),
+                components_dropdown,
+                dot_separator(cx),
+                page,
+            ]
         });
 
         vec![list]

@@ -32,4 +32,3 @@ pub(super) fn preview_badge(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement>
 
     vec![body.test_id("ui-gallery-badge")]
 }
-

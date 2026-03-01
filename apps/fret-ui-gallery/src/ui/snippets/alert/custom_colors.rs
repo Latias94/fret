@@ -13,10 +13,13 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
         )
         .into_element(cx),
     ])
-    .refine_style(ChromeRefinement::default().bg(warn_bg).border_color(warn_border))
+    .refine_style(
+        ChromeRefinement::default()
+            .bg(warn_bg)
+            .border_color(warn_border),
+    )
     .refine_layout(LayoutRefinement::default().w_full().max_w(Px(520.0)))
     .into_element(cx)
     .test_id("ui-gallery-alert-colors")
 }
 // endregion: example
-

@@ -48,12 +48,10 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
                         .into_element(cx),
                     ])
                     .into_element(cx),
-                    shadcn::DrawerFooter::new([
-                        shadcn::Button::new("Close")
-                            .variant(shadcn::ButtonVariant::Outline)
-                            .toggle_model(close_open.clone())
-                            .into_element(cx),
-                    ])
+                    shadcn::DrawerFooter::new([shadcn::Button::new("Close")
+                        .variant(shadcn::ButtonVariant::Outline)
+                        .toggle_model(close_open.clone())
+                        .into_element(cx)])
                     .into_element(cx),
                 ])
                 .drag_handle_test_id("ui-gallery-drawer-snap-points-handle")
@@ -63,4 +61,3 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
         )
 }
 // endregion: example
-

@@ -46,12 +46,10 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
                             .into_element(cx),
                         ])
                         .into_element(cx),
-                        shadcn::DrawerFooter::new([
-                            shadcn::Button::new("Close")
-                                .variant(shadcn::ButtonVariant::Outline)
-                                .toggle_model(open_for_close.clone())
-                                .into_element(cx),
-                        ])
+                        shadcn::DrawerFooter::new([shadcn::Button::new("Close")
+                            .variant(shadcn::ButtonVariant::Outline)
+                            .toggle_model(open_for_close.clone())
+                            .into_element(cx)])
                         .into_element(cx),
                     ])
                     .into_element(cx)
@@ -62,4 +60,3 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
     )
 }
 // endregion: example
-

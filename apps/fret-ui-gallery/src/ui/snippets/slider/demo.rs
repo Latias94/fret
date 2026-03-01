@@ -43,7 +43,10 @@ fn controlled<H: UiHost>(
     )
 }
 
-pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>, controlled_values: Model<Vec<f32>>) -> AnyElement {
+pub fn render<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    controlled_values: Model<Vec<f32>>,
+) -> AnyElement {
     let max_w_sm = LayoutRefinement::default().w_full().max_w(Px(384.0));
 
     let single = shadcn::Slider::new_controllable(cx, None, || vec![50.0])
@@ -102,12 +105,14 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>, controlled_values: Mode
 
     let controlled = controlled(cx, controlled_values).test_id("ui-gallery-slider-demo-controlled");
 
-    fret_ui_kit::ui::h_flex(cx, |_cx| vec![single, range, multiple, vertical, controlled])
-        .gap(Space::N6)
-        .wrap()
-        .w_full()
-        .items_start()
-        .into_element(cx)
-        .test_id("ui-gallery-slider-demo")
+    fret_ui_kit::ui::h_flex(cx, |_cx| {
+        vec![single, range, multiple, vertical, controlled]
+    })
+    .gap(Space::N6)
+    .wrap()
+    .w_full()
+    .items_start()
+    .into_element(cx)
+    .test_id("ui-gallery-slider-demo")
 }
 // endregion: example

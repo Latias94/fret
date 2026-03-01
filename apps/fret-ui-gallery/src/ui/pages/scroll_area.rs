@@ -23,7 +23,10 @@ pub(super) fn preview_scroll_area(cx: &mut ElementContext<'_, App>) -> Vec<AnyEl
         vec![
             DocSection::new("Demo", demo)
                 .description("Vertical scroll region with tags and separators.")
-                .code_rust_from_file_region(include_str!("../snippets/scroll_area/demo.rs"), "example"),
+                .code_rust_from_file_region(
+                    include_str!("../snippets/scroll_area/demo.rs"),
+                    "example",
+                ),
             DocSection::new("Horizontal", horizontal)
                 .description("Horizontal rail (fixed-size items) inside a scroll area.")
                 .code_rust_from_file_region(
@@ -32,7 +35,10 @@ pub(super) fn preview_scroll_area(cx: &mut ElementContext<'_, App>) -> Vec<AnyEl
                 ),
             DocSection::new("RTL", rtl)
                 .description("ScrollArea behavior under an RTL direction provider.")
-                .code_rust_from_file_region(include_str!("../snippets/scroll_area/rtl.rs"), "example"),
+                .code_rust_from_file_region(
+                    include_str!("../snippets/scroll_area/rtl.rs"),
+                    "example",
+                ),
             DocSection::new("Notes", notes).description("Usage notes and caveats."),
         ],
     );

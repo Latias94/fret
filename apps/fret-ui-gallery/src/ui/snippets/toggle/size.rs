@@ -31,4 +31,3 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
     .test_id("ui-gallery-toggle-size")
 }
 // endregion: example
-

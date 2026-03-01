@@ -13,9 +13,11 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
                 .into_element(cx),
         ])
         .into_element(cx),
-        shadcn::CardContent::new(vec![shadcn::Skeleton::new()
-            .refine_layout(LayoutRefinement::default().w_full().h_px(Px(144.0)))
-            .into_element(cx)])
+        shadcn::CardContent::new(vec![
+            shadcn::Skeleton::new()
+                .refine_layout(LayoutRefinement::default().w_full().h_px(Px(144.0)))
+                .into_element(cx),
+        ])
         .into_element(cx),
     ])
     .refine_layout(LayoutRefinement::default().w_px(Px(320.0)))
@@ -27,4 +29,3 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
     )
 }
 // endregion: example
-

@@ -51,16 +51,16 @@ fn side_button<H: UiHost>(
             shadcn::DrawerContent::new([
                 shadcn::DrawerHeader::new([
                     shadcn::DrawerTitle::new(format!("{title} Drawer")).into_element(cx),
-                    shadcn::DrawerDescription::new("Use the `side` prop to control drawer placement.")
-                        .into_element(cx),
+                    shadcn::DrawerDescription::new(
+                        "Use the `side` prop to control drawer placement.",
+                    )
+                    .into_element(cx),
                 ])
                 .into_element(cx),
-                shadcn::DrawerFooter::new([
-                    shadcn::Button::new("Close")
-                        .variant(shadcn::ButtonVariant::Outline)
-                        .toggle_model(open_for_close.clone())
-                        .into_element(cx),
-                ])
+                shadcn::DrawerFooter::new([shadcn::Button::new("Close")
+                    .variant(shadcn::ButtonVariant::Outline)
+                    .toggle_model(open_for_close.clone())
+                    .into_element(cx)])
                 .into_element(cx),
             ])
             .into_element(cx)
@@ -116,4 +116,3 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
     .test_id("ui-gallery-drawer-sides")
 }
 // endregion: example
-
