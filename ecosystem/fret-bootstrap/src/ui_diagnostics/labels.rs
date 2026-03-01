@@ -100,6 +100,13 @@ fn reason_code_for_script_failure(reason: &str) -> Option<&'static str> {
         "no_semantics_snapshot" => Some("semantics.missing"),
         "assert_failed" => Some("assert.failed"),
         "window_target_unresolved" => Some("window.target_unresolved"),
+        "scroll_into_view_impossible_oversized_target" => {
+            Some("scroll_into_view.impossible_oversized_target")
+        }
+        "scroll_into_view_impossible_oversized_target_for_container" => {
+            Some("scroll_into_view.impossible_oversized_target_for_container")
+        }
+        "scroll_into_view_stuck_no_progress" => Some("scroll_into_view.stuck_no_progress"),
         _ if reason.contains("focus") => Some("focus.mismatch"),
         _ if reason.ends_with("_timeout") => Some("timeout"),
         _ if reason.contains("no_semantics_match") || reason.contains("no_match") => {
