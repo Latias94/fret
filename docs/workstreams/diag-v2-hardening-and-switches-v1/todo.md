@@ -59,6 +59,10 @@ This file is a check-list style tracker. Milestone framing lives in `milestones.
 - [x] Add a bounded resolver so humans/agents can avoid reading `latest.txt` manually (and avoid base-dir races):
   - `diag resolve latest --dir <base_or_session_dir> [--within-session <id|latest>]`
   - resolution prefers `<out_dir>/script.result.json:last_bundle_dir` and falls back to `<out_dir>/latest.txt`/scan.
+- [x] Make bounded “read-only” commands accept base/session out dirs directly (so agents can pass `--dir` without an extra
+  resolve step), and resolve them to the latest bundle dir under the chosen session:
+  - `diag meta`, `diag windows`, `diag dock-routing`, `diag screenshots`, `diag trace`, `diag stats`, `diag index`
+  - `diag pack`, `diag triage`, `diag lint`, `diag test-ids`, `diag frames-index`, `diag ai-packet`, `diag compare`
 
 ## P1: Agent-native script ergonomics (ImGui-alignment outcomes)
 

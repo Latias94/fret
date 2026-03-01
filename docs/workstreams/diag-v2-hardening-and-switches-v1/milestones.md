@@ -35,6 +35,9 @@ Exit criteria:
 - Tool-launched runs have a first-class “parallel agents” escape hatch:
   - `--session-auto` allocates an isolated session root under `<base_dir>/sessions/<session_id>/` for `--launch` runs,
   - sessions are discoverable (`diag list sessions`) and cleanable (`diag sessions clean`).
+- Tooling can resolve “what just happened” without humans/agents reading pointer files:
+  - `diag resolve latest --dir <base_or_session_dir> [--within-session <id|latest>]`
+  - most bounded inspection commands accept `<base_or_session_out_dir>` directly and resolve it to the latest bundle dir.
 
 Evidence anchors:
 

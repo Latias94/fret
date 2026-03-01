@@ -70,6 +70,9 @@ Concurrency note (important for automation / AI agents):
 - If you are using `--launch`, prefer `--session-auto` so tooling allocates an isolated session dir automatically:
   - `cargo run -p fretboard -- diag run <script> --dir target/fret-diag-agent-a --session-auto --launch -- <cmd...>`
   - `cargo run -p fretboard -- diag suite <suite> --dir target/fret-diag-agent-a --session-auto --launch -- <cmd...>`
+- Tip: most bounded inspection commands accept a base/session out dir directly (not just bundle dirs) and will resolve it
+  to the latest bundle under the latest session automatically. When in doubt, use `diag resolve latest` to see what would
+  be selected.
 
 ## Bundle schema (v2) and semantics mode
 
