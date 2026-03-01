@@ -11,6 +11,7 @@ pub mod alert_dialog;
 pub mod aspect_ratio;
 pub mod badge;
 pub mod breadcrumb;
+pub mod button;
 pub mod button_group;
 pub mod context_menu;
 pub mod dialog;
