@@ -1,0 +1,29 @@
+{
+  "schema_version": 2,
+  "meta": {
+    "name": "Cookbook: hello_counter baseline",
+    "tags": ["cookbook", "hello_counter", "smoke", "screenshots"],
+    "required_capabilities": ["diag.script_v2", "diag.screenshot_png"],
+    "target_hints": [
+      "Waits for the counter view to exist.",
+      "Clicks increment and captures a screenshot + bundle."
+    ]
+  },
+  "steps": [
+    { "type": "reset_diagnostics" },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "hello-counter.count" }
+      },
+      "timeout_frames": 600
+    },
+    { "type": "wait_frames", "n": 10 },
+    { "type": "click_stable", "target": { "kind": "test_id", "id": "hello-counter.inc" } },
+    { "type": "wait_frames", "n": 10 },
+    { "type": "capture_screenshot", "label": "cookbook-hello-counter-after-inc" },
+    { "type": "capture_bundle", "label": "cookbook-hello-counter-after-inc" }
+  ]
+}
+

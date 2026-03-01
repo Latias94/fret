@@ -64,6 +64,94 @@
       "target_hints": []
     },
     {
+      "id": "cookbook-hello-baseline",
+      "path": "tools/diag-scripts/cookbook/hello/cookbook-hello-baseline.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "cookbook-hello"
+      ],
+      "tags": [
+        "cookbook",
+        "hello",
+        "screenshots",
+        "smoke"
+      ],
+      "target_hints": [
+        "Waits for the hello example root to exist.",
+        "Captures a baseline screenshot + bundle."
+      ]
+    },
+    {
+      "id": "cookbook-hello-counter-baseline",
+      "path": "tools/diag-scripts/cookbook/hello-counter/cookbook-hello-counter-baseline.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "cookbook-hello-counter"
+      ],
+      "tags": [
+        "cookbook",
+        "hello_counter",
+        "screenshots",
+        "smoke"
+      ],
+      "target_hints": [
+        "Waits for the counter view to exist.",
+        "Clicks increment and captures a screenshot + bundle."
+      ]
+    },
+    {
+      "id": "cookbook-overlay-basics-dialog-close",
+      "path": "tools/diag-scripts/cookbook/overlay-basics/cookbook-overlay-basics-dialog-close.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "cookbook-overlay-basics"
+      ],
+      "tags": [
+        "cookbook",
+        "dialog",
+        "overlay_basics",
+        "smoke"
+      ],
+      "target_hints": [
+        "Opens the dialog via the trigger.",
+        "Clicks the close affordance.",
+        "Waits for the content node to disappear.",
+        "Captures a screenshot + bundle."
+      ]
+    },
+    {
+      "id": "cookbook-overlay-basics-dialog-open-screenshot",
+      "path": "tools/diag-scripts/cookbook/overlay-basics/cookbook-overlay-basics-dialog-open-screenshot.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "cookbook-overlay-basics"
+      ],
+      "tags": [
+        "cookbook",
+        "dialog",
+        "overlay_basics",
+        "screenshots",
+        "smoke"
+      ],
+      "target_hints": [
+        "Clicks the dialog trigger.",
+        "Waits for the content node to exist.",
+        "Captures a screenshot + bundle."
+      ]
+    },
+    {
       "id": "docking-arbitration-demo-default-layout-signature",
       "path": "tools/diag-scripts/docking/arbitration/docking-arbitration-demo-default-layout-signature.json",
       "required_capabilities": [

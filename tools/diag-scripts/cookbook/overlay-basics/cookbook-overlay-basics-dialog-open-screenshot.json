@@ -1,0 +1,43 @@
+{
+  "schema_version": 2,
+  "meta": {
+    "name": "Cookbook: overlay_basics dialog open screenshot",
+    "tags": ["cookbook", "overlay_basics", "dialog", "smoke", "screenshots"],
+    "required_capabilities": ["diag.script_v2", "diag.screenshot_png"],
+    "target_hints": [
+      "Clicks the dialog trigger.",
+      "Waits for the content node to exist.",
+      "Captures a screenshot + bundle."
+    ]
+  },
+  "steps": [
+    { "type": "reset_diagnostics" },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "cookbook.overlays.dialog.trigger" }
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "click_stable",
+      "target": { "kind": "test_id", "id": "cookbook.overlays.dialog.trigger" }
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "cookbook.overlays.dialog.content" }
+      },
+      "timeout_frames": 600
+    },
+    { "type": "wait_frames", "n": 20 },
+    {
+      "type": "capture_screenshot",
+      "label": "cookbook-overlay-basics-dialog-open"
+    },
+    { "type": "capture_bundle", "label": "cookbook-overlay-basics-dialog-open" }
+  ]
+}
+
