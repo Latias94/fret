@@ -660,6 +660,7 @@ impl fret_core::CustomEffectService for Renderer {
         // Drop any cached pipelines for this effect.
         self.pipelines.custom_effect_pipelines.remove(&id);
         self.pipelines.custom_effect_v2_pipelines.remove(&id);
+        self.pipelines.custom_effect_v3_pipelines.remove(&id);
 
         self.custom_effects_generation = self.custom_effects_generation.wrapping_add(1);
         true
@@ -669,6 +670,7 @@ impl fret_core::CustomEffectService for Renderer {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use fret_core::CustomEffectService as _;
 
     #[test]
     fn sampled_material_registration_is_capability_gated() {
@@ -713,10 +715,51 @@ mod tests {
     #[test]
     fn custom_effect_wgsl_minimal_program_validates() {
         let src = r#"
+ fn fret_custom_effect(src: vec4<f32>, _uv: vec2<f32>, _pos_px: vec2<f32>, _params: EffectParamsV1) -> vec4<f32> {
+   return src;
+ }
+ "#;
+        build_and_validate_custom_effect_wgsl_v1(src).expect("expected valid custom effect WGSL");
+    }
+
+    #[test]
+    fn unregister_custom_effect_evicts_custom_v3_pipelines() {
+        let ctx = match pollster::block_on(crate::WgpuContext::new()) {
+            Ok(ctx) => ctx,
+            Err(_err) => return,
+        };
+        let mut renderer = crate::Renderer::new(&ctx.adapter, &ctx.device);
+
+        let src = r#"
 fn fret_custom_effect(src: vec4<f32>, _uv: vec2<f32>, _pos_px: vec2<f32>, _params: EffectParamsV1) -> vec4<f32> {
   return src;
 }
 "#;
-        build_and_validate_custom_effect_wgsl_v1(src).expect("expected valid custom effect WGSL");
+
+        let id = renderer
+            .register_custom_effect_v3(fret_core::CustomEffectDescriptorV3::wgsl_utf8(src))
+            .expect("custom effect v3 registration must succeed on wgpu backends");
+
+        renderer.ensure_custom_effect_v3_pipelines(
+            &ctx.device,
+            wgpu::TextureFormat::Rgba8Unorm,
+            id,
+        );
+        assert!(
+            renderer
+                .pipelines
+                .custom_effect_v3_pipelines
+                .contains_key(&id),
+            "expected v3 pipelines to be cached for the effect"
+        );
+
+        assert!(renderer.unregister_custom_effect(id));
+        assert!(
+            !renderer
+                .pipelines
+                .custom_effect_v3_pipelines
+                .contains_key(&id),
+            "expected v3 pipelines to be evicted when the effect is unregistered"
+        );
     }
 }
