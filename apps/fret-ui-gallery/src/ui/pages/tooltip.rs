@@ -62,4 +62,3 @@ pub(super) fn preview_tooltip(cx: &mut ElementContext<'_, App>) -> Vec<AnyElemen
 
     vec![page]
 }
-

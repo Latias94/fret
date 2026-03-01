@@ -17,11 +17,10 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
                     .variant(shadcn::ButtonVariant::Outline)
                     .test_id("ui-gallery-tooltip-focus-trigger")
                     .into_element(cx),
-                shadcn::TooltipContent::new(vec![shadcn::TooltipContent::text(
-                    cx,
-                    "Opens on keyboard focus",
-                )
-                .test_id("ui-gallery-tooltip-focus-text")])
+                shadcn::TooltipContent::new(vec![
+                    shadcn::TooltipContent::text(cx, "Opens on keyboard focus")
+                        .test_id("ui-gallery-tooltip-focus-text"),
+                ])
                 .into_element(cx),
             )
             .arrow(true)
@@ -31,16 +30,17 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
             .into_element(cx)
             .test_id("ui-gallery-tooltip-focus");
 
-            vec![stack::hstack(
-                cx,
-                stack::HStackProps::default().gap(Space::N2).items_center(),
-                |_cx| vec![focus_start, focus_tooltip],
-            )
-            .test_id("ui-gallery-tooltip-focus-row")]
+            vec![
+                stack::hstack(
+                    cx,
+                    stack::HStackProps::default().gap(Space::N2).items_center(),
+                    |_cx| vec![focus_start, focus_tooltip],
+                )
+                .test_id("ui-gallery-tooltip-focus-row"),
+            ]
         })
         .into_iter()
         .next()
         .expect("tooltip provider returns one root element")
 }
 // endregion: example
-

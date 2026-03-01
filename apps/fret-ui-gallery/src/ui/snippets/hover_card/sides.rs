@@ -94,9 +94,23 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
             .items_center(),
         move |cx| {
             let (side, label, trigger_test_id, content_test_id, root_test_id) = entries[0];
-            let left = card(cx, side, label, trigger_test_id, content_test_id, root_test_id);
+            let left = card(
+                cx,
+                side,
+                label,
+                trigger_test_id,
+                content_test_id,
+                root_test_id,
+            );
             let (side, label, trigger_test_id, content_test_id, root_test_id) = entries[1];
-            let top = card(cx, side, label, trigger_test_id, content_test_id, root_test_id);
+            let top = card(
+                cx,
+                side,
+                label,
+                trigger_test_id,
+                content_test_id,
+                root_test_id,
+            );
             vec![left, top]
         },
     );
@@ -110,9 +124,23 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
             .items_center(),
         move |cx| {
             let (side, label, trigger_test_id, content_test_id, root_test_id) = entries[2];
-            let bottom = card(cx, side, label, trigger_test_id, content_test_id, root_test_id);
+            let bottom = card(
+                cx,
+                side,
+                label,
+                trigger_test_id,
+                content_test_id,
+                root_test_id,
+            );
             let (side, label, trigger_test_id, content_test_id, root_test_id) = entries[3];
-            let right = card(cx, side, label, trigger_test_id, content_test_id, root_test_id);
+            let right = card(
+                cx,
+                side,
+                label,
+                trigger_test_id,
+                content_test_id,
+                root_test_id,
+            );
             vec![bottom, right]
         },
     );
@@ -133,4 +161,3 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
     )
 }
 // endregion: example
-

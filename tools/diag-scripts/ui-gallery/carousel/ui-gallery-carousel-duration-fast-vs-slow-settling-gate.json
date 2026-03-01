@@ -80,6 +80,26 @@
       "predicate": { "kind": "checked_is", "target": { "kind": "test_id", "id": "ui-gallery-carousel-duration-slow-can-next" }, "checked": true },
       "timeout_frames": 600
     },
+    {
+      "type": "wait_until",
+      "predicate": { "kind": "checked_is", "target": { "kind": "test_id", "id": "ui-gallery-carousel-duration-fast-embla-enabled" }, "checked": true },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": { "kind": "checked_is", "target": { "kind": "test_id", "id": "ui-gallery-carousel-duration-slow-embla-enabled" }, "checked": true },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": { "kind": "checked_is", "target": { "kind": "test_id", "id": "ui-gallery-carousel-duration-fast-at-snap" }, "checked": true },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": { "kind": "checked_is", "target": { "kind": "test_id", "id": "ui-gallery-carousel-duration-slow-at-snap" }, "checked": true },
+      "timeout_frames": 600
+    },
 
     {
       "type": "assert",
@@ -105,6 +125,29 @@
       "predicate": { "kind": "checked_is", "target": { "kind": "test_id", "id": "ui-gallery-carousel-duration-fast-selected-1" }, "checked": true },
       "timeout_frames": 240
     },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "checked_is",
+        "target": { "kind": "test_id", "id": "ui-gallery-carousel-duration-fast-selected-snap-large" },
+        "checked": true
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "checked_is",
+        "target": { "kind": "test_id", "id": "ui-gallery-carousel-duration-fast-scroll-duration-fast" },
+        "checked": true
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": { "kind": "checked_is", "target": { "kind": "test_id", "id": "ui-gallery-carousel-duration-fast-at-snap" }, "checked": true },
+      "timeout_frames": 240
+    },
 
     {
       "type": "wait_until",
@@ -115,23 +158,41 @@
     { "type": "click_stable", "target": { "kind": "test_id", "id": "ui-gallery-carousel-duration-slow-next" } },
     {
       "type": "wait_until",
-      "predicate": { "kind": "checked_is", "target": { "kind": "test_id", "id": "ui-gallery-carousel-duration-slow-settling" }, "checked": true },
-      "timeout_frames": 120
-    },
-    {
-      "type": "wait_until",
       "predicate": { "kind": "checked_is", "target": { "kind": "test_id", "id": "ui-gallery-carousel-duration-slow-selected-1" }, "checked": true },
       "timeout_frames": 240
     },
-
-    { "type": "wait_frames", "n": 20 },
     {
-      "type": "assert",
-      "predicate": { "kind": "checked_is", "target": { "kind": "test_id", "id": "ui-gallery-carousel-duration-slow-settling" }, "checked": true }
+      "type": "wait_until",
+      "predicate": {
+        "kind": "checked_is",
+        "target": { "kind": "test_id", "id": "ui-gallery-carousel-duration-slow-selected-snap-large" },
+        "checked": true
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "checked_is",
+        "target": { "kind": "test_id", "id": "ui-gallery-carousel-duration-slow-scroll-duration-slow" },
+        "checked": true
+      },
+      "timeout_frames": 240
+    },
+
+    {
+      "type": "wait_until",
+      "predicate": { "kind": "checked_is", "target": { "kind": "test_id", "id": "ui-gallery-carousel-duration-slow-settling" }, "checked": true },
+      "timeout_frames": 240
     },
     {
       "type": "assert",
       "predicate": { "kind": "checked_is", "target": { "kind": "test_id", "id": "ui-gallery-carousel-duration-fast-settling" }, "checked": false }
+    },
+    {
+      "type": "wait_until",
+      "predicate": { "kind": "checked_is", "target": { "kind": "test_id", "id": "ui-gallery-carousel-duration-slow-at-snap" }, "checked": true },
+      "timeout_frames": 1200
     },
 
     { "type": "capture_bundle", "label": "ui-gallery-carousel-duration-fast-vs-slow-settling-gate" }

@@ -26,6 +26,10 @@ Upstream references (local snapshots):
 - **Target**: the desired location we are moving toward.
 - **Seek step**: one integrator step, typically run once per rendered frame.
 - **Settle**: the state where `abs(target - offset_location) < epsilon` (Embla uses `0.001`).
+- **Coordinate system** (important when comparing numbers):
+  - Upstream Embla scroll snaps are typically non-increasing offsets: `0, -x, -2x, ...`.
+  - In-tree Fret recipes expose/render a positive `offset_px` (distance scrolled forward).
+  - Therefore, the mapping is: `embla_location_px = -offset_px` and `embla_scroll_snaps_px = -snap_offsets_px`.
 
 ## Time model (critical)
 

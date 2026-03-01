@@ -799,17 +799,38 @@ impl<H: UiHost> UiTree<H> {
                     });
 
                     if !foreign_capture_active && !candidate.moved {
-                        let hit_root = hit.and_then(|n| self.node_root(n));
-                        let hit_is_inside_layer = hit_root == Some(layer.root);
+                        let hit_is_inside_layer = hit.is_some_and(|hit| {
+                            self.is_reachable_from_root_via_children(layer.root, hit)
+                        });
                         let hit_is_inside_branch = hit.is_some_and(|hit| {
                             layer
                                 .pointer_down_outside_branches
                                 .iter()
                                 .copied()
-                                .any(|branch| self.is_descendant(branch, hit))
+                                .any(|branch| self.is_reachable_from_root_via_children(branch, hit))
                         });
 
                         if !hit_is_inside_layer && !hit_is_inside_branch {
+                            let (window, root_element, tick_id) = if let Some(window) = self.window
+                                && let Some(root_element) =
+                                    self.nodes.get(candidate.root).and_then(|n| n.element)
+                            {
+                                let tick_id = app.tick_id();
+                                crate::elements::with_element_state(
+                                    app,
+                                    window,
+                                    root_element,
+                                    crate::action::DismissibleLastDismissRequest::default,
+                                    |st| {
+                                        st.tick_id = tick_id;
+                                        st.reason = None;
+                                        st.default_prevented = false;
+                                    },
+                                );
+                                (Some(window), Some(root_element), Some(tick_id))
+                            } else {
+                                (None, None, None)
+                            };
                             self.dispatch_event_to_node_chain_observer(
                                 app,
                                 services,
@@ -818,6 +839,33 @@ impl<H: UiHost> UiTree<H> {
                                 &candidate.down_event,
                                 &mut invalidation_visited,
                             );
+                            let mut clear_focus = true;
+                            if let (Some(window), Some(root_element), Some(tick_id)) =
+                                (window, root_element, tick_id)
+                            {
+                                let prevented = crate::elements::with_element_state(
+                                    app,
+                                    window,
+                                    root_element,
+                                    crate::action::DismissibleLastDismissRequest::default,
+                                    |st| {
+                                        st.tick_id == tick_id
+                                            && matches!(
+                                                st.reason,
+                                                Some(
+                                                    crate::action::DismissReason::OutsidePress { .. }
+                                                )
+                                            )
+                                            && st.default_prevented
+                                    },
+                                );
+                                if prevented {
+                                    clear_focus = false;
+                                }
+                            }
+                            if clear_focus {
+                                self.set_focus(None);
+                            }
                             needs_redraw = true;
                             suppress_touch_up_outside_dispatch = candidate.consume;
                         }

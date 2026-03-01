@@ -874,6 +874,16 @@
       "target_hints": []
     },
     {
+      "id": "ui-gallery-card-content-button-hitbox-not-stretched",
+      "path": "tools/diag-scripts/ui-gallery/card/ui-gallery-card-content-button-hitbox-not-stretched.json",
+      "required_capabilities": [],
+      "suite_memberships": [
+        "ui-gallery-shadcn-conformance"
+      ],
+      "tags": [],
+      "target_hints": []
+    },
+    {
       "id": "ui-gallery-card-description-no-early-wrap",
       "path": "tools/diag-scripts/ui-gallery/card/ui-gallery-card-description-no-early-wrap.json",
       "required_capabilities": [],

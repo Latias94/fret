@@ -71,4 +71,3 @@ pub(super) fn preview_hover_card(cx: &mut ElementContext<'_, App>) -> Vec<AnyEle
 
     vec![body]
 }
-
