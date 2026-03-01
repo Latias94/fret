@@ -18,6 +18,7 @@ pub mod checkbox;
 pub mod collapsible;
 pub mod command;
 pub mod context_menu;
+pub mod data_table;
 pub mod dialog;
 pub mod drawer;
 pub mod dropdown_menu;
