@@ -84,8 +84,40 @@ Non-goals (v2):
   - Evidence:
     - `apps/fret-ui-gallery/src/ui/pages/carousel.rs` ("Duration (Embla)" section)
     - `ecosystem/fret-ui-shadcn/src/carousel.rs` (`CarouselApiSnapshot.settling`)
+    - `ecosystem/fret-ui-shadcn/src/carousel.rs` (nav handlers schedule `RequestAnimationFrame` and the embla tick loop requests frames until settled)
   - Gate:
     - `tools/diag-scripts/ui-gallery/carousel/ui-gallery-carousel-duration-fast-vs-slow-settling-gate.json`
+   - Notes:
+     - The gate asserts that the "slow" carousel is **not** at the selected snap after a couple of frames,
+       and then eventually reaches the snap within a bounded timeout.
+     - The UI gallery duration demo disables focus watching (`watch_focus(false)`) to keep the gate about
+       duration-driven motion only. Focus-driven scroll-to-view parity is tracked separately under the
+       focus semantics section.
+
+---
+
+## Upstream options coverage (v2 snapshot)
+
+Upstream reference: `repo-ref/embla-carousel/packages/embla-carousel/src/components/Options.ts`.
+
+Implemented (v2 MVP, in-tree mapping):
+
+- `align` → recipe option (`CarouselAlign`) + headless snap model alignment
+- `axis` (x/y) → recipe `orientation={horizontal|vertical}`
+- `containScroll` → headless snap model + Embla ports (`ScrollContain`/`ScrollSnapList`)
+- `direction` → recipe `LayoutDirection` (LTR/RTL) for deltas + controls + keys
+- `slidesToScroll` → headless snap model grouping
+- `dragFree`, `skipSnaps`, `duration`, `startSnap`, `draggable`, `loop` → recipe options + headless engine config
+- `inViewThreshold`, `inViewMargin` → headless `SlidesInView` tracker + recipe snapshot
+- `resize`, `slideChanges` → modeled via geometry/content-id driven `reInit` (MVP), not via DOM observers
+
+Not implemented / not applicable (expected gaps for native retained UI):
+
+- `container`, `slides` selector plumbing (DOM-only)
+- `active` (Embla instance enable/disable as a first-class option)
+- Embla's DOM-observer-driven `resize`/`slideChanges` behavior and exact timing
+- `ssr` (Embla SSR snap list injection)
+- `dragThreshold` parity (Embla uses px threshold; Fret uses retained pointer capture + drag-arms thresholds; needs explicit alignment work)
 - [x] CAR2-125 Port core targeting helpers (snap selection + limits) needed by the engine.
   - Evidence:
     - `ecosystem/fret-ui-headless/src/embla/scroll_target.rs`
