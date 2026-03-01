@@ -36,3 +36,5 @@ Notes:
 
 - PR0 (types + builder entrypoint) is landed: `crates/fret-ui/src/tree/dispatch_snapshot.rs` and
   `crates/fret-ui/src/tree/ui_tree_debug/query.rs` (`debug_dispatch_snapshot`).
+- PR1 (parity report) is landed: `crates/fret-ui/src/tree/ui_tree_debug/query.rs`
+  (`debug_dispatch_snapshot_parity`).

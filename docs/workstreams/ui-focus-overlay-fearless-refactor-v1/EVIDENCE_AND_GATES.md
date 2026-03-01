@@ -21,6 +21,7 @@
 
 - Snapshot types + builder: `crates/fret-ui/src/tree/dispatch_snapshot.rs`
 - Debug entrypoint (no behavior change): `crates/fret-ui/src/tree/ui_tree_debug/query.rs` (`debug_dispatch_snapshot`)
+- Snapshot parity report: `crates/fret-ui/src/tree/ui_tree_debug/query.rs` (`debug_dispatch_snapshot_parity`)
 
 ## New artifacts (Phase A/B)
 

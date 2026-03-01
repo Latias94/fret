@@ -100,7 +100,7 @@ use util::{
 
 #[cfg(feature = "diagnostics")]
 pub use debug::{
-    UiDebugDispatchSnapshot, UiDebugDispatchSnapshotNode,
+    UiDebugDispatchSnapshot, UiDebugDispatchSnapshotNode, UiDebugDispatchSnapshotParityReport,
     UiDebugOverlayPolicyDecisionWrite, UiDebugParentSeverWrite, UiDebugRemoveSubtreeFrameContext,
     UiDebugRemoveSubtreeOutcome, UiDebugRemoveSubtreeRecord, UiDebugSetChildrenWrite,
     UiDebugSetLayerVisibleWrite,

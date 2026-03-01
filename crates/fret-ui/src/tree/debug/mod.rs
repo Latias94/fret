@@ -46,6 +46,8 @@ pub use diagnostics::{
     UiDebugSetLayerVisibleWrite,
 };
 #[cfg(feature = "diagnostics")]
+pub use dispatch_snapshot::UiDebugDispatchSnapshotParityReport;
+#[cfg(feature = "diagnostics")]
 pub use dispatch_snapshot::{UiDebugDispatchSnapshot, UiDebugDispatchSnapshotNode};
 
 pub(in crate::tree) use internal::{

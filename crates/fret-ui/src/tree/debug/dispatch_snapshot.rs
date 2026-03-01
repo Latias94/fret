@@ -17,6 +17,27 @@ pub struct UiDebugDispatchSnapshot {
     pub nodes: Vec<UiDebugDispatchSnapshotNode>,
 }
 
+#[derive(Debug, Clone)]
+pub struct UiDebugDispatchSnapshotParityReport {
+    pub frame_id: FrameId,
+    pub window: Option<AppWindowId>,
+    pub active_layer_roots: Vec<NodeId>,
+    pub barrier_root: Option<NodeId>,
+
+    pub reachable_count: usize,
+    pub snapshot_count: usize,
+
+    /// Nodes that are reachable from the active layer roots via child edges, but missing from the
+    /// snapshot forest.
+    pub missing_in_snapshot_total: usize,
+    pub missing_in_snapshot_sample: Vec<NodeId>,
+
+    /// Nodes that are present in the snapshot forest, but not reachable from the active layer
+    /// roots via child edges.
+    pub extra_in_snapshot_total: usize,
+    pub extra_in_snapshot_sample: Vec<NodeId>,
+}
+
 impl UiDebugDispatchSnapshot {
     pub(in crate::tree) fn from_snapshot(snapshot: &UiDispatchSnapshot) -> Self {
         let mut nodes: Vec<UiDebugDispatchSnapshotNode> = Vec::with_capacity(snapshot.nodes.len());
@@ -40,4 +61,3 @@ impl UiDebugDispatchSnapshot {
         }
     }
 }
-
