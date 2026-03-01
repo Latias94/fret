@@ -128,8 +128,8 @@ fn extract_edge_label_ops(scene: &Scene, style: &NodeGraphStyle) -> Vec<(Rect, P
         if order != fret_core::DrawOrder(2) {
             continue;
         }
-        if background != fret_core::Paint::Solid(style.edge_label_background)
-            || border_paint != fret_core::Paint::Solid(style.edge_label_border)
+        if background.paint != fret_core::Paint::Solid(style.edge_label_background)
+            || border_paint.paint != fret_core::Paint::Solid(style.edge_label_border)
         {
             continue;
         }

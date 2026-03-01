@@ -209,10 +209,10 @@ fn edge_label_border_uses_edge_render_hint_color_override() {
         if order != fret_core::DrawOrder(2) {
             continue;
         }
-        if background != fret_core::Paint::Solid(canvas.style.edge_label_background) {
+        if background.paint != fret_core::Paint::Solid(canvas.style.edge_label_background) {
             continue;
         }
-        if border_paint != fret_core::Paint::Solid(override_color) {
+        if border_paint.paint != fret_core::Paint::Solid(override_color) {
             continue;
         }
         if matches!(ops[ix + 1], SceneOp::Text { .. }) {

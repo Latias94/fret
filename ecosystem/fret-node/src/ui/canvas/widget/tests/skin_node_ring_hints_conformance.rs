@@ -141,13 +141,13 @@ fn skin_node_ring_hints_draws_focused_ring_outside_node_rect() {
         if *order != DrawOrder(3) {
             continue;
         }
-        if *background != fret_core::Paint::TRANSPARENT {
+        if background.paint != fret_core::Paint::TRANSPARENT {
             continue;
         }
         if *border != fret_core::Edges::all(Px(3.0)) {
             continue;
         }
-        let fret_core::Paint::Solid(c) = border_paint else {
+        let fret_core::Paint::Solid(c) = border_paint.paint else {
             continue;
         };
         if !(approx(c.r, ring_color.r)
