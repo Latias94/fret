@@ -54,10 +54,14 @@ Optional (best-effort, may be missing depending on the run):
 - `<out_dir>/<run_id>/trace.chrome.json`
 - `<out_dir>/<run_id>/bundle.json` (alias copy of the last dumped bundle artifact)
 - `<out_dir>/<run_id>/bundle.schema2.json` (alias copy when schema2 exists)
+- screenshots (GPU readback; opt-in):
+  - `<out_dir>/screenshots/<bundle_dir_name>/manifest.json`
+  - `<out_dir>/screenshots/<bundle_dir_name>/*.png`
 - sidecars for fast queries (usually written when a bundle artifact is aliased):
   - `<out_dir>/<run_id>/bundle.meta.json`
   - `<out_dir>/<run_id>/bundle.index.json`
   - `<out_dir>/<run_id>/window.map.json`
+  - `<out_dir>/<run_id>/dock.routing.json`
   - `<out_dir>/<run_id>/frames.index.json`
   - `<out_dir>/<run_id>/test_ids.index.json`
   - `<out_dir>/<run_id>/test_ids.json`
@@ -77,6 +81,7 @@ target/fret-diag/
     bundle.meta.json             (optional sidecar)
     bundle.index.json            (optional sidecar)
     window.map.json              (optional sidecar)
+    dock.routing.json            (optional sidecar)
     frames.index.json            (optional sidecar)
     test_ids.index.json          (optional sidecar)
     chunks/
@@ -97,6 +102,7 @@ target/fret-diag/
     bundle.json                  (optional, large raw view)
     bundle.dumped.json           (optional, WS materialization metadata)
     window.map.json              (optional sidecar)
+    dock.routing.json            (optional sidecar)
 ```
 
 `target/fret-diag/latest.txt` contains the directory name of the most recently materialized bundle

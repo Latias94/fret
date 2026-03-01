@@ -73,8 +73,14 @@ Planned outcomes:
   - [ ] Ensure the feature is capability-gated (tooling-side) and does not leak policy into `fret-ui`.
 - [ ] Multi-viewport docking evidence (make cross-window failures explainable, not just “timeout”):
   - [x] Export a bounded `window.map.json` sidecar in bundle export dirs (window ids + last bounds + hover detection).
-  - [ ] Record input routing decisions for dock/tear-out flows (why a hover/click went to a different window).
-  - [x] Add a bounded `diag windows <bundle_dir|bundle.schema2.json>` query to avoid opening large artifacts.
+  - [x] Record input routing decisions for dock/tear-out flows (why a hover/click went to a different window):
+    - runtime sidecar: `dock.routing.json` (bounded; max 512 entries),
+    - tooling: `fretboard diag dock-routing <bundle_dir|bundle.schema2.json> [--json]` (bounded report).
+- [x] Add bounded queries to avoid opening large artifacts:
+  - `diag windows <bundle_dir|bundle.schema2.json>`
+  - `diag dock-routing <bundle_dir|bundle.schema2.json>`
+- [x] Add a bounded `diag screenshots <bundle_dir|bundle.schema2.json>` query to locate and summarize GPU screenshots without
+  hunting through directories.
 - [ ] Fast mode policy (determinism + speed):
   - [ ] Make “fast mode vs human-speed” explicit via config (stabilization defaults, animation handling).
   - [ ] Add a bounded “fast mode” smoke suite (runs faster than today without introducing flake).

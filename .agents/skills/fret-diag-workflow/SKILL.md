@@ -22,6 +22,8 @@ Use `fret-ui-review` when the goal is an architecture/UX audit rather than produ
 - Prefer bounded tooling queries:
   - `fretboard diag meta ...`
   - `fretboard diag windows ...`
+  - `fretboard diag dock-routing ...`
+  - `fretboard diag screenshots ...`
   - `fretboard diag query ...`
   - `fretboard diag slice ...`
 - When you need repository-wide search, use `tools/rg-safe.ps1` (excludes diag artifact directories and bundle artifacts).
@@ -191,6 +193,9 @@ Supported `pointer_kind` values in scripts: `mouse`, `touch`, `pen`.
 Prefer bounded queries over `rg bundle.json`:
 
 - `fretboard diag meta <bundle_dir|bundle.json|bundle.schema2.json> --json`
+- `fretboard diag windows <bundle_dir|bundle.json|bundle.schema2.json>`
+- `fretboard diag dock-routing <bundle_dir|bundle.json|bundle.schema2.json>`
+- `fretboard diag screenshots <bundle_dir|bundle.json|bundle.schema2.json>`
 - `fretboard diag query test-id <bundle_dir|bundle.json|bundle.schema2.json> <pattern> --top 50`
 - `fretboard diag slice <bundle_dir|bundle.json|bundle.schema2.json> --test-id <test_id>`
 

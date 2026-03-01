@@ -144,6 +144,16 @@ pub(crate) fn dispatch_simple(
             warmup_frames,
             stats_json,
         ),
+        "dock-routing" => commands::dock_routing::cmd_dock_routing(
+            rest,
+            pack_after_run,
+            workspace_root,
+            warmup_frames,
+            stats_json,
+        ),
+        "screenshots" => {
+            commands::screenshots::cmd_screenshots(rest, pack_after_run, workspace_root, stats_json)
+        }
         "index" => commands::index::cmd_index(
             rest,
             pack_after_run,

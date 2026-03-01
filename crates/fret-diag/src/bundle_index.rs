@@ -323,6 +323,11 @@ pub(crate) fn default_window_map_path(bundle_path: &Path) -> PathBuf {
     dir.join("window.map.json")
 }
 
+pub(crate) fn default_dock_routing_path(bundle_path: &Path) -> PathBuf {
+    let dir = bundle_path.parent().unwrap_or_else(|| Path::new("."));
+    dir.join("dock.routing.json")
+}
+
 pub(crate) fn default_test_ids_path(bundle_path: &Path) -> PathBuf {
     let dir = bundle_path.parent().unwrap_or_else(|| Path::new("."));
     dir.join("test_ids.json")
@@ -377,6 +382,30 @@ pub(crate) fn ensure_window_map_json(
         }
     }
     let payload = build_window_map_payload(bundle_path, warmup_frames)?;
+    write_pretty_json(&out, &payload)?;
+    Ok(out)
+}
+
+pub(crate) fn ensure_dock_routing_json(
+    bundle_path: &Path,
+    warmup_frames: u64,
+) -> Result<PathBuf, String> {
+    let out = default_dock_routing_path(bundle_path);
+    let expected_bundle = bundle_path.display().to_string();
+    if out.is_file() {
+        if let Some(existing) = read_json_value(&out) {
+            let kind_ok = existing.get("kind").and_then(|v| v.as_str()) == Some("dock_routing");
+            let schema_ok = existing.get("schema_version").and_then(|v| v.as_u64()) == Some(1u64);
+            let warmup_ok =
+                existing.get("warmup_frames").and_then(|v| v.as_u64()) == Some(warmup_frames);
+            let bundle_ok =
+                existing.get("bundle").and_then(|v| v.as_str()) == Some(&expected_bundle);
+            if kind_ok && schema_ok && warmup_ok && bundle_ok {
+                return Ok(out);
+            }
+        }
+    }
+    let payload = build_dock_routing_payload(bundle_path, warmup_frames)?;
     write_pretty_json(&out, &payload)?;
     Ok(out)
 }
@@ -503,6 +532,224 @@ fn build_window_map_payload(bundle_path: &Path, warmup_frames: u64) -> Result<Va
     let bytes = std::fs::read(bundle_path).map_err(|e| e.to_string())?;
     let bundle: Value = serde_json::from_slice(&bytes).map_err(|e| e.to_string())?;
     build_window_map_payload_from_json(&bundle, &bundle_path.display().to_string(), warmup_frames)
+}
+
+fn build_dock_routing_payload(bundle_path: &Path, warmup_frames: u64) -> Result<Value, String> {
+    let bytes = std::fs::read(bundle_path).map_err(|e| e.to_string())?;
+    let bundle: Value = serde_json::from_slice(&bytes).map_err(|e| e.to_string())?;
+    build_dock_routing_payload_from_json(&bundle, &bundle_path.display().to_string(), warmup_frames)
+}
+
+fn hash_str_64(s: &str) -> u64 {
+    let mut fp: u64 = 14695981039346656037;
+    for b in s.as_bytes() {
+        fp ^= *b as u64;
+        fp = fp.wrapping_mul(1099511628211);
+    }
+    fp
+}
+
+fn build_dock_routing_payload_from_json(
+    bundle: &Value,
+    bundle_label: &str,
+    warmup_frames: u64,
+) -> Result<Value, String> {
+    const MAX_ENTRIES: usize = 512;
+
+    let windows = bundle
+        .get("windows")
+        .and_then(|v| v.as_array())
+        .ok_or_else(|| "invalid bundle artifact: missing windows".to_string())?;
+
+    let mut entries: Vec<Value> = Vec::new();
+    let mut last_fingerprint_by_window: HashMap<u64, u64> = HashMap::new();
+
+    for w in windows {
+        let window = w.get("window").and_then(|v| v.as_u64()).unwrap_or(0);
+        let snaps = w
+            .get("snapshots")
+            .and_then(|v| v.as_array())
+            .map_or(&[][..], |v| v.as_slice());
+
+        for (idx, s) in snaps.iter().enumerate() {
+            if (idx as u64) < warmup_frames {
+                continue;
+            }
+
+            let docking = s
+                .get("debug")
+                .and_then(|v| v.get("docking_interaction"))
+                .and_then(|v| v.as_object());
+            let Some(docking) = docking else {
+                continue;
+            };
+
+            let dock_drag = docking.get("dock_drag").and_then(|v| v.as_object());
+            let dock_drop = docking.get("dock_drop_resolve").and_then(|v| v.as_object());
+
+            let drag_interesting = dock_drag.is_some_and(|d| {
+                d.get("dragging").and_then(|v| v.as_bool()).unwrap_or(false)
+                    || d.get("cross_window_hover")
+                        .and_then(|v| v.as_bool())
+                        .unwrap_or(false)
+            });
+            let interesting = drag_interesting || dock_drop.is_some();
+            if !interesting {
+                continue;
+            }
+
+            let hover_detection = s
+                .get("caps")
+                .and_then(|v| v.get("ui_window_hover_detection"))
+                .and_then(|v| v.as_str())
+                .unwrap_or("unknown");
+
+            let mut fp: u64 = 14695981039346656037;
+            let mix = |fp: &mut u64, v: u64| {
+                *fp ^= v;
+                *fp = fp.wrapping_mul(1099511628211);
+            };
+
+            mix(&mut fp, window);
+            mix(&mut fp, hash_str_64(hover_detection));
+
+            if let Some(d) = dock_drag {
+                mix(
+                    &mut fp,
+                    d.get("pointer_id").and_then(|v| v.as_u64()).unwrap_or(0),
+                );
+                mix(
+                    &mut fp,
+                    d.get("source_window").and_then(|v| v.as_u64()).unwrap_or(0),
+                );
+                mix(
+                    &mut fp,
+                    d.get("current_window")
+                        .and_then(|v| v.as_u64())
+                        .unwrap_or(0),
+                );
+                mix(
+                    &mut fp,
+                    d.get("dragging").and_then(|v| v.as_bool()).unwrap_or(false) as u64,
+                );
+                mix(
+                    &mut fp,
+                    d.get("cross_window_hover")
+                        .and_then(|v| v.as_bool())
+                        .unwrap_or(false) as u64,
+                );
+                mix(
+                    &mut fp,
+                    d.get("transparent_payload_applied")
+                        .and_then(|v| v.as_bool())
+                        .unwrap_or(false) as u64,
+                );
+                mix(
+                    &mut fp,
+                    hash_str_64(
+                        d.get("window_under_cursor_source")
+                            .and_then(|v| v.as_str())
+                            .unwrap_or(""),
+                    ),
+                );
+            }
+
+            if let Some(d) = dock_drop {
+                mix(
+                    &mut fp,
+                    d.get("pointer_id").and_then(|v| v.as_u64()).unwrap_or(0),
+                );
+                if let Some(source) = d.get("source") {
+                    let label = serde_json::to_string(source).unwrap_or_default();
+                    mix(&mut fp, hash_str_64(&label));
+                }
+                if let Some(r) = d.get("resolved").and_then(|v| v.as_object()) {
+                    mix(
+                        &mut fp,
+                        r.get("layout_root").and_then(|v| v.as_u64()).unwrap_or(0),
+                    );
+                    mix(&mut fp, r.get("tabs").and_then(|v| v.as_u64()).unwrap_or(0));
+                    if let Some(zone) = r.get("zone") {
+                        let label = serde_json::to_string(zone).unwrap_or_default();
+                        mix(&mut fp, hash_str_64(&label));
+                    }
+                    mix(
+                        &mut fp,
+                        r.get("outer").and_then(|v| v.as_bool()).unwrap_or(false) as u64,
+                    );
+                }
+                if let Some(p) = d.get("preview").and_then(|v| v.as_object()) {
+                    if let Some(kind) = p.get("kind") {
+                        let label = serde_json::to_string(kind).unwrap_or_default();
+                        mix(&mut fp, hash_str_64(&label));
+                    }
+                }
+            }
+
+            if last_fingerprint_by_window.get(&window).copied() == Some(fp) {
+                continue;
+            }
+            last_fingerprint_by_window.insert(window, fp);
+
+            let dock_drag_out = dock_drag.map(|d| {
+                json!({
+                    "pointer_id": d.get("pointer_id").and_then(|v| v.as_u64()).unwrap_or(0),
+                    "source_window": d.get("source_window").and_then(|v| v.as_u64()).unwrap_or(0),
+                    "current_window": d.get("current_window").and_then(|v| v.as_u64()).unwrap_or(0),
+                    "dragging": d.get("dragging").and_then(|v| v.as_bool()).unwrap_or(false),
+                    "cross_window_hover": d.get("cross_window_hover").and_then(|v| v.as_bool()).unwrap_or(false),
+                    "transparent_payload_applied": d.get("transparent_payload_applied").and_then(|v| v.as_bool()).unwrap_or(false),
+                    "window_under_cursor_source": d.get("window_under_cursor_source").cloned().unwrap_or(Value::Null),
+                })
+            });
+
+            let dock_drop_out = dock_drop.map(|d| {
+                json!({
+                    "pointer_id": d.get("pointer_id").and_then(|v| v.as_u64()).unwrap_or(0),
+                    "source": d.get("source").cloned().unwrap_or(Value::Null),
+                    "resolved": d.get("resolved").and_then(|v| v.as_object()).map(|r| json!({
+                        "layout_root": r.get("layout_root").and_then(|v| v.as_u64()).unwrap_or(0),
+                        "tabs": r.get("tabs").and_then(|v| v.as_u64()).unwrap_or(0),
+                        "zone": r.get("zone").cloned().unwrap_or(Value::Null),
+                        "outer": r.get("outer").and_then(|v| v.as_bool()).unwrap_or(false),
+                    })),
+                    "preview": d.get("preview").and_then(|v| v.as_object()).map(|p| json!({
+                        "kind": p.get("kind").cloned().unwrap_or(Value::Null),
+                    })),
+                })
+            });
+
+            let timestamp_unix_ms = s
+                .get("timestamp_unix_ms")
+                .and_then(|v| v.as_u64())
+                .or_else(|| s.get("timestamp_ms").and_then(|v| v.as_u64()));
+
+            entries.push(json!({
+                "window": window,
+                "tick_id": s.get("tick_id").and_then(|v| v.as_u64()),
+                "frame_id": s.get("frame_id").and_then(|v| v.as_u64()),
+                "timestamp_unix_ms": timestamp_unix_ms,
+                "window_snapshot_seq": s.get("window_snapshot_seq").and_then(|v| v.as_u64()),
+                "ui_window_hover_detection": hover_detection,
+                "dock_drag": dock_drag_out,
+                "dock_drop_resolve": dock_drop_out,
+            }));
+
+            if entries.len() > MAX_ENTRIES {
+                let extra = entries.len().saturating_sub(MAX_ENTRIES);
+                entries.drain(0..extra);
+            }
+        }
+    }
+
+    Ok(json!({
+        "schema_version": 1,
+        "kind": "dock_routing",
+        "bundle": bundle_label,
+        "warmup_frames": warmup_frames,
+        "entries_total": entries.len(),
+        "entries": entries,
+    }))
 }
 
 fn build_bundle_meta_payload_from_json(
@@ -1305,6 +1552,72 @@ mod tests {
         })
     }
 
+    fn sample_v2_bundle_with_dock_routing_fields() -> Value {
+        json!({
+            "schema_version": 2,
+            "windows": [{
+                "window": 1,
+                "events": [{ "kind": "noop" }],
+                "snapshots": [
+                    {
+                        "tick_id": 7,
+                        "frame_id": 42,
+                        "timestamp_unix_ms": 123,
+                        "window_snapshot_seq": 100,
+                        "window": 1,
+                        "caps": { "ui_window_hover_detection": "platform_win32" },
+                        "debug": {
+                            "docking_interaction": {
+                                "dock_drag": {
+                                    "pointer_id": 1,
+                                    "source_window": 1,
+                                    "current_window": 2,
+                                    "dragging": true,
+                                    "cross_window_hover": true,
+                                    "transparent_payload_applied": true,
+                                    "window_under_cursor_source": "heuristic_rects"
+                                },
+                                "dock_drop_resolve": {
+                                    "pointer_id": 1,
+                                    "source": "outer_hint_rect",
+                                    "resolved": { "layout_root": 11, "tabs": 22, "zone": "left", "outer": false },
+                                    "preview": { "kind": { "kind": "wrap_binary" } }
+                                }
+                            }
+                        }
+                    },
+                    {
+                        "tick_id": 8,
+                        "frame_id": 43,
+                        "timestamp_unix_ms": 124,
+                        "window_snapshot_seq": 101,
+                        "window": 1,
+                        "caps": { "ui_window_hover_detection": "platform_win32" },
+                        "debug": {
+                            "docking_interaction": {
+                                "dock_drag": {
+                                    "pointer_id": 1,
+                                    "source_window": 1,
+                                    "current_window": 2,
+                                    "dragging": true,
+                                    "cross_window_hover": true,
+                                    "transparent_payload_applied": true,
+                                    "window_under_cursor_source": "heuristic_rects"
+                                },
+                                "dock_drop_resolve": {
+                                    "pointer_id": 1,
+                                    "source": "outer_hint_rect",
+                                    "resolved": { "layout_root": 11, "tabs": 22, "zone": "left", "outer": false },
+                                    "preview": { "kind": { "kind": "wrap_binary" } }
+                                }
+                            }
+                        }
+                    }
+                ]
+            }]
+        })
+    }
+
     #[test]
     fn bundle_meta_counts_semantics_via_table() {
         let bundle = sample_v2_bundle();
@@ -1443,6 +1756,53 @@ mod tests {
         assert_eq!(bounds.get("y_px").and_then(|v| v.as_f64()), Some(2.0));
         assert_eq!(bounds.get("w_px").and_then(|v| v.as_f64()), Some(300.0));
         assert_eq!(bounds.get("h_px").and_then(|v| v.as_f64()), Some(200.0));
+    }
+
+    #[test]
+    fn dock_routing_dedups_repeated_frames_and_records_key_fields() {
+        let bundle = sample_v2_bundle_with_dock_routing_fields();
+        let routing = build_dock_routing_payload_from_json(&bundle, "bundle.json", 0).unwrap();
+
+        assert_eq!(routing["kind"].as_str(), Some("dock_routing"));
+        assert_eq!(routing["schema_version"].as_u64(), Some(1));
+        assert_eq!(routing["entries_total"].as_u64(), Some(1));
+
+        let entries = routing["entries"].as_array().unwrap();
+        assert_eq!(entries.len(), 1);
+        let e0 = entries[0].as_object().unwrap();
+        assert_eq!(e0.get("window").and_then(|v| v.as_u64()), Some(1));
+        assert_eq!(e0.get("tick_id").and_then(|v| v.as_u64()), Some(7));
+        assert_eq!(e0.get("frame_id").and_then(|v| v.as_u64()), Some(42));
+        assert_eq!(
+            e0.get("ui_window_hover_detection").and_then(|v| v.as_str()),
+            Some("platform_win32")
+        );
+
+        let drag = e0.get("dock_drag").unwrap().as_object().unwrap();
+        assert_eq!(drag.get("dragging").and_then(|v| v.as_bool()), Some(true));
+        assert_eq!(
+            drag.get("cross_window_hover").and_then(|v| v.as_bool()),
+            Some(true)
+        );
+        assert_eq!(
+            drag.get("window_under_cursor_source")
+                .and_then(|v| v.as_str()),
+            Some("heuristic_rects")
+        );
+
+        let drop = e0.get("dock_drop_resolve").unwrap().as_object().unwrap();
+        assert_eq!(
+            drop.get("source").and_then(|v| v.as_str()),
+            Some("outer_hint_rect")
+        );
+        let resolved = drop.get("resolved").unwrap().as_object().unwrap();
+        assert_eq!(resolved.get("zone").and_then(|v| v.as_str()), Some("left"));
+        let preview = drop.get("preview").unwrap().as_object().unwrap();
+        let kind = preview.get("kind").unwrap().as_object().unwrap();
+        assert_eq!(
+            kind.get("kind").and_then(|v| v.as_str()),
+            Some("wrap_binary")
+        );
     }
 
     #[test]

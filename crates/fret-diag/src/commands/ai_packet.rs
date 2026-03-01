@@ -230,11 +230,16 @@ pub(crate) fn generate_ai_packet_dir(
         crate::bundle_index::ensure_bundle_index_json(bundle_path, warmup_frames)?;
     let frames_index_path =
         crate::frames_index::ensure_frames_index_json(bundle_path, warmup_frames)?;
+    let window_map_path = crate::bundle_index::ensure_window_map_json(bundle_path, warmup_frames)?;
+    let dock_routing_path =
+        crate::bundle_index::ensure_dock_routing_json(bundle_path, warmup_frames)?;
 
     fs::copy_file_named(&meta_path, packet_dir, "bundle.meta.json")?;
     fs::copy_file_named(&test_ids_index_path, packet_dir, "test_ids.index.json")?;
     fs::copy_file_named(&bundle_index_path, packet_dir, "bundle.index.json")?;
     fs::copy_file_named(&frames_index_path, packet_dir, "frames.index.json")?;
+    fs::copy_file_named(&window_map_path, packet_dir, "window.map.json")?;
+    fs::copy_file_named(&dock_routing_path, packet_dir, "dock.routing.json")?;
 
     fs::copy_bundle_schema2_if_present(bundle_path, bundle_dir, packet_dir)?;
 
@@ -459,6 +464,21 @@ pub(crate) fn generate_ai_packet_dir_sidecars_only(
     fs::copy_file_named(&test_ids_index_path, packet_dir, "test_ids.index.json")?;
     fs::copy_file_named(&bundle_index_path, packet_dir, "bundle.index.json")?;
     fs::copy_file_named(&frames_index_path, packet_dir, "frames.index.json")?;
+
+    let copy_optional_sidecar = |name: &str| -> Result<(), String> {
+        let direct = bundle_dir.join(name);
+        let root = root_dir.join(name);
+        if direct.is_file() {
+            return fs::copy_file_named(&direct, packet_dir, name);
+        }
+        if root.is_file() {
+            return fs::copy_file_named(&root, packet_dir, name);
+        }
+        Ok(())
+    };
+
+    copy_optional_sidecar("window.map.json")?;
+    copy_optional_sidecar("dock.routing.json")?;
 
     let bundle_path_for_schema2 = bundle_path
         .map(|p| p.to_path_buf())
