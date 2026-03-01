@@ -183,11 +183,13 @@ fn fret_custom_effect(src: vec4<f32>, _uv: vec2<f32>, pos_px: vec2<f32>, params:
     let n = normalize(g1 + vec2<f32>(1.0e-6, 0.0));
 
     let b0 = clamp(dot(n, light_dir), 0.0, 1.0);
-    raw.rgb = raw.rgb * (1.0 + 0.5 * bevel_strength * intensity01 * b0);
+    let m0 = 1.0 + 0.5 * bevel_strength * intensity01 * b0;
+    raw = vec4<f32>(raw.rgb * m0, raw.a);
 
     let b1 = clamp(dot(n, -light_dir), 0.0, 1.0);
     let band = min(1.0, smoothstep(1.0, 0.0, abs(intensity01 - 0.25) * 6.0));
-    raw.rgb = raw.rgb * (1.0 + 0.5 * bevel_strength * bevel_secondary_strength * b1 * band);
+    let m1 = 1.0 + 0.5 * bevel_strength * bevel_secondary_strength * b1 * band;
+    raw = vec4<f32>(raw.rgb * m1, raw.a);
   }
 
   let rim = 1.0 - smoothstep(0.0, 1.0, inside01);
