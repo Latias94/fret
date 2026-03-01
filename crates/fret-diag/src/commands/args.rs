@@ -13,6 +13,18 @@ pub(crate) fn resolve_bundle_artifact_path_or_latest(
 ) -> Result<PathBuf, String> {
     if let Some(s) = bundle_arg {
         let src = crate::resolve_path(workspace_root, PathBuf::from(s));
+
+        // If the user points at a base/session out dir (common in multi-agent workflows), resolve
+        // the latest bundle dir under it rather than treating it as a bundle export dir.
+        if src.is_dir()
+            && crate::resolve_bundle_artifact_path_no_materialize(&src).is_none()
+            && (resolve::looks_like_diag_session_root(&src)
+                || src.join(crate::session::SESSIONS_DIRNAME).is_dir())
+            && let Ok(latest_dir) = resolve_latest_bundle_dir_path(&src)
+        {
+            return Ok(crate::resolve_bundle_artifact_path(&latest_dir));
+        }
+
         return Ok(crate::resolve_bundle_artifact_path(&src));
     }
     let latest = resolve_latest_bundle_dir_path(out_dir)?;
@@ -82,5 +94,38 @@ mod tests {
 
         let got = resolve_latest_bundle_dir_path(&base).expect("resolve latest for base");
         assert_eq!(got, bundle_dir);
+    }
+
+    #[test]
+    fn resolve_bundle_artifact_path_accepts_base_dir_with_sessions() {
+        let base = make_temp_dir("fret-diag-args-bundle-artifact-base");
+
+        let s1 = crate::session::session_out_dir(&base, "100-1");
+        let s2 = crate::session::session_out_dir(&base, "200-1");
+        std::fs::create_dir_all(&s1).expect("create session 1");
+        std::fs::create_dir_all(&s2).expect("create session 2");
+
+        let _ = crate::util::write_json_value(
+            &s1.join("session.json"),
+            &serde_json::json!({"schema_version":1,"created_unix_ms":100,"pid":1,"session_id":"100-1"}),
+        );
+        let _ = crate::util::write_json_value(
+            &s2.join("session.json"),
+            &serde_json::json!({"schema_version":1,"created_unix_ms":200,"pid":1,"session_id":"200-1"}),
+        );
+
+        let bundle_dir = s2.join("999-bundle");
+        std::fs::create_dir_all(&bundle_dir).expect("create bundle dir");
+        write_script_result(&s2, 999, "999-bundle");
+        std::fs::write(bundle_dir.join("bundle.schema2.json"), b"{}").expect("write bundle");
+
+        let base_str = base.to_string_lossy().to_string();
+        let got = resolve_bundle_artifact_path_or_latest(
+            Some(base_str.as_str()),
+            Path::new("."),
+            Path::new("."),
+        )
+        .expect("resolve bundle artifact");
+        assert_eq!(got, bundle_dir.join("bundle.schema2.json"));
     }
 }
