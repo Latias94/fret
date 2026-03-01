@@ -81,9 +81,10 @@ Planned outcomes:
   - `diag dock-routing <bundle_dir|bundle.schema2.json>`
 - [x] Add a bounded `diag screenshots <bundle_dir|bundle.schema2.json>` query to locate and summarize GPU screenshots without
   hunting through directories.
-- [ ] Hardening: guard non-convergent scroll scripts (reduce “scroll forever until timeout” flake):
+- [x] Hardening: guard non-convergent scroll scripts (reduce “scroll forever until timeout” flake):
   - detect impossible `require_fully_within_window=true` when the target is larger than the padded window inner rect,
   - fail fast with a stable `reason_code` and bounded evidence (instead of spamming wheel events until timeout).
+  - Evidence: `ecosystem/fret-bootstrap/src/ui_diagnostics/script_steps_scroll.rs`, `ecosystem/fret-bootstrap/src/ui_diagnostics/labels.rs`.
 - [ ] Fast mode policy (determinism + speed):
   - [ ] Make “fast mode vs human-speed” explicit via config (stabilization defaults, animation handling).
   - [ ] Add a bounded “fast mode” smoke suite (runs faster than today without introducing flake).
