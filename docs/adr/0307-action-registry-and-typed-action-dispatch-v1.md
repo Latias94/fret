@@ -58,6 +58,13 @@ Naming convention (recommended):
   - `"workspace.tabs.close.v1"`
   - `"app.editor.save.v1"`
 
+**v1 decision (locked)**:
+
+- `ActionId` is implemented as an alias/wrapper over `CommandId`.
+- Keymap bindings continue to reference the same string IDs (no keymap schema changes in v1).
+- “Action-first” is primarily an authoring + observability + convergence refactor:
+  - pointer-triggered UI, keymap, and command palette should dispatch through the same pipeline.
+
 ### D2 — Converge action metadata with command metadata
 
 Actions need the same metadata currently used for commands:

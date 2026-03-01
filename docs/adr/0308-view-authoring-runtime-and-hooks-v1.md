@@ -42,6 +42,11 @@ Rationale:
 - authoring ergonomics and adapter glue should evolve without kernel churn (ADR 0066, ADR 0223),
 - the kernel already provides the required mechanisms (identity, dispatch hooks, invalidation, caching).
 
+**v1 decision (locked)**:
+
+- The v1 view runtime lands in `ecosystem/fret` (golden path) to minimize churn and maximize adoption.
+- A future split into `ecosystem/fret-view` (or similar) is explicitly deferred until after in-tree adoption proves the API.
+
 ### D2 — Views are stateful objects that render into the existing IR
 
 Introduce a `View` trait that renders into the existing declarative element taxonomy (`AnyElement`):
