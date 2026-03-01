@@ -261,6 +261,18 @@ fn validate_adapter(adapter: &wgpu::Adapter) -> Result<(), RenderError> {
     Ok(())
 }
 
+fn memory_hints_from_env() -> wgpu::MemoryHints {
+    let Some(v) = std::env::var_os("FRET_WGPU_MEMORY_HINTS").filter(|v| !v.is_empty()) else {
+        return wgpu::MemoryHints::default();
+    };
+
+    match v.to_string_lossy().trim().to_ascii_lowercase().as_str() {
+        "performance" | "perf" => wgpu::MemoryHints::Performance,
+        "memory" | "memoryusage" | "memory_usage" => wgpu::MemoryHints::MemoryUsage,
+        _ => wgpu::MemoryHints::default(),
+    }
+}
+
 pub struct WgpuContext {
     pub instance: wgpu::Instance,
     pub adapter: wgpu::Adapter,
@@ -326,7 +338,7 @@ impl WgpuContext {
                             required_features: wgpu::Features::empty(),
                             required_limits: wgpu::Limits::default(),
                             experimental_features: wgpu::ExperimentalFeatures::default(),
-                            memory_hints: wgpu::MemoryHints::default(),
+                            memory_hints: memory_hints_from_env(),
                             trace: wgpu::Trace::default(),
                         })
                         .await
