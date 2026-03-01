@@ -26,8 +26,9 @@ fn run() -> Result<(), String> {
         "hotpatch" => crate::hotpatch::hotpatch_cmd(args.collect()),
         "diag" => crate::diag::diag_cmd(args.collect()),
         "list" => match args.next().as_deref() {
-            Some("native-demos") => crate::demos::list_native_demos(),
-            Some("web-demos") => crate::demos::list_web_demos(),
+            Some("native-demos") => crate::demos::list_native_demos(args.collect()),
+            Some("web-demos") => crate::demos::list_web_demos(args.collect()),
+            Some("cookbook-examples") => crate::demos::list_cookbook_examples(args.collect()),
             Some(other) => Err(format!("unknown list target: {other}")),
             None => Err("missing list target (try: list native-demos)".to_string()),
         },
@@ -106,14 +107,16 @@ Usage:
   fretboard diag matrix ui-gallery [--dir <dir>] [--timeout-ms <ms>] [--poll-ms <ms>] [--warmup-frames <n>] [--compare-eps-px <px>] [--compare-ignore-bounds] [--compare-ignore-scene-fingerprint] [--check-view-cache-reuse-min <n>] [--check-view-cache-reuse-stable-min <n>] [--check-overlay-synthesis-min <n>] [--check-viewport-input-min <n>] [--check-dock-drag-min <n>] [--check-viewport-capture-min <n>] [--check-retained-vlist-reconcile-no-notify <n>] [--check-retained-vlist-attach-detach-max <n>] [--check-vlist-window-shifts-non-retained-max <n>] [--check-vlist-window-shifts-prefetch-max <n>] [--check-vlist-window-shifts-escape-max <n>] [--env <KEY=VALUE>...] [--launch -- <cmd...>] [--json]
   fretboard diag compare <base_or_session_out_dir|bundle_a|dir> <base_or_session_out_dir|bundle_b|dir> [--warmup-frames <n>] [--compare-eps-px <px>] [--compare-ignore-bounds] [--compare-ignore-scene-fingerprint] [--json]
   fretboard diag perf <ui-gallery|script.json...> [--top <n>] [--sort <invalidation|time>] [--repeat <n>] [--warmup-frames <n>] [--suite-prewarm <script.json>...] [--suite-prelude <script.json>...] [--suite-prelude-each-run] [--trace] [--check-perf-hints] [--check-perf-hints-min-severity <info|warn|error>] [--check-perf-hints-deny <codes>] [--max-top-total-us <n>] [--max-top-layout-us <n>] [--max-top-solve-us <n>] [--max-pointer-move-dispatch-us <n>] [--max-pointer-move-hit-test-us <n>] [--max-pointer-move-global-changes <n>] [--min-run-paint-cache-hit-test-only-replay-allowed-max <n>] [--max-run-paint-cache-hit-test-only-replay-rejected-key-mismatch-max <n>] [--perf-baseline <path>] [--perf-baseline-out <path>] [--perf-baseline-headroom-pct <n>] [--perf-baseline-seed-preset <path>...] [--perf-baseline-seed <scope@metric=max|p90|p95>...] [--timeout-ms <ms>] [--poll-ms <ms>] [--dir <dir>] [--json] [--check-stale-paint <test_id>] [--check-stale-paint-eps <px>] [--check-stale-scene <test_id>] [--check-stale-scene-eps <px>] [--check-pixels-changed <test_id>] [--check-wheel-scroll <test_id>] [--check-prepaint-actions-min <n>] [--check-chart-sampling-window-shifts-min <n>] [--check-node-graph-cull-window-shifts-min <n>] [--check-node-graph-cull-window-shifts-max <n>] [--check-vlist-visible-range-refreshes-min <n>] [--check-vlist-visible-range-refreshes-max <n>] [--check-vlist-window-shifts-explainable] [--check-vlist-window-shifts-non-retained-max <n>] [--check-vlist-window-shifts-prefetch-max <n>] [--check-vlist-window-shifts-escape-max <n>] [--check-drag-cache-root-paint-only <test_id>] [--check-hover-layout] [--check-hover-layout-max <n>] [--check-gc-sweep-liveness] [--check-view-cache-reuse-min <n>] [--check-view-cache-reuse-stable-min <n>] [--check-overlay-synthesis-min <n>] [--check-viewport-input-min <n>] [--check-dock-drag-min <n>] [--check-viewport-capture-min <n>] [--check-retained-vlist-reconcile-no-notify <n>] [--check-retained-vlist-attach-detach-max <n>] [--env <KEY=VALUE>...] [--launch -- <cmd...>]
-  fretboard list native-demos
+  fretboard list native-demos [--all]
   fretboard list web-demos
-  fretboard dev native [--bin <name> | --choose] [--profile <cargo_profile>] [--hotpatch] [--hotpatch-reload] [--hotpatch-trigger-path <path>] [--hotpatch-poll-ms <ms>] [-- <args...>]
+  fretboard list cookbook-examples
+  fretboard dev native [--bin <name> | --choose [--all]] [--profile <cargo_profile>] [--hotpatch] [--hotpatch-reload] [--hotpatch-trigger-path <path>] [--hotpatch-poll-ms <ms>] [-- <args...>]
   fretboard dev native --demo <demo> [--profile <cargo_profile>] [--dev-state-reset] [--hotpatch|--watch] [-- <args...>]
-  fretboard dev native [--bin <name> | --choose] [--profile <cargo_profile>] [--hotpatch] [--no-supervise] [-- <args...>]
-  fretboard dev native [--bin <name> | --choose] [--profile <cargo_profile>] [--hotpatch] [--watch] [--watch-poll-ms <ms>] [--no-watch] [--dev-state-reset] [-- <args...>]
-  fretboard dev native [--bin <name> | --choose] [--profile <cargo_profile>] --hotpatch-devserver <ws_endpoint> [--hotpatch-build-id <auto|none|u64>] [-- <args...>]
-  fretboard dev native [--bin <name> | --choose] [--profile <cargo_profile>] --hotpatch-dx [--hotpatch-dx-ws <ws_endpoint>] [--hotpatch-build-id <auto|none|u64>] [-- <args...>]
+  fretboard dev native --example <name> [--profile <cargo_profile>] [-- <args...>]
+  fretboard dev native [--bin <name> | --choose [--all]] [--profile <cargo_profile>] [--hotpatch] [--no-supervise] [-- <args...>]
+  fretboard dev native [--bin <name> | --choose [--all]] [--profile <cargo_profile>] [--hotpatch] [--watch] [--watch-poll-ms <ms>] [--no-watch] [--dev-state-reset] [-- <args...>]
+  fretboard dev native [--bin <name> | --choose [--all]] [--profile <cargo_profile>] --hotpatch-devserver <ws_endpoint> [--hotpatch-build-id <auto|none|u64>] [-- <args...>]
+  fretboard dev native [--bin <name> | --choose [--all]] [--profile <cargo_profile>] --hotpatch-dx [--hotpatch-dx-ws <ws_endpoint>] [--hotpatch-build-id <auto|none|u64>] [-- <args...>]
   fretboard dev web [--no-open] [--port <port>] [--demo <demo> | --choose] [--devtools-ws-url <ws://.../> --devtools-token <token>]
   fretboard dev web --open [--no-open] [--port <port>] [--demo <demo> | --choose]
 

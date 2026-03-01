@@ -1,0 +1,52 @@
+{
+  "schema_version": 2,
+  "meta": {
+    "name": "Cookbook: overlay_basics dialog close",
+    "tags": ["cookbook", "overlay_basics", "dialog", "smoke"],
+    "required_capabilities": ["diag.script_v2", "diag.screenshot_png"],
+    "target_hints": [
+      "Opens the dialog via the trigger.",
+      "Clicks the close affordance.",
+      "Waits for the content node to disappear.",
+      "Captures a screenshot + bundle."
+    ]
+  },
+  "steps": [
+    { "type": "reset_diagnostics" },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "cookbook.overlays.dialog.trigger" }
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "click_stable",
+      "target": { "kind": "test_id", "id": "cookbook.overlays.dialog.trigger" }
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "cookbook.overlays.dialog.content" }
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "click_stable",
+      "target": { "kind": "test_id", "id": "cookbook.overlays.dialog.close" }
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "not_exists",
+        "target": { "kind": "test_id", "id": "cookbook.overlays.dialog.content" }
+      },
+      "timeout_frames": 600
+    },
+    { "type": "wait_frames", "n": 10 },
+    { "type": "capture_screenshot", "label": "cookbook-overlay-basics-dialog-close" },
+    { "type": "capture_bundle", "label": "cookbook-overlay-basics-dialog-close" }
+  ]
+}

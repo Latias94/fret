@@ -55,6 +55,23 @@ We explicitly mirror the high-level learning story many people expect:
 - **Labs** (“cool/experimental, optional”): renderer effects, advanced visuals, experimental components
 - **Diagnostics** (“debug + regressions”): `fretboard diag` scripts/suites anchored to stable `test_id`s
 
+### Cookbook commands (native)
+
+The cookbook is intended to be GPUI-like: small Cargo `examples/` where one file demonstrates one
+concept.
+
+Canonical discovery + run commands:
+
+```bash
+fretboard list cookbook-examples
+fretboard dev native --example overlay_basics
+```
+
+Notes:
+
+- Cookbook examples are currently native-only. Web support is tracked separately (see `web-support-tiers.md`).
+- `fretboard dev native` only supports one selector at a time: `--demo`, `--bin`, or `--example`.
+
 Supporting appendices for making this plan executable (and preventing drift):
 
 - Current inventory + mapping: `docs/workstreams/example-suite-fearless-refactor-v1/inventory.md`
@@ -187,6 +204,16 @@ Implementation options (to decide in TODO):
 3) **Rust registry module** (type-safe but heavier): `apps/fretboard/src/catalog.rs`.
 
 Recommended direction: start with (1) to reduce duplication, then migrate to (2) when the table stabilizes.
+
+### Official vs maintainer demos
+
+`apps/fret-demo/src/bin` currently contains many maintainer/stress demos. For onboarding, we keep a
+small “official” list surfaced by default:
+
+```bash
+fretboard list native-demos
+fretboard list native-demos --all
+```
 
 ## Quality bars (what makes an example “official”)
 

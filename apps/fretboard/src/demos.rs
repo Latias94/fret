@@ -2,20 +2,52 @@ use std::path::Path;
 
 use crate::cli::workspace_root;
 
-pub(crate) fn list_native_demos() -> Result<(), String> {
+pub(crate) fn list_native_demos(args: Vec<String>) -> Result<(), String> {
+    let list_all = parse_list_all_flag(args)?;
     let root = workspace_root()?;
     let bin_dir = root.join("apps").join("fret-demo").join("src").join("bin");
     let mut demos = read_rs_stems(&bin_dir)?;
     demos.sort();
-    for demo in demos {
+
+    let (official, maintainer) = split_official_native_demos(&demos);
+    for demo in official.iter() {
+        println!("{demo}");
+    }
+
+    if list_all {
+        if !maintainer.is_empty() {
+            println!();
+        }
+        for demo in maintainer.iter() {
+            println!("{demo}");
+        }
+    } else if !maintainer.is_empty() {
+        eprintln!(
+            "note: {} maintainer/stress demos hidden (use: fretboard list native-demos --all)",
+            maintainer.len()
+        );
+    }
+    Ok(())
+}
+
+pub(crate) fn list_web_demos(args: Vec<String>) -> Result<(), String> {
+    if !args.is_empty() {
+        return Err("list web-demos does not accept extra args".to_string());
+    }
+    for demo in web_demos() {
         println!("{demo}");
     }
     Ok(())
 }
 
-pub(crate) fn list_web_demos() -> Result<(), String> {
-    for demo in web_demos() {
-        println!("{demo}");
+pub(crate) fn list_cookbook_examples(args: Vec<String>) -> Result<(), String> {
+    if !args.is_empty() {
+        return Err("list cookbook-examples does not accept extra args".to_string());
+    }
+    let root = workspace_root()?;
+    let examples = list_cookbook_examples_from(&root)?;
+    for ex in examples {
+        println!("{ex}");
     }
     Ok(())
 }
@@ -40,6 +72,41 @@ fn read_rs_stems(dir: &Path) -> Result<Vec<String>, String> {
 
 pub(crate) fn display_path(path: &Path) -> String {
     path.to_string_lossy().to_string()
+}
+
+fn parse_list_all_flag(args: Vec<String>) -> Result<bool, String> {
+    let mut all = false;
+    for a in args {
+        match a.as_str() {
+            "--all" => all = true,
+            other => return Err(format!("unknown list argument: {other}")),
+        }
+    }
+    Ok(all)
+}
+
+fn is_official_native_demo(id: &str) -> bool {
+    // Keep this list small and intentional: it defines the user-facing story.
+    // Maintainer/stress harnesses remain runnable via `--bin` and discoverable via `--all`.
+    matches!(id, "todo_demo" | "components_gallery")
+}
+
+fn split_official_native_demos(all: &[String]) -> (Vec<String>, Vec<String>) {
+    let mut official = Vec::new();
+    let mut maintainer = Vec::new();
+    for id in all {
+        if is_official_native_demo(id) {
+            official.push(id.clone());
+        } else {
+            maintainer.push(id.clone());
+        }
+    }
+    (official, maintainer)
+}
+
+pub(crate) fn official_native_demos(all: &[String]) -> Vec<String> {
+    let (official, _) = split_official_native_demos(all);
+    official
 }
 
 fn web_demos() -> &'static [&'static str] {
@@ -88,6 +155,34 @@ pub(crate) fn validate_web_demo(name: &str) -> Result<(), String> {
     }
     Err(format!(
         "unknown web demo `{name}`\n  try: fretboard list web-demos"
+    ))
+}
+
+pub(crate) fn list_cookbook_examples_from(workspace_root: &Path) -> Result<Vec<String>, String> {
+    let examples_dir = workspace_root
+        .join("apps")
+        .join("fret-cookbook")
+        .join("examples");
+    let mut examples = read_rs_stems(&examples_dir)?;
+    examples.sort();
+    Ok(examples)
+}
+
+pub(crate) fn validate_cookbook_example(examples: &[String], name: &str) -> Result<(), String> {
+    if examples.iter().any(|e| e == name) {
+        return Ok(());
+    }
+
+    let mut hint = String::new();
+    for e in examples {
+        if e.contains(name) || name.contains(e) {
+            hint = format!("\n  hint: did you mean `{e}`?");
+            break;
+        }
+    }
+
+    Err(format!(
+        "unknown cookbook example `{name}`{hint}\n  try: fretboard list cookbook-examples"
     ))
 }
 

@@ -13,5 +13,5 @@ This crate intentionally favors:
 ```bash
 cargo run -p fret-cookbook --example hello
 cargo run -p fret-cookbook --example hello_counter
+cargo run -p fret-cookbook --example overlay_basics
 ```
-
