@@ -65,6 +65,42 @@ pub(super) fn handle_ensure_visible_step(
         UiPredicateV1::VisibleInWindow { target }
     };
 
+    if within_window {
+        if let Some(node) = select_semantics_node_with_trace(
+            snapshot,
+            window,
+            element_runtime,
+            match &predicate {
+                UiPredicateV1::BoundsWithinWindow { target, .. } => target,
+                _ => unreachable!(),
+            },
+            active.scope_root_for_window(window),
+            step_index as u32,
+            svc.cfg.redact_text,
+            &mut active.selector_resolution_trace,
+        ) {
+            let insets = UiPaddingInsetsV1::uniform(padding_px);
+            let inner_window = rect_inset(window_bounds, insets);
+            let target_w = node.bounds.size.width.0.max(0.0);
+            let target_h = node.bounds.size.height.0.max(0.0);
+            let inner_w = inner_window.size.width.0.max(0.0);
+            let inner_h = inner_window.size.height.0.max(0.0);
+            if inner_w > 1.0
+                && inner_h > 1.0
+                && (target_w > inner_w + 0.5 || target_h > inner_h + 0.5)
+            {
+                *force_dump_label = Some(format!(
+                    "script-step-{step_index:04}-ensure_visible-impossible-oversized"
+                ));
+                *stop_script = true;
+                *failure_reason = Some("ensure_visible_impossible_oversized_target".to_string());
+                active.v2_step_state = None;
+                output.request_redraw = true;
+                return true;
+            }
+        }
+    }
+
     let docking_diag = app
         .global::<fret_runtime::WindowInteractionDiagnosticsStore>()
         .and_then(|store| store.docking_latest_for_window(window));

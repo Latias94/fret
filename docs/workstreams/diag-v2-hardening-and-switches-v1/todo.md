@@ -85,6 +85,14 @@ Planned outcomes:
   - detect impossible `require_fully_within_window=true` when the target is larger than the padded window inner rect,
   - fail fast with a stable `reason_code` and bounded evidence (instead of spamming wheel events until timeout).
   - Evidence: `ecosystem/fret-bootstrap/src/ui_diagnostics/script_steps_scroll.rs`, `ecosystem/fret-bootstrap/src/ui_diagnostics/labels.rs`.
+- [x] Hardening: guard impossible “stable frames” configs (reduce avoidable timeouts):
+  - detect `stable_frames > timeout_frames` for stability-gated steps (`wait_bounds_stable`, `click_stable`, `click_selectable_text_span_stable`),
+  - fail fast with stable `reason_code` (instead of waiting to timeout).
+  - Evidence: `ecosystem/fret-bootstrap/src/ui_diagnostics/script_steps_wait.rs`, `ecosystem/fret-bootstrap/src/ui_diagnostics/script_steps_pointer.rs`, `ecosystem/fret-bootstrap/src/ui_diagnostics/labels.rs`.
+- [x] Hardening: guard impossible `ensure_visible(within_window=true)` on oversized targets (reduce avoidable timeouts):
+  - detect when the target bounds exceed the padded inner window rect,
+  - fail fast with stable `reason_code` (instead of waiting to timeout).
+  - Evidence: `ecosystem/fret-bootstrap/src/ui_diagnostics/script_steps_visibility.rs`, `ecosystem/fret-bootstrap/src/ui_diagnostics/labels.rs`.
 - [ ] Fast mode policy (determinism + speed):
   - [ ] Make “fast mode vs human-speed” explicit via config (stabilization defaults, animation handling).
   - [ ] Add a bounded “fast mode” smoke suite (runs faster than today without introducing flake).

@@ -149,3 +149,6 @@ Status (2026-02-28):
 - Named ref map + relative selector syntax are still pending (v1 covers the most common “scope to panel” case).
 - Bundles export a bounded `window.map.json` (window ids + last bounds + hover detection) and `dock.routing.json` (routing
   evidence for docking/tear-out); tooling provides bounded reports (`diag windows`, `diag dock-routing`).
+- Script runtime hardening reduces avoidable “timeout” flakes by failing fast with stable `reason_code`:
+  - oversized targets (`scroll_into_view`, `ensure_visible(within_window=true)`),
+  - impossible stability configs (`stable_frames > timeout_frames` for stability-gated steps).
