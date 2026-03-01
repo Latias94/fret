@@ -1706,7 +1706,7 @@ pub(super) fn preview_carousel(cx: &mut ElementContext<'_, App>) -> Vec<AnyEleme
                             ..Default::default()
                         },
                         move |cx| {
-                            let title = ui::text(cx, format!("Item\u{00A0}{idx}"))
+                            let title = ui::text(cx, format!("Item{idx}"))
                                 .text_base()
                                 .font_semibold()
                                 .nowrap()

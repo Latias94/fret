@@ -2550,23 +2550,23 @@ impl Carousel {
                                         .min_h(MetricRef::Px(basis))
                                         .max_h(MetricRef::Px(basis));
                                 }
-                            } else {
-                                // Match shadcn/ui v4 `basis-full` default for horizontal tracks.
-                                //
-                                // For vertical tracks, the upstream demo uses `md:basis-1/2` and
-                                // relies on `min-height: auto` to clamp items to their content.
-                                // Since we don't have breakpoint-aware layout here, default to an
-                                // auto basis so vertical item geometry remains content-driven in
-                                // common layouts (matching our web goldens).
-                                item_layout = match track_direction {
-                                    fret_core::Axis::Horizontal => {
-                                        item_layout.basis(LengthRefinement::Fill)
-                                    }
-                                    fret_core::Axis::Vertical => {
-                                        item_layout.basis(LengthRefinement::Auto)
-                                    }
-                                };
-                            }
+                             } else {
+                                 // Match shadcn/ui v4 `basis-full` default for horizontal tracks.
+                                 //
+                                 // For vertical tracks, the upstream demo uses `md:basis-1/2` and
+                                 // relies on breakpoint-dependent item sizing, but the base class
+                                 // still includes `basis-full` (i.e. fill the viewport on the main
+                                 // axis). Match that default so `orientation="vertical"` behaves
+                                 // like the docs without requiring `item_basis_main_px`.
+                                 item_layout = match track_direction {
+                                     fret_core::Axis::Horizontal => {
+                                         item_layout.basis(LengthRefinement::Fill)
+                                     }
+                                     fret_core::Axis::Vertical => {
+                                         item_layout.basis(LengthRefinement::Fill)
+                                     }
+                                 };
+                             }
 
                             let item_layout =
                                 decl_style::layout_style(&theme_for_items, item_layout);
