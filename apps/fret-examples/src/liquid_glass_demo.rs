@@ -1278,6 +1278,9 @@ fn view(
                                                                 use_backdrop_model.clone(),
                                                             )
                                                             .a11y_label("Backdrop mode")
+                                                            .test_id(
+                                                                "liquid-glass-switch-use-backdrop",
+                                                            )
                                                             .into_element(cx),
                                                             shadcn::Label::new("Backdrop")
                                                                 .into_element(cx),
@@ -1285,6 +1288,9 @@ fn view(
                                                                 use_dither_model.clone(),
                                                             )
                                                             .a11y_label("Dither")
+                                                            .test_id(
+                                                                "liquid-glass-switch-use-dither",
+                                                            )
                                                             .into_element(cx),
                                                             shadcn::Label::new("Dither")
                                                                 .into_element(cx),
@@ -1292,6 +1298,7 @@ fn view(
                                                                 animate_model.clone(),
                                                             )
                                                             .a11y_label("Animate phase")
+                                                            .test_id("liquid-glass-switch-animate")
                                                             .into_element(cx),
                                                             shadcn::Label::new("Animate")
                                                                 .into_element(cx),
@@ -1332,6 +1339,9 @@ fn view(
                                                                 )
                                                                 .size(shadcn::ButtonSize::Sm)
                                                                 .on_click(reset_stage)
+                                                                .test_id(
+                                                                    "liquid-glass-button-reset-stage",
+                                                                )
                                                                 .into_element(cx),
                                                         ]
                                                     },
@@ -1909,6 +1919,9 @@ fn view(
                                                 .variant(shadcn::ButtonVariant::Secondary)
                                                 .size(shadcn::ButtonSize::Sm)
                                                 .on_click(reset_inspector)
+                                                .test_id(
+                                                    "liquid-glass-button-reset-inspector",
+                                                )
                                                 .into_element(cx),
                                         ]
                                     },
