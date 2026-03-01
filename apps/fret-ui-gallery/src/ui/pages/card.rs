@@ -412,7 +412,9 @@ pub(super) fn preview_card(
             shadcn::CardContent::new(vec![list]).into_element(cx),
             shadcn::CardFooter::new(vec![avatars]).into_element(cx),
         ])
-        .refine_layout(max_w_sm.clone())
+        // Guardrail: the UI gallery docs scaffold uses auto-sized tabs; keep this preview card
+        // from accidentally inheriting a stretched height from its tab panel wrapper.
+        .refine_layout(max_w_sm.clone().max_h(Px(400.0)))
         .into_element(cx)
         .test_id("ui-gallery-card-meeting-notes")
     };
