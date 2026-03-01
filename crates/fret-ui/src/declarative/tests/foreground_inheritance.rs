@@ -70,10 +70,10 @@ fn foreground_scope_late_binds_foreground_for_text_and_icons() {
     );
 
     let text_color = scene.ops().iter().find_map(|op| match op {
-        SceneOp::Text {
-            paint: Paint::Solid(color),
-            ..
-        } => Some(*color),
+        SceneOp::Text { paint, .. } => match paint.paint {
+            Paint::Solid(color) => Some(color),
+            _ => None,
+        },
         _ => None,
     });
     assert_eq!(

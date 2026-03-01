@@ -165,7 +165,7 @@ fn edge_paths_in_scene(scene: &Scene) -> Vec<Color> {
         if *order != fret_core::DrawOrder(2) {
             continue;
         }
-        if let Paint::Solid(color) = *paint {
+        if let Paint::Solid(color) = paint.paint {
             out.push(color);
         }
     }

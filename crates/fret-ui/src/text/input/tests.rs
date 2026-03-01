@@ -532,7 +532,7 @@ fn text_input_draws_caret_when_focused_and_empty() {
     let caret_rect = scene.ops().iter().rev().find_map(|op| match op {
         fret_core::SceneOp::Quad {
             rect, background, ..
-        } if *background == fret_core::Paint::Solid(caret_color) => Some(*rect),
+        } if *background == fret_core::Paint::Solid(caret_color).into() => Some(*rect),
         _ => None,
     });
 
@@ -594,7 +594,7 @@ fn text_input_draws_preedit_underline_when_composing() {
     let underline_rect = scene.ops().iter().rev().find_map(|op| match op {
         fret_core::SceneOp::Quad {
             rect, background, ..
-        } if *background == fret_core::Paint::Solid(underline_color)
+        } if *background == fret_core::Paint::Solid(underline_color).into()
             && rect.size.height.0 > 0.0
             && rect.size.height.0 <= 1.1 =>
         {

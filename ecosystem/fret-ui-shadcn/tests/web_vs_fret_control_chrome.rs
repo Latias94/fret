@@ -140,10 +140,10 @@ fn find_best_quad(scene: &Scene, target: Rect) -> Option<PaintedQuad> {
         else {
             continue;
         };
-        let fret_core::Paint::Solid(background) = background else {
+        let fret_core::Paint::Solid(background) = background.paint else {
             continue;
         };
-        let fret_core::Paint::Solid(border_color) = border_paint else {
+        let fret_core::Paint::Solid(border_color) = border_paint.paint else {
             continue;
         };
         let border_widths = [border.top.0, border.right.0, border.bottom.0, border.left.0];
@@ -484,10 +484,10 @@ fn find_focus_ring_quad(scene: &Scene, target: Rect, spread: f32) -> Option<Pain
             continue;
         };
 
-        if background != Paint::TRANSPARENT {
+        if background.paint != Paint::TRANSPARENT {
             continue;
         }
-        let fret_core::Paint::Solid(border_color) = border_paint else {
+        let fret_core::Paint::Solid(border_color) = border_paint.paint else {
             continue;
         };
         let bw = [border.top.0, border.right.0, border.bottom.0, border.left.0];
@@ -5570,10 +5570,10 @@ fn web_vs_fret_radio_group_demo_control_chrome_matches() {
             else {
                 continue;
             };
-            let fret_core::Paint::Solid(background) = background else {
+            let fret_core::Paint::Solid(background) = background.paint else {
                 continue;
             };
-            let fret_core::Paint::Solid(border_color) = border_paint else {
+            let fret_core::Paint::Solid(border_color) = border_paint.paint else {
                 continue;
             };
             let score = (rect.origin.x.0 - target.origin.x.0).abs()
