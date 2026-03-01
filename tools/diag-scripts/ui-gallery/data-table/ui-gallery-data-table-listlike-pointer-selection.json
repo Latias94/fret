@@ -127,7 +127,8 @@
 
     {
       "type": "click",
-      "target": { "kind": "test_id", "id": "ui-gallery-data-table-listlike-row-4" }
+      "target": { "kind": "test_id", "id": "ui-gallery-data-table-listlike-row-4" },
+      "modifiers": { "meta": true }
     },
     { "type": "wait_frames", "n": 2 },
     {
