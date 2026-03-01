@@ -38,6 +38,7 @@ mod diag_policy;
 mod diag_repeat;
 mod diag_repro;
 mod diag_run;
+mod diag_sessions;
 mod diag_simple_dispatch;
 mod diag_stats;
 mod diag_suite;
@@ -61,6 +62,7 @@ mod run_artifacts;
 mod script_execution;
 mod script_registry;
 mod script_tooling;
+mod session;
 mod shrink;
 mod stats;
 mod suite_summary;
@@ -330,6 +332,8 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
     let mut pack_schema2_only: bool = false;
     let mut ensure_ai_packet: bool = false;
     let mut pack_ai_only: bool = false;
+    let mut session_auto: bool = false;
+    let mut session_id: Option<String> = None;
     let mut triage_out: Option<PathBuf> = None;
     let mut lint_out: Option<PathBuf> = None;
     let mut artifact_lint_out: Option<PathBuf> = None;
@@ -1987,6 +1991,18 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                 launch_env.push((key.to_string(), value.to_string()));
                 i += 1;
             }
+            "--session-auto" => {
+                session_auto = true;
+                i += 1;
+            }
+            "--session" => {
+                i += 1;
+                let Some(v) = args.get(i).cloned() else {
+                    return Err("missing value for --session".to_string());
+                };
+                session_id = Some(v);
+                i += 1;
+            }
             "--reuse-launch" => {
                 reuse_launch = true;
                 i += 1;
@@ -2043,6 +2059,10 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
         return Err("missing diag subcommand (try: fretboard diag poke)".to_string());
     };
     let rest: Vec<String> = positionals.into_iter().skip(1).collect();
+
+    if session_auto && session_id.is_some() {
+        return Err("--session-auto conflicts with --session".to_string());
+    }
 
     if sub == "matrix" && launch_write_bundle_json {
         return Err("--launch-write-bundle-json is not supported with `diag matrix`".to_string());
@@ -2130,7 +2150,7 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
 
     let workspace_root = crate::cli::workspace_root()?;
 
-    let resolved_out_dir = {
+    let resolved_base_out_dir = {
         let raw = out_dir
             .clone()
             .or_else(|| {
@@ -2142,107 +2162,228 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
         resolve_path(&workspace_root, raw)
     };
 
+    let session_enabled = session_auto || session_id.is_some();
+    if session_enabled {
+        if launch.is_none() {
+            return Err(
+                "--session-auto/--session requires --launch (tool-launched only)".to_string(),
+            );
+        }
+        let mut overrides: Vec<&'static str> = Vec::new();
+        if trigger_path.is_some() {
+            overrides.push("--trigger-path");
+        }
+        if script_path.is_some() {
+            overrides.push("--script-path");
+        }
+        if script_trigger_path.is_some() {
+            overrides.push("--script-trigger-path");
+        }
+        if script_result_path.is_some() {
+            overrides.push("--script-result-path");
+        }
+        if script_result_trigger_path.is_some() {
+            overrides.push("--script-result-trigger-path");
+        }
+        if pick_trigger_path.is_some() {
+            overrides.push("--pick-trigger-path");
+        }
+        if pick_result_path.is_some() {
+            overrides.push("--pick-result-path");
+        }
+        if pick_result_trigger_path.is_some() {
+            overrides.push("--pick-result-trigger-path");
+        }
+        if inspect_path.is_some() {
+            overrides.push("--inspect-path");
+        }
+        if inspect_trigger_path.is_some() {
+            overrides.push("--inspect-trigger-path");
+        }
+        if !overrides.is_empty() {
+            return Err(format!(
+                "--session-auto/--session is not compatible with explicit path overrides ({})",
+                overrides.join(", ")
+            ));
+        }
+        let supported = match sub.as_str() {
+            "run" | "suite" | "repro" | "perf" | "repeat" | "matrix" => true,
+            "script" => rest.first().is_some_and(|v| v == "shrink"),
+            _ => false,
+        };
+        if !supported {
+            return Err(format!(
+                "--session-auto/--session is not supported for `diag {sub}` (supported: run/suite/repro/perf/repeat/matrix, and script shrink)"
+            ));
+        }
+    }
+
+    let resolved_out_dir = if session_enabled {
+        let raw_id = session_id
+            .clone()
+            .unwrap_or_else(|| session::auto_session_id(now_unix_ms(), std::process::id()));
+        let sid = session::sanitize_session_id(&raw_id);
+        let out = session::session_out_dir(&resolved_base_out_dir, &sid);
+        session::write_session_json_best_effort(
+            &out,
+            &resolved_base_out_dir,
+            &sid,
+            &sub,
+            launch.as_deref(),
+        );
+        eprintln!(
+            "diag session: base_out_dir={} session_id={} out_dir={}",
+            resolved_base_out_dir.display(),
+            sid,
+            out.display()
+        );
+        out
+    } else {
+        resolved_base_out_dir.clone()
+    };
+
     let resolved_trigger_path = {
-        let raw = trigger_path
-            .or_else(|| {
-                std::env::var_os("FRET_DIAG_TRIGGER_PATH")
-                    .filter(|v| !v.is_empty())
-                    .map(PathBuf::from)
-            })
-            .unwrap_or_else(|| resolved_out_dir.join("trigger.touch"));
+        let raw = if session_enabled {
+            trigger_path.unwrap_or_else(|| resolved_out_dir.join("trigger.touch"))
+        } else {
+            trigger_path
+                .or_else(|| {
+                    std::env::var_os("FRET_DIAG_TRIGGER_PATH")
+                        .filter(|v| !v.is_empty())
+                        .map(PathBuf::from)
+                })
+                .unwrap_or_else(|| resolved_out_dir.join("trigger.touch"))
+        };
         resolve_path(&workspace_root, raw)
     };
 
     let resolved_ready_path = {
-        let raw = std::env::var_os("FRET_DIAG_READY_PATH")
-            .filter(|v| !v.is_empty())
-            .map(PathBuf::from)
-            .unwrap_or_else(|| resolved_out_dir.join("ready.touch"));
+        let raw = if session_enabled {
+            resolved_out_dir.join("ready.touch")
+        } else {
+            std::env::var_os("FRET_DIAG_READY_PATH")
+                .filter(|v| !v.is_empty())
+                .map(PathBuf::from)
+                .unwrap_or_else(|| resolved_out_dir.join("ready.touch"))
+        };
         resolve_path(&workspace_root, raw)
     };
 
     let resolved_exit_path = {
-        let raw = std::env::var_os("FRET_DIAG_EXIT_PATH")
-            .filter(|v| !v.is_empty())
-            .map(PathBuf::from)
-            .unwrap_or_else(|| resolved_out_dir.join("exit.touch"));
+        let raw = if session_enabled {
+            resolved_out_dir.join("exit.touch")
+        } else {
+            std::env::var_os("FRET_DIAG_EXIT_PATH")
+                .filter(|v| !v.is_empty())
+                .map(PathBuf::from)
+                .unwrap_or_else(|| resolved_out_dir.join("exit.touch"))
+        };
         resolve_path(&workspace_root, raw)
     };
 
     let resolved_script_path = {
-        let raw = script_path
-            .or_else(|| {
-                std::env::var_os("FRET_DIAG_SCRIPT_PATH")
-                    .filter(|v| !v.is_empty())
-                    .map(PathBuf::from)
-            })
-            .unwrap_or_else(|| resolved_out_dir.join("script.json"));
+        let raw = if session_enabled {
+            script_path.unwrap_or_else(|| resolved_out_dir.join("script.json"))
+        } else {
+            script_path
+                .or_else(|| {
+                    std::env::var_os("FRET_DIAG_SCRIPT_PATH")
+                        .filter(|v| !v.is_empty())
+                        .map(PathBuf::from)
+                })
+                .unwrap_or_else(|| resolved_out_dir.join("script.json"))
+        };
         resolve_path(&workspace_root, raw)
     };
 
     let resolved_script_trigger_path = {
-        let raw = script_trigger_path
-            .or_else(|| {
-                std::env::var_os("FRET_DIAG_SCRIPT_TRIGGER_PATH")
-                    .filter(|v| !v.is_empty())
-                    .map(PathBuf::from)
-            })
-            .unwrap_or_else(|| resolved_out_dir.join("script.touch"));
+        let raw = if session_enabled {
+            script_trigger_path.unwrap_or_else(|| resolved_out_dir.join("script.touch"))
+        } else {
+            script_trigger_path
+                .or_else(|| {
+                    std::env::var_os("FRET_DIAG_SCRIPT_TRIGGER_PATH")
+                        .filter(|v| !v.is_empty())
+                        .map(PathBuf::from)
+                })
+                .unwrap_or_else(|| resolved_out_dir.join("script.touch"))
+        };
         resolve_path(&workspace_root, raw)
     };
 
     let resolved_script_result_path = {
-        let raw = script_result_path
-            .or_else(|| {
-                std::env::var_os("FRET_DIAG_SCRIPT_RESULT_PATH")
-                    .filter(|v| !v.is_empty())
-                    .map(PathBuf::from)
-            })
-            .unwrap_or_else(|| resolved_out_dir.join("script.result.json"));
+        let raw = if session_enabled {
+            script_result_path.unwrap_or_else(|| resolved_out_dir.join("script.result.json"))
+        } else {
+            script_result_path
+                .or_else(|| {
+                    std::env::var_os("FRET_DIAG_SCRIPT_RESULT_PATH")
+                        .filter(|v| !v.is_empty())
+                        .map(PathBuf::from)
+                })
+                .unwrap_or_else(|| resolved_out_dir.join("script.result.json"))
+        };
         resolve_path(&workspace_root, raw)
     };
 
     let resolved_script_result_trigger_path = {
-        let raw = script_result_trigger_path
-            .or_else(|| {
-                std::env::var_os("FRET_DIAG_SCRIPT_RESULT_TRIGGER_PATH")
-                    .filter(|v| !v.is_empty())
-                    .map(PathBuf::from)
-            })
-            .unwrap_or_else(|| resolved_out_dir.join("script.result.touch"));
+        let raw = if session_enabled {
+            script_result_trigger_path
+                .unwrap_or_else(|| resolved_out_dir.join("script.result.touch"))
+        } else {
+            script_result_trigger_path
+                .or_else(|| {
+                    std::env::var_os("FRET_DIAG_SCRIPT_RESULT_TRIGGER_PATH")
+                        .filter(|v| !v.is_empty())
+                        .map(PathBuf::from)
+                })
+                .unwrap_or_else(|| resolved_out_dir.join("script.result.touch"))
+        };
         resolve_path(&workspace_root, raw)
     };
 
     let resolved_pick_trigger_path = {
-        let raw = pick_trigger_path
-            .or_else(|| {
-                std::env::var_os("FRET_DIAG_PICK_TRIGGER_PATH")
-                    .filter(|v| !v.is_empty())
-                    .map(PathBuf::from)
-            })
-            .unwrap_or_else(|| resolved_out_dir.join("pick.touch"));
+        let raw = if session_enabled {
+            pick_trigger_path.unwrap_or_else(|| resolved_out_dir.join("pick.touch"))
+        } else {
+            pick_trigger_path
+                .or_else(|| {
+                    std::env::var_os("FRET_DIAG_PICK_TRIGGER_PATH")
+                        .filter(|v| !v.is_empty())
+                        .map(PathBuf::from)
+                })
+                .unwrap_or_else(|| resolved_out_dir.join("pick.touch"))
+        };
         resolve_path(&workspace_root, raw)
     };
 
     let resolved_pick_result_path = {
-        let raw = pick_result_path
-            .or_else(|| {
-                std::env::var_os("FRET_DIAG_PICK_RESULT_PATH")
-                    .filter(|v| !v.is_empty())
-                    .map(PathBuf::from)
-            })
-            .unwrap_or_else(|| resolved_out_dir.join("pick.result.json"));
+        let raw = if session_enabled {
+            pick_result_path.unwrap_or_else(|| resolved_out_dir.join("pick.result.json"))
+        } else {
+            pick_result_path
+                .or_else(|| {
+                    std::env::var_os("FRET_DIAG_PICK_RESULT_PATH")
+                        .filter(|v| !v.is_empty())
+                        .map(PathBuf::from)
+                })
+                .unwrap_or_else(|| resolved_out_dir.join("pick.result.json"))
+        };
         resolve_path(&workspace_root, raw)
     };
 
     let resolved_pick_result_trigger_path = {
-        let raw = pick_result_trigger_path
-            .or_else(|| {
-                std::env::var_os("FRET_DIAG_PICK_RESULT_TRIGGER_PATH")
-                    .filter(|v| !v.is_empty())
-                    .map(PathBuf::from)
-            })
-            .unwrap_or_else(|| resolved_out_dir.join("pick.result.touch"));
+        let raw = if session_enabled {
+            pick_result_trigger_path.unwrap_or_else(|| resolved_out_dir.join("pick.result.touch"))
+        } else {
+            pick_result_trigger_path
+                .or_else(|| {
+                    std::env::var_os("FRET_DIAG_PICK_RESULT_TRIGGER_PATH")
+                        .filter(|v| !v.is_empty())
+                        .map(PathBuf::from)
+                })
+                .unwrap_or_else(|| resolved_out_dir.join("pick.result.touch"))
+        };
         resolve_path(&workspace_root, raw)
     };
 
@@ -2252,24 +2393,32 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
     };
 
     let resolved_inspect_path = {
-        let raw = inspect_path
-            .or_else(|| {
-                std::env::var_os("FRET_DIAG_INSPECT_PATH")
-                    .filter(|v| !v.is_empty())
-                    .map(PathBuf::from)
-            })
-            .unwrap_or_else(|| resolved_out_dir.join("inspect.json"));
+        let raw = if session_enabled {
+            inspect_path.unwrap_or_else(|| resolved_out_dir.join("inspect.json"))
+        } else {
+            inspect_path
+                .or_else(|| {
+                    std::env::var_os("FRET_DIAG_INSPECT_PATH")
+                        .filter(|v| !v.is_empty())
+                        .map(PathBuf::from)
+                })
+                .unwrap_or_else(|| resolved_out_dir.join("inspect.json"))
+        };
         resolve_path(&workspace_root, raw)
     };
 
     let resolved_inspect_trigger_path = {
-        let raw = inspect_trigger_path
-            .or_else(|| {
-                std::env::var_os("FRET_DIAG_INSPECT_TRIGGER_PATH")
-                    .filter(|v| !v.is_empty())
-                    .map(PathBuf::from)
-            })
-            .unwrap_or_else(|| resolved_out_dir.join("inspect.touch"));
+        let raw = if session_enabled {
+            inspect_trigger_path.unwrap_or_else(|| resolved_out_dir.join("inspect.touch"))
+        } else {
+            inspect_trigger_path
+                .or_else(|| {
+                    std::env::var_os("FRET_DIAG_INSPECT_TRIGGER_PATH")
+                        .filter(|v| !v.is_empty())
+                        .map(PathBuf::from)
+                })
+                .unwrap_or_else(|| resolved_out_dir.join("inspect.touch"))
+        };
         resolve_path(&workspace_root, raw)
     };
 
@@ -2445,7 +2594,19 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
     };
 
     match sub.as_str() {
-        "list" => diag_list::cmd_list(&rest, &workspace_root, stats_json, stats_top_override),
+        "list" => diag_list::cmd_list(
+            &rest,
+            &workspace_root,
+            &resolved_out_dir,
+            stats_json,
+            stats_top_override,
+        ),
+        "sessions" => diag_sessions::cmd_sessions(
+            &rest,
+            &resolved_out_dir,
+            stats_json,
+            stats_top_override,
+        ),
         "artifact" | "artifacts" => commands::artifact::cmd_artifact(
             &rest,
             pack_after_run,

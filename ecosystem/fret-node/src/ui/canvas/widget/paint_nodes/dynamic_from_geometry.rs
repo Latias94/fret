@@ -332,19 +332,13 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
             let border_color = if hovered_port_valid {
                 interaction_hint.hover.unwrap_or(color)
             } else if hovered_port_convertible {
-                interaction_hint.convertible.unwrap_or(Color {
-                    r: 0.95,
-                    g: 0.75,
-                    b: 0.20,
-                    a: 1.0,
-                })
+                interaction_hint
+                    .convertible
+                    .unwrap_or_else(|| Color::from_srgb_hex_rgb(0xf2_bf_33))
             } else {
-                interaction_hint.invalid.unwrap_or(Color {
-                    r: 0.90,
-                    g: 0.35,
-                    b: 0.35,
-                    a: 1.0,
-                })
+                interaction_hint
+                    .invalid
+                    .unwrap_or_else(|| Color::from_srgb_hex_rgb(0xe6_59_59))
             };
             let pad = 2.0 / zoom;
             let hover_rect = Rect::new(
@@ -374,19 +368,13 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                 if focused_port_valid {
                     interaction_hint.hover.unwrap_or(color)
                 } else if focused_port_convertible {
-                    interaction_hint.convertible.unwrap_or(Color {
-                        r: 0.95,
-                        g: 0.75,
-                        b: 0.20,
-                        a: 1.0,
-                    })
+                    interaction_hint
+                        .convertible
+                        .unwrap_or_else(|| Color::from_srgb_hex_rgb(0xf2_bf_33))
                 } else {
-                    interaction_hint.invalid.unwrap_or(Color {
-                        r: 0.90,
-                        g: 0.35,
-                        b: 0.35,
-                        a: 1.0,
-                    })
+                    interaction_hint
+                        .invalid
+                        .unwrap_or_else(|| Color::from_srgb_hex_rgb(0xe6_59_59))
                 }
             } else {
                 self.style.node_border_selected

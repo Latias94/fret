@@ -49,11 +49,9 @@ impl WinitAppDriver for FirstFrameSmokeDriver {
                 ),
             ),
             background: fret_core::Paint::Solid(fret_core::Color {
-                r: 0.12,
-                g: 0.15,
-                b: 0.22,
                 a: 1.0,
-            })
+                ..fret_core::Color::from_srgb_hex_rgb(0x1f_26_38)
+            }),
             .into(),
             border: Edges::all(Px(0.0)),
             border_paint: fret_core::Paint::TRANSPARENT.into(),

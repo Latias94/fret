@@ -27,6 +27,7 @@ impl UiDiagnosticsService {
             run_id,
             anchor_window,
             next_step: 0,
+            base_ref: None,
             event_log: Vec::new(),
             event_log_dropped: 0,
             event_log_active_step: None,
@@ -335,6 +336,12 @@ impl UiDiagnosticsService {
         let Some(mut pending) = active.pending_cancel_cross_window_drag.take() else {
             return;
         };
+
+        pending.remaining_frames = pending.remaining_frames.saturating_sub(1);
+        if pending.remaining_frames > 0 {
+            active.pending_cancel_cross_window_drag = Some(pending);
+            return;
+        }
 
         let pointer_id = pending.pointer_id;
         let step_index = active.next_step.min(u32::MAX as usize) as u32;

@@ -1,6 +1,7 @@
 #[derive(Clone, Copy, Debug)]
 struct DockDragRuntimeState {
     dragging: bool,
+    cross_window_hover: bool,
     source_window: AppWindowId,
     current_window: AppWindowId,
     moving_window: Option<AppWindowId>,
@@ -50,6 +51,7 @@ fn dock_drag_runtime_state(
     {
         return Some(DockDragRuntimeState {
             dragging: drag.dragging,
+            cross_window_hover: drag.cross_window_hover,
             source_window: drag.source_window,
             current_window: drag.current_window,
             moving_window: drag.moving_window,
@@ -67,4 +69,3 @@ fn dock_drag_runtime_state(
     // useful for debugging but unsuitable as a source of truth for scripted gates.
     None
 }
-

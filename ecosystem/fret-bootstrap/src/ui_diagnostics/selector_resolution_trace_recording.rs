@@ -3,6 +3,7 @@ fn select_semantics_node_with_trace<'a>(
     window: AppWindowId,
     element_runtime: Option<&ElementRuntime>,
     selector: &UiSelectorV1,
+    scope_root: Option<u64>,
     step_index: u32,
     redact_text: bool,
     trace: &mut Vec<UiSelectorResolutionTraceEntryV1>,
@@ -11,13 +12,22 @@ fn select_semantics_node_with_trace<'a>(
     let mut matches: Vec<&'a fret_core::SemanticsNode> = Vec::new();
     let mut note: Option<String> = None;
 
+    let in_scope = |id: u64| -> bool {
+        scope_root
+            .map(|root| index.is_descendant_of_or_self(id, root))
+            .unwrap_or(true)
+    };
+
     match selector {
         UiSelectorV1::NodeId { node } => {
             if let Some(n) = index
                 .by_id
                 .get(node)
                 .copied()
-                .filter(|n| index.is_selectable(n.id.data().as_ffi()))
+                .filter(|n| {
+                    let id = n.id.data().as_ffi();
+                    index.is_selectable(id) && in_scope(id)
+                })
             {
                 matches.push(n);
             }
@@ -41,7 +51,10 @@ fn select_semantics_node_with_trace<'a>(
 
             matches.extend(snapshot.nodes.iter().filter(|n| {
                 let id = n.id.data().as_ffi();
-                index.is_selectable(id) && n.role == role && n.label.as_deref() == Some(name)
+                index.is_selectable(id)
+                    && in_scope(id)
+                    && n.role == role
+                    && n.label.as_deref() == Some(name)
             }));
         }
         UiSelectorV1::RoleAndPath {
@@ -89,6 +102,7 @@ fn select_semantics_node_with_trace<'a>(
             matches.extend(snapshot.nodes.iter().filter(|n| {
                 let id = n.id.data().as_ffi();
                 index.is_selectable(id)
+                    && in_scope(id)
                     && n.role == role
                     && n.label.as_deref() == Some(name)
                     && index.ancestors_match_subsequence(n.parent, &parsed_ancestors)
@@ -97,7 +111,7 @@ fn select_semantics_node_with_trace<'a>(
         UiSelectorV1::TestId { id } => {
             matches.extend(snapshot.nodes.iter().filter(|n| {
                 let node_id = n.id.data().as_ffi();
-                index.is_selectable(node_id) && n.test_id.as_deref() == Some(id)
+                index.is_selectable(node_id) && in_scope(node_id) && n.test_id.as_deref() == Some(id)
             }));
             if matches.is_empty() {
                 // Fallback for debugging: allow selecting hidden nodes if no visible match exists.
@@ -106,7 +120,10 @@ fn select_semantics_node_with_trace<'a>(
                     snapshot
                         .nodes
                         .iter()
-                        .filter(|n| n.test_id.as_deref() == Some(id)),
+                        .filter(|n| {
+                            let node_id = n.id.data().as_ffi();
+                            in_scope(node_id) && n.test_id.as_deref() == Some(id)
+                        }),
                 );
             }
         }
@@ -133,7 +150,10 @@ fn select_semantics_node_with_trace<'a>(
                 .by_id
                 .get(&node_id)
                 .copied()
-                .filter(|n| index.is_selectable(n.id.data().as_ffi()))
+                .filter(|n| {
+                    let id = n.id.data().as_ffi();
+                    index.is_selectable(id) && in_scope(id)
+                })
             {
                 matches.push(n);
             }

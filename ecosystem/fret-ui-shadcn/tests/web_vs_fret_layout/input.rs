@@ -1416,6 +1416,43 @@ fn web_vs_fret_layout_command_demo_input_height_matches() {
     );
 }
 
+fn web_vs_fret_layout_command_demo_input_above_listbox() {
+    let web = read_web_golden("command-demo");
+    let theme = web_theme(&web);
+    let web_input = find_first(&theme.root, &|n| {
+        n.tag == "input" && n.attrs.get("role").is_some_and(|v| v == "combobox")
+    })
+    .expect("web command-demo combobox input");
+    let web_listbox = find_first(&theme.root, &|n| {
+        n.attrs.get("role").is_some_and(|v| v == "listbox")
+    })
+    .expect("web command-demo listbox");
+    assert!(
+        web_input.rect.y < web_listbox.rect.y,
+        "web command-demo expects combobox input above listbox: input_y={} listbox_y={}",
+        web_input.rect.y,
+        web_listbox.rect.y
+    );
+
+    let snap = command_demo_snapshot(theme);
+    let combobox = find_semantics(&snap, SemanticsRole::ComboBox, None)
+        .unwrap_or_else(|| panic!("missing fret command-demo combobox"));
+    let listbox = find_semantics(&snap, SemanticsRole::ListBox, None)
+        .unwrap_or_else(|| panic!("missing fret command-demo listbox"));
+
+    assert!(
+        combobox.bounds.origin.y.0 < listbox.bounds.origin.y.0,
+        "command-demo expects combobox input above listbox: input_y={} listbox_y={}",
+        combobox.bounds.origin.y.0,
+        listbox.bounds.origin.y.0
+    );
+}
+
+#[test]
+fn web_vs_fret_layout_command_demo_input_above_listbox_matches_web() {
+    web_vs_fret_layout_command_demo_input_above_listbox();
+}
+
 fn web_vs_fret_layout_command_demo_listbox_height_matches() {
     let web = read_web_golden("command-demo");
     let theme = web_theme(&web);

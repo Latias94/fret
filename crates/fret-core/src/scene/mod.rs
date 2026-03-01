@@ -56,6 +56,52 @@ impl Color {
         b: 0.0,
         a: 0.0,
     };
+
+    /// Convert an sRGB `0xRRGGBB` hex color into a linear `Color` (alpha = 1.0).
+    pub fn from_srgb_hex_rgb(hex: u32) -> Self {
+        let r = ((hex >> 16) & 0xff) as u8;
+        let g = ((hex >> 8) & 0xff) as u8;
+        let b = (hex & 0xff) as u8;
+        Self {
+            r: srgb_u8_to_linear(r),
+            g: srgb_u8_to_linear(g),
+            b: srgb_u8_to_linear(b),
+            a: 1.0,
+        }
+    }
+
+    /// Convert a linear `Color` to an sRGB `0xRRGGBB` hex value (alpha ignored).
+    pub fn to_srgb_hex_rgb(self) -> u32 {
+        let r = linear_to_srgb_u8(self.r) as u32;
+        let g = linear_to_srgb_u8(self.g) as u32;
+        let b = linear_to_srgb_u8(self.b) as u32;
+        (r << 16) | (g << 8) | b
+    }
+}
+
+fn srgb_f32_to_linear(c: f32) -> f32 {
+    if c <= 0.04045 {
+        c / 12.92
+    } else {
+        ((c + 0.055) / 1.055).powf(2.4)
+    }
+}
+
+fn linear_f32_to_srgb(c: f32) -> f32 {
+    if c <= 0.0031308 {
+        12.92 * c
+    } else {
+        1.055 * c.powf(1.0 / 2.4) - 0.055
+    }
+}
+
+fn srgb_u8_to_linear(u: u8) -> f32 {
+    srgb_f32_to_linear(u as f32 / 255.0)
+}
+
+fn linear_to_srgb_u8(c: f32) -> u8 {
+    let srgb = linear_f32_to_srgb(c.clamp(0.0, 1.0)).clamp(0.0, 1.0);
+    (srgb * 255.0).round() as u8
 }
 
 /// A bounded, portable text shadow surface (v1).

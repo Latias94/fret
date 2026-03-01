@@ -88,6 +88,8 @@ pub(super) fn preview_alert(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement>
         .test_id("ui-gallery-alert-action")
     };
 
+    let warn_bg = ColorRef::Color(fret_ui_kit::colors::linear_from_hex_rgb(0xFF_FA_EB));
+    let warn_border = ColorRef::Color(fret_ui_kit::colors::linear_from_hex_rgb(0xFA_D9_73));
     let custom_colors = shadcn::Alert::new([
         shadcn::icon::icon(cx, fret_icons::IconId::new_static("lucide.triangle-alert")),
         shadcn::AlertTitle::new("Your subscription expires in 3 days").into_element(cx),
@@ -98,18 +100,8 @@ pub(super) fn preview_alert(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement>
     ])
     .refine_style(
         ChromeRefinement::default()
-            .bg(ColorRef::Color(CoreColor {
-                r: 1.0,
-                g: 0.98,
-                b: 0.92,
-                a: 1.0,
-            }))
-            .border_color(ColorRef::Color(CoreColor {
-                r: 0.98,
-                g: 0.85,
-                b: 0.45,
-                a: 1.0,
-            })),
+            .bg(warn_bg.clone())
+            .border_color(warn_border.clone()),
     )
     .refine_layout(LayoutRefinement::default().w_full().max_w(Px(520.0)))
     .into_element(cx)
@@ -219,8 +211,8 @@ pub(super) fn preview_alert(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement>
 ])
 .refine_style(
     ChromeRefinement::default()
-        .bg(ColorRef::Color(CoreColor { r: 1.0, g: 0.98, b: 0.92, a: 1.0 }))
-        .border_color(ColorRef::Color(CoreColor { r: 0.98, g: 0.85, b: 0.45, a: 1.0 })),
+        .bg(ColorRef::Color(fret_ui_kit::colors::linear_from_hex_rgb(0xFF_FA_EB)))
+        .border_color(ColorRef::Color(fret_ui_kit::colors::linear_from_hex_rgb(0xFA_D9_73))),
 )
 .into_element(cx);"#,
                 ),

@@ -64,6 +64,6 @@ When completing an item, prefer leaving 1–3 evidence anchors:
 ## M4 — No-compile: hot literals
 
 - [x] HP-DL-lit-001 Define a hot-literals file format and resolution precedence.
-  - Evidence: `ecosystem/fret-ui-literals/src/lib.rs`, `ecosystem/fret-bootstrap/src/dev_reload.rs`
+  - Evidence: `ecosystem/fret-bootstrap/src/hot_literals.rs`, `ecosystem/fret-bootstrap/src/dev_reload.rs`
 - [x] HP-DL-lit-002 Implement for one demo and validate.
-  - Evidence: `apps/fret-demo/src/demos/hotpatch_smoke_demo.rs`
+  - Evidence: `apps/fret-demo/src/bin/hotpatch_smoke_demo.rs`

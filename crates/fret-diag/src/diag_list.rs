@@ -12,6 +12,7 @@ struct ListFilterOptions {
 pub(crate) fn cmd_list(
     rest: &[String],
     workspace_root: &Path,
+    out_dir: &Path,
     json: bool,
     top_override: Option<usize>,
 ) -> Result<(), String> {
@@ -22,6 +23,7 @@ pub(crate) fn cmd_list(
     match kind {
         "scripts" | "script" => cmd_list_scripts(&rest[1..], workspace_root, json, top_override),
         "suites" | "suite" => cmd_list_suites(&rest[1..], workspace_root, json, top_override),
+        "sessions" | "session" => cmd_list_sessions(&rest[1..], out_dir, json, top_override),
         other => Err(format!("unknown diag list target: {other}")),
     }
 }
@@ -153,6 +155,83 @@ hint: generate it via `python tools/check_diag_scripts_registry.py --write`",
     Ok(())
 }
 
+fn cmd_list_sessions(
+    rest: &[String],
+    out_dir: &Path,
+    json: bool,
+    top_override: Option<usize>,
+) -> Result<(), String> {
+    let opts = parse_list_filter_options("sessions", rest)?;
+
+    let mut sessions = crate::session::collect_sessions(out_dir)?;
+
+    if let Some(needle) = opts.contains.as_deref() {
+        let needle_lower = needle.to_ascii_lowercase();
+        sessions.retain(|s| {
+            if opts.case_sensitive {
+                s.session_id.contains(needle)
+                    || s.session_dir.to_string_lossy().contains(needle)
+                    || s.diag_subcommand
+                        .as_deref()
+                        .is_some_and(|v| v.contains(needle))
+            } else {
+                s.session_id.to_ascii_lowercase().contains(&needle_lower)
+                    || s.session_dir
+                        .to_string_lossy()
+                        .to_ascii_lowercase()
+                        .contains(&needle_lower)
+                    || s.diag_subcommand
+                        .as_deref()
+                        .is_some_and(|v| v.to_ascii_lowercase().contains(&needle_lower))
+            }
+        });
+    }
+
+    if !opts.all {
+        let limit = top_override.unwrap_or(50);
+        sessions.truncate(limit);
+    }
+
+    if json {
+        let payload = serde_json::json!({
+            "sessions": sessions.iter().map(|s| serde_json::json!({
+                "session_id": s.session_id,
+                "session_dir": s.session_dir.display().to_string(),
+                "created_unix_ms": s.created_unix_ms,
+                "pid": s.pid,
+                "diag_subcommand": s.diag_subcommand,
+            })).collect::<Vec<_>>(),
+        });
+        println!(
+            "{}",
+            serde_json::to_string_pretty(&payload).map_err(|e| e.to_string())?
+        );
+        return Ok(());
+    }
+
+    for s in sessions {
+        let created = s
+            .created_unix_ms
+            .map(|v| v.to_string())
+            .unwrap_or_else(|| "?".to_string());
+        let pid = s
+            .pid
+            .map(|v| v.to_string())
+            .unwrap_or_else(|| "?".to_string());
+        let sub = s.diag_subcommand.unwrap_or_else(|| "?".to_string());
+        println!(
+            "{} (created_unix_ms={} pid={} sub={}) -> {}",
+            s.session_id,
+            created,
+            pid,
+            sub,
+            s.session_dir.display()
+        );
+    }
+
+    Ok(())
+}
+
 fn parse_list_filter_options(kind: &str, rest: &[String]) -> Result<ListFilterOptions, String> {
     let mut out = ListFilterOptions::default();
 
@@ -193,6 +272,7 @@ hint: use flags like --contains <needle>, --all, or global flags like --top <n> 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::time::{SystemTime, UNIX_EPOCH};
 
     fn s(v: &[&str]) -> Vec<String> {
         v.iter().map(|s| s.to_string()).collect()
@@ -210,5 +290,41 @@ mod tests {
     fn parse_list_filter_options_rejects_unknown_flag() {
         let err = parse_list_filter_options("scripts", &s(&["--nope"])).unwrap_err();
         assert!(err.contains("unknown"));
+    }
+
+    #[test]
+    fn collect_sessions_sorts_by_created_unix_ms_desc() {
+        let root = std::env::temp_dir().join(format!(
+            "fret-diag-list-sessions-{}",
+            SystemTime::now()
+                .duration_since(UNIX_EPOCH)
+                .unwrap_or_default()
+                .as_millis()
+        ));
+        let _ = std::fs::remove_dir_all(&root);
+        std::fs::create_dir_all(&root).expect("create temp root");
+
+        let sessions_root = root.join(crate::session::SESSIONS_DIRNAME);
+        std::fs::create_dir_all(&sessions_root).expect("create sessions dir");
+
+        let a = sessions_root.join("100-1");
+        let b = sessions_root.join("200-1");
+        std::fs::create_dir_all(&a).expect("create a");
+        std::fs::create_dir_all(&b).expect("create b");
+        std::fs::write(
+            a.join("session.json"),
+            br#"{"schema_version":1,"created_unix_ms":100,"pid":1,"diag_subcommand":"run"}"#,
+        )
+        .expect("write a");
+        std::fs::write(
+            b.join("session.json"),
+            br#"{"schema_version":1,"created_unix_ms":200,"pid":1,"diag_subcommand":"suite"}"#,
+        )
+        .expect("write b");
+
+        let sessions = crate::session::collect_sessions(&root).expect("collect sessions");
+        assert_eq!(sessions.len(), 2);
+        assert_eq!(sessions[0].session_id, "200-1");
+        assert_eq!(sessions[1].session_id, "100-1");
     }
 }

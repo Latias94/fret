@@ -73,12 +73,7 @@ pub(in crate::ui) fn preview_material3_button(cx: &mut ElementContext<'_, App>) 
                             .when(WidgetStates::HOVERED, Some(ColorRef::Color(hover_label))),
                     );
 
-                let accent = fret_core::Color {
-                    r: 0.9,
-                    g: 0.2,
-                    b: 0.9,
-                    a: 1.0,
-                };
+                let accent = fret_ui_kit::colors::linear_from_hex_rgb(0xe5_33_e5);
                 let override_style = material3::ButtonStyle::default()
                     .label_color(WidgetStateProperty::new(Some(ColorRef::Color(accent))))
                     .state_layer_color(

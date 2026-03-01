@@ -24,6 +24,17 @@ pub fn register_icons(reg: &mut IconRegistry) {
 /// Register Lucide vendor icon IDs (`lucide.*`) into an [`IconRegistry`].
 pub fn register_vendor_icons(reg: &mut IconRegistry) {
     register_curated(reg);
+
+    // Legacy Lucide IDs (lucide-react exports `MoreHorizontal`, older packs ship `more-horizontal.svg`).
+    // Newer Lucide versions standardize on `ellipsis` / `ellipsis-vertical`.
+    let _ = reg.alias_if_missing(
+        IconId::new("lucide.more-horizontal"),
+        IconId::new("lucide.ellipsis"),
+    );
+    let _ = reg.alias_if_missing(
+        IconId::new("lucide.more-vertical"),
+        IconId::new("lucide.ellipsis-vertical"),
+    );
 }
 
 /// Register semantic `ui.*` aliases for this icon pack.
@@ -109,5 +120,21 @@ mod semantic_ui {
             IconId::new("lucide.circle-check"),
         );
         let _ = reg.alias_if_missing(ids::ui::TOOL, IconId::new("lucide.wrench"));
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn lucide_more_horizontal_alias_resolves() {
+        let mut reg = IconRegistry::default();
+        register_vendor_icons(&mut reg);
+
+        reg.resolve(&IconId::new("lucide.ellipsis"))
+            .expect("expected lucide.ellipsis to resolve");
+        reg.resolve(&IconId::new("lucide.more-horizontal"))
+            .expect("expected lucide.more-horizontal legacy alias to resolve");
     }
 }

@@ -641,17 +641,11 @@ impl WinitAppDriver for EffectsDemoDriver {
         if state.panel2_enabled {
             scene.push(SceneOp::PopEffect);
         }
-        panel_border(
-            scene,
-            13_000,
-            panel2,
-            Color {
-                r: 0.495,
-                g: 0.495,
-                b: 0.5225,
-                a: if state.panel2_enabled { 0.55 } else { 0.22 },
-            },
-        );
+        panel_border(scene, 13_000, panel2, {
+            let mut c = Color::from_srgb_hex_rgb(0x7e_7e_85);
+            c.a = if state.panel2_enabled { 0.55 } else { 0.22 };
+            c
+        });
         scene.push(SceneOp::PopClip);
 
         // Foreground marker (ordering sanity).
@@ -761,10 +755,8 @@ impl WinitAppDriver for EffectsDemoDriver {
                     ),
                     text: blob,
                     paint: (Color {
-                        r: 0.95,
-                        g: 0.95,
-                        b: 0.95,
                         a: 0.95,
+                        ..Color::from_srgb_hex_rgb(0xf2_f2_f2)
                     })
                     .into(),
                     outline: None,

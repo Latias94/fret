@@ -188,41 +188,20 @@ impl Default for ViewGizmoConfig {
             depth_range: DepthRange::ZeroToOne,
             z01: 0.08,
             face_color: Color {
-                r: 0.22,
-                g: 0.22,
-                b: 0.24,
                 a: 0.35,
+                ..Color::from_srgb_hex_rgb(0x38_38_3d)
             },
             edge_color: Color {
-                r: 0.95,
-                g: 0.95,
-                b: 0.98,
                 a: 0.9,
+                ..Color::from_srgb_hex_rgb(0xf2_f2_fa)
             },
             hover_color: Color {
-                r: 1.0,
-                g: 0.85,
-                b: 0.3,
                 a: 0.55,
+                ..Color::from_srgb_hex_rgb(0xff_d9_4d)
             },
-            x_color: Color {
-                r: 1.0,
-                g: 0.2,
-                b: 0.4,
-                a: 1.0,
-            },
-            y_color: Color {
-                r: 0.2,
-                g: 1.0,
-                b: 0.4,
-                a: 1.0,
-            },
-            z_color: Color {
-                r: 0.2,
-                g: 0.5,
-                b: 1.0,
-                a: 1.0,
-            },
+            x_color: Color::from_srgb_hex_rgb(0xff_33_66),
+            y_color: Color::from_srgb_hex_rgb(0x33_ff_66),
+            z_color: Color::from_srgb_hex_rgb(0x33_80_ff),
         }
     }
 }

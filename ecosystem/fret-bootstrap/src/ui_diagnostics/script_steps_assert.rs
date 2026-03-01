@@ -106,6 +106,7 @@ pub(super) fn handle_assert_step(
                         snapshot,
                         window_bounds,
                         predicate_window,
+                        active.scope_root_for_window(predicate_window),
                         input_ctx,
                         element_runtime,
                         text_input_snapshot,

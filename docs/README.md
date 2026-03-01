@@ -28,6 +28,7 @@ New to the repo? Start with:
 - Layout engine refactor: `docs/layout-engine-refactor-roadmap.md`
 - Percent sizing semantics v1 (percent/fraction closure): `docs/workstreams/length-percentage-semantics-v1.md` and `docs/workstreams/length-percentage-semantics-v1-todo.md`
 - Renderer refactor: `docs/renderer-refactor-roadmap.md`
+- Renderer contract surface summary: `docs/renderer-contracts.md`
 - GPU debugging (RenderDoc): `docs/renderdoc-inspection.md`
 - Debugging playbook: `docs/debugging-playbook.md`
 - CPU timeline profiling (Tracy): `docs/tracy.md`

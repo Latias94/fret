@@ -5,68 +5,20 @@ use fret_core::scene::Color;
 
 use crate::plot::colormap::ColorMapId;
 
-pub const DEFAULT_SERIES_PALETTE: [Color; 10] = [
-    Color {
-        r: 0.35,
-        g: 0.65,
-        b: 0.95,
-        a: 1.0,
-    },
-    Color {
-        r: 0.95,
-        g: 0.45,
-        b: 0.55,
-        a: 1.0,
-    },
-    Color {
-        r: 0.45,
-        g: 0.85,
-        b: 0.55,
-        a: 1.0,
-    },
-    Color {
-        r: 0.95,
-        g: 0.75,
-        b: 0.35,
-        a: 1.0,
-    },
-    Color {
-        r: 0.75,
-        g: 0.55,
-        b: 0.95,
-        a: 1.0,
-    },
-    Color {
-        r: 0.35,
-        g: 0.85,
-        b: 0.85,
-        a: 1.0,
-    },
-    Color {
-        r: 0.95,
-        g: 0.35,
-        b: 0.85,
-        a: 1.0,
-    },
-    Color {
-        r: 0.65,
-        g: 0.65,
-        b: 0.65,
-        a: 1.0,
-    },
-    Color {
-        r: 0.55,
-        g: 0.75,
-        b: 0.35,
-        a: 1.0,
-    },
-    Color {
-        r: 0.35,
-        g: 0.55,
-        b: 0.95,
-        a: 1.0,
-    },
-];
+pub fn default_series_palette() -> [Color; 10] {
+    [
+        Color::from_srgb_hex_rgb(0x59_a6_f2),
+        Color::from_srgb_hex_rgb(0xf2_73_8c),
+        Color::from_srgb_hex_rgb(0x73_d9_8c),
+        Color::from_srgb_hex_rgb(0xf2_bf_59),
+        Color::from_srgb_hex_rgb(0xbf_8c_f2),
+        Color::from_srgb_hex_rgb(0x59_d9_d9),
+        Color::from_srgb_hex_rgb(0xf2_59_d9),
+        Color::from_srgb_hex_rgb(0xa6_a6_a6),
+        Color::from_srgb_hex_rgb(0x8c_bf_59),
+        Color::from_srgb_hex_rgb(0x59_8c_f2),
+    ]
+}
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum MouseReadoutMode {
     /// Show mouse coordinates as a tooltip near the cursor.
@@ -205,14 +157,9 @@ impl Default for LinePlotStyle {
             series_tooltip: SeriesTooltipMode::default(),
             hover_threshold: Px(10.0),
             tick_count: 5,
-            stroke_color: Color {
-                r: 0.35,
-                g: 0.65,
-                b: 0.95,
-                a: 1.0,
-            },
+            stroke_color: Color::from_srgb_hex_rgb(0x59_a6_f2),
             stroke_width: Px(1.5),
-            series_palette: DEFAULT_SERIES_PALETTE,
+            series_palette: default_series_palette(),
             clamp_to_data_bounds: true,
             overscroll_fraction: 0.03,
             emphasize_hovered_series: true,

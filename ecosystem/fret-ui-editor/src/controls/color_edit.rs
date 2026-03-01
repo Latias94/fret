@@ -196,15 +196,10 @@ impl ColorEdit {
                         true
                     }
                     KeyCode::Escape => {
-                        let current =
-                            host.models_mut()
-                                .get_copied(&model_for_key)
-                                .unwrap_or(Color {
-                                    r: 0.0,
-                                    g: 0.0,
-                                    b: 0.0,
-                                    a: 1.0,
-                                });
+                        let current = host
+                            .models_mut()
+                            .get_copied(&model_for_key)
+                            .unwrap_or_else(|| Color::from_srgb_hex_rgb(0x00_00_00));
                         let formatted = format_hex(current, show_alpha);
                         let _ = host
                             .models_mut()

@@ -50,26 +50,20 @@ impl GroupedBarsDemoDriver {
             CategoryBarSeries::new("A", a.into())
                 .id(SeriesId::from_label("A"))
                 .fill(Color {
-                    r: 0.35,
-                    g: 0.65,
-                    b: 0.95,
                     a: 0.55,
+                    ..Color::from_srgb_hex_rgb(0x59_a6_f2)
                 }),
             CategoryBarSeries::new("B", b.into())
                 .id(SeriesId::from_label("B"))
                 .fill(Color {
-                    r: 0.95,
-                    g: 0.45,
-                    b: 0.55,
                     a: 0.55,
+                    ..Color::from_srgb_hex_rgb(0xf2_73_8c)
                 }),
             CategoryBarSeries::new("C", c.into())
                 .id(SeriesId::from_label("C"))
                 .fill(Color {
-                    r: 0.45,
-                    g: 0.85,
-                    b: 0.55,
                     a: 0.55,
+                    ..Color::from_srgb_hex_rgb(0x73_d9_8c)
                 }),
         ];
 

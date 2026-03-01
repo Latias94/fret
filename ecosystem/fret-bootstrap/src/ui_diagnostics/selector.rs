@@ -101,20 +101,36 @@ pub(super) fn select_semantics_node<'a>(
     element_runtime: Option<&ElementRuntime>,
     selector: &UiSelectorV1,
 ) -> Option<&'a fret_core::SemanticsNode> {
+    select_semantics_node_scoped(snapshot, window, element_runtime, selector, None)
+}
+
+pub(super) fn select_semantics_node_scoped<'a>(
+    snapshot: &'a fret_core::SemanticsSnapshot,
+    window: AppWindowId,
+    element_runtime: Option<&ElementRuntime>,
+    selector: &UiSelectorV1,
+    scope_root: Option<u64>,
+) -> Option<&'a fret_core::SemanticsNode> {
     let index = SemanticsIndex::new(snapshot);
 
+    let in_scope = |id: u64| -> bool {
+        scope_root
+            .map(|root| index.is_descendant_of_or_self(id, root))
+            .unwrap_or(true)
+    };
+
     match selector {
-        UiSelectorV1::NodeId { node } => index
-            .by_id
-            .get(node)
-            .copied()
-            .filter(|n| index.is_selectable(n.id.data().as_ffi())),
+        UiSelectorV1::NodeId { node } => index.by_id.get(node).copied().filter(|n| {
+            let id = n.id.data().as_ffi();
+            index.is_selectable(id) && in_scope(id)
+        }),
         UiSelectorV1::RoleAndName { role, name } => {
             let role = parse_semantics_role(role)?;
             super::pick::pick_best_match(
                 snapshot.nodes.iter().filter(|n| {
                     let id = n.id.data().as_ffi();
                     index.is_selectable(id)
+                        && in_scope(id)
                         && n.role == role
                         && n.label.as_deref().is_some_and(|label| label == name)
                 }),
@@ -138,6 +154,7 @@ pub(super) fn select_semantics_node<'a>(
                 snapshot.nodes.iter().filter(|n| {
                     let id = n.id.data().as_ffi();
                     index.is_selectable(id)
+                        && in_scope(id)
                         && n.role == role
                         && n.label.as_deref().is_some_and(|label| label == name)
                         && index.ancestors_match_subsequence(n.parent, &parsed_ancestors)
@@ -148,17 +165,19 @@ pub(super) fn select_semantics_node<'a>(
         UiSelectorV1::TestId { id } => super::pick::pick_best_match(
             snapshot.nodes.iter().filter(|n| {
                 let node_id = n.id.data().as_ffi();
-                index.is_selectable(node_id) && n.test_id.as_deref().is_some_and(|v| v == id)
+                index.is_selectable(node_id)
+                    && in_scope(node_id)
+                    && n.test_id.as_deref().is_some_and(|v| v == id)
             }),
             &index,
         )
         .or_else(|| {
             // Fallback for debugging: allow selecting hidden nodes if no visible match exists.
             super::pick::pick_best_match(
-                snapshot
-                    .nodes
-                    .iter()
-                    .filter(|n| n.test_id.as_deref().is_some_and(|v| v == id)),
+                snapshot.nodes.iter().filter(|n| {
+                    let node_id = n.id.data().as_ffi();
+                    in_scope(node_id) && n.test_id.as_deref().is_some_and(|v| v == id)
+                }),
                 &index,
             )
         }),
@@ -167,11 +186,10 @@ pub(super) fn select_semantics_node<'a>(
                 runtime.node_for_element(window, fret_ui::elements::GlobalElementId(*element))
             })?;
             let node_id = node.data().as_ffi();
-            index
-                .by_id
-                .get(&node_id)
-                .copied()
-                .filter(|n| index.is_selectable(n.id.data().as_ffi()))
+            index.by_id.get(&node_id).copied().filter(|n| {
+                let id = n.id.data().as_ffi();
+                index.is_selectable(id) && in_scope(id)
+            })
         }
     }
 }

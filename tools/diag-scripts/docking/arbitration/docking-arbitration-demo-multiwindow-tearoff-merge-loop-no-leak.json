@@ -68,7 +68,7 @@
     { "type": "raise_window", "window": { "kind": "last_seen_other" } },
     { "type": "set_cursor_in_window", "window": { "kind": "last_seen_other" }, "x_px": 220.0, "y_px": 220.0 },
     { "type": "wait_frames", "n": 2 },
-    { "type": "pointer_move", "delta_x": -800.0, "delta_y": 0.0, "steps": 90 },
+    { "type": "pointer_move", "delta_x": -340.0, "delta_y": 0.0, "steps": 90 },
     {
       "type": "wait_until",
       "predicate": { "kind": "dock_drag_current_window_is", "window": { "kind": "last_seen_other" } },
@@ -117,7 +117,7 @@
     { "type": "raise_window", "window": { "kind": "last_seen_other" } },
     { "type": "set_cursor_in_window", "window": { "kind": "last_seen_other" }, "x_px": 220.0, "y_px": 220.0 },
     { "type": "wait_frames", "n": 2 },
-    { "type": "pointer_move", "delta_x": -800.0, "delta_y": 0.0, "steps": 90 },
+    { "type": "pointer_move", "delta_x": -340.0, "delta_y": 0.0, "steps": 90 },
     {
       "type": "wait_until",
       "predicate": { "kind": "dock_drag_current_window_is", "window": { "kind": "last_seen_other" } },
@@ -166,7 +166,7 @@
     { "type": "raise_window", "window": { "kind": "last_seen_other" } },
     { "type": "set_cursor_in_window", "window": { "kind": "last_seen_other" }, "x_px": 220.0, "y_px": 220.0 },
     { "type": "wait_frames", "n": 2 },
-    { "type": "pointer_move", "delta_x": -800.0, "delta_y": 0.0, "steps": 90 },
+    { "type": "pointer_move", "delta_x": -340.0, "delta_y": 0.0, "steps": 90 },
     {
       "type": "wait_until",
       "predicate": { "kind": "dock_drag_current_window_is", "window": { "kind": "last_seen_other" } },
