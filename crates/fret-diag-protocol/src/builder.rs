@@ -34,6 +34,14 @@ pub fn not_exists(target: UiSelectorV1) -> UiPredicateV1 {
     UiPredicateV1::NotExists { target }
 }
 
+pub fn exists_under(scope: UiSelectorV1, target: UiSelectorV1) -> UiPredicateV1 {
+    UiPredicateV1::ExistsUnder { scope, target }
+}
+
+pub fn not_exists_under(scope: UiSelectorV1, target: UiSelectorV1) -> UiPredicateV1 {
+    UiPredicateV1::NotExistsUnder { scope, target }
+}
+
 pub fn focus_is(target: UiSelectorV1) -> UiPredicateV1 {
     UiPredicateV1::FocusIs { target }
 }
@@ -76,6 +84,13 @@ pub fn ime_cursor_area_min_size(min_w_px: f32, min_h_px: f32, eps_px: f32) -> Ui
 
 pub fn runner_accessibility_activated() -> UiPredicateV1 {
     UiPredicateV1::RunnerAccessibilityActivated
+}
+
+pub fn value_equals(target: UiSelectorV1, text: impl Into<String>) -> UiPredicateV1 {
+    UiPredicateV1::ValueEquals {
+        target,
+        text: text.into(),
+    }
 }
 
 #[derive(Debug, Default, Clone)]

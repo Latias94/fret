@@ -1207,6 +1207,21 @@ pub enum UiPredicateV1 {
     NotExists {
         target: UiSelectorV1,
     },
+    /// True when `target` resolves to a node that is a descendant of (or equal to) `scope`.
+    ///
+    /// This is primarily used to disambiguate selectors when multiple similar widgets exist in a
+    /// window (and to keep scripts resilient under overlay/root splits).
+    ExistsUnder {
+        scope: UiSelectorV1,
+        target: UiSelectorV1,
+    },
+    /// True when `scope` exists and `target` does *not* exist under it.
+    ///
+    /// Note: if `scope` does not exist, this predicate returns false.
+    NotExistsUnder {
+        scope: UiSelectorV1,
+        target: UiSelectorV1,
+    },
     FocusIs {
         target: UiSelectorV1,
     },
@@ -1221,6 +1236,14 @@ pub enum UiPredicateV1 {
     },
     /// True when the target exists and its semantics `value` contains `text` as a substring.
     ValueContains {
+        target: UiSelectorV1,
+        text: String,
+    },
+    /// True when the target exists and its semantics `value` equals `text`.
+    ///
+    /// Caution: some widgets use locale-dependent `value` strings; prefer structured predicates
+    /// (`SemanticsNumericApproxEq`, `SemanticsScrollApproxEq`, ...) when available.
+    ValueEquals {
         target: UiSelectorV1,
         text: String,
     },
@@ -2678,6 +2701,57 @@ mod tests {
             roundtrip,
             UiPredicateV1::BoundsCenterApproxEqual { .. }
         ));
+    }
+
+    #[test]
+    fn predicate_exists_under_serializes_minimally() {
+        let value = serde_json::to_value(UiPredicateV1::ExistsUnder {
+            scope: UiSelectorV1::TestId {
+                id: "scope".to_string(),
+                root_z_index: None,
+            },
+            target: UiSelectorV1::TestId {
+                id: "target".to_string(),
+                root_z_index: None,
+            },
+        })
+        .unwrap();
+
+        assert_eq!(
+            value,
+            serde_json::json!({
+                "kind": "exists_under",
+                "scope": { "kind": "test_id", "id": "scope" },
+                "target": { "kind": "test_id", "id": "target" },
+            })
+        );
+
+        let roundtrip: UiPredicateV1 = serde_json::from_value(value).unwrap();
+        assert!(matches!(roundtrip, UiPredicateV1::ExistsUnder { .. }));
+    }
+
+    #[test]
+    fn predicate_value_equals_serializes_minimally() {
+        let value = serde_json::to_value(UiPredicateV1::ValueEquals {
+            target: UiSelectorV1::TestId {
+                id: "name".to_string(),
+                root_z_index: None,
+            },
+            text: "Alice".to_string(),
+        })
+        .unwrap();
+
+        assert_eq!(
+            value,
+            serde_json::json!({
+                "kind": "value_equals",
+                "target": { "kind": "test_id", "id": "name" },
+                "text": "Alice",
+            })
+        );
+
+        let roundtrip: UiPredicateV1 = serde_json::from_value(value).unwrap();
+        assert!(matches!(roundtrip, UiPredicateV1::ValueEquals { .. }));
     }
 
     #[test]

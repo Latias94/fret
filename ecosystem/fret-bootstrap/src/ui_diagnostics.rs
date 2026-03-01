@@ -1254,6 +1254,20 @@ mod tests {
         n
     }
 
+    fn semantics_node_with_test_id_and_value(
+        id: u64,
+        parent: Option<u64>,
+        role: SemanticsRole,
+        bounds: Rect,
+        label: &str,
+        test_id: &str,
+        value: &str,
+    ) -> SemanticsNode {
+        let mut n = semantics_node_with_test_id(id, parent, role, bounds, label, test_id);
+        n.value = Some(value.to_string());
+        n
+    }
+
     #[test]
     fn scripts_do_not_force_inspection_active() {
         let mut svc = UiDiagnosticsService::default();
@@ -1597,6 +1611,170 @@ mod tests {
                 &pred
             ),
             "expected padding to shrink the allowed window rect"
+        );
+    }
+
+    #[test]
+    fn predicates_support_exists_under_and_value_equals() {
+        let window_bounds = rect(0.0, 0.0, 500.0, 500.0);
+        let snapshot = SemanticsSnapshot {
+            window: window_id(1),
+            roots: vec![SemanticsRoot {
+                root: node_id(1),
+                visible: true,
+                blocks_underlay_input: false,
+                hit_testable: true,
+                z_index: 0,
+            }],
+            barrier_root: None,
+            focus_barrier_root: None,
+            focus: None,
+            captured: None,
+            nodes: vec![
+                semantics_node(
+                    1,
+                    None,
+                    SemanticsRole::Panel,
+                    rect(0.0, 0.0, 500.0, 500.0),
+                    "r",
+                ),
+                semantics_node_with_test_id(
+                    2,
+                    Some(1),
+                    SemanticsRole::Panel,
+                    rect(0.0, 0.0, 200.0, 200.0),
+                    "container",
+                    "container",
+                ),
+                semantics_node_with_test_id_and_value(
+                    3,
+                    Some(2),
+                    SemanticsRole::TextField,
+                    rect(0.0, 0.0, 100.0, 20.0),
+                    "name",
+                    "name",
+                    "Alice",
+                ),
+                semantics_node_with_test_id_and_value(
+                    4,
+                    Some(1),
+                    SemanticsRole::TextField,
+                    rect(0.0, 0.0, 100.0, 20.0),
+                    "name-outside",
+                    "name",
+                    "Bob",
+                ),
+            ],
+        };
+
+        let pred = UiPredicateV1::ExistsUnder {
+            scope: UiSelectorV1::TestId {
+                id: "container".to_string(),
+                root_z_index: None,
+            },
+            target: UiSelectorV1::TestId {
+                id: "name".to_string(),
+                root_z_index: None,
+            },
+        };
+        assert!(
+            eval_predicate(
+                &snapshot,
+                window_bounds,
+                window_id(1),
+                None,
+                None,
+                None,
+                None,
+                &[],
+                None,
+                0,
+                false,
+                true,
+                &pred
+            ),
+            "expected to find `name` under `container`"
+        );
+
+        let pred = UiPredicateV1::NotExistsUnder {
+            scope: UiSelectorV1::TestId {
+                id: "container".to_string(),
+                root_z_index: None,
+            },
+            target: UiSelectorV1::TestId {
+                id: "does_not_exist".to_string(),
+                root_z_index: None,
+            },
+        };
+        assert!(
+            eval_predicate(
+                &snapshot,
+                window_bounds,
+                window_id(1),
+                None,
+                None,
+                None,
+                None,
+                &[],
+                None,
+                0,
+                false,
+                true,
+                &pred
+            ),
+            "expected `does_not_exist` to be absent under `container`"
+        );
+
+        let pred = UiPredicateV1::ValueEquals {
+            target: UiSelectorV1::NodeId {
+                node: node_id(3).data().as_ffi(),
+                root_z_index: None,
+            },
+            text: "Alice".to_string(),
+        };
+        assert!(
+            eval_predicate(
+                &snapshot,
+                window_bounds,
+                window_id(1),
+                None,
+                None,
+                None,
+                None,
+                &[],
+                None,
+                0,
+                false,
+                true,
+                &pred
+            ),
+            "expected `ValueEquals` to match the in-scope node value"
+        );
+
+        let pred = UiPredicateV1::ValueEquals {
+            target: UiSelectorV1::NodeId {
+                node: node_id(3).data().as_ffi(),
+                root_z_index: None,
+            },
+            text: "Bob".to_string(),
+        };
+        assert!(
+            !eval_predicate(
+                &snapshot,
+                window_bounds,
+                window_id(1),
+                None,
+                None,
+                None,
+                None,
+                &[],
+                None,
+                0,
+                false,
+                true,
+                &pred
+            ),
+            "expected `ValueEquals` to be strict"
         );
     }
 

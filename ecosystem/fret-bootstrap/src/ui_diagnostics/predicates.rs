@@ -218,6 +218,22 @@ fn eval_predicate(
         UiPredicateV1::NotExists { target } => {
             select_node(target).is_none()
         }
+        UiPredicateV1::ExistsUnder { scope, target } => {
+            let Some(scope_node) = select_node(scope) else {
+                return false;
+            };
+            let scope_root = scope_node.id.data().as_ffi();
+            select_semantics_node_scoped(snapshot, window, element_runtime, target, Some(scope_root))
+                .is_some()
+        }
+        UiPredicateV1::NotExistsUnder { scope, target } => {
+            let Some(scope_node) = select_node(scope) else {
+                return false;
+            };
+            let scope_root = scope_node.id.data().as_ffi();
+            select_semantics_node_scoped(snapshot, window, element_runtime, target, Some(scope_root))
+                .is_none()
+        }
         UiPredicateV1::FocusIs { target } => {
             let Some(focus) = snapshot.focus else {
                 return false;
@@ -247,6 +263,12 @@ fn eval_predicate(
                 return false;
             };
             node.value.as_deref().is_some_and(|value| value.contains(text))
+        }
+        UiPredicateV1::ValueEquals { target, text } => {
+            let Some(node) = select_node(target) else {
+                return false;
+            };
+            node.value.as_deref() == Some(text.as_str())
         }
         UiPredicateV1::PosInSetIs { target, pos_in_set } => {
             let Some(node) = select_node(target) else {
