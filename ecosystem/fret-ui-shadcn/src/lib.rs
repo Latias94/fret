@@ -255,7 +255,8 @@ pub use native_select::{
 pub use navigation_menu::{
     NavigationMenu, NavigationMenuContent, NavigationMenuIndicator, NavigationMenuItem,
     NavigationMenuLink, NavigationMenuList, NavigationMenuRoot, NavigationMenuTrigger,
-    NavigationMenuViewport, navigation_menu, navigation_menu_list, navigation_menu_uncontrolled,
+    NavigationMenuTriggerStyle, NavigationMenuViewport, navigation_menu, navigation_menu_list,
+    navigation_menu_trigger_style, navigation_menu_uncontrolled,
 };
 pub use pagination::{
     Pagination, PaginationContent, PaginationEllipsis, PaginationItem, PaginationLink,
