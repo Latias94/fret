@@ -46,7 +46,11 @@ impl<H: UiHost> UiTree<H> {
         self.is_descendant(trap_root, requested_focus)
     }
 
-    fn is_reachable_from_any_root_via_children(&self, target: NodeId, roots: &[NodeId]) -> bool {
+    pub(in crate::tree) fn is_reachable_from_any_root_via_children(
+        &self,
+        target: NodeId,
+        roots: &[NodeId],
+    ) -> bool {
         if roots.is_empty() {
             return false;
         }
@@ -77,5 +81,52 @@ impl<H: UiHost> UiTree<H> {
         }
 
         false
+    }
+
+    pub(in crate::tree) fn is_reachable_from_root_via_children(
+        &self,
+        root: NodeId,
+        target: NodeId,
+    ) -> bool {
+        if root == target {
+            return true;
+        }
+        if !self.nodes.contains_key(root) || !self.nodes.contains_key(target) {
+            return false;
+        }
+
+        let mut visited: HashSet<NodeId> = HashSet::new();
+        let mut stack: Vec<NodeId> = Vec::new();
+        visited.insert(root);
+        stack.push(root);
+
+        while let Some(node) = stack.pop() {
+            let Some(entry) = self.nodes.get(node) else {
+                continue;
+            };
+            for &child in &entry.children {
+                if child == target {
+                    return true;
+                }
+                if visited.insert(child) {
+                    stack.push(child);
+                }
+            }
+        }
+
+        false
+    }
+
+    pub(in crate::tree) fn first_reachable_root_via_children(
+        &self,
+        target: NodeId,
+        roots_in_priority_order: &[NodeId],
+    ) -> Option<NodeId> {
+        for &root in roots_in_priority_order {
+            if self.is_reachable_from_root_via_children(root, target) {
+                return Some(root);
+            }
+        }
+        None
     }
 }
