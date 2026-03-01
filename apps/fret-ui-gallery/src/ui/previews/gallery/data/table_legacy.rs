@@ -359,6 +359,7 @@ pub(in crate::ui) fn preview_data_table_legacy(
     let state_for_header_checkbox = state.clone();
     let assets_for_header_checkbox = assets.clone();
     let table = shadcn::DataTable::new()
+        .row_click_selection(false)
         .row_height(Px(40.0))
         .header_height(Px(40.0))
         .column_actions_menu(false)

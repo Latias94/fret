@@ -128,11 +128,12 @@ pub use alert::{Alert, AlertAction, AlertDescription, AlertTitle, AlertVariant};
 pub use alert_dialog::{
     AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogContentSize,
     AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogMedia,
-    AlertDialogTitle, AlertDialogTrigger,
+    AlertDialogOverlay, AlertDialogPortal, AlertDialogTitle, AlertDialogTrigger,
 };
 pub use aspect_ratio::AspectRatio;
 pub use avatar::{
     Avatar, AvatarBadge, AvatarFallback, AvatarGroup, AvatarGroupCount, AvatarImage, AvatarSize,
+    avatar_sized,
 };
 pub use badge::{Badge, BadgeRender, BadgeVariant, badge};
 pub use breadcrumb::{Breadcrumb, BreadcrumbItem, BreadcrumbSeparator};
@@ -149,9 +150,10 @@ pub use card::{
 };
 pub use carousel::{
     Carousel, CarouselAlign, CarouselApi, CarouselApiSnapshot, CarouselAutoplayConfig,
-    CarouselBreakpoint, CarouselContainScroll, CarouselEvent, CarouselEventCursor, CarouselOptions,
-    CarouselOptionsPatch, CarouselOrientation, CarouselSlidesInViewSnapshot,
-    CarouselSlidesToScroll,
+    CarouselBreakpoint, CarouselContainScroll, CarouselContent, CarouselContext, CarouselEvent,
+    CarouselEventCursor, CarouselItem, CarouselNext, CarouselOptions, CarouselOptionsPatch,
+    CarouselOrientation, CarouselPrevious, CarouselSlidesInViewSnapshot, CarouselSlidesToScroll,
+    carousel_context, use_carousel,
 };
 pub use chart::{
     ChartLegendContent, ChartLegendItem, ChartLegendVerticalAlign, ChartTooltipContent,
@@ -282,8 +284,8 @@ pub use select::{
 };
 pub use separator::{Separator, SeparatorOrientation, separator};
 pub use sheet::{
-    Sheet, SheetClose, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetSide,
-    SheetTitle,
+    Sheet, SheetClose, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetOverlay,
+    SheetPortal, SheetSide, SheetTitle, SheetTrigger,
 };
 pub use shortcut_hint::ShortcutHint;
 pub use sidebar::{

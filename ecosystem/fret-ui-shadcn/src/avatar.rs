@@ -80,6 +80,24 @@ pub enum AvatarSize {
     Lg,
 }
 
+/// Build an avatar and its size-dependent parts inside an avatar size provider.
+///
+/// This avoids footguns where callers construct `AvatarBadge` / `AvatarGroupCount` elements outside
+/// the `Avatar` subtree and accidentally miss inherited size defaults.
+pub fn avatar_sized<H: UiHost, I>(
+    cx: &mut ElementContext<'_, H>,
+    size: AvatarSize,
+    f: impl FnOnce(&mut ElementContext<'_, H>) -> I,
+) -> AnyElement
+where
+    I: IntoIterator<Item = AnyElement>,
+{
+    let children = with_avatar_size_provider(cx, size, |cx| {
+        f(cx).into_iter().collect::<Vec<_>>()
+    });
+    Avatar::new(children).size(size).into_element(cx)
+}
+
 /// shadcn/ui `Avatar` root.
 ///
 /// This is a fixed-size, fully-rounded container intended to host exactly one `AvatarImage` and
@@ -190,6 +208,7 @@ impl Avatar {
 #[derive(Debug, Default)]
 pub struct AvatarBadge {
     children: Vec<AnyElement>,
+    size: Option<AvatarSize>,
     chrome: ChromeRefinement,
     layout: LayoutRefinement,
 }
@@ -201,6 +220,16 @@ impl AvatarBadge {
 
     pub fn children(mut self, children: impl IntoIterator<Item = AnyElement>) -> Self {
         self.children = children.into_iter().collect();
+        self
+    }
+
+    /// Explicitly set the avatar size for this badge.
+    ///
+    /// Most compositions rely on `Avatar` installing a size provider; however, callers sometimes
+    /// build `AvatarBadge` before inserting it into an `Avatar` subtree. In those cases, inherited
+    /// size is unavailable, so callers can pass an explicit size to match upstream shadcn behavior.
+    pub fn size(mut self, size: AvatarSize) -> Self {
+        self.size = Some(size);
         self
     }
 
@@ -216,7 +245,10 @@ impl AvatarBadge {
 
     #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        let size = inherited_avatar_size(cx).unwrap_or_default();
+        let size = self
+            .size
+            .or_else(|| inherited_avatar_size(cx))
+            .unwrap_or_default();
         let (dot_px, icon_px, hide_icon) = match size {
             AvatarSize::Sm => (Px(8.0), Px(0.0), true),
             AvatarSize::Default => (Px(10.0), Px(8.0), false),
@@ -385,6 +417,7 @@ impl AvatarGroup {
 #[derive(Debug, Default)]
 pub struct AvatarGroupCount {
     children: Vec<AnyElement>,
+    size: Option<AvatarSize>,
     chrome: ChromeRefinement,
     layout: LayoutRefinement,
 }
@@ -393,9 +426,18 @@ impl AvatarGroupCount {
     pub fn new(children: impl IntoIterator<Item = AnyElement>) -> Self {
         Self {
             children: children.into_iter().collect(),
+            size: None,
             chrome: ChromeRefinement::default(),
             layout: LayoutRefinement::default(),
         }
+    }
+
+    /// Explicitly set the avatar size for this count bubble.
+    ///
+    /// See `AvatarBadge::size(...)` for why some call sites need this.
+    pub fn size(mut self, size: AvatarSize) -> Self {
+        self.size = Some(size);
+        self
     }
 
     pub fn refine_style(mut self, style: ChromeRefinement) -> Self {
@@ -410,7 +452,10 @@ impl AvatarGroupCount {
 
     #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        let size = inherited_avatar_size(cx).unwrap_or_default();
+        let size = self
+            .size
+            .or_else(|| inherited_avatar_size(cx))
+            .unwrap_or_default();
         let (box_space, text_px) = match size {
             AvatarSize::Sm => (Space::N6, Px(12.0)),
             AvatarSize::Default => (Space::N8, Px(14.0)),
@@ -875,6 +920,69 @@ mod tests {
             n.role == SemanticsRole::Text
                 && (n.label.as_deref() == Some(text) || n.value.as_deref() == Some(text))
         })
+    }
+
+    #[test]
+    fn avatar_badge_can_inherit_or_override_size() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(200.0), Px(120.0)),
+        );
+
+        fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            fn badge_box_px(el: &AnyElement) -> Px {
+                let ElementKind::Container(ContainerProps { layout, .. }) = &el.kind else {
+                    panic!("expected AvatarBadge to be a container element");
+                };
+                match layout.size.width {
+                    Length::Px(px) => px,
+                    other => panic!("expected AvatarBadge width to be px, got {other:?}"),
+                }
+            }
+
+            let default_el = AvatarBadge::new().into_element(cx);
+            assert_eq!(badge_box_px(&default_el), Px(10.0));
+
+            let inherited_sm_el = with_avatar_size_provider(cx, AvatarSize::Sm, |cx| {
+                AvatarBadge::new().into_element(cx)
+            });
+            assert_eq!(badge_box_px(&inherited_sm_el), Px(8.0));
+
+            let explicit_sm_el = AvatarBadge::new().size(AvatarSize::Sm).into_element(cx);
+            assert_eq!(badge_box_px(&explicit_sm_el), Px(8.0));
+        });
+    }
+
+    #[test]
+    fn avatar_group_count_can_inherit_or_override_size() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(200.0), Px(120.0)),
+        );
+
+        fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            fn count_box_px(el: &AnyElement) -> Px {
+                let ElementKind::Container(ContainerProps { layout, .. }) = &el.kind else {
+                    panic!("expected AvatarGroupCount to be a container element");
+                };
+                match layout.size.width {
+                    Length::Px(px) => px,
+                    other => panic!("expected AvatarGroupCount width to be px, got {other:?}"),
+                }
+            }
+
+            let inherited_sm_el = with_avatar_size_provider(cx, AvatarSize::Sm, |cx| {
+                AvatarGroupCount::new(Vec::<AnyElement>::new()).into_element(cx)
+            });
+            let explicit_sm_el = AvatarGroupCount::new(Vec::<AnyElement>::new())
+                .size(AvatarSize::Sm)
+                .into_element(cx);
+            assert_eq!(count_box_px(&inherited_sm_el), count_box_px(&explicit_sm_el));
+        });
     }
 
     #[test]

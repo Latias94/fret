@@ -1,3 +1,4 @@
+// region: example
 use fret_core::{FontId, Px};
 use fret_ui_shadcn::{self as shadcn, prelude::*};
 use std::sync::Arc;
@@ -51,22 +52,24 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
         &[("$", "US Dollar"), ("€", "Euro"), ("£", "British Pound")];
 
     let currency = {
-        let entries: Vec<shadcn::SelectEntry> = vec![
-            shadcn::SelectGroup::new(currencies.iter().map(|(value, label)| {
-                shadcn::SelectItem::new(*value, *label)
-                    .item_text(shadcn::SelectItemText::new([
-                        shadcn::SelectTextRun::new(
-                            Arc::<str>::from(format!("{value} ")),
-                            shadcn::SelectTextTone::Normal,
-                        ),
-                        shadcn::SelectTextRun::new(*label, shadcn::SelectTextTone::Muted),
-                    ]))
-                    .into()
-            }))
-            .into(),
-        ];
+        let entries: Vec<shadcn::SelectEntry> =
+            vec![
+                shadcn::SelectGroup::new(currencies.iter().map(|(value, label)| {
+                    shadcn::SelectItem::new(*value, *label)
+                        .item_text(shadcn::SelectItemText::new([
+                            shadcn::SelectTextRun::new(
+                                Arc::<str>::from(format!("{value} ")),
+                                shadcn::SelectTextTone::Normal,
+                            ),
+                            shadcn::SelectTextRun::new(*label, shadcn::SelectTextTone::Muted),
+                        ]))
+                        .into()
+                }))
+                .into(),
+            ];
 
         shadcn::Select::new(currency_value.clone(), currency_open.clone())
+            .trigger_test_id("ui-gallery-button-group-select-currency-trigger")
             .trigger(
                 shadcn::SelectTrigger::new()
                     .font(FontId::monospace())
@@ -83,6 +86,7 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
     let amount = shadcn::Input::new(amount_value)
         .a11y_label("Amount")
         .placeholder("10.00")
+        .test_id("ui-gallery-button-group-select-amount")
         .refine_layout(LayoutRefinement::default().flex_1().min_w_0());
 
     let send = shadcn::Button::new("")
@@ -105,3 +109,5 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
     )
     .into_element(cx)
 }
+
+// endregion: example

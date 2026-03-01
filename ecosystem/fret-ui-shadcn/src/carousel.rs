@@ -5,7 +5,7 @@ use fret_core::{
     Edges, KeyCode, LayoutDirection, MouseButton, Point, Px, SemanticsOrientation, SemanticsRole,
 };
 use fret_icons::ids;
-use fret_runtime::{Effect, Model, ModelHost, TimerToken};
+use fret_runtime::{Effect, Model, ModelHost, ModelStore, TimerToken};
 use fret_ui::action::{ActionCx, ActivateReason, KeyDownCx, OnKeyDown, UiActionHost};
 use fret_ui::element::{
     AnyElement, ContainerProps, CrossAlign, ElementKind, FlexProps, HoverRegionProps, LayoutStyle,
@@ -88,6 +88,24 @@ impl CarouselApi {
 
     pub fn scroll_to(&self, host: &mut impl ModelHost, index: usize) {
         let _ = host.update_model(&self.commands, |q, _| {
+            q.pending.push(CarouselCommand::ScrollTo { index });
+        });
+    }
+
+    pub fn scroll_prev_store(&self, store: &mut ModelStore) {
+        let _ = store.update(&self.commands, |q| {
+            q.pending.push(CarouselCommand::ScrollPrev);
+        });
+    }
+
+    pub fn scroll_next_store(&self, store: &mut ModelStore) {
+        let _ = store.update(&self.commands, |q| {
+            q.pending.push(CarouselCommand::ScrollNext);
+        });
+    }
+
+    pub fn scroll_to_store(&self, store: &mut ModelStore, index: usize) {
+        let _ = store.update(&self.commands, |q| {
             q.pending.push(CarouselCommand::ScrollTo { index });
         });
     }
@@ -222,6 +240,17 @@ pub enum CarouselOrientation {
     #[default]
     Horizontal,
     Vertical,
+}
+
+#[derive(Debug, Clone, Default)]
+enum CarouselControls {
+    #[default]
+    BuiltIn,
+    Parts {
+        previous: CarouselPrevious,
+        next: CarouselNext,
+    },
+    None,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
@@ -536,6 +565,7 @@ pub struct Carousel {
     api_handle: Option<Model<Option<CarouselApi>>>,
     slides_in_view_snapshot: Option<Model<CarouselSlidesInViewSnapshot>>,
     autoplay: Option<CarouselAutoplayConfig>,
+    controls: CarouselControls,
     test_id: Option<Arc<str>>,
 }
 
@@ -780,6 +810,31 @@ fn carousel_slide_content_ids_model<H: UiHost>(
     model
 }
 
+#[derive(Default)]
+struct CarouselPartsModelsState {
+    api_handle: Option<Model<Option<CarouselApi>>>,
+    api_snapshot: Option<Model<CarouselApiSnapshot>>,
+}
+
+fn carousel_parts_models<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+) -> (Model<Option<CarouselApi>>, Model<CarouselApiSnapshot>) {
+    let (handle, snapshot) = cx.with_state(CarouselPartsModelsState::default, |st| {
+        (st.api_handle.clone(), st.api_snapshot.clone())
+    });
+    if let (Some(handle), Some(snapshot)) = (handle, snapshot) {
+        return (handle, snapshot);
+    }
+
+    let handle = cx.app.models_mut().insert(None::<CarouselApi>);
+    let snapshot = cx.app.models_mut().insert(CarouselApiSnapshot::default());
+    cx.with_state(CarouselPartsModelsState::default, |st| {
+        st.api_handle = Some(handle.clone());
+        st.api_snapshot = Some(snapshot.clone());
+    });
+    (handle, snapshot)
+}
+
 impl Default for Carousel {
     fn default() -> Self {
         Self::new(Vec::new())
@@ -805,6 +860,7 @@ impl Carousel {
             api_handle: None,
             slides_in_view_snapshot: None,
             autoplay: None,
+            controls: CarouselControls::BuiltIn,
             test_id: None,
         }
     }
@@ -947,6 +1003,48 @@ impl Carousel {
         self
     }
 
+    /// Enable/disable the built-in previous/next controls.
+    ///
+    /// Default: `true` (built-in controls enabled).
+    pub fn controls(mut self, enabled: bool) -> Self {
+        self.controls = if enabled {
+            CarouselControls::BuiltIn
+        } else {
+            CarouselControls::None
+        };
+        self
+    }
+
+    fn controls_parts(mut self, previous: CarouselPrevious, next: CarouselNext) -> Self {
+        self.controls = CarouselControls::Parts { previous, next };
+        self
+    }
+
+    /// Part-based authoring surface aligned with shadcn/ui v4 exports.
+    ///
+    /// This is a thin adapter over [`Carousel::into_element`] that accepts shadcn-style parts
+    /// (`CarouselContent`, `CarouselItem`, `CarouselPrevious`, `CarouselNext`).
+    #[track_caller]
+    pub fn into_element_parts<H: UiHost>(
+        self,
+        cx: &mut ElementContext<'_, H>,
+        content: impl FnOnce(&mut ElementContext<'_, H>) -> CarouselContent,
+        previous: CarouselPrevious,
+        next: CarouselNext,
+    ) -> AnyElement {
+        let (api_handle, api_snapshot) = carousel_parts_models(cx);
+        let content = content(cx);
+
+        self.items(content.items)
+            .refine_viewport_layout(content.viewport_layout)
+            .refine_track_layout(content.track_layout)
+            .refine_item_layout(content.item_layout)
+            .api_handle_model(api_handle)
+            .api_snapshot_model(api_snapshot)
+            .controls_parts(previous, next)
+            .into_element(cx)
+    }
+
     #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         cx.scope(|cx| {
@@ -960,6 +1058,8 @@ impl Carousel {
             let root_test_id = self.test_id.unwrap_or_else(|| Arc::from("carousel"));
             let slides_in_view_snapshot_model = self.slides_in_view_snapshot;
             let api_handle_model = self.api_handle;
+            let api_snapshot_model = self.api_snapshot;
+            let controls = self.controls;
 
             let (
                 index_model,
@@ -1010,6 +1110,19 @@ impl Carousel {
                     }
                 });
             }
+
+            cx.with_state(CarouselContextProviderState::default, |st| {
+                st.current = match (api_handle_model.clone(), api_snapshot_model.clone()) {
+                    (Some(api_handle), Some(api_snapshot)) => Some(CarouselContext {
+                        api_handle,
+                        api_snapshot,
+                        orientation,
+                        options,
+                        root_test_id: root_test_id.clone(),
+                    }),
+                    _ => None,
+                };
+            });
 
             let root_layout = decl_style::layout_style(
                 &theme,
@@ -3040,7 +3153,7 @@ impl Carousel {
                 || snaps_len <= 1
                 || (!options.loop_enabled && clamped_index + 1 >= snaps_len);
 
-            if let Some(api_snapshot) = self.api_snapshot {
+            if let Some(api_snapshot) = api_snapshot_model.as_ref() {
                 let runtime_now = cx.watch_model(&runtime_model).copied().unwrap_or_default();
                 let embla_moving = cx
                     .app
@@ -3059,145 +3172,178 @@ impl Carousel {
                     select_generation: runtime_now.api_select_generation,
                     reinit_generation: runtime_now.api_reinit_generation,
                 };
-                let _ = cx.app.models_mut().update(&api_snapshot, |v| *v = snapshot);
+                let _ = cx.app.models_mut().update(api_snapshot, |v| *v = snapshot);
             }
 
-            let prev_test_id = Arc::from(format!("{}-previous", root_test_id.as_ref()));
-            let next_test_id = Arc::from(format!("{}-next", root_test_id.as_ref()));
-
-            let rotate_controls = orientation == CarouselOrientation::Vertical;
-            let arrow_rotation = if rotate_controls { 90.0 } else { 0.0 };
-            let arrow_center = Point::new(Px(8.0), Px(8.0));
-            let arrow_transform =
-                fret_core::Transform2D::rotation_about_degrees(arrow_rotation, arrow_center);
-            let arrow_layout = decl_style::layout_style(
-                &theme,
-                LayoutRefinement::default()
-                    .w_px(Px(16.0))
-                    .h_px(Px(16.0))
-                    .flex_shrink_0(),
-            );
-
-            let rtl_controls =
-                layout_direction == LayoutDirection::Rtl && orientation == CarouselOrientation::Horizontal;
-            let (prev_icon, next_icon) = if rtl_controls {
-                (ids::ui::ARROW_RIGHT, ids::ui::ARROW_LEFT)
-            } else {
-                (ids::ui::ARROW_LEFT, ids::ui::ARROW_RIGHT)
+            let (prev_part, next_part) = match controls {
+                CarouselControls::None => (None, None),
+                CarouselControls::BuiltIn => (Some(CarouselPrevious::new()), Some(CarouselNext::new())),
+                CarouselControls::Parts { previous, next } => (Some(previous), Some(next)),
             };
 
-            let prev_button = Button::new("Previous slide")
-                .variant(ButtonVariant::Outline)
-                .size(ButtonSize::IconSm)
-                .disabled(prev_disabled)
-                .test_id(prev_test_id)
-                .refine_style(ChromeRefinement::default().rounded(Radius::Full))
-                .children([cx.visual_transform_props(
-                    VisualTransformProps {
-                        layout: arrow_layout,
-                        transform: arrow_transform,
-                    },
-                    move |cx| vec![decl_icon::icon(cx, prev_icon)],
-                )])
-                .on_activate(on_prev)
-                .into_element(cx);
+            let (prev_wrapper, next_wrapper) = if let (Some(prev_part), Some(next_part)) =
+                (prev_part, next_part)
+            {
+                let rotate_controls = orientation == CarouselOrientation::Vertical;
+                let arrow_rotation = if rotate_controls { 90.0 } else { 0.0 };
+                let arrow_center = Point::new(Px(8.0), Px(8.0));
+                let arrow_transform =
+                    fret_core::Transform2D::rotation_about_degrees(arrow_rotation, arrow_center);
+                let arrow_layout = decl_style::layout_style(
+                    &theme,
+                    LayoutRefinement::default()
+                        .w_px(Px(16.0))
+                        .h_px(Px(16.0))
+                        .flex_shrink_0(),
+                );
 
-            let next_button = Button::new("Next slide")
-                .variant(ButtonVariant::Outline)
-                .size(ButtonSize::IconSm)
-                .disabled(next_disabled)
-                .test_id(next_test_id)
-                .refine_style(ChromeRefinement::default().rounded(Radius::Full))
-                .children([cx.visual_transform_props(
-                    VisualTransformProps {
-                        layout: arrow_layout,
-                        transform: arrow_transform,
-                    },
-                    move |cx| vec![decl_icon::icon(cx, next_icon)],
-                )])
-                .on_activate(on_next)
-                .into_element(cx);
+                let rtl_controls = layout_direction == LayoutDirection::Rtl
+                    && orientation == CarouselOrientation::Horizontal;
+                let (prev_icon, next_icon) = if rtl_controls {
+                    (ids::ui::ARROW_RIGHT, ids::ui::ARROW_LEFT)
+                } else {
+                    (ids::ui::ARROW_LEFT, ids::ui::ARROW_RIGHT)
+                };
 
-            // Upstream shadcn uses `-left-12` / `-right-12` which maps to 48px in Tailwind.
-            let offset = MetricRef::Px(Px(48.0));
-            let button_size = MetricRef::Px(Px(32.0));
+                let prev_test_id = prev_part.test_id.clone().unwrap_or_else(|| {
+                    Arc::from(format!("{}-previous", root_test_id.as_ref()))
+                });
+                let next_test_id = next_part.test_id.clone().unwrap_or_else(|| {
+                    Arc::from(format!("{}-next", root_test_id.as_ref()))
+                });
 
-            let (prev_layout, next_layout) = match orientation {
-                CarouselOrientation::Horizontal => {
-                    if rtl_controls {
-                        (
-                            LayoutRefinement::default()
-                                .absolute()
-                                .top(Space::N0)
-                                .bottom(Space::N0)
-                                .right_neg_px(offset.clone())
-                                .w_px(button_size.clone()),
-                            LayoutRefinement::default()
-                                .absolute()
-                                .top(Space::N0)
-                                .bottom(Space::N0)
-                                .left_neg_px(offset)
-                                .w_px(button_size),
-                        )
-                    } else {
-                        (
-                            LayoutRefinement::default()
-                                .absolute()
-                                .top(Space::N0)
-                                .bottom(Space::N0)
-                                .left_neg_px(offset.clone())
-                                .w_px(button_size.clone()),
-                            LayoutRefinement::default()
-                                .absolute()
-                                .top(Space::N0)
-                                .bottom(Space::N0)
-                                .right_neg_px(offset)
-                                .w_px(button_size),
-                        )
+                let prev_label = prev_part
+                    .label
+                    .clone()
+                    .unwrap_or_else(|| Arc::from("Previous slide"));
+                let next_label = next_part
+                    .label
+                    .clone()
+                    .unwrap_or_else(|| Arc::from("Next slide"));
+
+                let prev_button = Button::new(prev_label)
+                    .variant(prev_part.variant)
+                    .size(prev_part.size)
+                    .disabled(prev_disabled)
+                    .test_id(prev_test_id)
+                    .refine_style(prev_part.chrome)
+                    .children([cx.visual_transform_props(
+                        VisualTransformProps {
+                            layout: arrow_layout,
+                            transform: arrow_transform,
+                        },
+                        move |cx| vec![decl_icon::icon(cx, prev_icon)],
+                    )])
+                    .on_activate(on_prev)
+                    .into_element(cx);
+
+                let next_button = Button::new(next_label)
+                    .variant(next_part.variant)
+                    .size(next_part.size)
+                    .disabled(next_disabled)
+                    .test_id(next_test_id)
+                    .refine_style(next_part.chrome)
+                    .children([cx.visual_transform_props(
+                        VisualTransformProps {
+                            layout: arrow_layout,
+                            transform: arrow_transform,
+                        },
+                        move |cx| vec![decl_icon::icon(cx, next_icon)],
+                    )])
+                    .on_activate(on_next)
+                    .into_element(cx);
+
+                // Upstream shadcn uses `-left-12` / `-right-12` which maps to 48px in Tailwind.
+                let offset = MetricRef::Px(Px(48.0));
+                let button_size = MetricRef::Px(Px(32.0));
+
+                let (prev_layout, next_layout) = match orientation {
+                    CarouselOrientation::Horizontal => {
+                        if rtl_controls {
+                            (
+                                LayoutRefinement::default()
+                                    .absolute()
+                                    .top(Space::N0)
+                                    .bottom(Space::N0)
+                                    .right_neg_px(offset.clone())
+                                    .w_px(button_size.clone())
+                                    .merge(prev_part.layout),
+                                LayoutRefinement::default()
+                                    .absolute()
+                                    .top(Space::N0)
+                                    .bottom(Space::N0)
+                                    .left_neg_px(offset)
+                                    .w_px(button_size)
+                                    .merge(next_part.layout),
+                            )
+                        } else {
+                            (
+                                LayoutRefinement::default()
+                                    .absolute()
+                                    .top(Space::N0)
+                                    .bottom(Space::N0)
+                                    .left_neg_px(offset.clone())
+                                    .w_px(button_size.clone())
+                                    .merge(prev_part.layout),
+                                LayoutRefinement::default()
+                                    .absolute()
+                                    .top(Space::N0)
+                                    .bottom(Space::N0)
+                                    .right_neg_px(offset)
+                                    .w_px(button_size)
+                                    .merge(next_part.layout),
+                            )
+                        }
                     }
-                }
-                CarouselOrientation::Vertical => (
-                    LayoutRefinement::default()
-                        .absolute()
-                        .left(Space::N0)
-                        .right(Space::N0)
-                        .top_neg_px(offset.clone())
-                        .h_px(button_size.clone()),
-                    LayoutRefinement::default()
-                        .absolute()
-                        .left(Space::N0)
-                        .right(Space::N0)
-                        .bottom_neg_px(offset)
-                        .h_px(button_size),
-                ),
+                    CarouselOrientation::Vertical => (
+                        LayoutRefinement::default()
+                            .absolute()
+                            .left(Space::N0)
+                            .right(Space::N0)
+                            .top_neg_px(offset.clone())
+                            .h_px(button_size.clone())
+                            .merge(prev_part.layout),
+                        LayoutRefinement::default()
+                            .absolute()
+                            .left(Space::N0)
+                            .right(Space::N0)
+                            .bottom_neg_px(offset)
+                            .h_px(button_size)
+                            .merge(next_part.layout),
+                    ),
+                };
+
+                let prev_layout = decl_style::layout_style(&theme, prev_layout);
+                let next_layout = decl_style::layout_style(&theme, next_layout);
+
+                let prev_wrapper = cx.flex(
+                    FlexProps {
+                        layout: prev_layout,
+                        direction: button_axis,
+                        justify: MainAlign::Center,
+                        align: CrossAlign::Center,
+                        wrap: false,
+                        ..Default::default()
+                    },
+                    move |_cx| vec![prev_button],
+                );
+
+                let next_wrapper = cx.flex(
+                    FlexProps {
+                        layout: next_layout,
+                        direction: button_axis,
+                        justify: MainAlign::Center,
+                        align: CrossAlign::Center,
+                        wrap: false,
+                        ..Default::default()
+                    },
+                    move |_cx| vec![next_button],
+                );
+
+                (Some(prev_wrapper), Some(next_wrapper))
+            } else {
+                (None, None)
             };
-
-            let prev_layout = decl_style::layout_style(&theme, prev_layout);
-            let next_layout = decl_style::layout_style(&theme, next_layout);
-
-            let prev_wrapper = cx.flex(
-                FlexProps {
-                    layout: prev_layout,
-                    direction: button_axis,
-                    justify: MainAlign::Center,
-                    align: CrossAlign::Center,
-                    wrap: false,
-                    ..Default::default()
-                },
-                move |_cx| vec![prev_button],
-            );
-
-            let next_wrapper = cx.flex(
-                FlexProps {
-                    layout: next_layout,
-                    direction: button_axis,
-                    justify: MainAlign::Center,
-                    align: CrossAlign::Center,
-                    wrap: false,
-                    ..Default::default()
-                },
-                move |_cx| vec![next_button],
-            );
 
             let pointer_can_hover =
                 fret_ui_kit::declarative::primary_pointer_can_hover(cx, Invalidation::Layout, true);
@@ -3306,7 +3452,13 @@ impl Carousel {
                         )
                     });
 
-                    let mut children = vec![viewport, prev_wrapper, next_wrapper];
+                    let mut children = vec![viewport];
+                    if let Some(prev_wrapper) = prev_wrapper {
+                        children.push(prev_wrapper);
+                    }
+                    if let Some(next_wrapper) = next_wrapper {
+                        children.push(next_wrapper);
+                    }
                     if let Some(hover_overlay) = hover_overlay {
                         children.push(hover_overlay);
                     }
@@ -3412,4 +3564,195 @@ impl Carousel {
             )
         })
     }
+}
+
+/// shadcn/ui `CarouselContent` (v4).
+#[derive(Debug, Clone)]
+pub struct CarouselContent {
+    items: Vec<AnyElement>,
+    viewport_layout: LayoutRefinement,
+    track_layout: LayoutRefinement,
+    item_layout: LayoutRefinement,
+}
+
+impl CarouselContent {
+    pub fn new(items: impl IntoIterator<Item = CarouselItem>) -> Self {
+        Self {
+            items: items.into_iter().map(|i| i.child).collect(),
+            viewport_layout: LayoutRefinement::default(),
+            track_layout: LayoutRefinement::default(),
+            item_layout: LayoutRefinement::default(),
+        }
+    }
+
+    pub fn refine_viewport_layout(mut self, layout: LayoutRefinement) -> Self {
+        self.viewport_layout = self.viewport_layout.merge(layout);
+        self
+    }
+
+    pub fn refine_track_layout(mut self, layout: LayoutRefinement) -> Self {
+        self.track_layout = self.track_layout.merge(layout);
+        self
+    }
+
+    pub fn refine_item_layout(mut self, layout: LayoutRefinement) -> Self {
+        self.item_layout = self.item_layout.merge(layout);
+        self
+    }
+}
+
+/// shadcn/ui `CarouselItem` (v4).
+#[derive(Debug)]
+pub struct CarouselItem {
+    child: AnyElement,
+}
+
+impl CarouselItem {
+    pub fn new(child: AnyElement) -> Self {
+        Self { child }
+    }
+}
+
+/// shadcn/ui `CarouselPrevious` (v4).
+#[derive(Debug, Clone)]
+pub struct CarouselPrevious {
+    label: Option<Arc<str>>,
+    variant: ButtonVariant,
+    size: ButtonSize,
+    chrome: ChromeRefinement,
+    layout: LayoutRefinement,
+    test_id: Option<Arc<str>>,
+}
+
+impl Default for CarouselPrevious {
+    fn default() -> Self {
+        Self {
+            label: None,
+            variant: ButtonVariant::Outline,
+            size: ButtonSize::IconSm,
+            chrome: ChromeRefinement::default().rounded(Radius::Full),
+            layout: LayoutRefinement::default(),
+            test_id: None,
+        }
+    }
+}
+
+impl CarouselPrevious {
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    pub fn label(mut self, label: impl Into<Arc<str>>) -> Self {
+        self.label = Some(label.into());
+        self
+    }
+
+    pub fn variant(mut self, variant: ButtonVariant) -> Self {
+        self.variant = variant;
+        self
+    }
+
+    pub fn size(mut self, size: ButtonSize) -> Self {
+        self.size = size;
+        self
+    }
+
+    pub fn refine_style(mut self, chrome: ChromeRefinement) -> Self {
+        self.chrome = self.chrome.merge(chrome);
+        self
+    }
+
+    pub fn refine_layout(mut self, layout: LayoutRefinement) -> Self {
+        self.layout = self.layout.merge(layout);
+        self
+    }
+
+    pub fn test_id(mut self, id: impl Into<Arc<str>>) -> Self {
+        self.test_id = Some(id.into());
+        self
+    }
+}
+
+/// shadcn/ui `CarouselNext` (v4).
+#[derive(Debug, Clone)]
+pub struct CarouselNext {
+    label: Option<Arc<str>>,
+    variant: ButtonVariant,
+    size: ButtonSize,
+    chrome: ChromeRefinement,
+    layout: LayoutRefinement,
+    test_id: Option<Arc<str>>,
+}
+
+impl Default for CarouselNext {
+    fn default() -> Self {
+        Self {
+            label: None,
+            variant: ButtonVariant::Outline,
+            size: ButtonSize::IconSm,
+            chrome: ChromeRefinement::default().rounded(Radius::Full),
+            layout: LayoutRefinement::default(),
+            test_id: None,
+        }
+    }
+}
+
+impl CarouselNext {
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    pub fn label(mut self, label: impl Into<Arc<str>>) -> Self {
+        self.label = Some(label.into());
+        self
+    }
+
+    pub fn variant(mut self, variant: ButtonVariant) -> Self {
+        self.variant = variant;
+        self
+    }
+
+    pub fn size(mut self, size: ButtonSize) -> Self {
+        self.size = size;
+        self
+    }
+
+    pub fn refine_style(mut self, chrome: ChromeRefinement) -> Self {
+        self.chrome = self.chrome.merge(chrome);
+        self
+    }
+
+    pub fn refine_layout(mut self, layout: LayoutRefinement) -> Self {
+        self.layout = self.layout.merge(layout);
+        self
+    }
+
+    pub fn test_id(mut self, id: impl Into<Arc<str>>) -> Self {
+        self.test_id = Some(id.into());
+        self
+    }
+}
+
+#[derive(Default)]
+struct CarouselContextProviderState {
+    current: Option<CarouselContext>,
+}
+
+#[derive(Debug, Clone)]
+pub struct CarouselContext {
+    pub api_handle: Model<Option<CarouselApi>>,
+    pub api_snapshot: Model<CarouselApiSnapshot>,
+    pub orientation: CarouselOrientation,
+    pub options: CarouselOptions,
+    pub root_test_id: Arc<str>,
+}
+
+pub fn carousel_context<H: UiHost>(cx: &ElementContext<'_, H>) -> Option<CarouselContext> {
+    cx.inherited_state_where::<CarouselContextProviderState>(|st| st.current.is_some())
+        .and_then(|st| st.current.clone())
+}
+
+#[track_caller]
+pub fn use_carousel<H: UiHost>(cx: &ElementContext<'_, H>) -> CarouselContext {
+    carousel_context(cx).expect("use_carousel must be used within a `Carousel`")
 }
