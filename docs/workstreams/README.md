@@ -32,6 +32,12 @@ Active workstreams:
 - `docs/workstreams/docking-tabbar-fearless-refactor-v1/PARITY_MATRIX.md`
 - `docs/workstreams/docking-tabbar-fearless-refactor-v1/EVIDENCE_AND_GATES.md`
 - `docs/workstreams/docking-tabbar-fearless-refactor-v1/REFERENCE_NOTES.md`
+- `docs/workstreams/subtree-layout-dirty-fearless-refactor-v1/README.md`
+- `docs/workstreams/subtree-layout-dirty-fearless-refactor-v1/DESIGN.md`
+- `docs/workstreams/subtree-layout-dirty-fearless-refactor-v1/TODO.md`
+- `docs/workstreams/subtree-layout-dirty-fearless-refactor-v1/MILESTONES.md`
+- `docs/workstreams/subtree-layout-dirty-fearless-refactor-v1/OPEN_QUESTIONS.md`
+- `docs/workstreams/subtree-layout-dirty-fearless-refactor-v1/EVIDENCE_AND_GATES.md`
 - `docs/workstreams/genui-json-render-v1.md`
 - `docs/workstreams/genui-json-render-v1-todo.md`
 - `docs/workstreams/genui-json-render-v1-milestones.md`
