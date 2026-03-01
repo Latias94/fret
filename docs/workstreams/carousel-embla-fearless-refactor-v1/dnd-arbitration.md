@@ -86,6 +86,9 @@ Therefore, the recommended recipe pattern is:
 In-tree helper:
 
 - Prefer `fret-ui-kit::dnd::DndPointerForwarders` to avoid duplicating the event-forwarding boilerplate.
+- Evidence:
+  - `ecosystem/fret-ui-kit/src/dnd/forwarders.rs`
+  - `apps/fret-ui-gallery/src/ui/pages/carousel.rs` (handle + long-press demos)
 
 ## Concrete activation constraints (suggested)
 
