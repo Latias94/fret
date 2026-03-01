@@ -15,9 +15,12 @@ Non-goals (v1):
 
 Note: v1 *does* include a small, deterministic "API snapshot" surface and a recipe-level autoplay
 policy surface to align with shadcn docs examples without importing Embla's imperative API.
-It also includes best-effort parity for a small subset of Embla options (e.g. `duration`,
-`skipSnaps`, `dragFree`, and a non-seamless `loop` selection wrap) without implementing Embla's full
-physics or loop engine.
+It also includes best-effort parity for a small subset of Embla options at the recipe level (e.g.
+`duration`, `skipSnaps`, `dragFree`, and `loop`).
+
+Deeper Embla engine parity (physics shaping, seamless looping, `reInit`/`select` event semantics,
+and a Rust-native API surface) is tracked in the v2 workstream:
+`docs/workstreams/carousel-embla-parity-v2/TODO.md`.
 
 Upstream references (local snapshots):
 
@@ -55,6 +58,8 @@ In-tree surfaces:
 
 - [x] CAR-110 Ensure UI gallery examples mirror upstream widths and spacing recipes.
   - Evidence: `apps/fret-ui-gallery/src/ui/pages/carousel.rs`
+  - Note: `orientation="vertical"` defaults to `basis-full` for items (matches shadcn/ui
+    `CarouselItem` default class list).
   - Gate: `tools/diag-scripts/ui-gallery/carousel/ui-gallery-carousel-*-screenshot.json`
 - [x] CAR-130 Support shadcn docs "Plugins / autoplay" outcome without exposing Embla plugins.
   - Evidence:
