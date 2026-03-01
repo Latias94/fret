@@ -3567,7 +3567,7 @@ impl Carousel {
 }
 
 /// shadcn/ui `CarouselContent` (v4).
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct CarouselContent {
     items: Vec<AnyElement>,
     viewport_layout: LayoutRefinement,
