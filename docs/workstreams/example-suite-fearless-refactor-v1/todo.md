@@ -51,11 +51,12 @@ Goal: create a lightweight, user-facing cookbook that does not pull “everythin
   - [ ] `todo` (or keep as template-only, but ensure the runnable “golden” stays obvious)
 - [ ] Add 6–10 focused cookbook examples (App Track):
   - [x] overlays basics (`overlay_basics`)
-  - [ ] commands + keymap
-  - [ ] theme switching
+  - [x] commands + keymap (`commands_keymap_basics`)
+  - [x] theme switching (`theme_switching_basics`)
   - [ ] icons/assets budgets
   - [ ] virtual list
   - [ ] async inbox + cancellation
+  - [x] effects layer basics (`effects_layer_basics`)
 
 Gates:
 
