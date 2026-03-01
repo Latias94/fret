@@ -196,6 +196,28 @@
       ]
     },
     {
+      "id": "cookbook-commands-keymap-basics-shortcut-and-gating",
+      "path": "tools/diag-scripts/cookbook/commands-keymap-basics/cookbook-commands-keymap-basics-shortcut-and-gating.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "cookbook-commands-keymap-basics"
+      ],
+      "tags": [
+        "commands",
+        "commands_keymap_basics",
+        "cookbook",
+        "keymap",
+        "smoke"
+      ],
+      "target_hints": [
+        "Waits for the example root to exist.",
+        "Toggles the panel via shortcut.",
+        "Disables availability and asserts the shortcut no longer toggles."
+      ]
+    },
+    {
       "id": "docking-arbitration-demo-default-layout-signature",
       "path": "tools/diag-scripts/docking/arbitration/docking-arbitration-demo-default-layout-signature.json",
       "required_capabilities": [
