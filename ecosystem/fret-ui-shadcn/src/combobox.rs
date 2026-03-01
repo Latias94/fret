@@ -2102,6 +2102,9 @@ fn combobox_content_placement(
 /// can start using `ComboboxOption` in their own APIs today.
 pub type ComboboxOption = ComboboxItem;
 
+/// Migration alias for the combobox group data model.
+pub type ComboboxOptionGroup = ComboboxGroup;
+
 #[cfg(test)]
 mod tests {
     use super::*;

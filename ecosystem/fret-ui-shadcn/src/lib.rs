@@ -169,7 +169,8 @@ pub use collapsible::{
     Collapsible, CollapsibleContent, CollapsibleTrigger, collapsible, collapsible_uncontrolled,
 };
 pub use combobox::{
-    Combobox, ComboboxGroup, ComboboxItem, ComboboxOption, ComboboxTriggerVariant, combobox,
+    Combobox, ComboboxGroup, ComboboxItem, ComboboxOption, ComboboxOptionGroup,
+    ComboboxTriggerVariant, combobox,
 };
 pub use combobox_chips::ComboboxChips;
 pub use command::{
