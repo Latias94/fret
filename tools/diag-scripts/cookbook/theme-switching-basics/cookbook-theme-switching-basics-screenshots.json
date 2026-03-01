@@ -21,10 +21,12 @@
     },
     { "type": "wait_frames", "n": 10 },
     { "type": "capture_screenshot", "label": "cookbook-theme-switching-basics-light" },
-    { "type": "click_stable", "target": { "kind": "test_id", "id": "cookbook.theme_switching_basics.toggle" } },
+    {
+      "type": "click_stable",
+      "target": { "kind": "test_id", "id": "cookbook.theme_switching_basics.toggle.dark" }
+    },
     { "type": "wait_frames", "n": 20 },
     { "type": "capture_screenshot", "label": "cookbook-theme-switching-basics-dark" },
     { "type": "capture_bundle", "label": "cookbook-theme-switching-basics-screenshots" }
   ]
 }
-
