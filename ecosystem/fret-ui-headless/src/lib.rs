@@ -35,6 +35,7 @@ pub mod slider;
 pub mod snap_points;
 pub mod tab_strip_canonical;
 pub mod tab_strip_drop_target;
+pub mod tab_strip_overflow;
 pub mod tab_strip_surface;
 pub mod table;
 pub mod tooltip_delay_group;
