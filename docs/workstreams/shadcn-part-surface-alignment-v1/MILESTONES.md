@@ -81,3 +81,23 @@ then tighten behavior and add gates.
 
 - Every item marked “Done” in `TODO.md` has at least one gate (unit test and/or diag script).
 
+## Milestone 5 — Combobox v4 part surface convergence
+
+`combobox` is the largest remaining surface gap because upstream is Base UI-rooted and the shadcn
+v4 part names conflict with Fret's current data-model naming (`ComboboxItem`).
+
+**Scope**
+
+- Stage 1 (non-breaking): publish data-model aliases (`ComboboxOption`, `ComboboxOptionGroup`) and
+  migrate in-tree call sites to the alias names.
+- Stage 2 (breaking, workstream-scoped): introduce v4-aligned parts (`ComboboxInput/Content/List/...`)
+  and resolve the `ComboboxItem` naming conflict.
+- Stage 3 (gates): lock at least one high-signal invariant:
+  - clear button visibility rules,
+  - responsive drawer vs popover switch (viewport breakpoint),
+  - and a deterministic "empty state" layout.
+
+**Acceptance criteria**
+
+- The upstream docs “Usage” snippet shape can be expressed in Rust with a part-based API (even if
+  some Tailwind constraints map to explicit `.w_full()` / `.min_w_0()` calls).

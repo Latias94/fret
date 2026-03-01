@@ -38,6 +38,30 @@ This workstream focuses on **part surface parity** and **composition safety**, n
 The set of public parts exported by upstream (e.g. `Dialog`, `DialogTrigger`, `DialogContent`,
 `DialogPortal`, `DialogOverlay`, …) and their expected composition shape.
 
+### Naming conflicts (Combobox)
+
+Some upstream components export a part name that conflicts with an existing Fret public type.
+
+The current high-signal case is `combobox`:
+
+- Upstream (`repo-ref/ui/apps/v4/registry/bases/radix/ui/combobox.tsx`) exports an element part
+  named `ComboboxItem`.
+- Fret's `ecosystem/fret-ui-shadcn` currently uses `ComboboxItem` as the **data model** for options
+  (`value/label/keywords/...`) in a Popover + Command recipe.
+
+This means “true v4 part surface parity” requires a staged rename + adapter plan, not a thin
+wrapper.
+
+**Recommended migration strategy**
+
+1. Introduce non-breaking aliases for the data model (`ComboboxOption`, `ComboboxOptionGroup`) so
+   downstream crates can migrate without churn.
+2. Migrate in-tree call sites (UI Gallery, tests, recipes) to the alias names.
+3. Only then, repurpose the upstream names (`ComboboxItem`, `ComboboxList`, `ComboboxContent`, …)
+   for a v4-aligned part surface and provide an `into_element_parts(...)` compatibility adapter.
+
+This keeps the workstream refactor-friendly while still converging to upstream part boundaries.
+
 ### Provider footgun
 
 A part reads inherited state (e.g. `size=sm`) but can be constructed before it is inserted under
