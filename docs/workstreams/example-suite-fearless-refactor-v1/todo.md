@@ -52,10 +52,11 @@ Goal: create a lightweight, user-facing cookbook that does not pull “everythin
 - [ ] Add 6–10 focused cookbook examples (App Track):
   - [x] overlays basics (`overlay_basics`)
   - [x] commands + keymap (`commands_keymap_basics`)
+  - [x] text input basics (`text_input_basics`)
   - [x] theme switching (`theme_switching_basics`)
-  - [ ] icons/assets budgets
-  - [ ] virtual list
-  - [ ] async inbox + cancellation
+  - [ ] icons + assets budgets (`icons_and_assets_basics`)
+  - [ ] virtual list (`virtual_list_basics`)
+  - [ ] async inbox + cancellation (`async_inbox_basics`)
   - [x] effects layer basics (`effects_layer_basics`)
 
 Gates:
@@ -102,6 +103,17 @@ Renderer Track:
   - [ ] capability checks are explicit
   - [ ] budgets/degradations are documented
   - [ ] at least one diag script exists
+
+Reference apps (app-scale):
+
+- [ ] Confirm the v1 set (2-3) and their intended scope:
+  - [ ] `workbench` (editor-grade shell)
+  - [ ] `viz-studio` (viz + canvas)
+  - [ ] `shader-lab` (renderer/effects)
+- [ ] Decide which reference apps are docs-only in v1 vs implemented in-tree.
+- [ ] For each chosen app:
+  - [ ] define one end-to-end “smoke workflow” suite (scripted)
+  - [ ] define one perf baseline gate (optional, if the app is perf-sensitive by design)
 
 ## M4 — Documentation + discoverability polish
 
