@@ -5,7 +5,7 @@ use std::sync::Arc;
 use fret_core::{Edges, FontId, FontWeight, Point, Px, Rect, Size, TextStyle};
 use fret_icons::{IconId, ids};
 use fret_runtime::{CommandId, Model};
-use fret_ui::action::{OnActivate, OnDismissRequest};
+use fret_ui::action::{OnActivate, OnDismissRequest, PressablePointerDownResult};
 use fret_ui::element::{
     AnyElement, ContainerProps, CrossAlign, FlexProps, InsetStyle, LayoutStyle, Length, MainAlign,
     Overflow, PositionStyle, PressableProps, RingStyle, RovingFlexProps, RovingFocusProps,
@@ -390,6 +390,9 @@ pub struct DropdownMenuItem {
     pub disabled: bool,
     pub close_on_select: bool,
     pub command: Option<CommandId>,
+    pub trailing_command: Option<CommandId>,
+    pub trailing_hit_width: Option<Px>,
+    pub trailing_close_on_select: bool,
     pub on_activate: Option<OnActivate>,
     pub a11y_label: Option<Arc<str>>,
     pub test_id: Option<Arc<str>>,
@@ -412,6 +415,9 @@ impl std::fmt::Debug for DropdownMenuItem {
             .field("disabled", &self.disabled)
             .field("close_on_select", &self.close_on_select)
             .field("command", &self.command)
+            .field("trailing_command", &self.trailing_command)
+            .field("trailing_hit_width", &self.trailing_hit_width)
+            .field("trailing_close_on_select", &self.trailing_close_on_select)
             .field("on_activate", &self.on_activate.is_some())
             .field("a11y_label", &self.a11y_label)
             .field("test_id", &self.test_id)
@@ -437,6 +443,9 @@ impl DropdownMenuItem {
             disabled: false,
             close_on_select: true,
             command: None,
+            trailing_command: None,
+            trailing_hit_width: None,
+            trailing_close_on_select: true,
             on_activate: None,
             a11y_label: None,
             test_id: None,
@@ -508,6 +517,21 @@ impl DropdownMenuItem {
 
     pub fn on_select(mut self, command: impl Into<CommandId>) -> Self {
         self.command = Some(command.into());
+        self
+    }
+
+    pub fn trailing_on_select(mut self, command: impl Into<CommandId>) -> Self {
+        self.trailing_command = Some(command.into());
+        self
+    }
+
+    pub fn trailing_hit_width(mut self, width: Px) -> Self {
+        self.trailing_hit_width = Some(width);
+        self
+    }
+
+    pub fn trailing_close_on_select(mut self, close: bool) -> Self {
+        self.trailing_close_on_select = close;
         self
     }
 
@@ -2703,6 +2727,10 @@ impl DropdownMenu {
                                                         let disabled = item.disabled;
                                                         let close_on_select = item.close_on_select;
                                                         let command = item.command;
+                                                        let trailing_command = item.trailing_command;
+                                                        let trailing_hit_width = item.trailing_hit_width;
+                                                        let trailing_close_on_select =
+                                                            item.trailing_close_on_select;
                                                         let on_activate = item.on_activate.clone();
                                                         let leading = item.leading;
                                                         let leading_icon = item.leading_icon;
@@ -2889,7 +2917,7 @@ impl DropdownMenu {
                                                                     }
                                                                 }
 
-                                                                let mut trailing = trailing;
+                                                                 let mut trailing = trailing;
                                                                 if !has_submenu && trailing.is_none() {
                                                                     trailing = command.as_ref().and_then(|cmd| {
                                                                         command_shortcut_label(
@@ -2910,6 +2938,55 @@ impl DropdownMenu {
                                                                      bottom: pad_y,
                                                                      left: pad_left,
                                                                  });
+
+                                                                if !has_submenu && !disabled {
+                                                                    if let Some(trailing_cmd) =
+                                                                        trailing_command.clone()
+                                                                    {
+                                                                        let open = open.clone();
+                                                                        let close_menu =
+                                                                            trailing_close_on_select;
+                                                                        let hit_width = trailing_hit_width
+                                                                            .unwrap_or(Px(28.0));
+                                                                        let right_pad =
+                                                                            row_padding.right;
+                                                                        cx.pressable_add_on_pointer_down(
+                                                                            Arc::new(
+                                                                                move |host, acx, down| {
+                                                                                    if down.button
+                                                                                        != fret_core::MouseButton::Left
+                                                                                    {
+                                                                                        return PressablePointerDownResult::Continue;
+                                                                                    }
+
+                                                                                    let bounds =
+                                                                                        host.bounds();
+                                                                                    let threshold_x = bounds.size.width.0
+                                                                                        - right_pad.0
+                                                                                        - hit_width.0;
+                                                                                    if down.position_local.x.0
+                                                                                        >= threshold_x
+                                                                                    {
+                                                                                        host.dispatch_command(
+                                                                                            Some(acx.window),
+                                                                                            trailing_cmd.clone(),
+                                                                                        );
+                                                                                        if close_menu {
+                                                                                            let _ = host
+                                                                                                .models_mut()
+                                                                                                .update(&open, |v| {
+                                                                                                    *v = false;
+                                                                                                });
+                                                                                        }
+                                                                                        host.request_redraw(acx.window);
+                                                                                        return PressablePointerDownResult::SkipDefaultAndStopPropagation;
+                                                                                    }
+                                                                                    PressablePointerDownResult::Continue
+                                                                                },
+                                                                            ),
+                                                                        );
+                                                                    }
+                                                                }
 
                                                                  let child = cx.container(
                                                                              ContainerProps {
