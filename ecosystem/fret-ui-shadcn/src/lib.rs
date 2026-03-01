@@ -54,6 +54,7 @@ pub mod date_picker;
 pub mod date_picker_with_presets;
 pub mod date_range_picker;
 pub mod dialog;
+pub mod direction;
 pub mod drawer;
 pub mod dropdown_menu;
 pub mod empty;
@@ -146,7 +147,8 @@ pub use calendar_hijri::CalendarHijri;
 pub use calendar_multiple::CalendarMultiple;
 pub use calendar_range::CalendarRange;
 pub use card::{
-    Card, CardAction, CardContent, CardDescription, CardFooter, CardHeader, CardSize, CardTitle,
+    Card, CardAction, CardContent, CardDescription, CardFooter, CardFooterDirection, CardHeader,
+    CardSize, CardTitle,
 };
 pub use carousel::{
     Carousel, CarouselAlign, CarouselApi, CarouselApiSnapshot, CarouselAutoplayConfig,
@@ -208,9 +210,10 @@ pub use dialog::{
     Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, DialogHeader,
     DialogOverlay, DialogPortal, DialogTitle, DialogTrigger,
 };
+pub use direction::{DirectionProvider, LayoutDirection, use_direction};
 pub use drawer::{
-    Drawer, DrawerClose, DrawerContent, DrawerDescription, DrawerFooter, DrawerHeader, DrawerSide,
-    DrawerOverlay, DrawerPortal, DrawerSnapPoint, DrawerTitle, DrawerTrigger, drawer,
+    Drawer, DrawerClose, DrawerContent, DrawerDescription, DrawerFooter, DrawerHeader,
+    DrawerOverlay, DrawerPortal, DrawerSide, DrawerSnapPoint, DrawerTitle, DrawerTrigger, drawer,
 };
 pub use dropdown_menu::{
     DropdownMenu, DropdownMenuAlign, DropdownMenuCheckboxItem, DropdownMenuContent,
@@ -277,8 +280,8 @@ pub use resizable::{
     ResizableEntry, ResizableHandle, ResizablePanel, ResizablePanelGroup, resizable_panel_group,
 };
 pub use scroll_area::{
-    ScrollArea, ScrollAreaCorner, ScrollAreaRoot, ScrollAreaScrollbar, ScrollBar,
-    ScrollAreaScrollbarOrientation, ScrollAreaViewport, scroll_area,
+    ScrollArea, ScrollAreaCorner, ScrollAreaRoot, ScrollAreaScrollbar,
+    ScrollAreaScrollbarOrientation, ScrollAreaViewport, ScrollBar, scroll_area,
 };
 pub use select::{
     Select, SelectAlign, SelectContent, SelectEntry, SelectGroup, SelectItem, SelectItemIndicator,
@@ -362,6 +365,7 @@ pub mod prelude {
         ChromeRefinement, ColorRef, Corners4, Edges4, LayoutRefinement, MarginEdge, MetricRef,
         Radius, ShadowPreset, SignedMetricRef, Size, Space, UiExt,
     };
+    pub use crate::{DirectionProvider, LayoutDirection, use_direction};
     pub use crate::{
         Select, SelectAlign, SelectContent, SelectEntry, SelectGroup, SelectItem,
         SelectItemIndicator, SelectItemText, SelectLabel, SelectScrollButtons,
