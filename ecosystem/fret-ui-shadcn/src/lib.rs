@@ -174,7 +174,9 @@ pub use combobox::{
     ComboboxGroup, ComboboxInput, ComboboxItem, ComboboxLabel, ComboboxList, ComboboxPart,
     ComboboxSeparator, ComboboxTriggerVariant, combobox, combobox_option, combobox_option_group,
 };
-pub use combobox_chips::ComboboxChips;
+pub use combobox_chips::{
+    ComboboxChip, ComboboxChips, ComboboxChipsInput, ComboboxChipsPart, ComboboxValue,
+};
 pub use combobox_data::{ComboboxOption, ComboboxOptionGroup};
 pub use command::{
     Command, CommandDialog, CommandEmpty, CommandEntry, CommandGroup, CommandInput, CommandItem,

@@ -22,13 +22,107 @@ use fret_ui_kit::{
     Size, Space, WidgetState, WidgetStateProperty, WidgetStates, resolve_override_slot, ui,
 };
 
-use crate::combobox::{ComboboxOpenChangeReason, ComboboxStyle};
+use crate::combobox::{
+    ComboboxContent, ComboboxContentPart, ComboboxGroup as V4ComboboxGroup,
+    ComboboxItem as V4ComboboxItem, ComboboxOpenChangeReason, ComboboxStyle,
+};
 use crate::combobox_data::{ComboboxOption, ComboboxOptionGroup};
 use crate::command::CommandPaletteA11ySelectedMode;
 use crate::{
     CommandEntry, CommandGroup, CommandItem, CommandPalette, CommandSeparator, Popover,
     PopoverContent,
 };
+
+/// Part-based authoring surface aligned with shadcn/ui v4 exports.
+#[derive(Debug)]
+pub enum ComboboxChipsPart {
+    Value(ComboboxValue),
+    ChipsInput(ComboboxChipsInput),
+    Content(ComboboxContent),
+}
+
+impl From<ComboboxValue> for ComboboxChipsPart {
+    fn from(value: ComboboxValue) -> Self {
+        Self::Value(value)
+    }
+}
+
+impl From<ComboboxChipsInput> for ComboboxChipsPart {
+    fn from(value: ComboboxChipsInput) -> Self {
+        Self::ChipsInput(value)
+    }
+}
+
+impl From<ComboboxContent> for ComboboxChipsPart {
+    fn from(value: ComboboxContent) -> Self {
+        Self::Content(value)
+    }
+}
+
+/// shadcn/ui `ComboboxValue` (v4).
+///
+/// This adapter uses `ComboboxValue` as a configuration surface for chip behavior rather than as a
+/// literal nested element (Fret renders chips via the `ComboboxChips` recipe).
+#[derive(Debug, Default)]
+pub struct ComboboxValue {
+    chips: Vec<ComboboxChip>,
+}
+
+impl ComboboxValue {
+    pub fn new(chips: impl IntoIterator<Item = ComboboxChip>) -> Self {
+        Self {
+            chips: chips.into_iter().collect(),
+        }
+    }
+
+    pub fn chip(mut self, chip: ComboboxChip) -> Self {
+        self.chips.push(chip);
+        self
+    }
+
+    pub fn chips(mut self, chips: impl IntoIterator<Item = ComboboxChip>) -> Self {
+        self.chips.extend(chips);
+        self
+    }
+}
+
+/// shadcn/ui `ComboboxChip` (v4).
+#[derive(Debug)]
+pub struct ComboboxChip {
+    value: Arc<str>,
+    show_remove: bool,
+}
+
+impl ComboboxChip {
+    pub fn new(value: impl Into<Arc<str>>) -> Self {
+        Self {
+            value: value.into(),
+            show_remove: true,
+        }
+    }
+
+    pub fn show_remove(mut self, show_remove: bool) -> Self {
+        self.show_remove = show_remove;
+        self
+    }
+}
+
+/// shadcn/ui `ComboboxChipsInput` (v4).
+#[derive(Debug, Default)]
+pub struct ComboboxChipsInput {
+    placeholder: Option<Arc<str>>,
+}
+
+impl ComboboxChipsInput {
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    pub fn placeholder(mut self, placeholder: impl Into<Arc<str>>) -> Self {
+        self.placeholder = Some(placeholder.into());
+        self
+    }
+}
 
 fn alpha_mul(mut c: Color, mul: f32) -> Color {
     c.a = (c.a * mul).clamp(0.0, 1.0);
@@ -69,6 +163,7 @@ pub struct ComboboxChips {
     search_placeholder: Arc<str>,
     empty_text: Arc<str>,
     disabled: bool,
+    chip_show_remove: bool,
     a11y_label: Option<Arc<str>>,
     consume_outside_pointer_events: bool,
     close_on_commit: bool,
@@ -94,6 +189,7 @@ impl ComboboxChips {
             search_placeholder: Arc::from("Search..."),
             empty_text: Arc::from("No results."),
             disabled: false,
+            chip_show_remove: true,
             a11y_label: None,
             consume_outside_pointer_events: false,
             close_on_commit: false,
@@ -170,6 +266,14 @@ impl ComboboxChips {
         self
     }
 
+    /// Controls whether selected value chips render an inline remove button.
+    ///
+    /// Upstream shadcn/ui v4 exposes this via the `ComboboxChip` `showRemove` prop.
+    pub fn chip_show_remove(mut self, show_remove: bool) -> Self {
+        self.chip_show_remove = show_remove;
+        self
+    }
+
     pub fn disabled(mut self, disabled: bool) -> Self {
         self.disabled = disabled;
         self
@@ -218,6 +322,22 @@ impl ComboboxChips {
         self
     }
 
+    /// Render the chips combobox using shadcn/ui v4 part-based composition.
+    ///
+    /// This is a compatibility adapter that maps v4-named parts onto Fret's `ComboboxChips`
+    /// recipe. The adapter focuses on copy/paste parity for docs examples and does not attempt to
+    /// emulate Base UI's DOM-first `ComboboxChipsInput` behavior.
+    #[track_caller]
+    pub fn into_element_parts<H: UiHost>(
+        mut self,
+        cx: &mut ElementContext<'_, H>,
+        parts: impl FnOnce(&mut ElementContext<'_, H>) -> Vec<ComboboxChipsPart>,
+    ) -> AnyElement {
+        apply_parts_patch_to_chips(&mut self, parts(cx));
+
+        self.into_element(cx)
+    }
+
     #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         combobox_chips_with_patch(
@@ -234,6 +354,7 @@ impl ComboboxChips {
             self.search_placeholder,
             self.empty_text,
             self.disabled,
+            self.chip_show_remove,
             self.a11y_label,
             self.consume_outside_pointer_events,
             self.close_on_commit,
@@ -243,6 +364,135 @@ impl ComboboxChips {
             self.layout,
             self.style,
         )
+    }
+}
+
+fn apply_parts_patch_to_chips(chips: &mut ComboboxChips, parts: Vec<ComboboxChipsPart>) {
+    for part in parts {
+        match part {
+            ComboboxChipsPart::Value(value) => {
+                if value
+                    .chips
+                    .iter()
+                    .any(|chip| !chip.show_remove && !chip.value.is_empty())
+                {
+                    chips.chip_show_remove = false;
+                }
+            }
+            ComboboxChipsPart::ChipsInput(input) => {
+                if let Some(placeholder) = input.placeholder {
+                    // In Base UI, chips input is the editable surface used to filter items.
+                    // Fret renders the filter input in the overlay, so we map the placeholder to
+                    // `search_placeholder` for the closest outcome.
+                    chips.search_placeholder = placeholder;
+                }
+            }
+            ComboboxChipsPart::Content(content) => {
+                apply_v4_content_patch_to_chips(chips, content);
+            }
+        }
+    }
+}
+
+fn apply_v4_content_patch_to_chips(chips: &mut ComboboxChips, content: ComboboxContent) {
+    for child in content.children {
+        match child {
+            ComboboxContentPart::Empty(empty) => {
+                chips.empty_text = empty.text;
+            }
+            ComboboxContentPart::Separator(_) => {}
+            ComboboxContentPart::List(list) => {
+                if !list.items.is_empty() {
+                    chips.items = list
+                        .items
+                        .into_iter()
+                        .map(v4_item_to_option)
+                        .collect::<Vec<_>>();
+                }
+
+                if !list.groups.is_empty() {
+                    chips.groups = list
+                        .groups
+                        .into_iter()
+                        .filter_map(v4_group_to_option_group)
+                        .collect::<Vec<_>>();
+                }
+            }
+        }
+    }
+}
+
+fn v4_item_to_option(item: V4ComboboxItem) -> ComboboxOption {
+    let mut option = ComboboxOption::new(item.value.clone(), item.label.clone())
+        .disabled(item.disabled)
+        .keywords(item.keywords);
+    if let Some(detail) = item.detail {
+        option = option.detail(detail);
+    }
+    option
+}
+
+fn v4_group_to_option_group(group: V4ComboboxGroup) -> Option<ComboboxOptionGroup> {
+    let heading = group.label.map(|label| label.text)?;
+    let items = if !group.items.is_empty() {
+        group.items
+    } else {
+        group.collection.map(|c| c.items).unwrap_or_default()
+    };
+    if items.is_empty() {
+        return None;
+    }
+    let items = items.into_iter().map(v4_item_to_option).collect::<Vec<_>>();
+    Some(ComboboxOptionGroup::new(heading, items))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    use fret_app::App;
+
+    #[test]
+    fn combobox_chips_parts_patch_maps_search_placeholder_and_chip_remove() {
+        let mut app = App::new();
+        let values = app.models_mut().insert(Vec::<Arc<str>>::new());
+        let open = app.models_mut().insert(false);
+        let mut chips = ComboboxChips::new(values, open);
+
+        let content = ComboboxContent::new([
+            ComboboxContentPart::empty(crate::combobox::ComboboxEmpty::new("Nothing found."))
+                .into(),
+            ComboboxContentPart::list(
+                crate::combobox::ComboboxList::new()
+                    .items([crate::combobox::ComboboxItem::new("a", "Alpha")])
+                    .groups([crate::combobox::ComboboxGroup::new()
+                        .label(crate::combobox::ComboboxLabel::new("Group 1"))
+                        .items([crate::combobox::ComboboxItem::new("b", "Beta")])]),
+            )
+            .into(),
+        ]);
+
+        apply_parts_patch_to_chips(
+            &mut chips,
+            vec![
+                ComboboxValue::new([ComboboxChip::new("a").show_remove(false)]).into(),
+                ComboboxChipsInput::new()
+                    .placeholder("Add framework")
+                    .into(),
+                content.into(),
+            ],
+        );
+
+        assert_eq!(chips.search_placeholder.as_ref(), "Add framework");
+        assert_eq!(chips.empty_text.as_ref(), "Nothing found.");
+        assert!(!chips.chip_show_remove);
+        assert_eq!(chips.items.len(), 1);
+        assert_eq!(chips.items[0].value.as_ref(), "a");
+        assert_eq!(chips.items[0].label.as_ref(), "Alpha");
+        assert_eq!(chips.groups.len(), 1);
+        assert_eq!(chips.groups[0].heading.as_ref(), "Group 1");
+        assert_eq!(chips.groups[0].items.len(), 1);
+        assert_eq!(chips.groups[0].items[0].value.as_ref(), "b");
     }
 }
 
@@ -261,6 +511,7 @@ fn combobox_chips_with_patch<H: UiHost>(
     search_placeholder: Arc<str>,
     empty_text: Arc<str>,
     disabled: bool,
+    chip_show_remove: bool,
     a11y_label: Option<Arc<str>>,
     consume_outside_pointer_events: bool,
     close_on_commit: bool,
@@ -357,6 +608,7 @@ fn combobox_chips_with_patch<H: UiHost>(
                 let trigger_test_id_for_trigger = trigger_test_id.clone();
                 let placeholder_for_trigger = placeholder.clone();
                 let a11y_label_for_trigger = a11y_label.clone();
+                let chip_show_remove_for_trigger = chip_show_remove;
 
                 let size = Size::default();
                 let (control_radius, control_text_px, button_h, button_px, button_py) = {
@@ -595,6 +847,12 @@ fn combobox_chips_with_patch<H: UiHost>(
 
                                     for value in selected_values_for_trigger.iter().cloned() {
                                         let slug = test_id_slug(value.as_ref());
+                                        let chip_test_id =
+                                            format!("{chip_prefix}-chip-{slug}");
+                                        let chip_remove_test_id =
+                                            format!("{chip_prefix}-chip-{slug}-remove");
+                                        let values_for_trigger_for_chip =
+                                            values_for_trigger.clone();
                                         let label = items_for_trigger
                                             .iter()
                                             .chain(
@@ -605,76 +863,6 @@ fn combobox_chips_with_patch<H: UiHost>(
                                             .find(|it| it.value.as_ref() == value.as_ref())
                                             .map(|it| it.label.clone())
                                             .unwrap_or_else(|| value.clone());
-
-                                        let values_for_remove = values_for_trigger.clone();
-                                        let value_for_remove = value.clone();
-                                        let remove = control_chrome_pressable_with_id_props(
-                                            cx,
-                                            move |cx, _st, _id| {
-                                                cx.pressable_add_on_activate(Arc::new(
-                                                    move |host, action_cx, _reason| {
-                                                        let _ = host.models_mut().update(
-                                                            &values_for_remove,
-                                                            |values| {
-                                                                values.retain(|v| {
-                                                                    v.as_ref()
-                                                                        != value_for_remove.as_ref()
-                                                                });
-                                                            },
-                                                        );
-                                                        host.request_redraw(action_cx.window);
-                                                    },
-                                                ));
-                                                let props = PressableProps {
-                                                    layout: {
-                                                        let mut layout = LayoutStyle::default();
-                                                        layout.size.width = Length::Px(Px(20.0));
-                                                        layout.size.height = Length::Px(Px(20.0));
-                                                        layout
-                                                    },
-                                                    enabled,
-                                                    focusable: true,
-                                                    a11y: PressableA11y {
-                                                        role: Some(SemanticsRole::Button),
-                                                        label: Some(Arc::from("Remove")),
-                                                        ..Default::default()
-                                                    },
-                                                    ..Default::default()
-                                                };
-                                                let chrome_props = ContainerProps {
-                                                    layout: LayoutStyle::default(),
-                                                    background: Some(Color::TRANSPARENT),
-                                                    corner_radii: Corners::all(Px(3.0)),
-                                                    ..Default::default()
-                                                };
-                                                let children =
-                                                    move |cx: &mut ElementContext<'_, H>| {
-                                                        let icon = decl_icon::icon_with(
-                                                            cx,
-                                                            ids::ui::CLOSE,
-                                                            Some(Px(14.0)),
-                                                            Some(ColorRef::Color(alpha_mul(
-                                                                chip_fg, 0.6,
-                                                            ))),
-                                                        );
-                                                        vec![cx.flex(
-                                                            FlexProps {
-                                                                layout: LayoutStyle::default(),
-                                                                direction:
-                                                                    fret_core::Axis::Horizontal,
-                                                                gap: Px(0.0).into(),
-                                                                padding: Edges::all(Px(0.0)).into(),
-                                                                justify: MainAlign::Center,
-                                                                align: CrossAlign::Center,
-                                                                wrap: false,
-                                                            },
-                                                            move |_cx| vec![icon],
-                                                        )]
-                                                    };
-                                                (props, chrome_props, children)
-                                            },
-                                        )
-                                        .test_id(format!("{chip_prefix}-chip-{slug}-remove"));
 
                                         let chip_props = ContainerProps {
                                             layout: LayoutStyle::default(),
@@ -702,7 +890,7 @@ fn combobox_chips_with_patch<H: UiHost>(
                                                         wrap: false,
                                                     },
                                                     move |cx| {
-                                                        vec![
+                                                        let mut out = vec![
                                                             ui::label(cx, label.clone())
                                                                 .text_size_px(Px(12.0))
                                                                 .font_weight(FontWeight::MEDIUM)
@@ -711,12 +899,114 @@ fn combobox_chips_with_patch<H: UiHost>(
                                                                 ))
                                                                 .truncate()
                                                                 .into_element(cx),
-                                                            remove,
-                                                        ]
+                                                        ];
+                                                        if chip_show_remove_for_trigger {
+                                                            let values_for_remove =
+                                                                values_for_trigger_for_chip
+                                                                    .clone();
+                                                            let value_for_remove = value.clone();
+                                                            out.push(
+                                                                control_chrome_pressable_with_id_props(
+                                                                    cx,
+                                                                    move |cx, _st, _id| {
+                                                                        cx.pressable_add_on_activate(
+                                                                            Arc::new(
+                                                                                move |host,
+                                                                                      action_cx,
+                                                                                      _reason| {
+                                                                                    let _ = host
+                                                                                        .models_mut()
+                                                                                        .update(
+                                                                                            &values_for_remove,
+                                                                                            |values| {
+                                                                                                values.retain(
+                                                                                                    |v| {
+                                                                                                        v.as_ref()
+                                                                                                            != value_for_remove.as_ref()
+                                                                                                    },
+                                                                                                );
+                                                                                            },
+                                                                                        );
+                                                                                    host.request_redraw(action_cx.window);
+                                                                                },
+                                                                            ),
+                                                                        );
+
+                                                                        let props = PressableProps {
+                                                                            layout: {
+                                                                                let mut layout =
+                                                                                    LayoutStyle::default();
+                                                                                layout.size.width =
+                                                                                    Length::Px(Px(20.0));
+                                                                                layout.size.height =
+                                                                                    Length::Px(Px(20.0));
+                                                                                layout
+                                                                            },
+                                                                            enabled,
+                                                                            focusable: true,
+                                                                            a11y: PressableA11y {
+                                                                                role: Some(
+                                                                                    SemanticsRole::Button,
+                                                                                ),
+                                                                                label: Some(
+                                                                                    Arc::from("Remove"),
+                                                                                ),
+                                                                                ..Default::default()
+                                                                            },
+                                                                            ..Default::default()
+                                                                        };
+                                                                        let chrome_props =
+                                                                            ContainerProps {
+                                                                                layout:
+                                                                                    LayoutStyle::default(),
+                                                                                background: Some(
+                                                                                    Color::TRANSPARENT,
+                                                                                ),
+                                                                                corner_radii:
+                                                                                    Corners::all(Px(3.0)),
+                                                                                ..Default::default()
+                                                                            };
+                                                                        let children =
+                                                                            move |cx: &mut ElementContext<
+                                                                                '_,
+                                                                                H,
+                                                                            >| {
+                                                                                let icon =
+                                                                                    decl_icon::icon_with(
+                                                                                        cx,
+                                                                                        ids::ui::CLOSE,
+                                                                                        Some(Px(14.0)),
+                                                                                        Some(ColorRef::Color(alpha_mul(
+                                                                                            chip_fg,
+                                                                                            0.6,
+                                                                                        ))),
+                                                                                    );
+                                                                                vec![cx.flex(
+                                                                                    FlexProps {
+                                                                                        layout: LayoutStyle::default(),
+                                                                                        direction:
+                                                                                            fret_core::Axis::Horizontal,
+                                                                                        gap: Px(0.0).into(),
+                                                                                        padding: Edges::all(Px(0.0))
+                                                                                            .into(),
+                                                                                        justify: MainAlign::Center,
+                                                                                        align: CrossAlign::Center,
+                                                                                        wrap: false,
+                                                                                    },
+                                                                                    move |_cx| vec![icon],
+                                                                                )]
+                                                                            };
+                                                                        (props, chrome_props, children)
+                                                                    },
+                                                                )
+                                                                .test_id(chip_remove_test_id.clone()),
+                                                            );
+                                                        }
+                                                        out
                                                     },
                                                 )]
                                             })
-                                            .test_id(format!("{chip_prefix}-chip-{slug}")),
+                                            .test_id(chip_test_id),
                                         );
                                     }
 

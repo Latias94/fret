@@ -198,11 +198,11 @@ impl ComboboxInput {
 /// shadcn/ui `ComboboxContent` (v4) (Base UI `Popup` + `Positioner`).
 #[derive(Debug)]
 pub struct ComboboxContent {
-    side: Option<popper::Side>,
-    align: Option<popper::Align>,
-    side_offset: Option<Px>,
-    align_offset: Option<Px>,
-    children: Vec<ComboboxContentPart>,
+    pub(crate) side: Option<popper::Side>,
+    pub(crate) align: Option<popper::Align>,
+    pub(crate) side_offset: Option<Px>,
+    pub(crate) align_offset: Option<Px>,
+    pub(crate) children: Vec<ComboboxContentPart>,
 }
 
 impl ComboboxContent {
@@ -280,7 +280,7 @@ impl From<ComboboxSeparator> for ComboboxContentPart {
 /// shadcn/ui `ComboboxEmpty` (v4).
 #[derive(Debug)]
 pub struct ComboboxEmpty {
-    text: Arc<str>,
+    pub(crate) text: Arc<str>,
 }
 
 impl ComboboxEmpty {
@@ -305,9 +305,9 @@ impl ComboboxSeparator {
 /// explicit list of items/groups, or leave it empty and continue using `Combobox::options(...)`.
 #[derive(Debug, Default)]
 pub struct ComboboxList {
-    items: Vec<ComboboxItem>,
-    groups: Vec<ComboboxGroup>,
-    group_separators: bool,
+    pub(crate) items: Vec<ComboboxItem>,
+    pub(crate) groups: Vec<ComboboxGroup>,
+    pub(crate) group_separators: bool,
 }
 
 impl ComboboxList {
@@ -334,11 +334,11 @@ impl ComboboxList {
 /// shadcn/ui `ComboboxItem` (v4).
 #[derive(Debug)]
 pub struct ComboboxItem {
-    value: Arc<str>,
-    label: Arc<str>,
-    detail: Option<Arc<str>>,
-    disabled: bool,
-    keywords: Vec<Arc<str>>,
+    pub(crate) value: Arc<str>,
+    pub(crate) label: Arc<str>,
+    pub(crate) detail: Option<Arc<str>>,
+    pub(crate) disabled: bool,
+    pub(crate) keywords: Vec<Arc<str>>,
 }
 
 impl ComboboxItem {
@@ -375,7 +375,7 @@ impl ComboboxItem {
 /// shadcn/ui `ComboboxLabel` (v4).
 #[derive(Debug)]
 pub struct ComboboxLabel {
-    text: Arc<str>,
+    pub(crate) text: Arc<str>,
 }
 
 impl ComboboxLabel {
@@ -387,7 +387,7 @@ impl ComboboxLabel {
 /// shadcn/ui `ComboboxCollection` (v4).
 #[derive(Debug, Default)]
 pub struct ComboboxCollection {
-    items: Vec<ComboboxItem>,
+    pub(crate) items: Vec<ComboboxItem>,
 }
 
 impl ComboboxCollection {
@@ -401,10 +401,10 @@ impl ComboboxCollection {
 /// shadcn/ui `ComboboxGroup` (v4).
 #[derive(Debug, Default)]
 pub struct ComboboxGroup {
-    label: Option<ComboboxLabel>,
-    collection: Option<ComboboxCollection>,
-    items: Vec<ComboboxItem>,
-    separator: bool,
+    pub(crate) label: Option<ComboboxLabel>,
+    pub(crate) collection: Option<ComboboxCollection>,
+    pub(crate) items: Vec<ComboboxItem>,
+    pub(crate) separator: bool,
 }
 
 impl ComboboxGroup {
