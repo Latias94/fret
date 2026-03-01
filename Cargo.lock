@@ -1889,7 +1889,9 @@ dependencies = [
  "fret",
  "fret-app",
  "fret-core",
+ "fret-icons-radix",
  "fret-ui",
+ "fret-ui-assets",
 ]
 
 [[package]]

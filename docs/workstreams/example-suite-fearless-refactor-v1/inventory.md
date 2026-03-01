@@ -47,6 +47,7 @@ examples and should be treated as product surfaces.
 | cookbook.commands_keymap_basics | Keep | `apps/fret-cookbook/examples/commands_keymap_basics.rs` | `cargo run -p fret-cookbook --example commands_keymap_basics` | Command registration + default keybinding + availability gating. |
 | cookbook.text_input_basics | Keep | `apps/fret-cookbook/examples/text_input_basics.rs` | `cargo run -p fret-cookbook --example text_input_basics` | Input submit/clear via commands (Enter/Escape) + numeric semantics gates. |
 | cookbook.effects_layer_basics | Keep | `apps/fret-cookbook/examples/effects_layer_basics.rs` | `cargo run -p fret-cookbook --example effects_layer_basics` | Minimal effect layer example (Pixelate/Blur) with stable `test_id` stamps. |
+| cookbook.icons_and_assets_basics | Keep | `apps/fret-cookbook/examples/icons_and_assets_basics.rs` | `cargo run -p fret-cookbook --example icons_and_assets_basics` | Icon packs (lucide/radix) + semantic `ui.*` ids + file-based SVG/images via `fret-ui-assets`. |
 | cookbook.theme_switching_basics | Keep | `apps/fret-cookbook/examples/theme_switching_basics.rs` | `cargo run -p fret-cookbook --example theme_switching_basics` | Minimal theme switching (shadcn New York v4 Light/Dark) with stable `test_id` stamps. |
 
 ## Cookbook crate (planned v1 additions)
@@ -55,7 +56,6 @@ These are the next "small but high-signal" recipes to add, in easy -> hard order
 
 | ID | State | Target anchors | Notes |
 |---|---|---|---|
-| cookbook.icons_and_assets_basics | Planned | `apps/fret-cookbook/examples/icons_and_assets_basics.rs` | Icon sources (lucide/radix) + SVG/image loading + `current_color` + budgets. |
 | cookbook.virtual_list_basics | Planned | `apps/fret-cookbook/examples/virtual_list_basics.rs` | Virtual list primitives + stable identity + scroll-to-item + perf guardrails. |
 | cookbook.async_inbox_basics | Planned | `apps/fret-cookbook/examples/async_inbox_basics.rs` | Async effects + cancellation + progress UI without leaking backend deps. |
 | cookbook.markdown_and_code_basics | Planned | `apps/fret-cookbook/examples/markdown_and_code_basics.rs` | Markdown rendering + code-view/syntax + copy affordances + `test_id`/gates. |
