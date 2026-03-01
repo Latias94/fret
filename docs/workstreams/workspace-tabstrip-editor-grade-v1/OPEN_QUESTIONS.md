@@ -42,3 +42,19 @@ Recommendation:
 - Treat this as a **mechanism** concern. Long-term, move “drag session position tracking” into the
   DnD/runtime layer (so non-tab surfaces don’t depend on tab-strip-local pointer capture).
 - Until then, keep the current workaround and gate it via scripts.
+
+## Q4: What is the contract between “roving focus” and “tab cycling”?
+
+Why it matters:
+- Users expect arrow keys in the tab strip to move focus *visually* (in-order).
+- Editors often bind `workspace.tab.next/prev` to cycle MRU (or at least not be strictly in-order).
+
+Recommendation (default for v1):
+- **ArrowLeft/ArrowRight** in the focused tab strip: in-order roving focus + **automatic activation**
+  (APG Tabs-style).
+- `workspace.tab.next/prev` commands: keep delegating to `WorkspaceTabs` `cycle_mode` (default MRU),
+  and document this as a workspace policy surface (not a `fret-ui` runtime behavior).
+
+Gate:
+- Unit: `ecosystem/fret-workspace/tests/tab_strip_keyboard_roving_arrow_activates_tab.rs`
+  (focus moves + `workspace.tab.activate.<id>` is dispatched).

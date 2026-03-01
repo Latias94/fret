@@ -30,4 +30,5 @@ This TODO list is scoped to this workstream folder and is intended to keep the r
 - [ ] Overflow menu: deterministic scroll-into-view under repeated resize/scroll (stress).
 - [ ] Close policies: close button vs middle click vs keyboard (policy-layer ownership documented).
 - [x] Focus restore after close when the tab strip is focused (unit test gate).
-- [ ] Keyboard nav: decide roving focus + MRU vs in-order cycling contract surface.
+- [x] Keyboard nav: baseline roving ArrowLeft/ArrowRight auto-activates (unit test gate).
+- [ ] Keyboard nav: decide MRU vs in-order for `workspace.tab.next/prev` and lock with gates.

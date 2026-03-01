@@ -11,6 +11,7 @@ Goal: keep the tab strip refactor **fearless** by locking outcomes behind unit t
 - `ecosystem/fret-workspace/src/tab_strip/utils.rs` (canonical end-drop resolution)
 - `ecosystem/fret-workspace/tests/tab_strip_pointer_down_does_not_steal_focus.rs` (focus stability)
 - `ecosystem/fret-workspace/tests/tab_strip_focus_restore_after_close_command.rs` (close focus restore)
+- `ecosystem/fret-workspace/tests/tab_strip_keyboard_roving_arrow_activates_tab.rs` (roving keyboard activation)
 
 ## M1 gates (must exist before/while refactoring)
 
