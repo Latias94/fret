@@ -280,10 +280,11 @@ impl fret_core::PathService for Renderer {
         }
 
         let metrics = metrics_from_path_commands(commands, style);
-        let triangles = tessellate_path_commands(commands, style, constraints);
+        let (triangles, stroke_s01_mode) = tessellate_path_commands(commands, style, constraints);
         let id = self.paths.insert(PreparedPath {
             metrics,
             triangles,
+            stroke_s01_mode,
             cache_key: key,
         });
         self.path_cache.insert(

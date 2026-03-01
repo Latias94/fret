@@ -26,10 +26,10 @@ date: 2026-02-28
 
 ## M3 — WGPU: stroke-space evaluation (StrokeS01)
 
-- [ ] `SceneOp::StrokeRRect` supports `StrokeS01` via perimeter `s01`.
-- [ ] Path stroke supports `StrokeS01` via per-vertex arclength attributes.
+- [x] `SceneOp::StrokeRRect` / quad borders support `StrokeS01` via perimeter `s01`.
+- [x] Path stroke supports `StrokeS01` via per-vertex arclength (`lyon` advancement) normalized to `s01`.
 - [ ] Define and implement dash × StrokeS01 semantics (no gradient reset per dash).
-- [ ] Add conformance tests for StrokeS01 correctness and stability across scale factors.
+- [x] Add conformance tests for StrokeS01 correctness and stability across scale factors.
 
 ## M4 — Ecosystem adoption gates
 

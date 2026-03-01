@@ -22,11 +22,12 @@ date: 2026-02-28
 ## Renderer (wgpu)
 
 - [x] Quad shader: introduce a single `paint_pos` selection based on eval space.
-- [ ] StrokeRRect: compute `s01` and bind `paint_pos = vec2(s01, 0)`.
+- [x] StrokeRRect / quad border: compute `s01` and bind `paint_pos = vec2(s01, 0)`.
 - [ ] Path pipeline:
-  - [ ] extend `PathVertex` with an `s01` attribute for stroke-prepared paths,
-  - [ ] normalize `s01` consistently across scale factors,
-  - [ ] preserve dash × StrokeS01 semantics (avoid per-dash gradient reset).
+  - [x] derive per-vertex arclength from lyon `StrokeVertex::advancement()` and normalize to `s01`,
+  - [x] bind `local_pos_px = vec2(s01, 0)` when `eval_space == StrokeS01` (no vertex layout change),
+  - [ ] preserve dash × StrokeS01 semantics (avoid per-dash gradient reset; current behavior
+    deterministically degrades StrokeS01 to LocalPx when dash is applied).
 - [ ] Text pipeline: decide whether StrokeS01 is invalid (likely) and ensure Local/Viewport are
   supported.
 
@@ -35,5 +36,5 @@ date: 2026-02-28
 - [ ] Add cache/fingerprint conformance tests for eval space changes.
 - [ ] Add rendering conformance tests for:
   - [x] `ViewportPx` vs `LocalPx` (should differ under transforms/panning),
-  - [ ] `StrokeS01` gradient directionality (monotonic along stroke).
+  - [x] `StrokeS01` gradient directionality (monotonic along stroke).
 - [ ] Add a small diag script (optional) to toggle eval spaces and record bundles.

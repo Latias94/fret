@@ -22,10 +22,26 @@ pub(super) struct CachedPathEntry {
     pub(super) last_used_epoch: u64,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(super) enum StrokeS01ModeV1 {
+    None,
+    /// Stroke-space arclength (`s01`) is continuous across the entire stroke.
+    Continuous,
+    /// Stroke-space `s01` was derived from a dashed path decomposition and may reset per dash.
+    ResetByDash,
+}
+
+#[derive(Debug, Clone, Copy)]
+pub(super) struct PathTriangleVertex {
+    pub(super) pos: [f32; 2],
+    pub(super) stroke_s01: f32,
+}
+
 #[derive(Debug)]
 pub(super) struct PreparedPath {
     pub(super) metrics: fret_core::PathMetrics,
-    pub(super) triangles: Vec<[f32; 2]>,
+    pub(super) triangles: Vec<PathTriangleVertex>,
+    pub(super) stroke_s01_mode: StrokeS01ModeV1,
     pub(super) cache_key: PathCacheKey,
 }
 
@@ -465,13 +481,19 @@ fn build_dashed_lyon_path(
     Some(builder.build())
 }
 
+#[derive(Clone, Copy)]
+struct PathTessVertex {
+    pos: [f32; 2],
+    advancement: f32,
+}
+
 pub(super) fn tessellate_path_commands(
     commands: &[fret_core::PathCommand],
     style: fret_core::PathStyle,
     constraints: fret_core::PathConstraints,
-) -> Vec<[f32; 2]> {
+) -> (Vec<PathTriangleVertex>, StrokeS01ModeV1) {
     if commands.is_empty() {
-        return Vec::new();
+        return (Vec::new(), StrokeS01ModeV1::None);
     }
 
     let path = build_lyon_path(commands);
@@ -479,7 +501,8 @@ pub(super) fn tessellate_path_commands(
     let scale = constraints.scale_factor.max(1.0);
     let tolerance = (0.25 / scale).clamp(0.01, 1.0);
 
-    let mut buffers: VertexBuffers<[f32; 2], u32> = VertexBuffers::new();
+    let mut buffers: VertexBuffers<PathTessVertex, u32> = VertexBuffers::new();
+    let mut stroke_s01_mode = StrokeS01ModeV1::None;
     match style {
         fret_core::PathStyle::Fill(fill) => {
             let fill_rule = match fill.rule {
@@ -495,11 +518,15 @@ pub(super) fn tessellate_path_commands(
                 &opts,
                 &mut BuffersBuilder::new(&mut buffers, |v: FillVertex| {
                     let p = v.position();
-                    [p.x, p.y]
+                    PathTessVertex {
+                        pos: [p.x, p.y],
+                        advancement: 0.0,
+                    }
                 }),
             );
         }
         fret_core::PathStyle::Stroke(stroke) => {
+            stroke_s01_mode = StrokeS01ModeV1::Continuous;
             let width = stroke.width.0.max(0.0);
             let opts = StrokeOptions::default()
                 .with_line_width(width)
@@ -513,11 +540,15 @@ pub(super) fn tessellate_path_commands(
                 &opts,
                 &mut BuffersBuilder::new(&mut buffers, |v: StrokeVertex| {
                     let p = v.position();
-                    [p.x, p.y]
+                    PathTessVertex {
+                        pos: [p.x, p.y],
+                        advancement: v.advancement(),
+                    }
                 }),
             );
         }
         fret_core::PathStyle::StrokeV2(stroke) => {
+            stroke_s01_mode = StrokeS01ModeV1::Continuous;
             let width = stroke.width.0.max(0.0);
 
             let join = match stroke.join {
@@ -541,6 +572,9 @@ pub(super) fn tessellate_path_commands(
                 .dash
                 .and_then(|pattern| build_dashed_lyon_path(&path, pattern, tolerance));
             let path = dashed_path.as_ref().unwrap_or(&path);
+            if stroke.dash.is_some() && dashed_path.is_some() {
+                stroke_s01_mode = StrokeS01ModeV1::ResetByDash;
+            }
 
             let opts = StrokeOptions::default()
                 .with_line_width(width)
@@ -555,17 +589,33 @@ pub(super) fn tessellate_path_commands(
                 &opts,
                 &mut BuffersBuilder::new(&mut buffers, |v: StrokeVertex| {
                     let p = v.position();
-                    [p.x, p.y]
+                    PathTessVertex {
+                        pos: [p.x, p.y],
+                        advancement: v.advancement(),
+                    }
                 }),
             );
         }
     }
 
+    let max_adv = buffers
+        .vertices
+        .iter()
+        .fold(0.0_f32, |acc, v| acc.max(v.advancement));
+    let inv_max_adv = if max_adv.is_finite() && max_adv > 1e-6 {
+        1.0 / max_adv
+    } else {
+        0.0
+    };
+
     let mut out = Vec::with_capacity(buffers.indices.len());
     for idx in buffers.indices {
         if let Some(v) = buffers.vertices.get(idx as usize) {
-            out.push(*v);
+            out.push(PathTriangleVertex {
+                pos: v.pos,
+                stroke_s01: (v.advancement * inv_max_adv).clamp(0.0, 1.0),
+            });
         }
     }
-    out
+    (out, stroke_s01_mode)
 }

@@ -82,8 +82,13 @@ Minimum gates before ecosystem adoption:
 ## Current status (2026-03-01)
 
 - Core contract is implemented and the workspace has been migrated to `PaintBindingV1`.
-- WGPU backend currently plumbs `eval_space` through GPU storage, but does not yet switch paint
-  evaluation based on `PaintEvalSpaceV1` (M2/M3 work).
+- WGPU backend implements:
+  - `ViewportPx` evaluation for quad/path/text paints.
+  - `StrokeS01` evaluation for:
+    - quad borders / `SceneOp::StrokeRRect` (perimeter `s01`),
+    - path strokes (lyon `advancement` normalized to `s01`).
+- Known gap: `dash × StrokeS01` continuity for dashed `PathStyle::StrokeV2` currently degrades
+  StrokeS01 to `LocalPx` (tracked in M3).
 
 Evidence anchors:
 
@@ -95,3 +100,4 @@ Evidence anchors:
 - WGPU shader struct: `crates/fret-render-wgpu/src/renderer/shaders.rs`
 - Baseline gradient stroke conformance: `crates/fret-render-wgpu/tests/stroke_paint_conformance.rs`
 - ViewportPx vs LocalPx conformance: `crates/fret-render-wgpu/tests/paint_eval_space_viewport_conformance.rs`
+- StrokeS01 conformance: `crates/fret-render-wgpu/tests/paint_eval_space_stroke_s01_conformance.rs`

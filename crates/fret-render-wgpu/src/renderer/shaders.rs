@@ -378,6 +378,26 @@ fn rrect_perimeter_s(p: vec2<f32>, rect: vec4<f32>, corner_radii: vec4<f32>) -> 
   return best_s;
 }
 
+fn rrect_perimeter_len(rect: vec4<f32>, corner_radii: vec4<f32>) -> f32 {
+  let half_pi = 1.5707963267948966;
+
+  let w = rect.z;
+  let h = rect.w;
+
+  let r_tl = max(corner_radii.x, 0.0);
+  let r_tr = max(corner_radii.y, 0.0);
+  let r_br = max(corner_radii.z, 0.0);
+  let r_bl = max(corner_radii.w, 0.0);
+
+  let l_top = max(0.0, w - r_tl - r_tr);
+  let l_right = max(0.0, h - r_tr - r_br);
+  let l_bottom = max(0.0, w - r_bl - r_br);
+  let l_left = max(0.0, h - r_tl - r_bl);
+
+  let l_corners = half_pi * (r_tl + r_tr + r_br + r_bl);
+  return l_top + l_right + l_bottom + l_left + l_corners;
+}
+
 fn clip_alpha(pixel_pos: vec2<f32>) -> f32 {
   var alpha = 1.0;
   var idx = viewport.clip_head;
@@ -927,7 +947,14 @@ fn fs_main(input: VsOut) -> @location(0) vec4<f32> {
       let on_end = 1.0 - smoothstep(dash - aa, dash + aa, m);
       dash_mask = on_start * on_end;
     }
-    border = paint_eval_border(inst.border_paint, input.local_pos, input.pixel_pos) * border_cov * dash_mask;
+    var border_local_pos = input.local_pos;
+    if (inst.border_paint.eval_space == 2u) {
+      let s = rrect_perimeter_s(input.local_pos, input.rect, input.corner_radii);
+      let len = rrect_perimeter_len(input.rect, input.corner_radii);
+      let s01 = select(0.0, clamp(s / len, 0.0, 1.0), len > 1e-6);
+      border_local_pos = vec2<f32>(s01, 0.0);
+    }
+    border = paint_eval_border(inst.border_paint, border_local_pos, input.pixel_pos) * border_cov * dash_mask;
   }
 
   let out = (fill + border) * clip * mask;
