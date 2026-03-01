@@ -372,30 +372,6 @@ pub(crate) fn triage_json_from_stats(
         //
         // These are correctness/ceiling signals: for liquid-glass-like looks, losing `src_raw` or
         // degrading the pyramid to 1 level can materially change the appearance.
-        let sum_v3_raw_aliased = stats_json
-            .get("sum")
-            .and_then(|v| v.get("renderer_custom_effect_v3_sources_raw_aliased_to_src"))
-            .and_then(|v| v.as_u64())
-            .unwrap_or(0);
-        let sum_v3_pyr_degraded = stats_json
-            .get("sum")
-            .and_then(|v| {
-                v.get("renderer_custom_effect_v3_sources_pyramid_degraded_to_one_budget_zero")
-            })
-            .and_then(|v| v.as_u64())
-            .unwrap_or(0)
-            .saturating_add(
-                stats_json
-                    .get("sum")
-                    .and_then(|v| {
-                        v.get(
-                            "renderer_custom_effect_v3_sources_pyramid_degraded_to_one_budget_insufficient",
-                        )
-                    })
-                    .and_then(|v| v.as_u64())
-                    .unwrap_or(0),
-            );
-
         let worst_v3_pyr_degraded = worst
             .renderer_custom_effect_v3_sources_pyramid_degraded_to_one_budget_zero
             .saturating_add(
@@ -413,7 +389,6 @@ pub(crate) fn triage_json_from_stats(
                     "custom_effect_v3_sources_pyramid_degraded_to_one_budget_insufficient": worst.renderer_custom_effect_v3_sources_pyramid_degraded_to_one_budget_insufficient,
                     "renderer_intermediate_budget_bytes": worst.renderer_intermediate_budget_bytes,
                     "renderer_intermediate_peak_in_use_bytes": worst.renderer_intermediate_peak_in_use_bytes,
-                    "sum_custom_effect_v3_sources_pyramid_degraded_to_one": sum_v3_pyr_degraded,
                 }
             }));
         }
@@ -429,35 +404,11 @@ pub(crate) fn triage_json_from_stats(
                     "custom_effect_v3_sources_raw_requested": worst.renderer_custom_effect_v3_sources_raw_requested,
                     "custom_effect_v3_sources_raw_distinct": worst.renderer_custom_effect_v3_sources_raw_distinct,
                     "custom_effect_v3_sources_raw_aliased_to_src": worst.renderer_custom_effect_v3_sources_raw_aliased_to_src,
-                    "sum_custom_effect_v3_sources_raw_aliased_to_src": sum_v3_raw_aliased,
                 }
             }));
         }
 
         // renderer.backdrop_source_group_degraded
-        let sum_bsg_raw_degraded = stats_json
-            .get("sum")
-            .and_then(|v| v.get("renderer_backdrop_source_groups_raw_degraded_budget_zero"))
-            .and_then(|v| v.as_u64())
-            .unwrap_or(0)
-            .saturating_add(
-                stats_json
-                    .get("sum")
-                    .and_then(|v| {
-                        v.get("renderer_backdrop_source_groups_raw_degraded_budget_insufficient")
-                    })
-                    .and_then(|v| v.as_u64())
-                    .unwrap_or(0),
-            )
-            .saturating_add(
-                stats_json
-                    .get("sum")
-                    .and_then(|v| {
-                        v.get("renderer_backdrop_source_groups_raw_degraded_target_exhausted")
-                    })
-                    .and_then(|v| v.as_u64())
-                    .unwrap_or(0),
-            );
         let worst_bsg_raw_degraded = worst
             .renderer_backdrop_source_groups_raw_degraded_budget_zero
             .saturating_add(worst.renderer_backdrop_source_groups_raw_degraded_budget_insufficient)
@@ -473,7 +424,6 @@ pub(crate) fn triage_json_from_stats(
                     "backdrop_source_groups_raw_degraded_budget_zero": worst.renderer_backdrop_source_groups_raw_degraded_budget_zero,
                     "backdrop_source_groups_raw_degraded_budget_insufficient": worst.renderer_backdrop_source_groups_raw_degraded_budget_insufficient,
                     "backdrop_source_groups_raw_degraded_target_exhausted": worst.renderer_backdrop_source_groups_raw_degraded_target_exhausted,
-                    "sum_backdrop_source_group_raw_degraded": sum_bsg_raw_degraded,
                 }
             }));
         }
