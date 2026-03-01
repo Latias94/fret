@@ -1,0 +1,53 @@
+// region: example
+use fret_ui::element::SemanticsDecoration;
+use fret_ui_shadcn::{self as shadcn, prelude::*};
+
+pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
+    let rtl_area = fret_ui_kit::primitives::direction::with_direction_provider(
+        cx,
+        fret_ui_kit::primitives::direction::LayoutDirection::Rtl,
+        |cx| {
+            let content = stack::vstack(
+                cx,
+                stack::VStackProps::default()
+                    .gap(Space::N2)
+                    .layout(LayoutRefinement::default().w_full()),
+                |cx| {
+                    let mut rows: Vec<AnyElement> = vec![shadcn::typography::small(cx, "العلامات")];
+                    for idx in 1..=40 {
+                        rows.push(cx.text(format!("v1.2.0-beta.{:02}", 41 - idx)));
+                        rows.push(
+                            shadcn::Separator::new()
+                                .refine_layout(LayoutRefinement::default().w_full())
+                                .into_element(cx),
+                        );
+                    }
+                    rows
+                },
+            );
+
+            shadcn::ScrollArea::new([content])
+                .axis(fret_ui::element::ScrollAxis::Y)
+                .viewport_test_id("ui-gallery-scroll-area-rtl-viewport")
+                .refine_layout(LayoutRefinement::default().w_full().h_full())
+                .into_element(cx)
+        },
+    )
+    .attach_semantics(
+        SemanticsDecoration::default()
+            .role(fret_core::SemanticsRole::Group)
+            .test_id("ui-gallery-scroll-area-rtl"),
+    );
+
+    let props = decl_style::container_props(
+        cx.theme(),
+        ChromeRefinement::default().border_1().rounded(Radius::Md),
+        LayoutRefinement::default()
+            .w_px(Px(192.0))
+            .h_px(Px(288.0))
+            .overflow_hidden(),
+    );
+
+    cx.container(props, move |_cx| [rtl_area])
+}
+// endregion: example

@@ -22,6 +22,7 @@ pub mod kbd;
 pub mod label;
 pub mod menubar;
 pub mod popover;
+pub mod scroll_area;
 pub mod select;
 pub mod sheet;
 pub mod skeleton;
