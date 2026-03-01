@@ -24,7 +24,7 @@ use fret_ui_kit::{ChromeRefinement, LayoutRefinement, LengthRefinement, MetricRe
 
 use crate::{Button, ButtonSize, ButtonVariant};
 
-#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, Default, PartialEq)]
 pub struct CarouselApiSnapshot {
     /// Zero-based selected slide index.
     pub selected_index: usize,
@@ -37,6 +37,38 @@ pub struct CarouselApiSnapshot {
     /// Note: this coalesces both the v1 recipe settle driver (`settling`) and the Embla-engine
     /// driver (`embla_settling`) into a single observable flag.
     pub settling: bool,
+    /// True while the v1 deterministic settle driver is active.
+    ///
+    /// This is intended for docs/diagnostics only.
+    pub recipe_settling: bool,
+    /// True while the Embla engine settle driver is active.
+    ///
+    /// This is intended for docs/diagnostics only.
+    pub embla_settling: bool,
+    /// True when the current offset is within an epsilon of the selected snap.
+    ///
+    /// This is intended for docs/diagnostics (e.g. asserting relative settle speed) and should not
+    /// be treated as a hard contract for application logic.
+    pub at_selected_snap: bool,
+    /// Current rendered offset in the main axis (px, positive).
+    ///
+    /// This is intended for docs/diagnostics only.
+    pub offset_px: f32,
+    /// Current selected snap offset in the main axis (px, positive).
+    ///
+    /// This is intended for docs/diagnostics only.
+    pub selected_snap_px: f32,
+    /// True when the Embla-style headless engine is enabled via options.
+    ///
+    /// Note: this does not account for environment reduced-motion suppression; use `settling` and
+    /// `embla_engine_present` to determine whether the engine is actually driving motion.
+    pub embla_engine_enabled: bool,
+    /// Embla-style `duration` option (integrator parameter, default `25`).
+    pub embla_duration: f32,
+    /// True when the recipe currently holds an Embla engine instance.
+    pub embla_engine_present: bool,
+    /// Current effective scroll duration in the Embla engine (when present).
+    pub embla_scroll_duration: f32,
     /// Monotonically increasing counter that increments when the selected index changes.
     ///
     /// This is an MVP event surface intended to support shadcn-style `api.on("select", ...)`
@@ -53,6 +85,7 @@ pub struct CarouselApiSnapshot {
 #[derive(Debug, Clone)]
 pub struct CarouselApi {
     index: Model<usize>,
+    offset: Model<Px>,
     runtime: Model<CarouselRuntime>,
     extent: Model<Px>,
     options: Model<CarouselOptions>,
@@ -94,6 +127,10 @@ impl CarouselApi {
 
     pub fn snapshot(&self, host: &mut impl ModelHost) -> CarouselApiSnapshot {
         let selected_index = host.read(&self.index, |_host, v| *v).ok().unwrap_or(0);
+        let offset = host
+            .read(&self.offset, |_host, v| *v)
+            .ok()
+            .unwrap_or(Px(0.0));
         let view_size = host.read(&self.extent, |_host, v| v.0).ok().unwrap_or(0.0);
         let snap_count_raw = host.read(&self.snaps, |_host, v| v.len()).ok().unwrap_or(0);
         let extent_ready = view_size > 0.0 && snap_count_raw > 0;
@@ -101,6 +138,14 @@ impl CarouselApi {
             .read(&self.options, |_host, v| v.loop_enabled)
             .ok()
             .unwrap_or(false);
+        let embla_engine_enabled = host
+            .read(&self.options, |_host, v| v.embla_engine)
+            .ok()
+            .unwrap_or(false);
+        let embla_duration = host
+            .read(&self.options, |_host, v| v.embla_duration)
+            .ok()
+            .unwrap_or(0.0);
 
         let runtime = host
             .read(&self.runtime, |_host, v| *v)
@@ -113,6 +158,17 @@ impl CarouselApi {
         let can_scroll_next = extent_ready
             && snap_count_raw > 1
             && (loop_enabled || selected_index + 1 < snap_count_raw);
+        let selected_snap = host
+            .read(&self.snaps, |_host, v| v.get(selected_index).copied())
+            .ok()
+            .flatten();
+        let at_selected_snap =
+            extent_ready && selected_snap.is_some_and(|snap| (snap.0 - offset.0).abs() <= 0.5);
+        let selected_snap_px = if extent_ready {
+            selected_snap.unwrap_or(Px(0.0)).0
+        } else {
+            0.0
+        };
 
         CarouselApiSnapshot {
             selected_index,
@@ -120,6 +176,15 @@ impl CarouselApi {
             can_scroll_prev,
             can_scroll_next,
             settling: runtime.settling || runtime.embla_settling,
+            recipe_settling: runtime.settling,
+            embla_settling: runtime.embla_settling,
+            at_selected_snap,
+            offset_px: offset.0,
+            selected_snap_px,
+            embla_engine_enabled,
+            embla_duration,
+            embla_engine_present: false,
+            embla_scroll_duration: 0.0,
             select_generation: runtime.api_select_generation,
             reinit_generation: runtime.api_reinit_generation,
         }
@@ -997,6 +1062,7 @@ impl Carousel {
             {
                 let api = CarouselApi {
                     index: index_model.clone(),
+                    offset: offset_model.clone(),
                     runtime: runtime_model.clone(),
                     extent: extent_model.clone(),
                     options: options_model.clone(),
@@ -2525,18 +2591,18 @@ impl Carousel {
                             continue;
                         };
 
-                        let (start, size) = match orientation {
-                            CarouselOrientation::Horizontal => (
+                         let (start, size) = match orientation {
+                             CarouselOrientation::Horizontal => (
                                 Px(bounds.origin.x.0 - viewport_bounds.origin.x.0),
-                                bounds.size.width,
-                            ),
-                            CarouselOrientation::Vertical => (
+                                 bounds.size.width,
+                             ),
+                             CarouselOrientation::Vertical => (
                                 Px(bounds.origin.y.0 - viewport_bounds.origin.y.0),
-                                bounds.size.height,
-                            ),
-                        };
-                        slides.push(headless_carousel::CarouselSlide1D { start, size });
-                    }
+                                 bounds.size.height,
+                             ),
+                         };
+                         slides.push(headless_carousel::CarouselSlide1D { start, size });
+                     }
 
                     let mut start_gap = Px(0.0);
                     if slides.len() == items_len {
@@ -3042,20 +3108,45 @@ impl Carousel {
 
             if let Some(api_snapshot) = self.api_snapshot {
                 let runtime_now = cx.watch_model(&runtime_model).copied().unwrap_or_default();
-                let embla_moving = cx
+                let (embla_engine_present, embla_moving, embla_scroll_duration) = cx
                     .app
                     .models_mut()
                     .read(&embla_engine_model, |v| {
-                        v.as_ref().is_some_and(|engine| !engine.scroll_body.settled())
+                        let Some(engine) = v.as_ref() else {
+                            return (false, false, 0.0);
+                        };
+                        (
+                            true,
+                            !engine.scroll_body.settled(),
+                            engine.scroll_body.duration(),
+                        )
                     })
                     .ok()
-                    .unwrap_or(false);
+                    .unwrap_or((false, false, 0.0));
+                let at_selected_snap = extent_ready
+                    && snaps_now
+                        .get(clamped_index)
+                        .is_some_and(|snap| (snap.0 - offset_now.0).abs() <= 0.5);
+                let selected_snap_px = if extent_ready {
+                    snaps_now.get(clamped_index).map(|s| s.0).unwrap_or(0.0)
+                } else {
+                    0.0
+                };
                 let snapshot = CarouselApiSnapshot {
                     selected_index: clamped_index,
                     snap_count: if extent_ready { snaps_len } else { 0 },
                     can_scroll_prev: !prev_disabled,
                     can_scroll_next: !next_disabled,
                     settling: runtime_now.settling || runtime_now.embla_settling || embla_moving,
+                    recipe_settling: runtime_now.settling,
+                    embla_settling: runtime_now.embla_settling,
+                    at_selected_snap,
+                    offset_px: offset_now.0,
+                    selected_snap_px,
+                    embla_engine_enabled,
+                    embla_duration: options.embla_duration.max(0.0),
+                    embla_engine_present,
+                    embla_scroll_duration,
                     select_generation: runtime_now.api_select_generation,
                     reinit_generation: runtime_now.api_reinit_generation,
                 };
