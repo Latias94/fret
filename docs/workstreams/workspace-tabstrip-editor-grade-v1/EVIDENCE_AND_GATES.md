@@ -12,6 +12,8 @@ Goal: keep the tab strip refactor **fearless** by locking outcomes behind unit t
 - `ecosystem/fret-workspace/src/tab_strip/utils.rs` (canonical end-drop resolution)
 - `ecosystem/fret-workspace/src/focus_registry.rs` (cross-frame element id registry for focus restore)
 - `ecosystem/fret-workspace/src/pane_content_focus.rs` (pane content focus target seam for exiting tab strip)
+- `ecosystem/fret-ui-headless/src/tab_strip_surface.rs` (shared hit-test surface vocabulary)
+- `ecosystem/fret-ui-headless/src/tab_strip_drop_target.rs` (shared midpoint drop target helper)
 - `ecosystem/fret-workspace/src/command_scope.rs` (workspace-shell command routing scope)
 - `ecosystem/fret-workspace/tests/tab_strip_pointer_down_does_not_steal_focus.rs` (focus stability)
 - `ecosystem/fret-workspace/tests/tab_strip_focus_restore_after_close_command.rs` (close focus restore)

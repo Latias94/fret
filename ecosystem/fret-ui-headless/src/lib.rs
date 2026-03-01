@@ -33,6 +33,7 @@ pub mod scroll_area_visibility;
 pub mod select_item_aligned;
 pub mod slider;
 pub mod snap_points;
+pub mod tab_strip_drop_target;
 pub mod tab_strip_surface;
 pub mod table;
 pub mod tooltip_delay_group;
