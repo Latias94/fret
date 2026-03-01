@@ -7,11 +7,11 @@ use fret_ui::element::{
 };
 use fret_ui::{ElementContext, Invalidation, Theme, ThemeSnapshot, UiHost};
 use fret_ui_kit::declarative::style as decl_style;
-use fret_ui_kit::primitives::control_registry::{ControlId, LabelEntry, control_registry_model};
+use fret_ui_kit::primitives::control_registry::{control_registry_model, ControlId, LabelEntry};
 use fret_ui_kit::primitives::direction as direction_prim;
 use fret_ui_kit::primitives::field_state as field_state_prim;
 use fret_ui_kit::theme_tokens;
-use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, Space, ui};
+use fret_ui_kit::{ui, ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, Space};
 
 fn muted_foreground(theme: &ThemeSnapshot) -> fret_core::Color {
     theme
@@ -1227,12 +1227,13 @@ impl FieldError {
         ui::text(cx, self.text)
             .text_size_px(px)
             .line_height_px(line_height)
+            .line_height_policy(fret_core::TextLineHeightPolicy::FixedFromStyle)
+            .line_box_in_bounds()
             .font_normal()
             .text_color(ColorRef::Color(fg))
             .wrap(wrap)
             .overflow(overflow)
             .text_align(align)
-            .auto_pad_ink_overflow()
             .into_element(cx)
     }
 }

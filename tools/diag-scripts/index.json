@@ -874,6 +874,16 @@
       "target_hints": []
     },
     {
+      "id": "ui-gallery-card-content-button-hitbox-not-stretched",
+      "path": "tools/diag-scripts/ui-gallery/card/ui-gallery-card-content-button-hitbox-not-stretched.json",
+      "required_capabilities": [],
+      "suite_memberships": [
+        "ui-gallery-shadcn-conformance"
+      ],
+      "tags": [],
+      "target_hints": []
+    },
+    {
       "id": "ui-gallery-card-description-no-early-wrap",
       "path": "tools/diag-scripts/ui-gallery/card/ui-gallery-card-description-no-early-wrap.json",
       "required_capabilities": [],
@@ -892,6 +902,30 @@
       ],
       "tags": [],
       "target_hints": []
+    },
+    {
+      "id": "ui-gallery-carousel-loop-continuity-touch-gate",
+      "path": "tools/diag-scripts/ui-gallery/carousel/ui-gallery-carousel-loop-continuity-touch-gate.json",
+      "required_capabilities": [
+        "diag.pointer_kind_touch",
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "ui-gallery-motion-pilot"
+      ],
+      "tags": [
+        "carousel",
+        "gate",
+        "loop",
+        "screenshot",
+        "touch",
+        "ui-gallery"
+      ],
+      "target_hints": [
+        "Requires the UI gallery Carousel page to include a `Loop` section with `loop=true` + Embla engine enabled.",
+        "Expected behavior: repeated touch swipes do not clamp at ends or hang; content remains visible."
+      ]
     },
     {
       "id": "ui-gallery-chart-accessibility-layer-keyboard",
@@ -1587,6 +1621,16 @@
       "target_hints": []
     },
     {
+      "id": "ui-gallery-data-table-guide-demo-checkbox-only-selection",
+      "path": "tools/diag-scripts/ui-gallery/data-table/ui-gallery-data-table-guide-demo-checkbox-only-selection.json",
+      "required_capabilities": [],
+      "suite_memberships": [
+        "ui-gallery-data-table"
+      ],
+      "tags": [],
+      "target_hints": []
+    },
+    {
       "id": "ui-gallery-data-table-retained-column-actions-menu",
       "path": "tools/diag-scripts/ui-gallery/data-table/ui-gallery-data-table-retained-column-actions-menu.json",
       "required_capabilities": [],
@@ -1702,7 +1746,8 @@
       "path": "tools/diag-scripts/ui-gallery/data-table/ui-gallery-data-table-smoke.json",
       "required_capabilities": [],
       "suite_memberships": [
-        "ui-gallery"
+        "ui-gallery",
+        "ui-gallery-data-table"
       ],
       "tags": [],
       "target_hints": []
@@ -3345,6 +3390,28 @@
         "Waits for the close button on the active tab (pane A, doc-a-2).",
         "Clicks the close button.",
         "Asserts the tab is removed from the UI tree."
+      ]
+    },
+    {
+      "id": "workspace-shell-demo-tab-close-mru-fallback-smoke",
+      "path": "tools/diag-scripts/workspace/shell-demo/workspace-shell-demo-tab-close-mru-fallback-smoke.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "diag-hardening-smoke-workspace"
+      ],
+      "tags": [
+        "close",
+        "gate",
+        "smoke",
+        "tabstrip",
+        "workspace"
+      ],
+      "target_hints": [
+        "Activates doc-a-1 (pane A) so MRU is deterministic.",
+        "Closes doc-a-1 via the close button.",
+        "Asserts doc-a-1 is removed and selection falls back to doc-a-2 (MRU fallback)."
       ]
     },
     {

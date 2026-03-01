@@ -3,7 +3,8 @@ use fret_runtime::{CommandId, Effect, Model, ModelStore, TimerToken};
 use fret_ui::action::{PressablePointerDownResult, PressablePointerUpResult, UiActionHostExt};
 use fret_ui::element::{
     AnyElement, ContainerProps, LayoutStyle, Length, Overflow, PointerRegionProps, PressableA11y,
-    PressableProps, ScrollAxis, ScrollProps, SemanticsProps, SpacerProps, VirtualListOptions,
+    PressableProps, RingPlacement, RingStyle, ScrollAxis, ScrollProps, SemanticsProps, SpacerProps,
+    VirtualListOptions,
 };
 use fret_ui::scroll::{ScrollHandle, VirtualListScrollHandle};
 use fret_ui::{ElementContext, GlobalElementId, Theme, UiHost, scroll::ScrollStrategy};
@@ -182,6 +183,11 @@ pub struct TableViewProps {
     pub grouped_column_mode: GroupedColumnMode,
     pub enable_row_selection: bool,
     pub single_row_selection: bool,
+    /// When `true` (default), pointer-activating a row toggles its selection state.
+    ///
+    /// Set this to `false` for shadcn-style recipes where selection is driven by an explicit
+    /// checkbox column (and row clicks should not toggle selection).
+    pub pointer_row_selection: bool,
     /// When `false`, pinned rows are only rendered if they are part of the current
     /// filtered/sorted/paginated row model (TanStack `keepPinnedRows=false`).
     ///
@@ -261,6 +267,7 @@ impl Default for TableViewProps {
             grouped_column_mode: GroupedColumnMode::Reorder,
             enable_row_selection: true,
             single_row_selection: true,
+            pointer_row_selection: true,
             keep_pinned_rows: true,
             draw_frame: true,
             optimize_paint_order: false,
@@ -282,8 +289,9 @@ mod tests {
     use super::*;
     use fret_app::App;
     use fret_core::{
-        AppWindowId, PathCommand, SvgId, SvgService, TextBlobId, TextConstraints, TextInput,
-        TextMetrics, TextService,
+        AppWindowId, Event, Modifiers, MouseButton, PathCommand, PointerEvent, PointerId,
+        PointerType, SvgId, SvgService, TextBlobId, TextConstraints, TextInput, TextMetrics,
+        TextService,
     };
     use fret_core::{PathConstraints, PathId, PathMetrics, PathService, PathStyle};
     use fret_core::{Point, Px, Rect, TextWrap};
@@ -947,6 +955,315 @@ mod tests {
                 );
             }
         }
+    }
+
+    #[test]
+    fn table_virtualized_pointer_select_does_not_shift_row_bounds() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        Theme::with_global_mut(&mut app, |theme| {
+            theme.apply_config(&ThemeConfig {
+                name: "Test".to_string(),
+                ..ThemeConfig::default()
+            });
+        });
+
+        let mut state_value = TableState::default();
+        state_value.pagination.page_size = 5;
+        let state = app.models_mut().insert(state_value);
+
+        let data = vec![0u32, 1u32, 2u32, 3u32, 4u32];
+        let mut col = ColumnDef::new("name");
+        col.size = 220.0;
+        let columns = vec![col];
+        let scroll = VirtualListScrollHandle::new();
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(320.0), Px(200.0)),
+        );
+        let mut services = FakeServices;
+
+        let props = TableViewProps {
+            draw_frame: false,
+            enable_column_resizing: false,
+            enable_row_selection: true,
+            single_row_selection: true,
+            row_height: Some(Px(40.0)),
+            header_height: Some(Px(40.0)),
+            ..Default::default()
+        };
+
+        let render = |ui: &mut UiTree<App>,
+                      app: &mut App,
+                      services: &mut FakeServices|
+         -> fret_core::NodeId {
+            fret_ui::declarative::render_root(ui, app, services, window, bounds, "test", |cx| {
+                vec![table_virtualized(
+                    cx,
+                    &data,
+                    &columns,
+                    state.clone(),
+                    &scroll,
+                    0,
+                    &|_row, i| RowKey::from_index(i),
+                    None,
+                    props.clone(),
+                    |_row| None,
+                    |cx, _col, _sort| [cx.text("")],
+                    |cx, row, _col| {
+                        let mut fill = LayoutStyle::default();
+                        fill.size.width = Length::Fill;
+                        fill.size.height = Length::Fill;
+                        let marker = cx.container(
+                            ContainerProps {
+                                layout: fill,
+                                ..Default::default()
+                            },
+                            |_| Vec::new(),
+                        );
+                        if row.index == 1 {
+                            [cx.semantics(
+                                SemanticsProps {
+                                    test_id: Some(Arc::<str>::from("table-test-row-1-marker")),
+                                    ..Default::default()
+                                },
+                                move |_cx| vec![marker],
+                            )]
+                        } else {
+                            [marker]
+                        }
+                    },
+                    None,
+                )]
+            })
+        };
+
+        for _ in 0..2 {
+            let root = render(&mut ui, &mut app, &mut services);
+            ui.set_root(root);
+            ui.request_semantics_snapshot();
+            ui.layout_all(&mut app, &mut services, bounds, 1.0);
+            let mut scene = fret_core::Scene::default();
+            ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
+        }
+
+        let snap = ui
+            .semantics_snapshot()
+            .expect("expected a semantics snapshot");
+        let before = snap
+            .nodes
+            .iter()
+            .find(|n| n.test_id.as_deref() == Some("table-test-row-1-marker"))
+            .map(|n| n.bounds)
+            .expect("expected marker node");
+
+        let click_pos = Point::new(
+            Px(before.origin.x.0 + before.size.width.0 * 0.5),
+            Px(before.origin.y.0 + before.size.height.0 * 0.5),
+        );
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::Pointer(PointerEvent::Down {
+                position: click_pos,
+                button: MouseButton::Left,
+                modifiers: Modifiers::default(),
+                click_count: 1,
+                pointer_id: PointerId(0),
+                pointer_type: PointerType::Mouse,
+            }),
+        );
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::Pointer(PointerEvent::Up {
+                position: click_pos,
+                button: MouseButton::Left,
+                modifiers: Modifiers::default(),
+                click_count: 1,
+                is_click: true,
+                pointer_id: PointerId(0),
+                pointer_type: PointerType::Mouse,
+            }),
+        );
+
+        for _ in 0..2 {
+            let root = render(&mut ui, &mut app, &mut services);
+            ui.set_root(root);
+            ui.request_semantics_snapshot();
+            ui.layout_all(&mut app, &mut services, bounds, 1.0);
+            let mut scene = fret_core::Scene::default();
+            ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
+        }
+
+        let snap = ui
+            .semantics_snapshot()
+            .expect("expected a semantics snapshot");
+        let after = snap
+            .nodes
+            .iter()
+            .find(|n| n.test_id.as_deref() == Some("table-test-row-1-marker"))
+            .map(|n| n.bounds)
+            .expect("expected marker node");
+
+        assert!(
+            (after.origin.y.0 - before.origin.y.0).abs() <= 0.1,
+            "expected row marker to keep stable y; before={:?} after={:?}",
+            before,
+            after
+        );
+    }
+
+    #[test]
+    fn table_virtualized_can_disable_pointer_row_selection() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        Theme::with_global_mut(&mut app, |theme| {
+            theme.apply_config(&ThemeConfig {
+                name: "Test".to_string(),
+                ..ThemeConfig::default()
+            });
+        });
+
+        let mut state_value = TableState::default();
+        state_value.pagination.page_size = 5;
+        let state = app.models_mut().insert(state_value);
+
+        let data = vec![0u32, 1u32, 2u32, 3u32, 4u32];
+        let mut col = ColumnDef::new("name");
+        col.size = 220.0;
+        let columns = vec![col];
+        let scroll = VirtualListScrollHandle::new();
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(320.0), Px(200.0)),
+        );
+        let mut services = FakeServices;
+
+        let props = TableViewProps {
+            draw_frame: false,
+            enable_column_resizing: false,
+            enable_row_selection: true,
+            pointer_row_selection: false,
+            single_row_selection: true,
+            row_height: Some(Px(40.0)),
+            header_height: Some(Px(40.0)),
+            ..Default::default()
+        };
+
+        let render = |ui: &mut UiTree<App>,
+                      app: &mut App,
+                      services: &mut FakeServices|
+         -> fret_core::NodeId {
+            fret_ui::declarative::render_root(ui, app, services, window, bounds, "test", |cx| {
+                vec![table_virtualized(
+                    cx,
+                    &data,
+                    &columns,
+                    state.clone(),
+                    &scroll,
+                    0,
+                    &|_row, i| RowKey::from_index(i),
+                    None,
+                    props.clone(),
+                    |_row| None,
+                    |cx, _col, _sort| [cx.text("")],
+                    |cx, row, _col| {
+                        let mut fill = LayoutStyle::default();
+                        fill.size.width = Length::Fill;
+                        fill.size.height = Length::Fill;
+                        let marker = cx.container(
+                            ContainerProps {
+                                layout: fill,
+                                ..Default::default()
+                            },
+                            |_| Vec::new(),
+                        );
+                        if row.index == 1 {
+                            [cx.semantics(
+                                SemanticsProps {
+                                    test_id: Some(Arc::<str>::from("table-test-row-1-marker")),
+                                    ..Default::default()
+                                },
+                                move |_cx| vec![marker],
+                            )]
+                        } else {
+                            [marker]
+                        }
+                    },
+                    None,
+                )]
+            })
+        };
+
+        for _ in 0..2 {
+            let root = render(&mut ui, &mut app, &mut services);
+            ui.set_root(root);
+            ui.request_semantics_snapshot();
+            ui.layout_all(&mut app, &mut services, bounds, 1.0);
+            let mut scene = fret_core::Scene::default();
+            ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
+        }
+
+        let snap = ui
+            .semantics_snapshot()
+            .expect("expected a semantics snapshot");
+        let marker_bounds = snap
+            .nodes
+            .iter()
+            .find(|n| n.test_id.as_deref() == Some("table-test-row-1-marker"))
+            .map(|n| n.bounds)
+            .expect("expected marker node");
+
+        let click_pos = Point::new(
+            Px(marker_bounds.origin.x.0 + marker_bounds.size.width.0 * 0.5),
+            Px(marker_bounds.origin.y.0 + marker_bounds.size.height.0 * 0.5),
+        );
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::Pointer(PointerEvent::Down {
+                position: click_pos,
+                button: MouseButton::Left,
+                modifiers: Modifiers::default(),
+                click_count: 1,
+                pointer_id: PointerId(0),
+                pointer_type: PointerType::Mouse,
+            }),
+        );
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &Event::Pointer(PointerEvent::Up {
+                position: click_pos,
+                button: MouseButton::Left,
+                modifiers: Modifiers::default(),
+                click_count: 1,
+                is_click: true,
+                pointer_id: PointerId(0),
+                pointer_type: PointerType::Mouse,
+            }),
+        );
+
+        let selection = app
+            .models()
+            .read(&state, |st| st.row_selection.clone())
+            .ok()
+            .unwrap_or_default();
+        assert!(
+            !selection.contains(&RowKey::from_index(1)),
+            "expected row click not to toggle selection when pointer_row_selection=false"
+        );
     }
 
     #[test]
@@ -2375,22 +2692,24 @@ where
                             host.request_focus(focus_target);
                             host.request_redraw(action_cx.window);
                             PressablePointerUpResult::Continue
-                        }));
+	                        }));
 
-                        cx.key_on_key_down_for(cx.root_id(), key_handler_for_row.clone());
-                        let state = state_model.clone();
-                        cx.pressable_update_model(&state, move |st| {
-                            if st.row_selection.contains(&row_key) {
-                                st.row_selection.remove(&row_key);
-                            } else {
-                                st.row_selection.insert(row_key);
-                            }
-                        });
+	                        cx.key_on_key_down_for(cx.root_id(), key_handler_for_row.clone());
+	                        if props.enable_row_selection && props.pointer_row_selection {
+	                            let state = state_model.clone();
+	                            cx.pressable_update_model(&state, move |st| {
+	                                if st.row_selection.contains(&row_key) {
+	                                    st.row_selection.remove(&row_key);
+	                                } else {
+	                                    st.row_selection.insert(row_key);
+	                                }
+	                            });
+	                        }
 
-                        let bg = if selected || st.pressed {
-                            Some(row_active_bg)
-                        } else if st.hovered {
-                            Some(row_hover_bg)
+	                        let bg = if selected || st.pressed {
+	                            Some(row_active_bg)
+	                        } else if st.hovered {
+	                            Some(row_hover_bg)
                         } else {
                             None
                         };
@@ -2710,7 +3029,6 @@ where
                 );
             }
 
-            let is_focused = cx.is_focused_element(list_id);
             let content =
                 cx.pointer_region(fret_ui::element::PointerRegionProps::default(), move |cx| {
                     let focus_id = list_id;
@@ -2746,33 +3064,37 @@ where
                     )]
                 });
 
-            if props.draw_frame || is_focused {
-                vec![cx.container(
-                    ContainerProps {
-                        layout: fill_layout,
-                        background: Some(table_bg),
-                        border: if is_focused {
-                            Edges::all(Px(2.0))
-                        } else if props.draw_frame {
-                            Edges::all(Px(1.0))
-                        } else {
-                            Edges::all(Px(0.0))
-                        },
-                        border_color: if is_focused {
-                            Some(ring)
-                        } else if props.draw_frame {
-                            Some(border)
-                        } else {
-                            None
-                        },
-                        corner_radii: Corners::all(radius),
-                        ..Default::default()
+            let focus_ring = RingStyle {
+                placement: RingPlacement::Inset,
+                width: Px(2.0),
+                offset: Px(0.0),
+                color: ring,
+                offset_color: None,
+                corner_radii: Corners::all(radius),
+            };
+
+            vec![cx.container(
+                ContainerProps {
+                    layout: fill_layout,
+                    background: Some(table_bg),
+                    border: if props.draw_frame {
+                        Edges::all(Px(1.0))
+                    } else {
+                        Edges::all(Px(0.0))
                     },
-                    move |_cx| vec![content],
-                )]
-            } else {
-                vec![content]
-            }
+                    border_color: if props.draw_frame { Some(border) } else { None },
+                    focus_border_color: if props.draw_frame { Some(ring) } else { None },
+                    focus_ring: Some(focus_ring),
+                    focus_within: true,
+                    corner_radii: if props.draw_frame {
+                        Corners::all(radius)
+                    } else {
+                        Corners::all(Px(0.0))
+                    },
+                    ..Default::default()
+                },
+                move |_cx| vec![content],
+            )]
         },
     )
 }
@@ -3888,7 +4210,14 @@ where
                     }),
                 );
             }
-            let is_focused = cx.is_focused_element(list_id);
+            let focus_ring = RingStyle {
+                placement: RingPlacement::Inset,
+                width: Px(2.0),
+                offset: Px(0.0),
+                color: ring,
+                offset_color: None,
+                corner_radii: Corners::all(radius),
+            };
             vec![cx.container(
                 ContainerProps {
                     layout: {
@@ -3901,21 +4230,16 @@ where
                         layout
                     },
                     background: Some(table_bg),
-                    border: if is_focused {
-                        Edges::all(Px(2.0))
-                    } else if props.draw_frame {
+                    border: if props.draw_frame {
                         Edges::all(Px(1.0))
                     } else {
                         Edges::all(Px(0.0))
                     },
-                    border_color: if is_focused {
-                        Some(ring)
-                    } else if props.draw_frame {
-                        Some(border)
-                    } else {
-                        None
-                    },
-                    corner_radii: if props.draw_frame || is_focused {
+                    border_color: if props.draw_frame { Some(border) } else { None },
+                    focus_border_color: if props.draw_frame { Some(ring) } else { None },
+                    focus_ring: Some(focus_ring),
+                    focus_within: true,
+                    corner_radii: if props.draw_frame {
                         Corners::all(radius)
                     } else {
                         Corners::all(Px(0.0))
@@ -4649,9 +4973,20 @@ where
                                                                 vec![cx.container(
                                                                     ContainerProps {
                                                                         background: bg,
-                                                                        border: Edges::default(),
-                                                                        border_color: None,
-                                                                    layout: LayoutStyle {
+                                                                        border: Edges {
+                                                                            left: if is_active {
+                                                                                Px(2.0)
+                                                                            } else {
+                                                                                Px(0.0)
+                                                                            },
+                                                                            ..Default::default()
+                                                                        },
+                                                                        border_color: if is_active {
+                                                                            Some(ring)
+                                                                        } else {
+                                                                            None
+                                                                        },
+                                                                        layout: LayoutStyle {
                                                                         size:
                                                                             fret_ui::element::SizeStyle {
                                                                                 width: Length::Fill,
@@ -4659,7 +4994,7 @@ where
                                                                                 ..Default::default()
                                                                             },
                                                                         ..Default::default()
-                                                                    },
+                                                                        },
                                                                         ..Default::default()
                                                                     },
                                                                     |cx| {
@@ -4984,34 +5319,7 @@ where
                                                                                 }
                                                                             };
 
-                                                                        let mut out: Vec<AnyElement> = Vec::new();
-                                                                        if is_active {
-                                                                            out.push(cx.container(
-                                                                                ContainerProps {
-                                                                                    background: Some(ring),
-                                                                                    layout: LayoutStyle {
-                                                                                        size: fret_ui::element::SizeStyle {
-                                                                                            width: Length::Px(Px(2.0)),
-                                                                                            height: Length::Fill,
-                                                                                            ..Default::default()
-                                                                                        },
-                                                                                        position:
-                                                                                            fret_ui::element::PositionStyle::Absolute,
-                                                                                        inset: fret_ui::element::InsetStyle {
-                                                                                            top: Some(Px(0.0)).into(),
-                                                                                            bottom: Some(Px(0.0)).into(),
-                                                                                            left: Some(Px(0.0)).into(),
-                                                                                            ..Default::default()
-                                                                                        },
-                                                                                        ..Default::default()
-                                                                                    },
-                                                                                    ..Default::default()
-                                                                                },
-                                                                                |_| Vec::new(),
-                                                                            ));
-                                                                        }
-
-                                                                        out.push(stack::hstack(
+                                                                        vec![stack::hstack(
                                                                             cx,
                                                                             stack::HStackProps::default()
                                                                                 .gap_x(Space::N0)
@@ -5098,8 +5406,7 @@ where
 
                                                                                 vec![left, center, right]
                                                                             },
-                                                                        ));
-                                                                        out
+                                                                        )]
                                                                     },
                                                                 )]
                                                             },
@@ -5178,17 +5485,19 @@ where
                                                         },
                                                     ));
 
-                                                    if active_index.get() == Some(i) {
-                                                        active_element.set(Some(cx.root_id()));
-                                                        *active_command.borrow_mut() = cmd.clone();
-                                                    }
-                                                    cx.pressable_dispatch_command_if_enabled_opt(cmd.clone());
-                                                    if props.enable_row_selection {
-                                                        let state_model = state.clone();
-                                                        let row_key = data_row.key;
-                                                        let single = props.single_row_selection;
-                                                        cx.pressable_update_model(&state_model, move |st| {
-                                                            let selected = st.row_selection.contains(&row_key);
+	                                                    if active_index.get() == Some(i) {
+	                                                        active_element.set(Some(cx.root_id()));
+	                                                        *active_command.borrow_mut() = cmd.clone();
+	                                                    }
+	                                                    cx.pressable_dispatch_command_if_enabled_opt(cmd.clone());
+	                                                    if props.enable_row_selection
+	                                                        && props.pointer_row_selection
+	                                                    {
+	                                                        let state_model = state.clone();
+	                                                        let row_key = data_row.key;
+	                                                        let single = props.single_row_selection;
+	                                                        cx.pressable_update_model(&state_model, move |st| {
+	                                                            let selected = st.row_selection.contains(&row_key);
                                                             if single {
                                                                 st.row_selection.clear();
                                                             }
@@ -5212,8 +5521,11 @@ where
                                                         vec![cx.container(
                                                             ContainerProps {
                                                                 background: bg,
-                                                                border: Edges::default(),
-                                                                border_color: None,
+                                                                border: Edges {
+                                                                    left: if is_active { Px(2.0) } else { Px(0.0) },
+                                                                    ..Default::default()
+                                                                },
+                                                                border_color: if is_active { Some(ring) } else { None },
                                                                 layout: LayoutStyle {
                                                                     size: fret_ui::element::SizeStyle {
                                                                         width: Length::Fill,
@@ -5223,15 +5535,15 @@ where
                                                                     ..Default::default()
                                                                 },
                                                                 ..Default::default()
-                                                        },
-                                                        |cx| {
+                                                            },
+                                                            |cx| {
                                                             let mut render_row_group =
                                                                 |cx: &mut ElementContext<'_, H>,
                                                                  cols: &[&ColumnDef<TData>],
                                                                  scroll_x: Option<ScrollHandle>| {
                                                                     let column_width_by_id =
                                                                         column_width_by_id.clone();
-                                                                    let row = if props.optimize_paint_order {
+                                                                let row = if props.optimize_paint_order {
                                                                         cx.container(
                                                                             ContainerProps {
                                                                                 layout: LayoutStyle {
@@ -5457,34 +5769,7 @@ where
                                                                     }
                                                                 };
 
-                                                            let mut out: Vec<AnyElement> = Vec::new();
-                                                            if is_active {
-                                                                out.push(cx.container(
-                                                                    ContainerProps {
-                                                                        background: Some(ring),
-                                                                        layout: LayoutStyle {
-                                                                            size: fret_ui::element::SizeStyle {
-                                                                                width: Length::Px(Px(2.0)),
-                                                                                height: Length::Fill,
-                                                                                ..Default::default()
-                                                                            },
-                                                                            position:
-                                                                                fret_ui::element::PositionStyle::Absolute,
-                                                                            inset: fret_ui::element::InsetStyle {
-                                                                                top: Some(Px(0.0)).into(),
-                                                                                bottom: Some(Px(0.0)).into(),
-                                                                                left: Some(Px(0.0)).into(),
-                                                                                ..Default::default()
-                                                                            },
-                                                                            ..Default::default()
-                                                                        },
-                                                                        ..Default::default()
-                                                                    },
-                                                                    |_| Vec::new(),
-                                                                ));
-                                                            }
-
-                                                            out.push(stack::hstack(
+                                                            vec![stack::hstack(
                                                                 cx,
                                                                 stack::HStackProps::default()
                                                                     .gap_x(Space::N0)
@@ -5558,8 +5843,7 @@ where
                                                                         render_row_group(cx, &right_cols, None);
                                                                     vec![left, center, right]
                                                                 },
-                                                            ));
-                                                            out
+                                                            )]
                                                         },
                                                     )]
                                                 },

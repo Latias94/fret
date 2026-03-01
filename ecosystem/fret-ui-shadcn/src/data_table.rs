@@ -273,6 +273,7 @@ pub struct DataTable {
     row_height: Option<Px>,
     header_height: Option<Px>,
     measure_rows: bool,
+    row_click_selection: bool,
     column_actions_menu: bool,
     chrome: ChromeRefinement,
     layout: LayoutRefinement,
@@ -287,6 +288,7 @@ impl Default for DataTable {
             row_height: None,
             header_height: None,
             measure_rows: false,
+            row_click_selection: true,
             column_actions_menu: false,
             chrome: ChromeRefinement::default(),
             layout: LayoutRefinement::default(),
@@ -326,6 +328,16 @@ impl DataTable {
     /// The default remains fixed-height rows for performance.
     pub fn measure_rows(mut self, enabled: bool) -> Self {
         self.measure_rows = enabled;
+        self
+    }
+
+    /// Controls whether pointer-activating a body row toggles its selection state.
+    ///
+    /// Upstream shadcn examples typically drive selection via an explicit checkbox column; in that
+    /// recipe style, prefer `row_click_selection(false)` to avoid double-toggling selection when
+    /// clicking inside the row.
+    pub fn row_click_selection(mut self, enabled: bool) -> Self {
+        self.row_click_selection = enabled;
         self
     }
 
@@ -379,6 +391,7 @@ impl DataTable {
             row_height,
             header_height,
             measure_rows,
+            row_click_selection,
             column_actions_menu,
             chrome,
             layout,
@@ -438,6 +451,7 @@ impl DataTable {
             } else {
                 TableRowMeasureMode::Fixed
             };
+            view_props.pointer_row_selection = row_click_selection;
             view_props.enable_column_grouping = false;
             view_props.enable_column_resizing = false;
             view_props.draw_frame = false;
@@ -568,6 +582,7 @@ impl DataTable {
             row_height,
             header_height,
             measure_rows,
+            row_click_selection,
             column_actions_menu,
             chrome,
             layout,
@@ -615,6 +630,7 @@ impl DataTable {
             } else {
                 TableRowMeasureMode::Fixed
             };
+            view_props.pointer_row_selection = row_click_selection;
             view_props.enable_column_grouping = false;
             view_props.enable_column_resizing = true;
             view_props.draw_frame = false;
@@ -677,6 +693,10 @@ impl DataTable {
                                             layout: LayoutStyle {
                                                 size: fret_ui::element::SizeStyle {
                                                     min_width: Some(Length::Px(Px(0.0))),
+                                                    ..Default::default()
+                                                },
+                                                flex: fret_ui::element::FlexItemStyle {
+                                                    shrink: 1.0,
                                                     ..Default::default()
                                                 },
                                                 overflow: Overflow::Clip,
@@ -803,6 +823,10 @@ impl DataTable {
                                                     layout: LayoutStyle {
                                                         size: fret_ui::element::SizeStyle {
                                                             min_width: Some(Length::Px(Px(0.0))),
+                                                            ..Default::default()
+                                                        },
+                                                        flex: fret_ui::element::FlexItemStyle {
+                                                            shrink: 1.0,
                                                             ..Default::default()
                                                         },
                                                         overflow: Overflow::Clip,

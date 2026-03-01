@@ -41,6 +41,11 @@ pub use fret_icons::IconRegistry;
 pub use fret_bootstrap::ui_app_driver::ViewElements;
 
 pub mod workspace_menu;
+pub mod workspace_shell;
+
+pub use workspace_shell::{workspace_shell_model, workspace_shell_model_default_menu};
+
+mod pending_shortcut_overlay;
 
 #[cfg(all(not(target_arch = "wasm32"), feature = "desktop"))]
 mod app_entry;

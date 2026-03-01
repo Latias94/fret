@@ -181,7 +181,9 @@ pub(super) fn presets(
             .refine_layout(
                 LayoutRefinement::default()
                     .flex_grow(1.0)
-                    .flex_shrink(1.0)
+                    // Prefer preserving the label's intrinsic width. In wrapped rows, shrinking
+                    // below content width clips the shadcn Button's `nowrap()` label.
+                    .flex_shrink(0.0)
                     .basis(LengthRefinement::Auto),
             )
             .test_id(test_id)
@@ -246,12 +248,18 @@ pub(super) fn presets(
         LayoutRefinement::default()
             .w(LengthRefinement::Auto)
             .max_w(MetricRef::Px(Px(300.0)))
-            .mx_auto()
             .min_w_0(),
     )
     .into_element(cx);
 
-    card.test_id("ui-gallery-calendar-presets-card")
+    stack::hstack(
+        cx,
+        stack::HStackProps::default()
+            .justify_center()
+            .layout(LayoutRefinement::default().w_full().min_w_0()),
+        move |_cx| vec![card],
+    )
+    .test_id("ui-gallery-calendar-presets-card")
 }
 
 pub(super) fn date_and_time_picker(

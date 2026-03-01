@@ -1,3 +1,4 @@
+// region: example
 use fret_core::Px;
 use fret_ui_shadcn::{self as shadcn, prelude::*};
 
@@ -94,3 +95,5 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
         .into_element(cx)
         .test_id("ui-gallery-button-group-input-group")
 }
+
+// endregion: example

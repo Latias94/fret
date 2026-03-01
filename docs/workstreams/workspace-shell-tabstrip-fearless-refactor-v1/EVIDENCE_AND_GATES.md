@@ -56,8 +56,14 @@ Prefer nextest tests for “hard” behaviors that do not require real rendering
 
 - Focus stability:
   - pointer down on tab does not steal focus from an existing focus target.
-- Roving keyboard navigation:
-  - arrow keys move roving focus and activate correct tab.
+- Focus transfer:
+  - `workspace.pane.focus_tab_strip` focuses the active tab in the focused pane.
+  - `workspace.pane.focus_tab_strip` works when focus starts outside the pane subtree (shell scope).
+  - `workspace.pane.focus_content` restores the pre-tabstrip focus target after keyboard use of the strip.
+  - Default keybinding suggestion: `Ctrl+F6` bound to `workspace.pane.toggle_tab_strip_focus`
+    (apps can override via keymap layering).
+  - Roving keyboard navigation:
+    - arrow keys move roving focus and activate correct tab.
 
 ## Diag gates (interaction-heavy)
 
@@ -90,6 +96,11 @@ Current anchors:
 
 - Workspace tab strip adapter: `ecosystem/fret-workspace/src/tab_strip/mod.rs`
 - Tab strip interaction kernel (WIP): `ecosystem/fret-workspace/src/tab_strip/kernel.rs`
+- Focus transfer gate: `ecosystem/fret-workspace/tests/pane_focus_tab_strip_command_focuses_active_tab.rs`
+- Shell scope gate: `ecosystem/fret-workspace/tests/workspace_command_scope_focus_tab_strip_from_outside_pane.rs`
+- Exit tab strip gate: `ecosystem/fret-workspace/tests/workspace_command_scope_focus_content_restores_previous_focus.rs`
+- Toggle focus gate: `ecosystem/fret-workspace/tests/workspace_command_scope_toggle_tab_strip_focus_toggles_between_content_and_tab_strip.rs`
+- Toggle (multi-pane) gate: `ecosystem/fret-workspace/tests/workspace_command_scope_toggle_tab_strip_focus_multi_pane_returns_to_last_non_tabstrip_focus.rs`
 
 Reference anchors:
 

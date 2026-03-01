@@ -6,6 +6,7 @@ use fret_core::{
 };
 use fret_runtime::Effect;
 use fret_ui::tree::UiTree;
+use fret_ui_kit::OverlayController;
 
 fn window_bounds() -> Rect {
     Rect::new(
@@ -82,8 +83,10 @@ fn render_frame(
     f: impl FnOnce(&mut fret_ui::ElementContext<'_, App>) -> Vec<fret_ui::element::AnyElement>,
 ) -> (Vec<SceneOp>, Vec<Effect>) {
     app.set_frame_id(frame_id);
+    OverlayController::begin_frame(app, window);
     let root = fret_ui::declarative::render_root(ui, app, services, window, bounds, root_name, f);
     ui.set_root(root);
+    OverlayController::render(ui, app, services, window, bounds);
     ui.request_semantics_snapshot();
     ui.layout_all(app, services, bounds, 1.0);
 

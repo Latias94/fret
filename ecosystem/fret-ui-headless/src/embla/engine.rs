@@ -278,7 +278,7 @@ impl Engine {
 
     /// Apply Embla-style drag release shaping and scroll to the resulting target.
     ///
-    /// `pointer_delta` is the signed drag delta in the main axis.
+    /// `pointer_delta` is the Embla-style flick force in the main axis (px/ms).
     /// `direction` is the axis direction function (Embla `axis.direction`).
     pub fn on_drag_release(
         &mut self,

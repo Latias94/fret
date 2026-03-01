@@ -11,14 +11,14 @@ Legend:
 
 ### Foundations
 
-- [ ] Add `apps/fret-ui-gallery/src/ui/snippets/` with a minimal example.
-- [ ] Add a helper for `DocSection` to load code from a snippet file (and optionally a named region).
-- [ ] Document snippet conventions (file naming, user-facing `use` stanza, required function signatures).
+- [x] Add `apps/fret-ui-gallery/src/ui/snippets/` with a minimal example.
+- [x] Add a helper for `DocSection` to load code from a snippet file (and optionally a named region).
+- [x] Document snippet conventions (file naming, user-facing `use` stanza, required function signatures).
 
 ### Migration batches
 
-- [ ] Migrate Button Group page(s) to snippet-backed sections.
-- [ ] Migrate Select page(s) to snippet-backed sections.
+- [x] Migrate Button Group page(s) to snippet-backed sections.
+- [x] Migrate Select page(s) to snippet-backed sections.
 - [ ] Migrate overlay family pages (Dropdown Menu, Menubar, Context Menu, Popover, Tooltip, Dialog, Sheet, Drawer).
 - [ ] Migrate form family pages (Input, Input Group, Textarea, Checkbox, Radio Group, Switch, Slider, Toggle, Toggle Group, Select, Combobox).
 - [ ] Migrate layout + data-display pages (Tabs, Table, Data Table, Chart, Calendar, Carousel, Scroll Area, Navigation Menu, Pagination, etc).
@@ -27,6 +27,11 @@ Legend:
 
 - [ ] Add a lint/test that forbids new `DocSection::code("rust", r#"...")` on migrated pages.
 - [ ] Add a small “drift audit” doc section in UI Gallery (optional) to list remaining legacy sections.
+
+Notes:
+
+- Use `tools/check_ui_gallery_code_literals.py --deny --only <page.rs>` to enforce “no multi-line Rust literals”
+  on snippet-backed/migrated pages.
 
 ## Shadcn component tracker (gallery refactor status)
 
@@ -56,7 +61,7 @@ Source list: upstream shadcn v4 Base/Radix doc trees:
 | badge | `repo-ref/ui/apps/v4/content/docs/components/base/badge.mdx` | `repo-ref/ui/apps/v4/content/docs/components/radix/badge.mdx` | `badge` | TBD | No | Not started |  |  |
 | breadcrumb | `repo-ref/ui/apps/v4/content/docs/components/base/breadcrumb.mdx` | `repo-ref/ui/apps/v4/content/docs/components/radix/breadcrumb.mdx` | `breadcrumb` | TBD | No | Not started |  |  |
 | button | `repo-ref/ui/apps/v4/content/docs/components/base/button.mdx` | `repo-ref/ui/apps/v4/content/docs/components/radix/button.mdx` | `button` | TBD | No | Not started |  |  |
-| button-group | `repo-ref/ui/apps/v4/content/docs/components/base/button-group.mdx` | `repo-ref/ui/apps/v4/content/docs/components/radix/button-group.mdx` | `button_group` | `apps/fret-ui-gallery/src/ui/previews/pages/components/basics/button_group.rs` | Partial | In progress |  | Migrated Select + Input Group to snippet-backed; finish remaining sections. |
+| button-group | `repo-ref/ui/apps/v4/content/docs/components/base/button-group.mdx` | `repo-ref/ui/apps/v4/content/docs/components/radix/button-group.mdx` | `button_group` | `apps/fret-ui-gallery/src/ui/previews/pages/components/basics/button_group.rs` | Yes | Done | `tools/diag-scripts/ui-gallery/button/ui-gallery-button-group-demo-screenshots.json`, `tools/diag-scripts/ui-gallery/button/ui-gallery-button-group-select-screenshots.json` | Snippet-backed previews + region-sliced code tabs for all Button Group sections (preview ≡ code). |
 | calendar | `repo-ref/ui/apps/v4/content/docs/components/base/calendar.mdx` | `repo-ref/ui/apps/v4/content/docs/components/radix/calendar.mdx` | `calendar` | TBD | No | Not started |  |  |
 | card | `repo-ref/ui/apps/v4/content/docs/components/base/card.mdx` | `repo-ref/ui/apps/v4/content/docs/components/radix/card.mdx` | `card` | TBD | No | Not started |  |  |
 | carousel | `repo-ref/ui/apps/v4/content/docs/components/base/carousel.mdx` | `repo-ref/ui/apps/v4/content/docs/components/radix/carousel.mdx` | `carousel` | TBD | No | Not started |  |  |
@@ -85,14 +90,14 @@ Source list: upstream shadcn v4 Base/Radix doc trees:
 | native-select | `repo-ref/ui/apps/v4/content/docs/components/base/native-select.mdx` | `repo-ref/ui/apps/v4/content/docs/components/radix/native-select.mdx` | `native_select` | TBD | No | Not started |  |  |
 | navigation-menu | `repo-ref/ui/apps/v4/content/docs/components/base/navigation-menu.mdx` | `repo-ref/ui/apps/v4/content/docs/components/radix/navigation-menu.mdx` | `navigation_menu` | TBD | No | Not started |  |  |
 | pagination | `repo-ref/ui/apps/v4/content/docs/components/base/pagination.mdx` | `repo-ref/ui/apps/v4/content/docs/components/radix/pagination.mdx` | `pagination` | TBD | No | Not started |  |  |
-| popover | `repo-ref/ui/apps/v4/content/docs/components/base/popover.mdx` | `repo-ref/ui/apps/v4/content/docs/components/radix/popover.mdx` | `popover` | TBD | No | Not started |  | Overlay family; add interaction gates. |
+| popover | `repo-ref/ui/apps/v4/content/docs/components/base/popover.mdx` | `repo-ref/ui/apps/v4/content/docs/components/radix/popover.mdx` | `popover` | `apps/fret-ui-gallery/src/ui/previews/pages/components/overlays/popover.rs` | Yes | Done | `tools/diag-scripts/ui-gallery/overlay/ui-gallery-popover-doc-page-opens.json`, `tools/diag-scripts/ui-gallery/overlay/ui-gallery-popover-basic-open-screenshot-zinc-dark.json` | Snippet-backed previews + region-sliced code tabs (preview ≡ code). |
 | progress | `repo-ref/ui/apps/v4/content/docs/components/base/progress.mdx` | `repo-ref/ui/apps/v4/content/docs/components/radix/progress.mdx` | `progress` | TBD | No | Not started |  |  |
 | radio-group | `repo-ref/ui/apps/v4/content/docs/components/base/radio-group.mdx` | `repo-ref/ui/apps/v4/content/docs/components/radix/radio-group.mdx` | `radio_group` | TBD | No | Not started |  |  |
 | resizable | `repo-ref/ui/apps/v4/content/docs/components/base/resizable.mdx` | `repo-ref/ui/apps/v4/content/docs/components/radix/resizable.mdx` | `resizable` | TBD | No | Not started |  |  |
 | scroll-area | `repo-ref/ui/apps/v4/content/docs/components/base/scroll-area.mdx` | `repo-ref/ui/apps/v4/content/docs/components/radix/scroll-area.mdx` | `scroll_area` | TBD | No | Not started |  |  |
 | select | `repo-ref/ui/apps/v4/content/docs/components/base/select.mdx` | `repo-ref/ui/apps/v4/content/docs/components/radix/select.mdx` | `select` | `apps/fret-ui-gallery/src/ui/previews/gallery/forms/select.rs` | Yes | Done |  | Snippet-backed previews + code tabs for all Select sections. |
 | separator | `repo-ref/ui/apps/v4/content/docs/components/base/separator.mdx` | `repo-ref/ui/apps/v4/content/docs/components/radix/separator.mdx` | `separator` | TBD | No | Not started |  |  |
-| sheet | `repo-ref/ui/apps/v4/content/docs/components/base/sheet.mdx` | `repo-ref/ui/apps/v4/content/docs/components/radix/sheet.mdx` | `sheet` | TBD | No | Not started |  | Overlay family; add interaction gates. |
+| sheet | `repo-ref/ui/apps/v4/content/docs/components/base/sheet.mdx` | `repo-ref/ui/apps/v4/content/docs/components/radix/sheet.mdx` | `sheet` | `apps/fret-ui-gallery/src/ui/previews/pages/components/overlays/sheet.rs` | Yes | Done | `tools/diag-scripts/ui-gallery/overlay/ui-gallery-sheet-part-surface-smoke.json`, `tools/diag-scripts/ui-gallery/overlay/ui-gallery-sheet-side-top-bottom-screenshots.json` | Snippet-backed previews + region-sliced code tabs (preview ≡ code). |
 | sidebar | `repo-ref/ui/apps/v4/content/docs/components/base/sidebar.mdx` | `repo-ref/ui/apps/v4/content/docs/components/radix/sidebar.mdx` | `sidebar` | TBD | No | Not started |  |  |
 | skeleton | `repo-ref/ui/apps/v4/content/docs/components/base/skeleton.mdx` | `repo-ref/ui/apps/v4/content/docs/components/radix/skeleton.mdx` | `skeleton` | TBD | No | Not started |  |  |
 | slider | `repo-ref/ui/apps/v4/content/docs/components/base/slider.mdx` | `repo-ref/ui/apps/v4/content/docs/components/radix/slider.mdx` | `slider` | TBD | No | Not started |  |  |

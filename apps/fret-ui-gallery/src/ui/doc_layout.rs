@@ -56,8 +56,16 @@ impl DocSection {
         self
     }
 
+    pub(in crate::ui) fn code_rust(self, code: impl Into<Arc<str>>) -> Self {
+        self.code("rust", code)
+    }
+
     pub(in crate::ui) fn code_from_file(self, language: &'static str, file: &'static str) -> Self {
         self.code(language, Arc::<str>::from(file))
+    }
+
+    pub(in crate::ui) fn code_rust_from_file(self, file: &'static str) -> Self {
+        self.code_from_file("rust", file)
     }
 
     pub(in crate::ui) fn code_from_file_region(
@@ -69,6 +77,14 @@ impl DocSection {
         let sliced = slice_code_region(file, region)
             .unwrap_or_else(|| format!("// region `{region}` not found\n{file}"));
         self.code(language, Arc::<str>::from(sliced))
+    }
+
+    pub(in crate::ui) fn code_rust_from_file_region(
+        self,
+        file: &'static str,
+        region: &'static str,
+    ) -> Self {
+        self.code_from_file_region("rust", file, region)
     }
 
     pub(in crate::ui) fn max_w(mut self, max_w: Px) -> Self {
@@ -131,11 +147,9 @@ pub(in crate::ui) fn wrap_preview_page(
     render_doc_page(
         cx,
         intro,
-        vec![
-            DocSection::new(section_title, preview)
-                .no_shell()
-                .max_w(Px(980.0)),
-        ],
+        vec![DocSection::new(section_title, preview)
+            .no_shell()
+            .max_w(Px(980.0))],
     )
 }
 
