@@ -92,9 +92,7 @@ pub fn avatar_sized<H: UiHost, I>(
 where
     I: IntoIterator<Item = AnyElement>,
 {
-    let children = with_avatar_size_provider(cx, size, |cx| {
-        f(cx).into_iter().collect::<Vec<_>>()
-    });
+    let children = with_avatar_size_provider(cx, size, |cx| f(cx).into_iter().collect::<Vec<_>>());
     Avatar::new(children).size(size).into_element(cx)
 }
 
@@ -981,7 +979,10 @@ mod tests {
             let explicit_sm_el = AvatarGroupCount::new(Vec::<AnyElement>::new())
                 .size(AvatarSize::Sm)
                 .into_element(cx);
-            assert_eq!(count_box_px(&inherited_sm_el), count_box_px(&explicit_sm_el));
+            assert_eq!(
+                count_box_px(&inherited_sm_el),
+                count_box_px(&explicit_sm_el)
+            );
         });
     }
 

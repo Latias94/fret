@@ -1,7 +1,7 @@
 use super::*;
 use crate::widget::{ScrollIntoViewCx, ScrollIntoViewResult};
-use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::Arc;
+use std::sync::atomic::{AtomicUsize, Ordering};
 
 #[test]
 fn focus_on_pointer_down_defaults_to_first_focusable_ancestor() {

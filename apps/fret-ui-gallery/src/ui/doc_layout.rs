@@ -147,9 +147,11 @@ pub(in crate::ui) fn wrap_preview_page(
     render_doc_page(
         cx,
         intro,
-        vec![DocSection::new(section_title, preview)
-            .no_shell()
-            .max_w(Px(980.0))],
+        vec![
+            DocSection::new(section_title, preview)
+                .no_shell()
+                .max_w(Px(980.0)),
+        ],
     )
 }
 
@@ -620,7 +622,9 @@ fn code_block_shell(
     let props = cx.with_theme(|theme| {
         decl_style::container_props(
             theme,
-            ChromeRefinement::default(),
+            // Match the Preview tab's comfortable padding so Code tabs don't look "flush-left"
+            // compared to the demo shell.
+            ChromeRefinement::default().p(Space::N4),
             LayoutRefinement::default().w_full().min_w_0().max_w(max_w),
         )
     });

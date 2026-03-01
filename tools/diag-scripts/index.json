@@ -1631,6 +1631,16 @@
       "target_hints": []
     },
     {
+      "id": "ui-gallery-data-table-listlike-pointer-selection",
+      "path": "tools/diag-scripts/ui-gallery/data-table/ui-gallery-data-table-listlike-pointer-selection.json",
+      "required_capabilities": [],
+      "suite_memberships": [
+        "ui-gallery-data-table"
+      ],
+      "tags": [],
+      "target_hints": []
+    },
+    {
       "id": "ui-gallery-data-table-retained-column-actions-menu",
       "path": "tools/diag-scripts/ui-gallery/data-table/ui-gallery-data-table-retained-column-actions-menu.json",
       "required_capabilities": [],

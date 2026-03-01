@@ -170,9 +170,10 @@ pub use command::{
     CommandList, CommandLoading, CommandPalette, CommandSeparator, CommandShortcut, command,
 };
 pub use context_menu::{
-    ContextMenu, ContextMenuCheckboxItem, ContextMenuEntry, ContextMenuGroup, ContextMenuItem,
-    ContextMenuLabel, ContextMenuRadioGroup, ContextMenuRadioItem, ContextMenuRadioItemSpec,
-    ContextMenuShortcut,
+    ContextMenu, ContextMenuCheckboxItem, ContextMenuContent, ContextMenuEntry, ContextMenuGroup,
+    ContextMenuItem, ContextMenuLabel, ContextMenuRadioGroup, ContextMenuRadioItem,
+    ContextMenuRadioItemSpec, ContextMenuSeparator, ContextMenuShortcut, ContextMenuSub,
+    ContextMenuSubContent, ContextMenuSubTrigger, ContextMenuTrigger,
 };
 pub use data_grid_canvas::{DataGridCanvas, DataGridCanvasAxis};
 pub use fret_ui_headless::calendar::{DateRange, DateRangeSelection};
@@ -255,7 +256,8 @@ pub use native_select::{
 pub use navigation_menu::{
     NavigationMenu, NavigationMenuContent, NavigationMenuIndicator, NavigationMenuItem,
     NavigationMenuLink, NavigationMenuList, NavigationMenuRoot, NavigationMenuTrigger,
-    NavigationMenuViewport, navigation_menu, navigation_menu_list, navigation_menu_uncontrolled,
+    NavigationMenuTriggerStyle, NavigationMenuViewport, navigation_menu, navigation_menu_list,
+    navigation_menu_trigger_style, navigation_menu_uncontrolled,
 };
 pub use pagination::{
     Pagination, PaginationContent, PaginationEllipsis, PaginationItem, PaginationLink,
@@ -309,7 +311,8 @@ pub use table::{
     Table, TableBody, TableCaption, TableCell, TableFooter, TableHead, TableHeader, TableRow,
 };
 pub use tabs::{
-    Tabs, TabsContent, TabsItem, TabsList, TabsRoot, TabsTrigger, tabs, tabs_uncontrolled,
+    Tabs, TabsContent, TabsItem, TabsList, TabsListVariant, TabsListVariants, TabsRoot,
+    TabsTrigger, tabs, tabs_list_variants, tabs_uncontrolled,
 };
 pub use textarea::{Textarea, textarea};
 pub use toggle::{Toggle, ToggleRoot, ToggleSize, ToggleVariant, toggle, toggle_uncontrolled};
