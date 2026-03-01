@@ -501,8 +501,28 @@
       "target_hints": []
     },
     {
+      "id": "liquid-glass-custom-v3-steady",
+      "path": "tools/diag-scripts/renderer/effects/liquid-glass-custom-v3-steady.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "perf-liquid-glass-custom-v3-steady"
+      ],
+      "tags": [
+        "effects",
+        "gate",
+        "liquid_glass",
+        "perf"
+      ],
+      "target_hints": [
+        "Shows only the CustomV3 lens and captures a steady-state diagnostics bundle.",
+        "Intended as a perf regression baseline for CustomV3 raw+pyramid paths."
+      ]
+    },
+    {
       "id": "liquid-glass-lens-custom-v3-corners-screenshot",
-      "path": "tools/diag-scripts/liquid-glass-lens-custom-v3-corners-screenshot.json",
+      "path": "tools/diag-scripts/suites/liquid-glass-custom-v3/liquid-glass-lens-custom-v3-corners-screenshot.json",
       "required_capabilities": [
         "diag.script_v2"
       ],
@@ -521,7 +541,7 @@
     },
     {
       "id": "liquid-glass-lens-custom-v3-source-group-screenshot",
-      "path": "tools/diag-scripts/liquid-glass-lens-custom-v3-source-group-screenshot.json",
+      "path": "tools/diag-scripts/suites/liquid-glass-custom-v3/liquid-glass-lens-custom-v3-source-group-screenshot.json",
       "required_capabilities": [
         "diag.script_v2"
       ],
@@ -540,7 +560,7 @@
     },
     {
       "id": "liquid-glass-lens-custom-v3-bevel-screenshot",
-      "path": "tools/diag-scripts/liquid-glass-lens-custom-v3-bevel-screenshot.json",
+      "path": "tools/diag-scripts/suites/liquid-glass-custom-v3/liquid-glass-lens-custom-v3-bevel-screenshot.json",
       "required_capabilities": [
         "diag.script_v2"
       ],
