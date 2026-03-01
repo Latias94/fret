@@ -59,7 +59,9 @@ use layouts::{
 };
 use state::WorkspaceTabStripState;
 use theme::WorkspaceTabStripTheme;
-use utils::{dnd_scope_for_pane, resolve_end_drop_target_in_canonical_order, scroll_rect_into_view_x};
+use utils::{
+    dnd_scope_for_pane, resolve_end_drop_target_in_canonical_order, scroll_rect_into_view_x,
+};
 use widgets::{tab_close_button, tab_dirty_indicator, tab_trailing_slot_placeholder};
 
 use crate::tab_drag::compute_tab_drop_target;
