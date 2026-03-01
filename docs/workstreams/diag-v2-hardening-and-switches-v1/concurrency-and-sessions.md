@@ -160,6 +160,12 @@ P2 (de-risk `latest.txt`):
 
 - Make tooling prefer per-run `manifest.json` + `script.result.json` for “what just happened”, with `latest.txt` as a
   best-effort convenience pointer inside a session dir.
+- Add a bounded “resolve” helper so humans/agents can avoid reading `latest.txt` manually:
+  - `diag resolve latest --dir <session_dir>` (returns the latest run id + the latest bundle export dir, if any)
+  - `diag resolve latest --dir <base_dir> --session <id|latest>` (resolves to a session dir first, then resolves the
+    latest run/bundle within it)
+  - rule of thumb: if `<base_dir>/sessions/*` exists, base-level “latest” should be derived from session metadata, not
+    by writing a global `latest.txt`.
 
 ## Agent workflows (recommended patterns)
 

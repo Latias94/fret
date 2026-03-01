@@ -29,7 +29,7 @@ Related trackers:
 - **per-run dir**: the stable directory for a single run: `<out_dir>/<run_id>/`.
 - **bundle export dir**: a (usually timestamp/label-based) directory containing a bundle artifact
   (typically `bundle.schema2.json`, and optionally `bundle.json`) written by the runtime/tooling.
-  `latest.txt` points to the most recent bundle export dir name.
+  `latest.txt` points to the most recent bundle export dir name **within a single session root**.
 
 Important: **per-run dirs and bundle export dirs are not the same thing**.
 
@@ -109,6 +109,13 @@ target/fret-diag/
 export (not a run id).
 
 Tooling bridges these worlds by copying the bundle artifact into the per-run dir when possible.
+
+Notes:
+
+- In a multi-agent workflow, `latest.txt` is a convenience pointer, not a synchronization primitive. It is only safe
+  when the out dir is an exclusive session root (see `concurrency-and-sessions.md`).
+- Prefer per-run `manifest.json` + `script.result.json` for “what just happened”. Treat `latest.txt` as best-effort,
+  especially when the base dir contains multiple session dirs.
 
 ## `manifest.json` (per-run)
 

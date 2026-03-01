@@ -707,6 +707,44 @@ fn tool_launched_diag_config(
     cfg
 }
 
+fn validate_tool_launched_diag_config(
+    cfg: &UiDiagnosticsConfigFileV1,
+    wants_screenshots: bool,
+    launch_write_bundle_json: bool,
+) -> Result<(), String> {
+    // Keep these invariants explicit so future edits can't accidentally regress tool-launched runs
+    // back to "huge raw bundle.json by default" or other output-explosion behaviors.
+    if cfg.enabled != Some(true) {
+        return Err("tool launch config invariant failed: enabled must be true".to_string());
+    }
+    if cfg.allow_script_schema_v1 != Some(false) {
+        return Err(
+            "tool launch config invariant failed: allow_script_schema_v1 must be false".to_string(),
+        );
+    }
+    if cfg.write_bundle_schema2 != Some(true) {
+        return Err(
+            "tool launch config invariant failed: write_bundle_schema2 must be true".to_string(),
+        );
+    }
+    if cfg.write_bundle_json != Some(launch_write_bundle_json) {
+        return Err(format!(
+            "tool launch config invariant failed: write_bundle_json must equal --launch-write-bundle-json ({})",
+            launch_write_bundle_json
+        ));
+    }
+    if cfg.script_auto_dump != Some(false) || cfg.pick_auto_dump != Some(false) {
+        return Err("tool launch config invariant failed: script_auto_dump and pick_auto_dump must be false".to_string());
+    }
+    if cfg.screenshots_enabled != Some(wants_screenshots) {
+        return Err(format!(
+            "tool launch config invariant failed: screenshots_enabled must equal wants_screenshots ({})",
+            wants_screenshots
+        ));
+    }
+    Ok(())
+}
+
 #[allow(clippy::too_many_arguments)]
 pub(crate) fn maybe_launch_demo(
     launch: &Option<Vec<String>>,
@@ -872,6 +910,7 @@ pub(crate) fn maybe_launch_demo(
         launch_write_bundle_json,
         launch_env,
     );
+    validate_tool_launched_diag_config(&cfg, wants_screenshots, launch_write_bundle_json)?;
     let bytes = serde_json::to_vec_pretty(&cfg)
         .map_err(|e| format!("failed to serialize diag config: {e}"))?;
     std::fs::create_dir_all(out_dir).map_err(|e| {
