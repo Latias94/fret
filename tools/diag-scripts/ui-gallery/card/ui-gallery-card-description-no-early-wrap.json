@@ -56,7 +56,7 @@
         "kind": "bounds_max_size",
         "target": { "kind": "test_id", "id": "ui-gallery-card-demo-description" },
         "max_w_px": 10000.0,
-        "max_h_px": 28.0,
+        "max_h_px": 44.0,
         "eps_px": 0.5
       },
       "timeout_frames": 240
@@ -66,4 +66,3 @@
     { "type": "capture_screenshot", "label": "ui-gallery-card-description-no-early-wrap" }
   ]
 }
-

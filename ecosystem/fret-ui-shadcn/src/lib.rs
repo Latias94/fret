@@ -137,10 +137,10 @@ pub use avatar::{
     avatar_sized,
 };
 pub use badge::{Badge, BadgeRender, BadgeVariant, badge};
-pub use breadcrumb::{Breadcrumb, BreadcrumbItem, BreadcrumbSeparator};
 pub use breadcrumb::primitives::{
     BreadcrumbEllipsis, BreadcrumbLink, BreadcrumbList, BreadcrumbPage,
 };
+pub use breadcrumb::{Breadcrumb, BreadcrumbItem, BreadcrumbSeparator};
 pub use button::{Button, ButtonRender, ButtonSize, ButtonVariant};
 pub use button_group::{
     ButtonGroup, ButtonGroupItem, ButtonGroupOrientation, ButtonGroupSeparator, ButtonGroupText,
@@ -242,7 +242,8 @@ pub use hover_card::{
 };
 pub use input::{Input, OnInputSubmit, input};
 pub use input_group::{
-    InputGroup, InputGroupButton, InputGroupButtonSize, InputGroupText, InputGroupTextSize,
+    InputGroup, InputGroupAddon, InputGroupAddonAlign, InputGroupButton, InputGroupButtonSize,
+    InputGroupInput, InputGroupPart, InputGroupText, InputGroupTextSize, InputGroupTextarea,
     input_group,
 };
 pub use input_otp::{InputOtp, input_otp};
