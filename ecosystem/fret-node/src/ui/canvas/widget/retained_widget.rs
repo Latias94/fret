@@ -161,6 +161,7 @@ impl<H: UiHost, M: NodeGraphCanvasMiddleware> Widget<H> for NodeGraphCanvasWith<
             .read_ref(cx.app, |graph| {
                 let mut parts: Vec<String> = Vec::new();
                 parts.push(format!("zoom {:.3}", snapshot.zoom));
+                parts.push(format!("panning {}", self.interaction.panning));
                 parts.push(format!(
                     "selected nodes {}, edges {}, groups {}",
                     snapshot.selected_nodes.len(),

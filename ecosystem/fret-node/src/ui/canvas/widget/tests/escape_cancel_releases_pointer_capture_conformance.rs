@@ -1,7 +1,7 @@
 use fret_core::{Point, Px, Rect, Size};
 
-use super::{NullServices, TestUiHostImpl, event_cx, insert_graph_view, make_test_graph_two_nodes};
 use super::prelude::NodeGraphCanvas;
+use super::{NullServices, TestUiHostImpl, event_cx, insert_graph_view, make_test_graph_two_nodes};
 
 #[test]
 fn escape_cancel_releases_pointer_capture_during_panning() {
@@ -34,7 +34,10 @@ fn escape_cancel_releases_pointer_capture_during_panning() {
         start_pos,
         fret_core::MouseButton::Middle,
     ));
-    assert!(canvas.interaction.panning, "expected panning to be active after begin_panning");
+    assert!(
+        canvas.interaction.panning,
+        "expected panning to be active after begin_panning"
+    );
     assert_eq!(
         cx.requested_capture,
         Some(Some(cx.node)),
@@ -53,4 +56,3 @@ fn escape_cancel_releases_pointer_capture_during_panning() {
         "expected escape cancel to request pointer capture release"
     );
 }
-

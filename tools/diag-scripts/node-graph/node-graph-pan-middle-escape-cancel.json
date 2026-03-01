@@ -31,11 +31,20 @@
 
     { "type": "pointer_move", "window": { "kind": "current" }, "delta_x": 240.0, "delta_y": 120.0, "steps": 24 },
     { "type": "wait_frames", "n": 2 },
+    {
+      "type": "wait_until",
+      "predicate": { "kind": "value_contains", "target": { "kind": "test_id", "id": "node_graph.canvas" }, "text": "panning true" },
+      "timeout_frames": 120
+    },
     { "type": "press_key", "key": "escape" },
     { "type": "wait_frames", "n": 2 },
+    {
+      "type": "wait_until",
+      "predicate": { "kind": "value_contains", "target": { "kind": "test_id", "id": "node_graph.canvas" }, "text": "panning false" },
+      "timeout_frames": 120
+    },
     { "type": "pointer_up", "window": { "kind": "current" } },
 
     { "type": "capture_bundle", "label": "node-graph-pan-middle-escape-cancel" }
   ]
 }
-

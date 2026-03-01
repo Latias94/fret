@@ -175,3 +175,18 @@ Any hard-to-change runtime mechanism requires ADR alignment before being treated
 - Canvas portals (staged): `ecosystem/fret-node/src/ui/portal.rs`
 - Declarative canvas element + hosted painter: `docs/adr/0141-declarative-canvas-element-and-painter.md`
 - Cache policy vocabulary for smooth-by-default: `docs/adr/0161-canvas-cache-policy-and-hosted-resource-caches.md`
+
+## M0 quickstart (baseline repro artifacts)
+
+Run the existing node graph demo (Windows-friendly):
+
+- `cargo run -p fretboard -- dev native --bin node_graph_demo`
+
+Capture a baseline diagnostics bundle using the scripted repro:
+
+- `cargo run -p fretboard -- diag run tools/diag-scripts/node-graph/node-graph-pan-middle-escape-cancel.json --dir target/fret-diag-node-graph --launch -- cargo run -p fret-demo --bin node_graph_demo --features node-graph-demos`
+
+Notes:
+
+- The diag script asserts `panning true` then `panning false` by inspecting the viewport semantics
+  `value` string for `test_id=node_graph.canvas`.

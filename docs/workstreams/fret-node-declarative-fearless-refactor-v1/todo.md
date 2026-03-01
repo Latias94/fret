@@ -26,7 +26,7 @@ Keep this list concrete. Prefer tasks that can land independently with a single 
 Suggested starting artifacts (already present in this worktree):
 
 - Gate (Rust): `ecosystem/fret-node/src/ui/canvas/widget/tests/escape_cancel_releases_pointer_capture_conformance.rs`
-- Repro (diag script): `tools/diag-scripts/node-graph/node-graph-pan-middle-escape-cancel.json`
+- Repro (diag script): `tools/diag-scripts/node-graph/node-graph-pan-middle-escape-cancel.json` (asserts `panning true` → `panning false` via viewport semantics `value`)
 
 Suggested run commands (Windows-friendly):
 
