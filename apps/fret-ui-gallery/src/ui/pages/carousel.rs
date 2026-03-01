@@ -19,6 +19,14 @@ pub(super) fn preview_carousel(cx: &mut ElementContext<'_, App>) -> Vec<AnyEleme
             api_cursor: Option<Model<shadcn::CarouselEventCursor>>,
             api_effect_current: Option<Model<usize>>,
             api_effect_count: Option<Model<usize>>,
+            duration_fast_api_snapshot: Option<Model<shadcn::CarouselApiSnapshot>>,
+            duration_slow_api_snapshot: Option<Model<shadcn::CarouselApiSnapshot>>,
+            duration_fast_settling: Option<Model<bool>>,
+            duration_slow_settling: Option<Model<bool>>,
+            duration_fast_can_next: Option<Model<bool>>,
+            duration_slow_can_next: Option<Model<bool>>,
+            duration_fast_selected_1: Option<Model<bool>>,
+            duration_slow_selected_1: Option<Model<bool>>,
             expandable_selected: Option<Model<Option<usize>>>,
         }
 
@@ -756,6 +764,346 @@ pub(super) fn preview_carousel(cx: &mut ElementContext<'_, App>) -> Vec<AnyEleme
         .test_id("ui-gallery-carousel-spacing")
         .into_element(cx);
 
+    // Embla duration: demonstrate that smaller durations settle faster for button navigation.
+    // Note: drag release shaping uses Embla's hard-coded `baseDuration` (see workstream docs), so
+    // this demo focuses on prev/next.
+    let duration_fast_api_snapshot = cx
+        .with_state(CarouselPageState::default, |st| {
+            st.duration_fast_api_snapshot.clone()
+        })
+        .unwrap_or_else(|| {
+            let model: Model<shadcn::CarouselApiSnapshot> =
+                cx.app.models_mut().insert(shadcn::CarouselApiSnapshot::default());
+            cx.with_state(CarouselPageState::default, |st| {
+                st.duration_fast_api_snapshot = Some(model.clone());
+            });
+            model
+        });
+    let duration_slow_api_snapshot = cx
+        .with_state(CarouselPageState::default, |st| {
+            st.duration_slow_api_snapshot.clone()
+        })
+        .unwrap_or_else(|| {
+            let model: Model<shadcn::CarouselApiSnapshot> =
+                cx.app.models_mut().insert(shadcn::CarouselApiSnapshot::default());
+            cx.with_state(CarouselPageState::default, |st| {
+                st.duration_slow_api_snapshot = Some(model.clone());
+            });
+            model
+        });
+    let duration_fast_settling = cx
+        .with_state(CarouselPageState::default, |st| st.duration_fast_settling.clone())
+        .unwrap_or_else(|| {
+            let model: Model<bool> = cx.app.models_mut().insert(false);
+            cx.with_state(CarouselPageState::default, |st| {
+                st.duration_fast_settling = Some(model.clone());
+            });
+            model
+        });
+    let duration_slow_settling = cx
+        .with_state(CarouselPageState::default, |st| st.duration_slow_settling.clone())
+        .unwrap_or_else(|| {
+            let model: Model<bool> = cx.app.models_mut().insert(false);
+            cx.with_state(CarouselPageState::default, |st| {
+                st.duration_slow_settling = Some(model.clone());
+            });
+            model
+        });
+    let duration_fast_can_next = cx
+        .with_state(CarouselPageState::default, |st| st.duration_fast_can_next.clone())
+        .unwrap_or_else(|| {
+            let model: Model<bool> = cx.app.models_mut().insert(false);
+            cx.with_state(CarouselPageState::default, |st| {
+                st.duration_fast_can_next = Some(model.clone());
+            });
+            model
+        });
+    let duration_slow_can_next = cx
+        .with_state(CarouselPageState::default, |st| st.duration_slow_can_next.clone())
+        .unwrap_or_else(|| {
+            let model: Model<bool> = cx.app.models_mut().insert(false);
+            cx.with_state(CarouselPageState::default, |st| {
+                st.duration_slow_can_next = Some(model.clone());
+            });
+            model
+        });
+    let duration_fast_selected_1 = cx
+        .with_state(CarouselPageState::default, |st| {
+            st.duration_fast_selected_1.clone()
+        })
+        .unwrap_or_else(|| {
+            let model: Model<bool> = cx.app.models_mut().insert(false);
+            cx.with_state(CarouselPageState::default, |st| {
+                st.duration_fast_selected_1 = Some(model.clone());
+            });
+            model
+        });
+    let duration_slow_selected_1 = cx
+        .with_state(CarouselPageState::default, |st| {
+            st.duration_slow_selected_1.clone()
+        })
+        .unwrap_or_else(|| {
+            let model: Model<bool> = cx.app.models_mut().insert(false);
+            cx.with_state(CarouselPageState::default, |st| {
+                st.duration_slow_selected_1 = Some(model.clone());
+            });
+            model
+        });
+
+    let duration_fast_snapshot_now = cx
+        .watch_model(&duration_fast_api_snapshot)
+        .copied()
+        .unwrap_or_default();
+    let duration_slow_snapshot_now = cx
+        .watch_model(&duration_slow_api_snapshot)
+        .copied()
+        .unwrap_or_default();
+
+    let duration_fast_settling_now = cx
+        .watch_model(&duration_fast_settling)
+        .copied()
+        .unwrap_or(false);
+    if duration_fast_settling_now != duration_fast_snapshot_now.settling {
+        let _ = cx
+            .app
+            .models_mut()
+            .update(&duration_fast_settling, |v| *v = duration_fast_snapshot_now.settling);
+    }
+    let duration_slow_settling_now = cx
+        .watch_model(&duration_slow_settling)
+        .copied()
+        .unwrap_or(false);
+    if duration_slow_settling_now != duration_slow_snapshot_now.settling {
+        let _ = cx
+            .app
+            .models_mut()
+            .update(&duration_slow_settling, |v| *v = duration_slow_snapshot_now.settling);
+    }
+
+    let duration_fast_can_next_now = cx
+        .watch_model(&duration_fast_can_next)
+        .copied()
+        .unwrap_or(false);
+    if duration_fast_can_next_now != duration_fast_snapshot_now.can_scroll_next {
+        let _ = cx.app.models_mut().update(&duration_fast_can_next, |v| {
+            *v = duration_fast_snapshot_now.can_scroll_next
+        });
+    }
+    let duration_slow_can_next_now = cx
+        .watch_model(&duration_slow_can_next)
+        .copied()
+        .unwrap_or(false);
+    if duration_slow_can_next_now != duration_slow_snapshot_now.can_scroll_next {
+        let _ = cx.app.models_mut().update(&duration_slow_can_next, |v| {
+            *v = duration_slow_snapshot_now.can_scroll_next
+        });
+    }
+
+    let duration_fast_selected_1_now = cx
+        .watch_model(&duration_fast_selected_1)
+        .copied()
+        .unwrap_or(false);
+    let duration_fast_selected_1_next = duration_fast_snapshot_now.selected_index == 1;
+    if duration_fast_selected_1_now != duration_fast_selected_1_next {
+        let _ = cx
+            .app
+            .models_mut()
+            .update(&duration_fast_selected_1, |v| *v = duration_fast_selected_1_next);
+    }
+
+    let duration_slow_selected_1_now = cx
+        .watch_model(&duration_slow_selected_1)
+        .copied()
+        .unwrap_or(false);
+    let duration_slow_selected_1_next = duration_slow_snapshot_now.selected_index == 1;
+    if duration_slow_selected_1_now != duration_slow_selected_1_next {
+        let _ = cx
+            .app
+            .models_mut()
+            .update(&duration_slow_selected_1, |v| *v = duration_slow_selected_1_next);
+    }
+
+    let duration_visual = SlideVisual {
+        text_px: Px(36.0),
+        line_height_px: Px(40.0),
+    };
+    let duration_items_fast = (1..=5)
+        .map(|idx| slide(cx, idx, duration_visual))
+        .collect::<Vec<_>>();
+    let duration_items_slow = (1..=5)
+        .map(|idx| slide(cx, idx, duration_visual))
+        .collect::<Vec<_>>();
+    let duration_fast = shadcn::Carousel::new(duration_items_fast)
+        .opts(
+            shadcn::CarouselOptions::new()
+                .embla_engine(true)
+                .embla_duration(6.0)
+                .ignore_reduced_motion(true),
+        )
+        .api_snapshot_model(duration_fast_api_snapshot.clone())
+        .refine_layout(LayoutRefinement::default().w_full())
+        .test_id("ui-gallery-carousel-duration-fast")
+        .into_element(cx);
+    let duration_slow = shadcn::Carousel::new(duration_items_slow)
+        .opts(
+            shadcn::CarouselOptions::new()
+                .embla_engine(true)
+                .embla_duration(250.0)
+                .ignore_reduced_motion(true),
+        )
+        .api_snapshot_model(duration_slow_api_snapshot.clone())
+        .refine_layout(LayoutRefinement::default().w_full())
+        .test_id("ui-gallery-carousel-duration-slow")
+        .into_element(cx);
+
+    let duration = cx.flex(
+        FlexProps {
+            layout: decl_style::layout_style(
+                &Theme::global(&*cx.app).snapshot(),
+                LayoutRefinement::default().w_full(),
+            ),
+            direction: fret_core::Axis::Horizontal,
+            justify: MainAlign::Start,
+            align: CrossAlign::Start,
+            // The shadcn Carousel controls sit outside the viewport (`-left-12` / `-right-12`).
+            // When rendering multiple carousels side-by-side, keep enough horizontal spacing so
+            // the controls do not overlap and become unclickable.
+            gap: Px(96.0).into(),
+            ..Default::default()
+        },
+        move |cx| {
+            let theme = Theme::global(&*cx.app).snapshot();
+
+            let fast_row = cx.flex(
+                FlexProps {
+                    layout: decl_style::layout_style(&theme, LayoutRefinement::default().w_full()),
+                    direction: fret_core::Axis::Horizontal,
+                    justify: MainAlign::SpaceBetween,
+                    align: CrossAlign::Center,
+                    ..Default::default()
+                },
+                move |cx| {
+                    let label = ui::text(cx, "Fast (embla_duration=6)")
+                        .text_sm()
+                        .font_semibold()
+                        .into_element(cx);
+                    let indicators = cx.flex(
+                        FlexProps {
+                            direction: fret_core::Axis::Horizontal,
+                            justify: MainAlign::End,
+                            align: CrossAlign::Center,
+                            gap: Px(8.0).into(),
+                            ..Default::default()
+                        },
+                        move |cx| {
+                            let can_next = shadcn::Checkbox::new(duration_fast_can_next.clone())
+                                .a11y_label("canScrollNext")
+                                .disabled(true)
+                                .test_id("ui-gallery-carousel-duration-fast-can-next")
+                                .into_element(cx);
+                            let selected_1 =
+                                shadcn::Checkbox::new(duration_fast_selected_1.clone())
+                                    .a11y_label("selectedIndexIs1")
+                                    .disabled(true)
+                                    .test_id("ui-gallery-carousel-duration-fast-selected-1")
+                                    .into_element(cx);
+                            let settling = shadcn::Checkbox::new(duration_fast_settling.clone())
+                                .a11y_label("settling")
+                                .disabled(true)
+                                .test_id("ui-gallery-carousel-duration-fast-settling")
+                                .into_element(cx);
+                            vec![can_next, selected_1, settling]
+                        },
+                    );
+                    vec![label, indicators]
+                },
+            );
+            let fast_col = cx.flex(
+                FlexProps {
+                    layout: decl_style::layout_style(
+                        &theme,
+                        // Carousel controls are positioned outside the viewport (`-left-12` /
+                        // `-right-12`). Keep overflow visible so the controls remain clickable.
+                        LayoutRefinement::default()
+                            .w_full()
+                            .max_w(max_w_xs)
+                            .overflow_visible(),
+                    ),
+                    direction: fret_core::Axis::Vertical,
+                    justify: MainAlign::Start,
+                    align: CrossAlign::Stretch,
+                    gap: Px(12.0).into(),
+                    ..Default::default()
+                },
+                move |_cx| vec![fast_row, duration_fast],
+            );
+
+            let slow_row = cx.flex(
+                FlexProps {
+                    layout: decl_style::layout_style(&theme, LayoutRefinement::default().w_full()),
+                    direction: fret_core::Axis::Horizontal,
+                    justify: MainAlign::SpaceBetween,
+                    align: CrossAlign::Center,
+                    ..Default::default()
+                },
+                move |cx| {
+                    let label = ui::text(cx, "Slow (embla_duration=250)")
+                        .text_sm()
+                        .font_semibold()
+                        .into_element(cx);
+                    let indicators = cx.flex(
+                        FlexProps {
+                            direction: fret_core::Axis::Horizontal,
+                            justify: MainAlign::End,
+                            align: CrossAlign::Center,
+                            gap: Px(8.0).into(),
+                            ..Default::default()
+                        },
+                        move |cx| {
+                            let can_next = shadcn::Checkbox::new(duration_slow_can_next.clone())
+                                .a11y_label("canScrollNext")
+                                .disabled(true)
+                                .test_id("ui-gallery-carousel-duration-slow-can-next")
+                                .into_element(cx);
+                            let selected_1 =
+                                shadcn::Checkbox::new(duration_slow_selected_1.clone())
+                                    .a11y_label("selectedIndexIs1")
+                                    .disabled(true)
+                                    .test_id("ui-gallery-carousel-duration-slow-selected-1")
+                                    .into_element(cx);
+                            let settling = shadcn::Checkbox::new(duration_slow_settling.clone())
+                                .a11y_label("settling")
+                                .disabled(true)
+                                .test_id("ui-gallery-carousel-duration-slow-settling")
+                                .into_element(cx);
+                            vec![can_next, selected_1, settling]
+                        },
+                    );
+                    vec![label, indicators]
+                },
+            );
+            let slow_col = cx.flex(
+                FlexProps {
+                    layout: decl_style::layout_style(
+                        &theme,
+                        LayoutRefinement::default()
+                            .w_full()
+                            .max_w(max_w_xs)
+                            .overflow_visible(),
+                    ),
+                    direction: fret_core::Axis::Vertical,
+                    justify: MainAlign::Start,
+                    align: CrossAlign::Stretch,
+                    gap: Px(12.0).into(),
+                    ..Default::default()
+                },
+                move |_cx| vec![slow_row, duration_slow],
+            );
+
+            vec![fast_col, slow_col]
+        },
+    );
+
     // Shadcn uses `setApi` + `api.on("select"|"reInit", ...)` to update counters.
     // In Rust we expose a handle model and poll a cursor for the same outcomes.
     let api_handle = cx.with_state(CarouselPageState::default, |st| st.api_handle.clone());
@@ -972,29 +1320,46 @@ pub(super) fn preview_carousel(cx: &mut ElementContext<'_, App>) -> Vec<AnyEleme
                         LayoutRefinement::default().w_full().h_px(height),
                     ),
                     direction: fret_core::Axis::Vertical,
-                    justify: MainAlign::Center,
-                    align: CrossAlign::Center,
+                    justify: MainAlign::Start,
+                    align: CrossAlign::Stretch,
                     gap: gap.into(),
                     padding: Edges::all(Px(24.0)).into(),
                     ..Default::default()
                 },
                 move |cx| {
-                    let mut out = vec![
-                        ui::text(cx, format!("Item\u{00A0}{idx}"))
-                            .text_base()
-                            .font_semibold()
-                            .nowrap()
-                            .into_element(cx),
-                        shadcn::Button::new(if expanded { "Collapse" } else { "Expand" })
-                            .variant(shadcn::ButtonVariant::Outline)
-                            .size(shadcn::ButtonSize::Sm)
-                            .test_id(format!(
-                                "ui-gallery-carousel-expandable-item-{}-toggle",
-                                idx
-                            ))
-                            .on_activate(set_expandable_selected(Some(idx)))
-                            .into_element(cx),
-                    ];
+                    let theme = Theme::global(&*cx.app).snapshot();
+
+                    let header = cx.flex(
+                        FlexProps {
+                            layout: decl_style::layout_style(
+                                &theme,
+                                LayoutRefinement::default().w_full(),
+                            ),
+                            direction: fret_core::Axis::Horizontal,
+                            justify: MainAlign::SpaceBetween,
+                            align: CrossAlign::Center,
+                            ..Default::default()
+                        },
+                        move |cx| {
+                            let title = ui::text(cx, format!("Item\u{00A0}{idx}"))
+                                .text_base()
+                                .font_semibold()
+                                .nowrap()
+                                .into_element(cx);
+                            let toggle = shadcn::Button::new(if expanded { "Collapse" } else { "Expand" })
+                                .variant(shadcn::ButtonVariant::Outline)
+                                .size(shadcn::ButtonSize::Sm)
+                                .test_id(format!(
+                                    "ui-gallery-carousel-expandable-item-{}-toggle",
+                                    idx
+                                ))
+                                .on_activate(set_expandable_selected(Some(idx)))
+                                .into_element(cx);
+                            vec![title, toggle]
+                        },
+                    );
+
+                    let mut out = vec![header];
 
                     if expanded {
                         out.push(ui::text(cx, "Expandable body").text_sm().into_element(cx));
@@ -1079,7 +1444,7 @@ pub(super) fn preview_carousel(cx: &mut ElementContext<'_, App>) -> Vec<AnyEleme
         // Match the shadcn/ui docs outcome on desktop widths (`md:basis-1/2`) in a deterministic
         // way (we do not currently apply breakpoint-aware per-item sizing here).
         .item_basis_main_px(Px(100.0))
-        .refine_viewport_layout(LayoutRefinement::default().h_px(Px(200.0)))
+        .refine_viewport_layout(LayoutRefinement::default().h_px(Px(196.0)))
         .refine_track_layout(LayoutRefinement::default().h_px(Px(200.0)))
         .track_start_neg_margin(Space::N1)
         .item_padding_start(Space::N1)
@@ -1166,6 +1531,31 @@ shadcn::Carousel::new(items)
     .track_start_neg_margin(Space::N1)
     .item_padding_start(Space::N1)
     .refine_layout(LayoutRefinement::default().w_full().max_w(Px(384.0)).mx_auto())
+    .into_element(cx);"#,
+                ),
+            DocSection::new("Duration (Embla)", duration)
+                .description("Embla `duration` (integrator parameter) affects settle speed for button navigation (this demo ignores prefers-reduced-motion).")
+                .max_w(Px(760.0))
+                .test_id_prefix("ui-gallery-carousel-duration")
+                .code(
+                    "rust",
+                    r#"let api_fast = cx.app.models_mut().insert(shadcn::CarouselApiSnapshot::default());
+let api_slow = cx.app.models_mut().insert(shadcn::CarouselApiSnapshot::default());
+
+let items = (1..=5).map(|idx| slide(cx, idx)).collect::<Vec<_>>();
+
+let fast = shadcn::Carousel::new(items.clone())
+    .opts(shadcn::CarouselOptions::new().embla_engine(true).embla_duration(6.0))
+    .api_snapshot_model(api_fast)
+    .refine_track_layout(LayoutRefinement::default().w_px(Px(336.0)))
+    .refine_layout(LayoutRefinement::default().w_full().max_w(Px(320.0)).mx_auto())
+    .into_element(cx);
+
+let slow = shadcn::Carousel::new(items)
+    .opts(shadcn::CarouselOptions::new().embla_engine(true).embla_duration(250.0))
+    .api_snapshot_model(api_slow)
+    .refine_track_layout(LayoutRefinement::default().w_px(Px(336.0)))
+    .refine_layout(LayoutRefinement::default().w_full().max_w(Px(320.0)).mx_auto())
     .into_element(cx);"#,
                 ),
             DocSection::new("API", api)

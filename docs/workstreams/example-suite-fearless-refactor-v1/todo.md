@@ -50,7 +50,7 @@ Goal: create a lightweight, user-facing cookbook that does not pull “everythin
   - [ ] `simple-todo`
   - [ ] `todo` (or keep as template-only, but ensure the runnable “golden” stays obvious)
 - [ ] Add 6–10 focused cookbook examples (App Track):
-  - [ ] overlays basics
+  - [x] overlays basics (`overlay_basics`)
   - [ ] commands + keymap
   - [ ] theme switching
   - [ ] icons/assets budgets
@@ -66,9 +66,12 @@ Gates:
 
 Goal: avoid duplicated demo lists across native/web/tooling.
 
-- [ ] Make `fretboard list native-demos` and `--choose` show:
-  - [ ] “Official (user-facing)” first
-  - [ ] “Maintainer/Stress” behind `--all`
+- [x] Make `fretboard list native-demos` and `--choose` show:
+  - [x] “Official (user-facing)” first
+  - [x] “Maintainer/Stress” behind `--all`
+- [x] Add cookbook discovery + runner commands:
+  - [x] `fretboard list cookbook-examples`
+  - [x] `fretboard dev native --example <name>`
 - [ ] Reduce or eliminate hand-maintained demo lists where practical:
   - [ ] native: prefer scanning `apps/fret-demo/src/bin` and cookbook `examples/`
   - [ ] web: keep a curated list but generate docs from it

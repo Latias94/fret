@@ -706,6 +706,9 @@ impl DialogContent {
 /// Upstream shadcn's `DialogContent` renders a close affordance wired to the underlying Radix
 /// primitive. Fret exposes this as an explicit building block so apps can choose to include it (or
 /// replace it) while keeping the modal overlay policy decoupled from visuals.
+///
+/// Note: When used with absolute positioning (the default), place `DialogClose` as the *last*
+/// child in `DialogContent` so it stays on top during hit testing.
 #[derive(Clone)]
 pub struct DialogClose {
     open: Model<bool>,

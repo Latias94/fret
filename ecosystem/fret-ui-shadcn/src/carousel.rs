@@ -14,6 +14,7 @@ use fret_ui::element::{
 use fret_ui::{ElementContext, Invalidation, Theme, UiHost};
 use fret_ui_kit::declarative::icon as decl_icon;
 use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
+use fret_ui_kit::declarative::prefers_reduced_motion;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::declarative::transition as decl_transition;
 use fret_ui_kit::headless::carousel as headless_carousel;
@@ -31,6 +32,11 @@ pub struct CarouselApiSnapshot {
     pub snap_count: usize,
     pub can_scroll_prev: bool,
     pub can_scroll_next: bool,
+    /// True while the carousel is actively settling toward a target snap.
+    ///
+    /// Note: this coalesces both the v1 recipe settle driver (`settling`) and the Embla-engine
+    /// driver (`embla_settling`) into a single observable flag.
+    pub settling: bool,
     /// Monotonically increasing counter that increments when the selected index changes.
     ///
     /// This is an MVP event surface intended to support shadcn-style `api.on("select", ...)`
@@ -131,6 +137,7 @@ impl CarouselApi {
             snap_count,
             can_scroll_prev,
             can_scroll_next,
+            settling: runtime.settling || runtime.embla_settling,
             select_generation: runtime.api_select_generation,
             reinit_generation: runtime.api_reinit_generation,
         }
@@ -283,6 +290,7 @@ pub struct CarouselOptionsPatch {
     pub duration: Option<Duration>,
     pub embla_engine: Option<bool>,
     pub embla_duration: Option<f32>,
+    pub ignore_reduced_motion: Option<bool>,
     pub in_view_threshold: Option<f32>,
     pub in_view_margin_px: Option<Px>,
     pub watch_focus: Option<bool>,
@@ -304,6 +312,9 @@ impl CarouselOptionsPatch {
             duration: self.duration.unwrap_or(base.duration),
             embla_engine: self.embla_engine.unwrap_or(base.embla_engine),
             embla_duration: self.embla_duration.unwrap_or(base.embla_duration),
+            ignore_reduced_motion: self
+                .ignore_reduced_motion
+                .unwrap_or(base.ignore_reduced_motion),
             in_view_threshold: self.in_view_threshold.unwrap_or(base.in_view_threshold),
             in_view_margin_px: self.in_view_margin_px.unwrap_or(base.in_view_margin_px),
             watch_focus: self.watch_focus.unwrap_or(base.watch_focus),
@@ -406,6 +417,10 @@ pub struct CarouselOptions {
     /// This is *not* a wall-clock duration in milliseconds. See:
     /// - `docs/workstreams/carousel-embla-parity-v2/contracts.md`
     pub embla_duration: f32,
+    /// When true, ignore window `prefers-reduced-motion` and keep motion enabled.
+    ///
+    /// This is intended for demos/diagnostics only; production UIs should respect reduced motion.
+    pub ignore_reduced_motion: bool,
     /// Minimum visible fraction (0..=1) required to count a slide as "in view" for slidesInView.
     pub in_view_threshold: f32,
     /// Viewport margin (px) applied on both ends for slidesInView intersection tests.
@@ -432,6 +447,7 @@ impl Default for CarouselOptions {
             duration: Duration::from_millis(25),
             embla_engine: false,
             embla_duration: 25.0,
+            ignore_reduced_motion: false,
             in_view_threshold: 0.0,
             in_view_margin_px: Px(0.0),
             watch_focus: true,
@@ -505,6 +521,11 @@ impl CarouselOptions {
         self
     }
 
+    pub fn ignore_reduced_motion(mut self, ignore: bool) -> Self {
+        self.ignore_reduced_motion = ignore;
+        self
+    }
+
     pub fn in_view_threshold(mut self, threshold: f32) -> Self {
         self.in_view_threshold = threshold;
         self
@@ -553,6 +574,7 @@ struct CarouselRuntime {
     drag: headless_carousel::CarouselDragState,
     settling: bool,
     embla_settling: bool,
+    prevent_click: bool,
     settle_from: Px,
     settle_to: Px,
     settle_generation: u64,
@@ -576,6 +598,7 @@ impl Default for CarouselRuntime {
             drag: headless_carousel::CarouselDragState::default(),
             settling: false,
             embla_settling: false,
+            prevent_click: false,
             settle_from: Px(0.0),
             settle_to: Px(0.0),
             settle_generation: 0,
@@ -1103,7 +1126,13 @@ impl Carousel {
 
             let root_layout = decl_style::layout_style(
                 &theme,
-                LayoutRefinement::default().relative().merge(self.layout),
+                // Upstream shadcn places the prev/next controls outside the viewport (`-left-12` /
+                // `-right-12`). Keep the root overflow-visible so hit-testing can reach those
+                // controls even when their bounds extend outside the carousel panel.
+                LayoutRefinement::default()
+                    .relative()
+                    .overflow_visible()
+                    .merge(self.layout),
             );
 
             let viewport_layout = decl_style::layout_style(
@@ -1150,10 +1179,14 @@ impl Carousel {
             let offset_now = cx.watch_model(&offset_model).copied().unwrap_or(Px(0.0));
             let runtime_snapshot = cx.watch_model(&runtime_model).copied().unwrap_or_default();
 
+            let reduced_motion =
+                prefers_reduced_motion(cx, Invalidation::Paint, false) && !options.ignore_reduced_motion;
+
             let embla_engine_enabled = options.embla_engine
                 || std::env::var("FRET_DEBUG_CAROUSEL_EMBLA_ENGINE")
                     .ok()
                     .is_some_and(|v| v == "1" || v.eq_ignore_ascii_case("true"));
+            let embla_engine_enabled = embla_engine_enabled && !reduced_motion;
 
             let mut applied_api_command = false;
             if let Some(api_commands_model) = api_commands_model.as_ref() {
@@ -1333,6 +1366,12 @@ impl Carousel {
             };
 
             if runtime_snapshot.embla_settling {
+                if reduced_motion {
+                    let _ = cx.app.models_mut().update(&embla_engine_model, |v| *v = None);
+                    let _ = cx.app.models_mut().update(&runtime_model, |st| {
+                        st.embla_settling = false;
+                    });
+                } else {
                 let _frames = cx.begin_continuous_frames();
 
                 let max_offset = cx
@@ -1371,9 +1410,19 @@ impl Carousel {
                         st.embla_settling = false;
                     }
                 });
+                }
             }
 
             if runtime_snapshot.settling {
+                if reduced_motion {
+                    let _ = cx.app.models_mut().update(&offset_model, |v| {
+                        *v = runtime_snapshot.settle_to;
+                    });
+                    offset_now = runtime_snapshot.settle_to;
+                    let _ = cx.app.models_mut().update(&runtime_model, |st| {
+                        st.settling = false;
+                    });
+                } else {
                 let duration = options.duration;
                 let settle_generation = runtime_snapshot.settle_generation;
                 let motion = cx.keyed(("carousel-settle", settle_generation), |cx| {
@@ -1396,6 +1445,7 @@ impl Carousel {
                         st.settling = false;
                     }
                 });
+                }
             }
 
             let axis_offset = offset_now;
@@ -1429,6 +1479,32 @@ impl Carousel {
                     return false;
                 }
 
+                let stop_click_should_be_prevented = (|| {
+                    if !drag_free_for_down {
+                        return false;
+                    }
+                    if down.pointer_type != fret_core::PointerType::Mouse {
+                        return false;
+                    }
+                    let settling = host
+                        .models_mut()
+                        .read(&runtime_for_down, |st| st.embla_settling)
+                        .ok()
+                        .unwrap_or(false);
+                    if !settling {
+                        return false;
+                    }
+                    host.models_mut()
+                        .read(&embla_engine_for_down, |v| {
+                            v.as_ref().is_some_and(|engine| {
+                                (engine.scroll_body.target() - engine.scroll_body.location()).abs()
+                                    >= 2.0
+                            })
+                        })
+                        .ok()
+                        .unwrap_or(false)
+                })();
+
                 if autoplay_stop_for_down {
                     let token = host
                         .models_mut()
@@ -1458,6 +1534,7 @@ impl Carousel {
                     );
                     st.settling = false;
                     st.embla_settling = false;
+                    st.prevent_click = stop_click_should_be_prevented;
                 });
 
                 let snaps: Arc<[Px]> = host
@@ -1515,7 +1592,12 @@ impl Carousel {
                     engine.scroll_target.set_target_vector(loc);
                     *v = Some(engine);
                 });
-                false
+                if stop_click_should_be_prevented {
+                    host.capture_pointer();
+                    true
+                } else {
+                    false
+                }
             });
 
             let runtime_for_move = runtime_model.clone();
@@ -1683,8 +1765,17 @@ impl Carousel {
                     .ok()
                     .unwrap_or_default();
                 if !runtime.drag.dragging {
+                    if runtime.prevent_click {
+                        host.release_pointer_capture();
+                        let _ = host.models_mut().update(&runtime_for_up, |st| {
+                            st.drag = headless_carousel::CarouselDragState::default();
+                            st.prevent_click = false;
+                        });
+                        return true;
+                    }
                     let _ = host.models_mut().update(&runtime_for_up, |st| {
                         st.drag = headless_carousel::CarouselDragState::default();
+                        st.prevent_click = false;
                     });
                     return false;
                 }
@@ -1802,6 +1893,8 @@ impl Carousel {
                         st.drag = headless_carousel::CarouselDragState::default();
                         st.settling = false;
                         st.embla_settling = true;
+                        st.prevent_click = false;
+                        st.selection_initialized = true;
                     });
                     host.request_redraw(cx.window);
                     return true;
@@ -1848,6 +1941,7 @@ impl Carousel {
                     st.drag = headless_carousel::CarouselDragState::default();
                     st.settling = true;
                     st.embla_settling = false;
+                    st.prevent_click = false;
                     st.settle_from = offset;
                     st.settle_to = release.target_offset;
                     st.settle_generation = st.settle_generation.saturating_add(1);
@@ -1873,6 +1967,7 @@ impl Carousel {
                     st.drag = headless_carousel::CarouselDragState::default();
                     st.settling = false;
                     st.embla_settling = false;
+                    st.prevent_click = false;
                 });
                 let _ = host.models_mut().update(&embla_engine_for_cancel, |v| {
                     *v = None;
@@ -1978,6 +2073,7 @@ impl Carousel {
                             st.drag = headless_carousel::CarouselDragState::default();
                             st.settling = false;
                             st.embla_settling = true;
+                            st.selection_initialized = true;
                         });
                         host.request_redraw(cx.window);
                         return;
@@ -2112,6 +2208,7 @@ impl Carousel {
                             st.drag = headless_carousel::CarouselDragState::default();
                             st.settling = false;
                             st.embla_settling = true;
+                            st.selection_initialized = true;
                         });
                         host.request_redraw(cx.window);
                         return;
@@ -2287,6 +2384,7 @@ impl Carousel {
                             st.drag = headless_carousel::CarouselDragState::default();
                             st.settling = false;
                             st.embla_settling = true;
+                            st.selection_initialized = true;
                         });
                         host.request_redraw(cx.window);
                         return true;
@@ -2487,7 +2585,7 @@ impl Carousel {
                 },
             );
 
-            let (viewport_id, viewport) = cx.scope(|cx| {
+            let (viewport_id, viewport) = cx.keyed((root_test_id.clone(), "viewport"), |cx| {
                 let id = cx.root_id();
                 (
                     id,
@@ -2948,6 +3046,7 @@ impl Carousel {
             let snaps_len = snaps_now.len();
             let selection_source_index = if !runtime_snapshot.selection_initialized
                 && !runtime_snapshot.settling
+                && !runtime_snapshot.embla_settling
                 && !runtime_snapshot.drag.dragging
             {
                 options.start_snap
@@ -3028,6 +3127,7 @@ impl Carousel {
             if extent_ready
                 && !runtime_snapshot.selection_initialized
                 && !runtime_snapshot.settling
+                && !runtime_snapshot.embla_settling
                 && !runtime_snapshot.drag.dragging
             {
                 let target = snaps_now
@@ -3055,11 +3155,20 @@ impl Carousel {
 
             if let Some(api_snapshot) = api_snapshot_model.as_ref() {
                 let runtime_now = cx.watch_model(&runtime_model).copied().unwrap_or_default();
+                let embla_moving = cx
+                    .app
+                    .models_mut()
+                    .read(&embla_engine_model, |v| {
+                        v.as_ref().is_some_and(|engine| !engine.scroll_body.settled())
+                    })
+                    .ok()
+                    .unwrap_or(false);
                 let snapshot = CarouselApiSnapshot {
                     selected_index: clamped_index,
                     snap_count: if extent_ready { snaps_len } else { 0 },
                     can_scroll_prev: !prev_disabled,
                     can_scroll_next: !next_disabled,
+                    settling: runtime_now.settling || runtime_now.embla_settling || embla_moving,
                     select_generation: runtime_now.api_select_generation,
                     reinit_generation: runtime_now.api_reinit_generation,
                 };
@@ -3144,6 +3253,7 @@ impl Carousel {
                     .on_activate(on_next)
                     .into_element(cx);
 
+                // Upstream shadcn uses `-left-12` / `-right-12` which maps to 48px in Tailwind.
                 let offset = MetricRef::Px(Px(48.0));
                 let button_size = MetricRef::Px(Px(32.0));
 

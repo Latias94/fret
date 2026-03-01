@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use fret_core::Rect;
-use fret_runtime::Model;
+use fret_runtime::{Model, TimerToken};
 use fret_ui::scroll::ScrollHandle;
 use fret_ui::{ElementContext, UiHost};
 
@@ -13,6 +13,39 @@ pub(super) struct WorkspaceTabStripState {
     pub(super) last_active: Option<Arc<str>>,
     pub(super) last_tab_rects: Vec<WorkspaceTabHitRect>,
     pub(super) last_scroll_viewport: Option<Rect>,
+}
+
+#[derive(Debug, Default, Clone)]
+pub(super) struct WorkspaceTabStripPendingFocusRestore {
+    pub(super) timer: Option<TimerToken>,
+    pub(super) target_pane_id: Option<Arc<str>>,
+    pub(super) tab_id: Option<Arc<str>>,
+    pub(super) attempts: u32,
+}
+
+#[derive(Default)]
+struct WorkspaceTabStripFocusRestoreModelState {
+    model: Option<Model<WorkspaceTabStripPendingFocusRestore>>,
+}
+
+pub(super) fn get_focus_restore_model<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+) -> Model<WorkspaceTabStripPendingFocusRestore> {
+    let existing = cx.with_state(WorkspaceTabStripFocusRestoreModelState::default, |st| {
+        st.model.clone()
+    });
+    if let Some(m) = existing {
+        return m;
+    }
+
+    let model = cx
+        .app
+        .models_mut()
+        .insert(WorkspaceTabStripPendingFocusRestore::default());
+    cx.with_state(WorkspaceTabStripFocusRestoreModelState::default, |st| {
+        st.model = Some(model.clone());
+    });
+    model
 }
 
 #[cfg(feature = "shadcn-context-menu")]

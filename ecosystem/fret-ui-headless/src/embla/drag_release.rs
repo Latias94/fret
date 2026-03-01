@@ -139,4 +139,57 @@ mod tests {
         assert!(out.duration <= 25.0);
         assert!(out.friction >= 0.68);
     }
+
+    #[test]
+    fn skip_snaps_halves_base_force_when_index_changed() {
+        // Arrange: simulate a drag where the target vector is already closest to a later snap while
+        // the selected index is still the start snap (Embla `indexChanged()`).
+        let snaps = vec![0.0, -100.0, -200.0, -300.0];
+        let content_size = 300.0;
+        let limit = scroll_limit(content_size, &snaps, false);
+        let scroll_target = ScrollTarget::new(false, snaps, content_size, limit, -200.0);
+
+        let base_cfg = DragReleaseConfig {
+            drag_free: false,
+            skip_snaps: false,
+            view_size: 320.0,
+            base_friction: 0.68,
+        };
+
+        // `pointer_delta` is Embla dragTracker force (px/ms). Use a value that yields a large
+        // boosted force and triggers the `goToNextThreshold` branch.
+        let pointer_delta = -1.0;
+
+        let out_no_skip = compute_release(
+            base_cfg,
+            PointerKind::Mouse,
+            &scroll_target,
+            0,
+            pointer_delta,
+            |v| v,
+        );
+        let out_skip = compute_release(
+            DragReleaseConfig {
+                skip_snaps: true,
+                ..base_cfg
+            },
+            PointerKind::Mouse,
+            &scroll_target,
+            0,
+            pointer_delta,
+            |v| v,
+        );
+
+        // Without skipSnaps, Embla clamps to the neighbor index distance (from the current
+        // `index_current`), which in this setup moves back toward snap 1.
+        assert!(
+            (out_no_skip.force - 100.0).abs() < 0.001,
+            "out={out_no_skip:?}"
+        );
+
+        // With skipSnaps and `indexChanged()`, Embla uses `baseForce(force) * 0.5`.
+        // Here, baseForce resolves to the raw boosted force because we are past bounds, so the
+        // result is exactly half.
+        assert!((out_skip.force - -150.0).abs() < 0.001, "out={out_skip:?}");
+    }
 }

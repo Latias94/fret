@@ -1,10 +1,13 @@
 use std::cell::{Cell, RefCell};
+use std::rc::Rc;
 use std::sync::Arc;
+use std::time::Duration;
 
 use fret_core::{
-    Color, Corners, Edges, MouseButton, Point, Px, SemanticsRole, TextOverflow, TextSlant, TextWrap,
+    Color, Corners, Edges, KeyCode, MouseButton, Point, Px, SemanticsRole, TextOverflow, TextSlant,
+    TextWrap,
 };
-use fret_runtime::{CommandId, Model};
+use fret_runtime::{CommandId, Effect, Model};
 use fret_ui::action::{
     OnActivate, OnPressablePointerDown, OnPressablePointerMove, OnPressablePointerUp, OnWheel,
     PressablePointerDownResult, PressablePointerUpResult,
@@ -20,6 +23,9 @@ use fret_ui::{ElementContext, Invalidation, UiHost};
 use fret_ui_kit::declarative::action_hooks::ActionHooksExt as _;
 use fret_ui_kit::dnd as ui_dnd;
 
+use crate::focus_registry::{WorkspaceTabElementKey, workspace_tab_element_registry_model};
+
+use crate::commands::CMD_WORKSPACE_PANE_FOCUS_CONTENT;
 use crate::commands::{
     tab_activate_command, tab_close_command, tab_pin_command, tab_unpin_command,
 };
@@ -34,6 +40,7 @@ mod interaction;
 mod kernel;
 mod layouts;
 mod state;
+mod surface;
 mod theme;
 mod utils;
 mod widgets;
@@ -57,7 +64,7 @@ use layouts::{
     centered_row, fill_grow_layout, fill_layout, fixed_square_layout, row_layout,
     tab_list_semantics_layout, tab_strip_scroll_content_layout,
 };
-use state::WorkspaceTabStripState;
+use state::{WorkspaceTabStripState, get_focus_restore_model};
 use theme::WorkspaceTabStripTheme;
 use utils::{
     dnd_scope_for_pane, resolve_end_drop_target_in_canonical_order, scroll_rect_into_view_x,
@@ -133,6 +140,12 @@ impl WorkspaceTab {
 pub struct WorkspaceTabStrip {
     active: Option<Arc<str>>,
     tabs: Vec<WorkspaceTab>,
+    /// Most-recently-used ordering (including the active tab at index 0) when the strip is backed
+    /// by `WorkspaceTabs`.
+    ///
+    /// This is used for editor-grade focus restore policies (e.g. close active tab while the tab
+    /// strip is focused).
+    mru: Option<Arc<[Arc<str>]>>,
     height: Px,
     pane_id: Option<Arc<str>>,
     tab_drag: Option<Model<WorkspaceTabDragState>>,
@@ -145,6 +158,7 @@ impl WorkspaceTabStrip {
         Self {
             active: Some(active.into()),
             tabs: Vec::new(),
+            mru: None,
             height: Px(28.0),
             pane_id: None,
             tab_drag: None,
@@ -157,6 +171,7 @@ impl WorkspaceTabStrip {
         Self {
             active,
             tabs: Vec::new(),
+            mru: None,
             height: Px(28.0),
             pane_id: None,
             tab_drag: None,
@@ -204,12 +219,19 @@ impl WorkspaceTabStrip {
         self
     }
 
+    /// Provide MRU ordering for editor-grade behaviors (e.g. focus restore after close).
+    pub fn mru(mut self, mru: impl IntoIterator<Item = Arc<str>>) -> Self {
+        self.mru = Some(mru.into_iter().collect::<Vec<_>>().into());
+        self
+    }
+
     pub fn from_workspace_tabs(
         state: &crate::tabs::WorkspaceTabs,
         title: impl Fn(&str) -> Arc<str>,
     ) -> Self {
         let active = state.active().cloned();
         let mut out = WorkspaceTabStrip::new_optional(active);
+        out.mru = Some(state.mru().to_vec().into());
         out.tabs = state
             .tabs()
             .iter()
@@ -234,6 +256,7 @@ impl WorkspaceTabStrip {
         let tabs = self.tabs;
         let set_size = tabs.len() as u32;
         let active = self.active;
+        let mru = self.mru;
         let pane_id = self.pane_id;
         let pane_activate_cmd = pane_id
             .as_deref()
@@ -296,6 +319,9 @@ impl WorkspaceTabStrip {
                     .into();
                 let roving_disabled: Arc<[bool]> = vec![false; tabs.len()].into();
 
+                let tab_element_registry = workspace_tab_element_registry_model(cx);
+                let focus_restore_model = get_focus_restore_model(cx);
+
                 let (
                     scroll_handle,
                     last_active,
@@ -314,9 +340,16 @@ impl WorkspaceTabStrip {
                 );
                 let scroll_element = Cell::<Option<GlobalElementId>>::new(None);
                 let active_tab_element = Cell::<Option<GlobalElementId>>::new(None);
-                let tab_elements: RefCell<Vec<(Arc<str>, GlobalElementId)>> = RefCell::new(Vec::new());
+                let tab_elements: Rc<RefCell<Vec<(Arc<str>, GlobalElementId)>>> =
+                    Rc::new(RefCell::new(Vec::new()));
                 let pinned_boundary_element = Cell::<Option<GlobalElementId>>::new(None);
                 let end_drop_target_element = Cell::<Option<GlobalElementId>>::new(None);
+                let overflow_control_element: Rc<Cell<Option<GlobalElementId>>> =
+                    Rc::new(Cell::new(None));
+                let scroll_left_control_element: Rc<Cell<Option<GlobalElementId>>> =
+                    Rc::new(Cell::new(None));
+                let scroll_right_control_element: Rc<Cell<Option<GlobalElementId>>> =
+                    Rc::new(Cell::new(None));
 
                 let cross_drop_target: Option<(Arc<str>, WorkspaceTabInsertionSide)> = match (
                     tab_drag_model.as_ref(),
@@ -361,6 +394,25 @@ impl WorkspaceTabStrip {
                             ..Default::default()
                         },
                         |cx| {
+                            // Escape exits the tab strip (best-effort) by asking the workspace
+                            // shell to restore focus to pane content.
+                            cx.key_add_on_key_down_for(
+                                cx.root_id(),
+                                Arc::new(move |host, acx, down| {
+                                    if down.ime_composing {
+                                        return false;
+                                    }
+                                    if down.key != KeyCode::Escape {
+                                        return false;
+                                    }
+                                    host.dispatch_command(
+                                        Some(acx.window),
+                                        CommandId::from(CMD_WORKSPACE_PANE_FOCUS_CONTENT),
+                                    );
+                                    true
+                                }),
+                            );
+
                             let scroll = cx.keyed("workspace-tab-strip-scroll", |cx| {
                                 let id = cx.root_id();
                                 scroll_element.set(Some(id));
@@ -493,6 +545,8 @@ impl WorkspaceTabStrip {
                                             let tab_dirty = tab.dirty;
                                             let tab_pinned = tab.pinned;
                                             let tab_preview = tab.preview;
+                                            let pane_id_for_registry = pane_id.clone();
+                                            let tab_element_registry_for_tab = tab_element_registry.clone();
                                             let tab_test_id_prefix_for_tab = tab_test_id_prefix.clone();
                                             #[cfg(feature = "shadcn-context-menu")]
                                             let has_left = index > 0;
@@ -543,9 +597,36 @@ impl WorkspaceTabStrip {
                                                         ..Default::default()
                                                     },
                                                     |cx, press_state, element_id| {
-                                                        tab_elements.borrow_mut().push((tab_id.clone(), element_id));
+                                                        tab_elements
+                                                            .borrow_mut()
+                                                            .push((tab_id.clone(), element_id));
                                                         if is_active {
                                                             active_tab_element.set(Some(element_id));
+                                                        }
+
+                                                        // Registry for cross-frame focus restore.
+                                                        //
+                                                        // We avoid updating the model unless the mapping actually
+                                                        // changes, because `ModelStore::update` always marks dirty.
+                                                        let registry_key = WorkspaceTabElementKey {
+                                                            window: cx.window,
+                                                            pane_id: pane_id_for_registry.clone(),
+                                                            tab_id: tab_id.clone(),
+                                                        };
+                                                        let needs_registry_update = cx
+                                                            .app
+                                                            .models_mut()
+                                                            .read(&tab_element_registry_for_tab, |reg| {
+                                                                reg.get(&registry_key) != Some(element_id)
+                                                            })
+                                                            .unwrap_or(true);
+                                                        if needs_registry_update {
+                                                            let _ = cx.app.models_mut().update(
+                                                                &tab_element_registry_for_tab,
+                                                                |reg| {
+                                                                    reg.set_if_changed(registry_key, element_id);
+                                                                },
+                                                            );
                                                         }
 
                                                         let tab_activate_cmd_for_activate =
@@ -619,6 +700,12 @@ impl WorkspaceTabStrip {
                                                                     snapshot.end_drop_target_rect;
                                                                 let scroll_viewport_rect =
                                                                     snapshot.scroll_viewport_rect;
+                                                                let overflow_control_rect =
+                                                                    snapshot.overflow_control_rect;
+                                                                let scroll_left_control_rect =
+                                                                    snapshot.scroll_left_control_rect;
+                                                                let scroll_right_control_rect =
+                                                                    snapshot.scroll_right_control_rect;
 
                                                                 let Some(dragged_tab) = dragged_tab else {
                                                                     return false;
@@ -681,6 +768,9 @@ impl WorkspaceTabStrip {
                                                                         pinned_boundary_rect,
                                                                         end_drop_target_rect,
                                                                         scroll_viewport_rect,
+                                                                        overflow_control_rect,
+                                                                        scroll_left_control_rect,
+                                                                        scroll_right_control_rect,
                                                                     );
                                                                 if matches!(drop_target, WorkspaceTabStripDropTarget::End) {
                                                                     drop_target = resolve_end_drop_target_in_canonical_order(
@@ -1239,7 +1329,8 @@ impl WorkspaceTabStrip {
                                                  enabled: bool,
                                                  glyph: &'static str,
                                                  a11y_label: &'static str,
-                                                 delta_x: f32| {
+                                                 delta_x: f32,
+                                                 control_element: Rc<Cell<Option<GlobalElementId>>>| {
                                 let scroll_handle = scroll_handle.clone();
                                 let button_text_style = text_style.clone();
                                 let glyph = Arc::<str>::from(glyph);
@@ -1256,6 +1347,7 @@ impl WorkspaceTabStrip {
                                         ..Default::default()
                                     },
                                     move |cx, state| {
+                                        control_element.set(Some(cx.root_id()));
                                         let handler: OnActivate = Arc::new(move |_host, _acx, _r| {
                                             let current = scroll_handle.offset();
                                             scroll_handle.set_offset(Point::new(
@@ -1307,6 +1399,18 @@ impl WorkspaceTabStrip {
                             let end_drop_target_rect_now = bounds_for_optional_element_id(
                                 cx,
                                 end_drop_target_element.get(),
+                            );
+                            let overflow_control_rect_now = bounds_for_optional_element_id(
+                                cx,
+                                overflow_control_element.get(),
+                            );
+                            let scroll_left_control_rect_now = bounds_for_optional_element_id(
+                                cx,
+                                scroll_left_control_element.get(),
+                            );
+                            let scroll_right_control_rect_now = bounds_for_optional_element_id(
+                                cx,
+                                scroll_right_control_element.get(),
                             );
 
                             #[cfg(feature = "shadcn-context-menu")]
@@ -1389,18 +1493,34 @@ impl WorkspaceTabStrip {
                             let viewport_changed = viewport_for_hit != drag_snapshot.scroll_viewport_rect;
                             let end_drop_changed =
                                 end_drop_target_rect_now != drag_snapshot.end_drop_target_rect;
+                            let overflow_control_changed =
+                                overflow_control_rect_now != drag_snapshot.overflow_control_rect;
+                            let scroll_left_control_changed =
+                                scroll_left_control_rect_now
+                                    != drag_snapshot.scroll_left_control_rect;
+                            let scroll_right_control_changed =
+                                scroll_right_control_rect_now
+                                    != drag_snapshot.scroll_right_control_rect;
 
                             if should_clear
                                 || (should_sync_rects
                                     && (rects_changed
                                         || pinned_boundary_changed
                                         || viewport_changed
-                                        || end_drop_changed))
+                                        || end_drop_changed
+                                        || overflow_control_changed
+                                        || scroll_left_control_changed
+                                        || scroll_right_control_changed))
                             {
                                 let rects_for_model = rects_for_hit.clone();
                                 let pinned_boundary_rect_for_model = pinned_boundary_rect_now;
                                 let viewport_for_model = viewport_for_hit;
                                 let end_drop_target_rect_for_model = end_drop_target_rect_now;
+                                let overflow_control_rect_for_model = overflow_control_rect_now;
+                                let scroll_left_control_rect_for_model =
+                                    scroll_left_control_rect_now;
+                                let scroll_right_control_rect_for_model =
+                                    scroll_right_control_rect_now;
                                 let _ = cx.app.models_mut().update(&drag_model, move |st| {
                                     if should_clear {
                                         *st = WorkspaceTabStripDragState::default();
@@ -1411,6 +1531,10 @@ impl WorkspaceTabStrip {
                                     st.pinned_boundary_rect = pinned_boundary_rect_for_model;
                                     st.scroll_viewport_rect = viewport_for_model;
                                     st.end_drop_target_rect = end_drop_target_rect_for_model;
+                                    st.overflow_control_rect = overflow_control_rect_for_model;
+                                    st.scroll_left_control_rect = scroll_left_control_rect_for_model;
+                                    st.scroll_right_control_rect =
+                                        scroll_right_control_rect_for_model;
                                     match st.drop_target.clone() {
                                         WorkspaceTabStripDropTarget::None => {}
                                         WorkspaceTabStripDropTarget::PinnedBoundary => {
@@ -1446,14 +1570,18 @@ impl WorkspaceTabStrip {
                                         && session_dragging
                                         && session_current_window == cx.window
                                     {
-                                    let next = compute_workspace_tab_strip_drop_target(
-                                        session_position,
-                                        dragged,
-                                        &rects_for_hit,
-                                        pinned_boundary_rect_now,
-                                        end_drop_target_rect_now,
-                                        viewport_for_hit,
-                                    );
+                                        let overflow_rect = overflow_control_rect_now;
+                                        let next = compute_workspace_tab_strip_drop_target(
+                                            session_position,
+                                            dragged,
+                                            &rects_for_hit,
+                                            pinned_boundary_rect_now,
+                                            end_drop_target_rect_now,
+                                            viewport_for_hit,
+                                            overflow_rect,
+                                            scroll_left_control_rect_now,
+                                            scroll_right_control_rect_now,
+                                        );
                                     let next = match next {
                                         WorkspaceTabStripDropTarget::End => resolve_end_drop_target_in_canonical_order(
                                             pinned_by_id.as_ref(),
@@ -1630,6 +1758,7 @@ impl WorkspaceTabStrip {
                                                     "<",
                                                     "Scroll left",
                                                     -1.0,
+                                                    scroll_left_control_element.clone(),
                                                 ),
                                                 scroll,
                                                 scroll_button(
@@ -1638,13 +1767,22 @@ impl WorkspaceTabStrip {
                                                     ">",
                                                     "Scroll right",
                                                     1.0,
+                                                    scroll_right_control_element.clone(),
                                                 ),
                                             ];
 
                                             #[cfg(feature = "shadcn-context-menu")]
+                                            overflow_control_element.set(None);
+                                            scroll_left_control_element.set(None);
+                                            scroll_right_control_element.set(None);
+                                            #[cfg(feature = "shadcn-context-menu")]
                                             if overflow_is_overflowing {
                                                 let enabled = !overflow_entries.is_empty();
+                                                let overflow_control_element_for_trigger =
+                                                    overflow_control_element.clone();
                                                 let trigger = move |cx: &mut ElementContext<'_, H>| {
+                                                    overflow_control_element_for_trigger
+                                                        .set(Some(cx.root_id()));
                                                     let on_down: OnPressablePointerDown = Arc::new(|host, _acx, _down| {
                                                         host.prevent_default(
                                                             fret_runtime::DefaultAction::FocusOnPointerDown,
@@ -1733,6 +1871,196 @@ impl WorkspaceTabStrip {
                     cx.with_state(WorkspaceTabStripState::default, |state| {
                         state.last_active = active.clone();
                     });
+
+                    // Editor-grade focus restore:
+                    //
+                    // When the tab strip is focused (keyboard-first), closing the active tab
+                    // should keep focus within the strip by pre-focusing the tab that is expected
+                    // to become active next.
+                    {
+                        use crate::commands::{CMD_WORKSPACE_TAB_CLOSE, CMD_WORKSPACE_TAB_CLOSE_PREFIX};
+
+                        let active_for_hook = active.clone();
+                        let mru_for_hook = mru.clone();
+                        let canonical_for_hook = canonical_tab_order.clone();
+                        let tab_elements_for_hook = tab_elements.clone();
+                        let pane_id_for_hook = pane_id.clone();
+                        let tab_element_registry_for_timer = tab_element_registry.clone();
+                        let focus_restore_model_for_timer = focus_restore_model.clone();
+                        let tab_element_registry_for_command = tab_element_registry.clone();
+                        let focus_restore_model_for_command = focus_restore_model.clone();
+
+                        cx.timer_on_timer_for(
+                            root.id,
+                            Arc::new(move |host, acx, token| {
+                                const MAX_ATTEMPTS: u32 = 4;
+
+                                let Ok((pending_timer, pane_id, tab_id, attempts)) =
+                                    host.models_mut().read(&focus_restore_model_for_timer, |st| {
+                                        (st.timer, st.target_pane_id.clone(), st.tab_id.clone(), st.attempts)
+                                    })
+                                else {
+                                    return false;
+                                };
+
+                                if pending_timer != Some(token) {
+                                    return false;
+                                }
+
+                                let Some(tab_id) = tab_id else {
+                                    return false;
+                                };
+
+                                let key = WorkspaceTabElementKey {
+                                    window: acx.window,
+                                    pane_id,
+                                    tab_id: tab_id.clone(),
+                                };
+
+                                let target = host
+                                    .models_mut()
+                                    .read(&tab_element_registry_for_timer, |reg| reg.get(&key))
+                                    .ok()
+                                    .flatten();
+
+                                if let Some(target) = target {
+                                    host.request_focus(target);
+                                    host.request_redraw(acx.window);
+                                    let _ = host.models_mut().update(&focus_restore_model_for_timer, |st| {
+                                        if st.timer == Some(token) {
+                                            st.timer = None;
+                                            st.target_pane_id = None;
+                                            st.tab_id = None;
+                                            st.attempts = 0;
+                                        }
+                                    });
+                                    return false;
+                                }
+
+                                if attempts >= MAX_ATTEMPTS {
+                                    let _ = host.models_mut().update(&focus_restore_model_for_timer, |st| {
+                                        if st.timer == Some(token) {
+                                            st.timer = None;
+                                            st.target_pane_id = None;
+                                            st.tab_id = None;
+                                            st.attempts = 0;
+                                        }
+                                    });
+                                    return false;
+                                }
+
+                                let retry_token = host.next_timer_token();
+                                let retry_after = if attempts == 0 {
+                                    Duration::from_millis(0)
+                                } else {
+                                    Duration::from_millis(16)
+                                };
+
+                                let _ = host.models_mut().update(&focus_restore_model_for_timer, |st| {
+                                    if st.timer == Some(token) {
+                                        st.timer = Some(retry_token);
+                                        st.attempts = attempts.saturating_add(1);
+                                    }
+                                });
+
+                                host.push_effect(Effect::SetTimer {
+                                    window: Some(acx.window),
+                                    token: retry_token,
+                                    after: retry_after,
+                                    repeat: None,
+                                });
+
+                                false
+                            }),
+                        );
+
+                        cx.command_on_command_for(
+                            root.id,
+                            Arc::new(move |host, acx, command| {
+                                let Some(active_id) = active_for_hook.clone() else {
+                                    return false;
+                                };
+
+                                let cmd = command.as_str();
+                                let closing_active = if cmd == CMD_WORKSPACE_TAB_CLOSE {
+                                    true
+                                } else if let Some(id) =
+                                    cmd.strip_prefix(CMD_WORKSPACE_TAB_CLOSE_PREFIX)
+                                {
+                                    id.trim() == active_id.as_ref()
+                                } else {
+                                    false
+                                };
+
+                                if !closing_active {
+                                    return false;
+                                }
+
+                                let next = utils::predict_next_active_tab_after_close(
+                                    &active_id,
+                                    canonical_for_hook.as_ref(),
+                                    mru_for_hook.as_deref(),
+                                );
+
+                                if let Some(next_id) = next {
+                                    // Drop the closing tab entry (best-effort) so the registry
+                                    // doesn't grow unbounded in long sessions.
+                                    let closing_key = WorkspaceTabElementKey {
+                                        window: acx.window,
+                                        pane_id: pane_id_for_hook.clone(),
+                                        tab_id: active_id.clone(),
+                                    };
+                                    let _ = host
+                                        .models_mut()
+                                        .update(&tab_element_registry_for_command, |reg| {
+                                            reg.remove(&closing_key);
+                                        });
+
+                                    let target = tab_elements_for_hook
+                                        .borrow()
+                                        .iter()
+                                        .find(|(id, _)| id.as_ref() == next_id.as_ref())
+                                        .map(|(_, el)| *el);
+                                    if let Some(target) = target {
+                                        host.request_focus(target);
+                                        host.request_redraw(acx.window);
+                                    }
+
+                                    // The tab we want to focus is typically not focusable until it
+                                    // becomes the new active tab (roving focus policy). Defer an
+                                    // additional focus attempt to a timer tick so it runs after
+                                    // the close command has updated selection.
+                                    let existing = host
+                                        .models_mut()
+                                        .read(&focus_restore_model_for_command, |st| st.timer)
+                                        .ok()
+                                        .flatten();
+                                    if let Some(prev) = existing {
+                                        host.push_effect(Effect::CancelTimer { token: prev });
+                                    }
+
+                                    let token = host.next_timer_token();
+                                    let _ = host.models_mut().update(
+                                        &focus_restore_model_for_command,
+                                        |st| {
+                                            st.timer = Some(token);
+                                            st.target_pane_id = pane_id_for_hook.clone();
+                                            st.tab_id = Some(next_id.clone());
+                                            st.attempts = 0;
+                                        },
+                                    );
+                                    host.push_effect(Effect::SetTimer {
+                                        window: Some(acx.window),
+                                        token,
+                                        after: Duration::from_millis(0),
+                                        repeat: None,
+                                    });
+                                }
+
+                                false
+                            }),
+                        );
+                    }
 
                     vec![root]
             },
