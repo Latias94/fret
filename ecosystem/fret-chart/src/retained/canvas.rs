@@ -1288,9 +1288,9 @@ impl ChartCanvas {
                     cx.scene.push(SceneOp::Quad {
                         order: shadow_order,
                         rect,
-                        background: Paint::Solid(color),
+                        background: Paint::Solid(color).into(),
                         border: Edges::all(Px(0.0)),
-                        border_paint: Paint::TRANSPARENT,
+                        border_paint: Paint::TRANSPARENT.into(),
                         corner_radii: Corners::all(Px(0.0)),
                     });
                 }
@@ -1301,9 +1301,9 @@ impl ChartCanvas {
                         Point::new(Px(x - 0.5 * crosshair_w), plot.origin.y),
                         Size::new(Px(crosshair_w), plot.size.height),
                     ),
-                    background: Paint::Solid(self.style.crosshair_color),
+                    background: Paint::Solid(self.style.crosshair_color).into(),
                     border: Edges::all(Px(0.0)),
-                    border_paint: Paint::TRANSPARENT,
+                    border_paint: Paint::TRANSPARENT.into(),
                     corner_radii: Corners::all(Px(0.0)),
                 });
             }
@@ -1314,9 +1314,9 @@ impl ChartCanvas {
                         Point::new(plot.origin.x, Px(y - 0.5 * crosshair_w)),
                         Size::new(plot.size.width, Px(crosshair_w)),
                     ),
-                    background: Paint::Solid(self.style.crosshair_color),
+                    background: Paint::Solid(self.style.crosshair_color).into(),
                     border: Edges::all(Px(0.0)),
-                    border_paint: Paint::TRANSPARENT,
+                    border_paint: Paint::TRANSPARENT.into(),
                     corner_radii: Corners::all(Px(0.0)),
                 });
             }
@@ -1439,9 +1439,9 @@ impl ChartCanvas {
                     cx.scene.push(SceneOp::Quad {
                         order: label_order,
                         rect,
-                        background: Paint::Solid(self.style.tooltip_background),
+                        background: Paint::Solid(self.style.tooltip_background).into(),
                         border: Edges::all(self.style.tooltip_border_width),
-                        border_paint: Paint::Solid(self.style.tooltip_border_color),
+                        border_paint: Paint::Solid(self.style.tooltip_border_color).into(),
                         corner_radii: Corners::all(Px(4.0)),
                     });
                     cx.scene.push(SceneOp::Text {
@@ -1482,9 +1482,9 @@ impl ChartCanvas {
                             Point::new(Px(hit.point_px.x.0 - r), Px(hit.point_px.y.0 - r)),
                             Size::new(Px(2.0 * r), Px(2.0 * r)),
                         ),
-                        background: Paint::Solid(self.style.hover_point_color),
+                        background: Paint::Solid(self.style.hover_point_color).into(),
                         border: Edges::all(Px(0.0)),
-                        border_paint: Paint::TRANSPARENT,
+                        border_paint: Paint::TRANSPARENT.into(),
                         corner_radii: Corners::all(Px(0.0)),
                     });
                 }
@@ -1655,9 +1655,9 @@ impl ChartCanvas {
                 cx.scene.push(SceneOp::Quad {
                     order: tooltip_order,
                     rect: Rect::new(Point::new(Px(tip_x), Px(tip_y)), Size::new(Px(w), Px(h))),
-                    background: Paint::Solid(self.style.tooltip_background),
+                    background: Paint::Solid(self.style.tooltip_background).into(),
                     border: Edges::all(self.style.tooltip_border_width),
-                    border_paint: Paint::Solid(self.style.tooltip_border_color),
+                    border_paint: Paint::Solid(self.style.tooltip_border_color).into(),
                     corner_radii: Corners::all(self.style.tooltip_corner_radius),
                 });
 
@@ -1698,9 +1698,9 @@ impl ChartCanvas {
                                 Point::new(Px(swatch_x), Px(marker_y)),
                                 Size::new(Px(side), Px(side)),
                             ),
-                            background: Paint::Solid(self.series_color(series)),
+                            background: Paint::Solid(self.series_color(series)).into(),
                             border: Edges::all(Px(0.0)),
-                            border_paint: Paint::TRANSPARENT,
+                            border_paint: Paint::TRANSPARENT.into(),
                             corner_radii: Corners::all(Px(side * 0.5)),
                         });
                     }
@@ -3328,10 +3328,10 @@ impl ChartCanvas {
         cx.scene.push(SceneOp::Quad {
             order: legend_order,
             rect: legend_rect,
-            background: fret_core::Paint::Solid(self.style.legend_background),
+            background: fret_core::Paint::Solid(self.style.legend_background).into(),
 
             border: Edges::all(self.style.legend_border_width),
-            border_paint: fret_core::Paint::Solid(self.style.legend_border_color),
+            border_paint: fret_core::Paint::Solid(self.style.legend_border_color).into(),
 
             corner_radii: Corners::all(self.style.legend_corner_radius),
         });
@@ -3355,10 +3355,10 @@ impl ChartCanvas {
                 cx.scene.push(SceneOp::Quad {
                     order: DrawOrder(legend_order.0.saturating_add(1)),
                     rect,
-                    background: fret_core::Paint::Solid(self.style.legend_hover_background),
+                    background: fret_core::Paint::Solid(self.style.legend_hover_background).into(),
 
                     border: Edges::all(Px(0.0)),
-                    border_paint: fret_core::Paint::TRANSPARENT,
+                    border_paint: fret_core::Paint::TRANSPARENT.into(),
 
                     corner_radii: Corners::all(Px(4.0)),
                 });
@@ -3395,10 +3395,10 @@ impl ChartCanvas {
                 cx.scene.push(SceneOp::Quad {
                     order: DrawOrder(legend_order.0.saturating_add(1 + i as u32 * 3)),
                     rect: item_rect,
-                    background: fret_core::Paint::Solid(self.style.legend_hover_background),
+                    background: fret_core::Paint::Solid(self.style.legend_hover_background).into(),
 
                     border: Edges::all(Px(0.0)),
-                    border_paint: fret_core::Paint::TRANSPARENT,
+                    border_paint: fret_core::Paint::TRANSPARENT.into(),
 
                     corner_radii: Corners::all(Px(0.0)),
                 });
@@ -3411,10 +3411,10 @@ impl ChartCanvas {
             cx.scene.push(SceneOp::Quad {
                 order: DrawOrder(legend_order.0.saturating_add(2 + i as u32 * 3)),
                 rect: Rect::new(Point::new(Px(sw_x), Px(sw_y)), Size::new(Px(sw), Px(sw))),
-                background: fret_core::Paint::Solid(swatch),
+                background: fret_core::Paint::Solid(swatch).into(),
 
                 border: Edges::all(Px(0.0)),
-                border_paint: fret_core::Paint::TRANSPARENT,
+                border_paint: fret_core::Paint::TRANSPARENT.into(),
 
                 corner_radii: Corners::all(Px(2.0)),
             });
@@ -3459,10 +3459,10 @@ impl ChartCanvas {
             cx.scene.push(SceneOp::Quad {
                 order,
                 rect: track,
-                background: fret_core::Paint::Solid(self.style.visual_map_track_color),
+                background: fret_core::Paint::Solid(self.style.visual_map_track_color).into(),
 
                 border: Edges::all(Px(0.0)),
-                border_paint: fret_core::Paint::TRANSPARENT,
+                border_paint: fret_core::Paint::TRANSPARENT.into(),
 
                 corner_radii: Corners::all(self.style.visual_map_corner_radius),
             });
@@ -3497,10 +3497,10 @@ impl ChartCanvas {
                                 Point::new(ramp_rect.origin.x, Px(y0)),
                                 Size::new(ramp_rect.size.width, Px(h)),
                             ),
-                            background: fret_core::Paint::Solid(c),
+                            background: fret_core::Paint::Solid(c).into(),
 
                             border: Edges::all(Px(0.0)),
-                            border_paint: fret_core::Paint::TRANSPARENT,
+                            border_paint: fret_core::Paint::TRANSPARENT.into(),
 
                             corner_radii: Corners::all(Px(0.0)),
                         });
@@ -3521,10 +3521,12 @@ impl ChartCanvas {
                     cx.scene.push(SceneOp::Quad {
                         order: DrawOrder(order.0.saturating_add(2)),
                         rect: win_rect,
-                        background: fret_core::Paint::Solid(self.style.visual_map_range_fill),
+                        background: fret_core::Paint::Solid(self.style.visual_map_range_fill)
+                            .into(),
 
                         border: Edges::all(self.style.selection_stroke_width),
-                        border_paint: fret_core::Paint::Solid(self.style.visual_map_range_stroke),
+                        border_paint: fret_core::Paint::Solid(self.style.visual_map_range_stroke)
+                            .into(),
 
                         corner_radii: Corners::all(self.style.visual_map_corner_radius),
                     });
@@ -3537,10 +3539,10 @@ impl ChartCanvas {
                             Point::new(track.origin.x, Px(y_min - 0.5 * handle_h)),
                             Size::new(track.size.width, Px(handle_h)),
                         ),
-                        background: fret_core::Paint::Solid(handle_color),
+                        background: fret_core::Paint::Solid(handle_color).into(),
 
                         border: Edges::all(Px(0.0)),
-                        border_paint: fret_core::Paint::TRANSPARENT,
+                        border_paint: fret_core::Paint::TRANSPARENT.into(),
 
                         corner_radii: Corners::all(Px(0.0)),
                     });
@@ -3550,10 +3552,10 @@ impl ChartCanvas {
                             Point::new(track.origin.x, Px(y_max - 0.5 * handle_h)),
                             Size::new(track.size.width, Px(handle_h)),
                         ),
-                        background: fret_core::Paint::Solid(handle_color),
+                        background: fret_core::Paint::Solid(handle_color).into(),
 
                         border: Edges::all(Px(0.0)),
-                        border_paint: fret_core::Paint::TRANSPARENT,
+                        border_paint: fret_core::Paint::TRANSPARENT.into(),
 
                         corner_radii: Corners::all(Px(0.0)),
                     });
@@ -3582,10 +3584,10 @@ impl ChartCanvas {
                                 Point::new(ramp_rect.origin.x, Px(y0)),
                                 Size::new(ramp_rect.size.width, Px(h)),
                             ),
-                            background: fret_core::Paint::Solid(c),
+                            background: fret_core::Paint::Solid(c).into(),
 
                             border: Edges::all(Px(0.0)),
-                            border_paint: fret_core::Paint::TRANSPARENT,
+                            border_paint: fret_core::Paint::TRANSPARENT.into(),
 
                             corner_radii: Corners::all(Px(0.0)),
                         });
@@ -3678,10 +3680,10 @@ impl ChartCanvas {
                     Point::new(band.rect.origin.x, Px(baseline_y - line_w * 0.5)),
                     Size::new(plot.size.width, Px(line_w)),
                 ),
-                background: fret_core::Paint::Solid(self.style.axis_line_color),
+                background: fret_core::Paint::Solid(self.style.axis_line_color).into(),
 
                 border: Edges::all(Px(0.0)),
-                border_paint: fret_core::Paint::TRANSPARENT,
+                border_paint: fret_core::Paint::TRANSPARENT.into(),
 
                 corner_radii: Corners::all(Px(0.0)),
             });
@@ -3705,10 +3707,10 @@ impl ChartCanvas {
                         Point::new(Px(x_px - 0.5 * line_w), Px(tick_y)),
                         Size::new(Px(line_w), Px(tick_len)),
                     ),
-                    background: fret_core::Paint::Solid(self.style.axis_tick_color),
+                    background: fret_core::Paint::Solid(self.style.axis_tick_color).into(),
 
                     border: Edges::all(Px(0.0)),
-                    border_paint: fret_core::Paint::TRANSPARENT,
+                    border_paint: fret_core::Paint::TRANSPARENT.into(),
 
                     corner_radii: Corners::all(Px(0.0)),
                 });
@@ -3753,10 +3755,10 @@ impl ChartCanvas {
                     Point::new(Px(baseline_x - line_w * 0.5), band.rect.origin.y),
                     Size::new(Px(line_w), plot.size.height),
                 ),
-                background: fret_core::Paint::Solid(self.style.axis_line_color),
+                background: fret_core::Paint::Solid(self.style.axis_line_color).into(),
 
                 border: Edges::all(Px(0.0)),
-                border_paint: fret_core::Paint::TRANSPARENT,
+                border_paint: fret_core::Paint::TRANSPARENT.into(),
 
                 corner_radii: Corners::all(Px(0.0)),
             });
@@ -3780,10 +3782,10 @@ impl ChartCanvas {
                         Point::new(Px(tick_x), Px(y_px - 0.5 * line_w)),
                         Size::new(Px(tick_w), Px(line_w)),
                     ),
-                    background: fret_core::Paint::Solid(self.style.axis_tick_color),
+                    background: fret_core::Paint::Solid(self.style.axis_tick_color).into(),
 
                     border: Edges::all(Px(0.0)),
-                    border_paint: fret_core::Paint::TRANSPARENT,
+                    border_paint: fret_core::Paint::TRANSPARENT.into(),
 
                     corner_radii: Corners::all(Px(0.0)),
                 });
@@ -5825,9 +5827,9 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
             cx.scene.push(SceneOp::Quad {
                 order: DrawOrder(self.style.draw_order.0.saturating_sub(1)),
                 rect: self.last_layout.bounds,
-                background: fret_core::Paint::Solid(background),
+                background: fret_core::Paint::Solid(background).into(),
                 border: Edges::all(Px(0.0)),
-                border_paint: fret_core::Paint::TRANSPARENT,
+                border_paint: fret_core::Paint::TRANSPARENT.into(),
 
                 corner_radii: Corners::all(Px(0.0)),
             });
@@ -5961,10 +5963,10 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
                 ops.push(SceneOp::Quad {
                     order: DrawOrder(base_order),
                     rect: cached.rect,
-                    background: fret_core::Paint::Solid(fill_color),
+                    background: fret_core::Paint::Solid(fill_color).into(),
 
                     border: Edges::all(stroke_width),
-                    border_paint: fret_core::Paint::Solid(border_color),
+                    border_paint: fret_core::Paint::Solid(border_color).into(),
                     corner_radii: Corners::all(Px(0.0)),
                 });
             }
@@ -6135,10 +6137,10 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
                         ),
                         Size::new(Px(2.0 * point_r), Px(2.0 * point_r)),
                     ),
-                    background: fret_core::Paint::Solid(fill_color),
+                    background: fret_core::Paint::Solid(fill_color).into(),
 
                     border: Edges::all(stroke_width),
-                    border_paint: fret_core::Paint::Solid(border_color),
+                    border_paint: fret_core::Paint::Solid(border_color).into(),
                     corner_radii: Corners::all(Px(point_r)),
                 });
             }
@@ -6213,10 +6215,10 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
                 cx.scene.push(SceneOp::Quad {
                     order: DrawOrder(base_order.saturating_add(highlight_bias)),
                     rect: cached.rect,
-                    background: fret_core::Paint::Solid(fill_color),
+                    background: fret_core::Paint::Solid(fill_color).into(),
 
                     border: Edges::all(stroke_width),
-                    border_paint: fret_core::Paint::Solid(border_color),
+                    border_paint: fret_core::Paint::Solid(border_color).into(),
 
                     corner_radii: Corners::all(Px(0.0)),
                 });
@@ -6332,10 +6334,10 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
                         ),
                         Size::new(Px(2.0 * point_r), Px(2.0 * point_r)),
                     ),
-                    background: fret_core::Paint::Solid(fill_color),
+                    background: fret_core::Paint::Solid(fill_color).into(),
 
                     border: Edges::all(Px(0.0)),
-                    border_paint: fret_core::Paint::TRANSPARENT,
+                    border_paint: fret_core::Paint::TRANSPARENT.into(),
 
                     corner_radii: Corners::all(Px(point_r)),
                 });
@@ -6457,10 +6459,10 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
                     cx.scene.push(SceneOp::Quad {
                         order: shadow_order,
                         rect,
-                        background: fret_core::Paint::Solid(color),
+                        background: fret_core::Paint::Solid(color).into(),
 
                         border: Edges::all(Px(0.0)),
-                        border_paint: fret_core::Paint::TRANSPARENT,
+                        border_paint: fret_core::Paint::TRANSPARENT.into(),
 
                         corner_radii: Corners::all(Px(0.0)),
                     });
@@ -6472,10 +6474,10 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
                         Point::new(Px(x - 0.5 * crosshair_w), plot.origin.y),
                         Size::new(Px(crosshair_w), plot.size.height),
                     ),
-                    background: fret_core::Paint::Solid(self.style.crosshair_color),
+                    background: fret_core::Paint::Solid(self.style.crosshair_color).into(),
 
                     border: Edges::all(Px(0.0)),
-                    border_paint: fret_core::Paint::TRANSPARENT,
+                    border_paint: fret_core::Paint::TRANSPARENT.into(),
 
                     corner_radii: Corners::all(Px(0.0)),
                 });
@@ -6487,10 +6489,10 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
                         Point::new(plot.origin.x, Px(y - 0.5 * crosshair_w)),
                         Size::new(plot.size.width, Px(crosshair_w)),
                     ),
-                    background: fret_core::Paint::Solid(self.style.crosshair_color),
+                    background: fret_core::Paint::Solid(self.style.crosshair_color).into(),
 
                     border: Edges::all(Px(0.0)),
-                    border_paint: fret_core::Paint::TRANSPARENT,
+                    border_paint: fret_core::Paint::TRANSPARENT.into(),
 
                     corner_radii: Corners::all(Px(0.0)),
                 });
@@ -6646,10 +6648,12 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
                         cx.scene.push(SceneOp::Quad {
                             order: label_order,
                             rect,
-                            background: fret_core::Paint::Solid(self.style.tooltip_background),
+                            background: fret_core::Paint::Solid(self.style.tooltip_background)
+                                .into(),
 
                             border: Edges::all(self.style.tooltip_border_width),
-                            border_paint: fret_core::Paint::Solid(self.style.tooltip_border_color),
+                            border_paint: fret_core::Paint::Solid(self.style.tooltip_border_color)
+                                .into(),
 
                             corner_radii: Corners::all(Px(4.0)),
                         });
@@ -6683,10 +6687,10 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
                             Point::new(Px(hit.point_px.x.0 - r), Px(hit.point_px.y.0 - r)),
                             Size::new(Px(2.0 * r), Px(2.0 * r)),
                         ),
-                        background: fret_core::Paint::Solid(self.style.hover_point_color),
+                        background: fret_core::Paint::Solid(self.style.hover_point_color).into(),
 
                         border: Edges::all(Px(0.0)),
-                        border_paint: fret_core::Paint::TRANSPARENT,
+                        border_paint: fret_core::Paint::TRANSPARENT.into(),
 
                         corner_radii: Corners::all(Px(0.0)),
                     });
@@ -6703,10 +6707,10 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
                 cx.scene.push(SceneOp::Quad {
                     order: DrawOrder(self.style.draw_order.0.saturating_add(8_800)),
                     rect,
-                    background: fret_core::Paint::Solid(self.style.selection_fill),
+                    background: fret_core::Paint::Solid(self.style.selection_fill).into(),
 
                     border: Edges::all(self.style.selection_stroke_width),
-                    border_paint: fret_core::Paint::Solid(self.style.selection_stroke),
+                    border_paint: fret_core::Paint::Solid(self.style.selection_stroke).into(),
 
                     corner_radii: Corners::all(Px(0.0)),
                 });
@@ -6733,10 +6737,10 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
             cx.scene.push(SceneOp::Quad {
                 order,
                 rect: track,
-                background: fret_core::Paint::Solid(track_color),
+                background: fret_core::Paint::Solid(track_color).into(),
 
                 border: Edges::all(Px(0.0)),
-                border_paint: fret_core::Paint::TRANSPARENT,
+                border_paint: fret_core::Paint::TRANSPARENT.into(),
 
                 corner_radii: Corners::all(Px(4.0)),
             });
@@ -6748,10 +6752,10 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
             cx.scene.push(SceneOp::Quad {
                 order: DrawOrder(order.0.saturating_add(1)),
                 rect: win_rect,
-                background: fret_core::Paint::Solid(self.style.selection_fill),
+                background: fret_core::Paint::Solid(self.style.selection_fill).into(),
 
                 border: Edges::all(self.style.selection_stroke_width),
-                border_paint: fret_core::Paint::Solid(self.style.selection_stroke),
+                border_paint: fret_core::Paint::Solid(self.style.selection_stroke).into(),
 
                 corner_radii: Corners::all(Px(4.0)),
             });
@@ -6764,10 +6768,10 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
                     Point::new(Px(left - 0.5 * handle_w), track.origin.y),
                     Size::new(Px(handle_w), track.size.height),
                 ),
-                background: fret_core::Paint::Solid(handle_color),
+                background: fret_core::Paint::Solid(handle_color).into(),
 
                 border: Edges::all(Px(0.0)),
-                border_paint: fret_core::Paint::TRANSPARENT,
+                border_paint: fret_core::Paint::TRANSPARENT.into(),
 
                 corner_radii: Corners::all(Px(0.0)),
             });
@@ -6777,10 +6781,10 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
                     Point::new(Px(right - 0.5 * handle_w), track.origin.y),
                     Size::new(Px(handle_w), track.size.height),
                 ),
-                background: fret_core::Paint::Solid(handle_color),
+                background: fret_core::Paint::Solid(handle_color).into(),
 
                 border: Edges::all(Px(0.0)),
-                border_paint: fret_core::Paint::TRANSPARENT,
+                border_paint: fret_core::Paint::TRANSPARENT.into(),
 
                 corner_radii: Corners::all(Px(0.0)),
             });
@@ -6809,10 +6813,10 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
             cx.scene.push(SceneOp::Quad {
                 order,
                 rect: track,
-                background: fret_core::Paint::Solid(track_color),
+                background: fret_core::Paint::Solid(track_color).into(),
 
                 border: Edges::all(Px(0.0)),
-                border_paint: fret_core::Paint::TRANSPARENT,
+                border_paint: fret_core::Paint::TRANSPARENT.into(),
 
                 corner_radii: Corners::all(Px(4.0)),
             });
@@ -6826,10 +6830,10 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
             cx.scene.push(SceneOp::Quad {
                 order: DrawOrder(order.0.saturating_add(1)),
                 rect: win_rect,
-                background: fret_core::Paint::Solid(self.style.selection_fill),
+                background: fret_core::Paint::Solid(self.style.selection_fill).into(),
 
                 border: Edges::all(self.style.selection_stroke_width),
-                border_paint: fret_core::Paint::Solid(self.style.selection_stroke),
+                border_paint: fret_core::Paint::Solid(self.style.selection_stroke).into(),
 
                 corner_radii: Corners::all(Px(4.0)),
             });
@@ -6842,10 +6846,10 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
                     Point::new(track.origin.x, Px(y0 - 0.5 * handle_h)),
                     Size::new(track.size.width, Px(handle_h)),
                 ),
-                background: fret_core::Paint::Solid(handle_color),
+                background: fret_core::Paint::Solid(handle_color).into(),
 
                 border: Edges::all(Px(0.0)),
-                border_paint: fret_core::Paint::TRANSPARENT,
+                border_paint: fret_core::Paint::TRANSPARENT.into(),
 
                 corner_radii: Corners::all(Px(0.0)),
             });
@@ -6855,10 +6859,10 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
                     Point::new(track.origin.x, Px(y1 - 0.5 * handle_h)),
                     Size::new(track.size.width, Px(handle_h)),
                 ),
-                background: fret_core::Paint::Solid(handle_color),
+                background: fret_core::Paint::Solid(handle_color).into(),
 
                 border: Edges::all(Px(0.0)),
-                border_paint: fret_core::Paint::TRANSPARENT,
+                border_paint: fret_core::Paint::TRANSPARENT.into(),
 
                 corner_radii: Corners::all(Px(0.0)),
             });
@@ -6868,10 +6872,10 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
             cx.scene.push(SceneOp::Quad {
                 order: DrawOrder(self.style.draw_order.0.saturating_add(8_700)),
                 rect,
-                background: fret_core::Paint::Solid(self.style.selection_fill),
+                background: fret_core::Paint::Solid(self.style.selection_fill).into(),
 
                 border: Edges::all(self.style.selection_stroke_width),
-                border_paint: fret_core::Paint::Solid(self.style.selection_stroke),
+                border_paint: fret_core::Paint::Solid(self.style.selection_stroke).into(),
 
                 corner_radii: Corners::all(Px(0.0)),
             });
@@ -6884,10 +6888,10 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
                 cx.scene.push(SceneOp::Quad {
                     order: DrawOrder(self.style.draw_order.0.saturating_add(8_750)),
                     rect,
-                    background: fret_core::Paint::Solid(self.style.selection_fill),
+                    background: fret_core::Paint::Solid(self.style.selection_fill).into(),
 
                     border: Edges::all(self.style.selection_stroke_width),
-                    border_paint: fret_core::Paint::Solid(self.style.selection_stroke),
+                    border_paint: fret_core::Paint::Solid(self.style.selection_stroke).into(),
 
                     corner_radii: Corners::all(Px(0.0)),
                 });
@@ -7069,10 +7073,10 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
             cx.scene.push(SceneOp::Quad {
                 order: tooltip_order,
                 rect: Rect::new(Point::new(Px(tip_x), Px(tip_y)), Size::new(Px(w), Px(h))),
-                background: fret_core::Paint::Solid(self.style.tooltip_background),
+                background: fret_core::Paint::Solid(self.style.tooltip_background).into(),
 
                 border: Edges::all(self.style.tooltip_border_width),
-                border_paint: fret_core::Paint::Solid(self.style.tooltip_border_color),
+                border_paint: fret_core::Paint::Solid(self.style.tooltip_border_color).into(),
 
                 corner_radii: Corners::all(self.style.tooltip_corner_radius),
             });
@@ -7114,10 +7118,10 @@ impl<H: UiHost> Widget<H> for ChartCanvas {
                             Point::new(Px(swatch_x), Px(marker_y)),
                             Size::new(Px(side), Px(side)),
                         ),
-                        background: fret_core::Paint::Solid(self.series_color(series)),
+                        background: fret_core::Paint::Solid(self.series_color(series)).into(),
 
                         border: Edges::all(Px(0.0)),
-                        border_paint: fret_core::Paint::TRANSPARENT,
+                        border_paint: fret_core::Paint::TRANSPARENT.into(),
 
                         corner_radii: Corners::all(Px((side * 0.25).max(0.0))),
                     });

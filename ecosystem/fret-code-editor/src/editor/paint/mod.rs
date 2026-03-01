@@ -100,10 +100,10 @@ pub(super) fn paint_row(
     painter.scene().push(SceneOp::Quad {
         order: DrawOrder(0),
         rect,
-        background: fret_core::Paint::TRANSPARENT,
+        background: fret_core::Paint::TRANSPARENT.into(),
 
         border: Edges::all(Px(0.0)),
-        border_paint: fret_core::Paint::TRANSPARENT,
+        border_paint: fret_core::Paint::TRANSPARENT.into(),
 
         corner_radii: Corners::all(Px(0.0)),
     });
@@ -741,10 +741,10 @@ pub(super) fn paint_row(
                     painter.scene().push(SceneOp::Quad {
                         order: DrawOrder(1),
                         rect: sel_rect,
-                        background: fret_core::Paint::Solid(selection_bg),
+                        background: fret_core::Paint::Solid(selection_bg).into(),
 
                         border: Edges::all(Px(0.0)),
-                        border_paint: fret_core::Paint::TRANSPARENT,
+                        border_paint: fret_core::Paint::TRANSPARENT.into(),
 
                         corner_radii: Corners::all(Px(0.0)),
                     });
@@ -831,10 +831,10 @@ pub(super) fn paint_row(
                     painter.scene().push(SceneOp::Quad {
                         order: DrawOrder(1),
                         rect: sel_rect,
-                        background: fret_core::Paint::Solid(selection_bg),
+                        background: fret_core::Paint::Solid(selection_bg).into(),
 
                         border: Edges::all(Px(0.0)),
-                        border_paint: fret_core::Paint::TRANSPARENT,
+                        border_paint: fret_core::Paint::TRANSPARENT.into(),
 
                         corner_radii: Corners::all(Px(0.0)),
                     });
@@ -879,10 +879,10 @@ pub(super) fn paint_row(
                 painter.scene().push(SceneOp::Quad {
                     order: DrawOrder(3),
                     rect: caret_rect,
-                    background: fret_core::Paint::Solid(caret_color),
+                    background: fret_core::Paint::Solid(caret_color).into(),
 
                     border: Edges::all(Px(0.0)),
-                    border_paint: fret_core::Paint::TRANSPARENT,
+                    border_paint: fret_core::Paint::TRANSPARENT.into(),
 
                     corner_radii: Corners::all(Px(0.0)),
                 });
@@ -911,10 +911,10 @@ pub(super) fn paint_row(
                     painter.scene().push(SceneOp::Quad {
                         order: DrawOrder(1),
                         rect: sel_rect,
-                        background: fret_core::Paint::Solid(selection_bg),
+                        background: fret_core::Paint::Solid(selection_bg).into(),
 
                         border: Edges::all(Px(0.0)),
-                        border_paint: fret_core::Paint::TRANSPARENT,
+                        border_paint: fret_core::Paint::TRANSPARENT.into(),
 
                         corner_radii: Corners::all(Px(0.0)),
                     });
@@ -989,10 +989,10 @@ pub(super) fn paint_row(
                 painter.scene().push(SceneOp::Quad {
                     order: DrawOrder(3),
                     rect: caret_rect,
-                    background: fret_core::Paint::Solid(caret_color),
+                    background: fret_core::Paint::Solid(caret_color).into(),
 
                     border: Edges::all(Px(0.0)),
-                    border_paint: fret_core::Paint::TRANSPARENT,
+                    border_paint: fret_core::Paint::TRANSPARENT.into(),
 
                     corner_radii: Corners::all(Px(0.0)),
                 });

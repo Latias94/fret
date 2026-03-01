@@ -173,14 +173,15 @@ fn gpu_clip_path_clips_to_shape_not_just_bounds() {
     scene.push(SceneOp::Quad {
         order: DrawOrder(0),
         rect: Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(64.0), Px(64.0))),
-        background: Paint::Solid(Color {
+        background: (Paint::Solid(Color {
             r: 0.0,
             g: 1.0,
             b: 0.0,
             a: 1.0,
-        }),
+        }))
+        .into(),
         border: Default::default(),
-        border_paint: Paint::Solid(Color::TRANSPARENT),
+        border_paint: (Paint::Solid(Color::TRANSPARENT)).into(),
         corner_radii: Default::default(),
     });
     scene.push(SceneOp::PopClip);
@@ -231,14 +232,15 @@ fn gpu_clip_path_is_captured_at_push_time_and_does_not_follow_later_transforms()
     scene.push(SceneOp::Quad {
         order: DrawOrder(0),
         rect: Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(16.0), Px(16.0))),
-        background: Paint::Solid(Color {
+        background: (Paint::Solid(Color {
             r: 0.0,
             g: 0.0,
             b: 1.0,
             a: 1.0,
-        }),
+        }))
+        .into(),
         border: Default::default(),
-        border_paint: Paint::Solid(Color::TRANSPARENT),
+        border_paint: (Paint::Solid(Color::TRANSPARENT)).into(),
         corner_radii: Default::default(),
     });
 
@@ -248,14 +250,15 @@ fn gpu_clip_path_is_captured_at_push_time_and_does_not_follow_later_transforms()
     scene.push(SceneOp::Quad {
         order: DrawOrder(1),
         rect: Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(16.0), Px(16.0))),
-        background: Paint::Solid(Color {
+        background: (Paint::Solid(Color {
             r: 1.0,
             g: 0.0,
             b: 0.0,
             a: 1.0,
-        }),
+        }))
+        .into(),
         border: Default::default(),
-        border_paint: Paint::Solid(Color::TRANSPARENT),
+        border_paint: (Paint::Solid(Color::TRANSPARENT)).into(),
         corner_radii: Default::default(),
     });
     scene.push(SceneOp::PopTransform);
@@ -311,14 +314,15 @@ fn gpu_clip_path_clip_before_transform_partial_overlap_is_clipped() {
     scene.push(SceneOp::Quad {
         order: DrawOrder(0),
         rect: Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(16.0), Px(16.0))),
-        background: Paint::Solid(Color {
+        background: (Paint::Solid(Color {
             r: 0.0,
             g: 0.0,
             b: 1.0,
             a: 1.0,
-        }),
+        }))
+        .into(),
         border: Default::default(),
-        border_paint: Paint::Solid(Color::TRANSPARENT),
+        border_paint: (Paint::Solid(Color::TRANSPARENT)).into(),
         corner_radii: Default::default(),
     });
     scene.push(SceneOp::PopTransform);
@@ -381,14 +385,15 @@ fn gpu_clip_path_under_affine_rotation_clips_in_rotated_space() {
     scene.push(SceneOp::Quad {
         order: DrawOrder(0),
         rect: Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(64.0), Px(64.0))),
-        background: Paint::Solid(Color {
+        background: (Paint::Solid(Color {
             r: 0.0,
             g: 1.0,
             b: 0.0,
             a: 1.0,
-        }),
+        }))
+        .into(),
         border: Default::default(),
-        border_paint: Paint::Solid(Color::TRANSPARENT),
+        border_paint: (Paint::Solid(Color::TRANSPARENT)).into(),
         corner_radii: Default::default(),
     });
     scene.push(SceneOp::PopClip);
@@ -437,14 +442,15 @@ fn gpu_rectangular_clip_path_matches_clip_rect_without_transform() {
     rect_scene.push(SceneOp::Quad {
         order: DrawOrder(0),
         rect: Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(64.0), Px(64.0))),
-        background: Paint::Solid(Color {
+        background: (Paint::Solid(Color {
             r: 0.0,
             g: 0.0,
             b: 1.0,
             a: 1.0,
-        }),
+        }))
+        .into(),
         border: Default::default(),
-        border_paint: Paint::Solid(Color::TRANSPARENT),
+        border_paint: (Paint::Solid(Color::TRANSPARENT)).into(),
         corner_radii: Default::default(),
     });
     rect_scene.push(SceneOp::PopClip);
@@ -458,14 +464,15 @@ fn gpu_rectangular_clip_path_matches_clip_rect_without_transform() {
     path_scene.push(SceneOp::Quad {
         order: DrawOrder(0),
         rect: Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(64.0), Px(64.0))),
-        background: Paint::Solid(Color {
+        background: (Paint::Solid(Color {
             r: 0.0,
             g: 0.0,
             b: 1.0,
             a: 1.0,
-        }),
+        }))
+        .into(),
         border: Default::default(),
-        border_paint: Paint::Solid(Color::TRANSPARENT),
+        border_paint: (Paint::Solid(Color::TRANSPARENT)).into(),
         corner_radii: Default::default(),
     });
     path_scene.push(SceneOp::PopClip);
@@ -510,14 +517,15 @@ fn gpu_nested_clip_path_with_composite_group_clips_group_content() {
     scene.push(SceneOp::Quad {
         order: DrawOrder(0),
         rect: Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(64.0), Px(64.0))),
-        background: Paint::Solid(Color {
+        background: (Paint::Solid(Color {
             r: 1.0,
             g: 0.0,
             b: 0.0,
             a: 1.0,
-        }),
+        }))
+        .into(),
         border: Default::default(),
-        border_paint: Paint::Solid(Color::TRANSPARENT),
+        border_paint: (Paint::Solid(Color::TRANSPARENT)).into(),
         corner_radii: Default::default(),
     });
 
@@ -538,14 +546,15 @@ fn gpu_nested_clip_path_with_composite_group_clips_group_content() {
     scene.push(SceneOp::Quad {
         order: DrawOrder(1),
         rect: Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(64.0), Px(64.0))),
-        background: Paint::Solid(Color {
+        background: (Paint::Solid(Color {
             r: 0.0,
             g: 0.0,
             b: 1.0,
             a: 1.0,
-        }),
+        }))
+        .into(),
         border: Default::default(),
-        border_paint: Paint::Solid(Color::TRANSPARENT),
+        border_paint: (Paint::Solid(Color::TRANSPARENT)).into(),
         corner_radii: Default::default(),
     });
     scene.push(SceneOp::PopCompositeGroup);
@@ -599,14 +608,15 @@ fn gpu_nested_clip_rect_then_clip_path_composes() {
     scene.push(SceneOp::Quad {
         order: DrawOrder(0),
         rect: Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(64.0), Px(64.0))),
-        background: Paint::Solid(Color {
+        background: (Paint::Solid(Color {
             r: 0.0,
             g: 1.0,
             b: 0.0,
             a: 1.0,
-        }),
+        }))
+        .into(),
         border: Default::default(),
-        border_paint: Paint::Solid(Color::TRANSPARENT),
+        border_paint: (Paint::Solid(Color::TRANSPARENT)).into(),
         corner_radii: Default::default(),
     });
     scene.push(SceneOp::PopClip);
@@ -658,14 +668,15 @@ fn gpu_clip_path_degrades_to_scissor_only_under_tight_intermediate_budget() {
     scene.push(SceneOp::Quad {
         order: DrawOrder(0),
         rect: Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(64.0), Px(64.0))),
-        background: Paint::Solid(Color {
+        background: (Paint::Solid(Color {
             r: 0.0,
             g: 1.0,
             b: 0.0,
             a: 1.0,
-        }),
+        }))
+        .into(),
         border: Default::default(),
-        border_paint: Paint::Solid(Color::TRANSPARENT),
+        border_paint: (Paint::Solid(Color::TRANSPARENT)).into(),
         corner_radii: Default::default(),
     });
     scene.push(SceneOp::PopClip);

@@ -850,15 +850,15 @@ pub fn slider<H: UiHost>(
                     } else {
                         corners_zero_right(track_shape)
                     };
-                    p.scene().push(fret_core::SceneOp::Quad {
-                        order: DrawOrder(0),
-                        rect,
-                        background: fret_core::Paint::Solid(left_color),
-                        border: Edges::all(Px(0.0)),
-                        border_paint: fret_core::Paint::TRANSPARENT,
-                        corner_radii: corners,
-                    });
-                }
+                     p.scene().push(fret_core::SceneOp::Quad {
+                         order: DrawOrder(0),
+                         rect,
+                         background: fret_core::Paint::Solid(left_color).into(),
+                         border: Edges::all(Px(0.0)),
+                         border_paint: fret_core::Paint::TRANSPARENT.into(),
+                         corner_radii: corners,
+                     });
+                 }
 
                 if right_w > 0.0 {
                     let rect = Rect::new(
@@ -870,15 +870,15 @@ pub fn slider<H: UiHost>(
                     } else {
                         corners_zero_left(track_shape)
                     };
-                    p.scene().push(fret_core::SceneOp::Quad {
-                        order: DrawOrder(0),
-                        rect,
-                        background: fret_core::Paint::Solid(right_color),
-                        border: Edges::all(Px(0.0)),
-                        border_paint: fret_core::Paint::TRANSPARENT,
-                        corner_radii: corners,
-                    });
-                }
+                     p.scene().push(fret_core::SceneOp::Quad {
+                         order: DrawOrder(0),
+                         rect,
+                         background: fret_core::Paint::Solid(right_color).into(),
+                         border: Edges::all(Px(0.0)),
+                         border_paint: fret_core::Paint::TRANSPARENT.into(),
+                         corner_radii: corners,
+                     });
+                 }
 
                 if state_layer_opacity > 0.0 {
                     let size = Px(state_layer_size.0.min(bounds.size.width.0).max(0.0));
@@ -892,19 +892,20 @@ pub fn slider<H: UiHost>(
                             bounds.origin.y.0 + bounds.size.height.0 - size.0,
                         ));
                         let rect = Rect::new(fret_core::Point::new(x, y), Size::new(size, size));
-                        p.scene().push(fret_core::SceneOp::Quad {
-                            order: DrawOrder(2),
-                            rect,
-                            background: fret_core::Paint::Solid(alpha_mul(
-                                state_layer_color,
-                                state_layer_opacity,
-                            )),
-                            border: Edges::all(Px(0.0)),
-                            border_paint: fret_core::Paint::TRANSPARENT,
-                            corner_radii: Corners::all(Px(size.0 * 0.5)),
-                        });
-                    }
-                }
+                         p.scene().push(fret_core::SceneOp::Quad {
+                             order: DrawOrder(2),
+                             rect,
+                             background: fret_core::Paint::Solid(alpha_mul(
+                                 state_layer_color,
+                                 state_layer_opacity,
+                             ))
+                             .into(),
+                             border: Edges::all(Px(0.0)),
+                             border_paint: fret_core::Paint::TRANSPARENT.into(),
+                             corner_radii: Corners::all(Px(size.0 * 0.5)),
+                         });
+                     }
+                 }
 
                 if with_tick_marks {
                     let mut tick_count: Option<i32> = tick_marks_count
@@ -963,17 +964,17 @@ pub fn slider<H: UiHost>(
                                 fret_core::Point::new(x, y),
                                 Size::new(tick_size, tick_size),
                             );
-                            p.scene().push(fret_core::SceneOp::Quad {
-                                order: DrawOrder(1),
-                                rect,
-                                background: fret_core::Paint::Solid(alpha_mul(color, opacity)),
-                                border: Edges::all(Px(0.0)),
-                                border_paint: fret_core::Paint::TRANSPARENT,
-                                corner_radii: tick_shape,
-                            });
-                        }
-                    }
-                }
+                             p.scene().push(fret_core::SceneOp::Quad {
+                                 order: DrawOrder(1),
+                                 rect,
+                                 background: fret_core::Paint::Solid(alpha_mul(color, opacity)).into(),
+                                 border: Edges::all(Px(0.0)),
+                                 border_paint: fret_core::Paint::TRANSPARENT.into(),
+                                 corner_radii: tick_shape,
+                             });
+                         }
+                     }
+                 }
 
                 if with_tick_marks {
                     let size = Px(stop_indicator_size
@@ -1005,16 +1006,16 @@ pub fn slider<H: UiHost>(
                             stop_indicator_color
                         };
                         let rect = Rect::new(fret_core::Point::new(x, y), Size::new(size, size));
-                        p.scene().push(fret_core::SceneOp::Quad {
-                            order: DrawOrder(1),
-                            rect,
-                            background: fret_core::Paint::Solid(color),
-                            border: Edges::all(Px(0.0)),
-                            border_paint: fret_core::Paint::TRANSPARENT,
-                            corner_radii: stop_indicator_shape,
-                        });
-                    }
-                }
+                         p.scene().push(fret_core::SceneOp::Quad {
+                             order: DrawOrder(1),
+                             rect,
+                             background: fret_core::Paint::Solid(color).into(),
+                             border: Edges::all(Px(0.0)),
+                             border_paint: fret_core::Paint::TRANSPARENT.into(),
+                             corner_radii: stop_indicator_shape,
+                         });
+                     }
+                 }
 
                 let handle_w = Px(handle_w.0.min(bounds.size.width.0).max(0.0));
                 let handle_h = Px(handle_h.0.min(bounds.size.height.0).max(0.0));
@@ -1027,15 +1028,15 @@ pub fn slider<H: UiHost>(
                     let handle =
                         Rect::new(fret_core::Point::new(x, y), Size::new(handle_w, handle_h));
 
-                    p.scene().push(fret_core::SceneOp::Quad {
-                        order: DrawOrder(3),
-                        rect: handle,
-                        background: fret_core::Paint::Solid(handle_color),
-                        border: Edges::all(Px(0.0)),
-                        border_paint: fret_core::Paint::TRANSPARENT,
-                        corner_radii: handle_shape,
-                    });
-                }
+                     p.scene().push(fret_core::SceneOp::Quad {
+                         order: DrawOrder(3),
+                         rect: handle,
+                         background: fret_core::Paint::Solid(handle_color).into(),
+                         border: Edges::all(Px(0.0)),
+                         border_paint: fret_core::Paint::TRANSPARENT.into(),
+                         corner_radii: handle_shape,
+                     });
+                 }
 
                 if state_layer_want_frames {
                     p.request_animation_frame();
@@ -1908,9 +1909,9 @@ pub fn range_slider<H: UiHost>(
                     p.scene().push(fret_core::SceneOp::Quad {
                         order: DrawOrder(0),
                         rect,
-                        background: fret_core::Paint::Solid(inactive_track_color),
+                        background: fret_core::Paint::Solid(inactive_track_color).into(),
                         border: Edges::all(Px(0.0)),
-                        border_paint: fret_core::Paint::TRANSPARENT,
+                        border_paint: fret_core::Paint::TRANSPARENT.into(),
                         corner_radii: corners,
                     });
                 }
@@ -1928,9 +1929,9 @@ pub fn range_slider<H: UiHost>(
                     p.scene().push(fret_core::SceneOp::Quad {
                         order: DrawOrder(0),
                         rect,
-                        background: fret_core::Paint::Solid(inactive_track_color),
+                        background: fret_core::Paint::Solid(inactive_track_color).into(),
                         border: Edges::all(Px(0.0)),
-                        border_paint: fret_core::Paint::TRANSPARENT,
+                        border_paint: fret_core::Paint::TRANSPARENT.into(),
                         corner_radii: corners,
                     });
                 }
@@ -1944,9 +1945,9 @@ pub fn range_slider<H: UiHost>(
                     p.scene().push(fret_core::SceneOp::Quad {
                         order: DrawOrder(0),
                         rect,
-                        background: fret_core::Paint::Solid(active_track_color),
+                        background: fret_core::Paint::Solid(active_track_color).into(),
                         border: Edges::all(Px(0.0)),
-                        border_paint: fret_core::Paint::TRANSPARENT,
+                        border_paint: fret_core::Paint::TRANSPARENT.into(),
                         corner_radii: corners,
                     });
                 }
@@ -2003,9 +2004,9 @@ pub fn range_slider<H: UiHost>(
                             p.scene().push(fret_core::SceneOp::Quad {
                                 order: DrawOrder(1),
                                 rect,
-                                background: fret_core::Paint::Solid(alpha_mul(color, opacity)),
+                                background: fret_core::Paint::Solid(alpha_mul(color, opacity)).into(),
                                 border: Edges::all(Px(0.0)),
-                                border_paint: fret_core::Paint::TRANSPARENT,
+                                border_paint: fret_core::Paint::TRANSPARENT.into(),
                                 corner_radii: tick_shape,
                             });
                         }
@@ -2048,9 +2049,9 @@ pub fn range_slider<H: UiHost>(
                             p.scene().push(fret_core::SceneOp::Quad {
                                 order: DrawOrder(1),
                                 rect,
-                                background: fret_core::Paint::Solid(color),
+                                background: fret_core::Paint::Solid(color).into(),
                                 border: Edges::all(Px(0.0)),
-                                border_paint: fret_core::Paint::TRANSPARENT,
+                                border_paint: fret_core::Paint::TRANSPARENT.into(),
                                 corner_radii: stop_indicator_shape,
                             });
                         };
@@ -2083,9 +2084,10 @@ pub fn range_slider<H: UiHost>(
                             background: fret_core::Paint::Solid(alpha_mul(
                                 state_layer_color,
                                 state_layer_opacity,
-                            )),
+                            ))
+                            .into(),
                             border: Edges::all(Px(0.0)),
-                            border_paint: fret_core::Paint::TRANSPARENT,
+                            border_paint: fret_core::Paint::TRANSPARENT.into(),
                             corner_radii: Corners::all(Px(size.0 * 0.5)),
                         });
                     }
@@ -2107,9 +2109,9 @@ pub fn range_slider<H: UiHost>(
                     p.scene().push(fret_core::SceneOp::Quad {
                         order: DrawOrder(3),
                         rect,
-                        background: fret_core::Paint::Solid(color),
+                        background: fret_core::Paint::Solid(color).into(),
                         border: Edges::all(Px(0.0)),
-                        border_paint: fret_core::Paint::TRANSPARENT,
+                        border_paint: fret_core::Paint::TRANSPARENT.into(),
                         corner_radii: handle_shape,
                     });
                 };

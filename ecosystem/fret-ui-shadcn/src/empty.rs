@@ -140,7 +140,6 @@ impl EmptyHeader {
         let layout = decl_style::layout_style(
             &theme,
             LayoutRefinement::default()
-                .w_full()
                 .max_w(max_w)
                 .min_w_0()
                 .merge(self.layout),
@@ -262,12 +261,10 @@ impl EmptyTitle {
         let fg = theme.color_token("foreground");
         let px = theme
             .metric_by_key("component.empty.title_px")
-            .or_else(|| theme.metric_by_key("font.size"))
-            .unwrap_or_else(|| theme.metric_token("font.size"));
+            .unwrap_or(Px(18.0));
         let line_height = theme
             .metric_by_key("component.empty.title_line_height")
-            .or_else(|| theme.metric_by_key("font.line_height"))
-            .unwrap_or_else(|| theme.metric_token("font.line_height"));
+            .unwrap_or(Px(28.0));
 
         ui::text(cx, self.text)
             .text_size_px(px)
@@ -298,12 +295,10 @@ impl EmptyDescription {
         let fg = theme.color_token("muted-foreground");
         let px = theme
             .metric_by_key("component.empty.description_px")
-            .or_else(|| theme.metric_by_key("font.size"))
-            .unwrap_or_else(|| theme.metric_token("font.size"));
+            .unwrap_or(Px(14.0));
         let line_height = theme
             .metric_by_key("component.empty.description_line_height")
-            .or_else(|| theme.metric_by_key("font.line_height"))
-            .unwrap_or_else(|| theme.metric_token("font.line_height"));
+            .unwrap_or(Px(22.75));
 
         ui::text(cx, self.text)
             .text_size_px(px)

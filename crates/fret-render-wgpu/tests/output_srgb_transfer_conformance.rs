@@ -128,14 +128,15 @@ fn gpu_non_srgb_output_applies_explicit_srgb_transfer() {
     scene.push(SceneOp::Quad {
         order: DrawOrder(0),
         rect: Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(64.0), Px(64.0))),
-        background: Paint::Solid(Color {
+        background: (Paint::Solid(Color {
             r: linear,
             g: linear,
             b: linear,
             a: 1.0,
-        }),
+        }))
+        .into(),
         border: Edges::all(Px(0.0)),
-        border_paint: Paint::Solid(Color::TRANSPARENT),
+        border_paint: (Paint::Solid(Color::TRANSPARENT)).into(),
         corner_radii: Default::default(),
     });
 

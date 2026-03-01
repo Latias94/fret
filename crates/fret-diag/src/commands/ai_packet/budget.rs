@@ -174,6 +174,12 @@ pub(super) fn write_packet_budget_report(
 
     if let Some(obj) = payload.as_object_mut() {
         obj.insert("compat".to_string(), compat_summary_for_packet_dir(dir));
+
+        if let Ok(bytes) = std::fs::read(dir.join("tooling.warnings.json"))
+            && let Ok(v) = serde_json::from_slice::<serde_json::Value>(&bytes)
+        {
+            obj.insert("tooling_warnings".to_string(), v);
+        }
     }
 
     let bytes = serde_json::to_vec_pretty(&payload).unwrap_or_else(|_| b"{}".to_vec());

@@ -25,7 +25,10 @@ pub(crate) fn find_best_background_quad(scene: &Scene, target: Rect) -> Option<P
 
         if score < best_score {
             best_score = score;
-            best = Some(PaintedQuad { rect, background });
+            best = Some(PaintedQuad {
+                rect,
+                background: background.paint,
+            });
         }
     }
 
@@ -44,7 +47,7 @@ pub(crate) fn find_best_opaque_background_quad(scene: &Scene, target: Rect) -> O
             continue;
         };
 
-        if paint_max_alpha(background) <= 0.001 {
+        if paint_max_alpha(background.paint) <= 0.001 {
             continue;
         }
 
@@ -55,7 +58,10 @@ pub(crate) fn find_best_opaque_background_quad(scene: &Scene, target: Rect) -> O
 
         if score < best_score {
             best_score = score;
-            best = Some(PaintedQuad { rect, background });
+            best = Some(PaintedQuad {
+                rect,
+                background: background.paint,
+            });
         }
     }
 
@@ -90,7 +96,7 @@ pub(crate) fn find_scene_quad_background_with_rect_close(
             return None;
         };
         if rect_close_px(rect, expected, tol) {
-            Some((rect, background))
+            Some((rect, background.paint))
         } else {
             None
         }
@@ -123,7 +129,7 @@ pub(crate) fn find_scene_quad_background_with_world_rect_close(
                 let current = *transform_stack.last().expect("transform stack not empty");
                 let world_rect = rect_aabb_after_transform(current, rect);
                 if rect_close_px(world_rect, expected, tol) {
-                    return Some((world_rect, background));
+                    return Some((world_rect, background.paint));
                 }
             }
             _ => {}
@@ -159,7 +165,7 @@ pub(crate) fn debug_dump_scene_quads_near_expected(
                 let current = *transform_stack.last().expect("transform stack not empty");
                 let world_rect = rect_aabb_after_transform(current, rect);
                 let d = rect_diff_metric(world_rect, expected);
-                quads.push((d, world_rect, background, current));
+                quads.push((d, world_rect, background.paint, current));
             }
             _ => {}
         }

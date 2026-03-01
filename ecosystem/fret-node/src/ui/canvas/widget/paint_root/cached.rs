@@ -79,10 +79,11 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
             rect: viewport_rect,
             background: fret_core::Paint::Solid(
                 canvas_hint.background.unwrap_or(self.style.background),
-            ),
+            )
+            .into(),
 
             border: Edges::all(Px(0.0)),
-            border_paint: fret_core::Paint::TRANSPARENT,
+            border_paint: fret_core::Paint::TRANSPARENT.into(),
 
             corner_radii: Corners::all(Px(0.0)),
         });

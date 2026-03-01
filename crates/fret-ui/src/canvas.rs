@@ -928,7 +928,7 @@ impl CanvasCache {
                 order,
                 origin,
                 text: blob,
-                paint: Paint::Solid(color),
+                paint: Paint::Solid(color).into(),
                 outline: None,
                 shadow: None,
             });
@@ -949,7 +949,7 @@ impl CanvasCache {
                 order,
                 origin,
                 text: entry.blob,
-                paint: Paint::Solid(color),
+                paint: Paint::Solid(color).into(),
                 outline: None,
                 shadow: None,
             });
@@ -983,7 +983,7 @@ impl CanvasCache {
             order,
             origin,
             text: blob,
-            paint: Paint::Solid(color),
+            paint: Paint::Solid(color).into(),
             outline: None,
             shadow: None,
         });
@@ -1079,7 +1079,7 @@ impl CanvasCache {
             order,
             origin,
             text: blob,
-            paint: Paint::Solid(color),
+            paint: Paint::Solid(color).into(),
             outline: None,
             shadow: None,
         });

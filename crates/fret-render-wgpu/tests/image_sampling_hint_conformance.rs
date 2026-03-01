@@ -273,14 +273,15 @@ fn image_sampling_hint_preserves_order_across_mixed_primitives() {
     scene.push(SceneOp::Quad {
         order: DrawOrder(0),
         rect: full_rect,
-        background: Paint::Solid(Color {
+        background: (Paint::Solid(Color {
             r: 1.0,
             g: 0.0,
             b: 0.0,
             a: 0.25,
-        }),
+        }))
+        .into(),
         border: Edges::all(Px(0.0)),
-        border_paint: Paint::TRANSPARENT,
+        border_paint: (Paint::TRANSPARENT).into(),
         corner_radii: Corners::all(Px(0.0)),
     });
     scene.push(SceneOp::ImageRegion {

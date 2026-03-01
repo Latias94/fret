@@ -165,7 +165,7 @@ fn per_node_header_palette_draws_distinct_header_quads() {
         if *border != fret_core::Edges::all(Px(0.0)) {
             continue;
         }
-        let fret_core::Paint::Solid(color) = background else {
+        let fret_core::Paint::Solid(color) = background.paint else {
             continue;
         };
         if rect.origin != rect_a.origin && rect.origin != rect_b.origin {
@@ -181,7 +181,7 @@ fn per_node_header_palette_draws_distinct_header_quads() {
             bottom_left: Px(0.0),
         };
         assert_eq!(*corner_radii, expected_corner);
-        headers.push((rect.origin, *color));
+        headers.push((rect.origin, color));
     }
 
     assert_eq!(

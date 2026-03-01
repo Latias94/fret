@@ -347,6 +347,7 @@ These ADRs are intentionally prioritized because they tend to cause large rewrit
 - `docs/adr/0123-renderer-extensibility-materials-effects-and-sandboxing-v1.md`
 - `docs/adr/0124-streaming-image-update-effects-and-metadata-v1.md`
 - `docs/adr/0125-frame-capture-options-and-determinism-v1.md`
+- `docs/adr/0306-paint-evaluation-spaces-v1.md`
 - `docs/adr/0095-renderer-perf-snapshot-and-stress-harness.md`
 
 ## Platform (`fret-platform`)

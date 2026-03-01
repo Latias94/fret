@@ -202,9 +202,10 @@ mod tests {
                     g: 1.0,
                     b: 1.0,
                     a: 1.0,
-                }),
+                })
+                .into(),
                 border: fret_core::Edges::all(Px(0.0)),
-                border_paint: fret_core::Paint::Solid(Color::TRANSPARENT),
+                border_paint: fret_core::Paint::Solid(Color::TRANSPARENT).into(),
                 corner_radii: fret_core::Corners::all(Px(0.0)),
             });
         });
@@ -233,9 +234,10 @@ mod tests {
                     g: 0.0,
                     b: 0.0,
                     a: 1.0,
-                }),
+                })
+                .into(),
                 border: fret_core::Edges::all(Px(0.0)),
-                border_paint: fret_core::Paint::Solid(Color::TRANSPARENT),
+                border_paint: fret_core::Paint::Solid(Color::TRANSPARENT).into(),
                 corner_radii: fret_core::Corners::all(Px(0.0)),
             }],
         );
@@ -258,9 +260,10 @@ mod tests {
                     g: 0.0,
                     b: 0.0,
                     a: 1.0,
-                }),
+                })
+                .into(),
                 border: fret_core::Edges::all(Px(0.0)),
-                border_paint: fret_core::Paint::Solid(Color::TRANSPARENT),
+                border_paint: fret_core::Paint::Solid(Color::TRANSPARENT).into(),
                 corner_radii: fret_core::Corners::all(Px(0.0)),
             }],
         );

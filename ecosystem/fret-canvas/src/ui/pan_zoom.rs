@@ -698,9 +698,9 @@ pub fn editor_pan_zoom_canvas_surface_panel_with_marquee_selection<H: UiHost>(
         p.scene().push(SceneOp::Quad {
             order: DrawOrder(1000),
             rect,
-            background: Paint::Solid(marquee_style.fill),
+            background: Paint::Solid(marquee_style.fill).into(),
             border: Edges::all(Px(marquee_style.border_width_px)),
-            border_paint: Paint::Solid(marquee_style.border),
+            border_paint: Paint::Solid(marquee_style.border).into(),
             corner_radii: Corners::all(Px(0.0)),
         });
     };

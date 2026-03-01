@@ -1845,10 +1845,10 @@ impl CodeEditor {
                         painter.scene().push(SceneOp::Quad {
                             order: DrawOrder(100),
                             rect: Rect::new(origin, Size::new(Px(620.0), Px(24.0))),
-                            background: fret_core::Paint::Solid(overlay_bg),
+                            background: fret_core::Paint::Solid(overlay_bg).into(),
 
                             border: Edges::all(Px(0.0)),
-                            border_paint: fret_core::Paint::TRANSPARENT,
+                            border_paint: fret_core::Paint::TRANSPARENT.into(),
 
                             corner_radii: Corners::all(Px(6.0)),
                         });

@@ -155,9 +155,9 @@ fn sampled_noise_material_uses_catalog_texture_layer() {
     scene.push(SceneOp::Quad {
         order: DrawOrder(0),
         rect,
-        background: Paint::Material { id, params },
+        background: (Paint::Material { id, params }).into(),
         border: Edges::all(Px(0.0)),
-        border_paint: Paint::TRANSPARENT,
+        border_paint: (Paint::TRANSPARENT).into(),
         corner_radii: Corners::all(Px(0.0)),
     });
 

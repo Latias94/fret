@@ -181,7 +181,7 @@ mod tests {
                 order: DrawOrder(0),
                 origin: Point::new(Px(0.0), Px(0.0)),
                 text: prepared.blob,
-                paint: fret_core::Paint::Solid(Color::TRANSPARENT),
+                paint: fret_core::Paint::Solid(Color::TRANSPARENT).into(),
                 outline: None,
                 shadow: None,
             },
@@ -189,7 +189,7 @@ mod tests {
                 order: DrawOrder(0),
                 origin: Point::new(Px(0.0), Px(0.0)),
                 path,
-                paint: fret_core::Paint::Solid(Color::TRANSPARENT),
+                paint: fret_core::Paint::Solid(Color::TRANSPARENT).into(),
             },
             SceneOp::SvgImage {
                 order: DrawOrder(0),
@@ -201,9 +201,9 @@ mod tests {
             SceneOp::Quad {
                 order: DrawOrder(0),
                 rect: Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(1.0), Px(1.0))),
-                background: fret_core::Paint::Solid(Color::TRANSPARENT),
+                background: fret_core::Paint::Solid(Color::TRANSPARENT).into(),
                 border: Edges::all(Px(0.0)),
-                border_paint: fret_core::Paint::Solid(Color::TRANSPARENT),
+                border_paint: fret_core::Paint::Solid(Color::TRANSPARENT).into(),
                 corner_radii: fret_core::Corners::all(Px(0.0)),
             },
         ];

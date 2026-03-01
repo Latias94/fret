@@ -211,10 +211,10 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
             scene.push(SceneOp::Quad {
                 order: DrawOrder(2),
                 rect,
-                background: fret_core::Paint::Solid(self.style.edge_label_background),
+                background: fret_core::Paint::Solid(self.style.edge_label_background).into(),
 
                 border: Edges::all(Px(border_w)),
-                border_paint: fret_core::Paint::Solid(border_color),
+                border_paint: fret_core::Paint::Solid(border_color).into(),
                 corner_radii: Corners::all(Px(corner_screen.max(0.0) / z)),
             });
 

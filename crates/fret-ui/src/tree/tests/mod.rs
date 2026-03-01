@@ -177,9 +177,9 @@ impl<H: UiHost> Widget<H> for CountingPaintWidget {
         cx.scene.push(SceneOp::Quad {
             order: DrawOrder(0),
             rect: cx.bounds,
-            background: fret_core::Paint::Solid(Color::TRANSPARENT),
+            background: fret_core::Paint::Solid(Color::TRANSPARENT).into(),
             border: Edges::default(),
-            border_paint: fret_core::Paint::Solid(Color::TRANSPARENT),
+            border_paint: fret_core::Paint::Solid(Color::TRANSPARENT).into(),
             corner_radii: Corners::default(),
         });
     }

@@ -365,9 +365,9 @@ fn snap_scene_op(op: SceneOp) -> SnapSceneOp {
             ..
         } => SnapSceneOp::Quad {
             rect: snap_rect(rect),
-            background: snap_paint(background),
+            background: snap_paint(background.paint),
             border: snap_edges(border),
-            border_color: snap_paint(border_paint),
+            border_color: snap_paint(border_paint.paint),
             corner_radii: snap_corners(corner_radii),
         },
         SceneOp::Image {
@@ -417,10 +417,10 @@ fn snap_scene_op(op: SceneOp) -> SnapSceneOp {
         },
         SceneOp::Text { origin, paint, .. } => SnapSceneOp::Text {
             origin: snap_point(origin),
-            color: snap_paint(paint),
+            color: snap_paint(paint.paint),
         },
         SceneOp::Path { origin, paint, .. } => {
-            let color = match paint {
+            let color = match paint.paint {
                 fret_core::Paint::Solid(c) => c,
                 _ => fret_core::Color::TRANSPARENT,
             };

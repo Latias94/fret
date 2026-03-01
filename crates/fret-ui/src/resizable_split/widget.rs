@@ -415,9 +415,10 @@ impl<H: UiHost> Widget<H> for ResizableSplit {
                     g: 1.0,
                     b: 1.0,
                     a: if self.dragging.is_some() { 0.35 } else { 0.18 },
-                }),
+                })
+                .into(),
                 border: Edges::all(Px(0.0)),
-                border_paint: Paint::Solid(Color::TRANSPARENT),
+                border_paint: Paint::Solid(Color::TRANSPARENT).into(),
                 corner_radii: Corners::all(Px(0.0)),
             });
         }

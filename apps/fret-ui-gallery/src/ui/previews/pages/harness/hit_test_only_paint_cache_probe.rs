@@ -70,10 +70,11 @@ pub(in crate::ui) fn preview_hit_test_only_paint_cache_probe(
                                         p.scene().push(SceneOp::Quad {
                                             order: DrawOrder(0),
                                             rect: bounds,
-                                            background: fret_core::Paint::Solid(accent_bg),
+                                            background: fret_core::Paint::Solid(accent_bg).into(),
 
                                             border: Edges::all(Px(1.0)),
-                                            border_paint: fret_core::Paint::Solid(border_color),
+                                            border_paint: fret_core::Paint::Solid(border_color)
+                                                .into(),
                                             corner_radii: Corners::all(Px(8.0)),
                                         });
 
@@ -90,10 +91,12 @@ pub(in crate::ui) fn preview_hit_test_only_paint_cache_probe(
                                         p.scene().push(SceneOp::Quad {
                                             order: DrawOrder(0),
                                             rect: guide,
-                                            background: fret_core::Paint::Solid(secondary_bg),
+                                            background: fret_core::Paint::Solid(secondary_bg)
+                                                .into(),
 
                                             border: Edges::all(Px(1.0)),
-                                            border_paint: fret_core::Paint::Solid(muted_border),
+                                            border_paint: fret_core::Paint::Solid(muted_border)
+                                                .into(),
 
                                             corner_radii: Corners::all(Px(6.0)),
                                         });

@@ -427,10 +427,10 @@ pub(in crate::ui) fn preview_text_bidi_rtl_conformance(
                                 scene.push(SceneOp::Quad {
                                     order: DrawOrder(0),
                                     rect,
-                                    background: fret_core::Paint::Solid(selection_bg),
+                                    background: fret_core::Paint::Solid(selection_bg).into(),
 
                                     border: Edges::all(Px(0.0)),
-                                    border_paint: fret_core::Paint::TRANSPARENT,
+                                    border_paint: fret_core::Paint::TRANSPARENT.into(),
 
                                     corner_radii: Corners::all(Px(0.0)),
                                 });
@@ -457,10 +457,10 @@ pub(in crate::ui) fn preview_text_bidi_rtl_conformance(
                             scene.push(SceneOp::Quad {
                                 order: DrawOrder(2),
                                 rect: caret_rect,
-                                background: fret_core::Paint::Solid(fg),
+                                background: fret_core::Paint::Solid(fg).into(),
 
                                 border: Edges::all(Px(0.0)),
-                                border_paint: fret_core::Paint::TRANSPARENT,
+                                border_paint: fret_core::Paint::TRANSPARENT.into(),
 
                                 corner_radii: Corners::all(Px(0.0)),
                             });
@@ -473,10 +473,10 @@ pub(in crate::ui) fn preview_text_bidi_rtl_conformance(
                                 scene.push(SceneOp::Quad {
                                     order: DrawOrder(3),
                                     rect: dot,
-                                    background: fret_core::Paint::Solid(fg),
+                                    background: fret_core::Paint::Solid(fg).into(),
 
                                     border: Edges::all(Px(0.0)),
-                                    border_paint: fret_core::Paint::TRANSPARENT,
+                                    border_paint: fret_core::Paint::TRANSPARENT.into(),
 
                                     corner_radii: Corners::all(Px(2.0)),
                                 });

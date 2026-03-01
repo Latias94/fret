@@ -158,7 +158,8 @@ fn dashed_border_conformance_stroke_rrect_masks_border_coverage() {
             g: 1.0,
             b: 1.0,
             a: 1.0,
-        }),
+        })
+        .into(),
         corner_radii: Corners::all(Px(radius)),
         style,
     });

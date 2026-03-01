@@ -1397,9 +1397,9 @@ impl<H: UiHost> Widget<H> for TextInput {
         cx.scene.push(SceneOp::Quad {
             order: DrawOrder(0),
             rect: cx.bounds,
-            background: Paint::Solid(self.chrome_style.background),
+            background: Paint::Solid(self.chrome_style.background).into(),
             border: self.chrome_style.border,
-            border_paint: Paint::Solid(border_color),
+            border_paint: Paint::Solid(border_color).into(),
             corner_radii: self.chrome_style.corner_radii,
         });
 
@@ -1562,9 +1562,9 @@ impl<H: UiHost> Widget<H> for TextInput {
                         selection_height.min(inner_height).max(Px(1.0)),
                     ),
                 ),
-                background: Paint::Solid(selection_color),
+                background: Paint::Solid(selection_color).into(),
                 border: fret_core::geometry::Edges::all(Px(0.0)),
-                border_paint: Paint::Solid(Color::TRANSPARENT),
+                border_paint: Paint::Solid(Color::TRANSPARENT).into(),
                 corner_radii: self.chrome_style.corner_radii,
             });
         }
@@ -1581,7 +1581,8 @@ impl<H: UiHost> Widget<H> for TextInput {
                         order: DrawOrder(0),
                         origin: base_origin,
                         text: blob,
-                        paint: fret_core::scene::Paint::Solid(self.chrome_style.placeholder_color),
+                        paint: fret_core::scene::Paint::Solid(self.chrome_style.placeholder_color)
+                            .into(),
                         outline: None,
                         shadow: None,
                     });
@@ -1591,7 +1592,7 @@ impl<H: UiHost> Widget<H> for TextInput {
                     order: DrawOrder(0),
                     origin: base_origin,
                     text: blob,
-                    paint: fret_core::scene::Paint::Solid(self.chrome_style.text_color),
+                    paint: fret_core::scene::Paint::Solid(self.chrome_style.text_color).into(),
                     outline: None,
                     shadow: None,
                 });
@@ -1613,7 +1614,7 @@ impl<H: UiHost> Widget<H> for TextInput {
                     order: DrawOrder(0),
                     origin: base_origin,
                     text: blob,
-                    paint: fret_core::scene::Paint::Solid(self.chrome_style.text_color),
+                    paint: fret_core::scene::Paint::Solid(self.chrome_style.text_color).into(),
                     outline: None,
                     shadow: None,
                 });
@@ -1625,7 +1626,7 @@ impl<H: UiHost> Widget<H> for TextInput {
                     order: DrawOrder(0),
                     origin: pre_origin,
                     text: pre_blob,
-                    paint: fret_core::scene::Paint::Solid(self.chrome_style.preedit_color),
+                    paint: fret_core::scene::Paint::Solid(self.chrome_style.preedit_color).into(),
                     outline: None,
                     shadow: None,
                 });
@@ -1639,7 +1640,7 @@ impl<H: UiHost> Widget<H> for TextInput {
                     order: DrawOrder(0),
                     origin: suffix_origin,
                     text: suffix_blob,
-                    paint: fret_core::scene::Paint::Solid(self.chrome_style.text_color),
+                    paint: fret_core::scene::Paint::Solid(self.chrome_style.text_color).into(),
                     outline: None,
                     shadow: None,
                 });
@@ -1677,9 +1678,9 @@ impl<H: UiHost> Widget<H> for TextInput {
             cx.scene.push(SceneOp::Quad {
                 order: DrawOrder(0),
                 rect: underline,
-                background: Paint::Solid(self.chrome_style.preedit_underline_color),
+                background: Paint::Solid(self.chrome_style.preedit_underline_color).into(),
                 border: fret_core::geometry::Edges::all(Px(0.0)),
-                border_paint: Paint::Solid(Color::TRANSPARENT),
+                border_paint: Paint::Solid(Color::TRANSPARENT).into(),
                 corner_radii: self.chrome_style.corner_radii,
             });
         }
@@ -1715,9 +1716,9 @@ impl<H: UiHost> Widget<H> for TextInput {
         cx.scene.push(SceneOp::Quad {
             order: DrawOrder(0),
             rect: caret,
-            background: Paint::Solid(self.chrome_style.caret_color),
+            background: Paint::Solid(self.chrome_style.caret_color).into(),
             border: fret_core::geometry::Edges::all(Px(0.0)),
-            border_paint: Paint::Solid(Color::TRANSPARENT),
+            border_paint: Paint::Solid(Color::TRANSPARENT).into(),
             corner_radii: fret_core::geometry::Corners::all(Px(1.0)),
         });
 

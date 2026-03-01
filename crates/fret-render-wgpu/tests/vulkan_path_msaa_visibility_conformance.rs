@@ -195,21 +195,22 @@ fn vulkan_path_msaa_pipeline_is_visible_by_default() {
             Point::new(Px(0.0), Px(0.0)),
             Size::new(Px(256.0), Px(256.0)),
         ),
-        background: Paint::TRANSPARENT,
+        background: (Paint::TRANSPARENT).into(),
         border: fret_core::Edges::all(Px(0.0)),
-        border_paint: Paint::TRANSPARENT,
+        border_paint: (Paint::TRANSPARENT).into(),
         corner_radii: fret_core::Corners::all(Px(0.0)),
     });
     scene.push(SceneOp::Path {
         order: DrawOrder(1),
         origin: Point::new(Px(0.0), Px(0.0)),
         path,
-        paint: Paint::Solid(Color {
+        paint: (Paint::Solid(Color {
             r: 1.0,
             g: 1.0,
             b: 1.0,
             a: 1.0,
-        }),
+        }))
+        .into(),
     });
 
     let cb = renderer.render_scene(
@@ -317,21 +318,22 @@ fn vulkan_path_msaa_can_be_disabled_via_env() {
             Point::new(Px(0.0), Px(0.0)),
             Size::new(Px(256.0), Px(256.0)),
         ),
-        background: Paint::TRANSPARENT,
+        background: (Paint::TRANSPARENT).into(),
         border: fret_core::Edges::all(Px(0.0)),
-        border_paint: Paint::TRANSPARENT,
+        border_paint: (Paint::TRANSPARENT).into(),
         corner_radii: fret_core::Corners::all(Px(0.0)),
     });
     scene.push(SceneOp::Path {
         order: DrawOrder(1),
         origin: Point::new(Px(0.0), Px(0.0)),
         path,
-        paint: Paint::Solid(Color {
+        paint: (Paint::Solid(Color {
             r: 1.0,
             g: 1.0,
             b: 1.0,
             a: 1.0,
-        }),
+        }))
+        .into(),
     });
 
     let cb = renderer.render_scene(

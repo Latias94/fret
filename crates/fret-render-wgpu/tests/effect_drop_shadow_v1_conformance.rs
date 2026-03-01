@@ -140,14 +140,15 @@ fn gpu_drop_shadow_v1_renders_behind_content_and_is_scissored() {
     let background = SceneOp::Quad {
         order: DrawOrder(0),
         rect: Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(64.0), Px(64.0))),
-        background: Paint::Solid(Color {
+        background: (Paint::Solid(Color {
             r: 0.5,
             g: 0.5,
             b: 0.5,
             a: 1.0,
-        }),
+        }))
+        .into(),
         border: Edges::all(Px(0.0)),
-        border_paint: Paint::Solid(Color::TRANSPARENT),
+        border_paint: (Paint::Solid(Color::TRANSPARENT)).into(),
         corner_radii: Default::default(),
     };
 
@@ -157,14 +158,15 @@ fn gpu_drop_shadow_v1_renders_behind_content_and_is_scissored() {
             Point::new(Px(24.0), Px(24.0)),
             Size::new(Px(16.0), Px(16.0)),
         ),
-        background: Paint::Solid(Color {
+        background: (Paint::Solid(Color {
             r: 1.0,
             g: 0.0,
             b: 0.0,
             a: 1.0,
-        }),
+        }))
+        .into(),
         border: Edges::all(Px(0.0)),
-        border_paint: Paint::Solid(Color::TRANSPARENT),
+        border_paint: (Paint::Solid(Color::TRANSPARENT)).into(),
         corner_radii: Default::default(),
     };
 

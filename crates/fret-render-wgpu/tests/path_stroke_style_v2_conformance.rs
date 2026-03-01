@@ -177,19 +177,21 @@ fn path_stroke_style_v2_join_miter_vs_bevel_has_expected_corner_coverage() {
             Point::new(Px(0.0), Px(0.0)),
             Size::new(Px(300.0), Px(120.0)),
         ),
-        background: fret_core::Paint::Solid(Color {
+        background: (fret_core::Paint::Solid(Color {
             r: 0.0,
             g: 0.0,
             b: 0.0,
             a: 0.0,
-        }),
+        }))
+        .into(),
         border: fret_core::Edges::all(Px(0.0)),
-        border_paint: fret_core::Paint::Solid(Color {
+        border_paint: (fret_core::Paint::Solid(Color {
             r: 0.0,
             g: 0.0,
             b: 0.0,
             a: 0.0,
-        }),
+        }))
+        .into(),
         corner_radii: fret_core::Corners::all(Px(0.0)),
     });
 
@@ -301,19 +303,21 @@ fn path_stroke_style_v2_dash_periodicity_and_phase_are_deterministic_across_scal
             Point::new(Px(0.0), Px(0.0)),
             Size::new(Px(260.0), Px(160.0)),
         ),
-        background: fret_core::Paint::Solid(Color {
+        background: (fret_core::Paint::Solid(Color {
             r: 0.0,
             g: 0.0,
             b: 0.0,
             a: 0.0,
-        }),
+        }))
+        .into(),
         border: fret_core::Edges::all(Px(0.0)),
-        border_paint: fret_core::Paint::Solid(Color {
+        border_paint: (fret_core::Paint::Solid(Color {
             r: 0.0,
             g: 0.0,
             b: 0.0,
             a: 0.0,
-        }),
+        }))
+        .into(),
         corner_radii: fret_core::Corners::all(Px(0.0)),
     });
 
@@ -435,19 +439,21 @@ fn path_stroke_style_v2_round_cap_extends_coverage_beyond_butt_across_scale_fact
             Point::new(Px(0.0), Px(0.0)),
             Size::new(Px(160.0), Px(160.0)),
         ),
-        background: fret_core::Paint::Solid(Color {
+        background: (fret_core::Paint::Solid(Color {
             r: 0.0,
             g: 0.0,
             b: 0.0,
             a: 0.0,
-        }),
+        }))
+        .into(),
         border: fret_core::Edges::all(Px(0.0)),
-        border_paint: fret_core::Paint::Solid(Color {
+        border_paint: (fret_core::Paint::Solid(Color {
             r: 0.0,
             g: 0.0,
             b: 0.0,
             a: 0.0,
-        }),
+        }))
+        .into(),
         corner_radii: fret_core::Corners::all(Px(0.0)),
     });
 

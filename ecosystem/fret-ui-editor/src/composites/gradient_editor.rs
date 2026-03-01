@@ -541,9 +541,9 @@ fn gradient_preview_canvas<H: UiHost>(
                 p.scene().push(fret_core::SceneOp::Quad {
                     order: fret_core::DrawOrder(0),
                     rect,
-                    background: Paint::LinearGradient(gradient),
+                    background: Paint::LinearGradient(gradient).into(),
                     border: Edges::all(Px(1.0)),
-                    border_paint: Paint::Solid(border),
+                    border_paint: Paint::Solid(border).into(),
                     corner_radii: Corners::all(Px(6.0)),
                 });
 
@@ -581,9 +581,9 @@ fn gradient_preview_canvas<H: UiHost>(
                     p.scene().push(fret_core::SceneOp::Quad {
                         order: fret_core::DrawOrder(1),
                         rect: marker_rect,
-                        background: Paint::Solid(s.color),
+                        background: Paint::Solid(s.color).into(),
                         border: Edges::all(stroke_w),
-                        border_paint: outline,
+                        border_paint: outline.into(),
                         corner_radii: Corners::all(marker_radius),
                     });
                 }

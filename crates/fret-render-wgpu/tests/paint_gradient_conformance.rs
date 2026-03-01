@@ -177,9 +177,9 @@ fn gpu_linear_gradient_smoke_conformance() {
     scene.push(SceneOp::Quad {
         order: DrawOrder(0),
         rect,
-        background: Paint::LinearGradient(gradient),
+        background: (Paint::LinearGradient(gradient)).into(),
         border: Edges::all(Px(0.0)),
-        border_paint: Paint::TRANSPARENT,
+        border_paint: (Paint::TRANSPARENT).into(),
         corner_radii: Corners::all(Px(0.0)),
     });
 
@@ -263,9 +263,9 @@ fn gpu_linear_gradient_repeat_tile_conformance() {
     scene.push(SceneOp::Quad {
         order: DrawOrder(0),
         rect,
-        background: Paint::LinearGradient(gradient),
+        background: (Paint::LinearGradient(gradient)).into(),
         border: Edges::all(Px(0.0)),
-        border_paint: Paint::TRANSPARENT,
+        border_paint: (Paint::TRANSPARENT).into(),
         corner_radii: Corners::all(Px(0.0)),
     });
 
@@ -327,9 +327,9 @@ fn gpu_linear_gradient_mirror_tile_conformance() {
     scene.push(SceneOp::Quad {
         order: DrawOrder(0),
         rect,
-        background: Paint::LinearGradient(gradient),
+        background: (Paint::LinearGradient(gradient)).into(),
         border: Edges::all(Px(0.0)),
-        border_paint: Paint::TRANSPARENT,
+        border_paint: (Paint::TRANSPARENT).into(),
         corner_radii: Corners::all(Px(0.0)),
     });
 
@@ -397,17 +397,17 @@ fn gpu_linear_gradient_oklab_color_space_midpoint_differs_from_srgb() {
     scene.push(SceneOp::Quad {
         order: DrawOrder(0),
         rect: left,
-        background: Paint::LinearGradient(srgb_gradient),
+        background: (Paint::LinearGradient(srgb_gradient)).into(),
         border: Edges::all(Px(0.0)),
-        border_paint: Paint::TRANSPARENT,
+        border_paint: (Paint::TRANSPARENT).into(),
         corner_radii: Corners::all(Px(0.0)),
     });
     scene.push(SceneOp::Quad {
         order: DrawOrder(1),
         rect: right,
-        background: Paint::LinearGradient(oklab_gradient),
+        background: (Paint::LinearGradient(oklab_gradient)).into(),
         border: Edges::all(Px(0.0)),
-        border_paint: Paint::TRANSPARENT,
+        border_paint: (Paint::TRANSPARENT).into(),
         corner_radii: Corners::all(Px(0.0)),
     });
 
@@ -470,9 +470,9 @@ fn gpu_radial_gradient_smoke_conformance() {
     scene.push(SceneOp::Quad {
         order: DrawOrder(0),
         rect,
-        background: Paint::RadialGradient(gradient),
+        background: (Paint::RadialGradient(gradient)).into(),
         border: Edges::all(Px(0.0)),
-        border_paint: Paint::TRANSPARENT,
+        border_paint: (Paint::TRANSPARENT).into(),
         corner_radii: Corners::all(Px(0.0)),
     });
 
@@ -531,9 +531,9 @@ fn gpu_sweep_gradient_smoke_conformance() {
     scene.push(SceneOp::Quad {
         order: DrawOrder(0),
         rect,
-        background: Paint::SweepGradient(gradient),
+        background: (Paint::SweepGradient(gradient)).into(),
         border: Edges::all(Px(0.0)),
-        border_paint: Paint::TRANSPARENT,
+        border_paint: (Paint::TRANSPARENT).into(),
         corner_radii: Corners::all(Px(0.0)),
     });
 

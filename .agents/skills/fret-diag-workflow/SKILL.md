@@ -22,6 +22,9 @@ Use `fret-ui-review` when the goal is an architecture/UX audit rather than produ
 - Prefer bounded tooling queries:
   - `fretboard diag meta ...`
   - `fretboard diag windows ...`
+  - `fretboard diag dock-routing ...`
+  - `fretboard diag screenshots ...`
+  - `fretboard diag resolve latest ...`
   - `fretboard diag query ...`
   - `fretboard diag slice ...`
 - When you need repository-wide search, use `tools/rg-safe.ps1` (excludes diag artifact directories and bundle artifacts).
@@ -48,10 +51,13 @@ Use `fret-ui-review` when the goal is an architecture/UX audit rather than produ
     - Discover sessions (bounded): `fretboard diag list sessions --dir target/fret-diag-agent-a`
     - Clean old sessions (dry-run by default): `fretboard diag sessions clean --dir target/fret-diag-agent-a --keep 50`
   - Avoid relying on a global `latest.txt` outside a session; prefer per-run `manifest.json` + `script.result.json` and
-    session listing commands.
+    session listing commands (or use `fretboard diag resolve latest --dir <base_or_session_dir>`).
 - Before rerunning a suspiciously large or inconsistent run:
   - `fretboard diag config doctor --mode launch --print-launch-policy`
   - `fretboard diag config doctor --mode launch --report-json` (inspect `launch_policy` + warnings)
+- If you use `--check-pixels-changed <test_id>`, the run must capture screenshots (add `capture_screenshot` steps).
+  - Tool-launched `--launch` runs enable screenshots automatically when this gate is requested, but the script still
+    needs explicit capture steps to produce `screenshots.result.json`.
 - Keep artifacts small by default:
   - capture only a few bundles at key points (not after every step),
   - prefer sidecars + `bundle.schema2.json` over raw `bundle.json`,
@@ -191,6 +197,10 @@ Supported `pointer_kind` values in scripts: `mouse`, `touch`, `pen`.
 Prefer bounded queries over `rg bundle.json`:
 
 - `fretboard diag meta <bundle_dir|bundle.json|bundle.schema2.json> --json`
+- `fretboard diag windows <bundle_dir|bundle.json|bundle.schema2.json>`
+- `fretboard diag dock-routing <bundle_dir|bundle.json|bundle.schema2.json>`
+- `fretboard diag screenshots <out_dir|bundle_dir|bundle.json|bundle.schema2.json>`
+- `fretboard diag resolve latest --dir <base_or_session_dir> [--within-session <id|latest>]`
 - `fretboard diag query test-id <bundle_dir|bundle.json|bundle.schema2.json> <pattern> --top 50`
 - `fretboard diag slice <bundle_dir|bundle.json|bundle.schema2.json> --test-id <test_id>`
 

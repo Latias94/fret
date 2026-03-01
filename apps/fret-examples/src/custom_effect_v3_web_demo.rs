@@ -118,9 +118,9 @@ impl WinitAppDriver for CustomEffectV3WebDriver {
                 scene.push(SceneOp::Quad {
                     order: DrawOrder(iy * cols + ix),
                     rect: Rect::new(Point::new(Px(x), Px(y)), Size::new(Px(tile_w), Px(tile_h))),
-                    background: Paint::Solid(Color { r, g, b, a: 1.0 }),
+                    background: Paint::Solid(Color { r, g, b, a: 1.0 }).into(),
                     border: Edges::all(Px(0.0)),
-                    border_paint: Paint::Solid(Color::TRANSPARENT),
+                    border_paint: Paint::Solid(Color::TRANSPARENT).into(),
                     corner_radii: Corners::all(Px(0.0)),
                 });
             }
@@ -220,9 +220,10 @@ impl WinitAppDriver for CustomEffectV3WebDriver {
                         g: 1.0,
                         b: 1.0,
                         a: 0.08,
-                    }),
+                    })
+                    .into(),
                     border: Edges::all(Px(0.0)),
-                    border_paint: Paint::Solid(Color::TRANSPARENT),
+                    border_paint: Paint::Solid(Color::TRANSPARENT).into(),
                     corner_radii: Corners::all(Px(24.0)),
                 });
                 scene.push(SceneOp::PopClip);
@@ -231,14 +232,15 @@ impl WinitAppDriver for CustomEffectV3WebDriver {
                 scene.push(SceneOp::Quad {
                     order: DrawOrder(base + 1),
                     rect: lens,
-                    background: Paint::Solid(Color::TRANSPARENT),
+                    background: Paint::Solid(Color::TRANSPARENT).into(),
                     border: Edges::all(Px(1.0)),
                     border_paint: Paint::Solid(Color {
                         r: 1.0,
                         g: 1.0,
                         b: 1.0,
                         a: 0.12,
-                    }),
+                    })
+                    .into(),
                     corner_radii: Corners::all(Px(24.0)),
                 });
             }
@@ -262,14 +264,16 @@ impl WinitAppDriver for CustomEffectV3WebDriver {
                     g: 0.0,
                     b: 0.0,
                     a: 0.25,
-                }),
+                })
+                .into(),
                 border: Edges::all(Px(1.0)),
                 border_paint: Paint::Solid(Color {
                     r: 1.0,
                     g: 0.0,
                     b: 0.0,
                     a: 0.8,
-                }),
+                })
+                .into(),
                 corner_radii: Corners::all(Px(24.0)),
             });
         }

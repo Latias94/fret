@@ -146,9 +146,9 @@ fn push_bounds_stripes(scene: &mut Scene, bounds: Rect, order_base: u32) {
                 Point::new(Px(x), bounds.origin.y),
                 Size::new(Px(1.0), bounds.size.height),
             ),
-            background: Paint::Solid(bg),
+            background: (Paint::Solid(bg)).into(),
             border: Edges::all(Px(0.0)),
-            border_paint: Paint::Solid(Color::TRANSPARENT),
+            border_paint: (Paint::Solid(Color::TRANSPARENT)).into(),
             corner_radii: Default::default(),
         });
     }
@@ -177,14 +177,15 @@ fn gpu_backdrop_pixelate_respects_rounded_clip_stack_on_writeback() {
     without_effect.push(SceneOp::Quad {
         order: DrawOrder(0),
         rect: Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(64.0), Px(64.0))),
-        background: Paint::Solid(Color {
+        background: (Paint::Solid(Color {
             r: 0.0,
             g: 1.0,
             b: 0.0,
             a: 1.0,
-        }),
+        }))
+        .into(),
         border: Edges::all(Px(0.0)),
-        border_paint: Paint::Solid(Color::TRANSPARENT),
+        border_paint: (Paint::Solid(Color::TRANSPARENT)).into(),
         corner_radii: Default::default(),
     });
     push_bounds_stripes(&mut without_effect, bounds, 1);
@@ -196,14 +197,15 @@ fn gpu_backdrop_pixelate_respects_rounded_clip_stack_on_writeback() {
     without_effect.push(SceneOp::Quad {
         order: DrawOrder(100),
         rect: Rect::new(Point::new(Px(28.0), Px(36.0)), Size::new(Px(8.0), Px(8.0))),
-        background: Paint::Solid(Color {
+        background: (Paint::Solid(Color {
             r: 1.0,
             g: 1.0,
             b: 1.0,
             a: 1.0,
-        }),
+        }))
+        .into(),
         border: Edges::all(Px(0.0)),
-        border_paint: Paint::Solid(Color::TRANSPARENT),
+        border_paint: (Paint::Solid(Color::TRANSPARENT)).into(),
         corner_radii: Default::default(),
     });
     without_effect.push(SceneOp::PopClip);
@@ -212,14 +214,15 @@ fn gpu_backdrop_pixelate_respects_rounded_clip_stack_on_writeback() {
     with_effect.push(SceneOp::Quad {
         order: DrawOrder(0),
         rect: Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(64.0), Px(64.0))),
-        background: Paint::Solid(Color {
+        background: (Paint::Solid(Color {
             r: 0.0,
             g: 1.0,
             b: 0.0,
             a: 1.0,
-        }),
+        }))
+        .into(),
         border: Edges::all(Px(0.0)),
-        border_paint: Paint::Solid(Color::TRANSPARENT),
+        border_paint: (Paint::Solid(Color::TRANSPARENT)).into(),
         corner_radii: Default::default(),
     });
     push_bounds_stripes(&mut with_effect, bounds, 1);
@@ -236,14 +239,15 @@ fn gpu_backdrop_pixelate_respects_rounded_clip_stack_on_writeback() {
     with_effect.push(SceneOp::Quad {
         order: DrawOrder(100),
         rect: Rect::new(Point::new(Px(28.0), Px(36.0)), Size::new(Px(8.0), Px(8.0))),
-        background: Paint::Solid(Color {
+        background: (Paint::Solid(Color {
             r: 1.0,
             g: 1.0,
             b: 1.0,
             a: 1.0,
-        }),
+        }))
+        .into(),
         border: Edges::all(Px(0.0)),
-        border_paint: Paint::Solid(Color::TRANSPARENT),
+        border_paint: (Paint::Solid(Color::TRANSPARENT)).into(),
         corner_radii: Default::default(),
     });
     with_effect.push(SceneOp::PopEffect);

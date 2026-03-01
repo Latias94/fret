@@ -992,7 +992,7 @@ fn web_vs_fret_layout_spinner_empty_icon_geometry_matches_web() {
             continue;
         }
 
-        let Some(background) = paint_solid_color(background) else {
+        let Some(background) = paint_solid_color(background.paint) else {
             continue;
         };
 

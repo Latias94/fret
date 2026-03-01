@@ -1,7 +1,7 @@
 ---
 title: fret-node style/skin layer v1
 status: active
-date: 2026-02-27
+date: 2026-03-01
 scope: ecosystem/fret-node
 ---
 
@@ -64,3 +64,5 @@ Milestone design notes (implementation-oriented):
 - v1 skin changes MUST be paint-only (colors/width/dash/title palette).
 - Geometry-affecting styling knobs (padding, header height, pin metrics) must be added only with
   explicit invalidation keys + conformance tests.
+- Wire gradients are out of scope for this workstream. Track mechanism-level paint support in
+  `docs/workstreams/paint-eval-space-v1/README.md`.

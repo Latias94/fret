@@ -134,14 +134,15 @@ fn stripe_scene_base(size: (u32, u32)) -> Scene {
             Point::new(Px(0.0), Px(0.0)),
             Size::new(Px(size.0 as f32), Px(size.1 as f32)),
         ),
-        background: Paint::Solid(Color {
+        background: (Paint::Solid(Color {
             r: 0.0,
             g: 1.0,
             b: 0.0,
             a: 1.0,
-        }),
+        }))
+        .into(),
         border: Edges::all(Px(0.0)),
-        border_paint: Paint::Solid(Color::TRANSPARENT),
+        border_paint: (Paint::Solid(Color::TRANSPARENT)).into(),
         corner_radii: Default::default(),
     });
 
@@ -169,9 +170,9 @@ fn stripe_scene_base(size: (u32, u32)) -> Scene {
                 Point::new(Px(x), Px(0.0)),
                 Size::new(Px(1.0), Px(size.1 as f32)),
             ),
-            background: Paint::Solid(bg),
+            background: (Paint::Solid(bg)).into(),
             border: Edges::all(Px(0.0)),
-            border_paint: Paint::Solid(Color::TRANSPARENT),
+            border_paint: (Paint::Solid(Color::TRANSPARENT)).into(),
             corner_radii: Default::default(),
         });
     }
@@ -253,14 +254,15 @@ fn gpu_backdrop_warp_v2_image_map_is_scissored_and_preserves_ordering() {
             Point::new(Px(26.0), Px(48.0)),
             Size::new(Px(12.0), Px(12.0)),
         ),
-        background: Paint::Solid(Color {
+        background: (Paint::Solid(Color {
             r: 1.0,
             g: 1.0,
             b: 1.0,
             a: 1.0,
-        }),
+        }))
+        .into(),
         border: Edges::all(Px(0.0)),
-        border_paint: Paint::Solid(Color::TRANSPARENT),
+        border_paint: (Paint::Solid(Color::TRANSPARENT)).into(),
         corner_radii: Default::default(),
     };
 
@@ -402,14 +404,15 @@ fn gpu_filter_content_warp_v2_is_deterministically_ignored() {
             Point::new(Px(24.0), Px(16.0)),
             Size::new(Px(16.0), Px(16.0)),
         ),
-        background: Paint::Solid(Color {
+        background: (Paint::Solid(Color {
             r: 0.9,
             g: 0.9,
             b: 0.0,
             a: 1.0,
-        }),
+        }))
+        .into(),
         border: Edges::all(Px(0.0)),
-        border_paint: Paint::Solid(Color::TRANSPARENT),
+        border_paint: (Paint::Solid(Color::TRANSPARENT)).into(),
         corner_radii: Default::default(),
     };
 

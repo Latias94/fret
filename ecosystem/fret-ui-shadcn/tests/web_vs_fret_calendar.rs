@@ -577,7 +577,7 @@ fn find_best_opaque_background_quad(scene: &Scene, target: Rect) -> Option<Paint
             continue;
         };
 
-        let fret_core::Paint::Solid(background) = background else {
+        let fret_core::Paint::Solid(background) = background.paint else {
             continue;
         };
         if background.a <= 0.001 {
@@ -660,7 +660,7 @@ fn find_best_text_color_in_rect(scene: &Scene, search_within: Rect) -> Option<Rg
         let SceneOp::Text { origin, paint, .. } = *op else {
             return;
         };
-        let fret_core::Paint::Solid(color) = paint else {
+        let fret_core::Paint::Solid(color) = paint.paint else {
             return;
         };
         let origin = st.transform.apply_point(origin);
@@ -744,7 +744,7 @@ fn find_best_icon_color_in_rect(scene: &Scene, search_within: Rect) -> Option<Rg
             if !search_within.contains(origin) {
                 return;
             }
-            let fret_core::Paint::Solid(color) = paint else {
+            let fret_core::Paint::Solid(color) = paint.paint else {
                 return;
             };
             let rgba = color_to_rgba(color_with_opacity(color, st.opacity));
