@@ -20,6 +20,24 @@
       },
       "timeout_frames": 600
     },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "liquid-glass-button-reset-stage" }
+      },
+      "timeout_frames": 600
+    },
+    { "type": "click_stable", "target": { "kind": "test_id", "id": "liquid-glass-button-reset-stage" }, "stable_frames": 6, "max_move_px": 0.5, "timeout_frames": 600 },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "checked_is",
+        "target": { "kind": "test_id", "id": "liquid-glass-switch-use-backdrop" },
+        "checked": true
+      },
+      "timeout_frames": 600
+    },
 
     { "type": "click_stable", "target": { "kind": "test_id", "id": "liquid-glass-switch-show-fake" }, "stable_frames": 6, "max_move_px": 0.5, "timeout_frames": 600 },
     { "type": "click_stable", "target": { "kind": "test_id", "id": "liquid-glass-switch-show-warp-v1" }, "stable_frames": 6, "max_move_px": 0.5, "timeout_frames": 600 },
