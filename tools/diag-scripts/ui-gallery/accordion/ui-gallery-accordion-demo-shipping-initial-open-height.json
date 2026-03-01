@@ -53,12 +53,20 @@
       "type": "wait_until",
       "predicate": {
         "kind": "exists",
-        "target": { "kind": "test_id", "id": "ui-gallery-accordion-demo-shipping-content" }
+        "target": { "kind": "test_id", "id": "ui-gallery-accordion-demo-shipping-trigger" }
       },
       "timeout_frames": 240
     },
 
-    { "type": "wait_frames", "n": 2 },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "not_exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-accordion-demo-shipping-content" }
+      },
+      "timeout_frames": 60
+    },
+
     {
       "type": "wait_until",
       "predicate": {
@@ -84,10 +92,27 @@
     },
 
     { "type": "click", "target": { "kind": "test_id", "id": "ui-gallery-accordion-demo-shipping-trigger" } },
+    { "type": "wait_frames", "n": 2 },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-accordion-demo-shipping-content" }
+      },
+      "timeout_frames": 240
+    },
     { "type": "wait_frames", "n": 10 },
 
     { "type": "click", "target": { "kind": "test_id", "id": "ui-gallery-accordion-demo-shipping-trigger" } },
     { "type": "wait_frames", "n": 2 },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "not_exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-accordion-demo-shipping-content" }
+      },
+      "timeout_frames": 240
+    },
     {
       "type": "wait_until",
       "predicate": {
