@@ -55,6 +55,8 @@ mod bundle_dump_policy;
 mod bundle_sidecars;
 mod fs_triggers;
 mod inspect;
+#[cfg(feature = "diagnostics")]
+mod inspect_overlay;
 mod pick;
 mod pick_flow;
 mod snapshot_recording;
@@ -94,7 +96,7 @@ use selector::SemanticsIndex;
 pub(crate) use selector::semantics_role_label;
 use selector::{
     best_selector_for_node, format_inspect_path, parent_node_id, parse_semantics_role,
-    select_semantics_node, select_semantics_node_scoped, suggest_selectors, truncate_debug_value,
+    select_semantics_node_scoped, suggest_selectors, truncate_debug_value,
 };
 
 mod trace_helpers;
@@ -111,6 +113,9 @@ mod ui_diagnostics_devtools_ws;
 
 use snapshot_types::WindowRing;
 pub use snapshot_types::*;
+
+#[cfg(feature = "diagnostics")]
+pub(crate) use inspect_overlay::render_diag_inspect_overlay;
 
 mod config;
 pub use config::UiDiagnosticsConfig;
@@ -1488,7 +1493,7 @@ mod tests {
         let selector = UiSelectorV1::TestId {
             id: "open".to_string(),
         };
-        let picked = select_semantics_node(&snapshot, window_id(1), None, &selector)
+        let picked = select_semantics_node_scoped(&snapshot, window_id(1), None, &selector, None)
             .expect("expected a pick");
         assert_eq!(picked.id, node_id(4));
 
@@ -1654,7 +1659,7 @@ mod tests {
             "listbox",
             "listbox",
         );
-        let mut item_a = semantics_node_with_test_id(
+        let item_a = semantics_node_with_test_id(
             2,
             Some(1),
             SemanticsRole::ListBoxOption,

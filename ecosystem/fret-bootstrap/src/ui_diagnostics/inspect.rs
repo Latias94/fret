@@ -14,6 +14,19 @@ pub(super) struct InspectToast {
 }
 
 impl UiDiagnosticsService {
+    pub(super) fn set_inspect_enabled(&mut self, enabled: bool, consume_clicks: bool) {
+        self.inspect_enabled = enabled;
+        self.inspect_consume_clicks = consume_clicks;
+        if !enabled {
+            self.pick_overlay_grace_frames.clear();
+            self.clear_inspect_state_all_windows();
+            self.last_hovered_node_id.clear();
+            self.last_hovered_selector_json.clear();
+            self.last_picked_node_id.clear();
+            self.last_picked_selector_json.clear();
+        }
+    }
+
     pub fn inspect_is_enabled(&self) -> bool {
         self.inspect_enabled
     }
@@ -141,17 +154,7 @@ impl UiDiagnosticsService {
                 }
 
                 if self.inspect_enabled {
-                    self.inspect_enabled = false;
-                    self.inspect_locked_windows.clear();
-                    self.last_hovered_selector_json.clear();
-                    self.last_picked_selector_json.clear();
-                    self.last_hovered_node_id.clear();
-                    self.inspect_focus_node_id.clear();
-                    self.inspect_focus_selector_json.clear();
-                    self.inspect_focus_down_stack.clear();
-                    self.inspect_pending_nav.clear();
-                    self.inspect_focus_summary_line.clear();
-                    self.inspect_focus_path_line.clear();
+                    self.set_inspect_enabled(false, self.inspect_consume_clicks);
 
                     let _ = write_json(
                         self.cfg.inspect_path.clone(),

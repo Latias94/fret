@@ -664,7 +664,6 @@ impl UiDiagnosticsService {
             return;
         }
 
-        self.inspect_enabled = cfg.enabled;
-        self.inspect_consume_clicks = cfg.consume_clicks;
+        self.set_inspect_enabled(cfg.enabled, cfg.consume_clicks);
     }
 }

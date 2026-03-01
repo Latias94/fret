@@ -559,6 +559,12 @@ impl UiDiagnosticsService {
         self.pick_armed_run_id.is_some()
     }
 
+    pub(super) fn pick_is_pending(&self, window: AppWindowId) -> bool {
+        self.pending_pick
+            .as_ref()
+            .is_some_and(|pending| pending.window == window)
+    }
+
     pub fn clear_window(&mut self, window: AppWindowId) {
         self.per_window.remove(&window);
         self.known_windows.retain(|w| *w != window);
@@ -567,6 +573,17 @@ impl UiDiagnosticsService {
         self.last_picked_selector_json.remove(&window);
         self.last_hovered_node_id.remove(&window);
         self.last_hovered_selector_json.remove(&window);
+        self.clear_inspect_state_for_window(window);
+        if self
+            .pending_pick
+            .as_ref()
+            .is_some_and(|p| p.window == window)
+        {
+            self.pending_pick = None;
+        }
+    }
+
+    pub(super) fn clear_inspect_state_for_window(&mut self, window: AppWindowId) {
         self.inspect_focus_node_id.remove(&window);
         self.inspect_focus_selector_json.remove(&window);
         self.inspect_focus_down_stack.remove(&window);
@@ -575,13 +592,22 @@ impl UiDiagnosticsService {
         self.inspect_focus_path_line.remove(&window);
         self.inspect_locked_windows.remove(&window);
         self.inspect_toast.remove(&window);
-        if self
-            .pending_pick
-            .as_ref()
-            .is_some_and(|p| p.window == window)
-        {
-            self.pending_pick = None;
+    }
+
+    pub(super) fn clear_inspect_state_all_windows(&mut self) {
+        let windows: Vec<AppWindowId> = self.inspect_focus_node_id.keys().copied().collect();
+        for window in windows {
+            self.clear_inspect_state_for_window(window);
         }
+
+        self.inspect_locked_windows.clear();
+        self.inspect_focus_node_id.clear();
+        self.inspect_focus_selector_json.clear();
+        self.inspect_focus_down_stack.clear();
+        self.inspect_pending_nav.clear();
+        self.inspect_focus_summary_line.clear();
+        self.inspect_focus_path_line.clear();
+        self.inspect_toast.clear();
     }
 
     fn reset_diagnostics_ring_for_window(&mut self, window: AppWindowId) {

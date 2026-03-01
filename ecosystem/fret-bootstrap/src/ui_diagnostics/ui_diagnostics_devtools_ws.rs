@@ -441,11 +441,7 @@ impl UiDiagnosticsService {
                 let Ok(cfg) = serde_json::from_value::<UiInspectConfigV1>(msg.payload) else {
                     return;
                 };
-                self.inspect_enabled = cfg.enabled;
-                self.inspect_consume_clicks = cfg.consume_clicks;
-                if !self.inspect_enabled {
-                    self.inspect_locked_windows.clear();
-                }
+                self.set_inspect_enabled(cfg.enabled, cfg.consume_clicks);
             }
             "pick.arm" => {
                 self.pending_pick = None;
