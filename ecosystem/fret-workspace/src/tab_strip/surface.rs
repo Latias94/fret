@@ -6,6 +6,7 @@ use crate::tab_drag::WorkspaceTabHitRect;
 pub(crate) enum WorkspaceTabStripSurface {
     Outside,
     OverflowControl,
+    ScrollControls,
     PinnedBoundary,
     TabsViewport,
     HeaderSpace,
@@ -27,11 +28,19 @@ pub(crate) fn classify_workspace_tab_strip_surface(
     end_drop_target_rect: Option<Rect>,
     scroll_viewport_rect: Option<Rect>,
     overflow_control_rect: Option<Rect>,
+    scroll_left_control_rect: Option<Rect>,
+    scroll_right_control_rect: Option<Rect>,
 ) -> WorkspaceTabStripSurface {
     // Explicit non-drop surfaces should win: they may overlap the scroll viewport in future
     // (e.g. button clusters living inside the tab bar).
     if overflow_control_rect.is_some_and(|r| rect_contains_point(r, position)) {
         return WorkspaceTabStripSurface::OverflowControl;
+    }
+
+    if scroll_left_control_rect.is_some_and(|r| rect_contains_point(r, position))
+        || scroll_right_control_rect.is_some_and(|r| rect_contains_point(r, position))
+    {
+        return WorkspaceTabStripSurface::ScrollControls;
     }
 
     if pinned_boundary_rect.is_some_and(|rect| rect_contains_point(rect, position)) {

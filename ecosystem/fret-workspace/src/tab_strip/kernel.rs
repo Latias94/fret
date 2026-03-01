@@ -24,6 +24,8 @@ pub(crate) fn compute_workspace_tab_strip_drop_target(
     end_drop_target_rect: Option<Rect>,
     scroll_viewport_rect: Option<Rect>,
     overflow_control_rect: Option<Rect>,
+    scroll_left_control_rect: Option<Rect>,
+    scroll_right_control_rect: Option<Rect>,
 ) -> WorkspaceTabStripDropTarget {
     let surface = classify_workspace_tab_strip_surface(
         position,
@@ -33,12 +35,14 @@ pub(crate) fn compute_workspace_tab_strip_drop_target(
         end_drop_target_rect,
         scroll_viewport_rect,
         overflow_control_rect,
+        scroll_left_control_rect,
+        scroll_right_control_rect,
     );
 
     match surface {
-        WorkspaceTabStripSurface::Outside | WorkspaceTabStripSurface::OverflowControl => {
-            WorkspaceTabStripDropTarget::None
-        }
+        WorkspaceTabStripSurface::Outside
+        | WorkspaceTabStripSurface::OverflowControl
+        | WorkspaceTabStripSurface::ScrollControls => WorkspaceTabStripDropTarget::None,
         WorkspaceTabStripSurface::PinnedBoundary => WorkspaceTabStripDropTarget::PinnedBoundary,
         WorkspaceTabStripSurface::HeaderSpace => WorkspaceTabStripDropTarget::End,
         WorkspaceTabStripSurface::TabsViewport => {
@@ -104,6 +108,8 @@ mod tests {
             None,
             Some(rect(0.0, 0.0, 200.0, 20.0)),
             None,
+            None,
+            None,
         );
         assert!(
             matches!(target, WorkspaceTabStripDropTarget::PinnedBoundary),
@@ -134,6 +140,8 @@ mod tests {
             None,
             Some(viewport),
             None,
+            None,
+            None,
         );
         assert!(matches!(target, WorkspaceTabStripDropTarget::End));
     }
@@ -156,6 +164,8 @@ mod tests {
             Some(end_rect),
             Some(viewport),
             None,
+            None,
+            None,
         );
         assert!(matches!(target, WorkspaceTabStripDropTarget::End));
     }
@@ -168,8 +178,9 @@ mod tests {
         }];
         let pos = Point::new(Px(10.0), Px(10.0));
 
-        let target =
-            compute_workspace_tab_strip_drop_target(pos, "b", &tab_rects, None, None, None, None);
+        let target = compute_workspace_tab_strip_drop_target(
+            pos, "b", &tab_rects, None, None, None, None, None, None,
+        );
         assert!(matches!(target, WorkspaceTabStripDropTarget::Tab(id, _) if id.as_ref() == "a"));
     }
 
@@ -191,6 +202,31 @@ mod tests {
             None,
             Some(viewport),
             Some(overflow),
+            None,
+            None,
+        );
+        assert!(matches!(target, WorkspaceTabStripDropTarget::None));
+    }
+
+    #[test]
+    fn scroll_controls_are_not_treated_as_header_space_without_viewport_bounds() {
+        let tab_rects = vec![WorkspaceTabHitRect {
+            id: Arc::from("a"),
+            rect: rect(0.0, 0.0, 100.0, 20.0),
+        }];
+        let scroll_right = rect(200.0, 0.0, 20.0, 20.0);
+        let pos = Point::new(Px(210.0), Px(10.0));
+
+        let target = compute_workspace_tab_strip_drop_target(
+            pos,
+            "b",
+            &tab_rects,
+            None,
+            None,
+            None,
+            None,
+            None,
+            Some(scroll_right),
         );
         assert!(matches!(target, WorkspaceTabStripDropTarget::None));
     }

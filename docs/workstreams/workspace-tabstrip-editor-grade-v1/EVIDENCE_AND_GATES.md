@@ -30,6 +30,7 @@ Goal: keep the tab strip refactor **fearless** by locking outcomes behind unit t
 
 - `insert_index` is canonical (full list index space).
 - end-drop surface resolves to `insert_index == tab_count`.
+- scroll controls are not classified as header-space drop surfaces when viewport bounds are missing.
 - pinned boundary prevents crossing on reorder (unless pin/unpin intent).
 - overflow mapping preserves canonical order.
 

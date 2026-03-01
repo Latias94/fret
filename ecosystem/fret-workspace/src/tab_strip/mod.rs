@@ -346,6 +346,10 @@ impl WorkspaceTabStrip {
                 let end_drop_target_element = Cell::<Option<GlobalElementId>>::new(None);
                 let overflow_control_element: Rc<Cell<Option<GlobalElementId>>> =
                     Rc::new(Cell::new(None));
+                let scroll_left_control_element: Rc<Cell<Option<GlobalElementId>>> =
+                    Rc::new(Cell::new(None));
+                let scroll_right_control_element: Rc<Cell<Option<GlobalElementId>>> =
+                    Rc::new(Cell::new(None));
 
                 let cross_drop_target: Option<(Arc<str>, WorkspaceTabInsertionSide)> = match (
                     tab_drag_model.as_ref(),
@@ -698,6 +702,10 @@ impl WorkspaceTabStrip {
                                                                     snapshot.scroll_viewport_rect;
                                                                 let overflow_control_rect =
                                                                     snapshot.overflow_control_rect;
+                                                                let scroll_left_control_rect =
+                                                                    snapshot.scroll_left_control_rect;
+                                                                let scroll_right_control_rect =
+                                                                    snapshot.scroll_right_control_rect;
 
                                                                 let Some(dragged_tab) = dragged_tab else {
                                                                     return false;
@@ -761,6 +769,8 @@ impl WorkspaceTabStrip {
                                                                         end_drop_target_rect,
                                                                         scroll_viewport_rect,
                                                                         overflow_control_rect,
+                                                                        scroll_left_control_rect,
+                                                                        scroll_right_control_rect,
                                                                     );
                                                                 if matches!(drop_target, WorkspaceTabStripDropTarget::End) {
                                                                     drop_target = resolve_end_drop_target_in_canonical_order(
@@ -1319,7 +1329,8 @@ impl WorkspaceTabStrip {
                                                  enabled: bool,
                                                  glyph: &'static str,
                                                  a11y_label: &'static str,
-                                                 delta_x: f32| {
+                                                 delta_x: f32,
+                                                 control_element: Rc<Cell<Option<GlobalElementId>>>| {
                                 let scroll_handle = scroll_handle.clone();
                                 let button_text_style = text_style.clone();
                                 let glyph = Arc::<str>::from(glyph);
@@ -1336,6 +1347,7 @@ impl WorkspaceTabStrip {
                                         ..Default::default()
                                     },
                                     move |cx, state| {
+                                        control_element.set(Some(cx.root_id()));
                                         let handler: OnActivate = Arc::new(move |_host, _acx, _r| {
                                             let current = scroll_handle.offset();
                                             scroll_handle.set_offset(Point::new(
@@ -1391,6 +1403,14 @@ impl WorkspaceTabStrip {
                             let overflow_control_rect_now = bounds_for_optional_element_id(
                                 cx,
                                 overflow_control_element.get(),
+                            );
+                            let scroll_left_control_rect_now = bounds_for_optional_element_id(
+                                cx,
+                                scroll_left_control_element.get(),
+                            );
+                            let scroll_right_control_rect_now = bounds_for_optional_element_id(
+                                cx,
+                                scroll_right_control_element.get(),
                             );
 
                             #[cfg(feature = "shadcn-context-menu")]
@@ -1475,6 +1495,12 @@ impl WorkspaceTabStrip {
                                 end_drop_target_rect_now != drag_snapshot.end_drop_target_rect;
                             let overflow_control_changed =
                                 overflow_control_rect_now != drag_snapshot.overflow_control_rect;
+                            let scroll_left_control_changed =
+                                scroll_left_control_rect_now
+                                    != drag_snapshot.scroll_left_control_rect;
+                            let scroll_right_control_changed =
+                                scroll_right_control_rect_now
+                                    != drag_snapshot.scroll_right_control_rect;
 
                             if should_clear
                                 || (should_sync_rects
@@ -1482,13 +1508,19 @@ impl WorkspaceTabStrip {
                                         || pinned_boundary_changed
                                         || viewport_changed
                                         || end_drop_changed
-                                        || overflow_control_changed))
+                                        || overflow_control_changed
+                                        || scroll_left_control_changed
+                                        || scroll_right_control_changed))
                             {
                                 let rects_for_model = rects_for_hit.clone();
                                 let pinned_boundary_rect_for_model = pinned_boundary_rect_now;
                                 let viewport_for_model = viewport_for_hit;
                                 let end_drop_target_rect_for_model = end_drop_target_rect_now;
                                 let overflow_control_rect_for_model = overflow_control_rect_now;
+                                let scroll_left_control_rect_for_model =
+                                    scroll_left_control_rect_now;
+                                let scroll_right_control_rect_for_model =
+                                    scroll_right_control_rect_now;
                                 let _ = cx.app.models_mut().update(&drag_model, move |st| {
                                     if should_clear {
                                         *st = WorkspaceTabStripDragState::default();
@@ -1500,6 +1532,9 @@ impl WorkspaceTabStrip {
                                     st.scroll_viewport_rect = viewport_for_model;
                                     st.end_drop_target_rect = end_drop_target_rect_for_model;
                                     st.overflow_control_rect = overflow_control_rect_for_model;
+                                    st.scroll_left_control_rect = scroll_left_control_rect_for_model;
+                                    st.scroll_right_control_rect =
+                                        scroll_right_control_rect_for_model;
                                     match st.drop_target.clone() {
                                         WorkspaceTabStripDropTarget::None => {}
                                         WorkspaceTabStripDropTarget::PinnedBoundary => {
@@ -1544,6 +1579,8 @@ impl WorkspaceTabStrip {
                                             end_drop_target_rect_now,
                                             viewport_for_hit,
                                             overflow_rect,
+                                            scroll_left_control_rect_now,
+                                            scroll_right_control_rect_now,
                                         );
                                     let next = match next {
                                         WorkspaceTabStripDropTarget::End => resolve_end_drop_target_in_canonical_order(
@@ -1721,6 +1758,7 @@ impl WorkspaceTabStrip {
                                                     "<",
                                                     "Scroll left",
                                                     -1.0,
+                                                    scroll_left_control_element.clone(),
                                                 ),
                                                 scroll,
                                                 scroll_button(
@@ -1729,11 +1767,14 @@ impl WorkspaceTabStrip {
                                                     ">",
                                                     "Scroll right",
                                                     1.0,
+                                                    scroll_right_control_element.clone(),
                                                 ),
                                             ];
 
                                             #[cfg(feature = "shadcn-context-menu")]
                                             overflow_control_element.set(None);
+                                            scroll_left_control_element.set(None);
+                                            scroll_right_control_element.set(None);
                                             #[cfg(feature = "shadcn-context-menu")]
                                             if overflow_is_overflowing {
                                                 let enabled = !overflow_entries.is_empty();
