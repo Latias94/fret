@@ -15,6 +15,7 @@ pub(in crate::ui) fn preview_sheet(
         side_bottom_open: Option<Model<bool>>,
         side_left_open: Option<Model<bool>>,
         no_close_open: Option<Model<bool>>,
+        parts_open: Option<Model<bool>>,
         rtl_open: Option<Model<bool>>,
         rtl_name: Option<Model<String>>,
         rtl_username: Option<Model<String>>,
@@ -94,6 +95,17 @@ pub(in crate::ui) fn preview_sheet(
             let model = cx.app.models_mut().insert(false);
             cx.with_state(SheetModels::default, |st| {
                 st.no_close_open = Some(model.clone())
+            });
+            model
+        }
+    };
+
+    let parts_open = match state.parts_open {
+        Some(model) => model,
+        None => {
+            let model = cx.app.models_mut().insert(false);
+            cx.with_state(SheetModels::default, |st| {
+                st.parts_open = Some(model.clone())
             });
             model
         }
@@ -199,6 +211,56 @@ pub(in crate::ui) fn preview_sheet(
             );
 
         demo_sheet
+    };
+
+    let parts = {
+        let trigger_open = parts_open.clone();
+        let close_open = parts_open.clone();
+
+        shadcn::Sheet::new(parts_open.clone())
+            .side(shadcn::SheetSide::Right)
+            .size(Px(420.0))
+            .into_element_parts(
+                cx,
+                move |cx| {
+                    let trigger = shadcn::Button::new("Open (Parts)")
+                        .variant(shadcn::ButtonVariant::Outline)
+                        .test_id("ui-gallery-sheet-parts-trigger")
+                        .toggle_model(trigger_open.clone())
+                        .into_element(cx);
+                    shadcn::SheetTrigger::new(trigger)
+                },
+                shadcn::SheetPortal::new(),
+                shadcn::SheetOverlay::new(),
+                move |cx| {
+                    shadcn::SheetContent::new([
+                        shadcn::SheetHeader::new([
+                            shadcn::SheetTitle::new("Parts sheet").into_element(cx),
+                            shadcn::SheetDescription::new(
+                                "Part surface adapter for shadcn-style authoring.",
+                            )
+                            .into_element(cx),
+                        ])
+                        .into_element(cx),
+                        shadcn::SheetFooter::new([shadcn::Button::new("Close")
+                            .variant(shadcn::ButtonVariant::Outline)
+                            .test_id("ui-gallery-sheet-parts-close")
+                            .toggle_model(close_open.clone())
+                            .into_element(cx)])
+                        .into_element(cx),
+                    ])
+                    .into_element(cx)
+                    .attach_semantics(
+                        SemanticsDecoration::default()
+                            .test_id("ui-gallery-sheet-parts-overlay-content"),
+                    )
+                },
+            )
+            .attach_semantics(
+                SemanticsDecoration::default()
+                    .role(fret_core::SemanticsRole::Group)
+                    .test_id("ui-gallery-sheet-parts-overlay"),
+            )
     };
 
     let side = {
@@ -438,6 +500,7 @@ pub(in crate::ui) fn preview_sheet(
         cx,
         [
             "Preview follows shadcn Sheet demo (new-york-v4).",
+            "Part surface adapters exist for shadcn-style call sites (SheetTrigger/SheetPortal/SheetOverlay).",
             "Fret renders a default top-right close affordance in `SheetContent` (disable via `show_close_button(false)`).",
             "Fret also exposes `SheetClose` for additional close affordances.",
         ],
@@ -508,7 +571,22 @@ shadcn::Sheet::new(open.clone())
             ])
             .into_element(cx)
         },
-    );"#,
+	    );"#,
+                ),
+            DocSection::new("Parts", parts)
+                .max_w(Px(980.0))
+                .test_id_prefix("ui-gallery-sheet-parts")
+                .code(
+                    "rust",
+                    r#"use shadcn::{Sheet, SheetContent, SheetOverlay, SheetPortal, SheetTrigger};
+
+let sheet = Sheet::new(open).into_element_parts(
+    cx,
+    |cx| SheetTrigger::new(shadcn::Button::new("Open").toggle_model(open.clone()).into_element(cx)),
+    SheetPortal::new(),
+    SheetOverlay::new(),
+    |cx| SheetContent::new([/* content */]).into_element(cx),
+);"#,
                 ),
             DocSection::new("Side", side)
                 .max_w(Px(980.0))
