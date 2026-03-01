@@ -17,7 +17,32 @@ pub(super) fn preview_combobox(
 ) -> Vec<AnyElement> {
     let models = models::get_or_init(cx);
 
-    let conformance_demo = sections::demo(cx, value, open, query);
+    let conformance_demo_value = value.clone();
+    let conformance_demo_open = open.clone();
+    let conformance_demo_query = query.clone();
+    let conformance_demo = stack::vstack(
+        cx,
+        stack::VStackProps::default()
+            .gap(Space::N2)
+            .items_start()
+            .layout(LayoutRefinement::default().w_full().max_w(Px(340.0))),
+        move |cx| {
+            vec![
+                sections::demo(
+                    cx,
+                    conformance_demo_value.clone(),
+                    conformance_demo_open.clone(),
+                    conformance_demo_query.clone(),
+                ),
+                helpers::state_rows(
+                    cx,
+                    &conformance_demo_value,
+                    &conformance_demo_query,
+                    "ui-gallery-combobox-demo",
+                ),
+            ]
+        },
+    );
     let basic = sections::basic_frameworks(cx, &models);
     let auto_highlight = sections::auto_highlight(cx, &models);
     let clear = sections::clear_button(cx, &models);
