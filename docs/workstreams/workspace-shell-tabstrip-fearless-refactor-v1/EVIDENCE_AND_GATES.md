@@ -58,6 +58,7 @@ Prefer nextest tests for “hard” behaviors that do not require real rendering
   - pointer down on tab does not steal focus from an existing focus target.
 - Focus transfer:
   - `workspace.pane.focus_tab_strip` focuses the active tab in the focused pane.
+  - `workspace.pane.focus_tab_strip` works when focus starts outside the pane subtree (shell scope).
 - Roving keyboard navigation:
   - arrow keys move roving focus and activate correct tab.
 
@@ -93,6 +94,7 @@ Current anchors:
 - Workspace tab strip adapter: `ecosystem/fret-workspace/src/tab_strip/mod.rs`
 - Tab strip interaction kernel (WIP): `ecosystem/fret-workspace/src/tab_strip/kernel.rs`
 - Focus transfer gate: `ecosystem/fret-workspace/tests/pane_focus_tab_strip_command_focuses_active_tab.rs`
+- Shell scope gate: `ecosystem/fret-workspace/tests/workspace_command_scope_focus_tab_strip_from_outside_pane.rs`
 
 Reference anchors:
 

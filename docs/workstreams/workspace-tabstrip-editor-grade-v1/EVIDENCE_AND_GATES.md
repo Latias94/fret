@@ -10,10 +10,12 @@ Goal: keep the tab strip refactor **fearless** by locking outcomes behind unit t
 - `ecosystem/fret-workspace/src/tab_strip/geometry.rs` (tab rect collection / hit testing helpers)
 - `ecosystem/fret-workspace/src/tab_strip/utils.rs` (canonical end-drop resolution)
 - `ecosystem/fret-workspace/src/focus_registry.rs` (cross-frame element id registry for focus restore)
+- `ecosystem/fret-workspace/src/command_scope.rs` (workspace-shell command routing scope)
 - `ecosystem/fret-workspace/tests/tab_strip_pointer_down_does_not_steal_focus.rs` (focus stability)
 - `ecosystem/fret-workspace/tests/tab_strip_focus_restore_after_close_command.rs` (close focus restore)
 - `ecosystem/fret-workspace/tests/tab_strip_keyboard_roving_arrow_activates_tab.rs` (roving keyboard activation)
 - `ecosystem/fret-workspace/tests/pane_focus_tab_strip_command_focuses_active_tab.rs` (focus transfer into tab strip)
+- `ecosystem/fret-workspace/tests/workspace_command_scope_focus_tab_strip_from_outside_pane.rs` (focus transfer from outside pane subtree)
 
 ## M1 gates (must exist before/while refactoring)
 

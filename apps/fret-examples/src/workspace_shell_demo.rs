@@ -18,7 +18,10 @@ use fret_ui_kit::declarative::ElementContextThemeExt as _;
 use fret_ui_kit::declarative::file_tree::{FileTreeViewProps, file_tree_view_retained_v0};
 use fret_ui_kit::{TreeItem, TreeState};
 use fret_workspace::layout::{WorkspacePaneTree, WorkspaceWindowLayout};
-use fret_workspace::{WorkspaceFrame, WorkspaceTabStrip, workspace_pane_tree_element_with_resize};
+use fret_workspace::{
+    WorkspaceCommandScope, WorkspaceFrame, WorkspaceTabStrip,
+    workspace_pane_tree_element_with_resize,
+};
 use std::collections::HashSet;
 use std::sync::Arc;
 
@@ -309,7 +312,7 @@ impl WorkspaceShellDemoDriver {
                         frame
                     };
 
-                    vec![out]
+                    vec![WorkspaceCommandScope::new(window_layout.clone(), out).into_element(cx)]
                 });
     }
 }
