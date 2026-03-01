@@ -8,16 +8,16 @@ date: 2026-02-28
 
 ## Contract + core
 
-- [ ] Define `PaintEvalSpaceV1` in `crates/fret-core`.
-- [ ] Define a binding value type (e.g. `PaintBindingV1 { paint, eval_space }`).
-- [ ] Thread it through the scene op surfaces that carry paint:
-  - [ ] quads (fill + border),
-  - [ ] rrect strokes,
-  - [ ] paths,
-  - [ ] text.
-- [ ] Update `Scene::validate()` rules for unsupported combinations (deterministic degradation vs
+- [x] Define `PaintEvalSpaceV1` in `crates/fret-core`.
+- [x] Define a binding value type (e.g. `PaintBindingV1 { paint, eval_space }`).
+- [x] Thread it through the scene op surfaces that carry paint:
+  - [x] quads (fill + border),
+  - [x] rrect strokes,
+  - [x] paths,
+  - [x] text.
+- [x] Update `Scene::validate()` rules for unsupported combinations (deterministic degradation vs
   hard reject).
-- [ ] Update `Scene::fingerprint()` to include evaluation space.
+- [x] Update `Scene::fingerprint()` to include evaluation space.
 
 ## Renderer (wgpu)
 
@@ -37,4 +37,3 @@ date: 2026-02-28
   - [ ] `ViewportPx` vs `LocalPx` (should differ under transforms/panning),
   - [ ] `StrokeS01` gradient directionality (monotonic along stroke).
 - [ ] Add a small diag script (optional) to toggle eval spaces and record bundles.
-

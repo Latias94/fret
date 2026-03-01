@@ -21,7 +21,7 @@ pub(in super::super) fn encode_path(
     state: &mut EncodeState<'_>,
     origin: Point,
     path: fret_core::PathId,
-    paint: fret_core::scene::Paint,
+    paint: fret_core::scene::PaintBindingV1,
 ) {
     state.flush_quad_batch();
 
@@ -29,6 +29,15 @@ pub(in super::super) fn encode_path(
     if group_opacity <= 0.0 {
         return;
     }
+
+    let paint = match paint.eval_space {
+        fret_core::scene::PaintEvalSpaceV1::StrokeS01 => fret_core::scene::PaintBindingV1 {
+            paint: paint.paint,
+            eval_space: fret_core::scene::PaintEvalSpaceV1::LocalPx,
+        },
+        _ => paint,
+    };
+
     if !paint_is_visible(paint, group_opacity) {
         return;
     }
@@ -60,7 +69,7 @@ pub(in super::super) fn encode_path(
     }
     let t_px = state.current_transform_px();
 
-    let material_requested = matches!(paint, fret_core::scene::Paint::Material { .. });
+    let material_requested = matches!(paint.paint, fret_core::scene::Paint::Material { .. });
     let paint_gpu = paint_to_gpu(
         renderer,
         state,

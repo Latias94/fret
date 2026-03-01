@@ -327,9 +327,9 @@ impl WorkflowEdgeAnimated {
             p.scene().push(SceneOp::Quad {
                 order: DrawOrder(2),
                 rect,
-                background: Paint::Solid(primary),
+                background: Paint::Solid(primary).into(),
                 border: Edges::all(Px(0.0)),
-                border_paint: Paint::Solid(Color::TRANSPARENT),
+                border_paint: Paint::Solid(Color::TRANSPARENT).into(),
                 corner_radii: Corners::all(radius),
             });
         });

@@ -208,14 +208,15 @@ fn gpu_linear_gradient_mask_smoke_conformance() {
     scene.push(SceneOp::Quad {
         order: DrawOrder(0),
         rect,
-        background: Paint::Solid(Color {
+        background: (Paint::Solid(Color {
             r: 1.0,
             g: 1.0,
             b: 1.0,
             a: 1.0,
-        }),
+        }))
+        .into(),
         border: Edges::all(Px(0.0)),
-        border_paint: Paint::TRANSPARENT,
+        border_paint: (Paint::TRANSPARENT).into(),
         corner_radii: Corners::all(Px(0.0)),
     });
     scene.push(SceneOp::PopMask);
@@ -270,14 +271,15 @@ fn gpu_linear_gradient_mask_repeat_tile_conformance() {
     scene.push(SceneOp::Quad {
         order: DrawOrder(0),
         rect,
-        background: Paint::Solid(Color {
+        background: (Paint::Solid(Color {
             r: 1.0,
             g: 1.0,
             b: 1.0,
             a: 1.0,
-        }),
+        }))
+        .into(),
         border: Edges::all(Px(0.0)),
-        border_paint: Paint::TRANSPARENT,
+        border_paint: (Paint::TRANSPARENT).into(),
         corner_radii: Corners::all(Px(0.0)),
     });
     scene.push(SceneOp::PopMask);
@@ -323,14 +325,15 @@ fn gpu_linear_gradient_mask_mirror_tile_conformance() {
     scene.push(SceneOp::Quad {
         order: DrawOrder(0),
         rect,
-        background: Paint::Solid(Color {
+        background: (Paint::Solid(Color {
             r: 1.0,
             g: 1.0,
             b: 1.0,
             a: 1.0,
-        }),
+        }))
+        .into(),
         border: Edges::all(Px(0.0)),
-        border_paint: Paint::TRANSPARENT,
+        border_paint: (Paint::TRANSPARENT).into(),
         corner_radii: Corners::all(Px(0.0)),
     });
     scene.push(SceneOp::PopMask);
@@ -376,14 +379,15 @@ fn gpu_radial_gradient_mask_smoke_conformance() {
     scene.push(SceneOp::Quad {
         order: DrawOrder(0),
         rect,
-        background: Paint::Solid(Color {
+        background: (Paint::Solid(Color {
             r: 1.0,
             g: 1.0,
             b: 1.0,
             a: 1.0,
-        }),
+        }))
+        .into(),
         border: Edges::all(Px(0.0)),
-        border_paint: Paint::TRANSPARENT,
+        border_paint: (Paint::TRANSPARENT).into(),
         corner_radii: Corners::all(Px(0.0)),
     });
     scene.push(SceneOp::PopMask);

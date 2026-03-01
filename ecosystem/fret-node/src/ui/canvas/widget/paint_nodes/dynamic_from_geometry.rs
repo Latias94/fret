@@ -27,10 +27,10 @@ fn paint_node_ring(
     scene.push(SceneOp::Quad {
         order: DrawOrder(3),
         rect: ring_rect,
-        background: fret_core::Paint::TRANSPARENT,
+        background: fret_core::Paint::TRANSPARENT.into(),
 
         border: Edges::all(Px(w / z)),
-        border_paint: fret_core::Paint::Solid(ring.color),
+        border_paint: fret_core::Paint::Solid(ring.color).into(),
 
         corner_radii: Corners::all(ring_corner),
     });
@@ -92,10 +92,10 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
             cx.scene.push(SceneOp::Quad {
                 order: DrawOrder(3),
                 rect,
-                background: fret_core::Paint::Solid(bg),
+                background: fret_core::Paint::Solid(bg).into(),
 
                 border: Edges::all(Px(1.0 / z)),
-                border_paint: fret_core::Paint::Solid(border_color),
+                border_paint: fret_core::Paint::Solid(border_color).into(),
                 corner_radii: Corners::all(corner),
             });
 
@@ -179,10 +179,10 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
             cx.scene.push(SceneOp::Quad {
                 order: DrawOrder(3),
                 rect,
-                background: fret_core::Paint::Solid(background),
+                background: fret_core::Paint::Solid(background).into(),
 
                 border: Edges::all(Px(0.0)),
-                border_paint: fret_core::Paint::TRANSPARENT,
+                border_paint: fret_core::Paint::TRANSPARENT.into(),
 
                 corner_radii: Corners::all(corner),
             });
@@ -194,10 +194,10 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                         rect.origin,
                         Size::new(rect.size.width, Px(title_h.min(rect.size.height.0))),
                     ),
-                    background: fret_core::Paint::Solid(color),
+                    background: fret_core::Paint::Solid(color).into(),
 
                     border: Edges::all(Px(0.0)),
-                    border_paint: fret_core::Paint::TRANSPARENT,
+                    border_paint: fret_core::Paint::TRANSPARENT.into(),
 
                     corner_radii: Corners {
                         top_left: corner,
@@ -211,10 +211,10 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
             cx.scene.push(SceneOp::Quad {
                 order: DrawOrder(3),
                 rect,
-                background: fret_core::Paint::TRANSPARENT,
+                background: fret_core::Paint::TRANSPARENT.into(),
 
                 border: Edges::all(Px(1.0 / zoom)),
-                border_paint: fret_core::Paint::Solid(border_color),
+                border_paint: fret_core::Paint::Solid(border_color).into(),
 
                 corner_radii: Corners::all(corner),
             });
@@ -244,10 +244,12 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                     cx.scene.push(SceneOp::Quad {
                         order: DrawOrder(5),
                         rect,
-                        background: fret_core::Paint::Solid(self.style.resize_handle_background),
+                        background: fret_core::Paint::Solid(self.style.resize_handle_background)
+                            .into(),
 
                         border: Edges::all(Px(1.0 / zoom)),
-                        border_paint: fret_core::Paint::Solid(self.style.resize_handle_border),
+                        border_paint: fret_core::Paint::Solid(self.style.resize_handle_border)
+                            .into(),
 
                         corner_radii: Corners::all(Px(2.0 / zoom)),
                     });
@@ -310,7 +312,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
             cx.scene.push(SceneOp::Quad {
                 order: DrawOrder(4),
                 rect: marker_rect,
-                background: fret_core::Paint::TRANSPARENT,
+                background: fret_core::Paint::TRANSPARENT.into(),
 
                 border: Edges::all(Px(1.0 / zoom)),
                 border_paint: fret_core::Paint::Solid(Color {
@@ -318,7 +320,8 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                     g: color.g,
                     b: color.b,
                     a: 0.55,
-                }),
+                })
+                .into(),
                 corner_radii: Corners::all(r),
             });
         }
@@ -355,10 +358,10 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
             cx.scene.push(SceneOp::Quad {
                 order: DrawOrder(4),
                 rect: hover_rect,
-                background: fret_core::Paint::TRANSPARENT,
+                background: fret_core::Paint::TRANSPARENT.into(),
 
                 border: Edges::all(Px(2.0 / zoom)),
-                border_paint: fret_core::Paint::Solid(border_color),
+                border_paint: fret_core::Paint::Solid(border_color).into(),
                 corner_radii: Corners::all(r),
             });
         }
@@ -401,10 +404,10 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
             cx.scene.push(SceneOp::Quad {
                 order: DrawOrder(4),
                 rect: hover_rect,
-                background: fret_core::Paint::TRANSPARENT,
+                background: fret_core::Paint::TRANSPARENT.into(),
 
                 border: Edges::all(Px(2.0 / zoom)),
-                border_paint: fret_core::Paint::Solid(border_color),
+                border_paint: fret_core::Paint::Solid(border_color).into(),
                 corner_radii: Corners::all(r),
             });
         }

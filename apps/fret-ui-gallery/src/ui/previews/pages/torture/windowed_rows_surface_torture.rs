@@ -46,9 +46,9 @@ pub(in crate::ui) fn preview_windowed_rows_surface_torture(
                 painter.scene().push(fret_core::SceneOp::Quad {
                     order: DrawOrder(0),
                     rect,
-                    background: fret_core::Paint::Solid(background),
+                    background: fret_core::Paint::Solid(background).into(),
                     border: Edges::all(Px(0.0)),
-                    border_paint: fret_core::Paint::TRANSPARENT,
+                    border_paint: fret_core::Paint::TRANSPARENT.into(),
 
                     corner_radii: Corners::all(Px(0.0)),
                 });

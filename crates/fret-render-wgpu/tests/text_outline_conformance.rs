@@ -186,13 +186,15 @@ fn gpu_text_outline_v1_renders_a_visible_ring_for_mask_glyphs() {
         g: 0.0,
         b: 0.0,
         a: 1.0,
-    });
+    })
+    .into();
     let outline_paint = Paint::Solid(Color {
         r: 0.0,
         g: 0.0,
         b: 1.0,
         a: 1.0,
-    });
+    })
+    .into();
 
     let mut fill_scene = Scene::default();
     fill_scene.push(SceneOp::Text {
@@ -304,13 +306,15 @@ fn gpu_text_outline_v1_invalid_width_sanitizes_to_fill_only() {
         g: 1.0,
         b: 1.0,
         a: 1.0,
-    });
+    })
+    .into();
     let outline_paint = Paint::Solid(Color {
         r: 0.0,
         g: 0.0,
         b: 0.0,
         a: 1.0,
-    });
+    })
+    .into();
 
     let mut fill_scene = Scene::default();
     fill_scene.push(SceneOp::Text {

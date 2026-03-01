@@ -161,10 +161,10 @@ pub(in crate::ui) fn preview_text_measure_overlay(
                     p.scene().push(SceneOp::Quad {
                         order: DrawOrder(0),
                         rect: case_rect,
-                        background: fret_core::Paint::Solid(bg),
+                        background: fret_core::Paint::Solid(bg).into(),
 
                         border: Edges::all(Px(1.0)),
-                        border_paint: fret_core::Paint::Solid(border),
+                        border_paint: fret_core::Paint::Solid(border).into(),
 
                         corner_radii: Corners::all(Px(8.0)),
                     });
@@ -207,10 +207,10 @@ pub(in crate::ui) fn preview_text_measure_overlay(
                     p.scene().push(SceneOp::Quad {
                         order: DrawOrder(1),
                         rect: text_box,
-                        background: fret_core::Paint::TRANSPARENT,
+                        background: fret_core::Paint::TRANSPARENT.into(),
 
                         border: Edges::all(Px(1.0)),
-                        border_paint: fret_core::Paint::Solid(green),
+                        border_paint: fret_core::Paint::Solid(green).into(),
 
                         corner_radii: Corners::all(Px(6.0)),
                     });
@@ -249,10 +249,10 @@ pub(in crate::ui) fn preview_text_measure_overlay(
                             Point::new(text_box.origin.x, text_box.origin.y + metrics.baseline),
                             Size::new(text_box.size.width, Px(1.0)),
                         ),
-                        background: fret_core::Paint::Solid(cyan),
+                        background: fret_core::Paint::Solid(cyan).into(),
 
                         border: Edges::all(Px(0.0)),
-                        border_paint: fret_core::Paint::TRANSPARENT,
+                        border_paint: fret_core::Paint::TRANSPARENT.into(),
 
                         corner_radii: Corners::all(Px(0.0)),
                     });
@@ -261,10 +261,10 @@ pub(in crate::ui) fn preview_text_measure_overlay(
                     p.scene().push(SceneOp::Quad {
                         order: DrawOrder(4),
                         rect: Rect::new(text_box.origin, metrics.size),
-                        background: fret_core::Paint::TRANSPARENT,
+                        background: fret_core::Paint::TRANSPARENT.into(),
 
                         border: Edges::all(Px(1.0)),
-                        border_paint: fret_core::Paint::Solid(yellow),
+                        border_paint: fret_core::Paint::Solid(yellow).into(),
 
                         corner_radii: Corners::all(Px(0.0)),
                     });

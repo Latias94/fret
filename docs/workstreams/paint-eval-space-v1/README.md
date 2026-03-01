@@ -78,3 +78,19 @@ Minimum gates before ecosystem adoption:
 - Arbitrary shader graphs.
 - Ecosystem policy surfaces (wire style recipes, node graph skins).
 - Cross-backend parity beyond deterministic degradation rules.
+
+## Current status (2026-03-01)
+
+- Core contract is implemented and the workspace has been migrated to `PaintBindingV1`.
+- WGPU backend currently plumbs `eval_space` through GPU storage, but does not yet switch paint
+  evaluation based on `PaintEvalSpaceV1` (M2/M3 work).
+
+Evidence anchors:
+
+- Contract: `crates/fret-core/src/scene/paint.rs`
+- Scene ops: `crates/fret-core/src/scene/mod.rs`
+- Validation: `crates/fret-core/src/scene/validate.rs`
+- Fingerprint: `crates/fret-core/src/scene/fingerprint.rs`
+- WGPU packing: `crates/fret-render-wgpu/src/renderer/render_scene/encode/draw/paint.rs`
+- WGPU shader struct: `crates/fret-render-wgpu/src/renderer/shaders.rs`
+- Baseline gradient stroke conformance: `crates/fret-render-wgpu/tests/stroke_paint_conformance.rs`

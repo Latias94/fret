@@ -85,9 +85,10 @@ fn record_scene(
             g: 0.06,
             b: 0.07,
             a: 1.0,
-        }),
+        })
+        .into(),
         border: Edges::all(Px(0.0)),
-        border_paint: Paint::TRANSPARENT,
+        border_paint: Paint::TRANSPARENT.into(),
         corner_radii: Corners::all(Px(0.0)),
     });
 
@@ -170,14 +171,15 @@ fn record_scene(
         scene.push(SceneOp::Quad {
             order,
             rect,
-            background: Paint::Solid(bg),
+            background: Paint::Solid(bg).into(),
             border: Edges::all(Px(1.25)),
             border_paint: Paint::Solid(Color {
                 r: 1.0,
                 g: 1.0,
                 b: 1.0,
                 a: 0.35,
-            }),
+            })
+            .into(),
             corner_radii: Corners::all(Px(10.0)),
         });
 

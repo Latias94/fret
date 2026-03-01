@@ -354,7 +354,7 @@ pub(super) fn handle_op(renderer: &Renderer, state: &mut EncodeState<'_>, op: &S
                 renderer,
                 state,
                 rect,
-                Paint::Solid(Color::TRANSPARENT),
+                Paint::Solid(Color::TRANSPARENT).into(),
                 stroke,
                 stroke_paint,
                 corner_radii,

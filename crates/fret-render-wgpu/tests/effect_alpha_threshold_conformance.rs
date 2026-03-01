@@ -139,27 +139,29 @@ fn gpu_alpha_threshold_hard_and_soft() {
     let left = SceneOp::Quad {
         order: DrawOrder(0),
         rect: Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(32.0), Px(64.0))),
-        background: Paint::Solid(Color {
+        background: (Paint::Solid(Color {
             r: 1.0,
             g: 0.0,
             b: 0.0,
             a: 0.25,
-        }),
+        }))
+        .into(),
         border: Edges::all(Px(0.0)),
-        border_paint: Paint::Solid(Color::TRANSPARENT),
+        border_paint: (Paint::Solid(Color::TRANSPARENT)).into(),
         corner_radii: Default::default(),
     };
     let right = SceneOp::Quad {
         order: DrawOrder(1),
         rect: Rect::new(Point::new(Px(32.0), Px(0.0)), Size::new(Px(32.0), Px(64.0))),
-        background: Paint::Solid(Color {
+        background: (Paint::Solid(Color {
             r: 1.0,
             g: 0.0,
             b: 0.0,
             a: 0.75,
-        }),
+        }))
+        .into(),
         border: Edges::all(Px(0.0)),
-        border_paint: Paint::Solid(Color::TRANSPARENT),
+        border_paint: (Paint::Solid(Color::TRANSPARENT)).into(),
         corner_radii: Default::default(),
     };
 
@@ -193,14 +195,15 @@ fn gpu_alpha_threshold_hard_and_soft() {
     let mid = SceneOp::Quad {
         order: DrawOrder(0),
         rect: Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(64.0), Px(64.0))),
-        background: Paint::Solid(Color {
+        background: (Paint::Solid(Color {
             r: 1.0,
             g: 0.0,
             b: 0.0,
             a: 0.50,
-        }),
+        }))
+        .into(),
         border: Edges::all(Px(0.0)),
-        border_paint: Paint::Solid(Color::TRANSPARENT),
+        border_paint: (Paint::Solid(Color::TRANSPARENT)).into(),
         corner_radii: Default::default(),
     };
 

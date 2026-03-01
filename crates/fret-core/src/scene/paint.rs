@@ -6,6 +6,60 @@ use super::Color;
 pub const MAX_STOPS: usize = 8;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum PaintEvalSpaceV1 {
+    /// Evaluate paints in the op's local scene space (ADR 0233 D4).
+    LocalPx,
+    /// Evaluate paints in viewport pixel space (after transforms).
+    ViewportPx,
+    /// Evaluate paints in a 1D stroke arclength domain: `paint_pos = (s01, 0)`.
+    StrokeS01,
+}
+
+impl Default for PaintEvalSpaceV1 {
+    fn default() -> Self {
+        Self::LocalPx
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct PaintBindingV1 {
+    pub paint: Paint,
+    pub eval_space: PaintEvalSpaceV1,
+}
+
+impl PaintBindingV1 {
+    pub const fn new(paint: Paint) -> Self {
+        Self {
+            paint,
+            eval_space: PaintEvalSpaceV1::LocalPx,
+        }
+    }
+
+    pub const fn with_eval_space(paint: Paint, eval_space: PaintEvalSpaceV1) -> Self {
+        Self { paint, eval_space }
+    }
+
+    pub fn sanitize(self) -> Self {
+        Self {
+            paint: self.paint.sanitize(),
+            eval_space: self.eval_space,
+        }
+    }
+}
+
+impl From<Paint> for PaintBindingV1 {
+    fn from(value: Paint) -> Self {
+        Self::new(value)
+    }
+}
+
+impl From<Color> for PaintBindingV1 {
+    fn from(value: Color) -> Self {
+        Self::new(Paint::Solid(value))
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum TileMode {
     Clamp,
     Repeat,

@@ -192,27 +192,29 @@ fn fret_custom_effect(src: vec4<f32>, _uv: vec2<f32>, pos_px: vec2<f32>, _params
     scene.push(SceneOp::Quad {
         order: DrawOrder(0),
         rect: left,
-        background: Paint::Solid(Color {
+        background: (Paint::Solid(Color {
             r: 1.0,
             g: 0.0,
             b: 0.0,
             a: 1.0,
-        }),
+        }))
+        .into(),
         border: Edges::all(Px(0.0)),
-        border_paint: Paint::Solid(Color::TRANSPARENT),
+        border_paint: (Paint::Solid(Color::TRANSPARENT)).into(),
         corner_radii: Default::default(),
     });
     scene.push(SceneOp::Quad {
         order: DrawOrder(1),
         rect: right,
-        background: Paint::Solid(Color {
+        background: (Paint::Solid(Color {
             r: 0.0,
             g: 0.0,
             b: 0.0,
             a: 1.0,
-        }),
+        }))
+        .into(),
         border: Edges::all(Px(0.0)),
-        border_paint: Paint::Solid(Color::TRANSPARENT),
+        border_paint: (Paint::Solid(Color::TRANSPARENT)).into(),
         corner_radii: Default::default(),
     });
     scene.push(SceneOp::PopEffect);
@@ -295,27 +297,29 @@ fn fret_custom_effect(src: vec4<f32>, _uv: vec2<f32>, pos_px: vec2<f32>, _params
     scene.push(SceneOp::Quad {
         order: DrawOrder(0),
         rect: left,
-        background: Paint::Solid(Color {
+        background: (Paint::Solid(Color {
             r: 1.0,
             g: 0.0,
             b: 0.0,
             a: 1.0,
-        }),
+        }))
+        .into(),
         border: Edges::all(Px(0.0)),
-        border_paint: Paint::Solid(Color::TRANSPARENT),
+        border_paint: (Paint::Solid(Color::TRANSPARENT)).into(),
         corner_radii: Default::default(),
     });
     scene.push(SceneOp::Quad {
         order: DrawOrder(1),
         rect: right,
-        background: Paint::Solid(Color {
+        background: (Paint::Solid(Color {
             r: 0.0,
             g: 0.0,
             b: 0.0,
             a: 1.0,
-        }),
+        }))
+        .into(),
         border: Edges::all(Px(0.0)),
-        border_paint: Paint::Solid(Color::TRANSPARENT),
+        border_paint: (Paint::Solid(Color::TRANSPARENT)).into(),
         corner_radii: Default::default(),
     });
 
@@ -465,27 +469,29 @@ fn fret_custom_effect(_src: vec4<f32>, _uv: vec2<f32>, pos_px: vec2<f32>, _param
     scene.push(SceneOp::Quad {
         order: DrawOrder(0),
         rect: left,
-        background: Paint::Solid(Color {
+        background: (Paint::Solid(Color {
             r: 1.0,
             g: 0.0,
             b: 0.0,
             a: 1.0,
-        }),
+        }))
+        .into(),
         border: Edges::all(Px(0.0)),
-        border_paint: Paint::Solid(Color::TRANSPARENT),
+        border_paint: (Paint::Solid(Color::TRANSPARENT)).into(),
         corner_radii: Default::default(),
     });
     scene.push(SceneOp::Quad {
         order: DrawOrder(1),
         rect: right,
-        background: Paint::Solid(Color {
+        background: (Paint::Solid(Color {
             r: 0.0,
             g: 0.0,
             b: 0.0,
             a: 1.0,
-        }),
+        }))
+        .into(),
         border: Edges::all(Px(0.0)),
-        border_paint: Paint::Solid(Color::TRANSPARENT),
+        border_paint: (Paint::Solid(Color::TRANSPARENT)).into(),
         corner_radii: Default::default(),
     });
     scene.push(SceneOp::PopEffect);

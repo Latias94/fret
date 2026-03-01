@@ -8,15 +8,15 @@ date: 2026-02-28
 
 ## M0 — Contract locked
 
-- [ ] ADR 0306 is accepted and indexed.
-- [ ] Workstream notes exist (`README.md`, `todo.md`, `milestones.md`).
-- [ ] Evidence anchors for baseline gradient strokes exist (wgpu conformance test).
+- [x] ADR 0306 is accepted and indexed.
+- [x] Workstream notes exist (`README.md`, `todo.md`, `milestones.md`).
+- [x] Evidence anchors for baseline gradient strokes exist (wgpu conformance test).
 
 ## M1 — Core contract implemented
 
-- [ ] Add `PaintEvalSpaceV1` + binding type in `crates/fret-core`.
-- [ ] Update scene ops to bind eval space per paint usage site (breaking change allowed).
-- [ ] Update validation + fingerprint to include eval space.
+- [x] Add `PaintEvalSpaceV1` + binding type in `crates/fret-core`.
+- [x] Update scene ops to bind eval space per paint usage site (breaking change allowed).
+- [x] Update validation + fingerprint to include eval space.
 - [ ] Add conformance tests for fingerprint/cache invalidation behavior.
 
 ## M2 — WGPU: viewport-space evaluation
@@ -37,4 +37,3 @@ date: 2026-02-28
   - [ ] a viewport shimmer,
   - [ ] a StrokeS01 wire gradient.
 - [ ] Node graph skin layer can opt into StrokeS01 without backend-specific code.
-

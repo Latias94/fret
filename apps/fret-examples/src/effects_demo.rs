@@ -396,9 +396,10 @@ impl WinitAppDriver for EffectsDemoDriver {
                 g: 0.09,
                 b: 0.12,
                 a: 1.0,
-            }),
+            })
+            .into(),
             border: Edges::all(Px(0.0)),
-            border_paint: fret_core::Paint::TRANSPARENT,
+            border_paint: fret_core::Paint::TRANSPARENT.into(),
 
             corner_radii: Corners::all(Px(0.0)),
         });
@@ -423,10 +424,10 @@ impl WinitAppDriver for EffectsDemoDriver {
                     Point::new(Px(x), bounds.origin.y),
                     Size::new(Px(stripe_w), Px(h)),
                 ),
-                background: fret_core::Paint::Solid(Color { r, g, b, a: 1.0 }),
+                background: fret_core::Paint::Solid(Color { r, g, b, a: 1.0 }).into(),
 
                 border: Edges::all(Px(0.0)),
-                border_paint: fret_core::Paint::TRANSPARENT,
+                border_paint: fret_core::Paint::TRANSPARENT.into(),
 
                 corner_radii: Corners::all(Px(0.0)),
             });
@@ -462,9 +463,10 @@ impl WinitAppDriver for EffectsDemoDriver {
                     g: 0.0,
                     b: 0.0,
                     a: 0.0,
-                }),
+                })
+                .into(),
                 border: Edges::all(Px(2.0)),
-                border_paint: fret_core::Paint::Solid(color),
+                border_paint: fret_core::Paint::Solid(color).into(),
 
                 corner_radii: panel_radii,
             });
@@ -501,9 +503,10 @@ impl WinitAppDriver for EffectsDemoDriver {
                 g: 0.08,
                 b: 0.08,
                 a: 0.08,
-            }),
+            })
+            .into(),
             border: Edges::all(Px(0.0)),
-            border_paint: fret_core::Paint::TRANSPARENT,
+            border_paint: fret_core::Paint::TRANSPARENT.into(),
 
             corner_radii: panel_radii,
         });
@@ -546,9 +549,10 @@ impl WinitAppDriver for EffectsDemoDriver {
                 g: 0.0,
                 b: 0.0,
                 a: 0.12,
-            }),
+            })
+            .into(),
             border: Edges::all(Px(0.0)),
-            border_paint: fret_core::Paint::TRANSPARENT,
+            border_paint: fret_core::Paint::TRANSPARENT.into(),
 
             corner_radii: panel_radii,
         });
@@ -610,10 +614,10 @@ impl WinitAppDriver for EffectsDemoDriver {
                     Point::new(Px(x), panel2.origin.y),
                     Size::new(Px(stripe_w), panel2.size.height),
                 ),
-                background: fret_core::Paint::Solid(bg),
+                background: fret_core::Paint::Solid(bg).into(),
 
                 border: Edges::all(Px(0.0)),
-                border_paint: fret_core::Paint::TRANSPARENT,
+                border_paint: fret_core::Paint::TRANSPARENT.into(),
 
                 corner_radii: Corners::all(Px(0.0)),
             });
@@ -627,9 +631,10 @@ impl WinitAppDriver for EffectsDemoDriver {
                 g: 0.0,
                 b: 0.0,
                 a: 0.12,
-            }),
+            })
+            .into(),
             border: Edges::all(Px(0.0)),
-            border_paint: fret_core::Paint::TRANSPARENT,
+            border_paint: fret_core::Paint::TRANSPARENT.into(),
 
             corner_radii: panel_radii,
         });
@@ -664,9 +669,10 @@ impl WinitAppDriver for EffectsDemoDriver {
                 g: 0.9,
                 b: 0.9,
                 a: 0.9,
-            }),
+            })
+            .into(),
             border: Edges::all(Px(0.0)),
-            border_paint: fret_core::Paint::TRANSPARENT,
+            border_paint: fret_core::Paint::TRANSPARENT.into(),
 
             corner_radii: Corners::all(Px(14.0)),
         });
@@ -734,14 +740,16 @@ impl WinitAppDriver for EffectsDemoDriver {
                         g: 0.06,
                         b: 0.07,
                         a: 0.72,
-                    }),
+                    })
+                    .into(),
                     border: Edges::all(Px(1.0)),
                     border_paint: fret_core::Paint::Solid(Color {
                         r: 1.0,
                         g: 1.0,
                         b: 1.0,
                         a: 0.12,
-                    }),
+                    })
+                    .into(),
                     corner_radii: Corners::all(Px(12.0)),
                 });
 

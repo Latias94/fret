@@ -20,8 +20,8 @@ use fingerprint::mix_scene_op;
 pub use image_object_fit::{ImageObjectFitMapped, map_image_object_fit};
 pub use mask::Mask;
 pub use paint::{
-    ColorSpace, GradientStop, LinearGradient, MAX_STOPS, MaterialParams, Paint, RadialGradient,
-    SweepGradient, TileMode,
+    ColorSpace, GradientStop, LinearGradient, MAX_STOPS, MaterialParams, Paint, PaintBindingV1,
+    PaintEvalSpaceV1, RadialGradient, SweepGradient, TileMode,
 };
 pub use stroke::{DashPatternV1, StrokeStyleV1};
 pub use validate::{SceneValidationError, SceneValidationErrorKind};
@@ -82,7 +82,7 @@ impl TextShadowV1 {
 /// backends. More advanced strategies (e.g. SDF/MSDF atlases, multi-layer outlines) remain v2+.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct TextOutlineV1 {
-    pub paint: Paint,
+    pub paint: PaintBindingV1,
     /// Outline width in logical pixels (pre-scale-factor).
     pub width_px: crate::Px,
 }
@@ -1016,9 +1016,9 @@ pub enum SceneOp {
     Quad {
         order: DrawOrder,
         rect: Rect,
-        background: Paint,
+        background: PaintBindingV1,
         border: Edges,
-        border_paint: Paint,
+        border_paint: PaintBindingV1,
         corner_radii: Corners,
     },
 
@@ -1026,7 +1026,7 @@ pub enum SceneOp {
         order: DrawOrder,
         rect: Rect,
         stroke: Edges,
-        stroke_paint: Paint,
+        stroke_paint: PaintBindingV1,
         corner_radii: Corners,
         style: StrokeStyleV1,
     },
@@ -1085,7 +1085,7 @@ pub enum SceneOp {
         order: DrawOrder,
         origin: Point,
         text: TextBlobId,
-        paint: Paint,
+        paint: PaintBindingV1,
         outline: Option<TextOutlineV1>,
         shadow: Option<TextShadowV1>,
     },
@@ -1094,7 +1094,7 @@ pub enum SceneOp {
         order: DrawOrder,
         origin: Point,
         path: PathId,
-        paint: Paint,
+        paint: PaintBindingV1,
     },
 
     ViewportSurface {
@@ -1132,9 +1132,9 @@ mod tests {
         let ops = [SceneOp::Quad {
             order: DrawOrder(0),
             rect: Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(10.0), Px(10.0))),
-            background: Paint::Solid(Color::TRANSPARENT),
+            background: Paint::Solid(Color::TRANSPARENT).into(),
             border: Edges::all(Px(0.0)),
-            border_paint: Paint::Solid(Color::TRANSPARENT),
+            border_paint: Paint::Solid(Color::TRANSPARENT).into(),
             corner_radii: Corners::all(Px(0.0)),
         }];
 
@@ -1288,9 +1288,9 @@ mod tests {
                 Point::new(Px(f32::NAN), Px(0.0)),
                 Size::new(Px(10.0), Px(10.0)),
             ),
-            background: Paint::Solid(Color::TRANSPARENT),
+            background: Paint::Solid(Color::TRANSPARENT).into(),
             border: Edges::all(Px(0.0)),
-            border_paint: Paint::Solid(Color::TRANSPARENT),
+            border_paint: Paint::Solid(Color::TRANSPARENT).into(),
             corner_radii: Corners::all(Px(0.0)),
         });
         assert!(matches!(

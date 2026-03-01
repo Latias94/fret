@@ -4300,14 +4300,16 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
                         g: 0.08,
                         b: 0.09,
                         a: 0.78,
-                    }),
+                    })
+                    .into(),
                     border: Edges::all(Px(1.0)),
                     border_paint: fret_core::Paint::Solid(Color {
                         r: 0.35,
                         g: 0.35,
                         b: 0.40,
                         a: 0.85,
-                    }),
+                    })
+                    .into(),
                     corner_radii: Corners::all(Px(12.0)),
                 });
                 scene.push(SceneOp::Text {
@@ -4405,14 +4407,16 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
                     g: 0.06,
                     b: 0.07,
                     a: 0.55,
-                }),
+                })
+                .into(),
                 border: Edges::all(Px(1.0)),
                 border_paint: fret_core::Paint::Solid(Color {
                     r: label.color.r,
                     g: label.color.g,
                     b: label.color.b,
                     a: 0.85,
-                }),
+                })
+                .into(),
                 corner_radii: Corners::all(Px(8.0)),
             });
 
@@ -4503,14 +4507,16 @@ impl WinitAppDriver for Gizmo3dDemoDriver {
                         g: 0.06,
                         b: 0.07,
                         a: 0.62,
-                    }),
+                    })
+                    .into(),
                     border: Edges::all(Px(1.0)),
                     border_paint: fret_core::Paint::Solid(Color {
                         r: 0.35,
                         g: 0.35,
                         b: 0.40,
                         a: 0.85,
-                    }),
+                    })
+                    .into(),
                     corner_radii: Corners::all(Px(12.0)),
                 });
                 scene.push(SceneOp::Text {

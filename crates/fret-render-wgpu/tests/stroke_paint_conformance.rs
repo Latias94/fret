@@ -199,7 +199,7 @@ fn gpu_stroke_rrect_linear_gradient_smoke_conformance_across_scale_factors() {
             order: DrawOrder(0),
             rect,
             stroke: Edges::all(Px(8.0)),
-            stroke_paint: Paint::LinearGradient(gradient),
+            stroke_paint: Paint::LinearGradient(gradient).into(),
             corner_radii: Corners::all(Px(8.0)),
             style: StrokeStyleV1 { dash: None },
         });
@@ -276,7 +276,7 @@ fn gpu_path_stroke_linear_gradient_smoke_conformance_across_scale_factors() {
             order: DrawOrder(0),
             origin: Point::new(Px(0.0), Px(0.0)),
             path,
-            paint: Paint::LinearGradient(gradient),
+            paint: (Paint::LinearGradient(gradient)).into(),
         });
 
         let pixels = render_and_readback(&ctx, &mut renderer, &scene, size, sf);

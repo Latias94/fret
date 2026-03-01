@@ -232,9 +232,9 @@ pub(in crate::ui) fn preview_ai_canvas_world_layer_spike(
                     p.scene().push(SceneOp::Quad {
                         order: DrawOrder(0),
                         rect,
-                        background: Paint::Solid(bg),
+                        background: Paint::Solid(bg).into(),
                         border: Edges::all(Px(0.0)),
-                        border_paint: Paint::Solid(fret_core::scene::Color::TRANSPARENT),
+                        border_paint: Paint::Solid(fret_core::scene::Color::TRANSPARENT).into(),
                         corner_radii: Corners::all(Px(0.0)),
                     });
 
@@ -247,9 +247,9 @@ pub(in crate::ui) fn preview_ai_canvas_world_layer_spike(
                         p.scene().push(SceneOp::Quad {
                             order: DrawOrder(1),
                             rect: line,
-                            background: Paint::Solid(grid),
+                            background: Paint::Solid(grid).into(),
                             border: Edges::all(Px(0.0)),
-                            border_paint: Paint::Solid(fret_core::scene::Color::TRANSPARENT),
+                            border_paint: Paint::Solid(fret_core::scene::Color::TRANSPARENT).into(),
                             corner_radii: Corners::all(Px(0.0)),
                         });
                     }
@@ -263,9 +263,9 @@ pub(in crate::ui) fn preview_ai_canvas_world_layer_spike(
                         p.scene().push(SceneOp::Quad {
                             order: DrawOrder(1),
                             rect: line,
-                            background: Paint::Solid(grid),
+                            background: Paint::Solid(grid).into(),
                             border: Edges::all(Px(0.0)),
-                            border_paint: Paint::Solid(fret_core::scene::Color::TRANSPARENT),
+                            border_paint: Paint::Solid(fret_core::scene::Color::TRANSPARENT).into(),
                             corner_radii: Corners::all(Px(0.0)),
                         });
                     }

@@ -2,17 +2,27 @@ use super::super::state::{EncodeState, transform_rows};
 use super::super::*;
 
 use fret_core::geometry::{Corners, Edges};
-use fret_core::scene::{DashPatternV1, MAX_STOPS, Paint};
+use fret_core::scene::{DashPatternV1, MAX_STOPS, PaintBindingV1, PaintEvalSpaceV1};
 
 use super::paint::{PaintMaterialPolicy, paint_is_visible, paint_to_gpu};
+
+fn normalize_eval_space_for_quad_fill(p: PaintBindingV1) -> PaintBindingV1 {
+    match p.eval_space {
+        PaintEvalSpaceV1::StrokeS01 => PaintBindingV1 {
+            paint: p.paint,
+            eval_space: PaintEvalSpaceV1::LocalPx,
+        },
+        _ => p,
+    }
+}
 
 pub(in super::super) fn encode_quad(
     renderer: &Renderer,
     state: &mut EncodeState<'_>,
     rect: Rect,
-    background: Paint,
+    background: PaintBindingV1,
     border: Edges,
-    border_paint: Paint,
+    border_paint: PaintBindingV1,
     corner_radii: Corners,
     dash: Option<DashPatternV1>,
 ) {
@@ -20,6 +30,7 @@ pub(in super::super) fn encode_quad(
 
     let (x, y, w, h) = rect_to_pixels(rect, state.scale_factor);
 
+    let background = normalize_eval_space_for_quad_fill(background);
     if !paint_is_visible(background, opacity) && !paint_is_visible(border_paint, opacity) {
         return;
     }
@@ -78,6 +89,8 @@ pub(in super::super) fn encode_quad(
             tile_mode: 0,
             color_space: 0,
             stop_count: 0,
+            eval_space: 0,
+            _pad_eval_space: [0; 3],
             params0: [0.0; 4],
             params1: [0.0; 4],
             params2: [0.0; 4],

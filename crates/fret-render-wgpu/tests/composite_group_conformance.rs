@@ -173,14 +173,15 @@ fn gpu_composite_group_add_is_scissored_and_additive() {
     scene.push(SceneOp::Quad {
         order: DrawOrder(0),
         rect: full,
-        background: Paint::Solid(Color {
+        background: (Paint::Solid(Color {
             r: 0.2,
             g: 0.2,
             b: 0.2,
             a: 1.0,
-        }),
+        }))
+        .into(),
         border: Edges::all(Px(0.0)),
-        border_paint: Paint::TRANSPARENT,
+        border_paint: (Paint::TRANSPARENT).into(),
         corner_radii: Corners::all(Px(0.0)),
     });
 
@@ -190,14 +191,15 @@ fn gpu_composite_group_add_is_scissored_and_additive() {
     scene.push(SceneOp::Quad {
         order: DrawOrder(1),
         rect: bounds,
-        background: Paint::Solid(Color {
+        background: (Paint::Solid(Color {
             r: 1.0,
             g: 1.0,
             b: 1.0,
             a: 0.5,
-        }),
+        }))
+        .into(),
         border: Edges::all(Px(0.0)),
-        border_paint: Paint::TRANSPARENT,
+        border_paint: (Paint::TRANSPARENT).into(),
         corner_radii: Corners::all(Px(0.0)),
     });
     scene.push(SceneOp::PopCompositeGroup);
@@ -260,9 +262,9 @@ fn gpu_composite_group_blend_modes_v2_smoke_conformance() {
         scene.push(SceneOp::Quad {
             order: DrawOrder(0),
             rect: full,
-            background: Paint::Solid(dst),
+            background: (Paint::Solid(dst)).into(),
             border: Edges::all(Px(0.0)),
-            border_paint: Paint::TRANSPARENT,
+            border_paint: (Paint::TRANSPARENT).into(),
             corner_radii: Corners::all(Px(0.0)),
         });
 
@@ -272,9 +274,9 @@ fn gpu_composite_group_blend_modes_v2_smoke_conformance() {
         scene.push(SceneOp::Quad {
             order: DrawOrder(1),
             rect: bounds,
-            background: Paint::Solid(src),
+            background: (Paint::Solid(src)).into(),
             border: Edges::all(Px(0.0)),
-            border_paint: Paint::TRANSPARENT,
+            border_paint: (Paint::TRANSPARENT).into(),
             corner_radii: Corners::all(Px(0.0)),
         });
         scene.push(SceneOp::PopCompositeGroup);
@@ -358,7 +360,8 @@ fn gpu_composite_group_opacity_is_isolated_for_overlapping_children() {
         g: 1.0,
         b: 1.0,
         a: 0.5,
-    });
+    })
+    .into();
 
     let mut stack_opacity_scene = Scene::default();
     stack_opacity_scene.push(SceneOp::PushOpacity { opacity: 0.5 });
@@ -367,7 +370,7 @@ fn gpu_composite_group_opacity_is_isolated_for_overlapping_children() {
         rect: a,
         background: paint,
         border: Edges::all(Px(0.0)),
-        border_paint: Paint::TRANSPARENT,
+        border_paint: (Paint::TRANSPARENT).into(),
         corner_radii: Corners::all(Px(0.0)),
     });
     stack_opacity_scene.push(SceneOp::Quad {
@@ -375,7 +378,7 @@ fn gpu_composite_group_opacity_is_isolated_for_overlapping_children() {
         rect: b,
         background: paint,
         border: Edges::all(Px(0.0)),
-        border_paint: Paint::TRANSPARENT,
+        border_paint: (Paint::TRANSPARENT).into(),
         corner_radii: Corners::all(Px(0.0)),
     });
     stack_opacity_scene.push(SceneOp::PopOpacity);
@@ -389,7 +392,7 @@ fn gpu_composite_group_opacity_is_isolated_for_overlapping_children() {
         rect: a,
         background: paint,
         border: Edges::all(Px(0.0)),
-        border_paint: Paint::TRANSPARENT,
+        border_paint: (Paint::TRANSPARENT).into(),
         corner_radii: Corners::all(Px(0.0)),
     });
     isolated_opacity_scene.push(SceneOp::Quad {
@@ -397,7 +400,7 @@ fn gpu_composite_group_opacity_is_isolated_for_overlapping_children() {
         rect: b,
         background: paint,
         border: Edges::all(Px(0.0)),
-        border_paint: Paint::TRANSPARENT,
+        border_paint: (Paint::TRANSPARENT).into(),
         corner_radii: Corners::all(Px(0.0)),
     });
     isolated_opacity_scene.push(SceneOp::PopCompositeGroup);
@@ -456,7 +459,8 @@ fn gpu_composite_group_opacity_degrades_under_tight_intermediate_budget() {
         g: 1.0,
         b: 1.0,
         a: 0.5,
-    });
+    })
+    .into();
 
     let mut baseline = Scene::default();
     baseline.push(SceneOp::Quad {
@@ -464,7 +468,7 @@ fn gpu_composite_group_opacity_degrades_under_tight_intermediate_budget() {
         rect: a,
         background: paint,
         border: Edges::all(Px(0.0)),
-        border_paint: Paint::TRANSPARENT,
+        border_paint: (Paint::TRANSPARENT).into(),
         corner_radii: Corners::all(Px(0.0)),
     });
     baseline.push(SceneOp::Quad {
@@ -472,7 +476,7 @@ fn gpu_composite_group_opacity_degrades_under_tight_intermediate_budget() {
         rect: b,
         background: paint,
         border: Edges::all(Px(0.0)),
-        border_paint: Paint::TRANSPARENT,
+        border_paint: (Paint::TRANSPARENT).into(),
         corner_radii: Corners::all(Px(0.0)),
     });
 
@@ -485,7 +489,7 @@ fn gpu_composite_group_opacity_degrades_under_tight_intermediate_budget() {
         rect: a,
         background: paint,
         border: Edges::all(Px(0.0)),
-        border_paint: Paint::TRANSPARENT,
+        border_paint: (Paint::TRANSPARENT).into(),
         corner_radii: Corners::all(Px(0.0)),
     });
     degraded.push(SceneOp::Quad {
@@ -493,7 +497,7 @@ fn gpu_composite_group_opacity_degrades_under_tight_intermediate_budget() {
         rect: b,
         background: paint,
         border: Edges::all(Px(0.0)),
-        border_paint: Paint::TRANSPARENT,
+        border_paint: (Paint::TRANSPARENT).into(),
         corner_radii: Corners::all(Px(0.0)),
     });
     degraded.push(SceneOp::PopCompositeGroup);

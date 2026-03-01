@@ -204,7 +204,7 @@ fn gpu_path_linear_gradient_smoke_conformance_across_scale_factors() {
             order: DrawOrder(0),
             origin: Point::new(Px(0.0), Px(0.0)),
             path,
-            paint: Paint::LinearGradient(gradient),
+            paint: (Paint::LinearGradient(gradient)).into(),
         });
 
         let pixels = render_and_readback(&ctx, &mut renderer, &scene, size, sf);
@@ -291,7 +291,7 @@ fn gpu_path_radial_gradient_smoke_conformance_across_scale_factors() {
             order: DrawOrder(0),
             origin: Point::new(Px(0.0), Px(0.0)),
             path,
-            paint: Paint::RadialGradient(gradient),
+            paint: (Paint::RadialGradient(gradient)).into(),
         });
 
         let pixels = render_and_readback(&ctx, &mut renderer, &scene, size, sf);
