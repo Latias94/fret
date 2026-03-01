@@ -38,3 +38,6 @@ Notes:
   `crates/fret-ui/src/tree/ui_tree_debug/query.rs` (`debug_dispatch_snapshot`).
 - PR1 (parity report) is landed: `crates/fret-ui/src/tree/ui_tree_debug/query.rs`
   (`debug_dispatch_snapshot_parity`).
+- PR2 (outside-press uses snapshot, Phase A fallback) is landed:
+  - `crates/fret-ui/src/tree/ui_tree_outside_press.rs`
+  - `crates/fret-ui/src/tree/dispatch/window.rs`

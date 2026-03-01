@@ -20,6 +20,7 @@
 - [x] Write `MILESTONES.md`-driven detailed design + migration breakdown (`M2_DISPATCH_SNAPSHOT_DESIGN.md`).
 - [x] PR0: Introduce `UiDispatchSnapshot` types + builder entrypoint (debug-only; no behavior change).
 - [x] PR1: Add snapshot parity report (reachable-set vs snapshot forest) for diagnostics.
+- [x] PR2: Route outside-press containment and branch checks via snapshot (Phase A reachability fallback).
 - [ ] Introduce a snapshot struct (per window, per frame) capturing:
   - [ ] focus containment relationships
   - [ ] hit-test primitives + transforms

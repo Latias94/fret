@@ -47,6 +47,21 @@ impl<H: UiHost> UiTree<H> {
     #[allow(dead_code)]
     pub(in crate::tree) fn build_dispatch_snapshot(&self, frame_id: FrameId) -> UiDispatchSnapshot {
         let (active_layer_roots, barrier_root) = self.active_input_layers();
+        self.build_dispatch_snapshot_for_layer_roots(
+            frame_id,
+            active_layer_roots.as_slice(),
+            barrier_root,
+        )
+    }
+
+    #[allow(dead_code)]
+    pub(in crate::tree) fn build_dispatch_snapshot_for_layer_roots(
+        &self,
+        frame_id: FrameId,
+        active_layer_roots: &[NodeId],
+        barrier_root: Option<NodeId>,
+    ) -> UiDispatchSnapshot {
+        let active_layer_roots: Vec<NodeId> = active_layer_roots.to_vec();
 
         let mut nodes: Vec<NodeId> = Vec::new();
         let mut parent: SecondaryMap<NodeId, Option<NodeId>> = SecondaryMap::new();

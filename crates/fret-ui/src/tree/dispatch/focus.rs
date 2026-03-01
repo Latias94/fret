@@ -116,17 +116,4 @@ impl<H: UiHost> UiTree<H> {
 
         false
     }
-
-    pub(in crate::tree) fn first_reachable_root_via_children(
-        &self,
-        target: NodeId,
-        roots_in_priority_order: &[NodeId],
-    ) -> Option<NodeId> {
-        for &root in roots_in_priority_order {
-            if self.is_reachable_from_root_via_children(root, target) {
-                return Some(root);
-            }
-        }
-        None
-    }
 }

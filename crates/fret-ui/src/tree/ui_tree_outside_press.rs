@@ -9,8 +9,20 @@ impl<H: UiHost> UiTree<H> {
         invalidation_visited: &mut impl InvalidationVisited,
     ) -> PointerDownOutsideOutcome {
         let hit = params.hit;
-        let hit_root = hit
-            .and_then(|hit| self.first_reachable_root_via_children(hit, params.active_layer_roots));
+
+        let snapshot = self.build_dispatch_snapshot_for_layer_roots(
+            app.frame_id(),
+            params.active_layer_roots,
+            params.barrier_root,
+        );
+
+        let hit_root = hit.and_then(|hit| {
+            snapshot
+                .active_layer_roots
+                .iter()
+                .copied()
+                .find(|&root| snapshot.is_descendant(root, hit))
+        });
 
         let (event_pointer_id, touch_candidate): (
             Option<PointerId>,
@@ -84,7 +96,13 @@ impl<H: UiHost> UiTree<H> {
                     .pointer_down_outside_branches
                     .iter()
                     .copied()
-                    .any(|branch| self.is_reachable_from_root_via_children(branch, hit))
+                    .any(|branch| {
+                        if snapshot.pre.get(branch).is_some() && snapshot.pre.get(hit).is_some() {
+                            snapshot.is_descendant(branch, hit)
+                        } else {
+                            self.is_reachable_from_root_via_children(branch, hit)
+                        }
+                    })
             }) {
                 break;
             }

@@ -799,15 +799,37 @@ impl<H: UiHost> UiTree<H> {
                     });
 
                     if !foreign_capture_active && !candidate.moved {
+                        let active_pointer_down_outside_layers =
+                            self.active_pointer_down_outside_layer_roots(barrier_root);
+                        let snapshot = self.build_dispatch_snapshot_for_layer_roots(
+                            app.frame_id(),
+                            active_pointer_down_outside_layers.as_slice(),
+                            barrier_root,
+                        );
+
                         let hit_is_inside_layer = hit.is_some_and(|hit| {
-                            self.is_reachable_from_root_via_children(layer.root, hit)
+                            if snapshot.pre.get(layer.root).is_some()
+                                && snapshot.pre.get(hit).is_some()
+                            {
+                                snapshot.is_descendant(layer.root, hit)
+                            } else {
+                                self.is_reachable_from_root_via_children(layer.root, hit)
+                            }
                         });
                         let hit_is_inside_branch = hit.is_some_and(|hit| {
                             layer
                                 .pointer_down_outside_branches
                                 .iter()
                                 .copied()
-                                .any(|branch| self.is_reachable_from_root_via_children(branch, hit))
+                                .any(|branch| {
+                                    if snapshot.pre.get(branch).is_some()
+                                        && snapshot.pre.get(hit).is_some()
+                                    {
+                                        snapshot.is_descendant(branch, hit)
+                                    } else {
+                                        self.is_reachable_from_root_via_children(branch, hit)
+                                    }
+                                })
                         });
 
                         if !hit_is_inside_layer && !hit_is_inside_branch {
@@ -973,6 +995,7 @@ impl<H: UiHost> UiTree<H> {
                         PointerDownOutsideParams {
                             input_ctx: &input_ctx,
                             active_layer_roots: &active_pointer_down_outside_layers,
+                            barrier_root,
                             base_root,
                             hit,
                             event,
