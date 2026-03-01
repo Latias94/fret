@@ -37,3 +37,4 @@ pub mod slider;
 pub mod toggle;
 pub mod toggle_group;
 pub mod tooltip;
+pub mod typography;
