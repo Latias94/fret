@@ -56,6 +56,8 @@ Prefer nextest tests for “hard” behaviors that do not require real rendering
 
 - Focus stability:
   - pointer down on tab does not steal focus from an existing focus target.
+- Focus transfer:
+  - `workspace.pane.focus_tab_strip` focuses the active tab in the focused pane.
 - Roving keyboard navigation:
   - arrow keys move roving focus and activate correct tab.
 
@@ -90,6 +92,7 @@ Current anchors:
 
 - Workspace tab strip adapter: `ecosystem/fret-workspace/src/tab_strip/mod.rs`
 - Tab strip interaction kernel (WIP): `ecosystem/fret-workspace/src/tab_strip/kernel.rs`
+- Focus transfer gate: `ecosystem/fret-workspace/tests/pane_focus_tab_strip_command_focuses_active_tab.rs`
 
 Reference anchors:
 

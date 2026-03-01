@@ -24,6 +24,7 @@ Legend:
 | Edge auto-scroll during drag | 🟡 | 🟡 | ✅ | 🟡 | 🟡 |
 | Drag-to-split integration | ✅ | 🟡 | ✅ | ✅ | 🟡 |
 | Keyboard roving focus | 🟡 | ❌ | ✅ | 🟡 | 🟡 |
+| Focus tab strip (command) | ✅ (unit) | ❌ | ✅ | 🟡 | 🟡 |
 | Focus restore after close/move | ✅ (unit) | ❌ | ✅ | 🟡 | 🟡 |
 | Diagnostics gates (scripts) | ✅ | 🟡 | n/a | n/a | n/a |
 

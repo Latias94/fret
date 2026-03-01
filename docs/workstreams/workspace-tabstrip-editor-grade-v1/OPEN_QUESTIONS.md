@@ -77,3 +77,26 @@ Recommendation:
 Gate:
 - Keep `ecosystem/fret-workspace/tests/tab_strip_focus_restore_after_close_command.rs` green and
   add a diagnostics script if this becomes flaky across runners.
+
+## Q6: What is the contract for “entering the tab strip” from pane content?
+
+Why it matters:
+- Pointer-down intentionally does **not** steal focus from the active editor surface (editor-grade).
+- Keyboard users still need a deterministic way to move focus into the tab strip to use roving
+  navigation, close/pin via menus, etc.
+
+Options:
+1) Add a pane-scoped command (e.g. `workspace.pane.focus_tab_strip`) that can be invoked anywhere
+   inside the pane subtree.
+2) Use focus traversal (`focus.next/previous`) and rely on tab order (fragile when panes contain
+   many focusables).
+3) Introduce a new mechanism surface (e.g. “focus handles”) to query/restore focus (bigger contract).
+
+Recommendation (v1):
+- Prefer **(1)**. Implement `workspace.pane.focus_tab_strip` as a policy-level command that focuses
+  the active tab in the pane's `WorkspaceTabStrip`.
+- Keep “exit tab strip back to editor surface” as an app-owned decision for now (depends on editor
+  widget focus semantics).
+
+Gate:
+- Unit: `ecosystem/fret-workspace/tests/pane_focus_tab_strip_command_focuses_active_tab.rs`.

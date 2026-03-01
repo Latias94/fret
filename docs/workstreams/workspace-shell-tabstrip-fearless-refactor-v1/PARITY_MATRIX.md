@@ -17,6 +17,7 @@ Legend:
 | Dirty indicator | Yes | N/A | N/A | Yes | Yes |
 | Context menu (close/close others/close left/right) | Yes | Partial | Partial | Partial (feature-flagged) | Yes |
 | Keyboard nav (roving, APG-like) | Yes | Partial | Partial | Yes | Yes |
+| Focus tab strip (command) | Yes | N/A | Partial | Yes (unit) | Yes |
 | Do not steal editor focus on click (editor chrome rule) | Yes | N/A | N/A | Yes | Yes |
 | Drag reorder within strip | Yes | Yes | Yes (dock tab panel) | Yes | Yes |
 | “Drop after last tab” explicit target | Yes | Yes (header space) | Yes (empty space) | Yes | Yes |
