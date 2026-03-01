@@ -684,6 +684,11 @@ pub(crate) fn cmd_run(ctx: RunCmdContext) -> Result<(), String> {
     }
     let script_wants_screenshots = script_requests_screenshots(&src);
     let mut run_launch_env = launch_env.clone();
+    // Tool-launched runs default to *not* redacting text to keep authoring/debugging ergonomic.
+    //
+    // Privacy-sensitive workflows (pack/share/CI) should explicitly opt back into redaction via:
+    // `--env FRET_DIAG_REDACT_TEXT=1` (or by inheriting it from the parent environment).
+    push_env_if_missing(&mut run_launch_env, "FRET_DIAG_REDACT_TEXT", "0");
     for (key, value) in script_env_defaults(&src) {
         push_env_if_missing(&mut run_launch_env, &key, &value);
     }
