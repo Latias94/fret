@@ -118,9 +118,64 @@ In Fret:
 The key is not the exact implementation, but the ability to express the same composition as
 upstream examples.
 
+## Style helpers (variants / `*TriggerStyle` / `*Variants`)
+
+Upstream shadcn/ui sometimes exports helper functions such as:
+
+- `navigationMenuTriggerStyle(...)`
+- `tabsListVariants(...)`
+
+These helpers are typically Tailwind/CVA implementation details. In Fret, we only port them when
+they are useful **authoring surfaces** (i.e. they help multiple call sites stay consistent and
+fearlessly refactorable).
+
+### Where they live (layering)
+
+- Design-system-specific helpers (shadcn-only): `ecosystem/fret-ui-shadcn`.
+- Cross-design-system “recipe utilities” (if we ever need them): `ecosystem/fret-ui-kit`.
+- Never in `crates/fret-ui` (helpers are policy/recipes, not mechanisms).
+
+### What they return (avoid DOM emulation)
+
+Do not emulate CSS/CVA by returning “class strings”. Prefer returning **mergeable refinement
+objects**:
+
+- `ChromeRefinement` (colors, borders, radius, shadows, text color, padding)
+- `LayoutRefinement` (sizing, flex behavior, min-w-0, etc.)
+
+If a helper needs to style text, prefer a small, typed refinement surface (or a thin wrapper that
+applies text props) rather than resolving to concrete pixels early.
+
+### Token-first, resolve-late
+
+Prefer `ColorRef` / `MetricRef` / `Space` references inside helpers and avoid eager `ThemeSnapshot`
+resolution. This keeps helpers:
+
+- consistent across themes,
+- easy to merge/override,
+- testable via token-level assertions.
+
+### Parent-state-driven styling
+
+Upstream patterns like `group-data-[size=sm]/card:*` translate to explicit, typed scopes in Fret:
+
+- provider scopes (e.g. `CardSizeProviderState`),
+- slot scopes (e.g. `ShadcnSurfaceSlot`),
+- direction scopes (`with_direction_provider`).
+
+Avoid inventing new stringly-typed “selector engines”. Prefer explicit scopes + small helper APIs.
+
+### Fearless-refactor requirements
+
+Every style helper should:
+
+1. Be composable: callers can `.merge(...)` or `.refine_*` to override, equivalent to appending a
+   `className` upstream.
+2. Be gated: add a minimal unit test or deterministic diag script that locks at least one
+   high-signal invariant (spacing or a key token mapping) to prevent drift during refactors.
+
 ## Deliverables
 
 - `DESIGN.md`: this document.
 - `TODO.md`: tracker table (components, parts, gaps, priority, status).
 - `MILESTONES.md`: staged acceptance criteria for landing changes safely.
-
