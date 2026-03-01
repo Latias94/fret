@@ -100,3 +100,25 @@ Recommendation (v1):
 
 Gate:
 - Unit: `ecosystem/fret-workspace/tests/pane_focus_tab_strip_command_focuses_active_tab.rs`.
+
+## Q7: What is the contract for “exiting the tab strip” back to pane content?
+
+Why it matters:
+- Keyboard users need a deterministic way to get back to the editor/content surface after using
+  roving navigation in the tab strip.
+- We cannot rely on pointer-driven focus transfer because pointer-down is intentionally focus-neutral.
+
+Options:
+1) `Escape` exits the tab strip and restores the focus target that was focused before entering.
+2) `ArrowDown` exits (like some editor shells), `Escape` stays within chrome.
+3) Use generic focus traversal (`focus.next/previous`) and accept non-determinism.
+
+Recommendation (v1):
+- Prefer **(1)**: `Escape` dispatches `workspace.pane.focus_content`.
+- Implement `workspace.pane.focus_content` as a **shell policy** in `WorkspaceCommandScope` that
+  restores the last focus target observed before `workspace.pane.focus_tab_strip` was invoked.
+- If no prior focus target is known, do nothing (best-effort).
+
+Gate:
+- Unit: focus `outside` → `workspace.pane.focus_tab_strip` → `workspace.pane.focus_content`
+  restores focus to `outside`.

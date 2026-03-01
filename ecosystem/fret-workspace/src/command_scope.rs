@@ -1,12 +1,13 @@
+use std::collections::HashMap;
 use std::sync::Arc;
 
-use fret_core::Px;
+use fret_core::{AppWindowId, Px};
 use fret_runtime::Model;
 use fret_ui::element::{AnyElement, ContainerProps, LayoutStyle, Length};
 use fret_ui::elements::GlobalElementId;
 use fret_ui::{ElementContext, UiHost};
 
-use crate::commands::CMD_WORKSPACE_PANE_FOCUS_TAB_STRIP;
+use crate::commands::{CMD_WORKSPACE_PANE_FOCUS_CONTENT, CMD_WORKSPACE_PANE_FOCUS_TAB_STRIP};
 use crate::focus_registry::{WorkspaceTabElementKey, workspace_tab_element_registry_model};
 use crate::layout::WorkspaceWindowLayout;
 
@@ -17,6 +18,33 @@ fn fill_layout() -> LayoutStyle {
     layout.size.min_width = Some(Length::Px(Px(0.0)));
     layout.size.min_height = Some(Length::Px(Px(0.0)));
     layout
+}
+
+#[derive(Debug, Default)]
+struct WorkspaceCommandScopeFocusState {
+    last_focused_by_window: HashMap<AppWindowId, Option<GlobalElementId>>,
+    return_focus_by_window_and_pane: HashMap<(AppWindowId, Arc<str>), GlobalElementId>,
+}
+
+#[derive(Default)]
+struct WorkspaceCommandScopeFocusGlobal {
+    model: Option<Model<WorkspaceCommandScopeFocusState>>,
+}
+
+fn workspace_command_scope_focus_model<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+) -> Model<WorkspaceCommandScopeFocusState> {
+    cx.app
+        .with_global_mut_untracked(WorkspaceCommandScopeFocusGlobal::default, |global, app| {
+            if let Some(model) = global.model.clone() {
+                return model;
+            }
+            let model = app
+                .models_mut()
+                .insert(WorkspaceCommandScopeFocusState::default());
+            global.model = Some(model.clone());
+            model
+        })
 }
 
 /// Workspace-shell command routing scope.
@@ -45,6 +73,18 @@ impl WorkspaceCommandScope {
         let window_layout = self.window_layout;
         let child = self.child;
         let tab_element_registry = workspace_tab_element_registry_model(cx);
+        let focus_state = workspace_command_scope_focus_model(cx);
+
+        // Best-effort: keep a snapshot of the latest focused element for the window so command
+        // handlers can record/restore focus transfer outcomes without needing a runtime focus query.
+        let focused_now = cx.focused_element();
+        let window = cx.window;
+        let _ = cx.app.models_mut().update(&focus_state, |st| {
+            let entry = st.last_focused_by_window.entry(window).or_insert(None);
+            if *entry != focused_now {
+                *entry = focused_now;
+            }
+        });
 
         let root = cx.container(
             ContainerProps {
@@ -56,41 +96,91 @@ impl WorkspaceCommandScope {
 
         let window_layout_for_command = window_layout.clone();
         let tab_element_registry_for_command = tab_element_registry.clone();
+        let focus_state_for_command = focus_state.clone();
         cx.command_on_command_for(
             root.id,
             Arc::new(move |host, acx, command| {
-                if command.as_str() != CMD_WORKSPACE_PANE_FOCUS_TAB_STRIP {
-                    return false;
+                match command.as_str() {
+                    CMD_WORKSPACE_PANE_FOCUS_TAB_STRIP => {
+                        let active = host.models_mut().read(&window_layout_for_command, |w| {
+                            let pane_id = w.active_pane_id().cloned()?;
+                            let pane = w.pane_tree.find_pane(pane_id.as_ref())?;
+                            let tab_id = pane.tabs.active().cloned()?;
+                            Some((pane_id, tab_id))
+                        });
+                        let Some((pane_id, tab_id)) = active.ok().flatten() else {
+                            return false;
+                        };
+
+                        let key = WorkspaceTabElementKey {
+                            window: acx.window,
+                            pane_id: Some(pane_id.clone()),
+                            tab_id,
+                        };
+
+                        let target: Option<GlobalElementId> = host
+                            .models_mut()
+                            .read(&tab_element_registry_for_command, |reg| reg.get(&key))
+                            .ok()
+                            .flatten();
+                        let Some(target) = target else {
+                            return false;
+                        };
+
+                        // Record the last focused element (best-effort) so `focus_content` can
+                        // restore it after keyboard use of the tab strip.
+                        let last_focus = host
+                            .models_mut()
+                            .read(&focus_state_for_command, |st| {
+                                st.last_focused_by_window
+                                    .get(&acx.window)
+                                    .copied()
+                                    .flatten()
+                            })
+                            .ok()
+                            .flatten();
+                        if let Some(last_focus) = last_focus {
+                            if last_focus != target {
+                                let _ = host.models_mut().update(&focus_state_for_command, |st| {
+                                    st.return_focus_by_window_and_pane
+                                        .insert((acx.window, pane_id.clone()), last_focus);
+                                });
+                            }
+                        }
+
+                        host.request_focus(target);
+                        host.request_redraw(acx.window);
+                        true
+                    }
+                    CMD_WORKSPACE_PANE_FOCUS_CONTENT => {
+                        let pane_id = host
+                            .models_mut()
+                            .read(&window_layout_for_command, |w| w.active_pane_id().cloned())
+                            .ok()
+                            .flatten();
+                        let Some(pane_id) = pane_id else {
+                            return false;
+                        };
+
+                        let target = host
+                            .models_mut()
+                            .read(&focus_state_for_command, |st| {
+                                st.return_focus_by_window_and_pane
+                                    .get(&(acx.window, pane_id.clone()))
+                                    .copied()
+                            })
+                            .ok()
+                            .flatten();
+                        let Some(target) = target else {
+                            return false;
+                        };
+
+                        host.request_focus(target);
+                        host.request_redraw(acx.window);
+                        true
+                    }
+                    _ => false,
                 }
-
-                let active = host.models_mut().read(&window_layout_for_command, |w| {
-                    let pane_id = w.active_pane_id().cloned()?;
-                    let pane = w.pane_tree.find_pane(pane_id.as_ref())?;
-                    let tab_id = pane.tabs.active().cloned()?;
-                    Some((pane_id, tab_id))
-                });
-                let Some((pane_id, tab_id)) = active.ok().flatten() else {
-                    return false;
-                };
-
-                let key = WorkspaceTabElementKey {
-                    window: acx.window,
-                    pane_id: Some(pane_id),
-                    tab_id,
-                };
-
-                let target: Option<GlobalElementId> = host
-                    .models_mut()
-                    .read(&tab_element_registry_for_command, |reg| reg.get(&key))
-                    .ok()
-                    .flatten();
-                let Some(target) = target else {
-                    return false;
-                };
-
-                host.request_focus(target);
-                host.request_redraw(acx.window);
-                true
             }),
         );
 

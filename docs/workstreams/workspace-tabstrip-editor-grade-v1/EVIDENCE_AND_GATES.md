@@ -16,6 +16,7 @@ Goal: keep the tab strip refactor **fearless** by locking outcomes behind unit t
 - `ecosystem/fret-workspace/tests/tab_strip_keyboard_roving_arrow_activates_tab.rs` (roving keyboard activation)
 - `ecosystem/fret-workspace/tests/pane_focus_tab_strip_command_focuses_active_tab.rs` (focus transfer into tab strip)
 - `ecosystem/fret-workspace/tests/workspace_command_scope_focus_tab_strip_from_outside_pane.rs` (focus transfer from outside pane subtree)
+- `ecosystem/fret-workspace/tests/workspace_command_scope_focus_content_restores_previous_focus.rs` (exit tab strip restores previous focus)
 
 ## M1 gates (must exist before/while refactoring)
 

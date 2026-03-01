@@ -4,7 +4,8 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use fret_core::{
-    Color, Corners, Edges, MouseButton, Point, Px, SemanticsRole, TextOverflow, TextSlant, TextWrap,
+    Color, Corners, Edges, KeyCode, MouseButton, Point, Px, SemanticsRole, TextOverflow, TextSlant,
+    TextWrap,
 };
 use fret_runtime::{CommandId, Effect, Model};
 use fret_ui::action::{
@@ -24,6 +25,7 @@ use fret_ui_kit::dnd as ui_dnd;
 
 use crate::focus_registry::{WorkspaceTabElementKey, workspace_tab_element_registry_model};
 
+use crate::commands::CMD_WORKSPACE_PANE_FOCUS_CONTENT;
 use crate::commands::{
     tab_activate_command, tab_close_command, tab_pin_command, tab_unpin_command,
 };
@@ -385,6 +387,25 @@ impl WorkspaceTabStrip {
                             ..Default::default()
                         },
                         |cx| {
+                            // Escape exits the tab strip (best-effort) by asking the workspace
+                            // shell to restore focus to pane content.
+                            cx.key_add_on_key_down_for(
+                                cx.root_id(),
+                                Arc::new(move |host, acx, down| {
+                                    if down.ime_composing {
+                                        return false;
+                                    }
+                                    if down.key != KeyCode::Escape {
+                                        return false;
+                                    }
+                                    host.dispatch_command(
+                                        Some(acx.window),
+                                        CommandId::from(CMD_WORKSPACE_PANE_FOCUS_CONTENT),
+                                    );
+                                    true
+                                }),
+                            );
+
                             let scroll = cx.keyed("workspace-tab-strip-scroll", |cx| {
                                 let id = cx.root_id();
                                 scroll_element.set(Some(id));

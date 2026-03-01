@@ -53,6 +53,7 @@ pub const CMD_WORKSPACE_PANE_MOVE_ACTIVE_TAB_UP: &str = "workspace.pane.move_act
 pub const CMD_WORKSPACE_PANE_MOVE_ACTIVE_TAB_DOWN: &str = "workspace.pane.move_active_tab.down";
 
 pub const CMD_WORKSPACE_PANE_FOCUS_TAB_STRIP: &str = "workspace.pane.focus_tab_strip";
+pub const CMD_WORKSPACE_PANE_FOCUS_CONTENT: &str = "workspace.pane.focus_content";
 
 /// Prefix for "activate a specific tab" commands.
 ///
@@ -478,6 +479,13 @@ pub fn register_workspace_commands(registry: &mut CommandRegistry) {
         CommandMeta::new("Focus Tab Strip")
             .with_category("Workspace")
             .with_keywords(["focus", "tab", "tabstrip", "pane", "workspace"]),
+    );
+
+    registry.register(
+        CommandId::new(CMD_WORKSPACE_PANE_FOCUS_CONTENT),
+        CommandMeta::new("Focus Pane Content")
+            .with_category("Workspace")
+            .with_keywords(["focus", "content", "pane", "workspace"]),
     );
 
     registry.register(
