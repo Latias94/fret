@@ -138,6 +138,9 @@ pub use avatar::{
 };
 pub use badge::{Badge, BadgeRender, BadgeVariant, badge};
 pub use breadcrumb::{Breadcrumb, BreadcrumbItem, BreadcrumbSeparator};
+pub use breadcrumb::primitives::{
+    BreadcrumbEllipsis, BreadcrumbLink, BreadcrumbList, BreadcrumbPage,
+};
 pub use button::{Button, ButtonRender, ButtonSize, ButtonVariant};
 pub use button_group::{
     ButtonGroup, ButtonGroupItem, ButtonGroupOrientation, ButtonGroupSeparator, ButtonGroupText,
