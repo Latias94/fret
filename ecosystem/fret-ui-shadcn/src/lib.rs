@@ -170,9 +170,10 @@ pub use command::{
     CommandList, CommandLoading, CommandPalette, CommandSeparator, CommandShortcut, command,
 };
 pub use context_menu::{
-    ContextMenu, ContextMenuCheckboxItem, ContextMenuEntry, ContextMenuGroup, ContextMenuItem,
-    ContextMenuLabel, ContextMenuRadioGroup, ContextMenuRadioItem, ContextMenuRadioItemSpec,
-    ContextMenuShortcut,
+    ContextMenu, ContextMenuCheckboxItem, ContextMenuContent, ContextMenuEntry, ContextMenuGroup,
+    ContextMenuItem, ContextMenuLabel, ContextMenuRadioGroup, ContextMenuRadioItem,
+    ContextMenuRadioItemSpec, ContextMenuSeparator, ContextMenuShortcut, ContextMenuSub,
+    ContextMenuSubContent, ContextMenuSubTrigger, ContextMenuTrigger,
 };
 pub use data_grid_canvas::{DataGridCanvas, DataGridCanvasAxis};
 pub use fret_ui_headless::calendar::{DateRange, DateRangeSelection};

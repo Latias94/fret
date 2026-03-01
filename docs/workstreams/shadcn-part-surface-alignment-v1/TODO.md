@@ -38,7 +38,7 @@ Last audit snapshot: **2026-03-01**.
 | `tooltip` | `TooltipProvider, Tooltip, TooltipTrigger, TooltipContent` | `Tooltip*` parts (+ `TooltipAnchor`) | Not audited in this workstream | Medium | Audit provider inheritance (delay/skip), safe-hover corridors, and content arrow parity | tbd | P1 | Not started |
 | `hover-card` | `HoverCard, HoverCardTrigger, HoverCardContent` | `HoverCard*` parts | Not audited in this workstream | Medium | Audit trigger/content parity and hover intent (Radix/Base UI outcomes) | tbd | P2 | Not started |
 | `select` | `Select, SelectTrigger, SelectValue, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectSeparator, SelectScrollUpButton, SelectScrollDownButton` | `Select*` parts | Not audited in this workstream | High | Audit parts + a11y semantics + scroll buttons and viewport clamping | tbd | P0 | Not started |
-| `context-menu` | `ContextMenu, Trigger, Portal, Content, Item, CheckboxItem, RadioItem, Label, Separator, Shortcut, Group, Sub, SubTrigger, SubContent, RadioGroup` | `ContextMenu*` parts | Not audited in this workstream | High | Audit submenu part composition + roving focus + outside-press dismissal | tbd | P0 | Not started |
+| `context-menu` | `ContextMenu, Trigger, Portal, Content, Item, CheckboxItem, RadioItem, Label, Separator, Shortcut, Group, Sub, SubTrigger, SubContent, RadioGroup` | `ContextMenu` + `ContextMenuTrigger/Content` adapters + submenu helpers | Portal is still implicit; submenu parts are helpers over `ContextMenuItem::submenu(...)` | High | Keep closure API; expose part adapters + submenu helper parts; add diag script when UI gallery uses it | unit tests in `ecosystem/fret-ui-shadcn/src/context_menu.rs` | P0 | In progress |
 
 ## Notes / recurring hazards
 
