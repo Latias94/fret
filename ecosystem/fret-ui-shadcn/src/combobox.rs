@@ -198,6 +198,10 @@ pub struct Combobox {
     test_id_prefix: Option<Arc<str>>,
     trigger_test_id: Option<Arc<str>>,
     width: Option<Px>,
+    content_side: popper::Side,
+    content_align: popper::Align,
+    content_side_offset: Px,
+    content_align_offset: Px,
     responsive: bool,
     responsive_device_md_breakpoint: Px,
     placeholder: Arc<str>,
@@ -234,6 +238,10 @@ impl Combobox {
             test_id_prefix: None,
             trigger_test_id: None,
             width: None,
+            content_side: popper::Side::Bottom,
+            content_align: popper::Align::Center,
+            content_side_offset: Px(4.0),
+            content_align_offset: Px(0.0),
             responsive: false,
             responsive_device_md_breakpoint: fret_ui_kit::declarative::viewport_tailwind::MD,
             placeholder: Arc::from("Select..."),
@@ -285,6 +293,38 @@ impl Combobox {
     /// uses `w-[200px]`).
     pub fn width(mut self, width: Px) -> Self {
         self.width = Some(width);
+        self
+    }
+
+    /// Controls the popper placement side for the combobox content.
+    ///
+    /// Default matches the existing shadcn recipe behavior (`bottom`).
+    pub fn content_side(mut self, side: popper::Side) -> Self {
+        self.content_side = side;
+        self
+    }
+
+    /// Controls the popper placement alignment for the combobox content.
+    ///
+    /// Default matches the existing shadcn recipe behavior (`center`).
+    pub fn content_align(mut self, align: popper::Align) -> Self {
+        self.content_align = align;
+        self
+    }
+
+    /// Controls the main-axis offset (gap) between trigger and content.
+    ///
+    /// Default matches the existing shadcn recipe behavior (`4px`).
+    pub fn content_side_offset_px(mut self, offset: Px) -> Self {
+        self.content_side_offset = offset;
+        self
+    }
+
+    /// Controls the cross-axis alignment offset for the combobox content.
+    ///
+    /// Default matches the existing shadcn recipe behavior (`0px`).
+    pub fn content_align_offset_px(mut self, offset: Px) -> Self {
+        self.content_align_offset = offset;
         self
     }
 
@@ -476,6 +516,10 @@ impl Combobox {
             self.test_id_prefix,
             self.trigger_test_id,
             self.width,
+            self.content_side,
+            self.content_align,
+            self.content_side_offset,
+            self.content_align_offset,
             self.placeholder,
             self.search_placeholder,
             self.empty_text,
@@ -529,6 +573,10 @@ pub fn combobox<H: UiHost>(
         None,
         None,
         width,
+        popper::Side::Bottom,
+        popper::Align::Center,
+        Px(4.0),
+        Px(0.0),
         placeholder,
         search_placeholder,
         empty_text,
@@ -566,6 +614,10 @@ fn combobox_with_patch<H: UiHost>(
     test_id_prefix: Option<Arc<str>>,
     trigger_test_id: Option<Arc<str>>,
     width: Option<Px>,
+    content_side: popper::Side,
+    content_align: popper::Align,
+    content_side_offset: Px,
+    content_align_offset: Px,
     placeholder: Arc<str>,
     search_placeholder: Arc<str>,
     empty_text: Arc<str>,
@@ -1716,7 +1768,7 @@ fn combobox_with_patch<H: UiHost>(
                     })
                 })
             },
-            move |cx, anchor| {
+                move |cx, anchor| {
                 let test_id_prefix = test_id_prefix_for_content.clone();
                 let open_change_reason_model = open_change_reason_model_for_content.clone();
                 let search_input_id = search_input_id_for_content.clone();
@@ -1728,7 +1780,7 @@ fn combobox_with_patch<H: UiHost>(
                 let desired_w = width.unwrap_or_else(|| Px(anchor.size.width.0.max(180.0)));
                 let selected = cx.watch_model(&model).cloned().unwrap_or_default();
 
-                let list = if search_enabled {
+                    let list = if search_enabled {
                     // Clamp the list height to the best-available main-axis space around the
                     // trigger. This models the Radix popper "available height" variables used by
                     // shadcn/cmdk (`--radix-*-content-available-height`) and prevents the listbox
@@ -1742,14 +1794,13 @@ fn combobox_with_patch<H: UiHost>(
                         window_margin,
                     );
                     let direction = direction_prim::use_direction_in_scope(cx, None);
-                    let placement = popper::PopperContentPlacement::new(
+                    let placement = combobox_content_placement(
                         direction,
-                        popper::Side::Bottom,
-                        popper::Align::Center,
-                        Px(4.0),
-                    )
-                    .with_shift_cross_axis(true)
-                    .with_sticky(popper::StickyMode::Partial);
+                        content_side,
+                        content_align,
+                        content_side_offset,
+                        content_align_offset,
+                    );
                     let available_main = radix_popover::popover_popper_vars(
                         outer,
                         anchor,
@@ -2031,6 +2082,26 @@ fn combobox_with_patch<H: UiHost>(
     })
 }
 
+fn combobox_content_placement(
+    direction: direction_prim::LayoutDirection,
+    side: popper::Side,
+    align: popper::Align,
+    side_offset: Px,
+    align_offset: Px,
+) -> popper::PopperContentPlacement {
+    popper::PopperContentPlacement::new(direction, side, align, side_offset)
+        .with_align_offset(align_offset)
+        .with_shift_cross_axis(true)
+        .with_sticky(popper::StickyMode::Partial)
+}
+
+/// Migration alias for the combobox item data model.
+///
+/// Upstream shadcn/ui v4 exports an element part named `ComboboxItem`. In Fret, `ComboboxItem` is
+/// currently the **data** type. Callers that want to prepare for a future v4 part-surface refactor
+/// can start using `ComboboxOption` in their own APIs today.
+pub type ComboboxOption = ComboboxItem;
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -2046,6 +2117,24 @@ mod tests {
     use fret_runtime::FrameId;
     use fret_ui::tree::UiTree;
     use fret_ui_kit::primitives::popover as radix_popover;
+
+    #[test]
+    fn combobox_content_placement_tracks_offsets() {
+        let placement = combobox_content_placement(
+            direction_prim::LayoutDirection::Ltr,
+            popper::Side::Top,
+            popper::Align::Start,
+            Px(6.0),
+            Px(12.0),
+        );
+
+        assert_eq!(placement.side, popper::Side::Top);
+        assert_eq!(placement.align, popper::Align::Start);
+        assert_eq!(placement.side_offset, Px(6.0));
+        assert_eq!(placement.align_offset, Px(12.0));
+        assert!(placement.shift_cross_axis);
+        assert_eq!(placement.sticky, popper::StickyMode::Partial);
+    }
 
     #[derive(Default)]
     struct FakeServices;
