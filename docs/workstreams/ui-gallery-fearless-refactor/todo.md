@@ -147,7 +147,7 @@ drift-free (preview ≡ copyable code).
 | Page | Gallery Page | Snippet-backed | Status | Notes |
 |---|---:|---:|---:|---|
 | icons | `apps/fret-ui-gallery/src/ui/pages/icons.rs` | Yes | Done | Snippet-backed previews + region-sliced code tabs (preview ≡ code). |
-| empty | `apps/fret-ui-gallery/src/ui/pages/empty.rs` | No | Not started | Includes advanced paint/layout demos; migrate after overlay/layout baseline stabilizes. |
+| empty | `apps/fret-ui-gallery/src/ui/pages/empty.rs` | Yes | Done | Snippet-backed previews + region-sliced code tabs (preview ≡ code). |
 | card | `apps/fret-ui-gallery/src/ui/pages/card.rs` | No | Deferred | Local edits in progress; migrate after card examples stabilize. |
 | item | `apps/fret-ui-gallery/src/ui/pages/item.rs` | No | Not started | Large page; split into focused snippets per section. |
 | image-object-fit | `apps/fret-ui-gallery/src/ui/pages/image_object_fit.rs` | Yes | Done | Snippet-backed previews + region-sliced code tabs (preview ≡ code). |
