@@ -454,6 +454,28 @@ impl MenubarContent {
     }
 }
 
+/// shadcn/ui `MenubarPortal` (v4).
+///
+/// Upstream exports a distinct portal part even though content is mounted in a portal by default.
+/// In Fret menus already render in an overlay root, so this is a no-op wrapper that exists for
+/// part surface parity (copy/paste examples).
+#[derive(Debug, Clone, Default)]
+pub struct MenubarPortal {
+    content: MenubarContent,
+}
+
+impl MenubarPortal {
+    pub fn new(content: MenubarContent) -> Self {
+        Self { content }
+    }
+}
+
+impl From<MenubarPortal> for MenubarContent {
+    fn from(value: MenubarPortal) -> Self {
+        value.content
+    }
+}
+
 /// shadcn/ui `MenubarSeparator` (v4).
 #[derive(Debug, Clone, Copy, Default)]
 pub struct MenubarSeparator;
@@ -1464,10 +1486,10 @@ impl MenubarMenu {
     /// placement/behavior configuration on a `MenubarContent` part (shadcn-style).
     pub fn entries_parts(
         self,
-        content: MenubarContent,
+        content: impl Into<MenubarContent>,
         entries: impl IntoIterator<Item = MenubarEntry>,
     ) -> MenubarMenuEntries {
-        content.apply_to(self.entries(entries))
+        content.into().apply_to(self.entries(entries))
     }
 
     pub fn disabled(mut self, disabled: bool) -> Self {
@@ -3946,6 +3968,17 @@ mod tests {
             .modal(true)
             .modal(false);
         assert!(!menubar.modal);
+    }
+
+    #[test]
+    fn menubar_portal_wraps_content_config() {
+        let menu = MenubarMenu::new("File");
+        let entries = menu.entries_parts(
+            MenubarPortal::new(MenubarContent::new().side_offset(Px(3.0))),
+            Vec::<MenubarEntry>::new(),
+        );
+
+        assert_eq!(entries.menu.side_offset, Px(3.0));
     }
 
     #[derive(Default)]

@@ -4675,6 +4675,27 @@ mod tests {
     }
 
     #[test]
+    fn select_content_align_item_with_trigger_false_sets_position_popper() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(400.0), Px(240.0)),
+        );
+
+        fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            let select = Select::new_controllable(cx, None, None::<Arc<str>>, None, false).content(
+                SelectContent::new()
+                    .align_item_with_trigger(false)
+                    .side_offset(Px(7.0)),
+            );
+
+            assert_eq!(select.position, SelectPosition::Popper);
+            assert_eq!(select.side_offset_override, Some(Px(7.0)));
+        });
+    }
+
+    #[test]
     fn select_open_change_events_emit_change_and_complete_after_settle() {
         let mut state = SelectOpenChangeCallbackState::default();
 

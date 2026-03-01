@@ -171,9 +171,9 @@ pub use command::{
 };
 pub use context_menu::{
     ContextMenu, ContextMenuCheckboxItem, ContextMenuContent, ContextMenuEntry, ContextMenuGroup,
-    ContextMenuItem, ContextMenuLabel, ContextMenuRadioGroup, ContextMenuRadioItem,
-    ContextMenuRadioItemSpec, ContextMenuSeparator, ContextMenuShortcut, ContextMenuSub,
-    ContextMenuSubContent, ContextMenuSubTrigger, ContextMenuTrigger,
+    ContextMenuItem, ContextMenuLabel, ContextMenuPortal, ContextMenuRadioGroup,
+    ContextMenuRadioItem, ContextMenuRadioItemSpec, ContextMenuSeparator, ContextMenuShortcut,
+    ContextMenuSub, ContextMenuSubContent, ContextMenuSubTrigger, ContextMenuTrigger,
 };
 pub use data_grid_canvas::{DataGridCanvas, DataGridCanvasAxis};
 pub use fret_ui_headless::calendar::{DateRange, DateRangeSelection};
@@ -214,7 +214,7 @@ pub use drawer::{
 };
 pub use dropdown_menu::{
     DropdownMenu, DropdownMenuAlign, DropdownMenuCheckboxItem, DropdownMenuContent,
-    DropdownMenuEntry, DropdownMenuGroup, DropdownMenuItem, DropdownMenuLabel,
+    DropdownMenuEntry, DropdownMenuGroup, DropdownMenuItem, DropdownMenuLabel, DropdownMenuPortal,
     DropdownMenuRadioGroup, DropdownMenuRadioItem, DropdownMenuRadioItemSpec,
     DropdownMenuSeparator, DropdownMenuShortcut, DropdownMenuSide, DropdownMenuSub,
     DropdownMenuSubContent, DropdownMenuSubTrigger, DropdownMenuTrigger,
@@ -246,9 +246,9 @@ pub use kbd::{Kbd, KbdGroup};
 pub use label::Label;
 pub use menubar::{
     Menubar, MenubarCheckboxItem, MenubarContent, MenubarEntry, MenubarGroup, MenubarItem,
-    MenubarLabel, MenubarMenu, MenubarMenuEntries, MenubarRadioGroup, MenubarRadioItem,
-    MenubarRadioItemSpec, MenubarSeparator, MenubarShortcut, MenubarSub, MenubarSubContent,
-    MenubarSubTrigger, MenubarTrigger, menubar,
+    MenubarLabel, MenubarMenu, MenubarMenuEntries, MenubarPortal, MenubarRadioGroup,
+    MenubarRadioItem, MenubarRadioItemSpec, MenubarSeparator, MenubarShortcut, MenubarSub,
+    MenubarSubContent, MenubarSubTrigger, MenubarTrigger, menubar,
 };
 pub use native_select::{
     NativeSelect, NativeSelectOptGroup, NativeSelectOption, NativeSelectSize, native_select,

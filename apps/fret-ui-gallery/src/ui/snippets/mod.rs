@@ -12,6 +12,7 @@ pub mod context_menu;
 pub mod dropdown_menu;
 pub mod drawer;
 pub mod input_group;
+pub mod label;
 pub mod menubar;
 pub mod hover_card;
 pub mod dialog;
