@@ -79,7 +79,13 @@ Non-goals (v2):
 - [x] CAR2-123 Duration: lock Embla `duration` as a fixed-step integrator parameter.
   - Evidence:
     - `ecosystem/fret-ui-headless/src/embla/scroll_body.rs` (`seek` divides by `scroll_duration`)
-    - Gate: `ecosystem/fret-ui-headless/src/embla/scroll_body.rs` (`lower_duration_moves_faster_per_tick`)
+  - Gate: `ecosystem/fret-ui-headless/src/embla/scroll_body.rs` (`lower_duration_moves_faster_per_tick`)
+- [x] CAR2-124 Duration (UI): gate that `embla_duration` affects button-navigation settling speed.
+  - Evidence:
+    - `apps/fret-ui-gallery/src/ui/pages/carousel.rs` ("Duration (Embla)" section)
+    - `ecosystem/fret-ui-shadcn/src/carousel.rs` (`CarouselApiSnapshot.settling`)
+  - Gate:
+    - `tools/diag-scripts/ui-gallery/carousel/ui-gallery-carousel-duration-fast-vs-slow-settling-gate.json`
 - [x] CAR2-125 Port core targeting helpers (snap selection + limits) needed by the engine.
   - Evidence:
     - `ecosystem/fret-ui-headless/src/embla/scroll_target.rs`

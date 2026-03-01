@@ -806,6 +806,28 @@
       "target_hints": []
     },
     {
+      "id": "ui-gallery-carousel-duration-fast-vs-slow-settling-gate",
+      "path": "tools/diag-scripts/ui-gallery/carousel/ui-gallery-carousel-duration-fast-vs-slow-settling-gate.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "ui-gallery-motion-pilot"
+      ],
+      "tags": [
+        "carousel",
+        "duration",
+        "embla",
+        "gate",
+        "settling",
+        "ui_gallery"
+      ],
+      "target_hints": [
+        "UI gallery Carousel page: Duration (Embla) section (two carousels, different `embla_duration`).",
+        "Expected: after one Next click, the fast carousel stops settling (checked=false) while the slow carousel remains settling for longer."
+      ]
+    },
+    {
       "id": "ui-gallery-carousel-loop-continuity-touch-gate",
       "path": "tools/diag-scripts/ui-gallery/carousel/ui-gallery-carousel-loop-continuity-touch-gate.json",
       "required_capabilities": [

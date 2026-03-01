@@ -32,6 +32,11 @@ pub struct CarouselApiSnapshot {
     pub snap_count: usize,
     pub can_scroll_prev: bool,
     pub can_scroll_next: bool,
+    /// True while the carousel is actively settling toward a target snap.
+    ///
+    /// Note: this coalesces both the v1 recipe settle driver (`settling`) and the Embla-engine
+    /// driver (`embla_settling`) into a single observable flag.
+    pub settling: bool,
     /// Monotonically increasing counter that increments when the selected index changes.
     ///
     /// This is an MVP event surface intended to support shadcn-style `api.on("select", ...)`
@@ -114,6 +119,7 @@ impl CarouselApi {
             snap_count,
             can_scroll_prev,
             can_scroll_next,
+            settling: runtime.settling || runtime.embla_settling,
             select_generation: runtime.api_select_generation,
             reinit_generation: runtime.api_reinit_generation,
         }
@@ -255,6 +261,7 @@ pub struct CarouselOptionsPatch {
     pub duration: Option<Duration>,
     pub embla_engine: Option<bool>,
     pub embla_duration: Option<f32>,
+    pub ignore_reduced_motion: Option<bool>,
     pub in_view_threshold: Option<f32>,
     pub in_view_margin_px: Option<Px>,
     pub watch_focus: Option<bool>,
@@ -276,6 +283,9 @@ impl CarouselOptionsPatch {
             duration: self.duration.unwrap_or(base.duration),
             embla_engine: self.embla_engine.unwrap_or(base.embla_engine),
             embla_duration: self.embla_duration.unwrap_or(base.embla_duration),
+            ignore_reduced_motion: self
+                .ignore_reduced_motion
+                .unwrap_or(base.ignore_reduced_motion),
             in_view_threshold: self.in_view_threshold.unwrap_or(base.in_view_threshold),
             in_view_margin_px: self.in_view_margin_px.unwrap_or(base.in_view_margin_px),
             watch_focus: self.watch_focus.unwrap_or(base.watch_focus),
@@ -378,6 +388,10 @@ pub struct CarouselOptions {
     /// This is *not* a wall-clock duration in milliseconds. See:
     /// - `docs/workstreams/carousel-embla-parity-v2/contracts.md`
     pub embla_duration: f32,
+    /// When true, ignore window `prefers-reduced-motion` and keep motion enabled.
+    ///
+    /// This is intended for demos/diagnostics only; production UIs should respect reduced motion.
+    pub ignore_reduced_motion: bool,
     /// Minimum visible fraction (0..=1) required to count a slide as "in view" for slidesInView.
     pub in_view_threshold: f32,
     /// Viewport margin (px) applied on both ends for slidesInView intersection tests.
@@ -404,6 +418,7 @@ impl Default for CarouselOptions {
             duration: Duration::from_millis(25),
             embla_engine: false,
             embla_duration: 25.0,
+            ignore_reduced_motion: false,
             in_view_threshold: 0.0,
             in_view_margin_px: Px(0.0),
             watch_focus: true,
@@ -474,6 +489,11 @@ impl CarouselOptions {
 
     pub fn embla_duration(mut self, duration: f32) -> Self {
         self.embla_duration = duration;
+        self
+    }
+
+    pub fn ignore_reduced_motion(mut self, ignore: bool) -> Self {
+        self.ignore_reduced_motion = ignore;
         self
     }
 
@@ -993,7 +1013,13 @@ impl Carousel {
 
             let root_layout = decl_style::layout_style(
                 &theme,
-                LayoutRefinement::default().relative().merge(self.layout),
+                // Upstream shadcn places the prev/next controls outside the viewport (`-left-12` /
+                // `-right-12`). Keep the root overflow-visible so hit-testing can reach those
+                // controls even when their bounds extend outside the carousel panel.
+                LayoutRefinement::default()
+                    .relative()
+                    .overflow_visible()
+                    .merge(self.layout),
             );
 
             let viewport_layout = decl_style::layout_style(
@@ -1040,7 +1066,8 @@ impl Carousel {
             let offset_now = cx.watch_model(&offset_model).copied().unwrap_or(Px(0.0));
             let runtime_snapshot = cx.watch_model(&runtime_model).copied().unwrap_or_default();
 
-            let reduced_motion = prefers_reduced_motion(cx, Invalidation::Paint, false);
+            let reduced_motion =
+                prefers_reduced_motion(cx, Invalidation::Paint, false) && !options.ignore_reduced_motion;
 
             let embla_engine_enabled = options.embla_engine
                 || std::env::var("FRET_DEBUG_CAROUSEL_EMBLA_ENGINE")
@@ -1754,6 +1781,7 @@ impl Carousel {
                         st.settling = false;
                         st.embla_settling = true;
                         st.prevent_click = false;
+                        st.selection_initialized = true;
                     });
                     host.request_redraw(cx.window);
                     return true;
@@ -1932,6 +1960,7 @@ impl Carousel {
                             st.drag = headless_carousel::CarouselDragState::default();
                             st.settling = false;
                             st.embla_settling = true;
+                            st.selection_initialized = true;
                         });
                         host.request_redraw(cx.window);
                         return;
@@ -2066,6 +2095,7 @@ impl Carousel {
                             st.drag = headless_carousel::CarouselDragState::default();
                             st.settling = false;
                             st.embla_settling = true;
+                            st.selection_initialized = true;
                         });
                         host.request_redraw(cx.window);
                         return;
@@ -2241,6 +2271,7 @@ impl Carousel {
                             st.drag = headless_carousel::CarouselDragState::default();
                             st.settling = false;
                             st.embla_settling = true;
+                            st.selection_initialized = true;
                         });
                         host.request_redraw(cx.window);
                         return true;
@@ -2902,6 +2933,7 @@ impl Carousel {
             let snaps_len = snaps_now.len();
             let selection_source_index = if !runtime_snapshot.selection_initialized
                 && !runtime_snapshot.settling
+                && !runtime_snapshot.embla_settling
                 && !runtime_snapshot.drag.dragging
             {
                 options.start_snap
@@ -2982,6 +3014,7 @@ impl Carousel {
             if extent_ready
                 && !runtime_snapshot.selection_initialized
                 && !runtime_snapshot.settling
+                && !runtime_snapshot.embla_settling
                 && !runtime_snapshot.drag.dragging
             {
                 let target = snaps_now
@@ -3009,11 +3042,20 @@ impl Carousel {
 
             if let Some(api_snapshot) = self.api_snapshot {
                 let runtime_now = cx.watch_model(&runtime_model).copied().unwrap_or_default();
+                let embla_moving = cx
+                    .app
+                    .models_mut()
+                    .read(&embla_engine_model, |v| {
+                        v.as_ref().is_some_and(|engine| !engine.scroll_body.settled())
+                    })
+                    .ok()
+                    .unwrap_or(false);
                 let snapshot = CarouselApiSnapshot {
                     selected_index: clamped_index,
                     snap_count: if extent_ready { snaps_len } else { 0 },
                     can_scroll_prev: !prev_disabled,
                     can_scroll_next: !next_disabled,
+                    settling: runtime_now.settling || runtime_now.embla_settling || embla_moving,
                     select_generation: runtime_now.api_select_generation,
                     reinit_generation: runtime_now.api_reinit_generation,
                 };
@@ -3076,6 +3118,7 @@ impl Carousel {
                 .on_activate(on_next)
                 .into_element(cx);
 
+            // Upstream shadcn uses `-left-12` / `-right-12` which maps to 48px in Tailwind.
             let offset = MetricRef::Px(Px(48.0));
             let button_size = MetricRef::Px(Px(32.0));
 
