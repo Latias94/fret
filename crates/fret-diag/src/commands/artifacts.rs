@@ -30,18 +30,8 @@ pub(crate) fn cmd_pack(
     let bundle_dir = match rest.first() {
         Some(src) => {
             let src = crate::resolve_path(workspace_root, PathBuf::from(src));
-            if src.is_dir() && crate::resolve_bundle_artifact_path_no_materialize(&src).is_none() {
-                if resolve::looks_like_diag_session_root(&src)
-                    || src.join(crate::session::SESSIONS_DIRNAME).is_dir()
-                {
-                    resolve::resolve_latest_bundle_dir_from_base_or_session_out_dir(&src, None)
-                        .map(|(p, _session_id, _source)| p)?
-                } else {
-                    crate::resolve_bundle_root_dir(&src)?
-                }
-            } else {
-                crate::resolve_bundle_root_dir(&src)?
-            }
+            let src = resolve::resolve_base_or_session_out_dir_to_latest_bundle_dir_or_err(&src)?;
+            crate::resolve_bundle_root_dir(&src)?
         }
         None => resolve_latest_bundle_dir_path(out_dir).map_err(|_err| {
             format!(
@@ -302,16 +292,8 @@ pub(crate) fn cmd_triage(
         ));
     }
 
-    let mut src = crate::resolve_path(workspace_root, PathBuf::from(src));
-    if src.is_dir()
-        && crate::resolve_bundle_artifact_path_no_materialize(&src).is_none()
-        && (resolve::looks_like_diag_session_root(&src)
-            || src.join(crate::session::SESSIONS_DIRNAME).is_dir())
-        && let Ok((bundle_dir, _session_id, _source)) =
-            resolve::resolve_latest_bundle_dir_from_base_or_session_out_dir(&src, None)
-    {
-        src = bundle_dir;
-    }
+    let src = crate::resolve_path(workspace_root, PathBuf::from(src));
+    let src = resolve::maybe_resolve_base_or_session_out_dir_to_latest_bundle_dir(&src);
     let bundle_path = crate::resolve_bundle_artifact_path(&src);
 
     let payload = if lite {
@@ -396,16 +378,8 @@ pub(crate) fn cmd_lint(
         return Err(format!("unexpected arguments: {}", rest[1..].join(" ")));
     }
 
-    let mut src = crate::resolve_path(workspace_root, PathBuf::from(src));
-    if src.is_dir()
-        && crate::resolve_bundle_artifact_path_no_materialize(&src).is_none()
-        && (resolve::looks_like_diag_session_root(&src)
-            || src.join(crate::session::SESSIONS_DIRNAME).is_dir())
-        && let Ok((bundle_dir, _session_id, _source)) =
-            resolve::resolve_latest_bundle_dir_from_base_or_session_out_dir(&src, None)
-    {
-        src = bundle_dir;
-    }
+    let src = crate::resolve_path(workspace_root, PathBuf::from(src));
+    let src = resolve::maybe_resolve_base_or_session_out_dir_to_latest_bundle_dir(&src);
     let bundle_path = crate::resolve_bundle_artifact_path(&src);
 
     let report = lint_bundle_from_path(
@@ -462,16 +436,8 @@ pub(crate) fn cmd_test_ids(
         return Err(format!("unexpected arguments: {}", rest[1..].join(" ")));
     }
 
-    let mut src = crate::resolve_path(workspace_root, PathBuf::from(src));
-    if src.is_dir()
-        && crate::resolve_bundle_artifact_path_no_materialize(&src).is_none()
-        && (resolve::looks_like_diag_session_root(&src)
-            || src.join(crate::session::SESSIONS_DIRNAME).is_dir())
-        && let Ok((bundle_dir, _session_id, _source)) =
-            resolve::resolve_latest_bundle_dir_from_base_or_session_out_dir(&src, None)
-    {
-        src = bundle_dir;
-    }
+    let src = crate::resolve_path(workspace_root, PathBuf::from(src));
+    let src = resolve::maybe_resolve_base_or_session_out_dir_to_latest_bundle_dir(&src);
     let bundle_path = crate::resolve_bundle_artifact_path(&src);
 
     let out = test_ids_out
@@ -531,16 +497,8 @@ pub(crate) fn cmd_test_ids_index(
         return Err(format!("unexpected arguments: {}", rest[1..].join(" ")));
     }
 
-    let mut src = crate::resolve_path(workspace_root, PathBuf::from(src));
-    if src.is_dir()
-        && crate::resolve_bundle_artifact_path_no_materialize(&src).is_none()
-        && (resolve::looks_like_diag_session_root(&src)
-            || src.join(crate::session::SESSIONS_DIRNAME).is_dir())
-        && let Ok((bundle_dir, _session_id, _source)) =
-            resolve::resolve_latest_bundle_dir_from_base_or_session_out_dir(&src, None)
-    {
-        src = bundle_dir;
-    }
+    let src = crate::resolve_path(workspace_root, PathBuf::from(src));
+    let src = resolve::maybe_resolve_base_or_session_out_dir_to_latest_bundle_dir(&src);
     let bundle_path = crate::resolve_bundle_artifact_path(&src);
     let out = crate::bundle_index::ensure_test_ids_index_json(&bundle_path, warmup_frames)?;
 
@@ -576,16 +534,8 @@ pub(crate) fn cmd_frames_index(
         return Err(format!("unexpected arguments: {}", rest[1..].join(" ")));
     }
 
-    let mut src = crate::resolve_path(workspace_root, PathBuf::from(src));
-    if src.is_dir()
-        && crate::resolve_bundle_artifact_path_no_materialize(&src).is_none()
-        && (resolve::looks_like_diag_session_root(&src)
-            || src.join(crate::session::SESSIONS_DIRNAME).is_dir())
-        && let Ok((bundle_dir, _session_id, _source)) =
-            resolve::resolve_latest_bundle_dir_from_base_or_session_out_dir(&src, None)
-    {
-        src = bundle_dir;
-    }
+    let src = crate::resolve_path(workspace_root, PathBuf::from(src));
+    let src = resolve::maybe_resolve_base_or_session_out_dir_to_latest_bundle_dir(&src);
     let bundle_path = crate::resolve_bundle_artifact_path(&src);
     let out = crate::frames_index::ensure_frames_index_json(&bundle_path, warmup_frames)?;
 
@@ -627,14 +577,7 @@ pub(crate) fn cmd_meta(
     }
 
     let mut src = crate::resolve_path(workspace_root, PathBuf::from(src));
-    if src.is_dir()
-        && (resolve::looks_like_diag_session_root(&src)
-            || src.join(crate::session::SESSIONS_DIRNAME).is_dir())
-        && let Ok((bundle_dir, _session_id, _source)) =
-            resolve::resolve_latest_bundle_dir_from_base_or_session_out_dir(&src, None)
-    {
-        src = bundle_dir;
-    }
+    src = resolve::maybe_resolve_base_or_session_out_dir_to_latest_bundle_dir(&src);
 
     let (meta_path, default_out) = if src.is_file()
         && src

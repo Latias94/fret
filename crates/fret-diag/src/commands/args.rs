@@ -13,18 +13,7 @@ pub(crate) fn resolve_bundle_artifact_path_or_latest(
 ) -> Result<PathBuf, String> {
     if let Some(s) = bundle_arg {
         let src = crate::resolve_path(workspace_root, PathBuf::from(s));
-
-        // If the user points at a base/session out dir (common in multi-agent workflows), resolve
-        // the latest bundle dir under it rather than treating it as a bundle export dir.
-        if src.is_dir()
-            && crate::resolve_bundle_artifact_path_no_materialize(&src).is_none()
-            && (resolve::looks_like_diag_session_root(&src)
-                || src.join(crate::session::SESSIONS_DIRNAME).is_dir())
-            && let Ok(latest_dir) = resolve_latest_bundle_dir_path(&src)
-        {
-            return Ok(crate::resolve_bundle_artifact_path(&latest_dir));
-        }
-
+        let src = resolve::maybe_resolve_base_or_session_out_dir_to_latest_bundle_dir(&src);
         return Ok(crate::resolve_bundle_artifact_path(&src));
     }
     let latest = resolve_latest_bundle_dir_path(out_dir)?;

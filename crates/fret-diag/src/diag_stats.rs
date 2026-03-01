@@ -102,8 +102,8 @@ pub(crate) fn cmd_stats(ctx: StatsCmdContext) -> Result<(), String> {
         }
         let a = resolve_path(&workspace_root, a);
         let b = resolve_path(&workspace_root, b);
-        let a = maybe_resolve_base_or_session_out_dir_to_latest_bundle_dir(&a);
-        let b = maybe_resolve_base_or_session_out_dir_to_latest_bundle_dir(&b);
+        let a = resolve::maybe_resolve_base_or_session_out_dir_to_latest_bundle_dir(&a);
+        let b = resolve::maybe_resolve_base_or_session_out_dir_to_latest_bundle_dir(&b);
         let a_bundle_path =
             prefer_schema2_sibling_for_bundle_json_path(&resolve_bundle_artifact_path(&a));
         let b_bundle_path =
@@ -139,7 +139,7 @@ pub(crate) fn cmd_stats(ctx: StatsCmdContext) -> Result<(), String> {
     }
 
     let src = resolve_path(&workspace_root, PathBuf::from(src));
-    let src = maybe_resolve_base_or_session_out_dir_to_latest_bundle_dir(&src);
+    let src = resolve::maybe_resolve_base_or_session_out_dir_to_latest_bundle_dir(&src);
     let bundle_path = resolve_bundle_artifact_path(&src);
     let bundle_path = prefer_schema2_sibling_for_bundle_json_path(&bundle_path);
     let mut report = bundle_stats_from_path(
@@ -547,24 +547,4 @@ pub(crate) fn cmd_stats(ctx: StatsCmdContext) -> Result<(), String> {
         )?;
     }
     Ok(())
-}
-
-fn maybe_resolve_base_or_session_out_dir_to_latest_bundle_dir(path: &Path) -> PathBuf {
-    if !path.is_dir() {
-        return path.to_path_buf();
-    }
-    if resolve_bundle_artifact_path_no_materialize(path).is_some() {
-        return path.to_path_buf();
-    }
-    if !(resolve::looks_like_diag_session_root(path)
-        || path.join(crate::session::SESSIONS_DIRNAME).is_dir())
-    {
-        return path.to_path_buf();
-    }
-    if let Ok((bundle_dir, _session_id, _source)) =
-        resolve::resolve_latest_bundle_dir_from_base_or_session_out_dir(path, None)
-    {
-        return bundle_dir;
-    }
-    path.to_path_buf()
 }

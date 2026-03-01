@@ -33,6 +33,8 @@ This file is a check-list style tracker. Milestone framing lives in `milestones.
   silently drift tool-launched runs.
 - [x] Audit `--launch` entry points to ensure a single per-run config writer is used (`diag run/suite/repro/perf/repeat`
   funnel through `maybe_launch_demo`; evidence: `crates/fret-diag/src/compare.rs:maybe_launch_demo`).
+- [x] Ensure `diag perf --launch` enables screenshots when required for gates (notably `--check-pixels-changed`) or when
+  any perf script/prelude/prewarm requests screenshots (align with `diag run/suite/repro` behavior).
 - [x] Tool-launched output safety defaults:
   - [x] `script_auto_dump=false` (avoid "dump on every injected step" explosions)
   - [x] `pick_auto_dump=false` (avoid "dump on every pick" explosions)
@@ -63,6 +65,8 @@ This file is a check-list style tracker. Milestone framing lives in `milestones.
   resolve step), and resolve them to the latest bundle dir under the chosen session:
   - `diag meta`, `diag windows`, `diag dock-routing`, `diag screenshots`, `diag trace`, `diag stats`, `diag index`
   - `diag pack`, `diag triage`, `diag lint`, `diag test-ids`, `diag frames-index`, `diag ai-packet`, `diag compare`
+- [x] Centralize base/session out dir resolution helpers in tooling to avoid per-command drift (e.g. pack/meta/stats/etc
+  share a single resolver in `crates/fret-diag/src/commands/resolve.rs`).
 
 ## P1: Agent-native script ergonomics (ImGui-alignment outcomes)
 

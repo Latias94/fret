@@ -26,15 +26,8 @@ pub(crate) fn cmd_dock_routing(
         return Err(format!("unexpected arguments: {}", rest[1..].join(" ")));
     }
 
-    let mut src = crate::resolve_path(workspace_root, PathBuf::from(src));
-    if src.is_dir()
-        && (resolve::looks_like_diag_session_root(&src)
-            || src.join(crate::session::SESSIONS_DIRNAME).is_dir())
-        && let Ok((bundle_dir, _session_id, _source)) =
-            resolve::resolve_latest_bundle_dir_from_base_or_session_out_dir(&src, None)
-    {
-        src = bundle_dir;
-    }
+    let src = crate::resolve_path(workspace_root, PathBuf::from(src));
+    let src = resolve::maybe_resolve_base_or_session_out_dir_to_latest_bundle_dir(&src);
 
     let (dock_routing_path, bundle_path) = if src.is_file()
         && src

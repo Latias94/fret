@@ -55,6 +55,9 @@ Use `fret-ui-review` when the goal is an architecture/UX audit rather than produ
 - Before rerunning a suspiciously large or inconsistent run:
   - `fretboard diag config doctor --mode launch --print-launch-policy`
   - `fretboard diag config doctor --mode launch --report-json` (inspect `launch_policy` + warnings)
+- If you use `--check-pixels-changed <test_id>`, the run must capture screenshots (add `capture_screenshot` steps).
+  - Tool-launched `--launch` runs enable screenshots automatically when this gate is requested, but the script still
+    needs explicit capture steps to produce `screenshots.result.json`.
 - Keep artifacts small by default:
   - capture only a few bundles at key points (not after every step),
   - prefer sidecars + `bundle.schema2.json` over raw `bundle.json`,

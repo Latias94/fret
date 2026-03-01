@@ -166,6 +166,8 @@ Make configuration predictable:
     override).
   - Audit (2026-02-28): all `--launch` entry points (`diag run/suite/repro/perf/repeat/script`) call the same helper
     (`crates/fret-diag/src/compare.rs:maybe_launch_demo`) to ensure consistent per-run config + env policy.
+  - Audit (2026-03-01): `diag perf` now enables screenshots when they are required for gates (`--check-pixels-changed`)
+    or when any perf script/prelude/prewarm requests screenshots, aligning with `diag run/suite/repro` launch behavior.
   - Launch entry points (2026-02-28):
     - `diag run`: `crates/fret-diag/src/diag_run.rs` (calls `maybe_launch_demo` once per run)
     - `diag suite`: `crates/fret-diag/src/diag_suite.rs` (calls `maybe_launch_demo` either once per suite when reusing,

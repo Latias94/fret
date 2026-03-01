@@ -415,16 +415,7 @@ fn resolve_bundle_dir_or_latest(
         if src.is_file() {
             return crate::resolve_bundle_root_dir(&src);
         }
-        if src.is_dir()
-            && crate::resolve_bundle_artifact_path_no_materialize(&src).is_none()
-            && (resolve::looks_like_diag_session_root(&src)
-                || src.join(crate::session::SESSIONS_DIRNAME).is_dir())
-        {
-            if let Ok(latest) = resolve_latest_bundle_dir_path(&src) {
-                return Ok(latest);
-            }
-        }
-        return Ok(src);
+        return Ok(resolve::maybe_resolve_base_or_session_out_dir_to_latest_bundle_dir(&src));
     }
     resolve_latest_bundle_dir_path(out_dir)
 }
