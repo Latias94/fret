@@ -553,10 +553,70 @@ pub(in crate::ui) fn preview_data_table_legacy(
 
     let table = table.test_id("ui-gallery-data-table-root");
 
+    #[derive(Default)]
+    struct ListLikeDataTableModels {
+        state: Option<Model<TableState>>,
+    }
+
+    let list_like_state = cx.with_state(ListLikeDataTableModels::default, |st| st.state.clone());
+    let list_like_state = match list_like_state {
+        Some(state) => state,
+        None => {
+            let mut state_value = TableState::default();
+            state_value.pagination.page_size = assets.data.len();
+            state_value.pagination.page_index = 0;
+            let state = cx.app.models_mut().insert(state_value);
+            cx.with_state(ListLikeDataTableModels::default, |st| {
+                st.state = Some(state.clone());
+            });
+            state
+        }
+    };
+
+    let list_like_columns: Arc<[ColumnDef<DemoProcessRow>]> = Arc::from(
+        assets
+            .columns
+            .iter()
+            .filter(|c| c.id.as_ref() != "select" && c.id.as_ref() != "actions")
+            .cloned()
+            .collect::<Vec<_>>(),
+    );
+
+    let list_like_table = shadcn::DataTable::new()
+        .row_click_selection(true)
+        .row_click_selection_policy(
+            fret_ui_kit::declarative::table::PointerRowSelectionPolicy::ListLike,
+        )
+        .single_row_selection(false)
+        .row_height(Px(40.0))
+        .header_height(Px(40.0))
+        .column_actions_menu(false)
+        .refine_layout(LayoutRefinement::default().w_full().h_px(Px(240.0)))
+        .into_element_retained(
+            cx,
+            assets.data.clone(),
+            1,
+            list_like_state,
+            list_like_columns,
+            |row, _index, _parent| fret_ui_headless::table::RowKey(row.id),
+            |col| col.id.clone(),
+            move |cx, col, row| match col.id.as_ref() {
+                "name" => cx.text(row.name.as_ref()),
+                "status" => cx.text(row.status.as_ref()),
+                "cpu%" => cx.text(format!("{}%", row.cpu)),
+                "mem_mb" => cx.text(format!("{} MB", row.mem_mb)),
+                _ => cx.text("?"),
+            },
+            Some(Arc::<str>::from("ui-gallery-data-table-listlike-header-")),
+            Some(Arc::<str>::from("ui-gallery-data-table-listlike-row-")),
+        )
+        .test_id("ui-gallery-data-table-listlike-root");
+
     vec![
         responsive_toggle,
         toolbar,
         table,
+        list_like_table,
         shadcn::DataTablePagination::new(state, output).into_element(cx),
     ]
 }

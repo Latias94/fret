@@ -4356,11 +4356,31 @@ fn select_impl<H: UiHost>(
             };
             chrome.shadow = match trigger_shadow_preset {
                 fret_ui_kit::ShadowPreset::None => None,
-                fret_ui_kit::ShadowPreset::Xs => Some(decl_style::shadow_xs(&theme, shadow_radius)),
-                fret_ui_kit::ShadowPreset::Sm => Some(decl_style::shadow_sm(&theme, shadow_radius)),
-                fret_ui_kit::ShadowPreset::Md => Some(decl_style::shadow_md(&theme, shadow_radius)),
-                fret_ui_kit::ShadowPreset::Lg => Some(decl_style::shadow_lg(&theme, shadow_radius)),
-                fret_ui_kit::ShadowPreset::Xl => Some(decl_style::shadow_xl(&theme, shadow_radius)),
+                fret_ui_kit::ShadowPreset::Xs => Some({
+                    let mut shadow = decl_style::shadow_xs(&theme, shadow_radius);
+                    shadow.corner_radii = chrome.corner_radii;
+                    shadow
+                }),
+                fret_ui_kit::ShadowPreset::Sm => Some({
+                    let mut shadow = decl_style::shadow_sm(&theme, shadow_radius);
+                    shadow.corner_radii = chrome.corner_radii;
+                    shadow
+                }),
+                fret_ui_kit::ShadowPreset::Md => Some({
+                    let mut shadow = decl_style::shadow_md(&theme, shadow_radius);
+                    shadow.corner_radii = chrome.corner_radii;
+                    shadow
+                }),
+                fret_ui_kit::ShadowPreset::Lg => Some({
+                    let mut shadow = decl_style::shadow_lg(&theme, shadow_radius);
+                    shadow.corner_radii = chrome.corner_radii;
+                    shadow
+                }),
+                fret_ui_kit::ShadowPreset::Xl => Some({
+                    let mut shadow = decl_style::shadow_xl(&theme, shadow_radius);
+                    shadow.corner_radii = chrome.corner_radii;
+                    shadow
+                }),
             };
 
             let state_for_value_node = trigger_state.clone();

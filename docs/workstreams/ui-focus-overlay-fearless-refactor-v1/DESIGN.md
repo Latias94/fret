@@ -11,6 +11,12 @@
   - default side effects (e.g. focus clearing) must be policy-controllable
 - Prepare a clean path to a GPUI-like per-frame dispatch snapshot (Phase C).
 
+## Status (as of this workstream)
+
+- Phase A: Shipped (child-edge reachability for outside-press containment + branches).
+- Phase B: Shipped (`prevent_default()` suppresses default focus clearing on outside press).
+- Phase C: In design and decomposition (dispatch snapshot).
+
 ## Non-goals
 
 - Redesign component policies (belongs in `ecosystem/*`).
@@ -88,4 +94,3 @@ Make event routing and focus/tab containment authoritative to a single per-frame
   2) focus containment + focus scope trap
   3) tab order computation + traversal
   4) hit-test path caching + transforms
-

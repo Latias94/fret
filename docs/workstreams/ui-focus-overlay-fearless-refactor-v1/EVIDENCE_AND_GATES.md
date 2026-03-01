@@ -3,7 +3,11 @@
 ## Minimum gates (local)
 
 - `cargo fmt`
-- `cargo nextest run -p fret-ui`
+- Targeted regression tests (Phase A/B invariants):
+  - `cargo nextest run -p fret-ui --lib outside_press_branch_containment_uses_child_edges_not_parent_pointers`
+  - `cargo nextest run -p fret-ui --lib dismissible_outside_press_prevent_default_keeps_focus`
+  - `cargo nextest run -p fret-ui --lib dismissible_outside_press_without_prevent_default_clears_focus`
+- Full suite (when practical): `cargo nextest run -p fret-ui`
 - `python3 tools/check_layering.py`
 
 ## Existing regression coverage (anchors)
@@ -17,4 +21,3 @@
 
 - Unit test: stale parent pointers do not break outside-press branch exclusion.
 - Unit tests: outside-press default focus clearing vs `prevent_default` suppression.
-

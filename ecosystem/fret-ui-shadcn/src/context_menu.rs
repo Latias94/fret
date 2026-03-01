@@ -53,6 +53,247 @@ pub enum ContextMenuEntry {
     Separator,
 }
 
+/// shadcn/ui `ContextMenuTrigger` (v4).
+///
+/// In the upstream DOM implementation this is a Radix primitive part. In Fret, the trigger element
+/// itself is still authored by the caller; this wrapper exists to align the part surface with
+/// shadcn docs/examples and to keep room for future trigger-specific defaults.
+#[derive(Debug)]
+pub struct ContextMenuTrigger {
+    child: AnyElement,
+}
+
+impl ContextMenuTrigger {
+    pub fn new(child: AnyElement) -> Self {
+        Self { child }
+    }
+
+    #[track_caller]
+    pub fn into_element<H: UiHost>(self, _cx: &mut ElementContext<'_, H>) -> AnyElement {
+        self.child
+    }
+}
+
+/// shadcn/ui `ContextMenuContent` (v4).
+///
+/// Upstream exposes placement-related props on the `Content` part (e.g. `align`, `sideOffset`).
+/// Fret's current `ContextMenu` surface owns these configuration knobs. This type provides an
+/// adapter surface so call sites can be authored in a part-based style while keeping the current
+/// implementation intact.
+#[derive(Debug, Clone, Default)]
+pub struct ContextMenuContent {
+    align: Option<DropdownMenuAlign>,
+    side: Option<DropdownMenuSide>,
+    side_offset: Option<Px>,
+    window_margin: Option<Px>,
+    min_width: Option<Px>,
+    submenu_min_width: Option<Px>,
+    arrow: Option<bool>,
+    arrow_size: Option<Px>,
+    arrow_padding: Option<Px>,
+    align_leading_icons: Option<bool>,
+}
+
+impl ContextMenuContent {
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    pub fn align(mut self, align: DropdownMenuAlign) -> Self {
+        self.align = Some(align);
+        self
+    }
+
+    pub fn side(mut self, side: DropdownMenuSide) -> Self {
+        self.side = Some(side);
+        self
+    }
+
+    pub fn side_offset(mut self, offset: Px) -> Self {
+        self.side_offset = Some(offset);
+        self
+    }
+
+    pub fn window_margin(mut self, margin: Px) -> Self {
+        self.window_margin = Some(margin);
+        self
+    }
+
+    pub fn min_width(mut self, min_width: Px) -> Self {
+        self.min_width = Some(min_width);
+        self
+    }
+
+    pub fn submenu_min_width(mut self, min_width: Px) -> Self {
+        self.submenu_min_width = Some(min_width);
+        self
+    }
+
+    pub fn arrow(mut self, arrow: bool) -> Self {
+        self.arrow = Some(arrow);
+        self
+    }
+
+    pub fn arrow_size(mut self, size: Px) -> Self {
+        self.arrow_size = Some(size);
+        self
+    }
+
+    pub fn arrow_padding(mut self, padding: Px) -> Self {
+        self.arrow_padding = Some(padding);
+        self
+    }
+
+    pub fn align_leading_icons(mut self, align: bool) -> Self {
+        self.align_leading_icons = Some(align);
+        self
+    }
+
+    fn apply_to(self, mut menu: ContextMenu) -> ContextMenu {
+        if let Some(v) = self.align {
+            menu.align = v;
+        }
+        if let Some(v) = self.side {
+            menu.side = v;
+        }
+        if let Some(v) = self.side_offset {
+            menu.side_offset = v;
+        }
+        if let Some(v) = self.window_margin {
+            menu.window_margin = v;
+        }
+        if let Some(v) = self.min_width {
+            menu.min_width = v;
+        }
+        if let Some(v) = self.submenu_min_width {
+            menu.submenu_min_width = v;
+        }
+        if let Some(v) = self.arrow {
+            menu.arrow = v;
+        }
+        if let Some(v) = self.arrow_size {
+            menu.arrow_size_override = Some(v);
+        }
+        if let Some(v) = self.arrow_padding {
+            menu.arrow_padding_override = Some(v);
+        }
+        if let Some(v) = self.align_leading_icons {
+            menu.align_leading_icons = v;
+        }
+        menu
+    }
+}
+
+/// shadcn/ui `ContextMenuSeparator` (v4).
+///
+/// In upstream this is a primitive part. In Fret menus we model it as an entry variant.
+#[derive(Debug, Clone, Copy, Default)]
+pub struct ContextMenuSeparator;
+
+impl ContextMenuSeparator {
+    pub fn new() -> Self {
+        Self
+    }
+}
+
+/// shadcn/ui `ContextMenuSub*` helpers (v4).
+///
+/// Upstream exposes `Sub` / `SubTrigger` / `SubContent` as distinct parts. Fret's current menu
+/// model represents submenus as `ContextMenuItem { submenu: Some(Vec<ContextMenuEntry>) }`.
+/// These helpers bridge the authoring model without changing the underlying representation.
+#[derive(Debug)]
+pub struct ContextMenuSubTrigger {
+    item: ContextMenuItem,
+}
+
+impl ContextMenuSubTrigger {
+    pub fn new(label: impl Into<Arc<str>>) -> Self {
+        Self {
+            item: ContextMenuItem::new(label).close_on_select(false),
+        }
+    }
+
+    pub fn refine(mut self, f: impl FnOnce(ContextMenuItem) -> ContextMenuItem) -> Self {
+        self.item = f(self.item);
+        // Sub triggers should not close on select.
+        self.item.close_on_select = false;
+        self
+    }
+}
+
+#[derive(Debug)]
+pub struct ContextMenuSubContent {
+    entries: Vec<ContextMenuEntry>,
+}
+
+impl ContextMenuSubContent {
+    pub fn new(entries: impl IntoIterator<Item = ContextMenuEntry>) -> Self {
+        Self {
+            entries: entries.into_iter().collect(),
+        }
+    }
+}
+
+#[derive(Debug)]
+pub struct ContextMenuSub {
+    trigger: ContextMenuSubTrigger,
+    content: ContextMenuSubContent,
+}
+
+impl ContextMenuSub {
+    pub fn new(trigger: ContextMenuSubTrigger, content: ContextMenuSubContent) -> Self {
+        Self { trigger, content }
+    }
+
+    pub fn into_entry(self) -> ContextMenuEntry {
+        let mut item = self.trigger.item;
+        item.submenu = Some(self.content.entries);
+        ContextMenuEntry::Item(item)
+    }
+}
+
+impl From<ContextMenuItem> for ContextMenuEntry {
+    fn from(value: ContextMenuItem) -> Self {
+        Self::Item(value)
+    }
+}
+
+impl From<ContextMenuCheckboxItem> for ContextMenuEntry {
+    fn from(value: ContextMenuCheckboxItem) -> Self {
+        Self::CheckboxItem(value)
+    }
+}
+
+impl From<ContextMenuRadioGroup> for ContextMenuEntry {
+    fn from(value: ContextMenuRadioGroup) -> Self {
+        Self::RadioGroup(value)
+    }
+}
+
+impl From<ContextMenuRadioItem> for ContextMenuEntry {
+    fn from(value: ContextMenuRadioItem) -> Self {
+        Self::RadioItem(value)
+    }
+}
+
+impl From<ContextMenuLabel> for ContextMenuEntry {
+    fn from(value: ContextMenuLabel) -> Self {
+        Self::Label(value)
+    }
+}
+
+impl From<ContextMenuGroup> for ContextMenuEntry {
+    fn from(value: ContextMenuGroup) -> Self {
+        Self::Group(value)
+    }
+}
+
+impl From<ContextMenuSeparator> for ContextMenuEntry {
+    fn from(_value: ContextMenuSeparator) -> Self {
+        Self::Separator
+    }
+}
+
 fn alpha_mul(mut c: fret_core::Color, mul: f32) -> fret_core::Color {
     c.a = (c.a * mul).clamp(0.0, 1.0);
     c
@@ -2667,6 +2908,26 @@ impl ContextMenu {
         self
     }
 
+    /// Part-based authoring surface aligned with shadcn/ui v4 exports.
+    ///
+    /// This is a thin adapter over `ContextMenu::into_element(...)` that allows call sites to use
+    /// `ContextMenuTrigger` and `ContextMenuContent` parts (and to attach content placement
+    /// options in a shadcn-like location).
+    #[track_caller]
+    pub fn into_element_parts<H: UiHost, I>(
+        self,
+        cx: &mut ElementContext<'_, H>,
+        trigger: impl FnOnce(&mut ElementContext<'_, H>) -> ContextMenuTrigger,
+        content: ContextMenuContent,
+        entries: impl FnOnce(&mut ElementContext<'_, H>) -> I,
+    ) -> AnyElement
+    where
+        I: IntoIterator<Item = ContextMenuEntry>,
+    {
+        let menu = content.apply_to(self);
+        menu.into_element(cx, |cx| trigger(cx).into_element(cx), entries)
+    }
+
     #[track_caller]
     pub fn into_element<H: UiHost, I>(
         self,
@@ -4178,6 +4439,31 @@ mod tests {
             (bg.a - 0.2).abs() < 1e-6,
             "expected /20 alpha on dark themes"
         );
+    }
+
+    #[test]
+    fn context_menu_sub_helpers_attach_submenu_entries() {
+        let entry = ContextMenuSub::new(
+            ContextMenuSubTrigger::new("More"),
+            ContextMenuSubContent::new([
+                ContextMenuItem::new("Item A").into(),
+                ContextMenuSeparator::new().into(),
+                ContextMenuItem::new("Item B").into(),
+            ]),
+        )
+        .into_entry();
+
+        let ContextMenuEntry::Item(item) = entry else {
+            panic!("expected ContextMenuEntry::Item for submenu trigger");
+        };
+
+        assert_eq!(item.label.as_ref(), "More");
+        assert_eq!(item.close_on_select, false);
+        assert!(
+            item.submenu.is_some(),
+            "expected submenu entries to be attached"
+        );
+        assert_eq!(item.submenu.as_ref().unwrap().len(), 3);
     }
 
     #[test]
