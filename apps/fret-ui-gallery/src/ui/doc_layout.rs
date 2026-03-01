@@ -6,9 +6,22 @@ pub(in crate::ui) struct DocSection {
     pub description: Vec<&'static str>,
     pub preview: AnyElement,
     pub code: Option<DocCodeBlock>,
+    pub tabs_sizing: DocTabsSizing,
     pub max_w: Px,
     pub test_id_prefix: Option<Arc<str>>,
     pub shell: bool,
+}
+
+/// Layout contract for the docs scaffold's Preview/Code tab panels.
+///
+/// - `Intrinsic` keeps tab panels content-sized by default (shrink-wrap).
+/// - `FillRemaining` allows `TabsContent` to fill remaining main-axis space when the tabs root is
+///   laid out under a definite-size budget.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub(in crate::ui) enum DocTabsSizing {
+    #[default]
+    Intrinsic,
+    FillRemaining,
 }
 
 pub(in crate::ui) struct DocCodeBlock {
@@ -24,6 +37,7 @@ impl DocSection {
             description: Vec::new(),
             preview,
             code: None,
+            tabs_sizing: DocTabsSizing::default(),
             max_w: Px(820.0),
             test_id_prefix: None,
             shell: true,
@@ -87,6 +101,13 @@ impl DocSection {
         self.code_from_file_region("rust", file, region)
     }
 
+    /// Controls whether Preview/Code tabs should shrink-wrap their content (default) or fill any
+    /// available main-axis space under definite-size ancestors (Tailwind-like `flex-1`).
+    pub(in crate::ui) fn tabs_sizing(mut self, sizing: DocTabsSizing) -> Self {
+        self.tabs_sizing = sizing;
+        self
+    }
+
     pub(in crate::ui) fn max_w(mut self, max_w: Px) -> Self {
         self.max_w = max_w;
         self
@@ -147,11 +168,9 @@ pub(in crate::ui) fn wrap_preview_page(
     render_doc_page(
         cx,
         intro,
-        vec![
-            DocSection::new(section_title, preview)
-                .no_shell()
-                .max_w(Px(980.0)),
-        ],
+        vec![DocSection::new(section_title, preview)
+            .no_shell()
+            .max_w(Px(980.0))],
     )
 }
 
@@ -404,6 +423,7 @@ fn render_section(cx: &mut ElementContext<'_, App>, section: DocSection) -> AnyE
         description,
         preview,
         code,
+        tabs_sizing,
         max_w,
         test_id_prefix,
         shell,
@@ -424,7 +444,14 @@ fn render_section(cx: &mut ElementContext<'_, App>, section: DocSection) -> AnyE
     let preview = preview_shell;
 
     let content = match code {
-        Some(code) => preview_code_tabs(cx, test_id_prefix.as_deref(), preview, max_w, code),
+        Some(code) => preview_code_tabs(
+            cx,
+            test_id_prefix.as_deref(),
+            preview,
+            max_w,
+            code,
+            tabs_sizing,
+        ),
         None => preview,
     };
 
@@ -562,13 +589,11 @@ fn preview_code_tabs(
     preview: AnyElement,
     max_w: Px,
     code: DocCodeBlock,
+    tabs_sizing: DocTabsSizing,
 ) -> AnyElement {
     let code_shell = code_block_shell(cx, test_id_prefix, max_w, code);
     let code_el = code_shell;
 
-    // Guardrail: tab panels (and their wrapper containers) can be laid out under definite-size
-    // ancestors (e.g. scroll viewports). Keep the docs scaffold faithful to shadcn/ui by ensuring
-    // preview/code payloads keep their intrinsic height rather than stretching vertically.
     let wrap_panel = |cx: &mut ElementContext<'_, App>, body: AnyElement| {
         stack::hstack(
             cx,
@@ -581,9 +606,7 @@ fn preview_code_tabs(
     };
 
     let base = shadcn::Tabs::uncontrolled(Some("preview"))
-        // `shadcn/ui` styles `TabsContent` with `flex-1`. In the UI gallery docs scaffold, tab
-        // roots often live in auto-sized stacks; keep the docs layout tight by default.
-        .content_fill_remaining(false)
+        .content_fill_remaining(matches!(tabs_sizing, DocTabsSizing::FillRemaining))
         .refine_layout(LayoutRefinement::default().w_full().min_w_0());
 
     let tabs = if let Some(prefix) = test_id_prefix {
