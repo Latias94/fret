@@ -1,3 +1,5 @@
+pub const SOURCE: &str = include_str!("expandable.rs");
+
 // region: example
 use fret_app::App;
 use fret_core::Edges;
