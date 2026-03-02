@@ -41,6 +41,7 @@ mod pagination;
 mod popover;
 mod progress;
 mod radio_group;
+mod resizable;
 mod scroll_area;
 mod select;
 mod separator;
@@ -290,6 +291,14 @@ pub(super) fn preview_navigation_menu(cx: &mut ElementContext<'_, App>) -> Vec<A
 
 pub(super) fn preview_radio_group(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
     radio_group::preview_radio_group(cx)
+}
+
+pub(super) fn preview_resizable(
+    cx: &mut ElementContext<'_, App>,
+    h_fractions: Model<Vec<f32>>,
+    v_fractions: Model<Vec<f32>>,
+) -> Vec<AnyElement> {
+    resizable::preview_resizable(cx, h_fractions, v_fractions)
 }
 
 pub(super) fn preview_pagination(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {

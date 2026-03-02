@@ -530,9 +530,7 @@ fn page_preview(
             date_picker_month,
             date_picker_selected,
         ),
-        PAGE_RESIZABLE => {
-            preview_resizable(cx, theme, resizable_h_fractions, resizable_v_fractions)
-        }
+        PAGE_RESIZABLE => pages::preview_resizable(cx, resizable_h_fractions, resizable_v_fractions),
         PAGE_DATA_TABLE => pages::preview_data_table(cx, data_table_state),
         PAGE_DATA_GRID => preview_data_grid(cx, data_grid_selected_row),
         PAGE_TABS => pages::preview_tabs(cx, tabs_value),
