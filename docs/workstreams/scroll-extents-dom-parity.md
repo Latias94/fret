@@ -154,6 +154,39 @@ The scroll content extent and `ScrollHandle` clamping must be derived from the s
 geometry that powers `bounds_for_element(...)` / overlay anchoring queries. This keeps overlay
 placement stable and avoids “anchor uses old bounds while scroll uses new extents” mismatches.
 
+#### SE-213 harness contract (scroll + overlay parity)
+
+We treat “overlay anchoring parity” as a *cross-cutting* correctness requirement:
+
+- When a scripted interaction causes scroll content height to change (e.g. switching a doc “Code”
+  tab that expands a code block), the scroll extents update must be reflected in the same
+  post-layout geometry source that overlay anchoring uses.
+- When an anchored overlay is opened after such a change, it must solve against the updated anchor
+  rect and remain clamped within the window.
+
+Because this spans multiple systems (layout, scroll handle clamping, overlay solver), the minimal
+verification path is currently a diagnostics harness (scripts + evidence queries), not unit tests.
+
+Planned gate (SE-213):
+
+- Script: a UI Gallery regression script that:
+  1) opens an anchored overlay and captures `overlay_placement_trace`,
+  2) expands a doc code tab (content growth) and proves scroll can still reach a lower section,
+  3) re-opens the overlay and asserts `bounds_within_window` for the overlay panel.
+- Tooling: `fretboard diag query overlay-placement-trace ...` prints/JSON-dumps the captured
+  `script.result.json` evidence for offline triage (anchor rect, chosen side, final rect, shift
+  delta, step/frame correlation).
+
+Evidence anchors:
+
+- Script: `tools/diag-scripts/ui-gallery/overlay/ui-gallery-tooltip-overlay-placement-after-code-tab-scroll-range.json`
+- Query example:
+  - `fretboard diag query overlay-placement-trace target/fret-diag/<run_id> --kind anchored_panel --anchor-test-id ui-gallery-tooltip-demo-trigger --json`
+
+Example (JSON):
+
+- `fretboard diag query overlay-placement-trace target/fret-diag/<run_id> --kind anchored_panel --anchor-test-id ui-gallery-tooltip-demo-trigger --json`
+
 ### Inclusion / exclusion rules
 
 These rules define which nodes can influence the scrollable extent:

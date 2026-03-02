@@ -1153,6 +1153,7 @@ impl Tooltip {
             }
 
             let overlay_root_name = radix_tooltip::tooltip_root_name(tooltip_id);
+            let overlay_root_name_for_children = overlay_root_name.clone();
             let opacity = motion.opacity;
             let scale = motion.scale;
             let portal_ctx = portal_inherited::PortalInherited::capture(cx);
@@ -1160,7 +1161,7 @@ impl Tooltip {
 
             let overlay_children = portal_inherited::with_root_name_inheriting(
                 cx,
-                &overlay_root_name,
+                &overlay_root_name_for_children,
                 portal_ctx,
                 move |cx| {
                     let cursor_for_anchor = if track_cursor_axis.enabled() {
@@ -1214,8 +1215,21 @@ impl Tooltip {
                             .with_hide_when_detached(hide_when_detached);
                     let reference_hidden = placement.reference_hidden(outer, anchor);
 
-                    let layout =
-                        popper::popper_content_layout_sized(outer, anchor, content_size, placement);
+                    let (layout, trace) = popper::popper_layout_sized_with_trace(
+                        outer,
+                        anchor,
+                        content_size,
+                        placement.side_offset,
+                        placement.side,
+                        placement.align,
+                        placement.options(),
+                    );
+                    cx.diagnostics_record_overlay_placement_anchored_panel(
+                        Some(overlay_root_name.as_str()),
+                        Some(anchor_id),
+                        Some(tooltip_id),
+                        trace,
+                    );
 
                     let placed = layout.rect;
                     let mut wrapper_insets =

@@ -3316,6 +3316,27 @@
       "target_hints": []
     },
     {
+      "id": "ui-gallery-tooltip-overlay-placement-after-code-tab-scroll-range",
+      "path": "tools/diag-scripts/ui-gallery/overlay/ui-gallery-tooltip-overlay-placement-after-code-tab-scroll-range.json",
+      "required_capabilities": [
+        "diag.overlay_placement_trace",
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "ui-gallery-shadcn-conformance"
+      ],
+      "tags": [
+        "overlay",
+        "regression",
+        "scroll",
+        "shadcn",
+        "tabs",
+        "tooltip",
+        "ui_gallery"
+      ],
+      "target_hints": []
+    },
+    {
       "id": "ui-gallery-tooltip-hovercard-scroll-clamp",
       "path": "tools/diag-scripts/ui-gallery/overlay/ui-gallery-tooltip-hovercard-scroll-clamp.json",
       "required_capabilities": [],
