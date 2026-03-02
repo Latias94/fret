@@ -57,14 +57,7 @@ examples and should be treated as product surfaces.
 | cookbook.theme_switching_basics | Keep | `apps/fret-cookbook/examples/theme_switching_basics.rs` | `cargo run -p fret-cookbook --example theme_switching_basics` | Minimal theme switching (shadcn New York v4 Light/Dark) with stable `test_id` stamps. |
 | cookbook.docking_basics | Keep | `apps/fret-cookbook/examples/docking_basics.rs` | `cargo run -p fret-cookbook --example docking_basics` | Minimal docking surface: retained dock host + app-owned panel registry + runner `dock_op` wiring. |
 | cookbook.chart_interactions_basics | Keep | `apps/fret-cookbook/examples/chart_interactions_basics.rs` | `cargo run -p fret-cookbook --example chart_interactions_basics` | Minimal chart wiring (`fret-chart` + `delinea`): shared engine + retained canvas + app-driven zoom, with a deterministic diag smoke script. |
-
-## Cookbook crate (planned v1 additions)
-
-These are the next "small but high-signal" recipes to add, in easy -> hard order.
-
-| ID | State | Target anchors | Notes |
-|---|---|---|---|
-| cookbook.gizmo_basics | Planned | `apps/fret-cookbook/examples/gizmo_basics.rs` | `fret-gizmo` wiring + viewport-style transforms (native-first). |
+| cookbook.gizmo_basics | Keep | `apps/fret-cookbook/examples/gizmo_basics.rs` | `cargo run -p fret-cookbook --example gizmo_basics` | `fret-gizmo` wiring + viewport-style transforms (native-first). |
 
 ## Interop + renderer “high ceiling” mapping
 

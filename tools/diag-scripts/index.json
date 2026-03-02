@@ -64,6 +64,101 @@
       "target_hints": []
     },
     {
+      "id": "cookbook-async-inbox-basics-smoke",
+      "path": "tools/diag-scripts/cookbook/async-inbox-basics/cookbook-async-inbox-basics-smoke.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "cookbook-async-inbox-basics"
+      ],
+      "tags": [
+        "async",
+        "cancellation",
+        "cookbook",
+        "inbox",
+        "smoke"
+      ],
+      "target_hints": []
+    },
+    {
+      "id": "cookbook-canvas-pan-zoom-basics-smoke",
+      "path": "tools/diag-scripts/cookbook/canvas-pan-zoom-basics/cookbook-canvas-pan-zoom-basics-smoke.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "cookbook-canvas-pan-zoom-basics"
+      ],
+      "tags": [
+        "canvas",
+        "cookbook",
+        "pan_zoom",
+        "smoke"
+      ],
+      "target_hints": []
+    },
+    {
+      "id": "cookbook-chart-interactions-basics-smoke",
+      "path": "tools/diag-scripts/cookbook/chart-interactions-basics/cookbook-chart-interactions-basics-smoke.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "cookbook-chart-interactions-basics"
+      ],
+      "tags": [
+        "chart",
+        "cookbook",
+        "data_viz",
+        "smoke"
+      ],
+      "target_hints": []
+    },
+    {
+      "id": "cookbook-commands-keymap-basics-shortcut-and-gating",
+      "path": "tools/diag-scripts/cookbook/commands-keymap-basics/cookbook-commands-keymap-basics-shortcut-and-gating.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "cookbook-commands-keymap-basics"
+      ],
+      "tags": [
+        "commands",
+        "commands_keymap_basics",
+        "cookbook",
+        "keymap",
+        "smoke"
+      ],
+      "target_hints": [
+        "Waits for the example root to exist.",
+        "Toggles the panel via shortcut.",
+        "Disables availability and asserts the shortcut no longer toggles."
+      ]
+    },
+    {
+      "id": "cookbook-docking-basics-smoke",
+      "path": "tools/diag-scripts/cookbook/docking-basics/cookbook-docking-basics-smoke.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "cookbook-docking-basics"
+      ],
+      "tags": [
+        "cookbook",
+        "docking",
+        "interop",
+        "smoke"
+      ],
+      "target_hints": []
+    },
+    {
       "id": "cookbook-effects-layer-basics-screenshots",
       "path": "tools/diag-scripts/cookbook/effects-layer-basics/cookbook-effects-layer-basics-screenshots.json",
       "required_capabilities": [
@@ -83,6 +178,29 @@
       "target_hints": [
         "Waits for the example root to exist.",
         "Toggles Pixelate/Blur/None and captures screenshots + bundle."
+      ]
+    },
+    {
+      "id": "cookbook-gizmo-basics-smoke",
+      "path": "tools/diag-scripts/cookbook/gizmo-basics/cookbook-gizmo-basics-smoke.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "cookbook-gizmo-basics"
+      ],
+      "tags": [
+        "cookbook",
+        "gizmo",
+        "smoke",
+        "viewport"
+      ],
+      "target_hints": [
+        "Waits for the root to exist.",
+        "Performs a simple pointer drag + wheel interaction over the viewport.",
+        "Verifies the position-length numeric semantics are present (reset returns to ~0).",
+        "Captures a screenshot + bundle."
       ]
     },
     {
@@ -126,6 +244,42 @@
         "Waits for the counter view to exist.",
         "Clicks increment and captures a screenshot + bundle."
       ]
+    },
+    {
+      "id": "cookbook-icons-and-assets-basics-smoke",
+      "path": "tools/diag-scripts/cookbook/icons-and-assets-basics/cookbook-icons-and-assets-basics-smoke.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "cookbook-icons-and-assets-basics"
+      ],
+      "tags": [
+        "cookbook",
+        "cookbook.icons_and_assets_basics"
+      ],
+      "target_hints": [
+        "Validates that icon + asset panels mount and that the reload epoch button is wired."
+      ]
+    },
+    {
+      "id": "cookbook-markdown-and-code-basics-smoke",
+      "path": "tools/diag-scripts/cookbook/markdown-and-code-basics/cookbook-markdown-and-code-basics-smoke.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "cookbook-markdown-and-code-basics"
+      ],
+      "tags": [
+        "code_view",
+        "cookbook",
+        "copy",
+        "markdown",
+        "smoke"
+      ],
+      "target_hints": []
     },
     {
       "id": "cookbook-overlay-basics-dialog-close",
@@ -174,6 +328,43 @@
       ]
     },
     {
+      "id": "cookbook-simple-todo-smoke",
+      "path": "tools/diag-scripts/cookbook/simple-todo/cookbook-simple-todo-smoke.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "cookbook-simple-todo"
+      ],
+      "tags": [
+        "cookbook",
+        "mvu",
+        "simple_todo",
+        "smoke"
+      ],
+      "target_hints": []
+    },
+    {
+      "id": "cookbook-text-input-basics-submit-and-clear",
+      "path": "tools/diag-scripts/cookbook/text-input-basics/cookbook-text-input-basics-submit-and-clear.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "cookbook-text-input-basics"
+      ],
+      "tags": [
+        "commands",
+        "cookbook",
+        "input",
+        "smoke",
+        "text_input"
+      ],
+      "target_hints": []
+    },
+    {
       "id": "cookbook-theme-switching-basics-screenshots",
       "path": "tools/diag-scripts/cookbook/theme-switching-basics/cookbook-theme-switching-basics-screenshots.json",
       "required_capabilities": [
@@ -196,49 +387,41 @@
       ]
     },
     {
-      "id": "cookbook-commands-keymap-basics-shortcut-and-gating",
-      "path": "tools/diag-scripts/cookbook/commands-keymap-basics/cookbook-commands-keymap-basics-shortcut-and-gating.json",
+      "id": "cookbook-undo-basics-smoke",
+      "path": "tools/diag-scripts/cookbook/undo-basics/cookbook-undo-basics-smoke.json",
       "required_capabilities": [
+        "diag.screenshot_png",
         "diag.script_v2"
       ],
       "suite_memberships": [
-        "cookbook-commands-keymap-basics"
+        "cookbook-undo-basics"
       ],
       "tags": [
         "commands",
-        "commands_keymap_basics",
         "cookbook",
-        "keymap",
-        "smoke"
+        "smoke",
+        "undo"
       ],
-      "target_hints": [
-        "Waits for the example root to exist.",
-        "Toggles the panel via shortcut.",
-        "Disables availability and asserts the shortcut no longer toggles."
-      ]
+      "target_hints": []
     },
     {
-      "id": "cookbook-text-input-basics-submit-and-clear",
-      "path": "tools/diag-scripts/cookbook/text-input-basics/cookbook-text-input-basics-submit-and-clear.json",
+      "id": "cookbook-virtual-list-basics-smoke",
+      "path": "tools/diag-scripts/cookbook/virtual-list-basics/cookbook-virtual-list-basics-smoke.json",
       "required_capabilities": [
-        "diag.script_v2",
-        "diag.screenshot_png"
+        "diag.screenshot_png",
+        "diag.script_v2"
       ],
       "suite_memberships": [
-        "cookbook-text-input-basics"
+        "cookbook-virtual-list-basics"
       ],
       "tags": [
-        "commands",
         "cookbook",
-        "input",
+        "reorder",
+        "scroll",
         "smoke",
-        "text_input"
+        "virtual_list"
       ],
-      "target_hints": [
-        "Types into the input and asserts length via numeric semantics.",
-        "Presses Enter to submit and asserts the submit counter increments.",
-        "Presses Escape to clear and asserts the length returns to 0."
-      ]
+      "target_hints": []
     },
     {
       "id": "docking-arbitration-demo-default-layout-signature",

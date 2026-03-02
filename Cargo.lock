@@ -1896,12 +1896,14 @@ dependencies = [
  "fret-core",
  "fret-docking",
  "fret-executor",
+ "fret-gizmo",
  "fret-icons-radix",
  "fret-markdown",
  "fret-runtime",
  "fret-ui",
  "fret-ui-assets",
  "fret-undo",
+ "glam 0.30.10",
 ]
 
 [[package]]

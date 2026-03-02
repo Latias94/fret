@@ -28,3 +28,5 @@ fret-docking = { path = "../../ecosystem/fret-docking", default-features = false
 fret-bootstrap = { path = "../../ecosystem/fret-bootstrap", default-features = false, features = ["ui-app-driver", "diagnostics", "ui-assets", "icons-ui-semantic-lucide"] }
 fret-chart = { path = "../../ecosystem/fret-chart" }
 delinea = { path = "../../ecosystem/delinea" }
+fret-gizmo = { path = "../../ecosystem/fret-gizmo" }
+glam.workspace = true
