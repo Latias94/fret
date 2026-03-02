@@ -72,6 +72,8 @@ ID format:
     - Implemented (dispatch path resolution, best-effort): `crates/fret-runtime/src/command_dispatch_diagnostics.rs` +
       `crates/fret-ui/src/tree/commands.rs` + `ecosystem/fret-bootstrap/src/ui_diagnostics/debug_snapshot_types.rs`
       (`debug.command_dispatch_trace[*]`, including handled-by element + default-root fallback)
+    - Gated (scripted): `crates/fret-diag-protocol/src/lib.rs` (`UiActionStepV2::WaitCommandDispatchTrace`) +
+      `tools/diag-scripts/cookbook/imui-action-basics/cookbook-imui-action-basics-cross-frontend.json`
     - Pending: “which handler scope handled the action” (focused widget vs window vs app) as an explicit, stable field,
       and a first-class pointer-triggered mapping from stable selectors (`test_id`) → dispatched `ActionId` (currently
       recorded as `GlobalElementId.0`, which can be correlated via element runtime/semantics snapshots).

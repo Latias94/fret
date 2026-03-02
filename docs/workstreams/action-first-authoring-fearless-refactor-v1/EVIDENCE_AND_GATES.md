@@ -70,6 +70,8 @@ Dispatch path explainability (diagnostics traces):
 - `crates/fret-ui/src/tree/shortcuts.rs` (records shortcut routing → pending dispatch source)
 - `crates/fret-ui/src/tree/commands.rs` (records dispatch outcome + handled-by element)
 - `ecosystem/fret-bootstrap/src/ui_diagnostics/debug_snapshot_types.rs` (`debug.command_dispatch_trace[*]`)
+- `crates/fret-diag-protocol/src/lib.rs` (`UiActionStepV2::WaitCommandDispatchTrace`, `UiCommandDispatchTraceQueryV1`)
+- `tools/diag-scripts/cookbook/imui-action-basics/cookbook-imui-action-basics-cross-frontend.json` (`wait_command_dispatch_trace` gate)
 
 ---
 
