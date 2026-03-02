@@ -3,7 +3,10 @@ use super::super::*;
 use crate::ui::doc_layout::{self, DocSection};
 use crate::ui::snippets::textarea as snippets;
 
-pub(super) fn preview_textarea(cx: &mut ElementContext<'_, App>, value: Model<String>) -> Vec<AnyElement> {
+pub(super) fn preview_textarea(
+    cx: &mut ElementContext<'_, App>,
+    value: Model<String>,
+) -> Vec<AnyElement> {
     let demo = snippets::demo::render(cx, value);
     let field = snippets::field::render(cx);
     let disabled = snippets::disabled::render(cx);
@@ -30,45 +33,44 @@ pub(super) fn preview_textarea(cx: &mut ElementContext<'_, App>, value: Model<St
                 .max_w(Px(760.0))
                 .test_id_prefix("ui-gallery-textarea-demo")
                 .code_rust_from_file_region(
-                    include_str!("../snippets/textarea/demo.rs"),
+                    snippets::demo::SOURCE,
                     "example",
                 ),
             DocSection::new("Field", field)
                 .max_w(Px(760.0))
                 .test_id_prefix("ui-gallery-textarea-field")
                 .code_rust_from_file_region(
-                    include_str!("../snippets/textarea/field.rs"),
+                    snippets::field::SOURCE,
                     "example",
                 ),
             DocSection::new("Disabled", disabled)
                 .max_w(Px(760.0))
                 .test_id_prefix("ui-gallery-textarea-disabled")
                 .code_rust_from_file_region(
-                    include_str!("../snippets/textarea/disabled.rs"),
+                    snippets::disabled::SOURCE,
                     "example",
                 ),
             DocSection::new("Invalid", invalid)
                 .max_w(Px(760.0))
                 .test_id_prefix("ui-gallery-textarea-invalid")
                 .code_rust_from_file_region(
-                    include_str!("../snippets/textarea/invalid.rs"),
+                    snippets::invalid::SOURCE,
                     "example",
                 ),
             DocSection::new("Button", button)
                 .max_w(Px(760.0))
                 .test_id_prefix("ui-gallery-textarea-button")
                 .code_rust_from_file_region(
-                    include_str!("../snippets/textarea/button.rs"),
+                    snippets::button::SOURCE,
                     "example",
                 ),
             DocSection::new("RTL", rtl)
                 .max_w(Px(760.0))
                 .test_id_prefix("ui-gallery-textarea-rtl")
-                .code_rust_from_file_region(include_str!("../snippets/textarea/rtl.rs"), "example"),
+                .code_rust_from_file_region(snippets::rtl::SOURCE, "example"),
             DocSection::new("Notes", notes).max_w(Px(820.0)),
         ],
     );
 
     vec![body.test_id("ui-gallery-textarea")]
 }
-
