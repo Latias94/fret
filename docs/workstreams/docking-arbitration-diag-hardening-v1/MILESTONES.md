@@ -55,6 +55,14 @@ Post-merge verification (2026-03-02):
   - `--timeout-ms 60000 --reuse-launch --compare-ignore-bounds --compare-ignore-scene-fingerprint`
   - out dir: `target/fret-diag-step35-fix3b-repeat2`
 
+Post-merge verification (2026-03-02, after syncing `origin/main` into local `main`):
+
+- Merge commit: `d3d97c321`.
+- Base out dir: `target/fret-diag-merge-smoke`.
+- `fretboard diag run` PASS with `--timeout-ms 60000`:
+  - overlap z-order switch: run id `1772468892427` (session `1772468392070-85720`)
+  - chained tear-off (two tabs): run id `1772468949607` (session `1772468946994-57504`)
+
 ## M1.4 — Rebuild reliability for docking demos (Windows/MSVC)
 
 Goal: docking demo binaries used by `--launch` diagnostics can be rebuilt reliably in local dev.
