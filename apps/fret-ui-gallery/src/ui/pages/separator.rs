@@ -12,10 +12,8 @@ pub(super) fn preview_separator(cx: &mut ElementContext<'_, App>) -> Vec<AnyElem
         cx,
         Some("Visually or semantically separates content."),
         vec![
-            DocSection::new("Demo", demo).code_rust_from_file_region(
-                include_str!("../snippets/separator/demo.rs"),
-                "example",
-            ),
+            DocSection::new("Demo", demo)
+                .code_rust_from_file_region(snippets::demo::SOURCE, "example"),
             DocSection::new("Notes", notes).no_shell(),
         ],
     );
