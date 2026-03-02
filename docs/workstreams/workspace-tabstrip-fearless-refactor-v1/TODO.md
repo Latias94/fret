@@ -86,7 +86,7 @@ ID format:
   - Diag gates:
     - [x] `tools/diag-scripts/workspace/shell-demo/workspace-shell-demo-tab-close-left-keeps-pinned-smoke.json`
     - [x] `tools/diag-scripts/workspace/shell-demo/workspace-shell-demo-tab-close-others-keeps-pinned-smoke.json`
-    - [ ] (TODO) close right keeps pinned
+    - [x] `tools/diag-scripts/workspace/shell-demo/workspace-shell-demo-tab-close-right-keeps-pinned-smoke.json`
 - [ ] WTS-editor-032 Dirty close confirmation hooks (workspace-level, not tab mechanism).
 
 ## E. Cleanup + Convergence

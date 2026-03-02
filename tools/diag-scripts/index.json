@@ -2736,18 +2736,19 @@
       "suite_memberships": [
         "ui-gallery"
       ],
-      "tags": [
-        "context_menu",
-        "mouse",
-        "regression_pack",
-        "shadcn",
-        "ui_gallery"
-      ],
-    },
-    {
-      "id": "ui-gallery-context-menu-keyboard-escape-focus-restore",
-      "path": "tools/diag-scripts/ui-gallery/overlay/ui-gallery-context-menu-keyboard-escape-focus-restore.json",
-      "required_capabilities": [],
+	      "tags": [
+	        "context_menu",
+	        "mouse",
+	        "regression_pack",
+	        "shadcn",
+	        "ui_gallery"
+	      ],
+	      "target_hints": []
+	    },
+	    {
+	      "id": "ui-gallery-context-menu-keyboard-escape-focus-restore",
+	      "path": "tools/diag-scripts/ui-gallery/overlay/ui-gallery-context-menu-keyboard-escape-focus-restore.json",
+	      "required_capabilities": [],
       "suite_memberships": [
         "ui-gallery-overlay-steady"
       ],
@@ -3127,18 +3128,19 @@
       "suite_memberships": [
         "ui-gallery"
       ],
-      "tags": [
-        "dropdown_menu",
-        "mouse",
-        "regression_pack",
-        "shadcn",
-        "ui_gallery"
-      ],
-    },
-    {
-      "id": "ui-gallery-dropdown-nonmodal-outside-press-focus-underlay",
-      "path": "tools/diag-scripts/ui-gallery/overlay/ui-gallery-dropdown-nonmodal-outside-press-focus-underlay.json",
-      "required_capabilities": [],
+	      "tags": [
+	        "dropdown_menu",
+	        "mouse",
+	        "regression_pack",
+	        "shadcn",
+	        "ui_gallery"
+	      ],
+	      "target_hints": []
+	    },
+	    {
+	      "id": "ui-gallery-dropdown-nonmodal-outside-press-focus-underlay",
+	      "path": "tools/diag-scripts/ui-gallery/overlay/ui-gallery-dropdown-nonmodal-outside-press-focus-underlay.json",
+	      "required_capabilities": [],
       "suite_memberships": [
         "ui-gallery-overlay-steady"
       ],
@@ -4853,6 +4855,28 @@
 	      "target_hints": [
 	        "Pins doc-a-0, activates doc-a-2, then runs Close Tabs to the Left.",
 	        "Asserts doc-a-1 is closed but the pinned tab is kept."
+	      ]
+	    },
+	    {
+	      "id": "workspace-shell-demo-tab-close-right-keeps-pinned-smoke",
+	      "path": "tools/diag-scripts/workspace/shell-demo/workspace-shell-demo-tab-close-right-keeps-pinned-smoke.json",
+	      "required_capabilities": [
+	        "diag.script_v2"
+	      ],
+	      "suite_memberships": [
+	        "workspace-shell-demo"
+	      ],
+	      "tags": [
+	        "close",
+	        "gate",
+	        "pinned",
+	        "smoke",
+	        "tabstrip",
+	        "workspace"
+	      ],
+	      "target_hints": [
+	        "Pins doc-a-0, activates doc-a-1, then runs Close Tabs to the Right.",
+	        "Asserts doc-a-2 is closed but the pinned tab is kept."
 	      ]
 	    },
 	    {
