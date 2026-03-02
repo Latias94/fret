@@ -440,6 +440,17 @@ impl<H: UiHost> UiTree<H> {
             let window = self.window;
             let frame_id = app.frame_id();
             let token = *token;
+            // Timer events should be dispatched to visible layers even when they are not currently
+            // hit-testable (e.g. during open/close transitions). The regular dispatch context is
+            // built from active *input* layers, which can exclude visible timer listeners and
+            // cause snapshot membership assertions during bubble dispatch.
+            let timer_dispatch_cx = {
+                let timer_layer_roots: Vec<NodeId> = self
+                    .visible_layers_in_paint_order()
+                    .filter_map(|layer_id| self.layers.get(layer_id).map(|l| l.root))
+                    .collect();
+                self.build_dispatch_cx(frame_id, timer_layer_roots, None)
+            };
             let mut timer_target: Option<NodeId> = None;
             let mut broadcast_rebuild_visible_layers_elapsed: Option<Duration> = None;
             let mut broadcast_loop_elapsed: Option<Duration> = None;
@@ -479,7 +490,7 @@ impl<H: UiHost> UiTree<H> {
                                 self.dispatch_event_to_node_chain(
                                     app,
                                     services,
-                                    &dispatch_cx,
+                                    &timer_dispatch_cx,
                                     &input_ctx,
                                     node,
                                     event,
@@ -535,7 +546,7 @@ impl<H: UiHost> UiTree<H> {
                                     let stopped = self.dispatch_event_to_node_chain(
                                         app,
                                         services,
-                                        &dispatch_cx,
+                                        &timer_dispatch_cx,
                                         &input_ctx,
                                         layer.root,
                                         event,
