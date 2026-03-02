@@ -442,6 +442,12 @@ Notes:
   - `renderer_intermediate_full_target_bytes` (bytes for one full-viewport intermediate target),
   - `renderer_intermediate_budget_bytes`,
   - `renderer_intermediate_peak_in_use_bytes`.
+
+Conformance:
+
+- Target exhaustion: `crates/fret-render-wgpu/tests/effect_custom_v3_conformance.rs` includes a
+  nested FilterContent scenario that forces CustomEffectV3 pass emission to be skipped due to
+  lack of scratch targets (target exhausted).
 - Centralize intermediate budget charging helpers used by V1/V2/V3 (including mask targets and pyramid bytes).
 - Make “base required bytes” semantics explicit and shared (srcdst + required scratch), so triage evidence can report:
   - budget available
