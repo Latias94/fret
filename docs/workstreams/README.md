@@ -153,9 +153,16 @@ Active workstreams:
 - `docs/workstreams/diag-simplification-v1-m0-baseline.md`
 - `docs/workstreams/diag-simplification-v1-todo.md`
 - `docs/workstreams/diag-simplification-v1-milestones.md`
+- `docs/workstreams/diag-architecture-fearless-refactor-v1/README.md`
 - `docs/workstreams/diag-architecture-fearless-refactor-v1/DESIGN.md`
 - `docs/workstreams/diag-architecture-fearless-refactor-v1/TODO.md`
 - `docs/workstreams/diag-architecture-fearless-refactor-v1/MILESTONES.md`
+- `docs/workstreams/diag-architecture-fearless-refactor-v1/EVIDENCE_AND_GATES.md`
+- `docs/workstreams/diag-architecture-fearless-refactor-v1/OPEN_QUESTIONS.md`
+- `docs/workstreams/diag-architecture-fearless-refactor-v1/CRATE_PLAN.md`
+- `docs/workstreams/diag-architecture-fearless-refactor-v1/PARITY_MATRIX.md`
+- `docs/workstreams/diag-architecture-fearless-refactor-v1/RISK_MATRIX.md`
+- `docs/workstreams/diag-architecture-fearless-refactor-v1/MIGRATION_GUIDE.md`
 - `docs/workstreams/ui-diagnostics-inspector-todo.md`
 - `docs/workstreams/retained-bridge-exit-v1.md`
 - `docs/workstreams/retained-bridge-exit-v1-todo.md`
