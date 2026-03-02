@@ -16,7 +16,7 @@ Status legend:
 
 ## M0 — Lock the catalog + the ladder (docs-first)
 
-- [ ] Add a short pointer from:
+- [x] Add a short pointer from:
   - [x] `docs/README.md` (“Start here” section) to this workstream
   - [x] `docs/first-hour.md` (link to the canonical ladder + cookbook)
 - [x] Add appendices to make execution repeatable and prevent drift:
@@ -26,17 +26,15 @@ Status legend:
   - [x] `gates-and-diag-templates.md`
   - [x] `catalog-source-of-truth.md`
   - [x] `gpui-and-flutter-notes.md`
-- [ ] Decide the **v1 catalog scope**:
-  - [ ] which rows are “official user-facing examples”
-  - [ ] which rows are “maintainer harnesses” (still runnable, but hidden by default)
-- [ ] Confirm the **easy → hard** ladder is consistent with:
-  - [ ] `docs/first-hour.md`
-  - [ ] `docs/examples/todo-app-golden-path.md`
-  - [ ] ADR 0109/0110 golden-path surfaces
+- [x] Decide the **v1 catalog scope** (Official vs Lab vs Maintainer) and document it in `design.md`.
+- [x] Confirm the **easy → hard** ladder is consistent with:
+  - [x] `docs/first-hour.md`
+  - [x] `docs/examples/todo-app-golden-path.md`
+  - [x] ADR 0110 golden-path surfaces
 
 Deliverable:
 
-- [ ] A stable table in `design.md` that is “good enough” to implement against.
+- [x] A stable table in `design.md` that is “good enough” to implement against.
 
 ## M1 — Cookbook crate (small examples that compile fast)
 
