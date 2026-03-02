@@ -22,13 +22,10 @@ pub(super) fn preview_icons(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement>
             DocSection::new("Icons", grid)
                 .max_w(Px(980.0))
                 .description("Icons rendered via `fret_icons` IDs.")
-                .code_rust_from_file_region(include_str!("../snippets/icons/grid.rs"), "example"),
+                .code_rust_from_file_region(snippets::grid::SOURCE, "example"),
             DocSection::new("Spinner", spinner_row)
                 .description("Spinner can be animated or static.")
-                .code_rust_from_file_region(
-                    include_str!("../snippets/icons/spinner.rs"),
-                    "example",
-                ),
+                .code_rust_from_file_region(snippets::spinner::SOURCE, "example"),
             DocSection::new("Notes", notes).description("Usage notes."),
         ],
     );
