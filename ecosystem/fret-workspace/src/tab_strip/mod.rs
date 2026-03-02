@@ -14,8 +14,9 @@ use fret_ui::action::{
 use fret_ui::element::ElementKind;
 use fret_ui::element::{
     AnyElement, ContainerProps, CrossAlign, FlexProps, LayoutStyle, Length, MainAlign,
-    InternalDragRegionProps, PointerRegionProps, PressableA11y, PressableProps, RovingFlexProps,
-    RovingFocusProps, ScrollAxis, ScrollProps, SemanticsProps, TextInkOverflow, TextProps,
+    HitTestGateProps, InsetEdge, InternalDragRegionProps, PointerRegionProps, PositionStyle,
+    PressableA11y, PressableProps, RovingFlexProps, RovingFocusProps, ScrollAxis, ScrollProps,
+    SemanticsProps, TextInkOverflow, TextProps,
 };
 use fret_ui::elements::GlobalElementId;
 use fret_ui::{ElementContext, Invalidation, UiHost};
@@ -587,6 +588,9 @@ impl WorkspaceTabStrip {
                                                 let tab_chrome_test_id = tab_test_id
                                                     .as_ref()
                                                     .map(|id| Arc::<str>::from(format!("{id}.chrome")));
+                                                let tab_preview_test_id = tab_test_id
+                                                    .as_ref()
+                                                    .map(|id| Arc::<str>::from(format!("{id}.preview")));
                                                 let tab_element = cx.pressable_with_id(
                                                     PressableProps {
                                                         layout: {
@@ -1380,7 +1384,47 @@ impl WorkspaceTabStrip {
                                                                 ..Default::default()
                                                             },
                                                             |cx| {
-                                                                vec![cx.flex(
+                                                                let mut out = Vec::new();
+                                                                if tab_preview {
+                                                                    if let Some(test_id) =
+                                                                        tab_preview_test_id.clone()
+                                                                    {
+                                                                        let mut layout =
+                                                                            LayoutStyle::default();
+                                                                        layout.position =
+                                                                            PositionStyle::Absolute;
+                                                                        layout.inset.top =
+                                                                            InsetEdge::Px(Px(0.0));
+                                                                        layout.inset.left =
+                                                                            InsetEdge::Px(Px(0.0));
+                                                                        layout.size.width =
+                                                                            Length::Px(Px(1.0));
+                                                                        layout.size.height =
+                                                                            Length::Px(Px(1.0));
+                                                                        out.push(cx.hit_test_gate_props(
+                                                                            HitTestGateProps {
+                                                                                layout,
+                                                                                hit_test: false,
+                                                                            },
+                                                                            move |cx| {
+                                                                                vec![cx.semantics(
+                                                                                    SemanticsProps {
+                                                                                        layout: fill_layout(),
+                                                                                        role: SemanticsRole::Generic,
+                                                                                        label: Some(Arc::<str>::from(
+                                                                                            "Preview tab",
+                                                                                        )),
+                                                                                        test_id: Some(test_id),
+                                                                                        ..Default::default()
+                                                                                    },
+                                                                                    |_cx| Vec::new(),
+                                                                                )]
+                                                                            },
+                                                                        ));
+                                                                    }
+                                                                }
+
+                                                                out.push(cx.flex(
                                                                     FlexProps {
                                                                         layout: {
                                                                             let mut layout =
@@ -1398,7 +1442,7 @@ impl WorkspaceTabStrip {
                                                                         align: CrossAlign::Center,
                                                                         ..Default::default()
                                                                     },
-                                                            |cx| {
+                                                                    |cx| {
                                                                 let tab_fg = if is_active {
                                                                     active_fg
                                                                 } else {
@@ -1473,7 +1517,9 @@ impl WorkspaceTabStrip {
 
                                                                         children
                                                                     },
-                                                                )]
+                                                                ));
+
+                                                                out
                                                             },
                                                         );
                                                         if let Some(test_id) = tab_chrome_test_id.clone() {
