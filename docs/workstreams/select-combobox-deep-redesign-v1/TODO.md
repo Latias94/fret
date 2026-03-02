@@ -83,8 +83,8 @@ These do not exist upstream but reduce churn when porting examples:
 
 | Component | Target surface | Current state (Fret) | Known gaps / risks | Proposed changes (layer) | Gates | Status |
 |---|---|---|---|---|---|---|
-| `select` | shadcn v4 part surface (`Select*`) + stable `test_id` | Implemented via adapters; behavior is usable but not fully upstream-shaped | Composition drift, focus/keyboard edge cases, automation surfaces not uniformly documented | Extract/align shared listbox substrate (`kit`), keep shadcn defaults (`shadcn`) | Unit tests: open/close + focus restore + keyboard nav; optionally diag script for overlay flows | Not started |
-| `combobox` | shadcn v4 part surface (`Combobox*`) + docs-aligned examples | Part adapters exist; still “known gaps” by design doc | Input-in-trigger ergonomics, Base UI-style expectations, structural adapter debt | Shared substrate (`kit`), refine part surface + adapters (`shadcn`), document explicit differences | Unit tests: filtering/typeahead + focus model + stable `test_id`; optionally diag script for overlay interactions | Not started |
+| `select` | shadcn part surface (`Select*`) + stable `test_id` | Part adapters exist (`Select::into_element_parts` + `SelectContent::with_entries`); call-site parity is mostly achieved in-tree | Composition drift, focus/keyboard edge cases, automation surfaces not uniformly documented | Extract/align shared listbox substrate (`kit`), keep shadcn defaults (`shadcn`); decide a single focus model and gate it | Unit tests: open/close + focus restore + keyboard nav; optionally diag script for overlay flows | In progress |
+| `combobox` | shadcn part surface (`Combobox*`) + docs-aligned examples | Part adapters exist; legacy option model has been removed; known structural drift remains by design | Input-in-trigger ergonomics, Base UI-style expectations, structural adapter debt | Shared substrate (`kit`), refine part surface + adapters (`shadcn`), document explicit differences | Unit tests: filtering/typeahead + focus model + stable `test_id`; optionally diag script for overlay interactions | In progress |
 
 ### Proposed `test_id` scheme (for gates + scripted diags)
 
@@ -93,38 +93,41 @@ without binding tests to internal structure.
 
 #### Select
 
-- Trigger: `select.trigger`
-- Content root: `select.content`
-- Viewport / scroll container: `select.viewport`
+Existing in-tree anchors (already used by tests):
+
+- Trigger: call-site provided (e.g. `Select::trigger_test_id("select-trigger")`)
+- Viewport / scroll container: `select-scroll-viewport` (wired in `ecosystem/fret-ui-shadcn/src/select.rs`)
+
+Recommended conventions for new gates:
+
+- Trigger chrome wrapper (if needed): `select-trigger.chrome`
 - Items: `select.item.<value>` (value should be stable and URL/identifier-safe)
 - Group labels: `select.label.<heading>` (optional)
 - Scroll buttons: `select.scroll_up`, `select.scroll_down`
 
 #### Combobox
 
-- Input: `combobox.input`
-- Trigger (if present): `combobox.trigger`
-- Clear button: `combobox.clear`
-- Content root: `combobox.content`
-- List / scroll container: `combobox.list`
-- Items: `combobox.item.<value>`
-- Empty state: `combobox.empty`
-- Chips (multiple): `combobox.chip.<value>` and remove affordance `combobox.chip_remove.<value>`
+Combobox already supports a stable prefix-based scheme (`Combobox::test_id_prefix(...)`), and the
+parts adapter forwards it to:
+
+- Trigger: `<prefix>-trigger` / `<prefix>-trigger-icon` / `<prefix>-clear-button`
+- Input: `<prefix>-input`
+- Listbox: `<prefix>-listbox`
+- Items: `<prefix>-item-<slug(value)>`
+
+For multi-select (chips), prefer explicit `test_id`s on chip parts where possible.
 
 ### Immediate next steps (proposed)
 
-1. **Audit current APIs**:
-   - enumerate current public parts/functions in `ecosystem/fret-ui-shadcn/src/select.rs` and
-     `ecosystem/fret-ui-shadcn/src/combobox.rs`,
-   - map them to upstream part names and call-site expectations.
-2. **Decide focus model** per component:
+1. **Decide focus model** per component:
    - active-descendant listbox model vs roving focus on items,
    - how it maps to platform semantics and automation.
-3. **Define stable `test_id` scheme**:
-   - trigger id,
-   - content viewport id,
-   - option/item ids (including groups).
-4. **Extract shared substrate** in `ecosystem/fret-ui-kit` and gate it before rewriting recipes.
+2. **Lock the `test_id` scheme with one gate per component**:
+   - `select`: verify trigger + `select-scroll-viewport` + at least one item id are stable across open/close frames.
+   - `combobox`: verify `<prefix>-listbox` + item slugging + clear button visibility rules.
+3. **Extract one shared helper in `ecosystem/fret-ui-kit` (reuse-first)**:
+   - only if we can’t express the desired outcome with existing `kit` primitives,
+   - add a unit test at the kit layer for the helper (not only recipe tests).
 
 ### Evidence checklist (fill as we implement)
 
