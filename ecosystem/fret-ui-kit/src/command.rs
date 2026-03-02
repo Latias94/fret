@@ -1,4 +1,4 @@
-use fret_runtime::{CommandId, InputContext, Platform, PlatformCapabilities};
+use fret_runtime::{ActionId, CommandId, InputContext, Platform, PlatformCapabilities};
 use fret_ui::{ElementContext, UiHost};
 
 pub fn default_fallback_input_context<H: UiHost>(app: &H) -> InputContext {
@@ -23,6 +23,12 @@ pub trait ElementCommandGatingExt {
         command: CommandId,
         fallback_input_ctx: InputContext,
     ) -> bool;
+
+    /// Action-first naming parity: `ActionId` uses the same ID strings as `CommandId` in v1.
+    fn action_is_enabled(&self, action: &ActionId) -> bool;
+
+    /// Action-first naming parity: dispatch an `ActionId` if enabled.
+    fn dispatch_action_if_enabled(&mut self, action: ActionId) -> bool;
 }
 
 impl<H: UiHost> ElementCommandGatingExt for ElementContext<'_, H> {
@@ -72,5 +78,13 @@ impl<H: UiHost> ElementCommandGatingExt for ElementContext<'_, H> {
             command,
         });
         true
+    }
+
+    fn action_is_enabled(&self, action: &ActionId) -> bool {
+        self.command_is_enabled(action)
+    }
+
+    fn dispatch_action_if_enabled(&mut self, action: ActionId) -> bool {
+        self.dispatch_command_if_enabled(action)
     }
 }

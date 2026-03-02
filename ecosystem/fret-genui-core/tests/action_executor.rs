@@ -3,6 +3,7 @@ use std::sync::Arc;
 use fret_app::App;
 use fret_genui_core::executor::{GenUiActionExecutorV1, GenUiActionOutcome};
 use fret_genui_core::render::GenUiActionInvocation;
+use fret_runtime::CommandId;
 use fret_runtime::Effect;
 use fret_ui::GlobalElementId;
 use fret_ui::action::UiActionHostAdapter;
@@ -136,5 +137,28 @@ fn executor_can_emit_portable_effects() {
             _ => false,
         }),
         "expected Effect::OpenUrl, got {effects:?}"
+    );
+}
+
+#[test]
+fn executor_can_dispatch_commands_for_action_ids() {
+    let mut app = App::new();
+    let state = app.models_mut().insert(Value::Null);
+
+    let cmd: CommandId = "app.test.dispatch_me.v1".into();
+    let mut exec = GenUiActionExecutorV1::new(state).with_dispatch_command_actions([cmd.clone()]);
+    let mut host = UiActionHostAdapter { app: &mut app };
+
+    let out = exec.execute_invocation(&mut host, &inv(cmd.as_str(), json!({})));
+    assert_eq!(out, GenUiActionOutcome::Applied);
+
+    let effects = host.app.flush_effects();
+    assert!(
+        effects.iter().any(|e| match e {
+            Effect::Command { window, command } =>
+                *window == Some(Default::default()) && command.as_str() == cmd.as_str(),
+            _ => false,
+        }),
+        "expected Effect::Command, got {effects:?}"
     );
 }

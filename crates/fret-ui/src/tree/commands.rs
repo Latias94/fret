@@ -364,89 +364,111 @@ impl<H: UiHost> UiTree<H> {
         }
 
         let default_root = barrier_root.unwrap_or(base_root);
-        let node_id = self.focus.or(Some(default_root));
-        let Some(mut node_id) = node_id else {
-            return false;
+        let focus = self.focus;
+        let focus_in_default_root = focus.is_some_and(|n| self.is_descendant(default_root, n));
+
+        let mut bubble_from = |start: NodeId| -> (bool, bool, bool, Option<NodeId>) {
+            let mut node_id = start;
+            let mut handled = false;
+            let mut needs_redraw = false;
+            let mut stopped = false;
+            let mut handled_by_node: Option<NodeId> = None;
+
+            loop {
+                let (did_handle, invalidations, requested_focus, stop_bubbling, parent) = self
+                    .with_widget_mut(node_id, |widget, tree| {
+                        let parent = tree.nodes.get(node_id).and_then(|n| n.parent);
+                        let window = tree.window;
+                        let focus = tree.focus;
+                        let mut cx = CommandCx {
+                            app,
+                            services: &mut *services,
+                            tree,
+                            node: node_id,
+                            window,
+                            input_ctx: input_ctx.clone(),
+                            focus,
+                            invalidations: Vec::new(),
+                            requested_focus: None,
+                            stop_propagation: false,
+                        };
+                        let did_handle = widget.command(&mut cx, command);
+                        (
+                            did_handle,
+                            cx.invalidations,
+                            cx.requested_focus,
+                            cx.stop_propagation,
+                            parent,
+                        )
+                    });
+
+                if did_handle {
+                    handled = true;
+                    handled_by_node = handled_by_node.or(Some(node_id));
+                }
+
+                if !invalidations.is_empty() || requested_focus.is_some() {
+                    needs_redraw = true;
+                }
+
+                for (id, inv) in invalidations {
+                    self.mark_invalidation(id, inv);
+                }
+
+                if let Some(focus) = requested_focus {
+                    let (active_roots, barrier_root) = self.active_input_layers();
+                    let snapshot = self.build_dispatch_snapshot_for_layer_roots(
+                        app.frame_id(),
+                        active_roots.as_slice(),
+                        barrier_root,
+                    );
+                    if self.focus_request_is_allowed(
+                        app,
+                        self.window,
+                        &active_roots,
+                        focus,
+                        Some(&snapshot),
+                    ) {
+                        if let Some(prev) = self.focus {
+                            self.mark_invalidation(prev, Invalidation::Paint);
+                        }
+                        self.focus = Some(focus);
+                        self.mark_invalidation(focus, Invalidation::Paint);
+                    }
+                }
+
+                if did_handle {
+                    break;
+                }
+                if stop_bubbling {
+                    stopped = true;
+                    break;
+                }
+
+                node_id = match parent {
+                    Some(parent) => parent,
+                    None => break,
+                };
+            }
+
+            (handled, needs_redraw, stopped, handled_by_node)
         };
 
-        let mut handled = false;
-        let mut needs_redraw = false;
-        let mut stopped = false;
-
-        loop {
-            let (did_handle, invalidations, requested_focus, stop_bubbling, parent) = self
-                .with_widget_mut(node_id, |widget, tree| {
-                    let parent = tree.nodes.get(node_id).and_then(|n| n.parent);
-                    let window = tree.window;
-                    let focus = tree.focus;
-                    let mut cx = CommandCx {
-                        app,
-                        services: &mut *services,
-                        tree,
-                        node: node_id,
-                        window,
-                        input_ctx: input_ctx.clone(),
-                        focus,
-                        invalidations: Vec::new(),
-                        requested_focus: None,
-                        stop_propagation: false,
-                    };
-                    let did_handle = widget.command(&mut cx, command);
-                    (
-                        did_handle,
-                        cx.invalidations,
-                        cx.requested_focus,
-                        cx.stop_propagation,
-                        parent,
-                    )
-                });
-
-            if did_handle {
-                handled = true;
-            }
-
-            if !invalidations.is_empty() || requested_focus.is_some() {
-                needs_redraw = true;
-            }
-
-            for (id, inv) in invalidations {
-                self.mark_invalidation(id, inv);
-            }
-
-            if let Some(focus) = requested_focus {
-                let (active_roots, barrier_root) = self.active_input_layers();
-                let snapshot = self.build_dispatch_snapshot_for_layer_roots(
-                    app.frame_id(),
-                    active_roots.as_slice(),
-                    barrier_root,
-                );
-                if self.focus_request_is_allowed(
-                    app,
-                    self.window,
-                    &active_roots,
-                    focus,
-                    Some(&snapshot),
-                ) {
-                    if let Some(prev) = self.focus {
-                        self.mark_invalidation(prev, Invalidation::Paint);
-                    }
-                    self.focus = Some(focus);
-                    self.mark_invalidation(focus, Invalidation::Paint);
-                }
-            }
-
-            if did_handle {
-                break;
-            }
-            if stop_bubbling {
-                stopped = true;
-                break;
-            }
-
-            node_id = match parent {
-                Some(parent) => parent,
-                None => break,
-            };
+        let (mut handled, mut needs_redraw, mut stopped, mut handled_by_node) =
+            bubble_from(focus.unwrap_or(default_root));
+        let mut used_default_root_fallback = false;
+        if !handled
+            && !stopped
+            && focus.is_some()
+            && !focus_in_default_root
+            && focus.unwrap_or(default_root) != default_root
+        {
+            used_default_root_fallback = true;
+            let (handled2, needs_redraw2, stopped2, handled_by_node2) = bubble_from(default_root);
+            handled = handled || handled2;
+            needs_redraw = needs_redraw || needs_redraw2;
+            stopped = stopped || stopped2;
+            handled_by_node = handled_by_node.or(handled_by_node2);
         }
 
         if !handled && !stopped && is_focus_traversal_command {
@@ -519,6 +541,46 @@ impl<H: UiHost> UiTree<H> {
             }
 
             self.publish_window_command_action_availability_snapshot(app, &input_ctx);
+        }
+
+        if let Some(window) = self.window {
+            let source = app.with_global_mut(
+                fret_runtime::WindowPendingCommandDispatchSourceService::default,
+                |svc, app| {
+                    svc.consume(window, app.tick_id(), command)
+                        .unwrap_or_else(fret_runtime::CommandDispatchSourceV1::programmatic)
+                },
+            );
+            let handled_by_element = handled_by_node
+                .and_then(|node| self.node_element(node))
+                .map(|id| id.0);
+            let started_from_focus = focus.is_some();
+
+            app.with_global_mut(
+                fret_runtime::WindowCommandDispatchDiagnosticsStore::default,
+                |store, app| {
+                    let handled_by_scope = if handled {
+                        Some(fret_runtime::CommandScope::Widget)
+                    } else {
+                        None
+                    };
+                    store.record(fret_runtime::CommandDispatchDecisionV1 {
+                        seq: 0,
+                        frame_id: app.frame_id(),
+                        tick_id: app.tick_id(),
+                        window,
+                        command: command.clone(),
+                        source,
+                        handled,
+                        handled_by_element,
+                        handled_by_scope,
+                        handled_by_driver: false,
+                        stopped,
+                        started_from_focus,
+                        used_default_root_fallback,
+                    });
+                },
+            );
         }
 
         handled

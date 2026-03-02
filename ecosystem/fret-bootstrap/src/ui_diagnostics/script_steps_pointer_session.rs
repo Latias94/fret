@@ -670,8 +670,9 @@ pub(super) fn handle_pointer_up_step(
                     active.next_step = active.next_step.saturating_add(1);
                     output.request_redraw = true;
                     if svc.cfg.script_auto_dump {
-                        *force_dump_label =
-                            Some(format!("script-step-{step_index:04}-pointer_up-cross-window"));
+                        *force_dump_label = Some(format!(
+                            "script-step-{step_index:04}-pointer_up-cross-window"
+                        ));
                     }
                     return true;
                 }

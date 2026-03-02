@@ -1,6 +1,6 @@
 # ADR 0308: View Authoring Runtime and Hooks (v1)
 
-Status: Proposed
+Status: Accepted
 
 ## Context
 
@@ -115,12 +115,18 @@ Where:
 The view runtime provides:
 
 - `use_state(...)` for local state slots (stored in element/view state),
+- `use_state_keyed(...)` (or `cx.keyed(...)`) for loops,
 - `use_selector(...)` / `use_selector_keyed(...)` backed by `ecosystem/fret-selector`,
 - `use_query(...)` backed by `ecosystem/fret-query`.
 
 Key rule:
 
 - loops must use keyed variants or `cx.keyed(...)` scoping to prevent “unstable order” collisions.
+
+Diagnostics rail (debug-only):
+
+- hook helpers should warn when the same hook callsite is invoked multiple times per frame without
+  a keyed scope, as this is a strong indicator of an accidental loop callsite collision.
 
 ### C3 — Dirty marking (`notify`)
 
@@ -136,6 +142,15 @@ without requiring users to reason about low-level IR nodes:
 
 - “cached unless dirty” (GPUI-style outcome),
 - picking/inspection disables reuse (diagnostics correctness).
+
+v1 note:
+
+- The initial user-facing helper lives in the component ecosystem as sugar over the mechanism
+  primitive:
+  - `ecosystem/fret-ui-kit/src/declarative/cached_subtree.rs` (`CachedSubtreeExt`,
+    `CachedSubtreeProps`)
+- Reuse is automatically disabled when inspection/picking is active via `UiTree::view_cache_active`
+  (see `crates/fret-ui/src/tree/ui_tree_view_cache.rs`).
 
 ### C5 — Multi-frontend compatibility
 

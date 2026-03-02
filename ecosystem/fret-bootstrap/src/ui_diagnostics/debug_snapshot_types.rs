@@ -75,6 +75,12 @@ pub struct UiTreeDebugSnapshotV1 {
     /// without relying on ad-hoc logs.
     #[serde(default)]
     pub command_gating_trace: Vec<UiCommandGatingTraceEntryV1>,
+    /// Best-effort command dispatch trace entries observed during the current frame.
+    ///
+    /// This is intended to answer “what command was dispatched, from where, and was it handled?”
+    /// without relying on ad-hoc logs.
+    #[serde(default)]
+    pub command_dispatch_trace: Vec<UiCommandDispatchTraceEntryV1>,
     pub layers_in_paint_order: Vec<UiLayerInfoV1>,
     #[serde(default)]
     pub all_layer_roots: Vec<u64>,
@@ -117,6 +123,32 @@ pub struct UiTreeDebugSnapshotV1 {
     pub hit_test: Option<UiHitTestSnapshotV1>,
     pub element_runtime: Option<ElementDiagnosticsSnapshotV1>,
     pub semantics: Option<UiSemanticsSnapshotV1>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UiCommandDispatchTraceEntryV1 {
+    pub command: String,
+    pub handled: bool,
+    /// Best-effort handler scope classification (ADR 0307).
+    ///
+    /// Expected values: `"widget"`, `"window"`, `"app"`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub handled_by_scope: Option<String>,
+    /// Whether the command was handled by a runner/driver integration layer (not by a UI element).
+    #[serde(default)]
+    pub handled_by_driver: bool,
+    #[serde(default)]
+    pub stopped: bool,
+    #[serde(default)]
+    pub source_kind: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub source_element: Option<u64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub handled_by_element: Option<u64>,
+    #[serde(default)]
+    pub started_from_focus: bool,
+    #[serde(default)]
+    pub used_default_root_fallback: bool,
 }
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize)]

@@ -69,6 +69,8 @@ fret-framework = { version = "0.1.0", path = "../../crates/fret-framework", pack
 # Golden-path wiring and optional ecosystem integrations.
 fret-bootstrap = { version = "0.1.0", path = "../fret-bootstrap", default-features = false }
 fret-icons = { version = "0.1.0", path = "../fret-icons" }
+fret-query = { version = "0.1.0", path = "../fret-query", features = ["ui"] }
+fret-selector = { version = "0.1.0", path = "../fret-selector", features = ["ui"] }
 fret-ui-shadcn = { version = "0.1.0", path = "../fret-ui-shadcn", optional = true, features = ["app-integration"] }
 fret-ui-kit = { version = "0.1.0", path = "../fret-ui-kit" }
 
