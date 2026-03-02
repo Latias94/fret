@@ -27,8 +27,8 @@ See also: `docs/workstreams/shadcn-part-surface-alignment-v1/INVENTORY.md`.
 This is the suggested dev sequence for the next parity passes (optimize for “high leverage” and
 “high risk”):
 
-1. `select` follow-up cleanup (finish migrating remaining call sites to the nested `SelectContent::with_entries(...)` shape).
-2. **Defer last**: `select` / `combobox` deeper redesign (structural drift is known; deeper than naming). See `docs/workstreams/select-combobox-deep-redesign-v1/`.
+1. Start `select` / `combobox` deep redesign gates (lock `test_id` + focus/keyboard outcomes). Workstream: `docs/workstreams/select-combobox-deep-redesign-v1/`.
+2. Continue part-surface audits for other components (prioritize “missing split” and provider footguns).
 
 ## Tracker table
 
