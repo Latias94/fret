@@ -73,8 +73,8 @@ impl<H: UiHost> UiTree<H> {
         }
 
         let trap_root = if let Some(snapshot) = snapshot {
+            // When a dispatch snapshot is available, avoid depending on retained parent pointers.
             self.active_trapped_focus_scope_root_in_snapshot(app, window, snapshot)
-                .or_else(|| self.active_trapped_focus_scope_root(app, window))
         } else {
             self.active_trapped_focus_scope_root(app, window)
         };
