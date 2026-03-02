@@ -113,3 +113,4 @@ Suggested run commands (Windows-friendly):
   - Impact: full parity for “Escape cancels pan drag immediately” needs either:
     - a mechanism-level contract to release capture from key hooks, or
     - an ecosystem-level re-framing of pan as an internal drag kind that the runtime cancels on Escape.
+  - Proposed ADR: `docs/adr/0307-non-pointer-hooks-can-cancel-pointer-capture-v1.md`
