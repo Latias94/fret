@@ -12,7 +12,8 @@ expanding `crates/fret-ui` into a policy-heavy component layer.
   (`ecosystem/fret-workspace` + `ecosystem/fret` glue), not in `fret-ui`.
 - Shared **mechanism helpers** (pure geometry / surface classification) belong in
   `ecosystem/fret-ui-headless`.
-- Shared **interaction arbitration policy** belongs in `ecosystem/fret-ui-kit`.
+- Shared **interaction arbitration policy** belongs in `ecosystem/fret-ui-headless` (and may be
+  re-exported from `ecosystem/fret-ui-kit` for convenience).
 
 ## Contract surface (v1)
 
@@ -42,7 +43,7 @@ Workspace must produce a coarse hit target that is stable across rendering refac
 
 Evidence:
 
-- `ecosystem/fret-ui-kit/src/headless/tab_strip_controller.rs`
+- `ecosystem/fret-ui-headless/src/tab_strip_controller.rs`
 
 ### Click intent arbitration
 
@@ -54,7 +55,7 @@ Workspace must follow editor-grade click intent rules:
 
 Evidence:
 
-- `ecosystem/fret-ui-kit/src/headless/tab_strip_controller.rs` (`intent_for_click`)
+- `ecosystem/fret-ui-headless/src/tab_strip_controller.rs` (`intent_for_click`)
 
 ### Insert index semantics
 
@@ -65,14 +66,26 @@ Implications:
 - Overflow dropdown is a view over the canonical list.
 - Drag previews must map from "where the pointer is" to a canonical insert index.
 
+### Drop target resolution (DnD)
+
+Workspace and docking should share the same coarse drop-target vocabulary:
+
+- `None`
+- `Tab { index, side: Before|After }`
+- `PinnedBoundary`
+- `End` (explicit header-space end-drop target)
+
+Evidence:
+
+- `ecosystem/fret-ui-headless/src/tab_strip_drop_target.rs` (`compute_tab_strip_drop_target_midpoint`)
+
 ## Kernel structure recommendation
 
-Keep a workspace-specific kernel (v1) rather than forcing immediate convergence with docking:
+Keep adapter-specific integration while converging on shared headless primitives:
 
-- Docking and workspace tab strips have similar vocabulary but differ in ops/payload and may differ
-  in pinned/preview semantics.
-- Share math helpers (surface classification + overflow membership), keep kernels separate until both
-  stabilize.
+- Docking and workspace tab strips share vocabulary and geometry primitives, but differ in ops and
+  policy (pinned/preview vs float/tear-off).
+- Converge on shared headless primitives and keep adapters responsible for wiring and policy.
 
 ## Evidence anchors (current)
 

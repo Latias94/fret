@@ -28,7 +28,7 @@ ID format:
 
 ## A. Contract + Boundaries
 
-- [~] WTS-contract-001 Write down the Workspace TabStrip contract surface:
+- [x] WTS-contract-001 Write down the Workspace TabStrip contract surface:
   - Surface classification vocabulary (header space vs tabs viewport vs controls).
   - Hit targets (tab content vs close, overflow menu row content vs close).
   - Insert index semantics (canonical order, under overflow).
