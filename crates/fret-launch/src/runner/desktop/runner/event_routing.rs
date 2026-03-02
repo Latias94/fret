@@ -519,7 +519,10 @@ impl<D: WinitAppDriver> WinitRunner<D> {
         // Keep both the drag source and the hovered/target window rendering while a cross-window
         // dock drag is active. This prevents diagnostics scripts that are still attached to the
         // payload window from stalling on `wait_frames` when hover routing peeks behind overlap.
-        for w in [drag_source_window, moving_window.unwrap_or(drag_source_window)] {
+        for w in [
+            drag_source_window,
+            moving_window.unwrap_or(drag_source_window),
+        ] {
             if w == current {
                 continue;
             }
