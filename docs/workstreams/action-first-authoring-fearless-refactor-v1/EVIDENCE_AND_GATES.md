@@ -77,6 +77,7 @@ Dispatch path explainability (diagnostics traces):
 - `crates/fret-ui/src/tree/commands.rs` (records dispatch outcome + handled-by element)
 - `ecosystem/fret-bootstrap/src/ui_app_driver.rs` (records driver-handled dispatch outcomes to the same trace store, including handler scope classification)
 - `ecosystem/fret-bootstrap/src/ui_diagnostics/debug_snapshot_types.rs` (`debug.command_dispatch_trace[*]`)
+- `ecosystem/fret-bootstrap/src/ui_diagnostics/script_steps_wait.rs` (`handle_wait_command_dispatch_trace_step` gate runner used by scripted diagnostics)
 - `crates/fret-diag-protocol/src/lib.rs` (`UiActionStepV2::WaitCommandDispatchTrace`, `UiCommandDispatchTraceQueryV1`)
 - `tools/diag-scripts/cookbook/imui-action-basics/cookbook-imui-action-basics-cross-frontend.json` (`wait_command_dispatch_trace` gate)
 

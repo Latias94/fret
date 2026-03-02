@@ -75,6 +75,7 @@ ID format:
       `ecosystem/fret-bootstrap/src/ui_app_driver.rs`
       (`debug.command_dispatch_trace[*]` / script evidence, including handled-by element, handled-by scope, driver-handled classification, and default-root fallback)
     - Gated (scripted): `crates/fret-diag-protocol/src/lib.rs` (`UiActionStepV2::WaitCommandDispatchTrace`) +
+      `ecosystem/fret-bootstrap/src/ui_diagnostics/script_steps_wait.rs` (`handle_wait_command_dispatch_trace_step`) +
       `tools/diag-scripts/cookbook/imui-action-basics/cookbook-imui-action-basics-cross-frontend.json`
     - Pending: a first-class pointer-triggered mapping from stable selectors (`test_id`) → dispatched `ActionId`
       (today the dispatch trace records `GlobalElementId.0`, which can be correlated via element runtime/semantics snapshots).
