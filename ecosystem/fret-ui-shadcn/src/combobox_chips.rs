@@ -415,7 +415,7 @@ mod tests {
         apply_parts_patch_to_chips(
             &mut chips,
             vec![
-                ComboboxValue::new([ComboboxChip::new("a").show_remove(false)]).into(),
+                ComboboxValue::new([crate::ComboboxChip::new("a").show_remove(false)]).into(),
                 ComboboxChipsInput::new()
                     .placeholder("Add framework")
                     .into(),
