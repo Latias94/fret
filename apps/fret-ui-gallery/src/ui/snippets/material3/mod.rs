@@ -1,3 +1,4 @@
+pub mod autocomplete;
 pub mod badge;
 pub mod bottom_sheet;
 pub mod button;
