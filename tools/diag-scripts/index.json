@@ -578,8 +578,7 @@
         "diag.script_v2"
       ],
       "suite_memberships": [
-        "docking-arbitration",
-        "diag-hardening-smoke-docking"
+        "docking-arbitration"
       ],
       "tags": [
         "docking",
@@ -1894,6 +1893,7 @@
         "diag.script_v2"
       ],
       "suite_memberships": [
+        "ui-gallery-scroll-extents-dom-parity",
         "ui-gallery-shadcn-conformance"
       ],
       "tags": [
@@ -3651,6 +3651,28 @@
       "target_hints": []
     },
     {
+      "id": "ui-gallery-popover-overlay-placement-after-code-tab-scroll-range",
+      "path": "tools/diag-scripts/ui-gallery/popover/ui-gallery-popover-overlay-placement-after-code-tab-scroll-range.json",
+      "required_capabilities": [
+        "diag.overlay_placement_trace",
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "ui-gallery-scroll-extents-dom-parity"
+      ],
+      "tags": [
+        "overlay",
+        "popover",
+        "regression",
+        "scroll",
+        "shadcn",
+        "tabs",
+        "ui_gallery"
+      ],
+      "target_hints": []
+    },
+    {
       "id": "ui-gallery-portal-geometry-scroll-clamp",
       "path": "tools/diag-scripts/ui-gallery/portal/ui-gallery-portal-geometry-scroll-clamp.json",
       "required_capabilities": [],
@@ -4175,6 +4197,27 @@
       "target_hints": []
     },
     {
+      "id": "ui-gallery-tooltip-overlay-placement-after-code-tab-scroll-range",
+      "path": "tools/diag-scripts/ui-gallery/overlay/ui-gallery-tooltip-overlay-placement-after-code-tab-scroll-range.json",
+      "required_capabilities": [
+        "diag.overlay_placement_trace",
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "ui-gallery-scroll-extents-dom-parity"
+      ],
+      "tags": [
+        "overlay",
+        "regression",
+        "scroll",
+        "shadcn",
+        "tabs",
+        "tooltip",
+        "ui_gallery"
+      ],
+      "target_hints": []
+    },
+    {
       "id": "ui-gallery-tooltip-repeat-hover",
       "path": "tools/diag-scripts/ui-gallery/overlay/ui-gallery-tooltip-repeat-hover.json",
       "required_capabilities": [],
@@ -4228,6 +4271,7 @@
         "diag.script_v2"
       ],
       "suite_memberships": [
+        "ui-gallery-scroll-extents-dom-parity",
         "ui-gallery-shadcn-conformance"
       ],
       "tags": [
