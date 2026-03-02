@@ -1,0 +1,59 @@
+{
+  "schema_version": 2,
+  "meta": {
+    "name": "Node graph (paint-only): steady-state nodes cache does not rebuild",
+    "tags": ["node-graph", "declarative", "paint-only", "nodes", "cache", "gate-steady-state"],
+    "required_capabilities": ["diag.script_v2"],
+    "target_hints": [
+      "Run with `FRET_NODE_GRAPH_DECLARATIVE=paint` so the paint-only declarative surface is active.",
+      "This gate relies on a stable semantics `value` emitted by `node_graph.canvas`.",
+      "It asserts the cached node chrome rebuild counter remains stable while idling."
+    ]
+  },
+  "steps": [
+    { "type": "press_key", "key": "escape" },
+    { "type": "wait_frames", "n": 5 },
+
+    {
+      "type": "wait_until",
+      "predicate": { "kind": "exists", "target": { "kind": "test_id", "id": "node_graph.canvas" } },
+      "timeout_frames": 600
+    },
+
+    { "type": "move_pointer", "target": { "kind": "test_id", "id": "node_graph.canvas" } },
+    { "type": "wait_frames", "n": 15 },
+
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "value_contains",
+        "target": { "kind": "test_id", "id": "node_graph.canvas" },
+        "text": "nodes_cached:true"
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "value_contains",
+        "target": { "kind": "test_id", "id": "node_graph.canvas" },
+        "text": "nodes_rebuilds:1;"
+      },
+      "timeout_frames": 600
+    },
+
+    { "type": "wait_frames", "n": 120 },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "value_contains",
+        "target": { "kind": "test_id", "id": "node_graph.canvas" },
+        "text": "nodes_rebuilds:1;"
+      },
+      "timeout_frames": 600
+    },
+
+    { "type": "capture_bundle", "label": "node-graph-paint-only-steady-nodes-cache" }
+  ]
+}
+

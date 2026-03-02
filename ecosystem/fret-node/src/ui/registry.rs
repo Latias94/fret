@@ -17,7 +17,7 @@ use fret_ui::element::Elements;
 use fret_ui::elements::ElementContext;
 
 use crate::core::{Graph, NodeKindKey};
-use crate::ui::portal::NodeGraphPortalNodeLayout;
+use crate::ui::NodeGraphPortalNodeLayout;
 
 pub type NodeGraphNodeRenderer<H> =
     dyn for<'a> FnMut(&mut ElementContext<'a, H>, &Graph, NodeGraphPortalNodeLayout) -> Elements;
