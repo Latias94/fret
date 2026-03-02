@@ -1,3 +1,5 @@
+pub const SOURCE: &str = include_str!("controlled.rs");
+
 // region: example
 use fret_core::Px;
 use fret_ui::element::SemanticsDecoration;
@@ -71,7 +73,9 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
     let content = shadcn::SidebarProvider::new()
         .open(Some(open.clone()))
         .with(cx, |cx| {
-            let open_now = cx.get_model_cloned(&open, Invalidation::Paint).unwrap_or(true);
+            let open_now = cx
+                .get_model_cloned(&open, Invalidation::Paint)
+                .unwrap_or(true);
             let selected_value = resolve_selected(cx, &selected, "design-engineering");
 
             let open_for_toggle = open.clone();
@@ -89,12 +93,16 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
                     .layout(LayoutRefinement::default().w_full()),
                 |cx| {
                     vec![
-                        shadcn::Button::new(if open_now { "Close Sidebar" } else { "Open Sidebar" })
-                            .variant(shadcn::ButtonVariant::Outline)
-                            .size(shadcn::ButtonSize::Sm)
-                            .on_activate(on_toggle_open.clone())
-                            .test_id("ui-gallery-sidebar-controlled-toggle")
-                            .into_element(cx),
+                        shadcn::Button::new(if open_now {
+                            "Close Sidebar"
+                        } else {
+                            "Open Sidebar"
+                        })
+                        .variant(shadcn::ButtonVariant::Outline)
+                        .size(shadcn::ButtonSize::Sm)
+                        .on_activate(on_toggle_open.clone())
+                        .test_id("ui-gallery-sidebar-controlled-toggle")
+                        .into_element(cx),
                         shadcn::typography::muted(
                             cx,
                             "Controlled via SidebarProvider.open(Some(model)).",
@@ -225,4 +233,3 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
 }
 
 // endregion: example
-

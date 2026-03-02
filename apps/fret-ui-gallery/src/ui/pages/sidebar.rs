@@ -25,25 +25,19 @@ pub(super) fn preview_sidebar(cx: &mut ElementContext<'_, App>) -> Vec<AnyElemen
             DocSection::new("Demo", demo)
                 .max_w(Px(980.0))
                 .test_id_prefix("ui-gallery-sidebar-demo")
-                .code_rust_from_file_region(include_str!("../snippets/sidebar/demo.rs"), "example"),
+                .code_rust_from_file_region(snippets::demo::SOURCE, "example"),
             DocSection::new("Controlled", controlled)
                 .max_w(Px(980.0))
                 .test_id_prefix("ui-gallery-sidebar-controlled")
-                .code_rust_from_file_region(
-                    include_str!("../snippets/sidebar/controlled.rs"),
-                    "example",
-                ),
+                .code_rust_from_file_region(snippets::controlled::SOURCE, "example"),
             DocSection::new("Mobile", mobile)
                 .max_w(Px(980.0))
                 .test_id_prefix("ui-gallery-sidebar-mobile")
-                .code_rust_from_file_region(
-                    include_str!("../snippets/sidebar/mobile.rs"),
-                    "example",
-                ),
+                .code_rust_from_file_region(snippets::mobile::SOURCE, "example"),
             DocSection::new("RTL", rtl)
                 .max_w(Px(980.0))
                 .test_id_prefix("ui-gallery-sidebar-rtl")
-                .code_rust_from_file_region(include_str!("../snippets/sidebar/rtl.rs"), "example"),
+                .code_rust_from_file_region(snippets::rtl::SOURCE, "example"),
             DocSection::new("Notes", notes)
                 .no_shell()
                 .test_id_prefix("ui-gallery-sidebar-notes"),
@@ -52,4 +46,3 @@ pub(super) fn preview_sidebar(cx: &mut ElementContext<'_, App>) -> Vec<AnyElemen
 
     vec![body]
 }
-

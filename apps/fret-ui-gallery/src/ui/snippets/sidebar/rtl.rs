@@ -1,3 +1,5 @@
+pub const SOURCE: &str = include_str!("rtl.rs");
+
 // region: example
 use crate::ui::doc_layout;
 use fret_app::App;
@@ -17,7 +19,9 @@ fn ensure_selected(cx: &mut ElementContext<'_, App>) -> Model<Arc<str>> {
         Some(model) => model,
         None => {
             let model = cx.app.models_mut().insert(Arc::<str>::from("playground"));
-            cx.with_state(SidebarModels::default, |st| st.selected = Some(model.clone()));
+            cx.with_state(SidebarModels::default, |st| {
+                st.selected = Some(model.clone())
+            });
             model
         }
     }
@@ -147,4 +151,3 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
 }
 
 // endregion: example
-

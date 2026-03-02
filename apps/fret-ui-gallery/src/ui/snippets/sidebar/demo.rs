@@ -1,3 +1,5 @@
+pub const SOURCE: &str = include_str!("demo.rs");
+
 // region: example
 use fret_core::Px;
 use fret_ui::element::SemanticsDecoration;
@@ -15,7 +17,9 @@ fn ensure_selected<H: UiHost>(cx: &mut ElementContext<'_, H>) -> Model<Arc<str>>
         Some(model) => model,
         None => {
             let model = cx.app.models_mut().insert(Arc::<str>::from("playground"));
-            cx.with_state(SidebarModels::default, |st| st.selected = Some(model.clone()));
+            cx.with_state(SidebarModels::default, |st| {
+                st.selected = Some(model.clone())
+            });
             model
         }
     }
@@ -64,7 +68,8 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
 
     let content = shadcn::SidebarProvider::new().with(cx, |cx| {
         let selected_value = resolve_selected(cx, &selected_model, "playground");
-        let collapsed = shadcn::use_sidebar(cx).is_some_and(|ctx| !ctx.is_mobile && ctx.collapsed());
+        let collapsed =
+            shadcn::use_sidebar(cx).is_some_and(|ctx| !ctx.is_mobile && ctx.collapsed());
 
         let header = stack::hstack(
             cx,
@@ -87,10 +92,7 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
                             "Expanded"
                         },
                     ),
-                    shadcn::typography::muted(
-                        cx,
-                        format!("active={}", selected_value.as_ref()),
-                    ),
+                    shadcn::typography::muted(cx, format!("active={}", selected_value.as_ref())),
                 ]
             },
         );
@@ -242,4 +244,3 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
 }
 
 // endregion: example
-
