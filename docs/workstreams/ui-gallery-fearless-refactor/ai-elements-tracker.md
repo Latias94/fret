@@ -28,7 +28,7 @@ Status labels:
 | `context_demo` | `PAGE_AI_CONTEXT_DEMO` | (removed) | `apps/fret-ui-gallery/src/ui/snippets/ai/context_demo.rs` | `apps/fret-ui-gallery/src/ui/pages/ai_context_demo.rs` | Snippet-backed |
 | `conversation_demo` | `PAGE_AI_CONVERSATION_DEMO` | `apps/fret-ui-gallery/src/ui/previews/gallery/ai/conversation_demo.rs` | — | — | Legacy preview |
 | `environment_variables_demo` | `PAGE_AI_ENVIRONMENT_VARIABLES_DEMO` | (removed) | `apps/fret-ui-gallery/src/ui/snippets/ai/environment_variables_demo.rs` | `apps/fret-ui-gallery/src/ui/pages/ai_environment_variables_demo.rs` | Snippet-backed |
-| `file_tree_demo` | `PAGE_AI_FILE_TREE_DEMO` | `apps/fret-ui-gallery/src/ui/previews/gallery/ai/file_tree_demo.rs` | — | — | Legacy preview |
+| `file_tree_demo` | `PAGE_AI_FILE_TREE_DEMO` | (removed) | `apps/fret-ui-gallery/src/ui/snippets/ai/file_tree_demo.rs` | `apps/fret-ui-gallery/src/ui/pages/ai_file_tree_demo.rs` | Snippet-backed |
 | `image_demo` | `PAGE_AI_IMAGE_DEMO` | `apps/fret-ui-gallery/src/ui/previews/gallery/ai/image_demo.rs` | — | — | Legacy preview |
 | `inline_citation_demo` | `PAGE_AI_INLINE_CITATION_DEMO` | (removed) | `apps/fret-ui-gallery/src/ui/snippets/ai/inline_citation_demo.rs` | `apps/fret-ui-gallery/src/ui/pages/ai_inline_citation_demo.rs` | Snippet-backed |
 | `message_branch_demo` | `PAGE_AI_MESSAGE_BRANCH_DEMO` | (removed) | `apps/fret-ui-gallery/src/ui/snippets/ai/message_branch_demo.rs` | `apps/fret-ui-gallery/src/ui/pages/ai_message_branch_demo.rs` | Snippet-backed |

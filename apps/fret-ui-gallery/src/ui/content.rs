@@ -423,7 +423,7 @@ fn page_preview(
         PAGE_AI_CONTEXT_DEMO => pages::preview_ai_context_demo(cx, theme),
         PAGE_AI_TERMINAL_DEMO => pages::preview_ai_terminal_demo(cx, theme),
         PAGE_AI_PACKAGE_INFO_DEMO => pages::preview_ai_package_info_demo(cx, theme),
-        PAGE_AI_FILE_TREE_DEMO => preview_ai_file_tree_demo(cx, theme),
+        PAGE_AI_FILE_TREE_DEMO => pages::preview_ai_file_tree_demo(cx, theme),
         PAGE_AI_TASK_DEMO => pages::preview_ai_task_demo(cx, theme),
         PAGE_AI_AUDIO_PLAYER_DEMO => pages::preview_ai_audio_player_demo(cx, theme),
         PAGE_AI_TRANSCRIPTION_DEMO => preview_ai_transcription_demo(cx, theme),

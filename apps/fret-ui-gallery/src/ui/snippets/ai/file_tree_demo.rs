@@ -1,32 +1,29 @@
-use super::super::super::super::*;
+pub const SOURCE: &str = include_str!("file_tree_demo.rs");
 
-pub(in crate::ui) fn preview_ai_file_tree_demo(
-    cx: &mut ElementContext<'_, App>,
-    _theme: &Theme,
-) -> Vec<AnyElement> {
-    use std::collections::HashSet;
-    use std::sync::Arc;
+// region: example
+use fret_runtime::Model;
+use fret_ui::action::ActionCx;
+use fret_ui::element::SemanticsProps;
+use fret_ui_ai as ui_ai;
+use fret_ui_kit::declarative::stack;
+use fret_ui_kit::{LayoutRefinement, Space};
+use fret_ui_shadcn::prelude::*;
+use std::collections::HashSet;
+use std::sync::Arc;
 
-    use fret_runtime::Model;
-    use fret_ui::action::ActionCx;
-    use fret_ui::element::SemanticsProps;
-    use fret_ui_kit::declarative::stack;
-    use fret_ui_kit::{LayoutRefinement, Space};
+#[derive(Default)]
+struct FileTreeModels {
+    expanded: Option<Model<HashSet<Arc<str>>>>,
+    selected: Option<Model<Option<Arc<str>>>>,
+}
 
-    #[derive(Default)]
-    struct FileTreeModels {
-        expanded: Option<Model<HashSet<Arc<str>>>>,
-        selected: Option<Model<Option<Arc<str>>>>,
-    }
-
+pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement {
     let expanded = cx.with_state(FileTreeModels::default, |st| st.expanded.clone());
     let expanded = match expanded {
         Some(model) => model,
         None => {
             let model = cx.app.models_mut().insert(HashSet::<Arc<str>>::new());
-            cx.with_state(FileTreeModels::default, |st| {
-                st.expanded = Some(model.clone())
-            });
+            cx.with_state(FileTreeModels::default, |st| st.expanded = Some(model.clone()));
             model
         }
     };
@@ -36,9 +33,7 @@ pub(in crate::ui) fn preview_ai_file_tree_demo(
         Some(model) => model,
         None => {
             let model = cx.app.models_mut().insert(None::<Arc<str>>);
-            cx.with_state(FileTreeModels::default, |st| {
-                st.selected = Some(model.clone())
-            });
+            cx.with_state(FileTreeModels::default, |st| st.selected = Some(model.clone()));
             model
         }
     };
@@ -105,7 +100,7 @@ pub(in crate::ui) fn preview_ai_file_tree_demo(
         )
     });
 
-    vec![stack::vstack(
+    stack::vstack(
         cx,
         stack::VStackProps::default()
             .layout(LayoutRefinement::default().w_full().min_w_0())
@@ -118,5 +113,7 @@ pub(in crate::ui) fn preview_ai_file_tree_demo(
                 selected_marker.unwrap_or_else(|| cx.text("")),
             ]
         },
-    )]
+    )
 }
+// endregion: example
+

@@ -11,6 +11,7 @@ mod ai_commit_demo;
 mod ai_commit_large_demo;
 mod ai_confirmation_demo;
 mod ai_context_demo;
+mod ai_file_tree_demo;
 mod ai_environment_variables_demo;
 mod ai_inline_citation_demo;
 mod ai_message_branch_demo;
@@ -175,6 +176,13 @@ pub(super) fn preview_ai_context_demo(
     theme: &Theme,
 ) -> Vec<AnyElement> {
     ai_context_demo::preview_ai_context_demo(cx, theme)
+}
+
+pub(super) fn preview_ai_file_tree_demo(
+    cx: &mut ElementContext<'_, App>,
+    theme: &Theme,
+) -> Vec<AnyElement> {
+    ai_file_tree_demo::preview_ai_file_tree_demo(cx, theme)
 }
 
 pub(super) fn preview_ai_snippet_demo(
