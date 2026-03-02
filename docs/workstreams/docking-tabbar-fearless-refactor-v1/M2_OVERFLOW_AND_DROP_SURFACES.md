@@ -25,3 +25,5 @@ are hidden (dropdown / scroll).
 - Overflow diag gate stays green:
   - `insert_index == 10` for a 10-tab stack in an overflow layout scenario.
 - No regressions in non-overflow drop behavior.
+- At least one integration test goes through `InternalDrag` and asserts the emitted `DockOp::MovePanel.insert_index`
+  for an overflowed tab bar end-drop.
