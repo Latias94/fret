@@ -17,12 +17,10 @@ without having to grep the whole crate.
 
 ## Recommended next audit order (dev sequence)
 
-1. `tooltip` / `popover` / `hover-card` (overlay semantics + extremely common call sites)
-2. `tabs` / `accordion` / `collapsible` (composites; roving focus + keyboard expectations)
-3. `sidebar` (large surface; mobile sheet integration; many scope-driven defaults)
-4. `carousel` (already in-flight via embla workstreams; ensure part surface remains stable)
-5. controls (`checkbox`, `radio-group`, `switch`, `slider`) + form-ish (`field`, `input`, `textarea`)
-6. **Defer last**: `select` / `combobox` (structural drift is known and deeper than “just names”)
+1. `sonner` (toast/notification stack; part surface + deterministic automation ids)
+2. `toggle-group` / `button-group` (composites; keyboard expectations + spacing defaults)
+3. `button` / `toggle` (variants helpers parity; ensure copy/paste authoring stays stable)
+4. **Defer last**: `select` / `combobox` deeper redesign (structural drift is known and deeper than “just names”)
 
 ## Inventory table (upstream radix base → Fret module)
 
@@ -66,7 +64,7 @@ without having to grep the whole crate.
 | `popover` | `repo-ref/ui/apps/v4/registry/bases/radix/ui/popover.tsx` | `ecosystem/fret-ui-shadcn/src/popover.rs` | parts | No | Yes | Placement + focus outcomes are gated by unit tests. |
 | `progress` | `repo-ref/ui/apps/v4/registry/bases/radix/ui/progress.tsx` | `ecosystem/fret-ui-shadcn/src/progress.rs` | parts | No | Yes | Optional value `None` maps to 0% and semantics are gated by unit tests. |
 | `radio-group` | `repo-ref/ui/apps/v4/registry/bases/radix/ui/radio-group.tsx` | `ecosystem/fret-ui-shadcn/src/radio_group.rs` | parts | No | Yes | Selection + a11y metadata are gated by unit tests. |
-| `resizable` | `repo-ref/ui/apps/v4/registry/bases/radix/ui/resizable.tsx` | `ecosystem/fret-ui-shadcn/src/resizable.rs` | parts | No | No | Not audited yet. |
+| `resizable` | `repo-ref/ui/apps/v4/registry/bases/radix/ui/resizable.tsx` | `ecosystem/fret-ui-shadcn/src/resizable.rs` | parts | No | Yes | Unit tests lock splitter semantics, `test_id_prefix`, and `with_handle` hit thickness. |
 | `scroll-area` | `repo-ref/ui/apps/v4/registry/bases/radix/ui/scroll-area.tsx` | `ecosystem/fret-ui-shadcn/src/scroll_area.rs` | parts | No | Yes | Exposes `ScrollBar` alias for copy/paste parity. |
 | `select` | `repo-ref/ui/apps/v4/registry/bases/radix/ui/select.tsx` | `ecosystem/fret-ui-shadcn/src/select.rs` | config wrappers + adapter | Yes | Yes | Trigger/Value/Content are config wrappers; `into_element_parts` is callsite-only parity. |
 | `separator` | `repo-ref/ui/apps/v4/registry/bases/radix/ui/separator.tsx` | `ecosystem/fret-ui-shadcn/src/separator.rs` | parts | No | Yes | Adds shadcn defaults (`shrink-0`, `h-px w-full`) + a vertical stretch approximation; gated by unit tests. |

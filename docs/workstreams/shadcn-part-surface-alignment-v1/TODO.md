@@ -27,9 +27,10 @@ See also: `docs/workstreams/shadcn-part-surface-alignment-v1/INVENTORY.md`.
 This is the suggested dev sequence for the next parity passes (optimize for “high leverage” and
 “high risk”):
 
-1. `kbd` (token + layout invariants; used widely in docs/examples)
-2. `resizable` (handle hit area + pointer semantics)
-3. **Defer last**: `select` / `combobox` (structural drift is known; deeper than naming)
+1. `sonner` (toast/notification stacking + action surface)
+2. `toggle-group` (composite; keyboard expectations + part surface)
+3. `button-group` (variants helper + spacing defaults)
+4. **Defer last**: `select` / `combobox` deeper redesign (structural drift is known; deeper than naming)
 
 ## Tracker table
 
@@ -81,6 +82,8 @@ This is the suggested dev sequence for the next parity passes (optimize for “h
 | `input-otp` | `InputOTP, InputOTPGroup, InputOTPSlot, InputOTPSeparator` | `InputOtp` recipe + parts adapters (`InputOTPGroup/Slot/Separator`) | Slot-level `aria-invalid` is global (`InputOtp::aria_invalid`), not per-slot; per-part refinements are not modeled | Low | Keep monolithic recipe; provide `into_element_parts` adapter for copy/paste parity | unit tests in `ecosystem/fret-ui-shadcn/src/input_otp.rs` | P2 | Done (with known gaps) |
 | `empty` | `Empty, EmptyHeader, EmptyTitle, EmptyDescription, EmptyContent, EmptyMedia` | `Empty*` parts | Uses container queries instead of viewport breakpoints (intentional) | Low | Keep surface; lock padding breakpoint behavior via deterministic unit test | `ecosystem/fret-ui-shadcn/tests/empty_responsive_padding.rs` | P2 | Done |
 | `context-menu` | `ContextMenu, Trigger, Portal, Content, Item, CheckboxItem, RadioItem, Label, Separator, Shortcut, Group, Sub, SubTrigger, SubContent, RadioGroup` | `ContextMenu` + `ContextMenuTrigger/Portal/Content` adapters + submenu helpers | Portal is a no-op wrapper; submenu parts are helpers over `ContextMenuItem::submenu(...)` | High | Keep closure API; expose part adapters + submenu helper parts; add diag script when UI gallery uses it | unit tests in `ecosystem/fret-ui-shadcn/src/context_menu.rs` | P0 | Done (with known gaps) |
+| `kbd` | `Kbd, KbdGroup, kbd_icon` | `Kbd, KbdGroup, kbd_icon` | none (token-mapped defaults) | Low | Keep surface; lock layout + typography invariants and tooltip slot alpha mapping | unit tests in `ecosystem/fret-ui-shadcn/src/kbd.rs` | P2 | Done |
+| `resizable` | `ResizablePanelGroup, ResizablePanel, ResizableHandle` | `ResizablePanelGroup, ResizablePanel, ResizableHandle` (+ `test_id_prefix`) | Per-handle disabling is ignored; omits `SetValue` steps when fractions are missing/degenerate | Low | Keep part surface; lock splitter semantics + orientation + `with_handle` hit thickness | unit tests in `ecosystem/fret-ui-shadcn/src/resizable.rs` | P1 | Done (with known gaps) |
 
 ## Backlog (not audited yet)
 
@@ -88,7 +91,7 @@ This is the short “next few” list. Full inventory is in `INVENTORY.md`.
 
 | Component | Upstream base file | Fret module | Priority | Status | Notes |
 |---|---|---|---:|---|---|
-| `resizable` | `repo-ref/ui/apps/v4/registry/bases/radix/ui/resizable.tsx` | `ecosystem/fret-ui-shadcn/src/resizable.rs` | P1 | Not started | Gate: handle hit area + pointer semantics + gap token mapping. |
+| `sonner` | `repo-ref/ui/apps/v4/registry/bases/radix/ui/sonner.tsx` | `ecosystem/fret-ui-shadcn/src/sonner.rs` | P1 | Not started | Gate: toast stack composition + action surface + deterministic test ids (if used in UI gallery). |
 
 ## Notes / recurring hazards
 
