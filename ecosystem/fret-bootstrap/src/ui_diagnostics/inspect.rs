@@ -86,6 +86,30 @@ impl UiDiagnosticsService {
         }
     }
 
+    pub(super) fn ensure_inspect_tree_state_initialized(
+        &mut self,
+        window: AppWindowId,
+        snapshot: &fret_core::SemanticsSnapshot,
+        index: &super::selector::SemanticsIndex<'_>,
+        focus_node_id: Option<u64>,
+        picked_node_id: Option<u64>,
+    ) {
+        self.inspector.ensure_tree_state_initialized(
+            window,
+            snapshot,
+            index,
+            focus_node_id,
+            picked_node_id,
+        );
+    }
+
+    pub(super) fn inspect_tree_state_snapshot(
+        &self,
+        window: AppWindowId,
+    ) -> (std::collections::HashSet<u64>, Option<u64>) {
+        self.inspector.tree_state_snapshot(window)
+    }
+
     pub(super) fn set_inspect_enabled(&mut self, enabled: bool, consume_clicks: bool) {
         self.inspector.set_enabled(enabled, consume_clicks);
     }

@@ -125,67 +125,19 @@ pub(crate) fn render_diag_inspect_overlay(
         });
 
         let tree_model = (model.help_open && model.tree_open).then(|| {
-            // Lazy-init tree state while we have a snapshot and an index.
             app.with_global_mut_untracked(UiDiagnosticsService::default, |svc, _app| {
-                let expanded = svc
-                    .inspector
-                    .state
-                    .tree_expanded_node_ids
-                    .entry(window)
-                    .or_default();
-                let selected = svc
-                    .inspector
-                    .state
-                    .tree_selected_node_id
-                    .get(&window)
-                    .copied();
-                let anchor = selected.or(model.focus_node_id).or(model.picked_node_id);
-
-                if selected.is_none() {
-                    if let Some(anchor) = anchor {
-                        svc.inspector
-                            .state
-                            .tree_selected_node_id
-                            .insert(window, anchor);
-                    }
-                }
-
-                if expanded.is_empty() {
-                    if let Some(anchor) = anchor {
-                        let mut cur = Some(anchor);
-                        for _ in 0..64 {
-                            let Some(id) = cur else {
-                                break;
-                            };
-                            expanded.insert(id);
-                            cur = index
-                                .by_id
-                                .get(&id)
-                                .and_then(|n| n.parent.map(|p| p.data().as_ffi()));
-                        }
-                    } else {
-                        for r in snapshot.roots.iter().filter(|r| r.visible) {
-                            expanded.insert(r.root.data().as_ffi());
-                        }
-                    }
-                }
+                svc.ensure_inspect_tree_state_initialized(
+                    window,
+                    snapshot,
+                    &index,
+                    model.focus_node_id,
+                    model.picked_node_id,
+                );
             });
 
-            let (expanded, selected_node_id) =
-                app.with_global_mut_untracked(UiDiagnosticsService::default, |svc, _app| {
-                    (
-                        svc.inspector
-                            .state
-                            .tree_expanded_node_ids
-                            .get(&window)
-                            .cloned()
-                            .unwrap_or_default(),
-                        svc.inspector
-                            .state
-                            .tree_selected_node_id
-                            .get(&window)
-                            .copied(),
-                    )
+            let (expanded, selected_node_id) = app
+                .with_global_mut_untracked(UiDiagnosticsService::default, |svc, _app| {
+                    svc.inspect_tree_state_snapshot(window)
                 });
 
             let model = build_inspect_tree_model(

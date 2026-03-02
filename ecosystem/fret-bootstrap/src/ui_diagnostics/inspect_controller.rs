@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 use fret_app::{App, Effect};
 use fret_core::AppWindowId;
@@ -164,6 +164,60 @@ impl InspectController {
             self.state.pending_copy_selector_windows.remove(&window);
         }
         payload
+    }
+
+    pub(super) fn ensure_tree_state_initialized(
+        &mut self,
+        window: AppWindowId,
+        snapshot: &fret_core::SemanticsSnapshot,
+        index: &super::selector::SemanticsIndex<'_>,
+        focus_node_id: Option<u64>,
+        picked_node_id: Option<u64>,
+    ) {
+        if !self.tree_is_open(window) {
+            return;
+        }
+
+        let expanded = self.state.tree_expanded_node_ids.entry(window).or_default();
+        let selected = self.state.tree_selected_node_id.get(&window).copied();
+        let anchor = selected.or(focus_node_id).or(picked_node_id);
+
+        if selected.is_none() {
+            if let Some(anchor) = anchor {
+                self.state.tree_selected_node_id.insert(window, anchor);
+            }
+        }
+
+        if expanded.is_empty() {
+            if let Some(anchor) = anchor {
+                let mut cur = Some(anchor);
+                for _ in 0..64 {
+                    let Some(id) = cur else {
+                        break;
+                    };
+                    expanded.insert(id);
+                    cur = index
+                        .by_id
+                        .get(&id)
+                        .and_then(|n| n.parent.map(|p| p.data().as_ffi()));
+                }
+            } else {
+                for r in snapshot.roots.iter().filter(|r| r.visible) {
+                    expanded.insert(r.root.data().as_ffi());
+                }
+            }
+        }
+    }
+
+    pub(super) fn tree_state_snapshot(&self, window: AppWindowId) -> (HashSet<u64>, Option<u64>) {
+        (
+            self.state
+                .tree_expanded_node_ids
+                .get(&window)
+                .cloned()
+                .unwrap_or_default(),
+            self.state.tree_selected_node_id.get(&window).copied(),
+        )
     }
 
     pub(super) fn is_locked(&self, window: AppWindowId) -> bool {
