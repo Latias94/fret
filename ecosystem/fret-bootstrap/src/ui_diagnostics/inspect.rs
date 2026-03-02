@@ -2,10 +2,88 @@ use super::*;
 
 pub(super) use super::inspect_controller::{InspectNavCommand, InspectToast};
 
+#[derive(Debug, Default, Clone)]
+pub(super) struct InspectOverlayClipboardPayloads {
+    pub(super) copy_details: Option<String>,
+    pub(super) copy_selector: Option<String>,
+}
+
+#[derive(Debug, Default, Clone)]
+pub(super) struct InspectOverlayModel {
+    pub(super) pointer_pos: Option<Point>,
+    pub(super) picked_node_id: Option<u64>,
+    pub(super) focus_node_id: Option<u64>,
+
+    pub(super) redact_text: bool,
+
+    pub(super) pick_armed: bool,
+    pub(super) pick_pending: bool,
+
+    pub(super) inspect_enabled: bool,
+    pub(super) help_open: bool,
+    pub(super) consume_clicks: bool,
+    pub(super) locked: bool,
+
+    pub(super) help_search_query: Option<String>,
+    pub(super) help_selected_match_index: Option<usize>,
+    pub(super) help_scroll_offset: usize,
+    pub(super) tree_open: bool,
+
+    pub(super) toast_message: Option<String>,
+    pub(super) best_selector_json: Option<String>,
+    pub(super) focus_summary_line: Option<String>,
+    pub(super) focus_path_line: Option<String>,
+}
+
 impl UiDiagnosticsService {
     pub(super) fn poll_inspector_controls(&mut self) {
         self.poll_pick_trigger();
         self.poll_inspect_trigger();
+    }
+
+    pub(super) fn take_inspect_overlay_clipboard_payloads(
+        &mut self,
+        window: AppWindowId,
+    ) -> InspectOverlayClipboardPayloads {
+        InspectOverlayClipboardPayloads {
+            copy_details: self.inspector.take_pending_copy_details_payload(window),
+            copy_selector: self.inspector.take_pending_copy_selector_payload(window),
+        }
+    }
+
+    pub(super) fn inspect_overlay_model(&self, window: AppWindowId) -> InspectOverlayModel {
+        InspectOverlayModel {
+            pointer_pos: self.last_pointer_position(window),
+            picked_node_id: self.last_picked_node_id(window),
+            focus_node_id: self.inspector.focus_node_id(window),
+            redact_text: self.redact_text(),
+            pick_armed: self.pick_is_armed(),
+            pick_pending: self.pick_is_pending(window),
+            inspect_enabled: self.inspector.enabled,
+            help_open: self.inspector.help_is_open(window),
+            consume_clicks: self.inspector.consume_clicks,
+            locked: self.inspector.is_locked(window),
+            help_search_query: self
+                .inspector
+                .help_search_query(window)
+                .map(|s| s.to_string()),
+            help_selected_match_index: self.inspector.help_selected_match_index(window),
+            help_scroll_offset: self.inspector.help_scroll_offset(window),
+            tree_open: self.inspector.tree_is_open(window),
+            toast_message: self.inspector.toast_message(window).map(|s| s.to_string()),
+            best_selector_json: self
+                .inspector
+                .best_selector_json(window)
+                .map(|s| s.to_string()),
+            focus_summary_line: self
+                .inspector
+                .focus_summary_line(window)
+                .map(|s| s.to_string()),
+            focus_path_line: self
+                .inspector
+                .focus_path_line(window)
+                .map(|s| s.to_string()),
+        }
     }
 
     pub(super) fn set_inspect_enabled(&mut self, enabled: bool, consume_clicks: bool) {
@@ -32,10 +110,7 @@ impl UiDiagnosticsService {
         self.inspector.help_search_query(window)
     }
 
-    pub(super) fn inspect_help_selected_match_index(&self, window: AppWindowId) -> Option<usize> {
-        self.inspector.help_selected_match_index(window)
-    }
-
+    #[cfg(test)]
     pub(super) fn inspect_help_scroll_offset(&self, window: AppWindowId) -> usize {
         self.inspector.help_scroll_offset(window)
     }
@@ -46,10 +121,6 @@ impl UiDiagnosticsService {
 
     pub(super) fn set_inspect_help_matches(&mut self, window: AppWindowId, matches: Vec<u64>) {
         self.inspector.set_help_matches(window, matches);
-    }
-
-    pub(super) fn inspect_tree_is_open(&self, window: AppWindowId) -> bool {
-        self.inspector.tree_is_open(window)
     }
 
     pub(super) fn set_inspect_tree_items(&mut self, window: AppWindowId, items: Vec<u64>) {

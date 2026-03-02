@@ -144,6 +144,28 @@ impl InspectController {
         self.pick_overlay_grace_frames.insert(window, 10);
     }
 
+    pub(super) fn take_pending_copy_details_payload(
+        &mut self,
+        window: AppWindowId,
+    ) -> Option<String> {
+        self.state.pending_copy_details_payload.remove(&window)
+    }
+
+    pub(super) fn take_pending_copy_selector_payload(
+        &mut self,
+        window: AppWindowId,
+    ) -> Option<String> {
+        if !self.state.pending_copy_selector_windows.contains(&window) {
+            return None;
+        }
+
+        let payload = self.best_selector_json(window).map(|s| s.to_string());
+        if payload.is_some() {
+            self.state.pending_copy_selector_windows.remove(&window);
+        }
+        payload
+    }
+
     pub(super) fn is_locked(&self, window: AppWindowId) -> bool {
         self.state.locked_windows.contains(&window)
     }

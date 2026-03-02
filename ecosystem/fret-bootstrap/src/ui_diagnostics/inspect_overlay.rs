@@ -21,38 +21,15 @@ pub(crate) fn render_diag_inspect_overlay(
 
     const ROOT_NAME: &str = "__diag_inspect";
 
-    let pending_copy_payload =
-        app.with_global_mut_untracked(UiDiagnosticsService::default, |svc, _app| {
-            svc.inspector
-                .state
-                .pending_copy_details_payload
-                .remove(&window)
-        });
-    if let Some(text) = pending_copy_payload {
+    let clipboard = app.with_global_mut_untracked(UiDiagnosticsService::default, |svc, _app| {
+        svc.take_inspect_overlay_clipboard_payloads(window)
+    });
+    if let Some(text) = clipboard.copy_details {
         app.push_effect(Effect::ClipboardSetText { text });
     }
 
-    let pending_copy_selector_payload =
-        app.with_global_mut_untracked(UiDiagnosticsService::default, |svc, _app| {
-            if !svc
-                .inspector
-                .state
-                .pending_copy_selector_windows
-                .contains(&window)
-            {
-                return None;
-            }
-            svc.inspect_best_selector_json(window)
-                .map(|s| s.to_string())
-        });
-    if let Some(text) = pending_copy_selector_payload {
+    if let Some(text) = clipboard.copy_selector {
         app.push_effect(Effect::ClipboardSetText { text });
-        app.with_global_mut_untracked(UiDiagnosticsService::default, |svc, _app| {
-            svc.inspector
-                .state
-                .pending_copy_selector_windows
-                .remove(&window);
-        });
     }
 
     if !inspection_active {
@@ -76,42 +53,13 @@ pub(crate) fn render_diag_inspect_overlay(
         return;
     }
 
-    let (
-        pointer_pos,
-        picked_node_id,
-        focus_node_id,
-        redact_text,
-        pick_armed,
-        pick_pending,
-        inspect_enabled,
-        help_open,
-        consume_clicks,
-        locked,
-        help_search_query,
-        help_selected_match_index,
-        help_scroll_offset,
-        tree_open,
-    ) = app.with_global_mut_untracked(UiDiagnosticsService::default, |svc, _app| {
-        (
-            svc.last_pointer_position(window),
-            svc.last_picked_node_id(window),
-            svc.inspect_focus_node_id(window),
-            svc.redact_text(),
-            svc.pick_is_armed(),
-            svc.pick_is_pending(window),
-            svc.inspect_is_enabled(),
-            svc.inspect_help_is_open(window),
-            svc.inspect_consume_clicks(),
-            svc.inspect_is_locked(window),
-            svc.inspect_help_search_query(window).map(|s| s.to_string()),
-            svc.inspect_help_selected_match_index(window),
-            svc.inspect_help_scroll_offset(window),
-            svc.inspect_tree_is_open(window),
-        )
+    let model = app.with_global_mut_untracked(UiDiagnosticsService::default, |svc, _app| {
+        svc.inspect_overlay_model(window)
     });
 
-    let explainability_lines: Vec<String> = help_open
-        .then(|| build_inspect_explainability_lines(ui, window, pointer_pos))
+    let explainability_lines: Vec<String> = model
+        .help_open
+        .then(|| build_inspect_explainability_lines(ui, window, model.pointer_pos))
         .unwrap_or_default();
 
     struct InspectNodeInfo {
@@ -128,7 +76,7 @@ pub(crate) fn render_diag_inspect_overlay(
     {
         let index = SemanticsIndex::new(snapshot);
 
-        let hovered = pointer_pos.and_then(|pos| {
+        let hovered = model.pointer_pos.and_then(|pos| {
             let node = super::pick::pick_semantics_node_at(snapshot, ui, pos)?;
             let id = node.id.data().as_ffi();
             Some(InspectNodeInfo {
@@ -141,7 +89,8 @@ pub(crate) fn render_diag_inspect_overlay(
             })
         });
 
-        let picked = picked_node_id
+        let picked = model
+            .picked_node_id
             .and_then(|id| snapshot.nodes.iter().find(|n| n.id.data().as_ffi() == id))
             .map(|node| InspectNodeInfo {
                 bounds: node.bounds,
@@ -152,7 +101,8 @@ pub(crate) fn render_diag_inspect_overlay(
                 label: node.label.clone(),
             });
 
-        let focus = focus_node_id
+        let focus = model
+            .focus_node_id
             .and_then(|id| snapshot.nodes.iter().find(|n| n.id.data().as_ffi() == id))
             .map(|node| InspectNodeInfo {
                 bounds: node.bounds,
@@ -163,18 +113,18 @@ pub(crate) fn render_diag_inspect_overlay(
                 label: node.label.clone(),
             });
 
-        let neighborhood_model = help_open.then(|| {
+        let neighborhood_model = model.help_open.then(|| {
             build_inspect_neighborhood_model(
                 snapshot,
                 &index,
-                focus_node_id.or(picked_node_id),
-                help_search_query.as_deref(),
-                redact_text,
-                help_selected_match_index,
+                model.focus_node_id.or(model.picked_node_id),
+                model.help_search_query.as_deref(),
+                model.redact_text,
+                model.help_selected_match_index,
             )
         });
 
-        let tree_model = (help_open && tree_open).then(|| {
+        let tree_model = (model.help_open && model.tree_open).then(|| {
             // Lazy-init tree state while we have a snapshot and an index.
             app.with_global_mut_untracked(UiDiagnosticsService::default, |svc, _app| {
                 let expanded = svc
@@ -189,7 +139,7 @@ pub(crate) fn render_diag_inspect_overlay(
                     .tree_selected_node_id
                     .get(&window)
                     .copied();
-                let anchor = selected.or(focus_node_id).or(picked_node_id);
+                let anchor = selected.or(model.focus_node_id).or(model.picked_node_id);
 
                 if selected.is_none() {
                     if let Some(anchor) = anchor {
@@ -243,7 +193,7 @@ pub(crate) fn render_diag_inspect_overlay(
                 &index,
                 &expanded,
                 selected_node_id,
-                redact_text,
+                model.redact_text,
             );
             app.with_global_mut_untracked(UiDiagnosticsService::default, |svc, _app| {
                 svc.set_inspect_tree_items(window, model.flat_node_ids.clone());
@@ -269,34 +219,21 @@ pub(crate) fn render_diag_inspect_overlay(
         svc.set_inspect_help_matches(window, neighborhood_model.match_node_ids.clone());
     });
 
-    let hovered = if locked || !(pick_armed || inspect_enabled) {
+    let hovered = if model.locked || !(model.pick_armed || model.inspect_enabled) {
         None
     } else {
         hovered
     };
 
-    let (toast, best_selector) =
-        app.with_global_mut_untracked(UiDiagnosticsService::default, |svc, _app| {
-            (
-                svc.inspect_toast_message(window).map(|s| s.to_string()),
-                svc.inspect_best_selector_json(window)
-                    .map(|s| s.to_string()),
-            )
-        });
+    let toast = model.toast_message.as_deref();
+    let best_selector = model.best_selector_json.as_deref();
+    let focus_summary = model.focus_summary_line.as_deref();
+    let focus_path = model.focus_path_line.as_deref();
 
-    let (focus_summary, focus_path) =
-        app.with_global_mut_untracked(UiDiagnosticsService::default, |svc, _app| {
-            (
-                svc.inspect_focus_summary_line(window)
-                    .map(|s| s.to_string()),
-                svc.inspect_focus_path_line(window).map(|s| s.to_string()),
-            )
-        });
-
-    let should_show_hud = pick_armed
-        || pick_pending
-        || inspect_enabled
-        || help_open
+    let should_show_hud = model.pick_armed
+        || model.pick_pending
+        || model.inspect_enabled
+        || model.help_open
         || toast.is_some()
         || best_selector.is_some()
         || focus_summary.is_some()
@@ -306,12 +243,13 @@ pub(crate) fn render_diag_inspect_overlay(
         let mut header_lines: Vec<String> = Vec::new();
         let mut body_lines: Vec<String> = Vec::new();
 
-        if pick_armed || pick_pending {
+        if model.pick_armed || model.pick_pending {
             header_lines
                 .push("INSPECT: click to pick a target (Esc to cancel, Ctrl+Alt+H help)".to_string());
-        } else if help_open {
+        } else if model.help_open {
             header_lines.push(format!(
-                "INSPECT (enabled={inspect_enabled}, consume_clicks={consume_clicks}, locked={locked})"
+                "INSPECT (enabled={}, consume_clicks={}, locked={})",
+                model.inspect_enabled, model.consume_clicks, model.locked
             ));
             header_lines.push("Ctrl/Cmd+Alt+I: toggle inspect".to_string());
             header_lines.push("Ctrl/Cmd+Alt+H: toggle help".to_string());
@@ -345,7 +283,7 @@ pub(crate) fn render_diag_inspect_overlay(
 
             const BODY_PAGE_LINES: usize = 28;
             let total = body_lines.len();
-            let mut offset = help_scroll_offset;
+            let mut offset = model.help_scroll_offset;
             let max_offset = total.saturating_sub(BODY_PAGE_LINES);
             if offset > max_offset {
                 offset = max_offset;
@@ -369,20 +307,21 @@ pub(crate) fn render_diag_inspect_overlay(
             }
         } else {
             header_lines.push(format!(
-                "INSPECT: Ctrl+Alt+I toggle | Ctrl+Alt+H help | Esc exit | Ctrl+C copy selector | F focus | L lock | Alt+Up/Down nav (consume_clicks={consume_clicks}, locked={locked})"
+                "INSPECT: Ctrl+Alt+I toggle | Ctrl+Alt+H help | Esc exit | Ctrl+C copy selector | F focus | L lock | Alt+Up/Down nav (consume_clicks={}, locked={})",
+                model.consume_clicks, model.locked
             ));
         }
 
-        if let Some(t) = toast.as_deref() {
+        if let Some(t) = toast {
             header_lines.push(format!("status: {t}"));
         }
-        if let Some(summary) = focus_summary.as_deref() {
+        if let Some(summary) = focus_summary {
             header_lines.push(summary.to_string());
         }
-        if let Some(path) = focus_path.as_deref() {
+        if let Some(path) = focus_path {
             header_lines.push(path.to_string());
         }
-        if let Some(sel) = best_selector.as_deref() {
+        if let Some(sel) = best_selector {
             let trimmed = if sel.chars().take(181).count() > 180 {
                 let mut s: String = sel.chars().take(180).collect();
                 s.push('…');
@@ -400,6 +339,8 @@ pub(crate) fn render_diag_inspect_overlay(
         }
         lines
     });
+
+    let redact_text = model.redact_text;
 
     let root_node = fret_ui::declarative::render_root(
         ui,
