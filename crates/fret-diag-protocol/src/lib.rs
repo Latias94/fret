@@ -649,6 +649,15 @@ pub enum UiActionStepV2 {
         #[serde(default = "default_action_timeout_frames")]
         timeout_frames: u32,
     },
+    /// Wait until the command dispatch trace contains an entry matching `query`.
+    ///
+    /// This is intended to gate action-first convergence work: pointer triggers, keymap shortcuts,
+    /// and command palette/menus should all produce explainable dispatch outcomes.
+    WaitCommandDispatchTrace {
+        query: UiCommandDispatchTraceQueryV1,
+        #[serde(default = "default_action_timeout_frames")]
+        timeout_frames: u32,
+    },
     /// Wait until the overlay placement trace contains an entry matching `query`.
     ///
     /// This is intended for overlay-driven components (Select/Combobox/Menus) where correctness
@@ -2001,6 +2010,8 @@ pub struct UiScriptEvidenceV1 {
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub shortcut_routing_trace: Vec<UiShortcutRoutingTraceEntryV1>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub command_dispatch_trace: Vec<UiCommandDispatchTraceEntryV1>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub overlay_placement_trace: Vec<UiOverlayPlacementTraceEntryV1>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub web_ime_trace: Vec<UiWebImeTraceEntryV1>,
@@ -2329,6 +2340,40 @@ pub struct UiShortcutRoutingTraceQueryV1 {
     pub ime_composing: Option<bool>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub focus_is_text_input: Option<bool>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UiCommandDispatchTraceEntryV1 {
+    pub step_index: u32,
+    pub frame_id: u64,
+    pub command: String,
+    pub handled: bool,
+    #[serde(default)]
+    pub stopped: bool,
+    #[serde(default)]
+    pub source_kind: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub source_element: Option<u64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub handled_by_element: Option<u64>,
+    #[serde(default)]
+    pub started_from_focus: bool,
+    #[serde(default)]
+    pub used_default_root_fallback: bool,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+pub struct UiCommandDispatchTraceQueryV1 {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub command: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub source_kind: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub handled: Option<bool>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub started_from_focus: Option<bool>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub used_default_root_fallback: Option<bool>,
 }
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize)]

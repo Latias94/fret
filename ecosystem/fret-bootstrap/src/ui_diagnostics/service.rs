@@ -886,6 +886,7 @@ impl UiDiagnosticsService {
         ring.push_snapshot(&self.cfg, snapshot);
 
         self.record_shortcut_routing_trace_for_window(app, window);
+        self.record_command_dispatch_trace_for_window(app, window);
 
         if let Some(pending) = self.pending_pick.clone()
             && pending.window == window
@@ -958,6 +959,56 @@ impl UiDiagnosticsService {
                     command: decision.command.as_ref().map(|c| c.as_str().to_string()),
                     command_enabled: decision.command_enabled,
                     pending_sequence_len: Some(decision.pending_sequence_len),
+                },
+            );
+        }
+    }
+
+    fn record_command_dispatch_trace_for_window(&mut self, app: &App, window: AppWindowId) {
+        let Some(active) = self.active_scripts.get_mut(&window) else {
+            return;
+        };
+        let Some(store) = app.global::<fret_runtime::WindowCommandDispatchDiagnosticsStore>()
+        else {
+            return;
+        };
+
+        let step_index = active
+            .last_injected_step
+            .unwrap_or_else(|| active.next_step.min(u32::MAX as usize) as u32);
+
+        let max_entries = MAX_SHORTCUT_ROUTING_TRACE_ENTRIES;
+        let decisions =
+            store.snapshot_since(window, active.last_command_dispatch_seq, max_entries);
+        if decisions.is_empty() {
+            return;
+        }
+
+        for decision in decisions {
+            active.last_command_dispatch_seq = active
+                .last_command_dispatch_seq
+                .max(decision.seq.saturating_add(1));
+
+            let source_kind = match decision.source.kind {
+                fret_runtime::CommandDispatchSourceKindV1::Pointer => "pointer",
+                fret_runtime::CommandDispatchSourceKindV1::Keyboard => "keyboard",
+                fret_runtime::CommandDispatchSourceKindV1::Shortcut => "shortcut",
+                fret_runtime::CommandDispatchSourceKindV1::Programmatic => "programmatic",
+            };
+
+            push_command_dispatch_trace(
+                &mut active.command_dispatch_trace,
+                UiScriptCommandDispatchTraceEntryV1 {
+                    step_index,
+                    frame_id: decision.frame_id.0,
+                    command: decision.command.as_str().to_string(),
+                    handled: decision.handled,
+                    stopped: decision.stopped,
+                    source_kind: source_kind.to_string(),
+                    source_element: decision.source.element,
+                    handled_by_element: decision.handled_by_element,
+                    started_from_focus: decision.started_from_focus,
+                    used_default_root_fallback: decision.used_default_root_fallback,
                 },
             );
         }

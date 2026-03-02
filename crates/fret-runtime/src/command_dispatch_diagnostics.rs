@@ -88,6 +88,23 @@ impl WindowCommandDispatchDiagnosticsStore {
             .rev()
             .collect()
     }
+
+    pub fn snapshot_since(
+        &self,
+        window: AppWindowId,
+        since_seq: u64,
+        max_entries: usize,
+    ) -> Vec<CommandDispatchDecisionV1> {
+        let Some(entries) = self.per_window.get(&window) else {
+            return Vec::new();
+        };
+        entries
+            .iter()
+            .filter(|e| e.seq >= since_seq)
+            .take(max_entries)
+            .cloned()
+            .collect()
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]

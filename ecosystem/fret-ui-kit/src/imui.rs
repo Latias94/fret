@@ -3642,12 +3642,13 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
                     if enabled {
                         let close_popup = close_popup.clone();
                         let action_for_activate = action.clone();
-                        cx.pressable_on_activate(Arc::new(move |host, acx, _reason| {
+                        cx.pressable_on_activate(Arc::new(move |host, acx, reason| {
                             if let Some(open) = close_popup.as_ref() {
                                 let _ = host.update_model(open, |v| *v = false);
                             }
                             host.record_transient_event(acx, KEY_CLICKED);
                             if let Some(action) = action_for_activate.clone() {
+                                host.record_pending_command_dispatch_source(acx, &action, reason);
                                 host.dispatch_command(Some(acx.window), action);
                             }
                             host.notify(acx);
@@ -3841,9 +3842,10 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
                 let long_press_signal_model_for_up = long_press_signal_model.clone();
 
                 let action_for_activate = action.clone();
-                cx.pressable_on_activate(Arc::new(move |host, acx, _reason| {
+                cx.pressable_on_activate(Arc::new(move |host, acx, reason| {
                     host.record_transient_event(acx, KEY_CLICKED);
                     if let Some(action) = action_for_activate.clone() {
+                        host.record_pending_command_dispatch_source(acx, &action, reason);
                         host.dispatch_command(Some(acx.window), action);
                     }
                     host.notify(acx);

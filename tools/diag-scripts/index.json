@@ -189,6 +189,7 @@
       "id": "cookbook-imui-action-basics-cross-frontend",
       "path": "tools/diag-scripts/cookbook/imui-action-basics/cookbook-imui-action-basics-cross-frontend.json",
       "required_capabilities": [
+        "diag.command_dispatch_trace",
         "diag.script_v2"
       ],
       "suite_memberships": [

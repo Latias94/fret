@@ -11,17 +11,20 @@ use fret_diag_protocol::{
 };
 use fret_diag_protocol::{
     UiActionScriptV1, UiActionScriptV2, UiActionStepV2, UiArtifactStatsV1,
-    UiBoundsStableTraceEntryV1, UiClickStableTraceEntryV1, UiEdgesV1, UiFocusTraceEntryV1,
-    UiHitTestScopeRootEvidenceV1, UiHitTestTraceEntryV1, UiImeEventTraceEntryV1, UiImeEventV1,
-    UiIncomingOpenInjectItemV1, UiInspectConfigV1, UiKeyModifiersV1, UiLayoutDirectionV1,
-    UiMouseButtonV1, UiOptionalRootStateV1, UiOverlayAlignV1, UiOverlayArrowLayoutV1,
-    UiOverlayOffsetV1, UiOverlayPlacementTraceEntryV1, UiOverlayPlacementTraceKindV1,
-    UiOverlayPlacementTraceQueryV1, UiOverlayShiftV1, UiOverlaySideV1, UiOverlayStickyModeV1,
-    UiPaddingInsetsV1, UiPointV1, UiPointerKindV1, UiPredicateV1, UiRectV1, UiRoleAndNameV1,
-    UiScriptEventLogEntryV1, UiScriptEvidenceV1, UiScriptResultV1, UiScriptStageV1,
-    UiSelectorResolutionCandidateV1, UiSelectorResolutionTraceEntryV1, UiSelectorV1,
-    UiShortcutRoutingTraceEntryV1, UiShortcutRoutingTraceQueryV1, UiSizeV1, UiTextInputSnapshotV1,
-    UiWebImeTraceEntryV1, UiWindowTargetV1,
+    UiBoundsStableTraceEntryV1, UiClickStableTraceEntryV1,
+    UiCommandDispatchTraceEntryV1 as UiScriptCommandDispatchTraceEntryV1,
+    UiCommandDispatchTraceQueryV1 as UiScriptCommandDispatchTraceQueryV1, UiEdgesV1,
+    UiFocusTraceEntryV1, UiHitTestScopeRootEvidenceV1, UiHitTestTraceEntryV1,
+    UiImeEventTraceEntryV1, UiImeEventV1, UiIncomingOpenInjectItemV1, UiInspectConfigV1,
+    UiKeyModifiersV1, UiLayoutDirectionV1, UiMouseButtonV1, UiOptionalRootStateV1,
+    UiOverlayAlignV1, UiOverlayArrowLayoutV1, UiOverlayOffsetV1, UiOverlayPlacementTraceEntryV1,
+    UiOverlayPlacementTraceKindV1, UiOverlayPlacementTraceQueryV1, UiOverlayShiftV1,
+    UiOverlaySideV1, UiOverlayStickyModeV1, UiPaddingInsetsV1, UiPointV1, UiPointerKindV1,
+    UiPredicateV1, UiRectV1, UiRoleAndNameV1, UiScriptEventLogEntryV1, UiScriptEvidenceV1,
+    UiScriptResultV1, UiScriptStageV1, UiSelectorResolutionCandidateV1,
+    UiSelectorResolutionTraceEntryV1, UiSelectorV1, UiShortcutRoutingTraceEntryV1,
+    UiShortcutRoutingTraceQueryV1, UiSizeV1, UiTextInputSnapshotV1, UiWebImeTraceEntryV1,
+    UiWindowTargetV1,
 };
 use fret_runtime::DragHost as _;
 use fret_ui::elements::ElementRuntime;
@@ -64,11 +67,12 @@ pub(crate) use pick::pick_semantics_node_by_bounds;
 use pick::{pick_best_match, pick_semantics_node_at};
 mod script_engine;
 use script_engine::{
-    overlay_placement_trace_entry_matches_query,
+    command_dispatch_trace_entry_matches_query, overlay_placement_trace_entry_matches_query,
     overlay_placement_trace_entry_matches_query_any_step, push_click_stable_trace,
-    push_focus_trace, push_ime_event_trace, push_overlay_placement_trace, push_script_event_log,
-    push_shortcut_routing_trace, push_web_ime_trace, script_evidence_for_active,
-    script_step_kind_name, shortcut_routing_trace_entry_matches_query,
+    push_command_dispatch_trace, push_focus_trace, push_ime_event_trace,
+    push_overlay_placement_trace, push_script_event_log, push_shortcut_routing_trace,
+    push_web_ime_trace, script_evidence_for_active, script_step_kind_name,
+    shortcut_routing_trace_entry_matches_query,
 };
 mod script_result;
 mod script_runner;
