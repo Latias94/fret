@@ -1893,12 +1893,15 @@ dependencies = [
  "fret-app",
  "fret-core",
  "fret-executor",
+ "fret-genui-core",
+ "fret-genui-shadcn",
  "fret-icons-radix",
  "fret-imui",
  "fret-runtime",
  "fret-ui",
  "fret-ui-assets",
  "fret-ui-kit",
+ "serde_json",
 ]
 
 [[package]]

@@ -136,7 +136,7 @@ ID format:
 - [x] AFA-frontends-033 Add at least one cross-frontend demo:
   - a Rust view triggers an action,
   - an imui panel triggers the same action,
-  - an optional GenUI spec triggers a catalog-approved action ID.
+  - a GenUI spec triggers a catalog-approved action ID (strict catalog validation).
   - Evidence:
     - `apps/fret-cookbook/examples/imui_action_basics.rs`
     - `tools/diag-scripts/cookbook/imui-action-basics/cookbook-imui-action-basics-cross-frontend.json`

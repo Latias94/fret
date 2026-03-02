@@ -21,4 +21,7 @@ fret-icons-radix = { path = "../../ecosystem/fret-icons-radix", default-features
 fret-ui-assets = { path = "../../ecosystem/fret-ui-assets", default-features = false, features = ["ui", "image-decode"] }
 fret-executor = { path = "../../ecosystem/fret-executor" }
 fret-imui = { path = "../../ecosystem/fret-imui" }
+fret-genui-core = { path = "../../ecosystem/fret-genui-core" }
+fret-genui-shadcn = { path = "../../ecosystem/fret-genui-shadcn" }
 fret-ui-kit = { path = "../../ecosystem/fret-ui-kit", features = ["imui"] }
+serde_json.workspace = true

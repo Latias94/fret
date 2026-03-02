@@ -1,8 +1,15 @@
 use std::sync::Arc;
 
 use fret::prelude::*;
+use fret_genui_core::catalog::CatalogActionV1;
+use fret_genui_core::render::{GenUiRuntime, RenderLimits, render_spec};
+use fret_genui_core::spec::SpecV1;
+use fret_genui_core::validate::ValidationMode;
+use fret_genui_shadcn::catalog::shadcn_catalog_v1;
+use fret_genui_shadcn::resolver::ShadcnResolver;
 use fret_ui::CommandAvailability;
 use fret_ui_kit::imui::ButtonOptions;
+use serde_json::{Value, json};
 
 mod act {
     fret::actions!([Inc = "cookbook.imui_action_basics.inc.v1"]);
@@ -13,11 +20,51 @@ const TEST_ID_COUNT: &str = "cookbook.imui_action_basics.count";
 const TEST_ID_BUTTON_DECL: &str = "cookbook.imui_action_basics.button.declarative";
 const TEST_ID_BUTTON_IMUI: &str = "cookbook.imui_action_basics.button.imui";
 
-struct ImUiActionBasicsView;
+struct ImUiActionBasicsView {
+    genui_state: Model<Value>,
+    genui_spec: SpecV1,
+    genui_catalog: Arc<fret_genui_core::catalog::CatalogV1>,
+}
 
 impl View for ImUiActionBasicsView {
-    fn init(_app: &mut App, _window: AppWindowId) -> Self {
-        Self
+    fn init(app: &mut App, _window: AppWindowId) -> Self {
+        let genui_state = app.models_mut().insert(json!({}));
+
+        let genui_spec: SpecV1 = serde_json::from_value(json!({
+            "schema_version": 1,
+            "root": "cookbook.imui_action_basics.genui.root",
+            "elements": {
+                "cookbook.imui_action_basics.genui.root": {
+                    "type": "VStack",
+                    "props": { "gap": "sm" },
+                    "children": ["cookbook.imui_action_basics.genui.button.inc"]
+                },
+                "cookbook.imui_action_basics.genui.button.inc": {
+                    "type": "Button",
+                    "props": { "label": "Increment (genui)" },
+                    "on": { "press": { "action": "cookbook.imui_action_basics.inc.v1" } },
+                    "children": []
+                }
+            }
+        }))
+        .expect("hardcoded spec must be valid");
+
+        let mut catalog = shadcn_catalog_v1();
+        catalog.actions.insert(
+            act::Inc::ID_STR.to_string(),
+            CatalogActionV1 {
+                description: Some(
+                    "Dispatch a stable ActionId via the host command pipeline.".to_string(),
+                ),
+                params: Default::default(),
+            },
+        );
+
+        Self {
+            genui_state,
+            genui_spec,
+            genui_catalog: Arc::new(catalog),
+        }
     }
 
     fn render(&mut self, cx: &mut ViewCx<'_, '_, App>) -> Elements {
@@ -39,6 +86,28 @@ impl View for ImUiActionBasicsView {
         cx.on_action_availability::<act::Inc>(|_host, _acx| CommandAvailability::Available);
 
         ui::v_flex(cx, |cx| {
+            let genui_panel = cx.column(fret_ui::element::ColumnProps::default(), |cx| {
+                let runtime = GenUiRuntime {
+                    state: self.genui_state.clone(),
+                    action_queue: None,
+                    auto_apply_standard_actions: false,
+                    limits: RenderLimits::default(),
+                    catalog: Some(self.genui_catalog.clone()),
+                    catalog_validation: ValidationMode::Strict,
+                };
+                let mut resolver = ShadcnResolver::new();
+                match render_spec(cx, &self.genui_spec, &runtime, &mut resolver) {
+                    Ok(out) => {
+                        if !out.issues.is_empty() {
+                            vec![cx.text(format!("GenUI issues: {:?}", out.issues))]
+                        } else {
+                            out.roots
+                        }
+                    }
+                    Err(err) => vec![cx.text(format!("GenUI render error: {err}"))],
+                }
+            });
+
             let imui_panel = cx.column(fret_ui::element::ColumnProps::default(), |cx| {
                 fret_imui::imui(cx, |ui| {
                     ui.text("IMUI");
@@ -62,6 +131,7 @@ impl View for ImUiActionBasicsView {
                     .into_element(cx)
                     .a11y_role(SemanticsRole::Button)
                     .test_id(TEST_ID_BUTTON_DECL),
+                genui_panel,
                 imui_panel,
             ]
         })

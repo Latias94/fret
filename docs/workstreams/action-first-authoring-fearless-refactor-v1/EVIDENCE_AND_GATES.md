@@ -39,10 +39,12 @@ Pointer-trigger authoring integration (v1 still dispatches through the command p
 - `ecosystem/fret-ui-kit/src/declarative/action_hooks.rs` (`pressable_dispatch_action_if_enabled`)
 - `ecosystem/fret-ui-kit/src/imui.rs` (`ImUiFacade::action_button_ex`, `ImUiFacade::menu_item_action_ex`, `UiWriterImUiFacadeExt::menu_item_action_ex`)
 - `ecosystem/fret-genui-core/src/executor.rs` (`GenUiActionExecutorV1::with_dispatch_command_actions`)
+- `ecosystem/fret-genui-core/src/render.rs` (default `test_id` stamping: `genui:{element_key}`)
+- `ecosystem/fret-genui-shadcn/src/resolver/basic.rs` (Button action-first mapping for unit `.v1` action ids)
 - `ecosystem/fret-ui-kit/src/declarative/cached_subtree.rs` (`CachedSubtreeExt` authoring helper)
 - `apps/fret-cookbook/examples/commands_keymap_basics.rs` (example adoption: view runtime + keymap + action availability gating)
 - `apps/fret-cookbook/examples/hello.rs` (example adoption: view runtime + action-first button + handler registration)
-- `apps/fret-cookbook/examples/imui_action_basics.rs` (example adoption: shared action handler across declarative + imui)
+- `apps/fret-cookbook/examples/imui_action_basics.rs` (example adoption: shared action handler across declarative + GenUI + imui)
 - `apps/fret-cookbook/examples/overlay_basics.rs` (example adoption: view runtime + modal barrier gate)
 
 ---

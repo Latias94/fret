@@ -407,6 +407,7 @@ Minimum gates to avoid “AI broke the UI silently”:
   - binding path resolution.
 - Component conformance tests (later):
   - golden specs rendered via `fret-ui-shadcn` components with stable `test_id` anchors.
+  - v1 default: core stamps `test_id` as `genui:{element_key}` when the resolver does not provide one.
 
 ## 9. Open questions (explicitly tracked)
 

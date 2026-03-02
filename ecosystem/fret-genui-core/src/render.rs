@@ -225,6 +225,10 @@ impl EventDispatcher {
     }
 }
 
+fn genui_default_test_id(key: &ElementKey) -> Arc<str> {
+    Arc::from(format!("genui:{}", key.0))
+}
+
 pub fn render_spec<H: UiHost, R: ComponentResolver<H>>(
     cx: &mut ElementContext<'_, H>,
     spec: &SpecV1,
@@ -371,6 +375,21 @@ fn render_element_node<H: UiHost, R: ComponentResolver<H>>(
                 component: element.ty.clone(),
                 message: err.to_string(),
             })?;
+
+        // Diagnostics contract: every spec element should be selectable via a stable `test_id` even
+        // if the resolver/component policy does not explicitly stamp one.
+        let rendered = {
+            let has_test_id = rendered
+                .semantics_decoration
+                .as_ref()
+                .and_then(|d| d.test_id.as_ref())
+                .is_some();
+            if has_test_id {
+                rendered
+            } else {
+                rendered.test_id(genui_default_test_id(key))
+            }
+        };
 
         *rendered_count = rendered_count.saturating_add(1);
 

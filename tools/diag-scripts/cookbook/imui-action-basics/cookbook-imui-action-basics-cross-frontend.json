@@ -5,8 +5,8 @@
     "tags": ["cookbook", "imui", "view_runtime", "actions", "smoke"],
     "required_capabilities": ["diag.script_v2"],
     "target_hints": [
-      "Clicks a declarative button and an imui button that dispatch the same ActionId.",
-      "Asserts both triggers update the same view-local state via a shared typed action handler."
+      "Clicks a declarative button, a GenUI-rendered button, and an imui button that dispatch the same ActionId.",
+      "Asserts all triggers update the same view-local state via a shared typed action handler."
     ]
   },
   "steps": [
@@ -42,7 +42,7 @@
     },
     {
       "type": "click_stable",
-      "target": { "kind": "test_id", "id": "cookbook.imui_action_basics.button.imui" }
+      "target": { "kind": "test_id", "id": "genui:cookbook.imui_action_basics.genui.button.inc" }
     },
     {
       "type": "wait_until",
@@ -54,9 +54,21 @@
       "timeout_frames": 240
     },
     {
+      "type": "click_stable",
+      "target": { "kind": "test_id", "id": "cookbook.imui_action_basics.button.imui" }
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "label_contains",
+        "target": { "kind": "test_id", "id": "cookbook.imui_action_basics.count" },
+        "text": "Count: 3"
+      },
+      "timeout_frames": 240
+    },
+    {
       "type": "capture_bundle",
       "label": "cookbook-imui-action-basics-cross-frontend"
     }
   ]
 }
-
