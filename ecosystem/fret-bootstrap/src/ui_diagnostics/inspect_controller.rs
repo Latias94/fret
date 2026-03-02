@@ -179,6 +179,20 @@ impl InspectController {
         );
     }
 
+    pub(super) fn script_finish_lock_and_copy_selector(
+        &mut self,
+        window: AppWindowId,
+        node_id: u64,
+        selector_json: String,
+        toast_message: String,
+    ) -> Effect {
+        self.script_set_focus_and_best_selector_json(window, node_id, selector_json.clone());
+        self.script_set_toast(window, toast_message);
+        Effect::ClipboardSetText {
+            text: selector_json,
+        }
+    }
+
     pub(super) fn script_prepare_help_search(&mut self, window: AppWindowId, query: String) {
         self.state.help_open_windows.insert(window);
         self.state.help_search_query.insert(window, query);

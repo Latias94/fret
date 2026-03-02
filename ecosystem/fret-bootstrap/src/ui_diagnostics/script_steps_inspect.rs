@@ -274,19 +274,14 @@ pub(super) fn handle_inspect_help_lock_best_match_and_copy_selector_step(
 
     // Mirror the in-app inspector focus/lock semantics so overlay code can copy the selector and
     // subsequent steps can observe a stable `inspect_best_selector_json`.
-    svc.inspector.script_set_focus_and_best_selector_json(
-        resolved_window,
-        node_id,
-        selector_json.clone(),
-    );
-
-    output.effects.push(Effect::ClipboardSetText {
-        text: selector_json,
-    });
-    svc.inspector.script_set_toast(
-        resolved_window,
-        "inspect: locked match and copied selector".to_string(),
-    );
+    output
+        .effects
+        .push(svc.inspector.script_finish_lock_and_copy_selector(
+            resolved_window,
+            node_id,
+            selector_json,
+            "inspect: locked match and copied selector".to_string(),
+        ));
 
     active.v2_step_state = None;
     active.next_step = active.next_step.saturating_add(1);
@@ -519,19 +514,14 @@ pub(super) fn handle_inspect_help_tree_lock_best_match_and_copy_selector_step(
     };
 
     svc.inspector.script_lock_window(resolved_window);
-    svc.inspector.script_set_focus_and_best_selector_json(
-        resolved_window,
-        node_id,
-        selector_json.clone(),
-    );
-
-    output.effects.push(Effect::ClipboardSetText {
-        text: selector_json,
-    });
-    svc.inspector.script_set_toast(
-        resolved_window,
-        "inspect: locked tree match and copied selector".to_string(),
-    );
+    output
+        .effects
+        .push(svc.inspector.script_finish_lock_and_copy_selector(
+            resolved_window,
+            node_id,
+            selector_json,
+            "inspect: locked tree match and copied selector".to_string(),
+        ));
 
     active.v2_step_state = None;
     active.next_step = active.next_step.saturating_add(1);
