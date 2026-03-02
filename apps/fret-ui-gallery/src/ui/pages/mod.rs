@@ -3,6 +3,8 @@ use super::*;
 mod alert;
 mod alert_dialog;
 mod accordion;
+mod ai_code_block_demo;
+mod ai_snippet_demo;
 mod aspect_ratio;
 mod avatar;
 mod badge;
@@ -66,6 +68,17 @@ mod typography;
 
 pub(super) fn preview_alert(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
     alert::preview_alert(cx)
+}
+
+pub(super) fn preview_ai_code_block_demo(
+    cx: &mut ElementContext<'_, App>,
+    theme: &Theme,
+) -> Vec<AnyElement> {
+    ai_code_block_demo::preview_ai_code_block_demo(cx, theme)
+}
+
+pub(super) fn preview_ai_snippet_demo(cx: &mut ElementContext<'_, App>, theme: &Theme) -> Vec<AnyElement> {
+    ai_snippet_demo::preview_ai_snippet_demo(cx, theme)
 }
 
 pub(super) fn preview_accordion(
