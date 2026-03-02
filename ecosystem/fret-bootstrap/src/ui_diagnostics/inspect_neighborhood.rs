@@ -170,10 +170,11 @@ pub(super) fn build_inspect_neighborhood_model(
         let selected_id = selected
             .and_then(|i| matches.get(i))
             .map(|n| n.id.data().as_ffi());
+        let selected_1 = selected.map(|i| i.saturating_add(1)).unwrap_or(0);
+        let shown = matches.len();
 
         out.push(format!(
-            "matches: {matches_total} (showing {}) (Up/Down select, Enter lock, Ctrl/Cmd+Enter lock+copy)",
-            matches.len()
+            "matches: {matches_total} (showing {shown}) selected={selected_1}/{shown} (Up/Down select, Enter lock, Ctrl/Cmd+Enter lock+copy)",
         ));
         for m in matches.iter().copied() {
             let is_selected = selected_id.is_some_and(|id| id == m.id.data().as_ffi());
