@@ -50,41 +50,35 @@ pub(super) fn preview_forms(
             DocSection::new("Form Demo", upstream_demo)
                 .description("Aligned with shadcn/ui `form-demo.tsx` (new-york-v4).")
                 .max_w(Px(840.0))
-                .code_rust_from_file_region(
-                    include_str!("../snippets/form/upstream_demo.rs"),
-                    "example",
-                ),
+                .code_rust_from_file_region(snippets::upstream_demo::SOURCE, "example"),
             DocSection::new("Demo", demo)
                 .description("FieldSet + FieldGroup recipe with multiple controls.")
                 .max_w(Px(840.0))
-                .code_rust_from_file_region(include_str!("../snippets/form/demo.rs"), "example"),
+                .code_rust_from_file_region(snippets::demo::SOURCE, "example"),
             DocSection::new("Input", input)
                 .description("A model-bound input control.")
                 .max_w(Px(840.0))
-                .code_rust_from_file_region(include_str!("../snippets/form/input.rs"), "example"),
+                .code_rust_from_file_region(snippets::input::SOURCE, "example"),
             DocSection::new("Textarea", textarea)
                 .description("A model-bound textarea control with fixed height.")
                 .max_w(Px(840.0))
-                .code_rust_from_file_region(include_str!("../snippets/form/textarea.rs"), "example"),
+                .code_rust_from_file_region(snippets::textarea::SOURCE, "example"),
             DocSection::new("Checkbox + Switch", controls)
                 .description("Basic checkbox + switch controls with labels.")
                 .max_w(Px(840.0))
-                .code_rust_from_file_region(include_str!("../snippets/form/controls.rs"), "example"),
+                .code_rust_from_file_region(snippets::controls::SOURCE, "example"),
             DocSection::new("Fieldset", fieldset)
                 .description("FieldSet recipe with grouped fields and action row.")
                 .max_w(Px(840.0))
-                .code_rust_from_file_region(
-                    include_str!("../snippets/form/fieldset.rs"),
-                    "example",
-                ),
+                .code_rust_from_file_region(snippets::fieldset::SOURCE, "example"),
             DocSection::new("RTL", rtl)
                 .description("Form composition under an RTL direction provider.")
                 .max_w(Px(840.0))
-                .code_rust_from_file_region(include_str!("../snippets/form/rtl.rs"), "example"),
+                .code_rust_from_file_region(snippets::rtl::SOURCE, "example"),
             DocSection::new("Notes", notes)
                 .description("API reference pointers and authoring notes.")
                 .max_w(Px(820.0))
-                .code_rust_from_file_region(include_str!("../snippets/form/notes.rs"), "example"),
+                .code_rust_from_file_region(snippets::notes::SOURCE, "example"),
         ],
     );
 

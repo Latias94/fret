@@ -1,3 +1,5 @@
+pub const SOURCE: &str = include_str!("upstream_demo.rs");
+
 // region: example
 use fret_app::App;
 use fret_ui_headless::calendar::CalendarMonth;

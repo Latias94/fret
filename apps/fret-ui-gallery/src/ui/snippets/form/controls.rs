@@ -1,3 +1,5 @@
+pub const SOURCE: &str = include_str!("controls.rs");
+
 // region: example
 use fret_app::App;
 use fret_ui_shadcn::{self as shadcn, prelude::*};
