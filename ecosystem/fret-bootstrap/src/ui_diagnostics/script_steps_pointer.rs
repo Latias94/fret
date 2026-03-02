@@ -1277,6 +1277,8 @@ pub(super) fn handle_click_stable_step(
                                 click_modifiers,
                                 pointer_type,
                             ));
+                            active.last_injected_step =
+                                Some(step_index.min(u32::MAX as usize) as u32);
                             active.wait_until = None;
                             active.screenshot_wait = None;
                             active.next_step = active.next_step.saturating_add(1);
@@ -1295,6 +1297,7 @@ pub(super) fn handle_click_stable_step(
                             click_modifiers,
                             pointer_type,
                         ));
+                        active.last_injected_step = Some(step_index.min(u32::MAX as usize) as u32);
                         active.wait_until = None;
                         active.screenshot_wait = None;
                         active.next_step = active.next_step.saturating_add(1);
