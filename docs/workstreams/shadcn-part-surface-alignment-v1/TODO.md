@@ -27,8 +27,9 @@ See also: `docs/workstreams/shadcn-part-surface-alignment-v1/INVENTORY.md`.
 This is the suggested dev sequence for the next parity passes (optimize for “high leverage” and
 “high risk”):
 
-1. `field` (label/control association + helper text semantics)
-2. **Defer last**: `select` / `combobox` (structural drift is known; deeper than naming)
+1. `tooltip` / `popover` / `hover-card` (overlay semantics + extremely common call sites)
+2. `table` (layout constraints + semantics stamping)
+3. **Defer last**: `select` / `combobox` (structural drift is known; deeper than naming)
 
 ## Tracker table
 
@@ -45,6 +46,7 @@ This is the suggested dev sequence for the next parity passes (optimize for “h
 | `checkbox` | `Checkbox` | `Checkbox` | DOM slot composition differs; keyboard/a11y outcomes must match Radix/APG expectations | Medium | Keep surface; treat behavior outcomes as the contract and gate with unit tests | unit tests in `ecosystem/fret-ui-shadcn/src/checkbox.rs` | P1 | Done (with known gaps) |
 | `input` | `Input` | `Input` | Upstream `file:*` styling and `type` differences are not modeled; focus/selection outcomes are the contract | Low | Keep surface; lock `w-full` + `min-w-0` defaults and selection color token mapping | unit tests in `ecosystem/fret-ui-shadcn/src/input.rs` | P2 | Done (with known gaps) |
 | `textarea` | `Textarea` | `Textarea` | Adds resize-handle + stable-line-box knobs not present upstream | Low | Keep surface; lock `min-h-16` + `w-full` defaults and resize-handle gating | unit tests in `ecosystem/fret-ui-shadcn/src/textarea.rs` | P2 | Done (with known gaps) |
+| `field` | `FieldSet, FieldLegend, FieldGroup, FieldContent, FieldTitle, FieldLabel, FieldDescription, FieldError, FieldSeparator` | `Field*` parts + ControlRegistry association (`ControlId`) | No DOM `id/htmlFor`; `described-by` is a single relationship (error > description) | Medium | Extend `ControlRegistry` to include helper text; add `.control_id(...)` on `Input`/`Textarea` and `.for_control(...)` on `FieldDescription`/`FieldError` | unit tests in `ecosystem/fret-ui-shadcn/src/field.rs` and `ecosystem/fret-ui-shadcn/src/input.rs` | P1 | Done (with known gaps) |
 | `spinner` | `Spinner` | `Spinner` | Upstream uses an SVG with `role="status"`; Fret maps to `SvgIcon` + `VisualTransform` | Low | Keep surface; lock `size-4` default and stamp loading semantics (`aria-live` equivalent) | unit tests in `ecosystem/fret-ui-shadcn/src/spinner.rs` | P2 | Done |
 | `switch` | `Switch` | `Switch` | DOM slot composition differs; geometry and semantics outcomes are the contract | Low | Keep surface; lock thumb centering + semantics role stamping | unit tests in `ecosystem/fret-ui-shadcn/src/switch.rs` | P1 | Done |
 | `dialog` | `Dialog, DialogTrigger, DialogPortal, DialogOverlay, DialogContent, DialogClose, DialogHeader, DialogFooter, DialogTitle, DialogDescription` | `Dialog, DialogContent, DialogClose, DialogHeader, DialogFooter, DialogTitle, DialogDescription` (+ thin parts adapters) | Portal/overlay/trigger are adapters; in `into_element_parts` we install a default "open on activate" behavior when the trigger is pressable | Medium | Add thin parts that delegate to existing `Dialog` overlay composition; preserve current closure API | unit tests in `ecosystem/fret-ui-shadcn/src/dialog.rs` (+ diag script TODO) | P0 | Done (with known gaps) |
@@ -83,7 +85,7 @@ This is the short “next few” list. Full inventory is in `INVENTORY.md`.
 
 | Component | Upstream base file | Fret module | Priority | Status | Notes |
 |---|---|---|---:|---|---|
-| `field` | `repo-ref/ui/apps/v4/registry/bases/radix/ui/field.tsx` | `ecosystem/fret-ui-shadcn/src/field.rs` | P1 | Not started | Gate: label/control association + helper text semantics + required/invalid chrome. |
+| `table` | `repo-ref/ui/apps/v4/registry/bases/radix/ui/table.tsx` | `ecosystem/fret-ui-shadcn/src/table.rs` | P2 | Not started | Gate: default layout constraints (`min-w-0`, truncate) + semantics role stamping. |
 
 ## Notes / recurring hazards
 

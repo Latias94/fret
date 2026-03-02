@@ -9,6 +9,9 @@ use fret_ui::element::{
 use fret_ui::elements::GlobalElementId;
 use fret_ui::{ElementContext, TextAreaStyle, Theme, UiHost, action};
 use fret_ui_kit::declarative::style as decl_style;
+use fret_ui_kit::primitives::control_registry::{
+    ControlAction, ControlEntry, ControlId, control_registry_model,
+};
 use fret_ui_kit::recipes::input::{InputTokenKeys, resolve_input_chrome};
 use fret_ui_kit::typography;
 use fret_ui_kit::{ChromeRefinement, LayoutRefinement, Size as ComponentSize, Space};
@@ -60,6 +63,7 @@ pub struct Textarea {
     model: Model<String>,
     a11y_label: Option<Arc<str>>,
     labelled_by_element: Option<GlobalElementId>,
+    control_id: Option<ControlId>,
     placeholder: Option<Arc<str>>,
     aria_invalid: bool,
     aria_required: bool,
@@ -96,6 +100,7 @@ impl Textarea {
             model,
             a11y_label: None,
             labelled_by_element: None,
+            control_id: None,
             placeholder: None,
             aria_invalid: false,
             aria_required: false,
@@ -117,6 +122,13 @@ impl Textarea {
     /// Associates this control with a label element (ARIA `aria-labelledby`-like outcome).
     pub fn labelled_by_element(mut self, label: GlobalElementId) -> Self {
         self.labelled_by_element = Some(label);
+        self
+    }
+
+    /// Associates this textarea with a logical form control id so related elements (e.g. labels,
+    /// helper text) can forward activation and attach `labelled-by` / `described-by` semantics.
+    pub fn control_id(mut self, id: impl Into<ControlId>) -> Self {
+        self.control_id = Some(id.into());
         self
     }
 
@@ -179,6 +191,7 @@ impl Textarea {
             self.model,
             self.a11y_label,
             self.labelled_by_element,
+            self.control_id,
             self.placeholder,
             self.aria_invalid,
             self.aria_required,
@@ -198,6 +211,7 @@ pub fn textarea<H: UiHost>(
     model: Model<String>,
     a11y_label: Option<Arc<str>>,
     labelled_by_element: Option<GlobalElementId>,
+    control_id: Option<ControlId>,
     placeholder: Option<Arc<str>>,
     aria_invalid: bool,
     aria_required: bool,
@@ -260,6 +274,7 @@ pub fn textarea<H: UiHost>(
         }
     }
 
+    let has_a11y_label = a11y_label.is_some();
     let mut props = TextAreaProps::new(model);
     props.enabled = !disabled;
     props.focusable = !disabled;
@@ -310,12 +325,70 @@ pub fn textarea<H: UiHost>(
             ..Default::default()
         },
         move |cx| {
+            let control_id = control_id.clone();
+            let control_registry = control_id.as_ref().map(|_| control_registry_model(cx));
+
+            let labelled_by_element = if labelled_by_element.is_some() {
+                labelled_by_element
+            } else if has_a11y_label {
+                None
+            } else if let (Some(control_id), Some(control_registry)) =
+                (control_id.as_ref(), control_registry.as_ref())
+            {
+                cx.app
+                    .models()
+                    .read(control_registry, |reg| {
+                        reg.label_for(cx.window, control_id).map(|l| l.element)
+                    })
+                    .ok()
+                    .flatten()
+            } else {
+                None
+            };
+
+            let described_by_element = if let (Some(control_id), Some(control_registry)) =
+                (control_id.as_ref(), control_registry.as_ref())
+            {
+                cx.app
+                    .models()
+                    .read(control_registry, |reg| {
+                        reg.described_by_for(cx.window, control_id)
+                    })
+                    .ok()
+                    .flatten()
+            } else {
+                None
+            };
+
             if !show_resize_handle {
-                let textarea = cx.text_area(props);
-                let textarea = if let Some(label) = labelled_by_element {
-                    textarea.attach_semantics(
-                        SemanticsDecoration::default().labelled_by_element(label.0),
-                    )
+                let control_id_for_register = control_id.clone();
+                let control_registry_for_register = control_registry.clone();
+                let textarea = cx.text_area_with_id_props(move |cx, id| {
+                    if let (Some(control_id), Some(control_registry)) = (
+                        control_id_for_register.clone(),
+                        control_registry_for_register.clone(),
+                    ) {
+                        let entry = ControlEntry {
+                            element: id,
+                            enabled: !disabled,
+                            action: ControlAction::Noop,
+                        };
+                        let _ = cx.app.models_mut().update(&control_registry, |reg| {
+                            reg.register_control(cx.window, cx.frame_id, control_id, entry);
+                        });
+                    }
+                    props
+                });
+
+                let textarea = if labelled_by_element.is_some() || described_by_element.is_some() {
+                    let mut decoration = SemanticsDecoration::default();
+                    if let Some(label) = labelled_by_element {
+                        decoration = decoration.labelled_by_element(label.0);
+                    }
+                    if let Some(desc) = described_by_element {
+                        decoration = decoration.described_by_element(desc.0);
+                    }
+                    textarea.attach_semantics(decoration)
                 } else {
                     textarea
                 };
@@ -353,10 +426,34 @@ pub fn textarea<H: UiHost>(
                 props.layout.size.height = Length::Px(px);
             }
 
-            let textarea = cx.text_area(props);
-            let textarea = if let Some(label) = labelled_by_element {
-                textarea
-                    .attach_semantics(SemanticsDecoration::default().labelled_by_element(label.0))
+            let control_id_for_register = control_id.clone();
+            let control_registry_for_register = control_registry.clone();
+            let textarea = cx.text_area_with_id_props(move |cx, id| {
+                if let (Some(control_id), Some(control_registry)) = (
+                    control_id_for_register.clone(),
+                    control_registry_for_register.clone(),
+                ) {
+                    let entry = ControlEntry {
+                        element: id,
+                        enabled: !disabled,
+                        action: ControlAction::Noop,
+                    };
+                    let _ = cx.app.models_mut().update(&control_registry, |reg| {
+                        reg.register_control(cx.window, cx.frame_id, control_id, entry);
+                    });
+                }
+                props
+            });
+
+            let textarea = if labelled_by_element.is_some() || described_by_element.is_some() {
+                let mut decoration = SemanticsDecoration::default();
+                if let Some(label) = labelled_by_element {
+                    decoration = decoration.labelled_by_element(label.0);
+                }
+                if let Some(desc) = described_by_element {
+                    decoration = decoration.described_by_element(desc.0);
+                }
+                textarea.attach_semantics(decoration)
             } else {
                 textarea
             };
