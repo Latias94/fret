@@ -1,0 +1,38 @@
+{
+  "schema_version": 2,
+  "meta": {
+    "name": "cookbook-markdown-and-code-basics-smoke",
+    "required_capabilities": ["diag.script_v2", "diag.screenshot_png"],
+    "tags": ["cookbook", "markdown", "code_view", "copy", "smoke"]
+  },
+  "steps": [
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "cookbook.markdown_and_code_basics.root" }
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "fret-markdown.anchor.markdown-and-code-basics" }
+      },
+      "timeout_frames": 240
+    },
+    { "type": "click", "target": { "kind": "role_and_name", "role": "button", "name": "Copy" } },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "role_and_name", "role": "button", "name": "Copied" }
+      },
+      "timeout_frames": 240
+    },
+    { "type": "capture_screenshot", "label": "cookbook-markdown-and-code-basics-smoke" },
+    { "type": "capture_bundle", "label": "cookbook-markdown-and-code-basics-smoke" }
+  ]
+}
+
