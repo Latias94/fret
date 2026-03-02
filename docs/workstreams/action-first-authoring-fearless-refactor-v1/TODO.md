@@ -130,6 +130,8 @@ ID format:
       `apps/fret-cookbook/examples/commands_keymap_basics.rs`
     - Action-first button binding + handler table landed for `hello` (still MVU; view runtime pending):
       `apps/fret-cookbook/examples/hello.rs`
+    - Action-first bindings landed for `overlay_basics` (still MVU; view runtime pending):
+      `apps/fret-cookbook/examples/overlay_basics.rs`
 - [ ] AFA-adopt-041 Add at least one ui-gallery page/snippet using actions + view runtime.
 - [ ] AFA-adopt-042 Add one editor-grade harness adoption:
   - docking/workspace shell uses actions for tab/command semantics (where appropriate).
@@ -147,7 +149,7 @@ ID format:
   - Status (as of 2026-03-02):
     - Implemented (non-modal gating): `tools/diag-scripts/cookbook/commands-keymap-basics/cookbook-commands-keymap-basics-shortcut-and-gating.json`
     - Implemented (button click + state update): `tools/diag-scripts/cookbook/hello/cookbook-hello-click-count.json`
-    - Pending: modal barrier availability coverage (e.g. under an overlay barrier root)
+    - Implemented (modal barrier shortcut gating): `tools/diag-scripts/cookbook/overlay-basics/cookbook-overlay-basics-modal-barrier-shortcut-gating.json`
 - [ ] AFA-gates-051 Add compile-only wasm smoke gates for the new view runtime surface.
 - [ ] AFA-gates-052 Add a small set of unit tests for action routing / handler table behavior.
 - [ ] AFA-gates-053 Add a “risk matrix” review pass for M0/M1 (see `RISK_MATRIX.md`).

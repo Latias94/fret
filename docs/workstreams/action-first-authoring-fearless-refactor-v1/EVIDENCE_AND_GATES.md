@@ -29,6 +29,7 @@ Pointer-trigger authoring integration (v1 still dispatches through the command p
 - `ecosystem/fret-ui-kit/src/declarative/action_hooks.rs` (`pressable_dispatch_action_if_enabled`)
 - `apps/fret-cookbook/examples/commands_keymap_basics.rs` (example adoption: typed action ID + button binding)
 - `apps/fret-cookbook/examples/hello.rs` (example adoption: typed action ID + button binding + handler table)
+- `apps/fret-cookbook/examples/overlay_basics.rs` (example adoption: action + keymap + modal barrier gate)
 
 ---
 
@@ -65,6 +66,7 @@ Current scripts (as of 2026-03-02):
 
 - `tools/diag-scripts/cookbook/commands-keymap-basics/cookbook-commands-keymap-basics-shortcut-and-gating.json`
 - `tools/diag-scripts/cookbook/hello/cookbook-hello-click-count.json`
+- `tools/diag-scripts/cookbook/overlay-basics/cookbook-overlay-basics-modal-barrier-shortcut-gating.json`
 
 ### 2.3 wasm smoke (build-only)
 
