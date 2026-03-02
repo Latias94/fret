@@ -5,6 +5,7 @@
 use super::prelude_core::*;
 use super::tab_bar_geometry::TabBarGeometry;
 use fret_ui::ThemeSnapshot;
+use fret_ui_headless::tab_strip_surface::{classify_tab_strip_surface_no_tabs, TabStripSurface};
 
 #[derive(Debug, Clone)]
 pub(super) struct TabBarOverflowCandidateGeometry {
@@ -65,4 +66,158 @@ pub(super) fn tab_strip_rect_with_overflow_button(theme: ThemeSnapshot, tab_bar:
     let end_x = (button.origin.x.0 - pad).max(tab_bar.origin.x.0);
     let w = (end_x - tab_bar.origin.x.0).max(0.0);
     Rect::new(tab_bar.origin, Size::new(Px(w), tab_bar.size.height))
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(super) struct TabBarDropResolution {
+    pub(super) surface: TabStripSurface,
+    pub(super) insert_index: Option<usize>,
+}
+
+pub(super) fn resolve_tab_bar_drop(
+    theme: ThemeSnapshot,
+    tab_bar: Rect,
+    tab_count: usize,
+    tab_widths: Option<&Arc<[Px]>>,
+    scroll: Px,
+    position: Point,
+) -> TabBarDropResolution {
+    if tab_count == 0 {
+        return TabBarDropResolution {
+            surface: TabStripSurface::Outside,
+            insert_index: None,
+        };
+    }
+    if !tab_bar.contains(position) {
+        return TabBarDropResolution {
+            surface: TabStripSurface::Outside,
+            insert_index: None,
+        };
+    }
+
+    let candidate =
+        compute_tab_bar_overflow_candidate_geometry(theme.clone(), tab_bar, tab_count, tab_widths);
+    if candidate.overflows {
+        let surface = classify_tab_strip_surface_no_tabs(
+            position,
+            None,
+            Some(candidate.reserved_header_space_rect),
+            Some(candidate.strip_rect),
+            Some(candidate.overflow_button_rect),
+            None,
+            None,
+        );
+        let insert_index = match surface {
+            TabStripSurface::TabsViewport => Some(candidate.geom.compute_insert_index(position, scroll)),
+            TabStripSurface::HeaderSpace => Some(tab_count),
+            TabStripSurface::OverflowControl
+            | TabStripSurface::Outside
+            | TabStripSurface::ScrollControls
+            | TabStripSurface::PinnedBoundary => None,
+        };
+        return TabBarDropResolution {
+            surface,
+            insert_index,
+        };
+    }
+
+    let geom_full = tab_widths
+        .filter(|w| w.len() == tab_count)
+        .map(|w| TabBarGeometry::variable(tab_bar, (*w).clone()))
+        .unwrap_or_else(|| TabBarGeometry::fixed(tab_bar, tab_count));
+    TabBarDropResolution {
+        surface: TabStripSurface::TabsViewport,
+        insert_index: Some(geom_full.compute_insert_index(position, scroll)),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use fret_ui::theme::{ThemeColors, ThemeMetrics};
+
+    fn test_theme() -> ThemeSnapshot {
+        ThemeSnapshot::from_baseline(
+            ThemeColors {
+                surface_background: Color::TRANSPARENT,
+                panel_background: Color::TRANSPARENT,
+                panel_border: Color::TRANSPARENT,
+                text_primary: Color::TRANSPARENT,
+                text_muted: Color::TRANSPARENT,
+                text_disabled: Color::TRANSPARENT,
+                accent: Color::TRANSPARENT,
+                selection_background: Color::TRANSPARENT,
+                selection_inactive_background: Color::TRANSPARENT,
+                selection_window_inactive_background: Color::TRANSPARENT,
+                hover_background: Color::TRANSPARENT,
+                focus_ring: Color::TRANSPARENT,
+                menu_background: Color::TRANSPARENT,
+                menu_border: Color::TRANSPARENT,
+                menu_item_hover: Color::TRANSPARENT,
+                menu_item_selected: Color::TRANSPARENT,
+                list_background: Color::TRANSPARENT,
+                list_border: Color::TRANSPARENT,
+                list_row_hover: Color::TRANSPARENT,
+                list_row_selected: Color::TRANSPARENT,
+                scrollbar_track: Color::TRANSPARENT,
+                scrollbar_thumb: Color::TRANSPARENT,
+                scrollbar_thumb_hover: Color::TRANSPARENT,
+                viewport_selection_fill: Color::TRANSPARENT,
+                viewport_selection_stroke: Color::TRANSPARENT,
+                viewport_marker: Color::TRANSPARENT,
+                viewport_drag_line_pan: Color::TRANSPARENT,
+                viewport_drag_line_orbit: Color::TRANSPARENT,
+                viewport_gizmo_x: Color::TRANSPARENT,
+                viewport_gizmo_y: Color::TRANSPARENT,
+                viewport_gizmo_handle_background: Color::TRANSPARENT,
+                viewport_gizmo_handle_border: Color::TRANSPARENT,
+                viewport_rotate_gizmo: Color::TRANSPARENT,
+            },
+            ThemeMetrics {
+                radius_sm: Px(6.0),
+                radius_md: Px(8.0),
+                radius_lg: Px(10.0),
+                padding_sm: Px(8.0),
+                padding_md: Px(10.0),
+                scrollbar_width: Px(10.0),
+                font_size: Px(13.0),
+                mono_font_size: Px(13.0),
+                font_line_height: Px(16.0),
+                mono_font_line_height: Px(16.0),
+            },
+            0,
+        )
+    }
+
+    #[test]
+    fn resolve_tab_bar_drop_returns_outside_when_pointer_is_outside_tab_bar() {
+        let theme = test_theme();
+        let tab_bar = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(120.0), Px(24.0)));
+        let pos = Point::new(Px(240.0), Px(12.0));
+        let resolved = resolve_tab_bar_drop(theme, tab_bar, 3, None, Px(0.0), pos);
+        assert_eq!(resolved.surface, TabStripSurface::Outside);
+        assert_eq!(resolved.insert_index, None);
+    }
+
+    #[test]
+    fn resolve_tab_bar_drop_treats_overflow_header_space_as_end_drop() {
+        let theme = test_theme();
+        let tab_bar = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(120.0), Px(24.0)));
+        let widths: Arc<[Px]> = Arc::from([Px(80.0), Px(80.0), Px(80.0)].as_slice());
+
+        let candidate = compute_tab_bar_overflow_candidate_geometry(theme.clone(), tab_bar, 3, Some(&widths));
+        assert!(candidate.overflows);
+
+        // Pick a point between strip end and overflow button. (The reserved header rect may overlap
+        // the overflow button rect; `OverflowControl` must win when overlapping.)
+        let strip_end_x = candidate.strip_rect.origin.x.0 + candidate.strip_rect.size.width.0;
+        let button_start_x = candidate.overflow_button_rect.origin.x.0;
+        let x = Px(((strip_end_x + button_start_x) * 0.5).clamp(strip_end_x, button_start_x));
+        let y = Px(tab_bar.origin.y.0 + tab_bar.size.height.0 * 0.5);
+        let pos = Point::new(x, y);
+
+        let resolved = resolve_tab_bar_drop(theme, tab_bar, 3, Some(&widths), Px(0.0), pos);
+        assert_eq!(resolved.surface, TabStripSurface::HeaderSpace);
+        assert_eq!(resolved.insert_index, Some(3));
+    }
 }
