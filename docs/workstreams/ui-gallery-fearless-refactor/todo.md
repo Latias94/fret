@@ -29,6 +29,7 @@ Legend:
 - [x] Add a lint/test that forbids new `DocSection::code("rust", r#"...")` on migrated pages (`apps/fret-ui-gallery/tests/ui_pages_deny_rust_code_literals.rs`).
 - [x] Forbid `include_str!("../snippets/...")` usage in pages; require `snippets::*::SOURCE` to avoid refactor path drift (`apps/fret-ui-gallery/tests/ui_pages_deny_relative_snippet_includes.rs`).
 - [x] Forbid snippet files from importing UI Gallery internals (`crate::ui`, `crate::spec`) (`apps/fret-ui-gallery/tests/ui_snippets_deny_gallery_internal_imports.rs`).
+- [x] Require every snippet file to export a `SOURCE` const (`apps/fret-ui-gallery/tests/ui_snippets_require_source_const.rs`).
 - [ ] Add a small “drift audit” doc section in UI Gallery (optional) to list remaining legacy sections.
 
 Notes:
