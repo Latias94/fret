@@ -19,7 +19,7 @@ impl UiDiagnosticsService {
 
     pub(super) fn resolve_pending_pick_for_window(
         &mut self,
-        pending: PendingPick,
+        pending: inspect_controller::PendingPick,
         raw_semantics: Option<&fret_core::SemanticsSnapshot>,
         ui: &UiTree<App>,
         element_runtime: Option<&ElementRuntime>,

@@ -10,6 +10,13 @@ use slotmap::Key as _;
 use super::UiDiagnosticsConfig;
 use super::inspect_state::InspectState;
 
+#[derive(Debug, Clone)]
+pub(super) struct PendingPick {
+    pub(super) run_id: u64,
+    pub(super) window: AppWindowId,
+    pub(super) position: Point,
+}
+
 #[derive(Debug, Clone, Copy)]
 pub(super) enum InspectNavCommand {
     Up,
@@ -39,7 +46,7 @@ pub(super) struct InspectController {
     pub(super) pick_overlay_grace_frames: HashMap<AppWindowId, u32>,
 
     pub(super) pick_armed_run_id: Option<u64>,
-    pub(super) pending_pick: Option<super::PendingPick>,
+    pub(super) pending_pick: Option<PendingPick>,
 }
 
 impl InspectController {
@@ -73,7 +80,7 @@ impl InspectController {
     pub(super) fn take_pending_pick_for_window(
         &mut self,
         window: AppWindowId,
-    ) -> Option<super::PendingPick> {
+    ) -> Option<PendingPick> {
         if self
             .pending_pick
             .as_ref()
@@ -640,7 +647,7 @@ impl InspectController {
         let Some(run_id) = self.pick_armed_run_id.take() else {
             return false;
         };
-        self.pending_pick = Some(super::PendingPick {
+        self.pending_pick = Some(PendingPick {
             run_id,
             window,
             position,
@@ -654,7 +661,7 @@ impl InspectController {
         run_id: u64,
         position: Point,
     ) -> bool {
-        self.pending_pick = Some(super::PendingPick {
+        self.pending_pick = Some(PendingPick {
             run_id,
             window,
             position,

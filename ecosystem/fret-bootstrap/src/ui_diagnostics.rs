@@ -168,13 +168,6 @@ pub fn maybe_consume_event(app: &mut App, window: AppWindowId, event: &Event) ->
     }
 }
 
-#[derive(Debug, Clone)]
-struct PendingPick {
-    run_id: u64,
-    window: AppWindowId,
-    position: Point,
-}
-
 // Bundle serialization types live in `ui_diagnostics/bundle.rs`.
 
 #[cfg(any())]
@@ -1146,6 +1139,21 @@ mod tests {
 
     fn window_id(id: u64) -> AppWindowId {
         AppWindowId::from(KeyData::from_ffi(id))
+    }
+
+    #[test]
+    fn inspect_controller_pick_run_id_is_strictly_monotonic() {
+        let mut c = inspect_controller::InspectController::default();
+        let first = c.next_pick_run_id();
+        let second = c.next_pick_run_id();
+        assert!(second > first);
+
+        let mut last = second;
+        for _ in 0..128 {
+            let next = c.next_pick_run_id();
+            assert!(next > last);
+            last = next;
+        }
     }
 
     fn dock_node_id(id: u64) -> fret_core::DockNodeId {
