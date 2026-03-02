@@ -505,3 +505,136 @@ fn dock_tab_drop_across_panes_end_inserts_at_target_end() {
         }
     });
 }
+
+#[test]
+fn dock_tab_drop_overflow_end_emits_insert_index_tab_count() {
+    let window = AppWindowId::default();
+
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    ui.set_window(window);
+
+    let root = ui.create_node_retained(DockSpace::new(window));
+    ui.set_root(root);
+
+    let tab_count = 10usize;
+    let panels: Vec<PanelKey> = (0..tab_count)
+        .map(|ix| PanelKey::new(format!("core.{ix}")))
+        .collect();
+
+    let mut app = TestHost::new();
+    app.set_global(PlatformCapabilities::default());
+    let tabs = app.with_global_mut(DockManager::default, |dock, _app| {
+        let tabs = dock.graph.insert_node(DockNode::Tabs {
+            tabs: panels.clone(),
+            active: 0,
+        });
+        dock.graph.set_window_root(window, tabs);
+
+        for (ix, panel) in panels.iter().enumerate() {
+            dock.panels.insert(
+                panel.clone(),
+                DockPanel {
+                    title: format!("Panel {ix}"),
+                    color: Color::TRANSPARENT,
+                    viewport: None,
+                },
+            );
+        }
+
+        tabs
+    });
+
+    let mut text = FakeTextService;
+    let size = Size::new(Px(260.0), Px(180.0));
+    let bounds = Rect::new(Point::new(Px(0.0), Px(0.0)), size);
+    let _ = ui.layout(&mut app, &mut text, root, size, 1.0);
+
+    let theme = fret_ui::Theme::global(&app).snapshot();
+    let (_chrome, dock_bounds) = dock_space_regions(bounds);
+    let (tab_bar, _content) = split_tab_bar(dock_bounds);
+
+    let candidate = super::super::tab_bar_kernel::compute_tab_bar_overflow_candidate_geometry(
+        theme.clone(),
+        tab_bar,
+        tab_count,
+        None,
+    );
+    assert!(candidate.overflows, "expected tab strip to overflow");
+
+    let strip_end = candidate.strip_rect.origin.x.0 + candidate.strip_rect.size.width.0;
+    let button_start = candidate.overflow_button_rect.origin.x.0;
+    assert!(
+        button_start > strip_end + 2.0,
+        "expected reserved header space between strip and overflow button"
+    );
+
+    // Pick a point inside the reserved header space but outside the overflow button rect.
+    let x0 = strip_end + 1.0;
+    let x1 = button_start - 1.0;
+    let x = Px((x0 + x1) * 0.5);
+    let y = Px(tab_bar.origin.y.0 + tab_bar.size.height.0 * 0.5);
+    let drop_pos = Point::new(x, y);
+
+    let dragged_panel = panels
+        .first()
+        .cloned()
+        .expect("expected at least one panel");
+
+    app.begin_cross_window_drag_with_kind(
+        fret_core::PointerId(0),
+        DRAG_KIND_DOCK_PANEL,
+        window,
+        Point::new(Px(24.0), Px(12.0)),
+        DockPanelDragPayload {
+            panel: dragged_panel.clone(),
+            grab_offset: Point::new(Px(0.0), Px(0.0)),
+            start_tick: fret_runtime::TickId(0),
+            tear_off_requested: false,
+            tear_off_oob_start_frame: None,
+            dock_previews_enabled: true,
+        },
+    );
+    if let Some(drag) = app.drag_mut(fret_core::PointerId(0)) {
+        drag.dragging = true;
+    }
+
+    ui.dispatch_event(
+        &mut app,
+        &mut text,
+        &Event::InternalDrag(InternalDragEvent {
+            position: drop_pos,
+            kind: InternalDragKind::Over,
+            modifiers: Modifiers::default(),
+            pointer_id: fret_core::PointerId(0),
+        }),
+    );
+    ui.dispatch_event(
+        &mut app,
+        &mut text,
+        &Event::InternalDrag(InternalDragEvent {
+            position: drop_pos,
+            kind: InternalDragKind::Drop,
+            modifiers: Modifiers::default(),
+            pointer_id: fret_core::PointerId(0),
+        }),
+    );
+
+    let effects = app.take_effects();
+    let insert_indices: Vec<_> = effects
+        .iter()
+        .filter_map(|e| match e {
+            Effect::Dock(DockOp::MovePanel {
+                panel,
+                target_tabs,
+                zone,
+                insert_index,
+                ..
+            }) if panel == &dragged_panel && *target_tabs == tabs && *zone == DropZone::Center => {
+                Some(*insert_index)
+            }
+            _ => None,
+        })
+        .collect();
+
+    assert_eq!(insert_indices, vec![Some(tab_count)]);
+}
