@@ -35,4 +35,5 @@
   - linear gradient in `StrokeS01`
   - viewport-fixed highlight
   - material-based animated “flow” (if enabled)
+- [x] Provide a JSON-loadable theme preset file + parsing entry-point for iteration
 - [ ] Add a demo / diagnostic harness in `apps/` to validate wire paint presets visually
