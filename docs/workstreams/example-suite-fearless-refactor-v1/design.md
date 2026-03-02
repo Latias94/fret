@@ -180,6 +180,7 @@ Legend:
 | simple-todo | 1 | App | state | Template | ✅ | ✅ | MVU + keyed lists | diag script: add/remove rows |
 | todo | 2 | App | state | Template | ✅ | (optional) | selectors + queries baseline | diag script: “golden path” actions |
 | cookbook.commands_keymap_basics | 2 | App | input | Example | ✅ | ✅ | commands + shortcuts | diag script: key injection |
+| cookbook.undo_basics | 2 | App | state | Example | ✅ | ✅ | app-owned undo/redo (`fret-undo`) | diag script: press_shortcut undo/redo |
 | cookbook.text_input_basics | 2 | App | input | Example | ✅ | ✅ | text input + submit/clear commands | diag script: submit + value gate |
 | cookbook.overlay_basics | 2 | App | overlays | Example | ✅ | ✅ | dialog basics + focus restore | diag suite: overlay conformance |
 | cookbook.virtual_list_basics | 2 | App | perf | Example | ✅ | ✅ | virtualization + stable identity | perf gate (worst-frame) |
@@ -187,21 +188,22 @@ Legend:
 | cookbook.theme_switching_basics | 2 | App | theming | Example | ✅ | ✅ | preset switch + token reads | screenshot gate (light/dark) |
 | cookbook.icons_and_assets_basics | 2 | App | assets | Example | ✅ | ✅ | icons + image/SVG budgets | screenshot gate |
 | data-table | 3 | App | data | Gallery Page | ✅ | ✅ | headless table + sizing/pinning | layout gate + perf baseline |
-| markdown-and-code | 3 | App | docs | Example | ✅ | ✅ | markdown + syntax + copy button | screenshot gate |
-| docking-basics | 3 | Interop | docking | Example | ✅ | ⛔ | dock model + UI policy | diag script + checklist anchor |
+| cookbook.markdown_and_code_basics | 3 | App | docs | Example | ✅ | ✅ | markdown + syntax + copy button | screenshot gate |
+| cookbook.docking_basics | 3 | Interop | docking | Example | ✅ | ⛔ | dock model + UI policy | diag script + checklist anchor |
 | docking-arbitration | 4 | Interop | docking | Harness | ✅ | ⛔ | multi-root overlays + input arbitration | diag suite (ADR checklist) |
 | multi-window-tearoff | 4 | Interop | windows | Lab/Harness | ✅ | ⛔ | tear-off + DPI + drag | manual + diag evidence |
-| embedded-viewport | 3 | Interop | viewport | Example | ✅ | (optional) | viewport surface + input forwarding | diag script: pointer mapping |
-| gizmo-viewport | 4 | Interop | viewport | Example | ✅ | ⛔ | gizmo + viewport tool math | screenshot + interaction script |
-| external-texture-import | 3 | Interop | render I/O | Example | ✅ | ✅ | external texture paths | diag run + capability check |
+| cookbook.embedded_viewport_basics | 3 | Interop | viewport | Example | ✅ | (optional) | viewport surface + explicit input forwarding | diag script: pointer mapping |
+| cookbook.gizmo_basics | 4 | Interop | viewport | Example | ✅ | ⛔ | gizmo + viewport tool math | screenshot + interaction script |
+| cookbook.external_texture_import_basics | 3 | Interop | render I/O | Example | ✅ | ✅ | imported render targets + ingest strategy semantics | diag run + capability check |
 | external-video-import | 4 | Interop | render I/O | Lab | ✅ | ⛔ | video import (platform-specific) | platform-gated smoke |
 | cookbook.effects_layer_basics | 2 | Renderer | effects | Example | ✅ | ✅ | built-in effect steps + semantics | screenshot gate |
+| cookbook.canvas_pan_zoom_basics | 3 | App | canvas | Example | ✅ | ⛔ | pan/zoom wiring + basic drag tool | diag script: pan + zoom + drag |
 | liquid-glass | 4 | Renderer | effects | Lab | ✅ | ⛔ | bounded glass/acrylic recipe | perf + screenshot gate |
-| customv1 | 4 | Renderer | custom effects | Lab | ✅ | ✅ | CustomV1 bounded ABI | capability-gated smoke |
+| cookbook.customv1_basics | 4 | Renderer | custom effects | Lab | ✅ | ⛔ | CustomV1 bounded ABI | capability-gated smoke |
 | customv2 | 4 | Renderer | custom effects | Lab | ✅ | ✅ | CustomV2 authoring + presets | script-driven repro |
 | customv3-pass-graph | 4 | Renderer | custom effects | Lab | ✅ | ✅ | CustomV3 pass planning semantics | script + perf attribution |
 | node-graph-basics | 3 | App | canvas | Example | ✅ | ⛔ | node graph navigation + selection | screenshot gate |
-| charts-plot | 3 | App | viz | Example | ✅ | ✅ | charts/plot interactions | screenshot + drag script |
+| cookbook.chart_interactions_basics | 3 | App | viz | Example | ✅ | ✅ | charts interactions | screenshot + drag script |
 | inspector-and-diag | 3 | Maint | diagnostics | Harness | ✅ | ✅ | inspector + bundle export | `fretboard diag` docs gate |
 
 Notes:
