@@ -219,6 +219,7 @@ mod cursor_icon_query;
 mod dispatch_phase;
 mod dock_drag;
 mod escape_dismiss;
+mod focus_barrier_transition;
 mod focus_scope;
 mod focus_traversal_availability;
 mod focus_traversal_prepaint_cache;

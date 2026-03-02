@@ -543,7 +543,10 @@ impl<H: UiHost> UiTree<H> {
                 continue;
             }
 
-            if layer.hit_testable {
+            // Focus barriers can become active while the barrier layer is hit-test-inert (e.g.
+            // open/close transitions or pointer-only underlay blocking). Include the barrier root
+            // itself so focus can remain inside (and be moved within) the barrier scope.
+            if layer.hit_testable || barrier_root == Some(layer.root) {
                 roots.push(layer.root);
             }
 

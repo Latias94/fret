@@ -35,10 +35,12 @@ impl<H: UiHost> UiTree<H> {
             return CommandAvailability::NotHandled;
         };
 
-        let (active_layers, barrier_root) = self.active_input_layers();
+        let (_active_input_layers, input_barrier_root) = self.active_input_layers();
+        let (active_focus_layers, focus_barrier_root) = self.active_focus_layers();
+        let barrier_root = focus_barrier_root.or(input_barrier_root);
         let dispatch_snapshot = self.build_dispatch_snapshot_for_layer_roots(
             app.frame_id(),
-            active_layers.as_slice(),
+            active_focus_layers.as_slice(),
             barrier_root,
         );
         let caps = app
@@ -48,7 +50,7 @@ impl<H: UiHost> UiTree<H> {
         let mut input_ctx: InputContext = InputContext {
             platform: Platform::current(),
             caps,
-            ui_has_modal: barrier_root.is_some(),
+            ui_has_modal: input_barrier_root.is_some(),
             window_arbitration: None,
             focus_is_text_input: self.focus_is_text_input(app),
             text_boundary_mode: fret_runtime::TextBoundaryMode::UnicodeWord,
@@ -205,10 +207,12 @@ impl<H: UiHost> UiTree<H> {
         else {
             return;
         };
-        let (active_layers, barrier_root) = self.active_input_layers();
+        let (_active_input_layers, input_barrier_root) = self.active_input_layers();
+        let (active_focus_layers, focus_barrier_root) = self.active_focus_layers();
+        let barrier_root = focus_barrier_root.or(input_barrier_root);
         let dispatch_snapshot = self.build_dispatch_snapshot_for_layer_roots(
             app.frame_id(),
-            active_layers.as_slice(),
+            active_focus_layers.as_slice(),
             barrier_root,
         );
         let Some(start) =
@@ -290,10 +294,12 @@ impl<H: UiHost> UiTree<H> {
             return false;
         };
 
-        let (active_layers, barrier_root) = self.active_input_layers();
+        let (active_layers, input_barrier_root) = self.active_input_layers();
+        let (active_focus_layers, focus_barrier_root) = self.active_focus_layers();
+        let barrier_root = focus_barrier_root.or(input_barrier_root);
         let dispatch_snapshot = self.build_dispatch_snapshot_for_layer_roots(
             app.frame_id(),
-            active_layers.as_slice(),
+            active_focus_layers.as_slice(),
             barrier_root,
         );
         let caps = app
@@ -303,7 +309,7 @@ impl<H: UiHost> UiTree<H> {
         let mut input_ctx = InputContext {
             platform: Platform::current(),
             caps,
-            ui_has_modal: barrier_root.is_some(),
+            ui_has_modal: input_barrier_root.is_some(),
             window_arbitration: None,
             focus_is_text_input: self.focus_is_text_input(app),
             text_boundary_mode: fret_runtime::TextBoundaryMode::UnicodeWord,
