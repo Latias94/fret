@@ -75,13 +75,16 @@ fn scroll_extents_post_layout_enabled() -> bool {
 trait ScrollOverflowTree {
     fn children_ref(&self, node: NodeId) -> &[NodeId];
     fn node_bounds(&self, node: NodeId) -> Option<Rect>;
+    fn node_is_absolute(&mut self, node: NodeId) -> bool;
 }
 
-struct UiTreeScrollOverflowTree<'a, H: UiHost> {
+struct UiTreeScrollOverflowTree<'a, 'b, H: UiHost> {
     tree: &'a crate::tree::UiTree<H>,
+    app: &'b mut H,
+    window: AppWindowId,
 }
 
-impl<H: UiHost> ScrollOverflowTree for UiTreeScrollOverflowTree<'_, H> {
+impl<H: UiHost> ScrollOverflowTree for UiTreeScrollOverflowTree<'_, '_, H> {
     fn children_ref(&self, node: NodeId) -> &[NodeId] {
         self.tree.children_ref(node)
     }
@@ -89,10 +92,15 @@ impl<H: UiHost> ScrollOverflowTree for UiTreeScrollOverflowTree<'_, H> {
     fn node_bounds(&self, node: NodeId) -> Option<Rect> {
         self.tree.node_bounds(node)
     }
+
+    fn node_is_absolute(&mut self, node: NodeId) -> bool {
+        crate::declarative::frame::layout_style_for_node(self.app, self.window, node).position
+            == crate::element::PositionStyle::Absolute
+    }
 }
 
 fn observe_scroll_overflow_extents<T: ScrollOverflowTree>(
-    tree: &T,
+    tree: &mut T,
     barrier_roots: &[NodeId],
     content_bounds: Rect,
     axis: crate::element::ScrollAxis,
@@ -138,7 +146,11 @@ fn observe_scroll_overflow_extents<T: ScrollOverflowTree>(
         // Prefer observing immediate children of the barrier root, falling back to the barrier
         // root bounds when no children are present.
         let mut any = false;
-        for &child in tree.children_ref(observe_root) {
+        let observe_children: Vec<NodeId> = tree.children_ref(observe_root).to_vec();
+        for child in observe_children {
+            if tree.node_is_absolute(child) {
+                continue;
+            }
             let Some(bounds) = tree.node_bounds(child) else {
                 continue;
             };
@@ -182,6 +194,9 @@ fn observe_scroll_overflow_extents<T: ScrollOverflowTree>(
                 visited = visited.saturating_add(1);
                 if visited > OVERFLOW_SCAN_BUDGET_NODES {
                     break;
+                }
+                if tree.node_is_absolute(id) {
+                    continue;
                 }
                 let Some(bounds) = tree.node_bounds(id) else {
                     continue;
@@ -1446,9 +1461,13 @@ impl ElementHostWidget {
                 || defer_this_frame
                 || cached_max_child.is_some()
                 || cached.is_some();
-            let tree = UiTreeScrollOverflowTree { tree: &cx.tree };
+            let mut tree = UiTreeScrollOverflowTree {
+                tree: &cx.tree,
+                app: cx.app,
+                window,
+            };
             let observed = observe_scroll_overflow_extents(
-                &tree,
+                &mut tree,
                 cx.children,
                 content_bounds,
                 props.axis,
@@ -1698,6 +1717,7 @@ mod tests {
     struct TestOverflowTree {
         children: HashMap<NodeId, Vec<NodeId>>,
         bounds: HashMap<NodeId, Rect>,
+        absolute: std::collections::HashSet<NodeId>,
     }
 
     impl ScrollOverflowTree for TestOverflowTree {
@@ -1707,6 +1727,10 @@ mod tests {
 
         fn node_bounds(&self, node: NodeId) -> Option<Rect> {
             self.bounds.get(&node).copied()
+        }
+
+        fn node_is_absolute(&mut self, node: NodeId) -> bool {
+            self.absolute.contains(&node)
         }
     }
 
@@ -1741,7 +1765,7 @@ mod tests {
 
         let content_bounds = rect_xywh(0.0, 0.0, 100.0, 100.0);
         let observed = observe_scroll_overflow_extents(
-            &tree,
+            &mut tree,
             &[barrier_root],
             content_bounds,
             crate::element::ScrollAxis::Y,
@@ -1780,7 +1804,7 @@ mod tests {
 
         let content_bounds = rect_xywh(0.0, 0.0, 100.0, 100.0);
         let observed = observe_scroll_overflow_extents(
-            &tree,
+            &mut tree,
             &[barrier_root],
             content_bounds,
             crate::element::ScrollAxis::Y,
@@ -1819,7 +1843,7 @@ mod tests {
 
         let content_bounds = rect_xywh(0.0, 0.0, 100.0, 100.0);
         let observed = observe_scroll_overflow_extents(
-            &tree,
+            &mut tree,
             &[barrier_root],
             content_bounds,
             crate::element::ScrollAxis::Y,
@@ -1828,5 +1852,36 @@ mod tests {
         );
 
         assert_eq!(observed.height, Px(100.0));
+    }
+
+    #[test]
+    fn scroll_observed_overflow_excludes_absolute_nodes() {
+        let mut ids: SlotMap<NodeId, ()> = SlotMap::with_key();
+        let barrier_root = ids.insert(());
+        let abs_child = ids.insert(());
+        let normal_child = ids.insert(());
+
+        let mut tree = TestOverflowTree::default();
+        tree.children
+            .insert(barrier_root, vec![abs_child, normal_child]);
+        tree.bounds
+            .insert(barrier_root, rect_xywh(0.0, 0.0, 100.0, 100.0));
+        tree.bounds
+            .insert(abs_child, rect_xywh(0.0, 0.0, 100.0, 800.0));
+        tree.bounds
+            .insert(normal_child, rect_xywh(0.0, 0.0, 100.0, 300.0));
+        tree.absolute.insert(abs_child);
+
+        let content_bounds = rect_xywh(0.0, 0.0, 100.0, 100.0);
+        let observed = observe_scroll_overflow_extents(
+            &mut tree,
+            &[barrier_root],
+            content_bounds,
+            crate::element::ScrollAxis::Y,
+            Size::new(Px(100.0), Px(100.0)),
+            true,
+        );
+
+        assert_eq!(observed.height, Px(300.0));
     }
 }

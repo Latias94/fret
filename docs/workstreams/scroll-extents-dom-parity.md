@@ -254,8 +254,9 @@ These rules define which nodes can influence the scrollable extent:
 - **Exclude** absolute-positioned nodes by default.
   - Motivation: absolute nodes often represent overlays, chrome, or hit-test scaffolding that
     should not silently change scroll ranges.
-  - Note: current implementation inconsistently handles this (intrinsic probing skips absolute
-    children, layout probing does not). Parity work should standardize this as part of SE-110.
+  - Status: standardized in SE-113 (post-layout observation now filters absolute nodes, matching
+    the intrinsic measurement path).
+  - Evidence: `crates/fret-ui/src/declarative/host_widget/layout/scrolling.rs`
 - **Include** normal-flow descendants (including wrapper nodes) even if their own bounds are forced
   to match the viewport/content rect, as long as their descendants’ layout bounds overflow.
 
@@ -382,7 +383,7 @@ probes), we likely need at least one of these mechanism-level additions:
    - but allow scroll roots (or any explicit “overflow context”) to request a different clamp
      policy on the scroll axis, so auto-sized descendants can exceed the viewport and still be
      clipped/observed for extents.
-3. **Standardize absolute exclusion**:
+3. **Standardize absolute exclusion (SE-113 implemented)**:
    - Ensure the extent derivation path and the intrinsic measurement path agree on whether absolute
      nodes contribute to extents (default: exclude).
 4. **Keep observation bounded and debuggable**:
@@ -427,6 +428,8 @@ Implementation status:
   propagated through `LayoutCx` / `UiTree::layout_in_with_pass_kind`. In the post-layout extents
   gate, scroll roots install a context that sets the scroll axis probe budget to `MaxContent` so
   wrapper-heavy subtrees can measure descendants without a hard scroll-axis clamp.
+- SE-113 (absolute exclusion parity) is implemented. Post-layout overflow observation now excludes
+  absolute-positioned nodes by default, matching the intrinsic measurement skip behavior.
 
 ## Verification Plan (SE-210)
 
