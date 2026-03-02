@@ -5,10 +5,12 @@ use fret_core::scene::{EffectChain, EffectMode, EffectParamsV1, EffectQuality, E
 use fret_core::{AppWindowId, Color, EffectId, Px, SemanticsRole};
 use fret_render::RendererCapabilities;
 use fret_runtime::{CommandId, Model};
+use fret_ui::element::SemanticsProps;
 use fret_ui::element::{
     AnyElement, EffectLayerProps, LayoutStyle, Length, SemanticsDecoration, SpacerProps,
 };
 use fret_ui_kit::custom_effects::CustomEffectProgramV1;
+use std::sync::Arc;
 
 const ROOT_NAME: &str = "cookbook.customv1_basics";
 
@@ -260,6 +262,49 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut CustomV1BasicsWindowState) ->
                 .numeric_range(0.0, 1.0),
         );
 
+    let strength_model = st.strength.clone();
+    let set_strength_low: fret_ui::action::OnActivate =
+        Arc::new(move |host, action_cx, _reason| {
+            let _ = host.models_mut().update(&strength_model, |v| *v = 0.20);
+            host.request_redraw(action_cx.window);
+        });
+
+    let strength_model = st.strength.clone();
+    let set_strength_high: fret_ui::action::OnActivate =
+        Arc::new(move |host, action_cx, _reason| {
+            let _ = host.models_mut().update(&strength_model, |v| *v = 0.75);
+            host.request_redraw(action_cx.window);
+        });
+
+    // Diagnostics gate note: keep these controls directly selectable via stable semantics nodes.
+    let strength_low = {
+        let button = shadcn::Button::new("Strength: low")
+            .variant(shadcn::ButtonVariant::Secondary)
+            .on_activate(set_strength_low)
+            .disabled(!enabled)
+            .into_element(cx);
+
+        let mut props = SemanticsProps::default();
+        props.role = SemanticsRole::Button;
+        props.test_id = Some(Arc::from(TEST_ID_STRENGTH_LOW));
+        props.label = Some(Arc::from("Strength: low"));
+        cx.semantics(props, |_cx| [button])
+    };
+
+    let strength_high = {
+        let button = shadcn::Button::new("Strength: high")
+            .variant(shadcn::ButtonVariant::Secondary)
+            .on_activate(set_strength_high)
+            .disabled(!enabled)
+            .into_element(cx);
+
+        let mut props = SemanticsProps::default();
+        props.role = SemanticsRole::Button;
+        props.test_id = Some(Arc::from(TEST_ID_STRENGTH_HIGH));
+        props.label = Some(Arc::from("Strength: high"));
+        cx.semantics(props, |_cx| [button])
+    };
+
     let toggle_label = if enabled { "Disable" } else { "Enable" };
     let toolbar = ui::h_flex(cx, |cx| {
         [
@@ -268,19 +313,10 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut CustomV1BasicsWindowState) ->
                 .on_click(CMD_TOGGLE)
                 .test_id(TEST_ID_TOGGLE)
                 .disabled(!caps_supported || effect_id.is_none())
-                .into_element(cx),
-            shadcn::Button::new("Strength: low")
-                .variant(shadcn::ButtonVariant::Secondary)
-                .on_click(CMD_STRENGTH_LOW)
-                .test_id(TEST_ID_STRENGTH_LOW)
-                .disabled(!enabled)
-                .into_element(cx),
-            shadcn::Button::new("Strength: high")
-                .variant(shadcn::ButtonVariant::Secondary)
-                .on_click(CMD_STRENGTH_HIGH)
-                .test_id(TEST_ID_STRENGTH_HIGH)
-                .disabled(!enabled)
-                .into_element(cx),
+                .into_element(cx)
+                .test_id(TEST_ID_TOGGLE),
+            strength_low,
+            strength_high,
             supported_badge,
             registered_badge,
             enabled_badge,
@@ -345,6 +381,19 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut CustomV1BasicsWindowState) ->
     };
 
     let content = ui::v_flex(cx, |cx| {
+        let panels = ui::h_flex(cx, |_cx| [plain, custom_panel])
+            .gap(Space::N3)
+            .items_stretch()
+            .into_element(cx);
+
+        let body = stack::vstack(
+            cx,
+            stack::VStackProps::default()
+                .gap_y(Space::N3)
+                .layout(LayoutRefinement::default().w_full()),
+            |_cx| [toolbar, panels],
+        );
+
         [
             shadcn::CardHeader::new(vec![
                 shadcn::CardTitle::new("CustomV1 basics").into_element(cx),
@@ -354,14 +403,7 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut CustomV1BasicsWindowState) ->
                 .into_element(cx),
             ])
             .into_element(cx),
-            shadcn::CardContent::new(vec![
-                toolbar,
-                ui::h_flex(cx, |_cx| [plain, custom_panel])
-                    .gap(Space::N3)
-                    .items_stretch()
-                    .into_element(cx),
-            ])
-            .into_element(cx),
+            shadcn::CardContent::new(vec![body]).into_element(cx),
         ]
     })
     .into_element(cx);
