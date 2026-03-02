@@ -143,6 +143,89 @@ fn is_missing_or_hidden_by_label(
         .is_none_or(|n| n.flags.hidden)
 }
 
+fn mount_table(
+    ui: &mut UiTree<App>,
+    app: &mut App,
+    services: &mut dyn fret_core::UiServices,
+    window: AppWindowId,
+    bounds: Rect,
+    data: &Arc<[RowData]>,
+    state: &Model<TableState>,
+    columns: &Arc<[ColumnDef<RowData>]>,
+    revision: u64,
+) {
+    render_frame(
+        ui,
+        app,
+        services,
+        window,
+        bounds,
+        data.clone(),
+        revision,
+        state.clone(),
+        columns.clone(),
+    );
+    render_frame(
+        ui,
+        app,
+        services,
+        window,
+        bounds,
+        data.clone(),
+        revision,
+        state.clone(),
+        columns.clone(),
+    );
+}
+
+fn open_status_actions_menu(
+    ui: &mut UiTree<App>,
+    app: &mut App,
+    services: &mut dyn fret_core::UiServices,
+    timers: &mut TimerQueue,
+    window: AppWindowId,
+    bounds: Rect,
+    data: &Arc<[RowData]>,
+    state: &Model<TableState>,
+    columns: &Arc<[ColumnDef<RowData>]>,
+    revision: u64,
+) {
+    let trigger_label = "Column actions for status";
+    let snap = ui
+        .semantics_snapshot()
+        .cloned()
+        .expect("expected semantics snapshot");
+    let trigger = find_by_role_and_label(&snap, SemanticsRole::Button, trigger_label);
+    click_at(ui, app, services, rect_center(trigger.bounds));
+    pump_effects(ui, app, services, timers);
+
+    let open_settle_frames = shadcn_motion::ticks_100() + 2;
+    for tick in 0..open_settle_frames {
+        render_frame(
+            ui,
+            app,
+            services,
+            window,
+            bounds,
+            data.clone(),
+            revision,
+            state.clone(),
+            columns.clone(),
+        );
+        if tick + 1 == open_settle_frames {
+            let snap = ui
+                .semantics_snapshot()
+                .cloned()
+                .expect("expected semantics snapshot");
+            let trigger = find_by_role_and_label(&snap, SemanticsRole::Button, trigger_label);
+            assert!(
+                trigger.flags.expanded,
+                "expected trigger expanded while open"
+            );
+        }
+    }
+}
+
 #[test]
 fn data_table_column_actions_menu_sort_asc_updates_state_and_closes() {
     let window = AppWindowId::default();
@@ -180,71 +263,29 @@ fn data_table_column_actions_menu_sort_asc_updates_state_and_closes() {
     let mut services = FakeServices;
     let mut timers = TimerQueue::default();
 
-    // Frame 1+2: mount and allow the retained table to populate semantics.
-    render_frame(
+    mount_table(
         &mut ui,
         &mut app,
         &mut services,
         window,
         bounds,
-        data.clone(),
+        &data,
+        &state,
+        &columns,
         1,
-        state.clone(),
-        columns.clone(),
     );
-    render_frame(
+    open_status_actions_menu(
         &mut ui,
         &mut app,
         &mut services,
+        &mut timers,
         window,
         bounds,
-        data.clone(),
-        1,
-        state.clone(),
-        columns.clone(),
+        &data,
+        &state,
+        &columns,
+        2,
     );
-
-    // Open the actions menu for the "status" column.
-    let trigger_label = "Column actions for status";
-    let snap = ui
-        .semantics_snapshot()
-        .cloned()
-        .expect("expected semantics snapshot");
-    let trigger = find_by_role_and_label(&snap, SemanticsRole::Button, trigger_label);
-    click_at(
-        &mut ui,
-        &mut app,
-        &mut services,
-        rect_center(trigger.bounds),
-    );
-    pump_effects(&mut ui, &mut app, &mut services, &mut timers);
-
-    let open_settle_frames = shadcn_motion::ticks_100() + 2;
-    for tick in 0..open_settle_frames {
-        render_frame(
-            &mut ui,
-            &mut app,
-            &mut services,
-            window,
-            bounds,
-            data.clone(),
-            2,
-            state.clone(),
-            columns.clone(),
-        );
-        if tick + 1 == open_settle_frames {
-            // Ensure the trigger reports an expanded state while the menu is open.
-            let snap = ui
-                .semantics_snapshot()
-                .cloned()
-                .expect("expected semantics snapshot");
-            let trigger = find_by_role_and_label(&snap, SemanticsRole::Button, trigger_label);
-            assert!(
-                trigger.flags.expanded,
-                "expected trigger to report expanded=true while menu is open"
-            );
-        }
-    }
 
     // ArrowDown focuses the first menu item, Enter activates it.
     dispatch_key_press(&mut ui, &mut app, &mut services, KeyCode::ArrowDown);
@@ -312,9 +353,293 @@ fn data_table_column_actions_menu_sort_asc_updates_state_and_closes() {
         is_missing_or_hidden_by_label(&snap, SemanticsRole::MenuItem, "Sort Asc"),
         "expected menu items to be absent or hidden after selection"
     );
-    let trigger = find_by_role_and_label(&snap, SemanticsRole::Button, trigger_label);
+    let trigger = find_by_role_and_label(&snap, SemanticsRole::Button, "Column actions for status");
     assert!(
         !trigger.flags.expanded,
         "expected trigger to collapse after selection"
+    );
+}
+
+#[test]
+fn data_table_column_actions_menu_hide_sets_column_visibility_false_and_closes() {
+    let window = AppWindowId::default();
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        CoreSize::new(Px(800.0), Px(420.0)),
+    );
+
+    let mut app = App::new();
+    fret_ui_shadcn::shadcn_themes::apply_shadcn_new_york_v4(
+        &mut app,
+        fret_ui_shadcn::shadcn_themes::ShadcnBaseColor::Neutral,
+        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Light,
+    );
+
+    let data: Arc<[RowData]> = Arc::from(
+        vec![
+            RowData {
+                status: "success",
+                email: "a@example.com",
+            },
+            RowData {
+                status: "pending",
+                email: "b@example.com",
+            },
+        ]
+        .into_boxed_slice(),
+    );
+    let columns: Arc<[ColumnDef<RowData>]> =
+        Arc::from(vec![ColumnDef::new("status"), ColumnDef::new("email")].into_boxed_slice());
+    let state: Model<TableState> = app.models_mut().insert(TableState::default());
+
+    let mut ui: UiTree<App> = UiTree::new();
+    ui.set_window(window);
+    let mut services = FakeServices;
+    let mut timers = TimerQueue::default();
+
+    mount_table(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        &data,
+        &state,
+        &columns,
+        1,
+    );
+    open_status_actions_menu(
+        &mut ui,
+        &mut app,
+        &mut services,
+        &mut timers,
+        window,
+        bounds,
+        &data,
+        &state,
+        &columns,
+        2,
+    );
+
+    // From the trigger, ArrowDown focuses Sort Asc. Hide is the 4th focusable item.
+    for _ in 0..4 {
+        dispatch_key_press(&mut ui, &mut app, &mut services, KeyCode::ArrowDown);
+        pump_effects(&mut ui, &mut app, &mut services, &mut timers);
+        render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            data.clone(),
+            3,
+            state.clone(),
+            columns.clone(),
+        );
+    }
+
+    let snap = ui
+        .semantics_snapshot()
+        .cloned()
+        .expect("expected semantics snapshot");
+    let focused_label = snap
+        .nodes
+        .iter()
+        .find(|n| n.flags.focused)
+        .and_then(|n| n.label.as_deref());
+    assert_eq!(focused_label, Some("Hide"));
+
+    dispatch_key_press(&mut ui, &mut app, &mut services, KeyCode::Enter);
+    pump_effects(&mut ui, &mut app, &mut services, &mut timers);
+
+    let close_settle_frames = shadcn_motion::ticks_100() + 2;
+    for _ in 0..close_settle_frames {
+        render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            data.clone(),
+            4,
+            state.clone(),
+            columns.clone(),
+        );
+    }
+
+    let st = app.models().get_cloned(&state).expect("table state");
+    let status_col = Arc::<str>::from("status");
+    assert_eq!(
+        st.column_visibility.get(&status_col).copied(),
+        Some(false),
+        "expected Hide to set column_visibility[status]=false"
+    );
+
+    let snap = ui
+        .semantics_snapshot()
+        .cloned()
+        .expect("expected semantics snapshot");
+    assert!(
+        is_missing_or_hidden_by_label(&snap, SemanticsRole::MenuItem, "Hide"),
+        "expected menu to close after Hide"
+    );
+}
+
+#[test]
+fn data_table_column_actions_menu_pin_left_and_unpin_update_column_pinning() {
+    let window = AppWindowId::default();
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        CoreSize::new(Px(800.0), Px(420.0)),
+    );
+
+    let mut app = App::new();
+    fret_ui_shadcn::shadcn_themes::apply_shadcn_new_york_v4(
+        &mut app,
+        fret_ui_shadcn::shadcn_themes::ShadcnBaseColor::Neutral,
+        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Light,
+    );
+
+    let data: Arc<[RowData]> = Arc::from(
+        vec![
+            RowData {
+                status: "success",
+                email: "a@example.com",
+            },
+            RowData {
+                status: "pending",
+                email: "b@example.com",
+            },
+        ]
+        .into_boxed_slice(),
+    );
+    let columns: Arc<[ColumnDef<RowData>]> =
+        Arc::from(vec![ColumnDef::new("status"), ColumnDef::new("email")].into_boxed_slice());
+    let state: Model<TableState> = app.models_mut().insert(TableState::default());
+
+    let mut ui: UiTree<App> = UiTree::new();
+    ui.set_window(window);
+    let mut services = FakeServices;
+    let mut timers = TimerQueue::default();
+
+    mount_table(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        &data,
+        &state,
+        &columns,
+        1,
+    );
+    open_status_actions_menu(
+        &mut ui,
+        &mut app,
+        &mut services,
+        &mut timers,
+        window,
+        bounds,
+        &data,
+        &state,
+        &columns,
+        2,
+    );
+
+    // Pin Left is the 5th focusable item.
+    for _ in 0..5 {
+        dispatch_key_press(&mut ui, &mut app, &mut services, KeyCode::ArrowDown);
+        pump_effects(&mut ui, &mut app, &mut services, &mut timers);
+        render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            data.clone(),
+            3,
+            state.clone(),
+            columns.clone(),
+        );
+    }
+    dispatch_key_press(&mut ui, &mut app, &mut services, KeyCode::Enter);
+    pump_effects(&mut ui, &mut app, &mut services, &mut timers);
+
+    let close_settle_frames = shadcn_motion::ticks_100() + 2;
+    for _ in 0..close_settle_frames {
+        render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            data.clone(),
+            4,
+            state.clone(),
+            columns.clone(),
+        );
+    }
+
+    let st = app.models().get_cloned(&state).expect("table state");
+    assert_eq!(
+        st.column_pinning
+            .left
+            .iter()
+            .map(|c| c.as_ref())
+            .collect::<Vec<_>>(),
+        vec!["status"],
+        "expected Pin Left to add the status column to column_pinning.left"
+    );
+
+    // Re-open and Unpin (7th focusable item) to clear pinning.
+    open_status_actions_menu(
+        &mut ui,
+        &mut app,
+        &mut services,
+        &mut timers,
+        window,
+        bounds,
+        &data,
+        &state,
+        &columns,
+        5,
+    );
+    for _ in 0..7 {
+        dispatch_key_press(&mut ui, &mut app, &mut services, KeyCode::ArrowDown);
+        pump_effects(&mut ui, &mut app, &mut services, &mut timers);
+        render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            data.clone(),
+            6,
+            state.clone(),
+            columns.clone(),
+        );
+    }
+    dispatch_key_press(&mut ui, &mut app, &mut services, KeyCode::Enter);
+    pump_effects(&mut ui, &mut app, &mut services, &mut timers);
+
+    let close_settle_frames = shadcn_motion::ticks_100() + 2;
+    for _ in 0..close_settle_frames {
+        render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            data.clone(),
+            7,
+            state.clone(),
+            columns.clone(),
+        );
+    }
+
+    let st = app.models().get_cloned(&state).expect("table state");
+    assert!(
+        st.column_pinning.left.is_empty() && st.column_pinning.right.is_empty(),
+        "expected Unpin to clear column_pinning state"
     );
 }
