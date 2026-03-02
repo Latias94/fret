@@ -444,8 +444,8 @@ impl UiDiagnosticsService {
                 self.set_inspect_enabled(cfg.enabled, cfg.consume_clicks);
             }
             "pick.arm" => {
-                self.inspector.pending_pick = None;
-                self.inspector.pick_armed_run_id = Some(self.next_pick_run_id());
+                let run_id = self.next_pick_run_id();
+                self.inspector.arm_pick(run_id);
             }
             "bundle.dump" => {
                 let (label, dump_max_snapshots) =

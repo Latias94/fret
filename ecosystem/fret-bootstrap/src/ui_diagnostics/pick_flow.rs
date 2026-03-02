@@ -28,18 +28,13 @@ impl UiDiagnosticsService {
 
     pub(super) fn resolve_pending_pick_for_window(
         &mut self,
-        window: AppWindowId,
-        position: Point,
+        pending: PendingPick,
         raw_semantics: Option<&fret_core::SemanticsSnapshot>,
         ui: &UiTree<App>,
         element_runtime: Option<&ElementRuntime>,
     ) {
-        let Some(pending) = self.inspector.pending_pick.clone() else {
-            return;
-        };
-        if pending.window != window {
-            return;
-        }
+        let window = pending.window;
+        let position = pending.position;
 
         let mut result = UiPickResultV1 {
             schema_version: 1,
@@ -72,9 +67,6 @@ impl UiDiagnosticsService {
             match selection {
                 Some(sel) => {
                     result.stage = UiPickStageV1::Picked;
-                    self.inspector
-                        .last_picked_node_id
-                        .insert(window, sel.node.id);
 
                     let selector_json = snapshot
                         .nodes
@@ -97,25 +89,8 @@ impl UiDiagnosticsService {
                         .or_else(|| sel.selectors.first().cloned())
                         .and_then(|sel| serde_json::to_string(&sel).ok());
 
-                    if let Some(json) = selector_json {
-                        self.inspector
-                            .last_picked_selector_json
-                            .insert(window, json.clone());
-                        self.inspector
-                            .state
-                            .focus_node_id
-                            .insert(window, sel.node.id);
-                        self.inspector
-                            .state
-                            .focus_selector_json
-                            .insert(window, json);
-                        self.inspector
-                            .state
-                            .focus_down_stack
-                            .insert(window, Vec::new());
-                    }
-
-                    self.inspector.pick_overlay_grace_frames.insert(window, 10);
+                    self.inspector
+                        .on_pick_success(window, sel.node.id, selector_json.clone());
                     result.selection = Some(sel);
                 }
                 None => {
@@ -133,6 +108,5 @@ impl UiDiagnosticsService {
         }
 
         self.write_pick_result(result);
-        self.inspector.pending_pick = None;
     }
 }

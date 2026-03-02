@@ -42,6 +42,11 @@ pub(super) struct InspectController {
 }
 
 impl InspectController {
+    pub(super) fn arm_pick(&mut self, run_id: u64) {
+        self.pending_pick = None;
+        self.pick_armed_run_id = Some(run_id);
+    }
+
     pub(super) fn set_enabled(&mut self, enabled: bool, consume_clicks: bool) {
         self.enabled = enabled;
         self.consume_clicks = consume_clicks;
@@ -53,6 +58,36 @@ impl InspectController {
             self.last_picked_node_id.clear();
             self.last_picked_selector_json.clear();
         }
+    }
+
+    pub(super) fn take_pending_pick_for_window(
+        &mut self,
+        window: AppWindowId,
+    ) -> Option<super::PendingPick> {
+        if self
+            .pending_pick
+            .as_ref()
+            .is_some_and(|pending| pending.window == window)
+        {
+            return self.pending_pick.take();
+        }
+        None
+    }
+
+    pub(super) fn on_pick_success(
+        &mut self,
+        window: AppWindowId,
+        node_id: u64,
+        selector_json: Option<String>,
+    ) {
+        self.last_picked_node_id.insert(window, node_id);
+        if let Some(json) = selector_json {
+            self.last_picked_selector_json.insert(window, json.clone());
+            self.state.focus_node_id.insert(window, node_id);
+            self.state.focus_selector_json.insert(window, json);
+            self.state.focus_down_stack.insert(window, Vec::new());
+        }
+        self.pick_overlay_grace_frames.insert(window, 10);
     }
 
     pub(super) fn is_locked(&self, window: AppWindowId) -> bool {

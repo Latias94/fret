@@ -970,16 +970,8 @@ impl UiDiagnosticsService {
 
         self.record_shortcut_routing_trace_for_window(app, window);
 
-        if let Some(pending) = self.inspector.pending_pick.clone()
-            && pending.window == window
-        {
-            self.resolve_pending_pick_for_window(
-                window,
-                pending.position,
-                raw_semantics,
-                ui,
-                element_runtime,
-            );
+        if let Some(pending) = self.inspector.take_pending_pick_for_window(window) {
+            self.resolve_pending_pick_for_window(pending, raw_semantics, ui, element_runtime);
         }
     }
 
