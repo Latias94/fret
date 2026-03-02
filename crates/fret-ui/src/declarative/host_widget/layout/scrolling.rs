@@ -2072,4 +2072,47 @@ mod tests {
         assert_eq!(telemetry.deep_scan_budget_nodes, 256);
         assert_eq!(telemetry.deep_scan_visited, 256);
     }
+
+    #[test]
+    fn scroll_observed_overflow_respects_deep_scan_allowed_flag() {
+        let mut ids: SlotMap<NodeId, ()> = SlotMap::with_key();
+        let barrier_root = ids.insert(());
+        let observe_root = ids.insert(());
+        let wrapper_a = ids.insert(());
+        let wrapper_b = ids.insert(());
+        let deep_overflow = ids.insert(());
+
+        let mut tree = TestOverflowTree::default();
+        tree.children.insert(barrier_root, vec![observe_root]);
+        tree.children
+            .insert(observe_root, vec![wrapper_a, wrapper_b]);
+        tree.children.insert(wrapper_a, vec![deep_overflow]);
+
+        tree.bounds
+            .insert(barrier_root, rect_xywh(0.0, 0.0, 100.0, 100.0));
+        tree.bounds
+            .insert(observe_root, rect_xywh(0.0, 0.0, 100.0, 100.0));
+        tree.bounds
+            .insert(wrapper_a, rect_xywh(0.0, 0.0, 100.0, 100.0));
+        tree.bounds
+            .insert(wrapper_b, rect_xywh(0.0, 0.0, 100.0, 100.0));
+        tree.bounds
+            .insert(deep_overflow, rect_xywh(0.0, 0.0, 100.0, 300.0));
+
+        let content_bounds = rect_xywh(0.0, 0.0, 100.0, 100.0);
+        let (observed, telemetry) = observe_scroll_overflow_extents(
+            &mut tree,
+            &[barrier_root],
+            content_bounds,
+            crate::element::ScrollAxis::Y,
+            Size::new(Px(100.0), Px(100.0)),
+            true,
+            false,
+        );
+
+        assert_eq!(observed.height, Px(100.0));
+        assert!(!telemetry.deep_scan_enabled);
+        assert_eq!(telemetry.deep_scan_visited, 0);
+        assert!(!telemetry.deep_scan_budget_hit);
+    }
 }
