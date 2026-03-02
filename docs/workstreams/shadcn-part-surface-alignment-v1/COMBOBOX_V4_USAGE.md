@@ -182,7 +182,7 @@ pub fn example_combobox_multiple(cx: &mut ElementContext<'_, App>) -> AnyElement
 - Base UI’s in-trigger editable chips input is not represented as a literal nested element in Fret;
   the filter input lives in the overlay surface.
 - Render-prop ergonomics are not modeled; lists are provided explicitly.
-- `ComboboxInput.show_trigger(false)` is currently advisory (Fret’s recipe always needs a trigger
-  affordance).
+- `ComboboxInput.show_trigger(false)` hides the default trigger icon (the trigger control still
+  toggles the overlay).
 - Base UI anchor refs (`useComboboxAnchor()`) are modeled via `useComboboxAnchor(child)` +
   `ComboboxContent::anchor_element_id(...)` (element ID), not a DOM ref.

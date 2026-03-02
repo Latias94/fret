@@ -454,6 +454,7 @@ impl ComboboxGroup {
 struct ComboboxPartsPatch {
     placeholder: Option<Arc<str>>,
     disabled: Option<bool>,
+    show_trigger: Option<bool>,
     show_clear: Option<bool>,
     content_side: Option<popper::Side>,
     content_align: Option<popper::Align>,
@@ -479,14 +480,12 @@ fn combobox_parts_patch(parts: Vec<ComboboxPart>) -> ComboboxPartsPatch {
                 if input.disabled.is_some() {
                     patch.disabled = input.disabled;
                 }
+                if input.show_trigger.is_some() {
+                    patch.show_trigger = input.show_trigger;
+                }
                 if input.show_clear.is_some() {
                     patch.show_clear = input.show_clear;
                 }
-
-                // `showTrigger` exists upstream because Base UI allows hiding the trigger affordance
-                // on the input. Fret's Popover + Command recipe always needs a trigger control, so
-                // we treat this as an advisory/no-op for now.
-                let _ = input.show_trigger;
             }
             ComboboxPart::Content(next) => {
                 content = Some(next);
@@ -619,6 +618,7 @@ pub struct Combobox {
     a11y_label: Option<Arc<str>>,
     search_enabled: bool,
     show_clear: bool,
+    show_trigger: bool,
     trigger_variant: ComboboxTriggerVariant,
     consume_outside_pointer_events: bool,
     selection_commit_policy: kit_combobox::SelectionCommitPolicy,
@@ -660,6 +660,7 @@ impl Combobox {
             a11y_label: None,
             search_enabled: true,
             show_clear: false,
+            show_trigger: true,
             trigger_variant: ComboboxTriggerVariant::default(),
             // shadcn/ui Combobox is a Popover + Command recipe; Popover is click-through by default.
             // (ADR 0069)
@@ -693,6 +694,9 @@ impl Combobox {
         }
         if let Some(disabled) = patch.disabled {
             self.disabled = disabled;
+        }
+        if let Some(show_trigger) = patch.show_trigger {
+            self.show_trigger = show_trigger;
         }
         if let Some(show_clear) = patch.show_clear {
             self.show_clear = show_clear;
@@ -921,6 +925,14 @@ impl Combobox {
         self
     }
 
+    /// When disabled, hides the default trigger affordance icon (Base UI `showTrigger`).
+    ///
+    /// Note: this only affects visuals; the trigger control still toggles the popover.
+    pub fn show_trigger(mut self, show_trigger: bool) -> Self {
+        self.show_trigger = show_trigger;
+        self
+    }
+
     /// Controls the trigger preset used by the recipe (e.g. "Popup / Trigger Button" styling).
     pub fn trigger_variant(mut self, variant: ComboboxTriggerVariant) -> Self {
         self.trigger_variant = variant;
@@ -1019,6 +1031,7 @@ impl Combobox {
             self.group_separators,
             self.auto_highlight,
             self.show_clear,
+            self.show_trigger,
             self.trigger_variant,
             self.consume_outside_pointer_events,
             self.selection_commit_policy,
@@ -1077,6 +1090,7 @@ pub fn combobox<H: UiHost>(
         false,
         false,
         false,
+        true,
         ComboboxTriggerVariant::default(),
         consume_outside_pointer_events,
         kit_combobox::SelectionCommitPolicy::default(),
@@ -1119,6 +1133,7 @@ fn combobox_with_patch<H: UiHost>(
     group_separators: bool,
     auto_highlight: bool,
     show_clear: bool,
+    show_trigger: bool,
     trigger_variant: ComboboxTriggerVariant,
     consume_outside_pointer_events: bool,
     selection_commit_policy: kit_combobox::SelectionCommitPolicy,
@@ -1507,21 +1522,50 @@ fn combobox_with_patch<H: UiHost>(
                                     },
                                     move |cx| {
                                         let label_style = text_style.clone();
-                                        let show_clear =
-                                            show_clear && enabled && selected.is_some();
-                                        let right = cx.flex(
-                                            FlexProps {
-                                                layout: LayoutStyle::default(),
-                                                direction: fret_core::Axis::Horizontal,
-                                                gap: Px(0.0).into(),
-                                                padding: Edges::all(Px(0.0)).into(),
-                                                justify: MainAlign::Start,
-                                                align: CrossAlign::Center,
-                                                wrap: false,
-                                            },
-                                            move |cx| {
-                                                let mut out = Vec::new();
-                                                if show_clear {
+                                        let show_clear = show_clear && selected.is_some();
+                                        let label_el = {
+                                            let mut label = ui::label(cx, resolved_label.clone())
+                                                .w_full()
+                                                .min_w_0()
+                                                .flex_1()
+                                                .basis_0()
+                                                .text_size_px(label_style.size)
+                                                .font_weight(label_style.weight)
+                                                .text_color(if label_is_placeholder {
+                                                    ColorRef::Color(placeholder_fg_for_trigger)
+                                                } else {
+                                                    fg_ref.clone()
+                                                })
+                                                .truncate();
+                                            if let Some(line_height) = label_style.line_height {
+                                                label = label
+                                                    .line_height_px(line_height)
+                                                    .line_height_policy(
+                                                        fret_core::TextLineHeightPolicy::FixedFromStyle,
+                                                    );
+                                            }
+                                            if let Some(letter_spacing_em) =
+                                                label_style.letter_spacing_em
+                                            {
+                                                label = label.letter_spacing_em(letter_spacing_em);
+                                            }
+                                            label.into_element(cx)
+                                        };
+
+                                        let right = (show_clear || show_trigger).then(|| {
+                                            cx.flex(
+                                                FlexProps {
+                                                    layout: LayoutStyle::default(),
+                                                    direction: fret_core::Axis::Horizontal,
+                                                    gap: Px(0.0).into(),
+                                                    padding: Edges::all(Px(0.0)).into(),
+                                                    justify: MainAlign::Start,
+                                                    align: CrossAlign::Center,
+                                                    wrap: false,
+                                                },
+                                                move |cx| {
+                                                    let mut out = Vec::new();
+                                                    if show_clear {
                                                     let model_for_clear = model.clone();
                                                     let query_for_clear = query_model.clone();
                                                     let theme_for_clear =
@@ -1655,52 +1699,32 @@ fn combobox_with_patch<H: UiHost>(
                                                         clear
                                                     };
                                                     out.push(clear);
-                                                } else {
-                                                    out.push(decl_icon::icon_with(
+                                                } else if show_trigger {
+                                                    let mut icon = decl_icon::icon_with(
                                                         cx,
                                                         ids::ui::CHEVRON_DOWN,
                                                         Some(Px(16.0)),
                                                         Some(ColorRef::Color(icon_fg)),
-                                                    ));
+                                                    );
+                                                    if let Some(prefix) =
+                                                        test_id_prefix_for_trigger.as_deref()
+                                                    {
+                                                        icon = icon.test_id(format!(
+                                                            "{prefix}-trigger-icon"
+                                                        ));
+                                                    }
+                                                    out.push(icon);
                                                 }
                                                 out
                                             },
-                                        );
-                                        vec![
-                                            {
-                                                let mut label =
-                                                    ui::label(cx, resolved_label.clone())
-                                                        .w_full()
-                                                        .min_w_0()
-                                                        .flex_1()
-                                                        .basis_0()
-                                                        .text_size_px(label_style.size)
-                                                        .font_weight(label_style.weight)
-                                                        .text_color(if label_is_placeholder {
-                                                            ColorRef::Color(
-                                                                placeholder_fg_for_trigger,
-                                                            )
-                                                        } else {
-                                                            fg_ref.clone()
-                                                        })
-                                                        .truncate();
-                                                if let Some(line_height) = label_style.line_height {
-                                                    label = label
-                                                        .line_height_px(line_height)
-                                                        .line_height_policy(
-                                                            fret_core::TextLineHeightPolicy::FixedFromStyle,
-                                                        );
-                                                }
-                                                if let Some(letter_spacing_em) =
-                                                    label_style.letter_spacing_em
-                                                {
-                                                    label =
-                                                        label.letter_spacing_em(letter_spacing_em);
-                                                }
-                                                label.into_element(cx)
-                                            },
-                                            right,
-                                        ]
+                                        )
+                                        });
+
+                                        let mut out = vec![label_el];
+                                        if let Some(right) = right {
+                                            out.push(right);
+                                        }
+                                        out
                                     },
                                 )]
                             })
@@ -2099,20 +2123,49 @@ fn combobox_with_patch<H: UiHost>(
                             },
                             move |cx| {
                                 let label_style = text_style.clone();
-                                let show_clear = show_clear && enabled && selected.is_some();
-                                let right = cx.flex(
-                                    FlexProps {
-                                        layout: LayoutStyle::default(),
-                                        direction: fret_core::Axis::Horizontal,
-                                        gap: Px(0.0).into(),
-                                        padding: Edges::all(Px(0.0)).into(),
-                                        justify: MainAlign::Start,
-                                        align: CrossAlign::Center,
-                                        wrap: false,
-                                    },
-                                    move |cx| {
-                                        let mut out = Vec::new();
-                                        if show_clear {
+                                let show_clear = show_clear && selected.is_some();
+                                let label_el = {
+                                    let mut label = ui::label(cx, resolved_label.clone())
+                                        .w_full()
+                                        .min_w_0()
+                                        .flex_1()
+                                        .basis_0()
+                                        .text_size_px(label_style.size)
+                                        .font_weight(label_style.weight)
+                                        .text_color(if label_is_placeholder {
+                                            ColorRef::Color(placeholder_fg_for_trigger)
+                                        } else {
+                                            fg_ref.clone()
+                                        })
+                                        .truncate();
+                                    if let Some(line_height) = label_style.line_height {
+                                        label = label
+                                            .line_height_px(line_height)
+                                            .line_height_policy(
+                                                fret_core::TextLineHeightPolicy::FixedFromStyle,
+                                            );
+                                    }
+                                    if let Some(letter_spacing_em) = label_style.letter_spacing_em
+                                    {
+                                        label = label.letter_spacing_em(letter_spacing_em);
+                                    }
+                                    label.into_element(cx)
+                                };
+
+                                let right = (show_clear || show_trigger).then(|| {
+                                    cx.flex(
+                                        FlexProps {
+                                            layout: LayoutStyle::default(),
+                                            direction: fret_core::Axis::Horizontal,
+                                            gap: Px(0.0).into(),
+                                            padding: Edges::all(Px(0.0)).into(),
+                                            justify: MainAlign::Start,
+                                            align: CrossAlign::Center,
+                                            wrap: false,
+                                        },
+                                        move |cx| {
+                                            let mut out = Vec::new();
+                                            if show_clear {
                                             let model_for_clear = model.clone();
                                             let query_for_clear = query_model.clone();
                                             let theme_for_clear = theme_for_trigger.clone();
@@ -2213,48 +2266,31 @@ fn combobox_with_patch<H: UiHost>(
                                                 clear
                                             };
                                             out.push(clear);
-                                        } else {
-                                            out.push(decl_icon::icon_with(
+                                        } else if show_trigger {
+                                            let mut icon = decl_icon::icon_with(
                                                 cx,
                                                 ids::ui::CHEVRON_DOWN,
                                                 Some(Px(16.0)),
                                                 Some(ColorRef::Color(icon_fg)),
-                                            ));
+                                            );
+                                            if let Some(prefix) =
+                                                test_id_prefix_for_trigger.as_deref()
+                                            {
+                                                icon = icon
+                                                    .test_id(format!("{prefix}-trigger-icon"));
+                                            }
+                                            out.push(icon);
                                         }
                                         out
                                     },
-                                );
-                                vec![
-                                    {
-                                        let mut label = ui::label(cx, resolved_label.clone())
-                                            .w_full()
-                                            .min_w_0()
-                                            .flex_1()
-                                            .basis_0()
-                                            .text_size_px(label_style.size)
-                                            .font_weight(label_style.weight)
-                                            .text_color(if label_is_placeholder {
-                                                ColorRef::Color(placeholder_fg_for_trigger)
-                                            } else {
-                                                fg_ref.clone()
-                                            })
-                                            .truncate();
-                                            if let Some(line_height) = label_style.line_height {
-                                                label = label
-                                                    .line_height_px(line_height)
-                                                    .line_height_policy(
-                                                        fret_core::TextLineHeightPolicy::FixedFromStyle,
-                                                    );
-                                            }
-                                        if let Some(letter_spacing_em) =
-                                            label_style.letter_spacing_em
-                                        {
-                                            label = label.letter_spacing_em(letter_spacing_em);
-                                        }
-                                        label.into_element(cx)
-                                    },
-                                    right,
-                                ]
+                                )
+                                });
+
+                                let mut out = vec![label_el];
+                                if let Some(right) = right {
+                                    out.push(right);
+                                }
+                                out
                             },
                         )]
                     })
@@ -2628,6 +2664,7 @@ mod tests {
                 ComboboxInput::new()
                     .placeholder("Pick one")
                     .disabled(true)
+                    .show_trigger(false)
                     .show_clear(true),
             ),
             ComboboxPart::content(
@@ -2653,6 +2690,7 @@ mod tests {
         let patch = combobox_parts_patch(parts);
         assert_eq!(patch.placeholder.as_deref(), Some("Pick one"));
         assert_eq!(patch.disabled, Some(true));
+        assert_eq!(patch.show_trigger, Some(false));
         assert_eq!(patch.show_clear, Some(true));
         assert_eq!(patch.content_side, Some(popper::Side::Top));
         assert_eq!(patch.content_align, Some(popper::Align::Start));
@@ -2754,6 +2792,78 @@ mod tests {
                     .is_some_and(|id| id == "combobox-clear-clear-button")
             }),
             "expected clear button to be visible when a value is selected"
+        );
+    }
+
+    #[test]
+    fn combobox_show_trigger_hides_chevron_icon() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(360.0), Px(200.0)),
+        );
+        let mut services = FakeServices::default();
+
+        let model = app.models_mut().insert(None::<Arc<str>>);
+        let open = app.models_mut().insert(false);
+
+        let items = vec![ComboboxOption::new("alpha", "Alpha")];
+
+        let mut render_frame = |ui: &mut UiTree<App>, app: &mut App, show_trigger: bool| {
+            let next_frame = FrameId(app.frame_id().0.saturating_add(1));
+            app.set_frame_id(next_frame);
+
+            fret_ui_kit::OverlayController::begin_frame(app, window);
+            let root = fret_ui::declarative::render_root(
+                ui,
+                app,
+                &mut services,
+                window,
+                bounds,
+                "combobox-show-trigger",
+                |cx| {
+                    vec![
+                        Combobox::new(model.clone(), open.clone())
+                            .a11y_label("Combobox")
+                            .test_id_prefix("combobox-show-trigger")
+                            .show_trigger(show_trigger)
+                            .items(items.clone())
+                            .into_element(cx),
+                    ]
+                },
+            );
+            ui.set_root(root);
+            fret_ui_kit::OverlayController::render(ui, app, &mut services, window, bounds);
+            ui.request_semantics_snapshot();
+            ui.layout_all(app, &mut services, bounds, 1.0);
+        };
+
+        // Frame 1: icon hidden.
+        render_frame(&mut ui, &mut app, false);
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        assert!(
+            !snap.nodes.iter().any(|n| {
+                n.test_id
+                    .as_deref()
+                    .is_some_and(|id| id == "combobox-show-trigger-trigger-icon")
+            }),
+            "expected trigger icon to be hidden when show_trigger=false"
+        );
+
+        // Frame 2: icon visible.
+        render_frame(&mut ui, &mut app, true);
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        assert!(
+            snap.nodes.iter().any(|n| {
+                n.test_id
+                    .as_deref()
+                    .is_some_and(|id| id == "combobox-show-trigger-trigger-icon")
+            }),
+            "expected trigger icon to be visible when show_trigger=true"
         );
     }
 
