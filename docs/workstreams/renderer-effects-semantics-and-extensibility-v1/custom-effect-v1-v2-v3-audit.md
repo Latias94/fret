@@ -112,6 +112,13 @@ Triage hint codes (worst frame):
 - `renderer.custom_effect_v3_raw_aliased_to_src` (raw snapshot unavailable; `src_raw` aliases)
 - `renderer.custom_effect_v3_pyramid_degraded_to_one` (pyramid levels degraded under budget pressure)
 
+Interpretation note:
+
+- `renderer_render_plan_custom_effect_chain_optional_pyramid_max_bytes` will often be `0` when the pyramid is
+  degraded to 1 level, because we only charge/report pyramid bytes when `levels >= 2` (mip storage allocated).
+  Use triage evidence fields like `custom_effect_chain_headroom_after_mask_bytes` together with
+  `custom_effect_v3_pyramid_required_bytes_levels2_est` to make “why did it degrade?” explainable from a bundle.
+
 Anchors:
 
 - Plan compile: `crates/fret-render-wgpu/src/renderer/render_plan_effects.rs`
@@ -470,6 +477,9 @@ Notes:
     - `custom_effect_chain_headroom_before_optional_bytes`
     - `custom_effect_chain_headroom_after_mask_bytes`
     - `custom_effect_chain_headroom_after_optional_bytes`
+  - Triage-derived pyramid sizing estimates (worst-frame hint evidence):
+    - `custom_effect_v3_pyramid_required_bytes_levels2_est`
+    - `custom_effect_v3_pyramid_would_fit_levels2_est`
   - `renderer_intermediate_peak_in_use_bytes`.
 
 Conformance:
