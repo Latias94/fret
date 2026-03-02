@@ -67,16 +67,23 @@ When the layout pass clears `invalidation.layout` on a node (after successful me
   - the node itself
   - and all its ancestors
 
-### Important constraint: do not “respect truncation” for aggregation
+### Boundary semantics: contained view-cache roots
 
-View-cache truncation is a performance policy about *which ancestors must be invalidated*.
+View-cache truncation (especially `contained_layout`) is a *contract* about which parts of the tree
+may be laid out independently.
 
-Aggregation is a correctness mechanism for cache reuse decisions. If the aggregation propagation
-stops at a view-cache boundary, then callers outside that boundary can still see a “clean” subtree
-while descendants are dirty, which defeats the purpose.
+The aggregation is a correctness signal for cache reuse decisions, but it must **not** accidentally
+break contained-layout semantics by forcing ancestor relayouts to “pierce” cache boundaries.
 
-Therefore, aggregation propagation must reach the relevant ancestors **even when invalidation
-marking truncates**.
+Current v1 stance:
+
+- We allow aggregation to be computed independently of invalidation truncation (so consumers can
+  detect “descendant dirty” even if a local ancestor bit is unexpectedly clear).
+- We do **not** use `subtree_layout_dirty` to force ancestor relayouts in the generic layout loop.
+  Contained cache roots remain owned by the contained relayout pass.
+
+If we later want to use subtree-dirty to drive generic relayout decisions, we must define an
+explicit policy such as “subtree dirty excluding contained cache roots” (see open questions).
 
 ## Performance strategy
 
@@ -102,6 +109,22 @@ Always propagate to the root immediately. This is simplest but may be too costly
 The workstream should land the mechanism behind a runtime flag first so we can measure the real
 cost and choose between eager-only vs deferred.
 
+### Current implementation (v1)
+
+We currently ship an **eager-to-root** implementation with two optimizations:
+
+1. **Invalidation walks update aggregation in a single pass** (no nested “walk-to-root per node”):
+   - while walking ancestors to mark invalidation, maintain a `pending_delta` that represents “how
+     many newly-dirty nodes exist below the current node”
+   - apply `pending_delta + self_transition_delta` to each visited node’s counter
+2. **Aggregation propagation is not truncated by view-cache boundaries**:
+   - invalidation marking may truncate at view-cache roots
+   - aggregation continues walking parent pointers above the truncation point and applies the
+     pending delta without marking invalidation bits
+
+This preserves correctness for cache reuse decisions while keeping the hot path O(height) per
+invalidation root.
+
 ## API surface (internal)
 
 Add internal helpers on `UiTree` (non-public, mechanism-level):
@@ -124,11 +147,14 @@ Add internal helpers on `UiTree` (non-public, mechanism-level):
 
 ### Scroll fast path (consumer)
 
-Replace any “deep scan or forced invalidation” workaround with:
+Replace any “deep scan” workaround with:
 
-> At the scroll edge, if the direct child root is *subtree-dirty*, do not reuse cached extents.
+> At the scroll edge, if the direct child root is *subtree-dirty*, treat it as dirty for the
+> purposes of scroll extent probing.
 
-This is the precise correctness intent and should eliminate the need for ad-hoc DFS probes.
+Note: the intended contract is **not** “always relayout ancestors when any descendant is dirty”.
+Instead, scroll uses the subtree-dirty signal as a guard to avoid reusing stale content-extent
+caches when the user is at the scroll extent edge.
 
 ## Correctness invariants (debug asserts)
 

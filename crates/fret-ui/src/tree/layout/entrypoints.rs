@@ -587,6 +587,8 @@ impl<H: UiHost> UiTree<H> {
             // These bounds are used by component-layer policies (e.g. overlay placement) and are
             // expected to reflect the most recent layout pass.
             self.sync_element_bounds_cache_after_layout(app);
+
+            self.validate_subtree_layout_dirty_counts_if_enabled();
         }
 
         if pass_kind == LayoutPassKind::Final {

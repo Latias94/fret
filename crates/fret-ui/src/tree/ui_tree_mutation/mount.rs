@@ -18,6 +18,7 @@ impl<H: UiHost> UiTree<H> {
                     n.parent = Some(parent);
                 }
             }
+            self.recompute_node_subtree_layout_dirty_count_and_propagate(parent);
             return;
         }
 
@@ -109,6 +110,8 @@ impl<H: UiHost> UiTree<H> {
         if let Some((prev, next)) = counter_update {
             self.update_invalidation_counters(prev, next);
         }
+
+        self.recompute_node_subtree_layout_dirty_count_and_propagate(parent);
 
         if propagate {
             // Structural changes must invalidate ancestors so the next layout pass walks far
