@@ -19,6 +19,11 @@ Run as suite:
 
 - `cargo run -p fretboard -- diag suite docking-arbitration --launch -- cargo run -p fret-examples --bin docking_arbitration_demo --release`
 
+Multi-window tear-off + merge-back gates (runner-routed cross-window drags):
+
+- `tools/diag-scripts/docking/arbitration/docking-arbitration-demo-multiwindow-drag-tab-back-to-main.json`
+- `tools/diag-scripts/docking/arbitration/docking-arbitration-demo-multiwindow-chained-tearoff-two-tabs-merge.json`
+
 ## Unit tests
 
 - `cargo nextest run -p fret-docking`
@@ -39,3 +44,13 @@ Run as suite:
   - Suite summary: `target/fret-diag-ws-docking-tabbar-2026-03-02/sessions/1772427715938-32660/suite.summary.json`
   - Latest (failure) bundle: `target/fret-diag-ws-docking-tabbar-2026-03-02/sessions/1772427715938-32660/1772427929945-script-step-0044-wait_until-timeout/bundle.schema2.json`
   - Failure: `docking-arbitration-demo-multiwindow-chained-tearoff-two-tabs-merge` timed out waiting for `dock_drag_active_is == true` (step_index=44).
+
+- 2026-03-02 local repro (PASS): `docking-arbitration-demo-multiwindow-drag-tab-back-to-main`
+  - Session: `target/fret-diag-docking-drag-tab-back-check2/sessions/1772449592171-12097`
+  - Packed: `target/fret-diag-docking-drag-tab-back-check2/sessions/1772449592171-12097/share/1772449757899.zip`
+  - Run id: `1772449757899`
+
+- 2026-03-02 local repro (PASS): `docking-arbitration-demo-multiwindow-chained-tearoff-two-tabs-merge`
+  - Session: `target/fret-diag-docking-chained-merge-check3/sessions/1772449828065-14394`
+  - Packed: `target/fret-diag-docking-chained-merge-check3/sessions/1772449828065-14394/share/1772449829179.zip`
+  - Run id: `1772449829179`
