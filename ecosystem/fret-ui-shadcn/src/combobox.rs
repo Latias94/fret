@@ -38,7 +38,7 @@ fn alpha_mul(mut c: Color, mul: f32) -> Color {
     c
 }
 
-fn combobox_group_items<'a>(group: &'a ComboboxGroup) -> &'a [ComboboxItem] {
+pub(crate) fn combobox_group_items<'a>(group: &'a ComboboxGroup) -> &'a [ComboboxItem] {
     if !group.items.is_empty() {
         &group.items
     } else if let Some(collection) = group.collection.as_ref() {

@@ -25,7 +25,7 @@ use fret_ui_kit::{
 
 use crate::combobox::{
     ComboboxChipsInput, ComboboxContent, ComboboxContentPart, ComboboxGroup, ComboboxItem,
-    ComboboxOpenChangeReason, ComboboxStyle, ComboboxValue,
+    ComboboxOpenChangeReason, ComboboxStyle, ComboboxValue, combobox_group_items,
 };
 use crate::command::CommandPaletteA11ySelectedMode;
 use crate::test_id::test_id_slug;
@@ -63,16 +63,6 @@ impl From<ComboboxContent> for ComboboxChipsPart {
 fn alpha_mul(mut c: Color, mul: f32) -> Color {
     c.a = (c.a * mul).clamp(0.0, 1.0);
     c
-}
-
-fn combobox_group_items<'a>(group: &'a ComboboxGroup) -> &'a [ComboboxItem] {
-    if !group.items.is_empty() {
-        &group.items
-    } else if let Some(collection) = group.collection.as_ref() {
-        &collection.items
-    } else {
-        &[]
-    }
 }
 
 fn combobox_value_label_map(
