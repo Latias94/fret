@@ -450,6 +450,24 @@ pub struct UiFrameStatsV1 {
     #[serde(default)]
     pub renderer_render_plan_effect_chain_other_live_max_bytes: u64,
     #[serde(default)]
+    pub renderer_render_plan_custom_effect_chain_budget_samples: u64,
+    #[serde(default)]
+    pub renderer_render_plan_custom_effect_chain_effective_budget_min_bytes: u64,
+    #[serde(default)]
+    pub renderer_render_plan_custom_effect_chain_effective_budget_max_bytes: u64,
+    #[serde(default)]
+    pub renderer_render_plan_custom_effect_chain_other_live_max_bytes: u64,
+    #[serde(default)]
+    pub renderer_render_plan_custom_effect_chain_base_required_max_bytes: u64,
+    #[serde(default)]
+    pub renderer_render_plan_custom_effect_chain_optional_required_max_bytes: u64,
+    #[serde(default)]
+    pub renderer_render_plan_custom_effect_chain_base_required_full_targets_max: u32,
+    #[serde(default)]
+    pub renderer_render_plan_custom_effect_chain_optional_mask_max_bytes: u64,
+    #[serde(default)]
+    pub renderer_render_plan_custom_effect_chain_optional_pyramid_max_bytes: u64,
+    #[serde(default)]
     pub renderer_intermediate_in_use_bytes: u64,
     #[serde(default)]
     pub renderer_intermediate_peak_in_use_bytes: u64,
@@ -855,6 +873,15 @@ impl UiFrameStatsV1 {
             renderer_render_plan_effect_chain_effective_budget_min_bytes: 0,
             renderer_render_plan_effect_chain_effective_budget_max_bytes: 0,
             renderer_render_plan_effect_chain_other_live_max_bytes: 0,
+            renderer_render_plan_custom_effect_chain_budget_samples: 0,
+            renderer_render_plan_custom_effect_chain_effective_budget_min_bytes: 0,
+            renderer_render_plan_custom_effect_chain_effective_budget_max_bytes: 0,
+            renderer_render_plan_custom_effect_chain_other_live_max_bytes: 0,
+            renderer_render_plan_custom_effect_chain_base_required_max_bytes: 0,
+            renderer_render_plan_custom_effect_chain_optional_required_max_bytes: 0,
+            renderer_render_plan_custom_effect_chain_base_required_full_targets_max: 0,
+            renderer_render_plan_custom_effect_chain_optional_mask_max_bytes: 0,
+            renderer_render_plan_custom_effect_chain_optional_pyramid_max_bytes: 0,
             renderer_intermediate_in_use_bytes: 0,
             renderer_intermediate_peak_in_use_bytes: 0,
             renderer_intermediate_release_targets: 0,
@@ -987,6 +1014,24 @@ impl UiFrameStatsV1 {
                 sample.perf.render_plan_effect_chain_effective_budget_max_bytes;
             out.renderer_render_plan_effect_chain_other_live_max_bytes =
                 sample.perf.render_plan_effect_chain_other_live_max_bytes;
+            out.renderer_render_plan_custom_effect_chain_budget_samples =
+                sample.perf.render_plan_custom_effect_chain_budget_samples;
+            out.renderer_render_plan_custom_effect_chain_effective_budget_min_bytes =
+                sample.perf.render_plan_custom_effect_chain_effective_budget_min_bytes;
+            out.renderer_render_plan_custom_effect_chain_effective_budget_max_bytes =
+                sample.perf.render_plan_custom_effect_chain_effective_budget_max_bytes;
+            out.renderer_render_plan_custom_effect_chain_other_live_max_bytes =
+                sample.perf.render_plan_custom_effect_chain_other_live_max_bytes;
+            out.renderer_render_plan_custom_effect_chain_base_required_max_bytes =
+                sample.perf.render_plan_custom_effect_chain_base_required_max_bytes;
+            out.renderer_render_plan_custom_effect_chain_optional_required_max_bytes =
+                sample.perf.render_plan_custom_effect_chain_optional_required_max_bytes;
+            out.renderer_render_plan_custom_effect_chain_base_required_full_targets_max =
+                sample.perf.render_plan_custom_effect_chain_base_required_full_targets_max;
+            out.renderer_render_plan_custom_effect_chain_optional_mask_max_bytes =
+                sample.perf.render_plan_custom_effect_chain_optional_mask_max_bytes;
+            out.renderer_render_plan_custom_effect_chain_optional_pyramid_max_bytes =
+                sample.perf.render_plan_custom_effect_chain_optional_pyramid_max_bytes;
             out.renderer_intermediate_in_use_bytes = sample.perf.intermediate_in_use_bytes;
             out.renderer_intermediate_peak_in_use_bytes =
                 sample.perf.intermediate_peak_in_use_bytes;

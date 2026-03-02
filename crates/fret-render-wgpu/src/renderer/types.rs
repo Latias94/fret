@@ -503,6 +503,51 @@ pub struct RenderPerfSnapshot {
     ///
     /// This is a best-effort diagnostics signal (not a stable API).
     pub render_plan_effect_chain_other_live_max_bytes: u64,
+
+    /// Number of CustomEffect chain budget samples recorded during render plan compilation.
+    ///
+    /// A "CustomEffect chain" is an effect chain that contains at least one CustomEffect step
+    /// (v1/v2/v3). These are best-effort diagnostics signals (not a stable API).
+    pub render_plan_custom_effect_chain_budget_samples: u64,
+    /// Minimum effective intermediate budget observed across CustomEffect chain compilation.
+    ///
+    /// This is a best-effort diagnostics signal (not a stable API).
+    pub render_plan_custom_effect_chain_effective_budget_min_bytes: u64,
+    /// Maximum effective intermediate budget observed across CustomEffect chain compilation.
+    ///
+    /// This is a best-effort diagnostics signal (not a stable API).
+    pub render_plan_custom_effect_chain_effective_budget_max_bytes: u64,
+    /// Maximum "other live bytes" observed across CustomEffect chain compilation.
+    ///
+    /// This is a best-effort diagnostics signal (not a stable API).
+    pub render_plan_custom_effect_chain_other_live_max_bytes: u64,
+    /// Maximum "base required bytes" observed across CustomEffect chains.
+    ///
+    /// Base required bytes are expressed as full-size intermediate targets for the chain
+    /// (`srcdst` + required scratch/work/raw targets), excluding optional resources
+    /// (mask/pyramid).
+    ///
+    /// This is a best-effort diagnostics signal (not a stable API).
+    pub render_plan_custom_effect_chain_base_required_max_bytes: u64,
+    /// Maximum "optional required bytes" observed across CustomEffect chains.
+    ///
+    /// Optional required bytes cover non-full intermediate allocations like clip masks and v3
+    /// pyramids.
+    ///
+    /// This is a best-effort diagnostics signal (not a stable API).
+    pub render_plan_custom_effect_chain_optional_required_max_bytes: u64,
+    /// Maximum full-size target count implied by "base required bytes" across CustomEffect chains.
+    ///
+    /// This is a best-effort diagnostics signal (not a stable API).
+    pub render_plan_custom_effect_chain_base_required_full_targets_max: u32,
+    /// Maximum clip-mask bytes observed across CustomEffect chains.
+    ///
+    /// This is a best-effort diagnostics signal (not a stable API).
+    pub render_plan_custom_effect_chain_optional_mask_max_bytes: u64,
+    /// Maximum pyramid bytes observed across CustomEffect chains.
+    ///
+    /// This is a best-effort diagnostics signal (not a stable API).
+    pub render_plan_custom_effect_chain_optional_pyramid_max_bytes: u64,
     pub render_plan_degradations_budget_zero: u64,
     pub render_plan_degradations_budget_insufficient: u64,
     pub render_plan_degradations_target_exhausted: u64,
@@ -685,6 +730,15 @@ pub(super) struct RenderPerfStats {
     pub(super) render_plan_effect_chain_effective_budget_min_bytes: u64,
     pub(super) render_plan_effect_chain_effective_budget_max_bytes: u64,
     pub(super) render_plan_effect_chain_other_live_max_bytes: u64,
+    pub(super) render_plan_custom_effect_chain_budget_samples: u64,
+    pub(super) render_plan_custom_effect_chain_effective_budget_min_bytes: u64,
+    pub(super) render_plan_custom_effect_chain_effective_budget_max_bytes: u64,
+    pub(super) render_plan_custom_effect_chain_other_live_max_bytes: u64,
+    pub(super) render_plan_custom_effect_chain_base_required_max_bytes: u64,
+    pub(super) render_plan_custom_effect_chain_optional_required_max_bytes: u64,
+    pub(super) render_plan_custom_effect_chain_base_required_full_targets_max: u32,
+    pub(super) render_plan_custom_effect_chain_optional_mask_max_bytes: u64,
+    pub(super) render_plan_custom_effect_chain_optional_pyramid_max_bytes: u64,
     pub(super) render_plan_degradations_budget_zero: u64,
     pub(super) render_plan_degradations_budget_insufficient: u64,
     pub(super) render_plan_degradations_target_exhausted: u64,

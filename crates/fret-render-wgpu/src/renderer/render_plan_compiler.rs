@@ -445,6 +445,16 @@ fn compile_for_scene_inner(
     let mut effect_chain_effective_budget_max_bytes: u64 = 0;
     let mut effect_chain_other_live_max_bytes: u64 = 0;
 
+    let mut custom_effect_chain_budget_samples: u64 = 0;
+    let mut custom_effect_chain_effective_budget_min_bytes: u64 = u64::MAX;
+    let mut custom_effect_chain_effective_budget_max_bytes: u64 = 0;
+    let mut custom_effect_chain_other_live_max_bytes: u64 = 0;
+    let mut custom_effect_chain_base_required_max_bytes: u64 = 0;
+    let mut custom_effect_chain_optional_required_max_bytes: u64 = 0;
+    let mut custom_effect_chain_base_required_full_targets_max: u32 = 0;
+    let mut custom_effect_chain_optional_mask_max_bytes: u64 = 0;
+    let mut custom_effect_chain_optional_pyramid_max_bytes: u64 = 0;
+
     let mut alloc_segment = |draw_range: std::ops::Range<usize>| -> super::SceneSegmentId {
         let id = super::SceneSegmentId(next_segment_id);
         next_segment_id += 1;
@@ -622,7 +632,7 @@ fn compile_for_scene_inner(
                     in_use_targets.push(t);
                 }
             }
-            effects::apply_chain_in_place(
+            let custom_evidence = effects::apply_chain_in_place(
                 passes,
                 &in_use_targets,
                 srcdst,
@@ -643,6 +653,30 @@ fn compile_for_scene_inner(
                 },
                 backdrop_source_group,
             );
+
+            if let Some(e) = custom_evidence {
+                custom_effect_chain_budget_samples =
+                    custom_effect_chain_budget_samples.saturating_add(1);
+                let effective_budget_bytes = e.effective_budget_bytes;
+                custom_effect_chain_effective_budget_min_bytes =
+                    custom_effect_chain_effective_budget_min_bytes.min(effective_budget_bytes);
+                custom_effect_chain_effective_budget_max_bytes =
+                    custom_effect_chain_effective_budget_max_bytes.max(effective_budget_bytes);
+                custom_effect_chain_other_live_max_bytes =
+                    custom_effect_chain_other_live_max_bytes.max(breakdown.other_live_bytes);
+                custom_effect_chain_base_required_max_bytes =
+                    custom_effect_chain_base_required_max_bytes.max(e.base_required_bytes);
+                custom_effect_chain_optional_required_max_bytes =
+                    custom_effect_chain_optional_required_max_bytes
+                        .max(e.optional_required_bytes());
+                custom_effect_chain_base_required_full_targets_max =
+                    custom_effect_chain_base_required_full_targets_max
+                        .max(e.base_required_full_targets);
+                custom_effect_chain_optional_mask_max_bytes =
+                    custom_effect_chain_optional_mask_max_bytes.max(e.optional_mask_bytes);
+                custom_effect_chain_optional_pyramid_max_bytes =
+                    custom_effect_chain_optional_pyramid_max_bytes.max(e.optional_pyramid_bytes);
+            }
         };
 
     let mut scene_range_start: usize = 0;
@@ -1519,6 +1553,33 @@ fn compile_for_scene_inner(
         plan.compile_stats.effect_chain_effective_budget_max_bytes =
             effect_chain_effective_budget_max_bytes;
         plan.compile_stats.effect_chain_other_live_max_bytes = effect_chain_other_live_max_bytes;
+    }
+
+    if custom_effect_chain_budget_samples > 0 {
+        plan.compile_stats.custom_effect_chain_budget_samples = custom_effect_chain_budget_samples;
+        plan.compile_stats
+            .custom_effect_chain_effective_budget_min_bytes =
+            custom_effect_chain_effective_budget_min_bytes;
+        plan.compile_stats
+            .custom_effect_chain_effective_budget_max_bytes =
+            custom_effect_chain_effective_budget_max_bytes;
+        plan.compile_stats.custom_effect_chain_other_live_max_bytes =
+            custom_effect_chain_other_live_max_bytes;
+        plan.compile_stats
+            .custom_effect_chain_base_required_max_bytes =
+            custom_effect_chain_base_required_max_bytes;
+        plan.compile_stats
+            .custom_effect_chain_optional_required_max_bytes =
+            custom_effect_chain_optional_required_max_bytes;
+        plan.compile_stats
+            .custom_effect_chain_base_required_full_targets_max =
+            custom_effect_chain_base_required_full_targets_max;
+        plan.compile_stats
+            .custom_effect_chain_optional_mask_max_bytes =
+            custom_effect_chain_optional_mask_max_bytes;
+        plan.compile_stats
+            .custom_effect_chain_optional_pyramid_max_bytes =
+            custom_effect_chain_optional_pyramid_max_bytes;
     }
 
     plan

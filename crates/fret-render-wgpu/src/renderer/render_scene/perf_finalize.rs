@@ -253,6 +253,32 @@ impl Renderer {
             frame_perf.render_plan_effect_chain_effective_budget_max_bytes;
         self.perf.render_plan_effect_chain_other_live_max_bytes =
             frame_perf.render_plan_effect_chain_other_live_max_bytes;
+        self.perf.render_plan_custom_effect_chain_budget_samples =
+            frame_perf.render_plan_custom_effect_chain_budget_samples;
+        self.perf
+            .render_plan_custom_effect_chain_effective_budget_min_bytes =
+            frame_perf.render_plan_custom_effect_chain_effective_budget_min_bytes;
+        self.perf
+            .render_plan_custom_effect_chain_effective_budget_max_bytes =
+            frame_perf.render_plan_custom_effect_chain_effective_budget_max_bytes;
+        self.perf
+            .render_plan_custom_effect_chain_other_live_max_bytes =
+            frame_perf.render_plan_custom_effect_chain_other_live_max_bytes;
+        self.perf
+            .render_plan_custom_effect_chain_base_required_max_bytes =
+            frame_perf.render_plan_custom_effect_chain_base_required_max_bytes;
+        self.perf
+            .render_plan_custom_effect_chain_optional_required_max_bytes =
+            frame_perf.render_plan_custom_effect_chain_optional_required_max_bytes;
+        self.perf
+            .render_plan_custom_effect_chain_base_required_full_targets_max =
+            frame_perf.render_plan_custom_effect_chain_base_required_full_targets_max;
+        self.perf
+            .render_plan_custom_effect_chain_optional_mask_max_bytes =
+            frame_perf.render_plan_custom_effect_chain_optional_mask_max_bytes;
+        self.perf
+            .render_plan_custom_effect_chain_optional_pyramid_max_bytes =
+            frame_perf.render_plan_custom_effect_chain_optional_pyramid_max_bytes;
         self.perf.render_plan_segments_changed = self
             .perf
             .render_plan_segments_changed
@@ -597,6 +623,24 @@ impl Renderer {
                 .render_plan_effect_chain_effective_budget_max_bytes,
             render_plan_effect_chain_other_live_max_bytes: frame_perf
                 .render_plan_effect_chain_other_live_max_bytes,
+            render_plan_custom_effect_chain_budget_samples: frame_perf
+                .render_plan_custom_effect_chain_budget_samples,
+            render_plan_custom_effect_chain_effective_budget_min_bytes: frame_perf
+                .render_plan_custom_effect_chain_effective_budget_min_bytes,
+            render_plan_custom_effect_chain_effective_budget_max_bytes: frame_perf
+                .render_plan_custom_effect_chain_effective_budget_max_bytes,
+            render_plan_custom_effect_chain_other_live_max_bytes: frame_perf
+                .render_plan_custom_effect_chain_other_live_max_bytes,
+            render_plan_custom_effect_chain_base_required_max_bytes: frame_perf
+                .render_plan_custom_effect_chain_base_required_max_bytes,
+            render_plan_custom_effect_chain_optional_required_max_bytes: frame_perf
+                .render_plan_custom_effect_chain_optional_required_max_bytes,
+            render_plan_custom_effect_chain_base_required_full_targets_max: frame_perf
+                .render_plan_custom_effect_chain_base_required_full_targets_max,
+            render_plan_custom_effect_chain_optional_mask_max_bytes: frame_perf
+                .render_plan_custom_effect_chain_optional_mask_max_bytes,
+            render_plan_custom_effect_chain_optional_pyramid_max_bytes: frame_perf
+                .render_plan_custom_effect_chain_optional_pyramid_max_bytes,
             render_plan_degradations_budget_zero: frame_perf.render_plan_degradations_budget_zero,
             render_plan_degradations_budget_insufficient: frame_perf
                 .render_plan_degradations_budget_insufficient,

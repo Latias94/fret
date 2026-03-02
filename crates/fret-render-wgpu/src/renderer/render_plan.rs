@@ -53,6 +53,50 @@ pub(super) struct RenderPlanCompileStats {
     ///
     /// This is a best-effort diagnostics signal (not a stable API).
     pub(super) effect_chain_other_live_max_bytes: u64,
+
+    /// Counts how many effect chains containing at least one CustomEffect step (v1/v2/v3) were
+    /// compiled through `apply_chain_in_place` for the frame.
+    ///
+    /// This is a best-effort diagnostics signal (not a stable API).
+    pub(super) custom_effect_chain_budget_samples: u64,
+    /// Minimum effective intermediate budget observed across CustomEffect chain compilation.
+    ///
+    /// This is a best-effort diagnostics signal (not a stable API).
+    pub(super) custom_effect_chain_effective_budget_min_bytes: u64,
+    /// Maximum effective intermediate budget observed across CustomEffect chain compilation.
+    ///
+    /// This is a best-effort diagnostics signal (not a stable API).
+    pub(super) custom_effect_chain_effective_budget_max_bytes: u64,
+    /// Maximum "other live bytes" observed across CustomEffect chain compilation.
+    ///
+    /// This is a best-effort diagnostics signal (not a stable API).
+    pub(super) custom_effect_chain_other_live_max_bytes: u64,
+    /// Maximum "base required bytes" observed across CustomEffect chain compilation.
+    ///
+    /// Base required bytes are expressed as full-size intermediate targets for the chain
+    /// (`srcdst` + required scratch/work/raw targets), excluding optional resources (mask/pyramid).
+    ///
+    /// This is a best-effort diagnostics signal (not a stable API).
+    pub(super) custom_effect_chain_base_required_max_bytes: u64,
+    /// Maximum "optional required bytes" observed across CustomEffect chain compilation.
+    ///
+    /// Optional required bytes cover non-full intermediate allocations like clip masks and v3
+    /// pyramids.
+    ///
+    /// This is a best-effort diagnostics signal (not a stable API).
+    pub(super) custom_effect_chain_optional_required_max_bytes: u64,
+    /// Maximum full-size target count implied by "base required bytes" across CustomEffect chains.
+    ///
+    /// This is a best-effort diagnostics signal (not a stable API).
+    pub(super) custom_effect_chain_base_required_full_targets_max: u32,
+    /// Maximum clip-mask bytes observed across CustomEffect chains.
+    ///
+    /// This is a best-effort diagnostics signal (not a stable API).
+    pub(super) custom_effect_chain_optional_mask_max_bytes: u64,
+    /// Maximum pyramid bytes observed across CustomEffect chains.
+    ///
+    /// This is a best-effort diagnostics signal (not a stable API).
+    pub(super) custom_effect_chain_optional_pyramid_max_bytes: u64,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -447,14 +491,10 @@ impl RenderPlan {
             segments,
             passes,
             compile_stats: RenderPlanCompileStats {
-                estimated_peak_intermediate_bytes: 0,
                 degradation_count: degradations.len() as u64,
                 effect_degradations,
                 effect_blur_quality,
-                effect_chain_budget_samples: 0,
-                effect_chain_effective_budget_min_bytes: 0,
-                effect_chain_effective_budget_max_bytes: 0,
-                effect_chain_other_live_max_bytes: 0,
+                ..Default::default()
             },
             degradations,
         };

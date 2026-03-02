@@ -48,6 +48,22 @@ pub(super) struct EffectCompileCtx {
     pub(super) scale_factor: f32,
 }
 
+#[derive(Clone, Copy, Debug, Default)]
+pub(super) struct CustomEffectChainBudgetEvidence {
+    pub(super) effective_budget_bytes: u64,
+    pub(super) base_required_bytes: u64,
+    pub(super) base_required_full_targets: u32,
+    pub(super) optional_mask_bytes: u64,
+    pub(super) optional_pyramid_bytes: u64,
+}
+
+impl CustomEffectChainBudgetEvidence {
+    pub(super) fn optional_required_bytes(&self) -> u64 {
+        self.optional_mask_bytes
+            .saturating_add(self.optional_pyramid_bytes)
+    }
+}
+
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub(super) enum CustomV3PyramidDegradeReason {
     BudgetZero,
@@ -152,14 +168,14 @@ pub(super) fn apply_chain_in_place(
     effect_blur_quality: &mut super::BlurQualitySnapshot,
     ctx: EffectCompileCtx,
     backdrop_source_group: Option<BackdropSourceGroupCtx>,
-) {
+) -> Option<CustomEffectChainBudgetEvidence> {
     if srcdst == PlanTarget::Output || scissor.w == 0 || scissor.h == 0 {
-        return;
+        return None;
     }
 
     let steps: Vec<fret_core::EffectStep> = chain.iter().collect();
     if steps.is_empty() {
-        return;
+        return None;
     }
 
     let group_raw = backdrop_source_group.map(|g| g.raw_target);
@@ -169,6 +185,25 @@ pub(super) fn apply_chain_in_place(
 
     let mut budget_bytes = ctx.intermediate_budget_bytes;
     let srcdst_bytes = estimate_texture_bytes(ctx.viewport_size, ctx.format, 1);
+    let chain_has_custom_effect = steps.iter().any(|s| {
+        matches!(
+            *s,
+            fret_core::EffectStep::CustomV1 { .. }
+                | fret_core::EffectStep::CustomV2 { .. }
+                | fret_core::EffectStep::CustomV3 { .. }
+        )
+    });
+    let full_target_bytes = estimate_texture_bytes(ctx.viewport_size, ctx.format, 1);
+    let mut custom_chain_budget =
+        chain_has_custom_effect.then_some(CustomEffectChainBudgetEvidence {
+            effective_budget_bytes: ctx.intermediate_budget_bytes,
+            base_required_bytes: base_required_bytes_for_srcdst_and_single_scratch(
+                full_target_bytes,
+            ),
+            base_required_full_targets: 2,
+            optional_mask_bytes: 0,
+            optional_pyramid_bytes: 0,
+        });
 
     let scratch_targets = available_scratch_targets(in_use_targets, srcdst);
     let forced_quarter_blur = scratch_targets.len() >= 2
@@ -201,6 +236,7 @@ pub(super) fn apply_chain_in_place(
         });
     let mask_tier_cap = forced_quarter_blur.then_some(PlanTarget::Mask2);
 
+    let mut chosen_mask_bytes: u64 = 0;
     let mask = if let Some(uniform_index) = mask_uniform_index
         && let Some((mask_target, mask_size, mask_bytes)) = choose_clip_mask_target_capped(
             ctx.viewport_size,
@@ -218,6 +254,7 @@ pub(super) fn apply_chain_in_place(
             uniform_index,
             load: wgpu::LoadOp::Clear(wgpu::Color::TRANSPARENT),
         }));
+        chosen_mask_bytes = mask_bytes;
         budget_bytes = budget_bytes.saturating_sub(mask_bytes);
         Some(MaskRef {
             target: mask_target,
@@ -227,6 +264,10 @@ pub(super) fn apply_chain_in_place(
     } else {
         None
     };
+
+    if let Some(e) = custom_chain_budget.as_mut() {
+        e.optional_mask_bytes = chosen_mask_bytes;
+    }
 
     // Padded effect chains:
     //
@@ -278,6 +319,14 @@ pub(super) fn apply_chain_in_place(
                 && scratch_targets.len() >= 3
                 && budget_bytes >= base_required_bytes_for_srcdst_and_three_scratch(full))
             .then_some(scratch_targets[1]);
+
+            if let Some(e) = custom_chain_budget.as_mut() {
+                let required_full_targets = if chain_raw.is_some() { 4 } else { 3 };
+                e.base_required_full_targets = required_full_targets;
+                e.base_required_bytes =
+                    required_bytes_for_full_size_targets(full, required_full_targets as u64);
+            }
+
             let work_scratch_targets = if chain_raw.is_some() {
                 &scratch_targets[2..]
             } else {
@@ -336,6 +385,7 @@ pub(super) fn apply_chain_in_place(
                     ctx,
                     chain_raw,
                     backdrop_source_group,
+                    &mut custom_chain_budget,
                 );
             }
 
@@ -447,6 +497,20 @@ pub(super) fn apply_chain_in_place(
                             &mut effect_degradations.custom_effect_v3_sources,
                         );
 
+                        if let Some(e) = custom_chain_budget.as_mut()
+                            && group_pyramid.is_none()
+                            && sources.pyramid.is_some()
+                            && v3_sources_plan.pyramid_levels >= 2
+                        {
+                            e.optional_pyramid_bytes = e.optional_pyramid_bytes.saturating_add(
+                                estimate_custom_v3_pyramid_bytes(
+                                    ctx.viewport_size,
+                                    ctx.format,
+                                    v3_sources_plan.pyramid_levels,
+                                ),
+                            );
+                        }
+
                         passes.push(RenderPlanPass::CustomEffectV3(CustomEffectV3Pass {
                             src_raw: v3_sources_plan.src_raw,
                             src_pyramid: v3_sources_plan.src_raw,
@@ -496,6 +560,7 @@ pub(super) fn apply_chain_in_place(
                         ctx,
                         chain_raw,
                         backdrop_source_group,
+                        &mut custom_chain_budget,
                     );
                 }
 
@@ -529,7 +594,7 @@ pub(super) fn apply_chain_in_place(
                 }
             }
 
-            return;
+            return custom_chain_budget;
         }
     }
 
@@ -556,6 +621,10 @@ pub(super) fn apply_chain_in_place(
             load: wgpu::LoadOp::Clear(ctx.clear),
         }));
         budget_bytes = budget_excluding_full_size_targets(budget_bytes, full, 1);
+        if let Some(e) = custom_chain_budget.as_mut() {
+            e.base_required_full_targets = e.base_required_full_targets.max(3);
+            e.base_required_bytes = required_bytes_for_full_size_targets(full, 3);
+        }
         (Some(chain_raw), &scratch_targets[1..])
     } else {
         (None, scratch_targets.as_slice())
@@ -1638,6 +1707,19 @@ pub(super) fn apply_chain_in_place(
                     )),
                     &mut effect_degradations.custom_effect_v3_sources,
                 );
+                if let Some(e) = custom_chain_budget.as_mut()
+                    && group_pyramid.is_none()
+                    && sources.pyramid.is_some()
+                    && v3_sources_plan.pyramid_levels >= 2
+                {
+                    e.optional_pyramid_bytes =
+                        e.optional_pyramid_bytes
+                            .saturating_add(estimate_custom_v3_pyramid_bytes(
+                                ctx.viewport_size,
+                                ctx.format,
+                                v3_sources_plan.pyramid_levels,
+                            ));
+                }
                 append_custom_effect_v3_in_place_single_scratch(
                     passes,
                     srcdst,
@@ -1663,6 +1745,8 @@ pub(super) fn apply_chain_in_place(
             }
         }
     }
+
+    custom_chain_budget
 }
 
 fn padded_chain_step_scissors(
@@ -1735,6 +1819,7 @@ fn apply_step_in_place_with_scratch_targets(
     ctx: EffectCompileCtx,
     custom_v3_chain_raw: Option<PlanTarget>,
     backdrop_source_group: Option<BackdropSourceGroupCtx>,
+    custom_chain_budget: &mut Option<CustomEffectChainBudgetEvidence>,
 ) {
     match step {
         fret_core::EffectStep::GaussianBlur {
@@ -2326,6 +2411,19 @@ fn apply_step_in_place_with_scratch_targets(
                 )),
                 &mut effect_degradations.custom_effect_v3_sources,
             );
+            if let Some(e) = custom_chain_budget.as_mut()
+                && group_pyramid.is_none()
+                && sources.pyramid.is_some()
+                && v3_sources_plan.pyramid_levels >= 2
+            {
+                e.optional_pyramid_bytes =
+                    e.optional_pyramid_bytes
+                        .saturating_add(estimate_custom_v3_pyramid_bytes(
+                            ctx.viewport_size,
+                            ctx.format,
+                            v3_sources_plan.pyramid_levels,
+                        ));
+            }
             append_custom_effect_v3_in_place_single_scratch(
                 passes,
                 srcdst,

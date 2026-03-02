@@ -716,6 +716,56 @@ pub(super) fn bundle_stats_from_json_with_options(
                 .and_then(|m| m.get("renderer_render_plan_effect_chain_other_live_max_bytes"))
                 .and_then(|v| v.as_u64())
                 .unwrap_or(0);
+            let renderer_render_plan_custom_effect_chain_budget_samples = stats
+                .and_then(|m| m.get("renderer_render_plan_custom_effect_chain_budget_samples"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let renderer_render_plan_custom_effect_chain_effective_budget_min_bytes = stats
+                .and_then(|m| {
+                    m.get("renderer_render_plan_custom_effect_chain_effective_budget_min_bytes")
+                })
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let renderer_render_plan_custom_effect_chain_effective_budget_max_bytes = stats
+                .and_then(|m| {
+                    m.get("renderer_render_plan_custom_effect_chain_effective_budget_max_bytes")
+                })
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let renderer_render_plan_custom_effect_chain_other_live_max_bytes = stats
+                .and_then(|m| m.get("renderer_render_plan_custom_effect_chain_other_live_max_bytes"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let renderer_render_plan_custom_effect_chain_base_required_max_bytes = stats
+                .and_then(|m| {
+                    m.get("renderer_render_plan_custom_effect_chain_base_required_max_bytes")
+                })
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let renderer_render_plan_custom_effect_chain_optional_required_max_bytes = stats
+                .and_then(|m| {
+                    m.get("renderer_render_plan_custom_effect_chain_optional_required_max_bytes")
+                })
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let renderer_render_plan_custom_effect_chain_base_required_full_targets_max = stats
+                .and_then(|m| {
+                    m.get("renderer_render_plan_custom_effect_chain_base_required_full_targets_max")
+                })
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let renderer_render_plan_custom_effect_chain_optional_mask_max_bytes = stats
+                .and_then(|m| {
+                    m.get("renderer_render_plan_custom_effect_chain_optional_mask_max_bytes")
+                })
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let renderer_render_plan_custom_effect_chain_optional_pyramid_max_bytes = stats
+                .and_then(|m| {
+                    m.get("renderer_render_plan_custom_effect_chain_optional_pyramid_max_bytes")
+                })
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
             let renderer_intermediate_in_use_bytes = stats
                 .and_then(|m| m.get("renderer_intermediate_in_use_bytes"))
                 .and_then(|v| v.as_u64())
@@ -1597,6 +1647,15 @@ pub(super) fn bundle_stats_from_json_with_options(
                 renderer_render_plan_effect_chain_effective_budget_min_bytes,
                 renderer_render_plan_effect_chain_effective_budget_max_bytes,
                 renderer_render_plan_effect_chain_other_live_max_bytes,
+                renderer_render_plan_custom_effect_chain_budget_samples,
+                renderer_render_plan_custom_effect_chain_effective_budget_min_bytes,
+                renderer_render_plan_custom_effect_chain_effective_budget_max_bytes,
+                renderer_render_plan_custom_effect_chain_other_live_max_bytes,
+                renderer_render_plan_custom_effect_chain_base_required_max_bytes,
+                renderer_render_plan_custom_effect_chain_optional_required_max_bytes,
+                renderer_render_plan_custom_effect_chain_base_required_full_targets_max,
+                renderer_render_plan_custom_effect_chain_optional_mask_max_bytes,
+                renderer_render_plan_custom_effect_chain_optional_pyramid_max_bytes,
                 renderer_intermediate_in_use_bytes,
                 renderer_intermediate_peak_in_use_bytes,
                 renderer_intermediate_release_targets,
