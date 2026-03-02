@@ -1,3 +1,5 @@
+pub const SOURCE: &str = include_str!("avatar.rs");
+
 // region: example
 use crate::spec::CMD_APP_OPEN;
 use fret_app::App;
