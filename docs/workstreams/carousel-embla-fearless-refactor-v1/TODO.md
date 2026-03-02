@@ -60,7 +60,15 @@ In-tree surfaces:
   - Evidence: `apps/fret-ui-gallery/src/ui/pages/carousel.rs`
   - Note: `orientation="vertical"` defaults to `basis-full` for items (matches shadcn/ui
     `CarouselItem` default class list).
+  - Additional evidence (basis-full + demo constraints):
+    - `ecosystem/fret-ui-shadcn/src/carousel.rs` (default item `basis-full` uses percent sizing via
+      `basis_fraction(1.0)`)
+    - `apps/fret-ui-gallery/src/ui/snippets/carousel/*.rs` (slide wrappers use `w_full()`; demos do
+      not force a fixed track width)
   - Gate: `tools/diag-scripts/ui-gallery/carousel/ui-gallery-carousel-*-screenshot.json`
+  - Verification (native, 2026-03-02):
+    - `ui-gallery-carousel-expandable-screenshot` PASS (run_id=1772432870508)
+    - `ui-gallery-carousel-orientation-vertical-screenshot` PASS (run_id=1772432892001)
 - [x] CAR-130 Support shadcn docs "Plugins / autoplay" outcome without exposing Embla plugins.
   - Evidence:
     - `ecosystem/fret-ui-shadcn/src/carousel.rs` (`CarouselAutoplayConfig`, `Carousel::autoplay`)
