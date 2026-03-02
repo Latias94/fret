@@ -10,8 +10,8 @@
 
 ## Implementation tasks
 
-- [ ] Add `NodeGraphPaintOverrides` + `NodeGraphPaintOverridesMap` in `ecosystem/fret-node`
-- [ ] Thread overrides handle through `NodeGraphCanvas` builder
+- [x] Add `NodeGraphPaintOverrides` + `NodeGraphPaintOverridesMap` in `ecosystem/fret-node`
+- [x] Thread overrides handle through `NodeGraphCanvas` builder
 - [ ] Update paint cache keys to include paint override revision
 - [ ] Add conformance tests (invalidation + invariants)
 
@@ -19,4 +19,3 @@
 
 - [ ] Add debug overlay counters for “paint caches rebuilt due to overrides”
 - [ ] Add a small JSON preset format for edge paint recipes (optional; do not couple to `Graph`)
-

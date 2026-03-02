@@ -7,9 +7,9 @@
 
 ## M1: UI-only paint overrides surface (no behavior yet)
 
-- [ ] Define `NodeGraphPaintOverrides` trait (revision + per-node/per-edge queries)
-- [ ] Add `NodeGraphPaintOverridesMap` reference implementation
-- [ ] Plumb optional `paint_overrides` handle through the canvas widget builder
+- [x] Define `NodeGraphPaintOverrides` trait (revision + per-node/per-edge queries)
+- [x] Add `NodeGraphPaintOverridesMap` reference implementation
+- [x] Plumb optional `paint_overrides` handle through the canvas widget builder
 
 ## M2: Paint cache invalidation + conformance gates
 
@@ -31,4 +31,3 @@
   - viewport-fixed highlight
   - material-based animated “flow” (if enabled)
 - [ ] Add a demo / diagnostic harness in `apps/` to validate wire paint presets visually
-
