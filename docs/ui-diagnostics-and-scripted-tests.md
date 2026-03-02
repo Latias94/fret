@@ -704,7 +704,7 @@ Semantics export:
 
 Privacy / size:
 
-- `FRET_DIAG_REDACT_TEXT=0`: disable redaction (default enabled).
+- `FRET_DIAG_REDACT_TEXT=0`: disable redaction (runtime default enabled; tool-launched runs via `fretboard diag ... --launch` default to disabled).
 - `FRET_DIAG_MAX_DEBUG_STRING_BYTES=...`: cap event debug strings and exported semantics text.
 - `FRET_DIAG_MAX_GATING_TRACE_ENTRIES=...`: cap `debug.command_gating_trace` entries (default 200; clamped to <= 2000).
 

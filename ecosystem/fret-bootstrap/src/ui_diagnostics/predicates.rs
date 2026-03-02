@@ -1,6 +1,23 @@
 // Split across small files to reduce churn in fearless refactors.
 include!("predicates/dock_drag.rs");
 
+fn redaction_aware_len_bytes(s: &str) -> usize {
+    // Diagnostics redaction uses `<redacted len={}>` where the number is the UTF-8 byte length.
+    // Prefer reading that value so predicates remain stable regardless of `redact_text`.
+    const PREFIX: &str = "<redacted len=";
+    const SUFFIX: &str = ">";
+
+    let s = s.trim();
+    if let Some(rest) = s.strip_prefix(PREFIX)
+        && let Some(num) = rest.strip_suffix(SUFFIX)
+        && let Ok(n) = num.parse::<usize>()
+    {
+        return n;
+    }
+
+    s.len()
+}
+
 fn dock_drag_window_under_cursor_source_is(
     have: fret_runtime::WindowUnderCursorSource,
     want: &str,
@@ -244,11 +261,61 @@ fn eval_predicate(
             };
             node.label.as_deref().is_some_and(|label| label.contains(text))
         }
+        UiPredicateV1::LabelLenIs { target, len_bytes } => {
+            let Some(node) = select_node(target) else {
+                return false;
+            };
+            let got = node
+                .label
+                .as_deref()
+                .map(redaction_aware_len_bytes)
+                .unwrap_or(0);
+            got == (*len_bytes as usize)
+        }
+        UiPredicateV1::LabelLenGe {
+            target,
+            min_len_bytes,
+        } => {
+            let Some(node) = select_node(target) else {
+                return false;
+            };
+            let got = node
+                .label
+                .as_deref()
+                .map(redaction_aware_len_bytes)
+                .unwrap_or(0);
+            got >= (*min_len_bytes as usize)
+        }
         UiPredicateV1::ValueContains { target, text } => {
             let Some(node) = select_node(target) else {
                 return false;
             };
             node.value.as_deref().is_some_and(|value| value.contains(text))
+        }
+        UiPredicateV1::ValueLenIs { target, len_bytes } => {
+            let Some(node) = select_node(target) else {
+                return false;
+            };
+            let got = node
+                .value
+                .as_deref()
+                .map(redaction_aware_len_bytes)
+                .unwrap_or(0);
+            got == (*len_bytes as usize)
+        }
+        UiPredicateV1::ValueLenGe {
+            target,
+            min_len_bytes,
+        } => {
+            let Some(node) = select_node(target) else {
+                return false;
+            };
+            let got = node
+                .value
+                .as_deref()
+                .map(redaction_aware_len_bytes)
+                .unwrap_or(0);
+            got >= (*min_len_bytes as usize)
         }
         UiPredicateV1::PosInSetIs { target, pos_in_set } => {
             let Some(node) = select_node(target) else {

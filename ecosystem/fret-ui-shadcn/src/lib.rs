@@ -42,6 +42,7 @@ pub mod checkbox;
 pub mod collapsible;
 pub mod combobox;
 pub mod combobox_chips;
+pub mod combobox_data;
 pub mod command;
 mod command_gating;
 pub mod context_menu;
@@ -54,6 +55,7 @@ pub mod date_picker;
 pub mod date_picker_with_presets;
 pub mod date_range_picker;
 pub mod dialog;
+pub mod direction;
 pub mod drawer;
 pub mod dropdown_menu;
 pub mod empty;
@@ -128,13 +130,17 @@ pub use alert::{Alert, AlertAction, AlertDescription, AlertTitle, AlertVariant};
 pub use alert_dialog::{
     AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogContentSize,
     AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogMedia,
-    AlertDialogTitle, AlertDialogTrigger,
+    AlertDialogOverlay, AlertDialogPortal, AlertDialogTitle, AlertDialogTrigger,
 };
 pub use aspect_ratio::AspectRatio;
 pub use avatar::{
     Avatar, AvatarBadge, AvatarFallback, AvatarGroup, AvatarGroupCount, AvatarImage, AvatarSize,
+    avatar_sized,
 };
 pub use badge::{Badge, BadgeRender, BadgeVariant, badge};
+pub use breadcrumb::primitives::{
+    BreadcrumbEllipsis, BreadcrumbLink, BreadcrumbList, BreadcrumbPage,
+};
 pub use breadcrumb::{Breadcrumb, BreadcrumbItem, BreadcrumbSeparator};
 pub use button::{Button, ButtonRender, ButtonSize, ButtonVariant};
 pub use button_group::{
@@ -145,32 +151,44 @@ pub use calendar_hijri::CalendarHijri;
 pub use calendar_multiple::CalendarMultiple;
 pub use calendar_range::CalendarRange;
 pub use card::{
-    Card, CardAction, CardContent, CardDescription, CardFooter, CardHeader, CardSize, CardTitle,
+    Card, CardAction, CardContent, CardDescription, CardFooter, CardFooterDirection, CardHeader,
+    CardSize, CardTitle,
 };
 pub use carousel::{
     Carousel, CarouselAlign, CarouselApi, CarouselApiSnapshot, CarouselAutoplayConfig,
-    CarouselBreakpoint, CarouselContainScroll, CarouselEvent, CarouselEventCursor, CarouselOptions,
-    CarouselOptionsPatch, CarouselOrientation, CarouselSlidesInViewSnapshot,
-    CarouselSlidesToScroll,
+    CarouselBreakpoint, CarouselContainScroll, CarouselContent, CarouselContext, CarouselEvent,
+    CarouselEventCursor, CarouselItem, CarouselNext, CarouselOptions, CarouselOptionsPatch,
+    CarouselOrientation, CarouselPrevious, CarouselSlidesInViewSnapshot, CarouselSlidesToScroll,
+    carousel_context, useCarousel, use_carousel,
 };
 pub use chart::{
-    ChartLegendContent, ChartLegendItem, ChartLegendVerticalAlign, ChartTooltipContent,
-    ChartTooltipContentKind, ChartTooltipIndicator, ChartTooltipItem,
+    ChartConfig, ChartConfigItem, ChartContainer, ChartContext, ChartLegend, ChartLegendContent,
+    ChartLegendItem, ChartLegendVerticalAlign, ChartStyle, ChartTooltip, ChartTooltipContent,
+    ChartTooltipContentKind, ChartTooltipIndicator, ChartTooltipItem, chart_context, use_chart,
 };
 pub use checkbox::{Checkbox, checkbox};
 pub use collapsible::{
     Collapsible, CollapsibleContent, CollapsibleTrigger, collapsible, collapsible_uncontrolled,
 };
-pub use combobox::{Combobox, ComboboxGroup, ComboboxItem, ComboboxTriggerVariant, combobox};
-pub use combobox_chips::ComboboxChips;
+pub use combobox::{
+    Combobox, ComboboxCollection, ComboboxContent, ComboboxContentPart, ComboboxEmpty,
+    ComboboxGroup, ComboboxInput, ComboboxItem, ComboboxLabel, ComboboxList, ComboboxPart,
+    ComboboxSeparator, ComboboxTriggerVariant, combobox, combobox_option, combobox_option_group,
+    useComboboxAnchor,
+};
+pub use combobox_chips::{
+    ComboboxChip, ComboboxChips, ComboboxChipsInput, ComboboxChipsPart, ComboboxValue,
+};
+pub use combobox_data::{ComboboxOption, ComboboxOptionGroup};
 pub use command::{
     Command, CommandDialog, CommandEmpty, CommandEntry, CommandGroup, CommandInput, CommandItem,
     CommandList, CommandLoading, CommandPalette, CommandSeparator, CommandShortcut, command,
 };
 pub use context_menu::{
-    ContextMenu, ContextMenuCheckboxItem, ContextMenuEntry, ContextMenuGroup, ContextMenuItem,
-    ContextMenuLabel, ContextMenuRadioGroup, ContextMenuRadioItem, ContextMenuRadioItemSpec,
-    ContextMenuShortcut,
+    ContextMenu, ContextMenuCheckboxItem, ContextMenuContent, ContextMenuEntry, ContextMenuGroup,
+    ContextMenuItem, ContextMenuLabel, ContextMenuPortal, ContextMenuRadioGroup,
+    ContextMenuRadioItem, ContextMenuRadioItemSpec, ContextMenuSeparator, ContextMenuShortcut,
+    ContextMenuSub, ContextMenuSubContent, ContextMenuSubTrigger, ContextMenuTrigger,
 };
 pub use data_grid_canvas::{DataGridCanvas, DataGridCanvasAxis};
 pub use fret_ui_headless::calendar::{DateRange, DateRangeSelection};
@@ -205,18 +223,21 @@ pub use dialog::{
     Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, DialogHeader,
     DialogOverlay, DialogPortal, DialogTitle, DialogTrigger,
 };
+pub use direction::{DirectionProvider, LayoutDirection, useDirection, use_direction};
 pub use drawer::{
-    Drawer, DrawerClose, DrawerContent, DrawerDescription, DrawerFooter, DrawerHeader, DrawerSide,
-    DrawerSnapPoint, DrawerTitle, DrawerTrigger, drawer,
+    Drawer, DrawerClose, DrawerContent, DrawerDescription, DrawerFooter, DrawerHeader,
+    DrawerOverlay, DrawerPortal, DrawerSide, DrawerSnapPoint, DrawerTitle, DrawerTrigger, drawer,
 };
 pub use dropdown_menu::{
     DropdownMenu, DropdownMenuAlign, DropdownMenuCheckboxItem, DropdownMenuContent,
-    DropdownMenuEntry, DropdownMenuGroup, DropdownMenuItem, DropdownMenuLabel,
+    DropdownMenuEntry, DropdownMenuGroup, DropdownMenuItem, DropdownMenuLabel, DropdownMenuPortal,
     DropdownMenuRadioGroup, DropdownMenuRadioItem, DropdownMenuRadioItemSpec,
     DropdownMenuSeparator, DropdownMenuShortcut, DropdownMenuSide, DropdownMenuSub,
     DropdownMenuSubContent, DropdownMenuSubTrigger, DropdownMenuTrigger,
 };
-pub use empty::Empty;
+pub use empty::{
+    Empty, EmptyContent, EmptyDescription, EmptyHeader, EmptyMedia, EmptyMediaVariant, EmptyTitle,
+};
 pub use field::{
     Field, FieldContent, FieldDescription, FieldError, FieldGroup, FieldLabel, FieldLegend,
     FieldLegendVariant, FieldOrientation, FieldSeparator, FieldSet, FieldTitle,
@@ -231,10 +252,14 @@ pub use hover_card::{
 };
 pub use input::{Input, OnInputSubmit, input};
 pub use input_group::{
-    InputGroup, InputGroupButton, InputGroupButtonSize, InputGroupText, InputGroupTextSize,
+    InputGroup, InputGroupAddon, InputGroupAddonAlign, InputGroupButton, InputGroupButtonSize,
+    InputGroupInput, InputGroupPart, InputGroupText, InputGroupTextSize, InputGroupTextarea,
     input_group,
 };
-pub use input_otp::{InputOtp, input_otp};
+pub use input_otp::{
+    InputOTP, InputOTPGroup, InputOTPSeparator, InputOTPSlot, InputOtp, InputOtpGroup,
+    InputOtpPart, InputOtpSeparator, InputOtpSlot, input_otp,
+};
 pub use item::{
     Item, ItemActions, ItemContent, ItemDescription, ItemFooter, ItemGroup, ItemHeader, ItemMedia,
     ItemMediaVariant, ItemRender, ItemSeparator, ItemSize, ItemTitle, ItemVariant, item_group,
@@ -243,9 +268,9 @@ pub use kbd::{Kbd, KbdGroup};
 pub use label::Label;
 pub use menubar::{
     Menubar, MenubarCheckboxItem, MenubarContent, MenubarEntry, MenubarGroup, MenubarItem,
-    MenubarLabel, MenubarMenu, MenubarMenuEntries, MenubarRadioGroup, MenubarRadioItem,
-    MenubarRadioItemSpec, MenubarSeparator, MenubarShortcut, MenubarSub, MenubarSubContent,
-    MenubarSubTrigger, MenubarTrigger, menubar,
+    MenubarLabel, MenubarMenu, MenubarMenuEntries, MenubarPortal, MenubarRadioGroup,
+    MenubarRadioItem, MenubarRadioItemSpec, MenubarSeparator, MenubarShortcut, MenubarSub,
+    MenubarSubContent, MenubarSubTrigger, MenubarTrigger, menubar,
 };
 pub use native_select::{
     NativeSelect, NativeSelectOptGroup, NativeSelectOption, NativeSelectSize, native_select,
@@ -253,7 +278,8 @@ pub use native_select::{
 pub use navigation_menu::{
     NavigationMenu, NavigationMenuContent, NavigationMenuIndicator, NavigationMenuItem,
     NavigationMenuLink, NavigationMenuList, NavigationMenuRoot, NavigationMenuTrigger,
-    NavigationMenuViewport, navigation_menu, navigation_menu_list, navigation_menu_uncontrolled,
+    NavigationMenuTriggerStyle, NavigationMenuViewport, navigation_menu, navigation_menu_list,
+    navigation_menu_trigger_style, navigation_menu_uncontrolled,
 };
 pub use pagination::{
     Pagination, PaginationContent, PaginationEllipsis, PaginationItem, PaginationLink,
@@ -272,7 +298,7 @@ pub use resizable::{
 };
 pub use scroll_area::{
     ScrollArea, ScrollAreaCorner, ScrollAreaRoot, ScrollAreaScrollbar,
-    ScrollAreaScrollbarOrientation, ScrollAreaViewport, scroll_area,
+    ScrollAreaScrollbarOrientation, ScrollAreaViewport, ScrollBar, scroll_area,
 };
 pub use select::{
     Select, SelectAlign, SelectContent, SelectEntry, SelectGroup, SelectItem, SelectItemIndicator,
@@ -282,8 +308,8 @@ pub use select::{
 };
 pub use separator::{Separator, SeparatorOrientation, separator};
 pub use sheet::{
-    Sheet, SheetClose, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetSide,
-    SheetTitle,
+    Sheet, SheetClose, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetOverlay,
+    SheetPortal, SheetSide, SheetTitle, SheetTrigger,
 };
 pub use shortcut_hint::ShortcutHint;
 pub use sidebar::{
@@ -292,7 +318,7 @@ pub use sidebar::{
     SidebarMenuAction, SidebarMenuBadge, SidebarMenuButton, SidebarMenuButtonVariant,
     SidebarMenuItem, SidebarMenuSkeleton, SidebarMenuSub, SidebarMenuSubButton,
     SidebarMenuSubButtonSize, SidebarMenuSubItem, SidebarProvider, SidebarRail, SidebarSeparator,
-    SidebarSide, SidebarTrigger, SidebarVariant, use_sidebar,
+    SidebarSide, SidebarTrigger, SidebarVariant, useSidebar, use_sidebar,
 };
 pub use skeleton::Skeleton;
 pub use slider::{Slider, slider};
@@ -307,7 +333,8 @@ pub use table::{
     Table, TableBody, TableCaption, TableCell, TableFooter, TableHead, TableHeader, TableRow,
 };
 pub use tabs::{
-    Tabs, TabsContent, TabsItem, TabsList, TabsRoot, TabsTrigger, tabs, tabs_uncontrolled,
+    Tabs, TabsContent, TabsItem, TabsList, TabsListVariant, TabsListVariants, TabsRoot,
+    TabsTrigger, tabs, tabs_list_variants, tabs_uncontrolled,
 };
 pub use textarea::{Textarea, textarea};
 pub use toggle::{Toggle, ToggleRoot, ToggleSize, ToggleVariant, toggle, toggle_uncontrolled};
@@ -355,6 +382,7 @@ pub mod prelude {
         ChromeRefinement, ColorRef, Corners4, Edges4, LayoutRefinement, MarginEdge, MetricRef,
         Radius, ShadowPreset, SignedMetricRef, Size, Space, UiExt,
     };
+    pub use crate::{DirectionProvider, LayoutDirection, use_direction};
     pub use crate::{
         Select, SelectAlign, SelectContent, SelectEntry, SelectGroup, SelectItem,
         SelectItemIndicator, SelectItemText, SelectLabel, SelectScrollButtons,

@@ -51,7 +51,7 @@ Notes:
 - If the bug is visual, capture pixels too:
   - `FRET_DIAG_BUNDLE_SCREENSHOT=1`: enable screenshot readback and write `frame.bmp` into the most recent bundle dir when a script requests it (via `capture_screenshot`) or when dumping bundles (writes `screenshot.request`).
 - If you need to inspect `SemanticsProps.test_id` / `label` in exported `bundle.json`, disable text redaction:
-  - `FRET_DIAG_REDACT_TEXT=0` (default is redaction enabled).
+  - `FRET_DIAG_REDACT_TEXT=0` (runtime default is redaction enabled; tool-launched runs default to disabled).
 
 ### 2.2 Dump the solved layout tree (when bounds are wrong)
 

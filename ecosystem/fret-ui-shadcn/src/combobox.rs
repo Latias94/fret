@@ -27,9 +27,10 @@ use fret_ui_kit::{
     resolve_override_slot, ui,
 };
 
+use crate::combobox_data::{ComboboxOption, ComboboxOptionGroup};
 use crate::{
     CommandEntry, CommandGroup, CommandItem, CommandList, CommandPalette, CommandSeparator, Drawer,
-    DrawerContent, Popover, PopoverContent,
+    DrawerContent, Popover, PopoverAnchor, PopoverContent,
 };
 
 fn alpha_mul(mut c: Color, mul: f32) -> Color {
@@ -86,77 +87,26 @@ impl ComboboxStyle {
     }
 }
 
-#[derive(Debug, Clone)]
-pub struct ComboboxItem {
-    pub value: Arc<str>,
-    pub label: Arc<str>,
-    /// Optional structured detail for display, typically rendered as a suffix (e.g. `(React)`).
-    ///
-    /// This is primarily meant to support "object item" adapters without forcing callers to
-    /// pre-format richer labels into a single string.
-    pub detail: Option<Arc<str>>,
-    pub disabled: bool,
-    /// Additional strings that participate in cmdk-style filtering/ranking.
-    ///
-    /// This aligns with `CommandItem::keywords(...)` and cmdk's `keywords` prop.
-    pub keywords: Vec<Arc<str>>,
+/// Migration-friendly constructor for the combobox option data model.
+pub fn combobox_option(value: impl Into<Arc<str>>, label: impl Into<Arc<str>>) -> ComboboxOption {
+    ComboboxOption::new(value, label)
 }
 
-impl ComboboxItem {
-    pub fn new(value: impl Into<Arc<str>>, label: impl Into<Arc<str>>) -> Self {
-        Self {
-            value: value.into(),
-            label: label.into(),
-            detail: None,
-            disabled: false,
-            keywords: Vec::new(),
-        }
-    }
-
-    /// Sets a structured detail suffix and appends it to the visible label as `(<detail>)`.
-    ///
-    /// This preserves the existing string-based label contract while letting callers keep the
-    /// underlying data model structured.
-    pub fn detail(mut self, detail: impl Into<Arc<str>>) -> Self {
-        let detail = detail.into();
-        self.detail = Some(detail.clone());
-        self.keywords.push(detail.clone());
-        self.label = Arc::<str>::from(format!("{} ({})", self.label, detail));
-        self
-    }
-
-    /// Additional strings used for cmdk-style filtering/ranking.
-    pub fn keywords<I, S>(mut self, keywords: I) -> Self
-    where
-        I: IntoIterator<Item = S>,
-        S: Into<Arc<str>>,
-    {
-        self.keywords = keywords.into_iter().map(Into::into).collect();
-        self
-    }
-
-    pub fn disabled(mut self, disabled: bool) -> Self {
-        self.disabled = disabled;
-        self
-    }
+/// Migration-friendly constructor for the combobox group data model.
+pub fn combobox_option_group(
+    heading: impl Into<Arc<str>>,
+    items: impl IntoIterator<Item = ComboboxOption>,
+) -> ComboboxOptionGroup {
+    ComboboxOptionGroup::new(heading, items)
 }
 
-#[derive(Debug, Clone)]
-pub struct ComboboxGroup {
-    pub heading: Arc<str>,
-    pub items: Vec<ComboboxItem>,
-}
-
-impl ComboboxGroup {
-    pub fn new(
-        heading: impl Into<Arc<str>>,
-        items: impl IntoIterator<Item = ComboboxItem>,
-    ) -> Self {
-        Self {
-            heading: heading.into(),
-            items: items.into_iter().collect(),
-        }
-    }
+/// shadcn/ui v4 `useComboboxAnchor`.
+///
+/// Upstream returns a DOM ref used to anchor the popup. In Fret, we model the same outcome via a
+/// layout-only wrapper that exposes a stable element ID.
+#[allow(non_snake_case)]
+pub fn useComboboxAnchor(child: AnyElement) -> PopoverAnchor {
+    PopoverAnchor::new(child)
 }
 
 #[derive(Default)]
@@ -186,18 +136,478 @@ pub enum ComboboxTriggerVariant {
     Button,
 }
 
+/// Part-based authoring surface aligned with shadcn/ui v4 exports.
+///
+/// Upstream uses Base UI render props to map `items` → list rows. In Fret we expose a structured
+/// adapter that maps part configuration onto the existing Popover + Command recipe so upstream
+/// “Usage” shapes remain expressible in Rust.
+#[derive(Debug)]
+pub enum ComboboxPart {
+    Input(ComboboxInput),
+    Content(ComboboxContent),
+}
+
+impl ComboboxPart {
+    pub fn input(input: ComboboxInput) -> Self {
+        Self::Input(input)
+    }
+
+    pub fn content(content: ComboboxContent) -> Self {
+        Self::Content(content)
+    }
+}
+
+impl From<ComboboxInput> for ComboboxPart {
+    fn from(value: ComboboxInput) -> Self {
+        Self::Input(value)
+    }
+}
+
+impl From<ComboboxContent> for ComboboxPart {
+    fn from(value: ComboboxContent) -> Self {
+        Self::Content(value)
+    }
+}
+
+/// shadcn/ui `ComboboxInput` (v4).
+#[derive(Debug, Default)]
+pub struct ComboboxInput {
+    placeholder: Option<Arc<str>>,
+    disabled: Option<bool>,
+    show_trigger: Option<bool>,
+    show_clear: Option<bool>,
+}
+
+impl ComboboxInput {
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    pub fn placeholder(mut self, placeholder: impl Into<Arc<str>>) -> Self {
+        self.placeholder = Some(placeholder.into());
+        self
+    }
+
+    pub fn disabled(mut self, disabled: bool) -> Self {
+        self.disabled = Some(disabled);
+        self
+    }
+
+    pub fn show_trigger(mut self, show_trigger: bool) -> Self {
+        self.show_trigger = Some(show_trigger);
+        self
+    }
+
+    pub fn show_clear(mut self, show_clear: bool) -> Self {
+        self.show_clear = Some(show_clear);
+        self
+    }
+}
+
+/// shadcn/ui `ComboboxContent` (v4) (Base UI `Popup` + `Positioner`).
+#[derive(Debug)]
+pub struct ComboboxContent {
+    pub(crate) side: Option<popper::Side>,
+    pub(crate) align: Option<popper::Align>,
+    pub(crate) side_offset: Option<Px>,
+    pub(crate) align_offset: Option<Px>,
+    pub(crate) anchor_element_id: Option<GlobalElementId>,
+    pub(crate) children: Vec<ComboboxContentPart>,
+}
+
+impl ComboboxContent {
+    pub fn new(children: impl IntoIterator<Item = ComboboxContentPart>) -> Self {
+        Self {
+            side: None,
+            align: None,
+            side_offset: None,
+            align_offset: None,
+            anchor_element_id: None,
+            children: children.into_iter().collect(),
+        }
+    }
+
+    pub fn side(mut self, side: popper::Side) -> Self {
+        self.side = Some(side);
+        self
+    }
+
+    pub fn align(mut self, align: popper::Align) -> Self {
+        self.align = Some(align);
+        self
+    }
+
+    pub fn side_offset_px(mut self, offset: Px) -> Self {
+        self.side_offset = Some(offset);
+        self
+    }
+
+    pub fn align_offset_px(mut self, offset: Px) -> Self {
+        self.align_offset = Some(offset);
+        self
+    }
+
+    /// Overrides which element the popup is anchored to (Base UI `Positioner.anchor`).
+    pub fn anchor_element_id(mut self, anchor: GlobalElementId) -> Self {
+        self.anchor_element_id = Some(anchor);
+        self
+    }
+}
+
+/// Part-based children inside `ComboboxContent`.
+#[derive(Debug)]
+pub enum ComboboxContentPart {
+    Empty(ComboboxEmpty),
+    List(ComboboxList),
+    Separator(ComboboxSeparator),
+}
+
+impl ComboboxContentPart {
+    pub fn empty(empty: ComboboxEmpty) -> Self {
+        Self::Empty(empty)
+    }
+
+    pub fn list(list: ComboboxList) -> Self {
+        Self::List(list)
+    }
+
+    pub fn separator(sep: ComboboxSeparator) -> Self {
+        Self::Separator(sep)
+    }
+}
+
+impl From<ComboboxEmpty> for ComboboxContentPart {
+    fn from(value: ComboboxEmpty) -> Self {
+        Self::Empty(value)
+    }
+}
+
+impl From<ComboboxList> for ComboboxContentPart {
+    fn from(value: ComboboxList) -> Self {
+        Self::List(value)
+    }
+}
+
+impl From<ComboboxSeparator> for ComboboxContentPart {
+    fn from(value: ComboboxSeparator) -> Self {
+        Self::Separator(value)
+    }
+}
+
+/// shadcn/ui `ComboboxEmpty` (v4).
+#[derive(Debug)]
+pub struct ComboboxEmpty {
+    pub(crate) text: Arc<str>,
+}
+
+impl ComboboxEmpty {
+    pub fn new(text: impl Into<Arc<str>>) -> Self {
+        Self { text: text.into() }
+    }
+}
+
+/// shadcn/ui `ComboboxSeparator` (v4).
+#[derive(Debug, Default)]
+pub struct ComboboxSeparator;
+
+impl ComboboxSeparator {
+    pub fn new() -> Self {
+        Self
+    }
+}
+
+/// shadcn/ui `ComboboxList` (v4).
+///
+/// Upstream uses render props (`(item) => <ComboboxItem ... />`). In Rust, callers can prepare an
+/// explicit list of items/groups, or leave it empty and continue using `Combobox::options(...)`.
+#[derive(Debug, Default)]
+pub struct ComboboxList {
+    pub(crate) items: Vec<ComboboxItem>,
+    pub(crate) groups: Vec<ComboboxGroup>,
+    pub(crate) group_separators: bool,
+}
+
+impl ComboboxList {
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    pub fn items(mut self, items: impl IntoIterator<Item = ComboboxItem>) -> Self {
+        self.items = items.into_iter().collect();
+        self
+    }
+
+    pub fn groups(mut self, groups: impl IntoIterator<Item = ComboboxGroup>) -> Self {
+        self.groups = groups.into_iter().collect();
+        self
+    }
+
+    pub fn group_separators(mut self, enabled: bool) -> Self {
+        self.group_separators = enabled;
+        self
+    }
+}
+
+/// shadcn/ui `ComboboxItem` (v4).
+#[derive(Debug)]
+pub struct ComboboxItem {
+    pub(crate) value: Arc<str>,
+    pub(crate) label: Arc<str>,
+    pub(crate) detail: Option<Arc<str>>,
+    pub(crate) disabled: bool,
+    pub(crate) keywords: Vec<Arc<str>>,
+}
+
+impl ComboboxItem {
+    pub fn new(value: impl Into<Arc<str>>, label: impl Into<Arc<str>>) -> Self {
+        Self {
+            value: value.into(),
+            label: label.into(),
+            detail: None,
+            disabled: false,
+            keywords: Vec::new(),
+        }
+    }
+
+    pub fn detail(mut self, detail: impl Into<Arc<str>>) -> Self {
+        self.detail = Some(detail.into());
+        self
+    }
+
+    pub fn disabled(mut self, disabled: bool) -> Self {
+        self.disabled = disabled;
+        self
+    }
+
+    pub fn keywords<I, S>(mut self, keywords: I) -> Self
+    where
+        I: IntoIterator<Item = S>,
+        S: Into<Arc<str>>,
+    {
+        self.keywords = keywords.into_iter().map(Into::into).collect();
+        self
+    }
+}
+
+/// shadcn/ui `ComboboxLabel` (v4).
+#[derive(Debug)]
+pub struct ComboboxLabel {
+    pub(crate) text: Arc<str>,
+}
+
+impl ComboboxLabel {
+    pub fn new(text: impl Into<Arc<str>>) -> Self {
+        Self { text: text.into() }
+    }
+}
+
+/// shadcn/ui `ComboboxCollection` (v4).
+#[derive(Debug, Default)]
+pub struct ComboboxCollection {
+    pub(crate) items: Vec<ComboboxItem>,
+}
+
+impl ComboboxCollection {
+    pub fn new(items: impl IntoIterator<Item = ComboboxItem>) -> Self {
+        Self {
+            items: items.into_iter().collect(),
+        }
+    }
+}
+
+/// shadcn/ui `ComboboxGroup` (v4).
+#[derive(Debug, Default)]
+pub struct ComboboxGroup {
+    pub(crate) label: Option<ComboboxLabel>,
+    pub(crate) collection: Option<ComboboxCollection>,
+    pub(crate) items: Vec<ComboboxItem>,
+    pub(crate) separator: bool,
+}
+
+impl ComboboxGroup {
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    pub fn label(mut self, label: ComboboxLabel) -> Self {
+        self.label = Some(label);
+        self
+    }
+
+    pub fn collection(mut self, collection: ComboboxCollection) -> Self {
+        self.collection = Some(collection);
+        self
+    }
+
+    pub fn items(mut self, items: impl IntoIterator<Item = ComboboxItem>) -> Self {
+        self.items = items.into_iter().collect();
+        self
+    }
+
+    pub fn separator(mut self, enabled: bool) -> Self {
+        self.separator = enabled;
+        self
+    }
+}
+
+#[derive(Debug, Default)]
+struct ComboboxPartsPatch {
+    placeholder: Option<Arc<str>>,
+    disabled: Option<bool>,
+    show_trigger: Option<bool>,
+    show_clear: Option<bool>,
+    content_side: Option<popper::Side>,
+    content_align: Option<popper::Align>,
+    content_side_offset: Option<Px>,
+    content_align_offset: Option<Px>,
+    anchor_element_id: Option<GlobalElementId>,
+    empty_text: Option<Arc<str>>,
+    list_items: Option<Vec<ComboboxOption>>,
+    list_groups: Option<Vec<ComboboxOptionGroup>>,
+    group_separators: Option<bool>,
+}
+
+fn combobox_parts_patch(parts: Vec<ComboboxPart>) -> ComboboxPartsPatch {
+    let mut patch = ComboboxPartsPatch::default();
+    let mut content: Option<ComboboxContent> = None;
+
+    for part in parts {
+        match part {
+            ComboboxPart::Input(input) => {
+                if input.placeholder.is_some() {
+                    patch.placeholder = input.placeholder;
+                }
+                if input.disabled.is_some() {
+                    patch.disabled = input.disabled;
+                }
+                if input.show_trigger.is_some() {
+                    patch.show_trigger = input.show_trigger;
+                }
+                if input.show_clear.is_some() {
+                    patch.show_clear = input.show_clear;
+                }
+            }
+            ComboboxPart::Content(next) => {
+                content = Some(next);
+            }
+        }
+    }
+
+    if let Some(content) = content {
+        if content.side.is_some() {
+            patch.content_side = content.side;
+        }
+        if content.align.is_some() {
+            patch.content_align = content.align;
+        }
+        if content.side_offset.is_some() {
+            patch.content_side_offset = content.side_offset;
+        }
+        if content.align_offset.is_some() {
+            patch.content_align_offset = content.align_offset;
+        }
+        if content.anchor_element_id.is_some() {
+            patch.anchor_element_id = content.anchor_element_id;
+        }
+
+        let mut saw_separator = false;
+        for child in content.children {
+            match child {
+                ComboboxContentPart::Empty(empty) => {
+                    patch.empty_text = Some(empty.text);
+                }
+                ComboboxContentPart::Separator(_) => {
+                    saw_separator = true;
+                }
+                ComboboxContentPart::List(list) => {
+                    if !list.items.is_empty() {
+                        let items = list
+                            .items
+                            .into_iter()
+                            .map(|item| {
+                                let mut option =
+                                    ComboboxOption::new(item.value.clone(), item.label.clone())
+                                        .disabled(item.disabled)
+                                        .keywords(item.keywords);
+                                if let Some(detail) = item.detail {
+                                    option = option.detail(detail);
+                                }
+                                option
+                            })
+                            .collect();
+                        patch.list_items = Some(items);
+                    }
+
+                    if !list.groups.is_empty() {
+                        let group_separators_requested = saw_separator
+                            || list.group_separators
+                            || list.groups.iter().any(|g| g.separator);
+
+                        let groups = list
+                            .groups
+                            .into_iter()
+                            .filter_map(|group| {
+                                let heading = group.label.map(|l| l.text)?;
+                                let items = if !group.items.is_empty() {
+                                    group.items
+                                } else {
+                                    group.collection.map(|c| c.items).unwrap_or_default()
+                                };
+                                if items.is_empty() {
+                                    return None;
+                                }
+                                let items = items
+                                    .into_iter()
+                                    .map(|item| {
+                                        let mut option =
+                                            ComboboxOption::new(item.value.clone(), item.label)
+                                                .disabled(item.disabled)
+                                                .keywords(item.keywords);
+                                        if let Some(detail) = item.detail {
+                                            option = option.detail(detail);
+                                        }
+                                        option
+                                    })
+                                    .collect::<Vec<_>>();
+                                Some(ComboboxOptionGroup::new(heading, items))
+                            })
+                            .collect::<Vec<_>>();
+                        if !groups.is_empty() {
+                            patch.list_groups = Some(groups);
+                        }
+
+                        // Upstream uses an explicit `ComboboxSeparator` part inside the group.
+                        if group_separators_requested {
+                            patch.group_separators = Some(true);
+                        }
+                    } else if saw_separator || list.group_separators {
+                        patch.group_separators = Some(true);
+                    }
+                }
+            }
+        }
+    }
+
+    patch
+}
+
 #[derive(Clone)]
 pub struct Combobox {
     model: Model<Option<Arc<str>>>,
     open: Model<bool>,
     query: Option<Model<String>>,
-    items: Vec<ComboboxItem>,
-    groups: Vec<ComboboxGroup>,
+    items: Vec<ComboboxOption>,
+    groups: Vec<ComboboxOptionGroup>,
     group_separators: bool,
     auto_highlight: bool,
     test_id_prefix: Option<Arc<str>>,
     trigger_test_id: Option<Arc<str>>,
     width: Option<Px>,
+    content_side: popper::Side,
+    content_align: popper::Align,
+    content_side_offset: Px,
+    content_align_offset: Px,
+    anchor_element_id: Option<GlobalElementId>,
     responsive: bool,
     responsive_device_md_breakpoint: Px,
     placeholder: Arc<str>,
@@ -208,6 +618,7 @@ pub struct Combobox {
     a11y_label: Option<Arc<str>>,
     search_enabled: bool,
     show_clear: bool,
+    show_trigger: bool,
     trigger_variant: ComboboxTriggerVariant,
     consume_outside_pointer_events: bool,
     selection_commit_policy: kit_combobox::SelectionCommitPolicy,
@@ -234,6 +645,11 @@ impl Combobox {
             test_id_prefix: None,
             trigger_test_id: None,
             width: None,
+            content_side: popper::Side::Bottom,
+            content_align: popper::Align::Center,
+            content_side_offset: Px(4.0),
+            content_align_offset: Px(0.0),
+            anchor_element_id: None,
             responsive: false,
             responsive_device_md_breakpoint: fret_ui_kit::declarative::viewport_tailwind::MD,
             placeholder: Arc::from("Select..."),
@@ -244,6 +660,7 @@ impl Combobox {
             a11y_label: None,
             search_enabled: true,
             show_clear: false,
+            show_trigger: true,
             trigger_variant: ComboboxTriggerVariant::default(),
             // shadcn/ui Combobox is a Popover + Command recipe; Popover is click-through by default.
             // (ADR 0069)
@@ -258,6 +675,61 @@ impl Combobox {
             layout: LayoutRefinement::default(),
             style: ComboboxStyle::default(),
         }
+    }
+
+    /// Render the combobox using shadcn/ui v4 part-based composition.
+    ///
+    /// This is a compatibility adapter that maps upstream-like `ComboboxInput` /
+    /// `ComboboxContent` / `ComboboxEmpty` / `ComboboxList` parts onto Fret's Popover + Command
+    /// recipe.
+    #[track_caller]
+    pub fn into_element_parts<H: UiHost>(
+        mut self,
+        cx: &mut ElementContext<'_, H>,
+        parts: impl FnOnce(&mut ElementContext<'_, H>) -> Vec<ComboboxPart>,
+    ) -> AnyElement {
+        let patch = combobox_parts_patch(parts(cx));
+        if let Some(placeholder) = patch.placeholder {
+            self.placeholder = placeholder;
+        }
+        if let Some(disabled) = patch.disabled {
+            self.disabled = disabled;
+        }
+        if let Some(show_trigger) = patch.show_trigger {
+            self.show_trigger = show_trigger;
+        }
+        if let Some(show_clear) = patch.show_clear {
+            self.show_clear = show_clear;
+        }
+        if let Some(side) = patch.content_side {
+            self.content_side = side;
+        }
+        if let Some(align) = patch.content_align {
+            self.content_align = align;
+        }
+        if let Some(offset) = patch.content_side_offset {
+            self.content_side_offset = offset;
+        }
+        if let Some(offset) = patch.content_align_offset {
+            self.content_align_offset = offset;
+        }
+        if let Some(anchor_element_id) = patch.anchor_element_id {
+            self.anchor_element_id = Some(anchor_element_id);
+        }
+        if let Some(empty_text) = patch.empty_text {
+            self.empty_text = empty_text;
+        }
+        if let Some(items) = patch.list_items {
+            self.items = items;
+        }
+        if let Some(groups) = patch.list_groups {
+            self.groups = groups;
+        }
+        if let Some(group_separators) = patch.group_separators {
+            self.group_separators = group_separators;
+        }
+
+        self.into_element(cx)
     }
 
     /// Creates a combobox with controlled/uncontrolled models:
@@ -288,6 +760,44 @@ impl Combobox {
         self
     }
 
+    /// Controls the popper placement side for the combobox content.
+    ///
+    /// Default matches the existing shadcn recipe behavior (`bottom`).
+    pub fn content_side(mut self, side: popper::Side) -> Self {
+        self.content_side = side;
+        self
+    }
+
+    /// Controls the popper placement alignment for the combobox content.
+    ///
+    /// Default matches the existing shadcn recipe behavior (`center`).
+    pub fn content_align(mut self, align: popper::Align) -> Self {
+        self.content_align = align;
+        self
+    }
+
+    /// Controls the main-axis offset (gap) between trigger and content.
+    ///
+    /// Default matches the existing shadcn recipe behavior (`4px`).
+    pub fn content_side_offset_px(mut self, offset: Px) -> Self {
+        self.content_side_offset = offset;
+        self
+    }
+
+    /// Controls the cross-axis alignment offset for the combobox content.
+    ///
+    /// Default matches the existing shadcn recipe behavior (`0px`).
+    pub fn content_align_offset_px(mut self, offset: Px) -> Self {
+        self.content_align_offset = offset;
+        self
+    }
+
+    /// Overrides the anchor element used for popper positioning.
+    pub fn anchor_element_id(mut self, anchor: GlobalElementId) -> Self {
+        self.anchor_element_id = Some(anchor);
+        self
+    }
+
     /// When enabled, follows the upstream shadcn "responsive combobox" recipe: it uses a Drawer on
     /// narrow viewports (mobile) and a Popover on desktop.
     pub fn responsive(mut self, responsive: bool) -> Self {
@@ -309,24 +819,44 @@ impl Combobox {
         self
     }
 
-    pub fn item(mut self, item: ComboboxItem) -> Self {
+    pub fn item(mut self, item: ComboboxOption) -> Self {
         self.items.push(item);
         self
     }
 
-    pub fn items(mut self, items: impl IntoIterator<Item = ComboboxItem>) -> Self {
+    /// Migration-friendly alias for [`Combobox::item`].
+    pub fn option(self, option: ComboboxOption) -> Self {
+        self.item(option)
+    }
+
+    pub fn items(mut self, items: impl IntoIterator<Item = ComboboxOption>) -> Self {
         self.items.extend(items);
         self
     }
 
-    pub fn group(mut self, group: ComboboxGroup) -> Self {
+    /// Migration-friendly alias for [`Combobox::items`].
+    pub fn options(self, options: impl IntoIterator<Item = ComboboxOption>) -> Self {
+        self.items(options)
+    }
+
+    pub fn group(mut self, group: ComboboxOptionGroup) -> Self {
         self.groups.push(group);
         self
     }
 
-    pub fn groups(mut self, groups: impl IntoIterator<Item = ComboboxGroup>) -> Self {
+    /// Migration-friendly alias for [`Combobox::group`].
+    pub fn option_group(self, group: ComboboxOptionGroup) -> Self {
+        self.group(group)
+    }
+
+    pub fn groups(mut self, groups: impl IntoIterator<Item = ComboboxOptionGroup>) -> Self {
         self.groups.extend(groups);
         self
+    }
+
+    /// Migration-friendly alias for [`Combobox::groups`].
+    pub fn option_groups(self, groups: impl IntoIterator<Item = ComboboxOptionGroup>) -> Self {
+        self.groups(groups)
     }
 
     /// When enabled, inserts visual separators between `items` and `groups`, and between
@@ -392,6 +922,14 @@ impl Combobox {
     /// When enabled, shows a clear affordance on the trigger when a value is selected.
     pub fn show_clear(mut self, show_clear: bool) -> Self {
         self.show_clear = show_clear;
+        self
+    }
+
+    /// When disabled, hides the default trigger affordance icon (Base UI `showTrigger`).
+    ///
+    /// Note: this only affects visuals; the trigger control still toggles the popover.
+    pub fn show_trigger(mut self, show_trigger: bool) -> Self {
+        self.show_trigger = show_trigger;
         self
     }
 
@@ -476,6 +1014,11 @@ impl Combobox {
             self.test_id_prefix,
             self.trigger_test_id,
             self.width,
+            self.content_side,
+            self.content_align,
+            self.content_side_offset,
+            self.content_align_offset,
+            self.anchor_element_id,
             self.placeholder,
             self.search_placeholder,
             self.empty_text,
@@ -488,6 +1031,7 @@ impl Combobox {
             self.group_separators,
             self.auto_highlight,
             self.show_clear,
+            self.show_trigger,
             self.trigger_variant,
             self.consume_outside_pointer_events,
             self.selection_commit_policy,
@@ -509,7 +1053,7 @@ pub fn combobox<H: UiHost>(
     model: Model<Option<Arc<str>>>,
     open: Model<bool>,
     query: Option<Model<String>>,
-    items: &[ComboboxItem],
+    items: &[ComboboxOption],
     width: Option<Px>,
     placeholder: Arc<str>,
     search_placeholder: Arc<str>,
@@ -529,6 +1073,11 @@ pub fn combobox<H: UiHost>(
         None,
         None,
         width,
+        popper::Side::Bottom,
+        popper::Align::Center,
+        Px(4.0),
+        Px(0.0),
+        None,
         placeholder,
         search_placeholder,
         empty_text,
@@ -541,6 +1090,7 @@ pub fn combobox<H: UiHost>(
         false,
         false,
         false,
+        true,
         ComboboxTriggerVariant::default(),
         consume_outside_pointer_events,
         kit_combobox::SelectionCommitPolicy::default(),
@@ -561,11 +1111,16 @@ fn combobox_with_patch<H: UiHost>(
     model: Model<Option<Arc<str>>>,
     open: Model<bool>,
     query: Option<Model<String>>,
-    items: &[ComboboxItem],
-    groups: &[ComboboxGroup],
+    items: &[ComboboxOption],
+    groups: &[ComboboxOptionGroup],
     test_id_prefix: Option<Arc<str>>,
     trigger_test_id: Option<Arc<str>>,
     width: Option<Px>,
+    content_side: popper::Side,
+    content_align: popper::Align,
+    content_side_offset: Px,
+    content_align_offset: Px,
+    anchor_element_id: Option<GlobalElementId>,
     placeholder: Arc<str>,
     search_placeholder: Arc<str>,
     empty_text: Arc<str>,
@@ -578,6 +1133,7 @@ fn combobox_with_patch<H: UiHost>(
     group_separators: bool,
     auto_highlight: bool,
     show_clear: bool,
+    show_trigger: bool,
     trigger_variant: ComboboxTriggerVariant,
     consume_outside_pointer_events: bool,
     selection_commit_policy: kit_combobox::SelectionCommitPolicy,
@@ -825,8 +1381,8 @@ fn combobox_with_patch<H: UiHost>(
             .when(WidgetStates::FOCUS_VISIBLE, ColorRef::Color(ring_border));
 
         let enabled = !disabled;
-        let items: Vec<ComboboxItem> = items.to_vec();
-        let groups: Vec<ComboboxGroup> = groups.to_vec();
+        let items: Vec<ComboboxOption> = items.to_vec();
+        let groups: Vec<ComboboxOptionGroup> = groups.to_vec();
         let open_for_trigger = open.clone();
         let trigger_gap = MetricRef::space(Space::N2).resolve(&theme);
         let a11y_label_for_trigger = a11y_label.clone();
@@ -966,21 +1522,50 @@ fn combobox_with_patch<H: UiHost>(
                                     },
                                     move |cx| {
                                         let label_style = text_style.clone();
-                                        let show_clear =
-                                            show_clear && enabled && selected.is_some();
-                                        let right = cx.flex(
-                                            FlexProps {
-                                                layout: LayoutStyle::default(),
-                                                direction: fret_core::Axis::Horizontal,
-                                                gap: Px(0.0).into(),
-                                                padding: Edges::all(Px(0.0)).into(),
-                                                justify: MainAlign::Start,
-                                                align: CrossAlign::Center,
-                                                wrap: false,
-                                            },
-                                            move |cx| {
-                                                let mut out = Vec::new();
-                                                if show_clear {
+                                        let show_clear = show_clear && selected.is_some();
+                                        let label_el = {
+                                            let mut label = ui::label(cx, resolved_label.clone())
+                                                .w_full()
+                                                .min_w_0()
+                                                .flex_1()
+                                                .basis_0()
+                                                .text_size_px(label_style.size)
+                                                .font_weight(label_style.weight)
+                                                .text_color(if label_is_placeholder {
+                                                    ColorRef::Color(placeholder_fg_for_trigger)
+                                                } else {
+                                                    fg_ref.clone()
+                                                })
+                                                .truncate();
+                                            if let Some(line_height) = label_style.line_height {
+                                                label = label
+                                                    .line_height_px(line_height)
+                                                    .line_height_policy(
+                                                        fret_core::TextLineHeightPolicy::FixedFromStyle,
+                                                    );
+                                            }
+                                            if let Some(letter_spacing_em) =
+                                                label_style.letter_spacing_em
+                                            {
+                                                label = label.letter_spacing_em(letter_spacing_em);
+                                            }
+                                            label.into_element(cx)
+                                        };
+
+                                        let right = (show_clear || show_trigger).then(|| {
+                                            cx.flex(
+                                                FlexProps {
+                                                    layout: LayoutStyle::default(),
+                                                    direction: fret_core::Axis::Horizontal,
+                                                    gap: Px(0.0).into(),
+                                                    padding: Edges::all(Px(0.0)).into(),
+                                                    justify: MainAlign::Start,
+                                                    align: CrossAlign::Center,
+                                                    wrap: false,
+                                                },
+                                                move |cx| {
+                                                    let mut out = Vec::new();
+                                                    if show_clear {
                                                     let model_for_clear = model.clone();
                                                     let query_for_clear = query_model.clone();
                                                     let theme_for_clear =
@@ -1114,52 +1699,32 @@ fn combobox_with_patch<H: UiHost>(
                                                         clear
                                                     };
                                                     out.push(clear);
-                                                } else {
-                                                    out.push(decl_icon::icon_with(
+                                                } else if show_trigger {
+                                                    let mut icon = decl_icon::icon_with(
                                                         cx,
                                                         ids::ui::CHEVRON_DOWN,
                                                         Some(Px(16.0)),
                                                         Some(ColorRef::Color(icon_fg)),
-                                                    ));
+                                                    );
+                                                    if let Some(prefix) =
+                                                        test_id_prefix_for_trigger.as_deref()
+                                                    {
+                                                        icon = icon.test_id(format!(
+                                                            "{prefix}-trigger-icon"
+                                                        ));
+                                                    }
+                                                    out.push(icon);
                                                 }
                                                 out
                                             },
-                                        );
-                                        vec![
-                                            {
-                                                let mut label =
-                                                    ui::label(cx, resolved_label.clone())
-                                                        .w_full()
-                                                        .min_w_0()
-                                                        .flex_1()
-                                                        .basis_0()
-                                                        .text_size_px(label_style.size)
-                                                        .font_weight(label_style.weight)
-                                                        .text_color(if label_is_placeholder {
-                                                            ColorRef::Color(
-                                                                placeholder_fg_for_trigger,
-                                                            )
-                                                        } else {
-                                                            fg_ref.clone()
-                                                        })
-                                                        .truncate();
-                                                if let Some(line_height) = label_style.line_height {
-                                                    label = label
-                                                        .line_height_px(line_height)
-                                                        .line_height_policy(
-                                                            fret_core::TextLineHeightPolicy::FixedFromStyle,
-                                                        );
-                                                }
-                                                if let Some(letter_spacing_em) =
-                                                    label_style.letter_spacing_em
-                                                {
-                                                    label =
-                                                        label.letter_spacing_em(letter_spacing_em);
-                                                }
-                                                label.into_element(cx)
-                                            },
-                                            right,
-                                        ]
+                                        )
+                                        });
+
+                                        let mut out = vec![label_el];
+                                        if let Some(right) = right {
+                                            out.push(right);
+                                        }
+                                        out
                                     },
                                 )]
                             })
@@ -1192,7 +1757,7 @@ fn combobox_with_patch<H: UiHost>(
                             let mut entries: Vec<CommandEntry> =
                                 Vec::with_capacity(items.len() + groups.len());
 
-                            let make_item = |item: ComboboxItem| -> CommandItem {
+                            let make_item = |item: ComboboxOption| -> CommandItem {
                                 let item_disabled = disabled || item.disabled;
                                 let is_selected = selected
                                     .as_ref()
@@ -1233,7 +1798,7 @@ fn combobox_with_patch<H: UiHost>(
                                 entries.push(CommandEntry::Item(make_item(item)));
                             }
 
-                            let non_empty_groups: Vec<ComboboxGroup> = groups
+                            let non_empty_groups: Vec<ComboboxOptionGroup> = groups
                                 .iter()
                                 .cloned()
                                 .filter(|group| !group.items.is_empty())
@@ -1303,7 +1868,7 @@ fn combobox_with_patch<H: UiHost>(
                             let fg_disabled = alpha_mul(fg, 0.5);
                             let item_text_style = crate::command::item_text_style(&theme);
 
-                            let mut make_item = |item: ComboboxItem| -> CommandItem {
+                            let mut make_item = |item: ComboboxOption| -> CommandItem {
                                 let item_disabled = disabled || item.disabled;
                                 let is_selected = selected
                                     .as_ref()
@@ -1386,7 +1951,7 @@ fn combobox_with_patch<H: UiHost>(
                                 entries.push(CommandEntry::Item(make_item(item)));
                             }
 
-                            let non_empty_groups: Vec<ComboboxGroup> = groups
+                            let non_empty_groups: Vec<ComboboxOptionGroup> = groups
                                 .iter()
                                 .cloned()
                                 .filter(|group| !group.items.is_empty())
@@ -1464,6 +2029,9 @@ fn combobox_with_patch<H: UiHost>(
 
         if let Some(cell) = search_input_id.clone() {
             popover = popover.initial_focus_from_cell(cell);
+        }
+        if let Some(anchor_element_id) = anchor_element_id {
+            popover = popover.anchor_element(anchor_element_id);
         }
 
         popover.into_element_with_anchor(
@@ -1555,20 +2123,49 @@ fn combobox_with_patch<H: UiHost>(
                             },
                             move |cx| {
                                 let label_style = text_style.clone();
-                                let show_clear = show_clear && enabled && selected.is_some();
-                                let right = cx.flex(
-                                    FlexProps {
-                                        layout: LayoutStyle::default(),
-                                        direction: fret_core::Axis::Horizontal,
-                                        gap: Px(0.0).into(),
-                                        padding: Edges::all(Px(0.0)).into(),
-                                        justify: MainAlign::Start,
-                                        align: CrossAlign::Center,
-                                        wrap: false,
-                                    },
-                                    move |cx| {
-                                        let mut out = Vec::new();
-                                        if show_clear {
+                                let show_clear = show_clear && selected.is_some();
+                                let label_el = {
+                                    let mut label = ui::label(cx, resolved_label.clone())
+                                        .w_full()
+                                        .min_w_0()
+                                        .flex_1()
+                                        .basis_0()
+                                        .text_size_px(label_style.size)
+                                        .font_weight(label_style.weight)
+                                        .text_color(if label_is_placeholder {
+                                            ColorRef::Color(placeholder_fg_for_trigger)
+                                        } else {
+                                            fg_ref.clone()
+                                        })
+                                        .truncate();
+                                    if let Some(line_height) = label_style.line_height {
+                                        label = label
+                                            .line_height_px(line_height)
+                                            .line_height_policy(
+                                                fret_core::TextLineHeightPolicy::FixedFromStyle,
+                                            );
+                                    }
+                                    if let Some(letter_spacing_em) = label_style.letter_spacing_em
+                                    {
+                                        label = label.letter_spacing_em(letter_spacing_em);
+                                    }
+                                    label.into_element(cx)
+                                };
+
+                                let right = (show_clear || show_trigger).then(|| {
+                                    cx.flex(
+                                        FlexProps {
+                                            layout: LayoutStyle::default(),
+                                            direction: fret_core::Axis::Horizontal,
+                                            gap: Px(0.0).into(),
+                                            padding: Edges::all(Px(0.0)).into(),
+                                            justify: MainAlign::Start,
+                                            align: CrossAlign::Center,
+                                            wrap: false,
+                                        },
+                                        move |cx| {
+                                            let mut out = Vec::new();
+                                            if show_clear {
                                             let model_for_clear = model.clone();
                                             let query_for_clear = query_model.clone();
                                             let theme_for_clear = theme_for_trigger.clone();
@@ -1669,54 +2266,37 @@ fn combobox_with_patch<H: UiHost>(
                                                 clear
                                             };
                                             out.push(clear);
-                                        } else {
-                                            out.push(decl_icon::icon_with(
+                                        } else if show_trigger {
+                                            let mut icon = decl_icon::icon_with(
                                                 cx,
                                                 ids::ui::CHEVRON_DOWN,
                                                 Some(Px(16.0)),
                                                 Some(ColorRef::Color(icon_fg)),
-                                            ));
+                                            );
+                                            if let Some(prefix) =
+                                                test_id_prefix_for_trigger.as_deref()
+                                            {
+                                                icon = icon
+                                                    .test_id(format!("{prefix}-trigger-icon"));
+                                            }
+                                            out.push(icon);
                                         }
                                         out
                                     },
-                                );
-                                vec![
-                                    {
-                                        let mut label = ui::label(cx, resolved_label.clone())
-                                            .w_full()
-                                            .min_w_0()
-                                            .flex_1()
-                                            .basis_0()
-                                            .text_size_px(label_style.size)
-                                            .font_weight(label_style.weight)
-                                            .text_color(if label_is_placeholder {
-                                                ColorRef::Color(placeholder_fg_for_trigger)
-                                            } else {
-                                                fg_ref.clone()
-                                            })
-                                            .truncate();
-                                            if let Some(line_height) = label_style.line_height {
-                                                label = label
-                                                    .line_height_px(line_height)
-                                                    .line_height_policy(
-                                                        fret_core::TextLineHeightPolicy::FixedFromStyle,
-                                                    );
-                                            }
-                                        if let Some(letter_spacing_em) =
-                                            label_style.letter_spacing_em
-                                        {
-                                            label = label.letter_spacing_em(letter_spacing_em);
-                                        }
-                                        label.into_element(cx)
-                                    },
-                                    right,
-                                ]
+                                )
+                                });
+
+                                let mut out = vec![label_el];
+                                if let Some(right) = right {
+                                    out.push(right);
+                                }
+                                out
                             },
                         )]
                     })
                 })
             },
-            move |cx, anchor| {
+                move |cx, anchor| {
                 let test_id_prefix = test_id_prefix_for_content.clone();
                 let open_change_reason_model = open_change_reason_model_for_content.clone();
                 let search_input_id = search_input_id_for_content.clone();
@@ -1728,7 +2308,7 @@ fn combobox_with_patch<H: UiHost>(
                 let desired_w = width.unwrap_or_else(|| Px(anchor.size.width.0.max(180.0)));
                 let selected = cx.watch_model(&model).cloned().unwrap_or_default();
 
-                let list = if search_enabled {
+                    let list = if search_enabled {
                     // Clamp the list height to the best-available main-axis space around the
                     // trigger. This models the Radix popper "available height" variables used by
                     // shadcn/cmdk (`--radix-*-content-available-height`) and prevents the listbox
@@ -1742,14 +2322,13 @@ fn combobox_with_patch<H: UiHost>(
                         window_margin,
                     );
                     let direction = direction_prim::use_direction_in_scope(cx, None);
-                    let placement = popper::PopperContentPlacement::new(
+                    let placement = combobox_content_placement(
                         direction,
-                        popper::Side::Bottom,
-                        popper::Align::Center,
-                        Px(4.0),
-                    )
-                    .with_shift_cross_axis(true)
-                    .with_sticky(popper::StickyMode::Partial);
+                        content_side,
+                        content_align,
+                        content_side_offset,
+                        content_align_offset,
+                    );
                     let available_main = radix_popover::popover_popper_vars(
                         outer,
                         anchor,
@@ -1781,7 +2360,7 @@ fn combobox_with_patch<H: UiHost>(
                     let mut entries: Vec<CommandEntry> =
                         Vec::with_capacity(items.len() + groups.len());
 
-                    let make_item = |item: ComboboxItem| -> CommandItem {
+                    let make_item = |item: ComboboxOption| -> CommandItem {
                         let item_disabled = disabled || item.disabled;
                         let is_selected = selected
                             .as_ref()
@@ -1821,7 +2400,7 @@ fn combobox_with_patch<H: UiHost>(
                         entries.push(CommandEntry::Item(make_item(item)));
                     }
 
-                    let non_empty_groups: Vec<ComboboxGroup> = groups
+                    let non_empty_groups: Vec<ComboboxOptionGroup> = groups
                         .iter()
                         .cloned()
                         .filter(|group| !group.items.is_empty())
@@ -1890,7 +2469,7 @@ fn combobox_with_patch<H: UiHost>(
                     let fg_disabled = alpha_mul(fg, 0.5);
                     let item_text_style = crate::command::item_text_style(&theme);
 
-                    let mut make_item = |item: ComboboxItem| -> CommandItem {
+                    let mut make_item = |item: ComboboxOption| -> CommandItem {
                         let item_disabled = disabled || item.disabled;
                         let is_selected = selected
                             .as_ref()
@@ -1970,7 +2549,7 @@ fn combobox_with_patch<H: UiHost>(
                         entries.push(CommandEntry::Item(make_item(item)));
                     }
 
-                    let non_empty_groups: Vec<ComboboxGroup> = groups
+                    let non_empty_groups: Vec<ComboboxOptionGroup> = groups
                         .iter()
                         .cloned()
                         .filter(|group| !group.items.is_empty())
@@ -2031,6 +2610,19 @@ fn combobox_with_patch<H: UiHost>(
     })
 }
 
+fn combobox_content_placement(
+    direction: direction_prim::LayoutDirection,
+    side: popper::Side,
+    align: popper::Align,
+    side_offset: Px,
+    align_offset: Px,
+) -> popper::PopperContentPlacement {
+    popper::PopperContentPlacement::new(direction, side, align, side_offset)
+        .with_align_offset(align_offset)
+        .with_shift_cross_axis(true)
+        .with_sticky(popper::StickyMode::Partial)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -2046,6 +2638,234 @@ mod tests {
     use fret_runtime::FrameId;
     use fret_ui::tree::UiTree;
     use fret_ui_kit::primitives::popover as radix_popover;
+
+    #[test]
+    fn combobox_content_placement_tracks_offsets() {
+        let placement = combobox_content_placement(
+            direction_prim::LayoutDirection::Ltr,
+            popper::Side::Top,
+            popper::Align::Start,
+            Px(6.0),
+            Px(12.0),
+        );
+
+        assert_eq!(placement.side, popper::Side::Top);
+        assert_eq!(placement.align, popper::Align::Start);
+        assert_eq!(placement.side_offset, Px(6.0));
+        assert_eq!(placement.align_offset, Px(12.0));
+        assert!(placement.shift_cross_axis);
+        assert_eq!(placement.sticky, popper::StickyMode::Partial);
+    }
+
+    #[test]
+    fn combobox_parts_patch_maps_input_content_and_list() {
+        let parts = vec![
+            ComboboxPart::input(
+                ComboboxInput::new()
+                    .placeholder("Pick one")
+                    .disabled(true)
+                    .show_trigger(false)
+                    .show_clear(true),
+            ),
+            ComboboxPart::content(
+                ComboboxContent::new([
+                    ComboboxContentPart::empty(ComboboxEmpty::new("Nothing found.")),
+                    ComboboxContentPart::list(
+                        ComboboxList::new()
+                            .items([ComboboxItem::new("a", "Alpha").keywords(["alpha"])])
+                            .groups([ComboboxGroup::new()
+                                .label(ComboboxLabel::new("Group 1"))
+                                .items([ComboboxItem::new("b", "Beta").detail("React")])
+                                .separator(true)]),
+                    ),
+                ])
+                .side(popper::Side::Top)
+                .align(popper::Align::Start)
+                .side_offset_px(Px(6.0))
+                .align_offset_px(Px(7.0))
+                .anchor_element_id(GlobalElementId(42)),
+            ),
+        ];
+
+        let patch = combobox_parts_patch(parts);
+        assert_eq!(patch.placeholder.as_deref(), Some("Pick one"));
+        assert_eq!(patch.disabled, Some(true));
+        assert_eq!(patch.show_trigger, Some(false));
+        assert_eq!(patch.show_clear, Some(true));
+        assert_eq!(patch.content_side, Some(popper::Side::Top));
+        assert_eq!(patch.content_align, Some(popper::Align::Start));
+        assert_eq!(patch.content_side_offset, Some(Px(6.0)));
+        assert_eq!(patch.content_align_offset, Some(Px(7.0)));
+        assert_eq!(patch.anchor_element_id, Some(GlobalElementId(42)));
+        assert_eq!(patch.empty_text.as_deref(), Some("Nothing found."));
+        assert_eq!(patch.group_separators, Some(true));
+
+        let items = patch.list_items.expect("expected items from list");
+        assert_eq!(items.len(), 1);
+        assert_eq!(items[0].value.as_ref(), "a");
+        assert_eq!(items[0].label.as_ref(), "Alpha");
+        assert_eq!(items[0].disabled, false);
+        assert_eq!(items[0].keywords.len(), 1);
+        assert_eq!(items[0].keywords[0].as_ref(), "alpha");
+
+        let groups = patch.list_groups.expect("expected groups from list");
+        assert_eq!(groups.len(), 1);
+        assert_eq!(groups[0].heading.as_ref(), "Group 1");
+        assert_eq!(groups[0].items.len(), 1);
+        assert_eq!(groups[0].items[0].value.as_ref(), "b");
+        assert_eq!(groups[0].items[0].detail.as_deref(), Some("React"));
+        assert_eq!(groups[0].items[0].label.as_ref(), "Beta (React)");
+        assert_eq!(groups[0].items[0].keywords.len(), 1);
+        assert_eq!(groups[0].items[0].keywords[0].as_ref(), "React");
+    }
+
+    #[test]
+    fn combobox_show_clear_renders_only_when_selected() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(360.0), Px(200.0)),
+        );
+        let mut services = FakeServices::default();
+
+        let model = app.models_mut().insert(None::<Arc<str>>);
+        let open = app.models_mut().insert(false);
+
+        let items = vec![ComboboxOption::new("alpha", "Alpha")];
+
+        let mut render_frame =
+            |ui: &mut UiTree<App>, app: &mut App, model: Model<Option<Arc<str>>>| {
+                let next_frame = FrameId(app.frame_id().0.saturating_add(1));
+                app.set_frame_id(next_frame);
+
+                fret_ui_kit::OverlayController::begin_frame(app, window);
+                let root = fret_ui::declarative::render_root(
+                    ui,
+                    app,
+                    &mut services,
+                    window,
+                    bounds,
+                    "combobox-clear",
+                    |cx| {
+                        vec![
+                            Combobox::new(model, open.clone())
+                                .a11y_label("Combobox")
+                                .test_id_prefix("combobox-clear")
+                                .show_clear(true)
+                                .items(items.clone())
+                                .into_element(cx),
+                        ]
+                    },
+                );
+                ui.set_root(root);
+                fret_ui_kit::OverlayController::render(ui, app, &mut services, window, bounds);
+                ui.request_semantics_snapshot();
+                ui.layout_all(app, &mut services, bounds, 1.0);
+            };
+
+        // Frame 1: no selection, clear should not render.
+        render_frame(&mut ui, &mut app, model.clone());
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        assert!(
+            !snap.nodes.iter().any(|n| {
+                n.test_id
+                    .as_deref()
+                    .is_some_and(|id| id == "combobox-clear-clear-button")
+            }),
+            "expected clear button to be hidden when no value is selected"
+        );
+
+        // Frame 2: selection present, clear should render.
+        let _ = app
+            .models_mut()
+            .update(&model, |v| *v = Some(Arc::from("alpha")));
+        render_frame(&mut ui, &mut app, model);
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        assert!(
+            snap.nodes.iter().any(|n| {
+                n.test_id
+                    .as_deref()
+                    .is_some_and(|id| id == "combobox-clear-clear-button")
+            }),
+            "expected clear button to be visible when a value is selected"
+        );
+    }
+
+    #[test]
+    fn combobox_show_trigger_hides_chevron_icon() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(360.0), Px(200.0)),
+        );
+        let mut services = FakeServices::default();
+
+        let model = app.models_mut().insert(None::<Arc<str>>);
+        let open = app.models_mut().insert(false);
+
+        let items = vec![ComboboxOption::new("alpha", "Alpha")];
+
+        let mut render_frame = |ui: &mut UiTree<App>, app: &mut App, show_trigger: bool| {
+            let next_frame = FrameId(app.frame_id().0.saturating_add(1));
+            app.set_frame_id(next_frame);
+
+            fret_ui_kit::OverlayController::begin_frame(app, window);
+            let root = fret_ui::declarative::render_root(
+                ui,
+                app,
+                &mut services,
+                window,
+                bounds,
+                "combobox-show-trigger",
+                |cx| {
+                    vec![
+                        Combobox::new(model.clone(), open.clone())
+                            .a11y_label("Combobox")
+                            .test_id_prefix("combobox-show-trigger")
+                            .show_trigger(show_trigger)
+                            .items(items.clone())
+                            .into_element(cx),
+                    ]
+                },
+            );
+            ui.set_root(root);
+            fret_ui_kit::OverlayController::render(ui, app, &mut services, window, bounds);
+            ui.request_semantics_snapshot();
+            ui.layout_all(app, &mut services, bounds, 1.0);
+        };
+
+        // Frame 1: icon hidden.
+        render_frame(&mut ui, &mut app, false);
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        assert!(
+            !snap.nodes.iter().any(|n| {
+                n.test_id
+                    .as_deref()
+                    .is_some_and(|id| id == "combobox-show-trigger-trigger-icon")
+            }),
+            "expected trigger icon to be hidden when show_trigger=false"
+        );
+
+        // Frame 2: icon visible.
+        render_frame(&mut ui, &mut app, true);
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        assert!(
+            snap.nodes.iter().any(|n| {
+                n.test_id
+                    .as_deref()
+                    .is_some_and(|id| id == "combobox-show-trigger-trigger-icon")
+            }),
+            "expected trigger icon to be visible when show_trigger=true"
+        );
+    }
 
     #[derive(Default)]
     struct FakeServices;
@@ -2105,8 +2925,8 @@ mod tests {
     }
 
     #[test]
-    fn combobox_item_detail_appends_label_and_keywords() {
-        let item = ComboboxItem::new("next", "Next.js").detail("React");
+    fn combobox_option_detail_appends_label_and_keywords() {
+        let item = ComboboxOption::new("next", "Next.js").detail("React");
         assert_eq!(item.detail.as_deref(), Some("React"));
         assert_eq!(item.label.as_ref(), "Next.js (React)");
         assert!(
@@ -2123,7 +2943,7 @@ mod tests {
         bounds: Rect,
         model: Model<Option<Arc<str>>>,
         open: Model<bool>,
-        items: Vec<ComboboxItem>,
+        items: Vec<ComboboxOption>,
     ) -> fret_core::NodeId {
         let next_frame = FrameId(app.frame_id().0.saturating_add(1));
         app.set_frame_id(next_frame);
@@ -2153,7 +2973,7 @@ mod tests {
         bounds: Rect,
         model: Model<Option<Arc<str>>>,
         open: Model<bool>,
-        items: Vec<ComboboxItem>,
+        items: Vec<ComboboxOption>,
         underlay_clicked: Model<bool>,
     ) -> fret_core::NodeId {
         let next_frame = FrameId(app.frame_id().0.saturating_add(1));
@@ -2223,8 +3043,8 @@ mod tests {
         let open_out: RefCell<Option<Model<bool>>> = RefCell::new(None);
 
         let items = vec![
-            ComboboxItem::new("alpha", "Alpha"),
-            ComboboxItem::new("beta", "Beta"),
+            ComboboxOption::new("alpha", "Alpha"),
+            ComboboxOption::new("beta", "Beta"),
         ];
 
         let render = |ui: &mut UiTree<App>,
@@ -2415,9 +3235,9 @@ mod tests {
         let mut services = FakeServices::default();
 
         let items = vec![
-            ComboboxItem::new("alpha", "Alpha"),
-            ComboboxItem::new("beta", "Beta"),
-            ComboboxItem::new("gamma", "Gamma"),
+            ComboboxOption::new("alpha", "Alpha"),
+            ComboboxOption::new("beta", "Beta"),
+            ComboboxOption::new("gamma", "Gamma"),
         ];
 
         // First frame: establish stable trigger bounds.
@@ -2543,9 +3363,9 @@ mod tests {
         let mut services = FakeServices::default();
 
         let items = vec![
-            ComboboxItem::new("alpha", "Alpha"),
-            ComboboxItem::new("beta", "Beta"),
-            ComboboxItem::new("gamma", "Gamma"),
+            ComboboxOption::new("alpha", "Alpha"),
+            ComboboxOption::new("beta", "Beta"),
+            ComboboxOption::new("gamma", "Gamma"),
         ];
 
         // Frame 1: establish stable trigger bounds.
@@ -2658,9 +3478,9 @@ mod tests {
         let mut services = FakeServices::default();
 
         let items = vec![
-            ComboboxItem::new("alpha", "Alpha"),
-            ComboboxItem::new("beta", "Beta"),
-            ComboboxItem::new("gamma", "Gamma"),
+            ComboboxOption::new("alpha", "Alpha"),
+            ComboboxOption::new("beta", "Beta"),
+            ComboboxOption::new("gamma", "Gamma"),
         ];
 
         let root = render_frame(
@@ -2754,9 +3574,9 @@ mod tests {
         let mut services = FakeServices::default();
 
         let items = vec![
-            ComboboxItem::new("alpha", "Alpha"),
-            ComboboxItem::new("beta", "Beta"),
-            ComboboxItem::new("gamma", "Gamma"),
+            ComboboxOption::new("alpha", "Alpha"),
+            ComboboxOption::new("beta", "Beta"),
+            ComboboxOption::new("gamma", "Gamma"),
         ];
 
         let root = render_frame(
@@ -2880,9 +3700,9 @@ mod tests {
         let mut services = FakeServices::default();
 
         let items = vec![
-            ComboboxItem::new("alpha", "Alpha"),
-            ComboboxItem::new("beta", "Beta"),
-            ComboboxItem::new("gamma", "Gamma"),
+            ComboboxOption::new("alpha", "Alpha"),
+            ComboboxOption::new("beta", "Beta"),
+            ComboboxOption::new("gamma", "Gamma"),
         ];
 
         // Frame 1: closed.
@@ -3027,8 +3847,8 @@ mod tests {
         );
         let mut services = FakeServices::default();
 
-        let items: Vec<ComboboxItem> = (0..40)
-            .map(|i| ComboboxItem::new(format!("v{i}"), format!("Item {i}")))
+        let items: Vec<ComboboxOption> = (0..40)
+            .map(|i| ComboboxOption::new(format!("v{i}"), format!("Item {i}")))
             .collect();
 
         // First frame: establish stable trigger bounds.

@@ -1,0 +1,62 @@
+// region: example
+use fret_ui::element::SemanticsDecoration;
+use fret_ui_shadcn::{self as shadcn, prelude::*};
+
+pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
+    let rail = stack::hstack(
+        cx,
+        stack::HStackProps::default()
+            .gap(Space::N4)
+            .items_start()
+            .layout(LayoutRefinement::default().w_px(Px(760.0))),
+        |cx| {
+            let artists = ["Ornella Binni", "Tom Byrom", "Vladimir Malyavko"];
+            artists
+                .iter()
+                .map(|artist| {
+                    let art = shadcn::Skeleton::new()
+                        .refine_style(ChromeRefinement::default().rounded(Radius::Md))
+                        .refine_layout(LayoutRefinement::default().w_px(Px(150.0)).h_px(Px(200.0)))
+                        .into_element(cx);
+
+                    let caption = shadcn::typography::muted(cx, format!("Photo by {artist}"));
+
+                    stack::vstack(
+                        cx,
+                        stack::VStackProps::default()
+                            .gap(Space::N2)
+                            .items_start()
+                            .layout(LayoutRefinement::default().flex_none()),
+                        |_cx| vec![art, caption],
+                    )
+                })
+                .collect::<Vec<_>>()
+        },
+    );
+
+    let area = shadcn::ScrollArea::new([rail])
+        .axis(fret_ui::element::ScrollAxis::X)
+        .viewport_test_id("ui-gallery-scroll-area-horizontal-viewport")
+        .refine_layout(LayoutRefinement::default().w_full())
+        .into_element(cx)
+        .attach_semantics(
+            SemanticsDecoration::default()
+                .role(fret_core::SemanticsRole::Group)
+                .test_id("ui-gallery-scroll-area-horizontal"),
+        );
+
+    let props = decl_style::container_props(
+        cx.theme(),
+        ChromeRefinement::default()
+            .border_1()
+            .rounded(Radius::Md)
+            .p(Space::N4),
+        LayoutRefinement::default()
+            .w_full()
+            .max_w(Px(384.0))
+            .overflow_hidden(),
+    );
+
+    cx.container(props, move |_cx| [area])
+}
+// endregion: example

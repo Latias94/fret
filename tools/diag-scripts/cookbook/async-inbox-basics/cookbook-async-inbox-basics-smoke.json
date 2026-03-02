@@ -1,0 +1,33 @@
+{
+  "schema_version": 2,
+  "meta": {
+    "name": "cookbook-async-inbox-basics-smoke",
+    "required_capabilities": ["diag.script_v2", "diag.screenshot_png"],
+    "tags": ["cookbook", "async", "inbox", "cancellation", "smoke"]
+  },
+  "steps": [
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "cookbook.async_inbox_basics.root" }
+      },
+      "timeout_frames": 240
+    },
+    { "type": "click", "target": { "kind": "test_id", "id": "cookbook.async_inbox_basics.start" } },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "semantics_numeric_approx_eq",
+        "target": { "kind": "test_id", "id": "cookbook.async_inbox_basics.progress" },
+        "field": "value",
+        "value": 100.0,
+        "eps": 0.01
+      },
+      "timeout_frames": 240
+    },
+    { "type": "capture_screenshot", "label": "cookbook-async-inbox-basics-smoke" },
+    { "type": "capture_bundle", "label": "cookbook-async-inbox-basics-smoke" }
+  ]
+}
+

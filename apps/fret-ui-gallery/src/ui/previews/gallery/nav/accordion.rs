@@ -21,10 +21,71 @@ pub(in crate::ui) fn preview_accordion(
         .max_w(MetricRef::Px(Px(384.0)))
         .min_w_0();
 
-    let demo = {
-        let simple = shadcn::Accordion::single_uncontrolled(Some("item-1"))
+    let demo = shadcn::Accordion::single_uncontrolled(Some("item-1"))
+        .collapsible(true)
+        .refine_layout(max_w_xl.clone())
+        .items([
+            shadcn::AccordionItem::new(
+                "item-1",
+                shadcn::AccordionTrigger::new(vec![cx.text("Product Information")]),
+                shadcn::AccordionContent::new(vec![
+                    shadcn::typography::p(
+                        cx,
+                        "Our flagship product combines cutting-edge technology with sleek design. Built with premium materials, it offers unparalleled performance and reliability.",
+                    ),
+                    shadcn::typography::p(
+                        cx,
+                        "Key features include advanced processing capabilities, and an intuitive user interface designed for both beginners and experts.",
+                    ),
+                ]),
+            ),
+            shadcn::AccordionItem::new(
+                "item-2",
+                shadcn::AccordionTrigger::new(vec![cx.text("Shipping Details")])
+                    .test_id("ui-gallery-accordion-demo-shipping-trigger"),
+                shadcn::AccordionContent::new(vec![
+                    shadcn::typography::p(
+                        cx,
+                        "We offer worldwide shipping through trusted courier partners. Standard delivery takes 3-5 business days, while express shipping ensures delivery within 1-2 business days.",
+                    ),
+                    shadcn::typography::p(
+                        cx,
+                        "All orders are carefully packaged and fully insured. Track your shipment in real-time through our dedicated tracking portal.",
+                    ),
+                ])
+                .test_id("ui-gallery-accordion-demo-shipping-content"),
+            )
+            .test_id("ui-gallery-accordion-demo-shipping-item"),
+            shadcn::AccordionItem::new(
+                "item-3",
+                shadcn::AccordionTrigger::new(vec![cx.text("Return Policy")])
+                    .test_id("ui-gallery-accordion-demo-returns-trigger"),
+                shadcn::AccordionContent::new(vec![
+                    shadcn::typography::p(
+                        cx,
+                        "We stand behind our products with a comprehensive 30-day return policy. If you're not completely satisfied, simply return the item in its original condition.",
+                    ),
+                    shadcn::typography::p(
+                        cx,
+                        "Our hassle-free return process includes free return shipping and full refunds processed within 48 hours of receiving the returned item.",
+                    ),
+                ])
+                .test_id("ui-gallery-accordion-demo-returns-content"),
+            )
+            .test_id("ui-gallery-accordion-demo-returns-item"),
+        ])
+        .into_element(cx)
+        .test_id("ui-gallery-accordion-demo");
+
+    let extras = {
+        let muted = shadcn::typography::muted(
+            cx,
+            "Extras are Fret-specific recipes and regression gates (not part of upstream shadcn AccordionDemo).",
+        );
+
+        let usage = shadcn::Accordion::single_uncontrolled(Some("item-1"))
             .collapsible(true)
-            .refine_layout(LayoutRefinement::default().w_full().min_w_0())
+            .refine_layout(max_w_sm.clone())
             .items([
                 shadcn::AccordionItem::new(
                     "item-1",
@@ -48,11 +109,12 @@ pub(in crate::ui) fn preview_accordion(
                     )]),
                 ),
             ])
-            .into_element(cx);
+            .into_element(cx)
+            .test_id("ui-gallery-accordion-usage");
 
         let long = shadcn::Accordion::single_uncontrolled(Some("item-1"))
             .collapsible(true)
-            .refine_layout(LayoutRefinement::default().w_full().min_w_0())
+            .refine_layout(max_w_xl.clone())
             .items([
                 shadcn::AccordionItem::new(
                     "item-1",
@@ -75,61 +137,8 @@ pub(in crate::ui) fn preview_accordion(
                     )]),
                 ),
             ])
-            .into_element(cx);
-
-        stack::vstack(
-            cx,
-            stack::VStackProps::default()
-                .gap(Space::N4)
-                .items_start()
-                .layout(max_w_xl.clone()),
-            move |_cx| vec![simple, long],
-        )
-        .test_id("ui-gallery-accordion-demo")
-    };
-
-    let extras = {
-        let muted = shadcn::typography::muted(
-            cx,
-            "Extras are Fret-specific recipes and regression gates (not part of upstream shadcn AccordionDemo).",
-        );
-
-        let legacy_demo = shadcn::Accordion::single_uncontrolled(Some("shipping"))
-            .collapsible(true)
-            .refine_layout(max_w_lg.clone())
-            .items([
-                shadcn::AccordionItem::new(
-                    "shipping",
-                    shadcn::AccordionTrigger::new(vec![cx.text("What are your shipping options?")])
-                        .test_id("ui-gallery-accordion-demo-shipping-trigger"),
-                    shadcn::AccordionContent::new(vec![cx.text(
-                        "We offer standard (5-7 days), express (2-3 days), and overnight shipping. Free shipping on international orders.",
-                    )])
-                    .test_id("ui-gallery-accordion-demo-shipping-content"),
-                )
-                .test_id("ui-gallery-accordion-demo-shipping-item"),
-                shadcn::AccordionItem::new(
-                    "returns",
-                    shadcn::AccordionTrigger::new(vec![cx.text("What is your return policy?")])
-                        .test_id("ui-gallery-accordion-demo-returns-trigger"),
-                    shadcn::AccordionContent::new(vec![cx.text(
-                        "Returns accepted within 30 days. Items must be unused and in original packaging. Refunds processed within 5-7 business days.",
-                    )])
-                    .test_id("ui-gallery-accordion-demo-returns-content"),
-                )
-                .test_id("ui-gallery-accordion-demo-returns-item"),
-                shadcn::AccordionItem::new(
-                    "support",
-                    shadcn::AccordionTrigger::new(vec![cx.text(
-                        "How can I contact customer support?",
-                    )]),
-                    shadcn::AccordionContent::new(vec![cx.text(
-                        "Reach us via email, live chat, or phone. We respond within 24 hours during business days.",
-                    )]),
-                ),
-            ])
             .into_element(cx)
-            .test_id("ui-gallery-accordion-legacy-demo");
+            .test_id("ui-gallery-accordion-long-text");
 
         let multiple = shadcn::Accordion::multiple_uncontrolled(["notifications"])
             .refine_layout(max_w_lg.clone())
@@ -324,8 +333,10 @@ pub(in crate::ui) fn preview_accordion(
             move |cx| {
                 vec![
                     muted,
-                    shadcn::typography::h4(cx, "Legacy Demo"),
-                    legacy_demo,
+                    shadcn::typography::h4(cx, "Usage"),
+                    usage,
+                    shadcn::typography::h4(cx, "Long Text Wrap"),
+                    long,
                     shadcn::typography::h4(cx, "Multiple"),
                     multiple,
                     shadcn::typography::h4(cx, "Disabled"),
@@ -345,8 +356,8 @@ pub(in crate::ui) fn preview_accordion(
     let notes = doc_layout::notes(
         cx,
         [
-            "Preview follows `accordion-demo.tsx` (new-york-v4): a simple accordion + a long-content accordion.",
-            "Extras keep Fret-specific variants and test ids used by local regression harnesses.",
+            "Preview follows `accordion-demo.tsx` (new-york-v4).",
+            "Extras keep additional stress cases and local regression gates (not part of upstream).",
             "API reference: `ecosystem/fret-ui-shadcn/src/accordion.rs`.",
         ],
     );
@@ -364,9 +375,32 @@ pub(in crate::ui) fn preview_accordion(
                     "rust",
                     r#"shadcn::Accordion::single_uncontrolled(Some("item-1"))
     .collapsible(true)
+    .refine_layout(LayoutRefinement::default().w_full().min_w_0())
     .items([
-        shadcn::AccordionItem::new("item-1", trigger, content),
-        shadcn::AccordionItem::new("item-2", trigger, content),
+        shadcn::AccordionItem::new(
+            "item-1",
+            shadcn::AccordionTrigger::new(vec![cx.text("Product Information")]),
+            shadcn::AccordionContent::new(vec![
+                shadcn::typography::p(cx, "Our flagship product combines cutting-edge technology with sleek design. Built with premium materials, it offers unparalleled performance and reliability."),
+                shadcn::typography::p(cx, "Key features include advanced processing capabilities, and an intuitive user interface designed for both beginners and experts."),
+            ]),
+        ),
+        shadcn::AccordionItem::new(
+            "item-2",
+            shadcn::AccordionTrigger::new(vec![cx.text("Shipping Details")]),
+            shadcn::AccordionContent::new(vec![
+                shadcn::typography::p(cx, "We offer worldwide shipping through trusted courier partners. Standard delivery takes 3-5 business days, while express shipping ensures delivery within 1-2 business days."),
+                shadcn::typography::p(cx, "All orders are carefully packaged and fully insured. Track your shipment in real-time through our dedicated tracking portal."),
+            ]),
+        ),
+        shadcn::AccordionItem::new(
+            "item-3",
+            shadcn::AccordionTrigger::new(vec![cx.text("Return Policy")]),
+            shadcn::AccordionContent::new(vec![
+                shadcn::typography::p(cx, "We stand behind our products with a comprehensive 30-day return policy. If you're not completely satisfied, simply return the item in its original condition."),
+                shadcn::typography::p(cx, "Our hassle-free return process includes free return shipping and full refunds processed within 48 hours of receiving the returned item."),
+            ]),
+        ),
     ])
     .into_element(cx);"#,
                 ),

@@ -2175,6 +2175,7 @@ impl<H: UiHost> Widget<H> for DockSpace {
             layout: &HashMap<DockNodeId, Rect>,
             tab_scroll: &HashMap<DockNodeId, Px>,
             tab_widths: &HashMap<DockNodeId, Arc<[Px]>>,
+            theme: fret_ui::ThemeSnapshot,
             hint_font_size_inner: Px,
             hint_font_size_outer: Px,
             position: Point,
@@ -2225,20 +2226,21 @@ impl<H: UiHost> Widget<H> for DockSpace {
                         });
                     }
                     let scroll = tab_scroll_for_node(tab_scroll, tabs_node);
+                    let insert_index = super::tab_bar_drop_target::tab_bar_insert_index_for_drop(
+                        theme.clone(),
+                        tab_bar,
+                        tab_count,
+                        tab_widths.get(&tabs_node),
+                        scroll,
+                        position,
+                    )?;
                     return Some((
                         HoverTarget {
                             tabs: tabs_node,
                             root,
                             leaf_tabs: tabs_node,
                             zone: DropZone::Center,
-                            insert_index: Some({
-                                let geom = tab_widths
-                                    .get(&tabs_node)
-                                    .filter(|w| w.len() == tab_count)
-                                    .map(|w| TabBarGeometry::variable(tab_bar, w.clone()))
-                                    .unwrap_or_else(|| TabBarGeometry::fixed(tab_bar, tab_count));
-                                geom.compute_insert_index(position, scroll)
-                            }),
+                            insert_index: Some(insert_index),
                             outer: false,
                             explicit: false,
                         },
@@ -2390,6 +2392,7 @@ impl<H: UiHost> Widget<H> for DockSpace {
             window_bounds: Rect,
             tab_scroll: &HashMap<DockNodeId, Px>,
             tab_widths: &HashMap<DockNodeId, Arc<[Px]>>,
+            theme: fret_ui::ThemeSnapshot,
             hint_font_size_inner: Px,
             hint_font_size_outer: Px,
             split_handle_gap: Px,
@@ -2556,6 +2559,7 @@ impl<H: UiHost> Widget<H> for DockSpace {
                 &layout,
                 tab_scroll,
                 tab_widths,
+                theme,
                 hint_font_size_inner,
                 hint_font_size_outer,
                 effective_position,
@@ -2577,6 +2581,7 @@ impl<H: UiHost> Widget<H> for DockSpace {
             window_bounds: Rect,
             tab_scroll: &HashMap<DockNodeId, Px>,
             tab_widths: &HashMap<DockNodeId, Arc<[Px]>>,
+            theme: fret_ui::ThemeSnapshot,
             hint_font_size_inner: Px,
             hint_font_size_outer: Px,
             split_handle_gap: Px,
@@ -2604,6 +2609,7 @@ impl<H: UiHost> Widget<H> for DockSpace {
                     window_bounds,
                     tab_scroll,
                     tab_widths,
+                    theme,
                     hint_font_size_inner,
                     hint_font_size_outer,
                     split_handle_gap,
@@ -5414,6 +5420,7 @@ impl<H: UiHost> Widget<H> for DockSpace {
 	                                                window_bounds,
 	                                                &self.tab_scroll,
 	                                                &self.tab_widths,
+	                                                theme.clone(),
 	                                                hint_font_size_inner,
 	                                                hint_font_size_outer,
 	                                                split_handle_gap,
@@ -5551,6 +5558,7 @@ impl<H: UiHost> Widget<H> for DockSpace {
 	                                            window_bounds,
 	                                            &self.tab_scroll,
 	                                            &self.tab_widths,
+	                                            theme.clone(),
 	                                            hint_font_size_inner,
 	                                            hint_font_size_outer,
 	                                            split_handle_gap,

@@ -12,5 +12,11 @@ publish = false
 
 [dependencies]
 anyhow.workspace = true
-fret = { path = "../../ecosystem/fret", default-features = false, features = ["desktop", "diagnostics", "shadcn", "icons", "preload-icon-svgs"] }
+fret = { path = "../../ecosystem/fret", default-features = false, features = ["desktop", "diagnostics", "shadcn", "ui-assets", "icons", "preload-icon-svgs"] }
+fret-app = { path = "../../crates/fret-app" }
 fret-core = { path = "../../crates/fret-core" }
+fret-runtime = { path = "../../crates/fret-runtime" }
+fret-ui = { path = "../../crates/fret-ui" }
+fret-icons-radix = { path = "../../ecosystem/fret-icons-radix", default-features = false, features = ["app-integration"] }
+fret-ui-assets = { path = "../../ecosystem/fret-ui-assets", default-features = false, features = ["ui", "image-decode"] }
+fret-executor = { path = "../../ecosystem/fret-executor" }

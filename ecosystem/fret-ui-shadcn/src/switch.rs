@@ -744,12 +744,12 @@ mod tests {
 
             let is_thumb = (rect.size.width.0 - thumb_size.0).abs() <= 0.1
                 && (rect.size.height.0 - thumb_size.0).abs() <= 0.1
-                && *background == thumb_bg;
+                && background.paint == thumb_bg;
             if is_thumb {
                 thumb_rect = Some(*rect);
             }
 
-            if *background == track_bg {
+            if background.paint == track_bg {
                 let score = overlap_area(*rect, switch_bounds);
                 if score <= 0.0 {
                     continue;
@@ -1221,12 +1221,12 @@ mod tests {
 
             let is_thumb = (rect.size.width.0 - thumb_size.0).abs() <= 0.1
                 && (rect.size.height.0 - thumb_size.0).abs() <= 0.1
-                && *background == thumb_bg;
+                && background.paint == thumb_bg;
             if is_thumb {
                 thumb_rect = Some(*rect);
             }
 
-            if *background == track_bg {
+            if background.paint == track_bg {
                 let score = overlap_area(*rect, switch_bounds);
                 if score <= 0.0 {
                     continue;

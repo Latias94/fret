@@ -9,7 +9,8 @@ impl<H: UiHost> UiTree<H> {
         invalidation_visited: &mut impl InvalidationVisited,
     ) -> PointerDownOutsideOutcome {
         let hit = params.hit;
-        let hit_root = hit.and_then(|n| self.node_root(n));
+        let hit_root = hit
+            .and_then(|hit| self.first_reachable_root_via_children(hit, params.active_layer_roots));
 
         let (event_pointer_id, touch_candidate): (
             Option<PointerId>,
@@ -83,7 +84,7 @@ impl<H: UiHost> UiTree<H> {
                     .pointer_down_outside_branches
                     .iter()
                     .copied()
-                    .any(|branch| self.is_descendant(branch, hit))
+                    .any(|branch| self.is_reachable_from_root_via_children(branch, hit))
             }) {
                 break;
             }
@@ -119,6 +120,25 @@ impl<H: UiHost> UiTree<H> {
                     self.focus(),
                 );
             }
+            let (window, root_element, tick_id) = if let Some(window) = self.window
+                && let Some(root_element) = self.nodes.get(root).and_then(|n| n.element)
+            {
+                let tick_id = app.tick_id();
+                crate::elements::with_element_state(
+                    app,
+                    window,
+                    root_element,
+                    crate::action::DismissibleLastDismissRequest::default,
+                    |st| {
+                        st.tick_id = tick_id;
+                        st.reason = None;
+                        st.default_prevented = false;
+                    },
+                );
+                (Some(window), Some(root_element), Some(tick_id))
+            } else {
+                (None, None, None)
+            };
             self.dispatch_event_to_node_chain_observer(
                 app,
                 services,
@@ -128,13 +148,40 @@ impl<H: UiHost> UiTree<H> {
                 invalidation_visited,
             );
             // Match Radix/web outcomes: clicking outside a dismissible overlay should clear focus
-            // from the overlay subtree. If the event is click-through, the subsequent hit-tested
-            // dispatch can still assign focus to the underlay target.
-            self.set_focus(None);
+            // from the overlay subtree. If policy prevents default dismissal, keep focus stable.
+            //
+            // If the event is click-through, the subsequent hit-tested dispatch can still assign
+            // focus to the underlay target.
+            let mut clear_focus = true;
+            if let (Some(window), Some(root_element), Some(tick_id)) =
+                (window, root_element, tick_id)
+            {
+                let prevented = crate::elements::with_element_state(
+                    app,
+                    window,
+                    root_element,
+                    crate::action::DismissibleLastDismissRequest::default,
+                    |st| {
+                        st.tick_id == tick_id
+                            && matches!(
+                                st.reason,
+                                Some(crate::action::DismissReason::OutsidePress { .. })
+                            )
+                            && st.default_prevented
+                    },
+                );
+                if prevented {
+                    clear_focus = false;
+                }
+            }
+
+            if clear_focus {
+                self.set_focus(None);
+            }
             #[cfg(debug_assertions)]
             if crate::runtime_config::ui_runtime_config().debug_pointer_down_outside {
                 eprintln!(
-                    "pointer_down_outside: focus_after={:?} (suppress_hit_test_dispatch={consume})",
+                    "pointer_down_outside: focus_after={:?} (suppress_hit_test_dispatch={consume} clear_focus={clear_focus})",
                     self.focus(),
                 );
             }

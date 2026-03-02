@@ -61,14 +61,16 @@ Outcome:
 
 - Interop and renderer effects are showcased as “Labs” without polluting the onboarding path.
 - Custom effects (CustomV1/V2/V3 + pass semantics) are teachable and capability-gated.
+- A small set of app-scale reference apps is scoped (may be docs-only in v1).
 
 Deliverables:
 
 - A curated set of interop examples (viewport, external textures, gizmo).
 - A curated set of renderer labs with explicit budgets/capabilities.
+- A scoped plan for 2–3 reference apps (workbench/viz-studio/shader-lab), including at least one
+  smoke workflow gate per app.
 - At least one scripted diag scenario per lab.
 
 Exit criteria:
 
 - Users can discover “cool” features safely, and maintainers have reproducible regressions.
-

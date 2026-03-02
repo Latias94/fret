@@ -1066,7 +1066,7 @@ impl FieldLabel {
                 if render_text_block {
                     builder = builder.w_full().min_w_0();
                 }
-                let mut label = builder
+                let label = builder
                     .text_size_px(px)
                     .line_height_px(line_height)
                     .font_medium()
@@ -1227,12 +1227,14 @@ impl FieldError {
         ui::text(cx, self.text)
             .text_size_px(px)
             .line_height_px(line_height)
+            .line_height_policy(fret_core::TextLineHeightPolicy::FixedFromStyle)
             .font_normal()
             .text_color(ColorRef::Color(fg))
             .wrap(wrap)
             .overflow(overflow)
             .text_align(align)
-            .auto_pad_ink_overflow()
+            .w_full()
+            .min_w_0()
             .into_element(cx)
     }
 }

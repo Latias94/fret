@@ -1,124 +1,15 @@
 use super::super::*;
 
 use crate::ui::doc_layout::{self, DocSection};
+use crate::ui::snippets::toggle as snippets;
 
 pub(super) fn preview_toggle(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
-    let demo = stack::hstack(
-        cx,
-        stack::HStackProps::default().gap(Space::N2).items_center(),
-        |cx| {
-            vec![
-                shadcn::Toggle::uncontrolled(false)
-                    .variant(shadcn::ToggleVariant::Outline)
-                    .size(shadcn::ToggleSize::Sm)
-                    .a11y_label("Toggle bookmark")
-                    .leading_icon(IconId::new_static("lucide.bookmark"))
-                    .label("Bookmark")
-                    .into_element(cx)
-                    .test_id("ui-gallery-toggle-demo-bookmark"),
-            ]
-        },
-    )
-    .test_id("ui-gallery-toggle-demo");
-
-    let outline = stack::hstack(
-        cx,
-        stack::HStackProps::default().gap(Space::N2).items_center(),
-        |cx| {
-            vec![
-                shadcn::Toggle::uncontrolled(false)
-                    .variant(shadcn::ToggleVariant::Outline)
-                    .a11y_label("Toggle italic")
-                    .leading_icon(IconId::new_static("lucide.italic"))
-                    .label("Italic")
-                    .into_element(cx)
-                    .test_id("ui-gallery-toggle-outline-italic"),
-                shadcn::Toggle::uncontrolled(false)
-                    .variant(shadcn::ToggleVariant::Outline)
-                    .a11y_label("Toggle bold")
-                    .leading_icon(IconId::new_static("lucide.bold"))
-                    .label("Bold")
-                    .into_element(cx)
-                    .test_id("ui-gallery-toggle-outline-bold"),
-            ]
-        },
-    )
-    .test_id("ui-gallery-toggle-outline");
-
-    let with_text = stack::hstack(
-        cx,
-        stack::HStackProps::default().gap(Space::N2).items_center(),
-        |cx| {
-            vec![
-                shadcn::Toggle::uncontrolled(false)
-                    .a11y_label("Toggle italic with text")
-                    .leading_icon(IconId::new_static("lucide.italic"))
-                    .label("Italic")
-                    .into_element(cx),
-            ]
-        },
-    )
-    .test_id("ui-gallery-toggle-with-text");
-
-    let size = stack::hstack(
-        cx,
-        stack::HStackProps::default().gap(Space::N2).items_center(),
-        |cx| {
-            vec![
-                shadcn::Toggle::uncontrolled(false)
-                    .variant(shadcn::ToggleVariant::Outline)
-                    .size(shadcn::ToggleSize::Sm)
-                    .a11y_label("Toggle small")
-                    .label("Small")
-                    .into_element(cx),
-                shadcn::Toggle::uncontrolled(false)
-                    .variant(shadcn::ToggleVariant::Outline)
-                    .size(shadcn::ToggleSize::Default)
-                    .a11y_label("Toggle default")
-                    .label("Default")
-                    .into_element(cx),
-                shadcn::Toggle::uncontrolled(false)
-                    .variant(shadcn::ToggleVariant::Outline)
-                    .size(shadcn::ToggleSize::Lg)
-                    .a11y_label("Toggle large")
-                    .label("Large")
-                    .into_element(cx),
-            ]
-        },
-    )
-    .test_id("ui-gallery-toggle-size");
-
-    let disabled = stack::hstack(
-        cx,
-        stack::HStackProps::default().gap(Space::N2).items_center(),
-        |cx| {
-            vec![
-                shadcn::Toggle::uncontrolled(false)
-                    .disabled(true)
-                    .a11y_label("Toggle disabled")
-                    .label("Disabled")
-                    .into_element(cx),
-                shadcn::Toggle::uncontrolled(false)
-                    .disabled(true)
-                    .variant(shadcn::ToggleVariant::Outline)
-                    .a11y_label("Toggle disabled outline")
-                    .label("Disabled")
-                    .into_element(cx),
-            ]
-        },
-    )
-    .test_id("ui-gallery-toggle-disabled");
-
-    let rtl = doc_layout::rtl(cx, |cx| {
-        shadcn::Toggle::uncontrolled(false)
-            .variant(shadcn::ToggleVariant::Outline)
-            .size(shadcn::ToggleSize::Sm)
-            .a11y_label("Toggle bookmark rtl")
-            .leading_icon(IconId::new_static("lucide.bookmark"))
-            .label("Bookmark")
-            .into_element(cx)
-    })
-    .test_id("ui-gallery-toggle-rtl");
+    let demo = snippets::demo::render(cx);
+    let outline = snippets::outline::render(cx);
+    let with_text = snippets::with_text::render(cx);
+    let size = snippets::size::render(cx);
+    let disabled = snippets::disabled::render(cx);
+    let rtl = snippets::rtl::render(cx);
 
     let notes = doc_layout::notes(
         cx,
@@ -140,86 +31,36 @@ pub(super) fn preview_toggle(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement
             DocSection::new("Demo", demo)
                 .description("A small outline toggle with an icon + label.")
                 .max_w(Px(480.0))
-                .code(
-                    "rust",
-                    r#"shadcn::Toggle::uncontrolled(false)
-    .variant(shadcn::ToggleVariant::Outline)
-    .size(shadcn::ToggleSize::Sm)
-    .a11y_label("Toggle bookmark")
-    .leading_icon(IconId::new_static("lucide.bookmark"))
-    .label("Bookmark")
-    .into_element(cx);"#,
-                ),
+                .code_rust_from_file_region(include_str!("../snippets/toggle/demo.rs"), "example"),
             DocSection::new("Outline", outline)
                 .description("Outline variant for dense toolbars.")
                 .max_w(Px(480.0))
-                .code(
-                    "rust",
-                    r#"shadcn::Toggle::uncontrolled(false)
-    .variant(shadcn::ToggleVariant::Outline)
-    .a11y_label("Toggle bold")
-    .leading_icon(IconId::new_static("lucide.bold"))
-    .label("Bold")
-    .into_element(cx);"#,
+                .code_rust_from_file_region(
+                    include_str!("../snippets/toggle/outline.rs"),
+                    "example",
                 ),
             DocSection::new("With Text", with_text)
                 .description("Default variant with icon + text.")
                 .max_w(Px(480.0))
-                .code(
-                    "rust",
-                    r#"shadcn::Toggle::uncontrolled(false)
-    .a11y_label("Toggle italic with text")
-    .leading_icon(IconId::new_static("lucide.italic"))
-    .label("Italic")
-    .into_element(cx);"#,
+                .code_rust_from_file_region(
+                    include_str!("../snippets/toggle/with_text.rs"),
+                    "example",
                 ),
             DocSection::new("Size", size)
                 .description("Size presets: Sm / Default / Lg.")
                 .max_w(Px(480.0))
-                .code(
-                    "rust",
-                    r#"stack::hstack(cx, stack::HStackProps::default().gap(Space::N2).items_center(), |cx| {
-    vec![
-        shadcn::Toggle::uncontrolled(false)
-            .variant(shadcn::ToggleVariant::Outline)
-            .size(shadcn::ToggleSize::Sm)
-            .label("Small")
-            .into_element(cx),
-        shadcn::Toggle::uncontrolled(false)
-            .variant(shadcn::ToggleVariant::Outline)
-            .size(shadcn::ToggleSize::Lg)
-            .label("Large")
-            .into_element(cx),
-    ]
-})
-.into_element(cx);"#,
-                ),
+                .code_rust_from_file_region(include_str!("../snippets/toggle/size.rs"), "example"),
             DocSection::new("Disabled", disabled)
                 .description("Disabled toggles remain readable and non-interactive.")
                 .max_w(Px(480.0))
-                .code(
-                    "rust",
-                    r#"shadcn::Toggle::uncontrolled(false)
-    .disabled(true)
-    .variant(shadcn::ToggleVariant::Outline)
-    .a11y_label("Toggle disabled")
-    .label("Disabled")
-    .into_element(cx);"#,
+                .code_rust_from_file_region(
+                    include_str!("../snippets/toggle/disabled.rs"),
+                    "example",
                 ),
             DocSection::new("RTL", rtl)
                 .description("Toggle content order and alignment under RTL.")
                 .max_w(Px(480.0))
-                .code(
-                    "rust",
-                    r#"fret_ui_kit::primitives::direction::with_direction_provider(
-    cx,
-    fret_ui_kit::primitives::direction::LayoutDirection::Rtl,
-    |cx| shadcn::Toggle::uncontrolled(false)
-        .leading_icon(IconId::new_static("lucide.bookmark"))
-        .label("Bookmark")
-        .into_element(cx),
-);"#,
-                ),
+                .code_rust_from_file_region(include_str!("../snippets/toggle/rtl.rs"), "example"),
             DocSection::new("Notes", notes)
                 .description("API reference pointers and accessibility notes.")
                 .max_w(Px(820.0)),
