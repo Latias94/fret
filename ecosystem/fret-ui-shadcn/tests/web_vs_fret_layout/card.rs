@@ -57,7 +57,7 @@ fn web_vs_fret_layout_card_with_form_width() {
 fn card_header_action_gap_matches_shadcn_gap_2() {
     let expected_gap = {
         let mut app = App::new();
-        fret_ui_shadcn::shadcn_themes::apply_shadcn_new_york_v4(
+        fret_ui_shadcn::shadcn_themes::apply_shadcn_new_york(
             &mut app,
             fret_ui_shadcn::shadcn_themes::ShadcnBaseColor::Neutral,
             fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Light,

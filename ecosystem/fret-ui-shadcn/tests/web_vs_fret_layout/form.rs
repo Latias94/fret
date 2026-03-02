@@ -706,7 +706,7 @@ fn assert_form_select_control_size_matches_web(web_name: &str, select_id: &str) 
             move |cx| {
                 vec![
                     fret_ui_shadcn::Select::new(value, open)
-                        .placeholder("Select")
+                        .value(fret_ui_shadcn::SelectValue::new().placeholder("Select"))
                         .items([
                             fret_ui_shadcn::SelectItem::new("auto", "Auto"),
                             fret_ui_shadcn::SelectItem::new("english", "English"),

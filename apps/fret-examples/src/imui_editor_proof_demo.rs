@@ -81,7 +81,7 @@ pub fn run() -> anyhow::Result<()> {
     .with_main_window("imui_editor_proof_demo", (1120.0, 720.0))
     .init_app(|app| {
         configure_single_window_caps_if_requested(app);
-        shadcn::shadcn_themes::apply_shadcn_new_york_v4(
+        shadcn::shadcn_themes::apply_shadcn_new_york(
             app,
             shadcn::shadcn_themes::ShadcnBaseColor::Slate,
             shadcn::shadcn_themes::ShadcnColorScheme::Dark,

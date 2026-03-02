@@ -1,0 +1,54 @@
+{
+  "schema_version": 2,
+  "meta": {
+    "name": "Workspace shell demo: pin commits preview (smoke)",
+    "tags": ["workspace", "tabstrip", "pinned", "preview", "smoke", "gate"],
+    "required_capabilities": ["diag.script_v2"],
+    "env_defaults": {
+      "FRET_WORKSPACE_SHELL_DEBUG_PREVIEW": "1"
+    },
+    "target_hints": [
+      "Opens preview A, then toggles pin on the active tab via demo-only debug controls.",
+      "Asserts pinning commits the preview (preview marker removed, pinned marker present)."
+    ]
+  },
+  "steps": [
+    { "type": "set_window_inner_size", "width_px": 1280.0, "height_px": 720.0 },
+    { "type": "wait_frames", "n": 10 },
+
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "workspace-shell-pane-pane-a-debug-open-preview-a" }
+      },
+      "timeout_frames": 240
+    },
+
+    { "type": "click", "target": { "kind": "test_id", "id": "workspace-shell-pane-pane-a-debug-open-preview-a" } },
+    { "type": "wait_frames", "n": 6 },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "workspace-shell-pane-pane-a-tab-doc-a-preview-a.preview" }
+      },
+      "timeout_frames": 240
+    },
+
+    { "type": "click", "target": { "kind": "test_id", "id": "workspace-shell-pane-pane-a-debug-toggle-pin" } },
+    { "type": "wait_frames", "n": 6 },
+
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "workspace-shell-pane-pane-a-tab-doc-a-preview-a.pinned" }
+      },
+      "timeout_frames": 240
+    },
+    { "type": "assert", "predicate": { "kind": "not_exists", "target": { "kind": "test_id", "id": "workspace-shell-pane-pane-a-tab-doc-a-preview-a.preview" } } },
+
+    { "type": "capture_bundle", "label": "workspace-shell-demo-tab-pin-commits-preview-smoke" }
+  ]
+}

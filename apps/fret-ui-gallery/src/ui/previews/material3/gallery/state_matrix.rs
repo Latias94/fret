@@ -70,19 +70,13 @@ pub(in crate::ui) fn material3_state_matrix_content(
     out.extend(preview_material3_fab(cx, last_action.clone()));
 
     out.push(cx.text("— Checkbox —"));
-    out.push(snippets::material3::checkbox::render(
-        cx,
-        material3_checkbox,
-    ));
+    out.push(snippets::material3::checkbox::render(cx, material3_checkbox));
 
     out.push(cx.text("— Switch —"));
     out.push(snippets::material3::switch::render(cx, material3_switch));
 
     out.push(cx.text("— Radio —"));
-    out.push(snippets::material3::radio::render(
-        cx,
-        material3_radio_value,
-    ));
+    out.push(snippets::material3::radio::render(cx, material3_radio_value));
 
     out.push(cx.text("— Text Field —"));
     out.extend(preview_material3_text_field(

@@ -79,8 +79,10 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
                         .label_policy(shadcn::SelectTriggerLabelPolicy::Value)
                 },
                 |_cx| {
+                    shadcn::SelectValue::new()
+                },
+                move |_cx| {
                     shadcn::SelectContent::new()
-                        .align_item_with_trigger(false)
                         .align(shadcn::SelectAlign::Start)
                         .with_entries(entries)
                 },

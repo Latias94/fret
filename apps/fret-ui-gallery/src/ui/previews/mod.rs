@@ -1,6 +1,5 @@
 pub(super) mod gallery;
 pub(super) mod magic;
-pub(super) mod material3;
 pub(super) mod pages;
 
 // Placeholder module. This will host extracted preview implementations to keep `ui/mod.rs`

@@ -1190,7 +1190,7 @@ mod tests {
         let mut ui: UiTree<App> = UiTree::new();
         ui.set_window(window);
 
-        crate::shadcn_themes::apply_shadcn_new_york_v4(
+        crate::shadcn_themes::apply_shadcn_new_york(
             &mut app,
             crate::shadcn_themes::ShadcnBaseColor::Neutral,
             crate::shadcn_themes::ShadcnColorScheme::Light,
@@ -1469,7 +1469,7 @@ mod tests {
         let mut app = App::new();
         let window = AppWindowId::default();
 
-        crate::shadcn_themes::apply_shadcn_new_york_v4(
+        crate::shadcn_themes::apply_shadcn_new_york(
             &mut app,
             crate::shadcn_themes::ShadcnBaseColor::Neutral,
             crate::shadcn_themes::ShadcnColorScheme::Light,
@@ -1499,7 +1499,7 @@ mod tests {
         let mut app = App::new();
         let window = AppWindowId::default();
 
-        crate::shadcn_themes::apply_shadcn_new_york_v4(
+        crate::shadcn_themes::apply_shadcn_new_york(
             &mut app,
             crate::shadcn_themes::ShadcnBaseColor::Neutral,
             crate::shadcn_themes::ShadcnColorScheme::Light,
@@ -1862,7 +1862,7 @@ mod tests {
         let mut ui: UiTree<App> = UiTree::new();
         ui.set_window(window);
 
-        crate::shadcn_themes::apply_shadcn_new_york_v4(
+        crate::shadcn_themes::apply_shadcn_new_york(
             &mut app,
             crate::shadcn_themes::ShadcnBaseColor::Neutral,
             crate::shadcn_themes::ShadcnColorScheme::Light,
@@ -2003,7 +2003,7 @@ mod tests {
     #[test]
     fn destructive_button_text_contrast_is_reasonable_in_zinc_dark() {
         let mut app = App::new();
-        crate::shadcn_themes::apply_shadcn_new_york_v4(
+        crate::shadcn_themes::apply_shadcn_new_york(
             &mut app,
             crate::shadcn_themes::ShadcnBaseColor::Zinc,
             crate::shadcn_themes::ShadcnColorScheme::Dark,
@@ -2031,7 +2031,7 @@ mod tests {
     #[test]
     fn disabled_destructive_button_text_contrast_is_reasonable_in_zinc_dark() {
         let mut app = App::new();
-        crate::shadcn_themes::apply_shadcn_new_york_v4(
+        crate::shadcn_themes::apply_shadcn_new_york(
             &mut app,
             crate::shadcn_themes::ShadcnBaseColor::Zinc,
             crate::shadcn_themes::ShadcnColorScheme::Dark,

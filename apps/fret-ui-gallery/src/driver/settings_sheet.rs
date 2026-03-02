@@ -50,7 +50,7 @@ pub(super) fn push_settings_sheet(
                         settings_menu_bar_os.clone(),
                         settings_menu_bar_os_open.clone(),
                     )
-                    .placeholder("OS menubar")
+                    .value(shadcn::SelectValue::new().placeholder("OS menubar"))
                     .trigger_test_id("ui-gallery-settings-os-menubar")
                     .items([
                         shadcn::SelectItem::new("auto", "Auto (Windows/macOS on; Linux/Web off)")
@@ -67,7 +67,7 @@ pub(super) fn push_settings_sheet(
                         settings_menu_bar_in_window.clone(),
                         settings_menu_bar_in_window_open.clone(),
                     )
-                    .placeholder("In-window menubar")
+                    .value(shadcn::SelectValue::new().placeholder("In-window menubar"))
                     .trigger_test_id("ui-gallery-settings-in-window-menubar")
                     .items([
                         shadcn::SelectItem::new("auto", "Auto (Linux/Web on; Windows/macOS off)")

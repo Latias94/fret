@@ -115,7 +115,7 @@ fn web_vs_fret_date_picker_with_presets_preset_tomorrow_trigger_text_and_selecte
 
     let window = AppWindowId::default();
     let mut app = App::new();
-    fret_ui_shadcn::shadcn_themes::apply_shadcn_new_york_v4(
+    fret_ui_shadcn::shadcn_themes::apply_shadcn_new_york(
         &mut app,
         fret_ui_shadcn::shadcn_themes::ShadcnBaseColor::Neutral,
         fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Light,

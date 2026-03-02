@@ -372,7 +372,7 @@ mod tests {
         frame_id: u64,
     ) {
         app.set_frame_id(FrameId(frame_id));
-        crate::shadcn_themes::apply_shadcn_new_york_v4(
+        crate::shadcn_themes::apply_shadcn_new_york(
             app,
             crate::shadcn_themes::ShadcnBaseColor::Neutral,
             crate::shadcn_themes::ShadcnColorScheme::Light,

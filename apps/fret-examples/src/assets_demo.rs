@@ -32,7 +32,7 @@ pub fn run() -> anyhow::Result<()> {
         .with_main_window("assets_demo", (720.0, 520.0))
         .with_ui_assets_budgets(64 * 1024 * 1024, 2048, 16 * 1024 * 1024, 4096)
         .init_app(|app| {
-            shadcn::shadcn_themes::apply_shadcn_new_york_v4(
+            shadcn::shadcn_themes::apply_shadcn_new_york(
                 app,
                 shadcn::shadcn_themes::ShadcnBaseColor::Slate,
                 shadcn::shadcn_themes::ShadcnColorScheme::Light,

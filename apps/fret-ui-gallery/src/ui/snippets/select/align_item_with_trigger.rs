@@ -29,10 +29,15 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
     let select = shadcn::Select::new_controllable(cx, None, Some("banana"), None, false)
         .into_element_parts(
             cx,
-            |_cx| shadcn::SelectTrigger::new().value(shadcn::SelectValue::new()),
+            |_cx| shadcn::SelectTrigger::new(),
+            |_cx| shadcn::SelectValue::new(),
             |_cx| {
                 shadcn::SelectContent::new()
-                    .align_item_with_trigger(align)
+                    .position(if align {
+                        shadcn::select::SelectPosition::ItemAligned
+                    } else {
+                        shadcn::select::SelectPosition::Popper
+                    })
                     .with_entries([shadcn::SelectGroup::new([
                         shadcn::SelectItem::new("apple", "Apple").into(),
                         shadcn::SelectItem::new("banana", "Banana").into(),
@@ -47,16 +52,16 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
     shadcn::FieldGroup::new([
         shadcn::Field::new([
             shadcn::FieldContent::new([
-                shadcn::FieldLabel::new("Align Item")
+                shadcn::FieldLabel::new("Position")
                     .for_control("ui-gallery-select-align-item-switch")
                     .into_element(cx),
-                shadcn::FieldDescription::new("Toggle to align the item with the trigger.")
+                shadcn::FieldDescription::new("Toggle between ItemAligned and Popper positioning.")
                     .into_element(cx),
             ])
             .into_element(cx),
             shadcn::Switch::new(align_item_with_trigger.clone())
                 .control_id("ui-gallery-select-align-item-switch")
-                .a11y_label("Align item with trigger")
+                .a11y_label("Select positioning toggle")
                 .into_element(cx),
         ])
         .orientation(shadcn::FieldOrientation::Horizontal)

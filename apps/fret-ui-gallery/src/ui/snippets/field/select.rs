@@ -37,7 +37,7 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
     shadcn::Field::new([
         shadcn::FieldLabel::new("Department").into_element(cx),
         shadcn::Select::new(value, open)
-            .placeholder("Choose department")
+            .value(shadcn::SelectValue::new().placeholder("Choose department"))
             .items([
                 shadcn::SelectItem::new("engineering", "Engineering"),
                 shadcn::SelectItem::new("design", "Design"),

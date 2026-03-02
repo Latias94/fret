@@ -1840,7 +1840,7 @@ mod tests {
     use fret_ui::element::{ElementKind, TextInputProps, TextProps};
     use fret_ui::tree::UiTree;
 
-    use crate::shadcn_themes::{ShadcnBaseColor, ShadcnColorScheme, apply_shadcn_new_york_v4};
+    use crate::shadcn_themes::{ShadcnBaseColor, ShadcnColorScheme, apply_shadcn_new_york};
 
     fn bounds() -> Rect {
         Rect::new(
@@ -1919,16 +1919,19 @@ mod tests {
         }
     }
 
-    fn find_flex_with_text_and_order(node: &AnyElement, text: &str, order: i32) -> bool {
-        let matches = match &node.kind {
-            ElementKind::Flex(FlexProps { layout, .. }) => {
-                layout.flex.order == order && find_text(node, text).is_some()
-            }
-            _ => false,
-        };
-        if matches {
-            return true;
-        }
+	    fn find_flex_with_text_and_order(node: &AnyElement, text: &str, order: i32) -> bool {
+	        let matches = match &node.kind {
+	            ElementKind::Flex(FlexProps { layout, .. }) => {
+	                layout.flex.order == order && find_text(node, text).is_some()
+	            }
+	            ElementKind::PointerRegion(props) => {
+	                props.layout.flex.order == order && find_text(node, text).is_some()
+	            }
+	            _ => false,
+	        };
+	        if matches {
+	            return true;
+	        }
         node.children
             .iter()
             .any(|c| find_flex_with_text_and_order(c, text, order))
@@ -1938,7 +1941,7 @@ mod tests {
     fn input_group_parts_apply_placeholder_to_control() {
         let window = AppWindowId::default();
         let mut app = App::new();
-        apply_shadcn_new_york_v4(&mut app, ShadcnBaseColor::Neutral, ShadcnColorScheme::Light);
+        apply_shadcn_new_york(&mut app, ShadcnBaseColor::Neutral, ShadcnColorScheme::Light);
 
         fret_ui::elements::with_element_cx(&mut app, window, bounds(), "input_group_parts", |cx| {
             let model: Model<String> = cx.app.models_mut().insert(String::new());
@@ -1961,7 +1964,7 @@ mod tests {
     fn input_group_parts_route_inline_addons_by_align_order() {
         let window = AppWindowId::default();
         let mut app = App::new();
-        apply_shadcn_new_york_v4(&mut app, ShadcnBaseColor::Neutral, ShadcnColorScheme::Light);
+        apply_shadcn_new_york(&mut app, ShadcnBaseColor::Neutral, ShadcnColorScheme::Light);
 
         fret_ui::elements::with_element_cx(
             &mut app,
@@ -2000,7 +2003,7 @@ mod tests {
     fn input_group_inline_addon_click_to_focus_requests_focus_for_control() {
         let window = AppWindowId::default();
         let mut app = App::new();
-        apply_shadcn_new_york_v4(&mut app, ShadcnBaseColor::Neutral, ShadcnColorScheme::Light);
+        apply_shadcn_new_york(&mut app, ShadcnBaseColor::Neutral, ShadcnColorScheme::Light);
 
         let mut ui: UiTree<App> = UiTree::new();
         ui.set_window(window);
@@ -2061,7 +2064,7 @@ mod tests {
     fn input_group_inline_addon_with_button_hint_does_not_steal_focus() {
         let window = AppWindowId::default();
         let mut app = App::new();
-        apply_shadcn_new_york_v4(&mut app, ShadcnBaseColor::Neutral, ShadcnColorScheme::Light);
+        apply_shadcn_new_york(&mut app, ShadcnBaseColor::Neutral, ShadcnColorScheme::Light);
 
         let mut ui: UiTree<App> = UiTree::new();
         ui.set_window(window);

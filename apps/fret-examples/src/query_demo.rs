@@ -31,7 +31,7 @@ pub fn run() -> anyhow::Result<()> {
     fret::mvu::app::<QueryDemoProgram>("query-demo")?
         .with_main_window("query_demo", (560.0, 360.0))
         .init_app(|app| {
-            shadcn::shadcn_themes::apply_shadcn_new_york_v4(
+            shadcn::shadcn_themes::apply_shadcn_new_york(
                 app,
                 shadcn::shadcn_themes::ShadcnBaseColor::Zinc,
                 shadcn::shadcn_themes::ShadcnColorScheme::Dark,

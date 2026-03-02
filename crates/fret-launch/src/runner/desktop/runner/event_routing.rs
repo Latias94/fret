@@ -285,15 +285,32 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                 })
         };
 
-        // If the runner is actively moving a dock tear-off window (follow mode), prefer routing
-        // hover to the window under the moving window. This is the ImGui-style
-        // `HoveredWindowUnderMovingWindow` behavior needed to dock back into an overlapped window
-        // while the payload window remains under the cursor.
+        // ImGui-style "peek behind moving window" hover routing:
+        //
+        // When a dock payload window overlaps a target, docking previews/resolve should be able
+        // to treat the window under the moving window as the hover target (ImGui's
+        // `HoveredWindowUnderMovingWindow`), rather than getting "stuck" on the moving window.
+        //
+        // In Fret this is primarily driven by transparent payload / follow-window behavior.
         let follow_active = self.dock_tearoff_follow.is_some_and(|follow| {
             follow.source_window == drag_source_window && follow.manual_follow
         });
-        let hover_under_moving_window =
-            follow_active || std::env::var_os("FRET_DOCK_DRAG_HOVER_UNDER_MOVING_WINDOW").is_some();
+        let wants_transparent_payload = {
+            let settings = self
+                .app
+                .global::<fret_runtime::DockingInteractionSettings>()
+                .copied()
+                .unwrap_or_default();
+            settings.transparent_payload_during_follow
+                || std::env::var_os("FRET_DOCK_TEAROFF_TRANSPARENT_PAYLOAD").is_some()
+        };
+        let hover_under_moving_window = follow_active
+            || (wants_transparent_payload
+                && matches!(
+                    drag_kind,
+                    fret_runtime::DRAG_KIND_DOCK_TABS | fret_runtime::DRAG_KIND_DOCK_PANEL
+                ))
+            || std::env::var_os("FRET_DOCK_DRAG_HOVER_UNDER_MOVING_WINDOW").is_some();
         let hovered = if hover_under_moving_window
             && allow_window_under_cursor
             && window_under_moving_window.is_some()
@@ -498,6 +515,17 @@ impl<D: WinitAppDriver> WinitRunner<D> {
         let _ = self.dispatch_internal_drag_event(current, pointer_id, InternalDragKind::Over, pos);
         if let Some(state) = self.windows.get(current) {
             state.window.request_redraw();
+        }
+        // Keep both the drag source and the hovered/target window rendering while a cross-window
+        // dock drag is active. This prevents diagnostics scripts that are still attached to the
+        // payload window from stalling on `wait_frames` when hover routing peeks behind overlap.
+        for w in [drag_source_window, moving_window.unwrap_or(drag_source_window)] {
+            if w == current {
+                continue;
+            }
+            if let Some(state) = self.windows.get(w) {
+                state.window.request_redraw();
+            }
         }
         true
     }
@@ -816,6 +844,14 @@ impl<D: WinitAppDriver> WinitRunner<D> {
             "[drop-dispatch] tick={} pointer={:?} target={:?} ok={}",
             self.tick_id.0, pointer_id, target, dispatched
         ));
+        if let Some(state) = self.windows.get(target) {
+            state.window.request_redraw();
+        }
+        if target != drag_source_window
+            && let Some(state) = self.windows.get(drag_source_window)
+        {
+            state.window.request_redraw();
+        }
 
         // Cross-window dock drags are runner-routed (Enter/Over/Drop). Ensure the drag session
         // cannot get stuck if the pointer release is delivered to a different window than the

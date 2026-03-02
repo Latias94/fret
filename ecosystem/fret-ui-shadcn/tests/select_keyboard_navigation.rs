@@ -67,7 +67,7 @@ fn select_arrow_down_enter_selects_item_and_closes() {
     );
 
     let mut app = App::new();
-    fret_ui_shadcn::shadcn_themes::apply_shadcn_new_york_v4(
+    fret_ui_shadcn::shadcn_themes::apply_shadcn_new_york(
         &mut app,
         fret_ui_shadcn::shadcn_themes::ShadcnBaseColor::Neutral,
         fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Light,
@@ -99,7 +99,7 @@ fn select_arrow_down_enter_selects_item_and_closes() {
         move |cx| {
             vec![
                 fret_ui_shadcn::Select::new(value_frame_1, open_frame_1)
-                    .placeholder("Select")
+                    .value(fret_ui_shadcn::SelectValue::new().placeholder("Select"))
                     .a11y_label("Select")
                     .trigger_test_id("select-trigger")
                     .items(items_frame_1)
@@ -141,7 +141,7 @@ fn select_arrow_down_enter_selects_item_and_closes() {
             move |cx| {
                 vec![
                     fret_ui_shadcn::Select::new(value_frame, open_frame)
-                        .placeholder("Select")
+                        .value(fret_ui_shadcn::SelectValue::new().placeholder("Select"))
                         .a11y_label("Select")
                         .trigger_test_id("select-trigger")
                         .items(items_frame)
@@ -168,7 +168,7 @@ fn select_arrow_down_enter_selects_item_and_closes() {
         move |cx| {
             vec![
                 fret_ui_shadcn::Select::new(value_frame_3, open_frame_3)
-                    .placeholder("Select")
+                    .value(fret_ui_shadcn::SelectValue::new().placeholder("Select"))
                     .a11y_label("Select")
                     .trigger_test_id("select-trigger")
                     .items(items_frame_3)

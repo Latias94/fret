@@ -49,7 +49,8 @@ pub(super) fn tab_pointer_down_handler(
                     );
                     dispatch_intent(host, acx.window, WorkspaceTabStripIntent::RequestRedraw);
                     host.prevent_default(DefaultAction::FocusOnPointerDown);
-                    return PressablePointerDownResult::SkipDefault;
+                    // Allow the surrounding context-menu trigger to observe the right-click.
+                    return PressablePointerDownResult::Continue;
                 }
                 _ => {}
             }

@@ -835,7 +835,7 @@ mod tests {
         let mut ui: UiTree<App> = UiTree::new();
         ui.set_window(window);
 
-        crate::shadcn_themes::apply_shadcn_new_york_v4(
+        crate::shadcn_themes::apply_shadcn_new_york(
             &mut app,
             crate::shadcn_themes::ShadcnBaseColor::Neutral,
             crate::shadcn_themes::ShadcnColorScheme::Light,

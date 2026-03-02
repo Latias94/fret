@@ -61,7 +61,7 @@ pub fn run() -> anyhow::Result<()> {
         .window("query_async_tokio_demo", (560.0, 360.0))
         .install_app(|app| {
             install_tokio_spawner(app);
-            shadcn::shadcn_themes::apply_shadcn_new_york_v4(
+            shadcn::shadcn_themes::apply_shadcn_new_york(
                 app,
                 shadcn::shadcn_themes::ShadcnBaseColor::Zinc,
                 shadcn::shadcn_themes::ShadcnColorScheme::Dark,

@@ -109,7 +109,7 @@ pub fn run() -> anyhow::Result<()> {
     let builder = fret::mvu::app::<Program>("custom-effect-v3-demo")?
         .with_main_window("custom_effect_v3_demo", (1100.0, 720.0))
         .init_app(|app| {
-            shadcn::shadcn_themes::apply_shadcn_new_york_v4(
+            shadcn::shadcn_themes::apply_shadcn_new_york(
                 app,
                 shadcn::shadcn_themes::ShadcnBaseColor::Slate,
                 shadcn::shadcn_themes::ShadcnColorScheme::Dark,
