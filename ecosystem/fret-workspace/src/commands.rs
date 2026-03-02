@@ -17,6 +17,14 @@ pub const CMD_WORKSPACE_TAB_MOVE_RIGHT: &str = "workspace.tab.move.right";
 
 pub const CMD_WORKSPACE_TAB_TOGGLE_PIN: &str = "workspace.tab.toggle_pin";
 
+/// Prefix for "open a tab as preview and activate it" commands.
+///
+/// Shape: `workspace.tab.open_preview.<tab_id>`
+pub const CMD_WORKSPACE_TAB_OPEN_PREVIEW_PREFIX: &str = "workspace.tab.open_preview.";
+
+/// Commit the active preview tab (if any), converting it into a normal tab.
+pub const CMD_WORKSPACE_TAB_COMMIT_PREVIEW: &str = "workspace.tab.commit_preview";
+
 /// Prefix for "move the active tab before another tab" commands.
 ///
 /// Shape: `workspace.tab.move_before.<target_tab_id>`
@@ -203,6 +211,16 @@ pub fn tab_unpin_command(id: &str) -> Option<CommandId> {
     }
     Some(CommandId::new(Arc::<str>::from(format!(
         "{CMD_WORKSPACE_TAB_UNPIN_PREFIX}{id}"
+    ))))
+}
+
+pub fn tab_open_preview_command(id: &str) -> Option<CommandId> {
+    let id = id.trim();
+    if id.is_empty() {
+        return None;
+    }
+    Some(CommandId::new(Arc::<str>::from(format!(
+        "{CMD_WORKSPACE_TAB_OPEN_PREVIEW_PREFIX}{id}"
     ))))
 }
 
@@ -413,6 +431,13 @@ pub fn register_workspace_commands(registry: &mut CommandRegistry) {
         CommandMeta::new("Close Tabs to the Right")
             .with_category("Workspace")
             .with_keywords(["tab", "close", "right", "workspace"]),
+    );
+
+    registry.register(
+        CommandId::new(CMD_WORKSPACE_TAB_COMMIT_PREVIEW),
+        CommandMeta::new("Commit Preview Tab")
+            .with_category("Workspace")
+            .with_keywords(["tab", "preview", "commit", "workspace"]),
     );
 
     registry.register(

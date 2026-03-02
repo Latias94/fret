@@ -12,13 +12,17 @@ use crate::{
 };
 
 pub fn test_id(id: impl Into<String>) -> UiSelectorV1 {
-    UiSelectorV1::TestId { id: id.into() }
+    UiSelectorV1::TestId {
+        id: id.into(),
+        root_z_index: None,
+    }
 }
 
 pub fn role_and_name(role: impl Into<String>, name: impl Into<String>) -> UiSelectorV1 {
     UiSelectorV1::RoleAndName {
         role: role.into(),
         name: name.into(),
+        root_z_index: None,
     }
 }
 
@@ -30,8 +34,20 @@ pub fn not_exists(target: UiSelectorV1) -> UiPredicateV1 {
     UiPredicateV1::NotExists { target }
 }
 
+pub fn exists_under(scope: UiSelectorV1, target: UiSelectorV1) -> UiPredicateV1 {
+    UiPredicateV1::ExistsUnder { scope, target }
+}
+
+pub fn not_exists_under(scope: UiSelectorV1, target: UiSelectorV1) -> UiPredicateV1 {
+    UiPredicateV1::NotExistsUnder { scope, target }
+}
+
 pub fn focus_is(target: UiSelectorV1) -> UiPredicateV1 {
     UiPredicateV1::FocusIs { target }
+}
+
+pub fn focused_descendant_is(scope: UiSelectorV1, target: UiSelectorV1) -> UiPredicateV1 {
+    UiPredicateV1::FocusedDescendantIs { scope, target }
 }
 
 pub fn active_item_is(container: UiSelectorV1, item: UiSelectorV1) -> UiPredicateV1 {
@@ -72,6 +88,13 @@ pub fn ime_cursor_area_min_size(min_w_px: f32, min_h_px: f32, eps_px: f32) -> Ui
 
 pub fn runner_accessibility_activated() -> UiPredicateV1 {
     UiPredicateV1::RunnerAccessibilityActivated
+}
+
+pub fn value_equals(target: UiSelectorV1, text: impl Into<String>) -> UiPredicateV1 {
+    UiPredicateV1::ValueEquals {
+        target,
+        text: text.into(),
+    }
 }
 
 #[derive(Debug, Default, Clone)]

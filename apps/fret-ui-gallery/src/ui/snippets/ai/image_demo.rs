@@ -13,7 +13,6 @@ use fret_ui_shadcn::prelude::*;
 use ui_assets::ui::ImageSourceElementContextExt as _;
 
 pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement {
-
     let Some(assets) = cx.app.global::<UiGalleryImageSourceDemoAssets>().cloned() else {
         return cx.text("Image demo assets missing (expected UiGalleryDriver init).");
     };

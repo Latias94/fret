@@ -113,6 +113,23 @@
       "type": "wait_until"
     },
     {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-combobox-demo-selected" }
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "label_contains",
+        "target": { "kind": "test_id", "id": "ui-gallery-combobox-demo-selected" },
+        "text": "Selected: <none>"
+      },
+      "timeout_frames": 240
+    },
+    {
       "button": "left",
       "target": {
         "id": "ui-gallery-combobox-demo-trigger",
@@ -141,6 +158,15 @@
       },
       "timeout_frames": 240,
       "type": "wait_until"
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists_under",
+        "scope": { "kind": "test_id", "id": "ui-gallery-combobox-demo-listbox" },
+        "target": { "kind": "test_id", "id": "ui-gallery-combobox-demo-item-banana" }
+      },
+      "timeout_frames": 240
     },
     {
       "query": {
@@ -227,6 +253,15 @@
       "type": "wait_until"
     },
     {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "label_contains",
+        "target": { "kind": "test_id", "id": "ui-gallery-combobox-demo-selected" },
+        "text": "Selected: banana"
+      },
+      "timeout_frames": 240
+    },
+    {
       "predicate": {
         "kind": "focus_is",
         "target": {
@@ -289,6 +324,15 @@
       },
       "timeout_frames": 240,
       "type": "wait_until"
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "label_contains",
+        "target": { "kind": "test_id", "id": "ui-gallery-combobox-demo-selected" },
+        "text": "Selected: banana"
+      },
+      "timeout_frames": 240
     },
     {
       "label": "ui-gallery-combobox-typeahead-commit-banana",

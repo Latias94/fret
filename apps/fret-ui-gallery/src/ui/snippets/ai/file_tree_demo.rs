@@ -24,7 +24,9 @@ pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement
         Some(model) => model,
         None => {
             let model = cx.app.models_mut().insert(HashSet::<Arc<str>>::new());
-            cx.with_state(FileTreeModels::default, |st| st.expanded = Some(model.clone()));
+            cx.with_state(FileTreeModels::default, |st| {
+                st.expanded = Some(model.clone())
+            });
             model
         }
     };
@@ -34,7 +36,9 @@ pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement
         Some(model) => model,
         None => {
             let model = cx.app.models_mut().insert(None::<Arc<str>>);
-            cx.with_state(FileTreeModels::default, |st| st.selected = Some(model.clone()));
+            cx.with_state(FileTreeModels::default, |st| {
+                st.selected = Some(model.clone())
+            });
             model
         }
     };

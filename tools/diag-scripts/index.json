@@ -515,6 +515,105 @@
       "target_hints": []
     },
     {
+      "id": "custom-effect-v2-non-filterable-input-fallback-screenshot",
+      "path": "tools/diag-scripts/custom-effect-v2-non-filterable-input-fallback-screenshot.json",
+      "required_capabilities": [],
+      "suite_memberships": [
+        "cookbook-customv2-basics"
+      ],
+      "tags": [],
+      "target_hints": []
+    },
+    {
+      "id": "custom-effect-v3-non-filterable-user0-fallback-screenshot",
+      "path": "tools/diag-scripts/custom-effect-v3-non-filterable-user0-fallback-screenshot.json",
+      "required_capabilities": [],
+      "suite_memberships": [
+        "cookbook-customv3-basics"
+      ],
+      "tags": [],
+      "target_hints": []
+    },
+    {
+      "id": "custom-effect-v3-non-filterable-user01-fallback-screenshot",
+      "path": "tools/diag-scripts/custom-effect-v3-non-filterable-user01-fallback-screenshot.json",
+      "required_capabilities": [],
+      "suite_memberships": [
+        "cookbook-customv3-basics"
+      ],
+      "tags": [],
+      "target_hints": []
+    },
+    {
+      "id": "custom-effect-v3-non-filterable-user1-fallback-screenshot",
+      "path": "tools/diag-scripts/custom-effect-v3-non-filterable-user1-fallback-screenshot.json",
+      "required_capabilities": [],
+      "suite_memberships": [
+        "cookbook-customv3-basics"
+      ],
+      "tags": [],
+      "target_hints": []
+    },
+    {
+      "id": "docking-arbitration-demo-close-controls",
+      "path": "tools/diag-scripts/docking/arbitration/docking-arbitration-demo-close-controls.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "docking-arbitration"
+      ],
+      "tags": [
+        "close",
+        "docking",
+        "gate",
+        "panel"
+      ],
+      "target_hints": [
+        "Closes the controls panel via a harness button and asserts controls-only widgets disappear.",
+        "Also asserts the resulting dock graph canonical signature."
+      ]
+    },
+    {
+      "id": "docking-arbitration-demo-close-viewport-left",
+      "path": "tools/diag-scripts/docking/arbitration/docking-arbitration-demo-close-viewport-left.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "docking-arbitration"
+      ],
+      "tags": [
+        "close",
+        "docking",
+        "gate",
+        "panel"
+      ],
+      "target_hints": [
+        "Closes the left viewport panel via a harness button and asserts the viewport node disappears."
+      ]
+    },
+    {
+      "id": "docking-arbitration-demo-close-viewport-right",
+      "path": "tools/diag-scripts/docking/arbitration/docking-arbitration-demo-close-viewport-right.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "docking-arbitration"
+      ],
+      "tags": [
+        "close",
+        "docking",
+        "gate",
+        "panel"
+      ],
+      "target_hints": [
+        "Closes the right viewport panel via a harness button and asserts the viewport node disappears.",
+        "Also asserts the resulting dock graph canonical signature."
+      ]
+    },
+    {
       "id": "docking-arbitration-demo-default-layout-signature",
       "path": "tools/diag-scripts/docking/arbitration/docking-arbitration-demo-default-layout-signature.json",
       "required_capabilities": [
@@ -1003,6 +1102,26 @@
       "target_hints": []
     },
     {
+      "id": "liquid-glass-lens-custom-v3-dispersion-screenshot",
+      "path": "tools/diag-scripts/renderer/effects/liquid-glass-lens-custom-v3-dispersion-screenshot.json",
+      "required_capabilities": [],
+      "suite_memberships": [
+        "liquid-glass-custom-v3"
+      ],
+      "tags": [],
+      "target_hints": []
+    },
+    {
+      "id": "liquid-glass-lens-custom-v3-pair-no-group-screenshot",
+      "path": "tools/diag-scripts/renderer/effects/liquid-glass-lens-custom-v3-pair-no-group-screenshot.json",
+      "required_capabilities": [],
+      "suite_memberships": [
+        "liquid-glass-custom-v3"
+      ],
+      "tags": [],
+      "target_hints": []
+    },
+    {
       "id": "liquid-glass-lens-custom-v3-source-group-degraded-screenshot",
       "path": "tools/diag-scripts/renderer/effects/liquid-glass-lens-custom-v3-source-group-degraded-screenshot.json",
       "required_capabilities": [],
@@ -1078,7 +1197,7 @@
         "paint-only"
       ],
       "target_hints": [
-        "Run with `FRET_NODE_GRAPH_DECLARATIVE=paint` so the paint-only declarative surface is active.",
+        "Run the `node_graph_demo` binary (it defaults to the paint-only declarative surface).",
         "Requires `FRET_DIAG=1` (diagnostics-only shortcuts).",
         "Uses the paint-only diagnostics-only graph bump shortcut (Ctrl+3) and asserts that node/edge geometry caches rebuild exactly once."
       ]
@@ -1101,7 +1220,7 @@
         "wires"
       ],
       "target_hints": [
-        "Run with `FRET_NODE_GRAPH_DECLARATIVE=paint` so the paint-only declarative surface is active.",
+        "Run the `node_graph_demo` binary (it defaults to the paint-only declarative surface).",
         "This is a lightweight gate for regressions where edges stop painting due to culling/geometry issues."
       ]
     },
@@ -1123,7 +1242,7 @@
         "portal"
       ],
       "target_hints": [
-        "Run with `FRET_NODE_GRAPH_DECLARATIVE=paint` so the paint-only declarative surface is active.",
+        "Run the `node_graph_demo` binary (it defaults to the paint-only declarative surface).",
         "Requires `FRET_DIAG=1` (Ctrl+9 shortcut).",
         "This gates that portal subtrees are hosted declaratively, their bounds are harvested via LayoutQueryRegion, and a key command can consume those bounds to update the view model."
       ]
@@ -1147,7 +1266,7 @@
         "selection"
       ],
       "target_hints": [
-        "Run with `FRET_NODE_GRAPH_DECLARATIVE=paint` so the paint-only declarative surface is active.",
+        "Run the `node_graph_demo` binary (it defaults to the paint-only declarative surface).",
         "Uses the diagnostics-only normalize shortcut (Ctrl+4) to place a node under the canvas center.",
         "Asserts that hover/selection update visual state without rebuilding cached node/edge geometry render data."
       ]
@@ -1171,7 +1290,7 @@
         "tooltip"
       ],
       "target_hints": [
-        "Run with `FRET_NODE_GRAPH_DECLARATIVE=paint` so the paint-only declarative surface is active.",
+        "Run the `node_graph_demo` binary (it defaults to the paint-only declarative surface).",
         "Requires `FRET_DIAG=1` (Ctrl+4 normalization shortcut).",
         "This gates that paint-only hover state can drive a declarative overlay (tooltip) without enabling portal hit-testing."
       ]
@@ -1196,7 +1315,7 @@
         "tooltip"
       ],
       "target_hints": [
-        "Run with `FRET_NODE_GRAPH_DECLARATIVE=paint` so the paint-only declarative surface is active.",
+        "Run the `node_graph_demo` binary (it defaults to the paint-only declarative surface).",
         "Requires `FRET_DIAG=1` (Ctrl+4 normalization, Ctrl+8 disable portals).",
         "This gates that hover-driven overlays do not depend on portal hosting caps; tooltip falls back to HoverAnchorStore."
       ]
@@ -1219,7 +1338,7 @@
         "zoom"
       ],
       "target_hints": [
-        "Run with `FRET_NODE_GRAPH_DECLARATIVE=paint` so the paint-only declarative surface is active.",
+        "Run the `node_graph_demo` binary (it defaults to the paint-only declarative surface).",
         "This asserts that zooming (Ctrl+1) rebuilds cached node/edge geometry render data exactly once."
       ]
     },
@@ -1243,7 +1362,7 @@
         "selection"
       ],
       "target_hints": [
-        "Run with `FRET_NODE_GRAPH_DECLARATIVE=paint` so the paint-only declarative surface is active.",
+        "Run the `node_graph_demo` binary (it defaults to the paint-only declarative surface).",
         "Requires `FRET_DIAG=1` (diagnostics-only shortcuts).",
         "Uses the diagnostics-only normalize+offset shortcut (Ctrl+5) so the canvas center is blank for marquee start.",
         "Asserts that PointerCancel clears marquee state and does not commit selection or rebuild geometry caches."
@@ -1268,7 +1387,7 @@
         "selection"
       ],
       "target_hints": [
-        "Run with `FRET_NODE_GRAPH_DECLARATIVE=paint` so the paint-only declarative surface is active.",
+        "Run the `node_graph_demo` binary (it defaults to the paint-only declarative surface).",
         "Requires `FRET_DIAG=1` (diagnostics-only shortcuts).",
         "Uses the diagnostics-only normalize+offset shortcut (Ctrl+5) to place a node near (but not under) the canvas center.",
         "Asserts that marquee selection updates view-state without rebuilding cached node/edge geometry render data."
@@ -1294,7 +1413,7 @@
         "paint-only"
       ],
       "target_hints": [
-        "Run with `FRET_NODE_GRAPH_DECLARATIVE=paint` so the paint-only declarative surface is active.",
+        "Run the `node_graph_demo` binary (it defaults to the paint-only declarative surface).",
         "Requires `FRET_DIAG=1` (diagnostics-only shortcuts).",
         "Uses the diagnostics-only normalize shortcut (Ctrl+4) to place a node under the canvas center.",
         "Asserts that pressing Escape during an active drag cancels preview and does not commit a graph mutation (no geometry rebuild)."
@@ -1319,7 +1438,7 @@
         "paint-only"
       ],
       "target_hints": [
-        "Run with `FRET_NODE_GRAPH_DECLARATIVE=paint` so the paint-only declarative surface is active.",
+        "Run the `node_graph_demo` binary (it defaults to the paint-only declarative surface).",
         "Requires `FRET_DIAG=1` (diagnostics-only shortcuts).",
         "Uses the diagnostics-only normalize shortcut (Ctrl+4) to place a node under the canvas center.",
         "Asserts that PointerCancel ends the local drag preview without committing graph changes (no geometry rebuild)."
@@ -1343,7 +1462,7 @@
         "paint-only"
       ],
       "target_hints": [
-        "Run with `FRET_NODE_GRAPH_DECLARATIVE=paint` so the paint-only declarative surface is active.",
+        "Run the `node_graph_demo` binary (it defaults to the paint-only declarative surface).",
         "Requires `FRET_DIAG=1` (diagnostics-only shortcuts).",
         "Uses the diagnostics-only normalize shortcut (Ctrl+4) to place a node under the canvas center.",
         "Asserts that drag preview does not rebuild cached node/edge geometry render data; commit (pointer-up) does."
@@ -1367,7 +1486,7 @@
         "pan"
       ],
       "target_hints": [
-        "Run with `FRET_NODE_GRAPH_DECLARATIVE=paint` so the paint-only declarative surface is active.",
+        "Run the `node_graph_demo` binary (it defaults to the paint-only declarative surface).",
         "This asserts that panning changes the view transform without rebuilding cached node/edge geometry render data."
       ]
     },
@@ -1390,7 +1509,7 @@
         "pan"
       ],
       "target_hints": [
-        "Run with `FRET_NODE_GRAPH_DECLARATIVE=paint` so the paint-only declarative surface is active.",
+        "Run the `node_graph_demo` binary (it defaults to the paint-only declarative surface).",
         "Asserts that panning becomes active, then a scripted PointerCancel clears the pan state.",
         "Verifies that cancel does not rebuild cached node/edge geometry render data."
       ]
@@ -1413,7 +1532,7 @@
         "paint-only"
       ],
       "target_hints": [
-        "Run with `FRET_NODE_GRAPH_DECLARATIVE=paint` so the paint-only declarative surface is active.",
+        "Run the `node_graph_demo` binary (it defaults to the paint-only declarative surface).",
         "This gate relies on a stable semantics `value` emitted by `node_graph.canvas`.",
         "It asserts the cached edges render-data rebuild counter remains stable while idling."
       ]
@@ -1435,7 +1554,7 @@
         "paint-only"
       ],
       "target_hints": [
-        "Run with `FRET_NODE_GRAPH_DECLARATIVE=paint` so the paint-only declarative surface is active.",
+        "Run the `node_graph_demo` binary (it defaults to the paint-only declarative surface).",
         "This gate relies on a stable semantics `value` emitted by `node_graph.canvas`.",
         "It moves the pointer once to force the surface to learn bounds, then asserts the cached grid ops rebuild counter remains stable while idling."
       ]
@@ -1458,55 +1577,9 @@
         "paint-only"
       ],
       "target_hints": [
-        "Run with `FRET_NODE_GRAPH_DECLARATIVE=paint` so the paint-only declarative surface is active.",
+        "Run the `node_graph_demo` binary (it defaults to the paint-only declarative surface).",
         "This gate relies on a stable semantics `value` emitted by `node_graph.canvas`.",
         "It asserts the cached node chrome rebuild counter remains stable while idling."
-      ]
-    },
-    {
-      "id": "node-graph-paint-only-paint-overrides-revision-does-not-rebuild-geometry",
-      "path": "tools/diag-scripts/node-graph/node-graph-paint-only-paint-overrides-revision-does-not-rebuild-geometry.json",
-      "required_capabilities": [
-        "diag.script_v2"
-      ],
-      "suite_memberships": [
-        "fret-examples-node-graph-paint-only"
-      ],
-      "tags": [
-        "cache",
-        "declarative",
-        "gate",
-        "node-graph",
-        "overrides",
-        "paint-only",
-        "paint"
-      ],
-      "target_hints": [
-        "Run with `FRET_NODE_GRAPH_DECLARATIVE=paint` so the paint-only declarative surface is active.",
-        "Requires `FRET_DIAG=1` (Ctrl+6 shortcut).",
-        "Asserts that paint override revision bumps do not rebuild derived geometry or draw caches."
-      ]
-    },
-    {
-      "id": "node-graph-paint-only-paint-overrides-screenshot",
-      "path": "tools/diag-scripts/node-graph/node-graph-paint-only-paint-overrides-screenshot.json",
-      "required_capabilities": [
-        "diag.screenshot_png",
-        "diag.script_v2"
-      ],
-      "suite_memberships": [],
-      "tags": [
-        "declarative",
-        "node-graph",
-        "overrides",
-        "paint-only",
-        "paint",
-        "screenshot"
-      ],
-      "target_hints": [
-        "Run with `FRET_NODE_GRAPH_DECLARATIVE=paint` so the paint-only declarative surface is active.",
-        "Requires `FRET_DIAG=1` (Ctrl+6 shortcut).",
-        "Requires `FRET_DIAG_GPU_SCREENSHOTS=1` to emit GPU screenshots."
       ]
     },
     {
@@ -1581,6 +1654,16 @@
     {
       "id": "ui-gallery-accordion-returns-first-open-height",
       "path": "tools/diag-scripts/ui-gallery/accordion/ui-gallery-accordion-returns-first-open-height.json",
+      "required_capabilities": [],
+      "suite_memberships": [
+        "ui-gallery-shadcn-conformance"
+      ],
+      "tags": [],
+      "target_hints": []
+    },
+    {
+      "id": "ui-gallery-accordion-trigger-hover-underline-pixels-changed",
+      "path": "tools/diag-scripts/ui-gallery/accordion/ui-gallery-accordion-trigger-hover-underline-pixels-changed.json",
       "required_capabilities": [],
       "suite_memberships": [
         "ui-gallery-shadcn-conformance"
@@ -1961,6 +2044,7 @@
         "diag.script_v2"
       ],
       "suite_memberships": [
+        "ui-gallery-scroll-extents-dom-parity",
         "ui-gallery-shadcn-conformance"
       ],
       "tags": [
@@ -2625,6 +2709,52 @@
       "target_hints": []
     },
     {
+      "id": "ui-gallery-context-menu-basic-keyboard-nav",
+      "path": "tools/diag-scripts/ui-gallery/context-menu/ui-gallery-context-menu-basic-keyboard-nav.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "ui-gallery"
+      ],
+      "tags": [
+        "context_menu",
+        "keyboard",
+        "nav",
+        "regression_pack",
+        "shadcn",
+        "ui_gallery"
+      ],
+      "target_hints": []
+    },
+    {
+      "id": "ui-gallery-context-menu-basic-right-click-last-action",
+      "path": "tools/diag-scripts/ui-gallery/context-menu/ui-gallery-context-menu-basic-right-click-last-action.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "ui-gallery"
+      ],
+      "tags": [
+        "context_menu",
+        "mouse",
+        "regression_pack",
+        "shadcn",
+        "ui_gallery"
+      ],
+    },
+    {
+      "id": "ui-gallery-context-menu-keyboard-escape-focus-restore",
+      "path": "tools/diag-scripts/ui-gallery/overlay/ui-gallery-context-menu-keyboard-escape-focus-restore.json",
+      "required_capabilities": [],
+      "suite_memberships": [
+        "ui-gallery-overlay-steady"
+      ],
+      "tags": [],
+      "target_hints": []
+    },
+    {
       "id": "ui-gallery-context-menu-occlusion-wheel-pass-through",
       "path": "tools/diag-scripts/ui-gallery/overlay/ui-gallery-context-menu-occlusion-wheel-pass-through.json",
       "required_capabilities": [],
@@ -2655,6 +2785,28 @@
       ],
       "tags": [],
       "target_hints": []
+    },
+    {
+      "id": "ui-gallery-control-chrome-button-group-text-w-fit",
+      "path": "tools/diag-scripts/ui-gallery/control-chrome/ui-gallery-control-chrome-button-group-text-w-fit.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "ui-gallery-shadcn-conformance"
+      ],
+      "tags": [
+        "button-group",
+        "layout",
+        "shadcn",
+        "ui-gallery",
+        "w-fit"
+      ],
+      "target_hints": [
+        "Navigates to the Button Group page.",
+        "Asserts the Text example does not stretch to the page width (shadcn `w-fit`)."
+      ]
     },
     {
       "id": "ui-gallery-data-table-guide-demo-checkbox-only-selection",
@@ -2948,6 +3100,52 @@
       "target_hints": []
     },
     {
+      "id": "ui-gallery-dropdown-menu-basic-typeahead-billing",
+      "path": "tools/diag-scripts/ui-gallery/dropdown-menu/ui-gallery-dropdown-menu-basic-typeahead-billing.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "ui-gallery"
+      ],
+      "tags": [
+        "dropdown_menu",
+        "keyboard",
+        "regression_pack",
+        "shadcn",
+        "typeahead",
+        "ui_gallery"
+      ],
+      "target_hints": []
+    },
+    {
+      "id": "ui-gallery-dropdown-menu-demo-click-profile-last-action",
+      "path": "tools/diag-scripts/ui-gallery/dropdown-menu/ui-gallery-dropdown-menu-demo-click-profile-last-action.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "ui-gallery"
+      ],
+      "tags": [
+        "dropdown_menu",
+        "mouse",
+        "regression_pack",
+        "shadcn",
+        "ui_gallery"
+      ],
+    },
+    {
+      "id": "ui-gallery-dropdown-nonmodal-outside-press-focus-underlay",
+      "path": "tools/diag-scripts/ui-gallery/overlay/ui-gallery-dropdown-nonmodal-outside-press-focus-underlay.json",
+      "required_capabilities": [],
+      "suite_memberships": [
+        "ui-gallery-overlay-steady"
+      ],
+      "tags": [],
+      "target_hints": []
+    },
+    {
       "id": "ui-gallery-dropdown-open-select",
       "path": "tools/diag-scripts/ui-gallery/dropdown/ui-gallery-dropdown-open-select.json",
       "required_capabilities": [],
@@ -3214,6 +3412,37 @@
         "ui-gallery-shadcn-conformance"
       ],
       "tags": [],
+      "target_hints": []
+    },
+    {
+      "id": "ui-gallery-inspector-help-lock-match-copy-selector-steady",
+      "path": "tools/diag-scripts/ui-gallery-inspector-help-lock-match-copy-selector-steady.json",
+      "required_capabilities": [],
+      "suite_memberships": [
+        "ui-gallery-overlay-steady"
+      ],
+      "tags": [
+        "clipboard",
+        "inspector",
+        "steady",
+        "ui-gallery"
+      ],
+      "target_hints": []
+    },
+    {
+      "id": "ui-gallery-inspector-help-tree-lock-match-copy-selector-steady",
+      "path": "tools/diag-scripts/ui-gallery-inspector-help-tree-lock-match-copy-selector-steady.json",
+      "required_capabilities": [],
+      "suite_memberships": [
+        "ui-gallery-overlay-steady"
+      ],
+      "tags": [
+        "clipboard",
+        "inspector",
+        "steady",
+        "tree",
+        "ui-gallery"
+      ],
       "target_hints": []
     },
     {
@@ -4388,6 +4617,7 @@
         "diag.script_v2"
       ],
       "suite_memberships": [
+        "ui-gallery-scroll-extents-dom-parity",
         "ui-gallery-shadcn-conformance"
       ],
       "tags": [
@@ -4713,6 +4943,49 @@
         "Opens the overflow menu.",
         "Selects a known tab entry from the overflow list.",
         "Asserts the tab becomes selected."
+      ]
+    },
+    {
+      "id": "workspace-shell-demo-tab-preview-commit-keeps-old-tab-smoke",
+      "path": "tools/diag-scripts/workspace/shell-demo/workspace-shell-demo-tab-preview-commit-keeps-old-tab-smoke.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "workspace-shell-demo"
+      ],
+      "tags": [
+        "commit",
+        "gate",
+        "preview",
+        "smoke",
+        "tabstrip",
+        "workspace"
+      ],
+      "target_hints": [
+        "Opens preview A, commits it, then opens preview B.",
+        "Asserts the committed preview remains as a normal tab and the new preview is marked as preview."
+      ]
+    },
+    {
+      "id": "workspace-shell-demo-tab-preview-replaces-existing-smoke",
+      "path": "tools/diag-scripts/workspace/shell-demo/workspace-shell-demo-tab-preview-replaces-existing-smoke.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "workspace-shell-demo"
+      ],
+      "tags": [
+        "gate",
+        "preview",
+        "smoke",
+        "tabstrip",
+        "workspace"
+      ],
+      "target_hints": [
+        "Clicks the demo-only debug controls to open preview A, then preview B.",
+        "Asserts the previous preview tab is replaced (removed) and the new one is marked as preview."
       ]
     },
     {

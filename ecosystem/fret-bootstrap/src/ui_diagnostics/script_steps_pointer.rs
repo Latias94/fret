@@ -1831,7 +1831,7 @@ pub(super) fn handle_move_pointer_step(
             // This is intentionally narrow: only `test_id` selectors are supported in this
             // fallback path.
             if pointer_session_active || dock_drag_active {
-                if let UiSelectorV1::TestId { id } = &target {
+                if let UiSelectorV1::TestId { id, .. } = &target {
                     let cached = svc.per_window.get(&target_window).and_then(|ring| {
                         let bounds = ring.test_id_bounds.get(id)?;
                         let window_bounds = ring.snapshots.back().map(|s| s.window_bounds)?;
@@ -1889,11 +1889,12 @@ pub(super) fn handle_move_pointer_step(
                         );
                         active.last_explicit_cursor_override =
                             Some(CursorOverrideTarget::WindowClientLogical(target_window));
-                        active.last_explicit_cursor_override_pos = Some(ExplicitCursorOverridePos {
-                            target: CursorOverrideTarget::WindowClientLogical(target_window),
-                            x_px: x,
-                            y_px: y,
-                        });
+                        active.last_explicit_cursor_override_pos =
+                            Some(ExplicitCursorOverridePos {
+                                target: CursorOverrideTarget::WindowClientLogical(target_window),
+                                x_px: x,
+                                y_px: y,
+                            });
                         push_script_event_log(
                             active,
                             &svc.cfg,

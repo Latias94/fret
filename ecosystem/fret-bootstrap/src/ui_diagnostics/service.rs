@@ -16,8 +16,7 @@ pub struct UiDiagnosticsService {
     ready_write_warned: bool,
     capabilities_written: bool,
     capabilities_write_warned: bool,
-    inspect_enabled: bool,
-    inspect_consume_clicks: bool,
+    inspector: inspect_controller::InspectController,
     pending_script: Option<PendingScript>,
     pending_script_run_id: Option<u64>,
     active_scripts: HashMap<AppWindowId, ActiveScript>,
@@ -25,22 +24,6 @@ pub struct UiDiagnosticsService {
     last_dump_dir: Option<PathBuf>,
     last_dump_artifact_stats: Option<UiArtifactStatsV1>,
     last_script_run_id: u64,
-    last_pick_run_id: u64,
-    last_picked_node_id: HashMap<AppWindowId, u64>,
-    last_picked_selector_json: HashMap<AppWindowId, String>,
-    last_hovered_node_id: HashMap<AppWindowId, u64>,
-    last_hovered_selector_json: HashMap<AppWindowId, String>,
-    inspect_focus_node_id: HashMap<AppWindowId, u64>,
-    inspect_focus_selector_json: HashMap<AppWindowId, String>,
-    inspect_focus_down_stack: HashMap<AppWindowId, Vec<u64>>,
-    inspect_pending_nav: HashMap<AppWindowId, inspect::InspectNavCommand>,
-    inspect_focus_summary_line: HashMap<AppWindowId, String>,
-    inspect_focus_path_line: HashMap<AppWindowId, String>,
-    inspect_locked_windows: HashSet<AppWindowId>,
-    inspect_toast: HashMap<AppWindowId, inspect::InspectToast>,
-    pick_overlay_grace_frames: HashMap<AppWindowId, u32>,
-    pick_armed_run_id: Option<u64>,
-    pending_pick: Option<PendingPick>,
     clipboard_text_responses: std::collections::VecDeque<DiagClipboardTextResponse>,
     next_clipboard_token: u64,
     app_snapshot_provider:
@@ -248,6 +231,94 @@ impl UiDiagnosticsService {
         }
     }
 
+    fn cached_test_id_exists(&self, window: AppWindowId, test_id: &str) -> Option<bool> {
+        let ring = self.per_window.get(&window)?;
+        Some(ring.test_id_bounds.contains_key(test_id))
+    }
+
+    fn resolve_window_target_for_active_step_with_test_id_hint(
+        &self,
+        current_window: AppWindowId,
+        anchor_window: AppWindowId,
+        target: Option<&UiWindowTargetV1>,
+        test_id_hint: Option<&str>,
+    ) -> Option<AppWindowId> {
+        let resolved = self.resolve_window_target_for_active_step(current_window, anchor_window, target)?;
+        let Some(test_id_hint) = test_id_hint else {
+            return Some(resolved);
+        };
+        let Some(target) = target else {
+            return Some(resolved);
+        };
+
+        // Do not override fully explicit targets.
+        match target {
+            UiWindowTargetV1::Current | UiWindowTargetV1::FirstSeen | UiWindowTargetV1::WindowFfi { .. } => {
+                return Some(resolved);
+            }
+            UiWindowTargetV1::FirstSeenOther | UiWindowTargetV1::LastSeenOther | UiWindowTargetV1::LastSeen => {}
+        }
+
+        let candidates: Vec<AppWindowId> = match target {
+            UiWindowTargetV1::FirstSeenOther | UiWindowTargetV1::LastSeenOther => self
+                .known_windows
+                .iter()
+                .copied()
+                .filter(|w| *w != anchor_window)
+                .collect(),
+            UiWindowTargetV1::LastSeen => self.known_windows.clone(),
+            _ => Vec::new(),
+        };
+
+        if candidates.len() <= 1 {
+            return Some(resolved);
+        }
+
+        let mut matches: Option<AppWindowId> = None;
+        for window in candidates {
+            if self.cached_test_id_exists(window, test_id_hint) != Some(true) {
+                continue;
+            }
+            if matches.is_some() {
+                // Ambiguous: multiple windows claim the selector.
+                return Some(resolved);
+            }
+            matches = Some(window);
+        }
+
+        Some(matches.unwrap_or(resolved))
+    }
+
+    fn step_test_id_hint(step: &UiActionStepV2) -> Option<&str> {
+        let target = match step {
+            UiActionStepV2::Click { target, .. }
+            | UiActionStepV2::Tap { target, .. }
+            | UiActionStepV2::LongPress { target, .. }
+            | UiActionStepV2::Swipe { target, .. }
+            | UiActionStepV2::Pinch { target, .. }
+            | UiActionStepV2::SetBaseRef { target, .. }
+            | UiActionStepV2::MovePointer { target, .. }
+            | UiActionStepV2::MovePointerSweep { target, .. }
+            | UiActionStepV2::PointerDown { target, .. }
+            | UiActionStepV2::DragPointer { target, .. }
+            | UiActionStepV2::DragPointerUntil { target, .. }
+            | UiActionStepV2::Wheel { target, .. }
+            | UiActionStepV2::ClickStable { target, .. }
+            | UiActionStepV2::ClickSelectableTextSpanStable { target, .. }
+            | UiActionStepV2::WaitBoundsStable { target, .. }
+            | UiActionStepV2::EnsureVisible { target, .. }
+            | UiActionStepV2::ScrollIntoView { target, .. }
+            | UiActionStepV2::TypeTextInto { target, .. }
+            | UiActionStepV2::SetSliderValue { target, .. } => Some(target),
+            _ => None,
+        }?;
+
+        match target {
+            UiSelectorV1::TestId { id, .. } => Some(id.as_str()),
+            _ => None,
+        }
+    }
+
     fn predicate_can_eval_off_window(predicate: &UiPredicateV1) -> bool {
         matches!(
             predicate,
@@ -312,10 +383,10 @@ impl UiDiagnosticsService {
     ) -> CachedTestIdPredicateEval {
         let test_id = match predicate {
             UiPredicateV1::Exists {
-                target: UiSelectorV1::TestId { id },
+                target: UiSelectorV1::TestId { id, .. },
             }
             | UiPredicateV1::NotExists {
-                target: UiSelectorV1::TestId { id },
+                target: UiSelectorV1::TestId { id, .. },
             } => Some(id.clone()),
             _ => None,
         };
@@ -670,14 +741,15 @@ impl UiDiagnosticsService {
             return true;
         }
 
-        if self.pick_armed_run_id.is_some()
+        if self.inspector.pick_armed_run_id.is_some()
             || self
+                .inspector
                 .pending_pick
                 .as_ref()
                 .is_some_and(|p| p.window == window)
-            || self.inspect_enabled
-            || self.inspect_locked_windows.contains(&window)
-            || self.inspect_toast.contains_key(&window)
+            || self.inspector.enabled
+            || self.inspector.state.locked_windows.contains(&window)
+            || self.inspector.state.toast.contains_key(&window)
         {
             return true;
         }
@@ -702,36 +774,25 @@ impl UiDiagnosticsService {
     }
 
     pub fn last_picked_node_id(&self, window: AppWindowId) -> Option<u64> {
-        self.last_picked_node_id.get(&window).copied()
+        self.inspector.last_picked_node_id.get(&window).copied()
     }
 
     pub fn pick_is_armed(&self) -> bool {
-        self.pick_armed_run_id.is_some()
+        self.inspector.pick_armed_run_id.is_some()
+    }
+
+    pub(super) fn pick_is_pending(&self, window: AppWindowId) -> bool {
+        self.inspector
+            .pending_pick
+            .as_ref()
+            .is_some_and(|pending| pending.window == window)
     }
 
     pub fn clear_window(&mut self, window: AppWindowId) {
         self.per_window.remove(&window);
         self.known_windows.retain(|w| *w != window);
         self.active_scripts.remove(&window);
-        self.last_picked_node_id.remove(&window);
-        self.last_picked_selector_json.remove(&window);
-        self.last_hovered_node_id.remove(&window);
-        self.last_hovered_selector_json.remove(&window);
-        self.inspect_focus_node_id.remove(&window);
-        self.inspect_focus_selector_json.remove(&window);
-        self.inspect_focus_down_stack.remove(&window);
-        self.inspect_pending_nav.remove(&window);
-        self.inspect_focus_summary_line.remove(&window);
-        self.inspect_focus_path_line.remove(&window);
-        self.inspect_locked_windows.remove(&window);
-        self.inspect_toast.remove(&window);
-        if self
-            .pending_pick
-            .as_ref()
-            .is_some_and(|p| p.window == window)
-        {
-            self.pending_pick = None;
-        }
+        self.inspector.clear_for_window(window);
     }
 
     fn reset_diagnostics_ring_for_window(&mut self, window: AppWindowId) {
@@ -880,10 +941,10 @@ impl UiDiagnosticsService {
             )
         });
 
-        if self.inspect_enabled {
+        if self.inspector.enabled {
             let hovered = last_pointer_position.and_then(|pos| {
                 raw_semantics.and_then(|snap| {
-                    pick_semantics_node_by_bounds(snap, pos).map(|n| n.id.data().as_ffi())
+                    pick::pick_semantics_node_at(snap, ui, pos).map(|n| n.id.data().as_ffi())
                 })
             });
             self.update_inspect_hover(window, raw_semantics, hovered, element_runtime);
@@ -1080,16 +1141,8 @@ impl UiDiagnosticsService {
         self.record_shortcut_routing_trace_for_window(app, window);
         self.record_command_dispatch_trace_for_window(app, window);
 
-        if let Some(pending) = self.pending_pick.clone()
-            && pending.window == window
-        {
-            self.resolve_pending_pick_for_window(
-                window,
-                pending.position,
-                raw_semantics,
-                ui,
-                element_runtime,
-            );
+        if let Some(pending) = self.inspector.take_pending_pick_for_window(window) {
+            self.resolve_pending_pick_for_window(pending, raw_semantics, ui, element_runtime);
         }
     }
 

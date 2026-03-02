@@ -1,15 +1,6 @@
 use super::*;
 
 impl UiDiagnosticsService {
-    pub(super) fn next_pick_run_id(&mut self) -> u64 {
-        let mut id = unix_ms_now();
-        if id <= self.last_pick_run_id {
-            id = self.last_pick_run_id.saturating_add(1);
-        }
-        self.last_pick_run_id = id;
-        id
-    }
-
     pub(super) fn write_pick_result(&mut self, result: UiPickResultV1) {
         if !self.is_enabled() {
             return;
@@ -28,18 +19,13 @@ impl UiDiagnosticsService {
 
     pub(super) fn resolve_pending_pick_for_window(
         &mut self,
-        window: AppWindowId,
-        position: Point,
+        pending: inspect_controller::PendingPick,
         raw_semantics: Option<&fret_core::SemanticsSnapshot>,
         ui: &UiTree<App>,
         element_runtime: Option<&ElementRuntime>,
     ) {
-        let Some(pending) = self.pending_pick.clone() else {
-            return;
-        };
-        if pending.window != window {
-            return;
-        }
+        let window = pending.window;
+        let position = pending.position;
 
         let mut result = UiPickResultV1 {
             schema_version: 1,
@@ -56,8 +42,8 @@ impl UiDiagnosticsService {
                 .map(|p| display_path(&self.cfg.out_dir, p)),
         };
 
-        let selection = match raw_semantics {
-            Some(snapshot) => pick_semantics_node_at(snapshot, ui, position).map(|node| {
+        if let Some(snapshot) = raw_semantics {
+            let selection = pick_semantics_node_at(snapshot, ui, position).map(|node| {
                 let (element, element_path) = element_runtime
                     .and_then(|runtime| {
                         runtime.element_for_node(window, node.id).map(|id| {
@@ -67,28 +53,43 @@ impl UiDiagnosticsService {
                     })
                     .unwrap_or((None, None));
                 UiPickSelectionV1::from_node(snapshot, node, element, element_path, &self.cfg)
-            }),
-            None => None,
-        };
+            });
 
-        match selection {
-            Some(sel) => {
-                result.stage = UiPickStageV1::Picked;
-                self.last_picked_node_id.insert(window, sel.node.id);
-                if let Some(best) = sel.selectors.first()
-                    && let Ok(json) = serde_json::to_string(best)
-                {
-                    self.last_picked_selector_json.insert(window, json.clone());
-                    self.inspect_focus_node_id.insert(window, sel.node.id);
-                    self.inspect_focus_selector_json.insert(window, json);
-                    self.inspect_focus_down_stack.insert(window, Vec::new());
+            match selection {
+                Some(sel) => {
+                    result.stage = UiPickStageV1::Picked;
+
+                    let selector_json = snapshot
+                        .nodes
+                        .iter()
+                        .find(|n| n.id.data().as_ffi() == sel.node.id)
+                        .and_then(|node| {
+                            let element = element_runtime
+                                .and_then(|runtime| runtime.element_for_node(window, node.id))
+                                .map(|id| id.0);
+                            best_selector_for_node_validated(
+                                snapshot,
+                                window,
+                                element_runtime,
+                                node,
+                                element,
+                                &self.cfg,
+                            )
+                            .or_else(|| best_selector_for_node(snapshot, node, element, &self.cfg))
+                        })
+                        .or_else(|| sel.selectors.first().cloned())
+                        .and_then(|sel| serde_json::to_string(&sel).ok());
+
+                    self.inspector
+                        .on_pick_success(window, sel.node.id, selector_json.clone());
+                    result.selection = Some(sel);
                 }
-                self.pick_overlay_grace_frames.insert(window, 10);
-                result.selection = Some(sel);
+                None => {
+                    result.reason = Some("no matching semantics node under pointer".to_string());
+                }
             }
-            None => {
-                result.reason = Some("no matching semantics node under pointer".to_string());
-            }
+        } else {
+            result.reason = Some("no semantics snapshot".to_string());
         }
 
         if self.cfg.pick_auto_dump {
@@ -98,6 +99,5 @@ impl UiDiagnosticsService {
         }
 
         self.write_pick_result(result);
-        self.pending_pick = None;
     }
 }

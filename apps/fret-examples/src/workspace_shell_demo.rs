@@ -316,7 +316,116 @@ impl WorkspaceShellDemoDriver {
                                                     content,
                                                 )
                                                 .into_element(cx);
-                                                vec![strip, content]
+                                                let debug_preview =
+                                                    env_bool("FRET_WORKSPACE_SHELL_DEBUG_PREVIEW", false)
+                                                        && pane.id.as_ref() == "pane-a";
+                                                let mut children = vec![strip];
+                                                if debug_preview {
+                                                    let button = |cx: &mut fret_ui::ElementContext<'_, App>,
+                                                                  test_id: &str,
+                                                                  label: &str,
+                                                                  cmd: CommandId| {
+                                                        let test_id: Arc<str> = Arc::from(test_id);
+                                                        let label: Arc<str> = Arc::from(label);
+                                                        cx.pressable(
+                                                            PressableProps {
+                                                                layout: {
+                                                                    let mut layout =
+                                                                        LayoutStyle::default();
+                                                                    layout.size.width = Length::Auto;
+                                                                    layout.size.height =
+                                                                        Length::Px(Px(22.0));
+                                                                    layout
+                                                                },
+                                                                enabled: true,
+                                                                focusable: false,
+                                                                a11y: PressableA11y {
+                                                                    role: Some(SemanticsRole::Button),
+                                                                    label: Some(label.clone()),
+                                                                    test_id: Some(test_id),
+                                                                    ..Default::default()
+                                                                },
+                                                                ..Default::default()
+                                                            },
+                                                            move |cx, _state| {
+                                                                cx.pressable_add_on_activate(
+                                                                    Arc::new(move |host, acx, _reason| {
+                                                                        host.dispatch_command(
+                                                                            Some(acx.window),
+                                                                            cmd.clone(),
+                                                                        );
+                                                                    }),
+                                                                );
+                                                                vec![cx.container(
+                                                                    ContainerProps {
+                                                                        layout: fill_layout(),
+                                                                        padding: Edges::all(Px(6.0))
+                                                                            .into(),
+                                                                        ..Default::default()
+                                                                    },
+                                                                    move |cx| vec![cx.text(label.clone())],
+                                                                )]
+                                                            },
+                                                        )
+                                                    };
+
+                                                    let open_a = CommandId::new(Arc::<str>::from(
+                                                        "workspace.tab.open_preview.doc-a-preview-a",
+                                                    ));
+                                                    let open_b = CommandId::new(Arc::<str>::from(
+                                                        "workspace.tab.open_preview.doc-a-preview-b",
+                                                    ));
+                                                    let commit = CommandId::new(Arc::<str>::from(
+                                                        "workspace.tab.commit_preview",
+                                                    ));
+
+                                                    let bar = cx.flex(
+                                                        FlexProps {
+                                                            layout: {
+                                                                let mut layout =
+                                                                    LayoutStyle::default();
+                                                                layout.size.width = Length::Fill;
+                                                                layout.size.height =
+                                                                    Length::Px(Px(28.0));
+                                                                layout.flex.shrink = 0.0;
+                                                                layout
+                                                            },
+                                                            direction: Axis::Horizontal,
+                                                            gap: fret_ui::element::SpacingLength::Px(
+                                                                Px(8.0),
+                                                            ),
+                                                            justify: MainAlign::Start,
+                                                            align: CrossAlign::Center,
+                                                            wrap: false,
+                                                            ..Default::default()
+                                                        },
+                                                        move |cx| {
+                                                            vec![
+                                                                button(
+                                                                    cx,
+                                                                    "workspace-shell-pane-pane-a-debug-open-preview-a",
+                                                                    "Open preview A",
+                                                                    open_a.clone(),
+                                                                ),
+                                                                button(
+                                                                    cx,
+                                                                    "workspace-shell-pane-pane-a-debug-open-preview-b",
+                                                                    "Open preview B",
+                                                                    open_b.clone(),
+                                                                ),
+                                                                button(
+                                                                    cx,
+                                                                    "workspace-shell-pane-pane-a-debug-commit-preview",
+                                                                    "Commit preview",
+                                                                    commit.clone(),
+                                                                ),
+                                                            ]
+                                                        },
+                                                    );
+                                                    children.push(bar);
+                                                }
+                                                children.push(content);
+                                                children
                                             },
                                         )]
                                     },

@@ -1,9 +1,9 @@
 use fret_app::App;
 use fret_core::{AppWindowId, FrameId, KeyCode, Point, Px, Rect, Size as CoreSize};
 use fret_runtime::Model;
+use fret_ui::ElementContext;
 use fret_ui::element::AnyElement;
 use fret_ui::tree::UiTree;
-use fret_ui::ElementContext;
 use fret_ui_kit::OverlayController;
 use std::sync::Arc;
 
@@ -97,25 +97,30 @@ fn combobox_arrow_down_enter_selects_item_and_closes() {
                 fret_ui_shadcn::ComboboxItem::new("nuxt", "Nuxt.js"),
             ];
 
-            vec![fret_ui_shadcn::Combobox::new(value_frame_1, open_frame_1)
-                .a11y_label("Combobox")
-                .trigger_test_id("combobox-trigger")
-                .test_id_prefix("combobox-test")
-                .into_element_parts(cx, |_cx| {
-                    vec![
-                        fret_ui_shadcn::ComboboxPart::from(
-                            fret_ui_shadcn::ComboboxInput::new().placeholder("Select a framework"),
-                        ),
-                        fret_ui_shadcn::ComboboxPart::from(fret_ui_shadcn::ComboboxContent::new([
-                            fret_ui_shadcn::ComboboxContentPart::from(
-                                fret_ui_shadcn::ComboboxEmpty::new("No items found."),
+            vec![
+                fret_ui_shadcn::Combobox::new(value_frame_1, open_frame_1)
+                    .a11y_label("Combobox")
+                    .trigger_test_id("combobox-trigger")
+                    .test_id_prefix("combobox-test")
+                    .into_element_parts(cx, |_cx| {
+                        vec![
+                            fret_ui_shadcn::ComboboxPart::from(
+                                fret_ui_shadcn::ComboboxInput::new()
+                                    .placeholder("Select a framework"),
                             ),
-                            fret_ui_shadcn::ComboboxContentPart::from(
-                                fret_ui_shadcn::ComboboxList::new().items(items),
+                            fret_ui_shadcn::ComboboxPart::from(
+                                fret_ui_shadcn::ComboboxContent::new([
+                                    fret_ui_shadcn::ComboboxContentPart::from(
+                                        fret_ui_shadcn::ComboboxEmpty::new("No items found."),
+                                    ),
+                                    fret_ui_shadcn::ComboboxContentPart::from(
+                                        fret_ui_shadcn::ComboboxList::new().items(items),
+                                    ),
+                                ]),
                             ),
-                        ])),
-                    ]
-                })]
+                        ]
+                    }),
+            ]
         },
     );
 
@@ -155,28 +160,30 @@ fn combobox_arrow_down_enter_selects_item_and_closes() {
                     fret_ui_shadcn::ComboboxItem::new("nuxt", "Nuxt.js"),
                 ];
 
-                vec![fret_ui_shadcn::Combobox::new(value_frame, open_frame)
-                    .a11y_label("Combobox")
-                    .trigger_test_id("combobox-trigger")
-                    .test_id_prefix("combobox-test")
-                    .into_element_parts(cx, |_cx| {
-                        vec![
-                            fret_ui_shadcn::ComboboxPart::from(
-                                fret_ui_shadcn::ComboboxInput::new()
-                                    .placeholder("Select a framework"),
-                            ),
-                            fret_ui_shadcn::ComboboxPart::from(
-                                fret_ui_shadcn::ComboboxContent::new([
-                                    fret_ui_shadcn::ComboboxContentPart::from(
-                                        fret_ui_shadcn::ComboboxEmpty::new("No items found."),
-                                    ),
-                                    fret_ui_shadcn::ComboboxContentPart::from(
-                                        fret_ui_shadcn::ComboboxList::new().items(items),
-                                    ),
-                                ]),
-                            ),
-                        ]
-                    })]
+                vec![
+                    fret_ui_shadcn::Combobox::new(value_frame, open_frame)
+                        .a11y_label("Combobox")
+                        .trigger_test_id("combobox-trigger")
+                        .test_id_prefix("combobox-test")
+                        .into_element_parts(cx, |_cx| {
+                            vec![
+                                fret_ui_shadcn::ComboboxPart::from(
+                                    fret_ui_shadcn::ComboboxInput::new()
+                                        .placeholder("Select a framework"),
+                                ),
+                                fret_ui_shadcn::ComboboxPart::from(
+                                    fret_ui_shadcn::ComboboxContent::new([
+                                        fret_ui_shadcn::ComboboxContentPart::from(
+                                            fret_ui_shadcn::ComboboxEmpty::new("No items found."),
+                                        ),
+                                        fret_ui_shadcn::ComboboxContentPart::from(
+                                            fret_ui_shadcn::ComboboxList::new().items(items),
+                                        ),
+                                    ]),
+                                ),
+                            ]
+                        }),
+                ]
             },
         );
     }
@@ -201,25 +208,30 @@ fn combobox_arrow_down_enter_selects_item_and_closes() {
                 fret_ui_shadcn::ComboboxItem::new("nuxt", "Nuxt.js"),
             ];
 
-            vec![fret_ui_shadcn::Combobox::new(value_frame_3, open_frame_3)
-                .a11y_label("Combobox")
-                .trigger_test_id("combobox-trigger")
-                .test_id_prefix("combobox-test")
-                .into_element_parts(cx, |_cx| {
-                    vec![
-                        fret_ui_shadcn::ComboboxPart::from(
-                            fret_ui_shadcn::ComboboxInput::new().placeholder("Select a framework"),
-                        ),
-                        fret_ui_shadcn::ComboboxPart::from(fret_ui_shadcn::ComboboxContent::new([
-                            fret_ui_shadcn::ComboboxContentPart::from(
-                                fret_ui_shadcn::ComboboxEmpty::new("No items found."),
+            vec![
+                fret_ui_shadcn::Combobox::new(value_frame_3, open_frame_3)
+                    .a11y_label("Combobox")
+                    .trigger_test_id("combobox-trigger")
+                    .test_id_prefix("combobox-test")
+                    .into_element_parts(cx, |_cx| {
+                        vec![
+                            fret_ui_shadcn::ComboboxPart::from(
+                                fret_ui_shadcn::ComboboxInput::new()
+                                    .placeholder("Select a framework"),
                             ),
-                            fret_ui_shadcn::ComboboxContentPart::from(
-                                fret_ui_shadcn::ComboboxList::new().items(items),
+                            fret_ui_shadcn::ComboboxPart::from(
+                                fret_ui_shadcn::ComboboxContent::new([
+                                    fret_ui_shadcn::ComboboxContentPart::from(
+                                        fret_ui_shadcn::ComboboxEmpty::new("No items found."),
+                                    ),
+                                    fret_ui_shadcn::ComboboxContentPart::from(
+                                        fret_ui_shadcn::ComboboxList::new().items(items),
+                                    ),
+                                ]),
                             ),
-                        ])),
-                    ]
-                })]
+                        ]
+                    }),
+            ]
         },
     );
 

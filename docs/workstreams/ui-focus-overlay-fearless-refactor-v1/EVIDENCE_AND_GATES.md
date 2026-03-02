@@ -77,3 +77,21 @@ cargo run -p fretboard -- diag run ui-gallery-modal-barrier-wheel-block `
 cargo run -p fretboard -- diag run ui-gallery-modal-barrier-focus-restore `
   --launch -- cargo run -p fret-ui-gallery --release
 ```
+
+- ContextMenu keyboard invocation MUST focus the first item and restore focus to the trigger on escape:
+
+```powershell
+cargo run -p fretboard -- diag run ui-gallery-context-menu-keyboard-escape-focus-restore `
+  --launch -- cargo run -p fret-ui-gallery --release
+```
+
+- Non-modal menu overlays (click-through outside press) MUST NOT steal focus back to the trigger:
+
+```powershell
+cargo run -p fretboard -- diag run ui-gallery-dropdown-nonmodal-outside-press-focus-underlay `
+  --launch -- cargo run -p fret-ui-gallery --release
+```
+
+Note: this gate assumes the underlay click target is not occluded by the dropdown panel (so it is a
+true outside-press). The UI Gallery keeps `ui-gallery-overlay-underlay` in a top row to avoid
+accidental overlap.

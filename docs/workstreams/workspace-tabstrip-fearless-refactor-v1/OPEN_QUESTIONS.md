@@ -13,6 +13,19 @@ Recommendation (v1):
 - Share **math helpers** in `ecosystem/fret-ui-headless` and keep kernels separate until both sides
   stabilize their invariants.
 
+## Reference source of truth (Zed vs dockview vs gpui-component)
+
+- Which reference should we treat as the behavioral source of truth for editor-grade tabs?
+
+Recommendation (v1):
+
+- Use **Zed** as the primary source of truth for workspace tab semantics (preview/pinned/activation
+  rules), because it is an editor and its invariants match our target.
+- Use **dockview** as the primary source of truth for DnD overlay discipline and droptarget
+  vocabulary (e.g. ensuring only a single overlay is active at any time).
+- Use **gpui-component** only as a UI composition reference (e.g. "last empty space" as an explicit
+  drop target), not as the behavioral authority.
+
 ## Explicit surfaces vs diagnostics-only
 
 - For self-drawn strips, do we require explicit internal surfaces (header space, controls) even if

@@ -22,4 +22,3 @@ pub(super) fn preview_ai_workflow_connection_demo(
 
     vec![body.test_id("ui-gallery-page-ai-workflow-connection-demo")]
 }
-

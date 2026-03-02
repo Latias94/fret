@@ -43,6 +43,9 @@ with special focus on multi-window tear-off + drag-back sequences.
 - Runner: isolate scripted cursor overrides from physical mouse movement.
 - Window counting: `known_window_count_*` predicates use a runner-owned source-of-truth.
 - Cached `test_id` predicate evaluation is freshness-bounded and emits evidence when used.
+- `fretboard diag repeat --reuse-launch` clears `script.result.json` between runs to avoid stale `run_id` timeouts.
+- Script migration: avoid `pointer_down` ping-pong for relative window targets (wake the active script window instead of
+  migrating).
 - Unblocked Windows/MSVC rebuild of docking demos (`taffy`-related LNK2019) by compiling `taffy` with a single
   codegen unit in dev profiles.
 - Chained tear-off (two tabs) now returns to the pre-tearoff fingerprint after two merge-backs (script-level targeting

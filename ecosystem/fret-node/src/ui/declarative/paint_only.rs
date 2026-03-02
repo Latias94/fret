@@ -1951,7 +1951,7 @@ pub fn node_graph_surface_paint_only<H: UiHost + 'static>(
                                 *st = enable_next;
                             });
 
-                        let (edge_id, node_id) = host
+                        let (edge_id, _node_id) = host
                             .models_mut()
                             .read(&graph_debug, |g| {
                                 let edge = g.edges.keys().next().copied();
@@ -2001,28 +2001,6 @@ pub fn node_graph_surface_paint_only<H: UiHost + 'static>(
                                 );
                             } else {
                                 diag_paint_overrides_for_keys.set_edge_override(edge_id, None);
-                            }
-                        }
-
-                        if let Some(node_id) = node_id {
-                            if enable_next {
-                                diag_paint_overrides_for_keys.set_node_override(
-                                    node_id,
-                                    Some(
-                                        crate::ui::paint_overrides::NodePaintOverrideV1 {
-                                            body_background: Some(
-                                                fret_core::scene::Paint::Solid(Color::from_srgb_hex_rgb(
-                                                    0x1c_2b_3a,
-                                                ))
-                                                .into(),
-                                            ),
-                                            ..Default::default()
-                                        }
-                                        .normalized(),
-                                    ),
-                                );
-                            } else {
-                                diag_paint_overrides_for_keys.set_node_override(node_id, None);
                             }
                         }
 

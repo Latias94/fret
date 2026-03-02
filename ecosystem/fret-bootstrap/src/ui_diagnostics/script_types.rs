@@ -150,9 +150,12 @@ pub(super) enum V2StepState {
     EnsureVisible(V2EnsureVisibleState),
     ScrollIntoView(V2ScrollIntoViewState),
     TypeTextInto(V2TypeTextIntoState),
+    PasteTextInto(V2PasteTextIntoState),
     MenuSelect(V2MenuSelectState),
     MenuSelectPath(V2MenuSelectPathState),
     AssertClipboardText(V2AssertClipboardTextState),
+    InspectHelpLockBestMatchAndCopySelector(V2InspectHelpLockBestMatchAndCopySelectorState),
+    InspectHelpTreeLockBestMatchAndCopySelector(V2InspectHelpTreeLockBestMatchAndCopySelectorState),
     DragPointer(V2DragPointerState),
     DragPointerUntil(V2DragPointerUntilState),
     DragTo(V2DragToState),
@@ -239,6 +242,15 @@ pub(super) struct V2TypeTextIntoState {
 }
 
 #[derive(Debug, Clone)]
+pub(super) struct V2PasteTextIntoState {
+    pub(super) step_index: usize,
+    pub(super) remaining_frames: u32,
+    pub(super) phase: u32,
+    pub(super) expected_node_id: Option<u64>,
+    pub(super) expected_test_id: Option<String>,
+}
+
+#[derive(Debug, Clone)]
 pub(super) struct V2MenuSelectState {
     pub(super) step_index: usize,
     pub(super) remaining_frames: u32,
@@ -261,6 +273,10 @@ pub(super) struct V2AssertClipboardTextState {
     pub(super) remaining_frames: u32,
     pub(super) request_issued: bool,
     pub(super) token: Option<fret_core::ClipboardToken>,
+    pub(super) saw_text_response: bool,
+    pub(super) saw_unavailable_response: bool,
+    pub(super) last_text_len: Option<usize>,
+    pub(super) last_unavailable_message: Option<String>,
 }
 
 impl V2AssertClipboardTextState {
@@ -277,6 +293,58 @@ impl V2AssertClipboardTextState {
             remaining_frames: timeout_frames.max(1),
             request_issued: false,
             token: None,
+            saw_text_response: false,
+            saw_unavailable_response: false,
+            last_text_len: None,
+            last_unavailable_message: None,
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
+pub(super) struct V2InspectHelpLockBestMatchAndCopySelectorState {
+    pub(super) step_index: usize,
+    pub(super) window: AppWindowId,
+    pub(super) query: String,
+    pub(super) remaining_frames: u32,
+}
+
+impl V2InspectHelpLockBestMatchAndCopySelectorState {
+    pub(super) fn new(
+        step_index: usize,
+        window: AppWindowId,
+        query: String,
+        timeout_frames: u32,
+    ) -> Self {
+        Self {
+            step_index,
+            window,
+            query,
+            remaining_frames: timeout_frames.max(1),
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
+pub(super) struct V2InspectHelpTreeLockBestMatchAndCopySelectorState {
+    pub(super) step_index: usize,
+    pub(super) window: AppWindowId,
+    pub(super) query: String,
+    pub(super) remaining_frames: u32,
+}
+
+impl V2InspectHelpTreeLockBestMatchAndCopySelectorState {
+    pub(super) fn new(
+        step_index: usize,
+        window: AppWindowId,
+        query: String,
+        timeout_frames: u32,
+    ) -> Self {
+        Self {
+            step_index,
+            window,
+            query,
+            remaining_frames: timeout_frames.max(1),
         }
     }
 }

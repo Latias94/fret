@@ -38,8 +38,11 @@ pub(super) fn active_script_needs_semantics_snapshot(active: &ActiveScript) -> b
                 | V2StepState::EnsureVisible(_)
                 | V2StepState::ScrollIntoView(_)
                 | V2StepState::TypeTextInto(_)
+                | V2StepState::PasteTextInto(_)
                 | V2StepState::MenuSelect(_)
                 | V2StepState::MenuSelectPath(_)
+                | V2StepState::InspectHelpLockBestMatchAndCopySelector(_)
+                | V2StepState::InspectHelpTreeLockBestMatchAndCopySelector(_)
                 | V2StepState::DragPointerUntil(_)
                 | V2StepState::DragTo(_)
                 | V2StepState::SetSliderValue(_)
@@ -72,8 +75,11 @@ pub(super) fn active_script_needs_semantics_snapshot(active: &ActiveScript) -> b
         | UiActionStepV2::EnsureVisible { .. }
         | UiActionStepV2::ScrollIntoView { .. }
         | UiActionStepV2::TypeTextInto { .. }
+        | UiActionStepV2::PasteTextInto { .. }
         | UiActionStepV2::MenuSelect { .. }
         | UiActionStepV2::MenuSelectPath { .. }
+        | UiActionStepV2::InspectHelpLockBestMatchAndCopySelector { .. }
+        | UiActionStepV2::InspectHelpTreeLockBestMatchAndCopySelector { .. }
         | UiActionStepV2::DragTo { .. }
         | UiActionStepV2::SetSliderValue { .. } => true,
         UiActionStepV2::ResetDiagnostics
@@ -126,6 +132,7 @@ pub(super) fn script_step_kind_name(step: &UiActionStepV2) -> &'static str {
         UiActionStepV2::Wheel { .. } => "wheel",
         UiActionStepV2::TypeText { .. } => "type_text",
         UiActionStepV2::TypeTextInto { .. } => "type_text_into",
+        UiActionStepV2::PasteTextInto { .. } => "paste_text_into",
         UiActionStepV2::WaitFrames { .. } => "wait_frames",
         UiActionStepV2::WaitUntil { .. } => "wait_until",
         UiActionStepV2::WaitCommandDispatchTrace { .. } => "wait_command_dispatch_trace",
@@ -135,6 +142,12 @@ pub(super) fn script_step_kind_name(step: &UiActionStepV2) -> &'static str {
         UiActionStepV2::ResetDiagnostics => "reset_diagnostics",
         UiActionStepV2::SetClipboardText { .. } => "set_clipboard_text",
         UiActionStepV2::AssertClipboardText { .. } => "assert_clipboard_text",
+        UiActionStepV2::InspectHelpLockBestMatchAndCopySelector { .. } => {
+            "inspect_help_lock_best_match_and_copy_selector"
+        }
+        UiActionStepV2::InspectHelpTreeLockBestMatchAndCopySelector { .. } => {
+            "inspect_help_tree_lock_best_match_and_copy_selector"
+        }
         _ => "step",
     }
 }
@@ -387,6 +400,44 @@ pub(super) fn dispatch_drive_script_step(
                 stop_script,
                 failure_reason,
             );
+            debug_assert!(handled);
+        }
+        step @ UiActionStepV2::InspectHelpLockBestMatchAndCopySelector { .. } => {
+            let handled =
+                script_steps_inspect::handle_inspect_help_lock_best_match_and_copy_selector_step(
+                    service,
+                    app,
+                    window,
+                    anchor_window,
+                    step_index,
+                    step,
+                    semantics_snapshot,
+                    active,
+                    output,
+                    force_dump_label,
+                    handoff_to,
+                    stop_script,
+                    failure_reason,
+                );
+            debug_assert!(handled);
+        }
+        step @ UiActionStepV2::InspectHelpTreeLockBestMatchAndCopySelector { .. } => {
+            let handled =
+                script_steps_inspect::handle_inspect_help_tree_lock_best_match_and_copy_selector_step(
+                    service,
+                    app,
+                    window,
+                    anchor_window,
+                    step_index,
+                    step,
+                    semantics_snapshot,
+                    active,
+                    output,
+                    force_dump_label,
+                    handoff_to,
+                    stop_script,
+                    failure_reason,
+                );
             debug_assert!(handled);
         }
         step
@@ -900,6 +951,25 @@ pub(super) fn dispatch_drive_script_step(
         }
         step @ UiActionStepV2::TypeTextInto { .. } => {
             let handled = script_steps_input::handle_type_text_into_step(
+                service,
+                app,
+                window,
+                window_bounds,
+                step_index,
+                step,
+                element_runtime,
+                semantics_snapshot,
+                ui.as_deref_mut(),
+                active,
+                output,
+                force_dump_label,
+                stop_script,
+                failure_reason,
+            );
+            debug_assert!(handled);
+        }
+        step @ UiActionStepV2::PasteTextInto { .. } => {
+            let handled = script_steps_input::handle_paste_text_into_step(
                 service,
                 app,
                 window,

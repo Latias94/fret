@@ -15,9 +15,9 @@ use fret_diag_protocol::{
     UiCommandDispatchTraceEntryV1 as UiScriptCommandDispatchTraceEntryV1,
     UiCommandDispatchTraceQueryV1 as UiScriptCommandDispatchTraceQueryV1, UiEdgesV1,
     UiFocusTraceEntryV1, UiHitTestScopeRootEvidenceV1, UiHitTestTraceEntryV1,
-    UiImeEventTraceEntryV1, UiImeEventV1, UiIncomingOpenInjectItemV1, UiInspectConfigV1,
-    UiKeyModifiersV1, UiLayoutDirectionV1, UiMouseButtonV1, UiOptionalRootStateV1,
-    UiOverlayAlignV1, UiOverlayArrowLayoutV1, UiOverlayOffsetV1, UiOverlayPlacementTraceEntryV1,
+    UiImeEventTraceEntryV1, UiImeEventV1, UiIncomingOpenInjectItemV1, UiKeyModifiersV1,
+    UiLayoutDirectionV1, UiMouseButtonV1, UiOptionalRootStateV1, UiOverlayAlignV1,
+    UiOverlayArrowLayoutV1, UiOverlayOffsetV1, UiOverlayPlacementTraceEntryV1,
     UiOverlayPlacementTraceKindV1, UiOverlayPlacementTraceQueryV1, UiOverlayShiftV1,
     UiOverlaySideV1, UiOverlayStickyModeV1, UiPaddingInsetsV1, UiPointV1, UiPointerKindV1,
     UiPredicateV1, UiRectV1, UiRoleAndNameV1, UiScriptEventLogEntryV1, UiScriptEvidenceV1,
@@ -58,12 +58,21 @@ mod bundle_dump_policy;
 mod bundle_sidecars;
 mod fs_triggers;
 mod inspect;
+mod inspect_controller;
+#[cfg(feature = "diagnostics")]
+mod inspect_explain;
+#[cfg(feature = "diagnostics")]
+mod inspect_neighborhood;
+#[cfg(feature = "diagnostics")]
+mod inspect_overlay;
+mod inspect_state;
+#[cfg(feature = "diagnostics")]
+mod inspect_tree;
 mod pick;
 mod pick_flow;
 mod snapshot_recording;
 mod snapshot_types;
 mod test_id_bloom;
-pub(crate) use pick::pick_semantics_node_by_bounds;
 use pick::{pick_best_match, pick_semantics_node_at};
 mod script_engine;
 use script_engine::{
@@ -82,6 +91,7 @@ mod script_steps_assert;
 mod script_steps_clipboard;
 mod script_steps_drag;
 mod script_steps_input;
+mod script_steps_inspect;
 mod script_steps_menu;
 mod script_steps_pointer;
 mod script_steps_pointer_session;
@@ -97,12 +107,10 @@ mod selector;
 use selector::SemanticsIndex;
 pub(crate) use selector::semantics_role_label;
 use selector::{
-    best_selector_for_node, format_inspect_path, parent_node_id, parse_semantics_role,
+    best_selector_for_node, best_selector_for_node_validated, format_inspect_path,
+    inspect_selector_candidates_report, parent_node_id, parse_semantics_role,
     select_semantics_node_scoped, suggest_selectors, truncate_debug_value,
 };
-
-#[cfg(test)]
-use selector::select_semantics_node;
 
 mod trace_helpers;
 use trace_helpers::{
@@ -118,6 +126,9 @@ mod ui_diagnostics_devtools_ws;
 
 use snapshot_types::WindowRing;
 pub use snapshot_types::*;
+
+#[cfg(feature = "diagnostics")]
+pub(crate) use inspect_overlay::render_diag_inspect_overlay;
 
 mod config;
 pub use config::UiDiagnosticsConfig;
@@ -147,6 +158,7 @@ pub fn maybe_consume_event(app: &mut App, window: AppWindowId, event: &Event) ->
             if !svc.is_enabled() {
                 return false;
             }
+            svc.poll_inspector_controls();
             if svc.maybe_intercept_event_for_picking(app, window, event) {
                 return true;
             }
@@ -159,13 +171,6 @@ pub fn maybe_consume_event(app: &mut App, window: AppWindowId, event: &Event) ->
         let _ = (app, window, event);
         false
     }
-}
-
-#[derive(Debug, Clone)]
-struct PendingPick {
-    run_id: u64,
-    window: AppWindowId,
-    position: Point,
 }
 
 // Bundle serialization types live in `ui_diagnostics/bundle.rs`.
@@ -1062,7 +1067,7 @@ mod tests {
             render_text,
             render_text_font_trace,
             known_windows,
-            known_windows.len() as u32,
+            known_windows.len().min(u32::MAX as usize) as u32,
             None,
             docking,
             None,
@@ -1139,6 +1144,52 @@ mod tests {
 
     fn window_id(id: u64) -> AppWindowId {
         AppWindowId::from(KeyData::from_ffi(id))
+    }
+
+    #[test]
+    fn inspect_controller_pick_run_id_is_strictly_monotonic() {
+        let mut c = inspect_controller::InspectController::default();
+        let first = c.next_pick_run_id();
+        let second = c.next_pick_run_id();
+        assert!(second > first);
+
+        let mut last = second;
+        for _ in 0..128 {
+            let next = c.next_pick_run_id();
+            assert!(next > last);
+            last = next;
+        }
+    }
+
+    #[test]
+    fn inspect_controller_pointer_down_picking_consumes_when_armed() {
+        let mut c = inspect_controller::InspectController::default();
+        c.arm_pick(123);
+        let decision = c.on_pointer_down_for_picking(window_id(1), Point::new(Px(10.0), Px(20.0)));
+        assert!(decision.intercepted);
+        assert!(decision.consumed);
+        assert!(decision.request_redraw);
+
+        let pending = c.pending_pick.as_ref().unwrap();
+        assert_eq!(pending.run_id, 123);
+        assert_eq!(pending.window, window_id(1));
+        assert_eq!(pending.position, Point::new(Px(10.0), Px(20.0)));
+    }
+
+    #[test]
+    fn inspect_controller_pointer_down_picking_starts_pending_when_enabled() {
+        let mut c = inspect_controller::InspectController::default();
+        c.set_enabled(true, false);
+
+        let decision = c.on_pointer_down_for_picking(window_id(1), Point::new(Px(10.0), Px(20.0)));
+        assert!(decision.intercepted);
+        assert!(!decision.consumed);
+        assert!(decision.request_redraw);
+
+        let pending = c.pending_pick.as_ref().unwrap();
+        assert_eq!(pending.window, window_id(1));
+        assert_eq!(pending.position, Point::new(Px(10.0), Px(20.0)));
+        assert_eq!(pending.run_id, c.last_pick_run_id);
     }
 
     fn dock_node_id(id: u64) -> fret_core::DockNodeId {
@@ -1258,13 +1309,27 @@ mod tests {
         n
     }
 
+    fn semantics_node_with_test_id_and_value(
+        id: u64,
+        parent: Option<u64>,
+        role: SemanticsRole,
+        bounds: Rect,
+        label: &str,
+        test_id: &str,
+        value: &str,
+    ) -> SemanticsNode {
+        let mut n = semantics_node_with_test_id(id, parent, role, bounds, label, test_id);
+        n.value = Some(value.to_string());
+        n
+    }
+
     #[test]
     fn scripts_do_not_force_inspection_active() {
         let mut svc = UiDiagnosticsService::default();
         svc.cfg.enabled = true;
-        svc.inspect_enabled = false;
-        svc.pick_armed_run_id = None;
-        svc.pending_pick = None;
+        svc.inspector.enabled = false;
+        svc.inspector.pick_armed_run_id = None;
+        svc.inspector.pending_pick = None;
         let unique = fret_core::time::SystemTime::now()
             .duration_since(fret_core::time::UNIX_EPOCH)
             .expect("system clock should be >= UNIX_EPOCH")
@@ -1332,7 +1397,7 @@ mod tests {
     fn pick_trigger_is_baselined_on_first_poll() {
         let mut svc = UiDiagnosticsService::default();
         svc.cfg.enabled = true;
-        svc.pick_armed_run_id = None;
+        svc.inspector.pick_armed_run_id = None;
 
         let unique = fret_core::time::SystemTime::now()
             .duration_since(fret_core::time::UNIX_EPOCH)
@@ -1347,7 +1412,7 @@ mod tests {
         svc.poll_pick_trigger();
 
         assert!(
-            svc.pick_armed_run_id.is_none(),
+            svc.inspector.pick_armed_run_id.is_none(),
             "the first observed pick.touch mtime should be baselined, not treated as a pick trigger"
         );
         assert!(svc.last_pick_trigger_mtime.is_some());
@@ -1357,7 +1422,7 @@ mod tests {
     fn inspect_trigger_is_baselined_on_first_poll() {
         let mut svc = UiDiagnosticsService::default();
         svc.cfg.enabled = true;
-        svc.inspect_enabled = false;
+        svc.inspector.enabled = false;
 
         let unique = fret_core::time::SystemTime::now()
             .duration_since(fret_core::time::UNIX_EPOCH)
@@ -1373,7 +1438,7 @@ mod tests {
         svc.poll_inspect_trigger();
 
         assert!(
-            !svc.inspect_enabled,
+            !svc.inspector.enabled,
             "the first observed inspect.touch mtime should be baselined, not treated as an inspect trigger"
         );
         assert!(svc.last_inspect_trigger_mtime.is_some());
@@ -1435,7 +1500,7 @@ mod tests {
             ],
         };
 
-        let picked = pick_semantics_node_by_bounds(&snapshot, Point::new(Px(10.0), Px(10.0)))
+        let picked = pick::pick_semantics_node_by_bounds(&snapshot, Point::new(Px(10.0), Px(10.0)))
             .expect("expected a pick");
         assert_eq!(picked.id, node_id(4));
     }
@@ -1500,8 +1565,9 @@ mod tests {
 
         let selector = UiSelectorV1::TestId {
             id: "open".to_string(),
+            root_z_index: None,
         };
-        let picked = select_semantics_node(&snapshot, window_id(1), None, &selector)
+        let picked = select_semantics_node_scoped(&snapshot, window_id(1), None, &selector, None)
             .expect("expected a pick");
         assert_eq!(picked.id, node_id(4));
 
@@ -1509,7 +1575,7 @@ mod tests {
         let best = best_selector_for_node(&snapshot, &snapshot.nodes[1], None, &cfg)
             .expect("expected a selector");
         match best {
-            UiSelectorV1::TestId { id } => assert_eq!(id, "open"),
+            UiSelectorV1::TestId { id, .. } => assert_eq!(id, "open"),
             other => panic!("expected TestId selector, got: {other:?}"),
         }
     }
@@ -1552,6 +1618,7 @@ mod tests {
         let pred = UiPredicateV1::BoundsWithinWindow {
             target: UiSelectorV1::TestId {
                 id: "content".to_string(),
+                root_z_index: None,
             },
             padding_px: 0.0,
             padding_insets_px: None,
@@ -1576,6 +1643,7 @@ mod tests {
         let pred = UiPredicateV1::BoundsWithinWindow {
             target: UiSelectorV1::TestId {
                 id: "content".to_string(),
+                root_z_index: None,
             },
             padding_px: 12.0,
             padding_insets_px: None,
@@ -1598,6 +1666,277 @@ mod tests {
                 &pred
             ),
             "expected padding to shrink the allowed window rect"
+        );
+    }
+
+    #[test]
+    fn predicates_support_exists_under_and_value_equals() {
+        let window_bounds = rect(0.0, 0.0, 500.0, 500.0);
+        let snapshot = SemanticsSnapshot {
+            window: window_id(1),
+            roots: vec![SemanticsRoot {
+                root: node_id(1),
+                visible: true,
+                blocks_underlay_input: false,
+                hit_testable: true,
+                z_index: 0,
+            }],
+            barrier_root: None,
+            focus_barrier_root: None,
+            focus: None,
+            captured: None,
+            nodes: vec![
+                semantics_node(
+                    1,
+                    None,
+                    SemanticsRole::Panel,
+                    rect(0.0, 0.0, 500.0, 500.0),
+                    "r",
+                ),
+                semantics_node_with_test_id(
+                    2,
+                    Some(1),
+                    SemanticsRole::Panel,
+                    rect(0.0, 0.0, 200.0, 200.0),
+                    "container",
+                    "container",
+                ),
+                semantics_node_with_test_id_and_value(
+                    3,
+                    Some(2),
+                    SemanticsRole::TextField,
+                    rect(0.0, 0.0, 100.0, 20.0),
+                    "name",
+                    "name",
+                    "Alice",
+                ),
+                semantics_node_with_test_id_and_value(
+                    4,
+                    Some(1),
+                    SemanticsRole::TextField,
+                    rect(0.0, 0.0, 100.0, 20.0),
+                    "name-outside",
+                    "name",
+                    "Bob",
+                ),
+            ],
+        };
+
+        let pred = UiPredicateV1::ExistsUnder {
+            scope: UiSelectorV1::TestId {
+                id: "container".to_string(),
+                root_z_index: None,
+            },
+            target: UiSelectorV1::TestId {
+                id: "name".to_string(),
+                root_z_index: None,
+            },
+        };
+        assert!(
+            eval_predicate(
+                &snapshot,
+                window_bounds,
+                window_id(1),
+                None,
+                None,
+                None,
+                None,
+                &[],
+                None,
+                0,
+                false,
+                true,
+                &pred
+            ),
+            "expected to find `name` under `container`"
+        );
+
+        let pred = UiPredicateV1::NotExistsUnder {
+            scope: UiSelectorV1::TestId {
+                id: "container".to_string(),
+                root_z_index: None,
+            },
+            target: UiSelectorV1::TestId {
+                id: "does_not_exist".to_string(),
+                root_z_index: None,
+            },
+        };
+        assert!(
+            eval_predicate(
+                &snapshot,
+                window_bounds,
+                window_id(1),
+                None,
+                None,
+                None,
+                None,
+                &[],
+                None,
+                0,
+                false,
+                true,
+                &pred
+            ),
+            "expected `does_not_exist` to be absent under `container`"
+        );
+
+        let pred = UiPredicateV1::ValueEquals {
+            target: UiSelectorV1::NodeId {
+                node: node_id(3).data().as_ffi(),
+                root_z_index: None,
+            },
+            text: "Alice".to_string(),
+        };
+        assert!(
+            eval_predicate(
+                &snapshot,
+                window_bounds,
+                window_id(1),
+                None,
+                None,
+                None,
+                None,
+                &[],
+                None,
+                0,
+                false,
+                true,
+                &pred
+            ),
+            "expected `ValueEquals` to match the in-scope node value"
+        );
+
+        let pred = UiPredicateV1::ValueEquals {
+            target: UiSelectorV1::NodeId {
+                node: node_id(3).data().as_ffi(),
+                root_z_index: None,
+            },
+            text: "Bob".to_string(),
+        };
+        assert!(
+            !eval_predicate(
+                &snapshot,
+                window_bounds,
+                window_id(1),
+                None,
+                None,
+                None,
+                None,
+                &[],
+                None,
+                0,
+                false,
+                true,
+                &pred
+            ),
+            "expected `ValueEquals` to be strict"
+        );
+    }
+
+    #[test]
+    fn predicate_focused_descendant_is_matches_focus_within_scope() {
+        let window_bounds = rect(0.0, 0.0, 500.0, 500.0);
+        let snapshot = SemanticsSnapshot {
+            window: window_id(1),
+            roots: vec![SemanticsRoot {
+                root: node_id(1),
+                visible: true,
+                blocks_underlay_input: false,
+                hit_testable: true,
+                z_index: 0,
+            }],
+            barrier_root: None,
+            focus_barrier_root: None,
+            focus: Some(node_id(3)),
+            captured: None,
+            nodes: vec![
+                semantics_node(
+                    1,
+                    None,
+                    SemanticsRole::Panel,
+                    rect(0.0, 0.0, 500.0, 500.0),
+                    "r",
+                ),
+                semantics_node_with_test_id(
+                    2,
+                    Some(1),
+                    SemanticsRole::Dialog,
+                    rect(0.0, 0.0, 200.0, 200.0),
+                    "dialog",
+                    "dialog",
+                ),
+                semantics_node_with_test_id(
+                    3,
+                    Some(2),
+                    SemanticsRole::Button,
+                    rect(0.0, 0.0, 20.0, 20.0),
+                    "close",
+                    "close",
+                ),
+                semantics_node_with_test_id(
+                    4,
+                    Some(1),
+                    SemanticsRole::Button,
+                    rect(0.0, 0.0, 20.0, 20.0),
+                    "close-outside",
+                    "close_outside",
+                ),
+            ],
+        };
+
+        let pred = UiPredicateV1::FocusedDescendantIs {
+            scope: UiSelectorV1::TestId {
+                id: "dialog".to_string(),
+                root_z_index: None,
+            },
+            target: UiSelectorV1::TestId {
+                id: "close".to_string(),
+                root_z_index: None,
+            },
+        };
+        assert!(eval_predicate(
+            &snapshot,
+            window_bounds,
+            window_id(1),
+            None,
+            None,
+            None,
+            None,
+            &[],
+            None,
+            0,
+            false,
+            true,
+            &pred
+        ));
+
+        let pred = UiPredicateV1::FocusedDescendantIs {
+            scope: UiSelectorV1::TestId {
+                id: "dialog".to_string(),
+                root_z_index: None,
+            },
+            target: UiSelectorV1::TestId {
+                id: "close_outside".to_string(),
+                root_z_index: None,
+            },
+        };
+        assert!(
+            !eval_predicate(
+                &snapshot,
+                window_bounds,
+                window_id(1),
+                None,
+                None,
+                None,
+                None,
+                &[],
+                None,
+                0,
+                false,
+                true,
+                &pred
+            ),
+            "expected focused descendant predicate to be strict on focus target"
         );
     }
 
@@ -1630,6 +1969,7 @@ mod tests {
         let pred = UiPredicateV1::BoundsMinSize {
             target: UiSelectorV1::TestId {
                 id: "ui-gallery-resizable-panels".to_string(),
+                root_z_index: None,
             },
             min_w_px: 200.0,
             min_h_px: 200.0,
@@ -1667,7 +2007,7 @@ mod tests {
             "listbox",
             "listbox",
         );
-        let mut item_a = semantics_node_with_test_id(
+        let item_a = semantics_node_with_test_id(
             2,
             Some(1),
             SemanticsRole::ListBoxOption,
@@ -1704,9 +2044,11 @@ mod tests {
         let pred = UiPredicateV1::ActiveItemIs {
             container: UiSelectorV1::TestId {
                 id: "listbox".to_string(),
+                root_z_index: None,
             },
             item: UiSelectorV1::TestId {
                 id: "a".to_string(),
+                root_z_index: None,
             },
         };
         assert!(
@@ -1749,9 +2091,11 @@ mod tests {
         let pred = UiPredicateV1::ActiveItemIs {
             container: UiSelectorV1::TestId {
                 id: "listbox".to_string(),
+                root_z_index: None,
             },
             item: UiSelectorV1::TestId {
                 id: "b".to_string(),
+                root_z_index: None,
             },
         };
         assert!(
@@ -1813,6 +2157,7 @@ mod tests {
         let pred = UiPredicateV1::ActiveItemIsNone {
             container: UiSelectorV1::TestId {
                 id: "listbox".to_string(),
+                root_z_index: None,
             },
         };
         assert!(eval_predicate(
@@ -2277,6 +2622,7 @@ mod tests {
         let pred = UiPredicateV1::BoundsMinSize {
             target: UiSelectorV1::TestId {
                 id: "ui-gallery-resizable-panels".to_string(),
+                root_z_index: None,
             },
             min_w_px: 200.0,
             min_h_px: 200.0,
@@ -2349,9 +2695,11 @@ mod tests {
         let pred = UiPredicateV1::BoundsNonOverlapping {
             a: UiSelectorV1::TestId {
                 id: "a".to_string(),
+                root_z_index: None,
             },
             b: UiSelectorV1::TestId {
                 id: "b".to_string(),
+                root_z_index: None,
             },
             eps_px: 0.0,
         };
@@ -2377,9 +2725,11 @@ mod tests {
         let pred = UiPredicateV1::BoundsNonOverlapping {
             a: UiSelectorV1::TestId {
                 id: "a".to_string(),
+                root_z_index: None,
             },
             b: UiSelectorV1::TestId {
                 id: "b".to_string(),
+                root_z_index: None,
             },
             eps_px: 16.0,
         };
@@ -2431,6 +2781,7 @@ mod tests {
         let pred = UiPredicateV1::NotExists {
             target: UiSelectorV1::TestId {
                 id: "missing".to_string(),
+                root_z_index: None,
             },
         };
         assert!(
@@ -2499,9 +2850,11 @@ mod tests {
         let pred = UiPredicateV1::BoundsOverlapping {
             a: UiSelectorV1::TestId {
                 id: "a".to_string(),
+                root_z_index: None,
             },
             b: UiSelectorV1::TestId {
                 id: "b".to_string(),
+                root_z_index: None,
             },
             eps_px: 0.0,
         };
@@ -2527,9 +2880,11 @@ mod tests {
         let pred = UiPredicateV1::BoundsOverlapping {
             a: UiSelectorV1::TestId {
                 id: "a".to_string(),
+                root_z_index: None,
             },
             b: UiSelectorV1::TestId {
                 id: "b".to_string(),
+                root_z_index: None,
             },
             eps_px: 16.0,
         };
@@ -2599,9 +2954,11 @@ mod tests {
         let pred = UiPredicateV1::BoundsOverlappingX {
             a: UiSelectorV1::TestId {
                 id: "a".to_string(),
+                root_z_index: None,
             },
             b: UiSelectorV1::TestId {
                 id: "b".to_string(),
+                root_z_index: None,
             },
             eps_px: 0.0,
         };
@@ -2627,9 +2984,11 @@ mod tests {
         let pred = UiPredicateV1::BoundsOverlappingX {
             a: UiSelectorV1::TestId {
                 id: "a".to_string(),
+                root_z_index: None,
             },
             b: UiSelectorV1::TestId {
                 id: "b".to_string(),
+                root_z_index: None,
             },
             eps_px: 8.0,
         };
@@ -2699,9 +3058,11 @@ mod tests {
         let pred = UiPredicateV1::BoundsOverlappingY {
             a: UiSelectorV1::TestId {
                 id: "a".to_string(),
+                root_z_index: None,
             },
             b: UiSelectorV1::TestId {
                 id: "b".to_string(),
+                root_z_index: None,
             },
             eps_px: 0.0,
         };
@@ -2727,9 +3088,11 @@ mod tests {
         let pred = UiPredicateV1::BoundsOverlappingY {
             a: UiSelectorV1::TestId {
                 id: "a".to_string(),
+                root_z_index: None,
             },
             b: UiSelectorV1::TestId {
                 id: "b".to_string(),
+                root_z_index: None,
             },
             eps_px: 8.0,
         };
@@ -2790,19 +3153,121 @@ mod tests {
         let window = window_id(1);
         let mut svc = UiDiagnosticsService::default();
         svc.cfg.enabled = true;
-        svc.inspect_enabled = true;
+        svc.inspector.enabled = true;
 
-        svc.inspect_pending_nav
+        svc.inspector
+            .state
+            .pending_nav
             .insert(window, inspect::InspectNavCommand::Focus);
         svc.apply_inspect_navigation(window, Some(&snapshot), None);
 
-        assert!(svc.inspect_is_locked(window));
+        let model = svc.inspect_overlay_model(window);
+        assert!(model.locked);
         let focus_id = snapshot.focus.expect("focus").data().as_ffi();
-        assert_eq!(svc.inspect_focus_node_id(window), Some(focus_id));
+        assert_eq!(model.focus_node_id, Some(focus_id));
         assert!(
-            svc.inspect_best_selector_json(window)
+            model
+                .best_selector_json
                 .is_some_and(|s| s.contains("test_id"))
         );
+    }
+
+    #[test]
+    fn inspect_help_search_typeahead_updates_query() {
+        let window = window_id(1);
+
+        let mut svc = UiDiagnosticsService::default();
+        svc.cfg.enabled = true;
+        svc.inspector.enabled = true;
+        svc.inspector.state.help_open_windows.insert(window);
+
+        let mut app = App::new();
+
+        let event = Event::KeyDown {
+            key: KeyCode::KeyA,
+            modifiers: Modifiers::default(),
+            repeat: false,
+        };
+        assert!(
+            svc.maybe_intercept_event_for_inspect_shortcuts(&mut app, window, &event),
+            "expected inspect help to consume typed keys"
+        );
+        let model = svc.inspect_overlay_model(window);
+        assert_eq!(model.help_search_query.as_deref(), Some("a"));
+
+        let event = Event::KeyDown {
+            key: KeyCode::Backspace,
+            modifiers: Modifiers::default(),
+            repeat: false,
+        };
+        assert!(
+            svc.maybe_intercept_event_for_inspect_shortcuts(&mut app, window, &event),
+            "expected backspace to be consumed by inspect help search"
+        );
+        let model = svc.inspect_overlay_model(window);
+        assert!(
+            model.help_search_query.is_none(),
+            "expected backspace to clear the query"
+        );
+    }
+
+    #[test]
+    fn inspect_help_scroll_shortcuts_update_scroll_offset() {
+        let window = window_id(1);
+
+        let mut svc = UiDiagnosticsService::default();
+        svc.cfg.enabled = true;
+        svc.inspector.enabled = true;
+        svc.inspector.state.help_open_windows.insert(window);
+
+        let mut app = App::new();
+
+        let event = Event::KeyDown {
+            key: KeyCode::PageDown,
+            modifiers: Modifiers::default(),
+            repeat: false,
+        };
+        assert!(
+            svc.maybe_intercept_event_for_inspect_shortcuts(&mut app, window, &event),
+            "expected PageDown to be consumed by inspect help"
+        );
+        assert_eq!(svc.inspect_overlay_model(window).help_scroll_offset, 20);
+
+        let event = Event::KeyDown {
+            key: KeyCode::PageUp,
+            modifiers: Modifiers::default(),
+            repeat: false,
+        };
+        assert!(
+            svc.maybe_intercept_event_for_inspect_shortcuts(&mut app, window, &event),
+            "expected PageUp to be consumed by inspect help"
+        );
+        assert_eq!(svc.inspect_overlay_model(window).help_scroll_offset, 0);
+
+        let event = Event::KeyDown {
+            key: KeyCode::End,
+            modifiers: Modifiers::default(),
+            repeat: false,
+        };
+        assert!(
+            svc.maybe_intercept_event_for_inspect_shortcuts(&mut app, window, &event),
+            "expected End to be consumed by inspect help"
+        );
+        assert_eq!(
+            svc.inspect_overlay_model(window).help_scroll_offset,
+            usize::MAX / 4
+        );
+
+        let event = Event::KeyDown {
+            key: KeyCode::Home,
+            modifiers: Modifiers::default(),
+            repeat: false,
+        };
+        assert!(
+            svc.maybe_intercept_event_for_inspect_shortcuts(&mut app, window, &event),
+            "expected Home to be consumed by inspect help"
+        );
+        assert_eq!(svc.inspect_overlay_model(window).help_scroll_offset, 0);
     }
 
     #[test]
@@ -2861,7 +3326,7 @@ mod tests {
             ],
         };
 
-        let picked = pick_semantics_node_by_bounds(&snapshot, Point::new(Px(10.0), Px(10.0)))
+        let picked = pick::pick_semantics_node_by_bounds(&snapshot, Point::new(Px(10.0), Px(10.0)))
             .expect("expected a pick");
         assert_eq!(picked.id, node_id(4));
     }
