@@ -25,7 +25,8 @@ Status: Draft
 - [ ] Decide coalescing layer:
   - [ ] runner/platform (preferred),
   - [ ] UI core (fallback).
-- [ ] Implement behind a runtime knob (opt-in) with a clear default.
+- [x] Implement behind a runtime knob (opt-in) with a clear default.
+  - [x] Native (winit): `FRET_WINIT_COALESCE_WHEEL=1` (coalesce consecutive wheel events).
 - [ ] Add diag evidence:
   - [ ] stress wheel in a scroll area,
   - [ ] stress wheel in a virtual list,
@@ -33,8 +34,9 @@ Status: Draft
 
 ## Scrollbar drag stability
 
-- [ ] Add “drag baseline” to `ScrollbarState` (mechanism-only).
+- [x] Add “drag baseline” to `ScrollbarState` (mechanism-only).
 - [ ] Update thumb math while dragging to use baseline.
+- [x] Update thumb math while dragging to use baseline.
 - [ ] Add diag script + pixel or semantics assertions.
 
 ## Extents probing / observation

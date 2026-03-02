@@ -71,6 +71,8 @@ Unit / integration tests (non-exhaustive):
   - `crates/fret-ui/src/tree/tests/scroll_into_view.rs`
 - Occlusion vs scroll forwarding:
   - `crates/fret-ui/src/tree/tests/pointer_occlusion.rs`
+- Scrollbar thumb drag baseline stability (content growth mid-drag):
+  - `crates/fret-ui/src/declarative/tests/layout/scroll.rs`
 
 ## Known risks / pain points
 
@@ -123,6 +125,11 @@ Options:
 2. UI-layer coalescing:
    - Maintain a per-window accumulator applied during `layout` or `prepaint`.
 
+Current implementation (native, opt-in):
+
+- Winit runner coalesces consecutive wheel events when `FRET_WINIT_COALESCE_WHEEL=1`:
+  - `crates/fret-runner-winit/src/state/input/mod.rs`
+
 Evidence gate:
 
 - Add a perf-oriented diag script that wheels repeatedly and asserts:
@@ -141,6 +148,13 @@ Mechanism idea:
 - Use the baseline for:
   - mapping pointer movement -> offset,
   - computing thumb rect while dragging.
+
+Current implementation (mechanism-only):
+
+- `ScrollbarState` stores baseline viewport/content while dragging, so thumb math does not drift if
+  content extents change mid-drag:
+  - `crates/fret-ui/src/element.rs`
+  - `crates/fret-ui/src/declarative/host_widget/event/scrollbar.rs`
 
 Evidence gate:
 
