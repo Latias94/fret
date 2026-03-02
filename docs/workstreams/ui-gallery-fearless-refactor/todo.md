@@ -158,6 +158,6 @@ drift-free (preview ≡ copyable code).
 | data-table | `apps/fret-ui-gallery/src/ui/pages/data_table.rs` | Yes | Done | Snippet-backed previews + region-sliced code tabs (preview ≡ code). Keep `ui-gallery-data-table-*` `test_id`s stable for diag scripts. |
 | date-picker | `apps/fret-ui-gallery/src/ui/pages/date_picker.rs` | Yes | Done | Snippet-backed previews + region-sliced code tabs (preview ≡ code). |
 | navigation-menu | `apps/fret-ui-gallery/src/ui/pages/navigation_menu.rs` | Yes | Done | Snippet-backed previews + region-sliced code tabs (preview ≡ code). Keep `ui-gallery-navigation-menu-*` `test_id`s stable for diag scripts. |
-| form | `apps/fret-ui-gallery/src/ui/pages/form.rs` | No | Not started | Composite page; migrate last. |
+| form | `apps/fret-ui-gallery/src/ui/pages/form.rs` | Yes | Done | Snippet-backed previews + region-sliced code tabs (preview ≡ code). |
 | shadcn-extras | `apps/fret-ui-gallery/src/ui/pages/shadcn_extras.rs` | Yes | Done | Snippet-backed previews + region-sliced code tabs (preview ≡ code). |
 | combobox | `apps/fret-ui-gallery/src/ui/pages/combobox.rs` | Yes | Done | Snippet-backed previews + region-sliced code tabs (preview ≡ code). Gates: `tools/diag-scripts/ui-gallery/combobox/ui-gallery-combobox-*.json`. |

@@ -29,6 +29,7 @@ pub mod drawer;
 pub mod dropdown_menu;
 pub mod empty;
 pub mod field;
+pub mod form;
 pub mod hover_card;
 pub mod icons;
 pub mod image_object_fit;
