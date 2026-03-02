@@ -511,6 +511,8 @@ fn custom_effect_lens(
             [1.0, 1.0, 1.0, 0.08],
         ],
     };
+    let max_sample_offset_px =
+        crate::effect_authoring::custom_effect_v3_lens_max_sample_offset_px(34.0, 0.55);
 
     let chain = EffectChain::from_steps(&[
         EffectStep::GaussianBlur {
@@ -520,8 +522,7 @@ fn custom_effect_lens(
         EffectStep::CustomV3 {
             id: effect,
             params,
-            // Refraction + dispersion can reach beyond 40px at the rim; keep the bound generous.
-            max_sample_offset_px: Px(96.0),
+            max_sample_offset_px,
             user0: None,
             user1: None,
             sources: CustomEffectSourcesV3 {

@@ -809,9 +809,11 @@ fn view(
                         ],
                     ],
                 },
-                max_sample_offset_px: Px(warp_base.strength_px.0
-                    + warp_base.chromatic_aberration_px.0
-                    + 8.0),
+                max_sample_offset_px:
+                    crate::effect_authoring::custom_effect_warp_max_sample_offset_px(
+                        warp_base.strength_px.0,
+                        warp_base.chromatic_aberration_px.0,
+                    ),
                 input_image: Some(CustomEffectImageInputV1 {
                     image,
                     uv: UvRect::FULL,
@@ -850,9 +852,11 @@ fn view(
                         ],
                     ],
                 },
-                max_sample_offset_px: Px(warp_base.strength_px.0
-                    + warp_base.chromatic_aberration_px.0
-                    + 8.0),
+                max_sample_offset_px:
+                    crate::effect_authoring::custom_effect_warp_max_sample_offset_px(
+                        warp_base.strength_px.0,
+                        warp_base.chromatic_aberration_px.0,
+                    ),
                 input_image: None,
             }),
             _ => None,
@@ -875,7 +879,13 @@ fn view(
         let refraction_height_px = custom_edge_falloff_px.clamp(0.0, 64.0);
         // Map the demo's warp strength to a more noticeable refraction amount.
         let refraction_amount_px = (warp_strength_px * 3.2 + 8.0).clamp(0.0, 96.0);
+        let dispersion = 0.55;
         let noise_alpha = (custom_grain_strength * 0.2).clamp(0.0, 0.1);
+        let max_sample_offset_px =
+            crate::effect_authoring::custom_effect_v3_lens_max_sample_offset_px(
+                refraction_amount_px,
+                dispersion,
+            );
 
         let mut steps: Vec<EffectStep> = Vec::new();
         if blur_radius_px > 0.0 && steps.len() < EffectChain::MAX_STEPS {
@@ -897,7 +907,7 @@ fn view(
                             0.75,
                         ],
                         // (corner_radius_px, depth_effect, dispersion, dispersion_quality)
-                        [lens_radius_px * sf, 0.18, 0.55, 1.0],
+                        [lens_radius_px * sf, 0.18, dispersion, 1.0],
                         // (noise_alpha, bevel_strength, bevel_light_angle_deg, bevel_secondary_strength)
                         [
                             noise_alpha,
@@ -909,7 +919,7 @@ fn view(
                         [1.0, 1.0, 1.0, 0.08],
                     ],
                 },
-                max_sample_offset_px: Px(96.0),
+                max_sample_offset_px,
                 user0: None,
                 user1: None,
                 sources: CustomEffectSourcesV3 {

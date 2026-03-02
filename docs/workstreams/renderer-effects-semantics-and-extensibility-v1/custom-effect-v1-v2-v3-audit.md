@@ -578,21 +578,27 @@ Rollback:
 
 Status:
 
-- Planned.
+- Landed.
 
 Goal:
 
 - Reduce “padding bugs” in demos and future recipes by standardizing how `max_sample_offset_px` is derived.
 
-Changes (proposed):
+Changes (landed):
 
-- Add a tiny authoring helper in `ecosystem/fret-ui-kit` (or `apps/fret-examples` if we want to keep it demo-local)
-  that computes a conservative `max_sample_offset_px` from known shader parameters.
-- Update liquid glass demo + custom v3 demos to use the helper (keep perf-script defaults stable).
+- Add a tiny authoring helper in `apps/fret-examples` that computes conservative `max_sample_offset_px` bounds from known shader parameters.
+- Update liquid glass demo + CustomV3 lens demos to use the helper.
+
+Anchors:
+
+- `apps/fret-examples/src/effect_authoring.rs` (authoring helpers)
+- `apps/fret-examples/src/liquid_glass_demo.rs` (CustomV2 + CustomV3 chains)
+- `apps/fret-examples/src/custom_effect_v3_demo.rs` (native lens demo)
+- `apps/fret-examples/src/custom_effect_v3_web_demo.rs` (web lens demo)
 
 Gates:
 
-- `cargo check -p fret-ui-kit -p fret-examples`
+- `cargo check -p fret-examples`
 - Run `tools/diag-scripts/suites/perf-liquid-glass-custom-v3-steady/` (manual + scripted)
 
 Rollback:
