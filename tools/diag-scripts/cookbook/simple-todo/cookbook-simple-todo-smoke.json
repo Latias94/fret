@@ -1,0 +1,62 @@
+{
+  "schema_version": 2,
+  "meta": {
+    "name": "cookbook-simple-todo-smoke",
+    "required_capabilities": ["diag.script_v2", "diag.screenshot_png"],
+    "tags": ["cookbook", "simple_todo", "mvu", "smoke"]
+  },
+  "steps": [
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "cookbook.simple_todo.root" }
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "semantics_numeric_approx_eq",
+        "target": { "kind": "test_id", "id": "cookbook.simple_todo.progress" },
+        "field": "value",
+        "value": 1.0,
+        "eps": 0.01
+      },
+      "timeout_frames": 240
+    },
+    { "type": "click", "target": { "kind": "test_id", "id": "cookbook.simple_todo.draft" } },
+    {
+      "type": "type_text_into",
+      "target": { "kind": "test_id", "id": "cookbook.simple_todo.draft" },
+      "text": "New task"
+    },
+    { "type": "click", "target": { "kind": "test_id", "id": "cookbook.simple_todo.add" } },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "semantics_numeric_approx_eq",
+        "target": { "kind": "test_id", "id": "cookbook.simple_todo.progress" },
+        "field": "max",
+        "value": 3.0,
+        "eps": 0.01
+      },
+      "timeout_frames": 240
+    },
+    { "type": "click", "target": { "kind": "test_id", "id": "cookbook.simple_todo.clear_done" } },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "semantics_numeric_approx_eq",
+        "target": { "kind": "test_id", "id": "cookbook.simple_todo.progress" },
+        "field": "max",
+        "value": 2.0,
+        "eps": 0.01
+      },
+      "timeout_frames": 240
+    },
+    { "type": "capture_screenshot", "label": "cookbook-simple-todo-smoke" },
+    { "type": "capture_bundle", "label": "cookbook-simple-todo-smoke" }
+  ]
+}
+
