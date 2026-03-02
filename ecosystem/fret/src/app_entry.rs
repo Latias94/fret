@@ -169,9 +169,53 @@ impl App {
         Ok(builder)
     }
 
+    /// Build a view-runtime app (`fret::view`) and return a runnable builder.
+    ///
+    /// This is the recommended authoring loop once `ViewCx` adoption lands for the target area.
+    pub fn view<V: crate::view::View>(
+        self,
+    ) -> Result<UiAppBuilder<crate::view::ViewWindowState<V>>> {
+        let App {
+            root_name,
+            main_window,
+            defaults,
+            install_app_hooks,
+            install_hooks,
+            register_icon_pack_hooks,
+        } = self;
+
+        let mut builder = crate::ui_bootstrap_builder_with_hooks(
+            root_name,
+            crate::view::view_init_window::<V>,
+            crate::view::view_view::<V>,
+            |d| d.record_engine_frame(crate::view::view_record_engine_frame::<V>),
+        );
+
+        for f in install_app_hooks {
+            builder = builder.install_app(f);
+        }
+        for f in install_hooks {
+            builder = builder.install(f);
+        }
+        for f in register_icon_pack_hooks {
+            builder = builder.register_icon_pack(f);
+        }
+
+        let builder = crate::apply_desktop_defaults_with(builder, defaults)
+            .map_err(crate::BootstrapError::from)?;
+        let mut builder = UiAppBuilder::from_bootstrap(builder);
+        builder = apply_main_window(root_name, main_window, builder);
+        Ok(builder)
+    }
+
     /// Convenience: build an MVU app and run it immediately.
     pub fn run_mvu<P: crate::mvu::Program>(self) -> Result<()> {
         self.mvu::<P>()?.run()
+    }
+
+    /// Convenience: build a view-runtime app and run it immediately.
+    pub fn run_view<V: crate::view::View>(self) -> Result<()> {
+        self.view::<V>()?.run()
     }
 
     /// Convenience: build a UI app and run it immediately.

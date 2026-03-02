@@ -5,7 +5,7 @@
     "tags": ["node-graph", "declarative", "paint-only", "zoom", "cache", "gate"],
     "required_capabilities": ["diag.script_v2"],
     "target_hints": [
-      "Run with `FRET_NODE_GRAPH_DECLARATIVE=paint` so the paint-only declarative surface is active.",
+      "Run the `node_graph_demo` binary (it defaults to the paint-only declarative surface).",
       "This asserts that zooming (Ctrl+1) rebuilds cached node/edge geometry render data exactly once."
     ]
   },
@@ -71,4 +71,3 @@
     { "type": "capture_bundle", "label": "node-graph-paint-only-keyboard-zoom-rebuilds-geometry" }
   ]
 }
-

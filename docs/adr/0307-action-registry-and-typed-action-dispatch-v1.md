@@ -1,6 +1,6 @@
 # ADR 0307: Action Registry and Typed Action Dispatch (v1)
 
-Status: Proposed
+Status: Accepted
 
 ## Context
 

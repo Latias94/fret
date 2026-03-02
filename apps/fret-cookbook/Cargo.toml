@@ -12,18 +12,22 @@ publish = false
 
 [dependencies]
 anyhow.workspace = true
-fret = { path = "../../ecosystem/fret", default-features = false, features = ["desktop", "diagnostics", "shadcn", "ui-assets", "icons", "preload-icon-svgs"] }
+fret = { path = "../../ecosystem/fret", default-features = false, features = ["desktop", "diagnostics", "shadcn", "ui-assets", "icons", "preload-icon-svgs", "command-palette"] }
 fret-app = { path = "../../crates/fret-app" }
 fret-core = { path = "../../crates/fret-core" }
 fret-runtime = { path = "../../crates/fret-runtime" }
 fret-ui = { path = "../../crates/fret-ui" }
 fret-render = { path = "../../crates/fret-render" }
 fret-launch = { path = "../../crates/fret-launch" }
-fret-ui-kit = { path = "../../ecosystem/fret-ui-kit" }
+fret-ui-kit = { path = "../../ecosystem/fret-ui-kit", features = ["imui"] }
 fret-icons = { path = "../../ecosystem/fret-icons" }
 fret-icons-radix = { path = "../../ecosystem/fret-icons-radix", default-features = false, features = ["app-integration"] }
 fret-ui-assets = { path = "../../ecosystem/fret-ui-assets", default-features = false, features = ["ui", "image-decode"] }
 fret-executor = { path = "../../ecosystem/fret-executor" }
+fret-imui = { path = "../../ecosystem/fret-imui" }
+fret-genui-core = { path = "../../ecosystem/fret-genui-core" }
+fret-genui-shadcn = { path = "../../ecosystem/fret-genui-shadcn" }
+serde_json.workspace = true
 fret-markdown = { path = "../../ecosystem/fret-markdown", default-features = false, features = ["ui", "syntax-rust"] }
 fret-code-view = { path = "../../ecosystem/fret-code-view", default-features = false }
 fret-undo = { path = "../../ecosystem/fret-undo" }

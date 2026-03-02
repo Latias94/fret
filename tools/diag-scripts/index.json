@@ -332,6 +332,28 @@
       ]
     },
     {
+      "id": "cookbook-imui-action-basics-cross-frontend",
+      "path": "tools/diag-scripts/cookbook/imui-action-basics/cookbook-imui-action-basics-cross-frontend.json",
+      "required_capabilities": [
+        "diag.command_dispatch_trace",
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "cookbook-imui-action-basics"
+      ],
+      "tags": [
+        "actions",
+        "cookbook",
+        "imui",
+        "smoke",
+        "view_runtime"
+      ],
+      "target_hints": [
+        "Invokes the command palette, clicks a declarative button, a GenUI-rendered button, a GenUI dropdown menu item, and an imui button that dispatch the same ActionId.",
+        "Asserts all triggers update the same view-local state via a shared typed action handler."
+      ]
+    },
+    {
       "id": "cookbook-markdown-and-code-basics-smoke",
       "path": "tools/diag-scripts/cookbook/markdown-and-code-basics/cookbook-markdown-and-code-basics-smoke.json",
       "required_capabilities": [
@@ -4711,6 +4733,49 @@
         "Opens the overflow menu.",
         "Selects a known tab entry from the overflow list.",
         "Asserts the tab becomes selected."
+      ]
+    },
+    {
+      "id": "workspace-shell-demo-tab-preview-commit-keeps-old-tab-smoke",
+      "path": "tools/diag-scripts/workspace/shell-demo/workspace-shell-demo-tab-preview-commit-keeps-old-tab-smoke.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "workspace-shell-demo"
+      ],
+      "tags": [
+        "commit",
+        "gate",
+        "preview",
+        "smoke",
+        "tabstrip",
+        "workspace"
+      ],
+      "target_hints": [
+        "Opens preview A, commits it, then opens preview B.",
+        "Asserts the committed preview remains as a normal tab and the new preview is marked as preview."
+      ]
+    },
+    {
+      "id": "workspace-shell-demo-tab-preview-replaces-existing-smoke",
+      "path": "tools/diag-scripts/workspace/shell-demo/workspace-shell-demo-tab-preview-replaces-existing-smoke.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "workspace-shell-demo"
+      ],
+      "tags": [
+        "gate",
+        "preview",
+        "smoke",
+        "tabstrip",
+        "workspace"
+      ],
+      "target_hints": [
+        "Clicks the demo-only debug controls to open preview A, then preview B.",
+        "Asserts the previous preview tab is replaced (removed) and the new one is marked as preview."
       ]
     },
     {

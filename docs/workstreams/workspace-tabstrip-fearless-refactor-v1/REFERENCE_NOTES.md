@@ -25,6 +25,13 @@ This file records reference implementations and what we intend to borrow (semant
   - `repo-ref/gpui-component/crates/ui/src/tab/tab_bar.rs`
   - `repo-ref/gpui-component/crates/ui/src/dock/tab_panel.rs`
 
+## VS Code (external)
+
+- Editor tabs preview/pinned semantics (preview editors):
+  - Treat VS Code as behavioral inspiration for preview/dirty/pinned policy (not code).
+  - Prefer referencing Zed for the in-repo, GPUI-adjacent semantics baseline; use VS Code only to
+    sanity-check edge cases (e.g. when preview should be preserved vs replaced).
+
 ## Notes for Fret
 
 - Reuse:

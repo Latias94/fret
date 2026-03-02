@@ -5,7 +5,7 @@
     "tags": ["node-graph", "declarative", "paint-only", "graph", "cache", "gate"],
     "required_capabilities": ["diag.script_v2"],
     "target_hints": [
-      "Run with `FRET_NODE_GRAPH_DECLARATIVE=paint` so the paint-only declarative surface is active.",
+      "Run the `node_graph_demo` binary (it defaults to the paint-only declarative surface).",
       "Requires `FRET_DIAG=1` (diagnostics-only shortcuts).",
       "Uses the paint-only diagnostics-only graph bump shortcut (Ctrl+3) and asserts that node/edge geometry caches rebuild exactly once."
     ]

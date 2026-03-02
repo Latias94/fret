@@ -84,6 +84,7 @@ pub(super) fn active_script_needs_semantics_snapshot(active: &ActiveScript) -> b
         | UiActionStepV2::Ime { .. }
         | UiActionStepV2::WaitFrames { .. }
         | UiActionStepV2::WaitShortcutRoutingTrace { .. }
+        | UiActionStepV2::WaitCommandDispatchTrace { .. }
         | UiActionStepV2::CaptureBundle { .. }
         | UiActionStepV2::CaptureScreenshot { .. }
         | UiActionStepV2::SetWindowInnerSize { .. }
@@ -127,6 +128,7 @@ pub(super) fn script_step_kind_name(step: &UiActionStepV2) -> &'static str {
         UiActionStepV2::TypeTextInto { .. } => "type_text_into",
         UiActionStepV2::WaitFrames { .. } => "wait_frames",
         UiActionStepV2::WaitUntil { .. } => "wait_until",
+        UiActionStepV2::WaitCommandDispatchTrace { .. } => "wait_command_dispatch_trace",
         UiActionStepV2::Assert { .. } => "assert",
         UiActionStepV2::CaptureBundle { .. } => "capture_bundle",
         UiActionStepV2::CaptureScreenshot { .. } => "capture_screenshot",
@@ -165,6 +167,7 @@ pub(super) fn script_evidence_for_active(active: &ActiveScript) -> Option<UiScri
         && active.bounds_stable_trace.is_empty()
         && active.focus_trace.is_empty()
         && active.shortcut_routing_trace.is_empty()
+        && active.command_dispatch_trace.is_empty()
         && active.overlay_placement_trace.is_empty()
         && active.web_ime_trace.is_empty()
         && active.ime_event_trace.is_empty()
@@ -181,6 +184,7 @@ pub(super) fn script_evidence_for_active(active: &ActiveScript) -> Option<UiScri
         bounds_stable_trace: active.bounds_stable_trace.clone(),
         focus_trace: active.focus_trace.clone(),
         shortcut_routing_trace: active.shortcut_routing_trace.clone(),
+        command_dispatch_trace: active.command_dispatch_trace.clone(),
         overlay_placement_trace: active.overlay_placement_trace.clone(),
         web_ime_trace: active.web_ime_trace.clone(),
         ime_event_trace: active.ime_event_trace.clone(),
@@ -449,6 +453,19 @@ pub(super) fn dispatch_drive_script_step(
         }
         step @ UiActionStepV2::WaitShortcutRoutingTrace { .. } => {
             let handled = script_steps_wait::handle_wait_shortcut_routing_trace_step(
+                app,
+                step_index,
+                step,
+                active,
+                output,
+                force_dump_label,
+                stop_script,
+                failure_reason,
+            );
+            debug_assert!(handled);
+        }
+        step @ UiActionStepV2::WaitCommandDispatchTrace { .. } => {
+            let handled = script_steps_wait::handle_wait_command_dispatch_trace_step(
                 app,
                 step_index,
                 step,
@@ -1331,6 +1348,61 @@ pub(super) fn shortcut_routing_trace_entry_matches_query(
     }
     if let Some(focus_is_text_input) = query.focus_is_text_input
         && entry.focus_is_text_input != focus_is_text_input
+    {
+        return false;
+    }
+    true
+}
+
+pub(super) fn push_command_dispatch_trace(
+    trace: &mut Vec<UiScriptCommandDispatchTraceEntryV1>,
+    entry: UiScriptCommandDispatchTraceEntryV1,
+) {
+    trace.push(entry);
+    if trace.len() > MAX_SHORTCUT_ROUTING_TRACE_ENTRIES {
+        let extra = trace
+            .len()
+            .saturating_sub(MAX_SHORTCUT_ROUTING_TRACE_ENTRIES);
+        trace.drain(0..extra);
+    }
+}
+
+pub(super) fn command_dispatch_trace_entry_matches_query(
+    entry: &UiScriptCommandDispatchTraceEntryV1,
+    query: &UiScriptCommandDispatchTraceQueryV1,
+) -> bool {
+    if let Some(command) = &query.command
+        && entry.command != *command
+    {
+        return false;
+    }
+    if let Some(source_kind) = &query.source_kind
+        && entry.source_kind != *source_kind
+    {
+        return false;
+    }
+    if let Some(handled) = query.handled
+        && entry.handled != handled
+    {
+        return false;
+    }
+    if let Some(scope) = &query.handled_by_scope
+        && entry.handled_by_scope.as_ref() != Some(scope)
+    {
+        return false;
+    }
+    if let Some(handled_by_driver) = query.handled_by_driver
+        && entry.handled_by_driver != handled_by_driver
+    {
+        return false;
+    }
+    if let Some(started_from_focus) = query.started_from_focus
+        && entry.started_from_focus != started_from_focus
+    {
+        return false;
+    }
+    if let Some(used_default_root_fallback) = query.used_default_root_fallback
+        && entry.used_default_root_fallback != used_default_root_fallback
     {
         return false;
     }

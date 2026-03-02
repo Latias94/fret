@@ -59,6 +59,7 @@ impl UiDiagnosticsService {
             wait_frames_remaining: 0,
             wait_until: None,
             wait_shortcut_routing_trace: None,
+            wait_command_dispatch_trace: None,
             wait_overlay_placement_trace: None,
             screenshot_wait: None,
             v2_step_state: None,
@@ -73,6 +74,8 @@ impl UiDiagnosticsService {
             focus_trace: Vec::new(),
             shortcut_routing_trace: Vec::new(),
             last_shortcut_routing_seq: 0,
+            command_dispatch_trace: Vec::new(),
+            last_command_dispatch_seq: 0,
             overlay_placement_trace: Vec::new(),
             web_ime_trace: Vec::new(),
             ime_event_trace: Vec::new(),
@@ -175,7 +178,8 @@ impl UiDiagnosticsService {
         let step_window_target = Self::active_step_window_target(other_active);
         let other_step_index = other_active.next_step;
         let step_allows_off_window_cached_test_id_predicate = step.is_some_and(|step| match step {
-            UiActionStepV2::WaitUntil { predicate, .. } | UiActionStepV2::Assert { predicate, .. } => {
+            UiActionStepV2::WaitUntil { predicate, .. }
+            | UiActionStepV2::Assert { predicate, .. } => {
                 UiDiagnosticsService::predicate_can_eval_from_cached_test_id_bounds(predicate)
             }
             _ => false,

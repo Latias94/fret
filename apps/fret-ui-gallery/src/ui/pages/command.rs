@@ -13,6 +13,7 @@ pub(super) fn preview_command_palette(
     let docs_demo_palette = snippets::docs_demo::render(cx, last_action.clone());
     let basic_dialog = snippets::basic::render(cx, last_action.clone());
     let shortcuts_section = snippets::shortcuts::render(cx, last_action.clone());
+    let action_first_view_runtime = snippets::action_first_view::render(cx, last_action.clone());
     let groups_palette = snippets::groups::render(cx, last_action.clone());
     let scrollable_palette = snippets::scrollable::render(cx, last_action.clone());
     let rtl = snippets::rtl::render(cx, last_action.clone());
@@ -31,7 +32,7 @@ pub(super) fn preview_command_palette(
     let body = doc_layout::render_doc_page(
         cx,
         Some(
-            "Preview follows shadcn Command docs order: Usage, Demo, Basic, Shortcuts, Groups, Scrollable, RTL, Loading.",
+            "Preview follows shadcn Command docs order (Usage, Demo, Basic, Shortcuts, Groups, Scrollable, RTL, Loading) plus a Fret-specific Action-first (View runtime) section.",
         ),
         vec![
             DocSection::new("Usage", usage_palette)
@@ -62,6 +63,17 @@ pub(super) fn preview_command_palette(
                 .test_id_prefix("ui-gallery-command-shortcuts")
                 .code_rust_from_file_region(
                     snippets::shortcuts::SOURCE,
+                    "example",
+                ),
+            DocSection::new("Action-first (View runtime)", action_first_view_runtime)
+                .max_w(Px(760.0))
+                .test_id_prefix("ui-gallery-command-action-first-view-runtime")
+                .descriptions([
+                    "This section demonstrates action-first authoring using the ecosystem view runtime (`View` + `ViewCx`).",
+                    "The button binds a stable `ActionId` via `.action(...)`, while the handler is registered at the view root via `cx.on_action::<...>(...)`.",
+                ])
+                .code_rust_from_file_region(
+                    snippets::action_first_view::SOURCE,
                     "example",
                 ),
             DocSection::new("Groups", groups_palette)

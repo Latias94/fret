@@ -21,9 +21,9 @@ use fret_ui::canvas::{CanvasKey, CanvasPainter};
 use fret_ui::element::{
     AnyElement, CanvasProps, ColumnProps, ContainerProps, LayoutQueryRegionProps, LayoutStyle,
     Length, PointerRegionProps, PositionStyle, SemanticsDecoration, SemanticsProps, SpacingEdges,
-    SpacingLength,
+    SpacingLength, TextProps,
 };
-use fret_ui::{ElementContext, Invalidation, UiHost};
+use fret_ui::{ElementContext, Invalidation, Theme, UiHost};
 
 use crate::core::Graph;
 use crate::io::NodeGraphViewState;
@@ -243,14 +243,24 @@ impl Default for GridPaintCacheState {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-struct GridPaintCacheKeyV1 {
+struct GridPaintCacheKeyV2 {
     bounds_x_q: i32,
     bounds_y_q: i32,
     bounds_w_q: i32,
     bounds_h_q: i32,
-    pan_x_q: i32,
-    pan_y_q: i32,
     zoom_q: i32,
+    ix0: i32,
+    ix1: i32,
+    iy0: i32,
+    iy1: i32,
+    bg_r_bits: u32,
+    bg_g_bits: u32,
+    bg_b_bits: u32,
+    bg_a_bits: u32,
+    grid_r_bits: u32,
+    grid_g_bits: u32,
+    grid_b_bits: u32,
+    grid_a_bits: u32,
 }
 
 fn quantize_f32(value: f32, scale: f32) -> i32 {
@@ -262,25 +272,70 @@ fn quantize_f32(value: f32, scale: f32) -> i32 {
         .clamp(i32::MIN as f32, i32::MAX as f32) as i32
 }
 
-fn grid_cache_key(bounds: Rect, view: PanZoom2D) -> CanvasKey {
+fn grid_cache_key(bounds: Rect, view: PanZoom2D, style: &NodeGraphStyle) -> CanvasKey {
     let zoom = PanZoom2D::sanitize_zoom(view.zoom, 1.0);
+    let bg = style.paint.background;
+    let grid = style.paint.grid_minor_color;
 
     // Quantize to avoid cache churn due to float noise while remaining sensitive to real changes.
     // - bounds: device-independent UI px (layout space)
-    // - pan: canvas units
     // - zoom: scale factor (unitless)
-    let v = GridPaintCacheKeyV1 {
+    // - grid indices: snapped to step boundaries (avoid per-pixel pan churn)
+    let step = 64.0f32;
+    let (ix0, ix1, iy0, iy1) = if bounds.size.width.0.is_finite()
+        && bounds.size.height.0.is_finite()
+        && bounds.size.width.0 > 0.0
+        && bounds.size.height.0 > 0.0
+        && step.is_finite()
+        && step > 0.0
+    {
+        let tl = view.screen_to_canvas(bounds, bounds.origin);
+        let br = view.screen_to_canvas(
+            bounds,
+            Point::new(
+                Px(bounds.origin.x.0 + bounds.size.width.0),
+                Px(bounds.origin.y.0 + bounds.size.height.0),
+            ),
+        );
+        let x0 = tl.x.0.min(br.x.0);
+        let x1 = tl.x.0.max(br.x.0);
+        let y0 = tl.y.0.min(br.y.0);
+        let y1 = tl.y.0.max(br.y.0);
+        if x0.is_finite() && x1.is_finite() && y0.is_finite() && y1.is_finite() {
+            (
+                (x0 / step).floor() as i32 - 1,
+                (x1 / step).ceil() as i32 + 1,
+                (y0 / step).floor() as i32 - 1,
+                (y1 / step).ceil() as i32 + 1,
+            )
+        } else {
+            (0, 0, 0, 0)
+        }
+    } else {
+        (0, 0, 0, 0)
+    };
+    let v = GridPaintCacheKeyV2 {
         bounds_x_q: quantize_f32(bounds.origin.x.0, 8.0),
         bounds_y_q: quantize_f32(bounds.origin.y.0, 8.0),
         bounds_w_q: quantize_f32(bounds.size.width.0, 8.0),
         bounds_h_q: quantize_f32(bounds.size.height.0, 8.0),
-        pan_x_q: quantize_f32(view.pan.x.0, 64.0),
-        pan_y_q: quantize_f32(view.pan.y.0, 64.0),
         zoom_q: quantize_f32(zoom, 4096.0),
+        ix0,
+        ix1,
+        iy0,
+        iy1,
+        bg_r_bits: bg.r.to_bits(),
+        bg_g_bits: bg.g.to_bits(),
+        bg_b_bits: bg.b.to_bits(),
+        bg_a_bits: bg.a.to_bits(),
+        grid_r_bits: grid.r.to_bits(),
+        grid_g_bits: grid.g.to_bits(),
+        grid_b_bits: grid.b.to_bits(),
+        grid_a_bits: grid.a.to_bits(),
     };
 
     // Namespace the key so future paint-only variants can coexist safely.
-    CanvasKey::from_hash(&("fret-node.grid.paint-only.v1", v))
+    CanvasKey::from_hash(&("fret-node.grid.paint-only.v2", v))
 }
 
 #[derive(Debug, Clone)]
@@ -365,15 +420,18 @@ fn derived_geometry_cache_key(
     CanvasKey::from_hash(&("fret-node.derived-geometry.paint-only.v2", v))
 }
 
-fn build_debug_grid_ops(bounds: Rect, view: PanZoom2D) -> Arc<Vec<fret_core::SceneOp>> {
+fn build_debug_grid_ops(
+    bounds: Rect,
+    view: PanZoom2D,
+    style: &NodeGraphStyle,
+) -> Arc<Vec<fret_core::SceneOp>> {
     let mut ops = Vec::<fret_core::SceneOp>::new();
 
     // Background fill (debug baseline).
     ops.push(fret_core::SceneOp::Quad {
         order: DrawOrder(0),
         rect: bounds,
-        background: fret_core::scene::Paint::Solid(fret_core::Color::from_srgb_hex_rgb(0x0f1218))
-            .into(),
+        background: fret_core::scene::Paint::Solid(style.paint.background).into(),
         border: fret_core::Edges::default(),
         border_paint: fret_core::scene::Paint::TRANSPARENT.into(),
         corner_radii: fret_core::Corners::default(),
@@ -424,12 +482,19 @@ fn build_debug_grid_ops(bounds: Rect, view: PanZoom2D) -> Arc<Vec<fret_core::Sce
     let iy0 = (y0 / step).floor() as i32 - 1;
     let iy1 = (y1 / step).ceil() as i32 + 1;
 
+    // Snap the painted extents to the computed grid indices so small pans do not require
+    // rebuilding the cached ops (the transform already accounts for pan/zoom).
+    let x0 = ix0 as f32 * step;
+    let x1 = ix1 as f32 * step;
+    let y0 = iy0 as f32 * step;
+    let y1 = iy1 as f32 * step;
+
     let max_lines = 400i32;
     let x_lines = (ix1 - ix0).clamp(0, max_lines);
     let y_lines = (iy1 - iy0).clamp(0, max_lines);
 
     let grid_paint: fret_core::scene::PaintBindingV1 =
-        fret_core::scene::Paint::Solid(fret_core::Color::from_srgb_hex_rgb(0x202833)).into();
+        fret_core::scene::Paint::Solid(style.paint.grid_minor_color).into();
 
     for i in 0..x_lines {
         let x = (ix0 + i) as f32 * step;
@@ -474,6 +539,7 @@ fn paint_debug_grid_cached(
     p: &mut CanvasPainter<'_>,
     view: PanZoom2D,
     ops: Option<Arc<Vec<fret_core::SceneOp>>>,
+    style: &NodeGraphStyle,
 ) {
     if let Some(ops) = ops {
         for op in ops.iter().copied() {
@@ -485,7 +551,7 @@ fn paint_debug_grid_cached(
     // Fallback path: build-and-paint without storing any cache. This keeps the surface functional
     // in the very first frames before bounds are known to the element.
     let bounds = p.bounds();
-    let ops = build_debug_grid_ops(bounds, view);
+    let ops = build_debug_grid_ops(bounds, view, style);
     for op in ops.iter().copied() {
         p.scene().push(op);
     }
@@ -1266,18 +1332,19 @@ pub fn node_graph_surface_paint_only<H: UiHost + 'static>(
     // to clone it on steady-state frames.
     cx.observe_model(&graph, Invalidation::Paint);
 
+    // These models affect portal positioning, so treat them as layout-invalidating in a cached view.
     let drag_value = cx
-        .get_model_copied(&drag, Invalidation::Paint)
+        .get_model_copied(&drag, Invalidation::Layout)
         .unwrap_or(None);
     let panning = drag_value.is_some();
 
     let marquee_value = cx
-        .get_model_cloned(&marquee_drag, Invalidation::Paint)
+        .get_model_cloned(&marquee_drag, Invalidation::Layout)
         .unwrap_or(None);
     let marquee_active = marquee_value.as_ref().is_some_and(|m| m.active);
 
     let node_drag_value = cx
-        .get_model_cloned(&node_drag, Invalidation::Paint)
+        .get_model_cloned(&node_drag, Invalidation::Layout)
         .unwrap_or(None);
     let node_drag_armed = node_drag_value.as_ref().is_some_and(|d| !d.canceled);
     let node_dragging = node_drag_value
@@ -1285,10 +1352,11 @@ pub fn node_graph_surface_paint_only<H: UiHost + 'static>(
         .is_some_and(|d| d.active && !d.canceled);
 
     let view_value = cx
-        .get_model_cloned(&view_state, Invalidation::Paint)
+        .get_model_cloned(&view_state, Invalidation::Layout)
         .unwrap_or_default();
     let view_for_paint = view_from_state(&view_value);
-    let style_tokens = NodeGraphStyle::default();
+    let theme = Theme::global(&*cx.app).snapshot();
+    let style_tokens = NodeGraphStyle::from_snapshot(theme.clone());
     let diag_keys_enabled = std::env::var("FRET_DIAG")
         .ok()
         .is_some_and(|v| !v.trim().is_empty() && v.trim() != "0");
@@ -1322,9 +1390,9 @@ pub fn node_graph_surface_paint_only<H: UiHost + 'static>(
         && grid_cache_value.bounds.size.width.0.is_finite()
         && grid_cache_value.bounds.size.height.0.is_finite()
     {
-        let key = grid_cache_key(grid_cache_value.bounds, view_for_paint);
+        let key = grid_cache_key(grid_cache_value.bounds, view_for_paint, &style_tokens);
         if grid_cache_value.key != Some(key) {
-            let ops = build_debug_grid_ops(grid_cache_value.bounds, view_for_paint);
+            let ops = build_debug_grid_ops(grid_cache_value.bounds, view_for_paint, &style_tokens);
             let _ = cx.app.models_mut().update(&grid_cache, |st| {
                 st.key = Some(key);
                 st.rebuilds = st.rebuilds.saturating_add(1);
@@ -1883,7 +1951,7 @@ pub fn node_graph_surface_paint_only<H: UiHost + 'static>(
                                 *st = enable_next;
                             });
 
-                        let (edge_id, node_id) = host
+                        let (edge_id, _node_id) = host
                             .models_mut()
                             .read(&graph_debug, |g| {
                                 let edge = g.edges.keys().next().copied();
@@ -1933,28 +2001,6 @@ pub fn node_graph_surface_paint_only<H: UiHost + 'static>(
                                 );
                             } else {
                                 diag_paint_overrides_for_keys.set_edge_override(edge_id, None);
-                            }
-                        }
-
-                        if let Some(node_id) = node_id {
-                            if enable_next {
-                                diag_paint_overrides_for_keys.set_node_override(
-                                    node_id,
-                                    Some(
-                                        crate::ui::paint_overrides::NodePaintOverrideV1 {
-                                            body_background: Some(
-                                                fret_core::scene::Paint::Solid(Color::from_srgb_hex_rgb(
-                                                    0x1c_2b_3a,
-                                                ))
-                                                .into(),
-                                            ),
-                                            ..Default::default()
-                                        }
-                                        .normalized(),
-                                    ),
-                                );
-                            } else {
-                                diag_paint_overrides_for_keys.set_node_override(node_id, None);
                             }
                         }
 
@@ -2026,6 +2072,7 @@ pub fn node_graph_surface_paint_only<H: UiHost + 'static>(
                                 last_pos: down.position,
                             });
                         });
+                        host.notify(action_cx);
                         host.request_redraw(action_cx.window);
                         return true;
                     }
@@ -2129,6 +2176,7 @@ pub fn node_graph_surface_paint_only<H: UiHost + 'static>(
                                 });
                             }
 
+                            host.notify(action_cx);
                             host.request_redraw(action_cx.window);
                             return true;
                         }
@@ -2162,6 +2210,7 @@ pub fn node_graph_surface_paint_only<H: UiHost + 'static>(
                                 });
                             }
 
+                            host.notify(action_cx);
                             host.request_redraw(action_cx.window);
                             return true;
                         }
@@ -2173,10 +2222,12 @@ pub fn node_graph_surface_paint_only<H: UiHost + 'static>(
                                 state.selected_edges.clear();
                                 state.selected_groups.clear();
                             });
+                            host.notify(action_cx);
                             host.request_redraw(action_cx.window);
                             return true;
                         }
 
+                        host.notify(action_cx);
                         host.request_redraw(action_cx.window);
                         return true;
                     }
@@ -2255,6 +2306,9 @@ pub fn node_graph_surface_paint_only<H: UiHost + 'static>(
 
                             let _ = host.models_mut().update(&hovered_for_hover, |h| *h = None);
                             if needs_redraw {
+                                // Node dragging moves portals (layout) and the canvas chrome (paint).
+                                host.invalidate(Invalidation::Layout);
+                                host.notify(action_cx);
                                 host.request_redraw(action_cx.window);
                             }
                             return needs_redraw;
@@ -2377,6 +2431,7 @@ pub fn node_graph_surface_paint_only<H: UiHost + 'static>(
                             }
 
                             let _ = host.models_mut().update(&hovered_for_hover, |h| *h = None);
+                            host.notify(action_cx);
                             host.request_redraw(action_cx.window);
                             return true;
                         }
@@ -2435,6 +2490,8 @@ pub fn node_graph_surface_paint_only<H: UiHost + 'static>(
                             .unwrap_or(false);
 
                         if changed {
+                            host.invalidate(Invalidation::Paint);
+                            host.notify(action_cx);
                             host.request_redraw(action_cx.window);
                         }
                         return changed;
@@ -2460,6 +2517,9 @@ pub fn node_graph_surface_paint_only<H: UiHost + 'static>(
                         }
                     });
 
+                    // Panning repositions portals (layout) and changes world mapping (hit-test + paint).
+                    host.invalidate(Invalidation::Layout);
+                    host.notify(action_cx);
                     host.request_redraw(action_cx.window);
                     true
                 },
@@ -2511,6 +2571,8 @@ pub fn node_graph_surface_paint_only<H: UiHost + 'static>(
 
                             host.release_pointer_capture();
                             let _ = host.models_mut().update(&node_drag_end, |st| *st = None);
+                            host.invalidate(Invalidation::Layout);
+                            host.notify(action_cx);
                             host.request_redraw(action_cx.window);
                             return true;
                         }
@@ -2526,12 +2588,16 @@ pub fn node_graph_surface_paint_only<H: UiHost + 'static>(
 
                         host.release_pointer_capture();
                         let _ = host.models_mut().update(&marquee_end, |st| *st = None);
+                        host.invalidate(Invalidation::Layout);
+                        host.notify(action_cx);
                         host.request_redraw(action_cx.window);
                         return true;
                     }
 
                     host.release_pointer_capture();
                     let _ = host.models_mut().update(&drag_end, |st| *st = None);
+                    host.invalidate(Invalidation::Layout);
+                    host.notify(action_cx);
                     host.request_redraw(action_cx.window);
                     true
                 },
@@ -2561,6 +2627,8 @@ pub fn node_graph_surface_paint_only<H: UiHost + 'static>(
                     }
                     let _ = host.models_mut().update(&marquee_cancel, |st| *st = None);
                     let _ = host.models_mut().update(&node_drag_cancel, |st| *st = None);
+                    host.invalidate(Invalidation::Layout);
+                    host.notify(action_cx);
                     host.request_redraw(action_cx.window);
                     true
                 },
@@ -2604,6 +2672,8 @@ pub fn node_graph_surface_paint_only<H: UiHost + 'static>(
                         );
                     });
 
+                    host.invalidate(Invalidation::Layout);
+                    host.notify(action_cx);
                     host.request_redraw(action_cx.window);
                     true
                 },
@@ -2643,6 +2713,8 @@ pub fn node_graph_surface_paint_only<H: UiHost + 'static>(
                         );
                     });
 
+                    host.invalidate(Invalidation::Layout);
+                    host.notify(action_cx);
                     host.request_redraw(action_cx.window);
                     true
                 },
@@ -2677,8 +2749,24 @@ pub fn node_graph_surface_paint_only<H: UiHost + 'static>(
                 let selected_nodes_for_paint = selected_nodes.clone();
                 let node_drag_for_paint = node_drag_value.clone();
                 let paint_overrides_for_paint = paint_overrides_ref.clone();
+                // Ensure canvas paint-cache invalidation tracks interactive state changes even when
+                // the surface rerenders outside the canvas node (e.g. portal layout updates).
+                let graph_model_id = graph.id();
+                let view_state_model_id = view_state.id();
+                let hovered_node_model_id = hovered_node.id();
+                let node_drag_model_id = node_drag.clone().id();
+                let marquee_drag_model_id = marquee_drag.clone().id();
                 let canvas = cx.canvas(canvas, move |p| {
-                    paint_debug_grid_cached(p, view_for_paint, grid_ops.clone());
+                    // Declare paint dependencies for paint-cache invalidation. Without this, the
+                    // canvas node can replay cached ops while portals update, which reads as
+                    // "drag not following" (chrome decouples from labels).
+                    p.observe_model_id(graph_model_id, Invalidation::Paint);
+                    p.observe_model_id(view_state_model_id, Invalidation::Paint);
+                    p.observe_model_id(hovered_node_model_id, Invalidation::Paint);
+                    p.observe_model_id(node_drag_model_id, Invalidation::Paint);
+                    p.observe_model_id(marquee_drag_model_id, Invalidation::Paint);
+
+                    paint_debug_grid_cached(p, view_for_paint, grid_ops.clone(), &style_tokens_for_paint);
                     paint_nodes_cached(
                         p,
                         view_for_paint,
@@ -2705,6 +2793,7 @@ pub fn node_graph_surface_paint_only<H: UiHost + 'static>(
                 let mut out: Vec<AnyElement> = Vec::new();
                 out.push(canvas);
                 let mut overlay_children: Vec<AnyElement> = Vec::new();
+                let mut hovered_portal_hosted: bool = false;
 
                 if portals_enabled && portal_max_nodes > 0 && !portals_disabled {
                     // Portals are positioned in screen space (semantic zoom) and gated off from
@@ -2829,6 +2918,9 @@ pub fn node_graph_surface_paint_only<H: UiHost + 'static>(
                             .unwrap_or_default();
 
                         if !portal_infos.is_empty() {
+                            hovered_portal_hosted = hovered_node_value
+                                .is_some_and(|id| portal_infos.iter().any(|p| p.id == id));
+
                             // Best-effort prune for nodes that are no longer hosted this frame. Bounds are
                             // frame-lagged by contract, so removals may trail unmount by one frame.
                             let visible: std::collections::BTreeSet<crate::core::NodeId> =
@@ -2851,6 +2943,7 @@ pub fn node_graph_surface_paint_only<H: UiHost + 'static>(
 
                             for (ordinal, info) in portal_infos.iter().cloned().enumerate() {
                                 let style_tokens = style_tokens.clone();
+                                let theme = theme.clone();
                                 let portal_bounds_store = portal_bounds_store.clone();
                                 overlay_children.push(cx.keyed(
                                     ("fret-node.portal-label.v1", info.id),
@@ -2915,11 +3008,11 @@ pub fn node_graph_surface_paint_only<H: UiHost + 'static>(
                                             p.snap_to_device_pixels = true;
                                             p.background = Some(Color {
                                                 a: if info.selected {
-                                                    0.30
+                                                    0.98
                                                 } else if info.hovered {
-                                                    0.22
+                                                    0.95
                                                 } else {
-                                                    0.16
+                                                    0.92
                                                 },
                                                 ..style_tokens.paint.node_background
                                             });
@@ -2929,29 +3022,36 @@ pub fn node_graph_surface_paint_only<H: UiHost + 'static>(
                                                 ..style_tokens.paint.node_border
                                             });
 
-                                            let header = cx
-                                                .text(info.label.clone())
-                                                .attach_semantics(
-                                                SemanticsDecoration::default().test_id(
-                                                    Arc::<str>::from(format!(
-                                                        "node_graph.portal.node.{ordinal}.header"
-                                                    )),
-                                                ),
-                                            );
-                                            let ports = cx
-                                                .text(Arc::<str>::from(format!(
-                                                    "in:{} out:{}",
-                                                    info.ports_in, info.ports_out
-                                                )))
-                                                .attach_semantics(
-                                                    SemanticsDecoration::default().test_id(Arc::<
-                                                        str,
-                                                    >::from(
-                                                        format!(
+                                            let header_color = theme.color_token("card-foreground");
+                                            let ports_color = theme.color_token("muted-foreground");
+
+                                            let header = {
+                                                let mut props = TextProps::new(info.label.clone());
+                                                props.color = Some(header_color);
+                                                cx.text_props(props).attach_semantics(
+                                                    SemanticsDecoration::default().test_id(
+                                                        Arc::<str>::from(format!(
+                                                            "node_graph.portal.node.{ordinal}.header"
+                                                        )),
+                                                    ),
+                                                )
+                                            };
+                                            let ports = {
+                                                let mut props = TextProps::new(Arc::<str>::from(
+                                                    format!(
+                                                        "in:{} out:{}",
+                                                        info.ports_in, info.ports_out
+                                                    ),
+                                                ));
+                                                props.color = Some(ports_color);
+                                                cx.text_props(props).attach_semantics(
+                                                    SemanticsDecoration::default().test_id(
+                                                        Arc::<str>::from(format!(
                                                             "node_graph.portal.node.{ordinal}.ports"
-                                                        ),
-                                                    )),
-                                                );
+                                                        )),
+                                                    ),
+                                                )
+                                            };
 
                                             vec![
                                                 cx.container(p, move |cx| {
@@ -3046,7 +3146,13 @@ pub fn node_graph_surface_paint_only<H: UiHost + 'static>(
                 //
                 // Positioning prefers `PortalBoundsStore` so this milestone demonstrates the full
                 // bounds-query loop (host subtree → harvest bounds → consume bounds).
-                if !panning && !marquee_active && !node_dragging {
+                // Keep this diagnostics-only. When portals are hosted, avoid duplicating portal
+                // label content: the tooltip should focus on debug details (anchor source, ids).
+                if diag_keys_enabled
+                    && !panning
+                    && !marquee_active
+                    && !node_dragging
+                {
                     if let Some(hovered_id) = hovered_node_value {
                         let bounds = grid_cache_value.bounds;
                         let view = view_for_paint;
@@ -3171,19 +3277,32 @@ pub fn node_graph_surface_paint_only<H: UiHost + 'static>(
                                                 ..style_tokens.paint.node_border
                                             });
 
+                                            let source_for_text = source.clone();
                                             cx.container(p, move |cx| {
                                                 let mut col = ColumnProps::default();
                                                 col.layout.size.width = Length::Fill;
                                                 col.layout.size.height = Length::Fill;
                                                 col.gap = SpacingLength::Px(Px(2.0));
                                                 vec![cx.column(col, move |cx| {
-                                                    vec![
-                                                        cx.text(hovered_label.clone()),
+                                                    let mut lines: Vec<AnyElement> = vec![
                                                         cx.text(Arc::<str>::from(format!(
-                                                            "in:{} out:{}",
-                                                            ports_in, ports_out
+                                                            "id:{}",
+                                                            hovered_id.0
                                                         ))),
-                                                    ]
+                                                        cx.text(Arc::<str>::from(format!(
+                                                            "source:{source_for_text}"
+                                                        ))),
+                                                    ];
+
+                                                    // Only include the label/port summary when it won't read as
+                                                    // "duplicated text" over a hosted portal label.
+                                                    if !hovered_portal_hosted {
+                                                        lines.push(cx.text(hovered_label.clone()));
+                                                        lines.push(cx.text(Arc::<str>::from(
+                                                            format!("in:{} out:{}", ports_in, ports_out),
+                                                        )));
+                                                    }
+                                                    lines
                                                 })]
                                             })
                                             .attach_semantics(

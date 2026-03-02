@@ -14,7 +14,9 @@ publish = false
 alloc-profile = []
 mathjax-svg = ["fret-markdown/mathjax-svg"]
 hotpatch = ["fret-launch/hotpatch-subsecond", "fret-bootstrap/hotpatch-subsecond"]
-node-graph-demos = ["fret-node/imui"]
+# Node-graph demos are split so the default path stays declarative-first (no retained bridge).
+node-graph-demos = []
+node-graph-demos-legacy = ["node-graph-demos", "fret-node/imui"]
 devtools-ws = ["fret-bootstrap/diagnostics-ws"]
 
 [dependencies]

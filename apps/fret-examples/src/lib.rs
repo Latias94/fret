@@ -107,7 +107,7 @@ pub mod imui_editor_proof_demo;
 pub mod imui_floating_windows_demo;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod imui_hello_demo;
-#[cfg(all(not(target_arch = "wasm32"), feature = "node-graph-demos"))]
+#[cfg(all(not(target_arch = "wasm32"), feature = "node-graph-demos-legacy"))]
 pub mod imui_node_graph_demo;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod imui_response_signals_demo;
@@ -121,9 +121,11 @@ pub mod liquid_glass_demo;
 pub mod markdown_demo;
 #[cfg(all(not(target_arch = "wasm32"), feature = "node-graph-demos"))]
 pub mod node_graph_demo;
-#[cfg(all(not(target_arch = "wasm32"), feature = "node-graph-demos"))]
+#[cfg(all(not(target_arch = "wasm32"), feature = "node-graph-demos-legacy"))]
 pub mod node_graph_domain_demo;
-#[cfg(all(not(target_arch = "wasm32"), feature = "node-graph-demos"))]
+#[cfg(all(not(target_arch = "wasm32"), feature = "node-graph-demos-legacy"))]
+pub mod node_graph_legacy_demo;
+#[cfg(all(not(target_arch = "wasm32"), feature = "node-graph-demos-legacy"))]
 pub(crate) mod node_graph_tuning_overlay;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod plot3d_demo;

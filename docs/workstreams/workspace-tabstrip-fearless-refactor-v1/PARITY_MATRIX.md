@@ -16,5 +16,5 @@ Legend:
 | Move tab across panes | Zed | Yes | Cross-pane move gate |
 | Active tab always visible | Zed | Yes | `workspace_tab_strip_active_visible_is` gate exists in the suite |
 | Pinned tabs | Zed | Partial | Pinned flags + boundary exist; tighten semantics + gates |
-| Preview tab slot | Zed | Partial | Preview flags exist; tighten semantics + gates |
+| Preview tab slot | Zed | Yes | Commit/replace behavior is diag-gated in workspace-shell-demo suite |
 | Dirty close confirmation | Zed | No | M3 |

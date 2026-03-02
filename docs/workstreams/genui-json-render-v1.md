@@ -158,6 +158,9 @@ These are treated as “hard-to-change” for v1 to avoid later rewrites:
 - Repeat keys: allow index fallback, but validator should warn when `repeat.key` is missing for reorderable lists.
 - Expressions: reserve the full grammar up-front (`$state`, `$item`, `$index`, `$bindState`, `$bindItem`, `$cond`).
 - Actions: event → action bindings are app-owned; core emits invocations into a queue model (no baked-in navigation/confirm policy).
+  - For Action-first convergence, apps should treat action names as stable `ActionId`/`CommandId` strings (v1: `ActionId == CommandId`).
+  - Preferred naming: namespaced, human-readable, and version-suffixed (e.g. `"app.editor.save.v1"`).
+  - Execution glue: `GenUiActionExecutorV1::with_dispatch_command_actions` can route selected action ids into the host command pipeline.
 - Safety limits: hard caps for max elements/depth/repeat items are enforced by the renderer.
 
 ## 3. Spec model (flat, LLM-friendly)
@@ -404,6 +407,7 @@ Minimum gates to avoid “AI broke the UI silently”:
   - binding path resolution.
 - Component conformance tests (later):
   - golden specs rendered via `fret-ui-shadcn` components with stable `test_id` anchors.
+  - v1 default: core stamps `test_id` as `genui:{element_key}` when the resolver does not provide one.
 
 ## 9. Open questions (explicitly tracked)
 
