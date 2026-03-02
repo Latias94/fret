@@ -1,6 +1,6 @@
 # Action-First Authoring + View Runtime (Fearless Refactor v1) — Evidence and Gates
 
-Last updated: 2026-03-01
+Last updated: 2026-03-02
 
 This file defines what “done” means beyond subjective UX feel.
 
@@ -28,6 +28,7 @@ Pointer-trigger authoring integration (v1 still dispatches through the command p
 - `ecosystem/fret-ui-kit/src/command.rs` (`action_is_enabled`, `dispatch_action_if_enabled`)
 - `ecosystem/fret-ui-kit/src/declarative/action_hooks.rs` (`pressable_dispatch_action_if_enabled`)
 - `apps/fret-cookbook/examples/commands_keymap_basics.rs` (example adoption: typed action ID + button binding)
+- `apps/fret-cookbook/examples/hello.rs` (example adoption: typed action ID + button binding + handler table)
 
 ---
 
@@ -59,6 +60,11 @@ Notes:
 
 - Tests must rely on stable selectors (`test_id`/role/name), not pixel coordinates.
 - The script output must record the resolved `ActionId` (or command/action identity) for each step.
+
+Current scripts (as of 2026-03-02):
+
+- `tools/diag-scripts/cookbook/commands-keymap-basics/cookbook-commands-keymap-basics-shortcut-and-gating.json`
+- `tools/diag-scripts/cookbook/hello/cookbook-hello-click-count.json`
 
 ### 2.3 wasm smoke (build-only)
 
