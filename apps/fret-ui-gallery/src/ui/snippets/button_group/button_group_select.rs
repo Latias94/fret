@@ -71,17 +71,20 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
 
         shadcn::Select::new(currency_value.clone(), currency_open.clone())
             .trigger_test_id("ui-gallery-button-group-select-currency-trigger")
-            .trigger(
-                shadcn::SelectTrigger::new()
-                    .font(FontId::monospace())
-                    .label_policy(shadcn::SelectTriggerLabelPolicy::Value),
+            .into_element_parts(
+                cx,
+                |_cx| {
+                    shadcn::SelectTrigger::new()
+                        .font(FontId::monospace())
+                        .label_policy(shadcn::SelectTriggerLabelPolicy::Value)
+                },
+                |_cx| {
+                    shadcn::SelectContent::new()
+                        .align_item_with_trigger(false)
+                        .align(shadcn::SelectAlign::Start)
+                        .with_entries(entries)
+                },
             )
-            .content(
-                shadcn::SelectContent::new()
-                    .align_item_with_trigger(false)
-                    .align(shadcn::SelectAlign::Start),
-            )
-            .entries(entries)
     };
 
     let amount = shadcn::Input::new(amount_value)

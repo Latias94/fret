@@ -5,7 +5,10 @@ use fret_canvas::view::{
     wheel_zoom_factor,
 };
 use fret_canvas::wires as canvas_wires;
-use fret_core::scene::DashPatternV1;
+use fret_core::scene::{
+    ColorSpace, DashPatternV1, GradientStop, LinearGradient, MAX_STOPS, Paint, PaintBindingV1,
+    PaintEvalSpaceV1, TileMode,
+};
 use fret_core::{
     Color, DrawOrder, MouseButton, PathCommand, PathStyle, Point, Px, Rect, StrokeCapV1,
     StrokeJoinV1, StrokeStyleV2,
@@ -1895,6 +1898,24 @@ pub fn node_graph_surface_paint_only<H: UiHost + 'static>(
 
                         if let Some(edge_id) = edge_id {
                             if enable_next {
+                                let mut stops =
+                                    [GradientStop::new(0.0, Color::TRANSPARENT); MAX_STOPS];
+                                stops[0] =
+                                    GradientStop::new(0.0, Color::from_srgb_hex_rgb(0xff_3b_30));
+                                stops[1] =
+                                    GradientStop::new(1.0, Color::from_srgb_hex_rgb(0x34_c7_59));
+                                let gradient = LinearGradient {
+                                    start: Point::new(Px(0.0), Px(0.0)),
+                                    end: Point::new(Px(240.0), Px(0.0)),
+                                    tile_mode: TileMode::Clamp,
+                                    color_space: ColorSpace::Srgb,
+                                    stop_count: 2,
+                                    stops,
+                                };
+                                let paint = PaintBindingV1::with_eval_space(
+                                    Paint::LinearGradient(gradient),
+                                    PaintEvalSpaceV1::ViewportPx,
+                                );
                                 diag_paint_overrides_for_keys.set_edge_override(
                                     edge_id,
                                     Some(
@@ -1905,12 +1926,7 @@ pub fn node_graph_surface_paint_only<H: UiHost + 'static>(
                                                 Px(0.0),
                                             )),
                                             stroke_width_mul: Some(1.6),
-                                            stroke_paint: Some(
-                                                fret_core::scene::Paint::Solid(Color::from_srgb_hex_rgb(
-                                                    0xff_3b_30,
-                                                ))
-                                                .into(),
-                                            ),
+                                            stroke_paint: Some(paint),
                                         }
                                         .normalized(),
                                     ),

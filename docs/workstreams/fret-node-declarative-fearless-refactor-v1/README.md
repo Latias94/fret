@@ -91,6 +91,8 @@ This workstream aims to make downstream ecosystem authors productive without tou
   - pass it via `NodeGraphSurfacePaintOnlyProps.paint_overrides`
   - bump `revision()` when overrides change so paint-only caches can update without rebuilding
     derived geometry
+  - Note: edge paint overrides can provide full `PaintBindingV1` (gradients/materials), because
+    the paint-only surface uses `CanvasPainter::path_paint` under the hood.
 - Keep editor state in models:
   - graph: `Model<Graph>`
   - view state: `Model<NodeGraphViewState>`

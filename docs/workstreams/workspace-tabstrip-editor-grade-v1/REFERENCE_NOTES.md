@@ -51,9 +51,12 @@ Evidence anchors:
 
 These are useful as “behavior checklists” even if we do not vendor the sources:
 
-- VS Code / Monaco: editor tab semantics (preview, dirty indicator, pinned), keyboard + focus rules.
-- Eclipse Theia: similar to VS Code tab/workbench behaviors.
-- Jupyter Lumino: docking/tab strip behaviors and hit-testing patterns.
+- VS Code: editor tab semantics (preview, dirty indicator, pinned), keyboard + focus rules.
+  - Anchor (tab control + overflow + close/pin wiring): `src/vs/workbench/browser/parts/editor/editorTabsControl.ts`
+  - Anchor (tab model + group semantics): `src/vs/workbench/common/editor/editorGroupModel.ts`
+- Monaco: the editor itself; tab semantics are primarily in VS Code (Monaco alone is not a “workspace shell”).
+- Eclipse Theia: similar to VS Code tab/workbench behaviors (useful alternative viewpoint on command routing + focus).
+- Jupyter Lumino: docking/tab strip behaviors and hit-testing patterns (strong reference for dock layout + drag/drop).
 - GoldenLayout: docking/tab container UX patterns (split/drop targets).
 
 We should treat these as outcome references and encode the outcomes as:

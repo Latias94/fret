@@ -55,7 +55,7 @@ pub(in crate::ui) fn material3_state_matrix_content(
     let mut out: Vec<AnyElement> = Vec::new();
 
     out.push(cx.text("— Buttons —"));
-    out.extend(preview_material3_button(cx));
+    out.push(snippets::material3::button::render(cx));
 
     out.push(cx.text("— Chips —"));
     out.extend(preview_material3_chip(cx, last_action.clone()));
@@ -64,19 +64,19 @@ pub(in crate::ui) fn material3_state_matrix_content(
     out.extend(preview_material3_card(cx, last_action.clone()));
 
     out.push(cx.text("— Icon Buttons —"));
-    out.extend(preview_material3_icon_button(cx));
+    out.push(snippets::material3::icon_button::render(cx));
 
     out.push(cx.text("— FAB —"));
     out.extend(preview_material3_fab(cx, last_action.clone()));
 
     out.push(cx.text("— Checkbox —"));
-    out.extend(preview_material3_checkbox(cx, material3_checkbox));
+    out.push(snippets::material3::checkbox::render(cx, material3_checkbox));
 
     out.push(cx.text("— Switch —"));
-    out.extend(preview_material3_switch(cx, material3_switch));
+    out.push(snippets::material3::switch::render(cx, material3_switch));
 
     out.push(cx.text("— Radio —"));
-    out.extend(preview_material3_radio(cx, material3_radio_value));
+    out.push(snippets::material3::radio::render(cx, material3_radio_value));
 
     out.push(cx.text("— Text Field —"));
     out.extend(preview_material3_text_field(

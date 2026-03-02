@@ -492,6 +492,24 @@ pub(crate) fn triage_json_from_stats(
             }));
         }
 
+        // renderer.custom_effect_v2_user_image_incompatible_fallbacks
+        //
+        // CustomEffectV2's ABI requires filterable sampled textures for the user image. When a
+        // non-filterable (or otherwise incompatible) image is provided, the renderer binds a
+        // deterministic fallback (1x1 transparent) to avoid wgpu validation errors.
+        if worst.renderer_custom_effect_v2_user_image_incompatible_fallbacks > 0 {
+            out.push(json!({
+                "code": "renderer.custom_effect_v2_user_image_incompatible_fallbacks",
+                "severity": "warn",
+                "message": "CustomEffectV2 bound the fallback user image due to incompatible input formats in the worst frame.",
+                "evidence": {
+                    "custom_effect_v2_steps_requested": worst.renderer_custom_effect_v2_steps_requested,
+                    "custom_effect_v2_passes_emitted": worst.renderer_custom_effect_v2_passes_emitted,
+                    "custom_effect_v2_user_image_incompatible_fallbacks": worst.renderer_custom_effect_v2_user_image_incompatible_fallbacks,
+                }
+            }));
+        }
+
         // renderer.custom_effect_v3_requested_but_skipped
         //
         // This catches the case where the UI requested CustomEffectV3 (effect chains include a
@@ -536,6 +554,27 @@ pub(crate) fn triage_json_from_stats(
                     "custom_effect_chain_headroom_after_optional_bytes": custom_effect_chain_headroom_after_optional_bytes,
                     "min_budget_for_two_full_targets_bytes": min_budget_for_two_full_targets_bytes,
                     "renderer_intermediate_peak_in_use_bytes": worst.renderer_intermediate_peak_in_use_bytes,
+                }
+            }));
+        }
+
+        // renderer.custom_effect_v3_user_image_incompatible_fallbacks
+        //
+        // CustomEffectV3's ABI requires filterable sampled textures for `user0` / `user1`. When
+        // incompatible images are provided, the renderer binds a deterministic fallback (1x1
+        // transparent) to keep bind group creation valid and deterministic.
+        if worst.renderer_custom_effect_v3_user0_image_incompatible_fallbacks > 0
+            || worst.renderer_custom_effect_v3_user1_image_incompatible_fallbacks > 0
+        {
+            out.push(json!({
+                "code": "renderer.custom_effect_v3_user_image_incompatible_fallbacks",
+                "severity": "warn",
+                "message": "CustomEffectV3 bound fallback user images due to incompatible input formats in the worst frame.",
+                "evidence": {
+                    "custom_effect_v3_steps_requested": worst.renderer_custom_effect_v3_steps_requested,
+                    "custom_effect_v3_passes_emitted": worst.renderer_custom_effect_v3_passes_emitted,
+                    "custom_effect_v3_user0_image_incompatible_fallbacks": worst.renderer_custom_effect_v3_user0_image_incompatible_fallbacks,
+                    "custom_effect_v3_user1_image_incompatible_fallbacks": worst.renderer_custom_effect_v3_user1_image_incompatible_fallbacks,
                 }
             }));
         }
@@ -605,6 +644,43 @@ pub(crate) fn triage_json_from_stats(
                     "custom_effect_v3_sources_raw_requested": worst.renderer_custom_effect_v3_sources_raw_requested,
                     "custom_effect_v3_sources_raw_distinct": worst.renderer_custom_effect_v3_sources_raw_distinct,
                     "custom_effect_v3_sources_raw_aliased_to_src": worst.renderer_custom_effect_v3_sources_raw_aliased_to_src,
+                }
+            }));
+        }
+
+        // renderer.custom_effect_v3_pyramid_cache_miss_heavy
+        //
+        // This is a perf/efficiency signal: when multiple CustomV3 passes in the same frame
+        // request a pyramid (levels >= 2), the renderer has a frame-local reuse cache keyed by
+        // (src_raw target, size, format, levels, src_raw epoch). A high miss ratio suggests that
+        // `src_raw` is not stable across the passes, or that the pyramid cannot be reused due to
+        // intervening writes.
+        let custom_effect_v3_pyramid_cache_hits =
+            worst.renderer_custom_effect_v3_pyramid_cache_hits;
+        let custom_effect_v3_pyramid_cache_misses =
+            worst.renderer_custom_effect_v3_pyramid_cache_misses;
+        let custom_effect_v3_pyramid_cache_total = custom_effect_v3_pyramid_cache_hits
+            .saturating_add(custom_effect_v3_pyramid_cache_misses);
+        if worst.renderer_custom_effect_v3_sources_pyramid_applied_levels_ge2 > 0
+            && custom_effect_v3_pyramid_cache_total >= 2
+            && custom_effect_v3_pyramid_cache_misses > custom_effect_v3_pyramid_cache_hits
+        {
+            let miss_pct = ratio_pct(
+                custom_effect_v3_pyramid_cache_misses,
+                custom_effect_v3_pyramid_cache_total,
+            );
+            let severity = if miss_pct >= 75.0 { "warn" } else { "info" };
+            out.push(json!({
+                "code": "renderer.custom_effect_v3_pyramid_cache_miss_heavy",
+                "severity": severity,
+                "message": "CustomEffectV3 pyramid cache misses dominate in the worst frame (pyramid rebuilds likely).",
+                "evidence": {
+                    "custom_effect_v3_sources_pyramid_requested": worst.renderer_custom_effect_v3_sources_pyramid_requested,
+                    "custom_effect_v3_sources_pyramid_applied_levels_ge2": worst.renderer_custom_effect_v3_sources_pyramid_applied_levels_ge2,
+                    "custom_effect_v3_pyramid_cache_hits": custom_effect_v3_pyramid_cache_hits,
+                    "custom_effect_v3_pyramid_cache_misses": custom_effect_v3_pyramid_cache_misses,
+                    "custom_effect_v3_pyramid_cache_total": custom_effect_v3_pyramid_cache_total,
+                    "custom_effect_v3_pyramid_cache_miss_pct": miss_pct,
                 }
             }));
         }

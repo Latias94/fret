@@ -12,6 +12,7 @@ Acceptance:
   - upstream part surface mapping (file anchors),
   - an explicit “reference stack” list (APG/Radix/shadcn/Base UI),
   - a minimal gate plan (what we will test and how).
+- A “style helper policy” is documented (what we port vs what we intentionally do not port).
 
 Deliverables:
 

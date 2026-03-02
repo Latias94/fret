@@ -46,20 +46,17 @@ The current high-signal case is `combobox`:
 
 - Upstream (`repo-ref/ui/apps/v4/registry/bases/radix/ui/combobox.tsx`) exports an element part
   named `ComboboxItem`.
-- Fret's `ecosystem/fret-ui-shadcn` now models options via `ComboboxOption` / `ComboboxOptionGroup`
-  (in `src/combobox_data.rs`) to keep the upstream part name available for a future v4 part surface.
+- Fret aligns on upstream v4 names directly (`ComboboxItem`, `ComboboxGroup`, `ComboboxList`, …).
 
-This means “true v4 part surface parity” requires a staged rename + adapter plan, not a thin
-wrapper.
+This means “true v4 part surface parity” can keep upstream names, but structural drift vs Base UI
+(render props, in-trigger editable input) still requires an adapter-oriented design.
 
 **Recommended migration strategy**
 
-1. Introduce the option data model (`ComboboxOption`, `ComboboxOptionGroup`) in a dedicated module
-   so the upstream v4 part names are not consumed by data structs.
-2. Migrate in-tree call sites (UI Gallery, tests, recipes) to the option model and helpers (e.g.
-   `options(...)` + `combobox_option(...)`).
-3. Repurpose the upstream names (`ComboboxItem`, `ComboboxList`, `ComboboxContent`, …) for a
-   v4-aligned part surface and provide an `into_element_parts(...)` compatibility adapter.
+1. Keep upstream v4 part identifiers available as Rust types/functions (`ComboboxInput/Content/...`)
+   and treat `ComboboxItem` as the data-bearing “part-like” surface for list entries.
+2. Provide an `into_element_parts(...)` adapter so upstream docs “Usage” shapes can be expressed in
+   Rust even when the underlying implementation remains a Popover + Command recipe.
 
 This keeps the workstream refactor-friendly while still converging to upstream part boundaries.
 

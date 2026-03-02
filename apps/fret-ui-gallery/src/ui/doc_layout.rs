@@ -530,7 +530,7 @@ fn demo_shell(cx: &mut ElementContext<'_, App>, max_w: Px, body: AnyElement) -> 
             LayoutRefinement::default().w_full().min_w_0().max_w(max_w),
         )
     });
-    cx.container(props, move |cx| [centered(cx, body)])
+    cx.container(props, move |_cx| [body])
 }
 
 fn layout_only_shell(cx: &mut ElementContext<'_, App>, max_w: Px, body: AnyElement) -> AnyElement {
@@ -541,7 +541,7 @@ fn layout_only_shell(cx: &mut ElementContext<'_, App>, max_w: Px, body: AnyEleme
             LayoutRefinement::default().w_full().min_w_0().max_w(max_w),
         )
     });
-    cx.container(props, move |cx| [centered(cx, body)])
+    cx.container(props, move |_cx| [body])
 }
 
 fn auto_tabs_test_id_prefix(title: &'static str, title_test_id: Option<&'static str>) -> Arc<str> {
@@ -596,17 +596,6 @@ fn preview_code_tabs(
     let code_shell = code_block_shell(cx, test_id_prefix, max_w, code);
     let code_el = code_shell;
 
-    let wrap_panel = |cx: &mut ElementContext<'_, App>, body: AnyElement| {
-        stack::hstack(
-            cx,
-            stack::HStackProps::default()
-                .items_start()
-                .justify_center()
-                .layout(LayoutRefinement::default().w_full().min_w_0()),
-            move |_cx| vec![body],
-        )
-    };
-
     let base = shadcn::Tabs::uncontrolled(Some("preview"))
         .content_fill_remaining(matches!(tabs_sizing, DocTabsSizing::FillRemaining))
         .refine_layout(LayoutRefinement::default().w_full().min_w_0());
@@ -614,15 +603,15 @@ fn preview_code_tabs(
     let tabs = if let Some(prefix) = test_id_prefix {
         let tabs_test_id = format!("{prefix}-tabs");
         base.test_id(tabs_test_id.clone()).items([
-            shadcn::TabsItem::new("preview", "Preview", [wrap_panel(cx, preview)])
+            shadcn::TabsItem::new("preview", "Preview", [preview])
                 .trigger_test_id(format!("{tabs_test_id}-trigger-preview")),
-            shadcn::TabsItem::new("code", "Code", [wrap_panel(cx, code_el)])
+            shadcn::TabsItem::new("code", "Code", [code_el])
                 .trigger_test_id(format!("{tabs_test_id}-trigger-code")),
         ])
     } else {
         base.items([
-            shadcn::TabsItem::new("preview", "Preview", [wrap_panel(cx, preview)]),
-            shadcn::TabsItem::new("code", "Code", [wrap_panel(cx, code_el)]),
+            shadcn::TabsItem::new("preview", "Preview", [preview]),
+            shadcn::TabsItem::new("code", "Code", [code_el]),
         ])
     };
 

@@ -1,6 +1,64 @@
 use super::*;
 
 mod accordion;
+mod ai_audio_player_demo;
+mod ai_agent_demo;
+mod ai_artifact_demo;
+mod ai_attachments_demo;
+mod ai_canvas_world_layer_spike;
+mod ai_chat_demo;
+mod ai_chain_of_thought_demo;
+mod ai_checkpoint_demo;
+mod ai_code_block_demo;
+mod ai_commit_demo;
+mod ai_commit_large_demo;
+mod ai_confirmation_demo;
+mod ai_context_demo;
+mod ai_conversation_demo;
+mod ai_file_tree_demo;
+mod ai_environment_variables_demo;
+mod ai_image_demo;
+mod ai_inline_citation_demo;
+mod ai_message_branch_demo;
+mod ai_message_demo;
+mod ai_mic_selector_demo;
+mod ai_model_selector_demo;
+mod ai_open_in_chat_demo;
+mod ai_package_info_demo;
+mod ai_persona_demo;
+mod ai_plan_demo;
+mod ai_prompt_input_action_menu_demo;
+mod ai_prompt_input_provider_demo;
+mod ai_prompt_input_referenced_sources_demo;
+mod ai_queue_demo;
+mod ai_reasoning_demo;
+mod ai_schema_display_demo;
+mod ai_shimmer_demo;
+mod ai_snippet_demo;
+mod ai_sources_demo;
+mod ai_speech_input_demo;
+mod ai_sandbox_demo;
+mod ai_stack_trace_demo;
+mod ai_stack_trace_large_demo;
+mod ai_suggestions_demo;
+mod ai_task_demo;
+mod ai_terminal_demo;
+mod ai_test_results_demo;
+mod ai_test_results_large_demo;
+mod ai_transcription_demo;
+mod ai_transcript_torture;
+mod ai_tool_demo;
+mod ai_voice_selector_demo;
+mod ai_web_preview_demo;
+mod ai_workflow_connection_demo;
+mod ai_workflow_controls_demo;
+mod ai_workflow_canvas_demo;
+mod ai_workflow_chrome_demo;
+mod ai_workflow_edge_demo;
+mod ai_workflow_node_demo;
+mod ai_workflow_node_graph_demo;
+mod ai_workflow_panel_demo;
+mod ai_workflow_toolbar_demo;
 mod alert;
 mod alert_dialog;
 mod aspect_ratio;
@@ -66,6 +124,414 @@ mod typography;
 
 pub(super) fn preview_alert(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
     alert::preview_alert(cx)
+}
+
+pub(super) fn preview_ai_attachments_demo(
+    cx: &mut ElementContext<'_, App>,
+    theme: &Theme,
+) -> Vec<AnyElement> {
+    ai_attachments_demo::preview_ai_attachments_demo(cx, theme)
+}
+
+pub(super) fn preview_ai_audio_player_demo(
+    cx: &mut ElementContext<'_, App>,
+    theme: &Theme,
+) -> Vec<AnyElement> {
+    ai_audio_player_demo::preview_ai_audio_player_demo(cx, theme)
+}
+
+pub(super) fn preview_ai_agent_demo(
+    cx: &mut ElementContext<'_, App>,
+    theme: &Theme,
+) -> Vec<AnyElement> {
+    ai_agent_demo::preview_ai_agent_demo(cx, theme)
+}
+
+pub(super) fn preview_ai_artifact_demo(
+    cx: &mut ElementContext<'_, App>,
+    theme: &Theme,
+) -> Vec<AnyElement> {
+    ai_artifact_demo::preview_ai_artifact_demo(cx, theme)
+}
+
+pub(super) fn preview_ai_canvas_world_layer_spike(
+    cx: &mut ElementContext<'_, App>,
+    theme: &Theme,
+) -> Vec<AnyElement> {
+    ai_canvas_world_layer_spike::preview_ai_canvas_world_layer_spike(cx, theme)
+}
+
+pub(super) fn preview_ai_chat_demo(
+    cx: &mut ElementContext<'_, App>,
+    theme: &Theme,
+) -> Vec<AnyElement> {
+    ai_chat_demo::preview_ai_chat_demo(cx, theme)
+}
+
+pub(super) fn preview_ai_checkpoint_demo(
+    cx: &mut ElementContext<'_, App>,
+    theme: &Theme,
+) -> Vec<AnyElement> {
+    ai_checkpoint_demo::preview_ai_checkpoint_demo(cx, theme)
+}
+
+pub(super) fn preview_ai_chain_of_thought_demo(
+    cx: &mut ElementContext<'_, App>,
+    theme: &Theme,
+) -> Vec<AnyElement> {
+    ai_chain_of_thought_demo::preview_ai_chain_of_thought_demo(cx, theme)
+}
+
+pub(super) fn preview_ai_code_block_demo(
+    cx: &mut ElementContext<'_, App>,
+    theme: &Theme,
+) -> Vec<AnyElement> {
+    ai_code_block_demo::preview_ai_code_block_demo(cx, theme)
+}
+
+pub(super) fn preview_ai_commit_demo(
+    cx: &mut ElementContext<'_, App>,
+    theme: &Theme,
+) -> Vec<AnyElement> {
+    ai_commit_demo::preview_ai_commit_demo(cx, theme)
+}
+
+pub(super) fn preview_ai_commit_large_demo(
+    cx: &mut ElementContext<'_, App>,
+    theme: &Theme,
+) -> Vec<AnyElement> {
+    ai_commit_large_demo::preview_ai_commit_large_demo(cx, theme)
+}
+
+pub(super) fn preview_ai_confirmation_demo(
+    cx: &mut ElementContext<'_, App>,
+    theme: &Theme,
+) -> Vec<AnyElement> {
+    ai_confirmation_demo::preview_ai_confirmation_demo(cx, theme)
+}
+
+pub(super) fn preview_ai_conversation_demo(
+    cx: &mut ElementContext<'_, App>,
+    theme: &Theme,
+) -> Vec<AnyElement> {
+    ai_conversation_demo::preview_ai_conversation_demo(cx, theme)
+}
+
+pub(super) fn preview_ai_context_demo(
+    cx: &mut ElementContext<'_, App>,
+    theme: &Theme,
+) -> Vec<AnyElement> {
+    ai_context_demo::preview_ai_context_demo(cx, theme)
+}
+
+pub(super) fn preview_ai_file_tree_demo(
+    cx: &mut ElementContext<'_, App>,
+    theme: &Theme,
+) -> Vec<AnyElement> {
+    ai_file_tree_demo::preview_ai_file_tree_demo(cx, theme)
+}
+
+pub(super) fn preview_ai_image_demo(
+    cx: &mut ElementContext<'_, App>,
+    theme: &Theme,
+) -> Vec<AnyElement> {
+    ai_image_demo::preview_ai_image_demo(cx, theme)
+}
+
+pub(super) fn preview_ai_snippet_demo(
+    cx: &mut ElementContext<'_, App>,
+    theme: &Theme,
+) -> Vec<AnyElement> {
+    ai_snippet_demo::preview_ai_snippet_demo(cx, theme)
+}
+
+pub(super) fn preview_ai_environment_variables_demo(
+    cx: &mut ElementContext<'_, App>,
+    theme: &Theme,
+) -> Vec<AnyElement> {
+    ai_environment_variables_demo::preview_ai_environment_variables_demo(cx, theme)
+}
+
+pub(super) fn preview_ai_message_demo(
+    cx: &mut ElementContext<'_, App>,
+    theme: &Theme,
+) -> Vec<AnyElement> {
+    ai_message_demo::preview_ai_message_demo(cx, theme)
+}
+
+pub(super) fn preview_ai_message_branch_demo(
+    cx: &mut ElementContext<'_, App>,
+    theme: &Theme,
+) -> Vec<AnyElement> {
+    ai_message_branch_demo::preview_ai_message_branch_demo(cx, theme)
+}
+
+pub(super) fn preview_ai_open_in_chat_demo(
+    cx: &mut ElementContext<'_, App>,
+    theme: &Theme,
+) -> Vec<AnyElement> {
+    ai_open_in_chat_demo::preview_ai_open_in_chat_demo(cx, theme)
+}
+
+pub(super) fn preview_ai_persona_demo(
+    cx: &mut ElementContext<'_, App>,
+    theme: &Theme,
+) -> Vec<AnyElement> {
+    ai_persona_demo::preview_ai_persona_demo(cx, theme)
+}
+
+pub(super) fn preview_ai_plan_demo(
+    cx: &mut ElementContext<'_, App>,
+    theme: &Theme,
+) -> Vec<AnyElement> {
+    ai_plan_demo::preview_ai_plan_demo(cx, theme)
+}
+
+pub(super) fn preview_ai_schema_display_demo(
+    cx: &mut ElementContext<'_, App>,
+    theme: &Theme,
+) -> Vec<AnyElement> {
+    ai_schema_display_demo::preview_ai_schema_display_demo(cx, theme)
+}
+
+pub(super) fn preview_ai_queue_demo(
+    cx: &mut ElementContext<'_, App>,
+    theme: &Theme,
+) -> Vec<AnyElement> {
+    ai_queue_demo::preview_ai_queue_demo(cx, theme)
+}
+
+pub(super) fn preview_ai_terminal_demo(
+    cx: &mut ElementContext<'_, App>,
+    theme: &Theme,
+) -> Vec<AnyElement> {
+    ai_terminal_demo::preview_ai_terminal_demo(cx, theme)
+}
+
+pub(super) fn preview_ai_stack_trace_demo(
+    cx: &mut ElementContext<'_, App>,
+    theme: &Theme,
+) -> Vec<AnyElement> {
+    ai_stack_trace_demo::preview_ai_stack_trace_demo(cx, theme)
+}
+
+pub(super) fn preview_ai_stack_trace_large_demo(
+    cx: &mut ElementContext<'_, App>,
+    theme: &Theme,
+) -> Vec<AnyElement> {
+    ai_stack_trace_large_demo::preview_ai_stack_trace_large_demo(cx, theme)
+}
+
+pub(super) fn preview_ai_tool_demo(
+    cx: &mut ElementContext<'_, App>,
+    theme: &Theme,
+) -> Vec<AnyElement> {
+    ai_tool_demo::preview_ai_tool_demo(cx, theme)
+}
+
+pub(super) fn preview_ai_reasoning_demo(
+    cx: &mut ElementContext<'_, App>,
+    theme: &Theme,
+) -> Vec<AnyElement> {
+    ai_reasoning_demo::preview_ai_reasoning_demo(cx, theme)
+}
+
+pub(super) fn preview_ai_shimmer_demo(
+    cx: &mut ElementContext<'_, App>,
+    theme: &Theme,
+) -> Vec<AnyElement> {
+    ai_shimmer_demo::preview_ai_shimmer_demo(cx, theme)
+}
+
+pub(super) fn preview_ai_suggestions_demo(
+    cx: &mut ElementContext<'_, App>,
+    theme: &Theme,
+) -> Vec<AnyElement> {
+    ai_suggestions_demo::preview_ai_suggestions_demo(cx, theme)
+}
+
+pub(super) fn preview_ai_task_demo(
+    cx: &mut ElementContext<'_, App>,
+    theme: &Theme,
+) -> Vec<AnyElement> {
+    ai_task_demo::preview_ai_task_demo(cx, theme)
+}
+
+pub(super) fn preview_ai_test_results_demo(
+    cx: &mut ElementContext<'_, App>,
+    theme: &Theme,
+) -> Vec<AnyElement> {
+    ai_test_results_demo::preview_ai_test_results_demo(cx, theme)
+}
+
+pub(super) fn preview_ai_test_results_large_demo(
+    cx: &mut ElementContext<'_, App>,
+    theme: &Theme,
+) -> Vec<AnyElement> {
+    ai_test_results_large_demo::preview_ai_test_results_large_demo(cx, theme)
+}
+
+pub(super) fn preview_ai_transcription_demo(
+    cx: &mut ElementContext<'_, App>,
+    theme: &Theme,
+) -> Vec<AnyElement> {
+    ai_transcription_demo::preview_ai_transcription_demo(cx, theme)
+}
+
+pub(super) fn preview_ai_transcript_torture(
+    cx: &mut ElementContext<'_, App>,
+    theme: &Theme,
+) -> Vec<AnyElement> {
+    ai_transcript_torture::preview_ai_transcript_torture(cx, theme)
+}
+
+pub(super) fn preview_ai_prompt_input_provider_demo(
+    cx: &mut ElementContext<'_, App>,
+    theme: &Theme,
+) -> Vec<AnyElement> {
+    ai_prompt_input_provider_demo::preview_ai_prompt_input_provider_demo(cx, theme)
+}
+
+pub(super) fn preview_ai_prompt_input_action_menu_demo(
+    cx: &mut ElementContext<'_, App>,
+    theme: &Theme,
+) -> Vec<AnyElement> {
+    ai_prompt_input_action_menu_demo::preview_ai_prompt_input_action_menu_demo(cx, theme)
+}
+
+pub(super) fn preview_ai_prompt_input_referenced_sources_demo(
+    cx: &mut ElementContext<'_, App>,
+    theme: &Theme,
+) -> Vec<AnyElement> {
+    ai_prompt_input_referenced_sources_demo::preview_ai_prompt_input_referenced_sources_demo(
+        cx, theme,
+    )
+}
+
+pub(super) fn preview_ai_package_info_demo(
+    cx: &mut ElementContext<'_, App>,
+    theme: &Theme,
+) -> Vec<AnyElement> {
+    ai_package_info_demo::preview_ai_package_info_demo(cx, theme)
+}
+
+pub(super) fn preview_ai_model_selector_demo(
+    cx: &mut ElementContext<'_, App>,
+    theme: &Theme,
+) -> Vec<AnyElement> {
+    ai_model_selector_demo::preview_ai_model_selector_demo(cx, theme)
+}
+
+pub(super) fn preview_ai_mic_selector_demo(
+    cx: &mut ElementContext<'_, App>,
+    theme: &Theme,
+) -> Vec<AnyElement> {
+    ai_mic_selector_demo::preview_ai_mic_selector_demo(cx, theme)
+}
+
+pub(super) fn preview_ai_voice_selector_demo(
+    cx: &mut ElementContext<'_, App>,
+    theme: &Theme,
+) -> Vec<AnyElement> {
+    ai_voice_selector_demo::preview_ai_voice_selector_demo(cx, theme)
+}
+
+pub(super) fn preview_ai_inline_citation_demo(
+    cx: &mut ElementContext<'_, App>,
+    theme: &Theme,
+) -> Vec<AnyElement> {
+    ai_inline_citation_demo::preview_ai_inline_citation_demo(cx, theme)
+}
+
+pub(super) fn preview_ai_sources_demo(
+    cx: &mut ElementContext<'_, App>,
+    theme: &Theme,
+) -> Vec<AnyElement> {
+    ai_sources_demo::preview_ai_sources_demo(cx, theme)
+}
+
+pub(super) fn preview_ai_speech_input_demo(
+    cx: &mut ElementContext<'_, App>,
+    theme: &Theme,
+) -> Vec<AnyElement> {
+    ai_speech_input_demo::preview_ai_speech_input_demo(cx, theme)
+}
+
+pub(super) fn preview_ai_sandbox_demo(
+    cx: &mut ElementContext<'_, App>,
+    theme: &Theme,
+) -> Vec<AnyElement> {
+    ai_sandbox_demo::preview_ai_sandbox_demo(cx, theme)
+}
+
+pub(super) fn preview_ai_web_preview_demo(
+    cx: &mut ElementContext<'_, App>,
+    theme: &Theme,
+) -> Vec<AnyElement> {
+    ai_web_preview_demo::preview_ai_web_preview_demo(cx, theme)
+}
+
+pub(super) fn preview_ai_workflow_toolbar_demo(
+    cx: &mut ElementContext<'_, App>,
+    theme: &Theme,
+) -> Vec<AnyElement> {
+    ai_workflow_toolbar_demo::preview_ai_workflow_toolbar_demo(cx, theme)
+}
+
+pub(super) fn preview_ai_workflow_panel_demo(
+    cx: &mut ElementContext<'_, App>,
+    theme: &Theme,
+) -> Vec<AnyElement> {
+    ai_workflow_panel_demo::preview_ai_workflow_panel_demo(cx, theme)
+}
+
+pub(super) fn preview_ai_workflow_connection_demo(
+    cx: &mut ElementContext<'_, App>,
+    theme: &Theme,
+) -> Vec<AnyElement> {
+    ai_workflow_connection_demo::preview_ai_workflow_connection_demo(cx, theme)
+}
+
+pub(super) fn preview_ai_workflow_chrome_demo(
+    cx: &mut ElementContext<'_, App>,
+    theme: &Theme,
+) -> Vec<AnyElement> {
+    ai_workflow_chrome_demo::preview_ai_workflow_chrome_demo(cx, theme)
+}
+
+pub(super) fn preview_ai_workflow_controls_demo(
+    cx: &mut ElementContext<'_, App>,
+    theme: &Theme,
+) -> Vec<AnyElement> {
+    ai_workflow_controls_demo::preview_ai_workflow_controls_demo(cx, theme)
+}
+
+pub(super) fn preview_ai_workflow_canvas_demo(
+    cx: &mut ElementContext<'_, App>,
+    theme: &Theme,
+) -> Vec<AnyElement> {
+    ai_workflow_canvas_demo::preview_ai_workflow_canvas_demo(cx, theme)
+}
+
+pub(super) fn preview_ai_workflow_node_demo(
+    cx: &mut ElementContext<'_, App>,
+    theme: &Theme,
+) -> Vec<AnyElement> {
+    ai_workflow_node_demo::preview_ai_workflow_node_demo(cx, theme)
+}
+
+pub(super) fn preview_ai_workflow_edge_demo(
+    cx: &mut ElementContext<'_, App>,
+    theme: &Theme,
+) -> Vec<AnyElement> {
+    ai_workflow_edge_demo::preview_ai_workflow_edge_demo(cx, theme)
+}
+
+pub(super) fn preview_ai_workflow_node_graph_demo(
+    cx: &mut ElementContext<'_, App>,
+    theme: &Theme,
+) -> Vec<AnyElement> {
+    ai_workflow_node_graph_demo::preview_ai_workflow_node_graph_demo(cx, theme)
 }
 
 pub(super) fn preview_accordion(

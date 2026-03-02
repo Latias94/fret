@@ -111,11 +111,7 @@ pub(super) fn handle_ensure_visible_step(
         .global::<fret_runtime::WindowInputContextService>()
         .and_then(|svc| svc.snapshot(window));
     let dock_drag_runtime = dock_drag_runtime_state(app, svc.known_windows.as_slice());
-    let open_window_count = app
-        .global::<fret_runtime::WindowInputContextService>()
-        .map(|ctx_svc| ctx_svc.window_count() as u32)
-        .unwrap_or(0)
-        .max(1);
+    let open_window_count = UiDiagnosticsService::open_window_count_for_predicates(app);
     if eval_predicate(
         snapshot,
         window_bounds,

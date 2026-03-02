@@ -11,6 +11,7 @@ use crate::tree::{
 use fret_core::FrameId;
 use fret_core::time::{Duration, Instant};
 use std::sync::OnceLock;
+use std::sync::Arc;
 
 #[derive(Debug, Clone)]
 struct ScrollLayoutProfileConfig {
@@ -106,6 +107,7 @@ fn observe_scroll_overflow_extents<T: ScrollOverflowTree>(
     axis: crate::element::ScrollAxis,
     content_size: Size,
     extent_may_be_stale: bool,
+    deep_scan_allowed: bool,
 ) -> (Size, UiDebugScrollOverflowObservationTelemetry) {
     let mut observed = Size::new(Px(0.0), Px(0.0));
     const MAX_BARRIER_WRAPPER_CHAIN: usize = 8;
@@ -196,7 +198,8 @@ fn observe_scroll_overflow_extents<T: ScrollOverflowTree>(
             observed.height = Px(observed.height.0.max(bottom));
         }
 
-        if extent_may_be_stale
+        if deep_scan_allowed
+            && extent_may_be_stale
             && ((axis.scroll_x() && observed.width.0 <= content_size.width.0 + 0.5)
                 || (axis.scroll_y() && observed.height.0 <= content_size.height.0 + 0.5))
         {
@@ -1382,6 +1385,29 @@ impl ElementHostWidget {
         let mut content_w = Px(content_w.0.max(desired.width.0.max(0.0)));
         let mut content_h = Px(content_h.0.max(desired.height.0.max(0.0)));
 
+        let debug_test_id: Option<Arc<str>> = if cx.tree.debug_enabled() {
+            let mut current = Some(cx.node);
+            let mut steps: u8 = 0;
+            let mut found: Option<Arc<str>> = None;
+            while let Some(node) = current {
+                if let Some(record) = crate::declarative::element_record_for_node(cx.app, window, node)
+                    && let Some(decoration) = record.semantics_decoration.as_ref()
+                    && let Some(test_id) = decoration.test_id.as_ref()
+                {
+                    found = Some(test_id.clone());
+                    break;
+                }
+                current = cx.tree.node_parent(node);
+                steps = steps.saturating_add(1);
+                if steps >= 48 {
+                    break;
+                }
+            }
+            found
+        } else {
+            None
+        };
+
         // Avoid mutating the imperative handle during "probe" layout passes that use an
         // effectively-unbounded available space, otherwise scroll position can be clamped to zero
         // prematurely.
@@ -1395,6 +1421,7 @@ impl ElementHostWidget {
                 .debug_record_scroll_node_telemetry(UiDebugScrollNodeTelemetry {
                     node: cx.node,
                     element: Some(self.element),
+                    test_id: debug_test_id.clone(),
                     axis: match props.axis {
                         crate::element::ScrollAxis::X => UiDebugScrollAxis::X,
                         crate::element::ScrollAxis::Y => UiDebugScrollAxis::Y,
@@ -1455,9 +1482,11 @@ impl ElementHostWidget {
             let mut ctx = cx.overflow_ctx;
             if props.axis.scroll_x() {
                 ctx.probe_available_override.width = Some(AvailableSpace::MaxContent);
+                ctx.allow_overflow_on_auto.width = true;
             }
             if props.axis.scroll_y() {
                 ctx.probe_available_override.height = Some(AvailableSpace::MaxContent);
+                ctx.allow_overflow_on_auto.height = true;
             }
             ctx
         } else {
@@ -1513,6 +1542,7 @@ impl ElementHostWidget {
                 props.axis,
                 Size::new(content_w, content_h),
                 extent_may_be_stale,
+                at_scroll_extent_edge && extent_may_be_stale && !must_probe_for_growing_extent,
             );
 
             if crate::runtime_config::ui_runtime_config().debug_scroll_extent_probe
@@ -1530,6 +1560,35 @@ impl ElementHostWidget {
                     observation.deep_scan_budget_nodes,
                     observation.extent_may_be_stale,
                 );
+            }
+
+            // If we cannot confidently observe overflow in post-layout geometry (budget hit), fall
+            // back to a measured unbounded probe on the next frame when the user is already at
+            // the current scroll extent edge. This avoids "pinned scroll range" regressions (e.g.
+            // expanding a code tab at the bottom of a docs page).
+            if post_layout_extents_mode
+                && at_scroll_extent_edge
+                && (observation.wrapper_peel_budget_hit || observation.deep_scan_budget_hit)
+            {
+                let first_set = crate::elements::with_element_state(
+                    &mut *cx.app,
+                    window,
+                    self.element,
+                    crate::element::ScrollState::default,
+                    |state| {
+                        let prev = state.pending_extent_probe;
+                        state.pending_extent_probe = true;
+                        !prev
+                    },
+                );
+                if first_set {
+                    cx.tree.schedule_barrier_relayout_with_source_and_detail(
+                        cx.node,
+                        UiDebugInvalidationSource::Other,
+                        UiDebugInvalidationDetail::ScrollExtentsObservationBudgetHit,
+                    );
+                    cx.request_redraw();
+                }
             }
 
             // Best-effort: if post-layout child bounds exceed the probed extent (cached/deferral
@@ -1574,6 +1633,7 @@ impl ElementHostWidget {
                     .debug_record_scroll_node_telemetry(UiDebugScrollNodeTelemetry {
                         node: cx.node,
                         element: Some(self.element),
+                        test_id: debug_test_id.clone(),
                         axis: match props.axis {
                             crate::element::ScrollAxis::X => UiDebugScrollAxis::X,
                             crate::element::ScrollAxis::Y => UiDebugScrollAxis::Y,
@@ -1655,6 +1715,7 @@ impl ElementHostWidget {
                         .debug_record_scroll_node_telemetry(UiDebugScrollNodeTelemetry {
                             node: cx.node,
                             element: Some(self.element),
+                            test_id: debug_test_id.clone(),
                             axis: match props.axis {
                                 crate::element::ScrollAxis::X => UiDebugScrollAxis::X,
                                 crate::element::ScrollAxis::Y => UiDebugScrollAxis::Y,
@@ -1712,6 +1773,7 @@ impl ElementHostWidget {
                     .debug_record_scroll_node_telemetry(UiDebugScrollNodeTelemetry {
                         node: cx.node,
                         element: Some(self.element),
+                        test_id: debug_test_id.clone(),
                         axis: match props.axis {
                             crate::element::ScrollAxis::X => UiDebugScrollAxis::X,
                             crate::element::ScrollAxis::Y => UiDebugScrollAxis::Y,
@@ -1850,6 +1912,7 @@ mod tests {
             crate::element::ScrollAxis::Y,
             Size::new(Px(100.0), Px(100.0)),
             false,
+            false,
         );
 
         assert_eq!(observed.height, Px(300.0));
@@ -1888,6 +1951,7 @@ mod tests {
             content_bounds,
             crate::element::ScrollAxis::Y,
             Size::new(Px(100.0), Px(100.0)),
+            true,
             true,
         );
 
@@ -1928,6 +1992,7 @@ mod tests {
             crate::element::ScrollAxis::Y,
             Size::new(Px(100.0), Px(100.0)),
             false,
+            true,
         );
 
         assert_eq!(observed.height, Px(100.0));
@@ -1958,6 +2023,7 @@ mod tests {
             content_bounds,
             crate::element::ScrollAxis::Y,
             Size::new(Px(100.0), Px(100.0)),
+            true,
             true,
         );
 
@@ -1999,6 +2065,7 @@ mod tests {
             crate::element::ScrollAxis::Y,
             Size::new(Px(100.0), Px(100.0)),
             true,
+            true,
         );
 
         assert!(telemetry.wrapper_peel_budget_hit);
@@ -2006,5 +2073,48 @@ mod tests {
         assert!(telemetry.deep_scan_budget_hit);
         assert_eq!(telemetry.deep_scan_budget_nodes, 256);
         assert_eq!(telemetry.deep_scan_visited, 256);
+    }
+
+    #[test]
+    fn scroll_observed_overflow_respects_deep_scan_allowed_flag() {
+        let mut ids: SlotMap<NodeId, ()> = SlotMap::with_key();
+        let barrier_root = ids.insert(());
+        let observe_root = ids.insert(());
+        let wrapper_a = ids.insert(());
+        let wrapper_b = ids.insert(());
+        let deep_overflow = ids.insert(());
+
+        let mut tree = TestOverflowTree::default();
+        tree.children.insert(barrier_root, vec![observe_root]);
+        tree.children
+            .insert(observe_root, vec![wrapper_a, wrapper_b]);
+        tree.children.insert(wrapper_a, vec![deep_overflow]);
+
+        tree.bounds
+            .insert(barrier_root, rect_xywh(0.0, 0.0, 100.0, 100.0));
+        tree.bounds
+            .insert(observe_root, rect_xywh(0.0, 0.0, 100.0, 100.0));
+        tree.bounds
+            .insert(wrapper_a, rect_xywh(0.0, 0.0, 100.0, 100.0));
+        tree.bounds
+            .insert(wrapper_b, rect_xywh(0.0, 0.0, 100.0, 100.0));
+        tree.bounds
+            .insert(deep_overflow, rect_xywh(0.0, 0.0, 100.0, 300.0));
+
+        let content_bounds = rect_xywh(0.0, 0.0, 100.0, 100.0);
+        let (observed, telemetry) = observe_scroll_overflow_extents(
+            &mut tree,
+            &[barrier_root],
+            content_bounds,
+            crate::element::ScrollAxis::Y,
+            Size::new(Px(100.0), Px(100.0)),
+            true,
+            false,
+        );
+
+        assert_eq!(observed.height, Px(100.0));
+        assert!(!telemetry.deep_scan_enabled);
+        assert_eq!(telemetry.deep_scan_visited, 0);
+        assert!(!telemetry.deep_scan_budget_hit);
     }
 }

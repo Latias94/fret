@@ -10,8 +10,7 @@ use fret_ui::element::{ContainerProps, LayoutStyle, Length};
 use fret_ui::scroll::ScrollHandle;
 use fret_ui::tree::UiTree;
 use fret_ui_kit::OverlayController;
-use fret_ui_shadcn::combobox::Combobox;
-use fret_ui_shadcn::combobox_option;
+use fret_ui_shadcn::combobox::{Combobox, ComboboxItem};
 use fret_ui_shadcn::shadcn_themes;
 use std::sync::Arc;
 
@@ -125,7 +124,7 @@ fn render_frame(
                             let items = (0..40).map(|idx| {
                                 let value = Arc::from(format!("value-{idx}"));
                                 let label = Arc::from(format!("Label {idx}"));
-                                combobox_option(value, label)
+                                ComboboxItem::new(value, label)
                             });
 
                             vec![cx.container(
@@ -147,7 +146,7 @@ fn render_frame(
                                             .a11y_label("Combobox")
                                             .placeholder("Select an option")
                                             .test_id_prefix("combobox-responsive")
-                                            .options(items)
+                                            .items(items)
                                             .into_element(cx),
                                     ]
                                 },

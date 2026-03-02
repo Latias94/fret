@@ -20,6 +20,12 @@ truth for examples.
 As of 2026-03-02, UI Gallery pages in `apps/fret-ui-gallery/src/ui/pages/**` are snippet-backed
 (Preview ≡ Code), and enforcement lives in tests + the informational build-time drift audit.
 
+AI Elements gallery demos are also snippet-backed (see `ai-elements-tracker.md`).
+
+Material 3 pages are **not** snippet-backed yet: they currently live under
+`apps/fret-ui-gallery/src/ui/previews/material3/**` as legacy preview functions (no drift-free code
+tabs). A dedicated tracker exists at `material3-tracker.md`.
+
 ## Goals
 
 1. **Single-source examples**: the preview and copyable snippet are generated from the same code.
