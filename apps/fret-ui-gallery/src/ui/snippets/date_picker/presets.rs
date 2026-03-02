@@ -1,0 +1,21 @@
+// region: example
+use fret_ui_headless::calendar::CalendarMonth;
+use fret_ui_shadcn::{self as shadcn, prelude::*};
+use time::Date;
+
+pub fn render<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    open: Model<bool>,
+    month: Model<CalendarMonth>,
+    selected: Model<Option<Date>>,
+    today: Date,
+) -> AnyElement {
+    shadcn::DatePickerWithPresets::new(open, month, selected)
+        .today(today)
+        .placeholder("Pick a date")
+        .refine_layout(LayoutRefinement::default().w_px(Px(240.0)))
+        .into_element(cx)
+        .test_id("ui-gallery-date-picker-with-presets")
+}
+// endregion: example
+
