@@ -17,7 +17,7 @@ without having to grep the whole crate.
 
 ## Recommended next audit order (dev sequence)
 
-1. `toggle-group` / `button-group` (composites; keyboard expectations + spacing defaults)
+1. `button-group` (composites; spacing defaults + variants helper parity)
 2. `button` / `toggle` (variants helpers parity; ensure copy/paste authoring stays stable)
 3. **Defer last**: `select` / `combobox` deeper redesign (structural drift is known and deeper than “just names”)
 
@@ -78,7 +78,7 @@ without having to grep the whole crate.
 | `tabs` | `repo-ref/ui/apps/v4/registry/bases/radix/ui/tabs.tsx` | `ecosystem/fret-ui-shadcn/src/tabs.rs` | parts (+ helper) | No | Yes | Part surface + style helper are tracked as “Done (with known gaps)”. |
 | `textarea` | `repo-ref/ui/apps/v4/registry/bases/radix/ui/textarea.tsx` | `ecosystem/fret-ui-shadcn/src/textarea.rs` | parts | No | Yes | Shadow wrapper + resize handle policy are gated by unit tests. |
 | `toggle` | `repo-ref/ui/apps/v4/registry/bases/radix/ui/toggle.tsx` | `ecosystem/fret-ui-shadcn/src/toggle.rs` | parts (+ helper) | No | No | Has `toggleVariants(...)` mapping; not audited yet. |
-| `toggle-group` | `repo-ref/ui/apps/v4/registry/bases/radix/ui/toggle-group.tsx` | `ecosystem/fret-ui-shadcn/src/toggle_group.rs` | parts | No | No | Not audited yet. |
+| `toggle-group` | `repo-ref/ui/apps/v4/registry/bases/radix/ui/toggle-group.tsx` | `ecosystem/fret-ui-shadcn/src/toggle_group.rs` | parts | No | Yes | Unit tests lock shadcn-aligned root sizing + gap and vertical stretch behavior. |
 | `tooltip` | `repo-ref/ui/apps/v4/registry/bases/radix/ui/tooltip.tsx` | `ecosystem/fret-ui-shadcn/src/tooltip.rs` | parts | No | Yes | Inherited defaults + max width are gated by unit tests. |
 
 ## Per-component audit template (quick)
