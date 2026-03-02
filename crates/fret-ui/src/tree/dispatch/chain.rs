@@ -34,7 +34,12 @@ impl<H: UiHost> UiTree<H> {
             _ => None,
         };
 
-        let (active_roots, _barrier_root) = self.active_input_layers();
+        let (active_roots, barrier_root) = self.active_input_layers();
+        let dispatch_snapshot = self.build_dispatch_snapshot_for_layer_roots(
+            app.frame_id(),
+            active_roots.as_slice(),
+            barrier_root,
+        );
         if event_position(event).is_some() {
             let chain = self.build_mapped_event_chain(start, event);
             let pointer_hit_is_text_input =
@@ -141,7 +146,13 @@ impl<H: UiHost> UiTree<H> {
                 }
 
                 if let Some(focus) = requested_focus
-                    && self.focus_request_is_allowed(app, self.window, &active_roots, focus)
+                    && self.focus_request_is_allowed(
+                        app,
+                        self.window,
+                        &active_roots,
+                        focus,
+                        Some(&dispatch_snapshot),
+                    )
                 {
                     if let Some(prev) = self.focus {
                         Self::pending_invalidation_merge(
@@ -314,7 +325,13 @@ impl<H: UiHost> UiTree<H> {
             }
 
             if let Some(focus) = requested_focus
-                && self.focus_request_is_allowed(app, self.window, &active_roots, focus)
+                && self.focus_request_is_allowed(
+                    app,
+                    self.window,
+                    &active_roots,
+                    focus,
+                    Some(&dispatch_snapshot),
+                )
             {
                 if let Some(prev) = self.focus {
                     Self::pending_invalidation_merge(

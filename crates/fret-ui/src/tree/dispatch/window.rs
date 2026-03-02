@@ -70,6 +70,23 @@ impl<H: UiHost> UiTree<H> {
     ) {
         self.begin_debug_frame_if_needed(app.frame_id());
         let trace_enabled = tracing::enabled!(tracing::Level::TRACE);
+        #[cfg(debug_assertions)]
+        let debug_focus_scope = std::env::var_os("FRET_TEST_DEBUG_FOCUS_SCOPE").is_some();
+        #[cfg(debug_assertions)]
+        let mut debug_focus_last = self.focus;
+        #[cfg(debug_assertions)]
+        let mut debug_focus_note = |label: &str, focus: Option<NodeId>| {
+            if !debug_focus_scope {
+                return;
+            }
+            if focus != debug_focus_last {
+                eprintln!(
+                    "debug: dispatch {}: focus {:?} -> {:?}",
+                    label, debug_focus_last, focus
+                );
+                debug_focus_last = focus;
+            }
+        };
 
         if let Some(window) = self.window {
             let frame_id = app.frame_id();
@@ -178,10 +195,11 @@ impl<H: UiHost> UiTree<H> {
             || tracing::trace_span!("fret.ui.dispatch.active_layers"),
             || {
                 let (active_layers, barrier_root) = self.active_input_layers();
-                self.enforce_modal_barrier_scope(&active_layers);
                 (active_layers, barrier_root)
             },
         );
+        #[cfg(debug_assertions)]
+        debug_focus_note("after active layers", self.focus);
         if let Some(active_layers_elapsed) = active_layers_elapsed {
             self.debug_stats.dispatch_active_layers_time += active_layers_elapsed;
         }
@@ -213,20 +231,44 @@ impl<H: UiHost> UiTree<H> {
             .as_deref()
             .unwrap_or(active_layers.as_slice());
 
+        let dispatch_snapshot = self.build_dispatch_snapshot_for_layer_roots(
+            app.frame_id(),
+            active_layers.as_slice(),
+            barrier_root,
+        );
+        let node_in_active_layers = |node: NodeId| dispatch_snapshot.pre.get(node).is_some();
+
+        // Focus barriers (trap scopes / modal focus arbitration) must not rely on retained parent
+        // pointers for correctness under retained/view-cache reuse. Enforce focus-barrier scope
+        // using a snapshot forest built from child edges.
+        let (focus_roots, focus_barrier_root) = self.active_focus_layers();
+        if focus_barrier_root.is_some() && self.focus.is_some() {
+            let focus_snapshot = self.build_dispatch_snapshot_for_layer_roots(
+                app.frame_id(),
+                focus_roots.as_slice(),
+                focus_barrier_root,
+            );
+            if self
+                .focus
+                .is_some_and(|n| focus_snapshot.pre.get(n).is_none())
+            {
+                self.set_focus_unchecked(None, "dispatch/window: focus barrier scope");
+            }
+        }
+
         let to_remove: Vec<fret_core::PointerId> = self
             .captured
             .iter()
-            .filter_map(|(p, n)| (!self.node_in_any_layer(*n, &active_layers)).then_some(*p))
+            .filter_map(|(p, n)| (!node_in_active_layers(*n)).then_some(*p))
             .collect();
         for p in to_remove {
             self.captured.remove(&p);
         }
-        if self
-            .focus
-            .is_some_and(|n| !self.node_in_any_layer(n, &active_layers))
-        {
-            self.focus = None;
+        if self.focus.is_some_and(|n| !self.node_exists(n)) {
+            self.set_focus_unchecked(None, "dispatch/window: missing focus node");
         }
+        #[cfg(debug_assertions)]
+        debug_focus_note("after pre-dispatch cleanup", self.focus);
 
         let focus_is_text_input = self.focus_is_text_input(app);
         self.update_ime_composing_for_event(focus_is_text_input, event);
@@ -1352,6 +1394,7 @@ impl<H: UiHost> UiTree<H> {
                                     self.window,
                                     &active_layers,
                                     focus,
+                                    Some(&dispatch_snapshot),
                                 )
                             {
                                 focus_requested = true;
@@ -1539,6 +1582,7 @@ impl<H: UiHost> UiTree<H> {
                                     self.window,
                                     &active_layers,
                                     focus,
+                                    Some(&dispatch_snapshot),
                                 )
                             {
                                 focus_requested = true;
@@ -1733,6 +1777,7 @@ impl<H: UiHost> UiTree<H> {
                                     self.window,
                                     &active_layers,
                                     focus,
+                                    Some(&dispatch_snapshot),
                                 )
                             {
                                 focus_requested = true;
@@ -1876,6 +1921,7 @@ impl<H: UiHost> UiTree<H> {
                                     self.window,
                                     &active_layers,
                                     focus,
+                                    Some(&dispatch_snapshot),
                                 )
                             {
                                 focus_requested = true;
@@ -2036,7 +2082,13 @@ impl<H: UiHost> UiTree<H> {
                 }
 
                 if let Some(focus) = requested_focus
-                    && self.focus_request_is_allowed(app, self.window, &active_layers, focus)
+                    && self.focus_request_is_allowed(
+                        app,
+                        self.window,
+                        &active_layers,
+                        focus,
+                        Some(&dispatch_snapshot),
+                    )
                 {
                     focus_requested = true;
                     if let Some(prev) = self.focus {
@@ -2115,7 +2167,13 @@ impl<H: UiHost> UiTree<H> {
         {
             let candidate = self.first_focusable_ancestor_including_declarative(app, window, hit);
             if let Some(focus) = candidate
-                && self.focus_request_is_allowed(app, self.window, &active_layers, focus)
+                && self.focus_request_is_allowed(
+                    app,
+                    self.window,
+                    &active_layers,
+                    focus,
+                    Some(&dispatch_snapshot),
+                )
             {
                 if let Some(prev) = self.focus {
                     self.mark_invalidation(prev, Invalidation::Paint);

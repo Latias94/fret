@@ -129,9 +129,12 @@ impl<H: UiHost> UiTree<H> {
     ) -> Option<NodeId> {
         if self
             .focus
-            .is_some_and(|n| !self.node_in_any_layer(n, active_layers))
+            .is_some_and(|n| !self.is_reachable_from_any_root_via_children(n, active_layers))
         {
-            self.focus = None;
+            self.set_focus_unchecked(
+                None,
+                "commands: focus not reachable from active layer roots",
+            );
         }
 
         let default_root = barrier_root.unwrap_or(base_root);
@@ -337,9 +340,9 @@ impl<H: UiHost> UiTree<H> {
 
         if self
             .focus
-            .is_some_and(|n| !self.node_in_any_layer(n, &active_layers))
+            .is_some_and(|n| !self.is_reachable_from_any_root_via_children(n, &active_layers))
         {
-            self.focus = None;
+            self.set_focus_unchecked(None, "commands: focus not reachable from active layers");
         }
 
         let default_root = barrier_root.unwrap_or(base_root);
@@ -393,8 +396,19 @@ impl<H: UiHost> UiTree<H> {
             }
 
             if let Some(focus) = requested_focus {
-                let (active_roots, _barrier_root) = self.active_input_layers();
-                if self.focus_request_is_allowed(app, self.window, &active_roots, focus) {
+                let (active_roots, barrier_root) = self.active_input_layers();
+                let snapshot = self.build_dispatch_snapshot_for_layer_roots(
+                    app.frame_id(),
+                    active_roots.as_slice(),
+                    barrier_root,
+                );
+                if self.focus_request_is_allowed(
+                    app,
+                    self.window,
+                    &active_roots,
+                    focus,
+                    Some(&snapshot),
+                ) {
                     if let Some(prev) = self.focus {
                         self.mark_invalidation(prev, Invalidation::Paint);
                     }

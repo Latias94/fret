@@ -366,7 +366,7 @@ impl<H: UiHost> UiTree<H> {
             }
 
             if self.focus == Some(node) {
-                self.focus = None;
+                self.set_focus_unchecked(None, "mutation/remove: removed focused node");
             }
             self.captured.retain(|_, n| *n != node);
 

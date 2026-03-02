@@ -72,16 +72,18 @@ impl<H: UiHost> UiTree<H> {
     pub(in crate::tree) fn enforce_modal_barrier_scope(&mut self, active_roots: &[NodeId]) {
         let (focus_roots, focus_barrier_root) = self.active_focus_layers();
         if focus_barrier_root.is_some()
-            && self
-                .focus
-                .is_some_and(|n| !self.node_in_any_layer(n, focus_roots.as_slice()))
+            && self.focus.is_some_and(|n| {
+                !self.is_reachable_from_any_root_via_children(n, focus_roots.as_slice())
+            })
         {
-            self.focus = None;
+            self.set_focus_unchecked(None, "layers: enforce modal barrier scope");
         }
         let to_remove: Vec<PointerId> = self
             .captured
             .iter()
-            .filter_map(|(p, n)| (!self.node_in_any_layer(*n, active_roots)).then_some(*p))
+            .filter_map(|(p, n)| {
+                (!self.is_reachable_from_any_root_via_children(*n, active_roots)).then_some(*p)
+            })
             .collect();
         for p in to_remove {
             self.captured.remove(&p);
@@ -91,9 +93,9 @@ impl<H: UiHost> UiTree<H> {
     pub(in crate::tree) fn enforce_focus_barrier_scope(&mut self, active_roots: &[NodeId]) {
         if self
             .focus
-            .is_some_and(|n| !self.node_in_any_layer(n, active_roots))
+            .is_some_and(|n| !self.is_reachable_from_any_root_via_children(n, active_roots))
         {
-            self.focus = None;
+            self.set_focus_unchecked(None, "layers: enforce focus barrier scope");
         }
     }
 
@@ -218,7 +220,7 @@ impl<H: UiHost> UiTree<H> {
                 .focus
                 .is_some_and(|n| self.node_layer(n).is_some_and(|lid| lid == layer))
             {
-                self.focus = None;
+                self.set_focus_unchecked(None, "layers: set_layer_visible(false)");
             }
         }
 
@@ -274,7 +276,7 @@ impl<H: UiHost> UiTree<H> {
                 .focus
                 .is_some_and(|n| self.node_layer(n).is_some_and(|lid| lid == layer))
             {
-                self.focus = None;
+                self.set_focus_unchecked(None, "layers: set_layer_hit_testable(false)");
             }
         }
 

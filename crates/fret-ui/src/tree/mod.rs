@@ -119,7 +119,6 @@ use shortcuts::{
 };
 use small_list::{SmallCopyList, SmallNodeList};
 
-#[cfg(feature = "diagnostics")]
 pub(crate) use dispatch_snapshot::UiDispatchSnapshot;
 
 fn type_id_sort_key(id: TypeId) -> u64 {
