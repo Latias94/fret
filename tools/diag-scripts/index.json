@@ -2556,6 +2556,26 @@
       "target_hints": []
     },
     {
+      "id": "ui-gallery-overlay-focus-trap-hover-cursor",
+      "path": "tools/diag-scripts/ui-gallery/overlay/ui-gallery-overlay-focus-trap-hover-cursor.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "ui-gallery"
+      ],
+      "tags": [
+        "cursor",
+        "dialog",
+        "focus",
+        "gate",
+        "hover",
+        "overlay",
+        "ui_gallery"
+      ],
+      "target_hints": []
+    },
+    {
       "id": "ui-gallery-overlay-torture",
       "path": "tools/diag-scripts/ui-gallery/perf/ui-gallery-overlay-torture.json",
       "required_capabilities": [],
