@@ -99,6 +99,8 @@ const CMD_TOGGLE_BLACKBOARD_OVERLAY: &str = "node_graph_demo.toggle_blackboard_o
 const CMD_TOGGLE_CONTROLS_PLACEMENT: &str = "node_graph_demo.toggle_controls_placement";
 const CMD_TOGGLE_MINIMAP_PLACEMENT: &str = "node_graph_demo.toggle_minimap_placement";
 const WEIRD_KIND: &str = "demo.weird_layout";
+const ENV_PRESET_JSON_PATH: &str = "FRET_NODE_GRAPH_DEMO_PRESET_JSON_PATH";
+const ENV_PRESET_FAMILY: &str = "FRET_NODE_GRAPH_DEMO_PRESET_FAMILY";
 
 #[derive(Debug)]
 struct NodeGraphDemoStyleState {
@@ -2518,10 +2520,27 @@ pub fn run() -> anyhow::Result<()> {
     app.set_global(Arc::new(DemoWeirdLayoutMeasuredState::new()));
     app.set_global(Arc::new(NodeGraphDemoStyleState::new()));
     app.set_global(Arc::new(NodeGraphDemoOverlayToggles::new()));
-    app.set_global(NodeGraphPresetSkinV1::new_from_snapshot(
-        Theme::global(&app).snapshot(),
-        NodeGraphPresetFamily::WorkflowClean,
-    ));
+
+    let initial_family = std::env::var(ENV_PRESET_FAMILY)
+        .ok()
+        .map(|v| match v.trim().to_ascii_lowercase().as_str() {
+            "workflowclean" | "workflow_clean" | "clean" => NodeGraphPresetFamily::WorkflowClean,
+            "schematiccontrast" | "schematic_contrast" | "schematic" | "contrast" => {
+                NodeGraphPresetFamily::SchematicContrast
+            }
+            "graphdark" | "graph_dark" | "dark" => NodeGraphPresetFamily::GraphDark,
+            _ => NodeGraphPresetFamily::WorkflowClean,
+        })
+        .unwrap_or(NodeGraphPresetFamily::WorkflowClean);
+
+    let skin = std::env::var(ENV_PRESET_JSON_PATH)
+        .ok()
+        .and_then(|path| std::fs::read_to_string(path).ok())
+        .and_then(|raw| NodeGraphPresetSkinV1::try_new_from_json_str(&raw, initial_family).ok())
+        .unwrap_or_else(|| {
+            NodeGraphPresetSkinV1::new_from_snapshot(Theme::global(&app).snapshot(), initial_family)
+        });
+    app.set_global(skin);
 
     let config = WinitRunnerConfig {
         main_window_title: "fret-demo node_graph_demo".to_string(),
