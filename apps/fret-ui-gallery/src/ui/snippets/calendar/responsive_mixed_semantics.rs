@@ -58,7 +58,10 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
     let range_month = match range_month {
         Some(model) => model,
         None => {
-            let model = cx.app.models_mut().insert(CalendarMonth::from_date(range_from));
+            let model = cx
+                .app
+                .models_mut()
+                .insert(CalendarMonth::from_date(range_from));
             cx.with_state(Models::default, |st| st.range_month = Some(model.clone()));
             model
         }
@@ -70,7 +73,9 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
                 from: Some(range_from),
                 to: Some(range_to),
             });
-            cx.with_state(Models::default, |st| st.range_selected = Some(model.clone()));
+            cx.with_state(Models::default, |st| {
+                st.range_selected = Some(model.clone())
+            });
             model
         }
     };
@@ -138,4 +143,3 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
     )
 }
 // endregion: example
-

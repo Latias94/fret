@@ -2869,6 +2869,16 @@
       "target_hints": []
     },
     {
+      "id": "ui-gallery-dropdown-nonmodal-outside-press-focus-underlay",
+      "path": "tools/diag-scripts/ui-gallery/overlay/ui-gallery-dropdown-nonmodal-outside-press-focus-underlay.json",
+      "required_capabilities": [],
+      "suite_memberships": [
+        "ui-gallery-overlay-steady"
+      ],
+      "tags": [],
+      "target_hints": []
+    },
+    {
       "id": "ui-gallery-dropdown-open-select",
       "path": "tools/diag-scripts/ui-gallery/dropdown/ui-gallery-dropdown-open-select.json",
       "required_capabilities": [],

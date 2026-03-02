@@ -1,8 +1,8 @@
 use super::*;
 
+mod accordion;
 mod alert;
 mod alert_dialog;
-mod accordion;
 mod aspect_ratio;
 mod avatar;
 mod badge;

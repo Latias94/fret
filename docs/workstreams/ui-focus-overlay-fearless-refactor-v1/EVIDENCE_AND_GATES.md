@@ -84,3 +84,10 @@ cargo run -p fretboard -- diag run ui-gallery-modal-barrier-focus-restore `
 cargo run -p fretboard -- diag run ui-gallery-context-menu-keyboard-escape-focus-restore `
   --launch -- cargo run -p fret-ui-gallery --release
 ```
+
+- Non-modal menu overlays (click-through outside press) MUST NOT steal focus back to the trigger:
+
+```powershell
+cargo run -p fretboard -- diag run ui-gallery-dropdown-nonmodal-outside-press-focus-underlay `
+  --launch -- cargo run -p fret-ui-gallery --release
+```
