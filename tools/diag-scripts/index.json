@@ -589,8 +589,8 @@
       ],
       "target_hints": [
         "This script exercises an opt-in behavior: creating multiple DockFloating OS windows without merging the first one back.",
-        "It tears off two distinct tabs (left + right) from the main window, then drags them back one-by-one and asserts the dock graph returns to the canonical signature.",
-        "Note: cursor overrides are expressed in window-client logical pixels."
+        "It tears off two distinct tabs (left + right) from the main window, then drags them back one-by-one and asserts the dock graph is canonical, has no floatings, and still contains the baseline panels.",
+        "Note: cursor overrides are expressed in window-client physical pixels."
       ]
     },
     {
@@ -897,6 +897,27 @@
       "target_hints": [
         "This script first merges two viewports into a single tab stack, then asserts drop-at-end resolves insert_index == 2.",
         "It cancels the final drag (Escape) to avoid mutating layout beyond the setup step."
+      ]
+    },
+    {
+      "id": "docking-arbitration-demo-tab-bar-edge-autoscroll",
+      "path": "tools/diag-scripts/docking/arbitration/docking-arbitration-demo-tab-bar-edge-autoscroll.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "docking-arbitration"
+      ],
+      "tags": [
+        "autoscroll",
+        "docking",
+        "gate",
+        "overflow",
+        "tabbar"
+      ],
+      "target_hints": [
+        "Starts a tab drag on the first tab, then parks the pointer at the right edge of the active tab bar.",
+        "Gates that docking diagnostics report `tab_strip_active_visibility.scroll` increasing (edge auto-scroll)."
       ]
     },
     {
@@ -3725,6 +3746,28 @@
       "target_hints": []
     },
     {
+      "id": "ui-gallery-popover-overlay-placement-after-code-tab-scroll-range",
+      "path": "tools/diag-scripts/ui-gallery/popover/ui-gallery-popover-overlay-placement-after-code-tab-scroll-range.json",
+      "required_capabilities": [
+        "diag.overlay_placement_trace",
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "ui-gallery-scroll-extents-dom-parity"
+      ],
+      "tags": [
+        "overlay",
+        "popover",
+        "regression",
+        "scroll",
+        "shadcn",
+        "tabs",
+        "ui_gallery"
+      ],
+      "target_hints": []
+    },
+    {
       "id": "ui-gallery-portal-geometry-scroll-clamp",
       "path": "tools/diag-scripts/ui-gallery/portal/ui-gallery-portal-geometry-scroll-clamp.json",
       "required_capabilities": [],
@@ -4249,6 +4292,27 @@
       "target_hints": []
     },
     {
+      "id": "ui-gallery-tooltip-overlay-placement-after-code-tab-scroll-range",
+      "path": "tools/diag-scripts/ui-gallery/overlay/ui-gallery-tooltip-overlay-placement-after-code-tab-scroll-range.json",
+      "required_capabilities": [
+        "diag.overlay_placement_trace",
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "ui-gallery-scroll-extents-dom-parity"
+      ],
+      "tags": [
+        "overlay",
+        "regression",
+        "scroll",
+        "shadcn",
+        "tabs",
+        "tooltip",
+        "ui_gallery"
+      ],
+      "target_hints": []
+    },
+    {
       "id": "ui-gallery-tooltip-repeat-hover",
       "path": "tools/diag-scripts/ui-gallery/overlay/ui-gallery-tooltip-repeat-hover.json",
       "required_capabilities": [],
@@ -4560,6 +4624,28 @@
         "Drags a tab from pane A toward the right edge of pane B.",
         "Waits for the right-edge drop preview indicator to appear.",
         "Captures a screenshot while the preview is visible (used to gate docking drop overlay tokens)."
+      ]
+    },
+    {
+      "id": "workspace-shell-demo-tab-drag-to-split-right-row-suppressed-smoke",
+      "path": "tools/diag-scripts/workspace/shell-demo/workspace-shell-demo-tab-drag-to-split-right-row-suppressed-smoke.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "diag-hardening-smoke-workspace"
+      ],
+      "tags": [
+        "drag_to_split",
+        "drop_preview",
+        "gate",
+        "smoke",
+        "tabstrip",
+        "workspace"
+      ],
+      "target_hints": [
+        "Drag a tab from pane A over pane B while staying in pane B's tab strip row.",
+        "Asserts the right-edge split preview does not activate until the pointer leaves the tab strip row."
       ]
     },
     {

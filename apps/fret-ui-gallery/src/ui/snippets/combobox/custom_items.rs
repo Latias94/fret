@@ -93,11 +93,11 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
         .query_model(query.clone())
         .test_id_prefix("ui-gallery-combobox-custom-items")
         .trigger_test_id("ui-gallery-combobox-custom-items-trigger")
-        .options([
-            shadcn::combobox_option("next", "Next.js").detail("React"),
-            shadcn::combobox_option("nuxt", "Nuxt.js").detail("Vue"),
-            shadcn::combobox_option("svelte", "SvelteKit").detail("Svelte"),
-            shadcn::combobox_option("astro", "Astro").detail("Hybrid"),
+        .items([
+            shadcn::ComboboxItem::new("next", "Next.js").detail("React"),
+            shadcn::ComboboxItem::new("nuxt", "Nuxt.js").detail("Vue"),
+            shadcn::ComboboxItem::new("svelte", "SvelteKit").detail("Svelte"),
+            shadcn::ComboboxItem::new("astro", "Astro").detail("Hybrid"),
         ])
         .into_element(cx);
 

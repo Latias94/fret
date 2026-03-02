@@ -44,25 +44,29 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
 
     let select =
         shadcn::Select::new_controllable(cx, Some(value), None::<Arc<str>>, Some(open), false)
-            .trigger(
-                shadcn::SelectTrigger::new()
-                    .value(shadcn::SelectValue::new().placeholder("Select a fruit")),
-            )
             .aria_invalid(invalid)
-            .entries([shadcn::SelectGroup::new([
-                shadcn::SelectItem::new("apple", "Apple")
-                    .test_id("ui-gallery-select-invalid-item-apple")
-                    .into(),
-                shadcn::SelectItem::new("banana", "Banana")
-                    .test_id("ui-gallery-select-invalid-item-banana")
-                    .into(),
-                shadcn::SelectItem::new("blueberry", "Blueberry")
-                    .test_id("ui-gallery-select-invalid-item-blueberry")
-                    .into(),
-            ])
-            .into()])
             .trigger_test_id("ui-gallery-select-invalid-trigger")
-            .into_element(cx);
+            .into_element_parts(
+                cx,
+                |_cx| {
+                    shadcn::SelectTrigger::new()
+                        .value(shadcn::SelectValue::new().placeholder("Select a fruit"))
+                },
+                |_cx| {
+                    shadcn::SelectContent::new().with_entries([shadcn::SelectGroup::new([
+                        shadcn::SelectItem::new("apple", "Apple")
+                            .test_id("ui-gallery-select-invalid-item-apple")
+                            .into(),
+                        shadcn::SelectItem::new("banana", "Banana")
+                            .test_id("ui-gallery-select-invalid-item-banana")
+                            .into(),
+                        shadcn::SelectItem::new("blueberry", "Blueberry")
+                            .test_id("ui-gallery-select-invalid-item-blueberry")
+                            .into(),
+                    ])
+                    .into()])
+                },
+            );
 
     let mut children = vec![label, select];
     if invalid {

@@ -1,110 +1,19 @@
 use super::super::super::*;
+use super::super::super::doc_layout::DocSection;
 
 pub(in crate::ui) fn preview_material3_icon_button(
     cx: &mut ElementContext<'_, App>,
 ) -> Vec<AnyElement> {
-    use fret_icons::ids;
-    use fret_ui_kit::{ColorRef, WidgetStateProperty, WidgetStates};
+    let demo = snippets::material3::icon_button::render(cx);
 
-    #[derive(Default)]
-    struct IconButtonPageModels {
-        toggle_checked: Option<Model<bool>>,
-    }
-
-    let toggle_checked = cx.with_state(IconButtonPageModels::default, |st| {
-        st.toggle_checked.clone()
-    });
-    let toggle_checked = match toggle_checked {
-        Some(m) => m,
-        None => {
-            let m = cx.app.models_mut().insert(false);
-            cx.with_state(IconButtonPageModels::default, |st| {
-                st.toggle_checked = Some(m.clone());
-            });
-            m
-        }
-    };
-
-    let row = |cx: &mut ElementContext<'_, App>,
-               variant: material3::IconButtonVariant,
-               label: &'static str| {
-        stack::hstack(
-            cx,
-            stack::HStackProps::default().gap(Space::N2).items_center(),
-            move |cx| {
-                let hover_accent = fret_ui_kit::colors::linear_from_hex_rgb(0xe5_33_e5);
-                let override_style = material3::IconButtonStyle::default()
-                    .icon_color(
-                        WidgetStateProperty::new(None)
-                            .when(WidgetStates::HOVERED, Some(ColorRef::Color(hover_accent))),
-                    )
-                    .state_layer_color(
-                        WidgetStateProperty::new(None)
-                            .when(WidgetStates::HOVERED, Some(ColorRef::Color(hover_accent))),
-                    );
-                vec![
-                    material3::IconButton::new(ids::ui::CLOSE)
-                        .variant(variant)
-                        .a11y_label(label)
-                        .into_element(cx),
-                    material3::IconButton::new(ids::ui::CLOSE)
-                        .variant(variant)
-                        .a11y_label("Override")
-                        .style(override_style)
-                        .into_element(cx),
-                    material3::IconButton::new(ids::ui::CLOSE)
-                        .variant(variant)
-                        .a11y_label("Disabled")
-                        .disabled(true)
-                        .into_element(cx),
-                ]
-            },
-        )
-    };
-
-    let toggles = stack::hstack(
+    let page = doc_layout::render_doc_page(
         cx,
-        stack::HStackProps::default().gap(Space::N2).items_center(),
-        move |cx| {
-            let checked = cx
-                .get_model_copied(&toggle_checked, Invalidation::Layout)
-                .unwrap_or(false);
-            vec![
-                material3::IconToggleButton::new(toggle_checked.clone(), ids::ui::CHECK)
-                    .variant(material3::IconButtonVariant::Filled)
-                    .a11y_label("Material 3 Icon Toggle Button")
-                    .test_id("ui-gallery-material3-icon-toggle-button")
-                    .into_element(cx),
-                cx.text(format!("checked={checked}"))
-                    .test_id("ui-gallery-material3-icon-toggle-button-checked"),
-            ]
-        },
+        Some("Material 3 surfaces are still migrating to snippet-backed pages (Preview ≡ Code)."),
+        vec![DocSection::new("Demo", demo)
+            .code_rust_from_file_region(snippets::material3::icon_button::SOURCE, "example")],
     );
 
-    let centered_gate = stack::hstack(
-        cx,
-        stack::HStackProps::default().gap(Space::N2).items_center(),
-        move |cx| {
-            vec![
-                material3::IconButton::new(ids::ui::CLOSE)
-                    .variant(material3::IconButtonVariant::Filled)
-                    .a11y_label("Material 3 icon button (centered chrome)")
-                    .test_id("ui-gallery-material3-icon-button-centered")
-                    .into_element(cx),
-            ]
-        },
-    );
-
-    vec![
-        cx.text("Material 3 Icon Buttons: token-driven colors + state layer + bounded ripple."),
-        cx.text("Centered fixed chrome: hit box can exceed visual chrome (min touch target)."),
-        centered_gate,
-        row(cx, material3::IconButtonVariant::Standard, "Standard"),
-        row(cx, material3::IconButtonVariant::Filled, "Filled"),
-        row(cx, material3::IconButtonVariant::Tonal, "Tonal"),
-        row(cx, material3::IconButtonVariant::Outlined, "Outlined"),
-        toggles,
-    ]
+    vec![page]
 }
 
 pub(in crate::ui) fn preview_material3_fab(
@@ -232,393 +141,62 @@ pub(in crate::ui) fn preview_material3_checkbox(
     cx: &mut ElementContext<'_, App>,
     checked: Model<bool>,
 ) -> Vec<AnyElement> {
-    use fret_ui_kit::{ColorRef, WidgetStateProperty, WidgetStates};
+    let demo = snippets::material3::checkbox::render(cx, checked);
 
-    #[derive(Default)]
-    struct CheckboxPageModels {
-        tristate: Option<Model<Option<bool>>>,
-    }
-
-    let tristate = cx.with_state(CheckboxPageModels::default, |st| st.tristate.clone());
-    let tristate = match tristate {
-        Some(m) => m,
-        None => {
-            let m = cx.app.models_mut().insert(None::<bool>);
-            cx.with_state(CheckboxPageModels::default, |st| {
-                st.tristate = Some(m.clone())
-            });
-            m
-        }
-    };
-
-    let value = cx
-        .get_model_copied(&checked, Invalidation::Layout)
-        .unwrap_or(false);
-    let tristate_value = cx
-        .get_model_cloned(&tristate, Invalidation::Layout)
-        .unwrap_or(None);
-
-    let row = stack::hstack(
+    let page = doc_layout::render_doc_page(
         cx,
-        stack::HStackProps::default().gap(Space::N2).items_center(),
-        move |cx| {
-            let selected_accent = fret_ui_kit::colors::linear_from_hex_rgb(0x33_cc_66);
-            let override_style = material3::CheckboxStyle::default()
-                .icon_color(WidgetStateProperty::new(None).when(
-                    WidgetStates::SELECTED,
-                    Some(ColorRef::Color(selected_accent)),
-                ))
-                .outline_color(WidgetStateProperty::new(None).when(
-                    WidgetStates::SELECTED,
-                    Some(ColorRef::Color(selected_accent)),
-                ));
-            vec![
-                material3::Checkbox::new(checked.clone())
-                    .a11y_label("Material 3 Checkbox")
-                    .test_id("ui-gallery-material3-checkbox")
-                    .into_element(cx),
-                material3::Checkbox::new(checked.clone())
-                    .a11y_label("Material 3 Checkbox (override)")
-                    .style(override_style)
-                    .test_id("ui-gallery-material3-checkbox-overridden")
-                    .into_element(cx),
-                cx.text(format!("checked={}", value as u8)),
-                material3::Checkbox::new(checked.clone())
-                    .a11y_label("Disabled Material 3 Checkbox")
-                    .disabled(true)
-                    .test_id("ui-gallery-material3-checkbox-disabled")
-                    .into_element(cx),
-            ]
-        },
+        Some("Material 3 surfaces are still migrating to snippet-backed pages (Preview ≡ Code)."),
+        vec![DocSection::new("Demo", demo)
+            .code_rust_from_file_region(snippets::material3::checkbox::SOURCE, "example")],
     );
 
-    let tristate_row = stack::hstack(
-        cx,
-        stack::HStackProps::default().gap(Space::N2).items_center(),
-        move |cx| {
-            let label = match tristate_value {
-                Some(true) => "checked",
-                Some(false) => "unchecked",
-                None => "indeterminate",
-            };
-            vec![
-                material3::Checkbox::new_optional(tristate.clone())
-                    .a11y_label("Material 3 Checkbox (tri-state)")
-                    .test_id("ui-gallery-material3-checkbox-tristate")
-                    .into_element(cx),
-                cx.text(format!("state={label}"))
-                    .test_id("ui-gallery-material3-checkbox-tristate-state"),
-            ]
-        },
-    );
-
-    vec![
-        cx.text("Material 3 Checkbox: token-driven sizing/colors + state layer + bounded ripple."),
-        row,
-        cx.text("Material 3 Checkbox (tri-state): `checked: None` represents indeterminate/mixed."),
-        tristate_row,
-    ]
+    vec![page]
 }
 
 pub(in crate::ui) fn preview_material3_switch(
     cx: &mut ElementContext<'_, App>,
     selected: Model<bool>,
 ) -> Vec<AnyElement> {
-    use fret_ui_kit::{ColorRef, WidgetStateProperty, WidgetStates};
+    let demo = snippets::material3::switch::render(cx, selected);
 
-    #[derive(Default)]
-    struct SwitchPageModels {
-        icons_both: Option<Model<bool>>,
-        icons_selected_only: Option<Model<bool>>,
-    }
-
-    let icons_both = cx.with_state(SwitchPageModels::default, |st| st.icons_both.clone());
-    let icons_both = match icons_both {
-        Some(model) => model,
-        None => {
-            let model = cx.app.models_mut().insert(false);
-            cx.with_state(SwitchPageModels::default, |st| {
-                st.icons_both = Some(model.clone())
-            });
-            model
-        }
-    };
-
-    let icons_selected_only = cx.with_state(SwitchPageModels::default, |st| {
-        st.icons_selected_only.clone()
-    });
-    let icons_selected_only = match icons_selected_only {
-        Some(model) => model,
-        None => {
-            let model = cx.app.models_mut().insert(false);
-            cx.with_state(SwitchPageModels::default, |st| {
-                st.icons_selected_only = Some(model.clone())
-            });
-            model
-        }
-    };
-
-    let value = cx
-        .get_model_copied(&selected, Invalidation::Layout)
-        .unwrap_or(false);
-
-    let row = stack::hstack(
+    let page = doc_layout::render_doc_page(
         cx,
-        stack::HStackProps::default().gap(Space::N2).items_center(),
-        move |cx| {
-            let selected_accent = fret_ui_kit::colors::linear_from_hex_rgb(0x33_cc_66);
-            let hover_accent = fret_ui_kit::colors::linear_from_hex_rgb(0xe5_33_e5);
-            let override_style = material3::SwitchStyle::default()
-                .track_color(WidgetStateProperty::new(None).when(
-                    WidgetStates::SELECTED,
-                    Some(ColorRef::Color(selected_accent)),
-                ))
-                .state_layer_color(
-                    WidgetStateProperty::new(None)
-                        .when(WidgetStates::HOVERED, Some(ColorRef::Color(hover_accent))),
-                );
-            vec![
-                material3::Switch::new(selected.clone())
-                    .a11y_label("Material 3 Switch")
-                    .test_id("ui-gallery-material3-switch")
-                    .into_element(cx),
-                material3::Switch::new(selected.clone())
-                    .a11y_label("Material 3 Switch (override)")
-                    .style(override_style)
-                    .test_id("ui-gallery-material3-switch-overridden")
-                    .into_element(cx),
-                cx.text(format!("selected={}", value as u8)),
-                material3::Switch::new(selected.clone())
-                    .a11y_label("Disabled Material 3 Switch")
-                    .disabled(true)
-                    .test_id("ui-gallery-material3-switch-disabled")
-                    .into_element(cx),
-            ]
-        },
+        Some("Material 3 surfaces are still migrating to snippet-backed pages (Preview ≡ Code)."),
+        vec![DocSection::new("Demo", demo)
+            .code_rust_from_file_region(snippets::material3::switch::SOURCE, "example")],
     );
 
-    vec![
-        cx.text("Material 3 Switch: token-driven sizing/colors + state layer + bounded ripple."),
-        row,
-        stack::hstack(
-            cx,
-            stack::HStackProps::default().gap(Space::N2).items_center(),
-            move |cx| {
-                let icons_both_value = cx
-                    .get_model_copied(&icons_both, Invalidation::Layout)
-                    .unwrap_or(false);
-                let icons_selected_only_value = cx
-                    .get_model_copied(&icons_selected_only, Invalidation::Layout)
-                    .unwrap_or(false);
-                vec![
-                    material3::Switch::new(icons_both.clone())
-                        .icons(true)
-                        .a11y_label("Material 3 Switch (icons)")
-                        .test_id("ui-gallery-material3-switch-icons-both")
-                        .into_element(cx),
-                    cx.text(format!("icons_both={}", icons_both_value as u8)),
-                    material3::Switch::new(icons_both.clone())
-                        .icons(true)
-                        .disabled(true)
-                        .a11y_label("Disabled Material 3 Switch (icons)")
-                        .test_id("ui-gallery-material3-switch-icons-both-disabled")
-                        .into_element(cx),
-                    material3::Switch::new(icons_selected_only.clone())
-                        .show_only_selected_icon(true)
-                        .a11y_label("Material 3 Switch (selected icon only)")
-                        .test_id("ui-gallery-material3-switch-icons-selected-only")
-                        .into_element(cx),
-                    cx.text(format!(
-                        "icons_selected_only={}",
-                        icons_selected_only_value as u8
-                    )),
-                    material3::Switch::new(icons_selected_only.clone())
-                        .show_only_selected_icon(true)
-                        .disabled(true)
-                        .a11y_label("Disabled Material 3 Switch (selected icon only)")
-                        .test_id("ui-gallery-material3-switch-icons-selected-only-disabled")
-                        .into_element(cx),
-                ]
-            },
-        ),
-    ]
+    vec![page]
 }
 
 pub(in crate::ui) fn preview_material3_slider(
     cx: &mut ElementContext<'_, App>,
     value: Model<f32>,
 ) -> Vec<AnyElement> {
-    let value_now = cx
-        .get_model_copied(&value, Invalidation::Layout)
-        .unwrap_or(0.0)
-        .clamp(0.0, 1.0);
-    let value_for_main_row = value.clone();
-    let value_for_ticks_row = value.clone();
+    let demo = snippets::material3::slider::render(cx, value);
 
-    vec![
-        cx.text("Material 3 Slider: token-driven track + handle + state layer."),
-        stack::hstack(
-            cx,
-            stack::HStackProps::default().gap(Space::N4).items_center(),
-            move |cx| {
-                vec![
-                    material3::Slider::new(value_for_main_row.clone())
-                        .a11y_label("Material 3 Slider")
-                        .test_id("ui-gallery-material3-slider")
-                        .into_element(cx),
-                    cx.text(format!("value={value_now:.3}"))
-                        .test_id("ui-gallery-material3-slider-value"),
-                    material3::Slider::new(value_for_main_row.clone())
-                        .disabled(true)
-                        .a11y_label("Disabled Material 3 Slider")
-                        .test_id("ui-gallery-material3-slider-disabled")
-                        .into_element(cx),
-                ]
-            },
-        ),
-        stack::hstack(
-            cx,
-            stack::HStackProps::default().gap(Space::N4).items_center(),
-            move |cx| {
-                vec![
-                    material3::Slider::new(value_for_ticks_row.clone())
-                        .with_tick_marks(true)
-                        .tick_marks_count(5)
-                        .a11y_label("Material 3 Slider (tick marks)")
-                        .test_id("ui-gallery-material3-slider-tick-marks")
-                        .into_element(cx),
-                    cx.text("tick_marks=5"),
-                ]
-            },
-        ),
-    ]
+    let page = doc_layout::render_doc_page(
+        cx,
+        Some("Material 3 surfaces are still migrating to snippet-backed pages (Preview ≡ Code)."),
+        vec![DocSection::new("Demo", demo)
+            .code_rust_from_file_region(snippets::material3::slider::SOURCE, "example")],
+    );
+
+    vec![page]
 }
 
 pub(in crate::ui) fn preview_material3_radio(
     cx: &mut ElementContext<'_, App>,
     group_value: Model<Option<Arc<str>>>,
 ) -> Vec<AnyElement> {
-    use fret_ui_kit::{ColorRef, WidgetStateProperty, WidgetStates};
+    let demo = snippets::material3::radio::render(cx, group_value);
 
-    #[derive(Default)]
-    struct RadioPageModels {
-        standalone_selected: Option<Model<bool>>,
-    }
-
-    let standalone_selected = cx.with_state(RadioPageModels::default, |st| {
-        st.standalone_selected.clone()
-    });
-    let standalone_selected = match standalone_selected {
-        Some(model) => model,
-        None => {
-            let model = cx.app.models_mut().insert(false);
-            cx.with_state(RadioPageModels::default, |st| {
-                st.standalone_selected = Some(model.clone())
-            });
-            model
-        }
-    };
-
-    let current = cx
-        .get_model_cloned(&group_value, Invalidation::Layout)
-        .flatten()
-        .unwrap_or_else(|| Arc::<str>::from("<none>"));
-
-    let group_value_for_row = group_value.clone();
-    let row = stack::hstack(
+    let page = doc_layout::render_doc_page(
         cx,
-        stack::HStackProps::default().gap(Space::N4).items_center(),
-        move |cx| {
-            vec![
-                material3::RadioGroup::new(group_value_for_row.clone())
-                    .a11y_label("Material 3 RadioGroup")
-                    .orientation(material3::RadioGroupOrientation::Horizontal)
-                    .gap(Px(8.0))
-                    .items(vec![
-                        material3::RadioGroupItem::new("Alpha")
-                            .a11y_label("Radio Alpha")
-                            .test_id("ui-gallery-material3-radio-a"),
-                        material3::RadioGroupItem::new("Beta")
-                            .a11y_label("Radio Beta")
-                            .test_id("ui-gallery-material3-radio-b"),
-                        material3::RadioGroupItem::new("Charlie")
-                            .a11y_label("Radio Charlie (disabled)")
-                            .disabled(true)
-                            .test_id("ui-gallery-material3-radio-c-disabled"),
-                    ])
-                    .into_element(cx),
-                cx.text(format!("value={}", current.as_ref())),
-            ]
-        },
+        Some("Material 3 surfaces are still migrating to snippet-backed pages (Preview ≡ Code)."),
+        vec![DocSection::new("Demo", demo)
+            .code_rust_from_file_region(snippets::material3::radio::SOURCE, "example")],
     );
 
-    let selected_accent = fret_ui_kit::colors::linear_from_hex_rgb(0x33_cc_66);
-    let hover_accent = fret_ui_kit::colors::linear_from_hex_rgb(0xe5_33_e5);
-    let override_style = material3::RadioStyle::default()
-        .icon_color(WidgetStateProperty::new(None).when(
-            WidgetStates::SELECTED,
-            Some(ColorRef::Color(selected_accent)),
-        ))
-        .state_layer_color(
-            WidgetStateProperty::new(None)
-                .when(WidgetStates::HOVERED, Some(ColorRef::Color(hover_accent))),
-        );
-
-    let group_value_for_group_overridden = group_value.clone();
-    let override_style_for_group = override_style.clone();
-    let override_style_for_standalone = override_style.clone();
-    let group_overridden = stack::hstack(
-        cx,
-        stack::HStackProps::default().gap(Space::N4).items_center(),
-        move |cx| {
-            vec![
-                material3::RadioGroup::new(group_value_for_group_overridden.clone())
-                    .a11y_label("Material 3 RadioGroup (override)")
-                    .style(override_style_for_group.clone())
-                    .orientation(material3::RadioGroupOrientation::Horizontal)
-                    .gap(Px(8.0))
-                    .items(vec![
-                        material3::RadioGroupItem::new("Alpha")
-                            .a11y_label("Radio Alpha (override)")
-                            .test_id("ui-gallery-material3-radio-a-overridden"),
-                        material3::RadioGroupItem::new("Beta")
-                            .a11y_label("Radio Beta (override)")
-                            .test_id("ui-gallery-material3-radio-b-overridden"),
-                        material3::RadioGroupItem::new("Charlie")
-                            .a11y_label("Radio Charlie (disabled)")
-                            .disabled(true)
-                            .test_id("ui-gallery-material3-radio-c-disabled-overridden"),
-                    ])
-                    .into_element(cx),
-            ]
-        },
-    );
-    let standalone = stack::hstack(
-        cx,
-        stack::HStackProps::default().gap(Space::N4).items_center(),
-        move |cx| {
-            vec![
-                material3::Radio::new(standalone_selected.clone())
-                    .a11y_label("Material 3 Radio (standalone)")
-                    .test_id("ui-gallery-material3-radio-standalone")
-                    .into_element(cx),
-                material3::Radio::new(standalone_selected.clone())
-                    .a11y_label("Material 3 Radio (override)")
-                    .style(override_style_for_standalone.clone())
-                    .test_id("ui-gallery-material3-radio-standalone-overridden")
-                    .into_element(cx),
-            ]
-        },
-    );
-
-    vec![
-        cx.text(
-            "Material 3 Radio: group-value binding + roving focus + typeahead + state layer + bounded ripple.",
-        ),
-        row,
-        cx.text("Override preview: RadioGroup::style(...) using RadioStyle."),
-        group_overridden,
-        cx.text("Override preview: standalone Radio::style(...) using RadioStyle."),
-        standalone,
-    ]
+    vec![page]
 }

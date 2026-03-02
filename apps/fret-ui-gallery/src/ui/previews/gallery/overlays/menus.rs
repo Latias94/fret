@@ -1,13 +1,5 @@
 use super::super::super::super::*;
 
-pub(in crate::ui) fn preview_dropdown_menu(
-    cx: &mut ElementContext<'_, App>,
-    open: Model<bool>,
-    last_action: Model<Arc<str>>,
-) -> Vec<AnyElement> {
-    pages::preview_dropdown_menu(cx, open, last_action)
-}
-
 pub(in crate::ui) fn preview_menus(
     cx: &mut ElementContext<'_, App>,
     dropdown_open: Model<bool>,
@@ -78,12 +70,4 @@ pub(in crate::ui) fn preview_menus(
         ),
         cx.text(format!("last action: {last}")),
     ]
-}
-
-pub(in crate::ui) fn preview_context_menu(
-    cx: &mut ElementContext<'_, App>,
-    open: Model<bool>,
-    last_action: Model<Arc<str>>,
-) -> Vec<AnyElement> {
-    pages::preview_context_menu(cx, open, last_action)
 }

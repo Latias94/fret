@@ -55,4 +55,3 @@ fn ui_previews_pages_do_not_embed_rust_code_literals() {
         );
     }
 }
-

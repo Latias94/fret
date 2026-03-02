@@ -86,11 +86,11 @@ fn state_rows(
 pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
     let (value, open, query) = ensure_models(cx);
 
-    let items: Vec<shadcn::ComboboxOption> = (0..250)
+    let items: Vec<shadcn::ComboboxItem> = (0..250)
         .map(|i| {
             let value = format!("{i:03}");
             let label = format!("Item {i:03}");
-            shadcn::combobox_option(value, label)
+            shadcn::ComboboxItem::new(value, label)
         })
         .collect();
 
@@ -101,7 +101,7 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
         .query_model(query.clone())
         .test_id_prefix("ui-gallery-combobox-long-list")
         .trigger_test_id("ui-gallery-combobox-long-list-trigger")
-        .options(items)
+        .items(items)
         .into_element(cx);
 
     stack::vstack(

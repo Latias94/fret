@@ -89,7 +89,10 @@ pub(super) fn preview_calendar(
             DocSection::new("Responsive semantics (Fret)", responsive_mixed_semantics)
                 .max_w(Px(980.0))
                 .test_id_prefix("ui-gallery-calendar-responsive")
-                .code_rust_from_file_region(snippets::responsive_mixed_semantics::SOURCE, "example"),
+                .code_rust_from_file_region(
+                    snippets::responsive_mixed_semantics::SOURCE,
+                    "example",
+                ),
             DocSection::new("Notes", notes)
                 .no_shell()
                 .test_id_prefix("ui-gallery-calendar-notes"),
@@ -98,4 +101,3 @@ pub(super) fn preview_calendar(
 
     vec![body.test_id("ui-gallery-page-calendar")]
 }
-

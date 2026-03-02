@@ -37,6 +37,7 @@ pub(super) struct ActiveScript {
     pub(super) web_ime_trace: Vec<UiWebImeTraceEntryV1>,
     pub(super) ime_event_trace: Vec<UiImeEventTraceEntryV1>,
     pub(super) last_explicit_cursor_override: Option<CursorOverrideTarget>,
+    pub(super) last_explicit_cursor_override_pos: Option<ExplicitCursorOverridePos>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -44,6 +45,13 @@ pub(super) enum CursorOverrideTarget {
     ScreenPhysical,
     WindowClientPhysical(AppWindowId),
     WindowClientLogical(AppWindowId),
+}
+
+#[derive(Debug, Clone, Copy)]
+pub(super) struct ExplicitCursorOverridePos {
+    pub(super) target: CursorOverrideTarget,
+    pub(super) x_px: f32,
+    pub(super) y_px: f32,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -343,6 +351,7 @@ pub(super) struct V2MovePointerSweepState {
 pub(super) struct WaitUntilState {
     pub(super) step_index: usize,
     pub(super) remaining_frames: u32,
+    pub(super) cached_test_id_predicate_last_stale: Option<bool>,
 }
 
 #[derive(Debug, Clone)]

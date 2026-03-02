@@ -1,0 +1,76 @@
+{
+  "schema_version": 2,
+  "meta": {
+    "name": "Docking arbitration demo: tab drag edge auto-scroll increases tab strip scroll",
+    "tags": ["docking", "tabbar", "overflow", "autoscroll", "gate"],
+    "required_capabilities": ["diag.script_v2"],
+    "env_defaults": {
+      "FRET_DOCK_ARB_PRESET": "overflow_tabs"
+    },
+    "target_hints": [
+      "Starts a tab drag on the first tab, then parks the pointer at the right edge of the active tab bar.",
+      "Gates that docking diagnostics report `tab_strip_active_visibility.scroll` increasing (edge auto-scroll)."
+    ]
+  },
+  "steps": [
+    { "type": "press_key", "key": "escape" },
+    { "type": "wait_frames", "n": 5 },
+    { "type": "set_window_inner_size", "width_px": 420.0, "height_px": 720.0 },
+    { "type": "wait_frames", "n": 18 },
+
+    {
+      "type": "wait_until",
+      "predicate": { "kind": "exists", "target": { "kind": "test_id", "id": "dock-arb-dock-space" } },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": { "kind": "exists", "target": { "kind": "test_id", "id": "dock-arb-tab-drag-anchor-left" } },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "dock-arb-tab-scroll-edge-anchor-right" }
+      },
+      "timeout_frames": 240
+    },
+
+    {
+      "type": "wait_until",
+      "predicate": { "kind": "dock_tab_strip_active_overflow_is", "overflow": true },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": { "kind": "dock_tab_strip_active_scroll_px_le", "px": 0.1 },
+      "timeout_frames": 240
+    },
+
+    {
+      "type": "pointer_down",
+      "window": { "kind": "current" },
+      "target": { "kind": "test_id", "id": "dock-arb-tab-drag-anchor-left" },
+      "button": "left"
+    },
+    { "type": "pointer_move", "window": { "kind": "current" }, "delta_x": 20.0, "delta_y": 0.0, "steps": 12 },
+    { "type": "wait_until", "window": { "kind": "current" }, "predicate": { "kind": "dock_drag_active_is", "active": true }, "timeout_frames": 120 },
+
+    { "type": "move_pointer", "window": { "kind": "current" }, "target": { "kind": "test_id", "id": "dock-arb-tab-scroll-edge-anchor-right" } },
+    { "type": "wait_frames", "n": 10 },
+
+    {
+      "type": "wait_until",
+      "predicate": { "kind": "dock_tab_strip_active_scroll_px_ge", "px": 12.0 },
+      "timeout_frames": 240
+    },
+
+    { "type": "press_key", "key": "escape" },
+    { "type": "wait_frames", "n": 2 },
+    { "type": "pointer_up", "window": { "kind": "current" } },
+    { "type": "wait_until", "window": { "kind": "current" }, "predicate": { "kind": "dock_drag_active_is", "active": false }, "timeout_frames": 240 },
+
+    { "type": "capture_bundle", "label": "docking-arbitration-demo-tab-bar-edge-autoscroll" }
+  ]
+}

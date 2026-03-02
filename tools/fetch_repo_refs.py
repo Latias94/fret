@@ -13,6 +13,8 @@ Usage:
   python3 tools/fetch_repo_refs.py                  # fetch the recommended set (ui + primitives)
   python3 tools/fetch_repo_refs.py --ui-only        # fetch only shadcn/ui
   python3 tools/fetch_repo_refs.py --primitives-only
+  python3 tools/fetch_repo_refs.py --with-ai-elements
+  python3 tools/fetch_repo_refs.py --ai-elements-only
   python3 tools/fetch_repo_refs.py --force          # re-point origin + checkout pinned commit
 
 Proxy (optional):
@@ -98,16 +100,20 @@ def main(argv: list[str]) -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--ui-only", action="store_true")
     parser.add_argument("--primitives-only", action="store_true")
+    parser.add_argument("--with-ai-elements", action="store_true")
+    parser.add_argument("--ai-elements-only", action="store_true")
     parser.add_argument("--force", action="store_true")
 
     parser.add_argument("--repo-root", default="", help="Repo root (auto-detected if empty).")
 
     parser.add_argument("--ui-url", default="https://github.com/shadcn-ui/ui.git")
     parser.add_argument("--primitives-url", default="https://github.com/radix-ui/primitives.git")
+    parser.add_argument("--ai-elements-url", default="https://github.com/vercel/ai-elements.git")
 
     # Pinned commits recorded in `docs/repo-ref.md`.
     parser.add_argument("--ui-commit", default="d07a7af8")
     parser.add_argument("--primitives-commit", default="90751370")
+    parser.add_argument("--ai-elements-commit", default="10a5e652")
 
     args = parser.parse_args(argv)
 
@@ -115,10 +121,19 @@ def main(argv: list[str]) -> int:
 
     want_ui = True
     want_primitives = True
+    want_ai_elements = False
     if args.ui_only:
         want_primitives = False
+        want_ai_elements = False
     if args.primitives_only:
         want_ui = False
+        want_ai_elements = False
+    if args.ai_elements_only:
+        want_ui = False
+        want_primitives = False
+        want_ai_elements = True
+    if args.with_ai_elements:
+        want_ai_elements = True
 
     if want_ui:
         _ensure_repo_checkout(
@@ -134,6 +149,14 @@ def main(argv: list[str]) -> int:
             name="primitives",
             url=args.primitives_url,
             commit=args.primitives_commit,
+            force=args.force,
+        )
+    if want_ai_elements:
+        _ensure_repo_checkout(
+            repo_root=repo_root,
+            name="ai-elements",
+            url=args.ai_elements_url,
+            commit=args.ai_elements_commit,
             force=args.force,
         )
 

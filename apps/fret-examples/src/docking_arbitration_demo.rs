@@ -138,6 +138,8 @@ struct DockingArbitrationHarnessRoot {
     tab_drop_end_anchor: fret_core::NodeId,
     tab_overflow_button_anchor: fret_core::NodeId,
     tab_overflow_menu_row_1_anchor: fret_core::NodeId,
+    tab_scroll_edge_left_anchor: fret_core::NodeId,
+    tab_scroll_edge_right_anchor: fret_core::NodeId,
     dock_hint_inner_anchors: Vec<(DropZone, fret_core::NodeId)>,
     dock_hint_outer_anchors: Vec<(DropZone, fret_core::NodeId)>,
 }
@@ -398,8 +400,13 @@ impl<H: fret_ui::UiHost> Widget<H> for DockingArbitrationHarnessRoot {
             ),
         );
 
-        let (overflow_button_anchor_rect, overflow_row_1_anchor_rect, tab_drop_end_anchor_rect) =
-            (|| {
+        let (
+            overflow_button_anchor_rect,
+            overflow_row_1_anchor_rect,
+            tab_drop_end_anchor_rect,
+            tab_scroll_edge_left_anchor_rect,
+            tab_scroll_edge_right_anchor_rect,
+        ) = (|| {
                 use fret_core::{DockGraph, DockNode, DockNodeId, PanelKey};
 
                 fn tabs_rect_for_panel(
@@ -536,13 +543,21 @@ impl<H: fret_ui::UiHost> Widget<H> for DockingArbitrationHarnessRoot {
                 };
                 let end_cy = tab_bar.origin.y.0 + tab_bar.size.height.0 * 0.5;
 
+                let edge_left_cx =
+                    tab_bar.origin.x.0 + 1.0_f32.min(tab_bar.size.width.0.max(0.0));
+                let edge_right_cx = tab_bar.origin.x.0
+                    + (tab_bar.size.width.0.max(0.0) - 1.0_f32).max(0.0);
+                let edge_cy = tab_bar.origin.y.0 + tab_bar.size.height.0 * 0.5;
+
                 Some((
                     rect(button_cx, button_cy),
                     rect(row_cx, row_cy),
                     rect(end_cx, end_cy),
+                    rect(edge_left_cx, edge_cy),
+                    rect(edge_right_cx, edge_cy),
                 ))
             })()
-            .unwrap_or((hidden, hidden, hidden));
+            .unwrap_or((hidden, hidden, hidden, hidden, hidden));
 
         let _ = cx.layout_in(self.tab_overflow_button_anchor, overflow_button_anchor_rect);
         let _ = cx.layout_in(
@@ -550,6 +565,14 @@ impl<H: fret_ui::UiHost> Widget<H> for DockingArbitrationHarnessRoot {
             overflow_row_1_anchor_rect,
         );
         let _ = cx.layout_in(self.tab_drop_end_anchor, tab_drop_end_anchor_rect);
+        let _ = cx.layout_in(
+            self.tab_scroll_edge_left_anchor,
+            tab_scroll_edge_left_anchor_rect,
+        );
+        let _ = cx.layout_in(
+            self.tab_scroll_edge_right_anchor,
+            tab_scroll_edge_right_anchor_rect,
+        );
 
         let candidate_rect_for = |kind: fret_runtime::DockDropCandidateRectKind, zone: DropZone| {
             hint_candidates
@@ -2139,6 +2162,18 @@ impl DockingArbitrationDriver {
                     .create_node_retained(DockingArbitrationDragAnchor::new(
                         "dock-arb-tab-drop-end-anchor-left",
                     ));
+            let tab_scroll_edge_left_anchor =
+                state
+                    .ui
+                    .create_node_retained(DockingArbitrationDragAnchor::new(
+                        "dock-arb-tab-scroll-edge-anchor-left",
+                    ));
+            let tab_scroll_edge_right_anchor =
+                state
+                    .ui
+                    .create_node_retained(DockingArbitrationDragAnchor::new(
+                        "dock-arb-tab-scroll-edge-anchor-right",
+                    ));
             let hint_zones = [
                 (DropZone::Center, "center"),
                 (DropZone::Left, "left"),
@@ -2182,6 +2217,8 @@ impl DockingArbitrationDriver {
                     tab_drop_end_anchor,
                     tab_overflow_button_anchor,
                     tab_overflow_menu_row_1_anchor,
+                    tab_scroll_edge_left_anchor,
+                    tab_scroll_edge_right_anchor,
                     dock_hint_inner_anchors: dock_hint_inner_anchors.clone(),
                     dock_hint_outer_anchors: dock_hint_outer_anchors.clone(),
                 });
@@ -2201,6 +2238,8 @@ impl DockingArbitrationDriver {
                 .chain(std::iter::once(tab_drop_end_anchor))
                 .chain(std::iter::once(tab_overflow_button_anchor))
                 .chain(std::iter::once(tab_overflow_menu_row_1_anchor))
+                .chain(std::iter::once(tab_scroll_edge_left_anchor))
+                .chain(std::iter::once(tab_scroll_edge_right_anchor))
                 .collect();
             state.ui.set_children(root, children);
             root

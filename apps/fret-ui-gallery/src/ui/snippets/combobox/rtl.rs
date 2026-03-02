@@ -55,10 +55,10 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
                     .query_model(query.clone())
                     .test_id_prefix("ui-gallery-combobox-rtl")
                     .trigger_test_id("ui-gallery-combobox-rtl-trigger")
-                    .options([
-                        shadcn::combobox_option("next", "Next.js"),
-                        shadcn::combobox_option("nuxt", "Nuxt.js"),
-                        shadcn::combobox_option("svelte", "SvelteKit"),
+                    .items([
+                        shadcn::ComboboxItem::new("next", "Next.js"),
+                        shadcn::ComboboxItem::new("nuxt", "Nuxt.js"),
+                        shadcn::ComboboxItem::new("svelte", "SvelteKit"),
                     ])
                     .into_element(cx)
             })]

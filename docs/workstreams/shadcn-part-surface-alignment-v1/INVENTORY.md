@@ -34,7 +34,8 @@ part renames or default refinements.
 
 ## Recommended next audit order (dev sequence)
 
-1. **Defer last**: `select` / `combobox` deeper redesign (structural drift is known and deeper than “just names”)
+1. `select`: finish migrating remaining call sites to the nested `SelectContent::with_entries(...)` authoring shape.
+2. **Defer last**: `select` / `combobox` deeper redesign (structural drift is known and deeper than “just names”)
 
 ## Inventory table (upstream radix base → Fret module)
 

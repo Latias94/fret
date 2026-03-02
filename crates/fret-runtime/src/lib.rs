@@ -44,6 +44,7 @@ pub mod platform_completion;
 pub mod platform_text_input;
 pub mod runner_accessibility_diagnostics;
 pub mod runner_surface_lifecycle_diagnostics;
+pub mod runner_window_lifecycle_diagnostics;
 pub mod shortcut_routing_diagnostics;
 pub mod strict_runtime;
 pub mod text_interaction_settings;
@@ -121,10 +122,11 @@ pub use interaction_diagnostics::{
     DockDragDiagnostics, DockDropCandidateRectDiagnostics, DockDropCandidateRectKind,
     DockDropPreviewDiagnostics, DockDropPreviewKindDiagnostics, DockDropResolveDiagnostics,
     DockDropResolveSource, DockDropTargetDiagnostics, DockFloatingDragDiagnostics,
-    DockGraphSignatureDiagnostics, DockGraphStatsDiagnostics, DockTabStripActiveVisibilityDiagnostics,
-    DockTabStripActiveVisibilityStatusDiagnostics, DockingInteractionDiagnostics,
-    ViewportCaptureDiagnostics, WindowInteractionDiagnosticsStore, WorkspaceInteractionDiagnostics,
-    WorkspaceTabStripActiveVisibilityDiagnostics, WorkspaceTabStripActiveVisibilityStatusDiagnostics,
+    DockGraphSignatureDiagnostics, DockGraphStatsDiagnostics,
+    DockTabStripActiveVisibilityDiagnostics, DockTabStripActiveVisibilityStatusDiagnostics,
+    DockingInteractionDiagnostics, ViewportCaptureDiagnostics, WindowInteractionDiagnosticsStore,
+    WorkspaceInteractionDiagnostics, WorkspaceTabStripActiveVisibilityDiagnostics,
+    WorkspaceTabStripActiveVisibilityStatusDiagnostics,
 };
 pub use keymap::{BindingV1, KeySpecV1, KeymapError, KeymapFileV1};
 pub use keymap::{DefaultKeybinding, Keymap, KeymapContinuation, KeymapService, PlatformFilter};
@@ -145,6 +147,9 @@ pub use runner_accessibility_diagnostics::{
 };
 pub use runner_surface_lifecycle_diagnostics::{
     RunnerSurfaceLifecycleDiagnosticsStore, RunnerSurfaceLifecycleSnapshot,
+};
+pub use runner_window_lifecycle_diagnostics::{
+    RunnerWindowLifecycleDiagnosticsStore, RunnerWindowLifecycleSnapshot,
 };
 pub use shortcut_routing_diagnostics::{
     ShortcutRoutingDecision, ShortcutRoutingOutcome, ShortcutRoutingPhase,

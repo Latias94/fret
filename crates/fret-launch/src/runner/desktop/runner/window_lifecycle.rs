@@ -388,6 +388,12 @@ impl<D: WinitAppDriver> WinitRunner<D> {
         let winit_id = self.windows[id].window.id();
         self.window_registry.insert(winit_id, id);
         self.bump_window_z_order(id);
+        self.app.with_global_mut(
+            fret_runtime::RunnerWindowLifecycleDiagnosticsStore::default,
+            |svc, _app| {
+                svc.record_window_open(id);
+            },
+        );
 
         #[cfg(windows)]
         windows_menu::register_window(self.windows[id].window.as_ref(), id);
@@ -511,6 +517,12 @@ impl<D: WinitAppDriver> WinitRunner<D> {
         #[cfg(target_os = "macos")]
         macos_menu::unregister_window(state.window.as_ref());
         self.window_registry.remove(state.window.id());
+        self.app.with_global_mut(
+            fret_runtime::RunnerWindowLifecycleDiagnosticsStore::default,
+            |svc, _app| {
+                svc.record_window_close(window);
+            },
+        );
 
         self.app.with_global_mut(
             fret_runtime::WindowInputContextService::default,

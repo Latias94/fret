@@ -817,6 +817,7 @@ Supported selectors (v1 MVP):
 - `raise_window` (schema v2 only; optional `window` target)
 - `set_cursor_screen_pos` (schema v2 only; runner-level cursor screen-position override, physical pixels; intended for cross-window routing in scripted runs)
 - `set_cursor_in_window` (schema v2 only; runner-level cursor override using window-client physical pixels; intended for cross-window routing without hardcoding DPI)
+- `set_cursor_in_window_logical` (schema v2 only; runner-level cursor override using window-client logical pixels; preferred when you need to seed a cross-window `pointer_down` session for later `pointer_move`/`pointer_up` window migration)
 - `set_mouse_buttons` (schema v2 only; runner-level mouse button state override; capability-gated behind `diag.mouse_buttons_override`)
 - `inject_incoming_open` (schema v2 only; simulates "open in..." / share-target flows; capability-gated behind `diag.incoming_open_inject`)
 - `drag_pointer_until` (schema v2 only; optional `window` target; drag across frames until a predicate passes or timeout; intended for cross-window routing; optional `release_on_success` to end while keeping the pointer pressed)
@@ -831,6 +832,15 @@ Pointer kind note (as of 2026-02-27):
 - For cross-step pointer sessions (`pointer_down`/`pointer_move`/`pointer_up`), `pointer_down.pointer_kind` sets the
   session kind; `pointer_move`/`pointer_up` must either omit `pointer_kind` or match the session kind.
 
+Cross-window docking note (pointer sessions):
+
+- During cross-window docking drags, a script may intentionally release the drag in a different window than where the
+  pointer session started (e.g. start the drag in a torn-off window, then `pointer_up` in the main window to ensure the
+  drop resolves in the correct dock graph).
+- To keep this deterministic, seed the target window coordinates via `set_cursor_in_window_logical` before attempting to
+  migrate `pointer_move`/`pointer_up` to that window.
+  - Example: `tools/diag-scripts/docking/arbitration/docking-arbitration-demo-multiwindow-chained-tearoff-two-tabs-merge.json`
+
 Additional predicate kinds are occasionally added to unblock new regression gates (for example menu a11y checks).
 When authoring scripts, prefer stable `test_id` selectors and stick to predicates documented here; see
 `ecosystem/fret-bootstrap/src/ui_diagnostics.rs` for the authoritative list.
@@ -843,7 +853,7 @@ Recent additions:
 - `dock_drop_preview_kind_is` (assert coarse docking drop preview decision: `wrap_binary` vs `insert_into_split`)
 - `dock_graph_canonical_is` / `dock_graph_has_nested_same_axis_splits_is` (assert N-ary docking canonical-form invariants via a cheap stats snapshot)
 - `dock_graph_node_count_le` / `dock_graph_max_split_depth_le` (assert dock graph size/depth stays bounded after repeated operations)
-- `known_window_count_ge` / `known_window_count_is` (assert number of currently open windows as reported by the runner; useful for multi-window tear-off scripts)
+- `known_window_count_ge` / `known_window_count_is` (assert number of currently open windows as best-effort reported by the runner; computed as `max(runner_window_count, diag_known_windows)` to avoid backend lag in multi-window tear-off scripts)
 - `dock_drag_current_window_is` (assert that a dock drag session is active and its `current_window` matches a window target)
 - `dock_drag_moving_window_is` (assert the runner-reported moving window for a dock drag; ImGui-style “follow window”)
 - `dock_drag_window_under_moving_window_is` (assert the best-effort “window under moving window” selection during a dock drag)
@@ -1296,6 +1306,14 @@ There are also multi-window (tear-off) docking scripts (require `diag.multi_wind
 Example (run one script against the demo, launching a fresh process):
 
 - `cargo run -p fretboard -- diag run tools/diag-scripts/docking-arbitration-demo-multiwindow-drag-tab-back-to-main.json --launch -- cargo run -p fret-demo --bin docking_arbitration_demo --release`
+
+Local debugging note:
+
+- For “not yet suite-worthy” helper scripts (especially bundle-capture scripts used to debug flaky multi-window cases),
+  keep them under a `local-debug/` directory inside the canonical taxonomy location (example:
+  `tools/diag-scripts/docking/arbitration/local-debug/`).
+- These scripts are intentionally *not* promoted into `tools/diag-scripts/index.json` and should not be relied on by
+  CI-style suites.
 
 ### View-cache regression gating
 

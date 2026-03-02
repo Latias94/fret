@@ -5,12 +5,12 @@ use fret_app::App;
 use fret_ui_shadcn::{self as shadcn, prelude::*};
 use std::sync::Arc;
 
-fn base_items() -> Vec<shadcn::ComboboxOption> {
+fn base_items() -> Vec<shadcn::ComboboxItem> {
     vec![
-        shadcn::combobox_option("apple", "Apple"),
-        shadcn::combobox_option("banana", "Banana"),
-        shadcn::combobox_option("orange", "Orange"),
-        shadcn::combobox_option("disabled", "Disabled").disabled(true),
+        shadcn::ComboboxItem::new("apple", "Apple"),
+        shadcn::ComboboxItem::new("banana", "Banana"),
+        shadcn::ComboboxItem::new("orange", "Orange"),
+        shadcn::ComboboxItem::new("disabled", "Disabled").disabled(true),
     ]
 }
 
@@ -28,7 +28,7 @@ pub fn render(
         .query_model(query.clone())
         .test_id_prefix("ui-gallery-combobox-demo")
         .trigger_test_id("ui-gallery-combobox-demo-trigger")
-        .options(base_items())
+        .items(base_items())
         .into_element(cx)
 }
 // endregion: example
