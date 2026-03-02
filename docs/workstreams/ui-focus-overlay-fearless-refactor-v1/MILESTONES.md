@@ -60,3 +60,8 @@ Status: In progress (2026-03-02)
 - Focus traversal availability no longer depends on retained `parent` pointers:
   - snapshot membership + snapshot parent traversal: `crates/fret-ui/src/tree/ui_tree_outside_press.rs`
   - regression test: `crates/fret-ui/src/tree/tests/focus_traversal_availability.rs`
+- Dispatch-time event chain construction (pointer mapping + cursor queries) no longer depends on
+  retained `parent` pointers:
+  - `crates/fret-ui/src/tree/dispatch/event_chain.rs`
+  - `crates/fret-ui/src/tree/dispatch/window.rs`
+  - regression test: `crates/fret-ui/src/tree/tests/cursor_icon_query.rs`

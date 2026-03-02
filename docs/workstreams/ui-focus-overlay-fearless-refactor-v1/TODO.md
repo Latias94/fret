@@ -24,8 +24,11 @@ Tracking doc: `docs/workstreams/ui-focus-overlay-fearless-refactor-v1/DESIGN.md`
 - [x] Refactor `dispatch/window.rs` and `dispatch/chain.rs` to thread `DispatchCx` rather than
   ad-hoc snapshots/closures.
 - [x] Avoid retained-parent fallbacks for trapped focus scope detection when a dispatch snapshot is available.
-- [ ] Remove remaining containment queries that rely on live-tree parent walks during dispatch
+- [x] Remove remaining containment queries that rely on live-tree parent walks during dispatch
   (replace with snapshot queries).
+  - Evidence: event chain construction uses dispatch snapshots for ancestor traversal in
+    `crates/fret-ui/src/tree/dispatch/event_chain.rs` (threaded from `dispatch/window.rs` and
+    `dispatch/chain.rs`).
 - [ ] Add conformance coverage for nested scenarios:
   - [x] trapped focus scope inside a modal overlay root (portal-style nested roots)
   - [x] multiple stacked trapped scopes (inner scope wins)
