@@ -160,7 +160,9 @@ ID format:
     - Implemented (non-modal gating): `tools/diag-scripts/cookbook/commands-keymap-basics/cookbook-commands-keymap-basics-shortcut-and-gating.json`
     - Implemented (button click + state update): `tools/diag-scripts/cookbook/hello/cookbook-hello-click-count.json`
     - Implemented (modal barrier shortcut gating): `tools/diag-scripts/cookbook/overlay-basics/cookbook-overlay-basics-modal-barrier-shortcut-gating.json`
-- [ ] AFA-gates-051 Add compile-only wasm smoke gates for the new view runtime surface.
+- [x] AFA-gates-051 Add compile-only wasm smoke gates for the new view runtime surface.
+  - Evidence:
+    - `tools/gates_wasm_smoke.ps1`
 - [ ] AFA-gates-052 Add a small set of unit tests for action routing / handler table behavior.
 - [ ] AFA-gates-053 Add a “risk matrix” review pass for M0/M1 (see `RISK_MATRIX.md`).
 

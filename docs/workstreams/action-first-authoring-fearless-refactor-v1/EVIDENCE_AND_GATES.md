@@ -100,6 +100,7 @@ Prefer `cargo nextest run` when available.
   - `cargo clippy -p fret-ui -p fret -p fret-ui-kit --all-targets -- -D warnings`
 - wasm smoke:
   - `cargo check -p fret -p fret-ui-kit --target wasm32-unknown-unknown`
+  - `tools/gates_wasm_smoke.ps1`
 
 ---
 
