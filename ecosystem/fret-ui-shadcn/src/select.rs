@@ -1426,6 +1426,27 @@ impl Select {
         self
     }
 
+    /// Part-based authoring surface aligned with shadcn/ui v4 exports.
+    ///
+    /// This is a thin adapter over [`Select::into_element`] that accepts shadcn-style parts
+    /// (`SelectTrigger`, `SelectContent`) in a nested shape, while still mapping onto Fret's
+    /// current configuration + entries implementation.
+    #[track_caller]
+    pub fn into_element_parts<H: UiHost, I>(
+        self,
+        cx: &mut ElementContext<'_, H>,
+        trigger: impl FnOnce(&mut ElementContext<'_, H>) -> SelectTrigger,
+        content: impl Into<SelectContent>,
+        entries: impl FnOnce(&mut ElementContext<'_, H>) -> I,
+    ) -> AnyElement
+    where
+        I: IntoIterator<Item = SelectEntry>,
+    {
+        let select = self.trigger(trigger(cx)).content(content.into());
+        let entries = entries(cx);
+        select.entries(entries).into_element(cx)
+    }
+
     pub fn item(mut self, item: SelectItem) -> Self {
         self.entries.push(SelectEntry::Item(item));
         self
@@ -4671,6 +4692,27 @@ mod tests {
 
             assert_eq!(value.as_deref(), Some("alpha"));
             assert!(open);
+        });
+    }
+
+    #[test]
+    fn select_content_align_item_with_trigger_false_sets_position_popper() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(400.0), Px(240.0)),
+        );
+
+        fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            let select = Select::new_controllable(cx, None, None::<Arc<str>>, None, false).content(
+                SelectContent::new()
+                    .align_item_with_trigger(false)
+                    .side_offset(Px(7.0)),
+            );
+
+            assert_eq!(select.position, SelectPosition::Popper);
+            assert_eq!(select.side_offset_override, Some(Px(7.0)));
         });
     }
 

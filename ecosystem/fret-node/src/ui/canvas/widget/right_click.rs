@@ -29,7 +29,7 @@ pub(super) fn handle_right_click_pointer_down<H: UiHost, M: NodeGraphCanvasMiddl
     });
 
     let hit_group = {
-        let header_h = canvas.style.node_header_height;
+        let header_h = canvas.style.geometry.node_header_height;
         let pos = position;
         let this = &*canvas;
         this.graph

@@ -422,3 +422,189 @@ where
         .entries(f(cx))
         .into_element(cx)
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    use fret_app::App;
+    use fret_core::{AppWindowId, Point, Px, Rect, SemanticsOrientation, Size};
+    use fret_ui::element::ElementKind;
+
+    fn apply_theme(app: &mut App) {
+        crate::shadcn_themes::apply_shadcn_new_york_v4(
+            app,
+            crate::shadcn_themes::ShadcnBaseColor::Neutral,
+            crate::shadcn_themes::ShadcnColorScheme::Light,
+        );
+    }
+
+    fn bounds_320x240() -> Rect {
+        Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(320.0), Px(240.0)),
+        )
+    }
+
+    fn build_group(app: &mut App, window: AppWindowId, group: ResizablePanelGroup) -> AnyElement {
+        fret_ui::elements::with_element_cx(app, window, bounds_320x240(), "test", |cx| {
+            group.into_element(cx)
+        })
+    }
+
+    fn default_entries() -> Vec<ResizableEntry> {
+        vec![
+            ResizablePanel::new(std::iter::empty()).into(),
+            ResizableHandle::new().into(),
+            ResizablePanel::new(std::iter::empty()).into(),
+        ]
+    }
+
+    #[test]
+    fn resizable_panel_group_defaults_use_theme_gap_and_hit_thickness() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        apply_theme(&mut app);
+
+        let model = app.models_mut().insert(vec![1.0, 1.0]);
+        let group = ResizablePanelGroup::new(model).entries(default_entries());
+
+        let element = build_group(&mut app, window, group);
+        let ElementKind::ResizablePanelGroup(props) = &element.kind else {
+            panic!("expected ResizablePanelGroup element kind");
+        };
+
+        assert_eq!(props.chrome.gap, Px(1.0));
+        assert_eq!(props.chrome.hit_thickness, Px(6.0));
+
+        let theme = Theme::global(&app);
+        assert_eq!(props.chrome.handle_color, theme.color_token("border"));
+        assert_eq!(props.chrome.handle_alpha, 1.0);
+        assert_eq!(props.chrome.handle_hover_alpha, 1.0);
+        assert_eq!(props.chrome.handle_drag_alpha, 1.0);
+    }
+
+    #[test]
+    fn resizable_handle_semantics_stamps_splitter_role_and_orientation() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        apply_theme(&mut app);
+
+        let model = app.models_mut().insert(vec![1.0, 1.0]);
+        let group = ResizablePanelGroup::new(model)
+            .test_id_prefix("demo")
+            .entries(default_entries());
+
+        let element = build_group(&mut app, window, group);
+        assert_eq!(element.children.len(), 3);
+
+        let handle = &element.children[1];
+        let ElementKind::Semantics(props) = &handle.kind else {
+            panic!("expected handle child to be a Semantics element");
+        };
+
+        assert_eq!(props.role, fret_core::SemanticsRole::Splitter);
+        assert_eq!(props.test_id.as_deref(), Some("demo.splitter.0"));
+        assert_eq!(props.orientation, Some(SemanticsOrientation::Vertical));
+        assert_eq!(props.numeric_value, Some(0.5));
+        assert_eq!(props.min_numeric_value, Some(0.0));
+        assert_eq!(props.max_numeric_value, Some(1.0));
+        assert_eq!(props.numeric_value_step, Some(0.01));
+        assert_eq!(props.numeric_value_jump, Some(0.1));
+        assert!(props.focusable);
+        assert_eq!(props.value_editable, Some(true));
+    }
+
+    #[test]
+    fn resizable_handle_semantics_omits_value_steps_when_value_is_unknown() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        apply_theme(&mut app);
+
+        let model = app.models_mut().insert(vec![0.0, 0.0]);
+        let group = ResizablePanelGroup::new(model).entries(default_entries());
+
+        let element = build_group(&mut app, window, group);
+        let handle = &element.children[1];
+        let ElementKind::Semantics(props) = &handle.kind else {
+            panic!("expected handle child to be a Semantics element");
+        };
+
+        assert_eq!(props.numeric_value, None);
+        assert_eq!(props.numeric_value_step, None);
+        assert_eq!(props.numeric_value_jump, None);
+    }
+
+    #[test]
+    fn resizable_handle_with_handle_increases_hit_thickness() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        apply_theme(&mut app);
+
+        let model = app.models_mut().insert(vec![1.0, 1.0]);
+        let group = ResizablePanelGroup::new(model).entries(vec![
+            ResizablePanel::new(std::iter::empty()).into(),
+            ResizableHandle::new().with_handle(true).into(),
+            ResizablePanel::new(std::iter::empty()).into(),
+        ]);
+
+        let element = build_group(&mut app, window, group);
+        let ElementKind::ResizablePanelGroup(props) = &element.kind else {
+            panic!("expected ResizablePanelGroup element kind");
+        };
+
+        assert!(
+            props.chrome.hit_thickness.0 >= 16.0,
+            "expected hit_thickness >= 16px when with_handle=true, got {:?}",
+            props.chrome.hit_thickness
+        );
+    }
+
+    #[test]
+    fn resizable_handle_grip_is_paint_only() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        apply_theme(&mut app);
+
+        let model = app.models_mut().insert(vec![1.0, 1.0]);
+        let group = ResizablePanelGroup::new(model).entries(vec![
+            ResizablePanel::new(std::iter::empty()).into(),
+            ResizableHandle::new().with_handle(true).into(),
+            ResizablePanel::new(std::iter::empty()).into(),
+        ]);
+
+        let element = build_group(&mut app, window, group);
+        let handle = &element.children[1];
+        assert_eq!(handle.children.len(), 1);
+
+        let hit_gate = &handle.children[0];
+        let ElementKind::HitTestGate(props) = &hit_gate.kind else {
+            panic!("expected resizable grip wrapper to be a HitTestGate element");
+        };
+        assert!(!props.hit_test);
+        assert!(
+            !hit_gate.children.is_empty(),
+            "expected grip subtree to be present when with_handle=true"
+        );
+    }
+
+    #[test]
+    fn resizable_vertical_axis_flips_handle_orientation() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        apply_theme(&mut app);
+
+        let model = app.models_mut().insert(vec![1.0, 1.0]);
+        let group = ResizablePanelGroup::new(model)
+            .axis(fret_core::Axis::Vertical)
+            .entries(default_entries());
+
+        let element = build_group(&mut app, window, group);
+        let handle = &element.children[1];
+        let ElementKind::Semantics(props) = &handle.kind else {
+            panic!("expected handle child to be a Semantics element");
+        };
+
+        assert_eq!(props.orientation, Some(SemanticsOrientation::Horizontal));
+    }
+}

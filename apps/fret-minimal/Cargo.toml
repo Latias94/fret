@@ -1,0 +1,21 @@
+[package]
+name = "fret-minimal"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+documentation.workspace = true
+publish = false
+default-run = "fret-minimal"
+
+[dependencies]
+anyhow.workspace = true
+fret-app = { path = "../../crates/fret-app" }
+fret-bootstrap = { path = "../../ecosystem/fret-bootstrap", features = ["ui-app-driver"] }
+fret-core = { path = "../../crates/fret-core" }
+fret-ui = { path = "../../crates/fret-ui" }
+fret-ui-kit = { path = "../../ecosystem/fret-ui-kit" }
+wgpu.workspace = true

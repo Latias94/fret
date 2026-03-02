@@ -1,0 +1,107 @@
+use std::sync::Arc;
+
+use fret_core::{Point, Px, Rect, Scene, Size, Transform2D};
+use fret_runtime::ui_host::GlobalsHost;
+use fret_ui::retained_bridge::Widget as _;
+use fret_ui::{Invalidation, Theme, UiTree};
+
+use crate::ui::{NodeGraphCanvas, NodeGraphGeometryOverridesMap, NodeGraphGeometryOverridesRef};
+
+use super::{NullServices, TestUiHostImpl, insert_view, make_test_graph_two_nodes_with_ports};
+
+fn bounds() -> Rect {
+    Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(800.0), Px(600.0)),
+    )
+}
+
+fn paint_once(
+    canvas: &mut NodeGraphCanvas,
+    host: &mut TestUiHostImpl,
+    tree: &mut UiTree<TestUiHostImpl>,
+    services: &mut NullServices,
+    bounds: Rect,
+) -> Scene {
+    let mut scene = Scene::default();
+    let mut observe_model = |_id, _inv: Invalidation| {};
+    let mut observe_global = |_id, _inv: Invalidation| {};
+
+    let mut cx = fret_ui::retained_bridge::PaintCx::new(
+        host,
+        tree,
+        fret_core::NodeId::default(),
+        None,
+        None,
+        &[],
+        bounds,
+        1.0,
+        Transform2D::IDENTITY,
+        None,
+        services,
+        &mut observe_model,
+        &mut observe_global,
+        &mut scene,
+    );
+
+    canvas.paint(&mut cx);
+    scene
+}
+
+#[test]
+fn geometry_overrides_revision_rebuilds_derived_geometry_and_spatial_index_without_mutating_graph()
+{
+    let (graph_value, a, _a_in, _a_out, _b, _b_in) = make_test_graph_two_nodes_with_ports();
+
+    let mut host = TestUiHostImpl::default();
+    host.set_global(Theme::global(&host).clone());
+
+    let graph = host.models.insert(graph_value);
+    let view = insert_view(&mut host);
+
+    let _ = view.update(&mut host, |s, _cx| {
+        s.zoom = 1.0;
+        s.interaction.only_render_visible_elements = false;
+        s.interaction.frame_view_duration_ms = 0;
+    });
+
+    let overrides_map = Arc::new(NodeGraphGeometryOverridesMap::default());
+    let overrides: NodeGraphGeometryOverridesRef = overrides_map.clone();
+
+    let mut canvas = NodeGraphCanvas::new(graph.clone(), view).with_geometry_overrides(overrides);
+
+    let mut tree = UiTree::<TestUiHostImpl>::default();
+    let mut services = NullServices::default();
+    let _ = paint_once(&mut canvas, &mut host, &mut tree, &mut services, bounds());
+
+    let snapshot1 = canvas.sync_view_state(&mut host);
+    let (geom1, index1) = canvas.canvas_derived(&host, &snapshot1);
+    let counters1 = canvas.debug_derived_build_counters();
+
+    overrides_map.set_node_size_px(a, (512.0, 256.0));
+
+    let _ = paint_once(&mut canvas, &mut host, &mut tree, &mut services, bounds());
+
+    let snapshot2 = canvas.sync_view_state(&mut host);
+    let (geom2, index2) = canvas.canvas_derived(&host, &snapshot2);
+    let counters2 = canvas.debug_derived_build_counters();
+
+    assert!(!Arc::ptr_eq(&geom1, &geom2));
+    assert!(!Arc::ptr_eq(&index1, &index2));
+    assert!(
+        counters2.geom_rebuilds > counters1.geom_rebuilds,
+        "override changes must rebuild derived geometry"
+    );
+    assert!(
+        counters2.index_rebuilds > counters1.index_rebuilds,
+        "override changes must rebuild the spatial index"
+    );
+
+    let leaked = graph
+        .read_ref(&host, |g| g.nodes.get(&a).and_then(|n| n.size))
+        .unwrap_or(None);
+    assert!(
+        leaked.is_none(),
+        "UI-only overrides must not mutate serialized Graph.node.size"
+    );
+}

@@ -797,8 +797,48 @@ impl<H: UiHost> UiTree<H> {
                 return None;
             }
             let target = crate::internal_drag::route(app, window, drag.kind)?;
-            node_in_active_layers(target).then_some(target)
+            // Cross-window internal drags are runner-routed and rely on a stable, per-window
+            // anchor node. Do not gate the route target on the current "active layer" set:
+            // modal barriers/overlays can temporarily deactivate the base layer while a dock drag
+            // is in flight (ADR 0072), but docking still needs `InternalDrag` hover/drop events.
+            //
+            // Only require that the node still exists in the tree (mechanism-only contract).
+            self.nodes.get(target).is_some().then_some(target)
         })();
+        if std::env::var_os("FRET_INTERNAL_DRAG_ROUTE_TRACE").is_some_and(|v| !v.is_empty())
+            && let Some(window) = self.window
+            && let Event::InternalDrag(e) = event
+            && matches!(e.kind, fret_core::InternalDragKind::Drop)
+        {
+            let (drag_kind, cross_window_hover, route, route_in_active_layer) =
+                if let Some(drag) = app.drag(e.pointer_id) {
+                    let route = crate::internal_drag::route(app, window, drag.kind);
+                    let route_in_active_layer =
+                        route.is_some_and(|node| self.node_in_any_layer(node, &active_layers));
+                    (
+                        Some(drag.kind),
+                        drag.cross_window_hover,
+                        route,
+                        route_in_active_layer,
+                    )
+                } else {
+                    (None, false, None, false)
+                };
+            tracing::info!(
+                window = ?window,
+                pointer_id = ?e.pointer_id,
+                kind = ?e.kind,
+                position = ?e.position,
+                modifiers = ?e.modifiers,
+                drag_kind = ?drag_kind,
+                cross_window_hover = cross_window_hover,
+                route = ?route,
+                route_in_active_layer = route_in_active_layer,
+                internal_drag_target = ?internal_drag_target,
+                last_internal_drag_target = ?self.last_internal_drag_target,
+                "internal drag route trace"
+            );
+        }
 
         if let Some(window) = self.window
             && matches!(event, Event::Pointer(_))

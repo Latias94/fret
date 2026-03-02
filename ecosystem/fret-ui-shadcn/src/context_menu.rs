@@ -184,6 +184,28 @@ impl ContextMenuContent {
     }
 }
 
+/// shadcn/ui `ContextMenuPortal` (v4).
+///
+/// Upstream exports a distinct portal part even though `ContextMenuContent` mounts itself in a
+/// portal by default. In Fret the overlay is already rendered in an overlay root, so this is a
+/// no-op wrapper that exists for part surface parity (copy/paste examples).
+#[derive(Debug, Clone, Default)]
+pub struct ContextMenuPortal {
+    content: ContextMenuContent,
+}
+
+impl ContextMenuPortal {
+    pub fn new(content: ContextMenuContent) -> Self {
+        Self { content }
+    }
+}
+
+impl From<ContextMenuPortal> for ContextMenuContent {
+    fn from(value: ContextMenuPortal) -> Self {
+        value.content
+    }
+}
+
 /// shadcn/ui `ContextMenuSeparator` (v4).
 ///
 /// In upstream this is a primitive part. In Fret menus we model it as an entry variant.
@@ -2918,13 +2940,13 @@ impl ContextMenu {
         self,
         cx: &mut ElementContext<'_, H>,
         trigger: impl FnOnce(&mut ElementContext<'_, H>) -> ContextMenuTrigger,
-        content: ContextMenuContent,
+        content: impl Into<ContextMenuContent>,
         entries: impl FnOnce(&mut ElementContext<'_, H>) -> I,
     ) -> AnyElement
     where
         I: IntoIterator<Item = ContextMenuEntry>,
     {
-        let menu = content.apply_to(self);
+        let menu = content.into().apply_to(self);
         menu.into_element(cx, |cx| trigger(cx).into_element(cx), entries)
     }
 
@@ -4464,6 +4486,17 @@ mod tests {
             "expected submenu entries to be attached"
         );
         assert_eq!(item.submenu.as_ref().unwrap().len(), 3);
+    }
+
+    #[test]
+    fn context_menu_portal_wraps_content_config() {
+        let mut app = App::new();
+        let open = app.models_mut().insert(false);
+
+        let content = ContextMenuPortal::new(ContextMenuContent::new().side_offset(Px(9.0)));
+        let menu = ContextMenuContent::from(content).apply_to(ContextMenu::new(open));
+
+        assert_eq!(menu.side_offset, Px(9.0));
     }
 
     #[test]

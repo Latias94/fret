@@ -1,0 +1,137 @@
+{
+  "schema_version": 2,
+  "meta": {
+    "name": "Node graph (paint-only): PointerCancel during marquee clears state without committing selection",
+    "tags": ["node-graph", "declarative", "paint-only", "marquee", "cancel", "selection", "cache", "gate"],
+    "required_capabilities": ["diag.script_v2"],
+    "target_hints": [
+      "Run with `FRET_NODE_GRAPH_DECLARATIVE=paint` so the paint-only declarative surface is active.",
+      "Requires `FRET_DIAG=1` (diagnostics-only shortcuts).",
+      "Uses the diagnostics-only normalize+offset shortcut (Ctrl+5) so the canvas center is blank for marquee start.",
+      "Asserts that PointerCancel clears marquee state and does not commit selection or rebuild geometry caches."
+    ]
+  },
+  "steps": [
+    { "type": "press_key", "key": "escape" },
+    { "type": "wait_frames", "n": 5 },
+    {
+      "type": "wait_until",
+      "predicate": { "kind": "exists", "target": { "kind": "test_id", "id": "node_graph.canvas" } },
+      "timeout_frames": 600
+    },
+    { "type": "move_pointer", "target": { "kind": "test_id", "id": "node_graph.canvas" } },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "value_contains",
+        "target": { "kind": "test_id", "id": "node_graph.canvas" },
+        "text": "nodes_rebuilds:1;"
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "value_contains",
+        "target": { "kind": "test_id", "id": "node_graph.canvas" },
+        "text": "edges_rebuilds:1;"
+      },
+      "timeout_frames": 600
+    },
+
+    { "type": "click", "target": { "kind": "test_id", "id": "node_graph.canvas" }, "button": "middle" },
+    { "type": "wait_frames", "n": 2 },
+    { "type": "press_key", "key": "5", "modifiers": { "ctrl": true } },
+    { "type": "wait_frames", "n": 10 },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "value_contains",
+        "target": { "kind": "test_id", "id": "node_graph.canvas" },
+        "text": "nodes_rebuilds:2;"
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "value_contains",
+        "target": { "kind": "test_id", "id": "node_graph.canvas" },
+        "text": "edges_rebuilds:2;"
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "value_contains",
+        "target": { "kind": "test_id", "id": "node_graph.canvas" },
+        "text": "selected_nodes:0;"
+      },
+      "timeout_frames": 240
+    },
+
+    {
+      "type": "pointer_down",
+      "window": { "kind": "current" },
+      "target": { "kind": "test_id", "id": "node_graph.canvas" },
+      "button": "left"
+    },
+    { "type": "wait_until", "predicate": { "kind": "event_kind_seen", "event_kind": "pointer.down" }, "timeout_frames": 120 },
+    { "type": "pointer_move", "window": { "kind": "current" }, "delta_x": 90.0, "delta_y": 60.0, "steps": 10 },
+    { "type": "wait_frames", "n": 2 },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "value_contains",
+        "target": { "kind": "test_id", "id": "node_graph.canvas" },
+        "text": "marquee_active:true;"
+      },
+      "timeout_frames": 240
+    },
+    { "type": "pointer_move", "window": { "kind": "current" }, "delta_x": 120.0, "delta_y": 80.0, "steps": 10 },
+    { "type": "wait_frames", "n": 2 },
+
+    { "type": "pointer_cancel", "window": { "kind": "current" } },
+    { "type": "wait_until", "predicate": { "kind": "event_kind_seen", "event_kind": "pointer.cancel.left_window" }, "timeout_frames": 120 },
+    { "type": "wait_frames", "n": 5 },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "value_contains",
+        "target": { "kind": "test_id", "id": "node_graph.canvas" },
+        "text": "marquee_active:false;"
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "value_contains",
+        "target": { "kind": "test_id", "id": "node_graph.canvas" },
+        "text": "selected_nodes:0;"
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "value_contains",
+        "target": { "kind": "test_id", "id": "node_graph.canvas" },
+        "text": "nodes_rebuilds:2;"
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "value_contains",
+        "target": { "kind": "test_id", "id": "node_graph.canvas" },
+        "text": "edges_rebuilds:2;"
+      },
+      "timeout_frames": 240
+    },
+
+    { "type": "capture_bundle", "label": "node-graph-paint-only-marquee-pointer-cancel-does-not-commit" }
+  ]
+}

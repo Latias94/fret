@@ -1153,6 +1153,7 @@ impl Tooltip {
             }
 
             let overlay_root_name = radix_tooltip::tooltip_root_name(tooltip_id);
+            let overlay_root_name_for_children = overlay_root_name.clone();
             let opacity = motion.opacity;
             let scale = motion.scale;
             let portal_ctx = portal_inherited::PortalInherited::capture(cx);
@@ -1160,7 +1161,7 @@ impl Tooltip {
 
             let overlay_children = portal_inherited::with_root_name_inheriting(
                 cx,
-                &overlay_root_name,
+                &overlay_root_name_for_children,
                 portal_ctx,
                 move |cx| {
                     let cursor_for_anchor = if track_cursor_axis.enabled() {
@@ -1214,8 +1215,21 @@ impl Tooltip {
                             .with_hide_when_detached(hide_when_detached);
                     let reference_hidden = placement.reference_hidden(outer, anchor);
 
-                    let layout =
-                        popper::popper_content_layout_sized(outer, anchor, content_size, placement);
+                    let (layout, trace) = popper::popper_layout_sized_with_trace(
+                        outer,
+                        anchor,
+                        content_size,
+                        placement.side_offset,
+                        placement.side,
+                        placement.align,
+                        placement.options(),
+                    );
+                    cx.diagnostics_record_overlay_placement_anchored_panel(
+                        Some(overlay_root_name.as_str()),
+                        Some(anchor_id),
+                        Some(tooltip_id),
+                        trace,
+                    );
 
                     let placed = layout.rect;
                     let mut wrapper_insets =
@@ -1456,7 +1470,15 @@ impl TooltipContent {
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app).snapshot();
 
-        let base_layout = LayoutRefinement::default().flex_shrink_0();
+        // shadcn/ui v4 uses `w-fit max-w-xs` for tooltip content.
+        // Model this as "shrink-to-content with a max width hint" so long text wraps similarly.
+        let max_w = theme
+            .metric_by_key("component.tooltip.max_w")
+            .unwrap_or(Px(320.0)); // Tailwind `max-w-xs` = 20rem.
+        let base_layout = LayoutRefinement::default()
+            .flex_shrink_0()
+            .max_w(max_w)
+            .min_w_0();
         let chrome = tooltip_content_chrome(&theme).merge(self.chrome);
         let props = decl_style::container_props(&theme, chrome, base_layout.merge(self.layout));
         let fg = tooltip_text_fg(&theme);
@@ -1493,6 +1515,34 @@ mod tests {
     use fret_ui::overlay_placement::{Align, Side, anchored_panel_bounds_sized};
     use fret_ui::tree::UiTree;
     use fret_ui_kit::OverlayController;
+
+    #[test]
+    fn tooltip_content_default_max_width_matches_shadcn() {
+        use fret_ui::element::Length;
+        use fret_ui::elements::GlobalElementId;
+
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            CoreSize::new(Px(200.0), Px(120.0)),
+        );
+
+        fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            let content = TooltipContent::new(vec![AnyElement::new(
+                GlobalElementId(1),
+                ElementKind::Text(TextProps::new("tip")),
+                Vec::new(),
+            )])
+            .into_element(cx);
+
+            let ElementKind::Container(props) = content.kind else {
+                panic!("expected TooltipContent to build a Container element");
+            };
+
+            assert_eq!(props.layout.size.max_width, Some(Length::Px(Px(320.0))));
+        });
+    }
 
     #[derive(Default)]
     struct FakeServices;

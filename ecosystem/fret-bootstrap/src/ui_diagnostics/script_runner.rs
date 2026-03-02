@@ -1,5 +1,21 @@
 use super::*;
 
+fn append_diag_script_migration_trace(out_dir: &std::path::Path, line: &str) {
+    if std::env::var_os("FRET_DIAG_SCRIPT_MIGRATION_TRACE").is_none() {
+        return;
+    }
+
+    let path = out_dir.join("ui_diag_script_migration_trace.log");
+    if let Ok(mut file) = std::fs::OpenOptions::new()
+        .create(true)
+        .append(true)
+        .open(path)
+    {
+        use std::io::Write as _;
+        let _ = writeln!(file, "{}", line);
+    }
+}
+
 impl UiDiagnosticsService {
     pub(super) fn maybe_start_pending_script(&mut self, app: &mut App, window: AppWindowId) {
         if !self.active_scripts.is_empty() {
@@ -11,14 +27,22 @@ impl UiDiagnosticsService {
         };
 
         let run_id = self.pending_script_run_id.take().unwrap_or(0);
-        // Prefer a deterministic anchor window when starting a script. The trigger touch can
-        // be observed by any window, and multi-window apps may produce frames in a different
-        // order across runs. Using the smallest observed window key (best-effort "first
-        // created") keeps `first_seen` window targets stable for scripts.
+        // Anchor scripts to a stable "first seen" window. Multi-window diagnostics scripts often
+        // treat `UiWindowTargetV1::FirstSeen` as "the main window" and rely on it remaining stable
+        // even as additional OS windows are created (tear-off, floating tool windows, etc).
+        //
+        // Use the smallest window id among windows that have produced at least one snapshot so far
+        // (best-effort liveness check). Fall back to the current window if we have no candidates
+        // yet (e.g. during very early startup).
         let anchor_window = self
             .known_windows
             .iter()
             .copied()
+            .filter(|w| {
+                self.per_window
+                    .get(w)
+                    .is_some_and(|ring| ring.snapshots.back().is_some())
+            })
             .min_by_key(|w| w.data().as_ffi())
             .unwrap_or(window);
 
@@ -52,6 +76,7 @@ impl UiDiagnosticsService {
             overlay_placement_trace: Vec::new(),
             web_ime_trace: Vec::new(),
             ime_event_trace: Vec::new(),
+            last_explicit_cursor_override: None,
         };
 
         // Avoid leaking clipboard responses across runs. Script steps that assert clipboard state
@@ -119,7 +144,7 @@ impl UiDiagnosticsService {
 
     pub(super) fn maybe_migrate_single_active_script_to_window(
         &mut self,
-        app: &App,
+        app: &mut App,
         window: AppWindowId,
     ) {
         // Multi-window scripts can create additional OS windows (tear-off). Depending on platform
@@ -145,7 +170,59 @@ impl UiDiagnosticsService {
             preferred.is_some_and(|w| !self.per_window.contains_key(&w));
         let dock_drag = dock_drag_runtime_state(app, self.known_windows.as_slice());
         let dock_drag_source_window = dock_drag.as_ref().map(|drag| drag.source_window);
-        let allow_migrate_for_dock_drag = dock_drag_source_window == Some(window);
+        let step = other_active.steps.get(other_active.next_step);
+        let step_window_target = Self::active_step_window_target(other_active);
+        let other_step_index = other_active.next_step;
+
+        let step_allows_dock_drag_migration = matches!(
+            step,
+            Some(
+                UiActionStepV2::DragPointer { .. }
+                    | UiActionStepV2::DragPointerUntil { .. }
+                    | UiActionStepV2::DragTo { .. }
+                    | UiActionStepV2::PointerDown { .. }
+                    | UiActionStepV2::PointerMove { .. }
+                    | UiActionStepV2::PointerUp { .. }
+                    | UiActionStepV2::SetMouseButtons { .. }
+            )
+        );
+        let allow_migrate_for_dock_drag =
+            dock_drag_source_window == Some(window) && step_allows_dock_drag_migration;
+
+        // Avoid migration loops for window-targeted steps.
+        //
+        // If a step resolves to a specific window (e.g. `last_seen`), do not migrate the active
+        // script to an "unrelated" window that happens to be producing callbacks. Instead, nudge
+        // the resolved window to produce frames and keep the script attached there.
+        //
+        // Exception: during an active dock drag, allow migration to follow the runner-owned drag
+        // source window (ImGui-style tear-off), since the captured drag itself can be remapped.
+        if !allow_migrate_for_dock_drag
+            && let Some(step_window_target) = step_window_target.as_ref()
+            && let Some(resolved) = self.resolve_window_target_for_active_step(
+                other_window,
+                other_active.anchor_window,
+                Some(step_window_target),
+            )
+            && resolved != window
+        {
+            app.request_redraw(resolved);
+            app.push_effect(Effect::Redraw(resolved));
+            app.push_effect(Effect::RequestAnimationFrame(resolved));
+            append_diag_script_migration_trace(
+                &self.cfg.out_dir,
+                &format!(
+                    "unix_ms={} kind=nudge_step_target resolved={:?} requested_from={:?} active_window={:?} step_index={} step_window_target={:?}",
+                    unix_ms_now(),
+                    resolved,
+                    window,
+                    other_window,
+                    other_step_index,
+                    step_window_target,
+                ),
+            );
+            return;
+        }
 
         // Note: do not use `dock_drag.current_window` for migration decisions. Hover can
         // legitimately change during a captured-pointer gesture; `dock_drag.source_window`
@@ -158,6 +235,21 @@ impl UiDiagnosticsService {
             || allow_migrate_for_unobserved_preferred
         {
             if let Some(mut active) = self.active_scripts.remove(&other_window) {
+                append_diag_script_migration_trace(
+                    &self.cfg.out_dir,
+                    &format!(
+                        "unix_ms={} from={:?} to={:?} preferred={:?} allow_current_target={} allow_unobserved_preferred={} allow_dock_drag={} step_index={} step_window_target={:?}",
+                        unix_ms_now(),
+                        other_window,
+                        window,
+                        preferred,
+                        allow_migrate_for_current_target,
+                        allow_migrate_for_unobserved_preferred,
+                        allow_migrate_for_dock_drag,
+                        other_step_index,
+                        step_window_target,
+                    ),
+                );
                 if allow_migrate_for_current_target
                     || allow_migrate_for_unobserved_preferred
                     || allow_migrate_for_dock_drag
@@ -177,7 +269,7 @@ impl UiDiagnosticsService {
                 );
             }
         } else {
-            let step_window_target = match Self::active_step_window_target(other_active) {
+            let step_window_target = match step_window_target {
                 Some(UiWindowTargetV1::Current) => Some("current"),
                 Some(UiWindowTargetV1::FirstSeen) => Some("first_seen"),
                 Some(UiWindowTargetV1::FirstSeenOther) => Some("first_seen_other"),
@@ -198,6 +290,28 @@ impl UiDiagnosticsService {
                 step_window_target,
                 "script migration skipped"
             );
+
+            if let Some(preferred) = preferred
+                && preferred != window
+            {
+                // Wake the preferred window even if it is fully occluded; window-targeted steps
+                // can legitimately need semantics snapshots from a "behind" window during
+                // cross-window drags.
+                app.request_redraw(preferred);
+                app.push_effect(Effect::Redraw(preferred));
+                app.push_effect(Effect::RequestAnimationFrame(preferred));
+                append_diag_script_migration_trace(
+                    &self.cfg.out_dir,
+                    &format!(
+                        "unix_ms={} kind=nudge_preferred preferred={:?} requested_from={:?} step_index={} step_window_target={:?}",
+                        unix_ms_now(),
+                        preferred,
+                        window,
+                        other_step_index,
+                        step_window_target,
+                    ),
+                );
+            }
         }
     }
 
@@ -230,6 +344,13 @@ impl UiDiagnosticsService {
         };
 
         if let Some((active_window, run_id, step_index, now_unix_ms)) = heartbeat {
+            // Keep the active window producing frames even if it is occluded behind another window.
+            // Multi-window drags can starve the "under" window of redraw callbacks while scripted
+            // steps are still window-targeted (e.g. selector resolution in the main window).
+            app.request_redraw(active_window);
+            app.push_effect(Effect::Redraw(active_window));
+            app.push_effect(Effect::RequestAnimationFrame(active_window));
+
             self.write_script_result(UiScriptResultV1 {
                 schema_version: 1,
                 run_id,

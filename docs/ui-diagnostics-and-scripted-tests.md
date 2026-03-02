@@ -704,7 +704,7 @@ Semantics export:
 
 Privacy / size:
 
-- `FRET_DIAG_REDACT_TEXT=0`: disable redaction (default enabled).
+- `FRET_DIAG_REDACT_TEXT=0`: disable redaction (runtime default enabled; tool-launched runs via `fretboard diag ... --launch` default to disabled).
 - `FRET_DIAG_MAX_DEBUG_STRING_BYTES=...`: cap event debug strings and exported semantics text.
 - `FRET_DIAG_MAX_GATING_TRACE_ENTRIES=...`: cap `debug.command_gating_trace` entries (default 200; clamped to <= 2000).
 
@@ -843,7 +843,7 @@ Recent additions:
 - `dock_drop_preview_kind_is` (assert coarse docking drop preview decision: `wrap_binary` vs `insert_into_split`)
 - `dock_graph_canonical_is` / `dock_graph_has_nested_same_axis_splits_is` (assert N-ary docking canonical-form invariants via a cheap stats snapshot)
 - `dock_graph_node_count_le` / `dock_graph_max_split_depth_le` (assert dock graph size/depth stays bounded after repeated operations)
-- `known_window_count_ge` (assert that the diagnostics runtime has observed at least N windows)
+- `known_window_count_ge` / `known_window_count_is` (assert number of currently open windows as reported by the runner; useful for multi-window tear-off scripts)
 - `dock_drag_current_window_is` (assert that a dock drag session is active and its `current_window` matches a window target)
 - `dock_drag_moving_window_is` (assert the runner-reported moving window for a dock drag; ImGui-style “follow window”)
 - `dock_drag_window_under_moving_window_is` (assert the best-effort “window under moving window” selection during a dock drag)
@@ -1052,6 +1052,7 @@ Docking predicates (require a `WindowInteractionDiagnosticsStore` publisher, typ
 - `{"kind":"dock_graph_canonical_is","canonical":true}`
 - `{"kind":"dock_graph_has_nested_same_axis_splits_is","has_nested":false}`
 - `{"kind":"known_window_count_ge","n":2}`
+- `{"kind":"known_window_count_is","n":1}`
 - `{"kind":"dock_drag_current_window_is","window":{"kind":"last_seen_other"}}`
 - `{"kind":"dock_graph_node_count_le","max":32}`
 - `{"kind":"dock_graph_max_split_depth_le","max":8}`
@@ -1179,6 +1180,12 @@ For component-focused conformance scripts (built-in suites), run:
 - `cargo run -p fretboard -- diag suite ui-gallery-select --timeout-ms 240000 --launch -- cargo run -p fret-ui-gallery --release`
 - `cargo run -p fretboard -- diag suite ui-gallery-combobox --timeout-ms 240000 --launch -- cargo run -p fret-ui-gallery --release`
 - `cargo run -p fretboard -- diag suite ui-gallery-text-ime --timeout-ms 240000 --launch -- cargo run -p fret-ui-gallery --release`
+
+For Embla-engine-dependent Carousel gates, run:
+
+- `cargo run -p fretboard -- diag suite ui-gallery-carousel-embla-engine --launch -- cargo run -p fret-ui-gallery --release`
+
+To force-disable the Embla engine (debug), set `FRET_DEBUG_CAROUSEL_EMBLA_ENGINE=0`.
 
 To keep “Rust template ↔ JSON script” closure, check that the committed scripts match typed templates:
 

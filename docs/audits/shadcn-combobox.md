@@ -52,9 +52,9 @@ Base UI combobox lifecycle semantics.
 
 ### Item modeling (structured metadata)
 
-- Pass: `ComboboxItem::detail(...)` supports structured suffix metadata (e.g. `Next.js (React)`) without forcing callers
+- Pass: `ComboboxOption::detail(...)` supports structured suffix metadata (e.g. `Next.js (React)`) without forcing callers
   to pre-format richer labels.
-- Pass: `ComboboxItem::keywords(...)` is forwarded to cmdk-style filtering via `CommandItem::keywords(...)`.
+- Pass: `ComboboxOption::keywords(...)` is forwarded to cmdk-style filtering via `CommandItem::keywords(...)`.
 
 ## Known gaps
 

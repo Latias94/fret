@@ -9,7 +9,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
     ) -> Option<PortId> {
         let zoom = ctx.zoom;
         let z = zoom_z(zoom);
-        let r = self.style.pin_radius / z;
+        let r = self.style.geometry.pin_radius / z;
         if !r.is_finite() || r <= 0.0 {
             return None;
         }

@@ -55,6 +55,20 @@ We explicitly mirror the high-level learning story many people expect:
 - **Labs** (“cool/experimental, optional”): renderer effects, advanced visuals, experimental components
 - **Diagnostics** (“debug + regressions”): `fretboard diag` scripts/suites anchored to stable `test_id`s
 
+### Cookbook vs UI Gallery (positioning)
+
+We already have a UI Gallery. The cookbook is **not a second component catalog**.
+
+- **Cookbook** (this workstream): "how do I do X?" recipes that teach authoring patterns and
+  ecosystem seams (commands, overlays, text input, virtualization, effects, etc.).
+  - One file ≈ one lesson.
+  - Optimized for copy/paste and first-day onboarding.
+- **UI Gallery**: "what exists and how does it behave?" component pages + conformance harnesses.
+  - Optimized for breadth, parity work, and regression detection (APG/Radix/shadcn alignment).
+
+If we later want a "cookbook gallery" UI surface, it should be a **thin index** (listing + deep
+links + "run this example") rather than duplicating the UI Gallery's role.
+
 ### Cookbook commands (native)
 
 The cookbook is intended to be GPUI-like: small Cargo `examples/` where one file demonstrates one
@@ -69,7 +83,8 @@ fretboard dev native --example overlay_basics
 
 Notes:
 
-- Cookbook examples are currently native-only. Web support is tracked separately (see `web-support-tiers.md`).
+- Cookbook Cargo `examples/` are currently native-only. Some scenarios may also be hosted as web demos;
+  web coverage is tracked separately (see `web-support-tiers.md`).
 - `fretboard dev native` only supports one selector at a time: `--demo`, `--bin`, or `--example`.
 
 Supporting appendices for making this plan executable (and preventing drift):
@@ -115,6 +130,16 @@ Proposed v1 set (names TBD):
 | viz-studio | viz + canvas | “interactive viz workspace” | charts/plot, canvas interactions, node graph (optional), perf-friendly virtualization | perf + input scripts |
 | shader-lab | renderer/effects | “bounded effects playground” | built-in effect steps, CustomV1/V2/V3 tracks, budget/capability reporting | capability-gated scripts |
 
+Reference app constraints:
+
+- Keep the set small (2-3) and treat each app as a product surface with an owner.
+- Do not use reference apps as a dumping ground for experiments: experiments should live in cookbook
+  examples or Labs first.
+- Prefer reusing cookbook surfaces and diag scripts (or suites) rather than inventing bespoke
+  automation per app.
+- Keep mechanism vs policy boundaries intact: these apps should depend on ecosystem layers, not
+  re-implement policy in app code and not pull backend crates unless the point is interop.
+
 ### B) Cookbook tracks (focused examples; “how do I do X?”)
 
 We define three tracks:
@@ -127,6 +152,19 @@ Cookbook implementation (initial):
 
 - In-tree cookbook crate: `apps/fret-cookbook` (Cargo `examples/`)
 
+Suggested v1 sequencing (App Track):
+
+1) `cookbook.hello` -> first run, layout + theme baseline
+2) `cookbook.hello_counter` -> MVU + Model + keyed UI updates
+3) `cookbook.commands_keymap_basics` -> commands + shortcuts + availability gating
+4) `cookbook.text_input_basics` -> text input + submit/clear patterns
+5) `cookbook.overlay_basics` -> overlay lifecycle + focus restore baseline
+6) `cookbook.effects_layer_basics` -> renderer "wow" without leaving the safe path
+7) `cookbook.theme_switching_basics` -> token-driven theming + light/dark verification
+8) `cookbook.icons_and_assets_basics` -> icons + assets + currentColor + budgets
+9) `cookbook.virtual_list_basics` -> perf + virtualization basics
+10) `cookbook.async_inbox_basics` -> async workflows + cancellation patterns
+
 ## Example catalog (v1 proposal)
 
 This table is the “source of truth” for what we *intend* to maintain as user-facing examples.
@@ -136,35 +174,57 @@ Legend:
 
 - **Level**: 0 (first run) → 4 (editor-grade)
 - **Form**: Template / Example / Gallery Page / Lab / Harness
+- **Catalog**:
+  - `Official`: user-facing by default (linked from onboarding docs; shown in `fretboard list ...`).
+  - `Lab`: user-facing but opt-in (higher ceiling; must be capability/budget bounded).
+  - `Maintainer`: stress/regression harness (hidden by default; exposed via `--all`).
 
-| ID | Level | Track | Theme | Form | Native | Web | Teaches | Proposed gate |
-|---|---:|---|---|---|---|---|---|---|
-| hello | 0 | App | layout | Template | ✅ | ✅ | window + layout + text | smoke (first frame) |
-| simple-todo | 1 | App | state | Template | ✅ | ✅ | MVU + keyed lists | diag script: add/remove rows |
-| todo | 2 | App | state | Template | ✅ | (optional) | selectors + queries baseline | diag script: “golden path” actions |
-| commands-and-keymap | 2 | App | input | Example | ✅ | ✅ | commands + shortcuts | diag script: key injection |
-| overlay-basics | 2 | App | overlays | Example | ✅ | ✅ | popover/dialog/sheet + focus restore | diag suite: overlay conformance |
-| virtual-list | 2 | App | perf | Example | ✅ | ✅ | virtualization + stable identity | perf gate (worst-frame) |
-| async-inbox | 2 | App | async | Example | ✅ | ✅ | inbox drain + cancellation | unit test + diag run |
-| theme-switching | 2 | App | theming | Example | ✅ | ✅ | preset switch + token reads | screenshot gate (light/dark) |
-| icons-and-assets | 2 | App | assets | Example | ✅ | ✅ | icons + image/SVG budgets | screenshot gate |
-| data-table | 3 | App | data | Gallery Page | ✅ | ✅ | headless table + sizing/pinning | layout gate + perf baseline |
-| markdown-and-code | 3 | App | docs | Example | ✅ | ✅ | markdown + syntax + copy button | screenshot gate |
-| docking-basics | 3 | Interop | docking | Example | ✅ | ⛔ | dock model + UI policy | diag script + checklist anchor |
-| docking-arbitration | 4 | Interop | docking | Harness | ✅ | ⛔ | multi-root overlays + input arbitration | diag suite (ADR checklist) |
-| multi-window-tearoff | 4 | Interop | windows | Lab/Harness | ✅ | ⛔ | tear-off + DPI + drag | manual + diag evidence |
-| embedded-viewport | 3 | Interop | viewport | Example | ✅ | (optional) | viewport surface + input forwarding | diag script: pointer mapping |
-| gizmo-viewport | 4 | Interop | viewport | Example | ✅ | ⛔ | gizmo + viewport tool math | screenshot + interaction script |
-| external-texture-import | 3 | Interop | render I/O | Example | ✅ | ✅ | external texture paths | diag run + capability check |
-| external-video-import | 4 | Interop | render I/O | Lab | ✅ | ⛔ | video import (platform-specific) | platform-gated smoke |
-| effects-basics | 2 | Renderer | effects | Example | ✅ | ✅ | blur/shadow/noise semantics | screenshot gate |
-| liquid-glass | 4 | Renderer | effects | Lab | ✅ | ⛔ | bounded glass/acrylic recipe | perf + screenshot gate |
-| customv1 | 4 | Renderer | custom effects | Lab | ✅ | ✅ | CustomV1 bounded ABI | capability-gated smoke |
-| customv2 | 4 | Renderer | custom effects | Lab | ✅ | ✅ | CustomV2 authoring + presets | script-driven repro |
-| customv3-pass-graph | 4 | Renderer | custom effects | Lab | ✅ | ✅ | CustomV3 pass planning semantics | script + perf attribution |
-| node-graph-basics | 3 | App | canvas | Example | ✅ | ⛔ | node graph navigation + selection | screenshot gate |
-| charts-plot | 3 | App | viz | Example | ✅ | ✅ | charts/plot interactions | screenshot + drag script |
-| inspector-and-diag | 3 | Maint | diagnostics | Harness | ✅ | ✅ | inspector + bundle export | `fretboard diag` docs gate |
+v1 scope decisions:
+
+- The **day-1 ladder** remains the three templates (`hello`, `simple-todo`, `todo`) as also described in:
+  - `docs/first-hour.md` (“Next steps” ladder),
+  - `docs/examples/todo-app-golden-path.md` (“Onboarding ladder”),
+  - ADR 0110 golden-path driver/pipelines.
+- The cookbook examples are `Official` unless explicitly marked as `Lab`/`Maintainer` below.
+
+Note: `components_gallery` and `ui_gallery` are treated as catalog surfaces; they are not “copy/paste
+recipes”, but they are still `Official` entry points.
+
+| ID | Level | Catalog | Track | Theme | Form | Native | Web | Teaches | Proposed gate |
+|---|---:|---|---|---|---|---|---|---|---|
+| hello | 0 | Official | App | layout | Template | ✅ | ✅ | window + layout + text | smoke (first frame) |
+| simple-todo | 1 | Official | App | state | Template | ✅ | ✅ | MVU + keyed lists | diag script: add/remove rows |
+| todo | 2 | Official | App | state | Template | ✅ | (optional) | selectors + queries baseline | diag script: “golden path” actions |
+| components_gallery | 3 | Official | App | components | Demo | ✅ | ⛔ | component sampling + overlay behaviors | diag smoke (basic navigation) |
+| ui_gallery | 4 | Official | App | components | Gallery App | ✅ | ✅ | per-component pages + conformance | existing ui-gallery suites |
+| cookbook.hello | 0 | Official | App | layout | Example | ✅ | ⛔ | minimal “hello” runnable | diag smoke |
+| cookbook.hello_counter | 1 | Official | App | state | Example | ✅ | ⛔ | MVU + Model counter | diag smoke |
+| cookbook.simple_todo | 1 | Official | App | state | Example | ✅ | ⛔ | minimal todo list (copy/paste) | diag smoke |
+| cookbook.commands_keymap_basics | 2 | Official | App | input | Example | ✅ | ✅ | commands + shortcuts | diag script: key injection |
+| cookbook.undo_basics | 2 | Official | App | state | Example | ✅ | ✅ | app-owned undo/redo (`fret-undo`) | diag script: press_shortcut undo/redo |
+| cookbook.text_input_basics | 2 | Official | App | input | Example | ✅ | ✅ | text input + submit/clear commands | diag script: submit + value gate |
+| cookbook.overlay_basics | 2 | Official | App | overlays | Example | ✅ | ✅ | dialog basics + focus restore | diag suite: overlay conformance |
+| cookbook.virtual_list_basics | 2 | Official | App | perf | Example | ✅ | ✅ | virtualization + stable identity | perf gate (worst-frame) |
+| cookbook.async_inbox_basics | 2 | Official | App | async | Example | ✅ | ✅ | inbox drain + cancellation | unit test + diag run |
+| cookbook.theme_switching_basics | 2 | Official | App | theming | Example | ✅ | ✅ | preset switch + token reads | screenshot gate (light/dark) |
+| cookbook.icons_and_assets_basics | 2 | Official | App | assets | Example | ✅ | ✅ | icons + image/SVG budgets | screenshot gate |
+| cookbook.effects_layer_basics | 2 | Official | Renderer | effects | Example | ✅ | ✅ | built-in effect steps + semantics | screenshot gate |
+| cookbook.markdown_and_code_basics | 3 | Official | App | docs | Example | ✅ | ✅ | markdown + syntax + copy button | screenshot gate |
+| cookbook.canvas_pan_zoom_basics | 3 | Official | App | canvas | Example | ✅ | ⛔ | pan/zoom wiring + basic drag tool | diag script: pan + zoom + drag |
+| cookbook.chart_interactions_basics | 3 | Official | App | viz | Example | ✅ | ✅ | charts interactions | screenshot + drag script |
+| data-table | 3 | Official | App | data | Gallery Page | ✅ | ✅ | headless table + sizing/pinning | layout gate + perf baseline |
+| cookbook.docking_basics | 3 | Official | Interop | docking | Example | ✅ | ⛔ | dock model + UI policy | diag script + checklist anchor |
+| cookbook.embedded_viewport_basics | 3 | Official | Interop | viewport | Example | ✅ | (optional) | viewport surface + explicit input forwarding | diag script: pointer mapping |
+| cookbook.external_texture_import_basics | 3 | Official | Interop | render I/O | Example | ✅ | ✅ | imported render targets + ingest strategy semantics | diag run + capability check |
+| cookbook.gizmo_basics | 4 | Lab | Interop | viewport | Example | ✅ | ⛔ | gizmo + viewport tool math | screenshot + interaction script |
+| cookbook.customv1_basics | 4 | Lab | Renderer | custom effects | Lab | ✅ | ⛔ | CustomV1 bounded ABI | capability-gated smoke |
+| liquid-glass | 4 | Lab | Renderer | effects | Lab | ✅ | ⛔ | bounded glass/acrylic recipe | perf + screenshot gate |
+| customv2 | 4 | Lab | Renderer | custom effects | Lab | ✅ | ✅ | CustomV2 authoring + presets | script-driven repro |
+| customv3-pass-graph | 4 | Lab | Renderer | custom effects | Lab | ✅ | ✅ | CustomV3 pass planning semantics | script + perf attribution |
+| node-graph-basics | 3 | Lab | App | canvas | Example | ✅ | ⛔ | node graph navigation + selection | screenshot gate |
+| multi-window-tearoff | 4 | Maintainer | Interop | windows | Lab/Harness | ✅ | ⛔ | tear-off + DPI + drag | manual + diag evidence |
+| docking-arbitration | 4 | Maintainer | Interop | docking | Harness | ✅ | ⛔ | multi-root overlays + input arbitration | diag suite (ADR checklist) |
+| inspector-and-diag | 3 | Maintainer | Maint | diagnostics | Harness | ✅ | ✅ | inspector + bundle export | `fretboard diag` docs gate |
 
 Notes:
 

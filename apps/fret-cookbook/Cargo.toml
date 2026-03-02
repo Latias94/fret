@@ -12,5 +12,26 @@ publish = false
 
 [dependencies]
 anyhow.workspace = true
-fret = { path = "../../ecosystem/fret", default-features = false, features = ["desktop", "diagnostics", "shadcn", "icons", "preload-icon-svgs"] }
+fret = { path = "../../ecosystem/fret", default-features = false, features = ["desktop", "diagnostics", "shadcn", "ui-assets", "icons", "preload-icon-svgs"] }
+fret-app = { path = "../../crates/fret-app" }
 fret-core = { path = "../../crates/fret-core" }
+fret-runtime = { path = "../../crates/fret-runtime" }
+fret-ui = { path = "../../crates/fret-ui" }
+fret-render = { path = "../../crates/fret-render" }
+fret-launch = { path = "../../crates/fret-launch" }
+fret-ui-kit = { path = "../../ecosystem/fret-ui-kit" }
+fret-icons = { path = "../../ecosystem/fret-icons" }
+fret-icons-radix = { path = "../../ecosystem/fret-icons-radix", default-features = false, features = ["app-integration"] }
+fret-ui-assets = { path = "../../ecosystem/fret-ui-assets", default-features = false, features = ["ui", "image-decode"] }
+fret-executor = { path = "../../ecosystem/fret-executor" }
+fret-markdown = { path = "../../ecosystem/fret-markdown", default-features = false, features = ["ui", "syntax-rust"] }
+fret-code-view = { path = "../../ecosystem/fret-code-view", default-features = false }
+fret-undo = { path = "../../ecosystem/fret-undo" }
+fret-canvas = { path = "../../ecosystem/fret-canvas", default-features = false, features = ["ui"] }
+fret-docking = { path = "../../ecosystem/fret-docking", default-features = false, features = ["ui"] }
+fret-bootstrap = { path = "../../ecosystem/fret-bootstrap", default-features = false, features = ["ui-app-driver", "diagnostics", "ui-assets", "icons-ui-semantic-lucide"] }
+fret-chart = { path = "../../ecosystem/fret-chart" }
+delinea = { path = "../../ecosystem/delinea" }
+fret-gizmo = { path = "../../ecosystem/fret-gizmo" }
+glam.workspace = true
+wgpu.workspace = true

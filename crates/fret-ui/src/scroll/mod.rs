@@ -415,6 +415,29 @@ mod tests {
     }
 
     #[test]
+    fn scroll_handle_revision_bumps_on_user_visible_clamps() {
+        let handle = ScrollHandle::default();
+        let rev0 = handle.revision();
+
+        handle.set_viewport_size(Size::new(Px(10.0), Px(10.0)));
+        let rev1 = handle.revision();
+        assert!(rev1 > rev0);
+
+        handle.set_content_size(Size::new(Px(10.0), Px(100.0)));
+        let rev2 = handle.revision();
+        assert!(rev2 > rev1);
+
+        handle.set_offset(Point::new(Px(0.0), Px(90.0)));
+        let rev3 = handle.revision();
+        assert!(rev3 > rev2);
+
+        // Clamp via shrink should bump the revision (observable offset change).
+        handle.set_content_size(Size::new(Px(10.0), Px(50.0)));
+        let rev4 = handle.revision();
+        assert!(rev4 > rev3);
+    }
+
+    #[test]
     fn virtual_list_scroll_to_bottom_requests_end_sentinel() {
         let handle = VirtualListScrollHandle::default();
         handle.scroll_to_bottom();

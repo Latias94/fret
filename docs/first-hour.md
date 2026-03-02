@@ -27,6 +27,12 @@ cargo run -p fretboard -- new simple-todo --name my-simple-todo
 cargo run --manifest-path local/my-simple-todo/Cargo.toml
 ```
 
+If you prefer an in-tree example (no local scaffold), run the cookbook version:
+
+```bash
+cargo run -p fret-cookbook --example simple_todo
+```
+
 Why `simple-todo`?
 
 - It is **Model + MVU messages + keyed lists** only.
@@ -155,8 +161,9 @@ If you are unsure, start with `Layout` and tighten later.
 4) **Interop (Tier A embedding)**: viewport surfaces + input forwarding
    - See: `docs/ui-ergonomics-and-interop.md`
    - See: `ecosystem/fret/src/interop/embedded_viewport.rs`
-5) **Cookbook + example catalog (in progress)**: how we intend to structure “Flutter-like” examples (ladder, cookbook, gallery, labs, gates)
-   - See: `docs/workstreams/example-suite-fearless-refactor-v1/design.md`
+5) **Examples index**: templates + cookbook + gallery + labs
+   - See: `docs/examples/README.md`
+   - Workstream notes: `docs/workstreams/example-suite-fearless-refactor-v1/design.md`
 
 ### Template matrix (what each scaffold teaches)
 

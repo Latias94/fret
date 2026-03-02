@@ -8,7 +8,7 @@ use fret_icons::IconId;
 use fret_runtime::{CommandId, Effect};
 use fret_ui::action::{OnActivate, OnHoverChange};
 use fret_ui::element::{AnyElement, PressableA11y, PressableKeyActivation, PressableProps};
-use fret_ui::{ElementContext, Theme, ThemeNamedColorKey, UiHost};
+use fret_ui::{ElementContext, Theme, ThemeNamedColorKey, ThemeSnapshot, UiHost};
 use fret_ui_kit::command::ElementCommandGatingExt as _;
 use fret_ui_kit::declarative::action_hooks::ActionHooksExt as _;
 use fret_ui_kit::declarative::chrome::control_chrome_pressable_with_id_props;
@@ -16,7 +16,7 @@ use fret_ui_kit::declarative::current_color;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::typography;
 use fret_ui_kit::{
-    ChromeRefinement, ColorFallback, ColorRef, Justify, LayoutRefinement, OverrideSlot,
+    ChromeRefinement, ColorFallback, ColorRef, Justify, LayoutRefinement, OverrideSlot, Radius,
     ShadowPreset, Size as ComponentSize, Space, WidgetStateProperty, WidgetStates,
     resolve_override_slot, ui,
 };
@@ -107,9 +107,13 @@ pub enum ButtonVariant {
 pub enum ButtonSize {
     #[default]
     Default,
+    /// Upstream shadcn/ui v4: `size="xs"` (`h-6`, `text-xs`).
+    Xs,
     Sm,
     Lg,
     Icon,
+    /// Upstream shadcn/ui v4: `size="icon-xs"` (`size-6`).
+    IconXs,
     IconSm,
     IconLg,
 }
@@ -118,9 +122,11 @@ impl ButtonSize {
     fn component_size(self) -> ComponentSize {
         match self {
             Self::Default => ComponentSize::Medium,
+            Self::Xs => ComponentSize::XSmall,
             Self::Sm => ComponentSize::Small,
             Self::Lg => ComponentSize::Large,
             Self::Icon => ComponentSize::Medium,
+            Self::IconXs => ComponentSize::XSmall,
             Self::IconSm => ComponentSize::Small,
             Self::IconLg => ComponentSize::Large,
         }
@@ -295,6 +301,77 @@ pub(crate) fn variant_style(variant: ButtonVariant) -> ButtonVariantStyle {
             foreground: WidgetStateProperty::new(token("primary", ColorFallback::ThemeAccent)),
         },
     }
+}
+
+/// Upstream shadcn/ui `buttonVariants(...)` compat surface.
+///
+/// Upstream returns a Tailwind/CVA class string that can be applied to non-button nodes. In Fret we
+/// expose the closest equivalent as mergeable refinements.
+#[derive(Debug, Clone)]
+pub struct ButtonVariants {
+    pub chrome: ChromeRefinement,
+    pub layout: LayoutRefinement,
+}
+
+fn button_variant_size_key(size: ButtonSize) -> &'static str {
+    match size {
+        ButtonSize::Xs | ButtonSize::IconXs => "xs",
+        ButtonSize::Sm | ButtonSize::IconSm => "sm",
+        ButtonSize::Default | ButtonSize::Icon => "md",
+        ButtonSize::Lg | ButtonSize::IconLg => "lg",
+    }
+}
+
+pub fn button_variants(
+    theme: &ThemeSnapshot,
+    variant: ButtonVariant,
+    size: ButtonSize,
+) -> ButtonVariants {
+    let style = variant_style(variant);
+    let bg = style.background.resolve(WidgetStates::empty());
+    let fg = style.foreground.resolve(WidgetStates::empty());
+    let border = style.border_color.resolve(WidgetStates::empty());
+
+    let chrome = ChromeRefinement::default()
+        .rounded(Radius::Md)
+        .bg(bg.clone())
+        .text_color(fg.clone())
+        .border_color(border.clone())
+        .merge(if variant == ButtonVariant::Outline {
+            ChromeRefinement::default().border_1()
+        } else {
+            ChromeRefinement::default()
+        });
+
+    let size_key = button_variant_size_key(size);
+    let button_h = theme
+        .metric_by_key(&format!("component.size.{size_key}.button.h"))
+        .unwrap_or(Px(32.0));
+    let icon = theme
+        .metric_by_key(&format!("component.size.{size_key}.icon_button.size"))
+        .unwrap_or(button_h);
+
+    let mut layout = LayoutRefinement::default().flex_shrink_0();
+    if matches!(
+        size,
+        ButtonSize::Icon | ButtonSize::IconXs | ButtonSize::IconSm | ButtonSize::IconLg
+    ) {
+        layout = layout.w_px(icon).h_px(icon).min_w(icon).min_h(icon);
+    } else {
+        layout = layout.h_px(button_h).min_h(button_h);
+    }
+
+    ButtonVariants { chrome, layout }
+}
+
+/// Upstream shadcn/ui compat alias for copy/paste parity.
+#[allow(non_snake_case)]
+pub fn buttonVariants(
+    theme: &ThemeSnapshot,
+    variant: ButtonVariant,
+    size: ButtonSize,
+) -> ButtonVariants {
+    button_variants(theme, variant, size)
 }
 
 pub(crate) fn variant_colors(
@@ -648,7 +725,7 @@ impl Button {
             let test_id = self.test_id.clone();
             let is_icon_button = matches!(
                 self.size,
-                ButtonSize::Icon | ButtonSize::IconSm | ButtonSize::IconLg
+                ButtonSize::Icon | ButtonSize::IconXs | ButtonSize::IconSm | ButtonSize::IconLg
             );
             if is_icon_button {
                 let icon = size.icon_button_size(Theme::global(&*cx.app));
@@ -888,7 +965,15 @@ impl Button {
                                     + usize::from(trailing_icon.is_some()),
                             );
 
-                            let icon_px = leading_icon_size.unwrap_or(Px(16.0));
+                            let icon_px = leading_icon_size.unwrap_or_else(|| match size {
+                                // Upstream shadcn/ui v4:
+                                // - `xs` / `icon-xs` => `size-3` (12px)
+                                // - `sm` => `size-3.5` (14px)
+                                // - default => `size-4` (16px)
+                                ComponentSize::XSmall => Px(12.0),
+                                ComponentSize::Small => Px(14.0),
+                                ComponentSize::Medium | ComponentSize::Large => Px(16.0),
+                            });
                             if let Some(icon) = leading_icon.clone() {
                                 let icon = crate::icon::icon_with(cx, icon, Some(icon_px), None);
                                 content.push(crate::test_id::attach_test_id_suffix(

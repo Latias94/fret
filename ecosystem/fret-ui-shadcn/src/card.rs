@@ -425,7 +425,7 @@ mod tests {
     use super::*;
 
     use fret_app::App;
-    use fret_core::{AppWindowId, Point, Rect, Size};
+    use fret_core::{AppWindowId, Axis, Point, Rect, Size};
     use fret_ui::element::{
         ColumnProps, ContainerProps, CrossAlign, ForegroundScopeProps, Length, Overflow,
         SemanticsProps,
@@ -841,6 +841,42 @@ mod tests {
             );
         });
     }
+
+    #[test]
+    fn card_footer_column_uses_vertical_flex() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(400.0), Px(300.0)),
+        );
+
+        fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            let el = CardFooter::new([cx.text("A"), cx.text("B")])
+                .direction(CardFooterDirection::Column)
+                .gap(Space::N2)
+                .into_element(cx);
+
+            fn find_flex_direction(el: &AnyElement) -> Option<Axis> {
+                let mut stack = vec![el];
+                while let Some(node) = stack.pop() {
+                    if let ElementKind::Flex(props) = &node.kind {
+                        return Some(props.direction);
+                    }
+                    for child in &node.children {
+                        stack.push(child);
+                    }
+                }
+                None
+            }
+
+            assert_eq!(
+                find_flex_direction(&el),
+                Some(Axis::Vertical),
+                "expected CardFooter(direction=Column) to emit a vertical flex node"
+            );
+        });
+    }
 }
 
 #[derive(Debug)]
@@ -923,8 +959,21 @@ pub struct CardFooter {
     chrome: ChromeRefinement,
     layout: LayoutRefinement,
     border_top: bool,
+    direction: CardFooterDirection,
     gap: Space,
     wrap: bool,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum CardFooterDirection {
+    Row,
+    Column,
+}
+
+impl Default for CardFooterDirection {
+    fn default() -> Self {
+        Self::Row
+    }
 }
 
 impl CardFooter {
@@ -936,6 +985,7 @@ impl CardFooter {
             chrome: ChromeRefinement::default(),
             layout: LayoutRefinement::default(),
             border_top: false,
+            direction: CardFooterDirection::Row,
             gap: Space::N0.into(),
             wrap: false,
         }
@@ -964,6 +1014,11 @@ impl CardFooter {
         self
     }
 
+    pub fn direction(mut self, direction: CardFooterDirection) -> Self {
+        self.direction = direction;
+        self
+    }
+
     pub fn gap(mut self, gap: Space) -> Self {
         self.gap = gap;
         self
@@ -985,13 +1040,62 @@ impl CardFooter {
             CardSize::Default => Space::N6,
             CardSize::Sm => Space::N4,
         };
+        let border_top = self.border_top;
         let children = self.children;
         let chrome = self.chrome;
         let layout = self.layout;
+        let direction = self.direction;
         let gap = self.gap;
         let wrap = self.wrap;
 
-        let el = if self.border_top {
+        let inner_props = {
+            let theme = Theme::global(&*cx.app);
+            let base = if border_top {
+                // shadcn/ui v4: `flex items-center px-6` and `[.border-t]:pt-6` (vertical padding
+                // lives on Card).
+                ChromeRefinement::default().px(p).pt(pt)
+            } else {
+                // shadcn/ui v4: `flex items-center px-6` (vertical padding lives on Card).
+                ChromeRefinement::default().px(p)
+            };
+            decl_style::container_props(
+                theme,
+                base.merge(chrome),
+                LayoutRefinement::default().w_full().merge(layout),
+            )
+        };
+
+        let inner = cx.container(inner_props, move |cx| {
+            let mut children = Some(children);
+            vec![match direction {
+                CardFooterDirection::Row => {
+                    let children = children
+                        .take()
+                        .unwrap_or_else(|| panic!("expected CardFooter children to be available"));
+                    if wrap {
+                        ui::h_flex(cx, move |_cx| children)
+                            .wrap()
+                            .gap(gap)
+                            .into_element(cx)
+                    } else {
+                        ui::h_flex(cx, move |_cx| children)
+                            .gap(gap)
+                            .into_element(cx)
+                    }
+                }
+                CardFooterDirection::Column => {
+                    let children = children
+                        .take()
+                        .unwrap_or_else(|| panic!("expected CardFooter children to be available"));
+                    // shadcn/ui v4: `flex-col` uses the default `items-stretch` behavior.
+                    ui::v_flex(cx, move |_cx| children)
+                        .gap(gap)
+                        .into_element(cx)
+                }
+            }]
+        });
+
+        let el = if border_top {
             let outer_props = {
                 let theme = Theme::global(&*cx.app);
                 decl_style::container_props(
@@ -1000,30 +1104,6 @@ impl CardFooter {
                     LayoutRefinement::default().w_full(),
                 )
             };
-
-            let inner_props = {
-                let theme = Theme::global(&*cx.app);
-                // shadcn/ui v4: `flex items-center px-6` and `[.border-t]:pt-6` (vertical padding
-                // lives on Card).
-                decl_style::container_props(
-                    theme,
-                    ChromeRefinement::default().px(p).pt(pt).merge(chrome),
-                    LayoutRefinement::default().w_full().merge(layout),
-                )
-            };
-
-            let inner = cx.container(inner_props, move |cx| {
-                vec![if wrap {
-                    ui::h_flex(cx, move |_cx| children)
-                        .wrap()
-                        .gap(gap)
-                        .into_element(cx)
-                } else {
-                    ui::h_flex(cx, move |_cx| children)
-                        .gap(gap)
-                        .into_element(cx)
-                }]
-            });
 
             let separator = crate::Separator::new().into_element(cx);
             shadcn_layout::container_vstack(
@@ -1035,28 +1115,7 @@ impl CardFooter {
                 vec![separator, inner],
             )
         } else {
-            let props = {
-                let theme = Theme::global(&*cx.app);
-                decl_style::container_props(
-                    theme,
-                    // shadcn/ui v4: `flex items-center px-6` (vertical padding lives on Card).
-                    ChromeRefinement::default().px(p).merge(chrome),
-                    LayoutRefinement::default().w_full().merge(layout),
-                )
-            };
-
-            cx.container(props, move |cx| {
-                vec![if wrap {
-                    ui::h_flex(cx, move |_cx| children)
-                        .wrap()
-                        .gap(gap)
-                        .into_element(cx)
-                } else {
-                    ui::h_flex(cx, move |_cx| children)
-                        .gap(gap)
-                        .into_element(cx)
-                }]
-            })
+            inner
         };
 
         let marker: Arc<str> = Arc::from(format!("{}:{}", CARD_FOOTER_MARKER_PREFIX, el.id.0));

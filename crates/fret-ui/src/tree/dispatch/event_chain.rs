@@ -143,6 +143,15 @@ impl<H: UiHost> UiTree<H> {
         let Some(pos) = event_position(event) else {
             return vec![(start, event.clone())];
         };
+        let trace_internal_drag_pos_map = std::env::var_os("FRET_INTERNAL_DRAG_POS_MAP_TRACE")
+            .is_some_and(|v| !v.is_empty())
+            && matches!(
+                event,
+                Event::InternalDrag(fret_core::InternalDragEvent {
+                    kind: fret_core::InternalDragKind::Drop,
+                    ..
+                })
+            );
 
         let chain = self.build_event_chain_nodes_leaf_to_root(start, snapshot);
 
@@ -203,6 +212,23 @@ impl<H: UiHost> UiTree<H> {
         }
 
         out.reverse();
+        if trace_internal_drag_pos_map {
+            let leaf_pos = out
+                .first()
+                .and_then(|(node, mapped_event)| (*node == start).then_some(mapped_event))
+                .and_then(event_position);
+            let root_pos = out
+                .last()
+                .and_then(|(_node, mapped_event)| event_position(mapped_event));
+            tracing::info!(
+                start = ?start,
+                chain_len = out.len(),
+                orig = ?pos,
+                root_pos = ?root_pos,
+                leaf_pos = ?leaf_pos,
+                "internal drag position map trace"
+            );
+        }
         out
     }
 

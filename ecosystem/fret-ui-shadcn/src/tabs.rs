@@ -148,6 +148,12 @@ pub fn tabs_list_variants(theme: &ThemeSnapshot, variant: TabsListVariant) -> Ta
     }
 }
 
+/// Upstream shadcn/ui compat alias for copy/paste parity.
+#[allow(non_snake_case)]
+pub fn tabsListVariants(theme: &ThemeSnapshot, variant: TabsListVariant) -> TabsListVariants {
+    tabs_list_variants(theme, variant)
+}
+
 fn tabs_trigger_text_style(theme: &ThemeSnapshot) -> TextStyle {
     let px = theme
         .metric_by_key("component.tabs.trigger.text_px")
@@ -1585,7 +1591,7 @@ impl Tabs {
             let mut refinement = LayoutRefinement::default().w_full().min_w_0();
             if content_fill_remaining {
                 // shadcn/ui uses `flex-1` on `TabsContent`. In practice that intent is "fill the
-                // remaining main-axis space when the parent is a definite-size flex container".
+                // remaining main-axis space when the parent is a flex container".
                 //
                 // Note: Avoid Tailwind's `flex: 1 1 0%` (`basis=0`) here. Taffy currently
                 // shrink-wraps some auto-sized flex containers around the sum of flex bases, which

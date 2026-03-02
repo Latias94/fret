@@ -25,6 +25,7 @@ use crate::ui::measured::MeasuredGeometryStore;
 use crate::ui::style::NodeGraphStyle;
 
 use super::canvas::{node_order, node_ports, node_size_default_px};
+pub use super::portal_layout::NodeGraphPortalNodeLayout;
 
 pub const CMD_SUBMIT_TEXT_PREFIX: &str = "fret_node.portal.submit_text:";
 pub const CMD_CANCEL_TEXT_PREFIX: &str = "fret_node.portal.cancel_text:";
@@ -233,17 +234,6 @@ where
             other => other,
         }
     }
-}
-
-/// Layout information for a portal-rendered node subtree.
-#[derive(Debug, Clone, Copy)]
-pub struct NodeGraphPortalNodeLayout {
-    /// Node id in the graph model.
-    pub node: NodeId,
-    /// Node bounds in window coordinates.
-    pub node_window: Rect,
-    /// Zoom factor for the canvas.
-    pub zoom: f32,
 }
 
 /// A portal host widget that mounts per-node declarative `fret-ui` subtrees on top of the canvas.

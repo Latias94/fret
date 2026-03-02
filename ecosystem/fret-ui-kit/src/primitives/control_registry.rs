@@ -44,6 +44,7 @@ pub enum ControlAction {
     ToggleBool(Model<bool>),
     ToggleOptionalBool(Model<Option<bool>>),
     ToggleCheckedState(Model<CheckedState>),
+    Noop,
 }
 
 impl ControlAction {
@@ -66,6 +67,7 @@ impl ControlAction {
                     .models_mut()
                     .update(model, |v: &mut CheckedState| *v = v.toggle());
             }
+            ControlAction::Noop => {}
         }
     }
 }
@@ -82,6 +84,16 @@ pub struct LabelEntry {
     pub element: GlobalElementId,
 }
 
+#[derive(Debug, Clone)]
+pub struct DescriptionEntry {
+    pub element: GlobalElementId,
+}
+
+#[derive(Debug, Clone)]
+pub struct ErrorEntry {
+    pub element: GlobalElementId,
+}
+
 #[derive(Debug, Default, Clone)]
 pub struct ControlRegistry {
     windows: HashMap<AppWindowId, WindowControlRegistry>,
@@ -92,6 +104,8 @@ struct WindowControlRegistry {
     frame_id: Option<FrameId>,
     controls: HashMap<ControlId, ControlEntry>,
     labels: HashMap<ControlId, LabelEntry>,
+    descriptions: HashMap<ControlId, DescriptionEntry>,
+    errors: HashMap<ControlId, ErrorEntry>,
 }
 
 impl ControlRegistry {
@@ -138,12 +152,54 @@ impl ControlRegistry {
         st.labels.insert(id, label);
     }
 
+    pub fn register_description(
+        &mut self,
+        window: AppWindowId,
+        frame_id: FrameId,
+        id: ControlId,
+        description: DescriptionEntry,
+    ) {
+        let st = self.begin_frame(window, frame_id);
+        st.descriptions.insert(id, description);
+    }
+
+    pub fn register_error(
+        &mut self,
+        window: AppWindowId,
+        frame_id: FrameId,
+        id: ControlId,
+        error: ErrorEntry,
+    ) {
+        let st = self.begin_frame(window, frame_id);
+        st.errors.insert(id, error);
+    }
+
     pub fn control_for(&self, window: AppWindowId, id: &ControlId) -> Option<&ControlEntry> {
         self.windows.get(&window)?.controls.get(id)
     }
 
     pub fn label_for(&self, window: AppWindowId, id: &ControlId) -> Option<&LabelEntry> {
         self.windows.get(&window)?.labels.get(id)
+    }
+
+    pub fn description_for(
+        &self,
+        window: AppWindowId,
+        id: &ControlId,
+    ) -> Option<&DescriptionEntry> {
+        self.windows.get(&window)?.descriptions.get(id)
+    }
+
+    pub fn error_for(&self, window: AppWindowId, id: &ControlId) -> Option<&ErrorEntry> {
+        self.windows.get(&window)?.errors.get(id)
+    }
+
+    pub fn described_by_for(&self, window: AppWindowId, id: &ControlId) -> Option<GlobalElementId> {
+        let st = self.windows.get(&window)?;
+        st.errors
+            .get(id)
+            .map(|e| e.element)
+            .or_else(|| st.descriptions.get(id).map(|d| d.element))
     }
 }
 

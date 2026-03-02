@@ -1,0 +1,46 @@
+{
+  "schema_version": 2,
+  "meta": {
+    "name": "cookbook icons+assets: smoke",
+    "tags": ["cookbook", "cookbook.icons_and_assets_basics"],
+    "required_capabilities": ["diag.script_v2", "diag.screenshot_png"],
+    "target_hints": [
+      "Validates that icon + asset panels mount and that the reload epoch button is wired."
+    ]
+  },
+  "steps": [
+    { "type": "reset_diagnostics" },
+    { "type": "set_window_inner_size", "width_px": 960.0, "height_px": 860.0 },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "cookbook.icons_and_assets_basics.root" }
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "cookbook.icons_and_assets_basics.image.status" }
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "cookbook.icons_and_assets_basics.svg.status" }
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "click_stable",
+      "target": { "kind": "test_id", "id": "cookbook.icons_and_assets_basics.bump_reload" }
+    },
+    { "type": "wait_frames", "n": 5 },
+    { "type": "capture_screenshot", "label": "cookbook-icons-and-assets-basics-smoke" },
+    { "type": "capture_bundle", "label": "cookbook-icons-and-assets-basics-smoke" }
+  ]
+}

@@ -10,6 +10,7 @@ use crate::rules::{DiagnosticSeverity, EdgeEndpoint};
 use crate::runtime::callbacks::ViewportMoveKind;
 use crate::ui::presenter::{InsertNodeCandidate, NodeGraphContextMenuItem};
 
+pub use super::resize_handle::NodeResizeHandle;
 use super::searcher::SearcherRow;
 use super::snaplines::SnapGuides;
 
@@ -382,47 +383,6 @@ pub(crate) struct NodeResize {
     pub(crate) preview_rev: u64,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum NodeResizeHandle {
-    TopLeft,
-    Top,
-    TopRight,
-    Right,
-    BottomRight,
-    Bottom,
-    BottomLeft,
-    Left,
-}
-
-impl NodeResizeHandle {
-    pub const ALL: [Self; 8] = [
-        Self::TopLeft,
-        Self::Top,
-        Self::TopRight,
-        Self::Right,
-        Self::BottomRight,
-        Self::Bottom,
-        Self::BottomLeft,
-        Self::Left,
-    ];
-
-    pub fn affects_left(self) -> bool {
-        matches!(self, Self::TopLeft | Self::Left | Self::BottomLeft)
-    }
-
-    pub fn affects_right(self) -> bool {
-        matches!(self, Self::TopRight | Self::Right | Self::BottomRight)
-    }
-
-    pub fn affects_top(self) -> bool {
-        matches!(self, Self::TopLeft | Self::Top | Self::TopRight)
-    }
-
-    pub fn affects_bottom(self) -> bool {
-        matches!(self, Self::BottomLeft | Self::Bottom | Self::BottomRight)
-    }
-}
-
 #[derive(Debug, Clone)]
 pub(crate) struct PendingMarqueeDrag {
     pub(crate) start_pos: Point,
@@ -541,6 +501,7 @@ pub(crate) struct DerivedBaseKey {
     pub(crate) draw_order: DrawOrderFingerprint,
     pub(crate) presenter_rev: u64,
     pub(crate) edge_types_rev: u64,
+    pub(crate) overrides_rev: u64,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]

@@ -50,36 +50,60 @@ impl<H: UiHost> UiTree<H> {
 
     #[cfg(test)]
     pub(crate) fn test_clear_node_invalidations(&mut self, node: NodeId) {
-        let Some(n) = self.nodes.get_mut(node) else {
+        let Some((layout_before, layout_after)) = self.nodes.get_mut(node).map(|n| {
+            let layout_before = n.invalidation.layout;
+            n.invalidation.clear();
+            n.paint_invalidated_by_hit_test_only = false;
+            let layout_after = n.invalidation.layout;
+            (layout_before, layout_after)
+        }) else {
             return;
         };
-        let layout_before = n.invalidation.layout;
-        n.invalidation.clear();
-        n.paint_invalidated_by_hit_test_only = false;
         record_layout_invalidation_transition(
             &mut self.layout_invalidations_count,
             layout_before,
-            n.invalidation.layout,
+            layout_after,
+        );
+        self.note_layout_invalidation_transition_for_subtree_aggregation(
+            node,
+            layout_before,
+            layout_after,
         );
     }
 
     #[cfg(test)]
     pub(crate) fn test_set_layout_invalidation(&mut self, node: NodeId, value: bool) {
         let view_cache_active = self.view_cache_active();
-        let Some(n) = self.nodes.get_mut(node) else {
+        let Some((layout_before, layout_after, should_mark_contained_cache_root_dirty)) =
+            self.nodes.get_mut(node).map(|n| {
+                let layout_before = n.invalidation.layout;
+                n.invalidation.layout = value;
+                if value {
+                    n.invalidation.paint = true;
+                }
+                let should_mark_contained_cache_root_dirty = value
+                    && view_cache_active
+                    && n.view_cache.enabled
+                    && n.view_cache.contained_layout;
+                let layout_after = n.invalidation.layout;
+                (
+                    layout_before,
+                    layout_after,
+                    should_mark_contained_cache_root_dirty,
+                )
+            })
+        else {
             return;
         };
-        let layout_before = n.invalidation.layout;
-        n.invalidation.layout = value;
-        if value {
-            n.invalidation.paint = true;
-        }
-        let should_mark_contained_cache_root_dirty =
-            value && view_cache_active && n.view_cache.enabled && n.view_cache.contained_layout;
         record_layout_invalidation_transition(
             &mut self.layout_invalidations_count,
             layout_before,
-            n.invalidation.layout,
+            layout_after,
+        );
+        self.note_layout_invalidation_transition_for_subtree_aggregation(
+            node,
+            layout_before,
+            layout_after,
         );
 
         if should_mark_contained_cache_root_dirty {
@@ -120,6 +144,7 @@ impl<H: UiHost> UiTree<H> {
             node.invalidation.paint = true;
         }
         self.mark_invalidation_local(parent, Invalidation::HitTest);
+        self.recompute_node_subtree_layout_dirty_count_and_propagate(parent);
     }
 
     #[track_caller]
@@ -144,6 +169,7 @@ impl<H: UiHost> UiTree<H> {
                     n.parent = Some(parent);
                 }
             }
+            self.recompute_node_subtree_layout_dirty_count_and_propagate(parent);
             return;
         }
 
@@ -227,6 +253,8 @@ impl<H: UiHost> UiTree<H> {
         if let Some((prev, next)) = counter_update {
             self.update_invalidation_counters(prev, next);
         }
+
+        self.recompute_node_subtree_layout_dirty_count_and_propagate(parent);
 
         if propagate {
             // Structural changes must invalidate ancestors so the next layout pass walks far

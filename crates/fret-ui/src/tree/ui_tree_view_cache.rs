@@ -386,5 +386,7 @@ impl<H: UiHost> UiTree<H> {
             );
             self.update_invalidation_counters(prev, next);
         }
+
+        self.rebuild_subtree_layout_dirty_counts_and_propagate(root);
     }
 }

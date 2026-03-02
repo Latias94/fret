@@ -2,6 +2,7 @@ use std::collections::{HashMap, HashSet};
 use std::path::{Path, PathBuf};
 
 use super::args::{looks_like_path, resolve_bundle_artifact_path_or_latest};
+use super::resolve;
 use super::sidecars;
 
 use crate::test_id_bloom::TestIdBloomV1;
@@ -289,8 +290,500 @@ pub(crate) fn cmd_query(
             warmup_frames,
             stats_json,
         ),
+        "overlay-placement-trace"
+        | "overlay_placement_trace"
+        | "overlay-placement"
+        | "overlay_placement" => cmd_query_overlay_placement_trace(
+            &rest[1..],
+            workspace_root,
+            out_dir,
+            query_out,
+            stats_json,
+        ),
         other => Err(format!("unknown query kind: {other}")),
     }
+}
+
+fn find_nearest_script_result_json_preferring_evidence(start: &Path) -> Option<PathBuf> {
+    let mut cur = Some(start);
+    let mut first_found: Option<PathBuf> = None;
+    for _ in 0..10 {
+        let Some(dir) = cur else { break };
+        let direct = dir.join("script.result.json");
+        if direct.is_file() {
+            if first_found.is_none() {
+                first_found = Some(direct.clone());
+            }
+            if let Some(result) = read_script_result_typed(&direct)
+                && result.evidence.is_some()
+            {
+                return Some(direct);
+            }
+        }
+        cur = dir.parent();
+    }
+    first_found
+}
+
+fn read_script_result_typed(path: &Path) -> Option<fret_diag_protocol::UiScriptResultV1> {
+    let bytes = std::fs::read(path).ok()?;
+    serde_json::from_slice::<fret_diag_protocol::UiScriptResultV1>(&bytes).ok()
+}
+
+fn parse_overlay_side(s: &str) -> Option<fret_diag_protocol::UiOverlaySideV1> {
+    match s.trim().to_ascii_lowercase().as_str() {
+        "top" => Some(fret_diag_protocol::UiOverlaySideV1::Top),
+        "bottom" => Some(fret_diag_protocol::UiOverlaySideV1::Bottom),
+        "left" => Some(fret_diag_protocol::UiOverlaySideV1::Left),
+        "right" => Some(fret_diag_protocol::UiOverlaySideV1::Right),
+        _ => None,
+    }
+}
+
+fn parse_overlay_align(s: &str) -> Option<fret_diag_protocol::UiOverlayAlignV1> {
+    match s.trim().to_ascii_lowercase().as_str() {
+        "start" => Some(fret_diag_protocol::UiOverlayAlignV1::Start),
+        "center" => Some(fret_diag_protocol::UiOverlayAlignV1::Center),
+        "end" => Some(fret_diag_protocol::UiOverlayAlignV1::End),
+        _ => None,
+    }
+}
+
+fn parse_overlay_sticky(s: &str) -> Option<fret_diag_protocol::UiOverlayStickyModeV1> {
+    match s.trim().to_ascii_lowercase().as_str() {
+        "partial" => Some(fret_diag_protocol::UiOverlayStickyModeV1::Partial),
+        "always" => Some(fret_diag_protocol::UiOverlayStickyModeV1::Always),
+        _ => None,
+    }
+}
+
+fn parse_overlay_kind(s: &str) -> Option<fret_diag_protocol::UiOverlayPlacementTraceKindV1> {
+    match s.trim().to_ascii_lowercase().as_str() {
+        "anchored_panel" | "anchored-panel" => {
+            Some(fret_diag_protocol::UiOverlayPlacementTraceKindV1::AnchoredPanel)
+        }
+        "placed_rect" | "placed-rect" => {
+            Some(fret_diag_protocol::UiOverlayPlacementTraceKindV1::PlacedRect)
+        }
+        _ => None,
+    }
+}
+
+fn overlay_entry_matches_query(
+    entry: &fret_diag_protocol::UiOverlayPlacementTraceEntryV1,
+    q: &fret_diag_protocol::UiOverlayPlacementTraceQueryV1,
+) -> bool {
+    let kind = match entry {
+        fret_diag_protocol::UiOverlayPlacementTraceEntryV1::AnchoredPanel { .. } => {
+            fret_diag_protocol::UiOverlayPlacementTraceKindV1::AnchoredPanel
+        }
+        fret_diag_protocol::UiOverlayPlacementTraceEntryV1::PlacedRect { .. } => {
+            fret_diag_protocol::UiOverlayPlacementTraceKindV1::PlacedRect
+        }
+    };
+
+    if let Some(want) = q.kind
+        && want != kind
+    {
+        return false;
+    }
+
+    fn opt_str_matches(have: &Option<String>, want: &Option<String>) -> bool {
+        match want.as_deref() {
+            None => true,
+            Some(w) => have.as_deref().is_some_and(|h| h == w),
+        }
+    }
+
+    match entry {
+        fret_diag_protocol::UiOverlayPlacementTraceEntryV1::AnchoredPanel {
+            overlay_root_name,
+            anchor_test_id,
+            content_test_id,
+            preferred_side,
+            chosen_side,
+            align,
+            sticky,
+            ..
+        } => {
+            if !opt_str_matches(overlay_root_name, &q.overlay_root_name) {
+                return false;
+            }
+            if !opt_str_matches(anchor_test_id, &q.anchor_test_id) {
+                return false;
+            }
+            if !opt_str_matches(content_test_id, &q.content_test_id) {
+                return false;
+            }
+            if let Some(want) = q.preferred_side
+                && want != *preferred_side
+            {
+                return false;
+            }
+            if let Some(want) = q.chosen_side
+                && want != *chosen_side
+            {
+                return false;
+            }
+            if let Some(want) = q.flipped {
+                let flipped = *preferred_side != *chosen_side;
+                if want != flipped {
+                    return false;
+                }
+            }
+            if let Some(want) = q.align
+                && want != *align
+            {
+                return false;
+            }
+            if let Some(want) = q.sticky
+                && want != *sticky
+            {
+                return false;
+            }
+            true
+        }
+        fret_diag_protocol::UiOverlayPlacementTraceEntryV1::PlacedRect {
+            overlay_root_name,
+            anchor_test_id,
+            content_test_id,
+            side,
+            ..
+        } => {
+            if !opt_str_matches(overlay_root_name, &q.overlay_root_name) {
+                return false;
+            }
+            if !opt_str_matches(anchor_test_id, &q.anchor_test_id) {
+                return false;
+            }
+            if !opt_str_matches(content_test_id, &q.content_test_id) {
+                return false;
+            }
+            if let Some(want) = q.chosen_side {
+                // Best-effort: only `PlacedRect` has an optional `side`.
+                if side.is_some_and(|s| s != want) || side.is_none() {
+                    return false;
+                }
+            }
+            true
+        }
+    }
+}
+
+#[allow(clippy::too_many_arguments)]
+fn cmd_query_overlay_placement_trace(
+    rest: &[String],
+    workspace_root: &Path,
+    out_dir: &Path,
+    query_out: Option<PathBuf>,
+    stats_json: bool,
+) -> Result<(), String> {
+    let mut top: usize = 50;
+    let mut q = fret_diag_protocol::UiOverlayPlacementTraceQueryV1::default();
+
+    let mut positionals: Vec<String> = Vec::new();
+    let mut i: usize = 0;
+    while i < rest.len() {
+        match rest[i].as_str() {
+            "--top" => {
+                i += 1;
+                let Some(v) = rest.get(i).cloned() else {
+                    return Err("missing value for --top".to_string());
+                };
+                top = v
+                    .parse::<usize>()
+                    .map_err(|_| "invalid value for --top (expected usize)".to_string())?;
+                i += 1;
+            }
+            "--kind" => {
+                i += 1;
+                let Some(v) = rest.get(i).cloned() else {
+                    return Err("missing value for --kind".to_string());
+                };
+                q.kind = Some(parse_overlay_kind(v.as_str()).ok_or_else(|| {
+                    "invalid value for --kind (expected anchored_panel|placed_rect)".to_string()
+                })?);
+                i += 1;
+            }
+            "--overlay-root-name" => {
+                i += 1;
+                let Some(v) = rest.get(i).cloned() else {
+                    return Err("missing value for --overlay-root-name".to_string());
+                };
+                q.overlay_root_name = Some(v);
+                i += 1;
+            }
+            "--anchor-test-id" | "--anchor" => {
+                i += 1;
+                let Some(v) = rest.get(i).cloned() else {
+                    return Err("missing value for --anchor-test-id".to_string());
+                };
+                q.anchor_test_id = Some(v);
+                i += 1;
+            }
+            "--content-test-id" | "--content" => {
+                i += 1;
+                let Some(v) = rest.get(i).cloned() else {
+                    return Err("missing value for --content-test-id".to_string());
+                };
+                q.content_test_id = Some(v);
+                i += 1;
+            }
+            "--preferred-side" => {
+                i += 1;
+                let Some(v) = rest.get(i).cloned() else {
+                    return Err("missing value for --preferred-side".to_string());
+                };
+                q.preferred_side = Some(parse_overlay_side(v.as_str()).ok_or_else(|| {
+                    "invalid value for --preferred-side (expected top|bottom|left|right)"
+                        .to_string()
+                })?);
+                i += 1;
+            }
+            "--chosen-side" | "--side" => {
+                i += 1;
+                let Some(v) = rest.get(i).cloned() else {
+                    return Err("missing value for --chosen-side".to_string());
+                };
+                q.chosen_side = Some(parse_overlay_side(v.as_str()).ok_or_else(|| {
+                    "invalid value for --chosen-side (expected top|bottom|left|right)".to_string()
+                })?);
+                i += 1;
+            }
+            "--flipped" => {
+                i += 1;
+                let Some(v) = rest.get(i).cloned() else {
+                    return Err("missing value for --flipped".to_string());
+                };
+                q.flipped = match v.trim() {
+                    "1" | "true" => Some(true),
+                    "0" | "false" => Some(false),
+                    _ => {
+                        return Err("invalid value for --flipped (expected true|false)".to_string());
+                    }
+                };
+                i += 1;
+            }
+            "--align" => {
+                i += 1;
+                let Some(v) = rest.get(i).cloned() else {
+                    return Err("missing value for --align".to_string());
+                };
+                q.align = Some(parse_overlay_align(v.as_str()).ok_or_else(|| {
+                    "invalid value for --align (expected start|center|end)".to_string()
+                })?);
+                i += 1;
+            }
+            "--sticky" => {
+                i += 1;
+                let Some(v) = rest.get(i).cloned() else {
+                    return Err("missing value for --sticky".to_string());
+                };
+                q.sticky = Some(parse_overlay_sticky(v.as_str()).ok_or_else(|| {
+                    "invalid value for --sticky (expected partial|always)".to_string()
+                })?);
+                i += 1;
+            }
+            other if other.starts_with("--") => {
+                return Err(format!(
+                    "unknown flag for query overlay-placement-trace: {other}"
+                ));
+            }
+            other => {
+                positionals.push(other.to_string());
+                i += 1;
+            }
+        }
+    }
+
+    if positionals.len() > 1 {
+        return Err(format!(
+            "unexpected arguments: {}",
+            positionals[1..].join(" ")
+        ));
+    }
+
+    let script_result_path = if let Some(src) = positionals.first() {
+        let src = crate::resolve_path(workspace_root, PathBuf::from(src));
+        if src.is_dir() {
+            let direct = src.join("script.result.json");
+            if direct.is_file() {
+                find_nearest_script_result_json_preferring_evidence(&src).ok_or_else(|| {
+                    format!(
+                        "failed to locate script.result.json near: {}\n\
+hint: pass a diagnostics out dir (or bundle dir) that contains script.result.json",
+                        src.display()
+                    )
+                })?
+            } else {
+                let resolved =
+                    resolve::maybe_resolve_base_or_session_out_dir_to_latest_bundle_dir(&src);
+                let start = if resolved.is_dir() {
+                    resolved.as_path()
+                } else {
+                    resolved.parent().unwrap_or_else(|| resolved.as_path())
+                };
+                find_nearest_script_result_json_preferring_evidence(start).ok_or_else(|| {
+                    format!(
+                        "failed to locate script.result.json near: {}\n\
+hint: pass a diagnostics out dir (or bundle dir) that contains script.result.json",
+                        src.display()
+                    )
+                })?
+            }
+        } else if src.is_file()
+            && src
+                .file_name()
+                .is_some_and(|s| s.eq_ignore_ascii_case("script.result.json"))
+        {
+            let start = src.parent().unwrap_or_else(|| Path::new("."));
+            find_nearest_script_result_json_preferring_evidence(start).ok_or_else(|| {
+                format!(
+                    "failed to locate script.result.json near: {}\n\
+hint: pass a diagnostics out dir (or bundle dir) that contains script.result.json",
+                    src.display()
+                )
+            })?
+        } else {
+            let resolved =
+                resolve::maybe_resolve_base_or_session_out_dir_to_latest_bundle_dir(&src);
+            let start = if resolved.is_dir() {
+                resolved.as_path()
+            } else {
+                resolved.parent().unwrap_or_else(|| resolved.as_path())
+            };
+            find_nearest_script_result_json_preferring_evidence(start).ok_or_else(|| {
+                format!(
+                    "failed to locate script.result.json near: {}\n\
+hint: pass a diagnostics out dir (or bundle dir) that contains script.result.json",
+                    src.display()
+                )
+            })?
+        }
+    } else {
+        let bundle_path = resolve_bundle_artifact_path_or_latest(None, workspace_root, out_dir)?;
+        let start = bundle_path.parent().unwrap_or_else(|| Path::new("."));
+        find_nearest_script_result_json_preferring_evidence(start).ok_or_else(|| {
+            format!(
+                "failed to locate script.result.json near latest bundle: {}",
+                bundle_path.display()
+            )
+        })?
+    };
+
+    let result = read_script_result_typed(&script_result_path).ok_or_else(|| {
+        format!(
+            "script.result.json is missing or invalid (expected UiScriptResultV1 JSON)\n  path: {}",
+            script_result_path.display()
+        )
+    })?;
+
+    let evidence = result.evidence.as_ref().ok_or_else(|| {
+        format!(
+            "script.result.json has no evidence (missing `evidence` field)\n\
+hint: overlay placement evidence is only captured when scripts require `diag.overlay_placement_trace` (e.g. via `wait_overlay_placement_trace`)\n  path: {}",
+            script_result_path.display()
+        )
+    })?;
+
+    let mut rows: Vec<&fret_diag_protocol::UiOverlayPlacementTraceEntryV1> = evidence
+        .overlay_placement_trace
+        .iter()
+        .filter(|e| overlay_entry_matches_query(e, &q))
+        .collect();
+
+    if top > 0 && rows.len() > top {
+        rows.truncate(top);
+    }
+
+    if stats_json {
+        let payload = serde_json::json!({
+            "schema_version": 1,
+            "kind": "query.overlay_placement_trace",
+            "script_result": script_result_path.display().to_string(),
+            "top": top,
+            "query": serde_json::to_value(&q).unwrap_or_else(|_| serde_json::json!({})),
+            "results": rows.iter().map(|entry| serde_json::to_value(entry).unwrap_or_else(|_| serde_json::json!({ "error": "serialize_failed" }))).collect::<Vec<_>>(),
+        });
+
+        if let Some(out) = query_out.map(|p| crate::resolve_path(workspace_root, p)) {
+            if let Some(parent) = out.parent() {
+                std::fs::create_dir_all(parent).map_err(|e| e.to_string())?;
+            }
+            let pretty =
+                serde_json::to_string_pretty(&payload).unwrap_or_else(|_| "{}".to_string());
+            std::fs::write(&out, pretty.as_bytes()).map_err(|e| e.to_string())?;
+            println!("{}", out.display());
+            return Ok(());
+        }
+
+        println!(
+            "{}",
+            serde_json::to_string_pretty(&payload).unwrap_or_else(|_| "{}".to_string())
+        );
+        return Ok(());
+    }
+
+    if rows.is_empty() {
+        println!("(no matching overlay placement trace entries)");
+        return Ok(());
+    }
+
+    for entry in rows {
+        match entry {
+            fret_diag_protocol::UiOverlayPlacementTraceEntryV1::AnchoredPanel {
+                step_index,
+                frame_id,
+                anchor_test_id,
+                content_test_id,
+                preferred_side,
+                chosen_side,
+                final_rect,
+                shift_delta,
+                ..
+            } => {
+                println!(
+                    "anchored_panel step={} frame={} anchor_test_id={:?} content_test_id={:?} preferred={:?} chosen={:?} final=({:.1},{:.1},{:.1},{:.1}) shift=({:.1},{:.1})",
+                    step_index,
+                    frame_id,
+                    anchor_test_id,
+                    content_test_id,
+                    preferred_side,
+                    chosen_side,
+                    final_rect.x_px,
+                    final_rect.y_px,
+                    final_rect.w_px,
+                    final_rect.h_px,
+                    shift_delta.x_px,
+                    shift_delta.y_px
+                );
+            }
+            fret_diag_protocol::UiOverlayPlacementTraceEntryV1::PlacedRect {
+                step_index,
+                frame_id,
+                anchor_test_id,
+                content_test_id,
+                placed,
+                side,
+                ..
+            } => {
+                println!(
+                    "placed_rect step={} frame={} anchor_test_id={:?} content_test_id={:?} side={:?} placed=({:.1},{:.1},{:.1},{:.1})",
+                    step_index,
+                    frame_id,
+                    anchor_test_id,
+                    content_test_id,
+                    side,
+                    placed.x_px,
+                    placed.y_px,
+                    placed.w_px,
+                    placed.h_px,
+                );
+            }
+        }
+    }
+
+    Ok(())
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -1015,4 +1508,212 @@ fn cmd_query_test_id(
         );
     }
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn make_temp_dir(prefix: &str) -> PathBuf {
+        let mut dir = std::env::temp_dir();
+        dir.push(format!("{prefix}-{}", crate::util::now_unix_ms()));
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).expect("create temp dir");
+        dir
+    }
+
+    fn write_script_result_with_overlay_trace(dir: &Path) -> PathBuf {
+        use fret_diag_protocol::{
+            UiOverlayPlacementTraceEntryV1, UiOverlaySideV1, UiRectV1, UiScriptEvidenceV1,
+            UiScriptResultV1, UiScriptStageV1,
+        };
+
+        let rect = UiRectV1 {
+            x_px: 1.0,
+            y_px: 2.0,
+            w_px: 3.0,
+            h_px: 4.0,
+        };
+
+        let evidence = UiScriptEvidenceV1 {
+            overlay_placement_trace: vec![
+                UiOverlayPlacementTraceEntryV1::PlacedRect {
+                    step_index: 10,
+                    note: None,
+                    frame_id: 100,
+                    overlay_root_name: Some("root".to_string()),
+                    anchor_element: None,
+                    anchor_test_id: Some("anchor-a".to_string()),
+                    content_element: None,
+                    content_test_id: Some("panel-a".to_string()),
+                    outer: rect,
+                    anchor: rect,
+                    placed: rect,
+                    side: Some(UiOverlaySideV1::Top),
+                },
+                UiOverlayPlacementTraceEntryV1::PlacedRect {
+                    step_index: 20,
+                    note: None,
+                    frame_id: 200,
+                    overlay_root_name: Some("root".to_string()),
+                    anchor_element: None,
+                    anchor_test_id: Some("anchor-b".to_string()),
+                    content_element: None,
+                    content_test_id: Some("panel-b".to_string()),
+                    outer: rect,
+                    anchor: rect,
+                    placed: rect,
+                    side: Some(UiOverlaySideV1::Bottom),
+                },
+            ],
+            ..UiScriptEvidenceV1::default()
+        };
+
+        let payload = UiScriptResultV1 {
+            schema_version: 1,
+            run_id: 1,
+            updated_unix_ms: 1,
+            window: None,
+            stage: UiScriptStageV1::Passed,
+            step_index: None,
+            reason_code: None,
+            reason: None,
+            evidence: Some(evidence),
+            last_bundle_dir: None,
+            last_bundle_artifact: None,
+        };
+
+        let path = dir.join("script.result.json");
+        let bytes = serde_json::to_vec_pretty(&payload).expect("serialize script.result");
+        std::fs::write(&path, bytes).expect("write script.result");
+        path
+    }
+
+    fn write_script_result_without_evidence(dir: &Path) -> PathBuf {
+        use fret_diag_protocol::{UiScriptResultV1, UiScriptStageV1};
+
+        let payload = UiScriptResultV1 {
+            schema_version: 1,
+            run_id: 1,
+            updated_unix_ms: 1,
+            window: None,
+            stage: UiScriptStageV1::Passed,
+            step_index: None,
+            reason_code: None,
+            reason: None,
+            evidence: None,
+            last_bundle_dir: None,
+            last_bundle_artifact: None,
+        };
+
+        let path = dir.join("script.result.json");
+        let bytes = serde_json::to_vec_pretty(&payload).expect("serialize script.result");
+        std::fs::write(&path, bytes).expect("write script.result");
+        path
+    }
+
+    #[test]
+    fn query_overlay_placement_trace_filters_by_anchor_and_side_and_writes_json() {
+        let out_dir = make_temp_dir("fret-diag-query-overlay");
+        let script_result = write_script_result_with_overlay_trace(&out_dir);
+
+        let query_out = out_dir.join("out.json");
+        cmd_query_overlay_placement_trace(
+            &[
+                script_result.display().to_string(),
+                "--anchor-test-id".to_string(),
+                "anchor-a".to_string(),
+                "--chosen-side".to_string(),
+                "top".to_string(),
+            ],
+            Path::new("."),
+            &out_dir,
+            Some(query_out.clone()),
+            true,
+        )
+        .expect("query ok");
+
+        let bytes = std::fs::read(&query_out).expect("read out.json");
+        let v: serde_json::Value = serde_json::from_slice(&bytes).expect("parse out.json");
+        let results = v
+            .get("results")
+            .and_then(|v| v.as_array())
+            .cloned()
+            .unwrap_or_default();
+        assert_eq!(results.len(), 1);
+        assert_eq!(
+            results[0].get("kind").and_then(|v| v.as_str()),
+            Some("placed_rect")
+        );
+    }
+
+    #[test]
+    fn query_overlay_placement_trace_accepts_out_dir_with_script_result_json() {
+        let out_dir = make_temp_dir("fret-diag-query-overlay-dir");
+        let _script_result = write_script_result_with_overlay_trace(&out_dir);
+
+        let query_out = out_dir.join("out.json");
+        cmd_query_overlay_placement_trace(
+            &[
+                out_dir.display().to_string(),
+                "--anchor-test-id".to_string(),
+                "anchor-b".to_string(),
+                "--chosen-side".to_string(),
+                "bottom".to_string(),
+            ],
+            Path::new("."),
+            &out_dir,
+            Some(query_out.clone()),
+            true,
+        )
+        .expect("query ok");
+
+        let bytes = std::fs::read(&query_out).expect("read out.json");
+        let v: serde_json::Value = serde_json::from_slice(&bytes).expect("parse out.json");
+        let results = v
+            .get("results")
+            .and_then(|v| v.as_array())
+            .cloned()
+            .unwrap_or_default();
+        assert_eq!(results.len(), 1);
+    }
+
+    #[test]
+    fn query_overlay_placement_trace_prefers_parent_script_result_with_evidence() {
+        let out_dir = make_temp_dir("fret-diag-query-overlay-prefers-evidence");
+        let parent = out_dir.join("sessions").join("sid");
+        std::fs::create_dir_all(&parent).expect("create parent");
+        let child = parent.join("bundle-subdir");
+        std::fs::create_dir_all(&child).expect("create child");
+
+        // Simulate the common layout where bundle dump dirs contain a script.result.json without
+        // evidence, but the session root contains the evidence-bearing script.result.json.
+        let _parent_script_result = write_script_result_with_overlay_trace(&parent);
+        let _child_script_result = write_script_result_without_evidence(&child);
+
+        let query_out = out_dir.join("out.json");
+        cmd_query_overlay_placement_trace(
+            &[
+                child.display().to_string(),
+                "--anchor-test-id".to_string(),
+                "anchor-a".to_string(),
+                "--chosen-side".to_string(),
+                "top".to_string(),
+            ],
+            Path::new("."),
+            &out_dir,
+            Some(query_out.clone()),
+            true,
+        )
+        .expect("query ok");
+
+        let bytes = std::fs::read(&query_out).expect("read out.json");
+        let v: serde_json::Value = serde_json::from_slice(&bytes).expect("parse out.json");
+        let results = v
+            .get("results")
+            .and_then(|v| v.as_array())
+            .cloned()
+            .unwrap_or_default();
+        assert_eq!(results.len(), 1);
+    }
 }

@@ -7,6 +7,7 @@ mod avatar;
 mod badge;
 mod breadcrumb;
 mod button;
+mod button_group;
 mod card;
 mod carousel;
 mod chart;
@@ -36,10 +37,26 @@ mod menubar;
 mod motion_presets;
 mod native_select;
 mod navigation_menu;
+mod pagination;
+mod popover;
+mod progress;
+mod radio_group;
+mod resizable;
 mod scroll_area;
+mod select;
+mod separator;
 mod shadcn_extras;
+mod sheet;
+mod sidebar;
 mod skeleton;
 mod slider;
+mod sonner;
+mod spinner;
+mod switch;
+mod table;
+mod tabs;
+mod textarea;
+mod toast;
 mod toggle;
 mod toggle_group;
 mod tooltip;
@@ -58,6 +75,10 @@ pub(super) fn preview_avatar(
 
 pub(super) fn preview_button(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
     button::preview_button(cx)
+}
+
+pub(super) fn preview_button_group(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
+    button_group::preview_button_group(cx)
 }
 
 pub(super) fn preview_alert_dialog(
@@ -148,6 +169,13 @@ pub(super) fn preview_command_palette(
     command::preview_command_palette(cx, open, query, last_action)
 }
 
+pub(super) fn preview_toast(
+    cx: &mut ElementContext<'_, App>,
+    last_action: Model<Arc<str>>,
+) -> Vec<AnyElement> {
+    toast::preview_toast(cx, last_action)
+}
+
 pub(super) fn preview_context_menu(
     cx: &mut ElementContext<'_, App>,
     open: Model<bool>,
@@ -176,6 +204,27 @@ pub(super) fn preview_dialog(
     open: Model<bool>,
 ) -> Vec<AnyElement> {
     dialog::preview_dialog(cx, open)
+}
+
+pub(super) fn preview_popover(
+    cx: &mut ElementContext<'_, App>,
+    open: Model<bool>,
+) -> Vec<AnyElement> {
+    popover::preview_popover(cx, open)
+}
+
+pub(super) fn preview_progress(
+    cx: &mut ElementContext<'_, App>,
+    progress: Model<f32>,
+) -> Vec<AnyElement> {
+    progress::preview_progress(cx, progress)
+}
+
+pub(super) fn preview_sheet(
+    cx: &mut ElementContext<'_, App>,
+    open: Model<bool>,
+) -> Vec<AnyElement> {
+    sheet::preview_sheet(cx, open)
 }
 
 pub(super) fn preview_field(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
@@ -220,6 +269,10 @@ pub(super) fn preview_kbd(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
     kbd::preview_kbd(cx)
 }
 
+pub(super) fn preview_select(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
+    select::preview_select(cx)
+}
+
 pub(super) fn preview_label(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
     label::preview_label(cx)
 }
@@ -236,8 +289,32 @@ pub(super) fn preview_navigation_menu(cx: &mut ElementContext<'_, App>) -> Vec<A
     navigation_menu::preview_navigation_menu(cx)
 }
 
+pub(super) fn preview_radio_group(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
+    radio_group::preview_radio_group(cx)
+}
+
+pub(super) fn preview_resizable(
+    cx: &mut ElementContext<'_, App>,
+    h_fractions: Model<Vec<f32>>,
+    v_fractions: Model<Vec<f32>>,
+) -> Vec<AnyElement> {
+    resizable::preview_resizable(cx, h_fractions, v_fractions)
+}
+
+pub(super) fn preview_pagination(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
+    pagination::preview_pagination(cx)
+}
+
 pub(super) fn preview_scroll_area(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
     scroll_area::preview_scroll_area(cx)
+}
+
+pub(super) fn preview_separator(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
+    separator::preview_separator(cx)
+}
+
+pub(super) fn preview_sidebar(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
+    sidebar::preview_sidebar(cx)
 }
 
 pub(super) fn preview_motion_presets(
@@ -266,6 +343,43 @@ pub(super) fn preview_skeleton(cx: &mut ElementContext<'_, App>) -> Vec<AnyEleme
 
 pub(super) fn preview_slider(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
     slider::preview_slider(cx)
+}
+
+pub(super) fn preview_sonner(
+    cx: &mut ElementContext<'_, App>,
+    last_action: Model<Arc<str>>,
+    sonner_position: Model<shadcn::ToastPosition>,
+) -> Vec<AnyElement> {
+    sonner::preview_sonner(cx, last_action, sonner_position)
+}
+
+pub(super) fn preview_tabs(
+    cx: &mut ElementContext<'_, App>,
+    value: Model<Option<Arc<str>>>,
+) -> Vec<AnyElement> {
+    tabs::preview_tabs(cx, value)
+}
+
+pub(super) fn preview_table(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
+    table::preview_table(cx)
+}
+
+pub(super) fn preview_spinner(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
+    spinner::preview_spinner(cx)
+}
+
+pub(super) fn preview_switch(
+    cx: &mut ElementContext<'_, App>,
+    model: Model<bool>,
+) -> Vec<AnyElement> {
+    switch::preview_switch(cx, model)
+}
+
+pub(super) fn preview_textarea(
+    cx: &mut ElementContext<'_, App>,
+    value: Model<String>,
+) -> Vec<AnyElement> {
+    textarea::preview_textarea(cx, value)
 }
 
 pub(super) fn preview_drawer(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {

@@ -1,3 +1,6 @@
+pub const SOURCE: &str = include_str!("disabled.rs");
+
+// region: example
 use fret_core::Px;
 use fret_ui_shadcn::{self as shadcn, prelude::*};
 use std::sync::Arc;
@@ -23,3 +26,5 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
         .into_element(cx)
         .test_id("ui-gallery-select-disabled")
 }
+
+// endregion: example

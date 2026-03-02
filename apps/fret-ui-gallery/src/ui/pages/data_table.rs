@@ -1,21 +1,13 @@
 use super::super::*;
 
 use crate::ui::doc_layout::{self, DocSection};
+use crate::ui::snippets::data_table as snippets;
 
 pub(super) fn preview_data_table(
     cx: &mut ElementContext<'_, App>,
     state: Model<fret_ui_headless::table::TableState>,
 ) -> Vec<AnyElement> {
-    let legacy_content = super::super::preview_data_table_legacy(cx, state);
-    let demo = stack::vstack(
-        cx,
-        stack::VStackProps::default()
-            .gap(Space::N3)
-            .items_start()
-            .layout(LayoutRefinement::default().w_full()),
-        |_cx| legacy_content,
-    )
-    .test_id("ui-gallery-data-table-guide-demo");
+    let demo = snippets::guide_demo::render(cx, state);
 
     let notes_stack = doc_layout::notes(
         cx,
@@ -27,19 +19,7 @@ pub(super) fn preview_data_table(
         ],
     );
 
-    let code_preview = stack::vstack(
-        cx,
-        stack::VStackProps::default()
-            .gap(Space::N2)
-            .items_start()
-            .layout(LayoutRefinement::default().w_full().min_w_0()),
-        |cx| {
-            vec![shadcn::typography::muted(
-                cx,
-                "Key snippets for the guide-aligned recipe surface.",
-            )]
-        },
-    );
+    let code_preview = snippets::code_outline::render(cx);
 
     let body = doc_layout::render_doc_page(
         cx,
@@ -47,45 +27,13 @@ pub(super) fn preview_data_table(
             "shadcn Data Table is a guide recipe (TanStack + Table primitives). This page renders a guide-aligned demo backed by Fret's headless engine.",
         ),
         vec![
-            DocSection::new("Guide Demo", demo).max_w(Px(900.0)).code(
-                "rust",
-                r#"// This page currently reuses the legacy recipe surface while the guide-aligned
-// split (toolbar/pagination/columns) is stabilized.
-let content = super::super::preview_data_table_legacy(cx, state.clone());
-
-stack::vstack(
-    cx,
-    stack::VStackProps::default()
-        .gap(Space::N3)
-        .items_start()
-        .layout(LayoutRefinement::default().w_full()),
-    |_cx| content,
-)
-.into_element(cx);"#,
-            ),
+            DocSection::new("Guide Demo", demo)
+                .max_w(Px(900.0))
+                .code_rust_from_file_region(snippets::guide_demo::SOURCE, "example"),
             DocSection::new("Code", code_preview)
                 .max_w(Px(900.0))
                 .test_id_prefix("ui-gallery-data-table-code")
-                .code(
-                    "rust",
-                    r#"// Basic Table
-let table = shadcn::DataTable::new()
-    .row_height(Px(40.0))
-    .header_height(Px(40.0))
-    .refine_layout(LayoutRefinement::default().w_full().h_px(Px(280.0)))
-    .into_element(cx, data, 1, state, columns, row_key, col_key, render_cell, render_header);
-
-// State + Sorting
-let selected_count = models.read(&state, |st| st.row_selection.len())?;
-let sorting = models.read(&state, |st| st.sorting.first().cloned())?;
-
-// show selection/sorting summaries in a deterministic status row
-
-// Docs Gap Markers
-section_card("Filtering", Alert::new([...]))
-section_card("Visibility", Alert::new([...]))
-// keep unsupported guide sections explicit so parity work is traceable"#,
-                ),
+                .code_rust_from_file_region(snippets::code_outline::SOURCE, "example"),
             DocSection::new("Notes", notes_stack).max_w(Px(900.0)),
         ],
     );

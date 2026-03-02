@@ -1,0 +1,36 @@
+{
+  "schema_version": 2,
+  "meta": {
+    "name": "Node graph (paint-only): edges paint stats are sane",
+    "tags": ["node-graph", "declarative", "paint-only", "wires", "gate", "diagnostics"],
+    "required_capabilities": ["diag.script_v2"],
+    "target_hints": [
+      "Run with `FRET_NODE_GRAPH_DECLARATIVE=paint` so the paint-only declarative surface is active.",
+      "This is a lightweight gate for regressions where edges stop painting due to culling/geometry issues."
+    ]
+  },
+  "steps": [
+    { "type": "press_key", "key": "escape" },
+    { "type": "wait_frames", "n": 5 },
+
+    {
+      "type": "wait_until",
+      "predicate": { "kind": "exists", "target": { "kind": "test_id", "id": "node_graph.canvas" } },
+      "timeout_frames": 600
+    },
+    { "type": "wait_frames", "n": 20 },
+
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "value_contains",
+        "target": { "kind": "test_id", "id": "node_graph.canvas" },
+        "text": "edges_paint_ok:true;"
+      },
+      "timeout_frames": 600
+    },
+
+    { "type": "capture_bundle", "label": "node-graph-paint-only-edges-paint-stats-ok" }
+  ]
+}
+

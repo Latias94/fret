@@ -95,6 +95,7 @@ pub(super) fn parse_semantics_role(s: &str) -> Option<SemanticsRole> {
     })
 }
 
+#[cfg(test)]
 pub(super) fn select_semantics_node<'a>(
     snapshot: &'a fret_core::SemanticsSnapshot,
     window: AppWindowId,
@@ -103,7 +104,6 @@ pub(super) fn select_semantics_node<'a>(
 ) -> Option<&'a fret_core::SemanticsNode> {
     select_semantics_node_scoped(snapshot, window, element_runtime, selector, None)
 }
-
 pub(super) fn select_semantics_node_scoped<'a>(
     snapshot: &'a fret_core::SemanticsSnapshot,
     window: AppWindowId,

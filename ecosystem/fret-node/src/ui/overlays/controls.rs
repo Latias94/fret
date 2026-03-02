@@ -113,9 +113,9 @@ impl NodeGraphControlsOverlay {
     }
 
     fn panel_size_px(&self) -> (f32, f32) {
-        let pad = self.style.controls_padding.max(0.0);
-        let gap = self.style.controls_gap.max(0.0);
-        let button = self.style.controls_button_size.max(10.0);
+        let pad = self.style.paint.controls_padding.max(0.0);
+        let gap = self.style.paint.controls_gap.max(0.0);
+        let button = self.style.paint.controls_button_size.max(10.0);
 
         let items = [
             ControlsButton::ToggleConnectionMode,
@@ -133,10 +133,10 @@ impl NodeGraphControlsOverlay {
     }
 
     fn compute_layout(&self, bounds: Rect) -> ControlsLayout {
-        let margin = self.style.controls_margin.max(0.0);
-        let pad = self.style.controls_padding.max(0.0);
-        let gap = self.style.controls_gap.max(0.0);
-        let button = self.style.controls_button_size.max(10.0);
+        let margin = self.style.paint.controls_margin.max(0.0);
+        let pad = self.style.paint.controls_padding.max(0.0);
+        let gap = self.style.paint.controls_gap.max(0.0);
+        let button = self.style.paint.controls_button_size.max(10.0);
 
         let items = [
             ControlsButton::ToggleConnectionMode,
@@ -418,9 +418,9 @@ impl<H: UiHost> Widget<H> for NodeGraphControlsOverlay {
             .unwrap_or_default();
 
         let layout = self.compute_layout(cx.bounds);
-        let bg = self.style.context_menu_background;
-        let border = self.style.context_menu_border;
-        let corner = self.style.context_menu_corner_radius;
+        let bg = self.style.paint.context_menu_background;
+        let border = self.style.paint.context_menu_border;
+        let corner = self.style.paint.context_menu_corner_radius;
 
         cx.scene.push(SceneOp::Quad {
             order: DrawOrder(21_000),
@@ -433,7 +433,7 @@ impl<H: UiHost> Widget<H> for NodeGraphControlsOverlay {
             corner_radii: Corners::all(Px(corner)),
         });
 
-        let text_style = self.style.controls_text_style.clone();
+        let text_style = self.style.paint.controls_text_style.clone();
         let constraints = TextConstraints {
             max_width: None,
             wrap: TextWrap::None,
@@ -450,9 +450,9 @@ impl<H: UiHost> Widget<H> for NodeGraphControlsOverlay {
                     && self.keyboard_active == Some(*btn));
             let pressed = self.pressed == Some(*btn);
             let button_bg = if pressed {
-                self.style.controls_active_background
+                self.style.paint.controls_active_background
             } else if hovered {
-                self.style.controls_hover_background
+                self.style.paint.controls_hover_background
             } else {
                 Color::TRANSPARENT
             };
@@ -482,7 +482,7 @@ impl<H: UiHost> Widget<H> for NodeGraphControlsOverlay {
                 order: DrawOrder(21_002),
                 text: id,
                 origin: Point::new(Px(tx), Px(ty)),
-                paint: (self.style.controls_text).into(),
+                paint: (self.style.paint.controls_text).into(),
                 outline: None,
                 shadow: None,
             });

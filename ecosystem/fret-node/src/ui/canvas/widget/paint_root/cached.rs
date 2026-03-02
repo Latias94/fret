@@ -78,7 +78,9 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
             order: DrawOrder(0),
             rect: viewport_rect,
             background: fret_core::Paint::Solid(
-                canvas_hint.background.unwrap_or(self.style.background),
+                canvas_hint
+                    .background
+                    .unwrap_or(self.style.paint.background),
             )
             .into(),
 

@@ -2,14 +2,15 @@ use std::sync::Arc;
 
 use crate::button::{ButtonVariant, variant_colors};
 use fret_core::{
-    Axis, Color, Corners, Edges, FontId, FontWeight, Px, SemanticsRole, TextOverflow, TextWrap,
+    Axis, Color, Corners, Edges, FontId, FontWeight, MouseButton, Px, SemanticsRole, TextOverflow,
+    TextWrap,
 };
 use fret_icons::IconId;
 use fret_runtime::{CommandId, Model};
-use fret_ui::action::OnKeyDown;
+use fret_ui::action::{OnKeyDown, UiPointerActionHost};
 use fret_ui::element::{
-    AnyElement, ContainerProps, FlexProps, LayoutStyle, Length, Overflow, PressableA11y,
-    PressableProps, SemanticsDecoration, TextAreaProps, TextInputProps, TextProps,
+    AnyElement, ContainerProps, FlexProps, LayoutStyle, Length, Overflow, PointerRegionProps,
+    PressableA11y, PressableProps, SemanticsDecoration, TextAreaProps, TextInputProps, TextProps,
 };
 use fret_ui::{ElementContext, TextAreaStyle, TextInputStyle, Theme, UiHost};
 use fret_ui_kit::command::ElementCommandGatingExt as _;
@@ -473,53 +474,99 @@ impl InputGroup {
                 ..Default::default()
             },
             |cx| {
-                let build_inline_addon =
-                    |cx: &mut ElementContext<'_, H>,
-                     children: Vec<AnyElement>,
-                     is_start: bool,
-                     has_button: bool,
-                     has_kbd: bool| {
-                        let mut layout = LayoutRefinement::default()
-                            .flex_none()
-                            .order(if is_start { -1 } else { 1 });
-                        if has_button {
-                            layout = if is_start {
-                                layout.ml_neg(Space::N2)
-                            } else {
-                                layout.mr_neg(Space::N2)
-                            };
-                        } else if has_kbd {
-                            layout = if is_start {
-                                layout.ml_neg(Space::N1p5)
-                            } else {
-                                layout.mr_neg(Space::N1p5)
-                            };
-                        }
-
-                        let (layout, gap) = {
-                            let theme = Theme::global(&*cx.app);
-                            (
-                                decl_style::layout_style(theme, layout),
-                                fret_ui_kit::MetricRef::space(Space::N2).resolve(theme),
-                            )
-                        };
-
-                        let padding = if is_start {
-                            Edges {
-                                top: addon_py,
-                                right: Px(0.0),
-                                bottom: addon_py,
-                                left: addon_pl,
-                            }
+                let build_inline_addon = |cx: &mut ElementContext<'_, H>,
+                                          children: Vec<AnyElement>,
+                                          is_start: bool,
+                                          has_button: bool,
+                                          has_kbd: bool,
+                                          control_focus_target: Option<
+                    fret_ui::elements::GlobalElementId,
+                >| {
+                    let mut layout = LayoutRefinement::default().flex_none().order(if is_start {
+                        -1
+                    } else {
+                        1
+                    });
+                    if has_button {
+                        layout = if is_start {
+                            layout.ml_neg(Space::N2)
                         } else {
-                            Edges {
-                                top: addon_py,
-                                right: addon_pl,
-                                bottom: addon_py,
-                                left: Px(0.0),
-                            }
+                            layout.mr_neg(Space::N2)
                         };
+                    } else if has_kbd {
+                        layout = if is_start {
+                            layout.ml_neg(Space::N1p5)
+                        } else {
+                            layout.mr_neg(Space::N1p5)
+                        };
+                    }
 
+                    let (layout, gap) = {
+                        let theme = Theme::global(&*cx.app);
+                        (
+                            decl_style::layout_style(theme, layout),
+                            fret_ui_kit::MetricRef::space(Space::N2).resolve(theme),
+                        )
+                    };
+
+                    let padding = if is_start {
+                        Edges {
+                            top: addon_py,
+                            right: Px(0.0),
+                            bottom: addon_py,
+                            left: addon_pl,
+                        }
+                    } else {
+                        Edges {
+                            top: addon_py,
+                            right: addon_pl,
+                            bottom: addon_py,
+                            left: Px(0.0),
+                        }
+                    };
+
+                    let should_click_to_focus = control_focus_target.is_some() && !has_button;
+
+                    if should_click_to_focus {
+                        let control_focus_target =
+                            control_focus_target.expect("control_focus_target");
+
+                        let on_down = Arc::new(
+                                move |host: &mut dyn UiPointerActionHost,
+                                      _cx: fret_ui::action::ActionCx,
+                                      down: fret_ui::action::PointerDownCx| {
+                                    if down.button == MouseButton::Left {
+                                        host.request_focus(control_focus_target);
+                                    }
+                                    false
+                                },
+                            );
+
+                        let flex = cx.flex(
+                            FlexProps {
+                                layout: LayoutStyle::default(),
+                                direction: Axis::Horizontal,
+                                gap: gap.into(),
+                                padding: padding.into(),
+                                justify: fret_ui::element::MainAlign::Center,
+                                align: fret_ui::element::CrossAlign::Center,
+                                wrap: false,
+                            },
+                            |_cx| children,
+                        );
+
+                        cx.pointer_region(
+                            PointerRegionProps {
+                                layout,
+                                enabled: true,
+                                capture_phase_pointer_moves: false,
+                            },
+                            move |cx| {
+                                cx.pointer_region_on_pointer_down(on_down);
+                                vec![flex]
+                            },
+                        )
+                    } else {
                         cx.flex(
                             FlexProps {
                                 layout,
@@ -532,7 +579,8 @@ impl InputGroup {
                             },
                             |_cx| children,
                         )
-                    };
+                    }
+                };
 
                 if is_block_layout {
                     let control_el = match control {
@@ -628,6 +676,7 @@ impl InputGroup {
                     };
 
                     let control_id = control_el.id;
+                    let control_focus_target = (!disabled).then_some(control_id);
                     if let Some(handler) = control_on_key_down {
                         // Run before the control's internal key handling so callers can
                         // consume keys like Enter/Backspace and prevent default behavior.
@@ -637,7 +686,14 @@ impl InputGroup {
                     let inline_start = (control == InputGroupControlKind::Input
                         && !leading.is_empty())
                     .then(|| {
-                        build_inline_addon(cx, leading, true, leading_has_button, leading_has_kbd)
+                        build_inline_addon(
+                            cx,
+                            leading,
+                            true,
+                            leading_has_button,
+                            leading_has_kbd,
+                            control_focus_target,
+                        )
                     });
 
                     let inline_end = (control == InputGroupControlKind::Input
@@ -649,6 +705,7 @@ impl InputGroup {
                             false,
                             trailing_has_button,
                             trailing_has_kbd,
+                            control_focus_target,
                         )
                     });
 
@@ -893,6 +950,7 @@ impl InputGroup {
                     };
 
                     let control_el = cx.text_input(input);
+                    let control_focus_target = (!disabled).then_some(control_el.id);
 
                     if let Some(handler) = control_on_key_down {
                         // Run before the control's internal key handling so callers can
@@ -901,7 +959,14 @@ impl InputGroup {
                     }
 
                     let leading = (!leading.is_empty()).then(|| {
-                        build_inline_addon(cx, leading, true, leading_has_button, leading_has_kbd)
+                        build_inline_addon(
+                            cx,
+                            leading,
+                            true,
+                            leading_has_button,
+                            leading_has_kbd,
+                            control_focus_target,
+                        )
                     });
 
                     let trailing = (!trailing.is_empty()).then(|| {
@@ -911,6 +976,7 @@ impl InputGroup {
                             false,
                             trailing_has_button,
                             trailing_has_kbd,
+                            control_focus_target,
                         )
                     });
 
@@ -959,6 +1025,382 @@ impl InputGroup {
 
 pub fn input_group<H: UiHost>(cx: &mut ElementContext<'_, H>, group: InputGroup) -> AnyElement {
     group.into_element(cx)
+}
+
+/// Upstream `InputGroupAddon` alignment variants (shadcn/ui v4).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum InputGroupAddonAlign {
+    #[default]
+    InlineStart,
+    InlineEnd,
+    BlockStart,
+    BlockEnd,
+}
+
+/// shadcn/ui `InputGroupAddon` (v4).
+///
+/// In the upstream DOM implementation, addons can be aligned to any edge of the group
+/// (`inline-start`, `inline-end`, `block-start`, `block-end`).
+///
+/// Fret's `InputGroup` recipe is slot-based (`leading/trailing/block_start/block_end`), so this
+/// type acts as a part adapter that can be routed into the appropriate slot via
+/// [`InputGroup::into_element_parts`].
+#[derive(Debug)]
+pub struct InputGroupAddon {
+    align: InputGroupAddonAlign,
+    children: Vec<AnyElement>,
+    has_button: bool,
+    has_kbd: bool,
+}
+
+impl InputGroupAddon {
+    pub fn new(children: impl IntoIterator<Item = AnyElement>) -> Self {
+        Self {
+            align: InputGroupAddonAlign::default(),
+            children: children.into_iter().collect(),
+            has_button: false,
+            has_kbd: false,
+        }
+    }
+
+    pub fn align(mut self, align: InputGroupAddonAlign) -> Self {
+        self.align = align;
+        self
+    }
+
+    /// Hint: addon subtree contains a `Button`.
+    ///
+    /// Upstream uses selectors like `has-[>button]:ml-[-0.45rem]`. Fret does not have selectors,
+    /// so callers (or recipes) can provide this hint to match the same geometry.
+    pub fn has_button(mut self, has_button: bool) -> Self {
+        self.has_button = has_button;
+        self
+    }
+
+    /// Hint: addon subtree contains a `Kbd`.
+    ///
+    /// Upstream uses selectors like `has-[>kbd]:ml-[-0.35rem]`. Fret does not have selectors, so
+    /// callers (or recipes) can provide this hint to match the same geometry.
+    pub fn has_kbd(mut self, has_kbd: bool) -> Self {
+        self.has_kbd = has_kbd;
+        self
+    }
+}
+
+/// shadcn/ui `InputGroupInput` (v4).
+///
+/// Upstream wraps the `Input` component and applies `flex-1` and related classes.
+/// In Fret the control is owned by the `InputGroup` recipe, so this type is a configuration part
+/// that can be applied via [`InputGroup::into_element_parts`].
+#[derive(Default, Clone)]
+pub struct InputGroupInput {
+    placeholder: Option<Arc<str>>,
+    disabled: Option<bool>,
+    aria_invalid: Option<bool>,
+    a11y_label: Option<Arc<str>>,
+    submit_command: Option<CommandId>,
+    cancel_command: Option<CommandId>,
+    test_id: Option<Arc<str>>,
+    on_key_down: Option<OnKeyDown>,
+}
+
+impl std::fmt::Debug for InputGroupInput {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("InputGroupInput")
+            .field("placeholder", &self.placeholder.as_deref())
+            .field("disabled", &self.disabled)
+            .field("aria_invalid", &self.aria_invalid)
+            .field("a11y_label", &self.a11y_label.as_deref())
+            .field("submit_command", &self.submit_command)
+            .field("cancel_command", &self.cancel_command)
+            .field("test_id", &self.test_id.as_deref())
+            .field("on_key_down", &self.on_key_down.is_some())
+            .finish()
+    }
+}
+
+impl InputGroupInput {
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    pub fn placeholder(mut self, placeholder: impl Into<Arc<str>>) -> Self {
+        self.placeholder = Some(placeholder.into());
+        self
+    }
+
+    pub fn disabled(mut self, disabled: bool) -> Self {
+        self.disabled = Some(disabled);
+        self
+    }
+
+    pub fn aria_invalid(mut self, aria_invalid: bool) -> Self {
+        self.aria_invalid = Some(aria_invalid);
+        self
+    }
+
+    pub fn a11y_label(mut self, label: impl Into<Arc<str>>) -> Self {
+        self.a11y_label = Some(label.into());
+        self
+    }
+
+    pub fn submit_command(mut self, command: CommandId) -> Self {
+        self.submit_command = Some(command);
+        self
+    }
+
+    pub fn cancel_command(mut self, command: CommandId) -> Self {
+        self.cancel_command = Some(command);
+        self
+    }
+
+    pub fn test_id(mut self, id: impl Into<Arc<str>>) -> Self {
+        self.test_id = Some(id.into());
+        self
+    }
+
+    pub fn on_key_down(mut self, handler: OnKeyDown) -> Self {
+        self.on_key_down = Some(handler);
+        self
+    }
+}
+
+/// shadcn/ui `InputGroupTextarea` (v4).
+///
+/// Upstream wraps the `Textarea` component and applies `flex-1 resize-none` and related classes.
+/// In Fret the control is owned by the `InputGroup` recipe, so this type is a configuration part
+/// that can be applied via [`InputGroup::into_element_parts`].
+#[derive(Default, Clone)]
+pub struct InputGroupTextarea {
+    placeholder: Option<Arc<str>>,
+    disabled: Option<bool>,
+    aria_invalid: Option<bool>,
+    a11y_label: Option<Arc<str>>,
+    submit_command: Option<CommandId>,
+    cancel_command: Option<CommandId>,
+    test_id: Option<Arc<str>>,
+    on_key_down: Option<OnKeyDown>,
+    min_height: Option<Px>,
+    max_height: Option<Px>,
+}
+
+impl std::fmt::Debug for InputGroupTextarea {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("InputGroupTextarea")
+            .field("placeholder", &self.placeholder.as_deref())
+            .field("disabled", &self.disabled)
+            .field("aria_invalid", &self.aria_invalid)
+            .field("a11y_label", &self.a11y_label.as_deref())
+            .field("submit_command", &self.submit_command)
+            .field("cancel_command", &self.cancel_command)
+            .field("test_id", &self.test_id.as_deref())
+            .field("on_key_down", &self.on_key_down.is_some())
+            .field("min_height", &self.min_height)
+            .field("max_height", &self.max_height)
+            .finish()
+    }
+}
+
+impl InputGroupTextarea {
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    pub fn placeholder(mut self, placeholder: impl Into<Arc<str>>) -> Self {
+        self.placeholder = Some(placeholder.into());
+        self
+    }
+
+    pub fn disabled(mut self, disabled: bool) -> Self {
+        self.disabled = Some(disabled);
+        self
+    }
+
+    pub fn aria_invalid(mut self, aria_invalid: bool) -> Self {
+        self.aria_invalid = Some(aria_invalid);
+        self
+    }
+
+    pub fn a11y_label(mut self, label: impl Into<Arc<str>>) -> Self {
+        self.a11y_label = Some(label.into());
+        self
+    }
+
+    pub fn submit_command(mut self, command: CommandId) -> Self {
+        self.submit_command = Some(command);
+        self
+    }
+
+    pub fn cancel_command(mut self, command: CommandId) -> Self {
+        self.cancel_command = Some(command);
+        self
+    }
+
+    pub fn test_id(mut self, id: impl Into<Arc<str>>) -> Self {
+        self.test_id = Some(id.into());
+        self
+    }
+
+    pub fn on_key_down(mut self, handler: OnKeyDown) -> Self {
+        self.on_key_down = Some(handler);
+        self
+    }
+
+    pub fn min_height(mut self, min_height: Px) -> Self {
+        self.min_height = Some(min_height);
+        self
+    }
+
+    pub fn max_height(mut self, max_height: Px) -> Self {
+        self.max_height = Some(max_height);
+        self
+    }
+}
+
+/// Part-based authoring surface aligned with shadcn/ui v4 exports.
+#[derive(Debug)]
+pub enum InputGroupPart {
+    Addon(InputGroupAddon),
+    Input(InputGroupInput),
+    Textarea(InputGroupTextarea),
+}
+
+impl InputGroupPart {
+    pub fn addon(addon: InputGroupAddon) -> Self {
+        Self::Addon(addon)
+    }
+
+    pub fn input(input: InputGroupInput) -> Self {
+        Self::Input(input)
+    }
+
+    pub fn textarea(textarea: InputGroupTextarea) -> Self {
+        Self::Textarea(textarea)
+    }
+}
+
+impl InputGroup {
+    /// Part-based authoring adapter aligned with shadcn/ui v4.
+    ///
+    /// This routes `InputGroupAddon` alignments into the recipe's slot-based surface and applies
+    /// `InputGroupInput` / `InputGroupTextarea` control configuration.
+    ///
+    /// Note: In the upstream DOM implementation, addons can click-to-focus the inner input.
+    /// In Fret we approximate this by requesting focus for the control on left-button pointer
+    /// down for non-button addons (suppressed when the addon hints `has_button=true`).
+    #[track_caller]
+    pub fn into_element_parts<H: UiHost>(
+        self,
+        cx: &mut ElementContext<'_, H>,
+        parts: impl FnOnce(&mut ElementContext<'_, H>) -> Vec<InputGroupPart>,
+    ) -> AnyElement {
+        let mut group = self;
+        let parts = parts(cx);
+
+        let mut leading = std::mem::take(&mut group.leading);
+        let mut trailing = std::mem::take(&mut group.trailing);
+        let mut block_start = std::mem::take(&mut group.block_start);
+        let mut block_end = std::mem::take(&mut group.block_end);
+
+        let mut leading_has_button = group.leading_has_button;
+        let mut trailing_has_button = group.trailing_has_button;
+        let mut leading_has_kbd = group.leading_has_kbd;
+        let mut trailing_has_kbd = group.trailing_has_kbd;
+
+        for part in parts {
+            match part {
+                InputGroupPart::Addon(addon) => match addon.align {
+                    InputGroupAddonAlign::InlineStart => {
+                        leading_has_button |= addon.has_button;
+                        leading_has_kbd |= addon.has_kbd;
+                        leading.extend(addon.children);
+                    }
+                    InputGroupAddonAlign::InlineEnd => {
+                        trailing_has_button |= addon.has_button;
+                        trailing_has_kbd |= addon.has_kbd;
+                        trailing.extend(addon.children);
+                    }
+                    InputGroupAddonAlign::BlockStart => {
+                        block_start.extend(addon.children);
+                    }
+                    InputGroupAddonAlign::BlockEnd => {
+                        block_end.extend(addon.children);
+                    }
+                },
+                InputGroupPart::Input(input) => {
+                    if let Some(placeholder) = input.placeholder {
+                        group.placeholder = Some(placeholder);
+                    }
+                    if let Some(disabled) = input.disabled {
+                        group.disabled = disabled;
+                    }
+                    if let Some(aria_invalid) = input.aria_invalid {
+                        group.aria_invalid = aria_invalid;
+                    }
+                    if let Some(label) = input.a11y_label {
+                        group.a11y_label = Some(label);
+                    }
+                    if let Some(cmd) = input.submit_command {
+                        group.submit_command = Some(cmd);
+                    }
+                    if let Some(cmd) = input.cancel_command {
+                        group.cancel_command = Some(cmd);
+                    }
+                    if let Some(test_id) = input.test_id {
+                        group.control_test_id = Some(test_id);
+                    }
+                    if let Some(handler) = input.on_key_down {
+                        group.control_on_key_down = Some(handler);
+                    }
+                }
+                InputGroupPart::Textarea(textarea) => {
+                    group.control = InputGroupControlKind::Textarea;
+
+                    if let Some(placeholder) = textarea.placeholder {
+                        group.placeholder = Some(placeholder);
+                    }
+                    if let Some(disabled) = textarea.disabled {
+                        group.disabled = disabled;
+                    }
+                    if let Some(aria_invalid) = textarea.aria_invalid {
+                        group.aria_invalid = aria_invalid;
+                    }
+                    if let Some(label) = textarea.a11y_label {
+                        group.a11y_label = Some(label);
+                    }
+                    if let Some(cmd) = textarea.submit_command {
+                        group.submit_command = Some(cmd);
+                    }
+                    if let Some(cmd) = textarea.cancel_command {
+                        group.cancel_command = Some(cmd);
+                    }
+                    if let Some(test_id) = textarea.test_id {
+                        group.control_test_id = Some(test_id);
+                    }
+                    if let Some(handler) = textarea.on_key_down {
+                        group.control_on_key_down = Some(handler);
+                    }
+                    if let Some(min_h) = textarea.min_height {
+                        group.textarea_min_height = min_h;
+                    }
+                    if let Some(max_h) = textarea.max_height {
+                        group.textarea_max_height = Some(max_h);
+                    }
+                }
+            }
+        }
+
+        group.leading = leading;
+        group.trailing = trailing;
+        group.block_start = block_start;
+        group.block_end = block_end;
+        group.leading_has_button = leading_has_button;
+        group.trailing_has_button = trailing_has_button;
+        group.leading_has_kbd = leading_has_kbd;
+        group.trailing_has_kbd = trailing_has_kbd;
+
+        group.into_element(cx)
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
@@ -1381,5 +1823,298 @@ impl InputGroupButton {
                 (pressable_props, chrome_props, content)
             })
         })
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    use fret_app::App;
+    use fret_core::{
+        AppWindowId, MaterialService, Modifiers, MouseButton, PathCommand, PathConstraints, PathId,
+        PathMetrics, PathService, PathStyle, Point, Px, Rect, Size as CoreSize, SvgId, SvgService,
+        TextBlobId, TextConstraints, TextInput, TextMetrics, TextService,
+    };
+    use fret_runtime::Model;
+    use fret_ui::element::{ElementKind, TextInputProps, TextProps};
+    use fret_ui::tree::UiTree;
+
+    use crate::shadcn_themes::{ShadcnBaseColor, ShadcnColorScheme, apply_shadcn_new_york_v4};
+
+    fn bounds() -> Rect {
+        Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            CoreSize::new(Px(800.0), Px(200.0)),
+        )
+    }
+
+    struct FakeServices;
+
+    impl TextService for FakeServices {
+        fn prepare(
+            &mut self,
+            _input: &TextInput,
+            _constraints: TextConstraints,
+        ) -> (TextBlobId, TextMetrics) {
+            (
+                TextBlobId::default(),
+                TextMetrics {
+                    size: CoreSize::new(Px(10.0), Px(10.0)),
+                    baseline: Px(8.0),
+                },
+            )
+        }
+
+        fn release(&mut self, _blob: TextBlobId) {}
+    }
+
+    impl PathService for FakeServices {
+        fn prepare(
+            &mut self,
+            _commands: &[PathCommand],
+            _style: PathStyle,
+            _constraints: PathConstraints,
+        ) -> (PathId, PathMetrics) {
+            (PathId::default(), PathMetrics::default())
+        }
+
+        fn release(&mut self, _path: PathId) {}
+    }
+
+    impl SvgService for FakeServices {
+        fn register_svg(&mut self, _bytes: &[u8]) -> SvgId {
+            SvgId::default()
+        }
+
+        fn unregister_svg(&mut self, _svg: SvgId) -> bool {
+            true
+        }
+    }
+
+    impl MaterialService for FakeServices {
+        fn register_material(
+            &mut self,
+            _desc: fret_core::MaterialDescriptor,
+        ) -> Result<fret_core::MaterialId, fret_core::MaterialRegistrationError> {
+            Ok(fret_core::MaterialId::default())
+        }
+
+        fn unregister_material(&mut self, _id: fret_core::MaterialId) -> bool {
+            true
+        }
+    }
+
+    fn find_text_input<'a>(node: &'a AnyElement) -> Option<&'a TextInputProps> {
+        match &node.kind {
+            ElementKind::TextInput(props) => Some(props),
+            _ => node.children.iter().find_map(find_text_input),
+        }
+    }
+
+    fn find_text<'a>(node: &'a AnyElement, text: &str) -> Option<&'a TextProps> {
+        match &node.kind {
+            ElementKind::Text(props) if props.text.as_ref() == text => Some(props),
+            _ => node.children.iter().find_map(|c| find_text(c, text)),
+        }
+    }
+
+    fn find_flex_with_text_and_order(node: &AnyElement, text: &str, order: i32) -> bool {
+        let matches = match &node.kind {
+            ElementKind::Flex(FlexProps { layout, .. }) => {
+                layout.flex.order == order && find_text(node, text).is_some()
+            }
+            _ => false,
+        };
+        if matches {
+            return true;
+        }
+        node.children
+            .iter()
+            .any(|c| find_flex_with_text_and_order(c, text, order))
+    }
+
+    #[test]
+    fn input_group_parts_apply_placeholder_to_control() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        apply_shadcn_new_york_v4(&mut app, ShadcnBaseColor::Neutral, ShadcnColorScheme::Light);
+
+        fret_ui::elements::with_element_cx(&mut app, window, bounds(), "input_group_parts", |cx| {
+            let model: Model<String> = cx.app.models_mut().insert(String::new());
+            let el = InputGroup::new(model).into_element_parts(cx, |cx| {
+                vec![
+                    InputGroupPart::addon(
+                        InputGroupAddon::new([cx.text("lead")])
+                            .align(InputGroupAddonAlign::InlineStart),
+                    ),
+                    InputGroupPart::input(InputGroupInput::new().placeholder("placeholder")),
+                ]
+            });
+
+            let props = find_text_input(&el).expect("expected text input in InputGroup");
+            assert_eq!(props.placeholder.as_deref(), Some("placeholder"));
+        });
+    }
+
+    #[test]
+    fn input_group_parts_route_inline_addons_by_align_order() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        apply_shadcn_new_york_v4(&mut app, ShadcnBaseColor::Neutral, ShadcnColorScheme::Light);
+
+        fret_ui::elements::with_element_cx(
+            &mut app,
+            window,
+            bounds(),
+            "input_group_addons",
+            |cx| {
+                let model: Model<String> = cx.app.models_mut().insert(String::new());
+                let el = InputGroup::new(model).into_element_parts(cx, |cx| {
+                    vec![
+                        InputGroupPart::addon(
+                            InputGroupAddon::new([cx.text("lead")])
+                                .align(InputGroupAddonAlign::InlineStart),
+                        ),
+                        InputGroupPart::addon(
+                            InputGroupAddon::new([cx.text("trail")])
+                                .align(InputGroupAddonAlign::InlineEnd),
+                        ),
+                        InputGroupPart::input(InputGroupInput::new()),
+                    ]
+                });
+
+                assert!(
+                    find_flex_with_text_and_order(&el, "lead", -1),
+                    "expected inline-start addon flex to carry order=-1"
+                );
+                assert!(
+                    find_flex_with_text_and_order(&el, "trail", 1),
+                    "expected inline-end addon flex to carry order=1"
+                );
+            },
+        );
+    }
+
+    #[test]
+    fn input_group_inline_addon_click_to_focus_requests_focus_for_control() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        apply_shadcn_new_york_v4(&mut app, ShadcnBaseColor::Neutral, ShadcnColorScheme::Light);
+
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let mut services = FakeServices;
+        let bounds = bounds();
+        let model: Model<String> = app.models_mut().insert(String::new());
+
+        let root = fret_ui::declarative::render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "shadcn-input-group-addon-click-to-focus",
+            |cx| {
+                vec![
+                    InputGroup::new(model.clone())
+                        .leading([cx.text("lead")])
+                        .into_element(cx),
+                ]
+            },
+        );
+        ui.set_root(root);
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        let group_node = ui.children(root)[0];
+        let row_node = ui.children(group_node)[0];
+        let row_children = ui.children(row_node);
+        let control_node = row_children[0];
+        let addon_node = row_children[1];
+
+        assert_eq!(ui.focus(), None);
+
+        let addon_bounds = ui.debug_node_bounds(addon_node).expect("addon bounds");
+        let position = Point::new(
+            Px(addon_bounds.origin.x.0 + addon_bounds.size.width.0 * 0.5),
+            Px(addon_bounds.origin.y.0 + addon_bounds.size.height.0 * 0.5),
+        );
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Down {
+                pointer_id: fret_core::PointerId(0),
+                position,
+                button: MouseButton::Left,
+                modifiers: Modifiers::default(),
+                pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
+            }),
+        );
+
+        assert_eq!(ui.focus(), Some(control_node));
+    }
+
+    #[test]
+    fn input_group_inline_addon_with_button_hint_does_not_steal_focus() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        apply_shadcn_new_york_v4(&mut app, ShadcnBaseColor::Neutral, ShadcnColorScheme::Light);
+
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let mut services = FakeServices;
+        let bounds = bounds();
+        let model: Model<String> = app.models_mut().insert(String::new());
+
+        let root = fret_ui::declarative::render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "shadcn-input-group-addon-click-to-focus-suppressed-by-hint",
+            |cx| {
+                vec![
+                    InputGroup::new(model.clone())
+                        .leading([cx.text("lead")])
+                        .leading_has_button(true)
+                        .into_element(cx),
+                ]
+            },
+        );
+        ui.set_root(root);
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        let group_node = ui.children(root)[0];
+        let row_node = ui.children(group_node)[0];
+        let row_children = ui.children(row_node);
+        let addon_node = row_children[1];
+
+        assert_eq!(ui.focus(), None);
+
+        let addon_bounds = ui.debug_node_bounds(addon_node).expect("addon bounds");
+        let position = Point::new(
+            Px(addon_bounds.origin.x.0 + addon_bounds.size.width.0 * 0.5),
+            Px(addon_bounds.origin.y.0 + addon_bounds.size.height.0 * 0.5),
+        );
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Down {
+                pointer_id: fret_core::PointerId(0),
+                position,
+                button: MouseButton::Left,
+                modifiers: Modifiers::default(),
+                pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
+            }),
+        );
+
+        assert_eq!(ui.focus(), None);
     }
 }
