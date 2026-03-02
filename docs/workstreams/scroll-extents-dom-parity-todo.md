@@ -1,6 +1,6 @@
 # Scroll Extents (DOM/GPUI Parity) — TODO Tracker
 
-Status: Draft
+Status: In progress
 
 Tracking format:
 
@@ -19,9 +19,10 @@ Tracking format:
 
 ## Design (Contract)
 
-- [ ] SE-100 Define the scroll-extent contract: how extents are derived from layout geometry.
+- [x] SE-100 Define the scroll-extent contract: how extents are derived from layout geometry.
   - Include: padding/border, negative origins policy, rounding policy.
   - Include: interaction with overlays and anchoring.
+  - Draft: `docs/workstreams/scroll-extents-dom-parity.md` (Target Contract / SE-100)
 - [ ] SE-110 Identify current “available size clamping” behaviors that prevent overflow.
   - List the minimum set of element types that must change to allow DOM-like overflow.
 
@@ -35,4 +36,3 @@ Tracking format:
 
 - [ ] SE-300 Turn the prototype into the default for vertical scrolling surfaces.
 - [ ] SE-310 Keep an escape hatch for horizontal “true unbounded” cases if needed.
-
