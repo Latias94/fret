@@ -163,6 +163,18 @@
       "predicate": { "kind": "known_window_count_is", "n": 2 },
       "timeout_frames": 240
     },
+    {
+      "type": "wait_until",
+      "window": { "kind": "first_seen" },
+      "predicate": { "kind": "dock_graph_signature_contains", "needle": "demo.viewport.right" },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "window": { "kind": "first_seen" },
+      "predicate": { "kind": "dock_graph_signature_contains", "needle": "demo.viewport.left" },
+      "timeout_frames": 240
+    },
 
     {
       "type": "wait_until",
@@ -218,6 +230,18 @@
       "timeout_frames": 360
     },
 
+    {
+      "type": "wait_until",
+      "window": { "kind": "first_seen" },
+      "predicate": { "kind": "dock_graph_signature_contains", "needle": "demo.viewport.right" },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "window": { "kind": "first_seen" },
+      "predicate": { "kind": "dock_graph_signature_contains", "needle": "demo.viewport.left" },
+      "timeout_frames": 240
+    },
     { "type": "wait_until", "window": { "kind": "first_seen" }, "predicate": { "kind": "dock_graph_canonical_is", "canonical": true }, "timeout_frames": 240 },
     {
       "type": "assert",
