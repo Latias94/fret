@@ -154,6 +154,7 @@ pub fn maybe_consume_event(app: &mut App, window: AppWindowId, event: &Event) ->
             if !svc.is_enabled() {
                 return false;
             }
+            svc.poll_inspector_controls();
             if svc.maybe_intercept_event_for_picking(app, window, event) {
                 return true;
             }

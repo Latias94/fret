@@ -3,6 +3,11 @@ use super::*;
 pub(super) use super::inspect_controller::{InspectNavCommand, InspectToast};
 
 impl UiDiagnosticsService {
+    pub(super) fn poll_inspector_controls(&mut self) {
+        self.poll_pick_trigger();
+        self.poll_inspect_trigger();
+    }
+
     pub(super) fn set_inspect_enabled(&mut self, enabled: bool, consume_clicks: bool) {
         self.inspector.set_enabled(enabled, consume_clicks);
     }
@@ -76,8 +81,7 @@ impl UiDiagnosticsService {
             return false;
         }
 
-        self.poll_pick_trigger();
-        self.poll_inspect_trigger();
+        self.poll_inspector_controls();
 
         self.inspector.wants_inspection_active(window)
     }
@@ -91,9 +95,6 @@ impl UiDiagnosticsService {
         if !self.is_enabled() {
             return false;
         }
-
-        self.poll_pick_trigger();
-        self.poll_inspect_trigger();
 
         self.inspector
             .maybe_intercept_event_for_shortcuts(&self.cfg, app, window, event)
@@ -112,9 +113,6 @@ impl UiDiagnosticsService {
         if !self.is_enabled() {
             return false;
         }
-
-        self.poll_pick_trigger();
-        self.poll_inspect_trigger();
 
         let Event::Pointer(PointerEvent::Down { position, .. }) = event else {
             return false;
