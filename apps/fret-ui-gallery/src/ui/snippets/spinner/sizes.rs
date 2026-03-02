@@ -1,3 +1,5 @@
+pub const SOURCE: &str = include_str!("sizes.rs");
+
 // region: example
 use fret_core::Px;
 use fret_ui_shadcn::{self as shadcn, prelude::*};
@@ -16,11 +18,15 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
         stack::HStackProps::default()
             .gap(Space::N6)
             .items_center()
-            .layout(LayoutRefinement::default().w_full().min_w_0().max_w(Px(520.0))),
+            .layout(
+                LayoutRefinement::default()
+                    .w_full()
+                    .min_w_0()
+                    .max_w(Px(520.0)),
+            ),
         |_cx| vec![small, large],
     )
     .test_id("ui-gallery-spinner-sizes")
 }
 
 // endregion: example
-

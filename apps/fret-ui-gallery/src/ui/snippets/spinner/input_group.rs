@@ -1,3 +1,5 @@
+pub const SOURCE: &str = include_str!("input_group.rs");
+
 // region: example
 use fret_core::Px;
 use fret_ui_shadcn::{self as shadcn, prelude::*};
@@ -32,4 +34,3 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
 }
 
 // endregion: example
-

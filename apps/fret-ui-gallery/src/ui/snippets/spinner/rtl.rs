@@ -1,3 +1,5 @@
+pub const SOURCE: &str = include_str!("rtl.rs");
+
 // region: example
 use fret_core::Px;
 use fret_ui_kit::primitives::direction::{LayoutDirection, with_direction_provider};
@@ -7,8 +9,10 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
     with_direction_provider(cx, LayoutDirection::Rtl, |cx| {
         shadcn::Item::new([
             shadcn::ItemMedia::new([shadcn::Spinner::new().into_element(cx)]).into_element(cx),
-            shadcn::ItemContent::new([shadcn::ItemTitle::new("Processing payment...").into_element(cx)])
-                .into_element(cx),
+            shadcn::ItemContent::new([
+                shadcn::ItemTitle::new("Processing payment...").into_element(cx)
+            ])
+            .into_element(cx),
             shadcn::ItemActions::new([cx.text("$100.00")]).into_element(cx),
         ])
         .variant(shadcn::ItemVariant::Muted)
@@ -19,4 +23,3 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
 }
 
 // endregion: example
-
