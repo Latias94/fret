@@ -15,6 +15,7 @@ pub mod navigation_drawer;
 pub mod navigation_rail;
 pub mod radio;
 pub mod segmented_button;
+pub mod select;
 pub mod slider;
 pub mod snackbar;
 pub mod state_matrix;
