@@ -2992,9 +2992,10 @@ mod tests {
                             Combobox::new(model, open.clone())
                                 .a11y_label("Combobox")
                                 .test_id_prefix("combobox-clear")
-                                .show_clear(true)
                                 .items([ComboboxItem::new("alpha", "Alpha")])
-                                .into_element(cx),
+                                .into_element_parts(cx, |_cx| {
+                                    vec![ComboboxPart::from(ComboboxInput::new().show_clear(true))]
+                                }),
                         ]
                     },
                 );
@@ -3065,9 +3066,12 @@ mod tests {
                         Combobox::new(model.clone(), open.clone())
                             .a11y_label("Combobox")
                             .test_id_prefix("combobox-show-trigger")
-                            .show_trigger(show_trigger)
                             .items([ComboboxItem::new("alpha", "Alpha")])
-                            .into_element(cx),
+                            .into_element_parts(cx, |_cx| {
+                                vec![ComboboxPart::from(
+                                    ComboboxInput::new().show_trigger(show_trigger),
+                                )]
+                            }),
                     ]
                 },
             );
