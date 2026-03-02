@@ -51,3 +51,14 @@ cargo run -p fretboard -- diag run ui-gallery-hovercard-open `
   --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 `
   --launch -- cargo run -p fret-ui-gallery --release
 ```
+
+## Wheel routing gates (pointer occlusion vs modal barrier)
+
+- Pointer occlusion MUST allow wheel to scroll underlay content (Radix `disableOutsidePointerEvents` / GPUI
+  `BlockMouseExceptScroll` ergonomics):
+
+```powershell
+cargo run -p fretboard -- diag run ui-gallery-context-menu-occlusion-wheel-pass-through `
+  --check-pixels-changed ui-gallery-nav-scroll `
+  --launch -- cargo run -p fret-ui-gallery --release
+```
