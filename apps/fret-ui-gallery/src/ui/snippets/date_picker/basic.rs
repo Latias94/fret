@@ -1,6 +1,8 @@
+pub const SOURCE: &str = include_str!("basic.rs");
+
 // region: example
-use fret_ui_headless::calendar::CalendarMonth;
 use fret_core::FontWeight;
+use fret_ui_headless::calendar::CalendarMonth;
 use fret_ui_shadcn::{self as shadcn, prelude::*};
 use time::Date;
 
@@ -60,14 +62,12 @@ pub fn render<H: UiHost>(
                         .refine_layout(LayoutRefinement::default().w_px(Px(176.0)));
 
                     if selected_now.is_none() {
-                        button = button.style(
-                            shadcn::button::ButtonStyle::default().foreground(
-                                fret_ui_kit::WidgetStateProperty::new(Some(ColorRef::Token {
-                                    key: "muted-foreground",
-                                    fallback: fret_ui_kit::ColorFallback::ThemeTextMuted,
-                                })),
-                            ),
-                        );
+                        button = button.style(shadcn::button::ButtonStyle::default().foreground(
+                            fret_ui_kit::WidgetStateProperty::new(Some(ColorRef::Token {
+                                key: "muted-foreground",
+                                fallback: fret_ui_kit::ColorFallback::ThemeTextMuted,
+                            })),
+                        ));
                     }
 
                     button

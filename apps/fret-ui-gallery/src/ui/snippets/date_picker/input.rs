@@ -1,3 +1,5 @@
+pub const SOURCE: &str = include_str!("input.rs");
+
 // region: example
 use fret_ui_headless::calendar::CalendarMonth;
 use fret_ui_shadcn::{self as shadcn, prelude::*};
@@ -65,7 +67,11 @@ pub fn render<H: UiHost>(
     selected: Model<Option<Date>>,
     value: Model<String>,
 ) -> AnyElement {
-    let current_value = cx.app.models().read(&value, |v| v.clone()).unwrap_or_default();
+    let current_value = cx
+        .app
+        .models()
+        .read(&value, |v| v.clone())
+        .unwrap_or_default();
     if let Some(parsed) = parse_date_month_dd_yyyy_en(&current_value) {
         let selected_now = cx.app.models().read(&selected, |v| *v).ok().flatten();
         if selected_now != Some(parsed) {
@@ -81,7 +87,11 @@ pub fn render<H: UiHost>(
     let next_value = cx.with_state(Models::default, |st| {
         if selected_now != st.last_selected {
             st.last_selected = selected_now;
-            Some(selected_now.map(format_date_month_dd_yyyy_en).unwrap_or_default())
+            Some(
+                selected_now
+                    .map(format_date_month_dd_yyyy_en)
+                    .unwrap_or_default(),
+            )
         } else {
             None
         }
@@ -121,7 +131,9 @@ pub fn render<H: UiHost>(
             move |cx| {
                 shadcn::PopoverContent::new([calendar(cx)])
                     .refine_style(ChromeRefinement::default().p(Space::N0))
-                    .refine_layout(LayoutRefinement::default().w(fret_ui_kit::LengthRefinement::Auto))
+                    .refine_layout(
+                        LayoutRefinement::default().w(fret_ui_kit::LengthRefinement::Auto),
+                    )
                     .into_element(cx)
                     .test_id("ui-gallery-date-picker-input-content")
             },
@@ -148,4 +160,3 @@ pub fn render<H: UiHost>(
     .test_id("ui-gallery-date-picker-input")
 }
 // endregion: example
-

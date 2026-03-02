@@ -416,7 +416,12 @@ pub(super) fn preview_date_picker(
         time_selected.clone(),
         time_value.clone(),
     );
-    let rtl = snippets::rtl::render(cx, rtl_open.clone(), rtl_month.clone(), rtl_selected.clone());
+    let rtl = snippets::rtl::render(
+        cx,
+        rtl_open.clone(),
+        rtl_month.clone(),
+        rtl_selected.clone(),
+    );
     let notes_stack = snippets::notes::render(cx);
 
     let body = doc_layout::render_doc_page(
@@ -427,13 +432,13 @@ pub(super) fn preview_date_picker(
         vec![
             DocSection::new("Demo", demo)
                 .description("A compact date picker trigger (docs: Date Picker demo).")
-                .code_rust_from_file_region(include_str!("../snippets/date_picker/demo.rs"), "example")
+                .code_rust_from_file_region(snippets::demo::SOURCE, "example")
                 .max_w(Px(980.0))
                 .no_shell(),
             DocSection::new("Basic", basic)
                 .description("A basic date picker component (docs: Date Picker Basic).")
                 .code_rust_from_file_region(
-                    include_str!("../snippets/date_picker/basic.rs"),
+                    snippets::basic::SOURCE,
                     "example",
                 )
                 .max_w(Px(980.0))
@@ -441,7 +446,7 @@ pub(super) fn preview_date_picker(
             DocSection::new("Range Picker", range)
                 .description("A date picker component for selecting a range of dates.")
                 .code_rust_from_file_region(
-                    include_str!("../snippets/date_picker/range.rs"),
+                    snippets::range::SOURCE,
                     "example",
                 )
                 .max_w(Px(980.0))
@@ -450,7 +455,7 @@ pub(super) fn preview_date_picker(
                 .description(
                     "A date picker component with a dropdown caption layout for month/year selection.",
                 )
-                .code_rust_from_file_region(include_str!("../snippets/date_picker/dob.rs"), "example")
+                .code_rust_from_file_region(snippets::dob::SOURCE, "example")
                 .max_w(Px(780.0))
                 .no_shell(),
             DocSection::new("Input", input)
@@ -458,7 +463,7 @@ pub(super) fn preview_date_picker(
                     "InputGroup + calendar button + popover calendar (docs: Date Picker Input).",
                 )
                 .code_rust_from_file_region(
-                    include_str!("../snippets/date_picker/input.rs"),
+                    snippets::input::SOURCE,
                     "example",
                 )
                 .max_w(Px(780.0))
@@ -466,7 +471,7 @@ pub(super) fn preview_date_picker(
             DocSection::new("Time Picker", time_picker)
                 .description("Date + time fields side-by-side (docs: Date Picker Time).")
                 .code_rust_from_file_region(
-                    include_str!("../snippets/date_picker/time_picker.rs"),
+                    snippets::time_picker::SOURCE,
                     "example",
                 )
                 .max_w(Px(780.0))
@@ -474,20 +479,20 @@ pub(super) fn preview_date_picker(
             DocSection::new("Natural Language Picker", natural_language)
                 .description("This example parses natural language into a date (subset).")
                 .code_rust_from_file_region(
-                    include_str!("../snippets/date_picker/natural_language.rs"),
+                    snippets::natural_language::SOURCE,
                     "example",
                 )
                 .max_w(Px(780.0))
                 .no_shell(),
             DocSection::new("RTL", rtl)
                 .description("All shadcn components should work under an RTL direction provider.")
-                .code_rust_from_file_region(include_str!("../snippets/date_picker/rtl.rs"), "example")
+                .code_rust_from_file_region(snippets::rtl::SOURCE, "example")
                 .max_w(Px(780.0))
                 .no_shell(),
             DocSection::new("Extras: With Presets", presets)
                 .description("shadcn `date-picker-with-presets` (Select + Calendar in a popover).")
                 .code_rust_from_file_region(
-                    include_str!("../snippets/date_picker/presets.rs"),
+                    snippets::presets::SOURCE,
                     "example",
                 )
                 .max_w(Px(780.0))
@@ -497,7 +502,7 @@ pub(super) fn preview_date_picker(
                     "Gallery-only: desktop uses a Popover; mobile uses a Drawer. Calendar caption uses dropdown month/year selection.",
                 )
                 .code_rust_from_file_region(
-                    include_str!("../snippets/date_picker/dropdowns.rs"),
+                    snippets::dropdowns::SOURCE,
                     "example",
                 )
                 .max_w(Px(780.0))
@@ -505,7 +510,7 @@ pub(super) fn preview_date_picker(
             DocSection::new("Notes", notes_stack)
                 .description("Guidelines and parity notes for date picker recipes.")
                 .max_w(Px(780.0))
-                .code_rust_from_file_region(include_str!("../snippets/date_picker/notes.rs"), "example"),
+                .code_rust_from_file_region(snippets::notes::SOURCE, "example"),
         ],
     );
 

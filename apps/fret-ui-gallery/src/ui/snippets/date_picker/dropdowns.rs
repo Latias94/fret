@@ -1,3 +1,5 @@
+pub const SOURCE: &str = include_str!("dropdowns.rs");
+
 // region: example
 use fret_app::App;
 use fret_ui::Invalidation;

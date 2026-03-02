@@ -1,3 +1,5 @@
+pub const SOURCE: &str = include_str!("range.rs");
+
 // region: example
 use fret_ui_headless::calendar::{CalendarMonth, DateRangeSelection};
 use fret_ui_shadcn::{self as shadcn, prelude::*};
@@ -26,4 +28,3 @@ pub fn render<H: UiHost>(
         .test_id("ui-gallery-date-picker-range")
 }
 // endregion: example
-

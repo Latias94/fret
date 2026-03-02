@@ -1,3 +1,5 @@
+pub const SOURCE: &str = include_str!("natural_language.rs");
+
 // region: example
 use fret_ui_headless::calendar::CalendarMonth;
 use fret_ui_shadcn::{self as shadcn, prelude::*};
@@ -114,10 +116,9 @@ fn parse_natural_date_en(raw: &str, base: Date) -> Option<Date> {
                 "day" => base.checked_add(time::Duration::days(n)),
                 "week" => base.checked_add(time::Duration::days(7 * n)),
                 "month" => add_months_clamped(base, (n as i32).clamp(-1200, 1200)),
-                "year" => add_months_clamped(
-                    base,
-                    (12_i32).saturating_mul((n as i32).clamp(-100, 100)),
-                ),
+                "year" => {
+                    add_months_clamped(base, (12_i32).saturating_mul((n as i32).clamp(-100, 100)))
+                }
                 _ => None,
             }
         }
@@ -137,7 +138,11 @@ pub fn render<H: UiHost>(
     value: Model<String>,
     today: Date,
 ) -> AnyElement {
-    let current_value = cx.app.models().read(&value, |v| v.clone()).unwrap_or_default();
+    let current_value = cx
+        .app
+        .models()
+        .read(&value, |v| v.clone())
+        .unwrap_or_default();
     if let Some(parsed) = parse_natural_date_en(&current_value, today) {
         let selected_now = cx.app.models().read(&selected, |v| *v).ok().flatten();
         if selected_now != Some(parsed) {
@@ -153,7 +158,11 @@ pub fn render<H: UiHost>(
     let next_value = cx.with_state(Models::default, |st| {
         if selected_now != st.last_selected {
             st.last_selected = selected_now;
-            Some(selected_now.map(format_date_month_dd_yyyy_en).unwrap_or_default())
+            Some(
+                selected_now
+                    .map(format_date_month_dd_yyyy_en)
+                    .unwrap_or_default(),
+            )
         } else {
             None
         }
@@ -237,4 +246,3 @@ pub fn render<H: UiHost>(
     .test_id("ui-gallery-date-picker-natural-language")
 }
 // endregion: example
-

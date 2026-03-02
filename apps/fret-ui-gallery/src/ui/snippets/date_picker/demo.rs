@@ -1,6 +1,8 @@
+pub const SOURCE: &str = include_str!("demo.rs");
+
 // region: example
-use fret_ui_headless::calendar::CalendarMonth;
 use fret_core::FontWeight;
+use fret_ui_headless::calendar::CalendarMonth;
 use fret_ui_shadcn::{self as shadcn, prelude::*};
 use time::Date;
 
@@ -60,14 +62,12 @@ pub fn render<H: UiHost>(
                     .test_id("ui-gallery-date-picker-demo-trigger");
 
                 if selected_now.is_none() {
-                    button = button.style(
-                        shadcn::button::ButtonStyle::default().foreground(
-                            fret_ui_kit::WidgetStateProperty::new(Some(ColorRef::Token {
-                                key: "muted-foreground",
-                                fallback: fret_ui_kit::ColorFallback::ThemeTextMuted,
-                            })),
-                        ),
-                    );
+                    button = button.style(shadcn::button::ButtonStyle::default().foreground(
+                        fret_ui_kit::WidgetStateProperty::new(Some(ColorRef::Token {
+                            key: "muted-foreground",
+                            fallback: fret_ui_kit::ColorFallback::ThemeTextMuted,
+                        })),
+                    ));
                 }
 
                 button.into_element(cx)
@@ -79,7 +79,9 @@ pub fn render<H: UiHost>(
 
                 shadcn::PopoverContent::new([calendar])
                     .refine_style(ChromeRefinement::default().p(Space::N0))
-                    .refine_layout(LayoutRefinement::default().w(fret_ui_kit::LengthRefinement::Auto))
+                    .refine_layout(
+                        LayoutRefinement::default().w(fret_ui_kit::LengthRefinement::Auto),
+                    )
                     .into_element(cx)
                     .test_id("ui-gallery-date-picker-demo-content")
             },

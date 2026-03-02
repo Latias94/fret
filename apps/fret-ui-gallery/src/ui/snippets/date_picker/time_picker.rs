@@ -1,3 +1,5 @@
+pub const SOURCE: &str = include_str!("time_picker.rs");
+
 // region: example
 use fret_ui_headless::calendar::CalendarMonth;
 use fret_ui_shadcn::{self as shadcn, prelude::*};
@@ -33,4 +35,3 @@ pub fn render<H: UiHost>(
     .test_id("ui-gallery-date-picker-time")
 }
 // endregion: example
-
