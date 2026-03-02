@@ -1039,6 +1039,29 @@
       ]
     },
     {
+      "id": "ui-gallery-carousel-demo-reinit-resize-gate",
+      "path": "tools/diag-scripts/ui-gallery/carousel/ui-gallery-carousel-demo-reinit-resize-gate.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "ui-gallery-carousel-embla-engine"
+      ],
+      "tags": [
+        "carousel",
+        "gate",
+        "reinit",
+        "resize",
+        "screenshot",
+        "ui-gallery"
+      ],
+      "target_hints": [
+        "Requires Embla engine MVP to be enabled (set FRET_DEBUG_CAROUSEL_EMBLA_ENGINE=1).",
+        "Expected behavior: resizing during an Embla-driven settle does not panic and items remain visible."
+      ]
+    },
+    {
       "id": "ui-gallery-carousel-focus-watch-tab-scrolls-gate",
       "path": "tools/diag-scripts/ui-gallery/carousel/ui-gallery-carousel-focus-watch-tab-scrolls-gate.json",
       "required_capabilities": [
