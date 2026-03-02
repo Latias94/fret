@@ -1037,6 +1037,91 @@ fn gpu_custom_effect_v2_requested_but_skipped_due_to_target_exhaustion() {
 }
 
 #[test]
+fn gpu_custom_effect_requested_but_skipped_due_to_budget_insufficient() {
+    let ctx = match pollster::block_on(WgpuContext::new()) {
+        Ok(ctx) => ctx,
+        Err(_err) => return,
+    };
+
+    let size = (32u32, 32u32);
+    let full_target_bytes = size.0 as u64 * size.1 as u64 * 4;
+    let budget_insufficient_bytes = full_target_bytes.saturating_mul(2).saturating_sub(1).max(1);
+
+    for abi in [
+        CustomEffectAbi::V1,
+        CustomEffectAbi::V2,
+        CustomEffectAbi::V3,
+    ] {
+        let mut renderer = Renderer::new(&ctx.adapter, &ctx.device);
+        renderer.set_intermediate_budget_bytes(budget_insufficient_bytes);
+        renderer.set_perf_enabled(true);
+
+        let effect = register_passthrough_custom_effect(&mut renderer, abi);
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(size.0 as f32), Px(size.1 as f32)),
+        );
+
+        let mut scene = Scene::default();
+        scene.push(SceneOp::PushEffect {
+            bounds,
+            mode: EffectMode::FilterContent,
+            chain: EffectChain::from_steps(&[custom_effect_step(abi, effect)]),
+            quality: EffectQuality::Auto,
+        });
+        scene.push(SceneOp::Quad {
+            order: DrawOrder(0),
+            rect: bounds,
+            background: (Paint::Solid(Color {
+                r: 1.0,
+                g: 0.0,
+                b: 0.0,
+                a: 1.0,
+            }))
+            .into(),
+            border: Edges::all(Px(0.0)),
+            border_paint: (Paint::Solid(Color::TRANSPARENT)).into(),
+            corner_radii: Default::default(),
+        });
+        scene.push(SceneOp::PopEffect);
+
+        let _pixels = render_and_readback(&ctx, &mut renderer, &scene, size);
+
+        let snap = renderer
+            .take_last_frame_perf_snapshot()
+            .expect("expected last_frame_perf snapshot with perf enabled");
+        assert_eq!(
+            snap.intermediate_full_target_bytes, full_target_bytes,
+            "expected intermediate_full_target_bytes to match the output format/viewport size"
+        );
+        assert_eq!(
+            snap.render_plan_degradations_budget_insufficient, 1,
+            "expected exactly one budget-insufficient degradation in this scenario (abi={abi:?})"
+        );
+        assert_eq!(
+            snap.render_plan_degradations_filter_content_disabled, 1,
+            "expected the FilterContent effect chain to be disabled due to insufficient budget (abi={abi:?})"
+        );
+
+        match abi {
+            CustomEffectAbi::V1 => {
+                assert_eq!(snap.custom_effect_v1_steps_requested, 1);
+                assert_eq!(snap.custom_effect_v1_passes_emitted, 0);
+            }
+            CustomEffectAbi::V2 => {
+                assert_eq!(snap.custom_effect_v2_steps_requested, 1);
+                assert_eq!(snap.custom_effect_v2_passes_emitted, 0);
+            }
+            CustomEffectAbi::V3 => {
+                assert_eq!(snap.custom_effect_v3_steps_requested, 1);
+                assert_eq!(snap.custom_effect_v3_passes_emitted, 0);
+            }
+        }
+    }
+}
+
+#[test]
 fn gpu_custom_effect_v3_requested_but_skipped_due_to_target_exhaustion() {
     let ctx = match pollster::block_on(WgpuContext::new()) {
         Ok(ctx) => ctx,
