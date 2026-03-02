@@ -14,6 +14,12 @@ Deliverables:
   - asserts a stable dock graph outcome.
 - A bounded evidence bundle captured near the end of the scenario.
 
+Status (2026-03-02):
+
+- Diagnostics/runtime hang class addressed (no more “script.result stuck running” when a target window is occluded).
+- Remaining blocker is docking correctness: chained tear-off + merge-back does not yet return to the original dock graph
+  fingerprint, so the “exact signature” gate fails even though windows auto-close and canonicalization passes.
+
 ## M2 — Suite-level stability and isolation
 
 Goal: the full `docking-arbitration` suite runs without cross-script contamination.
@@ -36,4 +42,3 @@ Deliverables:
   - drop routing semantics for scripted drags,
   - required invariants (no stuck drags, consistent window targeting).
 - At least one runner-level regression test or diagnostics gate that fails fast on drift.
-
