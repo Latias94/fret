@@ -284,8 +284,15 @@
       "window": { "kind": "first_seen" },
       "predicate": { "kind": "dock_graph_signature_contains", "needle": "floatings=[]" }
     },
+    {
+      "type": "assert",
+      "window": { "kind": "first_seen" },
+      "predicate": {
+        "kind": "dock_graph_signature_fingerprint64_is",
+        "fingerprint64": 7509174212363425732
+      }
+    },
 
-    { "type": "capture_bundle", "label": "docking-arbitration-demo-multiwindow-chained-tearoff-two-tabs-merge" },
-    { "type": "wait_frames", "n": 2 }
+    { "type": "capture_bundle", "label": "docking-arbitration-demo-multiwindow-chained-tearoff-two-tabs-merge" }
   ]
 }
