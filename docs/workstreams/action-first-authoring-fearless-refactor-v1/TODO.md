@@ -129,8 +129,10 @@ ID format:
     - `tools/diag-scripts/cookbook/imui-action-basics/cookbook-imui-action-basics-cross-frontend.json`
 - [x] AFA-frontends-031 Ensure imui outputs stable semantics/test IDs for diag scripts.
   - Evidence: `docs/adr/0159-ui-diagnostics-snapshot-and-scripted-interaction-tests.md`
-- [ ] AFA-frontends-032 Align GenUI action bindings with `ActionId` conventions (namespace/versioning).
-  - Evidence: `docs/workstreams/genui-json-render-v1.md`
+- [x] AFA-frontends-032 Align GenUI action bindings with `ActionId` conventions (namespace/versioning).
+  - Evidence:
+    - `docs/workstreams/genui-json-render-v1.md` (ActionId/CommandId naming + executor glue note)
+    - `ecosystem/fret-genui-core/src/executor.rs` (`GenUiActionExecutorV1::with_dispatch_command_actions`)
 - [x] AFA-frontends-033 Add at least one cross-frontend demo:
   - a Rust view triggers an action,
   - an imui panel triggers the same action,
