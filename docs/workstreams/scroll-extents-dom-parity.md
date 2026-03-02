@@ -436,6 +436,10 @@ Implementation status:
   - Tooling: `fretboard diag query scroll-extents-observation <base_out_dir|session_out_dir|bundle_dir|bundle.schema2.json> --json`
     - The JSON output includes a best-effort `test_id` field (nearest ancestor semantics decoration),
       to make “budget hit” reports easier to triage in UI Gallery pages.
+    - Filter modes:
+      - Default: only rows where observation hit its wrapper/deep-scan budget (actionable).
+      - `--deep-scan`: include rows where a bounded deep scan ran (even if it stayed under budget).
+      - `--all`: include all scroll nodes (may be large).
   - Perf note: the bounded deep scan is edge-gated (only allowed when the user is already at the
     current scroll-extent edge and the extent may be stale). This avoids spending scan budget on
     frames where a temporarily stale extent cannot cause “pinned scroll range” regressions.
