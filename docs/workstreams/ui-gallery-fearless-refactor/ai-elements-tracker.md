@@ -15,7 +15,7 @@ Status labels:
 |---|---|---|---|---|---|
 | `agent_demo` | `PAGE_AI_AGENT_DEMO` | `apps/fret-ui-gallery/src/ui/previews/gallery/ai/agent_demo.rs` | — | — | Legacy preview |
 | `artifact_demo` | `PAGE_AI_ARTIFACT_DEMO` | `apps/fret-ui-gallery/src/ui/previews/gallery/ai/artifact_demo.rs` | — | — | Legacy preview |
-| `attachments_demo` | `PAGE_AI_ATTACHMENTS_DEMO` | `apps/fret-ui-gallery/src/ui/previews/gallery/ai/attachments_demo.rs` | — | — | Legacy preview |
+| `attachments_demo` | `PAGE_AI_ATTACHMENTS_DEMO` | (removed) | `apps/fret-ui-gallery/src/ui/snippets/ai/attachments_demo.rs` | `apps/fret-ui-gallery/src/ui/pages/ai_attachments_demo.rs` | Snippet-backed |
 | `audio_player_demo` | `PAGE_AI_AUDIO_PLAYER_DEMO` | `apps/fret-ui-gallery/src/ui/previews/gallery/ai/audio_player_demo.rs` | — | — | Legacy preview |
 | `canvas_world_layer_spike` | `PAGE_AI_CANVAS_WORLD_LAYER_SPIKE` | `apps/fret-ui-gallery/src/ui/previews/gallery/ai/canvas_world_layer_spike.rs` | — | — | Legacy preview |
 | `chain_of_thought_demo` | `PAGE_AI_CHAIN_OF_THOUGHT_DEMO` | `apps/fret-ui-gallery/src/ui/previews/gallery/ai/chain_of_thought_demo.rs` | — | — | Legacy preview |
@@ -54,10 +54,10 @@ Status labels:
 | `stack_trace_large_demo` | `PAGE_AI_STACK_TRACE_LARGE_DEMO` | `apps/fret-ui-gallery/src/ui/previews/gallery/ai/stack_trace_large_demo.rs` | — | — | Legacy preview |
 | `suggestions_demo` | `PAGE_AI_SUGGESTIONS_DEMO` | `apps/fret-ui-gallery/src/ui/previews/gallery/ai/suggestions_demo.rs` | — | — | Legacy preview |
 | `task_demo` | `PAGE_AI_TASK_DEMO` | `apps/fret-ui-gallery/src/ui/previews/gallery/ai/task_demo.rs` | — | — | Legacy preview |
-| `terminal_demo` | `PAGE_AI_TERMINAL_DEMO` | `apps/fret-ui-gallery/src/ui/previews/gallery/ai/terminal_demo.rs` | — | — | Legacy preview |
+| `terminal_demo` | `PAGE_AI_TERMINAL_DEMO` | (removed) | `apps/fret-ui-gallery/src/ui/snippets/ai/terminal_demo.rs` | `apps/fret-ui-gallery/src/ui/pages/ai_terminal_demo.rs` | Snippet-backed |
 | `test_results_demo` | `PAGE_AI_TEST_RESULTS_DEMO` | `apps/fret-ui-gallery/src/ui/previews/gallery/ai/test_results_demo.rs` | — | — | Legacy preview |
 | `test_results_large_demo` | `PAGE_AI_TEST_RESULTS_LARGE_DEMO` | `apps/fret-ui-gallery/src/ui/previews/gallery/ai/test_results_large_demo.rs` | — | — | Legacy preview |
-| `tool_demo` | `PAGE_AI_TOOL_DEMO` | `apps/fret-ui-gallery/src/ui/previews/gallery/ai/tool_demo.rs` | — | — | Legacy preview |
+| `tool_demo` | `PAGE_AI_TOOL_DEMO` | (removed) | `apps/fret-ui-gallery/src/ui/snippets/ai/tool_demo.rs` | `apps/fret-ui-gallery/src/ui/pages/ai_tool_demo.rs` | Snippet-backed |
 | `transcript_torture` | `PAGE_AI_TRANSCRIPT_TORTURE` | `apps/fret-ui-gallery/src/ui/previews/gallery/ai/transcript_torture.rs` | — | — | Legacy preview |
 | `transcription_demo` | `PAGE_AI_TRANSCRIPTION_DEMO` | `apps/fret-ui-gallery/src/ui/previews/gallery/ai/transcription_demo.rs` | — | — | Legacy preview |
 | `voice_selector_demo` | `PAGE_AI_VOICE_SELECTOR_DEMO` | `apps/fret-ui-gallery/src/ui/previews/gallery/ai/voice_selector_demo.rs` | — | — | Legacy preview |
@@ -71,4 +71,3 @@ Status labels:
 | `workflow_node_graph_demo` | `PAGE_AI_WORKFLOW_NODE_GRAPH_DEMO` | `apps/fret-ui-gallery/src/ui/previews/gallery/ai/workflow_node_graph_demo.rs` | — | — | Legacy preview |
 | `workflow_panel_demo` | `PAGE_AI_WORKFLOW_PANEL_DEMO` | `apps/fret-ui-gallery/src/ui/previews/gallery/ai/workflow_panel_demo.rs` | — | — | Legacy preview |
 | `workflow_toolbar_demo` | `PAGE_AI_WORKFLOW_TOOLBAR_DEMO` | `apps/fret-ui-gallery/src/ui/previews/gallery/ai/workflow_toolbar_demo.rs` | — | — | Legacy preview |
-

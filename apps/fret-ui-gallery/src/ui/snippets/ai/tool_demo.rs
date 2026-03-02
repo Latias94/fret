@@ -1,12 +1,12 @@
-use super::super::super::super::*;
+pub const SOURCE: &str = include_str!("tool_demo.rs");
 
-pub(in crate::ui) fn preview_ai_tool_demo(
-    cx: &mut ElementContext<'_, App>,
-    _theme: &Theme,
-) -> Vec<AnyElement> {
-    use fret_ui_kit::declarative::stack;
-    use fret_ui_kit::{LayoutRefinement, Space};
+// region: example
+use fret_ui_ai as ui_ai;
+use fret_ui_kit::declarative::stack;
+use fret_ui_kit::{LayoutRefinement, Space};
+use fret_ui_shadcn::prelude::*;
 
+pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement {
     let tool = ui_ai::Tool::new(
         ui_ai::ToolHeader::new("tool-grep", ui_ai::ToolStatus::OutputAvailable)
             .title("grep")
@@ -18,7 +18,7 @@ pub(in crate::ui) fn preview_ai_tool_demo(
     )
     .into_element(cx);
 
-    vec![stack::vstack(
+    stack::vstack(
         cx,
         stack::VStackProps::default()
             .layout(LayoutRefinement::default().w_full().min_w_0())
@@ -30,5 +30,6 @@ pub(in crate::ui) fn preview_ai_tool_demo(
                 tool,
             ]
         },
-    )]
+    )
 }
+// endregion: example

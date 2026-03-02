@@ -1,22 +1,21 @@
-use super::super::super::super::*;
+pub const SOURCE: &str = include_str!("terminal_demo.rs");
 
-pub(in crate::ui) fn preview_ai_terminal_demo(
-    cx: &mut ElementContext<'_, App>,
-    _theme: &Theme,
-) -> Vec<AnyElement> {
-    use std::sync::Arc;
+// region: example
+use fret_runtime::Model;
+use fret_ui::Invalidation;
+use fret_ui::element::{ContainerProps, LayoutStyle, Length, SemanticsProps, SizeStyle};
+use fret_ui_ai as ui_ai;
+use fret_ui_kit::declarative::stack;
+use fret_ui_kit::{LayoutRefinement, Space};
+use fret_ui_shadcn::prelude::*;
+use std::sync::Arc;
 
-    use fret_runtime::Model;
-    use fret_ui::Invalidation;
-    use fret_ui::element::SemanticsProps;
-    use fret_ui_kit::declarative::stack;
-    use fret_ui_kit::{LayoutRefinement, Space};
+#[derive(Default)]
+struct DemoModels {
+    output: Option<Model<String>>,
+}
 
-    #[derive(Default)]
-    struct DemoModels {
-        output: Option<Model<String>>,
-    }
-
+pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement {
     let output = cx.with_state(DemoModels::default, |st| st.output.clone());
     let output = match output {
         Some(model) => model,
@@ -42,11 +41,11 @@ pub(in crate::ui) fn preview_ai_terminal_demo(
             },
             |cx| {
                 vec![cx.container(
-                    fret_ui::element::ContainerProps {
-                        layout: fret_ui::element::LayoutStyle {
-                            size: fret_ui::element::SizeStyle {
-                                width: fret_ui::element::Length::Px(Px(0.0)),
-                                height: fret_ui::element::Length::Px(Px(0.0)),
+                    ContainerProps {
+                        layout: LayoutStyle {
+                            size: SizeStyle {
+                                width: Length::Px(Px(0.0)),
+                                height: Length::Px(Px(0.0)),
                                 ..Default::default()
                             },
                             ..Default::default()
@@ -74,7 +73,7 @@ pub(in crate::ui) fn preview_ai_terminal_demo(
         .refine_layout(LayoutRefinement::default().w_full().min_w_0())
         .into_element(cx);
 
-    vec![stack::vstack(
+    stack::vstack(
         cx,
         stack::VStackProps::default()
             .layout(LayoutRefinement::default().w_full().min_w_0())
@@ -90,5 +89,6 @@ pub(in crate::ui) fn preview_ai_terminal_demo(
             }
             out
         },
-    )]
+    )
 }
+// endregion: example
