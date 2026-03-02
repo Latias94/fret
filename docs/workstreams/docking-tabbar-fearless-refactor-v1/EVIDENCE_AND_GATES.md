@@ -34,4 +34,8 @@ Run as suite:
 
 ## Evidence bundles (fill in after running locally)
 
-- Docking arbitration suite bundle: TODO (record `target/.../bundle.json` path here)
+- 2026-03-02 docking-arbitration suite out dir:
+  - `target/fret-diag-ws-docking-tabbar-2026-03-02/sessions/1772427715938-32660`
+  - Suite summary: `target/fret-diag-ws-docking-tabbar-2026-03-02/sessions/1772427715938-32660/suite.summary.json`
+  - Latest (failure) bundle: `target/fret-diag-ws-docking-tabbar-2026-03-02/sessions/1772427715938-32660/1772427929945-script-step-0044-wait_until-timeout/bundle.schema2.json`
+  - Failure: `docking-arbitration-demo-multiwindow-chained-tearoff-two-tabs-merge` timed out waiting for `dock_drag_active_is == true` (step_index=44).
