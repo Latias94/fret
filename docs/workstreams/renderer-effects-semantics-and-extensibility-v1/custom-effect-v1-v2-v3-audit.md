@@ -183,6 +183,7 @@ Anchor:
 
 - `crates/fret-render-wgpu/src/renderer/services.rs` (`unregister_custom_effect`)
 - `crates/fret-render-wgpu/src/renderer/gpu_pipelines.rs` (per-ABI pipeline maps)
+- Locked by unit test: `crates/fret-render-wgpu/src/renderer/services.rs` (`unregister_custom_effect_evicts_custom_effect_pipelines`)
 
 ### H4 — Authoring pitfalls remain easy to hit
 
@@ -275,7 +276,7 @@ Rollback:
 
 - Revert the refactor (no contract changes).
 
-### PR3 — Fix: unregister evicts V3 pipeline cache + add a unit test
+### PR3 — Fix: unregister evicts custom-effect pipeline caches + add a unit test
 
 Status:
 
@@ -287,9 +288,9 @@ Goal:
 
 Changes:
 
-- Evict `custom_effect_v3_pipelines` in `unregister_custom_effect`.
-- Add a focused unit test under `crates/fret-render-wgpu/src/renderer/services.rs` (or a small new test module) that:
-  - registers an effect, forces pipeline creation, unregisters, and asserts the map entry is gone.
+- Evict `custom_effect_pipelines` (v1), `custom_effect_v2_pipelines`, and `custom_effect_v3_pipelines` in `unregister_custom_effect`.
+- Add a focused unit test under `crates/fret-render-wgpu/src/renderer/services.rs` that:
+  - registers v1/v2/v3 effects, forces pipeline creation, unregisters, and asserts each map entry is evicted.
 
 Gates:
 
