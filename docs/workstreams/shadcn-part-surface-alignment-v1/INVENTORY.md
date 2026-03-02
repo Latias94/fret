@@ -17,9 +17,8 @@ without having to grep the whole crate.
 
 ## Recommended next audit order (dev sequence)
 
-1. `button-group` (composites; spacing defaults + variants helper parity)
-2. `button` / `toggle` (variants helpers parity; ensure copy/paste authoring stays stable)
-3. **Defer last**: `select` / `combobox` deeper redesign (structural drift is known and deeper than “just names”)
+1. `button` / `toggle` (variants helpers parity; ensure copy/paste authoring stays stable)
+2. **Defer last**: `select` / `combobox` deeper redesign (structural drift is known and deeper than “just names”)
 
 ## Inventory table (upstream radix base → Fret module)
 
@@ -33,7 +32,7 @@ without having to grep the whole crate.
 | `badge` | `repo-ref/ui/apps/v4/registry/bases/radix/ui/badge.tsx` | `ecosystem/fret-ui-shadcn/src/badge.rs` | parts | No | Yes | Variant fg + shrink-0 + overflow clip are gated by unit tests. |
 | `breadcrumb` | `repo-ref/ui/apps/v4/registry/bases/radix/ui/breadcrumb.tsx` | `ecosystem/fret-ui-shadcn/src/breadcrumb.rs` | recipe (+ primitive aliases) | No | Yes | Root name conflict (`Breadcrumb` recipe vs upstream root part). |
 | `button` | `repo-ref/ui/apps/v4/registry/bases/radix/ui/button.tsx` | `ecosystem/fret-ui-shadcn/src/button.rs` | parts | No | No | Has `buttonVariants(...)` mapping; not tracked as a component row (yet). |
-| `button-group` | `repo-ref/ui/apps/v4/registry/bases/radix/ui/button-group.tsx` | `ecosystem/fret-ui-shadcn/src/button_group.rs` | parts | No | No | Has `buttonGroupVariants(...)` mapping; not audited yet. |
+| `button-group` | `repo-ref/ui/apps/v4/registry/bases/radix/ui/button-group.tsx` | `ecosystem/fret-ui-shadcn/src/button_group.rs` | parts | No | Yes | Unit tests lock merged borders/corners and separator margin defaults. |
 | `calendar` | `repo-ref/ui/apps/v4/registry/bases/radix/ui/calendar.tsx` | `ecosystem/fret-ui-shadcn/src/calendar.rs` | parts | No | No | Calendar variants live in multiple modules (`calendar_*`). |
 | `card` | `repo-ref/ui/apps/v4/registry/bases/radix/ui/card.tsx` | `ecosystem/fret-ui-shadcn/src/card.rs` | parts | No | Yes | Includes `CardSize` support. |
 | `carousel` | `repo-ref/ui/apps/v4/registry/bases/radix/ui/carousel.tsx` | `ecosystem/fret-ui-shadcn/src/carousel.rs` | parts + adapter | Yes | Yes | `into_element_parts` exists; audit/gates live in carousel workstreams. |
