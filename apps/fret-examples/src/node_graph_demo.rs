@@ -51,16 +51,16 @@ use fret_node::ui::presenter::{
 };
 use fret_node::ui::style::{NodeGraphBackgroundPattern, NodeGraphStyle};
 use fret_node::ui::{
-    MeasuredGeometryStore, MeasuredNodeGraphPresenter, NodeGraphA11yFocusedEdge,
-    NodeGraphA11yFocusedNode, NodeGraphA11yFocusedPort, NodeGraphBlackboardOverlay,
-    NodeGraphCanvas, NodeGraphControlsOverlay, NodeGraphDiagAnchor, NodeGraphDiagConnectingFlag,
-    NodeGraphEdgeToolbar, NodeGraphEdgeTypes, NodeGraphEditQueue, NodeGraphEditor,
-    NodeGraphInternalsStore, NodeGraphMiniMapOverlay, NodeGraphNodeToolbar, NodeGraphNodeTypes,
-    NodeGraphOverlayHost, NodeGraphOverlayState, NodeGraphPanel, NodeGraphPanelPosition,
-    NodeGraphPortalHost, NodeGraphPortalNodeLayout, NodeGraphPresetFamily, NodeGraphPresetSkinV1,
-    NodeGraphToolbarAlign, NodeGraphToolbarPosition, PortalNumberEditHandler, PortalNumberEditSpec,
-    PortalNumberEditSubmit, PortalNumberEditor, RegistryNodeGraphPresenter,
-    register_node_graph_commands,
+    EdgePaintOverrideV1, MeasuredGeometryStore, MeasuredNodeGraphPresenter,
+    NodeGraphA11yFocusedEdge, NodeGraphA11yFocusedNode, NodeGraphA11yFocusedPort,
+    NodeGraphBlackboardOverlay, NodeGraphCanvas, NodeGraphControlsOverlay, NodeGraphDiagAnchor,
+    NodeGraphDiagConnectingFlag, NodeGraphEdgeToolbar, NodeGraphEdgeTypes, NodeGraphEditQueue,
+    NodeGraphEditor, NodeGraphInternalsStore, NodeGraphMiniMapOverlay, NodeGraphNodeToolbar,
+    NodeGraphNodeTypes, NodeGraphOverlayHost, NodeGraphOverlayState, NodeGraphPaintOverridesMap,
+    NodeGraphPanel, NodeGraphPanelPosition, NodeGraphPortalHost, NodeGraphPortalNodeLayout,
+    NodeGraphPresetFamily, NodeGraphPresetSkinV1, NodeGraphToolbarAlign, NodeGraphToolbarPosition,
+    PortalNumberEditHandler, PortalNumberEditSpec, PortalNumberEditSubmit, PortalNumberEditor,
+    RegistryNodeGraphPresenter, register_node_graph_commands,
 };
 
 #[derive(Clone)]
@@ -101,6 +101,7 @@ const CMD_TOGGLE_MINIMAP_PLACEMENT: &str = "node_graph_demo.toggle_minimap_place
 const WEIRD_KIND: &str = "demo.weird_layout";
 const ENV_PRESET_JSON_PATH: &str = "FRET_NODE_GRAPH_DEMO_PRESET_JSON_PATH";
 const ENV_PRESET_FAMILY: &str = "FRET_NODE_GRAPH_DEMO_PRESET_FAMILY";
+const ENV_WIRE_PAINT_COOKBOOK: &str = "FRET_NODE_GRAPH_DEMO_WIRE_PAINT_COOKBOOK";
 
 #[derive(Debug)]
 struct NodeGraphDemoStyleState {
@@ -131,6 +132,80 @@ impl NodeGraphDemoStyleState {
             1 => NodeGraphBackgroundPattern::Dots,
             2 => NodeGraphBackgroundPattern::Cross,
             _ => NodeGraphBackgroundPattern::Lines,
+        }
+    }
+}
+
+#[derive(Debug)]
+struct NodeGraphDemoWirePaintCookbookState {
+    enabled: bool,
+    applied: AtomicBool,
+    overrides: Arc<NodeGraphPaintOverridesMap>,
+}
+
+impl NodeGraphDemoWirePaintCookbookState {
+    fn new_from_env() -> Self {
+        let enabled = std::env::var(ENV_WIRE_PAINT_COOKBOOK)
+            .ok()
+            .is_some_and(|v| !v.trim().is_empty() && v.trim() != "0");
+        Self {
+            enabled,
+            applied: AtomicBool::new(false),
+            overrides: Arc::new(NodeGraphPaintOverridesMap::default()),
+        }
+    }
+
+    fn ensure_applied_once(&self, app: &mut App, graph: &fret_runtime::Model<Graph>) {
+        if !self.enabled {
+            return;
+        }
+        if self.applied.swap(true, Ordering::Relaxed) {
+            return;
+        }
+
+        if let Some(skin) = app.global::<Arc<NodeGraphPresetSkinV1>>().cloned()
+            && !skin.edge_markers_enabled()
+        {
+            let _ = skin.toggle_edge_markers();
+        }
+
+        let edges: Vec<(EdgeId, EdgeKind)> = graph
+            .read_ref(app, |g| {
+                g.edges.iter().map(|(id, e)| (*id, e.kind)).collect()
+            })
+            .unwrap_or_default();
+
+        self.overrides.clear();
+
+        let mut data_i: usize = 0;
+        for (edge_id, kind) in edges {
+            let mut ov = EdgePaintOverrideV1::default();
+            match kind {
+                EdgeKind::Data => {
+                    if data_i == 0 {
+                        // Recipe (v1): solid emphasis.
+                        ov.stroke_paint = Some(Color::from_srgb_hex_rgb(0x22_d3_ee).into());
+                        ov.stroke_width_mul = Some(1.4);
+                    } else {
+                        // Recipe: solid + dash (preview / invalid / emphasis vocabulary).
+                        ov.stroke_paint = Some(Color::from_srgb_hex_rgb(0xff_bf_24).into());
+                        ov.dash = Some(fret_core::scene::DashPatternV1::new(
+                            Px(8.0),
+                            Px(4.0),
+                            Px(0.0),
+                        ));
+                        ov.stroke_width_mul = Some(1.2);
+                    }
+                    data_i = data_i.saturating_add(1);
+                }
+                EdgeKind::Exec => {
+                    // Recipe (v1): solid exec wire.
+                    ov.stroke_paint = Some(Color::from_srgb_hex_rgb(0xf9_71_71).into());
+                    ov.stroke_width_mul = Some(1.6);
+                }
+            }
+
+            self.overrides.set_edge_override(edge_id, Some(ov));
         }
     }
 }
@@ -1601,6 +1676,15 @@ impl NodeGraphDemoDriver {
             .with_internals_store(internals)
             .with_measured_output_store(measured.derived.clone())
             .with_close_command(CommandId::new("node_graph_demo.close"));
+        if let Some(cookbook) = app
+            .global::<Arc<NodeGraphDemoWirePaintCookbookState>>()
+            .cloned()
+        {
+            cookbook.ensure_applied_once(app, &graph);
+            if cookbook.enabled {
+                canvas = canvas.with_paint_overrides(cookbook.overrides.clone());
+            }
+        }
         if !diag_anchor_ports.is_empty() {
             canvas = canvas.with_diagnostics_anchor_ports(4, diag_anchor_ports.clone());
         }
@@ -2520,6 +2604,7 @@ pub fn run() -> anyhow::Result<()> {
     app.set_global(Arc::new(DemoWeirdLayoutMeasuredState::new()));
     app.set_global(Arc::new(NodeGraphDemoStyleState::new()));
     app.set_global(Arc::new(NodeGraphDemoOverlayToggles::new()));
+    app.set_global(Arc::new(NodeGraphDemoWirePaintCookbookState::new_from_env()));
 
     let initial_family = std::env::var(ENV_PRESET_FAMILY)
         .ok()
