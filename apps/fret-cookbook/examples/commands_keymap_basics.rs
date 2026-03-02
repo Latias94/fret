@@ -11,7 +11,9 @@ use fret_ui::{
     action::{OnCommand, OnCommandAvailability, UiActionHost},
 };
 
-const CMD_TOGGLE_PANEL: &str = "cookbook.commands.toggle_panel";
+mod act {
+    fret::actions!([TogglePanel = "cookbook.commands.toggle_panel.v1"]);
+}
 
 const TEST_ID_ROOT: &str = "cookbook.commands_keymap_basics.root";
 const TEST_ID_ALLOW: &str = "cookbook.commands_keymap_basics.allow";
@@ -23,9 +25,9 @@ const TEST_ID_PANEL_OPEN: &str = "cookbook.commands_keymap_basics.panel_open";
 const TEST_ID_PANEL: &str = "cookbook.commands_keymap_basics.panel";
 
 fn install_commands(app: &mut App) {
-    let cmd = CommandId::from(CMD_TOGGLE_PANEL);
+    let cmd: CommandId = act::TogglePanel.into();
     let meta = CommandMeta::new("Toggle panel")
-        .with_description("Toggles a panel via a registered command + default keybinding.")
+        .with_description("Toggles a panel via a registered action ID + default keybinding.")
         .with_category("Cookbook")
         .with_scope(CommandScope::Widget)
         .with_default_keybindings([
@@ -70,11 +72,13 @@ fn command_handlers(
     panel_open: Model<bool>,
     allow_command: Model<bool>,
 ) -> (OnCommand, OnCommandAvailability) {
+    let cmd_for_command: CommandId = act::TogglePanel.into();
+    let cmd_for_availability = cmd_for_command.clone();
     let allow_for_command = allow_command.clone();
     let allow_for_availability = allow_command;
 
     let on_command: OnCommand = Arc::new(move |host, acx, command| {
-        if command.as_str() != CMD_TOGGLE_PANEL {
+        if command != cmd_for_command {
             return false;
         }
 
@@ -91,7 +95,7 @@ fn command_handlers(
     });
 
     let on_command_availability: OnCommandAvailability = Arc::new(move |host, _acx, command| {
-        if command.as_str() != CMD_TOGGLE_PANEL {
+        if command != cmd_for_availability {
             return CommandAvailability::NotHandled;
         }
 
@@ -139,14 +143,14 @@ impl MvuProgram for CommandsKeymapBasicsProgram {
         let base_root = cx.root_id();
 
         let theme = Theme::global(&*cx.app).snapshot();
-        let cmd = CommandId::from(CMD_TOGGLE_PANEL);
+        let cmd: CommandId = act::TogglePanel.into();
 
         let panel_open = state
             .panel_open
             .read(&mut *cx.app, |_host, v| *v)
             .unwrap_or(false);
 
-        let enabled = cx.command_is_enabled(&cmd);
+        let enabled = cx.action_is_enabled(&cmd);
         let enabled_label = if enabled { "Enabled" } else { "Disabled" };
 
         let shortcut = cx
@@ -212,7 +216,7 @@ impl MvuProgram for CommandsKeymapBasicsProgram {
 
         let dispatch_button = shadcn::Button::new("Dispatch command")
             .variant(shadcn::ButtonVariant::Outline)
-            .on_click(cmd.clone())
+            .action(act::TogglePanel)
             .into_element(cx)
             .a11y_role(SemanticsRole::Button)
             .test_id(TEST_ID_DISPATCH);

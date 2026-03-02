@@ -121,8 +121,11 @@ ID format:
 
 ## E. Adoption (Cookbook + Gallery + Editor-grade shells)
 
-- [ ] AFA-adopt-040 Migrate 2–3 cookbook demos to the new View + actions path.
+- [~] AFA-adopt-040 Migrate 2–3 cookbook demos to the new View + actions path.
   - Suggested: `apps/fret-cookbook/examples/hello.rs`, `overlay_basics.rs`, `commands_keymap_basics.rs`.
+  - Status (as of 2026-03-02):
+    - Action-first bindings landed for `commands_keymap_basics` (still MVU; view runtime pending):
+      `apps/fret-cookbook/examples/commands_keymap_basics.rs`
 - [ ] AFA-adopt-041 Add at least one ui-gallery page/snippet using actions + view runtime.
 - [ ] AFA-adopt-042 Add one editor-grade harness adoption:
   - docking/workspace shell uses actions for tab/command semantics (where appropriate).
@@ -133,10 +136,13 @@ ID format:
 
 ## F. Evidence + Regression Gates
 
-- [ ] AFA-gates-050 Add at least one scripted diag repro that exercises:
+- [~] AFA-gates-050 Add at least one scripted diag repro that exercises:
   - a keybinding → action dispatch,
   - a button click → action dispatch,
   - action availability gating (disabled state) under a modal barrier.
+  - Status (as of 2026-03-02):
+    - Implemented (non-modal gating): `tools/diag-scripts/cookbook/commands-keymap-basics/cookbook-commands-keymap-basics-shortcut-and-gating.json`
+    - Pending: modal barrier availability coverage (e.g. under an overlay barrier root)
 - [ ] AFA-gates-051 Add compile-only wasm smoke gates for the new view runtime surface.
 - [ ] AFA-gates-052 Add a small set of unit tests for action routing / handler table behavior.
 - [ ] AFA-gates-053 Add a “risk matrix” review pass for M0/M1 (see `RISK_MATRIX.md`).
