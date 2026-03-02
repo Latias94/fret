@@ -9,6 +9,11 @@ Legend:
 
 ## TODO (phased)
 
+## Status
+
+As of 2026-03-02, UI Gallery pages are **snippet-backed** (Preview ≡ Code) and the core enforcement
+tests are in place.
+
 ### Foundations
 
 - [x] Add `apps/fret-ui-gallery/src/ui/snippets/` with a minimal example.
@@ -21,8 +26,8 @@ Legend:
 - [x] Migrate Select page(s) to snippet-backed sections.
 - [x] Migrate Input Group page(s) to snippet-backed sections.
 - [x] Migrate overlay family pages (Alert Dialog, Dropdown Menu, Menubar, Context Menu, Popover, Tooltip, Dialog, Sheet, Drawer).
-- [ ] Migrate form family pages (Input, Input Group, Textarea, Checkbox, Radio Group, Switch, Slider, Toggle, Toggle Group, Select, Combobox).
-- [ ] Migrate layout + data-display pages (Tabs, Table, Data Table, Chart, Calendar, Carousel, Scroll Area, Navigation Menu, Pagination, etc).
+- [x] Migrate form family pages (Input, Input Group, Textarea, Checkbox, Radio Group, Switch, Slider, Toggle, Toggle Group, Select, Combobox).
+- [x] Migrate layout + data-display pages (Tabs, Table, Data Table, Chart, Calendar, Carousel, Scroll Area, Navigation Menu, Pagination, etc).
 
 ### Enforcement
 
@@ -31,6 +36,12 @@ Legend:
 - [x] Forbid snippet files from importing UI Gallery internals (`crate::ui`, `crate::spec`) (`apps/fret-ui-gallery/tests/ui_snippets_deny_gallery_internal_imports.rs`).
 - [x] Require every snippet file to export a `SOURCE` const (`apps/fret-ui-gallery/tests/ui_snippets_require_source_const.rs`).
 - [x] Add a small “drift audit” doc section in UI Gallery (optional) to list remaining legacy sections (`apps/fret-ui-gallery/build.rs`, `apps/fret-ui-gallery/src/ui/previews/pages/harness/intro.rs`).
+
+### Next (post-migration)
+
+- [ ] Expand drift audit coverage to include any non-`src/ui/pages/**` preview surfaces (if present).
+- [ ] Normalize DocSection chrome/layout (max widths, padding, “Notes” shell usage) across pages.
+- [ ] Optional: align page taxonomy + section ordering to upstream shadcn MDX navigation.
 
 Notes:
 
