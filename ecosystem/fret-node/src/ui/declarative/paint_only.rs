@@ -37,6 +37,9 @@ struct PortalBoundsStore {
     nodes_canvas_bounds: std::collections::BTreeMap<crate::core::NodeId, Rect>,
     /// Counter for diagnostics gates (fit-to-portals triggered).
     fit_to_portals_count: u64,
+    /// Diagnostics-only: when true, a Ctrl+9 fit-to-portals request is armed and will be applied
+    /// once portal bounds arrive via `LayoutQueryRegion` (frame-lagged by contract).
+    pending_fit_to_portals: bool,
 }
 
 #[derive(Debug, Default, Clone, Copy)]
@@ -1361,6 +1364,29 @@ pub fn node_graph_surface_paint_only<H: UiHost + 'static>(
         .models()
         .read(&portal_bounds_store, |st| st.fit_to_portals_count)
         .unwrap_or(0);
+    let portal_fit_pending = cx
+        .app
+        .models()
+        .read(&portal_bounds_store, |st| st.pending_fit_to_portals)
+        .unwrap_or(false);
+    let portal_union = cx
+        .app
+        .models()
+        .read(&portal_bounds_store, |st| {
+            let mut out: Option<Rect> = None;
+            for rect in st.nodes_canvas_bounds.values().copied() {
+                out = Some(match out {
+                    Some(prev) => rect_union(prev, rect),
+                    None => rect,
+                });
+            }
+            out
+        })
+        .ok()
+        .flatten();
+    let (portal_union_w, portal_union_h) = portal_union
+        .map(|r| (r.size.width.0, r.size.height.0))
+        .unwrap_or((0.0, 0.0));
     let portal_bounds_entries = cx
         .app
         .models()
@@ -1371,7 +1397,7 @@ pub fn node_graph_surface_paint_only<H: UiHost + 'static>(
         .unwrap_or_default()
         .disable_portals;
     let semantics_value: Arc<str> = Arc::from(format!(
-        "panning {panning}; marquee_active:{marquee_active}; node_drag_armed:{node_drag_armed}; node_dragging:{node_dragging}; hovered_node:{hovered}; selected_nodes:{selected_nodes_len}; grid_cached:{grid_cached}; grid_rebuilds:{}; geom_cached:{geom_cached}; geom_rebuilds:{}; nodes_cached:{nodes_cached}; nodes_rebuilds:{}; edges_cached:{edges_cached}; edges_rebuilds:{}; view_pan:{:.2},{:.2}; view_zoom:{:.4}; portal_fit_count:{portal_fit_count}; portal_bounds_entries:{portal_bounds_entries}; portals_disabled:{portals_disabled};",
+        "panning {panning}; marquee_active:{marquee_active}; node_drag_armed:{node_drag_armed}; node_dragging:{node_dragging}; hovered_node:{hovered}; selected_nodes:{selected_nodes_len}; grid_cached:{grid_cached}; grid_rebuilds:{}; geom_cached:{geom_cached}; geom_rebuilds:{}; nodes_cached:{nodes_cached}; nodes_rebuilds:{}; edges_cached:{edges_cached}; edges_rebuilds:{}; view_pan:{:.2},{:.2}; view_zoom:{:.4}; portal_fit_count:{portal_fit_count}; portal_fit_pending:{portal_fit_pending}; portal_union_wh:{portal_union_w:.2}x{portal_union_h:.2}; portal_bounds_entries:{portal_bounds_entries}; portals_disabled:{portals_disabled};",
         grid_cache_value.rebuilds,
         derived_cache_value.rebuilds,
         nodes_cache_value.rebuilds,
@@ -1407,8 +1433,7 @@ pub fn node_graph_surface_paint_only<H: UiHost + 'static>(
             let node_drag_escape = node_drag.clone();
             let graph_debug = graph.clone();
             let view_zoom_kb = view_state.clone();
-            let view_fit_to_portals = view_state.clone();
-            let grid_cache_for_fit = grid_cache.clone();
+            let view_escape = view_state.clone();
             let portal_bounds_for_fit = portal_bounds_store.clone();
             let portal_debug_for_keys = portal_debug_flags.clone();
             let diag_keys_enabled = std::env::var("FRET_DIAG")
@@ -1428,11 +1453,12 @@ pub fn node_graph_surface_paint_only<H: UiHost + 'static>(
                             .read(&drag_escape, |st| *st)
                             .ok()
                             .flatten();
-                        let marquee_active = host
+                        let marquee = host
                             .models_mut()
-                            .read(&marquee_escape, |st| st.is_some())
+                            .read(&marquee_escape, |st| st.clone())
                             .ok()
-                            .unwrap_or(false);
+                            .flatten();
+                        let marquee_active = marquee.is_some();
                         let node_drag_active = host
                             .models_mut()
                             .read(&node_drag_escape, |st| st.is_some())
@@ -1444,6 +1470,13 @@ pub fn node_graph_surface_paint_only<H: UiHost + 'static>(
                         }
 
                         let _ = host.models_mut().update(&drag_escape, |st| *st = None);
+                        if let Some(marquee) = marquee {
+                            let base_selected = marquee.base_selected_nodes.clone();
+                            let _ = host.models_mut().update(&view_escape, |state| {
+                                state.selected_nodes.clear();
+                                state.selected_nodes.extend(base_selected.iter().copied());
+                            });
+                        }
                         let _ = host.models_mut().update(&marquee_escape, |st| *st = None);
                         let _ = host.models_mut().update(&node_drag_escape, |st| {
                             if let Some(st) = st.as_mut() {
@@ -1577,49 +1610,12 @@ pub fn node_graph_surface_paint_only<H: UiHost + 'static>(
                     }
 
                     if diag_keys_enabled && key.key == fret_core::KeyCode::Digit9 {
-                        let bounds = host
-                            .models_mut()
-                            .read(&grid_cache_for_fit, |st| st.bounds)
-                            .ok()
-                            .unwrap_or_default();
-
-                        let target = host
-                            .models_mut()
-                            .read(&portal_bounds_for_fit, |st| {
-                                let mut out: Option<Rect> = None;
-                                for rect in st.nodes_canvas_bounds.values().copied() {
-                                    out = Some(match out {
-                                        Some(prev) => rect_union(prev, rect),
-                                        None => rect,
-                                    });
-                                }
-                                out
-                            })
-                            .ok()
-                            .flatten();
-
-                        let Some(target) = target else {
-                            return false;
-                        };
-
-                        let applied = host
-                            .models_mut()
-                            .update(&view_fit_to_portals, |state| {
-                                apply_fit_view_to_canvas_rect(
-                                    state, bounds, target, 24.0, min_zoom, max_zoom,
-                                )
-                            })
-                            .ok()
-                            .unwrap_or(false);
-
-                        if !applied {
-                            return false;
-                        }
-
+                        // Portal bounds are frame-lagged by contract and canvas bounds are only
+                        // learned after layout. Arm a pending fit request and let the paint pass
+                        // apply it deterministically once the prerequisites are available.
                         let _ = host.models_mut().update(&portal_bounds_for_fit, |st| {
-                            st.fit_to_portals_count = st.fit_to_portals_count.saturating_add(1);
+                            st.pending_fit_to_portals = true;
                         });
-
                         host.request_redraw(action_cx.window);
                         return true;
                     }
@@ -1631,6 +1627,7 @@ pub fn node_graph_surface_paint_only<H: UiHost + 'static>(
                         // Ensure consumers don't keep using stale portal bounds.
                         let _ = host.models_mut().update(&portal_bounds_for_fit, |st| {
                             st.nodes_canvas_bounds.clear();
+                            st.pending_fit_to_portals = false;
                         });
                         host.request_redraw(action_cx.window);
                         return true;
@@ -2222,12 +2219,25 @@ pub fn node_graph_surface_paint_only<H: UiHost + 'static>(
             let drag_cancel = drag.clone();
             let marquee_cancel = marquee_drag.clone();
             let node_drag_cancel = node_drag.clone();
+            let view_cancel = view_state.clone();
             let on_pointer_cancel: OnPointerCancel = Arc::new(
                 move |host: &mut dyn fret_ui::action::UiPointerActionHost,
                       action_cx: fret_ui::action::ActionCx,
                       _cancel: fret_ui::action::PointerCancelCx| {
+                    let marquee = host
+                        .models_mut()
+                        .read(&marquee_cancel, |st| st.clone())
+                        .ok()
+                        .flatten();
                     host.release_pointer_capture();
                     let _ = host.models_mut().update(&drag_cancel, |st| *st = None);
+                    if let Some(marquee) = marquee {
+                        let base_selected = marquee.base_selected_nodes.clone();
+                        let _ = host.models_mut().update(&view_cancel, |state| {
+                            state.selected_nodes.clear();
+                            state.selected_nodes.extend(base_selected.iter().copied());
+                        });
+                    }
                     let _ = host.models_mut().update(&marquee_cancel, |st| *st = None);
                     let _ = host.models_mut().update(&node_drag_cancel, |st| *st = None);
                     host.request_redraw(action_cx.window);
@@ -2523,10 +2533,18 @@ pub fn node_graph_surface_paint_only<H: UiHost + 'static>(
                                     move |cx| {
                                         let bounds = bounds;
                                         let view = view;
-                                        let query = LayoutQueryRegionProps {
+                                        let mut query = LayoutQueryRegionProps {
                                             name: Some("fret-node.portal.node_label.v1".into()),
                                             ..Default::default()
                                         };
+                                        // Make the query region itself the absolutely positioned item.
+                                        // Otherwise, the region's bounds would not include its absolute
+                                        // descendants, and harvested portal bounds would collapse to 0x0.
+                                        query.layout.position = PositionStyle::Absolute;
+                                        query.layout.inset.left = Some(info.left).into();
+                                        query.layout.inset.top = Some(info.top).into();
+                                        query.layout.size.width = Length::Px(info.width);
+                                        query.layout.size.height = Length::Px(info.height);
 
                                         cx.layout_query_region_with_id(query, move |cx, element| {
                                             let visual_bounds = cx
@@ -2566,11 +2584,8 @@ pub fn node_graph_surface_paint_only<H: UiHost + 'static>(
                                             }
 
                                             let mut p = ContainerProps::default();
-                                            p.layout.position = PositionStyle::Absolute;
-                                            p.layout.inset.left = Some(info.left).into();
-                                            p.layout.inset.top = Some(info.top).into();
-                                            p.layout.size.width = Length::Px(info.width);
-                                            p.layout.size.height = Length::Px(info.height);
+                                            p.layout.size.width = Length::Fill;
+                                            p.layout.size.height = Length::Fill;
                                             p.padding =
                                                 SpacingEdges::all(SpacingLength::Px(Px(4.0)));
                                             p.snap_to_device_pixels = true;
@@ -2860,6 +2875,70 @@ pub fn node_graph_surface_paint_only<H: UiHost + 'static>(
                                 }
                             }
                         }
+                    }
+                }
+
+                // Diagnostics-only: if Ctrl+9 was pressed before portal bounds arrived, apply the
+                // fit request once we have harvested at least one portal rect.
+                //
+                // This keeps scripted gates deterministic without requiring arbitrary sleeps.
+                let pending_fit = cx
+                    .app
+                    .models()
+                    .read(&portal_bounds_store, |st| st.pending_fit_to_portals)
+                    .unwrap_or(false);
+                if pending_fit && portals_enabled && !portals_disabled {
+                    let bounds = grid_cache_value.bounds;
+                    let bounds_valid = bounds.size.width.0.is_finite()
+                        && bounds.size.height.0.is_finite()
+                        && bounds.size.width.0 > 0.0
+                        && bounds.size.height.0 > 0.0;
+                    let target = cx
+                        .app
+                        .models()
+                        .read(&portal_bounds_store, |st| {
+                            let mut out: Option<Rect> = None;
+                            for rect in st.nodes_canvas_bounds.values().copied() {
+                                out = Some(match out {
+                                    Some(prev) => rect_union(prev, rect),
+                                    None => rect,
+                                });
+                            }
+                            out
+                        })
+                        .ok()
+                        .flatten();
+
+                    if bounds_valid && let Some(target) = target {
+                        let applied = cx
+                            .app
+                            .models_mut()
+                            .update(&view_state, |state| {
+                                apply_fit_view_to_canvas_rect(
+                                    state, bounds, target, 24.0, min_zoom, max_zoom,
+                                )
+                            })
+                            .ok()
+                            .unwrap_or(false);
+
+                        if applied {
+                            let _ = cx.app.models_mut().update(&portal_bounds_store, |st| {
+                                st.fit_to_portals_count = st.fit_to_portals_count.saturating_add(1);
+                                st.pending_fit_to_portals = false;
+                            });
+                            // Ensure the semantics `value` string updates promptly for script gates.
+                            cx.request_frame();
+                        }
+                    }
+
+                    // Keep polling until bounds are available, but only while the request is armed.
+                    let still_pending = cx
+                        .app
+                        .models()
+                        .read(&portal_bounds_store, |st| st.pending_fit_to_portals)
+                        .unwrap_or(false);
+                    if still_pending {
+                        cx.request_frame();
                     }
                 }
 

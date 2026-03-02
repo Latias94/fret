@@ -158,6 +158,8 @@ This refactor assumes the following runtime contracts remain stable and sufficie
 - input wiring: `PointerRegion` action hooks (`crates/fret-ui/src/action`)
 - correct world mapping: `render_transform` semantics (ADR 0082)
 - cross-frame geometry: `last_*bounds_for_element` / `LayoutQueryRegion` patterns
+  - Note: `LayoutQueryRegion` bounds do not include absolutely positioned descendants; the query
+    region itself should be the positioned box when harvesting overlay item bounds.
 
 ## Red lines (when to propose new runtime contracts)
 
