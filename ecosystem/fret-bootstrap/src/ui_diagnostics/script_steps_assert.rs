@@ -254,11 +254,7 @@ pub(super) fn handle_assert_step(
                     let dock_drag_runtime =
                         dock_drag_runtime_state(app, svc.known_windows.as_slice());
                     let platform_caps = app.global::<fret_runtime::PlatformCapabilities>();
-                    let open_window_count = app
-                        .global::<fret_runtime::WindowInputContextService>()
-                        .map(|ctx_svc| ctx_svc.window_count() as u32)
-                        .unwrap_or(0)
-                        .max(1);
+                    let open_window_count = UiDiagnosticsService::open_window_count_for_predicates(app);
 
                     if predicate_window == window {
                         if let Some(snapshot) = semantics_snapshot {

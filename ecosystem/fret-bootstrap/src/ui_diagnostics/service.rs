@@ -294,6 +294,20 @@ impl UiDiagnosticsService {
         )
     }
 
+    pub(super) fn open_window_count_for_predicates(app: &App) -> u32 {
+        let from_runner = app
+            .global::<fret_runtime::RunnerWindowLifecycleDiagnosticsStore>()
+            .map(|store| store.snapshot().open_window_count);
+        let from_input_ctx = app
+            .global::<fret_runtime::WindowInputContextService>()
+            .map(|ctx_svc| ctx_svc.window_count() as u32);
+
+        from_runner
+            .or(from_input_ctx)
+            .unwrap_or(0)
+            .max(1)
+    }
+
     const CACHED_TEST_ID_PREDICATE_MAX_AGE_MS: u64 = 30_000;
 
     fn eval_predicate_from_cached_test_id_bounds(
