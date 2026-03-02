@@ -148,15 +148,15 @@ impl<'a> RenderSceneExecutor<'a> {
             }
             RenderPlanPass::CustomEffect(pass) => {
                 record_custom_effect_pass(self, ctx, pass);
-                self.renderer.bump_plan_target_write_epoch(pass.dst);
+                self.renderer.bump_plan_target_write_epoch(pass.common.dst);
             }
             RenderPlanPass::CustomEffectV2(pass) => {
                 record_custom_effect_v2_pass(self, ctx, pass);
-                self.renderer.bump_plan_target_write_epoch(pass.dst);
+                self.renderer.bump_plan_target_write_epoch(pass.common.dst);
             }
             RenderPlanPass::CustomEffectV3(pass) => {
                 record_custom_effect_v3_pass(self, ctx, pass);
-                self.renderer.bump_plan_target_write_epoch(pass.dst);
+                self.renderer.bump_plan_target_write_epoch(pass.common.dst);
             }
             RenderPlanPass::CompositePremul(pass) => {
                 record_composite_premul_pass(self, ctx, pass);

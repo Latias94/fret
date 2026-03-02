@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use std::hash::{Hash, Hasher};
 use std::sync::Arc;
 
-use fret_core::scene::Paint;
+use fret_core::scene::{Paint, PaintBindingV1};
 use fret_core::{
     AttributedText, Color, Corners, DrawOrder, EffectChain, EffectMode, EffectQuality, FontId,
     FontWeight, Point, Px, Rect, Scene, SceneOp, SvgFit, TextConstraints, TextMetrics,
@@ -552,7 +552,36 @@ impl<'a> CanvasPainter<'a> {
             origin,
             commands,
             style,
-            color,
+            color.into(),
+            raster_scale_factor,
+            scene,
+        )
+    }
+
+    /// Draw a cached tessellated path with an explicit paint binding.
+    ///
+    /// This is the paint-general form of `path(...)`: geometry caching is keyed by path commands,
+    /// style, and scale. Paint binding changes should not force re-tessellation.
+    #[allow(clippy::too_many_arguments)]
+    pub fn path_paint(
+        &mut self,
+        key: u64,
+        order: DrawOrder,
+        origin: Point,
+        commands: &[PathCommand],
+        style: PathStyle,
+        paint: PaintBindingV1,
+        raster_scale_factor: f32,
+    ) -> PathMetrics {
+        let (services, scene) = self.host.services_and_scene();
+        self.cache.path(
+            services,
+            key,
+            order,
+            origin,
+            commands,
+            style,
+            paint,
             raster_scale_factor,
             scene,
         )
@@ -1095,7 +1124,7 @@ impl CanvasCache {
         origin: Point,
         commands: &[PathCommand],
         style: PathStyle,
-        color: Color,
+        paint: PaintBindingV1,
         raster_scale_factor: f32,
         scene: &mut Scene,
     ) -> PathMetrics {
@@ -1137,7 +1166,7 @@ impl CanvasCache {
             order,
             origin,
             path,
-            paint: color.into(),
+            paint,
         });
         metrics
     }

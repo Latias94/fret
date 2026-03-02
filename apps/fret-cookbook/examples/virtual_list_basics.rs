@@ -470,19 +470,7 @@ impl MvuProgram for VirtualListBasicsProgram {
             .max_w(Px(980.0))
             .into_element(cx);
 
-        ui::container(cx, |cx| {
-            [ui::v_flex(cx, |_cx| [card])
-                .gap(Space::N6)
-                .items_center()
-                .justify_center()
-                .size_full()
-                .into_element(cx)]
-        })
-        .bg(ColorRef::Color(theme.color_token("muted")))
-        .p(Space::N6)
-        .into_element(cx)
-        .test_id(TEST_ID_ROOT)
-        .into()
+        fret_cookbook::scaffold::centered_page_muted(cx, TEST_ID_ROOT, card).into()
     }
 }
 

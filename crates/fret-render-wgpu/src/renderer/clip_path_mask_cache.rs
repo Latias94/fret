@@ -1,4 +1,4 @@
-use super::intermediate_pool::{IntermediatePool, PooledTexture, estimate_texture_bytes};
+use super::intermediate_pool::{IntermediatePool, PooledTexture, estimate_clip_mask_bytes};
 use std::collections::HashMap;
 
 pub(super) struct ClipPathMaskCache {
@@ -84,7 +84,7 @@ impl ClipPathMaskCache {
         frame_index: u64,
     ) {
         let size = (size.0.max(1), size.1.max(1));
-        let bytes = estimate_texture_bytes(size, wgpu::TextureFormat::R8Unorm, 1);
+        let bytes = estimate_clip_mask_bytes(size);
 
         let usage = wgpu::TextureUsages::COPY_SRC | wgpu::TextureUsages::COPY_DST;
 

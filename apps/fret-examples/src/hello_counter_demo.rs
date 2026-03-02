@@ -3,6 +3,7 @@ use std::sync::Arc;
 use fret::prelude::*;
 use fret_core::Corners;
 
+const TEST_ID_ROOT: &str = "hello-counter.root";
 const TEST_ID_COUNT: &str = "hello-counter.count";
 const TEST_ID_STEP_INPUT: &str = "hello-counter.step";
 const TEST_ID_DEC: &str = "hello-counter.dec";
@@ -335,20 +336,21 @@ fn view(
         .refine_style(ChromeRefinement::default().shadow_lg())
         .ui()
         .w_full()
-        .max_w(Px(480.0));
+        .max_w(Px(480.0))
+        .into_element(cx);
 
     ui::container(cx, |cx| {
         [ui::v_flex(cx, |_cx| [card])
-            .w_full()
-            .h_full()
-            .justify_center()
             .items_center()
+            .justify_center()
+            .gap(Space::N6)
+            .size_full()
             .into_element(cx)]
     })
     .bg(ColorRef::Color(theme.color_token("muted")))
     .p(Space::N6)
-    .w_full()
-    .h_full()
+    .size_full()
     .into_element(cx)
+    .test_id(TEST_ID_ROOT)
     .into()
 }

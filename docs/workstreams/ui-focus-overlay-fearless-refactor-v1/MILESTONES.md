@@ -1,33 +1,84 @@
-# Milestones
+# UI Focus + Overlay Focus Containment (Fearless Refactor v1) — Milestones
 
-## M0: Phase A shipped (containment hardening)
+Tracking doc: `docs/workstreams/ui-focus-overlay-fearless-refactor-v1/DESIGN.md`
+TODO board: `docs/workstreams/ui-focus-overlay-fearless-refactor-v1/TODO.md`
 
-Done when:
+## M1 — Focus containment correctness under retained drift (A + B)
 
-- Outside-press containment and branch exclusion do not rely on parent pointers.
-- New regression test covers “stale parent pointers” without needing a full app harness.
-- `cargo nextest run -p fret-ui` is green (targeted filters are acceptable for local iteration).
+Goal:
 
-Status: Done.
+- FocusScope trap correctness holds even if retained `parent` pointers are temporarily stale.
+- Active-layer containment (modal barrier) does not leak focus/capture to underlay.
 
-## M1: Phase B shipped (prevent default suppresses focus clearing)
+Exit gates:
 
-Done when:
+- `crates/fret-ui` tests cover Tab traversal + pointer-focus clamping + stale-parent simulation.
+- No policy leakage into `crates/fret-ui` (mechanism-only).
 
-- `prevent_default()` from dismissible outside-press hooks suppresses default focus clearing.
-- Regression tests exist for:
-  - prevented outside press keeps focus stable
-  - non-prevented outside press clears focus (baseline)
-- No behavior changes are introduced for non-dismissible observer users.
+Status: Implemented in this worktree (2026-03-01)
 
-Status: Done.
+## M2 — Expand conformance matrix (nested overlays + transitions)
 
-## M2: Phase C design locked (dispatch snapshot)
+Goal: cover the most failure-prone editor-grade compositions:
 
-Done when:
+- nested roots (portal-style overlays),
+- stacked traps,
+- close-transition focus restore while barrier remains active.
 
-- A detailed “dispatch snapshot” design exists (data model + build phase + consumers).
-- Migration is decomposed into 3–6 landable PRs with clear acceptance criteria.
-- Evidence plan exists (diag script or debug report) to prove parity with Phase A/B invariants.
+Exit gates:
 
-Status: Draft (design exists; migration breakdown drafted; diagnostics + implementation still TODO).
+- Add at least 3 focused regression tests in `crates/fret-ui` and/or shadcn recipe tests in
+  `ecosystem/fret-ui-shadcn` that exercise the above sequences.
+
+Progress (2026-03-02):
+
+- Close-transition style focus barrier (hit-test-inert layer) is covered by:
+  - `crates/fret-ui/src/tree/tests/focus_barrier_transition.rs`
+- Layer-root (portal-style) focus scope trapping is covered by:
+  - `crates/fret-ui/src/tree/tests/focus_scope_layered.rs`
+
+## M3 — Snapshot-first dispatch (C phase)
+
+Goal: containment during dispatch never depends on retained `parent` pointers.
+
+Exit gates:
+
+- Introduce and thread a single dispatch context across window and chain dispatch.
+- Remove parent-walk containment checks from dispatch paths (snapshot-only).
+
+Status: In progress (2026-03-02)
+
+- A per-dispatch context (`DispatchCx`) is introduced and threaded through window + chain dispatch:
+  - `crates/fret-ui/src/tree/dispatch/ctx.rs`
+  - `crates/fret-ui/src/tree/dispatch/window.rs`
+  - `crates/fret-ui/src/tree/dispatch/chain.rs`
+- Focus-scope trap detection no longer falls back to retained parent pointers when a snapshot is present:
+  - `crates/fret-ui/src/tree/dispatch/focus.rs`
+- Dispatch-time layer membership queries no longer use retained `parent` pointers in:
+  - `crates/fret-ui/src/tree/dispatch/window.rs`
+  - `crates/fret-ui/src/tree/dispatch/chain.rs`
+- Focus traversal availability no longer depends on retained `parent` pointers:
+  - snapshot membership + snapshot parent traversal: `crates/fret-ui/src/tree/ui_tree_outside_press.rs`
+  - regression test: `crates/fret-ui/src/tree/tests/focus_traversal_availability.rs`
+- Dispatch-time event chain construction (pointer mapping + cursor queries) no longer depends on
+  retained `parent` pointers:
+  - `crates/fret-ui/src/tree/dispatch/event_chain.rs`
+  - `crates/fret-ui/src/tree/dispatch/window.rs`
+  - regression test: `crates/fret-ui/src/tree/tests/cursor_icon_query.rs`
+- Key dispatch capture/bubble chains no longer depend on retained `parent` pointers:
+  - `crates/fret-ui/src/tree/dispatch/window.rs`
+  - regression test: `crates/fret-ui/src/tree/tests/dispatch_phase.rs`
+- Hover derivation (Pressable/HoverRegion ancestor queries) no longer depends on retained `parent` pointers:
+  - `crates/fret-ui/src/tree/dispatch/hover.rs`
+  - regression test: `crates/fret-ui/src/declarative/tests/layout/interactivity.rs`
+- Scripted diag repro exists for overlay focus trap + hover/cursor chains:
+  - `tools/diag-scripts/ui-gallery/overlay/ui-gallery-overlay-focus-trap-hover-cursor.json`
+
+- View-cache reuse cannot hide hover transitions:
+  - HoverRegion “hover edge” invalidation disables view-cache reuse for the containing cache roots
+    (rerender-on-hover-edge), so hover-driven overlays and pseudoclass-driven style changes remain
+    correct under cache hits.
+  - Regression test: `crates/fret-ui/src/declarative/tests/layout/interactivity.rs`
+    (`hover_region_marks_view_cache_root_dirty_on_hover_edges`).
+  - Scripted gate: `tools/diag-scripts/ui-gallery/overlay/ui-gallery-hovercard-open.json` (run with
+    `FRET_UI_GALLERY_VIEW_CACHE=1` + `FRET_UI_GALLERY_VIEW_CACHE_SHELL=1`).

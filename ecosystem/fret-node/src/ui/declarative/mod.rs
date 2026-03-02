@@ -12,4 +12,6 @@ pub use paint_only::{NodeGraphSurfacePaintOnlyProps, node_graph_surface_paint_on
 mod compat_retained;
 
 #[cfg(feature = "compat-retained-canvas")]
-pub use compat_retained::{NodeGraphSurfaceCompatRetainedProps, node_graph_surface_compat_retained};
+pub use compat_retained::{
+    NodeGraphSurfaceCompatRetainedProps, node_graph_surface_compat_retained,
+};
