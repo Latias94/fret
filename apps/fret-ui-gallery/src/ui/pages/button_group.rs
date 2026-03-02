@@ -1,9 +1,9 @@
-use super::super::super::super::super::*;
+use super::super::*;
 
-pub(in crate::ui) fn preview_button_group(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
-    use crate::ui::doc_layout::{self, DocSection};
-    use crate::ui::snippets::button_group as snippets;
+use crate::ui::doc_layout::{self, DocSection};
+use crate::ui::snippets::button_group as snippets;
 
+pub(super) fn preview_button_group(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
     let demo = snippets::demo::render(cx);
     let orientation = snippets::orientation::render(cx);
     let size = snippets::size::render(cx);
@@ -36,91 +36,91 @@ pub(in crate::ui) fn preview_button_group(cx: &mut ElementContext<'_, App>) -> V
             DocSection::new("Demo", demo)
                 .test_id_prefix("ui-gallery-button-group-demo")
                 .code_rust_from_file_region(
-                    include_str!("../../../../snippets/button_group/demo.rs"),
+                    include_str!("../snippets/button_group/demo.rs"),
                     "example",
                 ),
             DocSection::new("Orientation", orientation)
                 .test_id_prefix("ui-gallery-button-group-orientation")
                 .code_rust_from_file_region(
-                    include_str!("../../../../snippets/button_group/orientation.rs"),
+                    include_str!("../snippets/button_group/orientation.rs"),
                     "example",
                 ),
             DocSection::new("Size", size)
                 .test_id_prefix("ui-gallery-button-group-size")
                 .code_rust_from_file_region(
-                    include_str!("../../../../snippets/button_group/size.rs"),
+                    include_str!("../snippets/button_group/size.rs"),
                     "example",
                 ),
             DocSection::new("Nested", nested)
                 .test_id_prefix("ui-gallery-button-group-nested")
                 .code_rust_from_file_region(
-                    include_str!("../../../../snippets/button_group/nested.rs"),
+                    include_str!("../snippets/button_group/nested.rs"),
                     "example",
                 ),
             DocSection::new("Separator", separator)
                 .test_id_prefix("ui-gallery-button-group-separator")
                 .code_rust_from_file_region(
-                    include_str!("../../../../snippets/button_group/separator.rs"),
+                    include_str!("../snippets/button_group/separator.rs"),
                     "example",
                 ),
             DocSection::new("Split", split)
                 .test_id_prefix("ui-gallery-button-group-split")
                 .code_rust_from_file_region(
-                    include_str!("../../../../snippets/button_group/split.rs"),
+                    include_str!("../snippets/button_group/split.rs"),
                     "example",
                 ),
             DocSection::new("Text", text)
                 .test_id_prefix("ui-gallery-button-group-text")
                 .code_rust_from_file_region(
-                    include_str!("../../../../snippets/button_group/text.rs"),
+                    include_str!("../snippets/button_group/text.rs"),
                     "example",
                 ),
             DocSection::new("Flex-1 items", flex_1)
                 .max_w(Px(980.0))
                 .test_id_prefix("ui-gallery-button-group-flex1")
                 .code_rust_from_file_region(
-                    include_str!("../../../../snippets/button_group/flex_1_items.rs"),
+                    include_str!("../snippets/button_group/flex_1_items.rs"),
                     "example",
                 ),
             DocSection::new("Input", input)
                 .max_w(Px(760.0))
                 .test_id_prefix("ui-gallery-button-group-input")
                 .code_rust_from_file_region(
-                    include_str!("../../../../snippets/button_group/input.rs"),
+                    include_str!("../snippets/button_group/input.rs"),
                     "example",
                 ),
             DocSection::new("Input Group", input_group)
                 .max_w(Px(820.0))
                 .test_id_prefix("ui-gallery-button-group-input-group")
                 .code_rust_from_file_region(
-                    include_str!("../../../../snippets/button_group/input_group.rs"),
+                    include_str!("../snippets/button_group/input_group.rs"),
                     "example",
                 ),
             DocSection::new("Dropdown Menu", dropdown)
                 .max_w(Px(820.0))
                 .test_id_prefix("ui-gallery-button-group-dropdown")
                 .code_rust_from_file_region(
-                    include_str!("../../../../snippets/button_group/dropdown_menu.rs"),
+                    include_str!("../snippets/button_group/dropdown_menu.rs"),
                     "example",
                 ),
             DocSection::new("Select", select)
                 .max_w(Px(820.0))
                 .test_id_prefix("ui-gallery-button-group-select")
                 .code_rust_from_file_region(
-                    include_str!("../../../../snippets/button_group/button_group_select.rs"),
+                    include_str!("../snippets/button_group/button_group_select.rs"),
                     "example",
                 ),
             DocSection::new("Popover", popover)
                 .max_w(Px(820.0))
                 .test_id_prefix("ui-gallery-button-group-popover")
                 .code_rust_from_file_region(
-                    include_str!("../../../../snippets/button_group/popover.rs"),
+                    include_str!("../snippets/button_group/popover.rs"),
                     "example",
                 ),
             DocSection::new("RTL", rtl)
                 .test_id_prefix("ui-gallery-button-group-rtl")
                 .code_rust_from_file_region(
-                    include_str!("../../../../snippets/button_group/rtl.rs"),
+                    include_str!("../snippets/button_group/rtl.rs"),
                     "example",
                 ),
             DocSection::new("Notes", notes)
@@ -129,5 +129,6 @@ pub(in crate::ui) fn preview_button_group(cx: &mut ElementContext<'_, App>) -> V
         ],
     );
 
-    vec![body]
+    vec![body.test_id("ui-gallery-button-group")]
 }
+

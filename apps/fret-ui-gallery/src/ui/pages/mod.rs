@@ -7,6 +7,7 @@ mod avatar;
 mod badge;
 mod breadcrumb;
 mod button;
+mod button_group;
 mod card;
 mod carousel;
 mod chart;
@@ -59,6 +60,10 @@ pub(super) fn preview_avatar(
 
 pub(super) fn preview_button(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
     button::preview_button(cx)
+}
+
+pub(super) fn preview_button_group(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
+    button_group::preview_button_group(cx)
 }
 
 pub(super) fn preview_alert_dialog(

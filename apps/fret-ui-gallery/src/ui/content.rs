@@ -547,7 +547,7 @@ fn page_preview(
         PAGE_ALERT_DIALOG => preview_alert_dialog(cx, alert_dialog_open),
         PAGE_ASPECT_RATIO => preview_aspect_ratio(cx),
         PAGE_BREADCRUMB => preview_breadcrumb(cx, last_action.clone()),
-        PAGE_BUTTON_GROUP => preview_button_group(cx),
+        PAGE_BUTTON_GROUP => pages::preview_button_group(cx),
         PAGE_CALENDAR => preview_calendar(cx, date_picker_month, date_picker_selected),
         PAGE_CAROUSEL => preview_carousel(cx),
         PAGE_CHART => preview_chart(cx),
