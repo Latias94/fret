@@ -2024,7 +2024,11 @@ mod tests {
 
         let query_out = out_dir.join("out.json");
         cmd_query_scroll_extents_observation(
-            &[bundle.display().to_string(), "--top".to_string(), "10".to_string()],
+            &[
+                bundle.display().to_string(),
+                "--top".to_string(),
+                "10".to_string(),
+            ],
             Path::new("."),
             &out_dir,
             Some(query_out.clone()),

@@ -294,11 +294,13 @@ hint: list suites via `fretboard diag list suites`"
 
     let scripts_from_promoted_registry_suite =
         |suite: &str| -> Result<Option<Vec<PathBuf>>, String> {
-            let registry_path = crate::script_registry::promoted_registry_default_path(&workspace_root);
+            let registry_path =
+                crate::script_registry::promoted_registry_default_path(&workspace_root);
             if !registry_path.is_file() {
                 return Ok(None);
             }
-            let registry = crate::script_registry::PromotedScriptRegistry::load_from_path(&registry_path)?;
+            let registry =
+                crate::script_registry::PromotedScriptRegistry::load_from_path(&registry_path)?;
             let mut scripts: Vec<PathBuf> = registry
                 .resolve_suite(suite)
                 .into_iter()
