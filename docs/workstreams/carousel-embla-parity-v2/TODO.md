@@ -248,7 +248,8 @@ Not implemented / not applicable (expected gaps for native retained UI):
 
 - [ ] CAR2-510 Add targeted `nextest` tests for the engine:
   - integrator stability, velocity decay, settle thresholds
-  - loop wrapping invariants
+  - [x] loop wrapping invariants
+    - Evidence: `ecosystem/fret-ui-headless/src/embla/engine.rs` (`loop_normalization_*` tests)
   - slidesInView thresholds + margins
 - [ ] CAR2-520 Add `fretboard diag` scripts for:
   - [x] inertial swipe (mouse)
