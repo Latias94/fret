@@ -29,7 +29,7 @@ In-tree surfaces (current baseline):
 
 Verification (native, 2026-03-02):
 
-- `cargo run -p fretboard -- diag suite ui-gallery-carousel-embla-engine --env FRET_DEBUG_CAROUSEL_EMBLA_ENGINE=1 --launch -- cargo run -p fret-ui-gallery --release` PASS
+- `cargo run -p fretboard -- diag suite ui-gallery-carousel-embla-engine --launch -- cargo run -p fret-ui-gallery --release` PASS
 
 Non-goals (v2):
 
