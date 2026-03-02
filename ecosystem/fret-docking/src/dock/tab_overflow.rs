@@ -3,6 +3,7 @@
 // It is intentionally `pub(super)` only; the public API lives in `dock/mod.rs`.
 
 use super::prelude_core::*;
+use super::tab_bar_kernel as kernel;
 use fret_ui::ThemeSnapshot;
 use fret_ui_headless::tab_strip_overflow::compute_overflowed_tab_indices;
 
@@ -15,11 +16,7 @@ pub(super) struct TabOverflowMenuState {
 }
 
 pub(super) fn tab_overflow_button_rect(theme: ThemeSnapshot, tab_bar: Rect) -> Rect {
-    let pad = theme.metric_token("metric.padding.sm").0.max(0.0);
-    let size = (tab_bar.size.height.0 * 0.80).clamp(18.0, 24.0);
-    let x = tab_bar.origin.x.0 + tab_bar.size.width.0 - pad - size;
-    let y = tab_bar.origin.y.0 + (tab_bar.size.height.0 - size) * 0.5;
-    Rect::new(Point::new(Px(x), Px(y)), Size::new(Px(size), Px(size)))
+    kernel::tab_overflow_button_rect(theme, tab_bar)
 }
 
 pub(super) fn tab_overflow_menu_rect(
@@ -40,11 +37,7 @@ pub(super) fn tab_overflow_menu_rect(
 ///
 /// This should only be used when the tab bar actually overflows.
 pub(super) fn tab_strip_rect_with_overflow_button(theme: ThemeSnapshot, tab_bar: Rect) -> Rect {
-    let pad = theme.metric_token("metric.padding.sm").0.max(0.0);
-    let button = tab_overflow_button_rect(theme.clone(), tab_bar);
-    let end_x = (button.origin.x.0 - pad).max(tab_bar.origin.x.0);
-    let w = (end_x - tab_bar.origin.x.0).max(0.0);
-    Rect::new(tab_bar.origin, Size::new(Px(w), tab_bar.size.height))
+    kernel::tab_strip_rect_with_overflow_button(theme, tab_bar)
 }
 
 pub(super) fn overflow_menu_row_height(tab_bar: Rect) -> Px {
@@ -119,23 +112,21 @@ pub(super) fn compute_tab_overflow_menu_items(
         return Arc::from([]);
     }
 
-    let strip_candidate = tab_strip_rect_with_overflow_button(theme.clone(), tab_bar);
-    let geom_candidate = tab_widths
-        .filter(|w| w.len() == tab_count)
-        .map(|w| super::tab_bar_geometry::TabBarGeometry::variable(strip_candidate, (*w).clone()))
-        .unwrap_or_else(|| {
-            super::tab_bar_geometry::TabBarGeometry::fixed(strip_candidate, tab_count)
-        });
-    let overflow = geom_candidate.max_scroll().0 > 0.0;
-    if !overflow {
+    let candidate = kernel::compute_tab_bar_overflow_candidate_geometry(
+        theme.clone(),
+        tab_bar,
+        tab_count,
+        tab_widths,
+    );
+    if !candidate.overflows {
         return Arc::from([]);
     }
 
     let indices: Vec<usize> = (0..tab_count).collect();
     let overflowed = compute_overflowed_tab_indices(
         &indices,
-        |ix| Some(geom_candidate.tab_rect(*ix, scroll)),
-        strip_candidate,
+        |ix| Some(candidate.geom.tab_rect(*ix, scroll)),
+        candidate.strip_rect,
         Px(2.0),
     );
 

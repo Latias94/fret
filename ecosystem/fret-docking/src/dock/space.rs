@@ -1197,7 +1197,8 @@ impl DockSpace {
         let (_chrome, dock_bounds) = dock_space_regions(window_bounds);
         let Some(root) = dock.graph.window_root(self.window) else {
             return Some(fret_runtime::DockTabStripActiveVisibilityDiagnostics {
-                status: fret_runtime::DockTabStripActiveVisibilityStatusDiagnostics::MissingWindowRoot,
+                status:
+                    fret_runtime::DockTabStripActiveVisibilityStatusDiagnostics::MissingWindowRoot,
                 tabs_node: None,
                 overflow: false,
                 tab_count: 0,
@@ -1272,7 +1273,8 @@ impl DockSpace {
 
         let Some(&rect) = layout_all.get(&tabs_node) else {
             return Some(fret_runtime::DockTabStripActiveVisibilityDiagnostics {
-                status: fret_runtime::DockTabStripActiveVisibilityStatusDiagnostics::MissingLayoutRect,
+                status:
+                    fret_runtime::DockTabStripActiveVisibilityStatusDiagnostics::MissingLayoutRect,
                 tabs_node: Some(tabs_node),
                 overflow: false,
                 tab_count: 0,
@@ -1284,7 +1286,8 @@ impl DockSpace {
         };
         let Some(DockNode::Tabs { tabs, active }) = dock.graph.node(tabs_node) else {
             return Some(fret_runtime::DockTabStripActiveVisibilityDiagnostics {
-                status: fret_runtime::DockTabStripActiveVisibilityStatusDiagnostics::MissingTabsNode,
+                status:
+                    fret_runtime::DockTabStripActiveVisibilityStatusDiagnostics::MissingTabsNode,
                 tabs_node: Some(tabs_node),
                 overflow: false,
                 tab_count: 0,
@@ -1310,7 +1313,8 @@ impl DockSpace {
         let active = (*active).min(tab_count.saturating_sub(1));
 
         let (tab_bar, _content) = split_tab_bar(rect);
-        let (geom, _overflow) = self.tab_bar_geometry_for_node(theme, tabs_node, tab_bar, tab_count);
+        let (geom, _overflow) =
+            self.tab_bar_geometry_for_node(theme, tabs_node, tab_bar, tab_count);
         let scroll = self.tab_scroll_for(tabs_node);
         let max_scroll = geom.max_scroll();
         let overflow = max_scroll.0 > 0.0;
