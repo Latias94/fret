@@ -1114,7 +1114,6 @@ pub(super) fn preview_item(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> 
                     shadcn::Button::new("Select")
                         .variant(shadcn::ButtonVariant::Outline)
                         .size(shadcn::ButtonSize::Sm)
-                        .toggle_model(dropdown_open.clone())
                         .children([
                             ui::text(cx, "Select").into_element(cx),
                             icon(cx, "lucide.chevron-down"),

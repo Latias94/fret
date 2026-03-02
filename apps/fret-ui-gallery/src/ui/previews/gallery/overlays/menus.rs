@@ -20,7 +20,6 @@ pub(in crate::ui) fn preview_menus(
             shadcn::Button::new("DropdownMenu")
                 .variant(shadcn::ButtonVariant::Outline)
                 .test_id("ui-gallery-menus-dropdown-trigger")
-                .toggle_model(dropdown_open.clone())
                 .into_element(cx)
         },
         |_cx| {

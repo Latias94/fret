@@ -385,7 +385,6 @@ pub(in crate::ui) fn preview_button_group(cx: &mut ElementContext<'_, App>) -> V
                     .variant(shadcn::ButtonVariant::Outline)
                     .size(shadcn::ButtonSize::Icon)
                     .icon(icon_id("lucide.chevron-down"))
-                    .toggle_model(dropdown_open.clone())
                     .into_element(cx)
             },
             |_cx| {
