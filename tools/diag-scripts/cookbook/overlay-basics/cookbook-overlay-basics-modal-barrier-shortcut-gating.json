@@ -1,0 +1,93 @@
+{
+  "schema_version": 2,
+  "meta": {
+    "name": "Cookbook: overlay_basics modal barrier shortcut gating",
+    "tags": ["cookbook", "overlay_basics", "dialog", "actions", "keymap", "modal", "smoke"],
+    "required_capabilities": ["diag.script_v2"],
+    "target_hints": [
+      "Bumps an underlay counter via a default shortcut.",
+      "Opens a modal dialog (barrier-backed).",
+      "Asserts the same shortcut no longer bumps the underlay while the modal is open."
+    ]
+  },
+  "steps": [
+    { "type": "reset_diagnostics" },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "cookbook.overlays.root" }
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "label_contains",
+        "target": { "kind": "test_id", "id": "cookbook.overlays.underlay.bumps" },
+        "text": "Underlay bumps: 0"
+      },
+      "timeout_frames": 240
+    },
+    { "type": "press_shortcut", "shortcut": "primary+shift+u" },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "label_contains",
+        "target": { "kind": "test_id", "id": "cookbook.overlays.underlay.bumps" },
+        "text": "Underlay bumps: 1"
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "click_stable",
+      "target": { "kind": "test_id", "id": "cookbook.overlays.dialog.trigger" }
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "cookbook.overlays.dialog.content" }
+      },
+      "timeout_frames": 600
+    },
+    { "type": "wait_frames", "n": 10 },
+    { "type": "press_shortcut", "shortcut": "primary+shift+u" },
+    { "type": "wait_frames", "n": 30 },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "label_contains",
+        "target": { "kind": "test_id", "id": "cookbook.overlays.underlay.bumps" },
+        "text": "Underlay bumps: 1"
+      }
+    },
+    {
+      "type": "click_stable",
+      "target": { "kind": "test_id", "id": "cookbook.overlays.dialog.close" }
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "not_exists",
+        "target": { "kind": "test_id", "id": "cookbook.overlays.dialog.content" }
+      },
+      "timeout_frames": 600
+    },
+    { "type": "press_shortcut", "shortcut": "primary+shift+u" },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "label_contains",
+        "target": { "kind": "test_id", "id": "cookbook.overlays.underlay.bumps" },
+        "text": "Underlay bumps: 2"
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "capture_bundle",
+      "label": "cookbook-overlay-basics-modal-barrier-shortcut-gating"
+    }
+  ]
+}
+

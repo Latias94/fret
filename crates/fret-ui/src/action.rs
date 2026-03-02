@@ -369,6 +369,20 @@ pub trait UiActionHost {
     ///   root so declarative UI that depends on non-model state can still update deterministically.
     fn notify(&mut self, _cx: ActionCx) {}
 
+    /// Record best-effort diagnostics metadata for an upcoming command dispatch.
+    ///
+    /// This is a mechanism-only hook intended to help explain pointer-triggered `Effect::Command`
+    /// dispatches in `fretboard diag` without changing the effect schema.
+    ///
+    /// Hosts that do not support diagnostics can leave this as a no-op.
+    fn record_pending_command_dispatch_source(
+        &mut self,
+        _cx: ActionCx,
+        _command: &CommandId,
+        _reason: ActivateReason,
+    ) {
+    }
+
     fn dispatch_command(&mut self, window: Option<AppWindowId>, command: CommandId) {
         self.push_effect(Effect::Command { window, command });
     }
@@ -506,6 +520,28 @@ impl<'a, H: UiHost> UiActionHost for UiActionHostAdapter<'a, H> {
 
     fn record_transient_event(&mut self, cx: ActionCx, key: u64) {
         crate::elements::record_transient_event(&mut *self.app, cx.window, cx.target, key);
+    }
+
+    fn record_pending_command_dispatch_source(
+        &mut self,
+        cx: ActionCx,
+        command: &CommandId,
+        reason: ActivateReason,
+    ) {
+        let kind = match reason {
+            ActivateReason::Pointer => fret_runtime::CommandDispatchSourceKindV1::Pointer,
+            ActivateReason::Keyboard => fret_runtime::CommandDispatchSourceKindV1::Keyboard,
+        };
+        let source = fret_runtime::CommandDispatchSourceV1 {
+            kind,
+            element: Some(cx.target.0),
+        };
+        self.app.with_global_mut(
+            fret_runtime::WindowPendingCommandDispatchSourceService::default,
+            |svc, app| {
+                svc.record(cx.window, app.tick_id(), command.clone(), source);
+            },
+        );
     }
 }
 

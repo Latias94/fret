@@ -781,7 +781,7 @@ pub(super) fn hello_template_main_rs(package_name: &str, opts: ScaffoldOptions) 
     let palette_button = if opts.command_palette {
         r#"
                 shadcn::Button::new("Command palette")
-                    .on_click("app.command_palette")
+                    .action("app.command_palette")
                     .into_element(cx),"#
     } else {
         ""
@@ -798,40 +798,38 @@ pub(super) fn hello_template_main_rs(package_name: &str, opts: ScaffoldOptions) 
     format!(
         r#"use fret::prelude::*;
 
-#[derive(Debug, Clone)]
-enum Msg {{
-    Click,
+mod act {{
+    fret::actions!([Click = "{package_name}.hello.click.v1"]);
 }}
 
-struct HelloProgram;
+struct HelloView;
 
-impl MvuProgram for HelloProgram {{
-    type State = ();
-    type Message = Msg;
-
-    fn init(_app: &mut App, _window: AppWindowId) -> Self::State {{}}
-
-    fn update(_app: &mut App, _state: &mut Self::State, message: Self::Message) {{
-        match message {{
-            Msg::Click => {{
-                println!("Clicked!");
-            }}
-        }}
+impl View for HelloView {{
+    fn init(_app: &mut App, _window: AppWindowId) -> Self {{
+        Self
     }}
 
-    fn view(
-        cx: &mut ElementContext<'_, App>,
-        _state: &mut Self::State,
-        msg: &mut MessageRouter<Self::Message>,
-    ) -> Elements {{
-        let click_cmd = msg.cmd(Msg::Click);
+    fn render(&mut self, cx: &mut ViewCx<'_, '_, App>) -> Elements {{
+        let click_count = cx.use_state::<u32>();
+        let click_count_value = cx.watch_model(&click_count).layout().copied_or(0);
+
+        cx.on_action::<act::Click>({{
+            let click_count = click_count.clone();
+            move |host, acx| {{
+                let _ = host
+                    .models_mut()
+                    .update(&click_count, |v| *v = v.saturating_add(1));
+                host.request_redraw(acx.window);
+                host.notify(acx);
+                true
+            }}
+        }});
 
         ui::v_flex(cx, |cx| {{
             [
                 shadcn::Label::new("Hello, world!").into_element(cx),
-                shadcn::Button::new("Click me")
-                    .on_click(click_cmd)
-                    .into_element(cx),
+                cx.text(format!("Clicks: {{click_count_value}}")),
+                shadcn::Button::new("Click me").action(act::Click).into_element(cx),
 __PALETTE_BUTTON__
             ]
         }})
@@ -853,7 +851,7 @@ fn main() -> anyhow::Result<()> {{
     FretApp::new("{package_name}")
         .window("{package_name}", (560.0, 360.0))
         .install_app(install_app)
-        .run_mvu::<HelloProgram>()
+        .run_view::<HelloView>()
         .map_err(anyhow::Error::from)
 }}
 "#
@@ -1405,6 +1403,7 @@ Set-Content -Path .fret/hotpatch.touch -Value (Get-Date).Ticks
 
 - Theme: shadcn new-york-v4 (default via `fret-ui-shadcn/app-integration`)
 {icons_line}{palette_line}
+- Authoring: view runtime + typed unit actions (action-first, v1)
 - Next: edit `src/main.rs` and replace the view tree
 "#
     )
@@ -1435,6 +1434,8 @@ mod tests {
     fn hello_template_uses_default_authoring_dialect() {
         let src = hello_template_main_rs("hello-app", opts());
         assert!(src.contains("ui::v_flex("));
+        assert!(src.contains("impl View for HelloView"));
+        assert!(src.contains(".run_view::<HelloView>()"));
         assert!(src.contains(".into_element(cx)"));
         assert!(!src.contains("decl_style::container_props"));
     }

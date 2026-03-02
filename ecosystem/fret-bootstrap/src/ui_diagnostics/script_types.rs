@@ -19,6 +19,7 @@ pub(super) struct ActiveScript {
     pub(super) wait_frames_remaining: u32,
     pub(super) wait_until: Option<WaitUntilState>,
     pub(super) wait_shortcut_routing_trace: Option<WaitShortcutRoutingTraceState>,
+    pub(super) wait_command_dispatch_trace: Option<WaitCommandDispatchTraceState>,
     pub(super) wait_overlay_placement_trace: Option<WaitOverlayPlacementTraceState>,
     pub(super) screenshot_wait: Option<ScreenshotWaitState>,
     pub(super) v2_step_state: Option<V2StepState>,
@@ -33,6 +34,8 @@ pub(super) struct ActiveScript {
     pub(super) focus_trace: Vec<UiFocusTraceEntryV1>,
     pub(super) shortcut_routing_trace: Vec<UiShortcutRoutingTraceEntryV1>,
     pub(super) last_shortcut_routing_seq: u64,
+    pub(super) command_dispatch_trace: Vec<UiScriptCommandDispatchTraceEntryV1>,
+    pub(super) last_command_dispatch_seq: u64,
     pub(super) overlay_placement_trace: Vec<UiOverlayPlacementTraceEntryV1>,
     pub(super) web_ime_trace: Vec<UiWebImeTraceEntryV1>,
     pub(super) ime_event_trace: Vec<UiImeEventTraceEntryV1>,
@@ -424,6 +427,13 @@ pub(super) struct WaitUntilState {
 
 #[derive(Debug, Clone)]
 pub(super) struct WaitShortcutRoutingTraceState {
+    pub(super) step_index: usize,
+    pub(super) remaining_frames: u32,
+    pub(super) start_frame_id: u64,
+}
+
+#[derive(Debug, Clone)]
+pub(super) struct WaitCommandDispatchTraceState {
     pub(super) step_index: usize,
     pub(super) remaining_frames: u32,
     pub(super) start_frame_id: u64,

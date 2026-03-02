@@ -1,4 +1,4 @@
-use fret_runtime::{CommandId, Effect, Model, WeakModel};
+use fret_runtime::{ActionId, CommandId, Effect, Model, WeakModel};
 use fret_ui::ElementContext;
 use fret_ui::UiHost;
 use fret_ui::action::UiActionHostExt;
@@ -21,6 +21,10 @@ pub trait ActionHooksExt {
     fn pressable_dispatch_command_if_enabled(&mut self, command: CommandId);
 
     fn pressable_dispatch_command_if_enabled_opt(&mut self, command: Option<CommandId>);
+
+    fn pressable_dispatch_action_if_enabled(&mut self, action: ActionId);
+
+    fn pressable_dispatch_action_if_enabled_opt(&mut self, action: Option<ActionId>);
 
     fn pressable_update_model<T, F>(&mut self, model: &Model<T>, update: F)
     where
@@ -100,7 +104,8 @@ impl<H: UiHost> ActionHooksExt for ElementContext<'_, H> {
         if !self.command_is_enabled(&command) {
             return;
         }
-        self.pressable_add_on_activate(Arc::new(move |host, acx, _reason| {
+        self.pressable_add_on_activate(Arc::new(move |host, acx, reason| {
+            host.record_pending_command_dispatch_source(acx, &command, reason);
             host.dispatch_command(Some(acx.window), command.clone());
         }));
     }
@@ -110,6 +115,14 @@ impl<H: UiHost> ActionHooksExt for ElementContext<'_, H> {
             return;
         };
         self.pressable_dispatch_command_if_enabled(command);
+    }
+
+    fn pressable_dispatch_action_if_enabled(&mut self, action: ActionId) {
+        self.pressable_dispatch_command_if_enabled(action);
+    }
+
+    fn pressable_dispatch_action_if_enabled_opt(&mut self, action: Option<ActionId>) {
+        self.pressable_dispatch_command_if_enabled_opt(action);
     }
 
     fn pressable_update_model<T, F>(&mut self, model: &Model<T>, update: F)

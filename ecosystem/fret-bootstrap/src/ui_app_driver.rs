@@ -1404,6 +1404,48 @@ fn ui_app_handle_command<S>(
         state,
     } = context;
 
+    let record_driver_handled_dispatch =
+        |app: &mut App,
+         window: AppWindowId,
+         command: &CommandId,
+         source: fret_runtime::CommandDispatchSourceV1| {
+            let handled_by_scope = app
+                .commands()
+                .get(command.clone())
+                .map(|m| m.scope)
+                .or(Some(fret_runtime::CommandScope::Window));
+            app.with_global_mut(
+                fret_runtime::WindowCommandDispatchDiagnosticsStore::default,
+                |store, app| {
+                    store.record(fret_runtime::CommandDispatchDecisionV1 {
+                        seq: 0,
+                        frame_id: app.frame_id(),
+                        tick_id: app.tick_id(),
+                        window,
+                        command: command.clone(),
+                        source,
+                        handled: true,
+                        handled_by_element: None,
+                        handled_by_scope,
+                        handled_by_driver: true,
+                        stopped: false,
+                        started_from_focus: false,
+                        used_default_root_fallback: false,
+                    });
+                },
+            );
+        };
+
+    // Capture the best-effort pending source up front so driver-handled commands can record the
+    // same origin metadata as UI-tree-handled commands (ADR 0307).
+    let pending_source = app.with_global_mut(
+        fret_runtime::WindowPendingCommandDispatchSourceService::default,
+        |svc, app| {
+            svc.consume(window, app.tick_id(), &command)
+                .unwrap_or_else(fret_runtime::CommandDispatchSourceV1::programmatic)
+        },
+    );
+
     #[cfg(feature = "ui-app-command-palette")]
     if driver.command_palette_enabled
         && matches!(
@@ -1412,8 +1454,18 @@ fn ui_app_handle_command<S>(
         )
     {
         let _ = command_palette_toggle(app, window);
+        record_driver_handled_dispatch(app, window, &command, pending_source);
         return;
     }
+
+    // Re-insert the pending source so the UI tree dispatch can consume it when it records its own
+    // trace entry.
+    app.with_global_mut(
+        fret_runtime::WindowPendingCommandDispatchSourceService::default,
+        |svc, app| {
+            svc.record(window, app.tick_id(), command.clone(), pending_source);
+        },
+    );
 
     if state.ui.dispatch_command(app, services, &command) {
         return;
@@ -1424,41 +1476,49 @@ fn ui_app_handle_command<S>(
             #[cfg(target_os = "macos")]
             {
                 app.push_effect(Effect::ShowAboutPanel);
+                record_driver_handled_dispatch(app, window, &command, pending_source);
                 return;
             }
         }
         fret_app::core_commands::APP_PREFERENCES => {
             if let Some(f) = driver.on_preferences {
                 f(app, services, window, &mut state.ui, &mut state.state);
+                record_driver_handled_dispatch(app, window, &command, pending_source);
                 return;
             }
         }
         fret_app::core_commands::APP_LOCALE_SWITCH_NEXT => {
             if fret_app::core_commands::handle_locale_cycle_command(app, &command) {
                 app.request_redraw(window);
+                record_driver_handled_dispatch(app, window, &command, pending_source);
                 return;
             }
         }
         fret_app::core_commands::APP_QUIT => {
             app.push_effect(Effect::QuitApp);
+            record_driver_handled_dispatch(app, window, &command, pending_source);
             return;
         }
         fret_app::core_commands::APP_HIDE => {
             app.push_effect(Effect::HideApp);
+            record_driver_handled_dispatch(app, window, &command, pending_source);
             return;
         }
         fret_app::core_commands::APP_HIDE_OTHERS => {
             app.push_effect(Effect::HideOtherApps);
+            record_driver_handled_dispatch(app, window, &command, pending_source);
             return;
         }
         fret_app::core_commands::APP_SHOW_ALL => {
             app.push_effect(Effect::UnhideAllApps);
+            record_driver_handled_dispatch(app, window, &command, pending_source);
             return;
         }
         _ => {}
     }
 
     if fret_ui_kit::try_handle_window_overlays_command(&mut state.ui, app, window, &command) {
+        record_driver_handled_dispatch(app, window, &command, pending_source);
         return;
     }
 

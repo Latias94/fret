@@ -298,6 +298,7 @@ impl UiDiagnosticsEnvFingerprintV1 {
         capabilities.push("diag.text_ime_trace".to_string());
         capabilities.push("diag.text_input_snapshot".to_string());
         capabilities.push("diag.shortcut_routing_trace".to_string());
+        capabilities.push("diag.command_dispatch_trace".to_string());
         capabilities.push("diag.overlay_placement_trace".to_string());
         if cfg!(any(
             target_os = "windows",

@@ -364,6 +364,68 @@ pub(super) fn handle_wait_shortcut_routing_trace_step(
     true
 }
 
+pub(super) fn handle_wait_command_dispatch_trace_step(
+    app: &App,
+    step_index: usize,
+    step: UiActionStepV2,
+    active: &mut ActiveScript,
+    output: &mut UiScriptFrameOutput,
+    force_dump_label: &mut Option<String>,
+    stop_script: &mut bool,
+    failure_reason: &mut Option<String>,
+) -> bool {
+    let UiActionStepV2::WaitCommandDispatchTrace {
+        query,
+        timeout_frames,
+    } = step
+    else {
+        return false;
+    };
+
+    active.wait_until = None;
+    active.screenshot_wait = None;
+
+    let state = match active.wait_command_dispatch_trace.take() {
+        Some(mut state) if state.step_index == step_index => {
+            state.remaining_frames = state.remaining_frames.min(timeout_frames);
+            state
+        }
+        _ => WaitCommandDispatchTraceState {
+            step_index,
+            remaining_frames: timeout_frames,
+            start_frame_id: app.frame_id().0.saturating_sub(1),
+        },
+    };
+
+    let found = active.command_dispatch_trace.iter().any(|entry| {
+        entry.frame_id >= state.start_frame_id
+            && command_dispatch_trace_entry_matches_query(entry, &query)
+    });
+
+    if found {
+        active.wait_command_dispatch_trace = None;
+        active.next_step = active.next_step.saturating_add(1);
+        output.request_redraw = true;
+    } else if state.remaining_frames == 0 {
+        *force_dump_label = Some(format!(
+            "script-step-{step_index:04}-wait_command_dispatch_trace-timeout"
+        ));
+        *stop_script = true;
+        *failure_reason = Some("wait_command_dispatch_trace_timeout".to_string());
+        active.wait_command_dispatch_trace = None;
+        output.request_redraw = true;
+    } else {
+        active.wait_command_dispatch_trace = Some(WaitCommandDispatchTraceState {
+            step_index: state.step_index,
+            remaining_frames: state.remaining_frames.saturating_sub(1),
+            start_frame_id: state.start_frame_id,
+        });
+        output.request_redraw = true;
+    }
+
+    true
+}
+
 pub(super) fn handle_wait_overlay_placement_trace_step(
     window: AppWindowId,
     step_index: usize,
