@@ -426,7 +426,7 @@ fn page_preview(
         PAGE_AI_FILE_TREE_DEMO => pages::preview_ai_file_tree_demo(cx, theme),
         PAGE_AI_TASK_DEMO => pages::preview_ai_task_demo(cx, theme),
         PAGE_AI_AUDIO_PLAYER_DEMO => pages::preview_ai_audio_player_demo(cx, theme),
-        PAGE_AI_TRANSCRIPTION_DEMO => preview_ai_transcription_demo(cx, theme),
+        PAGE_AI_TRANSCRIPTION_DEMO => pages::preview_ai_transcription_demo(cx, theme),
         PAGE_AI_MIC_SELECTOR_DEMO => pages::preview_ai_mic_selector_demo(cx, theme),
         PAGE_AI_SPEECH_INPUT_DEMO => pages::preview_ai_speech_input_demo(cx, theme),
         PAGE_AI_VOICE_SELECTOR_DEMO => pages::preview_ai_voice_selector_demo(cx, theme),

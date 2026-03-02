@@ -36,6 +36,7 @@ pub mod task_demo;
 pub mod terminal_demo;
 pub mod test_results_demo;
 pub mod test_results_large_demo;
+pub mod transcription_demo;
 pub mod tool_demo;
 pub mod voice_selector_demo;
 pub mod web_preview_demo;
