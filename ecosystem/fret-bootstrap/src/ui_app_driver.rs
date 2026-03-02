@@ -2628,6 +2628,24 @@ fn ui_app_window_created<S>(
     // ticks (e.g. multi-window tear-off scripts waiting for `known_window_count_ge`).
     app.request_redraw(new_window);
     app.push_effect(Effect::RequestAnimationFrame(new_window));
+
+    // Seed `WindowInputContextService` for diagnostics runs so `KnownWindowCount*` predicates can
+    // observe window creation/closure without depending on a per-window input pass having run.
+    //
+    // The UI runtime will overwrite this placeholder snapshot on the first real dispatch.
+    let diag_env_enabled = std::env::var_os("FRET_DIAG").is_some_and(|v| !v.is_empty())
+        || std::env::var_os("FRET_DIAG_DIR").is_some_and(|v| !v.is_empty());
+    let diag_service_enabled = app
+        .global::<UiDiagnosticsService>()
+        .is_some_and(|svc| svc.is_enabled());
+    if diag_env_enabled || diag_service_enabled {
+        app.with_global_mut(
+            fret_runtime::WindowInputContextService::default,
+            |svc, _app| {
+                svc.set_snapshot(new_window, fret_runtime::InputContext::default());
+            },
+        );
+    }
 }
 
 fn ui_app_before_close_window<S>(

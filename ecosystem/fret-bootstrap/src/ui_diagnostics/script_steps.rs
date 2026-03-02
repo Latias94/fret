@@ -366,7 +366,7 @@ pub(super) fn handle_effect_only_steps(
             output.request_redraw = true;
             true
         }
-        UiActionStepV2::WaitFrames { n } => {
+        UiActionStepV2::WaitFrames { n, .. } => {
             active.wait_frames_remaining = n;
             active.wait_until = None;
             active.screenshot_wait = None;
