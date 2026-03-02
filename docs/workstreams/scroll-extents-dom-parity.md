@@ -217,6 +217,19 @@ Run (gate on):
 
 - `cargo run -p fretboard -- diag suite ui-gallery-scroll-extents-dom-parity --dir target/fret-diag-se213-suite-post-layout --session-auto --env FRET_UI_SCROLL_EXTENTS_POST_LAYOUT=1 --launch -- cargo run -p fret-ui-gallery`
 
+Evidence (2026-03-02, macOS aarch64, debug build):
+
+- Baseline out dir: `target/fret-diag-se213-suite-baseline`
+  - `ui-gallery-checkbox-invalid-code-tab-scroll-range`: `run_id=1772437569123`
+  - `ui-gallery-tooltip-overlay-placement-after-code-tab-scroll-range`: `run_id=1772437659253`
+  - `ui-gallery-typography-inline-code-tab-scroll-range`: `run_id=1772437747623`
+  - Summary: `target/fret-diag-se213-suite-baseline/sessions/1772437474178-65965/suite.summary.json`
+- Gate on out dir: `target/fret-diag-se213-suite-post-layout`
+  - `ui-gallery-checkbox-invalid-code-tab-scroll-range`: `run_id=1772437848671`
+  - `ui-gallery-tooltip-overlay-placement-after-code-tab-scroll-range`: `run_id=1772437937052`
+  - `ui-gallery-typography-inline-code-tab-scroll-range`: `run_id=1772438027683`
+  - Summary: `target/fret-diag-se213-suite-post-layout/sessions/1772437763689-21483/suite.summary.json`
+
 Example (JSON):
 
 - `fretboard diag query overlay-placement-trace target/fret-diag/<run_id> --kind anchored_panel --anchor-test-id ui-gallery-tooltip-demo-trigger --json`
