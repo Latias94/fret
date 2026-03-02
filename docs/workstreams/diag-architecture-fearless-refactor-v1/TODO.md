@@ -6,8 +6,8 @@ This TODO is organized by milestones (see `MILESTONES.md`). Keep tasks **small a
 
 ## M0 — Baseline and boundaries
 
-- [ ] Write a “current architecture map” note with clickable evidence anchors (crates + key entrypoints).
-- [ ] Define the “artifact invariants” checklist (what a successful run must always produce).
+- [x] Write a “current architecture map” note with clickable evidence anchors (crates + key entrypoints).
+- [x] Define the “artifact invariants” checklist (what a successful run must always produce).
 - [ ] List the top 10 churn hotspots in `crates/fret-diag` and why they churn.
 - [ ] Identify which parts are demo-specific (UI gallery) vs general engine.
 

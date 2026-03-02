@@ -7,6 +7,8 @@ This folder is a focused, “fearless refactor” plan for Fret’s diagnostics 
 Start here:
 
 - Design overview: `docs/workstreams/diag-architecture-fearless-refactor-v1/DESIGN.md`
+- Current architecture map: `docs/workstreams/diag-architecture-fearless-refactor-v1/CURRENT_ARCHITECTURE_MAP.md`
+- Artifact invariants: `docs/workstreams/diag-architecture-fearless-refactor-v1/ARTIFACT_INVARIANTS.md`
 - Milestones: `docs/workstreams/diag-architecture-fearless-refactor-v1/MILESTONES.md`
 - Task tracker: `docs/workstreams/diag-architecture-fearless-refactor-v1/TODO.md`
 - Evidence + gates: `docs/workstreams/diag-architecture-fearless-refactor-v1/EVIDENCE_AND_GATES.md`
@@ -21,4 +23,3 @@ Related active workstreams:
 - Simplification (transport + artifacts): `docs/workstreams/diag-simplification-v1.md`
 - Extensibility + capabilities: `docs/workstreams/diag-extensibility-and-capabilities-v1/README.md`
 - DevTools GUI: `docs/workstreams/diag-devtools-gui-v1.md`
-
