@@ -993,6 +993,26 @@
       "target_hints": []
     },
     {
+      "id": "ui-gallery-carousel-focus-watch-tab-scrolls-gate",
+      "path": "tools/diag-scripts/ui-gallery/carousel/ui-gallery-carousel-focus-watch-tab-scrolls-gate.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "ui-gallery-motion-pilot"
+      ],
+      "tags": [
+        "carousel",
+        "focus",
+        "gate",
+        "ui-gallery"
+      ],
+      "target_hints": [
+        "Navigate to the Carousel page and use Tab to move focus between slide buttons.",
+        "Expected behavior: when focus moves to an offscreen slide, the carousel scrolls it into view."
+      ]
+    },
+    {
       "id": "ui-gallery-carousel-loop-continuity-touch-gate",
       "path": "tools/diag-scripts/ui-gallery/carousel/ui-gallery-carousel-loop-continuity-touch-gate.json",
       "required_capabilities": [
