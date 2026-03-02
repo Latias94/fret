@@ -31,9 +31,9 @@ v3 focuses on **per-entity paint overrides** so host apps can express “style o
 ## References (non-normative)
 
 - XyFlow / React Flow edge: `interactionWidth` + `style?: CSSProperties` (`repo-ref/xyflow`)
+- Parity crosswalk: `docs/workstreams/fret-node-style-skinning-v3/xyflow-style-parity.md`
 - Fret contracts:
   - ADR 0306: paint evaluation spaces (`PaintEvalSpaceV1`, `PaintBindingV1`)
   - ADR 0307: node-graph geometry style surface (paint vs geometry)
   - ADR 0308: per-entity geometry overrides (UI-only)
   - ADR 0309: per-entity paint overrides (this workstream)
-
