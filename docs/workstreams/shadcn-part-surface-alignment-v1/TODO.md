@@ -88,7 +88,7 @@ This is the short “next few” list. Full inventory is in `INVENTORY.md`.
 
 | Component | Upstream base file | Fret module | Priority | Status | Notes |
 |---|---|---|---:|---|---|
-| `kbd` | `repo-ref/ui/apps/v4/registry/bases/radix/ui/kbd.tsx` | `ecosystem/fret-ui-shadcn/src/kbd.rs` | P2 | Not started | Gate: default `h-5` + `text-xs` mapping and stable padding/radius outcomes. |
+| `resizable` | `repo-ref/ui/apps/v4/registry/bases/radix/ui/resizable.tsx` | `ecosystem/fret-ui-shadcn/src/resizable.rs` | P1 | Not started | Gate: handle hit area + pointer semantics + gap token mapping. |
 
 ## Notes / recurring hazards
 
