@@ -1180,6 +1180,10 @@ For component-focused conformance scripts (built-in suites), run:
 - `cargo run -p fretboard -- diag suite ui-gallery-combobox --timeout-ms 240000 --launch -- cargo run -p fret-ui-gallery --release`
 - `cargo run -p fretboard -- diag suite ui-gallery-text-ime --timeout-ms 240000 --launch -- cargo run -p fret-ui-gallery --release`
 
+For Embla-engine-dependent Carousel gates (requires an explicit opt-in env var), run:
+
+- `cargo run -p fretboard -- diag suite ui-gallery-carousel-embla-engine --env FRET_DEBUG_CAROUSEL_EMBLA_ENGINE=1 --launch -- cargo run -p fret-ui-gallery --release`
+
 To keep “Rust template ↔ JSON script” closure, check that the committed scripts match typed templates:
 
 - `cargo run -p fret-diag-scriptgen -- check-suite ui-gallery-select`
