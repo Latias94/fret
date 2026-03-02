@@ -230,6 +230,19 @@ Evidence (2026-03-02, macOS aarch64, debug build):
   - `ui-gallery-typography-inline-code-tab-scroll-range`: `run_id=1772438027683`
   - Summary: `target/fret-diag-se213-suite-post-layout/sessions/1772437763689-21483/suite.summary.json`
 
+Evidence (2026-03-02, macOS aarch64, debug build, after SE-112 overflow-context wiring):
+
+- Baseline out dir: `target/fret-diag-se112-suite-baseline3`
+  - `ui-gallery-checkbox-invalid-code-tab-scroll-range`: `run_id=1772442112463`
+  - `ui-gallery-tooltip-overlay-placement-after-code-tab-scroll-range`: `run_id=1772442117838`
+  - `ui-gallery-typography-inline-code-tab-scroll-range`: `run_id=1772442123499`
+  - Summary: `target/fret-diag-se112-suite-baseline3/sessions/1772442109769-12830/suite.summary.json`
+- Gate on out dir: `target/fret-diag-se112-suite-post-layout3`
+  - `ui-gallery-checkbox-invalid-code-tab-scroll-range`: `run_id=1772442136322`
+  - `ui-gallery-tooltip-overlay-placement-after-code-tab-scroll-range`: `run_id=1772442141765`
+  - `ui-gallery-typography-inline-code-tab-scroll-range`: `run_id=1772442147987`
+  - Summary: `target/fret-diag-se112-suite-post-layout3/sessions/1772442133993-13204/suite.summary.json`
+
 Example (JSON):
 
 - `fretboard diag query overlay-placement-trace target/fret-diag/<run_id> --kind anchored_panel --anchor-test-id ui-gallery-tooltip-demo-trigger --json`
