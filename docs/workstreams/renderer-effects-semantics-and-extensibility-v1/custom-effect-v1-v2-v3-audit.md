@@ -384,6 +384,56 @@ Rollback:
 
 - Revert the dump formatting/script changes.
 
+### PR7 — Semantics: unify “requested vs effective” counters + triage codes across V1/V2/V3
+
+Goal:
+
+- Make it trivial to answer: “did we skip the whole pass?”, “did we degrade sources?”, “did we silently fall back?” across all CustomEffect ABIs.
+
+Changes:
+
+- Add per-ABI counters in renderer perf:
+  - steps requested vs passes emitted (V1/V2 as well, mirroring V3),
+  - per-ABI “registration invalid / not supported” counts (optional, if we can plumb it cleanly).
+- Add triage hint codes with stable evidence keys:
+  - `renderer.custom_effect_v1_requested_but_skipped`
+  - `renderer.custom_effect_v2_requested_but_skipped`
+  - Keep `renderer.custom_effect_v3_requested_but_skipped` as-is.
+- (Optional) Add one conformance test per ABI to force “requested but skipped” under tight budgets (bounded, deterministic).
+
+Gates:
+
+- `cargo nextest run -p fret-render-wgpu --tests effect_custom_v1_conformance effect_custom_v2_conformance effect_custom_v3_conformance`
+- `cargo run -p fretboard -- diag suite liquid-glass-custom-v3-sources-degraded --dir target/fret-diag/lg-v3-sources --session-auto --launch -- .\\target\\debug\\liquid_glass_demo.exe`
+
+Rollback:
+
+- Revert counters/hints/tests (no contract changes).
+
+### PR8 — Budget model: make CustomEffect ABI scratch/budget charging consistent (no policy drift)
+
+Goal:
+
+- Remove “same scene, different ABI => different silent budget outcomes” drift and make budgets explainable.
+
+Changes:
+
+- Centralize intermediate budget charging helpers used by V1/V2/V3 (including mask targets and pyramid bytes).
+- Make “base required bytes” semantics explicit and shared (srcdst + required scratch), so triage evidence can report:
+  - budget available
+  - estimated required (base + optional)
+  - chosen effective plan (targets/levels/scissors)
+- Add a tiny table-driven conformance test set that locks a few budget edge cases (budget=0, insufficient, target exhausted) per ABI.
+
+Gates:
+
+- `cargo nextest run -p fret-render-wgpu --tests`
+- `cargo test -p fret-examples --test wgsl_smoke`
+
+Rollback:
+
+- Revert refactors/tests; behavior should be unchanged unless explicitly called out by the tests.
+
 ## Evidence anchors (most load-bearing)
 
 - Contract:
