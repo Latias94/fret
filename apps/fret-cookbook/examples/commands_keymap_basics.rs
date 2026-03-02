@@ -4,10 +4,8 @@ use fret_app::{
     PlatformFilter, format_sequence,
 };
 use fret_core::{KeyCode, Modifiers};
-use fret_ui::{
-    CommandAvailability,
-    action::{OnCommand, OnCommandAvailability, UiActionHost},
-};
+use fret_ui::CommandAvailability;
+use fret_ui::action::UiActionHost;
 
 mod act {
     fret::actions!([TogglePanel = "cookbook.commands.toggle_panel.v1"]);
@@ -66,76 +64,24 @@ fn toggle_panel(host: &mut dyn UiActionHost, window: AppWindowId, panel_open: &M
     host.push_effect(Effect::RequestAnimationFrame(window));
 }
 
-fn command_handlers(
-    panel_open: Model<bool>,
-    allow_command: Model<bool>,
-) -> (OnCommand, OnCommandAvailability) {
-    let allow_for_command = allow_command.clone();
-    let allow_for_availability = allow_command;
-
-    fret::actions::ActionHandlerTable::new()
-        .on::<act::TogglePanel>(move |host, acx| {
-            let allowed = host
-                .models_mut()
-                .get_copied(&allow_for_command)
-                .unwrap_or(true);
-            if !allowed {
-                return false;
-            }
-
-            toggle_panel(host, acx.window, &panel_open);
-            true
-        })
-        .availability::<act::TogglePanel>(move |host, _acx| {
-            let allowed = host
-                .models_mut()
-                .get_copied(&allow_for_availability)
-                .unwrap_or(true);
-            if allowed {
-                CommandAvailability::Available
-            } else {
-                CommandAvailability::Blocked
-            }
-        })
-        .build()
-}
-
-struct CommandsKeymapBasicsState {
+struct CommandsKeymapBasicsView {
     panel_open: Model<bool>,
     allow_command: Model<bool>,
 }
 
-struct CommandsKeymapBasicsProgram;
-
-impl MvuProgram for CommandsKeymapBasicsProgram {
-    type State = CommandsKeymapBasicsState;
-    type Message = ();
-
-    fn init(app: &mut App, _window: AppWindowId) -> Self::State {
-        Self::State {
+impl View for CommandsKeymapBasicsView {
+    fn init(app: &mut App, _window: AppWindowId) -> Self {
+        Self {
             panel_open: app.models_mut().insert(false),
             allow_command: app.models_mut().insert(true),
         }
     }
 
-    fn update(_app: &mut App, _state: &mut Self::State, _message: Self::Message) {}
-
-    fn view(
-        cx: &mut ElementContext<'_, App>,
-        state: &mut Self::State,
-        _msg: &mut MessageRouter<Self::Message>,
-    ) -> Elements {
-        // Attach command handlers to the window's declarative root so shortcuts work even when
-        // nothing inside the view has focus (the dispatch path doesn't walk descendants).
-        let base_root = cx.root_id();
-
+    fn render(&mut self, cx: &mut ViewCx<'_, '_, App>) -> Elements {
         let theme = Theme::global(&*cx.app).snapshot();
         let cmd: CommandId = act::TogglePanel.into();
 
-        let panel_open = state
-            .panel_open
-            .read(&mut *cx.app, |_host, v| *v)
-            .unwrap_or(false);
+        let panel_open = cx.watch_model(&self.panel_open).layout().copied_or(false);
 
         let enabled = cx.action_is_enabled(&cmd);
         let enabled_label = if enabled { "Enabled" } else { "Disabled" };
@@ -192,7 +138,7 @@ impl MvuProgram for CommandsKeymapBasicsProgram {
         let row_allow = ui::h_flex(cx, |cx| {
             [
                 shadcn::Label::new("Allow command:").into_element(cx),
-                shadcn::Switch::new(state.allow_command.clone())
+                shadcn::Switch::new(self.allow_command.clone())
                     .test_id(TEST_ID_ALLOW)
                     .into_element(cx),
             ]
@@ -221,7 +167,7 @@ impl MvuProgram for CommandsKeymapBasicsProgram {
                 if panel_open { "Open" } else { "Closed" }
             ))
             .test_id(TEST_ID_PANEL_STATE);
-        let panel_open_indicator = shadcn::Switch::new(state.panel_open.clone())
+        let panel_open_indicator = shadcn::Switch::new(self.panel_open.clone())
             .disabled(true)
             .test_id(TEST_ID_PANEL_OPEN)
             .into_element(cx);
@@ -275,8 +221,32 @@ impl MvuProgram for CommandsKeymapBasicsProgram {
             .max_w(Px(860.0))
             .into_element(cx);
 
-        let (on_command, on_command_availability) =
-            command_handlers(state.panel_open.clone(), state.allow_command.clone());
+        cx.on_action::<act::TogglePanel>({
+            let panel_open = self.panel_open.clone();
+            let allow = self.allow_command.clone();
+            move |host, acx| {
+                let allowed = host.models_mut().get_copied(&allow).unwrap_or(true);
+                if !allowed {
+                    return false;
+                }
+
+                toggle_panel(host, acx.window, &panel_open);
+                host.notify(acx);
+                true
+            }
+        });
+
+        cx.on_action_availability::<act::TogglePanel>({
+            let allow = self.allow_command.clone();
+            move |host, _acx| {
+                let allowed = host.models_mut().get_copied(&allow).unwrap_or(true);
+                if allowed {
+                    CommandAvailability::Available
+                } else {
+                    CommandAvailability::Blocked
+                }
+            }
+        });
 
         let root = ui::container(cx, |cx| {
             [ui::v_flex(cx, |_cx| [card])
@@ -291,9 +261,6 @@ impl MvuProgram for CommandsKeymapBasicsProgram {
         .into_element(cx)
         .test_id(TEST_ID_ROOT);
 
-        cx.command_on_command_for(base_root, on_command);
-        cx.command_on_command_availability_for(base_root, on_command_availability);
-
         root.into()
     }
 }
@@ -304,6 +271,6 @@ fn main() -> anyhow::Result<()> {
         .config_files(false)
         .install_app(install_commands)
         .install_app(fret_cookbook::install_cookbook_defaults)
-        .run_mvu::<CommandsKeymapBasicsProgram>()
+        .run_view::<CommandsKeymapBasicsView>()
         .map_err(anyhow::Error::from)
 }

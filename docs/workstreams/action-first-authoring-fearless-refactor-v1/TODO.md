@@ -130,7 +130,7 @@ ID format:
 - [~] AFA-adopt-040 Migrate 2–3 cookbook demos to the new View + actions path.
   - Suggested: `apps/fret-cookbook/examples/hello.rs`, `overlay_basics.rs`, `commands_keymap_basics.rs`.
   - Status (as of 2026-03-02):
-    - Action-first bindings landed for `commands_keymap_basics` (still MVU; view runtime pending):
+    - View runtime + action-first adoption landed for `commands_keymap_basics`:
       `apps/fret-cookbook/examples/commands_keymap_basics.rs`
     - View runtime + action-first adoption landed for `hello`:
       `apps/fret-cookbook/examples/hello.rs`
