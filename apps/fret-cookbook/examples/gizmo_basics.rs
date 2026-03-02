@@ -335,7 +335,6 @@ fn paint_gizmo(
 }
 
 fn view(cx: &mut ElementContext<'_, App>, st: &mut GizmoBasicsWindowState) -> ViewElements {
-    let theme = Theme::global(&*cx.app).snapshot();
     let model = cx.watch_model(&st.model).paint().cloned_or_default();
 
     let pos = model.transform.translation;
@@ -679,20 +678,7 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut GizmoBasicsWindowState) -> Vi
     .max_w(Px(1100.0))
     .into_element(cx);
 
-    let root = ui::container(cx, |cx| {
-        vec![
-            ui::v_flex(cx, |_cx| vec![card])
-                .items_center()
-                .justify_center()
-                .size_full()
-                .into_element(cx),
-        ]
-    })
-    .bg(ColorRef::Color(theme.color_token("muted")))
-    .p(Space::N6)
-    .size_full()
-    .into_element(cx)
-    .test_id(TEST_ID_ROOT);
+    let root = fret_cookbook::scaffold::centered_page_muted(cx, TEST_ID_ROOT, card);
 
     vec![cx.semantics(
         SemanticsProps {

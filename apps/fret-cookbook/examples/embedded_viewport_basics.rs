@@ -493,20 +493,7 @@ Input does not arrive as normal UI pointer events; it is forwarded as ViewportIn
     .max_w(Px(1100.0))
     .into_element(cx);
 
-    let root = ui::container(cx, |cx| {
-        vec![
-            ui::v_flex(cx, |_cx| vec![card])
-                .items_center()
-                .justify_center()
-                .size_full()
-                .into_element(cx),
-        ]
-    })
-    .bg(ColorRef::Color(theme.color_token("background")))
-    .p(Space::N6)
-    .size_full()
-    .into_element(cx)
-    .test_id(TEST_ID_ROOT);
+    let root = fret_cookbook::scaffold::centered_page_background(cx, TEST_ID_ROOT, card);
 
     vec![root].into()
 }
