@@ -2,6 +2,27 @@ use super::*;
 use std::collections::HashMap;
 
 impl<H: UiHost> UiTree<H> {
+    fn snapshot_parent_or_retained(
+        &self,
+        snapshot: Option<&UiDispatchSnapshot>,
+        node: NodeId,
+    ) -> Option<NodeId> {
+        match snapshot {
+            Some(snapshot) => {
+                if snapshot.pre.get(node).is_none() {
+                    debug_assert!(
+                        false,
+                        "dispatch/hover: node missing from snapshot (node={node:?}, frame_id={:?}, window={:?})",
+                        snapshot.frame_id, snapshot.window
+                    );
+                    return None;
+                }
+                snapshot.parent.get(node).copied().flatten()
+            }
+            None => self.nodes.get(node).and_then(|n| n.parent),
+        }
+    }
+
     pub(super) fn run_pressable_hover_hook(
         app: &mut H,
         window: AppWindowId,
@@ -90,6 +111,7 @@ impl<H: UiHost> UiTree<H> {
         app: &mut H,
         window: AppWindowId,
         hit: Option<NodeId>,
+        snapshot: Option<&UiDispatchSnapshot>,
     ) -> Option<crate::elements::GlobalElementId> {
         declarative::with_window_frame(app, window, |window_frame| {
             let window_frame = window_frame?;
@@ -100,7 +122,7 @@ impl<H: UiHost> UiTree<H> {
                 {
                     return Some(record.element);
                 }
-                node = self.nodes.get(id).and_then(|n| n.parent);
+                node = self.snapshot_parent_or_retained(snapshot, id);
             }
             None
         })
@@ -116,10 +138,12 @@ impl<H: UiHost> UiTree<H> {
         hit_for_hover: Option<NodeId>,
         hit_for_hover_region: Option<NodeId>,
         hit_for_raw_below_barrier: Option<NodeId>,
+        snapshot: Option<&UiDispatchSnapshot>,
         invalidation_visited: &mut HashMap<NodeId, u8>,
         needs_redraw: &mut bool,
     ) {
-        let hovered_pressable = self.pressable_element_for_hit(app, window, hit_for_hover);
+        let hovered_pressable =
+            self.pressable_element_for_hit(app, window, hit_for_hover, snapshot);
 
         let (prev_element, prev_node, next_element, next_node) =
             crate::elements::update_hovered_pressable(app, window, hovered_pressable);
@@ -169,7 +193,8 @@ impl<H: UiHost> UiTree<H> {
 
         // Raw hover is pressable-targeted hover derived directly from hit testing, regardless of
         // component-local interactivity policy (e.g. disabled scopes).
-        let hovered_pressable_raw = self.pressable_element_for_hit(app, window, hit_for_hover);
+        let hovered_pressable_raw =
+            self.pressable_element_for_hit(app, window, hit_for_hover, snapshot);
         let (prev_raw_element, prev_raw_node, next_raw_element, next_raw_node) =
             crate::elements::update_hovered_pressable_raw(app, window, hovered_pressable_raw);
         if prev_raw_node.is_some() || next_raw_node.is_some() {
@@ -208,7 +233,7 @@ impl<H: UiHost> UiTree<H> {
         }
 
         let hovered_pressable_raw_below_barrier = if hit_for_raw_below_barrier.is_some() {
-            self.pressable_element_for_hit(app, window, hit_for_raw_below_barrier)
+            self.pressable_element_for_hit(app, window, hit_for_raw_below_barrier, snapshot)
         } else if let (Some(barrier_root), Some(position)) = (barrier_root, position) {
             let mut roots: Vec<NodeId> = Vec::new();
             let mut hit_barrier = false;
@@ -239,7 +264,16 @@ impl<H: UiHost> UiTree<H> {
                 self.hit_test_path_cache = None;
                 let hit = self.hit_test_layers_cached(&roots, position);
                 self.hit_test_path_cache = saved;
-                self.pressable_element_for_hit(app, window, hit)
+                if hit.is_none() {
+                    None
+                } else {
+                    let snapshot = self.build_dispatch_snapshot_for_layer_roots(
+                        app.frame_id(),
+                        roots.as_slice(),
+                        Some(barrier_root),
+                    );
+                    self.pressable_element_for_hit(app, window, hit, Some(&snapshot))
+                }
             }
         } else {
             None
@@ -299,7 +333,7 @@ impl<H: UiHost> UiTree<H> {
                     {
                         return Some(record.element);
                     }
-                    node = self.nodes.get(id).and_then(|n| n.parent);
+                    node = self.snapshot_parent_or_retained(snapshot, id);
                 }
                 None
             });

@@ -243,9 +243,7 @@ impl<H: UiHost> UiTree<H> {
                 notify_requested,
                 notify_requested_location,
                 stop_propagation,
-                parent,
             ) = self.with_widget_mut(node_id, |widget, tree| {
-                let parent = tree.nodes.get(node_id).and_then(|n| n.parent);
                 let (children, bounds) = tree
                     .nodes
                     .get(node_id)
@@ -284,7 +282,6 @@ impl<H: UiHost> UiTree<H> {
                     cx.notify_requested,
                     cx.notify_requested_location,
                     cx.stop_propagation,
-                    parent,
                 )
             });
 
@@ -400,6 +397,21 @@ impl<H: UiHost> UiTree<H> {
                 return true;
             }
 
+            let parent = if dispatch_cx.input_snapshot.pre.get(node_id).is_some() {
+                dispatch_cx
+                    .input_snapshot
+                    .parent
+                    .get(node_id)
+                    .copied()
+                    .flatten()
+            } else {
+                debug_assert!(
+                    false,
+                    "dispatch/chain: node missing from input snapshot (node={node_id:?}, frame_id={:?}, window={:?})",
+                    dispatch_cx.input_snapshot.frame_id, dispatch_cx.input_snapshot.window
+                );
+                self.nodes.get(node_id).and_then(|n| n.parent)
+            };
             node_id = match parent {
                 Some(parent) => parent,
                 None => break,

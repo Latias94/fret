@@ -1065,6 +1065,7 @@ impl<H: UiHost> UiTree<H> {
                     hit_for_hover,
                     hit_for_hover_region,
                     hit_for_raw_below_barrier,
+                    Some(pointer_chain_snapshot),
                     &mut invalidation_visited,
                     &mut needs_redraw,
                 );
@@ -2614,6 +2615,7 @@ impl<H: UiHost> UiTree<H> {
                         hit_for_hover,
                         hit_for_hover_region,
                         hit_for_raw_below_barrier,
+                        Some(pointer_chain_snapshot),
                         &mut invalidation_visited,
                         &mut needs_redraw,
                     );

@@ -85,6 +85,91 @@ fn hover_region_reports_hovered_even_when_child_is_pressable() {
 }
 
 #[test]
+fn hover_region_is_resilient_to_stale_parent_pointers_during_hover_updates() {
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+    ui.set_debug_enabled(true);
+
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(200.0), Px(80.0)),
+    );
+    let mut text = FakeTextService::default();
+
+    fn build_root(cx: &mut ElementContext<'_, TestHost>) -> Vec<AnyElement> {
+        vec![cx.hover_region(
+            crate::element::HoverRegionProps::default(),
+            |cx, hovered| {
+                let trigger = cx
+                    .pressable(crate::element::PressableProps::default(), |cx, _state| {
+                        vec![cx.text("trigger")]
+                    });
+
+                let mut children = vec![trigger];
+                if hovered {
+                    children.push(cx.text("hovered"));
+                }
+                children
+            },
+        )]
+    }
+
+    // Frame 0: not hovered yet.
+    let root = render_root(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds,
+        "hover-region-stale-parent",
+        build_root,
+    );
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut text, bounds, 1.0);
+
+    let hover_region_node = ui.children(root)[0];
+    let trigger_node = ui.children(hover_region_node)[0];
+    let trigger_leaf = ui.children(trigger_node)[0];
+    ui.test_set_node_parent(trigger_leaf, None);
+
+    let trigger_bounds = ui.debug_node_bounds(trigger_node).expect("trigger bounds");
+    let pos = fret_core::Point::new(
+        Px(trigger_bounds.origin.x.0 + 2.0),
+        Px(trigger_bounds.origin.y.0 + 2.0),
+    );
+    ui.dispatch_event(
+        &mut app,
+        &mut text,
+        &fret_core::Event::Pointer(fret_core::PointerEvent::Move {
+            position: pos,
+            buttons: fret_core::MouseButtons::default(),
+            modifiers: fret_core::Modifiers::default(),
+            pointer_id: fret_core::PointerId(0),
+            pointer_type: fret_core::PointerType::Mouse,
+        }),
+    );
+
+    // Frame 1: hover_region should observe hovered=true even when the hit leaf has a stale parent.
+    app.advance_frame();
+    let root = render_root(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds,
+        "hover-region-stale-parent",
+        build_root,
+    );
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut text, bounds, 1.0);
+
+    let hover_region_node = ui.children(root)[0];
+    assert_eq!(ui.children(hover_region_node).len(), 2);
+}
+
+#[test]
 fn pressable_keyboard_activation_dispatches_click_command() {
     let mut app = TestHost::new();
     let mut ui: UiTree<TestHost> = UiTree::new();
