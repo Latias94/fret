@@ -135,6 +135,7 @@ struct DockingArbitrationHarnessRoot {
     float_zone_anchor: fret_core::NodeId,
     viewport_split_handle_anchor: fret_core::NodeId,
     floating_title_bar_anchor: fret_core::NodeId,
+    tab_drop_end_anchor: fret_core::NodeId,
     tab_overflow_button_anchor: fret_core::NodeId,
     tab_overflow_menu_row_1_anchor: fret_core::NodeId,
 }
@@ -377,7 +378,7 @@ impl<H: fret_ui::UiHost> Widget<H> for DockingArbitrationHarnessRoot {
             ),
         );
 
-        let (overflow_button_anchor_rect, overflow_row_1_anchor_rect) = (|| {
+        let (overflow_button_anchor_rect, overflow_row_1_anchor_rect, tab_drop_end_anchor_rect) = (|| {
             use fret_core::{DockGraph, DockNode, DockNodeId, PanelKey};
 
             fn tabs_rect_for_panel(
@@ -498,15 +499,30 @@ impl<H: fret_ui::UiHost> Widget<H> for DockingArbitrationHarnessRoot {
             let row_cx = row_1_rect.origin.x.0 + row_1_rect.size.width.0 * 0.25;
             let row_cy = row_1_rect.origin.y.0 + row_1_rect.size.height.0 * 0.5;
 
-            Some((rect(button_cx, button_cy), rect(row_cx, row_cy)))
+            // Anchor a "drop at end" position to the reserved header space to the left of the
+            // overflow button. This avoids fragile `set_cursor_in_window_logical` coordinates in
+            // scripts while still gating the same dock drop resolution contract.
+            let end_cx = {
+                let x_right = tab_bar.origin.x.0 + tab_bar.size.width.0;
+                let x_before_button = (button_rect.origin.x.0 - 2.0).max(tab_bar.origin.x.0 + pad);
+                (x_right - pad - 2.0).min(x_before_button)
+            };
+            let end_cy = tab_bar.origin.y.0 + tab_bar.size.height.0 * 0.5;
+
+            Some((
+                rect(button_cx, button_cy),
+                rect(row_cx, row_cy),
+                rect(end_cx, end_cy),
+            ))
         })()
-        .unwrap_or((hidden, hidden));
+        .unwrap_or((hidden, hidden, hidden));
 
         let _ = cx.layout_in(self.tab_overflow_button_anchor, overflow_button_anchor_rect);
         let _ = cx.layout_in(
             self.tab_overflow_menu_row_1_anchor,
             overflow_row_1_anchor_rect,
         );
+        let _ = cx.layout_in(self.tab_drop_end_anchor, tab_drop_end_anchor_rect);
 
         let floating_anchor_rect = (|| {
             let dock = cx.app.global::<DockManager>()?;
@@ -2057,6 +2073,12 @@ impl DockingArbitrationDriver {
                     .create_node_retained(DockingArbitrationDragAnchor::new(
                         "dock-arb-tab-overflow-menu-row-anchor-left-1",
                     ));
+            let tab_drop_end_anchor =
+                state
+                    .ui
+                    .create_node_retained(DockingArbitrationDragAnchor::new(
+                        "dock-arb-tab-drop-end-anchor-left",
+                    ));
             let root = state
                 .ui
                 .create_node_retained(DockingArbitrationHarnessRoot {
@@ -2068,6 +2090,7 @@ impl DockingArbitrationDriver {
                     float_zone_anchor,
                     viewport_split_handle_anchor,
                     floating_title_bar_anchor,
+                    tab_drop_end_anchor,
                     tab_overflow_button_anchor,
                     tab_overflow_menu_row_1_anchor,
                 });
@@ -2082,6 +2105,7 @@ impl DockingArbitrationDriver {
                 .chain(std::iter::once(float_zone_anchor))
                 .chain(std::iter::once(viewport_split_handle_anchor))
                 .chain(std::iter::once(floating_title_bar_anchor))
+                .chain(std::iter::once(tab_drop_end_anchor))
                 .chain(std::iter::once(tab_overflow_button_anchor))
                 .chain(std::iter::once(tab_overflow_menu_row_1_anchor))
                 .collect();
