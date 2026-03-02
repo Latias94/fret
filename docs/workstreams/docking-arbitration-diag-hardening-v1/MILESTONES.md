@@ -33,6 +33,11 @@ Status update (2026-03-02, later):
   retargeting + explicit zone selection).
 - M1.6 delivered: chained tear-off + merge-back returns to the pre-tearoff dock graph fingerprint (idempotence).
 
+Stability check (2026-03-02):
+
+- `fretboard diag repeat` passes 7x when launch env includes `FRET_DOCK_ALLOW_MULTI_WINDOW_TEAR_OFF=1` and repeat
+  comparison ignores window bounds + scene fingerprint (expected to vary run-to-run for a multi-window docking demo).
+
 ## M1.4 — Rebuild reliability for docking demos (Windows/MSVC)
 
 Goal: docking demo binaries used by `--launch` diagnostics can be rebuilt reliably in local dev.
