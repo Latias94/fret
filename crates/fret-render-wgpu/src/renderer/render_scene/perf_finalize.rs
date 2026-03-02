@@ -285,6 +285,22 @@ impl Renderer {
         self.perf
             .effect_blur_quality
             .saturating_add_assign(frame_perf.effect_blur_quality);
+        self.perf.custom_effect_v1_steps_requested = self
+            .perf
+            .custom_effect_v1_steps_requested
+            .saturating_add(frame_perf.custom_effect_v1_steps_requested);
+        self.perf.custom_effect_v1_passes_emitted = self
+            .perf
+            .custom_effect_v1_passes_emitted
+            .saturating_add(frame_perf.custom_effect_v1_passes_emitted);
+        self.perf.custom_effect_v2_steps_requested = self
+            .perf
+            .custom_effect_v2_steps_requested
+            .saturating_add(frame_perf.custom_effect_v2_steps_requested);
+        self.perf.custom_effect_v2_passes_emitted = self
+            .perf
+            .custom_effect_v2_passes_emitted
+            .saturating_add(frame_perf.custom_effect_v2_passes_emitted);
         self.perf.custom_effect_v3_pyramid_cache_hits = self
             .perf
             .custom_effect_v3_pyramid_cache_hits
@@ -576,6 +592,10 @@ impl Renderer {
                 .render_plan_degradations_composite_group_blend_to_over,
             effect_degradations: frame_perf.effect_degradations,
             effect_blur_quality: frame_perf.effect_blur_quality,
+            custom_effect_v1_steps_requested: frame_perf.custom_effect_v1_steps_requested,
+            custom_effect_v1_passes_emitted: frame_perf.custom_effect_v1_passes_emitted,
+            custom_effect_v2_steps_requested: frame_perf.custom_effect_v2_steps_requested,
+            custom_effect_v2_passes_emitted: frame_perf.custom_effect_v2_passes_emitted,
             custom_effect_v3_steps_requested: frame_perf.custom_effect_v3_steps_requested,
             custom_effect_v3_passes_emitted: frame_perf.custom_effect_v3_passes_emitted,
             custom_effect_v3_pyramid_cache_hits: frame_perf.custom_effect_v3_pyramid_cache_hits,

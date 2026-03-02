@@ -368,6 +368,40 @@ pub(crate) fn triage_json_from_stats(
             }));
         }
 
+        // renderer.custom_effect_v1_requested_but_skipped
+        if worst.renderer_custom_effect_v1_steps_requested > 0
+            && worst.renderer_custom_effect_v1_passes_emitted == 0
+        {
+            out.push(json!({
+                "code": "renderer.custom_effect_v1_requested_but_skipped",
+                "severity": "warn",
+                "message": "CustomEffectV1 was requested but no CustomEffect passes were emitted in the worst frame (likely skipped due to intermediate budget / target constraints).",
+                "evidence": {
+                    "custom_effect_v1_steps_requested": worst.renderer_custom_effect_v1_steps_requested,
+                    "custom_effect_v1_passes_emitted": worst.renderer_custom_effect_v1_passes_emitted,
+                    "renderer_intermediate_budget_bytes": worst.renderer_intermediate_budget_bytes,
+                    "renderer_intermediate_peak_in_use_bytes": worst.renderer_intermediate_peak_in_use_bytes,
+                }
+            }));
+        }
+
+        // renderer.custom_effect_v2_requested_but_skipped
+        if worst.renderer_custom_effect_v2_steps_requested > 0
+            && worst.renderer_custom_effect_v2_passes_emitted == 0
+        {
+            out.push(json!({
+                "code": "renderer.custom_effect_v2_requested_but_skipped",
+                "severity": "warn",
+                "message": "CustomEffectV2 was requested but no CustomEffectV2 passes were emitted in the worst frame (likely skipped due to intermediate budget / target constraints).",
+                "evidence": {
+                    "custom_effect_v2_steps_requested": worst.renderer_custom_effect_v2_steps_requested,
+                    "custom_effect_v2_passes_emitted": worst.renderer_custom_effect_v2_passes_emitted,
+                    "renderer_intermediate_budget_bytes": worst.renderer_intermediate_budget_bytes,
+                    "renderer_intermediate_peak_in_use_bytes": worst.renderer_intermediate_peak_in_use_bytes,
+                }
+            }));
+        }
+
         // renderer.custom_effect_v3_requested_but_skipped
         //
         // This catches the case where the UI requested CustomEffectV3 (effect chains include a

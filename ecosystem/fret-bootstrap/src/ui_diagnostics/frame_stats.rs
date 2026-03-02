@@ -507,6 +507,14 @@ pub struct UiFrameStatsV1 {
     // Renderer effect degradation counters (best-effort). These are only populated when
     // `FRET_DIAG_RENDERER_PERF=1` and the runner records perf samples.
     #[serde(default)]
+    pub renderer_custom_effect_v1_steps_requested: u64,
+    #[serde(default)]
+    pub renderer_custom_effect_v1_passes_emitted: u64,
+    #[serde(default)]
+    pub renderer_custom_effect_v2_steps_requested: u64,
+    #[serde(default)]
+    pub renderer_custom_effect_v2_passes_emitted: u64,
+    #[serde(default)]
     pub renderer_custom_effect_v3_steps_requested: u64,
     #[serde(default)]
     pub renderer_custom_effect_v3_passes_emitted: u64,
@@ -864,6 +872,10 @@ impl UiFrameStatsV1 {
             renderer_material_distinct: 0,
             renderer_material_unknown_ids: 0,
             renderer_material_degraded_due_to_budget: 0,
+            renderer_custom_effect_v1_steps_requested: 0,
+            renderer_custom_effect_v1_passes_emitted: 0,
+            renderer_custom_effect_v2_steps_requested: 0,
+            renderer_custom_effect_v2_passes_emitted: 0,
             renderer_custom_effect_v3_steps_requested: 0,
             renderer_custom_effect_v3_passes_emitted: 0,
             renderer_custom_effect_v3_sources_raw_requested: 0,
@@ -991,8 +1003,18 @@ impl UiFrameStatsV1 {
             out.renderer_material_degraded_due_to_budget =
                 sample.perf.material_degraded_due_to_budget;
 
-            out.renderer_custom_effect_v3_steps_requested = sample.perf.custom_effect_v3_steps_requested;
-            out.renderer_custom_effect_v3_passes_emitted = sample.perf.custom_effect_v3_passes_emitted;
+            out.renderer_custom_effect_v1_steps_requested =
+                sample.perf.custom_effect_v1_steps_requested;
+            out.renderer_custom_effect_v1_passes_emitted =
+                sample.perf.custom_effect_v1_passes_emitted;
+            out.renderer_custom_effect_v2_steps_requested =
+                sample.perf.custom_effect_v2_steps_requested;
+            out.renderer_custom_effect_v2_passes_emitted =
+                sample.perf.custom_effect_v2_passes_emitted;
+            out.renderer_custom_effect_v3_steps_requested =
+                sample.perf.custom_effect_v3_steps_requested;
+            out.renderer_custom_effect_v3_passes_emitted =
+                sample.perf.custom_effect_v3_passes_emitted;
 
             let effects = sample.perf.effect_degradations;
             out.renderer_custom_effect_v3_sources_raw_requested =

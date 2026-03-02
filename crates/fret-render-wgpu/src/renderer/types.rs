@@ -490,6 +490,24 @@ pub struct RenderPerfSnapshot {
     pub render_plan_degradations_composite_group_blend_to_over: u64,
     pub effect_degradations: EffectDegradationSnapshot,
     pub effect_blur_quality: BlurQualitySnapshot,
+    /// Counts `EffectStep::CustomV1` occurrences in requested effect chains for the frame.
+    ///
+    /// This is a best-effort diagnostics signal (not a stable API).
+    pub custom_effect_v1_steps_requested: u64,
+    /// Counts `RenderPlanPass::CustomEffect` emitted by the render plan compiler for the frame.
+    ///
+    /// When `custom_effect_v1_steps_requested > 0` but this remains `0`, CustomEffectV1 was
+    /// requested but skipped (typically due to intermediate budget / target constraints).
+    pub custom_effect_v1_passes_emitted: u64,
+    /// Counts `EffectStep::CustomV2` occurrences in requested effect chains for the frame.
+    ///
+    /// This is a best-effort diagnostics signal (not a stable API).
+    pub custom_effect_v2_steps_requested: u64,
+    /// Counts `RenderPlanPass::CustomEffectV2` emitted by the render plan compiler for the frame.
+    ///
+    /// When `custom_effect_v2_steps_requested > 0` but this remains `0`, CustomEffectV2 was
+    /// requested but skipped (typically due to intermediate budget / target constraints).
+    pub custom_effect_v2_passes_emitted: u64,
     /// Counts `EffectStep::CustomV3` occurrences in requested effect chains for the frame.
     ///
     /// This is a best-effort diagnostics signal (not a stable API).
@@ -649,6 +667,10 @@ pub(super) struct RenderPerfStats {
     pub(super) render_plan_degradations_composite_group_blend_to_over: u64,
     pub(super) effect_degradations: EffectDegradationSnapshot,
     pub(super) effect_blur_quality: BlurQualitySnapshot,
+    pub(super) custom_effect_v1_steps_requested: u64,
+    pub(super) custom_effect_v1_passes_emitted: u64,
+    pub(super) custom_effect_v2_steps_requested: u64,
+    pub(super) custom_effect_v2_passes_emitted: u64,
     pub(super) custom_effect_v3_steps_requested: u64,
     pub(super) custom_effect_v3_passes_emitted: u64,
     pub(super) custom_effect_v3_pyramid_cache_hits: u64,

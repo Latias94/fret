@@ -386,6 +386,10 @@ Rollback:
 
 ### PR7 — Semantics: unify “requested vs effective” counters + triage codes across V1/V2/V3
 
+Status:
+
+- Landed.
+
 Goal:
 
 - Make it trivial to answer: “did we skip the whole pass?”, “did we degrade sources?”, “did we silently fall back?” across all CustomEffect ABIs.
@@ -393,18 +397,19 @@ Goal:
 Changes:
 
 - Add per-ABI counters in renderer perf:
-  - steps requested vs passes emitted (V1/V2 as well, mirroring V3),
-  - per-ABI “registration invalid / not supported” counts (optional, if we can plumb it cleanly).
+  - steps requested vs passes emitted (V1/V2 as well, mirroring V3).
 - Add triage hint codes with stable evidence keys:
   - `renderer.custom_effect_v1_requested_but_skipped`
   - `renderer.custom_effect_v2_requested_but_skipped`
   - Keep `renderer.custom_effect_v3_requested_but_skipped` as-is.
-- (Optional) Add one conformance test per ABI to force “requested but skipped” under tight budgets (bounded, deterministic).
+- Add conformance tests to force “requested but skipped” under tight budgets (bounded, deterministic).
 
 Gates:
 
-- `cargo nextest run -p fret-render-wgpu --tests effect_custom_v1_conformance effect_custom_v2_conformance effect_custom_v3_conformance`
-- `cargo run -p fretboard -- diag suite liquid-glass-custom-v3-sources-degraded --dir target/fret-diag/lg-v3-sources --session-auto --launch -- .\\target\\debug\\liquid_glass_demo.exe`
+- `cargo check -p fret-render-wgpu -p fret-diag -p fret-bootstrap`
+- `cargo test -p fret-render-wgpu --test effect_custom_v3_conformance`
+- (Optional) Add suite gates:
+  - `cargo run -p fretboard -- diag suite <suite> --dir target/fret-diag/<suite> --session-auto --check-triage-hint-absent renderer.custom_effect_v1_requested_but_skipped --check-triage-hint-absent renderer.custom_effect_v2_requested_but_skipped --launch -- <demo exe>`
 
 Rollback:
 
@@ -447,8 +452,6 @@ Rollback:
   - `crates/fret-render-wgpu/src/renderer/render_plan_effects.rs`
   - `crates/fret-render-wgpu/src/renderer/render_scene/recorders/effects.rs`
 - Tests:
-  - `crates/fret-render-wgpu/tests/effect_custom_v1_conformance.rs`
-  - `crates/fret-render-wgpu/tests/effect_custom_v2_conformance.rs`
   - `crates/fret-render-wgpu/tests/effect_custom_v3_conformance.rs`
   - `apps/fret-examples/tests/wgsl_smoke.rs`
 - Liquid glass demo + diag:
