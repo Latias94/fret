@@ -61,27 +61,35 @@ fn eval_docking_predicate_from_recent_debug_snapshot(
             let resolved = docking.dock_drop_resolve.as_ref()?.resolved.as_ref()?;
             Some(resolved.insert_index == Some(*index as u64))
         }
-        UiPredicateV1::DockGraphCanonicalIs { canonical } => Some(
-            docking.dock_graph_stats.as_ref()?.canonical_ok == *canonical,
-        ),
+        UiPredicateV1::DockGraphCanonicalIs { canonical } => {
+            Some(docking.dock_graph_stats.as_ref()?.canonical_ok == *canonical)
+        }
         UiPredicateV1::DockGraphHasNestedSameAxisSplitsIs { has_nested } => Some(
-            docking.dock_graph_stats.as_ref()?.has_nested_same_axis_splits == *has_nested,
+            docking
+                .dock_graph_stats
+                .as_ref()?
+                .has_nested_same_axis_splits
+                == *has_nested,
         ),
-        UiPredicateV1::DockGraphNodeCountLe { max } => Some(
-            docking.dock_graph_stats.as_ref()?.node_count <= *max,
-        ),
-        UiPredicateV1::DockGraphMaxSplitDepthLe { max } => Some(
-            docking.dock_graph_stats.as_ref()?.max_split_depth <= *max,
-        ),
-        UiPredicateV1::DockGraphSignatureIs { signature } => Some(
-            docking.dock_graph_signature.as_ref()?.signature == *signature,
-        ),
+        UiPredicateV1::DockGraphNodeCountLe { max } => {
+            Some(docking.dock_graph_stats.as_ref()?.node_count <= *max)
+        }
+        UiPredicateV1::DockGraphMaxSplitDepthLe { max } => {
+            Some(docking.dock_graph_stats.as_ref()?.max_split_depth <= *max)
+        }
+        UiPredicateV1::DockGraphSignatureIs { signature } => {
+            Some(docking.dock_graph_signature.as_ref()?.signature == *signature)
+        }
         UiPredicateV1::DockGraphSignatureContains { needle } => Some(
-            docking.dock_graph_signature.as_ref()?.signature.contains(needle),
+            docking
+                .dock_graph_signature
+                .as_ref()?
+                .signature
+                .contains(needle),
         ),
-        UiPredicateV1::DockGraphSignatureFingerprint64Is { fingerprint64 } => Some(
-            docking.dock_graph_signature.as_ref()?.fingerprint64 == *fingerprint64,
-        ),
+        UiPredicateV1::DockGraphSignatureFingerprint64Is { fingerprint64 } => {
+            Some(docking.dock_graph_signature.as_ref()?.fingerprint64 == *fingerprint64)
+        }
         _ => None,
     }
 }
@@ -154,7 +162,8 @@ pub(super) fn handle_assert_step(
     } else if handoff_to.is_some() {
         // This step is window-targeted; the runtime will migrate the script.
     } else {
-        let cache_eval = svc.eval_predicate_from_cached_test_id_bounds(predicate_window, &predicate);
+        let cache_eval =
+            svc.eval_predicate_from_cached_test_id_bounds(predicate_window, &predicate);
         if cache_eval.used_cache {
             let kind = if cache_eval.stale {
                 "diag.cached_test_id_predicate.stale"
@@ -244,38 +253,61 @@ pub(super) fn handle_assert_step(
                             let open_window_count =
                                 UiDiagnosticsService::open_window_count_for_predicates(app);
 
-                        if predicate_window == window {
-                            if let Some(snapshot) = semantics_snapshot {
-                                record_overlay_placement_trace(
-                                    &mut active.overlay_placement_trace,
-                                    element_runtime,
-                                    Some(snapshot),
-                                    window,
-                                    step_index as u32,
-                                    "assert",
-                                );
-                                eval_predicate(
-                                    snapshot,
-                                    window_bounds,
-                                    predicate_window,
-                                    active.scope_root_for_window(predicate_window),
-                                    input_ctx,
-                                    element_runtime,
-                                    text_input_snapshot,
-                                    app.global::<fret_core::RendererTextPerfSnapshot>().copied(),
-                                    app.global::<fret_core::RendererTextFontTraceSnapshot>(),
-                                    svc.known_windows.as_slice(),
-                                    open_window_count,
-                                    platform_caps,
-                                    docking_diag,
-                                    workspace_diag,
-                                    dock_drag_runtime.as_ref(),
-                                    text_font_stack_key_stable_frames,
-                                    font_catalog_populated,
-                                    system_font_rescan_idle,
-                                    &predicate,
-                                )
+                            if predicate_window == window {
+                                if let Some(snapshot) = semantics_snapshot {
+                                    record_overlay_placement_trace(
+                                        &mut active.overlay_placement_trace,
+                                        element_runtime,
+                                        Some(snapshot),
+                                        window,
+                                        step_index as u32,
+                                        "assert",
+                                    );
+                                    eval_predicate(
+                                        snapshot,
+                                        window_bounds,
+                                        predicate_window,
+                                        active.scope_root_for_window(predicate_window),
+                                        input_ctx,
+                                        element_runtime,
+                                        text_input_snapshot,
+                                        app.global::<fret_core::RendererTextPerfSnapshot>()
+                                            .copied(),
+                                        app.global::<fret_core::RendererTextFontTraceSnapshot>(),
+                                        svc.known_windows.as_slice(),
+                                        open_window_count,
+                                        platform_caps,
+                                        docking_diag,
+                                        workspace_diag,
+                                        dock_drag_runtime.as_ref(),
+                                        text_font_stack_key_stable_frames,
+                                        font_catalog_populated,
+                                        system_font_rescan_idle,
+                                        &predicate,
+                                    )
+                                } else {
+                                    eval_predicate_without_semantics(
+                                        predicate_window,
+                                        svc.known_windows.as_slice(),
+                                        open_window_count,
+                                        platform_caps,
+                                        docking_diag,
+                                        workspace_diag,
+                                        dock_drag_runtime.as_ref(),
+                                        &predicate,
+                                    )
+                                    .unwrap_or_else(|| {
+                                        *force_dump_label = Some(format!(
+                                            "script-step-{step_index:04}-assert-no-semantics"
+                                        ));
+                                        *stop_script = true;
+                                        *failure_reason = Some("no_semantics_snapshot".to_string());
+                                        output.request_redraw = true;
+                                        false
+                                    })
+                                }
                             } else {
+                                // Off-window predicates must not reuse the current window's semantics snapshot.
                                 eval_predicate_without_semantics(
                                     predicate_window,
                                     svc.known_windows.as_slice(),
@@ -296,32 +328,10 @@ pub(super) fn handle_assert_step(
                                     false
                                 })
                             }
-                        } else {
-                            // Off-window predicates must not reuse the current window's semantics snapshot.
-                            eval_predicate_without_semantics(
-                                predicate_window,
-                                svc.known_windows.as_slice(),
-                                open_window_count,
-                                platform_caps,
-                                docking_diag,
-                                workspace_diag,
-                                dock_drag_runtime.as_ref(),
-                                &predicate,
-                            )
-                            .unwrap_or_else(|| {
-                                *force_dump_label = Some(format!(
-                                    "script-step-{step_index:04}-assert-no-semantics"
-                                ));
-                                *stop_script = true;
-                                *failure_reason = Some("no_semantics_snapshot".to_string());
-                                output.request_redraw = true;
-                                false
-                            })
                         }
                     }
-                }
-            },
-        };
+                },
+            };
 
             if ok {
                 active.next_step = active.next_step.saturating_add(1);

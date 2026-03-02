@@ -114,29 +114,12 @@ impl UiDiagnosticsService {
         self.inspector.set_enabled(enabled, consume_clicks);
     }
 
-    pub fn inspect_is_enabled(&self) -> bool {
+    pub(super) fn inspect_is_enabled(&self) -> bool {
         self.inspector.enabled
     }
 
-    pub fn inspect_consume_clicks(&self) -> bool {
+    pub(super) fn inspect_consume_clicks(&self) -> bool {
         self.inspector.consume_clicks
-    }
-
-    pub fn inspect_is_locked(&self, window: AppWindowId) -> bool {
-        self.inspector.is_locked(window)
-    }
-
-    pub fn inspect_help_is_open(&self, window: AppWindowId) -> bool {
-        self.inspector.help_is_open(window)
-    }
-
-    pub fn inspect_help_search_query(&self, window: AppWindowId) -> Option<&str> {
-        self.inspector.help_search_query(window)
-    }
-
-    #[cfg(test)]
-    pub(super) fn inspect_help_scroll_offset(&self, window: AppWindowId) -> usize {
-        self.inspector.help_scroll_offset(window)
     }
 
     pub(super) fn set_inspect_help_scroll_offset(&mut self, window: AppWindowId, offset: usize) {
@@ -149,26 +132,6 @@ impl UiDiagnosticsService {
 
     pub(super) fn set_inspect_tree_items(&mut self, window: AppWindowId, items: Vec<u64>) {
         self.inspector.set_tree_items(window, items);
-    }
-
-    pub fn inspect_focus_node_id(&self, window: AppWindowId) -> Option<u64> {
-        self.inspector.focus_node_id(window)
-    }
-
-    pub fn inspect_focus_summary_line(&self, window: AppWindowId) -> Option<&str> {
-        self.inspector.focus_summary_line(window)
-    }
-
-    pub fn inspect_focus_path_line(&self, window: AppWindowId) -> Option<&str> {
-        self.inspector.focus_path_line(window)
-    }
-
-    pub fn inspect_toast_message(&self, window: AppWindowId) -> Option<&str> {
-        self.inspector.toast_message(window)
-    }
-
-    pub fn inspect_best_selector_json(&self, window: AppWindowId) -> Option<&str> {
-        self.inspector.best_selector_json(window)
     }
 
     pub fn wants_inspection_active(&mut self, window: AppWindowId) -> bool {

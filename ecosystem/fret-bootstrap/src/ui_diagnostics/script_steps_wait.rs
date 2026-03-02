@@ -61,27 +61,35 @@ fn eval_docking_predicate_from_recent_debug_snapshot(
             let resolved = docking.dock_drop_resolve.as_ref()?.resolved.as_ref()?;
             Some(resolved.insert_index == Some(*index as u64))
         }
-        UiPredicateV1::DockGraphCanonicalIs { canonical } => Some(
-            docking.dock_graph_stats.as_ref()?.canonical_ok == *canonical,
-        ),
+        UiPredicateV1::DockGraphCanonicalIs { canonical } => {
+            Some(docking.dock_graph_stats.as_ref()?.canonical_ok == *canonical)
+        }
         UiPredicateV1::DockGraphHasNestedSameAxisSplitsIs { has_nested } => Some(
-            docking.dock_graph_stats.as_ref()?.has_nested_same_axis_splits == *has_nested,
+            docking
+                .dock_graph_stats
+                .as_ref()?
+                .has_nested_same_axis_splits
+                == *has_nested,
         ),
-        UiPredicateV1::DockGraphNodeCountLe { max } => Some(
-            docking.dock_graph_stats.as_ref()?.node_count <= *max,
-        ),
-        UiPredicateV1::DockGraphMaxSplitDepthLe { max } => Some(
-            docking.dock_graph_stats.as_ref()?.max_split_depth <= *max,
-        ),
-        UiPredicateV1::DockGraphSignatureIs { signature } => Some(
-            docking.dock_graph_signature.as_ref()?.signature == *signature,
-        ),
+        UiPredicateV1::DockGraphNodeCountLe { max } => {
+            Some(docking.dock_graph_stats.as_ref()?.node_count <= *max)
+        }
+        UiPredicateV1::DockGraphMaxSplitDepthLe { max } => {
+            Some(docking.dock_graph_stats.as_ref()?.max_split_depth <= *max)
+        }
+        UiPredicateV1::DockGraphSignatureIs { signature } => {
+            Some(docking.dock_graph_signature.as_ref()?.signature == *signature)
+        }
         UiPredicateV1::DockGraphSignatureContains { needle } => Some(
-            docking.dock_graph_signature.as_ref()?.signature.contains(needle),
+            docking
+                .dock_graph_signature
+                .as_ref()?
+                .signature
+                .contains(needle),
         ),
-        UiPredicateV1::DockGraphSignatureFingerprint64Is { fingerprint64 } => Some(
-            docking.dock_graph_signature.as_ref()?.fingerprint64 == *fingerprint64,
-        ),
+        UiPredicateV1::DockGraphSignatureFingerprint64Is { fingerprint64 } => {
+            Some(docking.dock_graph_signature.as_ref()?.fingerprint64 == *fingerprint64)
+        }
         _ => None,
     }
 }
