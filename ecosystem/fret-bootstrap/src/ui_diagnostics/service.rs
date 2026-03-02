@@ -16,8 +16,7 @@ pub struct UiDiagnosticsService {
     ready_write_warned: bool,
     capabilities_written: bool,
     capabilities_write_warned: bool,
-    inspect_enabled: bool,
-    inspect_consume_clicks: bool,
+    inspector: inspect_controller::InspectController,
     pending_script: Option<PendingScript>,
     pending_script_run_id: Option<u64>,
     active_scripts: HashMap<AppWindowId, ActiveScript>,
@@ -26,14 +25,6 @@ pub struct UiDiagnosticsService {
     last_dump_artifact_stats: Option<UiArtifactStatsV1>,
     last_script_run_id: u64,
     last_pick_run_id: u64,
-    last_picked_node_id: HashMap<AppWindowId, u64>,
-    last_picked_selector_json: HashMap<AppWindowId, String>,
-    last_hovered_node_id: HashMap<AppWindowId, u64>,
-    last_hovered_selector_json: HashMap<AppWindowId, String>,
-    inspect: inspect_state::InspectState,
-    pick_overlay_grace_frames: HashMap<AppWindowId, u32>,
-    pick_armed_run_id: Option<u64>,
-    pending_pick: Option<PendingPick>,
     clipboard_text_responses: std::collections::VecDeque<DiagClipboardTextResponse>,
     next_clipboard_token: u64,
     app_snapshot_provider:
@@ -529,14 +520,15 @@ impl UiDiagnosticsService {
             return true;
         }
 
-        if self.pick_armed_run_id.is_some()
+        if self.inspector.pick_armed_run_id.is_some()
             || self
+                .inspector
                 .pending_pick
                 .as_ref()
                 .is_some_and(|p| p.window == window)
-            || self.inspect_enabled
-            || self.inspect.locked_windows.contains(&window)
-            || self.inspect.toast.contains_key(&window)
+            || self.inspector.enabled
+            || self.inspector.state.locked_windows.contains(&window)
+            || self.inspector.state.toast.contains_key(&window)
         {
             return true;
         }
@@ -561,15 +553,16 @@ impl UiDiagnosticsService {
     }
 
     pub fn last_picked_node_id(&self, window: AppWindowId) -> Option<u64> {
-        self.last_picked_node_id.get(&window).copied()
+        self.inspector.last_picked_node_id.get(&window).copied()
     }
 
     pub fn pick_is_armed(&self) -> bool {
-        self.pick_armed_run_id.is_some()
+        self.inspector.pick_armed_run_id.is_some()
     }
 
     pub(super) fn pick_is_pending(&self, window: AppWindowId) -> bool {
-        self.pending_pick
+        self.inspector
+            .pending_pick
             .as_ref()
             .is_some_and(|pending| pending.window == window)
     }
@@ -578,26 +571,11 @@ impl UiDiagnosticsService {
         self.per_window.remove(&window);
         self.known_windows.retain(|w| *w != window);
         self.active_scripts.remove(&window);
-        self.last_picked_node_id.remove(&window);
-        self.last_picked_selector_json.remove(&window);
-        self.last_hovered_node_id.remove(&window);
-        self.last_hovered_selector_json.remove(&window);
-        self.clear_inspect_state_for_window(window);
-        if self
-            .pending_pick
-            .as_ref()
-            .is_some_and(|p| p.window == window)
-        {
-            self.pending_pick = None;
-        }
-    }
-
-    pub(super) fn clear_inspect_state_for_window(&mut self, window: AppWindowId) {
-        self.inspect.clear_for_window(window);
+        self.inspector.clear_for_window(window);
     }
 
     pub(super) fn clear_inspect_state_all_windows(&mut self) {
-        self.inspect.clear_all();
+        self.inspector.state.clear_all();
     }
 
     fn reset_diagnostics_ring_for_window(&mut self, window: AppWindowId) {
@@ -730,7 +708,7 @@ impl UiDiagnosticsService {
             )
         });
 
-        if self.inspect_enabled {
+        if self.inspector.enabled {
             let hovered = last_pointer_position.and_then(|pos| {
                 raw_semantics.and_then(|snap| {
                     pick::pick_semantics_node_at(snap, ui, pos).map(|n| n.id.data().as_ffi())
@@ -929,7 +907,7 @@ impl UiDiagnosticsService {
 
         self.record_shortcut_routing_trace_for_window(app, window);
 
-        if let Some(pending) = self.pending_pick.clone()
+        if let Some(pending) = self.inspector.pending_pick.clone()
             && pending.window == window
         {
             self.resolve_pending_pick_for_window(

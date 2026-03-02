@@ -611,8 +611,8 @@ impl UiDiagnosticsService {
         }
         self.last_pick_trigger_mtime = Some(modified);
 
-        self.pending_pick = None;
-        self.pick_armed_run_id = Some(self.next_pick_run_id());
+        self.inspector.pending_pick = None;
+        self.inspector.pick_armed_run_id = Some(self.next_pick_run_id());
     }
 
     pub(super) fn poll_inspect_trigger(&mut self) {

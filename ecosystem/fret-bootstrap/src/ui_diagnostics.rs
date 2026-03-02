@@ -55,6 +55,7 @@ mod bundle_dump_policy;
 mod bundle_sidecars;
 mod fs_triggers;
 mod inspect;
+mod inspect_controller;
 #[cfg(feature = "diagnostics")]
 mod inspect_explain;
 #[cfg(feature = "diagnostics")]
@@ -1280,9 +1281,9 @@ mod tests {
     fn scripts_do_not_force_inspection_active() {
         let mut svc = UiDiagnosticsService::default();
         svc.cfg.enabled = true;
-        svc.inspect_enabled = false;
-        svc.pick_armed_run_id = None;
-        svc.pending_pick = None;
+        svc.inspector.enabled = false;
+        svc.inspector.pick_armed_run_id = None;
+        svc.inspector.pending_pick = None;
         let unique = fret_core::time::SystemTime::now()
             .duration_since(fret_core::time::UNIX_EPOCH)
             .expect("system clock should be >= UNIX_EPOCH")
@@ -1350,7 +1351,7 @@ mod tests {
     fn pick_trigger_is_baselined_on_first_poll() {
         let mut svc = UiDiagnosticsService::default();
         svc.cfg.enabled = true;
-        svc.pick_armed_run_id = None;
+        svc.inspector.pick_armed_run_id = None;
 
         let unique = fret_core::time::SystemTime::now()
             .duration_since(fret_core::time::UNIX_EPOCH)
@@ -1365,7 +1366,7 @@ mod tests {
         svc.poll_pick_trigger();
 
         assert!(
-            svc.pick_armed_run_id.is_none(),
+            svc.inspector.pick_armed_run_id.is_none(),
             "the first observed pick.touch mtime should be baselined, not treated as a pick trigger"
         );
         assert!(svc.last_pick_trigger_mtime.is_some());
@@ -1375,7 +1376,7 @@ mod tests {
     fn inspect_trigger_is_baselined_on_first_poll() {
         let mut svc = UiDiagnosticsService::default();
         svc.cfg.enabled = true;
-        svc.inspect_enabled = false;
+        svc.inspector.enabled = false;
 
         let unique = fret_core::time::SystemTime::now()
             .duration_since(fret_core::time::UNIX_EPOCH)
@@ -1391,7 +1392,7 @@ mod tests {
         svc.poll_inspect_trigger();
 
         assert!(
-            !svc.inspect_enabled,
+            !svc.inspector.enabled,
             "the first observed inspect.touch mtime should be baselined, not treated as an inspect trigger"
         );
         assert!(svc.last_inspect_trigger_mtime.is_some());
@@ -3106,9 +3107,10 @@ mod tests {
         let window = window_id(1);
         let mut svc = UiDiagnosticsService::default();
         svc.cfg.enabled = true;
-        svc.inspect_enabled = true;
+        svc.inspector.enabled = true;
 
-        svc.inspect
+        svc.inspector
+            .state
             .pending_nav
             .insert(window, inspect::InspectNavCommand::Focus);
         svc.apply_inspect_navigation(window, Some(&snapshot), None);
@@ -3128,8 +3130,8 @@ mod tests {
 
         let mut svc = UiDiagnosticsService::default();
         svc.cfg.enabled = true;
-        svc.inspect_enabled = true;
-        svc.inspect.help_open_windows.insert(window);
+        svc.inspector.enabled = true;
+        svc.inspector.state.help_open_windows.insert(window);
 
         let mut app = App::new();
 
@@ -3165,8 +3167,8 @@ mod tests {
 
         let mut svc = UiDiagnosticsService::default();
         svc.cfg.enabled = true;
-        svc.inspect_enabled = true;
-        svc.inspect.help_open_windows.insert(window);
+        svc.inspector.enabled = true;
+        svc.inspector.state.help_open_windows.insert(window);
 
         let mut app = App::new();
 

@@ -34,7 +34,7 @@ impl UiDiagnosticsService {
         ui: &UiTree<App>,
         element_runtime: Option<&ElementRuntime>,
     ) {
-        let Some(pending) = self.pending_pick.clone() else {
+        let Some(pending) = self.inspector.pending_pick.clone() else {
             return;
         };
         if pending.window != window {
@@ -72,7 +72,9 @@ impl UiDiagnosticsService {
             match selection {
                 Some(sel) => {
                     result.stage = UiPickStageV1::Picked;
-                    self.last_picked_node_id.insert(window, sel.node.id);
+                    self.inspector
+                        .last_picked_node_id
+                        .insert(window, sel.node.id);
 
                     let selector_json = snapshot
                         .nodes
@@ -96,13 +98,24 @@ impl UiDiagnosticsService {
                         .and_then(|sel| serde_json::to_string(&sel).ok());
 
                     if let Some(json) = selector_json {
-                        self.last_picked_selector_json.insert(window, json.clone());
-                        self.inspect.focus_node_id.insert(window, sel.node.id);
-                        self.inspect.focus_selector_json.insert(window, json);
-                        self.inspect.focus_down_stack.insert(window, Vec::new());
+                        self.inspector
+                            .last_picked_selector_json
+                            .insert(window, json.clone());
+                        self.inspector
+                            .state
+                            .focus_node_id
+                            .insert(window, sel.node.id);
+                        self.inspector
+                            .state
+                            .focus_selector_json
+                            .insert(window, json);
+                        self.inspector
+                            .state
+                            .focus_down_stack
+                            .insert(window, Vec::new());
                     }
 
-                    self.pick_overlay_grace_frames.insert(window, 10);
+                    self.inspector.pick_overlay_grace_frames.insert(window, 10);
                     result.selection = Some(sel);
                 }
                 None => {
@@ -120,6 +133,6 @@ impl UiDiagnosticsService {
         }
 
         self.write_pick_result(result);
-        self.pending_pick = None;
+        self.inspector.pending_pick = None;
     }
 }
