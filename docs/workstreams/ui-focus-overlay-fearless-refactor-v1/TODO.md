@@ -32,7 +32,7 @@ Tracking doc: `docs/workstreams/ui-focus-overlay-fearless-refactor-v1/DESIGN.md`
 - [x] Make hover ancestor queries resilient to stale retained `parent` pointers (Pressable/HoverRegion).
 - [x] Make HoverRegion “hover edge” transitions disable view-cache reuse for the containing cache
   roots (rerender-on-hover-edge), so hover-driven overlays cannot get stuck behind cache hits.
-- [ ] Add conformance coverage for nested scenarios:
+- [x] Add conformance coverage for nested scenarios:
   - [x] trapped focus scope inside a modal overlay root (portal-style nested roots)
   - [x] multiple stacked trapped scopes (inner scope wins)
   - [x] barrier active during close transitions (focus restoration while pointer underlay stays blocked)
