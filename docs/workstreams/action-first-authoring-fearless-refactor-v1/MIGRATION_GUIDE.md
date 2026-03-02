@@ -112,6 +112,10 @@ Template reference:
 - `fretboard new hello` uses this pattern (View runtime + typed unit actions):
   `apps/fretboard/src/scaffold/templates.rs` (`hello_template_main_rs`)
 
+UI gallery reference:
+
+- `apps/fret-ui-gallery/src/ui/snippets/command/action_first_view.rs` (Action-first + view runtime snippet, used by the `Command` page).
+
 Migration steps:
 
 1) Move state into:

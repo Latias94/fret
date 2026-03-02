@@ -181,7 +181,10 @@ ID format:
       `apps/fret-cookbook/examples/hello.rs`
     - View runtime + action-first adoption landed for `overlay_basics`:
       `apps/fret-cookbook/examples/overlay_basics.rs`
-- [ ] AFA-adopt-041 Add at least one ui-gallery page/snippet using actions + view runtime.
+- [x] AFA-adopt-041 Add at least one ui-gallery page/snippet using actions + view runtime.
+  - Evidence:
+    - `apps/fret-ui-gallery/src/ui/snippets/command/action_first_view.rs`
+    - `apps/fret-ui-gallery/src/ui/pages/command.rs`
 - [ ] AFA-adopt-042 Add one editor-grade harness adoption:
   - docking/workspace shell uses actions for tab/command semantics (where appropriate).
 - [~] AFA-adopt-043 Update `fretboard` scaffold templates to prefer action-first patterns (once v1 is stable).
