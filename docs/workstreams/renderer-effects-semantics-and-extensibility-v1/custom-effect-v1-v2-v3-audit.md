@@ -451,6 +451,9 @@ Conformance:
 - Budget zero + target exhaustion: conformance gates exist for CustomEffect V1/V2/V3 so budget
   edges remain deterministic across ABIs (requested step present, emitted pass absent, and the
   corresponding render plan degradation reason is visible in perf snapshots).
+- Budget insufficient (non-zero): conformance gates exist for CustomEffect V1/V2/V3 so “needs >= 2
+  full targets” requirements remain stable and produce a `BudgetInsufficient` render plan
+  degradation that can be triaged from perf snapshots.
 - Centralize intermediate budget charging helpers used by V1/V2/V3 (including mask targets and pyramid bytes).
 - Make “base required bytes” semantics explicit and shared (srcdst + required scratch), so triage evidence can report:
   - budget available
