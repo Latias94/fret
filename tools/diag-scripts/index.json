@@ -64,6 +64,65 @@
       "target_hints": []
     },
     {
+      "id": "docking-arbitration-demo-close-controls",
+      "path": "tools/diag-scripts/docking/arbitration/docking-arbitration-demo-close-controls.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "docking-arbitration"
+      ],
+      "tags": [
+        "close",
+        "docking",
+        "gate",
+        "panel"
+      ],
+      "target_hints": [
+        "Closes the controls panel via a harness button and asserts controls-only widgets disappear.",
+        "Also asserts the resulting dock graph canonical signature."
+      ]
+    },
+    {
+      "id": "docking-arbitration-demo-close-viewport-left",
+      "path": "tools/diag-scripts/docking/arbitration/docking-arbitration-demo-close-viewport-left.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "docking-arbitration"
+      ],
+      "tags": [
+        "close",
+        "docking",
+        "gate",
+        "panel"
+      ],
+      "target_hints": [
+        "Closes the left viewport panel via a harness button and asserts the viewport node disappears."
+      ]
+    },
+    {
+      "id": "docking-arbitration-demo-close-viewport-right",
+      "path": "tools/diag-scripts/docking/arbitration/docking-arbitration-demo-close-viewport-right.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "docking-arbitration"
+      ],
+      "tags": [
+        "close",
+        "docking",
+        "gate",
+        "panel"
+      ],
+      "target_hints": [
+        "Closes the right viewport panel via a harness button and asserts the viewport node disappears.",
+        "Also asserts the resulting dock graph canonical signature."
+      ]
+    },
+    {
       "id": "docking-arbitration-demo-default-layout-signature",
       "path": "tools/diag-scripts/docking/arbitration/docking-arbitration-demo-default-layout-signature.json",
       "required_capabilities": [
@@ -646,26 +705,6 @@
       ],
       "tags": [],
       "target_hints": []
-    },
-    {
-      "id": "ui-gallery-alert-dialog-focus-trap-tab-cycle",
-      "path": "tools/diag-scripts/ui-gallery/overlay/ui-gallery-alert-dialog-focus-trap-tab-cycle.json",
-      "required_capabilities": [
-        "diag.script_v2"
-      ],
-      "suite_memberships": [
-        "ui-gallery",
-        "ui-gallery-shadcn-conformance"
-      ],
-      "tags": [
-        "alert_dialog",
-        "focus",
-        "trap",
-        "ui_gallery"
-      ],
-      "target_hints": [
-        "Opens the overlay demo AlertDialog and asserts Tab/Shift+Tab cycles focus within the modal content (focus trap), then Escape restores focus to the trigger."
-      ]
     },
     {
       "id": "ui-gallery-alert-tabs-shared-indicator-pixels-changed-fixed-frame-delta",
@@ -1497,6 +1536,43 @@
       "target_hints": []
     },
     {
+      "id": "ui-gallery-context-menu-basic-keyboard-nav",
+      "path": "tools/diag-scripts/ui-gallery/context-menu/ui-gallery-context-menu-basic-keyboard-nav.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "ui-gallery"
+      ],
+      "tags": [
+        "context_menu",
+        "keyboard",
+        "nav",
+        "regression_pack",
+        "shadcn",
+        "ui_gallery"
+      ],
+      "target_hints": []
+    },
+    {
+      "id": "ui-gallery-context-menu-basic-right-click-last-action",
+      "path": "tools/diag-scripts/ui-gallery/context-menu/ui-gallery-context-menu-basic-right-click-last-action.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "ui-gallery"
+      ],
+      "tags": [
+        "context_menu",
+        "mouse",
+        "regression_pack",
+        "shadcn",
+        "ui_gallery"
+      ],
+      "target_hints": []
+    },
+    {
       "id": "ui-gallery-context-menu-right-click",
       "path": "tools/diag-scripts/ui-gallery/context-menu/ui-gallery-context-menu-right-click.json",
       "required_capabilities": [],
@@ -1758,26 +1834,6 @@
       "target_hints": []
     },
     {
-      "id": "ui-gallery-dialog-focus-trap-tab-cycle",
-      "path": "tools/diag-scripts/ui-gallery/overlay/ui-gallery-dialog-focus-trap-tab-cycle.json",
-      "required_capabilities": [
-        "diag.script_v2"
-      ],
-      "suite_memberships": [
-        "ui-gallery",
-        "ui-gallery-shadcn-conformance"
-      ],
-      "tags": [
-        "dialog",
-        "focus",
-        "trap",
-        "ui-gallery"
-      ],
-      "target_hints": [
-        "Opens the overlay demo Dialog and asserts Tab cycles focus within the modal content (focus trap), then Escape restores focus to the trigger."
-      ]
-    },
-    {
       "id": "ui-gallery-dialog-escape-focus-restore-steady",
       "path": "tools/diag-scripts/ui-gallery/perf/ui-gallery-dialog-escape-focus-restore-steady.json",
       "required_capabilities": [],
@@ -1806,6 +1862,43 @@
         "ui-gallery-motion-pilot"
       ],
       "tags": [],
+      "target_hints": []
+    },
+    {
+      "id": "ui-gallery-dropdown-menu-basic-typeahead-billing",
+      "path": "tools/diag-scripts/ui-gallery/dropdown-menu/ui-gallery-dropdown-menu-basic-typeahead-billing.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "ui-gallery"
+      ],
+      "tags": [
+        "dropdown_menu",
+        "keyboard",
+        "regression_pack",
+        "shadcn",
+        "typeahead",
+        "ui_gallery"
+      ],
+      "target_hints": []
+    },
+    {
+      "id": "ui-gallery-dropdown-menu-demo-click-profile-last-action",
+      "path": "tools/diag-scripts/ui-gallery/dropdown-menu/ui-gallery-dropdown-menu-demo-click-profile-last-action.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "ui-gallery"
+      ],
+      "tags": [
+        "dropdown_menu",
+        "mouse",
+        "regression_pack",
+        "shadcn",
+        "ui_gallery"
+      ],
       "target_hints": []
     },
     {
@@ -2057,6 +2150,37 @@
         "ui-gallery-shadcn-conformance"
       ],
       "tags": [],
+      "target_hints": []
+    },
+    {
+      "id": "ui-gallery-inspector-help-lock-match-copy-selector-steady",
+      "path": "tools/diag-scripts/ui-gallery-inspector-help-lock-match-copy-selector-steady.json",
+      "required_capabilities": [],
+      "suite_memberships": [
+        "ui-gallery-overlay-steady"
+      ],
+      "tags": [
+        "clipboard",
+        "inspector",
+        "steady",
+        "ui-gallery"
+      ],
+      "target_hints": []
+    },
+    {
+      "id": "ui-gallery-inspector-help-tree-lock-match-copy-selector-steady",
+      "path": "tools/diag-scripts/ui-gallery-inspector-help-tree-lock-match-copy-selector-steady.json",
+      "required_capabilities": [],
+      "suite_memberships": [
+        "ui-gallery-overlay-steady"
+      ],
+      "tags": [
+        "clipboard",
+        "inspector",
+        "steady",
+        "tree",
+        "ui-gallery"
+      ],
       "target_hints": []
     },
     {

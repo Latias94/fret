@@ -3154,6 +3154,62 @@ mod tests {
     }
 
     #[test]
+    fn inspect_help_scroll_shortcuts_update_scroll_offset() {
+        let window = window_id(1);
+
+        let mut svc = UiDiagnosticsService::default();
+        svc.cfg.enabled = true;
+        svc.inspect_enabled = true;
+        svc.inspect_help_open_windows.insert(window);
+
+        let mut app = App::new();
+
+        let event = Event::KeyDown {
+            key: KeyCode::PageDown,
+            modifiers: Modifiers::default(),
+            repeat: false,
+        };
+        assert!(
+            svc.maybe_intercept_event_for_inspect_shortcuts(&mut app, window, &event),
+            "expected PageDown to be consumed by inspect help"
+        );
+        assert_eq!(svc.inspect_help_scroll_offset(window), 20);
+
+        let event = Event::KeyDown {
+            key: KeyCode::PageUp,
+            modifiers: Modifiers::default(),
+            repeat: false,
+        };
+        assert!(
+            svc.maybe_intercept_event_for_inspect_shortcuts(&mut app, window, &event),
+            "expected PageUp to be consumed by inspect help"
+        );
+        assert_eq!(svc.inspect_help_scroll_offset(window), 0);
+
+        let event = Event::KeyDown {
+            key: KeyCode::End,
+            modifiers: Modifiers::default(),
+            repeat: false,
+        };
+        assert!(
+            svc.maybe_intercept_event_for_inspect_shortcuts(&mut app, window, &event),
+            "expected End to be consumed by inspect help"
+        );
+        assert_eq!(svc.inspect_help_scroll_offset(window), usize::MAX / 4);
+
+        let event = Event::KeyDown {
+            key: KeyCode::Home,
+            modifiers: Modifiers::default(),
+            repeat: false,
+        };
+        assert!(
+            svc.maybe_intercept_event_for_inspect_shortcuts(&mut app, window, &event),
+            "expected Home to be consumed by inspect help"
+        );
+        assert_eq!(svc.inspect_help_scroll_offset(window), 0);
+    }
+
+    #[test]
     fn pick_by_bounds_respects_modal_barrier() {
         let snapshot = SemanticsSnapshot {
             window: window_id(1),
