@@ -88,13 +88,13 @@ Keep this milestone for historical context only.
 
 `combobox` is the largest remaining surface gap because upstream is Base UI-rooted and the shadcn
 v4 part surface is not yet represented in Rust. The prior naming conflict (`ComboboxItem` as a
-data model) has been resolved by moving option structs to `ComboboxOption` /
-`ComboboxOptionGroup`.
+data model) has been resolved by aligning on upstream v4 names (`ComboboxItem`, `ComboboxGroup`,
+`ComboboxList`, …) and removing the legacy “option” data model.
 
 **Scope**
 
-- Stage 1 (done): publish the option data model (`ComboboxOption`, `ComboboxOptionGroup`) and
-  migrate in-tree call sites to `options(...)` + `combobox_option(...)` style construction.
+- Stage 1 (done): provide v4-named parts (`ComboboxInput/Content/List/Item/...`) and keep
+  `ComboboxItem/Group/List` as the only list data surface (no legacy option structs).
 - Stage 2 (workstream-scoped): introduce v4-aligned parts (`ComboboxInput/Content/List/Item/...`)
   and provide an `into_element_parts(...)` adapter over the existing Popover + Command recipe.
 - Stage 3 (gates): lock at least one high-signal invariant:

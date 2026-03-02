@@ -24,7 +24,7 @@ fn fret_combobox_popover_tracks_trigger_when_underlay_scrolls() {
     let scroll_handle = ScrollHandle::default();
 
     let render = |cx: &mut ElementContext<'_, App>, open: &Model<bool>| {
-        use fret_ui_shadcn::combobox::{Combobox, combobox_option};
+        use fret_ui_shadcn::combobox::{Combobox, ComboboxItem};
 
         let value = value.clone();
         let open = open.clone();
@@ -57,7 +57,7 @@ fn fret_combobox_popover_tracks_trigger_when_underlay_scrolls() {
                         let items = (0..40).map(|idx| {
                             let value = Arc::from(format!("value-{idx}"));
                             let label = Arc::from(format!("Label {idx}"));
-                            combobox_option(value, label)
+                            ComboboxItem::new(value, label)
                         });
 
                         vec![cx.container(
@@ -273,7 +273,7 @@ fn fret_combobox_responsive_drawer_blocks_underlay_scroll_on_mobile() {
     let scroll_handle = ScrollHandle::default();
 
     let render = |cx: &mut ElementContext<'_, App>, open: &Model<bool>| {
-        use fret_ui_shadcn::combobox::{Combobox, combobox_option};
+        use fret_ui_shadcn::combobox::{Combobox, ComboboxItem};
 
         let value = value.clone();
         let open = open.clone();
@@ -306,7 +306,7 @@ fn fret_combobox_responsive_drawer_blocks_underlay_scroll_on_mobile() {
                         let items = (0..40).map(|idx| {
                             let value = Arc::from(format!("value-{idx}"));
                             let label = Arc::from(format!("Label {idx}"));
-                            combobox_option(value, label)
+                            ComboboxItem::new(value, label)
                         });
 
                         vec![cx.container(

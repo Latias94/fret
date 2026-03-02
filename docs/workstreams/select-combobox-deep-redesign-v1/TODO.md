@@ -68,8 +68,8 @@ mean roughly the same thing.
 
 These do not exist upstream but reduce churn when porting examples:
 
-- `combobox_option(...)`
-- `combobox_option_group(...)`
+- (None today.) Prefer `ComboboxItem::new(...)` and `ComboboxGroup::new().items(...)` for explicit
+  list construction.
 
 ### Status legend
 

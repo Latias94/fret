@@ -42,7 +42,6 @@ pub mod checkbox;
 pub mod collapsible;
 pub mod combobox;
 pub mod combobox_chips;
-pub mod combobox_data;
 pub mod command;
 mod command_gating;
 pub mod context_menu;
@@ -181,10 +180,9 @@ pub use combobox::{
     Combobox, ComboboxChip, ComboboxChipsInput, ComboboxCollection, ComboboxContent,
     ComboboxContentPart, ComboboxEmpty, ComboboxGroup, ComboboxInput, ComboboxItem, ComboboxLabel,
     ComboboxList, ComboboxPart, ComboboxSeparator, ComboboxTrigger, ComboboxTriggerVariant,
-    ComboboxValue, combobox, combobox_option, combobox_option_group, useComboboxAnchor,
+    ComboboxValue, combobox, useComboboxAnchor,
 };
 pub use combobox_chips::{ComboboxChips, ComboboxChipsPart};
-pub use combobox_data::{ComboboxOption, ComboboxOptionGroup};
 pub use command::{
     Command, CommandDialog, CommandEmpty, CommandEntry, CommandGroup, CommandInput, CommandItem,
     CommandList, CommandLoading, CommandPalette, CommandSeparator, CommandShortcut, command,

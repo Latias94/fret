@@ -94,12 +94,12 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
         .trigger_variant(shadcn::ComboboxTriggerVariant::Button)
         .trigger_test_id("ui-gallery-combobox-popup-trigger")
         .test_id_prefix("ui-gallery-combobox-popup")
-        .options([
-            shadcn::combobox_option("next", "Next.js"),
-            shadcn::combobox_option("svelte", "SvelteKit"),
-            shadcn::combobox_option("nuxt", "Nuxt.js"),
-            shadcn::combobox_option("remix", "Remix"),
-            shadcn::combobox_option("astro", "Astro"),
+        .items([
+            shadcn::ComboboxItem::new("next", "Next.js"),
+            shadcn::ComboboxItem::new("svelte", "SvelteKit"),
+            shadcn::ComboboxItem::new("nuxt", "Nuxt.js"),
+            shadcn::ComboboxItem::new("remix", "Remix"),
+            shadcn::ComboboxItem::new("astro", "Astro"),
         ])
         .into_element(cx);
 

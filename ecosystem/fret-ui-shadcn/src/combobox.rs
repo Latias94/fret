@@ -27,7 +27,6 @@ use fret_ui_kit::{
     resolve_override_slot, ui,
 };
 
-use crate::combobox_data::{ComboboxOption, ComboboxOptionGroup};
 use crate::{
     CommandEntry, CommandGroup, CommandItem, CommandList, CommandPalette, CommandSeparator, Drawer,
     DrawerContent, Popover, PopoverAnchor, PopoverContent,
@@ -48,6 +47,16 @@ fn test_id_slug(s: &str) -> String {
         }
     }
     out.trim_matches('-').to_string()
+}
+
+fn combobox_group_items<'a>(group: &'a ComboboxGroup) -> &'a [ComboboxItem] {
+    if !group.items.is_empty() {
+        &group.items
+    } else if let Some(collection) = group.collection.as_ref() {
+        &collection.items
+    } else {
+        &[]
+    }
 }
 
 #[derive(Debug, Clone, Default)]
@@ -85,19 +94,6 @@ impl ComboboxStyle {
         }
         self
     }
-}
-
-/// Migration-friendly constructor for the combobox option data model.
-pub fn combobox_option(value: impl Into<Arc<str>>, label: impl Into<Arc<str>>) -> ComboboxOption {
-    ComboboxOption::new(value, label)
-}
-
-/// Migration-friendly constructor for the combobox group data model.
-pub fn combobox_option_group(
-    heading: impl Into<Arc<str>>,
-    items: impl IntoIterator<Item = ComboboxOption>,
-) -> ComboboxOptionGroup {
-    ComboboxOptionGroup::new(heading, items)
 }
 
 /// shadcn/ui v4 `useComboboxAnchor`.
@@ -621,10 +617,8 @@ struct ComboboxPartsPatch {
     content_align_offset: Option<Px>,
     anchor_element_id: Option<GlobalElementId>,
     empty_text: Option<Arc<str>>,
-    list_items: Option<Vec<ComboboxOption>>,
-    list_groups: Option<Vec<ComboboxOptionGroup>>,
-    v4_list_items: Option<Vec<ComboboxItem>>,
-    v4_list_groups: Option<Vec<ComboboxGroup>>,
+    list_items: Option<Vec<ComboboxItem>>,
+    list_groups: Option<Vec<ComboboxGroup>>,
     group_separators: Option<bool>,
 }
 
@@ -701,25 +695,7 @@ fn combobox_parts_patch(parts: Vec<ComboboxPart>) -> ComboboxPartsPatch {
                 }
                 ComboboxContentPart::List(list) => {
                     if !list.items.is_empty() {
-                        let has_custom_content = list.items.iter().any(|it| it.content.is_some());
-                        let items = list
-                            .items
-                            .iter()
-                            .map(|item| {
-                                let mut option =
-                                    ComboboxOption::new(item.value.clone(), item.label.clone())
-                                        .disabled(item.disabled)
-                                        .keywords(item.keywords.clone());
-                                if let Some(detail) = item.detail.clone() {
-                                    option = option.detail(detail);
-                                }
-                                option
-                            })
-                            .collect::<Vec<_>>();
-                        patch.list_items = Some(items);
-                        if has_custom_content {
-                            patch.v4_list_items = Some(list.items);
-                        }
+                        patch.list_items = Some(list.items);
                     }
 
                     if !list.groups.is_empty() {
@@ -727,53 +703,7 @@ fn combobox_parts_patch(parts: Vec<ComboboxPart>) -> ComboboxPartsPatch {
                             || list.group_separators
                             || list.groups.iter().any(|g| g.separator);
 
-                        let has_custom_content = list
-                            .groups
-                            .iter()
-                            .any(|g| g.items.iter().any(|it| it.content.is_some()))
-                            || list.groups.iter().any(|g| {
-                                g.collection
-                                    .as_ref()
-                                    .is_some_and(|c| c.items.iter().any(|it| it.content.is_some()))
-                            });
-
-                        let groups = list
-                            .groups
-                            .iter()
-                            .filter_map(|group| {
-                                let heading = group.label.as_ref().map(|l| l.text.clone())?;
-                                let items = if !group.items.is_empty() {
-                                    &group.items
-                                } else {
-                                    group.collection.as_ref().map(|c| &c.items)?
-                                };
-                                if items.is_empty() {
-                                    return None;
-                                }
-                                let items = items
-                                    .iter()
-                                    .map(|item| {
-                                        let mut option = ComboboxOption::new(
-                                            item.value.clone(),
-                                            item.label.clone(),
-                                        )
-                                        .disabled(item.disabled)
-                                        .keywords(item.keywords.clone());
-                                        if let Some(detail) = item.detail.clone() {
-                                            option = option.detail(detail);
-                                        }
-                                        option
-                                    })
-                                    .collect::<Vec<_>>();
-                                Some(ComboboxOptionGroup::new(heading, items))
-                            })
-                            .collect::<Vec<_>>();
-                        if !groups.is_empty() {
-                            patch.list_groups = Some(groups);
-                        }
-                        if has_custom_content {
-                            patch.v4_list_groups = Some(list.groups);
-                        }
+                        patch.list_groups = Some(list.groups);
 
                         // Upstream uses an explicit `ComboboxSeparator` part inside the group.
                         if group_separators_requested {
@@ -794,8 +724,8 @@ pub struct Combobox {
     model: Model<Option<Arc<str>>>,
     open: Model<bool>,
     query: Option<Model<String>>,
-    items: Vec<ComboboxOption>,
-    groups: Vec<ComboboxOptionGroup>,
+    items: Vec<ComboboxItem>,
+    groups: Vec<ComboboxGroup>,
     group_separators: bool,
     auto_highlight: bool,
     test_id_prefix: Option<Arc<str>>,
@@ -818,8 +748,6 @@ pub struct Combobox {
     show_clear: bool,
     show_trigger: bool,
     trigger_variant: ComboboxTriggerVariant,
-    v4_list_items: Option<Vec<ComboboxItem>>,
-    v4_list_groups: Option<Vec<ComboboxGroup>>,
     consume_outside_pointer_events: bool,
     selection_commit_policy: kit_combobox::SelectionCommitPolicy,
     close_auto_focus_policy: kit_combobox::ComboboxCloseAutoFocusPolicy,
@@ -862,8 +790,6 @@ impl Combobox {
             show_clear: false,
             show_trigger: true,
             trigger_variant: ComboboxTriggerVariant::default(),
-            v4_list_items: None,
-            v4_list_groups: None,
             // shadcn/ui Combobox is a Popover + Command recipe; Popover is click-through by default.
             // (ADR 0069)
             consume_outside_pointer_events: false,
@@ -911,12 +837,6 @@ impl Combobox {
         }
         if let Some(show_clear) = patch.show_clear {
             self.show_clear = show_clear;
-        }
-        if let Some(v4_items) = patch.v4_list_items {
-            self.v4_list_items = Some(v4_items);
-        }
-        if let Some(v4_groups) = patch.v4_list_groups {
-            self.v4_list_groups = Some(v4_groups);
         }
         if let Some(side) = patch.content_side {
             self.content_side = side;
@@ -1036,44 +956,32 @@ impl Combobox {
         self
     }
 
-    pub fn item(mut self, item: ComboboxOption) -> Self {
+    pub fn item(mut self, item: ComboboxItem) -> Self {
         self.items.push(item);
         self
     }
 
-    /// Migration-friendly alias for [`Combobox::item`].
-    pub fn option(self, option: ComboboxOption) -> Self {
-        self.item(option)
-    }
-
-    pub fn items(mut self, items: impl IntoIterator<Item = ComboboxOption>) -> Self {
-        self.items.extend(items);
+    pub fn items<I>(mut self, items: I) -> Self
+    where
+        I: IntoIterator,
+        I::Item: Into<ComboboxItem>,
+    {
+        self.items.extend(items.into_iter().map(Into::into));
         self
     }
 
-    /// Migration-friendly alias for [`Combobox::items`].
-    pub fn options(self, options: impl IntoIterator<Item = ComboboxOption>) -> Self {
-        self.items(options)
-    }
-
-    pub fn group(mut self, group: ComboboxOptionGroup) -> Self {
+    pub fn group(mut self, group: ComboboxGroup) -> Self {
         self.groups.push(group);
         self
     }
 
-    /// Migration-friendly alias for [`Combobox::group`].
-    pub fn option_group(self, group: ComboboxOptionGroup) -> Self {
-        self.group(group)
-    }
-
-    pub fn groups(mut self, groups: impl IntoIterator<Item = ComboboxOptionGroup>) -> Self {
-        self.groups.extend(groups);
+    pub fn groups<I>(mut self, groups: I) -> Self
+    where
+        I: IntoIterator,
+        I::Item: Into<ComboboxGroup>,
+    {
+        self.groups.extend(groups.into_iter().map(Into::into));
         self
-    }
-
-    /// Migration-friendly alias for [`Combobox::groups`].
-    pub fn option_groups(self, groups: impl IntoIterator<Item = ComboboxOptionGroup>) -> Self {
-        self.groups(groups)
     }
 
     /// When enabled, inserts visual separators between `items` and `groups`, and between
@@ -1226,8 +1134,8 @@ impl Combobox {
             self.model,
             self.open,
             self.query,
-            &self.items,
-            &self.groups,
+            self.items,
+            self.groups,
             self.test_id_prefix,
             self.trigger_test_id,
             self.width,
@@ -1250,8 +1158,6 @@ impl Combobox {
             self.show_clear,
             self.show_trigger,
             self.trigger_variant,
-            self.v4_list_items,
-            self.v4_list_groups,
             self.consume_outside_pointer_events,
             self.selection_commit_policy,
             self.close_auto_focus_policy,
@@ -1272,7 +1178,7 @@ pub fn combobox<H: UiHost>(
     model: Model<Option<Arc<str>>>,
     open: Model<bool>,
     query: Option<Model<String>>,
-    items: &[ComboboxOption],
+    items: impl IntoIterator<Item = ComboboxItem>,
     width: Option<Px>,
     placeholder: Arc<str>,
     search_placeholder: Arc<str>,
@@ -1282,13 +1188,14 @@ pub fn combobox<H: UiHost>(
     search_enabled: bool,
     consume_outside_pointer_events: bool,
 ) -> AnyElement {
+    let items: Vec<ComboboxItem> = items.into_iter().collect();
     combobox_with_patch(
         cx,
         model,
         open,
         query,
         items,
-        &[],
+        Vec::new(),
         None,
         None,
         width,
@@ -1311,8 +1218,6 @@ pub fn combobox<H: UiHost>(
         false,
         true,
         ComboboxTriggerVariant::default(),
-        None,
-        None,
         consume_outside_pointer_events,
         kit_combobox::SelectionCommitPolicy::default(),
         kit_combobox::ComboboxCloseAutoFocusPolicy::default(),
@@ -1332,8 +1237,8 @@ fn combobox_with_patch<H: UiHost>(
     model: Model<Option<Arc<str>>>,
     open: Model<bool>,
     query: Option<Model<String>>,
-    items: &[ComboboxOption],
-    groups: &[ComboboxOptionGroup],
+    items: Vec<ComboboxItem>,
+    groups: Vec<ComboboxGroup>,
     test_id_prefix: Option<Arc<str>>,
     trigger_test_id: Option<Arc<str>>,
     width: Option<Px>,
@@ -1356,8 +1261,6 @@ fn combobox_with_patch<H: UiHost>(
     show_clear: bool,
     show_trigger: bool,
     trigger_variant: ComboboxTriggerVariant,
-    v4_list_items: Option<Vec<ComboboxItem>>,
-    v4_list_groups: Option<Vec<ComboboxGroup>>,
     consume_outside_pointer_events: bool,
     selection_commit_policy: kit_combobox::SelectionCommitPolicy,
     close_auto_focus_policy: kit_combobox::ComboboxCloseAutoFocusPolicy,
@@ -1469,7 +1372,11 @@ fn combobox_with_patch<H: UiHost>(
             .and_then(|v| {
                 items
                     .iter()
-                    .chain(groups.iter().flat_map(|g| g.items.iter()))
+                    .chain(
+                        groups
+                            .iter()
+                            .flat_map(|g| combobox_group_items(g).iter()),
+                    )
                     .find(|it| it.value.as_ref() == v.as_ref())
             })
             .map(|it| (it.label.clone(), true))
@@ -1604,10 +1511,6 @@ fn combobox_with_patch<H: UiHost>(
             .when(WidgetStates::FOCUS_VISIBLE, ColorRef::Color(ring_border));
 
         let enabled = !disabled;
-        let items: Vec<ComboboxOption> = items.to_vec();
-        let groups: Vec<ComboboxOptionGroup> = groups.to_vec();
-        let mut v4_list_items = v4_list_items;
-        let mut v4_list_groups = v4_list_groups;
         let open_for_trigger = open.clone();
         let trigger_gap = MetricRef::space(Space::N2).resolve(&theme);
         let a11y_label_for_trigger = a11y_label.clone();
@@ -1642,8 +1545,8 @@ fn combobox_with_patch<H: UiHost>(
             let query_model_for_trigger = query_model.clone();
             let selected_for_trigger = selected.clone();
             let show_trigger_for_trigger = show_trigger;
-            let v4_list_items_for_content = v4_list_items.take();
-            let v4_list_groups_for_content = v4_list_groups.take();
+            let items_for_content = items;
+            let groups_for_content = groups;
             return Drawer::new(open.clone())
                 .on_dismiss_request(Some(
                     kit_combobox::set_open_change_reason_on_dismiss_request(
@@ -1962,8 +1865,8 @@ fn combobox_with_patch<H: UiHost>(
                     move |cx| {
                         let test_id_prefix = test_id_prefix_for_content.clone();
                         let open_change_reason_model = open_change_reason_model_for_content.clone();
-                        let mut v4_list_items = v4_list_items_for_content;
-                        let mut v4_list_groups = v4_list_groups_for_content;
+                        let items = items_for_content;
+                        let groups = groups_for_content;
                         let theme_max_list_h = theme
                             .metric_by_key("component.combobox.max_list_height")
                             .or_else(|| theme.metric_by_key("component.select.max_list_height"))
@@ -1987,8 +1890,7 @@ fn combobox_with_patch<H: UiHost>(
 
                             let mut entries: Vec<CommandEntry> =
                                 Vec::with_capacity(items.len() + groups.len());
-
-                            let make_item = |item: ComboboxOption| -> CommandItem {
+                            let mut make_item = |item: ComboboxItem| -> CommandItem {
                                 let item_disabled = disabled || item.disabled;
                                 let is_selected = selected
                                     .as_ref()
@@ -2000,9 +1902,28 @@ fn combobox_with_patch<H: UiHost>(
                                 let open_change_reason_model_for_select =
                                     open_change_reason_model.clone();
 
-                                let mut cmd_item = CommandItem::new(item.label.clone())
+                                let label_text = if item.content.is_none() {
+                                    if let Some(detail) = item.detail.as_ref() {
+                                        Arc::<str>::from(format!(
+                                            "{} ({})",
+                                            item.label.as_ref(),
+                                            detail.as_ref()
+                                        ))
+                                    } else {
+                                        item.label.clone()
+                                    }
+                                } else {
+                                    item.label.clone()
+                                };
+
+                                let mut keywords = item.keywords.clone();
+                                if let Some(detail) = item.detail.clone() {
+                                    keywords.push(detail);
+                                }
+
+                                let mut cmd_item = CommandItem::new(label_text)
                                     .value(item.value.clone())
-                                    .keywords(item.keywords.clone())
+                                    .keywords(keywords)
                                     .disabled(item_disabled)
                                     .checkmark(is_selected)
                                     .on_select_value_action(move |host, action_cx, reason, value| {
@@ -2016,182 +1937,79 @@ fn combobox_with_patch<H: UiHost>(
                                         );
                                         on_select(host, action_cx, reason);
                                     });
+
+                                if let Some(content) = item.content {
+                                    let body = ui::h_flex(cx, move |_cx| vec![content])
+                                        .w_full()
+                                        .min_w_0()
+                                        .flex_1()
+                                        .basis_0()
+                                        .into_element(cx);
+                                    cmd_item = cmd_item.children([body]);
+                                }
+
                                 if let Some(prefix) = test_id_prefix.as_deref() {
                                     cmd_item = cmd_item.test_id(format!(
                                         "{prefix}-item-{}",
                                         test_id_slug(item.value.as_ref())
                                     ));
                                 }
+
                                 cmd_item
                             };
 
-                            let v4_items = v4_list_items.take().unwrap_or_default();
-                            let v4_groups = v4_list_groups.take().unwrap_or_default();
-                            let use_v4 = !v4_items.is_empty() || !v4_groups.is_empty();
-
-                            if use_v4 {
-                                let mut make_v4_item = |item: ComboboxItem| -> CommandItem {
-                                    let item_disabled = disabled || item.disabled;
-                                    let is_selected = selected
-                                        .as_ref()
-                                        .is_some_and(|v| v.as_ref() == item.value.as_ref());
-
-                                    let model_for_select = model.clone();
-                                    let open_for_select = open.clone();
-                                    let query_for_select = query_model.clone();
-                                    let open_change_reason_model_for_select =
-                                        open_change_reason_model.clone();
-
-                                    let label_text = if item.content.is_none() {
-                                        if let Some(detail) = item.detail.as_ref() {
-                                            Arc::<str>::from(format!(
-                                                "{} ({})",
-                                                item.label.as_ref(),
-                                                detail.as_ref()
-                                            ))
-                                        } else {
-                                            item.label.clone()
-                                        }
-                                    } else {
-                                        item.label.clone()
-                                    };
-
-                                    let mut keywords = item.keywords.clone();
-                                    if let Some(detail) = item.detail.clone() {
-                                        keywords.push(detail);
-                                    }
-
-                                    let mut cmd_item = CommandItem::new(label_text)
-                                        .value(item.value.clone())
-                                        .keywords(keywords)
-                                        .disabled(item_disabled)
-                                        .checkmark(is_selected)
-                                        .on_select_value_action(move |host, action_cx, reason, value| {
-                                            let on_select = kit_combobox::commit_selection_on_activate(
-                                                selection_commit_policy,
-                                                model_for_select.clone(),
-                                                open_for_select.clone(),
-                                                query_for_select.clone(),
-                                                open_change_reason_model_for_select.clone(),
-                                                value,
-                                            );
-                                            on_select(host, action_cx, reason);
-                                        });
-
-                                    if let Some(content) = item.content {
-                                        let body = ui::h_flex(cx, move |_cx| vec![content])
-                                            .w_full()
-                                            .min_w_0()
-                                            .flex_1()
-                                            .basis_0()
-                                            .into_element(cx);
-                                        cmd_item = cmd_item.children([body]);
-                                    }
-
-                                    if let Some(prefix) = test_id_prefix.as_deref() {
-                                        cmd_item = cmd_item.test_id(format!(
-                                            "{prefix}-item-{}",
-                                            test_id_slug(item.value.as_ref())
-                                        ));
-                                    }
-
-                                    cmd_item
+                            let mut root_items = items;
+                            let mut non_empty_groups: Vec<(Arc<str>, Vec<ComboboxItem>)> =
+                                Vec::new();
+                            for group in groups {
+                                let group_items = if !group.items.is_empty() {
+                                    group.items
+                                } else {
+                                    group.collection.map(|c| c.items).unwrap_or_default()
                                 };
-
-                                let mut root_items = v4_items;
-                                let mut non_empty_groups: Vec<(Arc<str>, Vec<ComboboxItem>)> =
-                                    Vec::new();
-                                for group in v4_groups {
-                                    let group_items = if !group.items.is_empty() {
-                                        group.items
-                                    } else {
-                                        group.collection.map(|c| c.items).unwrap_or_default()
-                                    };
-                                    if group_items.is_empty() {
-                                        continue;
-                                    }
-                                    if let Some(label) = group.label {
-                                        non_empty_groups.push((label.text, group_items));
-                                    } else {
-                                        root_items.extend(group_items);
-                                    }
+                                if group_items.is_empty() {
+                                    continue;
                                 }
-
-                                for item in root_items {
-                                    entries.push(CommandEntry::Item(make_v4_item(item)));
+                                if let Some(label) = group.label {
+                                    non_empty_groups.push((label.text, group_items));
+                                } else {
+                                    root_items.extend(group_items);
                                 }
+                            }
 
-                                let non_empty_groups_len = non_empty_groups.len();
-                                if group_separators && !entries.is_empty() && non_empty_groups_len > 0 {
-                                    let sep = if let Some(prefix) = test_id_prefix.as_deref() {
-                                        CommandSeparator::new()
-                                            .test_id(format!("{prefix}-sep-items-groups"))
-                                    } else {
-                                        CommandSeparator::new()
-                                    };
-                                    entries.push(CommandEntry::Separator(sep));
-                                }
+                            for item in root_items {
+                                entries.push(CommandEntry::Item(make_item(item)));
+                            }
 
-                                for (idx, (heading, group_items)) in
-                                    non_empty_groups.into_iter().enumerate()
-                                {
-                                    let group_items: Vec<CommandItem> = group_items
-                                        .into_iter()
-                                        .map(|item| make_v4_item(item))
-                                        .collect();
-                                    entries.push(CommandEntry::Group(
-                                        CommandGroup::new(group_items).heading(heading),
-                                    ));
-                                    if group_separators && idx + 1 < non_empty_groups_len {
-                                        let sep = if let Some(prefix) = test_id_prefix.as_deref() {
-                                            CommandSeparator::new()
-                                                .test_id(format!("{prefix}-sep-group-{idx}"))
-                                        } else {
-                                            CommandSeparator::new()
-                                        };
-                                        entries.push(CommandEntry::Separator(sep));
-                                    }
-                                }
-                            } else {
-                                for item in items.iter().cloned() {
-                                    entries.push(CommandEntry::Item(make_item(item)));
-                                }
+                            let non_empty_groups_len = non_empty_groups.len();
+                            if group_separators && !entries.is_empty() && non_empty_groups_len > 0 {
+                                let sep = if let Some(prefix) = test_id_prefix.as_deref() {
+                                    CommandSeparator::new()
+                                        .test_id(format!("{prefix}-sep-items-groups"))
+                                } else {
+                                    CommandSeparator::new()
+                                };
+                                entries.push(CommandEntry::Separator(sep));
+                            }
 
-                                let non_empty_groups: Vec<ComboboxOptionGroup> = groups
-                                    .iter()
-                                    .cloned()
-                                    .filter(|group| !group.items.is_empty())
+                            for (idx, (heading, group_items)) in
+                                non_empty_groups.into_iter().enumerate()
+                            {
+                                let group_items: Vec<CommandItem> = group_items
+                                    .into_iter()
+                                    .map(|item| make_item(item))
                                     .collect();
-                                let non_empty_groups_len = non_empty_groups.len();
-
-                                if group_separators && !items.is_empty() && non_empty_groups_len > 0 {
+                                entries.push(CommandEntry::Group(
+                                    CommandGroup::new(group_items).heading(heading),
+                                ));
+                                if group_separators && idx + 1 < non_empty_groups_len {
                                     let sep = if let Some(prefix) = test_id_prefix.as_deref() {
                                         CommandSeparator::new()
-                                            .test_id(format!("{prefix}-sep-items-groups"))
+                                            .test_id(format!("{prefix}-sep-group-{idx}"))
                                     } else {
                                         CommandSeparator::new()
                                     };
                                     entries.push(CommandEntry::Separator(sep));
-                                }
-
-                                for (idx, group) in non_empty_groups.into_iter().enumerate() {
-                                    let group_items: Vec<CommandItem> = group
-                                        .items
-                                        .into_iter()
-                                        .map(|item| make_item(item))
-                                        .collect();
-                                    entries.push(CommandEntry::Group(
-                                        CommandGroup::new(group_items).heading(group.heading),
-                                    ));
-                                    if group_separators && idx + 1 < non_empty_groups_len {
-                                        let sep = if let Some(prefix) = test_id_prefix.as_deref() {
-                                            CommandSeparator::new()
-                                                .test_id(format!("{prefix}-sep-group-{idx}"))
-                                        } else {
-                                            CommandSeparator::new()
-                                        };
-                                        entries.push(CommandEntry::Separator(sep));
-                                    }
                                 }
                             }
 
@@ -2231,91 +2049,9 @@ fn combobox_with_patch<H: UiHost>(
                             let fg_disabled = alpha_mul(fg, 0.5);
                             let item_text_style = crate::command::item_text_style(&theme);
 
-                            let mut make_item = |item: ComboboxOption| -> CommandItem {
-                                let item_disabled = disabled || item.disabled;
-                                let is_selected = selected
-                                    .as_ref()
-                                    .is_some_and(|v| v.as_ref() == item.value.as_ref());
-
-                                let model_for_select = model.clone();
-                                let open_for_select = open.clone();
-                                let query_for_select = query_model.clone();
-                                let open_change_reason_model_for_select =
-                                    open_change_reason_model.clone();
-
-                                let label_text = item.label.clone();
-                                let label_style = item_text_style.clone();
-                                let icon = decl_icon::icon_with(
-                                    cx,
-                                    ids::ui::CHECK,
-                                    Some(Px(16.0)),
-                                    Some(ColorRef::Color(if item_disabled {
-                                        fg_disabled
-                                    } else {
-                                        fg
-                                    })),
-                                );
-                                let icon = cx
-                                    .opacity(if is_selected { 1.0 } else { 0.0 }, move |_cx| {
-                                        vec![icon]
-                                    });
-
-                                let text = {
-                                    let mut label = ui::label(cx, label_text.clone())
-                                        .text_size_px(label_style.size)
-                                        .font_weight(label_style.weight)
-                                        .text_color(ColorRef::Color(if item_disabled {
-                                            fg_disabled
-                                        } else {
-                                            fg
-                                        }))
-                                        .truncate();
-                                    if let Some(line_height) = label_style.line_height {
-                                        label = label
-                                            .line_height_px(line_height)
-                                            .line_height_policy(
-                                                fret_core::TextLineHeightPolicy::FixedFromStyle,
-                                            );
-                                    }
-                                    if let Some(letter_spacing_em) = label_style.letter_spacing_em {
-                                        label = label.letter_spacing_em(letter_spacing_em);
-                                    }
-                                    label.into_element(cx)
-                                };
-
-                                let mut cmd_item = CommandItem::new(label_text)
-                                    .value(item.value.clone())
-                                    .keywords(item.keywords.clone())
-                                    .disabled(item_disabled)
-                                    .on_select_value_action(move |host, action_cx, reason, value| {
-                                        let on_select = kit_combobox::commit_selection_on_activate(
-                                            selection_commit_policy,
-                                            model_for_select.clone(),
-                                            open_for_select.clone(),
-                                            query_for_select.clone(),
-                                            open_change_reason_model_for_select.clone(),
-                                            value,
-                                        );
-                                        on_select(host, action_cx, reason);
-                                    })
-                                    .children(vec![text, icon]);
-                                if let Some(prefix) = test_id_prefix.as_deref() {
-                                    cmd_item = cmd_item.test_id(format!(
-                                        "{prefix}-item-{}",
-                                        test_id_slug(item.value.as_ref())
-                                    ));
-                                }
-                                cmd_item
-                            };
-
                             let mut entries: Vec<CommandEntry> =
                                 Vec::with_capacity(items.len() + groups.len());
-                            let v4_items = v4_list_items.take().unwrap_or_default();
-                            let v4_groups = v4_list_groups.take().unwrap_or_default();
-                            let use_v4 = !v4_items.is_empty() || !v4_groups.is_empty();
-
-                            if use_v4 {
-                                let mut make_v4_item = |item: ComboboxItem| -> CommandItem {
+                            let mut make_item = |item: ComboboxItem| -> CommandItem {
                                     let item_disabled = disabled || item.disabled;
                                     let is_selected = selected
                                         .as_ref()
@@ -2421,100 +2157,58 @@ fn combobox_with_patch<H: UiHost>(
                                     cmd_item
                                 };
 
-                                let mut root_items = v4_items;
-                                let mut non_empty_groups: Vec<(Arc<str>, Vec<ComboboxItem>)> =
-                                    Vec::new();
-                                for group in v4_groups {
-                                    let group_items = if !group.items.is_empty() {
-                                        group.items
-                                    } else {
-                                        group.collection.map(|c| c.items).unwrap_or_default()
-                                    };
-                                    if group_items.is_empty() {
-                                        continue;
-                                    }
-                                    if let Some(label) = group.label {
-                                        non_empty_groups.push((label.text, group_items));
-                                    } else {
-                                        root_items.extend(group_items);
-                                    }
+                            let mut root_items = items;
+                            let mut non_empty_groups: Vec<(Arc<str>, Vec<ComboboxItem>)> =
+                                Vec::new();
+                            for group in groups {
+                                let group_items = if !group.items.is_empty() {
+                                    group.items
+                                } else {
+                                    group.collection.map(|c| c.items).unwrap_or_default()
+                                };
+                                if group_items.is_empty() {
+                                    continue;
                                 }
+                                if let Some(label) = group.label {
+                                    non_empty_groups.push((label.text, group_items));
+                                } else {
+                                    root_items.extend(group_items);
+                                }
+                            }
 
-                                for item in root_items {
-                                    entries.push(CommandEntry::Item(make_v4_item(item)));
-                                }
+                            for item in root_items {
+                                entries.push(CommandEntry::Item(make_item(item)));
+                            }
 
-                                let non_empty_groups_len = non_empty_groups.len();
-                                if group_separators && !entries.is_empty() && non_empty_groups_len > 0 {
-                                    let sep = if let Some(prefix) = test_id_prefix.as_deref() {
-                                        CommandSeparator::new()
-                                            .test_id(format!("{prefix}-sep-items-groups"))
-                                    } else {
-                                        CommandSeparator::new()
-                                    };
-                                    entries.push(CommandEntry::Separator(sep));
-                                }
+                            let non_empty_groups_len = non_empty_groups.len();
+                            if group_separators && !entries.is_empty() && non_empty_groups_len > 0 {
+                                let sep = if let Some(prefix) = test_id_prefix.as_deref() {
+                                    CommandSeparator::new()
+                                        .test_id(format!("{prefix}-sep-items-groups"))
+                                } else {
+                                    CommandSeparator::new()
+                                };
+                                entries.push(CommandEntry::Separator(sep));
+                            }
 
-                                for (idx, (heading, group_items)) in
-                                    non_empty_groups.into_iter().enumerate()
-                                {
-                                    let group_items: Vec<CommandItem> = group_items
-                                        .into_iter()
-                                        .map(|item| make_v4_item(item))
-                                        .collect();
-                                    entries.push(CommandEntry::Group(
-                                        CommandGroup::new(group_items).heading(heading),
-                                    ));
-                                    if group_separators && idx + 1 < non_empty_groups_len {
-                                        let sep = if let Some(prefix) = test_id_prefix.as_deref() {
-                                            CommandSeparator::new()
-                                                .test_id(format!("{prefix}-sep-group-{idx}"))
-                                        } else {
-                                            CommandSeparator::new()
-                                        };
-                                        entries.push(CommandEntry::Separator(sep));
-                                    }
-                                }
-                            } else {
-                                for item in items.iter().cloned() {
-                                    entries.push(CommandEntry::Item(make_item(item)));
-                                }
-
-                                let non_empty_groups: Vec<ComboboxOptionGroup> = groups
-                                    .iter()
-                                    .cloned()
-                                    .filter(|group| !group.items.is_empty())
+                            for (idx, (heading, group_items)) in
+                                non_empty_groups.into_iter().enumerate()
+                            {
+                                let group_items: Vec<CommandItem> = group_items
+                                    .into_iter()
+                                    .map(|item| make_item(item))
                                     .collect();
-                                let non_empty_groups_len = non_empty_groups.len();
-                                if group_separators && !items.is_empty() && non_empty_groups_len > 0
-                                {
+                                entries.push(CommandEntry::Group(
+                                    CommandGroup::new(group_items).heading(heading),
+                                ));
+                                if group_separators && idx + 1 < non_empty_groups_len {
                                     let sep = if let Some(prefix) = test_id_prefix.as_deref() {
                                         CommandSeparator::new()
-                                            .test_id(format!("{prefix}-sep-items-groups"))
+                                            .test_id(format!("{prefix}-sep-group-{idx}"))
                                     } else {
                                         CommandSeparator::new()
                                     };
                                     entries.push(CommandEntry::Separator(sep));
-                                }
-
-                                for (idx, group) in non_empty_groups.into_iter().enumerate() {
-                                    let group_items: Vec<CommandItem> = group
-                                        .items
-                                        .into_iter()
-                                        .map(|item| make_item(item))
-                                        .collect();
-                                    entries.push(CommandEntry::Group(
-                                        CommandGroup::new(group_items).heading(group.heading),
-                                    ));
-                                    if group_separators && idx + 1 < non_empty_groups_len {
-                                        let sep = if let Some(prefix) = test_id_prefix.as_deref() {
-                                            CommandSeparator::new()
-                                                .test_id(format!("{prefix}-sep-group-{idx}"))
-                                        } else {
-                                            CommandSeparator::new()
-                                        };
-                                        entries.push(CommandEntry::Separator(sep));
-                                    }
                                 }
                             }
 
@@ -2832,14 +2526,16 @@ fn combobox_with_patch<H: UiHost>(
                 let open_change_reason_model = open_change_reason_model_for_content.clone();
                 let search_input_id = search_input_id_for_content.clone();
                 let listbox_id_for_diag = listbox_id_for_diag_for_content.clone();
-                let theme_max_list_h = theme
-                    .metric_by_key("component.combobox.max_list_height")
-                    .or_else(|| theme.metric_by_key("component.select.max_list_height"))
-                    .unwrap_or(Px(280.0));
-                let desired_w = width.unwrap_or_else(|| Px(anchor.size.width.0.max(180.0)));
-                let selected = cx.watch_model(&model).cloned().unwrap_or_default();
+	                let theme_max_list_h = theme
+	                    .metric_by_key("component.combobox.max_list_height")
+	                    .or_else(|| theme.metric_by_key("component.select.max_list_height"))
+	                    .unwrap_or(Px(280.0));
+	                let desired_w = width.unwrap_or_else(|| Px(anchor.size.width.0.max(180.0)));
+	                let selected = cx.watch_model(&model).cloned().unwrap_or_default();
+	                let mut items = Some(items);
+	                let mut groups = Some(groups);
 
-                    let list = if search_enabled {
+	                    let list = if search_enabled {
                     // Clamp the list height to the best-available main-axis space around the
                     // trigger. This models the Radix popper "available height" variables used by
                     // shadcn/cmdk (`--radix-*-content-available-height`) and prevents the listbox
@@ -2888,10 +2584,12 @@ fn combobox_with_patch<H: UiHost>(
                         })
                         .shadow(ShadowPreset::Md);
 
+                    let items = items.take().unwrap_or_default();
+                    let groups = groups.take().unwrap_or_default();
                     let mut entries: Vec<CommandEntry> =
                         Vec::with_capacity(items.len() + groups.len());
 
-                    let make_item = |item: ComboboxOption| -> CommandItem {
+                    let mut make_item = |item: ComboboxItem| -> CommandItem {
                         let item_disabled = disabled || item.disabled;
                         let is_selected = selected
                             .as_ref()
@@ -2902,9 +2600,28 @@ fn combobox_with_patch<H: UiHost>(
                         let query_for_select = query_model.clone();
                         let open_change_reason_model_for_select = open_change_reason_model.clone();
 
-                        let mut cmd_item = CommandItem::new(item.label.clone())
+                        let label_text = if item.content.is_none() {
+                            if let Some(detail) = item.detail.as_ref() {
+                                Arc::<str>::from(format!(
+                                    "{} ({})",
+                                    item.label.as_ref(),
+                                    detail.as_ref()
+                                ))
+                            } else {
+                                item.label.clone()
+                            }
+                        } else {
+                            item.label.clone()
+                        };
+
+                        let mut keywords = item.keywords.clone();
+                        if let Some(detail) = item.detail.clone() {
+                            keywords.push(detail);
+                        }
+
+                        let mut cmd_item = CommandItem::new(label_text)
                             .value(item.value.clone())
-                            .keywords(item.keywords.clone())
+                            .keywords(keywords)
                             .disabled(item_disabled)
                             .checkmark(is_selected)
                             .on_select_value_action(move |host, action_cx, reason, value| {
@@ -2918,27 +2635,51 @@ fn combobox_with_patch<H: UiHost>(
                                 );
                                 on_select(host, action_cx, reason);
                             });
+
+                        if let Some(content) = item.content {
+                            let body = ui::h_flex(cx, move |_cx| vec![content])
+                                .w_full()
+                                .min_w_0()
+                                .flex_1()
+                                .basis_0()
+                                .into_element(cx);
+                            cmd_item = cmd_item.children([body]);
+                        }
+
                         if let Some(prefix) = test_id_prefix.as_deref() {
                             cmd_item = cmd_item.test_id(format!(
                                 "{prefix}-item-{}",
                                 test_id_slug(item.value.as_ref())
                             ));
                         }
+
                         cmd_item
                     };
 
-                    for item in items.iter().cloned() {
+                    let mut root_items = items;
+                    let mut non_empty_groups: Vec<(Arc<str>, Vec<ComboboxItem>)> = Vec::new();
+                    for group in groups {
+                        let group_items = if !group.items.is_empty() {
+                            group.items
+                        } else {
+                            group.collection.map(|c| c.items).unwrap_or_default()
+                        };
+                        if group_items.is_empty() {
+                            continue;
+                        }
+                        if let Some(label) = group.label {
+                            non_empty_groups.push((label.text, group_items));
+                        } else {
+                            root_items.extend(group_items);
+                        }
+                    }
+
+                    for item in root_items {
                         entries.push(CommandEntry::Item(make_item(item)));
                     }
 
-                    let non_empty_groups: Vec<ComboboxOptionGroup> = groups
-                        .iter()
-                        .cloned()
-                        .filter(|group| !group.items.is_empty())
-                        .collect();
                     let non_empty_groups_len = non_empty_groups.len();
-
-                    if group_separators && !items.is_empty() && non_empty_groups_len > 0 {
+                    if group_separators && !entries.is_empty() && non_empty_groups_len > 0 {
                         let sep = if let Some(prefix) = test_id_prefix.as_deref() {
                             CommandSeparator::new().test_id(format!("{prefix}-sep-items-groups"))
                         } else {
@@ -2947,11 +2688,12 @@ fn combobox_with_patch<H: UiHost>(
                         entries.push(CommandEntry::Separator(sep));
                     }
 
-                    for (idx, group) in non_empty_groups.into_iter().enumerate() {
+                    for (idx, (heading, group_items)) in non_empty_groups.into_iter().enumerate()
+                    {
                         let group_items: Vec<CommandItem> =
-                            group.items.into_iter().map(|item| make_item(item)).collect();
+                            group_items.into_iter().map(|item| make_item(item)).collect();
                         entries.push(CommandEntry::Group(
-                            CommandGroup::new(group_items).heading(group.heading),
+                            CommandGroup::new(group_items).heading(heading),
                         ));
                         if group_separators && idx + 1 < non_empty_groups_len {
                             let sep = if let Some(prefix) = test_id_prefix.as_deref() {
@@ -3000,7 +2742,12 @@ fn combobox_with_patch<H: UiHost>(
                     let fg_disabled = alpha_mul(fg, 0.5);
                     let item_text_style = crate::command::item_text_style(&theme);
 
-                    let mut make_item = |item: ComboboxOption| -> CommandItem {
+                    let items = items.take().unwrap_or_default();
+                    let groups = groups.take().unwrap_or_default();
+                    let mut entries: Vec<CommandEntry> =
+                        Vec::with_capacity(items.len() + groups.len());
+
+                    let mut make_item = |item: ComboboxItem| -> CommandItem {
                         let item_disabled = disabled || item.disabled;
                         let is_selected = selected
                             .as_ref()
@@ -3011,22 +2758,43 @@ fn combobox_with_patch<H: UiHost>(
                         let query_for_select = query_model.clone();
                         let open_change_reason_model_for_select = open_change_reason_model.clone();
 
-                        let label_text = item.label.clone();
+                        let label_text = if item.content.is_none() {
+                            if let Some(detail) = item.detail.as_ref() {
+                                Arc::<str>::from(format!(
+                                    "{} ({})",
+                                    item.label.as_ref(),
+                                    detail.as_ref()
+                                ))
+                            } else {
+                                item.label.clone()
+                            }
+                        } else {
+                            item.label.clone()
+                        };
+
+                        let mut keywords = item.keywords.clone();
+                        if let Some(detail) = item.detail.clone() {
+                            keywords.push(detail);
+                        }
+
                         let label_style = item_text_style.clone();
                         let icon = decl_icon::icon_with(
                             cx,
                             ids::ui::CHECK,
                             Some(Px(16.0)),
-                            Some(ColorRef::Color(if item_disabled {
-                                fg_disabled
-                            } else {
-                                fg
-                            })),
+                            Some(ColorRef::Color(if item_disabled { fg_disabled } else { fg })),
                         );
                         let icon =
                             cx.opacity(if is_selected { 1.0 } else { 0.0 }, move |_cx| vec![icon]);
 
-                        let text = {
+                        let body = if let Some(content) = item.content {
+                            ui::h_flex(cx, move |_cx| vec![content])
+                                .w_full()
+                                .min_w_0()
+                                .flex_1()
+                                .basis_0()
+                                .into_element(cx)
+                        } else {
                             let mut label = ui::label(cx, label_text.clone())
                                 .text_size_px(label_style.size)
                                 .font_weight(label_style.weight)
@@ -3051,7 +2819,7 @@ fn combobox_with_patch<H: UiHost>(
 
                         let mut cmd_item = CommandItem::new(label_text)
                             .value(item.value.clone())
-                            .keywords(item.keywords.clone())
+                            .keywords(keywords)
                             .disabled(item_disabled)
                             .on_select_value_action(move |host, action_cx, reason, value| {
                                 let on_select = kit_combobox::commit_selection_on_activate(
@@ -3064,29 +2832,42 @@ fn combobox_with_patch<H: UiHost>(
                                 );
                                 on_select(host, action_cx, reason);
                             })
-                            .children(vec![text, icon]);
+                            .children(vec![body, icon]);
+
                         if let Some(prefix) = test_id_prefix.as_deref() {
                             cmd_item = cmd_item.test_id(format!(
                                 "{prefix}-item-{}",
                                 test_id_slug(item.value.as_ref())
                             ));
                         }
+
                         cmd_item
                     };
 
-                    let mut entries: Vec<CommandEntry> =
-                        Vec::with_capacity(items.len() + groups.len());
-                    for item in items.iter().cloned() {
+                    let mut root_items = items;
+                    let mut non_empty_groups: Vec<(Arc<str>, Vec<ComboboxItem>)> = Vec::new();
+                    for group in groups {
+                        let group_items = if !group.items.is_empty() {
+                            group.items
+                        } else {
+                            group.collection.map(|c| c.items).unwrap_or_default()
+                        };
+                        if group_items.is_empty() {
+                            continue;
+                        }
+                        if let Some(label) = group.label {
+                            non_empty_groups.push((label.text, group_items));
+                        } else {
+                            root_items.extend(group_items);
+                        }
+                    }
+
+                    for item in root_items {
                         entries.push(CommandEntry::Item(make_item(item)));
                     }
 
-                    let non_empty_groups: Vec<ComboboxOptionGroup> = groups
-                        .iter()
-                        .cloned()
-                        .filter(|group| !group.items.is_empty())
-                        .collect();
                     let non_empty_groups_len = non_empty_groups.len();
-                    if group_separators && !items.is_empty() && non_empty_groups_len > 0 {
+                    if group_separators && !entries.is_empty() && non_empty_groups_len > 0 {
                         let sep = if let Some(prefix) = test_id_prefix.as_deref() {
                             CommandSeparator::new().test_id(format!("{prefix}-sep-items-groups"))
                         } else {
@@ -3095,14 +2876,12 @@ fn combobox_with_patch<H: UiHost>(
                         entries.push(CommandEntry::Separator(sep));
                     }
 
-                    for (idx, group) in non_empty_groups.into_iter().enumerate() {
-                        let group_items: Vec<CommandItem> = group
-                            .items
-                            .into_iter()
-                            .map(|item| make_item(item))
-                            .collect();
+                    for (idx, (heading, group_items)) in non_empty_groups.into_iter().enumerate()
+                    {
+                        let group_items: Vec<CommandItem> =
+                            group_items.into_iter().map(|item| make_item(item)).collect();
                         entries.push(CommandEntry::Group(
-                            CommandGroup::new(group_items).heading(group.heading),
+                            CommandGroup::new(group_items).heading(heading),
                         ));
                         if group_separators && idx + 1 < non_empty_groups_len {
                             let sep = if let Some(prefix) = test_id_prefix.as_deref() {
@@ -3255,13 +3034,16 @@ mod tests {
 
         let groups = patch.list_groups.expect("expected groups from list");
         assert_eq!(groups.len(), 1);
-        assert_eq!(groups[0].heading.as_ref(), "Group 1");
-        assert_eq!(groups[0].items.len(), 1);
-        assert_eq!(groups[0].items[0].value.as_ref(), "b");
-        assert_eq!(groups[0].items[0].detail.as_deref(), Some("React"));
-        assert_eq!(groups[0].items[0].label.as_ref(), "Beta (React)");
-        assert_eq!(groups[0].items[0].keywords.len(), 1);
-        assert_eq!(groups[0].items[0].keywords[0].as_ref(), "React");
+        assert_eq!(
+            groups[0].label.as_ref().expect("group label").text.as_ref(),
+            "Group 1"
+        );
+        let group_items = combobox_group_items(&groups[0]);
+        assert_eq!(group_items.len(), 1);
+        assert_eq!(group_items[0].value.as_ref(), "b");
+        assert_eq!(group_items[0].detail.as_deref(), Some("React"));
+        assert_eq!(group_items[0].label.as_ref(), "Beta");
+        assert_eq!(group_items[0].keywords.len(), 0);
     }
 
     #[test]
@@ -3279,8 +3061,6 @@ mod tests {
 
         let model = app.models_mut().insert(None::<Arc<str>>);
         let open = app.models_mut().insert(false);
-
-        let items = vec![ComboboxOption::new("alpha", "Alpha")];
 
         let mut render_frame =
             |ui: &mut UiTree<App>, app: &mut App, model: Model<Option<Arc<str>>>| {
@@ -3301,7 +3081,7 @@ mod tests {
                                 .a11y_label("Combobox")
                                 .test_id_prefix("combobox-clear")
                                 .show_clear(true)
-                                .items(items.clone())
+                                .items([ComboboxItem::new("alpha", "Alpha")])
                                 .into_element(cx),
                         ]
                     },
@@ -3356,8 +3136,6 @@ mod tests {
         let model = app.models_mut().insert(None::<Arc<str>>);
         let open = app.models_mut().insert(false);
 
-        let items = vec![ComboboxOption::new("alpha", "Alpha")];
-
         let mut render_frame = |ui: &mut UiTree<App>, app: &mut App, show_trigger: bool| {
             let next_frame = FrameId(app.frame_id().0.saturating_add(1));
             app.set_frame_id(next_frame);
@@ -3376,7 +3154,7 @@ mod tests {
                             .a11y_label("Combobox")
                             .test_id_prefix("combobox-show-trigger")
                             .show_trigger(show_trigger)
-                            .items(items.clone())
+                            .items([ComboboxItem::new("alpha", "Alpha")])
                             .into_element(cx),
                     ]
                 },
@@ -3470,14 +3248,11 @@ mod tests {
     }
 
     #[test]
-    fn combobox_option_detail_appends_label_and_keywords() {
-        let item = ComboboxOption::new("next", "Next.js").detail("React");
+    fn combobox_item_detail_sets_detail_without_mutating_label() {
+        let item = ComboboxItem::new("next", "Next.js").detail("React");
         assert_eq!(item.detail.as_deref(), Some("React"));
-        assert_eq!(item.label.as_ref(), "Next.js (React)");
-        assert!(
-            item.keywords.iter().any(|kw| kw.as_ref() == "React"),
-            "expected detail to be included in keywords"
-        );
+        assert_eq!(item.label.as_ref(), "Next.js");
+        assert_eq!(item.keywords.len(), 0);
     }
 
     fn render_frame(
@@ -3488,7 +3263,7 @@ mod tests {
         bounds: Rect,
         model: Model<Option<Arc<str>>>,
         open: Model<bool>,
-        items: Vec<ComboboxOption>,
+        items: Vec<ComboboxItem>,
     ) -> fret_core::NodeId {
         let next_frame = FrameId(app.frame_id().0.saturating_add(1));
         app.set_frame_id(next_frame);
@@ -3518,7 +3293,7 @@ mod tests {
         bounds: Rect,
         model: Model<Option<Arc<str>>>,
         open: Model<bool>,
-        items: Vec<ComboboxOption>,
+        items: Vec<ComboboxItem>,
         underlay_clicked: Model<bool>,
     ) -> fret_core::NodeId {
         let next_frame = FrameId(app.frame_id().0.saturating_add(1));
@@ -3587,11 +3362,6 @@ mod tests {
         let model_out: RefCell<Option<Model<Option<Arc<str>>>>> = RefCell::new(None);
         let open_out: RefCell<Option<Model<bool>>> = RefCell::new(None);
 
-        let items = vec![
-            ComboboxOption::new("alpha", "Alpha"),
-            ComboboxOption::new("beta", "Beta"),
-        ];
-
         let render = |ui: &mut UiTree<App>,
                       app: &mut App,
                       services: &mut FakeServices,
@@ -3612,6 +3382,10 @@ mod tests {
                 "combobox-controllable",
                 |cx| {
                     vec![cx.keyed("combobox", |cx| {
+                        let items = vec![
+                            ComboboxItem::new("alpha", "Alpha"),
+                            ComboboxItem::new("beta", "Beta"),
+                        ];
                         let combobox = Combobox::new_controllable(
                             cx,
                             None,
@@ -3619,7 +3393,7 @@ mod tests {
                             None,
                             false,
                         )
-                        .items(items.clone());
+                        .items(items);
                         model_id_out.set(Some(combobox.model.id()));
                         open_id_out.set(Some(combobox.open.id()));
                         *model_out.borrow_mut() = Some(combobox.model.clone());
@@ -3779,11 +3553,13 @@ mod tests {
         );
         let mut services = FakeServices::default();
 
-        let items = vec![
-            ComboboxOption::new("alpha", "Alpha"),
-            ComboboxOption::new("beta", "Beta"),
-            ComboboxOption::new("gamma", "Gamma"),
-        ];
+        let items = || {
+            vec![
+                ComboboxItem::new("alpha", "Alpha"),
+                ComboboxItem::new("beta", "Beta"),
+                ComboboxItem::new("gamma", "Gamma"),
+            ]
+        };
 
         // First frame: establish stable trigger bounds.
         let _ = render_frame(
@@ -3794,7 +3570,7 @@ mod tests {
             bounds,
             model.clone(),
             open.clone(),
-            items.clone(),
+            items(),
         );
 
         let _ = app.models_mut().update(&open, |v| *v = true);
@@ -3811,7 +3587,7 @@ mod tests {
             bounds,
             model.clone(),
             open.clone(),
-            items.clone(),
+            items(),
         );
         let _ = render_frame(
             &mut ui,
@@ -3821,7 +3597,7 @@ mod tests {
             bounds,
             model.clone(),
             open.clone(),
-            items.clone(),
+            items(),
         );
 
         let snap = ui.semantics_snapshot().expect("semantics snapshot");
@@ -3876,7 +3652,7 @@ mod tests {
             bounds,
             model,
             open,
-            items,
+            items(),
         );
 
         let snap = ui.semantics_snapshot().expect("semantics snapshot");
@@ -3907,11 +3683,13 @@ mod tests {
         );
         let mut services = FakeServices::default();
 
-        let items = vec![
-            ComboboxOption::new("alpha", "Alpha"),
-            ComboboxOption::new("beta", "Beta"),
-            ComboboxOption::new("gamma", "Gamma"),
-        ];
+        let items = || {
+            vec![
+                ComboboxItem::new("alpha", "Alpha"),
+                ComboboxItem::new("beta", "Beta"),
+                ComboboxItem::new("gamma", "Gamma"),
+            ]
+        };
 
         // Frame 1: establish stable trigger bounds.
         let _ = render_frame(
@@ -3922,7 +3700,7 @@ mod tests {
             bounds,
             model.clone(),
             open.clone(),
-            items.clone(),
+            items(),
         );
 
         let snap = ui.semantics_snapshot().expect("semantics snapshot");
@@ -3978,7 +3756,7 @@ mod tests {
             bounds,
             model.clone(),
             open.clone(),
-            items.clone(),
+            items(),
         );
         let _ = render_frame(
             &mut ui,
@@ -3988,7 +3766,7 @@ mod tests {
             bounds,
             model,
             open,
-            items,
+            items(),
         );
 
         let snap = ui.semantics_snapshot().expect("semantics snapshot");
@@ -4022,11 +3800,13 @@ mod tests {
         );
         let mut services = FakeServices::default();
 
-        let items = vec![
-            ComboboxOption::new("alpha", "Alpha"),
-            ComboboxOption::new("beta", "Beta"),
-            ComboboxOption::new("gamma", "Gamma"),
-        ];
+        let items = || {
+            vec![
+                ComboboxItem::new("alpha", "Alpha"),
+                ComboboxItem::new("beta", "Beta"),
+                ComboboxItem::new("gamma", "Gamma"),
+            ]
+        };
 
         let root = render_frame(
             &mut ui,
@@ -4036,7 +3816,7 @@ mod tests {
             bounds,
             model.clone(),
             open.clone(),
-            items.clone(),
+            items(),
         );
 
         let trigger = ui
@@ -4074,7 +3854,7 @@ mod tests {
             bounds,
             model.clone(),
             open.clone(),
-            items.clone(),
+            items(),
         );
         let _ = render_frame(
             &mut ui,
@@ -4084,7 +3864,7 @@ mod tests {
             bounds,
             model,
             open,
-            items,
+            items(),
         );
 
         let snap = ui.semantics_snapshot().expect("semantics snapshot");
@@ -4118,11 +3898,13 @@ mod tests {
         );
         let mut services = FakeServices::default();
 
-        let items = vec![
-            ComboboxOption::new("alpha", "Alpha"),
-            ComboboxOption::new("beta", "Beta"),
-            ComboboxOption::new("gamma", "Gamma"),
-        ];
+        let items = || {
+            vec![
+                ComboboxItem::new("alpha", "Alpha"),
+                ComboboxItem::new("beta", "Beta"),
+                ComboboxItem::new("gamma", "Gamma"),
+            ]
+        };
 
         let root = render_frame(
             &mut ui,
@@ -4132,7 +3914,7 @@ mod tests {
             bounds,
             model.clone(),
             open.clone(),
-            items.clone(),
+            items(),
         );
 
         let trigger = ui
@@ -4170,7 +3952,7 @@ mod tests {
             bounds,
             model.clone(),
             open.clone(),
-            items.clone(),
+            items(),
         );
         let _ = render_frame(
             &mut ui,
@@ -4180,7 +3962,7 @@ mod tests {
             bounds,
             model.clone(),
             open.clone(),
-            items.clone(),
+            items(),
         );
 
         let snap = ui.semantics_snapshot().expect("semantics snapshot");
@@ -4244,11 +4026,13 @@ mod tests {
         );
         let mut services = FakeServices::default();
 
-        let items = vec![
-            ComboboxOption::new("alpha", "Alpha"),
-            ComboboxOption::new("beta", "Beta"),
-            ComboboxOption::new("gamma", "Gamma"),
-        ];
+        let items = || {
+            vec![
+                ComboboxItem::new("alpha", "Alpha"),
+                ComboboxItem::new("beta", "Beta"),
+                ComboboxItem::new("gamma", "Gamma"),
+            ]
+        };
 
         // Frame 1: closed.
         let _ = render_frame_with_underlay(
@@ -4259,7 +4043,7 @@ mod tests {
             bounds,
             model.clone(),
             open.clone(),
-            items.clone(),
+            items(),
             underlay_clicked.clone(),
         );
 
@@ -4274,7 +4058,7 @@ mod tests {
             bounds,
             model.clone(),
             open.clone(),
-            items.clone(),
+            items(),
             underlay_clicked.clone(),
         );
         let overlay_id =
@@ -4307,7 +4091,7 @@ mod tests {
             bounds,
             model,
             open,
-            items,
+            items(),
             underlay_clicked.clone(),
         );
 
@@ -4392,9 +4176,11 @@ mod tests {
         );
         let mut services = FakeServices::default();
 
-        let items: Vec<ComboboxOption> = (0..40)
-            .map(|i| ComboboxOption::new(format!("v{i}"), format!("Item {i}")))
-            .collect();
+        let items = || {
+            (0..40)
+                .map(|i| ComboboxItem::new(format!("v{i}"), format!("Item {i}")))
+                .collect::<Vec<_>>()
+        };
 
         // First frame: establish stable trigger bounds.
         let _ = render_frame(
@@ -4405,7 +4191,7 @@ mod tests {
             bounds,
             model.clone(),
             open.clone(),
-            items.clone(),
+            items(),
         );
         let _ = app.models_mut().update(&open, |v| *v = true);
 
@@ -4418,7 +4204,7 @@ mod tests {
             bounds,
             model.clone(),
             open.clone(),
-            items.clone(),
+            items(),
         );
         let _ = render_frame(
             &mut ui,
@@ -4428,7 +4214,7 @@ mod tests {
             bounds,
             model,
             open,
-            items,
+            items(),
         );
 
         let snap = ui.semantics_snapshot().expect("semantics snapshot");
