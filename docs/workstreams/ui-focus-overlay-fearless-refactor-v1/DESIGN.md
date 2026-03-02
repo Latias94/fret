@@ -75,6 +75,8 @@ Evidence anchors:
   `crates/fret-ui/src/tree/tests/focus_barrier_transition.rs`
 - Regression tests (layer-root focus scopes + stacked traps):
   `crates/fret-ui/src/tree/tests/focus_scope_layered.rs`
+- Scripted repro (fretboard diag): overlay focus trap + hover/cursor chains:
+  `tools/diag-scripts/ui-gallery/overlay/ui-gallery-overlay-focus-trap-hover-cursor.json`
 
 ## Plan: A + B → C (snapshot-first dispatch)
 

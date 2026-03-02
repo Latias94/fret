@@ -71,3 +71,5 @@ Status: In progress (2026-03-02)
 - Hover derivation (Pressable/HoverRegion ancestor queries) no longer depends on retained `parent` pointers:
   - `crates/fret-ui/src/tree/dispatch/hover.rs`
   - regression test: `crates/fret-ui/src/declarative/tests/layout/interactivity.rs`
+- Scripted diag repro exists for overlay focus trap + hover/cursor chains:
+  - `tools/diag-scripts/ui-gallery/overlay/ui-gallery-overlay-focus-trap-hover-cursor.json`

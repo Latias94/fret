@@ -37,5 +37,6 @@ Tracking doc: `docs/workstreams/ui-focus-overlay-fearless-refactor-v1/DESIGN.md`
 
 ## Nice-to-haves (separate workstreams if they expand)
 
-- [ ] `fretboard diag` scripted repro covering “stale parent pointers” + overlay focus trap outcomes.
+- [x] `fretboard diag` scripted repro covering overlay focus trap + hover/cursor outcomes.
+  - Script: `tools/diag-scripts/ui-gallery/overlay/ui-gallery-overlay-focus-trap-hover-cursor.json`
 - [ ] Perf probe: snapshot build cost vs frame budget in UI gallery worst-case overlays.
