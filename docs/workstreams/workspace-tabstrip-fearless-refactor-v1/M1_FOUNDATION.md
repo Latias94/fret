@@ -21,5 +21,5 @@ arbitration, and end-drop insert index.
 Status:
 
 - Contracts: in progress (see `DESIGN.md`)
-- Tests: pending
-- Diag gate: pending
+- Tests: present (kernel/utils/overflow unit tests)
+- Diag gate: present (workspace shell demo suite)

@@ -9,12 +9,12 @@ Legend:
 
 | Capability | Target | Status | Notes |
 |---|---:|---:|---|
-| End-drop surface (`insert_index == tab_count`) | Zed | No | Add diag + nextest gates in M1 |
-| Close does not activate | Zed | Partial | Policy exists in `fret-ui-kit`; ensure adapters follow |
-| Overflow menu close vs activate arbitration | Zed | Partial | Needs adapter conformance + tests |
-| Reorder within pane | Zed | No | M2 |
-| Move tab across panes | Zed | No | M2 |
-| Active tab always visible | Zed | No | Add diagnostics gate in M1 |
-| Pinned tabs | Zed | No | M3 |
-| Preview tab slot | Zed | No | M3 |
+| End-drop surface (`insert_index == tab_count`) | Zed | Yes | `drop_end` anchor + diag scripts |
+| Close does not activate | Zed | Yes | Overflow close gate + click arbitration |
+| Overflow menu close vs activate arbitration | Zed | Yes | `overflow_entry.*.close` + activate-hidden gate |
+| Reorder within pane | Zed | Yes | Reorder-to-end gates |
+| Move tab across panes | Zed | Yes | Cross-pane move gate |
+| Active tab always visible | Zed | Partial | Add an explicit `WorkspaceTabStripActiveVisibleIs(visible=true)` gate |
+| Pinned tabs | Zed | Partial | Pinned flags + boundary exist; tighten semantics + gates |
+| Preview tab slot | Zed | Partial | Preview flags exist; tighten semantics + gates |
 | Dirty close confirmation | Zed | No | M3 |

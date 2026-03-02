@@ -7,17 +7,25 @@ This workstream is gated by a small set of unit tests and `fretboard diag` scrip
 - `cargo nextest run -p fret-workspace`
 - `cargo nextest run -p fret-ui-headless -p fret-ui-kit` (shared helpers / policy arbitration)
 
-## Diagnostics scripts (planned)
+## Diagnostics scripts (workspace shell demo)
 
-Workspace tab strip "drop at end" gate:
+Suite:
 
-- (TODO) `tools/diag-scripts/workspace/workspace-tabstrip-drop-end-insert-index.json`
+- `cargo run -p fretboard -- diag suite workspace-shell-demo --launch -- cargo run -p fret-examples --bin workspace_shell_demo --release`
 
-Workspace active tab visibility gate:
+Gates (examples):
 
-- (TODO) `tools/diag-scripts/workspace/workspace-tabstrip-active-visible.json`
+- drop at end / reorder:
+  - `tools/diag-scripts/workspace/shell-demo/workspace-shell-demo-tab-reorder-first-to-end-smoke.json`
+  - `tools/diag-scripts/workspace/shell-demo/workspace-shell-demo-tab-reorder-first-to-end-overflow-smoke.json`
+- overflow activation:
+  - `tools/diag-scripts/workspace/shell-demo/workspace-shell-demo-tab-overflow-activate-hidden-smoke.json`
+- overflow close does not activate:
+  - `tools/diag-scripts/workspace/shell-demo/workspace-shell-demo-tab-overflow-close-does-not-activate.json`
+- cross-pane move to end:
+  - `tools/diag-scripts/workspace/shell-demo/workspace-shell-demo-tab-cross-pane-move-to-end.json`
 
-Suggested harness:
+Harness:
 
 - `apps/fret-examples/src/workspace_shell_demo.rs`
 

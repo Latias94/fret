@@ -28,7 +28,7 @@ ID format:
 
 ## A. Contract + Boundaries
 
-- [ ] WTS-contract-001 Write down the Workspace TabStrip contract surface:
+- [~] WTS-contract-001 Write down the Workspace TabStrip contract surface:
   - Surface classification vocabulary (header space vs tabs viewport vs controls).
   - Hit targets (tab content vs close, overflow menu row content vs close).
   - Insert index semantics (canonical order, under overflow).
@@ -36,29 +36,37 @@ ID format:
   - share a single kernel,
   - share only math helpers, or
   - keep fully separate.
-- [ ] WTS-contract-003 Decide the minimum stable diagnostic anchors needed for scripted gates.
+- [x] WTS-contract-003 Minimum stable diagnostic anchors exist:
+  - end-drop: `{root}.drop_end`
+  - overflow button: `{root}.overflow_button`
+  - overflow entry + close: `{root}.overflow_entry.{tab_id}[.close]`
+  - pinned boundary: `{root}.drop_pinned_boundary`
 
 ## B. Kernelization (Mechanism vs Policy)
 
-- [ ] WTS-kernel-010 Ensure Workspace TabStrip uses `fret-ui-headless` for:
+- [x] WTS-kernel-010 Workspace TabStrip uses `fret-ui-headless` for:
   - surface classification (`TabStripSurface`),
   - overflow membership / geometry helpers (if needed).
-- [ ] WTS-kernel-011 Keep click arbitration policy in `ecosystem/fret-ui-kit`:
+- [x] WTS-kernel-011 Click arbitration policy lives in `ecosystem/fret-ui-kit`:
   - Evidence: `ecosystem/fret-ui-kit/src/headless/tab_strip_controller.rs`.
-- [ ] WTS-kernel-012 Add a small workspace-specific "tab strip kernel" module for:
+- [x] WTS-kernel-012 Workspace-specific kernel exists:
   - mapping pointer → hit target,
   - mapping hit target → insert index (including end-drop),
   - mapping tab rects → drag preview banding.
 
 ## C. Diagnostics + Gates
 
-- [ ] WTS-gates-020 Add a diag script gate:
-  - drop-at-end resolves `insert_index == tab_count` for workspace tabs.
-- [ ] WTS-gates-021 Add a diag script gate:
-  - active tab stays visible (no hidden-active regression under overflow).
-- [ ] WTS-gates-022 Add at least 2 nextest tests that validate:
-  - end-drop insert index (no overflow + overflow),
-  - reorder in-place maintains canonical ordering invariants.
+- [x] WTS-gates-020 Drop-at-end gates exist (via `test_id` + semantics predicates):
+  - `tools/diag-scripts/workspace/shell-demo/workspace-shell-demo-tab-reorder-first-to-end-smoke.json`
+  - `tools/diag-scripts/workspace/shell-demo/workspace-shell-demo-tab-reorder-first-to-end-overflow-smoke.json`
+  - `tools/diag-scripts/workspace/shell-demo/workspace-shell-demo-tab-cross-pane-move-to-end.json`
+- [x] WTS-gates-021 Overflow activation and "close does not activate" gates exist:
+  - `tools/diag-scripts/workspace/shell-demo/workspace-shell-demo-tab-overflow-activate-hidden-smoke.json`
+  - `tools/diag-scripts/workspace/shell-demo/workspace-shell-demo-tab-overflow-close-does-not-activate.json`
+- [x] WTS-gates-022 Nextest coverage exists in:
+  - `ecosystem/fret-workspace/src/tab_strip/kernel.rs`
+  - `ecosystem/fret-workspace/src/tab_strip/utils.rs`
+  - `ecosystem/fret-workspace/src/tab_strip/overflow.rs`
 
 ## D. Editor Semantics (Policy Layer)
 
@@ -70,5 +78,5 @@ ID format:
 
 ## E. Cleanup + Convergence
 
-- [ ] WTS-cleanup-040 Remove legacy ad-hoc hit-tests once kernel is in use.
+- [~] WTS-cleanup-040 Remove legacy ad-hoc hit-tests once kernel is in use.
 - [ ] WTS-cleanup-041 Converge styling recipes (shadcn/material) without affecting mechanism tests.
