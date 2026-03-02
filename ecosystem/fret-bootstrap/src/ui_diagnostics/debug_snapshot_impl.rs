@@ -246,11 +246,35 @@ impl UiTreeDebugSnapshotV1 {
                 }),
             docking_interaction: app
                 .global::<fret_runtime::WindowInteractionDiagnosticsStore>()
-                .and_then(|store| store.docking_for_window(window, app.frame_id()))
+                .and_then(|store| {
+                    let frame = store.docking_for_window(window, app.frame_id());
+                    let has_frame_data = frame.is_some_and(|d| {
+                        d.dock_drag.is_some()
+                            || d.floating_drag.is_some()
+                            || d.dock_drop_resolve.is_some()
+                            || d.viewport_capture.is_some()
+                            || d.tab_strip_active_visibility.is_some()
+                            || d.dock_graph_stats.is_some()
+                            || d.dock_graph_signature.is_some()
+                    });
+                    if has_frame_data {
+                        frame
+                    } else {
+                        store.docking_latest_for_window(window)
+                    }
+                })
                 .map(UiDockingInteractionSnapshotV1::from_snapshot),
             workspace_interaction: app
                 .global::<fret_runtime::WindowInteractionDiagnosticsStore>()
-                .and_then(|store| store.workspace_for_window(window, app.frame_id()))
+                .and_then(|store| {
+                    let frame = store.workspace_for_window(window, app.frame_id());
+                    let has_frame_data = frame.is_some_and(|w| !w.tab_strip_active_visibility.is_empty());
+                    if has_frame_data {
+                        frame
+                    } else {
+                        store.workspace_latest_for_window(window)
+                    }
+                })
                 .map(UiWorkspaceInteractionSnapshotV1::from_snapshot),
             removed_subtrees,
             layout_engine_solves,
