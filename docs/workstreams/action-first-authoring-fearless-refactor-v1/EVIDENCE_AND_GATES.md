@@ -96,6 +96,7 @@ Requirements:
   - clicks a button that dispatches an action,
   - triggers a keybinding that dispatches an action,
   - asserts availability/disabled state under a modal barrier or focus scope.
+  - gates command dispatch explainability (a command dispatch trace entry exists and records the source kind).
 
 Notes:
 
