@@ -19,9 +19,9 @@
 
 ## M3: Per-edge paint overrides
 
-- [ ] Implement `EdgePaintOverrideV1` resolution order:
-  - presenter hint (per edge) → paint overrides → skin hints → `NodeGraphStyle.paint` defaults
-- [ ] Support `stroke_paint`, `stroke_width_mul`, and `dash` overrides
+- [x] Implement `EdgePaintOverrideV1` resolution order:
+  - `NodeGraphStyle.paint` defaults → presenter/edge_types hint → skin hints → paint overrides
+- [x] Support `stroke_paint`, `stroke_width_mul`, and `dash` overrides
 
 ## M4 (deferred): Gradient/material wire styling recipes
 

@@ -1,4 +1,5 @@
 use crate::ui::canvas::widget::*;
+use fret_core::scene::PaintBindingV1;
 
 impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
     pub(in super::super) fn paint_edge_overlays_selected_hovered<H: UiHost>(
@@ -27,6 +28,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
             to: Point,
             hint: EdgeRenderHint,
             color: Color,
+            paint: PaintBindingV1,
             width: f32,
         }
 
@@ -55,9 +57,31 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                 }
                 .normalized();
 
+                let mut hint = hint;
+                let paint_override = self
+                    .paint_overrides
+                    .as_ref()
+                    .and_then(|o| o.edge_paint_override(*edge_id));
+                if let Some(ov) = paint_override {
+                    if let Some(dash) = ov.dash {
+                        hint.dash = Some(dash);
+                    }
+                    if let Some(w) = ov.stroke_width_mul {
+                        hint.width_mul = hint.width_mul * w;
+                    }
+                }
+                hint = hint.normalized();
+
                 let mut color = presenter.edge_color(g, *edge_id, style);
                 if let Some(override_color) = hint.color {
                     color = override_color;
+                }
+
+                let mut paint: PaintBindingV1 = color.into();
+                if let Some(ov) = paint_override {
+                    if let Some(p) = ov.stroke_paint {
+                        paint = p;
+                    }
                 }
 
                 let mut width = style.geometry.wire_width * hint.width_mul;
@@ -75,6 +99,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                     to,
                     hint,
                     color,
+                    paint,
                     width,
                 });
             }
@@ -97,7 +122,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                     order: DrawOrder(2),
                     origin: Point::new(Px(0.0), Px(0.0)),
                     path,
-                    paint: edge.color.into(),
+                    paint: edge.paint,
                 });
             }
 

@@ -1,5 +1,6 @@
 use crate::ui::canvas::widget::*;
 use fret_core::scene::DashPatternV1;
+use fret_core::scene::PaintBindingV1;
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub(super) struct WireHighlightPaint {
@@ -17,6 +18,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
         route: EdgeRouteKind,
         from: Point,
         to: Point,
+        paint: PaintBindingV1,
         color: Color,
         width: f32,
         dash: Option<DashPatternV1>,
@@ -89,7 +91,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                 order: DrawOrder(2),
                 origin: Point::new(Px(0.0), Px(0.0)),
                 path,
-                paint: color.into(),
+                paint,
             });
         }
 
@@ -200,6 +202,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
         scale_factor: f32,
         from: Point,
         to: Point,
+        paint: PaintBindingV1,
         color: Color,
         width: f32,
         dash: Option<DashPatternV1>,
@@ -278,7 +281,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                 order: DrawOrder(2),
                 origin: Point::new(Px(0.0), Px(0.0)),
                 path,
-                paint: color.into(),
+                paint,
             });
         }
 

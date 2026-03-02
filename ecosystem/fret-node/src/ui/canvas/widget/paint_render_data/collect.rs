@@ -1,6 +1,7 @@
 use super::*;
 use crate::ui::NodeChromeHint;
 use crate::ui::PortChromeHint;
+use fret_core::scene::PaintBindingV1;
 
 impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
     pub(in super::super) fn collect_render_data<H: UiHost>(
@@ -266,6 +267,22 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                         } else {
                             hint
                         };
+
+                        let mut hint = hint;
+                        let paint_override = this
+                            .paint_overrides
+                            .as_ref()
+                            .and_then(|o| o.edge_paint_override(edge_id));
+                        if let Some(ov) = paint_override {
+                            if let Some(dash) = ov.dash {
+                                hint.dash = Some(dash);
+                            }
+                            if let Some(w) = ov.stroke_width_mul {
+                                hint.width_mul = hint.width_mul * w;
+                            }
+                        }
+                        hint = hint.normalized();
+
                         if let Some(c) = cull {
                             let interaction_width_px = this
                                 .geometry_overrides
@@ -277,10 +294,12 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                             let pad = (interaction_width_px
                                 .max(
                                     this.style.geometry.wire_width
+                                        * hint.width_mul
                                         * this.style.paint.wire_width_selected_mul,
                                 )
                                 .max(
                                     this.style.geometry.wire_width
+                                        * hint.width_mul
                                         * this.style.paint.wire_width_hover_mul,
                                 ))
                                 / zoom;
@@ -304,6 +323,13 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                             color = override_color;
                         }
 
+                        let mut paint: PaintBindingV1 = color.into();
+                        if let Some(ov) = paint_override {
+                            if let Some(p) = ov.stroke_paint {
+                                paint = p;
+                            }
+                        }
+
                         // Keep edge ordering stable and aligned with node z-order.
                         // This mirrors XyFlow's "basic" z-index behavior where edge z depends on the
                         // highest z of its endpoints (selection/hover boosts are applied later by
@@ -325,6 +351,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                             from,
                             to,
                             color,
+                            paint,
                             hint,
                             selected,
                             hovered,

@@ -3,7 +3,7 @@
 ## Design checks
 
 - [ ] Verify paint-only invariants (no geometry/hit-test dependencies on paint overrides)
-- [ ] Decide the minimal v1 override structs:
+- [x] Decide the minimal v1 override structs:
   - Edge: stroke paint/width mul/dash
   - Node: background/border paint (and optional header paint)
 - [ ] Define deterministic normalization rules for override structs (finite checks; clamping)
@@ -14,6 +14,9 @@
 - [x] Thread overrides handle through `NodeGraphCanvas` builder
 - [x] Update paint cache keys to include paint override revision
 - [x] Add conformance tests (invalidation + invariants)
+- [x] Apply per-edge paint overrides to emitted wire `SceneOp::Path.paint`
+- [ ] Apply per-node paint overrides to emitted node body/background paint
+- [ ] Conformance: paint overrides do not mutate serialized `Graph`
 
 ## Optional (nice-to-have)
 

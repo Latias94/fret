@@ -2,6 +2,7 @@ use crate::ui::canvas::widget::paint_render_data::RenderData;
 use crate::ui::canvas::widget::*;
 use fret_core::scene::DashPatternV1;
 use fret_core::scene::DropShadowV1;
+use fret_core::scene::PaintBindingV1;
 use fret_core::{EffectChain, EffectMode, EffectQuality, EffectStep};
 use std::collections::hash_map::DefaultHasher;
 use std::hash::{Hash, Hasher};
@@ -24,6 +25,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
             from: Point,
             to: Point,
             color: Color,
+            paint: PaintBindingV1,
             width: f32,
             route: EdgeRouteKind,
             dash: Option<DashPatternV1>,
@@ -244,6 +246,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                 from: edge.from,
                 to: edge.to,
                 color: edge.color,
+                paint: edge.paint,
                 width,
                 route,
                 dash: edge.hint.dash,
@@ -452,6 +455,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                     cx.scale_factor,
                     edge.from,
                     edge.to,
+                    edge.paint,
                     edge.color,
                     edge.width,
                     edge.dash,
@@ -471,6 +475,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                     edge.route,
                     edge.from,
                     edge.to,
+                    edge.paint,
                     edge.color,
                     edge.width,
                     edge.dash,
