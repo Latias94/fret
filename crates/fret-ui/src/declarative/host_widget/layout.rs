@@ -900,13 +900,13 @@ impl ElementHostWidget {
             }
             ElementInstance::Text(props) => {
                 if cx.pass_kind == crate::layout_pass::LayoutPassKind::Probe {
-                    let constraints = LayoutConstraints::new(
-                        LayoutSize::new(None, None),
-                        LayoutSize::new(
-                            AvailableSpace::Definite(cx.available.width),
-                            AvailableSpace::Definite(cx.available.height),
-                        ),
-                    );
+                    let mut constraints = cx.probe_constraints_for_size(cx.available);
+                    if cx.available.width.0 <= 0.0 {
+                        constraints.available.width = AvailableSpace::MaxContent;
+                    }
+                    if cx.available.height.0 <= 0.0 {
+                        constraints.available.height = AvailableSpace::MaxContent;
+                    }
 
                     // Avoid re-entrant `with_widget_mut(cx.node)` by measuring the current widget
                     // directly (using the same intrinsic measurement semantics as `MeasureCx`).
