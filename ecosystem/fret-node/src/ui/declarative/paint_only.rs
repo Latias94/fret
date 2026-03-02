@@ -28,6 +28,7 @@ use crate::ui::declarative::view_reducer::{
     apply_fit_view_to_canvas_rect, apply_pan_by_screen_delta, apply_zoom_about_screen_point,
     view_from_state,
 };
+use crate::ui::geometry_overrides::NodeGraphGeometryOverridesRef;
 use crate::ui::presenter::DefaultNodeGraphPresenter;
 use crate::ui::style::NodeGraphStyle;
 
@@ -85,6 +86,11 @@ pub struct NodeGraphSurfacePaintOnlyProps {
     pub pointer_region: PointerRegionProps,
     pub canvas: CanvasProps,
 
+    /// Optional geometry overrides for UI-only per-entity sizing/hit-testing.
+    ///
+    /// Changes must bump `revision()` on the provider (see `ui/geometry_overrides.rs`).
+    pub geometry_overrides: Option<NodeGraphGeometryOverridesRef>,
+
     /// When true, host a lightweight portal layer that renders node labels as normal element
     /// subtrees positioned in screen space (semantic zoom).
     ///
@@ -118,6 +124,7 @@ impl NodeGraphSurfacePaintOnlyProps {
             view_state,
             pointer_region,
             canvas: CanvasProps::default(),
+            geometry_overrides: None,
             portals_enabled: true,
             portal_max_nodes: 32,
             cull_margin_screen_px: 256.0,
@@ -285,12 +292,14 @@ impl Default for DerivedGeometryCacheState {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-struct DerivedGeometryCacheKeyV1 {
+struct DerivedGeometryCacheKeyV2 {
     graph_rev: u64,
     zoom_q: i32,
     node_origin_x_q: i32,
     node_origin_y_q: i32,
     draw_order_hash: u64,
+    geometry_tokens_fingerprint: u64,
+    geometry_overrides_rev: u64,
     cell_size_screen_bits: u32,
     min_cell_size_screen_bits: u32,
     edge_aabb_pad_screen_bits: u32,
@@ -305,23 +314,36 @@ fn derived_geometry_cache_key(
     draw_order: &[crate::core::NodeId],
     interaction: &crate::io::NodeGraphInteractionState,
     style: &NodeGraphStyle,
+    geometry_overrides_rev: u64,
+    max_edge_interaction_width_override_px: f32,
 ) -> CanvasKey {
     let zoom = PanZoom2D::sanitize_zoom(zoom, 1.0);
     let origin = node_origin.normalized();
 
     let tuning = interaction.spatial_index;
+    let max_edge_interaction_width_override_px = if max_edge_interaction_width_override_px
+        .is_finite()
+        && max_edge_interaction_width_override_px >= 0.0
+    {
+        max_edge_interaction_width_override_px
+    } else {
+        0.0
+    };
     let edge_aabb_pad_screen_px = tuning
         .edge_aabb_pad_screen_px
         .max(interaction.edge_interaction_width)
+        .max(max_edge_interaction_width_override_px)
         .max(style.geometry.wire_width)
         .max(0.0);
 
-    let v = DerivedGeometryCacheKeyV1 {
+    let v = DerivedGeometryCacheKeyV2 {
         graph_rev,
         zoom_q: quantize_f32(zoom, 4096.0),
         node_origin_x_q: quantize_f32(origin.x, 4096.0),
         node_origin_y_q: quantize_f32(origin.y, 4096.0),
         draw_order_hash: stable_hash_u64(1, &draw_order),
+        geometry_tokens_fingerprint: style.geometry.fingerprint(),
+        geometry_overrides_rev,
         cell_size_screen_bits: tuning.cell_size_screen_px.to_bits(),
         min_cell_size_screen_bits: tuning.min_cell_size_screen_px.to_bits(),
         edge_aabb_pad_screen_bits: edge_aabb_pad_screen_px.to_bits(),
@@ -329,7 +351,7 @@ fn derived_geometry_cache_key(
         wire_width_bits: style.geometry.wire_width.to_bits(),
     };
 
-    CanvasKey::from_hash(&("fret-node.derived-geometry.paint-only.v1", v))
+    CanvasKey::from_hash(&("fret-node.derived-geometry.paint-only.v2", v))
 }
 
 fn build_debug_grid_ops(bounds: Rect, view: PanZoom2D) -> Arc<Vec<fret_core::SceneOp>> {
@@ -476,12 +498,13 @@ impl Default for EdgePaintCacheState {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-struct EdgePaintCacheKeyV2 {
+struct EdgePaintCacheKeyV3 {
     graph_rev: u64,
     zoom_q: i32,
     node_origin_x_q: i32,
     node_origin_y_q: i32,
     draw_order_hash: u64,
+    derived_geometry_key: u64,
 }
 
 #[derive(Debug, Clone)]
@@ -513,12 +536,13 @@ impl Default for NodePaintCacheState {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-struct NodePaintCacheKeyV2 {
+struct NodePaintCacheKeyV3 {
     graph_rev: u64,
     zoom_q: i32,
     node_origin_x_q: i32,
     node_origin_y_q: i32,
     draw_order_hash: u64,
+    derived_geometry_key: u64,
 }
 
 #[derive(Debug, Clone)]
@@ -668,17 +692,19 @@ fn edges_cache_key(
     zoom: f32,
     node_origin: crate::io::NodeGraphNodeOrigin,
     draw_order_hash: u64,
+    derived_geometry_key: u64,
 ) -> CanvasKey {
     let zoom = PanZoom2D::sanitize_zoom(zoom, 1.0);
     let origin = node_origin.normalized();
-    let v = EdgePaintCacheKeyV2 {
+    let v = EdgePaintCacheKeyV3 {
         graph_rev,
         zoom_q: quantize_f32(zoom, 4096.0),
         node_origin_x_q: quantize_f32(origin.x, 4096.0),
         node_origin_y_q: quantize_f32(origin.y, 4096.0),
         draw_order_hash,
+        derived_geometry_key,
     };
-    CanvasKey::from_hash(&("fret-node.edges.paint-only.v2", v))
+    CanvasKey::from_hash(&("fret-node.edges.paint-only.v3", v))
 }
 
 fn nodes_cache_key(
@@ -686,17 +712,19 @@ fn nodes_cache_key(
     zoom: f32,
     node_origin: crate::io::NodeGraphNodeOrigin,
     draw_order_hash: u64,
+    derived_geometry_key: u64,
 ) -> CanvasKey {
     let zoom = PanZoom2D::sanitize_zoom(zoom, 1.0);
     let origin = node_origin.normalized();
-    let v = NodePaintCacheKeyV2 {
+    let v = NodePaintCacheKeyV3 {
         graph_rev,
         zoom_q: quantize_f32(zoom, 4096.0),
         node_origin_x_q: quantize_f32(origin.x, 4096.0),
         node_origin_y_q: quantize_f32(origin.y, 4096.0),
         draw_order_hash,
+        derived_geometry_key,
     };
-    CanvasKey::from_hash(&("fret-node.nodes.paint-only.v2", v))
+    CanvasKey::from_hash(&("fret-node.nodes.paint-only.v3", v))
 }
 
 fn canvas_viewport_rect(bounds: Rect, view: PanZoom2D, margin_screen_px: f32) -> Option<Rect> {
@@ -1090,6 +1118,7 @@ pub fn node_graph_surface_paint_only<H: UiHost + 'static>(
         view_state,
         pointer_region,
         canvas,
+        geometry_overrides,
         portals_enabled,
         portal_max_nodes,
         cull_margin_screen_px,
@@ -1175,6 +1204,12 @@ pub fn node_graph_surface_paint_only<H: UiHost + 'static>(
         .unwrap_or_default();
     let view_for_paint = view_from_state(&view_value);
     let style_tokens = NodeGraphStyle::default();
+    let geometry_overrides = geometry_overrides.as_deref();
+    let geometry_overrides_rev = geometry_overrides.map(|o| o.revision()).unwrap_or(0);
+    let max_edge_interaction_width_override_px = geometry_overrides
+        .map(|o| o.max_edge_interaction_width_override_px())
+        .filter(|w| w.is_finite() && *w >= 0.0)
+        .unwrap_or(0.0);
 
     let graph_rev = graph.revision(&*cx.app).unwrap_or(0);
     let draw_order_hash = stable_hash_u64(2, &view_value.draw_order);
@@ -1219,6 +1254,8 @@ pub fn node_graph_surface_paint_only<H: UiHost + 'static>(
             &view_value.draw_order,
             &view_value.interaction,
             &style_tokens,
+            geometry_overrides_rev,
+            max_edge_interaction_width_override_px,
         );
 
         if derived_cache_value.key != Some(key) {
@@ -1235,13 +1272,14 @@ pub fn node_graph_surface_paint_only<H: UiHost + 'static>(
                         zoom,
                         node_origin,
                         &mut presenter,
-                        None,
+                        geometry_overrides,
                     );
 
                     let tuning = view_value.interaction.spatial_index;
                     let edge_aabb_pad_screen_px = tuning
                         .edge_aabb_pad_screen_px
                         .max(view_value.interaction.edge_interaction_width)
+                        .max(max_edge_interaction_width_override_px)
                         .max(style_tokens.geometry.wire_width)
                         .max(0.0);
                     let cell_size_canvas = (tuning.cell_size_screen_px / z)
@@ -1287,7 +1325,14 @@ pub fn node_graph_surface_paint_only<H: UiHost + 'static>(
         .get_model_cloned(&nodes_cache, Invalidation::Paint)
         .unwrap_or_default();
     {
-        let key = nodes_cache_key(graph_rev, view_for_paint.zoom, node_origin, draw_order_hash);
+        let derived_geometry_key = derived_cache_value.key.as_ref().map(|k| k.0).unwrap_or(0);
+        let key = nodes_cache_key(
+            graph_rev,
+            view_for_paint.zoom,
+            node_origin,
+            draw_order_hash,
+            derived_geometry_key,
+        );
         if nodes_cache_value.key != Some(key) {
             let draws = if let Some(geom) = derived_cache_value.geom.as_deref() {
                 let mut out = Vec::<NodeRectDraw>::new();
@@ -1326,7 +1371,14 @@ pub fn node_graph_surface_paint_only<H: UiHost + 'static>(
         .get_model_cloned(&edges_cache, Invalidation::Paint)
         .unwrap_or_default();
     {
-        let key = edges_cache_key(graph_rev, view_for_paint.zoom, node_origin, draw_order_hash);
+        let derived_geometry_key = derived_cache_value.key.as_ref().map(|k| k.0).unwrap_or(0);
+        let key = edges_cache_key(
+            graph_rev,
+            view_for_paint.zoom,
+            node_origin,
+            draw_order_hash,
+            derived_geometry_key,
+        );
         if edges_cache_value.key != Some(key) {
             let geom_for_edges = derived_cache_value
                 .geom
