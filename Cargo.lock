@@ -2136,6 +2136,7 @@ dependencies = [
  "glam 0.30.10",
  "image",
  "js-sys",
+ "naga",
  "serde_json",
  "slotmap",
  "time",

@@ -440,6 +440,34 @@ pub struct UiFrameStatsV1 {
     #[serde(default)]
     pub renderer_intermediate_budget_bytes: u64,
     #[serde(default)]
+    pub renderer_intermediate_full_target_bytes: u64,
+    #[serde(default)]
+    pub renderer_render_plan_effect_chain_budget_samples: u64,
+    #[serde(default)]
+    pub renderer_render_plan_effect_chain_effective_budget_min_bytes: u64,
+    #[serde(default)]
+    pub renderer_render_plan_effect_chain_effective_budget_max_bytes: u64,
+    #[serde(default)]
+    pub renderer_render_plan_effect_chain_other_live_max_bytes: u64,
+    #[serde(default)]
+    pub renderer_render_plan_custom_effect_chain_budget_samples: u64,
+    #[serde(default)]
+    pub renderer_render_plan_custom_effect_chain_effective_budget_min_bytes: u64,
+    #[serde(default)]
+    pub renderer_render_plan_custom_effect_chain_effective_budget_max_bytes: u64,
+    #[serde(default)]
+    pub renderer_render_plan_custom_effect_chain_other_live_max_bytes: u64,
+    #[serde(default)]
+    pub renderer_render_plan_custom_effect_chain_base_required_max_bytes: u64,
+    #[serde(default)]
+    pub renderer_render_plan_custom_effect_chain_optional_required_max_bytes: u64,
+    #[serde(default)]
+    pub renderer_render_plan_custom_effect_chain_base_required_full_targets_max: u32,
+    #[serde(default)]
+    pub renderer_render_plan_custom_effect_chain_optional_mask_max_bytes: u64,
+    #[serde(default)]
+    pub renderer_render_plan_custom_effect_chain_optional_pyramid_max_bytes: u64,
+    #[serde(default)]
     pub renderer_intermediate_in_use_bytes: u64,
     #[serde(default)]
     pub renderer_intermediate_peak_in_use_bytes: u64,
@@ -503,6 +531,65 @@ pub struct UiFrameStatsV1 {
     pub renderer_material_unknown_ids: u64,
     #[serde(default)]
     pub renderer_material_degraded_due_to_budget: u64,
+
+    // Renderer effect degradation counters (best-effort). These are only populated when
+    // `FRET_DIAG_RENDERER_PERF=1` and the runner records perf samples.
+    #[serde(default)]
+    pub renderer_custom_effect_v1_steps_requested: u64,
+    #[serde(default)]
+    pub renderer_custom_effect_v1_passes_emitted: u64,
+    #[serde(default)]
+    pub renderer_custom_effect_v2_steps_requested: u64,
+    #[serde(default)]
+    pub renderer_custom_effect_v2_passes_emitted: u64,
+    #[serde(default)]
+    pub renderer_custom_effect_v2_user_image_incompatible_fallbacks: u64,
+    #[serde(default)]
+    pub renderer_custom_effect_v3_steps_requested: u64,
+    #[serde(default)]
+    pub renderer_custom_effect_v3_passes_emitted: u64,
+    #[serde(default)]
+    pub renderer_custom_effect_v3_user0_image_incompatible_fallbacks: u64,
+    #[serde(default)]
+    pub renderer_custom_effect_v3_user1_image_incompatible_fallbacks: u64,
+    #[serde(default)]
+    pub renderer_custom_effect_v3_sources_raw_requested: u64,
+    #[serde(default)]
+    pub renderer_custom_effect_v3_sources_raw_distinct: u64,
+    #[serde(default)]
+    pub renderer_custom_effect_v3_sources_raw_aliased_to_src: u64,
+    #[serde(default)]
+    pub renderer_custom_effect_v3_sources_pyramid_requested: u64,
+    #[serde(default)]
+    pub renderer_custom_effect_v3_sources_pyramid_applied_levels_ge2: u64,
+    #[serde(default)]
+    pub renderer_custom_effect_v3_sources_pyramid_degraded_to_one_budget_zero: u64,
+    #[serde(default)]
+    pub renderer_custom_effect_v3_sources_pyramid_degraded_to_one_budget_insufficient: u64,
+    #[serde(default)]
+    pub renderer_custom_effect_v3_pyramid_cache_hits: u64,
+    #[serde(default)]
+    pub renderer_custom_effect_v3_pyramid_cache_misses: u64,
+    #[serde(default)]
+    pub renderer_backdrop_source_groups_requested: u64,
+    #[serde(default)]
+    pub renderer_backdrop_source_groups_applied_raw: u64,
+    #[serde(default)]
+    pub renderer_backdrop_source_groups_raw_degraded_budget_zero: u64,
+    #[serde(default)]
+    pub renderer_backdrop_source_groups_raw_degraded_budget_insufficient: u64,
+    #[serde(default)]
+    pub renderer_backdrop_source_groups_raw_degraded_target_exhausted: u64,
+    #[serde(default)]
+    pub renderer_backdrop_source_groups_pyramid_requested: u64,
+    #[serde(default)]
+    pub renderer_backdrop_source_groups_pyramid_applied_levels_ge2: u64,
+    #[serde(default)]
+    pub renderer_backdrop_source_groups_pyramid_degraded_to_one_budget_zero: u64,
+    #[serde(default)]
+    pub renderer_backdrop_source_groups_pyramid_degraded_to_one_budget_insufficient: u64,
+    #[serde(default)]
+    pub renderer_backdrop_source_groups_pyramid_skipped_raw_unavailable: u64,
 }
 
 impl UiFrameStatsV1 {
@@ -791,6 +878,20 @@ impl UiFrameStatsV1 {
             renderer_text_atlas_evicted_page_glyphs: 0,
             renderer_text_atlas_resets: 0,
             renderer_intermediate_budget_bytes: 0,
+            renderer_intermediate_full_target_bytes: 0,
+            renderer_render_plan_effect_chain_budget_samples: 0,
+            renderer_render_plan_effect_chain_effective_budget_min_bytes: 0,
+            renderer_render_plan_effect_chain_effective_budget_max_bytes: 0,
+            renderer_render_plan_effect_chain_other_live_max_bytes: 0,
+            renderer_render_plan_custom_effect_chain_budget_samples: 0,
+            renderer_render_plan_custom_effect_chain_effective_budget_min_bytes: 0,
+            renderer_render_plan_custom_effect_chain_effective_budget_max_bytes: 0,
+            renderer_render_plan_custom_effect_chain_other_live_max_bytes: 0,
+            renderer_render_plan_custom_effect_chain_base_required_max_bytes: 0,
+            renderer_render_plan_custom_effect_chain_optional_required_max_bytes: 0,
+            renderer_render_plan_custom_effect_chain_base_required_full_targets_max: 0,
+            renderer_render_plan_custom_effect_chain_optional_mask_max_bytes: 0,
+            renderer_render_plan_custom_effect_chain_optional_pyramid_max_bytes: 0,
             renderer_intermediate_in_use_bytes: 0,
             renderer_intermediate_peak_in_use_bytes: 0,
             renderer_intermediate_release_targets: 0,
@@ -823,6 +924,34 @@ impl UiFrameStatsV1 {
             renderer_material_distinct: 0,
             renderer_material_unknown_ids: 0,
             renderer_material_degraded_due_to_budget: 0,
+            renderer_custom_effect_v1_steps_requested: 0,
+            renderer_custom_effect_v1_passes_emitted: 0,
+            renderer_custom_effect_v2_steps_requested: 0,
+            renderer_custom_effect_v2_passes_emitted: 0,
+            renderer_custom_effect_v2_user_image_incompatible_fallbacks: 0,
+            renderer_custom_effect_v3_steps_requested: 0,
+            renderer_custom_effect_v3_passes_emitted: 0,
+            renderer_custom_effect_v3_user0_image_incompatible_fallbacks: 0,
+            renderer_custom_effect_v3_user1_image_incompatible_fallbacks: 0,
+            renderer_custom_effect_v3_pyramid_cache_hits: 0,
+            renderer_custom_effect_v3_pyramid_cache_misses: 0,
+            renderer_custom_effect_v3_sources_raw_requested: 0,
+            renderer_custom_effect_v3_sources_raw_distinct: 0,
+            renderer_custom_effect_v3_sources_raw_aliased_to_src: 0,
+            renderer_custom_effect_v3_sources_pyramid_requested: 0,
+            renderer_custom_effect_v3_sources_pyramid_applied_levels_ge2: 0,
+            renderer_custom_effect_v3_sources_pyramid_degraded_to_one_budget_zero: 0,
+            renderer_custom_effect_v3_sources_pyramid_degraded_to_one_budget_insufficient: 0,
+            renderer_backdrop_source_groups_requested: 0,
+            renderer_backdrop_source_groups_applied_raw: 0,
+            renderer_backdrop_source_groups_raw_degraded_budget_zero: 0,
+            renderer_backdrop_source_groups_raw_degraded_budget_insufficient: 0,
+            renderer_backdrop_source_groups_raw_degraded_target_exhausted: 0,
+            renderer_backdrop_source_groups_pyramid_requested: 0,
+            renderer_backdrop_source_groups_pyramid_applied_levels_ge2: 0,
+            renderer_backdrop_source_groups_pyramid_degraded_to_one_budget_zero: 0,
+            renderer_backdrop_source_groups_pyramid_degraded_to_one_budget_insufficient: 0,
+            renderer_backdrop_source_groups_pyramid_skipped_raw_unavailable: 0,
         };
 
         if let Some(sample) = renderer_perf {
@@ -890,6 +1019,34 @@ impl UiFrameStatsV1 {
                 sample.perf.text_atlas_evicted_page_glyphs;
             out.renderer_text_atlas_resets = sample.perf.text_atlas_resets;
             out.renderer_intermediate_budget_bytes = sample.perf.intermediate_budget_bytes;
+            out.renderer_intermediate_full_target_bytes =
+                sample.perf.intermediate_full_target_bytes;
+            out.renderer_render_plan_effect_chain_budget_samples =
+                sample.perf.render_plan_effect_chain_budget_samples;
+            out.renderer_render_plan_effect_chain_effective_budget_min_bytes =
+                sample.perf.render_plan_effect_chain_effective_budget_min_bytes;
+            out.renderer_render_plan_effect_chain_effective_budget_max_bytes =
+                sample.perf.render_plan_effect_chain_effective_budget_max_bytes;
+            out.renderer_render_plan_effect_chain_other_live_max_bytes =
+                sample.perf.render_plan_effect_chain_other_live_max_bytes;
+            out.renderer_render_plan_custom_effect_chain_budget_samples =
+                sample.perf.render_plan_custom_effect_chain_budget_samples;
+            out.renderer_render_plan_custom_effect_chain_effective_budget_min_bytes =
+                sample.perf.render_plan_custom_effect_chain_effective_budget_min_bytes;
+            out.renderer_render_plan_custom_effect_chain_effective_budget_max_bytes =
+                sample.perf.render_plan_custom_effect_chain_effective_budget_max_bytes;
+            out.renderer_render_plan_custom_effect_chain_other_live_max_bytes =
+                sample.perf.render_plan_custom_effect_chain_other_live_max_bytes;
+            out.renderer_render_plan_custom_effect_chain_base_required_max_bytes =
+                sample.perf.render_plan_custom_effect_chain_base_required_max_bytes;
+            out.renderer_render_plan_custom_effect_chain_optional_required_max_bytes =
+                sample.perf.render_plan_custom_effect_chain_optional_required_max_bytes;
+            out.renderer_render_plan_custom_effect_chain_base_required_full_targets_max =
+                sample.perf.render_plan_custom_effect_chain_base_required_full_targets_max;
+            out.renderer_render_plan_custom_effect_chain_optional_mask_max_bytes =
+                sample.perf.render_plan_custom_effect_chain_optional_mask_max_bytes;
+            out.renderer_render_plan_custom_effect_chain_optional_pyramid_max_bytes =
+                sample.perf.render_plan_custom_effect_chain_optional_pyramid_max_bytes;
             out.renderer_intermediate_in_use_bytes = sample.perf.intermediate_in_use_bytes;
             out.renderer_intermediate_peak_in_use_bytes =
                 sample.perf.intermediate_peak_in_use_bytes;
@@ -930,6 +1087,66 @@ impl UiFrameStatsV1 {
             out.renderer_material_unknown_ids = sample.perf.material_unknown_ids;
             out.renderer_material_degraded_due_to_budget =
                 sample.perf.material_degraded_due_to_budget;
+
+            out.renderer_custom_effect_v1_steps_requested =
+                sample.perf.custom_effect_v1_steps_requested;
+            out.renderer_custom_effect_v1_passes_emitted =
+                sample.perf.custom_effect_v1_passes_emitted;
+            out.renderer_custom_effect_v2_steps_requested =
+                sample.perf.custom_effect_v2_steps_requested;
+            out.renderer_custom_effect_v2_passes_emitted =
+                sample.perf.custom_effect_v2_passes_emitted;
+            out.renderer_custom_effect_v2_user_image_incompatible_fallbacks =
+                sample.perf.custom_effect_v2_user_image_incompatible_fallbacks;
+            out.renderer_custom_effect_v3_steps_requested =
+                sample.perf.custom_effect_v3_steps_requested;
+            out.renderer_custom_effect_v3_passes_emitted =
+                sample.perf.custom_effect_v3_passes_emitted;
+            out.renderer_custom_effect_v3_user0_image_incompatible_fallbacks =
+                sample.perf.custom_effect_v3_user0_image_incompatible_fallbacks;
+            out.renderer_custom_effect_v3_user1_image_incompatible_fallbacks =
+                sample.perf.custom_effect_v3_user1_image_incompatible_fallbacks;
+            out.renderer_custom_effect_v3_pyramid_cache_hits =
+                sample.perf.custom_effect_v3_pyramid_cache_hits;
+            out.renderer_custom_effect_v3_pyramid_cache_misses =
+                sample.perf.custom_effect_v3_pyramid_cache_misses;
+
+            let effects = sample.perf.effect_degradations;
+            out.renderer_custom_effect_v3_sources_raw_requested =
+                effects.custom_effect_v3_sources.raw_requested;
+            out.renderer_custom_effect_v3_sources_raw_distinct =
+                effects.custom_effect_v3_sources.raw_distinct;
+            out.renderer_custom_effect_v3_sources_raw_aliased_to_src =
+                effects.custom_effect_v3_sources.raw_aliased_to_src;
+            out.renderer_custom_effect_v3_sources_pyramid_requested =
+                effects.custom_effect_v3_sources.pyramid_requested;
+            out.renderer_custom_effect_v3_sources_pyramid_applied_levels_ge2 =
+                effects.custom_effect_v3_sources.pyramid_applied_levels_ge2;
+            out.renderer_custom_effect_v3_sources_pyramid_degraded_to_one_budget_zero =
+                effects.custom_effect_v3_sources.pyramid_degraded_to_one_budget_zero;
+            out.renderer_custom_effect_v3_sources_pyramid_degraded_to_one_budget_insufficient =
+                effects
+                    .custom_effect_v3_sources
+                    .pyramid_degraded_to_one_budget_insufficient;
+
+            out.renderer_backdrop_source_groups_requested = effects.backdrop_source_groups.requested;
+            out.renderer_backdrop_source_groups_applied_raw = effects.backdrop_source_groups.applied_raw;
+            out.renderer_backdrop_source_groups_raw_degraded_budget_zero =
+                effects.backdrop_source_groups.raw_degraded_budget_zero;
+            out.renderer_backdrop_source_groups_raw_degraded_budget_insufficient =
+                effects.backdrop_source_groups.raw_degraded_budget_insufficient;
+            out.renderer_backdrop_source_groups_raw_degraded_target_exhausted =
+                effects.backdrop_source_groups.raw_degraded_target_exhausted;
+            out.renderer_backdrop_source_groups_pyramid_requested =
+                effects.backdrop_source_groups.pyramid_requested;
+            out.renderer_backdrop_source_groups_pyramid_applied_levels_ge2 =
+                effects.backdrop_source_groups.pyramid_applied_levels_ge2;
+            out.renderer_backdrop_source_groups_pyramid_degraded_to_one_budget_zero =
+                effects.backdrop_source_groups.pyramid_degraded_to_one_budget_zero;
+            out.renderer_backdrop_source_groups_pyramid_degraded_to_one_budget_insufficient =
+                effects.backdrop_source_groups.pyramid_degraded_to_one_budget_insufficient;
+            out.renderer_backdrop_source_groups_pyramid_skipped_raw_unavailable =
+                effects.backdrop_source_groups.pyramid_skipped_raw_unavailable;
         }
 
         out

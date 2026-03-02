@@ -303,8 +303,6 @@ fn active_tab_state(app: &App, tabs: DockNodeId) -> Option<(u32, u32)> {
 }
 
 fn view(cx: &mut ElementContext<'_, App>, st: &mut DockingBasicsWindowState) -> ViewElements {
-    let theme = Theme::global(&*cx.app).snapshot();
-
     let active_left = active_tab_title(cx.app, st.layout_ids.left_tabs).unwrap_or("Unknown".into());
     let active_right =
         active_tab_title(cx.app, st.layout_ids.right_tabs).unwrap_or("Unknown".into());
@@ -418,20 +416,7 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut DockingBasicsWindowState) -> 
     .max_w(Px(1100.0))
     .into_element(cx);
 
-    let root = ui::container(cx, |cx| {
-        vec![
-            ui::v_flex(cx, |_cx| vec![card])
-                .items_center()
-                .justify_center()
-                .size_full()
-                .into_element(cx),
-        ]
-    })
-    .bg(ColorRef::Color(theme.color_token("muted")))
-    .p(Space::N6)
-    .size_full()
-    .into_element(cx)
-    .test_id(TEST_ID_ROOT);
+    let root = fret_cookbook::scaffold::centered_page_muted(cx, TEST_ID_ROOT, card);
 
     vec![cx.semantics(
         SemanticsProps {

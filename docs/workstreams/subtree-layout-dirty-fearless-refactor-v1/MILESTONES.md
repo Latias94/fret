@@ -42,3 +42,10 @@ Done criteria:
   - max parent-walk length
   - number of deferred propagations
 - Validate no regression on UI Gallery navigation / scroll perf workstreams.
+
+## Current status (implementation)
+
+- M1: implemented (counter + bookkeeping + validation + telemetry).
+- M2: implemented “no deep scan” scroll edge guardrail using the O(1) subtree query.
+  - Generic layout does **not** use subtree-dirty to force ancestor relayouts; contained cache roots
+    remain owned by the contained relayout pass.

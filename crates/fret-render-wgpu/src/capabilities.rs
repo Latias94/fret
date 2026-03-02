@@ -26,6 +26,7 @@ pub struct RendererCapabilities {
     pub sampled_materials_catalog_textures: bool,
     pub custom_effect_v1: bool,
     pub custom_effect_v2_user_image: bool,
+    pub custom_effect_v3: bool,
 }
 
 impl RendererCapabilities {
@@ -45,6 +46,7 @@ impl RendererCapabilities {
         // renderer-owned catalog textures).
         let custom_effect_v1 = true;
         let custom_effect_v2_user_image = sampled_materials_catalog_textures;
+        let custom_effect_v3 = sampled_materials_catalog_textures;
 
         Self {
             adapter: AdapterCapabilities {
@@ -61,6 +63,7 @@ impl RendererCapabilities {
             sampled_materials_catalog_textures,
             custom_effect_v1,
             custom_effect_v2_user_image,
+            custom_effect_v3,
         }
     }
 }

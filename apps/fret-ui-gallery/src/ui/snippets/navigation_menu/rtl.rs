@@ -1,12 +1,15 @@
+pub const SOURCE: &str = include_str!("rtl.rs");
+
 // region: example
-use crate::spec::{CMD_APP_OPEN, CMD_APP_SAVE};
-use crate::ui::doc_layout;
 use fret_app::App;
 use fret_core::{FontId, FontWeight, Px, TextOverflow, TextStyle, TextWrap};
 use fret_ui::element::TextProps;
 use fret_ui_kit::declarative::{ElementContextThemeExt as _, ModelWatchExt as _};
 use fret_ui_shadcn::{self as shadcn, prelude::*};
 use std::sync::Arc;
+
+const CMD_APP_OPEN: &str = "ui_gallery.app.open";
+const CMD_APP_SAVE: &str = "ui_gallery.app.save";
 
 pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
     #[derive(Default, Clone)]
@@ -126,7 +129,7 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
             .into_element(cx)
     };
 
-    doc_layout::rtl(cx, |cx| {
+    shadcn::DirectionProvider::new(shadcn::LayoutDirection::Rtl).into_element(cx, |cx| {
         let region_props = fret_ui::element::LayoutQueryRegionProps {
             layout: cx.with_theme(|theme| {
                 fret_ui_kit::declarative::style::layout_style(

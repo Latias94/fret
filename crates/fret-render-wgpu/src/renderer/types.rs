@@ -467,6 +467,12 @@ pub struct RenderPerfSnapshot {
 
     // Intermediate pool churn (best-effort; used for blur/effect pipelines).
     pub intermediate_budget_bytes: u64,
+    /// Estimated bytes required for a single full-viewport intermediate target at the current
+    /// viewport size and format.
+    ///
+    /// This is intended for diagnostics / triage evidence (to interpret budget thresholds like
+    /// “needs >= 2 full targets”) and should not be treated as a stable API surface.
+    pub intermediate_full_target_bytes: u64,
     pub intermediate_in_use_bytes: u64,
     pub intermediate_peak_in_use_bytes: u64,
     pub intermediate_release_targets: u64,
@@ -481,6 +487,67 @@ pub struct RenderPerfSnapshot {
     pub render_plan_segments_changed: u64,
     pub render_plan_segments_passes_increased: u64,
     pub render_plan_degradations: u64,
+    /// Number of effect chain budget samples recorded during render plan compilation.
+    ///
+    /// This is a best-effort diagnostics signal (not a stable API).
+    pub render_plan_effect_chain_budget_samples: u64,
+    /// Minimum effective intermediate budget observed across effect chain compilation.
+    ///
+    /// This is a best-effort diagnostics signal (not a stable API).
+    pub render_plan_effect_chain_effective_budget_min_bytes: u64,
+    /// Maximum effective intermediate budget observed across effect chain compilation.
+    ///
+    /// This is a best-effort diagnostics signal (not a stable API).
+    pub render_plan_effect_chain_effective_budget_max_bytes: u64,
+    /// Maximum "other live bytes" observed across effect chain compilation.
+    ///
+    /// This is a best-effort diagnostics signal (not a stable API).
+    pub render_plan_effect_chain_other_live_max_bytes: u64,
+
+    /// Number of CustomEffect chain budget samples recorded during render plan compilation.
+    ///
+    /// A "CustomEffect chain" is an effect chain that contains at least one CustomEffect step
+    /// (v1/v2/v3). These are best-effort diagnostics signals (not a stable API).
+    pub render_plan_custom_effect_chain_budget_samples: u64,
+    /// Minimum effective intermediate budget observed across CustomEffect chain compilation.
+    ///
+    /// This is a best-effort diagnostics signal (not a stable API).
+    pub render_plan_custom_effect_chain_effective_budget_min_bytes: u64,
+    /// Maximum effective intermediate budget observed across CustomEffect chain compilation.
+    ///
+    /// This is a best-effort diagnostics signal (not a stable API).
+    pub render_plan_custom_effect_chain_effective_budget_max_bytes: u64,
+    /// Maximum "other live bytes" observed across CustomEffect chain compilation.
+    ///
+    /// This is a best-effort diagnostics signal (not a stable API).
+    pub render_plan_custom_effect_chain_other_live_max_bytes: u64,
+    /// Maximum "base required bytes" observed across CustomEffect chains.
+    ///
+    /// Base required bytes are expressed as full-size intermediate targets for the chain
+    /// (`srcdst` + required scratch/work/raw targets), excluding optional resources
+    /// (mask/pyramid).
+    ///
+    /// This is a best-effort diagnostics signal (not a stable API).
+    pub render_plan_custom_effect_chain_base_required_max_bytes: u64,
+    /// Maximum "optional required bytes" observed across CustomEffect chains.
+    ///
+    /// Optional required bytes cover non-full intermediate allocations like clip masks and v3
+    /// pyramids.
+    ///
+    /// This is a best-effort diagnostics signal (not a stable API).
+    pub render_plan_custom_effect_chain_optional_required_max_bytes: u64,
+    /// Maximum full-size target count implied by "base required bytes" across CustomEffect chains.
+    ///
+    /// This is a best-effort diagnostics signal (not a stable API).
+    pub render_plan_custom_effect_chain_base_required_full_targets_max: u32,
+    /// Maximum clip-mask bytes observed across CustomEffect chains.
+    ///
+    /// This is a best-effort diagnostics signal (not a stable API).
+    pub render_plan_custom_effect_chain_optional_mask_max_bytes: u64,
+    /// Maximum pyramid bytes observed across CustomEffect chains.
+    ///
+    /// This is a best-effort diagnostics signal (not a stable API).
+    pub render_plan_custom_effect_chain_optional_pyramid_max_bytes: u64,
     pub render_plan_degradations_budget_zero: u64,
     pub render_plan_degradations_budget_insufficient: u64,
     pub render_plan_degradations_target_exhausted: u64,
@@ -490,6 +557,48 @@ pub struct RenderPerfSnapshot {
     pub render_plan_degradations_composite_group_blend_to_over: u64,
     pub effect_degradations: EffectDegradationSnapshot,
     pub effect_blur_quality: BlurQualitySnapshot,
+    /// Counts `EffectStep::CustomV1` occurrences in requested effect chains for the frame.
+    ///
+    /// This is a best-effort diagnostics signal (not a stable API).
+    pub custom_effect_v1_steps_requested: u64,
+    /// Counts `RenderPlanPass::CustomEffect` emitted by the render plan compiler for the frame.
+    ///
+    /// When `custom_effect_v1_steps_requested > 0` but this remains `0`, CustomEffectV1 was
+    /// requested but skipped (typically due to intermediate budget / target constraints).
+    pub custom_effect_v1_passes_emitted: u64,
+    /// Counts `EffectStep::CustomV2` occurrences in requested effect chains for the frame.
+    ///
+    /// This is a best-effort diagnostics signal (not a stable API).
+    pub custom_effect_v2_steps_requested: u64,
+    /// Counts `RenderPlanPass::CustomEffectV2` emitted by the render plan compiler for the frame.
+    ///
+    /// When `custom_effect_v2_steps_requested > 0` but this remains `0`, CustomEffectV2 was
+    /// requested but skipped (typically due to intermediate budget / target constraints).
+    pub custom_effect_v2_passes_emitted: u64,
+    /// Counts CustomEffectV2 passes where an incompatible user image was provided and the backend
+    /// bound the deterministic fallback instead (1x1 transparent).
+    ///
+    /// This is a best-effort diagnostics signal (not a stable API).
+    pub custom_effect_v2_user_image_incompatible_fallbacks: u64,
+    /// Counts `EffectStep::CustomV3` occurrences in requested effect chains for the frame.
+    ///
+    /// This is a best-effort diagnostics signal (not a stable API).
+    pub custom_effect_v3_steps_requested: u64,
+    /// Counts `RenderPlanPass::CustomEffectV3` emitted by the render plan compiler for the frame.
+    ///
+    /// When `custom_effect_v3_steps_requested > 0` but this remains `0`, CustomEffectV3 was
+    /// requested but skipped (typically due to intermediate budget / target constraints).
+    pub custom_effect_v3_passes_emitted: u64,
+    /// Counts CustomEffectV3 passes where an incompatible `user0` image was provided and the
+    /// backend bound the deterministic fallback instead (1x1 transparent).
+    ///
+    /// This is a best-effort diagnostics signal (not a stable API).
+    pub custom_effect_v3_user0_image_incompatible_fallbacks: u64,
+    /// Counts CustomEffectV3 passes where an incompatible `user1` image was provided and the
+    /// backend bound the deterministic fallback instead (1x1 transparent).
+    ///
+    /// This is a best-effort diagnostics signal (not a stable API).
+    pub custom_effect_v3_user1_image_incompatible_fallbacks: u64,
     pub custom_effect_v3_pyramid_cache_hits: u64,
     pub custom_effect_v3_pyramid_cache_misses: u64,
 
@@ -617,6 +726,7 @@ pub(super) struct RenderPerfStats {
     pub(super) text_atlas_resets: u64,
 
     pub(super) intermediate_budget_bytes: u64,
+    pub(super) intermediate_full_target_bytes: u64,
     pub(super) intermediate_in_use_bytes: u64,
     pub(super) intermediate_peak_in_use_bytes: u64,
     pub(super) intermediate_release_targets: u64,
@@ -631,6 +741,19 @@ pub(super) struct RenderPerfStats {
     pub(super) render_plan_segments_changed: u64,
     pub(super) render_plan_segments_passes_increased: u64,
     pub(super) render_plan_degradations: u64,
+    pub(super) render_plan_effect_chain_budget_samples: u64,
+    pub(super) render_plan_effect_chain_effective_budget_min_bytes: u64,
+    pub(super) render_plan_effect_chain_effective_budget_max_bytes: u64,
+    pub(super) render_plan_effect_chain_other_live_max_bytes: u64,
+    pub(super) render_plan_custom_effect_chain_budget_samples: u64,
+    pub(super) render_plan_custom_effect_chain_effective_budget_min_bytes: u64,
+    pub(super) render_plan_custom_effect_chain_effective_budget_max_bytes: u64,
+    pub(super) render_plan_custom_effect_chain_other_live_max_bytes: u64,
+    pub(super) render_plan_custom_effect_chain_base_required_max_bytes: u64,
+    pub(super) render_plan_custom_effect_chain_optional_required_max_bytes: u64,
+    pub(super) render_plan_custom_effect_chain_base_required_full_targets_max: u32,
+    pub(super) render_plan_custom_effect_chain_optional_mask_max_bytes: u64,
+    pub(super) render_plan_custom_effect_chain_optional_pyramid_max_bytes: u64,
     pub(super) render_plan_degradations_budget_zero: u64,
     pub(super) render_plan_degradations_budget_insufficient: u64,
     pub(super) render_plan_degradations_target_exhausted: u64,
@@ -640,6 +763,15 @@ pub(super) struct RenderPerfStats {
     pub(super) render_plan_degradations_composite_group_blend_to_over: u64,
     pub(super) effect_degradations: EffectDegradationSnapshot,
     pub(super) effect_blur_quality: BlurQualitySnapshot,
+    pub(super) custom_effect_v1_steps_requested: u64,
+    pub(super) custom_effect_v1_passes_emitted: u64,
+    pub(super) custom_effect_v2_steps_requested: u64,
+    pub(super) custom_effect_v2_passes_emitted: u64,
+    pub(super) custom_effect_v2_user_image_incompatible_fallbacks: u64,
+    pub(super) custom_effect_v3_steps_requested: u64,
+    pub(super) custom_effect_v3_passes_emitted: u64,
+    pub(super) custom_effect_v3_user0_image_incompatible_fallbacks: u64,
+    pub(super) custom_effect_v3_user1_image_incompatible_fallbacks: u64,
     pub(super) custom_effect_v3_pyramid_cache_hits: u64,
     pub(super) custom_effect_v3_pyramid_cache_misses: u64,
 

@@ -22,6 +22,7 @@ See:
 - `TODO.md` / `MILESTONES.md` for sequencing
 - `EVIDENCE_AND_GATES.md` for regression artifacts and minimum gates
 - `OPEN_QUESTIONS.md` for unresolved semantics
+- `UPSTREAM_AUDIT_ZED_GPUI.md` for upstream mechanism notes (Zed / GPUI)
 - Related ADRs: `docs/adr/0069-outside-press-and-dismissable-non-modal-overlays.md`
 
 ## Current status
@@ -30,6 +31,9 @@ See:
 - Phase B shipped: `prevent_default()` suppresses the runtime’s default focus-clearing side effect on
   outside press.
 - Phase C is in design and decomposition: `M2_DISPATCH_SNAPSHOT_DESIGN.md` (dispatch snapshot).
+- View-cache + hover correctness hardening: HoverRegion “hover edge” transitions disable view-cache
+  reuse for the containing cache roots (rerender-on-hover-edge) so hover-driven overlays and
+  pseudoclass-driven style changes cannot be hidden behind cache hits.
 
 Evidence anchors live in:
 

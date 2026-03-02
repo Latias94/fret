@@ -58,6 +58,13 @@ pub enum UiDebugInvalidationDetail {
     GlobalObservation,
     NotifyCall,
     HoverEvent,
+    /// A hover edge that must re-run declarative view-cache subtrees.
+    ///
+    /// `HoverRegion` is a mechanism-layer primitive that provides a `hovered: bool` signal to
+    /// component code. Under view-cache reuse, paint-only invalidations do not re-run child render
+    /// closures by design, so hover edges must be treated as "view dirty" to preserve the
+    /// contract for hover-driven policies (e.g. hover cards).
+    HoverRegionEdge,
     FocusEvent,
     ScrollHandleHitTestOnly,
     ScrollHandleLayout,
@@ -91,6 +98,7 @@ impl UiDebugInvalidationDetail {
             Self::GlobalObservation => Some("global_observation"),
             Self::NotifyCall => Some("notify_call"),
             Self::HoverEvent => Some("hover_event"),
+            Self::HoverRegionEdge => Some("hover_region_edge"),
             Self::FocusEvent => Some("focus_event"),
             Self::ScrollHandleHitTestOnly => Some("scroll_handle_hit_test_only"),
             Self::ScrollHandleLayout => Some("scroll_handle_layout"),

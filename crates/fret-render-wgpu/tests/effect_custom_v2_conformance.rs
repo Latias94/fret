@@ -375,6 +375,7 @@ fn gpu_custom_effect_v2_rejects_non_filterable_input_format_by_falling_back() {
 
     let mut renderer = Renderer::new(&ctx.adapter, &ctx.device);
     renderer.set_intermediate_budget_bytes(u64::MAX);
+    renderer.set_perf_enabled(true);
 
     // Create a non-filterable float format and register it as an ImageId. The CustomV2 ABI requires
     // filterable sampled textures; the backend should deterministically fall back instead of
@@ -455,6 +456,14 @@ fn fret_custom_effect(_src: vec4<f32>, _uv: vec2<f32>, pos_px: vec2<f32>, _param
         inside,
         [0, 0, 0, 0],
         "expected deterministic fallback sampling for incompatible input formats"
+    );
+
+    let perf = renderer
+        .take_last_frame_perf_snapshot()
+        .expect("expected a last-frame perf snapshot when perf is enabled");
+    assert_eq!(
+        perf.custom_effect_v2_user_image_incompatible_fallbacks, 1,
+        "expected one incompatible user-image fallback for the rendered CustomEffectV2 pass"
     );
 }
 

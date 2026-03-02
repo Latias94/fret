@@ -1,11 +1,74 @@
 use fret_core::geometry::{Edges, Point, Px, Rect, Size};
 use fret_core::scene::{
-    Color, CustomEffectPyramidRequestV1, CustomEffectSourcesV3, DrawOrder, EffectChain, EffectMode,
-    EffectParamsV1, EffectQuality, EffectStep, Paint, Scene, SceneOp,
+    Color, CustomEffectImageInputV1, CustomEffectPyramidRequestV1, CustomEffectSourcesV3,
+    DrawOrder, EffectChain, EffectMode, EffectParamsV1, EffectQuality, EffectStep,
+    ImageSamplingHint, Paint, Scene, SceneOp, UvRect,
 };
-use fret_core::{CustomEffectDescriptorV3, CustomEffectService as _};
-use fret_render_wgpu::{ClearColor, RenderSceneParams, Renderer, WgpuContext};
+use fret_core::{
+    AlphaMode, CustomEffectDescriptorV1, CustomEffectDescriptorV2, CustomEffectDescriptorV3,
+    CustomEffectService as _, ImageId,
+};
+use fret_render_wgpu::{
+    ClearColor, ImageColorSpace, ImageDescriptor, RenderSceneParams, Renderer, WgpuContext,
+};
 use std::sync::mpsc;
+
+#[derive(Clone, Copy, Debug)]
+enum CustomEffectAbi {
+    V1,
+    V2,
+    V3,
+}
+
+fn register_passthrough_custom_effect(
+    renderer: &mut Renderer,
+    abi: CustomEffectAbi,
+) -> fret_core::EffectId {
+    let wgsl = r#"
+fn fret_custom_effect(src: vec4<f32>, _uv: vec2<f32>, _pos_px: vec2<f32>, _params: EffectParamsV1) -> vec4<f32> {
+  return src;
+}
+"#;
+
+    match abi {
+        CustomEffectAbi::V1 => renderer
+            .register_custom_effect_v1(CustomEffectDescriptorV1::wgsl_utf8(wgsl))
+            .expect("custom effect v1 registration must succeed on wgpu backends"),
+        CustomEffectAbi::V2 => renderer
+            .register_custom_effect_v2(CustomEffectDescriptorV2::wgsl_utf8(wgsl))
+            .expect("custom effect v2 registration must succeed on wgpu backends"),
+        CustomEffectAbi::V3 => renderer
+            .register_custom_effect_v3(CustomEffectDescriptorV3::wgsl_utf8(wgsl))
+            .expect("custom effect v3 registration must succeed on wgpu backends"),
+    }
+}
+
+fn custom_effect_step(abi: CustomEffectAbi, id: fret_core::EffectId) -> EffectStep {
+    match abi {
+        CustomEffectAbi::V1 => EffectStep::CustomV1 {
+            id,
+            params: EffectParamsV1::ZERO,
+            max_sample_offset_px: Px(0.0),
+        },
+        CustomEffectAbi::V2 => EffectStep::CustomV2 {
+            id,
+            params: EffectParamsV1::ZERO,
+            max_sample_offset_px: Px(0.0),
+            input_image: None,
+        },
+        CustomEffectAbi::V3 => EffectStep::CustomV3 {
+            id,
+            params: EffectParamsV1::ZERO,
+            max_sample_offset_px: Px(0.0),
+            user0: None,
+            user1: None,
+            sources: CustomEffectSourcesV3 {
+                want_raw: false,
+                pyramid: None,
+            },
+        },
+    }
+}
 
 fn read_texture_rgba8(
     device: &wgpu::Device,
@@ -401,6 +464,492 @@ fn fret_custom_effect(src: vec4<f32>, _uv: vec2<f32>, pos_px: vec2<f32>, _params
 }
 
 #[test]
+fn gpu_custom_effect_v3_requested_but_skipped_under_tight_intermediate_budget() {
+    let ctx = match pollster::block_on(WgpuContext::new()) {
+        Ok(ctx) => ctx,
+        Err(_err) => return,
+    };
+
+    let mut renderer = Renderer::new(&ctx.adapter, &ctx.device);
+    renderer.set_intermediate_budget_bytes(1024);
+    renderer.set_perf_enabled(true);
+
+    let wgsl = r#"
+fn fret_custom_effect(src: vec4<f32>, _uv: vec2<f32>, _pos_px: vec2<f32>, _params: EffectParamsV1) -> vec4<f32> {
+  return src;
+}
+"#;
+
+    let effect = renderer
+        .register_custom_effect_v3(CustomEffectDescriptorV3::wgsl_utf8(wgsl))
+        .expect("custom effect v3 registration must succeed on wgpu backends");
+
+    let size = (32u32, 32u32);
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(size.0 as f32), Px(size.1 as f32)),
+    );
+
+    let mut scene = Scene::default();
+    scene.push(SceneOp::PushEffect {
+        bounds,
+        mode: EffectMode::FilterContent,
+        chain: EffectChain::from_steps(&[EffectStep::CustomV3 {
+            id: effect,
+            params: EffectParamsV1::ZERO,
+            max_sample_offset_px: Px(0.0),
+            user0: None,
+            user1: None,
+            sources: CustomEffectSourcesV3 {
+                want_raw: true,
+                pyramid: Some(CustomEffectPyramidRequestV1 {
+                    max_levels: 4,
+                    max_radius_px: Px(16.0),
+                }),
+            },
+        }]),
+        quality: EffectQuality::Auto,
+    });
+    scene.push(SceneOp::Quad {
+        order: DrawOrder(0),
+        rect: bounds,
+        background: (Paint::Solid(Color {
+            r: 1.0,
+            g: 0.0,
+            b: 0.0,
+            a: 1.0,
+        }))
+        .into(),
+        border: Edges::all(Px(0.0)),
+        border_paint: (Paint::Solid(Color::TRANSPARENT)).into(),
+        corner_radii: Default::default(),
+    });
+    scene.push(SceneOp::PopEffect);
+
+    let _pixels = render_and_readback(&ctx, &mut renderer, &scene, size);
+
+    let snap = renderer
+        .take_last_frame_perf_snapshot()
+        .expect("expected last_frame_perf snapshot with perf enabled");
+    assert_eq!(
+        snap.custom_effect_v3_steps_requested, 1,
+        "expected one CustomV3 step to be requested by the effect chain"
+    );
+    assert_eq!(
+        snap.custom_effect_v3_passes_emitted, 0,
+        "expected CustomEffectV3 pass emission to be skipped under a tight intermediate budget"
+    );
+    assert_eq!(
+        snap.effect_degradations
+            .custom_effect_v3_sources
+            .raw_requested,
+        0,
+        "source counters remain at 0 when the pass is not emitted"
+    );
+    assert_eq!(
+        snap.effect_degradations
+            .custom_effect_v3_sources
+            .pyramid_requested,
+        0,
+        "source counters remain at 0 when the pass is not emitted"
+    );
+}
+
+#[test]
+fn gpu_custom_effect_v1_requested_but_skipped_under_tight_intermediate_budget() {
+    let ctx = match pollster::block_on(WgpuContext::new()) {
+        Ok(ctx) => ctx,
+        Err(_err) => return,
+    };
+
+    let mut renderer = Renderer::new(&ctx.adapter, &ctx.device);
+    renderer.set_intermediate_budget_bytes(1024);
+    renderer.set_perf_enabled(true);
+
+    let wgsl = r#"
+fn fret_custom_effect(src: vec4<f32>, _uv: vec2<f32>, _pos_px: vec2<f32>, _params: EffectParamsV1) -> vec4<f32> {
+  return src;
+}
+"#;
+
+    let effect = renderer
+        .register_custom_effect_v1(CustomEffectDescriptorV1::wgsl_utf8(wgsl))
+        .expect("custom effect v1 registration must succeed on wgpu backends");
+
+    let size = (32u32, 32u32);
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(size.0 as f32), Px(size.1 as f32)),
+    );
+
+    let mut scene = Scene::default();
+    scene.push(SceneOp::PushEffect {
+        bounds,
+        mode: EffectMode::FilterContent,
+        chain: EffectChain::from_steps(&[EffectStep::CustomV1 {
+            id: effect,
+            params: EffectParamsV1::ZERO,
+            max_sample_offset_px: Px(0.0),
+        }]),
+        quality: EffectQuality::Auto,
+    });
+    scene.push(SceneOp::Quad {
+        order: DrawOrder(0),
+        rect: bounds,
+        background: (Paint::Solid(Color {
+            r: 1.0,
+            g: 0.0,
+            b: 0.0,
+            a: 1.0,
+        }))
+        .into(),
+        border: Edges::all(Px(0.0)),
+        border_paint: (Paint::Solid(Color::TRANSPARENT)).into(),
+        corner_radii: Default::default(),
+    });
+    scene.push(SceneOp::PopEffect);
+
+    let _pixels = render_and_readback(&ctx, &mut renderer, &scene, size);
+
+    let snap = renderer
+        .take_last_frame_perf_snapshot()
+        .expect("expected last_frame_perf snapshot with perf enabled");
+    assert_eq!(
+        snap.custom_effect_v1_steps_requested, 1,
+        "expected one CustomV1 step to be requested by the effect chain"
+    );
+    assert_eq!(
+        snap.custom_effect_v1_passes_emitted, 0,
+        "expected CustomEffect pass emission to be skipped under a tight intermediate budget"
+    );
+}
+
+#[test]
+fn gpu_custom_effect_v2_requested_but_skipped_under_tight_intermediate_budget() {
+    let ctx = match pollster::block_on(WgpuContext::new()) {
+        Ok(ctx) => ctx,
+        Err(_err) => return,
+    };
+
+    let mut renderer = Renderer::new(&ctx.adapter, &ctx.device);
+    renderer.set_intermediate_budget_bytes(1024);
+    renderer.set_perf_enabled(true);
+
+    let wgsl = r#"
+fn fret_custom_effect(src: vec4<f32>, _uv: vec2<f32>, _pos_px: vec2<f32>, _params: EffectParamsV1) -> vec4<f32> {
+  return src;
+}
+"#;
+
+    let effect = renderer
+        .register_custom_effect_v2(CustomEffectDescriptorV2::wgsl_utf8(wgsl))
+        .expect("custom effect v2 registration must succeed on wgpu backends");
+
+    let size = (32u32, 32u32);
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(size.0 as f32), Px(size.1 as f32)),
+    );
+
+    let mut scene = Scene::default();
+    scene.push(SceneOp::PushEffect {
+        bounds,
+        mode: EffectMode::FilterContent,
+        chain: EffectChain::from_steps(&[EffectStep::CustomV2 {
+            id: effect,
+            params: EffectParamsV1::ZERO,
+            max_sample_offset_px: Px(0.0),
+            input_image: None,
+        }]),
+        quality: EffectQuality::Auto,
+    });
+    scene.push(SceneOp::Quad {
+        order: DrawOrder(0),
+        rect: bounds,
+        background: (Paint::Solid(Color {
+            r: 1.0,
+            g: 0.0,
+            b: 0.0,
+            a: 1.0,
+        }))
+        .into(),
+        border: Edges::all(Px(0.0)),
+        border_paint: (Paint::Solid(Color::TRANSPARENT)).into(),
+        corner_radii: Default::default(),
+    });
+    scene.push(SceneOp::PopEffect);
+
+    let _pixels = render_and_readback(&ctx, &mut renderer, &scene, size);
+
+    let snap = renderer
+        .take_last_frame_perf_snapshot()
+        .expect("expected last_frame_perf snapshot with perf enabled");
+    assert_eq!(
+        snap.custom_effect_v2_steps_requested, 1,
+        "expected one CustomV2 step to be requested by the effect chain"
+    );
+    assert_eq!(
+        snap.custom_effect_v2_passes_emitted, 0,
+        "expected CustomEffectV2 pass emission to be skipped under a tight intermediate budget"
+    );
+}
+
+#[test]
+fn gpu_custom_effect_requested_but_skipped_with_budget_zero() {
+    let ctx = match pollster::block_on(WgpuContext::new()) {
+        Ok(ctx) => ctx,
+        Err(_err) => return,
+    };
+
+    let size = (32u32, 32u32);
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(size.0 as f32), Px(size.1 as f32)),
+    );
+
+    for abi in [
+        CustomEffectAbi::V1,
+        CustomEffectAbi::V2,
+        CustomEffectAbi::V3,
+    ] {
+        let mut renderer = Renderer::new(&ctx.adapter, &ctx.device);
+        renderer.set_intermediate_budget_bytes(0);
+        renderer.set_perf_enabled(true);
+
+        let effect = register_passthrough_custom_effect(&mut renderer, abi);
+
+        let mut scene = Scene::default();
+        scene.push(SceneOp::PushEffect {
+            bounds,
+            mode: EffectMode::FilterContent,
+            chain: EffectChain::from_steps(&[custom_effect_step(abi, effect)]),
+            quality: EffectQuality::Auto,
+        });
+        scene.push(SceneOp::Quad {
+            order: DrawOrder(0),
+            rect: bounds,
+            background: (Paint::Solid(Color {
+                r: 1.0,
+                g: 0.0,
+                b: 0.0,
+                a: 1.0,
+            }))
+            .into(),
+            border: Edges::all(Px(0.0)),
+            border_paint: (Paint::Solid(Color::TRANSPARENT)).into(),
+            corner_radii: Default::default(),
+        });
+        scene.push(SceneOp::PopEffect);
+
+        let _pixels = render_and_readback(&ctx, &mut renderer, &scene, size);
+
+        let snap = renderer
+            .take_last_frame_perf_snapshot()
+            .expect("expected last_frame_perf snapshot with perf enabled");
+        assert!(
+            snap.render_plan_degradations_budget_zero > 0,
+            "expected at least one budget-zero degradation when intermediate budget is zero (abi={abi:?})"
+        );
+        assert!(
+            snap.render_plan_degradations_filter_content_disabled > 0,
+            "expected FilterContentDisabled degradation when the effect chain cannot be applied (abi={abi:?})"
+        );
+
+        match abi {
+            CustomEffectAbi::V1 => {
+                assert_eq!(snap.custom_effect_v1_steps_requested, 1);
+                assert_eq!(snap.custom_effect_v1_passes_emitted, 0);
+            }
+            CustomEffectAbi::V2 => {
+                assert_eq!(snap.custom_effect_v2_steps_requested, 1);
+                assert_eq!(snap.custom_effect_v2_passes_emitted, 0);
+            }
+            CustomEffectAbi::V3 => {
+                assert_eq!(snap.custom_effect_v3_steps_requested, 1);
+                assert_eq!(snap.custom_effect_v3_passes_emitted, 0);
+            }
+        }
+    }
+}
+
+#[test]
+fn gpu_custom_effect_requested_but_skipped_due_to_target_exhaustion() {
+    let ctx = match pollster::block_on(WgpuContext::new()) {
+        Ok(ctx) => ctx,
+        Err(_err) => return,
+    };
+
+    let size = (32u32, 32u32);
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(size.0 as f32), Px(size.1 as f32)),
+    );
+
+    // Exhaust all intermediate targets by nesting four FilterContent scopes. The innermost scope
+    // still allocates its content target, but has no free scratch target for the custom effect. The
+    // render plan should therefore skip custom effect pass emission with a target-exhausted
+    // degradation.
+    for abi in [
+        CustomEffectAbi::V1,
+        CustomEffectAbi::V2,
+        CustomEffectAbi::V3,
+    ] {
+        let mut renderer = Renderer::new(&ctx.adapter, &ctx.device);
+        renderer.set_intermediate_budget_bytes(u64::MAX);
+        renderer.set_perf_enabled(true);
+
+        let effect = register_passthrough_custom_effect(&mut renderer, abi);
+
+        let mut scene = Scene::default();
+        for _ in 0..3 {
+            scene.push(SceneOp::PushEffect {
+                bounds,
+                mode: EffectMode::FilterContent,
+                chain: EffectChain::from_steps(&[]),
+                quality: EffectQuality::Auto,
+            });
+        }
+        scene.push(SceneOp::PushEffect {
+            bounds,
+            mode: EffectMode::FilterContent,
+            chain: EffectChain::from_steps(&[custom_effect_step(abi, effect)]),
+            quality: EffectQuality::Auto,
+        });
+        scene.push(SceneOp::Quad {
+            order: DrawOrder(0),
+            rect: bounds,
+            background: (Paint::Solid(Color {
+                r: 1.0,
+                g: 0.0,
+                b: 0.0,
+                a: 1.0,
+            }))
+            .into(),
+            border: Edges::all(Px(0.0)),
+            border_paint: (Paint::Solid(Color::TRANSPARENT)).into(),
+            corner_radii: Default::default(),
+        });
+        for _ in 0..4 {
+            scene.push(SceneOp::PopEffect);
+        }
+
+        let _pixels = render_and_readback(&ctx, &mut renderer, &scene, size);
+
+        let snap = renderer
+            .take_last_frame_perf_snapshot()
+            .expect("expected last_frame_perf snapshot with perf enabled");
+        assert!(
+            snap.render_plan_degradations_target_exhausted > 0,
+            "expected at least one target-exhausted degradation when intermediates are fully occupied (abi={abi:?})"
+        );
+        assert!(
+            snap.render_plan_degradations_filter_content_disabled > 0,
+            "expected FilterContentDisabled degradation when the effect chain cannot be applied (abi={abi:?})"
+        );
+
+        match abi {
+            CustomEffectAbi::V1 => {
+                assert_eq!(snap.custom_effect_v1_steps_requested, 1);
+                assert_eq!(snap.custom_effect_v1_passes_emitted, 0);
+            }
+            CustomEffectAbi::V2 => {
+                assert_eq!(snap.custom_effect_v2_steps_requested, 1);
+                assert_eq!(snap.custom_effect_v2_passes_emitted, 0);
+            }
+            CustomEffectAbi::V3 => {
+                assert_eq!(snap.custom_effect_v3_steps_requested, 1);
+                assert_eq!(snap.custom_effect_v3_passes_emitted, 0);
+            }
+        }
+    }
+}
+
+#[test]
+fn gpu_custom_effect_requested_but_skipped_due_to_budget_insufficient() {
+    let ctx = match pollster::block_on(WgpuContext::new()) {
+        Ok(ctx) => ctx,
+        Err(_err) => return,
+    };
+
+    let size = (32u32, 32u32);
+    let full_target_bytes = size.0 as u64 * size.1 as u64 * 4;
+    let budget_insufficient_bytes = full_target_bytes.saturating_mul(2).saturating_sub(1).max(1);
+
+    for abi in [
+        CustomEffectAbi::V1,
+        CustomEffectAbi::V2,
+        CustomEffectAbi::V3,
+    ] {
+        let mut renderer = Renderer::new(&ctx.adapter, &ctx.device);
+        renderer.set_intermediate_budget_bytes(budget_insufficient_bytes);
+        renderer.set_perf_enabled(true);
+
+        let effect = register_passthrough_custom_effect(&mut renderer, abi);
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(size.0 as f32), Px(size.1 as f32)),
+        );
+
+        let mut scene = Scene::default();
+        scene.push(SceneOp::PushEffect {
+            bounds,
+            mode: EffectMode::FilterContent,
+            chain: EffectChain::from_steps(&[custom_effect_step(abi, effect)]),
+            quality: EffectQuality::Auto,
+        });
+        scene.push(SceneOp::Quad {
+            order: DrawOrder(0),
+            rect: bounds,
+            background: (Paint::Solid(Color {
+                r: 1.0,
+                g: 0.0,
+                b: 0.0,
+                a: 1.0,
+            }))
+            .into(),
+            border: Edges::all(Px(0.0)),
+            border_paint: (Paint::Solid(Color::TRANSPARENT)).into(),
+            corner_radii: Default::default(),
+        });
+        scene.push(SceneOp::PopEffect);
+
+        let _pixels = render_and_readback(&ctx, &mut renderer, &scene, size);
+
+        let snap = renderer
+            .take_last_frame_perf_snapshot()
+            .expect("expected last_frame_perf snapshot with perf enabled");
+        assert_eq!(
+            snap.intermediate_full_target_bytes, full_target_bytes,
+            "expected intermediate_full_target_bytes to match the output format/viewport size"
+        );
+        assert_eq!(
+            snap.render_plan_degradations_budget_insufficient, 1,
+            "expected exactly one budget-insufficient degradation in this scenario (abi={abi:?})"
+        );
+        assert_eq!(
+            snap.render_plan_degradations_filter_content_disabled, 1,
+            "expected the FilterContent effect chain to be disabled due to insufficient budget (abi={abi:?})"
+        );
+
+        match abi {
+            CustomEffectAbi::V1 => {
+                assert_eq!(snap.custom_effect_v1_steps_requested, 1);
+                assert_eq!(snap.custom_effect_v1_passes_emitted, 0);
+            }
+            CustomEffectAbi::V2 => {
+                assert_eq!(snap.custom_effect_v2_steps_requested, 1);
+                assert_eq!(snap.custom_effect_v2_passes_emitted, 0);
+            }
+            CustomEffectAbi::V3 => {
+                assert_eq!(snap.custom_effect_v3_steps_requested, 1);
+                assert_eq!(snap.custom_effect_v3_passes_emitted, 0);
+            }
+        }
+    }
+}
+
+#[test]
 fn gpu_custom_effect_v3_pyramid_level1_differs_from_raw_near_an_unaligned_edge() {
     let ctx = match pollster::block_on(WgpuContext::new()) {
         Ok(ctx) => ctx,
@@ -514,5 +1063,116 @@ fn fret_custom_effect(_src: vec4<f32>, _uv: vec2<f32>, pos_px: vec2<f32>, _param
     assert!(
         pyr_r >= 16 && pyr_r < raw_r.saturating_sub(8),
         "expected mip level 1 to differ near the edge (raw_r={raw_r}, pyr_r={pyr_r})"
+    );
+}
+
+#[test]
+fn gpu_custom_effect_v3_rejects_non_filterable_user_image_formats_by_falling_back_and_counts_it() {
+    let ctx = match pollster::block_on(WgpuContext::new()) {
+        Ok(ctx) => ctx,
+        Err(_err) => return,
+    };
+
+    let mut renderer = Renderer::new(&ctx.adapter, &ctx.device);
+    renderer.set_intermediate_budget_bytes(u64::MAX);
+    renderer.set_perf_enabled(true);
+
+    // Create a non-filterable float format and register it as an ImageId. The CustomV3 ABI
+    // requires filterable sampled textures for `user0` / `user1`; the backend should
+    // deterministically fall back instead of triggering a wgpu validation error at bind group
+    // creation time.
+    let size = (1u32, 1u32);
+    let texture = ctx.device.create_texture(&wgpu::TextureDescriptor {
+        label: Some("effect_custom_v3_conformance non-filterable user0"),
+        size: wgpu::Extent3d {
+            width: size.0,
+            height: size.1,
+            depth_or_array_layers: 1,
+        },
+        mip_level_count: 1,
+        sample_count: 1,
+        dimension: wgpu::TextureDimension::D2,
+        format: wgpu::TextureFormat::Rgba32Float,
+        usage: wgpu::TextureUsages::TEXTURE_BINDING,
+        view_formats: &[],
+    });
+    let view = texture.create_view(&wgpu::TextureViewDescriptor::default());
+    let non_filterable: ImageId = renderer.register_image(ImageDescriptor {
+        view,
+        size,
+        format: wgpu::TextureFormat::Rgba32Float,
+        color_space: ImageColorSpace::Linear,
+        alpha_mode: AlphaMode::Opaque,
+    });
+
+    let wgsl = r#"
+fn fret_custom_effect(_src: vec4<f32>, _uv: vec2<f32>, pos_px: vec2<f32>, _params: EffectParamsV1) -> vec4<f32> {
+  // If the user image is incompatible, the backend should bind the deterministic fallback
+  // (1x1 transparent black) rather than crashing.
+  return fret_sample_user0_at_pos(pos_px);
+}
+"#;
+    let effect = renderer
+        .register_custom_effect_v3(CustomEffectDescriptorV3::wgsl_utf8(wgsl))
+        .expect("custom effect v3 registration must succeed on wgpu backends");
+
+    let bounds = Rect::new(Point::new(Px(3.0), Px(2.0)), Size::new(Px(18.0), Px(12.0)));
+    let size = (32u32, 24u32);
+
+    let mut scene = Scene::default();
+    scene.push(SceneOp::PushEffect {
+        bounds,
+        mode: EffectMode::FilterContent,
+        chain: EffectChain::from_steps(&[EffectStep::CustomV3 {
+            id: effect,
+            params: EffectParamsV1::ZERO,
+            max_sample_offset_px: Px(0.0),
+            user0: Some(CustomEffectImageInputV1 {
+                image: non_filterable,
+                uv: UvRect::FULL,
+                sampling: ImageSamplingHint::Linear,
+            }),
+            user1: None,
+            sources: CustomEffectSourcesV3 {
+                want_raw: false,
+                pyramid: None,
+            },
+        }]),
+        quality: EffectQuality::Auto,
+    });
+    scene.push(SceneOp::Quad {
+        order: DrawOrder(0),
+        rect: bounds,
+        background: (Paint::Solid(Color {
+            r: 1.0,
+            g: 1.0,
+            b: 1.0,
+            a: 1.0,
+        }))
+        .into(),
+        border: Edges::all(Px(0.0)),
+        border_paint: (Paint::Solid(Color::TRANSPARENT)).into(),
+        corner_radii: Default::default(),
+    });
+    scene.push(SceneOp::PopEffect);
+
+    let pixels = render_and_readback(&ctx, &mut renderer, &scene, size);
+    let inside = pixel_rgba(&pixels, size.0, 10, 10);
+    assert_eq!(
+        inside,
+        [0, 0, 0, 0],
+        "expected deterministic fallback sampling for incompatible user image formats"
+    );
+
+    let perf = renderer
+        .take_last_frame_perf_snapshot()
+        .expect("expected a last-frame perf snapshot when perf is enabled");
+    assert_eq!(
+        perf.custom_effect_v3_user0_image_incompatible_fallbacks, 1,
+        "expected one incompatible user0 fallback for the rendered CustomEffectV3 pass"
+    );
+    assert_eq!(
+        perf.custom_effect_v3_user1_image_incompatible_fallbacks, 0,
+        "expected no user1 fallbacks when user1 is not provided"
     );
 }

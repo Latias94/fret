@@ -696,6 +696,76 @@ pub(super) fn bundle_stats_from_json_with_options(
                 .and_then(|m| m.get("renderer_intermediate_budget_bytes"))
                 .and_then(|v| v.as_u64())
                 .unwrap_or(0);
+            let renderer_intermediate_full_target_bytes = stats
+                .and_then(|m| m.get("renderer_intermediate_full_target_bytes"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let renderer_render_plan_effect_chain_budget_samples = stats
+                .and_then(|m| m.get("renderer_render_plan_effect_chain_budget_samples"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let renderer_render_plan_effect_chain_effective_budget_min_bytes = stats
+                .and_then(|m| m.get("renderer_render_plan_effect_chain_effective_budget_min_bytes"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let renderer_render_plan_effect_chain_effective_budget_max_bytes = stats
+                .and_then(|m| m.get("renderer_render_plan_effect_chain_effective_budget_max_bytes"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let renderer_render_plan_effect_chain_other_live_max_bytes = stats
+                .and_then(|m| m.get("renderer_render_plan_effect_chain_other_live_max_bytes"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let renderer_render_plan_custom_effect_chain_budget_samples = stats
+                .and_then(|m| m.get("renderer_render_plan_custom_effect_chain_budget_samples"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let renderer_render_plan_custom_effect_chain_effective_budget_min_bytes = stats
+                .and_then(|m| {
+                    m.get("renderer_render_plan_custom_effect_chain_effective_budget_min_bytes")
+                })
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let renderer_render_plan_custom_effect_chain_effective_budget_max_bytes = stats
+                .and_then(|m| {
+                    m.get("renderer_render_plan_custom_effect_chain_effective_budget_max_bytes")
+                })
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let renderer_render_plan_custom_effect_chain_other_live_max_bytes = stats
+                .and_then(|m| m.get("renderer_render_plan_custom_effect_chain_other_live_max_bytes"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let renderer_render_plan_custom_effect_chain_base_required_max_bytes = stats
+                .and_then(|m| {
+                    m.get("renderer_render_plan_custom_effect_chain_base_required_max_bytes")
+                })
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let renderer_render_plan_custom_effect_chain_optional_required_max_bytes = stats
+                .and_then(|m| {
+                    m.get("renderer_render_plan_custom_effect_chain_optional_required_max_bytes")
+                })
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let renderer_render_plan_custom_effect_chain_base_required_full_targets_max = stats
+                .and_then(|m| {
+                    m.get("renderer_render_plan_custom_effect_chain_base_required_full_targets_max")
+                })
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let renderer_render_plan_custom_effect_chain_optional_mask_max_bytes = stats
+                .and_then(|m| {
+                    m.get("renderer_render_plan_custom_effect_chain_optional_mask_max_bytes")
+                })
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let renderer_render_plan_custom_effect_chain_optional_pyramid_max_bytes = stats
+                .and_then(|m| {
+                    m.get("renderer_render_plan_custom_effect_chain_optional_pyramid_max_bytes")
+                })
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
             let renderer_intermediate_in_use_bytes = stats
                 .and_then(|m| m.get("renderer_intermediate_in_use_bytes"))
                 .and_then(|v| v.as_u64())
@@ -770,6 +840,136 @@ pub(super) fn bundle_stats_from_json_with_options(
                 .unwrap_or(0);
             let renderer_material_degraded_due_to_budget = stats
                 .and_then(|m| m.get("renderer_material_degraded_due_to_budget"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let renderer_custom_effect_v1_steps_requested = stats
+                .and_then(|m| m.get("renderer_custom_effect_v1_steps_requested"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let renderer_custom_effect_v1_passes_emitted = stats
+                .and_then(|m| m.get("renderer_custom_effect_v1_passes_emitted"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let renderer_custom_effect_v2_steps_requested = stats
+                .and_then(|m| m.get("renderer_custom_effect_v2_steps_requested"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let renderer_custom_effect_v2_passes_emitted = stats
+                .and_then(|m| m.get("renderer_custom_effect_v2_passes_emitted"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let renderer_custom_effect_v2_user_image_incompatible_fallbacks = stats
+                .and_then(|m| m.get("renderer_custom_effect_v2_user_image_incompatible_fallbacks"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let renderer_custom_effect_v3_steps_requested = stats
+                .and_then(|m| m.get("renderer_custom_effect_v3_steps_requested"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let renderer_custom_effect_v3_passes_emitted = stats
+                .and_then(|m| m.get("renderer_custom_effect_v3_passes_emitted"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let renderer_custom_effect_v3_user0_image_incompatible_fallbacks = stats
+                .and_then(|m| m.get("renderer_custom_effect_v3_user0_image_incompatible_fallbacks"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let renderer_custom_effect_v3_user1_image_incompatible_fallbacks = stats
+                .and_then(|m| m.get("renderer_custom_effect_v3_user1_image_incompatible_fallbacks"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let renderer_custom_effect_v3_pyramid_cache_hits = stats
+                .and_then(|m| m.get("renderer_custom_effect_v3_pyramid_cache_hits"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let renderer_custom_effect_v3_pyramid_cache_misses = stats
+                .and_then(|m| m.get("renderer_custom_effect_v3_pyramid_cache_misses"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let renderer_custom_effect_v3_sources_raw_requested = stats
+                .and_then(|m| m.get("renderer_custom_effect_v3_sources_raw_requested"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let renderer_custom_effect_v3_sources_raw_distinct = stats
+                .and_then(|m| m.get("renderer_custom_effect_v3_sources_raw_distinct"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let renderer_custom_effect_v3_sources_raw_aliased_to_src = stats
+                .and_then(|m| m.get("renderer_custom_effect_v3_sources_raw_aliased_to_src"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let renderer_custom_effect_v3_sources_pyramid_requested = stats
+                .and_then(|m| m.get("renderer_custom_effect_v3_sources_pyramid_requested"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let renderer_custom_effect_v3_sources_pyramid_applied_levels_ge2 = stats
+                .and_then(|m| m.get("renderer_custom_effect_v3_sources_pyramid_applied_levels_ge2"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let renderer_custom_effect_v3_sources_pyramid_degraded_to_one_budget_zero = stats
+                .and_then(|m| {
+                    m.get("renderer_custom_effect_v3_sources_pyramid_degraded_to_one_budget_zero")
+                })
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let renderer_custom_effect_v3_sources_pyramid_degraded_to_one_budget_insufficient = stats
+                .and_then(|m| {
+                    m.get(
+                        "renderer_custom_effect_v3_sources_pyramid_degraded_to_one_budget_insufficient",
+                    )
+                })
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let renderer_backdrop_source_groups_requested = stats
+                .and_then(|m| m.get("renderer_backdrop_source_groups_requested"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let renderer_backdrop_source_groups_applied_raw = stats
+                .and_then(|m| m.get("renderer_backdrop_source_groups_applied_raw"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let renderer_backdrop_source_groups_raw_degraded_budget_zero = stats
+                .and_then(|m| m.get("renderer_backdrop_source_groups_raw_degraded_budget_zero"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let renderer_backdrop_source_groups_raw_degraded_budget_insufficient = stats
+                .and_then(|m| {
+                    m.get("renderer_backdrop_source_groups_raw_degraded_budget_insufficient")
+                })
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let renderer_backdrop_source_groups_raw_degraded_target_exhausted = stats
+                .and_then(|m| {
+                    m.get("renderer_backdrop_source_groups_raw_degraded_target_exhausted")
+                })
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let renderer_backdrop_source_groups_pyramid_requested = stats
+                .and_then(|m| m.get("renderer_backdrop_source_groups_pyramid_requested"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let renderer_backdrop_source_groups_pyramid_applied_levels_ge2 = stats
+                .and_then(|m| m.get("renderer_backdrop_source_groups_pyramid_applied_levels_ge2"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let renderer_backdrop_source_groups_pyramid_degraded_to_one_budget_zero = stats
+                .and_then(|m| {
+                    m.get("renderer_backdrop_source_groups_pyramid_degraded_to_one_budget_zero")
+                })
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let renderer_backdrop_source_groups_pyramid_degraded_to_one_budget_insufficient = stats
+                .and_then(|m| {
+                    m.get(
+                        "renderer_backdrop_source_groups_pyramid_degraded_to_one_budget_insufficient",
+                    )
+                })
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let renderer_backdrop_source_groups_pyramid_skipped_raw_unavailable = stats
+                .and_then(|m| {
+                    m.get("renderer_backdrop_source_groups_pyramid_skipped_raw_unavailable")
+                })
                 .and_then(|v| v.as_u64())
                 .unwrap_or(0);
             let layout_engine_solves = stats
@@ -1462,6 +1662,20 @@ pub(super) fn bundle_stats_from_json_with_options(
                 renderer_text_atlas_upload_bytes,
                 renderer_text_atlas_evicted_pages,
                 renderer_intermediate_budget_bytes,
+                renderer_intermediate_full_target_bytes,
+                renderer_render_plan_effect_chain_budget_samples,
+                renderer_render_plan_effect_chain_effective_budget_min_bytes,
+                renderer_render_plan_effect_chain_effective_budget_max_bytes,
+                renderer_render_plan_effect_chain_other_live_max_bytes,
+                renderer_render_plan_custom_effect_chain_budget_samples,
+                renderer_render_plan_custom_effect_chain_effective_budget_min_bytes,
+                renderer_render_plan_custom_effect_chain_effective_budget_max_bytes,
+                renderer_render_plan_custom_effect_chain_other_live_max_bytes,
+                renderer_render_plan_custom_effect_chain_base_required_max_bytes,
+                renderer_render_plan_custom_effect_chain_optional_required_max_bytes,
+                renderer_render_plan_custom_effect_chain_base_required_full_targets_max,
+                renderer_render_plan_custom_effect_chain_optional_mask_max_bytes,
+                renderer_render_plan_custom_effect_chain_optional_pyramid_max_bytes,
                 renderer_intermediate_in_use_bytes,
                 renderer_intermediate_peak_in_use_bytes,
                 renderer_intermediate_release_targets,
@@ -1481,6 +1695,34 @@ pub(super) fn bundle_stats_from_json_with_options(
                 renderer_material_distinct,
                 renderer_material_unknown_ids,
                 renderer_material_degraded_due_to_budget,
+                renderer_custom_effect_v1_steps_requested,
+                renderer_custom_effect_v1_passes_emitted,
+                renderer_custom_effect_v2_steps_requested,
+                renderer_custom_effect_v2_passes_emitted,
+                renderer_custom_effect_v2_user_image_incompatible_fallbacks,
+                renderer_custom_effect_v3_steps_requested,
+                renderer_custom_effect_v3_passes_emitted,
+                renderer_custom_effect_v3_user0_image_incompatible_fallbacks,
+                renderer_custom_effect_v3_user1_image_incompatible_fallbacks,
+                renderer_custom_effect_v3_pyramid_cache_hits,
+                renderer_custom_effect_v3_pyramid_cache_misses,
+                renderer_custom_effect_v3_sources_raw_requested,
+                renderer_custom_effect_v3_sources_raw_distinct,
+                renderer_custom_effect_v3_sources_raw_aliased_to_src,
+                renderer_custom_effect_v3_sources_pyramid_requested,
+                renderer_custom_effect_v3_sources_pyramid_applied_levels_ge2,
+                renderer_custom_effect_v3_sources_pyramid_degraded_to_one_budget_zero,
+                renderer_custom_effect_v3_sources_pyramid_degraded_to_one_budget_insufficient,
+                renderer_backdrop_source_groups_requested,
+                renderer_backdrop_source_groups_applied_raw,
+                renderer_backdrop_source_groups_raw_degraded_budget_zero,
+                renderer_backdrop_source_groups_raw_degraded_budget_insufficient,
+                renderer_backdrop_source_groups_raw_degraded_target_exhausted,
+                renderer_backdrop_source_groups_pyramid_requested,
+                renderer_backdrop_source_groups_pyramid_applied_levels_ge2,
+                renderer_backdrop_source_groups_pyramid_degraded_to_one_budget_zero,
+                renderer_backdrop_source_groups_pyramid_degraded_to_one_budget_insufficient,
+                renderer_backdrop_source_groups_pyramid_skipped_raw_unavailable,
                 layout_engine_solves,
                 layout_engine_solve_time_us,
                 changed_models,
@@ -2250,4 +2492,3 @@ fn snapshot_top_hover_declarative_invalidations(
 
     out
 }
-

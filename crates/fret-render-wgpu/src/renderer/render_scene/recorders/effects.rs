@@ -666,17 +666,18 @@ pub(in super::super) fn record_custom_effect_pass(
     ctx: &RecordPassCtx<'_>,
     pass: &CustomEffectPass,
 ) {
-    let effect = pass.effect;
+    let common = pass.common;
+    let effect = common.effect;
 
     if exec.renderer.custom_effects.get(effect).is_none() {
         let blit = FullscreenBlitPass {
-            src: pass.src,
-            dst: pass.dst,
-            src_size: pass.src_size,
-            dst_size: pass.dst_size,
-            dst_scissor: pass.dst_scissor,
+            src: common.src,
+            dst: common.dst,
+            src_size: common.src_size,
+            dst_size: common.dst_size,
+            dst_scissor: common.dst_scissor,
             encode_output_srgb: false,
-            load: pass.load,
+            load: common.load,
         };
         record_fullscreen_blit_pass(exec, &blit);
         return;
@@ -691,19 +692,19 @@ pub(in super::super) fn record_custom_effect_pass(
         .contains_key(&effect)
     {
         let blit = FullscreenBlitPass {
-            src: pass.src,
-            dst: pass.dst,
-            src_size: pass.src_size,
-            dst_size: pass.dst_size,
-            dst_scissor: pass.dst_scissor,
+            src: common.src,
+            dst: common.dst,
+            src_size: common.src_size,
+            dst_size: common.dst_size,
+            dst_scissor: common.dst_scissor,
             encode_output_srgb: false,
-            load: pass.load,
+            load: common.load,
         };
         record_fullscreen_blit_pass(exec, &blit);
         return;
     }
 
-    let packed = pack_effect_params_v1(pass.params);
+    let packed = pack_effect_params_v1(common.params);
     record_fullscreen_param_effect_pass(
         exec,
         ctx,
@@ -716,14 +717,14 @@ pub(in super::super) fn record_custom_effect_pass(
             pass_mask: "fret custom-effect mask pass",
         },
         true,
-        pass.src,
-        pass.dst,
-        pass.src_size,
-        pass.dst_size,
-        pass.dst_scissor,
-        pass.mask_uniform_index,
-        pass.mask,
-        pass.load,
+        common.src,
+        common.dst,
+        common.src_size,
+        common.dst_size,
+        common.dst_scissor,
+        common.mask_uniform_index,
+        common.mask,
+        common.load,
         packed.as_ref(),
         packed.len() as u64,
         |r| &r.effect_params.custom_effect_param_buffer,
@@ -742,30 +743,31 @@ pub(in super::super) fn record_custom_effect_v2_pass(
     ctx: &RecordPassCtx<'_>,
     pass: &CustomEffectV2Pass,
 ) {
-    let effect = pass.effect;
+    let common = pass.common;
+    let effect = common.effect;
 
     let Some(entry) = exec.renderer.custom_effects.get(effect) else {
         let blit = FullscreenBlitPass {
-            src: pass.src,
-            dst: pass.dst,
-            src_size: pass.src_size,
-            dst_size: pass.dst_size,
-            dst_scissor: pass.dst_scissor,
+            src: common.src,
+            dst: common.dst,
+            src_size: common.src_size,
+            dst_size: common.dst_size,
+            dst_scissor: common.dst_scissor,
             encode_output_srgb: false,
-            load: pass.load,
+            load: common.load,
         };
         record_fullscreen_blit_pass(exec, &blit);
         return;
     };
     if entry.abi != CustomEffectAbi::V2 {
         let blit = FullscreenBlitPass {
-            src: pass.src,
-            dst: pass.dst,
-            src_size: pass.src_size,
-            dst_size: pass.dst_size,
-            dst_scissor: pass.dst_scissor,
+            src: common.src,
+            dst: common.dst,
+            src_size: common.src_size,
+            dst_size: common.dst_size,
+            dst_scissor: common.dst_scissor,
             encode_output_srgb: false,
-            load: pass.load,
+            load: common.load,
         };
         record_fullscreen_blit_pass(exec, &blit);
         return;
@@ -780,20 +782,20 @@ pub(in super::super) fn record_custom_effect_v2_pass(
         .contains_key(&effect)
     {
         let blit = FullscreenBlitPass {
-            src: pass.src,
-            dst: pass.dst,
-            src_size: pass.src_size,
-            dst_size: pass.dst_size,
-            dst_scissor: pass.dst_scissor,
+            src: common.src,
+            dst: common.dst,
+            src_size: common.src_size,
+            dst_size: common.dst_size,
+            dst_scissor: common.dst_scissor,
             encode_output_srgb: false,
-            load: pass.load,
+            load: common.load,
         };
         record_fullscreen_blit_pass(exec, &blit);
         return;
     }
 
     // Params (64B)
-    let packed = pack_effect_params_v1(pass.params);
+    let packed = pack_effect_params_v1(common.params);
     exec.queue.write_buffer(
         &exec.renderer.effect_params.custom_effect_param_buffer,
         0,
@@ -827,8 +829,8 @@ pub(in super::super) fn record_custom_effect_v2_pass(
 
     let Some(src_view) = require_color_src_view(
         &mut *exec.frame_targets,
-        pass.src,
-        pass.src_size,
+        common.src,
+        common.src_size,
         "CustomEffectV2",
     ) else {
         return;
@@ -838,14 +840,15 @@ pub(in super::super) fn record_custom_effect_v2_pass(
         &mut *exec.frame_targets,
         &mut exec.renderer.intermediate_pool,
         exec.device,
-        pass.dst,
-        pass.dst_size,
+        common.dst,
+        common.dst_size,
         exec.format,
         exec.usage,
         "CustomEffectV2",
     );
     let dst_view = dst_view_owned.as_ref().unwrap_or(exec.target_view);
 
+    let mut input_incompatible = false;
     let input_view = pass
         .input_image
         .and_then(|id| {
@@ -857,9 +860,21 @@ pub(in super::super) fn record_custom_effect_v2_pass(
                 .contains(wgpu::TextureUsages::TEXTURE_BINDING);
             let ok_sample_type = format.sample_type(None, Some(exec.device.features()))
                 == Some(wgpu::TextureSampleType::Float { filterable: true });
-            (ok_usage && ok_sample_type).then_some(view)
+            if ok_usage && ok_sample_type {
+                Some(view)
+            } else {
+                input_incompatible = true;
+                None
+            }
         })
         .unwrap_or(&exec.renderer.globals.custom_effect_input_fallback_view);
+    if exec.perf_enabled && input_incompatible {
+        exec.frame_perf
+            .custom_effect_v2_user_image_incompatible_fallbacks = exec
+            .frame_perf
+            .custom_effect_v2_user_image_incompatible_fallbacks
+            .saturating_add(1);
+    }
 
     let input_sampler = match pass.input_sampling {
         fret_core::scene::ImageSamplingHint::Nearest => {
@@ -879,8 +894,8 @@ pub(in super::super) fn record_custom_effect_v2_pass(
 
     let uniform_stride = exec.renderer.uniforms.uniform_stride;
 
-    if let Some(mask) = pass.mask {
-        let mask_uniform_index = pass
+    if let Some(mask) = common.mask {
+        let mask_uniform_index = common
             .mask_uniform_index
             .expect("mask pass needs uniform index");
         let uniform_offset = (u64::from(mask_uniform_index) * uniform_stride) as u32;
@@ -930,7 +945,7 @@ pub(in super::super) fn record_custom_effect_v2_pass(
             "fret custom-effect v2 mask pass",
             pipeline,
             dst_view,
-            pass.load,
+            common.load,
             exec.renderer.pick_uniform_bind_group_for_mask_image(
                 exec.encoding
                     .uniform_mask_images
@@ -941,8 +956,8 @@ pub(in super::super) fn record_custom_effect_v2_pass(
             &[uniform_offset, ctx.render_space_offset_u32],
             &bind_group,
             &[],
-            pass.dst_scissor,
-            pass.dst_size,
+            common.dst_scissor,
+            common.dst_size,
             exec.perf_enabled.then_some(&mut *exec.frame_perf),
         );
         return;
@@ -975,7 +990,7 @@ pub(in super::super) fn record_custom_effect_v2_pass(
         ],
     });
 
-    if let Some(mask_uniform_index) = pass.mask_uniform_index {
+    if let Some(mask_uniform_index) = common.mask_uniform_index {
         let uniform_offset = (u64::from(mask_uniform_index) * uniform_stride) as u32;
         let pipeline = exec.renderer.custom_effect_v2_masked_pipeline_ref(effect);
         run_fullscreen_triangle_pass_uniform_texture(
@@ -983,7 +998,7 @@ pub(in super::super) fn record_custom_effect_v2_pass(
             "fret custom-effect v2 masked pass",
             pipeline,
             dst_view,
-            pass.load,
+            common.load,
             exec.renderer.pick_uniform_bind_group_for_mask_image(
                 exec.encoding
                     .uniform_mask_images
@@ -994,8 +1009,8 @@ pub(in super::super) fn record_custom_effect_v2_pass(
             &[uniform_offset, ctx.render_space_offset_u32],
             &bind_group,
             &[],
-            pass.dst_scissor,
-            pass.dst_size,
+            common.dst_scissor,
+            common.dst_size,
             exec.perf_enabled.then_some(&mut *exec.frame_perf),
         );
         return;
@@ -1007,13 +1022,13 @@ pub(in super::super) fn record_custom_effect_v2_pass(
         "fret custom-effect v2 pass",
         pipeline,
         dst_view,
-        pass.load,
+        common.load,
         exec.renderer.pick_uniform_bind_group_for_mask_image(None),
         &[0, ctx.render_space_offset_u32],
         &bind_group,
         &[],
-        pass.dst_scissor,
-        pass.dst_size,
+        common.dst_scissor,
+        common.dst_size,
         exec.perf_enabled.then_some(&mut *exec.frame_perf),
     );
 }
@@ -1023,30 +1038,31 @@ pub(in super::super) fn record_custom_effect_v3_pass(
     ctx: &RecordPassCtx<'_>,
     pass: &CustomEffectV3Pass,
 ) {
-    let effect = pass.effect;
+    let common = pass.common;
+    let effect = common.effect;
 
     let Some(entry) = exec.renderer.custom_effects.get(effect) else {
         let blit = FullscreenBlitPass {
-            src: pass.src,
-            dst: pass.dst,
-            src_size: pass.src_size,
-            dst_size: pass.dst_size,
-            dst_scissor: pass.dst_scissor,
+            src: common.src,
+            dst: common.dst,
+            src_size: common.src_size,
+            dst_size: common.dst_size,
+            dst_scissor: common.dst_scissor,
             encode_output_srgb: false,
-            load: pass.load,
+            load: common.load,
         };
         record_fullscreen_blit_pass(exec, &blit);
         return;
     };
     if entry.abi != CustomEffectAbi::V3 {
         let blit = FullscreenBlitPass {
-            src: pass.src,
-            dst: pass.dst,
-            src_size: pass.src_size,
-            dst_size: pass.dst_size,
-            dst_scissor: pass.dst_scissor,
+            src: common.src,
+            dst: common.dst,
+            src_size: common.src_size,
+            dst_size: common.dst_size,
+            dst_scissor: common.dst_scissor,
             encode_output_srgb: false,
-            load: pass.load,
+            load: common.load,
         };
         record_fullscreen_blit_pass(exec, &blit);
         return;
@@ -1061,20 +1077,20 @@ pub(in super::super) fn record_custom_effect_v3_pass(
         .contains_key(&effect)
     {
         let blit = FullscreenBlitPass {
-            src: pass.src,
-            dst: pass.dst,
-            src_size: pass.src_size,
-            dst_size: pass.dst_size,
-            dst_scissor: pass.dst_scissor,
+            src: common.src,
+            dst: common.dst,
+            src_size: common.src_size,
+            dst_size: common.dst_size,
+            dst_scissor: common.dst_scissor,
             encode_output_srgb: false,
-            load: pass.load,
+            load: common.load,
         };
         record_fullscreen_blit_pass(exec, &blit);
         return;
     }
 
     // Params (64B)
-    let packed = pack_effect_params_v1(pass.params);
+    let packed = pack_effect_params_v1(common.params);
     exec.queue.write_buffer(
         &exec.renderer.effect_params.custom_effect_param_buffer,
         0,
@@ -1114,8 +1130,8 @@ pub(in super::super) fn record_custom_effect_v3_pass(
 
     let Some(src_view) = require_color_src_view(
         &mut *exec.frame_targets,
-        pass.src,
-        pass.src_size,
+        common.src,
+        common.src_size,
         "CustomEffectV3",
     ) else {
         return;
@@ -1123,7 +1139,7 @@ pub(in super::super) fn record_custom_effect_v3_pass(
     let Some(src_raw_view) = require_color_src_view(
         &mut *exec.frame_targets,
         pass.src_raw,
-        pass.src_size,
+        common.src_size,
         "CustomEffectV3",
     ) else {
         return;
@@ -1132,7 +1148,7 @@ pub(in super::super) fn record_custom_effect_v3_pass(
     let pyramid_override_view = if pass.pyramid_wanted && pass.pyramid_levels >= 2 {
         let reuse = exec.renderer.can_reuse_custom_effect_v3_pyramid(
             pass.src_raw,
-            pass.src_size,
+            common.src_size,
             exec.format,
             pass.pyramid_levels,
         );
@@ -1153,7 +1169,7 @@ pub(in super::super) fn record_custom_effect_v3_pass(
         let (mip_views, mip_sizes, full_view) = {
             let scratch = exec.renderer.ensure_custom_effect_v3_pyramid_scratch(
                 exec.device,
-                pass.src_size,
+                common.src_size,
                 exec.format,
                 pass.pyramid_levels,
             );
@@ -1248,7 +1264,7 @@ pub(in super::super) fn record_custom_effect_v3_pass(
 
             exec.renderer.set_custom_effect_v3_pyramid_cache(
                 pass.src_raw,
-                pass.src_size,
+                common.src_size,
                 exec.format,
                 pass.pyramid_levels,
             );
@@ -1265,7 +1281,7 @@ pub(in super::super) fn record_custom_effect_v3_pass(
         let Some(view) = require_color_src_view(
             &mut *exec.frame_targets,
             pass.src_pyramid,
-            pass.src_size,
+            common.src_size,
             "CustomEffectV3",
         ) else {
             return;
@@ -1277,14 +1293,15 @@ pub(in super::super) fn record_custom_effect_v3_pass(
         &mut *exec.frame_targets,
         &mut exec.renderer.intermediate_pool,
         exec.device,
-        pass.dst,
-        pass.dst_size,
+        common.dst,
+        common.dst_size,
         exec.format,
         exec.usage,
         "CustomEffectV3",
     );
     let dst_view = dst_view_owned.as_ref().unwrap_or(exec.target_view);
 
+    let mut user0_incompatible = false;
     let user0_view = pass
         .user0_image
         .and_then(|id| {
@@ -1296,10 +1313,23 @@ pub(in super::super) fn record_custom_effect_v3_pass(
                 .contains(wgpu::TextureUsages::TEXTURE_BINDING);
             let ok_sample_type = format.sample_type(None, Some(exec.device.features()))
                 == Some(wgpu::TextureSampleType::Float { filterable: true });
-            (ok_usage && ok_sample_type).then_some(view)
+            if ok_usage && ok_sample_type {
+                Some(view)
+            } else {
+                user0_incompatible = true;
+                None
+            }
         })
         .unwrap_or(&exec.renderer.globals.custom_effect_input_fallback_view);
+    if exec.perf_enabled && user0_incompatible {
+        exec.frame_perf
+            .custom_effect_v3_user0_image_incompatible_fallbacks = exec
+            .frame_perf
+            .custom_effect_v3_user0_image_incompatible_fallbacks
+            .saturating_add(1);
+    }
 
+    let mut user1_incompatible = false;
     let user1_view = pass
         .user1_image
         .and_then(|id| {
@@ -1311,9 +1341,21 @@ pub(in super::super) fn record_custom_effect_v3_pass(
                 .contains(wgpu::TextureUsages::TEXTURE_BINDING);
             let ok_sample_type = format.sample_type(None, Some(exec.device.features()))
                 == Some(wgpu::TextureSampleType::Float { filterable: true });
-            (ok_usage && ok_sample_type).then_some(view)
+            if ok_usage && ok_sample_type {
+                Some(view)
+            } else {
+                user1_incompatible = true;
+                None
+            }
         })
         .unwrap_or(&exec.renderer.globals.custom_effect_input_fallback_view);
+    if exec.perf_enabled && user1_incompatible {
+        exec.frame_perf
+            .custom_effect_v3_user1_image_incompatible_fallbacks = exec
+            .frame_perf
+            .custom_effect_v3_user1_image_incompatible_fallbacks
+            .saturating_add(1);
+    }
 
     let user0_sampler = match pass.user0_sampling {
         fret_core::scene::ImageSamplingHint::Nearest => {
@@ -1336,8 +1378,8 @@ pub(in super::super) fn record_custom_effect_v3_pass(
 
     let uniform_stride = exec.renderer.uniforms.uniform_stride;
 
-    if let Some(mask) = pass.mask {
-        let mask_uniform_index = pass
+    if let Some(mask) = common.mask {
+        let mask_uniform_index = common
             .mask_uniform_index
             .expect("mask pass needs uniform index");
         let uniform_offset = (u64::from(mask_uniform_index) * uniform_stride) as u32;
@@ -1403,7 +1445,7 @@ pub(in super::super) fn record_custom_effect_v3_pass(
             "fret custom-effect v3 mask pass",
             pipeline,
             dst_view,
-            pass.load,
+            common.load,
             exec.renderer.pick_uniform_bind_group_for_mask_image(
                 exec.encoding
                     .uniform_mask_images
@@ -1414,8 +1456,8 @@ pub(in super::super) fn record_custom_effect_v3_pass(
             &[uniform_offset, ctx.render_space_offset_u32],
             &bind_group,
             &[],
-            pass.dst_scissor,
-            pass.dst_size,
+            common.dst_scissor,
+            common.dst_size,
             exec.perf_enabled.then_some(&mut *exec.frame_perf),
         );
         return;
@@ -1464,7 +1506,7 @@ pub(in super::super) fn record_custom_effect_v3_pass(
         ],
     });
 
-    if let Some(mask_uniform_index) = pass.mask_uniform_index {
+    if let Some(mask_uniform_index) = common.mask_uniform_index {
         let uniform_offset = (u64::from(mask_uniform_index) * uniform_stride) as u32;
         let pipeline = exec.renderer.custom_effect_v3_masked_pipeline_ref(effect);
         run_fullscreen_triangle_pass_uniform_texture(
@@ -1472,7 +1514,7 @@ pub(in super::super) fn record_custom_effect_v3_pass(
             "fret custom-effect v3 masked pass",
             pipeline,
             dst_view,
-            pass.load,
+            common.load,
             exec.renderer.pick_uniform_bind_group_for_mask_image(
                 exec.encoding
                     .uniform_mask_images
@@ -1483,8 +1525,8 @@ pub(in super::super) fn record_custom_effect_v3_pass(
             &[uniform_offset, ctx.render_space_offset_u32],
             &bind_group,
             &[],
-            pass.dst_scissor,
-            pass.dst_size,
+            common.dst_scissor,
+            common.dst_size,
             exec.perf_enabled.then_some(&mut *exec.frame_perf),
         );
         return;
@@ -1496,13 +1538,13 @@ pub(in super::super) fn record_custom_effect_v3_pass(
         "fret custom-effect v3 pass",
         pipeline,
         dst_view,
-        pass.load,
+        common.load,
         exec.renderer.pick_uniform_bind_group_for_mask_image(None),
         &[0, ctx.render_space_offset_u32],
         &bind_group,
         &[],
-        pass.dst_scissor,
-        pass.dst_size,
+        common.dst_scissor,
+        common.dst_size,
         exec.perf_enabled.then_some(&mut *exec.frame_perf),
     );
 }

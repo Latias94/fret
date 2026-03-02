@@ -84,8 +84,10 @@ pub(crate) fn cmd_suite(ctx: SuiteCmdContext) -> Result<(), String> {
         check_node_graph_cull_window_shifts_max,
         check_node_graph_cull_window_shifts_min,
         check_notify_hotspot_file_max,
+        check_triage_hint_absent_codes: _,
         check_overlay_synthesis_min,
         check_pixels_changed_test_id,
+        check_pixels_unchanged_test_id,
         check_prepaint_actions_min,
         check_retained_vlist_attach_detach_max,
         check_retained_vlist_keep_alive_budget,
@@ -290,6 +292,29 @@ hint: list suites via `fretboard diag list suites`"
         let inputs = vec![format!("tools/diag-scripts/suites/{suite}")];
         expand_script_inputs(&workspace_root, &inputs)
     };
+
+    let scripts_from_promoted_registry_suite =
+        |suite: &str| -> Result<Option<Vec<PathBuf>>, String> {
+            let registry_path =
+                crate::script_registry::promoted_registry_default_path(&workspace_root);
+            if !registry_path.is_file() {
+                return Ok(None);
+            }
+            let registry =
+                crate::script_registry::PromotedScriptRegistry::load_from_path(&registry_path)?;
+            let mut scripts: Vec<PathBuf> = registry
+                .resolve_suite(suite)
+                .into_iter()
+                .map(|e| resolve_path(&workspace_root, PathBuf::from(e.path.as_str())))
+                .collect();
+            scripts.sort();
+            scripts.dedup();
+            if scripts.is_empty() {
+                Ok(None)
+            } else {
+                Ok(Some(scripts))
+            }
+        };
 
     let suite_dir_exists = |suite: &str| -> bool {
         workspace_root
@@ -604,6 +629,10 @@ hint: list suites via `fretboard diag list suites`"
         let inputs = diag_suite_scripts::docking_arbitration_suite_scripts();
         let scripts = expand_script_inputs(&workspace_root, &inputs)?;
         (scripts, Some(BuiltinSuite::DockingArbitration))
+    } else if suite_args.len() == 1
+        && let Some(scripts) = scripts_from_promoted_registry_suite(&suite_args[0])?
+    {
+        (scripts, None)
     } else if suite_args.len() == 1 && suite_dir_exists(&suite_args[0]) {
         let scripts = scripts_from_suite_dir(&suite_args[0])?;
         (scripts, None)
@@ -651,7 +680,9 @@ hint: list promoted scripts via `fretboard diag list scripts --contains {name}`"
 
     let suite_wants_screenshots = pack_include_screenshots
         || check_pixels_changed_test_id.is_some()
+        || check_pixels_unchanged_test_id.is_some()
         || (check_pixels_changed_test_id.is_none()
+            && check_pixels_unchanged_test_id.is_none()
             && scripts
                 .iter()
                 .any(|src| diag_policy::ui_gallery_script_pixels_changed_test_id(src).is_some()))
@@ -1419,6 +1450,7 @@ hint: list promoted scripts via `fretboard diag list scripts --contains {name}`"
             || check_stale_scene_test_id.is_some()
             || check_idle_no_paint_min.is_some()
             || check_pixels_changed_test_id.is_some()
+            || check_pixels_unchanged_test_id.is_some()
             || check_ui_gallery_web_ime_bridge_enabled
             || check_ui_gallery_text_rescan_system_fonts_font_stack_key_bumps
             || check_ui_gallery_text_fallback_policy_key_bumps_on_settings_change
@@ -1627,7 +1659,10 @@ hint: list promoted scripts via `fretboard diag list scripts --contains {name}`"
                 .or_else(|| {
                     is_ui_gallery_chart_torture_suite.then_some("ui-gallery-chart-torture-root")
                 })
-                .filter(|_| check_pixels_changed_test_id.is_none());
+                .filter(|_| {
+                    check_pixels_changed_test_id.is_none()
+                        && check_pixels_unchanged_test_id.is_none()
+                });
             let suite_vlist_visible_range_refreshes_min = vlist_window_boundary_suite
                 .then_some(1u64)
                 .filter(|_| check_vlist_visible_range_refreshes_min.is_none());
@@ -1710,8 +1745,10 @@ hint: list promoted scripts via `fretboard diag list scripts --contains {name}`"
                     &src,
                 ) && !check_windowed_rows_visible_start_changes_repainted;
             let suite_pixels_changed_test_id =
-                diag_policy::ui_gallery_script_pixels_changed_test_id(&src)
-                    .filter(|_| check_pixels_changed_test_id.is_none());
+                diag_policy::ui_gallery_script_pixels_changed_test_id(&src).filter(|_| {
+                    check_pixels_changed_test_id.is_none()
+                        && check_pixels_unchanged_test_id.is_none()
+                });
             let suite_ui_gallery_code_editor_torture_marker_present =
                 diag_policy::ui_gallery_script_requires_code_editor_torture_marker_present_gate(
                     &src,

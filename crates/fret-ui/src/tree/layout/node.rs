@@ -13,6 +13,7 @@ impl<H: UiHost> UiTree<H> {
         bounds: Rect,
         scale_factor: f32,
         pass_kind: LayoutPassKind,
+        overflow_ctx: crate::layout::overflow::LayoutOverflowContext,
     ) -> Size {
         let is_probe = pass_kind == LayoutPassKind::Probe;
         if self.debug_enabled {
@@ -24,6 +25,7 @@ impl<H: UiHost> UiTree<H> {
             Some(n) => (n.bounds, n.measured_size, n.invalidation.layout),
             None => return Size::default(),
         };
+        let subtree_dirty = self.node_subtree_layout_dirty(node);
         let invalidated_for_pass = invalidated || is_probe;
 
         let view_cache = self
@@ -54,6 +56,7 @@ impl<H: UiHost> UiTree<H> {
             && prev_bounds.size == bounds.size
             && prev_bounds.origin != bounds.origin
             && measured != Size::default()
+            && !subtree_dirty
         {
             let delta = Point::new(
                 bounds.origin.x - prev_bounds.origin.x,
@@ -93,6 +96,14 @@ impl<H: UiHost> UiTree<H> {
             return measured;
         }
 
+        // `subtree_dirty` is intentionally *not* used to force a relayout of otherwise-clean
+        // ancestors here. Contained view-cache roots can hold descendant layout invalidations that
+        // must be handled by the contained relayout pass; forcing ancestor relayouts would clear
+        // those invalidations early and defeat the cache boundary semantics.
+        //
+        // Consumers that need to observe descendant invalidations (e.g. scroll extent updates at
+        // the scroll edge) should consult `node_subtree_layout_dirty()` inside their own layout
+        // logic instead.
         let needs_layout = invalidated_for_pass || prev_bounds != bounds;
         if !needs_layout {
             return measured;
@@ -170,6 +181,7 @@ impl<H: UiHost> UiTree<H> {
                 bounds,
                 available: bounds.size,
                 pass_kind,
+                overflow_ctx,
                 scale_factor: sf,
                 services: &mut *services,
                 observe_model,
@@ -295,17 +307,26 @@ impl<H: UiHost> UiTree<H> {
                         .saturating_add(global_items);
                 }
             }
-            if let Some((prev, next)) = self.nodes.get_mut(node).map(|n| {
-                n.measured_size = size;
-                let prev = n.invalidation;
-                if n.invalidation.layout {
-                    debug_assert!(self.layout_invalidations_count > 0);
-                    self.layout_invalidations_count =
-                        self.layout_invalidations_count.saturating_sub(1);
-                }
-                n.invalidation.layout = false;
-                (prev, n.invalidation)
-            }) {
+            if let Some((prev, next, layout_before, layout_after)) =
+                self.nodes.get_mut(node).map(|n| {
+                    n.measured_size = size;
+                    let prev = n.invalidation;
+                    let layout_before = n.invalidation.layout;
+                    if layout_before {
+                        debug_assert!(self.layout_invalidations_count > 0);
+                        self.layout_invalidations_count =
+                            self.layout_invalidations_count.saturating_sub(1);
+                    }
+                    n.invalidation.layout = false;
+                    let layout_after = n.invalidation.layout;
+                    (prev, n.invalidation, layout_before, layout_after)
+                })
+            {
+                self.note_layout_invalidation_transition_for_subtree_aggregation(
+                    node,
+                    layout_before,
+                    layout_after,
+                );
                 self.update_invalidation_counters(prev, next);
             }
         }
@@ -346,6 +367,7 @@ impl<H: UiHost> UiTree<H> {
 
         if let Some(n) = self.nodes.get(node)
             && !n.invalidation.layout
+            && !self.node_subtree_layout_dirty(node)
             && let Some(cache) = n.measure_cache
             && cache.key == cache_key
         {

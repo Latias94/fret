@@ -27,6 +27,7 @@ mod bounds_tree;
 mod commands;
 mod debug;
 mod dispatch;
+mod dispatch_snapshot;
 mod frame_arena;
 mod hit_test;
 mod invalidation_dedup;
@@ -55,6 +56,7 @@ mod ui_tree_mutation;
 mod ui_tree_outside_press;
 mod ui_tree_scratch;
 mod ui_tree_semantics;
+mod ui_tree_subtree_layout_dirty;
 mod ui_tree_text_input;
 mod ui_tree_view_cache;
 mod ui_tree_widget;
@@ -74,11 +76,11 @@ pub use debug::{
     UiDebugPaintWidgetHotspot, UiDebugPrepaintAction, UiDebugPrepaintActionKind,
     UiDebugRetainedVirtualListReconcile, UiDebugRetainedVirtualListReconcileKind,
     UiDebugScrollAxis, UiDebugScrollHandleChange, UiDebugScrollHandleChangeKind,
-    UiDebugScrollNodeTelemetry, UiDebugScrollbarTelemetry, UiDebugTextConstraintsSnapshot,
-    UiDebugVirtualListWindow, UiDebugVirtualListWindowShiftApplyMode,
-    UiDebugVirtualListWindowShiftKind, UiDebugVirtualListWindowShiftReason,
-    UiDebugVirtualListWindowShiftSample, UiDebugVirtualListWindowSource,
-    UiDebugWidgetMeasureHotspot, UiInputArbitrationSnapshot,
+    UiDebugScrollNodeTelemetry, UiDebugScrollOverflowObservationTelemetry,
+    UiDebugScrollbarTelemetry, UiDebugTextConstraintsSnapshot, UiDebugVirtualListWindow,
+    UiDebugVirtualListWindowShiftApplyMode, UiDebugVirtualListWindowShiftKind,
+    UiDebugVirtualListWindowShiftReason, UiDebugVirtualListWindowShiftSample,
+    UiDebugVirtualListWindowSource, UiDebugWidgetMeasureHotspot, UiInputArbitrationSnapshot,
 };
 use frame_arena::FrameArenaScratch;
 use invalidation_dedup::{InvalidationDedupTable, InvalidationVisited};
@@ -99,6 +101,7 @@ use util::{
 
 #[cfg(feature = "diagnostics")]
 pub use debug::{
+    UiDebugDispatchSnapshot, UiDebugDispatchSnapshotNode, UiDebugDispatchSnapshotParityReport,
     UiDebugOverlayPolicyDecisionWrite, UiDebugParentSeverWrite, UiDebugRemoveSubtreeFrameContext,
     UiDebugRemoveSubtreeOutcome, UiDebugRemoveSubtreeRecord, UiDebugSetChildrenWrite,
     UiDebugSetLayerVisibleWrite,
@@ -116,6 +119,8 @@ use shortcuts::{
     KeydownShortcutParams, PendingShortcut, PointerDownOutsideOutcome, PointerDownOutsideParams,
 };
 use small_list::{SmallCopyList, SmallNodeList};
+
+pub(crate) use dispatch_snapshot::UiDispatchSnapshot;
 
 fn type_id_sort_key(id: TypeId) -> u64 {
     use std::hash::{Hash, Hasher};
@@ -279,6 +284,8 @@ pub struct UiTree<H: UiHost> {
     debug_removed_subtrees: Vec<UiDebugRemoveSubtreeRecord>,
     #[cfg(feature = "diagnostics")]
     debug_reachable_from_layer_roots: Option<(FrameId, HashSet<NodeId>)>,
+    #[cfg(feature = "diagnostics")]
+    debug_dispatch_snapshot: Option<UiDispatchSnapshot>,
     #[cfg(feature = "diagnostics")]
     debug_text_constraints_measured: HashMap<NodeId, TextConstraints>,
     #[cfg(feature = "diagnostics")]

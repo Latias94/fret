@@ -506,18 +506,7 @@ impl MvuProgram for UndoBasicsProgram {
         let (on_command, on_command_availability) =
             command_handlers(state.value.clone(), state.history.clone());
 
-        let root = ui::container(cx, |cx| {
-            [ui::v_flex(cx, |_cx| [card])
-                .gap(Space::N6)
-                .items_center()
-                .justify_center()
-                .size_full()
-                .into_element(cx)]
-        })
-        .bg(ColorRef::Color(theme.color_token("background")))
-        .p(Space::N6)
-        .into_element(cx)
-        .test_id(TEST_ID_ROOT);
+        let root = fret_cookbook::scaffold::centered_page_background(cx, TEST_ID_ROOT, card);
 
         cx.command_on_command_for(base_root, on_command);
         cx.command_on_command_availability_for(base_root, on_command_availability);

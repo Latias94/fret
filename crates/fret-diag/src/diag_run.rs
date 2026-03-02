@@ -86,8 +86,10 @@ pub(crate) struct RunChecks {
     pub check_node_graph_cull_window_shifts_max: Option<u64>,
     pub check_node_graph_cull_window_shifts_min: Option<u64>,
     pub check_notify_hotspot_file_max: Vec<(String, u64)>,
+    pub check_triage_hint_absent_codes: Vec<String>,
     pub check_overlay_synthesis_min: Option<u64>,
     pub check_pixels_changed_test_id: Option<String>,
+    pub check_pixels_unchanged_test_id: Option<String>,
     pub check_prepaint_actions_min: Option<u64>,
     pub check_retained_vlist_attach_detach_max: Option<u64>,
     pub check_retained_vlist_keep_alive_budget: Option<(u64, u64)>,
@@ -263,8 +265,10 @@ pub(crate) fn cmd_run(ctx: RunCmdContext) -> Result<(), String> {
         check_node_graph_cull_window_shifts_max,
         check_node_graph_cull_window_shifts_min,
         check_notify_hotspot_file_max,
+        check_triage_hint_absent_codes: _,
         check_overlay_synthesis_min,
         check_pixels_changed_test_id,
+        check_pixels_unchanged_test_id,
         check_prepaint_actions_min,
         check_retained_vlist_attach_detach_max,
         check_retained_vlist_keep_alive_budget,
@@ -430,6 +434,7 @@ pub(crate) fn cmd_run(ctx: RunCmdContext) -> Result<(), String> {
             || check_stale_scene_test_id.is_some()
             || check_idle_no_paint_min.is_some()
             || check_pixels_changed_test_id.is_some()
+            || check_pixels_unchanged_test_id.is_some()
             || check_ui_gallery_code_editor_torture_marker_present
             || check_ui_gallery_code_editor_torture_undo_redo
             || check_ui_gallery_code_editor_torture_geom_fallbacks_low
@@ -708,7 +713,10 @@ pub(crate) fn cmd_run(ctx: RunCmdContext) -> Result<(), String> {
         &resolved_ready_path,
         &resolved_exit_path,
         &fs_transport_cfg,
-        pack_defaults.2 || check_pixels_changed_test_id.is_some() || script_wants_screenshots,
+        pack_defaults.2
+            || check_pixels_changed_test_id.is_some()
+            || check_pixels_unchanged_test_id.is_some()
+            || script_wants_screenshots,
         launch_write_bundle_json,
         timeout_ms,
         poll_ms,
@@ -822,6 +830,7 @@ pub(crate) fn cmd_run(ctx: RunCmdContext) -> Result<(), String> {
             || check_stale_scene_test_id.is_some()
             || check_idle_no_paint_min.is_some()
             || check_pixels_changed_test_id.is_some()
+            || check_pixels_unchanged_test_id.is_some()
             || check_ui_gallery_code_editor_torture_marker_present
             || check_ui_gallery_code_editor_torture_undo_redo
             || check_ui_gallery_code_editor_torture_geom_fallbacks_low

@@ -260,6 +260,10 @@ pub(super) fn estimate_mipped_texture_bytes(
     bytes
 }
 
+pub(super) fn estimate_clip_mask_bytes(mask_size: (u32, u32)) -> u64 {
+    estimate_texture_bytes(mask_size, wgpu::TextureFormat::R8Unorm, 1)
+}
+
 fn bytes_per_pixel(format: wgpu::TextureFormat) -> u32 {
     match format {
         wgpu::TextureFormat::R8Unorm

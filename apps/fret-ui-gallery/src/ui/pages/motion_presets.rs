@@ -31,43 +31,28 @@ pub(super) fn preview_motion_presets(
                 DocSection::new("Preset selector", preset_selector)
                     .no_shell()
                     .max_w(Px(760.0))
-                    .code_rust_from_file_region(
-                        include_str!("../snippets/motion_presets/preset_selector.rs"),
-                        "example",
-                    ),
+                    .code_rust_from_file_region(snippets::preset_selector::SOURCE, "example"),
                 DocSection::new("Token snapshot", token_snapshot)
                     .no_shell()
                     .max_w(Px(760.0))
-                    .code_rust_from_file_region(
-                        include_str!("../snippets/motion_presets/token_snapshot.rs"),
-                        "example",
-                    ),
+                    .code_rust_from_file_region(snippets::token_snapshot::SOURCE, "example"),
                 DocSection::new("Overlay demo", overlay_demo)
                     .no_shell()
                     .max_w(Px(760.0))
-                    .code_rust_from_file_region(
-                        include_str!("../snippets/motion_presets/overlay_demo.rs"),
-                        "example",
-                    ),
+                    .code_rust_from_file_region(snippets::overlay_demo::SOURCE, "example"),
                 DocSection::new("Fluid tabs demo", fluid_tabs_demo)
                     .no_shell()
                     .max_w(Px(760.0))
-                    .code_rust_from_file_region(
-                        include_str!("../snippets/motion_presets/fluid_tabs_demo.rs"),
-                        "example",
-                    ),
+                    .code_rust_from_file_region(snippets::fluid_tabs_demo::SOURCE, "example"),
                 DocSection::new("Stagger / sequence demo", stagger_demo)
                     .no_shell()
                     .max_w(Px(760.0))
-                    .code_rust_from_file_region(
-                        include_str!("../snippets/motion_presets/stagger_demo.rs"),
-                        "example",
-                    ),
+                    .code_rust_from_file_region(snippets::stagger_demo::SOURCE, "example"),
                 DocSection::new("Stack shift list demo", stack_shift_list_demo)
                     .no_shell()
                     .max_w(Px(760.0))
                     .code_rust_from_file_region(
-                        include_str!("../snippets/motion_presets/stack_shift_list_demo.rs"),
+                        snippets::stack_shift_list_demo::SOURCE,
                         "example",
                     ),
             ],

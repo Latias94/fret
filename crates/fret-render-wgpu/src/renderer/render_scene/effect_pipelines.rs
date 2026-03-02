@@ -70,13 +70,13 @@ impl Renderer {
         for pass in &plan.passes {
             match pass {
                 RenderPlanPass::CustomEffect(pass) => {
-                    custom_effects.insert(pass.effect);
+                    custom_effects.insert(pass.common.effect);
                 }
                 RenderPlanPass::CustomEffectV2(pass) => {
-                    custom_effects_v2.insert(pass.effect);
+                    custom_effects_v2.insert(pass.common.effect);
                 }
                 RenderPlanPass::CustomEffectV3(pass) => {
-                    custom_effects_v3.insert(pass.effect);
+                    custom_effects_v3.insert(pass.common.effect);
                 }
                 _ => {}
             }

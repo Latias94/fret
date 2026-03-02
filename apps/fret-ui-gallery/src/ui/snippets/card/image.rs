@@ -1,3 +1,5 @@
+pub const SOURCE: &str = include_str!("image.rs");
+
 // region: example
 use fret_app::App;
 use fret_core::{Color as CoreColor, ImageId};

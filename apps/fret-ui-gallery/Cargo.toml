@@ -50,7 +50,7 @@ serde_json.workspace = true
 uuid.workspace = true
 winit.workspace = true
 image.workspace = true
-fret-node = { path = "../../ecosystem/fret-node" }
+fret-node = { path = "../../ecosystem/fret-node", features = ["compat-retained-canvas"] }
 
 [dev-dependencies]
 pollster.workspace = true

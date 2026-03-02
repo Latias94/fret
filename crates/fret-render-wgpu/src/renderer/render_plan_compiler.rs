@@ -9,7 +9,7 @@ use super::{
     LocalScissorRect, OrderedDraw, RenderPlanDegradation, RenderPlanDegradationKind,
     RenderPlanDegradationReason, RenderPlanPass, SceneDrawRangePass, SceneEncoding, ScissorRect,
 };
-use crate::renderer::estimate_texture_bytes;
+use crate::renderer::{estimate_clip_mask_bytes, estimate_texture_bytes};
 use slotmap::Key;
 
 fn mix_u64(mut state: u64, value: u64) -> u64 {
@@ -17,6 +17,112 @@ fn mix_u64(mut state: u64, value: u64) -> u64 {
     state = state.rotate_left(7);
     state = state.wrapping_mul(0xD6E8_FEB8_6659_FD93);
     state
+}
+
+fn choose_backdrop_source_group_pyramid_choice(
+    req: fret_core::scene::CustomEffectPyramidRequestV1,
+    viewport_size: (u32, u32),
+    format: wgpu::TextureFormat,
+    intermediate_budget_bytes: u64,
+    in_use_intermediate_bytes: u64,
+    clip_path_mask_in_use_bytes: u64,
+    backdrop_source_group_in_use_bytes: u64,
+    raw_bytes: u64,
+) -> effects::CustomV3PyramidChoice {
+    // `choose_custom_v3_pyramid_choice_for_request` expects:
+    // - `budget_bytes`: total available headroom
+    // - `base_required_bytes`: bytes that are already reserved within that headroom
+    //
+    // Here we pre-subtract all reservations (including `raw_bytes`) to produce a pure headroom
+    // value, so `base_required_bytes` must be 0 to avoid double-counting.
+    let headroom_after_raw = intermediate_budget_bytes.saturating_sub(
+        in_use_intermediate_bytes
+            .saturating_add(clip_path_mask_in_use_bytes)
+            .saturating_add(backdrop_source_group_in_use_bytes)
+            .saturating_add(raw_bytes),
+    );
+
+    effects::choose_custom_v3_pyramid_choice_for_request(
+        req,
+        viewport_size,
+        format,
+        headroom_after_raw,
+        0,
+    )
+}
+
+fn is_intermediate_target(t: super::PlanTarget) -> bool {
+    matches!(
+        t,
+        super::PlanTarget::Intermediate0
+            | super::PlanTarget::Intermediate1
+            | super::PlanTarget::Intermediate2
+            | super::PlanTarget::Intermediate3
+    )
+}
+
+fn estimate_in_use_intermediate_bytes(
+    draw_scopes: &[DrawScope],
+    format: wgpu::TextureFormat,
+) -> u64 {
+    draw_scopes
+        .iter()
+        .filter(|s| is_intermediate_target(s.target))
+        .map(|s| estimate_texture_bytes(s.size, format, 1))
+        .sum()
+}
+
+fn estimate_target_bytes_in_scopes(
+    draw_scopes: &[DrawScope],
+    target: super::PlanTarget,
+    format: wgpu::TextureFormat,
+) -> Option<u64> {
+    draw_scopes
+        .iter()
+        .find(|s| s.target == target)
+        .map(|s| estimate_texture_bytes(s.size, format, 1))
+}
+
+#[derive(Clone, Copy, Debug)]
+struct IntermediateBudgetBreakdown {
+    effective_budget_bytes: u64,
+    other_live_bytes: u64,
+}
+
+fn intermediate_budget_breakdown_for_chain(
+    intermediate_budget_bytes: u64,
+    draw_scopes: &[DrawScope],
+    srcdst: super::PlanTarget,
+    format: wgpu::TextureFormat,
+    extra_in_use_bytes: u64,
+) -> IntermediateBudgetBreakdown {
+    let in_use_intermediate_bytes = estimate_in_use_intermediate_bytes(draw_scopes, format);
+    let srcdst_bytes = if is_intermediate_target(srcdst) {
+        estimate_target_bytes_in_scopes(draw_scopes, srcdst, format).unwrap_or(0)
+    } else {
+        0
+    };
+    let other_live_bytes = in_use_intermediate_bytes
+        .saturating_sub(srcdst_bytes)
+        .saturating_add(extra_in_use_bytes);
+    IntermediateBudgetBreakdown {
+        effective_budget_bytes: intermediate_budget_bytes.saturating_sub(other_live_bytes),
+        other_live_bytes,
+    }
+}
+
+fn can_allocate_intermediate_bytes(
+    intermediate_budget_bytes: u64,
+    draw_scopes: &[DrawScope],
+    required_bytes: u64,
+    extra_in_use_bytes: u64,
+    format: wgpu::TextureFormat,
+) -> bool {
+    let in_use_bytes = estimate_in_use_intermediate_bytes(draw_scopes, format);
+    in_use_bytes
+        .saturating_add(extra_in_use_bytes)
+        .saturating_add(required_bytes)
+        <= intermediate_budget_bytes
 }
 
 #[derive(Clone, Copy, Debug)]
@@ -210,6 +316,90 @@ pub(super) fn compile_for_scene(
     )
 }
 
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn backdrop_source_group_pyramid_choice_does_not_double_count_raw_bytes() {
+        let viewport_size = (64u32, 64u32);
+        let format = wgpu::TextureFormat::Rgba8Unorm;
+
+        let req = fret_core::scene::CustomEffectPyramidRequestV1 {
+            max_levels: 7,
+            max_radius_px: fret_core::geometry::Px(16.0),
+        };
+
+        let raw_bytes = estimate_texture_bytes(viewport_size, format, 1);
+        let pyramid_bytes = effects::estimate_custom_v3_pyramid_bytes(viewport_size, format, 2);
+        let intermediate_budget_bytes = raw_bytes.saturating_add(pyramid_bytes);
+
+        let choice = choose_backdrop_source_group_pyramid_choice(
+            req,
+            viewport_size,
+            format,
+            intermediate_budget_bytes,
+            0,
+            0,
+            0,
+            raw_bytes,
+        );
+
+        assert_eq!(
+            choice.levels, 2,
+            "expected enough headroom for a 2-level pyramid after reserving raw bytes"
+        );
+        assert_eq!(
+            choice.degraded_to_one, None,
+            "expected no degradation when budget exactly fits the requested 2-level pyramid"
+        );
+    }
+
+    #[test]
+    fn effective_intermediate_budget_excludes_srcdst_bytes() {
+        let format = wgpu::TextureFormat::Rgba8Unorm;
+        let intermediate_budget_bytes = 1000u64;
+
+        let draw_scopes = [
+            DrawScope {
+                target: super::super::PlanTarget::Intermediate0,
+                origin: (0, 0),
+                size: (4, 4),
+                needs_clear: false,
+                clear_color: wgpu::Color::TRANSPARENT,
+            },
+            DrawScope {
+                target: super::super::PlanTarget::Intermediate1,
+                origin: (0, 0),
+                size: (2, 2),
+                needs_clear: false,
+                clear_color: wgpu::Color::TRANSPARENT,
+            },
+        ];
+
+        let srcdst_bytes = estimate_texture_bytes((4, 4), format, 1);
+        let in_use_bytes = estimate_texture_bytes((4, 4), format, 1)
+            .saturating_add(estimate_texture_bytes((2, 2), format, 1));
+        let extra_in_use_bytes = 7u64;
+
+        let expected = intermediate_budget_bytes.saturating_sub(
+            in_use_bytes
+                .saturating_sub(srcdst_bytes)
+                .saturating_add(extra_in_use_bytes),
+        );
+
+        let got = intermediate_budget_breakdown_for_chain(
+            intermediate_budget_bytes,
+            &draw_scopes,
+            super::super::PlanTarget::Intermediate0,
+            format,
+            extra_in_use_bytes,
+        )
+        .effective_budget_bytes;
+        assert_eq!(got, expected);
+    }
+}
+
 fn compile_for_scene_inner(
     encoding: &SceneEncoding,
     scale_factor: f32,
@@ -250,24 +440,20 @@ fn compile_for_scene_inner(
     let mut backdrop_source_group_reserved_targets: Vec<super::PlanTarget> = Vec::new();
     let mut backdrop_source_group_in_use_bytes: u64 = 0;
 
-    let can_allocate_intermediate_bytes =
-        |draw_scopes: &[DrawScope], required: u64, extra_in_use: u64| -> bool {
-            let in_use: u64 = draw_scopes
-                .iter()
-                .filter(|s| {
-                    matches!(
-                        s.target,
-                        super::PlanTarget::Intermediate0
-                            | super::PlanTarget::Intermediate1
-                            | super::PlanTarget::Intermediate2
-                            | super::PlanTarget::Intermediate3
-                    )
-                })
-                .map(|s| estimate_texture_bytes(s.size, format, 1))
-                .sum();
-            in_use.saturating_add(extra_in_use).saturating_add(required)
-                <= intermediate_budget_bytes
-        };
+    let mut effect_chain_budget_samples: u64 = 0;
+    let mut effect_chain_effective_budget_min_bytes: u64 = u64::MAX;
+    let mut effect_chain_effective_budget_max_bytes: u64 = 0;
+    let mut effect_chain_other_live_max_bytes: u64 = 0;
+
+    let mut custom_effect_chain_budget_samples: u64 = 0;
+    let mut custom_effect_chain_effective_budget_min_bytes: u64 = u64::MAX;
+    let mut custom_effect_chain_effective_budget_max_bytes: u64 = 0;
+    let mut custom_effect_chain_other_live_max_bytes: u64 = 0;
+    let mut custom_effect_chain_base_required_max_bytes: u64 = 0;
+    let mut custom_effect_chain_optional_required_max_bytes: u64 = 0;
+    let mut custom_effect_chain_base_required_full_targets_max: u32 = 0;
+    let mut custom_effect_chain_optional_mask_max_bytes: u64 = 0;
+    let mut custom_effect_chain_optional_pyramid_max_bytes: u64 = 0;
 
     let mut alloc_segment = |draw_range: std::ops::Range<usize>| -> super::SceneSegmentId {
         let id = super::SceneSegmentId(next_segment_id);
@@ -396,7 +582,7 @@ fn compile_for_scene_inner(
             }
         };
 
-    let apply_chain_in_place =
+    let mut apply_chain_in_place =
         |passes: &mut Vec<RenderPlanPass>,
          draw_scopes: &[DrawScope],
          srcdst: super::PlanTarget,
@@ -416,32 +602,24 @@ fn compile_for_scene_inner(
                 return;
             }
 
-            let in_use_intermediate_bytes: u64 = draw_scopes
-                .iter()
-                .filter(|s| {
-                    matches!(
-                        s.target,
-                        super::PlanTarget::Intermediate0
-                            | super::PlanTarget::Intermediate1
-                            | super::PlanTarget::Intermediate2
-                            | super::PlanTarget::Intermediate3
-                    )
-                })
-                .map(|s| estimate_texture_bytes(s.size, format, 1))
-                .sum();
-            let srcdst_bytes = matches!(
+            let breakdown = intermediate_budget_breakdown_for_chain(
+                intermediate_budget_bytes,
+                draw_scopes,
                 srcdst,
-                super::PlanTarget::Intermediate0
-                    | super::PlanTarget::Intermediate1
-                    | super::PlanTarget::Intermediate2
-                    | super::PlanTarget::Intermediate3
-            )
-            .then(|| estimate_texture_bytes(ctx_viewport_size, format, 1))
-            .unwrap_or(0);
-            let other_live_bytes = in_use_intermediate_bytes
-                .saturating_sub(srcdst_bytes)
-                .saturating_add(extra_in_use_bytes);
-            let effective_budget_bytes = intermediate_budget_bytes.saturating_sub(other_live_bytes);
+                format,
+                extra_in_use_bytes,
+            );
+            let effective_budget_bytes = breakdown.effective_budget_bytes;
+
+            if !chain.is_empty() {
+                effect_chain_budget_samples = effect_chain_budget_samples.saturating_add(1);
+                effect_chain_effective_budget_min_bytes =
+                    effect_chain_effective_budget_min_bytes.min(effective_budget_bytes);
+                effect_chain_effective_budget_max_bytes =
+                    effect_chain_effective_budget_max_bytes.max(effective_budget_bytes);
+                effect_chain_other_live_max_bytes =
+                    effect_chain_other_live_max_bytes.max(breakdown.other_live_bytes);
+            }
 
             let mut in_use_targets: Vec<super::PlanTarget> = Vec::new();
             for s in draw_scopes {
@@ -454,7 +632,7 @@ fn compile_for_scene_inner(
                     in_use_targets.push(t);
                 }
             }
-            effects::apply_chain_in_place(
+            let custom_evidence = effects::apply_chain_in_place(
                 passes,
                 &in_use_targets,
                 srcdst,
@@ -475,6 +653,30 @@ fn compile_for_scene_inner(
                 },
                 backdrop_source_group,
             );
+
+            if let Some(e) = custom_evidence {
+                custom_effect_chain_budget_samples =
+                    custom_effect_chain_budget_samples.saturating_add(1);
+                let effective_budget_bytes = e.effective_budget_bytes;
+                custom_effect_chain_effective_budget_min_bytes =
+                    custom_effect_chain_effective_budget_min_bytes.min(effective_budget_bytes);
+                custom_effect_chain_effective_budget_max_bytes =
+                    custom_effect_chain_effective_budget_max_bytes.max(effective_budget_bytes);
+                custom_effect_chain_other_live_max_bytes =
+                    custom_effect_chain_other_live_max_bytes.max(breakdown.other_live_bytes);
+                custom_effect_chain_base_required_max_bytes =
+                    custom_effect_chain_base_required_max_bytes.max(e.base_required_bytes);
+                custom_effect_chain_optional_required_max_bytes =
+                    custom_effect_chain_optional_required_max_bytes
+                        .max(e.optional_required_bytes());
+                custom_effect_chain_base_required_full_targets_max =
+                    custom_effect_chain_base_required_full_targets_max
+                        .max(e.base_required_full_targets);
+                custom_effect_chain_optional_mask_max_bytes =
+                    custom_effect_chain_optional_mask_max_bytes.max(e.optional_mask_bytes);
+                custom_effect_chain_optional_pyramid_max_bytes =
+                    custom_effect_chain_optional_pyramid_max_bytes.max(e.optional_pyramid_bytes);
+            }
         };
 
     let mut scene_range_start: usize = 0;
@@ -621,10 +823,12 @@ fn compile_for_scene_inner(
 
                                     if content_target.is_some()
                                         && !can_allocate_intermediate_bytes(
+                                            intermediate_budget_bytes,
                                             &draw_scopes,
                                             estimate_texture_bytes(content_size, format, 1),
                                             clip_path_mask_in_use_bytes
                                                 .saturating_add(backdrop_source_group_in_use_bytes),
+                                            format,
                                         )
                                     {
                                         content_target = None;
@@ -825,16 +1029,14 @@ fn compile_for_scene_inner(
                             {
                                 let required_color =
                                     estimate_texture_bytes(content_size, format, 1);
-                                let required_mask = estimate_texture_bytes(
-                                    mask_size,
-                                    wgpu::TextureFormat::R8Unorm,
-                                    1,
-                                );
+                                let required_mask = estimate_clip_mask_bytes(mask_size);
                                 if !can_allocate_intermediate_bytes(
+                                    intermediate_budget_bytes,
                                     &draw_scopes,
                                     required_color.saturating_add(required_mask),
                                     clip_path_mask_in_use_bytes
                                         .saturating_add(backdrop_source_group_in_use_bytes),
+                                    format,
                                 ) {
                                     content_target = None;
                                     mask_target = None;
@@ -892,11 +1094,7 @@ fn compile_for_scene_inner(
                             });
 
                             clip_path_mask_in_use_bytes = clip_path_mask_in_use_bytes
-                                .saturating_add(estimate_texture_bytes(
-                                    mask_size,
-                                    wgpu::TextureFormat::R8Unorm,
-                                    1,
-                                ));
+                                .saturating_add(estimate_clip_mask_bytes(mask_size));
                         }
 
                         clip_path_scopes.push(ClipPathScope {
@@ -954,11 +1152,7 @@ fn compile_for_scene_inner(
                             let _ = draw_scopes.pop();
 
                             clip_path_mask_in_use_bytes = clip_path_mask_in_use_bytes
-                                .saturating_sub(estimate_texture_bytes(
-                                    scope.mask_size,
-                                    wgpu::TextureFormat::R8Unorm,
-                                    1,
-                                ));
+                                .saturating_sub(estimate_clip_mask_bytes(scope.mask_size));
                         } else {
                             let _ = scope.mask_draw_index;
                         }
@@ -1016,10 +1210,12 @@ fn compile_for_scene_inner(
 
                         let can_afford_raw = had_free_target
                             && can_allocate_intermediate_bytes(
+                                intermediate_budget_bytes,
                                 &draw_scopes,
                                 raw_bytes,
                                 clip_path_mask_in_use_bytes
                                     .saturating_add(backdrop_source_group_in_use_bytes),
+                                format,
                             );
                         if !can_afford_raw {
                             raw_target = None;
@@ -1082,32 +1278,17 @@ fn compile_for_scene_inner(
                             reserved_bytes = reserved_bytes.saturating_add(raw_bytes);
 
                             if let Some(req) = pyramid {
-                                let in_use_intermediate_bytes: u64 = draw_scopes
-                                    .iter()
-                                    .filter(|s| {
-                                        matches!(
-                                            s.target,
-                                            super::PlanTarget::Intermediate0
-                                                | super::PlanTarget::Intermediate1
-                                                | super::PlanTarget::Intermediate2
-                                                | super::PlanTarget::Intermediate3
-                                        )
-                                    })
-                                    .map(|s| estimate_texture_bytes(s.size, format, 1))
-                                    .sum();
+                                let in_use_intermediate_bytes =
+                                    estimate_in_use_intermediate_bytes(&draw_scopes, format);
 
-                                let budget_after_raw = intermediate_budget_bytes.saturating_sub(
-                                    in_use_intermediate_bytes
-                                        .saturating_add(clip_path_mask_in_use_bytes)
-                                        .saturating_add(backdrop_source_group_in_use_bytes)
-                                        .saturating_add(raw_bytes),
-                                );
-
-                                let choice = effects::choose_custom_v3_pyramid_choice_for_request(
+                                let choice = choose_backdrop_source_group_pyramid_choice(
                                     req,
                                     viewport_size,
                                     format,
-                                    budget_after_raw,
+                                    intermediate_budget_bytes,
+                                    in_use_intermediate_bytes,
+                                    clip_path_mask_in_use_bytes,
+                                    backdrop_source_group_in_use_bytes,
                                     raw_bytes,
                                 );
 
@@ -1206,10 +1387,12 @@ fn compile_for_scene_inner(
 
                             if content_target.is_some()
                                 && !can_allocate_intermediate_bytes(
+                                    intermediate_budget_bytes,
                                     &draw_scopes,
                                     estimate_texture_bytes(content_size, format, 1),
                                     clip_path_mask_in_use_bytes
                                         .saturating_add(backdrop_source_group_in_use_bytes),
+                                    format,
                                 )
                             {
                                 content_target = None;
@@ -1351,7 +1534,7 @@ fn compile_for_scene_inner(
         cursor += 1;
     }
 
-    super::RenderPlan::finalize(
+    let mut plan = super::RenderPlan::finalize(
         segments,
         passes,
         viewport_size,
@@ -1361,5 +1544,43 @@ fn compile_for_scene_inner(
         degradations,
         effect_degradations,
         effect_blur_quality,
-    )
+    );
+
+    if effect_chain_budget_samples > 0 {
+        plan.compile_stats.effect_chain_budget_samples = effect_chain_budget_samples;
+        plan.compile_stats.effect_chain_effective_budget_min_bytes =
+            effect_chain_effective_budget_min_bytes;
+        plan.compile_stats.effect_chain_effective_budget_max_bytes =
+            effect_chain_effective_budget_max_bytes;
+        plan.compile_stats.effect_chain_other_live_max_bytes = effect_chain_other_live_max_bytes;
+    }
+
+    if custom_effect_chain_budget_samples > 0 {
+        plan.compile_stats.custom_effect_chain_budget_samples = custom_effect_chain_budget_samples;
+        plan.compile_stats
+            .custom_effect_chain_effective_budget_min_bytes =
+            custom_effect_chain_effective_budget_min_bytes;
+        plan.compile_stats
+            .custom_effect_chain_effective_budget_max_bytes =
+            custom_effect_chain_effective_budget_max_bytes;
+        plan.compile_stats.custom_effect_chain_other_live_max_bytes =
+            custom_effect_chain_other_live_max_bytes;
+        plan.compile_stats
+            .custom_effect_chain_base_required_max_bytes =
+            custom_effect_chain_base_required_max_bytes;
+        plan.compile_stats
+            .custom_effect_chain_optional_required_max_bytes =
+            custom_effect_chain_optional_required_max_bytes;
+        plan.compile_stats
+            .custom_effect_chain_base_required_full_targets_max =
+            custom_effect_chain_base_required_full_targets_max;
+        plan.compile_stats
+            .custom_effect_chain_optional_mask_max_bytes =
+            custom_effect_chain_optional_mask_max_bytes;
+        plan.compile_stats
+            .custom_effect_chain_optional_pyramid_max_bytes =
+            custom_effect_chain_optional_pyramid_max_bytes;
+    }
+
+    plan
 }

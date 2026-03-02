@@ -33,66 +33,39 @@ pub(super) fn preview_toggle_group(cx: &mut ElementContext<'_, App>) -> Vec<AnyE
             DocSection::new("Demo", demo)
                 .description("Multiple selection with icon-only items.")
                 .max_w(Px(560.0))
-                .code_rust_from_file_region(
-                    include_str!("../snippets/toggle_group/demo.rs"),
-                    "example",
-                ),
+                .code_rust_from_file_region(snippets::demo::SOURCE, "example"),
             DocSection::new("Outline", outline)
                 .description("Text items with outline chrome.")
                 .max_w(Px(560.0))
-                .code_rust_from_file_region(
-                    include_str!("../snippets/toggle_group/outline.rs"),
-                    "example",
-                ),
+                .code_rust_from_file_region(snippets::outline::SOURCE, "example"),
             DocSection::new("Full Width Items", full_width_items)
                 .description("Stretched items (flex-1) to gate control-chrome fill invariants.")
                 .max_w(Px(560.0))
-                .code_rust_from_file_region(
-                    include_str!("../snippets/toggle_group/full_width_items.rs"),
-                    "example",
-                ),
+                .code_rust_from_file_region(snippets::full_width_items::SOURCE, "example"),
             DocSection::new("Flex-1 items", stretch)
                 .description("Regression gate for hit/visual alignment under `flex-1` sizing.")
                 .max_w(Px(560.0))
-                .code_rust_from_file_region(
-                    include_str!("../snippets/toggle_group/flex_1_items.rs"),
-                    "example",
-                ),
+                .code_rust_from_file_region(snippets::flex_1_items::SOURCE, "example"),
             DocSection::new("Size", size)
                 .description("Size presets for toolbar density.")
                 .max_w(Px(560.0))
-                .code_rust_from_file_region(
-                    include_str!("../snippets/toggle_group/size.rs"),
-                    "example",
-                ),
+                .code_rust_from_file_region(snippets::size::SOURCE, "example"),
             DocSection::new("Spacing", spacing)
                 .description("Explicit spacing between items to reduce mis-clicks.")
                 .max_w(Px(560.0))
-                .code_rust_from_file_region(
-                    include_str!("../snippets/toggle_group/spacing.rs"),
-                    "example",
-                ),
+                .code_rust_from_file_region(snippets::spacing::SOURCE, "example"),
             DocSection::new("Vertical", vertical)
                 .description("Vertical orientation for side panels / inspectors.")
                 .max_w(Px(560.0))
-                .code_rust_from_file_region(
-                    include_str!("../snippets/toggle_group/vertical.rs"),
-                    "example",
-                ),
+                .code_rust_from_file_region(snippets::vertical::SOURCE, "example"),
             DocSection::new("Disabled", disabled)
                 .description("Disabled groups keep layout but block interaction.")
                 .max_w(Px(560.0))
-                .code_rust_from_file_region(
-                    include_str!("../snippets/toggle_group/disabled.rs"),
-                    "example",
-                ),
+                .code_rust_from_file_region(snippets::disabled::SOURCE, "example"),
             DocSection::new("RTL", rtl)
                 .description("Item ordering and pressed visuals under RTL.")
                 .max_w(Px(560.0))
-                .code_rust_from_file_region(
-                    include_str!("../snippets/toggle_group/rtl.rs"),
-                    "example",
-                ),
+                .code_rust_from_file_region(snippets::rtl::SOURCE, "example"),
             DocSection::new("Notes", notes)
                 .description("API reference pointers and authoring notes.")
                 .max_w(Px(820.0)),

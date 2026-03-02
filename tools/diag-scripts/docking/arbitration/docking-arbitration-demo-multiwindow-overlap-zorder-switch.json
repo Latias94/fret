@@ -73,7 +73,7 @@
     },
 
     { "type": "raise_window", "window": { "kind": "first_seen" } },
-    { "type": "wait_frames", "n": 2 },
+    { "type": "wait_frames", "window": { "kind": "first_seen" }, "n": 2 },
     {
       "type": "wait_until",
       "window": { "kind": "first_seen" },
@@ -82,7 +82,7 @@
     },
 
     { "type": "raise_window", "window": { "kind": "last_seen" } },
-    { "type": "wait_frames", "n": 2 },
+    { "type": "wait_frames", "window": { "kind": "last_seen" }, "n": 2 },
     {
       "type": "wait_until",
       "window": { "kind": "last_seen" },

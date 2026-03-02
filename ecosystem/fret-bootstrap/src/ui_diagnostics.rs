@@ -732,6 +732,8 @@ include!("ui_diagnostics/virtual_list_diagnostics.rs");
 
 include!("ui_diagnostics/scroll_handle_diagnostics.rs");
 
+include!("ui_diagnostics/scroll_extents_observation_diagnostics.rs");
+
 include!("ui_diagnostics/prepaint_diagnostics.rs");
 
 include!("ui_diagnostics/command_gating_trace.rs");
@@ -1056,8 +1058,10 @@ mod tests {
             render_text,
             render_text_font_trace,
             known_windows,
+            known_windows.len() as u32,
             None,
             docking,
+            None,
             None,
             text_font_stack_key_stable_frames,
             font_catalog_populated,

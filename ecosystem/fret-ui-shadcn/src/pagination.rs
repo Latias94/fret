@@ -614,3 +614,86 @@ impl Default for PaginationEllipsis {
         Self::new()
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    use fret_app::App;
+    use fret_core::{AppWindowId, Point, Px, Rect, Size};
+    use fret_ui::element::ElementKind;
+
+    fn bounds() -> Rect {
+        Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(300.0), Px(160.0)),
+        )
+    }
+
+    #[test]
+    fn pagination_root_is_w_full_and_labeled() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+
+        let el = fret_ui::elements::with_element_cx(&mut app, window, bounds(), "test", |cx| {
+            Pagination::new([PaginationContent::new([PaginationItem::new(
+                PaginationLink::new([cx.text("1")]).into_element(cx),
+            )
+            .into_element(cx)])
+            .into_element(cx)])
+            .into_element(cx)
+        });
+
+        let ElementKind::Flex(props) = &el.kind else {
+            panic!("expected Pagination to build a Flex element");
+        };
+        assert_eq!(
+            props.layout.size.width,
+            fret_ui::element::Length::Fill,
+            "expected Pagination to default to w-full"
+        );
+        assert_eq!(
+            el.semantics_decoration
+                .as_ref()
+                .and_then(|d| d.label.as_deref()),
+            Some("pagination"),
+            "expected Pagination to attach an a11y label"
+        );
+    }
+
+    #[test]
+    fn pagination_link_active_stamps_selected() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+
+        let el = fret_ui::elements::with_element_cx(&mut app, window, bounds(), "test", |cx| {
+            PaginationLink::new([cx.text("1")])
+                .active(true)
+                .into_element(cx)
+        });
+
+        let ElementKind::Pressable(props) = &el.kind else {
+            panic!("expected PaginationLink to build a Pressable element");
+        };
+        assert!(
+            props.a11y.selected,
+            "expected PaginationLink(active=true) to set a11y.selected"
+        );
+    }
+
+    #[test]
+    fn pagination_ellipsis_is_hidden_in_semantics_tree() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+
+        let el = fret_ui::elements::with_element_cx(&mut app, window, bounds(), "test", |cx| {
+            PaginationEllipsis::new().into_element(cx)
+        });
+
+        assert_eq!(
+            el.semantics_decoration.as_ref().and_then(|d| d.hidden),
+            Some(true),
+            "expected PaginationEllipsis to be semantics-hidden (aria-hidden parity)"
+        );
+    }
+}

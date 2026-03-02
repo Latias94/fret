@@ -396,6 +396,34 @@ impl ElementHostWidget {
                     cx.scene.push(SceneOp::PopEffect);
                 }
             }
+            ElementInstance::BackdropSourceGroup(props) => {
+                let pyramid = props.pyramid.map(|req| {
+                    let max_levels = req.max_levels.max(1).min(7);
+                    let max_radius_px = if req.max_radius_px.0.is_finite() {
+                        fret_core::Px(req.max_radius_px.0.max(0.0))
+                    } else {
+                        fret_core::Px(0.0)
+                    };
+                    fret_core::scene::CustomEffectPyramidRequestV1 {
+                        max_levels,
+                        max_radius_px,
+                    }
+                });
+
+                cx.scene.push(SceneOp::PushBackdropSourceGroupV1 {
+                    bounds: cx.bounds,
+                    pyramid,
+                    quality: props.quality,
+                });
+
+                paint_children_clipped_if(
+                    cx,
+                    matches!(props.layout.overflow, Overflow::Clip),
+                    None,
+                );
+
+                cx.scene.push(SceneOp::PopBackdropSourceGroup);
+            }
             ElementInstance::VisualTransform(props) => {
                 let local = props.transform;
                 let is_finite = local.a.is_finite()
