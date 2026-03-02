@@ -575,6 +575,11 @@ pub struct RenderPerfSnapshot {
     /// When `custom_effect_v2_steps_requested > 0` but this remains `0`, CustomEffectV2 was
     /// requested but skipped (typically due to intermediate budget / target constraints).
     pub custom_effect_v2_passes_emitted: u64,
+    /// Counts CustomEffectV2 passes where an incompatible user image was provided and the backend
+    /// bound the deterministic fallback instead (1x1 transparent).
+    ///
+    /// This is a best-effort diagnostics signal (not a stable API).
+    pub custom_effect_v2_user_image_incompatible_fallbacks: u64,
     /// Counts `EffectStep::CustomV3` occurrences in requested effect chains for the frame.
     ///
     /// This is a best-effort diagnostics signal (not a stable API).
@@ -584,6 +589,16 @@ pub struct RenderPerfSnapshot {
     /// When `custom_effect_v3_steps_requested > 0` but this remains `0`, CustomEffectV3 was
     /// requested but skipped (typically due to intermediate budget / target constraints).
     pub custom_effect_v3_passes_emitted: u64,
+    /// Counts CustomEffectV3 passes where an incompatible `user0` image was provided and the
+    /// backend bound the deterministic fallback instead (1x1 transparent).
+    ///
+    /// This is a best-effort diagnostics signal (not a stable API).
+    pub custom_effect_v3_user0_image_incompatible_fallbacks: u64,
+    /// Counts CustomEffectV3 passes where an incompatible `user1` image was provided and the
+    /// backend bound the deterministic fallback instead (1x1 transparent).
+    ///
+    /// This is a best-effort diagnostics signal (not a stable API).
+    pub custom_effect_v3_user1_image_incompatible_fallbacks: u64,
     pub custom_effect_v3_pyramid_cache_hits: u64,
     pub custom_effect_v3_pyramid_cache_misses: u64,
 
@@ -752,8 +767,11 @@ pub(super) struct RenderPerfStats {
     pub(super) custom_effect_v1_passes_emitted: u64,
     pub(super) custom_effect_v2_steps_requested: u64,
     pub(super) custom_effect_v2_passes_emitted: u64,
+    pub(super) custom_effect_v2_user_image_incompatible_fallbacks: u64,
     pub(super) custom_effect_v3_steps_requested: u64,
     pub(super) custom_effect_v3_passes_emitted: u64,
+    pub(super) custom_effect_v3_user0_image_incompatible_fallbacks: u64,
+    pub(super) custom_effect_v3_user1_image_incompatible_fallbacks: u64,
     pub(super) custom_effect_v3_pyramid_cache_hits: u64,
     pub(super) custom_effect_v3_pyramid_cache_misses: u64,
 
