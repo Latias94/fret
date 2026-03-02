@@ -4,11 +4,16 @@ mod accordion;
 mod ai_attachments_demo;
 mod ai_checkpoint_demo;
 mod ai_code_block_demo;
+mod ai_commit_demo;
+mod ai_commit_large_demo;
 mod ai_confirmation_demo;
 mod ai_environment_variables_demo;
 mod ai_inline_citation_demo;
+mod ai_message_branch_demo;
+mod ai_message_demo;
 mod ai_model_selector_demo;
 mod ai_mic_selector_demo;
+mod ai_open_in_chat_demo;
 mod ai_package_info_demo;
 mod ai_prompt_input_action_menu_demo;
 mod ai_prompt_input_provider_demo;
@@ -115,6 +120,20 @@ pub(super) fn preview_ai_code_block_demo(
     ai_code_block_demo::preview_ai_code_block_demo(cx, theme)
 }
 
+pub(super) fn preview_ai_commit_demo(
+    cx: &mut ElementContext<'_, App>,
+    theme: &Theme,
+) -> Vec<AnyElement> {
+    ai_commit_demo::preview_ai_commit_demo(cx, theme)
+}
+
+pub(super) fn preview_ai_commit_large_demo(
+    cx: &mut ElementContext<'_, App>,
+    theme: &Theme,
+) -> Vec<AnyElement> {
+    ai_commit_large_demo::preview_ai_commit_large_demo(cx, theme)
+}
+
 pub(super) fn preview_ai_confirmation_demo(
     cx: &mut ElementContext<'_, App>,
     theme: &Theme,
@@ -134,6 +153,27 @@ pub(super) fn preview_ai_environment_variables_demo(
     theme: &Theme,
 ) -> Vec<AnyElement> {
     ai_environment_variables_demo::preview_ai_environment_variables_demo(cx, theme)
+}
+
+pub(super) fn preview_ai_message_demo(
+    cx: &mut ElementContext<'_, App>,
+    theme: &Theme,
+) -> Vec<AnyElement> {
+    ai_message_demo::preview_ai_message_demo(cx, theme)
+}
+
+pub(super) fn preview_ai_message_branch_demo(
+    cx: &mut ElementContext<'_, App>,
+    theme: &Theme,
+) -> Vec<AnyElement> {
+    ai_message_branch_demo::preview_ai_message_branch_demo(cx, theme)
+}
+
+pub(super) fn preview_ai_open_in_chat_demo(
+    cx: &mut ElementContext<'_, App>,
+    theme: &Theme,
+) -> Vec<AnyElement> {
+    ai_open_in_chat_demo::preview_ai_open_in_chat_demo(cx, theme)
 }
 
 pub(super) fn preview_ai_terminal_demo(

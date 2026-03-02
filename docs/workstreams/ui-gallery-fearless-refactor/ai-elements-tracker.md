@@ -22,8 +22,8 @@ Status labels:
 | `chat_demo` | `PAGE_AI_CHAT_DEMO` | `apps/fret-ui-gallery/src/ui/previews/gallery/ai/chat_demo.rs` | — | — | Legacy preview |
 | `checkpoint_demo` | `PAGE_AI_CHECKPOINT_DEMO` | (removed) | `apps/fret-ui-gallery/src/ui/snippets/ai/checkpoint_demo.rs` | `apps/fret-ui-gallery/src/ui/pages/ai_checkpoint_demo.rs` | Snippet-backed |
 | `code_block_demo` | `PAGE_AI_CODE_BLOCK_DEMO` | (removed) | `apps/fret-ui-gallery/src/ui/snippets/ai/code_block_demo.rs` | `apps/fret-ui-gallery/src/ui/pages/ai_code_block_demo.rs` | Snippet-backed |
-| `commit_demo` | `PAGE_AI_COMMIT_DEMO` | `apps/fret-ui-gallery/src/ui/previews/gallery/ai/commit_demo.rs` | — | — | Legacy preview |
-| `commit_large_demo` | `PAGE_AI_COMMIT_LARGE_DEMO` | `apps/fret-ui-gallery/src/ui/previews/gallery/ai/commit_large_demo.rs` | — | — | Legacy preview |
+| `commit_demo` | `PAGE_AI_COMMIT_DEMO` | (removed) | `apps/fret-ui-gallery/src/ui/snippets/ai/commit_demo.rs` | `apps/fret-ui-gallery/src/ui/pages/ai_commit_demo.rs` | Snippet-backed |
+| `commit_large_demo` | `PAGE_AI_COMMIT_LARGE_DEMO` | (removed) | `apps/fret-ui-gallery/src/ui/snippets/ai/commit_large_demo.rs` | `apps/fret-ui-gallery/src/ui/pages/ai_commit_large_demo.rs` | Snippet-backed |
 | `confirmation_demo` | `PAGE_AI_CONFIRMATION_DEMO` | (removed) | `apps/fret-ui-gallery/src/ui/snippets/ai/confirmation_demo.rs` | `apps/fret-ui-gallery/src/ui/pages/ai_confirmation_demo.rs` | Snippet-backed |
 | `context_demo` | `PAGE_AI_CONTEXT_DEMO` | `apps/fret-ui-gallery/src/ui/previews/gallery/ai/context_demo.rs` | — | — | Legacy preview |
 | `conversation_demo` | `PAGE_AI_CONVERSATION_DEMO` | `apps/fret-ui-gallery/src/ui/previews/gallery/ai/conversation_demo.rs` | — | — | Legacy preview |
@@ -31,11 +31,11 @@ Status labels:
 | `file_tree_demo` | `PAGE_AI_FILE_TREE_DEMO` | `apps/fret-ui-gallery/src/ui/previews/gallery/ai/file_tree_demo.rs` | — | — | Legacy preview |
 | `image_demo` | `PAGE_AI_IMAGE_DEMO` | `apps/fret-ui-gallery/src/ui/previews/gallery/ai/image_demo.rs` | — | — | Legacy preview |
 | `inline_citation_demo` | `PAGE_AI_INLINE_CITATION_DEMO` | (removed) | `apps/fret-ui-gallery/src/ui/snippets/ai/inline_citation_demo.rs` | `apps/fret-ui-gallery/src/ui/pages/ai_inline_citation_demo.rs` | Snippet-backed |
-| `message_branch_demo` | `PAGE_AI_MESSAGE_BRANCH_DEMO` | `apps/fret-ui-gallery/src/ui/previews/gallery/ai/message_branch_demo.rs` | — | — | Legacy preview |
-| `message_demo` | `PAGE_AI_MESSAGE_DEMO` | `apps/fret-ui-gallery/src/ui/previews/gallery/ai/message_demo.rs` | — | — | Legacy preview |
+| `message_branch_demo` | `PAGE_AI_MESSAGE_BRANCH_DEMO` | (removed) | `apps/fret-ui-gallery/src/ui/snippets/ai/message_branch_demo.rs` | `apps/fret-ui-gallery/src/ui/pages/ai_message_branch_demo.rs` | Snippet-backed |
+| `message_demo` | `PAGE_AI_MESSAGE_DEMO` | (removed) | `apps/fret-ui-gallery/src/ui/snippets/ai/message_demo.rs` | `apps/fret-ui-gallery/src/ui/pages/ai_message_demo.rs` | Snippet-backed |
 | `mic_selector_demo` | `PAGE_AI_MIC_SELECTOR_DEMO` | (removed) | `apps/fret-ui-gallery/src/ui/snippets/ai/mic_selector_demo.rs` | `apps/fret-ui-gallery/src/ui/pages/ai_mic_selector_demo.rs` | Snippet-backed |
 | `model_selector_demo` | `PAGE_AI_MODEL_SELECTOR_DEMO` | (removed) | `apps/fret-ui-gallery/src/ui/snippets/ai/model_selector_demo.rs` | `apps/fret-ui-gallery/src/ui/pages/ai_model_selector_demo.rs` | Snippet-backed |
-| `open_in_chat_demo` | `PAGE_AI_OPEN_IN_CHAT_DEMO` | `apps/fret-ui-gallery/src/ui/previews/gallery/ai/open_in_chat_demo.rs` | — | — | Legacy preview |
+| `open_in_chat_demo` | `PAGE_AI_OPEN_IN_CHAT_DEMO` | (removed) | `apps/fret-ui-gallery/src/ui/snippets/ai/open_in_chat_demo.rs` | `apps/fret-ui-gallery/src/ui/pages/ai_open_in_chat_demo.rs` | Snippet-backed |
 | `package_info_demo` | `PAGE_AI_PACKAGE_INFO_DEMO` | (removed) | `apps/fret-ui-gallery/src/ui/snippets/ai/package_info_demo.rs` | `apps/fret-ui-gallery/src/ui/pages/ai_package_info_demo.rs` | Snippet-backed |
 | `persona_demo` | `PAGE_AI_PERSONA_DEMO` | `apps/fret-ui-gallery/src/ui/previews/gallery/ai/persona_demo.rs` | — | — | Legacy preview |
 | `plan_demo` | `PAGE_AI_PLAN_DEMO` | `apps/fret-ui-gallery/src/ui/previews/gallery/ai/plan_demo.rs` | — | — | Legacy preview |

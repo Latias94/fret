@@ -1,13 +1,19 @@
-use super::super::super::super::*;
+pub const SOURCE: &str = include_str!("message_branch_demo.rs");
 
-pub(in crate::ui) fn preview_ai_message_branch_demo(
-    cx: &mut ElementContext<'_, App>,
-    theme: &Theme,
-) -> Vec<AnyElement> {
-    use fret_ui_kit::declarative::stack;
-    use fret_ui_kit::{ChromeRefinement, LayoutRefinement, Radius, Space};
+// region: example
+use fret_ui::element::SemanticsDecoration;
+use fret_ui_ai as ui_ai;
+use fret_ui_kit::declarative::stack;
+use fret_ui_kit::declarative::style as decl_style;
+use fret_ui_kit::{ChromeRefinement, LayoutRefinement, Radius, Space};
+use fret_ui_shadcn::prelude::*;
+use std::sync::Arc;
 
-    let branch = |cx: &mut ElementContext<'_, App>, index: usize, label: &'static str| {
+pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement {
+    let theme = Theme::global(&*cx.app).clone();
+
+    let branch = move |cx: &mut ElementContext<'_, H>, index: usize, label: &'static str| {
+        let theme = theme.clone();
         stack::vstack(
             cx,
             stack::VStackProps::default()
@@ -15,13 +21,14 @@ pub(in crate::ui) fn preview_ai_message_branch_demo(
                 .gap(Space::N2),
             move |cx| {
                 vec![
-                    cx.text("")
-                        .attach_semantics(SemanticsDecoration::default().test_id(
-                            Arc::<str>::from(format!("ui-ai-message-branch-active-marker-{index}")),
-                        )),
+                    cx.text("").attach_semantics(
+                        SemanticsDecoration::default().test_id(Arc::<str>::from(format!(
+                            "ui-ai-message-branch-active-marker-{index}"
+                        ))),
+                    ),
                     cx.container(
-                        fret_ui_kit::declarative::style::container_props(
-                            theme,
+                        decl_style::container_props(
+                            &theme,
                             ChromeRefinement::default()
                                 .border_1()
                                 .rounded(Radius::Md)
@@ -47,7 +54,7 @@ pub(in crate::ui) fn preview_ai_message_branch_demo(
         .next_test_id("ui-ai-message-branch-next")
         .into_element(cx);
 
-    vec![stack::vstack(
+    stack::vstack(
         cx,
         stack::VStackProps::default()
             .layout(LayoutRefinement::default().w_full().min_w_0())
@@ -59,5 +66,7 @@ pub(in crate::ui) fn preview_ai_message_branch_demo(
                 message_branch,
             ]
         },
-    )]
+    )
 }
+// endregion: example
+

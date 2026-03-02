@@ -1,12 +1,13 @@
-use super::super::super::super::*;
+pub const SOURCE: &str = include_str!("open_in_chat_demo.rs");
 
-pub(in crate::ui) fn preview_ai_open_in_chat_demo(
-    cx: &mut ElementContext<'_, App>,
-    _theme: &Theme,
-) -> Vec<AnyElement> {
-    use fret_ui_kit::declarative::stack;
-    use fret_ui_kit::{LayoutRefinement, Space};
+// region: example
+use fret_ui_ai as ui_ai;
+use fret_ui_kit::declarative::stack;
+use fret_ui_kit::{LayoutRefinement, Space};
+use fret_ui_shadcn::prelude::*;
+use std::sync::Arc;
 
+pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement {
     let query: Arc<str> = Arc::from("How do I implement a focus trap?");
 
     let menu = ui_ai::OpenIn::new(query)
@@ -34,7 +35,7 @@ pub(in crate::ui) fn preview_ai_open_in_chat_demo(
             ]
         });
 
-    vec![stack::vstack(
+    stack::vstack(
         cx,
         stack::VStackProps::default()
             .layout(LayoutRefinement::default().w_full().min_w_0())
@@ -46,5 +47,7 @@ pub(in crate::ui) fn preview_ai_open_in_chat_demo(
                 menu,
             ]
         },
-    )]
+    )
 }
+// endregion: example
+

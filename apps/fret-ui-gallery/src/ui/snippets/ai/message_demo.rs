@@ -1,28 +1,25 @@
-use super::super::super::super::*;
+pub const SOURCE: &str = include_str!("message_demo.rs");
 
-pub(in crate::ui) fn preview_ai_message_demo(
-    cx: &mut ElementContext<'_, App>,
-    _theme: &Theme,
-) -> Vec<AnyElement> {
-    use std::sync::Arc;
+// region: example
+use fret_runtime::Model;
+use fret_ui::Invalidation;
+use fret_ui::action::OnActivate;
+use fret_ui_ai as ui_ai;
+use fret_ui_kit::declarative::stack;
+use fret_ui_kit::{Justify, LayoutRefinement, Space};
+use fret_ui_shadcn::prelude::*;
+use std::sync::Arc;
 
-    use fret_runtime::Model;
-    use fret_ui::Invalidation;
-    use fret_ui::action::OnActivate;
-    use fret_ui_kit::declarative::stack;
-    use fret_ui_kit::{Justify, LayoutRefinement, Space};
+#[derive(Default)]
+struct DemoModels {
+    last_action: Option<Model<Option<Arc<str>>>>,
+}
 
-    #[derive(Default)]
-    struct DemoModels {
-        last_action: Option<Model<Option<Arc<str>>>>,
-    }
-
+pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement {
     let needs_init = cx.with_state(DemoModels::default, |st| st.last_action.is_none());
     if needs_init {
         let model = cx.app.models_mut().insert(None::<Arc<str>>);
-        cx.with_state(DemoModels::default, |st| {
-            st.last_action = Some(model.clone())
-        });
+        cx.with_state(DemoModels::default, |st| st.last_action = Some(model.clone()));
     }
 
     let last_action_model = cx
@@ -114,11 +111,13 @@ pub(in crate::ui) fn preview_ai_message_demo(
 
     let title = cx.text("Message (AI Elements): alignment + bubble + actions rows.");
 
-    vec![stack::vstack(
+    stack::vstack(
         cx,
         stack::VStackProps::default()
             .layout(LayoutRefinement::default().w_full().min_w_0())
             .gap(Space::N4),
         move |_cx| vec![title, marker, assistant, user],
-    )]
+    )
 }
+// endregion: example
+
