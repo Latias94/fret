@@ -32,10 +32,10 @@ ID format:
   - Surface classification vocabulary (header space vs tabs viewport vs controls).
   - Hit targets (tab content vs close, overflow menu row content vs close).
   - Insert index semantics (canonical order, under overflow).
-- [ ] WTS-contract-002 Decide how Workspace TabStrip relates to Docking TabBar:
-  - share a single kernel,
-  - share only math helpers, or
-  - keep fully separate.
+- [x] WTS-contract-002 Decide how Workspace TabStrip relates to Docking TabBar:
+  - Shared primitives in `ecosystem/fret-ui-headless` (surface classification, overflow membership,
+    click arbitration, midpoint drop target resolution).
+  - Adapter-specific policy remains separate (workspace pinned/preview, docking float/tear-off).
 - [x] WTS-contract-003 Minimum stable diagnostic anchors exist:
   - end-drop: `{root}.drop_end`
   - overflow button: `{root}.overflow_button`

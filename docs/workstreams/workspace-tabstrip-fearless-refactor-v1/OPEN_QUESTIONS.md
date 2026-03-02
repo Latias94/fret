@@ -8,10 +8,30 @@
   - other header-tab surfaces
   Or do we keep kernels separate and share only math helpers?
 
-Recommendation (v1):
+Decision (2026-03-02):
 
-- Share **math helpers** in `ecosystem/fret-ui-headless` and keep kernels separate until both sides
-  stabilize their invariants.
+- Share **headless primitives** in `ecosystem/fret-ui-headless` (and re-export from
+  `ecosystem/fret-ui-kit` when convenient), while keeping adapter-specific policy and integration
+  separate.
+- Current shared surfaces:
+  - surface classification: `tab_strip_surface::{TabStripSurface, classify_tab_strip_surface*}`
+  - overflow membership: `tab_strip_overflow::compute_overflowed_tab_indices`
+  - click arbitration: `tab_strip_controller::intent_for_click`
+  - midpoint drop target resolution: `tab_strip_drop_target::compute_tab_strip_drop_target_midpoint`
+
+Rationale:
+
+- We want docking and workspace to share the same vocabulary and "what counts as header space /
+  end-drop / overflow control".
+- We still keep adapter-specific policy separate:
+  - workspace owns pinned/preview/editor semantics
+  - docking owns floating/tear-off/float-zone vocabulary and overlay discipline
+
+Open question (follow-up):
+
+- "Dragged tab exclusion" semantics are adapter-sensitive. If a UI keeps the dragged tab in the
+  layout (no placeholder reflow), excluding it from drop candidates can produce confusing previews.
+  Prefer adapter-owned behavior unless we also define a shared placeholder/reflow contract.
 
 ## Reference source of truth (Zed vs dockview vs gpui-component)
 
