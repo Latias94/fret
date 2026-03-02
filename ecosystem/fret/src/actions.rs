@@ -6,6 +6,86 @@
 
 pub use fret_runtime::{ActionId, TypedAction};
 
+pub type OnAction = std::sync::Arc<
+    dyn Fn(&mut dyn fret_ui::action::UiFocusActionHost, fret_ui::action::ActionCx) -> bool
+        + 'static,
+>;
+
+pub type OnActionAvailability = std::sync::Arc<
+    dyn Fn(
+            &mut dyn fret_ui::action::UiCommandAvailabilityActionHost,
+            fret_ui::action::CommandAvailabilityActionCx,
+        ) -> fret_ui::CommandAvailability
+        + 'static,
+>;
+
+/// Minimal handler table that dispatches stable [`ActionId`]s through the existing command hooks.
+///
+/// v1 note: `ActionId` is `CommandId`-compatible, so this is implemented as a thin adapter over
+/// `OnCommand` / `OnCommandAvailability`.
+#[derive(Default)]
+pub struct ActionHandlerTable {
+    on_action: std::collections::HashMap<ActionId, OnAction>,
+    on_action_availability: std::collections::HashMap<ActionId, OnActionAvailability>,
+}
+
+impl ActionHandlerTable {
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    pub fn on<A: TypedAction>(
+        mut self,
+        f: impl Fn(&mut dyn fret_ui::action::UiFocusActionHost, fret_ui::action::ActionCx) -> bool
+        + 'static,
+    ) -> Self {
+        self.on_action
+            .insert(A::action_id(), std::sync::Arc::new(f));
+        self
+    }
+
+    pub fn availability<A: TypedAction>(
+        mut self,
+        f: impl Fn(
+            &mut dyn fret_ui::action::UiCommandAvailabilityActionHost,
+            fret_ui::action::CommandAvailabilityActionCx,
+        ) -> fret_ui::CommandAvailability
+        + 'static,
+    ) -> Self {
+        self.on_action_availability
+            .insert(A::action_id(), std::sync::Arc::new(f));
+        self
+    }
+
+    pub fn build(
+        self,
+    ) -> (
+        fret_ui::action::OnCommand,
+        fret_ui::action::OnCommandAvailability,
+    ) {
+        let on_action = self.on_action;
+        let on_action_availability = self.on_action_availability;
+
+        let on_command: fret_ui::action::OnCommand =
+            std::sync::Arc::new(move |host, acx, command| {
+                let Some(handler) = on_action.get(&command) else {
+                    return false;
+                };
+                handler(host, acx)
+            });
+
+        let on_command_availability: fret_ui::action::OnCommandAvailability =
+            std::sync::Arc::new(move |host, acx, command| {
+                let Some(handler) = on_action_availability.get(&command) else {
+                    return fret_ui::CommandAvailability::NotHandled;
+                };
+                handler(host, acx)
+            });
+
+        (on_command, on_command_availability)
+    }
+}
+
 /// Define typed unit actions with stable IDs.
 ///
 /// This macro intentionally requires explicit action ID strings in v1 to keep the mapping

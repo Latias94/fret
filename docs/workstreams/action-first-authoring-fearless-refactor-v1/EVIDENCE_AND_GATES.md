@@ -20,7 +20,7 @@ small, deterministic gates (tests and scripted diagnostics), not just manual QA.
 Action identity + typed unit actions:
 
 - `crates/fret-runtime/src/action.rs` (`ActionId`, `TypedAction`)
-- `ecosystem/fret/src/actions.rs` (`fret::actions!` macro + unit test)
+- `ecosystem/fret/src/actions.rs` (`fret::actions!` macro, `ActionHandlerTable` + unit test)
 
 Pointer-trigger authoring integration (v1 still dispatches through the command pipeline):
 

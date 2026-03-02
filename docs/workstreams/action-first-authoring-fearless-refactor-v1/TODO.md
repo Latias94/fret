@@ -54,8 +54,10 @@ ID format:
   - Evidence:
     - Macro: `ecosystem/fret/src/actions.rs`
     - Compile/test: `cargo test -p fret --lib actions::tests::typed_actions_convert_to_command_id`
-- [ ] AFA-actions-012 Add a minimal action handler table API for views/frontends.
+- [~] AFA-actions-012 Add a minimal action handler table API for views/frontends.
   - Goal: IR binds `ActionId`; handlers live in view/app layer.
+  - Evidence:
+    - `ecosystem/fret/src/actions.rs` (`ActionHandlerTable`, `build()` adapters)
 - [ ] AFA-actions-013 Integrate action availability queries with input dispatch v2 semantics.
   - Evidence: `docs/adr/0218-input-dispatch-phases-prevent-default-and-action-availability-v2.md`
 - [ ] AFA-actions-014 Add diagnostics traces for:

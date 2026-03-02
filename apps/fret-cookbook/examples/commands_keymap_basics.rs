@@ -1,5 +1,3 @@
-use std::sync::Arc;
-
 use fret::prelude::*;
 use fret_app::{
     CommandMeta, CommandScope, DefaultKeybinding, InputContext, KeyChord, KeymapService, Platform,
@@ -72,45 +70,34 @@ fn command_handlers(
     panel_open: Model<bool>,
     allow_command: Model<bool>,
 ) -> (OnCommand, OnCommandAvailability) {
-    let cmd_for_command: CommandId = act::TogglePanel.into();
-    let cmd_for_availability = cmd_for_command.clone();
     let allow_for_command = allow_command.clone();
     let allow_for_availability = allow_command;
 
-    let on_command: OnCommand = Arc::new(move |host, acx, command| {
-        if command != cmd_for_command {
-            return false;
-        }
+    fret::actions::ActionHandlerTable::new()
+        .on::<act::TogglePanel>(move |host, acx| {
+            let allowed = host
+                .models_mut()
+                .get_copied(&allow_for_command)
+                .unwrap_or(true);
+            if !allowed {
+                return false;
+            }
 
-        let allowed = host
-            .models_mut()
-            .get_copied(&allow_for_command)
-            .unwrap_or(true);
-        if !allowed {
-            return false;
-        }
-
-        toggle_panel(host, acx.window, &panel_open);
-        true
-    });
-
-    let on_command_availability: OnCommandAvailability = Arc::new(move |host, _acx, command| {
-        if command != cmd_for_availability {
-            return CommandAvailability::NotHandled;
-        }
-
-        let allowed = host
-            .models_mut()
-            .get_copied(&allow_for_availability)
-            .unwrap_or(true);
-        if allowed {
-            CommandAvailability::Available
-        } else {
-            CommandAvailability::Blocked
-        }
-    });
-
-    (on_command, on_command_availability)
+            toggle_panel(host, acx.window, &panel_open);
+            true
+        })
+        .availability::<act::TogglePanel>(move |host, _acx| {
+            let allowed = host
+                .models_mut()
+                .get_copied(&allow_for_availability)
+                .unwrap_or(true);
+            if allowed {
+                CommandAvailability::Available
+            } else {
+                CommandAvailability::Blocked
+            }
+        })
+        .build()
 }
 
 struct CommandsKeymapBasicsState {
