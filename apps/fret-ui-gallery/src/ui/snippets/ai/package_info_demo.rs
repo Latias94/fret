@@ -1,12 +1,12 @@
-use super::super::super::super::*;
+pub const SOURCE: &str = include_str!("package_info_demo.rs");
 
-pub(in crate::ui) fn preview_ai_package_info_demo(
-    cx: &mut ElementContext<'_, App>,
-    _theme: &Theme,
-) -> Vec<AnyElement> {
-    use fret_ui_kit::declarative::stack;
-    use fret_ui_kit::{LayoutRefinement, Space};
+// region: example
+use fret_ui_ai as ui_ai;
+use fret_ui_kit::declarative::stack;
+use fret_ui_kit::{LayoutRefinement, Space};
+use fret_ui_shadcn::prelude::*;
 
+pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement {
     let package = ui_ai::PackageInfo::new("fret-ui-ai")
         .current_version("0.2.0")
         .new_version("0.3.0")
@@ -35,7 +35,7 @@ pub(in crate::ui) fn preview_ai_package_info_demo(
             ]
         });
 
-    vec![stack::vstack(
+    stack::vstack(
         cx,
         stack::VStackProps::default()
             .layout(LayoutRefinement::default().w_full().min_w_0())
@@ -47,5 +47,6 @@ pub(in crate::ui) fn preview_ai_package_info_demo(
                 package,
             ]
         },
-    )]
+    )
 }
+// endregion: example

@@ -1,26 +1,24 @@
-use super::super::super::super::*;
+pub const SOURCE: &str = include_str!("mic_selector_demo.rs");
 
-pub(in crate::ui) fn preview_ai_voice_selector_demo(
-    cx: &mut ElementContext<'_, App>,
-    _theme: &Theme,
-) -> Vec<AnyElement> {
-    use std::sync::Arc;
+// region: example
+use fret_runtime::Model;
+use fret_ui::Invalidation;
+use fret_ui::element::SemanticsDecoration;
+use fret_ui_ai as ui_ai;
+use fret_ui_kit::declarative::stack;
+use fret_ui_kit::{LayoutRefinement, Space};
+use fret_ui_shadcn::prelude::*;
+use std::sync::Arc;
 
-    use fret_runtime::Model;
-    use fret_ui::Invalidation;
-    use fret_ui::element::SemanticsDecoration;
-    use fret_ui_kit::declarative::stack;
-    use fret_ui_kit::{LayoutRefinement, Space};
+#[derive(Default)]
+struct DemoModels {
+    open: Option<Model<bool>>,
+    value: Option<Model<Option<Arc<str>>>>,
+}
 
-    #[derive(Default)]
-    struct DemoModels {
-        open: Option<Model<bool>>,
-        value: Option<Model<Option<Arc<str>>>>,
-    }
-
-    let needs_init = cx.with_state(DemoModels::default, |st| {
-        st.open.is_none() || st.value.is_none()
-    });
+pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement {
+    let needs_init =
+        cx.with_state(DemoModels::default, |st| st.open.is_none() || st.value.is_none());
     if needs_init {
         let open = cx.app.models_mut().insert(false);
         let value = cx.app.models_mut().insert(None::<Arc<str>>);
@@ -37,10 +35,10 @@ pub(in crate::ui) fn preview_ai_voice_selector_demo(
         )
     });
 
-    let voices: Arc<[ui_ai::VoiceSelectorVoice]> = Arc::from(vec![
-        ui_ai::VoiceSelectorVoice::new("alloy", "Alloy").description("Balanced, clear tone"),
-        ui_ai::VoiceSelectorVoice::new("verse", "Verse").description("Warm, conversational"),
-        ui_ai::VoiceSelectorVoice::new("orbit", "Orbit").description("Crisp, energetic"),
+    let devices: Arc<[ui_ai::MicSelectorDevice]> = Arc::from(vec![
+        ui_ai::MicSelectorDevice::new("default", "Default Microphone (1234:abcd)"),
+        ui_ai::MicSelectorDevice::new("usb", "USB Audio Device (5678:ef01)"),
+        ui_ai::MicSelectorDevice::new("loopback", "Loopback"),
     ]);
 
     let selected = cx.app.models().read(&value, |v| v.clone()).ok().flatten();
@@ -54,32 +52,32 @@ pub(in crate::ui) fn preview_ai_voice_selector_demo(
             SemanticsDecoration::default()
                 .role(fret_core::SemanticsRole::Generic)
                 .test_id(if selected.is_some() {
-                    "ui-ai-voice-selector-demo-selected"
+                    "ui-ai-mic-selector-demo-selected"
                 } else {
-                    "ui-ai-voice-selector-demo-none"
+                    "ui-ai-mic-selector-demo-none"
                 }),
         );
 
-    let selector = ui_ai::VoiceSelector::from_arc(voices)
+    let selector = ui_ai::MicSelector::from_arc(devices)
         .open_model(open.clone())
         .value_model(value.clone())
         .into_element(
             cx,
             |cx| {
-                ui_ai::VoiceSelectorButton::new()
-                    .test_id("ui-ai-voice-selector-demo-trigger")
+                ui_ai::MicSelectorTrigger::new([ui_ai::MicSelectorValue::new().into_element(cx)])
+                    .test_id("ui-ai-mic-selector-demo-trigger")
                     .into_element(cx)
             },
             |cx| {
-                ui_ai::VoiceSelectorContent::new([
-                    ui_ai::VoiceSelectorInput::new()
-                        .test_id("ui-ai-voice-selector-demo-input")
+                ui_ai::MicSelectorContent::new([
+                    ui_ai::MicSelectorInput::new()
+                        .test_id("ui-ai-mic-selector-demo-input")
                         .into_element(cx),
-                    ui_ai::VoiceSelectorList::new()
-                        .test_id_prefix("ui-ai-voice-selector-demo-item")
+                    ui_ai::MicSelectorList::new()
+                        .test_id_prefix("ui-ai-mic-selector-demo-item")
                         .into_element(cx),
                 ])
-                .test_id_root("ui-ai-voice-selector-demo-content")
+                .test_id_root("ui-ai-mic-selector-demo-content")
                 .into_element(cx)
             },
         );
@@ -91,25 +89,27 @@ pub(in crate::ui) fn preview_ai_voice_selector_demo(
         SemanticsDecoration::default()
             .role(fret_core::SemanticsRole::Generic)
             .test_id(if open_now {
-                "ui-ai-voice-selector-demo-open-true"
+                "ui-ai-mic-selector-demo-open-true"
             } else {
-                "ui-ai-voice-selector-demo-open-false"
+                "ui-ai-mic-selector-demo-open-false"
             }),
     );
 
-    vec![stack::vstack(
+    stack::vstack(
         cx,
         stack::VStackProps::default()
             .layout(LayoutRefinement::default().w_full().min_w_0())
             .gap(Space::N4),
         move |cx| {
             vec![
-                cx.text("VoiceSelector (AI Elements)"),
-                cx.text("UI-only chrome. Apps own voice inventory + preview playback."),
+                cx.text("MicSelector (AI Elements)"),
+                cx.text("UI-only chrome. Apps own device enumeration + permissions."),
                 marker,
                 open_marker,
                 selector,
             ]
         },
-    )]
+    )
 }
+// endregion: example
+

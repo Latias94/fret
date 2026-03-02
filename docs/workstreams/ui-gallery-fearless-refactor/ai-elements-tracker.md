@@ -33,10 +33,10 @@ Status labels:
 | `inline_citation_demo` | `PAGE_AI_INLINE_CITATION_DEMO` | `apps/fret-ui-gallery/src/ui/previews/gallery/ai/inline_citation_demo.rs` | — | — | Legacy preview |
 | `message_branch_demo` | `PAGE_AI_MESSAGE_BRANCH_DEMO` | `apps/fret-ui-gallery/src/ui/previews/gallery/ai/message_branch_demo.rs` | — | — | Legacy preview |
 | `message_demo` | `PAGE_AI_MESSAGE_DEMO` | `apps/fret-ui-gallery/src/ui/previews/gallery/ai/message_demo.rs` | — | — | Legacy preview |
-| `mic_selector_demo` | `PAGE_AI_MIC_SELECTOR_DEMO` | `apps/fret-ui-gallery/src/ui/previews/gallery/ai/mic_selector_demo.rs` | — | — | Legacy preview |
-| `model_selector_demo` | `PAGE_AI_MODEL_SELECTOR_DEMO` | `apps/fret-ui-gallery/src/ui/previews/gallery/ai/model_selector_demo.rs` | — | — | Legacy preview |
+| `mic_selector_demo` | `PAGE_AI_MIC_SELECTOR_DEMO` | (removed) | `apps/fret-ui-gallery/src/ui/snippets/ai/mic_selector_demo.rs` | `apps/fret-ui-gallery/src/ui/pages/ai_mic_selector_demo.rs` | Snippet-backed |
+| `model_selector_demo` | `PAGE_AI_MODEL_SELECTOR_DEMO` | (removed) | `apps/fret-ui-gallery/src/ui/snippets/ai/model_selector_demo.rs` | `apps/fret-ui-gallery/src/ui/pages/ai_model_selector_demo.rs` | Snippet-backed |
 | `open_in_chat_demo` | `PAGE_AI_OPEN_IN_CHAT_DEMO` | `apps/fret-ui-gallery/src/ui/previews/gallery/ai/open_in_chat_demo.rs` | — | — | Legacy preview |
-| `package_info_demo` | `PAGE_AI_PACKAGE_INFO_DEMO` | `apps/fret-ui-gallery/src/ui/previews/gallery/ai/package_info_demo.rs` | — | — | Legacy preview |
+| `package_info_demo` | `PAGE_AI_PACKAGE_INFO_DEMO` | (removed) | `apps/fret-ui-gallery/src/ui/snippets/ai/package_info_demo.rs` | `apps/fret-ui-gallery/src/ui/pages/ai_package_info_demo.rs` | Snippet-backed |
 | `persona_demo` | `PAGE_AI_PERSONA_DEMO` | `apps/fret-ui-gallery/src/ui/previews/gallery/ai/persona_demo.rs` | — | — | Legacy preview |
 | `plan_demo` | `PAGE_AI_PLAN_DEMO` | `apps/fret-ui-gallery/src/ui/previews/gallery/ai/plan_demo.rs` | — | — | Legacy preview |
 | `prompt_input_action_menu_demo` | `PAGE_AI_PROMPT_INPUT_ACTION_MENU_DEMO` | (removed) | `apps/fret-ui-gallery/src/ui/snippets/ai/prompt_input_action_menu_demo.rs` | `apps/fret-ui-gallery/src/ui/pages/ai_prompt_input_action_menu_demo.rs` | Snippet-backed |
@@ -60,7 +60,7 @@ Status labels:
 | `tool_demo` | `PAGE_AI_TOOL_DEMO` | (removed) | `apps/fret-ui-gallery/src/ui/snippets/ai/tool_demo.rs` | `apps/fret-ui-gallery/src/ui/pages/ai_tool_demo.rs` | Snippet-backed |
 | `transcript_torture` | `PAGE_AI_TRANSCRIPT_TORTURE` | `apps/fret-ui-gallery/src/ui/previews/gallery/ai/transcript_torture.rs` | — | — | Legacy preview |
 | `transcription_demo` | `PAGE_AI_TRANSCRIPTION_DEMO` | `apps/fret-ui-gallery/src/ui/previews/gallery/ai/transcription_demo.rs` | — | — | Legacy preview |
-| `voice_selector_demo` | `PAGE_AI_VOICE_SELECTOR_DEMO` | `apps/fret-ui-gallery/src/ui/previews/gallery/ai/voice_selector_demo.rs` | — | — | Legacy preview |
+| `voice_selector_demo` | `PAGE_AI_VOICE_SELECTOR_DEMO` | (removed) | `apps/fret-ui-gallery/src/ui/snippets/ai/voice_selector_demo.rs` | `apps/fret-ui-gallery/src/ui/pages/ai_voice_selector_demo.rs` | Snippet-backed |
 | `web_preview_demo` | `PAGE_AI_WEB_PREVIEW_DEMO` | `apps/fret-ui-gallery/src/ui/previews/gallery/ai/web_preview_demo.rs` | — | — | Legacy preview |
 | `workflow_canvas_demo` | `PAGE_AI_WORKFLOW_CANVAS_DEMO` | `apps/fret-ui-gallery/src/ui/previews/gallery/ai/workflow_canvas_demo.rs` | — | — | Legacy preview |
 | `workflow_chrome_demo` | `PAGE_AI_WORKFLOW_CHROME_DEMO` | `apps/fret-ui-gallery/src/ui/previews/gallery/ai/workflow_chrome_demo.rs` | — | — | Legacy preview |
