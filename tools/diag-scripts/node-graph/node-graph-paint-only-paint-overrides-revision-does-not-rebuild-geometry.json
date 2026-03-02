@@ -5,7 +5,7 @@
     "tags": ["node-graph", "declarative", "paint-only", "overrides", "paint", "cache", "gate"],
     "required_capabilities": ["diag.script_v2"],
     "target_hints": [
-      "Run with `FRET_NODE_GRAPH_DECLARATIVE=paint` so the paint-only declarative surface is active.",
+      "Run the `node_graph_demo` binary (it defaults to the paint-only declarative surface).",
       "Uses the diagnostics-only paint overrides toggle (Ctrl+6). Requires `FRET_DIAG=1`.",
       "Asserts that paint override revision bumps do not rebuild derived geometry/spatial caches."
     ]
@@ -100,4 +100,3 @@
     { "type": "capture_bundle", "label": "node-graph-paint-only-paint-overrides-revision-does-not-rebuild-geometry" }
   ]
 }
-
