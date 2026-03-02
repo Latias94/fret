@@ -17,8 +17,8 @@ Deliverables:
 Status (2026-03-02):
 
 - Diagnostics/runtime hang class addressed (no more “script.result stuck running” when a target window is occluded).
-- Remaining blocker is docking correctness: chained tear-off + merge-back does not yet return to the original dock graph
-  fingerprint, so the “exact signature” gate fails even though windows auto-close and canonicalization passes.
+- M1 is now green again after hardening scripted input + window predicates, and fixing chained tear-off merge targeting
+  so the final dock graph fingerprint returns to baseline.
 
 Status update (2026-03-02, later):
 
