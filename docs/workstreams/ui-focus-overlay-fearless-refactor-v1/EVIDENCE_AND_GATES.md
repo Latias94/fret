@@ -62,3 +62,11 @@ cargo run -p fretboard -- diag run ui-gallery-context-menu-occlusion-wheel-pass-
   --check-pixels-changed ui-gallery-nav-scroll `
   --launch -- cargo run -p fret-ui-gallery --release
 ```
+
+- Modal barriers MUST block wheel from reaching underlay scroll containers:
+
+```powershell
+cargo run -p fretboard -- diag run ui-gallery-modal-barrier-wheel-block `
+  --check-pixels-unchanged ui-gallery-nav-scroll `
+  --launch -- cargo run -p fret-ui-gallery --release
+```

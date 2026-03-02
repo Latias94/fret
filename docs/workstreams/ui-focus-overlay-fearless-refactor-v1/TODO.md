@@ -51,3 +51,4 @@ Tracking doc: `docs/workstreams/ui-focus-overlay-fearless-refactor-v1/DESIGN.md`
   - ADR: `docs/adr/0069-outside-press-and-dismissable-non-modal-overlays.md` (wheel routing precedence)
   - Unit test (modal barrier blocks wheel): `crates/fret-ui/src/tree/tests/pointer_occlusion.rs`
   - Script gate (occlusion allows wheel): `tools/diag-scripts/ui-gallery/overlay/ui-gallery-context-menu-occlusion-wheel-pass-through.json`
+  - Script gate (modal barrier blocks wheel): `tools/diag-scripts/ui-gallery/overlay/ui-gallery-modal-barrier-wheel-block.json`
