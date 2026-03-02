@@ -432,13 +432,13 @@ Changes:
     - Centralize “base required bytes” helpers to replace ad-hoc `full * N` budget checks.
     - Centralize intermediate budget charging helpers (mask targets + CustomV3 pyramid bytes), so “budget available / required” evidence is computed from a single source of truth.
   - In progress:
-    - Extend diagnostics evidence to report the computed budget model inputs for the worst frame (budget, base required, optional required, chosen plan).
+    - (Done) Extend diagnostics evidence to report the computed CustomEffect budget model inputs for the worst frame (budget, base required, optional required, chosen plan).
 - Landable steps (3–8, PR-sized):
   1) [Landed] Fix BackdropSourceGroup pyramid headroom accounting (avoid double-counting `raw_bytes`) and lock with a unit test.
   2) [Landed] Centralize “base required bytes” helpers used by CustomV1/V2/V3 (single-scratch, padded-chain work path, optional chain-raw) and use them everywhere instead of ad-hoc `full * N`.
   3) [Landed] Centralize intermediate budget charging helpers (mask targets + CustomV3 pyramid bytes), so “budget available / required” evidence is computed from a single source of truth.
   4) [Landed] Add a tiny table-driven conformance set for budget edges (budget=0 / insufficient / target exhausted) per ABI.
-  5) [Planned] Extend diagnostics evidence to report the computed budget model inputs for the worst frame (budget, base required, optional required, chosen plan).
+  5) [Landed] Extend diagnostics evidence to report the computed CustomEffect budget model inputs for the worst frame (budget, base required, optional required, chosen plan).
 
 Notes:
 
@@ -449,6 +449,16 @@ Notes:
   - `renderer_render_plan_effect_chain_effective_budget_min_bytes`,
   - `renderer_render_plan_effect_chain_effective_budget_max_bytes`,
   - `renderer_render_plan_effect_chain_other_live_max_bytes`,
+  - CustomEffect chain budget model evidence (new):
+    - `renderer_render_plan_custom_effect_chain_budget_samples`
+    - `renderer_render_plan_custom_effect_chain_effective_budget_min_bytes`
+    - `renderer_render_plan_custom_effect_chain_effective_budget_max_bytes`
+    - `renderer_render_plan_custom_effect_chain_other_live_max_bytes`
+    - `renderer_render_plan_custom_effect_chain_base_required_max_bytes`
+    - `renderer_render_plan_custom_effect_chain_optional_required_max_bytes`
+    - `renderer_render_plan_custom_effect_chain_base_required_full_targets_max`
+    - `renderer_render_plan_custom_effect_chain_optional_mask_max_bytes`
+    - `renderer_render_plan_custom_effect_chain_optional_pyramid_max_bytes`
   - `renderer_intermediate_peak_in_use_bytes`.
 
 Conformance:
@@ -465,7 +475,7 @@ Conformance:
 
 Remaining:
 
-- Extend diagnostics evidence to report budget model inputs (budget, base required, optional required, chosen plan).
+- None (PR8 step5 landed).
 
 Gates:
 
