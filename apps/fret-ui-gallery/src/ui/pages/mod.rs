@@ -51,6 +51,7 @@ mod skeleton;
 mod slider;
 mod spinner;
 mod switch;
+mod tabs;
 mod toggle;
 mod toggle_group;
 mod textarea;
@@ -323,6 +324,13 @@ pub(super) fn preview_skeleton(cx: &mut ElementContext<'_, App>) -> Vec<AnyEleme
 
 pub(super) fn preview_slider(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
     slider::preview_slider(cx)
+}
+
+pub(super) fn preview_tabs(
+    cx: &mut ElementContext<'_, App>,
+    value: Model<Option<Arc<str>>>,
+) -> Vec<AnyElement> {
+    tabs::preview_tabs(cx, value)
 }
 
 pub(super) fn preview_spinner(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {

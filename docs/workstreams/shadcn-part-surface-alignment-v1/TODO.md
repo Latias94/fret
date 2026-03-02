@@ -4,6 +4,8 @@ This tracker is **workstream-local**. It is not the global roadmap source of tru
 
 Last audit snapshot: **2026-03-02**.
 
+See also: `docs/workstreams/shadcn-part-surface-alignment-v1/INVENTORY.md`.
+
 ## How to use this tracker
 
 - “Parts” should match upstream shadcn/ui v4 *bases* exports under
@@ -19,6 +21,15 @@ Last audit snapshot: **2026-03-02**.
 - `Done (with known gaps)`
 - `Done`
 - `Deferred (planned)`
+
+## Next audit queue (ordered)
+
+This is the suggested dev sequence for the next parity passes (optimize for “high leverage” and
+“high risk”):
+
+1. `sidebar` (large surface; mobile sheet integration)
+2. `alert` / `badge` / `checkbox` / `radio-group` (base controls parity pass)
+3. **Defer last**: `select` / `combobox` (structural drift is known; deeper than naming)
 
 ## Tracker table
 
@@ -41,6 +52,8 @@ Last audit snapshot: **2026-03-02**.
 | `popover` | `Popover, PopoverTrigger, PopoverContent, PopoverAnchor, PopoverHeader, PopoverTitle, PopoverDescription` | `Popover*` parts | `PopoverContent` encapsulates portal/presence; surface includes additional knobs (hover-open, modal mode) | Medium | Keep surface; lock default alignment + hover open/close events and focus behavior with unit tests | unit tests in `ecosystem/fret-ui-shadcn/src/popover.rs` | P1 | Done (with known gaps) |
 | `tooltip` | `TooltipProvider, Tooltip, TooltipTrigger, TooltipContent` | `Tooltip*` parts (+ `TooltipAnchor`) | `Tooltip` includes policy knobs not present upstream; content slot defaults are modeled via `ShadcnSurfaceSlot` | Medium | Keep surface; lock provider delay semantics + content inherited defaults via unit tests | unit tests in `ecosystem/fret-ui-shadcn/src/tooltip.rs` | P1 | Done (with known gaps) |
 | `hover-card` | `HoverCard, HoverCardTrigger, HoverCardContent` | `HoverCard*` parts (+ `HoverCardAnchor`) | Adds `HoverCardAnchor` and extra policy knobs (delays, safe corridor buffer) | Medium | Keep surface; lock hover intent lease/delays + placement defaults via unit tests | unit tests in `ecosystem/fret-ui-shadcn/src/hover_card.rs` | P2 | Done (with known gaps) |
+| `collapsible` | `Collapsible, CollapsibleTrigger, CollapsibleContent` | `Collapsible` + `CollapsibleTrigger` + `CollapsibleContent` | `CollapsibleTrigger` requires an explicit `open: Model<bool>` (Rust authoring), not an implicit context lookup; content uses a measured-height motion wrapper | Low | Keep surface; lock trigger toggling + force-mount behavior via unit tests | unit tests in `ecosystem/fret-ui-shadcn/src/collapsible.rs` | P1 | Done (with known gaps) |
+| `accordion` | `Accordion, AccordionItem, AccordionTrigger, AccordionContent` | `Accordion*` parts | Trigger/content structure is Rust-native (no DOM slots); motion uses measured-height wrapper; chevron icons are in-recipe instead of `asChild` composition | Medium | Keep surface; lock trigger toggling + measured motion invariants via unit tests | unit tests in `ecosystem/fret-ui-shadcn/src/accordion.rs` | P1 | Done (with known gaps) |
 | `select` | `Select, SelectTrigger, SelectValue, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectSeparator, SelectScrollUpButton, SelectScrollDownButton` | `Select*` parts (config wrappers + entries) | Structural drift: Trigger/Value/Content are config wrappers, not literal nested elements (limits copy/paste parity). `into_element_parts` provides a nested-callsite adapter but does not change the underlying structure. | High | Keep current surface for now; add a translation note (`SELECT_V4_USAGE.md`); **defer** a true part-surface redesign to Milestone 6 (while keeping the existing unit tests as a behavior baseline). | unit tests in `ecosystem/fret-ui-shadcn/src/select.rs` | P0 | Done (with known gaps) |
 | `combobox` | many parts (Base UI-rooted) | `Combobox` (Popover + Command recipe) + `ComboboxOption/OptionGroup` data model + v4 parts adapters (`into_element_parts`) | Still missing full Base UI surface (render-prop ergonomics, true in-trigger input; anchor uses element IDs instead of DOM refs) | High | Data model rename landed (`src/combobox_data.rs`) + placement knobs + v4-named parts (`ComboboxInput/Content/Empty/List/Item/Group/...`) and chips adapter (`ComboboxChips::into_element_parts`). Usage notes: `docs/workstreams/shadcn-part-surface-alignment-v1/COMBOBOX_V4_USAGE.md`. Next: tighten gates around copy/paste docs usage and extend chips/clear/anchor parity as needed. | unit tests in `ecosystem/fret-ui-shadcn/src/combobox.rs`, `ecosystem/fret-ui-shadcn/src/combobox_chips.rs`, and `ecosystem/fret-ui-shadcn/tests/combobox_v4_parts_semantics.rs` | P0 | Done (with known gaps) |
 | `scroll-area` | `ScrollArea, ScrollBar` | `ScrollArea` + `ScrollArea*` primitives + `ScrollBar` alias | Previously only exposed `ScrollAreaScrollbar`; `ScrollBar` alias added for copy/paste parity | Low | Keep both names; treat `ScrollBar` as the docs-aligned spelling | unit tests in `ecosystem/fret-ui-shadcn/src/scroll_area.rs` | P2 | Done |
@@ -48,6 +61,14 @@ Last audit snapshot: **2026-03-02**.
 | `input-otp` | `InputOTP, InputOTPGroup, InputOTPSlot, InputOTPSeparator` | `InputOtp` recipe + parts adapters (`InputOTPGroup/Slot/Separator`) | Slot-level `aria-invalid` is global (`InputOtp::aria_invalid`), not per-slot; per-part refinements are not modeled | Low | Keep monolithic recipe; provide `into_element_parts` adapter for copy/paste parity | unit tests in `ecosystem/fret-ui-shadcn/src/input_otp.rs` | P2 | Done (with known gaps) |
 | `empty` | `Empty, EmptyHeader, EmptyTitle, EmptyDescription, EmptyContent, EmptyMedia` | `Empty*` parts | Uses container queries instead of viewport breakpoints (intentional) | Low | Keep surface; lock padding breakpoint behavior via deterministic unit test | `ecosystem/fret-ui-shadcn/tests/empty_responsive_padding.rs` | P2 | Done |
 | `context-menu` | `ContextMenu, Trigger, Portal, Content, Item, CheckboxItem, RadioItem, Label, Separator, Shortcut, Group, Sub, SubTrigger, SubContent, RadioGroup` | `ContextMenu` + `ContextMenuTrigger/Portal/Content` adapters + submenu helpers | Portal is a no-op wrapper; submenu parts are helpers over `ContextMenuItem::submenu(...)` | High | Keep closure API; expose part adapters + submenu helper parts; add diag script when UI gallery uses it | unit tests in `ecosystem/fret-ui-shadcn/src/context_menu.rs` | P0 | Done (with known gaps) |
+
+## Backlog (not audited yet)
+
+This is the short “next few” list. Full inventory is in `INVENTORY.md`.
+
+| Component | Upstream base file | Fret module | Priority | Status | Notes |
+|---|---|---|---:|---|---|
+| `sidebar` | `repo-ref/ui/apps/v4/registry/bases/radix/ui/sidebar.tsx` | `ecosystem/fret-ui-shadcn/src/sidebar.rs` | P1 | Not started | Large surface; scope footguns (state/collapsible/mobile). Gate “collapsed icon” layout. |
 
 ## Notes / recurring hazards
 
