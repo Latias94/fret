@@ -100,9 +100,12 @@ ID format:
   - Evidence:
     - ADR update: `docs/adr/0308-view-authoring-runtime-and-hooks-v1.md`
     - `use_state_keyed` + debug rail: `ecosystem/fret/src/view.rs`
-- [ ] AFA-view-023 Add a view-cache boundary helper aligned with ADR 0213:
+- [x] AFA-view-023 Add a view-cache boundary helper aligned with ADR 0213:
   - “cached unless dirty” semantics,
   - inspection/picking disables reuse.
+  - Evidence:
+    - Helper: `ecosystem/fret-ui-kit/src/declarative/cached_subtree.rs`
+    - Reuse gating: `crates/fret-ui/src/tree/ui_tree_view_cache.rs` (`UiTree::view_cache_active`)
 - [ ] AFA-view-024 Provide an adapter path for MVU:
   - keep MVU available while views are adopted,
   - document “when to use MVU vs View” in cookbook guidance.

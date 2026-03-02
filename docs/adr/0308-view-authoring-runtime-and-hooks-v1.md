@@ -143,6 +143,15 @@ without requiring users to reason about low-level IR nodes:
 - “cached unless dirty” (GPUI-style outcome),
 - picking/inspection disables reuse (diagnostics correctness).
 
+v1 note:
+
+- The initial user-facing helper lives in the component ecosystem as sugar over the mechanism
+  primitive:
+  - `ecosystem/fret-ui-kit/src/declarative/cached_subtree.rs` (`CachedSubtreeExt`,
+    `CachedSubtreeProps`)
+- Reuse is automatically disabled when inspection/picking is active via `UiTree::view_cache_active`
+  (see `crates/fret-ui/src/tree/ui_tree_view_cache.rs`).
+
 ### C5 — Multi-frontend compatibility
 
 The view runtime must remain compatible with:
