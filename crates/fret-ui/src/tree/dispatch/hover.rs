@@ -320,7 +320,7 @@ impl<H: UiHost> UiTree<H> {
             }
         }
 
-        let hovered_hover_region: Option<crate::elements::GlobalElementId> =
+        let hovered_hover_region: Option<(crate::elements::GlobalElementId, NodeId)> =
             declarative::with_window_frame(app, window, |window_frame| {
                 let window_frame = window_frame?;
                 let mut node = hit_for_hover_region;
@@ -331,7 +331,7 @@ impl<H: UiHost> UiTree<H> {
                             declarative::ElementInstance::HoverRegion(_)
                         )
                     {
-                        return Some(record.element);
+                        return Some((record.element, id));
                     }
                     node = self.snapshot_parent_or_retained(snapshot, id);
                 }
@@ -339,7 +339,11 @@ impl<H: UiHost> UiTree<H> {
             });
 
         let (_prev_element, prev_node, _next_element, next_node) =
-            crate::elements::update_hovered_hover_region(app, window, hovered_hover_region);
+            crate::elements::update_hovered_hover_region_with_node(
+                app,
+                window,
+                hovered_hover_region,
+            );
         if prev_node.is_some() || next_node.is_some() {
             *needs_redraw = true;
             self.debug_record_hover_edge_hover_region();

@@ -1610,32 +1610,6 @@ impl<D: super::WinitAppDriver> WinitRunner<D> {
                             self.driver
                                 .window_created(&mut self.app, &create, new_window);
 
-                            // Diagnostics scripts use `WindowInputContextService.window_count()`
-                            // as a stable "open windows" signal. In normal runs, this service is
-                            // populated opportunistically during input dispatch, which can lag
-                            // behind window creation.
-                            //
-                            // In diagnostics runs, seed a placeholder snapshot at creation time so
-                            // scripted `known_window_count_*` predicates can observe window
-                            // creation/closure deterministically.
-                            let diag_env_enabled =
-                                std::env::var_os("FRET_DIAG").is_some_and(|v| !v.is_empty())
-                                    || std::env::var_os("FRET_DIAG_DIR")
-                                        .is_some_and(|v| !v.is_empty());
-                            if diag_env_enabled {
-                                self.app.with_global_mut(
-                                    fret_runtime::WindowInputContextService::default,
-                                    |svc, _app| {
-                                        if svc.snapshot(new_window).is_none() {
-                                            svc.set_snapshot(
-                                                new_window,
-                                                fret_runtime::InputContext::default(),
-                                            );
-                                        }
-                                    },
-                                );
-                            }
-
                             self.app.request_redraw(new_window);
                         }
                         WindowRequest::SetInnerSize { window, size } => {

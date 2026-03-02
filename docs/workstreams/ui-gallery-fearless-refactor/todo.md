@@ -45,13 +45,19 @@ Any remaining legacy surfaces that embed raw Rust code strings are tracked via t
 
 - [x] Expand drift audit coverage to include non-`src/ui/pages/**` preview surfaces (`src/ui/previews/**`).
 - [x] Migrate Calendar page(s) out of `src/ui/previews/**` so copyable code stays drift-free.
+- [x] Migrate AI Elements gallery demos to snippet-backed pages (see `docs/workstreams/ui-gallery-fearless-refactor/ai-elements-tracker.md`).
+- [x] Ensure Code tabs are vertically scrollable (wheel scrolling over CodeBlock gutters for windowed snippets).
 - [ ] Normalize DocSection chrome/layout (max widths, padding, “Notes” shell usage) across pages.
+  - [x] Remove redundant centering wrappers so Preview/Code tabs share consistent left padding.
+  - [ ] Audit remaining max-width and padding inconsistencies across pages.
 - [ ] Optional: align page taxonomy + section ordering to upstream shadcn MDX navigation.
 
 Notes:
 
 - Use `tools/check_ui_gallery_code_literals.py --deny --only <page.rs>` to enforce “no multi-line Rust literals”
   on snippet-backed/migrated pages.
+- Material 3 pages are tracked separately because they currently live under `src/ui/previews/material3/**`:
+  `docs/workstreams/ui-gallery-fearless-refactor/material3-tracker.md`.
 
 ## Shadcn component tracker (gallery refactor status)
 

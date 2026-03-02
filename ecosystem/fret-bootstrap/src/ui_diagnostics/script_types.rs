@@ -351,6 +351,7 @@ pub(super) struct V2MovePointerSweepState {
 pub(super) struct WaitUntilState {
     pub(super) step_index: usize,
     pub(super) remaining_frames: u32,
+    pub(super) cached_test_id_predicate_last_stale: Option<bool>,
 }
 
 #[derive(Debug, Clone)]

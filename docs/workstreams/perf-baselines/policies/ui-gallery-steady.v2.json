@@ -22,6 +22,16 @@
       "scope": "tools/diag-scripts/ui-gallery-overlay-torture-steady.json",
       "metric": "top_total_time_us",
       "seed": "p95"
+    },
+    {
+      "scope": "tools/diag-scripts/ui-gallery/perf/ui-gallery-overlay-pointer-move-steady.json",
+      "metric": "top_total_time_us",
+      "seed": "p95"
+    },
+    {
+      "scope": "tools/diag-scripts/ui-gallery/perf/ui-gallery-overlay-pointer-move-steady.json",
+      "metric": "top_layout_time_us",
+      "seed": "p95"
     }
   ]
 }

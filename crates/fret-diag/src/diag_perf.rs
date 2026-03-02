@@ -36,6 +36,7 @@ pub(crate) struct PerfCmdContext {
     pub check_perf_hints_deny: Vec<String>,
     pub check_perf_hints_min_severity: Option<String>,
     pub check_pixels_changed_test_id: Option<String>,
+    pub check_pixels_unchanged_test_id: Option<String>,
     pub devtools_session_id: Option<String>,
     pub devtools_token: Option<String>,
     pub devtools_ws_url: Option<String>,
@@ -93,6 +94,7 @@ pub(crate) fn cmd_perf(ctx: PerfCmdContext) -> Result<(), String> {
         check_perf_hints_deny,
         check_perf_hints_min_severity,
         check_pixels_changed_test_id,
+        check_pixels_unchanged_test_id,
         devtools_session_id,
         devtools_token,
         devtools_ws_url,
@@ -385,6 +387,7 @@ hint: list promoted scripts via `fretboard diag list scripts --contains {name}`"
         resolved_script_result_trigger_path.clone();
 
     let perf_wants_screenshots = check_pixels_changed_test_id.is_some()
+        || check_pixels_unchanged_test_id.is_some()
         || scripts
             .iter()
             .any(|src| crate::script_requests_screenshots(src))
@@ -1854,6 +1857,9 @@ hint: list promoted scripts via `fretboard diag list scripts --contains {name}`"
 
     if let Some(test_id) = check_pixels_changed_test_id.as_deref() {
         stats::check_out_dir_for_pixels_changed(&resolved_out_dir, test_id, warmup_frames)?;
+    }
+    if let Some(test_id) = check_pixels_unchanged_test_id.as_deref() {
+        stats::check_out_dir_for_pixels_unchanged(&resolved_out_dir, test_id, warmup_frames)?;
     }
 
     if let Some(path) = perf_baseline_out.as_ref() {

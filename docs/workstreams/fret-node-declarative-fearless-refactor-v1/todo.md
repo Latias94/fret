@@ -71,6 +71,8 @@ Suggested run commands (Windows-friendly):
 - [x] Wire `NodeGraphGeometryOverrides` into derived geometry + spatial index cache keys (revisioned).
 - [x] Wire `NodeGraphPaintOverrides` into paint-only rendering + add a diag gate (revision bump does not rebuild geometry):
   - `tools/diag-scripts/node-graph/node-graph-paint-only-paint-overrides-revision-does-not-rebuild-geometry.json` (Ctrl+6, requires `FRET_DIAG=1`)
+- [x] Add a screenshot repro for non-solid edge paint overrides:
+  - `tools/diag-scripts/node-graph/node-graph-paint-only-paint-overrides-screenshot.json` (Ctrl+6, requires `FRET_DIAG=1`, `FRET_DIAG_GPU_SCREENSHOTS=1`)
 
 ## M2 — Interaction + portals
 

@@ -33,14 +33,19 @@ fn today_from_env_or_now() -> Date {
 }
 
 pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
-    let (month, selected) = cx.with_state(Models::default, |st| (st.month.clone(), st.selected.clone()));
+    let (month, selected) = cx.with_state(Models::default, |st| {
+        (st.month.clone(), st.selected.clone())
+    });
 
     let today = today_from_env_or_now();
 
     let month = match month {
         Some(model) => model,
         None => {
-            let model = cx.app.models_mut().insert(SolarHijriMonth::from_gregorian(today));
+            let model = cx
+                .app
+                .models_mut()
+                .insert(SolarHijriMonth::from_gregorian(today));
             cx.with_state(Models::default, |st| st.month = Some(model.clone()));
             model
         }
@@ -63,4 +68,3 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
         .test_id("ui-gallery-calendar-hijri-calendar")
 }
 // endregion: example
-

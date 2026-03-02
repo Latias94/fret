@@ -1169,6 +1169,8 @@ paths so `diag triage` can surface actionable hints (budget pressure, source ali
 
 Suites:
 
+- `tools/diag-scripts/suites/liquid-glass-custom-v3/`
+  - Captures baseline screenshots/bundles for the CustomV3 "lens" authoring demo surface (no forced degradation).
 - `tools/diag-scripts/suites/liquid-glass-custom-v3-degraded/`
   - Forces an extreme low intermediate budget to trigger **BackdropSourceGroup** degradation.
   - Expected triage hint codes:
@@ -1193,6 +1195,44 @@ Notes:
 - If the intermediate budget is *too* low, the renderer may skip emitting a CustomV3 pass entirely.
   `diag triage` should surface `renderer.custom_effect_v3_requested_but_skipped`, and the source-level degradation counters
   will stay at 0. Prefer the curated suite budgets when you want `CustomV3 sources` degradation signals specifically.
+
+### CustomV2 user-image compatibility suite
+
+This suite exercises the deterministic fallback behavior when a CustomV2 user input image is incompatible with the ABI
+(e.g. a non-filterable format combined with a filtering sampler). The backend should bind a 1x1 transparent fallback
+image instead of triggering a wgpu validation error, and should surface the hint:
+
+- `renderer.custom_effect_v2_user_image_incompatible_fallbacks`
+
+Suite:
+
+- `tools/diag-scripts/suites/cookbook-customv2-basics/`
+  - `custom-effect-v2-non-filterable-input-fallback-screenshot.json`
+
+Run example:
+
+- `cargo run -p fretboard -- diag suite cookbook-customv2-basics --dir target/fret-diag/customv2 --session-auto --launch -- cargo run -p fret-demo --bin custom_effect_v2_demo`
+- `cargo run -p fretboard -- diag triage target/fret-diag/customv2/sessions/<session_id> --warmup-frames 0`
+
+### CustomV3 user-image compatibility suite
+
+This suite is the CustomV3 counterpart: it binds an intentionally incompatible `user0` image (a non-filterable float
+format) while the CustomV3 ABI expects filterable sampled textures. The backend should bind a deterministic 1x1
+transparent fallback image instead of triggering a wgpu validation error, and should surface the hint:
+
+- `renderer.custom_effect_v3_user_image_incompatible_fallbacks`
+
+Suite:
+
+- `tools/diag-scripts/suites/cookbook-customv3-basics/`
+  - `custom-effect-v3-non-filterable-user0-fallback-screenshot.json`
+  - `custom-effect-v3-non-filterable-user1-fallback-screenshot.json`
+  - `custom-effect-v3-non-filterable-user01-fallback-screenshot.json`
+
+Run example:
+
+- `cargo run -p fretboard -- diag suite cookbook-customv3-basics --dir target/fret-diag/customv3 --session-auto --launch -- cargo run -p fret-demo --bin custom_effect_v3_demo`
+- `cargo run -p fretboard -- diag triage target/fret-diag/customv3/sessions/<session_id> --warmup-frames 0`
 
 Note:
 

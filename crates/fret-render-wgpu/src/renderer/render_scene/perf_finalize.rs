@@ -338,6 +338,10 @@ impl Renderer {
             .perf
             .custom_effect_v2_passes_emitted
             .saturating_add(frame_perf.custom_effect_v2_passes_emitted);
+        self.perf.custom_effect_v2_user_image_incompatible_fallbacks = self
+            .perf
+            .custom_effect_v2_user_image_incompatible_fallbacks
+            .saturating_add(frame_perf.custom_effect_v2_user_image_incompatible_fallbacks);
         self.perf.custom_effect_v3_pyramid_cache_hits = self
             .perf
             .custom_effect_v3_pyramid_cache_hits
@@ -354,6 +358,16 @@ impl Renderer {
             .perf
             .custom_effect_v3_passes_emitted
             .saturating_add(frame_perf.custom_effect_v3_passes_emitted);
+        self.perf
+            .custom_effect_v3_user0_image_incompatible_fallbacks = self
+            .perf
+            .custom_effect_v3_user0_image_incompatible_fallbacks
+            .saturating_add(frame_perf.custom_effect_v3_user0_image_incompatible_fallbacks);
+        self.perf
+            .custom_effect_v3_user1_image_incompatible_fallbacks = self
+            .perf
+            .custom_effect_v3_user1_image_incompatible_fallbacks
+            .saturating_add(frame_perf.custom_effect_v3_user1_image_incompatible_fallbacks);
 
         self.perf.clip_path_mask_cache_bytes_live = self
             .perf
@@ -660,8 +674,14 @@ impl Renderer {
             custom_effect_v1_passes_emitted: frame_perf.custom_effect_v1_passes_emitted,
             custom_effect_v2_steps_requested: frame_perf.custom_effect_v2_steps_requested,
             custom_effect_v2_passes_emitted: frame_perf.custom_effect_v2_passes_emitted,
+            custom_effect_v2_user_image_incompatible_fallbacks: frame_perf
+                .custom_effect_v2_user_image_incompatible_fallbacks,
             custom_effect_v3_steps_requested: frame_perf.custom_effect_v3_steps_requested,
             custom_effect_v3_passes_emitted: frame_perf.custom_effect_v3_passes_emitted,
+            custom_effect_v3_user0_image_incompatible_fallbacks: frame_perf
+                .custom_effect_v3_user0_image_incompatible_fallbacks,
+            custom_effect_v3_user1_image_incompatible_fallbacks: frame_perf
+                .custom_effect_v3_user1_image_incompatible_fallbacks,
             custom_effect_v3_pyramid_cache_hits: frame_perf.custom_effect_v3_pyramid_cache_hits,
             custom_effect_v3_pyramid_cache_misses: frame_perf.custom_effect_v3_pyramid_cache_misses,
             draw_calls: frame_perf.draw_calls,

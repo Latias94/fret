@@ -1,8 +1,8 @@
 use super::super::ElementHostWidget;
 use crate::declarative::frame::layout_style_for_node;
 use crate::declarative::layout_helpers::{
-    PositionedLayoutStyle, clamp_to_constraints, layout_absolute_child_with_probe_bounds,
-    layout_positioned_child, positioned_layout_style,
+    PositionedLayoutStyle, clamp_to_constraints, clamp_to_constraints_with_overflow_context,
+    layout_absolute_child_with_probe_bounds, layout_positioned_child, positioned_layout_style,
 };
 use crate::declarative::prelude::*;
 use crate::layout_constraints::AvailableSpace;
@@ -106,7 +106,12 @@ impl ElementHostWidget {
             clamp_available.height = Px(max_child.height.0.max(0.0));
         }
 
-        let desired = clamp_to_constraints(max_child, layout, clamp_available);
+        let desired = clamp_to_constraints_with_overflow_context(
+            max_child,
+            layout,
+            clamp_available,
+            cx.overflow_ctx,
+        );
         let base = Rect::new(cx.bounds.origin, desired);
         let probe_bounds = base;
 
@@ -198,7 +203,12 @@ impl ElementHostWidget {
             clamp_available.height = Px(max_child.height.0.max(0.0));
         }
 
-        let desired = clamp_to_constraints(max_child, layout, clamp_available);
+        let desired = clamp_to_constraints_with_overflow_context(
+            max_child,
+            layout,
+            clamp_available,
+            cx.overflow_ctx,
+        );
         let base = Rect::new(cx.bounds.origin, desired);
         let probe_bounds = base;
 

@@ -146,6 +146,7 @@ debug = 2
 
 [profile.dev.package.taffy]
 opt-level = 3
+codegen-units = 1
 
 # Opt-in profile for faster edit/compile iterations (especially on Windows where linking + PDBs
 # can dominate debug builds). Keep it off by default; use via `--profile dev-fast`.
@@ -156,6 +157,7 @@ debug = 1
 
 [profile.dev-fast.package.taffy]
 opt-level = 3
+codegen-units = 1
 
 # Windows/MSVC note: the shadcn test suite can produce very large test binaries.
 # Keeping test debuginfo to line-tables only avoids hitting `link.exe` PDB size limits while

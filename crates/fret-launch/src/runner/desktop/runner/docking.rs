@@ -84,16 +84,10 @@ impl<D: WinitAppDriver> WinitRunner<D> {
         if self.diag_mouse_buttons_override_active {
             return false;
         }
-        // Scripted diagnostics inject pointer events without a real OS mouse button state.
-        // When a cursor/button override was observed recently, avoid using OS polling heuristics
-        // to terminate the drag; scripts will deliver an explicit `PointerUp`.
-        if self
-            .diag_last_cursor_override_tick
-            .is_some_and(|t| self.tick_id.0.saturating_sub(t.0) <= 2)
-            || self
-                .diag_last_mouse_buttons_override_tick
-                .is_some_and(|t| self.tick_id.0.saturating_sub(t.0) <= 2)
-        {
+        // Scripted diagnostics inject pointer events without a real OS mouse button state. When
+        // pointer input isolation is active, avoid OS polling heuristics to terminate the drag;
+        // scripts will deliver an explicit `PointerUp`.
+        if self.diag_pointer_input_isolation_active() {
             return false;
         }
 
@@ -153,16 +147,10 @@ impl<D: WinitAppDriver> WinitRunner<D> {
         if self.diag_mouse_buttons_override_active {
             return false;
         }
-        // Scripted diagnostics inject pointer events without a real OS mouse button state.
-        // When a cursor/button override was observed recently, avoid using OS polling heuristics
-        // to terminate the drag; scripts will deliver an explicit `PointerUp`.
-        if self
-            .diag_last_cursor_override_tick
-            .is_some_and(|t| self.tick_id.0.saturating_sub(t.0) <= 2)
-            || self
-                .diag_last_mouse_buttons_override_tick
-                .is_some_and(|t| self.tick_id.0.saturating_sub(t.0) <= 2)
-        {
+        // Scripted diagnostics inject pointer events without a real OS mouse button state. When
+        // pointer input isolation is active, avoid OS polling heuristics to terminate the drag;
+        // scripts will deliver an explicit `PointerUp`.
+        if self.diag_pointer_input_isolation_active() {
             return false;
         }
 
@@ -250,13 +238,7 @@ impl<D: WinitAppDriver> WinitRunner<D> {
         //
         // When a recent diagnostics cursor/button override was observed, stop following and let
         // cursor-based hover/drop routing drive the interaction deterministically.
-        let diag_override_recent = self
-            .diag_last_cursor_override_tick
-            .is_some_and(|t| self.tick_id.0.saturating_sub(t.0) <= 2)
-            || self
-                .diag_last_mouse_buttons_override_tick
-                .is_some_and(|t| self.tick_id.0.saturating_sub(t.0) <= 2);
-        if diag_override_recent && self.dock_tearoff_follow.is_some() {
+        if self.diag_pointer_input_isolation_active() && self.dock_tearoff_follow.is_some() {
             self.stop_dock_tearoff_follow(Instant::now(), false);
             return true;
         }

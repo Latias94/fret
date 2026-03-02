@@ -858,12 +858,32 @@ pub(super) fn bundle_stats_from_json_with_options(
                 .and_then(|m| m.get("renderer_custom_effect_v2_passes_emitted"))
                 .and_then(|v| v.as_u64())
                 .unwrap_or(0);
+            let renderer_custom_effect_v2_user_image_incompatible_fallbacks = stats
+                .and_then(|m| m.get("renderer_custom_effect_v2_user_image_incompatible_fallbacks"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
             let renderer_custom_effect_v3_steps_requested = stats
                 .and_then(|m| m.get("renderer_custom_effect_v3_steps_requested"))
                 .and_then(|v| v.as_u64())
                 .unwrap_or(0);
             let renderer_custom_effect_v3_passes_emitted = stats
                 .and_then(|m| m.get("renderer_custom_effect_v3_passes_emitted"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let renderer_custom_effect_v3_user0_image_incompatible_fallbacks = stats
+                .and_then(|m| m.get("renderer_custom_effect_v3_user0_image_incompatible_fallbacks"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let renderer_custom_effect_v3_user1_image_incompatible_fallbacks = stats
+                .and_then(|m| m.get("renderer_custom_effect_v3_user1_image_incompatible_fallbacks"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let renderer_custom_effect_v3_pyramid_cache_hits = stats
+                .and_then(|m| m.get("renderer_custom_effect_v3_pyramid_cache_hits"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let renderer_custom_effect_v3_pyramid_cache_misses = stats
+                .and_then(|m| m.get("renderer_custom_effect_v3_pyramid_cache_misses"))
                 .and_then(|v| v.as_u64())
                 .unwrap_or(0);
             let renderer_custom_effect_v3_sources_raw_requested = stats
@@ -1679,8 +1699,13 @@ pub(super) fn bundle_stats_from_json_with_options(
                 renderer_custom_effect_v1_passes_emitted,
                 renderer_custom_effect_v2_steps_requested,
                 renderer_custom_effect_v2_passes_emitted,
+                renderer_custom_effect_v2_user_image_incompatible_fallbacks,
                 renderer_custom_effect_v3_steps_requested,
                 renderer_custom_effect_v3_passes_emitted,
+                renderer_custom_effect_v3_user0_image_incompatible_fallbacks,
+                renderer_custom_effect_v3_user1_image_incompatible_fallbacks,
+                renderer_custom_effect_v3_pyramid_cache_hits,
+                renderer_custom_effect_v3_pyramid_cache_misses,
                 renderer_custom_effect_v3_sources_raw_requested,
                 renderer_custom_effect_v3_sources_raw_distinct,
                 renderer_custom_effect_v3_sources_raw_aliased_to_src,
