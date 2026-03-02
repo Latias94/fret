@@ -85,12 +85,11 @@ impl ComboboxStyle {
     }
 }
 
-/// shadcn/ui v4 `useComboboxAnchor`.
+/// Returns a layout-only anchor wrapper for combobox overlay placement.
 ///
-/// Upstream returns a DOM ref used to anchor the popup. In Fret, we model the same outcome via a
-/// layout-only wrapper that exposes a stable element ID.
-#[allow(non_snake_case)]
-pub fn useComboboxAnchor(child: AnyElement) -> PopoverAnchor {
+/// Upstream shadcn/ui v4 returns a DOM ref (`useComboboxAnchor()`) used to anchor the popup. In
+/// Fret, we model the same outcome by wrapping a child element and exposing a stable element ID.
+pub fn use_combobox_anchor(child: AnyElement) -> PopoverAnchor {
     PopoverAnchor::new(child)
 }
 
