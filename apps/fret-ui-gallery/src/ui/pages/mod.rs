@@ -5,6 +5,7 @@ mod ai_audio_player_demo;
 mod ai_agent_demo;
 mod ai_artifact_demo;
 mod ai_attachments_demo;
+mod ai_canvas_world_layer_spike;
 mod ai_chain_of_thought_demo;
 mod ai_checkpoint_demo;
 mod ai_code_block_demo;
@@ -138,6 +139,13 @@ pub(super) fn preview_ai_artifact_demo(
     theme: &Theme,
 ) -> Vec<AnyElement> {
     ai_artifact_demo::preview_ai_artifact_demo(cx, theme)
+}
+
+pub(super) fn preview_ai_canvas_world_layer_spike(
+    cx: &mut ElementContext<'_, App>,
+    theme: &Theme,
+) -> Vec<AnyElement> {
+    ai_canvas_world_layer_spike::preview_ai_canvas_world_layer_spike(cx, theme)
 }
 
 pub(super) fn preview_ai_checkpoint_demo(

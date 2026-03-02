@@ -1,4 +1,3 @@
-mod canvas_world_layer_spike;
 mod chat_demo;
 mod conversation_demo;
 mod image_demo;
@@ -13,7 +12,6 @@ mod workflow_node_graph_demo;
 mod workflow_panel_demo;
 mod workflow_toolbar_demo;
 
-pub(in crate::ui) use canvas_world_layer_spike::*;
 pub(in crate::ui) use chat_demo::*;
 pub(in crate::ui) use conversation_demo::*;
 pub(in crate::ui) use image_demo::*;

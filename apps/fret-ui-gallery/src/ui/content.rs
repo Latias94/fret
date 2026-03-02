@@ -443,7 +443,7 @@ fn page_preview(
         PAGE_AI_WORKFLOW_PANEL_DEMO => preview_ai_workflow_panel_demo(cx, theme),
         PAGE_AI_WORKFLOW_TOOLBAR_DEMO => preview_ai_workflow_toolbar_demo(cx, theme),
         PAGE_AI_WORKFLOW_NODE_GRAPH_DEMO => preview_ai_workflow_node_graph_demo(cx, theme),
-        PAGE_AI_CANVAS_WORLD_LAYER_SPIKE => preview_ai_canvas_world_layer_spike(cx, theme),
+        PAGE_AI_CANVAS_WORLD_LAYER_SPIKE => pages::preview_ai_canvas_world_layer_spike(cx, theme),
         PAGE_AI_ARTIFACT_DEMO => pages::preview_ai_artifact_demo(cx, theme),
         PAGE_AI_ATTACHMENTS_DEMO => pages::preview_ai_attachments_demo(cx, theme),
         PAGE_AI_MESSAGE_BRANCH_DEMO => pages::preview_ai_message_branch_demo(cx, theme),

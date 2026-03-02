@@ -1,9 +1,14 @@
-use super::super::super::super::*;
+pub const SOURCE: &str = include_str!("canvas_world_layer_spike.rs");
 
-pub(in crate::ui) fn preview_ai_canvas_world_layer_spike(
-    cx: &mut ElementContext<'_, App>,
-    theme: &Theme,
-) -> Vec<AnyElement> {
+// region: example
+use fret_ui_ai as ui_ai;
+use fret_ui_kit::declarative::stack;
+use fret_ui_kit::declarative::style as decl_style;
+use fret_ui_kit::{ChromeRefinement, ColorFallback, ColorRef, LayoutRefinement, Radius, Space};
+use fret_ui_shadcn as shadcn;
+use fret_ui_shadcn::prelude::*;
+
+pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement {
     use std::sync::Arc;
 
     use fret_canvas::ui::{
@@ -19,10 +24,6 @@ pub(in crate::ui) fn preview_ai_canvas_world_layer_spike(
     use fret_ui::action::OnActivate;
     use fret_ui::canvas::CanvasPainter;
     use fret_ui::element::{CanvasCachePolicy, Length, PointerRegionProps};
-    use fret_ui_kit::declarative::stack;
-    use fret_ui_kit::declarative::style as decl_style;
-    use fret_ui_kit::{ChromeRefinement, ColorFallback, ColorRef, LayoutRefinement, Radius, Space};
-    use fret_ui_shadcn as shadcn;
     use fret_ui_shadcn::ButtonVariant;
 
     #[derive(Debug, Clone, Copy, PartialEq)]
@@ -176,22 +177,24 @@ pub(in crate::ui) fn preview_ai_canvas_world_layer_spike(
         .relative()
         .overflow_hidden();
 
-    let stage_props = decl_style::container_props(
-        theme,
-        ChromeRefinement::default()
-            .rounded(Radius::Md)
-            .border_1()
-            .bg(ColorRef::Token {
-                key: "card",
-                fallback: ColorFallback::ThemePanelBackground,
-            })
-            .border_color(ColorRef::Token {
-                key: "border",
-                fallback: ColorFallback::ThemePanelBorder,
-            })
-            .p(Space::N2),
-        stage_layout,
-    );
+    let stage_props = cx.with_theme(|theme| {
+        decl_style::container_props(
+            theme,
+            ChromeRefinement::default()
+                .rounded(Radius::Md)
+                .border_1()
+                .bg(ColorRef::Token {
+                    key: "card",
+                    fallback: ColorFallback::ThemePanelBackground,
+                })
+                .border_color(ColorRef::Token {
+                    key: "border",
+                    fallback: ColorFallback::ThemePanelBorder,
+                })
+                .p(Space::N2),
+            stage_layout,
+        )
+    });
 
     let mut world_props = CanvasWorldSurfacePanelProps::default();
     world_props.pan_zoom.preset = PanZoomInputPreset::DesktopCanvasCad;
@@ -206,9 +209,10 @@ pub(in crate::ui) fn preview_ai_canvas_world_layer_spike(
     };
     world_props.pan_zoom.canvas.cache_policy = CanvasCachePolicy::smooth_default();
 
+    let (bg, grid) = cx.with_theme(|theme| {
+        (theme.color_required("background"), theme.color_required("border"))
+    });
     let paint = {
-        let bg = theme.color_required("background");
-        let grid = theme.color_required("border");
         move |p: &mut CanvasPainter<'_>, paint_cx: fret_canvas::ui::PanZoomCanvasPaintCx| {
             let bounds = p.bounds();
             let Some(transform) = paint_cx.view.render_transform(bounds) else {
@@ -1920,11 +1924,12 @@ pub(in crate::ui) fn preview_ai_canvas_world_layer_spike(
             .test_id("ui-ai-canvas-world-layer-spike-root"),
     );
 
-    vec![stack::vstack(
+    stack::vstack(
         cx,
         stack::VStackProps::default()
             .layout(LayoutRefinement::default().w_full().min_w_0())
             .gap(Space::N4),
         move |cx| vec![header, cx.container(stage_props, move |_cx| vec![world])],
-    )]
+    )
 }
+// endregion: example
