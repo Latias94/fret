@@ -25,13 +25,16 @@ This is a living snapshot of what is already in place vs what remains.
   - Minimal runnable demo: `cargo run -p fretboard -- dev native --bin node_graph_demo`
   - Diagnostics suite (paint-only): `fret-examples-node-graph-paint-only`
 - M1 (declarative surface skeleton, paint-only): **Present**
-  - Declarative paint-only surface (`FRET_NODE_GRAPH_DECLARATIVE=paint`) with hosted caches
+  - Declarative paint-only surface (default demo path) with hosted caches
   - Steady-state cache gates exist (grid/nodes/edges)
 - M2 (interaction + portals, paint-only baselines): **Partially present**
   - Marquee/drag cancellation + portal bounds harvest + fit-view baselines are gated
   - Remaining: policy parity (selection/marquee reducers, overlays, richer portal hosting)
-  - 2026-03-02: merged `main` and adapted paint-only to the `NodeGraphStyle { paint, geometry }`
-    split (including the new `CanvasGeometry::build_with_presenter(..., overrides)` param)
+  - 2026-03-02: fixed a paint-cache coupling gap where portal layout could update during drag while
+    the canvas node replayed cached ops (reads as “drag not following”).
+    - Implementation: the paint-only `Canvas` declares interactive paint dependencies via
+      `CanvasPainter::observe_model_id(...)`.
+    - Evidence: `ecosystem/fret-node/src/ui/declarative/paint_only.rs` (`node_graph_surface_paint_only`)
 - M3 (defaults + compatibility): **Present**
   - Retained is opt-in only: `fret-node/compat-retained-canvas`
   - Default features avoid `fret-ui/unstable-retained-bridge`
@@ -43,7 +46,6 @@ PowerShell (Windows-friendly):
 ```powershell
 $env:FRET_DIAG='1'
 cargo run -p fretboard -- diag suite fret-examples-node-graph-paint-only `
-  --env FRET_NODE_GRAPH_DECLARATIVE=paint `
   --dir target/fret-diag-node-graph `
   --launch -- cargo run -p fret-demo --bin node_graph_demo --features node-graph-demos
 ```
@@ -54,6 +56,8 @@ Notes:
   not passed via `--env FRET_DIAG=...`.
 - For GPU screenshots, pass `--env FRET_DIAG_GPU_SCREENSHOTS=1` and use a screenshot script (see
   `tools/diag-scripts/node-graph/node-graph-paint-only-wires-screenshot.json`).
+- For “drag not following” reports, use the mid-drag screenshot script:
+  - `tools/diag-scripts/node-graph/node-graph-paint-only-node-drag-preview-screenshot.json`
 
 ## Recommendation (default declarative, compat retained)
 
@@ -91,6 +95,8 @@ This workstream aims to make downstream ecosystem authors productive without tou
   - pass it via `NodeGraphSurfacePaintOnlyProps.paint_overrides`
   - bump `revision()` when overrides change so paint-only caches can update without rebuilding
     derived geometry
+  - Note: edge paint overrides can provide full `PaintBindingV1` (gradients/materials), because
+    the paint-only surface uses `CanvasPainter::path_paint` under the hood.
 - Keep editor state in models:
   - graph: `Model<Graph>`
   - view state: `Model<NodeGraphViewState>`
@@ -125,11 +131,13 @@ that are closer to the intended long-term direction:
 - declarative input wiring around a leaf `Canvas`: `ecosystem/fret-canvas/src/ui/canvas_surface.rs`
 - world-layer composition with `RenderTransform` + cross-frame bounds: `ecosystem/fret-canvas/src/ui/world_layer.rs`
 
-As a first migration step, this workstream adds a **declarative entrypoint** that still hosts the
-current retained node-graph canvas as an internal subtree:
+As a first migration step, this workstream adds a **declarative entrypoint** that can still host
+the current retained node-graph canvas as an internal subtree when needed:
 
 - compat declarative surface: `ecosystem/fret-node/src/ui/declarative/mod.rs`
-- demo A/B switch: `apps/fret-examples/src/node_graph_demo.rs` (`FRET_NODE_GRAPH_DECLARATIVE=1`)
+- demos:
+  - declarative-first (paint-only): `apps/fret-examples/src/node_graph_demo.rs`
+  - legacy retained bridge: `apps/fret-examples/src/node_graph_legacy_demo.rs` (feature-gated)
 
 ## Public API sketch (ecosystem authoring surface)
 
@@ -283,11 +291,9 @@ Notes:
 
 - The diag script asserts `panning true` then `panning false` by inspecting the viewport semantics
   `value` string for `test_id=node_graph.canvas`.
-- To opt into the declarative root for manual exploration:
-  - Compat retained surface (current default for the declarative root):
-    - PowerShell: `$env:FRET_NODE_GRAPH_DECLARATIVE=1`
-  - Paint-only declarative skeleton (paint-first + semantic-zoom portals, no portal hit-testing yet):
-    - PowerShell: `$env:FRET_NODE_GRAPH_DECLARATIVE=paint`
+- Demo targets:
+  - Declarative-first (paint-only): `cargo run -p fretboard -- dev native --bin node_graph_demo`
+  - Legacy retained bridge: `cargo run -p fretboard -- dev native --bin node_graph_legacy_demo`
 
 ## M1 steady-state cache gate (paint-only baseline)
 
@@ -298,26 +304,26 @@ Notes:
 - Set `FRET_DIAG=1` in your shell (do not pass it via `--env`; it is reserved for tool-launched runs).
   - PowerShell: `$env:FRET_DIAG='1'`
 
-- `cargo run -p fretboard -- diag run tools/diag-scripts/node-graph/node-graph-paint-only-steady-grid-cache.json --env FRET_NODE_GRAPH_DECLARATIVE=paint --dir target/fret-diag-node-graph --launch -- cargo run -p fret-demo --bin node_graph_demo --features node-graph-demos`
-- `cargo run -p fretboard -- diag run tools/diag-scripts/node-graph/node-graph-paint-only-steady-nodes-cache.json --env FRET_NODE_GRAPH_DECLARATIVE=paint --dir target/fret-diag-node-graph --launch -- cargo run -p fret-demo --bin node_graph_demo --features node-graph-demos`
-- `cargo run -p fretboard -- diag run tools/diag-scripts/node-graph/node-graph-paint-only-steady-edges-cache.json --env FRET_NODE_GRAPH_DECLARATIVE=paint --dir target/fret-diag-node-graph --launch -- cargo run -p fret-demo --bin node_graph_demo --features node-graph-demos`
-- `cargo run -p fretboard -- diag run tools/diag-scripts/node-graph/node-graph-paint-only-pan-does-not-rebuild-geometry.json --env FRET_NODE_GRAPH_DECLARATIVE=paint --dir target/fret-diag-node-graph --launch -- cargo run -p fret-demo --bin node_graph_demo --features node-graph-demos`
-- `cargo run -p fretboard -- diag run tools/diag-scripts/node-graph/node-graph-paint-only-keyboard-zoom-rebuilds-geometry.json --env FRET_NODE_GRAPH_DECLARATIVE=paint --dir target/fret-diag-node-graph --launch -- cargo run -p fret-demo --bin node_graph_demo --features node-graph-demos`
-- `cargo run -p fretboard -- diag run tools/diag-scripts/node-graph/node-graph-paint-only-diag-graph-bump-rebuilds-geometry.json --env FRET_NODE_GRAPH_DECLARATIVE=paint --dir target/fret-diag-node-graph --launch -- cargo run -p fret-demo --bin node_graph_demo --features node-graph-demos`
-- `cargo run -p fretboard -- diag run tools/diag-scripts/node-graph/node-graph-paint-only-hover-and-select-do-not-rebuild-geometry.json --env FRET_NODE_GRAPH_DECLARATIVE=paint --dir target/fret-diag-node-graph --launch -- cargo run -p fret-demo --bin node_graph_demo --features node-graph-demos`
-- `cargo run -p fretboard -- diag run tools/diag-scripts/node-graph/node-graph-paint-only-marquee-select-does-not-rebuild-geometry.json --env FRET_NODE_GRAPH_DECLARATIVE=paint --dir target/fret-diag-node-graph --launch -- cargo run -p fret-demo --bin node_graph_demo --features node-graph-demos`
-- `cargo run -p fretboard -- diag run tools/diag-scripts/node-graph/node-graph-paint-only-marquee-pointer-cancel-does-not-commit.json --env FRET_NODE_GRAPH_DECLARATIVE=paint --dir target/fret-diag-node-graph --launch -- cargo run -p fret-demo --bin node_graph_demo --features node-graph-demos`
-- `cargo run -p fretboard -- diag run tools/diag-scripts/node-graph/node-graph-paint-only-node-drag-preview-and-commit.json --env FRET_NODE_GRAPH_DECLARATIVE=paint --dir target/fret-diag-node-graph --launch -- cargo run -p fret-demo --bin node_graph_demo --features node-graph-demos`
-- `cargo run -p fretboard -- diag run tools/diag-scripts/node-graph/node-graph-paint-only-node-drag-escape-cancel-does-not-commit.json --env FRET_NODE_GRAPH_DECLARATIVE=paint --dir target/fret-diag-node-graph --launch -- cargo run -p fret-demo --bin node_graph_demo --features node-graph-demos`
-- `cargo run -p fretboard -- diag run tools/diag-scripts/node-graph/node-graph-paint-only-node-drag-pointer-cancel-does-not-commit.json --env FRET_NODE_GRAPH_DECLARATIVE=paint --dir target/fret-diag-node-graph --launch -- cargo run -p fret-demo --bin node_graph_demo --features node-graph-demos`
-- `cargo run -p fretboard -- diag run tools/diag-scripts/node-graph/node-graph-paint-only-fit-view-to-portals-updates-view.json --env FRET_NODE_GRAPH_DECLARATIVE=paint --dir target/fret-diag-node-graph --launch -- cargo run -p fret-demo --bin node_graph_demo --features node-graph-demos`
-- `cargo run -p fretboard -- diag run tools/diag-scripts/node-graph/node-graph-paint-only-hover-shows-portal-tooltip.json --env FRET_NODE_GRAPH_DECLARATIVE=paint --dir target/fret-diag-node-graph --launch -- cargo run -p fret-demo --bin node_graph_demo --features node-graph-demos`
-- `cargo run -p fretboard -- diag run tools/diag-scripts/node-graph/node-graph-paint-only-hover-tooltip-falls-back-to-hover-anchor.json --env FRET_NODE_GRAPH_DECLARATIVE=paint --dir target/fret-diag-node-graph --launch -- cargo run -p fret-demo --bin node_graph_demo --features node-graph-demos`
-- `cargo run -p fretboard -- diag run tools/diag-scripts/node-graph/node-graph-paint-only-pan-pointer-cancel-does-not-rebuild-geometry.json --env FRET_NODE_GRAPH_DECLARATIVE=paint --dir target/fret-diag-node-graph --launch -- cargo run -p fret-demo --bin node_graph_demo --features node-graph-demos`
+- `cargo run -p fretboard -- diag run tools/diag-scripts/node-graph/node-graph-paint-only-steady-grid-cache.json --dir target/fret-diag-node-graph --launch -- cargo run -p fret-demo --bin node_graph_demo --features node-graph-demos`
+- `cargo run -p fretboard -- diag run tools/diag-scripts/node-graph/node-graph-paint-only-steady-nodes-cache.json --dir target/fret-diag-node-graph --launch -- cargo run -p fret-demo --bin node_graph_demo --features node-graph-demos`
+- `cargo run -p fretboard -- diag run tools/diag-scripts/node-graph/node-graph-paint-only-steady-edges-cache.json --dir target/fret-diag-node-graph --launch -- cargo run -p fret-demo --bin node_graph_demo --features node-graph-demos`
+- `cargo run -p fretboard -- diag run tools/diag-scripts/node-graph/node-graph-paint-only-pan-does-not-rebuild-geometry.json --dir target/fret-diag-node-graph --launch -- cargo run -p fret-demo --bin node_graph_demo --features node-graph-demos`
+- `cargo run -p fretboard -- diag run tools/diag-scripts/node-graph/node-graph-paint-only-keyboard-zoom-rebuilds-geometry.json --dir target/fret-diag-node-graph --launch -- cargo run -p fret-demo --bin node_graph_demo --features node-graph-demos`
+- `cargo run -p fretboard -- diag run tools/diag-scripts/node-graph/node-graph-paint-only-diag-graph-bump-rebuilds-geometry.json --dir target/fret-diag-node-graph --launch -- cargo run -p fret-demo --bin node_graph_demo --features node-graph-demos`
+- `cargo run -p fretboard -- diag run tools/diag-scripts/node-graph/node-graph-paint-only-hover-and-select-do-not-rebuild-geometry.json --dir target/fret-diag-node-graph --launch -- cargo run -p fret-demo --bin node_graph_demo --features node-graph-demos`
+- `cargo run -p fretboard -- diag run tools/diag-scripts/node-graph/node-graph-paint-only-marquee-select-does-not-rebuild-geometry.json --dir target/fret-diag-node-graph --launch -- cargo run -p fret-demo --bin node_graph_demo --features node-graph-demos`
+- `cargo run -p fretboard -- diag run tools/diag-scripts/node-graph/node-graph-paint-only-marquee-pointer-cancel-does-not-commit.json --dir target/fret-diag-node-graph --launch -- cargo run -p fret-demo --bin node_graph_demo --features node-graph-demos`
+- `cargo run -p fretboard -- diag run tools/diag-scripts/node-graph/node-graph-paint-only-node-drag-preview-and-commit.json --dir target/fret-diag-node-graph --launch -- cargo run -p fret-demo --bin node_graph_demo --features node-graph-demos`
+- `cargo run -p fretboard -- diag run tools/diag-scripts/node-graph/node-graph-paint-only-node-drag-escape-cancel-does-not-commit.json --dir target/fret-diag-node-graph --launch -- cargo run -p fret-demo --bin node_graph_demo --features node-graph-demos`
+- `cargo run -p fretboard -- diag run tools/diag-scripts/node-graph/node-graph-paint-only-node-drag-pointer-cancel-does-not-commit.json --dir target/fret-diag-node-graph --launch -- cargo run -p fret-demo --bin node_graph_demo --features node-graph-demos`
+- `cargo run -p fretboard -- diag run tools/diag-scripts/node-graph/node-graph-paint-only-fit-view-to-portals-updates-view.json --dir target/fret-diag-node-graph --launch -- cargo run -p fret-demo --bin node_graph_demo --features node-graph-demos`
+- `cargo run -p fretboard -- diag run tools/diag-scripts/node-graph/node-graph-paint-only-hover-shows-portal-tooltip.json --dir target/fret-diag-node-graph --launch -- cargo run -p fret-demo --bin node_graph_demo --features node-graph-demos`
+- `cargo run -p fretboard -- diag run tools/diag-scripts/node-graph/node-graph-paint-only-hover-tooltip-falls-back-to-hover-anchor.json --dir target/fret-diag-node-graph --launch -- cargo run -p fret-demo --bin node_graph_demo --features node-graph-demos`
+- `cargo run -p fretboard -- diag run tools/diag-scripts/node-graph/node-graph-paint-only-pan-pointer-cancel-does-not-rebuild-geometry.json --dir target/fret-diag-node-graph --launch -- cargo run -p fret-demo --bin node_graph_demo --features node-graph-demos`
 
 Run the promoted paint-only suite (IDs live in `tools/diag-scripts/index.json`):
 
-- `cargo run -p fretboard -- diag suite fret-examples-node-graph-paint-only --env FRET_NODE_GRAPH_DECLARATIVE=paint --dir target/fret-diag-node-graph --launch -- cargo run -p fret-demo --bin node_graph_demo --features node-graph-demos`
+- `cargo run -p fretboard -- diag suite fret-examples-node-graph-paint-only --dir target/fret-diag-node-graph --launch -- cargo run -p fret-demo --bin node_graph_demo --features node-graph-demos`
 
 Maintenance note:
 

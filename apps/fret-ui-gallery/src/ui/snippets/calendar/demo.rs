@@ -33,7 +33,9 @@ fn today_from_env_or_now() -> Date {
 }
 
 pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
-    let (month, selected) = cx.with_state(Models::default, |st| (st.month.clone(), st.selected.clone()));
+    let (month, selected) = cx.with_state(Models::default, |st| {
+        (st.month.clone(), st.selected.clone())
+    });
 
     let today = today_from_env_or_now();
 
@@ -64,8 +66,12 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
                 .rounded(Radius::Md)
                 .shadow_sm(),
         )
-        .refine_layout(LayoutRefinement::default().w_full().min_w_0().max_w(Px(980.0)))
+        .refine_layout(
+            LayoutRefinement::default()
+                .w_full()
+                .min_w_0()
+                .max_w(Px(980.0)),
+        )
         .into_element(cx)
 }
 // endregion: example
-

@@ -5,7 +5,7 @@
     "tags": ["node-graph", "declarative", "paint-only", "edges", "cache", "gate-steady-state"],
     "required_capabilities": ["diag.script_v2"],
     "target_hints": [
-      "Run with `FRET_NODE_GRAPH_DECLARATIVE=paint` so the paint-only declarative surface is active.",
+      "Run the `node_graph_demo` binary (it defaults to the paint-only declarative surface).",
       "This gate relies on a stable semantics `value` emitted by `node_graph.canvas`.",
       "It asserts the cached edges render-data rebuild counter remains stable while idling."
     ]
@@ -56,4 +56,3 @@
     { "type": "capture_bundle", "label": "node-graph-paint-only-steady-edges-cache" }
   ]
 }
-

@@ -37,7 +37,12 @@ fn today_from_env_or_now() -> Date {
 
 pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
     let (month, selected, from, to) = cx.with_state(Models::default, |st| {
-        (st.month.clone(), st.selected.clone(), st.from.clone(), st.to.clone())
+        (
+            st.month.clone(),
+            st.selected.clone(),
+            st.from.clone(),
+            st.to.clone(),
+        )
     });
 
     let today = today_from_env_or_now();
@@ -47,7 +52,10 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
     let month = match month {
         Some(model) => model,
         None => {
-            let model = cx.app.models_mut().insert(CalendarMonth::from_date(time_date));
+            let model = cx
+                .app
+                .models_mut()
+                .insert(CalendarMonth::from_date(time_date));
             cx.with_state(Models::default, |st| st.month = Some(model.clone()));
             model
         }
@@ -126,4 +134,3 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
     .into_element(cx)
 }
 // endregion: example
-

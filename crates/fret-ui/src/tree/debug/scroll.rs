@@ -1,4 +1,5 @@
 use super::super::*;
+use std::sync::Arc;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum UiDebugScrollHandleChangeKind {
@@ -13,10 +14,11 @@ pub enum UiDebugScrollAxis {
     Both,
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone)]
 pub struct UiDebugScrollNodeTelemetry {
     pub node: NodeId,
     pub element: Option<GlobalElementId>,
+    pub test_id: Option<Arc<str>>,
     pub axis: UiDebugScrollAxis,
     pub offset: fret_core::Point,
     pub viewport: fret_core::Size,

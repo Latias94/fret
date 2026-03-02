@@ -5,7 +5,7 @@
     "tags": ["node-graph", "declarative", "paint-only", "portal", "fit_view", "gate"],
     "required_capabilities": ["diag.script_v2"],
     "target_hints": [
-      "Run with `FRET_NODE_GRAPH_DECLARATIVE=paint` so the paint-only declarative surface is active.",
+      "Run the `node_graph_demo` binary (it defaults to the paint-only declarative surface).",
       "Requires `FRET_DIAG=1` (Ctrl+9 shortcut).",
       "This gates that portal subtrees are hosted declaratively, their bounds are harvested via LayoutQueryRegion, and a key command can consume those bounds to update the view model."
     ]

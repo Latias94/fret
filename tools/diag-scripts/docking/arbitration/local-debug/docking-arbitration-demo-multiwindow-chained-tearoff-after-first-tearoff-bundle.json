@@ -1,0 +1,62 @@
+{
+  "schema_version": 2,
+  "meta": {
+    "name": "Docking arbitration demo (debug): chained tear-off — capture bundle after first tear-off window appears",
+    "tags": ["docking", "multiwindow", "tearoff", "debug", "bundle"],
+    "required_capabilities": ["diag.script_v2", "diag.multi_window"],
+    "env_defaults": {
+      "FRET_DOCK_ALLOW_MULTI_WINDOW_TEAR_OFF": "1"
+    },
+    "target_hints": [
+      "Debug helper: tear off the left tab into a new OS window, then capture a bundle while focused on the last-seen window.",
+      "Use this to inspect whether test-id anchors (e.g. dock-arb-tab-drag-anchor-left) are present in the tear-off window."
+    ]
+  },
+  "steps": [
+    { "type": "press_key", "window": { "kind": "first_seen" }, "key": "escape" },
+    { "type": "wait_frames", "n": 2 },
+    {
+      "type": "set_window_outer_position",
+      "window": { "kind": "first_seen" },
+      "x_px": 120.0,
+      "y_px": 120.0
+    },
+    {
+      "type": "set_window_inner_size",
+      "window": { "kind": "first_seen" },
+      "width_px": 1600.0,
+      "height_px": 900.0
+    },
+    { "type": "wait_frames", "n": 2 },
+    {
+      "type": "wait_until",
+      "window": { "kind": "first_seen" },
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "dock-arb-tab-drag-anchor-left" }
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "drag_pointer_until",
+      "window": { "kind": "current" },
+      "target": { "kind": "test_id", "id": "dock-arb-tab-drag-anchor-left" },
+      "delta_x": -2400.0,
+      "delta_y": 0.0,
+      "steps": 160,
+      "predicate": { "kind": "known_window_count_ge", "n": 2 },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": { "kind": "known_window_count_ge", "n": 2 },
+      "timeout_frames": 240
+    },
+    { "type": "wait_frames", "n": 30 },
+    {
+      "type": "capture_bundle",
+      "window": { "kind": "last_seen" },
+      "label": "debug-after-first-tearoff-last-seen-window"
+    }
+  ]
+}

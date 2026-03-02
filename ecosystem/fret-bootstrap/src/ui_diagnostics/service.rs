@@ -56,6 +56,17 @@ struct TextFontStackKeyStability {
     stable_frames: u32,
 }
 
+#[derive(Debug, Clone)]
+struct CachedTestIdPredicateEval {
+    used_cache: bool,
+    ok: Option<bool>,
+    stale: bool,
+    test_id: Option<String>,
+    age_ms: Option<u64>,
+    window_snapshot_seq: Option<u64>,
+    max_age_ms: Option<u64>,
+}
+
 thread_local! {
     static SCRIPT_INJECTION_SCOPE: std::cell::Cell<bool> = std::cell::Cell::new(false);
 }
@@ -175,16 +186,11 @@ impl UiDiagnosticsService {
         current_window: AppWindowId,
         target: Option<&UiWindowTargetV1>,
     ) -> Option<AppWindowId> {
-        let first_seen = self
-            .known_windows
-            .iter()
-            .copied()
-            .min_by_key(|w| w.data().as_ffi());
-        let last_seen = self
-            .known_windows
-            .iter()
-            .copied()
-            .max_by_key(|w| w.data().as_ffi());
+        // `known_windows` is insertion-ordered by first observation. Treat `first_seen` /
+        // `last_seen` as "seen order", not numeric window ids (which are not guaranteed to be
+        // monotonic across backends).
+        let first_seen = self.known_windows.first().copied();
+        let last_seen = self.known_windows.last().copied();
         match target.copied().unwrap_or(UiWindowTargetV1::Current) {
             UiWindowTargetV1::Current => Some(current_window),
             UiWindowTargetV1::FirstSeen => first_seen,
@@ -193,14 +199,14 @@ impl UiDiagnosticsService {
                 .iter()
                 .copied()
                 .filter(|w| *w != current_window)
-                .min_by_key(|w| w.data().as_ffi()),
+                .next(),
             UiWindowTargetV1::LastSeen => last_seen,
             UiWindowTargetV1::LastSeenOther => self
                 .known_windows
                 .iter()
                 .copied()
                 .filter(|w| *w != current_window)
-                .max_by_key(|w| w.data().as_ffi()),
+                .last(),
             UiWindowTargetV1::WindowFfi { window } => {
                 let want = AppWindowId::from(KeyData::from_ffi(window));
                 self.known_windows.contains(&want).then_some(want)
@@ -266,20 +272,97 @@ impl UiDiagnosticsService {
         )
     }
 
+    pub(super) fn open_window_count_for_predicates(app: &App) -> u32 {
+        let from_runner = app
+            .global::<fret_runtime::RunnerWindowLifecycleDiagnosticsStore>()
+            .map(|store| store.snapshot().open_window_count);
+        let from_input_ctx = app
+            .global::<fret_runtime::WindowInputContextService>()
+            .map(|ctx_svc| ctx_svc.window_count() as u32);
+
+        from_runner
+            .or(from_input_ctx)
+            .unwrap_or(0)
+            .max(1)
+    }
+
+    const CACHED_TEST_ID_PREDICATE_MAX_AGE_MS: u64 = 30_000;
+
     fn eval_predicate_from_cached_test_id_bounds(
         &self,
         window: AppWindowId,
         predicate: &UiPredicateV1,
-    ) -> Option<bool> {
-        let ring = self.per_window.get(&window)?;
-        match predicate {
+    ) -> CachedTestIdPredicateEval {
+        let test_id = match predicate {
             UiPredicateV1::Exists {
                 target: UiSelectorV1::TestId { id, .. },
-            } => Some(ring.test_id_bounds.contains_key(id)),
-            UiPredicateV1::NotExists {
+            }
+            | UiPredicateV1::NotExists {
                 target: UiSelectorV1::TestId { id, .. },
-            } => Some(!ring.test_id_bounds.contains_key(id)),
+            } => Some(id.clone()),
             _ => None,
+        };
+        let Some(test_id) = test_id else {
+            return CachedTestIdPredicateEval {
+                used_cache: false,
+                ok: None,
+                stale: false,
+                test_id: None,
+                age_ms: None,
+                window_snapshot_seq: None,
+                max_age_ms: None,
+            };
+        };
+
+        let Some(ring) = self.per_window.get(&window) else {
+            return CachedTestIdPredicateEval {
+                used_cache: false,
+                ok: None,
+                stale: false,
+                test_id: Some(test_id),
+                age_ms: None,
+                window_snapshot_seq: None,
+                max_age_ms: None,
+            };
+        };
+        let Some(snapshot) = ring.snapshots.back() else {
+            return CachedTestIdPredicateEval {
+                used_cache: false,
+                ok: None,
+                stale: false,
+                test_id: Some(test_id),
+                age_ms: None,
+                window_snapshot_seq: None,
+                max_age_ms: None,
+            };
+        };
+
+        let age_ms = unix_ms_now().saturating_sub(snapshot.timestamp_unix_ms);
+        if age_ms > Self::CACHED_TEST_ID_PREDICATE_MAX_AGE_MS {
+            return CachedTestIdPredicateEval {
+                used_cache: true,
+                ok: None,
+                stale: true,
+                test_id: Some(test_id),
+                age_ms: Some(age_ms),
+                window_snapshot_seq: Some(snapshot.window_snapshot_seq),
+                max_age_ms: Some(Self::CACHED_TEST_ID_PREDICATE_MAX_AGE_MS),
+            };
+        }
+
+        let ok = match predicate {
+            UiPredicateV1::Exists { .. } => ring.test_id_bounds.contains_key(&test_id),
+            UiPredicateV1::NotExists { .. } => !ring.test_id_bounds.contains_key(&test_id),
+            _ => unreachable!("predicate already checked for test_id selector"),
+        };
+        CachedTestIdPredicateEval {
+            used_cache: true,
+            ok: Some(ok),
+            stale: false,
+            test_id: Some(test_id),
+            age_ms: Some(age_ms),
+            window_snapshot_seq: Some(snapshot.window_snapshot_seq),
+            max_age_ms: Some(Self::CACHED_TEST_ID_PREDICATE_MAX_AGE_MS),
         }
     }
 

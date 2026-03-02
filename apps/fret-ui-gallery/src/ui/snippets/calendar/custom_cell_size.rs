@@ -33,7 +33,9 @@ fn today_from_env_or_now() -> Date {
 }
 
 pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
-    let (month, selected) = cx.with_state(Models::default, |st| (st.month.clone(), st.selected.clone()));
+    let (month, selected) = cx.with_state(Models::default, |st| {
+        (st.month.clone(), st.selected.clone())
+    });
 
     let today = today_from_env_or_now();
 
@@ -63,4 +65,3 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
         .into_element(cx)
 }
 // endregion: example
-

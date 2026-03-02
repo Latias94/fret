@@ -156,6 +156,7 @@ impl<H: UiHost> UiTree<H> {
             let mut mark_dirty = false;
             let mut counter_update: Option<(InvalidationFlags, InvalidationFlags)> = None;
             let mut self_delta: i32 = 0;
+            let mut rebuild_subtree_layout_dirty: bool = false;
             let next_parent = if let Some(n) = self.nodes.get_mut(id) {
                 let next_parent = n.parent;
                 if invalidation_active {
@@ -209,10 +210,21 @@ impl<H: UiHost> UiTree<H> {
                 if agg_enabled {
                     let apply_delta = pending_layout_dirty_delta.saturating_add(self_delta);
                     if apply_delta != 0 {
-                        super::super::ui_tree_subtree_layout_dirty::apply_i32_delta_to_u32(
-                            &mut n.subtree_layout_dirty_count,
-                            apply_delta,
-                        );
+                        let underflow =
+                            super::super::ui_tree_subtree_layout_dirty::apply_i32_delta_to_u32(
+                                &mut n.subtree_layout_dirty_count,
+                                apply_delta,
+                            );
+                        if underflow {
+                            rebuild_subtree_layout_dirty = true;
+                            tracing::error!(
+                                node = ?id,
+                                element = ?n.element,
+                                stored = n.subtree_layout_dirty_count,
+                                delta = apply_delta,
+                                "subtree layout dirty count underflow during invalidation walk"
+                            );
+                        }
                     }
                 }
                 next_parent
@@ -224,9 +236,17 @@ impl<H: UiHost> UiTree<H> {
                 self.update_invalidation_counters(prev, next);
             }
 
+            if rebuild_subtree_layout_dirty {
+                self.rebuild_subtree_layout_dirty_counts_and_propagate(id);
+            }
+
             if agg_enabled {
                 agg_walk_len = agg_walk_len.saturating_add(1);
-                pending_layout_dirty_delta = pending_layout_dirty_delta.saturating_add(self_delta);
+                pending_layout_dirty_delta = if rebuild_subtree_layout_dirty {
+                    0
+                } else {
+                    pending_layout_dirty_delta.saturating_add(self_delta)
+                };
             }
 
             if did_stop {
@@ -380,6 +400,7 @@ impl<H: UiHost> UiTree<H> {
             let mut did_stop = false;
             let mut mark_dirty = false;
             let mut self_delta: i32 = 0;
+            let mut rebuild_subtree_layout_dirty: bool = false;
             let next_parent = if let Some(n) = self.nodes.get_mut(id) {
                 let next_parent = n.parent;
                 let mut counter_update: Option<(InvalidationFlags, InvalidationFlags)> = None;
@@ -430,10 +451,21 @@ impl<H: UiHost> UiTree<H> {
                 if agg_enabled {
                     let apply_delta = pending_layout_dirty_delta.saturating_add(self_delta);
                     if apply_delta != 0 {
-                        super::super::ui_tree_subtree_layout_dirty::apply_i32_delta_to_u32(
-                            &mut n.subtree_layout_dirty_count,
-                            apply_delta,
-                        );
+                        let underflow =
+                            super::super::ui_tree_subtree_layout_dirty::apply_i32_delta_to_u32(
+                                &mut n.subtree_layout_dirty_count,
+                                apply_delta,
+                            );
+                        if underflow {
+                            rebuild_subtree_layout_dirty = true;
+                            tracing::error!(
+                                node = ?id,
+                                element = ?n.element,
+                                stored = n.subtree_layout_dirty_count,
+                                delta = apply_delta,
+                                "subtree layout dirty count underflow during invalidation walk"
+                            );
+                        }
                     }
                 }
 
@@ -445,6 +477,10 @@ impl<H: UiHost> UiTree<H> {
                 break;
             };
 
+            if rebuild_subtree_layout_dirty {
+                self.rebuild_subtree_layout_dirty_counts_and_propagate(id);
+            }
+
             if did_stop {
                 if mark_dirty {
                     self.mark_cache_root_dirty(id, source, detail);
@@ -453,7 +489,11 @@ impl<H: UiHost> UiTree<H> {
             }
             if agg_enabled {
                 agg_walk_len = agg_walk_len.saturating_add(1);
-                pending_layout_dirty_delta = pending_layout_dirty_delta.saturating_add(self_delta);
+                pending_layout_dirty_delta = if rebuild_subtree_layout_dirty {
+                    0
+                } else {
+                    pending_layout_dirty_delta.saturating_add(self_delta)
+                };
             }
             if !invalidation_active && (!agg_enabled || pending_layout_dirty_delta == 0) {
                 break;

@@ -27,17 +27,22 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
         .get_model_cloned(&align_item_with_trigger, Invalidation::Paint)
         .unwrap_or(true);
     let select = shadcn::Select::new_controllable(cx, None, Some("banana"), None, false)
-        .trigger(shadcn::SelectTrigger::new().value(shadcn::SelectValue::new()))
-        .content(shadcn::SelectContent::new().align_item_with_trigger(align))
-        .entries([shadcn::SelectGroup::new([
-            shadcn::SelectItem::new("apple", "Apple").into(),
-            shadcn::SelectItem::new("banana", "Banana").into(),
-            shadcn::SelectItem::new("blueberry", "Blueberry").into(),
-            shadcn::SelectItem::new("grapes", "Grapes").into(),
-            shadcn::SelectItem::new("pineapple", "Pineapple").into(),
-        ])
-        .into()])
-        .into_element(cx);
+        .into_element_parts(
+            cx,
+            |_cx| shadcn::SelectTrigger::new().value(shadcn::SelectValue::new()),
+            |_cx| {
+                shadcn::SelectContent::new()
+                    .align_item_with_trigger(align)
+                    .with_entries([shadcn::SelectGroup::new([
+                        shadcn::SelectItem::new("apple", "Apple").into(),
+                        shadcn::SelectItem::new("banana", "Banana").into(),
+                        shadcn::SelectItem::new("blueberry", "Blueberry").into(),
+                        shadcn::SelectItem::new("grapes", "Grapes").into(),
+                        shadcn::SelectItem::new("pineapple", "Pineapple").into(),
+                    ])
+                    .into()])
+            },
+        );
 
     shadcn::FieldGroup::new([
         shadcn::Field::new([

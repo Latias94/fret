@@ -1,0 +1,198 @@
+{
+  "schema_version": 2,
+  "meta": {
+    "name": "ui-gallery-popover-overlay-placement-after-code-tab-scroll-range",
+    "required_capabilities": [
+      "diag.script_v2",
+      "diag.overlay_placement_trace",
+      "diag.screenshot_png"
+    ],
+    "tags": ["ui_gallery", "shadcn", "popover", "overlay", "tabs", "scroll", "regression"]
+  },
+  "steps": [
+    { "type": "reset_diagnostics" },
+    { "type": "press_key", "key": "escape" },
+    { "type": "wait_frames", "n": 2 },
+    { "type": "set_window_inner_size", "width_px": 1280.0, "height_px": 720.0 },
+    { "type": "wait_frames", "n": 20 },
+
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-nav-search" }
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "type_text_into",
+      "target": { "kind": "test_id", "id": "ui-gallery-nav-search" },
+      "text": "popover",
+      "clear_before_type": true,
+      "timeout_frames": 600
+    },
+    { "type": "wait_frames", "n": 4 },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-nav-popover" }
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "ensure_visible",
+      "target": { "kind": "test_id", "id": "ui-gallery-nav-popover" },
+      "within_window": true,
+      "padding_px": 8.0,
+      "timeout_frames": 600
+    },
+    { "type": "click_stable", "target": { "kind": "test_id", "id": "ui-gallery-nav-popover" } },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-page-popover" }
+      },
+      "timeout_frames": 600
+    },
+
+    {
+      "type": "scroll_into_view",
+      "container": { "kind": "test_id", "id": "ui-gallery-content-scroll" },
+      "target": { "kind": "test_id", "id": "ui-gallery-popover-with-form" },
+      "delta_y": -120.0,
+      "require_fully_within_window": true,
+      "padding_px": 24.0,
+      "timeout_frames": 1800
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-popover-with-form-trigger" }
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "click_stable",
+      "target": { "kind": "test_id", "id": "ui-gallery-popover-with-form-trigger" },
+      "stable_frames": 2,
+      "max_move_px": 2.0,
+      "timeout_frames": 900
+    },
+    { "type": "wait_frames", "n": 12 },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-popover-with-form-panel" }
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_overlay_placement_trace",
+      "query": { "kind": "anchored_panel" },
+      "timeout_frames": 600
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "bounds_within_window",
+        "target": { "kind": "test_id", "id": "ui-gallery-popover-with-form-panel" },
+        "padding_px": 0.0,
+        "eps_px": 1.0
+      }
+    },
+    {
+      "type": "capture_screenshot",
+      "label": "ui-gallery-popover-overlay-placement-after-code-tab-scroll-range.before_tab_switch"
+    },
+    { "type": "press_key", "key": "escape" },
+    { "type": "wait_frames", "n": 8 },
+
+    {
+      "type": "scroll_into_view",
+      "container": { "kind": "test_id", "id": "ui-gallery-content-scroll" },
+      "target": { "kind": "test_id", "id": "ui-gallery-popover-basic-tabs-trigger-code" },
+      "delta_y": -120.0,
+      "require_fully_within_window": true,
+      "padding_px": 24.0,
+      "timeout_frames": 900
+    },
+    {
+      "type": "click_stable",
+      "target": { "kind": "test_id", "id": "ui-gallery-popover-basic-tabs-trigger-code" },
+      "stable_frames": 2,
+      "max_move_px": 2.0,
+      "timeout_frames": 900
+    },
+    { "type": "wait_frames", "n": 12 },
+    {
+      "type": "capture_bundle",
+      "label": "ui-gallery-popover-overlay-placement-after-code-tab-scroll-range.after_tab_switch"
+    },
+
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "semantics_scroll_is_finite",
+        "target": { "kind": "test_id", "id": "ui-gallery-content-viewport" },
+        "field": "y_max"
+      }
+    },
+
+    {
+      "type": "scroll_into_view",
+      "container": { "kind": "test_id", "id": "ui-gallery-content-scroll" },
+      "target": { "kind": "test_id", "id": "ui-gallery-popover-with-form" },
+      "delta_y": -120.0,
+      "require_fully_within_window": true,
+      "padding_px": 24.0,
+      "timeout_frames": 1800
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-popover-with-form-trigger" }
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "click_stable",
+      "target": { "kind": "test_id", "id": "ui-gallery-popover-with-form-trigger" },
+      "stable_frames": 2,
+      "max_move_px": 2.0,
+      "timeout_frames": 900
+    },
+    { "type": "wait_frames", "n": 12 },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-popover-with-form-panel" }
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_overlay_placement_trace",
+      "query": { "kind": "anchored_panel" },
+      "timeout_frames": 600
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "bounds_within_window",
+        "target": { "kind": "test_id", "id": "ui-gallery-popover-with-form-panel" },
+        "padding_px": 0.0,
+        "eps_px": 1.0
+      }
+    },
+    {
+      "type": "capture_screenshot",
+      "label": "ui-gallery-popover-overlay-placement-after-code-tab-scroll-range.after_tab_switch.popover_visible"
+    },
+    { "type": "capture_bundle", "label": "ui-gallery-popover-overlay-placement-after-code-tab-scroll-range" }
+  ]
+}

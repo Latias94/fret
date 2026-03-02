@@ -5,7 +5,7 @@
     "tags": ["node-graph", "declarative", "paint-only", "marquee", "selection", "cache", "gate"],
     "required_capabilities": ["diag.script_v2"],
     "target_hints": [
-      "Run with `FRET_NODE_GRAPH_DECLARATIVE=paint` so the paint-only declarative surface is active.",
+      "Run the `node_graph_demo` binary (it defaults to the paint-only declarative surface).",
       "Requires `FRET_DIAG=1` (diagnostics-only shortcuts).",
       "Uses the diagnostics-only normalize+offset shortcut (Ctrl+5) to place a node near (but not under) the canvas center.",
       "Asserts that marquee selection updates view-state without rebuilding cached node/edge geometry render data."

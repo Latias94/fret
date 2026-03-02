@@ -32,11 +32,14 @@ fn today_from_env_or_now() -> Date {
 }
 
 pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
-    let (month, selected) = cx.with_state(Models::default, |st| (st.month.clone(), st.selected.clone()));
+    let (month, selected) = cx.with_state(Models::default, |st| {
+        (st.month.clone(), st.selected.clone())
+    });
 
     let today = today_from_env_or_now();
-    let week_number_initial = time::Date::from_calendar_date(today.year(), time::Month::January, 12)
-        .expect("valid week number initial date");
+    let week_number_initial =
+        time::Date::from_calendar_date(today.year(), time::Month::January, 12)
+            .expect("valid week number initial date");
 
     let month = match month {
         Some(model) => model,
@@ -66,4 +69,3 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
         .into_element(cx)
 }
 // endregion: example
-

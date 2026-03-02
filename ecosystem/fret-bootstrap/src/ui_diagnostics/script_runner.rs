@@ -77,6 +77,7 @@ impl UiDiagnosticsService {
             web_ime_trace: Vec::new(),
             ime_event_trace: Vec::new(),
             last_explicit_cursor_override: None,
+            last_explicit_cursor_override_pos: None,
         };
 
         // Avoid leaking clipboard responses across runs. Script steps that assert clipboard state
@@ -181,16 +182,16 @@ impl UiDiagnosticsService {
             _ => false,
         });
 
+        // Only drag-playback steps (which can explicitly remap captured drags) should "follow"
+        // the runner-owned dock drag source window. Pointer sessions are window-local by default
+        // and have their own migration rules; including them here can cause nudge ping-pong
+        // between the drag source and a window-targeted step.
         let step_allows_dock_drag_migration = matches!(
             step,
             Some(
                 UiActionStepV2::DragPointer { .. }
                     | UiActionStepV2::DragPointerUntil { .. }
                     | UiActionStepV2::DragTo { .. }
-                    | UiActionStepV2::PointerDown { .. }
-                    | UiActionStepV2::PointerMove { .. }
-                    | UiActionStepV2::PointerUp { .. }
-                    | UiActionStepV2::SetMouseButtons { .. }
             )
         );
         let allow_migrate_for_dock_drag =

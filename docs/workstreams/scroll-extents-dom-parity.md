@@ -339,18 +339,18 @@ Evidence anchors:
 
 ### Flex/Grid probe-pass behavior
 
-`flex` and `grid` widgets treat `LayoutPassKind::Probe` as “run measure() under definite available
-space”.
+`flex`, `grid`, and `text` widgets treat `LayoutPassKind::Probe` as “run measure() under a
+viewport-sized budget”, but the budget is now constructed via `LayoutCx::probe_constraints_for_size(...)`
+so overflow contexts can override the scroll axis to `MaxContent`.
 
-This preserves “probe pass does not see infinite viewport” invariants, but it also means that any
-prototype that uses probe passes to derive extents must ensure probe constraints represent the
-intended scroll-axis budget (or avoid probe passes entirely for extent derivation).
+This preserves “probe pass does not see infinite viewport” invariants on the cross axis, while
+still allowing scroll surfaces to opt into DOM/GPUI-like overflow observability.
 
 Evidence anchors:
 
 - Flex: `crates/fret-ui/src/declarative/host_widget/layout/flex.rs`
 - Grid: `crates/fret-ui/src/declarative/host_widget/layout/grid.rs`
-- Text (probe pass also hard-codes definite available space): `crates/fret-ui/src/declarative/host_widget/layout.rs`
+- Text: `crates/fret-ui/src/declarative/host_widget/layout.rs`
 
 ### Absolute-positioned nodes inclusion is inconsistent
 
@@ -428,12 +428,29 @@ Implementation status:
   propagated through `LayoutCx` / `UiTree::layout_in_with_pass_kind`. In the post-layout extents
   gate, scroll roots install a context that sets the scroll axis probe budget to `MaxContent` so
   wrapper-heavy subtrees can measure descendants without a hard scroll-axis clamp.
+- SE-111 (clamp policy hook) is implemented. Under the scroll-installed overflow context, `Auto`
+  sizing is allowed to exceed the viewport-sized `available` budget on the scroll axis, so
+  overflow becomes visible in `node_bounds` for post-layout extent derivation.
+  - Evidence:
+    - Context field: `crates/fret-ui/src/layout/overflow.rs` (`allow_overflow_on_auto`)
+    - Clamp helper: `crates/fret-ui/src/declarative/layout_helpers.rs` (`clamp_to_constraints_with_overflow_context`)
+    - Clamp adoption: `crates/fret-ui/src/declarative/host_widget/layout.rs`
+    - Scroll installs: `crates/fret-ui/src/declarative/host_widget/layout/scrolling.rs`
 - SE-113 (absolute exclusion parity) is implemented. Post-layout overflow observation now excludes
   absolute-positioned nodes by default, matching the intrinsic measurement skip behavior.
 - SE-114 (bounded-observation telemetry) is implemented. When wrapper peeling or bounded deep scan
   hits its budget, `UiDebugScrollNodeTelemetry` records an `overflow_observation` payload for the
   scroll node (and `FRET_DEBUG_SCROLL_EXTENT_PROBE=1` prints a budget-hit log line).
-  - Tooling: `fretboard diag query scroll-extents-observation <bundle_dir|bundle.schema2.json> --json`
+  - Tooling: `fretboard diag query scroll-extents-observation <base_out_dir|session_out_dir|bundle_dir|bundle.schema2.json> --json`
+    - The JSON output includes a best-effort `test_id` field (nearest ancestor semantics decoration),
+      to make “budget hit” reports easier to triage in UI Gallery pages.
+    - Filter modes:
+      - Default: only rows where observation hit its wrapper/deep-scan budget (actionable).
+      - `--deep-scan`: include rows where a bounded deep scan ran (even if it stayed under budget).
+      - `--all`: include all scroll nodes (may be large).
+  - Perf note: the bounded deep scan is edge-gated (only allowed when the user is already at the
+    current scroll-extent edge and the extent may be stale). This avoids spending scan budget on
+    frames where a temporarily stale extent cannot cause “pinned scroll range” regressions.
 
 ## Verification Plan (SE-210)
 
@@ -456,9 +473,12 @@ Evidence anchors:
 
 ### Non-unit-testable (for now)
 
-- **Overlay anchoring parity** (reanchoring and scroll extent updates staying in sync) requires a
-  higher-level harness (diag scripts or integration tests) and is tracked separately until the
-  overlay/anchor query surface is directly assertable in unit tests.
+- **Overlay anchoring parity** (reanchoring and scroll extent updates staying in sync) is covered
+  via UI Gallery diag scripts while SE-200 remains behind a gate:
+  - Tooltip (hover-triggered anchored panel): `tools/diag-scripts/ui-gallery/overlay/ui-gallery-tooltip-overlay-placement-after-code-tab-scroll-range.json`
+  - Popover (click-triggered anchored panel): `tools/diag-scripts/ui-gallery/popover/ui-gallery-popover-overlay-placement-after-code-tab-scroll-range.json`
+  - These scripts assert (1) scroll extents remain finite after code-tab content growth and (2)
+    reopened overlays remain clamped within the window.
 
 ## Reference Direction (GPUI / DOM)
 

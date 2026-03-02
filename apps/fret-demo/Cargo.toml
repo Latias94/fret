@@ -27,6 +27,7 @@ hotpatch = [
     "dep:fret-ui-shadcn",
 ]
 node-graph-demos = ["fret-examples/node-graph-demos"]
+node-graph-demos-legacy = ["fret-examples/node-graph-demos-legacy"]
 
 [dependencies]
 

@@ -543,9 +543,15 @@ pub struct UiFrameStatsV1 {
     #[serde(default)]
     pub renderer_custom_effect_v2_passes_emitted: u64,
     #[serde(default)]
+    pub renderer_custom_effect_v2_user_image_incompatible_fallbacks: u64,
+    #[serde(default)]
     pub renderer_custom_effect_v3_steps_requested: u64,
     #[serde(default)]
     pub renderer_custom_effect_v3_passes_emitted: u64,
+    #[serde(default)]
+    pub renderer_custom_effect_v3_user0_image_incompatible_fallbacks: u64,
+    #[serde(default)]
+    pub renderer_custom_effect_v3_user1_image_incompatible_fallbacks: u64,
     #[serde(default)]
     pub renderer_custom_effect_v3_sources_raw_requested: u64,
     #[serde(default)]
@@ -560,6 +566,10 @@ pub struct UiFrameStatsV1 {
     pub renderer_custom_effect_v3_sources_pyramid_degraded_to_one_budget_zero: u64,
     #[serde(default)]
     pub renderer_custom_effect_v3_sources_pyramid_degraded_to_one_budget_insufficient: u64,
+    #[serde(default)]
+    pub renderer_custom_effect_v3_pyramid_cache_hits: u64,
+    #[serde(default)]
+    pub renderer_custom_effect_v3_pyramid_cache_misses: u64,
     #[serde(default)]
     pub renderer_backdrop_source_groups_requested: u64,
     #[serde(default)]
@@ -918,8 +928,13 @@ impl UiFrameStatsV1 {
             renderer_custom_effect_v1_passes_emitted: 0,
             renderer_custom_effect_v2_steps_requested: 0,
             renderer_custom_effect_v2_passes_emitted: 0,
+            renderer_custom_effect_v2_user_image_incompatible_fallbacks: 0,
             renderer_custom_effect_v3_steps_requested: 0,
             renderer_custom_effect_v3_passes_emitted: 0,
+            renderer_custom_effect_v3_user0_image_incompatible_fallbacks: 0,
+            renderer_custom_effect_v3_user1_image_incompatible_fallbacks: 0,
+            renderer_custom_effect_v3_pyramid_cache_hits: 0,
+            renderer_custom_effect_v3_pyramid_cache_misses: 0,
             renderer_custom_effect_v3_sources_raw_requested: 0,
             renderer_custom_effect_v3_sources_raw_distinct: 0,
             renderer_custom_effect_v3_sources_raw_aliased_to_src: 0,
@@ -1081,10 +1096,20 @@ impl UiFrameStatsV1 {
                 sample.perf.custom_effect_v2_steps_requested;
             out.renderer_custom_effect_v2_passes_emitted =
                 sample.perf.custom_effect_v2_passes_emitted;
+            out.renderer_custom_effect_v2_user_image_incompatible_fallbacks =
+                sample.perf.custom_effect_v2_user_image_incompatible_fallbacks;
             out.renderer_custom_effect_v3_steps_requested =
                 sample.perf.custom_effect_v3_steps_requested;
             out.renderer_custom_effect_v3_passes_emitted =
                 sample.perf.custom_effect_v3_passes_emitted;
+            out.renderer_custom_effect_v3_user0_image_incompatible_fallbacks =
+                sample.perf.custom_effect_v3_user0_image_incompatible_fallbacks;
+            out.renderer_custom_effect_v3_user1_image_incompatible_fallbacks =
+                sample.perf.custom_effect_v3_user1_image_incompatible_fallbacks;
+            out.renderer_custom_effect_v3_pyramid_cache_hits =
+                sample.perf.custom_effect_v3_pyramid_cache_hits;
+            out.renderer_custom_effect_v3_pyramid_cache_misses =
+                sample.perf.custom_effect_v3_pyramid_cache_misses;
 
             let effects = sample.perf.effect_degradations;
             out.renderer_custom_effect_v3_sources_raw_requested =

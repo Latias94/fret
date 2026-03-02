@@ -5,7 +5,7 @@
     "tags": ["node-graph", "declarative", "paint-only", "portal", "hover", "tooltip", "gate", "fallback"],
     "required_capabilities": ["diag.script_v2"],
     "target_hints": [
-      "Run with `FRET_NODE_GRAPH_DECLARATIVE=paint` so the paint-only declarative surface is active.",
+      "Run the `node_graph_demo` binary (it defaults to the paint-only declarative surface).",
       "Requires `FRET_DIAG=1` (Ctrl+4 normalization, Ctrl+8 disable portals).",
       "This gates that hover-driven overlays do not depend on portal hosting caps; tooltip falls back to HoverAnchorStore."
     ]

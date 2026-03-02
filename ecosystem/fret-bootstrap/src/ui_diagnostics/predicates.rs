@@ -178,6 +178,16 @@ fn eval_predicate_without_semantics(
                 .and_then(|d| d.tab_strip_active_visibility.as_ref())
                 .is_some_and(|s| s.active_visible == *visible),
         ),
+        UiPredicateV1::DockTabStripActiveScrollPxGe { px } => Some(
+            docking
+                .and_then(|d| d.tab_strip_active_visibility.as_ref())
+                .is_some_and(|s| s.scroll.0 >= *px),
+        ),
+        UiPredicateV1::DockTabStripActiveScrollPxLe { px } => Some(
+            docking
+                .and_then(|d| d.tab_strip_active_visibility.as_ref())
+                .is_some_and(|s| s.scroll.0 <= *px),
+        ),
         UiPredicateV1::WorkspaceTabStripActiveOverflowIs { overflow, pane_id } => Some(
             workspace
                 .and_then(|w| {
@@ -1058,6 +1068,12 @@ fn eval_predicate(
         UiPredicateV1::DockTabStripActiveVisibleIs { visible } => docking
             .and_then(|d| d.tab_strip_active_visibility.as_ref())
             .is_some_and(|s| s.active_visible == *visible),
+        UiPredicateV1::DockTabStripActiveScrollPxGe { px } => docking
+            .and_then(|d| d.tab_strip_active_visibility.as_ref())
+            .is_some_and(|s| s.scroll.0 >= *px),
+        UiPredicateV1::DockTabStripActiveScrollPxLe { px } => docking
+            .and_then(|d| d.tab_strip_active_visibility.as_ref())
+            .is_some_and(|s| s.scroll.0 <= *px),
         UiPredicateV1::WorkspaceTabStripActiveOverflowIs { overflow, pane_id } => workspace
             .and_then(|w| {
                 w.tab_strip_active_visibility.iter().rev().find(|s| {

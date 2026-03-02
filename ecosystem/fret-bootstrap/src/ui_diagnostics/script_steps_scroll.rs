@@ -95,6 +95,7 @@ pub(super) fn handle_scroll_into_view_step(
         },
     };
 
+    let _ = _app;
     let container_node = select_semantics_node_with_trace(
         snapshot,
         window,
