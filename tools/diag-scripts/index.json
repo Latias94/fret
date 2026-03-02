@@ -128,6 +128,29 @@
       ]
     },
     {
+      "id": "cookbook-node-graph-theme-presets-screenshots",
+      "path": "tools/diag-scripts/cookbook/node-graph-theme-presets/node-graph-theme-presets-screenshots.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "cookbook-node-graph-theme-presets"
+      ],
+      "tags": [
+        "cookbook",
+        "node_graph",
+        "theme_presets",
+        "screenshots",
+        "smoke"
+      ],
+      "target_hints": [
+        "Waits for node_graph.canvas to exist.",
+        "Cycles preset family (Ctrl+Shift+P) and captures 3 screenshots + bundle.",
+        "Optional: set FRET_NODE_GRAPH_DEMO_PRESET_JSON_PATH to load custom JSON presets."
+      ]
+    },
+    {
       "id": "cookbook-overlay-basics-dialog-close",
       "path": "tools/diag-scripts/cookbook/overlay-basics/cookbook-overlay-basics-dialog-close.json",
       "required_capabilities": [
