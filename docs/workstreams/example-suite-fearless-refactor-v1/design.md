@@ -180,6 +180,7 @@ Legend:
 | simple-todo | 1 | App | state | Template | ✅ | ✅ | MVU + keyed lists | diag script: add/remove rows |
 | todo | 2 | App | state | Template | ✅ | (optional) | selectors + queries baseline | diag script: “golden path” actions |
 | cookbook.commands_keymap_basics | 2 | App | input | Example | ✅ | ✅ | commands + shortcuts | diag script: key injection |
+| cookbook.undo_basics | 2 | App | state | Example | ✅ | ✅ | app-owned undo/redo (`fret-undo`) | diag script: press_shortcut undo/redo |
 | cookbook.text_input_basics | 2 | App | input | Example | ✅ | ✅ | text input + submit/clear commands | diag script: submit + value gate |
 | cookbook.overlay_basics | 2 | App | overlays | Example | ✅ | ✅ | dialog basics + focus restore | diag suite: overlay conformance |
 | cookbook.virtual_list_basics | 2 | App | perf | Example | ✅ | ✅ | virtualization + stable identity | perf gate (worst-frame) |
@@ -187,7 +188,7 @@ Legend:
 | cookbook.theme_switching_basics | 2 | App | theming | Example | ✅ | ✅ | preset switch + token reads | screenshot gate (light/dark) |
 | cookbook.icons_and_assets_basics | 2 | App | assets | Example | ✅ | ✅ | icons + image/SVG budgets | screenshot gate |
 | data-table | 3 | App | data | Gallery Page | ✅ | ✅ | headless table + sizing/pinning | layout gate + perf baseline |
-| markdown-and-code | 3 | App | docs | Example | ✅ | ✅ | markdown + syntax + copy button | screenshot gate |
+| cookbook.markdown_and_code_basics | 3 | App | docs | Example | ✅ | ✅ | markdown + syntax + copy button | screenshot gate |
 | docking-basics | 3 | Interop | docking | Example | ✅ | ⛔ | dock model + UI policy | diag script + checklist anchor |
 | docking-arbitration | 4 | Interop | docking | Harness | ✅ | ⛔ | multi-root overlays + input arbitration | diag suite (ADR checklist) |
 | multi-window-tearoff | 4 | Interop | windows | Lab/Harness | ✅ | ⛔ | tear-off + DPI + drag | manual + diag evidence |

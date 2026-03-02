@@ -17,7 +17,7 @@ Status legend:
 ## M0 — Lock the catalog + the ladder (docs-first)
 
 - [ ] Add a short pointer from:
-  - [ ] `docs/README.md` (“Start here” section) to this workstream
+  - [x] `docs/README.md` (“Start here” section) to this workstream
   - [ ] `docs/first-hour.md` (link to the canonical ladder + cookbook)
 - [x] Add appendices to make execution repeatable and prevent drift:
   - [x] `inventory.md` (catalog → current anchors)
@@ -47,11 +47,12 @@ Goal: create a lightweight, user-facing cookbook that does not pull “everythin
   - [~] Keep deps minimal; prefer `fret` + ecosystem surfaces (avoid backend crates unless the example is about that boundary).
 - [ ] Implement the “Stage 0–2” ladder examples as `examples/`:
   - [x] `hello`
-  - [ ] `simple-todo`
+  - [x] `simple-todo`
   - [ ] `todo` (or keep as template-only, but ensure the runnable “golden” stays obvious)
 - [ ] Add 6–10 focused cookbook examples (App Track):
   - [x] overlays basics (`overlay_basics`)
   - [x] commands + keymap (`commands_keymap_basics`)
+  - [x] undo/redo basics (`undo_basics`)
   - [x] text input basics (`text_input_basics`)
   - [x] theme switching (`theme_switching_basics`)
   - [x] icons + assets budgets (`icons_and_assets_basics`)
@@ -62,8 +63,8 @@ Goal: create a lightweight, user-facing cookbook that does not pull “everythin
 
 Gates:
 
-- [ ] Each example stamps stable `test_id`s for primary controls.
-- [ ] Add at least one `fretboard diag run` script per example (or a shared suite).
+- [x] Each example stamps stable `test_id`s for primary controls.
+- [x] Add at least one `fretboard diag run` script per example (or a shared suite).
 
 ## M2 — Consolidate the demo registry (reduce duplication)
 
@@ -118,11 +119,11 @@ Reference apps (app-scale):
 
 ## M4 — Documentation + discoverability polish
 
-- [ ] Add a single “Examples” index doc that links:
-  - [ ] the ladder
-  - [ ] cookbook topics
-  - [ ] UI gallery (component catalog)
-  - [ ] diagnostics bundles/scripts
+- [x] Add a single “Examples” index doc that links:
+  - [x] the ladder
+  - [x] cookbook topics
+  - [x] UI gallery (component catalog)
+  - [x] diagnostics bundles/scripts
 - [ ] Ensure `README.md` only links the *canonical* path (avoid scattering run commands).
 - [ ] Add contribution rules:
   - [ ] how to add a new official example

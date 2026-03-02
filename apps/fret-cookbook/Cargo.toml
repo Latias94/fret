@@ -22,3 +22,4 @@ fret-ui-assets = { path = "../../ecosystem/fret-ui-assets", default-features = f
 fret-executor = { path = "../../ecosystem/fret-executor" }
 fret-markdown = { path = "../../ecosystem/fret-markdown", default-features = false, features = ["ui", "syntax-rust"] }
 fret-code-view = { path = "../../ecosystem/fret-code-view", default-features = false }
+fret-undo = { path = "../../ecosystem/fret-undo" }

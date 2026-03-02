@@ -43,8 +43,10 @@ examples and should be treated as product surfaces.
 |---|---|---|---|---|
 | cookbook.hello | Keep | `apps/fret-cookbook/examples/hello.rs` | `cargo run -p fret-cookbook --example hello` | Minimal “hello” runnable. |
 | cookbook.hello_counter | Keep | `apps/fret-cookbook/examples/hello_counter.rs` | `cargo run -p fret-cookbook --example hello_counter` | Small MVU + Model counter; stable `test_id` set. |
+| cookbook.simple_todo | Keep | `apps/fret-cookbook/examples/simple_todo.rs` | `cargo run -p fret-cookbook --example simple_todo` | Minimal todo list (MVU + keyed rows) intended for copy/paste. |
 | cookbook.overlay_basics | Keep | `apps/fret-cookbook/examples/overlay_basics.rs` | `cargo run -p fret-cookbook --example overlay_basics` | Minimal dialog example with stable `test_id` stamps. |
 | cookbook.commands_keymap_basics | Keep | `apps/fret-cookbook/examples/commands_keymap_basics.rs` | `cargo run -p fret-cookbook --example commands_keymap_basics` | Command registration + default keybinding + availability gating. |
+| cookbook.undo_basics | Keep | `apps/fret-cookbook/examples/undo_basics.rs` | `cargo run -p fret-cookbook --example undo_basics` | App-owned undo/redo history (`fret-undo`) wired to `edit.undo/edit.redo` commands. |
 | cookbook.text_input_basics | Keep | `apps/fret-cookbook/examples/text_input_basics.rs` | `cargo run -p fret-cookbook --example text_input_basics` | Input submit/clear via commands (Enter/Escape) + numeric semantics gates. |
 | cookbook.effects_layer_basics | Keep | `apps/fret-cookbook/examples/effects_layer_basics.rs` | `cargo run -p fret-cookbook --example effects_layer_basics` | Minimal effect layer example (Pixelate/Blur) with stable `test_id` stamps. |
 | cookbook.icons_and_assets_basics | Keep | `apps/fret-cookbook/examples/icons_and_assets_basics.rs` | `cargo run -p fret-cookbook --example icons_and_assets_basics` | Icon packs (lucide/radix) + semantic `ui.*` ids + file-based SVG/images via `fret-ui-assets`. |
@@ -59,6 +61,10 @@ These are the next "small but high-signal" recipes to add, in easy -> hard order
 
 | ID | State | Target anchors | Notes |
 |---|---|---|---|
+| cookbook.docking_basics | Planned | `apps/fret-cookbook/examples/docking_basics.rs` | Minimal docking surface: core model ops + UI policy via `fret-docking`. |
+| cookbook.canvas_pan_zoom_basics | Planned | `apps/fret-cookbook/examples/canvas_pan_zoom_basics.rs` | `fret-canvas` pan/zoom + hit-testing + selection basics. |
+| cookbook.chart_interactions_basics | Planned | `apps/fret-cookbook/examples/chart_interactions_basics.rs` | `fret-chart` or `fret-plot` interactions (hover/drag) with a minimal diag script. |
+| cookbook.gizmo_basics | Planned | `apps/fret-cookbook/examples/gizmo_basics.rs` | `fret-gizmo` wiring + viewport-style transforms (native-first). |
 
 ## Interop + renderer “high ceiling” mapping
 

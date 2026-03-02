@@ -1896,6 +1896,7 @@ dependencies = [
  "fret-runtime",
  "fret-ui",
  "fret-ui-assets",
+ "fret-undo",
 ]
 
 [[package]]
