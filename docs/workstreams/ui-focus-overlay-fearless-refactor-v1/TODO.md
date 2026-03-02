@@ -26,8 +26,8 @@ Tracking doc: `docs/workstreams/ui-focus-overlay-fearless-refactor-v1/DESIGN.md`
 - [ ] Remove remaining containment queries that rely on live-tree parent walks during dispatch
   (replace with snapshot queries).
 - [ ] Add conformance coverage for nested scenarios:
-  - [ ] trapped focus scope inside a modal overlay root (portal-style nested roots)
-  - [ ] multiple stacked trapped scopes (inner scope wins)
+  - [x] trapped focus scope inside a modal overlay root (portal-style nested roots)
+  - [x] multiple stacked trapped scopes (inner scope wins)
   - [x] barrier active during close transitions (focus restoration while pointer underlay stays blocked)
 
 ## Nice-to-haves (separate workstreams if they expand)

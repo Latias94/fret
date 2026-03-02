@@ -34,6 +34,8 @@ Progress (2026-03-02):
 
 - Close-transition style focus barrier (hit-test-inert layer) is covered by:
   - `crates/fret-ui/src/tree/tests/focus_barrier_transition.rs`
+- Layer-root (portal-style) focus scope trapping is covered by:
+  - `crates/fret-ui/src/tree/tests/focus_scope_layered.rs`
 
 ## M3 — Snapshot-first dispatch (C phase)
 
