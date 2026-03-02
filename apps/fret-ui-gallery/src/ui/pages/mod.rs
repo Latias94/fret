@@ -37,9 +37,11 @@ mod menubar;
 mod motion_presets;
 mod native_select;
 mod navigation_menu;
+mod pagination;
 mod popover;
 mod scroll_area;
 mod select;
+mod separator;
 mod shadcn_extras;
 mod sheet;
 mod skeleton;
@@ -262,8 +264,16 @@ pub(super) fn preview_navigation_menu(cx: &mut ElementContext<'_, App>) -> Vec<A
     navigation_menu::preview_navigation_menu(cx)
 }
 
+pub(super) fn preview_pagination(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
+    pagination::preview_pagination(cx)
+}
+
 pub(super) fn preview_scroll_area(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
     scroll_area::preview_scroll_area(cx)
+}
+
+pub(super) fn preview_separator(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
+    separator::preview_separator(cx)
 }
 
 pub(super) fn preview_motion_presets(

@@ -4,7 +4,6 @@ mod calendar;
 mod composites;
 mod forms;
 mod misc;
-mod navigation;
 mod selection;
 
 pub(in crate::ui) use basics::*;
@@ -13,5 +12,4 @@ pub(in crate::ui) use calendar::*;
 pub(in crate::ui) use composites::*;
 pub(in crate::ui) use forms::*;
 pub(in crate::ui) use misc::*;
-pub(in crate::ui) use navigation::*;
 pub(in crate::ui) use selection::*;
