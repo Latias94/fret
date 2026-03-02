@@ -575,7 +575,7 @@ fn page_preview(
         PAGE_NAVIGATION_MENU => pages::preview_navigation_menu(cx),
         PAGE_PAGINATION => pages::preview_pagination(cx),
         PAGE_POPOVER => pages::preview_popover(cx, popover_open),
-        PAGE_RADIO_GROUP => preview_radio_group(cx),
+        PAGE_RADIO_GROUP => pages::preview_radio_group(cx),
         PAGE_SEPARATOR => pages::preview_separator(cx),
         PAGE_SHEET => pages::preview_sheet(cx, sheet_open),
         PAGE_SIDEBAR => preview_sidebar(cx),

@@ -39,6 +39,7 @@ mod native_select;
 mod navigation_menu;
 mod pagination;
 mod popover;
+mod radio_group;
 mod scroll_area;
 mod select;
 mod separator;
@@ -262,6 +263,10 @@ pub(super) fn preview_native_select(cx: &mut ElementContext<'_, App>) -> Vec<Any
 
 pub(super) fn preview_navigation_menu(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
     navigation_menu::preview_navigation_menu(cx)
+}
+
+pub(super) fn preview_radio_group(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
+    radio_group::preview_radio_group(cx)
 }
 
 pub(super) fn preview_pagination(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
