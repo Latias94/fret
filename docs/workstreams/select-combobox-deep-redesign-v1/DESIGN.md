@@ -35,6 +35,32 @@ Fret is a GPU-first renderer, so we do not port DOM/CSS mechanics 1:1. The goal 
 This redesign should **prefer adding a reusable headless substrate in `fret-ui-kit`** and keeping
 shadcn-specific defaults in `fret-ui-shadcn`.
 
+### Style helpers (policy)
+
+Upstream shadcn/ui occasionally exports helper functions (typically Tailwind/CVA-derived) such as
+`buttonVariants`, `tabsListVariants`, or `navigationMenuTriggerStyle`. In Fret, these helpers are
+*optional*: we only port them when they are a useful **authoring surface**, not when they are
+implementation details.
+
+Rules of thumb:
+
+- Prefer a helper only when it improves copy/paste parity for upstream examples *or* eliminates
+  repeated, error-prone layout constraints (`w-full`, `min-w-0`, `flex-1`, `truncate`, etc.).
+- Helpers must be **pure** and **mergeable**:
+  - They should return `ChromeRefinement`, `LayoutRefinement`, and/or typed style enums that map
+    to those refinements.
+  - They should not mutate models, install providers, or read global runtime state.
+- Helpers must not encode a selector engine:
+  - No DOM/CSS selector assumptions (`[data-state=...]`, `:has(...)`, etc.) in the helper surface.
+  - Interactive state styling remains recipe-owned (driven by `WidgetStates` + typed overrides).
+- Naming:
+  - Prefer Rust idioms as the canonical export (`snake_case` function + typed enums).
+  - If upstream uses a camelCase helper name and it is valuable for copy/paste parity, add a thin
+    alias (e.g. `buttonVariants(...)` forwarding to `button_variants(...)`) in `fret-ui-shadcn`.
+- Do not expose “versioned” identifiers in **component/recipe** public APIs (`v4`, `V4`, etc.).
+  Treat versions as documentation-only. (Theme preset helpers may remain versioned when they map to
+  an upstream versioned theme name.)
+
 ### Existing substrate (reuse-first)
 
 We already have meaningful substrate in `ecosystem/fret-ui-kit` for the reference-stack outcomes:

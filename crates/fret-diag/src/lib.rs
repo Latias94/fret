@@ -421,6 +421,7 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
     let mut check_stale_scene_test_id: Option<String> = None;
     let mut check_stale_scene_eps: f32 = 0.5;
     let mut check_pixels_changed_test_id: Option<String> = None;
+    let mut check_pixels_unchanged_test_id: Option<String> = None;
     let mut check_ui_gallery_code_editor_torture_marker_present: bool = false;
     let mut check_ui_gallery_code_editor_torture_undo_redo: bool = false;
     let mut check_ui_gallery_code_editor_torture_geom_fallbacks_low: bool = false;
@@ -1287,6 +1288,14 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                 check_pixels_changed_test_id = Some(v);
                 i += 1;
             }
+            "--check-pixels-unchanged" => {
+                i += 1;
+                let Some(v) = args.get(i).cloned() else {
+                    return Err("missing value for --check-pixels-unchanged".to_string());
+                };
+                check_pixels_unchanged_test_id = Some(v);
+                i += 1;
+            }
             "--check-ui-gallery-code-editor-torture-marker-present" => {
                 check_ui_gallery_code_editor_torture_marker_present = true;
                 i += 1;
@@ -2098,7 +2107,7 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
             &ms.to_string(),
         );
     }
-    if check_pixels_changed_test_id.is_some() {
+    if check_pixels_changed_test_id.is_some() || check_pixels_unchanged_test_id.is_some() {
         push_env_if_missing(&mut launch_env, "FRET_DIAG_GPU_SCREENSHOTS", "1");
     }
 
@@ -2552,6 +2561,7 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
         check_triage_hint_absent_codes: check_triage_hint_absent_codes.clone(),
         check_overlay_synthesis_min: check_overlay_synthesis_min.clone(),
         check_pixels_changed_test_id: check_pixels_changed_test_id.clone(),
+        check_pixels_unchanged_test_id: check_pixels_unchanged_test_id.clone(),
         check_prepaint_actions_min: check_prepaint_actions_min.clone(),
         check_retained_vlist_attach_detach_max: check_retained_vlist_attach_detach_max.clone(),
         check_retained_vlist_keep_alive_budget: check_retained_vlist_keep_alive_budget.clone(),
@@ -2707,6 +2717,7 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                 resolved_script_result_trigger_path: resolved_script_result_trigger_path.clone(),
                 pack_include_screenshots,
                 check_pixels_changed_test_id: check_pixels_changed_test_id.clone(),
+                check_pixels_unchanged_test_id: check_pixels_unchanged_test_id.clone(),
                 reuse_launch,
                 launch: launch.clone(),
                 launch_env: launch_env.clone(),
@@ -2808,6 +2819,7 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                 check_triage_hint_absent_codes: check_triage_hint_absent_codes.clone(),
                 check_overlay_synthesis_min: check_overlay_synthesis_min.clone(),
                 check_pixels_changed_test_id: check_pixels_changed_test_id.clone(),
+                check_pixels_unchanged_test_id: check_pixels_unchanged_test_id.clone(),
                 check_prepaint_actions_min: check_prepaint_actions_min.clone(),
                 check_retained_vlist_attach_detach_max: check_retained_vlist_attach_detach_max.clone(),
                 check_retained_vlist_keep_alive_budget: check_retained_vlist_keep_alive_budget.clone(),
@@ -2919,6 +2931,7 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                 check_perf_hints_deny: check_perf_hints_deny.clone(),
                 check_perf_hints_min_severity: check_perf_hints_min_severity.clone(),
                 check_pixels_changed_test_id: check_pixels_changed_test_id.clone(),
+                check_pixels_unchanged_test_id: check_pixels_unchanged_test_id.clone(),
                 devtools_session_id: devtools_session_id.clone(),
                 devtools_token: devtools_token.clone(),
                 devtools_ws_url: devtools_ws_url.clone(),
@@ -2976,6 +2989,7 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                 check_stale_scene_eps,
                 check_idle_no_paint_min,
                 check_pixels_changed_test_id: check_pixels_changed_test_id.clone(),
+                check_pixels_unchanged_test_id: check_pixels_unchanged_test_id.clone(),
                 check_semantics_changed_repainted,
                 dump_semantics_changed_repainted_json,
                 check_wheel_scroll_test_id: check_wheel_scroll_test_id.clone(),

@@ -93,10 +93,10 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
         .query_model(query.clone())
         .test_id_prefix("ui-gallery-combobox-input-group")
         .trigger_test_id("ui-gallery-combobox-input-group-trigger")
-        .options([
-            shadcn::combobox_option("new-file", "New File"),
-            shadcn::combobox_option("open-file", "Open File"),
-            shadcn::combobox_option("save-all", "Save All"),
+        .items([
+            shadcn::ComboboxItem::new("new-file", "New File"),
+            shadcn::ComboboxItem::new("open-file", "Open File"),
+            shadcn::ComboboxItem::new("save-all", "Save All"),
         ])
         .into_element(cx);
 

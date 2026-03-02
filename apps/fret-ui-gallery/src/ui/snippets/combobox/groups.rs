@@ -93,31 +93,28 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
         .query_model(query.clone())
         .test_id_prefix("ui-gallery-combobox-groups")
         .trigger_test_id("ui-gallery-combobox-groups-trigger")
-        .option_groups([
-            shadcn::combobox_option_group(
-                "Americas",
-                [
-                    shadcn::combobox_option("americas-ny", "(GMT-5) New York"),
-                    shadcn::combobox_option("americas-la", "(GMT-8) Los Angeles"),
-                    shadcn::combobox_option("americas-chi", "(GMT-6) Chicago"),
-                ],
-            ),
-            shadcn::combobox_option_group(
-                "Europe",
-                [
-                    shadcn::combobox_option("europe-lon", "(GMT+0) London"),
-                    shadcn::combobox_option("europe-paris", "(GMT+1) Paris"),
-                    shadcn::combobox_option("europe-berlin", "(GMT+1) Berlin"),
-                ],
-            ),
-            shadcn::combobox_option_group(
-                "Asia/Pacific",
-                [
-                    shadcn::combobox_option("asia-tokyo", "(GMT+9) Tokyo"),
-                    shadcn::combobox_option("asia-shanghai", "(GMT+8) Shanghai"),
-                    shadcn::combobox_option("asia-singapore", "(GMT+8) Singapore"),
-                ],
-            ),
+        .groups([
+            shadcn::ComboboxGroup::new()
+                .label(shadcn::ComboboxLabel::new("Americas"))
+                .items([
+                    shadcn::ComboboxItem::new("americas-ny", "(GMT-5) New York"),
+                    shadcn::ComboboxItem::new("americas-la", "(GMT-8) Los Angeles"),
+                    shadcn::ComboboxItem::new("americas-chi", "(GMT-6) Chicago"),
+                ]),
+            shadcn::ComboboxGroup::new()
+                .label(shadcn::ComboboxLabel::new("Europe"))
+                .items([
+                    shadcn::ComboboxItem::new("europe-lon", "(GMT+0) London"),
+                    shadcn::ComboboxItem::new("europe-paris", "(GMT+1) Paris"),
+                    shadcn::ComboboxItem::new("europe-berlin", "(GMT+1) Berlin"),
+                ]),
+            shadcn::ComboboxGroup::new()
+                .label(shadcn::ComboboxLabel::new("Asia/Pacific"))
+                .items([
+                    shadcn::ComboboxItem::new("asia-tokyo", "(GMT+9) Tokyo"),
+                    shadcn::ComboboxItem::new("asia-shanghai", "(GMT+8) Shanghai"),
+                    shadcn::ComboboxItem::new("asia-singapore", "(GMT+8) Singapore"),
+                ]),
         ])
         .into_element(cx);
 

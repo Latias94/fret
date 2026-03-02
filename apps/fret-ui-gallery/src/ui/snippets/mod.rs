@@ -6,9 +6,10 @@
 //!
 //! Prefer user-facing imports in snippet files (typically `use fret_ui_shadcn::prelude::*;`).
 
+pub mod accordion;
+pub mod ai;
 pub mod alert;
 pub mod alert_dialog;
-pub mod accordion;
 pub mod aspect_ratio;
 pub mod avatar;
 pub mod badge;
@@ -42,6 +43,7 @@ pub mod item;
 pub mod kbd;
 pub mod label;
 pub mod menubar;
+pub mod material3;
 pub mod motion_presets;
 pub mod native_select;
 pub mod navigation_menu;

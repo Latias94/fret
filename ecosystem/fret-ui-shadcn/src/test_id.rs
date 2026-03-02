@@ -16,3 +16,19 @@ pub(crate) fn attach_test_id_suffix(
     };
     attach_test_id(el, Arc::<str>::from(format!("{prefix}-{suffix}")))
 }
+
+/// Converts an arbitrary identifier into a stable `test_id`-safe slug.
+///
+/// This is intentionally conservative: keep ASCII alphanumerics, lowercase them, and replace all
+/// other characters with `-`. Callers should treat this as an automation-only surface.
+pub(crate) fn test_id_slug(s: &str) -> String {
+    let mut out = String::with_capacity(s.len());
+    for c in s.chars() {
+        if c.is_ascii_alphanumeric() {
+            out.push(c.to_ascii_lowercase());
+        } else {
+            out.push('-');
+        }
+    }
+    out.trim_matches('-').to_string()
+}

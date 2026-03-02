@@ -14,6 +14,7 @@ pub(crate) struct RepeatCmdContext {
     pub resolved_script_result_trigger_path: PathBuf,
     pub pack_include_screenshots: bool,
     pub check_pixels_changed_test_id: Option<String>,
+    pub check_pixels_unchanged_test_id: Option<String>,
     pub reuse_launch: bool,
     pub launch: Option<Vec<String>>,
     pub launch_env: Vec<(String, String)>,
@@ -46,6 +47,7 @@ pub(crate) fn cmd_repeat(ctx: RepeatCmdContext) -> Result<(), String> {
         resolved_script_result_trigger_path,
         pack_include_screenshots,
         check_pixels_changed_test_id,
+        check_pixels_unchanged_test_id,
         reuse_launch,
         launch,
         launch_env,
@@ -80,7 +82,8 @@ pub(crate) fn cmd_repeat(ctx: RepeatCmdContext) -> Result<(), String> {
     let src = resolve_path(&workspace_root, PathBuf::from(src));
     let wants_screenshots = script_requests_screenshots(&src)
         || pack_include_screenshots
-        || check_pixels_changed_test_id.is_some();
+        || check_pixels_changed_test_id.is_some()
+        || check_pixels_unchanged_test_id.is_some();
 
     let repeat_launch_env = launch_env.clone();
     let reuse_process = launch.is_none() || reuse_launch;

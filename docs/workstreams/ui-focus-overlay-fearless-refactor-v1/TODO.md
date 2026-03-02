@@ -32,7 +32,7 @@ Tracking doc: `docs/workstreams/ui-focus-overlay-fearless-refactor-v1/DESIGN.md`
 - [x] Make hover ancestor queries resilient to stale retained `parent` pointers (Pressable/HoverRegion).
 - [x] Make HoverRegion “hover edge” transitions disable view-cache reuse for the containing cache
   roots (rerender-on-hover-edge), so hover-driven overlays cannot get stuck behind cache hits.
-- [ ] Add conformance coverage for nested scenarios:
+- [x] Add conformance coverage for nested scenarios:
   - [x] trapped focus scope inside a modal overlay root (portal-style nested roots)
   - [x] multiple stacked trapped scopes (inner scope wins)
   - [x] barrier active during close transitions (focus restoration while pointer underlay stays blocked)
@@ -44,4 +44,13 @@ Tracking doc: `docs/workstreams/ui-focus-overlay-fearless-refactor-v1/DESIGN.md`
 - [x] Minimal hovercard-open scripted gate under view-cache reuse (hover edge should rerender the
   relevant cache root).
   - Script: `tools/diag-scripts/ui-gallery/overlay/ui-gallery-hovercard-open.json`
-- [ ] Perf probe: snapshot build cost vs frame budget in UI gallery worst-case overlays.
+- [x] Perf probe: snapshot build cost vs frame budget in UI gallery worst-case overlays.
+  - Script: `tools/diag-scripts/ui-gallery/perf/ui-gallery-overlay-pointer-move-steady.json`
+  - Suite membership: `tools/diag-scripts/suites/perf-ui-gallery-steady/ui-gallery-overlay-pointer-move-steady.json`
+- [x] Wheel routing gate: pointer occlusion allows wheel, modal barriers block wheel.
+  - ADR: `docs/adr/0069-outside-press-and-dismissable-non-modal-overlays.md` (wheel routing precedence)
+  - Unit test (modal barrier blocks wheel): `crates/fret-ui/src/tree/tests/pointer_occlusion.rs`
+  - Script gate (occlusion allows wheel): `tools/diag-scripts/ui-gallery/overlay/ui-gallery-context-menu-occlusion-wheel-pass-through.json`
+  - Script gate (modal barrier blocks wheel): `tools/diag-scripts/ui-gallery/overlay/ui-gallery-modal-barrier-wheel-block.json`
+- [x] Modal focus barrier + focus restore gate (barrier roots present while open; underlay press blocked; focus restores to trigger).
+  - Script gate: `tools/diag-scripts/ui-gallery/overlay/ui-gallery-modal-barrier-focus-restore.json`

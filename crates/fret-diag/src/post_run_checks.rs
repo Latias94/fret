@@ -14,6 +14,7 @@ pub(crate) fn apply_post_run_checks(
     let check_stale_scene_test_id = checks.check_stale_scene_test_id.as_deref();
     let check_stale_scene_eps = checks.check_stale_scene_eps;
     let check_pixels_changed_test_id = checks.check_pixels_changed_test_id.as_deref();
+    let check_pixels_unchanged_test_id = checks.check_pixels_unchanged_test_id.as_deref();
     let check_ui_gallery_code_editor_torture_marker_present =
         checks.check_ui_gallery_code_editor_torture_marker_present;
     let check_ui_gallery_code_editor_torture_undo_redo =
@@ -249,6 +250,9 @@ pub(crate) fn apply_post_run_checks(
     }
     if let Some(test_id) = check_pixels_changed_test_id {
         stats::check_out_dir_for_pixels_changed(out_dir, test_id, warmup_frames)?;
+    }
+    if let Some(test_id) = check_pixels_unchanged_test_id {
+        stats::check_out_dir_for_pixels_unchanged(out_dir, test_id, warmup_frames)?;
     }
     if check_ui_gallery_code_editor_torture_marker_present {
         stats::check_bundle_for_ui_gallery_code_editor_torture_marker_present(

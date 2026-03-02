@@ -6,10 +6,10 @@ use fret_runtime::CommandId;
 use crate::commands::{
     CMD_WORKSPACE_TAB_ACTIVATE_PREFIX, CMD_WORKSPACE_TAB_CLOSE, CMD_WORKSPACE_TAB_CLOSE_LEFT,
     CMD_WORKSPACE_TAB_CLOSE_OTHERS, CMD_WORKSPACE_TAB_CLOSE_PREFIX, CMD_WORKSPACE_TAB_CLOSE_RIGHT,
-    CMD_WORKSPACE_TAB_MOVE_AFTER_PREFIX, CMD_WORKSPACE_TAB_MOVE_BEFORE_PREFIX,
-    CMD_WORKSPACE_TAB_MOVE_LEFT, CMD_WORKSPACE_TAB_MOVE_RIGHT, CMD_WORKSPACE_TAB_NEXT,
-    CMD_WORKSPACE_TAB_PIN_PREFIX, CMD_WORKSPACE_TAB_PREV, CMD_WORKSPACE_TAB_TOGGLE_PIN,
-    CMD_WORKSPACE_TAB_UNPIN_PREFIX,
+    CMD_WORKSPACE_TAB_COMMIT_PREVIEW, CMD_WORKSPACE_TAB_MOVE_AFTER_PREFIX,
+    CMD_WORKSPACE_TAB_MOVE_BEFORE_PREFIX, CMD_WORKSPACE_TAB_MOVE_LEFT, CMD_WORKSPACE_TAB_MOVE_RIGHT,
+    CMD_WORKSPACE_TAB_NEXT, CMD_WORKSPACE_TAB_OPEN_PREVIEW_PREFIX, CMD_WORKSPACE_TAB_PIN_PREFIX,
+    CMD_WORKSPACE_TAB_PREV, CMD_WORKSPACE_TAB_TOGGLE_PIN, CMD_WORKSPACE_TAB_UNPIN_PREFIX,
 };
 
 #[cfg(feature = "serde")]
@@ -590,6 +590,12 @@ impl WorkspaceTabs {
         match command.as_str() {
             CMD_WORKSPACE_TAB_NEXT => return self.next(),
             CMD_WORKSPACE_TAB_PREV => return self.prev(),
+            CMD_WORKSPACE_TAB_COMMIT_PREVIEW => {
+                let Some(active) = self.active.clone() else {
+                    return false;
+                };
+                return self.commit_preview(active.as_ref());
+            }
             CMD_WORKSPACE_TAB_TOGGLE_PIN => {
                 let Some(active) = self.active.clone() else {
                     return false;
@@ -633,6 +639,17 @@ impl WorkspaceTabs {
                 return false;
             }
             return self.move_active_relative_to(id, true);
+        }
+
+        if let Some(id) = command
+            .as_str()
+            .strip_prefix(CMD_WORKSPACE_TAB_OPEN_PREVIEW_PREFIX)
+        {
+            let id = id.trim();
+            if id.is_empty() {
+                return false;
+            }
+            return self.open_preview_and_activate(Arc::<str>::from(id));
         }
 
         if let Some(id) = command

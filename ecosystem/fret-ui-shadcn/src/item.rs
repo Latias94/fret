@@ -12,7 +12,7 @@ use fret_ui_kit::declarative::action_hooks::ActionHooksExt as _;
 use fret_ui_kit::declarative::chrome::control_chrome_pressable_with_id_props;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::{
-    ui, ChromeRefinement, ColorRef, LayoutRefinement, LengthRefinement, MetricRef, Radius, Space,
+    ChromeRefinement, ColorRef, LayoutRefinement, LengthRefinement, MetricRef, Radius, Space, ui,
 };
 
 #[derive(Debug, Default)]

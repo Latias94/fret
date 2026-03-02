@@ -189,12 +189,26 @@ impl<H: UiHost> UiTree<H> {
         let mut walked_nodes: u32 = 0;
         let mut current = Some(node);
         while let Some(id) = current {
-            let Some(n) = self.nodes.get_mut(id) else {
-                break;
+            let (parent, element, stored, underflow) = {
+                let Some(n) = self.nodes.get_mut(id) else {
+                    break;
+                };
+                let underflow = apply_i32_delta_to_u32(&mut n.subtree_layout_dirty_count, delta);
+                (n.parent, n.element, n.subtree_layout_dirty_count, underflow)
             };
-            apply_i32_delta_to_u32(&mut n.subtree_layout_dirty_count, delta);
+            if underflow {
+                tracing::error!(
+                    node = ?id,
+                    element = ?element,
+                    stored,
+                    delta,
+                    "subtree layout dirty count underflow"
+                );
+                self.rebuild_subtree_layout_dirty_counts_and_propagate(id);
+                break;
+            }
             walked_nodes = walked_nodes.saturating_add(1);
-            current = n.parent;
+            current = parent;
         }
 
         if self.debug_enabled {
@@ -297,14 +311,17 @@ impl<H: UiHost> UiTree<H> {
     }
 }
 
-pub(in crate::tree) fn apply_i32_delta_to_u32(value: &mut u32, delta: i32) {
+pub(in crate::tree) fn apply_i32_delta_to_u32(value: &mut u32, delta: i32) -> bool {
     if delta > 0 {
         *value = value.saturating_add(delta as u32);
-        return;
+        return false;
     }
     if delta < 0 {
         let dec = (-delta) as u32;
-        debug_assert!(*value >= dec);
-        *value = value.saturating_sub(dec);
+        if *value < dec {
+            return true;
+        }
+        *value -= dec;
     }
+    false
 }

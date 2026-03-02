@@ -5,7 +5,7 @@
     "tags": ["node-graph", "declarative", "paint-only", "wires", "gate", "diagnostics"],
     "required_capabilities": ["diag.script_v2"],
     "target_hints": [
-      "Run with `FRET_NODE_GRAPH_DECLARATIVE=paint` so the paint-only declarative surface is active.",
+      "Run the `node_graph_demo` binary (it defaults to the paint-only declarative surface).",
       "This is a lightweight gate for regressions where edges stop painting due to culling/geometry issues."
     ]
   },
@@ -33,4 +33,3 @@
     { "type": "capture_bundle", "label": "node-graph-paint-only-edges-paint-stats-ok" }
   ]
 }
-
