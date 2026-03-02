@@ -1,3 +1,5 @@
+pub const SOURCE: &str = include_str!("deprecated.rs");
+
 // region: example
 use crate::spec::CMD_NAV_SONNER;
 use fret_app::App;
@@ -46,4 +48,3 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
 }
 
 // endregion: example
-
