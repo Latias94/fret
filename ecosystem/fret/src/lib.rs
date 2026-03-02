@@ -41,7 +41,7 @@ pub use fret_icons::IconRegistry;
 pub use fret_bootstrap::ui_app_driver::ViewElements;
 
 /// Re-export portable action/command identity types for app code and macros.
-pub use fret_runtime::{ActionId, CommandId, TypedAction};
+pub use fret_runtime::{ActionId, ActionMeta, ActionRegistry, CommandId, TypedAction};
 
 pub mod actions;
 pub mod view;

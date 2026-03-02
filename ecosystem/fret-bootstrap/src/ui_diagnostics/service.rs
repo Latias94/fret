@@ -1045,6 +1045,12 @@ impl UiDiagnosticsService {
                     frame_id: decision.frame_id.0,
                     command: decision.command.as_str().to_string(),
                     handled: decision.handled,
+                    handled_by_scope: decision.handled_by_scope.map(|s| match s {
+                        fret_runtime::CommandScope::Widget => "widget".to_string(),
+                        fret_runtime::CommandScope::Window => "window".to_string(),
+                        fret_runtime::CommandScope::App => "app".to_string(),
+                    }),
+                    handled_by_driver: decision.handled_by_driver,
                     stopped: decision.stopped,
                     source_kind: source_kind.to_string(),
                     source_element: decision.source.element,

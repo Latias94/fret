@@ -1383,6 +1383,16 @@ pub(super) fn command_dispatch_trace_entry_matches_query(
     {
         return false;
     }
+    if let Some(scope) = &query.handled_by_scope
+        && entry.handled_by_scope.as_ref() != Some(scope)
+    {
+        return false;
+    }
+    if let Some(handled_by_driver) = query.handled_by_driver
+        && entry.handled_by_driver != handled_by_driver
+    {
+        return false;
+    }
     if let Some(started_from_focus) = query.started_from_focus
         && entry.started_from_focus != started_from_focus
     {

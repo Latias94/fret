@@ -127,6 +127,14 @@ pub struct UiTreeDebugSnapshotV1 {
 pub struct UiCommandDispatchTraceEntryV1 {
     pub command: String,
     pub handled: bool,
+    /// Best-effort handler scope classification (ADR 0307).
+    ///
+    /// Expected values: `"widget"`, `"window"`, `"app"`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub handled_by_scope: Option<String>,
+    /// Whether the command was handled by a runner/driver integration layer (not by a UI element).
+    #[serde(default)]
+    pub handled_by_driver: bool,
     #[serde(default)]
     pub stopped: bool,
     #[serde(default)]

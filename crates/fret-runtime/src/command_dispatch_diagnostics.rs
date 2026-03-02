@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use fret_core::{AppWindowId, FrameId};
 
-use crate::{CommandId, TickId};
+use crate::{CommandId, CommandScope, TickId};
 
 /// Best-effort classification of where a command dispatch originated.
 ///
@@ -42,6 +42,16 @@ pub struct CommandDispatchDecisionV1 {
     pub handled: bool,
     /// `GlobalElementId.0` (from `crates/fret-ui`) for the first widget that handled the command.
     pub handled_by_element: Option<u64>,
+    /// Best-effort handler scope classification for explainability (ADR 0307).
+    ///
+    /// Notes:
+    /// - `Some(CommandScope::Widget)` means the command was handled by bubbling widget dispatch.
+    /// - For driver-handled commands, this is typically `Some(CommandScope::Window)` or
+    ///   `Some(CommandScope::App)`.
+    /// - `None` means the command was not handled (or the scope could not be determined).
+    pub handled_by_scope: Option<CommandScope>,
+    /// Whether the command was handled by a runner/driver integration layer (not by a UI element).
+    pub handled_by_driver: bool,
     pub stopped: bool,
     pub started_from_focus: bool,
     pub used_default_root_fallback: bool,

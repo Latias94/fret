@@ -3,8 +3,9 @@
 //! v1 constraints (see ADR 0307):
 //! - `ActionId` is compatible with existing `CommandId` strings (no keymap schema changes).
 //! - typed actions are unit marker types (no payload).
+//! - action metadata uses the existing command registry surface (`CommandRegistry` + `CommandMeta`).
 
-pub use fret_runtime::{ActionId, TypedAction};
+pub use fret_runtime::{ActionId, ActionMeta, ActionRegistry, TypedAction};
 
 pub type OnAction = std::sync::Arc<
     dyn Fn(&mut dyn fret_ui::action::UiFocusActionHost, fret_ui::action::ActionCx) -> bool
@@ -18,6 +19,23 @@ pub type OnActionAvailability = std::sync::Arc<
         ) -> fret_ui::CommandAvailability
         + 'static,
 >;
+
+/// Typed action marker type that also provides metadata for command palette / menus (v1).
+///
+/// v1 strategy (ADR 0307): this metadata is the existing command metadata surface.
+pub trait TypedActionMeta: TypedAction {
+    fn meta() -> ActionMeta;
+}
+
+pub trait ActionRegistryExt {
+    fn register_typed_action<A: TypedActionMeta>(&mut self);
+}
+
+impl ActionRegistryExt for fret_runtime::CommandRegistry {
+    fn register_typed_action<A: TypedActionMeta>(&mut self) {
+        self.register(A::action_id(), A::meta());
+    }
+}
 
 /// Minimal handler table that dispatches stable [`ActionId`]s through the existing command hooks.
 ///

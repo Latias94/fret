@@ -2392,6 +2392,14 @@ pub struct UiCommandDispatchTraceEntryV1 {
     pub frame_id: u64,
     pub command: String,
     pub handled: bool,
+    /// Best-effort handler scope classification (ADR 0307).
+    ///
+    /// Expected values: `"widget"`, `"window"`, `"app"`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub handled_by_scope: Option<String>,
+    /// Whether the command was handled by a runner/driver integration layer (not by a UI element).
+    #[serde(default)]
+    pub handled_by_driver: bool,
     #[serde(default)]
     pub stopped: bool,
     #[serde(default)]
@@ -2414,6 +2422,10 @@ pub struct UiCommandDispatchTraceQueryV1 {
     pub source_kind: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub handled: Option<bool>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub handled_by_scope: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub handled_by_driver: Option<bool>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub started_from_focus: Option<bool>,
     #[serde(default, skip_serializing_if = "Option::is_none")]

@@ -548,6 +548,11 @@ impl<H: UiHost> UiTree<H> {
             app.with_global_mut(
                 fret_runtime::WindowCommandDispatchDiagnosticsStore::default,
                 |store, app| {
+                    let handled_by_scope = if handled {
+                        Some(fret_runtime::CommandScope::Widget)
+                    } else {
+                        None
+                    };
                     store.record(fret_runtime::CommandDispatchDecisionV1 {
                         seq: 0,
                         frame_id: app.frame_id(),
@@ -557,6 +562,8 @@ impl<H: UiHost> UiTree<H> {
                         source,
                         handled,
                         handled_by_element,
+                        handled_by_scope,
+                        handled_by_driver: false,
                         stopped,
                         started_from_focus,
                         used_default_root_fallback,
