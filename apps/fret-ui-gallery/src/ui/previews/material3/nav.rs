@@ -1,5 +1,5 @@
-use super::super::super::*;
 use super::super::super::doc_layout::DocSection;
+use super::super::super::*;
 
 pub(in crate::ui) fn preview_material3_tabs(
     cx: &mut ElementContext<'_, App>,
@@ -10,8 +10,10 @@ pub(in crate::ui) fn preview_material3_tabs(
     let page = doc_layout::render_doc_page(
         cx,
         Some("Material 3 surfaces are still migrating to snippet-backed pages (Preview ≡ Code)."),
-        vec![DocSection::new("Demo", demo)
-            .code_rust_from_file_region(snippets::material3::tabs::SOURCE, "example")],
+        vec![
+            DocSection::new("Demo", demo)
+                .code_rust_from_file_region(snippets::material3::tabs::SOURCE, "example"),
+        ],
     );
 
     vec![page]
@@ -26,10 +28,10 @@ pub(in crate::ui) fn preview_material3_navigation_bar(
     let page = doc_layout::render_doc_page(
         cx,
         Some("Material 3 surfaces are still migrating to snippet-backed pages (Preview ≡ Code)."),
-        vec![DocSection::new("Demo", demo).code_rust_from_file_region(
-            snippets::material3::navigation_bar::SOURCE,
-            "example",
-        )],
+        vec![
+            DocSection::new("Demo", demo)
+                .code_rust_from_file_region(snippets::material3::navigation_bar::SOURCE, "example"),
+        ],
     );
 
     vec![page]
@@ -44,10 +46,12 @@ pub(in crate::ui) fn preview_material3_navigation_rail(
     let page = doc_layout::render_doc_page(
         cx,
         Some("Material 3 surfaces are still migrating to snippet-backed pages (Preview ≡ Code)."),
-        vec![DocSection::new("Demo", demo).code_rust_from_file_region(
-            snippets::material3::navigation_rail::SOURCE,
-            "example",
-        )],
+        vec![
+            DocSection::new("Demo", demo).code_rust_from_file_region(
+                snippets::material3::navigation_rail::SOURCE,
+                "example",
+            ),
+        ],
     );
 
     vec![page]
@@ -62,10 +66,12 @@ pub(in crate::ui) fn preview_material3_navigation_drawer(
     let page = doc_layout::render_doc_page(
         cx,
         Some("Material 3 surfaces are still migrating to snippet-backed pages (Preview ≡ Code)."),
-        vec![DocSection::new("Demo", demo).code_rust_from_file_region(
-            snippets::material3::navigation_drawer::SOURCE,
-            "example",
-        )],
+        vec![
+            DocSection::new("Demo", demo).code_rust_from_file_region(
+                snippets::material3::navigation_drawer::SOURCE,
+                "example",
+            ),
+        ],
     );
 
     vec![page]

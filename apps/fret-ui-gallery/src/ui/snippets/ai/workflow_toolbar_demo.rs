@@ -9,7 +9,6 @@ use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, Radius, Space};
 use fret_ui_shadcn::prelude::*;
 
 pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement {
-
     let toolbar = ui_ai::WorkflowToolbar::new([
         fret_ui_shadcn::Button::new("Run")
             .test_id("ui-ai-workflow-toolbar-demo-run")

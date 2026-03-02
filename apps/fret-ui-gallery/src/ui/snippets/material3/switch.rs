@@ -1,8 +1,8 @@
 pub const SOURCE: &str = include_str!("switch.rs");
 
 // region: example
-use fret_ui_material3 as material3;
 use fret_ui_kit::{ColorRef, WidgetStateProperty, WidgetStates};
+use fret_ui_material3 as material3;
 use fret_ui_shadcn::prelude::*;
 
 #[derive(Default)]
@@ -27,7 +27,9 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>, selected: Model<bool>) 
         Some(model) => model,
         None => {
             let model = cx.app.models_mut().insert(false);
-            cx.with_state(Models::default, |st| st.icons_selected_only = Some(model.clone()));
+            cx.with_state(Models::default, |st| {
+                st.icons_selected_only = Some(model.clone())
+            });
             model
         }
     };
@@ -121,7 +123,9 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>, selected: Model<bool>) 
             .items_start(),
         move |cx| {
             vec![
-                cx.text("Material 3 Switch: token-driven sizing/colors + state layer + bounded ripple."),
+                cx.text(
+                    "Material 3 Switch: token-driven sizing/colors + state layer + bounded ripple.",
+                ),
                 row,
                 icons_row,
             ]
@@ -131,4 +135,3 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>, selected: Model<bool>) 
 }
 
 // endregion: example
-

@@ -1,9 +1,9 @@
 pub const SOURCE: &str = include_str!("button.rs");
 
 // region: example
-use fret_ui_material3 as material3;
 use fret_ui_kit::declarative::ElementContextThemeExt as _;
 use fret_ui_kit::{ColorRef, WidgetStateProperty, WidgetStates};
+use fret_ui_material3 as material3;
 use fret_ui_shadcn::prelude::*;
 
 pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {

@@ -3,50 +3,65 @@ pub const SOURCE: &str = include_str!("demo.rs");
 // region: example
 use fret_ui_shadcn::{self as shadcn, prelude::*};
 
-fn build_alert<H: UiHost>(
-    cx: &mut ElementContext<'_, H>,
-    test_id: &'static str,
-    variant: shadcn::AlertVariant,
-    icon_name: &'static str,
-    title: &'static str,
-    description: &'static str,
-) -> AnyElement {
-    shadcn::Alert::new([
-        shadcn::icon::icon(cx, fret_icons::IconId::new_static(icon_name)),
-        shadcn::AlertTitle::new(title).into_element(cx),
-        shadcn::AlertDescription::new(description).into_element(cx),
-    ])
-    .variant(variant)
-    .refine_layout(LayoutRefinement::default().w_full().max_w(Px(520.0)))
-    .into_element(cx)
-    .test_id(test_id)
-}
-
 pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
     stack::vstack(
         cx,
         stack::VStackProps::default()
-            .gap(Space::N3)
+            .gap(Space::N4)
             .items_start()
             .layout(LayoutRefinement::default().w_full()),
         |cx| {
             vec![
-                build_alert(
-                    cx,
-                    "ui-gallery-alert-demo-success",
-                    shadcn::AlertVariant::Default,
-                    "lucide.circle-check",
-                    "Payment successful",
-                    "Your payment of $29.99 has been processed and a receipt has been emailed.",
-                ),
-                build_alert(
-                    cx,
-                    "ui-gallery-alert-demo-info",
-                    shadcn::AlertVariant::Default,
-                    "lucide.info",
-                    "New feature available",
-                    "Dark mode support is now available in account settings.",
-                ),
+                shadcn::Alert::new([
+                    shadcn::icon::icon(cx, fret_icons::IconId::new_static("lucide.circle-check")),
+                    shadcn::AlertTitle::new("Success! Your changes have been saved")
+                        .into_element(cx),
+                    shadcn::AlertDescription::new(
+                        "This is an alert with icon, title and description.",
+                    )
+                    .into_element(cx),
+                ])
+                .variant(shadcn::AlertVariant::Default)
+                .refine_layout(LayoutRefinement::default().w_full().max_w(Px(520.0)))
+                .into_element(cx)
+                .test_id("ui-gallery-alert-demo-success"),
+                shadcn::Alert::new([
+                    shadcn::icon::icon(cx, fret_icons::IconId::new_static("lucide.popcorn")),
+                    shadcn::AlertTitle::new("This Alert has a title and an icon. No description.")
+                        .into_element(cx),
+                ])
+                .variant(shadcn::AlertVariant::Default)
+                .refine_layout(LayoutRefinement::default().w_full().max_w(Px(520.0)))
+                .into_element(cx)
+                .test_id("ui-gallery-alert-demo-info"),
+                shadcn::Alert::new([
+                    shadcn::icon::icon(cx, fret_icons::IconId::new_static("lucide.circle-alert")),
+                    shadcn::AlertTitle::new("Unable to process your payment.").into_element(cx),
+                    shadcn::AlertDescription::new_children([
+                        ui::text(cx, "Please verify your billing information and try again.")
+                            .wrap(TextWrap::Word)
+                            .into_element(cx),
+                        stack::vstack(
+                            cx,
+                            stack::VStackProps::default()
+                                .gap(Space::N0p5)
+                                .items_start()
+                                .layout(LayoutRefinement::default().w_full()),
+                            |cx| {
+                                vec![
+                                    ui::text(cx, "• Check your card details").into_element(cx),
+                                    ui::text(cx, "• Ensure sufficient funds").into_element(cx),
+                                    ui::text(cx, "• Verify billing address").into_element(cx),
+                                ]
+                            },
+                        ),
+                    ])
+                    .into_element(cx),
+                ])
+                .variant(shadcn::AlertVariant::Destructive)
+                .refine_layout(LayoutRefinement::default().w_full().max_w(Px(520.0)))
+                .into_element(cx)
+                .test_id("ui-gallery-alert-demo-destructive"),
             ]
         },
     )

@@ -11,7 +11,9 @@ pub(super) fn preview_ai_chat_demo(
 
     let body = crate::ui::doc_layout::render_doc_page(
         cx,
-        Some("Interactive chat harness: PromptInput + transcript streaming + tool calls + sources."),
+        Some(
+            "Interactive chat harness: PromptInput + transcript streaming + tool calls + sources.",
+        ),
         vec![
             DocSection::new("Chat Demo", demo)
                 .max_w(Px(820.0))

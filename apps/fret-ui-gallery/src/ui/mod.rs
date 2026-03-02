@@ -24,9 +24,8 @@ use fret_code_editor as code_editor;
 use fret_code_editor_view as code_editor_view;
 use fret_code_view as code_view;
 use fret_core::{
-    AttributedText, CaretAffinity, Color as CoreColor, Corners, DrawOrder, Edges, FontId,
-    ImageId, Point, Px, Rect, SceneOp, Size, TextConstraints, TextOverflow, TextSpan,
-    TextStyle, TextWrap,
+    AttributedText, CaretAffinity, Color as CoreColor, Corners, DrawOrder, Edges, FontId, ImageId,
+    Point, Px, Rect, SceneOp, Size, TextConstraints, TextOverflow, TextSpan, TextStyle, TextWrap,
 };
 use fret_markdown as markdown;
 use fret_ui::Theme;

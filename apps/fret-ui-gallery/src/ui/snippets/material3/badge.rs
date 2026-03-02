@@ -19,9 +19,10 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
                 let mut props = ContainerProps::default();
                 props.layout.size.width = Length::Px(size);
                 props.layout.size.height = Length::Px(size);
-                props.background = Some(cx.with_theme(|theme| {
-                    theme.color_token("md.sys.color.surface-container-low")
-                }));
+                props.background =
+                    Some(cx.with_theme(|theme| {
+                        theme.color_token("md.sys.color.surface-container-low")
+                    }));
                 props.corner_radii = Corners::all(Px(8.0));
                 cx.container(props, |_cx| Vec::<AnyElement>::new())
                     .test_id(test_id)
@@ -36,9 +37,7 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
                         material3::Badge::dot()
                             .navigation_anchor_size(small)
                             .test_id("ui-gallery-material3-badge-dot-nav")
-                            .into_element(cx, |cx| {
-                                vec![anchor(cx, small, "badge-anchor-dot-nav")]
-                            }),
+                            .into_element(cx, |cx| vec![anchor(cx, small, "badge-anchor-dot-nav")]),
                         material3::Badge::text("9")
                             .navigation_anchor_size(small)
                             .test_id("ui-gallery-material3-badge-text-nav")

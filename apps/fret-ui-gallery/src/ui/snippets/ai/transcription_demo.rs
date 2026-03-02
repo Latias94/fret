@@ -92,7 +92,9 @@ pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement
         move |cx| {
             vec![
                 cx.text("Transcription (AI Elements)"),
-                cx.text("Segment click triggers `on_seek`; this demo mirrors it into `current_time`."),
+                cx.text(
+                    "Segment click triggers `on_seek`; this demo mirrors it into `current_time`.",
+                ),
                 time_marker,
                 active_marker,
                 transcript,
@@ -101,4 +103,3 @@ pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement
     )
 }
 // endregion: example
-

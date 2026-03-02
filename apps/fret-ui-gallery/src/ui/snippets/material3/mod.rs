@@ -1,5 +1,5 @@
-pub mod button;
 pub mod badge;
+pub mod button;
 pub mod checkbox;
 pub mod icon_button;
 pub mod modal_navigation_drawer;

@@ -16,7 +16,6 @@ use fret_ui_shadcn::prelude::*;
 use std::sync::Arc;
 
 pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement {
-
     let variable_height = std::env::var_os("FRET_UI_GALLERY_AI_TRANSCRIPT_VARIABLE_HEIGHT")
         .filter(|v| !v.is_empty())
         .is_some();
@@ -166,7 +165,12 @@ pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement
         stack::VStackProps::default()
             .layout(LayoutRefinement::default().w_full().min_w_0())
             .gap(Space::N3),
-        move |cx| vec![header, cx.container(container_props, |_cx| vec![transcript])],
+        move |cx| {
+            vec![
+                header,
+                cx.container(container_props, |_cx| vec![transcript]),
+            ]
+        },
     )
 }
 // endregion: example
