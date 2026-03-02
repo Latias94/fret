@@ -154,6 +154,21 @@ Runtime mechanism:
 - Outside-press dismissal still uses the observer pass described above (the overlay can close on
   outside press even though the underlay is inert for non-scroll pointer interactions).
 
+#### Wheel routing precedence (pointer occlusion vs modal barriers)
+
+This ADR makes the following contract requirements explicit:
+
+- When `pointer_occlusion = BlockMouseExceptScroll` is active, the runtime MUST treat wheel as a
+  scroll-like input and MUST NOT suppress wheel dispatch to the underlay scroll target.
+  - Rationale: editor ergonomics (scroll the document while a menu is open) and GPUI parity.
+- When a **modal barrier** is active (`blocks_underlay_input = true`), the runtime MUST scope wheel
+  routing to the barrier and layers above it; wheel MUST NOT reach underlay scrollables.
+  - Rationale: modal overlays block underlay interaction, including scrolling, to preserve focus
+    and semantics isolation.
+
+In other words: `BlockMouseExceptScroll` allows wheel to pass through to the underlay, but modal
+barrier scoping takes precedence and still blocks it.
+
 This ADR intentionally does **not** define the accessibility / "hide others" outcome for menus.
 That is handled separately by the semantics/a11y architecture ADRs.
 
