@@ -1,5 +1,6 @@
 use crate::ui::canvas::widget::*;
 use fret_core::scene::PaintBindingV1;
+use fret_core::scene::PaintEvalSpaceV1;
 
 impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
     pub(in super::super) fn paint_edge_overlays_selected_hovered<H: UiHost>(
@@ -23,12 +24,20 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
             return;
         }
 
+        fn marker_paint_binding_for_wire(paint: PaintBindingV1, color: Color) -> PaintBindingV1 {
+            if paint.eval_space == PaintEvalSpaceV1::StrokeS01 {
+                color.into()
+            } else {
+                paint
+            }
+        }
+
         struct OverlayEdgeDraw {
             from: Point,
             to: Point,
             hint: EdgeRenderHint,
-            color: Color,
             paint: PaintBindingV1,
+            marker_paint: PaintBindingV1,
             width: f32,
         }
 
@@ -98,8 +107,8 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                     from,
                     to,
                     hint,
-                    color,
                     paint,
+                    marker_paint: marker_paint_binding_for_wire(paint, color),
                     width,
                 });
             }
@@ -143,7 +152,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                         order: DrawOrder(2),
                         origin: Point::new(Px(0.0), Px(0.0)),
                         path,
-                        paint: edge.color.into(),
+                        paint: edge.marker_paint,
                     });
                 }
             }
@@ -165,7 +174,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                         order: DrawOrder(2),
                         origin: Point::new(Px(0.0), Px(0.0)),
                         path,
-                        paint: edge.color.into(),
+                        paint: edge.marker_paint,
                     });
                 }
             }

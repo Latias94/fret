@@ -6,7 +6,9 @@ use fret_ui::retained_bridge::Widget as _;
 use fret_ui::{Invalidation, Theme, UiTree};
 
 use crate::core::{Edge, EdgeId, EdgeKind};
-use crate::ui::{EdgePaintOverrideV1, NodeGraphCanvas, NodeGraphPaintOverridesMap, NodePaintOverrideV1};
+use crate::ui::{
+    EdgePaintOverrideV1, NodeGraphCanvas, NodeGraphPaintOverridesMap, NodePaintOverrideV1,
+};
 
 use super::{NullServices, TestUiHostImpl, insert_view, make_test_graph_two_nodes_with_ports};
 
@@ -78,7 +80,8 @@ fn paint_overrides_do_not_mutate_serialized_graph() {
     });
 
     let overrides = Arc::new(NodeGraphPaintOverridesMap::default());
-    let mut canvas = NodeGraphCanvas::new(graph.clone(), view).with_paint_overrides(overrides.clone());
+    let mut canvas =
+        NodeGraphCanvas::new(graph.clone(), view).with_paint_overrides(overrides.clone());
 
     let baseline = graph
         .read_ref(&host, |g| serde_json::to_value(g).expect("serialize graph"))
@@ -104,7 +107,11 @@ fn paint_overrides_do_not_mutate_serialized_graph() {
         edge_id,
         Some(EdgePaintOverrideV1 {
             stroke_width_mul: Some(1.25),
-            dash: Some(fret_core::scene::DashPatternV1::new(Px(6.0), Px(4.0), Px(0.0))),
+            dash: Some(fret_core::scene::DashPatternV1::new(
+                Px(6.0),
+                Px(4.0),
+                Px(0.0),
+            )),
             ..Default::default()
         }),
     );

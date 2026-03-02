@@ -6,6 +6,8 @@ use fret_ui::retained_bridge::Widget as _;
 use fret_ui::{Invalidation, UiTree};
 
 use crate::core::{Edge, EdgeId, EdgeKind};
+use crate::ui::edge_types::NodeGraphEdgeTypes;
+use crate::ui::presenter::EdgeMarker;
 use crate::ui::{EdgePaintOverrideV1, NodeGraphCanvas, NodeGraphPaintOverridesMap};
 
 use super::{NullServices, TestUiHostImpl, insert_view, make_test_graph_two_nodes_with_ports};
@@ -50,7 +52,7 @@ fn paint_once(
 }
 
 #[test]
-fn paint_overrides_can_override_edge_wire_paint_binding() {
+fn paint_overrides_can_drive_edge_marker_paint_binding() {
     let (mut graph_value, _a, _a_in, a_out, _b, b_in) = make_test_graph_two_nodes_with_ports();
     let edge_id = EdgeId::new();
     graph_value.edges.insert(
@@ -72,8 +74,19 @@ fn paint_overrides_can_override_edge_wire_paint_binding() {
     let overrides = Arc::new(NodeGraphPaintOverridesMap::default());
     let mut canvas = NodeGraphCanvas::new(graph, view).with_paint_overrides(overrides.clone());
 
+    // Ensure the edge has both markers so the scene should contain:
+    // - 1 wire path (paint override)
+    // - 2 marker paths (marker paint binding)
+    canvas = canvas.with_edge_types(NodeGraphEdgeTypes::new().with_fallback(
+        |_g, _e, _style, mut h| {
+            h.start_marker = Some(EdgeMarker::arrow(12.0));
+            h.end_marker = Some(EdgeMarker::arrow(12.0));
+            h
+        },
+    ));
+
     let paint = PaintBindingV1::with_eval_space(
-        Paint::Solid(Color::from_srgb_hex_rgb(0xff_33_66)),
+        Paint::Solid(Color::from_srgb_hex_rgb(0x11_22_33)),
         PaintEvalSpaceV1::ViewportPx,
     );
     overrides.set_edge_override(
@@ -88,19 +101,18 @@ fn paint_overrides_can_override_edge_wire_paint_binding() {
     let mut services = NullServices::default();
     let scene = paint_once(&mut canvas, &mut host, &mut tree, &mut services, bounds());
 
-    let mut found = false;
+    let mut matches: u32 = 0;
     for op in scene.ops() {
         let SceneOp::Path { paint: p, .. } = op else {
             continue;
         };
         if p.eval_space == PaintEvalSpaceV1::ViewportPx && p.paint == paint.paint {
-            found = true;
-            break;
+            matches = matches.saturating_add(1);
         }
     }
 
     assert!(
-        found,
-        "expected at least one edge wire path to use the override PaintBindingV1"
+        matches >= 3,
+        "expected wire + start marker + end marker paths to use the override PaintBindingV1; matches={matches}"
     );
 }
