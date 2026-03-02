@@ -58,7 +58,7 @@ Status labels:
 | `test_results_demo` | `PAGE_AI_TEST_RESULTS_DEMO` | (removed) | `apps/fret-ui-gallery/src/ui/snippets/ai/test_results_demo.rs` | `apps/fret-ui-gallery/src/ui/pages/ai_test_results_demo.rs` | Snippet-backed |
 | `test_results_large_demo` | `PAGE_AI_TEST_RESULTS_LARGE_DEMO` | (removed) | `apps/fret-ui-gallery/src/ui/snippets/ai/test_results_large_demo.rs` | `apps/fret-ui-gallery/src/ui/pages/ai_test_results_large_demo.rs` | Snippet-backed |
 | `tool_demo` | `PAGE_AI_TOOL_DEMO` | (removed) | `apps/fret-ui-gallery/src/ui/snippets/ai/tool_demo.rs` | `apps/fret-ui-gallery/src/ui/pages/ai_tool_demo.rs` | Snippet-backed |
-| `transcript_torture` | `PAGE_AI_TRANSCRIPT_TORTURE` | `apps/fret-ui-gallery/src/ui/previews/gallery/ai/transcript_torture.rs` | — | — | Legacy preview |
+| `transcript_torture` | `PAGE_AI_TRANSCRIPT_TORTURE` | (removed) | `apps/fret-ui-gallery/src/ui/snippets/ai/transcript_torture.rs` | `apps/fret-ui-gallery/src/ui/pages/ai_transcript_torture.rs` | Snippet-backed |
 | `transcription_demo` | `PAGE_AI_TRANSCRIPTION_DEMO` | (removed) | `apps/fret-ui-gallery/src/ui/snippets/ai/transcription_demo.rs` | `apps/fret-ui-gallery/src/ui/pages/ai_transcription_demo.rs` | Snippet-backed |
 | `voice_selector_demo` | `PAGE_AI_VOICE_SELECTOR_DEMO` | (removed) | `apps/fret-ui-gallery/src/ui/snippets/ai/voice_selector_demo.rs` | `apps/fret-ui-gallery/src/ui/pages/ai_voice_selector_demo.rs` | Snippet-backed |
 | `web_preview_demo` | `PAGE_AI_WEB_PREVIEW_DEMO` | (removed) | `apps/fret-ui-gallery/src/ui/snippets/ai/web_preview_demo.rs` | `apps/fret-ui-gallery/src/ui/pages/ai_web_preview_demo.rs` | Snippet-backed |

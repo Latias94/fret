@@ -1,10 +1,19 @@
-use super::super::super::super::*;
+pub const SOURCE: &str = include_str!("transcript_torture.rs");
 
-pub(in crate::ui) fn preview_ai_transcript_torture(
-    cx: &mut ElementContext<'_, App>,
-    theme: &Theme,
-) -> Vec<AnyElement> {
-    use fret_ui::action::OnActivate;
+// region: example
+use fret_runtime::Model;
+use fret_ui::Invalidation;
+use fret_ui::action::OnActivate;
+use fret_ui::scroll::VirtualListScrollHandle;
+use fret_ui_ai as ui_ai;
+use fret_ui_kit::declarative::stack;
+use fret_ui_kit::declarative::style as decl_style;
+use fret_ui_kit::declarative::{CachedSubtreeExt as _, CachedSubtreeProps};
+use fret_ui_kit::{ChromeRefinement, LayoutRefinement, Space};
+use fret_ui_shadcn::prelude::*;
+use std::sync::Arc;
+
+pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement {
 
     let variable_height = std::env::var_os("FRET_UI_GALLERY_AI_TRANSCRIPT_VARIABLE_HEIGHT")
         .filter(|v| !v.is_empty())
@@ -127,10 +136,12 @@ pub(in crate::ui) fn preview_ai_transcript_torture(
                 .test_id("ui-gallery-ai-transcript-scroll-bottom")
                 .into_element(cx);
 
-            let layout = decl_style::layout_style(
-                theme,
-                LayoutRefinement::default().w_full().h_full().relative(),
-            );
+            let layout = cx.with_theme(|theme| {
+                decl_style::layout_style(
+                    theme,
+                    LayoutRefinement::default().w_full().h_full().relative(),
+                )
+            });
 
             vec![
                 cx.stack_props(fret_ui::element::StackProps { layout }, |_cx| {
@@ -139,15 +150,21 @@ pub(in crate::ui) fn preview_ai_transcript_torture(
             ]
         });
 
-    let mut container_props = decl_style::container_props(
-        theme,
-        ChromeRefinement::default(),
-        LayoutRefinement::default().w_full().h_px(Px(460.0)),
-    );
+    let mut container_props = cx.with_theme(|theme| {
+        decl_style::container_props(
+            theme,
+            ChromeRefinement::default(),
+            LayoutRefinement::default().w_full().h_px(Px(460.0)),
+        )
+    });
     container_props.layout.overflow = fret_ui::element::Overflow::Clip;
 
-    vec![
-        header,
-        cx.container(container_props, |_cx| vec![transcript]),
-    ]
+    stack::vstack(
+        cx,
+        stack::VStackProps::default()
+            .layout(LayoutRefinement::default().w_full().min_w_0())
+            .gap(Space::N3),
+        move |cx| vec![header, cx.container(container_props, |_cx| vec![transcript])],
+    )
 }
+// endregion: example

@@ -44,6 +44,7 @@ mod ai_terminal_demo;
 mod ai_test_results_demo;
 mod ai_test_results_large_demo;
 mod ai_transcription_demo;
+mod ai_transcript_torture;
 mod ai_tool_demo;
 mod ai_voice_selector_demo;
 mod ai_web_preview_demo;
@@ -359,6 +360,13 @@ pub(super) fn preview_ai_transcription_demo(
     theme: &Theme,
 ) -> Vec<AnyElement> {
     ai_transcription_demo::preview_ai_transcription_demo(cx, theme)
+}
+
+pub(super) fn preview_ai_transcript_torture(
+    cx: &mut ElementContext<'_, App>,
+    theme: &Theme,
+) -> Vec<AnyElement> {
+    ai_transcript_torture::preview_ai_transcript_torture(cx, theme)
 }
 
 pub(super) fn preview_ai_prompt_input_provider_demo(

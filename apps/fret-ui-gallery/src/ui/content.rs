@@ -416,7 +416,7 @@ fn page_preview(
         PAGE_DATA_TABLE_TORTURE => preview_data_table_torture(cx, theme, data_table_state),
         PAGE_TREE_TORTURE => preview_tree_torture(cx, theme),
         PAGE_TABLE_RETAINED_TORTURE => preview_table_retained_torture(cx, theme),
-        PAGE_AI_TRANSCRIPT_TORTURE => preview_ai_transcript_torture(cx, theme),
+        PAGE_AI_TRANSCRIPT_TORTURE => pages::preview_ai_transcript_torture(cx, theme),
         PAGE_AI_CHAT_DEMO => preview_ai_chat_demo(cx, theme),
         PAGE_AI_CONVERSATION_DEMO => pages::preview_ai_conversation_demo(cx, theme),
         PAGE_AI_MESSAGE_DEMO => pages::preview_ai_message_demo(cx, theme),

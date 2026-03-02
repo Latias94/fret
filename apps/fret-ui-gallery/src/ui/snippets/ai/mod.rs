@@ -53,3 +53,4 @@ pub mod workflow_node_demo;
 pub mod workflow_node_graph_demo;
 pub mod workflow_panel_demo;
 pub mod workflow_toolbar_demo;
+pub mod transcript_torture;
