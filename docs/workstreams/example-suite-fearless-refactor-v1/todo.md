@@ -57,6 +57,7 @@ Goal: create a lightweight, user-facing cookbook that does not pull “everythin
   - [x] icons + assets budgets (`icons_and_assets_basics`)
   - [x] virtual list (`virtual_list_basics`)
   - [x] async inbox + cancellation (`async_inbox_basics`)
+  - [x] markdown + code (`markdown_and_code_basics`)
   - [x] effects layer basics (`effects_layer_basics`)
 
 Gates:
