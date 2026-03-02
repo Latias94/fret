@@ -9,7 +9,7 @@ expanding `crates/fret-ui` into a policy-heavy component layer.
 
 - `crates/fret-ui` remains a **mechanism/contract** layer.
 - Workspace TabStrip is a **policy-driven component** and lives in the workspace ecosystem
-  (`crates/fret-workspace` + `ecosystem/fret` glue), not in `fret-ui`.
+  (`ecosystem/fret-workspace` + `ecosystem/fret` glue), not in `fret-ui`.
 - Shared **mechanism helpers** (pure geometry / surface classification) belong in
   `ecosystem/fret-ui-headless`.
 - Shared **interaction arbitration policy** belongs in `ecosystem/fret-ui-kit`.
