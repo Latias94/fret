@@ -40,6 +40,7 @@
   - Hovered HoverRegion node tracking: `crates/fret-ui/src/elements/runtime.rs` (`hovered_hover_region_node`)
   - Update hook: `crates/fret-ui/src/elements/access.rs` (`update_hovered_hover_region_with_node`)
   - Dispatch derivation: `crates/fret-ui/src/tree/dispatch/hover.rs`
+- Unit test: `crates/fret-ui/src/elements/access.rs` (`hovered_hover_region_tracks_node_id_for_redraw_on_exit`)
 - Scripted gate (run under view-cache env):
 
 ```powershell
