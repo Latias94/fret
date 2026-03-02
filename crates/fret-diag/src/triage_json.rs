@@ -550,6 +550,12 @@ pub(crate) fn triage_json_from_stats(
                 worst.renderer_custom_effect_v3_sources_pyramid_degraded_to_one_budget_insufficient,
             );
         if worst_v3_pyr_degraded > 0 {
+            let custom_effect_v3_pyramid_required_bytes_levels2_est = worst
+                .renderer_intermediate_full_target_bytes
+                .saturating_add(worst.renderer_intermediate_full_target_bytes / 4);
+            let custom_effect_v3_pyramid_would_fit_levels2_est =
+                custom_effect_chain_headroom_after_mask_bytes
+                    .map(|h| h >= custom_effect_v3_pyramid_required_bytes_levels2_est);
             out.push(json!({
                 "code": "renderer.custom_effect_v3_pyramid_degraded_to_one",
                 "severity": "warn",
@@ -561,6 +567,8 @@ pub(crate) fn triage_json_from_stats(
                     "custom_effect_v3_sources_pyramid_degraded_to_one_budget_insufficient": worst.renderer_custom_effect_v3_sources_pyramid_degraded_to_one_budget_insufficient,
                     "renderer_intermediate_budget_bytes": worst.renderer_intermediate_budget_bytes,
                     "renderer_intermediate_full_target_bytes": worst.renderer_intermediate_full_target_bytes,
+                    "custom_effect_v3_pyramid_required_bytes_levels2_est": custom_effect_v3_pyramid_required_bytes_levels2_est,
+                    "custom_effect_v3_pyramid_would_fit_levels2_est": custom_effect_v3_pyramid_would_fit_levels2_est,
                     "renderer_render_plan_effect_chain_budget_samples": worst.renderer_render_plan_effect_chain_budget_samples,
                     "renderer_render_plan_effect_chain_effective_budget_min_bytes": worst.renderer_render_plan_effect_chain_effective_budget_min_bytes,
                     "renderer_render_plan_effect_chain_effective_budget_max_bytes": worst.renderer_render_plan_effect_chain_effective_budget_max_bytes,
