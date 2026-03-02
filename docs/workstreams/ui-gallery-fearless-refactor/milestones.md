@@ -9,6 +9,7 @@ As of 2026-03-02:
 
 - Milestones 0–3 are effectively complete in-tree (snippet-backed pages + enforcement tests + drift audit).
 - Milestone 4 remains optional / follow-up (taxonomy polish, consistency, etc).
+- AI Elements demos are snippet-backed (see `ai-elements-tracker.md`).
 
 ## Milestone 0 — Foundations
 

@@ -11,6 +11,8 @@ Status labels:
 - `Legacy preview`: still implemented under `apps/fret-ui-gallery/src/ui/previews/gallery/ai/**`.
 - `Snippet-backed`: implemented as `apps/fret-ui-gallery/src/ui/pages/**` + `apps/fret-ui-gallery/src/ui/snippets/ai/**`.
 
+As of 2026-03-02, all AI demos are snippet-backed (Preview ≡ Code).
+
 | Demo (module) | Gallery route | Legacy preview | Snippet | Page | Status |
 |---|---|---|---|---|---|
 | `agent_demo` | `PAGE_AI_AGENT_DEMO` | (removed) | `apps/fret-ui-gallery/src/ui/snippets/ai/agent_demo.rs` | `apps/fret-ui-gallery/src/ui/pages/ai_agent_demo.rs` | Snippet-backed |
