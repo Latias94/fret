@@ -1,3 +1,5 @@
+pub const SOURCE: &str = include_str!("disabled_button.rs");
+
 // region: example
 use fret_ui_shadcn::{self as shadcn, prelude::*};
 use std::time::Duration;
