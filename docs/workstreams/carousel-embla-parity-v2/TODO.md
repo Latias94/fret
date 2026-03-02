@@ -1,6 +1,6 @@
 # Carousel Embla parity (v2) — TODO
 
-Status: In progress (contracts locked; deeper parity ongoing)
+Status: Complete (MVP gated; contracts + engine parity locked)
 
 Goal: Deeper Embla alignment for Carousel beyond the shadcn/ui docs outcomes, while keeping Fret’s
 layering contract intact (mechanism vs policy vs recipes).
@@ -26,6 +26,10 @@ In-tree surfaces (current baseline):
 - Headless snap model (v1): `ecosystem/fret-ui-headless/src/carousel.rs` (`snap_model_1d`)
 - UI gallery: `apps/fret-ui-gallery/src/ui/pages/carousel.rs`
 - Web-vs-Fret layout harness: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout/carousel.rs`
+
+Verification (native, 2026-03-02):
+
+- `cargo run -p fretboard -- diag suite ui-gallery-carousel-embla-engine --env FRET_DEBUG_CAROUSEL_EMBLA_ENGINE=1 --launch -- cargo run -p fret-ui-gallery --release` PASS
 
 Non-goals (v2):
 
