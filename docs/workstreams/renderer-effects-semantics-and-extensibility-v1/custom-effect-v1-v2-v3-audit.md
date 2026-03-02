@@ -1,7 +1,7 @@
 ---
 title: Custom Effects (V1/V2/V3) — Design Audit + Fearless Refactor Plan
 status: draft
-date: 2026-03-01
+date: 2026-03-02
 scope: renderer, effects, extensibility, contracts, diagnostics, wgsl
 ---
 
@@ -104,12 +104,20 @@ V3 has explicit counters + plan visibility for:
 - raw requested/distinct/aliased
 - pyramid requested/applied/degraded reasons
 - backdrop source group outcomes
+- whether CustomV3 was requested vs actually emitted as a render-plan pass
+
+Triage hint codes (worst frame):
+
+- `renderer.custom_effect_v3_requested_but_skipped` (requested by effect chain, but no passes emitted)
+- `renderer.custom_effect_v3_raw_aliased_to_src` (raw snapshot unavailable; `src_raw` aliases)
+- `renderer.custom_effect_v3_pyramid_degraded_to_one` (pyramid levels degraded under budget pressure)
 
 Anchors:
 
 - Plan compile: `crates/fret-render-wgpu/src/renderer/render_plan_effects.rs`
 - Plan dump: `crates/fret-render-wgpu/src/renderer/render_plan_dump.rs`
 - Conformance: `crates/fret-render-wgpu/tests/effect_custom_v3_conformance.rs`
+- Triage: `crates/fret-diag/src/triage_json.rs`
 
 ## Liquid glass parity audit (demo authoring)
 
@@ -130,6 +138,8 @@ Anchors:
 - `apps/fret-examples/src/liquid_glass_demo.rs` (CustomV3 chain + bevel controls + optional backdrop source group)
 - Diagnostics suites:
   - `tools/diag-scripts/suites/liquid-glass-custom-v3/`
+  - `tools/diag-scripts/suites/liquid-glass-custom-v3-degraded/`
+  - `tools/diag-scripts/suites/liquid-glass-custom-v3-sources-degraded/`
   - `tools/diag-scripts/suites/perf-liquid-glass-custom-v3-steady/`
 
 ### Known gaps / intentional differences
@@ -145,11 +155,11 @@ These are not correctness bugs, but areas where “parity” may still drift fro
 
 ## Hazards (what is likely to bite us later)
 
-### H1 — Capability discovery is incomplete for V3
+### H1 — Capability discovery may need finer granularity
 
-`RendererCapabilities` exposes V1 and V2 user-image support, but does not expose V3 support explicitly. Apps currently
-probe V3 support by “trying to register and seeing if it succeeds”, which is workable but suboptimal for UX and
-diagnostics.
+`RendererCapabilities` exposes V3 support explicitly (`custom_effect_v3`). The remaining open question is whether we
+need finer-grained flags (e.g. “pyramid sources supported”) in the future, or whether deterministic degradation plus
+diagnostics hints are sufficient.
 
 Anchor:
 
@@ -189,6 +199,30 @@ Anchors:
 
 Each PR below is intended to be small, reviewable, and reversible. “Gates” are the minimum regression artifacts to run
 before landing.
+
+### PR0 — Landed: CustomV3 observability + liquid-glass degradation suites
+
+Goal:
+
+- Make “CustomV3 requested but skipped” and “CustomV3 sources degraded” triageable from diag bundles.
+
+Changes (landed):
+
+- Add renderer perf counters: `custom_effect_v3_steps_requested`, `custom_effect_v3_passes_emitted`.
+- Add triage hint: `renderer.custom_effect_v3_requested_but_skipped`.
+- Stabilize liquid-glass demo automation selectors (`test_id`) used by suites.
+- Add/curate liquid-glass suites:
+  - `tools/diag-scripts/suites/liquid-glass-custom-v3-degraded/`
+  - `tools/diag-scripts/suites/liquid-glass-custom-v3-sources-degraded/`
+
+Gates:
+
+- `cargo check -p fret-render-wgpu -p fret-diag -p fret-bootstrap`
+- `cargo run -p fretboard -- diag suite liquid-glass-custom-v3-sources-degraded --dir target/fret-diag/lg-v3 --session-auto --launch -- .\\target\\debug\\liquid_glass_demo.exe`
+
+Rollback:
+
+- Revert the commit(s) that add counters/hints/suites.
 
 ### PR1 — Docs: audit + authoring guidance links
 
@@ -235,6 +269,10 @@ Rollback:
 
 ### PR3 — Fix: unregister evicts V3 pipeline cache + add a unit test
 
+Status:
+
+- Landed (unit test exists in `crates/fret-render-wgpu/src/renderer/services.rs`).
+
 Goal:
 
 - Ensure `unregister_custom_effect` evicts all ABI pipeline caches consistently.
@@ -254,6 +292,10 @@ Rollback:
 - Revert the fix; behavior is internal (no contract surface change).
 
 ### PR4 — Capabilities: expose V3 support in `RendererCapabilities` (additive)
+
+Status:
+
+- Landed (`crates/fret-render-wgpu/src/capabilities.rs` exposes `custom_effect_v3`).
 
 Goal:
 
@@ -346,4 +388,3 @@ Rollback:
   - `apps/fret-examples/src/liquid_glass_demo.rs`
   - `tools/diag-scripts/suites/liquid-glass-custom-v3/`
   - `tools/diag-scripts/suites/perf-liquid-glass-custom-v3-steady/`
-
