@@ -611,7 +611,7 @@ impl UiDiagnosticsService {
         }
         self.last_pick_trigger_mtime = Some(modified);
 
-        let run_id = self.next_pick_run_id();
+        let run_id = self.inspector.next_pick_run_id();
         self.inspector.arm_pick(run_id);
     }
 

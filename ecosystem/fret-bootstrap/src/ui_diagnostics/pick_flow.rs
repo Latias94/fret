@@ -1,15 +1,6 @@
 use super::*;
 
 impl UiDiagnosticsService {
-    pub(super) fn next_pick_run_id(&mut self) -> u64 {
-        let mut id = unix_ms_now();
-        if id <= self.last_pick_run_id {
-            id = self.last_pick_run_id.saturating_add(1);
-        }
-        self.last_pick_run_id = id;
-        id
-    }
-
     pub(super) fn write_pick_result(&mut self, result: UiPickResultV1) {
         if !self.is_enabled() {
             return;

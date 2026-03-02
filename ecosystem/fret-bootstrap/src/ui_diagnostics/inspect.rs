@@ -129,7 +129,7 @@ impl UiDiagnosticsService {
             return false;
         }
 
-        let run_id = self.next_pick_run_id();
+        let run_id = self.inspector.next_pick_run_id();
         let consume_clicks = self.inspector.start_pending_pick(window, run_id, *position);
         app.request_redraw(window);
         consume_clicks

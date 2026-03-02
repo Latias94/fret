@@ -24,7 +24,6 @@ pub struct UiDiagnosticsService {
     last_dump_dir: Option<PathBuf>,
     last_dump_artifact_stats: Option<UiArtifactStatsV1>,
     last_script_run_id: u64,
-    last_pick_run_id: u64,
     clipboard_text_responses: std::collections::VecDeque<DiagClipboardTextResponse>,
     next_clipboard_token: u64,
     app_snapshot_provider:

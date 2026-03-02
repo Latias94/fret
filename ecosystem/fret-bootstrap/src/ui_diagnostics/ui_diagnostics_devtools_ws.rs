@@ -444,7 +444,7 @@ impl UiDiagnosticsService {
                 self.set_inspect_enabled(cfg.enabled, cfg.consume_clicks);
             }
             "pick.arm" => {
-                let run_id = self.next_pick_run_id();
+                let run_id = self.inspector.next_pick_run_id();
                 self.inspector.arm_pick(run_id);
             }
             "bundle.dump" => {

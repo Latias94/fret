@@ -29,6 +29,7 @@ pub(super) struct InspectController {
     pub(super) enabled: bool,
     pub(super) consume_clicks: bool,
 
+    pub(super) last_pick_run_id: u64,
     pub(super) last_picked_node_id: HashMap<AppWindowId, u64>,
     pub(super) last_picked_selector_json: HashMap<AppWindowId, String>,
     pub(super) last_hovered_node_id: HashMap<AppWindowId, u64>,
@@ -42,6 +43,15 @@ pub(super) struct InspectController {
 }
 
 impl InspectController {
+    pub(super) fn next_pick_run_id(&mut self) -> u64 {
+        let mut id = super::unix_ms_now();
+        if id <= self.last_pick_run_id {
+            id = self.last_pick_run_id.saturating_add(1);
+        }
+        self.last_pick_run_id = id;
+        id
+    }
+
     pub(super) fn arm_pick(&mut self, run_id: u64) {
         self.pending_pick = None;
         self.pick_armed_run_id = Some(run_id);
