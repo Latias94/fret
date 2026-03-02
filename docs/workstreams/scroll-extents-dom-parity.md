@@ -388,7 +388,7 @@ probes), we likely need at least one of these mechanism-level additions:
      nodes contribute to extents (default: exclude).
 4. **Keep observation bounded and debuggable**:
    - Maintain a bounded scan budget (as we do today) and surface “budget hit” telemetry so we can
-     detect cases where wrapper chains exceed peeling/scan limits.
+     detect cases where wrapper chains exceed peeling/scan limits (SE-114 implemented).
 
 ### SE-111 draft: overflow contexts + clamp policy (contract sketch)
 
@@ -430,6 +430,9 @@ Implementation status:
   wrapper-heavy subtrees can measure descendants without a hard scroll-axis clamp.
 - SE-113 (absolute exclusion parity) is implemented. Post-layout overflow observation now excludes
   absolute-positioned nodes by default, matching the intrinsic measurement skip behavior.
+- SE-114 (bounded-observation telemetry) is implemented. When wrapper peeling or bounded deep scan
+  hits its budget, `UiDebugScrollNodeTelemetry` records an `overflow_observation` payload for the
+  scroll node (and `FRET_DEBUG_SCROLL_EXTENT_PROBE=1` prints a budget-hit log line).
 
 ## Verification Plan (SE-210)
 
