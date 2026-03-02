@@ -51,6 +51,7 @@ mod skeleton;
 mod slider;
 mod spinner;
 mod switch;
+mod table;
 mod tabs;
 mod toggle;
 mod toggle_group;
@@ -331,6 +332,10 @@ pub(super) fn preview_tabs(
     value: Model<Option<Arc<str>>>,
 ) -> Vec<AnyElement> {
     tabs::preview_tabs(cx, value)
+}
+
+pub(super) fn preview_table(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
+    table::preview_table(cx)
 }
 
 pub(super) fn preview_spinner(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {

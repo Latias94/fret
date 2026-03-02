@@ -537,7 +537,7 @@ fn page_preview(
         PAGE_DATA_GRID => preview_data_grid(cx, data_grid_selected_row),
         PAGE_TABS => pages::preview_tabs(cx, tabs_value),
         PAGE_ACCORDION => preview_accordion(cx, accordion_value),
-        PAGE_TABLE => preview_table(cx),
+        PAGE_TABLE => pages::preview_table(cx),
         PAGE_PROGRESS => pages::preview_progress(cx, progress),
         PAGE_MENUS => preview_menus(cx, dropdown_open, context_menu_open, last_action.clone()),
         PAGE_COMMAND => {
