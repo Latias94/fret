@@ -20,6 +20,38 @@ Status (2026-03-02):
 - Remaining blocker is docking correctness: chained tear-off + merge-back does not yet return to the original dock graph
   fingerprint, so the “exact signature” gate fails even though windows auto-close and canonicalization passes.
 
+## M1.1 — Scripted input isolation (runner cursor override)
+
+Goal: scripted docking drags are deterministic under user input noise.
+
+Deliverables:
+
+- Runner ignores physical mouse cursor updates for docking routing while an active diagnostics cursor override is in
+  effect during a script run.
+- A small regression script that passes even if the user moves the mouse during playback.
+
+## M1.2 — Cached `test_id` predicate evaluation (freshness + evidence)
+
+Goal: avoid occlusion deadlocks without introducing stale-cache false positives.
+
+Deliverables:
+
+- Allow `exists/not_exists` predicates by `test_id` to be evaluated from per-window cached `test_id_bounds` when the
+  snapshot is recent (define and enforce a max age).
+- Emit explicit evidence (event log entries) when cached evaluation is used, and when it is rejected as stale.
+- Add a minimal repro script that forces an occlusion / non-redraw scenario and demonstrates cache-based evaluation
+  is bounded and observable.
+
+## M1.3 — Runner-owned window counting
+
+Goal: diagnostics window-count gates reflect real OS window lifecycle, not “windows that happened to produce input”.
+
+Deliverables:
+
+- Provide a runner-owned source-of-truth for open window count/list to the diagnostics service.
+- Switch `known_window_count_*` predicates to use this source-of-truth.
+- Add a regression script for multi-window tear-off + auto-close under z-order churn / occlusion.
+
 ## M2 — Suite-level stability and isolation
 
 Goal: the full `docking-arbitration` suite runs without cross-script contamination.

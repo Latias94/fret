@@ -26,6 +26,18 @@ Recommendation:
 - Keep window-client logical coordinates as an authoring convenience, but make the integration
   contract explicit and regression-tested.
 
+## 2.1) Should scripted cursor overrides mask physical mouse movement?
+
+Options:
+
+- Yes: when diagnostics cursor override is active (and a script is running), runner ignores physical mouse movement for
+  the purposes of docking hover/drop routing.
+- No: physical mouse is always authoritative; scripts must ensure they are the only input source (fragile for local dev).
+
+Recommendation:
+
+- Yes. This is a diagnostics-only determinism requirement; it should not affect normal app input.
+
 ## 3) What should a stable “drag-back success” predicate be?
 
 Candidates:
@@ -68,6 +80,31 @@ Status update (2026-03-02, later):
   runs through both merges but fails the final exact signature assertion. The last observed signature in a failing run:
   - `dock(root=tabs(a=1:[demo.controls,demo.viewport.right]);floatings=[])`
   - fingerprint64: `2526963005150391245` (expected `7509174212363425732`)
+
+## 3.1) Is cache-based `test_id` predicate evaluation acceptable?
+
+Context:
+
+- Some window-targeted waits/asserts (`exists/not_exists` by `test_id`) can deadlock if they force script migration to an
+  occluded window that stops producing redraw callbacks.
+
+Options:
+
+- Allow cached evaluation from per-window `test_id_bounds` (derived from recent semantics snapshots), with a freshness
+  policy and explicit evidence.
+- Disallow cached evaluation; only evaluate `exists/not_exists` on the current window snapshot (may require new script
+  primitives or a runner-assisted snapshot pump).
+
+Recommendation:
+
+- Allow cached evaluation, but only when:
+  - the cached snapshot is recent (define max age),
+  - the runtime emits bounded evidence of cache hit/miss/stale,
+  - and scripts that rely on this are annotated as such.
+
+Notes:
+
+- “Recent” should be an explicit constant (e.g. 30s) until we have a more principled snapshot liveness contract.
 
 ## 4) Should overlap-based “peek-behind” be required?
 

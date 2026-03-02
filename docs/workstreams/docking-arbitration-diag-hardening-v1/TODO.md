@@ -22,6 +22,23 @@ with special focus on multi-window tear-off + drag-back sequences.
   - `debug.docking_interaction.dock_graph_signature` / `dock_graph_stats` should be present and up-to-date for all frames
     that matter to gates (either by recording every frame, or by an explicit “latest snapshot” contract).
 
+## Hardening backlog (diag correctness + isolation)
+
+- Runner: isolate scripted cursor overrides from physical mouse movement.
+  - Goal: when diagnostics cursor override is active (and a script is running), physical mouse movement must not change
+    the runner cursor position used for docking hover/drop routing.
+  - Acceptance: a cross-window docking script remains deterministic even if the user moves the mouse during playback.
+- Window counting: make `known_window_count_*` source-of-truth runner-owned.
+  - Goal: diagnostics predicates for window count must reflect real open OS windows, not “windows that produced input”.
+  - Acceptance: tear-off create/auto-close gates do not flake under occlusion / z-order churn.
+- Cached `test_id` predicate evaluation: audit + evidence.
+  - Goal: `exists/not_exists` by `test_id` may be evaluated off-window using cached `test_id_bounds` to avoid occlusion
+    deadlocks, but must not introduce false positives from stale caches.
+  - Work:
+    - Define a max-age / freshness rule (e.g. require a recent snapshot for the target window).
+    - Add bounded evidence in the script event log when cache-based evaluation is used (hit/miss/stale).
+    - Add a focused repro script that intentionally occludes the target window and still progresses without hanging.
+
 ## Regression gates (candidate)
 
 - A small “hardening smoke” suite for docking that includes:
