@@ -97,6 +97,8 @@ impl<H: UiHost> Default for UiTree<H> {
             #[cfg(feature = "diagnostics")]
             debug_reachable_from_layer_roots: None,
             #[cfg(feature = "diagnostics")]
+            debug_dispatch_snapshot: None,
+            #[cfg(feature = "diagnostics")]
             debug_text_constraints_measured: HashMap::new(),
             #[cfg(feature = "diagnostics")]
             debug_text_constraints_prepared: HashMap::new(),

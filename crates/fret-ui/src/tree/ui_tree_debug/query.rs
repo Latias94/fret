@@ -583,4 +583,105 @@ impl<H: UiHost> UiTree<H> {
             barrier_root,
         }
     }
+
+    #[cfg(feature = "diagnostics")]
+    pub fn debug_dispatch_snapshot(&mut self, frame_id: FrameId) -> UiDebugDispatchSnapshot {
+        if self
+            .debug_dispatch_snapshot
+            .as_ref()
+            .is_some_and(|s| s.frame_id == frame_id)
+        {
+            let snapshot = self
+                .debug_dispatch_snapshot
+                .as_ref()
+                .expect("snapshot presence checked");
+            return UiDebugDispatchSnapshot::from_snapshot(snapshot);
+        }
+
+        let snapshot = self.build_dispatch_snapshot(frame_id);
+        let debug = UiDebugDispatchSnapshot::from_snapshot(&snapshot);
+        self.debug_dispatch_snapshot = Some(snapshot);
+        debug
+    }
+
+    #[cfg(feature = "diagnostics")]
+    pub fn debug_dispatch_snapshot_parity(
+        &mut self,
+        frame_id: FrameId,
+    ) -> UiDebugDispatchSnapshotParityReport {
+        // Reuse the snapshot cache if possible, but keep this method self-contained so diagnostics
+        // callers don't need to remember ordering.
+        let snapshot = if self
+            .debug_dispatch_snapshot
+            .as_ref()
+            .is_some_and(|s| s.frame_id == frame_id)
+        {
+            self.debug_dispatch_snapshot
+                .as_ref()
+                .expect("snapshot presence checked")
+                .clone()
+        } else {
+            let snapshot = self.build_dispatch_snapshot(frame_id);
+            self.debug_dispatch_snapshot = Some(snapshot.clone());
+            snapshot
+        };
+
+        // Phase A baseline: reachability from active layer roots via child edges.
+        let mut reachable: HashSet<NodeId> = HashSet::new();
+        let mut stack: Vec<NodeId> = snapshot.active_layer_roots.clone();
+        while let Some(id) = stack.pop() {
+            if !self.nodes.contains_key(id) {
+                continue;
+            }
+            if !reachable.insert(id) {
+                continue;
+            }
+            if let Some(entry) = self.nodes.get(id) {
+                for &child in &entry.children {
+                    stack.push(child);
+                }
+            }
+        }
+
+        let snapshot_nodes: HashSet<NodeId> = snapshot.nodes.iter().copied().collect();
+
+        const SAMPLE_LIMIT: usize = 64;
+
+        let mut missing_in_snapshot_sample: Vec<NodeId> = Vec::new();
+        let mut missing_in_snapshot_total = 0usize;
+        for id in reachable.iter().copied() {
+            if snapshot_nodes.contains(&id) {
+                continue;
+            }
+            missing_in_snapshot_total = missing_in_snapshot_total.saturating_add(1);
+            if missing_in_snapshot_sample.len() < SAMPLE_LIMIT {
+                missing_in_snapshot_sample.push(id);
+            }
+        }
+
+        let mut extra_in_snapshot_sample: Vec<NodeId> = Vec::new();
+        let mut extra_in_snapshot_total = 0usize;
+        for id in snapshot_nodes.iter().copied() {
+            if reachable.contains(&id) {
+                continue;
+            }
+            extra_in_snapshot_total = extra_in_snapshot_total.saturating_add(1);
+            if extra_in_snapshot_sample.len() < SAMPLE_LIMIT {
+                extra_in_snapshot_sample.push(id);
+            }
+        }
+
+        UiDebugDispatchSnapshotParityReport {
+            frame_id,
+            window: snapshot.window,
+            active_layer_roots: snapshot.active_layer_roots,
+            barrier_root: snapshot.barrier_root,
+            reachable_count: reachable.len(),
+            snapshot_count: snapshot_nodes.len(),
+            missing_in_snapshot_total,
+            missing_in_snapshot_sample,
+            extra_in_snapshot_total,
+            extra_in_snapshot_sample,
+        }
+    }
 }

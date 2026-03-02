@@ -411,6 +411,8 @@ pub fn handle_dock_op<H: UiHost>(app: &mut H, op: DockOp) -> bool {
                 return false;
             }
 
+            let tearoff_log = std::env::var_os("FRET_DOCK_TEAROFF_LOG")
+                .is_some_and(|v| !v.is_empty());
             let mut windows_to_auto_close: Vec<AppWindowId> = Vec::new();
             let handled = app.with_global_mut(DockManager::default, |dock, app| {
                 let now = app.tick_id();
@@ -443,10 +445,52 @@ pub fn handle_dock_op<H: UiHost>(app: &mut H, op: DockOp) -> bool {
                     return false;
                 }
 
+                if tearoff_log {
+                    match &op {
+                        DockOp::MovePanel {
+                            source_window,
+                            target_window,
+                            ..
+                        }
+                        | DockOp::MoveTabs {
+                            source_window,
+                            target_window,
+                            ..
+                        }
+                        | DockOp::MergeWindowInto {
+                            source_window,
+                            target_window,
+                            ..
+                        } => {
+                            let src_panels = dock.graph.collect_panels_in_window(*source_window);
+                            let tgt_panels = dock.graph.collect_panels_in_window(*target_window);
+                            tracing::info!(
+                                op = ?op,
+                                source_window = ?source_window,
+                                target_window = ?target_window,
+                                source_panel_count = src_panels.len(),
+                                target_panel_count = tgt_panels.len(),
+                                "dock tear-off: applied cross-window dock op"
+                            );
+                        }
+                        _ => {}
+                    }
+                }
+
                 if let Some(reg) = app.global::<DockFloatingOsWindowRegistry>() {
                     // Close-on-empty is a stable UX expectation in editor-grade docking (ImGui-style).
                     // Scan all known dock-owned floating OS windows rather than trying to keep an
                     // exhaustive list of which DockOps might have emptied a particular window.
+                    if tearoff_log {
+                        for window in reg.windows.iter().copied() {
+                            let panel_count = dock.graph.collect_panels_in_window(window).len();
+                            tracing::info!(
+                                window = ?window,
+                                panel_count,
+                                "dock tear-off: scan dock-floating window panels"
+                            );
+                        }
+                    }
                     for window in reg.windows.iter().copied() {
                         if dock.graph.collect_panels_in_window(window).is_empty() {
                             windows_to_auto_close.push(window);

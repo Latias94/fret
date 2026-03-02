@@ -31,40 +31,22 @@ pub(super) fn preview_collapsible(cx: &mut ElementContext<'_, App>) -> Vec<AnyEl
         vec![
             DocSection::new("Demo", demo)
                 .description("Uncontrolled disclosure with a compact trigger and a details list.")
-                .code_rust_from_file_region(
-                    include_str!("../snippets/collapsible/demo.rs"),
-                    "example",
-                ),
+                .code_rust_from_file_region(snippets::demo::SOURCE, "example"),
             DocSection::new("Controlled State", controlled_state)
                 .description("Controlled via `Model<bool>` when state must be driven externally.")
-                .code_rust_from_file_region(
-                    include_str!("../snippets/collapsible/controlled_state.rs"),
-                    "example",
-                ),
+                .code_rust_from_file_region(snippets::controlled_state::SOURCE, "example"),
             DocSection::new("Basic", basic)
                 .description("Uncontrolled disclosure with a simple text content body.")
-                .code_rust_from_file_region(
-                    include_str!("../snippets/collapsible/basic.rs"),
-                    "example",
-                ),
+                .code_rust_from_file_region(snippets::basic::SOURCE, "example"),
             DocSection::new("Settings Panel", settings)
                 .description("Collapsible used to hide optional/advanced form fields.")
-                .code_rust_from_file_region(
-                    include_str!("../snippets/collapsible/settings_panel.rs"),
-                    "example",
-                ),
+                .code_rust_from_file_region(snippets::settings_panel::SOURCE, "example"),
             DocSection::new("File Tree", file_tree)
                 .description("Nested collapsibles with independent open state per node.")
-                .code_rust_from_file_region(
-                    include_str!("../snippets/collapsible/file_tree.rs"),
-                    "example",
-                ),
+                .code_rust_from_file_region(snippets::file_tree::SOURCE, "example"),
             DocSection::new("RTL", rtl)
                 .description("Direction provider should keep trigger/content alignment stable.")
-                .code_rust_from_file_region(
-                    include_str!("../snippets/collapsible/rtl.rs"),
-                    "example",
-                ),
+                .code_rust_from_file_region(snippets::rtl::SOURCE, "example"),
             DocSection::new("Notes", notes).description("API reference pointers and caveats."),
         ],
     );

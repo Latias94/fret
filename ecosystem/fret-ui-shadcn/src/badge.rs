@@ -31,6 +31,45 @@ pub enum BadgeVariant {
     Link,
 }
 
+/// Upstream shadcn/ui `badgeVariants(...)` compat surface.
+///
+/// Upstream returns a Tailwind/CVA class string. In Fret we expose the closest equivalent as
+/// mergeable refinements.
+#[derive(Debug, Clone)]
+pub struct BadgeVariants {
+    pub chrome: ChromeRefinement,
+    pub layout: LayoutRefinement,
+}
+
+pub fn badge_variants(theme: &ThemeSnapshot, variant: BadgeVariant) -> BadgeVariants {
+    let mut chrome = ChromeRefinement::default()
+        .px(Space::N2)
+        .py(Space::N0p5)
+        .rounded(Radius::Full)
+        .border_1();
+    if let Some(bg) = bg_for(theme, variant) {
+        chrome = chrome.bg(ColorRef::Color(bg));
+    }
+    chrome = match variant {
+        BadgeVariant::Outline => chrome.border_color(ColorRef::Color(border_color(theme))),
+        BadgeVariant::Default
+        | BadgeVariant::Secondary
+        | BadgeVariant::Destructive
+        | BadgeVariant::Ghost
+        | BadgeVariant::Link => chrome.border_color(ColorRef::Color(Color::TRANSPARENT)),
+    };
+    chrome = chrome.text_color(ColorRef::Color(fg_for(theme, variant)));
+
+    let layout = LayoutRefinement::default().flex_shrink_0();
+    BadgeVariants { chrome, layout }
+}
+
+/// Upstream shadcn/ui compat alias for copy/paste parity.
+#[allow(non_snake_case)]
+pub fn badgeVariants(theme: &ThemeSnapshot, variant: BadgeVariant) -> BadgeVariants {
+    badge_variants(theme, variant)
+}
+
 #[derive(Debug, Clone)]
 pub enum BadgeRender {
     Link {

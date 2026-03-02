@@ -3,6 +3,8 @@
 This note documents how to express the shadcn/ui v4 Combobox docs shapes in Fret using the
 `into_element_parts(...)` adapters.
 
+Deeper structural convergence work is tracked in `docs/workstreams/select-combobox-deep-redesign-v1/`.
+
 Sources of truth:
 
 - Upstream docs: `repo-ref/ui/apps/v4/content/docs/components/radix/combobox.mdx`
@@ -95,6 +97,43 @@ let _anchor_el = anchor.into_element(cx);
 let content = ComboboxContent::new([]).anchor_element_id(anchor_id);
 ```
 
+## Popup trigger (docs “Popup” example)
+
+Upstream “Popup” moves the input inside `ComboboxContent` and uses `ComboboxTrigger(render=Button)`
+with `ComboboxValue` as its child.
+
+In Fret:
+
+- Use `ComboboxTrigger` to map to recipe-level trigger knobs (`trigger_variant`, `width`).
+- If `ComboboxInput` is placed inside `ComboboxContent`, its `placeholder(...)` maps to the overlay
+  search input placeholder (`search_placeholder`), not the trigger placeholder.
+
+```rust
+use fret_ui_shadcn::{
+    Combobox, ComboboxContent, ComboboxContentPart, ComboboxEmpty, ComboboxInput, ComboboxItem,
+    ComboboxList, ComboboxPart, ComboboxTrigger, ComboboxTriggerVariant,
+};
+use fret_core::Px;
+
+Combobox::new(value, open).into_element_parts(cx, |_cx| {
+    vec![
+        ComboboxPart::from(
+            ComboboxTrigger::new()
+                .variant(ComboboxTriggerVariant::Button)
+                .width_px(Px(256.0)),
+        ),
+        ComboboxPart::from(ComboboxContent::new([
+            ComboboxContentPart::from(ComboboxInput::new().placeholder("Search")),
+            ComboboxContentPart::from(ComboboxEmpty::new("No items found.")),
+            ComboboxContentPart::from(ComboboxList::new().items([
+                ComboboxItem::new("us", "United States"),
+                ComboboxItem::new("cn", "China"),
+            ])),
+        ])),
+    ]
+})
+```
+
 ## Groups (+ separator)
 
 Upstream uses `ComboboxGroup`, `ComboboxLabel`, `ComboboxCollection`, and an optional
@@ -181,6 +220,8 @@ pub fn example_combobox_multiple(cx: &mut ElementContext<'_, App>) -> AnyElement
 
 - Base UI’s in-trigger editable chips input is not represented as a literal nested element in Fret;
   the filter input lives in the overlay surface.
+- Base UI’s `ComboboxInput` inside `ComboboxContent` is treated as configuration for the overlay
+  search field (placeholder), not a literal nested input element.
 - Render-prop ergonomics are not modeled; lists are provided explicitly.
 - `ComboboxInput.show_trigger(false)` hides the default trigger icon (the trigger control still
   toggles the overlay).

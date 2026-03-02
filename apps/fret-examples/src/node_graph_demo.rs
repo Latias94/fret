@@ -23,6 +23,7 @@ use fret_runtime::{
     WhenExpr,
 };
 use fret_ui::Theme;
+use fret_ui::declarative as ui_declarative;
 use fret_ui::retained_bridge::{BoundTextInput, UiTreeRetainedExt as _, *};
 use fret_ui::{UiFrameCx, UiHost, UiTree};
 use serde_json::Value;
@@ -45,6 +46,7 @@ use fret_node::schema::{
     NodeKindMigrateError, NodeKindMigrator, NodeRegistry, NodeSchema, PortDecl,
 };
 use fret_node::ui::canvas::RejectNonFiniteTx;
+use fret_node::ui::declarative::NodeGraphSurfacePaintOnlyProps;
 use fret_node::ui::presenter::{
     EdgeMarker, EdgeRenderHint, EdgeRouteKind, InsertNodeCandidate, NodeGraphContextMenuItem,
     NodeGraphPresenter, PortAnchorHint,
@@ -1406,7 +1408,34 @@ fn build_stress_graph(graph_id: GraphId, target_nodes: usize) -> Graph {
 
 struct NodeGraphDemoWindowState {
     ui: UiTree<App>,
-    root: fret_core::NodeId,
+    root: Option<fret_core::NodeId>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum NodeGraphDemoDeclarativeMode {
+    Off,
+    CompatRetained,
+    PaintOnly,
+}
+
+impl NodeGraphDemoDeclarativeMode {
+    fn enabled(self) -> bool {
+        self != Self::Off
+    }
+
+    fn from_env() -> Self {
+        let Some(raw) = std::env::var("FRET_NODE_GRAPH_DECLARATIVE").ok() else {
+            return Self::Off;
+        };
+        let v = raw.trim();
+        if v.is_empty() || v == "0" {
+            return Self::Off;
+        }
+        match v.to_ascii_lowercase().as_str() {
+            "paint" | "paint_only" | "paint-only" => Self::PaintOnly,
+            _ => Self::CompatRetained,
+        }
+    }
 }
 
 #[derive(Debug, Default, Clone, Copy)]
@@ -1506,13 +1535,25 @@ impl PortalNumberEditSpec for DemoFloatPortalSpec {
     }
 }
 
-#[derive(Default)]
 struct NodeGraphDemoDriver {
+    declarative_mode: NodeGraphDemoDeclarativeMode,
     pending_view_state_save: bool,
     last_view_state_save_at: Option<Instant>,
 }
 
 impl NodeGraphDemoDriver {
+    fn new(declarative_mode: NodeGraphDemoDeclarativeMode) -> Self {
+        Self {
+            declarative_mode,
+            pending_view_state_save: false,
+            last_view_state_save_at: None,
+        }
+    }
+
+    fn new_from_env() -> Self {
+        Self::new(NodeGraphDemoDeclarativeMode::from_env())
+    }
+
     const VIEW_STATE_SAVE_DEBOUNCE: Duration = Duration::from_millis(500);
 
     fn save_view_state(&mut self, app: &mut App) {
@@ -1910,7 +1951,23 @@ impl NodeGraphDemoDriver {
         ui.set_children(root, children);
         ui.set_root(root);
 
-        NodeGraphDemoWindowState { ui, root }
+        NodeGraphDemoWindowState {
+            ui,
+            root: Some(root),
+        }
+    }
+
+    fn build_ui_declarative(_app: &mut App, window: AppWindowId) -> NodeGraphDemoWindowState {
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        NodeGraphDemoWindowState { ui, root: None }
+    }
+}
+
+impl Default for NodeGraphDemoDriver {
+    fn default() -> Self {
+        Self::new(NodeGraphDemoDeclarativeMode::Off)
     }
 }
 
@@ -1918,7 +1975,11 @@ impl WinitAppDriver for NodeGraphDemoDriver {
     type WindowState = NodeGraphDemoWindowState;
 
     fn create_window_state(&mut self, app: &mut App, window: AppWindowId) -> Self::WindowState {
-        Self::build_ui(app, window)
+        if self.declarative_mode.enabled() {
+            Self::build_ui_declarative(app, window)
+        } else {
+            Self::build_ui(app, window)
+        }
     }
 
     fn handle_model_changes(
@@ -2149,7 +2210,11 @@ impl WinitAppDriver for NodeGraphDemoDriver {
             let pattern = style_state.cycle_background_pattern();
             tracing::info!(?pattern, "node graph demo background pattern changed");
 
-            *state = Self::build_ui(app, window);
+            *state = if self.declarative_mode.enabled() {
+                Self::build_ui_declarative(app, window)
+            } else {
+                Self::build_ui(app, window)
+            };
             app.request_redraw(window);
             return;
         }
@@ -2210,7 +2275,11 @@ impl WinitAppDriver for NodeGraphDemoDriver {
                 return;
             };
             toggles.toggle_show_help();
-            *state = Self::build_ui(app, window);
+            *state = if self.declarative_mode.enabled() {
+                Self::build_ui_declarative(app, window)
+            } else {
+                Self::build_ui(app, window)
+            };
             app.request_redraw(window);
             return;
         }
@@ -2220,7 +2289,11 @@ impl WinitAppDriver for NodeGraphDemoDriver {
                 return;
             };
             toggles.toggle_show_toolbars();
-            *state = Self::build_ui(app, window);
+            *state = if self.declarative_mode.enabled() {
+                Self::build_ui_declarative(app, window)
+            } else {
+                Self::build_ui(app, window)
+            };
             app.request_redraw(window);
             return;
         }
@@ -2230,7 +2303,11 @@ impl WinitAppDriver for NodeGraphDemoDriver {
                 return;
             };
             toggles.toggle_show_blackboard();
-            *state = Self::build_ui(app, window);
+            *state = if self.declarative_mode.enabled() {
+                Self::build_ui_declarative(app, window)
+            } else {
+                Self::build_ui(app, window)
+            };
             app.request_redraw(window);
             return;
         }
@@ -2240,7 +2317,11 @@ impl WinitAppDriver for NodeGraphDemoDriver {
                 return;
             };
             toggles.toggle_controls_placement();
-            *state = Self::build_ui(app, window);
+            *state = if self.declarative_mode.enabled() {
+                Self::build_ui_declarative(app, window)
+            } else {
+                Self::build_ui(app, window)
+            };
             app.request_redraw(window);
             return;
         }
@@ -2250,7 +2331,11 @@ impl WinitAppDriver for NodeGraphDemoDriver {
                 return;
             };
             toggles.toggle_minimap_placement();
-            *state = Self::build_ui(app, window);
+            *state = if self.declarative_mode.enabled() {
+                Self::build_ui_declarative(app, window)
+            } else {
+                Self::build_ui(app, window)
+            };
             app.request_redraw(window);
             return;
         }
@@ -2381,11 +2466,20 @@ impl WinitAppDriver for NodeGraphDemoDriver {
             let mut next_view = NodeGraphViewState::default();
             next_view.sanitize_for_graph(&next_graph);
 
+            // Keep the standalone graph/view models in sync with the store so declarative surfaces
+            // that are not store-backed (e.g. paint-only skeleton) observe demo commands.
+            let next_graph_for_models = next_graph.clone();
+            let next_view_for_models = next_view.clone();
+
             let _ = models.store.update(app, |store, _cx| {
                 store.replace_graph(next_graph);
                 store.replace_view_state(next_view);
                 store.clear_history();
             });
+            let _ = models
+                .graph
+                .update(app, |g, _cx| *g = next_graph_for_models);
+            let _ = models.view.update(app, |v, _cx| *v = next_view_for_models);
 
             app.request_redraw(window);
             return;
@@ -2403,7 +2497,59 @@ impl WinitAppDriver for NodeGraphDemoDriver {
             scene,
         } = context;
 
-        state.ui.set_root(state.root);
+        if self.declarative_mode.enabled() {
+            if let Some(models) = app.global::<NodeGraphDemoModels>().cloned() {
+                let internals = app.global::<Arc<NodeGraphInternalsStore>>().cloned();
+                let mode = self.declarative_mode;
+                let root = ui_declarative::RenderRootContext::new(
+                    &mut state.ui,
+                    app,
+                    services,
+                    window,
+                    bounds,
+                )
+                .render_root("node-graph-demo-declarative", move |cx| {
+                    cx.observe_model(&models.graph, Invalidation::Layout);
+                    cx.observe_model(&models.view, Invalidation::Paint);
+                    cx.observe_model(&models.edits, Invalidation::Paint);
+                    cx.observe_model(&models.overlays, Invalidation::Paint);
+
+                    let surface = match mode {
+                        NodeGraphDemoDeclarativeMode::Off => unreachable!(),
+                        NodeGraphDemoDeclarativeMode::CompatRetained => {
+                            let mut surface_props =
+                                fret_node::ui::declarative::NodeGraphSurfaceCompatRetainedProps::new(
+                                    models.graph.clone(),
+                                    models.view.clone(),
+                                );
+                            surface_props.store = Some(models.store.clone());
+                            surface_props.edit_queue = Some(models.edits.clone());
+                            surface_props.overlays = Some(models.overlays.clone());
+                            surface_props.internals = internals;
+                            surface_props.test_id =
+                                Some(Arc::<str>::from("node_graph_demo.declarative.compat"));
+                            fret_node::ui::declarative::node_graph_surface_compat_retained(
+                                cx,
+                                surface_props,
+                            )
+                        }
+                        NodeGraphDemoDeclarativeMode::PaintOnly => {
+                            let props =
+                                NodeGraphSurfacePaintOnlyProps::new(models.graph.clone(), models.view.clone());
+                            fret_node::ui::declarative::node_graph_surface_paint_only(cx, props)
+                        }
+                    };
+                    vec![surface]
+                });
+                state.root = Some(root);
+            } else {
+                tracing::warn!("NodeGraphDemoModels global missing; skipping declarative render");
+            }
+        }
+
+        if let Some(root) = state.root {
+            state.ui.set_root(root);
+        }
         state.ui.request_semantics_snapshot();
         state.ui.ingest_paint_cache_source(scene);
 
@@ -2633,7 +2779,14 @@ pub fn run() -> anyhow::Result<()> {
         ..Default::default()
     };
 
-    fret::run_native_demo(config, app, NodeGraphDemoDriver::default()).map_err(anyhow::Error::from)
+    let driver = NodeGraphDemoDriver::new_from_env();
+    if driver.declarative_mode.enabled() {
+        tracing::info!(
+            mode = ?driver.declarative_mode,
+            "node_graph_demo: declarative root enabled (FRET_NODE_GRAPH_DECLARATIVE)"
+        );
+    }
+    fret::run_native_demo(config, app, driver).map_err(anyhow::Error::from)
 }
 
 fn kb(platform: PlatformFilter, key: KeyCode, mods: Modifiers) -> DefaultKeybinding {
@@ -3042,7 +3195,13 @@ fn register_demo_commands(registry: &mut CommandRegistry) {
             .with_category("Demo")
             .with_keywords(["reset", "graph", "demo"])
             .with_scope(CommandScope::App)
-            .with_when(WhenExpr::parse("!focus.is_text_input").expect("valid when expr")),
+            .with_when(WhenExpr::parse("!focus.is_text_input").expect("valid when expr"))
+            .with_default_keybindings([
+                mac_cmd_shift(KeyCode::KeyR),
+                win_ctrl_shift(KeyCode::KeyR),
+                linux_ctrl_shift(KeyCode::KeyR),
+                web_ctrl_shift(KeyCode::KeyR),
+            ]),
     );
 
     registry.register(

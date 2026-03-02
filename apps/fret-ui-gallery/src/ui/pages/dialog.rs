@@ -34,37 +34,25 @@ pub(super) fn preview_dialog(
         vec![
             DocSection::new("Demo", demo)
                 .description("Basic dialog with header, form fields, and footer actions.")
-                .code_rust_from_file_region(include_str!("../snippets/dialog/demo.rs"), "example"),
+                .code_rust_from_file_region(snippets::demo::SOURCE, "example"),
             DocSection::new("Parts", parts)
                 .description("shadcn-style part surface adapters (Trigger/Portal/Overlay).")
-                .code_rust_from_file_region(include_str!("../snippets/dialog/parts.rs"), "example"),
+                .code_rust_from_file_region(snippets::parts::SOURCE, "example"),
             DocSection::new("Custom Close Button", custom_close)
                 .description("Replace the close affordance with a custom footer action.")
-                .code_rust_from_file_region(
-                    include_str!("../snippets/dialog/custom_close_button.rs"),
-                    "example",
-                ),
+                .code_rust_from_file_region(snippets::custom_close_button::SOURCE, "example"),
             DocSection::new("No Close Button", no_close)
                 .description("Omit explicit close controls and rely on Escape or overlay dismissal.")
-                .code_rust_from_file_region(
-                    include_str!("../snippets/dialog/no_close_button.rs"),
-                    "example",
-                ),
+                .code_rust_from_file_region(snippets::no_close_button::SOURCE, "example"),
             DocSection::new("Sticky Footer", sticky_footer)
                 .description("Footer stays visible while the content scrolls.")
-                .code_rust_from_file_region(
-                    include_str!("../snippets/dialog/sticky_footer.rs"),
-                    "example",
-                ),
+                .code_rust_from_file_region(snippets::sticky_footer::SOURCE, "example"),
             DocSection::new("Scrollable Content", scrollable_content)
                 .description("Long body scrolls while keeping the header visible.")
-                .code_rust_from_file_region(
-                    include_str!("../snippets/dialog/scrollable_content.rs"),
-                    "example",
-                ),
+                .code_rust_from_file_region(snippets::scrollable_content::SOURCE, "example"),
             DocSection::new("RTL", rtl)
                 .description("Dialog layout should work under an RTL direction provider.")
-                .code_rust_from_file_region(include_str!("../snippets/dialog/rtl.rs"), "example"),
+                .code_rust_from_file_region(snippets::rtl::SOURCE, "example"),
             DocSection::new("Notes", notes).description(
                 "Keep test IDs stable so fretboard diag scripts and regression screenshots remain reusable.",
             ),

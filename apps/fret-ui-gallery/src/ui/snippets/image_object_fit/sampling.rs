@@ -1,5 +1,7 @@
+pub const SOURCE: &str = include_str!("sampling.rs");
+
 // region: example
-use crate::ui::ImageId;
+use fret_core::ImageId;
 use fret_core::scene::ImageSamplingHint;
 use fret_ui_shadcn::{self as shadcn, prelude::*};
 

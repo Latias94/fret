@@ -743,6 +743,8 @@ include!("ui_diagnostics/virtual_list_diagnostics.rs");
 
 include!("ui_diagnostics/scroll_handle_diagnostics.rs");
 
+include!("ui_diagnostics/scroll_extents_observation_diagnostics.rs");
+
 include!("ui_diagnostics/prepaint_diagnostics.rs");
 
 include!("ui_diagnostics/command_gating_trace.rs");

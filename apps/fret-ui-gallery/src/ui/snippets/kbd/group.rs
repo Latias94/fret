@@ -1,3 +1,5 @@
+pub const SOURCE: &str = include_str!("group.rs");
+
 // region: example
 use fret_ui::Theme;
 use fret_ui_kit::ui;

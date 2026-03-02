@@ -63,9 +63,9 @@ fn first_output_write(passes: &[RenderPlanPass]) -> Option<&RenderPlanPass> {
         RenderPlanPass::Dither(p) => p.dst == PlanTarget::Output,
         RenderPlanPass::Noise(p) => p.dst == PlanTarget::Output,
         RenderPlanPass::DropShadow(p) => p.dst == PlanTarget::Output,
-        RenderPlanPass::CustomEffect(p) => p.dst == PlanTarget::Output,
-        RenderPlanPass::CustomEffectV2(p) => p.dst == PlanTarget::Output,
-        RenderPlanPass::CustomEffectV3(p) => p.dst == PlanTarget::Output,
+        RenderPlanPass::CustomEffect(p) => p.common.dst == PlanTarget::Output,
+        RenderPlanPass::CustomEffectV2(p) => p.common.dst == PlanTarget::Output,
+        RenderPlanPass::CustomEffectV3(p) => p.common.dst == PlanTarget::Output,
         RenderPlanPass::ClipMask(_) => false,
         RenderPlanPass::ReleaseTarget(_) => false,
     })
@@ -114,13 +114,13 @@ fn assert_first_output_write_is_clear(passes: &[RenderPlanPass]) {
             assert!(matches!(p.load, wgpu::LoadOp::Clear(_)));
         }
         RenderPlanPass::CustomEffect(p) => {
-            assert!(matches!(p.load, wgpu::LoadOp::Clear(_)));
+            assert!(matches!(p.common.load, wgpu::LoadOp::Clear(_)));
         }
         RenderPlanPass::CustomEffectV2(p) => {
-            assert!(matches!(p.load, wgpu::LoadOp::Clear(_)));
+            assert!(matches!(p.common.load, wgpu::LoadOp::Clear(_)));
         }
         RenderPlanPass::CustomEffectV3(p) => {
-            assert!(matches!(p.load, wgpu::LoadOp::Clear(_)));
+            assert!(matches!(p.common.load, wgpu::LoadOp::Clear(_)));
         }
         RenderPlanPass::PathClipMask(_)
         | RenderPlanPass::ClipMask(_)

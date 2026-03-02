@@ -31,11 +31,13 @@ pub(crate) struct UiRuntimeEnvConfig {
     pub(crate) scroll_defer_unbounded_probe_on_resize: bool,
     pub(crate) scroll_defer_unbounded_probe_on_invalidation: bool,
     pub(crate) scroll_defer_unbounded_probe_stable_frames: u8,
+    pub(crate) scroll_extents_post_layout: bool,
 
     pub(crate) debug_pointer_region_move_hook: bool,
     pub(crate) debug_pointer_region_move_backtrace: bool,
     pub(crate) debug_scroll_wheel_vlist: bool,
     pub(crate) debug_scroll_wheel: bool,
+    pub(crate) debug_scroll_extent_probe: bool,
     pub(crate) debug_scroll_handle_set_offset: bool,
     pub(crate) resizable_split_log: bool,
 
@@ -52,6 +54,9 @@ pub(crate) struct UiRuntimeEnvConfig {
 
     pub(crate) layout_all_profile: bool,
     pub(crate) layout_profile: bool,
+    pub(crate) layout_subtree_dirty_aggregation: bool,
+    pub(crate) layout_subtree_dirty_aggregation_validate: bool,
+    pub(crate) layout_subtree_dirty_aggregation_validate_panic: bool,
     pub(crate) layout_engine_sweep_policy: LayoutEngineSweepPolicy,
     pub(crate) layout_skip_request_build_translation_only: bool,
     pub(crate) layout_flow_skip_barrier_clean_children: bool,
@@ -140,12 +145,20 @@ impl UiRuntimeEnvConfig {
                 .unwrap_or(2)
                 .min(60);
 
+        // Default-off: prototype flag for the scroll-extents DOM/GPUI parity workstream.
+        //
+        // When enabled, scroll layout attempts to avoid deep unbounded measurement probes by
+        // deriving extents from post-layout geometry (best-effort), with a fallback to unbounded
+        // probing when correctness requires it (e.g. at the scroll extent edge).
+        let scroll_extents_post_layout = env_is_one("FRET_UI_SCROLL_EXTENTS_POST_LAYOUT");
+
         let debug_pointer_region_move_hook = env_present("FRET_DEBUG_POINTER_REGION_MOVE_HOOK");
         let debug_pointer_region_move_backtrace =
             env_present("FRET_DEBUG_POINTER_REGION_MOVE_BACKTRACE");
 
         let debug_scroll_wheel_vlist = env_is_one("FRET_DEBUG_SCROLL_WHEEL_VLIST");
         let debug_scroll_wheel = env_is_one("FRET_DEBUG_SCROLL_WHEEL");
+        let debug_scroll_extent_probe = env_is_one("FRET_DEBUG_SCROLL_EXTENT_PROBE");
         let debug_scroll_handle_set_offset = env_enabled("FRET_DEBUG_SCROLL_HANDLE_SET_OFFSET");
 
         let resizable_split_log = env_present("FRET_RESIZABLE_SPLIT_LOG");
@@ -171,6 +184,19 @@ impl UiRuntimeEnvConfig {
 
         let layout_all_profile = env_enabled("FRET_LAYOUT_ALL_PROFILE");
         let layout_profile = env_enabled("FRET_LAYOUT_PROFILE");
+        // Default-on: subtree aggregation makes it cheap to avoid reusing stale layout-dependent
+        // caches when a descendant is dirty but invalidation bubbling is truncated or buggy.
+        //
+        // Set to "0" to disable for perf experiments.
+        let layout_subtree_dirty_aggregation =
+            std::env::var("FRET_UI_LAYOUT_SUBTREE_DIRTY_AGGREGATION")
+                .ok()
+                .map(|v| v != "0")
+                .unwrap_or(true);
+        let layout_subtree_dirty_aggregation_validate =
+            env_present("FRET_UI_LAYOUT_SUBTREE_DIRTY_AGGREGATION_VALIDATE");
+        let layout_subtree_dirty_aggregation_validate_panic =
+            env_present("FRET_UI_LAYOUT_SUBTREE_DIRTY_AGGREGATION_VALIDATE_PANIC");
         let layout_engine_sweep_policy = match std::env::var("FRET_UI_LAYOUT_ENGINE_SWEEP")
             .ok()
             .as_deref()
@@ -290,10 +316,12 @@ impl UiRuntimeEnvConfig {
             scroll_defer_unbounded_probe_on_resize,
             scroll_defer_unbounded_probe_on_invalidation,
             scroll_defer_unbounded_probe_stable_frames,
+            scroll_extents_post_layout,
             debug_pointer_region_move_hook,
             debug_pointer_region_move_backtrace,
             debug_scroll_wheel_vlist,
             debug_scroll_wheel,
+            debug_scroll_extent_probe,
             debug_scroll_handle_set_offset,
             resizable_split_log,
             hit_test_bounds_tree_disabled,
@@ -306,6 +334,9 @@ impl UiRuntimeEnvConfig {
             validate_element_tree_unique_ids_panic,
             layout_all_profile,
             layout_profile,
+            layout_subtree_dirty_aggregation,
+            layout_subtree_dirty_aggregation_validate,
+            layout_subtree_dirty_aggregation_validate_panic,
             layout_engine_sweep_policy,
             layout_skip_request_build_translation_only,
             layout_flow_skip_barrier_clean_children,

@@ -989,6 +989,83 @@
       "target_hints": []
     },
     {
+      "id": "liquid-glass-custom-v3-steady",
+      "path": "tools/diag-scripts/renderer/effects/liquid-glass-custom-v3-steady.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "perf-liquid-glass-custom-v3-steady"
+      ],
+      "tags": [
+        "effects",
+        "gate",
+        "liquid_glass",
+        "perf"
+      ],
+      "target_hints": [
+        "Shows only the CustomV3 lens and captures a steady-state diagnostics bundle.",
+        "Intended as a perf regression baseline for CustomV3 raw+pyramid paths."
+      ]
+    },
+    {
+      "id": "liquid-glass-lens-custom-v3-corners-screenshot",
+      "path": "tools/diag-scripts/suites/liquid-glass-custom-v3/liquid-glass-lens-custom-v3-corners-screenshot.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "liquid-glass-custom-v3"
+      ],
+      "tags": [
+        "effects",
+        "gate",
+        "liquid_glass"
+      ],
+      "target_hints": [
+        "Shows the CustomV3 lens corners without other effect variants.",
+        "Sets bevel sliders to deterministic values and captures a screenshot + diagnostics bundle."
+      ]
+    },
+    {
+      "id": "liquid-glass-lens-custom-v3-source-group-screenshot",
+      "path": "tools/diag-scripts/suites/liquid-glass-custom-v3/liquid-glass-lens-custom-v3-source-group-screenshot.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "liquid-glass-custom-v3"
+      ],
+      "tags": [
+        "effects",
+        "gate",
+        "liquid_glass"
+      ],
+      "target_hints": [
+        "Enables the CustomV3 pair and BackdropSourceGroup toggles in the liquid glass demo.",
+        "Captures a screenshot and diagnostics bundle for ordering drift vs shared snapshot debugging."
+      ]
+    },
+    {
+      "id": "liquid-glass-lens-custom-v3-bevel-screenshot",
+      "path": "tools/diag-scripts/suites/liquid-glass-custom-v3/liquid-glass-lens-custom-v3-bevel-screenshot.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "liquid-glass-custom-v3"
+      ],
+      "tags": [
+        "effects",
+        "gate",
+        "liquid_glass"
+      ],
+      "target_hints": [
+        "Shows the CustomV3 lens and opens the inspector.",
+        "Sets bevel sliders to deterministic values and captures a screenshot + diagnostics bundle."
+      ]
+    },
+    {
       "id": "node-graph-demo-preset-families-paint-only",
       "path": "tools/diag-scripts/extras/node-graph-demo-preset-families-paint-only.json",
       "required_capabilities": [
@@ -1014,6 +1091,409 @@
         "Toggles wire highlight so bundles capture both highlight and no-highlight variants.",
         "Toggles edge markers so bundles capture both markers and no-markers variants.",
         "Exercises invalid + convertible drops without mutating the graph (conversion picker forced)."
+      ]
+    },
+    {
+      "id": "node-graph-paint-only-diag-graph-bump-rebuilds-geometry",
+      "path": "tools/diag-scripts/node-graph/node-graph-paint-only-diag-graph-bump-rebuilds-geometry.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "fret-examples-node-graph-paint-only"
+      ],
+      "tags": [
+        "cache",
+        "declarative",
+        "gate",
+        "graph",
+        "node-graph",
+        "paint-only"
+      ],
+      "target_hints": [
+        "Run with `FRET_NODE_GRAPH_DECLARATIVE=paint` so the paint-only declarative surface is active.",
+        "Requires `FRET_DIAG=1` (diagnostics-only shortcuts).",
+        "Uses the paint-only diagnostics-only graph bump shortcut (Ctrl+3) and asserts that node/edge geometry caches rebuild exactly once."
+      ]
+    },
+    {
+      "id": "node-graph-paint-only-edges-paint-stats-ok",
+      "path": "tools/diag-scripts/node-graph/node-graph-paint-only-edges-paint-stats-ok.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "fret-examples-node-graph-paint-only"
+      ],
+      "tags": [
+        "declarative",
+        "diagnostics",
+        "gate",
+        "node-graph",
+        "paint-only",
+        "wires"
+      ],
+      "target_hints": [
+        "Run with `FRET_NODE_GRAPH_DECLARATIVE=paint` so the paint-only declarative surface is active.",
+        "This is a lightweight gate for regressions where edges stop painting due to culling/geometry issues."
+      ]
+    },
+    {
+      "id": "node-graph-paint-only-fit-view-to-portals-updates-view",
+      "path": "tools/diag-scripts/node-graph/node-graph-paint-only-fit-view-to-portals-updates-view.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "fret-examples-node-graph-paint-only"
+      ],
+      "tags": [
+        "declarative",
+        "fit_view",
+        "gate",
+        "node-graph",
+        "paint-only",
+        "portal"
+      ],
+      "target_hints": [
+        "Run with `FRET_NODE_GRAPH_DECLARATIVE=paint` so the paint-only declarative surface is active.",
+        "Requires `FRET_DIAG=1` (Ctrl+9 shortcut).",
+        "This gates that portal subtrees are hosted declaratively, their bounds are harvested via LayoutQueryRegion, and a key command can consume those bounds to update the view model."
+      ]
+    },
+    {
+      "id": "node-graph-paint-only-hover-and-select-do-not-rebuild-geometry",
+      "path": "tools/diag-scripts/node-graph/node-graph-paint-only-hover-and-select-do-not-rebuild-geometry.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "fret-examples-node-graph-paint-only"
+      ],
+      "tags": [
+        "cache",
+        "declarative",
+        "gate",
+        "hover",
+        "node-graph",
+        "paint-only",
+        "selection"
+      ],
+      "target_hints": [
+        "Run with `FRET_NODE_GRAPH_DECLARATIVE=paint` so the paint-only declarative surface is active.",
+        "Uses the diagnostics-only normalize shortcut (Ctrl+4) to place a node under the canvas center.",
+        "Asserts that hover/selection update visual state without rebuilding cached node/edge geometry render data."
+      ]
+    },
+    {
+      "id": "node-graph-paint-only-hover-shows-portal-tooltip",
+      "path": "tools/diag-scripts/node-graph/node-graph-paint-only-hover-shows-portal-tooltip.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "fret-examples-node-graph-paint-only"
+      ],
+      "tags": [
+        "declarative",
+        "gate",
+        "hover",
+        "node-graph",
+        "paint-only",
+        "portal",
+        "tooltip"
+      ],
+      "target_hints": [
+        "Run with `FRET_NODE_GRAPH_DECLARATIVE=paint` so the paint-only declarative surface is active.",
+        "Requires `FRET_DIAG=1` (Ctrl+4 normalization shortcut).",
+        "This gates that paint-only hover state can drive a declarative overlay (tooltip) without enabling portal hit-testing."
+      ]
+    },
+    {
+      "id": "node-graph-paint-only-hover-tooltip-falls-back-to-hover-anchor",
+      "path": "tools/diag-scripts/node-graph/node-graph-paint-only-hover-tooltip-falls-back-to-hover-anchor.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "fret-examples-node-graph-paint-only"
+      ],
+      "tags": [
+        "declarative",
+        "fallback",
+        "gate",
+        "hover",
+        "node-graph",
+        "paint-only",
+        "portal",
+        "tooltip"
+      ],
+      "target_hints": [
+        "Run with `FRET_NODE_GRAPH_DECLARATIVE=paint` so the paint-only declarative surface is active.",
+        "Requires `FRET_DIAG=1` (Ctrl+4 normalization, Ctrl+8 disable portals).",
+        "This gates that hover-driven overlays do not depend on portal hosting caps; tooltip falls back to HoverAnchorStore."
+      ]
+    },
+    {
+      "id": "node-graph-paint-only-keyboard-zoom-rebuilds-geometry",
+      "path": "tools/diag-scripts/node-graph/node-graph-paint-only-keyboard-zoom-rebuilds-geometry.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "fret-examples-node-graph-paint-only"
+      ],
+      "tags": [
+        "cache",
+        "declarative",
+        "gate",
+        "node-graph",
+        "paint-only",
+        "zoom"
+      ],
+      "target_hints": [
+        "Run with `FRET_NODE_GRAPH_DECLARATIVE=paint` so the paint-only declarative surface is active.",
+        "This asserts that zooming (Ctrl+1) rebuilds cached node/edge geometry render data exactly once."
+      ]
+    },
+    {
+      "id": "node-graph-paint-only-marquee-pointer-cancel-does-not-commit",
+      "path": "tools/diag-scripts/node-graph/node-graph-paint-only-marquee-pointer-cancel-does-not-commit.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "fret-examples-node-graph-paint-only"
+      ],
+      "tags": [
+        "cache",
+        "cancel",
+        "declarative",
+        "gate",
+        "marquee",
+        "node-graph",
+        "paint-only",
+        "selection"
+      ],
+      "target_hints": [
+        "Run with `FRET_NODE_GRAPH_DECLARATIVE=paint` so the paint-only declarative surface is active.",
+        "Requires `FRET_DIAG=1` (diagnostics-only shortcuts).",
+        "Uses the diagnostics-only normalize+offset shortcut (Ctrl+5) so the canvas center is blank for marquee start.",
+        "Asserts that PointerCancel clears marquee state and does not commit selection or rebuild geometry caches."
+      ]
+    },
+    {
+      "id": "node-graph-paint-only-marquee-select-does-not-rebuild-geometry",
+      "path": "tools/diag-scripts/node-graph/node-graph-paint-only-marquee-select-does-not-rebuild-geometry.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "fret-examples-node-graph-paint-only"
+      ],
+      "tags": [
+        "cache",
+        "declarative",
+        "gate",
+        "marquee",
+        "node-graph",
+        "paint-only",
+        "selection"
+      ],
+      "target_hints": [
+        "Run with `FRET_NODE_GRAPH_DECLARATIVE=paint` so the paint-only declarative surface is active.",
+        "Requires `FRET_DIAG=1` (diagnostics-only shortcuts).",
+        "Uses the diagnostics-only normalize+offset shortcut (Ctrl+5) to place a node near (but not under) the canvas center.",
+        "Asserts that marquee selection updates view-state without rebuilding cached node/edge geometry render data."
+      ]
+    },
+    {
+      "id": "node-graph-paint-only-node-drag-escape-cancel-does-not-commit",
+      "path": "tools/diag-scripts/node-graph/node-graph-paint-only-node-drag-escape-cancel-does-not-commit.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "fret-examples-node-graph-paint-only"
+      ],
+      "tags": [
+        "cache",
+        "cancel",
+        "declarative",
+        "drag",
+        "escape",
+        "gate",
+        "node-graph",
+        "paint-only"
+      ],
+      "target_hints": [
+        "Run with `FRET_NODE_GRAPH_DECLARATIVE=paint` so the paint-only declarative surface is active.",
+        "Requires `FRET_DIAG=1` (diagnostics-only shortcuts).",
+        "Uses the diagnostics-only normalize shortcut (Ctrl+4) to place a node under the canvas center.",
+        "Asserts that pressing Escape during an active drag cancels preview and does not commit a graph mutation (no geometry rebuild)."
+      ]
+    },
+    {
+      "id": "node-graph-paint-only-node-drag-pointer-cancel-does-not-commit",
+      "path": "tools/diag-scripts/node-graph/node-graph-paint-only-node-drag-pointer-cancel-does-not-commit.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "fret-examples-node-graph-paint-only"
+      ],
+      "tags": [
+        "cache",
+        "cancel",
+        "declarative",
+        "drag",
+        "gate",
+        "node-graph",
+        "paint-only"
+      ],
+      "target_hints": [
+        "Run with `FRET_NODE_GRAPH_DECLARATIVE=paint` so the paint-only declarative surface is active.",
+        "Requires `FRET_DIAG=1` (diagnostics-only shortcuts).",
+        "Uses the diagnostics-only normalize shortcut (Ctrl+4) to place a node under the canvas center.",
+        "Asserts that PointerCancel ends the local drag preview without committing graph changes (no geometry rebuild)."
+      ]
+    },
+    {
+      "id": "node-graph-paint-only-node-drag-preview-and-commit",
+      "path": "tools/diag-scripts/node-graph/node-graph-paint-only-node-drag-preview-and-commit.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "fret-examples-node-graph-paint-only"
+      ],
+      "tags": [
+        "cache",
+        "declarative",
+        "drag",
+        "gate",
+        "node-graph",
+        "paint-only"
+      ],
+      "target_hints": [
+        "Run with `FRET_NODE_GRAPH_DECLARATIVE=paint` so the paint-only declarative surface is active.",
+        "Requires `FRET_DIAG=1` (diagnostics-only shortcuts).",
+        "Uses the diagnostics-only normalize shortcut (Ctrl+4) to place a node under the canvas center.",
+        "Asserts that drag preview does not rebuild cached node/edge geometry render data; commit (pointer-up) does."
+      ]
+    },
+    {
+      "id": "node-graph-paint-only-pan-does-not-rebuild-geometry",
+      "path": "tools/diag-scripts/node-graph/node-graph-paint-only-pan-does-not-rebuild-geometry.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "fret-examples-node-graph-paint-only"
+      ],
+      "tags": [
+        "cache",
+        "declarative",
+        "gate",
+        "node-graph",
+        "paint-only",
+        "pan"
+      ],
+      "target_hints": [
+        "Run with `FRET_NODE_GRAPH_DECLARATIVE=paint` so the paint-only declarative surface is active.",
+        "This asserts that panning changes the view transform without rebuilding cached node/edge geometry render data."
+      ]
+    },
+    {
+      "id": "node-graph-paint-only-pan-pointer-cancel-does-not-rebuild-geometry",
+      "path": "tools/diag-scripts/node-graph/node-graph-paint-only-pan-pointer-cancel-does-not-rebuild-geometry.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "fret-examples-node-graph-paint-only"
+      ],
+      "tags": [
+        "cache",
+        "cancel",
+        "declarative",
+        "gate",
+        "node-graph",
+        "paint-only",
+        "pan"
+      ],
+      "target_hints": [
+        "Run with `FRET_NODE_GRAPH_DECLARATIVE=paint` so the paint-only declarative surface is active.",
+        "Asserts that panning becomes active, then a scripted PointerCancel clears the pan state.",
+        "Verifies that cancel does not rebuild cached node/edge geometry render data."
+      ]
+    },
+    {
+      "id": "node-graph-paint-only-steady-edges-cache",
+      "path": "tools/diag-scripts/node-graph/node-graph-paint-only-steady-edges-cache.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "fret-examples-node-graph-paint-only"
+      ],
+      "tags": [
+        "cache",
+        "declarative",
+        "edges",
+        "gate-steady-state",
+        "node-graph",
+        "paint-only"
+      ],
+      "target_hints": [
+        "Run with `FRET_NODE_GRAPH_DECLARATIVE=paint` so the paint-only declarative surface is active.",
+        "This gate relies on a stable semantics `value` emitted by `node_graph.canvas`.",
+        "It asserts the cached edges render-data rebuild counter remains stable while idling."
+      ]
+    },
+    {
+      "id": "node-graph-paint-only-steady-grid-cache",
+      "path": "tools/diag-scripts/node-graph/node-graph-paint-only-steady-grid-cache.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "fret-examples-node-graph-paint-only"
+      ],
+      "tags": [
+        "cache",
+        "declarative",
+        "gate-steady-state",
+        "node-graph",
+        "paint-only"
+      ],
+      "target_hints": [
+        "Run with `FRET_NODE_GRAPH_DECLARATIVE=paint` so the paint-only declarative surface is active.",
+        "This gate relies on a stable semantics `value` emitted by `node_graph.canvas`.",
+        "It moves the pointer once to force the surface to learn bounds, then asserts the cached grid ops rebuild counter remains stable while idling."
+      ]
+    },
+    {
+      "id": "node-graph-paint-only-steady-nodes-cache",
+      "path": "tools/diag-scripts/node-graph/node-graph-paint-only-steady-nodes-cache.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "fret-examples-node-graph-paint-only"
+      ],
+      "tags": [
+        "cache",
+        "declarative",
+        "gate-steady-state",
+        "node-graph",
+        "nodes",
+        "paint-only"
+      ],
+      "target_hints": [
+        "Run with `FRET_NODE_GRAPH_DECLARATIVE=paint` so the paint-only declarative surface is active.",
+        "This gate relies on a stable semantics `value` emitted by `node_graph.canvas`.",
+        "It asserts the cached node chrome rebuild counter remains stable while idling."
       ]
     },
     {
@@ -1468,6 +1948,7 @@
         "diag.script_v2"
       ],
       "suite_memberships": [
+        "ui-gallery-scroll-extents-dom-parity",
         "ui-gallery-shadcn-conformance"
       ],
       "tags": [
@@ -1862,6 +2343,26 @@
         "ui-gallery-shadcn-conformance"
       ],
       "tags": [],
+      "target_hints": []
+    },
+    {
+      "id": "ui-gallery-collapsible-rtl-code-tab-scroll-range",
+      "path": "tools/diag-scripts/ui-gallery/collapsible/ui-gallery-collapsible-rtl-code-tab-scroll-range.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "ui-gallery-shadcn-conformance"
+      ],
+      "tags": [
+        "collapsible",
+        "regression",
+        "scroll",
+        "shadcn",
+        "tabs",
+        "ui_gallery"
+      ],
       "target_hints": []
     },
     {
@@ -2681,6 +3182,24 @@
       "target_hints": []
     },
     {
+      "id": "ui-gallery-hovercard-open",
+      "path": "tools/diag-scripts/ui-gallery/overlay/ui-gallery-hovercard-open.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "ui-gallery"
+      ],
+      "tags": [
+        "gate",
+        "hover",
+        "hovercard",
+        "overlay",
+        "ui_gallery"
+      ],
+      "target_hints": []
+    },
+    {
       "id": "ui-gallery-incoming-open-inject-smoke",
       "path": "tools/diag-scripts/ui-gallery/incoming/ui-gallery-incoming-open-inject-smoke.json",
       "required_capabilities": [
@@ -3171,6 +3690,26 @@
         "ui-gallery-motion-pilot"
       ],
       "tags": [],
+      "target_hints": []
+    },
+    {
+      "id": "ui-gallery-overlay-focus-trap-hover-cursor",
+      "path": "tools/diag-scripts/ui-gallery/overlay/ui-gallery-overlay-focus-trap-hover-cursor.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "ui-gallery"
+      ],
+      "tags": [
+        "cursor",
+        "dialog",
+        "focus",
+        "gate",
+        "hover",
+        "overlay",
+        "ui_gallery"
+      ],
       "target_hints": []
     },
     {
@@ -3774,6 +4313,28 @@
       "target_hints": []
     },
     {
+      "id": "ui-gallery-tooltip-overlay-placement-after-code-tab-scroll-range",
+      "path": "tools/diag-scripts/ui-gallery/overlay/ui-gallery-tooltip-overlay-placement-after-code-tab-scroll-range.json",
+      "required_capabilities": [
+        "diag.overlay_placement_trace",
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "ui-gallery-scroll-extents-dom-parity",
+        "ui-gallery-shadcn-conformance"
+      ],
+      "tags": [
+        "overlay",
+        "regression",
+        "scroll",
+        "shadcn",
+        "tabs",
+        "tooltip",
+        "ui_gallery"
+      ],
+      "target_hints": []
+    },
+    {
       "id": "ui-gallery-tooltip-hovercard-scroll-clamp",
       "path": "tools/diag-scripts/ui-gallery/overlay/ui-gallery-tooltip-hovercard-scroll-clamp.json",
       "required_capabilities": [],
@@ -3849,6 +4410,7 @@
         "diag.script_v2"
       ],
       "suite_memberships": [
+        "ui-gallery-scroll-extents-dom-parity",
         "ui-gallery-shadcn-conformance"
       ],
       "tags": [

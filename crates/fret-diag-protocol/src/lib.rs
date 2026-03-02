@@ -585,6 +585,16 @@ pub enum UiActionStepV2 {
         #[serde(default, skip_serializing_if = "Option::is_none")]
         button: Option<UiMouseButtonV1>,
     },
+    /// Cancel an active `pointer_down` session.
+    ///
+    /// This emits `Event::PointerCancel` and mirrors internal drag routing by emitting
+    /// `InternalDrag::Cancel`.
+    PointerCancel {
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        window: Option<UiWindowTargetV1>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        pointer_kind: Option<UiPointerKindV1>,
+    },
     MovePointerSweep {
         #[serde(default, skip_serializing_if = "Option::is_none")]
         window: Option<UiWindowTargetV1>,
@@ -632,6 +642,8 @@ pub enum UiActionStepV2 {
         event: UiImeEventV1,
     },
     WaitFrames {
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        window: Option<UiWindowTargetV1>,
         n: u32,
     },
     WaitUntil {
@@ -1098,7 +1110,7 @@ impl From<UiActionStepV1> for UiActionStepV2 {
                 repeat,
             },
             UiActionStepV1::TypeText { text } => Self::TypeText { text },
-            UiActionStepV1::WaitFrames { n } => Self::WaitFrames { n },
+            UiActionStepV1::WaitFrames { n } => Self::WaitFrames { window: None, n },
             UiActionStepV1::WaitUntil {
                 predicate,
                 timeout_frames,

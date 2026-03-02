@@ -73,6 +73,7 @@ impl ElementHostWidget {
             ElementInstance::ForegroundScope(_) => false,
             ElementInstance::Opacity(_) => false,
             ElementInstance::EffectLayer(_) => false,
+            ElementInstance::BackdropSourceGroup(_) => false,
             ElementInstance::MaskLayer(_) => false,
             ElementInstance::CompositeGroup(_) => false,
             ElementInstance::ViewCache(_) => false,
@@ -101,6 +102,7 @@ impl ElementHostWidget {
             ElementInstance::DismissibleLayer(_) => true,
             ElementInstance::ForegroundScope(_) => true,
             ElementInstance::EffectLayer(_) => true,
+            ElementInstance::BackdropSourceGroup(_) => true,
             ElementInstance::MaskLayer(_) => true,
             ElementInstance::CompositeGroup(_) => true,
             ElementInstance::ViewCache(_) => true,
@@ -156,6 +158,7 @@ impl ElementHostWidget {
             ElementInstance::FocusTraversalGate(p) => matches!(p.layout.overflow, Overflow::Clip),
             ElementInstance::Opacity(p) => matches!(p.layout.overflow, Overflow::Clip),
             ElementInstance::EffectLayer(p) => matches!(p.layout.overflow, Overflow::Clip),
+            ElementInstance::BackdropSourceGroup(p) => matches!(p.layout.overflow, Overflow::Clip),
             ElementInstance::ViewCache(p) => matches!(p.layout.overflow, Overflow::Clip),
             ElementInstance::VisualTransform(p) => matches!(p.layout.overflow, Overflow::Clip),
             ElementInstance::RenderTransform(p) => matches!(p.layout.overflow, Overflow::Clip),
@@ -253,7 +256,7 @@ impl ElementHostWidget {
                 // Probe within the available height budget so measurement passes do not observe an
                 // artificially "infinite" viewport (important for scroll/virtualized children).
                 let probe_bounds = Rect::new(cx.bounds.origin, inner_avail);
-                let probe_constraints = probe_constraints_for_size(probe_bounds.size);
+                let probe_constraints = cx.probe_constraints_for_size(probe_bounds.size);
                 let mut max_child = Size::new(Px(0.0), Px(0.0));
                 let mut non_absolute_sizes: Vec<(NodeId, Size)> = Vec::new();
                 for &child in cx.children {
@@ -589,6 +592,40 @@ impl ElementHostWidget {
                 }
                 desired
             }
+            ElementInstance::BackdropSourceGroup(props) => {
+                // Pass-through wrapper (layout like EffectLayer), but with paint-time
+                // `SceneOp::PushBackdropSourceGroupV1/PopBackdropSourceGroup` emission.
+                let probe_bounds = Rect::new(cx.bounds.origin, cx.available);
+                let mut max_child = Size::new(Px(0.0), Px(0.0));
+                for &child in cx.children {
+                    let layout_style = layout_style_for_node(cx.app, window, child);
+                    if layout_style.position == crate::element::PositionStyle::Absolute {
+                        continue;
+                    }
+                    let child_size = cx.layout_in(child, probe_bounds);
+                    max_child.width = Px(max_child.width.0.max(child_size.width.0));
+                    max_child.height = Px(max_child.height.0.max(child_size.height.0));
+                }
+
+                let desired = clamp_to_constraints(max_child, props.layout, cx.available);
+                let base = Rect::new(cx.bounds.origin, desired);
+                for &child in cx.children {
+                    let layout_style = layout_style_for_node(cx.app, window, child);
+                    match positioned_layout_style(layout_style) {
+                        PositionedLayoutStyle::Absolute(inset) => {
+                            layout_absolute_child_with_probe_bounds(
+                                cx,
+                                child,
+                                base,
+                                probe_bounds,
+                                inset,
+                            )
+                        }
+                        style => layout_positioned_child(cx, child, base, style),
+                    }
+                }
+                desired
+            }
             ElementInstance::VisualTransform(props) => {
                 if let Some(size) = try_layout_children_from_engine_or_manual_absolute(
                     cx,
@@ -618,7 +655,7 @@ impl ElementHostWidget {
                 let probe_available =
                     clamp_to_constraints(cx.available, props.layout, cx.available);
                 let probe_bounds = Rect::new(cx.bounds.origin, probe_available);
-                let probe_constraints = probe_constraints_for_size(probe_bounds.size);
+                let probe_constraints = cx.probe_constraints_for_size(probe_bounds.size);
                 let mut max_child = Size::new(Px(0.0), Px(0.0));
                 for &child in cx.children {
                     let layout_style = layout_style_for_node(cx.app, window, child);
@@ -674,7 +711,7 @@ impl ElementHostWidget {
                 let probe_available =
                     clamp_to_constraints(cx.available, props.layout, cx.available);
                 let probe_bounds = Rect::new(cx.bounds.origin, probe_available);
-                let probe_constraints = probe_constraints_for_size(probe_bounds.size);
+                let probe_constraints = cx.probe_constraints_for_size(probe_bounds.size);
                 let mut max_child = Size::new(Px(0.0), Px(0.0));
                 for &child in cx.children {
                     let layout_style = layout_style_for_node(cx.app, window, child);
@@ -772,7 +809,7 @@ impl ElementHostWidget {
                 let probe_available =
                     clamp_to_constraints(cx.available, props.layout, cx.available);
                 let probe_bounds = Rect::new(cx.bounds.origin, probe_available);
-                let probe_constraints = probe_constraints_for_size(probe_bounds.size);
+                let probe_constraints = cx.probe_constraints_for_size(probe_bounds.size);
                 let mut max_child = Size::new(Px(0.0), Px(0.0));
                 for &child in cx.children {
                     let layout_style = layout_style_for_node(cx.app, window, child);
@@ -1508,15 +1545,8 @@ impl ElementHostWidget {
     }
 }
 
-fn probe_constraints_for_size(size: Size) -> LayoutConstraints {
-    LayoutConstraints::new(
-        LayoutSize::new(None, None),
-        LayoutSize::new(
-            AvailableSpace::Definite(size.width),
-            AvailableSpace::Definite(size.height),
-        ),
-    )
-}
+// Intentionally omitted: probe constraint construction is context-dependent (scroll overflow
+// contexts may override the scroll axis to `MaxContent`). Use `LayoutCx::probe_constraints_for_size`.
 
 fn try_layout_children_from_engine_or_manual_absolute<H: UiHost>(
     cx: &mut LayoutCx<'_, H>,

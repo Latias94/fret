@@ -1,0 +1,54 @@
+{
+  "schema_version": 2,
+  "meta": {
+    "name": "Node graph (paint-only): fit-to-portals updates view (portal bounds store)",
+    "tags": ["node-graph", "declarative", "paint-only", "portal", "fit_view", "gate"],
+    "required_capabilities": ["diag.script_v2"],
+    "target_hints": [
+      "Run with `FRET_NODE_GRAPH_DECLARATIVE=paint` so the paint-only declarative surface is active.",
+      "Requires `FRET_DIAG=1` (Ctrl+9 shortcut).",
+      "This gates that portal subtrees are hosted declaratively, their bounds are harvested via LayoutQueryRegion, and a key command can consume those bounds to update the view model."
+    ]
+  },
+  "steps": [
+    { "type": "press_key", "key": "escape" },
+    { "type": "wait_frames", "n": 5 },
+
+    {
+      "type": "wait_until",
+      "predicate": { "kind": "exists", "target": { "kind": "test_id", "id": "node_graph.canvas" } },
+      "timeout_frames": 600
+    },
+    { "type": "move_pointer", "target": { "kind": "test_id", "id": "node_graph.canvas" } },
+    { "type": "click", "target": { "kind": "test_id", "id": "node_graph.canvas" }, "button": "middle" },
+
+    { "type": "wait_frames", "n": 20 },
+    { "type": "press_key", "key": "7", "modifiers": { "ctrl": true } },
+    { "type": "wait_frames", "n": 2 },
+
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "value_contains",
+        "target": { "kind": "test_id", "id": "node_graph.canvas" },
+        "text": "portal_fit_count:0;"
+      },
+      "timeout_frames": 600
+    },
+
+    { "type": "press_key", "key": "9", "modifiers": { "ctrl": true } },
+    { "type": "wait_frames", "n": 10 },
+
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "value_contains",
+        "target": { "kind": "test_id", "id": "node_graph.canvas" },
+        "text": "portal_fit_count:1;"
+      },
+      "timeout_frames": 600
+    },
+
+    { "type": "capture_bundle", "label": "node-graph-paint-only-fit-view-to-portals-updates-view" }
+  ]
+}

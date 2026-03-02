@@ -29,28 +29,22 @@ pub(super) fn preview_chart(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement>
             DocSection::new("Demo", demo_cards)
                 .no_shell()
                 .max_w(Px(1100.0))
-                .code_rust_from_file_region(include_str!("../snippets/chart/demo.rs"), "example"),
+                .code_rust_from_file_region(snippets::demo::SOURCE, "example"),
             DocSection::new("Contracts", contracts_overview)
                 .max_w(Px(760.0))
-                .code_rust_from_file_region(
-                    include_str!("../snippets/chart/contracts.rs"),
-                    "example",
-                ),
+                .code_rust_from_file_region(snippets::contracts::SOURCE, "example"),
             DocSection::new("Tooltip", tooltip_content)
                 .max_w(Px(760.0))
                 .test_id_prefix("ui-gallery-chart-tooltip")
-                .code_rust_from_file_region(
-                    include_str!("../snippets/chart/tooltip.rs"),
-                    "example",
-                ),
+                .code_rust_from_file_region(snippets::tooltip::SOURCE, "example"),
             DocSection::new("Legend", legend_content)
                 .max_w(Px(760.0))
                 .test_id_prefix("ui-gallery-chart-legend")
-                .code_rust_from_file_region(include_str!("../snippets/chart/legend.rs"), "example"),
+                .code_rust_from_file_region(snippets::legend::SOURCE, "example"),
             DocSection::new("RTL", rtl)
                 .max_w(Px(760.0))
                 .test_id_prefix("ui-gallery-chart-rtl")
-                .code_rust_from_file_region(include_str!("../snippets/chart/rtl.rs"), "example"),
+                .code_rust_from_file_region(snippets::rtl::SOURCE, "example"),
             DocSection::new("Notes", notes_stack).max_w(Px(820.0)),
         ],
     );

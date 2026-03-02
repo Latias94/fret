@@ -79,6 +79,7 @@ impl<H: UiHost> UiTree<H> {
                 input_ctx,
                 layer_root,
                 event,
+                None,
                 invalidation_visited,
             ) {
                 *needs_redraw = true;
