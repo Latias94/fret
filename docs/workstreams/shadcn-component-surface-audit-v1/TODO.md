@@ -70,7 +70,7 @@ Last updated: 2026-03-02.
 | `spinner` | `repo-ref/ui/apps/v4/content/docs/components/radix/spinner.mdx` | `repo-ref/ui/apps/v4/registry/bases/radix/ui/spinner.tsx` | `ecosystem/fret-ui-shadcn/src/spinner.rs` | (none yet) | Not audited |
 | `switch` | `repo-ref/ui/apps/v4/content/docs/components/radix/switch.mdx` | `repo-ref/ui/apps/v4/registry/bases/radix/ui/switch.tsx` | `ecosystem/fret-ui-shadcn/src/switch.rs` | (none yet) | Not audited |
 | `table` | `repo-ref/ui/apps/v4/content/docs/components/radix/table.mdx` | `repo-ref/ui/apps/v4/registry/bases/radix/ui/table.tsx` | `ecosystem/fret-ui-shadcn/src/table.rs` | (none yet) | Not audited |
-| `tabs` | `repo-ref/ui/apps/v4/content/docs/components/radix/tabs.mdx` | `repo-ref/ui/apps/v4/registry/bases/radix/ui/tabs.tsx` | `ecosystem/fret-ui-shadcn/src/tabs.rs` | (none yet) | Not audited |
+| `tabs` | `repo-ref/ui/apps/v4/content/docs/components/radix/tabs.mdx` | `repo-ref/ui/apps/v4/registry/bases/radix/ui/tabs.tsx` | `ecosystem/fret-ui-shadcn/src/tabs.rs` | `ecosystem/fret-ui-shadcn/tests/tabs_keyboard_navigation.rs` | In progress |
 | `textarea` | `repo-ref/ui/apps/v4/content/docs/components/radix/textarea.mdx` | `repo-ref/ui/apps/v4/registry/bases/radix/ui/textarea.tsx` | `ecosystem/fret-ui-shadcn/src/textarea.rs` | (none yet) | Not audited |
 | `toast` | `repo-ref/ui/apps/v4/content/docs/components/radix/toast.mdx` | (docs-only) | `ecosystem/fret-ui-shadcn/src/toast.rs` | (none yet) | Not audited |
 | `toggle` | `repo-ref/ui/apps/v4/content/docs/components/radix/toggle.mdx` | `repo-ref/ui/apps/v4/registry/bases/radix/ui/toggle.tsx` | `ecosystem/fret-ui-shadcn/src/toggle.rs` | (none yet) | Not audited |
