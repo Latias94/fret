@@ -75,7 +75,7 @@ Last updated: 2026-03-02.
 | `toast` | `repo-ref/ui/apps/v4/content/docs/components/radix/toast.mdx` | (docs-only) | `ecosystem/fret-ui-shadcn/src/toast.rs` | (none yet) | Not audited |
 | `toggle` | `repo-ref/ui/apps/v4/content/docs/components/radix/toggle.mdx` | `repo-ref/ui/apps/v4/registry/bases/radix/ui/toggle.tsx` | `ecosystem/fret-ui-shadcn/src/toggle.rs` | (none yet) | Not audited |
 | `toggle-group` | `repo-ref/ui/apps/v4/content/docs/components/radix/toggle-group.mdx` | `repo-ref/ui/apps/v4/registry/bases/radix/ui/toggle-group.tsx` | `ecosystem/fret-ui-shadcn/src/toggle_group.rs` | (none yet) | Not audited |
-| `tooltip` | `repo-ref/ui/apps/v4/content/docs/components/radix/tooltip.mdx` | `repo-ref/ui/apps/v4/registry/bases/radix/ui/tooltip.tsx` | `ecosystem/fret-ui-shadcn/src/tooltip.rs` | (none yet) | Not audited |
+| `tooltip` | `repo-ref/ui/apps/v4/content/docs/components/radix/tooltip.mdx` | `repo-ref/ui/apps/v4/registry/bases/radix/ui/tooltip.tsx` | `ecosystem/fret-ui-shadcn/src/tooltip.rs` | `ecosystem/fret-ui-shadcn/tests/tooltip_hover_and_escape.rs` | In progress |
 | `typography` | `repo-ref/ui/apps/v4/content/docs/components/radix/typography.mdx` | (docs-only) | `ecosystem/fret-ui-shadcn/src/typography.rs` | (none yet) | Not audited |
 
 ### Proposed audit order (v1)
