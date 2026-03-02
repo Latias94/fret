@@ -370,6 +370,7 @@ fn cmd_query_scroll_extents_observation(
     let mut top: usize = 200;
     let mut window_filter: Option<u64> = None;
     let mut include_all: bool = false;
+    let mut include_deep_scan: bool = false;
 
     let mut positionals: Vec<String> = Vec::new();
     let mut i: usize = 0;
@@ -398,6 +399,10 @@ fn cmd_query_scroll_extents_observation(
             }
             "--all" => {
                 include_all = true;
+                i += 1;
+            }
+            "--deep-scan" | "--deep_scan" => {
+                include_deep_scan = true;
                 i += 1;
             }
             other if other.starts_with("--") => {
@@ -473,6 +478,10 @@ fn cmd_query_scroll_extents_observation(
 
             for n in scroll_nodes {
                 let overflow_observation = n.get("overflow_observation");
+                let deep_scan_enabled = overflow_observation
+                    .and_then(|o| o.get("deep_scan_enabled"))
+                    .and_then(|v| v.as_bool())
+                    .unwrap_or(false);
                 let budget_hit = overflow_observation
                     .and_then(|o| o.as_object())
                     .is_some_and(|o| {
@@ -483,7 +492,7 @@ fn cmd_query_scroll_extents_observation(
                                 .and_then(|v| v.as_bool())
                                 .unwrap_or(false)
                     });
-                if !include_all && !budget_hit {
+                if !include_all && !budget_hit && !(include_deep_scan && deep_scan_enabled) {
                     continue;
                 }
 
@@ -2020,6 +2029,54 @@ mod tests {
         path
     }
 
+    fn write_bundle_schema2_with_deep_scan_only_scroll_observation(dir: &Path) -> PathBuf {
+        let bundle = serde_json::json!({
+            "schema_version": 2,
+            "windows": [{
+                "window": 1u64,
+                "snapshots": [{
+                    "tick_id": 10u64,
+                    "frame_id": 20u64,
+                    "timestamp_unix_ms": 30u64,
+                    "debug": {
+                        "scroll_nodes": [{
+                            "node": 999u64,
+                            "element": 123u64,
+                            "axis": "y",
+                            "offset_x": 0.0,
+                            "offset_y": 100.0,
+                            "viewport_w": 200.0,
+                            "viewport_h": 300.0,
+                            "content_w": 200.0,
+                            "content_h": 400.0,
+                            "observed_w": 200.0,
+                            "observed_h": 450.0,
+                            "overflow_observation": {
+                                "extent_may_be_stale": true,
+                                "barrier_roots": 1u64,
+                                "wrapper_peel_budget": 8u64,
+                                "wrapper_peeled_max": 1u64,
+                                "wrapper_peel_budget_hit": false,
+                                "immediate_children_visited": 1u64,
+                                "immediate_children_skipped_absolute": 0u64,
+                                "deep_scan_enabled": true,
+                                "deep_scan_budget_nodes": 256u64,
+                                "deep_scan_visited": 12u64,
+                                "deep_scan_budget_hit": false,
+                                "deep_scan_skipped_absolute": 0u64,
+                            }
+                        }]
+                    }
+                }]
+            }]
+        });
+
+        let path = dir.join("bundle.schema2.json");
+        let bytes = serde_json::to_vec(&bundle).expect("serialize bundle.schema2.json");
+        std::fs::write(&path, bytes).expect("write bundle.schema2.json");
+        path
+    }
+
     #[test]
     fn query_scroll_extents_observation_writes_json() {
         let out_dir = make_temp_dir("fret-diag-query-scroll-extents-observation");
@@ -2054,6 +2111,59 @@ mod tests {
             results[0]
                 .get("overflow_observation")
                 .and_then(|v| v.get("deep_scan_budget_hit"))
+                .and_then(|v| v.as_bool()),
+            Some(true)
+        );
+    }
+
+    #[test]
+    fn query_scroll_extents_observation_deep_scan_filter_includes_deep_scan_only_rows() {
+        let out_dir = make_temp_dir("fret-diag-query-scroll-extents-observation-deep-scan");
+        let bundle = write_bundle_schema2_with_deep_scan_only_scroll_observation(&out_dir);
+
+        let query_out = out_dir.join("out.json");
+        cmd_query_scroll_extents_observation(
+            &[bundle.display().to_string()],
+            Path::new("."),
+            &out_dir,
+            Some(query_out.clone()),
+            0,
+            true,
+        )
+        .expect("query ok");
+
+        let bytes = std::fs::read(&query_out).expect("read out.json");
+        let v: serde_json::Value = serde_json::from_slice(&bytes).expect("parse out.json");
+        let results = v
+            .get("results")
+            .and_then(|v| v.as_array())
+            .cloned()
+            .unwrap_or_default();
+        assert_eq!(results.len(), 0);
+
+        cmd_query_scroll_extents_observation(
+            &[bundle.display().to_string(), "--deep-scan".to_string()],
+            Path::new("."),
+            &out_dir,
+            Some(query_out.clone()),
+            0,
+            true,
+        )
+        .expect("query ok");
+
+        let bytes = std::fs::read(&query_out).expect("read out.json");
+        let v: serde_json::Value = serde_json::from_slice(&bytes).expect("parse out.json");
+        let results = v
+            .get("results")
+            .and_then(|v| v.as_array())
+            .cloned()
+            .unwrap_or_default();
+        assert_eq!(results.len(), 1);
+        assert_eq!(results[0].get("node").and_then(|v| v.as_u64()), Some(999));
+        assert_eq!(
+            results[0]
+                .get("overflow_observation")
+                .and_then(|v| v.get("deep_scan_enabled"))
                 .and_then(|v| v.as_bool()),
             Some(true)
         );
