@@ -1,7 +1,7 @@
 # Action-First Authoring + View Runtime (Fearless Refactor v1) — TODO
 
 Status: Active
-Last updated: 2026-03-01
+Last updated: 2026-03-02
 
 Related:
 
@@ -29,35 +29,75 @@ ID format:
 
 ## A. Decision + Contract Locking
 
-- [ ] AFA-adr-001 Review ADR 0307 (actions) for scope/ownership boundaries.
-- [ ] AFA-adr-002 Review ADR 0308 (view runtime) for hook order/keying rules and cache boundary semantics.
-- [ ] AFA-adr-003 Update `docs/adr/README.md` jump table with new action/view ADR anchors.
+- [x] AFA-adr-001 Review ADR 0307 (actions) for scope/ownership boundaries.
+- [x] AFA-adr-002 Review ADR 0308 (view runtime) for hook order/keying rules and cache boundary semantics.
+- [x] AFA-adr-003 Update `docs/adr/README.md` jump table with new action/view ADR anchors.
 - [x] AFA-adr-004 Decide keymap strategy (v1):
   - Decision: `ActionId == CommandId` (alias/wrapper; no keymap schema churn in v1).
   - Evidence: ADR 0307 “v1 decision (locked)”.
 - [x] AFA-adr-005 Add a short action naming convention note (namespace + `.v1` suffix).
   - Goal: keep IDs predictable for GenUI and future frontends.
-- [ ] AFA-adr-006 Add an observability checklist for action dispatch + view dirty/reuse.
+- [x] AFA-adr-006 Add an observability checklist for action dispatch + view dirty/reuse.
   - Evidence: `docs/workstreams/action-first-authoring-fearless-refactor-v1/EVIDENCE_AND_GATES.md`
 
 ---
 
 ## B. Action System (Additive v1)
 
-- [ ] AFA-actions-010 Define the `ActionId` type and metadata surface.
+- [x] AFA-actions-010 Define the `ActionId` type and metadata surface.
   - Evidence: `docs/adr/0307-action-registry-and-typed-action-dispatch-v1.md`
-- [ ] AFA-actions-011 Provide an ecosystem macro for defining typed unit actions with stable IDs.
+  - Status (as of 2026-03-02):
+    - Implemented: `ActionId` portable identity (`crates/fret-runtime/src/action.rs`)
+    - Implemented: action metadata aliases (`ActionMeta` / `ActionRegistry`) reuse the command registry surface (`crates/fret-runtime/src/action.rs`)
+    - Implemented: command palette uses host command registry (`ecosystem/fret-ui-shadcn/src/command.rs`)
+- [x] AFA-actions-011 Provide an ecosystem macro for defining typed unit actions with stable IDs.
   - Goal: avoid stringly `"my.action.id"` constants in app code.
-- [ ] AFA-actions-012 Add a minimal action handler table API for views/frontends.
+  - Evidence:
+    - Macro: `ecosystem/fret/src/actions.rs`
+    - Compile/test: `cargo test -p fret --lib actions::tests::typed_actions_convert_to_command_id`
+- [x] AFA-actions-012 Add a minimal action handler table API for views/frontends.
   - Goal: IR binds `ActionId`; handlers live in view/app layer.
+  - Evidence:
+    - `ecosystem/fret/src/actions.rs` (`ActionHandlerTable`, `build()` adapters)
 - [ ] AFA-actions-013 Integrate action availability queries with input dispatch v2 semantics.
   - Evidence: `docs/adr/0218-input-dispatch-phases-prevent-default-and-action-availability-v2.md`
-- [ ] AFA-actions-014 Add diagnostics traces for:
+- [~] AFA-actions-014 Add diagnostics traces for:
   - keymap resolution → action id,
   - availability gating outcome,
   - dispatch path resolution.
-- [ ] AFA-actions-015 Converge command palette/menu invocation with action dispatch.
+  - Status (as of 2026-03-02):
+    - Implemented (keymap → action id): `crates/fret-runtime/src/shortcut_routing_diagnostics.rs` +
+      `ecosystem/fret-bootstrap/src/ui_diagnostics/service.rs` (`UiShortcutRoutingTraceEntryV1.command`)
+    - Implemented (availability gating outcome): `ecosystem/fret-bootstrap/src/ui_diagnostics/command_gating_trace.rs`
+      (`debug.command_gating_trace[*]`)
+    - Implemented (dispatch path resolution, best-effort): `crates/fret-runtime/src/command_dispatch_diagnostics.rs` +
+      `crates/fret-ui/src/tree/commands.rs` + `ecosystem/fret-bootstrap/src/ui_diagnostics/service.rs` +
+      `ecosystem/fret-bootstrap/src/ui_app_driver.rs`
+      (`debug.command_dispatch_trace[*]` / script evidence, including handled-by element, handled-by scope, driver-handled classification, and default-root fallback)
+    - Gated (scripted): `crates/fret-diag-protocol/src/lib.rs` (`UiActionStepV2::WaitCommandDispatchTrace`) +
+      `tools/diag-scripts/cookbook/imui-action-basics/cookbook-imui-action-basics-cross-frontend.json`
+    - Pending: a first-class pointer-triggered mapping from stable selectors (`test_id`) → dispatched `ActionId`
+      (today the dispatch trace records `GlobalElementId.0`, which can be correlated via element runtime/semantics snapshots).
+- [x] AFA-actions-015 Converge command palette/menu invocation with action dispatch.
   - Goal: palette/menu triggers and pointer triggers share the same action pipeline.
+  - Evidence:
+    - `ecosystem/fret-bootstrap/src/ui_app_driver.rs` (command palette overlay builds command entries and dispatches via the window command pipeline)
+    - `ecosystem/fret-ui-shadcn/src/command.rs` (command palette selection queues a pending command and dispatches via `Effect::Command` after close-on-select completes)
+    - `tools/diag-scripts/cookbook/imui-action-basics/cookbook-imui-action-basics-cross-frontend.json` (command palette → action handler gate)
+
+### B.1 Authoring integration (pointer triggers)
+
+- [x] AFA-actions-016 Add action-first binding convenience for shadcn `Button`.
+  - Evidence: `ecosystem/fret-ui-shadcn/src/button.rs` (`Button::action`)
+- [x] AFA-actions-017 Add action-first naming parity helpers in `fret-ui-kit`.
+  - Evidence:
+    - `ecosystem/fret-ui-kit/src/command.rs` (`action_is_enabled`, `dispatch_action_if_enabled`)
+    - `ecosystem/fret-ui-kit/src/declarative/action_hooks.rs` (`pressable_dispatch_action_if_enabled`)
+- [x] AFA-actions-018 Ensure action availability/dispatch can reach app handlers from overlay roots.
+  - Goal: portal-mounted menus/overlays can invoke app-level actions without duplicating handler tables.
+  - Evidence:
+    - `crates/fret-ui/src/tree/commands.rs` (dispatch/availability fallback to default root)
+    - `crates/fret-ui/src/tree/tests/command_availability.rs` (cross-layer fallback tests)
 
 ---
 
@@ -66,63 +106,108 @@ ID format:
 - [x] AFA-view-020 Decide crate placement for the view runtime:
   - Decision: land in `ecosystem/fret` for v1; defer split crate until after adoption.
   - Evidence: ADR 0308 “v1 decision (locked)”.
-- [ ] AFA-view-021 Implement a minimal `View` trait + `ViewCx` with:
+- [x] AFA-view-021 Implement a minimal `View` trait + `ViewCx` with:
   - action handler registration,
   - `notify()` dirty marking,
   - `use_state` (element/view state slots),
   - `use_selector` (re-export from `fret-selector`),
   - `use_query` (re-export from `fret-query`).
-- [ ] AFA-view-022 Define and document hook keying rules:
+  - Status (as of 2026-03-02):
+    - Implemented (v1): `ecosystem/fret/src/view.rs`
+    - Entry points: `ecosystem/fret/src/app_entry.rs` (`App::run_view`)
+    - First adoption: `apps/fret-cookbook/examples/hello.rs`
+- [x] AFA-view-022 Define and document hook keying rules:
   - stable callsite key for non-loop hooks,
   - required keyed variants for loops (`use_*_keyed`),
   - diagnostics for misuse (debug-only).
-- [ ] AFA-view-023 Add a view-cache boundary helper aligned with ADR 0213:
+  - Evidence:
+    - ADR update: `docs/adr/0308-view-authoring-runtime-and-hooks-v1.md`
+    - `use_state_keyed` + debug rail: `ecosystem/fret/src/view.rs`
+- [x] AFA-view-023 Add a view-cache boundary helper aligned with ADR 0213:
   - “cached unless dirty” semantics,
   - inspection/picking disables reuse.
+  - Evidence:
+    - Helper: `ecosystem/fret-ui-kit/src/declarative/cached_subtree.rs`
+    - Reuse gating: `crates/fret-ui/src/tree/ui_tree_view_cache.rs` (`UiTree::view_cache_active`)
 - [ ] AFA-view-024 Provide an adapter path for MVU:
   - keep MVU available while views are adopted,
   - document “when to use MVU vs View” in cookbook guidance.
-- [ ] AFA-view-025 Add view-level observability:
+- [x] AFA-view-025 Add view-level observability:
   - “why did this view rebuild?”
   - “why was reuse skipped?”
   - “which models/globals were observed?”
+  - Evidence:
+    - `debug.dirty_views` + `debug.notify_requests`: `ecosystem/fret-bootstrap/src/ui_diagnostics/invalidation_diagnostics.rs`
+    - `debug.cache_roots[*].reuse_reason`: `ecosystem/fret-bootstrap/src/ui_diagnostics/cache_root_diagnostics.rs`
+    - view-cache reason source: `crates/fret-ui/src/declarative/mount.rs`
 
 ---
 
 ## D. Frontend Convergence (Declarative + imui + GenUI)
 
-- [ ] AFA-frontends-030 Add an imui seam to dispatch `ActionId` without string commands.
-  - Evidence: `docs/workstreams/imui-authoring-facade-v2.md`
-- [ ] AFA-frontends-031 Ensure imui outputs stable semantics/test IDs for diag scripts.
+- [x] AFA-frontends-030 Add an imui seam to dispatch `ActionId` without string commands.
+  - Evidence:
+    - `ecosystem/fret-ui-kit/src/imui.rs` (`action_button_ex`, `menu_item_action_ex`)
+    - `apps/fret-cookbook/examples/imui_action_basics.rs`
+    - `tools/diag-scripts/cookbook/imui-action-basics/cookbook-imui-action-basics-cross-frontend.json`
+- [x] AFA-frontends-031 Ensure imui outputs stable semantics/test IDs for diag scripts.
   - Evidence: `docs/adr/0159-ui-diagnostics-snapshot-and-scripted-interaction-tests.md`
-- [ ] AFA-frontends-032 Align GenUI action bindings with `ActionId` conventions (namespace/versioning).
-  - Evidence: `docs/workstreams/genui-json-render-v1.md`
-- [ ] AFA-frontends-033 Add at least one cross-frontend demo:
+- [x] AFA-frontends-032 Align GenUI action bindings with `ActionId` conventions (namespace/versioning).
+  - Evidence:
+    - `docs/workstreams/genui-json-render-v1.md` (ActionId/CommandId naming + executor glue note)
+    - `ecosystem/fret-genui-core/src/executor.rs` (`GenUiActionExecutorV1::with_dispatch_command_actions`)
+- [x] AFA-frontends-033 Add at least one cross-frontend demo:
   - a Rust view triggers an action,
   - an imui panel triggers the same action,
-  - an optional GenUI spec triggers a catalog-approved action ID.
+  - a GenUI spec triggers a catalog-approved action ID (strict catalog validation).
+  - Evidence:
+    - `apps/fret-cookbook/examples/imui_action_basics.rs`
+    - `tools/diag-scripts/cookbook/imui-action-basics/cookbook-imui-action-basics-cross-frontend.json`
+- [x] AFA-frontends-034 Add facade-level wrappers for imui menu items that dispatch `ActionId`.
+  - Goal: keep focusability tracking (initial focus selection) consistent with action availability gating.
+  - Evidence:
+    - `ecosystem/fret-ui-kit/src/imui.rs` (`ImUiFacade::menu_item_action_ex`)
 
 ---
 
 ## E. Adoption (Cookbook + Gallery + Editor-grade shells)
 
-- [ ] AFA-adopt-040 Migrate 2–3 cookbook demos to the new View + actions path.
+- [x] AFA-adopt-040 Migrate 2–3 cookbook demos to the new View + actions path.
   - Suggested: `apps/fret-cookbook/examples/hello.rs`, `overlay_basics.rs`, `commands_keymap_basics.rs`.
-- [ ] AFA-adopt-041 Add at least one ui-gallery page/snippet using actions + view runtime.
+  - Status (as of 2026-03-02):
+    - View runtime + action-first adoption landed for `commands_keymap_basics`:
+      `apps/fret-cookbook/examples/commands_keymap_basics.rs`
+    - View runtime + action-first adoption landed for `hello`:
+      `apps/fret-cookbook/examples/hello.rs`
+    - View runtime + action-first adoption landed for `overlay_basics`:
+      `apps/fret-cookbook/examples/overlay_basics.rs`
+- [x] AFA-adopt-041 Add at least one ui-gallery page/snippet using actions + view runtime.
+  - Evidence:
+    - `apps/fret-ui-gallery/src/ui/snippets/command/action_first_view.rs`
+    - `apps/fret-ui-gallery/src/ui/pages/command.rs`
 - [ ] AFA-adopt-042 Add one editor-grade harness adoption:
   - docking/workspace shell uses actions for tab/command semantics (where appropriate).
-- [ ] AFA-adopt-043 Update `fretboard` scaffold templates to prefer action-first patterns (once v1 is stable).
+- [~] AFA-adopt-043 Update `fretboard` scaffold templates to prefer action-first patterns (once v1 is stable).
   - Rule: do not ship two different default paradigms in templates.
+  - Status (as of 2026-03-02):
+    - `fretboard new hello` migrated to View runtime + typed unit actions:
+      `apps/fretboard/src/scaffold/templates.rs` (`hello_template_main_rs`)
 
 ---
 
 ## F. Evidence + Regression Gates
 
-- [ ] AFA-gates-050 Add at least one scripted diag repro that exercises:
+- [~] AFA-gates-050 Add at least one scripted diag repro that exercises:
   - a keybinding → action dispatch,
   - a button click → action dispatch,
   - action availability gating (disabled state) under a modal barrier.
-- [ ] AFA-gates-051 Add compile-only wasm smoke gates for the new view runtime surface.
+  - Status (as of 2026-03-02):
+    - Implemented (non-modal gating): `tools/diag-scripts/cookbook/commands-keymap-basics/cookbook-commands-keymap-basics-shortcut-and-gating.json`
+    - Implemented (button click + state update): `tools/diag-scripts/cookbook/hello/cookbook-hello-click-count.json`
+    - Implemented (modal barrier shortcut gating): `tools/diag-scripts/cookbook/overlay-basics/cookbook-overlay-basics-modal-barrier-shortcut-gating.json`
+- [x] AFA-gates-051 Add compile-only wasm smoke gates for the new view runtime surface.
+  - Evidence:
+    - `tools/gates_wasm_smoke.ps1`
 - [ ] AFA-gates-052 Add a small set of unit tests for action routing / handler table behavior.
 - [ ] AFA-gates-053 Add a “risk matrix” review pass for M0/M1 (see `RISK_MATRIX.md`).
 

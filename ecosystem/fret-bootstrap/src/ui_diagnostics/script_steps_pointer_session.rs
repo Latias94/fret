@@ -63,9 +63,16 @@ pub(super) fn handle_pointer_down_step(
     }
 
     if !*stop_script {
-        if let Some(target_window) =
-            svc.resolve_window_target_for_active_step(window, anchor_window, target_window.as_ref())
-        {
+        let test_id_hint = match &target {
+            UiSelectorV1::TestId { id, .. } => Some(id.as_str()),
+            _ => None,
+        };
+        if let Some(target_window) = svc.resolve_window_target_for_active_step_with_test_id_hint(
+            window,
+            anchor_window,
+            target_window.as_ref(),
+            test_id_hint,
+        ) {
             if target_window != window {
                 *handoff_to = Some(target_window);
                 output

@@ -75,11 +75,13 @@
       "timeout_frames": 240
     },
     {
-      "type": "assert",
+      "type": "wait_until",
       "predicate": {
-        "kind": "focus_is",
+        "kind": "focused_descendant_is",
+        "scope": { "kind": "test_id", "id": "ui-gallery-alert-dialog-content" },
         "target": { "kind": "test_id", "id": "ui-gallery-alert-dialog-cancel" }
-      }
+      },
+      "timeout_frames": 60
     },
 
     {

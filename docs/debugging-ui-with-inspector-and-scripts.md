@@ -47,6 +47,9 @@ In-app shortcuts while inspect mode is active:
 - `F`: lock selection to the current semantics focus
 - `L`: lock/unlock selection (freeze hover)
 - `Alt+Up` / `Alt+Down`: walk the semantics parent chain (and “back to child”)
+- (Help open) Type to filter the neighborhood view; `Backspace` deletes.
+- (Help open, search active) `Up/Down` selects a match; `Enter` locks selection.
+- (Help open, search active) `Ctrl/Cmd+Enter` locks selection and copies the best selector JSON.
 
 ### What to look at
 
@@ -142,8 +145,21 @@ Fret’s scripted actions are *selector-driven* and run inside the app via file 
 - Prefer `{"kind":"test_id","id":"..."}` whenever possible.
 - Avoid relying on `label` when localization or wording is expected to change.
 - Use `wait_until`/`assert` instead of fixed delays when testing overlay open/close and focus restore.
+- When multiple widgets can match the same selector, scope assertions to a container:
+  - `exists_under(scope, target)` / `not_exists_under(scope, target)`
+  - `focused_descendant_is(scope, target)` for focus-trap / focus-restore checks
+- Use `value_equals` only when `FRET_DIAG_REDACT_TEXT=0` (tool-launched `diag run`/`diag suite --launch` defaults to redacted text).
 - When UI structure changes, update selectors using:
   - `cargo run -p fretboard -- diag pick-apply <script> --ptr <json-pointer>`
+
+### Generating scripts (when JSON is too limiting)
+
+Keep committed scripts as **plain JSON** (portable, reviewable, diffable). When you need loops,
+branching, or a large matrix:
+
+- Write a small generator (Rust/Python) that emits JSON fixtures into `tools/diag-scripts/`.
+- Treat the generator as *authoring ergonomics*; the runtime should still execute the emitted JSON
+  deterministically (no embedded scripting language in-app).
 
 ### Visual overlay debugging (optional screenshots)
 

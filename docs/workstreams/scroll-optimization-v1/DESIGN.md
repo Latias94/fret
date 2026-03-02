@@ -1,0 +1,179 @@
+# Scroll Optimization Workstream (v1)
+
+Date: 2026-03-02  
+Status: Draft (planning + gates-first)
+
+## Motivation
+
+Scrolling is a core interaction that touches multiple mechanisms:
+
+- layout barriers (virtualization, retained hosts, view-cache),
+- scroll handle revision + binding invalidation,
+- hit-testing / paint transforms,
+- content extent measurement (probes vs observed overflow).
+
+The goal of this workstream is to improve correctness, stability, and performance of scrolling
+without violating Fret’s layering rules (mechanism in `fret-ui`, policy in `ecosystem/*`).
+
+## Goals
+
+- Correctness
+  - No scroll-state drift across frames (especially under view-cache reuse).
+  - No “pinned scroll range” when content grows near the scroll extent edge.
+  - Nested scrollables behave predictably (deepest scrollable consumes wheel first).
+- Performance
+  - Reduce redundant invalidation/redraw work under high-frequency wheel/trackpad input.
+  - Avoid expensive unbounded extent probes on steady-state frames.
+  - Keep virtual list scrolling on HitTestOnly in common cases.
+- Maintainability
+  - Reduce foot-guns around barrier relayout + invalidation accounting.
+  - Keep diagnostics evidence and regression gates small and repeatable.
+
+## Non-goals
+
+- Changing the public “policy” behavior (hover intent, default paddings, component sizing).
+- Adding new scroll physics (inertia curves, overscroll behaviors) unless required by correctness.
+- Replacing the virtual list implementation strategy.
+
+## Current architecture (Fret)
+
+Key mechanism pieces:
+
+- Scroll handle and revision: `crates/fret-ui/src/scroll/mod.rs`
+  - External setters bump `revision`; internal setters used during layout do not.
+- Scroll layout + extent probing: `crates/fret-ui/src/declarative/host_widget/layout/scrolling.rs`
+  - Supports `probe_unbounded` and a post-layout overflow observation mode behind
+    `FRET_UI_SCROLL_EXTENTS_POST_LAYOUT`.
+- Scroll / vlist events: `crates/fret-ui/src/declarative/host_widget/event/scroll.rs`
+  - Wheel is handled by the deepest scrollable first (capture returns early for Wheel).
+  - Scroll offset changes are treated as `HitTestOnly` invalidations (fast path).
+- Scroll-handle binding registry and change classification:
+  - `crates/fret-ui/src/declarative/frame.rs`
+  - Applied in `crates/fret-ui/src/tree/layout/state.rs` (including `windowed_paint` view-cache rules).
+
+## Evidence (existing gates)
+
+Diagnostics scripts:
+
+- `tools/diag-scripts/ui-gallery/scroll-area/ui-gallery-scroll-area-wheel-scroll.json`
+  - Asserts semantics scroll max is finite and wheel moves offset for both axes.
+
+Unit / integration tests (non-exhaustive):
+
+- Wheel invalidation is HitTestOnly:
+  - `crates/fret-ui/src/tree/tests/scroll_invalidation.rs`
+  - `crates/fret-ui/src/declarative/tests/layout/scroll.rs`
+- Deferred scroll-to-item consumption:
+  - `crates/fret-ui/src/declarative/tests/virtual_list/scroll_to_item.rs`
+- Scroll-into-view correctness:
+  - `crates/fret-ui/src/tree/tests/scroll_into_view.rs`
+- Occlusion vs scroll forwarding:
+  - `crates/fret-ui/src/tree/tests/pointer_occlusion.rs`
+
+## Known risks / pain points
+
+### 1) Barrier + invalidation accounting foot-guns
+
+Barrier flows intentionally bypass normal “bubble invalidations to ancestors” rules. Any path that
+mutates:
+
+- `Node::children` for a barrier, or
+- `Node::invalidation.layout` directly
+
+must keep “subtree dirty aggregation” consistent, or debug underflow/drift can occur. This is
+especially likely in scroll/virtualization surfaces.
+
+### 2) High-frequency wheel input
+
+Currently each wheel event can trigger:
+
+- scroll handle mutation,
+- binding invalidations,
+- redraw request.
+
+This is correct but can be expensive under trackpads (many events per frame).
+
+### 3) Scrollbar drag stability while content grows/measures
+
+Zed/GPUI’s list state includes an explicit “scrollbar drag started/ended” mode that stabilizes the
+height used for scrollbar math while dragging, preventing the thumb from “moving away” as measured
+content changes.
+
+Fret’s current scrollbar mechanism tracks `dragging_thumb` but does not explicitly lock a baseline
+for content extent during drag.
+
+## Proposed work items (mechanism-safe)
+
+### A) Wheel/trackpad delta coalescing (gated)
+
+Goal: reduce redundant invalidation under high-frequency input while preserving determinism.
+
+Options:
+
+1. Platform/runner coalescing (preferred):
+   - Coalesce wheel deltas into one per frame/tick per target window.
+2. UI-layer coalescing:
+   - Maintain a per-window accumulator applied during `layout` or `prepaint`.
+
+Evidence gate:
+
+- Add a perf-oriented diag script that wheels repeatedly and asserts:
+  - no layout solves are forced,
+  - scroll offset changes monotonically,
+  - frame time stays under a target threshold (optional, separate perf gate).
+
+### B) Scrollbar drag baseline lock (correctness/UX)
+
+Goal: keep thumb position stable during drag even if content extent changes due to measurement or
+overflow observation growth.
+
+Mechanism idea:
+
+- Store a “drag baseline” in `ScrollbarState` (content size and/or max offset at drag start).
+- Use the baseline for:
+  - mapping pointer movement -> offset,
+  - computing thumb rect while dragging.
+
+Evidence gate:
+
+- Add a diag script that:
+  - starts thumb drag,
+  - triggers content growth (e.g. expand a collapsible in a scroll area),
+  - asserts the thumb does not jump away from the pointer beyond an epsilon.
+
+### C) Consolidate barrier invalidation helpers (hardening)
+
+Goal: reduce repeated “manual bookkeeping” code paths.
+
+Approach:
+
+- Prefer a single helper (or a small set) in `UiTree` that:
+  - mutates barrier children,
+  - schedules contained relayout,
+  - updates subtree dirty aggregation,
+  - records diagnostics detail.
+
+### D) Extents growth at scroll edge (already partly addressed)
+
+Keep improving the “avoid pinned extents” behavior:
+
+- `pending_extent_probe` scheduling on clamp-at-edge is good.
+- Post-layout observation (wrapper peel + deep scan budgets) is promising; expand gates to ensure:
+  - budget-hit fallback probes happen,
+  - extents grow when needed,
+  - no infinite/oscillating probe loops.
+
+## Reference: Zed/GPUI patterns
+
+- Scroll handle (div): `repo-ref/zed/crates/gpui/src/elements/div.rs`
+- List wheel delta coalescing + scrollbar drag stabilization:
+  - `repo-ref/zed/crates/gpui/src/elements/list.rs`
+- Scroll routing concept (“should handle scroll” separate from hover):
+  - `repo-ref/zed/crates/gpui/src/window.rs`
+
+## Open questions
+
+- Where should wheel delta coalescing live for Fret (runner vs UI core)?
+- For scrollbar drag baseline: what baseline is sufficient (content height only, or full size)?
+- Should “restrict scroll axis” be a mechanism knob (like GPUI) or remain policy-level?
+

@@ -102,6 +102,29 @@
       "timeout_frames": 600
     },
     {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": {
+          "kind": "test_id",
+          "id": "ui-gallery-select-selected-label"
+        }
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "label_contains",
+        "target": {
+          "kind": "test_id",
+          "id": "ui-gallery-select-selected-label"
+        },
+        "text": "Selected: <none>"
+      },
+      "timeout_frames": 240
+    },
+    {
       "type": "click",
       "target": {
         "kind": "test_id",
@@ -116,6 +139,21 @@
         "target": {
           "kind": "test_id",
           "id": "select-scroll-viewport"
+        }
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists_under",
+        "scope": {
+          "kind": "test_id",
+          "id": "select-scroll-viewport"
+        },
+        "target": {
+          "kind": "test_id",
+          "id": "ui-gallery-select-item-apple"
         }
       },
       "timeout_frames": 240
@@ -160,6 +198,18 @@
           "kind": "test_id",
           "id": "select-scroll-viewport"
         }
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "label_contains",
+        "target": {
+          "kind": "test_id",
+          "id": "ui-gallery-select-selected-label"
+        },
+        "text": "Selected: <none>"
       },
       "timeout_frames": 240
     },

@@ -661,6 +661,15 @@ pub enum UiActionStepV2 {
         #[serde(default = "default_action_timeout_frames")]
         timeout_frames: u32,
     },
+    /// Wait until the command dispatch trace contains an entry matching `query`.
+    ///
+    /// This is intended to gate action-first convergence work: pointer triggers, keymap shortcuts,
+    /// and command palette/menus should all produce explainable dispatch outcomes.
+    WaitCommandDispatchTrace {
+        query: UiCommandDispatchTraceQueryV1,
+        #[serde(default = "default_action_timeout_frames")]
+        timeout_frames: u32,
+    },
     /// Wait until the overlay placement trace contains an entry matching `query`.
     ///
     /// This is intended for overlay-driven components (Select/Combobox/Menus) where correctness
@@ -805,6 +814,31 @@ pub enum UiActionStepV2 {
         #[serde(default = "default_action_timeout_frames")]
         timeout_frames: u32,
     },
+    /// Paste `text` into a target text surface by:
+    ///
+    /// 1) clicking the target to focus it,
+    /// 2) setting the OS clipboard text (best-effort),
+    /// 3) issuing the platform "paste" shortcut (`Primary+V`).
+    ///
+    /// This is intentionally higher-level than `set_clipboard_text + press_shortcut` so scripts
+    /// can gate paste-specific code paths with less boilerplate.
+    ///
+    /// Notes:
+    ///
+    /// - The clipboard write is best-effort and runner/platform dependent.
+    /// - `clear_before_paste` uses `SetTextSelection { anchor=0, focus=u32::MAX }` (not `Ctrl+A`).
+    PasteTextInto {
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        window: Option<UiWindowTargetV1>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        pointer_kind: Option<UiPointerKindV1>,
+        target: UiSelectorV1,
+        text: String,
+        #[serde(default)]
+        clear_before_paste: bool,
+        #[serde(default = "default_action_timeout_frames")]
+        timeout_frames: u32,
+    },
     MenuSelect {
         #[serde(default, skip_serializing_if = "Option::is_none")]
         window: Option<UiWindowTargetV1>,
@@ -892,6 +926,38 @@ pub enum UiActionStepV2 {
     /// Requires capability `diag.clipboard_text`.
     AssertClipboardText {
         text: String,
+        #[serde(default = "default_action_timeout_frames")]
+        timeout_frames: u32,
+    },
+    /// In-app inspector helper: open help, search for `query`, lock the best match, and request
+    /// copying the best selector JSON to the OS clipboard.
+    ///
+    /// This is intended to gate that the in-app inspector UX is still functional under
+    /// tool-launched scripted runs (`fretboard diag run/suite --launch`) without relying on
+    /// keyboard shortcut injection.
+    ///
+    /// Behavior notes:
+    ///
+    /// - Matching prefers `test_id`, then `label` when text redaction is disabled.
+    /// - The runtime may keep the help overlay open after the step.
+    InspectHelpLockBestMatchAndCopySelector {
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        window: Option<UiWindowTargetV1>,
+        query: String,
+        #[serde(default = "default_action_timeout_frames")]
+        timeout_frames: u32,
+    },
+    /// In-app inspector helper: open help, ensure the semantics tree panel is visible, select the
+    /// best match for `query` in the tree, lock it, and copy the best selector JSON to the OS
+    /// clipboard.
+    ///
+    /// This is intended to gate that the help-mode tree browser remains functional under
+    /// tool-launched scripted runs (`fretboard diag run/suite --launch`) without relying on
+    /// keyboard shortcut injection.
+    InspectHelpTreeLockBestMatchAndCopySelector {
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        window: Option<UiWindowTargetV1>,
+        query: String,
         #[serde(default = "default_action_timeout_frames")]
         timeout_frames: u32,
     },
@@ -1219,6 +1285,31 @@ pub enum UiPredicateV1 {
     NotExists {
         target: UiSelectorV1,
     },
+    /// True when `target` resolves to a node that is a descendant of (or equal to) `scope`.
+    ///
+    /// This is primarily used to disambiguate selectors when multiple similar widgets exist in a
+    /// window (and to keep scripts resilient under overlay/root splits).
+    ExistsUnder {
+        scope: UiSelectorV1,
+        target: UiSelectorV1,
+    },
+    /// True when `scope` exists and `target` does *not* exist under it.
+    ///
+    /// Note: if `scope` does not exist, this predicate returns false.
+    NotExistsUnder {
+        scope: UiSelectorV1,
+        target: UiSelectorV1,
+    },
+    /// True when the currently focused semantics node equals `target` and is a descendant of
+    /// (or equal to) `scope`.
+    ///
+    /// This is a convenience predicate for focus-trap / focus-restore assertions:
+    /// - "focus stays within this dialog root"
+    /// - "after open, focus moves to the dialog's close button"
+    FocusedDescendantIs {
+        scope: UiSelectorV1,
+        target: UiSelectorV1,
+    },
     FocusIs {
         target: UiSelectorV1,
     },
@@ -1246,6 +1337,14 @@ pub enum UiPredicateV1 {
     },
     /// True when the target exists and its semantics `value` contains `text` as a substring.
     ValueContains {
+        target: UiSelectorV1,
+        text: String,
+    },
+    /// True when the target exists and its semantics `value` equals `text`.
+    ///
+    /// Caution: some widgets use locale-dependent `value` strings; prefer structured predicates
+    /// (`SemanticsNumericApproxEq`, `SemanticsScrollApproxEq`, ...) when available.
+    ValueEquals {
         target: UiSelectorV1,
         text: String,
     },
@@ -1810,20 +1909,30 @@ pub enum UiSelectorV1 {
     RoleAndName {
         role: String,
         name: String,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        root_z_index: Option<u32>,
     },
     RoleAndPath {
         role: String,
         name: String,
         ancestors: Vec<UiRoleAndNameV1>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        root_z_index: Option<u32>,
     },
     TestId {
         id: String,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        root_z_index: Option<u32>,
     },
     GlobalElementId {
         element: u64,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        root_z_index: Option<u32>,
     },
     NodeId {
         node: u64,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        root_z_index: Option<u32>,
     },
 }
 
@@ -2059,6 +2168,8 @@ pub struct UiScriptEvidenceV1 {
     pub focus_trace: Vec<UiFocusTraceEntryV1>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub shortcut_routing_trace: Vec<UiShortcutRoutingTraceEntryV1>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub command_dispatch_trace: Vec<UiCommandDispatchTraceEntryV1>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub overlay_placement_trace: Vec<UiOverlayPlacementTraceEntryV1>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
@@ -2390,6 +2501,52 @@ pub struct UiShortcutRoutingTraceQueryV1 {
     pub focus_is_text_input: Option<bool>,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UiCommandDispatchTraceEntryV1 {
+    pub step_index: u32,
+    pub frame_id: u64,
+    pub command: String,
+    pub handled: bool,
+    /// Best-effort handler scope classification (ADR 0307).
+    ///
+    /// Expected values: `"widget"`, `"window"`, `"app"`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub handled_by_scope: Option<String>,
+    /// Whether the command was handled by a runner/driver integration layer (not by a UI element).
+    #[serde(default)]
+    pub handled_by_driver: bool,
+    #[serde(default)]
+    pub stopped: bool,
+    #[serde(default)]
+    pub source_kind: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub source_element: Option<u64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub handled_by_element: Option<u64>,
+    #[serde(default)]
+    pub started_from_focus: bool,
+    #[serde(default)]
+    pub used_default_root_fallback: bool,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+pub struct UiCommandDispatchTraceQueryV1 {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub command: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub source_kind: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub handled: Option<bool>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub handled_by_scope: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub handled_by_driver: Option<bool>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub started_from_focus: Option<bool>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub used_default_root_fallback: Option<bool>,
+}
+
 #[derive(Debug, Clone, Copy, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum UiLayoutDirectionV1 {
@@ -2699,9 +2856,11 @@ mod tests {
         let value = serde_json::to_value(UiPredicateV1::BoundsApproxEqual {
             a: UiSelectorV1::TestId {
                 id: "a".to_string(),
+                root_z_index: None,
             },
             b: UiSelectorV1::TestId {
                 id: "b".to_string(),
+                root_z_index: None,
             },
             eps_px: 1.0,
         })
@@ -2726,9 +2885,11 @@ mod tests {
         let value = serde_json::to_value(UiPredicateV1::BoundsCenterApproxEqual {
             a: UiSelectorV1::TestId {
                 id: "a".to_string(),
+                root_z_index: None,
             },
             b: UiSelectorV1::TestId {
                 id: "b".to_string(),
+                root_z_index: None,
             },
             eps_px: 1.0,
         })
@@ -2748,6 +2909,87 @@ mod tests {
         assert!(matches!(
             roundtrip,
             UiPredicateV1::BoundsCenterApproxEqual { .. }
+        ));
+    }
+
+    #[test]
+    fn predicate_exists_under_serializes_minimally() {
+        let value = serde_json::to_value(UiPredicateV1::ExistsUnder {
+            scope: UiSelectorV1::TestId {
+                id: "scope".to_string(),
+                root_z_index: None,
+            },
+            target: UiSelectorV1::TestId {
+                id: "target".to_string(),
+                root_z_index: None,
+            },
+        })
+        .unwrap();
+
+        assert_eq!(
+            value,
+            serde_json::json!({
+                "kind": "exists_under",
+                "scope": { "kind": "test_id", "id": "scope" },
+                "target": { "kind": "test_id", "id": "target" },
+            })
+        );
+
+        let roundtrip: UiPredicateV1 = serde_json::from_value(value).unwrap();
+        assert!(matches!(roundtrip, UiPredicateV1::ExistsUnder { .. }));
+    }
+
+    #[test]
+    fn predicate_value_equals_serializes_minimally() {
+        let value = serde_json::to_value(UiPredicateV1::ValueEquals {
+            target: UiSelectorV1::TestId {
+                id: "name".to_string(),
+                root_z_index: None,
+            },
+            text: "Alice".to_string(),
+        })
+        .unwrap();
+
+        assert_eq!(
+            value,
+            serde_json::json!({
+                "kind": "value_equals",
+                "target": { "kind": "test_id", "id": "name" },
+                "text": "Alice",
+            })
+        );
+
+        let roundtrip: UiPredicateV1 = serde_json::from_value(value).unwrap();
+        assert!(matches!(roundtrip, UiPredicateV1::ValueEquals { .. }));
+    }
+
+    #[test]
+    fn predicate_focused_descendant_is_serializes_minimally() {
+        let value = serde_json::to_value(UiPredicateV1::FocusedDescendantIs {
+            scope: UiSelectorV1::TestId {
+                id: "dialog".to_string(),
+                root_z_index: None,
+            },
+            target: UiSelectorV1::TestId {
+                id: "close".to_string(),
+                root_z_index: None,
+            },
+        })
+        .unwrap();
+
+        assert_eq!(
+            value,
+            serde_json::json!({
+                "kind": "focused_descendant_is",
+                "scope": { "kind": "test_id", "id": "dialog" },
+                "target": { "kind": "test_id", "id": "close" },
+            })
+        );
+
+        let roundtrip: UiPredicateV1 = serde_json::from_value(value).unwrap();
+        assert!(matches!(
+            roundtrip,
+            UiPredicateV1::FocusedDescendantIs { .. }
         ));
     }
 
@@ -2824,6 +3066,7 @@ mod tests {
             pointer_kind: None,
             target: UiSelectorV1::TestId {
                 id: "a".to_string(),
+                root_z_index: None,
             },
             button: UiMouseButtonV1::Left,
             click_count: 1,
@@ -2863,6 +3106,7 @@ mod tests {
             pointer_kind: None,
             target: UiSelectorV1::TestId {
                 id: "a".to_string(),
+                root_z_index: None,
             },
             modifiers: None,
         };
@@ -2897,6 +3141,7 @@ mod tests {
             pointer_kind: None,
             target: UiSelectorV1::TestId {
                 id: "a".to_string(),
+                root_z_index: None,
             },
             duration_ms: default_long_press_duration_ms(),
             modifiers: None,
@@ -2934,6 +3179,7 @@ mod tests {
             pointer_kind: None,
             target: UiSelectorV1::TestId {
                 id: "a".to_string(),
+                root_z_index: None,
             },
             delta_x: 12.0,
             delta_y: -8.0,
@@ -2968,5 +3214,78 @@ mod tests {
                 ..
             }
         ));
+    }
+
+    #[test]
+    fn step_paste_text_into_deserializes_with_defaults() {
+        let value = serde_json::json!({
+            "type": "paste_text_into",
+            "target": { "kind": "test_id", "id": "field" },
+            "text": "Hello"
+        });
+
+        let step: UiActionStepV2 = serde_json::from_value(value).unwrap();
+        match step {
+            UiActionStepV2::PasteTextInto {
+                window,
+                pointer_kind,
+                target,
+                text,
+                clear_before_paste,
+                timeout_frames,
+            } => {
+                assert!(window.is_none());
+                assert!(pointer_kind.is_none());
+                assert!(matches!(target, UiSelectorV1::TestId { .. }));
+                assert_eq!(text, "Hello");
+                assert!(!clear_before_paste);
+                assert_eq!(timeout_frames, default_action_timeout_frames());
+            }
+            _ => panic!("expected paste_text_into"),
+        }
+    }
+
+    #[test]
+    fn step_inspect_help_lock_best_match_and_copy_selector_deserializes_with_defaults() {
+        let value = serde_json::json!({
+            "type": "inspect_help_lock_best_match_and_copy_selector",
+            "query": "ui-gallery-nav-search"
+        });
+
+        let step: UiActionStepV2 = serde_json::from_value(value).unwrap();
+        match step {
+            UiActionStepV2::InspectHelpLockBestMatchAndCopySelector {
+                window,
+                query,
+                timeout_frames,
+            } => {
+                assert!(window.is_none());
+                assert_eq!(query, "ui-gallery-nav-search");
+                assert_eq!(timeout_frames, default_action_timeout_frames());
+            }
+            _ => panic!("expected inspect_help_lock_best_match_and_copy_selector"),
+        }
+    }
+
+    #[test]
+    fn step_inspect_help_tree_lock_best_match_and_copy_selector_deserializes_with_defaults() {
+        let value = serde_json::json!({
+            "type": "inspect_help_tree_lock_best_match_and_copy_selector",
+            "query": "ui-gallery-nav-search"
+        });
+
+        let step: UiActionStepV2 = serde_json::from_value(value).unwrap();
+        match step {
+            UiActionStepV2::InspectHelpTreeLockBestMatchAndCopySelector {
+                window,
+                query,
+                timeout_frames,
+            } => {
+                assert!(window.is_none());
+                assert_eq!(query, "ui-gallery-nav-search");
+                assert_eq!(timeout_frames, default_action_timeout_frames());
+            }
+            _ => panic!("expected inspect_help_tree_lock_best_match_and_copy_selector"),
+        }
     }
 }

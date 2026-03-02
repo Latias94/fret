@@ -1,0 +1,61 @@
+{
+  "schema_version": 2,
+  "meta": {
+    "name": "UI gallery: Button RTL row screenshots (Back/Next alignment)",
+    "tags": ["ui-gallery", "shadcn", "button", "rtl", "screenshots"],
+    "required_capabilities": ["diag.script_v2", "diag.screenshot_png"],
+    "target_hints": [
+      "Navigates to the Button page via the left nav search.",
+      "Scrolls the docs scaffold to the RTL section and captures a screenshot + bundle."
+    ]
+  },
+  "steps": [
+    { "type": "reset_diagnostics" },
+    {
+      "type": "wait_until",
+      "predicate": { "kind": "exists", "target": { "kind": "test_id", "id": "ui-gallery-nav-search" } },
+      "timeout_frames": 600
+    },
+    { "type": "click", "target": { "kind": "test_id", "id": "ui-gallery-nav-search" } },
+    { "type": "press_key", "key": "a", "modifiers": { "ctrl": true } },
+    { "type": "press_key", "key": "backspace" },
+    { "type": "type_text", "text": "button" },
+    { "type": "wait_frames", "n": 2 },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "bounds_within_window",
+        "target": { "kind": "test_id", "id": "ui-gallery-nav-button" },
+        "padding_px": 8.0,
+        "eps_px": 1.0
+      },
+      "timeout_frames": 240
+    },
+    { "type": "click", "target": { "kind": "test_id", "id": "ui-gallery-nav-button" } },
+    {
+      "type": "wait_until",
+      "predicate": { "kind": "exists", "target": { "kind": "test_id", "id": "ui-gallery-button" } },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": { "kind": "exists", "target": { "kind": "test_id", "id": "ui-gallery-button-rtl-row" } },
+      "timeout_frames": 240
+    },
+    { "type": "ensure_visible", "target": { "kind": "test_id", "id": "ui-gallery-button-rtl-row" }, "within_window": true, "padding_px": 12.0 },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "bounds_within_window",
+        "target": { "kind": "test_id", "id": "ui-gallery-button-rtl-row" },
+        "padding_px": 8.0,
+        "eps_px": 1.0
+      },
+      "timeout_frames": 240
+    },
+    { "type": "wait_frames", "n": 5 },
+    { "type": "capture_bundle", "label": "ui-gallery-button-rtl-row" },
+    { "type": "capture_screenshot", "label": "ui-gallery-button-rtl-row" }
+  ]
+}
+

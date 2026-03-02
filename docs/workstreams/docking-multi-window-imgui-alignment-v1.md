@@ -98,6 +98,21 @@ These gates assert, at minimum:
 - hovered-window selection source is platform (`dock_drag_window_under_cursor_source_is: platform`)
 - overlap `raise_window` swaps the `dock_drag_current_window_is` target
 
+## Status (2026-03-02)
+
+- The overlapped z-order switching gate is green again on Windows (`window_hover_detection=reliable`):
+  - `tools/diag-scripts/docking/arbitration/docking-arbitration-demo-multiwindow-overlap-zorder-switch.json`
+- Key fixes that unblocked this:
+  - Docking: do not cancel the global dock drag session on `PointerCancel` (which can be synthesized by the runner
+    to clear stale per-window pointer state after tear-off migration).
+    - `ecosystem/fret-docking/src/dock/space.rs`
+  - Diagnostics: allow `wait_until/assert` steps whose predicates are global (dock-drag / dock-graph / window-count) to
+    execute without forcing the script to stay attached to an occluded target window.
+    - `ecosystem/fret-bootstrap/src/ui_diagnostics/script_runner.rs`
+  - Runner: on mouse-up, cancel the runner-routed cross-window drag using the internal routing pointer id (more robust
+    than relying on a specific `PointerId` in the injected event stream).
+    - `crates/fret-launch/src/runner/desktop/runner/app_handler.rs`
+
 ## Known gaps / next alignment steps
 
 1) **Separate “hovered window” vs “window under moving window”**

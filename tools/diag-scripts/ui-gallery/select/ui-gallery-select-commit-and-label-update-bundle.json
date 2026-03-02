@@ -132,6 +132,21 @@
       "timeout_frames": 240
     },
     {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists_under",
+        "scope": {
+          "kind": "test_id",
+          "id": "select-scroll-viewport"
+        },
+        "target": {
+          "kind": "test_id",
+          "id": "ui-gallery-select-item-banana"
+        }
+      },
+      "timeout_frames": 240
+    },
+    {
       "type": "wait_overlay_placement_trace",
       "query": {
         "kind": "placed_rect",
@@ -170,7 +185,7 @@
         "kind": "not_exists",
         "target": {
           "kind": "test_id",
-          "id": "ui-gallery-select-item-banana"
+          "id": "select-scroll-viewport"
         }
       },
       "timeout_frames": 240
@@ -183,6 +198,18 @@
           "kind": "test_id",
           "id": "ui-gallery-select-trigger"
         }
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "label_contains",
+        "target": {
+          "kind": "test_id",
+          "id": "ui-gallery-select-selected-label"
+        },
+        "text": "Selected: banana"
       },
       "timeout_frames": 240
     },
@@ -210,6 +237,21 @@
       "query": {
         "kind": "placed_rect",
         "anchor_test_id": "ui-gallery-select-trigger"
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists_under",
+        "scope": {
+          "kind": "test_id",
+          "id": "select-scroll-viewport"
+        },
+        "target": {
+          "kind": "test_id",
+          "id": "ui-gallery-select-item-banana"
+        }
       },
       "timeout_frames": 240
     },

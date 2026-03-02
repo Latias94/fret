@@ -1892,7 +1892,8 @@ impl DropdownMenu {
             // Note: menu trigger helpers intentionally do not wire Enter/Space because many
             // trigger surfaces implement those through pressable activation hooks. Here we
             // *do* wire activation so `DropdownMenu` is usable without an explicit Trigger
-            // component.
+            // component. Callers should not also toggle `open` on activation (e.g.
+            // `Button::toggle_model(open)`), or the state can be toggled twice and remain closed.
             let open_for_trigger_activate = self.open.clone();
             cx.pressable_add_on_activate_for(
                 trigger_id,

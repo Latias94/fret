@@ -1,5 +1,5 @@
-use super::super::super::super::doc_layout::DocSection;
 use super::super::super::super::*;
+use super::super::*;
 
 pub(in crate::ui) fn preview_material3_state_matrix(
     cx: &mut ElementContext<'_, App>,
@@ -14,7 +14,16 @@ pub(in crate::ui) fn preview_material3_state_matrix(
     material3_menu_open: Model<bool>,
     last_action: Model<Arc<str>>,
 ) -> Vec<AnyElement> {
-    let demo = snippets::material3::state_matrix::render(
+    let mut out: Vec<AnyElement> = Vec::new();
+
+    out.push(cx.text(
+        "Material 3 State Matrix: exercise hover/focus/press/disabled/selected states across multiple components.",
+    ));
+    out.push(cx.text(
+        "Tip: use keyboard Tab/Arrow/Home/End on Tabs/Radio/Menu; use Esc/outside press to close Menu.",
+    ));
+
+    out.extend(material3_state_matrix_content(
         cx,
         material3_checkbox,
         material3_switch,
@@ -26,16 +35,71 @@ pub(in crate::ui) fn preview_material3_state_matrix(
         material3_text_field_error,
         material3_menu_open,
         last_action,
-    );
+    ));
+    out
+}
 
-    let page = doc_layout::render_doc_page(
+pub(in crate::ui) fn material3_state_matrix_content(
+    cx: &mut ElementContext<'_, App>,
+    material3_checkbox: Model<bool>,
+    material3_switch: Model<bool>,
+    material3_radio_value: Model<Option<Arc<str>>>,
+    material3_tabs_value: Model<Arc<str>>,
+    material3_navigation_bar_value: Model<Arc<str>>,
+    material3_text_field_value: Model<String>,
+    material3_text_field_disabled: Model<bool>,
+    material3_text_field_error: Model<bool>,
+    material3_menu_open: Model<bool>,
+    last_action: Model<Arc<str>>,
+) -> Vec<AnyElement> {
+    let mut out: Vec<AnyElement> = Vec::new();
+
+    out.push(cx.text("— Buttons —"));
+    out.push(snippets::material3::button::render(cx));
+
+    out.push(cx.text("— Chips —"));
+    out.extend(preview_material3_chip(cx, last_action.clone()));
+
+    out.push(cx.text("— Cards —"));
+    out.extend(preview_material3_card(cx, last_action.clone()));
+
+    out.push(cx.text("— Icon Buttons —"));
+    out.push(snippets::material3::icon_button::render(cx));
+
+    out.push(cx.text("— FAB —"));
+    out.extend(preview_material3_fab(cx, last_action.clone()));
+
+    out.push(cx.text("— Checkbox —"));
+    out.push(snippets::material3::checkbox::render(cx, material3_checkbox));
+
+    out.push(cx.text("— Switch —"));
+    out.push(snippets::material3::switch::render(cx, material3_switch));
+
+    out.push(cx.text("— Radio —"));
+    out.push(snippets::material3::radio::render(cx, material3_radio_value));
+
+    out.push(cx.text("— Text Field —"));
+    out.extend(preview_material3_text_field(
         cx,
-        Some("Material 3 surfaces are still migrating to snippet-backed pages (Preview ≡ Code)."),
-        vec![
-            DocSection::new("Demo", demo)
-                .code_rust_from_file_region(snippets::material3::state_matrix::SOURCE, "example"),
-        ],
-    );
+        material3_text_field_value,
+        material3_text_field_disabled,
+        material3_text_field_error,
+    ));
 
-    vec![page]
+    out.push(cx.text("— Search View —"));
+    out.extend(preview_material3_search_view(cx));
+
+    out.push(cx.text("— Tabs —"));
+    out.push(snippets::material3::tabs::render(cx, material3_tabs_value));
+
+    out.push(cx.text("— Navigation Bar —"));
+    out.push(snippets::material3::navigation_bar::render(
+        cx,
+        material3_navigation_bar_value,
+    ));
+
+    out.push(cx.text("— Menu —"));
+    out.extend(preview_material3_menu(cx, material3_menu_open, last_action));
+
+    out
 }

@@ -1,0 +1,47 @@
+{
+  "schema_version": 2,
+  "meta": {
+    "name": "Cookbook: hello click increments count",
+    "tags": ["cookbook", "hello", "actions", "smoke"],
+    "required_capabilities": ["diag.script_v2"],
+    "target_hints": [
+      "Waits for the hello example root to exist.",
+      "Clicks the button and asserts the count label updates."
+    ]
+  },
+  "steps": [
+    { "type": "reset_diagnostics" },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "cookbook.hello.root" }
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "label_contains",
+        "target": { "kind": "test_id", "id": "cookbook.hello.count" },
+        "text": "Count: 0"
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "click_stable",
+      "target": { "kind": "test_id", "id": "cookbook.hello.button" }
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "label_contains",
+        "target": { "kind": "test_id", "id": "cookbook.hello.count" },
+        "text": "Count: 1"
+      },
+      "timeout_frames": 240
+    },
+    { "type": "capture_bundle", "label": "cookbook-hello-click-count" }
+  ]
+}
+

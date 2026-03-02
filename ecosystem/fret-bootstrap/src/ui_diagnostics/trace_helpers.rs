@@ -17,40 +17,67 @@ fn selector_trace_eq(a: &UiSelectorV1, b: &UiSelectorV1) -> bool {
             UiSelectorV1::RoleAndName {
                 role: a_role,
                 name: a_name,
+                root_z_index: a_root_z,
             },
             UiSelectorV1::RoleAndName {
                 role: b_role,
                 name: b_name,
+                root_z_index: b_root_z,
             },
-        ) => a_role == b_role && a_name == b_name,
+        ) => a_role == b_role && a_name == b_name && a_root_z == b_root_z,
         (
             UiSelectorV1::RoleAndPath {
                 role: a_role,
                 name: a_name,
                 ancestors: a_ancestors,
+                root_z_index: a_root_z,
             },
             UiSelectorV1::RoleAndPath {
                 role: b_role,
                 name: b_name,
                 ancestors: b_ancestors,
+                root_z_index: b_root_z,
             },
         ) => {
             a_role == b_role
                 && a_name == b_name
+                && a_root_z == b_root_z
                 && a_ancestors.len() == b_ancestors.len()
                 && a_ancestors
                     .iter()
                     .zip(b_ancestors.iter())
                     .all(|(a, b)| a.role == b.role && a.name == b.name)
         }
-        (UiSelectorV1::TestId { id: a_id }, UiSelectorV1::TestId { id: b_id }) => a_id == b_id,
         (
-            UiSelectorV1::GlobalElementId { element: a_el },
-            UiSelectorV1::GlobalElementId { element: b_el },
-        ) => a_el == b_el,
-        (UiSelectorV1::NodeId { node: a_node }, UiSelectorV1::NodeId { node: b_node }) => {
-            a_node == b_node
-        }
+            UiSelectorV1::TestId {
+                id: a_id,
+                root_z_index: a_root_z,
+            },
+            UiSelectorV1::TestId {
+                id: b_id,
+                root_z_index: b_root_z,
+            },
+        ) => a_id == b_id && a_root_z == b_root_z,
+        (
+            UiSelectorV1::GlobalElementId {
+                element: a_el,
+                root_z_index: a_root_z,
+            },
+            UiSelectorV1::GlobalElementId {
+                element: b_el,
+                root_z_index: b_root_z,
+            },
+        ) => a_el == b_el && a_root_z == b_root_z,
+        (
+            UiSelectorV1::NodeId {
+                node: a_node,
+                root_z_index: a_root_z,
+            },
+            UiSelectorV1::NodeId {
+                node: b_node,
+                root_z_index: b_root_z,
+            },
+        ) => a_node == b_node && a_root_z == b_root_z,
         _ => false,
     }
 }

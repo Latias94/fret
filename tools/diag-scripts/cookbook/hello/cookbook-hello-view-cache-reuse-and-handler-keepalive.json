@@ -1,0 +1,59 @@
+{
+  "schema_version": 2,
+  "meta": {
+    "name": "Cookbook: hello view-cache reuse + handler keepalive",
+    "tags": ["cookbook", "hello", "view_runtime", "view_cache", "actions", "smoke"],
+    "required_capabilities": ["diag.script_v2"],
+    "target_hints": [
+      "Asserts the view runtime is using view-cache reuse while idle.",
+      "Then clicks the button after idle and asserts the action handler still fires."
+    ]
+  },
+  "steps": [
+    { "type": "reset_diagnostics" },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "cookbook.hello.root" }
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "label_contains",
+        "target": { "kind": "test_id", "id": "cookbook.hello.render_marker" },
+        "text": "RenderedOnce"
+      },
+      "timeout_frames": 240
+    },
+    { "type": "wait_frames", "n": 20 },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "label_contains",
+        "target": { "kind": "test_id", "id": "cookbook.hello.render_marker" },
+        "text": "RenderedOnce"
+      }
+    },
+    {
+      "type": "click_stable",
+      "target": { "kind": "test_id", "id": "cookbook.hello.button" }
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "label_contains",
+        "target": { "kind": "test_id", "id": "cookbook.hello.count" },
+        "text": "Count: 1"
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "capture_bundle",
+      "label": "cookbook-hello-view-cache-reuse-and-handler-keepalive"
+    }
+  ]
+}
+

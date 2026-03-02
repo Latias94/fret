@@ -1404,6 +1404,48 @@ fn ui_app_handle_command<S>(
         state,
     } = context;
 
+    let record_driver_handled_dispatch =
+        |app: &mut App,
+         window: AppWindowId,
+         command: &CommandId,
+         source: fret_runtime::CommandDispatchSourceV1| {
+            let handled_by_scope = app
+                .commands()
+                .get(command.clone())
+                .map(|m| m.scope)
+                .or(Some(fret_runtime::CommandScope::Window));
+            app.with_global_mut(
+                fret_runtime::WindowCommandDispatchDiagnosticsStore::default,
+                |store, app| {
+                    store.record(fret_runtime::CommandDispatchDecisionV1 {
+                        seq: 0,
+                        frame_id: app.frame_id(),
+                        tick_id: app.tick_id(),
+                        window,
+                        command: command.clone(),
+                        source,
+                        handled: true,
+                        handled_by_element: None,
+                        handled_by_scope,
+                        handled_by_driver: true,
+                        stopped: false,
+                        started_from_focus: false,
+                        used_default_root_fallback: false,
+                    });
+                },
+            );
+        };
+
+    // Capture the best-effort pending source up front so driver-handled commands can record the
+    // same origin metadata as UI-tree-handled commands (ADR 0307).
+    let pending_source = app.with_global_mut(
+        fret_runtime::WindowPendingCommandDispatchSourceService::default,
+        |svc, app| {
+            svc.consume(window, app.tick_id(), &command)
+                .unwrap_or_else(fret_runtime::CommandDispatchSourceV1::programmatic)
+        },
+    );
+
     #[cfg(feature = "ui-app-command-palette")]
     if driver.command_palette_enabled
         && matches!(
@@ -1412,8 +1454,18 @@ fn ui_app_handle_command<S>(
         )
     {
         let _ = command_palette_toggle(app, window);
+        record_driver_handled_dispatch(app, window, &command, pending_source);
         return;
     }
+
+    // Re-insert the pending source so the UI tree dispatch can consume it when it records its own
+    // trace entry.
+    app.with_global_mut(
+        fret_runtime::WindowPendingCommandDispatchSourceService::default,
+        |svc, app| {
+            svc.record(window, app.tick_id(), command.clone(), pending_source);
+        },
+    );
 
     if state.ui.dispatch_command(app, services, &command) {
         return;
@@ -1424,41 +1476,49 @@ fn ui_app_handle_command<S>(
             #[cfg(target_os = "macos")]
             {
                 app.push_effect(Effect::ShowAboutPanel);
+                record_driver_handled_dispatch(app, window, &command, pending_source);
                 return;
             }
         }
         fret_app::core_commands::APP_PREFERENCES => {
             if let Some(f) = driver.on_preferences {
                 f(app, services, window, &mut state.ui, &mut state.state);
+                record_driver_handled_dispatch(app, window, &command, pending_source);
                 return;
             }
         }
         fret_app::core_commands::APP_LOCALE_SWITCH_NEXT => {
             if fret_app::core_commands::handle_locale_cycle_command(app, &command) {
                 app.request_redraw(window);
+                record_driver_handled_dispatch(app, window, &command, pending_source);
                 return;
             }
         }
         fret_app::core_commands::APP_QUIT => {
             app.push_effect(Effect::QuitApp);
+            record_driver_handled_dispatch(app, window, &command, pending_source);
             return;
         }
         fret_app::core_commands::APP_HIDE => {
             app.push_effect(Effect::HideApp);
+            record_driver_handled_dispatch(app, window, &command, pending_source);
             return;
         }
         fret_app::core_commands::APP_HIDE_OTHERS => {
             app.push_effect(Effect::HideOtherApps);
+            record_driver_handled_dispatch(app, window, &command, pending_source);
             return;
         }
         fret_app::core_commands::APP_SHOW_ALL => {
             app.push_effect(Effect::UnhideAllApps);
+            record_driver_handled_dispatch(app, window, &command, pending_source);
             return;
         }
         _ => {}
     }
 
     if fret_ui_kit::try_handle_window_overlays_command(&mut state.ui, app, window, &command) {
+        record_driver_handled_dispatch(app, window, &command, pending_source);
         return;
     }
 
@@ -1780,6 +1840,13 @@ fn ui_app_render<S>(
     let mut hitch_paint_ms: Option<u64> = None;
 
     // Note: diagnostics may enable inspection mode (disables caching) on demand.
+    #[cfg(feature = "diagnostics")]
+    let diag_inspection_active = app
+        .with_global_mut_untracked(UiDiagnosticsService::default, |svc, _app| {
+            svc.wants_inspection_active(window)
+        });
+    #[cfg(feature = "diagnostics")]
+    state.ui.set_inspection_active(diag_inspection_active);
 
     let render_depth = RENDER_DEPTH.with(|d| {
         let next = d.get().saturating_add(1);
@@ -2053,12 +2120,7 @@ fn ui_app_render<S>(
 
     #[cfg(feature = "diagnostics")]
     {
-        let diag_inspection_active = app
-            .with_global_mut_untracked(UiDiagnosticsService::default, |svc, _app| {
-                svc.wants_inspection_active(window)
-            });
-        state.ui.set_inspection_active(diag_inspection_active);
-        render_diag_inspect_overlay(
+        crate::ui_diagnostics::render_diag_inspect_overlay(
             &mut state.ui,
             app,
             services,
@@ -2233,321 +2295,6 @@ fn ui_app_render<S>(
         "ui_app_render: end window={window:?} depth={render_depth}"
     ));
     RENDER_DEPTH.with(|d| d.set(d.get().saturating_sub(1)));
-}
-
-#[cfg(feature = "diagnostics")]
-fn render_diag_inspect_overlay(
-    ui: &mut fret_ui::UiTree<App>,
-    app: &mut App,
-    services: &mut dyn fret_core::UiServices,
-    window: AppWindowId,
-    bounds: fret_core::Rect,
-    inspection_active: bool,
-) {
-    use slotmap::Key as _;
-
-    if !inspection_active {
-        return;
-    }
-
-    const ROOT_NAME: &str = "__diag_inspect";
-
-    let (
-        pointer_pos,
-        picked_node_id,
-        focus_node_id,
-        redact_text,
-        pick_armed,
-        inspect_enabled,
-        consume_clicks,
-        locked,
-    ) = app.with_global_mut_untracked(UiDiagnosticsService::default, |svc, _app| {
-        (
-            svc.last_pointer_position(window),
-            svc.last_picked_node_id(window),
-            svc.inspect_focus_node_id(window),
-            svc.redact_text(),
-            svc.pick_is_armed(),
-            svc.inspect_is_enabled(),
-            svc.inspect_consume_clicks(),
-            svc.inspect_is_locked(window),
-        )
-    });
-
-    struct InspectNodeInfo {
-        bounds: fret_core::Rect,
-        role: fret_core::SemanticsRole,
-        node_id: u64,
-        test_id: Option<String>,
-        label: Option<String>,
-    }
-
-    let snapshot = ui.semantics_snapshot();
-    let hovered = pointer_pos
-        .and_then(|pos| {
-            snapshot
-                .and_then(|snap| crate::ui_diagnostics::pick_semantics_node_by_bounds(snap, pos))
-        })
-        .map(|node| InspectNodeInfo {
-            bounds: node.bounds,
-            role: node.role,
-            node_id: node.id.data().as_ffi(),
-            test_id: node.test_id.clone(),
-            label: node.label.clone(),
-        });
-
-    let picked = picked_node_id
-        .and_then(|id| {
-            snapshot.and_then(|snap| snap.nodes.iter().find(|n| n.id.data().as_ffi() == id))
-        })
-        .map(|node| InspectNodeInfo {
-            bounds: node.bounds,
-            role: node.role,
-            node_id: node.id.data().as_ffi(),
-            test_id: node.test_id.clone(),
-            label: node.label.clone(),
-        });
-
-    let focus = focus_node_id
-        .and_then(|id| {
-            snapshot.and_then(|snap| snap.nodes.iter().find(|n| n.id.data().as_ffi() == id))
-        })
-        .map(|node| InspectNodeInfo {
-            bounds: node.bounds,
-            role: node.role,
-            node_id: node.id.data().as_ffi(),
-            test_id: node.test_id.clone(),
-            label: node.label.clone(),
-        });
-
-    let hovered = if locked { None } else { hovered };
-
-    let (toast, best_selector) =
-        app.with_global_mut_untracked(UiDiagnosticsService::default, |svc, _app| {
-            (
-                svc.inspect_toast_message(window).map(|s| s.to_string()),
-                svc.inspect_best_selector_json(window)
-                    .map(|s| s.to_string()),
-            )
-        });
-
-    let (focus_summary, focus_path) =
-        app.with_global_mut_untracked(UiDiagnosticsService::default, |svc, _app| {
-            (
-                svc.inspect_focus_summary_line(window)
-                    .map(|s| s.to_string()),
-                svc.inspect_focus_path_line(window).map(|s| s.to_string()),
-            )
-        });
-
-    let present = pick_armed
-        || inspect_enabled
-        || toast.is_some()
-        || best_selector.is_some()
-        || focus.is_some()
-        || hovered.is_some()
-        || picked.is_some();
-
-    let root_node = fret_ui::declarative::render_root(
-        ui,
-        app,
-        services,
-        window,
-        bounds,
-        ROOT_NAME,
-        move |cx| {
-            if !present {
-                return Vec::new();
-            }
-
-            use fret_core::{Color, Corners, Edges, Px};
-            use fret_ui::element::{
-                ContainerProps, InsetStyle, LayoutStyle, Length, PositionStyle, SizeStyle,
-            };
-
-            let mut children = Vec::new();
-
-            if pick_armed || inspect_enabled {
-                let mut layout = LayoutStyle::default();
-                layout.position = PositionStyle::Absolute;
-                layout.inset = InsetStyle {
-                    top: Some(Px(8.0)).into(),
-                    left: Some(Px(8.0)).into(),
-                    ..Default::default()
-                };
-
-                let mut props = ContainerProps::default();
-                props.layout = layout;
-                props.padding = Edges::all(Px(6.0)).into();
-                props.background = Some(Color {
-                    r: 0.0,
-                    g: 0.0,
-                    b: 0.0,
-                    a: 0.65,
-                });
-                props.corner_radii = Corners::all(Px(6.0));
-                props.border = Edges::all(Px(1.0));
-                props.border_color = Some(Color {
-                    r: 0.2,
-                    g: 0.8,
-                    b: 1.0,
-                    a: 1.0,
-                });
-
-                let mut lines: Vec<String> = Vec::new();
-                if pick_armed {
-                    lines.push("INSPECT: click to pick a target (Esc to cancel)".to_string());
-                } else {
-                    lines.push(format!(
-                        "INSPECT: Esc exit | Ctrl+C copy selector | Ctrl+Shift+C copy details | F focus | L lock | Alt+Up/Down nav (consume_clicks={consume_clicks}, locked={locked})"
-                    ));
-                }
-                if let Some(t) = toast.as_deref() {
-                    lines.push(format!("status: {t}"));
-                }
-                if let Some(summary) = focus_summary.as_deref() {
-                    lines.push(summary.to_string());
-                }
-                if let Some(path) = focus_path.as_deref() {
-                    lines.push(path.to_string());
-                }
-                if let Some(sel) = best_selector.as_deref() {
-                    let trimmed = if sel.len() > 180 {
-                        format!("{}…", &sel[..180])
-                    } else {
-                        sel.to_string()
-                    };
-                    lines.push(format!("selector: {trimmed}"));
-                }
-
-                children.push(cx.container(props, |cx| {
-                    lines.into_iter().map(|t| cx.text(t)).collect::<Vec<_>>()
-                }));
-            }
-
-            let show_focus = focus.as_ref().is_some_and(|f| {
-                picked.as_ref().is_none_or(|p| p.node_id != f.node_id)
-                    && hovered.as_ref().is_none_or(|h| h.node_id != f.node_id)
-            });
-            let focus_outline = if show_focus { focus } else { None };
-
-            let outlines = [
-                (
-                    focus_outline,
-                    Color {
-                        r: 0.2,
-                        g: 0.8,
-                        b: 1.0,
-                        a: 1.0,
-                    },
-                    "focus",
-                ),
-                (
-                    picked,
-                    Color {
-                        r: 1.0,
-                        g: 0.2,
-                        b: 1.0,
-                        a: 1.0,
-                    },
-                    "picked",
-                ),
-                (
-                    hovered,
-                    Color {
-                        r: 0.2,
-                        g: 1.0,
-                        b: 0.4,
-                        a: 1.0,
-                    },
-                    "hovered",
-                ),
-            ];
-
-            for (node, color, tag) in outlines {
-                let Some(node) = node else {
-                    continue;
-                };
-
-                let rect = node.bounds;
-                let mut layout = LayoutStyle::default();
-                layout.position = PositionStyle::Absolute;
-                layout.inset = InsetStyle {
-                    top: Some(rect.origin.y).into(),
-                    left: Some(rect.origin.x).into(),
-                    ..Default::default()
-                };
-                layout.size = SizeStyle {
-                    width: Length::Px(rect.size.width),
-                    height: Length::Px(rect.size.height),
-                    ..Default::default()
-                };
-
-                let mut props = ContainerProps::default();
-                props.layout = layout;
-                props.border = Edges::all(Px(1.0));
-                props.border_color = Some(color);
-                props.corner_radii = Corners::all(Px(2.0));
-
-                children.push(cx.container(props, |_cx| Vec::new()));
-
-                let mut label_layout = LayoutStyle::default();
-                label_layout.position = PositionStyle::Absolute;
-                label_layout.inset = InsetStyle {
-                    top: Some(rect.origin.y).into(),
-                    left: Some(rect.origin.x).into(),
-                    ..Default::default()
-                };
-
-                let mut label_props = ContainerProps::default();
-                label_props.layout = label_layout;
-                label_props.padding = Edges::all(Px(4.0)).into();
-                label_props.background = Some(Color {
-                    r: 0.0,
-                    g: 0.0,
-                    b: 0.0,
-                    a: 0.75,
-                });
-                label_props.corner_radii = Corners::all(Px(4.0));
-
-                let role = crate::ui_diagnostics::semantics_role_label(node.role);
-                let mut label = format!("[{tag}] {role} node={}", node.node_id);
-                if let Some(test_id) = node.test_id.as_deref() {
-                    label.push_str(&format!(" test_id={test_id}"));
-                }
-                if !redact_text && let Some(name) = node.label.as_deref() {
-                    label.push_str(&format!(" label={name}"));
-                }
-
-                children.push(cx.container(label_props, |cx| vec![cx.text(label)]));
-            }
-
-            let mut root_layout = LayoutStyle::default();
-            root_layout.position = PositionStyle::Relative;
-            root_layout.size = SizeStyle {
-                width: Length::Fill,
-                height: Length::Fill,
-                ..Default::default()
-            };
-
-            let mut root_props = ContainerProps::default();
-            root_props.layout = root_layout;
-            root_props.background = None;
-            root_props.border = Edges::all(Px(0.0));
-            root_props.border_color = None;
-
-            vec![cx.container(root_props, |_cx| children)]
-        },
-    );
-
-    let layer = ui
-        .node_layer(root_node)
-        .unwrap_or_else(|| ui.push_overlay_root_ex(root_node, false, false));
-    ui.set_layer_visible(layer, present);
-    ui.set_layer_hit_testable(layer, false);
-    ui.set_layer_wants_pointer_down_outside_events(layer, false);
-    ui.set_layer_wants_pointer_move_events(layer, false);
-    ui.set_layer_wants_timer_events(layer, false);
 }
 
 fn ui_app_hot_reload_window<S>(

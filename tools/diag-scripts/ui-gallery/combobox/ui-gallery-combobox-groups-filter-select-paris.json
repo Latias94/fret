@@ -78,7 +78,17 @@
     {
       "type": "wait_until",
       "predicate": {
-        "kind": "exists",
+        "kind": "value_equals",
+        "target": { "kind": "test_id", "id": "ui-gallery-combobox-groups-input" },
+        "text": "paris"
+      },
+      "timeout_frames": 60
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists_under",
+        "scope": { "kind": "test_id", "id": "ui-gallery-combobox-groups-listbox" },
         "target": { "kind": "test_id", "id": "ui-gallery-combobox-groups-item-europe-paris" }
       },
       "timeout_frames": 600

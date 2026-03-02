@@ -23,7 +23,16 @@ Related docs:
 - Picking (one-shot): `diag pick`, `diag pick-script`, `diag pick-apply`
 - Continuous inspect mode: `diag inspect on|off|toggle|status` (file-triggered, AI-friendly)
 - In-app inspect shortcuts (diagnostics-only): `Esc` exit, `Ctrl+C` copy selector, `Ctrl+Shift+C` copy details, `L` lock/unlock, `Alt+Up/Down` parent-chain navigation
+- In-app hover/pick prefer hit-test routing when available (fallback to bounds-based pick).
+- Selector validation exists (uniqueness + optional `root_z_index` gating) and is used by in-app “copy details” and focus selection.
+- Explainability panel (“why is input blocked?”) implemented and shown in help mode (cheap: bounded lists; no label printing).
+- Help output is paged (keyboard scroll via `PageUp/PageDown/Home/End`) to keep the overlay usable as sections grow (explainability + neighborhood + tree).
+- Inspector state is bucketed as `InspectState` (reduces churn and enables future modularization).
+- Inspector/pick ephemeral state, pick-result-to-inspector-state updates, and in-app shortcut handling are bucketed as `InspectController` (reduces churn and keeps `UiDiagnosticsService` manageable).
+- Overlay reads inspector state via a single snapshot model (`InspectOverlayModel`) to avoid proliferating ad-hoc `inspect_*` getters.
 - View cache frame stats exported in bundles (`debug.stats.view_cache_*`, `debug.stats.invalidation_*`)
+- A small regression gate exists in the `ui-gallery-overlay-steady` suite to ensure the in-app inspector can lock a help search match and copy the best selector JSON to the clipboard.
+- A scripted inspector helper step exists (`inspect_help_lock_best_match_and_copy_selector`) to avoid relying on keyboard shortcut injection under `--launch`.
 
 ## Milestone M1: “Inspect UX parity” (highest ROI)
 
@@ -32,12 +41,15 @@ Related docs:
    - Render label: `role`, `label`, `test_id`, `node_id`, and root `z_index`.
    - Interaction: toggle on/off; lock selection; copy selector to clipboard.
    - Ownership: should live in `fret-ui-kit` / app overlay, not `fret-ui`.
-   - Status:
-     - MVP implemented in `fret-bootstrap` as a diagnostics-only overlay layer (border + label) while inspection is active (scripts/picking).
-     - Continuous inspect toggle implemented via file-triggered `inspect.json` + `inspect.touch` (`fretboard diag inspect ...`).
-     - In-app shortcuts implemented (diagnostics-only): `Esc` exit, `Ctrl+C` copy selector, `Ctrl+Shift+C` copy details, `L` lock/unlock selection.
-     - Locked navigation implemented (diagnostics-only): `Alt+Up/Down` walks the semantics parent chain with a small “back to child” stack.
-     - Gaps: no in-app toggle/help UI beyond the overlay hint panel; no richer tree view (children list / siblings / search).
+    - Status:
+      - MVP implemented in `fret-bootstrap` as a diagnostics-only overlay layer (border + label) while inspection is active (scripts/picking).
+      - Continuous inspect toggle implemented via file-triggered `inspect.json` + `inspect.touch` (`fretboard diag inspect ...`).
+      - In-app toggle/help implemented (diagnostics-only): `Ctrl/Cmd+Alt+I` toggles inspect, `Ctrl/Cmd+Alt+H` shows shortcut help.
+      - In-app shortcuts implemented (diagnostics-only): `Esc` exit, `Ctrl+C` copy selector, `Ctrl+Shift+C` copy details, `L` lock/unlock selection.
+      - Locked navigation implemented (diagnostics-only): `Alt+Up/Down` walks the semantics parent chain with a small “back to child” stack.
+      - Local neighborhood view implemented in help mode: parent + siblings + children + type-to-filter, plus `Up/Down` match selection and `Enter` to lock (`Ctrl/Cmd+Enter` locks + copies).
+      - Help-mode semantics tree browser implemented (diagnostics-only): keyboard-driven expand/collapse + selection, shown as a paged text view (`Ctrl/Cmd+T`).
+      - Remaining gaps: no full semantics tree browser (virtualization, global search, mouse interactions, and better discoverability).
 
 2. **Pick modes**
    - One-shot pick (already): click once and write `pick.result.json`.
@@ -50,24 +62,43 @@ Related docs:
      - Otherwise prefer `(role + label + ancestors)` with minimal ancestor chain that is still unique under barrier/root.
    - Add optional `root_z_index` gating so scripts pick the right overlay.
    - Avoid using redacted labels when `FRET_DIAG_REDACT_TEXT=1`.
+   - Status:
+     - In-app copy-details (`Ctrl+Shift+C`) now includes a scored selector-candidates list (match count + chosen node).
+     - Runtime selector resolution honors `root_z_index` when present; validated selectors may add it when needed to become unique.
+
+4. **Explainability: “why is input blocked?”**
+   - Add a minimal in-app explanation panel (shown in help mode) that surfaces:
+     - hit-test target under pointer (best-effort),
+     - barrier roots (semantics ids),
+     - visible roots summary: `(root_id, z_index, blocks_underlay_input, hit_testable)`.
+    - Keep it cheap (no per-frame full tree dumps; bounded string work).
+    - Respect redaction (`FRET_DIAG_REDACT_TEXT=1`).
+    - Status:
+      - Implemented in `ecosystem/fret-bootstrap/src/ui_diagnostics/inspect_explain.rs` and rendered in help mode.
+      - Note: current output intentionally avoids labels/text, so it remains safe under redaction by construction.
 
 ## Milestone M2: “Script stability + coverage”
 
 1. **More scripted actions**
-   - Drag: pointer down/move/up with configurable steps.
-   - Wheel/scroll, double click, long press, hover move.
-   - Clipboard paste via `ClipboardText` and/or higher-level “paste” action.
+   - Status:
+     - Implemented (v2): pointer move/down/up/drag, wheel, scroll-into-view, long press, pointer sweeps.
+     - Implemented: multi-click via `click_count` (double/triple click baselines).
+     - Implemented: `paste_text_into` (clipboard + `Primary+V`) to gate paste paths with less boilerplate.
+     - Remaining gaps: a touch-first multi-tap gesture surface (double-tap / triple-tap) if we need to gate mobile-style policies.
 
 2. **More predicates and assertions**
-   - `focused_descendant_is`, `active_descendant_is`
-   - `exists_under` / `not_exists`
-   - `value_equals` for text fields / sliders
+   - `focused_descendant_is` (done)
+   - `active_descendant_is` (done: `ActiveItemIs` / `active_item_is`)
+   - `exists_under` / `not_exists_under` (done)
+   - `value_equals` for text fields (done; note locale sensitivity of `value` strings)
 
 3. **Golden “first regression pack” expansion**
-   - Menus: open/close, keyboard nav, typeahead.
-   - Dialog: escape close + focus restore (already), focus trap, default action.
-   - Select: open, filter, pick, close, restore.
-   - Docking: tab drag, drop target, split, close tab.
+   - Status:
+     - Dialog: escape close + focus restore, focus trap tab-cycle scripts landed.
+     - Select: commit/dismiss/focus-restore scripts landed (scoped assertions).
+     - Combobox: commit/dismiss/focus-restore scripts landed (scoped assertions + state rows).
+     - Menus: DropdownMenu + ContextMenu scripts landed (open/close, keyboard nav/typeahead, last-action assertions).
+     - Docking: regression gates live in `tools/diag-scripts/docking/arbitration/*` (tab drag/drop, split, close panel).
 
 ## Milestone M3: “AI debugging ergonomics”
 
@@ -92,6 +123,16 @@ Related docs:
 - Do we want a “headless” runner for behavior tests, or a “robot” runner (real window + event injection)?
 - On Windows CI, can we reliably run a UI window and inject events without flakiness?
 - If we can’t: should we treat scripted tests as “developer regression pack” instead of CI-gating?
+
+## Script authoring surface (JSON vs Rust)
+
+Proposed direction:
+
+- Keep JSON as the primary authoring + sharing format for scripts. Scripts are portable artifacts that can be attached
+  to issues and reviewed like data (and they match the bundle-first philosophy).
+- If we need richer logic (loops/conditionals), prefer adding a small set of deterministic control-flow steps to
+  `crates/fret-diag-protocol` (e.g. `repeat`, `repeat_until`, `with_timeout`, `for_each_window`) and/or tooling that
+  generates JSON, rather than making Rust code the primary test scripting surface.
 
 ## Notes / constraints
 

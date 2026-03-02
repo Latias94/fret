@@ -1,7 +1,7 @@
 # Action-First Authoring + View Runtime (Fearless Refactor v1) — Design
 
 Status: Draft (workstream note; ADRs remain the source of truth)
-Last updated: 2026-03-01
+Last updated: 2026-03-02
 
 This workstream refactors Fret’s **user-facing authoring story** to close the ergonomics + correctness gap vs
 Zed/GPUI while preserving Fret’s non-negotiable layering rules:
@@ -47,10 +47,16 @@ The remaining gap (felt in cookbook/gallery and by new app authors) is mostly:
 Establish a single authoring mental model:
 
 - UI events and keybindings resolve to **actions** (stable IDs),
-- actions are dispatched through the same routing stack as other input (focus/roots),
+- actions are dispatched through the same routing stack as other input (focus/roots/layers),
 - action availability is queryable for UX and diagnostics.
 
 This replaces ad-hoc stringly command parsing in user code and reduces boilerplate in demos/templates.
+
+Implementation note (as of 2026-03-02):
+
+- When focus is inside an overlay/portal layer root, command availability and command dispatch fall
+  back to the window default root (modal barrier root if present, else base root) so app-level
+  action handlers remain reachable unless an overlay explicitly stops bubbling.
 
 ### G2 — A view runtime with hooks, built on app-owned models
 
@@ -324,9 +330,9 @@ Target authoring outcome (Rust):
 
 ```rust,ignore
 mod act {
-    actions!(fret, [
-        EditorSave,        // "app.editor.save.v1"
-        WorkspaceTabClose, // "workspace.tabs.close.v1"
+    fret::actions!([
+        EditorSave = "app.editor.save.v1",
+        WorkspaceTabClose = "workspace.tabs.close.v1",
     ]);
 }
 ```

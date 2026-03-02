@@ -79,10 +79,26 @@
     },
     { "type": "press_key", "key": "escape" },
     { "type": "wait_frames", "n": 4 },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "not_exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-dialog-close" }
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "focus_is",
+        "target": { "kind": "test_id", "id": "ui-gallery-dialog-trigger" }
+      },
+      "timeout_frames": 240
+    },
 
     { "type": "reset_diagnostics" },
 
-    { "type": "click", "target": { "kind": "test_id", "id": "ui-gallery-dialog-trigger" } },
+    { "type": "press_key", "key": "enter" },
     {
       "type": "wait_until",
       "predicate": {

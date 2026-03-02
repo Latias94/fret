@@ -1,0 +1,145 @@
+{
+  "schema_version": 2,
+  "meta": {
+    "name": "ui-gallery-dialog-focus-trap-tab-cycle",
+    "required_capabilities": ["diag.script_v2"],
+    "tags": ["ui_gallery", "shadcn", "dialog", "focus", "keyboard", "trap"]
+  },
+  "steps": [
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-nav-search" }
+      },
+      "timeout_frames": 600
+    },
+    { "type": "press_key", "key": "escape" },
+    { "type": "wait_frames", "n": 2 },
+
+    {
+      "type": "click_stable",
+      "target": { "kind": "test_id", "id": "ui-gallery-nav-search" },
+      "button": "left",
+      "stable_frames": 10,
+      "max_move_px": 0.5,
+      "timeout_frames": 600
+    },
+    { "type": "press_key", "key": "a", "modifiers": { "ctrl": true } },
+    { "type": "press_key", "key": "backspace" },
+    { "type": "type_text", "text": "overlay" },
+    { "type": "wait_frames", "n": 2 },
+
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "bounds_within_window",
+        "target": { "kind": "test_id", "id": "ui-gallery-nav-overlay" },
+        "padding_px": 8.0,
+        "eps_px": 1.0
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "click_stable",
+      "target": { "kind": "test_id", "id": "ui-gallery-nav-overlay" },
+      "button": "left",
+      "stable_frames": 10,
+      "max_move_px": 0.5,
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-page-overlay" }
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-overlay-reset" }
+      },
+      "timeout_frames": 600
+    },
+
+    { "type": "click", "button": "left", "target": { "kind": "test_id", "id": "ui-gallery-overlay-reset" } },
+    { "type": "wait_frames", "n": 20 },
+
+    { "type": "click", "button": "left", "target": { "kind": "test_id", "id": "ui-gallery-dialog-trigger" } },
+    {
+      "type": "wait_until",
+      "predicate": { "kind": "exists", "target": { "kind": "test_id", "id": "ui-gallery-dialog-content" } },
+      "timeout_frames": 120
+    },
+    {
+      "type": "wait_until",
+      "predicate": { "kind": "exists", "target": { "kind": "test_id", "id": "ui-gallery-dialog-x-close" } },
+      "timeout_frames": 120
+    },
+
+    {
+      "type": "click_stable",
+      "target": { "kind": "test_id", "id": "ui-gallery-dialog-confirm" },
+      "button": "left",
+      "stable_frames": 10,
+      "max_move_px": 0.5,
+      "timeout_frames": 600
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "focused_descendant_is",
+        "scope": { "kind": "test_id", "id": "ui-gallery-dialog-content" },
+        "target": { "kind": "test_id", "id": "ui-gallery-dialog-confirm" }
+      }
+    },
+
+    { "type": "press_key", "key": "tab" },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "focused_descendant_is",
+        "scope": { "kind": "test_id", "id": "ui-gallery-dialog-content" },
+        "target": { "kind": "test_id", "id": "ui-gallery-dialog-x-close" }
+      },
+      "timeout_frames": 60
+    },
+
+    { "type": "press_key", "key": "tab" },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "focused_descendant_is",
+        "scope": { "kind": "test_id", "id": "ui-gallery-dialog-content" },
+        "target": { "kind": "test_id", "id": "ui-gallery-dialog-close" }
+      },
+      "timeout_frames": 60
+    },
+
+    { "type": "press_key", "key": "tab" },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "focused_descendant_is",
+        "scope": { "kind": "test_id", "id": "ui-gallery-dialog-content" },
+        "target": { "kind": "test_id", "id": "ui-gallery-dialog-confirm" }
+      },
+      "timeout_frames": 60
+    },
+
+    { "type": "press_key", "key": "escape" },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "focus_is",
+        "target": { "kind": "test_id", "id": "ui-gallery-dialog-trigger" }
+      },
+      "timeout_frames": 120
+    },
+
+    { "type": "capture_bundle", "label": "ui-gallery-dialog-focus-trap-tab-cycle" }
+  ]
+}

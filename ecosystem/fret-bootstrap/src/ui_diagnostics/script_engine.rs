@@ -38,8 +38,11 @@ pub(super) fn active_script_needs_semantics_snapshot(active: &ActiveScript) -> b
                 | V2StepState::EnsureVisible(_)
                 | V2StepState::ScrollIntoView(_)
                 | V2StepState::TypeTextInto(_)
+                | V2StepState::PasteTextInto(_)
                 | V2StepState::MenuSelect(_)
                 | V2StepState::MenuSelectPath(_)
+                | V2StepState::InspectHelpLockBestMatchAndCopySelector(_)
+                | V2StepState::InspectHelpTreeLockBestMatchAndCopySelector(_)
                 | V2StepState::DragPointerUntil(_)
                 | V2StepState::DragTo(_)
                 | V2StepState::SetSliderValue(_)
@@ -72,8 +75,11 @@ pub(super) fn active_script_needs_semantics_snapshot(active: &ActiveScript) -> b
         | UiActionStepV2::EnsureVisible { .. }
         | UiActionStepV2::ScrollIntoView { .. }
         | UiActionStepV2::TypeTextInto { .. }
+        | UiActionStepV2::PasteTextInto { .. }
         | UiActionStepV2::MenuSelect { .. }
         | UiActionStepV2::MenuSelectPath { .. }
+        | UiActionStepV2::InspectHelpLockBestMatchAndCopySelector { .. }
+        | UiActionStepV2::InspectHelpTreeLockBestMatchAndCopySelector { .. }
         | UiActionStepV2::DragTo { .. }
         | UiActionStepV2::SetSliderValue { .. } => true,
         UiActionStepV2::ResetDiagnostics
@@ -84,6 +90,7 @@ pub(super) fn active_script_needs_semantics_snapshot(active: &ActiveScript) -> b
         | UiActionStepV2::Ime { .. }
         | UiActionStepV2::WaitFrames { .. }
         | UiActionStepV2::WaitShortcutRoutingTrace { .. }
+        | UiActionStepV2::WaitCommandDispatchTrace { .. }
         | UiActionStepV2::CaptureBundle { .. }
         | UiActionStepV2::CaptureScreenshot { .. }
         | UiActionStepV2::SetWindowInnerSize { .. }
@@ -125,14 +132,22 @@ pub(super) fn script_step_kind_name(step: &UiActionStepV2) -> &'static str {
         UiActionStepV2::Wheel { .. } => "wheel",
         UiActionStepV2::TypeText { .. } => "type_text",
         UiActionStepV2::TypeTextInto { .. } => "type_text_into",
+        UiActionStepV2::PasteTextInto { .. } => "paste_text_into",
         UiActionStepV2::WaitFrames { .. } => "wait_frames",
         UiActionStepV2::WaitUntil { .. } => "wait_until",
+        UiActionStepV2::WaitCommandDispatchTrace { .. } => "wait_command_dispatch_trace",
         UiActionStepV2::Assert { .. } => "assert",
         UiActionStepV2::CaptureBundle { .. } => "capture_bundle",
         UiActionStepV2::CaptureScreenshot { .. } => "capture_screenshot",
         UiActionStepV2::ResetDiagnostics => "reset_diagnostics",
         UiActionStepV2::SetClipboardText { .. } => "set_clipboard_text",
         UiActionStepV2::AssertClipboardText { .. } => "assert_clipboard_text",
+        UiActionStepV2::InspectHelpLockBestMatchAndCopySelector { .. } => {
+            "inspect_help_lock_best_match_and_copy_selector"
+        }
+        UiActionStepV2::InspectHelpTreeLockBestMatchAndCopySelector { .. } => {
+            "inspect_help_tree_lock_best_match_and_copy_selector"
+        }
         _ => "step",
     }
 }
@@ -165,6 +180,7 @@ pub(super) fn script_evidence_for_active(active: &ActiveScript) -> Option<UiScri
         && active.bounds_stable_trace.is_empty()
         && active.focus_trace.is_empty()
         && active.shortcut_routing_trace.is_empty()
+        && active.command_dispatch_trace.is_empty()
         && active.overlay_placement_trace.is_empty()
         && active.web_ime_trace.is_empty()
         && active.ime_event_trace.is_empty()
@@ -181,6 +197,7 @@ pub(super) fn script_evidence_for_active(active: &ActiveScript) -> Option<UiScri
         bounds_stable_trace: active.bounds_stable_trace.clone(),
         focus_trace: active.focus_trace.clone(),
         shortcut_routing_trace: active.shortcut_routing_trace.clone(),
+        command_dispatch_trace: active.command_dispatch_trace.clone(),
         overlay_placement_trace: active.overlay_placement_trace.clone(),
         web_ime_trace: active.web_ime_trace.clone(),
         ime_event_trace: active.ime_event_trace.clone(),
@@ -385,6 +402,44 @@ pub(super) fn dispatch_drive_script_step(
             );
             debug_assert!(handled);
         }
+        step @ UiActionStepV2::InspectHelpLockBestMatchAndCopySelector { .. } => {
+            let handled =
+                script_steps_inspect::handle_inspect_help_lock_best_match_and_copy_selector_step(
+                    service,
+                    app,
+                    window,
+                    anchor_window,
+                    step_index,
+                    step,
+                    semantics_snapshot,
+                    active,
+                    output,
+                    force_dump_label,
+                    handoff_to,
+                    stop_script,
+                    failure_reason,
+                );
+            debug_assert!(handled);
+        }
+        step @ UiActionStepV2::InspectHelpTreeLockBestMatchAndCopySelector { .. } => {
+            let handled =
+                script_steps_inspect::handle_inspect_help_tree_lock_best_match_and_copy_selector_step(
+                    service,
+                    app,
+                    window,
+                    anchor_window,
+                    step_index,
+                    step,
+                    semantics_snapshot,
+                    active,
+                    output,
+                    force_dump_label,
+                    handoff_to,
+                    stop_script,
+                    failure_reason,
+                );
+            debug_assert!(handled);
+        }
         step
         @ (UiActionStepV2::CaptureBundle { .. } | UiActionStepV2::CaptureScreenshot { .. }) => {
             let handled = script_steps::handle_capture_steps(
@@ -449,6 +504,19 @@ pub(super) fn dispatch_drive_script_step(
         }
         step @ UiActionStepV2::WaitShortcutRoutingTrace { .. } => {
             let handled = script_steps_wait::handle_wait_shortcut_routing_trace_step(
+                app,
+                step_index,
+                step,
+                active,
+                output,
+                force_dump_label,
+                stop_script,
+                failure_reason,
+            );
+            debug_assert!(handled);
+        }
+        step @ UiActionStepV2::WaitCommandDispatchTrace { .. } => {
+            let handled = script_steps_wait::handle_wait_command_dispatch_trace_step(
                 app,
                 step_index,
                 step,
@@ -900,6 +968,25 @@ pub(super) fn dispatch_drive_script_step(
             );
             debug_assert!(handled);
         }
+        step @ UiActionStepV2::PasteTextInto { .. } => {
+            let handled = script_steps_input::handle_paste_text_into_step(
+                service,
+                app,
+                window,
+                window_bounds,
+                step_index,
+                step,
+                element_runtime,
+                semantics_snapshot,
+                ui.as_deref_mut(),
+                active,
+                output,
+                force_dump_label,
+                stop_script,
+                failure_reason,
+            );
+            debug_assert!(handled);
+        }
         step @ UiActionStepV2::MenuSelect { .. } => {
             let handled = script_steps_menu::handle_menu_select_step(
                 service,
@@ -1331,6 +1418,61 @@ pub(super) fn shortcut_routing_trace_entry_matches_query(
     }
     if let Some(focus_is_text_input) = query.focus_is_text_input
         && entry.focus_is_text_input != focus_is_text_input
+    {
+        return false;
+    }
+    true
+}
+
+pub(super) fn push_command_dispatch_trace(
+    trace: &mut Vec<UiScriptCommandDispatchTraceEntryV1>,
+    entry: UiScriptCommandDispatchTraceEntryV1,
+) {
+    trace.push(entry);
+    if trace.len() > MAX_SHORTCUT_ROUTING_TRACE_ENTRIES {
+        let extra = trace
+            .len()
+            .saturating_sub(MAX_SHORTCUT_ROUTING_TRACE_ENTRIES);
+        trace.drain(0..extra);
+    }
+}
+
+pub(super) fn command_dispatch_trace_entry_matches_query(
+    entry: &UiScriptCommandDispatchTraceEntryV1,
+    query: &UiScriptCommandDispatchTraceQueryV1,
+) -> bool {
+    if let Some(command) = &query.command
+        && entry.command != *command
+    {
+        return false;
+    }
+    if let Some(source_kind) = &query.source_kind
+        && entry.source_kind != *source_kind
+    {
+        return false;
+    }
+    if let Some(handled) = query.handled
+        && entry.handled != handled
+    {
+        return false;
+    }
+    if let Some(scope) = &query.handled_by_scope
+        && entry.handled_by_scope.as_ref() != Some(scope)
+    {
+        return false;
+    }
+    if let Some(handled_by_driver) = query.handled_by_driver
+        && entry.handled_by_driver != handled_by_driver
+    {
+        return false;
+    }
+    if let Some(started_from_focus) = query.started_from_focus
+        && entry.started_from_focus != started_from_focus
+    {
+        return false;
+    }
+    if let Some(used_default_root_fallback) = query.used_default_root_fallback
+        && entry.used_default_root_fallback != used_default_root_fallback
     {
         return false;
     }

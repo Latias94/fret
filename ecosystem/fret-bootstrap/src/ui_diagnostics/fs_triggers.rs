@@ -304,6 +304,7 @@ impl UiDiagnosticsService {
         caps.push("diag.text_ime_trace".to_string());
         caps.push("diag.text_input_snapshot".to_string());
         caps.push("diag.shortcut_routing_trace".to_string());
+        caps.push("diag.command_dispatch_trace".to_string());
         caps.push("diag.overlay_placement_trace".to_string());
         caps.push("diag.window_insets_override".to_string());
         caps.push("diag.clipboard_force_unavailable".to_string());
@@ -611,8 +612,8 @@ impl UiDiagnosticsService {
         }
         self.last_pick_trigger_mtime = Some(modified);
 
-        self.pending_pick = None;
-        self.pick_armed_run_id = Some(self.next_pick_run_id());
+        let run_id = self.inspector.next_pick_run_id();
+        self.inspector.arm_pick(run_id);
     }
 
     pub(super) fn poll_inspect_trigger(&mut self) {
@@ -664,7 +665,6 @@ impl UiDiagnosticsService {
             return;
         }
 
-        self.inspect_enabled = cfg.enabled;
-        self.inspect_consume_clicks = cfg.consume_clicks;
+        self.set_inspect_enabled(cfg.enabled, cfg.consume_clicks);
     }
 }

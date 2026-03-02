@@ -212,6 +212,7 @@ impl<H: UiHost> Widget<H> for ClickCounter {
 }
 
 mod alt_menu_bar_activation;
+mod barrier_subtree_layout_dirty_aggregation;
 mod children;
 mod command_availability;
 mod command_enabled_service;
