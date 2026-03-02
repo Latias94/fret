@@ -6,6 +6,23 @@ and the corresponding `ecosystem/fret-ui-shadcn` modules.
 Goal: make it easy to answer “which components are still missing the upstream part split / naming?”
 without having to grep the whole crate.
 
+## Structural drift watchlist (defer last)
+
+These components are not “missing exports”, but their **underlying structure** is meaningfully
+different from upstream shadcn/ui v4 (or Base UI), so they require a deeper redesign than simple
+part renames or default refinements.
+
+- `select` / `combobox`: see `docs/workstreams/select-combobox-deep-redesign-v1/`.
+
+## How to spot “Card-like split” gaps quickly
+
+- If a row is `parts`, we expect upstream-style part boundaries to exist as Rust types/functions.
+- If a row is `recipe` or `adapter`, we may still export the upstream identifiers, but the
+  underlying composition is not necessarily “literally nested parts” (copy/paste ports may require
+  an adapter, and behavior may be constrained by the recipe).
+- If you suspect “we have the names but not the split”, start with the `Surface kind` column and
+  then check the corresponding `TODO.md` row for drift notes and gate anchors.
+
 ## Legend
 
 - **Surface kind**

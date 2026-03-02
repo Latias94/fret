@@ -96,6 +96,31 @@ Expose upstream-shaped parts while keeping the underlying mechanism flexible:
 Where strict 1:1 nesting is not feasible, provide an explicit `into_element_parts(...)` adapter
 and document the difference (avoid silent drift).
 
+### Focus + semantics model (proposed)
+
+We should standardize on one focus model per component (and gate it), rather than letting
+call-site composition accidentally change outcomes.
+
+#### Select
+
+- On open, focus moves into the content (or a dedicated “focus proxy” element in the content).
+- The listbox highlight is modeled via an “active descendant” style contract (items are not
+  individually focusable).
+- On close, focus is restored to the trigger.
+
+This lines up with our existing `Command`-style listbox approach and is easier to keep stable
+across a GPU-first renderer than per-item focus.
+
+#### Combobox
+
+- Focus remains in the input at all times.
+- The list highlight is modeled via an “active descendant” style contract (items are not
+  individually focusable).
+- On close, focus remains in the input (or returns to trigger for “button-like trigger” presets).
+
+This matches the upstream Base UI combobox expectations: the input is the primary focus target,
+and the popup is a navigable collection bound to the input.
+
 #### C) Migration strategy
 
 We should minimize churn by staging:
@@ -117,4 +142,3 @@ Examples of “must gate” outcomes:
 - arrow navigation and selection semantics,
 - typeahead filtering behavior,
 - stable `test_id` surfaces across open/close frames.
-

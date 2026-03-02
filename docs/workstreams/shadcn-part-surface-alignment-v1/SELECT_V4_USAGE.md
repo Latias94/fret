@@ -3,6 +3,8 @@
 This note documents **how to express the upstream shadcn/ui v4 `Select` docs snippets** using the
 current `fret-ui-shadcn` surface.
 
+Deeper structural convergence work is tracked in `docs/workstreams/select-combobox-deep-redesign-v1/`.
+
 It is intentionally pragmatic: it aims to keep copy/paste workflows unblocked while `Select`
 remains a **configuration + entries** API rather than a true nested part tree (`SelectTrigger`,
 `SelectValue`, `SelectContent`, ... as real children).
@@ -111,4 +113,4 @@ fn view<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
   cases (especially when interacting with virtualization / available height constraints).
 
 If you need strict copy/paste parity for the nested part tree, track Milestone 6 in
-`MILESTONES.md` (Select v4 part surface convergence).
+`docs/workstreams/select-combobox-deep-redesign-v1/` (Select v4 part surface convergence).

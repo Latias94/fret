@@ -27,7 +27,7 @@ See also: `docs/workstreams/shadcn-part-surface-alignment-v1/INVENTORY.md`.
 This is the suggested dev sequence for the next parity passes (optimize for “high leverage” and
 “high risk”):
 
-1. **Defer last**: `select` / `combobox` deeper redesign (structural drift is known; deeper than naming)
+1. **Defer last**: `select` / `combobox` deeper redesign (structural drift is known; deeper than naming). See `docs/workstreams/select-combobox-deep-redesign-v1/`.
 
 ## Tracker table
 
@@ -93,7 +93,7 @@ This is the short “next few” list. Full inventory is in `INVENTORY.md`.
 
 | Component | Upstream base file | Fret module | Priority | Status | Notes |
 |---|---|---|---:|---|---|
-| `select` / `combobox` deep redesign | (see per-module refs) | `ecosystem/fret-ui-shadcn/src/select.rs` / `ecosystem/fret-ui-shadcn/src/combobox.rs` | P0 | Deferred (planned) | Structural drift is known; keep for last (see existing unit tests as behavior baselines). |
+| `select` / `combobox` deep redesign | (see per-module refs) | `ecosystem/fret-ui-shadcn/src/select.rs` / `ecosystem/fret-ui-shadcn/src/combobox.rs` | P0 | Deferred (planned) | Structural drift is known; keep for last. Workstream: `docs/workstreams/select-combobox-deep-redesign-v1/`. |
 
 ## Notes / recurring hazards
 
