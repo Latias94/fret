@@ -203,6 +203,29 @@
       ]
     },
     {
+      "id": "cookbook-external-texture-import-basics-smoke",
+      "path": "tools/diag-scripts/cookbook/external-texture-import-basics/cookbook-external-texture-import-basics-smoke.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "cookbook-external-texture-import-basics"
+      ],
+      "tags": [
+        "cookbook",
+        "external_texture",
+        "interop",
+        "render_io",
+        "smoke"
+      ],
+      "target_hints": [
+        "Verifies an imported render target is visible via ViewportSurface.",
+        "Switches the target size preset and asserts numeric semantics update.",
+        "Captures a screenshot + diagnostics bundle."
+      ]
+    },
+    {
       "id": "cookbook-gizmo-basics-smoke",
       "path": "tools/diag-scripts/cookbook/gizmo-basics/cookbook-gizmo-basics-smoke.json",
       "required_capabilities": [

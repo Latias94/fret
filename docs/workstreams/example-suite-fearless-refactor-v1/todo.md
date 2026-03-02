@@ -91,7 +91,7 @@ Interop Track:
 
 - [ ] Add/curate “engine embedding” examples:
   - [x] embedded viewport + input forwarding: `cookbook.embedded_viewport_basics`
-  - [ ] external texture import (native + web)
+  - [x] external texture import (native + web): `cookbook.external_texture_import_basics` (+ web demo reference)
   - [x] gizmo + viewport integration (native): `cookbook.gizmo_basics`
 - [ ] Docking story:
   - [x] docking basics (cookbook)

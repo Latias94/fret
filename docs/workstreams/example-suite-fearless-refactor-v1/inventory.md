@@ -59,6 +59,7 @@ examples and should be treated as product surfaces.
 | cookbook.chart_interactions_basics | Keep | `apps/fret-cookbook/examples/chart_interactions_basics.rs` | `cargo run -p fret-cookbook --example chart_interactions_basics` | Minimal chart wiring (`fret-chart` + `delinea`): shared engine + retained canvas + app-driven zoom, with a deterministic diag smoke script. |
 | cookbook.gizmo_basics | Keep | `apps/fret-cookbook/examples/gizmo_basics.rs` | `cargo run -p fret-cookbook --example gizmo_basics` | `fret-gizmo` wiring + viewport-style transforms (native-first). |
 | cookbook.embedded_viewport_basics | Keep | `apps/fret-cookbook/examples/embedded_viewport_basics.rs` | `cargo run -p fret-cookbook --example embedded_viewport_basics` | Embedded viewport surface: offscreen render target + `ViewportInputEvent` forwarding. |
+| cookbook.external_texture_import_basics | Keep | `apps/fret-cookbook/examples/external_texture_import_basics.rs` | `cargo run -p fret-cookbook --example external_texture_import_basics` | Imported render target updates (`ImportedViewportRenderTarget`) + viewport presentation. |
 
 ## Interop + renderer “high ceiling” mapping
 
@@ -66,7 +67,7 @@ examples and should be treated as product surfaces.
 |---|---|---|---|---|
 | docking_arbitration | Maint | `apps/fret-examples/src/docking_arbitration_demo.rs`, `apps/fret-demo/src/bin/docking_arbitration_demo.rs` | `fretboard dev native --bin docking_arbitration_demo` | Editor-grade regression harness; keep out of onboarding. |
 | embedded_viewport | Keep | `apps/fret-cookbook/examples/embedded_viewport_basics.rs` (cookbook), ref: `apps/fret-examples/src/embedded_viewport_demo.rs` | `cargo run -p fret-cookbook --example embedded_viewport_basics` | Cookbook is the canonical entry; keep the larger demo as a maintainer-grade reference. |
-| external_texture_import | Keep | `apps/fret-examples/src/external_texture_imports_demo.rs`, `apps/fret-demo/src/bin/external_texture_imports_demo.rs`, web: `apps/fret-examples/src/external_texture_imports_web_demo.rs` | native: `fretboard dev native --bin external_texture_imports_demo`; web: `fretboard dev web --demo external_texture_imports_web_demo` | Keep as canonical interop surface (native + web). |
+| external_texture_import | Keep | native cookbook: `apps/fret-cookbook/examples/external_texture_import_basics.rs`; reference demos: `apps/fret-examples/src/external_texture_imports_demo.rs` + web `apps/fret-examples/src/external_texture_imports_web_demo.rs` | native: `cargo run -p fret-cookbook --example external_texture_import_basics`; web: `fretboard dev web --demo external_texture_imports_web_demo` | Cookbook is the canonical entry; keep the larger demos as maintainer-grade references (and web coverage). |
 | liquid_glass | Maint | `apps/fret-examples/src/liquid_glass_demo.rs`, `apps/fret-demo/src/bin/liquid_glass_demo.rs` | `fretboard dev native --bin liquid_glass_demo` | Renderer lab; likely stays native-first initially. |
 | custom_effect_v1/v2/v3 | Maint | `apps/fret-examples/src/custom_effect_*`, `docs/workstreams/renderer-effects-semantics-and-extensibility-v1/*` | native/web demos exist (see `apps/fret-demo-web/src/wasm.rs`) | Keep as “Labs”; gate by capabilities + budgets. |
 

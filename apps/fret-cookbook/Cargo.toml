@@ -18,6 +18,7 @@ fret-core = { path = "../../crates/fret-core" }
 fret-runtime = { path = "../../crates/fret-runtime" }
 fret-ui = { path = "../../crates/fret-ui" }
 fret-render = { path = "../../crates/fret-render" }
+fret-launch = { path = "../../crates/fret-launch" }
 fret-icons-radix = { path = "../../ecosystem/fret-icons-radix", default-features = false, features = ["app-integration"] }
 fret-ui-assets = { path = "../../ecosystem/fret-ui-assets", default-features = false, features = ["ui", "image-decode"] }
 fret-executor = { path = "../../ecosystem/fret-executor" }

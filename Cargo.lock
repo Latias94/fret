@@ -1898,6 +1898,7 @@ dependencies = [
  "fret-executor",
  "fret-gizmo",
  "fret-icons-radix",
+ "fret-launch",
  "fret-markdown",
  "fret-render",
  "fret-runtime",

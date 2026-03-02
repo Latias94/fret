@@ -194,7 +194,7 @@ Legend:
 | multi-window-tearoff | 4 | Interop | windows | Lab/Harness | ✅ | ⛔ | tear-off + DPI + drag | manual + diag evidence |
 | cookbook.embedded_viewport_basics | 3 | Interop | viewport | Example | ✅ | (optional) | viewport surface + explicit input forwarding | diag script: pointer mapping |
 | cookbook.gizmo_basics | 4 | Interop | viewport | Example | ✅ | ⛔ | gizmo + viewport tool math | screenshot + interaction script |
-| external-texture-import | 3 | Interop | render I/O | Example | ✅ | ✅ | external texture paths | diag run + capability check |
+| cookbook.external_texture_import_basics | 3 | Interop | render I/O | Example | ✅ | ✅ | imported render targets + ingest strategy semantics | diag run + capability check |
 | external-video-import | 4 | Interop | render I/O | Lab | ✅ | ⛔ | video import (platform-specific) | platform-gated smoke |
 | cookbook.effects_layer_basics | 2 | Renderer | effects | Example | ✅ | ✅ | built-in effect steps + semantics | screenshot gate |
 | cookbook.canvas_pan_zoom_basics | 3 | App | canvas | Example | ✅ | ⛔ | pan/zoom wiring + basic drag tool | diag script: pan + zoom + drag |
