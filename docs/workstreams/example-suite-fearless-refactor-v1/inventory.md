@@ -55,8 +55,10 @@ examples and should be treated as product surfaces.
 
 ## Cookbook crate (planned v1 additions)
 
-No remaining items are currently queued in this table. Add the next scoped example here to keep
-inventory drift low.
+These are the next "small but high-signal" recipes to add, in easy -> hard order.
+
+| ID | State | Target anchors | Notes |
+|---|---|---|---|
 
 ## Interop + renderer “high ceiling” mapping
 
