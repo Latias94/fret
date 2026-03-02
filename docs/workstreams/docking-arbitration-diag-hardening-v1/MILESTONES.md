@@ -83,6 +83,9 @@ Stage gates for merge-back correctness (2026-03-03):
 - Transparent payload drag-back: switched the merge-back targeting to `dock-arb-hint-inner-right` to avoid `wrap_binary`
   outcomes from outer-hint drops, and added a drop-stage bundle.
   - PASS: run id `1772493899790` (`target/fret-diag-stage-gates4`)
+- Chained tear-off: removed trailing `wait_frames` after the final `capture_bundle` to avoid “script.result timeout”
+  when the last remaining window is occluded/idle and stops producing redraw callbacks.
+  - PASS: run id `1772495444909` (`target/fret-diag-chained-check2`)
 
 ## M1.4 — Rebuild reliability for docking demos (Windows/MSVC)
 

@@ -58,3 +58,8 @@ with special focus on multi-window tear-off + drag-back sequences.
 - Chained tear-off (two tabs) now returns to the pre-tearoff fingerprint after two merge-backs (script-level targeting
   fix: avoid hint retargeting to the wrong leaf by explicitly hovering a stable viewport in the destination window).
 - Added the chained tear-off script to `diag-hardening-smoke-docking`.
+
+## Done (2026-03-03)
+
+- Script termination hardening: avoid trailing `wait_frames` after a final `capture_bundle` in multi-window docking
+  scripts, because the last remaining window can be occluded/idle and stop producing redraw callbacks (tooling timeout).
