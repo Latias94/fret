@@ -3,6 +3,7 @@ pub mod audio_player_demo;
 pub mod artifact_demo;
 pub mod attachments_demo;
 pub mod checkpoint_demo;
+pub mod chain_of_thought_demo;
 pub mod code_block_demo;
 pub mod commit_demo;
 pub mod commit_large_demo;

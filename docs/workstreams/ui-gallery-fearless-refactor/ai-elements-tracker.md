@@ -18,7 +18,7 @@ Status labels:
 | `attachments_demo` | `PAGE_AI_ATTACHMENTS_DEMO` | (removed) | `apps/fret-ui-gallery/src/ui/snippets/ai/attachments_demo.rs` | `apps/fret-ui-gallery/src/ui/pages/ai_attachments_demo.rs` | Snippet-backed |
 | `audio_player_demo` | `PAGE_AI_AUDIO_PLAYER_DEMO` | (removed) | `apps/fret-ui-gallery/src/ui/snippets/ai/audio_player_demo.rs` | `apps/fret-ui-gallery/src/ui/pages/ai_audio_player_demo.rs` | Snippet-backed |
 | `canvas_world_layer_spike` | `PAGE_AI_CANVAS_WORLD_LAYER_SPIKE` | `apps/fret-ui-gallery/src/ui/previews/gallery/ai/canvas_world_layer_spike.rs` | — | — | Legacy preview |
-| `chain_of_thought_demo` | `PAGE_AI_CHAIN_OF_THOUGHT_DEMO` | `apps/fret-ui-gallery/src/ui/previews/gallery/ai/chain_of_thought_demo.rs` | — | — | Legacy preview |
+| `chain_of_thought_demo` | `PAGE_AI_CHAIN_OF_THOUGHT_DEMO` | (removed) | `apps/fret-ui-gallery/src/ui/snippets/ai/chain_of_thought_demo.rs` | `apps/fret-ui-gallery/src/ui/pages/ai_chain_of_thought_demo.rs` | Snippet-backed |
 | `chat_demo` | `PAGE_AI_CHAT_DEMO` | `apps/fret-ui-gallery/src/ui/previews/gallery/ai/chat_demo.rs` | — | — | Legacy preview |
 | `checkpoint_demo` | `PAGE_AI_CHECKPOINT_DEMO` | (removed) | `apps/fret-ui-gallery/src/ui/snippets/ai/checkpoint_demo.rs` | `apps/fret-ui-gallery/src/ui/pages/ai_checkpoint_demo.rs` | Snippet-backed |
 | `code_block_demo` | `PAGE_AI_CODE_BLOCK_DEMO` | (removed) | `apps/fret-ui-gallery/src/ui/snippets/ai/code_block_demo.rs` | `apps/fret-ui-gallery/src/ui/pages/ai_code_block_demo.rs` | Snippet-backed |

@@ -479,7 +479,7 @@ fn page_preview(
         }
         PAGE_AI_INLINE_CITATION_DEMO => pages::preview_ai_inline_citation_demo(cx, theme),
         PAGE_AI_SOURCES_DEMO => pages::preview_ai_sources_demo(cx, theme),
-        PAGE_AI_CHAIN_OF_THOUGHT_DEMO => preview_ai_chain_of_thought_demo(cx, theme),
+        PAGE_AI_CHAIN_OF_THOUGHT_DEMO => pages::preview_ai_chain_of_thought_demo(cx, theme),
         PAGE_AI_SNIPPET_DEMO => pages::preview_ai_snippet_demo(cx, theme),
         PAGE_AI_IMAGE_DEMO => preview_ai_image_demo(cx, theme),
         PAGE_INSPECTOR_TORTURE => preview_inspector_torture(cx, theme),
