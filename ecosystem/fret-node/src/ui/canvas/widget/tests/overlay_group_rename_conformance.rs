@@ -71,8 +71,10 @@ fn open_rename_overlay<H: fret_ui::UiHost>(
 }
 
 fn overlay_rect_for(style: &NodeGraphStyle, desired_origin: Point, bounds: Rect) -> Rect {
-    let w = style.context_menu_width.max(40.0);
-    let h = (style.context_menu_item_height.max(20.0) + 2.0 * style.context_menu_padding).max(24.0);
+    let w = style.paint.context_menu_width.max(40.0);
+    let h = (style.paint.context_menu_item_height.max(20.0)
+        + 2.0 * style.paint.context_menu_padding)
+        .max(24.0);
 
     let min_x = bounds.origin.x.0;
     let min_y = bounds.origin.y.0;

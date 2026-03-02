@@ -411,22 +411,7 @@ pub fn handle_dock_op<H: UiHost>(app: &mut H, op: DockOp) -> bool {
                 return false;
             }
 
-            let maybe_close_window = match &op {
-                DockOp::ClosePanel { window, .. } => Some(*window),
-                DockOp::MovePanel { source_window, .. } => Some(*source_window),
-                DockOp::MoveTabs { source_window, .. } => Some(*source_window),
-                DockOp::FloatPanelToWindow { source_window, .. } => Some(*source_window),
-                DockOp::FloatPanelInWindow { source_window, .. } => Some(*source_window),
-                DockOp::FloatTabsInWindow { source_window, .. } => Some(*source_window),
-                DockOp::MergeWindowInto { source_window, .. } => Some(*source_window),
-                _ => None,
-            }
-            .filter(|w| {
-                app.global::<DockFloatingOsWindowRegistry>()
-                    .is_some_and(|reg| reg.contains(*w))
-            });
-
-            let mut should_auto_close = false;
+            let mut windows_to_auto_close: Vec<AppWindowId> = Vec::new();
             let handled = app.with_global_mut(DockManager::default, |dock, app| {
                 let now = app.tick_id();
                 app.with_global_mut(DockTearOffMachine::default, |machine, _app| match &op {
@@ -458,10 +443,15 @@ pub fn handle_dock_op<H: UiHost>(app: &mut H, op: DockOp) -> bool {
                     return false;
                 }
 
-                if let Some(window) = maybe_close_window
-                    && dock.graph.collect_panels_in_window(window).is_empty()
-                {
-                    should_auto_close = true;
+                if let Some(reg) = app.global::<DockFloatingOsWindowRegistry>() {
+                    // Close-on-empty is a stable UX expectation in editor-grade docking (ImGui-style).
+                    // Scan all known dock-owned floating OS windows rather than trying to keep an
+                    // exhaustive list of which DockOps might have emptied a particular window.
+                    for window in reg.windows.iter().copied() {
+                        if dock.graph.collect_panels_in_window(window).is_empty() {
+                            windows_to_auto_close.push(window);
+                        }
+                    }
                 }
 
                 match &op {
@@ -559,21 +549,20 @@ pub fn handle_dock_op<H: UiHost>(app: &mut H, op: DockOp) -> bool {
                 true
             });
 
-            if handled
-                && should_auto_close
-                && let Some(window) = maybe_close_window
-            {
-                if std::env::var_os("FRET_DOCK_TEAROFF_LOG").is_some_and(|v| !v.is_empty()) {
-                    tracing::info!(
-                        window = ?window,
-                        op = ?op,
-                        "dock tear-off: auto-close empty DockFloating window"
-                    );
+            if handled && !windows_to_auto_close.is_empty() {
+                for window in windows_to_auto_close {
+                    if std::env::var_os("FRET_DOCK_TEAROFF_LOG").is_some_and(|v| !v.is_empty()) {
+                        tracing::info!(
+                            window = ?window,
+                            op = ?op,
+                            "dock tear-off: auto-close empty DockFloating window"
+                        );
+                    }
+                    app.with_global_mut(DockFloatingOsWindowRegistry::default, |reg, _app| {
+                        reg.remove(window);
+                    });
+                    app.push_effect(Effect::Window(WindowRequest::Close(window)));
                 }
-                app.with_global_mut(DockFloatingOsWindowRegistry::default, |reg, _app| {
-                    reg.remove(window);
-                });
-                app.push_effect(Effect::Window(WindowRequest::Close(window)));
             }
 
             handled

@@ -171,12 +171,12 @@ fn per_node_header_palette_draws_distinct_header_quads() {
         if rect.origin != rect_a.origin && rect.origin != rect_b.origin {
             continue;
         }
-        if (rect.size.height.0 - style.node_header_height).abs() > 1.0e-3 {
+        if (rect.size.height.0 - style.geometry.node_header_height).abs() > 1.0e-3 {
             continue;
         }
         let expected_corner = Corners {
-            top_left: Px(style.node_corner_radius),
-            top_right: Px(style.node_corner_radius),
+            top_left: Px(style.paint.node_corner_radius),
+            top_right: Px(style.paint.node_corner_radius),
             bottom_right: Px(0.0),
             bottom_left: Px(0.0),
         };

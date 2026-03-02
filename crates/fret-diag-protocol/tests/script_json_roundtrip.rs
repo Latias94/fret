@@ -214,6 +214,13 @@ fn script_v2_roundtrip_ui_gallery_data_table_retained_column_actions_menu() {
 }
 
 #[test]
+fn script_v2_roundtrip_ui_gallery_data_table_listlike_pointer_selection() {
+    assert_script_v2_roundtrip(include_str!(
+        "../../../tools/diag-scripts/ui-gallery-data-table-listlike-pointer-selection.json"
+    ));
+}
+
+#[test]
 fn script_v2_roundtrip_ui_gallery_data_table_retained_global_filter() {
     assert_script_v2_roundtrip(include_str!(
         "../../../tools/diag-scripts/ui-gallery-data-table-retained-global-filter.json"
@@ -259,6 +266,13 @@ fn script_v2_roundtrip_ui_gallery_data_table_retained_column_pinning_toggle() {
 fn script_v2_roundtrip_ui_gallery_data_table_guide_demo_select_and_row_actions() {
     assert_script_v2_roundtrip(include_str!(
         "../../../tools/diag-scripts/ui-gallery-data-table-guide-demo-select-and-row-actions.json"
+    ));
+}
+
+#[test]
+fn script_v2_roundtrip_ui_gallery_data_table_guide_demo_checkbox_only_selection() {
+    assert_script_v2_roundtrip(include_str!(
+        "../../../tools/diag-scripts/ui-gallery-data-table-guide-demo-checkbox-only-selection.json"
     ));
 }
 
@@ -615,6 +629,30 @@ fn script_v2_roundtrip_dock_drag_active_is_predicate() {
   "schema_version": 2,
   "steps": [
     { "type": "assert", "predicate": { "kind": "dock_drag_active_is", "active": false } }
+  ]
+}"#,
+    );
+}
+
+#[test]
+fn script_v2_roundtrip_dock_tab_strip_active_overflow_is_predicate() {
+    assert_script_v2_roundtrip(
+        r#"{
+  "schema_version": 2,
+  "steps": [
+    { "type": "assert", "predicate": { "kind": "dock_tab_strip_active_overflow_is", "overflow": true } }
+  ]
+}"#,
+    );
+}
+
+#[test]
+fn script_v2_roundtrip_dock_tab_strip_active_visible_is_predicate() {
+    assert_script_v2_roundtrip(
+        r#"{
+  "schema_version": 2,
+  "steps": [
+    { "type": "assert", "predicate": { "kind": "dock_tab_strip_active_visible_is", "visible": true } }
   ]
 }"#,
     );

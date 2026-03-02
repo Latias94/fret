@@ -140,7 +140,7 @@ fn find_best_quad(scene: &Scene, target: Rect) -> Option<PaintedQuad> {
         else {
             continue;
         };
-        let fret_core::Paint::Solid(background) = background.paint else {
+        let fret_core::Paint::Solid(background_color) = background.paint else {
             continue;
         };
         let fret_core::Paint::Solid(border_color) = border_paint.paint else {
@@ -148,7 +148,7 @@ fn find_best_quad(scene: &Scene, target: Rect) -> Option<PaintedQuad> {
         };
         let border_widths = [border.top.0, border.right.0, border.bottom.0, border.left.0];
         let draws_border = border_widths.iter().any(|w| *w > 0.0);
-        let draws_background = background.a > 0.0;
+        let draws_background = background_color.a > 0.0;
         if !draws_border && !draws_background {
             // Skip paint-noop quads (common for shadow-only wrappers).
             continue;
@@ -163,7 +163,7 @@ fn find_best_quad(scene: &Scene, target: Rect) -> Option<PaintedQuad> {
             best_score = score;
             best = Some(PaintedQuad {
                 rect,
-                background,
+                background: background_color,
                 border: border_widths,
                 border_color,
                 corners: [
@@ -1943,7 +1943,7 @@ fn web_vs_fret_button_group_dropdown_geometry_and_chrome_match() {
         // We express that via `ChromeRefinement` without changing global button sizing rules.
         let trigger = fret_ui_shadcn::Button::new("")
             .variant(fret_ui_shadcn::ButtonVariant::Outline)
-            .refine_style(ChromeRefinement::default().pl(Space::N2))
+            .refine_style(ChromeRefinement::default().pl(Space::N2).pr(Space::N3))
             .children(vec![decl_icon::icon(cx, ids::ui::CHEVRON_DOWN)])
             .test_id("button-group-dropdown.trigger")
             .into();
@@ -3600,6 +3600,40 @@ fn web_vs_fret_toggle_group_demo_chrome_matches() {
                 .into_element(cx),
         ]
     });
+
+    if debug {
+        // Helpful when the best-quad heuristic picks the wrong background quad.
+        // Prints candidate quads near the first item (0,0).
+        for op in scene.ops() {
+            let SceneOp::Quad {
+                rect,
+                border,
+                corner_radii,
+                ..
+            } = *op
+            else {
+                continue;
+            };
+            if rect.origin.x.0.abs() > 0.1 || rect.origin.y.0.abs() > 0.1 {
+                continue;
+            }
+            if (rect.size.width.0 - 42.0).abs() > 0.1 {
+                continue;
+            }
+            let border_w = [border.top.0, border.right.0, border.bottom.0, border.left.0];
+            eprintln!(
+                "toggle-group candidate quad: rect=({},{} {}x{}) border={border_w:?} corners=({},{} {} {})",
+                rect.origin.x.0,
+                rect.origin.y.0,
+                rect.size.width.0,
+                rect.size.height.0,
+                corner_radii.top_left.0,
+                corner_radii.top_right.0,
+                corner_radii.bottom_right.0,
+                corner_radii.bottom_left.0,
+            );
+        }
+    }
 
     for (idx, web_item) in web_items.into_iter().enumerate() {
         let web_w = web_item.rect.w;

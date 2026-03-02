@@ -38,6 +38,11 @@
       "predicate": { "kind": "exists", "target": { "kind": "test_id", "id": "dock-arb-tab-drag-anchor-extra-7" } },
       "timeout_frames": 240
     },
+    {
+      "type": "wait_until",
+      "predicate": { "kind": "exists", "target": { "kind": "test_id", "id": "dock-arb-tab-drop-end-anchor-left" } },
+      "timeout_frames": 240
+    },
 
     {
       "type": "pointer_down",
@@ -174,7 +179,7 @@
     { "type": "pointer_move", "window": { "kind": "current" }, "delta_x": 20.0, "delta_y": 0.0, "steps": 12 },
     { "type": "wait_until", "window": { "kind": "current" }, "predicate": { "kind": "dock_drag_active_is", "active": true }, "timeout_frames": 120 },
 
-    { "type": "set_cursor_in_window_logical", "window": { "kind": "current" }, "x_px": 940.0, "y_px": 18.0 },
+    { "type": "move_pointer", "window": { "kind": "current" }, "target": { "kind": "test_id", "id": "dock-arb-tab-drop-end-anchor-left" } },
     { "type": "wait_frames", "n": 4 },
     {
       "type": "wait_until",
@@ -209,4 +214,3 @@
     { "type": "capture_bundle", "label": "docking-arbitration-demo-tab-bar-drop-end-insert-index-overflow" }
   ]
 }
-

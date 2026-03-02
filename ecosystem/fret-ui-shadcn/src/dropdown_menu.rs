@@ -5,7 +5,7 @@ use std::sync::Arc;
 use fret_core::{Edges, FontId, FontWeight, Point, Px, Rect, Size, TextStyle};
 use fret_icons::{IconId, ids};
 use fret_runtime::{CommandId, Model};
-use fret_ui::action::{OnActivate, OnDismissRequest};
+use fret_ui::action::{OnActivate, OnDismissRequest, PressablePointerDownResult};
 use fret_ui::element::{
     AnyElement, ContainerProps, CrossAlign, FlexProps, InsetStyle, LayoutStyle, Length, MainAlign,
     Overflow, PositionStyle, PressableProps, RingStyle, RovingFlexProps, RovingFocusProps,
@@ -122,6 +122,284 @@ pub enum DropdownMenuEntry {
     Separator,
 }
 
+/// shadcn/ui `DropdownMenuTrigger` (v4).
+///
+/// In the upstream DOM implementation this is a Radix primitive part. In Fret, the trigger element
+/// itself is still authored by the caller; this wrapper exists to align the part surface with
+/// shadcn docs/examples and to keep room for future trigger-specific defaults.
+#[derive(Debug)]
+pub struct DropdownMenuTrigger {
+    child: AnyElement,
+}
+
+impl DropdownMenuTrigger {
+    pub fn new(child: AnyElement) -> Self {
+        Self { child }
+    }
+
+    #[track_caller]
+    pub fn into_element<H: UiHost>(self, _cx: &mut ElementContext<'_, H>) -> AnyElement {
+        self.child
+    }
+}
+
+/// shadcn/ui `DropdownMenuContent` (v4).
+///
+/// Upstream exposes placement-related props on the `Content` part (e.g. `align`, `sideOffset`).
+/// Fret's current `DropdownMenu` surface owns these configuration knobs. This type provides an
+/// adapter surface so call sites can be authored in a part-based style while keeping the current
+/// implementation intact.
+#[derive(Debug, Clone, Default)]
+pub struct DropdownMenuContent {
+    align: Option<DropdownMenuAlign>,
+    align_offset: Option<Px>,
+    side: Option<DropdownMenuSide>,
+    side_offset: Option<Px>,
+    window_margin: Option<Px>,
+    min_width: Option<Px>,
+    submenu_min_width: Option<Px>,
+    arrow: Option<bool>,
+    arrow_size: Option<Px>,
+    arrow_padding: Option<Px>,
+    align_leading_icons: Option<bool>,
+}
+
+impl DropdownMenuContent {
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    pub fn align(mut self, align: DropdownMenuAlign) -> Self {
+        self.align = Some(align);
+        self
+    }
+
+    pub fn align_offset(mut self, offset: Px) -> Self {
+        self.align_offset = Some(offset);
+        self
+    }
+
+    pub fn side(mut self, side: DropdownMenuSide) -> Self {
+        self.side = Some(side);
+        self
+    }
+
+    pub fn side_offset(mut self, offset: Px) -> Self {
+        self.side_offset = Some(offset);
+        self
+    }
+
+    pub fn window_margin(mut self, margin: Px) -> Self {
+        self.window_margin = Some(margin);
+        self
+    }
+
+    pub fn min_width(mut self, min_width: Px) -> Self {
+        self.min_width = Some(min_width);
+        self
+    }
+
+    pub fn submenu_min_width(mut self, min_width: Px) -> Self {
+        self.submenu_min_width = Some(min_width);
+        self
+    }
+
+    pub fn align_leading_icons(mut self, align: bool) -> Self {
+        self.align_leading_icons = Some(align);
+        self
+    }
+
+    pub fn arrow(mut self, arrow: bool) -> Self {
+        self.arrow = Some(arrow);
+        self
+    }
+
+    pub fn arrow_size(mut self, size: Px) -> Self {
+        self.arrow_size = Some(size);
+        self
+    }
+
+    pub fn arrow_padding(mut self, padding: Px) -> Self {
+        self.arrow_padding = Some(padding);
+        self
+    }
+
+    fn apply_to(self, mut menu: DropdownMenu) -> DropdownMenu {
+        if let Some(v) = self.align {
+            menu.align = v;
+        }
+        if let Some(v) = self.align_offset {
+            menu.align_offset = v;
+        }
+        if let Some(v) = self.side {
+            menu.side = v;
+        }
+        if let Some(v) = self.side_offset {
+            menu.side_offset = v;
+        }
+        if let Some(v) = self.window_margin {
+            menu.window_margin = v;
+        }
+        if let Some(v) = self.min_width {
+            menu.min_width = v;
+        }
+        if let Some(v) = self.submenu_min_width {
+            menu.submenu_min_width = v;
+        }
+        if let Some(v) = self.align_leading_icons {
+            menu.align_leading_icons = v;
+        }
+        if let Some(v) = self.arrow {
+            menu.arrow = v;
+        }
+        if let Some(v) = self.arrow_size {
+            menu.arrow_size_override = Some(v);
+        }
+        if let Some(v) = self.arrow_padding {
+            menu.arrow_padding_override = Some(v);
+        }
+        menu
+    }
+}
+
+/// shadcn/ui `DropdownMenuPortal` (v4).
+///
+/// Upstream exports a distinct portal part even though `DropdownMenuContent` mounts itself in a
+/// portal by default. In Fret the overlay is already rendered in an overlay root, so this is a
+/// no-op wrapper that exists for part surface parity (copy/paste examples).
+#[derive(Debug, Clone, Default)]
+pub struct DropdownMenuPortal {
+    content: DropdownMenuContent,
+}
+
+impl DropdownMenuPortal {
+    pub fn new(content: DropdownMenuContent) -> Self {
+        Self { content }
+    }
+}
+
+impl From<DropdownMenuPortal> for DropdownMenuContent {
+    fn from(value: DropdownMenuPortal) -> Self {
+        value.content
+    }
+}
+
+/// shadcn/ui `DropdownMenuSeparator` (v4).
+///
+/// In upstream this is a primitive part. In Fret menus we model it as an entry variant.
+#[derive(Debug, Clone, Copy, Default)]
+pub struct DropdownMenuSeparator;
+
+impl DropdownMenuSeparator {
+    pub fn new() -> Self {
+        Self
+    }
+}
+
+/// shadcn/ui `DropdownMenuSub*` helpers (v4).
+///
+/// Upstream exposes `Sub` / `SubTrigger` / `SubContent` as distinct parts. Fret's current menu
+/// model represents submenus as `DropdownMenuItem { submenu: Some(Vec<DropdownMenuEntry>) }`.
+/// These helpers bridge the authoring model without changing the underlying representation.
+#[derive(Debug)]
+pub struct DropdownMenuSubTrigger {
+    item: DropdownMenuItem,
+}
+
+impl DropdownMenuSubTrigger {
+    pub fn new(label: impl Into<Arc<str>>) -> Self {
+        Self {
+            item: DropdownMenuItem::new(label).close_on_select(false),
+        }
+    }
+
+    pub fn refine(mut self, f: impl FnOnce(DropdownMenuItem) -> DropdownMenuItem) -> Self {
+        self.item = f(self.item);
+        // Sub triggers should not close on select.
+        self.item.close_on_select = false;
+        self
+    }
+}
+
+#[derive(Debug)]
+pub struct DropdownMenuSubContent {
+    entries: Vec<DropdownMenuEntry>,
+}
+
+impl DropdownMenuSubContent {
+    pub fn new(entries: impl IntoIterator<Item = DropdownMenuEntry>) -> Self {
+        Self {
+            entries: entries.into_iter().collect(),
+        }
+    }
+}
+
+#[derive(Debug)]
+pub struct DropdownMenuSub {
+    trigger: DropdownMenuSubTrigger,
+    content: DropdownMenuSubContent,
+}
+
+impl DropdownMenuSub {
+    pub fn new(trigger: DropdownMenuSubTrigger, content: DropdownMenuSubContent) -> Self {
+        Self { trigger, content }
+    }
+
+    pub fn into_entry(self) -> DropdownMenuEntry {
+        let mut item = self.trigger.item;
+        item.submenu = Some(self.content.entries);
+        DropdownMenuEntry::Item(item)
+    }
+}
+
+impl From<DropdownMenuItem> for DropdownMenuEntry {
+    fn from(value: DropdownMenuItem) -> Self {
+        Self::Item(value)
+    }
+}
+
+impl From<DropdownMenuCheckboxItem> for DropdownMenuEntry {
+    fn from(value: DropdownMenuCheckboxItem) -> Self {
+        Self::CheckboxItem(value)
+    }
+}
+
+impl From<DropdownMenuRadioGroup> for DropdownMenuEntry {
+    fn from(value: DropdownMenuRadioGroup) -> Self {
+        Self::RadioGroup(value)
+    }
+}
+
+impl From<DropdownMenuRadioItem> for DropdownMenuEntry {
+    fn from(value: DropdownMenuRadioItem) -> Self {
+        Self::RadioItem(value)
+    }
+}
+
+impl From<DropdownMenuLabel> for DropdownMenuEntry {
+    fn from(value: DropdownMenuLabel) -> Self {
+        Self::Label(value)
+    }
+}
+
+impl From<DropdownMenuGroup> for DropdownMenuEntry {
+    fn from(value: DropdownMenuGroup) -> Self {
+        Self::Group(value)
+    }
+}
+
+impl From<DropdownMenuSeparator> for DropdownMenuEntry {
+    fn from(_value: DropdownMenuSeparator) -> Self {
+        Self::Separator
+    }
+}
+
+impl From<DropdownMenuSub> for DropdownMenuEntry {
+    fn from(value: DropdownMenuSub) -> Self {
+        value.into_entry()
+    }
+}
+
 pub struct DropdownMenuItem {
     pub label: Arc<str>,
     pub value: Arc<str>,
@@ -134,6 +412,9 @@ pub struct DropdownMenuItem {
     pub disabled: bool,
     pub close_on_select: bool,
     pub command: Option<CommandId>,
+    pub trailing_command: Option<CommandId>,
+    pub trailing_hit_width: Option<Px>,
+    pub trailing_close_on_select: bool,
     pub on_activate: Option<OnActivate>,
     pub a11y_label: Option<Arc<str>>,
     pub test_id: Option<Arc<str>>,
@@ -156,6 +437,9 @@ impl std::fmt::Debug for DropdownMenuItem {
             .field("disabled", &self.disabled)
             .field("close_on_select", &self.close_on_select)
             .field("command", &self.command)
+            .field("trailing_command", &self.trailing_command)
+            .field("trailing_hit_width", &self.trailing_hit_width)
+            .field("trailing_close_on_select", &self.trailing_close_on_select)
             .field("on_activate", &self.on_activate.is_some())
             .field("a11y_label", &self.a11y_label)
             .field("test_id", &self.test_id)
@@ -181,6 +465,9 @@ impl DropdownMenuItem {
             disabled: false,
             close_on_select: true,
             command: None,
+            trailing_command: None,
+            trailing_hit_width: None,
+            trailing_close_on_select: true,
             on_activate: None,
             a11y_label: None,
             test_id: None,
@@ -252,6 +539,21 @@ impl DropdownMenuItem {
 
     pub fn on_select(mut self, command: impl Into<CommandId>) -> Self {
         self.command = Some(command.into());
+        self
+    }
+
+    pub fn trailing_on_select(mut self, command: impl Into<CommandId>) -> Self {
+        self.trailing_command = Some(command.into());
+        self
+    }
+
+    pub fn trailing_hit_width(mut self, width: Px) -> Self {
+        self.trailing_hit_width = Some(width);
+        self
+    }
+
+    pub fn trailing_close_on_select(mut self, close: bool) -> Self {
+        self.trailing_close_on_select = close;
         self
     }
 
@@ -1399,6 +1701,26 @@ impl DropdownMenu {
         self
     }
 
+    /// Part-based authoring surface aligned with shadcn/ui v4 exports.
+    ///
+    /// This is a thin adapter over `DropdownMenu::into_element(...)` that allows call sites to use
+    /// `DropdownMenuTrigger` and `DropdownMenuContent` parts (and to attach content placement
+    /// options in a shadcn-like location).
+    #[track_caller]
+    pub fn into_element_parts<H: UiHost, I>(
+        self,
+        cx: &mut ElementContext<'_, H>,
+        trigger: impl FnOnce(&mut ElementContext<'_, H>) -> DropdownMenuTrigger,
+        content: impl Into<DropdownMenuContent>,
+        entries: impl FnOnce(&mut ElementContext<'_, H>) -> I,
+    ) -> AnyElement
+    where
+        I: IntoIterator<Item = DropdownMenuEntry>,
+    {
+        let menu = content.into().apply_to(self);
+        menu.into_element(cx, |cx| trigger(cx).into_element(cx), entries)
+    }
+
     #[track_caller]
     pub fn into_element<H: UiHost, I>(
         self,
@@ -2428,6 +2750,10 @@ impl DropdownMenu {
                                                         let disabled = item.disabled;
                                                         let close_on_select = item.close_on_select;
                                                         let command = item.command;
+                                                        let trailing_command = item.trailing_command;
+                                                        let trailing_hit_width = item.trailing_hit_width;
+                                                        let trailing_close_on_select =
+                                                            item.trailing_close_on_select;
                                                         let on_activate = item.on_activate.clone();
                                                         let leading = item.leading;
                                                         let leading_icon = item.leading_icon;
@@ -2614,7 +2940,7 @@ impl DropdownMenu {
                                                                     }
                                                                 }
 
-                                                                let mut trailing = trailing;
+                                                                 let mut trailing = trailing;
                                                                 if !has_submenu && trailing.is_none() {
                                                                     trailing = command.as_ref().and_then(|cmd| {
                                                                         command_shortcut_label(
@@ -2635,6 +2961,55 @@ impl DropdownMenu {
                                                                      bottom: pad_y,
                                                                      left: pad_left,
                                                                  });
+
+                                                                if !has_submenu && !disabled {
+                                                                    if let Some(trailing_cmd) =
+                                                                        trailing_command.clone()
+                                                                    {
+                                                                        let open = open.clone();
+                                                                        let close_menu =
+                                                                            trailing_close_on_select;
+                                                                        let hit_width = trailing_hit_width
+                                                                            .unwrap_or(Px(28.0));
+                                                                        let right_pad =
+                                                                            row_padding.right;
+                                                                        cx.pressable_add_on_pointer_down(
+                                                                            Arc::new(
+                                                                                move |host, acx, down| {
+                                                                                    if down.button
+                                                                                        != fret_core::MouseButton::Left
+                                                                                    {
+                                                                                        return PressablePointerDownResult::Continue;
+                                                                                    }
+
+                                                                                    let bounds =
+                                                                                        host.bounds();
+                                                                                    let threshold_x = bounds.size.width.0
+                                                                                        - right_pad.0
+                                                                                        - hit_width.0;
+                                                                                    if down.position_local.x.0
+                                                                                        >= threshold_x
+                                                                                    {
+                                                                                        host.dispatch_command(
+                                                                                            Some(acx.window),
+                                                                                            trailing_cmd.clone(),
+                                                                                        );
+                                                                                        if close_menu {
+                                                                                            let _ = host
+                                                                                                .models_mut()
+                                                                                                .update(&open, |v| {
+                                                                                                    *v = false;
+                                                                                                });
+                                                                                        }
+                                                                                        host.request_redraw(acx.window);
+                                                                                        return PressablePointerDownResult::SkipDefaultAndStopPropagation;
+                                                                                    }
+                                                                                    PressablePointerDownResult::Continue
+                                                                                },
+                                                                            ),
+                                                                        );
+                                                                    }
+                                                                }
 
                                                                  let child = cx.container(
                                                                              ContainerProps {
@@ -3871,6 +4246,17 @@ mod tests {
             let menu = DropdownMenu::new_controllable(cx, Some(controlled.clone()), false);
             assert_eq!(menu.open, controlled);
         });
+    }
+
+    #[test]
+    fn dropdown_menu_portal_wraps_content_config() {
+        let mut app = App::new();
+        let open = app.models_mut().insert(false);
+
+        let content = DropdownMenuPortal::new(DropdownMenuContent::new().side_offset(Px(9.0)));
+        let menu = DropdownMenuContent::from(content).apply_to(DropdownMenu::new(open));
+
+        assert_eq!(menu.side_offset, Px(9.0));
     }
 
     #[test]

@@ -41,13 +41,13 @@ fn paint_once(
 }
 
 #[test]
-fn xyflow_default_node_style_sets_expected_tokens() {
-    let style = NodeGraphStyle::default().with_xyflow_default_node_style();
-    assert_eq!(style.node_width, 150.0);
-    assert_eq!(style.node_padding, 10.0);
-    assert_eq!(style.node_corner_radius, 3.0);
-    assert_eq!(style.pin_radius, 3.0);
-    assert_eq!(style.context_menu_text_style.size, Px(12.0));
+fn compact_default_node_style_sets_expected_tokens() {
+    let style = NodeGraphStyle::default().with_compact_node_style();
+    assert_eq!(style.geometry.node_width, 150.0);
+    assert_eq!(style.geometry.node_padding, 10.0);
+    assert_eq!(style.paint.node_corner_radius, 3.0);
+    assert_eq!(style.geometry.pin_radius, 3.0);
+    assert_eq!(style.geometry.context_menu_text_style.size, Px(12.0));
 }
 
 #[test]
@@ -70,7 +70,7 @@ fn paint_uses_node_corner_radius_from_style() {
         s.interaction.frame_view_duration_ms = 0;
     });
 
-    let style = NodeGraphStyle::default().with_xyflow_default_node_style();
+    let style = NodeGraphStyle::default().with_compact_node_style();
     let mut canvas = NodeGraphCanvas::new(graph, view).with_style(style.clone());
 
     let snapshot = canvas.sync_view_state(&mut host);
@@ -81,7 +81,7 @@ fn paint_uses_node_corner_radius_from_style() {
     let mut services = NullServices::default();
     let scene = paint_once(&mut canvas, &mut host, &mut tree, &mut services, bounds);
 
-    let expected = Corners::all(Px(style.node_corner_radius));
+    let expected = Corners::all(Px(style.paint.node_corner_radius));
 
     for op in scene.ops().iter() {
         let SceneOp::Quad {

@@ -65,32 +65,32 @@ fn bounds() -> Rect {
 
 fn test_style() -> NodeGraphStyle {
     let mut style = NodeGraphStyle::default();
-    style.minimap_width = 200.0;
-    style.minimap_height = 120.0;
-    style.minimap_margin = 10.0;
-    style.minimap_world_padding = 0.0;
+    style.paint.minimap_width = 200.0;
+    style.paint.minimap_height = 120.0;
+    style.paint.minimap_margin = 10.0;
+    style.paint.minimap_world_padding = 0.0;
 
-    style.controls_button_size = 20.0;
-    style.controls_padding = 4.0;
-    style.controls_gap = 2.0;
-    style.controls_margin = 10.0;
+    style.paint.controls_button_size = 20.0;
+    style.paint.controls_padding = 4.0;
+    style.paint.controls_gap = 2.0;
+    style.paint.controls_margin = 10.0;
     style
 }
 
 fn minimap_rect(bounds: Rect, style: &NodeGraphStyle) -> Rect {
-    let w = style.minimap_width.max(40.0);
-    let h = style.minimap_height.max(30.0);
-    let margin = style.minimap_margin.max(0.0);
+    let w = style.paint.minimap_width.max(40.0);
+    let h = style.paint.minimap_height.max(30.0);
+    let margin = style.paint.minimap_margin.max(0.0);
     let x = bounds.origin.x.0 + (bounds.size.width.0 - margin - w).max(0.0);
     let y = bounds.origin.y.0 + (bounds.size.height.0 - margin - h).max(0.0);
     Rect::new(Point::new(Px(x), Px(y)), Size::new(Px(w), Px(h)))
 }
 
 fn controls_panel_rect(bounds: Rect, style: &NodeGraphStyle) -> Rect {
-    let margin = style.controls_margin.max(0.0);
-    let pad = style.controls_padding.max(0.0);
-    let gap = style.controls_gap.max(0.0);
-    let button = style.controls_button_size.max(10.0);
+    let margin = style.paint.controls_margin.max(0.0);
+    let pad = style.paint.controls_padding.max(0.0);
+    let gap = style.paint.controls_gap.max(0.0);
+    let button = style.paint.controls_button_size.max(10.0);
 
     let panel_w = button + 2.0 * pad;
     let items = 6.0_f32;
@@ -210,7 +210,7 @@ fn controls_overlay_button_click_requests_focus_to_canvas_node() {
 
     let style = test_style();
     let panel = controls_panel_rect(bounds(), &style);
-    let pad = style.controls_padding.max(0.0);
+    let pad = style.paint.controls_padding.max(0.0);
 
     let underlay_downs = Arc::new(AtomicUsize::new(0));
     let underlay = ui.create_node_retained(PointerDownCounter::new(underlay_downs.clone()));

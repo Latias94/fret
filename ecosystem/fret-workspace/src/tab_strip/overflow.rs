@@ -1,7 +1,10 @@
 use std::collections::HashMap;
 use std::sync::Arc;
 
-use fret_core::{Px, Rect};
+use fret_core::{Color, Px, Rect, TextStyle};
+use fret_ui_headless::tab_strip_overflow::compute_overflowed_tab_indices;
+use fret_ui_shadcn::{DropdownMenuEntry, DropdownMenuItem};
+use fret_ui::{ElementContext, UiHost};
 
 use super::WorkspaceTab;
 use crate::tab_drag::WorkspaceTabHitRect;
@@ -13,20 +16,80 @@ pub(crate) fn compute_overflowed_tab_ids(
     margin: Px,
 ) -> Vec<Arc<str>> {
     let by_id: HashMap<&str, Rect> = tab_rects.iter().map(|r| (r.id.as_ref(), r.rect)).collect();
+    compute_overflowed_tab_indices(
+        tabs,
+        |tab| by_id.get(tab.id.as_ref()).copied(),
+        viewport,
+        margin,
+    )
+    .into_iter()
+    .filter_map(|ix| tabs.get(ix).map(|tab| tab.id.clone()))
+    .collect()
+}
 
-    let view_left = viewport.origin.x.0 + margin.0;
-    let view_right = viewport.origin.x.0 + viewport.size.width.0 - margin.0;
-    let epsilon = 0.5f32;
+pub(crate) fn compute_overflow_menu_entries<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    root_test_id: Option<&Arc<str>>,
+    tabs: &[WorkspaceTab],
+    tab_rects: &[WorkspaceTabHitRect],
+    viewport: Option<Rect>,
+    is_overflowing: bool,
+    text_style: TextStyle,
+    inactive_fg: Color,
+) -> (Option<Arc<str>>, Vec<DropdownMenuEntry>) {
+    let button_test_id = root_test_id.map(|id| Arc::<str>::from(format!("{id}.overflow_button")));
 
-    tabs.iter()
-        .filter_map(|tab| {
-            let rect = by_id.get(tab.id.as_ref())?;
-            let tab_left = rect.origin.x.0;
-            let tab_right = rect.origin.x.0 + rect.size.width.0;
-            let overflowed = tab_left < view_left - epsilon || tab_right > view_right + epsilon;
-            overflowed.then(|| tab.id.clone())
+    let overflowed = viewport
+        .map(|viewport| compute_overflowed_tab_ids(tabs, tab_rects, viewport, Px(2.0)))
+        .unwrap_or_default();
+    let overflowed = if is_overflowing && overflowed.is_empty() {
+        tabs.iter().map(|tab| tab.id.clone()).collect()
+    } else {
+        overflowed
+    };
+
+    let entries = overflowed
+        .iter()
+        .filter_map(|id| {
+            let tab_ix = tabs.iter().position(|t| t.id.as_ref() == id.as_ref())?;
+            let tab = tabs.get(tab_ix)?;
+            let test_id = root_test_id.map(|root| {
+                Arc::<str>::from(format!("{root}.overflow_entry.{}", tab.id.as_ref()))
+            });
+            let close_test_id = root_test_id.map(|root| {
+                Arc::<str>::from(format!(
+                    "{root}.overflow_entry.{}.close",
+                    tab.id.as_ref()
+                ))
+            });
+
+            let close_slot = tab
+                .close_command
+                .as_ref()
+                .map(|_cmd| super::widgets::overflow_menu_close_slot(
+                    cx,
+                    text_style.clone(),
+                    inactive_fg,
+                    close_test_id,
+                ));
+
+            let mut item = DropdownMenuItem::new(tab.title.clone())
+                .close_on_select(true)
+                .on_select(tab.command.clone());
+            if let Some(id) = test_id {
+                item = item.test_id(id);
+            }
+            if let Some(close_cmd) = tab.close_command.clone() {
+                item = item.trailing_on_select(close_cmd);
+            }
+            if let Some(close_slot) = close_slot {
+                item = item.trailing(close_slot);
+            }
+            Some(DropdownMenuEntry::Item(item))
         })
-        .collect()
+        .collect::<Vec<_>>();
+
+    (button_test_id, entries)
 }
 
 #[cfg(test)]

@@ -73,10 +73,18 @@
     {
       "type": "wait_until",
       "predicate": {
-        "kind": "bounds_within_window",
-        "target": { "kind": "test_id", "id": "workspace-shell-pane-pane-a-tab-doc-a-2" },
-        "padding_px": 0.0,
-        "eps_px": 1.0
+        "kind": "workspace_tab_strip_active_overflow_is",
+        "overflow": true,
+        "pane_id": "pane-a"
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "workspace_tab_strip_active_visible_is",
+        "visible": true,
+        "pane_id": "pane-a"
       },
       "timeout_frames": 240
     },

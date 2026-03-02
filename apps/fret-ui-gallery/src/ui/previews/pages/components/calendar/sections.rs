@@ -3,6 +3,7 @@ use super::super::super::super::super::*;
 use super::models::CalendarHandles;
 use fret_ui::ThemeSnapshot;
 use fret_ui_headless::calendar_solar_hijri::SolarHijriMonth;
+use fret_ui_kit::LengthRefinement;
 
 pub(super) fn demo(cx: &mut ElementContext<'_, App>, models: &CalendarHandles) -> AnyElement {
     let month = models.caption_month.clone();
@@ -163,23 +164,38 @@ pub(super) fn presets(
     let presets_month = models.presets_month.clone();
     let presets_selected = models.presets_selected.clone();
 
-    let preset_button =
-        |cx: &mut ElementContext<'_, App>, label: &'static str, days: i64| -> AnyElement {
-            let month = presets_month.clone();
-            let selected = presets_selected.clone();
-            shadcn::Button::new(label)
-                .variant(shadcn::ButtonVariant::Outline)
-                .size(shadcn::ButtonSize::Sm)
-                .refine_layout(LayoutRefinement::default().flex_1())
-                .on_activate(Arc::new(move |host, _acx, _reason| {
-                    let new_date = today + time::Duration::days(days);
-                    let _ = host.models_mut().update(&selected, |v| *v = Some(new_date));
-                    let _ = host.models_mut().update(&month, |m| {
-                        *m = fret_ui_headless::calendar::CalendarMonth::from_date(new_date);
-                    });
-                }))
-                .into_element(cx)
-        };
+    let preset_button = |cx: &mut ElementContext<'_, App>,
+                         label: &'static str,
+                         test_id: &'static str,
+                         days: i64|
+     -> AnyElement {
+        let month = presets_month.clone();
+        let selected = presets_selected.clone();
+        shadcn::Button::new(label)
+            .variant(shadcn::ButtonVariant::Outline)
+            .size(shadcn::ButtonSize::Sm)
+            // Upstream shadcn uses `flex-1` (`flex: 1 1 0%`) here. Until Fret's flex-wrap
+            // intrinsic min-size behavior is fully aligned for composite controls, prefer an
+            // `auto` basis so the row wraps based on the button's content width instead of
+            // shrinking buttons down to near-zero.
+            .refine_layout(
+                LayoutRefinement::default()
+                    .flex_grow(1.0)
+                    // Prefer preserving the label's intrinsic width. In wrapped rows, shrinking
+                    // below content width clips the shadcn Button's `nowrap()` label.
+                    .flex_shrink(0.0)
+                    .basis(LengthRefinement::Auto),
+            )
+            .test_id(test_id)
+            .on_activate(Arc::new(move |host, _acx, _reason| {
+                let new_date = today + time::Duration::days(days);
+                let _ = host.models_mut().update(&selected, |v| *v = Some(new_date));
+                let _ = host.models_mut().update(&month, |m| {
+                    *m = fret_ui_headless::calendar::CalendarMonth::from_date(new_date);
+                });
+            }))
+            .into_element(cx)
+    };
 
     let calendar = shadcn::Calendar::new(presets_month.clone(), presets_selected.clone())
         .test_id_prefix("ui-gallery.calendar.presets")
@@ -189,16 +205,39 @@ pub(super) fn presets(
         .into_element(cx);
 
     let footer_buttons = vec![
-        preset_button(cx, "Today", 0),
-        preset_button(cx, "Tomorrow", 1),
-        preset_button(cx, "In 3 days", 3),
-        preset_button(cx, "In a week", 7),
-        preset_button(cx, "In 2 weeks", 14),
+        preset_button(cx, "Today", "ui-gallery-calendar-presets-button-today", 0),
+        preset_button(
+            cx,
+            "Tomorrow",
+            "ui-gallery-calendar-presets-button-tomorrow",
+            1,
+        ),
+        preset_button(
+            cx,
+            "In 3 days",
+            "ui-gallery-calendar-presets-button-in-3-days",
+            3,
+        ),
+        preset_button(
+            cx,
+            "In a week",
+            "ui-gallery-calendar-presets-button-in-a-week",
+            7,
+        ),
+        preset_button(
+            cx,
+            "In 2 weeks",
+            "ui-gallery-calendar-presets-button-in-2-weeks",
+            14,
+        ),
     ];
 
     let card = shadcn::Card::new(vec![
-        shadcn::CardContent::new(vec![calendar]).into_element(cx),
+        shadcn::CardContent::new(vec![calendar])
+            .size(shadcn::CardSize::Sm)
+            .into_element(cx),
         shadcn::CardFooter::new(footer_buttons)
+            .size(shadcn::CardSize::Sm)
             .border_top(true)
             .wrap(true)
             .gap(Space::N2)
@@ -207,12 +246,20 @@ pub(super) fn presets(
     .size(shadcn::CardSize::Sm)
     .refine_layout(
         LayoutRefinement::default()
+            .w(LengthRefinement::Auto)
             .max_w(MetricRef::Px(Px(300.0)))
             .min_w_0(),
     )
     .into_element(cx);
 
-    card
+    stack::hstack(
+        cx,
+        stack::HStackProps::default()
+            .justify_center()
+            .layout(LayoutRefinement::default().w_full().min_w_0()),
+        move |_cx| vec![card],
+    )
+    .test_id("ui-gallery-calendar-presets-card")
 }
 
 pub(super) fn date_and_time_picker(
@@ -261,8 +308,12 @@ pub(super) fn date_and_time_picker(
     .into_element(cx);
 
     let card = shadcn::Card::new(vec![
-        shadcn::CardContent::new(vec![calendar]).into_element(cx),
-        shadcn::CardFooter::new(vec![footer]).into_element(cx),
+        shadcn::CardContent::new(vec![calendar])
+            .size(shadcn::CardSize::Sm)
+            .into_element(cx),
+        shadcn::CardFooter::new(vec![footer])
+            .size(shadcn::CardSize::Sm)
+            .into_element(cx),
     ])
     .size(shadcn::CardSize::Sm)
     .refine_layout(LayoutRefinement::default().min_w_0())
@@ -352,7 +403,9 @@ pub(super) fn hijri(cx: &mut ElementContext<'_, App>, models: &CalendarHandles) 
     let selected = models.hijri_selected.clone();
 
     shadcn::CalendarHijri::new(month, selected)
+        .test_id_prefix("ui-gallery.calendar.hijri")
         .cell_size(Px(38.0))
         .refine_style(ChromeRefinement::default().border_1().rounded(Radius::Lg))
         .into_element(cx)
+        .test_id("ui-gallery-calendar-hijri-calendar")
 }

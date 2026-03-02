@@ -3,6 +3,7 @@ use std::sync::Arc;
 use crate::layout::SplitSide;
 use fret_core::{AppWindowId, Axis, Point, PointerId, Px, Rect};
 use fret_runtime::DragKindId;
+use fret_ui_headless::tab_strip_drop_target::{TabInsertionSide, compute_tab_drop_target_midpoint};
 
 /// Drag kind for cross-pane workspace tab drags.
 pub const DRAG_KIND_WORKSPACE_TAB: DragKindId = DragKindId(0x57535F544142); // "WS_TAB"
@@ -128,26 +129,19 @@ pub fn compute_tab_drop_target(
     dragged_tab: &str,
     rects: &[WorkspaceTabHitRect],
 ) -> Option<(Arc<str>, WorkspaceTabInsertionSide)> {
-    let mut filtered: Vec<&WorkspaceTabHitRect> = rects
-        .iter()
-        .filter(|r| r.id.as_ref() != dragged_tab)
-        .collect();
+    let (target_ix, side) = compute_tab_drop_target_midpoint(
+        pointer,
+        rects,
+        |r| r.rect,
+        |r| r.id.as_ref() == dragged_tab,
+    )?;
 
-    if filtered.is_empty() {
-        return None;
-    }
-
-    filtered.sort_by(|a, b| a.rect.origin.x.0.total_cmp(&b.rect.origin.x.0));
-
-    for r in &filtered {
-        let mid_x = r.rect.origin.x.0 + (r.rect.size.width.0 * 0.5);
-        if pointer.x.0 < mid_x {
-            return Some((r.id.clone(), WorkspaceTabInsertionSide::Before));
-        }
-    }
-
-    let last = filtered.last()?;
-    Some((last.id.clone(), WorkspaceTabInsertionSide::After))
+    let target = rects.get(target_ix)?.id.clone();
+    let side = match side {
+        TabInsertionSide::Before => WorkspaceTabInsertionSide::Before,
+        TabInsertionSide::After => WorkspaceTabInsertionSide::After,
+    };
+    Some((target, side))
 }
 
 #[derive(Debug, Default, Clone)]

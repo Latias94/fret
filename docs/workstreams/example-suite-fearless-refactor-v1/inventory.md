@@ -26,20 +26,49 @@ Legend:
 | components_gallery | Replace | `apps/fret-examples/src/components_gallery.rs`, `apps/fret-demo/src/bin/components_gallery.rs` | `fretboard dev native --bin components_gallery` | Keep behavior, but the registry/discovery story should unify. |
 | ui_gallery | Keep | `apps/fret-ui-gallery/src/*`, `apps/fret-demo/src/bin/ui_gallery.rs` | `cargo run -p fret-ui-gallery` | Treat as component catalog + conformance harness. |
 
+## Reference apps (planned)
+
+These are app-scale examples (Zed-like anchors). They are intentionally larger than cookbook
+examples and should be treated as product surfaces.
+
+| ID | State | Target anchors | Notes |
+|---|---|---|---|
+| workbench | Planned | `apps/workbench/` (TBD) | Editor-grade shell: docking + command palette + settings + file tree + doc surfaces. |
+| viz-studio | Planned | `apps/viz-studio/` (TBD) | Viz workspace: charts/plot + canvas + node graph (optional) + perf-friendly virtualization. |
+| shader-lab | Planned | `apps/shader-lab/` (TBD) | Renderer lab: built-in steps + CustomV1/V2/V3 tracks + budgets/capabilities surfaced. |
+
 ## Cookbook crate (current)
 
 | ID | State | Current anchors | Run (today) | Notes |
 |---|---|---|---|---|
 | cookbook.hello | Keep | `apps/fret-cookbook/examples/hello.rs` | `cargo run -p fret-cookbook --example hello` | Minimal “hello” runnable. |
 | cookbook.hello_counter | Keep | `apps/fret-cookbook/examples/hello_counter.rs` | `cargo run -p fret-cookbook --example hello_counter` | Small MVU + Model counter; stable `test_id` set. |
+| cookbook.simple_todo | Keep | `apps/fret-cookbook/examples/simple_todo.rs` | `cargo run -p fret-cookbook --example simple_todo` | Minimal todo list (MVU + keyed rows) intended for copy/paste. |
+| cookbook.overlay_basics | Keep | `apps/fret-cookbook/examples/overlay_basics.rs` | `cargo run -p fret-cookbook --example overlay_basics` | Minimal dialog example with stable `test_id` stamps. |
+| cookbook.commands_keymap_basics | Keep | `apps/fret-cookbook/examples/commands_keymap_basics.rs` | `cargo run -p fret-cookbook --example commands_keymap_basics` | Command registration + default keybinding + availability gating. |
+| cookbook.undo_basics | Keep | `apps/fret-cookbook/examples/undo_basics.rs` | `cargo run -p fret-cookbook --example undo_basics` | App-owned undo/redo history (`fret-undo`) wired to `edit.undo/edit.redo` commands. |
+| cookbook.text_input_basics | Keep | `apps/fret-cookbook/examples/text_input_basics.rs` | `cargo run -p fret-cookbook --example text_input_basics` | Input submit/clear via commands (Enter/Escape) + numeric semantics gates. |
+| cookbook.effects_layer_basics | Keep | `apps/fret-cookbook/examples/effects_layer_basics.rs` | `cargo run -p fret-cookbook --example effects_layer_basics` | Minimal effect layer example (Pixelate/Blur) with stable `test_id` stamps. |
+| cookbook.icons_and_assets_basics | Keep | `apps/fret-cookbook/examples/icons_and_assets_basics.rs` | `cargo run -p fret-cookbook --example icons_and_assets_basics` | Icon packs (lucide/radix) + semantic `ui.*` ids + file-based SVG/images via `fret-ui-assets`. |
+| cookbook.canvas_pan_zoom_basics | Keep | `apps/fret-cookbook/examples/canvas_pan_zoom_basics.rs` | `cargo run -p fret-cookbook --example canvas_pan_zoom_basics` | Pan/zoom wiring (`fret-canvas/ui`) + a tiny app-owned drag tool for one item. |
+| cookbook.virtual_list_basics | Keep | `apps/fret-cookbook/examples/virtual_list_basics.rs` | `cargo run -p fret-cookbook --example virtual_list_basics` | Keyed virtualization + items_revision + scroll-to-item, with a minimal diag smoke script. |
+| cookbook.async_inbox_basics | Keep | `apps/fret-cookbook/examples/async_inbox_basics.rs` | `cargo run -p fret-cookbook --example async_inbox_basics` | Portable async pattern: background task → inbox → runner drain, with cancellation + progress semantics gate. |
+| cookbook.markdown_and_code_basics | Keep | `apps/fret-cookbook/examples/markdown_and_code_basics.rs` | `cargo run -p fret-cookbook --example markdown_and_code_basics` | Markdown rendering + fenced code blocks (code-view/syntax) + copy affordance, with a minimal diag smoke script. |
+| cookbook.theme_switching_basics | Keep | `apps/fret-cookbook/examples/theme_switching_basics.rs` | `cargo run -p fret-cookbook --example theme_switching_basics` | Minimal theme switching (shadcn New York v4 Light/Dark) with stable `test_id` stamps. |
+| cookbook.docking_basics | Keep | `apps/fret-cookbook/examples/docking_basics.rs` | `cargo run -p fret-cookbook --example docking_basics` | Minimal docking surface: retained dock host + app-owned panel registry + runner `dock_op` wiring. |
+| cookbook.chart_interactions_basics | Keep | `apps/fret-cookbook/examples/chart_interactions_basics.rs` | `cargo run -p fret-cookbook --example chart_interactions_basics` | Minimal chart wiring (`fret-chart` + `delinea`): shared engine + retained canvas + app-driven zoom, with a deterministic diag smoke script. |
+| cookbook.gizmo_basics | Keep | `apps/fret-cookbook/examples/gizmo_basics.rs` | `cargo run -p fret-cookbook --example gizmo_basics` | `fret-gizmo` wiring + viewport-style transforms (native-first). |
+| cookbook.embedded_viewport_basics | Keep | `apps/fret-cookbook/examples/embedded_viewport_basics.rs` | `cargo run -p fret-cookbook --example embedded_viewport_basics` | Embedded viewport surface: offscreen render target + `ViewportInputEvent` forwarding. |
+| cookbook.external_texture_import_basics | Keep | `apps/fret-cookbook/examples/external_texture_import_basics.rs` | `cargo run -p fret-cookbook --example external_texture_import_basics` | Imported render target updates (`ImportedViewportRenderTarget`) + viewport presentation. |
+| cookbook.customv1_basics | Keep | `apps/fret-cookbook/examples/customv1_basics.rs` | `cargo run -p fret-cookbook --example customv1_basics` | Custom effect v1: register bounded WGSL at `on_gpu_ready` and apply `EffectStep::CustomV1`. |
 
 ## Interop + renderer “high ceiling” mapping
 
 | ID | State | Current anchors | Run (today) | Notes |
 |---|---|---|---|---|
 | docking_arbitration | Maint | `apps/fret-examples/src/docking_arbitration_demo.rs`, `apps/fret-demo/src/bin/docking_arbitration_demo.rs` | `fretboard dev native --bin docking_arbitration_demo` | Editor-grade regression harness; keep out of onboarding. |
-| embedded_viewport | Move | `apps/fret-examples/src/embedded_viewport_demo.rs`, `apps/fret-demo/src/bin/embedded_viewport_demo.rs` | `fretboard dev native --bin embedded_viewport_demo` | Candidate for Interop Track cookbook. |
-| external_texture_import | Keep | `apps/fret-examples/src/external_texture_imports_demo.rs`, `apps/fret-demo/src/bin/external_texture_imports_demo.rs`, web: `apps/fret-examples/src/external_texture_imports_web_demo.rs` | native: `fretboard dev native --bin external_texture_imports_demo`; web: `fretboard dev web --demo external_texture_imports_web_demo` | Keep as canonical interop surface (native + web). |
+| embedded_viewport | Keep | `apps/fret-cookbook/examples/embedded_viewport_basics.rs` (cookbook), ref: `apps/fret-examples/src/embedded_viewport_demo.rs` | `cargo run -p fret-cookbook --example embedded_viewport_basics` | Cookbook is the canonical entry; keep the larger demo as a maintainer-grade reference. |
+| external_texture_import | Keep | native cookbook: `apps/fret-cookbook/examples/external_texture_import_basics.rs`; reference demos: `apps/fret-examples/src/external_texture_imports_demo.rs` + web `apps/fret-examples/src/external_texture_imports_web_demo.rs` | native: `cargo run -p fret-cookbook --example external_texture_import_basics`; web: `fretboard dev web --demo external_texture_imports_web_demo` | Cookbook is the canonical entry; keep the larger demos as maintainer-grade references (and web coverage). |
 | liquid_glass | Maint | `apps/fret-examples/src/liquid_glass_demo.rs`, `apps/fret-demo/src/bin/liquid_glass_demo.rs` | `fretboard dev native --bin liquid_glass_demo` | Renderer lab; likely stays native-first initially. |
 | custom_effect_v1/v2/v3 | Maint | `apps/fret-examples/src/custom_effect_*`, `docs/workstreams/renderer-effects-semantics-and-extensibility-v1/*` | native/web demos exist (see `apps/fret-demo-web/src/wasm.rs`) | Keep as “Labs”; gate by capabilities + budgets. |
 

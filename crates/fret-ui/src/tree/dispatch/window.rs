@@ -755,9 +755,48 @@ impl<H: UiHost> UiTree<H> {
                 return None;
             }
             let target = crate::internal_drag::route(app, window, drag.kind)?;
-            self.node_in_any_layer(target, &active_layers)
-                .then_some(target)
+            // Cross-window internal drags are runner-routed and rely on a stable, per-window
+            // anchor node. Do not gate the route target on the current "active layer" set:
+            // modal barriers/overlays can temporarily deactivate the base layer while a dock drag
+            // is in flight (ADR 0072), but docking still needs `InternalDrag` hover/drop events.
+            //
+            // Only require that the node still exists in the tree (mechanism-only contract).
+            self.nodes.get(target).is_some().then_some(target)
         })();
+        if std::env::var_os("FRET_INTERNAL_DRAG_ROUTE_TRACE").is_some_and(|v| !v.is_empty())
+            && let Some(window) = self.window
+            && let Event::InternalDrag(e) = event
+            && matches!(e.kind, fret_core::InternalDragKind::Drop)
+        {
+            let (drag_kind, cross_window_hover, route, route_in_active_layer) =
+                if let Some(drag) = app.drag(e.pointer_id) {
+                    let route = crate::internal_drag::route(app, window, drag.kind);
+                    let route_in_active_layer =
+                        route.is_some_and(|node| self.node_in_any_layer(node, &active_layers));
+                    (
+                        Some(drag.kind),
+                        drag.cross_window_hover,
+                        route,
+                        route_in_active_layer,
+                    )
+                } else {
+                    (None, false, None, false)
+                };
+            tracing::info!(
+                window = ?window,
+                pointer_id = ?e.pointer_id,
+                kind = ?e.kind,
+                position = ?e.position,
+                modifiers = ?e.modifiers,
+                drag_kind = ?drag_kind,
+                cross_window_hover = cross_window_hover,
+                route = ?route,
+                route_in_active_layer = route_in_active_layer,
+                internal_drag_target = ?internal_drag_target,
+                last_internal_drag_target = ?self.last_internal_drag_target,
+                "internal drag route trace"
+            );
+        }
 
         if let Some(window) = self.window
             && matches!(event, Event::Pointer(_))
@@ -799,17 +838,38 @@ impl<H: UiHost> UiTree<H> {
                     });
 
                     if !foreign_capture_active && !candidate.moved {
-                        let hit_root = hit.and_then(|n| self.node_root(n));
-                        let hit_is_inside_layer = hit_root == Some(layer.root);
+                        let hit_is_inside_layer = hit.is_some_and(|hit| {
+                            self.is_reachable_from_root_via_children(layer.root, hit)
+                        });
                         let hit_is_inside_branch = hit.is_some_and(|hit| {
                             layer
                                 .pointer_down_outside_branches
                                 .iter()
                                 .copied()
-                                .any(|branch| self.is_descendant(branch, hit))
+                                .any(|branch| self.is_reachable_from_root_via_children(branch, hit))
                         });
 
                         if !hit_is_inside_layer && !hit_is_inside_branch {
+                            let (window, root_element, tick_id) = if let Some(window) = self.window
+                                && let Some(root_element) =
+                                    self.nodes.get(candidate.root).and_then(|n| n.element)
+                            {
+                                let tick_id = app.tick_id();
+                                crate::elements::with_element_state(
+                                    app,
+                                    window,
+                                    root_element,
+                                    crate::action::DismissibleLastDismissRequest::default,
+                                    |st| {
+                                        st.tick_id = tick_id;
+                                        st.reason = None;
+                                        st.default_prevented = false;
+                                    },
+                                );
+                                (Some(window), Some(root_element), Some(tick_id))
+                            } else {
+                                (None, None, None)
+                            };
                             self.dispatch_event_to_node_chain_observer(
                                 app,
                                 services,
@@ -818,6 +878,33 @@ impl<H: UiHost> UiTree<H> {
                                 &candidate.down_event,
                                 &mut invalidation_visited,
                             );
+                            let mut clear_focus = true;
+                            if let (Some(window), Some(root_element), Some(tick_id)) =
+                                (window, root_element, tick_id)
+                            {
+                                let prevented = crate::elements::with_element_state(
+                                    app,
+                                    window,
+                                    root_element,
+                                    crate::action::DismissibleLastDismissRequest::default,
+                                    |st| {
+                                        st.tick_id == tick_id
+                                            && matches!(
+                                                st.reason,
+                                                Some(
+                                                    crate::action::DismissReason::OutsidePress { .. }
+                                                )
+                                            )
+                                            && st.default_prevented
+                                    },
+                                );
+                                if prevented {
+                                    clear_focus = false;
+                                }
+                            }
+                            if clear_focus {
+                                self.set_focus(None);
+                            }
                             needs_redraw = true;
                             suppress_touch_up_outside_dispatch = candidate.consume;
                         }
@@ -1289,10 +1376,12 @@ impl<H: UiHost> UiTree<H> {
                                 }
                                 self.focus = Some(focus);
                                 self.mark_invalidation(focus, Invalidation::Paint);
-                                // Avoid scrolling during pointer-down sequences (e.g. click):
+                                // Avoid scrolling during pointer-driven focus changes:
                                 // programmatic scroll-to-focus can move content under a stationary cursor,
-                                // causing pressable activation to fail on pointer-up.
-                                if !matches!(event, Event::Pointer(PointerEvent::Down { .. })) {
+                                // causing pointer activation to miss/cancel (especially for nested pressables).
+                                //
+                                // Keyboard traversal still scrolls focused nodes into view.
+                                if !matches!(event, Event::Pointer(_) | Event::PointerCancel(_)) {
                                     self.scroll_node_into_view(app, focus);
                                 }
                             } else if requested_focus.is_some() {
@@ -1474,7 +1563,17 @@ impl<H: UiHost> UiTree<H> {
                                 }
                                 self.focus = Some(focus);
                                 self.mark_invalidation(focus, Invalidation::Paint);
-                                self.scroll_node_into_view(app, focus);
+                                // Avoid scrolling during pointer-driven focus changes:
+                                // programmatic scroll-to-focus can move content under a stationary cursor,
+                                // causing pointer activation to miss/cancel (especially for nested pressables).
+                                //
+                                // Keyboard traversal still scrolls focused nodes into view.
+                                if !matches!(
+                                    event_for_node,
+                                    Event::Pointer(_) | Event::PointerCancel(_)
+                                ) {
+                                    self.scroll_node_into_view(app, focus);
+                                }
                             } else if requested_focus.is_some() {
                                 focus_requested = true;
                             }
@@ -1961,7 +2060,14 @@ impl<H: UiHost> UiTree<H> {
                     }
                     self.focus = Some(focus);
                     self.mark_invalidation(focus, Invalidation::Paint);
-                    self.scroll_node_into_view(app, focus);
+                    // Avoid scrolling during pointer-driven focus changes:
+                    // programmatic scroll-to-focus can move content under a stationary cursor,
+                    // causing pointer activation to miss/cancel (especially for nested pressables).
+                    //
+                    // Keyboard traversal still scrolls focused nodes into view.
+                    if !matches!(event, Event::Pointer(_) | Event::PointerCancel(_)) {
+                        self.scroll_node_into_view(app, focus);
+                    }
                 } else if requested_focus.is_some() {
                     focus_requested = true;
                 }

@@ -1,0 +1,27 @@
+{
+  "schema_version": 2,
+  "meta": {
+    "name": "Cookbook: hello baseline",
+    "tags": ["cookbook", "hello", "smoke", "screenshots"],
+    "required_capabilities": ["diag.script_v2", "diag.screenshot_png"],
+    "target_hints": [
+      "Waits for the hello example root to exist.",
+      "Captures a baseline screenshot + bundle."
+    ]
+  },
+  "steps": [
+    { "type": "reset_diagnostics" },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "cookbook.hello.root" }
+      },
+      "timeout_frames": 600
+    },
+    { "type": "wait_frames", "n": 20 },
+    { "type": "capture_screenshot", "label": "cookbook-hello-baseline" },
+    { "type": "capture_bundle", "label": "cookbook-hello-baseline" }
+  ]
+}
+

@@ -33,6 +33,8 @@ Gates:
 
 - `nextest` unit test: velocity decays to ~0 and settles within bounded frames.
 - `diag` script: swipe → post-release pixel change continues for N frames.
+- `diag` script: fast vs slow duration settles at different speeds
+  (`tools/diag-scripts/ui-gallery/carousel/ui-gallery-carousel-duration-fast-vs-slow-settling-gate.json`).
 
 ## M2 — API + events (select/reInit)
 
@@ -57,6 +59,11 @@ Outcome:
 
 - `loop=true` is no longer “wrap selection”; it is a continuous loop engine.
 
+Follow-ups (deeper parity):
+
+- Port Embla `SlideLooper` “gap fitting” semantics for non-uniform slide sizes and stable recycling.
+- Implement Embla `canLoop` downgrade behavior (loop requested, but disabled when content cannot loop).
+
 Risks / notes:
 
 - Must avoid duplicate semantics/test ids.
@@ -65,6 +72,8 @@ Risks / notes:
 Gates:
 
 - `diag` script: repeated swipes never clamp at ends; continuity maintained.
+- `diag` script: loop requested but cannotLoop downgrades to non-loop (no wrap)
+  (`tools/diag-scripts/ui-gallery/carousel/ui-gallery-carousel-loop-downgrade-cannot-loop-gate.json`).
 
 ## M4 — SlidesInView + focus + breakpoints
 

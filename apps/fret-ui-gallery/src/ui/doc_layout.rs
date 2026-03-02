@@ -6,14 +6,27 @@ pub(in crate::ui) struct DocSection {
     pub description: Vec<&'static str>,
     pub preview: AnyElement,
     pub code: Option<DocCodeBlock>,
+    pub tabs_sizing: DocTabsSizing,
     pub max_w: Px,
     pub test_id_prefix: Option<Arc<str>>,
     pub shell: bool,
 }
 
+/// Layout contract for the docs scaffold's Preview/Code tab panels.
+///
+/// - `Intrinsic` keeps tab panels content-sized by default (shrink-wrap).
+/// - `FillRemaining` allows `TabsContent` to fill remaining main-axis space when the tabs root is
+///   laid out under a definite-size budget.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub(in crate::ui) enum DocTabsSizing {
+    #[default]
+    Intrinsic,
+    FillRemaining,
+}
+
 pub(in crate::ui) struct DocCodeBlock {
     pub language: &'static str,
-    pub code: &'static str,
+    pub code: Arc<str>,
 }
 
 impl DocSection {
@@ -24,6 +37,7 @@ impl DocSection {
             description: Vec::new(),
             preview,
             code: None,
+            tabs_sizing: DocTabsSizing::default(),
             max_w: Px(820.0),
             test_id_prefix: None,
             shell: true,
@@ -48,8 +62,49 @@ impl DocSection {
         self
     }
 
-    pub(in crate::ui) fn code(mut self, language: &'static str, code: &'static str) -> Self {
-        self.code = Some(DocCodeBlock { language, code });
+    pub(in crate::ui) fn code(mut self, language: &'static str, code: impl Into<Arc<str>>) -> Self {
+        self.code = Some(DocCodeBlock {
+            language,
+            code: code.into(),
+        });
+        self
+    }
+
+    pub(in crate::ui) fn code_rust(self, code: impl Into<Arc<str>>) -> Self {
+        self.code("rust", code)
+    }
+
+    pub(in crate::ui) fn code_from_file(self, language: &'static str, file: &'static str) -> Self {
+        self.code(language, Arc::<str>::from(file))
+    }
+
+    pub(in crate::ui) fn code_rust_from_file(self, file: &'static str) -> Self {
+        self.code_from_file("rust", file)
+    }
+
+    pub(in crate::ui) fn code_from_file_region(
+        self,
+        language: &'static str,
+        file: &'static str,
+        region: &'static str,
+    ) -> Self {
+        let sliced = slice_code_region(file, region)
+            .unwrap_or_else(|| format!("// region `{region}` not found\n{file}"));
+        self.code(language, Arc::<str>::from(sliced))
+    }
+
+    pub(in crate::ui) fn code_rust_from_file_region(
+        self,
+        file: &'static str,
+        region: &'static str,
+    ) -> Self {
+        self.code_from_file_region("rust", file, region)
+    }
+
+    /// Controls whether Preview/Code tabs should shrink-wrap their content (default) or fill any
+    /// available main-axis space under definite-size ancestors (Tailwind-like `flex-1`).
+    pub(in crate::ui) fn tabs_sizing(mut self, sizing: DocTabsSizing) -> Self {
+        self.tabs_sizing = sizing;
         self
     }
 
@@ -370,6 +425,7 @@ fn render_section(cx: &mut ElementContext<'_, App>, section: DocSection) -> AnyE
         description,
         preview,
         code,
+        tabs_sizing,
         max_w,
         test_id_prefix,
         shell,
@@ -390,16 +446,29 @@ fn render_section(cx: &mut ElementContext<'_, App>, section: DocSection) -> AnyE
     let preview = preview_shell;
 
     let content = match code {
-        Some(code) => preview_code_tabs(cx, test_id_prefix.as_deref(), preview, max_w, code),
+        Some(code) => preview_code_tabs(
+            cx,
+            test_id_prefix.as_deref(),
+            preview,
+            max_w,
+            code,
+            tabs_sizing,
+        ),
         None => preview,
     };
 
+    let section_max_w = Px(max_w.0.max(Px(820.0).0));
     let section_body = stack::vstack(
         cx,
         stack::VStackProps::default()
             .gap(Space::N2)
             .items_start()
-            .layout(LayoutRefinement::default().w_full().min_w_0().max_w(max_w)),
+            .layout(
+                LayoutRefinement::default()
+                    .w_full()
+                    .min_w_0()
+                    .max_w(section_max_w),
+            ),
         move |cx| {
             let mut out: Vec<AnyElement> = Vec::with_capacity(3);
             let title_el = section_title(cx, title);
@@ -522,28 +591,38 @@ fn preview_code_tabs(
     preview: AnyElement,
     max_w: Px,
     code: DocCodeBlock,
+    tabs_sizing: DocTabsSizing,
 ) -> AnyElement {
     let code_shell = code_block_shell(cx, test_id_prefix, max_w, code);
-    let code_el = centered(cx, code_shell);
+    let code_el = code_shell;
+
+    let wrap_panel = |cx: &mut ElementContext<'_, App>, body: AnyElement| {
+        stack::hstack(
+            cx,
+            stack::HStackProps::default()
+                .items_start()
+                .justify_center()
+                .layout(LayoutRefinement::default().w_full().min_w_0()),
+            move |_cx| vec![body],
+        )
+    };
 
     let base = shadcn::Tabs::uncontrolled(Some("preview"))
-        // `shadcn/ui` styles `TabsContent` with `flex-1`. In the UI gallery docs scaffold, tab
-        // roots often live in auto-sized stacks; keep the docs layout tight by default.
-        .content_fill_remaining(false)
+        .content_fill_remaining(matches!(tabs_sizing, DocTabsSizing::FillRemaining))
         .refine_layout(LayoutRefinement::default().w_full().min_w_0());
 
     let tabs = if let Some(prefix) = test_id_prefix {
         let tabs_test_id = format!("{prefix}-tabs");
         base.test_id(tabs_test_id.clone()).items([
-            shadcn::TabsItem::new("preview", "Preview", [preview])
+            shadcn::TabsItem::new("preview", "Preview", [wrap_panel(cx, preview)])
                 .trigger_test_id(format!("{tabs_test_id}-trigger-preview")),
-            shadcn::TabsItem::new("code", "Code", [code_el])
+            shadcn::TabsItem::new("code", "Code", [wrap_panel(cx, code_el)])
                 .trigger_test_id(format!("{tabs_test_id}-trigger-code")),
         ])
     } else {
         base.items([
-            shadcn::TabsItem::new("preview", "Preview", [preview]),
-            shadcn::TabsItem::new("code", "Code", [code_el]),
+            shadcn::TabsItem::new("preview", "Preview", [wrap_panel(cx, preview)]),
+            shadcn::TabsItem::new("code", "Code", [wrap_panel(cx, code_el)]),
         ])
     };
 
@@ -556,7 +635,7 @@ fn code_block_shell(
     max_w: Px,
     block: DocCodeBlock,
 ) -> AnyElement {
-    let code: Arc<str> = Arc::from(block.code);
+    let code: Arc<str> = block.code;
     let copy = match test_id_prefix {
         Some(prefix) => ui_ai::CodeBlockCopyButton::new(code.clone())
             .test_id(format!("{prefix}-code-block-copy"))
@@ -571,6 +650,7 @@ fn code_block_shell(
         .show_language(true)
         .show_line_numbers(true)
         .max_height(Px(400.0))
+        .windowed_lines(true)
         .header_right([copy])
         .into_element(cx);
 
@@ -581,11 +661,49 @@ fn code_block_shell(
     let props = cx.with_theme(|theme| {
         decl_style::container_props(
             theme,
-            ChromeRefinement::default(),
+            // Match the Preview tab's comfortable padding so Code tabs don't look "flush-left"
+            // compared to the demo shell.
+            ChromeRefinement::default().p(Space::N4),
             LayoutRefinement::default().w_full().min_w_0().max_w(max_w),
         )
     });
     cx.container(props, move |_cx| [code_block])
+}
+
+fn slice_code_region(code: &str, region: &str) -> Option<String> {
+    let mut inside = false;
+    let mut out: Vec<&str> = Vec::new();
+
+    for line in code.lines() {
+        let trimmed = line.trim();
+        if let Some(name) = trimmed.strip_prefix("// region:") {
+            inside = name.trim() == region;
+            continue;
+        }
+        if trimmed == "// endregion" {
+            if inside {
+                break;
+            }
+            continue;
+        }
+        if let Some(name) = trimmed.strip_prefix("// endregion:") {
+            if inside && (name.trim().is_empty() || name.trim() == region) {
+                break;
+            }
+            continue;
+        }
+        if inside {
+            out.push(line);
+        }
+    }
+
+    if out.is_empty() {
+        return None;
+    }
+
+    let mut joined = out.join("\n");
+    joined.push('\n');
+    Some(joined)
 }
 
 fn section_title(cx: &mut ElementContext<'_, App>, title: &'static str) -> AnyElement {

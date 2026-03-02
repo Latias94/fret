@@ -26,6 +26,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
             b.add_u64(base_key.draw_order.hi);
             b.add_u64(base_key.presenter_rev);
             b.add_u64(base_key.edge_types_rev);
+            b.add_u64(base_key.overrides_rev);
             b.add_u64(style_key);
             b.add_f32_bits(nodes_cache_tile_size_canvas);
             b.add_u32(cache_rect.origin.x.0.to_bits());
@@ -94,10 +95,11 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                 cx.scene.push(SceneOp::Quad {
                     order: DrawOrder(1),
                     rect,
-                    background: fret_core::Paint::Solid(self.style.group_background).into(),
+                    background: fret_core::Paint::Solid(self.style.paint.group_background).into(),
 
                     border: Edges::all(Px(1.0 / zoom)),
-                    border_paint: fret_core::Paint::Solid(self.style.node_border_selected).into(),
+                    border_paint: fret_core::Paint::Solid(self.style.paint.node_border_selected)
+                        .into(),
 
                     corner_radii: Corners::all(group_corner),
                 });

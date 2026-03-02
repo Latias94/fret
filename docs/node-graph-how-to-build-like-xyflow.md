@@ -85,6 +85,22 @@ custom controls) while keeping the canvas itself policy-light.
 
 Use `NodeGraphEdgeTypes` to register custom edge path builders and keep hit-testing deterministic.
 
+### Styling (theme tokens + UI-only chrome hints)
+
+XyFlow uses a mix of global CSS variables and per-entity `node.style` / `edge.style` overrides.
+
+In `fret-node`, styling is intentionally split:
+
+- **Base tokens**: `NodeGraphStyle` (typed tokens derived from the app theme).
+- **Paint-only per-entity chrome**: `NodeGraphSkin` (node/edge/port chrome hints).
+- **Geometry-affecting overrides** (M2): a planned, UI-only, type-safe surface for per-node/per-edge
+  layout knobs (kept out of serialized `Graph`).
+
+Contract / guidance:
+
+- `docs/node-graph-addons-theming.md`
+- `docs/workstreams/fret-node-style-skinning-v2/README.md`
+
 ## Built-in add-ons (UI overlays)
 
 - Panels composition: `ui::NodeGraphPanel` (XyFlow `<Panel />` equivalent)

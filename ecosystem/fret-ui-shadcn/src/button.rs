@@ -107,9 +107,13 @@ pub enum ButtonVariant {
 pub enum ButtonSize {
     #[default]
     Default,
+    /// Upstream shadcn/ui v4: `size="xs"` (`h-6`, `text-xs`).
+    Xs,
     Sm,
     Lg,
     Icon,
+    /// Upstream shadcn/ui v4: `size="icon-xs"` (`size-6`).
+    IconXs,
     IconSm,
     IconLg,
 }
@@ -118,9 +122,11 @@ impl ButtonSize {
     fn component_size(self) -> ComponentSize {
         match self {
             Self::Default => ComponentSize::Medium,
+            Self::Xs => ComponentSize::XSmall,
             Self::Sm => ComponentSize::Small,
             Self::Lg => ComponentSize::Large,
             Self::Icon => ComponentSize::Medium,
+            Self::IconXs => ComponentSize::XSmall,
             Self::IconSm => ComponentSize::Small,
             Self::IconLg => ComponentSize::Large,
         }
@@ -648,7 +654,7 @@ impl Button {
             let test_id = self.test_id.clone();
             let is_icon_button = matches!(
                 self.size,
-                ButtonSize::Icon | ButtonSize::IconSm | ButtonSize::IconLg
+                ButtonSize::Icon | ButtonSize::IconXs | ButtonSize::IconSm | ButtonSize::IconLg
             );
             if is_icon_button {
                 let icon = size.icon_button_size(Theme::global(&*cx.app));
@@ -888,7 +894,15 @@ impl Button {
                                     + usize::from(trailing_icon.is_some()),
                             );
 
-                            let icon_px = leading_icon_size.unwrap_or(Px(16.0));
+                            let icon_px = leading_icon_size.unwrap_or_else(|| match size {
+                                // Upstream shadcn/ui v4:
+                                // - `xs` / `icon-xs` => `size-3` (12px)
+                                // - `sm` => `size-3.5` (14px)
+                                // - default => `size-4` (16px)
+                                ComponentSize::XSmall => Px(12.0),
+                                ComponentSize::Small => Px(14.0),
+                                ComponentSize::Medium | ComponentSize::Large => Px(16.0),
+                            });
                             if let Some(icon) = leading_icon.clone() {
                                 let icon = crate::icon::icon_with(cx, icon, Some(icon_px), None);
                                 content.push(crate::test_id::attach_test_id_suffix(
@@ -1791,10 +1805,10 @@ mod tests {
             else {
                 continue;
             };
-            let fret_core::Paint::Solid(background) = background.paint else {
+            let fret_core::Paint::Solid(bg_color) = background.paint else {
                 continue;
             };
-            if background.a < 0.5 {
+            if bg_color.a < 0.5 {
                 continue;
             }
             let score = overlap_area(*rect, button_bounds);
@@ -1803,7 +1817,7 @@ mod tests {
             }
             let replace = best_quad.is_none_or(|(_, _, best)| score > best);
             if replace {
-                best_quad = Some((*rect, background, score));
+                best_quad = Some((*rect, bg_color, score));
             }
         }
 

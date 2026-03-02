@@ -731,6 +731,8 @@ include!("ui_diagnostics/debug_snapshot_impl.rs");
 
 include!("ui_diagnostics/docking_diagnostics.rs");
 
+include!("ui_diagnostics/workspace_diagnostics.rs");
+
 include!("ui_diagnostics/viewport_input_types.rs");
 
 include!("ui_diagnostics/overlay_synthesis_diagnostics.rs");
@@ -1063,8 +1065,10 @@ mod tests {
             render_text,
             render_text_font_trace,
             known_windows,
+            known_windows.len().min(u32::MAX as usize) as u32,
             None,
             docking,
+            None,
             None,
             text_font_stack_key_stable_frames,
             font_catalog_populated,

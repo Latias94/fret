@@ -135,6 +135,11 @@ struct DockingArbitrationHarnessRoot {
     float_zone_anchor: fret_core::NodeId,
     viewport_split_handle_anchor: fret_core::NodeId,
     floating_title_bar_anchor: fret_core::NodeId,
+    tab_drop_end_anchor: fret_core::NodeId,
+    tab_overflow_button_anchor: fret_core::NodeId,
+    tab_overflow_menu_row_1_anchor: fret_core::NodeId,
+    dock_hint_inner_anchors: Vec<(DropZone, fret_core::NodeId)>,
+    dock_hint_outer_anchors: Vec<(DropZone, fret_core::NodeId)>,
 }
 
 impl<H: fret_ui::UiHost> Widget<H> for DockingArbitrationHarnessRoot {
@@ -232,7 +237,6 @@ impl<H: fret_ui::UiHost> Widget<H> for DockingArbitrationHarnessRoot {
                         }
                         None
                     }
-                    _ => None,
                 }
             }
 
@@ -369,6 +373,197 @@ impl<H: fret_ui::UiHost> Widget<H> for DockingArbitrationHarnessRoot {
         };
         let _ = cx.layout_in(self.float_zone_anchor, float_zone_anchor_rect);
 
+        let hidden = Rect::new(
+            Point::new(Px(-1_000_000.0), Px(-1_000_000.0)),
+            Size::new(
+                DOCKING_ARBITRATION_DRAG_ANCHOR_SIZE,
+                DOCKING_ARBITRATION_DRAG_ANCHOR_SIZE,
+            ),
+        );
+
+        let hint_candidates = cx
+            .app
+            .global::<fret_runtime::WindowInteractionDiagnosticsStore>()
+            .and_then(|store| store.docking_latest_for_window(self.window))
+            .and_then(|d| d.dock_drop_resolve.as_ref())
+            .map(|d| d.candidates.clone())
+            .unwrap_or_default();
+        let fallback_hint_rect = Rect::new(
+            Point::new(
+                Px(bounds.origin.x.0 + bounds.size.width.0 * 0.5 - half),
+                Px(bounds.origin.y.0 + bounds.size.height.0 * 0.5 - half),
+            ),
+            Size::new(
+                DOCKING_ARBITRATION_DRAG_ANCHOR_SIZE,
+                DOCKING_ARBITRATION_DRAG_ANCHOR_SIZE,
+            ),
+        );
+
+        let (overflow_button_anchor_rect, overflow_row_1_anchor_rect, tab_drop_end_anchor_rect) = (|| {
+            use fret_core::{DockGraph, DockNode, DockNodeId, PanelKey};
+
+            fn tabs_rect_for_panel(
+                graph: &DockGraph,
+                node: DockNodeId,
+                rect: Rect,
+                split_handle_gap: Px,
+                split_handle_hit_thickness: Px,
+                panel: &PanelKey,
+            ) -> Option<Rect> {
+                match graph.node(node)? {
+                    DockNode::Tabs { tabs, .. } => tabs.iter().any(|p| p == panel).then_some(rect),
+                    DockNode::Floating { child } => tabs_rect_for_panel(
+                        graph,
+                        *child,
+                        rect,
+                        split_handle_gap,
+                        split_handle_hit_thickness,
+                        panel,
+                    ),
+                    DockNode::Split {
+                        axis,
+                        children,
+                        fractions,
+                    } => {
+                        let min_px = vec![Px(0.0); children.len()];
+                        let computed = resizable::compute_layout(
+                            *axis,
+                            rect,
+                            children.len(),
+                            fractions,
+                            split_handle_gap,
+                            split_handle_hit_thickness,
+                            &min_px,
+                        );
+                        for (child, &child_rect) in children.iter().zip(computed.panel_rects.iter())
+                        {
+                            if let Some(found) = tabs_rect_for_panel(
+                                graph,
+                                *child,
+                                child_rect,
+                                split_handle_gap,
+                                split_handle_hit_thickness,
+                                panel,
+                            ) {
+                                return Some(found);
+                            }
+                        }
+                        None
+                    }
+                }
+            }
+
+            let dock = cx.app.global::<DockManager>()?;
+            let root = dock.graph.window_root(self.window)?;
+
+            // Anchor overflow geometry to the left viewport's tabs container. Most arbitration
+            // scripts build tab overflow by merging additional tabs into that leaf.
+            let left_panel = PanelKey::new("demo.viewport.left");
+            let tabs_rect = tabs_rect_for_panel(
+                &dock.graph,
+                root,
+                bounds,
+                split_handle_gap,
+                split_handle_hit_thickness,
+                &left_panel,
+            )?;
+            let (tabs_node, _active) = dock.graph.find_panel_in_window(self.window, &left_panel)?;
+            let tab_count = match dock.graph.node(tabs_node)? {
+                DockNode::Tabs { tabs, .. } => tabs.len(),
+                _ => 0,
+            };
+            if tab_count == 0 {
+                return None;
+            }
+
+            // Duplicate the docking overflow geometry formula in order to keep scripted anchors
+            // stable without reaching into crate-private helpers.
+            let theme = cx.theme().snapshot();
+            let tab_bar = Rect {
+                origin: tabs_rect.origin,
+                size: Size::new(
+                    tabs_rect.size.width,
+                    Px(DOCKING_ARBITRATION_TAB_BAR_H.0.min(tabs_rect.size.height.0)),
+                ),
+            };
+            let pad = theme.metric_token("metric.padding.sm").0.max(0.0);
+            let button_size = (tab_bar.size.height.0 * 0.80).clamp(18.0, 24.0);
+            let button_rect = Rect::new(
+                Point::new(
+                    Px(tab_bar.origin.x.0 + tab_bar.size.width.0 - pad - button_size),
+                    Px(tab_bar.origin.y.0 + (tab_bar.size.height.0 - button_size) * 0.5),
+                ),
+                Size::new(Px(button_size), Px(button_size)),
+            );
+
+            let menu_width = (tab_bar.size.width.0 * 0.55).clamp(180.0, 320.0);
+            let rows = (tab_count.clamp(1, 10)) as f32;
+            let menu_height = (rows * tab_bar.size.height.0).clamp(tab_bar.size.height.0 * 2.0, 320.0);
+            let menu_rect = Rect::new(
+                Point::new(
+                    Px(tab_bar.origin.x.0 + tab_bar.size.width.0 - pad - menu_width),
+                    Px(tab_bar.origin.y.0 + tab_bar.size.height.0 + pad),
+                ),
+                Size::new(Px(menu_width), Px(menu_height)),
+            );
+            let row_h = Px(tab_bar.size.height.0.max(0.0));
+            let row_1_rect = Rect::new(
+                Point::new(menu_rect.origin.x, Px(menu_rect.origin.y.0 + row_h.0)),
+                Size::new(menu_rect.size.width, row_h),
+            );
+
+            let button_cx = button_rect.origin.x.0 + button_rect.size.width.0 * 0.5;
+            let button_cy = button_rect.origin.y.0 + button_rect.size.height.0 * 0.5;
+
+            // Prefer clicking towards the left side of the row to avoid the trailing close
+            // affordance.
+            let row_cx = row_1_rect.origin.x.0 + row_1_rect.size.width.0 * 0.25;
+            let row_cy = row_1_rect.origin.y.0 + row_1_rect.size.height.0 * 0.5;
+
+            // Anchor a "drop at end" position to the reserved header space to the left of the
+            // overflow button. This avoids fragile `set_cursor_in_window_logical` coordinates in
+            // scripts while still gating the same dock drop resolution contract.
+            let end_cx = {
+                let x_right = tab_bar.origin.x.0 + tab_bar.size.width.0;
+                let x_before_button = (button_rect.origin.x.0 - 2.0).max(tab_bar.origin.x.0 + pad);
+                (x_right - pad - 2.0).min(x_before_button)
+            };
+            let end_cy = tab_bar.origin.y.0 + tab_bar.size.height.0 * 0.5;
+
+            Some((
+                rect(button_cx, button_cy),
+                rect(row_cx, row_cy),
+                rect(end_cx, end_cy),
+            ))
+        })()
+        .unwrap_or((hidden, hidden, hidden));
+
+        let _ = cx.layout_in(self.tab_overflow_button_anchor, overflow_button_anchor_rect);
+        let _ = cx.layout_in(
+            self.tab_overflow_menu_row_1_anchor,
+            overflow_row_1_anchor_rect,
+        );
+        let _ = cx.layout_in(self.tab_drop_end_anchor, tab_drop_end_anchor_rect);
+
+        let candidate_rect_for = |kind: fret_runtime::DockDropCandidateRectKind, zone: DropZone| {
+            hint_candidates
+                .iter()
+                .find(|c| c.kind == kind && c.zone == Some(zone))
+                .map(|c| c.rect)
+        };
+        for (zone, anchor) in self.dock_hint_inner_anchors.iter().copied() {
+            let rect =
+                candidate_rect_for(fret_runtime::DockDropCandidateRectKind::InnerHintRect, zone)
+                    .unwrap_or(fallback_hint_rect);
+            let _ = cx.layout_in(anchor, rect);
+        }
+        for (zone, anchor) in self.dock_hint_outer_anchors.iter().copied() {
+            let rect =
+                candidate_rect_for(fret_runtime::DockDropCandidateRectKind::OuterHintRect, zone)
+                    .unwrap_or(fallback_hint_rect);
+            let _ = cx.layout_in(anchor, rect);
+        }
+
         let floating_anchor_rect = (|| {
             let dock = cx.app.global::<DockManager>()?;
             let floating = dock.graph.floating_windows(self.window).last()?;
@@ -500,6 +695,20 @@ impl<H: fret_ui::UiHost> Widget<H> for DockingArbitrationHarnessRoot {
     }
 
     fn paint(&mut self, cx: &mut PaintCx<'_, H>) {
+        // Keep retained diagnostics anchors (e.g. dock hint rect test_ids) synced to the latest
+        // docking candidate rects while a dock drag is in flight. The harness lays out these
+        // anchors from `WindowInteractionDiagnosticsStore` during layout, so ensure layout runs
+        // continuously during drags even if only paint would otherwise be invalidated.
+        let dock_drag_active = cx.app.drag(fret_core::PointerId(0)).is_some_and(|d| {
+            (d.kind == fret_runtime::DRAG_KIND_DOCK_PANEL
+                || d.kind == fret_runtime::DRAG_KIND_DOCK_TABS)
+                && d.dragging
+        });
+        if dock_drag_active {
+            cx.request_animation_frame();
+            cx.tree.invalidate(cx.node, Invalidation::Layout);
+        }
+
         if let Some(bounds) = cx.child_bounds(self.dock_space) {
             cx.paint(self.dock_space, bounds);
         } else {
@@ -1209,6 +1418,7 @@ enum DockingArbitrationLayoutPreset {
     #[default]
     Default,
     Large,
+    OverflowTabs,
 }
 
 impl DockingArbitrationLayoutPreset {
@@ -1219,6 +1429,7 @@ impl DockingArbitrationLayoutPreset {
         match raw.trim().to_ascii_lowercase().as_str() {
             "" | "default" => Self::Default,
             "large" | "perf_large" | "perf-large" => Self::Large,
+            "overflow_tabs" | "overflow-tabs" => Self::OverflowTabs,
             _ => Self::Default,
         }
     }
@@ -1678,6 +1889,65 @@ impl DockingArbitrationDriver {
                     });
                     dock.graph.set_window_root(window, root);
                 }
+                DockingArbitrationLayoutPreset::OverflowTabs => {
+                    let extra_viewports: Vec<PanelKey> = (0..10)
+                        .map(|ix| PanelKey::new(format!("demo.viewport.extra.{ix}")))
+                        .collect();
+
+                    for (ix, key) in extra_viewports.iter().enumerate() {
+                        let title = format!("Viewport Extra {ix}");
+                        let target = RenderTargetId::from(KeyData::from_ffi(10 + ix as u64));
+                        dock.ensure_panel(key, || DockPanel {
+                            title,
+                            color: Color::TRANSPARENT,
+                            viewport: Some(fret_docking::ViewportPanel {
+                                target,
+                                target_px_size: (960, 540),
+                                fit: fret_core::ViewportFit::Stretch,
+                                context_menu_enabled: true,
+                            }),
+                        });
+                    }
+
+                    let dummy_panel = PanelKey::new("demo.dummy.overflow");
+                    dock.ensure_panel(&dummy_panel, || DockPanel {
+                        title: "Dummy".to_string(),
+                        color: Color::TRANSPARENT,
+                        viewport: None,
+                    });
+
+                    let overflow_tabs = vec![
+                        viewport_left.clone(),
+                        viewport_right.clone(),
+                        extra_viewports[0].clone(),
+                        extra_viewports[1].clone(),
+                        extra_viewports[2].clone(),
+                        extra_viewports[3].clone(),
+                        extra_viewports[4].clone(),
+                        extra_viewports[5].clone(),
+                        extra_viewports[6].clone(),
+                        extra_viewports[7].clone(),
+                    ];
+                    let tabs_overflow = dock.graph.insert_node(DockNode::Tabs {
+                        tabs: overflow_tabs,
+                        active: 0,
+                    });
+
+                    let row1 = vec![
+                        tabs_overflow,
+                        tabs_for_panel(&mut dock.graph, extra_viewports[8].clone()),
+                        tabs_for_panel(&mut dock.graph, extra_viewports[9].clone()),
+                        tabs_for_panel(&mut dock.graph, dummy_panel),
+                    ];
+                    let row1 = row_split(&mut dock.graph, row1);
+                    let controls = tabs_for_panel(&mut dock.graph, controls_panel);
+                    let root = dock.graph.insert_node(DockNode::Split {
+                        axis: fret_core::Axis::Vertical,
+                        children: vec![row1, controls],
+                        fractions: vec![0.7, 0.3],
+                    });
+                    dock.graph.set_window_root(window, root);
+                }
             }
         });
     }
@@ -1902,6 +2172,53 @@ impl DockingArbitrationDriver {
                     .create_node_retained(DockingArbitrationDragAnchor::new(
                         "dock-arb-float-zone-anchor",
                     ));
+            let tab_overflow_button_anchor =
+                state
+                    .ui
+                    .create_node_retained(DockingArbitrationDragAnchor::new(
+                        "dock-arb-tab-overflow-button-anchor-left",
+                    ));
+            let tab_overflow_menu_row_1_anchor =
+                state
+                    .ui
+                    .create_node_retained(DockingArbitrationDragAnchor::new(
+                        "dock-arb-tab-overflow-menu-row-anchor-left-1",
+                    ));
+            let tab_drop_end_anchor =
+                state
+                    .ui
+                    .create_node_retained(DockingArbitrationDragAnchor::new(
+                        "dock-arb-tab-drop-end-anchor-left",
+                    ));
+            let hint_zones = [
+                (DropZone::Center, "center"),
+                (DropZone::Left, "left"),
+                (DropZone::Right, "right"),
+                (DropZone::Top, "top"),
+                (DropZone::Bottom, "bottom"),
+            ];
+            let dock_hint_inner_anchors = hint_zones
+                .iter()
+                .map(|(zone, label)| {
+                    let node = state
+                        .ui
+                        .create_node_retained(DockingArbitrationDragAnchor::new(format!(
+                            "dock-arb-hint-inner-{label}"
+                        )));
+                    (*zone, node)
+                })
+                .collect::<Vec<_>>();
+            let dock_hint_outer_anchors = hint_zones
+                .iter()
+                .map(|(zone, label)| {
+                    let node = state
+                        .ui
+                        .create_node_retained(DockingArbitrationDragAnchor::new(format!(
+                            "dock-arb-hint-outer-{label}"
+                        )));
+                    (*zone, node)
+                })
+                .collect::<Vec<_>>();
             let root = state
                 .ui
                 .create_node_retained(DockingArbitrationHarnessRoot {
@@ -1913,6 +2230,11 @@ impl DockingArbitrationDriver {
                     float_zone_anchor,
                     viewport_split_handle_anchor,
                     floating_title_bar_anchor,
+                    tab_drop_end_anchor,
+                    tab_overflow_button_anchor,
+                    tab_overflow_menu_row_1_anchor,
+                    dock_hint_inner_anchors: dock_hint_inner_anchors.clone(),
+                    dock_hint_outer_anchors: dock_hint_outer_anchors.clone(),
                 });
             state.ui.set_root(root);
             // Ensure the retained harness nodes participate in hit-testing and event routing.
@@ -1925,6 +2247,11 @@ impl DockingArbitrationDriver {
                 .chain(std::iter::once(float_zone_anchor))
                 .chain(std::iter::once(viewport_split_handle_anchor))
                 .chain(std::iter::once(floating_title_bar_anchor))
+                .chain(dock_hint_inner_anchors.iter().map(|(_, node)| *node))
+                .chain(dock_hint_outer_anchors.iter().map(|(_, node)| *node))
+                .chain(std::iter::once(tab_drop_end_anchor))
+                .chain(std::iter::once(tab_overflow_button_anchor))
+                .chain(std::iter::once(tab_overflow_menu_row_1_anchor))
                 .collect();
             state.ui.set_children(root, children);
             root
@@ -2380,27 +2707,6 @@ impl WinitAppDriver for DockingArbitrationDriver {
             app.with_global_mut_untracked(
                 fret_runtime::WindowInteractionDiagnosticsStore::default,
                 |store, app| store.begin_frame(window, app.frame_id()),
-            );
-            let (dock_graph_stats, dock_graph_signature) =
-                app.with_global_mut_untracked(DockManager::default, |dock, _app| {
-                    (
-                        fret_docking::dock::dock_graph_stats_for_window(&dock.graph, window),
-                        fret_docking::dock::dock_graph_signature_for_window(&dock.graph, window),
-                    )
-                });
-            app.with_global_mut_untracked(
-                fret_runtime::WindowInteractionDiagnosticsStore::default,
-                |store, app| {
-                    store.record_docking(
-                        window,
-                        app.frame_id(),
-                        fret_runtime::DockingInteractionDiagnostics {
-                            dock_graph_stats: Some(dock_graph_stats),
-                            dock_graph_signature: Some(dock_graph_signature),
-                            ..Default::default()
-                        },
-                    );
-                },
             );
         }
 

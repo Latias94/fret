@@ -788,6 +788,11 @@ impl LayoutRefinement {
         self.w_px(MetricRef::space(width))
     }
 
+    /// Shorthand for `width: auto`.
+    pub fn w_auto(self) -> Self {
+        self.w(LengthRefinement::Auto)
+    }
+
     pub fn h_px(self, height: impl Into<MetricRef>) -> Self {
         self.h(LengthRefinement::Px(height.into()))
     }

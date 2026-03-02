@@ -157,7 +157,10 @@ impl UiDiagnosticsService {
             return false;
         }
 
-        matches!(event, Event::Pointer(_) | Event::InternalDrag(_))
+        // Do not block `InternalDrag` while a script is running: multi-window docking relies on
+        // runner-routed internal drag hover/drop events, and scripted playback uses cursor/mouse
+        // overrides to drive those paths deterministically.
+        matches!(event, Event::Pointer(_))
     }
 
     pub fn should_ignore_external_keyboard_event(&self, event: &Event) -> bool {
@@ -273,6 +276,8 @@ impl UiDiagnosticsService {
                 | UiPredicateV1::DockDropPreviewKindIs { .. }
                 | UiPredicateV1::DockDropResolveSourceIs { .. }
                 | UiPredicateV1::DockDropResolvedIsSome { .. }
+                | UiPredicateV1::DockDropResolvedZoneIs { .. }
+                | UiPredicateV1::DockDropResolvedInsertIndexIs { .. }
                 | UiPredicateV1::DockGraphCanonicalIs { .. }
                 | UiPredicateV1::DockGraphHasNestedSameAxisSplitsIs { .. }
                 | UiPredicateV1::DockGraphNodeCountLe { .. }
@@ -302,6 +307,25 @@ impl UiDiagnosticsService {
             // The first few steps typically establish window geometry and must run consistently.
             if active.next_step == 0 {
                 return Some(active.anchor_window);
+            }
+
+            // Prefer preserving captured-pointer continuity over window-target pinning. During
+            // cross-window drags, the runner may temporarily starve the "under" window of redraw
+            // callbacks; pinning to `first_seen` in that state can stall scripts indefinitely.
+            if let Some(session) = active.pointer_session.as_ref() {
+                return Some(session.window);
+            }
+            if let Some(state) = active.v2_step_state.as_ref() {
+                match state {
+                    V2StepState::DragPointer(state) => return Some(state.window),
+                    V2StepState::DragPointerUntil(state) => return Some(state.playback.window),
+                    V2StepState::DragTo(state) => {
+                        if let Some(playback) = state.playback.as_ref() {
+                            return Some(playback.window);
+                        }
+                    }
+                    _ => {}
+                }
             }
 
             // Before a step caches any per-window state (pointer session / v2 step state), we may
@@ -357,15 +381,7 @@ impl UiDiagnosticsService {
             }
         }
 
-        if let Some(session) = active.pointer_session.as_ref() {
-            return Some(session.window);
-        }
-        match active.v2_step_state.as_ref()? {
-            V2StepState::DragPointer(state) => Some(state.window),
-            V2StepState::DragPointerUntil(state) => Some(state.playback.window),
-            V2StepState::DragTo(state) => state.playback.as_ref().map(|p| p.window),
-            _ => None,
-        }
+        None
     }
 
     fn active_step_window_target(active: &ActiveScript) -> Option<UiWindowTargetV1> {
@@ -677,6 +693,8 @@ impl UiDiagnosticsService {
             return;
         }
 
+        self.note_window_seen(window);
+
         self.poll_pick_trigger();
         self.poll_inspect_trigger();
 
@@ -795,6 +813,30 @@ impl UiDiagnosticsService {
             });
 
         let ring = self.per_window.entry(window).or_default();
+        if let Some(fingerprint) = semantics_fingerprint {
+            if ring.test_id_bounds_fingerprint != Some(fingerprint) {
+                ring.test_id_bounds.clear();
+                if let Some(snapshot) = raw_semantics {
+                    // Keep this bounded; scripted diagnostics primarily use `test_id` selectors.
+                    // Rebuilding this map on every frame is wasteful, so we key it off of the
+                    // semantics fingerprint.
+                    let cap = self.cfg.max_semantics_nodes.max(1) as usize;
+                    for node in &snapshot.nodes {
+                        if ring.test_id_bounds.len() >= cap {
+                            break;
+                        }
+                        if let Some(test_id) = node.test_id.as_deref() {
+                            ring.test_id_bounds
+                                .insert(test_id.to_string(), node.bounds);
+                        }
+                    }
+                }
+                ring.test_id_bounds_fingerprint = Some(fingerprint);
+            }
+        } else {
+            ring.test_id_bounds.clear();
+            ring.test_id_bounds_fingerprint = None;
+        }
         let viewport_input = std::mem::take(&mut ring.viewport_input_this_frame);
 
         let changed_models = std::mem::take(&mut ring.last_changed_models);

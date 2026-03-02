@@ -1356,6 +1356,56 @@ impl ElementHostWidget {
                 }
             }
 
+            // Approximate CSS flex item's automatic minimum size.
+            //
+            // Browsers default flex items to `min-width: auto`, which clamps the hypothetical
+            // main size to the item's min-content contribution (often: the label width). This is
+            // required for:
+            // - wrapping control rows (`flex-wrap`): items should wrap instead of shrinking to
+            //   near-zero and clipping their contents, and
+            // - intrinsic sizing probes (min/max-content): nested flex containers must be able to
+            //   report a non-zero min-content size to their parents.
+            //
+            // In Fret, `LayoutRefinement::min_w_0()` / `min_h_0()` is the explicit opt-in to allow
+            // shrinking below that intrinsic min size (Tailwind `min-w-0`).
+            let intrinsic_main_axis_probe = match props.direction {
+                fret_core::Axis::Horizontal => {
+                    matches!(
+                        inner_available.width,
+                        AvailableSpace::MinContent | AvailableSpace::MaxContent
+                    )
+                }
+                fret_core::Axis::Vertical => {
+                    matches!(
+                        inner_available.height,
+                        AvailableSpace::MinContent | AvailableSpace::MaxContent
+                    )
+                }
+            };
+            if (props.wrap || intrinsic_main_axis_probe)
+                && layout_style.position != crate::element::PositionStyle::Absolute
+            {
+                match props.direction {
+                    fret_core::Axis::Horizontal if layout_style.size.min_width.is_none() => {
+                        let min_constraints = LayoutConstraints::new(
+                            LayoutSize::new(None, None),
+                            LayoutSize::new(AvailableSpace::MinContent, AvailableSpace::MaxContent),
+                        );
+                        let min_content = cx.measure_in(child, min_constraints);
+                        min_w = Some(min_w.unwrap_or(0.0).max(min_content.width.0.max(0.0)));
+                    }
+                    fret_core::Axis::Vertical if layout_style.size.min_height.is_none() => {
+                        let min_constraints = LayoutConstraints::new(
+                            LayoutSize::new(None, None),
+                            LayoutSize::new(AvailableSpace::MaxContent, AvailableSpace::MinContent),
+                        );
+                        let min_content = cx.measure_in(child, min_constraints);
+                        min_h = Some(min_h.unwrap_or(0.0).max(min_content.height.0.max(0.0)));
+                    }
+                    _ => {}
+                }
+            }
+
             let style = TaffyStyle {
                 display: Display::Block,
                 position: super::super::taffy_layout::taffy_position(layout_style.position),

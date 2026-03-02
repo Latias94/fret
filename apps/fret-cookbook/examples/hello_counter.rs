@@ -15,13 +15,7 @@ const TEST_ID_STEP_10: &str = "hello-counter.step.10";
 pub fn run() -> anyhow::Result<()> {
     fret::mvu::app::<HelloCounterProgram>("hello-counter-demo")?
         .with_main_window("hello_counter_demo", (520.0, 420.0))
-        .init_app(|app| {
-            shadcn::shadcn_themes::apply_shadcn_new_york_v4(
-                app,
-                shadcn::shadcn_themes::ShadcnBaseColor::Slate,
-                shadcn::shadcn_themes::ShadcnColorScheme::Light,
-            );
-        })
+        .init_app(fret_cookbook::install_cookbook_defaults)
         .run()?;
     Ok(())
 }

@@ -1215,7 +1215,7 @@ impl UiDiagnosticsService {
         if !report.trim().is_empty() {
             lines.push(String::new());
             lines.push("selector_candidates:".to_string());
-            lines.extend(report.lines().map(|l| l.to_string()));
+            lines.extend(report.lines().map(|l: &str| l.to_string()));
         }
 
         let payload = lines.join("\n");

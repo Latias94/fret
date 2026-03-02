@@ -1,0 +1,78 @@
+{
+  "schema_version": 2,
+  "meta": {
+    "name": "Cookbook: commands_keymap_basics shortcut + gating",
+    "tags": ["cookbook", "commands_keymap_basics", "commands", "keymap", "smoke"],
+    "required_capabilities": ["diag.script_v2"],
+    "target_hints": [
+      "Waits for the example root to exist.",
+      "Toggles the panel via shortcut.",
+      "Disables availability and asserts the shortcut no longer toggles."
+    ]
+  },
+  "steps": [
+    { "type": "reset_diagnostics" },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "cookbook.commands_keymap_basics.root" }
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "checked_is",
+        "target": { "kind": "test_id", "id": "cookbook.commands_keymap_basics.panel_open" },
+        "checked": false
+      },
+      "timeout_frames": 240
+    },
+    { "type": "press_shortcut", "shortcut": "primary+shift+k" },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "checked_is",
+        "target": { "kind": "test_id", "id": "cookbook.commands_keymap_basics.panel_open" },
+        "checked": true
+      },
+      "timeout_frames": 240
+    },
+    { "type": "press_shortcut", "shortcut": "primary+shift+k" },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "checked_is",
+        "target": { "kind": "test_id", "id": "cookbook.commands_keymap_basics.panel_open" },
+        "checked": false
+      },
+      "timeout_frames": 240
+    },
+    { "type": "click_stable", "target": { "kind": "test_id", "id": "cookbook.commands_keymap_basics.allow" } },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "checked_is",
+        "target": { "kind": "test_id", "id": "cookbook.commands_keymap_basics.allow" },
+        "checked": false
+      },
+      "timeout_frames": 240
+    },
+    { "type": "wait_frames", "n": 10 },
+    { "type": "press_shortcut", "shortcut": "primary+shift+k" },
+    { "type": "wait_frames", "n": 20 },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "checked_is",
+        "target": { "kind": "test_id", "id": "cookbook.commands_keymap_basics.panel_open" },
+        "checked": false
+      }
+    },
+    {
+      "type": "capture_bundle",
+      "label": "cookbook-commands-keymap-basics-shortcut-and-gating"
+    }
+  ]
+}

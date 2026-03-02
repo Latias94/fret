@@ -1,6 +1,7 @@
 use std::sync::Arc;
 
-use fret_core::{Color, FontWeight, Px, TextOverflow, TextWrap};
+use fret_core::{Color, FontWeight, Px, TextAlign, TextOverflow, TextWrap};
+use fret_icons::ids;
 use fret_runtime::Model;
 use fret_ui::element::{
     AnyElement, FlexProps, LayoutStyle, Length, MainAlign, Overflow, PressableA11y, PressableProps,
@@ -9,16 +10,19 @@ use fret_ui::element::{
 use fret_ui::{ElementContext, Theme, ThemeSnapshot, UiHost};
 use fret_ui_headless::calendar_solar_hijri::{SolarHijriMonth, solar_hijri_month_grid_compact};
 use fret_ui_kit::declarative::chrome::control_chrome_pressable_with_id_props;
+use fret_ui_kit::declarative::icon as decl_icon;
 use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
 use fret_ui_kit::declarative::stack;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::theme_tokens;
 use fret_ui_kit::typography;
-use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, Radius, Space, ui};
+use fret_ui_kit::{
+    ChromeRefinement, ColorFallback, ColorRef, LayoutRefinement, MetricRef, Radius, Space,
+};
 use time::{Date, Weekday};
 
-use crate::button::{ButtonSize, ButtonVariant};
 use crate::surface_slot::{ShadcnSurfaceSlot, surface_slot_in_scope};
+use crate::test_id::attach_test_id_suffix;
 
 fn persian_digit(c: char) -> char {
     match c {
@@ -73,11 +77,11 @@ fn solar_hijri_weekday_name(weekday: Weekday) -> &'static str {
 fn solar_hijri_weekday_short(weekday: Weekday) -> Arc<str> {
     Arc::from(match weekday {
         Weekday::Saturday => "ش",
-        Weekday::Sunday => "۱ش",
-        Weekday::Monday => "۲ش",
-        Weekday::Tuesday => "۳ش",
-        Weekday::Wednesday => "۴ش",
-        Weekday::Thursday => "۵ش",
+        Weekday::Sunday => "ی",
+        Weekday::Monday => "د",
+        Weekday::Tuesday => "س",
+        Weekday::Wednesday => "چ",
+        Weekday::Thursday => "پ",
         Weekday::Friday => "ج",
     })
 }
@@ -127,85 +131,37 @@ fn hijri_weekday_labels_visual_order(week_start: Weekday) -> Arc<[Arc<str>]> {
     labels.into_iter().rev().collect::<Vec<_>>().into()
 }
 
-fn calendar_icon_button<H: UiHost>(
+fn calendar_nav_icon_button<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     label: &'static str,
-    variant: crate::button::ButtonVariant,
-    size: ButtonSize,
     button_size_px: Px,
-    text: Arc<str>,
+    icon: fret_icons::IconId,
     enabled: bool,
     on_activate: impl Fn(&mut dyn fret_ui::action::UiActionHost) + 'static,
 ) -> AnyElement {
-    let theme = Theme::global(&*cx.app).snapshot();
+    let icon = decl_icon::icon_with(
+        cx,
+        icon,
+        None,
+        Some(ColorRef::Token {
+            key: "foreground",
+            fallback: ColorFallback::ThemeTextPrimary,
+        }),
+    );
 
-    let (bg, bg_hover, bg_pressed, border, fg, text_style) = {
-        let theme_full = Theme::global(&*cx.app);
-        let (bg, bg_hover, bg_pressed, border, fg) =
-            crate::button::variant_colors(theme_full, variant);
-        let text_style = crate::button::button_text_style(theme_full, size);
-        (bg, bg_hover, bg_pressed, border, fg, text_style)
-    };
-
-    let radius = theme
-        .metric_by_key("component.button.radius")
-        .unwrap_or_else(|| theme.metric_token("metric.radius.md"));
-
-    control_chrome_pressable_with_id_props(cx, move |cx, st, _id| {
-        cx.pressable_add_on_activate(Arc::new(move |host, _acx, _reason| {
-            on_activate(host);
-        }));
-
-        let mut pressable_layout = LayoutStyle::default();
-        pressable_layout.size.width = Length::Px(button_size_px);
-        pressable_layout.size.height = Length::Px(button_size_px);
-
-        let bg = if st.pressed {
-            bg_pressed
-        } else if st.hovered {
-            bg_hover
-        } else {
-            bg
-        };
-
-        let chrome = ChromeRefinement::default()
-            .rounded(Radius::Md)
-            .bg(ColorRef::Color(bg))
-            .border_1()
-            .border_color(ColorRef::Color(border));
-
-        let pressable = PressableProps {
-            layout: pressable_layout,
-            enabled,
-            focusable: enabled,
-            focus_ring: Some(decl_style::focus_ring(&theme, radius)),
-            a11y: PressableA11y {
-                label: Some(Arc::from(label)),
-                ..Default::default()
-            },
-            ..Default::default()
-        };
-
-        let chrome_props = decl_style::container_props(&theme, chrome, LayoutRefinement::default());
-
-        let style = text_style.clone();
-        let children = move |cx: &mut ElementContext<'_, H>| {
-            let mut label = ui::label(cx, text.clone())
-                .text_size_px(style.size)
-                .font_weight(style.weight)
-                .text_color(ColorRef::Color(fg))
-                .nowrap();
-            if let Some(line_height) = style.line_height {
-                label = label.line_height_px(line_height);
-            }
-            if let Some(letter_spacing_em) = style.letter_spacing_em {
-                label = label.letter_spacing_em(letter_spacing_em);
-            }
-            vec![label.into_element(cx)]
-        };
-
-        (pressable, chrome_props, children)
-    })
+    crate::button::Button::new(label)
+        .variant(crate::button::ButtonVariant::Ghost)
+        .size(crate::button::ButtonSize::IconSm)
+        .children([icon])
+        .disabled(!enabled)
+        // Nav buttons use `size-(--cell-size)` and `p-0`.
+        .refine_layout(
+            LayoutRefinement::default()
+                .w_px(MetricRef::Px(button_size_px))
+                .h_px(MetricRef::Px(button_size_px)),
+        )
+        .on_activate(Arc::new(move |host, _acx, _reason| on_activate(host)))
+        .into_element(cx)
 }
 
 fn hijri_day_cell<H: UiHost>(
@@ -347,6 +303,7 @@ fn hijri_day_cell<H: UiHost>(
                     props.color = Some(fg);
                     props.wrap = TextWrap::None;
                     props.overflow = TextOverflow::Clip;
+                    props.align = TextAlign::Center;
                     vec![cx.text_props(props)]
                 },
             )]
@@ -364,6 +321,7 @@ pub struct CalendarHijri {
     week_start: Weekday,
     show_outside_days: bool,
     cell_size: Option<Px>,
+    test_id_prefix: Option<Arc<str>>,
     chrome: ChromeRefinement,
     layout: LayoutRefinement,
 }
@@ -377,6 +335,7 @@ impl CalendarHijri {
             week_start: Weekday::Saturday,
             show_outside_days: true,
             cell_size: None,
+            test_id_prefix: None,
             chrome: ChromeRefinement::default(),
             layout: LayoutRefinement::default(),
         }
@@ -394,6 +353,11 @@ impl CalendarHijri {
 
     pub fn cell_size(mut self, size: Px) -> Self {
         self.cell_size = Some(size);
+        self
+    }
+
+    pub fn test_id_prefix(mut self, prefix: impl Into<Arc<str>>) -> Self {
+        self.test_id_prefix = Some(prefix.into());
         self
     }
 
@@ -423,23 +387,24 @@ impl CalendarHijri {
             let disable_navigation = self.disable_navigation;
             let week_start = self.week_start;
             let show_outside_days = self.show_outside_days;
+            let test_id_prefix = self.test_id_prefix.clone();
 
             let title = solar_hijri_month_title(month);
             let weekday_labels = hijri_weekday_labels_visual_order(week_start);
 
-            let text_sm_px = theme
-                .metric_by_key(theme_tokens::metric::COMPONENT_TEXT_SM_PX)
+            let weekday_text_px = theme
+                .metric_by_key(theme_tokens::metric::COMPONENT_TEXT_XS_PX)
                 .unwrap_or_else(|| theme.metric_token("font.size"));
-            let text_sm_line_height = theme
-                .metric_by_key(theme_tokens::metric::COMPONENT_TEXT_SM_LINE_HEIGHT)
+            let weekday_text_line_height = theme
+                .metric_by_key(theme_tokens::metric::COMPONENT_TEXT_XS_LINE_HEIGHT)
                 .unwrap_or_else(|| theme.metric_token("font.line_height"));
 
-            let mut grid_text_style = typography::fixed_line_box_style(
+            let mut weekday_text_style = typography::fixed_line_box_style(
                 fret_core::FontId::ui(),
-                text_sm_px,
-                text_sm_line_height,
+                weekday_text_px,
+                weekday_text_line_height,
             );
-            grid_text_style.weight = FontWeight::MEDIUM;
+            weekday_text_style.weight = FontWeight::NORMAL;
 
             let day_size = self.cell_size.unwrap_or_else(|| {
                 theme
@@ -478,18 +443,16 @@ impl CalendarHijri {
                         .gap(Space::N2)
                         .layout(LayoutRefinement::default().w_px(MetricRef::Px(month_width)))
                         .items_center()
-                        .justify_between(),
+                        .justify_start(),
                     move |cx| {
                         let nav_enabled = !disable_navigation;
 
                         let month_model_prev = month_model.clone();
-                        let prev = calendar_icon_button(
+                        let prev = calendar_nav_icon_button(
                             cx,
                             "Go to the Previous Month",
-                            ButtonVariant::Ghost,
-                            ButtonSize::IconSm,
                             day_size,
-                            Arc::from("<"),
+                            ids::ui::CHEVRON_RIGHT,
                             nav_enabled,
                             move |host| {
                                 if disable_navigation {
@@ -500,14 +463,13 @@ impl CalendarHijri {
                                 });
                             },
                         );
+                        let prev = attach_test_id_suffix(prev, test_id_prefix.as_ref(), "nav-prev");
                         let month_model_next = month_model.clone();
-                        let next = calendar_icon_button(
+                        let next = calendar_nav_icon_button(
                             cx,
                             "Go to the Next Month",
-                            ButtonVariant::Ghost,
-                            ButtonSize::IconSm,
                             day_size,
-                            Arc::from(">"),
+                            ids::ui::CHEVRON_LEFT,
                             nav_enabled,
                             move |host| {
                                 if disable_navigation {
@@ -518,6 +480,7 @@ impl CalendarHijri {
                                 });
                             },
                         );
+                        let next = attach_test_id_suffix(next, test_id_prefix.as_ref(), "nav-next");
 
                         let mut title_props = TextProps::new(title.clone());
                         let size = theme_header.metric_token("font.size");
@@ -531,6 +494,11 @@ impl CalendarHijri {
                         title_props.style = Some(style);
                         title_props.wrap = TextWrap::None;
                         title_props.overflow = TextOverflow::Clip;
+                        title_props.align = TextAlign::Center;
+                        // Keep the caption centered between nav buttons.
+                        title_props.layout.flex.grow = 1.0;
+                        title_props.layout.flex.shrink = 1.0;
+                        title_props.layout.flex.basis = Length::Px(Px(0.0));
                         let title_el = cx.text_props(title_props);
 
                         // RTL visual order: Next (left), Title (center), Previous (right).
@@ -559,10 +527,11 @@ impl CalendarHijri {
                             .iter()
                             .map(|label| {
                                 let mut props = TextProps::new(Arc::clone(label));
-                                props.style = Some(grid_text_style.clone());
+                                props.style = Some(weekday_text_style.clone());
                                 props.color = theme_weekdays.color_by_key("muted-foreground");
                                 props.wrap = TextWrap::None;
                                 props.overflow = TextOverflow::Clip;
+                                props.align = TextAlign::Center;
 
                                 let mut layout = LayoutStyle::default();
                                 layout.size.width = Length::Px(day_size);
@@ -682,4 +651,28 @@ fn calendar_hidden_cell<H: UiHost>(
         let children = move |_cx: &mut ElementContext<'_, H>| Vec::new();
         (pressable, chrome_props, children)
     })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn weekday_short_uses_single_letter_abbreviations() {
+        assert_eq!(&*solar_hijri_weekday_short(Weekday::Saturday), "ش");
+        assert_eq!(&*solar_hijri_weekday_short(Weekday::Sunday), "ی");
+        assert_eq!(&*solar_hijri_weekday_short(Weekday::Monday), "د");
+        assert_eq!(&*solar_hijri_weekday_short(Weekday::Tuesday), "س");
+        assert_eq!(&*solar_hijri_weekday_short(Weekday::Wednesday), "چ");
+        assert_eq!(&*solar_hijri_weekday_short(Weekday::Thursday), "پ");
+        assert_eq!(&*solar_hijri_weekday_short(Weekday::Friday), "ج");
+    }
+
+    #[test]
+    fn weekday_labels_match_rtl_visual_order_for_saturday_start() {
+        let labels = hijri_weekday_labels_visual_order(Weekday::Saturday);
+        let as_str = labels.iter().map(|s| &**s).collect::<Vec<_>>();
+        // Visual RTL order: left-to-right render begins with the last weekday (Friday).
+        assert_eq!(as_str, vec!["ج", "پ", "چ", "س", "د", "ی", "ش"]);
+    }
 }

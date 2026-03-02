@@ -121,6 +121,33 @@ fn tabs_list_fg_muted(theme: &ThemeSnapshot) -> Color {
     theme.color_token("muted-foreground")
 }
 
+#[derive(Debug, Clone)]
+pub struct TabsListVariants {
+    pub chrome: ChromeRefinement,
+    pub padding_px: Px,
+    pub trigger_row_gap_px: Px,
+}
+
+pub fn tabs_list_variants(theme: &ThemeSnapshot, variant: TabsListVariant) -> TabsListVariants {
+    match variant {
+        TabsListVariant::Default => TabsListVariants {
+            chrome: ChromeRefinement::default()
+                .rounded(Radius::Lg)
+                .bg(ColorRef::Color(tabs_list_bg(theme)))
+                .text_color(ColorRef::Color(tabs_list_fg_muted(theme))),
+            padding_px: tabs_list_padding(theme),
+            trigger_row_gap_px: Px(0.0),
+        },
+        TabsListVariant::Line => TabsListVariants {
+            chrome: ChromeRefinement::default()
+                .bg(ColorRef::Color(Color::TRANSPARENT))
+                .text_color(ColorRef::Color(tabs_list_fg_muted(theme))),
+            padding_px: Px(0.0),
+            trigger_row_gap_px: Px(4.0),
+        },
+    }
+}
+
 fn tabs_trigger_text_style(theme: &ThemeSnapshot) -> TextStyle {
     let px = theme
         .metric_by_key("component.tabs.trigger.text_px")
@@ -178,6 +205,16 @@ fn tabs_trigger_border_width(theme: &ThemeSnapshot) -> Px {
 
 use fret_ui_kit::primitives::tabs as radix_tabs;
 pub use fret_ui_kit::primitives::tabs::{TabsActivationMode, TabsOrientation};
+
+/// Style variants for shadcn/ui `TabsList` (v4).
+///
+/// Mirrors the upstream `tabsListVariants({ variant })` helper exported by shadcn/ui.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum TabsListVariant {
+    #[default]
+    Default,
+    Line,
+}
 
 type OnValueChange = Arc<dyn Fn(Option<Arc<str>>) + Send + Sync + 'static>;
 type OnValueChangeWithSource =
@@ -268,10 +305,17 @@ pub enum TabsValueChangeSource {
     Activate,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum TabsSharedIndicatorKind {
+    Pill,
+    Line,
+}
+
 fn tabs_shared_indicator<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     container_id: GlobalElementId,
     orientation: TabsOrientation,
+    kind: TabsSharedIndicatorKind,
     tab_count: usize,
     selected_idx: Option<usize>,
     indicator_test_id: Option<Arc<str>>,
@@ -385,9 +429,74 @@ fn tabs_shared_indicator<H: UiHost>(
                 (0.0, 0.0, 0.0, 0.0)
             };
 
-            let shadow = (!disabled && selected_idx.is_some())
-                .then(|| decl_style::shadow_sm(&theme, radius));
             let spring = shared_indicator_spring_description(&*cx.app);
+
+            let (
+                target_x,
+                target_y,
+                target_width,
+                target_height,
+                bg,
+                border_color,
+                border_w,
+                shadow,
+                radius,
+            ) = match kind {
+                TabsSharedIndicatorKind::Pill => (
+                    target_x,
+                    target_y,
+                    target_width,
+                    target_height,
+                    bg,
+                    border_color,
+                    border_w,
+                    (!disabled && selected_idx.is_some())
+                        .then(|| decl_style::shadow_sm(&theme, radius)),
+                    radius,
+                ),
+                TabsSharedIndicatorKind::Line => {
+                    let thickness = theme
+                        .metric_by_key("component.tabs.indicator.line_thickness")
+                        .unwrap_or(Px(2.0))
+                        .0
+                        .max(0.0);
+                    let (target_x, target_y, target_width, target_height) = if thickness > 0.0 {
+                        match orientation {
+                            TabsOrientation::Horizontal => (
+                                target_x,
+                                (container_bounds.size.height.0 - thickness).max(0.0),
+                                target_width,
+                                thickness,
+                            ),
+                            TabsOrientation::Vertical => (
+                                (container_bounds.size.width.0 - thickness).max(0.0),
+                                target_y,
+                                thickness,
+                                target_height,
+                            ),
+                        }
+                    } else {
+                        (target_x, target_y, target_width, target_height)
+                    };
+
+                    let bg = if !disabled && selected_idx.is_some() {
+                        theme.color_token("foreground")
+                    } else {
+                        Color::TRANSPARENT
+                    };
+                    (
+                        target_x,
+                        target_y,
+                        target_width,
+                        target_height,
+                        bg,
+                        Color::TRANSPARENT,
+                        Px(0.0),
+                        None,
+                        Px(0.0),
+                    )
+                }
+            };
 
             (
                 target_x,
@@ -735,6 +844,7 @@ pub struct TabsRoot {
     orientation: TabsOrientation,
     activation_mode: TabsActivationMode,
     loop_navigation: bool,
+    list_variant: TabsListVariant,
     style: TabsStyle,
     chrome: ChromeRefinement,
     layout: LayoutRefinement,
@@ -760,6 +870,7 @@ impl std::fmt::Debug for TabsRoot {
             .field("orientation", &self.orientation)
             .field("activation_mode", &self.activation_mode)
             .field("loop_navigation", &self.loop_navigation)
+            .field("list_variant", &self.list_variant)
             .field("style", &self.style)
             .field("chrome", &self.chrome)
             .field("layout", &self.layout)
@@ -794,6 +905,7 @@ impl TabsRoot {
             orientation: TabsOrientation::default(),
             activation_mode: TabsActivationMode::default(),
             loop_navigation: true,
+            list_variant: TabsListVariant::default(),
             style: TabsStyle::default(),
             chrome: ChromeRefinement::default(),
             layout: LayoutRefinement::default(),
@@ -821,6 +933,7 @@ impl TabsRoot {
             orientation: TabsOrientation::default(),
             activation_mode: TabsActivationMode::default(),
             loop_navigation: true,
+            list_variant: TabsListVariant::default(),
             style: TabsStyle::default(),
             chrome: ChromeRefinement::default(),
             layout: LayoutRefinement::default(),
@@ -863,6 +976,11 @@ impl TabsRoot {
     /// When `true` (default), arrow key navigation loops at the ends (Radix `loop` behavior).
     pub fn loop_navigation(mut self, loop_navigation: bool) -> Self {
         self.loop_navigation = loop_navigation;
+        self
+    }
+
+    pub fn list_variant(mut self, variant: TabsListVariant) -> Self {
+        self.list_variant = variant;
         self
     }
 
@@ -993,6 +1111,7 @@ impl TabsRoot {
             orientation,
             activation_mode,
             loop_navigation,
+            list_variant,
             style,
             chrome,
             layout,
@@ -1037,6 +1156,7 @@ impl TabsRoot {
             .orientation(orientation)
             .activation_mode(activation_mode)
             .loop_navigation(loop_navigation)
+            .list_variant(list_variant)
             .on_value_change(on_value_change)
             .on_value_change_with_source(on_value_change_with_source)
             .on_value_change_with_details(on_value_change_with_details)
@@ -1135,6 +1255,7 @@ pub struct Tabs {
     orientation: TabsOrientation,
     activation_mode: TabsActivationMode,
     loop_navigation: bool,
+    list_variant: TabsListVariant,
     style: TabsStyle,
     chrome: ChromeRefinement,
     layout: LayoutRefinement,
@@ -1159,6 +1280,7 @@ impl std::fmt::Debug for Tabs {
             .field("orientation", &self.orientation)
             .field("activation_mode", &self.activation_mode)
             .field("loop_navigation", &self.loop_navigation)
+            .field("list_variant", &self.list_variant)
             .field("style", &self.style)
             .field("chrome", &self.chrome)
             .field("layout", &self.layout)
@@ -1192,6 +1314,7 @@ impl Tabs {
             orientation: TabsOrientation::default(),
             activation_mode: TabsActivationMode::default(),
             loop_navigation: true,
+            list_variant: TabsListVariant::default(),
             style: TabsStyle::default(),
             chrome: ChromeRefinement::default(),
             layout: LayoutRefinement::default(),
@@ -1218,6 +1341,7 @@ impl Tabs {
             orientation: TabsOrientation::default(),
             activation_mode: TabsActivationMode::default(),
             loop_navigation: true,
+            list_variant: TabsListVariant::default(),
             style: TabsStyle::default(),
             chrome: ChromeRefinement::default(),
             layout: LayoutRefinement::default(),
@@ -1260,6 +1384,11 @@ impl Tabs {
     /// When `true` (default), arrow key navigation loops at the ends (Radix `loop` behavior).
     pub fn loop_navigation(mut self, loop_navigation: bool) -> Self {
         self.loop_navigation = loop_navigation;
+        self
+    }
+
+    pub fn list_variant(mut self, variant: TabsListVariant) -> Self {
+        self.list_variant = variant;
         self
     }
 
@@ -1383,6 +1512,7 @@ impl Tabs {
         let orientation = self.orientation;
         let activation_mode = self.activation_mode;
         let loop_navigation = self.loop_navigation;
+        let list_variant = self.list_variant;
         let style_override = self.style;
         let chrome = self.chrome;
         let layout = self.layout;
@@ -1429,13 +1559,14 @@ impl Tabs {
             .and_then(|size| (size > 0).then_some(size));
 
         let list_height = tabs_list_height(&theme);
-        let list_padding = tabs_list_padding(&theme);
+        let TabsListVariants {
+            chrome: list_chrome,
+            padding_px: list_padding,
+            trigger_row_gap_px: trigger_row_gap,
+        } = tabs_list_variants(&theme, list_variant);
         let mut list_props = decl_style::container_props(
             &theme,
-            ChromeRefinement::default()
-                .rounded(Radius::Lg)
-                .bg(ColorRef::Color(tabs_list_bg(&theme)))
-                .text_color(ColorRef::Color(tabs_list_fg_muted(&theme))),
+            list_chrome,
             LayoutRefinement::default().h_px(list_height),
         );
         list_props.padding = Edges::all(list_padding).into();
@@ -1454,7 +1585,7 @@ impl Tabs {
             let mut refinement = LayoutRefinement::default().w_full().min_w_0();
             if content_fill_remaining {
                 // shadcn/ui uses `flex-1` on `TabsContent`. In practice that intent is "fill the
-                // remaining main-axis space when the parent is a definite-size flex container".
+                // remaining main-axis space when the parent is a flex container".
                 //
                 // Note: Avoid Tailwind's `flex: 1 1 0%` (`basis=0`) here. Taffy currently
                 // shrink-wraps some auto-sized flex containers around the sum of flex bases, which
@@ -1523,11 +1654,19 @@ impl Tabs {
                             .map(|id| Arc::<str>::from(format!("{id}-shared-indicator")));
 
                         let mut list_children: Vec<AnyElement> = Vec::new();
-                        if shared_indicator_motion {
+                        let indicator_kind = if list_variant == TabsListVariant::Line {
+                            Some(TabsSharedIndicatorKind::Line)
+                        } else if shared_indicator_motion {
+                            Some(TabsSharedIndicatorKind::Pill)
+                        } else {
+                            None
+                        };
+                        if let Some(indicator_kind) = indicator_kind {
                             list_children.push(tabs_shared_indicator(
                                 cx,
                                 list_container_id,
                                 orientation,
+                                indicator_kind,
                                 items_len,
                                 active_idx,
                                 indicator_test_id,
@@ -1560,7 +1699,7 @@ impl Tabs {
                                         TabsOrientation::Horizontal => fret_core::Axis::Horizontal,
                                         TabsOrientation::Vertical => fret_core::Axis::Vertical,
                                     },
-                                    gap: Px(0.0).into(),
+                                    gap: trigger_row_gap.into(),
                                     padding: Edges::all(Px(0.0)).into(),
                                     // NOTE: Taffy currently shrink-wraps auto-sized flex containers
                                     // around the sum of flex bases, not the min-content widths.
@@ -1628,10 +1767,19 @@ impl Tabs {
                                 let default_trigger_fg = WidgetStateProperty::new(fg_inactive)
                                     .when(WidgetStates::SELECTED, fg_active)
                                     .when(WidgetStates::DISABLED, fg_disabled);
-                                let default_trigger_bg = WidgetStateProperty::new(None)
-                                    .when(WidgetStates::SELECTED, Some(bg_active));
-                                let default_trigger_border = WidgetStateProperty::new(None)
-                                    .when(WidgetStates::SELECTED, Some(border_active));
+                                let default_trigger_bg = if list_variant == TabsListVariant::Line {
+                                    WidgetStateProperty::new(None)
+                                } else {
+                                    WidgetStateProperty::new(None)
+                                        .when(WidgetStates::SELECTED, Some(bg_active))
+                                };
+                                let default_trigger_border = if list_variant == TabsListVariant::Line
+                                {
+                                    WidgetStateProperty::new(None)
+                                } else {
+                                    WidgetStateProperty::new(None)
+                                        .when(WidgetStates::SELECTED, Some(border_active))
+                                };
 
                                 let pad_x = MetricRef::space(Space::N2).resolve(&theme);
                                 let pad_y = MetricRef::space(Space::N1).resolve(&theme);
@@ -1678,7 +1826,10 @@ impl Tabs {
                                     let default_trigger_border = default_trigger_border.clone();
                                     let theme = theme.clone();
 
-                                    let shadow = (!shared_indicator_motion && active && !item_disabled)
+                                    let shadow = (!shared_indicator_motion
+                                        && list_variant == TabsListVariant::Default
+                                        && active
+                                        && !item_disabled)
                                         .then(|| decl_style::shadow_sm(&theme, radius));
 
                                     let value = item.value.clone();
@@ -2183,8 +2334,8 @@ mod tests {
     use super::*;
     use fret_app::App;
     use fret_core::{
-        AppWindowId, Modifiers, MouseButton, Point, PointerType, Px, Rect, SemanticsRole, Size,
-        SvgId, SvgService,
+        AppWindowId, Color, Modifiers, MouseButton, Point, PointerType, Px, Rect, SemanticsRole,
+        Size, SvgId, SvgService,
     };
     use fret_core::{PathCommand, PathConstraints, PathId, PathMetrics, PathService, PathStyle};
     use fret_core::{TextBlobId, TextConstraints, TextMetrics, TextService};
@@ -2192,6 +2343,34 @@ mod tests {
     use fret_ui::element::ColumnProps;
     use fret_ui::elements::{ElementRuntime, GlobalElementId, node_for_element};
     use fret_ui::tree::UiTree;
+    use fret_ui_kit::ColorRef;
+
+    #[test]
+    fn tabs_list_variants_match_upstream_default_and_line_intent() {
+        let mut app = App::new();
+        crate::shadcn_themes::apply_shadcn_new_york_v4(
+            &mut app,
+            crate::shadcn_themes::ShadcnBaseColor::Slate,
+            crate::shadcn_themes::ShadcnColorScheme::Light,
+        );
+        let theme = Theme::global(&app).snapshot();
+
+        let default = tabs_list_variants(&theme, TabsListVariant::Default);
+        assert!(default.padding_px.0 > 0.0);
+        assert_eq!(default.trigger_row_gap_px, Px(0.0));
+        match default.chrome.background {
+            Some(ColorRef::Color(c)) => assert_ne!(c, Color::TRANSPARENT),
+            other => panic!("expected default tabs list to have a background, got {other:?}"),
+        }
+
+        let line = tabs_list_variants(&theme, TabsListVariant::Line);
+        assert_eq!(line.padding_px, Px(0.0));
+        assert_eq!(line.trigger_row_gap_px, Px(4.0));
+        match line.chrome.background {
+            Some(ColorRef::Color(c)) => assert_eq!(c, Color::TRANSPARENT),
+            other => panic!("expected line tabs list background to be transparent, got {other:?}"),
+        }
+    }
 
     #[test]
     fn tabs_content_defaults_to_flex_grow_fill_like_shadcn() {

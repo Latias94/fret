@@ -1,5 +1,21 @@
 use super::*;
 
+fn append_diag_script_migration_trace(out_dir: &std::path::Path, line: &str) {
+    if std::env::var_os("FRET_DIAG_SCRIPT_MIGRATION_TRACE").is_none() {
+        return;
+    }
+
+    let path = out_dir.join("ui_diag_script_migration_trace.log");
+    if let Ok(mut file) = std::fs::OpenOptions::new()
+        .create(true)
+        .append(true)
+        .open(path)
+    {
+        use std::io::Write as _;
+        let _ = writeln!(file, "{}", line);
+    }
+}
+
 pub(super) fn handle_click_step(
     svc: &mut UiDiagnosticsService,
     app: &App,
@@ -1758,6 +1774,7 @@ pub(super) fn handle_move_pointer_step(
     app: &App,
     window: AppWindowId,
     window_bounds: Rect,
+    anchor_window: AppWindowId,
     step_index: usize,
     step: UiActionStepV2,
     element_runtime: Option<&ElementRuntime>,
@@ -1766,15 +1783,181 @@ pub(super) fn handle_move_pointer_step(
     active: &mut ActiveScript,
     output: &mut UiScriptFrameOutput,
     force_dump_label: &mut Option<String>,
+    handoff_to: &mut Option<AppWindowId>,
+    stop_script: &mut bool,
+    failure_reason: &mut Option<String>,
 ) -> bool {
     let UiActionStepV2::MovePointer {
-        window: _,
+        window: target_window,
         pointer_kind,
         target,
     } = step
     else {
         return false;
     };
+
+    let resolved_target_window =
+        svc.resolve_window_target_for_active_step(window, anchor_window, target_window.as_ref());
+    append_diag_script_migration_trace(
+        &svc.cfg.out_dir,
+        &format!(
+            "unix_ms={} kind=move_pointer_resolve step_index={} window={:?} anchor_window={:?} target_window_spec={:?} resolved_target_window={:?}",
+            unix_ms_now(),
+            step_index,
+            window,
+            anchor_window,
+            target_window,
+            resolved_target_window,
+        ),
+    );
+    if let Some(target_window) = resolved_target_window {
+        if target_window != window {
+            let pointer_session_active = active.pointer_session.is_some();
+            let dock_drag_active = app.drag(fret_core::PointerId(0)).is_some_and(|d| {
+                (d.kind == fret_runtime::DRAG_KIND_DOCK_PANEL
+                    || d.kind == fret_runtime::DRAG_KIND_DOCK_TABS)
+                    && d.dragging
+            });
+
+            // During cross-window dock drags, the target window can be fully occluded and may not
+            // produce frames (and therefore not provide a live semantics snapshot). Treat
+            // `move_pointer` as a cursor-positioning operation: resolve the selector against the
+            // most recent captured semantics snapshot for the target window and write a cursor
+            // override, without forcing a script handoff.
+            //
+            // This is intentionally narrow: only `test_id` selectors are supported in this
+            // fallback path.
+            if pointer_session_active || dock_drag_active {
+                if let UiSelectorV1::TestId { id, .. } = &target {
+                    let cached = svc.per_window.get(&target_window).and_then(|ring| {
+                        let bounds = ring.test_id_bounds.get(id)?;
+                        let window_bounds = ring.snapshots.back().map(|s| s.window_bounds)?;
+                        Some((window_bounds, *bounds))
+                    });
+
+                    if cached.is_none() {
+                        append_diag_script_migration_trace(
+                            &svc.cfg.out_dir,
+                            &format!(
+                                "unix_ms={} kind=move_pointer_remote_miss step_index={} window={:?} target_window={:?} anchor_window={:?} test_id={id:?} pointer_session_active={} dock_drag_active={}",
+                                unix_ms_now(),
+                                step_index,
+                                window,
+                                target_window,
+                                anchor_window,
+                                pointer_session_active,
+                                dock_drag_active,
+                            ),
+                        );
+                    }
+
+                    if let Some((window_bounds_v1, node_bounds)) = cached {
+                        append_diag_script_migration_trace(
+                            &svc.cfg.out_dir,
+                            &format!(
+                                "unix_ms={} kind=move_pointer_remote_hit step_index={} window={:?} target_window={:?} anchor_window={:?} test_id={id:?} pointer_session_active={} dock_drag_active={}",
+                                unix_ms_now(),
+                                step_index,
+                                window,
+                                target_window,
+                                anchor_window,
+                                pointer_session_active,
+                                dock_drag_active,
+                            ),
+                        );
+                        let clamp_x_min = window_bounds_v1.x;
+                        let clamp_y_min = window_bounds_v1.y;
+                        let clamp_x_max = window_bounds_v1.x + window_bounds_v1.w;
+                        let clamp_y_max = window_bounds_v1.y + window_bounds_v1.h;
+                        let mut x = node_bounds.origin.x.0 + (node_bounds.size.width.0 * 0.5);
+                        let mut y = node_bounds.origin.y.0 + (node_bounds.size.height.0 * 0.5);
+                        if x.is_finite() {
+                            x = x.clamp(clamp_x_min, clamp_x_max);
+                        }
+                        if y.is_finite() {
+                            y = y.clamp(clamp_y_min, clamp_y_max);
+                        }
+
+                        let _ = write_cursor_override_window_client_logical(
+                            &svc.cfg.out_dir,
+                            target_window,
+                            x,
+                            y,
+                        );
+                        push_script_event_log(
+                            active,
+                            &svc.cfg,
+                            UiScriptEventLogEntryV1 {
+                                unix_ms: unix_ms_now(),
+                                kind: "move_pointer.remote_semantics".to_string(),
+                                step_index: Some(step_index as u32),
+                                note: Some(format!(
+                                    "from_window={} target_window={} test_id={id:?} pointer_session_active={} dock_drag_active={}",
+                                    window.data().as_ffi(),
+                                    target_window.data().as_ffi(),
+                                    pointer_session_active,
+                                    dock_drag_active,
+                                )),
+                                bundle_dir: None,
+                                window: Some(window.data().as_ffi()),
+                                tick_id: Some(app.tick_id().0),
+                                frame_id: Some(app.frame_id().0),
+                                window_snapshot_seq: None,
+                            },
+                        );
+
+                        active.wait_until = None;
+                        active.screenshot_wait = None;
+                        active.next_step = active.next_step.saturating_add(1);
+                        output.request_redraw = true;
+                        if svc.cfg.script_auto_dump {
+                            *force_dump_label =
+                                Some(format!("script-step-{step_index:04}-move_pointer-remote"));
+                        }
+                        return false;
+                    }
+                }
+            }
+
+            append_diag_script_migration_trace(
+                &svc.cfg.out_dir,
+                &format!(
+                    "unix_ms={} kind=move_pointer_handoff step_index={} window={:?} target_window={:?} anchor_window={:?} pointer_session_active={} dock_drag_active={}",
+                    unix_ms_now(),
+                    step_index,
+                    window,
+                    target_window,
+                    anchor_window,
+                    pointer_session_active,
+                    dock_drag_active,
+                ),
+            );
+            *handoff_to = Some(target_window);
+            output
+                .effects
+                .push(Effect::RequestAnimationFrame(target_window));
+            output.request_redraw = true;
+        }
+    } else if target_window.is_some() {
+        *force_dump_label = Some(format!(
+            "script-step-{step_index:04}-move_pointer-window-not-found"
+        ));
+        *stop_script = true;
+        *failure_reason = Some("window_target_unresolved".to_string());
+        output.request_redraw = true;
+    }
+
+    if *stop_script {
+        active.wait_until = None;
+        active.screenshot_wait = None;
+        return false;
+    }
+    if handoff_to.is_some() {
+        active.wait_until = None;
+        active.screenshot_wait = None;
+        // This step is window-targeted; the runtime will migrate the script.
+        return false;
+    }
 
     let pointer_type = pointer_type_from_kind(pointer_kind);
     let Some(snapshot) = semantics_snapshot else {
@@ -1881,7 +2064,16 @@ pub(super) fn handle_move_pointer_step(
             svc.cfg.max_debug_string_bytes,
         );
     }
-    output.events.push(move_pointer_event(pos, pointer_type));
+    let cross_window_dock_drag_active = app.drag(fret_core::PointerId(0)).is_some_and(|d| {
+        (d.kind == fret_runtime::DRAG_KIND_DOCK_PANEL
+            || d.kind == fret_runtime::DRAG_KIND_DOCK_TABS)
+            && d.cross_window_hover
+            && d.dragging
+    });
+    if !cross_window_dock_drag_active {
+        output.events.push(move_pointer_event(pos, pointer_type));
+    }
+    let _ = write_cursor_override_window_client_logical(&svc.cfg.out_dir, window, pos.x.0, pos.y.0);
 
     active.wait_until = None;
     active.screenshot_wait = None;

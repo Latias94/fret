@@ -228,6 +228,15 @@ pub(super) fn handle_virtual_list<H: UiHost>(
     props: crate::element::VirtualListProps,
     event: &Event,
 ) -> bool {
+    // Wheel events should be handled by the *innermost* scrollable under the pointer. If we scroll
+    // ancestors during the capture phase, nested scrollables (code blocks, tables, editors) never
+    // see the wheel delta.
+    if cx.input_ctx.dispatch_phase == fret_runtime::InputDispatchPhase::Capture
+        && matches!(event, Event::Pointer(fret_core::PointerEvent::Wheel { .. }))
+    {
+        return true;
+    }
+
     if cx.input_ctx.dispatch_phase == fret_runtime::InputDispatchPhase::Bubble
         && matches!(
             event,
@@ -387,6 +396,14 @@ pub(super) fn handle_scroll<H: UiHost>(
     props: crate::element::ScrollProps,
     event: &Event,
 ) -> bool {
+    // Same rationale as `handle_virtual_list`: let the deepest scrollable consume wheel deltas
+    // first, then fall back to ancestors in bubble.
+    if cx.input_ctx.dispatch_phase == fret_runtime::InputDispatchPhase::Capture
+        && matches!(event, Event::Pointer(fret_core::PointerEvent::Wheel { .. }))
+    {
+        return true;
+    }
+
     if cx.input_ctx.dispatch_phase == fret_runtime::InputDispatchPhase::Bubble
         && matches!(
             event,

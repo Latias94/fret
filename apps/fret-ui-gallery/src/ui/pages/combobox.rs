@@ -85,12 +85,12 @@ pub(super) fn preview_combobox(
     .width(Px(260.0))
     .placeholder("Select a framework")
     .query_model(query)
-    .items([
-        shadcn::ComboboxItem::new("next", "Next.js"),
-        shadcn::ComboboxItem::new("svelte", "SvelteKit"),
-        shadcn::ComboboxItem::new("nuxt", "Nuxt.js"),
-        shadcn::ComboboxItem::new("remix", "Remix"),
-        shadcn::ComboboxItem::new("astro", "Astro"),
+    .options([
+        shadcn::combobox_option("next", "Next.js"),
+        shadcn::combobox_option("svelte", "SvelteKit"),
+        shadcn::combobox_option("nuxt", "Nuxt.js"),
+        shadcn::combobox_option("remix", "Remix"),
+        shadcn::combobox_option("astro", "Astro"),
     ])
     .into_element(cx);"#,
                 ),
@@ -102,9 +102,9 @@ pub(super) fn preview_combobox(
     .placeholder("Select a framework")
     .query_model(query)
     .auto_highlight(true)
-    .items([
-        shadcn::ComboboxItem::new("next", "Next.js"),
-        shadcn::ComboboxItem::new("svelte", "SvelteKit"),
+    .options([
+        shadcn::combobox_option("next", "Next.js"),
+        shadcn::combobox_option("svelte", "SvelteKit"),
     ])
     .into_element(cx);"#,
                 )
@@ -117,12 +117,12 @@ pub(super) fn preview_combobox(
     .placeholder("Select a framework")
     .query_model(query)
     .show_clear(true)
-    .items([
-        shadcn::ComboboxItem::new("next", "Next.js"),
-        shadcn::ComboboxItem::new("svelte", "SvelteKit"),
-        shadcn::ComboboxItem::new("nuxt", "Nuxt.js"),
-        shadcn::ComboboxItem::new("remix", "Remix"),
-        shadcn::ComboboxItem::new("astro", "Astro"),
+    .options([
+        shadcn::combobox_option("next", "Next.js"),
+        shadcn::combobox_option("svelte", "SvelteKit"),
+        shadcn::combobox_option("nuxt", "Nuxt.js"),
+        shadcn::combobox_option("remix", "Remix"),
+        shadcn::combobox_option("astro", "Astro"),
     ])
     .into_element(cx);"#,
                 ),
@@ -133,14 +133,14 @@ pub(super) fn preview_combobox(
                     r#"shadcn::Combobox::new(value, open)
     .placeholder("Select a timezone")
     .query_model(query)
-    .groups([
-        shadcn::ComboboxGroup::new(
+    .option_groups([
+        shadcn::combobox_option_group(
             "Americas",
-            [shadcn::ComboboxItem::new("americas-ny", "(GMT-5) New York")],
+            [shadcn::combobox_option("americas-ny", "(GMT-5) New York")],
         ),
-        shadcn::ComboboxGroup::new(
+        shadcn::combobox_option_group(
             "Europe",
-            [shadcn::ComboboxItem::new("europe-lon", "(GMT+0) London")],
+            [shadcn::combobox_option("europe-lon", "(GMT+0) London")],
         ),
     ])
     .into_element(cx);"#,
@@ -154,14 +154,14 @@ pub(super) fn preview_combobox(
     .placeholder("Select a timezone")
     .query_model(query)
     .group_separators(true)
-    .groups([
-        shadcn::ComboboxGroup::new(
+    .option_groups([
+        shadcn::combobox_option_group(
             "Americas",
-            [shadcn::ComboboxItem::new("americas-ny", "(GMT-5) New York")],
+            [shadcn::combobox_option("americas-ny", "(GMT-5) New York")],
         ),
-        shadcn::ComboboxGroup::new(
+        shadcn::combobox_option_group(
             "Europe",
-            [shadcn::ComboboxItem::new("europe-lon", "(GMT+0) London")],
+            [shadcn::combobox_option("europe-lon", "(GMT+0) London")],
         ),
     ])
     .into_element(cx);"#,
@@ -178,18 +178,18 @@ pub(super) fn preview_combobox(
 let open: Model<bool> = cx.app.models_mut().insert(false);
 let query: Model<String> = cx.app.models_mut().insert(String::new());
 
-shadcn::ComboboxChips::new(values, open)
-    .a11y_label("Combobox multiple selection")
-    .width(Px(260.0))
-    .placeholder("Select frameworks")
-    .query_model(query)
-    .test_id_prefix("ui-gallery-combobox-multiple")
-    .trigger_test_id("ui-gallery-combobox-multiple-trigger")
-    .items([
-        shadcn::ComboboxItem::new("next", "Next.js"),
-        shadcn::ComboboxItem::new("svelte", "SvelteKit"),
-    ])
-    .into_element(cx);"#,
+	shadcn::ComboboxChips::new(values, open)
+	    .a11y_label("Combobox multiple selection")
+	    .width(Px(260.0))
+	    .placeholder("Select frameworks")
+	    .query_model(query)
+	    .test_id_prefix("ui-gallery-combobox-multiple")
+	    .trigger_test_id("ui-gallery-combobox-multiple-trigger")
+	    .options([
+	        shadcn::combobox_option("next", "Next.js"),
+	        shadcn::combobox_option("svelte", "SvelteKit"),
+	    ])
+	    .into_element(cx);"#,
                 ),
             DocSection::new("Extras: Custom Items", custom_items_top)
                 .description("Structured item details (e.g. suffix metadata) without pre-formatting richer labels.")
@@ -198,9 +198,9 @@ shadcn::ComboboxChips::new(values, open)
                     r#"let combo = shadcn::Combobox::new(value, open)
     .placeholder("Select framework")
     .query_model(query)
-    .items([
-        shadcn::ComboboxItem::new("next", "Next.js").detail("React"),
-        shadcn::ComboboxItem::new("nuxt", "Nuxt.js").detail("Vue"),
+    .options([
+        shadcn::combobox_option("next", "Next.js").detail("React"),
+        shadcn::combobox_option("nuxt", "Nuxt.js").detail("Vue"),
     ])
     .into_element(cx);"#,
                 ),
@@ -210,8 +210,8 @@ shadcn::ComboboxChips::new(values, open)
                 )
                 .code(
                     "rust",
-                    r#"let items: Vec<shadcn::ComboboxItem> = (0..250)
-    .map(|i| shadcn::ComboboxItem::new(format!("{i:03}"), format!("Item {i:03}")))
+                    r#"let items: Vec<shadcn::ComboboxOption> = (0..250)
+    .map(|i| shadcn::combobox_option(format!("{i:03}"), format!("Item {i:03}")))
     .collect();
 
 shadcn::Combobox::new(value, open)
@@ -220,7 +220,7 @@ shadcn::Combobox::new(value, open)
     .placeholder("Pick an item")
     .query_model(query)
     .test_id_prefix("ui-gallery-combobox-long-list")
-    .items(items)
+    .options(items)
     .into_element(cx);"#,
                 ),
             DocSection::new("Extras: Invalid", invalid)
@@ -232,9 +232,9 @@ shadcn::Combobox::new(value, open)
     .width(Px(260.0))
     .placeholder("Select required option")
     .query_model(query)
-    .items([
-        shadcn::ComboboxItem::new("apple", "Apple"),
-        shadcn::ComboboxItem::new("banana", "Banana"),
+    .options([
+        shadcn::combobox_option("apple", "Apple"),
+        shadcn::combobox_option("banana", "Banana"),
     ])
     .aria_invalid(true)
     .into_element(cx);"#,
@@ -247,7 +247,7 @@ shadcn::Combobox::new(value, open)
     .a11y_label("Combobox disabled")
     .placeholder("Disabled")
     .query_model(query)
-    .items([shadcn::ComboboxItem::new("apple", "Apple")])
+    .options([shadcn::combobox_option("apple", "Apple")])
     .disabled(true)
     .into_element(cx);"#,
                 ),
@@ -260,9 +260,9 @@ shadcn::Combobox::new(value, open)
     .width(Px(220.0))
     .placeholder("Search command")
     .query_model(query)
-    .items([
-        shadcn::ComboboxItem::new("new-file", "New File"),
-        shadcn::ComboboxItem::new("open-file", "Open File"),
+    .options([
+        shadcn::combobox_option("new-file", "New File"),
+        shadcn::combobox_option("open-file", "Open File"),
     ])
     .into_element(cx);
 
