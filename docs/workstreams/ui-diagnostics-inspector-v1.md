@@ -77,12 +77,16 @@ While inspection is active:
 - `Esc`: exit inspect (disarm pick first if armed)
 - `Ctrl/Cmd+C`: copy best selector JSON (prefer `test_id`)
 - `Ctrl/Cmd+Shift+C`: copy “selector + focus + path” details (including selector candidates + scores)
+- `Ctrl/Cmd+T` (help): toggle the semantics tree browser panel (diagnostics-only)
 - `F`: jump selection to the focused semantics node (locks selection)
 - `L`: lock/unlock selection
 - `Alt+Up/Down`: walk semantics parent chain, with a small “down stack” history
 - (Help open) Type to filter the neighborhood view (`test_id` and `label` when unredacted); `Backspace` deletes.
 - (Help open, search active) `Up/Down` selects a match; `Enter` locks selection to the selected match.
-- (Help open, search active) `Ctrl/Cmd+Enter` locks selection and copies the best selector JSON.
+- (Help open, tree open, no search) `Up/Down` selects a tree row.
+- (Help open, tree open, no search) `Left/Right` collapses/expands the selected tree node.
+- (Help open) `Ctrl/Cmd+Enter` locks selection and copies the best selector JSON (works for both search matches and tree selection).
+- (Help open) `PageUp/PageDown/Home/End` scroll the help output (paged text rendering).
 
 ### Overlay primitives
 
@@ -144,6 +148,7 @@ This workstream intentionally keeps “evidence anchors” stable so future refa
 - In-app overlay rendering: `ecosystem/fret-bootstrap/src/ui_diagnostics/inspect_overlay.rs`
 - Explainability panel lines (why input is blocked): `ecosystem/fret-bootstrap/src/ui_diagnostics/inspect_explain.rs`
 - Help neighborhood view lines (parent/siblings/children + filter): `ecosystem/fret-bootstrap/src/ui_diagnostics/inspect_neighborhood.rs`
+- Help tree browser model (paged, keyboard-driven): `ecosystem/fret-bootstrap/src/ui_diagnostics/inspect_tree.rs`
 - “Inspection active” wiring (view-cache correctness): `ecosystem/fret-bootstrap/src/ui_app_driver.rs`
 - Selector scoring/validation: `ecosystem/fret-bootstrap/src/ui_diagnostics/selector/validate.rs`
 - Scripted inspector helper step (protocol + runner): `crates/fret-diag-protocol/src/lib.rs` (`InspectHelpLockBestMatchAndCopySelector`) and `ecosystem/fret-bootstrap/src/ui_diagnostics/script_steps_inspect.rs`
@@ -151,6 +156,7 @@ This workstream intentionally keeps “evidence anchors” stable so future refa
 
 ## Non-goals (v1)
 
-- A full semantics tree browser inside the target app.
+- A full-featured semantics tree browser inside the target app (virtualized, mouse-driven, global search, etc.). The
+  in-app inspector only provides a minimal, keyboard-driven tree view in help mode.
 - Script authoring/editing inside the target app.
 - Remote debugging across machines as a supported feature.

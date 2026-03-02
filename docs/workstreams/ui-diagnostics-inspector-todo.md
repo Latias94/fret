@@ -26,6 +26,7 @@ Related docs:
 - In-app hover/pick prefer hit-test routing when available (fallback to bounds-based pick).
 - Selector validation exists (uniqueness + optional `root_z_index` gating) and is used by in-app “copy details” and focus selection.
 - Explainability panel (“why is input blocked?”) implemented and shown in help mode (cheap: bounded lists; no label printing).
+- Help output is paged (keyboard scroll via `PageUp/PageDown/Home/End`) to keep the overlay usable as sections grow (explainability + neighborhood + tree).
 - View cache frame stats exported in bundles (`debug.stats.view_cache_*`, `debug.stats.invalidation_*`)
 - A small regression gate exists in the `ui-gallery-overlay-steady` suite to ensure the in-app inspector can lock a help search match and copy the best selector JSON to the clipboard.
 - A scripted inspector helper step exists (`inspect_help_lock_best_match_and_copy_selector`) to avoid relying on keyboard shortcut injection under `--launch`.
@@ -37,14 +38,15 @@ Related docs:
    - Render label: `role`, `label`, `test_id`, `node_id`, and root `z_index`.
    - Interaction: toggle on/off; lock selection; copy selector to clipboard.
    - Ownership: should live in `fret-ui-kit` / app overlay, not `fret-ui`.
-   - Status:
-     - MVP implemented in `fret-bootstrap` as a diagnostics-only overlay layer (border + label) while inspection is active (scripts/picking).
-     - Continuous inspect toggle implemented via file-triggered `inspect.json` + `inspect.touch` (`fretboard diag inspect ...`).
-     - In-app toggle/help implemented (diagnostics-only): `Ctrl/Cmd+Alt+I` toggles inspect, `Ctrl/Cmd+Alt+H` shows shortcut help.
-     - In-app shortcuts implemented (diagnostics-only): `Esc` exit, `Ctrl+C` copy selector, `Ctrl+Shift+C` copy details, `L` lock/unlock selection.
-- Locked navigation implemented (diagnostics-only): `Alt+Up/Down` walks the semantics parent chain with a small “back to child” stack.
-- Local neighborhood view implemented in help mode: parent + siblings + children + type-to-filter, plus `Up/Down` match selection and `Enter` to lock (`Ctrl/Cmd+Enter` locks + copies).
-     - Remaining gaps: no full semantics tree browser (expand/collapse, virtualization, global search).
+    - Status:
+      - MVP implemented in `fret-bootstrap` as a diagnostics-only overlay layer (border + label) while inspection is active (scripts/picking).
+      - Continuous inspect toggle implemented via file-triggered `inspect.json` + `inspect.touch` (`fretboard diag inspect ...`).
+      - In-app toggle/help implemented (diagnostics-only): `Ctrl/Cmd+Alt+I` toggles inspect, `Ctrl/Cmd+Alt+H` shows shortcut help.
+      - In-app shortcuts implemented (diagnostics-only): `Esc` exit, `Ctrl+C` copy selector, `Ctrl+Shift+C` copy details, `L` lock/unlock selection.
+      - Locked navigation implemented (diagnostics-only): `Alt+Up/Down` walks the semantics parent chain with a small “back to child” stack.
+      - Local neighborhood view implemented in help mode: parent + siblings + children + type-to-filter, plus `Up/Down` match selection and `Enter` to lock (`Ctrl/Cmd+Enter` locks + copies).
+      - Help-mode semantics tree browser implemented (diagnostics-only): keyboard-driven expand/collapse + selection, shown as a paged text view (`Ctrl/Cmd+T`).
+      - Remaining gaps: no full semantics tree browser (virtualization, global search, mouse interactions, and better discoverability).
 
 2. **Pick modes**
    - One-shot pick (already): click once and write `pick.result.json`.
