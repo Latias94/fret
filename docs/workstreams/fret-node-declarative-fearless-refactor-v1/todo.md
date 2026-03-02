@@ -48,6 +48,9 @@ Suggested run commands (Windows-friendly):
 - [x] Introduce externalized render-data caches:
   - [x] stable key strategy (node/edge ids + view/style keys)
   - [x] cache invalidation by revision + viewport + scale factor (pan is paint-only)
+- [ ] Investigate “wire looks truncated / partially missing” reports in paint-only:
+  - [ ] confirm whether it is viewport culling (`cull_margin_screen_px`) vs edge bbox math vs raster cache,
+  - [ ] add a regression artifact (render snapshot gate preferred; semantics proxy acceptable).
 - [ ] Add cache observability counters (prepares/hits/evictions) for tuning.
 - [ ] Add one “steady-state” gate:
   - [x] fixed viewport + idle frames do not rebuild heavy render data (paint-only baselines):

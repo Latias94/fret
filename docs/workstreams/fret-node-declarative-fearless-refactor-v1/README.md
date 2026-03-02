@@ -232,6 +232,13 @@ Run the promoted paint-only suite (IDs live in `tools/diag-scripts/index.json`):
 
 - `cargo run -p fretboard -- diag suite fret-examples-node-graph-paint-only --env FRET_NODE_GRAPH_DECLARATIVE=paint --dir target/fret-diag-node-graph --launch -- cargo run -p fret-demo --bin node_graph_demo --features node-graph-demos`
 
+Maintenance note:
+
+- The suite members are defined via redirect stubs under
+  `tools/diag-scripts/suites/fret-examples-node-graph-paint-only/`.
+- `tools/diag-scripts/index.json` is generated; after changing suite membership, run:
+  - `python tools/check_diag_scripts_registry.py --write`
+
 ## Diagnostics shortcuts (paint-only)
 
 When running with `FRET_DIAG=1`, the paint-only surface provides a few deterministic shortcuts used
