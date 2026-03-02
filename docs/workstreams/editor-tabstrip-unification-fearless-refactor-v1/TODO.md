@@ -31,15 +31,16 @@ This workstream is intentionally scoped to “editor-grade tab UX”:
   - [x] Docking: overflow dropdown open + select row activates:
     - `tools/diag-scripts/docking/arbitration/docking-arbitration-demo-tab-overflow-menu-select-row-1-activates.json`
   - [x] Select-from-dropdown keeps active visible (explicit assert / evidence):
-    - Gate: `dock_tab_strip_active_visible_is visible=true` after selecting a row.
-    - Evidence:
+    - Docking gate: `dock_tab_strip_active_visible_is visible=true` after selecting a row.
       - Script: `tools/diag-scripts/docking/arbitration/docking-arbitration-demo-tab-overflow-menu-select-row-1-activates.json`
-      - Snapshot plumbing:
-        - Runtime: `crates/fret-runtime/src/interaction_diagnostics.rs`
-        - Docking publisher: `ecosystem/fret-docking/src/dock/space.rs`
-        - Bundle snapshot mapping: `ecosystem/fret-bootstrap/src/ui_diagnostics/docking_diagnostics.rs`
-        - Predicates: `ecosystem/fret-bootstrap/src/ui_diagnostics/predicates.rs`
-        - Protocol: `crates/fret-diag-protocol/src/lib.rs`
+    - Workspace gate: `workspace_tab_strip_active_visible_is visible=true pane_id="pane-a"` after selecting a row.
+      - Script: `tools/diag-scripts/workspace/shell-demo/workspace-shell-demo-tab-overflow-activate-hidden-smoke.json`
+    - Shared plumbing evidence:
+      - Runtime snapshot: `crates/fret-runtime/src/interaction_diagnostics.rs`
+      - Workspace publisher: `ecosystem/fret-workspace/src/tab_strip/mod.rs`
+      - Bundle snapshot mapping: `ecosystem/fret-bootstrap/src/ui_diagnostics/workspace_diagnostics.rs`
+      - Predicates + script runner wiring: `ecosystem/fret-bootstrap/src/ui_diagnostics/predicates.rs`
+      - Protocol predicate variants: `crates/fret-diag-protocol/src/lib.rs`
   - [ ] Drag end-drop on overflow header space resolves canonical insert_index:
     - Existing docking gate covers end-drop under overflow; workspace coverage still needed.
 - [x] Add minimal unit tests where headless helpers are used by adapters.

@@ -36,6 +36,8 @@ Recommendation:
   and lock it with a `fretboard diag` gate (non-pixel, no semantics required).
   - Current docking gate: `dock_tab_strip_active_visible_is visible=true` after selecting from
     the overflow dropdown.
+  - Current workspace gate: `workspace_tab_strip_active_visible_is visible=true pane_id="pane-a"`
+    after selecting from the overflow dropdown.
 
 ## Q5: Input arbitration priority (close vs activate vs overflow vs other affordances)
 
@@ -86,3 +88,18 @@ Options:
 Recommendation:
 - Use (2) for diagnostics gates to avoid false failures when a tab is wider than the viewport.
 - Keep “fully visible” as a UI/behavior goal where feasible, but do not over-constrain early gates.
+
+## Q9: Which upstream reference should “win” when behaviors conflict?
+
+Options:
+1) `repo-ref/zed` (editor-first, MRU/pinned, strong UX expectations).
+2) `repo-ref/dockview` (docking-first, explicit tests for overflow/drop semantics).
+3) `repo-ref/gpui-component` (element/controller patterns; declarative inspiration).
+
+Recommendation:
+- Prefer Dockview as the source of truth for docking chrome invariants (overflow membership,
+  dropdown affordances, drop target semantics).
+- Prefer Zed as the source of truth for editor interaction expectations (MRU fallback, focus
+  behavior, “active stays reachable” ergonomics).
+- Use GPUI references opportunistically for implementation patterns (stable keys, controller split),
+  but do not treat it as the final behavior oracle.

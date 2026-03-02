@@ -1906,6 +1906,74 @@ impl WorkspaceTabStrip {
                         state.last_active = active.clone();
                     });
 
+                    // Best-effort diagnostics hook: publish interaction state into the window-level
+                    // diagnostics store so `fretboard diag` can gate editor-grade invariants
+                    // without relying on pixels.
+                    {
+                        let frame_id = cx.app.frame_id();
+                        let tab_count = tabs.len();
+                        let scroll_x = scroll_handle.offset().x;
+                        let max_scroll_x = scroll_handle.max_offset().x;
+                        let overflow = max_scroll_x.0 > 0.5;
+
+                        let viewport_now = scroll_element
+                            .get()
+                            .and_then(|id| cx.last_bounds_for_element(id));
+                        let viewport = viewport_now.or(cached_scroll_viewport);
+                        let active_tab_rect = active_tab_element
+                            .get()
+                            .and_then(|id| cx.last_bounds_for_element(id));
+                        let scroll_viewport_rect = viewport;
+                        let active_tab_rect_diag = active_tab_rect;
+
+                        let status = if active.is_none() {
+                            fret_runtime::WorkspaceTabStripActiveVisibilityStatusDiagnostics::NoActiveTab
+                        } else if viewport.is_none() {
+                            fret_runtime::WorkspaceTabStripActiveVisibilityStatusDiagnostics::MissingScrollViewportRect
+                        } else if active_tab_rect.is_none() {
+                            fret_runtime::WorkspaceTabStripActiveVisibilityStatusDiagnostics::MissingActiveTabRect
+                        } else {
+                            fret_runtime::WorkspaceTabStripActiveVisibilityStatusDiagnostics::Ok
+                        };
+
+                        let active_visible = match (viewport, active_tab_rect) {
+                            (Some(viewport), Some(tab)) => {
+                                // `last_bounds_for_element` reports tab bounds in "unscrolled"
+                                // coordinates while the viewport bounds are in window
+                                // coordinates. Convert the tab rect into window coordinates by
+                                // subtracting the current scroll offset.
+                                let view_left = viewport.origin.x.0;
+                                let view_right = viewport.origin.x.0 + viewport.size.width.0;
+                                let tab_left = tab.origin.x.0 - scroll_x.0;
+                                let tab_right = tab.origin.x.0 + tab.size.width.0 - scroll_x.0;
+                                tab_left < view_right && tab_right > view_left
+                            }
+                            _ => false,
+                        };
+
+                        cx.app.with_global_mut_untracked(
+                            fret_runtime::WindowInteractionDiagnosticsStore::default,
+                            |store, _app| {
+                                store.record_workspace_tab_strip_active_visibility(
+                                    cx.window,
+                                    frame_id,
+                                    fret_runtime::WorkspaceTabStripActiveVisibilityDiagnostics {
+                                        status,
+                                        pane_id: pane_id.clone(),
+                                        active_tab_id: active.clone(),
+                                        tab_count,
+                                        overflow,
+                                        scroll_x,
+                                        max_scroll_x,
+                                        scroll_viewport_rect,
+                                        active_tab_rect: active_tab_rect_diag,
+                                        active_visible,
+                                    },
+                                );
+                            },
+                        );
+                    }
+
                     // Editor-grade focus restore:
                     //
                     // When the tab strip is focused (keyboard-first), closing the active tab

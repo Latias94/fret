@@ -24,6 +24,7 @@ fn eval_predicate_without_semantics(
     known_windows: &[AppWindowId],
     platform_caps: Option<&fret_runtime::PlatformCapabilities>,
     docking: Option<&fret_runtime::DockingInteractionDiagnostics>,
+    workspace: Option<&fret_runtime::WorkspaceInteractionDiagnostics>,
     dock_drag_runtime: Option<&DockDragRuntimeState>,
     pred: &UiPredicateV1,
 ) -> Option<bool> {
@@ -159,6 +160,36 @@ fn eval_predicate_without_semantics(
                 .and_then(|d| d.tab_strip_active_visibility.as_ref())
                 .is_some_and(|s| s.active_visible == *visible),
         ),
+        UiPredicateV1::WorkspaceTabStripActiveOverflowIs { overflow, pane_id } => Some(
+            workspace
+                .and_then(|w| {
+                    w.tab_strip_active_visibility.iter().rev().find(|s| {
+                        s.status
+                            == fret_runtime::WorkspaceTabStripActiveVisibilityStatusDiagnostics::Ok
+                            && pane_id.as_ref().is_none_or(|id| {
+                                s.pane_id
+                                    .as_ref()
+                                    .is_some_and(|p| p.as_ref() == id.as_str())
+                            })
+                    })
+                })
+                .is_some_and(|s| s.overflow == *overflow),
+        ),
+        UiPredicateV1::WorkspaceTabStripActiveVisibleIs { visible, pane_id } => Some(
+            workspace
+                .and_then(|w| {
+                    w.tab_strip_active_visibility.iter().rev().find(|s| {
+                        s.status
+                            == fret_runtime::WorkspaceTabStripActiveVisibilityStatusDiagnostics::Ok
+                            && pane_id.as_ref().is_none_or(|id| {
+                                s.pane_id
+                                    .as_ref()
+                                    .is_some_and(|p| p.as_ref() == id.as_str())
+                            })
+                    })
+                })
+                .is_some_and(|s| s.active_visible == *visible),
+        ),
         UiPredicateV1::DockGraphCanonicalIs { canonical } => Some(
             docking
                 .and_then(|d| d.dock_graph_stats)
@@ -211,6 +242,7 @@ fn eval_predicate(
     known_windows: &[AppWindowId],
     platform_caps: Option<&fret_runtime::PlatformCapabilities>,
     docking: Option<&fret_runtime::DockingInteractionDiagnostics>,
+    workspace: Option<&fret_runtime::WorkspaceInteractionDiagnostics>,
     dock_drag_runtime: Option<&DockDragRuntimeState>,
     text_font_stack_key_stable_frames: u32,
     font_catalog_populated: bool,
@@ -919,6 +951,26 @@ fn eval_predicate(
             .is_some_and(|s| s.overflow == *overflow),
         UiPredicateV1::DockTabStripActiveVisibleIs { visible } => docking
             .and_then(|d| d.tab_strip_active_visibility.as_ref())
+            .is_some_and(|s| s.active_visible == *visible),
+        UiPredicateV1::WorkspaceTabStripActiveOverflowIs { overflow, pane_id } => workspace
+            .and_then(|w| {
+                w.tab_strip_active_visibility.iter().rev().find(|s| {
+                    s.status == fret_runtime::WorkspaceTabStripActiveVisibilityStatusDiagnostics::Ok
+                        && pane_id.as_ref().is_none_or(|id| {
+                            s.pane_id.as_ref().is_some_and(|p| p.as_ref() == id.as_str())
+                        })
+                })
+            })
+            .is_some_and(|s| s.overflow == *overflow),
+        UiPredicateV1::WorkspaceTabStripActiveVisibleIs { visible, pane_id } => workspace
+            .and_then(|w| {
+                w.tab_strip_active_visibility.iter().rev().find(|s| {
+                    s.status == fret_runtime::WorkspaceTabStripActiveVisibilityStatusDiagnostics::Ok
+                        && pane_id.as_ref().is_none_or(|id| {
+                            s.pane_id.as_ref().is_some_and(|p| p.as_ref() == id.as_str())
+                        })
+                })
+            })
             .is_some_and(|s| s.active_visible == *visible),
         UiPredicateV1::DockGraphCanonicalIs { canonical } => docking
             .and_then(|d| d.dock_graph_stats)

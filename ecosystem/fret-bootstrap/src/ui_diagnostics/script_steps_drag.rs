@@ -318,6 +318,9 @@ pub(super) fn handle_drag_pointer_until_step(
         let docking_diag = app
             .global::<fret_runtime::WindowInteractionDiagnosticsStore>()
             .and_then(|store| store.docking_latest_for_window(window));
+        let workspace_diag = app
+            .global::<fret_runtime::WindowInteractionDiagnosticsStore>()
+            .and_then(|store| store.workspace_latest_for_window(window));
 
         let mut state = match active.v2_step_state.take() {
             Some(V2StepState::DragPointerUntil(state)) if state.step_index == step_index => state,
@@ -466,6 +469,36 @@ pub(super) fn handle_drag_pointer_until_step(
                 UiPredicateV1::DockGraphSignatureFingerprint64Is { fingerprint64 } => docking_diag
                     .and_then(|d| d.dock_graph_signature.as_ref())
                     .is_some_and(|s| s.fingerprint64 == *fingerprint64),
+                UiPredicateV1::WorkspaceTabStripActiveOverflowIs { overflow, pane_id } => {
+                    workspace_diag
+                        .and_then(|w| {
+                            w.tab_strip_active_visibility.iter().rev().find(|s| {
+                                s.status
+                                    == fret_runtime::WorkspaceTabStripActiveVisibilityStatusDiagnostics::Ok
+                                    && pane_id.as_ref().is_none_or(|id| {
+                                        s.pane_id
+                                            .as_ref()
+                                            .is_some_and(|p| p.as_ref() == id.as_str())
+                                    })
+                            })
+                        })
+                        .is_some_and(|s| s.overflow == *overflow)
+                }
+                UiPredicateV1::WorkspaceTabStripActiveVisibleIs { visible, pane_id } => {
+                    workspace_diag
+                        .and_then(|w| {
+                            w.tab_strip_active_visibility.iter().rev().find(|s| {
+                                s.status
+                                    == fret_runtime::WorkspaceTabStripActiveVisibilityStatusDiagnostics::Ok
+                                    && pane_id.as_ref().is_none_or(|id| {
+                                        s.pane_id
+                                            .as_ref()
+                                            .is_some_and(|p| p.as_ref() == id.as_str())
+                                    })
+                            })
+                        })
+                        .is_some_and(|s| s.active_visible == *visible)
+                }
                 _ => false,
             };
             let input_ctx = app
@@ -486,6 +519,7 @@ pub(super) fn handle_drag_pointer_until_step(
                     svc.known_windows.as_slice(),
                     app.global::<fret_runtime::PlatformCapabilities>(),
                     docking_diag,
+                    workspace_diag,
                     dock_drag_runtime.as_ref(),
                     text_font_stack_key_stable_frames,
                     font_catalog_populated,

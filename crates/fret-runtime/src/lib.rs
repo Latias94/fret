@@ -123,7 +123,8 @@ pub use interaction_diagnostics::{
     DockDropResolveSource, DockDropTargetDiagnostics, DockFloatingDragDiagnostics,
     DockGraphSignatureDiagnostics, DockGraphStatsDiagnostics, DockTabStripActiveVisibilityDiagnostics,
     DockTabStripActiveVisibilityStatusDiagnostics, DockingInteractionDiagnostics,
-    ViewportCaptureDiagnostics, WindowInteractionDiagnosticsStore,
+    ViewportCaptureDiagnostics, WindowInteractionDiagnosticsStore, WorkspaceInteractionDiagnostics,
+    WorkspaceTabStripActiveVisibilityDiagnostics, WorkspaceTabStripActiveVisibilityStatusDiagnostics,
 };
 pub use keymap::{BindingV1, KeySpecV1, KeymapError, KeymapFileV1};
 pub use keymap::{DefaultKeybinding, Keymap, KeymapContinuation, KeymapService, PlatformFilter};

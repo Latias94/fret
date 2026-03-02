@@ -104,6 +104,9 @@ pub(super) fn handle_ensure_visible_step(
     let docking_diag = app
         .global::<fret_runtime::WindowInteractionDiagnosticsStore>()
         .and_then(|store| store.docking_latest_for_window(window));
+    let workspace_diag = app
+        .global::<fret_runtime::WindowInteractionDiagnosticsStore>()
+        .and_then(|store| store.workspace_latest_for_window(window));
     let input_ctx = app
         .global::<fret_runtime::WindowInputContextService>()
         .and_then(|svc| svc.snapshot(window));
@@ -122,6 +125,7 @@ pub(super) fn handle_ensure_visible_step(
         svc.known_windows.as_slice(),
         app.global::<fret_runtime::PlatformCapabilities>(),
         docking_diag,
+        workspace_diag,
         dock_drag_runtime.as_ref(),
         text_font_stack_key_stable_frames,
         font_catalog_populated,

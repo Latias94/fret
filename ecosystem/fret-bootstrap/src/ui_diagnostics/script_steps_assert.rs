@@ -84,6 +84,9 @@ pub(super) fn handle_assert_step(
                 let docking_diag = app
                     .global::<fret_runtime::WindowInteractionDiagnosticsStore>()
                     .and_then(|store| store.docking_latest_for_window(predicate_window));
+                let workspace_diag = app
+                    .global::<fret_runtime::WindowInteractionDiagnosticsStore>()
+                    .and_then(|store| store.workspace_latest_for_window(predicate_window));
                 let input_ctx = app
                     .global::<fret_runtime::WindowInputContextService>()
                     .and_then(|svc| svc.snapshot(predicate_window));
@@ -115,6 +118,7 @@ pub(super) fn handle_assert_step(
                         svc.known_windows.as_slice(),
                         platform_caps,
                         docking_diag,
+                        workspace_diag,
                         dock_drag_runtime.as_ref(),
                         text_font_stack_key_stable_frames,
                         font_catalog_populated,
@@ -127,6 +131,7 @@ pub(super) fn handle_assert_step(
                         svc.known_windows.as_slice(),
                         platform_caps,
                         docking_diag,
+                        workspace_diag,
                         dock_drag_runtime.as_ref(),
                         &predicate,
                     )
