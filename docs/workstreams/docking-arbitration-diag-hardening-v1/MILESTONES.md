@@ -32,6 +32,10 @@ Status update (2026-03-02, later):
 - M1.5 delivered: the chained tear-off script is now deterministic enough to be a regression gate (stable hover
   retargeting + explicit zone selection).
 - M1.6 delivered: chained tear-off + merge-back returns to the pre-tearoff dock graph fingerprint (idempotence).
+- M1.7 delivered: multi-window overlap z-order switching is stable again under `--timeout-ms 60000` by:
+  - avoiding global dock-drag cancellation on `PointerCancel` (`ecosystem/fret-docking/src/dock/space.rs`),
+  - allowing global predicate steps to run off-window (avoid occlusion stalls) (`ecosystem/fret-bootstrap/src/ui_diagnostics/script_runner.rs`),
+  - canceling runner-routed cross-window drags using the internal routing pointer id on mouse-up (`crates/fret-launch/src/runner/desktop/runner/app_handler.rs`).
 
 Stability check (2026-03-02):
 
