@@ -2,6 +2,7 @@ use super::*;
 
 mod alert;
 mod alert_dialog;
+mod accordion;
 mod aspect_ratio;
 mod avatar;
 mod badge;
@@ -64,6 +65,13 @@ mod typography;
 
 pub(super) fn preview_alert(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
     alert::preview_alert(cx)
+}
+
+pub(super) fn preview_accordion(
+    cx: &mut ElementContext<'_, App>,
+    value: Model<Option<Arc<str>>>,
+) -> Vec<AnyElement> {
+    accordion::preview_accordion(cx, value)
 }
 
 pub(super) fn preview_avatar(

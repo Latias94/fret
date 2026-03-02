@@ -11,8 +11,11 @@ Legend:
 
 ## Status
 
-As of 2026-03-02, UI Gallery pages are **snippet-backed** (Preview ≡ Code) and the core enforcement
-tests are in place.
+As of 2026-03-02, UI Gallery component pages under `apps/fret-ui-gallery/src/ui/pages/**` are
+**snippet-backed** (Preview ≡ Code) and the core enforcement tests are in place.
+
+Remaining legacy surfaces that still embed raw Rust code strings are tracked via the drift audit
+(`apps/fret-ui-gallery/build.rs`) and should be migrated as follow-up work (e.g. Calendar).
 
 ### Foundations
 
@@ -40,6 +43,7 @@ tests are in place.
 ### Next (post-migration)
 
 - [x] Expand drift audit coverage to include non-`src/ui/pages/**` preview surfaces (`src/ui/previews/**`).
+- [ ] Migrate Calendar page(s) out of `src/ui/previews/**` so copyable code stays drift-free.
 - [ ] Normalize DocSection chrome/layout (max widths, padding, “Notes” shell usage) across pages.
 - [ ] Optional: align page taxonomy + section ordering to upstream shadcn MDX navigation.
 
@@ -68,7 +72,7 @@ Source list: upstream shadcn v4 Base/Radix doc trees:
 
 | Component | Base MDX | Radix MDX | Fret module | Gallery Page | Snippet-backed | Status | Gates | Notes |
 |---|---|---|---|---:|---:|---:|---|---|
-| accordion | `repo-ref/ui/apps/v4/content/docs/components/base/accordion.mdx` | `repo-ref/ui/apps/v4/content/docs/components/radix/accordion.mdx` | `accordion` | TBD | No | Not started |  |  |
+| accordion | `repo-ref/ui/apps/v4/content/docs/components/base/accordion.mdx` | `repo-ref/ui/apps/v4/content/docs/components/radix/accordion.mdx` | `accordion` | `apps/fret-ui-gallery/src/ui/pages/accordion.rs` | Yes | Done |  | Snippet-backed previews + region-sliced code tabs (preview ≡ code). Keep `ui-gallery-accordion-demo-*` test_ids stable for future diag scripts. |
 | alert | `repo-ref/ui/apps/v4/content/docs/components/base/alert.mdx` | `repo-ref/ui/apps/v4/content/docs/components/radix/alert.mdx` | `alert` | `apps/fret-ui-gallery/src/ui/pages/alert.rs` | Yes | Done | `tools/diag-scripts/ui-gallery/alert/ui-gallery-alert-*.json` | Snippet-backed previews + region-sliced code tabs (preview ≡ code). Keep `ui-gallery-alert-tabs-trigger-*` stable for diag scripts. |
 | alert-dialog | `repo-ref/ui/apps/v4/content/docs/components/base/alert-dialog.mdx` | `repo-ref/ui/apps/v4/content/docs/components/radix/alert-dialog.mdx` | `alert_dialog` | `apps/fret-ui-gallery/src/ui/pages/alert_dialog.rs` | Yes | Done | `tools/diag-scripts/ui-gallery/overlay/ui-gallery-alert-dialog-*`, `tools/diag-scripts/ui-gallery/alert-dialog/ui-gallery-alert-dialog-part-surface-smoke.json` | Snippet-backed previews + region-sliced code tabs (preview ≡ code). Keep Basic/RTL doc section IDs stable for diag scripts. |
 | aspect-ratio | `repo-ref/ui/apps/v4/content/docs/components/base/aspect-ratio.mdx` | `repo-ref/ui/apps/v4/content/docs/components/radix/aspect-ratio.mdx` | `aspect_ratio` | `apps/fret-ui-gallery/src/ui/pages/aspect_ratio.rs` | Yes | Done | `tools/diag-scripts/ui-gallery/aspect-ratio/ui-gallery-aspect-ratio-*.json` | Snippet-backed previews + region-sliced code tabs (preview ≡ code). Keep Demo section `docsec-demo-*` IDs stable for diag scripts. |

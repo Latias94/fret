@@ -8,6 +8,7 @@
 
 pub mod alert;
 pub mod alert_dialog;
+pub mod accordion;
 pub mod aspect_ratio;
 pub mod avatar;
 pub mod badge;
