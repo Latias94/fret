@@ -23,9 +23,8 @@ use fret_ui_kit::{
 };
 
 use crate::combobox::{
-    ComboboxChip, ComboboxChipsInput, ComboboxContent, ComboboxContentPart,
-    ComboboxGroup as V4ComboboxGroup, ComboboxItem as V4ComboboxItem, ComboboxOpenChangeReason,
-    ComboboxStyle, ComboboxValue,
+    ComboboxChipsInput, ComboboxContent, ComboboxContentPart, ComboboxGroup as V4ComboboxGroup,
+    ComboboxItem as V4ComboboxItem, ComboboxOpenChangeReason, ComboboxStyle, ComboboxValue,
 };
 use crate::combobox_data::{ComboboxOption, ComboboxOptionGroup};
 use crate::command::CommandPaletteA11ySelectedMode;
