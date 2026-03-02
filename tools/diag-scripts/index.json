@@ -2743,6 +2743,15 @@
         "shadcn",
         "ui_gallery"
       ],
+    },
+    {
+      "id": "ui-gallery-context-menu-keyboard-escape-focus-restore",
+      "path": "tools/diag-scripts/ui-gallery/overlay/ui-gallery-context-menu-keyboard-escape-focus-restore.json",
+      "required_capabilities": [],
+      "suite_memberships": [
+        "ui-gallery-overlay-steady"
+      ],
+      "tags": [],
       "target_hints": []
     },
     {
@@ -3125,6 +3134,15 @@
         "shadcn",
         "ui_gallery"
       ],
+    },
+    {
+      "id": "ui-gallery-dropdown-nonmodal-outside-press-focus-underlay",
+      "path": "tools/diag-scripts/ui-gallery/overlay/ui-gallery-dropdown-nonmodal-outside-press-focus-underlay.json",
+      "required_capabilities": [],
+      "suite_memberships": [
+        "ui-gallery-overlay-steady"
+      ],
+      "tags": [],
       "target_hints": []
     },
     {
