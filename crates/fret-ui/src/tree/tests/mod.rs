@@ -230,6 +230,7 @@ mod globals;
 mod hit_test;
 mod hit_test_cache_reuse_policy;
 mod interactivity_gate;
+mod key_dispatch_barrier_root;
 mod measure_in;
 mod models;
 mod outside_press;
