@@ -27,8 +27,8 @@ See also: `docs/workstreams/shadcn-part-surface-alignment-v1/INVENTORY.md`.
 This is the suggested dev sequence for the next parity passes (optimize for “high leverage” and
 “high risk”):
 
-1. `tooltip` / `popover` / `hover-card` (overlay semantics + extremely common call sites)
-2. `table` (layout constraints + semantics stamping)
+1. `kbd` (token + layout invariants; used widely in docs/examples)
+2. `resizable` (handle hit area + pointer semantics)
 3. **Defer last**: `select` / `combobox` (structural drift is known; deeper than naming)
 
 ## Tracker table
@@ -43,10 +43,13 @@ This is the suggested dev sequence for the next parity passes (optimize for “h
 | `breadcrumb` | `Breadcrumb, BreadcrumbList, BreadcrumbItem, BreadcrumbLink, BreadcrumbPage, BreadcrumbSeparator, BreadcrumbEllipsis` | `Breadcrumb` recipe builder + primitives re-export (incl `BreadcrumbRoot`, `BreadcrumbItemPart`, `BreadcrumbSeparatorPart`) | Root part name conflicts (`Breadcrumb` recipe vs upstream `Breadcrumb` root part) | Low | Keep recipe as-is; keep primitives available for upstream-shaped composition | unit tests in `ecosystem/fret-ui-shadcn/src/breadcrumb.rs` | P2 | Done (with known gaps) |
 | `avatar` | `Avatar, AvatarImage, AvatarFallback` | `Avatar*` (+ `AvatarBadge`, `AvatarGroup*`) + `avatar_sized(...)` | extra parts exist (fine) | **Yes** (size scope) | Keep extra parts; add scoped builder + explicit `size(...)` overrides for size-dependent leaf parts | unit tests in `ecosystem/fret-ui-shadcn/src/avatar.rs` | P0 | Done |
 | `badge` | `Badge, badgeVariants` | `Badge` + `BadgeVariant` + `badge_variants(...)` (`badgeVariants` alias) | `asChild` is modeled via explicit render modes; richer content model exists (icons/visited) | Low | Keep surface; lock shrink-0 + overflow clip + currentColor inheritance via unit tests | unit tests in `ecosystem/fret-ui-shadcn/src/badge.rs` | P2 | Done (with known gaps) |
+| `item` | `Item, ItemMedia, ItemContent, ItemActions, ItemGroup, ItemSeparator, ItemTitle, ItemDescription, ItemHeader, ItemFooter` | `Item*` parts + `ItemSize` + `item_sized(...)` | No DOM `group-data-[size=...]/item:*`; `item_sized(...)` provides a typed scope and leaf parts support explicit `.item_size(...)` overrides | Medium | Add `ItemSize::Xs`, `item_sized(...)`, and size-aware defaults for `ItemMedia(Image)` and `ItemContent` gap; keep the existing part surface | unit tests in `ecosystem/fret-ui-shadcn/src/item.rs` | P2 | Done (with known gaps) |
 | `checkbox` | `Checkbox` | `Checkbox` | DOM slot composition differs; keyboard/a11y outcomes must match Radix/APG expectations | Medium | Keep surface; treat behavior outcomes as the contract and gate with unit tests | unit tests in `ecosystem/fret-ui-shadcn/src/checkbox.rs` | P1 | Done (with known gaps) |
 | `input` | `Input` | `Input` | Upstream `file:*` styling and `type` differences are not modeled; focus/selection outcomes are the contract | Low | Keep surface; lock `w-full` + `min-w-0` defaults and selection color token mapping | unit tests in `ecosystem/fret-ui-shadcn/src/input.rs` | P2 | Done (with known gaps) |
 | `textarea` | `Textarea` | `Textarea` | Adds resize-handle + stable-line-box knobs not present upstream | Low | Keep surface; lock `min-h-16` + `w-full` defaults and resize-handle gating | unit tests in `ecosystem/fret-ui-shadcn/src/textarea.rs` | P2 | Done (with known gaps) |
+| `native-select` | `NativeSelect, NativeSelectOptGroup, NativeSelectOption` | `NativeSelect*` parts | Upstream is a true `<select>`; Fret models an overlay listbox/command surface with deterministic `test_id`s for automation | Medium | Keep surface; lock trigger combobox semantics + overlay `test_id_prefix` stamping via unit tests | unit tests in `ecosystem/fret-ui-shadcn/src/native_select.rs` | P2 | Done (with known gaps) |
 | `field` | `FieldSet, FieldLegend, FieldGroup, FieldContent, FieldTitle, FieldLabel, FieldDescription, FieldError, FieldSeparator` | `Field*` parts + ControlRegistry association (`ControlId`) | No DOM `id/htmlFor`; `described-by` is a single relationship (error > description) | Medium | Extend `ControlRegistry` to include helper text; add `.control_id(...)` on `Input`/`Textarea` and `.for_control(...)` on `FieldDescription`/`FieldError` | unit tests in `ecosystem/fret-ui-shadcn/src/field.rs` and `ecosystem/fret-ui-shadcn/src/input.rs` | P1 | Done (with known gaps) |
+| `table` | `Table, TableHeader, TableBody, TableFooter, TableRow, TableHead, TableCell, TableCaption` | `Table*` parts | Uses a `ScrollArea(axis=X)` wrapper; current `Grid` contract cannot expand to intrinsic content width, so horizontal scroll is best-effort | Medium | Keep surface; lock root width, footer styling, and border-bottom clearing via unit tests | unit tests in `ecosystem/fret-ui-shadcn/src/table.rs` | P2 | Done (with known gaps) |
 | `spinner` | `Spinner` | `Spinner` | Upstream uses an SVG with `role="status"`; Fret maps to `SvgIcon` + `VisualTransform` | Low | Keep surface; lock `size-4` default and stamp loading semantics (`aria-live` equivalent) | unit tests in `ecosystem/fret-ui-shadcn/src/spinner.rs` | P2 | Done |
 | `switch` | `Switch` | `Switch` | DOM slot composition differs; geometry and semantics outcomes are the contract | Low | Keep surface; lock thumb centering + semantics role stamping | unit tests in `ecosystem/fret-ui-shadcn/src/switch.rs` | P1 | Done |
 | `dialog` | `Dialog, DialogTrigger, DialogPortal, DialogOverlay, DialogContent, DialogClose, DialogHeader, DialogFooter, DialogTitle, DialogDescription` | `Dialog, DialogContent, DialogClose, DialogHeader, DialogFooter, DialogTitle, DialogDescription` (+ thin parts adapters) | Portal/overlay/trigger are adapters; in `into_element_parts` we install a default "open on activate" behavior when the trigger is pressable | Medium | Add thin parts that delegate to existing `Dialog` overlay composition; preserve current closure API | unit tests in `ecosystem/fret-ui-shadcn/src/dialog.rs` (+ diag script TODO) | P0 | Done (with known gaps) |
@@ -85,7 +88,7 @@ This is the short “next few” list. Full inventory is in `INVENTORY.md`.
 
 | Component | Upstream base file | Fret module | Priority | Status | Notes |
 |---|---|---|---:|---|---|
-| `table` | `repo-ref/ui/apps/v4/registry/bases/radix/ui/table.tsx` | `ecosystem/fret-ui-shadcn/src/table.rs` | P2 | Not started | Gate: default layout constraints (`min-w-0`, truncate) + semantics role stamping. |
+| `kbd` | `repo-ref/ui/apps/v4/registry/bases/radix/ui/kbd.tsx` | `ecosystem/fret-ui-shadcn/src/kbd.rs` | P2 | Not started | Gate: default `h-5` + `text-xs` mapping and stable padding/radius outcomes. |
 
 ## Notes / recurring hazards
 

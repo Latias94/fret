@@ -56,11 +56,11 @@ without having to grep the whole crate.
 | `input` | `repo-ref/ui/apps/v4/registry/bases/radix/ui/input.tsx` | `ecosystem/fret-ui-shadcn/src/input.rs` | parts | No | Yes | Default constraints + selection color token mapping are gated by unit tests. |
 | `input-group` | `repo-ref/ui/apps/v4/registry/bases/radix/ui/input-group.tsx` | `ecosystem/fret-ui-shadcn/src/input_group.rs` | recipe + adapter | Yes | Yes | Addon click-to-focus needs explicit hints for interactive descendants. |
 | `input-otp` | `repo-ref/ui/apps/v4/registry/bases/radix/ui/input-otp.tsx` | `ecosystem/fret-ui-shadcn/src/input_otp.rs` | recipe + adapter | Yes | Yes | `aria-invalid` is global, not per-slot. |
-| `item` | `repo-ref/ui/apps/v4/registry/bases/radix/ui/item.tsx` | `ecosystem/fret-ui-shadcn/src/item.rs` | parts | No | No | Not audited yet. |
+| `item` | `repo-ref/ui/apps/v4/registry/bases/radix/ui/item.tsx` | `ecosystem/fret-ui-shadcn/src/item.rs` | parts | Yes | Yes | Adds `ItemSize::Xs` + `item_sized(...)` to model `group-data-[size=...]/item:*` outcomes; unit tests lock padding/gap + size-scoped media/content defaults. |
 | `kbd` | `repo-ref/ui/apps/v4/registry/bases/radix/ui/kbd.tsx` | `ecosystem/fret-ui-shadcn/src/kbd.rs` | parts | No | No | Not audited yet. |
 | `label` | `repo-ref/ui/apps/v4/registry/bases/radix/ui/label.tsx` | `ecosystem/fret-ui-shadcn/src/label.rs` | parts | No | Yes | Re-exports the primitive; association uses `labelled_by_element(...)` on controls; defaults are gated in `fret-ui-kit` tests. |
 | `menubar` | `repo-ref/ui/apps/v4/registry/bases/radix/ui/menubar.tsx` | `ecosystem/fret-ui-shadcn/src/menubar.rs` | recipe + adapter | Yes | Yes | Portal is a no-op wrapper; trigger/content are adapters. |
-| `native-select` | `repo-ref/ui/apps/v4/registry/bases/radix/ui/native-select.tsx` | `ecosystem/fret-ui-shadcn/src/native_select.rs` | parts | No | No | Not audited yet. |
+| `native-select` | `repo-ref/ui/apps/v4/registry/bases/radix/ui/native-select.tsx` | `ecosystem/fret-ui-shadcn/src/native_select.rs` | parts | No | Yes | Models a shadcn-aligned select surface (trigger + listbox) and stamps deterministic `test_id`s; gated by unit tests. |
 | `navigation-menu` | `repo-ref/ui/apps/v4/registry/bases/radix/ui/navigation-menu.tsx` | `ecosystem/fret-ui-shadcn/src/navigation_menu.rs` | parts (+ style helper) | No | Yes | `navigation_menu_trigger_style(...)` is a typed refinement helper. |
 | `pagination` | `repo-ref/ui/apps/v4/registry/bases/radix/ui/pagination.tsx` | `ecosystem/fret-ui-shadcn/src/pagination.rs` | parts | No | Yes | Root label + link active semantics + ellipsis hidden semantics are gated by unit tests. |
 | `popover` | `repo-ref/ui/apps/v4/registry/bases/radix/ui/popover.tsx` | `ecosystem/fret-ui-shadcn/src/popover.rs` | parts | No | Yes | Placement + focus outcomes are gated by unit tests. |
@@ -73,11 +73,11 @@ without having to grep the whole crate.
 | `sheet` | `repo-ref/ui/apps/v4/registry/bases/radix/ui/sheet.tsx` | `ecosystem/fret-ui-shadcn/src/sheet.rs` | recipe + adapter | Yes | Yes | Trigger/Portal/Overlay are adapters; default “open on activate” when trigger is pressable. |
 | `sidebar` | `repo-ref/ui/apps/v4/registry/bases/radix/ui/sidebar.tsx` | `ecosystem/fret-ui-shadcn/src/sidebar.rs` | parts | No | Yes | Motion + width invariants are gated by unit tests; includes `useSidebar` + `use_sidebar` alias. |
 | `skeleton` | `repo-ref/ui/apps/v4/registry/bases/radix/ui/skeleton.tsx` | `ecosystem/fret-ui-shadcn/src/skeleton.rs` | parts | No | Yes | Default layout + pulse stability policy are gated by unit tests. |
-| `slider` | `repo-ref/ui/apps/v4/registry/bases/radix/ui/slider.tsx` | `ecosystem/fret-ui-shadcn/src/slider.rs` | parts | No | No | Not audited yet. |
+| `slider` | `repo-ref/ui/apps/v4/registry/bases/radix/ui/slider.tsx` | `ecosystem/fret-ui-shadcn/src/slider.rs` | parts | No | Yes | Keyboard/pointer + a11y SetValue outcomes are gated by unit tests. |
 | `sonner` | `repo-ref/ui/apps/v4/registry/bases/radix/ui/sonner.tsx` | `ecosystem/fret-ui-shadcn/src/sonner.rs` | parts | No | No | Not audited yet. |
 | `spinner` | `repo-ref/ui/apps/v4/registry/bases/radix/ui/spinner.tsx` | `ecosystem/fret-ui-shadcn/src/spinner.rs` | parts | No | Yes | Default `size-4` + loading semantics stamping are gated by unit tests. |
 | `switch` | `repo-ref/ui/apps/v4/registry/bases/radix/ui/switch.tsx` | `ecosystem/fret-ui-shadcn/src/switch.rs` | parts | No | Yes | Thumb centering + semantics role outcomes are gated by unit tests. |
-| `table` | `repo-ref/ui/apps/v4/registry/bases/radix/ui/table.tsx` | `ecosystem/fret-ui-shadcn/src/table.rs` | parts | No | No | Not audited yet (user recently fixed compile issue). |
+| `table` | `repo-ref/ui/apps/v4/registry/bases/radix/ui/table.tsx` | `ecosystem/fret-ui-shadcn/src/table.rs` | parts | No | Yes | `ScrollArea(axis=X)` wrapper is best-effort; unit tests lock width defaults + border clearing. |
 | `tabs` | `repo-ref/ui/apps/v4/registry/bases/radix/ui/tabs.tsx` | `ecosystem/fret-ui-shadcn/src/tabs.rs` | parts (+ helper) | No | Yes | Part surface + style helper are tracked as “Done (with known gaps)”. |
 | `textarea` | `repo-ref/ui/apps/v4/registry/bases/radix/ui/textarea.tsx` | `ecosystem/fret-ui-shadcn/src/textarea.rs` | parts | No | Yes | Shadow wrapper + resize handle policy are gated by unit tests. |
 | `toggle` | `repo-ref/ui/apps/v4/registry/bases/radix/ui/toggle.tsx` | `ecosystem/fret-ui-shadcn/src/toggle.rs` | parts (+ helper) | No | No | Has `toggleVariants(...)` mapping; not audited yet. |
