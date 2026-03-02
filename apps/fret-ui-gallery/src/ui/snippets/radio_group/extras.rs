@@ -1,3 +1,5 @@
+pub const SOURCE: &str = include_str!("extras.rs");
+
 // region: example
 use fret_core::Px;
 use fret_ui_kit::declarative::ElementContextThemeExt;
@@ -49,9 +51,18 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
     let fieldset = {
         let group = shadcn::RadioGroup::uncontrolled(Some("monthly"))
             .a11y_label("Subscription plan")
-            .item(shadcn::RadioGroupItem::new("monthly", "Monthly ($9.99/month)"))
-            .item(shadcn::RadioGroupItem::new("yearly", "Yearly ($99.99/year)"))
-            .item(shadcn::RadioGroupItem::new("lifetime", "Lifetime ($299.99)"))
+            .item(shadcn::RadioGroupItem::new(
+                "monthly",
+                "Monthly ($9.99/month)",
+            ))
+            .item(shadcn::RadioGroupItem::new(
+                "yearly",
+                "Yearly ($99.99/year)",
+            ))
+            .item(shadcn::RadioGroupItem::new(
+                "lifetime",
+                "Lifetime ($299.99)",
+            ))
             .into_element(cx);
 
         shadcn::FieldSet::new([
@@ -141,8 +152,7 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
                 shadcn::RadioGroupItem::new("comfortable", "مريح").child(
                     shadcn::FieldContent::new([
                         shadcn::FieldLabel::new("مريح").into_element(cx),
-                        shadcn::FieldDescription::new("مساحة أكبر بين العناصر.")
-                            .into_element(cx),
+                        shadcn::FieldDescription::new("مساحة أكبر بين العناصر.").into_element(cx),
                     ])
                     .into_element(cx),
                 ),
