@@ -3,9 +3,18 @@
 Scope: stabilize the `docking-arbitration` diagnostics suite in `--launch` mode on desktop (native),
 with special focus on multi-window tear-off + drag-back sequences.
 
-## Immediate TODOs
+## Immediate TODOs (next)
 
-- Make `docking-arbitration-demo-multiwindow-drag-tab-back-to-main` deterministic (no flake, no timeouts).
+- Unblock local rebuilds for docking demos on Windows/MSVC (currently observed: `taffy`-related LNK2019 unresolved
+  externals when building `docking_arbitration_demo`).
+- Make `docking-arbitration-demo-multiwindow-chained-tearoff-two-tabs-merge` deterministic enough to be a regression
+  gate:
+  - stabilize drop targeting (hint selection + tie-breakers),
+  - add “pre-warm hover” steps only if required (document why),
+  - keep intermediate structural assertions close to the failure point.
+- Fix chained tear-off + merge-back correctness (product correctness, not just diag):
+  - after two tear-offs and two merge-backs, the dock graph should return to the pre-tearoff fingerprint (no panel loss,
+    stable split/tab structure, stable tab ordering where applicable).
 - Decide the contract for “scripted cross-window drag release”:
   - which subsystem owns `Drop` routing (runner vs in-app diagnostics injection),
   - which coordinate space is the source of truth (screen vs window-client),
@@ -13,31 +22,19 @@ with special focus on multi-window tear-off + drag-back sequences.
 - Convert any remaining schema v1 docking scripts to schema v2.
 - Reduce coupling to layout presets (prefer fingerprints / structural assertions where possible).
 
-## Next TODOs (after diag no-hang)
+## Hardening backlog (audit + future-proofing)
 
-- Fix chained tear-off + merge-back correctness:
-  - `docking-arbitration-demo-multiwindow-chained-tearoff-two-tabs-merge` reaches the final assertion but the dock graph
-    signature does not return to the pre-tearoff fingerprint (observed: missing `demo.viewport.left`).
 - Ensure bundle-level evidence is sufficient without logs:
   - `debug.docking_interaction.dock_graph_signature` / `dock_graph_stats` should be present and up-to-date for all frames
     that matter to gates (either by recording every frame, or by an explicit “latest snapshot” contract).
-
-## Hardening backlog (diag correctness + isolation)
-
-- Runner: isolate scripted cursor overrides from physical mouse movement.
-  - Goal: when diagnostics cursor override is active (and a script is running), physical mouse movement must not change
-    the runner cursor position used for docking hover/drop routing.
-  - Acceptance: a cross-window docking script remains deterministic even if the user moves the mouse during playback.
-- Window counting: make `known_window_count_*` source-of-truth runner-owned.
-  - Goal: diagnostics predicates for window count must reflect real open OS windows, not “windows that produced input”.
-  - Acceptance: tear-off create/auto-close gates do not flake under occlusion / z-order churn.
-- Cached `test_id` predicate evaluation: audit + evidence.
-  - Goal: `exists/not_exists` by `test_id` may be evaluated off-window using cached `test_id_bounds` to avoid occlusion
-    deadlocks, but must not introduce false positives from stale caches.
-  - Work:
-    - Define a max-age / freshness rule (e.g. require a recent snapshot for the target window).
-    - Add bounded evidence in the script event log when cache-based evaluation is used (hit/miss/stale).
-    - Add a focused repro script that intentionally occludes the target window and still progresses without hanging.
+- “Diag resilience” policy: scripted repros should not be terminated by debug-only internal assertions (e.g. focus
+  snapshot invariants) when a safe downgrade is possible and preserves evidence.
+  - Prefer fixing the root cause, but allow temporary non-fatal behavior in diag/harness paths if it keeps the repro
+    running and captures a bundle.
+- Cached `test_id` predicate evaluation: keep auditing the trade-off (occlusion deadlock avoidance vs stale-cache false
+  positives).
+  - Maintain and revisit the freshness rule and evidence (event log) as we learn more about snapshot liveness.
+  - Add a minimal “occluded window still progresses” repro script if we do not already have one that is stable.
 
 ## Regression gates (candidate)
 
@@ -46,3 +43,9 @@ with special focus on multi-window tear-off + drag-back sequences.
   - hover routing across windows,
   - drag-back merge (tab restored into main),
   - no stuck drag sessions after release/cancel.
+
+## Done (2026-03-02)
+
+- Runner: isolate scripted cursor overrides from physical mouse movement.
+- Window counting: `known_window_count_*` predicates use a runner-owned source-of-truth.
+- Cached `test_id` predicate evaluation is freshness-bounded and emits evidence when used.

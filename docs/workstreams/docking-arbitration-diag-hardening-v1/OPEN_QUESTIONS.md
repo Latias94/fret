@@ -117,3 +117,59 @@ Recommendation:
 
 - Keep both modes, but ensure the non-follow path is explicitly tested by a script that moves the
   cursor into the destination window (not just overlap).
+
+## 5) Should internal focus snapshot invariants be fatal during diagnostics playback?
+
+Context:
+
+- Some docking demos have hit debug-only assertions in UI dispatch (focus snapshot / bubble chain consistency), which can
+  abort the entire repro and prevent a bundle from being captured.
+
+Options:
+
+- Keep assertions fatal in debug: bugs surface early, but scripted repros may be fragile and hard to share.
+- Downgrade to warnings during diagnostics playback only (or in harness builds): preserve the repro and capture evidence,
+  but risk masking a real bug if it becomes permanent.
+- Fix root cause only: no downgrades, invest in making the focus snapshot invariants always hold.
+
+Recommendation:
+
+- Prefer fixing the root cause. If the assertion prevents capturing docking evidence, allow a temporary diagnostics-only
+  downgrade (warn + early-exit) with explicit TODOs and a follow-up issue link.
+
+## 6) What does “layout idempotence” mean for fingerprints vs structural assertions?
+
+Context:
+
+- Today we rely on a fingerprint64 / exact signature to assert “returned to the pre-tearoff layout”, but failures show
+  multiple plausible “almost equivalent” signatures (e.g. same panels but different split orientation / tab grouping /
+  tab ordering).
+
+Options:
+
+- Keep exact fingerprint as the only gate (strict, but can be brittle during refactors).
+- Use a tiered gate: structural containment while correctness is being fixed; exact fingerprint once stable.
+- Define an equivalence relation for docking graphs (canonicalization + stable sorting) and fingerprint that.
+
+Recommendation:
+
+- Use tiered gates short term to localize failures, and invest in canonicalization/stable ordering so the exact
+  fingerprint becomes meaningful and durable.
+
+## 7) What is the deterministic tie-breaker for drop zone resolution?
+
+Context:
+
+- In failing runs, `dock_drop_resolve.resolved.zone` may land on an unexpected side even when a “center” hint is visible,
+  suggesting ambiguous hit-testing or non-deterministic ordering in zone selection.
+
+Options:
+
+- Define a strict priority order (e.g. inner-center > inner-left/right > outer zones) when multiple hints are eligible.
+- Prefer the “closest to cursor” by distance metric.
+- Prefer the most recently entered hint (stateful).
+
+Recommendation:
+
+- Define an explicit priority order (documented + tested), and include `dock_drop_resolve` evidence in bundles so scripts
+  can assert the resolved zone deterministically.

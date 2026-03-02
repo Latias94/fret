@@ -28,6 +28,16 @@ Status update (2026-03-02, later):
   (`ecosystem/fret-bootstrap/src/ui_diagnostics/service.rs:297`).
 - M1.3 delivered: `known_window_count_*` predicates use a runner-owned source-of-truth (`crates/fret-runtime/src/runner_window_lifecycle_diagnostics.rs`).
 
+## M1.4 — Rebuild reliability for docking demos (Windows/MSVC)
+
+Goal: docking demo binaries used by `--launch` diagnostics can be rebuilt reliably in local dev.
+
+Deliverables:
+
+- Document the observed failure mode (toolchain + target + error signature).
+- Unblock building `docking_arbitration_demo` (and related docking demos) from a clean-ish state on Windows/MSVC.
+- Add a short “if this regresses” note (what to try, what evidence to attach to an issue).
+
 ## M1.1 — Scripted input isolation (runner cursor override)
 
 Goal: scripted docking drags are deterministic under user input noise.
@@ -59,6 +69,29 @@ Deliverables:
 - Provide a runner-owned source-of-truth for open window count/list to the diagnostics service.
 - Switch `known_window_count_*` predicates to use this source-of-truth.
 - Add a regression script for multi-window tear-off + auto-close under z-order churn / occlusion.
+
+## M1.5 — Deterministic chained tear-off repro (two tabs, two merges)
+
+Goal: the chained tear-off repro is deterministic enough to be used as a stable regression gate (even if it currently
+fails on correctness).
+
+Deliverables:
+
+- A schema v2 script that:
+  - tears off a first tab, drags it back, waits for auto-close,
+  - tears off a second tab, drags it back, waits for auto-close,
+  - emits clear evidence for each merge (drop resolve zone, dock graph signature/stats).
+- Intermediate structural gates that pinpoint where a panel is lost or a split/tab shape changes.
+
+## M1.6 — Chained tear-off correctness (layout idempotence)
+
+Goal: after the chained tear-off + merge-back sequence, the dock graph returns to the pre-tearoff fingerprint.
+
+Deliverables:
+
+- Docking model/ops + interaction arbitration yield an idempotent outcome for tear-off → merge-back cycles (no panel
+  loss; stable canonicalization; stable ordering where applicable).
+- The chained repro script passes with the exact fingerprint gate (not just `contains`).
 
 ## M2 — Suite-level stability and isolation
 
