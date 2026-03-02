@@ -388,13 +388,14 @@ mod tests {
                 .saturating_add(extra_in_use_bytes),
         );
 
-        let got = effective_intermediate_budget_bytes_for_chain(
+        let got = intermediate_budget_breakdown_for_chain(
             intermediate_budget_bytes,
             &draw_scopes,
             super::super::PlanTarget::Intermediate0,
             format,
             extra_in_use_bytes,
-        );
+        )
+        .effective_budget_bytes;
         assert_eq!(got, expected);
     }
 }
