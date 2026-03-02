@@ -609,6 +609,43 @@ pub(crate) fn triage_json_from_stats(
             }));
         }
 
+        // renderer.custom_effect_v3_pyramid_cache_miss_heavy
+        //
+        // This is a perf/efficiency signal: when multiple CustomV3 passes in the same frame
+        // request a pyramid (levels >= 2), the renderer has a frame-local reuse cache keyed by
+        // (src_raw target, size, format, levels, src_raw epoch). A high miss ratio suggests that
+        // `src_raw` is not stable across the passes, or that the pyramid cannot be reused due to
+        // intervening writes.
+        let custom_effect_v3_pyramid_cache_hits =
+            worst.renderer_custom_effect_v3_pyramid_cache_hits;
+        let custom_effect_v3_pyramid_cache_misses =
+            worst.renderer_custom_effect_v3_pyramid_cache_misses;
+        let custom_effect_v3_pyramid_cache_total = custom_effect_v3_pyramid_cache_hits
+            .saturating_add(custom_effect_v3_pyramid_cache_misses);
+        if worst.renderer_custom_effect_v3_sources_pyramid_applied_levels_ge2 > 0
+            && custom_effect_v3_pyramid_cache_total >= 2
+            && custom_effect_v3_pyramid_cache_misses > custom_effect_v3_pyramid_cache_hits
+        {
+            let miss_pct = ratio_pct(
+                custom_effect_v3_pyramid_cache_misses,
+                custom_effect_v3_pyramid_cache_total,
+            );
+            let severity = if miss_pct >= 75.0 { "warn" } else { "info" };
+            out.push(json!({
+                "code": "renderer.custom_effect_v3_pyramid_cache_miss_heavy",
+                "severity": severity,
+                "message": "CustomEffectV3 pyramid cache misses dominate in the worst frame (pyramid rebuilds likely).",
+                "evidence": {
+                    "custom_effect_v3_sources_pyramid_requested": worst.renderer_custom_effect_v3_sources_pyramid_requested,
+                    "custom_effect_v3_sources_pyramid_applied_levels_ge2": worst.renderer_custom_effect_v3_sources_pyramid_applied_levels_ge2,
+                    "custom_effect_v3_pyramid_cache_hits": custom_effect_v3_pyramid_cache_hits,
+                    "custom_effect_v3_pyramid_cache_misses": custom_effect_v3_pyramid_cache_misses,
+                    "custom_effect_v3_pyramid_cache_total": custom_effect_v3_pyramid_cache_total,
+                    "custom_effect_v3_pyramid_cache_miss_pct": miss_pct,
+                }
+            }));
+        }
+
         // renderer.backdrop_source_group_degraded
         let worst_bsg_raw_degraded = worst
             .renderer_backdrop_source_groups_raw_degraded_budget_zero

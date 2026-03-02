@@ -866,6 +866,14 @@ pub(super) fn bundle_stats_from_json_with_options(
                 .and_then(|m| m.get("renderer_custom_effect_v3_passes_emitted"))
                 .and_then(|v| v.as_u64())
                 .unwrap_or(0);
+            let renderer_custom_effect_v3_pyramid_cache_hits = stats
+                .and_then(|m| m.get("renderer_custom_effect_v3_pyramid_cache_hits"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let renderer_custom_effect_v3_pyramid_cache_misses = stats
+                .and_then(|m| m.get("renderer_custom_effect_v3_pyramid_cache_misses"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
             let renderer_custom_effect_v3_sources_raw_requested = stats
                 .and_then(|m| m.get("renderer_custom_effect_v3_sources_raw_requested"))
                 .and_then(|v| v.as_u64())
@@ -1681,6 +1689,8 @@ pub(super) fn bundle_stats_from_json_with_options(
                 renderer_custom_effect_v2_passes_emitted,
                 renderer_custom_effect_v3_steps_requested,
                 renderer_custom_effect_v3_passes_emitted,
+                renderer_custom_effect_v3_pyramid_cache_hits,
+                renderer_custom_effect_v3_pyramid_cache_misses,
                 renderer_custom_effect_v3_sources_raw_requested,
                 renderer_custom_effect_v3_sources_raw_distinct,
                 renderer_custom_effect_v3_sources_raw_aliased_to_src,
