@@ -546,17 +546,24 @@ Rollback:
 
 Status:
 
-- Planned.
+- Landed.
 
 Goal:
 
 - Reduce merge conflict risk and make effect-chain planning readable (the file is a hotspot).
 
-Changes (proposed):
+Changes (landed):
 
 - Move chain planning (`apply_chain_in_place`, padding/work-target logic) into a dedicated module.
 - Move CustomV1/V2/V3 emission helpers into a dedicated module.
 - Keep existing tests and conformance behavior unchanged.
+
+Anchors:
+
+- `crates/fret-render-wgpu/src/renderer/render_plan_effects.rs` (module root + public helpers)
+- `crates/fret-render-wgpu/src/renderer/render_plan_effects/custom.rs` (CustomV1/V2/V3 helpers + V3 sources plan)
+- `crates/fret-render-wgpu/src/renderer/render_plan_effects/scissor.rs` (scissor mapping helpers)
+- `crates/fret-render-wgpu/src/renderer/render_plan_effects/tests.rs` (unit tests moved out-of-line)
 
 Gates:
 
