@@ -2,6 +2,7 @@
 # - commands/keymap typed-action dispatch + availability gating
 # - overlay modal barrier shortcut gating
 # - cross-frontend action dispatch (declarative + GenUI + imui)
+# - editor-grade surface adoption (workspace shell demo tab close dispatch trace)
 #
 # Usage:
 #   pwsh tools/diag_gate_action_first_authoring_v1.ps1
@@ -57,23 +58,47 @@ try {
             Name = "cookbook-imui-action-basics-cross-frontend"
             ScriptPath = "tools/diag-scripts/cookbook/imui-action-basics/cookbook-imui-action-basics-cross-frontend.json"
             ExampleName = "imui_action_basics"
+        },
+        @{
+            Name = "workspace-shell-demo-tab-close-button-command-dispatch-trace"
+            ScriptPath = "tools/diag-scripts/workspace/shell-demo/workspace-shell-demo-tab-close-button-closes-tab-smoke.json"
+            PackageName = "fret-demo"
+            BinName = "workspace_shell_demo"
         }
     )
 
     foreach ($gate in $gates) {
-        $exampleName = $gate.ExampleName
         $scriptPath = $gate.ScriptPath
         $gateName = $gate.Name
+        $demoExe = $null
 
-        $buildArgs = @("build", "-j", "1", "-p", "fret-cookbook", "--example", $exampleName)
-        if ($Release) {
-            $buildArgs += "--release"
-        }
-        Invoke-Checked "cargo build -p fret-cookbook --example $exampleName" "cargo" $buildArgs
+        if ($gate.ContainsKey("ExampleName")) {
+            $exampleName = $gate.ExampleName
+            $buildArgs = @("build", "-j", "1", "-p", "fret-cookbook", "--example", $exampleName)
+            if ($Release) {
+                $buildArgs += "--release"
+            }
+            Invoke-Checked "cargo build -p fret-cookbook --example $exampleName" "cargo" $buildArgs
 
-        $demoExe = Join-Path $workspaceRoot (Join-Path "target" (Join-Path $profileDir (Join-Path "examples" "$exampleName.exe")))
-        if (!(Test-Path $demoExe)) {
-            throw "cookbook example exe not found: $demoExe"
+            $demoExe = Join-Path $workspaceRoot (Join-Path "target" (Join-Path $profileDir (Join-Path "examples" "$exampleName.exe")))
+            if (!(Test-Path $demoExe)) {
+                throw "cookbook example exe not found: $demoExe"
+            }
+        } elseif ($gate.ContainsKey("PackageName") -and $gate.ContainsKey("BinName")) {
+            $packageName = $gate.PackageName
+            $binName = $gate.BinName
+            $buildArgs = @("build", "-j", "1", "-p", $packageName, "--bin", $binName)
+            if ($Release) {
+                $buildArgs += "--release"
+            }
+            Invoke-Checked "cargo build -p $packageName --bin $binName" "cargo" $buildArgs
+
+            $demoExe = Join-Path $workspaceRoot (Join-Path "target" (Join-Path $profileDir "$binName.exe"))
+            if (!(Test-Path $demoExe)) {
+                throw "demo exe not found: $demoExe"
+            }
+        } else {
+            throw "Invalid gate entry (missing ExampleName or (PackageName + BinName)): $($gateName)"
         }
 
         $scriptOutDir = Join-Path $runOutDir $gateName
@@ -109,4 +134,3 @@ try {
 } finally {
     Pop-Location
 }
-
