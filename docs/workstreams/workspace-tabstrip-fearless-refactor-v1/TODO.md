@@ -48,7 +48,7 @@ ID format:
   - surface classification (`TabStripSurface`),
   - overflow membership / geometry helpers (if needed).
 - [x] WTS-kernel-011 Click arbitration policy lives in `ecosystem/fret-ui-kit`:
-  - Evidence: `ecosystem/fret-ui-kit/src/headless/tab_strip_controller.rs`.
+  - Evidence: `ecosystem/fret-ui-headless/src/tab_strip_controller.rs` (re-exported via `ecosystem/fret-ui-kit/src/headless/tab_strip_controller.rs`).
 - [x] WTS-kernel-012 Workspace-specific kernel exists:
   - mapping pointer → hit target,
   - mapping hit target → insert index (including end-drop),
