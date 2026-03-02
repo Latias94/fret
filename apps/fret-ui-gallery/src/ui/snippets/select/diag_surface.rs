@@ -66,13 +66,15 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
 
     let select = shadcn::Select::new(value.clone(), open)
         .trigger_test_id("ui-gallery-select-trigger")
-        .trigger(
-            shadcn::SelectTrigger::new()
-                .refine_layout(LayoutRefinement::default().w_px(Px(180.0)))
-                .value(shadcn::SelectValue::new().placeholder("Select a fruit")),
-        )
-        .entries(entries)
-        .into_element(cx);
+        .into_element_parts(
+            cx,
+            |_cx| {
+                shadcn::SelectTrigger::new()
+                    .refine_layout(LayoutRefinement::default().w_px(Px(180.0)))
+                    .value(shadcn::SelectValue::new().placeholder("Select a fruit"))
+            },
+            |_cx| shadcn::SelectContent::new().with_entries(entries),
+        );
 
     let selected_value = value.clone();
     let selected_label = cx.scope(move |cx| {
