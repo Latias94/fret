@@ -307,6 +307,9 @@ unbounded” budget that is visible to these wrappers.
 
 Evidence anchors:
 
+- Layout-local helpers that force **definite** probe budgets:
+  - `probe_constraints_for_size(...)` in `crates/fret-ui/src/declarative/host_widget/layout.rs`
+  - `probe_constraints_for_size(...)` in `crates/fret-ui/src/declarative/host_widget/layout/positioned_container.rs`
 - Positioned containers:
   - `crates/fret-ui/src/declarative/host_widget/layout/positioned_container.rs`
   - uses `probe_available = clamp_to_constraints(cx.available, layout, cx.available)` and measures
@@ -314,7 +317,11 @@ Evidence anchors:
 - Generic container-like layouts:
   - `crates/fret-ui/src/declarative/host_widget/layout.rs`
   - “Probe within the available height budget” patterns appear in multiple element instances
-    (container-ish shells, translated wrappers, etc.).
+    (container-ish shells, transform wrappers, anchored wrappers, etc.).
+  - Examples in this file:
+    - `ElementInstance::RenderTransform`
+    - `ElementInstance::FractionalRenderTransform`
+    - `ElementInstance::Anchored`
 
 ### Flex/Grid probe-pass behavior
 
@@ -329,6 +336,7 @@ Evidence anchors:
 
 - Flex: `crates/fret-ui/src/declarative/host_widget/layout/flex.rs`
 - Grid: `crates/fret-ui/src/declarative/host_widget/layout/grid.rs`
+- Text (probe pass also hard-codes definite available space): `crates/fret-ui/src/declarative/host_widget/layout.rs`
 
 ### Absolute-positioned nodes inclusion is inconsistent
 
@@ -367,6 +375,38 @@ probes), we likely need at least one of these mechanism-level additions:
 4. **Keep observation bounded and debuggable**:
    - Maintain a bounded scan budget (as we do today) and surface “budget hit” telemetry so we can
      detect cases where wrapper chains exceed peeling/scan limits.
+
+### SE-111 draft: overflow contexts + clamp policy (contract sketch)
+
+Goal: make “fill vs fit vs overflow” an explicit mechanism contract so post-layout extents can be
+derived from `node_bounds` without relying on deep pre-layout unbounded probes.
+
+Proposed mechanism-level concepts:
+
+- **Overflow context (inherited)**:
+  - Installed at `Scroll` roots (and potentially other explicit overflow surfaces).
+  - Carries axis-specific “budget” hints (e.g. `scroll_axis_budget = MaxContent`, `cross_axis_budget = Definite(viewport)`).
+  - Intended to influence *measurement/probe constraints*, not to change paint-time clipping.
+- **Scoped clamp policy**:
+  - Default behavior remains: `clamp_to_constraints(...)` treats `available` as a hard maximum.
+  - Under an overflow context, on the **scroll axis only**, auto-sized descendants may exceed the
+    viewport-sized `Rect` budget so that overflow is visible in post-layout geometry.
+  - Cross axis remains clamped to preserve “no infinite viewport” invariants.
+
+Non-goals:
+
+- Do not implicitly include padding/border/chrome in extents at the mechanism level (policy lives
+  in component ecosystems via explicit wrappers).
+- Do not make overlays/chrome affect scroll ranges by default (absolute descendants are excluded).
+
+Open questions (to resolve before implementation):
+
+- Should the overflow context be carried on `LayoutCx` (layout-time inherited state) or via
+  `LayoutConstraints` (explicit constraints object)?
+- What is the minimal set of element/layout implementations that must consult the context to make
+  the behavior observable in real trees (docs pages + tab panels)?
+- How do we expose “budget hit / under-observed overflow” telemetry without turning it into a
+  perf hazard in release builds?
 
 ## Verification Plan (SE-210)
 

@@ -54,6 +54,10 @@ Tracking format:
   - Goal: let layout paths express `MaxContent` on the scroll axis without requiring a huge `Rect`.
   - Targets: `LayoutCx` + the key budget-clamping wrappers (container-ish layouts, positioned
     containers, flex/grid probe paths).
+  - Audit targets (evidence anchors in SE-110):
+    - `probe_constraints_for_size(...)` helpers that currently force definite budgets.
+    - `ElementInstance::RenderTransform` / `FractionalRenderTransform` / `Anchored` probe paths.
+    - `flex` / `grid` / `text` probe-pass behavior (definite `available`).
 - [ ] SE-113 Standardize absolute-positioned node exclusion for extents.
   - Goal: ensure post-layout extents observation and intrinsic sizing agree (default: exclude).
 - [ ] SE-114 Surface bounded-observation telemetry for extents (budget hits).
