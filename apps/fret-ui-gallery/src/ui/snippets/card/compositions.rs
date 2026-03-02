@@ -26,20 +26,26 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
         },
         |cx| {
             let content_only = {
-                let card = shadcn::Card::new(vec![shadcn::CardContent::new(vec![
-                    ui::text(cx, "Content Only").text_sm().into_element(cx),
-                ])
-                .into_element(cx)]);
+                let card = shadcn::Card::new(vec![
+                    shadcn::CardContent::new(vec![
+                        ui::text(cx, "Content Only").text_sm().into_element(cx),
+                    ])
+                    .into_element(cx),
+                ]);
                 cell(cx, card)
             };
 
             let header_only = {
-                let card = shadcn::Card::new(vec![shadcn::CardHeader::new(vec![
-                    shadcn::CardTitle::new("Header Only").into_element(cx),
-                    shadcn::CardDescription::new("This is a card with a header and a description.")
+                let card = shadcn::Card::new(vec![
+                    shadcn::CardHeader::new(vec![
+                        shadcn::CardTitle::new("Header Only").into_element(cx),
+                        shadcn::CardDescription::new(
+                            "This is a card with a header and a description.",
+                        )
                         .into_element(cx),
-                ])
-                .into_element(cx)]);
+                    ])
+                    .into_element(cx),
+                ]);
                 cell(cx, card)
             };
 
@@ -47,23 +53,25 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
                 let card = shadcn::Card::new(vec![
                     shadcn::CardHeader::new(vec![
                         shadcn::CardTitle::new("Header and Content").into_element(cx),
-                        shadcn::CardDescription::new(
-                            "This is a card with a header and a content.",
-                        )
-                        .into_element(cx),
+                        shadcn::CardDescription::new("This is a card with a header and a content.")
+                            .into_element(cx),
                     ])
                     .into_element(cx),
-                    shadcn::CardContent::new(vec![ui::text(cx, "Content").text_sm().into_element(cx)])
-                        .into_element(cx),
+                    shadcn::CardContent::new(vec![
+                        ui::text(cx, "Content").text_sm().into_element(cx),
+                    ])
+                    .into_element(cx),
                 ]);
                 cell(cx, card)
             };
 
             let footer_only = {
-                let card = shadcn::Card::new(vec![shadcn::CardFooter::new(vec![
-                    ui::text(cx, "Footer Only").text_sm().into_element(cx),
-                ])
-                .into_element(cx)]);
+                let card = shadcn::Card::new(vec![
+                    shadcn::CardFooter::new(vec![
+                        ui::text(cx, "Footer Only").text_sm().into_element(cx),
+                    ])
+                    .into_element(cx),
+                ]);
                 cell(cx, card)
             };
 
@@ -75,18 +83,24 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
                             .into_element(cx),
                     ])
                     .into_element(cx),
-                    shadcn::CardFooter::new(vec![ui::text(cx, "Footer").text_sm().into_element(cx)])
-                        .into_element(cx),
+                    shadcn::CardFooter::new(vec![
+                        ui::text(cx, "Footer").text_sm().into_element(cx),
+                    ])
+                    .into_element(cx),
                 ]);
                 cell(cx, card)
             };
 
             let content_and_footer = {
                 let card = shadcn::Card::new(vec![
-                    shadcn::CardContent::new(vec![ui::text(cx, "Content").text_sm().into_element(cx)])
-                        .into_element(cx),
-                    shadcn::CardFooter::new(vec![ui::text(cx, "Footer").text_sm().into_element(cx)])
-                        .into_element(cx),
+                    shadcn::CardContent::new(vec![
+                        ui::text(cx, "Content").text_sm().into_element(cx),
+                    ])
+                    .into_element(cx),
+                    shadcn::CardFooter::new(vec![
+                        ui::text(cx, "Footer").text_sm().into_element(cx),
+                    ])
+                    .into_element(cx),
                 ]);
                 cell(cx, card)
             };
@@ -99,10 +113,14 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
                             .into_element(cx),
                     ])
                     .into_element(cx),
-                    shadcn::CardContent::new(vec![ui::text(cx, "Content").text_sm().into_element(cx)])
-                        .into_element(cx),
-                    shadcn::CardFooter::new(vec![ui::text(cx, "Footer").text_sm().into_element(cx)])
-                        .into_element(cx),
+                    shadcn::CardContent::new(vec![
+                        ui::text(cx, "Content").text_sm().into_element(cx),
+                    ])
+                    .into_element(cx),
+                    shadcn::CardFooter::new(vec![
+                        ui::text(cx, "Footer").text_sm().into_element(cx),
+                    ])
+                    .into_element(cx),
                 ]);
                 cell(cx, card)
             };
@@ -118,19 +136,27 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
                     ])
                     .border_bottom(true)
                     .into_element(cx),
-                    shadcn::CardContent::new(vec![ui::text(cx, "Content").text_sm().into_element(cx)])
-                        .into_element(cx),
+                    shadcn::CardContent::new(vec![
+                        ui::text(cx, "Content").text_sm().into_element(cx),
+                    ])
+                    .into_element(cx),
                 ]);
                 cell(cx, card)
             };
 
             let footer_with_border = {
                 let card = shadcn::Card::new(vec![
-                    shadcn::CardContent::new(vec![ui::text(cx, "Content").text_sm().into_element(cx)])
-                        .into_element(cx),
-                    shadcn::CardFooter::new(vec![ui::text(cx, "Footer with Border").text_sm().into_element(cx)])
-                        .border_top(true)
-                        .into_element(cx),
+                    shadcn::CardContent::new(vec![
+                        ui::text(cx, "Content").text_sm().into_element(cx),
+                    ])
+                    .into_element(cx),
+                    shadcn::CardFooter::new(vec![
+                        ui::text(cx, "Footer with Border")
+                            .text_sm()
+                            .into_element(cx),
+                    ])
+                    .border_top(true)
+                    .into_element(cx),
                 ]);
                 cell(cx, card)
             };
@@ -151,4 +177,3 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
     .test_id("ui-gallery-card-compositions")
 }
 // endregion: example
-

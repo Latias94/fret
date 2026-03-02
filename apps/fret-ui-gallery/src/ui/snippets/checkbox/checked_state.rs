@@ -60,4 +60,3 @@ pub fn render<H: UiHost>(
     .test_id("ui-gallery-checkbox-checked-state")
 }
 // endregion: example
-

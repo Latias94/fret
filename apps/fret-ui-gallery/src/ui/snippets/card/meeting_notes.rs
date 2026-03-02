@@ -1,11 +1,11 @@
 // region: example
 use fret_app::App;
 use fret_ui::Theme;
+use fret_ui_assets::ui::ImageSourceElementContextExt as _;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::ui;
 use fret_ui_shadcn::{self as shadcn, prelude::*};
 use std::sync::{Arc, OnceLock};
-use fret_ui_assets::ui::ImageSourceElementContextExt as _;
 
 pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
     let theme = Theme::global(&*cx.app).snapshot();
@@ -107,36 +107,42 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
                                     .into_element(cx)
                             };
 
-                            let item = |cx: &mut ElementContext<'_, App>,
-                                        n: &str,
-                                        content: &str,
-                                        test_id: Option<&'static str>| {
-                                let row = stack::hstack(
-                                    cx,
-                                    stack::HStackProps::default()
-                                        .gap(Space::N2)
-                                        .items_start()
-                                        .layout(LayoutRefinement::default().w_full()),
-                                    |cx| {
-                                        vec![
-                                            marker(cx, n),
-                                            ui::text(cx, content)
-                                                .text_sm()
-                                                .flex_1()
-                                                .min_w_0()
-                                                .into_element(cx),
-                                        ]
-                                    },
-                                );
+                            let item =
+                                |cx: &mut ElementContext<'_, App>,
+                                 n: &str,
+                                 content: &str,
+                                 test_id: Option<&'static str>| {
+                                    let row = stack::hstack(
+                                        cx,
+                                        stack::HStackProps::default()
+                                            .gap(Space::N2)
+                                            .items_start()
+                                            .layout(LayoutRefinement::default().w_full()),
+                                        |cx| {
+                                            vec![
+                                                marker(cx, n),
+                                                ui::text(cx, content)
+                                                    .text_sm()
+                                                    .flex_1()
+                                                    .min_w_0()
+                                                    .into_element(cx),
+                                            ]
+                                        },
+                                    );
 
-                                match test_id {
-                                    Some(id) => row.test_id(id),
-                                    None => row,
-                                }
-                            };
+                                    match test_id {
+                                        Some(id) => row.test_id(id),
+                                        None => row,
+                                    }
+                                };
 
                             vec![
-                                item(cx, "1.", "New analytics widgets for daily/weekly metrics", None),
+                                item(
+                                    cx,
+                                    "1.",
+                                    "New analytics widgets for daily/weekly metrics",
+                                    None,
+                                ),
                                 item(cx, "2.", "Simplified navigation menu", None),
                                 item(
                                     cx,
@@ -145,7 +151,12 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
                                     Some("ui-gallery-card-notes-item-dark-mode"),
                                 ),
                                 item(cx, "4.", "Timeline: 6 weeks", None),
-                                item(cx, "5.", "Follow-up meeting scheduled for next Tuesday", None),
+                                item(
+                                    cx,
+                                    "5.",
+                                    "Follow-up meeting scheduled for next Tuesday",
+                                    None,
+                                ),
                             ]
                         },
                     )]

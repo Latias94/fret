@@ -111,4 +111,3 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
     .test_id("ui-gallery-item-avatar")
 }
 // endregion: example
-

@@ -24,4 +24,3 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>, rtl: Model<bool>) -> An
     .test_id("ui-gallery-checkbox-rtl-field")
 }
 // endregion: example
-

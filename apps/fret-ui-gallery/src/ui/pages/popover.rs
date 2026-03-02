@@ -29,10 +29,7 @@ pub(super) fn preview_popover(
             DocSection::new("Demo", demo)
                 .max_w(Px(760.0))
                 .test_id_prefix("ui-gallery-popover-demo")
-                .code_rust_from_file_region(
-                    include_str!("../snippets/popover/demo.rs"),
-                    "example",
-                ),
+                .code_rust_from_file_region(include_str!("../snippets/popover/demo.rs"), "example"),
             DocSection::new("Basic", basic)
                 .max_w(Px(760.0))
                 .test_id_prefix("ui-gallery-popover-basic")
@@ -57,10 +54,7 @@ pub(super) fn preview_popover(
             DocSection::new("RTL", rtl)
                 .max_w(Px(760.0))
                 .test_id_prefix("ui-gallery-popover-rtl")
-                .code_rust_from_file_region(
-                    include_str!("../snippets/popover/rtl.rs"),
-                    "example",
-                ),
+                .code_rust_from_file_region(include_str!("../snippets/popover/rtl.rs"), "example"),
             DocSection::new("Notes", notes).max_w(Px(820.0)),
         ],
     );

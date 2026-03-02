@@ -9,7 +9,9 @@ struct Models {
     open: Option<Model<bool>>,
 }
 
-fn ensure_models<H: UiHost>(cx: &mut ElementContext<'_, H>) -> (Model<Option<Arc<str>>>, Model<bool>) {
+fn ensure_models<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+) -> (Model<Option<Arc<str>>>, Model<bool>) {
     let state = cx.with_state(Models::default, |st| st.clone());
     match (state.value, state.open) {
         (Some(value), Some(open)) => (value, open),
@@ -48,4 +50,3 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
     .test_id("ui-gallery-field-select")
 }
 // endregion: example
-

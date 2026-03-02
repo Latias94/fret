@@ -98,10 +98,10 @@ pub(super) fn preview_field(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement>
                     include_str!("../snippets/field/responsive.rs"),
                     "example",
                 ),
-            DocSection::new("Notes", notes).description("API reference pointers and stability guidance."),
+            DocSection::new("Notes", notes)
+                .description("API reference pointers and stability guidance."),
         ],
     );
 
     vec![body.test_id("ui-gallery-field")]
 }
-

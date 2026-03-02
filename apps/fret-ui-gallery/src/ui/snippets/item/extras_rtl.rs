@@ -51,4 +51,3 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
     rtl.test_id("ui-gallery-item-rtl-wrapper")
 }
 // endregion: example
-

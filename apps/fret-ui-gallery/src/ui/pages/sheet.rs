@@ -30,24 +30,15 @@ pub(super) fn preview_sheet(
             DocSection::new("Demo", demo)
                 .max_w(Px(980.0))
                 .test_id_prefix("ui-gallery-sheet-demo")
-                .code_rust_from_file_region(
-                    include_str!("../snippets/sheet/demo.rs"),
-                    "example",
-                ),
+                .code_rust_from_file_region(include_str!("../snippets/sheet/demo.rs"), "example"),
             DocSection::new("Parts", parts)
                 .max_w(Px(980.0))
                 .test_id_prefix("ui-gallery-sheet-parts")
-                .code_rust_from_file_region(
-                    include_str!("../snippets/sheet/parts.rs"),
-                    "example",
-                ),
+                .code_rust_from_file_region(include_str!("../snippets/sheet/parts.rs"), "example"),
             DocSection::new("Side", side)
                 .max_w(Px(980.0))
                 .test_id_prefix("ui-gallery-sheet-side")
-                .code_rust_from_file_region(
-                    include_str!("../snippets/sheet/side.rs"),
-                    "example",
-                ),
+                .code_rust_from_file_region(include_str!("../snippets/sheet/side.rs"), "example"),
             DocSection::new("No Close Button", no_close_button)
                 .max_w(Px(980.0))
                 .test_id_prefix("ui-gallery-sheet-no-close")
@@ -58,10 +49,7 @@ pub(super) fn preview_sheet(
             DocSection::new("RTL", rtl)
                 .max_w(Px(980.0))
                 .test_id_prefix("ui-gallery-sheet-rtl")
-                .code_rust_from_file_region(
-                    include_str!("../snippets/sheet/rtl.rs"),
-                    "example",
-                ),
+                .code_rust_from_file_region(include_str!("../snippets/sheet/rtl.rs"), "example"),
             DocSection::new("Notes", notes)
                 .no_shell()
                 .test_id_prefix("ui-gallery-sheet-notes"),

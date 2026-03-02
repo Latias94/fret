@@ -38,23 +38,38 @@ pub(super) fn preview_typography(cx: &mut ElementContext<'_, App>) -> Vec<AnyEle
             DocSection::new("Demo", demo)
                 .description("A long-form story sample combining headings, paragraphs, and lists.")
                 .max_w(Px(760.0))
-                .code_rust_from_file_region(include_str!("../snippets/typography/demo.rs"), "example"),
+                .code_rust_from_file_region(
+                    include_str!("../snippets/typography/demo.rs"),
+                    "example",
+                ),
             DocSection::new("h1", h1)
                 .description("Top-level heading.")
                 .max_w(Px(760.0))
-                .code_rust_from_file_region(include_str!("../snippets/typography/h1.rs"), "example"),
+                .code_rust_from_file_region(
+                    include_str!("../snippets/typography/h1.rs"),
+                    "example",
+                ),
             DocSection::new("h2", h2)
                 .description("Section heading.")
                 .max_w(Px(760.0))
-                .code_rust_from_file_region(include_str!("../snippets/typography/h2.rs"), "example"),
+                .code_rust_from_file_region(
+                    include_str!("../snippets/typography/h2.rs"),
+                    "example",
+                ),
             DocSection::new("h3", h3)
                 .description("Sub-section heading.")
                 .max_w(Px(760.0))
-                .code_rust_from_file_region(include_str!("../snippets/typography/h3.rs"), "example"),
+                .code_rust_from_file_region(
+                    include_str!("../snippets/typography/h3.rs"),
+                    "example",
+                ),
             DocSection::new("h4", h4)
                 .description("Low-level heading for grouped content.")
                 .max_w(Px(760.0))
-                .code_rust_from_file_region(include_str!("../snippets/typography/h4.rs"), "example"),
+                .code_rust_from_file_region(
+                    include_str!("../snippets/typography/h4.rs"),
+                    "example",
+                ),
             DocSection::new("p", p)
                 .description("Body paragraph text.")
                 .max_w(Px(760.0))
@@ -76,7 +91,10 @@ pub(super) fn preview_typography(cx: &mut ElementContext<'_, App>) -> Vec<AnyEle
             DocSection::new("list", list)
                 .description("Bulleted/ordered list content.")
                 .max_w(Px(760.0))
-                .code_rust_from_file_region(include_str!("../snippets/typography/list.rs"), "example"),
+                .code_rust_from_file_region(
+                    include_str!("../snippets/typography/list.rs"),
+                    "example",
+                ),
             DocSection::new("Inline Code", inline_code)
                 .description("Inline code styling for commands and identifiers.")
                 .max_w(Px(760.0))
@@ -87,7 +105,10 @@ pub(super) fn preview_typography(cx: &mut ElementContext<'_, App>) -> Vec<AnyEle
             DocSection::new("Lead", lead)
                 .description("Intro lead paragraph for sections.")
                 .max_w(Px(760.0))
-                .code_rust_from_file_region(include_str!("../snippets/typography/lead.rs"), "example"),
+                .code_rust_from_file_region(
+                    include_str!("../snippets/typography/lead.rs"),
+                    "example",
+                ),
             DocSection::new("Large", large)
                 .description("Emphasis text for short callouts.")
                 .max_w(Px(760.0))
@@ -112,7 +133,10 @@ pub(super) fn preview_typography(cx: &mut ElementContext<'_, App>) -> Vec<AnyEle
             DocSection::new("RTL", rtl)
                 .description("Direction provider sample to validate RTL wrapping/alignment.")
                 .max_w(Px(760.0))
-                .code_rust_from_file_region(include_str!("../snippets/typography/rtl.rs"), "example"),
+                .code_rust_from_file_region(
+                    include_str!("../snippets/typography/rtl.rs"),
+                    "example",
+                ),
             DocSection::new("Notes", notes)
                 .description("API reference pointers and authoring notes.")
                 .max_w(Px(820.0)),
@@ -121,4 +145,3 @@ pub(super) fn preview_typography(cx: &mut ElementContext<'_, App>) -> Vec<AnyEle
 
     vec![body.test_id("ui-gallery-typography")]
 }
-

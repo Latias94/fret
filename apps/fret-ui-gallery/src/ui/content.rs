@@ -540,7 +540,9 @@ fn page_preview(
         PAGE_TABLE => preview_table(cx),
         PAGE_PROGRESS => preview_progress(cx, progress),
         PAGE_MENUS => preview_menus(cx, dropdown_open, context_menu_open, last_action.clone()),
-        PAGE_COMMAND => pages::preview_command_palette(cx, cmdk_open, cmdk_query, last_action.clone()),
+        PAGE_COMMAND => {
+            pages::preview_command_palette(cx, cmdk_open, cmdk_query, last_action.clone())
+        }
         PAGE_TOAST => preview_toast(cx, last_action.clone()),
         PAGE_SONNER => preview_sonner(cx, last_action.clone(), sonner_position.clone()),
         PAGE_ALERT => pages::preview_alert(cx),
@@ -553,7 +555,9 @@ fn page_preview(
         PAGE_CHART => pages::preview_chart(cx),
         PAGE_CHECKBOX => pages::preview_checkbox(cx, checkbox),
         PAGE_COLLAPSIBLE => pages::preview_collapsible(cx),
-        PAGE_CONTEXT_MENU => pages::preview_context_menu(cx, context_menu_open, last_action.clone()),
+        PAGE_CONTEXT_MENU => {
+            pages::preview_context_menu(cx, context_menu_open, last_action.clone())
+        }
         PAGE_DIALOG => pages::preview_dialog(cx, dialog_open),
         PAGE_DRAWER => pages::preview_drawer(cx),
         PAGE_DROPDOWN_MENU => pages::preview_dropdown_menu(cx, dropdown_open, last_action.clone()),

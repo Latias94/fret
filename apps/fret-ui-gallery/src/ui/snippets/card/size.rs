@@ -12,12 +12,13 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
     let default_card = shadcn::Card::new(vec![
         shadcn::CardHeader::new(vec![
             shadcn::CardTitle::new("Default spacing").into_element(cx),
-            shadcn::CardDescription::new("CardSize::Default (py-6, px-6, gap-6).")
-                .into_element(cx),
+            shadcn::CardDescription::new("CardSize::Default (py-6, px-6, gap-6).").into_element(cx),
         ])
         .into_element(cx),
-        shadcn::CardContent::new(vec![ui::text(cx, "Card Content").text_sm().into_element(cx)])
-            .into_element(cx),
+        shadcn::CardContent::new(vec![
+            ui::text(cx, "Card Content").text_sm().into_element(cx),
+        ])
+        .into_element(cx),
     ])
     .refine_layout(max_w_sm.clone())
     .into_element(cx)
@@ -29,8 +30,10 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
             shadcn::CardDescription::new("CardSize::Sm (py-4, px-4, gap-4).").into_element(cx),
         ])
         .into_element(cx),
-        shadcn::CardContent::new(vec![ui::text(cx, "Card Content").text_sm().into_element(cx)])
-            .into_element(cx),
+        shadcn::CardContent::new(vec![
+            ui::text(cx, "Card Content").text_sm().into_element(cx),
+        ])
+        .into_element(cx),
     ])
     .size(shadcn::CardSize::Sm)
     .refine_layout(max_w_sm)
@@ -48,4 +51,3 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
     .test_id("ui-gallery-card-size")
 }
 // endregion: example
-

@@ -131,4 +131,3 @@ pub(super) fn preview_button_group(cx: &mut ElementContext<'_, App>) -> Vec<AnyE
 
     vec![body.test_id("ui-gallery-button-group")]
 }
-

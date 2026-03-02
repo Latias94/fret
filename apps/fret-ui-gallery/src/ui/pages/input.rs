@@ -62,7 +62,10 @@ pub(super) fn preview_input(
                 ),
             DocSection::new("Invalid", invalid)
                 .description("Invalid state uses `aria_invalid` + field-level error copy.")
-                .code_rust_from_file_region(include_str!("../snippets/input/invalid.rs"), "example"),
+                .code_rust_from_file_region(
+                    include_str!("../snippets/input/invalid.rs"),
+                    "example",
+                ),
             DocSection::new("File", file)
                 .description("Native file picking uses a file dialog; diagnostics runs mock it.")
                 .code_rust_from_file_region(include_str!("../snippets/input/file.rs"), "example"),
@@ -105,4 +108,3 @@ pub(super) fn preview_input(
 
     vec![body.test_id("ui-gallery-input")]
 }
-
