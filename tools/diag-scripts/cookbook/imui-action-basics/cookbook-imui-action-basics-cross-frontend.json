@@ -55,8 +55,14 @@
       "query": { "command": "cookbook.imui_action_basics.inc.v1", "handled": true },
       "timeout_frames": 240
     },
-    { "type": "press_shortcut", "shortcut": "primary+p" },
-    { "type": "wait_frames", "n": 2 },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "not_exists",
+        "target": { "kind": "role_and_name", "role": "dialog", "name": "Command palette" }
+      },
+      "timeout_frames": 240
+    },
     {
       "type": "wait_until",
       "predicate": {

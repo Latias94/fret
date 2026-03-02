@@ -136,6 +136,7 @@ pub struct WindowPendingCommandDispatchSourceService {
 
 impl WindowPendingCommandDispatchSourceService {
     const MAX_PENDING_PER_WINDOW: usize = 32;
+    const PENDING_SOURCE_TTL_TICKS: u64 = 64;
 
     pub fn record(
         &mut self,
@@ -166,9 +167,16 @@ impl WindowPendingCommandDispatchSourceService {
     ) -> Option<CommandDispatchSourceV1> {
         let entries = self.per_window.get_mut(&window)?;
 
-        // Drop stale pending entries that were recorded on previous ticks. We intentionally keep
-        // this strict: pending context is only meant to bridge a single synchronous effect flush.
-        entries.retain(|e| e.tick_id == tick_id);
+        // Drop stale pending entries.
+        //
+        // This metadata is best-effort and diagnostics-only: in practice, effect-driven command
+        // dispatch can be handled on a later tick (e.g. when the platform/backend defers effect
+        // flushing, or when a UI interaction schedules work for a subsequent frame).
+        //
+        // Keep a small TTL window so pointer/keyboard-triggered dispatch remains explainable in
+        // `fretboard diag` without changing the `Effect::Command` schema.
+        let min_tick = TickId(tick_id.0.saturating_sub(Self::PENDING_SOURCE_TTL_TICKS));
+        entries.retain(|e| e.tick_id.0 >= min_tick.0 && e.tick_id.0 <= tick_id.0);
 
         let pos = entries
             .iter()
@@ -215,6 +223,58 @@ mod tests {
             },
         );
 
-        assert_eq!(svc.consume(window, TickId(11), &cmd), None);
+        assert_eq!(
+            svc.consume(window, TickId(11), &cmd),
+            Some(CommandDispatchSourceV1 {
+                kind: CommandDispatchSourceKindV1::Pointer,
+                element: Some(42),
+            })
+        );
+
+        svc.record(
+            window,
+            TickId(10),
+            cmd.clone(),
+            CommandDispatchSourceV1 {
+                kind: CommandDispatchSourceKindV1::Pointer,
+                element: Some(42),
+            },
+        );
+
+        assert_eq!(svc.consume(window, TickId(80), &cmd), None);
+    }
+
+    #[test]
+    fn pending_source_prefers_most_recent_match() {
+        let mut svc = WindowPendingCommandDispatchSourceService::default();
+        let window = AppWindowId::default();
+        let cmd = CommandId::from("test.cmd");
+
+        svc.record(
+            window,
+            TickId(10),
+            cmd.clone(),
+            CommandDispatchSourceV1 {
+                kind: CommandDispatchSourceKindV1::Pointer,
+                element: Some(1),
+            },
+        );
+        svc.record(
+            window,
+            TickId(12),
+            cmd.clone(),
+            CommandDispatchSourceV1 {
+                kind: CommandDispatchSourceKindV1::Pointer,
+                element: Some(2),
+            },
+        );
+
+        assert_eq!(
+            svc.consume(window, TickId(20), &cmd),
+            Some(CommandDispatchSourceV1 {
+                kind: CommandDispatchSourceKindV1::Pointer,
+                element: Some(2),
+            })
+        );
     }
 }

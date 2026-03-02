@@ -54,7 +54,7 @@ Command palette integration (must dispatch through the same pipeline):
 
 - `crates/fret-app/src/core_commands.rs` (`app.command_palette` command metadata + default keybinding)
 - `ecosystem/fret-bootstrap/src/ui_app_driver.rs` (command palette overlay + selection dispatch via `UiTree::dispatch_command`)
-- `ecosystem/fret-ui-shadcn/src/command.rs` (command palette item selection calls `host.dispatch_command(...)`)
+- `ecosystem/fret-ui-shadcn/src/command.rs` (command palette item selection queues a pending command and dispatches via `Effect::Command` after close-on-select completes)
 
 Keymap/availability explainability (diagnostics traces):
 
@@ -66,6 +66,7 @@ Dispatch path explainability (diagnostics traces):
 
 - `crates/fret-runtime/src/command_dispatch_diagnostics.rs` (`WindowCommandDispatchDiagnosticsStore`, `WindowPendingCommandDispatchSourceService`)
 - `crates/fret-ui/src/action.rs` (`UiActionHost::record_pending_command_dispatch_source` default hook + adapter implementation)
+- `crates/fret-ui/src/declarative/host_widget/event/pressable.rs` (pressable activation host forwards pending command-dispatch source metadata so pointer/keyboard triggers are explainable)
 - `ecosystem/fret-ui-kit/src/declarative/action_hooks.rs` (records pointer activation → pending dispatch source)
 - `crates/fret-ui/src/tree/shortcuts.rs` (records shortcut routing → pending dispatch source)
 - `crates/fret-ui/src/tree/commands.rs` (records dispatch outcome + handled-by element)
