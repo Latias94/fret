@@ -64,6 +64,14 @@ impl Renderer {
                 plan.compile_stats.estimated_peak_intermediate_bytes;
             frame_perf.render_plan_segments = plan.segments.len() as u64;
             frame_perf.render_plan_degradations = plan.degradations.len() as u64;
+            frame_perf.render_plan_effect_chain_budget_samples =
+                plan.compile_stats.effect_chain_budget_samples;
+            frame_perf.render_plan_effect_chain_effective_budget_min_bytes =
+                plan.compile_stats.effect_chain_effective_budget_min_bytes;
+            frame_perf.render_plan_effect_chain_effective_budget_max_bytes =
+                plan.compile_stats.effect_chain_effective_budget_max_bytes;
+            frame_perf.render_plan_effect_chain_other_live_max_bytes =
+                plan.compile_stats.effect_chain_other_live_max_bytes;
             frame_perf.effect_degradations = plan.compile_stats.effect_degradations;
             frame_perf.effect_blur_quality = plan.compile_stats.effect_blur_quality;
             frame_perf.intermediate_full_target_bytes =

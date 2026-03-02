@@ -487,6 +487,22 @@ pub struct RenderPerfSnapshot {
     pub render_plan_segments_changed: u64,
     pub render_plan_segments_passes_increased: u64,
     pub render_plan_degradations: u64,
+    /// Number of effect chain budget samples recorded during render plan compilation.
+    ///
+    /// This is a best-effort diagnostics signal (not a stable API).
+    pub render_plan_effect_chain_budget_samples: u64,
+    /// Minimum effective intermediate budget observed across effect chain compilation.
+    ///
+    /// This is a best-effort diagnostics signal (not a stable API).
+    pub render_plan_effect_chain_effective_budget_min_bytes: u64,
+    /// Maximum effective intermediate budget observed across effect chain compilation.
+    ///
+    /// This is a best-effort diagnostics signal (not a stable API).
+    pub render_plan_effect_chain_effective_budget_max_bytes: u64,
+    /// Maximum "other live bytes" observed across effect chain compilation.
+    ///
+    /// This is a best-effort diagnostics signal (not a stable API).
+    pub render_plan_effect_chain_other_live_max_bytes: u64,
     pub render_plan_degradations_budget_zero: u64,
     pub render_plan_degradations_budget_insufficient: u64,
     pub render_plan_degradations_target_exhausted: u64,
@@ -665,6 +681,10 @@ pub(super) struct RenderPerfStats {
     pub(super) render_plan_segments_changed: u64,
     pub(super) render_plan_segments_passes_increased: u64,
     pub(super) render_plan_degradations: u64,
+    pub(super) render_plan_effect_chain_budget_samples: u64,
+    pub(super) render_plan_effect_chain_effective_budget_min_bytes: u64,
+    pub(super) render_plan_effect_chain_effective_budget_max_bytes: u64,
+    pub(super) render_plan_effect_chain_other_live_max_bytes: u64,
     pub(super) render_plan_degradations_budget_zero: u64,
     pub(super) render_plan_degradations_budget_insufficient: u64,
     pub(super) render_plan_degradations_target_exhausted: u64,

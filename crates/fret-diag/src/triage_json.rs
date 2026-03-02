@@ -384,6 +384,10 @@ pub(crate) fn triage_json_from_stats(
                     "custom_effect_v1_passes_emitted": worst.renderer_custom_effect_v1_passes_emitted,
                     "renderer_intermediate_budget_bytes": worst.renderer_intermediate_budget_bytes,
                     "renderer_intermediate_full_target_bytes": worst.renderer_intermediate_full_target_bytes,
+                    "renderer_render_plan_effect_chain_budget_samples": worst.renderer_render_plan_effect_chain_budget_samples,
+                    "renderer_render_plan_effect_chain_effective_budget_min_bytes": worst.renderer_render_plan_effect_chain_effective_budget_min_bytes,
+                    "renderer_render_plan_effect_chain_effective_budget_max_bytes": worst.renderer_render_plan_effect_chain_effective_budget_max_bytes,
+                    "renderer_render_plan_effect_chain_other_live_max_bytes": worst.renderer_render_plan_effect_chain_other_live_max_bytes,
                     "min_budget_for_two_full_targets_bytes": min_budget_for_two_full_targets_bytes,
                     "renderer_intermediate_peak_in_use_bytes": worst.renderer_intermediate_peak_in_use_bytes,
                 }
@@ -406,6 +410,10 @@ pub(crate) fn triage_json_from_stats(
                     "custom_effect_v2_passes_emitted": worst.renderer_custom_effect_v2_passes_emitted,
                     "renderer_intermediate_budget_bytes": worst.renderer_intermediate_budget_bytes,
                     "renderer_intermediate_full_target_bytes": worst.renderer_intermediate_full_target_bytes,
+                    "renderer_render_plan_effect_chain_budget_samples": worst.renderer_render_plan_effect_chain_budget_samples,
+                    "renderer_render_plan_effect_chain_effective_budget_min_bytes": worst.renderer_render_plan_effect_chain_effective_budget_min_bytes,
+                    "renderer_render_plan_effect_chain_effective_budget_max_bytes": worst.renderer_render_plan_effect_chain_effective_budget_max_bytes,
+                    "renderer_render_plan_effect_chain_other_live_max_bytes": worst.renderer_render_plan_effect_chain_other_live_max_bytes,
                     "min_budget_for_two_full_targets_bytes": min_budget_for_two_full_targets_bytes,
                     "renderer_intermediate_peak_in_use_bytes": worst.renderer_intermediate_peak_in_use_bytes,
                 }
@@ -434,6 +442,10 @@ pub(crate) fn triage_json_from_stats(
                     "custom_effect_v3_passes_emitted": worst.renderer_custom_effect_v3_passes_emitted,
                     "renderer_intermediate_budget_bytes": worst.renderer_intermediate_budget_bytes,
                     "renderer_intermediate_full_target_bytes": worst.renderer_intermediate_full_target_bytes,
+                    "renderer_render_plan_effect_chain_budget_samples": worst.renderer_render_plan_effect_chain_budget_samples,
+                    "renderer_render_plan_effect_chain_effective_budget_min_bytes": worst.renderer_render_plan_effect_chain_effective_budget_min_bytes,
+                    "renderer_render_plan_effect_chain_effective_budget_max_bytes": worst.renderer_render_plan_effect_chain_effective_budget_max_bytes,
+                    "renderer_render_plan_effect_chain_other_live_max_bytes": worst.renderer_render_plan_effect_chain_other_live_max_bytes,
                     "min_budget_for_two_full_targets_bytes": min_budget_for_two_full_targets_bytes,
                     "renderer_intermediate_peak_in_use_bytes": worst.renderer_intermediate_peak_in_use_bytes,
                 }
@@ -461,6 +473,10 @@ pub(crate) fn triage_json_from_stats(
                     "custom_effect_v3_sources_pyramid_degraded_to_one_budget_insufficient": worst.renderer_custom_effect_v3_sources_pyramid_degraded_to_one_budget_insufficient,
                     "renderer_intermediate_budget_bytes": worst.renderer_intermediate_budget_bytes,
                     "renderer_intermediate_full_target_bytes": worst.renderer_intermediate_full_target_bytes,
+                    "renderer_render_plan_effect_chain_budget_samples": worst.renderer_render_plan_effect_chain_budget_samples,
+                    "renderer_render_plan_effect_chain_effective_budget_min_bytes": worst.renderer_render_plan_effect_chain_effective_budget_min_bytes,
+                    "renderer_render_plan_effect_chain_effective_budget_max_bytes": worst.renderer_render_plan_effect_chain_effective_budget_max_bytes,
+                    "renderer_render_plan_effect_chain_other_live_max_bytes": worst.renderer_render_plan_effect_chain_other_live_max_bytes,
                     "renderer_intermediate_peak_in_use_bytes": worst.renderer_intermediate_peak_in_use_bytes,
                 }
             }));

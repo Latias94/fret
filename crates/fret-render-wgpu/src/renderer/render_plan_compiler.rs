@@ -83,13 +83,19 @@ fn estimate_target_bytes_in_scopes(
         .map(|s| estimate_texture_bytes(s.size, format, 1))
 }
 
-fn effective_intermediate_budget_bytes_for_chain(
+#[derive(Clone, Copy, Debug)]
+struct IntermediateBudgetBreakdown {
+    effective_budget_bytes: u64,
+    other_live_bytes: u64,
+}
+
+fn intermediate_budget_breakdown_for_chain(
     intermediate_budget_bytes: u64,
     draw_scopes: &[DrawScope],
     srcdst: super::PlanTarget,
     format: wgpu::TextureFormat,
     extra_in_use_bytes: u64,
-) -> u64 {
+) -> IntermediateBudgetBreakdown {
     let in_use_intermediate_bytes = estimate_in_use_intermediate_bytes(draw_scopes, format);
     let srcdst_bytes = if is_intermediate_target(srcdst) {
         estimate_target_bytes_in_scopes(draw_scopes, srcdst, format).unwrap_or(0)
@@ -99,7 +105,10 @@ fn effective_intermediate_budget_bytes_for_chain(
     let other_live_bytes = in_use_intermediate_bytes
         .saturating_sub(srcdst_bytes)
         .saturating_add(extra_in_use_bytes);
-    intermediate_budget_bytes.saturating_sub(other_live_bytes)
+    IntermediateBudgetBreakdown {
+        effective_budget_bytes: intermediate_budget_bytes.saturating_sub(other_live_bytes),
+        other_live_bytes,
+    }
 }
 
 fn can_allocate_intermediate_bytes(
@@ -430,6 +439,11 @@ fn compile_for_scene_inner(
     let mut backdrop_source_group_reserved_targets: Vec<super::PlanTarget> = Vec::new();
     let mut backdrop_source_group_in_use_bytes: u64 = 0;
 
+    let mut effect_chain_budget_samples: u64 = 0;
+    let mut effect_chain_effective_budget_min_bytes: u64 = u64::MAX;
+    let mut effect_chain_effective_budget_max_bytes: u64 = 0;
+    let mut effect_chain_other_live_max_bytes: u64 = 0;
+
     let mut alloc_segment = |draw_range: std::ops::Range<usize>| -> super::SceneSegmentId {
         let id = super::SceneSegmentId(next_segment_id);
         next_segment_id += 1;
@@ -557,7 +571,7 @@ fn compile_for_scene_inner(
             }
         };
 
-    let apply_chain_in_place =
+    let mut apply_chain_in_place =
         |passes: &mut Vec<RenderPlanPass>,
          draw_scopes: &[DrawScope],
          srcdst: super::PlanTarget,
@@ -577,13 +591,24 @@ fn compile_for_scene_inner(
                 return;
             }
 
-            let effective_budget_bytes = effective_intermediate_budget_bytes_for_chain(
+            let breakdown = intermediate_budget_breakdown_for_chain(
                 intermediate_budget_bytes,
                 draw_scopes,
                 srcdst,
                 format,
                 extra_in_use_bytes,
             );
+            let effective_budget_bytes = breakdown.effective_budget_bytes;
+
+            if !chain.is_empty() {
+                effect_chain_budget_samples = effect_chain_budget_samples.saturating_add(1);
+                effect_chain_effective_budget_min_bytes =
+                    effect_chain_effective_budget_min_bytes.min(effective_budget_bytes);
+                effect_chain_effective_budget_max_bytes =
+                    effect_chain_effective_budget_max_bytes.max(effective_budget_bytes);
+                effect_chain_other_live_max_bytes =
+                    effect_chain_other_live_max_bytes.max(breakdown.other_live_bytes);
+            }
 
             let mut in_use_targets: Vec<super::PlanTarget> = Vec::new();
             for s in draw_scopes {
@@ -1486,7 +1511,7 @@ fn compile_for_scene_inner(
         cursor += 1;
     }
 
-    super::RenderPlan::finalize(
+    let mut plan = super::RenderPlan::finalize(
         segments,
         passes,
         viewport_size,
@@ -1496,5 +1521,16 @@ fn compile_for_scene_inner(
         degradations,
         effect_degradations,
         effect_blur_quality,
-    )
+    );
+
+    if effect_chain_budget_samples > 0 {
+        plan.compile_stats.effect_chain_budget_samples = effect_chain_budget_samples;
+        plan.compile_stats.effect_chain_effective_budget_min_bytes =
+            effect_chain_effective_budget_min_bytes;
+        plan.compile_stats.effect_chain_effective_budget_max_bytes =
+            effect_chain_effective_budget_max_bytes;
+        plan.compile_stats.effect_chain_other_live_max_bytes = effect_chain_other_live_max_bytes;
+    }
+
+    plan
 }

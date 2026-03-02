@@ -32,6 +32,27 @@ pub(super) struct RenderPlanCompileStats {
     pub(super) degradation_count: u64,
     pub(super) effect_degradations: super::EffectDegradationSnapshot,
     pub(super) effect_blur_quality: super::BlurQualitySnapshot,
+    /// Counts how many effect chains were compiled through `apply_chain_in_place` for the frame.
+    ///
+    /// This is a best-effort diagnostics signal (not a stable API).
+    pub(super) effect_chain_budget_samples: u64,
+    /// Minimum effective intermediate budget observed across effect chain compilation for the
+    /// frame.
+    ///
+    /// This is a best-effort diagnostics signal (not a stable API).
+    pub(super) effect_chain_effective_budget_min_bytes: u64,
+    /// Maximum effective intermediate budget observed across effect chain compilation for the
+    /// frame.
+    ///
+    /// This is a best-effort diagnostics signal (not a stable API).
+    pub(super) effect_chain_effective_budget_max_bytes: u64,
+    /// Maximum "other live bytes" observed while compiling effect chains for the frame.
+    ///
+    /// This represents intermediate bytes that were effectively unavailable due to other live
+    /// targets and reserved bytes (clip path masks, backdrop source groups), excluding `srcdst`.
+    ///
+    /// This is a best-effort diagnostics signal (not a stable API).
+    pub(super) effect_chain_other_live_max_bytes: u64,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -443,6 +464,10 @@ impl RenderPlan {
                 degradation_count: degradations.len() as u64,
                 effect_degradations,
                 effect_blur_quality,
+                effect_chain_budget_samples: 0,
+                effect_chain_effective_budget_min_bytes: 0,
+                effect_chain_effective_budget_max_bytes: 0,
+                effect_chain_other_live_max_bytes: 0,
             },
             degradations,
         };
