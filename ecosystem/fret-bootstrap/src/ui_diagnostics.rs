@@ -83,6 +83,7 @@ mod script_steps_assert;
 mod script_steps_clipboard;
 mod script_steps_drag;
 mod script_steps_input;
+mod script_steps_inspect;
 mod script_steps_menu;
 mod script_steps_pointer;
 mod script_steps_pointer_session;

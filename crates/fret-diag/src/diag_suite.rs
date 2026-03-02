@@ -305,6 +305,9 @@ hint: list suites via `fretboard diag list suites`"
         let scripts = expand_script_inputs(&workspace_root, &inputs)?;
         (scripts, Some(BuiltinSuite::UiGallery))
     } else if is_ui_gallery_overlay_steady_suite {
+        // The overlay-steady suite intentionally exercises role-and-name predicates and
+        // inspector help search queries, which are incompatible with redaction.
+        push_env_if_missing(&mut launch_env, "FRET_DIAG_REDACT_TEXT", "0");
         let inputs = diag_suite_scripts::ui_gallery_overlay_steady_suite_scripts();
         let scripts = expand_script_inputs(&workspace_root, &inputs)?;
         (scripts, Some(BuiltinSuite::UiGallery))

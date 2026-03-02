@@ -908,6 +908,24 @@ pub enum UiActionStepV2 {
         #[serde(default = "default_action_timeout_frames")]
         timeout_frames: u32,
     },
+    /// In-app inspector helper: open help, search for `query`, lock the best match, and request
+    /// copying the best selector JSON to the OS clipboard.
+    ///
+    /// This is intended to gate that the in-app inspector UX is still functional under
+    /// tool-launched scripted runs (`fretboard diag run/suite --launch`) without relying on
+    /// keyboard shortcut injection.
+    ///
+    /// Behavior notes:
+    ///
+    /// - Matching prefers `test_id`, then `label` when text redaction is disabled.
+    /// - The runtime may keep the help overlay open after the step.
+    InspectHelpLockBestMatchAndCopySelector {
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        window: Option<UiWindowTargetV1>,
+        query: String,
+        #[serde(default = "default_action_timeout_frames")]
+        timeout_frames: u32,
+    },
     /// Diagnostics-only incoming-open injection (best-effort).
     ///
     /// This simulates “open in…” / share-target flows by injecting an `IncomingOpenRequest` event.
@@ -3035,6 +3053,28 @@ mod tests {
                 assert_eq!(timeout_frames, default_action_timeout_frames());
             }
             _ => panic!("expected paste_text_into"),
+        }
+    }
+
+    #[test]
+    fn step_inspect_help_lock_best_match_and_copy_selector_deserializes_with_defaults() {
+        let value = serde_json::json!({
+            "type": "inspect_help_lock_best_match_and_copy_selector",
+            "query": "ui-gallery-nav-search"
+        });
+
+        let step: UiActionStepV2 = serde_json::from_value(value).unwrap();
+        match step {
+            UiActionStepV2::InspectHelpLockBestMatchAndCopySelector {
+                window,
+                query,
+                timeout_frames,
+            } => {
+                assert!(window.is_none());
+                assert_eq!(query, "ui-gallery-nav-search");
+                assert_eq!(timeout_frames, default_action_timeout_frames());
+            }
+            _ => panic!("expected inspect_help_lock_best_match_and_copy_selector"),
         }
     }
 }

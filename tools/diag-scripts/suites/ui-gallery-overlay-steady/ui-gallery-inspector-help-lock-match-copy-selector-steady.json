@@ -1,8 +1,8 @@
 {
   "schema_version": 2,
   "meta": {
-    "name": "UI Gallery: inspector help lock match + copy selector",
-    "tags": ["ui-gallery", "inspector", "clipboard"]
+    "name": "UI Gallery (overlay steady): inspector help lock match + copy selector",
+    "tags": ["ui-gallery", "inspector", "clipboard", "steady"]
   },
   "steps": [
     {
@@ -13,12 +13,13 @@
       },
       "timeout_frames": 240
     },
-    { "type": "press_shortcut", "shortcut": "primary+alt+h" },
+    { "type": "set_clipboard_text", "text": "diag-sentinel" },
     { "type": "wait_frames", "n": 2 },
-    { "type": "type_text", "text": "ui-gallery-nav-search" },
-    { "type": "wait_frames", "n": 4 },
-    { "type": "press_shortcut", "shortcut": "primary+enter" },
-    { "type": "wait_frames", "n": 4 },
+    {
+      "type": "inspect_help_lock_best_match_and_copy_selector",
+      "query": "ui-gallery-nav-search",
+      "timeout_frames": 240
+    },
     {
       "type": "assert_clipboard_text",
       "text": "{\"kind\":\"test_id\",\"id\":\"ui-gallery-nav-search\"}",

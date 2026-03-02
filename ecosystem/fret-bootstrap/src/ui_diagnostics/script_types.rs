@@ -135,6 +135,7 @@ pub(super) enum V2StepState {
     MenuSelect(V2MenuSelectState),
     MenuSelectPath(V2MenuSelectPathState),
     AssertClipboardText(V2AssertClipboardTextState),
+    InspectHelpLockBestMatchAndCopySelector(V2InspectHelpLockBestMatchAndCopySelectorState),
     DragPointer(V2DragPointerState),
     DragPointerUntil(V2DragPointerUntilState),
     DragTo(V2DragToState),
@@ -252,6 +253,10 @@ pub(super) struct V2AssertClipboardTextState {
     pub(super) remaining_frames: u32,
     pub(super) request_issued: bool,
     pub(super) token: Option<fret_core::ClipboardToken>,
+    pub(super) saw_text_response: bool,
+    pub(super) saw_unavailable_response: bool,
+    pub(super) last_text_len: Option<usize>,
+    pub(super) last_unavailable_message: Option<String>,
 }
 
 impl V2AssertClipboardTextState {
@@ -268,6 +273,34 @@ impl V2AssertClipboardTextState {
             remaining_frames: timeout_frames.max(1),
             request_issued: false,
             token: None,
+            saw_text_response: false,
+            saw_unavailable_response: false,
+            last_text_len: None,
+            last_unavailable_message: None,
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
+pub(super) struct V2InspectHelpLockBestMatchAndCopySelectorState {
+    pub(super) step_index: usize,
+    pub(super) window: AppWindowId,
+    pub(super) query: String,
+    pub(super) remaining_frames: u32,
+}
+
+impl V2InspectHelpLockBestMatchAndCopySelectorState {
+    pub(super) fn new(
+        step_index: usize,
+        window: AppWindowId,
+        query: String,
+        timeout_frames: u32,
+    ) -> Self {
+        Self {
+            step_index,
+            window,
+            query,
+            remaining_frames: timeout_frames.max(1),
         }
     }
 }

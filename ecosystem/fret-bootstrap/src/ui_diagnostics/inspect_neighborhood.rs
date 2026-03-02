@@ -48,6 +48,26 @@ pub(super) fn build_inspect_neighborhood_model(
     const MAX_ITEMS: usize = 8;
     const MAX_MATCHES: usize = 10;
 
+    #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+    struct MatchKey<'a> {
+        surface_rank: u8,
+        match_rank: u8,
+        value: &'a str,
+        node_id: u64,
+    }
+
+    fn match_rank(haystack: &str, needle: &str) -> Option<u8> {
+        if haystack == needle {
+            Some(0)
+        } else if haystack.starts_with(needle) {
+            Some(1)
+        } else if haystack.contains(needle) {
+            Some(2)
+        } else {
+            None
+        }
+    }
+
     let mut out: Vec<String> = Vec::new();
     out.push("neighborhood:".to_string());
 
@@ -64,36 +84,20 @@ pub(super) fn build_inspect_neighborhood_model(
         out.push("search: <type to filter> (Backspace delete, Enter clear)".to_string());
     }
 
-    let Some(focus_id) = focus_node_id else {
-        out.push("focus: <none>".to_string());
-        return InspectNeighborhoodModel {
-            lines: out,
-            match_node_ids: Vec::new(),
-        };
-    };
-    let Some(focus) = snapshot
-        .nodes
-        .iter()
-        .find(|n| n.id.data().as_ffi() == focus_id)
-    else {
-        out.push("focus: <missing>".to_string());
-        return InspectNeighborhoodModel {
-            lines: out,
-            match_node_ids: Vec::new(),
-        };
-    };
-
-    let parent_id = focus.parent.map(|p| p.data().as_ffi());
-
-    out.push("parent:".to_string());
-    if let Some(pid) = parent_id {
-        if let Some(parent) = snapshot.nodes.iter().find(|n| n.id.data().as_ffi() == pid) {
-            push_node_brief(&mut out, "- ", parent, index, redact_text);
-        } else {
-            out.push(format!("- <missing node={pid}>"));
-        }
+    let (focus_id, parent_id, focus_valid) = if let Some(focus_id) = focus_node_id {
+        let focus = snapshot
+            .nodes
+            .iter()
+            .find(|n| n.id.data().as_ffi() == focus_id);
+        let parent_id = focus.and_then(|f| f.parent.map(|p| p.data().as_ffi()));
+        (Some(focus_id), parent_id, focus.is_some())
     } else {
-        out.push("- <none>".to_string());
+        out.push("focus: <none>".to_string());
+        (None, None, false)
+    };
+
+    if focus_id.is_some() && !focus_valid {
+        out.push("focus: <missing>".to_string());
     }
 
     let mut siblings_total: u32 = 0;
@@ -101,7 +105,7 @@ pub(super) fn build_inspect_neighborhood_model(
     let mut matches_total: u32 = 0;
     let mut siblings: Vec<&SemanticsNode> = Vec::new();
     let mut children: Vec<&SemanticsNode> = Vec::new();
-    let mut matches: Vec<&SemanticsNode> = Vec::new();
+    let mut matches: Vec<(MatchKey<'_>, &SemanticsNode)> = Vec::new();
 
     for node in &snapshot.nodes {
         let id = node.id.data().as_ffi();
@@ -110,73 +114,114 @@ pub(super) fn build_inspect_neighborhood_model(
         }
 
         let node_parent = node.parent.map(|p| p.data().as_ffi());
-        if parent_id.is_some_and(|pid| node_parent == Some(pid)) {
-            siblings_total = siblings_total.saturating_add(1);
-            if siblings.len() < MAX_ITEMS {
-                siblings.push(node);
+        if focus_valid {
+            if parent_id.is_some_and(|pid| node_parent == Some(pid)) {
+                siblings_total = siblings_total.saturating_add(1);
+                if siblings.len() < MAX_ITEMS {
+                    siblings.push(node);
+                }
             }
-        }
-        if node_parent == Some(focus_id) {
-            children_total = children_total.saturating_add(1);
-            if children.len() < MAX_ITEMS {
-                children.push(node);
+            if node_parent == focus_id {
+                children_total = children_total.saturating_add(1);
+                if children.len() < MAX_ITEMS {
+                    children.push(node);
+                }
             }
         }
 
         if let Some(q) = query {
-            let mut ok = node
-                .test_id
-                .as_deref()
-                .is_some_and(|test_id| test_id.contains(q));
-            if !ok && !redact_text {
-                ok = node.label.as_deref().is_some_and(|label| label.contains(q));
+            let mut best_key: Option<MatchKey<'_>> = node.test_id.as_deref().and_then(|test_id| {
+                match_rank(test_id, q).map(|match_rank| MatchKey {
+                    surface_rank: 0,
+                    match_rank,
+                    value: test_id,
+                    node_id: id,
+                })
+            });
+
+            if !redact_text {
+                if let Some(label) = node.label.as_deref() {
+                    if let Some(match_rank) = match_rank(label, q) {
+                        let label_key = MatchKey {
+                            surface_rank: 1,
+                            match_rank,
+                            value: label,
+                            node_id: id,
+                        };
+                        if best_key.map_or(true, |k| label_key < k) {
+                            best_key = Some(label_key);
+                        }
+                    }
+                }
             }
-            if ok {
+
+            if let Some(key) = best_key {
                 matches_total = matches_total.saturating_add(1);
                 if matches.len() < MAX_MATCHES {
-                    matches.push(node);
+                    matches.push((key, node));
+                    matches.sort_by(|(a, _), (b, _)| a.cmp(b));
+                } else {
+                    let worst = matches.last().map(|(k, _)| *k);
+                    if worst.is_some_and(|worst| key < worst) {
+                        matches.push((key, node));
+                        matches.sort_by(|(a, _), (b, _)| a.cmp(b));
+                        matches.truncate(MAX_MATCHES);
+                    }
                 }
             }
         }
     }
 
-    out.push(format!(
-        "siblings: {siblings_total} (showing {})",
-        siblings.len()
-    ));
-    for s in siblings {
-        let star = if s.id.data().as_ffi() == focus_id {
-            "* "
+    if focus_valid {
+        out.push("parent:".to_string());
+        if let Some(pid) = parent_id {
+            if let Some(parent) = snapshot.nodes.iter().find(|n| n.id.data().as_ffi() == pid) {
+                push_node_brief(&mut out, "- ", parent, index, redact_text);
+            } else {
+                out.push(format!("- <missing node={pid}>"));
+            }
         } else {
-            "  "
-        };
-        push_node_brief(&mut out, &format!("- {star}"), s, index, redact_text);
-    }
+            out.push("- <none>".to_string());
+        }
 
-    out.push(format!(
-        "children: {children_total} (showing {})",
-        children.len()
-    ));
-    for c in children {
-        push_node_brief(&mut out, "- ", c, index, redact_text);
+        out.push(format!(
+            "siblings: {siblings_total} (showing {})",
+            siblings.len()
+        ));
+        for s in siblings {
+            let star = if focus_id.is_some_and(|id| s.id.data().as_ffi() == id) {
+                "* "
+            } else {
+                "  "
+            };
+            push_node_brief(&mut out, &format!("- {star}"), s, index, redact_text);
+        }
+
+        out.push(format!(
+            "children: {children_total} (showing {})",
+            children.len()
+        ));
+        for c in children {
+            push_node_brief(&mut out, "- ", c, index, redact_text);
+        }
     }
 
     if query.is_some() {
-        let selected = (!matches.is_empty()).then(|| {
+        let shown = matches.len();
+        let selected = (shown > 0).then(|| {
             selected_match_index
                 .unwrap_or(0)
-                .min(matches.len().saturating_sub(1))
+                .min(shown.saturating_sub(1))
         });
         let selected_id = selected
             .and_then(|i| matches.get(i))
-            .map(|n| n.id.data().as_ffi());
+            .map(|(_, n)| n.id.data().as_ffi());
         let selected_1 = selected.map(|i| i.saturating_add(1)).unwrap_or(0);
-        let shown = matches.len();
 
         out.push(format!(
             "matches: {matches_total} (showing {shown}) selected={selected_1}/{shown} (Up/Down select, Enter lock, Ctrl/Cmd+Enter lock+copy)",
         ));
-        for m in matches.iter().copied() {
+        for (_, m) in matches.iter().copied() {
             let is_selected = selected_id.is_some_and(|id| id == m.id.data().as_ffi());
             let prefix = if is_selected { "- > " } else { "-   " };
             push_node_brief(&mut out, prefix, m, index, redact_text);
@@ -185,7 +230,7 @@ pub(super) fn build_inspect_neighborhood_model(
 
     let match_node_ids = query
         .is_some()
-        .then(|| matches.iter().map(|n| n.id.data().as_ffi()).collect())
+        .then(|| matches.iter().map(|(_, n)| n.id.data().as_ffi()).collect())
         .unwrap_or_default();
 
     InspectNeighborhoodModel {

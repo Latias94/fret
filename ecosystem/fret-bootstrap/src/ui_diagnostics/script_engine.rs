@@ -25,6 +25,7 @@ pub(super) fn active_script_needs_semantics_snapshot(active: &ActiveScript) -> b
                 | V2StepState::PasteTextInto(_)
                 | V2StepState::MenuSelect(_)
                 | V2StepState::MenuSelectPath(_)
+                | V2StepState::InspectHelpLockBestMatchAndCopySelector(_)
                 | V2StepState::DragPointerUntil(_)
                 | V2StepState::DragTo(_)
                 | V2StepState::SetSliderValue(_)
@@ -60,6 +61,7 @@ pub(super) fn active_script_needs_semantics_snapshot(active: &ActiveScript) -> b
         | UiActionStepV2::PasteTextInto { .. }
         | UiActionStepV2::MenuSelect { .. }
         | UiActionStepV2::MenuSelectPath { .. }
+        | UiActionStepV2::InspectHelpLockBestMatchAndCopySelector { .. }
         | UiActionStepV2::DragTo { .. }
         | UiActionStepV2::SetSliderValue { .. } => true,
         UiActionStepV2::ResetDiagnostics
@@ -115,6 +117,9 @@ pub(super) fn script_step_kind_name(step: &UiActionStepV2) -> &'static str {
         UiActionStepV2::ResetDiagnostics => "reset_diagnostics",
         UiActionStepV2::SetClipboardText { .. } => "set_clipboard_text",
         UiActionStepV2::AssertClipboardText { .. } => "assert_clipboard_text",
+        UiActionStepV2::InspectHelpLockBestMatchAndCopySelector { .. } => {
+            "inspect_help_lock_best_match_and_copy_selector"
+        }
         _ => "step",
     }
 }
@@ -364,6 +369,25 @@ pub(super) fn dispatch_drive_script_step(
                 stop_script,
                 failure_reason,
             );
+            debug_assert!(handled);
+        }
+        step @ UiActionStepV2::InspectHelpLockBestMatchAndCopySelector { .. } => {
+            let handled =
+                script_steps_inspect::handle_inspect_help_lock_best_match_and_copy_selector_step(
+                    service,
+                    app,
+                    window,
+                    anchor_window,
+                    step_index,
+                    step,
+                    semantics_snapshot,
+                    active,
+                    output,
+                    force_dump_label,
+                    handoff_to,
+                    stop_script,
+                    failure_reason,
+                );
             debug_assert!(handled);
         }
         step
