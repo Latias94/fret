@@ -1,3 +1,5 @@
+use std::cell::Cell;
+use std::rc::Rc;
 use std::sync::Arc;
 
 use fret_core::{Color, Corners, Px, SemanticsRole, TextOverflow, TextStyle, TextWrap};
@@ -7,10 +9,12 @@ use fret_ui::element::{
     AnyElement, ContainerProps, FlexProps, LayoutStyle, MainAlign, PressableA11y, PressableProps,
     SemanticsDecoration, TextInkOverflow, TextProps,
 };
+use fret_ui::elements::GlobalElementId;
+use fret_ui::scroll::ScrollHandle;
 use fret_ui::{ElementContext, UiHost};
 
 use super::intent::{WorkspaceTabStripIntent, dispatch_intent};
-use super::layouts::{fill_layout, fixed_square_layout};
+use super::layouts::{centered_row, fill_layout, fixed_square_layout};
 
 pub(super) fn tab_close_button<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
@@ -167,5 +171,125 @@ pub(super) fn tab_trailing_slot_placeholder<H: UiHost>(
             ..Default::default()
         },
         |_cx| Vec::new(),
+    )
+}
+
+pub(super) fn tab_strip_scroll_button<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    enabled: bool,
+    glyph: &'static str,
+    a11y_label: &'static str,
+    delta_x_sign: f32,
+    scroll_step: Px,
+    scroll_handle: ScrollHandle,
+    scroll_button_fg: Color,
+    hover_bg: Color,
+    text_style: TextStyle,
+    control_element: Rc<Cell<Option<GlobalElementId>>>,
+) -> AnyElement {
+    let glyph = Arc::<str>::from(glyph);
+    cx.pressable(
+        PressableProps {
+            layout: fixed_square_layout(Px(20.0)),
+            enabled,
+            focusable: false,
+            a11y: PressableA11y {
+                role: Some(SemanticsRole::Button),
+                label: Some(Arc::from(a11y_label)),
+                ..Default::default()
+            },
+            ..Default::default()
+        },
+        move |cx, state| {
+            control_element.set(Some(cx.root_id()));
+            let handler: OnActivate = Arc::new(move |_host, _acx, _r| {
+                let current = scroll_handle.offset();
+                scroll_handle.set_offset(fret_core::Point::new(
+                    Px(current.x.0 + delta_x_sign * scroll_step.0),
+                    current.y,
+                ));
+            });
+            cx.pressable_on_activate(handler);
+
+            let alpha = if enabled { 1.0 } else { 0.35 };
+            let fg = Some(Color {
+                a: scroll_button_fg.a * alpha,
+                ..scroll_button_fg
+            });
+            let bg = if enabled && (state.hovered || state.pressed) {
+                Some(hover_bg)
+            } else {
+                None
+            };
+
+            vec![cx.container(
+                ContainerProps {
+                    layout: fill_layout(),
+                    background: bg,
+                    corner_radii: Corners::all(Px(4.0)),
+                    ..Default::default()
+                },
+                |cx| vec![centered_row(cx, glyph.clone(), text_style.clone(), fg)],
+            )]
+        },
+    )
+}
+
+#[cfg(feature = "shadcn-context-menu")]
+pub(super) fn tab_strip_overflow_button<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    enabled: bool,
+    scroll_button_fg: Color,
+    hover_bg: Color,
+    text_style: TextStyle,
+    test_id: Option<Arc<str>>,
+) -> AnyElement {
+    use fret_ui::action::{
+        OnPressablePointerDown, PressablePointerDownResult,
+    };
+
+    let on_down: OnPressablePointerDown = Arc::new(|host, _acx, _down| {
+        host.prevent_default(fret_runtime::DefaultAction::FocusOnPointerDown);
+        PressablePointerDownResult::Continue
+    });
+
+    let glyph = Arc::<str>::from("⋯");
+    cx.pressable(
+        PressableProps {
+            layout: fixed_square_layout(Px(20.0)),
+            enabled,
+            focusable: true,
+            a11y: PressableA11y {
+                role: Some(SemanticsRole::Button),
+                label: Some(Arc::from("More tabs")),
+                test_id,
+                ..Default::default()
+            },
+            ..Default::default()
+        },
+        move |cx, state| {
+            cx.pressable_on_pointer_down(on_down.clone());
+
+            let alpha = if enabled { 1.0 } else { 0.35 };
+            let fg = Some(Color {
+                a: scroll_button_fg.a * alpha,
+                ..scroll_button_fg
+            });
+            let bg = if enabled && (state.hovered || state.pressed) {
+                Some(hover_bg)
+            } else {
+                None
+            };
+
+            vec![cx.container(
+                ContainerProps {
+                    layout: fill_layout(),
+                    background: bg,
+                    corner_radii: Corners::all(Px(4.0)),
+                    ..Default::default()
+                },
+                |cx| vec![centered_row(cx, glyph.clone(), text_style.clone(), fg)],
+            )]
+        },
     )
 }

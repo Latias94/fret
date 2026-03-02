@@ -4,13 +4,12 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use fret_core::{
-    Color, Corners, Edges, KeyCode, MouseButton, Point, Px, SemanticsRole, TextOverflow, TextSlant,
-    TextWrap,
+    Corners, Edges, KeyCode, MouseButton, Point, Px, SemanticsRole, TextOverflow, TextSlant, TextWrap,
 };
 use fret_runtime::{CommandId, Effect, Model};
 use fret_ui::action::{
-    OnActivate, OnInternalDrag, OnPressablePointerDown, OnPressablePointerMove, OnPressablePointerUp,
-    OnWheel, PressablePointerDownResult, PressablePointerUpResult,
+    OnActivate, OnInternalDrag, OnPressablePointerMove, OnPressablePointerUp, OnWheel,
+    PressablePointerUpResult,
 };
 use fret_ui::element::ElementKind;
 use fret_ui::element::{
@@ -53,7 +52,7 @@ mod widgets;
 mod overflow;
 
 #[cfg(feature = "shadcn-context-menu")]
-use overflow::compute_overflowed_tab_ids;
+use overflow::compute_overflow_menu_entries;
 
 use kernel::{
     WorkspaceTabStripDropTarget, compute_tab_strip_edge_auto_scroll_delta_x,
@@ -65,18 +64,21 @@ use geometry::{bounds_for_optional_element_id, collect_tab_hit_rects};
 use intent::{WorkspaceTabStripIntent, dispatch_intent};
 use interaction::tab_pointer_down_handler;
 use layouts::{
-    centered_row, fill_grow_layout, fill_layout, fixed_square_layout, row_layout,
-    tab_list_semantics_layout, tab_strip_scroll_content_layout,
+    fill_grow_layout, fill_layout, row_layout, tab_list_semantics_layout,
+    tab_strip_scroll_content_layout,
 };
 use state::{WorkspaceTabStripState, get_focus_restore_model};
 use theme::WorkspaceTabStripTheme;
 use utils::{
     dnd_scope_for_pane, resolve_end_drop_target_in_canonical_order, scroll_rect_into_view_x,
 };
-use widgets::{tab_close_button, tab_dirty_indicator, tab_trailing_slot_placeholder};
+use widgets::{
+    tab_close_button, tab_dirty_indicator, tab_strip_scroll_button, tab_trailing_slot_placeholder,
+};
 
 #[cfg(feature = "shadcn-context-menu")]
-use widgets::overflow_menu_close_slot;
+#[cfg(feature = "shadcn-context-menu")]
+use widgets::tab_strip_overflow_button;
 
 use crate::tab_drag::compute_tab_drop_target;
 
@@ -89,7 +91,7 @@ use state::get_overflow_menu_open_model;
 #[cfg(feature = "shadcn-context-menu")]
 use fret_ui_shadcn::{
     ContextMenu, ContextMenuEntry, ContextMenuItem, DropdownMenu, DropdownMenuAlign,
-    DropdownMenuEntry, DropdownMenuItem, DropdownMenuSide,
+    DropdownMenuSide,
 };
 
 #[derive(Debug, Clone)]
@@ -1673,72 +1675,10 @@ impl WorkspaceTabStrip {
                             let can_scroll_left = scroll_x.0 > 0.5;
                             let can_scroll_right = scroll_x.0 + 0.5 < scroll_max_x.0;
                             let scroll_handle_for_wheel = scroll_handle.clone();
+                            let scroll_handle_for_controls = scroll_handle.clone();
 
                             #[cfg(feature = "shadcn-context-menu")]
                             let overflow_button_text_style = text_style.clone();
-
-                            let scroll_button = |cx: &mut ElementContext<'_, H>,
-                                                 enabled: bool,
-                                                 glyph: &'static str,
-                                                 a11y_label: &'static str,
-                                                 delta_x: f32,
-                                                 control_element: Rc<Cell<Option<GlobalElementId>>>| {
-                                let scroll_handle = scroll_handle.clone();
-                                let button_text_style = text_style.clone();
-                                let glyph = Arc::<str>::from(glyph);
-                                cx.pressable(
-                                    PressableProps {
-                                        layout: fixed_square_layout(Px(20.0)),
-                                        enabled,
-                                        focusable: false,
-                                        a11y: PressableA11y {
-                                            role: Some(SemanticsRole::Button),
-                                            label: Some(Arc::from(a11y_label)),
-                                            ..Default::default()
-                                        },
-                                        ..Default::default()
-                                    },
-                                    move |cx, state| {
-                                        control_element.set(Some(cx.root_id()));
-                                        let handler: OnActivate = Arc::new(move |_host, _acx, _r| {
-                                            let current = scroll_handle.offset();
-                                            scroll_handle.set_offset(Point::new(
-                                                Px(current.x.0 + delta_x * scroll_step.0),
-                                                current.y,
-                                            ));
-                                        });
-                                        cx.pressable_on_activate(handler);
-
-                                        let alpha = if enabled { 1.0 } else { 0.35 };
-                                        let fg = Some(Color {
-                                            a: scroll_button_fg.a * alpha,
-                                            ..scroll_button_fg
-                                        });
-                                        let bg = if enabled && (state.hovered || state.pressed) {
-                                            Some(hover_bg)
-                                        } else {
-                                            None
-                                        };
-
-                                        vec![cx.container(
-                                            ContainerProps {
-                                                layout: fill_layout(),
-                                                background: bg,
-                                                corner_radii: Corners::all(Px(4.0)),
-                                                ..Default::default()
-                                            },
-                                            |cx| {
-                                                vec![centered_row(
-                                                    cx,
-                                                    glyph.clone(),
-                                                    button_text_style.clone(),
-                                                    fg,
-                                                )]
-                                            },
-                                        )]
-                                    },
-                                )
-                            };
 
                             let rects = {
                                 let elements = tab_elements.borrow();
@@ -1768,9 +1708,6 @@ impl WorkspaceTabStrip {
                             #[cfg(feature = "shadcn-context-menu")]
                             let (overflow_is_overflowing, overflow_button_test_id, overflow_entries) = {
                                 let is_overflowing = scroll_max_x.0 > 0.5;
-                                let button_test_id = root_test_id
-                                    .as_ref()
-                                    .map(|id| Arc::<str>::from(format!("{id}.overflow_button")));
                                 let viewport_now = scroll_element
                                     .get()
                                     .and_then(|id| cx.last_bounds_for_element(id));
@@ -1780,60 +1717,16 @@ impl WorkspaceTabStrip {
                                 } else {
                                     rects.as_slice()
                                 };
-                                let overflowed = viewport
-                                    .map(|viewport| {
-                                        compute_overflowed_tab_ids(&tabs, tab_rects, viewport, Px(2.0))
-                                    })
-                                    .unwrap_or_default();
-                                let overflowed = if is_overflowing && overflowed.is_empty() {
-                                    tabs.iter().map(|tab| tab.id.clone()).collect()
-                                } else {
-                                    overflowed
-                                };
-                                let entries = overflowed
-                                    .iter()
-                                    .filter_map(|id| {
-                                        let tab_ix = tabs
-                                            .iter()
-                                            .position(|t| t.id.as_ref() == id.as_ref())?;
-                                        let tab = tabs.get(tab_ix)?;
-                                        let test_id = root_test_id.as_ref().map(|root| {
-                                            Arc::<str>::from(format!(
-                                                "{root}.overflow_entry.{}",
-                                                tab.id.as_ref()
-                                            ))
-                                        });
-                                        let close_test_id = root_test_id.as_ref().map(|root| {
-                                            Arc::<str>::from(format!(
-                                                "{root}.overflow_entry.{}.close",
-                                                tab.id.as_ref()
-                                            ))
-                                        });
-
-                                        let close_slot = tab.close_command.as_ref().map(|_cmd| {
-                                            overflow_menu_close_slot(
-                                                cx,
-                                                text_style.clone(),
-                                                inactive_fg,
-                                                close_test_id,
-                                            )
-                                        });
-
-                                        let mut item = DropdownMenuItem::new(tab.title.clone())
-                                            .close_on_select(true)
-                                            .on_select(tab.command.clone());
-                                        if let Some(id) = test_id {
-                                            item = item.test_id(id);
-                                        }
-                                        if let Some(close_cmd) = tab.close_command.clone() {
-                                            item = item.trailing_on_select(close_cmd);
-                                        }
-                                        if let Some(close_slot) = close_slot {
-                                            item = item.trailing(close_slot);
-                                        }
-                                        Some(DropdownMenuEntry::Item(item))
-                                    })
-                                    .collect::<Vec<_>>();
+                                let (button_test_id, entries) = compute_overflow_menu_entries(
+                                    cx,
+                                    root_test_id.as_ref(),
+                                    &tabs,
+                                    tab_rects,
+                                    viewport,
+                                    is_overflowing,
+                                    text_style.clone(),
+                                    inactive_fg,
+                                );
                                 (is_overflowing, button_test_id, entries)
                             };
 
@@ -2172,22 +2065,32 @@ impl WorkspaceTabStrip {
                                         },
                                         move |cx| {
                                             let mut out = vec![
-                                                scroll_button(
+                                                tab_strip_scroll_button(
                                                     cx,
                                                     can_scroll_left,
                                                     "<",
                                                     "Scroll left",
                                                     -1.0,
+                                                    scroll_step,
+                                                    scroll_handle_for_controls.clone(),
+                                                    scroll_button_fg,
+                                                    hover_bg,
+                                                    text_style.clone(),
                                                     scroll_left_control_element.clone(),
                                                 ),
                                                 scroll,
                                                 end_drop,
-                                                scroll_button(
+                                                tab_strip_scroll_button(
                                                     cx,
                                                     can_scroll_right,
                                                     ">",
                                                     "Scroll right",
                                                     1.0,
+                                                    scroll_step,
+                                                    scroll_handle_for_controls.clone(),
+                                                    scroll_button_fg,
+                                                    hover_bg,
+                                                    text_style.clone(),
                                                     scroll_right_control_element.clone(),
                                                 ),
                                             ];
@@ -2204,58 +2107,13 @@ impl WorkspaceTabStrip {
                                                 let trigger = move |cx: &mut ElementContext<'_, H>| {
                                                     overflow_control_element_for_trigger
                                                         .set(Some(cx.root_id()));
-                                                    let on_down: OnPressablePointerDown = Arc::new(|host, _acx, _down| {
-                                                        host.prevent_default(
-                                                            fret_runtime::DefaultAction::FocusOnPointerDown,
-                                                        );
-                                                        PressablePointerDownResult::Continue
-                                                    });
-
-                                                    let glyph = Arc::<str>::from("⋯");
-                                                    cx.pressable(
-                                                        PressableProps {
-                                                            layout: fixed_square_layout(Px(20.0)),
-                                                            enabled,
-                                                            focusable: true,
-                                                            a11y: PressableA11y {
-                                                                role: Some(SemanticsRole::Button),
-                                                                label: Some(Arc::from("More tabs")),
-                                                                test_id: overflow_button_test_id.clone(),
-                                                                ..Default::default()
-                                                            },
-                                                            ..Default::default()
-                                                        },
-                                                        move |cx, state| {
-                                                            cx.pressable_on_pointer_down(on_down.clone());
-
-                                                            let alpha = if enabled { 1.0 } else { 0.35 };
-                                                            let fg = Some(Color {
-                                                                a: scroll_button_fg.a * alpha,
-                                                                ..scroll_button_fg
-                                                            });
-                                                            let bg = if enabled && (state.hovered || state.pressed) {
-                                                                Some(hover_bg)
-                                                            } else {
-                                                                None
-                                                            };
-
-                                                            vec![cx.container(
-                                                                ContainerProps {
-                                                                    layout: fill_layout(),
-                                                                    background: bg,
-                                                                    corner_radii: Corners::all(Px(4.0)),
-                                                                    ..Default::default()
-                                                                },
-                                                                |cx| {
-                                                                    vec![centered_row(
-                                                                        cx,
-                                                                        glyph.clone(),
-                                                                        overflow_button_text_style.clone(),
-                                                                        fg,
-                                                                    )]
-                                                                },
-                                                            )]
-                                                        },
+                                                    tab_strip_overflow_button(
+                                                        cx,
+                                                        enabled,
+                                                        scroll_button_fg,
+                                                        hover_bg,
+                                                        overflow_button_text_style.clone(),
+                                                        overflow_button_test_id.clone(),
                                                     )
                                                 };
 
