@@ -213,6 +213,30 @@ pub(crate) fn update_hovered_hover_region<H: UiHost>(
     })
 }
 
+pub(crate) fn update_hovered_hover_region_with_node<H: UiHost>(
+    app: &mut H,
+    window: AppWindowId,
+    next: Option<(GlobalElementId, NodeId)>,
+) -> (
+    Option<GlobalElementId>,
+    Option<NodeId>,
+    Option<GlobalElementId>,
+    Option<NodeId>,
+) {
+    with_window_state(app, window, |st| {
+        let prev = st.hovered_hover_region;
+        let prev_node = st.hovered_hover_region_node;
+        let next_element = next.map(|(element, _)| element);
+        let next_node = next.map(|(_, node)| node);
+        if prev == next_element {
+            return (None, None, None, None);
+        }
+        st.hovered_hover_region = next_element;
+        st.hovered_hover_region_node = next_node;
+        (prev, prev_node, next_element, next_node)
+    })
+}
+
 pub(crate) fn set_pressed_pressable<H: UiHost>(
     app: &mut H,
     window: AppWindowId,
