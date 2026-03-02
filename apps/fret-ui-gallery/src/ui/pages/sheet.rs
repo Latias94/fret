@@ -1,6 +1,6 @@
-use super::super::super::super::super::*;
+use super::super::*;
 
-pub(in crate::ui) fn preview_sheet(
+pub(super) fn preview_sheet(
     cx: &mut ElementContext<'_, App>,
     _open: Model<bool>,
 ) -> Vec<AnyElement> {
@@ -31,35 +31,35 @@ pub(in crate::ui) fn preview_sheet(
                 .max_w(Px(980.0))
                 .test_id_prefix("ui-gallery-sheet-demo")
                 .code_rust_from_file_region(
-                    include_str!("../../../../snippets/sheet/demo.rs"),
+                    include_str!("../snippets/sheet/demo.rs"),
                     "example",
                 ),
             DocSection::new("Parts", parts)
                 .max_w(Px(980.0))
                 .test_id_prefix("ui-gallery-sheet-parts")
                 .code_rust_from_file_region(
-                    include_str!("../../../../snippets/sheet/parts.rs"),
+                    include_str!("../snippets/sheet/parts.rs"),
                     "example",
                 ),
             DocSection::new("Side", side)
                 .max_w(Px(980.0))
                 .test_id_prefix("ui-gallery-sheet-side")
                 .code_rust_from_file_region(
-                    include_str!("../../../../snippets/sheet/side.rs"),
+                    include_str!("../snippets/sheet/side.rs"),
                     "example",
                 ),
             DocSection::new("No Close Button", no_close_button)
                 .max_w(Px(980.0))
                 .test_id_prefix("ui-gallery-sheet-no-close")
                 .code_rust_from_file_region(
-                    include_str!("../../../../snippets/sheet/no_close_button.rs"),
+                    include_str!("../snippets/sheet/no_close_button.rs"),
                     "example",
                 ),
             DocSection::new("RTL", rtl)
                 .max_w(Px(980.0))
                 .test_id_prefix("ui-gallery-sheet-rtl")
                 .code_rust_from_file_region(
-                    include_str!("../../../../snippets/sheet/rtl.rs"),
+                    include_str!("../snippets/sheet/rtl.rs"),
                     "example",
                 ),
             DocSection::new("Notes", notes)
@@ -68,5 +68,5 @@ pub(in crate::ui) fn preview_sheet(
         ],
     );
 
-    vec![body]
+    vec![body.test_id("ui-gallery-sheet")]
 }

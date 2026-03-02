@@ -38,6 +38,7 @@ mod motion_presets;
 mod native_select;
 mod navigation_menu;
 mod popover;
+mod sheet;
 mod scroll_area;
 mod select;
 mod shadcn_extras;
@@ -190,6 +191,10 @@ pub(super) fn preview_popover(
     open: Model<bool>,
 ) -> Vec<AnyElement> {
     popover::preview_popover(cx, open)
+}
+
+pub(super) fn preview_sheet(cx: &mut ElementContext<'_, App>, open: Model<bool>) -> Vec<AnyElement> {
+    sheet::preview_sheet(cx, open)
 }
 
 pub(super) fn preview_field(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {

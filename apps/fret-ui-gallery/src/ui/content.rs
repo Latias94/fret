@@ -573,7 +573,7 @@ fn page_preview(
         PAGE_POPOVER => pages::preview_popover(cx, popover_open),
         PAGE_RADIO_GROUP => preview_radio_group(cx),
         PAGE_SEPARATOR => preview_separator(cx),
-        PAGE_SHEET => preview_sheet(cx, sheet_open),
+        PAGE_SHEET => pages::preview_sheet(cx, sheet_open),
         PAGE_SIDEBAR => preview_sidebar(cx),
         PAGE_SPINNER => preview_spinner(cx),
         PAGE_SWITCH => preview_switch(cx, switch),
