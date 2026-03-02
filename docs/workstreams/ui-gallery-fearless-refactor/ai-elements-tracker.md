@@ -26,7 +26,7 @@ Status labels:
 | `commit_large_demo` | `PAGE_AI_COMMIT_LARGE_DEMO` | (removed) | `apps/fret-ui-gallery/src/ui/snippets/ai/commit_large_demo.rs` | `apps/fret-ui-gallery/src/ui/pages/ai_commit_large_demo.rs` | Snippet-backed |
 | `confirmation_demo` | `PAGE_AI_CONFIRMATION_DEMO` | (removed) | `apps/fret-ui-gallery/src/ui/snippets/ai/confirmation_demo.rs` | `apps/fret-ui-gallery/src/ui/pages/ai_confirmation_demo.rs` | Snippet-backed |
 | `context_demo` | `PAGE_AI_CONTEXT_DEMO` | (removed) | `apps/fret-ui-gallery/src/ui/snippets/ai/context_demo.rs` | `apps/fret-ui-gallery/src/ui/pages/ai_context_demo.rs` | Snippet-backed |
-| `conversation_demo` | `PAGE_AI_CONVERSATION_DEMO` | `apps/fret-ui-gallery/src/ui/previews/gallery/ai/conversation_demo.rs` | — | — | Legacy preview |
+| `conversation_demo` | `PAGE_AI_CONVERSATION_DEMO` | (removed) | `apps/fret-ui-gallery/src/ui/snippets/ai/conversation_demo.rs` | `apps/fret-ui-gallery/src/ui/pages/ai_conversation_demo.rs` | Snippet-backed |
 | `environment_variables_demo` | `PAGE_AI_ENVIRONMENT_VARIABLES_DEMO` | (removed) | `apps/fret-ui-gallery/src/ui/snippets/ai/environment_variables_demo.rs` | `apps/fret-ui-gallery/src/ui/pages/ai_environment_variables_demo.rs` | Snippet-backed |
 | `file_tree_demo` | `PAGE_AI_FILE_TREE_DEMO` | (removed) | `apps/fret-ui-gallery/src/ui/snippets/ai/file_tree_demo.rs` | `apps/fret-ui-gallery/src/ui/pages/ai_file_tree_demo.rs` | Snippet-backed |
 | `image_demo` | `PAGE_AI_IMAGE_DEMO` | `apps/fret-ui-gallery/src/ui/previews/gallery/ai/image_demo.rs` | — | — | Legacy preview |

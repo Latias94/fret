@@ -13,6 +13,7 @@ mod ai_commit_demo;
 mod ai_commit_large_demo;
 mod ai_confirmation_demo;
 mod ai_context_demo;
+mod ai_conversation_demo;
 mod ai_file_tree_demo;
 mod ai_environment_variables_demo;
 mod ai_inline_citation_demo;
@@ -197,6 +198,13 @@ pub(super) fn preview_ai_confirmation_demo(
     theme: &Theme,
 ) -> Vec<AnyElement> {
     ai_confirmation_demo::preview_ai_confirmation_demo(cx, theme)
+}
+
+pub(super) fn preview_ai_conversation_demo(
+    cx: &mut ElementContext<'_, App>,
+    theme: &Theme,
+) -> Vec<AnyElement> {
+    ai_conversation_demo::preview_ai_conversation_demo(cx, theme)
 }
 
 pub(super) fn preview_ai_context_demo(

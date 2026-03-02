@@ -10,6 +10,7 @@ pub mod commit_demo;
 pub mod commit_large_demo;
 pub mod confirmation_demo;
 pub mod context_demo;
+pub mod conversation_demo;
 pub mod environment_variables_demo;
 pub mod file_tree_demo;
 pub mod inline_citation_demo;

@@ -1,18 +1,19 @@
-use super::super::super::super::*;
+pub const SOURCE: &str = include_str!("conversation_demo.rs");
 
-pub(in crate::ui) fn preview_ai_conversation_demo(
-    cx: &mut ElementContext<'_, App>,
-    theme: &Theme,
-) -> Vec<AnyElement> {
-    use std::sync::Arc;
+// region: example
+use fret_runtime::Model;
+use fret_ui::Invalidation;
+use fret_ui::action::OnActivate;
+use fret_ui::scroll::VirtualListScrollHandle;
+use fret_ui_ai as ui_ai;
+use fret_ui_kit::declarative::stack;
+use fret_ui_kit::declarative::style as decl_style;
+use fret_ui_kit::declarative::{CachedSubtreeExt as _, CachedSubtreeProps};
+use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, Radius, Space};
+use fret_ui_shadcn::prelude::*;
+use std::sync::Arc;
 
-    use fret_runtime::Model;
-    use fret_ui::Invalidation;
-    use fret_ui::action::OnActivate;
-    use fret_ui::scroll::VirtualListScrollHandle;
-    use fret_ui_kit::declarative::stack;
-    use fret_ui_kit::declarative::style as decl_style;
-    use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, Radius, Space};
+pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement {
 
     #[derive(Default)]
     struct DemoModels {
@@ -215,10 +216,9 @@ pub(in crate::ui) fn preview_ai_conversation_demo(
             .test_id("ui-ai-conversation-demo-scroll-bottom")
             .into_element(cx);
 
-        let layout = decl_style::layout_style(
-            theme,
-            LayoutRefinement::default().w_full().h_full().relative(),
-        );
+        let layout = cx.with_theme(|theme| {
+            decl_style::layout_style(theme, LayoutRefinement::default().w_full().h_full().relative())
+        });
 
         vec![
             cx.stack_props(fret_ui::element::StackProps { layout }, |_cx| {
@@ -227,19 +227,28 @@ pub(in crate::ui) fn preview_ai_conversation_demo(
         ]
     });
 
-    let chrome = ChromeRefinement::default()
-        .rounded(Radius::Lg)
-        .border_1()
-        .border_color(ColorRef::Color(theme.color_token("border")));
-    let props = decl_style::container_props(
-        theme,
-        chrome,
-        LayoutRefinement::default()
-            .w_full()
-            .h_px(Px(560.0))
-            .min_w_0()
-            .min_h_0(),
-    );
+    let props = cx.with_theme(|theme| {
+        let chrome = ChromeRefinement::default()
+            .rounded(Radius::Lg)
+            .border_1()
+            .border_color(ColorRef::Color(theme.color_token("border")));
+        decl_style::container_props(
+            theme,
+            chrome,
+            LayoutRefinement::default()
+                .w_full()
+                .h_px(Px(560.0))
+                .min_w_0()
+                .min_h_0(),
+        )
+    });
 
-    vec![header, cx.container(props, move |_cx| vec![body])]
+    stack::vstack(
+        cx,
+        stack::VStackProps::default()
+            .layout(LayoutRefinement::default().w_full().min_w_0())
+            .gap(Space::N3),
+        move |cx| vec![header, cx.container(props, move |_cx| vec![body])],
+    )
 }
+// endregion: example
