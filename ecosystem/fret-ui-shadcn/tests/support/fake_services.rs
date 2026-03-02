@@ -58,4 +58,3 @@ impl fret_core::MaterialService for FakeServices {
         true
     }
 }
-
