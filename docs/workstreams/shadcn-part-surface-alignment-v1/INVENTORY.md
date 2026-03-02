@@ -44,7 +44,7 @@ without having to grep the whole crate.
 | `checkbox` | `repo-ref/ui/apps/v4/registry/bases/radix/ui/checkbox.tsx` | `ecosystem/fret-ui-shadcn/src/checkbox.rs` | parts | No | Yes | Keyboard/pointer outcomes are gated by unit tests. |
 | `collapsible` | `repo-ref/ui/apps/v4/registry/bases/radix/ui/collapsible.tsx` | `ecosystem/fret-ui-shadcn/src/collapsible.rs` | parts | No | Yes | Trigger requires an explicit `open: Model<bool>`; content uses measured-height motion wrapper. |
 | `combobox` | `repo-ref/ui/apps/v4/registry/bases/radix/ui/combobox.tsx` | `ecosystem/fret-ui-shadcn/src/combobox.rs` | recipe + adapter | Yes | Yes | Structural drift vs Base UI expectations remains (defer deeper redesign). |
-| `command` | `repo-ref/ui/apps/v4/registry/bases/radix/ui/command.tsx` | `ecosystem/fret-ui-shadcn/src/command.rs` | parts | No | No | Not audited yet. |
+| `command` | `repo-ref/ui/apps/v4/registry/bases/radix/ui/command.tsx` | `ecosystem/fret-ui-shadcn/src/command.rs` | parts | No | Yes | Cmdk-style listbox semantics + keyboard outcomes are gated by unit tests. |
 | `context-menu` | `repo-ref/ui/apps/v4/registry/bases/radix/ui/context-menu.tsx` | `ecosystem/fret-ui-shadcn/src/context_menu.rs` | recipe + adapter | Yes | Yes | Submenu parts are helpers over the closure API. |
 | `dialog` | `repo-ref/ui/apps/v4/registry/bases/radix/ui/dialog.tsx` | `ecosystem/fret-ui-shadcn/src/dialog.rs` | recipe + adapter | Yes | Yes | Trigger/Portal/Overlay are adapters; default “open on activate” when trigger is pressable. |
 | `direction` | `repo-ref/ui/apps/v4/registry/bases/radix/ui/direction.tsx` | `ecosystem/fret-ui-shadcn/src/direction.rs` | parts | No | Yes | Includes `use_direction` alias for copy/paste parity. |

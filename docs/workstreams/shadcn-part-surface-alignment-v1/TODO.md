@@ -27,7 +27,7 @@ See also: `docs/workstreams/shadcn-part-surface-alignment-v1/INVENTORY.md`.
 This is the suggested dev sequence for the next parity passes (optimize for “high leverage” and
 “high risk”):
 
-1. `command` (cmdk parity surface + keyboard outcomes)
+1. `field` (label/control association + helper text semantics)
 2. **Defer last**: `select` / `combobox` (structural drift is known; deeper than naming)
 
 ## Tracker table
@@ -37,6 +37,7 @@ This is the suggested dev sequence for the next parity passes (optimize for “h
 | `card` | `Card, CardHeader, CardTitle, CardDescription, CardAction, CardContent, CardFooter` (+ `size`) | `Card*` parts + `CardSize` + `card_sized` | `CardAction` styling override was missing; `size=sm` spacing drift | Low | Keep part surface; lock `size=sm` spacing + add safe builders (already landed) | unit tests in `ecosystem/fret-ui-shadcn/src/card.rs` | P0 | Done |
 | `direction` | `DirectionProvider, useDirection` | `DirectionProvider, useDirection` (+ `use_direction` alias) | none (alias provided for copy/paste parity) | Low | Keep as thin wrappers; treat this as the shadcn-aligned entrypoint | unit tests in `ecosystem/fret-ui-shadcn/src/direction.rs` | P2 | Done |
 | `label` | `Label` | `Label` (re-export from `fret-ui-kit`) | No DOM `id/htmlFor`; association is modeled via `labelled_by_element(...)` on form controls | Low | Keep the re-export; lock the association surface on `Input`/`Textarea` + label default typography in kit | unit tests in `ecosystem/fret-ui-shadcn/src/input.rs`, `ecosystem/fret-ui-shadcn/src/textarea.rs`, and `ecosystem/fret-ui-kit/src/primitives/label.rs` | P2 | Done (with known gaps) |
+| `command` | `Command, CommandDialog, CommandInput, CommandList, CommandEmpty, CommandGroup, CommandItem, CommandShortcut, CommandSeparator` | `Command*` parts + `CommandPalette` + `CommandDialog` | Structural drift vs cmdk DOM is intentional; focus stays in the input while highlight uses `active_descendant` listbox semantics | Medium | Keep surface; lock arrow navigation + empty state + filtering invariants via unit tests | unit tests in `ecosystem/fret-ui-shadcn/src/command.rs` | P1 | Done (with known gaps) |
 | `alert` | `Alert, AlertTitle, AlertDescription, AlertAction` | `Alert*` parts | `AlertAction` is modeled as a marker element (for patching), not a literal DOM slot; link hover styling is recipe-owned | Low | Keep surface; lock role stamping + title truncation via unit tests | unit tests in `ecosystem/fret-ui-shadcn/src/alert.rs` | P2 | Done |
 | `breadcrumb` | `Breadcrumb, BreadcrumbList, BreadcrumbItem, BreadcrumbLink, BreadcrumbPage, BreadcrumbSeparator, BreadcrumbEllipsis` | `Breadcrumb` recipe builder + primitives re-export (incl `BreadcrumbRoot`, `BreadcrumbItemPart`, `BreadcrumbSeparatorPart`) | Root part name conflicts (`Breadcrumb` recipe vs upstream `Breadcrumb` root part) | Low | Keep recipe as-is; keep primitives available for upstream-shaped composition | unit tests in `ecosystem/fret-ui-shadcn/src/breadcrumb.rs` | P2 | Done (with known gaps) |
 | `avatar` | `Avatar, AvatarImage, AvatarFallback` | `Avatar*` (+ `AvatarBadge`, `AvatarGroup*`) + `avatar_sized(...)` | extra parts exist (fine) | **Yes** (size scope) | Keep extra parts; add scoped builder + explicit `size(...)` overrides for size-dependent leaf parts | unit tests in `ecosystem/fret-ui-shadcn/src/avatar.rs` | P0 | Done |
@@ -82,7 +83,7 @@ This is the short “next few” list. Full inventory is in `INVENTORY.md`.
 
 | Component | Upstream base file | Fret module | Priority | Status | Notes |
 |---|---|---|---:|---|---|
-| `command` | `repo-ref/ui/apps/v4/registry/bases/radix/ui/command.tsx` | `ecosystem/fret-ui-shadcn/src/command.rs` | P1 | Not started | Gate: keyboard navigation + selection + empty state. |
+| `field` | `repo-ref/ui/apps/v4/registry/bases/radix/ui/field.tsx` | `ecosystem/fret-ui-shadcn/src/field.rs` | P1 | Not started | Gate: label/control association + helper text semantics + required/invalid chrome. |
 
 ## Notes / recurring hazards
 
