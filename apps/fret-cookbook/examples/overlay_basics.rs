@@ -58,40 +58,51 @@ fn install_commands(app: &mut App) {
     fret_app::install_command_default_keybindings_into_keymap(app);
 }
 
-struct OverlayBasicsState {
-    dialog_open: Model<bool>,
-    underlay_bumps: Model<u32>,
-}
+struct OverlayBasicsView;
 
-struct OverlayBasicsProgram;
-
-impl MvuProgram for OverlayBasicsProgram {
-    type State = OverlayBasicsState;
-    type Message = ();
-
-    fn init(app: &mut App, _window: AppWindowId) -> Self::State {
-        Self::State {
-            dialog_open: app.models_mut().insert(false),
-            underlay_bumps: app.models_mut().insert(0),
-        }
+impl View for OverlayBasicsView {
+    fn init(_app: &mut App, _window: AppWindowId) -> Self {
+        Self
     }
 
-    fn update(_app: &mut App, _state: &mut Self::State, _message: Self::Message) {}
-
-    fn view(
-        cx: &mut ElementContext<'_, App>,
-        state: &mut Self::State,
-        _msg: &mut MessageRouter<Self::Message>,
-    ) -> Elements {
-        let base_root = cx.root_id();
+    fn render(&mut self, cx: &mut ViewCx<'_, '_, App>) -> Elements {
         let cmd_bump: CommandId = act::BumpUnderlay.into();
 
         let theme = Theme::global(&*cx.app).snapshot();
-        let dialog_open_for_dialog = state.dialog_open.clone();
-        let dialog_open_for_footer = state.dialog_open.clone();
-        let dialog_open_for_close = state.dialog_open.clone();
 
-        let bumps = cx.watch_model(&state.underlay_bumps).layout().copied_or(0);
+        let dialog_open = cx.use_state::<bool>();
+        let underlay_bumps = cx.use_state::<u32>();
+
+        cx.on_action::<act::OpenDialog>({
+            let dialog_open = dialog_open.clone();
+            move |host, acx| {
+                let _ = host.models_mut().update(&dialog_open, |v| *v = true);
+                host.request_redraw(acx.window);
+                host.notify(acx);
+                true
+            }
+        });
+        cx.on_action::<act::BumpUnderlay>({
+            let underlay_bumps = underlay_bumps.clone();
+            move |host, acx| {
+                let _ = host
+                    .models_mut()
+                    .update(&underlay_bumps, |v| *v = v.saturating_add(1));
+                host.request_redraw(acx.window);
+                host.notify(acx);
+                true
+            }
+        });
+        cx.on_action_availability::<act::OpenDialog>(|_host, _acx| CommandAvailability::Available);
+        cx.on_action_availability::<act::BumpUnderlay>(|_host, _acx| {
+            CommandAvailability::Available
+        });
+
+        let dialog_open_for_dialog = dialog_open.clone();
+        let dialog_open_for_footer = dialog_open.clone();
+        let dialog_open_for_close = dialog_open.clone();
+
+        let bumps = cx.watch_model(&underlay_bumps).layout().copied_or(0);
         let enabled = cx.action_is_enabled(&cmd_bump);
         let enabled_label = if enabled {
             "Enabled"
@@ -108,30 +119,6 @@ impl MvuProgram for OverlayBasicsProgram {
             })
             .map(|seq| format_sequence(Platform::current(), &seq))
             .unwrap_or_else(|| "Unbound".to_string());
-
-        let dialog_open_for_action_open = state.dialog_open.clone();
-        let underlay_bumps_for_action = state.underlay_bumps.clone();
-        let (on_command, on_command_availability) = fret::actions::ActionHandlerTable::new()
-            .on::<act::OpenDialog>(move |host, acx| {
-                let _ = host
-                    .models_mut()
-                    .update(&dialog_open_for_action_open, |v| *v = true);
-                host.request_redraw(acx.window);
-                true
-            })
-            .on::<act::BumpUnderlay>(move |host, acx| {
-                let _ = host.models_mut().update(&underlay_bumps_for_action, |v| {
-                    *v = v.saturating_add(1);
-                });
-                host.request_redraw(acx.window);
-                true
-            })
-            .availability::<act::OpenDialog>(|_host, _acx| CommandAvailability::Available)
-            .availability::<act::BumpUnderlay>(|_host, _acx| CommandAvailability::Available)
-            .build();
-
-        cx.command_on_command_for(base_root, on_command);
-        cx.command_on_command_availability_for(base_root, on_command_availability);
 
         let dialog = shadcn::Dialog::new(dialog_open_for_dialog).into_element(
             cx,
@@ -233,6 +220,6 @@ fn main() -> anyhow::Result<()> {
         .config_files(false)
         .install_app(install_commands)
         .install_app(fret_cookbook::install_cookbook_defaults)
-        .run_mvu::<OverlayBasicsProgram>()
+        .run_view::<OverlayBasicsView>()
         .map_err(anyhow::Error::from)
 }

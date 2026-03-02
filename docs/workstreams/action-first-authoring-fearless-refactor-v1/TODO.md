@@ -134,7 +134,7 @@ ID format:
       `apps/fret-cookbook/examples/commands_keymap_basics.rs`
     - View runtime + action-first adoption landed for `hello`:
       `apps/fret-cookbook/examples/hello.rs`
-    - Action-first bindings landed for `overlay_basics` (still MVU; view runtime pending):
+    - View runtime + action-first adoption landed for `overlay_basics`:
       `apps/fret-cookbook/examples/overlay_basics.rs`
 - [ ] AFA-adopt-041 Add at least one ui-gallery page/snippet using actions + view runtime.
 - [ ] AFA-adopt-042 Add one editor-grade harness adoption:
