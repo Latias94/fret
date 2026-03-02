@@ -35,7 +35,10 @@ fn slide_card(cx: &mut ElementContext<'_, App>, idx: usize, visual: SlideVisual)
 
     let content = cx.flex(
         FlexProps {
-            layout: decl_style::layout_style(&theme, LayoutRefinement::default().w_full().aspect_ratio(1.0)),
+            layout: decl_style::layout_style(
+                &theme,
+                LayoutRefinement::default().w_full().aspect_ratio(1.0),
+            ),
             direction: fret_core::Axis::Horizontal,
             justify: MainAlign::Center,
             align: CrossAlign::Center,
@@ -63,8 +66,10 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
     let api_cursor = match state.api_cursor {
         Some(model) => model,
         None => {
-            let model: Model<shadcn::CarouselEventCursor> =
-                cx.app.models_mut().insert(shadcn::CarouselEventCursor::default());
+            let model: Model<shadcn::CarouselEventCursor> = cx
+                .app
+                .models_mut()
+                .insert(shadcn::CarouselEventCursor::default());
             cx.with_state(Models::default, |st| st.api_cursor = Some(model.clone()));
             model
         }
@@ -73,7 +78,9 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
         Some(model) => model,
         None => {
             let model = cx.app.models_mut().insert(0usize);
-            cx.with_state(Models::default, |st| st.api_effect_current = Some(model.clone()));
+            cx.with_state(Models::default, |st| {
+                st.api_effect_current = Some(model.clone())
+            });
             model
         }
     };
@@ -81,7 +88,9 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
         Some(model) => model,
         None => {
             let model = cx.app.models_mut().insert(0usize);
-            cx.with_state(Models::default, |st| st.api_effect_count = Some(model.clone()));
+            cx.with_state(Models::default, |st| {
+                st.api_effect_count = Some(model.clone())
+            });
             model
         }
     };
@@ -102,7 +111,10 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
                 0
             };
             let _ = cx.app.models_mut().update(&api_cursor, |v| *v = cursor_now);
-            let _ = cx.app.models_mut().update(&api_effect_count, |v| *v = next_count);
+            let _ = cx
+                .app
+                .models_mut()
+                .update(&api_effect_count, |v| *v = next_count);
             let _ = cx
                 .app
                 .models_mut()
@@ -119,7 +131,6 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
         .collect::<Vec<_>>();
     let api_carousel = shadcn::Carousel::new(api_items)
         .api_handle_model(api_handle.clone())
-        .refine_track_layout(LayoutRefinement::default().w_px(Px(336.0)))
         .refine_layout(LayoutRefinement::default().w_full().max_w(max_w_xs))
         .test_id("ui-gallery-carousel-api")
         .into_element(cx);
@@ -153,14 +164,19 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
             ink_overflow: fret_ui::element::TextInkOverflow::None,
         });
 
-        ui::container(cx, move |_cx| vec![text]).py_2().into_element(cx)
+        ui::container(cx, move |_cx| vec![text])
+            .py_2()
+            .into_element(cx)
     };
 
     cx.flex(
         FlexProps {
             layout: decl_style::layout_style(
                 &Theme::global(&*cx.app).snapshot(),
-                LayoutRefinement::default().w_full().max_w(max_w_xs).mx_auto(),
+                LayoutRefinement::default()
+                    .w_full()
+                    .max_w(max_w_xs)
+                    .mx_auto(),
             ),
             direction: fret_core::Axis::Vertical,
             justify: MainAlign::Start,

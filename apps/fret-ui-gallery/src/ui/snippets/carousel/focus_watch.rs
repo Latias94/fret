@@ -32,7 +32,10 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
             );
 
             let card = shadcn::Card::new([body]).into_element(cx);
-            ui::container(cx, move |_cx| vec![card]).p_1().into_element(cx)
+            ui::container(cx, move |_cx| vec![card])
+                .w_full()
+                .p_1()
+                .into_element(cx)
         })
         .collect::<Vec<_>>();
 
@@ -46,11 +49,15 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
         .track_start_neg_margin(Space::N0)
         .item_padding_start(Space::N0)
         .item_basis_main_px(Px(200.0))
-        .refine_layout(LayoutRefinement::default().w_px(Px(200.0)).h_px(Px(120.0)).mx_auto())
+        .refine_layout(
+            LayoutRefinement::default()
+                .w_px(Px(200.0))
+                .h_px(Px(120.0))
+                .mx_auto(),
+        )
         .refine_viewport_layout(LayoutRefinement::default().h_px(Px(120.0)))
         .refine_track_layout(LayoutRefinement::default().h_px(Px(120.0)))
         .test_id("ui-gallery-carousel-focus")
         .into_element(cx)
 }
 // endregion: example
-

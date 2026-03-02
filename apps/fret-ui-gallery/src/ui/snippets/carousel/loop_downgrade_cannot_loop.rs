@@ -1,8 +1,8 @@
 // region: example
 use fret_app::App;
 use fret_core::Edges;
-use fret_ui::element::{CrossAlign, FlexProps, MainAlign};
 use fret_ui::Theme;
+use fret_ui::element::{CrossAlign, FlexProps, MainAlign};
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::ui;
 use fret_ui_shadcn::{self as shadcn, prelude::*};
@@ -44,6 +44,7 @@ fn slide_card(cx: &mut ElementContext<'_, App>, idx: usize, visual: SlideVisual)
 fn slide(cx: &mut ElementContext<'_, App>, idx: usize, visual: SlideVisual) -> AnyElement {
     let card = slide_card(cx, idx, visual);
     ui::container(cx, move |_cx| vec![card])
+        .w_full()
         .p_1()
         .into_element(cx)
 }
@@ -67,7 +68,6 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
         )
         // A narrow basis helps construct a configuration where Embla's `canLoop` downgrade applies.
         .item_basis_main_px(Px(240.0))
-        .refine_track_layout(LayoutRefinement::default().w_px(Px(336.0)))
         .refine_layout(
             LayoutRefinement::default()
                 .w_full()

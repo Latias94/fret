@@ -65,7 +65,10 @@ fn slide_card(cx: &mut ElementContext<'_, App>, idx: usize, visual: SlideVisual)
 
 fn slide(cx: &mut ElementContext<'_, App>, idx: usize, visual: SlideVisual) -> AnyElement {
     let card = slide_card(cx, idx, visual);
-    ui::container(cx, move |_cx| vec![card]).p_1().into_element(cx)
+    ui::container(cx, move |_cx| vec![card])
+        .w_full()
+        .p_1()
+        .into_element(cx)
 }
 
 pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
