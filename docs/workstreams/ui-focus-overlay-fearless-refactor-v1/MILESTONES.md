@@ -65,3 +65,6 @@ Status: In progress (2026-03-02)
   - `crates/fret-ui/src/tree/dispatch/event_chain.rs`
   - `crates/fret-ui/src/tree/dispatch/window.rs`
   - regression test: `crates/fret-ui/src/tree/tests/cursor_icon_query.rs`
+- Key dispatch capture/bubble chains no longer depend on retained `parent` pointers:
+  - `crates/fret-ui/src/tree/dispatch/window.rs`
+  - regression test: `crates/fret-ui/src/tree/tests/dispatch_phase.rs`
