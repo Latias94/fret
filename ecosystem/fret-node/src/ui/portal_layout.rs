@@ -17,4 +17,3 @@ pub struct NodeGraphPortalNodeLayout {
     /// Zoom factor for the canvas.
     pub zoom: f32,
 }
-

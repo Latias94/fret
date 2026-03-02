@@ -1,8 +1,8 @@
 use std::sync::Arc;
 
 use fret_canvas::view::{
-    screen_rect_to_canvas_rect, wheel_zoom_factor, PanZoom2D, DEFAULT_WHEEL_ZOOM_BASE,
-    DEFAULT_WHEEL_ZOOM_STEP,
+    DEFAULT_WHEEL_ZOOM_BASE, DEFAULT_WHEEL_ZOOM_STEP, PanZoom2D, screen_rect_to_canvas_rect,
+    wheel_zoom_factor,
 };
 use fret_canvas::wires as canvas_wires;
 use fret_core::scene::DashPatternV1;
@@ -845,6 +845,25 @@ fn build_edges_draws_paint_only(
     Arc::new(out)
 }
 
+fn scale_dash_pattern_screen_px_to_canvas_units(
+    pattern: DashPatternV1,
+    zoom: f32,
+) -> Option<DashPatternV1> {
+    if !zoom.is_finite() || zoom <= 0.0 {
+        return None;
+    }
+
+    let dash = pattern.dash.0 / zoom;
+    let gap = pattern.gap.0 / zoom;
+    let phase = pattern.phase.0 / zoom;
+    let period = dash + gap;
+    if !dash.is_finite() || !gap.is_finite() || !phase.is_finite() || dash <= 0.0 || period <= 0.0 {
+        return None;
+    }
+
+    Some(DashPatternV1::new(Px(dash), Px(gap), Px(phase)))
+}
+
 fn paint_edges_cached(
     p: &mut CanvasPainter<'_>,
     view: PanZoom2D,
@@ -880,7 +899,7 @@ fn paint_edges_cached(
             .unwrap_or((0.0, 0.0));
 
         for d in draws.iter() {
-            let mut color = d.color;
+            let mut paint: fret_core::scene::PaintBindingV1 = d.color.into();
             let mut stroke_width_mul = 1.0_f32;
             let mut dash: Option<DashPatternV1> = None;
 
@@ -893,11 +912,11 @@ fn paint_edges_cached(
                         stroke_width_mul = m;
                     }
                 }
-                dash = o.dash;
-                if let Some(paint) = o.stroke_paint {
-                    if let fret_core::scene::Paint::Solid(c) = paint.paint {
-                        color = c;
-                    }
+                dash = o
+                    .dash
+                    .and_then(|p| scale_dash_pattern_screen_px_to_canvas_units(p, zoom));
+                if let Some(paint_override) = o.stroke_paint {
+                    paint = paint_override;
                 }
             }
 
@@ -961,7 +980,12 @@ fn paint_edges_cached(
                         Px((max_y - min_y).max(0.0)),
                     ),
                 );
-                let pad = (style_tokens.geometry.wire_width / zoom).max(0.0);
+                let pad = style_tokens
+                    .geometry
+                    .wire_width
+                    .max(style_tokens.paint.wire_interaction_width)
+                    / zoom;
+                let pad = pad.max(0.0);
                 bbox = Rect::new(
                     Point::new(Px(bbox.origin.x.0 - pad), Px(bbox.origin.y.0 - pad)),
                     fret_core::Size::new(
@@ -981,26 +1005,26 @@ fn paint_edges_cached(
                     quantize_f32(ddy, 1024.0),
                 ))
                 .0;
-                p.path(
+                p.path_paint(
                     key,
                     DrawOrder(2),
                     Point::new(Px(0.0), Px(0.0)),
                     &commands,
                     style,
-                    color,
+                    paint,
                     raster_scale_factor,
                 );
             } else {
                 if !rects_intersect(cull, d.bbox) {
                     continue;
                 }
-                p.path(
+                p.path_paint(
                     d.key,
                     DrawOrder(2),
                     Point::new(Px(0.0), Px(0.0)),
                     &d.commands,
                     style,
-                    color,
+                    paint,
                     raster_scale_factor,
                 );
             }

@@ -41,11 +41,11 @@ pub mod portal;
 
 pub use declarative::{NodeGraphSurfacePaintOnlyProps, node_graph_surface_paint_only};
 
-pub use canvas::NodeResizeHandle;
 #[cfg(feature = "compat-retained-canvas")]
 pub use canvas::NodeGraphCanvas;
 #[cfg(feature = "compat-retained-canvas")]
 pub use canvas::NodeGraphCanvasWith;
+pub use canvas::NodeResizeHandle;
 #[cfg(feature = "compat-retained-canvas")]
 pub use canvas::{
     NodeGraphCanvasCommandOutcome, NodeGraphCanvasCommitOutcome, NodeGraphCanvasEventOutcome,
@@ -59,8 +59,12 @@ pub use geometry_overrides::{
     EdgeGeometryOverrideV1, NodeGeometryOverrideV1, NodeGraphGeometryOverrides,
     NodeGraphGeometryOverridesMap, NodeGraphGeometryOverridesRef,
 };
-pub use internals::{NodeGraphCanvasTransform, NodeGraphInternalsSnapshot, NodeGraphInternalsStore};
-pub use measured::{FallbackMeasuredNodeGraphPresenter, MeasuredGeometryStore, MeasuredNodeGraphPresenter};
+pub use internals::{
+    NodeGraphCanvasTransform, NodeGraphInternalsSnapshot, NodeGraphInternalsStore,
+};
+pub use measured::{
+    FallbackMeasuredNodeGraphPresenter, MeasuredGeometryStore, MeasuredNodeGraphPresenter,
+};
 pub use paint_overrides::{
     EdgePaintOverrideV1, NodeGraphPaintOverrides, NodeGraphPaintOverridesMap,
     NodeGraphPaintOverridesRef, NodePaintOverrideV1,
@@ -69,7 +73,7 @@ pub use portal_layout::NodeGraphPortalNodeLayout;
 pub use presenter::{
     DefaultNodeGraphPresenter, EdgeMarker, EdgeMarkerKind, EdgeRenderHint, EdgeRouteKind,
     InsertNodeCandidate, NodeGraphContextMenuAction, NodeGraphContextMenuItem, NodeGraphPresenter,
-    NodeResizeConstraintsPx, NodeResizeHandleSet, RegistryNodeGraphPresenter, PortAnchorHint,
+    NodeResizeConstraintsPx, NodeResizeHandleSet, PortAnchorHint, RegistryNodeGraphPresenter,
 };
 pub use presets::{NodeGraphPresetFamily, NodeGraphPresetSkinV1};
 pub use registry::{NodeGraphNodeRenderer, NodeGraphNodeTypes};
@@ -79,7 +83,9 @@ pub use skin::{
     PortShapeHint, WireGlowHint, WireHighlightHint, WireOutlineHint,
 };
 pub use style::{NodeGraphColorMode, NodeGraphStyle};
-pub use view_queue::{NodeGraphFitViewOptions, NodeGraphSetViewportOptions, NodeGraphViewQueue, NodeGraphViewRequest};
+pub use view_queue::{
+    NodeGraphFitViewOptions, NodeGraphSetViewportOptions, NodeGraphViewQueue, NodeGraphViewRequest,
+};
 pub use viewport_helper::NodeGraphViewportHelper;
 
 #[cfg(feature = "compat-retained-canvas")]
@@ -117,4 +123,3 @@ pub use portal::{
     parse_portal_text_command, portal_cancel_text_command, portal_step_text_command,
     portal_step_text_command_with_mode, portal_submit_text_command,
 };
-
