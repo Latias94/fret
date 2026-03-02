@@ -995,11 +995,7 @@ fn compile_for_scene_inner(
                             {
                                 let required_color =
                                     estimate_texture_bytes(content_size, format, 1);
-                                let required_mask = estimate_texture_bytes(
-                                    mask_size,
-                                    wgpu::TextureFormat::R8Unorm,
-                                    1,
-                                );
+                                let required_mask = effects::estimate_clip_mask_bytes(mask_size);
                                 if !can_allocate_intermediate_bytes(
                                     intermediate_budget_bytes,
                                     &draw_scopes,
@@ -1064,11 +1060,7 @@ fn compile_for_scene_inner(
                             });
 
                             clip_path_mask_in_use_bytes = clip_path_mask_in_use_bytes
-                                .saturating_add(estimate_texture_bytes(
-                                    mask_size,
-                                    wgpu::TextureFormat::R8Unorm,
-                                    1,
-                                ));
+                                .saturating_add(effects::estimate_clip_mask_bytes(mask_size));
                         }
 
                         clip_path_scopes.push(ClipPathScope {
@@ -1126,11 +1118,7 @@ fn compile_for_scene_inner(
                             let _ = draw_scopes.pop();
 
                             clip_path_mask_in_use_bytes = clip_path_mask_in_use_bytes
-                                .saturating_sub(estimate_texture_bytes(
-                                    scope.mask_size,
-                                    wgpu::TextureFormat::R8Unorm,
-                                    1,
-                                ));
+                                .saturating_sub(effects::estimate_clip_mask_bytes(scope.mask_size));
                         } else {
                             let _ = scope.mask_draw_index;
                         }

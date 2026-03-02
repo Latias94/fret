@@ -2608,6 +2608,10 @@ pub(super) fn pixelate_enabled(
     full.saturating_add(down) <= budget_bytes
 }
 
+pub(super) fn estimate_clip_mask_bytes(mask_size: (u32, u32)) -> u64 {
+    estimate_texture_bytes(mask_size, wgpu::TextureFormat::R8Unorm, 1)
+}
+
 fn choose_clip_mask_target_capped(
     viewport_size: (u32, u32),
     viewport_rect: ScissorRect,
@@ -2646,7 +2650,7 @@ fn choose_clip_mask_target_capped(
             continue;
         }
         let size = mask_target_size_in_viewport_rect(viewport_size, viewport_rect, *candidate);
-        let bytes = estimate_texture_bytes(size, wgpu::TextureFormat::R8Unorm, 1);
+        let bytes = estimate_clip_mask_bytes(size);
         if srcdst_bytes.saturating_add(bytes) <= budget_bytes {
             return Some((*candidate, size, bytes));
         }
