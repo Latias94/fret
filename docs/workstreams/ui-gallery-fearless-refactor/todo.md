@@ -27,6 +27,7 @@ Legend:
 ### Enforcement
 
 - [x] Add a lint/test that forbids new `DocSection::code("rust", r#"...")` on migrated pages (`apps/fret-ui-gallery/tests/ui_pages_deny_rust_code_literals.rs`).
+- [x] Forbid `include_str!("../snippets/...")` usage in pages; require `snippets::*::SOURCE` to avoid refactor path drift (`apps/fret-ui-gallery/tests/ui_pages_deny_relative_snippet_includes.rs`).
 - [ ] Add a small “drift audit” doc section in UI Gallery (optional) to list remaining legacy sections.
 
 Notes:
