@@ -47,7 +47,8 @@ In-app shortcuts while inspect mode is active:
 - `F`: lock selection to the current semantics focus
 - `L`: lock/unlock selection (freeze hover)
 - `Alt+Up` / `Alt+Down`: walk the semantics parent chain (and “back to child”)
-- (Help open) Type to filter the neighborhood view; `Backspace` deletes; `Enter` clears.
+- (Help open) Type to filter the neighborhood view; `Backspace` deletes.
+- (Help open, search active) `Up/Down` selects a match; `Enter` locks selection (or clears search when there are no matches).
 
 ### What to look at
 

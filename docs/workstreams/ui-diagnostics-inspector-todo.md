@@ -40,8 +40,8 @@ Related docs:
      - Continuous inspect toggle implemented via file-triggered `inspect.json` + `inspect.touch` (`fretboard diag inspect ...`).
      - In-app toggle/help implemented (diagnostics-only): `Ctrl/Cmd+Alt+I` toggles inspect, `Ctrl/Cmd+Alt+H` shows shortcut help.
      - In-app shortcuts implemented (diagnostics-only): `Esc` exit, `Ctrl+C` copy selector, `Ctrl+Shift+C` copy details, `L` lock/unlock selection.
-     - Locked navigation implemented (diagnostics-only): `Alt+Up/Down` walks the semantics parent chain with a small “back to child” stack.
-     - Local neighborhood view implemented in help mode: parent + siblings + children + type-to-filter.
+- Locked navigation implemented (diagnostics-only): `Alt+Up/Down` walks the semantics parent chain with a small “back to child” stack.
+- Local neighborhood view implemented in help mode: parent + siblings + children + type-to-filter, plus `Up/Down` match selection and `Enter` to lock.
      - Remaining gaps: no full semantics tree browser (expand/collapse, virtualization, global search).
 
 2. **Pick modes**

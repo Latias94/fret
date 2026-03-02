@@ -80,7 +80,8 @@ While inspection is active:
 - `F`: jump selection to the focused semantics node (locks selection)
 - `L`: lock/unlock selection
 - `Alt+Up/Down`: walk semantics parent chain, with a small “down stack” history
-- (Help open) Type to filter the neighborhood view (`test_id` and `label` when unredacted); `Backspace` deletes; `Enter` clears.
+- (Help open) Type to filter the neighborhood view (`test_id` and `label` when unredacted); `Backspace` deletes.
+- (Help open, search active) `Up/Down` selects a match; `Enter` locks selection to the selected match (or clears search when there are no matches).
 
 ### Overlay primitives
 

@@ -4,7 +4,7 @@ use fret_core::AppWindowId;
 
 use super::UiDiagnosticsService;
 use super::inspect_explain::build_inspect_explainability_lines;
-use super::inspect_neighborhood::build_inspect_neighborhood_lines;
+use super::inspect_neighborhood::build_inspect_neighborhood_model;
 use super::selector::SemanticsIndex;
 
 #[cfg(feature = "diagnostics")]
@@ -61,6 +61,7 @@ pub(crate) fn render_diag_inspect_overlay(
         consume_clicks,
         locked,
         help_search_query,
+        help_selected_match_index,
     ) = app.with_global_mut_untracked(UiDiagnosticsService::default, |svc, _app| {
         (
             svc.last_pointer_position(window),
@@ -74,6 +75,7 @@ pub(crate) fn render_diag_inspect_overlay(
             svc.inspect_consume_clicks(),
             svc.inspect_is_locked(window),
             svc.inspect_help_search_query(window).map(|s| s.to_string()),
+            svc.inspect_help_selected_match_index(window),
         )
     });
 
@@ -91,7 +93,7 @@ pub(crate) fn render_diag_inspect_overlay(
     }
 
     let snapshot = ui.semantics_snapshot();
-    let (hovered, picked, focus, neighborhood_lines) = if let Some(snapshot) = snapshot {
+    let (hovered, picked, focus, neighborhood_model) = if let Some(snapshot) = snapshot {
         let index = SemanticsIndex::new(snapshot);
 
         let hovered = pointer_pos.and_then(|pos| {
@@ -129,13 +131,14 @@ pub(crate) fn render_diag_inspect_overlay(
                 label: node.label.clone(),
             });
 
-        let neighborhood_lines = help_open.then(|| {
-            build_inspect_neighborhood_lines(
+        let neighborhood_model = help_open.then(|| {
+            build_inspect_neighborhood_model(
                 snapshot,
                 &index,
                 focus_node_id.or(picked_node_id),
                 help_search_query.as_deref(),
                 redact_text,
+                help_selected_match_index,
             )
         });
 
@@ -143,11 +146,15 @@ pub(crate) fn render_diag_inspect_overlay(
             hovered,
             picked,
             focus,
-            neighborhood_lines.unwrap_or_default(),
+            neighborhood_model.unwrap_or_default(),
         )
     } else {
-        (None, None, None, Vec::new())
+        (None, None, None, Default::default())
     };
+
+    app.with_global_mut_untracked(UiDiagnosticsService::default, |svc, _app| {
+        svc.set_inspect_help_matches(window, neighborhood_model.match_node_ids.clone());
+    });
 
     let hovered = if locked || !(pick_armed || inspect_enabled) {
         None
@@ -248,9 +255,9 @@ pub(crate) fn render_diag_inspect_overlay(
                             lines.extend(explainability_lines.iter().cloned());
                         }
 
-                        if !neighborhood_lines.is_empty() {
+                        if !neighborhood_model.lines.is_empty() {
                             lines.push(String::new());
-                            lines.extend(neighborhood_lines.iter().cloned());
+                            lines.extend(neighborhood_model.lines.iter().cloned());
                         }
                     } else {
                         lines.push(format!(

@@ -5,6 +5,7 @@ pub(super) enum InspectNavCommand {
     Up,
     Down,
     Focus,
+    SelectNode(u64),
 }
 
 #[derive(Debug, Clone)]
@@ -25,6 +26,8 @@ impl UiDiagnosticsService {
             self.last_picked_node_id.clear();
             self.last_picked_selector_json.clear();
             self.inspect_help_search_query.clear();
+            self.inspect_help_match_node_ids.clear();
+            self.inspect_help_selected_match_index.clear();
         }
     }
 
@@ -49,6 +52,51 @@ impl UiDiagnosticsService {
             .get(&window)
             .map(|s| s.as_str())
             .filter(|s| !s.trim().is_empty())
+    }
+
+    pub(super) fn inspect_help_selected_match_index(&self, window: AppWindowId) -> Option<usize> {
+        self.inspect_help_selected_match_index.get(&window).copied()
+    }
+
+    pub(super) fn set_inspect_help_matches(&mut self, window: AppWindowId, matches: Vec<u64>) {
+        if matches.is_empty() {
+            self.inspect_help_match_node_ids.remove(&window);
+            self.inspect_help_selected_match_index.remove(&window);
+            return;
+        }
+
+        self.inspect_help_match_node_ids.insert(window, matches);
+        let len = self
+            .inspect_help_match_node_ids
+            .get(&window)
+            .map(|v| v.len())
+            .unwrap_or(0);
+        if len == 0 {
+            self.inspect_help_selected_match_index.remove(&window);
+            return;
+        }
+
+        let idx = self
+            .inspect_help_selected_match_index
+            .get(&window)
+            .copied()
+            .unwrap_or(0)
+            .min(len.saturating_sub(1));
+        self.inspect_help_selected_match_index.insert(window, idx);
+    }
+
+    fn inspect_help_selected_match_node_id(&self, window: AppWindowId) -> Option<u64> {
+        let list = self.inspect_help_match_node_ids.get(&window)?;
+        if list.is_empty() {
+            return None;
+        }
+        let idx = self
+            .inspect_help_selected_match_index
+            .get(&window)
+            .copied()
+            .unwrap_or(0)
+            .min(list.len().saturating_sub(1));
+        list.get(idx).copied()
     }
 
     pub fn inspect_focus_node_id(&self, window: AppWindowId) -> Option<u64> {
@@ -203,6 +251,8 @@ impl UiDiagnosticsService {
 
                 let help_open = if self.inspect_help_open_windows.remove(&window) {
                     self.inspect_help_search_query.remove(&window);
+                    self.inspect_help_match_node_ids.remove(&window);
+                    self.inspect_help_selected_match_index.remove(&window);
                     false
                 } else {
                     self.inspect_help_open_windows.insert(window);
@@ -231,6 +281,52 @@ impl UiDiagnosticsService {
         {
             const MAX_QUERY_BYTES: usize = 64;
             match *key {
+                KeyCode::ArrowUp => {
+                    if self.inspect_help_search_query(window).is_some()
+                        && self
+                            .inspect_help_match_node_ids
+                            .get(&window)
+                            .is_some_and(|m| !m.is_empty())
+                    {
+                        let len = self
+                            .inspect_help_match_node_ids
+                            .get(&window)
+                            .map(|v| v.len())
+                            .unwrap_or(0);
+                        let idx = self
+                            .inspect_help_selected_match_index
+                            .get(&window)
+                            .copied()
+                            .unwrap_or(0);
+                        let next = if idx == 0 { len - 1 } else { idx - 1 };
+                        self.inspect_help_selected_match_index.insert(window, next);
+                        app.request_redraw(window);
+                        return true;
+                    }
+                }
+                KeyCode::ArrowDown => {
+                    if self.inspect_help_search_query(window).is_some()
+                        && self
+                            .inspect_help_match_node_ids
+                            .get(&window)
+                            .is_some_and(|m| !m.is_empty())
+                    {
+                        let len = self
+                            .inspect_help_match_node_ids
+                            .get(&window)
+                            .map(|v| v.len())
+                            .unwrap_or(0);
+                        let idx = self
+                            .inspect_help_selected_match_index
+                            .get(&window)
+                            .copied()
+                            .unwrap_or(0);
+                        let next = (idx + 1) % len.max(1);
+                        self.inspect_help_selected_match_index.insert(window, next);
+                        app.request_redraw(window);
+                        return true;
+                    }
+                }
                 KeyCode::Backspace => {
                     if let Some(q) = self.inspect_help_search_query.get_mut(&window) {
                         q.pop();
@@ -238,11 +334,30 @@ impl UiDiagnosticsService {
                             self.inspect_help_search_query.remove(&window);
                         }
                     }
+                    self.inspect_help_selected_match_index.insert(window, 0);
                     app.request_redraw(window);
                     return true;
                 }
                 KeyCode::Enter => {
+                    if self.inspect_help_search_query(window).is_some() {
+                        if let Some(node_id) = self.inspect_help_selected_match_node_id(window) {
+                            self.inspect_focus_down_stack.insert(window, Vec::new());
+                            self.inspect_locked_windows.insert(window);
+                            self.inspect_pending_nav
+                                .insert(window, InspectNavCommand::SelectNode(node_id));
+                            self.push_inspect_toast(
+                                window,
+                                "inspect: locked match selection (press Ctrl/Cmd+C to copy selector)"
+                                    .to_string(),
+                            );
+                            app.request_redraw(window);
+                            return true;
+                        }
+                    }
+
                     if self.inspect_help_search_query.remove(&window).is_some() {
+                        self.inspect_help_match_node_ids.remove(&window);
+                        self.inspect_help_selected_match_index.remove(&window);
                         self.push_inspect_toast(window, "inspect: search cleared".to_string());
                     }
                     app.request_redraw(window);
@@ -253,6 +368,7 @@ impl UiDiagnosticsService {
                     if q.len() < MAX_QUERY_BYTES {
                         q.push(' ');
                     }
+                    self.inspect_help_selected_match_index.insert(window, 0);
                     app.request_redraw(window);
                     return true;
                 }
@@ -262,6 +378,7 @@ impl UiDiagnosticsService {
                         if q.len() < MAX_QUERY_BYTES {
                             q.push(ch);
                         }
+                        self.inspect_help_selected_match_index.insert(window, 0);
                         app.request_redraw(window);
                         return true;
                     }
@@ -536,6 +653,11 @@ impl UiDiagnosticsService {
                 self.inspect_focus_down_stack.insert(window, Vec::new());
                 self.inspect_locked_windows.insert(window);
                 self.set_inspect_focus(window, snapshot, id, element_runtime);
+            }
+            InspectNavCommand::SelectNode(node_id) => {
+                self.inspect_focus_down_stack.insert(window, Vec::new());
+                self.inspect_locked_windows.insert(window);
+                self.set_inspect_focus(window, snapshot, node_id, element_runtime);
             }
             InspectNavCommand::Up => {
                 if !self.inspect_is_locked(window) {

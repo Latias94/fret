@@ -3,6 +3,12 @@ use slotmap::Key as _;
 
 use super::selector::SemanticsIndex;
 
+#[derive(Debug, Default, Clone)]
+pub(super) struct InspectNeighborhoodModel {
+    pub(super) lines: Vec<String>,
+    pub(super) match_node_ids: Vec<u64>,
+}
+
 fn push_node_brief(
     out: &mut Vec<String>,
     prefix: &str,
@@ -31,13 +37,14 @@ fn push_node_brief(
     out.push(line);
 }
 
-pub(super) fn build_inspect_neighborhood_lines(
+pub(super) fn build_inspect_neighborhood_model(
     snapshot: &SemanticsSnapshot,
     index: &SemanticsIndex<'_>,
     focus_node_id: Option<u64>,
     query: Option<&str>,
     redact_text: bool,
-) -> Vec<String> {
+    selected_match_index: Option<usize>,
+) -> InspectNeighborhoodModel {
     const MAX_ITEMS: usize = 8;
     const MAX_MATCHES: usize = 10;
 
@@ -59,7 +66,10 @@ pub(super) fn build_inspect_neighborhood_lines(
 
     let Some(focus_id) = focus_node_id else {
         out.push("focus: <none>".to_string());
-        return out;
+        return InspectNeighborhoodModel {
+            lines: out,
+            match_node_ids: Vec::new(),
+        };
     };
     let Some(focus) = snapshot
         .nodes
@@ -67,7 +77,10 @@ pub(super) fn build_inspect_neighborhood_lines(
         .find(|n| n.id.data().as_ffi() == focus_id)
     else {
         out.push("focus: <missing>".to_string());
-        return out;
+        return InspectNeighborhoodModel {
+            lines: out,
+            match_node_ids: Vec::new(),
+        };
     };
 
     let parent_id = focus.parent.map(|p| p.data().as_ffi());
@@ -149,14 +162,33 @@ pub(super) fn build_inspect_neighborhood_lines(
     }
 
     if query.is_some() {
+        let selected = (!matches.is_empty()).then(|| {
+            selected_match_index
+                .unwrap_or(0)
+                .min(matches.len().saturating_sub(1))
+        });
+        let selected_id = selected
+            .and_then(|i| matches.get(i))
+            .map(|n| n.id.data().as_ffi());
+
         out.push(format!(
-            "matches: {matches_total} (showing {})",
+            "matches: {matches_total} (showing {}) (Up/Down select, Enter lock)",
             matches.len()
         ));
-        for m in matches {
-            push_node_brief(&mut out, "- ", m, index, redact_text);
+        for m in matches.iter().copied() {
+            let is_selected = selected_id.is_some_and(|id| id == m.id.data().as_ffi());
+            let prefix = if is_selected { "- > " } else { "-   " };
+            push_node_brief(&mut out, prefix, m, index, redact_text);
         }
     }
 
-    out
+    let match_node_ids = query
+        .is_some()
+        .then(|| matches.iter().map(|n| n.id.data().as_ffi()).collect())
+        .unwrap_or_default();
+
+    InspectNeighborhoodModel {
+        lines: out,
+        match_node_ids,
+    }
 }

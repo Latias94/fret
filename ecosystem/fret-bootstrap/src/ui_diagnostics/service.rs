@@ -39,6 +39,8 @@ pub struct UiDiagnosticsService {
     inspect_locked_windows: HashSet<AppWindowId>,
     inspect_help_open_windows: HashSet<AppWindowId>,
     inspect_help_search_query: HashMap<AppWindowId, String>,
+    inspect_help_match_node_ids: HashMap<AppWindowId, Vec<u64>>,
+    inspect_help_selected_match_index: HashMap<AppWindowId, usize>,
     inspect_pending_copy_details_windows: HashSet<AppWindowId>,
     inspect_pending_copy_details_payload: HashMap<AppWindowId, String>,
     inspect_toast: HashMap<AppWindowId, inspect::InspectToast>,
@@ -596,6 +598,9 @@ impl UiDiagnosticsService {
         self.inspect_focus_path_line.remove(&window);
         self.inspect_locked_windows.remove(&window);
         self.inspect_help_open_windows.remove(&window);
+        self.inspect_help_search_query.remove(&window);
+        self.inspect_help_match_node_ids.remove(&window);
+        self.inspect_help_selected_match_index.remove(&window);
         self.inspect_pending_copy_details_windows.remove(&window);
         self.inspect_pending_copy_details_payload.remove(&window);
         self.inspect_toast.remove(&window);
@@ -609,6 +614,9 @@ impl UiDiagnosticsService {
 
         self.inspect_locked_windows.clear();
         self.inspect_help_open_windows.clear();
+        self.inspect_help_search_query.clear();
+        self.inspect_help_match_node_ids.clear();
+        self.inspect_help_selected_match_index.clear();
         self.inspect_pending_copy_details_windows.clear();
         self.inspect_pending_copy_details_payload.clear();
         self.inspect_focus_node_id.clear();
