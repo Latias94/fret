@@ -138,6 +138,10 @@ ID format:
   - Evidence:
     - `apps/fret-cookbook/examples/imui_action_basics.rs`
     - `tools/diag-scripts/cookbook/imui-action-basics/cookbook-imui-action-basics-cross-frontend.json`
+- [x] AFA-frontends-034 Add facade-level wrappers for imui menu items that dispatch `ActionId`.
+  - Goal: keep focusability tracking (initial focus selection) consistent with action availability gating.
+  - Evidence:
+    - `ecosystem/fret-ui-kit/src/imui.rs` (`ImUiFacade::menu_item_action_ex`)
 
 ---
 

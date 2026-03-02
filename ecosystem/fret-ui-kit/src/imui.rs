@@ -2112,6 +2112,26 @@ impl<'cx, 'a, H: UiHost> ImUiFacade<'cx, 'a, H> {
         resp
     }
 
+    pub fn menu_item_action(
+        &mut self,
+        label: impl Into<Arc<str>>,
+        action: impl Into<ActionId>,
+    ) -> ResponseExt {
+        self.menu_item_action_ex(label, action, MenuItemOptions::default())
+    }
+
+    pub fn menu_item_action_ex(
+        &mut self,
+        label: impl Into<Arc<str>>,
+        action: impl Into<ActionId>,
+        options: MenuItemOptions,
+    ) -> ResponseExt {
+        let resp =
+            <Self as UiWriterImUiFacadeExt<H>>::menu_item_action_ex(self, label, action, options);
+        self.record_focusable(resp.id, resp.enabled);
+        resp
+    }
+
     pub fn menu_item_close(
         &mut self,
         label: impl Into<Arc<str>>,

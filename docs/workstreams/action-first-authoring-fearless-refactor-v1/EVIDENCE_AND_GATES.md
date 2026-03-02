@@ -37,7 +37,7 @@ Pointer-trigger authoring integration (v1 still dispatches through the command p
 - `ecosystem/fret-ui-shadcn/src/button.rs` (`Button::action`)
 - `ecosystem/fret-ui-kit/src/command.rs` (`action_is_enabled`, `dispatch_action_if_enabled`)
 - `ecosystem/fret-ui-kit/src/declarative/action_hooks.rs` (`pressable_dispatch_action_if_enabled`)
-- `ecosystem/fret-ui-kit/src/imui.rs` (`action_button_ex`, `menu_item_action_ex`)
+- `ecosystem/fret-ui-kit/src/imui.rs` (`ImUiFacade::action_button_ex`, `ImUiFacade::menu_item_action_ex`, `UiWriterImUiFacadeExt::menu_item_action_ex`)
 - `ecosystem/fret-ui-kit/src/declarative/cached_subtree.rs` (`CachedSubtreeExt` authoring helper)
 - `apps/fret-cookbook/examples/commands_keymap_basics.rs` (example adoption: view runtime + keymap + action availability gating)
 - `apps/fret-cookbook/examples/hello.rs` (example adoption: view runtime + action-first button + handler registration)
