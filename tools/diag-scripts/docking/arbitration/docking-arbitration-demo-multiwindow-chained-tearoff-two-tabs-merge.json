@@ -147,7 +147,7 @@
     {
       "type": "move_pointer",
       "window": { "kind": "first_seen" },
-      "target": { "kind": "test_id", "id": "dock-arb-hint-inner-right" }
+      "target": { "kind": "test_id", "id": "dock-arb-hint-inner-top" }
     },
     { "type": "wait_frames", "n": 2 },
     {
