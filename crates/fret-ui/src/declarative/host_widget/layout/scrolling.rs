@@ -1482,9 +1482,11 @@ impl ElementHostWidget {
             let mut ctx = cx.overflow_ctx;
             if props.axis.scroll_x() {
                 ctx.probe_available_override.width = Some(AvailableSpace::MaxContent);
+                ctx.allow_overflow_on_auto.width = true;
             }
             if props.axis.scroll_y() {
                 ctx.probe_available_override.height = Some(AvailableSpace::MaxContent);
+                ctx.allow_overflow_on_auto.height = true;
             }
             ctx
         } else {
