@@ -6,9 +6,14 @@ This workstream is gated primarily by `fretboard diag` scripted regressions and 
 
 Baseline “drop-end resolves insert_index” gates:
 
-- `tools/diag-scripts/docking-arbitration-demo-tab-bar-drop-end-insert-index.json`
-- `tools/diag-scripts/docking-arbitration-demo-tab-bar-drop-end-insert-index-two-tabs.json`
-- `tools/diag-scripts/docking-arbitration-demo-tab-bar-drop-end-insert-index-overflow.json`
+- `tools/diag-scripts/docking/arbitration/docking-arbitration-demo-tab-bar-drop-end-insert-index.json`
+- `tools/diag-scripts/docking/arbitration/docking-arbitration-demo-tab-bar-drop-end-insert-index-two-tabs.json`
+- `tools/diag-scripts/docking/arbitration/docking-arbitration-demo-tab-bar-drop-end-insert-index-overflow.json`
+- `tools/diag-scripts/docking/arbitration/docking-arbitration-demo-tab-bar-drop-end-insert-index-screenshot.json`
+
+These scripts use a semantic anchor (instead of pixel coordinates) to avoid DPI/layout flakes:
+
+- `apps/fret-examples/src/docking_arbitration_demo.rs` exposes `test_id: "dock-arb-tab-drop-end-anchor-left"`
 
 Run as suite:
 
