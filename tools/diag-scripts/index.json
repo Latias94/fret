@@ -151,6 +151,30 @@
       ]
     },
     {
+      "id": "cookbook-node-graph-wire-paint-cookbook-screenshots",
+      "path": "tools/diag-scripts/cookbook/node-graph-wire-paint-cookbook/node-graph-wire-paint-cookbook-screenshots.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "cookbook-node-graph-wire-paint-cookbook"
+      ],
+      "tags": [
+        "cookbook",
+        "node_graph",
+        "wire_paint",
+        "screenshots",
+        "smoke"
+      ],
+      "target_hints": [
+        "Waits for node_graph.canvas to exist.",
+        "Cycles preset family (Ctrl+Shift+P) and captures 3 screenshots + bundle.",
+        "Requires FRET_NODE_GRAPH_DEMO_WIRE_PAINT_COOKBOOK=1.",
+        "Optional: set FRET_NODE_GRAPH_DEMO_PRESET_JSON_PATH to load custom JSON presets."
+      ]
+    },
+    {
       "id": "cookbook-overlay-basics-dialog-close",
       "path": "tools/diag-scripts/cookbook/overlay-basics/cookbook-overlay-basics-dialog-close.json",
       "required_capabilities": [
