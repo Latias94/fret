@@ -136,6 +136,7 @@ pub(super) enum V2StepState {
     MenuSelectPath(V2MenuSelectPathState),
     AssertClipboardText(V2AssertClipboardTextState),
     InspectHelpLockBestMatchAndCopySelector(V2InspectHelpLockBestMatchAndCopySelectorState),
+    InspectHelpTreeLockBestMatchAndCopySelector(V2InspectHelpTreeLockBestMatchAndCopySelectorState),
     DragPointer(V2DragPointerState),
     DragPointerUntil(V2DragPointerUntilState),
     DragTo(V2DragToState),
@@ -290,6 +291,30 @@ pub(super) struct V2InspectHelpLockBestMatchAndCopySelectorState {
 }
 
 impl V2InspectHelpLockBestMatchAndCopySelectorState {
+    pub(super) fn new(
+        step_index: usize,
+        window: AppWindowId,
+        query: String,
+        timeout_frames: u32,
+    ) -> Self {
+        Self {
+            step_index,
+            window,
+            query,
+            remaining_frames: timeout_frames.max(1),
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
+pub(super) struct V2InspectHelpTreeLockBestMatchAndCopySelectorState {
+    pub(super) step_index: usize,
+    pub(super) window: AppWindowId,
+    pub(super) query: String,
+    pub(super) remaining_frames: u32,
+}
+
+impl V2InspectHelpTreeLockBestMatchAndCopySelectorState {
     pub(super) fn new(
         step_index: usize,
         window: AppWindowId,
