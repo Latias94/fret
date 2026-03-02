@@ -60,10 +60,17 @@ ID format:
     - `ecosystem/fret/src/actions.rs` (`ActionHandlerTable`, `build()` adapters)
 - [ ] AFA-actions-013 Integrate action availability queries with input dispatch v2 semantics.
   - Evidence: `docs/adr/0218-input-dispatch-phases-prevent-default-and-action-availability-v2.md`
-- [ ] AFA-actions-014 Add diagnostics traces for:
+- [~] AFA-actions-014 Add diagnostics traces for:
   - keymap resolution → action id,
   - availability gating outcome,
   - dispatch path resolution.
+  - Status (as of 2026-03-02):
+    - Implemented (keymap → action id): `crates/fret-runtime/src/shortcut_routing_diagnostics.rs` +
+      `ecosystem/fret-bootstrap/src/ui_diagnostics/service.rs` (`UiShortcutRoutingTraceEntryV1.command`)
+    - Implemented (availability gating outcome): `ecosystem/fret-bootstrap/src/ui_diagnostics/command_gating_trace.rs`
+      (`debug.command_gating_trace[*]`)
+    - Pending: dispatch path resolution (which handler scope handled the action) and a pointer-triggered explainability
+      trace that binds “clicked element selector” → resolved ActionId.
 - [x] AFA-actions-015 Converge command palette/menu invocation with action dispatch.
   - Goal: palette/menu triggers and pointer triggers share the same action pipeline.
   - Evidence:

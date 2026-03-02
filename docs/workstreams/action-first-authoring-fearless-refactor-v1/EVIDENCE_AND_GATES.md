@@ -56,6 +56,12 @@ Command palette integration (must dispatch through the same pipeline):
 - `ecosystem/fret-bootstrap/src/ui_app_driver.rs` (command palette overlay + selection dispatch via `UiTree::dispatch_command`)
 - `ecosystem/fret-ui-shadcn/src/command.rs` (command palette item selection calls `host.dispatch_command(...)`)
 
+Keymap/availability explainability (diagnostics traces):
+
+- `crates/fret-runtime/src/shortcut_routing_diagnostics.rs` (`WindowShortcutRoutingDiagnosticsStore`)
+- `ecosystem/fret-bootstrap/src/ui_diagnostics/service.rs` (`record_shortcut_routing_trace_for_window`, `UiShortcutRoutingTraceEntryV1`)
+- `ecosystem/fret-bootstrap/src/ui_diagnostics/command_gating_trace.rs` (`debug.command_gating_trace[*]`)
+
 ---
 
 ## 2) Regression gates (required)
