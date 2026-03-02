@@ -16,5 +16,6 @@ pub mod snackbar;
 pub mod switch;
 pub mod tabs;
 pub mod text_field;
+pub mod touch_targets;
 pub mod top_app_bar;
 pub mod tooltip;
