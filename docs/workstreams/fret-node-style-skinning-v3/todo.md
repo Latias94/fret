@@ -15,7 +15,7 @@
 - [x] Update paint cache keys to include paint override revision
 - [x] Add conformance tests (invalidation + invariants)
 - [x] Apply per-edge paint overrides to emitted wire `SceneOp::Path.paint`
-- [ ] Apply per-node paint overrides to emitted node body/background paint
+- [x] Apply per-node paint overrides to emitted node body/background paint
 - [ ] Conformance: paint overrides do not mutate serialized `Graph`
 
 ## Optional (nice-to-have)

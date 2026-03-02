@@ -23,6 +23,10 @@
   - `NodeGraphStyle.paint` defaults → presenter/edge_types hint → skin hints → paint overrides
 - [x] Support `stroke_paint`, `stroke_width_mul`, and `dash` overrides
 
+## M3b: Per-node paint overrides
+
+- [x] Support `body_background`, `border_paint`, and `header_background` overrides
+
 ## M4 (deferred): Gradient/material wire styling recipes
 
 - [ ] Provide a small “wire paint cookbook” doc:
