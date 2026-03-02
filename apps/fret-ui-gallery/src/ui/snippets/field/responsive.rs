@@ -1,3 +1,5 @@
+pub const SOURCE: &str = include_str!("responsive.rs");
+
 // region: example
 use fret_core::Px;
 use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
