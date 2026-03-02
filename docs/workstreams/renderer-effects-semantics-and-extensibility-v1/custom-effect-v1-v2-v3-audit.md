@@ -196,6 +196,30 @@ Repro note (local evidence; do not check in the bundle):
 - `cargo run -p fretboard -- diag suite cookbook-customv3-basics --dir target/fret-diag/customv3 --session-auto --launch -- cargo run -p fret-demo --bin custom_effect_v3_demo`
 - `cargo run -p fretboard -- diag triage <bundle_dir> --warmup-frames 0 --json --out target/fret-diag/customv3/triage.custom-effect-v3-non-filterable-user0-fallback.json`
 
+Gate templates (local; PowerShell):
+
+These are intended as “copy/paste regression checks” that avoid opening `bundle.schema2.json` and rely on bounded triage
+output. They do not check in any artifacts under `target/fret-diag/`.
+
+- CustomV2 incompatible input → deterministic fallback hint present:
+  - `cargo run -p fretboard -- diag run tools/diag-scripts/suites/cookbook-customv2-basics/custom-effect-v2-non-filterable-input-fallback-screenshot.json --dir target/fret-diag/gates/customv2-fallback --session-auto --check-triage-hint-absent renderer.custom_effect_v2_requested_but_skipped --launch -- cargo run -p fret-demo --bin custom_effect_v2_demo`
+  - `cargo run -p fretboard -- diag triage target/fret-diag/gates/customv2-fallback --warmup-frames 0 --json --out target/fret-diag/gates/customv2-fallback/triage.json | Out-Null`
+  - `$t = Get-Content target/fret-diag/gates/customv2-fallback/triage.json | ConvertFrom-Json; if (($t.hints.code -notcontains 'renderer.custom_effect_v2_user_image_incompatible_fallbacks')) { throw 'missing expected triage hint' }`
+
+- CustomV3 incompatible user inputs → deterministic fallback hint present (user0 / user1 / user0+user1):
+  - user0:
+    - `cargo run -p fretboard -- diag run tools/diag-scripts/suites/cookbook-customv3-basics/custom-effect-v3-non-filterable-user0-fallback-screenshot.json --dir target/fret-diag/gates/customv3-user0 --session-auto --check-triage-hint-absent renderer.custom_effect_v3_requested_but_skipped --launch -- cargo run -p fret-demo --bin custom_effect_v3_demo`
+    - `cargo run -p fretboard -- diag triage target/fret-diag/gates/customv3-user0 --warmup-frames 0 --json --out target/fret-diag/gates/customv3-user0/triage.json | Out-Null`
+    - `$t = Get-Content target/fret-diag/gates/customv3-user0/triage.json | ConvertFrom-Json; $h = $t.hints | Where-Object { $_.code -eq 'renderer.custom_effect_v3_user_image_incompatible_fallbacks' } | Select-Object -First 1; if (-not $h) { throw 'missing expected triage hint' }; if ($h.evidence.custom_effect_v3_user0_image_incompatible_fallbacks -ne 1) { throw 'expected user0 fallbacks=1' }`
+  - user1:
+    - `cargo run -p fretboard -- diag run tools/diag-scripts/suites/cookbook-customv3-basics/custom-effect-v3-non-filterable-user1-fallback-screenshot.json --dir target/fret-diag/gates/customv3-user1 --session-auto --check-triage-hint-absent renderer.custom_effect_v3_requested_but_skipped --launch -- cargo run -p fret-demo --bin custom_effect_v3_demo`
+    - `cargo run -p fretboard -- diag triage target/fret-diag/gates/customv3-user1 --warmup-frames 0 --json --out target/fret-diag/gates/customv3-user1/triage.json | Out-Null`
+    - `$t = Get-Content target/fret-diag/gates/customv3-user1/triage.json | ConvertFrom-Json; $h = $t.hints | Where-Object { $_.code -eq 'renderer.custom_effect_v3_user_image_incompatible_fallbacks' } | Select-Object -First 1; if (-not $h) { throw 'missing expected triage hint' }; if ($h.evidence.custom_effect_v3_user1_image_incompatible_fallbacks -ne 1) { throw 'expected user1 fallbacks=1' }`
+  - user0+user1:
+    - `cargo run -p fretboard -- diag run tools/diag-scripts/suites/cookbook-customv3-basics/custom-effect-v3-non-filterable-user01-fallback-screenshot.json --dir target/fret-diag/gates/customv3-user01 --session-auto --check-triage-hint-absent renderer.custom_effect_v3_requested_but_skipped --launch -- cargo run -p fret-demo --bin custom_effect_v3_demo`
+    - `cargo run -p fretboard -- diag triage target/fret-diag/gates/customv3-user01 --warmup-frames 0 --json --out target/fret-diag/gates/customv3-user01/triage.json | Out-Null`
+    - `$t = Get-Content target/fret-diag/gates/customv3-user01/triage.json | ConvertFrom-Json; $h = $t.hints | Where-Object { $_.code -eq 'renderer.custom_effect_v3_user_image_incompatible_fallbacks' } | Select-Object -First 1; if (-not $h) { throw 'missing expected triage hint' }; if (($h.evidence.custom_effect_v3_user0_image_incompatible_fallbacks -ne 1) -or ($h.evidence.custom_effect_v3_user1_image_incompatible_fallbacks -ne 1)) { throw 'expected user0+user1 fallbacks=1' }`
+
 ### Known gaps / intentional differences
 
 These are not correctness bugs, but areas where “parity” may still drift from the Android reference:
