@@ -1,3 +1,4 @@
+// region: example
 use fret_ui_shadcn::{self as shadcn, prelude::*};
 use std::sync::Arc;
 
@@ -91,3 +92,5 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
     )
     .test_id("ui-gallery-select-diag-surface")
 }
+
+// endregion: example

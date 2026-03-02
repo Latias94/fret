@@ -1,3 +1,4 @@
+// region: example
 use fret_core::Px;
 use fret_ui_kit::primitives::direction::{LayoutDirection, with_direction_provider};
 use fret_ui_shadcn::{self as shadcn, prelude::*};
@@ -32,3 +33,5 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
     })
     .test_id("ui-gallery-select-rtl")
 }
+
+// endregion: example

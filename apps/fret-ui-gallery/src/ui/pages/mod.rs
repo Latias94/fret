@@ -37,6 +37,7 @@ mod motion_presets;
 mod native_select;
 mod navigation_menu;
 mod scroll_area;
+mod select;
 mod shadcn_extras;
 mod skeleton;
 mod slider;
@@ -218,6 +219,10 @@ pub(super) fn preview_item(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> 
 
 pub(super) fn preview_kbd(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
     kbd::preview_kbd(cx)
+}
+
+pub(super) fn preview_select(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
+    select::preview_select(cx)
 }
 
 pub(super) fn preview_label(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {

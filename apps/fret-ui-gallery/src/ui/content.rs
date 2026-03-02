@@ -522,7 +522,7 @@ fn page_preview(
         ),
         PAGE_SHADCN_EXTRAS => preview_shadcn_extras(cx),
         PAGE_FORMS => preview_forms(cx, text_input, text_area, checkbox, switch),
-        PAGE_SELECT => preview_select(cx),
+        PAGE_SELECT => pages::preview_select(cx),
         PAGE_COMBOBOX => preview_combobox(cx, combobox_value, combobox_open, combobox_query),
         PAGE_DATE_PICKER => preview_date_picker(
             cx,
