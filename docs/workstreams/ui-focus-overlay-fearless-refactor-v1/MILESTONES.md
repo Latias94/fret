@@ -52,6 +52,8 @@ Status: In progress (2026-03-02)
   - `crates/fret-ui/src/tree/dispatch/ctx.rs`
   - `crates/fret-ui/src/tree/dispatch/window.rs`
   - `crates/fret-ui/src/tree/dispatch/chain.rs`
+- Focus-scope trap detection no longer falls back to retained parent pointers when a snapshot is present:
+  - `crates/fret-ui/src/tree/dispatch/focus.rs`
 - Dispatch-time layer membership queries no longer use retained `parent` pointers in:
   - `crates/fret-ui/src/tree/dispatch/window.rs`
   - `crates/fret-ui/src/tree/dispatch/chain.rs`

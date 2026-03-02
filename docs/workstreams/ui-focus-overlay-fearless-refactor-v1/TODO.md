@@ -23,6 +23,7 @@ Tracking doc: `docs/workstreams/ui-focus-overlay-fearless-refactor-v1/DESIGN.md`
   - [x] focus-scope snapshot (eager for now; can be made lazy later)
 - [x] Refactor `dispatch/window.rs` and `dispatch/chain.rs` to thread `DispatchCx` rather than
   ad-hoc snapshots/closures.
+- [x] Avoid retained-parent fallbacks for trapped focus scope detection when a dispatch snapshot is available.
 - [ ] Remove remaining containment queries that rely on live-tree parent walks during dispatch
   (replace with snapshot queries).
 - [ ] Add conformance coverage for nested scenarios:
