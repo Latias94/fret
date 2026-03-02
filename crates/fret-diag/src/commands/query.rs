@@ -304,17 +304,25 @@ pub(crate) fn cmd_query(
     }
 }
 
-fn find_nearest_script_result_json(start: &Path) -> Option<PathBuf> {
+fn find_nearest_script_result_json_preferring_evidence(start: &Path) -> Option<PathBuf> {
     let mut cur = Some(start);
-    for _ in 0..6 {
+    let mut first_found: Option<PathBuf> = None;
+    for _ in 0..10 {
         let Some(dir) = cur else { break };
         let direct = dir.join("script.result.json");
         if direct.is_file() {
-            return Some(direct);
+            if first_found.is_none() {
+                first_found = Some(direct.clone());
+            }
+            if let Some(result) = read_script_result_typed(&direct)
+                && result.evidence.is_some()
+            {
+                return Some(direct);
+            }
         }
         cur = dir.parent();
     }
-    None
+    first_found
 }
 
 fn read_script_result_typed(path: &Path) -> Option<fret_diag_protocol::UiScriptResultV1> {
@@ -600,7 +608,13 @@ fn cmd_query_overlay_placement_trace(
         if src.is_dir() {
             let direct = src.join("script.result.json");
             if direct.is_file() {
-                direct
+                find_nearest_script_result_json_preferring_evidence(&src).ok_or_else(|| {
+                    format!(
+                        "failed to locate script.result.json near: {}\n\
+hint: pass a diagnostics out dir (or bundle dir) that contains script.result.json",
+                        src.display()
+                    )
+                })?
             } else {
                 let resolved =
                     resolve::maybe_resolve_base_or_session_out_dir_to_latest_bundle_dir(&src);
@@ -609,7 +623,7 @@ fn cmd_query_overlay_placement_trace(
                 } else {
                     resolved.parent().unwrap_or_else(|| resolved.as_path())
                 };
-                find_nearest_script_result_json(start).ok_or_else(|| {
+                find_nearest_script_result_json_preferring_evidence(start).ok_or_else(|| {
                     format!(
                         "failed to locate script.result.json near: {}\n\
 hint: pass a diagnostics out dir (or bundle dir) that contains script.result.json",
@@ -622,7 +636,14 @@ hint: pass a diagnostics out dir (or bundle dir) that contains script.result.jso
                 .file_name()
                 .is_some_and(|s| s.eq_ignore_ascii_case("script.result.json"))
         {
-            src
+            let start = src.parent().unwrap_or_else(|| Path::new("."));
+            find_nearest_script_result_json_preferring_evidence(start).ok_or_else(|| {
+                format!(
+                    "failed to locate script.result.json near: {}\n\
+hint: pass a diagnostics out dir (or bundle dir) that contains script.result.json",
+                    src.display()
+                )
+            })?
         } else {
             let resolved =
                 resolve::maybe_resolve_base_or_session_out_dir_to_latest_bundle_dir(&src);
@@ -631,7 +652,7 @@ hint: pass a diagnostics out dir (or bundle dir) that contains script.result.jso
             } else {
                 resolved.parent().unwrap_or_else(|| resolved.as_path())
             };
-            find_nearest_script_result_json(start).ok_or_else(|| {
+            find_nearest_script_result_json_preferring_evidence(start).ok_or_else(|| {
                 format!(
                     "failed to locate script.result.json near: {}\n\
 hint: pass a diagnostics out dir (or bundle dir) that contains script.result.json",
@@ -642,7 +663,7 @@ hint: pass a diagnostics out dir (or bundle dir) that contains script.result.jso
     } else {
         let bundle_path = resolve_bundle_artifact_path_or_latest(None, workspace_root, out_dir)?;
         let start = bundle_path.parent().unwrap_or_else(|| Path::new("."));
-        find_nearest_script_result_json(start).ok_or_else(|| {
+        find_nearest_script_result_json_preferring_evidence(start).ok_or_else(|| {
             format!(
                 "failed to locate script.result.json near latest bundle: {}",
                 bundle_path.display()
@@ -1568,6 +1589,29 @@ mod tests {
         path
     }
 
+    fn write_script_result_without_evidence(dir: &Path) -> PathBuf {
+        use fret_diag_protocol::{UiScriptResultV1, UiScriptStageV1};
+
+        let payload = UiScriptResultV1 {
+            schema_version: 1,
+            run_id: 1,
+            updated_unix_ms: 1,
+            window: None,
+            stage: UiScriptStageV1::Passed,
+            step_index: None,
+            reason_code: None,
+            reason: None,
+            evidence: None,
+            last_bundle_dir: None,
+            last_bundle_artifact: None,
+        };
+
+        let path = dir.join("script.result.json");
+        let bytes = serde_json::to_vec_pretty(&payload).expect("serialize script.result");
+        std::fs::write(&path, bytes).expect("write script.result");
+        path
+    }
+
     #[test]
     fn query_overlay_placement_trace_filters_by_anchor_and_side_and_writes_json() {
         let out_dir = make_temp_dir("fret-diag-query-overlay");
@@ -1616,6 +1660,45 @@ mod tests {
                 "anchor-b".to_string(),
                 "--chosen-side".to_string(),
                 "bottom".to_string(),
+            ],
+            Path::new("."),
+            &out_dir,
+            Some(query_out.clone()),
+            true,
+        )
+        .expect("query ok");
+
+        let bytes = std::fs::read(&query_out).expect("read out.json");
+        let v: serde_json::Value = serde_json::from_slice(&bytes).expect("parse out.json");
+        let results = v
+            .get("results")
+            .and_then(|v| v.as_array())
+            .cloned()
+            .unwrap_or_default();
+        assert_eq!(results.len(), 1);
+    }
+
+    #[test]
+    fn query_overlay_placement_trace_prefers_parent_script_result_with_evidence() {
+        let out_dir = make_temp_dir("fret-diag-query-overlay-prefers-evidence");
+        let parent = out_dir.join("sessions").join("sid");
+        std::fs::create_dir_all(&parent).expect("create parent");
+        let child = parent.join("bundle-subdir");
+        std::fs::create_dir_all(&child).expect("create child");
+
+        // Simulate the common layout where bundle dump dirs contain a script.result.json without
+        // evidence, but the session root contains the evidence-bearing script.result.json.
+        let _parent_script_result = write_script_result_with_overlay_trace(&parent);
+        let _child_script_result = write_script_result_without_evidence(&child);
+
+        let query_out = out_dir.join("out.json");
+        cmd_query_overlay_placement_trace(
+            &[
+                child.display().to_string(),
+                "--anchor-test-id".to_string(),
+                "anchor-a".to_string(),
+                "--chosen-side".to_string(),
+                "top".to_string(),
             ],
             Path::new("."),
             &out_dir,
