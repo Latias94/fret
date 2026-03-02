@@ -20,6 +20,14 @@ Status (2026-03-02):
 - Remaining blocker is docking correctness: chained tear-off + merge-back does not yet return to the original dock graph
   fingerprint, so the “exact signature” gate fails even though windows auto-close and canonicalization passes.
 
+Status update (2026-03-02, later):
+
+- M1.1 delivered: runner-level pointer isolation now masks physical mouse movement when diagnostics cursor overrides are
+  active (`crates/fret-launch/src/runner/desktop/runner/mod.rs`).
+- M1.2 delivered: cached `test_id` predicate evaluation is bounded by freshness and emits explicit evidence
+  (`ecosystem/fret-bootstrap/src/ui_diagnostics/service.rs:297`).
+- M1.3 delivered: `known_window_count_*` predicates use a runner-owned source-of-truth (`crates/fret-runtime/src/runner_window_lifecycle_diagnostics.rs`).
+
 ## M1.1 — Scripted input isolation (runner cursor override)
 
 Goal: scripted docking drags are deterministic under user input noise.
