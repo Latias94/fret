@@ -1,37 +1,39 @@
 use super::*;
 
 mod accordion;
-mod ai_attachments_demo;
+mod ai_audio_player_demo;
 mod ai_agent_demo;
 mod ai_artifact_demo;
+mod ai_attachments_demo;
 mod ai_checkpoint_demo;
 mod ai_code_block_demo;
 mod ai_commit_demo;
 mod ai_commit_large_demo;
 mod ai_confirmation_demo;
+mod ai_context_demo;
 mod ai_environment_variables_demo;
 mod ai_inline_citation_demo;
 mod ai_message_branch_demo;
 mod ai_message_demo;
-mod ai_model_selector_demo;
 mod ai_mic_selector_demo;
+mod ai_model_selector_demo;
 mod ai_open_in_chat_demo;
+mod ai_package_info_demo;
 mod ai_persona_demo;
 mod ai_plan_demo;
-mod ai_package_info_demo;
 mod ai_prompt_input_action_menu_demo;
 mod ai_prompt_input_provider_demo;
 mod ai_prompt_input_referenced_sources_demo;
 mod ai_reasoning_demo;
-mod ai_sources_demo;
 mod ai_schema_display_demo;
 mod ai_shimmer_demo;
 mod ai_snippet_demo;
-mod ai_suggestions_demo;
-mod ai_terminal_demo;
+mod ai_sources_demo;
 mod ai_stack_trace_demo;
 mod ai_stack_trace_large_demo;
+mod ai_suggestions_demo;
 mod ai_task_demo;
+mod ai_terminal_demo;
 mod ai_test_results_demo;
 mod ai_test_results_large_demo;
 mod ai_tool_demo;
@@ -111,6 +113,13 @@ pub(super) fn preview_ai_attachments_demo(
     ai_attachments_demo::preview_ai_attachments_demo(cx, theme)
 }
 
+pub(super) fn preview_ai_audio_player_demo(
+    cx: &mut ElementContext<'_, App>,
+    theme: &Theme,
+) -> Vec<AnyElement> {
+    ai_audio_player_demo::preview_ai_audio_player_demo(cx, theme)
+}
+
 pub(super) fn preview_ai_agent_demo(
     cx: &mut ElementContext<'_, App>,
     theme: &Theme,
@@ -158,6 +167,13 @@ pub(super) fn preview_ai_confirmation_demo(
     theme: &Theme,
 ) -> Vec<AnyElement> {
     ai_confirmation_demo::preview_ai_confirmation_demo(cx, theme)
+}
+
+pub(super) fn preview_ai_context_demo(
+    cx: &mut ElementContext<'_, App>,
+    theme: &Theme,
+) -> Vec<AnyElement> {
+    ai_context_demo::preview_ai_context_demo(cx, theme)
 }
 
 pub(super) fn preview_ai_snippet_demo(
@@ -265,7 +281,10 @@ pub(super) fn preview_ai_suggestions_demo(
     ai_suggestions_demo::preview_ai_suggestions_demo(cx, theme)
 }
 
-pub(super) fn preview_ai_task_demo(cx: &mut ElementContext<'_, App>, theme: &Theme) -> Vec<AnyElement> {
+pub(super) fn preview_ai_task_demo(
+    cx: &mut ElementContext<'_, App>,
+    theme: &Theme,
+) -> Vec<AnyElement> {
     ai_task_demo::preview_ai_task_demo(cx, theme)
 }
 
@@ -341,7 +360,10 @@ pub(super) fn preview_ai_inline_citation_demo(
     ai_inline_citation_demo::preview_ai_inline_citation_demo(cx, theme)
 }
 
-pub(super) fn preview_ai_sources_demo(cx: &mut ElementContext<'_, App>, theme: &Theme) -> Vec<AnyElement> {
+pub(super) fn preview_ai_sources_demo(
+    cx: &mut ElementContext<'_, App>,
+    theme: &Theme,
+) -> Vec<AnyElement> {
     ai_sources_demo::preview_ai_sources_demo(cx, theme)
 }
 

@@ -1,26 +1,25 @@
-use super::super::super::super::*;
+pub const SOURCE: &str = include_str!("audio_player_demo.rs");
 
-pub(in crate::ui) fn preview_ai_audio_player_demo(
-    cx: &mut ElementContext<'_, App>,
-    _theme: &Theme,
-) -> Vec<AnyElement> {
-    use std::sync::Arc;
+// region: example
+use fret_runtime::Model;
+use fret_ui::Invalidation;
+use fret_ui::element::SemanticsProps;
+use fret_ui_ai as ui_ai;
+use fret_ui_kit::declarative::stack;
+use fret_ui_kit::{ChromeRefinement, LayoutRefinement, Space};
+use fret_ui_shadcn::prelude::*;
+use std::sync::Arc;
 
-    use fret_runtime::Model;
-    use fret_ui::Invalidation;
-    use fret_ui::element::SemanticsProps;
-    use fret_ui_kit::declarative::stack;
-    use fret_ui_kit::{ChromeRefinement, LayoutRefinement, Space};
+#[derive(Default)]
+struct DemoModels {
+    playing: Option<Model<bool>>,
+    muted: Option<Model<bool>>,
+    time: Option<Model<Vec<f32>>>,
+    duration: Option<Model<f32>>,
+    volume: Option<Model<Vec<f32>>>,
+}
 
-    #[derive(Default)]
-    struct DemoModels {
-        playing: Option<Model<bool>>,
-        muted: Option<Model<bool>>,
-        time: Option<Model<Vec<f32>>>,
-        duration: Option<Model<f32>>,
-        volume: Option<Model<Vec<f32>>>,
-    }
-
+pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement {
     let needs_init = cx.with_state(DemoModels::default, |st| {
         st.playing.is_none()
             || st.muted.is_none()
@@ -156,7 +155,7 @@ pub(in crate::ui) fn preview_ai_audio_player_demo(
             vec![controls, time_row]
         });
 
-    vec![stack::vstack(
+    stack::vstack(
         cx,
         stack::VStackProps::default()
             .layout(LayoutRefinement::default().w_full().min_w_0())
@@ -178,5 +177,7 @@ pub(in crate::ui) fn preview_ai_audio_player_demo(
             }
             out
         },
-    )]
+    )
 }
+// endregion: example
+

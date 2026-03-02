@@ -420,12 +420,12 @@ fn page_preview(
         PAGE_AI_CHAT_DEMO => preview_ai_chat_demo(cx, theme),
         PAGE_AI_CONVERSATION_DEMO => preview_ai_conversation_demo(cx, theme),
         PAGE_AI_MESSAGE_DEMO => pages::preview_ai_message_demo(cx, theme),
-        PAGE_AI_CONTEXT_DEMO => preview_ai_context_demo(cx, theme),
+        PAGE_AI_CONTEXT_DEMO => pages::preview_ai_context_demo(cx, theme),
         PAGE_AI_TERMINAL_DEMO => pages::preview_ai_terminal_demo(cx, theme),
         PAGE_AI_PACKAGE_INFO_DEMO => pages::preview_ai_package_info_demo(cx, theme),
         PAGE_AI_FILE_TREE_DEMO => preview_ai_file_tree_demo(cx, theme),
         PAGE_AI_TASK_DEMO => pages::preview_ai_task_demo(cx, theme),
-        PAGE_AI_AUDIO_PLAYER_DEMO => preview_ai_audio_player_demo(cx, theme),
+        PAGE_AI_AUDIO_PLAYER_DEMO => pages::preview_ai_audio_player_demo(cx, theme),
         PAGE_AI_TRANSCRIPTION_DEMO => preview_ai_transcription_demo(cx, theme),
         PAGE_AI_MIC_SELECTOR_DEMO => pages::preview_ai_mic_selector_demo(cx, theme),
         PAGE_AI_SPEECH_INPUT_DEMO => preview_ai_speech_input_demo(cx, theme),
@@ -462,11 +462,15 @@ fn page_preview(
         PAGE_AI_TEST_RESULTS_LARGE_DEMO => pages::preview_ai_test_results_large_demo(cx, theme),
         PAGE_AI_CHECKPOINT_DEMO => pages::preview_ai_checkpoint_demo(cx, theme),
         PAGE_AI_CONFIRMATION_DEMO => pages::preview_ai_confirmation_demo(cx, theme),
-        PAGE_AI_ENVIRONMENT_VARIABLES_DEMO => pages::preview_ai_environment_variables_demo(cx, theme),
+        PAGE_AI_ENVIRONMENT_VARIABLES_DEMO => {
+            pages::preview_ai_environment_variables_demo(cx, theme)
+        }
         PAGE_AI_PLAN_DEMO => pages::preview_ai_plan_demo(cx, theme),
         PAGE_AI_TOOL_DEMO => pages::preview_ai_tool_demo(cx, theme),
         PAGE_AI_WEB_PREVIEW_DEMO => pages::preview_ai_web_preview_demo(cx, theme),
-        PAGE_AI_PROMPT_INPUT_PROVIDER_DEMO => pages::preview_ai_prompt_input_provider_demo(cx, theme),
+        PAGE_AI_PROMPT_INPUT_PROVIDER_DEMO => {
+            pages::preview_ai_prompt_input_provider_demo(cx, theme)
+        }
         PAGE_AI_PROMPT_INPUT_ACTION_MENU_DEMO => {
             pages::preview_ai_prompt_input_action_menu_demo(cx, theme)
         }

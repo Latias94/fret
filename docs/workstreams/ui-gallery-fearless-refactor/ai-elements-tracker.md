@@ -16,7 +16,7 @@ Status labels:
 | `agent_demo` | `PAGE_AI_AGENT_DEMO` | (removed) | `apps/fret-ui-gallery/src/ui/snippets/ai/agent_demo.rs` | `apps/fret-ui-gallery/src/ui/pages/ai_agent_demo.rs` | Snippet-backed |
 | `artifact_demo` | `PAGE_AI_ARTIFACT_DEMO` | (removed) | `apps/fret-ui-gallery/src/ui/snippets/ai/artifact_demo.rs` | `apps/fret-ui-gallery/src/ui/pages/ai_artifact_demo.rs` | Snippet-backed |
 | `attachments_demo` | `PAGE_AI_ATTACHMENTS_DEMO` | (removed) | `apps/fret-ui-gallery/src/ui/snippets/ai/attachments_demo.rs` | `apps/fret-ui-gallery/src/ui/pages/ai_attachments_demo.rs` | Snippet-backed |
-| `audio_player_demo` | `PAGE_AI_AUDIO_PLAYER_DEMO` | `apps/fret-ui-gallery/src/ui/previews/gallery/ai/audio_player_demo.rs` | — | — | Legacy preview |
+| `audio_player_demo` | `PAGE_AI_AUDIO_PLAYER_DEMO` | (removed) | `apps/fret-ui-gallery/src/ui/snippets/ai/audio_player_demo.rs` | `apps/fret-ui-gallery/src/ui/pages/ai_audio_player_demo.rs` | Snippet-backed |
 | `canvas_world_layer_spike` | `PAGE_AI_CANVAS_WORLD_LAYER_SPIKE` | `apps/fret-ui-gallery/src/ui/previews/gallery/ai/canvas_world_layer_spike.rs` | — | — | Legacy preview |
 | `chain_of_thought_demo` | `PAGE_AI_CHAIN_OF_THOUGHT_DEMO` | `apps/fret-ui-gallery/src/ui/previews/gallery/ai/chain_of_thought_demo.rs` | — | — | Legacy preview |
 | `chat_demo` | `PAGE_AI_CHAT_DEMO` | `apps/fret-ui-gallery/src/ui/previews/gallery/ai/chat_demo.rs` | — | — | Legacy preview |
@@ -25,7 +25,7 @@ Status labels:
 | `commit_demo` | `PAGE_AI_COMMIT_DEMO` | (removed) | `apps/fret-ui-gallery/src/ui/snippets/ai/commit_demo.rs` | `apps/fret-ui-gallery/src/ui/pages/ai_commit_demo.rs` | Snippet-backed |
 | `commit_large_demo` | `PAGE_AI_COMMIT_LARGE_DEMO` | (removed) | `apps/fret-ui-gallery/src/ui/snippets/ai/commit_large_demo.rs` | `apps/fret-ui-gallery/src/ui/pages/ai_commit_large_demo.rs` | Snippet-backed |
 | `confirmation_demo` | `PAGE_AI_CONFIRMATION_DEMO` | (removed) | `apps/fret-ui-gallery/src/ui/snippets/ai/confirmation_demo.rs` | `apps/fret-ui-gallery/src/ui/pages/ai_confirmation_demo.rs` | Snippet-backed |
-| `context_demo` | `PAGE_AI_CONTEXT_DEMO` | `apps/fret-ui-gallery/src/ui/previews/gallery/ai/context_demo.rs` | — | — | Legacy preview |
+| `context_demo` | `PAGE_AI_CONTEXT_DEMO` | (removed) | `apps/fret-ui-gallery/src/ui/snippets/ai/context_demo.rs` | `apps/fret-ui-gallery/src/ui/pages/ai_context_demo.rs` | Snippet-backed |
 | `conversation_demo` | `PAGE_AI_CONVERSATION_DEMO` | `apps/fret-ui-gallery/src/ui/previews/gallery/ai/conversation_demo.rs` | — | — | Legacy preview |
 | `environment_variables_demo` | `PAGE_AI_ENVIRONMENT_VARIABLES_DEMO` | (removed) | `apps/fret-ui-gallery/src/ui/snippets/ai/environment_variables_demo.rs` | `apps/fret-ui-gallery/src/ui/pages/ai_environment_variables_demo.rs` | Snippet-backed |
 | `file_tree_demo` | `PAGE_AI_FILE_TREE_DEMO` | `apps/fret-ui-gallery/src/ui/previews/gallery/ai/file_tree_demo.rs` | — | — | Legacy preview |
