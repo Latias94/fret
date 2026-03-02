@@ -810,20 +810,20 @@ impl<H: UiHost> UiTree<H> {
             && let Event::InternalDrag(e) = event
             && matches!(e.kind, fret_core::InternalDragKind::Drop)
         {
-            let (drag_kind, cross_window_hover, route, route_in_active_layer) =
-                if let Some(drag) = app.drag(e.pointer_id) {
-                    let route = crate::internal_drag::route(app, window, drag.kind);
-                    let route_in_active_layer =
-                        route.is_some_and(|node| self.node_in_any_layer(node, &active_layers));
-                    (
-                        Some(drag.kind),
-                        drag.cross_window_hover,
-                        route,
-                        route_in_active_layer,
-                    )
-                } else {
-                    (None, false, None, false)
-                };
+            let (drag_kind, cross_window_hover, route, route_in_active_layer) = if let Some(drag) =
+                app.drag(e.pointer_id)
+            {
+                let route = crate::internal_drag::route(app, window, drag.kind);
+                let route_in_active_layer = route.is_some_and(|node| node_in_active_layers(node));
+                (
+                    Some(drag.kind),
+                    drag.cross_window_hover,
+                    route,
+                    route_in_active_layer,
+                )
+            } else {
+                (None, false, None, false)
+            };
             tracing::info!(
                 window = ?window,
                 pointer_id = ?e.pointer_id,
