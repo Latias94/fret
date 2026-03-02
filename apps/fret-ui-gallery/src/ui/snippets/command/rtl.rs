@@ -42,19 +42,21 @@ pub fn render<H: UiHost>(
         }
     };
 
-    let entries = vec![shadcn::CommandGroup::new([
-        shadcn::CommandItem::new("Search")
-            .shortcut("Cmd+F")
-            .on_select_action(on_select(Arc::from("command.rtl.search"))),
-        shadcn::CommandItem::new("Dashboard")
-            .shortcut("Cmd+D")
-            .on_select_action(on_select(Arc::from("command.rtl.dashboard"))),
-        shadcn::CommandItem::new("Settings")
-            .shortcut("Cmd+,")
-            .on_select_action(on_select(Arc::from("command.rtl.settings"))),
-    ])
-    .heading("RTL")
-    .into()];
+    let entries = vec![
+        shadcn::CommandGroup::new([
+            shadcn::CommandItem::new("Search")
+                .shortcut("Cmd+F")
+                .on_select_action(on_select(Arc::from("command.rtl.search"))),
+            shadcn::CommandItem::new("Dashboard")
+                .shortcut("Cmd+D")
+                .on_select_action(on_select(Arc::from("command.rtl.dashboard"))),
+            shadcn::CommandItem::new("Settings")
+                .shortcut("Cmd+,")
+                .on_select_action(on_select(Arc::from("command.rtl.settings"))),
+        ])
+        .heading("RTL")
+        .into(),
+    ];
 
     fret_ui_kit::primitives::direction::with_direction_provider(
         cx,

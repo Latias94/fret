@@ -4,7 +4,7 @@
 
 use super::prelude_core::*;
 use super::tab_bar_geometry::TabBarGeometry;
-use super::tab_overflow::{tab_overflow_button_rect, tab_strip_rect_with_overflow_button};
+use super::tab_bar_kernel::compute_tab_bar_overflow_candidate_geometry;
 use fret_ui::ThemeSnapshot;
 use fret_ui_headless::tab_strip_surface::{TabStripSurface, classify_tab_strip_surface_no_tabs};
 
@@ -23,38 +23,22 @@ pub(super) fn tab_bar_insert_index_for_drop(
         return None;
     }
 
-    let strip_candidate = tab_strip_rect_with_overflow_button(theme.clone(), tab_bar);
-    let geom_candidate = tab_widths
-        .filter(|w| w.len() == tab_count)
-        .map(|w| TabBarGeometry::variable(strip_candidate, (*w).clone()))
-        .unwrap_or_else(|| TabBarGeometry::fixed(strip_candidate, tab_count));
-    let overflow = geom_candidate.max_scroll().0 > 0.0;
-
-    if overflow {
-        let overflow_button = tab_overflow_button_rect(theme.clone(), tab_bar);
-        let reserved_header_space_rect = {
-            let x0 = strip_candidate.origin.x.0 + strip_candidate.size.width.0;
-            let x1 = tab_bar.origin.x.0 + tab_bar.size.width.0;
-            let w = (x1 - x0).max(0.0);
-            Rect::new(
-                Point::new(Px(x0), tab_bar.origin.y),
-                Size::new(Px(w), tab_bar.size.height),
-            )
-        };
-
+    let candidate =
+        compute_tab_bar_overflow_candidate_geometry(theme.clone(), tab_bar, tab_count, tab_widths);
+    if candidate.overflows {
         return match classify_tab_strip_surface_no_tabs(
             position,
             None,
-            Some(reserved_header_space_rect),
-            Some(strip_candidate),
-            Some(overflow_button),
+            Some(candidate.reserved_header_space_rect),
+            Some(candidate.strip_rect),
+            Some(candidate.overflow_button_rect),
             None,
             None,
         ) {
             TabStripSurface::OverflowControl => None,
             TabStripSurface::HeaderSpace => Some(tab_count),
             TabStripSurface::TabsViewport => {
-                Some(geom_candidate.compute_insert_index(position, scroll))
+                Some(candidate.geom.compute_insert_index(position, scroll))
             }
             TabStripSurface::Outside
             | TabStripSurface::ScrollControls
@@ -71,6 +55,9 @@ pub(super) fn tab_bar_insert_index_for_drop(
 
 #[cfg(test)]
 mod tests {
+    use super::super::tab_overflow::{
+        tab_overflow_button_rect, tab_strip_rect_with_overflow_button,
+    };
     use super::*;
     use fret_ui::theme::{ThemeColors, ThemeMetrics};
 

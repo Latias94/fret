@@ -87,7 +87,10 @@ fn item_icon(
         content_children.push(shadcn::ItemDescription::new(description).into_element(cx));
     }
 
-    let mut children = vec![media, shadcn::ItemContent::new(content_children).into_element(cx)];
+    let mut children = vec![
+        media,
+        shadcn::ItemContent::new(content_children).into_element(cx),
+    ];
     if !actions.is_empty() {
         children.push(shadcn::ItemActions::new(actions).into_element(cx));
     }
@@ -131,7 +134,11 @@ fn item_avatar(
         .test_id(test_id)
 }
 
-fn item_team(cx: &mut ElementContext<'_, App>, test_id: &'static str, action_test_id: &'static str) -> AnyElement {
+fn item_team(
+    cx: &mut ElementContext<'_, App>,
+    test_id: &'static str,
+    action_test_id: &'static str,
+) -> AnyElement {
     let avatars = stack::hstack(
         cx,
         stack::HStackProps::default().gap(Space::N1).items_center(),
@@ -178,7 +185,9 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
         .with_state(Models::default, |st| st.download_progress.clone())
         .unwrap_or_else(|| {
             let model = cx.app.models_mut().insert(50.0);
-            cx.with_state(Models::default, |st| st.download_progress = Some(model.clone()));
+            cx.with_state(Models::default, |st| {
+                st.download_progress = Some(model.clone())
+            });
             model
         });
 
@@ -192,8 +201,9 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
         .max_w(MetricRef::Px(Px(520.0)));
 
     let item_download = {
-        let header = shadcn::ItemHeader::new([ui::text(cx, "Your download has started.").into_element(cx)])
-            .into_element(cx);
+        let header =
+            shadcn::ItemHeader::new([ui::text(cx, "Your download has started.").into_element(cx)])
+                .into_element(cx);
         let media = shadcn::ItemMedia::new([shadcn::Spinner::new().into_element(cx)])
             .variant(shadcn::ItemMediaVariant::Icon)
             .into_element(cx);
@@ -354,7 +364,11 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
     let column_people = {
         let people = [
             ("shadcn", "Just shipped a component that fixes itself", "S"),
-            ("pranathip", "My code is so clean, it does its own laundry", "P"),
+            (
+                "pranathip",
+                "My code is so clean, it does its own laundry",
+                "P",
+            ),
             (
                 "evilrabbit",
                 "Debugging is like being a detective in a crime movie where you're also the murderer",

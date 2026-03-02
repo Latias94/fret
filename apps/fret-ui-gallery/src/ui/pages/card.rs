@@ -34,12 +34,16 @@ pub(super) fn preview_card(
             DocSection::new("Demo", login)
                 .no_shell()
                 .max_w(Px(980.0))
-                .description("Login card layout (CardHeader + CardAction + CardContent + CardFooter).")
+                .description(
+                    "Login card layout (CardHeader + CardAction + CardContent + CardFooter).",
+                )
                 .code_rust_from_file_region(include_str!("../snippets/card/demo.rs"), "example"),
             DocSection::new("Usage", usage)
                 .no_shell()
                 .max_w(Px(980.0))
-                .description("Basic structure (header/content/footer) with an optional action slot.")
+                .description(
+                    "Basic structure (header/content/footer) with an optional action slot.",
+                )
                 .code_rust_from_file_region(include_str!("../snippets/card/usage.rs"), "example"),
             DocSection::new("Size", size)
                 .no_shell()
@@ -86,4 +90,3 @@ pub(super) fn preview_card(
 
     vec![body.test_id("ui-gallery-card")]
 }
-

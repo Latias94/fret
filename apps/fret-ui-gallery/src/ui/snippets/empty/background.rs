@@ -1,7 +1,7 @@
 // region: example
-use fret_core::scene::{ColorSpace, GradientStop, LinearGradient, Paint, TileMode, MAX_STOPS};
-use fret_ui::element::LayoutQueryRegionProps;
+use fret_core::scene::{ColorSpace, GradientStop, LinearGradient, MAX_STOPS, Paint, TileMode};
 use fret_ui::Invalidation;
+use fret_ui::element::LayoutQueryRegionProps;
 use fret_ui_kit::declarative::ElementContextThemeExt;
 use fret_ui_shadcn::{self as shadcn, prelude::*};
 

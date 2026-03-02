@@ -635,6 +635,30 @@ fn script_v2_roundtrip_dock_drag_active_is_predicate() {
 }
 
 #[test]
+fn script_v2_roundtrip_dock_tab_strip_active_overflow_is_predicate() {
+    assert_script_v2_roundtrip(
+        r#"{
+  "schema_version": 2,
+  "steps": [
+    { "type": "assert", "predicate": { "kind": "dock_tab_strip_active_overflow_is", "overflow": true } }
+  ]
+}"#,
+    );
+}
+
+#[test]
+fn script_v2_roundtrip_dock_tab_strip_active_visible_is_predicate() {
+    assert_script_v2_roundtrip(
+        r#"{
+  "schema_version": 2,
+  "steps": [
+    { "type": "assert", "predicate": { "kind": "dock_tab_strip_active_visible_is", "visible": true } }
+  ]
+}"#,
+    );
+}
+
+#[test]
 fn script_v2_roundtrip_dock_drag_transparent_payload_applied_predicate() {
     assert_script_v2_roundtrip(
         r#"{

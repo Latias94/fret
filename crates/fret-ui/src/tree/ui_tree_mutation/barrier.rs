@@ -235,7 +235,14 @@ impl<H: UiHost> UiTree<H> {
         }
     }
 
-    fn recompute_node_subtree_layout_dirty_count_and_propagate(&mut self, _parent: NodeId) {}
+    pub(crate) fn take_pending_barrier_relayouts(&mut self) -> Vec<NodeId> {
+        std::mem::take(&mut self.pending_barrier_relayouts)
+    }
+
+    // Compatibility hooks: barrier mutations rely on subtree-level layout invalidation aggregation
+    // in some branches/workstreams. The current tree does not maintain a dedicated subtree counter,
+    // so these are no-ops for now.
+    fn recompute_node_subtree_layout_dirty_count_and_propagate(&mut self, _node: NodeId) {}
 
     fn note_layout_invalidation_transition_for_subtree_aggregation(
         &mut self,
@@ -243,9 +250,5 @@ impl<H: UiHost> UiTree<H> {
         _before: bool,
         _after: bool,
     ) {
-    }
-
-    pub(crate) fn take_pending_barrier_relayouts(&mut self) -> Vec<NodeId> {
-        std::mem::take(&mut self.pending_barrier_relayouts)
     }
 }

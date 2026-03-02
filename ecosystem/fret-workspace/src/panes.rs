@@ -421,7 +421,7 @@ where
         let Some(session) = host.drag(drag.pointer_id) else {
             return false;
         };
-        if session.kind != DRAG_KIND_WORKSPACE_TAB || !session.dragging {
+        if session.kind != DRAG_KIND_WORKSPACE_TAB {
             return false;
         }
         if session.current_window != acx.window {
@@ -725,7 +725,7 @@ where
             let Some(session) = host.drag(drag.pointer_id) else {
                 return false;
             };
-            if session.kind != DRAG_KIND_WORKSPACE_TAB || !session.dragging {
+            if session.kind != DRAG_KIND_WORKSPACE_TAB {
                 return false;
             }
             if session.current_window != acx.window {

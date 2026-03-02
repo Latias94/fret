@@ -108,10 +108,18 @@ pub(super) fn handle_scroll_into_view_step(
     let docking_diag = app
         .global::<fret_runtime::WindowInteractionDiagnosticsStore>()
         .and_then(|store| store.docking_latest_for_window(window));
+    let workspace_diag = app
+        .global::<fret_runtime::WindowInteractionDiagnosticsStore>()
+        .and_then(|store| store.workspace_latest_for_window(window));
     let input_ctx = app
         .global::<fret_runtime::WindowInputContextService>()
         .and_then(|svc| svc.snapshot(window));
     let dock_drag_runtime = dock_drag_runtime_state(app, svc.known_windows.as_slice());
+    let open_window_count = app
+        .global::<fret_runtime::WindowInputContextService>()
+        .map(|ctx_svc| ctx_svc.window_count() as u32)
+        .filter(|n| *n > 0)
+        .unwrap_or_else(|| svc.known_windows.len() as u32);
     let visible_ok = eval_predicate(
         snapshot,
         window_bounds,
@@ -124,8 +132,10 @@ pub(super) fn handle_scroll_into_view_step(
         app.global::<fret_core::RendererTextPerfSnapshot>().copied(),
         app.global::<fret_core::RendererTextFontTraceSnapshot>(),
         svc.known_windows.as_slice(),
+        open_window_count,
         app.global::<fret_runtime::PlatformCapabilities>(),
         docking_diag,
+        workspace_diag,
         dock_drag_runtime.as_ref(),
         text_font_stack_key_stable_frames,
         font_catalog_populated,

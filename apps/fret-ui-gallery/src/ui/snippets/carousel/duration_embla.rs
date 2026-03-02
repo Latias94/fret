@@ -50,7 +50,10 @@ fn slide_card(cx: &mut ElementContext<'_, App>, idx: usize, visual: SlideVisual)
 
     let content = cx.flex(
         FlexProps {
-            layout: decl_style::layout_style(&theme, LayoutRefinement::default().w_full().aspect_ratio(1.0)),
+            layout: decl_style::layout_style(
+                &theme,
+                LayoutRefinement::default().w_full().aspect_ratio(1.0),
+            ),
             direction: fret_core::Axis::Horizontal,
             justify: MainAlign::Center,
             align: CrossAlign::Center,
@@ -80,8 +83,10 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
     let duration_fast_api_snapshot = cx
         .with_state(Models::default, |st| st.duration_fast_api_snapshot.clone())
         .unwrap_or_else(|| {
-            let model: Model<shadcn::CarouselApiSnapshot> =
-                cx.app.models_mut().insert(shadcn::CarouselApiSnapshot::default());
+            let model: Model<shadcn::CarouselApiSnapshot> = cx
+                .app
+                .models_mut()
+                .insert(shadcn::CarouselApiSnapshot::default());
             cx.with_state(Models::default, |st| {
                 st.duration_fast_api_snapshot = Some(model.clone());
             });
@@ -90,8 +95,10 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
     let duration_slow_api_snapshot = cx
         .with_state(Models::default, |st| st.duration_slow_api_snapshot.clone())
         .unwrap_or_else(|| {
-            let model: Model<shadcn::CarouselApiSnapshot> =
-                cx.app.models_mut().insert(shadcn::CarouselApiSnapshot::default());
+            let model: Model<shadcn::CarouselApiSnapshot> = cx
+                .app
+                .models_mut()
+                .insert(shadcn::CarouselApiSnapshot::default());
             cx.with_state(Models::default, |st| {
                 st.duration_slow_api_snapshot = Some(model.clone());
             });
@@ -171,7 +178,9 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
         });
 
     let duration_fast_engine_present = cx
-        .with_state(Models::default, |st| st.duration_fast_engine_present.clone())
+        .with_state(Models::default, |st| {
+            st.duration_fast_engine_present.clone()
+        })
         .unwrap_or_else(|| {
             let model: Model<bool> = cx.app.models_mut().insert(false);
             cx.with_state(Models::default, |st| {
@@ -180,7 +189,9 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
             model
         });
     let duration_slow_engine_present = cx
-        .with_state(Models::default, |st| st.duration_slow_engine_present.clone())
+        .with_state(Models::default, |st| {
+            st.duration_slow_engine_present.clone()
+        })
         .unwrap_or_else(|| {
             let model: Model<bool> = cx.app.models_mut().insert(false);
             cx.with_state(Models::default, |st| {
@@ -189,7 +200,9 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
             model
         });
     let duration_fast_scroll_duration_fast = cx
-        .with_state(Models::default, |st| st.duration_fast_scroll_duration_fast.clone())
+        .with_state(Models::default, |st| {
+            st.duration_fast_scroll_duration_fast.clone()
+        })
         .unwrap_or_else(|| {
             let model: Model<bool> = cx.app.models_mut().insert(false);
             cx.with_state(Models::default, |st| {
@@ -198,7 +211,9 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
             model
         });
     let duration_slow_scroll_duration_slow = cx
-        .with_state(Models::default, |st| st.duration_slow_scroll_duration_slow.clone())
+        .with_state(Models::default, |st| {
+            st.duration_slow_scroll_duration_slow.clone()
+        })
         .unwrap_or_else(|| {
             let model: Model<bool> = cx.app.models_mut().insert(false);
             cx.with_state(Models::default, |st| {
@@ -208,7 +223,9 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
         });
 
     let duration_fast_selected_snap_large = cx
-        .with_state(Models::default, |st| st.duration_fast_selected_snap_large.clone())
+        .with_state(Models::default, |st| {
+            st.duration_fast_selected_snap_large.clone()
+        })
         .unwrap_or_else(|| {
             let model: Model<bool> = cx.app.models_mut().insert(false);
             cx.with_state(Models::default, |st| {
@@ -217,7 +234,9 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
             model
         });
     let duration_slow_selected_snap_large = cx
-        .with_state(Models::default, |st| st.duration_slow_selected_snap_large.clone())
+        .with_state(Models::default, |st| {
+            st.duration_slow_selected_snap_large.clone()
+        })
         .unwrap_or_else(|| {
             let model: Model<bool> = cx.app.models_mut().insert(false);
             cx.with_state(Models::default, |st| {
@@ -227,7 +246,9 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
         });
 
     let duration_fast_embla_settling = cx
-        .with_state(Models::default, |st| st.duration_fast_embla_settling.clone())
+        .with_state(Models::default, |st| {
+            st.duration_fast_embla_settling.clone()
+        })
         .unwrap_or_else(|| {
             let model: Model<bool> = cx.app.models_mut().insert(false);
             cx.with_state(Models::default, |st| {
@@ -236,7 +257,9 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
             model
         });
     let duration_slow_embla_settling = cx
-        .with_state(Models::default, |st| st.duration_slow_embla_settling.clone())
+        .with_state(Models::default, |st| {
+            st.duration_slow_embla_settling.clone()
+        })
         .unwrap_or_else(|| {
             let model: Model<bool> = cx.app.models_mut().insert(false);
             cx.with_state(Models::default, |st| {
@@ -273,47 +296,66 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
         .copied()
         .unwrap_or_default();
 
-    let duration_fast_settling_now = cx.watch_model(&duration_fast_settling).copied().unwrap_or(false);
+    let duration_fast_settling_now = cx
+        .watch_model(&duration_fast_settling)
+        .copied()
+        .unwrap_or(false);
     if duration_fast_settling_now != duration_fast_snapshot_now.settling {
-        let _ = cx
-            .app
-            .models_mut()
-            .update(&duration_fast_settling, |v| *v = duration_fast_snapshot_now.settling);
+        let _ = cx.app.models_mut().update(&duration_fast_settling, |v| {
+            *v = duration_fast_snapshot_now.settling
+        });
     }
-    let duration_slow_settling_now = cx.watch_model(&duration_slow_settling).copied().unwrap_or(false);
+    let duration_slow_settling_now = cx
+        .watch_model(&duration_slow_settling)
+        .copied()
+        .unwrap_or(false);
     if duration_slow_settling_now != duration_slow_snapshot_now.settling {
-        let _ = cx
-            .app
-            .models_mut()
-            .update(&duration_slow_settling, |v| *v = duration_slow_snapshot_now.settling);
+        let _ = cx.app.models_mut().update(&duration_slow_settling, |v| {
+            *v = duration_slow_snapshot_now.settling
+        });
     }
-    let duration_fast_at_snap_now = cx.watch_model(&duration_fast_at_snap).copied().unwrap_or(false);
+    let duration_fast_at_snap_now = cx
+        .watch_model(&duration_fast_at_snap)
+        .copied()
+        .unwrap_or(false);
     if duration_fast_at_snap_now != duration_fast_snapshot_now.at_selected_snap {
         let _ = cx.app.models_mut().update(&duration_fast_at_snap, |v| {
             *v = duration_fast_snapshot_now.at_selected_snap
         });
     }
-    let duration_slow_at_snap_now = cx.watch_model(&duration_slow_at_snap).copied().unwrap_or(false);
+    let duration_slow_at_snap_now = cx
+        .watch_model(&duration_slow_at_snap)
+        .copied()
+        .unwrap_or(false);
     if duration_slow_at_snap_now != duration_slow_snapshot_now.at_selected_snap {
         let _ = cx.app.models_mut().update(&duration_slow_at_snap, |v| {
             *v = duration_slow_snapshot_now.at_selected_snap
         });
     }
 
-    let duration_fast_can_next_now = cx.watch_model(&duration_fast_can_next).copied().unwrap_or(false);
+    let duration_fast_can_next_now = cx
+        .watch_model(&duration_fast_can_next)
+        .copied()
+        .unwrap_or(false);
     if duration_fast_can_next_now != duration_fast_snapshot_now.can_scroll_next {
         let _ = cx.app.models_mut().update(&duration_fast_can_next, |v| {
             *v = duration_fast_snapshot_now.can_scroll_next
         });
     }
-    let duration_slow_can_next_now = cx.watch_model(&duration_slow_can_next).copied().unwrap_or(false);
+    let duration_slow_can_next_now = cx
+        .watch_model(&duration_slow_can_next)
+        .copied()
+        .unwrap_or(false);
     if duration_slow_can_next_now != duration_slow_snapshot_now.can_scroll_next {
         let _ = cx.app.models_mut().update(&duration_slow_can_next, |v| {
             *v = duration_slow_snapshot_now.can_scroll_next
         });
     }
 
-    let duration_fast_selected_1_now = cx.watch_model(&duration_fast_selected_1).copied().unwrap_or(false);
+    let duration_fast_selected_1_now = cx
+        .watch_model(&duration_fast_selected_1)
+        .copied()
+        .unwrap_or(false);
     let duration_fast_selected_1_next = duration_fast_snapshot_now.selected_index == 1;
     if duration_fast_selected_1_now != duration_fast_selected_1_next {
         let _ = cx.app.models_mut().update(&duration_fast_selected_1, |v| {
@@ -321,7 +363,10 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
         });
     }
 
-    let duration_slow_selected_1_now = cx.watch_model(&duration_slow_selected_1).copied().unwrap_or(false);
+    let duration_slow_selected_1_now = cx
+        .watch_model(&duration_slow_selected_1)
+        .copied()
+        .unwrap_or(false);
     let duration_slow_selected_1_next = duration_slow_snapshot_now.selected_index == 1;
     if duration_slow_selected_1_now != duration_slow_selected_1_next {
         let _ = cx.app.models_mut().update(&duration_slow_selected_1, |v| {
@@ -335,9 +380,12 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
         .unwrap_or(false);
     let duration_fast_engine_present_next = duration_fast_snapshot_now.embla_engine_present;
     if duration_fast_engine_present_now != duration_fast_engine_present_next {
-        let _ = cx.app.models_mut().update(&duration_fast_engine_present, |v| {
-            *v = duration_fast_engine_present_next
-        });
+        let _ = cx
+            .app
+            .models_mut()
+            .update(&duration_fast_engine_present, |v| {
+                *v = duration_fast_engine_present_next
+            });
     }
     let duration_slow_engine_present_now = cx
         .watch_model(&duration_slow_engine_present)
@@ -345,21 +393,28 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
         .unwrap_or(false);
     let duration_slow_engine_present_next = duration_slow_snapshot_now.embla_engine_present;
     if duration_slow_engine_present_now != duration_slow_engine_present_next {
-        let _ = cx.app.models_mut().update(&duration_slow_engine_present, |v| {
-            *v = duration_slow_engine_present_next
-        });
+        let _ = cx
+            .app
+            .models_mut()
+            .update(&duration_slow_engine_present, |v| {
+                *v = duration_slow_engine_present_next
+            });
     }
 
     let duration_fast_scroll_duration_fast_now = cx
         .watch_model(&duration_fast_scroll_duration_fast)
         .copied()
         .unwrap_or(false);
-    let duration_fast_scroll_duration_fast_next = duration_fast_snapshot_now.embla_scroll_duration > 0.0
+    let duration_fast_scroll_duration_fast_next = duration_fast_snapshot_now.embla_scroll_duration
+        > 0.0
         && duration_fast_snapshot_now.embla_scroll_duration <= 20.0;
     if duration_fast_scroll_duration_fast_now != duration_fast_scroll_duration_fast_next {
-        let _ = cx.app.models_mut().update(&duration_fast_scroll_duration_fast, |v| {
-            *v = duration_fast_scroll_duration_fast_next
-        });
+        let _ = cx
+            .app
+            .models_mut()
+            .update(&duration_fast_scroll_duration_fast, |v| {
+                *v = duration_fast_scroll_duration_fast_next
+            });
     }
 
     let duration_slow_scroll_duration_slow_now = cx
@@ -369,31 +424,42 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
     let duration_slow_scroll_duration_slow_next =
         duration_slow_snapshot_now.embla_scroll_duration >= 100.0;
     if duration_slow_scroll_duration_slow_now != duration_slow_scroll_duration_slow_next {
-        let _ = cx.app.models_mut().update(&duration_slow_scroll_duration_slow, |v| {
-            *v = duration_slow_scroll_duration_slow_next
-        });
+        let _ = cx
+            .app
+            .models_mut()
+            .update(&duration_slow_scroll_duration_slow, |v| {
+                *v = duration_slow_scroll_duration_slow_next
+            });
     }
 
     let duration_fast_selected_snap_large_now = cx
         .watch_model(&duration_fast_selected_snap_large)
         .copied()
         .unwrap_or(false);
-    let duration_fast_selected_snap_large_next = duration_fast_snapshot_now.selected_snap_px >= 50.0;
+    let duration_fast_selected_snap_large_next =
+        duration_fast_snapshot_now.selected_snap_px >= 50.0;
     if duration_fast_selected_snap_large_now != duration_fast_selected_snap_large_next {
-        let _ = cx.app.models_mut().update(&duration_fast_selected_snap_large, |v| {
-            *v = duration_fast_selected_snap_large_next
-        });
+        let _ = cx
+            .app
+            .models_mut()
+            .update(&duration_fast_selected_snap_large, |v| {
+                *v = duration_fast_selected_snap_large_next
+            });
     }
 
     let duration_slow_selected_snap_large_now = cx
         .watch_model(&duration_slow_selected_snap_large)
         .copied()
         .unwrap_or(false);
-    let duration_slow_selected_snap_large_next = duration_slow_snapshot_now.selected_snap_px >= 50.0;
+    let duration_slow_selected_snap_large_next =
+        duration_slow_snapshot_now.selected_snap_px >= 50.0;
     if duration_slow_selected_snap_large_now != duration_slow_selected_snap_large_next {
-        let _ = cx.app.models_mut().update(&duration_slow_selected_snap_large, |v| {
-            *v = duration_slow_selected_snap_large_next
-        });
+        let _ = cx
+            .app
+            .models_mut()
+            .update(&duration_slow_selected_snap_large, |v| {
+                *v = duration_slow_selected_snap_large_next
+            });
     }
 
     let duration_fast_embla_settling_now = cx
@@ -402,9 +468,12 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
         .unwrap_or(false);
     let duration_fast_embla_settling_next = duration_fast_snapshot_now.embla_settling;
     if duration_fast_embla_settling_now != duration_fast_embla_settling_next {
-        let _ = cx.app.models_mut().update(&duration_fast_embla_settling, |v| {
-            *v = duration_fast_embla_settling_next
-        });
+        let _ = cx
+            .app
+            .models_mut()
+            .update(&duration_fast_embla_settling, |v| {
+                *v = duration_fast_embla_settling_next
+            });
     }
 
     let duration_slow_embla_settling_now = cx
@@ -413,9 +482,12 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
         .unwrap_or(false);
     let duration_slow_embla_settling_next = duration_slow_snapshot_now.embla_settling;
     if duration_slow_embla_settling_now != duration_slow_embla_settling_next {
-        let _ = cx.app.models_mut().update(&duration_slow_embla_settling, |v| {
-            *v = duration_slow_embla_settling_next
-        });
+        let _ = cx
+            .app
+            .models_mut()
+            .update(&duration_slow_embla_settling, |v| {
+                *v = duration_slow_embla_settling_next
+            });
     }
 
     let duration_fast_embla_enabled_now = cx
@@ -424,9 +496,12 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
         .unwrap_or(false);
     let duration_fast_embla_enabled_next = duration_fast_snapshot_now.embla_engine_enabled;
     if duration_fast_embla_enabled_now != duration_fast_embla_enabled_next {
-        let _ = cx.app.models_mut().update(&duration_fast_embla_enabled, |v| {
-            *v = duration_fast_embla_enabled_next
-        });
+        let _ = cx
+            .app
+            .models_mut()
+            .update(&duration_fast_embla_enabled, |v| {
+                *v = duration_fast_embla_enabled_next
+            });
     }
 
     let duration_slow_embla_enabled_now = cx
@@ -435,9 +510,12 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
         .unwrap_or(false);
     let duration_slow_embla_enabled_next = duration_slow_snapshot_now.embla_engine_enabled;
     if duration_slow_embla_enabled_now != duration_slow_embla_enabled_next {
-        let _ = cx.app.models_mut().update(&duration_slow_embla_enabled, |v| {
-            *v = duration_slow_embla_enabled_next
-        });
+        let _ = cx
+            .app
+            .models_mut()
+            .update(&duration_slow_embla_enabled, |v| {
+                *v = duration_slow_embla_enabled_next
+            });
     }
 
     let duration_visual = SlideVisual {
@@ -475,7 +553,10 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
 
     cx.flex(
         FlexProps {
-            layout: decl_style::layout_style(&Theme::global(&*cx.app).snapshot(), LayoutRefinement::default().w_full()),
+            layout: decl_style::layout_style(
+                &Theme::global(&*cx.app).snapshot(),
+                LayoutRefinement::default().w_full(),
+            ),
             direction: fret_core::Axis::Horizontal,
             justify: MainAlign::Start,
             align: CrossAlign::Start,
@@ -515,21 +596,25 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
                                 .disabled(true)
                                 .test_id("ui-gallery-carousel-duration-fast-can-next")
                                 .into_element(cx);
-                            let embla_enabled = shadcn::Checkbox::new(duration_fast_embla_enabled.clone())
-                                .a11y_label("emblaEngineEnabled")
-                                .disabled(true)
-                                .test_id("ui-gallery-carousel-duration-fast-embla-enabled")
-                                .into_element(cx);
-                            let engine_present = shadcn::Checkbox::new(duration_fast_engine_present.clone())
-                                .a11y_label("emblaEnginePresent")
-                                .disabled(true)
-                                .test_id("ui-gallery-carousel-duration-fast-engine-present")
-                                .into_element(cx);
+                            let embla_enabled =
+                                shadcn::Checkbox::new(duration_fast_embla_enabled.clone())
+                                    .a11y_label("emblaEngineEnabled")
+                                    .disabled(true)
+                                    .test_id("ui-gallery-carousel-duration-fast-embla-enabled")
+                                    .into_element(cx);
+                            let engine_present =
+                                shadcn::Checkbox::new(duration_fast_engine_present.clone())
+                                    .a11y_label("emblaEnginePresent")
+                                    .disabled(true)
+                                    .test_id("ui-gallery-carousel-duration-fast-engine-present")
+                                    .into_element(cx);
                             let scroll_duration_fast =
                                 shadcn::Checkbox::new(duration_fast_scroll_duration_fast.clone())
                                     .a11y_label("emblaScrollDurationIsFast")
                                     .disabled(true)
-                                    .test_id("ui-gallery-carousel-duration-fast-scroll-duration-fast")
+                                    .test_id(
+                                        "ui-gallery-carousel-duration-fast-scroll-duration-fast",
+                                    )
                                     .into_element(cx);
                             let embla_settling =
                                 shadcn::Checkbox::new(duration_fast_embla_settling.clone())
@@ -537,16 +622,20 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
                                     .disabled(true)
                                     .test_id("ui-gallery-carousel-duration-fast-embla-settling")
                                     .into_element(cx);
-                            let selected_1 = shadcn::Checkbox::new(duration_fast_selected_1.clone())
-                                .a11y_label("selectedIndexIs1")
-                                .disabled(true)
-                                .test_id("ui-gallery-carousel-duration-fast-selected-1")
-                                .into_element(cx);
-                            let snap_large = shadcn::Checkbox::new(duration_fast_selected_snap_large.clone())
-                                .a11y_label("selectedSnapIsLarge")
-                                .disabled(true)
-                                .test_id("ui-gallery-carousel-duration-fast-selected-snap-large")
-                                .into_element(cx);
+                            let selected_1 =
+                                shadcn::Checkbox::new(duration_fast_selected_1.clone())
+                                    .a11y_label("selectedIndexIs1")
+                                    .disabled(true)
+                                    .test_id("ui-gallery-carousel-duration-fast-selected-1")
+                                    .into_element(cx);
+                            let snap_large =
+                                shadcn::Checkbox::new(duration_fast_selected_snap_large.clone())
+                                    .a11y_label("selectedSnapIsLarge")
+                                    .disabled(true)
+                                    .test_id(
+                                        "ui-gallery-carousel-duration-fast-selected-snap-large",
+                                    )
+                                    .into_element(cx);
                             let settling = shadcn::Checkbox::new(duration_fast_settling.clone())
                                 .a11y_label("settling")
                                 .disabled(true)
@@ -579,7 +668,10 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
                         &theme,
                         // Carousel controls are positioned outside the viewport (`-left-12` /
                         // `-right-12`). Keep overflow visible so the controls remain clickable.
-                        LayoutRefinement::default().w_full().max_w(max_w_xs).overflow_visible(),
+                        LayoutRefinement::default()
+                            .w_full()
+                            .max_w(max_w_xs)
+                            .overflow_visible(),
                     ),
                     direction: fret_core::Axis::Vertical,
                     justify: MainAlign::Start,
@@ -617,21 +709,25 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
                                 .disabled(true)
                                 .test_id("ui-gallery-carousel-duration-slow-can-next")
                                 .into_element(cx);
-                            let embla_enabled = shadcn::Checkbox::new(duration_slow_embla_enabled.clone())
-                                .a11y_label("emblaEngineEnabled")
-                                .disabled(true)
-                                .test_id("ui-gallery-carousel-duration-slow-embla-enabled")
-                                .into_element(cx);
-                            let engine_present = shadcn::Checkbox::new(duration_slow_engine_present.clone())
-                                .a11y_label("emblaEnginePresent")
-                                .disabled(true)
-                                .test_id("ui-gallery-carousel-duration-slow-engine-present")
-                                .into_element(cx);
+                            let embla_enabled =
+                                shadcn::Checkbox::new(duration_slow_embla_enabled.clone())
+                                    .a11y_label("emblaEngineEnabled")
+                                    .disabled(true)
+                                    .test_id("ui-gallery-carousel-duration-slow-embla-enabled")
+                                    .into_element(cx);
+                            let engine_present =
+                                shadcn::Checkbox::new(duration_slow_engine_present.clone())
+                                    .a11y_label("emblaEnginePresent")
+                                    .disabled(true)
+                                    .test_id("ui-gallery-carousel-duration-slow-engine-present")
+                                    .into_element(cx);
                             let scroll_duration_slow =
                                 shadcn::Checkbox::new(duration_slow_scroll_duration_slow.clone())
                                     .a11y_label("emblaScrollDurationIsSlow")
                                     .disabled(true)
-                                    .test_id("ui-gallery-carousel-duration-slow-scroll-duration-slow")
+                                    .test_id(
+                                        "ui-gallery-carousel-duration-slow-scroll-duration-slow",
+                                    )
                                     .into_element(cx);
                             let embla_settling =
                                 shadcn::Checkbox::new(duration_slow_embla_settling.clone())
@@ -639,16 +735,20 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
                                     .disabled(true)
                                     .test_id("ui-gallery-carousel-duration-slow-embla-settling")
                                     .into_element(cx);
-                            let selected_1 = shadcn::Checkbox::new(duration_slow_selected_1.clone())
-                                .a11y_label("selectedIndexIs1")
-                                .disabled(true)
-                                .test_id("ui-gallery-carousel-duration-slow-selected-1")
-                                .into_element(cx);
-                            let snap_large = shadcn::Checkbox::new(duration_slow_selected_snap_large.clone())
-                                .a11y_label("selectedSnapIsLarge")
-                                .disabled(true)
-                                .test_id("ui-gallery-carousel-duration-slow-selected-snap-large")
-                                .into_element(cx);
+                            let selected_1 =
+                                shadcn::Checkbox::new(duration_slow_selected_1.clone())
+                                    .a11y_label("selectedIndexIs1")
+                                    .disabled(true)
+                                    .test_id("ui-gallery-carousel-duration-slow-selected-1")
+                                    .into_element(cx);
+                            let snap_large =
+                                shadcn::Checkbox::new(duration_slow_selected_snap_large.clone())
+                                    .a11y_label("selectedSnapIsLarge")
+                                    .disabled(true)
+                                    .test_id(
+                                        "ui-gallery-carousel-duration-slow-selected-snap-large",
+                                    )
+                                    .into_element(cx);
                             let settling = shadcn::Checkbox::new(duration_slow_settling.clone())
                                 .a11y_label("settling")
                                 .disabled(true)
@@ -679,7 +779,10 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
                 FlexProps {
                     layout: decl_style::layout_style(
                         &theme,
-                        LayoutRefinement::default().w_full().max_w(max_w_xs).overflow_visible(),
+                        LayoutRefinement::default()
+                            .w_full()
+                            .max_w(max_w_xs)
+                            .overflow_visible(),
                     ),
                     direction: fret_core::Axis::Vertical,
                     justify: MainAlign::Start,

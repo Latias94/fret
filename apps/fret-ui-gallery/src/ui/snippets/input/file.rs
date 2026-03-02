@@ -48,4 +48,3 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>, file_value: Model<Strin
         .test_id("ui-gallery-input-file")
 }
 // endregion: example
-

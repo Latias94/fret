@@ -26,4 +26,3 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>, disabled: Model<bool>) 
     .test_id("ui-gallery-checkbox-disabled-field")
 }
 // endregion: example
-
