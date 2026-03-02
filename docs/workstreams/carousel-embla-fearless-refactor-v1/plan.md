@@ -50,6 +50,15 @@ Focus areas:
 - Expandable demo: avoid unexpected text wrapping (usually missing `min-w-0` / `flex` constraints).
 - Vertical orientation demo: verify track/item constraints match upstream intent.
 
+Status:
+
+- Done (2026-03-02): align `basis-full` sizing + demo constraints so Expandable header no longer
+  wraps and the Vertical demo matches the docs intent.
+  - Evidence: `ecosystem/fret-ui-shadcn/src/carousel.rs`, `apps/fret-ui-gallery/src/ui/snippets/carousel/*.rs`
+  - Gates:
+    - `tools/diag-scripts/ui-gallery/carousel/ui-gallery-carousel-expandable-screenshot.json`
+    - `tools/diag-scripts/ui-gallery/carousel/ui-gallery-carousel-orientation-vertical-screenshot.json`
+
 Exit criteria:
 
 - UI gallery matches shadcn docs for Expandable + Vertical demos.

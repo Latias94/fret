@@ -283,6 +283,13 @@ impl ScriptV2Builder {
         })
     }
 
+    pub fn pointer_cancel(self) -> Self {
+        self.push(UiActionStepV2::PointerCancel {
+            window: None,
+            pointer_kind: None,
+        })
+    }
+
     pub fn click_stable(self, target: UiSelectorV1) -> Self {
         self.push(UiActionStepV2::ClickStable {
             window: None,

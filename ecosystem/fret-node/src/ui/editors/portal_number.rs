@@ -208,13 +208,14 @@ impl PortalNumberEditor {
             .ok()
             .flatten();
 
-        let max_w = (layout.node_window.size.width.0 - 2.0 * style.node_padding)
+        let max_w = (layout.node_window.size.width.0 - 2.0 * style.geometry.node_padding)
             .max(80.0)
             .min(ui.max_width);
 
-        let inset_left = layout.node_window.origin.x.0 + style.node_padding;
-        let inset_top =
-            layout.node_window.origin.y.0 + style.node_header_height + style.node_padding;
+        let inset_left = layout.node_window.origin.x.0 + style.geometry.node_padding;
+        let inset_top = layout.node_window.origin.y.0
+            + style.geometry.node_header_height
+            + style.geometry.node_padding;
 
         let mut column = ColumnProps::default();
         column.gap = Px(ui.gap).into();

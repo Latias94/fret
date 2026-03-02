@@ -202,8 +202,8 @@ fn capture_step_marker_axes(place_dx_zero: bool) -> (Point, Point, Point, Point,
     let (mut graph_value, a, _a_in, a_out, b, b_in) = make_test_graph_two_nodes_with_ports();
 
     let mut style = NodeGraphStyle::default();
-    style.node_width = 200.0;
-    style.pin_radius = 6.0;
+    style.geometry.node_width = 200.0;
+    style.geometry.pin_radius = 6.0;
 
     if let Some(node) = graph_value.nodes.get_mut(&a) {
         node.pos.x = 100.0;

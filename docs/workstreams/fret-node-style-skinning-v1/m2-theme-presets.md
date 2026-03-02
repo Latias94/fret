@@ -55,8 +55,8 @@ Add kit-only helpers (headless-safe, but UI-only code behind `fret-ui`):
 
 - `NodeGraphSkinPreset::{WorkflowClean, SchematicContrast, GraphDark}`
 - `NodeGraphSkin::from_theme(theme_snapshot, preset)`
-- (Optional) `NodeGraphStyle::from_theme(...).with_xyflow_default_node_style()` as a compatibility
-  knob, but do not make XyFlow defaults the primary path.
+- (Optional) `NodeGraphStyle::from_theme(...).with_compact_node_style()` as a compatibility knob,
+  but do not make upstream defaults the primary path.
 
 Contract: presets must be **pure functions** of `ThemeSnapshot` + optional tuning knobs.
 

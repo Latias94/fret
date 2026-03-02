@@ -12,8 +12,8 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
     ) -> bool {
         let snapshot = self.sync_view_state(host);
 
-        let mut target_min_zoom = self.style.min_zoom;
-        let mut target_max_zoom = self.style.max_zoom;
+        let mut target_min_zoom = self.style.geometry.min_zoom;
+        let mut target_max_zoom = self.style.geometry.max_zoom;
         if let Some(options) = options {
             if let Some(min) = options.min_zoom {
                 if min.is_finite() && min > 0.0 {
@@ -32,8 +32,8 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
             || target_max_zoom <= 0.0
             || target_min_zoom > target_max_zoom
         {
-            target_min_zoom = self.style.min_zoom;
-            target_max_zoom = self.style.max_zoom;
+            target_min_zoom = self.style.geometry.min_zoom;
+            target_max_zoom = self.style.geometry.max_zoom;
         }
 
         let zoom = if zoom.is_finite() && zoom > 0.0 {
@@ -119,7 +119,8 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                     f(s);
 
                     let zoom = if s.zoom.is_finite() && s.zoom > 0.0 {
-                        s.zoom.clamp(style.min_zoom, style.max_zoom)
+                        s.zoom
+                            .clamp(style.geometry.min_zoom, style.geometry.max_zoom)
                     } else {
                         1.0
                     };
@@ -135,7 +136,8 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                 f(s);
 
                 let zoom = if s.zoom.is_finite() && s.zoom > 0.0 {
-                    s.zoom.clamp(style.min_zoom, style.max_zoom)
+                    s.zoom
+                        .clamp(style.geometry.min_zoom, style.geometry.max_zoom)
                 } else {
                     1.0
                 };

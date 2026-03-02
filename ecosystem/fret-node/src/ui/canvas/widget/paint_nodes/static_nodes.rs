@@ -58,29 +58,51 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
             ))
         }
 
-        let mut node_text_style = self.style.context_menu_text_style.clone();
+        let mut node_text_style = self.style.geometry.context_menu_text_style.clone();
         node_text_style.size = Px(node_text_style.size.0 / zoom);
         if let Some(lh) = node_text_style.line_height.as_mut() {
             lh.0 /= zoom;
         }
 
-        let corner = Px(self.style.node_corner_radius / zoom);
-        let title_pad = self.style.node_padding / zoom;
-        let title_h = self.style.node_header_height / zoom;
+        let corner = Px(self.style.paint.node_corner_radius / zoom);
+        let title_pad = self.style.geometry.node_padding / zoom;
+        let title_h = self.style.geometry.node_header_height / zoom;
 
-        for (_node, rect, is_selected, title, body, pin_rows, _resize_handles, hint) in
-            &render.nodes
+        for (node, rect, is_selected, title, body, pin_rows, _resize_handles, hint) in &render.nodes
         {
             let rect = *rect;
-            let background = hint.background.unwrap_or(self.style.node_background);
+            let background = hint.background.unwrap_or(self.style.paint.node_background);
             let border = if *is_selected {
                 hint.border_selected
                     .or(hint.border)
-                    .unwrap_or(self.style.node_border_selected)
+                    .unwrap_or(self.style.paint.node_border_selected)
             } else {
-                hint.border.unwrap_or(self.style.node_border)
+                hint.border.unwrap_or(self.style.paint.node_border)
             };
             let border_w = Px(1.0 / zoom);
+
+            let paint_override = self
+                .paint_overrides
+                .as_ref()
+                .and_then(|o| o.node_paint_override(*node));
+
+            let body_background: fret_core::scene::PaintBindingV1 = paint_override
+                .as_ref()
+                .and_then(|o| o.body_background)
+                .unwrap_or_else(|| fret_core::Paint::Solid(background).into());
+
+            let header_background: Option<fret_core::scene::PaintBindingV1> = paint_override
+                .as_ref()
+                .and_then(|o| o.header_background)
+                .or_else(|| {
+                    hint.header_background
+                        .map(|c| fret_core::Paint::Solid(c).into())
+                });
+
+            let border_paint: fret_core::scene::PaintBindingV1 = paint_override
+                .as_ref()
+                .and_then(|o| o.border_paint)
+                .unwrap_or_else(|| fret_core::Paint::Solid(border).into());
 
             let shadow = hint.shadow;
             if let Some(shadow) = shadow
@@ -98,7 +120,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
             scene.push(SceneOp::Quad {
                 order: DrawOrder(3),
                 rect,
-                background: fret_core::Paint::Solid(background).into(),
+                background: body_background,
 
                 border: Edges::all(Px(0.0)),
                 border_paint: fret_core::Paint::TRANSPARENT.into(),
@@ -106,14 +128,14 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                 corner_radii: Corners::all(corner),
             });
 
-            if let Some(color) = hint.header_background {
+            if let Some(paint) = header_background {
                 scene.push(SceneOp::Quad {
                     order: DrawOrder(3),
                     rect: Rect::new(
                         rect.origin,
                         Size::new(rect.size.width, Px(title_h.min(rect.size.height.0))),
                     ),
-                    background: fret_core::Paint::Solid(color).into(),
+                    background: paint,
 
                     border: Edges::all(Px(0.0)),
                     border_paint: fret_core::Paint::TRANSPARENT.into(),
@@ -133,7 +155,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                 background: fret_core::Paint::TRANSPARENT.into(),
 
                 border: Edges::all(border_w),
-                border_paint: fret_core::Paint::Solid(border).into(),
+                border_paint,
 
                 corner_radii: Corners::all(corner),
             });
@@ -165,7 +187,10 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                     order: DrawOrder(4),
                     origin: Point::new(text_x, text_y),
                     text: blob,
-                    paint: (hint.title_text.unwrap_or(self.style.context_menu_text)).into(),
+                    paint: (hint
+                        .title_text
+                        .unwrap_or(self.style.paint.context_menu_text))
+                    .into(),
                     outline: None,
                     shadow: None,
                 });
@@ -176,10 +201,10 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
             {
                 let pin_rows = (*pin_rows).max(0) as f32;
                 let body_top = rect.origin.y.0
-                    + (self.style.node_header_height
-                        + self.style.node_padding
-                        + pin_rows * self.style.pin_row_height
-                        + self.style.node_padding)
+                    + (self.style.geometry.node_header_height
+                        + self.style.geometry.node_padding
+                        + pin_rows * self.style.geometry.pin_row_height
+                        + self.style.geometry.node_padding)
                         / zoom;
 
                 let max_w = (rect.size.width.0 - 2.0 * title_pad).max(0.0);
@@ -203,14 +228,14 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                     order: DrawOrder(4),
                     origin: Point::new(text_x, Px(inner_y)),
                     text: blob,
-                    paint: (self.style.context_menu_text).into(),
+                    paint: (self.style.paint.context_menu_text).into(),
                     outline: None,
                     shadow: None,
                 });
             }
         }
 
-        let pin_r = self.style.pin_radius / zoom;
+        let pin_r = self.style.geometry.pin_radius / zoom;
         let pin_gap = 8.0 / zoom;
 
         for (port_id, info) in &render.port_labels {
@@ -241,7 +266,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                 order: DrawOrder(4),
                 origin: Point::new(x, y),
                 text: blob,
-                paint: (self.style.context_menu_text).into(),
+                paint: (self.style.paint.context_menu_text).into(),
                 outline: None,
                 shadow: None,
             });

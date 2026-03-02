@@ -235,4 +235,43 @@ mod tests {
         assert!(fast.location() > 0.0);
         assert!(slow.location() > 0.0);
     }
+
+    #[test]
+    fn embla_default_params_settle_and_decay_velocity() {
+        // Embla defaults (as used by the engine): duration=25, friction=0.68.
+        let mut body = ScrollBody::new(0.0, 25.0, 0.68);
+        body.set_target(100.0);
+
+        let mut max_abs_vel = 0.0f32;
+        for _ in 0..120 {
+            body.seek();
+            max_abs_vel = max_abs_vel.max(body.snapshot().velocity.abs());
+        }
+
+        let snap = body.snapshot();
+        assert!(snap.location.is_finite());
+        assert!(snap.velocity.is_finite());
+        assert!(max_abs_vel > 0.0);
+        assert!(snap.velocity.abs() < 0.001, "expected velocity to decay");
+        assert!((snap.target - snap.location).abs() < 0.01);
+        assert!(body.settled());
+    }
+
+    #[test]
+    fn add_loop_distance_preserves_velocity() {
+        let mut body = ScrollBody::new(0.0, 25.0, 0.68);
+        body.set_target(100.0);
+        body.seek();
+        let before = body.snapshot();
+
+        body.add_loop_distance(-500.0);
+        let after = body.snapshot();
+
+        assert!((before.velocity - after.velocity).abs() <= 0.0001);
+        assert!((before.duration - after.duration).abs() <= 0.0001);
+        assert!(
+            (after.target - after.location).abs() - (before.target - before.location).abs()
+                <= 0.0001
+        );
+    }
 }

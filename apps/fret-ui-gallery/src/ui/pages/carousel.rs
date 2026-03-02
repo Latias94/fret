@@ -7,6 +7,8 @@ pub(super) fn preview_carousel(cx: &mut ElementContext<'_, App>) -> Vec<AnyEleme
     cx.keyed("ui_gallery.carousel_page", |cx| {
         let demo = snippets::demo::render(cx);
         let loop_carousel = snippets::loop_carousel::render(cx);
+        let loop_downgrade_cannot_loop = snippets::loop_downgrade_cannot_loop::render(cx);
+        let focus = snippets::focus_watch::render(cx);
         let basic = snippets::basic::render(cx);
         let parts = snippets::parts::render(cx);
         let sizes = snippets::sizes::render(cx);
@@ -34,18 +36,33 @@ pub(super) fn preview_carousel(cx: &mut ElementContext<'_, App>) -> Vec<AnyEleme
                     .description("A carousel with 5 items and previous/next buttons.")
                     .max_w(Px(760.0))
                     .test_id_prefix("ui-gallery-carousel-demo")
-                    .code_rust_from_file_region(
-                        include_str!("../snippets/carousel/demo.rs"),
-                        "example",
-                    ),
+                    .code_rust_from_file_region(include_str!("../snippets/carousel/demo.rs"), "example"),
                 DocSection::new("Loop", loop_carousel)
-                    .description(
-                        "Seamless looping (`loop=true`) using the Embla-style headless engine.",
-                    )
+                    .description("Seamless looping (`loop=true`) using the Embla-style headless engine.")
                     .max_w(Px(760.0))
                     .test_id_prefix("ui-gallery-carousel-loop")
                     .code_rust_from_file_region(
                         include_str!("../snippets/carousel/loop_carousel.rs"),
+                        "example",
+                    ),
+                DocSection::new("Loop downgrade (cannotLoop)", loop_downgrade_cannot_loop)
+                    .description(
+                        "Requested `loop=true` but the slide set cannot loop; Embla downgrades to non-loop behavior.",
+                    )
+                    .max_w(Px(760.0))
+                    .test_id_prefix("ui-gallery-carousel-loop-downgrade-cannot-loop")
+                    .code_rust_from_file_region(
+                        include_str!("../snippets/carousel/loop_downgrade_cannot_loop.rs"),
+                        "example",
+                    ),
+                DocSection::new("Focus", focus)
+                    .description(
+                        "`watch_focus=true`: Tab into an offscreen slide and scroll it into view (Embla engine enabled).",
+                    )
+                    .max_w(Px(760.0))
+                    .test_id_prefix("ui-gallery-carousel-focus")
+                    .code_rust_from_file_region(
+                        include_str!("../snippets/carousel/focus_watch.rs"),
                         "example",
                     ),
                 DocSection::new("Basic", basic)
@@ -73,9 +90,7 @@ pub(super) fn preview_carousel(cx: &mut ElementContext<'_, App>) -> Vec<AnyEleme
                         "example",
                     ),
                 DocSection::new("Spacing", spacing)
-                    .description(
-                        "Tighter track negative margin + item start padding (shadcn `-ml-1` / `pl-1`).",
-                    )
+                    .description("Tighter track negative margin + item start padding (shadcn `-ml-1` / `pl-1`).")
                     .max_w(Px(760.0))
                     .test_id_prefix("ui-gallery-carousel-spacing")
                     .code_rust_from_file_region(

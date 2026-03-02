@@ -128,8 +128,8 @@ fn extract_edge_label_ops(scene: &Scene, style: &NodeGraphStyle) -> Vec<(Rect, P
         if order != fret_core::DrawOrder(2) {
             continue;
         }
-        if background.paint != fret_core::Paint::Solid(style.edge_label_background)
-            || border_paint.paint != fret_core::Paint::Solid(style.edge_label_border)
+        if background.paint != fret_core::Paint::Solid(style.paint.edge_label_background)
+            || border_paint.paint != fret_core::Paint::Solid(style.paint.edge_label_border)
         {
             continue;
         }
@@ -232,7 +232,7 @@ fn capture_edge_label_for_bounds(bounds: Rect) -> (Rect, Point, usize) {
     let base_mid = Point::new(Px(0.5 * (from.x.0 + to.x.0)), Px(0.5 * (from.y.0 + to.y.0)));
     let d = Point::new(Px(to.x.0 - from.x.0), Px(to.y.0 - from.y.0));
     let normal = crate::ui::canvas::route_math::normal_from_tangent(d);
-    let offset = canvas.style.edge_label_offset;
+    let offset = canvas.style.paint.edge_label_offset;
     let base_anchor = Point::new(
         Px(base_mid.x.0 + normal.x.0 * offset),
         Px(base_mid.y.0 + normal.y.0 * offset),
