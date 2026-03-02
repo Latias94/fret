@@ -1,9 +1,30 @@
 use super::*;
 
+fn dock_drag_active(app: &App) -> bool {
+    app.drag(fret_core::PointerId(0)).is_some_and(|d| {
+        (d.kind == fret_runtime::DRAG_KIND_DOCK_PANEL || d.kind == fret_runtime::DRAG_KIND_DOCK_TABS)
+            && d.dragging
+    })
+}
+
+fn seed_pointer_session_position_from_explicit_cursor_override(
+    active: &ActiveScript,
+    window: AppWindowId,
+) -> Option<Point> {
+    let last = active.last_explicit_cursor_override_pos?;
+    match last.target {
+        CursorOverrideTarget::WindowClientLogical(w) if w == window => {
+            Some(Point::new(Px(last.x_px), Px(last.y_px)))
+        }
+        _ => None,
+    }
+}
+
 pub(super) fn handle_pointer_down_step(
     svc: &mut UiDiagnosticsService,
     window: AppWindowId,
     window_bounds: Rect,
+    anchor_window: AppWindowId,
     step_index: usize,
     step: UiActionStepV2,
     element_runtime: Option<&ElementRuntime>,
@@ -41,7 +62,9 @@ pub(super) fn handle_pointer_down_step(
     }
 
     if !*stop_script {
-        if let Some(target_window) = svc.resolve_window_target(window, target_window.as_ref()) {
+        if let Some(target_window) =
+            svc.resolve_window_target_for_active_step(window, anchor_window, target_window.as_ref())
+        {
             if target_window != window {
                 *handoff_to = Some(target_window);
                 output
@@ -180,6 +203,7 @@ pub(super) fn handle_pointer_move_step(
     svc: &mut UiDiagnosticsService,
     app: &App,
     window: AppWindowId,
+    anchor_window: AppWindowId,
     step_index: usize,
     step: UiActionStepV2,
     active: &mut ActiveScript,
@@ -190,7 +214,7 @@ pub(super) fn handle_pointer_move_step(
     failure_reason: &mut Option<String>,
 ) -> bool {
     let UiActionStepV2::PointerMove {
-        window: target_window,
+        window: target_window_spec,
         pointer_kind,
         delta_x,
         delta_y,
@@ -205,41 +229,80 @@ pub(super) fn handle_pointer_move_step(
     output.request_redraw = true;
 
     if let Some(mut session) = active.pointer_session.clone() {
-        if let Some(target_window) = svc.resolve_window_target(window, target_window.as_ref()) {
-            if target_window != window {
-                if target_window == session.window {
-                    *handoff_to = Some(target_window);
-                    output
-                        .effects
-                        .push(Effect::RequestAnimationFrame(target_window));
-                    output.request_redraw = true;
-                } else {
-                    // Pointer sessions are window-local. If the script resolves a window target
-                    // that doesn't match the active pointer session, prefer continuing the session
-                    // in its owning window rather than failing the entire run. This makes
-                    // `last_seen`-targeted scripts more resilient under multi-window
-                    // occlusion/migration.
-                    push_script_event_log(
-                        active,
-                        &svc.cfg,
-                        UiScriptEventLogEntryV1 {
-                            unix_ms: unix_ms_now(),
-                            kind: "diag.pointer_move_window_redirect".to_string(),
-                            step_index: Some(step_index as u32),
-                            note: Some(format!(
-                                "pointer_move window mismatch: current={} target={} session={}; redirecting to session window",
-                                window.data().as_ffi(),
-                                target_window.data().as_ffi(),
-                                session.window.data().as_ffi(),
-                            )),
-                            bundle_dir: None,
-                            window: Some(window.data().as_ffi()),
-                            tick_id: Some(app.tick_id().0),
-                            frame_id: Some(app.frame_id().0),
-                            window_snapshot_seq: None,
-                        },
-                    );
-                    if session.window != window {
+        let allow_cross_window_migration = dock_drag_active(app);
+        let resolved_target_window = svc.resolve_window_target_for_active_step(
+            window,
+            anchor_window,
+            target_window_spec.as_ref(),
+        );
+
+        match resolved_target_window {
+            Some(target_window) => {
+                if target_window != window {
+                    if allow_cross_window_migration && target_window_spec.is_some() {
+                        *handoff_to = Some(target_window);
+                        output
+                            .effects
+                            .push(Effect::RequestAnimationFrame(target_window));
+                        output.request_redraw = true;
+                    } else if target_window == session.window {
+                        *handoff_to = Some(target_window);
+                        output
+                            .effects
+                            .push(Effect::RequestAnimationFrame(target_window));
+                        output.request_redraw = true;
+                    } else {
+                        // Pointer sessions are window-local by default. If the script resolves a
+                        // window target that doesn't match the active session, prefer continuing
+                        // the session in its owning window rather than failing the entire run.
+                        push_script_event_log(
+                            active,
+                            &svc.cfg,
+                            UiScriptEventLogEntryV1 {
+                                unix_ms: unix_ms_now(),
+                                kind: "diag.pointer_move_window_redirect".to_string(),
+                                step_index: Some(step_index as u32),
+                                note: Some(format!(
+                                    "pointer_move window mismatch: current={} target={} session={}; redirecting to session window",
+                                    window.data().as_ffi(),
+                                    target_window.data().as_ffi(),
+                                    session.window.data().as_ffi(),
+                                )),
+                                bundle_dir: None,
+                                window: Some(window.data().as_ffi()),
+                                tick_id: Some(app.tick_id().0),
+                                frame_id: Some(app.frame_id().0),
+                                window_snapshot_seq: None,
+                            },
+                        );
+                        if session.window != window {
+                            *handoff_to = Some(session.window);
+                            output
+                                .effects
+                                .push(Effect::RequestAnimationFrame(session.window));
+                            output.request_redraw = true;
+                        }
+                    }
+                } else if session.window != window {
+                    // We are already in the script-targeted window, but the pointer session still
+                    // belongs to a different window.
+                    if allow_cross_window_migration && target_window_spec.is_some() {
+                        if let Some(seed) =
+                            seed_pointer_session_position_from_explicit_cursor_override(active, window)
+                        {
+                            session.window = window;
+                            session.position = seed;
+                            active.pointer_session = Some(session.clone());
+                        } else {
+                            *force_dump_label = Some(format!(
+                                "script-step-{step_index:04}-pointer_move-missing-cursor-seed"
+                            ));
+                            *stop_script = true;
+                            *failure_reason =
+                                Some("pointer_session_missing_cursor_seed".to_string());
+                            output.request_redraw = true;
+                        }
+                    } else {
                         *handoff_to = Some(session.window);
                         output
                             .effects
@@ -248,20 +311,23 @@ pub(super) fn handle_pointer_move_step(
                     }
                 }
             }
-        } else if target_window.is_some() {
-            *force_dump_label = Some(format!(
-                "script-step-{step_index:04}-pointer_move-window-not-found"
-            ));
-            *stop_script = true;
-            *failure_reason = Some("window_target_unresolved".to_string());
-            output.request_redraw = true;
-        } else if session.window != window {
-            // The script migrated away from the window that owns the pointer session.
-            *handoff_to = Some(session.window);
-            output
-                .effects
-                .push(Effect::RequestAnimationFrame(session.window));
-            output.request_redraw = true;
+            None => {
+                if target_window_spec.is_some() {
+                    *force_dump_label = Some(format!(
+                        "script-step-{step_index:04}-pointer_move-window-not-found"
+                    ));
+                    *stop_script = true;
+                    *failure_reason = Some("window_target_unresolved".to_string());
+                    output.request_redraw = true;
+                } else if session.window != window {
+                    // The script migrated away from the window that owns the pointer session.
+                    *handoff_to = Some(session.window);
+                    output
+                        .effects
+                        .push(Effect::RequestAnimationFrame(session.window));
+                    output.request_redraw = true;
+                }
+            }
         }
 
         if *stop_script {
@@ -349,12 +415,21 @@ pub(super) fn handle_pointer_move_step(
 
                 session.position = position;
                 active.pointer_session = Some(session);
-                let _ = write_cursor_override_window_client_logical(
-                    &svc.cfg.out_dir,
-                    window,
-                    position.x.0,
-                    position.y.0,
-                );
+                let preserve_explicit_cursor_override = active
+                    .last_explicit_cursor_override
+                    .is_some_and(|t| match t {
+                        CursorOverrideTarget::ScreenPhysical => true,
+                        CursorOverrideTarget::WindowClientPhysical(w)
+                        | CursorOverrideTarget::WindowClientLogical(w) => w != window,
+                    });
+                if !preserve_explicit_cursor_override {
+                    let _ = write_cursor_override_window_client_logical(
+                        &svc.cfg.out_dir,
+                        window,
+                        position.x.0,
+                        position.y.0,
+                    );
+                }
 
                 state.frame = state.frame.saturating_add(1);
                 active.v2_step_state = Some(V2StepState::PointerMove(state));
@@ -363,12 +438,21 @@ pub(super) fn handle_pointer_move_step(
             } else {
                 session.position = state.end;
                 active.pointer_session = Some(session);
-                let _ = write_cursor_override_window_client_logical(
-                    &svc.cfg.out_dir,
-                    window,
-                    state.end.x.0,
-                    state.end.y.0,
-                );
+                let preserve_explicit_cursor_override = active
+                    .last_explicit_cursor_override
+                    .is_some_and(|t| match t {
+                        CursorOverrideTarget::ScreenPhysical => true,
+                        CursorOverrideTarget::WindowClientPhysical(w)
+                        | CursorOverrideTarget::WindowClientLogical(w) => w != window,
+                    });
+                if !preserve_explicit_cursor_override {
+                    let _ = write_cursor_override_window_client_logical(
+                        &svc.cfg.out_dir,
+                        window,
+                        state.end.x.0,
+                        state.end.y.0,
+                    );
+                }
 
                 active.v2_step_state = None;
                 active.last_injected_step = Some(step_index.min(u32::MAX as usize) as u32);
@@ -396,6 +480,7 @@ pub(super) fn handle_pointer_up_step(
     svc: &mut UiDiagnosticsService,
     app: &App,
     window: AppWindowId,
+    anchor_window: AppWindowId,
     step_index: usize,
     step: UiActionStepV2,
     active: &mut ActiveScript,
@@ -406,7 +491,7 @@ pub(super) fn handle_pointer_up_step(
     failure_reason: &mut Option<String>,
 ) -> bool {
     let UiActionStepV2::PointerUp {
-        window: target_window,
+        window: target_window_spec,
         pointer_kind,
         button: want_button,
     } = step
@@ -418,38 +503,82 @@ pub(super) fn handle_pointer_up_step(
     active.screenshot_wait = None;
     output.request_redraw = true;
 
-    if let Some(session) = active.pointer_session.clone() {
-        if let Some(target_window) = svc.resolve_window_target(window, target_window.as_ref()) {
-            if target_window != window {
-                if target_window == session.window {
-                    *handoff_to = Some(target_window);
-                    output
-                        .effects
-                        .push(Effect::RequestAnimationFrame(target_window));
-                    output.request_redraw = true;
-                } else {
+    if let Some(mut session) = active.pointer_session.clone() {
+        let allow_cross_window_migration = dock_drag_active(app);
+        let resolved_target_window = svc.resolve_window_target_for_active_step(
+            window,
+            anchor_window,
+            target_window_spec.as_ref(),
+        );
+
+        match resolved_target_window {
+            Some(target_window) => {
+                if target_window != window {
+                    if allow_cross_window_migration && target_window_spec.is_some() {
+                        *handoff_to = Some(target_window);
+                        output
+                            .effects
+                            .push(Effect::RequestAnimationFrame(target_window));
+                        output.request_redraw = true;
+                    } else if target_window == session.window {
+                        *handoff_to = Some(target_window);
+                        output
+                            .effects
+                            .push(Effect::RequestAnimationFrame(target_window));
+                        output.request_redraw = true;
+                    } else {
+                        *force_dump_label = Some(format!(
+                            "script-step-{step_index:04}-pointer_up-window-mismatch"
+                        ));
+                        *stop_script = true;
+                        *failure_reason =
+                            Some("pointer_session_cross_window_unsupported".to_string());
+                        output.request_redraw = true;
+                    }
+                } else if session.window != window {
+                    if allow_cross_window_migration && target_window_spec.is_some() {
+                        if let Some(seed) =
+                            seed_pointer_session_position_from_explicit_cursor_override(active, window)
+                        {
+                            session.window = window;
+                            session.position = seed;
+                            active.pointer_session = Some(session.clone());
+                        } else {
+                            *force_dump_label = Some(format!(
+                                "script-step-{step_index:04}-pointer_up-missing-cursor-seed"
+                            ));
+                            *stop_script = true;
+                            *failure_reason =
+                                Some("pointer_session_missing_cursor_seed".to_string());
+                            output.request_redraw = true;
+                            active.v2_step_state = None;
+                        }
+                    } else {
+                        *handoff_to = Some(session.window);
+                        output
+                            .effects
+                            .push(Effect::RequestAnimationFrame(session.window));
+                        output.request_redraw = true;
+                    }
+                }
+            }
+            None => {
+                if target_window_spec.is_some() {
                     *force_dump_label = Some(format!(
-                        "script-step-{step_index:04}-pointer_up-window-mismatch"
+                        "script-step-{step_index:04}-pointer_up-window-not-found"
                     ));
                     *stop_script = true;
-                    *failure_reason = Some("pointer_session_cross_window_unsupported".to_string());
+                    *failure_reason = Some("window_target_unresolved".to_string());
+                    output.request_redraw = true;
+                } else if session.window != window {
+                    // The script migrated away from the window that owns the pointer session.
+                    *handoff_to = Some(session.window);
+                    output
+                        .effects
+                        .push(Effect::RequestAnimationFrame(session.window));
                     output.request_redraw = true;
                 }
             }
-        } else if target_window.is_some() {
-            *force_dump_label = Some(format!(
-                "script-step-{step_index:04}-pointer_up-window-not-found"
-            ));
-            *stop_script = true;
-            *failure_reason = Some("window_target_unresolved".to_string());
-            output.request_redraw = true;
-        } else if session.window != window {
-            // The script migrated away from the window that owns the pointer session.
-            *handoff_to = Some(session.window);
-            output
-                .effects
-                .push(Effect::RequestAnimationFrame(session.window));
-            output.request_redraw = true;
         }
 
         if *stop_script {
@@ -503,12 +632,21 @@ pub(super) fn handle_pointer_up_step(
                         kind: fret_core::InternalDragKind::Drop,
                         modifiers: session.modifiers,
                     }));
-                let _ = write_cursor_override_window_client_logical(
-                    &svc.cfg.out_dir,
-                    window,
-                    session.position.x.0,
-                    session.position.y.0,
-                );
+                let preserve_explicit_cursor_override = active
+                    .last_explicit_cursor_override
+                    .is_some_and(|t| match t {
+                        CursorOverrideTarget::ScreenPhysical => true,
+                        CursorOverrideTarget::WindowClientPhysical(w)
+                        | CursorOverrideTarget::WindowClientLogical(w) => w != window,
+                    });
+                if !preserve_explicit_cursor_override {
+                    let _ = write_cursor_override_window_client_logical(
+                        &svc.cfg.out_dir,
+                        window,
+                        session.position.x.0,
+                        session.position.y.0,
+                    );
+                }
                 let _ = write_mouse_buttons_override_all_windows_v1(
                     &svc.cfg.out_dir,
                     match session.button {
