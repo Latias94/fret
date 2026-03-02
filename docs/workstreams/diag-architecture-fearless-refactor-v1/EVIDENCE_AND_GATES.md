@@ -1,6 +1,6 @@
 # Diagnostics Architecture (Fearless Refactor v1) — Evidence and Gates
 
-Last updated: 2026-03-02
+Last updated: 2026-03-03
 
 This file defines what “done” means for this workstream beyond subjective UX.
 
@@ -35,6 +35,8 @@ Protocol (stable serde types):
 Tooling engine (CLI/GUI shared):
 
 - `crates/fret-diag/src/lib.rs`
+- Suite resolution seam: `crates/fret-diag/src/registry/suites.rs`
+- Builtin suite mapping: `crates/fret-diag/src/diag_suite.rs` (`resolve_builtin_suite_scripts`)
 - CLI wrapper: `apps/fretboard/src/cli.rs`
 
 WS transport:

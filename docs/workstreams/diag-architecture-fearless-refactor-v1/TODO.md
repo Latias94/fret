@@ -16,6 +16,7 @@ This TODO is organized by milestones (see `MILESTONES.md`). Keep tasks **small a
 - [x] Introduce `SuiteRegistry` (initial scaffolding) and migrate one command path (`diag list suites`).
 - [x] Introduce `CheckRegistry` scaffolding (seam only; no behavior change yet).
 - [x] Migrate `diag suite` promoted-suite resolution to `SuiteRegistry` (remove duplicate loading logic).
+- [x] Centralize builtin suite script resolution + env defaults in `resolve_builtin_suite_scripts` (reduce `diag_suite.rs` churn).
 - [ ] Split “artifact materialization + integrity” into one focused module boundary with stable APIs.
 - [ ] Remove any remaining “global state by convention” patterns in favor of explicit context objects.
 

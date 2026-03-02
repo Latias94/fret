@@ -215,6 +215,7 @@ Status (as of 2026-03-03):
   - `crates/fret-diag/src/registry/checks.rs`
   - `crates/fret-diag/src/diag_list.rs` now resolves suites via `SuiteRegistry`.
   - `crates/fret-diag/src/diag_suite.rs` now resolves promoted + suite-dir scripts via `SuiteResolver`.
+  - `crates/fret-diag/src/diag_suite.rs` centralizes builtin suite resolution + default env injection via `resolve_builtin_suite_scripts` (table-driven match).
 
 ## Plan (phased)
 
