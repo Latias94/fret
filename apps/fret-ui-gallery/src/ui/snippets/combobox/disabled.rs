@@ -37,12 +37,12 @@ fn ensure_models(
     (value, open, query)
 }
 
-fn base_items() -> Vec<shadcn::ComboboxOption> {
+fn base_items() -> Vec<shadcn::ComboboxItem> {
     vec![
-        shadcn::combobox_option("apple", "Apple"),
-        shadcn::combobox_option("banana", "Banana"),
-        shadcn::combobox_option("orange", "Orange"),
-        shadcn::combobox_option("disabled", "Disabled").disabled(true),
+        shadcn::ComboboxItem::new("apple", "Apple"),
+        shadcn::ComboboxItem::new("banana", "Banana"),
+        shadcn::ComboboxItem::new("orange", "Orange"),
+        shadcn::ComboboxItem::new("disabled", "Disabled").disabled(true),
     ]
 }
 
@@ -102,7 +102,7 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
         .query_model(query.clone())
         .test_id_prefix("ui-gallery-combobox-disabled")
         .trigger_test_id("ui-gallery-combobox-disabled-trigger")
-        .options(base_items())
+        .items(base_items())
         .disabled(true)
         .into_element(cx);
 

@@ -26,6 +26,7 @@ pub(crate) struct StatsCmdContext {
     pub check_stale_scene_eps: f32,
     pub check_idle_no_paint_min: Option<u64>,
     pub check_pixels_changed_test_id: Option<String>,
+    pub check_pixels_unchanged_test_id: Option<String>,
     pub check_semantics_changed_repainted: bool,
     pub dump_semantics_changed_repainted_json: bool,
     pub check_wheel_scroll_test_id: Option<String>,
@@ -62,6 +63,7 @@ pub(crate) fn cmd_stats(ctx: StatsCmdContext) -> Result<(), String> {
         check_stale_scene_eps,
         check_idle_no_paint_min,
         check_pixels_changed_test_id,
+        check_pixels_unchanged_test_id,
         check_semantics_changed_repainted,
         dump_semantics_changed_repainted_json,
         check_wheel_scroll_test_id,
@@ -279,6 +281,17 @@ pub(crate) fn cmd_stats(ctx: StatsCmdContext) -> Result<(), String> {
         let bundle_dir = resolve_bundle_root_dir(&bundle_path)?;
         let out_dir = bundle_dir.parent().unwrap_or_else(|| Path::new("."));
         stats::check_out_dir_for_pixels_changed(out_dir, test_id, warmup_frames)?;
+    }
+    if let Some(test_id) = check_pixels_unchanged_test_id.as_deref() {
+        ensure_check_supported_in_stats_mode(
+            derived_from_frames_index,
+            "check-pixels-unchanged",
+            &bundle_path,
+            warmup_frames,
+        )?;
+        let bundle_dir = resolve_bundle_root_dir(&bundle_path)?;
+        let out_dir = bundle_dir.parent().unwrap_or_else(|| Path::new("."));
+        stats::check_out_dir_for_pixels_unchanged(out_dir, test_id, warmup_frames)?;
     }
     if check_semantics_changed_repainted {
         ensure_check_supported_in_stats_mode(

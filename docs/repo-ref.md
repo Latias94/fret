@@ -40,6 +40,7 @@ When you need to cite or inspect dependency behavior:
 These directories may track `main`/`master`/`trunk`. When you cite behavior from them, also cite the commit SHA.
 As a baseline, the project tracks the following reference SHAs (local checkouts may include only a subset):
 
+- `repo-ref/ai-elements`: `10a5e652`
 - `repo-ref/aria-practices`: `84b921a0`
 - `repo-ref/cmdk`: `dd2250e`
 - `repo-ref/dear-imgui-rs`: `5768e5a`
@@ -69,6 +70,8 @@ If you want the two refs most frequently used by goldens + audits:
 - `python3 tools/fetch_repo_refs.py` (defaults to `ui` + `primitives`)
 - `python3 tools/fetch_repo_refs.py --ui-only`
 - `python3 tools/fetch_repo_refs.py --primitives-only`
+- `python3 tools/fetch_repo_refs.py --with-ai-elements`
+- `python3 tools/fetch_repo_refs.py --ai-elements-only`
 
 ## Optional checkouts (not always present)
 

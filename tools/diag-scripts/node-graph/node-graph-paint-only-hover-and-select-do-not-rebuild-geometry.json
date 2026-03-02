@@ -5,7 +5,7 @@
     "tags": ["node-graph", "declarative", "paint-only", "hover", "selection", "cache", "gate"],
     "required_capabilities": ["diag.script_v2"],
     "target_hints": [
-      "Run with `FRET_NODE_GRAPH_DECLARATIVE=paint` so the paint-only declarative surface is active.",
+      "Run the `node_graph_demo` binary (it defaults to the paint-only declarative surface).",
       "Uses the diagnostics-only normalize shortcut (Ctrl+4) to place a node under the canvas center.",
       "Asserts that hover/selection update visual state without rebuilding cached node/edge geometry render data."
     ]

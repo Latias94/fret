@@ -37,6 +37,8 @@ S3. Large graph viewport culling:
   - Cache entry counts remain bounded under a fixed scenario.
 - UX smoothness:
   - Continuous pan/zoom does not trigger “jank spikes” from avoidable recomputation.
+  - Drag preview keeps canvas chrome and portal overlays coupled (no “labels move but canvas lags”
+    due to paint-cache replay).
 
 Implementation note:
 
@@ -96,22 +98,22 @@ Deliverables:
   - returns `AnyElement`,
   - does not expose retained types in its public signature,
   - hosts the existing retained canvas/editor internally.
-- A demo A/B switch so we can iterate without destabilizing the default retained demo path.
+- Separate demo targets so we can iterate without forcing retained bridge on the default path.
 
 Done criteria:
 
-- `apps/fret-examples/src/node_graph_demo.rs` can run in:
-  - default retained mode (no env var),
-  - declarative root mode (compat retained) (`FRET_NODE_GRAPH_DECLARATIVE=1`),
-  - declarative root mode (paint-only skeleton) (`FRET_NODE_GRAPH_DECLARATIVE=paint`),
-  with the same baseline interaction gates (Escape cancel / pointer capture) remaining valid.
+- `apps/fret-examples/src/node_graph_demo.rs` runs as the declarative-first (paint-only) demo target.
+- `apps/fret-examples/src/node_graph_legacy_demo.rs` runs as the legacy retained-bridge demo target
+  (feature-gated via `node-graph-demos-legacy`).
+- Baseline interaction gates (Escape cancel / pointer capture) remain valid on the declarative demo.
 
 Evidence anchors (required):
 
 - Declarative compat surface entry:
   - `ecosystem/fret-node/src/ui/declarative/mod.rs` (`node_graph_surface_compat_retained`)
 - Demo wiring:
-  - `apps/fret-examples/src/node_graph_demo.rs` (`NodeGraphDemoDriver::new_from_env`, `render_root`)
+  - `apps/fret-examples/src/node_graph_demo.rs` (paint-only surface composition)
+  - `apps/fret-examples/src/node_graph_legacy_demo.rs` (legacy driver + compat retained wiring)
 
 Deliverables:
 
@@ -183,6 +185,8 @@ Initial paint-only interaction gates (v1 worktree):
   - `tools/diag-scripts/node-graph/node-graph-paint-only-marquee-pointer-cancel-does-not-commit.json`
 - Node drag preview does not rebuild geometry caches; commit rebuilds once:
   - `tools/diag-scripts/node-graph/node-graph-paint-only-node-drag-preview-and-commit.json`
+- Node drag preview screenshot repro (canvas vs portals coupling):
+  - `tools/diag-scripts/node-graph/node-graph-paint-only-node-drag-preview-screenshot.json`
 - Escape cancels node dragging without committing:
   - `tools/diag-scripts/node-graph/node-graph-paint-only-node-drag-escape-cancel-does-not-commit.json`
 - PointerCancel cancels node dragging without committing:

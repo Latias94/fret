@@ -708,6 +708,13 @@ impl<D: WinitAppDriver> WinitRunner<D> {
         let _ = window;
         self.left_mouse_down
     }
+
+    fn diag_pointer_input_isolation_active(&self) -> bool {
+        if !self.diag_isolate_pointer_input {
+            return false;
+        }
+        self.diag_cursor_screen_pos_override.is_some() || self.diag_mouse_buttons_override.is_some()
+    }
 }
 
 impl<D: WinitAppDriver> WinitRunner<D> {

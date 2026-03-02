@@ -346,7 +346,7 @@ pub(super) fn read_window_before_after_metas(
         where
             D: serde::Deserializer<'de>,
         {
-            deserializer.deserialize_map(DebugHitAndVlistVisitor {
+            deserializer.deserialize_any(DebugHitAndVlistVisitor {
                 hit: None,
                 vlist_offset: None,
             })
@@ -384,6 +384,20 @@ pub(super) fn read_window_before_after_metas(
             }
             Ok((self.hit, self.vlist_offset))
         }
+
+        fn visit_unit<E>(self) -> Result<Self::Value, E>
+        where
+            E: serde::de::Error,
+        {
+            Ok((None, None))
+        }
+
+        fn visit_none<E>(self) -> Result<Self::Value, E>
+        where
+            E: serde::de::Error,
+        {
+            Ok((None, None))
+        }
     }
 
     struct HitTestHitSeed;
@@ -395,7 +409,7 @@ pub(super) fn read_window_before_after_metas(
         where
             D: serde::Deserializer<'de>,
         {
-            deserializer.deserialize_map(HitTestHitVisitor { hit: None })
+            deserializer.deserialize_any(HitTestHitVisitor { hit: None })
         }
     }
 
@@ -422,6 +436,20 @@ pub(super) fn read_window_before_after_metas(
                 }
             }
             Ok(self.hit)
+        }
+
+        fn visit_unit<E>(self) -> Result<Option<u64>, E>
+        where
+            E: serde::de::Error,
+        {
+            Ok(None)
+        }
+
+        fn visit_none<E>(self) -> Result<Option<u64>, E>
+        where
+            E: serde::de::Error,
+        {
+            Ok(None)
         }
     }
 

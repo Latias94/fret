@@ -373,53 +373,6 @@
       "target_hints": []
     },
     {
-      "id": "cookbook-node-graph-theme-presets-screenshots",
-      "path": "tools/diag-scripts/cookbook/node-graph-theme-presets/node-graph-theme-presets-screenshots.json",
-      "required_capabilities": [
-        "diag.screenshot_png",
-        "diag.script_v2"
-      ],
-      "suite_memberships": [
-        "cookbook-node-graph-theme-presets"
-      ],
-      "tags": [
-        "cookbook",
-        "node_graph",
-        "theme_presets",
-        "screenshots",
-        "smoke"
-      ],
-      "target_hints": [
-        "Waits for node_graph.canvas to exist.",
-        "Cycles preset family (Ctrl+Shift+P) and captures 3 screenshots + bundle.",
-        "Optional: set FRET_NODE_GRAPH_DEMO_PRESET_JSON_PATH to load custom JSON presets."
-      ]
-    },
-    {
-      "id": "cookbook-node-graph-wire-paint-cookbook-screenshots",
-      "path": "tools/diag-scripts/cookbook/node-graph-wire-paint-cookbook/node-graph-wire-paint-cookbook-screenshots.json",
-      "required_capabilities": [
-        "diag.screenshot_png",
-        "diag.script_v2"
-      ],
-      "suite_memberships": [
-        "cookbook-node-graph-wire-paint-cookbook"
-      ],
-      "tags": [
-        "cookbook",
-        "node_graph",
-        "wire_paint",
-        "screenshots",
-        "smoke"
-      ],
-      "target_hints": [
-        "Waits for node_graph.canvas to exist.",
-        "Cycles preset family (Ctrl+Shift+P) and captures 3 screenshots + bundle.",
-        "Requires FRET_NODE_GRAPH_DEMO_WIRE_PAINT_COOKBOOK=1.",
-        "Optional: set FRET_NODE_GRAPH_DEMO_PRESET_JSON_PATH to load custom JSON presets."
-      ]
-    },
-    {
       "id": "cookbook-overlay-basics-dialog-close",
       "path": "tools/diag-scripts/cookbook/overlay-basics/cookbook-overlay-basics-dialog-close.json",
       "required_capabilities": [
@@ -658,8 +611,8 @@
       ],
       "target_hints": [
         "This script exercises an opt-in behavior: creating multiple DockFloating OS windows without merging the first one back.",
-        "It tears off two distinct tabs (left + right) from the main window, then drags them back one-by-one and asserts the dock graph returns to the canonical signature.",
-        "Note: cursor overrides are expressed in window-client logical pixels."
+        "It tears off two distinct tabs (left + right) from the main window, then drags them back one-by-one and asserts the dock graph is canonical, has no floatings, and still contains the baseline panels.",
+        "Note: cursor overrides are expressed in window-client physical pixels."
       ]
     },
     {
@@ -680,9 +633,9 @@
         "multiwindow"
       ],
       "target_hints": [
-        "This script exercises a cross-window tab drag: tear off a tab to create a floating OS window, overlap the windows, then drag the tab back into the main window.",
+        "This script exercises an ImGui-style continuous tab tear-off: start dragging a tab, allow tear-off to create a floating OS window, then route the same drag back into the main window without releasing.",
         "It relies on schema v2 window-targeted steps to migrate the active script across windows.",
-        "Note: cursor overrides are expressed in window-client logical pixels."
+        "Note: cursor overrides are expressed in window-client logical pixels (unless a step explicitly requests physical)."
       ]
     },
     {
@@ -969,6 +922,27 @@
       ]
     },
     {
+      "id": "docking-arbitration-demo-tab-bar-edge-autoscroll",
+      "path": "tools/diag-scripts/docking/arbitration/docking-arbitration-demo-tab-bar-edge-autoscroll.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "docking-arbitration"
+      ],
+      "tags": [
+        "autoscroll",
+        "docking",
+        "gate",
+        "overflow",
+        "tabbar"
+      ],
+      "target_hints": [
+        "Starts a tab drag on the first tab, then parks the pointer at the right edge of the active tab bar.",
+        "Gates that docking diagnostics report `tab_strip_active_visibility.scroll` increasing (edge auto-scroll)."
+      ]
+    },
+    {
       "id": "docking-demo-split-toggle-retarget-fixed-frame-delta",
       "path": "tools/diag-scripts/docking/demo/docking-demo-split-toggle-retarget-fixed-frame-delta.json",
       "required_capabilities": [],
@@ -1001,79 +975,62 @@
     {
       "id": "liquid-glass-custom-v3-steady",
       "path": "tools/diag-scripts/renderer/effects/liquid-glass-custom-v3-steady.json",
-      "required_capabilities": [
-        "diag.script_v2"
-      ],
+      "required_capabilities": [],
       "suite_memberships": [
         "perf-liquid-glass-custom-v3-steady"
       ],
-      "tags": [
-        "effects",
-        "gate",
-        "liquid_glass",
-        "perf"
-      ],
-      "target_hints": [
-        "Shows only the CustomV3 lens and captures a steady-state diagnostics bundle.",
-        "Intended as a perf regression baseline for CustomV3 raw+pyramid paths."
-      ]
-    },
-    {
-      "id": "liquid-glass-lens-custom-v3-corners-screenshot",
-      "path": "tools/diag-scripts/suites/liquid-glass-custom-v3/liquid-glass-lens-custom-v3-corners-screenshot.json",
-      "required_capabilities": [
-        "diag.script_v2"
-      ],
-      "suite_memberships": [
-        "liquid-glass-custom-v3"
-      ],
-      "tags": [
-        "effects",
-        "gate",
-        "liquid_glass"
-      ],
-      "target_hints": [
-        "Shows the CustomV3 lens corners without other effect variants.",
-        "Sets bevel sliders to deterministic values and captures a screenshot + diagnostics bundle."
-      ]
-    },
-    {
-      "id": "liquid-glass-lens-custom-v3-source-group-screenshot",
-      "path": "tools/diag-scripts/suites/liquid-glass-custom-v3/liquid-glass-lens-custom-v3-source-group-screenshot.json",
-      "required_capabilities": [
-        "diag.script_v2"
-      ],
-      "suite_memberships": [
-        "liquid-glass-custom-v3"
-      ],
-      "tags": [
-        "effects",
-        "gate",
-        "liquid_glass"
-      ],
-      "target_hints": [
-        "Enables the CustomV3 pair and BackdropSourceGroup toggles in the liquid glass demo.",
-        "Captures a screenshot and diagnostics bundle for ordering drift vs shared snapshot debugging."
-      ]
+      "tags": [],
+      "target_hints": []
     },
     {
       "id": "liquid-glass-lens-custom-v3-bevel-screenshot",
-      "path": "tools/diag-scripts/suites/liquid-glass-custom-v3/liquid-glass-lens-custom-v3-bevel-screenshot.json",
-      "required_capabilities": [
-        "diag.script_v2"
-      ],
+      "path": "tools/diag-scripts/renderer/effects/liquid-glass-lens-custom-v3-bevel-screenshot.json",
+      "required_capabilities": [],
       "suite_memberships": [
         "liquid-glass-custom-v3"
       ],
-      "tags": [
-        "effects",
-        "gate",
-        "liquid_glass"
+      "tags": [],
+      "target_hints": []
+    },
+    {
+      "id": "liquid-glass-lens-custom-v3-corners-screenshot",
+      "path": "tools/diag-scripts/renderer/effects/liquid-glass-lens-custom-v3-corners-screenshot.json",
+      "required_capabilities": [],
+      "suite_memberships": [
+        "liquid-glass-custom-v3"
       ],
-      "target_hints": [
-        "Shows the CustomV3 lens and opens the inspector.",
-        "Sets bevel sliders to deterministic values and captures a screenshot + diagnostics bundle."
-      ]
+      "tags": [],
+      "target_hints": []
+    },
+    {
+      "id": "liquid-glass-lens-custom-v3-source-group-degraded-screenshot",
+      "path": "tools/diag-scripts/renderer/effects/liquid-glass-lens-custom-v3-source-group-degraded-screenshot.json",
+      "required_capabilities": [],
+      "suite_memberships": [
+        "liquid-glass-custom-v3-degraded"
+      ],
+      "tags": [],
+      "target_hints": []
+    },
+    {
+      "id": "liquid-glass-lens-custom-v3-source-group-screenshot",
+      "path": "tools/diag-scripts/renderer/effects/liquid-glass-lens-custom-v3-source-group-screenshot.json",
+      "required_capabilities": [],
+      "suite_memberships": [
+        "liquid-glass-custom-v3"
+      ],
+      "tags": [],
+      "target_hints": []
+    },
+    {
+      "id": "liquid-glass-lens-custom-v3-sources-degraded-screenshot",
+      "path": "tools/diag-scripts/renderer/effects/liquid-glass-lens-custom-v3-sources-degraded-screenshot.json",
+      "required_capabilities": [],
+      "suite_memberships": [
+        "liquid-glass-custom-v3-sources-degraded"
+      ],
+      "tags": [],
+      "target_hints": []
     },
     {
       "id": "node-graph-demo-preset-families-paint-only",
@@ -1507,6 +1464,52 @@
       ]
     },
     {
+      "id": "node-graph-paint-only-paint-overrides-revision-does-not-rebuild-geometry",
+      "path": "tools/diag-scripts/node-graph/node-graph-paint-only-paint-overrides-revision-does-not-rebuild-geometry.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "fret-examples-node-graph-paint-only"
+      ],
+      "tags": [
+        "cache",
+        "declarative",
+        "gate",
+        "node-graph",
+        "overrides",
+        "paint-only",
+        "paint"
+      ],
+      "target_hints": [
+        "Run with `FRET_NODE_GRAPH_DECLARATIVE=paint` so the paint-only declarative surface is active.",
+        "Requires `FRET_DIAG=1` (Ctrl+6 shortcut).",
+        "Asserts that paint override revision bumps do not rebuild derived geometry or draw caches."
+      ]
+    },
+    {
+      "id": "node-graph-paint-only-paint-overrides-screenshot",
+      "path": "tools/diag-scripts/node-graph/node-graph-paint-only-paint-overrides-screenshot.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "suite_memberships": [],
+      "tags": [
+        "declarative",
+        "node-graph",
+        "overrides",
+        "paint-only",
+        "paint",
+        "screenshot"
+      ],
+      "target_hints": [
+        "Run with `FRET_NODE_GRAPH_DECLARATIVE=paint` so the paint-only declarative surface is active.",
+        "Requires `FRET_DIAG=1` (Ctrl+6 shortcut).",
+        "Requires `FRET_DIAG_GPU_SCREENSHOTS=1` to emit GPU screenshots."
+      ]
+    },
+    {
       "id": "tooling-suite-prelude-reset-diagnostics",
       "path": "tools/diag-scripts/_prelude/tooling-suite-prelude-reset-diagnostics.json",
       "required_capabilities": [],
@@ -1784,16 +1787,6 @@
       "target_hints": []
     },
     {
-      "id": "ui-gallery-carousel-expandable-fixed-frame-delta",
-      "path": "tools/diag-scripts/ui-gallery/carousel/ui-gallery-carousel-expandable-fixed-frame-delta.json",
-      "required_capabilities": [],
-      "suite_memberships": [
-        "ui-gallery-motion-pilot"
-      ],
-      "tags": [],
-      "target_hints": []
-    },
-    {
       "id": "ui-gallery-carousel-demo-inertia-pixels-changed",
       "path": "tools/diag-scripts/ui-gallery/carousel/ui-gallery-carousel-demo-inertia-pixels-changed.json",
       "required_capabilities": [
@@ -1861,6 +1854,16 @@
         "Embla engine is enabled by default (set FRET_DEBUG_CAROUSEL_EMBLA_ENGINE=0 to force-disable).",
         "Expected behavior: resizing during an Embla-driven settle does not panic and items remain visible."
       ]
+    },
+    {
+      "id": "ui-gallery-carousel-expandable-fixed-frame-delta",
+      "path": "tools/diag-scripts/ui-gallery/carousel/ui-gallery-carousel-expandable-fixed-frame-delta.json",
+      "required_capabilities": [],
+      "suite_memberships": [
+        "ui-gallery-motion-pilot"
+      ],
+      "tags": [],
+      "target_hints": []
     },
     {
       "id": "ui-gallery-carousel-focus-watch-tab-scrolls-gate",
@@ -1958,7 +1961,6 @@
         "diag.script_v2"
       ],
       "suite_memberships": [
-        "ui-gallery-scroll-extents-dom-parity",
         "ui-gallery-shadcn-conformance"
       ],
       "tags": [
@@ -2618,6 +2620,16 @@
       ],
       "suite_memberships": [
         "ui-gallery-combobox"
+      ],
+      "tags": [],
+      "target_hints": []
+    },
+    {
+      "id": "ui-gallery-context-menu-occlusion-wheel-pass-through",
+      "path": "tools/diag-scripts/ui-gallery/overlay/ui-gallery-context-menu-occlusion-wheel-pass-through.json",
+      "required_capabilities": [],
+      "suite_memberships": [
+        "ui-gallery-overlay-steady"
       ],
       "tags": [],
       "target_hints": []
@@ -3535,11 +3547,31 @@
       "target_hints": []
     },
     {
+      "id": "ui-gallery-modal-barrier-focus-restore",
+      "path": "tools/diag-scripts/ui-gallery/overlay/ui-gallery-modal-barrier-focus-restore.json",
+      "required_capabilities": [],
+      "suite_memberships": [
+        "ui-gallery-overlay-steady"
+      ],
+      "tags": [],
+      "target_hints": []
+    },
+    {
       "id": "ui-gallery-modal-barrier-underlay-block",
       "path": "tools/diag-scripts/ui-gallery/overlay/ui-gallery-modal-barrier-underlay-block.json",
       "required_capabilities": [],
       "suite_memberships": [
         "ui-gallery"
+      ],
+      "tags": [],
+      "target_hints": []
+    },
+    {
+      "id": "ui-gallery-modal-barrier-wheel-block",
+      "path": "tools/diag-scripts/ui-gallery/overlay/ui-gallery-modal-barrier-wheel-block.json",
+      "required_capabilities": [],
+      "suite_memberships": [
+        "ui-gallery-overlay-steady"
       ],
       "tags": [],
       "target_hints": []
@@ -3616,6 +3648,26 @@
         "ui_gallery"
       ],
       "target_hints": []
+    },
+    {
+      "id": "ui-gallery-overlay-pointer-move-steady",
+      "path": "tools/diag-scripts/ui-gallery/perf/ui-gallery-overlay-pointer-move-steady.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "perf-ui-gallery-steady"
+      ],
+      "tags": [
+        "overlay",
+        "perf",
+        "pointer_move",
+        "steady",
+        "ui_gallery"
+      ],
+      "target_hints": [
+        "Perf probe: pointer-move dispatch/hit-test under overlay stacks (dispatch snapshot cost is included in dispatch time)."
+      ]
     },
     {
       "id": "ui-gallery-overlay-torture",
@@ -3713,6 +3765,28 @@
         "ui-gallery-shadcn-conformance"
       ],
       "tags": [],
+      "target_hints": []
+    },
+    {
+      "id": "ui-gallery-popover-overlay-placement-after-code-tab-scroll-range",
+      "path": "tools/diag-scripts/ui-gallery/popover/ui-gallery-popover-overlay-placement-after-code-tab-scroll-range.json",
+      "required_capabilities": [
+        "diag.overlay_placement_trace",
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "ui-gallery-scroll-extents-dom-parity"
+      ],
+      "tags": [
+        "overlay",
+        "popover",
+        "regression",
+        "scroll",
+        "shadcn",
+        "tabs",
+        "ui_gallery"
+      ],
       "target_hints": []
     },
     {
@@ -4218,28 +4292,6 @@
       "target_hints": []
     },
     {
-      "id": "ui-gallery-tooltip-overlay-placement-after-code-tab-scroll-range",
-      "path": "tools/diag-scripts/ui-gallery/overlay/ui-gallery-tooltip-overlay-placement-after-code-tab-scroll-range.json",
-      "required_capabilities": [
-        "diag.overlay_placement_trace",
-        "diag.script_v2"
-      ],
-      "suite_memberships": [
-        "ui-gallery-scroll-extents-dom-parity",
-        "ui-gallery-shadcn-conformance"
-      ],
-      "tags": [
-        "overlay",
-        "regression",
-        "scroll",
-        "shadcn",
-        "tabs",
-        "tooltip",
-        "ui_gallery"
-      ],
-      "target_hints": []
-    },
-    {
       "id": "ui-gallery-tooltip-hovercard-scroll-clamp",
       "path": "tools/diag-scripts/ui-gallery/overlay/ui-gallery-tooltip-hovercard-scroll-clamp.json",
       "required_capabilities": [],
@@ -4259,6 +4311,27 @@
         "ui-gallery-shadcn-conformance"
       ],
       "tags": [],
+      "target_hints": []
+    },
+    {
+      "id": "ui-gallery-tooltip-overlay-placement-after-code-tab-scroll-range",
+      "path": "tools/diag-scripts/ui-gallery/overlay/ui-gallery-tooltip-overlay-placement-after-code-tab-scroll-range.json",
+      "required_capabilities": [
+        "diag.overlay_placement_trace",
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "ui-gallery-scroll-extents-dom-parity"
+      ],
+      "tags": [
+        "overlay",
+        "regression",
+        "scroll",
+        "shadcn",
+        "tabs",
+        "tooltip",
+        "ui_gallery"
+      ],
       "target_hints": []
     },
     {
@@ -4315,7 +4388,6 @@
         "diag.script_v2"
       ],
       "suite_memberships": [
-        "ui-gallery-scroll-extents-dom-parity",
         "ui-gallery-shadcn-conformance"
       ],
       "tags": [
@@ -4574,6 +4646,28 @@
         "Drags a tab from pane A toward the right edge of pane B.",
         "Waits for the right-edge drop preview indicator to appear.",
         "Captures a screenshot while the preview is visible (used to gate docking drop overlay tokens)."
+      ]
+    },
+    {
+      "id": "workspace-shell-demo-tab-drag-to-split-right-row-suppressed-smoke",
+      "path": "tools/diag-scripts/workspace/shell-demo/workspace-shell-demo-tab-drag-to-split-right-row-suppressed-smoke.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "diag-hardening-smoke-workspace"
+      ],
+      "tags": [
+        "drag_to_split",
+        "drop_preview",
+        "gate",
+        "smoke",
+        "tabstrip",
+        "workspace"
+      ],
+      "target_hints": [
+        "Drag a tab from pane A over pane B while staying in pane B's tab strip row.",
+        "Asserts the right-edge split preview does not activate until the pointer leaves the tab strip row."
       ]
     },
     {

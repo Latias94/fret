@@ -70,6 +70,7 @@ pub enum UiDebugInvalidationDetail {
     ScrollHandleLayout,
     ScrollHandleWindowUpdate,
     ScrollDeferredProbe,
+    ScrollExtentsObservationBudgetHit,
     ScrollHandleScrollToItemWindowUpdate,
     ScrollHandleViewportResizeWindowUpdate,
     ScrollHandleItemsRevisionWindowUpdate,
@@ -104,6 +105,7 @@ impl UiDebugInvalidationDetail {
             Self::ScrollHandleLayout => Some("scroll_handle_layout"),
             Self::ScrollHandleWindowUpdate => Some("scroll_handle_window_update"),
             Self::ScrollDeferredProbe => Some("scroll_deferred_probe"),
+            Self::ScrollExtentsObservationBudgetHit => Some("scroll_extents_observation_budget_hit"),
             Self::ScrollHandleScrollToItemWindowUpdate => {
                 Some("scroll_handle_scroll_to_item_window_update")
             }

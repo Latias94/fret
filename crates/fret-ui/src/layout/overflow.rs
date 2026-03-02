@@ -15,18 +15,28 @@ pub struct LayoutOverflowContext {
     ///
     /// When `None`, probe constraints default to `AvailableSpace::Definite(size.{width,height})`.
     pub probe_available_override: LayoutSize<Option<AvailableSpace>>,
+    /// Allow `Length::Auto` sizes to exceed the viewport-sized available budget.
+    ///
+    /// When `true` for an axis, clamp helpers must not treat `available` as a hard maximum for
+    /// `Auto` on that axis. This is required for DOM/GPUI-like overflow: children can be taller
+    /// than their viewport budget and still have that overflow observable in post-layout geometry.
+    ///
+    /// This is scoped via `LayoutCx` and must not affect paint-time clipping.
+    pub allow_overflow_on_auto: LayoutSize<bool>,
 }
 
 impl LayoutOverflowContext {
     pub const fn new(probe_available_override: LayoutSize<Option<AvailableSpace>>) -> Self {
         Self {
             probe_available_override,
+            allow_overflow_on_auto: LayoutSize::new(false, false),
         }
     }
 
     pub const fn default_for_layout() -> Self {
         Self {
             probe_available_override: LayoutSize::new(None, None),
+            allow_overflow_on_auto: LayoutSize::new(false, false),
         }
     }
 
@@ -70,6 +80,7 @@ mod tests {
     fn probe_constraints_apply_overrides_per_axis() {
         let ctx = LayoutOverflowContext {
             probe_available_override: LayoutSize::new(Some(AvailableSpace::MaxContent), None),
+            allow_overflow_on_auto: LayoutSize::new(false, false),
         };
         let c = ctx.probe_constraints_for_size(Size::new(Px(10.0), Px(20.0)));
         assert_eq!(c.available.width, AvailableSpace::MaxContent);

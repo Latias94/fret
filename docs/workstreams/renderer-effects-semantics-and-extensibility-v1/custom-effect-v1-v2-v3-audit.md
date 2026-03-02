@@ -109,8 +109,11 @@ V3 has explicit counters + plan visibility for:
 Triage hint codes (worst frame):
 
 - `renderer.custom_effect_v3_requested_but_skipped` (requested by effect chain, but no passes emitted)
+- `renderer.custom_effect_v2_user_image_incompatible_fallbacks` (CustomV2 bound fallback user image due to incompatible format)
+- `renderer.custom_effect_v3_user_image_incompatible_fallbacks` (CustomV3 bound fallback user images due to incompatible formats)
 - `renderer.custom_effect_v3_raw_aliased_to_src` (raw snapshot unavailable; `src_raw` aliases)
 - `renderer.custom_effect_v3_pyramid_degraded_to_one` (pyramid levels degraded under budget pressure)
+- `renderer.custom_effect_v3_pyramid_cache_miss_heavy` (pyramid requested/applied but cache reuse is poor in-frame)
 
 Interpretation note:
 
@@ -118,6 +121,13 @@ Interpretation note:
   degraded to 1 level, because we only charge/report pyramid bytes when `levels >= 2` (mip storage allocated).
   Use triage evidence fields like `custom_effect_chain_headroom_after_mask_bytes` together with
   `custom_effect_v3_pyramid_required_bytes_levels2_est` to make “why did it degrade?” explainable from a bundle.
+- `renderer.custom_effect_v3_pyramid_cache_miss_heavy` is an efficiency hint: it reports
+  `custom_effect_v3_pyramid_cache_hits/misses` (frame-local reuse) when misses dominate across multiple pyramid uses in
+  the worst frame.
+- `renderer.custom_effect_v2_user_image_incompatible_fallbacks` and
+  `renderer.custom_effect_v3_user_image_incompatible_fallbacks` are correctness hints: they indicate that at least one
+  CustomEffect user image input was provided but was non-filterable (or otherwise incompatible), so the renderer bound a
+  deterministic 1x1 transparent fallback instead.
 
 Anchors:
 
@@ -139,15 +149,76 @@ The `CustomV3` lens WGSL used by the liquid glass demo covers the core AndroidLi
 - Bevel lighting modulation (ported from AndroidLiquidGlass SDF shader)
 - Raw + pyramid sampling path (`src_raw` + `src_pyramid`) for multi-scale “frost”
 
+AndroidLiquidGlass reference anchors (for parity comparisons):
+
+- Rounded-rect refraction + dispersion: `AndroidLiquidGlass/backdrop/src/main/java/com/kyant/backdrop/Shaders.kt`
+  - `RoundedRectRefractionShaderString`
+  - `RoundedRectRefractionWithDispersionShaderString`
+- Lens wiring (uniform setup + negated amount): `AndroidLiquidGlass/backdrop/src/main/java/com/kyant/backdrop/effects/Lens.kt`
+- Bevel modulation reference (SDF shader): `AndroidLiquidGlass/catalog/src/main/java/com/kyant/backdrop/catalog/utils/SdfShader.kt`
+
+Parity notes (intentional / known drifts):
+
+- Dispersion sign: Android’s dispersion intensity uses the signed `(centered.x * centered.y) / (half.x * half.y)` term.
+  The demo WGSL matches this sign behavior (no `abs`), so dispersion direction flips across quadrants (authoring-only,
+  parity-oriented choice).
+- Corner radii: Android’s rounded-rect shader assumes a per-corner radii vector; the demo uses a uniform radius.
+  This avoids observable drift today, but we should keep the `radius_at(centered, radii)` helper correct for future
+  non-uniform radii authoring.
+- Sampling: Android uses `content.eval()` (hardware bilinear). Fret uses manual bilinear sampling on `textureLoad` so
+  CustomV3 can remain bounded and support non-filterable internal formats deterministically.
+
 Anchors:
 
 - `apps/fret-examples/src/custom_effect_v3_wgsl.rs` (`CUSTOM_EFFECT_V3_LENS_WGSL`)
 - `apps/fret-examples/src/liquid_glass_demo.rs` (CustomV3 chain + bevel controls + optional backdrop source group)
 - Diagnostics suites:
   - `tools/diag-scripts/suites/liquid-glass-custom-v3/`
+    - Dispersion baseline script: `tools/diag-scripts/suites/liquid-glass-custom-v3/liquid-glass-lens-custom-v3-dispersion-screenshot.json`
   - `tools/diag-scripts/suites/liquid-glass-custom-v3-degraded/`
   - `tools/diag-scripts/suites/liquid-glass-custom-v3-sources-degraded/`
   - `tools/diag-scripts/suites/perf-liquid-glass-custom-v3-steady/`
+  - `tools/diag-scripts/suites/cookbook-customv2-basics/`
+    - CustomV2 incompatible user-image fallback script: `tools/diag-scripts/suites/cookbook-customv2-basics/custom-effect-v2-non-filterable-input-fallback-screenshot.json`
+  - `tools/diag-scripts/suites/cookbook-customv3-basics/`
+    - CustomV3 incompatible user-image fallback scripts:
+      - `tools/diag-scripts/suites/cookbook-customv3-basics/custom-effect-v3-non-filterable-user0-fallback-screenshot.json`
+      - `tools/diag-scripts/suites/cookbook-customv3-basics/custom-effect-v3-non-filterable-user1-fallback-screenshot.json`
+      - `tools/diag-scripts/suites/cookbook-customv3-basics/custom-effect-v3-non-filterable-user01-fallback-screenshot.json`
+
+Repro note (local evidence; do not check in the bundle):
+
+- `cargo run -p fretboard -- diag run tools/diag-scripts/suites/liquid-glass-custom-v3/liquid-glass-lens-custom-v3-dispersion-screenshot.json --dir target/fret-diag/lg-v3-dispersion --session-auto --launch -- cargo run -p fret-demo --bin liquid_glass_demo`
+- `cargo run -p fretboard -- diag latest --dir target/fret-diag/lg-v3-dispersion`
+- `cargo run -p fretboard -- diag triage <bundle_dir> --warmup-frames 0 --json --out target/fret-diag/lg-v3-dispersion/triage.liquid-glass-lens-custom-v3-dispersion.json`
+- `cargo run -p fretboard -- diag suite cookbook-customv2-basics --dir target/fret-diag/customv2 --session-auto --launch -- cargo run -p fret-demo --bin custom_effect_v2_demo`
+- `cargo run -p fretboard -- diag triage <bundle_dir> --warmup-frames 0 --json --out target/fret-diag/customv2/triage.custom-effect-v2-non-filterable-input-fallback.json`
+- `cargo run -p fretboard -- diag suite cookbook-customv3-basics --dir target/fret-diag/customv3 --session-auto --launch -- cargo run -p fret-demo --bin custom_effect_v3_demo`
+- `cargo run -p fretboard -- diag triage <bundle_dir> --warmup-frames 0 --json --out target/fret-diag/customv3/triage.custom-effect-v3-non-filterable-user0-fallback.json`
+
+Gate templates (local; PowerShell):
+
+These are intended as “copy/paste regression checks” that avoid opening `bundle.schema2.json` and rely on bounded triage
+output. They do not check in any artifacts under `target/fret-diag/`.
+
+- CustomV2 incompatible input → deterministic fallback hint present:
+  - `cargo run -p fretboard -- diag run tools/diag-scripts/suites/cookbook-customv2-basics/custom-effect-v2-non-filterable-input-fallback-screenshot.json --dir target/fret-diag/gates/customv2-fallback --session-auto --check-triage-hint-absent renderer.custom_effect_v2_requested_but_skipped --launch -- cargo run -p fret-demo --bin custom_effect_v2_demo`
+  - `cargo run -p fretboard -- diag triage target/fret-diag/gates/customv2-fallback --warmup-frames 0 --json --out target/fret-diag/gates/customv2-fallback/triage.json | Out-Null`
+  - `$t = Get-Content target/fret-diag/gates/customv2-fallback/triage.json | ConvertFrom-Json; if (($t.hints.code -notcontains 'renderer.custom_effect_v2_user_image_incompatible_fallbacks')) { throw 'missing expected triage hint' }`
+
+- CustomV3 incompatible user inputs → deterministic fallback hint present (user0 / user1 / user0+user1):
+  - user0:
+    - `cargo run -p fretboard -- diag run tools/diag-scripts/suites/cookbook-customv3-basics/custom-effect-v3-non-filterable-user0-fallback-screenshot.json --dir target/fret-diag/gates/customv3-user0 --session-auto --check-triage-hint-absent renderer.custom_effect_v3_requested_but_skipped --launch -- cargo run -p fret-demo --bin custom_effect_v3_demo`
+    - `cargo run -p fretboard -- diag triage target/fret-diag/gates/customv3-user0 --warmup-frames 0 --json --out target/fret-diag/gates/customv3-user0/triage.json | Out-Null`
+    - `$t = Get-Content target/fret-diag/gates/customv3-user0/triage.json | ConvertFrom-Json; $h = $t.hints | Where-Object { $_.code -eq 'renderer.custom_effect_v3_user_image_incompatible_fallbacks' } | Select-Object -First 1; if (-not $h) { throw 'missing expected triage hint' }; if ($h.evidence.custom_effect_v3_user0_image_incompatible_fallbacks -ne 1) { throw 'expected user0 fallbacks=1' }`
+  - user1:
+    - `cargo run -p fretboard -- diag run tools/diag-scripts/suites/cookbook-customv3-basics/custom-effect-v3-non-filterable-user1-fallback-screenshot.json --dir target/fret-diag/gates/customv3-user1 --session-auto --check-triage-hint-absent renderer.custom_effect_v3_requested_but_skipped --launch -- cargo run -p fret-demo --bin custom_effect_v3_demo`
+    - `cargo run -p fretboard -- diag triage target/fret-diag/gates/customv3-user1 --warmup-frames 0 --json --out target/fret-diag/gates/customv3-user1/triage.json | Out-Null`
+    - `$t = Get-Content target/fret-diag/gates/customv3-user1/triage.json | ConvertFrom-Json; $h = $t.hints | Where-Object { $_.code -eq 'renderer.custom_effect_v3_user_image_incompatible_fallbacks' } | Select-Object -First 1; if (-not $h) { throw 'missing expected triage hint' }; if ($h.evidence.custom_effect_v3_user1_image_incompatible_fallbacks -ne 1) { throw 'expected user1 fallbacks=1' }`
+  - user0+user1:
+    - `cargo run -p fretboard -- diag run tools/diag-scripts/suites/cookbook-customv3-basics/custom-effect-v3-non-filterable-user01-fallback-screenshot.json --dir target/fret-diag/gates/customv3-user01 --session-auto --check-triage-hint-absent renderer.custom_effect_v3_requested_but_skipped --launch -- cargo run -p fret-demo --bin custom_effect_v3_demo`
+    - `cargo run -p fretboard -- diag triage target/fret-diag/gates/customv3-user01 --warmup-frames 0 --json --out target/fret-diag/gates/customv3-user01/triage.json | Out-Null`
+    - `$t = Get-Content target/fret-diag/gates/customv3-user01/triage.json | ConvertFrom-Json; $h = $t.hints | Where-Object { $_.code -eq 'renderer.custom_effect_v3_user_image_incompatible_fallbacks' } | Select-Object -First 1; if (-not $h) { throw 'missing expected triage hint' }; if (($h.evidence.custom_effect_v3_user0_image_incompatible_fallbacks -ne 1) -or ($h.evidence.custom_effect_v3_user1_image_incompatible_fallbacks -ne 1)) { throw 'expected user0+user1 fallbacks=1' }`
 
 ### Known gaps / intentional differences
 

@@ -1710,6 +1710,19 @@ pub enum UiPredicateV1 {
     DockTabStripActiveVisibleIs {
         visible: bool,
     },
+    /// True when the latest docking diagnostics report `tab_strip_active_visibility.scroll >= px`.
+    ///
+    /// This predicate is intended to gate edge auto-scroll during tab drags in overflowed tab
+    /// strips, without relying on pixels.
+    DockTabStripActiveScrollPxGe {
+        px: f32,
+    },
+    /// True when the latest docking diagnostics report `tab_strip_active_visibility.scroll <= px`.
+    ///
+    /// This is primarily intended to assert the initial scroll state in scripted regressions.
+    DockTabStripActiveScrollPxLe {
+        px: f32,
+    },
     /// True when the latest workspace diagnostics report whether the active tab strip is overflowed.
     ///
     /// This predicate reads the best-effort `workspace_interaction.tab_strip_active_visibility`
@@ -2792,6 +2805,39 @@ mod tests {
         assert!(matches!(
             roundtrip,
             UiPredicateV1::BoundsCenterApproxEqual { .. }
+        ));
+    }
+
+    #[test]
+    fn predicate_dock_tab_strip_scroll_predicates_serialize_and_deserialize() {
+        let value = serde_json::to_value(UiPredicateV1::DockTabStripActiveScrollPxGe { px: 12.0 })
+            .unwrap();
+        assert_eq!(
+            value,
+            serde_json::json!({
+                "kind": "dock_tab_strip_active_scroll_px_ge",
+                "px": 12.0
+            })
+        );
+        let roundtrip: UiPredicateV1 = serde_json::from_value(value).unwrap();
+        assert!(matches!(
+            roundtrip,
+            UiPredicateV1::DockTabStripActiveScrollPxGe { .. }
+        ));
+
+        let value = serde_json::to_value(UiPredicateV1::DockTabStripActiveScrollPxLe { px: 0.0 })
+            .unwrap();
+        assert_eq!(
+            value,
+            serde_json::json!({
+                "kind": "dock_tab_strip_active_scroll_px_le",
+                "px": 0.0
+            })
+        );
+        let roundtrip: UiPredicateV1 = serde_json::from_value(value).unwrap();
+        assert!(matches!(
+            roundtrip,
+            UiPredicateV1::DockTabStripActiveScrollPxLe { .. }
         ));
     }
 

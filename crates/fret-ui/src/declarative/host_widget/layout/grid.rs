@@ -1,8 +1,7 @@
 use super::super::ElementHostWidget;
 use crate::declarative::layout_helpers::clamp_to_constraints;
 use crate::declarative::prelude::*;
-use crate::layout_constraints::LayoutConstraints;
-use crate::layout_constraints::{AvailableSpace as RuntimeAvailableSpace, LayoutSize};
+use crate::layout_constraints::AvailableSpace as RuntimeAvailableSpace;
 use crate::layout_engine::layout_children_from_engine_if_solved;
 use crate::widget::MeasureCx;
 
@@ -23,13 +22,13 @@ impl ElementHostWidget {
         props: crate::element::GridProps,
     ) -> Size {
         if cx.pass_kind == crate::layout_pass::LayoutPassKind::Probe {
-            let constraints = LayoutConstraints::new(
-                LayoutSize::new(None, None),
-                LayoutSize::new(
-                    RuntimeAvailableSpace::Definite(cx.available.width),
-                    RuntimeAvailableSpace::Definite(cx.available.height),
-                ),
-            );
+            let mut constraints = cx.probe_constraints_for_size(cx.available);
+            if cx.available.width.0 <= 0.0 {
+                constraints.available.width = RuntimeAvailableSpace::MaxContent;
+            }
+            if cx.available.height.0 <= 0.0 {
+                constraints.available.height = RuntimeAvailableSpace::MaxContent;
+            }
 
             // Avoid re-entrant `with_widget_mut(cx.node)` by measuring the current widget directly.
             let mut measure_cx = MeasureCx {

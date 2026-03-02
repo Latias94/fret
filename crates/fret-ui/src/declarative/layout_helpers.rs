@@ -176,7 +176,21 @@ pub(super) fn layout_absolute_child_with_probe_bounds<H: UiHost>(
     let _ = cx.layout_in(child, bounds);
 }
 
-pub(super) fn clamp_to_constraints(mut size: Size, style: LayoutStyle, available: Size) -> Size {
+pub(super) fn clamp_to_constraints(size: Size, style: LayoutStyle, available: Size) -> Size {
+    clamp_to_constraints_with_overflow_context(
+        size,
+        style,
+        available,
+        crate::layout::overflow::LayoutOverflowContext::default_for_layout(),
+    )
+}
+
+pub(super) fn clamp_to_constraints_with_overflow_context(
+    mut size: Size,
+    style: LayoutStyle,
+    available: Size,
+    overflow_ctx: crate::layout::overflow::LayoutOverflowContext,
+) -> Size {
     let resolve_constraint = |l: Length, base: Px| -> Option<Px> {
         match l {
             Length::Auto => None,
@@ -240,8 +254,18 @@ pub(super) fn clamp_to_constraints(mut size: Size, style: LayoutStyle, available
         size.height = Px(size.height.0.min(max_h.0.max(0.0)));
     }
 
-    size.width = Px(size.width.0.max(0.0).min(available.width.0.max(0.0)));
-    size.height = Px(size.height.0.max(0.0).min(available.height.0.max(0.0)));
+    let clamp_w = !width_auto || !overflow_ctx.allow_overflow_on_auto.width;
+    let clamp_h = !height_auto || !overflow_ctx.allow_overflow_on_auto.height;
+    size.width = if clamp_w {
+        Px(size.width.0.max(0.0).min(available.width.0.max(0.0)))
+    } else {
+        Px(size.width.0.max(0.0))
+    };
+    size.height = if clamp_h {
+        Px(size.height.0.max(0.0).min(available.height.0.max(0.0)))
+    } else {
+        Px(size.height.0.max(0.0))
+    };
 
     if let Some(ratio) = style.aspect_ratio
         && ratio.is_finite()
@@ -282,8 +306,46 @@ pub(super) fn clamp_to_constraints(mut size: Size, style: LayoutStyle, available
             size.height = Px(size.height.0.min(max_h.0.max(0.0)));
         }
 
-        size.width = Px(size.width.0.max(0.0).min(available.width.0.max(0.0)));
-        size.height = Px(size.height.0.max(0.0).min(available.height.0.max(0.0)));
+        size.width = if clamp_w {
+            Px(size.width.0.max(0.0).min(available.width.0.max(0.0)))
+        } else {
+            Px(size.width.0.max(0.0))
+        };
+        size.height = if clamp_h {
+            Px(size.height.0.max(0.0).min(available.height.0.max(0.0)))
+        } else {
+            Px(size.height.0.max(0.0))
+        };
     }
     size
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::layout_constraints::LayoutSize;
+
+    #[test]
+    fn clamp_to_constraints_auto_clamps_to_available_by_default() {
+        let size = Size::new(Px(100.0), Px(300.0));
+        let available = Size::new(Px(200.0), Px(100.0));
+        let style = LayoutStyle::default();
+        let out = clamp_to_constraints(size, style, available);
+        assert_eq!(out.width, Px(100.0));
+        assert_eq!(out.height, Px(100.0));
+    }
+
+    #[test]
+    fn clamp_to_constraints_auto_can_overflow_under_overflow_context() {
+        let size = Size::new(Px(100.0), Px(300.0));
+        let available = Size::new(Px(200.0), Px(100.0));
+        let style = LayoutStyle::default();
+        let overflow_ctx = crate::layout::overflow::LayoutOverflowContext {
+            allow_overflow_on_auto: LayoutSize::new(false, true),
+            ..crate::layout::overflow::LayoutOverflowContext::default_for_layout()
+        };
+        let out = clamp_to_constraints_with_overflow_context(size, style, available, overflow_ctx);
+        assert_eq!(out.width, Px(100.0));
+        assert_eq!(out.height, Px(300.0));
+    }
 }

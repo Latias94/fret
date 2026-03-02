@@ -114,8 +114,11 @@ fn main() {
     }
 
     report.push_str("\n## Previews\n\n");
-    report.push_str("These sources back non-shadcn preview pages (harnesses, torture cases, etc).\n");
-    report.push_str("If these ever start rendering copyable code tabs, they should follow the same\n");
+    report
+        .push_str("These sources back non-shadcn preview pages (harnesses, torture cases, etc).\n");
+    report.push_str(
+        "If these ever start rendering copyable code tabs, they should follow the same\n",
+    );
     report.push_str("snippet-backed pattern to stay drift-free.\n\n");
     report.push_str("| Path | `.code(\"rust\", ...)` | `include_str!(\"../snippets/\")` |\n");
     report.push_str("| --- | --- | --- |\n");

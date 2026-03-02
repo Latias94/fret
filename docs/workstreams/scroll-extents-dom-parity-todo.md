@@ -47,7 +47,7 @@ Tracking format:
     - Absolute-positioned nodes inclusion/exclusion inconsistencies.
     - Observation boundedness (wrapper peeling depth + DFS budget) needs telemetry.
 
-- [ ] SE-111 Decide the mechanism contract for “fill vs fit” along the scroll axis.
+- [x] SE-111 Decide and implement the mechanism contract for “fill vs fit” along the scroll axis.
   - Goal: make “auto can overflow” vs “fill must clamp” an explicit, testable contract.
   - Evidence: `docs/workstreams/scroll-extents-dom-parity.md` (SE-110, clamp policy blockers).
 - [~] SE-112 Add a layout-time “overflow context” / available-space budget carrier.
@@ -82,11 +82,15 @@ Tracking format:
 - [~] SE-210 Add focused unit tests (incremental).
   - [x] SE-211 Pure-geometry overflow observation (wrapper peeling + bounded deep scan).
   - [x] SE-212 Offset clamping invariants (`ScrollHandle`).
-  - [ ] SE-213 Scrollbar + overlay anchoring parity (needs harness).
+- [x] SE-213 Scrollbar + overlay anchoring parity (needs harness).
     - [x] SE-213a Add `fretboard diag query overlay-placement-trace` (reads `script.result.json` evidence).
     - [x] SE-213b Add a UI Gallery script that (1) opens an anchored overlay, (2) expands a doc code tab
       (content growth), and (3) re-opens the overlay and asserts it is still clamped within the window.
     - [x] SE-213c Record evidence for baseline vs `FRET_UI_SCROLL_EXTENTS_POST_LAYOUT=1` (optional but recommended).
+    - [x] SE-213d Add Popover coverage (click-triggered anchored panel) to reduce false confidence from hover-only overlays.
+      - Scripts:
+        - `tools/diag-scripts/ui-gallery/overlay/ui-gallery-tooltip-overlay-placement-after-code-tab-scroll-range.json`
+        - `tools/diag-scripts/ui-gallery/popover/ui-gallery-popover-overlay-placement-after-code-tab-scroll-range.json`
 
 ## Rollout
 

@@ -213,6 +213,30 @@ pub(crate) fn update_hovered_hover_region<H: UiHost>(
     })
 }
 
+pub(crate) fn update_hovered_hover_region_with_node<H: UiHost>(
+    app: &mut H,
+    window: AppWindowId,
+    next: Option<(GlobalElementId, NodeId)>,
+) -> (
+    Option<GlobalElementId>,
+    Option<NodeId>,
+    Option<GlobalElementId>,
+    Option<NodeId>,
+) {
+    with_window_state(app, window, |st| {
+        let prev = st.hovered_hover_region;
+        let prev_node = st.hovered_hover_region_node;
+        let next_element = next.map(|(element, _)| element);
+        let next_node = next.map(|(_, node)| node);
+        if prev == next_element {
+            return (None, None, None, None);
+        }
+        st.hovered_hover_region = next_element;
+        st.hovered_hover_region_node = next_node;
+        (prev, prev_node, next_element, next_node)
+    })
+}
+
 pub(crate) fn set_pressed_pressable<H: UiHost>(
     app: &mut H,
     window: AppWindowId,
@@ -275,6 +299,7 @@ mod tests {
     use super::*;
 
     use crate::strict_runtime::strict_runtime_enabled;
+    use slotmap::KeyData;
     use std::any::TypeId;
 
     #[test]
@@ -332,5 +357,27 @@ mod tests {
 
         let out = with_element_state(&mut app, window, element, || 0u32, |v| *v);
         assert_eq!(out, 2);
+    }
+
+    #[test]
+    fn hovered_hover_region_tracks_node_id_for_redraw_on_exit() {
+        let mut app = crate::test_host::TestHost::new();
+        let window = AppWindowId::default();
+        let element = GlobalElementId(1);
+        let node = NodeId::from(KeyData::from_ffi(1));
+
+        let (prev_element, prev_node, next_element, next_node) =
+            update_hovered_hover_region_with_node(&mut app, window, Some((element, node)));
+        assert_eq!(prev_element, None);
+        assert_eq!(prev_node, None);
+        assert_eq!(next_element, Some(element));
+        assert_eq!(next_node, Some(node));
+
+        let (prev_element, prev_node, next_element, next_node) =
+            update_hovered_hover_region_with_node(&mut app, window, None);
+        assert_eq!(prev_element, Some(element));
+        assert_eq!(prev_node, Some(node));
+        assert_eq!(next_element, None);
+        assert_eq!(next_node, None);
     }
 }

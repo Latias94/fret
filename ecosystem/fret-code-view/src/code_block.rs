@@ -1199,7 +1199,12 @@ fn render_code_block_windowed_lines<H: UiHost + 'static>(
 
     let list_layout = {
         let mut layout = LayoutStyle::default();
-        layout.size.width = Length::Auto;
+        // Ensure wheel events over the "empty" horizontal gutter still target the VirtualList.
+        //
+        // When the list is `Auto` width inside the X-scroll viewport, short lines can shrink the
+        // list's hit-test bounds. This causes wheel scrolling in the right-side gutter to hit the
+        // ancestor X-scroll container instead of the VirtualList, preventing vertical scrolling.
+        layout.size.width = Length::Fill;
         layout.size.height = Length::Fill;
         layout.overflow = Overflow::Clip;
         layout

@@ -148,10 +148,7 @@ impl<D: WinitAppDriver> WinitRunner<D> {
     pub(super) fn route_internal_drag_hover_from_cursor(&mut self) -> bool {
         #[cfg(target_os = "macos")]
         {
-            let diag_cursor_override_recent = self
-                .diag_last_cursor_override_tick
-                .is_some_and(|t| self.tick_id.0.saturating_sub(t.0) <= 2);
-            if !diag_cursor_override_recent {
+            if !self.diag_pointer_input_isolation_active() {
                 self.macos_refresh_cursor_screen_pos_for_dock_drag();
             }
         }
@@ -205,9 +202,7 @@ impl<D: WinitAppDriver> WinitRunner<D> {
         let mut window_under_moving_window = None;
         let mut window_under_moving_window_source = fret_runtime::WindowUnderCursorSource::Unknown;
         if let Some(moving_window) = moving_window {
-            let diag_cursor_override_recent = self
-                .diag_last_cursor_override_tick
-                .is_some_and(|t| self.tick_id.0.saturating_sub(t.0) <= 2);
+            let diag_cursor_override_active = self.diag_pointer_input_isolation_active();
             if allow_window_under_cursor {
                 // When scripted diagnostics inject cursor overrides in window-client coordinates,
                 // the simulated cursor may temporarily drift outside the moving window while the
@@ -217,7 +212,7 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                 // "window under moving window" result that an OS cursor would report.
                 let mut candidates = Vec::with_capacity(3);
                 candidates.push(screen_pos);
-                if diag_cursor_override_recent {
+                if diag_cursor_override_active {
                     if let Some(clamped) =
                         self.clamp_screen_pos_to_window_client(moving_window, screen_pos)
                     {
@@ -358,16 +353,9 @@ impl<D: WinitAppDriver> WinitRunner<D> {
         let Some(current) = self.internal_drag_hover_window else {
             return false;
         };
-        let diag_cursor_override_recent = self
-            .diag_last_cursor_override_tick
-            .is_some_and(|t| self.tick_id.0.saturating_sub(t.0) <= 2);
-        let diag_mouse_buttons_override_recent = self
-            .diag_last_mouse_buttons_override_tick
-            .is_some_and(|t| self.tick_id.0.saturating_sub(t.0) <= 2);
-        let diag_override_recent =
-            diag_cursor_override_recent || diag_mouse_buttons_override_recent;
+        let diag_override_active = self.diag_pointer_input_isolation_active();
 
-        let screen_pos_for_pos = if diag_override_recent && current != drag_source_window {
+        let screen_pos_for_pos = if diag_override_active && current != drag_source_window {
             self.clamp_screen_pos_to_window_client(current, screen_pos)
                 .unwrap_or(screen_pos)
         } else {
@@ -391,12 +379,10 @@ impl<D: WinitAppDriver> WinitRunner<D> {
             window_under_moving_window = None;
             window_under_moving_window_source = fret_runtime::WindowUnderCursorSource::Unknown;
             if allow_window_under_cursor {
-                let diag_cursor_override_recent = self
-                    .diag_last_cursor_override_tick
-                    .is_some_and(|t| self.tick_id.0.saturating_sub(t.0) <= 2);
+                let diag_cursor_override_active = self.diag_pointer_input_isolation_active();
                 let mut candidates = Vec::with_capacity(3);
                 candidates.push(screen_pos);
-                if diag_cursor_override_recent {
+                if diag_cursor_override_active {
                     if let Some(clamped) =
                         self.clamp_screen_pos_to_window_client(current, screen_pos)
                     {
@@ -519,10 +505,7 @@ impl<D: WinitAppDriver> WinitRunner<D> {
     pub(super) fn route_internal_drag_drop_from_cursor(&mut self) -> bool {
         #[cfg(target_os = "macos")]
         {
-            let diag_cursor_override_recent = self
-                .diag_last_cursor_override_tick
-                .is_some_and(|t| self.tick_id.0.saturating_sub(t.0) <= 2);
-            if !diag_cursor_override_recent {
+            if !self.diag_pointer_input_isolation_active() {
                 self.macos_refresh_cursor_screen_pos_for_dock_drag();
             }
         }
@@ -579,13 +562,11 @@ impl<D: WinitAppDriver> WinitRunner<D> {
         let mut window_under_moving_window = None;
         let mut window_under_moving_window_source = fret_runtime::WindowUnderCursorSource::Unknown;
         if let Some(moving_window) = moving_window {
-            let diag_cursor_override_recent = self
-                .diag_last_cursor_override_tick
-                .is_some_and(|t| self.tick_id.0.saturating_sub(t.0) <= 2);
+            let diag_cursor_override_active = self.diag_pointer_input_isolation_active();
             if allow_window_under_cursor {
                 let mut candidates = Vec::with_capacity(3);
                 candidates.push(screen_pos);
-                if diag_cursor_override_recent {
+                if diag_cursor_override_active {
                     if let Some(clamped) =
                         self.clamp_screen_pos_to_window_client(moving_window, screen_pos)
                     {
@@ -713,16 +694,9 @@ impl<D: WinitAppDriver> WinitRunner<D> {
         // If the cursor is outside all windows (Unity/ImGui-style tear-off), still deliver the
         // drop to the source window using the last known screen cursor position.
         let target = target.unwrap_or(drag_source_window);
-        let diag_cursor_override_recent = self
-            .diag_last_cursor_override_tick
-            .is_some_and(|t| self.tick_id.0.saturating_sub(t.0) <= 2);
-        let diag_mouse_buttons_override_recent = self
-            .diag_last_mouse_buttons_override_tick
-            .is_some_and(|t| self.tick_id.0.saturating_sub(t.0) <= 2);
-        let diag_override_recent =
-            diag_cursor_override_recent || diag_mouse_buttons_override_recent;
+        let diag_override_active = self.diag_pointer_input_isolation_active();
 
-        let screen_pos_for_pos = if diag_override_recent && target != drag_source_window {
+        let screen_pos_for_pos = if diag_override_active && target != drag_source_window {
             self.clamp_screen_pos_to_window_client(target, screen_pos)
                 .unwrap_or(screen_pos)
         } else {
@@ -753,12 +727,10 @@ impl<D: WinitAppDriver> WinitRunner<D> {
             window_under_moving_window = None;
             window_under_moving_window_source = fret_runtime::WindowUnderCursorSource::Unknown;
             if allow_window_under_cursor {
-                let diag_cursor_override_recent = self
-                    .diag_last_cursor_override_tick
-                    .is_some_and(|t| self.tick_id.0.saturating_sub(t.0) <= 2);
+                let diag_cursor_override_active = self.diag_pointer_input_isolation_active();
                 let mut candidates = Vec::with_capacity(3);
                 candidates.push(screen_pos);
-                if diag_cursor_override_recent {
+                if diag_cursor_override_active {
                     if let Some(clamped) =
                         self.clamp_screen_pos_to_window_client(target, screen_pos)
                     {

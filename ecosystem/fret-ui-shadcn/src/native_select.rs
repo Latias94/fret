@@ -23,6 +23,7 @@ use fret_ui_kit::{
     Size as ComponentSize, Space, WidgetState, WidgetStateProperty, WidgetStates, ui,
 };
 
+use crate::test_id::test_id_slug;
 use crate::{
     CommandEntry, CommandGroup, CommandItem, CommandList, CommandSeparator, Popover, PopoverContent,
 };
@@ -251,18 +252,6 @@ impl NativeSelect {
             self.layout,
         )
     }
-}
-
-fn test_id_slug(s: &str) -> String {
-    let mut out = String::with_capacity(s.len());
-    for c in s.chars() {
-        if c.is_ascii_alphanumeric() {
-            out.push(c.to_ascii_lowercase());
-        } else {
-            out.push('-');
-        }
-    }
-    out.trim_matches('-').to_string()
 }
 
 #[allow(clippy::too_many_arguments)]

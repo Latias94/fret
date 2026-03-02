@@ -56,6 +56,8 @@ pub struct UiScrollNodeTelemetryV1 {
     pub node: u64,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub element: Option<u64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub test_id: Option<String>,
     pub axis: UiScrollAxisV1,
     pub offset_x: f32,
     pub offset_y: f32,
@@ -76,6 +78,7 @@ impl UiScrollNodeTelemetryV1 {
         Self {
             node: key_to_u64(record.node),
             element: record.element.map(|e| e.0),
+            test_id: record.test_id.as_ref().map(|s| s.as_ref().to_string()),
             axis: UiScrollAxisV1::from_axis(record.axis),
             offset_x: record.offset.x.0,
             offset_y: record.offset.y.0,
@@ -91,4 +94,3 @@ impl UiScrollNodeTelemetryV1 {
         }
     }
 }
-

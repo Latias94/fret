@@ -17,8 +17,93 @@ Deliverables:
 Status (2026-03-02):
 
 - Diagnostics/runtime hang class addressed (no more “script.result stuck running” when a target window is occluded).
-- Remaining blocker is docking correctness: chained tear-off + merge-back does not yet return to the original dock graph
-  fingerprint, so the “exact signature” gate fails even though windows auto-close and canonicalization passes.
+- M1 is now green again after hardening scripted input + window predicates, and fixing chained tear-off merge targeting
+  so the final dock graph fingerprint returns to baseline.
+
+Status update (2026-03-02, later):
+
+- M1.1 delivered: runner-level pointer isolation now masks physical mouse movement when diagnostics cursor overrides are
+  active (`crates/fret-launch/src/runner/desktop/runner/mod.rs`).
+- M1.2 delivered: cached `test_id` predicate evaluation is bounded by freshness and emits explicit evidence
+  (`ecosystem/fret-bootstrap/src/ui_diagnostics/service.rs:297`).
+- M1.3 delivered: `known_window_count_*` predicates use a runner-owned source-of-truth (`crates/fret-runtime/src/runner_window_lifecycle_diagnostics.rs`).
+- M1.4 delivered: Windows/MSVC `docking_arbitration_demo` rebuilds no longer fail with `taffy`-related LNK2019 unresolved
+  externals by forcing `taffy` to compile with a single codegen unit in dev profiles (`Cargo.toml`).
+- M1.5 delivered: the chained tear-off script is now deterministic enough to be a regression gate (stable hover
+  retargeting + explicit zone selection).
+- M1.6 delivered: chained tear-off + merge-back returns to the pre-tearoff dock graph fingerprint (idempotence).
+
+Stability check (2026-03-02):
+
+- `fretboard diag repeat` passes 7x with:
+  - `--env FRET_DOCK_ALLOW_MULTI_WINDOW_TEAR_OFF=1`,
+  - `--reuse-launch`,
+  - `--compare-ignore-bounds --compare-ignore-scene-fingerprint` (expected to drift for multi-window demos).
+
+## M1.4 — Rebuild reliability for docking demos (Windows/MSVC)
+
+Goal: docking demo binaries used by `--launch` diagnostics can be rebuilt reliably in local dev.
+
+Deliverables:
+
+- Document the observed failure mode (toolchain + target + error signature).
+- Unblock building `docking_arbitration_demo` (and related docking demos) from a clean-ish state on Windows/MSVC.
+- Add a short “if this regresses” note (what to try, what evidence to attach to an issue).
+
+## M1.1 — Scripted input isolation (runner cursor override)
+
+Goal: scripted docking drags are deterministic under user input noise.
+
+Deliverables:
+
+- Runner ignores physical mouse cursor updates for docking routing while an active diagnostics cursor override is in
+  effect during a script run.
+- A small regression script that passes even if the user moves the mouse during playback.
+
+## M1.2 — Cached `test_id` predicate evaluation (freshness + evidence)
+
+Goal: avoid occlusion deadlocks without introducing stale-cache false positives.
+
+Deliverables:
+
+- Allow `exists/not_exists` predicates by `test_id` to be evaluated from per-window cached `test_id_bounds` when the
+  snapshot is recent (define and enforce a max age).
+- Emit explicit evidence (event log entries) when cached evaluation is used, and when it is rejected as stale.
+- Add a minimal repro script that forces an occlusion / non-redraw scenario and demonstrates cache-based evaluation
+  is bounded and observable.
+
+## M1.3 — Runner-owned window counting
+
+Goal: diagnostics window-count gates reflect real OS window lifecycle, not “windows that happened to produce input”.
+
+Deliverables:
+
+- Provide a runner-owned source-of-truth for open window count/list to the diagnostics service.
+- Switch `known_window_count_*` predicates to use this source-of-truth.
+- Add a regression script for multi-window tear-off + auto-close under z-order churn / occlusion.
+
+## M1.5 — Deterministic chained tear-off repro (two tabs, two merges)
+
+Goal: the chained tear-off repro is deterministic enough to be used as a stable regression gate (even if it currently
+fails on correctness).
+
+Deliverables:
+
+- A schema v2 script that:
+  - tears off a first tab, drags it back, waits for auto-close,
+  - tears off a second tab, drags it back, waits for auto-close,
+  - emits clear evidence for each merge (drop resolve zone, dock graph signature/stats).
+- Intermediate structural gates that pinpoint where a panel is lost or a split/tab shape changes.
+
+## M1.6 — Chained tear-off correctness (layout idempotence)
+
+Goal: after the chained tear-off + merge-back sequence, the dock graph returns to the pre-tearoff fingerprint.
+
+Deliverables:
+
+- Docking model/ops + interaction arbitration yield an idempotent outcome for tear-off → merge-back cycles (no panel
+  loss; stable canonicalization; stable ordering where applicable).
+- The chained repro script passes with the exact fingerprint gate (not just `contains`).
 
 ## M2 — Suite-level stability and isolation
 
