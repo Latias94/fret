@@ -29,8 +29,9 @@ Tracking format:
 
 ## Prototype (Behind a Gate)
 
-- [ ] SE-200 Add an opt-in implementation (env flag or compile-time flag) for “post-layout scroll extents”.
+- [x] SE-200 Add an opt-in implementation (env flag or compile-time flag) for “post-layout scroll extents”.
   - Must not change default behavior yet.
+  - Env: `FRET_UI_SCROLL_EXTENTS_POST_LAYOUT=1`
 - [ ] SE-210 Add focused unit tests around offset clamping + scrollbars + overlay reanchoring.
 
 ## Rollout
