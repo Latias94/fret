@@ -51,6 +51,71 @@ fn choose_backdrop_source_group_pyramid_choice(
     )
 }
 
+fn is_intermediate_target(t: super::PlanTarget) -> bool {
+    matches!(
+        t,
+        super::PlanTarget::Intermediate0
+            | super::PlanTarget::Intermediate1
+            | super::PlanTarget::Intermediate2
+            | super::PlanTarget::Intermediate3
+    )
+}
+
+fn estimate_in_use_intermediate_bytes(
+    draw_scopes: &[DrawScope],
+    format: wgpu::TextureFormat,
+) -> u64 {
+    draw_scopes
+        .iter()
+        .filter(|s| is_intermediate_target(s.target))
+        .map(|s| estimate_texture_bytes(s.size, format, 1))
+        .sum()
+}
+
+fn estimate_target_bytes_in_scopes(
+    draw_scopes: &[DrawScope],
+    target: super::PlanTarget,
+    format: wgpu::TextureFormat,
+) -> Option<u64> {
+    draw_scopes
+        .iter()
+        .find(|s| s.target == target)
+        .map(|s| estimate_texture_bytes(s.size, format, 1))
+}
+
+fn effective_intermediate_budget_bytes_for_chain(
+    intermediate_budget_bytes: u64,
+    draw_scopes: &[DrawScope],
+    srcdst: super::PlanTarget,
+    format: wgpu::TextureFormat,
+    extra_in_use_bytes: u64,
+) -> u64 {
+    let in_use_intermediate_bytes = estimate_in_use_intermediate_bytes(draw_scopes, format);
+    let srcdst_bytes = if is_intermediate_target(srcdst) {
+        estimate_target_bytes_in_scopes(draw_scopes, srcdst, format).unwrap_or(0)
+    } else {
+        0
+    };
+    let other_live_bytes = in_use_intermediate_bytes
+        .saturating_sub(srcdst_bytes)
+        .saturating_add(extra_in_use_bytes);
+    intermediate_budget_bytes.saturating_sub(other_live_bytes)
+}
+
+fn can_allocate_intermediate_bytes(
+    intermediate_budget_bytes: u64,
+    draw_scopes: &[DrawScope],
+    required_bytes: u64,
+    extra_in_use_bytes: u64,
+    format: wgpu::TextureFormat,
+) -> bool {
+    let in_use_bytes = estimate_in_use_intermediate_bytes(draw_scopes, format);
+    in_use_bytes
+        .saturating_add(extra_in_use_bytes)
+        .saturating_add(required_bytes)
+        <= intermediate_budget_bytes
+}
+
 #[derive(Clone, Copy, Debug)]
 struct DrawScope {
     target: super::PlanTarget,
@@ -280,6 +345,49 @@ mod tests {
             "expected no degradation when budget exactly fits the requested 2-level pyramid"
         );
     }
+
+    #[test]
+    fn effective_intermediate_budget_excludes_srcdst_bytes() {
+        let format = wgpu::TextureFormat::Rgba8Unorm;
+        let intermediate_budget_bytes = 1000u64;
+
+        let draw_scopes = [
+            DrawScope {
+                target: super::super::PlanTarget::Intermediate0,
+                origin: (0, 0),
+                size: (4, 4),
+                needs_clear: false,
+                clear_color: wgpu::Color::TRANSPARENT,
+            },
+            DrawScope {
+                target: super::super::PlanTarget::Intermediate1,
+                origin: (0, 0),
+                size: (2, 2),
+                needs_clear: false,
+                clear_color: wgpu::Color::TRANSPARENT,
+            },
+        ];
+
+        let srcdst_bytes = estimate_texture_bytes((4, 4), format, 1);
+        let in_use_bytes = estimate_texture_bytes((4, 4), format, 1)
+            .saturating_add(estimate_texture_bytes((2, 2), format, 1));
+        let extra_in_use_bytes = 7u64;
+
+        let expected = intermediate_budget_bytes.saturating_sub(
+            in_use_bytes
+                .saturating_sub(srcdst_bytes)
+                .saturating_add(extra_in_use_bytes),
+        );
+
+        let got = effective_intermediate_budget_bytes_for_chain(
+            intermediate_budget_bytes,
+            &draw_scopes,
+            super::super::PlanTarget::Intermediate0,
+            format,
+            extra_in_use_bytes,
+        );
+        assert_eq!(got, expected);
+    }
 }
 
 fn compile_for_scene_inner(
@@ -321,25 +429,6 @@ fn compile_for_scene_inner(
     let mut backdrop_source_group_scopes: Vec<BackdropSourceGroupScope> = Vec::new();
     let mut backdrop_source_group_reserved_targets: Vec<super::PlanTarget> = Vec::new();
     let mut backdrop_source_group_in_use_bytes: u64 = 0;
-
-    let can_allocate_intermediate_bytes =
-        |draw_scopes: &[DrawScope], required: u64, extra_in_use: u64| -> bool {
-            let in_use: u64 = draw_scopes
-                .iter()
-                .filter(|s| {
-                    matches!(
-                        s.target,
-                        super::PlanTarget::Intermediate0
-                            | super::PlanTarget::Intermediate1
-                            | super::PlanTarget::Intermediate2
-                            | super::PlanTarget::Intermediate3
-                    )
-                })
-                .map(|s| estimate_texture_bytes(s.size, format, 1))
-                .sum();
-            in_use.saturating_add(extra_in_use).saturating_add(required)
-                <= intermediate_budget_bytes
-        };
 
     let mut alloc_segment = |draw_range: std::ops::Range<usize>| -> super::SceneSegmentId {
         let id = super::SceneSegmentId(next_segment_id);
@@ -488,32 +577,13 @@ fn compile_for_scene_inner(
                 return;
             }
 
-            let in_use_intermediate_bytes: u64 = draw_scopes
-                .iter()
-                .filter(|s| {
-                    matches!(
-                        s.target,
-                        super::PlanTarget::Intermediate0
-                            | super::PlanTarget::Intermediate1
-                            | super::PlanTarget::Intermediate2
-                            | super::PlanTarget::Intermediate3
-                    )
-                })
-                .map(|s| estimate_texture_bytes(s.size, format, 1))
-                .sum();
-            let srcdst_bytes = matches!(
+            let effective_budget_bytes = effective_intermediate_budget_bytes_for_chain(
+                intermediate_budget_bytes,
+                draw_scopes,
                 srcdst,
-                super::PlanTarget::Intermediate0
-                    | super::PlanTarget::Intermediate1
-                    | super::PlanTarget::Intermediate2
-                    | super::PlanTarget::Intermediate3
-            )
-            .then(|| estimate_texture_bytes(ctx_viewport_size, format, 1))
-            .unwrap_or(0);
-            let other_live_bytes = in_use_intermediate_bytes
-                .saturating_sub(srcdst_bytes)
-                .saturating_add(extra_in_use_bytes);
-            let effective_budget_bytes = intermediate_budget_bytes.saturating_sub(other_live_bytes);
+                format,
+                extra_in_use_bytes,
+            );
 
             let mut in_use_targets: Vec<super::PlanTarget> = Vec::new();
             for s in draw_scopes {
@@ -693,10 +763,12 @@ fn compile_for_scene_inner(
 
                                     if content_target.is_some()
                                         && !can_allocate_intermediate_bytes(
+                                            intermediate_budget_bytes,
                                             &draw_scopes,
                                             estimate_texture_bytes(content_size, format, 1),
                                             clip_path_mask_in_use_bytes
                                                 .saturating_add(backdrop_source_group_in_use_bytes),
+                                            format,
                                         )
                                     {
                                         content_target = None;
@@ -903,10 +975,12 @@ fn compile_for_scene_inner(
                                     1,
                                 );
                                 if !can_allocate_intermediate_bytes(
+                                    intermediate_budget_bytes,
                                     &draw_scopes,
                                     required_color.saturating_add(required_mask),
                                     clip_path_mask_in_use_bytes
                                         .saturating_add(backdrop_source_group_in_use_bytes),
+                                    format,
                                 ) {
                                     content_target = None;
                                     mask_target = None;
@@ -1088,10 +1162,12 @@ fn compile_for_scene_inner(
 
                         let can_afford_raw = had_free_target
                             && can_allocate_intermediate_bytes(
+                                intermediate_budget_bytes,
                                 &draw_scopes,
                                 raw_bytes,
                                 clip_path_mask_in_use_bytes
                                     .saturating_add(backdrop_source_group_in_use_bytes),
+                                format,
                             );
                         if !can_afford_raw {
                             raw_target = None;
@@ -1154,19 +1230,8 @@ fn compile_for_scene_inner(
                             reserved_bytes = reserved_bytes.saturating_add(raw_bytes);
 
                             if let Some(req) = pyramid {
-                                let in_use_intermediate_bytes: u64 = draw_scopes
-                                    .iter()
-                                    .filter(|s| {
-                                        matches!(
-                                            s.target,
-                                            super::PlanTarget::Intermediate0
-                                                | super::PlanTarget::Intermediate1
-                                                | super::PlanTarget::Intermediate2
-                                                | super::PlanTarget::Intermediate3
-                                        )
-                                    })
-                                    .map(|s| estimate_texture_bytes(s.size, format, 1))
-                                    .sum();
+                                let in_use_intermediate_bytes =
+                                    estimate_in_use_intermediate_bytes(&draw_scopes, format);
 
                                 let choice = choose_backdrop_source_group_pyramid_choice(
                                     req,
@@ -1274,10 +1339,12 @@ fn compile_for_scene_inner(
 
                             if content_target.is_some()
                                 && !can_allocate_intermediate_bytes(
+                                    intermediate_budget_bytes,
                                     &draw_scopes,
                                     estimate_texture_bytes(content_size, format, 1),
                                     clip_path_mask_in_use_bytes
                                         .saturating_add(backdrop_source_group_in_use_bytes),
+                                    format,
                                 )
                             {
                                 content_target = None;
