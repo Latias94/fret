@@ -69,6 +69,7 @@ Dispatch path explainability (diagnostics traces):
 - `ecosystem/fret-ui-kit/src/declarative/action_hooks.rs` (records pointer activation → pending dispatch source)
 - `crates/fret-ui/src/tree/shortcuts.rs` (records shortcut routing → pending dispatch source)
 - `crates/fret-ui/src/tree/commands.rs` (records dispatch outcome + handled-by element)
+- `ecosystem/fret-bootstrap/src/ui_app_driver.rs` (records driver-handled dispatch outcomes to the same trace store, including handler scope classification)
 - `ecosystem/fret-bootstrap/src/ui_diagnostics/debug_snapshot_types.rs` (`debug.command_dispatch_trace[*]`)
 - `crates/fret-diag-protocol/src/lib.rs` (`UiActionStepV2::WaitCommandDispatchTrace`, `UiCommandDispatchTraceQueryV1`)
 - `tools/diag-scripts/cookbook/imui-action-basics/cookbook-imui-action-basics-cross-frontend.json` (`wait_command_dispatch_trace` gate)
@@ -98,7 +99,7 @@ Requirements:
   - clicks a button that dispatches an action,
   - triggers a keybinding that dispatches an action,
   - asserts availability/disabled state under a modal barrier or focus scope.
-  - gates command dispatch explainability (a command dispatch trace entry exists and records the source kind).
+  - gates command dispatch explainability (a command dispatch trace entry exists and records the source kind and handler classification).
 
 Notes:
 

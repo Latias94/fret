@@ -44,17 +44,18 @@ ID format:
 
 ## B. Action System (Additive v1)
 
-- [~] AFA-actions-010 Define the `ActionId` type and metadata surface.
+- [x] AFA-actions-010 Define the `ActionId` type and metadata surface.
   - Evidence: `docs/adr/0307-action-registry-and-typed-action-dispatch-v1.md`
   - Status (as of 2026-03-02):
     - Implemented: `ActionId` portable identity (`crates/fret-runtime/src/action.rs`)
-    - Pending: metadata surface (registry convergence, palette/menu integration)
+    - Implemented: action metadata aliases (`ActionMeta` / `ActionRegistry`) reuse the command registry surface (`crates/fret-runtime/src/action.rs`)
+    - Implemented: command palette uses host command registry (`ecosystem/fret-ui-shadcn/src/command.rs`)
 - [x] AFA-actions-011 Provide an ecosystem macro for defining typed unit actions with stable IDs.
   - Goal: avoid stringly `"my.action.id"` constants in app code.
   - Evidence:
     - Macro: `ecosystem/fret/src/actions.rs`
     - Compile/test: `cargo test -p fret --lib actions::tests::typed_actions_convert_to_command_id`
-- [~] AFA-actions-012 Add a minimal action handler table API for views/frontends.
+- [x] AFA-actions-012 Add a minimal action handler table API for views/frontends.
   - Goal: IR binds `ActionId`; handlers live in view/app layer.
   - Evidence:
     - `ecosystem/fret/src/actions.rs` (`ActionHandlerTable`, `build()` adapters)
@@ -70,13 +71,13 @@ ID format:
     - Implemented (availability gating outcome): `ecosystem/fret-bootstrap/src/ui_diagnostics/command_gating_trace.rs`
       (`debug.command_gating_trace[*]`)
     - Implemented (dispatch path resolution, best-effort): `crates/fret-runtime/src/command_dispatch_diagnostics.rs` +
-      `crates/fret-ui/src/tree/commands.rs` + `ecosystem/fret-bootstrap/src/ui_diagnostics/debug_snapshot_types.rs`
-      (`debug.command_dispatch_trace[*]`, including handled-by element + default-root fallback)
+      `crates/fret-ui/src/tree/commands.rs` + `ecosystem/fret-bootstrap/src/ui_diagnostics/service.rs` +
+      `ecosystem/fret-bootstrap/src/ui_app_driver.rs`
+      (`debug.command_dispatch_trace[*]` / script evidence, including handled-by element, handled-by scope, driver-handled classification, and default-root fallback)
     - Gated (scripted): `crates/fret-diag-protocol/src/lib.rs` (`UiActionStepV2::WaitCommandDispatchTrace`) +
       `tools/diag-scripts/cookbook/imui-action-basics/cookbook-imui-action-basics-cross-frontend.json`
-    - Pending: “which handler scope handled the action” (focused widget vs window vs app) as an explicit, stable field,
-      and a first-class pointer-triggered mapping from stable selectors (`test_id`) → dispatched `ActionId` (currently
-      recorded as `GlobalElementId.0`, which can be correlated via element runtime/semantics snapshots).
+    - Pending: a first-class pointer-triggered mapping from stable selectors (`test_id`) → dispatched `ActionId`
+      (today the dispatch trace records `GlobalElementId.0`, which can be correlated via element runtime/semantics snapshots).
 - [x] AFA-actions-015 Converge command palette/menu invocation with action dispatch.
   - Goal: palette/menu triggers and pointer triggers share the same action pipeline.
   - Evidence:
