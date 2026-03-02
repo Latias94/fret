@@ -840,8 +840,22 @@ impl ToggleGroup {
                                             layout: {
                                                 let mut layout =
                                                     fret_ui::element::LayoutStyle::default();
-                                                layout.size.width = fret_ui::element::Length::Fill;
                                                 layout.size.height = fret_ui::element::Length::Fill;
+                                                // Only force a full-width inner layout when the
+                                                // item itself is intended to stretch (Tailwind
+                                                // `flex-1` / "full width" toggle groups). For
+                                                // auto-sized groups, forcing `Fill` here makes the
+                                                // pressable bounds expand and results in large
+                                                // invisible hit boxes.
+                                                if items_flex_1
+                                                    && matches!(
+                                                        orientation,
+                                                        ToggleGroupOrientation::Horizontal
+                                                    )
+                                                {
+                                                    layout.size.width =
+                                                        fret_ui::element::Length::Fill;
+                                                }
                                                 layout
                                             },
                                             direction: fret_core::Axis::Horizontal,
