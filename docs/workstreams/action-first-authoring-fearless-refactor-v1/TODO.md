@@ -122,16 +122,22 @@ ID format:
 
 ## D. Frontend Convergence (Declarative + imui + GenUI)
 
-- [ ] AFA-frontends-030 Add an imui seam to dispatch `ActionId` without string commands.
-  - Evidence: `docs/workstreams/imui-authoring-facade-v2.md`
-- [ ] AFA-frontends-031 Ensure imui outputs stable semantics/test IDs for diag scripts.
+- [x] AFA-frontends-030 Add an imui seam to dispatch `ActionId` without string commands.
+  - Evidence:
+    - `ecosystem/fret-ui-kit/src/imui.rs` (`action_button_ex`, `menu_item_action_ex`)
+    - `apps/fret-cookbook/examples/imui_action_basics.rs`
+    - `tools/diag-scripts/cookbook/imui-action-basics/cookbook-imui-action-basics-cross-frontend.json`
+- [x] AFA-frontends-031 Ensure imui outputs stable semantics/test IDs for diag scripts.
   - Evidence: `docs/adr/0159-ui-diagnostics-snapshot-and-scripted-interaction-tests.md`
 - [ ] AFA-frontends-032 Align GenUI action bindings with `ActionId` conventions (namespace/versioning).
   - Evidence: `docs/workstreams/genui-json-render-v1.md`
-- [ ] AFA-frontends-033 Add at least one cross-frontend demo:
+- [x] AFA-frontends-033 Add at least one cross-frontend demo:
   - a Rust view triggers an action,
   - an imui panel triggers the same action,
   - an optional GenUI spec triggers a catalog-approved action ID.
+  - Evidence:
+    - `apps/fret-cookbook/examples/imui_action_basics.rs`
+    - `tools/diag-scripts/cookbook/imui-action-basics/cookbook-imui-action-basics-cross-frontend.json`
 
 ---
 

@@ -28,7 +28,7 @@ use fret_interaction::drag::DragThreshold as InteractionDragThreshold;
 use fret_interaction::runtime_drag::{
     DragMoveOutcome, update_immediate_move, update_thresholded_move,
 };
-use fret_runtime::{DragPhase, FrameId};
+use fret_runtime::{ActionId, DragPhase, FrameId};
 use fret_ui::action::UiActionHostExt as _;
 use fret_ui::action::{
     DismissReason, DismissRequestCx, OnDismissRequest, PressablePointerDownResult,
@@ -41,6 +41,7 @@ use fret_ui::element::{
 use fret_ui::{ElementContext, GlobalElementId, UiHost};
 
 use crate::UiBuilder;
+use crate::command::ElementCommandGatingExt as _;
 use crate::primitives::menu::root as menu_root;
 use crate::primitives::popper;
 use crate::{OverlayController, OverlayPresence, OverlayRequest};
@@ -690,6 +691,25 @@ impl Default for MenuItemOptions {
         Self {
             enabled: true,
             close_popup: None,
+            test_id: None,
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct ButtonOptions {
+    pub enabled: bool,
+    pub focusable: bool,
+    pub a11y_label: Option<Arc<str>>,
+    pub test_id: Option<Arc<str>>,
+}
+
+impl Default for ButtonOptions {
+    fn default() -> Self {
+        Self {
+            enabled: true,
+            focusable: true,
+            a11y_label: None,
             test_id: None,
         }
     }
@@ -2027,6 +2047,26 @@ impl<'cx, 'a, H: UiHost> ImUiFacade<'cx, 'a, H> {
         let resp = <Self as UiWriterImUiFacadeExt<H>>::button(self, label);
         let enabled = self.with_cx_mut(|cx| !imui_is_disabled(cx));
         self.record_focusable(resp.id, enabled);
+        resp
+    }
+
+    pub fn action_button(
+        &mut self,
+        label: impl Into<Arc<str>>,
+        action: impl Into<ActionId>,
+    ) -> ResponseExt {
+        self.action_button_ex(label, action, ButtonOptions::default())
+    }
+
+    pub fn action_button_ex(
+        &mut self,
+        label: impl Into<Arc<str>>,
+        action: impl Into<ActionId>,
+        options: ButtonOptions,
+    ) -> ResponseExt {
+        let resp =
+            <Self as UiWriterImUiFacadeExt<H>>::action_button_ex(self, label, action, options);
+        self.record_focusable(resp.id, resp.enabled);
         resp
     }
 
@@ -3405,7 +3445,7 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
         options: MenuItemOptions,
     ) -> ResponseExt {
         let label = label.into();
-        self.menu_item_impl(label, options, SemanticsRole::MenuItem, None)
+        self.menu_item_impl(label, options, SemanticsRole::MenuItem, None, None)
     }
 
     fn menu_item_checkbox_ex(
@@ -3420,6 +3460,7 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
             options,
             SemanticsRole::MenuItemCheckbox,
             Some(checked),
+            None,
         )
     }
 
@@ -3430,7 +3471,32 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
         options: MenuItemOptions,
     ) -> ResponseExt {
         let label = label.into();
-        self.menu_item_impl(label, options, SemanticsRole::MenuItemRadio, Some(checked))
+        self.menu_item_impl(
+            label,
+            options,
+            SemanticsRole::MenuItemRadio,
+            Some(checked),
+            None,
+        )
+    }
+
+    fn menu_item_action(
+        &mut self,
+        label: impl Into<Arc<str>>,
+        action: impl Into<ActionId>,
+    ) -> ResponseExt {
+        self.menu_item_action_ex(label, action, MenuItemOptions::default())
+    }
+
+    fn menu_item_action_ex(
+        &mut self,
+        label: impl Into<Arc<str>>,
+        action: impl Into<ActionId>,
+        options: MenuItemOptions,
+    ) -> ResponseExt {
+        let label = label.into();
+        let action = action.into();
+        self.menu_item_impl(label, options, SemanticsRole::MenuItem, None, Some(action))
     }
 
     fn menu_item_impl(
@@ -3439,6 +3505,7 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
         options: MenuItemOptions,
         role: SemanticsRole,
         checked: Option<bool>,
+        action: Option<ActionId>,
     ) -> ResponseExt {
         let mut response = ResponseExt::default();
 
@@ -3457,7 +3524,10 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
 
             let close_popup = options.close_popup.clone();
             let test_id = options.test_id.clone();
-            let enabled = options.enabled && !imui_is_disabled(cx);
+            let mut enabled = options.enabled && !imui_is_disabled(cx);
+            if let Some(action) = action.as_ref() {
+                enabled = enabled && cx.action_is_enabled(action);
+            }
             let label_for_visuals = label.clone();
 
             let mut stack = fret_ui::element::StackProps::default();
@@ -3551,11 +3621,15 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
 
                     if enabled {
                         let close_popup = close_popup.clone();
+                        let action_for_activate = action.clone();
                         cx.pressable_on_activate(Arc::new(move |host, acx, _reason| {
                             if let Some(open) = close_popup.as_ref() {
                                 let _ = host.update_model(open, |v| *v = false);
                             }
                             host.record_transient_event(acx, KEY_CLICKED);
+                            if let Some(action) = action_for_activate.clone() {
+                                host.dispatch_command(Some(acx.window), action);
+                            }
                             host.notify(acx);
                         }));
 
@@ -3678,18 +3752,53 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
     }
 
     fn button(&mut self, label: impl Into<Arc<str>>) -> ResponseExt {
-        let label = label.into();
+        self.button_ex(label, ButtonOptions::default())
+    }
+
+    fn button_ex(&mut self, label: impl Into<Arc<str>>, options: ButtonOptions) -> ResponseExt {
+        self.button_impl(label.into(), options, None)
+    }
+
+    fn action_button(
+        &mut self,
+        label: impl Into<Arc<str>>,
+        action: impl Into<ActionId>,
+    ) -> ResponseExt {
+        self.action_button_ex(label, action, ButtonOptions::default())
+    }
+
+    fn action_button_ex(
+        &mut self,
+        label: impl Into<Arc<str>>,
+        action: impl Into<ActionId>,
+        options: ButtonOptions,
+    ) -> ResponseExt {
+        let action = action.into();
+        self.button_impl(label.into(), options, Some(action))
+    }
+
+    #[doc(hidden)]
+    fn button_impl(
+        &mut self,
+        label: Arc<str>,
+        options: ButtonOptions,
+        action: Option<ActionId>,
+    ) -> ResponseExt {
         let mut response = ResponseExt::default();
 
         let element = self.with_cx_mut(|cx| {
             let response = &mut response;
-            let enabled = !imui_is_disabled(cx);
+            let mut enabled = options.enabled && !imui_is_disabled(cx);
+            if let Some(action) = action.as_ref() {
+                enabled = enabled && cx.action_is_enabled(action);
+            }
             let mut props = fret_ui::element::PressableProps::default();
             props.enabled = enabled;
-            props.focusable = enabled;
+            props.focusable = enabled && options.focusable;
             props.a11y = fret_ui::element::PressableA11y {
                 role: Some(SemanticsRole::Button),
-                label: Some(label.clone()),
+                label: options.a11y_label.clone().or_else(|| Some(label.clone())),
+                test_id: options.test_id.clone(),
                 ..Default::default()
             };
 
@@ -3711,8 +3820,12 @@ pub trait UiWriterImUiFacadeExt<H: UiHost>: UiWriter<H> {
                 let long_press_signal_model_for_move = long_press_signal_model.clone();
                 let long_press_signal_model_for_up = long_press_signal_model.clone();
 
+                let action_for_activate = action.clone();
                 cx.pressable_on_activate(Arc::new(move |host, acx, _reason| {
                     host.record_transient_event(acx, KEY_CLICKED);
+                    if let Some(action) = action_for_activate.clone() {
+                        host.dispatch_command(Some(acx.window), action);
+                    }
                     host.notify(acx);
                 }));
 

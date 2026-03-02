@@ -1,0 +1,62 @@
+{
+  "schema_version": 2,
+  "meta": {
+    "name": "Cookbook: imui action basics (cross-frontend)",
+    "tags": ["cookbook", "imui", "view_runtime", "actions", "smoke"],
+    "required_capabilities": ["diag.script_v2"],
+    "target_hints": [
+      "Clicks a declarative button and an imui button that dispatch the same ActionId.",
+      "Asserts both triggers update the same view-local state via a shared typed action handler."
+    ]
+  },
+  "steps": [
+    { "type": "reset_diagnostics" },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "cookbook.imui_action_basics.root" }
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "label_contains",
+        "target": { "kind": "test_id", "id": "cookbook.imui_action_basics.count" },
+        "text": "Count: 0"
+      }
+    },
+    {
+      "type": "click_stable",
+      "target": { "kind": "test_id", "id": "cookbook.imui_action_basics.button.declarative" }
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "label_contains",
+        "target": { "kind": "test_id", "id": "cookbook.imui_action_basics.count" },
+        "text": "Count: 1"
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "click_stable",
+      "target": { "kind": "test_id", "id": "cookbook.imui_action_basics.button.imui" }
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "label_contains",
+        "target": { "kind": "test_id", "id": "cookbook.imui_action_basics.count" },
+        "text": "Count: 2"
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "capture_bundle",
+      "label": "cookbook-imui-action-basics-cross-frontend"
+    }
+  ]
+}
+

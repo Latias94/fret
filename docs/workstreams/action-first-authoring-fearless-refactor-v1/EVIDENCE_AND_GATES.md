@@ -37,9 +37,11 @@ Pointer-trigger authoring integration (v1 still dispatches through the command p
 - `ecosystem/fret-ui-shadcn/src/button.rs` (`Button::action`)
 - `ecosystem/fret-ui-kit/src/command.rs` (`action_is_enabled`, `dispatch_action_if_enabled`)
 - `ecosystem/fret-ui-kit/src/declarative/action_hooks.rs` (`pressable_dispatch_action_if_enabled`)
+- `ecosystem/fret-ui-kit/src/imui.rs` (`action_button_ex`, `menu_item_action_ex`)
 - `ecosystem/fret-ui-kit/src/declarative/cached_subtree.rs` (`CachedSubtreeExt` authoring helper)
 - `apps/fret-cookbook/examples/commands_keymap_basics.rs` (example adoption: view runtime + keymap + action availability gating)
 - `apps/fret-cookbook/examples/hello.rs` (example adoption: view runtime + action-first button + handler registration)
+- `apps/fret-cookbook/examples/imui_action_basics.rs` (example adoption: shared action handler across declarative + imui)
 - `apps/fret-cookbook/examples/overlay_basics.rs` (example adoption: view runtime + modal barrier gate)
 
 ---
@@ -78,6 +80,7 @@ Current scripts (as of 2026-03-02):
 - `tools/diag-scripts/cookbook/commands-keymap-basics/cookbook-commands-keymap-basics-shortcut-and-gating.json`
 - `tools/diag-scripts/cookbook/hello/cookbook-hello-click-count.json`
 - `tools/diag-scripts/cookbook/hello/cookbook-hello-view-cache-reuse-and-handler-keepalive.json`
+- `tools/diag-scripts/cookbook/imui-action-basics/cookbook-imui-action-basics-cross-frontend.json`
 - `tools/diag-scripts/cookbook/overlay-basics/cookbook-overlay-basics-modal-barrier-shortcut-gating.json`
 
 ### 2.3 wasm smoke (build-only)

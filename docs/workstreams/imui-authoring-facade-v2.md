@@ -1,7 +1,7 @@
 # Immediate-Mode Authoring Facade ("imui") v2 - Fearless Refactor Plan
 
 Status: Implemented (in-tree; workstream note; not an ADR)
-Last updated: 2026-02-03
+Last updated: 2026-03-02
 
 This document describes a fearless refactor of the `imui` authoring surface after v1.
 
@@ -28,6 +28,15 @@ Decision snapshot (2026-02-03):
 - Canonical widget rule (official crates): one source-of-truth implementation; adapters (imui/ui-kit/shadcn) delegate.
 - Stability policy: keep `UiWriter` stable once depended on; expect churn in bridge utilities and imui ergonomics.
 - Token/preset policy: keep patch vocabulary + generic scales/presets in `fret-ui-kit`; keep shadcn-aligned tokens and recipes in `fret-ui-shadcn`; keep app-specific tokens in the app layer.
+
+Action-first integration note (2026-03-02):
+
+- The immediate-mode facade can dispatch stable `ActionId`s directly (no stringly `CommandId` glue
+  at call sites) via `fret_ui_kit::imui` helpers such as `action_button_ex(...)` /
+  `menu_item_action_ex(...)`.
+- This is intended to keep the “keyboard shortcuts / command palette / menus / pointer clicks”
+  dispatch semantics converged across authoring frontends (see ADR 0307 + the action-first
+  workstream evidence gates).
 
 ---
 
