@@ -35,6 +35,20 @@ Fret is a GPU-first renderer, so we do not port DOM/CSS mechanics 1:1. The goal 
 This redesign should **prefer adding a reusable headless substrate in `fret-ui-kit`** and keeping
 shadcn-specific defaults in `fret-ui-shadcn`.
 
+### Existing substrate (reuse-first)
+
+We already have meaningful substrate in `ecosystem/fret-ui-kit` for the reference-stack outcomes:
+
+- Radix-ish select outcomes: `ecosystem/fret-ui-kit/src/primitives/select.rs`
+- Base UI-ish combobox outcomes: `ecosystem/fret-ui-kit/src/primitives/combobox.rs`
+- Active-descendant semantics helpers + gates: `ecosystem/fret-ui-kit/src/primitives/active_descendant.rs`
+
+This workstream should treat these as the “mechanism/policy baseline” and focus on:
+
+- reducing recipe-level duplication in `fret-ui-shadcn`,
+- improving part-surface composition for copy/paste parity,
+- and adding targeted gates where the current recipes drift.
+
 ### Problem Statement (today)
 
 #### Select

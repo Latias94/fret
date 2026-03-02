@@ -10,6 +10,18 @@ structural work than the “part surface alignment” stream.
 - `select` base parts: `repo-ref/ui/apps/v4/registry/bases/radix/ui/select.tsx`
 - `combobox` base parts: `repo-ref/ui/apps/v4/registry/bases/radix/ui/combobox.tsx`
 
+### Existing substrate in `fret-ui-kit` (do not duplicate)
+
+Before extracting anything new, prefer reusing the existing primitives that already encode the
+reference-stack outcomes (Radix-ish select + Base UI-ish combobox):
+
+| Area | Existing module | Why it matters |
+|---|---|---|
+| Select (Radix outcomes) | `ecosystem/fret-ui-kit/src/primitives/select.rs` | Already encodes trigger a11y, open/close modeling, pointer-up guards, typeahead while closed/open, item-aligned placement helpers, and modal barrier/layer helpers. |
+| Combobox (Base UI outcomes) | `ecosystem/fret-ui-kit/src/primitives/combobox.rs` | Encodes open-change reasons, reason-aware focus restore policies, open-change callback gating, and selection commit helpers (single + multi). |
+| Active descendant | `ecosystem/fret-ui-kit/src/primitives/active_descendant.rs` | Provides the “active descendant” automation/a11y surface and gates for “present vs missing active option” stability. |
+| Typeahead policy | `ecosystem/fret-ui-kit/src/primitives/roving_focus_group.rs` + `ecosystem/fret-ui-kit/src/headless/mod.rs` (`typeahead`) | Prefix-buffer typeahead policies exist and are reused across menu/table surfaces; select/combobox should use the same buffer semantics where possible. |
+
 ### M0 — Current surface mapping (upstream → Fret)
 
 This is the “copy/paste authoring” view: do we have the same identifiers available, and do they
@@ -121,3 +133,27 @@ For each milestone, record 1–3 evidence anchors:
 - file + symbol anchors (e.g. `ecosystem/fret-ui-kit/src/...`),
 - unit tests (`cargo test -p fret-ui-shadcn --lib <filter>`),
 - diag scripts (if used).
+
+#### Evidence anchors (today)
+
+These anchors are intended to make audits and future refactors cheaper (searchable, stable names).
+
+- Upstream sources:
+  - `repo-ref/ui/apps/v4/registry/bases/radix/ui/select.tsx`
+  - `repo-ref/ui/apps/v4/registry/bases/radix/ui/combobox.tsx`
+- Kit substrate:
+  - `ecosystem/fret-ui-kit/src/primitives/select.rs:89` (`SelectRoot`)
+  - `ecosystem/fret-ui-kit/src/primitives/select.rs:147` (`apply_select_trigger_a11y`)
+  - `ecosystem/fret-ui-kit/src/primitives/select.rs:302` (`SelectMousePolicies`)
+  - `ecosystem/fret-ui-kit/src/primitives/select.rs:1822` (`modal_select_request`)
+  - `ecosystem/fret-ui-kit/src/primitives/combobox.rs:18` (`ComboboxOpenChangeReason`)
+  - `ecosystem/fret-ui-kit/src/primitives/combobox.rs:48` (`ComboboxCloseAutoFocusPolicy`)
+  - `ecosystem/fret-ui-kit/src/primitives/combobox.rs:213` (`commit_selection_on_activate`)
+  - `ecosystem/fret-ui-kit/src/primitives/combobox.rs:280` (`on_close_auto_focus_with_reason`)
+  - `ecosystem/fret-ui-kit/src/primitives/active_descendant.rs:4` (`active_descendant_for_index` re-export)
+- Current shadcn recipes/adapters:
+  - `ecosystem/fret-ui-shadcn/src/select.rs:1227` (`Select`)
+  - `ecosystem/fret-ui-shadcn/src/select.rs:1435` (`Select::into_element_parts`)
+  - `ecosystem/fret-ui-shadcn/src/combobox.rs:108` (`useComboboxAnchor`)
+  - `ecosystem/fret-ui-shadcn/src/combobox.rs:793` (`Combobox`)
+  - `ecosystem/fret-ui-shadcn/src/combobox.rs:888` (`Combobox::into_element_parts`)

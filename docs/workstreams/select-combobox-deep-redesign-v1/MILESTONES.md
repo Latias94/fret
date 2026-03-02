@@ -21,17 +21,29 @@ Deliverables:
 
 ### M1 — Shared headless substrate (kit)
 
+Note: a meaningful portion of this substrate already exists today (see
+`ecosystem/fret-ui-kit/src/primitives/select.rs`, `ecosystem/fret-ui-kit/src/primitives/combobox.rs`,
+and `ecosystem/fret-ui-kit/src/primitives/active_descendant.rs`). M1 should be “reuse-first”:
+only add new helpers when we can’t express an upstream outcome with the existing primitives.
+
 Acceptance:
 
-- A reusable substrate exists in `ecosystem/fret-ui-kit` that can drive both select and combobox
-  without duplicating keyboard/typeahead/selection logic.
-- At least one unit test gates core invariants (selection model + typeahead + disabled items).
+- A reusable substrate is available in `ecosystem/fret-ui-kit` that can drive both select and
+  combobox without duplicating keyboard/typeahead/selection logic (either by reusing existing
+  primitives or by adding a small missing helper).
+- At least one unit test gates core invariants (selection model + typeahead + disabled items) at
+  the substrate layer (kit or headless), not only via recipe tests.
 - No `fret-ui` contract expansion for policy-only behavior.
 
 Deliverables (example, may evolve):
 
-- `ecosystem/fret-ui-kit/src/primitives/*` (new listbox/combobox state helpers)
-- Unit tests in `ecosystem/fret-ui-kit`
+- Prefer reusing:
+  - `ecosystem/fret-ui-kit/src/primitives/select.rs`
+  - `ecosystem/fret-ui-kit/src/primitives/combobox.rs`
+  - `ecosystem/fret-ui-kit/src/primitives/active_descendant.rs`
+  - `ecosystem/fret-ui-headless/src/{cmdk_selection.rs,typeahead.rs}`
+- If needed, add a small missing helper in `ecosystem/fret-ui-kit/src/primitives/*` (e.g. a
+  listbox active-descendant wiring helper), with unit tests in `ecosystem/fret-ui-kit`.
 
 ### M2 — Select v4 part surface parity (shadcn)
 
@@ -85,4 +97,3 @@ Acceptance:
 
 - Old surfaces are either removed (if in-tree only) or deprecated with clear guidance.
 - The new gates provide sufficient regression protection to enable fearless refactors.
-
