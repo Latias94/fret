@@ -83,8 +83,8 @@ These do not exist upstream but reduce churn when porting examples:
 
 | Component | Target surface | Current state (Fret) | Known gaps / risks | Proposed changes (layer) | Gates | Status |
 |---|---|---|---|---|---|---|
-| `select` | shadcn part surface (`Select*`) + stable `test_id` | Part adapters exist (`Select::into_element_parts` + `SelectContent::with_entries`); call-site parity is mostly achieved in-tree | Composition drift, focus/keyboard edge cases, automation surfaces not uniformly documented | Extract/align shared listbox substrate (`kit`), keep shadcn defaults (`shadcn`); decide a single focus model and gate it | Unit tests: open/close + focus restore + keyboard nav; optionally diag script for overlay flows | In progress |
-| `combobox` | shadcn part surface (`Combobox*`) + docs-aligned examples | Part adapters exist; legacy option model has been removed; known structural drift remains by design | Input-in-trigger ergonomics, Base UI-style expectations, structural adapter debt | Shared substrate (`kit`), refine part surface + adapters (`shadcn`), document explicit differences | Unit tests: filtering/typeahead + focus model + stable `test_id`; optionally diag script for overlay interactions | In progress |
+| `select` | shadcn part surface (`Select*`) + stable `test_id` | Part adapters exist (`Select::into_element_parts` + `SelectContent::with_entries`); call-site parity is mostly achieved in-tree | Composition drift, focus/keyboard edge cases, automation surfaces not uniformly documented | Extract/align shared listbox substrate (`kit`), keep shadcn defaults (`shadcn`); decide a single focus model and gate it | Unit tests: `ecosystem/fret-ui-shadcn/tests/select_test_id_stability.rs` (locks trigger + viewport `test_id`), `ecosystem/fret-ui-shadcn/tests/select_keyboard_navigation.rs` (ArrowDown + Enter selects + closes), `ecosystem/fret-ui-shadcn/tests/select_escape_dismiss_focus_restore.rs` (Escape closes + focus restore), `ecosystem/fret-ui-shadcn/tests/select_typeahead.rs` (KeyB typeahead selects matching item) | In progress |
+| `combobox` | shadcn part surface (`Combobox*`) + docs-aligned examples | Part adapters exist; legacy option model has been removed; known structural drift remains by design | Input-in-trigger ergonomics, Base UI-style expectations, structural adapter debt | Shared substrate (`kit`), refine part surface + adapters (`shadcn`), document explicit differences | Unit tests: `ecosystem/fret-ui-shadcn/tests/combobox_test_id_prefix_semantics.rs` (locks prefix scheme + item slugging), `ecosystem/fret-ui-shadcn/tests/combobox_keyboard_navigation.rs` (ArrowDown + Enter selects + closes), `ecosystem/fret-ui-shadcn/tests/combobox_escape_dismiss_focus_restore.rs` (Escape closes + focus restore), `ecosystem/fret-ui-shadcn/tests/combobox_filtering.rs` (TextInput filters + Enter selects) | In progress |
 
 ### Proposed `test_id` scheme (for gates + scripted diags)
 
@@ -122,9 +122,9 @@ For multi-select (chips), prefer explicit `test_id`s on chip parts where possibl
 1. **Decide focus model** per component:
    - active-descendant listbox model vs roving focus on items,
    - how it maps to platform semantics and automation.
-2. **Lock the `test_id` scheme with one gate per component**:
-   - `select`: verify trigger + `select-scroll-viewport` + at least one item id are stable across open/close frames.
-   - `combobox`: verify `<prefix>-listbox` + item slugging + clear button visibility rules.
+2. **Lock the `test_id` scheme with one gate per component** (done):
+   - `select`: `ecosystem/fret-ui-shadcn/tests/select_test_id_stability.rs`
+   - `combobox`: `ecosystem/fret-ui-shadcn/tests/combobox_test_id_prefix_semantics.rs`
 3. **Extract one shared helper in `ecosystem/fret-ui-kit` (reuse-first)**:
    - only if we can’t express the desired outcome with existing `kit` primitives,
    - add a unit test at the kit layer for the helper (not only recipe tests).
@@ -160,3 +160,12 @@ These anchors are intended to make audits and future refactors cheaper (searchab
   - `ecosystem/fret-ui-shadcn/src/combobox.rs:108` (`useComboboxAnchor`)
   - `ecosystem/fret-ui-shadcn/src/combobox.rs:793` (`Combobox`)
   - `ecosystem/fret-ui-shadcn/src/combobox.rs:888` (`Combobox::into_element_parts`)
+- Gates:
+  - `ecosystem/fret-ui-shadcn/tests/select_test_id_stability.rs`
+  - `ecosystem/fret-ui-shadcn/tests/select_keyboard_navigation.rs`
+  - `ecosystem/fret-ui-shadcn/tests/select_escape_dismiss_focus_restore.rs`
+  - `ecosystem/fret-ui-shadcn/tests/select_typeahead.rs`
+  - `ecosystem/fret-ui-shadcn/tests/combobox_test_id_prefix_semantics.rs`
+  - `ecosystem/fret-ui-shadcn/tests/combobox_keyboard_navigation.rs`
+  - `ecosystem/fret-ui-shadcn/tests/combobox_escape_dismiss_focus_restore.rs`
+  - `ecosystem/fret-ui-shadcn/tests/combobox_filtering.rs`
