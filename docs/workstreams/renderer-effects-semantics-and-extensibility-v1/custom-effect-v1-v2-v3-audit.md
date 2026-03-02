@@ -476,6 +476,107 @@ Rollback:
 
 - Revert refactors/tests; behavior should be unchanged unless explicitly called out by the tests.
 
+### PR9 — Refactor: make CustomV3 source planning a small, testable unit
+
+Status:
+
+- Planned.
+
+Goal:
+
+- Reduce drift risk in CustomV3 by making “raw/pyramid choice + degradation + scissor ROI” explicit and unit-testable.
+
+Changes (proposed):
+
+- Extract CustomV3 source planning into a small helper module (pure-ish functions, table-driven tests):
+  - raw choice (distinct vs aliased),
+  - pyramid level selection (budget vs group vs request),
+  - pyramid build scissor ROI choice.
+- Make both padded-chain and non-padded-chain paths share the same planning code.
+
+Gates:
+
+- `cargo test -p fret-render-wgpu --test effect_custom_v3_conformance`
+- `cargo nextest run -p fret-render-wgpu --tests` (preferred)
+
+Rollback:
+
+- Revert the refactor commit; behavior should be unchanged.
+
+### PR10 — Refactor: reduce V1/V2/V3 pass struct duplication
+
+Status:
+
+- Planned.
+
+Goal:
+
+- Reduce “same field list repeated in 3 places” drift in pass validation, dumping, and recording.
+
+Changes (proposed):
+
+- Introduce an internal `CustomEffectPassCommon` (src/dst, sizes, scissor, mask, effect id, params, load).
+- Re-home shared validation/dump helpers to operate on the common struct.
+
+Gates:
+
+- `cargo check -p fret-render-wgpu`
+- `cargo test -p fret-render-wgpu --test effect_custom_v3_conformance`
+
+Rollback:
+
+- Revert the refactor commit; no behavior change expected.
+
+### PR11 — Refactor: split `render_plan_effects.rs` into modules (no behavior change)
+
+Status:
+
+- Planned.
+
+Goal:
+
+- Reduce merge conflict risk and make effect-chain planning readable (the file is a hotspot).
+
+Changes (proposed):
+
+- Move chain planning (`apply_chain_in_place`, padding/work-target logic) into a dedicated module.
+- Move CustomV1/V2/V3 emission helpers into a dedicated module.
+- Keep existing tests and conformance behavior unchanged.
+
+Gates:
+
+- `cargo test -p fret-render-wgpu --test effect_custom_v3_conformance`
+- `cargo nextest run -p fret-render-wgpu --tests` (preferred)
+
+Rollback:
+
+- Revert the move; no behavior change expected.
+
+### PR12 — Authoring: make `max_sample_offset_px` easier to get right
+
+Status:
+
+- Planned.
+
+Goal:
+
+- Reduce “padding bugs” in demos and future recipes by standardizing how `max_sample_offset_px` is derived.
+
+Changes (proposed):
+
+- Add a tiny authoring helper in `ecosystem/fret-ui-kit` (or `apps/fret-examples` if we want to keep it demo-local)
+  that computes a conservative `max_sample_offset_px` from known shader parameters.
+- Update liquid glass demo + custom v3 demos to use the helper (keep perf-script defaults stable).
+
+Gates:
+
+- `cargo check -p fret-ui-kit -p fret-examples`
+- Run `tools/diag-scripts/suites/perf-liquid-glass-custom-v3-steady/` (manual + scripted)
+
+Rollback:
+
+- Revert helper usage; behavior should be unchanged.
+
 ## Evidence anchors (most load-bearing)
 
 - Contract:
