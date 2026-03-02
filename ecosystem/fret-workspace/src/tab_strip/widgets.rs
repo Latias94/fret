@@ -12,8 +12,8 @@ use fret_ui::element::{
 use fret_ui::elements::GlobalElementId;
 use fret_ui::scroll::ScrollHandle;
 use fret_ui::{ElementContext, UiHost};
+use fret_ui_kit::declarative::action_hooks::ActionHooksExt as _;
 
-use super::intent::{WorkspaceTabStripIntent, dispatch_intent};
 use super::layouts::{centered_row, fill_layout, fixed_square_layout};
 
 pub(super) fn tab_close_button<H: UiHost>(
@@ -38,21 +38,8 @@ pub(super) fn tab_close_button<H: UiHost>(
             ..Default::default()
         },
         move |cx, close_state| {
-            let close_handler: OnActivate = {
-                let close_command = close_command.clone();
-                let pane_activate_cmd = pane_activate_cmd.clone();
-                Arc::new(move |host, acx, _reason| {
-                    if let Some(cmd) = pane_activate_cmd.clone() {
-                        dispatch_intent(host, acx.window, WorkspaceTabStripIntent::Activate(cmd));
-                    }
-                    dispatch_intent(
-                        host,
-                        acx.window,
-                        WorkspaceTabStripIntent::Close(close_command.clone()),
-                    );
-                })
-            };
-            cx.pressable_on_activate(close_handler);
+            cx.pressable_dispatch_action_if_enabled_opt(pane_activate_cmd.clone());
+            cx.pressable_dispatch_action_if_enabled(close_command.clone());
 
             let bg = if close_state.hovered || close_state.pressed {
                 Some(hover_bg)
