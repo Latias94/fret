@@ -24,6 +24,12 @@ pub(super) struct PickInterceptDecision {
     pub(super) request_redraw: bool,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(super) enum ScriptInspectTreeValidationFailure {
+    NodeNotInTree,
+    SelectedMarkerMissing,
+}
+
 #[derive(Debug, Clone, Copy)]
 pub(super) enum InspectNavCommand {
     Up,
@@ -281,6 +287,27 @@ impl InspectController {
                 .unwrap_or_default(),
             self.state.tree_selected_node_id.get(&window).copied(),
         )
+    }
+
+    pub(super) fn script_validate_tree_model_selected(
+        &self,
+        model: &super::inspect_tree::InspectTreeModel,
+        node_id: u64,
+    ) -> Result<(), ScriptInspectTreeValidationFailure> {
+        if !model.flat_node_ids.iter().any(|id| *id == node_id) {
+            return Err(ScriptInspectTreeValidationFailure::NodeNotInTree);
+        }
+
+        let want = format!("node={node_id}");
+        let ok = model
+            .lines
+            .iter()
+            .any(|line| line.contains("> ") && line.contains(&want));
+        if !ok {
+            return Err(ScriptInspectTreeValidationFailure::SelectedMarkerMissing);
+        }
+
+        Ok(())
     }
 
     pub(super) fn is_locked(&self, window: AppWindowId) -> bool {

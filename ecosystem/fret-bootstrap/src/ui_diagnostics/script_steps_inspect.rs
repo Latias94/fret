@@ -455,28 +455,30 @@ pub(super) fn handle_inspect_help_tree_lock_best_match_and_copy_selector_step(
         svc.cfg.redact_text,
     );
     svc.set_inspect_tree_items(resolved_window, model.flat_node_ids.clone());
-    if !model.flat_node_ids.iter().any(|id| *id == node_id) {
-        *force_dump_label = Some(format!(
-            "script-step-{step_index:04}-inspect_help_tree_lock_best_match_and_copy_selector-node-not-in-tree"
-        ));
-        *stop_script = true;
-        *failure_reason = Some("inspect_help_tree_node_not_in_tree".to_string());
-        output.request_redraw = true;
-        return true;
-    }
-
-    let has_selected_marker = model
-        .lines
-        .iter()
-        .any(|line| line.contains("> ") && line.contains(&format!("node={node_id}")));
-    if !has_selected_marker {
-        *force_dump_label = Some(format!(
-            "script-step-{step_index:04}-inspect_help_tree_lock_best_match_and_copy_selector-selected-marker-missing"
-        ));
-        *stop_script = true;
-        *failure_reason = Some("inspect_help_tree_selected_marker_missing".to_string());
-        output.request_redraw = true;
-        return true;
+    if let Err(err) = svc
+        .inspector
+        .script_validate_tree_model_selected(&model, node_id)
+    {
+        match err {
+            inspect_controller::ScriptInspectTreeValidationFailure::NodeNotInTree => {
+                *force_dump_label = Some(format!(
+                    "script-step-{step_index:04}-inspect_help_tree_lock_best_match_and_copy_selector-node-not-in-tree"
+                ));
+                *stop_script = true;
+                *failure_reason = Some("inspect_help_tree_node_not_in_tree".to_string());
+                output.request_redraw = true;
+                return true;
+            }
+            inspect_controller::ScriptInspectTreeValidationFailure::SelectedMarkerMissing => {
+                *force_dump_label = Some(format!(
+                    "script-step-{step_index:04}-inspect_help_tree_lock_best_match_and_copy_selector-selected-marker-missing"
+                ));
+                *stop_script = true;
+                *failure_reason = Some("inspect_help_tree_selected_marker_missing".to_string());
+                output.request_redraw = true;
+                return true;
+            }
+        }
     }
 
     let Some(node) = snapshot
