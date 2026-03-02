@@ -50,26 +50,31 @@ fn slide(cx: &mut ElementContext<'_, App>, idx: usize, visual: SlideVisual) -> A
 }
 
 pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
-    let max_w_sm = Px(384.0);
+    let max_w_xs = Px(320.0);
 
     let visual = SlideVisual {
-        text_px: Px(30.0),
-        line_height_px: Px(36.0),
+        text_px: Px(36.0),
+        line_height_px: Px(40.0),
     };
-    let items = (1..=5)
+    let items = (1..=2)
         .map(|idx| slide(cx, idx, visual))
         .collect::<Vec<_>>();
 
     shadcn::Carousel::new(items)
-        .opts(shadcn::CarouselOptions::new().align(shadcn::CarouselAlign::Start))
-        .item_basis_main_px(Px(133.328))
+        .opts(
+            shadcn::CarouselOptions::new()
+                .loop_enabled(true)
+                .embla_engine(true),
+        )
+        // A narrow basis helps construct a configuration where Embla's `canLoop` downgrade applies.
+        .item_basis_main_px(Px(240.0))
         .refine_layout(
             LayoutRefinement::default()
                 .w_full()
-                .max_w(max_w_sm)
+                .max_w(max_w_xs)
                 .mx_auto(),
         )
-        .test_id("ui-gallery-carousel-sizes")
+        .test_id("ui-gallery-carousel-loop-downgrade-cannot-loop")
         .into_element(cx)
 }
 // endregion: example

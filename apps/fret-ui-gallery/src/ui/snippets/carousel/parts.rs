@@ -44,6 +44,7 @@ fn slide_card(cx: &mut ElementContext<'_, App>, idx: usize, visual: SlideVisual)
 fn slide(cx: &mut ElementContext<'_, App>, idx: usize, visual: SlideVisual) -> AnyElement {
     let card = slide_card(cx, idx, visual);
     ui::container(cx, move |_cx| vec![card])
+        .w_full()
         .p_1()
         .into_element(cx)
 }
@@ -61,7 +62,6 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
         .collect::<Vec<_>>();
 
     shadcn::Carousel::default()
-        .refine_track_layout(LayoutRefinement::default().w_px(Px(336.0)))
         .refine_layout(
             LayoutRefinement::default()
                 .w_full()

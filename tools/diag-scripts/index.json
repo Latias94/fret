@@ -1245,6 +1245,95 @@
       "target_hints": []
     },
     {
+      "id": "ui-gallery-carousel-demo-inertia-pixels-changed",
+      "path": "tools/diag-scripts/ui-gallery/carousel/ui-gallery-carousel-demo-inertia-pixels-changed.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "ui-gallery-carousel-embla-engine"
+      ],
+      "tags": [
+        "carousel",
+        "inertia",
+        "pixels-changed",
+        "screenshot",
+        "ui-gallery"
+      ],
+      "target_hints": [
+        "Embla engine is enabled by default (set FRET_DEBUG_CAROUSEL_EMBLA_ENGINE=0 to force-disable).",
+        "Expected behavior: after releasing a flick, the carousel continues moving for a short time."
+      ]
+    },
+    {
+      "id": "ui-gallery-carousel-demo-inertia-touch-pixels-changed",
+      "path": "tools/diag-scripts/ui-gallery/carousel/ui-gallery-carousel-demo-inertia-touch-pixels-changed.json",
+      "required_capabilities": [
+        "diag.pointer_kind_touch",
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "ui-gallery-carousel-embla-engine"
+      ],
+      "tags": [
+        "carousel",
+        "inertia",
+        "pixels-changed",
+        "screenshot",
+        "touch",
+        "ui-gallery"
+      ],
+      "target_hints": [
+        "Embla engine is enabled by default (set FRET_DEBUG_CAROUSEL_EMBLA_ENGINE=0 to force-disable).",
+        "Expected behavior: after releasing a touch flick, the carousel continues moving for a short time."
+      ]
+    },
+    {
+      "id": "ui-gallery-carousel-demo-reinit-resize-gate",
+      "path": "tools/diag-scripts/ui-gallery/carousel/ui-gallery-carousel-demo-reinit-resize-gate.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "ui-gallery-carousel-embla-engine"
+      ],
+      "tags": [
+        "carousel",
+        "gate",
+        "reinit",
+        "resize",
+        "screenshot",
+        "ui-gallery"
+      ],
+      "target_hints": [
+        "Embla engine is enabled by default (set FRET_DEBUG_CAROUSEL_EMBLA_ENGINE=0 to force-disable).",
+        "Expected behavior: resizing during an Embla-driven settle does not panic and items remain visible."
+      ]
+    },
+    {
+      "id": "ui-gallery-carousel-focus-watch-tab-scrolls-gate",
+      "path": "tools/diag-scripts/ui-gallery/carousel/ui-gallery-carousel-focus-watch-tab-scrolls-gate.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "ui-gallery-motion-pilot"
+      ],
+      "tags": [
+        "carousel",
+        "focus",
+        "gate",
+        "ui-gallery"
+      ],
+      "target_hints": [
+        "Navigate to the Carousel page and use Tab to move focus between slide buttons.",
+        "Expected behavior: when focus moves to an offscreen slide, the carousel scrolls it into view."
+      ]
+    },
+    {
       "id": "ui-gallery-carousel-loop-continuity-touch-gate",
       "path": "tools/diag-scripts/ui-gallery/carousel/ui-gallery-carousel-loop-continuity-touch-gate.json",
       "required_capabilities": [
@@ -1253,6 +1342,7 @@
         "diag.script_v2"
       ],
       "suite_memberships": [
+        "ui-gallery-carousel-embla-engine",
         "ui-gallery-motion-pilot"
       ],
       "tags": [
@@ -1266,6 +1356,29 @@
       "target_hints": [
         "Requires the UI gallery Carousel page to include a `Loop` section with `loop=true` + Embla engine enabled.",
         "Expected behavior: repeated touch swipes do not clamp at ends or hang; content remains visible."
+      ]
+    },
+    {
+      "id": "ui-gallery-carousel-loop-downgrade-cannot-loop-gate",
+      "path": "tools/diag-scripts/ui-gallery/carousel/ui-gallery-carousel-loop-downgrade-cannot-loop-gate.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "ui-gallery-carousel-embla-engine"
+      ],
+      "tags": [
+        "can-loop",
+        "carousel",
+        "gate",
+        "loop",
+        "screenshot",
+        "ui-gallery"
+      ],
+      "target_hints": [
+        "Embla engine is enabled by default (set FRET_DEBUG_CAROUSEL_EMBLA_ENGINE=0 to force-disable).",
+        "Expected behavior: when `loop=true` but the slide set cannot loop, the carousel behaves like loop=false (no wrap)."
       ]
     },
     {

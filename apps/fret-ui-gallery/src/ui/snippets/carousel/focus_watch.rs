@@ -8,28 +8,27 @@ use fret_ui_kit::ui;
 use fret_ui_shadcn::{self as shadcn, prelude::*};
 
 pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
-    let max_w_xs = Px(320.0);
-
-    let vertical_items = (1..=5)
+    let focus_items = (1..=5)
         .map(|idx| {
-            let theme = Theme::global(&*cx.app).clone();
-            let number = ui::text(cx, format!("{idx}"))
-                .text_size_px(Px(30.0))
-                .line_height_px(Px(36.0))
-                .line_height_policy(fret_core::TextLineHeightPolicy::FixedFromStyle)
-                .font_semibold()
+            let theme = Theme::global(&*cx.app).snapshot();
+
+            let button = shadcn::Button::new(format!("Button {idx}"))
+                .test_id(format!("ui-gallery-carousel-focus-button-{idx}"))
                 .into_element(cx);
 
             let body = cx.flex(
                 FlexProps {
-                    layout: decl_style::layout_style(&theme, LayoutRefinement::default().w_full()),
+                    layout: decl_style::layout_style(
+                        &theme,
+                        LayoutRefinement::default().w_full().h_full(),
+                    ),
                     direction: fret_core::Axis::Horizontal,
                     justify: MainAlign::Center,
                     align: CrossAlign::Center,
                     padding: Edges::all(Px(24.0)).into(),
                     ..Default::default()
                 },
-                move |_cx| vec![number],
+                move |_cx| vec![button],
             );
 
             let card = shadcn::Card::new([body]).into_element(cx);
@@ -40,21 +39,25 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
         })
         .collect::<Vec<_>>();
 
-    shadcn::Carousel::new(vertical_items)
-        .orientation(shadcn::CarouselOrientation::Vertical)
-        .opts(shadcn::CarouselOptions::new().align(shadcn::CarouselAlign::Start))
-        .item_basis_main_px(Px(100.0))
-        .refine_viewport_layout(LayoutRefinement::default().h_px(Px(200.0)))
-        .refine_track_layout(LayoutRefinement::default().h_px(Px(200.0)))
-        .track_start_neg_margin(Space::N1)
-        .item_padding_start(Space::N1)
+    shadcn::Carousel::new(focus_items)
+        .opts(
+            shadcn::CarouselOptions::new()
+                .watch_focus(true)
+                .embla_engine(true)
+                .ignore_reduced_motion(true),
+        )
+        .track_start_neg_margin(Space::N0)
+        .item_padding_start(Space::N0)
+        .item_basis_main_px(Px(200.0))
         .refine_layout(
             LayoutRefinement::default()
-                .w_full()
-                .max_w(max_w_xs)
+                .w_px(Px(200.0))
+                .h_px(Px(120.0))
                 .mx_auto(),
         )
-        .test_id("ui-gallery-carousel-orientation-vertical")
+        .refine_viewport_layout(LayoutRefinement::default().h_px(Px(120.0)))
+        .refine_track_layout(LayoutRefinement::default().h_px(Px(120.0)))
+        .test_id("ui-gallery-carousel-focus")
         .into_element(cx)
 }
 // endregion: example

@@ -1,12 +1,12 @@
 {
   "schema_version": 2,
   "meta": {
-    "name": "UI gallery: carousel demo reInit resize gate",
-    "tags": ["ui-gallery", "carousel", "reinit", "resize", "gate", "screenshot"],
-    "required_capabilities": ["diag.script_v2", "diag.screenshot_png"],
+    "name": "UI gallery: carousel watch_focus scrolls focused slide into view",
+    "tags": ["ui-gallery", "carousel", "focus", "gate"],
+    "required_capabilities": ["diag.script_v2"],
     "target_hints": [
-      "Embla engine is enabled by default (set FRET_DEBUG_CAROUSEL_EMBLA_ENGINE=0 to force-disable).",
-      "Expected behavior: resizing during an Embla-driven settle does not panic and items remain visible."
+      "Navigate to the Carousel page and use Tab to move focus between slide buttons.",
+      "Expected behavior: when focus moves to an offscreen slide, the carousel scrolls it into view."
     ]
   },
   "steps": [
@@ -48,13 +48,13 @@
     },
     {
       "type": "wait_until",
-      "predicate": { "kind": "exists", "target": { "kind": "test_id", "id": "ui-gallery-carousel-demo" } },
+      "predicate": { "kind": "exists", "target": { "kind": "test_id", "id": "ui-gallery-carousel-focus" } },
       "timeout_frames": 600
     },
     {
       "type": "scroll_into_view",
       "container": { "kind": "test_id", "id": "ui-gallery-content-scroll" },
-      "target": { "kind": "test_id", "id": "ui-gallery-carousel-demo" },
+      "target": { "kind": "test_id", "id": "ui-gallery-carousel-focus" },
       "delta_y": -120.0,
       "require_fully_within_container": true,
       "require_fully_within_window": true,
@@ -64,33 +64,21 @@
 
     {
       "type": "wait_until",
-      "predicate": {
-        "kind": "visible_in_window",
-        "target": { "kind": "test_id", "id": "ui-gallery-carousel-demo-next" }
-      },
+      "predicate": { "kind": "visible_in_window", "target": { "kind": "test_id", "id": "ui-gallery-carousel-focus-item-1" } },
       "timeout_frames": 240
     },
-    { "type": "click", "target": { "kind": "test_id", "id": "ui-gallery-carousel-demo-next" } },
+    { "type": "click", "target": { "kind": "test_id", "id": "ui-gallery-carousel-focus-button-1" } },
     { "type": "wait_frames", "n": 2 },
-
-    { "type": "set_window_inner_size", "width_px": 520.0, "height_px": 720.0 },
-    { "type": "wait_frames", "n": 20 },
-    { "type": "set_window_inner_size", "width_px": 1280.0, "height_px": 720.0 },
-    { "type": "wait_frames", "n": 10 },
-
-    { "type": "click", "target": { "kind": "test_id", "id": "ui-gallery-carousel-demo-previous" } },
-    { "type": "wait_frames", "n": 20 },
+    { "type": "press_key", "key": "tab" },
+    { "type": "wait_frames", "n": 12 },
 
     {
       "type": "wait_until",
-      "predicate": {
-        "kind": "visible_in_window",
-        "target": { "kind": "test_id", "id": "ui-gallery-carousel-demo-item-1" }
-      },
+      "predicate": { "kind": "visible_in_window", "target": { "kind": "test_id", "id": "ui-gallery-carousel-focus-item-2" } },
       "timeout_frames": 600
     },
 
-    { "type": "capture_bundle", "label": "ui-gallery-carousel-demo-reinit-resize-gate" },
-    { "type": "capture_screenshot", "label": "ui-gallery-carousel-demo-reinit-resize-gate" }
+    { "type": "capture_bundle", "label": "ui-gallery-carousel-focus-watch-tab-scrolls" }
   ]
 }
+
