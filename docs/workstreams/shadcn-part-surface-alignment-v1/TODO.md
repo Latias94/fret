@@ -95,7 +95,7 @@ This is the short “next few” list. Full inventory is in `INVENTORY.md`.
 | Component | Upstream base file | Fret module | Priority | Status | Notes |
 |---|---|---|---:|---|---|
 | `combobox` API cleanup | `repo-ref/ui/apps/v4/registry/bases/radix/ui/combobox.tsx` | `ecosystem/fret-ui-shadcn/src/combobox.rs` | P0 | Done | Removed the legacy option model and the `use_v4` runtime branch; `ComboboxItem/Group/List` is the only list data surface. |
-| `select` call-site cleanup | `repo-ref/ui/apps/v4/registry/bases/radix/ui/select.tsx` | `ecosystem/fret-ui-shadcn/src/select.rs` | P1 | In progress | Migrate remaining call sites to `Select::into_element_parts(cx, trigger, content_parts)` + `SelectContent::with_entries(...)`. |
+| `select` call-site cleanup | `repo-ref/ui/apps/v4/registry/bases/radix/ui/select.tsx` | `ecosystem/fret-ui-shadcn/src/select.rs` | P1 | Done | UI Gallery select demos use `Select::into_element_parts(...)` + `SelectContent::with_entries(...)` for upstream-shaped copy/paste parity. |
 | `select` / `combobox` deep redesign | (see per-module refs) | `ecosystem/fret-ui-shadcn/src/select.rs` / `ecosystem/fret-ui-shadcn/src/combobox.rs` | P0 | Deferred (planned) | Structural drift is known; keep for last. Workstream: `docs/workstreams/select-combobox-deep-redesign-v1/`. |
 
 ## Notes / recurring hazards
