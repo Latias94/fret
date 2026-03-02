@@ -565,7 +565,9 @@ fn summarize_steps_v2(script: &UiActionScriptV2) -> Value {
     for step in &script.steps {
         match step {
             UiActionStepV2::CaptureBundle { .. } => capture_bundle_count += 1,
-            UiActionStepV2::WaitFrames { n, .. } => wait_frames_max = wait_frames_max.max(*n as u64),
+            UiActionStepV2::WaitFrames { n, .. } => {
+                wait_frames_max = wait_frames_max.max(*n as u64)
+            }
             UiActionStepV2::ClickStable { .. } => click_stable_count += 1,
             UiActionStepV2::WaitBoundsStable { .. } => wait_bounds_stable_count += 1,
             _ => {}

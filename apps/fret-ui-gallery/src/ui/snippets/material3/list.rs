@@ -86,4 +86,3 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>, value: Model<Arc<str>>)
 }
 
 // endregion: example
-

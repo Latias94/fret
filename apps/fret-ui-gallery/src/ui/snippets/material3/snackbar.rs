@@ -16,7 +16,10 @@ struct State {
     store: Option<Model<ToastStore>>,
 }
 
-pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>, last_action: Model<Arc<str>>) -> AnyElement {
+pub fn render<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    last_action: Model<Arc<str>>,
+) -> AnyElement {
     let store = cx.with_state(State::default, |st| st.store.clone());
     let store = store.unwrap_or_else(|| {
         let store = cx.app.models_mut().insert(ToastStore::default());
@@ -35,8 +38,7 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>, last_action: Model<Arc<
             let _ = controller.show(
                 host,
                 acx.window,
-                material3::Snackbar::new("Saved")
-                    .action("Undo", CommandId::new(CMD_TOAST_ACTION)),
+                material3::Snackbar::new("Saved").action("Undo", CommandId::new(CMD_TOAST_ACTION)),
             );
             host.request_redraw(acx.window);
         })

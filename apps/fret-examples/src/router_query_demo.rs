@@ -53,7 +53,7 @@ pub fn run() -> anyhow::Result<()> {
         .init_app(|app| {
             fret_router_ui::register_router_commands(app.commands_mut());
             fret_app::install_command_default_keybindings_into_keymap(app);
-            shadcn::shadcn_themes::apply_shadcn_new_york_v4(
+            shadcn::shadcn_themes::apply_shadcn_new_york(
                 app,
                 shadcn::shadcn_themes::ShadcnBaseColor::Zinc,
                 shadcn::shadcn_themes::ShadcnColorScheme::Dark,

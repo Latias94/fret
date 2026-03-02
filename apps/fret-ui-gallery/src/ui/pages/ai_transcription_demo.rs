@@ -22,4 +22,3 @@ pub(super) fn preview_ai_transcription_demo(
 
     vec![body.test_id("ui-gallery-page-ai-transcription-demo")]
 }
-

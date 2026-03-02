@@ -1886,11 +1886,12 @@ pub(super) fn handle_move_pointer_step(
                         );
                         active.last_explicit_cursor_override =
                             Some(CursorOverrideTarget::WindowClientLogical(target_window));
-                        active.last_explicit_cursor_override_pos = Some(ExplicitCursorOverridePos {
-                            target: CursorOverrideTarget::WindowClientLogical(target_window),
-                            x_px: x,
-                            y_px: y,
-                        });
+                        active.last_explicit_cursor_override_pos =
+                            Some(ExplicitCursorOverridePos {
+                                target: CursorOverrideTarget::WindowClientLogical(target_window),
+                                x_px: x,
+                                y_px: y,
+                            });
                         push_script_event_log(
                             active,
                             &svc.cfg,

@@ -22,4 +22,3 @@ pub(super) fn preview_ai_chain_of_thought_demo(
 
     vec![body.test_id("ui-gallery-page-ai-chain-of-thought-demo")]
 }
-

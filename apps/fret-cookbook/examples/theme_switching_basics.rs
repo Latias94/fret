@@ -12,7 +12,7 @@ const SCHEME_LIGHT: &str = "light";
 const SCHEME_DARK: &str = "dark";
 
 fn apply_scheme(app: &mut App, scheme: &str) {
-    shadcn::shadcn_themes::apply_shadcn_new_york_v4(
+    shadcn::shadcn_themes::apply_shadcn_new_york(
         app,
         shadcn::shadcn_themes::ShadcnBaseColor::Slate,
         match scheme {

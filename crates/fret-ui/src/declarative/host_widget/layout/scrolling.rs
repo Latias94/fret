@@ -10,8 +10,8 @@ use crate::tree::{
 };
 use fret_core::FrameId;
 use fret_core::time::{Duration, Instant};
-use std::sync::OnceLock;
 use std::sync::Arc;
+use std::sync::OnceLock;
 
 #[derive(Debug, Clone)]
 struct ScrollLayoutProfileConfig {
@@ -1390,7 +1390,8 @@ impl ElementHostWidget {
             let mut steps: u8 = 0;
             let mut found: Option<Arc<str>> = None;
             while let Some(node) = current {
-                if let Some(record) = crate::declarative::element_record_for_node(cx.app, window, node)
+                if let Some(record) =
+                    crate::declarative::element_record_for_node(cx.app, window, node)
                     && let Some(decoration) = record.semantics_decoration.as_ref()
                     && let Some(test_id) = decoration.test_id.as_ref()
                 {

@@ -2,15 +2,14 @@ pub const SOURCE: &str = include_str!("workflow_node_demo.rs");
 
 // region: example
 use fret_core::Px;
-use fret_ui_kit::declarative::ElementContextThemeExt;
 use fret_ui_ai as ui_ai;
+use fret_ui_kit::declarative::ElementContextThemeExt;
 use fret_ui_kit::declarative::stack;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, Radius, Space};
 use fret_ui_shadcn::prelude::*;
 
 pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement {
-
     let node = ui_ai::WorkflowNode::new([
         ui_ai::WorkflowNodeHeader::new([ui_ai::WorkflowNodeTitle::new("Summarize")
             .into_element(cx)

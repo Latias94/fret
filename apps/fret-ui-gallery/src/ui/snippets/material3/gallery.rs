@@ -176,16 +176,12 @@ pub fn render<H: UiHost>(
                         });
                         material3::SwitchStyle::default()
                             .track_color(
-                                fret_ui_kit::WidgetStateProperty::new(None).when(
-                                    fret_ui_kit::WidgetStates::HOVERED,
-                                    Some(hover_track),
-                                ),
+                                fret_ui_kit::WidgetStateProperty::new(None)
+                                    .when(fret_ui_kit::WidgetStates::HOVERED, Some(hover_track)),
                             )
                             .handle_color(
-                                fret_ui_kit::WidgetStateProperty::new(None).when(
-                                    fret_ui_kit::WidgetStates::HOVERED,
-                                    Some(hover_handle),
-                                ),
+                                fret_ui_kit::WidgetStateProperty::new(None)
+                                    .when(fret_ui_kit::WidgetStates::HOVERED, Some(hover_handle)),
                             )
                     })
                     .into_element(cx),
@@ -211,10 +207,10 @@ pub fn render<H: UiHost>(
                                 fret_ui_kit::WidgetStates::HOVERED,
                                 Some(hover_color.clone()),
                             ))
-                            .state_layer_color(fret_ui_kit::WidgetStateProperty::new(None).when(
-                                fret_ui_kit::WidgetStates::HOVERED,
-                                Some(hover_color),
-                            ));
+                            .state_layer_color(
+                                fret_ui_kit::WidgetStateProperty::new(None)
+                                    .when(fret_ui_kit::WidgetStates::HOVERED, Some(hover_color)),
+                            );
 
                         vec![
                             cx.text("Radio Group"),
@@ -368,4 +364,3 @@ pub fn render<H: UiHost>(
 }
 
 // endregion: example
-

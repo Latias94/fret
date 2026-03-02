@@ -41,8 +41,7 @@ impl RunnerWindowLifecycleDiagnosticsStore {
     pub fn record_window_close(&mut self, window: AppWindowId) {
         let removed = self.open_windows.remove(&window);
         if removed {
-            self.snapshot.window_close_events =
-                self.snapshot.window_close_events.saturating_add(1);
+            self.snapshot.window_close_events = self.snapshot.window_close_events.saturating_add(1);
             self.snapshot.last_window_close_unix_ms = Some(unix_ms_now());
             self.snapshot.open_window_count = self.open_windows.len().min(u32::MAX as usize) as u32;
         }
@@ -55,4 +54,3 @@ fn unix_ms_now() -> u64 {
         .map(|d| d.as_millis() as u64)
         .unwrap_or(0)
 }
-

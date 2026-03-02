@@ -16,7 +16,6 @@ use fret_ui_shadcn::prelude::*;
 use std::sync::Arc;
 
 pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement {
-
     #[derive(Default)]
     struct DemoModels {
         messages: Option<Model<Arc<[ui_ai::ConversationMessage]>>>,
@@ -219,7 +218,10 @@ pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement
             .into_element(cx);
 
         let layout = cx.with_theme(|theme| {
-            decl_style::layout_style(theme, LayoutRefinement::default().w_full().h_full().relative())
+            decl_style::layout_style(
+                theme,
+                LayoutRefinement::default().w_full().h_full().relative(),
+            )
         });
 
         vec![
