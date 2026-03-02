@@ -18,7 +18,7 @@ Status legend:
 
 - [ ] Add a short pointer from:
   - [x] `docs/README.md` (“Start here” section) to this workstream
-  - [ ] `docs/first-hour.md` (link to the canonical ladder + cookbook)
+  - [x] `docs/first-hour.md` (link to the canonical ladder + cookbook)
 - [x] Add appendices to make execution repeatable and prevent drift:
   - [x] `inventory.md` (catalog → current anchors)
   - [x] `web-support-tiers.md`
