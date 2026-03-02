@@ -216,58 +216,34 @@ pub(super) fn preview_checkbox(
         vec![
             DocSection::new("Demo", demo)
                 .description("Single checkbox with a label.")
-                .code_rust_from_file_region(include_str!("../snippets/checkbox/demo.rs"), "example"),
+                .code_rust_from_file_region(snippets::demo::SOURCE, "example"),
             DocSection::new("Checked State", checked_state)
                 .description("Controlled checked model and optional/indeterminate model.")
-                .code_rust_from_file_region(
-                    include_str!("../snippets/checkbox/checked_state.rs"),
-                    "example",
-                ),
+                .code_rust_from_file_region(snippets::checked_state::SOURCE, "example"),
             DocSection::new("Invalid State", invalid_state)
                 .description("Invalid styling uses `aria_invalid` on the checkbox and destructive label text.")
-                .code_rust_from_file_region(
-                    include_str!("../snippets/checkbox/invalid_state.rs"),
-                    "example",
-                ),
+                .code_rust_from_file_region(snippets::invalid_state::SOURCE, "example"),
             DocSection::new("Basic", basic)
                 .description("Field + checkbox + label composition.")
-                .code_rust_from_file_region(
-                    include_str!("../snippets/checkbox/basic.rs"),
-                    "example",
-                ),
+                .code_rust_from_file_region(snippets::basic::SOURCE, "example"),
             DocSection::new("Description", description_section)
                 .description("FieldContent keeps label and helper text aligned with the control.")
-                .code_rust_from_file_region(
-                    include_str!("../snippets/checkbox/description.rs"),
-                    "example",
-                ),
+                .code_rust_from_file_region(snippets::description::SOURCE, "example"),
             DocSection::new("Disabled", disabled_section)
                 .description("Disabled checkbox should block interaction and use muted styling.")
-                .code_rust_from_file_region(
-                    include_str!("../snippets/checkbox/disabled.rs"),
-                    "example",
-                ),
+                .code_rust_from_file_region(snippets::disabled::SOURCE, "example"),
             DocSection::new("With Title", with_title_section)
                 .description("FieldLabel can wrap a full Field layout (card-style label).")
-                .code_rust_from_file_region(
-                    include_str!("../snippets/checkbox/with_title.rs"),
-                    "example",
-                ),
+                .code_rust_from_file_region(snippets::with_title::SOURCE, "example"),
             DocSection::new("Group", group)
                 .description("Checkbox group pattern with per-item descriptions.")
-                .code_rust_from_file_region(
-                    include_str!("../snippets/checkbox/group.rs"),
-                    "example",
-                ),
+                .code_rust_from_file_region(snippets::group::SOURCE, "example"),
             DocSection::new("Table", table)
                 .description("Table selection pattern with header and row checkboxes.")
-                .code_rust_from_file_region(
-                    include_str!("../snippets/checkbox/table.rs"),
-                    "example",
-                ),
+                .code_rust_from_file_region(snippets::table::SOURCE, "example"),
             DocSection::new("RTL", rtl_section)
                 .description("Checkbox + label alignment under an RTL direction provider.")
-                .code_rust_from_file_region(include_str!("../snippets/checkbox/rtl.rs"), "example"),
+                .code_rust_from_file_region(snippets::rtl::SOURCE, "example"),
             DocSection::new("Notes", notes).description("API reference pointers and parity notes."),
         ],
     );
