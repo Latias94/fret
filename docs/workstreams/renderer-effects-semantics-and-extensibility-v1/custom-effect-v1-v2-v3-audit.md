@@ -425,6 +425,10 @@ Changes:
 
 - Status:
   - In progress (land as a small series of commits / local PR-sized steps).
+  - Landed:
+    - BackdropSourceGroup pyramid headroom accounting fix (avoid double-counting `raw_bytes`).
+  - In progress:
+    - Centralize “base required bytes” helpers to replace ad-hoc `full * N` budget checks.
 - Landable steps (3–8, PR-sized):
   1) Fix BackdropSourceGroup pyramid headroom accounting (avoid double-counting `raw_bytes`) and lock with a unit test.
   2) Centralize “base required bytes” helpers used by CustomV1/V2/V3 (single-scratch, padded-chain work path, optional chain-raw) and use them everywhere instead of ad-hoc `full * N`.
