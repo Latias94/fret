@@ -141,6 +141,29 @@
       ]
     },
     {
+      "id": "cookbook-customv1-basics-smoke",
+      "path": "tools/diag-scripts/cookbook/customv1-basics/cookbook-customv1-basics-smoke.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "cookbook-customv1-basics"
+      ],
+      "tags": [
+        "cookbook",
+        "customv1",
+        "effects",
+        "renderer",
+        "smoke"
+      ],
+      "target_hints": [
+        "Waits for CustomV1 support + registration semantics.",
+        "Toggles the effect on/off and adjusts a strength preset.",
+        "Captures a screenshot + diagnostics bundle."
+      ]
+    },
+    {
       "id": "cookbook-docking-basics-smoke",
       "path": "tools/diag-scripts/cookbook/docking-basics/cookbook-docking-basics-smoke.json",
       "required_capabilities": [

@@ -60,6 +60,7 @@ examples and should be treated as product surfaces.
 | cookbook.gizmo_basics | Keep | `apps/fret-cookbook/examples/gizmo_basics.rs` | `cargo run -p fret-cookbook --example gizmo_basics` | `fret-gizmo` wiring + viewport-style transforms (native-first). |
 | cookbook.embedded_viewport_basics | Keep | `apps/fret-cookbook/examples/embedded_viewport_basics.rs` | `cargo run -p fret-cookbook --example embedded_viewport_basics` | Embedded viewport surface: offscreen render target + `ViewportInputEvent` forwarding. |
 | cookbook.external_texture_import_basics | Keep | `apps/fret-cookbook/examples/external_texture_import_basics.rs` | `cargo run -p fret-cookbook --example external_texture_import_basics` | Imported render target updates (`ImportedViewportRenderTarget`) + viewport presentation. |
+| cookbook.customv1_basics | Keep | `apps/fret-cookbook/examples/customv1_basics.rs` | `cargo run -p fret-cookbook --example customv1_basics` | Custom effect v1: register bounded WGSL at `on_gpu_ready` and apply `EffectStep::CustomV1`. |
 
 ## Interop + renderer “high ceiling” mapping
 

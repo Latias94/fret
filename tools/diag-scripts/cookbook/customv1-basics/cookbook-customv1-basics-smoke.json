@@ -1,0 +1,98 @@
+{
+  "schema_version": 2,
+  "meta": {
+    "name": "cookbook-customv1-basics-smoke",
+    "required_capabilities": ["diag.script_v2", "diag.screenshot_png"],
+    "tags": ["cookbook", "renderer", "effects", "customv1", "smoke"],
+    "target_hints": [
+      "Waits for CustomV1 support + registration semantics.",
+      "Toggles the effect on/off and adjusts a strength preset.",
+      "Captures a screenshot + diagnostics bundle."
+    ]
+  },
+  "steps": [
+    { "type": "reset_diagnostics" },
+    { "type": "set_window_inner_size", "width_px": 1180.0, "height_px": 820.0 },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "cookbook.customv1_basics.root" }
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "semantics_numeric_approx_eq",
+        "target": { "kind": "test_id", "id": "cookbook.customv1_basics.supported" },
+        "field": "value",
+        "value": 1.0,
+        "eps": 0.0001
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "semantics_numeric_approx_eq",
+        "target": { "kind": "test_id", "id": "cookbook.customv1_basics.registered" },
+        "field": "value",
+        "value": 1.0,
+        "eps": 0.0001
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "semantics_numeric_approx_eq",
+        "target": { "kind": "test_id", "id": "cookbook.customv1_basics.enabled" },
+        "field": "value",
+        "value": 1.0,
+        "eps": 0.0001
+      },
+      "timeout_frames": 240
+    },
+    { "type": "click_stable", "target": { "kind": "test_id", "id": "cookbook.customv1_basics.toggle" } },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "semantics_numeric_approx_eq",
+        "target": { "kind": "test_id", "id": "cookbook.customv1_basics.enabled" },
+        "field": "value",
+        "value": 0.0,
+        "eps": 0.0001
+      },
+      "timeout_frames": 240
+    },
+    { "type": "click_stable", "target": { "kind": "test_id", "id": "cookbook.customv1_basics.toggle" } },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "semantics_numeric_approx_eq",
+        "target": { "kind": "test_id", "id": "cookbook.customv1_basics.enabled" },
+        "field": "value",
+        "value": 1.0,
+        "eps": 0.0001
+      },
+      "timeout_frames": 240
+    },
+    { "type": "click_stable", "target": { "kind": "test_id", "id": "cookbook.customv1_basics.strength_high" } },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "semantics_numeric_approx_eq",
+        "target": { "kind": "test_id", "id": "cookbook.customv1_basics.strength" },
+        "field": "value",
+        "value": 0.75,
+        "eps": 0.0001
+      },
+      "timeout_frames": 240
+    },
+    { "type": "wait_frames", "n": 10 },
+    { "type": "capture_screenshot", "label": "cookbook-customv1-basics-smoke" },
+    { "type": "capture_bundle", "label": "cookbook-customv1-basics-smoke" }
+  ]
+}
+

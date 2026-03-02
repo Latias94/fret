@@ -199,7 +199,7 @@ Legend:
 | cookbook.effects_layer_basics | 2 | Renderer | effects | Example | ✅ | ✅ | built-in effect steps + semantics | screenshot gate |
 | cookbook.canvas_pan_zoom_basics | 3 | App | canvas | Example | ✅ | ⛔ | pan/zoom wiring + basic drag tool | diag script: pan + zoom + drag |
 | liquid-glass | 4 | Renderer | effects | Lab | ✅ | ⛔ | bounded glass/acrylic recipe | perf + screenshot gate |
-| customv1 | 4 | Renderer | custom effects | Lab | ✅ | ✅ | CustomV1 bounded ABI | capability-gated smoke |
+| cookbook.customv1_basics | 4 | Renderer | custom effects | Lab | ✅ | ⛔ | CustomV1 bounded ABI | capability-gated smoke |
 | customv2 | 4 | Renderer | custom effects | Lab | ✅ | ✅ | CustomV2 authoring + presets | script-driven repro |
 | customv3-pass-graph | 4 | Renderer | custom effects | Lab | ✅ | ✅ | CustomV3 pass planning semantics | script + perf attribution |
 | node-graph-basics | 3 | App | canvas | Example | ✅ | ⛔ | node graph navigation + selection | screenshot gate |

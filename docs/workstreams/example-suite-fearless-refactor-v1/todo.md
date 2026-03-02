@@ -103,6 +103,7 @@ Renderer Track:
   - [ ] effects basics (built-in steps)
   - [ ] liquid glass / acrylic recipe (bounded)
   - [ ] custom effect tracks: CustomV1/V2/V3 (pass semantics)
+- [x] Add a CustomV1 cookbook lab: `cookbook.customv1_basics`
 - [ ] For each lab:
   - [ ] capability checks are explicit
   - [ ] budgets/degradations are documented
