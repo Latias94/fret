@@ -114,6 +114,12 @@ Current scripts (as of 2026-03-02):
 - `tools/diag-scripts/cookbook/imui-action-basics/cookbook-imui-action-basics-cross-frontend.json`
 - `tools/diag-scripts/cookbook/overlay-basics/cookbook-overlay-basics-modal-barrier-shortcut-gating.json`
 
+Notes:
+
+- The cross-frontend script gates both widget-handled and driver-handled dispatch trace entries:
+  - `app.command_palette` must record `handled_by_driver=true` when the palette is opened via shortcut,
+  - `cookbook.imui_action_basics.inc.v1` must record pointer-triggered widget handling across frontends.
+
 ### 2.3 wasm smoke (build-only)
 
 Requirements:

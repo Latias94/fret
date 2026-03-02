@@ -1,6 +1,6 @@
 # Action-First Authoring + View Runtime (Fearless Refactor v1) — Migration Guide
 
-Last updated: 2026-03-01
+Last updated: 2026-03-02
 
 This guide is intentionally practical: it describes how to migrate in-tree demos and ecosystem code
 in small, reviewable slices.
@@ -52,6 +52,36 @@ Bind a shadcn button to the action:
 
 ```rust,ignore
 shadcn::Button::new("Save").action(act::EditorSave);
+```
+
+### 2.2 Register metadata + default keybindings (v1: via the command registry)
+
+In v1, `ActionId == CommandId` and action metadata is published via the existing command registry
+surface (see ADR 0307). This keeps keymap, command palette, menus, and diagnostics aligned.
+
+Practical checklist for a demo / app:
+
+1) Register command/action metadata first (title, category, scope, default keybindings).
+2) Then install the default keybindings into the keymap (the app may have already installed
+   defaults for previously-known commands during bootstrap).
+
+Example:
+
+```rust,ignore
+fn install_commands(app: &mut App) {
+    let cmd: CommandId = act::EditorSave.into();
+
+    let meta = CommandMeta::new("Save")
+        .with_category("Editor")
+        .with_scope(CommandScope::Widget)
+        .with_default_keybindings([DefaultKeybinding::single(
+            PlatformFilter::All,
+            KeyChord::new(KeyCode::KeyS, Modifiers { ctrl: true, ..Default::default() }),
+        )]);
+
+    app.commands_mut().register(cmd, meta);
+    fret_app::install_command_default_keybindings_into_keymap(app);
+}
 ```
 
 ---

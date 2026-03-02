@@ -38,6 +38,15 @@
       },
       "timeout_frames": 240
     },
+    {
+      "type": "wait_command_dispatch_trace",
+      "query": {
+        "command": "app.command_palette",
+        "handled": true,
+        "handled_by_driver": true
+      },
+      "timeout_frames": 240
+    },
     { "type": "type_text", "text": "increment (action-first)" },
     { "type": "press_key", "key": "enter" },
     { "type": "wait_frames", "n": 2 },
