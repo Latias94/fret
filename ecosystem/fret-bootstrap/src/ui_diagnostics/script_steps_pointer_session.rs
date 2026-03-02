@@ -552,11 +552,44 @@ pub(super) fn handle_pointer_up_step(
             }
         }
     } else {
-        *force_dump_label = Some(format!("script-step-{step_index:04}-pointer_up-no-session"));
-        *stop_script = true;
-        *failure_reason = Some("pointer_session_missing".to_string());
-        output.request_redraw = true;
-        active.v2_step_state = None;
+        // Cross-window dock drags (runner-routed) can be held by diagnostics via mouse button
+        // overrides without a pointer session (e.g. `drag_pointer_until` with
+        // `release_on_success=false` while `cross_window_hover` is active).
+        //
+        // In that state, allow a best-effort pointer release that does not inject an
+        // `InternalDrag::Drop` into the current window. The runner owns cross-window drop routing
+        // based on the current cursor override.
+        let pointer_id = PointerId(0);
+        let cross_window_dock_drag_active = app.drag(pointer_id).is_some_and(|d| {
+            (d.kind == fret_runtime::DRAG_KIND_DOCK_PANEL
+                || d.kind == fret_runtime::DRAG_KIND_DOCK_TABS)
+                && d.dragging
+                && d.cross_window_hover
+        });
+
+        if cross_window_dock_drag_active {
+            let _ = write_mouse_buttons_override_all_windows_v1(
+                &svc.cfg.out_dir,
+                Some(false),
+                Some(false),
+                Some(false),
+            );
+            active.pending_cancel_cross_window_drag =
+                Some(PendingCancelCrossWindowDrag::new(pointer_id));
+            active.last_injected_step = Some(step_index.min(u32::MAX as usize) as u32);
+            active.next_step = active.next_step.saturating_add(1);
+            output.request_redraw = true;
+            if svc.cfg.script_auto_dump {
+                *force_dump_label =
+                    Some(format!("script-step-{step_index:04}-pointer_up-cross-window"));
+            }
+        } else {
+            *force_dump_label = Some(format!("script-step-{step_index:04}-pointer_up-no-session"));
+            *stop_script = true;
+            *failure_reason = Some("pointer_session_missing".to_string());
+            output.request_redraw = true;
+            active.v2_step_state = None;
+        }
     }
 
     true
