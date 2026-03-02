@@ -1408,6 +1408,52 @@
       ]
     },
     {
+      "id": "node-graph-paint-only-paint-overrides-revision-does-not-rebuild-geometry",
+      "path": "tools/diag-scripts/node-graph/node-graph-paint-only-paint-overrides-revision-does-not-rebuild-geometry.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "fret-examples-node-graph-paint-only"
+      ],
+      "tags": [
+        "cache",
+        "declarative",
+        "gate",
+        "node-graph",
+        "overrides",
+        "paint-only",
+        "paint"
+      ],
+      "target_hints": [
+        "Run with `FRET_NODE_GRAPH_DECLARATIVE=paint` so the paint-only declarative surface is active.",
+        "Requires `FRET_DIAG=1` (Ctrl+6 shortcut).",
+        "Asserts that paint override revision bumps do not rebuild derived geometry or draw caches."
+      ]
+    },
+    {
+      "id": "node-graph-paint-only-paint-overrides-screenshot",
+      "path": "tools/diag-scripts/node-graph/node-graph-paint-only-paint-overrides-screenshot.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "suite_memberships": [],
+      "tags": [
+        "declarative",
+        "node-graph",
+        "overrides",
+        "paint-only",
+        "paint",
+        "screenshot"
+      ],
+      "target_hints": [
+        "Run with `FRET_NODE_GRAPH_DECLARATIVE=paint` so the paint-only declarative surface is active.",
+        "Requires `FRET_DIAG=1` (Ctrl+6 shortcut).",
+        "Requires `FRET_DIAG_GPU_SCREENSHOTS=1` to emit GPU screenshots."
+      ]
+    },
+    {
       "id": "tooling-suite-prelude-reset-diagnostics",
       "path": "tools/diag-scripts/_prelude/tooling-suite-prelude-reset-diagnostics.json",
       "required_capabilities": [],
