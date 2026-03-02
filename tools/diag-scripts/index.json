@@ -3468,6 +3468,16 @@
       "target_hints": []
     },
     {
+      "id": "ui-gallery-modal-barrier-wheel-block",
+      "path": "tools/diag-scripts/ui-gallery/overlay/ui-gallery-modal-barrier-wheel-block.json",
+      "required_capabilities": [],
+      "suite_memberships": [
+        "ui-gallery-overlay-steady"
+      ],
+      "tags": [],
+      "target_hints": []
+    },
+    {
       "id": "ui-gallery-motion-presets-fluid-tabs-pixels-changed-fixed-frame-delta",
       "path": "tools/diag-scripts/ui-gallery/motion-presets/ui-gallery-motion-presets-fluid-tabs-pixels-changed-fixed-frame-delta.json",
       "required_capabilities": [
