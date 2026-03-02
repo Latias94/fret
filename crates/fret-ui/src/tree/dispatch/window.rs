@@ -797,8 +797,7 @@ impl<H: UiHost> UiTree<H> {
                 return None;
             }
             let target = crate::internal_drag::route(app, window, drag.kind)?;
-            self.node_in_any_layer(target, &active_layers)
-                .then_some(target)
+            node_in_active_layers(target).then_some(target)
         })();
 
         if let Some(window) = self.window
@@ -1135,8 +1134,7 @@ impl<H: UiHost> UiTree<H> {
                     .copied()
                     .flatten();
                 if barrier_root.is_some()
-                    && last_pointer_move_hit
-                        .is_some_and(|n| !self.node_in_any_layer(n, &active_layers))
+                    && last_pointer_move_hit.is_some_and(|n| !node_in_active_layers(n))
                 {
                     self.last_pointer_move_hit.remove(pointer_id);
                     last_pointer_move_hit = None;
@@ -1160,7 +1158,7 @@ impl<H: UiHost> UiTree<H> {
                     self.last_internal_drag_target = Some(node);
                 } else if self
                     .last_internal_drag_target
-                    .is_some_and(|n| !self.node_in_any_layer(n, &active_layers))
+                    .is_some_and(|n| !node_in_active_layers(n))
                 {
                     self.last_internal_drag_target = None;
                 }
@@ -1427,8 +1425,7 @@ impl<H: UiHost> UiTree<H> {
                                                 && let Some(old_capture) =
                                                     self.captured.get(&pointer_id).copied()
                                                 && old_capture != node
-                                                && self
-                                                    .node_in_any_layer(old_capture, &active_layers)
+                                                && node_in_active_layers(old_capture)
                                             {
                                                 let mut cancel_ctx = input_ctx.clone();
                                                 cancel_ctx.dispatch_phase =
@@ -1618,8 +1615,7 @@ impl<H: UiHost> UiTree<H> {
                                                 && let Some(old_capture) =
                                                     self.captured.get(&pointer_id).copied()
                                                 && old_capture != node
-                                                && self
-                                                    .node_in_any_layer(old_capture, &active_layers)
+                                                && node_in_active_layers(old_capture)
                                             {
                                                 let mut cancel_ctx = input_ctx.clone();
                                                 cancel_ctx.dispatch_phase =
@@ -2503,7 +2499,7 @@ impl<H: UiHost> UiTree<H> {
         if let Event::Pointer(PointerEvent::Move { .. }) = event
             && let Some(prev) = synth_pointer_move_prev_target
             && captured.is_none()
-            && self.node_in_any_layer(prev, &active_layers)
+            && node_in_active_layers(prev)
         {
             // Forward a synthetic hover-move to the previously hovered target so retained
             // widgets can clear hover state when the pointer crosses between siblings.

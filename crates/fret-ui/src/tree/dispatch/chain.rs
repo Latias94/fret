@@ -40,6 +40,7 @@ impl<H: UiHost> UiTree<H> {
             active_roots.as_slice(),
             barrier_root,
         );
+        let node_in_active_layers = |node: NodeId| dispatch_snapshot.pre.get(node).is_some();
         if event_position(event).is_some() {
             let chain = self.build_mapped_event_chain(start, event);
             let pointer_hit_is_text_input =
@@ -184,14 +185,14 @@ impl<H: UiHost> UiTree<H> {
                 }
 
                 if let Some(capture) = requested_capture
-                    && capture.is_none_or(|n| self.node_in_any_layer(n, &active_roots))
+                    && capture.is_none_or(|n| node_in_active_layers(n))
                     && let Some(pointer_id) = pointer_id_for_capture
                 {
                     if let Some(new_capture) = capture
                         && !matches!(event, Event::PointerCancel(_))
                         && let Some(old_capture) = self.captured.get(&pointer_id).copied()
                         && old_capture != new_capture
-                        && self.node_in_any_layer(old_capture, &active_roots)
+                        && node_in_active_layers(old_capture)
                     {
                         // When a component steals pointer capture mid-sequence (e.g. gesture arena
                         // outcomes), cancel the previous capture target so pressables/widgets can
@@ -361,14 +362,14 @@ impl<H: UiHost> UiTree<H> {
             }
 
             if let Some(capture) = requested_capture
-                && capture.is_none_or(|n| self.node_in_any_layer(n, &active_roots))
+                && capture.is_none_or(|n| node_in_active_layers(n))
                 && let Some(pointer_id) = pointer_id_for_capture
             {
                 if let Some(new_capture) = capture
                     && !matches!(event, Event::PointerCancel(_))
                     && let Some(old_capture) = self.captured.get(&pointer_id).copied()
                     && old_capture != new_capture
-                    && self.node_in_any_layer(old_capture, &active_roots)
+                    && node_in_active_layers(old_capture)
                 {
                     let cancel_event = pointer_cancel_event_for_capture_switch(event, pointer_id);
                     let _ = self.dispatch_event_to_node_chain(

@@ -229,11 +229,11 @@ impl<H: UiHost> UiTree<H> {
     pub(in crate::tree) fn collect_focusables(
         &self,
         node: NodeId,
-        active_layers: &[NodeId],
+        dispatch_snapshot: &UiDispatchSnapshot,
         scope_bounds: Rect,
         out: &mut Vec<NodeId>,
     ) {
-        if !self.node_in_any_layer(node, active_layers) {
+        if dispatch_snapshot.pre.get(node).is_none() {
             return;
         }
 
@@ -244,7 +244,7 @@ impl<H: UiHost> UiTree<H> {
             return;
         }
         if !Self::rects_intersect(n.bounds, scope_bounds)
-            && !self.node_has_scrollable_ancestor_in_scope(node, active_layers, scope_bounds)
+            && !self.node_has_scrollable_ancestor_in_scope(node, dispatch_snapshot, scope_bounds)
         {
             return;
         }
@@ -271,7 +271,7 @@ impl<H: UiHost> UiTree<H> {
             });
         if traverse_children {
             for &child in &n.children {
-                self.collect_focusables(child, active_layers, scope_bounds, out);
+                self.collect_focusables(child, dispatch_snapshot, scope_bounds, out);
             }
         }
     }
@@ -279,18 +279,19 @@ impl<H: UiHost> UiTree<H> {
     fn node_has_scrollable_ancestor_in_scope(
         &self,
         mut node: NodeId,
-        active_layers: &[NodeId],
+        dispatch_snapshot: &UiDispatchSnapshot,
         scope_bounds: Rect,
     ) -> bool {
         loop {
-            let Some(parent) = self.nodes.get(node).and_then(|n| n.parent) else {
+            let Some(parent) = dispatch_snapshot.parent.get(node).copied().flatten() else {
                 return false;
             };
             node = parent;
 
-            if !self.node_in_any_layer(node, active_layers) {
-                return false;
-            }
+            debug_assert!(
+                dispatch_snapshot.pre.get(node).is_some(),
+                "snapshot parent traversal must stay within the snapshot forest"
+            );
 
             let Some(n) = self.nodes.get(node) else {
                 return false;
