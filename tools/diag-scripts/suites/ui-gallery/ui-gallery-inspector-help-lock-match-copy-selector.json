@@ -1,0 +1,28 @@
+{
+  "schema_version": 2,
+  "meta": {
+    "name": "UI Gallery: inspector help lock match + copy selector",
+    "tags": ["ui-gallery", "inspector", "clipboard"]
+  },
+  "steps": [
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-nav-search" }
+      },
+      "timeout_frames": 240
+    },
+    { "type": "press_shortcut", "shortcut": "primary+alt+h" },
+    { "type": "wait_frames", "n": 2 },
+    { "type": "type_text", "text": "ui-gallery-nav-search" },
+    { "type": "wait_frames", "n": 4 },
+    { "type": "press_shortcut", "shortcut": "primary+enter" },
+    { "type": "wait_frames", "n": 4 },
+    {
+      "type": "assert_clipboard_text",
+      "text": "{\"kind\":\"test_id\",\"id\":\"ui-gallery-nav-search\"}",
+      "timeout_frames": 240
+    }
+  ]
+}

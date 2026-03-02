@@ -189,6 +189,38 @@ impl UiDiagnosticsService {
         self.poll_pick_trigger();
         self.poll_inspect_trigger();
 
+        if let Event::TextInput(text) = event {
+            let inspection_active = self.pick_armed_run_id.is_some() || self.inspect_enabled;
+            if !inspection_active {
+                return false;
+            }
+
+            if !self.inspect_help_is_open(window) {
+                return false;
+            }
+
+            const MAX_QUERY_BYTES: usize = 64;
+            let q = self.inspect_help_search_query.entry(window).or_default();
+            for ch in text.chars() {
+                if q.len() >= MAX_QUERY_BYTES {
+                    break;
+                }
+
+                let ch = ch.to_ascii_lowercase();
+                let ok = ch.is_ascii_alphanumeric() || ch == '-' || ch == ' ';
+                if ok {
+                    q.push(ch);
+                }
+            }
+
+            if q.trim().is_empty() {
+                self.inspect_help_search_query.remove(&window);
+            }
+            self.inspect_help_selected_match_index.insert(window, 0);
+            app.request_redraw(window);
+            return true;
+        }
+
         let Event::KeyDown {
             key,
             modifiers,
@@ -312,7 +344,6 @@ impl UiDiagnosticsService {
         if self.inspect_help_is_open(window)
             && !(modifiers.ctrl || modifiers.meta || modifiers.alt || modifiers.alt_gr)
         {
-            const MAX_QUERY_BYTES: usize = 64;
             match *key {
                 KeyCode::ArrowUp => {
                     if self.inspect_help_search_query(window).is_some()
@@ -408,21 +439,15 @@ impl UiDiagnosticsService {
                     return true;
                 }
                 KeyCode::Space => {
-                    let q = self.inspect_help_search_query.entry(window).or_default();
-                    if q.len() < MAX_QUERY_BYTES {
-                        q.push(' ');
-                    }
-                    self.inspect_help_selected_match_index.insert(window, 0);
+                    // Prefer `Event::TextInput` for actual text entry to avoid double-appending
+                    // characters on platforms that deliver both KeyDown + TextInput.
                     app.request_redraw(window);
                     return true;
                 }
                 _ => {
-                    if let Some(ch) = fret_core::keycode_to_ascii_lowercase(*key) {
-                        let q = self.inspect_help_search_query.entry(window).or_default();
-                        if q.len() < MAX_QUERY_BYTES {
-                            q.push(ch);
-                        }
-                        self.inspect_help_selected_match_index.insert(window, 0);
+                    // Prefer `Event::TextInput` for actual text entry to avoid double-appending
+                    // characters on platforms that deliver both KeyDown + TextInput.
+                    if fret_core::keycode_to_ascii_lowercase(*key).is_some() {
                         app.request_redraw(window);
                         return true;
                     }
