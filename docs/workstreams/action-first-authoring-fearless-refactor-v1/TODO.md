@@ -217,7 +217,9 @@ ID format:
 - [x] AFA-gates-051 Add compile-only wasm smoke gates for the new view runtime surface.
   - Evidence:
     - `tools/gates_wasm_smoke.ps1`
-- [ ] AFA-gates-052 Add a small set of unit tests for action routing / handler table behavior.
+- [x] AFA-gates-052 Add a small set of unit tests for action routing / handler table behavior.
+  - Evidence:
+    - `crates/fret-ui/src/tree/tests/command_dispatch_source_trace.rs`
 - [ ] AFA-gates-053 Add a “risk matrix” review pass for M0/M1 (see `RISK_MATRIX.md`).
 
 ---
