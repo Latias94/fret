@@ -36,7 +36,8 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
             shadcn::DrawerContent::new([
                 shadcn::DrawerHeader::new([
                     shadcn::DrawerTitle::new("Move Goal").into_element(cx),
-                    shadcn::DrawerDescription::new("Set your daily activity goal.").into_element(cx),
+                    shadcn::DrawerDescription::new("Set your daily activity goal.")
+                        .into_element(cx),
                 ])
                 .into_element(cx),
                 shadcn::DrawerFooter::new([
@@ -54,4 +55,3 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
     )
 }
 // endregion: example
-

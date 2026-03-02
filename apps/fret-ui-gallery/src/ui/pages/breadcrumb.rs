@@ -80,4 +80,3 @@ pub(super) fn preview_breadcrumb(
 
     vec![body]
 }
-

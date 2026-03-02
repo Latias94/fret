@@ -8279,14 +8279,14 @@ fn combobox_demo_open_snapshot(
     let open: Model<bool> = app.models_mut().insert(false);
 
     let render = |cx: &mut ElementContext<'_, App>| {
-        use fret_ui_shadcn::{Combobox, ComboboxItem};
+        use fret_ui_shadcn::{Combobox, combobox_option};
 
         let items = vec![
-            ComboboxItem::new("apple", "Apple"),
-            ComboboxItem::new("banana", "Banana"),
-            ComboboxItem::new("blueberry", "Blueberry"),
-            ComboboxItem::new("grapes", "Grapes"),
-            ComboboxItem::new("pineapple", "Pineapple"),
+            combobox_option("apple", "Apple"),
+            combobox_option("banana", "Banana"),
+            combobox_option("blueberry", "Blueberry"),
+            combobox_option("grapes", "Grapes"),
+            combobox_option("pineapple", "Pineapple"),
         ];
 
         Combobox::new(value.clone(), open.clone())

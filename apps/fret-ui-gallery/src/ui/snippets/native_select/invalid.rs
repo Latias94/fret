@@ -36,4 +36,3 @@ pub fn render<H: UiHost>(
     .test_id("ui-gallery-native-select-error")
 }
 // endregion: example
-

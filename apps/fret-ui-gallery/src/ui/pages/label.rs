@@ -39,4 +39,3 @@ pub(super) fn preview_label(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement>
 
     vec![body.test_id("ui-gallery-label")]
 }
-

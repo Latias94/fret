@@ -9,4 +9,3 @@
 pub mod demo;
 pub mod horizontal;
 pub mod rtl;
-

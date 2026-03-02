@@ -73,4 +73,3 @@ pub(super) fn preview_drawer(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement
 
     vec![body]
 }
-

@@ -47,6 +47,17 @@ pub fn use_direction<H: UiHost>(
     direction_prim::use_direction_in_scope(cx, local)
 }
 
+/// shadcn/ui `useDirection` (v4).
+///
+/// Alias for [`use_direction`] to preserve copy/paste parity with upstream docs and sources.
+#[allow(non_snake_case)]
+pub fn useDirection<H: UiHost>(
+    cx: &ElementContext<'_, H>,
+    local: Option<LayoutDirection>,
+) -> LayoutDirection {
+    use_direction(cx, local)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

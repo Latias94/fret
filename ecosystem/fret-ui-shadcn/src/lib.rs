@@ -42,6 +42,7 @@ pub mod checkbox;
 pub mod collapsible;
 pub mod combobox;
 pub mod combobox_chips;
+pub mod combobox_data;
 pub mod command;
 mod command_gating;
 pub mod context_menu;
@@ -158,18 +159,27 @@ pub use carousel::{
     CarouselBreakpoint, CarouselContainScroll, CarouselContent, CarouselContext, CarouselEvent,
     CarouselEventCursor, CarouselItem, CarouselNext, CarouselOptions, CarouselOptionsPatch,
     CarouselOrientation, CarouselPrevious, CarouselSlidesInViewSnapshot, CarouselSlidesToScroll,
-    carousel_context, use_carousel,
+    carousel_context, useCarousel, use_carousel,
 };
 pub use chart::{
-    ChartLegendContent, ChartLegendItem, ChartLegendVerticalAlign, ChartTooltipContent,
-    ChartTooltipContentKind, ChartTooltipIndicator, ChartTooltipItem,
+    ChartConfig, ChartConfigItem, ChartContainer, ChartContext, ChartLegend, ChartLegendContent,
+    ChartLegendItem, ChartLegendVerticalAlign, ChartStyle, ChartTooltip, ChartTooltipContent,
+    ChartTooltipContentKind, ChartTooltipIndicator, ChartTooltipItem, chart_context, use_chart,
 };
 pub use checkbox::{Checkbox, checkbox};
 pub use collapsible::{
     Collapsible, CollapsibleContent, CollapsibleTrigger, collapsible, collapsible_uncontrolled,
 };
-pub use combobox::{Combobox, ComboboxGroup, ComboboxItem, ComboboxTriggerVariant, combobox};
-pub use combobox_chips::ComboboxChips;
+pub use combobox::{
+    Combobox, ComboboxCollection, ComboboxContent, ComboboxContentPart, ComboboxEmpty,
+    ComboboxGroup, ComboboxInput, ComboboxItem, ComboboxLabel, ComboboxList, ComboboxPart,
+    ComboboxSeparator, ComboboxTriggerVariant, combobox, combobox_option, combobox_option_group,
+    useComboboxAnchor,
+};
+pub use combobox_chips::{
+    ComboboxChip, ComboboxChips, ComboboxChipsInput, ComboboxChipsPart, ComboboxValue,
+};
+pub use combobox_data::{ComboboxOption, ComboboxOptionGroup};
 pub use command::{
     Command, CommandDialog, CommandEmpty, CommandEntry, CommandGroup, CommandInput, CommandItem,
     CommandList, CommandLoading, CommandPalette, CommandSeparator, CommandShortcut, command,
@@ -213,7 +223,7 @@ pub use dialog::{
     Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, DialogHeader,
     DialogOverlay, DialogPortal, DialogTitle, DialogTrigger,
 };
-pub use direction::{DirectionProvider, LayoutDirection, use_direction};
+pub use direction::{DirectionProvider, LayoutDirection, useDirection, use_direction};
 pub use drawer::{
     Drawer, DrawerClose, DrawerContent, DrawerDescription, DrawerFooter, DrawerHeader,
     DrawerOverlay, DrawerPortal, DrawerSide, DrawerSnapPoint, DrawerTitle, DrawerTrigger, drawer,
@@ -246,7 +256,10 @@ pub use input_group::{
     InputGroupInput, InputGroupPart, InputGroupText, InputGroupTextSize, InputGroupTextarea,
     input_group,
 };
-pub use input_otp::{InputOtp, input_otp};
+pub use input_otp::{
+    InputOTP, InputOTPGroup, InputOTPSeparator, InputOTPSlot, InputOtp, InputOtpGroup,
+    InputOtpPart, InputOtpSeparator, InputOtpSlot, input_otp,
+};
 pub use item::{
     Item, ItemActions, ItemContent, ItemDescription, ItemFooter, ItemGroup, ItemHeader, ItemMedia,
     ItemMediaVariant, ItemRender, ItemSeparator, ItemSize, ItemTitle, ItemVariant, item_group,
@@ -305,7 +318,7 @@ pub use sidebar::{
     SidebarMenuAction, SidebarMenuBadge, SidebarMenuButton, SidebarMenuButtonVariant,
     SidebarMenuItem, SidebarMenuSkeleton, SidebarMenuSub, SidebarMenuSubButton,
     SidebarMenuSubButtonSize, SidebarMenuSubItem, SidebarProvider, SidebarRail, SidebarSeparator,
-    SidebarSide, SidebarTrigger, SidebarVariant, use_sidebar,
+    SidebarSide, SidebarTrigger, SidebarVariant, useSidebar, use_sidebar,
 };
 pub use skeleton::Skeleton;
 pub use slider::{Slider, slider};

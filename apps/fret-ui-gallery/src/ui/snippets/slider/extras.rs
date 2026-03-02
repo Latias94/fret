@@ -1,7 +1,10 @@
 // region: example
 use fret_ui_shadcn::{self as shadcn, prelude::*};
 
-pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>, last_commit: Model<Vec<f32>>) -> AnyElement {
+pub fn render<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    last_commit: Model<Vec<f32>>,
+) -> AnyElement {
     let max_width_xs = LayoutRefinement::default().w_full().max_w(Px(320.0));
 
     let on_value_commit = {

@@ -4,19 +4,21 @@ use std::sync::Arc;
 
 pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
     fret_ui_kit::ui::h_flex(cx, |cx| {
-        vec![shadcn::Badge::new("Open Link")
-            .variant(shadcn::BadgeVariant::Link)
-            .render(shadcn::BadgeRender::Link {
-                href: Arc::from("https://example.com"),
-                target: None,
-                rel: None,
-            })
-            // Avoid launching the system browser during diag runs; the render surface still applies
-            // link semantics and Enter-only activation.
-            .on_activate(Arc::new(|_host, _acx, _reason| {}))
-            .test_id("ui-gallery-badge-link")
-            .trailing_icon(fret_icons::IconId::new_static("lucide.arrow-right"))
-            .into_element(cx)]
+        vec![
+            shadcn::Badge::new("Open Link")
+                .variant(shadcn::BadgeVariant::Link)
+                .render(shadcn::BadgeRender::Link {
+                    href: Arc::from("https://example.com"),
+                    target: None,
+                    rel: None,
+                })
+                // Avoid launching the system browser during diag runs; the render surface still applies
+                // link semantics and Enter-only activation.
+                .on_activate(Arc::new(|_host, _acx, _reason| {}))
+                .test_id("ui-gallery-badge-link")
+                .trailing_icon(fret_icons::IconId::new_static("lucide.arrow-right"))
+                .into_element(cx),
+        ]
     })
     .gap(Space::N2)
     .wrap()
@@ -26,4 +28,3 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
     .test_id("ui-gallery-badge-link-row")
 }
 // endregion: example
-

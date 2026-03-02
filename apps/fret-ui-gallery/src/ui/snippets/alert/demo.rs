@@ -51,4 +51,3 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
     .test_id("ui-gallery-alert-demo")
 }
 // endregion: example
-

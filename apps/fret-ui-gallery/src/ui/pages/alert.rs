@@ -66,4 +66,3 @@ pub(super) fn preview_alert(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement>
 
     vec![body.test_id("ui-gallery-alert-component")]
 }
-

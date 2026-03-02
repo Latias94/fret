@@ -26,7 +26,10 @@ pub(super) fn preview_aspect_ratio(cx: &mut ElementContext<'_, App>) -> Vec<AnyE
         vec![
             DocSection::new("Demo", demo)
                 .description("16:9 landscape media frame with an inline caption.")
-                .code_rust_from_file_region(include_str!("../snippets/aspect_ratio/demo.rs"), "example"),
+                .code_rust_from_file_region(
+                    include_str!("../snippets/aspect_ratio/demo.rs"),
+                    "example",
+                ),
             DocSection::new("Square", square)
                 .description("1:1 square media for avatars/thumbnails.")
                 .code_rust_from_file_region(
@@ -41,11 +44,13 @@ pub(super) fn preview_aspect_ratio(cx: &mut ElementContext<'_, App>) -> Vec<AnyE
                 ),
             DocSection::new("RTL", rtl)
                 .description("AspectRatio should remain direction-agnostic.")
-                .code_rust_from_file_region(include_str!("../snippets/aspect_ratio/rtl.rs"), "example"),
+                .code_rust_from_file_region(
+                    include_str!("../snippets/aspect_ratio/rtl.rs"),
+                    "example",
+                ),
             DocSection::new("Notes", notes).description("API reference pointers and usage notes."),
         ],
     );
 
     vec![body.test_id("ui-gallery-aspect-ratio-component")]
 }
-
