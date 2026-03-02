@@ -1,43 +1,41 @@
-# Milestones
+# UI Focus + Overlay Focus Containment (Fearless Refactor v1) — Milestones
 
-## M0: Phase A shipped (containment hardening)
+Tracking doc: `docs/workstreams/ui-focus-overlay-fearless-refactor-v1/DESIGN.md`
+TODO board: `docs/workstreams/ui-focus-overlay-fearless-refactor-v1/TODO.md`
 
-Done when:
+## M1 — Focus containment correctness under retained drift (A + B)
 
-- Outside-press containment and branch exclusion do not rely on parent pointers.
-- New regression test covers “stale parent pointers” without needing a full app harness.
-- `cargo nextest run -p fret-ui` is green (targeted filters are acceptable for local iteration).
+Goal:
 
-Status: Done.
+- FocusScope trap correctness holds even if retained `parent` pointers are temporarily stale.
+- Active-layer containment (modal barrier) does not leak focus/capture to underlay.
 
-## M1: Phase B shipped (prevent default suppresses focus clearing)
+Exit gates:
 
-Done when:
+- `crates/fret-ui` tests cover Tab traversal + pointer-focus clamping + stale-parent simulation.
+- No policy leakage into `crates/fret-ui` (mechanism-only).
 
-- `prevent_default()` from dismissible outside-press hooks suppresses default focus clearing.
-- Regression tests exist for:
-  - prevented outside press keeps focus stable
-  - non-prevented outside press clears focus (baseline)
-- No behavior changes are introduced for non-dismissible observer users.
+Status: Implemented in this worktree (2026-03-01)
 
-Status: Done.
+## M2 — Expand conformance matrix (nested overlays + transitions)
 
-## M2: Phase C design locked (dispatch snapshot)
+Goal: cover the most failure-prone editor-grade compositions:
 
-Done when:
+- nested roots (portal-style overlays),
+- stacked traps,
+- close-transition focus restore while barrier remains active.
 
-- A detailed “dispatch snapshot” design exists (data model + build phase + consumers).
-- Migration is decomposed into 3–6 landable PRs with clear acceptance criteria.
-- Evidence plan exists (diag script or debug report) to prove parity with Phase A/B invariants.
+Exit gates:
 
-Status: Draft (design exists; migration breakdown drafted; diagnostics + implementation still TODO).
+- Add at least 3 focused regression tests in `crates/fret-ui` and/or shadcn recipe tests in
+  `ecosystem/fret-ui-shadcn` that exercise the above sequences.
 
-Notes:
+## M3 — Snapshot-first dispatch (C phase)
 
-- PR0 (types + builder entrypoint) is landed: `crates/fret-ui/src/tree/dispatch_snapshot.rs` and
-  `crates/fret-ui/src/tree/ui_tree_debug/query.rs` (`debug_dispatch_snapshot`).
-- PR1 (parity report) is landed: `crates/fret-ui/src/tree/ui_tree_debug/query.rs`
-  (`debug_dispatch_snapshot_parity`).
-- PR2 (outside-press uses snapshot, Phase A fallback) is landed:
-  - `crates/fret-ui/src/tree/ui_tree_outside_press.rs`
-  - `crates/fret-ui/src/tree/dispatch/window.rs`
+Goal: containment during dispatch never depends on retained `parent` pointers.
+
+Exit gates:
+
+- Introduce and thread a single dispatch context across window and chain dispatch.
+- Remove parent-walk containment checks from dispatch paths (snapshot-only).
+

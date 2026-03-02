@@ -1,31 +1,34 @@
-# TODO
+# UI Focus + Overlay Focus Containment (Fearless Refactor v1) — TODO
 
-## Phase A (Reachability hardening)
+Tracking doc: `docs/workstreams/ui-focus-overlay-fearless-refactor-v1/DESIGN.md`
 
-- [x] Replace outside-press “inside layer” detection with child-edge reachability.
-- [x] Replace outside-press branch containment (`is_descendant`) with child-edge reachability.
-- [x] Add a retained/view-cache style test where parent pointers are intentionally stale but
-      children edges are correct; outside-press behavior must be stable.
+## A + B (landed in this worktree)
 
-## Phase B (Prevent default suppresses focus clearing)
+- [x] Gate focus requests against active-layer reachability (child-edge authoritative).
+- [x] Use `UiDispatchSnapshot` to make focus containment robust under stale retained `parent` pointers.
+- [x] Add regression tests for:
+  - [x] Tab traversal trapping inside `FocusScopeProps { trap_focus: true }`
+  - [x] Pointer-focus clamping when a trapped scope is active
+  - [x] Stale parent-pointer simulation (child edges still correct)
 
-- [x] Record per-dismissible-root “last dismiss request outcome” for the current tick.
-- [x] Gate outside-press default focus clearing on `default_prevented` for that same tick.
-- [x] Add/extend tests:
-  - [x] `prevent_default` keeps focus stable on outside press.
-  - [x] non-prevented outside press still clears focus (baseline behavior).
+## C (snapshot-first dispatch) — follow-ups
 
-## Phase C (Dispatch snapshot)
+- [ ] Introduce an explicit dispatch context struct (e.g. `DispatchCx`) carrying:
+  - [ ] active input roots + barrier root
+  - [ ] active focus roots + focus barrier root
+  - [ ] input-scope snapshot (required)
+  - [ ] focus-scope snapshot (optional / on-demand)
+- [ ] Refactor `dispatch/window.rs` and `dispatch/chain.rs` to thread `DispatchCx` rather than
+  ad-hoc snapshots/closures.
+- [ ] Remove remaining containment queries that rely on live-tree parent walks during dispatch
+  (replace with snapshot queries).
+- [ ] Add conformance coverage for nested scenarios:
+  - [ ] trapped focus scope inside a modal overlay root (portal-style nested roots)
+  - [ ] multiple stacked trapped scopes (inner scope wins)
+  - [ ] barrier active during close transitions (focus restoration while pointer underlay stays blocked)
 
-- [x] Write `MILESTONES.md`-driven detailed design + migration breakdown (`M2_DISPATCH_SNAPSHOT_DESIGN.md`).
-- [x] PR0: Introduce `UiDispatchSnapshot` types + builder entrypoint (debug-only; no behavior change).
-- [x] PR1: Add snapshot parity report (reachable-set vs snapshot forest) for diagnostics.
-- [x] PR2: Route outside-press containment and branch checks via snapshot (Phase A reachability fallback).
-- [ ] Introduce a snapshot struct (per window, per frame) capturing:
-  - [ ] focus containment relationships
-  - [ ] hit-test primitives + transforms
-  - [ ] tab stops and traversal order
-  - [ ] input handler bindings (IME/text)
-- [ ] Add a “snapshot parity” debug view/diagnostic:
-  - [ ] compare snapshot containment vs Phase A reachability
-  - [ ] report divergences with evidence anchors
+## Nice-to-haves (separate workstreams if they expand)
+
+- [ ] `fretboard diag` scripted repro covering “stale parent pointers” + overlay focus trap outcomes.
+- [ ] Perf probe: snapshot build cost vs frame budget in UI gallery worst-case overlays.
+
