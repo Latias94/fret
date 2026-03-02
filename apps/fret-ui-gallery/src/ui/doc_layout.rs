@@ -168,9 +168,11 @@ pub(in crate::ui) fn wrap_preview_page(
     render_doc_page(
         cx,
         intro,
-        vec![DocSection::new(section_title, preview)
-            .no_shell()
-            .max_w(Px(980.0))],
+        vec![
+            DocSection::new(section_title, preview)
+                .no_shell()
+                .max_w(Px(980.0)),
+        ],
     )
 }
 

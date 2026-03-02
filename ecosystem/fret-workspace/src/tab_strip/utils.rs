@@ -28,13 +28,22 @@ pub(super) fn scroll_rect_into_view_x(handle: &ScrollHandle, viewport: Rect, chi
     let child_left = child.origin.x;
     let child_right = Px(child.origin.x.0 + child.size.width.0);
 
-    let next_x = if child_left.0 < (view_left.0 + margin.0) {
-        Px(current.x.0 + (child_left.0 - (view_left.0 + margin.0)))
+    // Note: `child` bounds are reported in "unscrolled" coordinates while `viewport` is in window
+    // coordinates, so the required scroll offset is absolute (do not add `current.x`).
+    let mut next_x = if child_left.0 < (view_left.0 + margin.0) {
+        Px(child_left.0 - (view_left.0 + margin.0))
     } else if child_right.0 > (view_right.0 - margin.0) {
-        Px(current.x.0 + (child_right.0 - (view_right.0 - margin.0)))
+        Px(child_right.0 - (view_right.0 - margin.0))
     } else {
         current.x
     };
+
+    let max_x = handle.max_offset().x;
+    if next_x.0 < 0.0 {
+        next_x = Px(0.0);
+    } else if next_x.0 > max_x.0 {
+        next_x = max_x;
+    }
 
     if next_x != current.x {
         handle.set_offset(Point::new(next_x, current.y));

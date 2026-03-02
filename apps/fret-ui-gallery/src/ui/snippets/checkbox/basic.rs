@@ -18,4 +18,3 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>, model: Model<bool>) -> 
     .test_id("ui-gallery-checkbox-basic-field")
 }
 // endregion: example
-

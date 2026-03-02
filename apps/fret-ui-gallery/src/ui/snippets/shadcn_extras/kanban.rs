@@ -54,7 +54,8 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
                 );
 
                 let header = if ctx.mode == shadcn::extras::KanbanCardMode::Board {
-                    let checkbox = shadcn::Checkbox::new_controllable(cx, None, false).into_element(cx);
+                    let checkbox =
+                        shadcn::Checkbox::new_controllable(cx, None, false).into_element(cx);
                     stack::hstack(
                         cx,
                         stack::HStackProps::default()
@@ -79,4 +80,3 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
     })
 }
 // endregion: example
-

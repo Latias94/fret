@@ -25,6 +25,12 @@
 
     {
       "type": "wait_until",
+      "predicate": { "kind": "workspace_tab_strip_active_overflow_is", "overflow": true, "pane_id": "pane-a" },
+      "timeout_frames": 240
+    },
+
+    {
+      "type": "wait_until",
       "predicate": {
         "kind": "pos_in_set_is",
         "target": { "kind": "test_id", "id": "workspace-shell-pane-pane-a-tab-doc-a-0" },
@@ -73,4 +79,3 @@
     { "type": "capture_bundle", "label": "workspace-shell-demo-tab-reorder-first-to-end-overflow-smoke" }
   ]
 }
-

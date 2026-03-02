@@ -1,12 +1,12 @@
 {
   "schema_version": 2,
   "meta": {
-    "name": "Workspace shell demo: reorder tab within strip (first -> after second) (smoke)",
+    "name": "Workspace shell demo: reorder tab within strip (first -> end) (smoke)",
     "tags": ["workspace", "tabstrip", "reorder", "smoke", "gate"],
     "required_capabilities": ["diag.script_v2"],
     "target_hints": [
       "Asserts initial pos_in_set for a known tab.",
-      "Drags the first tab to reorder within the strip and drops it.",
+      "Drags the first tab to the end and drops it.",
       "Asserts pos_in_set updates after the reorder."
     ]
   },
@@ -67,7 +67,7 @@
       "predicate": {
         "kind": "pos_in_set_is",
         "target": { "kind": "test_id", "id": "workspace-shell-pane-pane-a-tab-doc-a-0" },
-        "pos_in_set": 2
+        "pos_in_set": 3
       },
       "timeout_frames": 240
     },

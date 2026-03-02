@@ -70,18 +70,22 @@ pub fn render<H: UiHost>(
                 .unwrap_or(false);
 
             let entries: Vec<shadcn::CommandEntry> = if loading_enabled_value {
-                vec![shadcn::CommandLoading::new("Fetching commands…")
-                    .test_id("ui-gallery-command-loading-row")
-                    .into()]
+                vec![
+                    shadcn::CommandLoading::new("Fetching commands…")
+                        .test_id("ui-gallery-command-loading-row")
+                        .into(),
+                ]
             } else {
-                vec![shadcn::CommandGroup::new([
-                    shadcn::CommandItem::new("Calendar")
-                        .on_select_action(on_select(Arc::from("command.loading.calendar"))),
-                    shadcn::CommandItem::new("Search Emoji")
-                        .on_select_action(on_select(Arc::from("command.loading.search-emoji"))),
-                ])
-                .heading("Loaded items")
-                .into()]
+                vec![
+                    shadcn::CommandGroup::new([
+                        shadcn::CommandItem::new("Calendar")
+                            .on_select_action(on_select(Arc::from("command.loading.calendar"))),
+                        shadcn::CommandItem::new("Search Emoji")
+                            .on_select_action(on_select(Arc::from("command.loading.search-emoji"))),
+                    ])
+                    .heading("Loaded items")
+                    .into(),
+                ]
             };
 
             let toggle_row = stack::hstack(

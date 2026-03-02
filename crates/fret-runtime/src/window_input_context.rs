@@ -14,6 +14,10 @@ pub struct WindowInputContextService {
 }
 
 impl WindowInputContextService {
+    pub fn window_count(&self) -> usize {
+        self.by_window.len()
+    }
+
     pub fn snapshot(&self, window: AppWindowId) -> Option<&InputContext> {
         self.by_window.get(&window)
     }

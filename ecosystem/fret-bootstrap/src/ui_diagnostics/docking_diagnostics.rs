@@ -7,6 +7,8 @@ pub struct UiDockingInteractionSnapshotV1 {
     #[serde(default)]
     pub viewport_capture: Option<UiViewportCaptureDiagnosticsV1>,
     #[serde(default)]
+    pub tab_strip_active_visibility: Option<UiDockTabStripActiveVisibilityDiagnosticsV1>,
+    #[serde(default)]
     pub dock_graph_stats: Option<UiDockGraphStatsDiagnosticsV1>,
     #[serde(default)]
     pub dock_graph_signature: Option<UiDockGraphSignatureDiagnosticsV1>,
@@ -25,6 +27,9 @@ impl UiDockingInteractionSnapshotV1 {
             viewport_capture: snapshot
                 .viewport_capture
                 .map(UiViewportCaptureDiagnosticsV1::from_snapshot),
+            tab_strip_active_visibility: snapshot
+                .tab_strip_active_visibility
+                .map(UiDockTabStripActiveVisibilityDiagnosticsV1::from_snapshot),
             dock_graph_stats: snapshot
                 .dock_graph_stats
                 .map(UiDockGraphStatsDiagnosticsV1::from_snapshot),
@@ -32,6 +37,68 @@ impl UiDockingInteractionSnapshotV1 {
                 .dock_graph_signature
                 .as_ref()
                 .map(UiDockGraphSignatureDiagnosticsV1::from_snapshot),
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+pub struct UiDockTabStripActiveVisibilityDiagnosticsV1 {
+    #[serde(default)]
+    pub status: UiDockTabStripActiveVisibilityStatusV1,
+    #[serde(default)]
+    pub tabs_node: Option<u64>,
+    pub overflow: bool,
+    pub tab_count: u32,
+    pub active: u32,
+    pub scroll_px: f32,
+    pub max_scroll_px: f32,
+    pub active_visible: bool,
+}
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum UiDockTabStripActiveVisibilityStatusV1 {
+    Ok,
+    MissingWindowRoot,
+    NoTabsFound,
+    MissingLayoutRect,
+    MissingTabsNode,
+}
+
+impl Default for UiDockTabStripActiveVisibilityStatusV1 {
+    fn default() -> Self {
+        Self::Ok
+    }
+}
+
+impl UiDockTabStripActiveVisibilityDiagnosticsV1 {
+    fn from_snapshot(snapshot: fret_runtime::DockTabStripActiveVisibilityDiagnostics) -> Self {
+        use slotmap::Key as _;
+        Self {
+            status: match snapshot.status {
+                fret_runtime::DockTabStripActiveVisibilityStatusDiagnostics::Ok => {
+                    UiDockTabStripActiveVisibilityStatusV1::Ok
+                }
+                fret_runtime::DockTabStripActiveVisibilityStatusDiagnostics::MissingWindowRoot => {
+                    UiDockTabStripActiveVisibilityStatusV1::MissingWindowRoot
+                }
+                fret_runtime::DockTabStripActiveVisibilityStatusDiagnostics::NoTabsFound => {
+                    UiDockTabStripActiveVisibilityStatusV1::NoTabsFound
+                }
+                fret_runtime::DockTabStripActiveVisibilityStatusDiagnostics::MissingLayoutRect => {
+                    UiDockTabStripActiveVisibilityStatusV1::MissingLayoutRect
+                }
+                fret_runtime::DockTabStripActiveVisibilityStatusDiagnostics::MissingTabsNode => {
+                    UiDockTabStripActiveVisibilityStatusV1::MissingTabsNode
+                }
+            },
+            tabs_node: snapshot.tabs_node.map(|id| id.data().as_ffi()),
+            overflow: snapshot.overflow,
+            tab_count: snapshot.tab_count.min(u32::MAX as usize) as u32,
+            active: snapshot.active.min(u32::MAX as usize) as u32,
+            scroll_px: snapshot.scroll.0,
+            max_scroll_px: snapshot.max_scroll.0,
+            active_visible: snapshot.active_visible,
         }
     }
 }

@@ -70,7 +70,9 @@ pub(super) fn preview_item(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> 
                 .max_w(Px(820.0))
                 .code_rust_from_file_region(include_str!("../snippets/item/header.rs"), "example"),
             DocSection::new("Link", docs_link)
-                .description("Links are modeled via `ItemRender::Link` so the root carries link semantics.")
+                .description(
+                    "Links are modeled via `ItemRender::Link` so the root carries link semantics.",
+                )
                 .no_shell()
                 .max_w(Px(640.0))
                 .code_rust_from_file_region(include_str!("../snippets/item/link.rs"), "example"),
@@ -87,7 +89,9 @@ pub(super) fn preview_item(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> 
                 .no_shell()
                 .max_w(Px(1100.0)),
             DocSection::new("Link (render)", link_render)
-                .description("Minimal link row with media + chevron (gallery-friendly, deterministic).")
+                .description(
+                    "Minimal link row with media + chevron (gallery-friendly, deterministic).",
+                )
                 .no_shell()
                 .max_w(Px(640.0))
                 .code_rust_from_file_region(
@@ -108,4 +112,3 @@ pub(super) fn preview_item(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> 
 
     vec![body.test_id("ui-gallery-item")]
 }
-

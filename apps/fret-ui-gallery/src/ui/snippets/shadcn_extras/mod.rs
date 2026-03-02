@@ -7,4 +7,3 @@ pub mod rating;
 pub mod relative_time;
 pub mod tags;
 pub mod ticker;
-

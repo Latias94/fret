@@ -61,4 +61,3 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
     .test_id("ui-gallery-input-grid")
 }
 // endregion: example
-

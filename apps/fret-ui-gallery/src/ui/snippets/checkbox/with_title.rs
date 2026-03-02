@@ -52,4 +52,3 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>, with_title: Model<bool>
     .test_id("ui-gallery-checkbox-with-title-section")
 }
 // endregion: example
-

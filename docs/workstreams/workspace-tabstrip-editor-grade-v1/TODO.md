@@ -11,7 +11,7 @@ This TODO list is scoped to this workstream folder and is intended to keep the r
   - [x] `workspace-shell-demo-tab-drag-to-split-right`
   - [x] `workspace-shell-demo-tab-drag-to-split-right-drop-preview-screenshot`
 - [x] Add an overflow activation smoke gate (`workspace-shell-demo-tab-overflow-activate-hidden-smoke`).
-- [ ] Promote a minimal suite that runs in < 30s locally (e.g. `diag-hardening-smoke-workspace`) and keep it green.
+- [x] Promote a minimal suite that runs in < 30s locally (`diag-hardening-smoke-workspace`) and keep it green.
 - [ ] Add a non-screenshot invariants-based split gate (post-split layout assertions + tab ownership), once split preview routing is stable.
 
 ## Modularization (M1)
@@ -35,7 +35,9 @@ This TODO list is scoped to this workstream folder and is intended to keep the r
 - [x] Escape exits the focused tab strip (`workspace.pane.focus_content`) (unit test gate).
 - [x] `focus_content` / `Ctrl+F6` can exit even if no return target was recorded (pane content fallback).
 - [x] Keyboard nav: baseline roving ArrowLeft/ArrowRight auto-activates (unit test gate).
-- [ ] Keyboard nav: decide MRU vs in-order for `workspace.tab.next/prev` and lock with gates.
+- [x] Keyboard nav: decide MRU vs in-order for `workspace.tab.next/prev` and lock with gates (default: MRU).
+  - Evidence: `ecosystem/fret-workspace/src/tabs.rs` (`TabCycleMode::Mru` default + unit tests).
+  - Evidence: `ecosystem/fret-workspace/src/commands.rs` (default keybindings for `workspace.tab.next/prev`).
 - [x] Make tab strip hit-test surfaces explicit (tab row vs header space vs overflow control / scroll controls) and gate it via unit tests.
 - [x] Adopt `WorkspacePaneContentFocusTarget` in workspace shells (real pane content), so exit fallback works in demos.
   - Evidence: `apps/fret-examples/src/workspace_shell_demo.rs`.

@@ -22,8 +22,10 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
                 .into_element(cx),
             ])
             .into_element(cx),
-            shadcn::CardContent::new(vec![ui::text(cx, "محتوى البطاقة").text_sm().into_element(cx)])
-                .into_element(cx),
+            shadcn::CardContent::new(vec![
+                ui::text(cx, "محتوى البطاقة").text_sm().into_element(cx),
+            ])
+            .into_element(cx),
         ])
         .refine_layout(max_w_sm)
         .into_element(cx)
@@ -31,4 +33,3 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
     .test_id("ui-gallery-card-rtl")
 }
 // endregion: example
-

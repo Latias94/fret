@@ -17,8 +17,10 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
                 .into_element(cx),
         ])
         .into_element(cx),
-        shadcn::CardContent::new(vec![ui::text(cx, "Card Content").text_sm().into_element(cx)])
-            .into_element(cx),
+        shadcn::CardContent::new(vec![
+            ui::text(cx, "Card Content").text_sm().into_element(cx),
+        ])
+        .into_element(cx),
         shadcn::CardFooter::new(vec![ui::text(cx, "Card Footer").text_sm().into_element(cx)])
             .into_element(cx),
     ])
@@ -27,4 +29,3 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
     .test_id("ui-gallery-card-usage")
 }
 // endregion: example
-
