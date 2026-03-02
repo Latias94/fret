@@ -1159,6 +1159,8 @@ paths so `diag triage` can surface actionable hints (budget pressure, source ali
 
 Suites:
 
+- `tools/diag-scripts/suites/liquid-glass-custom-v3/`
+  - Captures baseline screenshots/bundles for the CustomV3 "lens" authoring demo surface (no forced degradation).
 - `tools/diag-scripts/suites/liquid-glass-custom-v3-degraded/`
   - Forces an extreme low intermediate budget to trigger **BackdropSourceGroup** degradation.
   - Expected triage hint codes:
