@@ -11,6 +11,7 @@ impl<H: UiHost> UiTree<H> {
         input_ctx: &InputContext,
         start: NodeId,
         event: &Event,
+        snapshot: Option<&UiDispatchSnapshot>,
         invalidation_visited: &mut impl InvalidationVisited,
     ) -> bool {
         let pointer_id_for_capture: Option<fret_core::PointerId> = match event {
@@ -27,7 +28,7 @@ impl<H: UiHost> UiTree<H> {
         let mut did_work = false;
 
         if event_position(event).is_some() {
-            let chain = self.build_mapped_event_chain(start, event);
+            let chain = self.build_mapped_event_chain(start, event, snapshot);
             for (node_id, event_for_node) in chain {
                 let (invalidations, notify_requested, notify_requested_location, _parent) = self
                     .with_widget_mut(node_id, |widget, tree| {

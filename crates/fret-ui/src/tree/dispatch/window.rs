@@ -233,6 +233,13 @@ impl<H: UiHost> UiTree<H> {
 
         let hit_test_layer_roots: &[NodeId] =
             wheel_hit_test_layers.as_deref().unwrap_or(active_layers);
+        let hit_test_snapshot: Option<UiDispatchSnapshot> =
+            wheel_hit_test_layers.as_deref().map(|roots| {
+                self.build_dispatch_snapshot_for_layer_roots(app.frame_id(), roots, barrier_root)
+            });
+        let pointer_chain_snapshot: &UiDispatchSnapshot = hit_test_snapshot
+            .as_ref()
+            .unwrap_or(&dispatch_cx.input_snapshot);
 
         let node_in_active_layers = |node: NodeId| dispatch_cx.node_in_active_input_layers(node);
 
@@ -894,6 +901,7 @@ impl<H: UiHost> UiTree<H> {
                                 &input_ctx,
                                 candidate.root,
                                 &candidate.down_event,
+                                Some(&snapshot),
                                 &mut invalidation_visited,
                             );
                             let mut clear_focus = true;
@@ -1235,7 +1243,12 @@ impl<H: UiHost> UiTree<H> {
             && matches!(event, Event::Pointer(_))
             && let Some(hit) = pointer_hit
         {
-            cursor_choice = self.cursor_icon_query_for_pointer_hit(hit, &input_ctx, event);
+            cursor_choice = self.cursor_icon_query_for_pointer_hit(
+                hit,
+                &input_ctx,
+                event,
+                Some(pointer_chain_snapshot),
+            );
             cursor_choice_from_query = cursor_choice.is_some();
         }
 
@@ -1254,9 +1267,13 @@ impl<H: UiHost> UiTree<H> {
                 || tracing::trace_span!("fret.ui.dispatch.event_chain_build"),
                 || {
                     if event_position(event).is_some() {
-                        self.build_mapped_event_chain(node_id, event)
+                        self.build_mapped_event_chain(node_id, event, Some(pointer_chain_snapshot))
                     } else {
-                        self.build_unmapped_event_chain(node_id, event)
+                        self.build_unmapped_event_chain(
+                            node_id,
+                            event,
+                            Some(&dispatch_cx.focus_snapshot),
+                        )
                     }
                 },
             );
@@ -2513,6 +2530,7 @@ impl<H: UiHost> UiTree<H> {
                         &input_ctx,
                         prev,
                         event,
+                        Some(&dispatch_cx.input_snapshot),
                         &mut invalidation_visited,
                     );
                     needs_redraw = true;

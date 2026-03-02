@@ -37,7 +37,8 @@ impl<H: UiHost> UiTree<H> {
 
         let node_in_active_layers = |node: NodeId| dispatch_cx.node_in_active_input_layers(node);
         if event_position(event).is_some() {
-            let chain = self.build_mapped_event_chain(start, event);
+            let chain =
+                self.build_mapped_event_chain(start, event, Some(&dispatch_cx.input_snapshot));
             let pointer_hit_is_text_input =
                 if matches!(event, Event::Pointer(PointerEvent::Down { .. }))
                     && let Some(window) = self.window

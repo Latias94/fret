@@ -163,6 +163,7 @@ impl<H: UiHost> UiTree<H> {
                 params.input_ctx,
                 root,
                 params.event,
+                Some(&snapshot),
                 invalidation_visited,
             );
             // Match Radix/web outcomes: clicking outside a dismissible overlay should clear focus
