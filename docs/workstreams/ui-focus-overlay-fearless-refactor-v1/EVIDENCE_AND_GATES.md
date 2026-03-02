@@ -70,3 +70,10 @@ cargo run -p fretboard -- diag run ui-gallery-modal-barrier-wheel-block `
   --check-pixels-unchanged ui-gallery-nav-scroll `
   --launch -- cargo run -p fret-ui-gallery --release
 ```
+
+- Modal dialogs MUST install barrier roots and restore focus on close (and underlay press MUST be blocked):
+
+```powershell
+cargo run -p fretboard -- diag run ui-gallery-modal-barrier-focus-restore `
+  --launch -- cargo run -p fret-ui-gallery --release
+```
