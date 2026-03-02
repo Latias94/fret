@@ -245,6 +245,7 @@ pub struct NodeGraphCanvasWith<M> {
     skin_last_rev: Option<u64>,
     geometry_overrides: Option<NodeGraphGeometryOverridesRef>,
     paint_overrides: Option<NodeGraphPaintOverridesRef>,
+    paint_overrides_last_rev: Option<u64>,
     close_command: Option<CommandId>,
 
     auto_measured: Arc<MeasuredGeometryStore>,
@@ -481,6 +482,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
             skin_last_rev: None,
             geometry_overrides: None,
             paint_overrides: None,
+            paint_overrides_last_rev: None,
             close_command: None,
             auto_measured,
             auto_measured_key: None,
@@ -545,6 +547,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
     /// Attaches a UI-only per-entity paint override provider (ADR 0309).
     pub fn with_paint_overrides(mut self, overrides: NodeGraphPaintOverridesRef) -> Self {
         self.paint_overrides = Some(overrides);
+        self.paint_overrides_last_rev = None;
         self
     }
 
@@ -585,6 +588,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
             skin_last_rev: self.skin_last_rev,
             geometry_overrides: self.geometry_overrides,
             paint_overrides: self.paint_overrides,
+            paint_overrides_last_rev: self.paint_overrides_last_rev,
             close_command: self.close_command,
             auto_measured: self.auto_measured,
             auto_measured_key: self.auto_measured_key,
@@ -771,6 +775,30 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
             return;
         }
         self.skin_last_rev = Some(rev);
+        self.grid_scene_cache.clear();
+        self.groups_scene_cache.clear();
+        self.nodes_scene_cache.clear();
+        self.edges_scene_cache.clear();
+        self.edge_labels_scene_cache.clear();
+        self.edges_build_states.clear();
+        self.edge_labels_build_states.clear();
+        self.edge_labels_build_state = None;
+    }
+
+    fn sync_paint_overrides(&mut self, _services: Option<&mut dyn fret_core::UiServices>) {
+        let Some(overrides) = self.paint_overrides.as_ref() else {
+            self.paint_overrides_last_rev = None;
+            return;
+        };
+
+        let rev = overrides.revision();
+        if self.paint_overrides_last_rev == Some(rev) {
+            return;
+        }
+        self.paint_overrides_last_rev = Some(rev);
+
+        // Paint overrides must be paint-only: invalidate paint caches without touching derived
+        // geometry/spatial index caches.
         self.grid_scene_cache.clear();
         self.groups_scene_cache.clear();
         self.nodes_scene_cache.clear();

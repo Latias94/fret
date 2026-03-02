@@ -3,6 +3,12 @@ use super::*;
 impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
     pub(super) fn static_scene_style_key(&self, scale_factor: f32) -> u64 {
         let mut b = TileCacheKeyBuilder::new("fret-node.canvas.static_scene_style.v1");
+        let paint_overrides_rev = self
+            .paint_overrides
+            .as_ref()
+            .map(|o| o.revision())
+            .unwrap_or(0);
+        b.add_u64(paint_overrides_rev);
         b.add_u32(self.style.paint.group_background.r.to_bits());
         b.add_u32(self.style.paint.group_background.g.to_bits());
         b.add_u32(self.style.paint.group_background.b.to_bits());
