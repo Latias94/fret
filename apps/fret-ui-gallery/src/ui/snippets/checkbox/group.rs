@@ -71,4 +71,3 @@ pub fn render<H: UiHost>(
     .test_id("ui-gallery-checkbox-group")
 }
 // endregion: example
-

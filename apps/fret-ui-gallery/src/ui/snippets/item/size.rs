@@ -40,12 +40,12 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
         let media = shadcn::ItemMedia::new([icon(cx, "lucide.badge-check")])
             .into_element(cx)
             .test_id("ui-gallery-item-size-sm-media");
-        let content = shadcn::ItemContent::new([shadcn::ItemTitle::new(
-            "Your profile has been verified.",
-        )
-        .into_element(cx)])
-        .into_element(cx)
-        .test_id("ui-gallery-item-size-sm-content");
+        let content =
+            shadcn::ItemContent::new([
+                shadcn::ItemTitle::new("Your profile has been verified.").into_element(cx)
+            ])
+            .into_element(cx)
+            .test_id("ui-gallery-item-size-sm-content");
         let actions = shadcn::ItemActions::new([icon(cx, "lucide.chevron-right")])
             .into_element(cx)
             .test_id("ui-gallery-item-size-sm-actions");
@@ -76,4 +76,3 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
     .test_id("ui-gallery-item-size")
 }
 // endregion: example
-

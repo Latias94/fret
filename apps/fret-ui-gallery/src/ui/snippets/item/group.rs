@@ -62,4 +62,3 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
     .test_id("ui-gallery-item-group-wrapper")
 }
 // endregion: example
-

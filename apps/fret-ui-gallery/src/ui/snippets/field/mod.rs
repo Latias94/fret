@@ -11,4 +11,3 @@ pub mod slider;
 pub mod switch;
 pub mod textarea;
 pub mod validation_and_errors;
-

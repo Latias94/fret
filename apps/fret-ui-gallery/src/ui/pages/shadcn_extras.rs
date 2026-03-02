@@ -16,7 +16,9 @@ pub(super) fn preview_shadcn_extras(cx: &mut ElementContext<'_, App>) -> Vec<Any
 
     let body = doc_layout::render_doc_page(
         cx,
-        Some("A small grab-bag of shadcn-style extras; each section is intentionally self-contained."),
+        Some(
+            "A small grab-bag of shadcn-style extras; each section is intentionally self-contained.",
+        ),
         vec![
             DocSection::new("Announcement", announcement)
                 .max_w(Px(860.0))
@@ -77,4 +79,3 @@ pub(super) fn preview_shadcn_extras(cx: &mut ElementContext<'_, App>) -> Vec<Any
 
     vec![body.test_id("ui-gallery-shadcn-extras-component")]
 }
-

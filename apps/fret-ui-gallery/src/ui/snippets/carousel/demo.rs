@@ -29,8 +29,9 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
 
     // Demo: include a descendant pressable so diag scripts can gate pointer propagation
     // (drag-from-descendant should not activate; click should).
-    let demo_inner_clicked =
-        cx.with_state(CarouselPageState::default, |st| st.demo_inner_clicked.clone());
+    let demo_inner_clicked = cx.with_state(CarouselPageState::default, |st| {
+        st.demo_inner_clicked.clone()
+    });
     let demo_inner_clicked = match demo_inner_clicked {
         Some(model) => model,
         None => {
@@ -41,16 +42,17 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
             model
         }
     };
-    let demo_inner_clicked_now = cx.watch_model(&demo_inner_clicked).copied().unwrap_or(false);
+    let demo_inner_clicked_now = cx
+        .watch_model(&demo_inner_clicked)
+        .copied()
+        .unwrap_or(false);
     let toggle_demo_inner_clicked = {
         let demo_inner_clicked = demo_inner_clicked.clone();
         Arc::new(
             move |host: &mut dyn fret_ui::action::UiActionHost,
                   action_cx: fret_ui::action::ActionCx,
                   _reason: fret_ui::action::ActivateReason| {
-                let _ = host
-                    .models_mut()
-                    .update(&demo_inner_clicked, |v| *v = !*v);
+                let _ = host.models_mut().update(&demo_inner_clicked, |v| *v = !*v);
                 host.request_redraw(action_cx.window);
             },
         ) as fret_ui::action::OnActivate
@@ -59,7 +61,8 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
     // Demo DnD handle (MVP): show a handle-only DnD activation that does not compete with the
     // carousel swipe gesture.
     const DEMO_DND_KIND: fret_runtime::DragKindId = fret_runtime::DragKindId(101);
-    let demo_dnd_pointer = cx.with_state(CarouselPageState::default, |st| st.demo_dnd_pointer.clone());
+    let demo_dnd_pointer =
+        cx.with_state(CarouselPageState::default, |st| st.demo_dnd_pointer.clone());
     let demo_dnd_pointer = match demo_dnd_pointer {
         Some(model) => model,
         None => {
@@ -71,8 +74,9 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
         }
     };
 
-    let demo_dnd_dragging =
-        cx.with_state(CarouselPageState::default, |st| st.demo_dnd_dragging.clone());
+    let demo_dnd_dragging = cx.with_state(CarouselPageState::default, |st| {
+        st.demo_dnd_dragging.clone()
+    });
     let demo_dnd_dragging = match demo_dnd_dragging {
         Some(model) => model,
         None => {
@@ -249,7 +253,9 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
                     );
 
                     host.release_pointer_capture();
-                    let _ = host.models_mut().update(&on_up_handle_pointer, |v| *v = None);
+                    let _ = host
+                        .models_mut()
+                        .update(&on_up_handle_pointer, |v| *v = None);
                     let _ = host
                         .models_mut()
                         .update(&on_up_handle_dragging, |v| *v = false);
@@ -359,7 +365,10 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
                         down.pointer_id,
                         down.position,
                         down.tick_id,
-                        fret_ui_kit::dnd::ActivationConstraint::DelayAndDistance { ticks: 12, px: 6.0 },
+                        fret_ui_kit::dnd::ActivationConstraint::DelayAndDistance {
+                            ticks: 12,
+                            px: 6.0,
+                        },
                         fret_ui_kit::dnd::CollisionStrategy::ClosestCenter,
                         None,
                     );
@@ -396,7 +405,10 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
                         mv.pointer_id,
                         mv.position,
                         mv.tick_id,
-                        fret_ui_kit::dnd::ActivationConstraint::DelayAndDistance { ticks: 12, px: 6.0 },
+                        fret_ui_kit::dnd::ActivationConstraint::DelayAndDistance {
+                            ticks: 12,
+                            px: 6.0,
+                        },
                         fret_ui_kit::dnd::CollisionStrategy::ClosestCenter,
                         None,
                     );
@@ -443,7 +455,10 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
                         up.pointer_id,
                         up.position,
                         up.tick_id,
-                        fret_ui_kit::dnd::ActivationConstraint::DelayAndDistance { ticks: 12, px: 6.0 },
+                        fret_ui_kit::dnd::ActivationConstraint::DelayAndDistance {
+                            ticks: 12,
+                            px: 6.0,
+                        },
                         fret_ui_kit::dnd::CollisionStrategy::ClosestCenter,
                         None,
                     );
@@ -488,7 +503,10 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
                         cancel.pointer_id,
                         position,
                         cancel.tick_id,
-                        fret_ui_kit::dnd::ActivationConstraint::DelayAndDistance { ticks: 12, px: 6.0 },
+                        fret_ui_kit::dnd::ActivationConstraint::DelayAndDistance {
+                            ticks: 12,
+                            px: 6.0,
+                        },
                         fret_ui_kit::dnd::CollisionStrategy::ClosestCenter,
                         None,
                     );
@@ -583,12 +601,17 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
         let props = decl_style::container_props(
             &theme,
             ChromeRefinement::default(),
-            LayoutRefinement::default().relative().w_full().aspect_ratio(1.0),
+            LayoutRefinement::default()
+                .relative()
+                .w_full()
+                .aspect_ratio(1.0),
         );
         let content = cx.container(props, move |_cx| layered);
 
         let card = shadcn::Card::new([content]).into_element(cx);
-        ui::container(cx, move |_cx| vec![card]).p_1().into_element(cx)
+        ui::container(cx, move |_cx| vec![card])
+            .p_1()
+            .into_element(cx)
     };
 
     let demo_visual = SlideVisual {
@@ -602,7 +625,12 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
     shadcn::Carousel::new(demo_items)
         // Web goldens: track width accounts for the negative start margin (`-ml-4`).
         .refine_track_layout(LayoutRefinement::default().w_px(Px(336.0)))
-        .refine_layout(LayoutRefinement::default().w_full().max_w(max_w_xs).mx_auto())
+        .refine_layout(
+            LayoutRefinement::default()
+                .w_full()
+                .max_w(max_w_xs)
+                .mx_auto(),
+        )
         .test_id("ui-gallery-carousel-demo")
         .into_element(cx)
 }

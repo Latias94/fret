@@ -13,4 +13,3 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>, value: Model<String>) -
         .test_id("ui-gallery-input-basic")
 }
 // endregion: example
-

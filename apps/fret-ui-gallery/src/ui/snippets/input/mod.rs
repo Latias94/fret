@@ -12,4 +12,3 @@ pub mod input_group;
 pub mod invalid;
 pub mod required;
 pub mod rtl;
-
