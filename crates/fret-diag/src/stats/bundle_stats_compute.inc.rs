@@ -772,6 +772,14 @@ pub(super) fn bundle_stats_from_json_with_options(
                 .and_then(|m| m.get("renderer_material_degraded_due_to_budget"))
                 .and_then(|v| v.as_u64())
                 .unwrap_or(0);
+            let renderer_custom_effect_v3_steps_requested = stats
+                .and_then(|m| m.get("renderer_custom_effect_v3_steps_requested"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
+            let renderer_custom_effect_v3_passes_emitted = stats
+                .and_then(|m| m.get("renderer_custom_effect_v3_passes_emitted"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
             let renderer_custom_effect_v3_sources_raw_requested = stats
                 .and_then(|m| m.get("renderer_custom_effect_v3_sources_raw_requested"))
                 .and_then(|v| v.as_u64())
@@ -1567,6 +1575,8 @@ pub(super) fn bundle_stats_from_json_with_options(
                 renderer_material_distinct,
                 renderer_material_unknown_ids,
                 renderer_material_degraded_due_to_budget,
+                renderer_custom_effect_v3_steps_requested,
+                renderer_custom_effect_v3_passes_emitted,
                 renderer_custom_effect_v3_sources_raw_requested,
                 renderer_custom_effect_v3_sources_raw_distinct,
                 renderer_custom_effect_v3_sources_raw_aliased_to_src,

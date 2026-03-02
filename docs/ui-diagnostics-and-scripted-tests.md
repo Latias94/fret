@@ -1179,8 +1179,9 @@ Run example (native, launch-managed):
 Notes:
 
 - These suites require `FRET_DIAG_RENDERER_PERF=1` to populate renderer perf counters.
-- If the intermediate budget is *too* low, the renderer may skip emitting a CustomV3 pass entirely (counters stay at 0).
-  Prefer the curated suite budgets when you want `CustomV3 sources` degradation signals specifically.
+- If the intermediate budget is *too* low, the renderer may skip emitting a CustomV3 pass entirely.
+  `diag triage` should surface `renderer.custom_effect_v3_requested_but_skipped`, and the source-level degradation counters
+  will stay at 0. Prefer the curated suite budgets when you want `CustomV3 sources` degradation signals specifically.
 
 Note:
 

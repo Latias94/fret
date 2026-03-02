@@ -19,12 +19,32 @@ impl Renderer {
                 RenderPlanDegradationReason as DegradationReason,
             };
 
+            let mut custom_effect_v3_steps_requested: u64 = 0;
+            for marker in effect_markers {
+                let EffectMarkerKind::Push { chain, .. } = &marker.kind else {
+                    continue;
+                };
+                for step in chain.iter() {
+                    if matches!(step, fret_core::EffectStep::CustomV3 { .. }) {
+                        custom_effect_v3_steps_requested =
+                            custom_effect_v3_steps_requested.saturating_add(1);
+                    }
+                }
+            }
+            let custom_effect_v3_passes_emitted = plan
+                .passes
+                .iter()
+                .filter(|p| matches!(p, RenderPlanPass::CustomEffectV3(_)))
+                .count() as u64;
+
             frame_perf.render_plan_estimated_peak_intermediate_bytes =
                 plan.compile_stats.estimated_peak_intermediate_bytes;
             frame_perf.render_plan_segments = plan.segments.len() as u64;
             frame_perf.render_plan_degradations = plan.degradations.len() as u64;
             frame_perf.effect_degradations = plan.compile_stats.effect_degradations;
             frame_perf.effect_blur_quality = plan.compile_stats.effect_blur_quality;
+            frame_perf.custom_effect_v3_steps_requested = custom_effect_v3_steps_requested;
+            frame_perf.custom_effect_v3_passes_emitted = custom_effect_v3_passes_emitted;
             for d in &plan.degradations {
                 match d.reason {
                     DegradationReason::BudgetZero => {

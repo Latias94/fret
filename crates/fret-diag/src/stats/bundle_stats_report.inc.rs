@@ -333,6 +333,8 @@ pub(super) struct BundleStatsSnapshotRow {
     pub(super) renderer_material_distinct: u64,
     pub(super) renderer_material_unknown_ids: u64,
     pub(super) renderer_material_degraded_due_to_budget: u64,
+    pub(super) renderer_custom_effect_v3_steps_requested: u64,
+    pub(super) renderer_custom_effect_v3_passes_emitted: u64,
     pub(super) renderer_custom_effect_v3_sources_raw_requested: u64,
     pub(super) renderer_custom_effect_v3_sources_raw_distinct: u64,
     pub(super) renderer_custom_effect_v3_sources_raw_aliased_to_src: u64,
