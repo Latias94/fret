@@ -49,7 +49,7 @@ Status labels:
 | `shimmer_demo` | `PAGE_AI_SHIMMER_DEMO` | (removed) | `apps/fret-ui-gallery/src/ui/snippets/ai/shimmer_demo.rs` | `apps/fret-ui-gallery/src/ui/pages/ai_shimmer_demo.rs` | Snippet-backed |
 | `snippet_demo` | `PAGE_AI_SNIPPET_DEMO` | (removed) | `apps/fret-ui-gallery/src/ui/snippets/ai/snippet_demo.rs` | `apps/fret-ui-gallery/src/ui/pages/ai_snippet_demo.rs` | Snippet-backed |
 | `sources_demo` | `PAGE_AI_SOURCES_DEMO` | (removed) | `apps/fret-ui-gallery/src/ui/snippets/ai/sources_demo.rs` | `apps/fret-ui-gallery/src/ui/pages/ai_sources_demo.rs` | Snippet-backed |
-| `speech_input_demo` | `PAGE_AI_SPEECH_INPUT_DEMO` | `apps/fret-ui-gallery/src/ui/previews/gallery/ai/speech_input_demo.rs` | — | — | Legacy preview |
+| `speech_input_demo` | `PAGE_AI_SPEECH_INPUT_DEMO` | (removed) | `apps/fret-ui-gallery/src/ui/snippets/ai/speech_input_demo.rs` | `apps/fret-ui-gallery/src/ui/pages/ai_speech_input_demo.rs` | Snippet-backed |
 | `stack_trace_demo` | `PAGE_AI_STACK_TRACE_DEMO` | (removed) | `apps/fret-ui-gallery/src/ui/snippets/ai/stack_trace_demo.rs` | `apps/fret-ui-gallery/src/ui/pages/ai_stack_trace_demo.rs` | Snippet-backed |
 | `stack_trace_large_demo` | `PAGE_AI_STACK_TRACE_LARGE_DEMO` | (removed) | `apps/fret-ui-gallery/src/ui/snippets/ai/stack_trace_large_demo.rs` | `apps/fret-ui-gallery/src/ui/pages/ai_stack_trace_large_demo.rs` | Snippet-backed |
 | `suggestions_demo` | `PAGE_AI_SUGGESTIONS_DEMO` | (removed) | `apps/fret-ui-gallery/src/ui/snippets/ai/suggestions_demo.rs` | `apps/fret-ui-gallery/src/ui/pages/ai_suggestions_demo.rs` | Snippet-backed |

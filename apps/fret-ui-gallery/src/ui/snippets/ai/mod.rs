@@ -28,6 +28,7 @@ pub mod schema_display_demo;
 pub mod shimmer_demo;
 pub mod snippet_demo;
 pub mod sources_demo;
+pub mod speech_input_demo;
 pub mod stack_trace_demo;
 pub mod stack_trace_large_demo;
 pub mod suggestions_demo;

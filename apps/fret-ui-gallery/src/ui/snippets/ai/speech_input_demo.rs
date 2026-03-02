@@ -1,21 +1,21 @@
-use super::super::super::super::*;
+pub const SOURCE: &str = include_str!("speech_input_demo.rs");
 
-pub(in crate::ui) fn preview_ai_speech_input_demo(
-    cx: &mut ElementContext<'_, App>,
-    _theme: &Theme,
-) -> Vec<AnyElement> {
-    use fret_runtime::Model;
-    use fret_ui::Invalidation;
-    use fret_ui::element::SemanticsDecoration;
-    use fret_ui_kit::declarative::stack;
-    use fret_ui_kit::{LayoutRefinement, Space};
+// region: example
+use fret_runtime::Model;
+use fret_ui::Invalidation;
+use fret_ui::element::SemanticsDecoration;
+use fret_ui_ai as ui_ai;
+use fret_ui_kit::declarative::stack;
+use fret_ui_kit::{LayoutRefinement, Space};
+use fret_ui_shadcn::prelude::*;
 
-    #[derive(Default)]
-    struct DemoModels {
-        listening: Option<Model<bool>>,
-        processing: Option<Model<bool>>,
-    }
+#[derive(Default)]
+struct DemoModels {
+    listening: Option<Model<bool>>,
+    processing: Option<Model<bool>>,
+}
 
+pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement {
     let needs_init = cx.with_state(DemoModels::default, |st| {
         st.listening.is_none() || st.processing.is_none()
     });
@@ -57,7 +57,7 @@ pub(in crate::ui) fn preview_ai_speech_input_demo(
         .test_id("ui-ai-speech-input-demo-btn")
         .into_element(cx);
 
-    vec![stack::vstack(
+    stack::vstack(
         cx,
         stack::VStackProps::default()
             .layout(LayoutRefinement::default().w_full().min_w_0())
@@ -70,5 +70,7 @@ pub(in crate::ui) fn preview_ai_speech_input_demo(
                 btn,
             ]
         },
-    )]
+    )
 }
+// endregion: example
+
