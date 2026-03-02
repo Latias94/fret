@@ -90,10 +90,10 @@ pub(in crate::ui) fn material3_state_matrix_content(
     out.extend(preview_material3_search_view(cx));
 
     out.push(cx.text("— Tabs —"));
-    out.extend(preview_material3_tabs(cx, material3_tabs_value));
+    out.push(snippets::material3::tabs::render(cx, material3_tabs_value));
 
     out.push(cx.text("— Navigation Bar —"));
-    out.extend(preview_material3_navigation_bar(
+    out.push(snippets::material3::navigation_bar::render(
         cx,
         material3_navigation_bar_value,
     ));
