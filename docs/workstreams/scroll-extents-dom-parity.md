@@ -202,6 +202,21 @@ Notes:
   resolves to the nearest evidence-bearing `script.result.json` (session root), not bundle dump
   subdirectories.
 
+### Mini suite: scroll + code-tab + overlay (recommended)
+
+Suite id: `ui-gallery-scroll-extents-dom-parity`
+
+This suite is designed to catch the UI Gallery “code tab expands but you can’t scroll further”
+class of regressions, and to ensure anchored overlays remain clamped after scroll range changes.
+
+Run (baseline):
+
+- `cargo run -p fretboard -- diag suite ui-gallery-scroll-extents-dom-parity --dir target/fret-diag-se213-suite-baseline --session-auto --launch -- cargo run -p fret-ui-gallery`
+
+Run (gate on):
+
+- `cargo run -p fretboard -- diag suite ui-gallery-scroll-extents-dom-parity --dir target/fret-diag-se213-suite-post-layout --session-auto --env FRET_UI_SCROLL_EXTENTS_POST_LAYOUT=1 --launch -- cargo run -p fret-ui-gallery`
+
 Example (JSON):
 
 - `fretboard diag query overlay-placement-trace target/fret-diag/<run_id> --kind anchored_panel --anchor-test-id ui-gallery-tooltip-demo-trigger --json`
