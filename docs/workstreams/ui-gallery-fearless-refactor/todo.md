@@ -48,6 +48,8 @@ Any remaining legacy surfaces that embed raw Rust code strings are tracked via t
 - [x] Migrate AI Elements gallery demos to snippet-backed pages (see `docs/workstreams/ui-gallery-fearless-refactor/ai-elements-tracker.md`).
 - [x] Ensure Code tabs are vertically scrollable (wheel scrolling over CodeBlock gutters for windowed snippets).
 - [ ] Normalize DocSection chrome/layout (max widths, padding, “Notes” shell usage) across pages.
+  - [x] Remove redundant centering wrappers so Preview/Code tabs share consistent left padding.
+  - [ ] Audit remaining max-width and padding inconsistencies across pages.
 - [ ] Optional: align page taxonomy + section ordering to upstream shadcn MDX navigation.
 
 Notes:
