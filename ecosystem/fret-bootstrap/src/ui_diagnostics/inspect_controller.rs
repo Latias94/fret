@@ -4,6 +4,8 @@ use fret_app::{App, Effect};
 use fret_core::AppWindowId;
 use fret_core::{Event, KeyCode};
 use fret_diag_protocol::UiInspectConfigV1;
+use fret_ui::elements::ElementRuntime;
+use slotmap::Key as _;
 
 use super::UiDiagnosticsConfig;
 use super::inspect_state::InspectState;
@@ -589,6 +591,283 @@ impl InspectController {
         }
     }
 
+    pub(super) fn update_hover(
+        &mut self,
+        cfg: &UiDiagnosticsConfig,
+        window: AppWindowId,
+        snapshot: Option<&fret_core::SemanticsSnapshot>,
+        hovered_node_id: Option<u64>,
+        element_runtime: Option<&ElementRuntime>,
+    ) {
+        if !self.enabled {
+            return;
+        }
+        let Some(snapshot) = snapshot else {
+            return;
+        };
+        let Some(hovered_id) = hovered_node_id else {
+            self.last_hovered_node_id.remove(&window);
+            self.last_hovered_selector_json.remove(&window);
+            return;
+        };
+        if self.is_locked(window) {
+            return;
+        }
+
+        let Some(node) = snapshot
+            .nodes
+            .iter()
+            .find(|n| n.id.data().as_ffi() == hovered_id)
+        else {
+            return;
+        };
+        let element = element_runtime
+            .and_then(|runtime| runtime.element_for_node(window, node.id))
+            .map(|id| id.0);
+        let selector = super::best_selector_for_node_validated(
+            snapshot,
+            window,
+            element_runtime,
+            node,
+            element,
+            cfg,
+        )
+        .or_else(|| super::best_selector_for_node(snapshot, node, element, cfg));
+        let Some(selector) = selector else {
+            return;
+        };
+        if let Ok(json) = serde_json::to_string(&selector) {
+            self.last_hovered_node_id.insert(window, hovered_id);
+            self.last_hovered_selector_json.insert(window, json.clone());
+
+            self.state.focus_node_id.insert(window, hovered_id);
+            self.state.focus_selector_json.insert(window, json);
+            self.state.focus_down_stack.insert(window, Vec::new());
+        }
+    }
+
+    pub(super) fn apply_navigation(
+        &mut self,
+        cfg: &UiDiagnosticsConfig,
+        window: AppWindowId,
+        snapshot: Option<&fret_core::SemanticsSnapshot>,
+        element_runtime: Option<&ElementRuntime>,
+    ) {
+        if !self.enabled {
+            self.state.pending_nav.remove(&window);
+            return;
+        }
+        let Some(cmd) = self.state.pending_nav.remove(&window) else {
+            return;
+        };
+        let Some(snapshot) = snapshot else {
+            self.push_toast(window, "inspect: no semantics snapshot".to_string());
+            return;
+        };
+
+        match cmd {
+            InspectNavCommand::Focus => {
+                let Some(node) = snapshot.focus else {
+                    self.push_toast(window, "inspect: no focused node".to_string());
+                    return;
+                };
+                let id = node.data().as_ffi();
+                self.state.focus_down_stack.insert(window, Vec::new());
+                self.state.locked_windows.insert(window);
+                self.set_focus(cfg, window, snapshot, id, element_runtime);
+            }
+            InspectNavCommand::SelectNode(node_id) => {
+                self.state.focus_down_stack.insert(window, Vec::new());
+                self.state.locked_windows.insert(window);
+                self.set_focus(cfg, window, snapshot, node_id, element_runtime);
+            }
+            InspectNavCommand::Up => {
+                if !self.is_locked(window) {
+                    self.push_toast(
+                        window,
+                        "inspect: lock selection first (press L)".to_string(),
+                    );
+                    return;
+                }
+
+                let current = self
+                    .state
+                    .focus_node_id
+                    .get(&window)
+                    .copied()
+                    .or_else(|| self.last_picked_node_id.get(&window).copied())
+                    .or_else(|| self.last_hovered_node_id.get(&window).copied());
+                let Some(current) = current else {
+                    self.push_toast(window, "inspect: no focused node".to_string());
+                    return;
+                };
+
+                let Some(parent) = super::parent_node_id(snapshot, current) else {
+                    self.push_toast(window, "inspect: reached root".to_string());
+                    return;
+                };
+                self.state
+                    .focus_down_stack
+                    .entry(window)
+                    .or_default()
+                    .push(current);
+                self.set_focus(cfg, window, snapshot, parent, element_runtime);
+                self.push_toast(window, "inspect: parent".to_string());
+            }
+            InspectNavCommand::Down => {
+                if !self.is_locked(window) {
+                    self.push_toast(
+                        window,
+                        "inspect: lock selection first (press L)".to_string(),
+                    );
+                    return;
+                }
+                let Some(prev) = self
+                    .state
+                    .focus_down_stack
+                    .get_mut(&window)
+                    .and_then(|s| s.pop())
+                else {
+                    self.push_toast(window, "inspect: no child history".to_string());
+                    return;
+                };
+                self.set_focus(cfg, window, snapshot, prev, element_runtime);
+                self.push_toast(window, "inspect: child".to_string());
+            }
+        }
+    }
+
+    pub(super) fn update_focus_lines(
+        &mut self,
+        cfg: &UiDiagnosticsConfig,
+        window: AppWindowId,
+        snapshot: Option<&fret_core::SemanticsSnapshot>,
+        element_runtime: Option<&ElementRuntime>,
+    ) {
+        let Some(snapshot) = snapshot else {
+            self.state.focus_summary_line.remove(&window);
+            self.state.focus_path_line.remove(&window);
+            if self.state.pending_copy_details_windows.remove(&window) {
+                self.push_toast(window, "inspect: no semantics snapshot".to_string());
+            }
+            return;
+        };
+
+        let node_id = self
+            .state
+            .focus_node_id
+            .get(&window)
+            .copied()
+            .or_else(|| self.last_picked_node_id.get(&window).copied())
+            .or_else(|| self.last_hovered_node_id.get(&window).copied());
+        let Some(node_id) = node_id else {
+            self.state.focus_summary_line.remove(&window);
+            self.state.focus_path_line.remove(&window);
+            if self.state.pending_copy_details_windows.remove(&window) {
+                self.push_toast(window, "inspect: no focused node".to_string());
+            }
+            return;
+        };
+
+        let Some(node) = snapshot
+            .nodes
+            .iter()
+            .find(|n| n.id.data().as_ffi() == node_id)
+        else {
+            self.state.focus_summary_line.remove(&window);
+            self.state.focus_path_line.remove(&window);
+            if self.state.pending_copy_details_windows.remove(&window) {
+                self.push_toast(window, "inspect: focused node missing".to_string());
+            }
+            return;
+        };
+
+        let role = super::semantics_role_label(node.role);
+        let mut summary = format!("focus: {role} node={node_id}");
+
+        if let Some(runtime) = element_runtime
+            && let Some(element) = runtime.element_for_node(window, node.id)
+        {
+            summary.push_str(&format!(" element={}", element.0));
+            if let Some(path) = runtime.debug_path_for_element(window, element) {
+                let path = super::truncate_debug_value(&path, 200);
+                summary.push_str(&format!(" element_path={path}"));
+            }
+        }
+        if let Some(test_id) = node.test_id.as_deref() {
+            summary.push_str(&format!(" test_id={test_id}"));
+        }
+        if !cfg.redact_text
+            && let Some(label) = node.label.as_deref()
+        {
+            let label = super::truncate_debug_value(label, 120);
+            summary.push_str(&format!(" label={label}"));
+        }
+
+        let path_line = super::format_inspect_path(snapshot, node_id, cfg.redact_text, 10);
+
+        self.state
+            .focus_summary_line
+            .insert(window, summary.clone());
+        if let Some(path) = path_line.as_ref() {
+            self.state.focus_path_line.insert(window, path.clone());
+        } else {
+            self.state.focus_path_line.remove(&window);
+        }
+
+        if !self.state.pending_copy_details_windows.remove(&window) {
+            return;
+        }
+
+        let element = element_runtime
+            .and_then(|runtime| runtime.element_for_node(window, node.id))
+            .map(|id| id.0);
+
+        let best = super::best_selector_for_node_validated(
+            snapshot,
+            window,
+            element_runtime,
+            node,
+            element,
+            cfg,
+        )
+        .or_else(|| super::best_selector_for_node(snapshot, node, element, cfg));
+
+        let mut lines: Vec<String> = Vec::new();
+        if let Some(best) = best.as_ref().and_then(|s| serde_json::to_string(s).ok()) {
+            lines.push(format!("selector: {best}"));
+        }
+        lines.push(summary);
+        if let Some(path) = path_line {
+            lines.push(path);
+        }
+
+        let report = super::inspect_selector_candidates_report(
+            snapshot,
+            window,
+            element_runtime,
+            node,
+            element,
+            cfg,
+        );
+        if !report.trim().is_empty() {
+            lines.push(String::new());
+            lines.push("selector_candidates:".to_string());
+            lines.extend(report.lines().map(|l: &str| l.to_string()));
+        }
+
+        let payload = lines.join("\n");
+        if payload.trim().is_empty() {
+            self.push_toast(window, "inspect: no details available".to_string());
+            return;
+        }
+
+        self.state
+            .pending_copy_details_payload
+            .insert(window, payload);
+        self.push_toast(window, "inspect: details copied".to_string());
+    }
+
     pub(super) fn clear_for_window(&mut self, window: AppWindowId) {
         self.last_picked_node_id.remove(&window);
         self.last_picked_selector_json.remove(&window);
@@ -603,6 +882,44 @@ impl InspectController {
             .is_some_and(|p| p.window == window)
         {
             self.pending_pick = None;
+        }
+    }
+
+    fn set_focus(
+        &mut self,
+        cfg: &UiDiagnosticsConfig,
+        window: AppWindowId,
+        snapshot: &fret_core::SemanticsSnapshot,
+        node_id: u64,
+        element_runtime: Option<&ElementRuntime>,
+    ) {
+        let Some(node) = snapshot
+            .nodes
+            .iter()
+            .find(|n| n.id.data().as_ffi() == node_id)
+        else {
+            return;
+        };
+        let element = element_runtime
+            .and_then(|runtime| runtime.element_for_node(window, node.id))
+            .map(|id| id.0);
+        let selector = super::best_selector_for_node_validated(
+            snapshot,
+            window,
+            element_runtime,
+            node,
+            element,
+            cfg,
+        )
+        .or_else(|| super::best_selector_for_node(snapshot, node, element, cfg));
+        let Some(selector) = selector else {
+            return;
+        };
+        if let Ok(json) = serde_json::to_string(&selector) {
+            self.state.focus_node_id.insert(window, node_id);
+            self.state.focus_selector_json.insert(window, json.clone());
+            self.last_picked_node_id.insert(window, node_id);
+            self.last_picked_selector_json.insert(window, json);
         }
     }
 

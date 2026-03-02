@@ -51,26 +51,6 @@ impl UiDiagnosticsService {
         self.inspector.set_tree_items(window, items);
     }
 
-    pub(super) fn inspect_tree_selected_node_id(&self, window: AppWindowId) -> Option<u64> {
-        self.inspector.tree_selected_node_id(window)
-    }
-
-    fn inspect_help_selected_match_node_id(&self, window: AppWindowId) -> Option<u64> {
-        let list = self.inspector.state.help_match_node_ids.get(&window)?;
-        if list.is_empty() {
-            return None;
-        }
-        let idx = self
-            .inspector
-            .state
-            .help_selected_match_index
-            .get(&window)
-            .copied()
-            .unwrap_or(0)
-            .min(list.len().saturating_sub(1));
-        list.get(idx).copied()
-    }
-
     pub fn inspect_focus_node_id(&self, window: AppWindowId) -> Option<u64> {
         self.inspector.focus_node_id(window)
     }
@@ -120,8 +100,10 @@ impl UiDiagnosticsService {
             .inspector
             .maybe_intercept_event_for_shortcuts(&self.cfg, app, window, event);
 
-        #[allow(unreachable_code)]
+        #[cfg(any())]
         {
+            // Legacy implementation retained temporarily for reference while migrating shortcuts
+            // into `InspectController`. Remove once the controller owns all inspector behaviors.
             if let Event::TextInput(text) = event {
                 let inspection_active =
                     self.inspector.pick_armed_run_id.is_some() || self.inspector.enabled;
@@ -952,76 +934,13 @@ impl UiDiagnosticsService {
         if !self.is_enabled() {
             return;
         }
-        if !self.inspector.enabled {
-            return;
-        }
-        let Some(snapshot) = snapshot else {
-            return;
-        };
-        let Some(hovered_id) = hovered_node_id else {
-            self.inspector.last_hovered_node_id.remove(&window);
-            self.inspector.last_hovered_selector_json.remove(&window);
-            return;
-        };
-        if self.inspect_is_locked(window) {
-            return;
-        }
 
-        let Some(node) = snapshot
-            .nodes
-            .iter()
-            .find(|n| n.id.data().as_ffi() == hovered_id)
-        else {
-            return;
-        };
-        let element = element_runtime
-            .and_then(|runtime| runtime.element_for_node(window, node.id))
-            .map(|id| id.0);
-        let selector = best_selector_for_node_validated(
-            snapshot,
-            window,
-            element_runtime,
-            node,
-            element,
+        self.inspector.update_hover(
             &self.cfg,
-        )
-        .or_else(|| best_selector_for_node(snapshot, node, element, &self.cfg));
-        let Some(selector) = selector else {
-            return;
-        };
-        if let Ok(json) = serde_json::to_string(&selector) {
-            self.inspector
-                .last_hovered_node_id
-                .insert(window, hovered_id);
-            self.inspector
-                .last_hovered_selector_json
-                .insert(window, json);
-            self.inspector
-                .state
-                .focus_node_id
-                .insert(window, hovered_id);
-            if let Some(sel) = self
-                .inspector
-                .last_hovered_selector_json
-                .get(&window)
-                .cloned()
-            {
-                self.inspector.state.focus_selector_json.insert(window, sel);
-            }
-            self.inspector
-                .state
-                .focus_down_stack
-                .insert(window, Vec::new());
-        }
-    }
-
-    fn push_inspect_toast(&mut self, window: AppWindowId, message: String) {
-        self.inspector.state.toast.insert(
             window,
-            InspectToast {
-                message,
-                remaining_frames: 90,
-            },
+            snapshot,
+            hovered_node_id,
+            element_runtime,
         );
     }
 
@@ -1034,139 +953,9 @@ impl UiDiagnosticsService {
         if !self.is_enabled() {
             return;
         }
-        if !self.inspector.enabled {
-            self.inspector.state.pending_nav.remove(&window);
-            return;
-        }
-        let Some(cmd) = self.inspector.state.pending_nav.remove(&window) else {
-            return;
-        };
-        let Some(snapshot) = snapshot else {
-            self.push_inspect_toast(window, "inspect: no semantics snapshot".to_string());
-            return;
-        };
 
-        match cmd {
-            InspectNavCommand::Focus => {
-                let Some(node) = snapshot.focus else {
-                    self.push_inspect_toast(window, "inspect: no focused node".to_string());
-                    return;
-                };
-                let id = node.data().as_ffi();
-                self.inspector
-                    .state
-                    .focus_down_stack
-                    .insert(window, Vec::new());
-                self.inspector.state.locked_windows.insert(window);
-                self.set_inspect_focus(window, snapshot, id, element_runtime);
-            }
-            InspectNavCommand::SelectNode(node_id) => {
-                self.inspector
-                    .state
-                    .focus_down_stack
-                    .insert(window, Vec::new());
-                self.inspector.state.locked_windows.insert(window);
-                self.set_inspect_focus(window, snapshot, node_id, element_runtime);
-            }
-            InspectNavCommand::Up => {
-                if !self.inspect_is_locked(window) {
-                    self.push_inspect_toast(
-                        window,
-                        "inspect: lock selection first (press L)".to_string(),
-                    );
-                    return;
-                }
-
-                let current = self
-                    .inspector
-                    .state
-                    .focus_node_id
-                    .get(&window)
-                    .copied()
-                    .or_else(|| self.inspector.last_picked_node_id.get(&window).copied())
-                    .or_else(|| self.inspector.last_hovered_node_id.get(&window).copied());
-                let Some(current) = current else {
-                    self.push_inspect_toast(window, "inspect: no focused node".to_string());
-                    return;
-                };
-
-                let Some(parent) = parent_node_id(snapshot, current) else {
-                    self.push_inspect_toast(window, "inspect: reached root".to_string());
-                    return;
-                };
-                self.inspector
-                    .state
-                    .focus_down_stack
-                    .entry(window)
-                    .or_default()
-                    .push(current);
-                self.set_inspect_focus(window, snapshot, parent, element_runtime);
-                self.push_inspect_toast(window, "inspect: parent".to_string());
-            }
-            InspectNavCommand::Down => {
-                if !self.inspect_is_locked(window) {
-                    self.push_inspect_toast(
-                        window,
-                        "inspect: lock selection first (press L)".to_string(),
-                    );
-                    return;
-                }
-                let Some(prev) = self
-                    .inspector
-                    .state
-                    .focus_down_stack
-                    .get_mut(&window)
-                    .and_then(|s| s.pop())
-                else {
-                    self.push_inspect_toast(window, "inspect: no child history".to_string());
-                    return;
-                };
-                self.set_inspect_focus(window, snapshot, prev, element_runtime);
-                self.push_inspect_toast(window, "inspect: child".to_string());
-            }
-        }
-    }
-
-    fn set_inspect_focus(
-        &mut self,
-        window: AppWindowId,
-        snapshot: &fret_core::SemanticsSnapshot,
-        node_id: u64,
-        element_runtime: Option<&ElementRuntime>,
-    ) {
-        let Some(node) = snapshot
-            .nodes
-            .iter()
-            .find(|n| n.id.data().as_ffi() == node_id)
-        else {
-            return;
-        };
-        let element = element_runtime
-            .and_then(|runtime| runtime.element_for_node(window, node.id))
-            .map(|id| id.0);
-        let selector = best_selector_for_node_validated(
-            snapshot,
-            window,
-            element_runtime,
-            node,
-            element,
-            &self.cfg,
-        )
-        .or_else(|| best_selector_for_node(snapshot, node, element, &self.cfg));
-        let Some(selector) = selector else {
-            return;
-        };
-        if let Ok(json) = serde_json::to_string(&selector) {
-            self.inspector.state.focus_node_id.insert(window, node_id);
-            self.inspector
-                .state
-                .focus_selector_json
-                .insert(window, json.clone());
-            self.inspector.last_picked_node_id.insert(window, node_id);
-            self.inspector
-                .last_picked_selector_json
-                .insert(window, json);
-        }
+        self.inspector
+            .apply_navigation(&self.cfg, window, snapshot, element_runtime);
     }
 
     pub(super) fn update_inspect_focus_lines(
@@ -1178,152 +967,8 @@ impl UiDiagnosticsService {
         if !self.is_enabled() {
             return;
         }
-        let Some(snapshot) = snapshot else {
-            self.inspector.state.focus_summary_line.remove(&window);
-            self.inspector.state.focus_path_line.remove(&window);
-            if self
-                .inspector
-                .state
-                .pending_copy_details_windows
-                .remove(&window)
-            {
-                self.push_inspect_toast(window, "inspect: no semantics snapshot".to_string());
-            }
-            return;
-        };
-
-        let node_id = self
-            .inspector
-            .state
-            .focus_node_id
-            .get(&window)
-            .copied()
-            .or_else(|| self.inspector.last_picked_node_id.get(&window).copied())
-            .or_else(|| self.inspector.last_hovered_node_id.get(&window).copied());
-        let Some(node_id) = node_id else {
-            self.inspector.state.focus_summary_line.remove(&window);
-            self.inspector.state.focus_path_line.remove(&window);
-            if self
-                .inspector
-                .state
-                .pending_copy_details_windows
-                .remove(&window)
-            {
-                self.push_inspect_toast(window, "inspect: no focused node".to_string());
-            }
-            return;
-        };
-
-        let Some(node) = snapshot
-            .nodes
-            .iter()
-            .find(|n| n.id.data().as_ffi() == node_id)
-        else {
-            self.inspector.state.focus_summary_line.remove(&window);
-            self.inspector.state.focus_path_line.remove(&window);
-            if self
-                .inspector
-                .state
-                .pending_copy_details_windows
-                .remove(&window)
-            {
-                self.push_inspect_toast(window, "inspect: focused node missing".to_string());
-            }
-            return;
-        };
-
-        let role = semantics_role_label(node.role);
-        let mut summary = format!("focus: {role} node={node_id}");
-
-        if let Some(runtime) = element_runtime
-            && let Some(element) = runtime.element_for_node(window, node.id)
-        {
-            summary.push_str(&format!(" element={}", element.0));
-            if let Some(path) = runtime.debug_path_for_element(window, element) {
-                let path = truncate_debug_value(&path, 200);
-                summary.push_str(&format!(" element_path={path}"));
-            }
-        }
-        if let Some(test_id) = node.test_id.as_deref() {
-            summary.push_str(&format!(" test_id={test_id}"));
-        }
-        if !self.cfg.redact_text
-            && let Some(label) = node.label.as_deref()
-        {
-            let label = truncate_debug_value(label, 120);
-            summary.push_str(&format!(" label={label}"));
-        }
-
-        let path = format_inspect_path(snapshot, node_id, self.cfg.redact_text, 10);
 
         self.inspector
-            .state
-            .focus_summary_line
-            .insert(window, summary);
-        if let Some(path) = path {
-            self.inspector.state.focus_path_line.insert(window, path);
-        } else {
-            self.inspector.state.focus_path_line.remove(&window);
-        }
-
-        if !self
-            .inspector
-            .state
-            .pending_copy_details_windows
-            .remove(&window)
-        {
-            return;
-        }
-
-        let element = element_runtime
-            .and_then(|runtime| runtime.element_for_node(window, node.id))
-            .map(|id| id.0);
-
-        let best = best_selector_for_node_validated(
-            snapshot,
-            window,
-            element_runtime,
-            node,
-            element,
-            &self.cfg,
-        )
-        .or_else(|| best_selector_for_node(snapshot, node, element, &self.cfg));
-
-        let mut lines: Vec<String> = Vec::new();
-        if let Some(best) = best.as_ref().and_then(|s| serde_json::to_string(s).ok()) {
-            lines.push(format!("selector: {best}"));
-        }
-        if let Some(summary) = self.inspect_focus_summary_line(window) {
-            lines.push(summary.to_string());
-        }
-        if let Some(path) = self.inspect_focus_path_line(window) {
-            lines.push(path.to_string());
-        }
-
-        let report = inspect_selector_candidates_report(
-            snapshot,
-            window,
-            element_runtime,
-            node,
-            element,
-            &self.cfg,
-        );
-        if !report.trim().is_empty() {
-            lines.push(String::new());
-            lines.push("selector_candidates:".to_string());
-            lines.extend(report.lines().map(|l: &str| l.to_string()));
-        }
-
-        let payload = lines.join("\n");
-        if payload.trim().is_empty() {
-            self.push_inspect_toast(window, "inspect: no details available".to_string());
-            return;
-        }
-
-        self.inspector
-            .state
-            .pending_copy_details_payload
-            .insert(window, payload);
-        self.push_inspect_toast(window, "inspect: details copied".to_string());
+            .update_focus_lines(&self.cfg, window, snapshot, element_runtime);
     }
 }
