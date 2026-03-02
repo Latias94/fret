@@ -433,6 +433,7 @@ Implementation status:
 - SE-114 (bounded-observation telemetry) is implemented. When wrapper peeling or bounded deep scan
   hits its budget, `UiDebugScrollNodeTelemetry` records an `overflow_observation` payload for the
   scroll node (and `FRET_DEBUG_SCROLL_EXTENT_PROBE=1` prints a budget-hit log line).
+  - Tooling: `fretboard diag query scroll-extents-observation <bundle_dir|bundle.schema2.json> --json`
 
 ## Verification Plan (SE-210)
 
