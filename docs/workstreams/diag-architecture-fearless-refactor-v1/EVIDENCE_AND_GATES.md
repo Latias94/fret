@@ -72,7 +72,8 @@ These are invariants for `fretboard diag run/suite/repro/perf`:
 
 ### 4.1 Format + compile (baseline)
 
-- `cargo fmt`
+- Prefer scoped formatting on Windows worktrees (avoid `os error 206` path length failures):
+  - `cargo fmt --manifest-path crates/fret-diag/Cargo.toml`
 - `cargo check -p fret-diag -p fret-diag-protocol -p fret-diag-ws`
 
 Notes:
@@ -144,4 +145,3 @@ $env:FRET_DIAG_SCRIPT_DUMP_MAX_SNAPSHOTS=20
 - New evidence fields are bounded and clipping is reported.
 - New runtime diagnostics capture does not introduce per-frame allocation cliffs.
 - Any new ecosystem extension path is capability-gated and does not weaken layering.
-

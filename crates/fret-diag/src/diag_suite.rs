@@ -2,7 +2,7 @@ use super::*;
 
 pub(crate) type SuiteChecks = diag_run::RunChecks;
 
-use crate::registry::suites::SuiteRegistry;
+use crate::registry::suites::SuiteResolver;
 
 #[derive(Debug, Clone)]
 pub(crate) struct SuiteCmdContext {
@@ -291,28 +291,10 @@ hint: list suites via `fretboard diag list suites`"
         suite_args.len() == 1 && suite_args[0] == "docking-arbitration";
 
     let scripts_from_suite_dir = |suite: &str| -> Result<Vec<PathBuf>, String> {
-        let inputs = vec![format!("tools/diag-scripts/suites/{suite}")];
-        expand_script_inputs(&workspace_root, &inputs)
+        SuiteResolver::scripts_from_suite_dir(&workspace_root, suite)
     };
 
-    let suite_registry: Option<SuiteRegistry> =
-        SuiteRegistry::try_load_from_workspace_root(&workspace_root)?;
-    let scripts_from_promoted_registry_suite =
-        |suite: &str| -> Result<Option<Vec<PathBuf>>, String> {
-            let Some(registry) = suite_registry.as_ref() else {
-                return Ok(None);
-            };
-            Ok(registry.resolve_promoted_suite_scripts(&workspace_root, suite))
-        };
-
-    let suite_dir_exists = |suite: &str| -> bool {
-        workspace_root
-            .join("tools")
-            .join("diag-scripts")
-            .join("suites")
-            .join(suite)
-            .is_dir()
-    };
+    let suite_resolver = SuiteResolver::try_load_from_workspace_root(&workspace_root)?;
 
     let mut used_fallback_paths = false;
     let (mut scripts, builtin_suite): (Vec<PathBuf>, Option<BuiltinSuite>) = if is_ui_gallery_suite
@@ -622,11 +604,9 @@ hint: list suites via `fretboard diag list suites`"
         let scripts = expand_script_inputs(&workspace_root, &inputs)?;
         (scripts, Some(BuiltinSuite::DockingArbitration))
     } else if suite_args.len() == 1
-        && let Some(scripts) = scripts_from_promoted_registry_suite(&suite_args[0])?
+        && let Some(scripts) =
+            suite_resolver.resolve_suite_scripts(&workspace_root, &suite_args[0])?
     {
-        (scripts, None)
-    } else if suite_args.len() == 1 && suite_dir_exists(&suite_args[0]) {
-        let scripts = scripts_from_suite_dir(&suite_args[0])?;
         (scripts, None)
     } else {
         used_fallback_paths = true;

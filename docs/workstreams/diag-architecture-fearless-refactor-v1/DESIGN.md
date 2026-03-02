@@ -214,6 +214,7 @@ Status (as of 2026-03-03):
   - `crates/fret-diag/src/registry/suites.rs`
   - `crates/fret-diag/src/registry/checks.rs`
   - `crates/fret-diag/src/diag_list.rs` now resolves suites via `SuiteRegistry`.
+  - `crates/fret-diag/src/diag_suite.rs` now resolves promoted + suite-dir scripts via `SuiteResolver`.
 
 ## Plan (phased)
 

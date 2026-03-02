@@ -6,6 +6,10 @@ pub(crate) struct SuiteRegistry {
     promoted: PromotedScriptRegistry,
 }
 
+pub(crate) struct SuiteResolver {
+    registry: Option<SuiteRegistry>,
+}
+
 impl SuiteRegistry {
     pub(crate) fn load_from_workspace_root(workspace_root: &Path) -> Result<Self, String> {
         let registry_path = promoted_registry_default_path(workspace_root);
@@ -63,5 +67,46 @@ hint: generate it via `python tools/check_diag_scripts_registry.py --write`",
         } else {
             Some(scripts)
         }
+    }
+}
+
+impl SuiteResolver {
+    pub(crate) fn try_load_from_workspace_root(workspace_root: &Path) -> Result<Self, String> {
+        Ok(Self {
+            registry: SuiteRegistry::try_load_from_workspace_root(workspace_root)?,
+        })
+    }
+
+    pub(crate) fn suite_dir_exists(workspace_root: &Path, suite: &str) -> bool {
+        workspace_root
+            .join("tools")
+            .join("diag-scripts")
+            .join("suites")
+            .join(suite)
+            .is_dir()
+    }
+
+    pub(crate) fn scripts_from_suite_dir(
+        workspace_root: &Path,
+        suite: &str,
+    ) -> Result<Vec<PathBuf>, String> {
+        let inputs = vec![format!("tools/diag-scripts/suites/{suite}")];
+        crate::paths::expand_script_inputs(workspace_root, &inputs)
+    }
+
+    pub(crate) fn resolve_suite_scripts(
+        &self,
+        workspace_root: &Path,
+        suite: &str,
+    ) -> Result<Option<Vec<PathBuf>>, String> {
+        if let Some(registry) = self.registry.as_ref()
+            && let Some(scripts) = registry.resolve_promoted_suite_scripts(workspace_root, suite)
+        {
+            return Ok(Some(scripts));
+        }
+        if Self::suite_dir_exists(workspace_root, suite) {
+            return Ok(Some(Self::scripts_from_suite_dir(workspace_root, suite)?));
+        }
+        Ok(None)
     }
 }
