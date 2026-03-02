@@ -37,7 +37,11 @@ pub struct CarouselApiSnapshot {
     /// Note: this coalesces both the v1 recipe settle driver (`settling`) and the Embla-engine
     /// driver (`embla_settling`) into a single observable flag.
     pub settling: bool,
-    /// True while the v1 deterministic settle driver is active.
+    /// True while the legacy v1 deterministic settle driver is active.
+    ///
+    /// This driver predates the Embla-style headless engine; it remains available as a fallback
+    /// (and for bisecting regressions), but it is not the preferred behavior and may be removed in
+    /// a future refactor.
     ///
     /// This is intended for docs/diagnostics only.
     pub recipe_settling: bool,
@@ -473,9 +477,10 @@ pub struct CarouselOptions {
     pub drag_free: bool,
     /// Settle animation duration for the deterministic (non-physics) driver (v1 behavior).
     pub duration: Duration,
-    /// Enable the Embla-style headless engine (v2 parity MVP).
+    /// Enable the Embla-style headless engine (v2 parity).
     ///
-    /// Note: when disabled, Carousel uses the deterministic settle driver (v1 behavior).
+    /// When disabled, Carousel falls back to the legacy v1 deterministic settle driver. This is
+    /// kept primarily for bisecting and as an escape hatch; it is not a long-term contract.
     pub embla_engine: bool,
     /// Embla-style `duration` (integrator parameter, default `25`).
     ///
