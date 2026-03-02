@@ -1,6 +1,8 @@
 pub mod badge;
+pub mod bottom_sheet;
 pub mod button;
 pub mod checkbox;
+pub mod date_picker;
 pub mod dialog;
 pub mod gallery;
 pub mod icon_button;
@@ -18,6 +20,7 @@ pub mod state_matrix;
 pub mod switch;
 pub mod tabs;
 pub mod text_field;
+pub mod time_picker;
 pub mod tooltip;
 pub mod top_app_bar;
 pub mod touch_targets;
