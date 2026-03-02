@@ -144,6 +144,35 @@ impl InspectController {
         self.pick_overlay_grace_frames.insert(window, 10);
     }
 
+    pub(super) fn script_lock_window(&mut self, window: AppWindowId) {
+        self.state.focus_down_stack.insert(window, Vec::new());
+        self.state.locked_windows.insert(window);
+    }
+
+    pub(super) fn script_set_focus_and_best_selector_json(
+        &mut self,
+        window: AppWindowId,
+        node_id: u64,
+        selector_json: String,
+    ) {
+        self.state.focus_node_id.insert(window, node_id);
+        self.state
+            .focus_selector_json
+            .insert(window, selector_json.clone());
+        self.last_picked_node_id.insert(window, node_id);
+        self.last_picked_selector_json.insert(window, selector_json);
+    }
+
+    pub(super) fn script_set_toast(&mut self, window: AppWindowId, message: String) {
+        self.state.toast.insert(
+            window,
+            InspectToast {
+                message,
+                remaining_frames: 90,
+            },
+        );
+    }
+
     pub(super) fn take_pending_copy_details_payload(
         &mut self,
         window: AppWindowId,

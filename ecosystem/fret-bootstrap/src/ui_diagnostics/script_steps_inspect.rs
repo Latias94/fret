@@ -243,11 +243,7 @@ pub(super) fn handle_inspect_help_lock_best_match_and_copy_selector_step(
     }
 
     let node_id = matches[0];
-    svc.inspector
-        .state
-        .focus_down_stack
-        .insert(resolved_window, Vec::new());
-    svc.inspector.state.locked_windows.insert(resolved_window);
+    svc.inspector.script_lock_window(resolved_window);
 
     let Some(node) = snapshot
         .nodes
@@ -288,30 +284,18 @@ pub(super) fn handle_inspect_help_lock_best_match_and_copy_selector_step(
 
     // Mirror the in-app inspector focus/lock semantics so overlay code can copy the selector and
     // subsequent steps can observe a stable `inspect_best_selector_json`.
-    svc.inspector
-        .state
-        .focus_node_id
-        .insert(resolved_window, node_id);
-    svc.inspector
-        .state
-        .focus_selector_json
-        .insert(resolved_window, selector_json.clone());
-    svc.inspector
-        .last_picked_node_id
-        .insert(resolved_window, node_id);
-    svc.inspector
-        .last_picked_selector_json
-        .insert(resolved_window, selector_json.clone());
+    svc.inspector.script_set_focus_and_best_selector_json(
+        resolved_window,
+        node_id,
+        selector_json.clone(),
+    );
 
     output.effects.push(Effect::ClipboardSetText {
         text: selector_json,
     });
-    svc.inspector.state.toast.insert(
+    svc.inspector.script_set_toast(
         resolved_window,
-        inspect::InspectToast {
-            message: "inspect: locked match and copied selector".to_string(),
-            remaining_frames: 90,
-        },
+        "inspect: locked match and copied selector".to_string(),
     );
 
     active.v2_step_state = None;
@@ -576,35 +560,19 @@ pub(super) fn handle_inspect_help_tree_lock_best_match_and_copy_selector_step(
         return true;
     };
 
-    svc.inspector
-        .state
-        .focus_down_stack
-        .insert(resolved_window, Vec::new());
-    svc.inspector.state.locked_windows.insert(resolved_window);
-    svc.inspector
-        .state
-        .focus_node_id
-        .insert(resolved_window, node_id);
-    svc.inspector
-        .state
-        .focus_selector_json
-        .insert(resolved_window, selector_json.clone());
-    svc.inspector
-        .last_picked_node_id
-        .insert(resolved_window, node_id);
-    svc.inspector
-        .last_picked_selector_json
-        .insert(resolved_window, selector_json.clone());
+    svc.inspector.script_lock_window(resolved_window);
+    svc.inspector.script_set_focus_and_best_selector_json(
+        resolved_window,
+        node_id,
+        selector_json.clone(),
+    );
 
     output.effects.push(Effect::ClipboardSetText {
         text: selector_json,
     });
-    svc.inspector.state.toast.insert(
+    svc.inspector.script_set_toast(
         resolved_window,
-        inspect::InspectToast {
-            message: "inspect: locked tree match and copied selector".to_string(),
-            remaining_frames: 90,
-        },
+        "inspect: locked tree match and copied selector".to_string(),
     );
 
     active.v2_step_state = None;
