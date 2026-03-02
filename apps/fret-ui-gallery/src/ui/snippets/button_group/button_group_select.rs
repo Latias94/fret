@@ -1,3 +1,5 @@
+pub const SOURCE: &str = include_str!("button_group_select.rs");
+
 // region: example
 use fret_core::{FontId, Px};
 use fret_ui_shadcn::{self as shadcn, prelude::*};
