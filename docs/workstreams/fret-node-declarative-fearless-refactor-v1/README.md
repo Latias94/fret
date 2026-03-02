@@ -30,8 +30,11 @@ This is a living snapshot of what is already in place vs what remains.
 - M2 (interaction + portals, paint-only baselines): **Partially present**
   - Marquee/drag cancellation + portal bounds harvest + fit-view baselines are gated
   - Remaining: policy parity (selection/marquee reducers, overlays, richer portal hosting)
-- M3 (defaults + compatibility): **Not started**
-  - Remaining: remove retained bridge from defaults; keep retained as opt-in compat only
+  - 2026-03-02: merged `main` and adapted paint-only to the `NodeGraphStyle { paint, geometry }`
+    split (including the new `CanvasGeometry::build_with_presenter(..., overrides)` param)
+- M3 (defaults + compatibility): **Present**
+  - Retained is opt-in only: `fret-node/compat-retained-canvas`
+  - Default features avoid `fret-ui/unstable-retained-bridge`
 
 ## How to run the paint-only gates
 
