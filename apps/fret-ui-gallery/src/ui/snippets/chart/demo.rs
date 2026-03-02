@@ -1,3 +1,5 @@
+pub const SOURCE: &str = include_str!("demo.rs");
+
 // region: example
 use crate::ui::doc_layout;
 use fret_app::App;
