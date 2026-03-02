@@ -357,6 +357,10 @@ Rollback:
 
 ### PR6 — Diagnostics polish: tighten the “degraded and why” story for CustomV3 liquid glass
 
+Status:
+
+- In progress.
+
 Goal:
 
 - Make it faster to triage “looks wrong” reports: show whether we lost raw distinctness, pyramid levels, or group
@@ -364,16 +368,16 @@ Goal:
 
 Changes:
 
-- Ensure RenderPlan dump summary for CustomV3 includes:
-  - applied pyramid levels,
-  - `pyramid_build_scissor` (already present in plan dumps) surfaced in the summary section,
-  - group snapshot outcomes when a backdrop source group is used.
-- Add/adjust one diag script that asserts “no degradations” for a known-good configuration (or explicitly records the
-  expected degradations) so drift is reviewable.
+- RenderPlan dumps:
+  - Extend CustomEffectV3 summaries with `pyramid_levels_min` + `pyramid_levels_sum` to make “applied levels” visible even when degraded to 1.
+  - Add `custom_effect_v3_diagnostics` to the dump root (CustomEffectV3 sources + BackdropSourceGroup degradation counters).
+- Suites:
+  - Pin a high intermediate budget for the BackdropSourceGroup liquid-glass suite to reduce cross-machine drift and make “known-good” runs more deterministic.
 
 Gates:
 
-- `cargo run -p fretboard -- diag suite liquid-glass-custom-v3 --dir target/fret-diag/liquid-glass-custom-v3 --session-auto --launch -- .\\target\\release\\liquid_glass_demo.exe`
+- `cargo test -p fret-render-wgpu --lib render_plan_dump`
+- (Optional) `cargo run -p fretboard -- diag suite liquid-glass-custom-v3 --dir target/fret-diag/liquid-glass-custom-v3 --session-auto --launch -- .\\target\\debug\\liquid_glass_demo.exe`
 
 Rollback:
 
