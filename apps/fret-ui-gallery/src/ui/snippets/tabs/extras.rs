@@ -1,7 +1,6 @@
 pub const SOURCE: &str = include_str!("extras.rs");
 
 // region: example
-use crate::ui::doc_layout;
 use fret_app::App;
 use fret_core::Px;
 use fret_ui_shadcn::{self as shadcn, prelude::*};
@@ -27,16 +26,17 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
         .into_element(cx)
         .test_id("ui-gallery-tabs-flex1");
 
-    let rtl = doc_layout::rtl(cx, |cx| {
-        shadcn::Tabs::uncontrolled(Some(Arc::<str>::from("preview")))
-            .refine_layout(LayoutRefinement::default().w_full().max_w(Px(460.0)))
-            .items([
-                shadcn::TabsItem::new("preview", "Preview", Vec::<AnyElement>::new()),
-                shadcn::TabsItem::new("code", "Code", Vec::<AnyElement>::new()),
-            ])
-            .into_element(cx)
-    })
-    .test_id("ui-gallery-tabs-rtl");
+    let rtl = shadcn::DirectionProvider::new(shadcn::LayoutDirection::Rtl)
+        .into_element(cx, |cx| {
+            shadcn::Tabs::uncontrolled(Some(Arc::<str>::from("preview")))
+                .refine_layout(LayoutRefinement::default().w_full().max_w(Px(460.0)))
+                .items([
+                    shadcn::TabsItem::new("preview", "Preview", Vec::<AnyElement>::new()),
+                    shadcn::TabsItem::new("code", "Code", Vec::<AnyElement>::new()),
+                ])
+                .into_element(cx)
+        })
+        .test_id("ui-gallery-tabs-rtl");
 
     stack::vstack(
         cx,

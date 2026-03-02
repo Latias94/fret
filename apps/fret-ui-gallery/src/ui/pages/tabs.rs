@@ -43,10 +43,7 @@ pub(super) fn preview_tabs(
                 .description("Disable individual triggers.")
                 .max_w(Px(760.0))
                 .test_id_prefix("ui-gallery-tabs-disabled")
-                .code_rust_from_file_region(
-                    snippets::disabled::SOURCE,
-                    "example",
-                ),
+                .code_rust_from_file_region(snippets::disabled::SOURCE, "example"),
             DocSection::new("Icons", icons)
                 .description("Compose icons into triggers.")
                 .max_w(Px(760.0))
@@ -61,18 +58,12 @@ pub(super) fn preview_tabs(
                 .description("Vertical orientation (Radix parity).")
                 .max_w(Px(760.0))
                 .test_id_prefix("ui-gallery-tabs-vertical")
-                .code_rust_from_file_region(
-                    snippets::vertical::SOURCE,
-                    "example",
-                ),
+                .code_rust_from_file_region(snippets::vertical::SOURCE, "example"),
             DocSection::new("Vertical (Line)", vertical_line)
                 .description("Vertical + line style.")
                 .max_w(Px(760.0))
                 .test_id_prefix("ui-gallery-tabs-vertical-line")
-                .code_rust_from_file_region(
-                    snippets::vertical_line::SOURCE,
-                    "example",
-                ),
+                .code_rust_from_file_region(snippets::vertical_line::SOURCE, "example"),
             DocSection::new("Extras", extras)
                 .description("Fret-specific regression gates (flex-1 triggers + RTL).")
                 .max_w(Px(980.0))

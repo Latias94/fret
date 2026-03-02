@@ -1,9 +1,10 @@
 pub const SOURCE: &str = include_str!("avatar.rs");
 
 // region: example
-use crate::spec::CMD_APP_OPEN;
 use fret_app::App;
 use fret_ui_shadcn::{self as shadcn, prelude::*};
+
+const CMD_APP_OPEN: &str = "ui_gallery.app.open";
 
 fn icon_button(
     cx: &mut ElementContext<'_, App>,

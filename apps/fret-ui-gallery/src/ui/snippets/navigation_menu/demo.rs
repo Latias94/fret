@@ -1,13 +1,15 @@
 pub const SOURCE: &str = include_str!("demo.rs");
 
 // region: example
-use crate::spec::{CMD_APP_OPEN, CMD_APP_SAVE};
 use fret_app::App;
 use fret_core::{FontId, FontWeight, Px, TextOverflow, TextStyle, TextWrap};
 use fret_ui::element::TextProps;
 use fret_ui_kit::declarative::{ElementContextThemeExt as _, ModelWatchExt as _};
 use fret_ui_shadcn::{self as shadcn, prelude::*};
 use std::sync::Arc;
+
+const CMD_APP_OPEN: &str = "ui_gallery.app.open";
+const CMD_APP_SAVE: &str = "ui_gallery.app.save";
 
 pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
     #[derive(Default, Clone)]

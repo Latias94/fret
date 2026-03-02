@@ -1,9 +1,11 @@
 pub const SOURCE: &str = include_str!("rtl.rs");
 
 // region: example
-use crate::spec::{CMD_APP_OPEN, CMD_APP_SAVE};
 use fret_ui_kit::primitives::direction::{LayoutDirection, with_direction_provider};
 use fret_ui_shadcn::{self as shadcn, prelude::*};
+
+const CMD_APP_OPEN: &str = "ui_gallery.app.open";
+const CMD_APP_SAVE: &str = "ui_gallery.app.save";
 
 fn to_arabic_numerals(num: u32) -> String {
     const DIGITS: [&str; 10] = ["٠", "١", "٢", "٣", "٤", "٥", "٦", "٧", "٨", "٩"];

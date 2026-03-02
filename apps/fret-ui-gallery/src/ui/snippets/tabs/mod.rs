@@ -6,4 +6,3 @@ pub mod line;
 pub mod list;
 pub mod vertical;
 pub mod vertical_line;
-

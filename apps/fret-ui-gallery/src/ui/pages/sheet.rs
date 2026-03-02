@@ -42,10 +42,7 @@ pub(super) fn preview_sheet(
             DocSection::new("No Close Button", no_close_button)
                 .max_w(Px(980.0))
                 .test_id_prefix("ui-gallery-sheet-no-close")
-                .code_rust_from_file_region(
-                    snippets::no_close_button::SOURCE,
-                    "example",
-                ),
+                .code_rust_from_file_region(snippets::no_close_button::SOURCE, "example"),
             DocSection::new("RTL", rtl)
                 .max_w(Px(980.0))
                 .test_id_prefix("ui-gallery-sheet-rtl")

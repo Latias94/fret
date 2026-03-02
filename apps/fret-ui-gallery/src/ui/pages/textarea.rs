@@ -32,38 +32,23 @@ pub(super) fn preview_textarea(
             DocSection::new("Demo", demo)
                 .max_w(Px(760.0))
                 .test_id_prefix("ui-gallery-textarea-demo")
-                .code_rust_from_file_region(
-                    snippets::demo::SOURCE,
-                    "example",
-                ),
+                .code_rust_from_file_region(snippets::demo::SOURCE, "example"),
             DocSection::new("Field", field)
                 .max_w(Px(760.0))
                 .test_id_prefix("ui-gallery-textarea-field")
-                .code_rust_from_file_region(
-                    snippets::field::SOURCE,
-                    "example",
-                ),
+                .code_rust_from_file_region(snippets::field::SOURCE, "example"),
             DocSection::new("Disabled", disabled)
                 .max_w(Px(760.0))
                 .test_id_prefix("ui-gallery-textarea-disabled")
-                .code_rust_from_file_region(
-                    snippets::disabled::SOURCE,
-                    "example",
-                ),
+                .code_rust_from_file_region(snippets::disabled::SOURCE, "example"),
             DocSection::new("Invalid", invalid)
                 .max_w(Px(760.0))
                 .test_id_prefix("ui-gallery-textarea-invalid")
-                .code_rust_from_file_region(
-                    snippets::invalid::SOURCE,
-                    "example",
-                ),
+                .code_rust_from_file_region(snippets::invalid::SOURCE, "example"),
             DocSection::new("Button", button)
                 .max_w(Px(760.0))
                 .test_id_prefix("ui-gallery-textarea-button")
-                .code_rust_from_file_region(
-                    snippets::button::SOURCE,
-                    "example",
-                ),
+                .code_rust_from_file_region(snippets::button::SOURCE, "example"),
             DocSection::new("RTL", rtl)
                 .max_w(Px(760.0))
                 .test_id_prefix("ui-gallery-textarea-rtl")

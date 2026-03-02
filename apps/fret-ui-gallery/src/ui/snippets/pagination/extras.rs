@@ -1,10 +1,12 @@
 pub const SOURCE: &str = include_str!("extras.rs");
 
 // region: example
-use crate::spec::{CMD_APP_OPEN, CMD_APP_SAVE};
 use fret_core::Px;
 use fret_ui_shadcn::{self as shadcn, prelude::*};
 use std::sync::Arc;
+
+const CMD_APP_OPEN: &str = "ui_gallery.app.open";
+const CMD_APP_SAVE: &str = "ui_gallery.app.save";
 
 #[derive(Default, Clone)]
 struct Models {

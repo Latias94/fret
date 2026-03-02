@@ -1,7 +1,7 @@
 pub const SOURCE: &str = include_str!("mapping.rs");
 
 // region: example
-use crate::ui::ImageId;
+use fret_core::ImageId;
 use fret_ui::Theme;
 use fret_ui_shadcn::{self as shadcn, prelude::*};
 

@@ -1,9 +1,10 @@
 pub const SOURCE: &str = include_str!("file.rs");
 
 // region: example
-use crate::spec::CMD_INPUT_PICTURE_BROWSE;
 use fret_core::Px;
 use fret_ui_shadcn::{self as shadcn, prelude::*};
+
+const CMD_INPUT_PICTURE_BROWSE: &str = "ui_gallery.input.picture.browse";
 
 pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>, file_value: Model<String>) -> AnyElement {
     let max_w_xs = LayoutRefinement::default().w_full().max_w(Px(320.0));

@@ -46,4 +46,3 @@ fn ui_pages_do_not_include_snippets_by_relative_path() {
         );
     }
 }
-

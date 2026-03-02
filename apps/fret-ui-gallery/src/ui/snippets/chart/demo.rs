@@ -1,10 +1,8 @@
 pub const SOURCE: &str = include_str!("demo.rs");
 
 // region: example
-use crate::ui::doc_layout;
 use fret_app::App;
 use fret_core::Px;
-use fret_ui::Theme;
 use fret_ui_kit::declarative::{CachedSubtreeExt as _, CachedSubtreeProps};
 use fret_ui_kit::ui;
 use fret_ui_shadcn::{self as shadcn, prelude::*};
@@ -290,7 +288,7 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
         };
 
     let trending_footer = |cx: &mut ElementContext<'_, App>, secondary: &'static str| {
-        let icon = doc_layout::icon(cx, "lucide.trending-up");
+        let icon = shadcn::icon::icon(cx, fret_icons::IconId::new_static("lucide.trending-up"));
         stack::vstack(
             cx,
             stack::VStackProps::default()
@@ -377,13 +375,12 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
         "ui-gallery-chart-demo-line",
     );
 
-    doc_layout::wrap_row_snapshot(
-        cx,
-        &Theme::global(&*cx.app).snapshot(),
-        Space::N4,
-        fret_ui::element::CrossAlign::Start,
-        |_cx| vec![area, bar, mixed, line],
-    )
-    .test_id("ui-gallery-chart-demo")
+    fret_ui_kit::ui::h_flex(cx, |_cx| vec![area, bar, mixed, line])
+        .gap(Space::N4)
+        .wrap()
+        .w_full()
+        .items_start()
+        .into_element(cx)
+        .test_id("ui-gallery-chart-demo")
 }
 // endregion: example

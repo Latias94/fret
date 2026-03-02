@@ -27,10 +27,7 @@ pub(super) fn preview_progress(
             DocSection::new("Demo", demo)
                 .max_w(Px(760.0))
                 .test_id_prefix("ui-gallery-progress-demo")
-                .code_rust_from_file_region(
-                    snippets::demo::SOURCE,
-                    "example",
-                ),
+                .code_rust_from_file_region(snippets::demo::SOURCE, "example"),
             DocSection::new("RTL", rtl)
                 .max_w(Px(760.0))
                 .test_id_prefix("ui-gallery-progress-rtl")
@@ -38,10 +35,7 @@ pub(super) fn preview_progress(
             DocSection::new("Extras", extras)
                 .max_w(Px(980.0))
                 .test_id_prefix("ui-gallery-progress-extras")
-                .code_rust_from_file_region(
-                    snippets::extras::SOURCE,
-                    "example",
-                ),
+                .code_rust_from_file_region(snippets::extras::SOURCE, "example"),
             DocSection::new("Notes", notes).max_w(Px(820.0)),
         ],
     );

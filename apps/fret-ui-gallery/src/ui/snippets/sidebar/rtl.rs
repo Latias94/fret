@@ -1,7 +1,6 @@
 pub const SOURCE: &str = include_str!("rtl.rs");
 
 // region: example
-use crate::ui::doc_layout;
 use fret_app::App;
 use fret_core::Px;
 use fret_ui::element::SemanticsDecoration;
@@ -69,7 +68,7 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
     let selected_model = ensure_selected(cx);
     let selected_value = resolve_selected(cx, &selected_model, "playground");
 
-    doc_layout::rtl(cx, |cx| {
+    shadcn::DirectionProvider::new(shadcn::LayoutDirection::Rtl).into_element(cx, |cx| {
         let platform = shadcn::SidebarGroup::new([
             shadcn::SidebarGroupLabel::new("المنصة")
                 .collapsed(false)

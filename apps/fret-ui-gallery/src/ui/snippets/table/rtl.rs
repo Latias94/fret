@@ -1,7 +1,6 @@
 pub const SOURCE: &str = include_str!("rtl.rs");
 
 // region: example
-use crate::ui::doc_layout;
 use fret_app::App;
 use fret_core::Px;
 use fret_ui_shadcn::{self as shadcn, prelude::*};
@@ -119,7 +118,7 @@ fn make_invoice_table(
 }
 
 pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
-    doc_layout::rtl(cx, |cx| {
+    shadcn::DirectionProvider::new(shadcn::LayoutDirection::Rtl).into_element(cx, |cx| {
         let rows: [(&str, &str, &str, &str); 3] = [
             ("INV001", "Paid", "$250.00", "Credit Card"),
             ("INV002", "Pending", "$150.00", "PayPal"),

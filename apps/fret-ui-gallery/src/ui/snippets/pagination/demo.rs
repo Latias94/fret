@@ -1,8 +1,10 @@
 pub const SOURCE: &str = include_str!("demo.rs");
 
 // region: example
-use crate::spec::{CMD_APP_OPEN, CMD_APP_SAVE};
 use fret_ui_shadcn::{self as shadcn, prelude::*};
+
+const CMD_APP_OPEN: &str = "ui_gallery.app.open";
+const CMD_APP_SAVE: &str = "ui_gallery.app.save";
 
 pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
     let page_number = |cx: &mut ElementContext<'_, H>, label: &'static str| {

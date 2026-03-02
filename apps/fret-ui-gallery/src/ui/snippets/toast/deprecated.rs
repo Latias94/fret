@@ -1,10 +1,11 @@
 pub const SOURCE: &str = include_str!("deprecated.rs");
 
 // region: example
-use crate::spec::CMD_NAV_SONNER;
 use fret_app::App;
 use fret_core::Px;
 use fret_ui_shadcn::{self as shadcn, prelude::*};
+
+const CMD_NAV_SONNER: &str = "ui_gallery.nav.select.sonner";
 
 fn centered(cx: &mut ElementContext<'_, App>, body: AnyElement) -> AnyElement {
     stack::hstack(
