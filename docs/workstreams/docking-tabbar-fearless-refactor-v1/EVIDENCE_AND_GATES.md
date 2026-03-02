@@ -11,18 +11,29 @@ Baseline “drop-end resolves insert_index” gates:
 - `tools/diag-scripts/docking/arbitration/docking-arbitration-demo-tab-bar-drop-end-insert-index-overflow.json`
 - `tools/diag-scripts/docking/arbitration/docking-arbitration-demo-tab-bar-drop-end-insert-index-screenshot.json`
 
+Tab strip overflow behavior gates:
+
+- `tools/diag-scripts/docking/arbitration/docking-arbitration-demo-tab-bar-edge-autoscroll.json`
+
 These scripts use a semantic anchor (instead of pixel coordinates) to avoid DPI/layout flakes:
 
 - `apps/fret-examples/src/docking_arbitration_demo.rs` exposes `test_id: "dock-arb-tab-drop-end-anchor-left"`
+- `apps/fret-examples/src/docking_arbitration_demo.rs` exposes `test_id: "dock-arb-tab-scroll-edge-anchor-right"`
 
 Run as suite:
 
 - `cargo run -p fretboard -- diag suite docking-arbitration --launch -- cargo run -p fret-examples --bin docking_arbitration_demo --release`
 
+Multi-window tear-off + merge-back gates (runner-routed cross-window drags):
+
+- `tools/diag-scripts/docking/arbitration/docking-arbitration-demo-multiwindow-drag-tab-back-to-main.json`
+- `tools/diag-scripts/docking/arbitration/docking-arbitration-demo-multiwindow-chained-tearoff-two-tabs-merge.json`
+
 ## Unit tests
 
 - `cargo nextest run -p fret-docking`
   - Evidence: `ecosystem/fret-docking/src/dock/tab_bar_drop_target.rs`
+  - Evidence: `ecosystem/fret-docking/src/dock/tests/tab_bar.rs` (`dock_tab_drop_across_panes_end_inserts_at_target_end`)
   - Evidence: `ecosystem/fret-ui-headless/src/tab_strip_surface.rs`
   - Evidence: `ecosystem/fret-ui-headless/src/tab_strip_overflow.rs`
   - Evidence: `ecosystem/fret-docking/src/dock/tab_overflow.rs`
@@ -39,3 +50,13 @@ Run as suite:
   - Suite summary: `target/fret-diag-ws-docking-tabbar-2026-03-02/sessions/1772427715938-32660/suite.summary.json`
   - Latest (failure) bundle: `target/fret-diag-ws-docking-tabbar-2026-03-02/sessions/1772427715938-32660/1772427929945-script-step-0044-wait_until-timeout/bundle.schema2.json`
   - Failure: `docking-arbitration-demo-multiwindow-chained-tearoff-two-tabs-merge` timed out waiting for `dock_drag_active_is == true` (step_index=44).
+
+- 2026-03-02 local repro (PASS): `docking-arbitration-demo-multiwindow-drag-tab-back-to-main`
+  - Session: `target/fret-diag-docking-drag-tab-back-check2/sessions/1772449592171-12097`
+  - Packed: `target/fret-diag-docking-drag-tab-back-check2/sessions/1772449592171-12097/share/1772449757899.zip`
+  - Run id: `1772449757899`
+
+- 2026-03-02 local repro (PASS): `docking-arbitration-demo-multiwindow-chained-tearoff-two-tabs-merge`
+  - Session: `target/fret-diag-docking-chained-merge-check3/sessions/1772449828065-14394`
+  - Packed: `target/fret-diag-docking-chained-merge-check3/sessions/1772449828065-14394/share/1772449829179.zip`
+  - Run id: `1772449829179`

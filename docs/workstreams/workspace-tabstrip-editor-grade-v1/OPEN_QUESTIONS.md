@@ -17,6 +17,8 @@ Recommendation:
 Gate:
 - Keep `workspace-shell-demo-tab-drag-to-split-right-drop-preview-screenshot` (screenshot) and add
   an invariants-based split gate once preview routing is stable.
+- Keep `workspace-shell-demo-tab-drag-to-split-right-row-suppressed-smoke` as a non-screenshot guardrail:
+  it asserts that the right-edge split preview does not activate until the pointer leaves the tab strip row.
 
 Status:
 - Implemented (best-effort) in workspace pane drop-zone arbitration so split zones do not latch
@@ -163,3 +165,20 @@ Recommendation (v1):
 
 Gates:
 - `ecosystem/fret-workspace/tests/workspace_command_scope_focus_content_fallbacks_to_registered_pane_content.rs`.
+
+## Q10: Which upstream should be treated as the “primary” reference for tab strip outcomes (Zed vs dockview vs gpui-component)?
+
+Why it matters:
+- If we pick the wrong primary reference, we either overfit to DOM/CSS details (dockview) or miss overflow/drop-surface
+  invariants (Zed).
+- The choice affects which gaps are considered “P0” and which behaviors must be locked down first.
+
+Recommendation:
+- Treat **Zed** as the primary reference for **editor semantics** (pinned/preview/close policies + focus invariants).
+- Treat **dockview** as the primary reference for **overflow + drop-surface mechanics + tests** (void/header drop surface,
+  overflow pipeline discipline).
+- Treat **gpui-component** as a reference for **wiring patterns**, not for final editor-grade behavior.
+
+Status:
+- This reference split is already captured in `REFERENCE_NOTES.md` and `GAP_ANALYSIS.md`; keep it explicit so “fearless
+  refactors” do not degrade editor outcomes while chasing dockview-style mechanics.

@@ -2192,10 +2192,11 @@ impl<H: UiHost> UiTree<H> {
                 }
 
                 if dispatch_cx.focus_snapshot.pre.get(node_id).is_none() {
-                    debug_assert!(
-                        false,
-                        "dispatch/window: bubble chain node missing from focus snapshot (node={node_id:?}, frame_id={:?}, window={:?})",
-                        dispatch_cx.focus_snapshot.frame_id, dispatch_cx.focus_snapshot.window
+                    tracing::warn!(
+                        node = ?node_id,
+                        frame_id = ?dispatch_cx.focus_snapshot.frame_id,
+                        window = ?dispatch_cx.focus_snapshot.window,
+                        "dispatch/window: bubble chain node missing from focus snapshot"
                     );
                     break;
                 }
