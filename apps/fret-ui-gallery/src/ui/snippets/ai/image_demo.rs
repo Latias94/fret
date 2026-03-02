@@ -1,17 +1,20 @@
-use super::super::super::super::*;
+pub const SOURCE: &str = include_str!("image_demo.rs");
 
+// region: example
+use crate::driver::UiGalleryImageSourceDemoAssets;
+use fret_core::Px;
+use fret_ui_ai as ui_ai;
+use fret_ui_assets as ui_assets;
+use fret_ui_kit::declarative::stack;
+use fret_ui_kit::declarative::style as decl_style;
+use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, Radius, Space};
+use fret_ui_shadcn::prelude::*;
 use ui_assets::ui::ImageSourceElementContextExt as _;
 
-pub(in crate::ui) fn preview_ai_image_demo(
-    cx: &mut ElementContext<'_, App>,
-    theme: &Theme,
-) -> Vec<AnyElement> {
-    use fret_ui_kit::declarative::stack;
-    use fret_ui_kit::declarative::style as decl_style;
-    use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, Radius, Space};
+pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement {
 
     let Some(assets) = cx.app.global::<UiGalleryImageSourceDemoAssets>().cloned() else {
-        return vec![cx.text("Image demo assets missing (expected UiGalleryDriver init).")];
+        return cx.text("Image demo assets missing (expected UiGalleryDriver init).");
     };
 
     let state = cx.use_image_source_state(&assets.square_png);
@@ -38,11 +41,13 @@ pub(in crate::ui) fn preview_ai_image_demo(
             .test_id("ui-ai-image-demo-loading")
     });
 
-    let chrome = ChromeRefinement::default().p(Space::N4);
-    let layout = LayoutRefinement::default().w_full().min_w_0().min_h_0();
-    let props = decl_style::container_props(theme, chrome, layout);
+    let props = cx.with_theme(|theme| {
+        let chrome = ChromeRefinement::default().p(Space::N4);
+        let layout = LayoutRefinement::default().w_full().min_w_0().min_h_0();
+        decl_style::container_props(theme, chrome, layout)
+    });
 
-    vec![stack::vstack(
+    stack::vstack(
         cx,
         stack::VStackProps::default()
             .layout(LayoutRefinement::default().w_full().min_w_0())
@@ -63,5 +68,6 @@ pub(in crate::ui) fn preview_ai_image_demo(
                 }),
             ]
         },
-    )]
+    )
 }
+// endregion: example

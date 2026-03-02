@@ -481,7 +481,7 @@ fn page_preview(
         PAGE_AI_SOURCES_DEMO => pages::preview_ai_sources_demo(cx, theme),
         PAGE_AI_CHAIN_OF_THOUGHT_DEMO => pages::preview_ai_chain_of_thought_demo(cx, theme),
         PAGE_AI_SNIPPET_DEMO => pages::preview_ai_snippet_demo(cx, theme),
-        PAGE_AI_IMAGE_DEMO => preview_ai_image_demo(cx, theme),
+        PAGE_AI_IMAGE_DEMO => pages::preview_ai_image_demo(cx, theme),
         PAGE_INSPECTOR_TORTURE => preview_inspector_torture(cx, theme),
         PAGE_FILE_TREE_TORTURE => preview_file_tree_torture(cx, theme),
         PAGE_BUTTON => pages::preview_button(cx),

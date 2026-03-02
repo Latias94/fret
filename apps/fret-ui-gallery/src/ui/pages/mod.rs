@@ -16,6 +16,7 @@ mod ai_context_demo;
 mod ai_conversation_demo;
 mod ai_file_tree_demo;
 mod ai_environment_variables_demo;
+mod ai_image_demo;
 mod ai_inline_citation_demo;
 mod ai_message_branch_demo;
 mod ai_message_demo;
@@ -220,6 +221,13 @@ pub(super) fn preview_ai_file_tree_demo(
     theme: &Theme,
 ) -> Vec<AnyElement> {
     ai_file_tree_demo::preview_ai_file_tree_demo(cx, theme)
+}
+
+pub(super) fn preview_ai_image_demo(
+    cx: &mut ElementContext<'_, App>,
+    theme: &Theme,
+) -> Vec<AnyElement> {
+    ai_image_demo::preview_ai_image_demo(cx, theme)
 }
 
 pub(super) fn preview_ai_snippet_demo(
