@@ -104,6 +104,11 @@ impl Engine {
         }
     }
 
+    #[inline]
+    pub fn loop_enabled(&self) -> bool {
+        self.config.loop_enabled
+    }
+
     pub fn reinit(
         &mut self,
         scroll_snaps: Vec<f32>,

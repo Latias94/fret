@@ -213,6 +213,22 @@ pub fn can_loop(slides: &[Slide1D], view_size: f32) -> bool {
     })
 }
 
+/// Convenience helper for integrators:
+///
+/// - returns `Vec::new()` when `can_loop(...)` is false (Embla downgrade behavior)
+/// - otherwise returns per-slide translate distances
+pub fn compute_slide_translates_if_can_loop(
+    slides: &[Slide1D],
+    axis_offset: f32,
+    content_size: f32,
+    view_size: f32,
+) -> Vec<f32> {
+    if !can_loop(slides, view_size) {
+        return Vec::new();
+    }
+    compute_slide_translates(slides, axis_offset, content_size, view_size)
+}
+
 /// Computes per-slide loop translations in px.
 ///
 /// - `axis_offset` is the current positive scroll offset (i.e. `-location` in Embla space).
@@ -281,6 +297,23 @@ mod tests {
         assert_eq!(out.len(), 5);
         assert_eq!(out[0], 500.0);
         assert_eq!(out[4], 0.0);
+    }
+
+    #[test]
+    fn translates_returns_empty_when_cannot_loop() {
+        let slides = vec![
+            Slide1D {
+                start: 0.0,
+                size: 200.0,
+            },
+            Slide1D {
+                start: 200.0,
+                size: 200.0,
+            },
+        ];
+
+        let out = compute_slide_translates_if_can_loop(&slides, 0.0, 400.0, 320.0);
+        assert!(out.is_empty());
     }
 
     #[test]
