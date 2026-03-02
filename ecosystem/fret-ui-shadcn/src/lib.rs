@@ -180,7 +180,7 @@ pub use combobox::{
     Combobox, ComboboxChip, ComboboxChipsInput, ComboboxCollection, ComboboxContent,
     ComboboxContentPart, ComboboxEmpty, ComboboxGroup, ComboboxInput, ComboboxItem, ComboboxLabel,
     ComboboxList, ComboboxPart, ComboboxSeparator, ComboboxTrigger, ComboboxTriggerVariant,
-    ComboboxValue, useComboboxAnchor,
+    ComboboxValue, use_combobox_anchor,
 };
 pub use combobox_chips::{ComboboxChips, ComboboxChipsPart};
 pub use command::{

@@ -41,8 +41,6 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
 
     shadcn::Combobox::new(value.clone(), open.clone())
         .a11y_label("Combobox auto highlight")
-        .width(Px(260.0))
-        .placeholder("Select a framework")
         .auto_highlight(true)
         .query_model(query.clone())
         .test_id_prefix("ui-gallery-combobox-auto-highlight")
@@ -54,6 +52,13 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
             shadcn::ComboboxItem::new("remix", "Remix"),
             shadcn::ComboboxItem::new("astro", "Astro"),
         ])
-        .into_element(cx)
+        .into_element_parts(cx, |_cx| {
+            vec![
+                shadcn::ComboboxPart::from(shadcn::ComboboxTrigger::new().width_px(Px(260.0))),
+                shadcn::ComboboxPart::from(
+                    shadcn::ComboboxInput::new().placeholder("Select a framework"),
+                ),
+            ]
+        })
 }
 // endregion: example

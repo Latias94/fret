@@ -85,12 +85,11 @@ impl ComboboxStyle {
     }
 }
 
-/// shadcn/ui v4 `useComboboxAnchor`.
+/// Returns a layout-only anchor wrapper for combobox overlay placement.
 ///
-/// Upstream returns a DOM ref used to anchor the popup. In Fret, we model the same outcome via a
-/// layout-only wrapper that exposes a stable element ID.
-#[allow(non_snake_case)]
-pub fn useComboboxAnchor(child: AnyElement) -> PopoverAnchor {
+/// Upstream shadcn/ui v4 returns a DOM ref (`useComboboxAnchor()`) used to anchor the popup. In
+/// Fret, we model the same outcome by wrapping a child element and exposing a stable element ID.
+pub fn use_combobox_anchor(child: AnyElement) -> PopoverAnchor {
     PopoverAnchor::new(child)
 }
 
@@ -2992,9 +2991,10 @@ mod tests {
                             Combobox::new(model, open.clone())
                                 .a11y_label("Combobox")
                                 .test_id_prefix("combobox-clear")
-                                .show_clear(true)
                                 .items([ComboboxItem::new("alpha", "Alpha")])
-                                .into_element(cx),
+                                .into_element_parts(cx, |_cx| {
+                                    vec![ComboboxPart::from(ComboboxInput::new().show_clear(true))]
+                                }),
                         ]
                     },
                 );
@@ -3065,9 +3065,12 @@ mod tests {
                         Combobox::new(model.clone(), open.clone())
                             .a11y_label("Combobox")
                             .test_id_prefix("combobox-show-trigger")
-                            .show_trigger(show_trigger)
                             .items([ComboboxItem::new("alpha", "Alpha")])
-                            .into_element(cx),
+                            .into_element_parts(cx, |_cx| {
+                                vec![ComboboxPart::from(
+                                    ComboboxInput::new().show_trigger(show_trigger),
+                                )]
+                            }),
                     ]
                 },
             );
