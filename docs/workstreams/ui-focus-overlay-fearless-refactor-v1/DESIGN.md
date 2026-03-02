@@ -51,6 +51,7 @@ The runtime now enforces focus containment using a dispatch-time snapshot forest
 Evidence anchors:
 
 - Focus request gating: `crates/fret-ui/src/tree/dispatch/focus.rs`
+- Dispatch context threading: `crates/fret-ui/src/tree/dispatch/ctx.rs`
 - Window + chain dispatch snapshot usage: `crates/fret-ui/src/tree/dispatch/window.rs`,
   `crates/fret-ui/src/tree/dispatch/chain.rs`, `crates/fret-ui/src/tree/commands.rs`
 - Focus traversal snapshot membership + snapshot parent traversal:

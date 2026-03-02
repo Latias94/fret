@@ -48,6 +48,10 @@ Exit gates:
 
 Status: In progress (2026-03-02)
 
+- A per-dispatch context (`DispatchCx`) is introduced and threaded through window + chain dispatch:
+  - `crates/fret-ui/src/tree/dispatch/ctx.rs`
+  - `crates/fret-ui/src/tree/dispatch/window.rs`
+  - `crates/fret-ui/src/tree/dispatch/chain.rs`
 - Dispatch-time layer membership queries no longer use retained `parent` pointers in:
   - `crates/fret-ui/src/tree/dispatch/window.rs`
   - `crates/fret-ui/src/tree/dispatch/chain.rs`

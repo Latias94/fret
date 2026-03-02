@@ -16,12 +16,12 @@ Tracking doc: `docs/workstreams/ui-focus-overlay-fearless-refactor-v1/DESIGN.md`
 - [x] Remove `node_in_any_layer(...)` membership checks from dispatch paths (use per-dispatch snapshots).
 - [x] Make focus traversal focusable collection resilient to stale retained `parent` pointers
   (snapshot membership + snapshot parent traversal).
-- [ ] Introduce an explicit dispatch context struct (e.g. `DispatchCx`) carrying:
-  - [ ] active input roots + barrier root
-  - [ ] active focus roots + focus barrier root
-  - [ ] input-scope snapshot (required)
-  - [ ] focus-scope snapshot (optional / on-demand)
-- [ ] Refactor `dispatch/window.rs` and `dispatch/chain.rs` to thread `DispatchCx` rather than
+- [x] Introduce an explicit dispatch context struct (`DispatchCx`) carrying:
+  - [x] active input roots + barrier root
+  - [x] active focus roots + focus barrier root
+  - [x] input-scope snapshot
+  - [x] focus-scope snapshot (eager for now; can be made lazy later)
+- [x] Refactor `dispatch/window.rs` and `dispatch/chain.rs` to thread `DispatchCx` rather than
   ad-hoc snapshots/closures.
 - [ ] Remove remaining containment queries that rely on live-tree parent walks during dispatch
   (replace with snapshot queries).
