@@ -644,7 +644,10 @@ impl ToggleGroup {
                 gap: gap.into(),
                 padding: Edges::all(Px(0.0)).into(),
                 justify: MainAlign::Start,
-                align: CrossAlign::Center,
+                align: match orientation {
+                    ToggleGroupOrientation::Horizontal => CrossAlign::Center,
+                    ToggleGroupOrientation::Vertical => CrossAlign::Stretch,
+                },
                 wrap: false,
                 ..Default::default()
             };
@@ -963,6 +966,7 @@ mod tests {
     };
     use fret_core::{PathCommand, PathConstraints, PathId, PathMetrics, PathService, PathStyle};
     use fret_core::{TextBlobId, TextConstraints, TextMetrics, TextService};
+    use fret_ui::element::{CrossAlign, ElementKind, Length, SpacingLength};
     use fret_ui::tree::UiTree;
 
     #[derive(Default)]
@@ -1496,5 +1500,85 @@ mod tests {
         );
         assert!(!pressed(&ui, "alpha"));
         assert!(pressed(&ui, "gamma"));
+    }
+
+    fn apply_theme(app: &mut App) {
+        crate::shadcn_themes::apply_shadcn_new_york_v4(
+            app,
+            crate::shadcn_themes::ShadcnBaseColor::Neutral,
+            crate::shadcn_themes::ShadcnColorScheme::Light,
+        );
+    }
+
+    fn bounds_320x240() -> Rect {
+        Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(320.0), Px(240.0)),
+        )
+    }
+
+    fn render_group_props(app: &mut App, window: AppWindowId, group: ToggleGroup) -> AnyElement {
+        fret_ui::elements::with_element_cx(app, window, bounds_320x240(), "test", |cx| {
+            group.into_element(cx)
+        })
+    }
+
+    fn group_items() -> Vec<ToggleGroupItem> {
+        vec![
+            ToggleGroupItem::new("one", Vec::<AnyElement>::new()),
+            ToggleGroupItem::new("two", Vec::<AnyElement>::new()),
+        ]
+    }
+
+    #[test]
+    fn toggle_group_root_defaults_to_w_fit_and_zero_gap() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        apply_theme(&mut app);
+
+        let model = app.models_mut().insert(None::<Arc<str>>);
+        let el = render_group_props(
+            &mut app,
+            window,
+            ToggleGroup::single(model).items(group_items()),
+        );
+
+        let ElementKind::Container(props) = &el.kind else {
+            panic!("expected ToggleGroup root to be a container");
+        };
+        assert_eq!(props.layout.size.width, Length::Auto);
+
+        let child = el.children.first().expect("container child");
+        let flex = match &child.kind {
+            ElementKind::RovingFlex(props) => &props.flex,
+            ElementKind::Flex(props) => props,
+            _ => panic!("expected ToggleGroup to contain a flex/roving flex child"),
+        };
+        assert_eq!(flex.gap, SpacingLength::Px(Px(0.0)));
+    }
+
+    #[test]
+    fn toggle_group_vertical_orientation_stretches_items_like_shadcn() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        apply_theme(&mut app);
+
+        let model = app.models_mut().insert(None::<Arc<str>>);
+        let el = render_group_props(
+            &mut app,
+            window,
+            ToggleGroup::single(model)
+                .orientation(ToggleGroupOrientation::Vertical)
+                .items(group_items()),
+        );
+
+        let child = el.children.first().expect("container child");
+        let flex = match &child.kind {
+            ElementKind::RovingFlex(props) => &props.flex,
+            ElementKind::Flex(props) => props,
+            _ => panic!("expected ToggleGroup to contain a flex/roving flex child"),
+        };
+        assert_eq!(flex.direction, fret_core::Axis::Vertical);
+        assert_eq!(flex.align, CrossAlign::Stretch);
     }
 }

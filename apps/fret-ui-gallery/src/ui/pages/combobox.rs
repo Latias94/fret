@@ -1,13 +1,7 @@
-mod helpers;
-mod models;
-mod sections;
-
-mod prelude {
-    pub(super) use super::super::super::*;
-}
+use super::super::*;
 
 use crate::ui::doc_layout::{self, DocSection};
-use prelude::*;
+use crate::ui::snippets::combobox as snippets;
 
 pub(super) fn preview_combobox(
     cx: &mut ElementContext<'_, App>,
@@ -15,22 +9,21 @@ pub(super) fn preview_combobox(
     open: Model<bool>,
     query: Model<String>,
 ) -> Vec<AnyElement> {
-    let models = models::get_or_init(cx);
-
-    let conformance_demo = sections::demo(cx, value, open, query);
-    let basic = sections::basic_frameworks(cx, &models);
-    let auto_highlight = sections::auto_highlight(cx, &models);
-    let clear = sections::clear_button(cx, &models);
-    let custom_items_top = sections::custom_items_top(cx, &models);
-    let long_list = sections::long_list(cx, &models);
-    let groups = sections::groups(cx, &models);
-    let groups_with_separator = sections::groups_with_separator(cx, &models);
-    let popup = sections::popup_trigger(cx, &models);
-    let multiple = sections::multiple_selection(cx, &models);
-    let invalid = sections::invalid(cx, &models);
-    let disabled = sections::disabled(cx, &models);
-    let input_group = sections::input_group(cx, &models);
-    let rtl = sections::rtl(cx, &models);
+    let conformance_demo =
+        snippets::conformance_demo::render(cx, value.clone(), open.clone(), query.clone());
+    let basic = snippets::basic::render(cx);
+    let auto_highlight = snippets::auto_highlight::render(cx);
+    let clear = snippets::clear_button::render(cx);
+    let groups = snippets::groups::render(cx);
+    let groups_with_separator = snippets::groups_with_separator::render(cx);
+    let trigger_button = snippets::trigger_button::render(cx);
+    let multiple = snippets::multiple_selection::render(cx);
+    let custom_items = snippets::custom_items::render(cx);
+    let long_list = snippets::long_list::render(cx);
+    let invalid = snippets::invalid::render(cx);
+    let disabled = snippets::disabled::render(cx);
+    let input_group = snippets::input_group::render(cx);
+    let rtl = snippets::rtl::render(cx);
 
     let notes = doc_layout::notes(
         cx,
@@ -49,217 +42,99 @@ pub(super) fn preview_combobox(
         ),
         vec![
             DocSection::new("Conformance Demo", conformance_demo)
-                .description("Small deterministic surface for `fretboard diag suite ui-gallery-combobox` scripts.")
-                .no_shell(),
+                .description(
+                    "Small deterministic surface for `fretboard diag suite ui-gallery-combobox` scripts.",
+                )
+                .no_shell()
+                .code_rust_from_file_region(snippets::conformance_demo::SOURCE, "example"),
             DocSection::new("Basic", basic)
                 .description("Upstream shadcn demo: basic framework combobox with search.")
-                .code(
-                    "rust",
-                    r#"shadcn::Combobox::new(value, open)
-    .a11y_label("Combobox basic")
-    .width(Px(260.0))
-    .placeholder("Select a framework")
-    .query_model(query)
-    .options([
-        shadcn::combobox_option("next", "Next.js"),
-        shadcn::combobox_option("svelte", "SvelteKit"),
-        shadcn::combobox_option("nuxt", "Nuxt.js"),
-        shadcn::combobox_option("remix", "Remix"),
-        shadcn::combobox_option("astro", "Astro"),
-    ])
-    .into_element(cx);"#,
-                ),
+                .code_rust_from_file_region(snippets::basic::SOURCE, "example"),
             DocSection::new("Auto Highlight", auto_highlight)
-                .description("Base UI opt-in: highlight the first enabled match on open/filter (`autoHighlight`).")
-                .code(
-                    "rust",
-                    r#"shadcn::Combobox::new(value, open)
-    .placeholder("Select a framework")
-    .query_model(query)
-    .auto_highlight(true)
-    .options([
-        shadcn::combobox_option("next", "Next.js"),
-        shadcn::combobox_option("svelte", "SvelteKit"),
-    ])
-    .into_element(cx);"#,
+                .description(
+                    "Base UI opt-in: highlight the first enabled match on open/filter (`autoHighlight`).",
+                )
+                .code_rust_from_file_region(
+                    snippets::auto_highlight::SOURCE,
+                    "example",
                 )
                 .no_shell(),
             DocSection::new("Clear Button", clear)
-                .description("Enable `show_clear` to show a clear affordance when a value is selected.")
-                .code(
-                    "rust",
-                    r#"shadcn::Combobox::new(value, open)
-    .placeholder("Select a framework")
-    .query_model(query)
-    .show_clear(true)
-    .options([
-        shadcn::combobox_option("next", "Next.js"),
-        shadcn::combobox_option("svelte", "SvelteKit"),
-        shadcn::combobox_option("nuxt", "Nuxt.js"),
-        shadcn::combobox_option("remix", "Remix"),
-        shadcn::combobox_option("astro", "Astro"),
-    ])
-    .into_element(cx);"#,
+                .description(
+                    "Enable `show_clear` to show a clear affordance when a value is selected.",
+                )
+                .code_rust_from_file_region(
+                    snippets::clear_button::SOURCE,
+                    "example",
                 ),
             DocSection::new("Groups", groups)
-                .description("Upstream groups items; Fret exposes grouped entries via `ComboboxGroup`.")
-                .code(
-                    "rust",
-                    r#"shadcn::Combobox::new(value, open)
-    .placeholder("Select a timezone")
-    .query_model(query)
-    .option_groups([
-        shadcn::combobox_option_group(
-            "Americas",
-            [shadcn::combobox_option("americas-ny", "(GMT-5) New York")],
-        ),
-        shadcn::combobox_option_group(
-            "Europe",
-            [shadcn::combobox_option("europe-lon", "(GMT+0) London")],
-        ),
-    ])
-    .into_element(cx);"#,
+                .description(
+                    "Upstream groups items; Fret exposes grouped entries via `ComboboxGroup`.",
                 )
+                .code_rust_from_file_region(snippets::groups::SOURCE, "example")
                 .no_shell(),
             DocSection::new("Groups + Separator", groups_with_separator)
-                .description("Use `.group_separators(true)` to insert separators between groups (shadcn `ComboboxSeparator`).")
-                .code(
-                    "rust",
-                    r#"shadcn::Combobox::new(value, open)
-    .placeholder("Select a timezone")
-    .query_model(query)
-    .group_separators(true)
-    .option_groups([
-        shadcn::combobox_option_group(
-            "Americas",
-            [shadcn::combobox_option("americas-ny", "(GMT-5) New York")],
-        ),
-        shadcn::combobox_option_group(
-            "Europe",
-            [shadcn::combobox_option("europe-lon", "(GMT+0) London")],
-        ),
-    ])
-    .into_element(cx);"#,
+                .description(
+                    "Use `.group_separators(true)` to insert separators between groups (shadcn `ComboboxSeparator`).",
+                )
+                .code_rust_from_file_region(
+                    snippets::groups_with_separator::SOURCE,
+                    "example",
                 )
                 .no_shell(),
-            DocSection::new("Trigger Button", popup)
+            DocSection::new("Trigger Button", trigger_button)
                 .description("Aligns Base UI combobox \"Popup\" recipe: a button-like trigger with the searchable listbox in the popover content.")
+                .code_rust_from_file_region(
+                    snippets::trigger_button::SOURCE,
+                    "example",
+                )
                 .no_shell(),
             DocSection::new("Multiple Selection", multiple)
                 .description("Upstream multi-select chips recipe: select multiple values and remove them via chips.")
-                .code(
-                    "rust",
-                    r#"let values: Model<Vec<Arc<str>>> = cx.app.models_mut().insert(vec![]);
-let open: Model<bool> = cx.app.models_mut().insert(false);
-let query: Model<String> = cx.app.models_mut().insert(String::new());
-
-	shadcn::ComboboxChips::new(values, open)
-	    .a11y_label("Combobox multiple selection")
-	    .width(Px(260.0))
-	    .placeholder("Select frameworks")
-	    .query_model(query)
-	    .test_id_prefix("ui-gallery-combobox-multiple")
-	    .trigger_test_id("ui-gallery-combobox-multiple-trigger")
-	    .options([
-	        shadcn::combobox_option("next", "Next.js"),
-	        shadcn::combobox_option("svelte", "SvelteKit"),
-	    ])
-	    .into_element(cx);"#,
+                .code_rust_from_file_region(
+                    snippets::multiple_selection::SOURCE,
+                    "example",
                 ),
-            DocSection::new("Extras: Custom Items", custom_items_top)
-                .description("Structured item details (e.g. suffix metadata) without pre-formatting richer labels.")
-                .code(
-                    "rust",
-                    r#"let combo = shadcn::Combobox::new(value, open)
-    .placeholder("Select framework")
-    .query_model(query)
-    .options([
-        shadcn::combobox_option("next", "Next.js").detail("React"),
-        shadcn::combobox_option("nuxt", "Nuxt.js").detail("Vue"),
-    ])
-    .into_element(cx);"#,
+            DocSection::new("Extras: Custom Items", custom_items)
+                .description(
+                    "Structured item details (e.g. suffix metadata) without pre-formatting richer labels.",
+                )
+                .code_rust_from_file_region(
+                    snippets::custom_items::SOURCE,
+                    "example",
                 ),
             DocSection::new("Extras: Long List", long_list)
                 .description(
                     "Supports long-list scroll regression gates (and future virtualization invariants).",
                 )
-                .code(
-                    "rust",
-                    r#"let items: Vec<shadcn::ComboboxOption> = (0..250)
-    .map(|i| shadcn::combobox_option(format!("{i:03}"), format!("Item {i:03}")))
-    .collect();
-
-shadcn::Combobox::new(value, open)
-    .a11y_label("Combobox long list")
-    .width(Px(320.0))
-    .placeholder("Pick an item")
-    .query_model(query)
-    .test_id_prefix("ui-gallery-combobox-long-list")
-    .options(items)
-    .into_element(cx);"#,
+                .code_rust_from_file_region(
+                    snippets::long_list::SOURCE,
+                    "example",
                 ),
             DocSection::new("Extras: Invalid", invalid)
                 .description("Invalid visual uses `aria_invalid(true)` on the combobox trigger.")
-            .code(
-                "rust",
-                r#"shadcn::Combobox::new(value, open)
-    .a11y_label("Combobox invalid")
-    .width(Px(260.0))
-    .placeholder("Select required option")
-    .query_model(query)
-    .options([
-        shadcn::combobox_option("apple", "Apple"),
-        shadcn::combobox_option("banana", "Banana"),
-    ])
-    .aria_invalid(true)
-    .into_element(cx);"#,
-            ),
+                .code_rust_from_file_region(
+                    snippets::invalid::SOURCE,
+                    "example",
+                ),
             DocSection::new("Extras: Disabled", disabled)
                 .description("Disabled state should block open/selection and use muted styling.")
-                .code(
-                    "rust",
-                    r#"shadcn::Combobox::new(value, open)
-    .a11y_label("Combobox disabled")
-    .placeholder("Disabled")
-    .query_model(query)
-    .options([shadcn::combobox_option("apple", "Apple")])
-    .disabled(true)
-    .into_element(cx);"#,
+                .code_rust_from_file_region(
+                    snippets::disabled::SOURCE,
+                    "example",
                 ),
             DocSection::new("Extras: Input Group", input_group)
                 .description("Inline keybinding + input grouping example.")
-                .code(
-                    "rust",
-                    r#"let combo = shadcn::Combobox::new(value, open)
-    .a11y_label("Combobox input group")
-    .width(Px(220.0))
-    .placeholder("Search command")
-    .query_model(query)
-    .options([
-        shadcn::combobox_option("new-file", "New File"),
-        shadcn::combobox_option("open-file", "Open File"),
-    ])
-    .into_element(cx);
-
-stack::hstack(
-    cx,
-    stack::HStackProps::default().gap(Space::N2).items_center(),
-    |cx| vec![shadcn::typography::muted(cx, "Cmd"), combo],
-);"#,
+                .code_rust_from_file_region(
+                    snippets::input_group::SOURCE,
+                    "example",
                 ),
             DocSection::new("Extras: RTL", rtl)
                 .description("All shadcn components should work under an RTL direction provider.")
-                .code(
-                     "rust",
-                     r#"with_direction_provider(LayoutDirection::Rtl, |cx| {
-     shadcn::Combobox::new(value, open)
-         .placeholder("ابحث عن أمر")
-         .into_element(cx)
-})"#,
-                 ),
-             DocSection::new("Notes", notes)
-                 .test_id_prefix("ui-gallery-combobox-notes")
-                 .description("Guidelines and parity notes for combobox recipes."),
+                .code_rust_from_file_region(snippets::rtl::SOURCE, "example"),
+            DocSection::new("Notes", notes)
+                .test_id_prefix("ui-gallery-combobox-notes")
+                .description("Guidelines and parity notes for combobox recipes."),
         ],
     );
 

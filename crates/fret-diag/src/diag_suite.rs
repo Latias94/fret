@@ -292,6 +292,27 @@ hint: list suites via `fretboard diag list suites`"
         expand_script_inputs(&workspace_root, &inputs)
     };
 
+    let scripts_from_promoted_registry_suite =
+        |suite: &str| -> Result<Option<Vec<PathBuf>>, String> {
+            let registry_path = crate::script_registry::promoted_registry_default_path(&workspace_root);
+            if !registry_path.is_file() {
+                return Ok(None);
+            }
+            let registry = crate::script_registry::PromotedScriptRegistry::load_from_path(&registry_path)?;
+            let mut scripts: Vec<PathBuf> = registry
+                .resolve_suite(suite)
+                .into_iter()
+                .map(|e| resolve_path(&workspace_root, PathBuf::from(e.path.as_str())))
+                .collect();
+            scripts.sort();
+            scripts.dedup();
+            if scripts.is_empty() {
+                Ok(None)
+            } else {
+                Ok(Some(scripts))
+            }
+        };
+
     let suite_dir_exists = |suite: &str| -> bool {
         workspace_root
             .join("tools")
@@ -605,6 +626,10 @@ hint: list suites via `fretboard diag list suites`"
         let inputs = diag_suite_scripts::docking_arbitration_suite_scripts();
         let scripts = expand_script_inputs(&workspace_root, &inputs)?;
         (scripts, Some(BuiltinSuite::DockingArbitration))
+    } else if suite_args.len() == 1
+        && let Some(scripts) = scripts_from_promoted_registry_suite(&suite_args[0])?
+    {
+        (scripts, None)
     } else if suite_args.len() == 1 && suite_dir_exists(&suite_args[0]) {
         let scripts = scripts_from_suite_dir(&suite_args[0])?;
         (scripts, None)

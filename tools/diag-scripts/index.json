@@ -1936,6 +1936,7 @@
         "diag.script_v2"
       ],
       "suite_memberships": [
+        "ui-gallery-scroll-extents-dom-parity",
         "ui-gallery-shadcn-conformance"
       ],
       "tags": [
@@ -2330,6 +2331,26 @@
         "ui-gallery-shadcn-conformance"
       ],
       "tags": [],
+      "target_hints": []
+    },
+    {
+      "id": "ui-gallery-collapsible-rtl-code-tab-scroll-range",
+      "path": "tools/diag-scripts/ui-gallery/collapsible/ui-gallery-collapsible-rtl-code-tab-scroll-range.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "ui-gallery-shadcn-conformance"
+      ],
+      "tags": [
+        "collapsible",
+        "regression",
+        "scroll",
+        "shadcn",
+        "tabs",
+        "ui_gallery"
+      ],
       "target_hints": []
     },
     {
@@ -3075,6 +3096,24 @@
       "target_hints": []
     },
     {
+      "id": "ui-gallery-hovercard-open",
+      "path": "tools/diag-scripts/ui-gallery/overlay/ui-gallery-hovercard-open.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "ui-gallery"
+      ],
+      "tags": [
+        "gate",
+        "hover",
+        "hovercard",
+        "overlay",
+        "ui_gallery"
+      ],
+      "target_hints": []
+    },
+    {
       "id": "ui-gallery-incoming-open-inject-smoke",
       "path": "tools/diag-scripts/ui-gallery/incoming/ui-gallery-incoming-open-inject-smoke.json",
       "required_capabilities": [
@@ -3534,6 +3573,26 @@
         "ui-gallery-motion-pilot"
       ],
       "tags": [],
+      "target_hints": []
+    },
+    {
+      "id": "ui-gallery-overlay-focus-trap-hover-cursor",
+      "path": "tools/diag-scripts/ui-gallery/overlay/ui-gallery-overlay-focus-trap-hover-cursor.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "ui-gallery"
+      ],
+      "tags": [
+        "cursor",
+        "dialog",
+        "focus",
+        "gate",
+        "hover",
+        "overlay",
+        "ui_gallery"
+      ],
       "target_hints": []
     },
     {
@@ -4137,6 +4196,28 @@
       "target_hints": []
     },
     {
+      "id": "ui-gallery-tooltip-overlay-placement-after-code-tab-scroll-range",
+      "path": "tools/diag-scripts/ui-gallery/overlay/ui-gallery-tooltip-overlay-placement-after-code-tab-scroll-range.json",
+      "required_capabilities": [
+        "diag.overlay_placement_trace",
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "ui-gallery-scroll-extents-dom-parity",
+        "ui-gallery-shadcn-conformance"
+      ],
+      "tags": [
+        "overlay",
+        "regression",
+        "scroll",
+        "shadcn",
+        "tabs",
+        "tooltip",
+        "ui_gallery"
+      ],
+      "target_hints": []
+    },
+    {
       "id": "ui-gallery-tooltip-hovercard-scroll-clamp",
       "path": "tools/diag-scripts/ui-gallery/overlay/ui-gallery-tooltip-hovercard-scroll-clamp.json",
       "required_capabilities": [],
@@ -4212,6 +4293,7 @@
         "diag.script_v2"
       ],
       "suite_memberships": [
+        "ui-gallery-scroll-extents-dom-parity",
         "ui-gallery-shadcn-conformance"
       ],
       "tags": [

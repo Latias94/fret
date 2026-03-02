@@ -39,9 +39,9 @@ pub(super) fn handle_scroll_into_view_step(
     element_runtime: Option<&ElementRuntime>,
     semantics_snapshot: Option<&fret_core::SemanticsSnapshot>,
     mut ui: Option<&mut UiTree<App>>,
-    text_font_stack_key_stable_frames: u32,
-    font_catalog_populated: bool,
-    system_font_rescan_idle: bool,
+    _text_font_stack_key_stable_frames: u32,
+    _font_catalog_populated: bool,
+    _system_font_rescan_idle: bool,
     active: &mut ActiveScript,
     output: &mut UiScriptFrameOutput,
     force_dump_label: &mut Option<String>,
@@ -80,6 +80,8 @@ pub(super) fn handle_scroll_into_view_step(
         return true;
     };
 
+    let insets = padding_insets_px.unwrap_or_else(|| UiPaddingInsetsV1::uniform(padding_px));
+
     let mut state = match active.v2_step_state.take() {
         Some(V2StepState::ScrollIntoView(mut state)) if state.step_index == step_index => {
             state.remaining_frames = state.remaining_frames.min(timeout_frames);
@@ -93,84 +95,53 @@ pub(super) fn handle_scroll_into_view_step(
         },
     };
 
-    let target_predicate = if require_fully_within_window {
-        UiPredicateV1::BoundsWithinWindow {
-            target: target.clone(),
-            padding_px,
-            padding_insets_px,
-            eps_px: 0.0,
-        }
-    } else {
-        UiPredicateV1::VisibleInWindow {
-            target: target.clone(),
-        }
-    };
-    let docking_diag = app
-        .global::<fret_runtime::WindowInteractionDiagnosticsStore>()
-        .and_then(|store| store.docking_latest_for_window(window));
-    let workspace_diag = app
-        .global::<fret_runtime::WindowInteractionDiagnosticsStore>()
-        .and_then(|store| store.workspace_latest_for_window(window));
-    let input_ctx = app
-        .global::<fret_runtime::WindowInputContextService>()
-        .and_then(|svc| svc.snapshot(window));
-    let dock_drag_runtime = dock_drag_runtime_state(app, svc.known_windows.as_slice());
-    let open_window_count = app
-        .global::<fret_runtime::WindowInputContextService>()
-        .map(|ctx_svc| ctx_svc.window_count() as u32)
-        .filter(|n| *n > 0)
-        .unwrap_or_else(|| svc.known_windows.len() as u32);
-    let visible_ok = eval_predicate(
+    let container_node = select_semantics_node_with_trace(
         snapshot,
-        window_bounds,
         window,
-        active.scope_root_for_window(window),
-        input_ctx,
         element_runtime,
-        app.global::<fret_runtime::WindowTextInputSnapshotService>()
-            .and_then(|svc| svc.snapshot(window)),
-        app.global::<fret_core::RendererTextPerfSnapshot>().copied(),
-        app.global::<fret_core::RendererTextFontTraceSnapshot>(),
-        svc.known_windows.as_slice(),
-        open_window_count,
-        app.global::<fret_runtime::PlatformCapabilities>(),
-        docking_diag,
-        workspace_diag,
-        dock_drag_runtime.as_ref(),
-        text_font_stack_key_stable_frames,
-        font_catalog_populated,
-        system_font_rescan_idle,
-        &target_predicate,
+        &container,
+        active.scope_root_for_window(window),
+        step_index as u32,
+        svc.cfg.redact_text,
+        &mut active.selector_resolution_trace,
     );
-    let container_ok = if require_fully_within_container {
-        let container_node = select_semantics_node_with_trace(
-            snapshot,
-            window,
-            element_runtime,
-            &container,
-            active.scope_root_for_window(window),
-            step_index as u32,
-            svc.cfg.redact_text,
-            &mut active.selector_resolution_trace,
-        );
-        let target_node = select_semantics_node_with_trace(
-            snapshot,
-            window,
-            element_runtime,
-            &target,
-            active.scope_root_for_window(window),
-            step_index as u32,
-            svc.cfg.redact_text,
-            &mut active.selector_resolution_trace,
-        );
-        if let (Some(container_node), Some(target_node)) = (container_node, target_node) {
-            let insets =
-                padding_insets_px.unwrap_or_else(|| UiPaddingInsetsV1::uniform(padding_px));
-            let inner = rect_inset(container_node.bounds, insets);
-            rect_fully_contains(inner, target_node.bounds)
+    let target_node = select_semantics_node_with_trace(
+        snapshot,
+        window,
+        element_runtime,
+        &target,
+        active.scope_root_for_window(window),
+        step_index as u32,
+        svc.cfg.redact_text,
+        &mut active.selector_resolution_trace,
+    );
+
+    let container_bounds: Option<Rect> = container_node.map(|node| {
+        ui.as_deref()
+            .and_then(|ui| ui.debug_node_visual_bounds(node.id))
+            .unwrap_or(node.bounds)
+    });
+    let target_bounds: Option<Rect> = target_node.map(|node| {
+        ui.as_deref()
+            .and_then(|ui| ui.debug_node_visual_bounds(node.id))
+            .unwrap_or(node.bounds)
+    });
+
+    let visible_ok = target_bounds.is_some_and(|bounds| {
+        if require_fully_within_window {
+            let inner_window = rect_inset(window_bounds, insets);
+            rect_fully_contains(inner_window, bounds)
         } else {
-            false
+            rect_intersection(bounds, window_bounds).is_some()
         }
+    });
+    let container_ok = if require_fully_within_container {
+        container_bounds
+            .zip(target_bounds)
+            .is_some_and(|(container_bounds, target_bounds)| {
+                let inner = rect_inset(container_bounds, insets);
+                rect_fully_contains(inner, target_bounds)
+            })
     } else {
         true
     };
@@ -191,41 +162,19 @@ pub(super) fn handle_scroll_into_view_step(
         active.v2_step_state = None;
         output.request_redraw = true;
     } else {
-        let container_node = select_semantics_node_with_trace(
-            snapshot,
-            window,
-            element_runtime,
-            &container,
-            active.scope_root_for_window(window),
-            step_index as u32,
-            svc.cfg.redact_text,
-            &mut active.selector_resolution_trace,
-        );
-        if let Some(container_node) = container_node {
-            let target_node = select_semantics_node_with_trace(
-                snapshot,
-                window,
-                element_runtime,
-                &target,
-                active.scope_root_for_window(window),
-                step_index as u32,
-                svc.cfg.redact_text,
-                &mut active.selector_resolution_trace,
-            );
-
-            let insets =
-                padding_insets_px.unwrap_or_else(|| UiPaddingInsetsV1::uniform(padding_px));
+        if let (Some(container_node), Some(container_bounds)) = (container_node, container_bounds) {
             let visible_container =
-                rect_intersection(container_node.bounds, window_bounds).unwrap_or(window_bounds);
+                rect_intersection(container_bounds, window_bounds).unwrap_or(window_bounds);
             let inner_visible = rect_inset(visible_container, insets);
 
             let mut effective_dx = delta_x;
             let mut effective_dy = delta_y;
-            if let Some(target_node) = target_node {
+            let target_bounds_opt = target_bounds;
+            if let Some(target_bounds) = target_bounds_opt {
                 if require_fully_within_window {
                     let inner_window = rect_inset(window_bounds, insets);
-                    let target_w = target_node.bounds.size.width.0.max(0.0);
-                    let target_h = target_node.bounds.size.height.0.max(0.0);
+                    let target_w = target_bounds.size.width.0.max(0.0);
+                    let target_h = target_bounds.size.height.0.max(0.0);
                     let inner_w = inner_window.size.width.0.max(0.0);
                     let inner_h = inner_window.size.height.0.max(0.0);
                     if inner_w > 1.0
@@ -245,9 +194,9 @@ pub(super) fn handle_scroll_into_view_step(
                 }
 
                 if require_fully_within_container {
-                    let inner_container = rect_inset(container_node.bounds, insets);
-                    let target_w = target_node.bounds.size.width.0.max(0.0);
-                    let target_h = target_node.bounds.size.height.0.max(0.0);
+                    let inner_container = rect_inset(container_bounds, insets);
+                    let target_w = target_bounds.size.width.0.max(0.0);
+                    let target_h = target_bounds.size.height.0.max(0.0);
                     let inner_w = inner_container.size.width.0.max(0.0);
                     let inner_h = inner_container.size.height.0.max(0.0);
                     if inner_w > 1.0
@@ -270,13 +219,13 @@ pub(super) fn handle_scroll_into_view_step(
 
                 if state
                     .last_target_bounds
-                    .is_some_and(|prev| prev == target_node.bounds)
+                    .is_some_and(|prev| prev == target_bounds)
                 {
                     state.no_progress_frames = state.no_progress_frames.saturating_add(1);
                 } else {
                     state.no_progress_frames = 0;
                 }
-                state.last_target_bounds = Some(target_node.bounds);
+                state.last_target_bounds = Some(target_bounds);
 
                 if state.no_progress_frames >= 20 {
                     *force_dump_label = Some(format!(
@@ -291,8 +240,8 @@ pub(super) fn handle_scroll_into_view_step(
 
                 if effective_dx.abs() > 0.01 {
                     let abs_dx = effective_dx.abs();
-                    let target_left = target_node.bounds.origin.x.0;
-                    let target_right = target_left + target_node.bounds.size.width.0.max(0.0);
+                    let target_left = target_bounds.origin.x.0;
+                    let target_right = target_left + target_bounds.size.width.0.max(0.0);
                     let inner_left = inner_visible.origin.x.0;
                     let inner_right = inner_left + inner_visible.size.width.0.max(0.0);
                     if target_left < inner_left {
@@ -304,8 +253,8 @@ pub(super) fn handle_scroll_into_view_step(
 
                 if effective_dy.abs() > 0.01 {
                     let abs_dy = effective_dy.abs();
-                    let target_top = target_node.bounds.origin.y.0;
-                    let target_bottom = target_top + target_node.bounds.size.height.0.max(0.0);
+                    let target_top = target_bounds.origin.y.0;
+                    let target_bottom = target_top + target_bounds.size.height.0.max(0.0);
                     let inner_top = inner_visible.origin.y.0;
                     let inner_bottom = inner_top + inner_visible.size.height.0.max(0.0);
                     if target_top < inner_top {
@@ -333,9 +282,10 @@ pub(super) fn handle_scroll_into_view_step(
             let vx1 = vx0 + visible_container.size.width.0.max(0.0);
             let edge_pad_x = 2.0f32.min((vx1 - vx0).max(0.0) * 0.5);
             let x_edge_left = (vx0 + edge_pad_x).clamp(vx0, vx1);
+            let x_edge_right = (vx1 - edge_pad_x).clamp(vx0, vx1);
 
-            let x_pref = target_node
-                .map(|n| n.bounds.origin.x.0 + n.bounds.size.width.0.max(0.0) * 0.5)
+            let x_pref = target_bounds_opt
+                .map(|bounds| bounds.origin.x.0 + bounds.size.width.0.max(0.0) * 0.5)
                 .unwrap_or(x_mid)
                 .clamp(ix0 + pad_x, ix1 - pad_x);
 
@@ -343,6 +293,9 @@ pub(super) fn handle_scroll_into_view_step(
                 Point::new(Px(x_edge_left), Px(y_mid)),
                 Point::new(Px(x_edge_left), Px(y_top)),
                 Point::new(Px(x_edge_left), Px(y_bottom)),
+                Point::new(Px(x_edge_right), Px(y_mid)),
+                Point::new(Px(x_edge_right), Px(y_top)),
+                Point::new(Px(x_edge_right), Px(y_bottom)),
                 Point::new(Px(x_mid.clamp(ix0 + pad_x, ix1 - pad_x)), Px(y_mid)),
                 Point::new(Px(x_pref), Px(y_mid.clamp(iy0 + pad_y, iy1 - pad_y))),
                 Point::new(Px(x_pref), Px(y_top)),
@@ -370,9 +323,17 @@ pub(super) fn handle_scroll_into_view_step(
                         continue;
                     };
                     let hit_id = hit.id.data().as_ffi();
-                    if hit.role == fret_core::SemanticsRole::ScrollBar
-                        || !index.is_descendant_of_or_self(hit_id, intended_id)
-                    {
+                    let controls_intended = hit
+                        .controls
+                        .iter()
+                        .any(|id| id.data().as_ffi() == intended_id);
+                    let descendant_intended = index.is_descendant_of_or_self(hit_id, intended_id);
+                    if !descendant_intended && !controls_intended {
+                        continue;
+                    }
+                    // If the intended viewport is fully covered by nested scrollables (e.g. a code
+                    // block), allow targeting the viewport's scrollbar (via `controls`).
+                    if hit.role == fret_core::SemanticsRole::ScrollBar && !controls_intended {
                         continue;
                     }
 
@@ -381,6 +342,8 @@ pub(super) fn handle_scroll_into_view_step(
                     let mut score: i32 = 0;
                     if scroll_owner == Some(intended_id) {
                         score += 100;
+                    } else if controls_intended {
+                        score += 95;
                     } else if scroll_owner.is_some() {
                         score += 0;
                     } else {

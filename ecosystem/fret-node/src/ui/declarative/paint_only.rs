@@ -1,10 +1,11 @@
 use std::sync::Arc;
 
 use fret_canvas::view::{
-    screen_rect_to_canvas_rect, wheel_zoom_factor, PanZoom2D, DEFAULT_WHEEL_ZOOM_BASE,
-    DEFAULT_WHEEL_ZOOM_STEP,
+    DEFAULT_WHEEL_ZOOM_BASE, DEFAULT_WHEEL_ZOOM_STEP, PanZoom2D, screen_rect_to_canvas_rect,
+    wheel_zoom_factor,
 };
 use fret_canvas::wires as canvas_wires;
+use fret_core::scene::DashPatternV1;
 use fret_core::{
     Color, DrawOrder, MouseButton, PathCommand, PathStyle, Point, Px, Rect, StrokeCapV1,
     StrokeJoinV1, StrokeStyleV2,
@@ -28,6 +29,8 @@ use crate::ui::declarative::view_reducer::{
     apply_fit_view_to_canvas_rect, apply_pan_by_screen_delta, apply_zoom_about_screen_point,
     view_from_state,
 };
+use crate::ui::geometry_overrides::NodeGraphGeometryOverridesRef;
+use crate::ui::paint_overrides::{NodeGraphPaintOverridesMap, NodeGraphPaintOverridesRef};
 use crate::ui::presenter::DefaultNodeGraphPresenter;
 use crate::ui::style::NodeGraphStyle;
 
@@ -85,6 +88,16 @@ pub struct NodeGraphSurfacePaintOnlyProps {
     pub pointer_region: PointerRegionProps,
     pub canvas: CanvasProps,
 
+    /// Optional geometry overrides for UI-only per-entity sizing/hit-testing.
+    ///
+    /// Changes must bump `revision()` on the provider (see `ui/geometry_overrides.rs`).
+    pub geometry_overrides: Option<NodeGraphGeometryOverridesRef>,
+
+    /// Optional paint-only overrides for UI-only per-node/per-edge styling.
+    ///
+    /// Changes must bump `revision()` on the provider (see `ui/paint_overrides.rs`).
+    pub paint_overrides: Option<NodeGraphPaintOverridesRef>,
+
     /// When true, host a lightweight portal layer that renders node labels as normal element
     /// subtrees positioned in screen space (semantic zoom).
     ///
@@ -118,6 +131,8 @@ impl NodeGraphSurfacePaintOnlyProps {
             view_state,
             pointer_region,
             canvas: CanvasProps::default(),
+            geometry_overrides: None,
+            paint_overrides: None,
             portals_enabled: true,
             portal_max_nodes: 32,
             cull_margin_screen_px: 256.0,
@@ -285,12 +300,14 @@ impl Default for DerivedGeometryCacheState {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-struct DerivedGeometryCacheKeyV1 {
+struct DerivedGeometryCacheKeyV2 {
     graph_rev: u64,
     zoom_q: i32,
     node_origin_x_q: i32,
     node_origin_y_q: i32,
     draw_order_hash: u64,
+    geometry_tokens_fingerprint: u64,
+    geometry_overrides_rev: u64,
     cell_size_screen_bits: u32,
     min_cell_size_screen_bits: u32,
     edge_aabb_pad_screen_bits: u32,
@@ -305,23 +322,36 @@ fn derived_geometry_cache_key(
     draw_order: &[crate::core::NodeId],
     interaction: &crate::io::NodeGraphInteractionState,
     style: &NodeGraphStyle,
+    geometry_overrides_rev: u64,
+    max_edge_interaction_width_override_px: f32,
 ) -> CanvasKey {
     let zoom = PanZoom2D::sanitize_zoom(zoom, 1.0);
     let origin = node_origin.normalized();
 
     let tuning = interaction.spatial_index;
+    let max_edge_interaction_width_override_px = if max_edge_interaction_width_override_px
+        .is_finite()
+        && max_edge_interaction_width_override_px >= 0.0
+    {
+        max_edge_interaction_width_override_px
+    } else {
+        0.0
+    };
     let edge_aabb_pad_screen_px = tuning
         .edge_aabb_pad_screen_px
         .max(interaction.edge_interaction_width)
+        .max(max_edge_interaction_width_override_px)
         .max(style.geometry.wire_width)
         .max(0.0);
 
-    let v = DerivedGeometryCacheKeyV1 {
+    let v = DerivedGeometryCacheKeyV2 {
         graph_rev,
         zoom_q: quantize_f32(zoom, 4096.0),
         node_origin_x_q: quantize_f32(origin.x, 4096.0),
         node_origin_y_q: quantize_f32(origin.y, 4096.0),
         draw_order_hash: stable_hash_u64(1, &draw_order),
+        geometry_tokens_fingerprint: style.geometry.fingerprint(),
+        geometry_overrides_rev,
         cell_size_screen_bits: tuning.cell_size_screen_px.to_bits(),
         min_cell_size_screen_bits: tuning.min_cell_size_screen_px.to_bits(),
         edge_aabb_pad_screen_bits: edge_aabb_pad_screen_px.to_bits(),
@@ -329,7 +359,7 @@ fn derived_geometry_cache_key(
         wire_width_bits: style.geometry.wire_width.to_bits(),
     };
 
-    CanvasKey::from_hash(&("fret-node.derived-geometry.paint-only.v1", v))
+    CanvasKey::from_hash(&("fret-node.derived-geometry.paint-only.v2", v))
 }
 
 fn build_debug_grid_ops(bounds: Rect, view: PanZoom2D) -> Arc<Vec<fret_core::SceneOp>> {
@@ -476,12 +506,13 @@ impl Default for EdgePaintCacheState {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-struct EdgePaintCacheKeyV2 {
+struct EdgePaintCacheKeyV3 {
     graph_rev: u64,
     zoom_q: i32,
     node_origin_x_q: i32,
     node_origin_y_q: i32,
     draw_order_hash: u64,
+    derived_geometry_key: u64,
 }
 
 #[derive(Debug, Clone)]
@@ -513,12 +544,13 @@ impl Default for NodePaintCacheState {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-struct NodePaintCacheKeyV2 {
+struct NodePaintCacheKeyV3 {
     graph_rev: u64,
     zoom_q: i32,
     node_origin_x_q: i32,
     node_origin_y_q: i32,
     draw_order_hash: u64,
+    derived_geometry_key: u64,
 }
 
 #[derive(Debug, Clone)]
@@ -668,17 +700,19 @@ fn edges_cache_key(
     zoom: f32,
     node_origin: crate::io::NodeGraphNodeOrigin,
     draw_order_hash: u64,
+    derived_geometry_key: u64,
 ) -> CanvasKey {
     let zoom = PanZoom2D::sanitize_zoom(zoom, 1.0);
     let origin = node_origin.normalized();
-    let v = EdgePaintCacheKeyV2 {
+    let v = EdgePaintCacheKeyV3 {
         graph_rev,
         zoom_q: quantize_f32(zoom, 4096.0),
         node_origin_x_q: quantize_f32(origin.x, 4096.0),
         node_origin_y_q: quantize_f32(origin.y, 4096.0),
         draw_order_hash,
+        derived_geometry_key,
     };
-    CanvasKey::from_hash(&("fret-node.edges.paint-only.v2", v))
+    CanvasKey::from_hash(&("fret-node.edges.paint-only.v3", v))
 }
 
 fn nodes_cache_key(
@@ -686,17 +720,19 @@ fn nodes_cache_key(
     zoom: f32,
     node_origin: crate::io::NodeGraphNodeOrigin,
     draw_order_hash: u64,
+    derived_geometry_key: u64,
 ) -> CanvasKey {
     let zoom = PanZoom2D::sanitize_zoom(zoom, 1.0);
     let origin = node_origin.normalized();
-    let v = NodePaintCacheKeyV2 {
+    let v = NodePaintCacheKeyV3 {
         graph_rev,
         zoom_q: quantize_f32(zoom, 4096.0),
         node_origin_x_q: quantize_f32(origin.x, 4096.0),
         node_origin_y_q: quantize_f32(origin.y, 4096.0),
         draw_order_hash,
+        derived_geometry_key,
     };
-    CanvasKey::from_hash(&("fret-node.nodes.paint-only.v2", v))
+    CanvasKey::from_hash(&("fret-node.nodes.paint-only.v3", v))
 }
 
 fn canvas_viewport_rect(bounds: Rect, view: PanZoom2D, margin_screen_px: f32) -> Option<Rect> {
@@ -764,7 +800,12 @@ fn build_edges_draws_paint_only(
             Point::new(Px(min_x), Px(min_y)),
             fret_core::Size::new(Px((max_x - min_x).max(0.0)), Px((max_y - min_y).max(0.0))),
         );
-        let pad = (style.geometry.wire_width / zoom).max(0.0);
+        let pad = style
+            .geometry
+            .wire_width
+            .max(style.paint.wire_interaction_width)
+            / zoom;
+        let pad = pad.max(0.0);
         bbox = Rect::new(
             Point::new(Px(bbox.origin.x.0 - pad), Px(bbox.origin.y.0 - pad)),
             fret_core::Size::new(
@@ -804,6 +845,25 @@ fn build_edges_draws_paint_only(
     Arc::new(out)
 }
 
+fn scale_dash_pattern_screen_px_to_canvas_units(
+    pattern: DashPatternV1,
+    zoom: f32,
+) -> Option<DashPatternV1> {
+    if !zoom.is_finite() || zoom <= 0.0 {
+        return None;
+    }
+
+    let dash = pattern.dash.0 / zoom;
+    let gap = pattern.gap.0 / zoom;
+    let phase = pattern.phase.0 / zoom;
+    let period = dash + gap;
+    if !dash.is_finite() || !gap.is_finite() || !phase.is_finite() || dash <= 0.0 || period <= 0.0 {
+        return None;
+    }
+
+    Some(DashPatternV1::new(Px(dash), Px(gap), Px(phase)))
+}
+
 fn paint_edges_cached(
     p: &mut CanvasPainter<'_>,
     view: PanZoom2D,
@@ -812,6 +872,7 @@ fn paint_edges_cached(
     geom: Option<Arc<CanvasGeometry>>,
     node_drag: Option<&NodeDragState>,
     style_tokens: &NodeGraphStyle,
+    paint_overrides: Option<&dyn crate::ui::paint_overrides::NodeGraphPaintOverrides>,
 ) {
     let Some(draws) = draws else {
         return;
@@ -828,14 +889,7 @@ fn paint_edges_cached(
 
     let zoom = PanZoom2D::sanitize_zoom(view.zoom, 1.0).max(1.0e-6);
     let raster_scale_factor = p.scale_factor() * zoom;
-    let stroke_width = (style_tokens.geometry.wire_width / zoom).max(0.0);
-    let style = PathStyle::StrokeV2(StrokeStyleV2 {
-        width: Px(stroke_width),
-        join: StrokeJoinV1::Round,
-        cap: StrokeCapV1::Round,
-        miter_limit: 4.0,
-        dash: None,
-    });
+    let base_stroke_width = (style_tokens.geometry.wire_width / zoom).max(0.0);
 
     p.with_transform(transform, |p| {
         let drag_active = node_drag.is_some_and(|d| d.active && !d.canceled);
@@ -845,6 +899,36 @@ fn paint_edges_cached(
             .unwrap_or((0.0, 0.0));
 
         for d in draws.iter() {
+            let mut paint: fret_core::scene::PaintBindingV1 = d.color.into();
+            let mut stroke_width_mul = 1.0_f32;
+            let mut dash: Option<DashPatternV1> = None;
+
+            if let Some(o) = paint_overrides
+                .and_then(|p| p.edge_paint_override(d.edge))
+                .map(|o| o.normalized())
+            {
+                if let Some(m) = o.stroke_width_mul {
+                    if m.is_finite() && m > 0.0 {
+                        stroke_width_mul = m;
+                    }
+                }
+                dash = o
+                    .dash
+                    .and_then(|p| scale_dash_pattern_screen_px_to_canvas_units(p, zoom));
+                if let Some(paint_override) = o.stroke_paint {
+                    paint = paint_override;
+                }
+            }
+
+            let stroke_width = (base_stroke_width * stroke_width_mul).max(0.0);
+            let style = PathStyle::StrokeV2(StrokeStyleV2 {
+                width: Px(stroke_width),
+                join: StrokeJoinV1::Round,
+                cap: StrokeCapV1::Round,
+                miter_limit: 4.0,
+                dash,
+            });
+
             let mut affected_by_drag = false;
             if drag_active {
                 let from_node = geom.ports.get(&d.from).map(|h| h.node);
@@ -896,7 +980,12 @@ fn paint_edges_cached(
                         Px((max_y - min_y).max(0.0)),
                     ),
                 );
-                let pad = (style_tokens.geometry.wire_width / zoom).max(0.0);
+                let pad = style_tokens
+                    .geometry
+                    .wire_width
+                    .max(style_tokens.paint.wire_interaction_width)
+                    / zoom;
+                let pad = pad.max(0.0);
                 bbox = Rect::new(
                     Point::new(Px(bbox.origin.x.0 - pad), Px(bbox.origin.y.0 - pad)),
                     fret_core::Size::new(
@@ -916,26 +1005,26 @@ fn paint_edges_cached(
                     quantize_f32(ddy, 1024.0),
                 ))
                 .0;
-                p.path(
+                p.path_paint(
                     key,
                     DrawOrder(2),
                     Point::new(Px(0.0), Px(0.0)),
                     &commands,
                     style,
-                    d.color,
+                    paint,
                     raster_scale_factor,
                 );
             } else {
                 if !rects_intersect(cull, d.bbox) {
                     continue;
                 }
-                p.path(
+                p.path_paint(
                     d.key,
                     DrawOrder(2),
                     Point::new(Px(0.0), Px(0.0)),
                     &d.commands,
                     style,
-                    d.color,
+                    paint,
                     raster_scale_factor,
                 );
             }
@@ -988,6 +1077,7 @@ fn paint_nodes_cached(
     hovered_node: Option<crate::core::NodeId>,
     selected_nodes: &[crate::core::NodeId],
     node_drag: Option<&NodeDragState>,
+    paint_overrides: Option<&dyn crate::ui::paint_overrides::NodeGraphPaintOverrides>,
 ) {
     let Some(draws) = draws else {
         return;
@@ -1048,7 +1138,20 @@ fn paint_nodes_cached(
             } else {
                 border_base
             };
-            let border_paint = fret_core::scene::Paint::Solid(border_color).into();
+            let mut background = fill;
+            let mut border_paint = fret_core::scene::Paint::Solid(border_color).into();
+
+            if let Some(o) = paint_overrides
+                .and_then(|p| p.node_paint_override(d.id))
+                .map(|o| o.normalized())
+            {
+                if let Some(paint) = o.body_background {
+                    background = paint;
+                }
+                if let Some(paint) = o.border_paint {
+                    border_paint = paint;
+                }
+            }
 
             // Paint node background *below* wires, but keep the node border above wires.
             // This avoids the common “wire looks truncated” artifact when wires are drawn behind
@@ -1056,7 +1159,7 @@ fn paint_nodes_cached(
             p.scene().push(fret_core::SceneOp::Quad {
                 order: DrawOrder(1),
                 rect,
-                background: fill,
+                background,
                 border: no_border,
                 border_paint: transparent_fill,
                 corner_radii,
@@ -1090,6 +1193,8 @@ pub fn node_graph_surface_paint_only<H: UiHost + 'static>(
         view_state,
         pointer_region,
         canvas,
+        geometry_overrides,
+        paint_overrides,
         portals_enabled,
         portal_max_nodes,
         cull_margin_screen_px,
@@ -1114,6 +1219,12 @@ pub fn node_graph_surface_paint_only<H: UiHost + 'static>(
     let hovered_node: Model<Option<crate::core::NodeId>> = use_uncontrolled_model(cx, || None);
     // Scratch vec used by hit tests to avoid per-event allocations.
     let hit_scratch: Model<Vec<crate::core::NodeId>> = use_uncontrolled_model(cx, Vec::new);
+
+    // Diagnostics-only: an internal paint overrides map so `diag.script_v2` can toggle a paint-only
+    // revision bump without demo-specific command routing.
+    let diag_paint_overrides: Model<Arc<NodeGraphPaintOverridesMap>> =
+        use_uncontrolled_model(cx, || Arc::new(NodeGraphPaintOverridesMap::default()));
+    let diag_paint_overrides_enabled: Model<bool> = use_uncontrolled_model(cx, || false);
 
     // Grid paint cache is a paint-only implementation detail. It uses a deterministic key so we can
     // gate steady-state behavior via diagnostics (no rebuild churn when view is stable).
@@ -1175,6 +1286,23 @@ pub fn node_graph_surface_paint_only<H: UiHost + 'static>(
         .unwrap_or_default();
     let view_for_paint = view_from_state(&view_value);
     let style_tokens = NodeGraphStyle::default();
+    let diag_keys_enabled = std::env::var("FRET_DIAG")
+        .ok()
+        .is_some_and(|v| !v.trim().is_empty() && v.trim() != "0");
+    let geometry_overrides = geometry_overrides.as_deref();
+    let geometry_overrides_rev = geometry_overrides.map(|o| o.revision()).unwrap_or(0);
+    let max_edge_interaction_width_override_px = geometry_overrides
+        .map(|o| o.max_edge_interaction_width_override_px())
+        .filter(|w| w.is_finite() && *w >= 0.0)
+        .unwrap_or(0.0);
+    let diag_paint_overrides_value = cx
+        .get_model_cloned(&diag_paint_overrides, Invalidation::Paint)
+        .unwrap_or_else(|| Arc::new(NodeGraphPaintOverridesMap::default()));
+    let diag_paint_overrides_ref: NodeGraphPaintOverridesRef = diag_paint_overrides_value.clone();
+    let paint_overrides_ref =
+        paint_overrides.or_else(|| diag_keys_enabled.then_some(diag_paint_overrides_ref));
+    let paint_overrides = paint_overrides_ref.as_deref();
+    let paint_overrides_rev = paint_overrides.map(|o| o.revision()).unwrap_or(0);
 
     let graph_rev = graph.revision(&*cx.app).unwrap_or(0);
     let draw_order_hash = stable_hash_u64(2, &view_value.draw_order);
@@ -1219,6 +1347,8 @@ pub fn node_graph_surface_paint_only<H: UiHost + 'static>(
             &view_value.draw_order,
             &view_value.interaction,
             &style_tokens,
+            geometry_overrides_rev,
+            max_edge_interaction_width_override_px,
         );
 
         if derived_cache_value.key != Some(key) {
@@ -1235,13 +1365,14 @@ pub fn node_graph_surface_paint_only<H: UiHost + 'static>(
                         zoom,
                         node_origin,
                         &mut presenter,
-                        None,
+                        geometry_overrides,
                     );
 
                     let tuning = view_value.interaction.spatial_index;
                     let edge_aabb_pad_screen_px = tuning
                         .edge_aabb_pad_screen_px
                         .max(view_value.interaction.edge_interaction_width)
+                        .max(max_edge_interaction_width_override_px)
                         .max(style_tokens.geometry.wire_width)
                         .max(0.0);
                     let cell_size_canvas = (tuning.cell_size_screen_px / z)
@@ -1287,7 +1418,14 @@ pub fn node_graph_surface_paint_only<H: UiHost + 'static>(
         .get_model_cloned(&nodes_cache, Invalidation::Paint)
         .unwrap_or_default();
     {
-        let key = nodes_cache_key(graph_rev, view_for_paint.zoom, node_origin, draw_order_hash);
+        let derived_geometry_key = derived_cache_value.key.as_ref().map(|k| k.0).unwrap_or(0);
+        let key = nodes_cache_key(
+            graph_rev,
+            view_for_paint.zoom,
+            node_origin,
+            draw_order_hash,
+            derived_geometry_key,
+        );
         if nodes_cache_value.key != Some(key) {
             let draws = if let Some(geom) = derived_cache_value.geom.as_deref() {
                 let mut out = Vec::<NodeRectDraw>::new();
@@ -1326,7 +1464,14 @@ pub fn node_graph_surface_paint_only<H: UiHost + 'static>(
         .get_model_cloned(&edges_cache, Invalidation::Paint)
         .unwrap_or_default();
     {
-        let key = edges_cache_key(graph_rev, view_for_paint.zoom, node_origin, draw_order_hash);
+        let derived_geometry_key = derived_cache_value.key.as_ref().map(|k| k.0).unwrap_or(0);
+        let key = edges_cache_key(
+            graph_rev,
+            view_for_paint.zoom,
+            node_origin,
+            draw_order_hash,
+            derived_geometry_key,
+        );
         if edges_cache_value.key != Some(key) {
             let geom_for_edges = derived_cache_value
                 .geom
@@ -1478,7 +1623,7 @@ pub fn node_graph_surface_paint_only<H: UiHost + 'static>(
     let edges_paint_ok =
         edges_paint_total > 0 && edges_paint_drawn > 0 && edges_paint_missing_ports == 0;
     let semantics_value: Arc<str> = Arc::from(format!(
-        "panning {panning}; marquee_active:{marquee_active}; node_drag_armed:{node_drag_armed}; node_dragging:{node_dragging}; hovered_node:{hovered}; selected_nodes:{selected_nodes_len}; grid_cached:{grid_cached}; grid_rebuilds:{}; geom_cached:{geom_cached}; geom_rebuilds:{}; nodes_cached:{nodes_cached}; nodes_rebuilds:{}; edges_cached:{edges_cached}; edges_rebuilds:{}; edges_paint_total:{edges_paint_total}; edges_paint_drawn:{edges_paint_drawn}; edges_paint_culled:{edges_paint_culled}; edges_paint_dragged:{edges_paint_dragged}; edges_paint_missing_ports:{edges_paint_missing_ports}; edges_paint_ok:{edges_paint_ok}; view_pan:{:.2},{:.2}; view_zoom:{:.4}; portal_fit_count:{portal_fit_count}; portal_fit_pending:{portal_fit_pending}; portal_union_wh:{portal_union_w:.2}x{portal_union_h:.2}; portal_bounds_entries:{portal_bounds_entries}; portals_disabled:{portals_disabled};",
+        "panning {panning}; marquee_active:{marquee_active}; node_drag_armed:{node_drag_armed}; node_dragging:{node_dragging}; hovered_node:{hovered}; selected_nodes:{selected_nodes_len}; grid_cached:{grid_cached}; grid_rebuilds:{}; geom_cached:{geom_cached}; geom_rebuilds:{}; nodes_cached:{nodes_cached}; nodes_rebuilds:{}; edges_cached:{edges_cached}; edges_rebuilds:{}; edges_paint_total:{edges_paint_total}; edges_paint_drawn:{edges_paint_drawn}; edges_paint_culled:{edges_paint_culled}; edges_paint_dragged:{edges_paint_dragged}; edges_paint_missing_ports:{edges_paint_missing_ports}; edges_paint_ok:{edges_paint_ok}; paint_overrides_rev:{paint_overrides_rev}; view_pan:{:.2},{:.2}; view_zoom:{:.4}; portal_fit_count:{portal_fit_count}; portal_fit_pending:{portal_fit_pending}; portal_union_wh:{portal_union_w:.2}x{portal_union_h:.2}; portal_bounds_entries:{portal_bounds_entries}; portals_disabled:{portals_disabled};",
         grid_cache_value.rebuilds,
         derived_cache_value.rebuilds,
         nodes_cache_value.rebuilds,
@@ -1517,9 +1662,9 @@ pub fn node_graph_surface_paint_only<H: UiHost + 'static>(
             let view_escape = view_state.clone();
             let portal_bounds_for_fit = portal_bounds_store.clone();
             let portal_debug_for_keys = portal_debug_flags.clone();
-            let diag_keys_enabled = std::env::var("FRET_DIAG")
-                .ok()
-                .is_some_and(|v| !v.trim().is_empty() && v.trim() != "0");
+            let diag_keys_enabled = diag_keys_enabled;
+            let diag_paint_overrides_for_keys = diag_paint_overrides_value.clone();
+            let diag_paint_overrides_enabled_for_keys = diag_paint_overrides_enabled.clone();
             let on_key_down_capture: OnKeyDown = Arc::new(
                 move |host: &mut dyn fret_ui::action::UiFocusActionHost,
                       action_cx: fret_ui::action::ActionCx,
@@ -1718,6 +1863,85 @@ pub fn node_graph_surface_paint_only<H: UiHost + 'static>(
                         let _ = host.models_mut().update(&portal_debug_for_keys, |st| {
                             st.disable_portals = false;
                         });
+                        host.request_redraw(action_cx.window);
+                        return true;
+                    }
+
+                    if diag_keys_enabled && key.key == fret_core::KeyCode::Digit6 {
+                        let enable_next = host
+                            .models_mut()
+                            .read(&diag_paint_overrides_enabled_for_keys, |st| *st)
+                            .ok()
+                            .unwrap_or(false);
+                        let enable_next = !enable_next;
+                        let _ = host
+                            .models_mut()
+                            .update(&diag_paint_overrides_enabled_for_keys, |st| {
+                                *st = enable_next;
+                            });
+
+                        let (edge_id, node_id) = host
+                            .models_mut()
+                            .read(&graph_debug, |g| {
+                                let edge = g.edges.keys().next().copied();
+                                let node = g
+                                    .nodes
+                                    .iter()
+                                    .find_map(|(id, n)| (!n.hidden).then_some(*id));
+                                (edge, node)
+                            })
+                            .ok()
+                            .unwrap_or((None, None));
+
+                        if let Some(edge_id) = edge_id {
+                            if enable_next {
+                                diag_paint_overrides_for_keys.set_edge_override(
+                                    edge_id,
+                                    Some(
+                                        crate::ui::paint_overrides::EdgePaintOverrideV1 {
+                                            dash: Some(DashPatternV1::new(
+                                                Px(8.0),
+                                                Px(4.0),
+                                                Px(0.0),
+                                            )),
+                                            stroke_width_mul: Some(1.6),
+                                            stroke_paint: Some(
+                                                fret_core::scene::Paint::Solid(Color::from_srgb_hex_rgb(
+                                                    0xff_3b_30,
+                                                ))
+                                                .into(),
+                                            ),
+                                        }
+                                        .normalized(),
+                                    ),
+                                );
+                            } else {
+                                diag_paint_overrides_for_keys.set_edge_override(edge_id, None);
+                            }
+                        }
+
+                        if let Some(node_id) = node_id {
+                            if enable_next {
+                                diag_paint_overrides_for_keys.set_node_override(
+                                    node_id,
+                                    Some(
+                                        crate::ui::paint_overrides::NodePaintOverrideV1 {
+                                            body_background: Some(
+                                                fret_core::scene::Paint::Solid(Color::from_srgb_hex_rgb(
+                                                    0x1c_2b_3a,
+                                                ))
+                                                .into(),
+                                            ),
+                                            ..Default::default()
+                                        }
+                                        .normalized(),
+                                    ),
+                                );
+                            } else {
+                                diag_paint_overrides_for_keys.set_node_override(node_id, None);
+                            }
+                        }
+
                         host.request_redraw(action_cx.window);
                         return true;
                     }
@@ -2436,6 +2660,7 @@ pub fn node_graph_surface_paint_only<H: UiHost + 'static>(
                 let style_tokens_for_paint = style_tokens.clone();
                 let selected_nodes_for_paint = selected_nodes.clone();
                 let node_drag_for_paint = node_drag_value.clone();
+                let paint_overrides_for_paint = paint_overrides_ref.clone();
                 let canvas = cx.canvas(canvas, move |p| {
                     paint_debug_grid_cached(p, view_for_paint, grid_ops.clone());
                     paint_nodes_cached(
@@ -2447,6 +2672,7 @@ pub fn node_graph_surface_paint_only<H: UiHost + 'static>(
                         hovered_node_value,
                         selected_nodes_for_paint.as_slice(),
                         node_drag_for_paint.as_ref(),
+                        paint_overrides_for_paint.as_deref(),
                     );
                     paint_edges_cached(
                         p,
@@ -2456,6 +2682,7 @@ pub fn node_graph_surface_paint_only<H: UiHost + 'static>(
                         geom_for_paint.clone(),
                         node_drag_for_paint.as_ref(),
                         &style_tokens_for_paint,
+                        paint_overrides_for_paint.as_deref(),
                     );
                 });
 

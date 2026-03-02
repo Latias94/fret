@@ -212,6 +212,37 @@ fn key_down_dispatches_capture_then_bubble() {
 }
 
 #[test]
+fn key_down_dispatches_capture_then_bubble_under_stale_parent_pointers() {
+    let log = PhaseLog {
+        entries: Arc::new(Mutex::new(Vec::new())),
+    };
+    let (mut app, mut ui, mut services, _root, child) = setup_ui(log.clone(), false);
+    ui.set_focus(Some(child));
+
+    ui.nodes.get_mut(child).unwrap().parent = None;
+
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &Event::KeyDown {
+            key: fret_core::KeyCode::KeyK,
+            modifiers: fret_core::Modifiers::default(),
+            repeat: false,
+        },
+    );
+
+    assert_eq!(
+        log.take(),
+        vec![
+            (fret_runtime::InputDispatchPhase::Capture, "root"),
+            (fret_runtime::InputDispatchPhase::Capture, "child"),
+            (fret_runtime::InputDispatchPhase::Bubble, "child"),
+            (fret_runtime::InputDispatchPhase::Bubble, "root"),
+        ]
+    );
+}
+
+#[test]
 fn key_up_dispatches_capture_then_bubble() {
     let log = PhaseLog {
         entries: Arc::new(Mutex::new(Vec::new())),

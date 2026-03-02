@@ -541,7 +541,7 @@ fn layout_only_shell(cx: &mut ElementContext<'_, App>, max_w: Px, body: AnyEleme
             LayoutRefinement::default().w_full().min_w_0().max_w(max_w),
         )
     });
-    cx.container(props, move |_cx| [body])
+    cx.container(props, move |cx| [centered(cx, body)])
 }
 
 fn auto_tabs_test_id_prefix(title: &'static str, title_test_id: Option<&'static str>) -> Arc<str> {

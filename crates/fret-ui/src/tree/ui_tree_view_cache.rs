@@ -155,6 +155,35 @@ impl<H: UiHost> UiTree<H> {
         }
     }
 
+    pub(in crate::tree) fn mark_view_cache_roots_needs_rerender_from_snapshot(
+        &mut self,
+        start: NodeId,
+        snapshot: Option<&UiDispatchSnapshot>,
+        source: UiDebugInvalidationSource,
+        detail: UiDebugInvalidationDetail,
+    ) {
+        if !self.view_cache_active() {
+            return;
+        }
+
+        let mut current = Some(start);
+        while let Some(id) = current {
+            let next = match snapshot {
+                Some(snapshot) => snapshot.parent.get(id).copied().flatten(),
+                None => self.nodes.get(id).and_then(|n| n.parent),
+            };
+
+            if let Some(n) = self.nodes.get_mut(id)
+                && n.view_cache.enabled
+            {
+                n.view_cache_needs_rerender = true;
+                self.mark_cache_root_dirty(id, source, detail);
+            }
+
+            current = next;
+        }
+    }
+
     /// Mark the nearest view-cache root as "needs rerender" without forcing a layout invalidation walk.
     ///
     /// This is intended for barrier-driven widgets (virtual lists, scroll content, etc.) that can
@@ -357,5 +386,7 @@ impl<H: UiHost> UiTree<H> {
             );
             self.update_invalidation_counters(prev, next);
         }
+
+        self.rebuild_subtree_layout_dirty_counts_and_propagate(root);
     }
 }

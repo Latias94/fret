@@ -42,101 +42,59 @@ pub(super) fn preview_dropdown_menu(
             DocSection::new("Demo", demo)
                 .max_w(Px(760.0))
                 .test_id_prefix("ui-gallery-dropdown-menu-demo")
-                .code_rust_from_file_region(
-                    include_str!("../snippets/dropdown_menu/demo.rs"),
-                    "example",
-                ),
+                .code_rust_from_file_region(snippets::demo::SOURCE, "example"),
             DocSection::new("Parts", parts)
                 .max_w(Px(760.0))
                 .test_id_prefix("ui-gallery-dropdown-menu-parts")
-                .code_rust_from_file_region(
-                    include_str!("../snippets/dropdown_menu/parts.rs"),
-                    "example",
-                ),
+                .code_rust_from_file_region(snippets::parts::SOURCE, "example"),
             DocSection::new("Basic", basic)
                 .max_w(Px(760.0))
                 .test_id_prefix("ui-gallery-dropdown-menu-basic")
-                .code_rust_from_file_region(
-                    include_str!("../snippets/dropdown_menu/basic.rs"),
-                    "example",
-                ),
+                .code_rust_from_file_region(snippets::basic::SOURCE, "example"),
             DocSection::new("Submenu", submenu)
                 .max_w(Px(760.0))
                 .test_id_prefix("ui-gallery-dropdown-menu-submenu")
-                .code_rust_from_file_region(
-                    include_str!("../snippets/dropdown_menu/submenu.rs"),
-                    "example",
-                ),
+                .code_rust_from_file_region(snippets::submenu::SOURCE, "example"),
             DocSection::new("Shortcuts", shortcuts)
                 .max_w(Px(760.0))
                 .test_id_prefix("ui-gallery-dropdown-menu-shortcuts")
-                .code_rust_from_file_region(
-                    include_str!("../snippets/dropdown_menu/shortcuts.rs"),
-                    "example",
-                ),
+                .code_rust_from_file_region(snippets::shortcuts::SOURCE, "example"),
             DocSection::new("Icons", icons)
                 .max_w(Px(760.0))
                 .test_id_prefix("ui-gallery-dropdown-menu-icons")
-                .code_rust_from_file_region(
-                    include_str!("../snippets/dropdown_menu/icons.rs"),
-                    "example",
-                ),
+                .code_rust_from_file_region(snippets::icons::SOURCE, "example"),
             DocSection::new("Checkboxes", checkboxes)
                 .max_w(Px(760.0))
                 .test_id_prefix("ui-gallery-dropdown-menu-checkboxes")
-                .code_rust_from_file_region(
-                    include_str!("../snippets/dropdown_menu/checkboxes.rs"),
-                    "example",
-                ),
+                .code_rust_from_file_region(snippets::checkboxes::SOURCE, "example"),
             DocSection::new("Checkboxes Icons", checkboxes_icons)
                 .max_w(Px(760.0))
                 .test_id_prefix("ui-gallery-dropdown-menu-checkboxes-icons")
-                .code_rust_from_file_region(
-                    include_str!("../snippets/dropdown_menu/checkboxes_icons.rs"),
-                    "example",
-                ),
+                .code_rust_from_file_region(snippets::checkboxes_icons::SOURCE, "example"),
             DocSection::new("Radio Group", radio_group)
                 .max_w(Px(760.0))
                 .test_id_prefix("ui-gallery-dropdown-menu-radio-group")
-                .code_rust_from_file_region(
-                    include_str!("../snippets/dropdown_menu/radio_group.rs"),
-                    "example",
-                ),
+                .code_rust_from_file_region(snippets::radio_group::SOURCE, "example"),
             DocSection::new("Radio Icons", radio_icons)
                 .max_w(Px(760.0))
                 .test_id_prefix("ui-gallery-dropdown-menu-radio-icons")
-                .code_rust_from_file_region(
-                    include_str!("../snippets/dropdown_menu/radio_icons.rs"),
-                    "example",
-                ),
+                .code_rust_from_file_region(snippets::radio_icons::SOURCE, "example"),
             DocSection::new("Destructive", destructive)
                 .max_w(Px(760.0))
                 .test_id_prefix("ui-gallery-dropdown-menu-destructive")
-                .code_rust_from_file_region(
-                    include_str!("../snippets/dropdown_menu/destructive.rs"),
-                    "example",
-                ),
+                .code_rust_from_file_region(snippets::destructive::SOURCE, "example"),
             DocSection::new("Avatar", avatar)
                 .max_w(Px(760.0))
                 .test_id_prefix("ui-gallery-dropdown-menu-avatar")
-                .code_rust_from_file_region(
-                    include_str!("../snippets/dropdown_menu/avatar.rs"),
-                    "example",
-                ),
+                .code_rust_from_file_region(snippets::avatar::SOURCE, "example"),
             DocSection::new("Complex", complex)
                 .max_w(Px(760.0))
                 .test_id_prefix("ui-gallery-dropdown-menu-complex")
-                .code_rust_from_file_region(
-                    include_str!("../snippets/dropdown_menu/complex.rs"),
-                    "example",
-                ),
+                .code_rust_from_file_region(snippets::complex::SOURCE, "example"),
             DocSection::new("RTL", rtl)
                 .max_w(Px(760.0))
                 .test_id_prefix("ui-gallery-dropdown-menu-rtl")
-                .code_rust_from_file_region(
-                    include_str!("../snippets/dropdown_menu/rtl.rs"),
-                    "example",
-                ),
+                .code_rust_from_file_region(snippets::rtl::SOURCE, "example"),
             DocSection::new("Notes", notes).max_w(Px(820.0)),
         ],
     );

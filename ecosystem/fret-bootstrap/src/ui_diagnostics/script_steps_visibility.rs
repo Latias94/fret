@@ -114,8 +114,8 @@ pub(super) fn handle_ensure_visible_step(
     let open_window_count = app
         .global::<fret_runtime::WindowInputContextService>()
         .map(|ctx_svc| ctx_svc.window_count() as u32)
-        .filter(|n| *n > 0)
-        .unwrap_or_else(|| svc.known_windows.len() as u32);
+        .unwrap_or(0)
+        .max(1);
     if eval_predicate(
         snapshot,
         window_bounds,

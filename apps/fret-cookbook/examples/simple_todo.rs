@@ -214,21 +214,7 @@ impl MvuProgram for SimpleTodoProgram {
         .max_w(Px(560.0))
         .into_element(cx);
 
-        ui::container(cx, |cx| {
-            [ui::v_flex(cx, |_cx| [card])
-                .w_full()
-                .h_full()
-                .justify_center()
-                .items_center()
-                .into_element(cx)]
-        })
-        .bg(ColorRef::Color(theme.color_token("muted")))
-        .p(Space::N6)
-        .w_full()
-        .h_full()
-        .into_element(cx)
-        .test_id(TEST_ID_ROOT)
-        .into()
+        fret_cookbook::scaffold::centered_page_muted(cx, TEST_ID_ROOT, card).into()
     }
 }
 

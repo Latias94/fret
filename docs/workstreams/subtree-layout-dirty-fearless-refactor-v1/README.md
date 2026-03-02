@@ -1,8 +1,8 @@
 # Subtree Layout Dirty Aggregation (Fearless Refactor v1)
 
-Status: **draft**
+Status: **in progress**
 
-Last updated: **2026-03-01**
+Last updated: **2026-03-02**
 
 ## Motivation
 
@@ -39,6 +39,35 @@ reliable to answer:
 
 - Primary: `crates/fret-ui` invalidation bookkeeping + scroll layout fast paths.
 - Secondary: view-cache repair passes and diagnostics (optional, as needed for correctness).
+
+## Current status (v1)
+
+Implemented the aggregation counter + bookkeeping and migrated the scroll “extent edge” workaround
+from a deep DFS scan to an O(1) subtree query.
+
+Evidence anchors:
+
+- Node storage:
+  - `crates/fret-ui/src/tree/node_storage.rs`
+  - `crates/fret-ui/src/tree/ui_tree_subtree_layout_dirty.rs`
+- Invalidation marking + truncation behavior:
+  - `crates/fret-ui/src/tree/ui_tree_invalidation_walk/mark.rs`
+  - `crates/fret-ui/src/tree/ui_tree_invalidation.rs`
+- Layout clearing:
+  - `crates/fret-ui/src/tree/layout/node.rs`
+- Structural mutations (attach/detach):
+  - `crates/fret-ui/src/tree/ui_tree_mutation/core.rs`
+  - `crates/fret-ui/src/tree/ui_tree_mutation/mount.rs`
+  - `crates/fret-ui/src/tree/ui_tree_mutation/barrier.rs`
+  - `crates/fret-ui/src/tree/ui_tree_mutation/remove.rs`
+- Scroll consumer:
+  - `crates/fret-ui/src/declarative/host_widget/layout/scrolling.rs`
+
+Runtime flags / validation:
+
+- `FRET_UI_LAYOUT_SUBTREE_DIRTY_AGGREGATION=0` disables the mechanism (default-on).
+- `FRET_UI_LAYOUT_SUBTREE_DIRTY_AGGREGATION_VALIDATE=1` enables drift validation.
+- `FRET_UI_LAYOUT_SUBTREE_DIRTY_AGGREGATION_VALIDATE_PANIC=1` panics on drift.
 
 ## Documents
 

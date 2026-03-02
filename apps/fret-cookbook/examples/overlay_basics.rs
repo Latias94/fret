@@ -28,7 +28,6 @@ impl MvuProgram for OverlayBasicsProgram {
         state: &mut Self::State,
         _msg: &mut MessageRouter<Self::Message>,
     ) -> Elements {
-        let theme = Theme::global(&*cx.app).snapshot();
         let dialog_open_for_dialog = state.dialog_open.clone();
         let dialog_open_for_trigger = state.dialog_open.clone();
         let dialog_open_for_footer = state.dialog_open.clone();
@@ -91,19 +90,7 @@ impl MvuProgram for OverlayBasicsProgram {
             },
         );
 
-        ui::container(cx, |cx| {
-            [ui::v_flex(cx, |_cx| [dialog])
-                .gap(Space::N6)
-                .items_center()
-                .justify_center()
-                .size_full()
-                .into_element(cx)]
-        })
-        .bg(ColorRef::Color(theme.color_token("muted")))
-        .p(Space::N6)
-        .into_element(cx)
-        .test_id(TEST_ID_ROOT)
-        .into()
+        fret_cookbook::scaffold::centered_page_muted(cx, TEST_ID_ROOT, dialog).into()
     }
 }
 

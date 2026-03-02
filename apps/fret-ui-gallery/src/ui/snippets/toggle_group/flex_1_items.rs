@@ -1,3 +1,5 @@
+pub const SOURCE: &str = include_str!("flex_1_items.rs");
+
 // region: example
 use fret_ui_shadcn::{self as shadcn, prelude::*};
 

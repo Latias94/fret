@@ -801,7 +801,7 @@ Supported selectors (v1 MVP):
 - `type_text`
 - `ime` (schema v2 only; deterministic IME event injection for composition/commit/preedit)
 - `reset_diagnostics` (clears the diagnostics ring buffer for the current window; useful to avoid mount/settle frames in perf captures)
-- `wait_frames`
+- `wait_frames` (schema v2 only: optional `window` target)
 - `wait_until` (schema v2 only: optional `window` target)
 - `wait_shortcut_routing_trace` (schema v2 only; wait until the shortcut routing trace contains a matching entry)
 - `wait_overlay_placement_trace` (schema v2 only; wait until overlay placement trace contains a matching entry)
@@ -1345,3 +1345,4 @@ Notes:
 **Multiple windows**
 
 - bundles are per-window; scripts currently execute against the first window that picks up the pending script.
+- for z-order / overlap cases during cross-window drags, prefer targeting `wait_frames.window` to a window that is actively producing frames (e.g. `first_seen`).

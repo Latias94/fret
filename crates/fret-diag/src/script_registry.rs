@@ -80,6 +80,17 @@ impl PromotedScriptRegistry {
         self.entries.iter().find(|e| e.id == id)
     }
 
+    pub(crate) fn resolve_suite(&self, suite: &str) -> Vec<&PromotedScriptRegistryEntry> {
+        let suite = suite.trim();
+        if suite.is_empty() {
+            return Vec::new();
+        }
+        self.entries
+            .iter()
+            .filter(|e| e.suite_memberships.iter().any(|s| s == suite))
+            .collect()
+    }
+
     pub(crate) fn suggest_ids(&self, query: &str, max: usize) -> Vec<String> {
         if query.trim().is_empty() || max == 0 {
             return Vec::new();
@@ -171,6 +182,19 @@ mod tests {
         path
     }
 
+    fn write_registry_with_suites(dir: &Path, scripts: &[(&str, &str, &[&str])]) -> PathBuf {
+        let path = dir.join("index.json");
+        let payload = serde_json::json!({
+            "scripts": scripts.iter().map(|(id, path, suites)| serde_json::json!({
+                "id": id,
+                "path": path,
+                "suite_memberships": suites,
+            })).collect::<Vec<_>>(),
+        });
+        std::fs::write(&path, serde_json::to_string_pretty(&payload).unwrap()).unwrap();
+        path
+    }
+
     #[test]
     fn normalize_script_id_query_strips_json_suffix() {
         assert_eq!(
@@ -210,6 +234,38 @@ mod tests {
             .unwrap();
         assert_eq!(resolved.path, "tools/diag-scripts/a.json");
         assert!(registry.resolve_id("missing").is_none());
+    }
+
+    #[test]
+    fn registry_resolve_suite_filters_by_membership() {
+        let dir = std::env::temp_dir().join(format!(
+            "fret-diag-registry-suite-{}-{}",
+            crate::util::now_unix_ms(),
+            std::process::id()
+        ));
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).unwrap();
+
+        let registry_path = write_registry_with_suites(
+            &dir,
+            &[
+                (
+                    "ui-gallery-a",
+                    "tools/diag-scripts/a.json",
+                    &["ui-gallery", "suite-a"],
+                ),
+                ("ui-gallery-b", "tools/diag-scripts/b.json", &["suite-b"]),
+                ("ui-gallery-c", "tools/diag-scripts/c.json", &[]),
+            ],
+        );
+        let registry = PromotedScriptRegistry::load_from_path(&registry_path).unwrap();
+
+        let suite_a = registry.resolve_suite("suite-a");
+        assert_eq!(suite_a.len(), 1);
+        assert_eq!(suite_a[0].id, "ui-gallery-a");
+
+        let empty = registry.resolve_suite("missing-suite");
+        assert!(empty.is_empty());
     }
 
     #[test]

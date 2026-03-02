@@ -29,17 +29,11 @@ pub(super) fn preview_data_table(
         vec![
             DocSection::new("Guide Demo", demo)
                 .max_w(Px(900.0))
-                .code_rust_from_file_region(
-                    include_str!("../snippets/data_table/guide_demo.rs"),
-                    "example",
-                ),
+                .code_rust_from_file_region(snippets::guide_demo::SOURCE, "example"),
             DocSection::new("Code", code_preview)
                 .max_w(Px(900.0))
                 .test_id_prefix("ui-gallery-data-table-code")
-                .code_rust_from_file_region(
-                    include_str!("../snippets/data_table/code_outline.rs"),
-                    "example",
-                ),
+                .code_rust_from_file_region(snippets::code_outline::SOURCE, "example"),
             DocSection::new("Notes", notes_stack).max_w(Px(900.0)),
         ],
     );

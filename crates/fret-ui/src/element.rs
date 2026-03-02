@@ -2520,6 +2520,7 @@ impl ScrollAxis {
 pub struct ScrollState {
     pub scroll_handle: crate::scroll::ScrollHandle,
     pub(crate) intrinsic_measure_cache: Option<ScrollIntrinsicMeasureCache>,
+    pub(crate) pending_extent_probe: bool,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

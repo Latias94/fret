@@ -32,51 +32,33 @@ pub(super) fn preview_button(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement
         vec![
             DocSection::new("Variants", variants)
                 .description("Default shadcn button variants.")
-                .code_rust_from_file_region(
-                    include_str!("../snippets/button/variants.rs"),
-                    "example",
-                ),
+                .code_rust_from_file_region(snippets::variants::SOURCE, "example"),
             DocSection::new("Link (render)", link_render)
                 .description(
                     "Render the button with link semantics (shadcn `asChild`-style composition).",
                 )
-                .code_rust_from_file_region(
-                    include_str!("../snippets/button/link_render.rs"),
-                    "example",
-                ),
+                .code_rust_from_file_region(snippets::link_render::SOURCE, "example"),
             DocSection::new("Size", size)
                 .description("Text and icon-only sizes.")
-                .code_rust_from_file_region(include_str!("../snippets/button/size.rs"), "example"),
+                .code_rust_from_file_region(snippets::size::SOURCE, "example"),
             DocSection::new("Icon", icon_only)
                 .description("Icon-only buttons.")
-                .code_rust_from_file_region(include_str!("../snippets/button/icon.rs"), "example"),
+                .code_rust_from_file_region(snippets::icon::SOURCE, "example"),
             DocSection::new("With Icon", with_icon)
                 .description("Compose an icon + text label.")
-                .code_rust_from_file_region(
-                    include_str!("../snippets/button/with_icon.rs"),
-                    "example",
-                ),
+                .code_rust_from_file_region(snippets::with_icon::SOURCE, "example"),
             DocSection::new("Loading", loading)
                 .description("Spinner + label for in-flight actions.")
-                .code_rust_from_file_region(
-                    include_str!("../snippets/button/loading.rs"),
-                    "example",
-                ),
+                .code_rust_from_file_region(snippets::loading::SOURCE, "example"),
             DocSection::new("Rounded", rounded)
                 .description("Use a fully-rounded chrome for pill-shaped buttons.")
-                .code_rust_from_file_region(
-                    include_str!("../snippets/button/rounded.rs"),
-                    "example",
-                ),
+                .code_rust_from_file_region(snippets::rounded::SOURCE, "example"),
             DocSection::new("Button Group", button_group)
                 .description("A grouped set of buttons with shared borders and radii.")
-                .code_rust_from_file_region(
-                    include_str!("../snippets/button/button_group.rs"),
-                    "example",
-                ),
+                .code_rust_from_file_region(snippets::button_group::SOURCE, "example"),
             DocSection::new("RTL", rtl)
                 .description("Button layout should work under an RTL direction provider.")
-                .code_rust_from_file_region(include_str!("../snippets/button/rtl.rs"), "example"),
+                .code_rust_from_file_region(snippets::rtl::SOURCE, "example"),
             DocSection::new("Notes", notes).description("Usage notes."),
         ],
     );

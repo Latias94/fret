@@ -23,6 +23,10 @@ The runtime traversal mechanism described here is **largely implemented** in `cr
 - FocusScope trap wiring: declarative `FocusScopeProps { trap_focus: true }` traps Tab traversal
   inside its subtree, and prevents focus requests that would move focus outside while the trap is
   active.
+  - Implementation note: containment checks during dispatch must treat **reachability via child
+    edges** (from active layer roots) as authoritative, and must not rely on retained `parent`
+    pointers being perfectly up to date. The current implementation uses a dispatch snapshot forest
+    built from child edges for scope membership and descendant queries.
 
 Current implementation entry points:
 

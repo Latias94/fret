@@ -21,6 +21,24 @@ pub struct UiDebugScrollNodeTelemetry {
     pub offset: fret_core::Point,
     pub viewport: fret_core::Size,
     pub content: fret_core::Size,
+    pub observed_extent: Option<fret_core::Size>,
+    pub overflow_observation: Option<UiDebugScrollOverflowObservationTelemetry>,
+}
+
+#[derive(Debug, Clone, Copy)]
+pub struct UiDebugScrollOverflowObservationTelemetry {
+    pub extent_may_be_stale: bool,
+    pub barrier_roots: u8,
+    pub wrapper_peel_budget: u8,
+    pub wrapper_peeled_max: u8,
+    pub wrapper_peel_budget_hit: bool,
+    pub immediate_children_visited: u16,
+    pub immediate_children_skipped_absolute: u16,
+    pub deep_scan_enabled: bool,
+    pub deep_scan_budget_nodes: u16,
+    pub deep_scan_visited: u16,
+    pub deep_scan_budget_hit: bool,
+    pub deep_scan_skipped_absolute: u16,
 }
 
 #[derive(Debug, Clone, Copy)]

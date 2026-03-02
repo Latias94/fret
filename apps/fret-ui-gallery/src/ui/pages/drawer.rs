@@ -38,30 +38,24 @@ pub(super) fn preview_drawer(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement
             DocSection::new("Demo", demo)
                 .description("Basic drawer with header copy and footer actions.")
                 .test_id_prefix("ui-gallery-drawer")
-                .code_rust_from_file_region(include_str!("../snippets/drawer/demo.rs"), "example"),
+                .code_rust_from_file_region(snippets::demo::SOURCE, "example"),
             DocSection::new("Snap Points", snap_points)
                 .description("Drag settles to the nearest snap point (Vaul-style).")
-                .code_rust_from_file_region(include_str!("../snippets/drawer/snap_points.rs"), "example"),
+                .code_rust_from_file_region(snippets::snap_points::SOURCE, "example"),
             DocSection::new("Scrollable Content", scrollable_content)
                 .description("Keep actions visible while the content area scrolls.")
-                .code_rust_from_file_region(
-                    include_str!("../snippets/drawer/scrollable_content.rs"),
-                    "example",
-                ),
+                .code_rust_from_file_region(snippets::scrollable_content::SOURCE, "example"),
             DocSection::new("Sides", sides)
                 .description("Use the `side` prop to control drawer placement.")
-                .code_rust_from_file_region(include_str!("../snippets/drawer/sides.rs"), "example"),
+                .code_rust_from_file_region(snippets::sides::SOURCE, "example"),
             DocSection::new("Responsive Dialog", responsive_dialog).descriptions([
                 "Responsive patterns often use Dialog on desktop and Drawer on mobile.",
                 "Gallery renders both branches explicitly for deterministic testing (no viewport switches).",
             ])
-            .code_rust_from_file_region(
-                include_str!("../snippets/drawer/responsive_dialog.rs"),
-                "example",
-            ),
+            .code_rust_from_file_region(snippets::responsive_dialog::SOURCE, "example"),
             DocSection::new("RTL", rtl)
                 .description("Drawer layout should follow right-to-left direction context.")
-                .code_rust_from_file_region(include_str!("../snippets/drawer/rtl.rs"), "example"),
+                .code_rust_from_file_region(snippets::rtl::SOURCE, "example"),
             DocSection::new("Usage", usage)
                 .title_test_id("ui-gallery-section-usage-title")
                 .description("Quick reference for using the drawer recipes."),

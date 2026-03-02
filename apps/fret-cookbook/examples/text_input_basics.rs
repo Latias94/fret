@@ -119,8 +119,6 @@ impl MvuProgram for TextInputBasicsProgram {
         // Attach command handlers to the window's declarative root so Enter/Escape work even when
         // focus is inside the text input node.
         let base_root = cx.root_id();
-
-        let theme = Theme::global(&*cx.app).snapshot();
         let submit_cmd = CommandId::from(CMD_SUBMIT);
         let clear_cmd = CommandId::from(CMD_CLEAR);
 
@@ -206,18 +204,7 @@ impl MvuProgram for TextInputBasicsProgram {
         .max_w(Px(560.0))
         .into_element(cx);
 
-        let root = ui::container(cx, |cx| {
-            [ui::v_flex(cx, |_cx| [card])
-                .gap(Space::N6)
-                .items_center()
-                .justify_center()
-                .size_full()
-                .into_element(cx)]
-        })
-        .bg(ColorRef::Color(theme.color_token("background")))
-        .p(Space::N6)
-        .into_element(cx)
-        .test_id(TEST_ID_ROOT);
+        let root = fret_cookbook::scaffold::centered_page_background(cx, TEST_ID_ROOT, card);
 
         let (on_command, on_command_availability) =
             command_handlers(state.text.clone(), state.submitted_count.clone());

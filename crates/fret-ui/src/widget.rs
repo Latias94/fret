@@ -417,6 +417,7 @@ pub struct LayoutCx<'a, H: UiHost> {
     pub bounds: Rect,
     pub available: Size,
     pub pass_kind: LayoutPassKind,
+    pub overflow_ctx: crate::layout::overflow::LayoutOverflowContext,
     pub scale_factor: f32,
     pub services: &'a mut dyn UiServices,
     pub observe_model: &'a mut dyn FnMut(ModelId, Invalidation),
@@ -424,6 +425,22 @@ pub struct LayoutCx<'a, H: UiHost> {
 }
 
 impl<'a, H: UiHost> LayoutCx<'a, H> {
+    pub fn probe_constraints_for_size(&self, size: Size) -> LayoutConstraints {
+        self.overflow_ctx.probe_constraints_for_size(size)
+    }
+
+    pub fn with_overflow_context<R>(
+        &mut self,
+        overflow_ctx: crate::layout::overflow::LayoutOverflowContext,
+        f: impl FnOnce(&mut Self) -> R,
+    ) -> R {
+        let prev = self.overflow_ctx;
+        self.overflow_ctx = overflow_ctx;
+        let out = f(self);
+        self.overflow_ctx = prev;
+        out
+    }
+
     pub fn theme(&mut self) -> &Theme {
         self.observe_global::<Theme>(Invalidation::Layout);
         Theme::global(&*self.app)
@@ -544,6 +561,7 @@ impl<'a, H: UiHost> LayoutCx<'a, H> {
             bounds,
             self.scale_factor,
             self.pass_kind,
+            self.overflow_ctx,
         )
     }
 
@@ -555,6 +573,7 @@ impl<'a, H: UiHost> LayoutCx<'a, H> {
             bounds,
             self.scale_factor,
             LayoutPassKind::Probe,
+            self.overflow_ctx,
         )
     }
 
