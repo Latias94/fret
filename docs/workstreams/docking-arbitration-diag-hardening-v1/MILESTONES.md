@@ -27,6 +27,8 @@ Status update (2026-03-02, later):
 - M1.2 delivered: cached `test_id` predicate evaluation is bounded by freshness and emits explicit evidence
   (`ecosystem/fret-bootstrap/src/ui_diagnostics/service.rs:297`).
 - M1.3 delivered: `known_window_count_*` predicates use a runner-owned source-of-truth (`crates/fret-runtime/src/runner_window_lifecycle_diagnostics.rs`).
+- M1.4 delivered: Windows/MSVC `docking_arbitration_demo` rebuilds no longer fail with `taffy`-related LNK2019 unresolved
+  externals by forcing `taffy` to compile with a single codegen unit in dev profiles (`Cargo.toml`).
 
 ## M1.4 — Rebuild reliability for docking demos (Windows/MSVC)
 
