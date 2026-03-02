@@ -51,14 +51,15 @@ overrides**:
 ## Known gaps / planned extension points
 
 - Per-edge marker paint binding:
-  - Today markers use `Color` paint. For gradient/material wires, marker appearance needs an
-    explicit policy (e.g. solid endpoint color, or a separate `marker_paint` override).
-- Per-node paint overrides are defined but not yet fully applied to emitted node body/background
-  paint.
+  - Markers reuse the resolved wire `PaintBindingV1` when the eval space is not `StrokeS01`.
+    When the wire uses `StrokeS01`, markers conservatively fall back to the resolved solid edge
+    color because the marker path's stroke parameter is unrelated to the wire's.
+- Per-node paint overrides:
+  - Applied to node body/border/header quads. Additional chrome layers (rings/glows) remain policy
+    via `NodeGraphSkin` / presenter hints.
 - CSS-like escape hatches:
   - ADR 0309 explicitly defers a string-keyed style map; if needed later, it should be layered on
     top of typed overrides with deterministic normalization + fingerprinting.
 - Blueprint-like looks:
   - Achieved by combining `PaintEvalSpaceV1::StrokeS01` gradients/materials with multi-pass
     strokes (glow/outline) expressed via skin/presenter policy rather than mutating `Graph`.
-
