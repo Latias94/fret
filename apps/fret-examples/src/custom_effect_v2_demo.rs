@@ -59,14 +59,16 @@ fn fret_custom_effect(src: vec4<f32>, _uv: vec2<f32>, pos_px: vec2<f32>, params:
 #[derive(Debug)]
 struct DemoEffectPack {
     program: CustomEffectProgramV2,
-    input_image: Option<ImageId>,
+    input_image_filterable: Option<ImageId>,
+    input_image_non_filterable: Option<ImageId>,
 }
 
 impl DemoEffectPack {
     fn new() -> Self {
         Self {
             program: CustomEffectProgramV2::wgsl_utf8(WGSL),
-            input_image: None,
+            input_image_filterable: None,
+            input_image_non_filterable: None,
         }
     }
 }
@@ -74,6 +76,7 @@ impl DemoEffectPack {
 #[derive(Debug)]
 struct CustomEffectV2State {
     enabled: Model<bool>,
+    use_non_filterable_input: Model<bool>,
     sampling: Model<Option<Arc<str>>>,
     sampling_open: Model<bool>,
     uv_span: Model<Vec<f32>>,
@@ -132,7 +135,7 @@ fn register_custom_effect(app: &mut App, effects: &mut dyn fret_core::CustomEffe
 
 fn upload_input_image(app: &mut App, context: &WgpuContext, renderer: &mut Renderer) {
     let size = (64u32, 64u32);
-    let texture = context.device.create_texture(&wgpu::TextureDescriptor {
+    let filterable_texture = context.device.create_texture(&wgpu::TextureDescriptor {
         label: Some("custom_effect_v2_demo input texture"),
         size: wgpu::Extent3d {
             width: size.0,
@@ -162,18 +165,53 @@ fn upload_input_image(app: &mut App, context: &WgpuContext, renderer: &mut Rende
         }
     }
 
-    write_rgba8_texture_region(&context.queue, &texture, (0, 0), size, size.0 * 4, &bytes);
+    write_rgba8_texture_region(
+        &context.queue,
+        &filterable_texture,
+        (0, 0),
+        size,
+        size.0 * 4,
+        &bytes,
+    );
 
-    let view = texture.create_view(&wgpu::TextureViewDescriptor::default());
-    let image = renderer.register_image(ImageDescriptor {
-        view: view.clone(),
+    let view = filterable_texture.create_view(&wgpu::TextureViewDescriptor::default());
+    let filterable_image = renderer.register_image(ImageDescriptor {
+        view,
         size,
         format: wgpu::TextureFormat::Rgba8Unorm,
         color_space: ImageColorSpace::Linear,
         alpha_mode: AlphaMode::Opaque,
     });
+
+    let non_filterable_texture = context.device.create_texture(&wgpu::TextureDescriptor {
+        label: Some("custom_effect_v2_demo non-filterable input texture"),
+        size: wgpu::Extent3d {
+            width: 1,
+            height: 1,
+            depth_or_array_layers: 1,
+        },
+        mip_level_count: 1,
+        sample_count: 1,
+        dimension: wgpu::TextureDimension::D2,
+        // Rgba32Float is a non-filterable float format in wgpu; sampling it with the CustomV2 ABI
+        // (which uses filtering samplers) should deterministically fall back to a 1x1 transparent
+        // texture rather than triggering a validation error.
+        format: wgpu::TextureFormat::Rgba32Float,
+        usage: wgpu::TextureUsages::TEXTURE_BINDING,
+        view_formats: &[],
+    });
+    let view = non_filterable_texture.create_view(&wgpu::TextureViewDescriptor::default());
+    let non_filterable_image = renderer.register_image(ImageDescriptor {
+        view,
+        size: (1, 1),
+        format: wgpu::TextureFormat::Rgba32Float,
+        color_space: ImageColorSpace::Linear,
+        alpha_mode: AlphaMode::Opaque,
+    });
+
     app.with_global_mut(DemoEffectPack::new, |pack, _app| {
-        pack.input_image = Some(image);
+        pack.input_image_filterable = Some(filterable_image);
+        pack.input_image_non_filterable = Some(non_filterable_image);
     });
 }
 
@@ -184,6 +222,7 @@ impl MvuProgram for CustomEffectV2Program {
     fn init(app: &mut App, _window: AppWindowId) -> Self::State {
         Self::State {
             enabled: app.models_mut().insert(true),
+            use_non_filterable_input: app.models_mut().insert(false),
             sampling: app.models_mut().insert(Some(Arc::from("linear"))),
             sampling_open: app.models_mut().insert(false),
             uv_span: app.models_mut().insert(vec![0.25]),
@@ -198,6 +237,9 @@ impl MvuProgram for CustomEffectV2Program {
         match msg {
             Msg::Reset => {
                 let _ = app.models_mut().update(&st.enabled, |v| *v = true);
+                let _ = app
+                    .models_mut()
+                    .update(&st.use_non_filterable_input, |v| *v = false);
                 let _ = app
                     .models_mut()
                     .update(&st.sampling, |v| *v = Some(Arc::from("linear")));
@@ -255,14 +297,28 @@ fn view(
     st: &mut CustomEffectV2State,
     msg: &mut MessageRouter<Msg>,
 ) -> Elements {
-    let pack = cx.app.global::<DemoEffectPack>();
-    let effect = pack.and_then(|p| p.program.id());
-    let input_image = pack.and_then(|p| p.input_image);
+    let (effect, filterable_input_image, non_filterable_input_image) = {
+        let pack = cx.app.global::<DemoEffectPack>();
+        (
+            pack.and_then(|p| p.program.id()),
+            pack.and_then(|p| p.input_image_filterable),
+            pack.and_then(|p| p.input_image_non_filterable),
+        )
+    };
     let Some(effect) = effect else {
         return vec![shadcn::typography::h3(cx, "Custom effects unavailable")].into();
     };
 
     let enabled = cx.watch_model(&st.enabled).layout().copied_or(true);
+    let use_non_filterable_input = cx
+        .watch_model(&st.use_non_filterable_input)
+        .layout()
+        .copied_or(false);
+    let input_image = if use_non_filterable_input {
+        non_filterable_input_image
+    } else {
+        filterable_input_image
+    };
     let sampling_value = cx
         .watch_model(&st.sampling)
         .layout()
@@ -661,6 +717,7 @@ fn inspector(
 
     let reset_cmd = msg.cmd(Msg::Reset);
     let enabled_model = st.enabled.clone();
+    let non_filterable_model = st.use_non_filterable_input.clone();
     let sampling_model = st.sampling.clone();
     let sampling_open_model = st.sampling_open.clone();
     let uv_span_model = st.uv_span.clone();
@@ -825,6 +882,24 @@ fn inspector(
                                         .test_id("custom-effect-v2.enabled")
                                         .into_element(cx),
                                     shadcn::Label::new("Enable").into_element(cx),
+                                ]
+                            },
+                        ),
+                        shadcn::stack::hstack(
+                            cx,
+                            shadcn::stack::HStackProps::default()
+                                .gap(Space::N2)
+                                .items_center(),
+                            |cx| {
+                                vec![
+                                    shadcn::Switch::new(non_filterable_model.clone())
+                                        .a11y_label(
+                                            "Use non-filterable input image (expect fallback)",
+                                        )
+                                        .test_id("custom-effect-v2.use-non-filterable-input")
+                                        .into_element(cx),
+                                    shadcn::Label::new("Non-filterable input (fallback)")
+                                        .into_element(cx),
                                 ]
                             },
                         ),

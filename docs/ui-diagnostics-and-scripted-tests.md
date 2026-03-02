@@ -1186,6 +1186,24 @@ Notes:
   `diag triage` should surface `renderer.custom_effect_v3_requested_but_skipped`, and the source-level degradation counters
   will stay at 0. Prefer the curated suite budgets when you want `CustomV3 sources` degradation signals specifically.
 
+### CustomV2 user-image compatibility suite
+
+This suite exercises the deterministic fallback behavior when a CustomV2 user input image is incompatible with the ABI
+(e.g. a non-filterable format combined with a filtering sampler). The backend should bind a 1x1 transparent fallback
+image instead of triggering a wgpu validation error, and should surface the hint:
+
+- `renderer.custom_effect_v2_user_image_incompatible_fallbacks`
+
+Suite:
+
+- `tools/diag-scripts/suites/cookbook-customv2-basics/`
+  - `custom-effect-v2-non-filterable-input-fallback-screenshot.json`
+
+Run example:
+
+- `cargo run -p fretboard -- diag suite cookbook-customv2-basics --dir target/fret-diag/customv2 --session-auto --launch -- cargo run -p fret-demo --bin custom_effect_v2_demo`
+- `cargo run -p fretboard -- diag triage target/fret-diag/customv2/sessions/<session_id> --warmup-frames 0`
+
 Note:
 
 - The script library is modularized via a taxonomy plus a minimal, generated registry for “promoted” scripts
