@@ -49,14 +49,15 @@ mod sheet;
 mod sidebar;
 mod skeleton;
 mod slider;
+mod sonner;
 mod spinner;
 mod switch;
 mod table;
 mod tabs;
+mod textarea;
 mod toast;
 mod toggle;
 mod toggle_group;
-mod textarea;
 mod tooltip;
 mod typography;
 
@@ -335,6 +336,14 @@ pub(super) fn preview_slider(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement
     slider::preview_slider(cx)
 }
 
+pub(super) fn preview_sonner(
+    cx: &mut ElementContext<'_, App>,
+    last_action: Model<Arc<str>>,
+    sonner_position: Model<shadcn::ToastPosition>,
+) -> Vec<AnyElement> {
+    sonner::preview_sonner(cx, last_action, sonner_position)
+}
+
 pub(super) fn preview_tabs(
     cx: &mut ElementContext<'_, App>,
     value: Model<Option<Arc<str>>>,
@@ -350,11 +359,17 @@ pub(super) fn preview_spinner(cx: &mut ElementContext<'_, App>) -> Vec<AnyElemen
     spinner::preview_spinner(cx)
 }
 
-pub(super) fn preview_switch(cx: &mut ElementContext<'_, App>, model: Model<bool>) -> Vec<AnyElement> {
+pub(super) fn preview_switch(
+    cx: &mut ElementContext<'_, App>,
+    model: Model<bool>,
+) -> Vec<AnyElement> {
     switch::preview_switch(cx, model)
 }
 
-pub(super) fn preview_textarea(cx: &mut ElementContext<'_, App>, value: Model<String>) -> Vec<AnyElement> {
+pub(super) fn preview_textarea(
+    cx: &mut ElementContext<'_, App>,
+    value: Model<String>,
+) -> Vec<AnyElement> {
     textarea::preview_textarea(cx, value)
 }
 
