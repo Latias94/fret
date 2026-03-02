@@ -930,6 +930,7 @@ pub(crate) fn cmd_slice(
                 let req_frame = frame_id;
                 let req_seq = window_snapshot_seq;
 
+                let mut selection_mismatch = false;
                 if req_window.is_some() || req_frame.is_some() || req_seq.is_some() {
                     let got_window = payload.get("window").and_then(|v| v.as_u64());
                     let got_frame = payload.get("frame_id").and_then(|v| v.as_u64());
@@ -939,34 +940,34 @@ pub(crate) fn cmd_slice(
                         || req_frame.is_some_and(|f| Some(f) != got_frame)
                         || req_seq.is_some_and(|s| Some(s) != got_seq)
                     {
-                        return Err(format!(
-                            "found precomputed slice, but it doesn't match the requested selection (requested window={req_window:?} frame_id={req_frame:?} snapshot_seq={req_seq:?}; slice has window={got_window:?} frame_id={got_frame:?} snapshot_seq={got_seq:?})"
-                        ));
+                        selection_mismatch = true;
                     }
                 }
 
-                let out = slice_out
-                    .map(|p| crate::resolve_path(workspace_root, p))
-                    .unwrap_or_else(|| slice_path.clone());
+                if !selection_mismatch {
+                    let out = slice_out
+                        .map(|p| crate::resolve_path(workspace_root, p))
+                        .unwrap_or_else(|| slice_path.clone());
 
-                if out != slice_path {
-                    if let Some(parent) = out.parent() {
-                        std::fs::create_dir_all(parent).map_err(|e| e.to_string())?;
+                    if out != slice_path {
+                        if let Some(parent) = out.parent() {
+                            std::fs::create_dir_all(parent).map_err(|e| e.to_string())?;
+                        }
+                        let pretty = serde_json::to_string_pretty(&payload)
+                            .unwrap_or_else(|_| "{}".to_string());
+                        std::fs::write(&out, pretty.as_bytes()).map_err(|e| e.to_string())?;
                     }
-                    let pretty =
-                        serde_json::to_string_pretty(&payload).unwrap_or_else(|_| "{}".to_string());
-                    std::fs::write(&out, pretty.as_bytes()).map_err(|e| e.to_string())?;
-                }
 
-                if stats_json {
-                    println!(
-                        "{}",
-                        std::fs::read_to_string(&out).map_err(|e| e.to_string())?
-                    );
-                } else {
-                    println!("{}", out.display());
+                    if stats_json {
+                        println!(
+                            "{}",
+                            std::fs::read_to_string(&out).map_err(|e| e.to_string())?
+                        );
+                    } else {
+                        println!("{}", out.display());
+                    }
+                    return Ok(());
                 }
-                return Ok(());
             }
         }
     }
