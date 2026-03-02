@@ -47,8 +47,10 @@ mod shadcn_extras;
 mod sheet;
 mod skeleton;
 mod slider;
+mod switch;
 mod toggle;
 mod toggle_group;
+mod textarea;
 mod tooltip;
 mod typography;
 
@@ -307,6 +309,14 @@ pub(super) fn preview_skeleton(cx: &mut ElementContext<'_, App>) -> Vec<AnyEleme
 
 pub(super) fn preview_slider(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
     slider::preview_slider(cx)
+}
+
+pub(super) fn preview_switch(cx: &mut ElementContext<'_, App>, model: Model<bool>) -> Vec<AnyElement> {
+    switch::preview_switch(cx, model)
+}
+
+pub(super) fn preview_textarea(cx: &mut ElementContext<'_, App>, value: Model<String>) -> Vec<AnyElement> {
+    textarea::preview_textarea(cx, value)
 }
 
 pub(super) fn preview_drawer(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
