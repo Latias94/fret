@@ -49,6 +49,12 @@ const DRAWER_SIDE_PANEL_MAX_WIDTH_PX: Px = Px(384.0);
 #[derive(Debug, Clone, Copy, Default)]
 pub struct DrawerPortal;
 
+impl DrawerPortal {
+    pub fn new() -> Self {
+        Self
+    }
+}
+
 /// shadcn/ui `DrawerOverlay` (v4).
 ///
 /// In upstream, `DrawerOverlay` is a styled overlay element rendered inside the portal. In Fret the
@@ -1343,9 +1349,7 @@ mod tests {
         assert_eq!(app.models().get_copied(&open), Some(false));
 
         let trigger_node = ui.children(root)[0];
-        let trigger_bounds = ui
-            .debug_node_bounds(trigger_node)
-            .expect("trigger bounds");
+        let trigger_bounds = ui.debug_node_bounds(trigger_node).expect("trigger bounds");
         let position = Point::new(
             Px(trigger_bounds.origin.x.0 + trigger_bounds.size.width.0 * 0.5),
             Px(trigger_bounds.origin.y.0 + trigger_bounds.size.height.0 * 0.5),
