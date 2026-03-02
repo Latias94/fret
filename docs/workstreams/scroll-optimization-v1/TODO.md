@@ -5,8 +5,8 @@ Status: Draft
 
 ## Gates-first checklist
 
-- [ ] Confirm baseline scripts pass:
-  - [ ] `ui-gallery-scroll-area-wheel-scroll`
+- [x] Confirm baseline scripts pass:
+  - [x] `ui-gallery-scroll-area-wheel-scroll` (bundle: `target/fret-diag/1772468071457-scroll-area-wheel-scroll`, 2026-03-02)
 - [ ] Add a repro/gate for “thumb drag stability under content growth”.
 - [ ] Add a perf-oriented wheel torture script (no layout solves, no jank threshold yet).
 
@@ -43,4 +43,3 @@ Status: Draft
 - [ ] Validate post-layout observation budgets:
   - [ ] wrapper peel budget hit triggers a probe next frame,
   - [ ] deep scan budget hit triggers a probe next frame.
-

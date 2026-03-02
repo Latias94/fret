@@ -57,6 +57,8 @@ Diagnostics scripts:
 
 - `tools/diag-scripts/ui-gallery/scroll-area/ui-gallery-scroll-area-wheel-scroll.json`
   - Asserts semantics scroll max is finite and wheel moves offset for both axes.
+  - Self-contained navigation via `ui-gallery-nav-search` -> `ui-gallery-nav-scroll-area`.
+  - Suite: `tools/diag-scripts/suites/ui-gallery-scroll-area/` (run: `cargo run -p fretboard -- diag suite ui-gallery-scroll-area --launch -- cargo run -p fret-ui-gallery --release`).
 
 Unit / integration tests (non-exhaustive):
 
@@ -93,6 +95,9 @@ Currently each wheel event can trigger:
 
 This is correct but can be expensive under trackpads (many events per frame).
 
+Concrete GPUI anchor: `accumulated_scroll_delta = accumulated_scroll_delta.coalesce(event.delta)` in
+`repo-ref/zed/crates/gpui/src/elements/list.rs`.
+
 ### 3) Scrollbar drag stability while content grows/measures
 
 Zed/GPUI’s list state includes an explicit “scrollbar drag started/ended” mode that stabilizes the
@@ -101,6 +106,9 @@ content changes.
 
 Fret’s current scrollbar mechanism tracks `dragging_thumb` but does not explicitly lock a baseline
 for content extent during drag.
+
+Concrete GPUI anchor (for parity): `scrollbar_drag_start_height` + `scrollbar_drag_started/ended` +
+`max_offset_for_scrollbar` in `repo-ref/zed/crates/gpui/src/elements/list.rs`.
 
 ## Proposed work items (mechanism-safe)
 
@@ -176,4 +184,3 @@ Keep improving the “avoid pinned extents” behavior:
 - Where should wheel delta coalescing live for Fret (runner vs UI core)?
 - For scrollbar drag baseline: what baseline is sufficient (content height only, or full size)?
 - Should “restrict scroll axis” be a mechanism knob (like GPUI) or remain policy-level?
-
