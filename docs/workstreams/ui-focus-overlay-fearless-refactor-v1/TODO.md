@@ -54,3 +54,5 @@ Tracking doc: `docs/workstreams/ui-focus-overlay-fearless-refactor-v1/DESIGN.md`
   - Script gate (modal barrier blocks wheel): `tools/diag-scripts/ui-gallery/overlay/ui-gallery-modal-barrier-wheel-block.json`
 - [x] Modal focus barrier + focus restore gate (barrier roots present while open; underlay press blocked; focus restores to trigger).
   - Script gate: `tools/diag-scripts/ui-gallery/overlay/ui-gallery-modal-barrier-focus-restore.json`
+- [x] ContextMenu keyboard open + escape focus restore gate (first item active; escape restores focus to trigger).
+  - Script gate: `tools/diag-scripts/ui-gallery/overlay/ui-gallery-context-menu-keyboard-escape-focus-restore.json`

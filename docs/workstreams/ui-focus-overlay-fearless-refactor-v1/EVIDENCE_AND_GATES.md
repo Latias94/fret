@@ -77,3 +77,10 @@ cargo run -p fretboard -- diag run ui-gallery-modal-barrier-wheel-block `
 cargo run -p fretboard -- diag run ui-gallery-modal-barrier-focus-restore `
   --launch -- cargo run -p fret-ui-gallery --release
 ```
+
+- ContextMenu keyboard invocation MUST focus the first item and restore focus to the trigger on escape:
+
+```powershell
+cargo run -p fretboard -- diag run ui-gallery-context-menu-keyboard-escape-focus-restore `
+  --launch -- cargo run -p fret-ui-gallery --release
+```
