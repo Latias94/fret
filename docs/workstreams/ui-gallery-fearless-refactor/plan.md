@@ -73,6 +73,19 @@ Then:
 
 This makes drift impossible.
 
+Tip: prefer exporting a `SOURCE` constant from every snippet module so pages don't hardcode relative
+`include_str!("../snippets/...")` paths (this keeps refactors/moves low-friction):
+
+```rust
+pub const SOURCE: &str = include_str!("demo.rs");
+```
+
+Then in the page:
+
+```rust
+DocSection::new("Demo", demo).code_rust_from_file_region(snippets::demo::SOURCE, "example")
+```
+
 #### Snippet template (recommended)
 
 Each snippet is real, compiled Rust code. Prefer snippets that are **self-contained** (they create
