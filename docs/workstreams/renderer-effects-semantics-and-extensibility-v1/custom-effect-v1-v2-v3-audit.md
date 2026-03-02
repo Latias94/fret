@@ -139,6 +139,25 @@ The `CustomV3` lens WGSL used by the liquid glass demo covers the core AndroidLi
 - Bevel lighting modulation (ported from AndroidLiquidGlass SDF shader)
 - Raw + pyramid sampling path (`src_raw` + `src_pyramid`) for multi-scale “frost”
 
+AndroidLiquidGlass reference anchors (for parity comparisons):
+
+- Rounded-rect refraction + dispersion: `AndroidLiquidGlass/backdrop/src/main/java/com/kyant/backdrop/Shaders.kt`
+  - `RoundedRectRefractionShaderString`
+  - `RoundedRectRefractionWithDispersionShaderString`
+- Lens wiring (uniform setup + negated amount): `AndroidLiquidGlass/backdrop/src/main/java/com/kyant/backdrop/effects/Lens.kt`
+- Bevel modulation reference (SDF shader): `AndroidLiquidGlass/catalog/src/main/java/com/kyant/backdrop/catalog/utils/SdfShader.kt`
+
+Parity notes (intentional / known drifts):
+
+- Dispersion sign: Android’s dispersion intensity uses the signed `(centered.x * centered.y) / (half.x * half.y)` term.
+  The demo WGSL currently uses `abs(...)`, which makes dispersion symmetric across quadrants. This is a look choice; if
+  we want closer parity, drop `abs` (authoring-only change).
+- Corner radii: Android’s rounded-rect shader assumes a per-corner radii vector; the demo uses a uniform radius.
+  This avoids observable drift today, but we should keep the `radius_at(centered, radii)` helper correct for future
+  non-uniform radii authoring.
+- Sampling: Android uses `content.eval()` (hardware bilinear). Fret uses manual bilinear sampling on `textureLoad` so
+  CustomV3 can remain bounded and support non-filterable internal formats deterministically.
+
 Anchors:
 
 - `apps/fret-examples/src/custom_effect_v3_wgsl.rs` (`CUSTOM_EFFECT_V3_LENS_WGSL`)
