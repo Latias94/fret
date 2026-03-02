@@ -408,6 +408,13 @@ Open questions (to resolve before implementation):
 - How do we expose “budget hit / under-observed overflow” telemetry without turning it into a
   perf hazard in release builds?
 
+Implementation status:
+
+- SE-112 (initial wiring) is in progress. A minimal `LayoutOverflowContext` exists and is
+  propagated through `LayoutCx` / `UiTree::layout_in_with_pass_kind`. In the post-layout extents
+  gate, scroll roots install a context that sets the scroll axis probe budget to `MaxContent` so
+  wrapper-heavy subtrees can measure descendants without a hard scroll-axis clamp.
+
 ## Verification Plan (SE-210)
 
 This section defines the minimal set of unit-testable invariants that lock down correctness while

@@ -1392,30 +1392,49 @@ impl ElementHostWidget {
 
         let content_bounds = Rect::new(cx.bounds.origin, Size::new(content_w, content_h));
 
-        if !is_probe_layout {
-            let solve_started = profile_cfg.is_some().then(Instant::now);
-            match cx.children {
-                [child] => {
-                    cx.solve_barrier_child_root_if_needed(*child, content_bounds);
-                }
-                children => {
-                    let roots: Vec<(NodeId, Rect)> =
-                        children.iter().map(|&c| (c, content_bounds)).collect();
-                    cx.solve_barrier_child_roots_if_needed(&roots);
-                }
+        // When running the post-layout extents prototype, install an overflow context so wrapper
+        // widgets can probe their descendants with `MaxContent` on the scroll axis. This is a
+        // prerequisite for making overflow observable in post-layout geometry without relying on
+        // deep unbounded pre-measure passes.
+        let overflow_ctx = if post_layout_extents_mode {
+            let mut ctx = cx.overflow_ctx;
+            if props.axis.scroll_x() {
+                ctx.probe_available_override.width = Some(AvailableSpace::MaxContent);
             }
-            if let Some(started) = solve_started {
-                t_solve_barrier = started.elapsed();
+            if props.axis.scroll_y() {
+                ctx.probe_available_override.height = Some(AvailableSpace::MaxContent);
             }
-        }
+            ctx
+        } else {
+            cx.overflow_ctx
+        };
 
-        let layout_started = profile_cfg.is_some().then(Instant::now);
-        for &child in cx.children {
-            let _ = cx.layout_in(child, content_bounds);
-        }
-        if let Some(started) = layout_started {
-            t_layout_children = started.elapsed();
-        }
+        cx.with_overflow_context(overflow_ctx, |cx| {
+            if !is_probe_layout {
+                let solve_started = profile_cfg.is_some().then(Instant::now);
+                match cx.children {
+                    [child] => {
+                        cx.solve_barrier_child_root_if_needed(*child, content_bounds);
+                    }
+                    children => {
+                        let roots: Vec<(NodeId, Rect)> =
+                            children.iter().map(|&c| (c, content_bounds)).collect();
+                        cx.solve_barrier_child_roots_if_needed(&roots);
+                    }
+                }
+                if let Some(started) = solve_started {
+                    t_solve_barrier = started.elapsed();
+                }
+            }
+
+            let layout_started = profile_cfg.is_some().then(Instant::now);
+            for &child in cx.children {
+                let _ = cx.layout_in(child, content_bounds);
+            }
+            if let Some(started) = layout_started {
+                t_layout_children = started.elapsed();
+            }
+        });
 
         if !is_probe_layout {
             // If we didn't do a deep unbounded probe for `max_child` this frame, scroll extents can

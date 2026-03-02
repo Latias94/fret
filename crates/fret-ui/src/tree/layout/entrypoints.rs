@@ -324,6 +324,7 @@ impl<H: UiHost> UiTree<H> {
                         bounds,
                         scale_factor,
                         pass_kind,
+                        crate::layout::overflow::LayoutOverflowContext::default(),
                     );
 
                     self.flush_viewport_roots_after_root(
@@ -979,7 +980,12 @@ impl<H: UiHost> UiTree<H> {
             // Pending barrier relayouts run as contained solves. Pre-solve each root via the
             // layout engine to avoid widget-local fallback solves (which amplify tail latency by
             // triggering extra out-of-band engine passes).
-            self.solve_barrier_flow_roots_if_needed(app, services, &roots_with_bounds, scale_factor);
+            self.solve_barrier_flow_roots_if_needed(
+                app,
+                services,
+                &roots_with_bounds,
+                scale_factor,
+            );
 
             for (root, bounds) in roots_with_bounds {
                 let _ = self.layout_in_with_pass_kind(
@@ -989,6 +995,7 @@ impl<H: UiHost> UiTree<H> {
                     bounds,
                     scale_factor,
                     pass_kind,
+                    crate::layout::overflow::LayoutOverflowContext::default(),
                 );
                 if self.debug_enabled {
                     self.debug_stats.barrier_relayouts_performed = self
@@ -1072,6 +1079,7 @@ impl<H: UiHost> UiTree<H> {
             bounds,
             scale_factor,
             LayoutPassKind::Final,
+            crate::layout::overflow::LayoutOverflowContext::default(),
         );
         self.flush_viewport_roots_after_root(
             app,
@@ -1128,6 +1136,7 @@ impl<H: UiHost> UiTree<H> {
             bounds,
             scale_factor,
             LayoutPassKind::Final,
+            crate::layout::overflow::LayoutOverflowContext::default(),
         );
         self.flush_viewport_roots_after_root(
             app,
@@ -1156,8 +1165,17 @@ impl<H: UiHost> UiTree<H> {
         bounds: Rect,
         scale_factor: f32,
         pass_kind: LayoutPassKind,
+        overflow_ctx: crate::layout::overflow::LayoutOverflowContext,
     ) -> Size {
-        self.layout_node(app, services, root, bounds, scale_factor, pass_kind)
+        self.layout_node(
+            app,
+            services,
+            root,
+            bounds,
+            scale_factor,
+            pass_kind,
+            overflow_ctx,
+        )
     }
 
     fn sync_element_bounds_cache_after_layout(&mut self, app: &mut H) {
@@ -1314,7 +1332,15 @@ impl<H: UiHost> UiTree<H> {
                 self.debug_view_cache_contained_relayout_roots.push(root);
             }
             let _ =
-                self.layout_in_with_pass_kind(app, services, root, bounds, scale_factor, pass_kind);
+                self.layout_in_with_pass_kind(
+                    app,
+                    services,
+                    root,
+                    bounds,
+                    scale_factor,
+                    pass_kind,
+                    crate::layout::overflow::LayoutOverflowContext::default(),
+                );
             self.flush_viewport_roots_after_root(
                 app,
                 services,
@@ -1759,6 +1785,7 @@ impl<H: UiHost> UiTree<H> {
                     item.bounds,
                     scale_factor,
                     LayoutPassKind::Final,
+                    crate::layout::overflow::LayoutOverflowContext::default(),
                 );
             }
 

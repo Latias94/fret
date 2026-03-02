@@ -50,7 +50,7 @@ Tracking format:
 - [ ] SE-111 Decide the mechanism contract for “fill vs fit” along the scroll axis.
   - Goal: make “auto can overflow” vs “fill must clamp” an explicit, testable contract.
   - Evidence: `docs/workstreams/scroll-extents-dom-parity.md` (SE-110, clamp policy blockers).
-- [ ] SE-112 Add a layout-time “overflow context” / available-space budget carrier.
+- [~] SE-112 Add a layout-time “overflow context” / available-space budget carrier.
   - Goal: let layout paths express `MaxContent` on the scroll axis without requiring a huge `Rect`.
   - Targets: `LayoutCx` + the key budget-clamping wrappers (container-ish layouts, positioned
     containers, flex/grid probe paths).
@@ -58,6 +58,12 @@ Tracking format:
     - `probe_constraints_for_size(...)` helpers that currently force definite budgets.
     - `ElementInstance::RenderTransform` / `FractionalRenderTransform` / `Anchored` probe paths.
     - `flex` / `grid` / `text` probe-pass behavior (definite `available`).
+  - Implementation evidence (initial wiring, 2026-03-02):
+    - `crates/fret-ui/src/layout/overflow.rs` (`LayoutOverflowContext`)
+    - `crates/fret-ui/src/widget.rs` (`LayoutCx::probe_constraints_for_size`, context propagation)
+    - `crates/fret-ui/src/declarative/host_widget/layout/scrolling.rs` (scroll installs context under gate)
+    - `crates/fret-ui/src/declarative/host_widget/layout.rs` and
+      `crates/fret-ui/src/declarative/host_widget/layout/positioned_container.rs` (probe helpers consult context)
 - [ ] SE-113 Standardize absolute-positioned node exclusion for extents.
   - Goal: ensure post-layout extents observation and intrinsic sizing agree (default: exclude).
 - [ ] SE-114 Surface bounded-observation telemetry for extents (budget hits).

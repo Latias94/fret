@@ -70,63 +70,6 @@ impl<H: UiHost> UiTree<H> {
         self.update_invalidation_counters(prev, next);
     }
 
-    pub(in crate::tree) fn recompute_node_subtree_layout_dirty_count_and_propagate(
-        &mut self,
-        node: NodeId,
-    ) {
-        // Compatibility shim: older retained-tree code maintained per-node subtree "layout dirty"
-        // counters. The current pipeline relies on global invalidation counters plus targeted
-        // passes (pending barrier relayouts, view-cache contained relayouts).
-        //
-        // Keep a conservative view-cache mark so contained cache roots stay discoverable via the
-        // `dirty_cache_roots` set when callers toggle layout invalidation without an invalidation
-        // walk.
-        if !self.view_cache_active() {
-            return;
-        }
-        let Some(root) = self.nearest_view_cache_root(node) else {
-            return;
-        };
-        let Some(n) = self.nodes.get(root) else {
-            return;
-        };
-        if n.view_cache.enabled && n.view_cache.contained_layout && n.invalidation.layout {
-            self.mark_cache_root_dirty(
-                root,
-                UiDebugInvalidationSource::Other,
-                UiDebugInvalidationDetail::Unknown,
-            );
-        }
-    }
-
-    pub(in crate::tree) fn note_layout_invalidation_transition_for_subtree_aggregation(
-        &mut self,
-        node: NodeId,
-        before: bool,
-        after: bool,
-    ) {
-        // Compatibility shim: see `recompute_node_subtree_layout_dirty_count_and_propagate`.
-        if before == after {
-            return;
-        }
-        if !after {
-            return;
-        }
-        if !self.view_cache_active() {
-            return;
-        }
-        let Some(n) = self.nodes.get(node) else {
-            return;
-        };
-        if n.view_cache.enabled && n.view_cache.contained_layout {
-            self.mark_cache_root_dirty(
-                node,
-                UiDebugInvalidationSource::Other,
-                UiDebugInvalidationDetail::Unknown,
-            );
-        }
-    }
-
     pub(in crate::tree) fn begin_prepaint_outputs_for_node(
         &mut self,
         node: NodeId,

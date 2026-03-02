@@ -32,7 +32,26 @@ impl<H: UiHost> UiTree<H> {
         before: bool,
         after: bool,
     ) {
-        if !self.subtree_layout_dirty_aggregation_enabled() || before == after {
+        if before == after {
+            return;
+        }
+
+        // Always keep view-cache dirty roots discoverable, even if subtree aggregation is
+        // disabled. Contained view-cache relayouts use `dirty_cache_roots` as their entry set.
+        if after
+            && self.view_cache_active()
+            && let Some(n) = self.nodes.get(node)
+            && n.view_cache.enabled
+            && n.view_cache.contained_layout
+        {
+            self.mark_cache_root_dirty(
+                node,
+                UiDebugInvalidationSource::Other,
+                UiDebugInvalidationDetail::Unknown,
+            );
+        }
+
+        if !self.subtree_layout_dirty_aggregation_enabled() {
             return;
         }
 
@@ -44,6 +63,23 @@ impl<H: UiHost> UiTree<H> {
         &mut self,
         node: NodeId,
     ) {
+        // Always keep view-cache dirty roots discoverable, even if subtree aggregation is
+        // disabled. This mirrors the older retained-tree behavior and is relied on by mutation
+        // paths that toggle invalidations without a full invalidation walk.
+        if self.view_cache_active()
+            && let Some(root) = self.nearest_view_cache_root(node)
+            && let Some(n) = self.nodes.get(root)
+            && n.view_cache.enabled
+            && n.view_cache.contained_layout
+            && n.invalidation.layout
+        {
+            self.mark_cache_root_dirty(
+                root,
+                UiDebugInvalidationSource::Other,
+                UiDebugInvalidationDetail::Unknown,
+            );
+        }
+
         if !self.subtree_layout_dirty_aggregation_enabled() {
             return;
         }

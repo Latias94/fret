@@ -13,6 +13,7 @@ impl<H: UiHost> UiTree<H> {
         bounds: Rect,
         scale_factor: f32,
         pass_kind: LayoutPassKind,
+        overflow_ctx: crate::layout::overflow::LayoutOverflowContext,
     ) -> Size {
         let is_probe = pass_kind == LayoutPassKind::Probe;
         if self.debug_enabled {
@@ -180,6 +181,7 @@ impl<H: UiHost> UiTree<H> {
                 bounds,
                 available: bounds.size,
                 pass_kind,
+                overflow_ctx,
                 scale_factor: sf,
                 services: &mut *services,
                 observe_model,
