@@ -22,14 +22,15 @@ fn dock_drag_window_under_cursor_source_is(
 fn eval_predicate_without_semantics(
     window: AppWindowId,
     known_windows: &[AppWindowId],
+    open_window_count: u32,
     platform_caps: Option<&fret_runtime::PlatformCapabilities>,
     docking: Option<&fret_runtime::DockingInteractionDiagnostics>,
     dock_drag_runtime: Option<&DockDragRuntimeState>,
     pred: &UiPredicateV1,
 ) -> Option<bool> {
     match pred {
-        UiPredicateV1::KnownWindowCountGe { n } => Some((known_windows.len() as u32) >= *n),
-        UiPredicateV1::KnownWindowCountIs { n } => Some((known_windows.len() as u32) == *n),
+        UiPredicateV1::KnownWindowCountGe { n } => Some(open_window_count >= *n),
+        UiPredicateV1::KnownWindowCountIs { n } => Some(open_window_count == *n),
         UiPredicateV1::PlatformUiWindowHoverDetectionIs { quality } => Some(
             platform_caps.is_some_and(|c| c.ui.window_hover_detection.as_str() == quality.as_str()),
         ),
@@ -199,6 +200,7 @@ fn eval_predicate(
     render_text: Option<fret_core::RendererTextPerfSnapshot>,
     render_text_font_trace: Option<&fret_core::RendererTextFontTraceSnapshot>,
     known_windows: &[AppWindowId],
+    open_window_count: u32,
     platform_caps: Option<&fret_runtime::PlatformCapabilities>,
     docking: Option<&fret_runtime::DockingInteractionDiagnostics>,
     dock_drag_runtime: Option<&DockDragRuntimeState>,
@@ -760,8 +762,8 @@ fn eval_predicate(
             let overlap_h = (ay1.min(by1) - ay0.max(by0)).max(0.0);
             overlap_h > eps
         }
-        UiPredicateV1::KnownWindowCountGe { n } => (known_windows.len() as u32) >= *n,
-        UiPredicateV1::KnownWindowCountIs { n } => (known_windows.len() as u32) == *n,
+        UiPredicateV1::KnownWindowCountGe { n } => open_window_count >= *n,
+        UiPredicateV1::KnownWindowCountIs { n } => open_window_count == *n,
         UiPredicateV1::PlatformUiWindowHoverDetectionIs { quality } => {
             if let Some(input_ctx) = input_ctx {
                 input_ctx.caps.ui.window_hover_detection.as_str() == quality.as_str()

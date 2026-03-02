@@ -204,6 +204,11 @@ pub(super) fn handle_assert_step(
                     let dock_drag_runtime =
                         dock_drag_runtime_state(app, svc.known_windows.as_slice());
                     let platform_caps = app.global::<fret_runtime::PlatformCapabilities>();
+                    let open_window_count = app
+                        .global::<fret_runtime::WindowInputContextService>()
+                        .map(|ctx_svc| ctx_svc.window_count() as u32)
+                        .filter(|n| *n > 0)
+                        .unwrap_or_else(|| svc.known_windows.len() as u32);
 
                     if predicate_window == window {
                         if let Some(snapshot) = semantics_snapshot {
@@ -226,6 +231,7 @@ pub(super) fn handle_assert_step(
                                 app.global::<fret_core::RendererTextPerfSnapshot>().copied(),
                                 app.global::<fret_core::RendererTextFontTraceSnapshot>(),
                                 svc.known_windows.as_slice(),
+                                open_window_count,
                                 platform_caps,
                                 docking_diag,
                                 dock_drag_runtime.as_ref(),
@@ -238,6 +244,7 @@ pub(super) fn handle_assert_step(
                             eval_predicate_without_semantics(
                                 predicate_window,
                                 svc.known_windows.as_slice(),
+                                open_window_count,
                                 platform_caps,
                                 docking_diag,
                                 dock_drag_runtime.as_ref(),
@@ -257,6 +264,7 @@ pub(super) fn handle_assert_step(
                         eval_predicate_without_semantics(
                             predicate_window,
                             svc.known_windows.as_slice(),
+                            open_window_count,
                             platform_caps,
                             docking_diag,
                             dock_drag_runtime.as_ref(),

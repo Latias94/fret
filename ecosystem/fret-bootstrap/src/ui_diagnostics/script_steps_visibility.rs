@@ -108,6 +108,11 @@ pub(super) fn handle_ensure_visible_step(
         .global::<fret_runtime::WindowInputContextService>()
         .and_then(|svc| svc.snapshot(window));
     let dock_drag_runtime = dock_drag_runtime_state(app, svc.known_windows.as_slice());
+    let open_window_count = app
+        .global::<fret_runtime::WindowInputContextService>()
+        .map(|ctx_svc| ctx_svc.window_count() as u32)
+        .filter(|n| *n > 0)
+        .unwrap_or_else(|| svc.known_windows.len() as u32);
     if eval_predicate(
         snapshot,
         window_bounds,
@@ -120,6 +125,7 @@ pub(super) fn handle_ensure_visible_step(
         app.global::<fret_core::RendererTextPerfSnapshot>().copied(),
         app.global::<fret_core::RendererTextFontTraceSnapshot>(),
         svc.known_windows.as_slice(),
+        open_window_count,
         app.global::<fret_runtime::PlatformCapabilities>(),
         docking_diag,
         dock_drag_runtime.as_ref(),

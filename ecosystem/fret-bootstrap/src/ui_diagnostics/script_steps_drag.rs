@@ -360,6 +360,11 @@ pub(super) fn handle_drag_pointer_until_step(
             // If the predicate is already satisfied (e.g. after runner-owned hover routing on a
             // previous frame), release immediately.
             let dock_drag_runtime = dock_drag_runtime_state(app, svc.known_windows.as_slice());
+            let open_window_count = app
+                .global::<fret_runtime::WindowInputContextService>()
+                .map(|ctx_svc| ctx_svc.window_count() as u32)
+                .filter(|n| *n > 0)
+                .unwrap_or_else(|| svc.known_windows.len() as u32);
             let move_steps = state.playback.steps.max(1);
             let reached_end = state.playback.frame > move_steps;
             let predicate_ok_without_semantics = match &state.predicate {
@@ -372,8 +377,8 @@ pub(super) fn handle_drag_pointer_until_step(
                 }
                 UiPredicateV1::FontCatalogPopulated => font_catalog_populated,
                 UiPredicateV1::SystemFontRescanIdle => system_font_rescan_idle,
-                UiPredicateV1::KnownWindowCountGe { n } => (svc.known_windows.len() as u32) >= *n,
-                UiPredicateV1::KnownWindowCountIs { n } => (svc.known_windows.len() as u32) == *n,
+                UiPredicateV1::KnownWindowCountGe { n } => open_window_count >= *n,
+                UiPredicateV1::KnownWindowCountIs { n } => open_window_count == *n,
                 UiPredicateV1::PlatformUiWindowHoverDetectionIs { quality } => app
                     .global::<fret_runtime::PlatformCapabilities>()
                     .is_some_and(|c| c.ui.window_hover_detection.as_str() == quality.as_str()),
@@ -475,6 +480,7 @@ pub(super) fn handle_drag_pointer_until_step(
                     app.global::<fret_core::RendererTextPerfSnapshot>().copied(),
                     app.global::<fret_core::RendererTextFontTraceSnapshot>(),
                     svc.known_windows.as_slice(),
+                    open_window_count,
                     app.global::<fret_runtime::PlatformCapabilities>(),
                     docking_diag,
                     dock_drag_runtime.as_ref(),
@@ -490,6 +496,16 @@ pub(super) fn handle_drag_pointer_until_step(
                 &state.predicate,
                 UiPredicateV1::DockDragCurrentWindowIs { .. }
             );
+            let preserve_explicit_cursor_override = is_current_window_predicate
+                && active
+                    .last_explicit_cursor_override
+                    .is_some_and(|t| match t {
+                        CursorOverrideTarget::WindowClientPhysical(w)
+                        | CursorOverrideTarget::WindowClientLogical(w) => {
+                            w != state.playback.window
+                        }
+                        CursorOverrideTarget::ScreenPhysical => false,
+                    });
             let predicate_ok = if is_current_window_predicate && !reached_end {
                 false
             } else {
@@ -500,10 +516,13 @@ pub(super) fn handle_drag_pointer_until_step(
             if predicate_ok {
                 if state.down_issued {
                     let release_pos = drag_playback_last_position(&state.playback);
-                    // For `DockDragCurrentWindowIs` predicates, preserve the last explicit cursor
-                    // placement (often in a different window) so runner hover routing can observe
-                    // the correct "current window" at the moment we resolve/release.
-                    if !is_current_window_predicate {
+                    // For `DockDragCurrentWindowIs` predicates, some scripts rely on preserving a
+                    // prior, explicit cursor placement in a different window so runner hover
+                    // routing can observe the correct "current window" at the moment we
+                    // resolve/release. When no explicit cross-window placement has been issued,
+                    // keep the cursor override synced to the playback position so scripts can
+                    // still simulate crossing window boundaries.
+                    if !preserve_explicit_cursor_override {
                         let _ = write_cursor_override_window_client_logical(
                             &svc.cfg.out_dir,
                             state.playback.window,
@@ -679,7 +698,8 @@ pub(super) fn handle_drag_pointer_until_step(
                     // cursor override with a position expressed in the playback window's client
                     // coordinates; keep the most recent explicit cursor placement instead (e.g.
                     // a prior `set_cursor_in_window` step).
-                    if !is_current_window_predicate && !suppress_pointer_events_for_cross_window_hover
+                    if !preserve_explicit_cursor_override
+                        && !suppress_pointer_events_for_cross_window_hover
                     {
                         let cursor_pos = drag_playback_last_position(&state.playback);
                         let _ = write_cursor_override_window_client_logical(
