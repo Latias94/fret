@@ -235,6 +235,16 @@ impl<H: UiHost> UiTree<H> {
         }
     }
 
+    fn recompute_node_subtree_layout_dirty_count_and_propagate(&mut self, _parent: NodeId) {}
+
+    fn note_layout_invalidation_transition_for_subtree_aggregation(
+        &mut self,
+        _node: NodeId,
+        _before: bool,
+        _after: bool,
+    ) {
+    }
+
     pub(crate) fn take_pending_barrier_relayouts(&mut self) -> Vec<NodeId> {
         std::mem::take(&mut self.pending_barrier_relayouts)
     }
