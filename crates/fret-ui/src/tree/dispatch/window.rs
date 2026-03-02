@@ -204,42 +204,12 @@ impl<H: UiHost> UiTree<H> {
             self.debug_stats.dispatch_active_layers_time += active_layers_elapsed;
         }
 
-        // If the topmost barrier is a hit-test-inert pointer occlusion layer (e.g. Radix
-        // `disableOutsidePointerEvents`), allow wheel events to route to the underlay scroll target.
-        //
-        // Modal barriers must continue to block wheel events while present.
-        let wheel_hit_test_layers: Option<Vec<NodeId>> = (is_wheel
-            && barrier_root.is_some_and(|barrier_root| {
-                self.root_to_layer
-                    .get(&barrier_root)
-                    .copied()
-                    .and_then(|layer| self.layers.get(layer))
-                    .is_some_and(|layer| !layer.hit_testable)
-            }))
-        .then(|| {
-            let visible: Vec<UiLayerId> = self.visible_layers_in_paint_order().collect();
-            let mut roots: Vec<NodeId> = Vec::new();
-            for layer_id in visible.into_iter().rev() {
-                let layer = &self.layers[layer_id];
-                if layer.hit_testable {
-                    roots.push(layer.root);
-                }
-            }
-            roots
-        });
         let dispatch_cx = self.build_dispatch_cx(app.frame_id(), active_layers, barrier_root);
         let active_layers: &[NodeId] = dispatch_cx.active_input_roots.as_slice();
         let barrier_root = dispatch_cx.input_barrier_root;
 
-        let hit_test_layer_roots: &[NodeId] =
-            wheel_hit_test_layers.as_deref().unwrap_or(active_layers);
-        let hit_test_snapshot: Option<UiDispatchSnapshot> =
-            wheel_hit_test_layers.as_deref().map(|roots| {
-                self.build_dispatch_snapshot_for_layer_roots(app.frame_id(), roots, barrier_root)
-            });
-        let pointer_chain_snapshot: &UiDispatchSnapshot = hit_test_snapshot
-            .as_ref()
-            .unwrap_or(&dispatch_cx.input_snapshot);
+        let hit_test_layer_roots: &[NodeId] = active_layers;
+        let pointer_chain_snapshot: &UiDispatchSnapshot = &dispatch_cx.input_snapshot;
 
         let node_in_active_layers = |node: NodeId| dispatch_cx.node_in_active_input_layers(node);
 
