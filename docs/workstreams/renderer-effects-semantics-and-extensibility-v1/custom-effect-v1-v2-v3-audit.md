@@ -111,6 +111,7 @@ Triage hint codes (worst frame):
 - `renderer.custom_effect_v3_requested_but_skipped` (requested by effect chain, but no passes emitted)
 - `renderer.custom_effect_v3_raw_aliased_to_src` (raw snapshot unavailable; `src_raw` aliases)
 - `renderer.custom_effect_v3_pyramid_degraded_to_one` (pyramid levels degraded under budget pressure)
+- `renderer.custom_effect_v3_pyramid_cache_miss_heavy` (pyramid requested/applied but cache reuse is poor in-frame)
 
 Interpretation note:
 
@@ -118,6 +119,9 @@ Interpretation note:
   degraded to 1 level, because we only charge/report pyramid bytes when `levels >= 2` (mip storage allocated).
   Use triage evidence fields like `custom_effect_chain_headroom_after_mask_bytes` together with
   `custom_effect_v3_pyramid_required_bytes_levels2_est` to make “why did it degrade?” explainable from a bundle.
+- `renderer.custom_effect_v3_pyramid_cache_miss_heavy` is an efficiency hint: it reports
+  `custom_effect_v3_pyramid_cache_hits/misses` (frame-local reuse) when misses dominate across multiple pyramid uses in
+  the worst frame.
 
 Anchors:
 
