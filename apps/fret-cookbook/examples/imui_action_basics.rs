@@ -37,7 +37,25 @@ impl View for ImUiActionBasicsView {
                 "cookbook.imui_action_basics.genui.root": {
                     "type": "VStack",
                     "props": { "gap": "N2" },
-                    "children": ["cookbook.imui_action_basics.genui.button.inc"]
+                    "children": [
+                        "cookbook.imui_action_basics.genui.menu",
+                        "cookbook.imui_action_basics.genui.button.inc"
+                    ]
+                },
+                "cookbook.imui_action_basics.genui.menu": {
+                    "type": "DropdownMenu",
+                    "props": {
+                        "trigger": "Open (genui menu)",
+                        "items": [
+                            {
+                                "type": "item",
+                                "label": "Increment (genui menu)",
+                                "action": "cookbook.imui_action_basics.inc.v1",
+                                "testId": "cookbook.imui_action_basics.genui.menu.inc"
+                            }
+                        ]
+                    },
+                    "children": []
                 },
                 "cookbook.imui_action_basics.genui.button.inc": {
                     "type": "Button",

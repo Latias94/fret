@@ -5,7 +5,7 @@
     "tags": ["cookbook", "imui", "view_runtime", "actions", "smoke"],
     "required_capabilities": ["diag.script_v2"],
     "target_hints": [
-      "Clicks a declarative button, a GenUI-rendered button, and an imui button that dispatch the same ActionId.",
+      "Clicks a declarative button, a GenUI-rendered button, a GenUI dropdown menu item, and an imui button that dispatch the same ActionId.",
       "Asserts all triggers update the same view-local state via a shared typed action handler."
     ]
   },
@@ -55,7 +55,19 @@
     },
     {
       "type": "click_stable",
-      "target": { "kind": "test_id", "id": "cookbook.imui_action_basics.button.imui" }
+      "target": { "kind": "role_and_name", "role": "button", "name": "Open (genui menu)" }
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "cookbook.imui_action_basics.genui.menu.inc" }
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "click_stable",
+      "target": { "kind": "test_id", "id": "cookbook.imui_action_basics.genui.menu.inc" }
     },
     {
       "type": "wait_until",
@@ -63,6 +75,19 @@
         "kind": "label_contains",
         "target": { "kind": "test_id", "id": "cookbook.imui_action_basics.count" },
         "text": "Count: 3"
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "click_stable",
+      "target": { "kind": "test_id", "id": "cookbook.imui_action_basics.button.imui" }
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "label_contains",
+        "target": { "kind": "test_id", "id": "cookbook.imui_action_basics.count" },
+        "text": "Count: 4"
       },
       "timeout_frames": 240
     },

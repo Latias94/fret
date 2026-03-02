@@ -34,6 +34,8 @@ View/cache observability (diagnostics):
 
 Pointer-trigger authoring integration (v1 still dispatches through the command pipeline):
 
+- `crates/fret-ui/src/tree/commands.rs` (command availability/dispatch fallback from overlay roots to the window default root)
+- `crates/fret-ui/src/tree/tests/command_availability.rs` (cross-layer fallback tests)
 - `ecosystem/fret-ui-shadcn/src/button.rs` (`Button::action`)
 - `ecosystem/fret-ui-kit/src/command.rs` (`action_is_enabled`, `dispatch_action_if_enabled`)
 - `ecosystem/fret-ui-kit/src/declarative/action_hooks.rs` (`pressable_dispatch_action_if_enabled`)
@@ -41,6 +43,7 @@ Pointer-trigger authoring integration (v1 still dispatches through the command p
 - `ecosystem/fret-genui-core/src/executor.rs` (`GenUiActionExecutorV1::with_dispatch_command_actions`)
 - `ecosystem/fret-genui-core/src/render.rs` (default `test_id` stamping: `genui:{element_key}`)
 - `ecosystem/fret-genui-shadcn/src/resolver/basic.rs` (Button action-first mapping for unit `.v1` action ids)
+- `ecosystem/fret-genui-shadcn/src/resolver/overlay.rs` (DropdownMenu item action-first mapping for unit `.v1` action ids + `testId` support)
 - `ecosystem/fret-ui-kit/src/declarative/cached_subtree.rs` (`CachedSubtreeExt` authoring helper)
 - `apps/fret-cookbook/examples/commands_keymap_basics.rs` (example adoption: view runtime + keymap + action availability gating)
 - `apps/fret-cookbook/examples/hello.rs` (example adoption: view runtime + action-first button + handler registration)

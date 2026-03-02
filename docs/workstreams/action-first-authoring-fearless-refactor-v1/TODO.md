@@ -75,6 +75,11 @@ ID format:
   - Evidence:
     - `ecosystem/fret-ui-kit/src/command.rs` (`action_is_enabled`, `dispatch_action_if_enabled`)
     - `ecosystem/fret-ui-kit/src/declarative/action_hooks.rs` (`pressable_dispatch_action_if_enabled`)
+- [x] AFA-actions-018 Ensure action availability/dispatch can reach app handlers from overlay roots.
+  - Goal: portal-mounted menus/overlays can invoke app-level actions without duplicating handler tables.
+  - Evidence:
+    - `crates/fret-ui/src/tree/commands.rs` (dispatch/availability fallback to default root)
+    - `crates/fret-ui/src/tree/tests/command_availability.rs` (cross-layer fallback tests)
 
 ---
 

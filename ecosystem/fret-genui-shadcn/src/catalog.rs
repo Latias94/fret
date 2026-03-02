@@ -894,6 +894,13 @@ fn shadcn_components_v1() -> BTreeMap<String, CatalogComponentV1> {
                                 "Structural item type.",
                             ),
                         ),
+                        (
+                            "testId",
+                            desc(
+                                CatalogPropV1::string().nullable(true),
+                                "Optional diagnostics selector anchor for the menu item.",
+                            ),
+                        ),
                     ]))
                     .required(true),
                     "Menu entries.",

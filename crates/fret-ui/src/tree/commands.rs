@@ -73,13 +73,33 @@ impl<H: UiHost> UiTree<H> {
             input_ctx.window_arbitration = Some(self.window_input_arbitration_snapshot());
         }
 
-        let Some(start) =
-            self.command_availability_start_node(base_root, &active_layers, barrier_root)
-        else {
-            return CommandAvailability::NotHandled;
-        };
+        if self
+            .focus
+            .is_some_and(|n| !self.node_in_any_layer(n, &active_layers))
+        {
+            self.focus = None;
+        }
 
-        let availability = self.command_availability_from_node(app, &input_ctx, start, command);
+        let default_root = barrier_root.unwrap_or(base_root);
+        let availability = if let Some(focus) = self.focus {
+            let availability = self.command_availability_from_node(app, &input_ctx, focus, command);
+
+            if availability != CommandAvailability::NotHandled {
+                availability
+            } else if self.is_descendant(default_root, focus) {
+                availability
+            } else {
+                let availability =
+                    self.command_availability_from_node(app, &input_ctx, default_root, command);
+                if availability != CommandAvailability::NotHandled {
+                    availability
+                } else {
+                    CommandAvailability::NotHandled
+                }
+            }
+        } else {
+            self.command_availability_from_node(app, &input_ctx, default_root, command)
+        };
 
         if availability == CommandAvailability::NotHandled
             && matches!(command.as_str(), "focus.next" | "focus.previous")
@@ -343,78 +363,96 @@ impl<H: UiHost> UiTree<H> {
         }
 
         let default_root = barrier_root.unwrap_or(base_root);
-        let node_id = self.focus.or(Some(default_root));
-        let Some(mut node_id) = node_id else {
-            return false;
+        let focus = self.focus;
+        let focus_in_default_root = focus.is_some_and(|n| self.is_descendant(default_root, n));
+
+        let mut bubble_from = |start: NodeId| -> (bool, bool, bool) {
+            let mut node_id = start;
+            let mut handled = false;
+            let mut needs_redraw = false;
+            let mut stopped = false;
+
+            loop {
+                let (did_handle, invalidations, requested_focus, stop_bubbling, parent) = self
+                    .with_widget_mut(node_id, |widget, tree| {
+                        let parent = tree.nodes.get(node_id).and_then(|n| n.parent);
+                        let window = tree.window;
+                        let focus = tree.focus;
+                        let mut cx = CommandCx {
+                            app,
+                            services: &mut *services,
+                            tree,
+                            node: node_id,
+                            window,
+                            input_ctx: input_ctx.clone(),
+                            focus,
+                            invalidations: Vec::new(),
+                            requested_focus: None,
+                            stop_propagation: false,
+                        };
+                        let did_handle = widget.command(&mut cx, command);
+                        (
+                            did_handle,
+                            cx.invalidations,
+                            cx.requested_focus,
+                            cx.stop_propagation,
+                            parent,
+                        )
+                    });
+
+                if did_handle {
+                    handled = true;
+                }
+
+                if !invalidations.is_empty() || requested_focus.is_some() {
+                    needs_redraw = true;
+                }
+
+                for (id, inv) in invalidations {
+                    self.mark_invalidation(id, inv);
+                }
+
+                if let Some(focus) = requested_focus {
+                    let (active_roots, _barrier_root) = self.active_input_layers();
+                    if self.focus_request_is_allowed(app, self.window, &active_roots, focus) {
+                        if let Some(prev) = self.focus {
+                            self.mark_invalidation(prev, Invalidation::Paint);
+                        }
+                        self.focus = Some(focus);
+                        self.mark_invalidation(focus, Invalidation::Paint);
+                    }
+                }
+
+                if did_handle {
+                    break;
+                }
+                if stop_bubbling {
+                    stopped = true;
+                    break;
+                }
+
+                node_id = match parent {
+                    Some(parent) => parent,
+                    None => break,
+                };
+            }
+
+            (handled, needs_redraw, stopped)
         };
 
-        let mut handled = false;
-        let mut needs_redraw = false;
-        let mut stopped = false;
+        let (mut handled, mut needs_redraw, mut stopped) =
+            bubble_from(focus.unwrap_or(default_root));
 
-        loop {
-            let (did_handle, invalidations, requested_focus, stop_bubbling, parent) = self
-                .with_widget_mut(node_id, |widget, tree| {
-                    let parent = tree.nodes.get(node_id).and_then(|n| n.parent);
-                    let window = tree.window;
-                    let focus = tree.focus;
-                    let mut cx = CommandCx {
-                        app,
-                        services: &mut *services,
-                        tree,
-                        node: node_id,
-                        window,
-                        input_ctx: input_ctx.clone(),
-                        focus,
-                        invalidations: Vec::new(),
-                        requested_focus: None,
-                        stop_propagation: false,
-                    };
-                    let did_handle = widget.command(&mut cx, command);
-                    (
-                        did_handle,
-                        cx.invalidations,
-                        cx.requested_focus,
-                        cx.stop_propagation,
-                        parent,
-                    )
-                });
-
-            if did_handle {
-                handled = true;
-            }
-
-            if !invalidations.is_empty() || requested_focus.is_some() {
-                needs_redraw = true;
-            }
-
-            for (id, inv) in invalidations {
-                self.mark_invalidation(id, inv);
-            }
-
-            if let Some(focus) = requested_focus {
-                let (active_roots, _barrier_root) = self.active_input_layers();
-                if self.focus_request_is_allowed(app, self.window, &active_roots, focus) {
-                    if let Some(prev) = self.focus {
-                        self.mark_invalidation(prev, Invalidation::Paint);
-                    }
-                    self.focus = Some(focus);
-                    self.mark_invalidation(focus, Invalidation::Paint);
-                }
-            }
-
-            if did_handle {
-                break;
-            }
-            if stop_bubbling {
-                stopped = true;
-                break;
-            }
-
-            node_id = match parent {
-                Some(parent) => parent,
-                None => break,
-            };
+        if !handled
+            && !stopped
+            && focus.is_some()
+            && !focus_in_default_root
+            && focus.unwrap_or(default_root) != default_root
+        {
+            let (handled2, needs_redraw2, stopped2) = bubble_from(default_root);
+            handled = handled || handled2;
+            needs_redraw = needs_redraw || needs_redraw2;
+            stopped = stopped || stopped2;
         }
 
         if !handled && !stopped && is_focus_traversal_command {
