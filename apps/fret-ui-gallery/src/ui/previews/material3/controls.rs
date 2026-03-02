@@ -141,216 +141,32 @@ pub(in crate::ui) fn preview_material3_checkbox(
     cx: &mut ElementContext<'_, App>,
     checked: Model<bool>,
 ) -> Vec<AnyElement> {
-    use fret_ui_kit::{ColorRef, WidgetStateProperty, WidgetStates};
+    let demo = snippets::material3::checkbox::render(cx, checked);
 
-    #[derive(Default)]
-    struct CheckboxPageModels {
-        tristate: Option<Model<Option<bool>>>,
-    }
-
-    let tristate = cx.with_state(CheckboxPageModels::default, |st| st.tristate.clone());
-    let tristate = match tristate {
-        Some(m) => m,
-        None => {
-            let m = cx.app.models_mut().insert(None::<bool>);
-            cx.with_state(CheckboxPageModels::default, |st| {
-                st.tristate = Some(m.clone())
-            });
-            m
-        }
-    };
-
-    let value = cx
-        .get_model_copied(&checked, Invalidation::Layout)
-        .unwrap_or(false);
-    let tristate_value = cx
-        .get_model_cloned(&tristate, Invalidation::Layout)
-        .unwrap_or(None);
-
-    let row = stack::hstack(
+    let page = doc_layout::render_doc_page(
         cx,
-        stack::HStackProps::default().gap(Space::N2).items_center(),
-        move |cx| {
-            let selected_accent = fret_ui_kit::colors::linear_from_hex_rgb(0x33_cc_66);
-            let override_style = material3::CheckboxStyle::default()
-                .icon_color(WidgetStateProperty::new(None).when(
-                    WidgetStates::SELECTED,
-                    Some(ColorRef::Color(selected_accent)),
-                ))
-                .outline_color(WidgetStateProperty::new(None).when(
-                    WidgetStates::SELECTED,
-                    Some(ColorRef::Color(selected_accent)),
-                ));
-            vec![
-                material3::Checkbox::new(checked.clone())
-                    .a11y_label("Material 3 Checkbox")
-                    .test_id("ui-gallery-material3-checkbox")
-                    .into_element(cx),
-                material3::Checkbox::new(checked.clone())
-                    .a11y_label("Material 3 Checkbox (override)")
-                    .style(override_style)
-                    .test_id("ui-gallery-material3-checkbox-overridden")
-                    .into_element(cx),
-                cx.text(format!("checked={}", value as u8)),
-                material3::Checkbox::new(checked.clone())
-                    .a11y_label("Disabled Material 3 Checkbox")
-                    .disabled(true)
-                    .test_id("ui-gallery-material3-checkbox-disabled")
-                    .into_element(cx),
-            ]
-        },
+        Some("Material 3 surfaces are still migrating to snippet-backed pages (Preview ≡ Code)."),
+        vec![DocSection::new("Demo", demo)
+            .code_rust_from_file_region(snippets::material3::checkbox::SOURCE, "example")],
     );
 
-    let tristate_row = stack::hstack(
-        cx,
-        stack::HStackProps::default().gap(Space::N2).items_center(),
-        move |cx| {
-            let label = match tristate_value {
-                Some(true) => "checked",
-                Some(false) => "unchecked",
-                None => "indeterminate",
-            };
-            vec![
-                material3::Checkbox::new_optional(tristate.clone())
-                    .a11y_label("Material 3 Checkbox (tri-state)")
-                    .test_id("ui-gallery-material3-checkbox-tristate")
-                    .into_element(cx),
-                cx.text(format!("state={label}"))
-                    .test_id("ui-gallery-material3-checkbox-tristate-state"),
-            ]
-        },
-    );
-
-    vec![
-        cx.text("Material 3 Checkbox: token-driven sizing/colors + state layer + bounded ripple."),
-        row,
-        cx.text("Material 3 Checkbox (tri-state): `checked: None` represents indeterminate/mixed."),
-        tristate_row,
-    ]
+    vec![page]
 }
 
 pub(in crate::ui) fn preview_material3_switch(
     cx: &mut ElementContext<'_, App>,
     selected: Model<bool>,
 ) -> Vec<AnyElement> {
-    use fret_ui_kit::{ColorRef, WidgetStateProperty, WidgetStates};
+    let demo = snippets::material3::switch::render(cx, selected);
 
-    #[derive(Default)]
-    struct SwitchPageModels {
-        icons_both: Option<Model<bool>>,
-        icons_selected_only: Option<Model<bool>>,
-    }
-
-    let icons_both = cx.with_state(SwitchPageModels::default, |st| st.icons_both.clone());
-    let icons_both = match icons_both {
-        Some(model) => model,
-        None => {
-            let model = cx.app.models_mut().insert(false);
-            cx.with_state(SwitchPageModels::default, |st| {
-                st.icons_both = Some(model.clone())
-            });
-            model
-        }
-    };
-
-    let icons_selected_only = cx.with_state(SwitchPageModels::default, |st| {
-        st.icons_selected_only.clone()
-    });
-    let icons_selected_only = match icons_selected_only {
-        Some(model) => model,
-        None => {
-            let model = cx.app.models_mut().insert(false);
-            cx.with_state(SwitchPageModels::default, |st| {
-                st.icons_selected_only = Some(model.clone())
-            });
-            model
-        }
-    };
-
-    let value = cx
-        .get_model_copied(&selected, Invalidation::Layout)
-        .unwrap_or(false);
-
-    let row = stack::hstack(
+    let page = doc_layout::render_doc_page(
         cx,
-        stack::HStackProps::default().gap(Space::N2).items_center(),
-        move |cx| {
-            let selected_accent = fret_ui_kit::colors::linear_from_hex_rgb(0x33_cc_66);
-            let hover_accent = fret_ui_kit::colors::linear_from_hex_rgb(0xe5_33_e5);
-            let override_style = material3::SwitchStyle::default()
-                .track_color(WidgetStateProperty::new(None).when(
-                    WidgetStates::SELECTED,
-                    Some(ColorRef::Color(selected_accent)),
-                ))
-                .state_layer_color(
-                    WidgetStateProperty::new(None)
-                        .when(WidgetStates::HOVERED, Some(ColorRef::Color(hover_accent))),
-                );
-            vec![
-                material3::Switch::new(selected.clone())
-                    .a11y_label("Material 3 Switch")
-                    .test_id("ui-gallery-material3-switch")
-                    .into_element(cx),
-                material3::Switch::new(selected.clone())
-                    .a11y_label("Material 3 Switch (override)")
-                    .style(override_style)
-                    .test_id("ui-gallery-material3-switch-overridden")
-                    .into_element(cx),
-                cx.text(format!("selected={}", value as u8)),
-                material3::Switch::new(selected.clone())
-                    .a11y_label("Disabled Material 3 Switch")
-                    .disabled(true)
-                    .test_id("ui-gallery-material3-switch-disabled")
-                    .into_element(cx),
-            ]
-        },
+        Some("Material 3 surfaces are still migrating to snippet-backed pages (Preview ≡ Code)."),
+        vec![DocSection::new("Demo", demo)
+            .code_rust_from_file_region(snippets::material3::switch::SOURCE, "example")],
     );
 
-    vec![
-        cx.text("Material 3 Switch: token-driven sizing/colors + state layer + bounded ripple."),
-        row,
-        stack::hstack(
-            cx,
-            stack::HStackProps::default().gap(Space::N2).items_center(),
-            move |cx| {
-                let icons_both_value = cx
-                    .get_model_copied(&icons_both, Invalidation::Layout)
-                    .unwrap_or(false);
-                let icons_selected_only_value = cx
-                    .get_model_copied(&icons_selected_only, Invalidation::Layout)
-                    .unwrap_or(false);
-                vec![
-                    material3::Switch::new(icons_both.clone())
-                        .icons(true)
-                        .a11y_label("Material 3 Switch (icons)")
-                        .test_id("ui-gallery-material3-switch-icons-both")
-                        .into_element(cx),
-                    cx.text(format!("icons_both={}", icons_both_value as u8)),
-                    material3::Switch::new(icons_both.clone())
-                        .icons(true)
-                        .disabled(true)
-                        .a11y_label("Disabled Material 3 Switch (icons)")
-                        .test_id("ui-gallery-material3-switch-icons-both-disabled")
-                        .into_element(cx),
-                    material3::Switch::new(icons_selected_only.clone())
-                        .show_only_selected_icon(true)
-                        .a11y_label("Material 3 Switch (selected icon only)")
-                        .test_id("ui-gallery-material3-switch-icons-selected-only")
-                        .into_element(cx),
-                    cx.text(format!(
-                        "icons_selected_only={}",
-                        icons_selected_only_value as u8
-                    )),
-                    material3::Switch::new(icons_selected_only.clone())
-                        .show_only_selected_icon(true)
-                        .disabled(true)
-                        .a11y_label("Disabled Material 3 Switch (selected icon only)")
-                        .test_id("ui-gallery-material3-switch-icons-selected-only-disabled")
-                        .into_element(cx),
-                ]
-            },
-        ),
-    ]
+    vec![page]
 }
 
 pub(in crate::ui) fn preview_material3_slider(
