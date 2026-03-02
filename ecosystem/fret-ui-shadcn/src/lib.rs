@@ -141,7 +141,8 @@ pub use badge::{
     Badge, BadgeRender, BadgeVariant, BadgeVariants, badge, badge_variants, badgeVariants,
 };
 pub use breadcrumb::primitives::{
-    BreadcrumbEllipsis, BreadcrumbLink, BreadcrumbList, BreadcrumbPage,
+    Breadcrumb as BreadcrumbRoot, BreadcrumbEllipsis, BreadcrumbItem as BreadcrumbItemPart,
+    BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator as BreadcrumbSeparatorPart,
 };
 pub use breadcrumb::{Breadcrumb, BreadcrumbItem, BreadcrumbSeparator};
 pub use button::{
