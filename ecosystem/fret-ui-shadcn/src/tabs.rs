@@ -1579,11 +1579,17 @@ impl Tabs {
             list_props.layout.flex.align_self = Some(CrossAlign::Start);
         }
         let tab_panel_layout = {
+            let root_layout = decl_style::layout_style(&theme, layout.clone());
+            let root_main_axis_is_definite = match orientation {
+                TabsOrientation::Horizontal => root_layout.size.height != Length::Auto,
+                TabsOrientation::Vertical => root_layout.size.width != Length::Auto,
+            };
+
             // `TabsContent` should fill the available width by default. Without this, max-content
             // descendants (long lines / unwrapped text) can force the tab panel wider than its
             // parent, causing horizontal overflow in app shells like the UI gallery.
             let mut refinement = LayoutRefinement::default().w_full().min_w_0();
-            if content_fill_remaining {
+            if content_fill_remaining && root_main_axis_is_definite {
                 // shadcn/ui uses `flex-1` on `TabsContent`. In practice that intent is "fill the
                 // remaining main-axis space when the parent is a definite-size flex container".
                 //

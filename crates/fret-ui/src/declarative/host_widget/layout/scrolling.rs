@@ -793,11 +793,63 @@ impl ElementHostWidget {
             ),
         );
 
-        let children_layout_invalidated = cx
+        fn subtree_has_layout_invalidation<H: UiHost>(
+            tree: &crate::tree::UiTree<H>,
+            root: NodeId,
+        ) -> bool {
+            // Heuristic guardrail: a scroll extent update bug is worse than a little extra work at
+            // the scroll edge. Cap traversal to keep worst-case pages bounded.
+            const VISIT_LIMIT: usize = 4096;
+            let mut visited = 0usize;
+            let mut stack: Vec<NodeId> = vec![root];
+            while let Some(node) = stack.pop() {
+                if tree.node_layout_invalidated(node) {
+                    return true;
+                }
+                visited = visited.saturating_add(1);
+                if visited >= VISIT_LIMIT {
+                    return true;
+                }
+                stack.extend_from_slice(tree.children_ref(node));
+            }
+            false
+        }
+
+        let direct_children_layout_invalidated = cx
             .children
             .iter()
             .copied()
             .any(|child| cx.tree.node_layout_invalidated(child));
+        // When the user is at the current scroll extent edge, we must be conservative about
+        // reusing cached content extents: if a descendant layout invalidation did not bubble up to
+        // the scroll's direct child root, relying on the cached max-child size can "pin" the
+        // scroll range to the previous frame (e.g. toggling a tabs panel at the bottom of a docs
+        // page and being unable to scroll further).
+        let descendant_dirty_children = at_scroll_extent_edge
+            .then(|| {
+                cx.children
+                    .iter()
+                    .copied()
+                    .filter(|&child| subtree_has_layout_invalidation(cx.tree, child))
+                    .collect::<Vec<_>>()
+            })
+            .unwrap_or_default();
+        if !descendant_dirty_children.is_empty() && !direct_children_layout_invalidated {
+            // Force the direct child roots to be treated as dirty so the layout engine cannot
+            // incorrectly skip a relayout when only descendants are invalidated.
+            for child in descendant_dirty_children.iter().copied() {
+                if !cx.tree.node_layout_invalidated(child) {
+                    cx.tree.invalidate_with_detail(
+                        child,
+                        Invalidation::Layout,
+                        UiDebugInvalidationDetail::ScrollDeferredProbe,
+                    );
+                }
+            }
+        }
+
+        let children_layout_invalidated =
+            direct_children_layout_invalidated || !descendant_dirty_children.is_empty();
         let at_end_with_invalidated_child = at_scroll_extent_edge && children_layout_invalidated;
 
         let mut intrinsic_cached_max_child: Option<Size> = None;
