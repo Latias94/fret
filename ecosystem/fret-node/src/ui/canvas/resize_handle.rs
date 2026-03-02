@@ -44,4 +44,3 @@ impl NodeResizeHandle {
         matches!(self, Self::BottomLeft | Self::Bottom | Self::BottomRight)
     }
 }
-

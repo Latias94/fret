@@ -85,6 +85,12 @@ This workstream aims to make downstream ecosystem authors productive without tou
   - implement `fret_node::ui::NodeGraphGeometryOverrides` (or use `NodeGraphGeometryOverridesMap`)
   - pass it via `NodeGraphSurfacePaintOnlyProps.geometry_overrides`
   - bump `revision()` when overrides change so derived geometry + hit-testing caches rebuild
+- Optional (advanced): provide paint-only per-node/per-edge styling without mutating the serialized
+  `Graph`:
+  - implement `fret_node::ui::NodeGraphPaintOverrides` (or use `NodeGraphPaintOverridesMap`)
+  - pass it via `NodeGraphSurfacePaintOnlyProps.paint_overrides`
+  - bump `revision()` when overrides change so paint-only caches can update without rebuilding
+    derived geometry
 - Keep editor state in models:
   - graph: `Model<Graph>`
   - view state: `Model<NodeGraphViewState>`
