@@ -1,11 +1,21 @@
 # Action-First Authoring + View Runtime (Fearless Refactor v1) — Milestones
 
-Last updated: 2026-03-01
+Last updated: 2026-03-02
 
 Related:
 
 - Design: `docs/workstreams/action-first-authoring-fearless-refactor-v1/DESIGN.md`
 - TODO: `docs/workstreams/action-first-authoring-fearless-refactor-v1/TODO.md`
+
+---
+
+## Current status snapshot (as of 2026-03-02)
+
+- **M0**: Not met (ADRs 0307/0308 are still `Proposed`; ADR index jump table is updated).
+- **M1**: Partially met (ActionId identity + typed unit actions + cross-frontend dispatch exist; metadata/palette traces still pending).
+- **M2**: Met (View runtime v1 + hooks + view-cache keepalive + gates exist; cookbook adoption landed).
+- **M3**: Met (Declarative + imui + GenUI converge on the same ActionId dispatch and stable selectors; cross-frontend diag gate exists).
+- **M4+**: Not met (ui-gallery/template updates and editor-grade proof still pending).
 
 ---
 

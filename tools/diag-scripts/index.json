@@ -202,7 +202,7 @@
         "view_runtime"
       ],
       "target_hints": [
-        "Clicks a declarative button, a GenUI-rendered button, a GenUI dropdown menu item, and an imui button that dispatch the same ActionId.",
+        "Invokes the command palette, clicks a declarative button, a GenUI-rendered button, a GenUI dropdown menu item, and an imui button that dispatch the same ActionId.",
         "Asserts all triggers update the same view-local state via a shared typed action handler."
       ]
     },

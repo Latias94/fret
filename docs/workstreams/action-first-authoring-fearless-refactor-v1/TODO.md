@@ -31,13 +31,13 @@ ID format:
 
 - [ ] AFA-adr-001 Review ADR 0307 (actions) for scope/ownership boundaries.
 - [ ] AFA-adr-002 Review ADR 0308 (view runtime) for hook order/keying rules and cache boundary semantics.
-- [ ] AFA-adr-003 Update `docs/adr/README.md` jump table with new action/view ADR anchors.
+- [x] AFA-adr-003 Update `docs/adr/README.md` jump table with new action/view ADR anchors.
 - [x] AFA-adr-004 Decide keymap strategy (v1):
   - Decision: `ActionId == CommandId` (alias/wrapper; no keymap schema churn in v1).
   - Evidence: ADR 0307 “v1 decision (locked)”.
 - [x] AFA-adr-005 Add a short action naming convention note (namespace + `.v1` suffix).
   - Goal: keep IDs predictable for GenUI and future frontends.
-- [ ] AFA-adr-006 Add an observability checklist for action dispatch + view dirty/reuse.
+- [x] AFA-adr-006 Add an observability checklist for action dispatch + view dirty/reuse.
   - Evidence: `docs/workstreams/action-first-authoring-fearless-refactor-v1/EVIDENCE_AND_GATES.md`
 
 ---
@@ -64,8 +64,12 @@ ID format:
   - keymap resolution → action id,
   - availability gating outcome,
   - dispatch path resolution.
-- [ ] AFA-actions-015 Converge command palette/menu invocation with action dispatch.
+- [x] AFA-actions-015 Converge command palette/menu invocation with action dispatch.
   - Goal: palette/menu triggers and pointer triggers share the same action pipeline.
+  - Evidence:
+    - `ecosystem/fret-bootstrap/src/ui_app_driver.rs` (command palette overlay builds command entries and dispatches via the window command pipeline)
+    - `ecosystem/fret-ui-shadcn/src/command.rs` (`host.dispatch_command(...)` on selection)
+    - `tools/diag-scripts/cookbook/imui-action-basics/cookbook-imui-action-basics-cross-frontend.json` (command palette → action handler gate)
 
 ### B.1 Authoring integration (pointer triggers)
 

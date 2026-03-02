@@ -50,6 +50,12 @@ Pointer-trigger authoring integration (v1 still dispatches through the command p
 - `apps/fret-cookbook/examples/imui_action_basics.rs` (example adoption: shared action handler across declarative + GenUI + imui)
 - `apps/fret-cookbook/examples/overlay_basics.rs` (example adoption: view runtime + modal barrier gate)
 
+Command palette integration (must dispatch through the same pipeline):
+
+- `crates/fret-app/src/core_commands.rs` (`app.command_palette` command metadata + default keybinding)
+- `ecosystem/fret-bootstrap/src/ui_app_driver.rs` (command palette overlay + selection dispatch via `UiTree::dispatch_command`)
+- `ecosystem/fret-ui-shadcn/src/command.rs` (command palette item selection calls `host.dispatch_command(...)`)
+
 ---
 
 ## 2) Regression gates (required)
@@ -134,3 +140,21 @@ These are not “nice to have”. They are the observability surface that keeps 
 See also:
 
 - Risk matrix: `docs/workstreams/action-first-authoring-fearless-refactor-v1/RISK_MATRIX.md`
+
+---
+
+## 5) Observability checklist (v1)
+
+This is a reviewer-facing checklist. A change is not considered “landed” unless evidence exists for
+each applicable item.
+
+Action dispatch:
+
+- [ ] A keybinding-triggered dispatch can be explained (matched binding + key context + resolved ActionId).
+- [ ] A pointer-triggered dispatch can be explained (source element/test_id + resolved ActionId).
+- [ ] A blocked dispatch can be explained (availability outcome + blocking reason/scope).
+
+View/cache closure:
+
+- [ ] A view rebuild can be explained (notify vs observed deps vs inspection/picking).
+- [ ] Cache reuse can be explained (why reuse happened or was skipped at a cache root).

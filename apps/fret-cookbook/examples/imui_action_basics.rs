@@ -7,6 +7,7 @@ use fret_genui_core::spec::SpecV1;
 use fret_genui_core::validate::ValidationMode;
 use fret_genui_shadcn::catalog::shadcn_catalog_v1;
 use fret_genui_shadcn::resolver::ShadcnResolver;
+use fret_runtime::{CommandId, CommandMeta, CommandScope};
 use fret_ui::CommandAvailability;
 use fret_ui_kit::imui::ButtonOptions;
 use serde_json::{Value, json};
@@ -76,6 +77,14 @@ impl View for ImUiActionBasicsView {
                 ),
                 params: Default::default(),
             },
+        );
+
+        app.commands_mut().register(
+            CommandId::new(act::Inc::ID_STR),
+            CommandMeta::new("Increment (action-first)")
+                .with_category("Cookbook")
+                .with_keywords(["action-first", "view runtime", "imui", "genui", "increment"])
+                .with_scope(CommandScope::Widget),
         );
 
         Self {

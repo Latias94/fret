@@ -5,7 +5,7 @@
     "tags": ["cookbook", "imui", "view_runtime", "actions", "smoke"],
     "required_capabilities": ["diag.script_v2"],
     "target_hints": [
-      "Clicks a declarative button, a GenUI-rendered button, a GenUI dropdown menu item, and an imui button that dispatch the same ActionId.",
+      "Invokes the command palette, clicks a declarative button, a GenUI-rendered button, a GenUI dropdown menu item, and an imui button that dispatch the same ActionId.",
       "Asserts all triggers update the same view-local state via a shared typed action handler."
     ]
   },
@@ -27,6 +27,31 @@
         "text": "Count: 0"
       }
     },
+    { "type": "press_key", "key": "escape" },
+    { "type": "wait_frames", "n": 2 },
+    { "type": "press_shortcut", "shortcut": "primary+p" },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "role_and_name", "role": "dialog", "name": "Command palette" }
+      },
+      "timeout_frames": 240
+    },
+    { "type": "type_text", "text": "increment (action-first)" },
+    { "type": "press_key", "key": "enter" },
+    { "type": "wait_frames", "n": 2 },
+    { "type": "press_shortcut", "shortcut": "primary+p" },
+    { "type": "wait_frames", "n": 2 },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "label_contains",
+        "target": { "kind": "test_id", "id": "cookbook.imui_action_basics.count" },
+        "text": "Count: 1"
+      },
+      "timeout_frames": 240
+    },
     {
       "type": "click_stable",
       "target": { "kind": "test_id", "id": "cookbook.imui_action_basics.button.declarative" }
@@ -36,7 +61,7 @@
       "predicate": {
         "kind": "label_contains",
         "target": { "kind": "test_id", "id": "cookbook.imui_action_basics.count" },
-        "text": "Count: 1"
+        "text": "Count: 2"
       },
       "timeout_frames": 240
     },
@@ -49,7 +74,7 @@
       "predicate": {
         "kind": "label_contains",
         "target": { "kind": "test_id", "id": "cookbook.imui_action_basics.count" },
-        "text": "Count: 2"
+        "text": "Count: 3"
       },
       "timeout_frames": 240
     },
@@ -74,7 +99,7 @@
       "predicate": {
         "kind": "label_contains",
         "target": { "kind": "test_id", "id": "cookbook.imui_action_basics.count" },
-        "text": "Count: 3"
+        "text": "Count: 4"
       },
       "timeout_frames": 240
     },
@@ -87,7 +112,7 @@
       "predicate": {
         "kind": "label_contains",
         "target": { "kind": "test_id", "id": "cookbook.imui_action_basics.count" },
-        "text": "Count: 4"
+        "text": "Count: 5"
       },
       "timeout_frames": 240
     },
