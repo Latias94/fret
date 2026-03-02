@@ -39,3 +39,11 @@ Exit gates:
 - Introduce and thread a single dispatch context across window and chain dispatch.
 - Remove parent-walk containment checks from dispatch paths (snapshot-only).
 
+Status: In progress (2026-03-02)
+
+- Dispatch-time layer membership queries no longer use retained `parent` pointers in:
+  - `crates/fret-ui/src/tree/dispatch/window.rs`
+  - `crates/fret-ui/src/tree/dispatch/chain.rs`
+- Focus traversal availability no longer depends on retained `parent` pointers:
+  - snapshot membership + snapshot parent traversal: `crates/fret-ui/src/tree/ui_tree_outside_press.rs`
+  - regression test: `crates/fret-ui/src/tree/tests/focus_traversal_availability.rs`

@@ -13,6 +13,9 @@ Tracking doc: `docs/workstreams/ui-focus-overlay-fearless-refactor-v1/DESIGN.md`
 
 ## C (snapshot-first dispatch) — follow-ups
 
+- [x] Remove `node_in_any_layer(...)` membership checks from dispatch paths (use per-dispatch snapshots).
+- [x] Make focus traversal focusable collection resilient to stale retained `parent` pointers
+  (snapshot membership + snapshot parent traversal).
 - [ ] Introduce an explicit dispatch context struct (e.g. `DispatchCx`) carrying:
   - [ ] active input roots + barrier root
   - [ ] active focus roots + focus barrier root
@@ -31,4 +34,3 @@ Tracking doc: `docs/workstreams/ui-focus-overlay-fearless-refactor-v1/DESIGN.md`
 
 - [ ] `fretboard diag` scripted repro covering “stale parent pointers” + overlay focus trap outcomes.
 - [ ] Perf probe: snapshot build cost vs frame budget in UI gallery worst-case overlays.
-

@@ -53,7 +53,11 @@ Evidence anchors:
 - Focus request gating: `crates/fret-ui/src/tree/dispatch/focus.rs`
 - Window + chain dispatch snapshot usage: `crates/fret-ui/src/tree/dispatch/window.rs`,
   `crates/fret-ui/src/tree/dispatch/chain.rs`, `crates/fret-ui/src/tree/commands.rs`
+- Focus traversal snapshot membership + snapshot parent traversal:
+  `crates/fret-ui/src/tree/ui_tree_outside_press.rs`
 - Regression tests (trap + stale parent pointers): `crates/fret-ui/src/tree/tests/focus_scope.rs`
+- Regression test (focus traversal availability under stale parent pointers):
+  `crates/fret-ui/src/tree/tests/focus_traversal_availability.rs`
 
 ## Plan: A + B → C (snapshot-first dispatch)
 
@@ -118,4 +122,3 @@ Performance notes:
 - ADR 0067: overlay policy architecture (dismissal/focus/portal in component layer)
 - ADR 0068: focus traversal and focus scopes
 - Overlay + input arbitration v2 progress: `docs/workstreams/overlay-input-arbitration-v2.md`
-
