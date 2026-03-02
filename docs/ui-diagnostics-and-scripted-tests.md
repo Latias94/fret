@@ -1216,6 +1216,8 @@ Suite:
 
 - `tools/diag-scripts/suites/cookbook-customv3-basics/`
   - `custom-effect-v3-non-filterable-user0-fallback-screenshot.json`
+  - `custom-effect-v3-non-filterable-user1-fallback-screenshot.json`
+  - `custom-effect-v3-non-filterable-user01-fallback-screenshot.json`
 
 Run example:
 

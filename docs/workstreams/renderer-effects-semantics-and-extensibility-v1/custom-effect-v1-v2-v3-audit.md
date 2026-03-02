@@ -181,7 +181,10 @@ Anchors:
   - `tools/diag-scripts/suites/cookbook-customv2-basics/`
     - CustomV2 incompatible user-image fallback script: `tools/diag-scripts/suites/cookbook-customv2-basics/custom-effect-v2-non-filterable-input-fallback-screenshot.json`
   - `tools/diag-scripts/suites/cookbook-customv3-basics/`
-    - CustomV3 incompatible user0 fallback script: `tools/diag-scripts/suites/cookbook-customv3-basics/custom-effect-v3-non-filterable-user0-fallback-screenshot.json`
+    - CustomV3 incompatible user-image fallback scripts:
+      - `tools/diag-scripts/suites/cookbook-customv3-basics/custom-effect-v3-non-filterable-user0-fallback-screenshot.json`
+      - `tools/diag-scripts/suites/cookbook-customv3-basics/custom-effect-v3-non-filterable-user1-fallback-screenshot.json`
+      - `tools/diag-scripts/suites/cookbook-customv3-basics/custom-effect-v3-non-filterable-user01-fallback-screenshot.json`
 
 Repro note (local evidence; do not check in the bundle):
 

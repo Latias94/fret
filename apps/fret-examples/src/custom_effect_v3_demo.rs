@@ -38,12 +38,34 @@ fn fret_custom_effect(_src: vec4<f32>, _uv: vec2<f32>, pos_px: vec2<f32>, _param
 }
 "#;
 
+const CUSTOM_EFFECT_V3_USER1_PROBE_WGSL: &str = r#"
+fn fret_custom_effect(_src: vec4<f32>, _uv: vec2<f32>, pos_px: vec2<f32>, _params: EffectParamsV1) -> vec4<f32> {
+  // For diagnostics: explicitly sample `user1`. When `user1` is incompatible with the CustomV3 ABI
+  // (non-filterable formats + filtering sampler), the backend must bind a deterministic fallback
+  // (1x1 transparent) rather than triggering a wgpu validation error.
+  return fret_sample_user1_at_pos(pos_px);
+}
+"#;
+
+const CUSTOM_EFFECT_V3_USER01_PROBE_WGSL: &str = r#"
+fn fret_custom_effect(_src: vec4<f32>, _uv: vec2<f32>, pos_px: vec2<f32>, _params: EffectParamsV1) -> vec4<f32> {
+  // For diagnostics: ensure both `user0` and `user1` sampling paths are exercised in the same pass.
+  let a = fret_sample_user0_at_pos(pos_px);
+  let b = fret_sample_user1_at_pos(pos_px);
+  return 0.5 * a + 0.5 * b;
+}
+"#;
+
 #[derive(Debug)]
 struct DemoGlobals {
     lens_program: CustomEffectProgramV3,
     user0_probe_program: CustomEffectProgramV3,
+    user1_probe_program: CustomEffectProgramV3,
+    user01_probe_program: CustomEffectProgramV3,
     user0_filterable: Option<ImageId>,
     user0_non_filterable: Option<ImageId>,
+    user1_filterable: Option<ImageId>,
+    user1_non_filterable: Option<ImageId>,
 }
 
 impl DemoGlobals {
@@ -53,8 +75,16 @@ impl DemoGlobals {
             user0_probe_program: CustomEffectProgramV3::wgsl_utf8(
                 CUSTOM_EFFECT_V3_USER0_PROBE_WGSL,
             ),
+            user1_probe_program: CustomEffectProgramV3::wgsl_utf8(
+                CUSTOM_EFFECT_V3_USER1_PROBE_WGSL,
+            ),
+            user01_probe_program: CustomEffectProgramV3::wgsl_utf8(
+                CUSTOM_EFFECT_V3_USER01_PROBE_WGSL,
+            ),
             user0_filterable: None,
             user0_non_filterable: None,
+            user1_filterable: None,
+            user1_non_filterable: None,
         }
     }
 }
@@ -63,7 +93,14 @@ impl DemoGlobals {
 struct State {
     enabled: Model<bool>,
     show_user0_probe: Model<bool>,
+    show_user1_probe: Model<bool>,
     use_non_filterable_user0: Model<bool>,
+    use_non_filterable_user1: Model<bool>,
+}
+
+#[derive(Debug, Clone)]
+enum Msg {
+    Reset,
 }
 
 struct Program;
@@ -107,6 +144,12 @@ fn register_custom_effect_v3(app: &mut App, effects: &mut dyn fret_core::CustomE
         }
         if let Err(err) = g.user0_probe_program.ensure_registered(effects) {
             tracing::warn!(?err, "custom effect v3 user0 probe registration failed");
+        }
+        if let Err(err) = g.user1_probe_program.ensure_registered(effects) {
+            tracing::warn!(?err, "custom effect v3 user1 probe registration failed");
+        }
+        if let Err(err) = g.user01_probe_program.ensure_registered(effects) {
+            tracing::warn!(?err, "custom effect v3 user01 probe registration failed");
         }
     });
 }
@@ -170,47 +213,141 @@ fn upload_user0_images(app: &mut App, context: &WgpuContext, renderer: &mut Rend
         alpha_mode: AlphaMode::Opaque,
     });
 
+    let user1_size = (1u32, 1u32);
+    let user1_texture = context.device.create_texture(&wgpu::TextureDescriptor {
+        label: Some("custom_effect_v3_demo user1 filterable"),
+        size: wgpu::Extent3d {
+            width: user1_size.0,
+            height: user1_size.1,
+            depth_or_array_layers: 1,
+        },
+        mip_level_count: 1,
+        sample_count: 1,
+        dimension: wgpu::TextureDimension::D2,
+        format: wgpu::TextureFormat::Rgba8Unorm,
+        usage: wgpu::TextureUsages::TEXTURE_BINDING | wgpu::TextureUsages::COPY_DST,
+        view_formats: &[],
+    });
+    write_rgba8_texture_region(
+        &context.queue,
+        &user1_texture,
+        (0, 0),
+        user1_size,
+        user1_size.0 * 4,
+        &[0, 255, 0, 255],
+    );
+    let view = user1_texture.create_view(&wgpu::TextureViewDescriptor::default());
+    let user1_filterable = renderer.register_image(ImageDescriptor {
+        view,
+        size: user1_size,
+        format: wgpu::TextureFormat::Rgba8Unorm,
+        color_space: ImageColorSpace::Linear,
+        alpha_mode: AlphaMode::Opaque,
+    });
+
+    let user1_non_filterable_texture = context.device.create_texture(&wgpu::TextureDescriptor {
+        label: Some("custom_effect_v3_demo user1 non-filterable"),
+        size: wgpu::Extent3d {
+            width: 1,
+            height: 1,
+            depth_or_array_layers: 1,
+        },
+        mip_level_count: 1,
+        sample_count: 1,
+        dimension: wgpu::TextureDimension::D2,
+        format: wgpu::TextureFormat::Rgba32Float,
+        usage: wgpu::TextureUsages::TEXTURE_BINDING,
+        view_formats: &[],
+    });
+    let view = user1_non_filterable_texture.create_view(&wgpu::TextureViewDescriptor::default());
+    let user1_non_filterable = renderer.register_image(ImageDescriptor {
+        view,
+        size: (1, 1),
+        format: wgpu::TextureFormat::Rgba32Float,
+        color_space: ImageColorSpace::Linear,
+        alpha_mode: AlphaMode::Opaque,
+    });
+
     app.with_global_mut(DemoGlobals::new, |g, _app| {
         g.user0_filterable = Some(user0_filterable);
         g.user0_non_filterable = Some(user0_non_filterable);
+        g.user1_filterable = Some(user1_filterable);
+        g.user1_non_filterable = Some(user1_non_filterable);
     });
 }
 
 impl MvuProgram for Program {
     type State = State;
-    type Message = ();
+    type Message = Msg;
 
     fn init(app: &mut App, _window: AppWindowId) -> Self::State {
         Self::State {
             enabled: app.models_mut().insert(true),
             show_user0_probe: app.models_mut().insert(false),
+            show_user1_probe: app.models_mut().insert(false),
             use_non_filterable_user0: app.models_mut().insert(false),
+            use_non_filterable_user1: app.models_mut().insert(false),
         }
     }
 
-    fn update(_app: &mut App, _st: &mut Self::State, _msg: Self::Message) {}
+    fn update(app: &mut App, st: &mut Self::State, msg: Self::Message) {
+        match msg {
+            Msg::Reset => {
+                let _ = app.models_mut().update(&st.enabled, |v| *v = true);
+                let _ = app
+                    .models_mut()
+                    .update(&st.show_user0_probe, |v| *v = false);
+                let _ = app
+                    .models_mut()
+                    .update(&st.show_user1_probe, |v| *v = false);
+                let _ = app
+                    .models_mut()
+                    .update(&st.use_non_filterable_user0, |v| *v = false);
+                let _ = app
+                    .models_mut()
+                    .update(&st.use_non_filterable_user1, |v| *v = false);
+            }
+        }
+    }
 
     fn view(
         cx: &mut ElementContext<'_, App>,
         st: &mut Self::State,
-        _msg: &mut MessageRouter<Self::Message>,
+        msg: &mut MessageRouter<Self::Message>,
     ) -> Elements {
-        view(cx, st)
+        view(cx, st, msg)
     }
 }
 
-fn view(cx: &mut ElementContext<'_, App>, st: &mut State) -> Elements {
+fn view(
+    cx: &mut ElementContext<'_, App>,
+    st: &mut State,
+    msg: &mut MessageRouter<Msg>,
+) -> Elements {
     // Animations make refraction far easier to see than static gradients.
     // Hold a continuous-frames lease so the backdrop moves without user input.
     let _frames = cx.begin_continuous_frames();
 
-    let (lens_effect, user0_probe_effect, user0_filterable, user0_non_filterable) = {
+    let (
+        lens_effect,
+        user0_probe_effect,
+        user1_probe_effect,
+        user01_probe_effect,
+        user0_filterable,
+        user0_non_filterable,
+        user1_filterable,
+        user1_non_filterable,
+    ) = {
         let globals = cx.app.global::<DemoGlobals>();
         (
             globals.and_then(|g| g.lens_program.id()),
             globals.and_then(|g| g.user0_probe_program.id()),
+            globals.and_then(|g| g.user1_probe_program.id()),
+            globals.and_then(|g| g.user01_probe_program.id()),
             globals.and_then(|g| g.user0_filterable),
             globals.and_then(|g| g.user0_non_filterable),
+            globals.and_then(|g| g.user1_filterable),
+            globals.and_then(|g| g.user1_non_filterable),
         )
     };
     let supported = cx
@@ -231,8 +368,16 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut State) -> Elements {
         .watch_model(&st.show_user0_probe)
         .layout()
         .copied_or(false);
+    let show_user1_probe = cx
+        .watch_model(&st.show_user1_probe)
+        .layout()
+        .copied_or(false);
     let use_non_filterable_user0 = cx
         .watch_model(&st.use_non_filterable_user0)
+        .layout()
+        .copied_or(false);
+    let use_non_filterable_user1 = cx
+        .watch_model(&st.use_non_filterable_user1)
         .layout()
         .copied_or(false);
     let user0_image = if use_non_filterable_user0 {
@@ -240,16 +385,27 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut State) -> Elements {
     } else {
         user0_filterable
     };
+    let user1_image = if use_non_filterable_user1 {
+        user1_non_filterable
+    } else {
+        user1_filterable
+    };
 
     let stage = stage(
         cx,
         st,
+        msg,
         enabled,
         show_user0_probe,
         use_non_filterable_user0,
         lens_effect,
         user0_probe_effect,
+        show_user1_probe,
+        use_non_filterable_user1,
+        user1_probe_effect,
+        user01_probe_effect,
         user0_image,
+        user1_image,
     );
 
     let mut root_layout = LayoutStyle::default();
@@ -270,12 +426,18 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut State) -> Elements {
 fn stage(
     cx: &mut ElementContext<'_, App>,
     st: &mut State,
+    msg: &mut MessageRouter<Msg>,
     enabled: bool,
     show_user0_probe: bool,
     use_non_filterable_user0: bool,
     lens_effect: EffectId,
     user0_probe_effect: Option<EffectId>,
+    show_user1_probe: bool,
+    use_non_filterable_user1: bool,
+    user1_probe_effect: Option<EffectId>,
+    user01_probe_effect: Option<EffectId>,
     user0_image: Option<ImageId>,
+    user1_image: Option<ImageId>,
 ) -> AnyElement {
     let backdrop = animated_backdrop(cx);
     let lenses = lens_row(
@@ -284,7 +446,11 @@ fn stage(
         show_user0_probe,
         lens_effect,
         user0_probe_effect,
+        show_user1_probe,
+        user1_probe_effect,
+        user01_probe_effect,
         user0_image,
+        user1_image,
     );
 
     let title = shadcn::typography::h3(cx, "Custom Effect V3 (CustomV3)");
@@ -292,7 +458,16 @@ fn stage(
         cx,
         "V3 can request renderer sources: src_raw + an optional bounded pyramid (for liquid glass ceilings).",
     );
-    let controls = stage_controls(cx, st, enabled, show_user0_probe, use_non_filterable_user0);
+    let controls = stage_controls(
+        cx,
+        st,
+        msg,
+        enabled,
+        show_user0_probe,
+        show_user1_probe,
+        use_non_filterable_user0,
+        use_non_filterable_user1,
+    );
 
     let mut header_layout = LayoutStyle::default();
     header_layout.size.width = Length::Fill;
@@ -362,13 +537,19 @@ fn stage(
 fn stage_controls(
     cx: &mut ElementContext<'_, App>,
     st: &mut State,
+    msg: &mut MessageRouter<Msg>,
     enabled: bool,
     show_user0_probe: bool,
+    show_user1_probe: bool,
     use_non_filterable_user0: bool,
+    use_non_filterable_user1: bool,
 ) -> AnyElement {
+    let reset_cmd = msg.cmd(Msg::Reset);
     let enabled_model = st.enabled.clone();
     let show_user0_probe_model = st.show_user0_probe.clone();
+    let show_user1_probe_model = st.show_user1_probe.clone();
     let use_non_filterable_user0_model = st.use_non_filterable_user0.clone();
+    let use_non_filterable_user1_model = st.use_non_filterable_user1.clone();
 
     shadcn::stack::hstack(
         cx,
@@ -398,7 +579,22 @@ fn stage_controls(
                 shadcn::Label::new(if show_user0_probe {
                     "User0 probe"
                 } else {
-                    "Lens"
+                    "User0 off"
+                })
+                .into_element(cx),
+            );
+
+            out.push(
+                shadcn::Switch::new(show_user1_probe_model.clone())
+                    .a11y_label("Show CustomV3 user1 probe")
+                    .test_id("custom-effect-v3.show-user1-probe")
+                    .into_element(cx),
+            );
+            out.push(
+                shadcn::Label::new(if show_user1_probe {
+                    "User1 probe"
+                } else {
+                    "User1 off"
                 })
                 .into_element(cx),
             );
@@ -416,6 +612,29 @@ fn stage_controls(
                     "Filterable user0"
                 })
                 .into_element(cx),
+            );
+
+            out.push(
+                shadcn::Switch::new(use_non_filterable_user1_model.clone())
+                    .a11y_label("Use non-filterable user1 image (expect fallback)")
+                    .test_id("custom-effect-v3.use-non-filterable-user1")
+                    .into_element(cx),
+            );
+            out.push(
+                shadcn::Label::new(if use_non_filterable_user1 {
+                    "Non-filterable user1"
+                } else {
+                    "Filterable user1"
+                })
+                .into_element(cx),
+            );
+
+            out.push(
+                shadcn::Button::new("Reset")
+                    .variant(shadcn::ButtonVariant::Secondary)
+                    .on_click(reset_cmd.clone())
+                    .test_id("custom-effect-v3.reset")
+                    .into_element(cx),
             );
 
             out
@@ -559,7 +778,11 @@ fn lens_row(
     show_user0_probe: bool,
     lens_effect: EffectId,
     user0_probe_effect: Option<EffectId>,
+    show_user1_probe: bool,
+    user1_probe_effect: Option<EffectId>,
+    user01_probe_effect: Option<EffectId>,
     user0_image: Option<ImageId>,
+    user1_image: Option<ImageId>,
 ) -> AnyElement {
     let radius = Px(24.0);
     let lens_w = Px(360.0);
@@ -580,7 +803,31 @@ fn lens_row(
             vec![
                 plain_lens(cx, "Plain (no effect)", radius, lens_w, lens_h)
                     .test_id("custom-effect-v3-demo.lens_left"),
-                if show_user0_probe {
+                if show_user0_probe && show_user1_probe {
+                    match (user01_probe_effect, user0_image, user1_image) {
+                        (Some(effect), Some(user0), Some(user1)) => {
+                            custom_effect_user01_probe_lens(
+                                cx,
+                                "CustomV3 user0+user1 probe",
+                                effect,
+                                user0,
+                                user1,
+                                radius,
+                                lens_w,
+                                lens_h,
+                            )
+                            .test_id("custom-effect-v3-demo.lens_right")
+                        }
+                        _ => plain_lens(
+                            cx,
+                            "CustomV3 user0+user1 probe (unavailable)",
+                            radius,
+                            lens_w,
+                            lens_h,
+                        )
+                        .test_id("custom-effect-v3-demo.lens_right"),
+                    }
+                } else if show_user0_probe {
                     match (user0_probe_effect, user0_image) {
                         (Some(effect), Some(image)) => custom_effect_user0_probe_lens(
                             cx,
@@ -595,6 +842,27 @@ fn lens_row(
                         _ => plain_lens(
                             cx,
                             "CustomV3 user0 probe (unavailable)",
+                            radius,
+                            lens_w,
+                            lens_h,
+                        )
+                        .test_id("custom-effect-v3-demo.lens_right"),
+                    }
+                } else if show_user1_probe {
+                    match (user1_probe_effect, user1_image) {
+                        (Some(effect), Some(image)) => custom_effect_user1_probe_lens(
+                            cx,
+                            "CustomV3 user1 probe",
+                            effect,
+                            image,
+                            radius,
+                            lens_w,
+                            lens_h,
+                        )
+                        .test_id("custom-effect-v3-demo.lens_right"),
+                        _ => plain_lens(
+                            cx,
+                            "CustomV3 user1 probe (unavailable)",
                             radius,
                             lens_w,
                             lens_h,
@@ -789,6 +1057,69 @@ fn custom_effect_user0_probe_lens(
             sampling: ImageSamplingHint::Linear,
         }),
         user1: None,
+        sources: CustomEffectSourcesV3 {
+            want_raw: false,
+            pyramid: None,
+        },
+    }])
+    .sanitize();
+
+    lens_shell(cx, title, radius, lens_w, lens_h, Some(chain))
+}
+
+fn custom_effect_user1_probe_lens(
+    cx: &mut ElementContext<'_, App>,
+    title: &'static str,
+    effect: EffectId,
+    user1_image: ImageId,
+    radius: Px,
+    lens_w: Px,
+    lens_h: Px,
+) -> AnyElement {
+    let chain = EffectChain::from_steps(&[EffectStep::CustomV3 {
+        id: effect,
+        params: EffectParamsV1::ZERO,
+        max_sample_offset_px: Px(0.0),
+        user0: None,
+        user1: Some(CustomEffectImageInputV1 {
+            image: user1_image,
+            uv: UvRect::FULL,
+            sampling: ImageSamplingHint::Linear,
+        }),
+        sources: CustomEffectSourcesV3 {
+            want_raw: false,
+            pyramid: None,
+        },
+    }])
+    .sanitize();
+
+    lens_shell(cx, title, radius, lens_w, lens_h, Some(chain))
+}
+
+fn custom_effect_user01_probe_lens(
+    cx: &mut ElementContext<'_, App>,
+    title: &'static str,
+    effect: EffectId,
+    user0_image: ImageId,
+    user1_image: ImageId,
+    radius: Px,
+    lens_w: Px,
+    lens_h: Px,
+) -> AnyElement {
+    let chain = EffectChain::from_steps(&[EffectStep::CustomV3 {
+        id: effect,
+        params: EffectParamsV1::ZERO,
+        max_sample_offset_px: Px(0.0),
+        user0: Some(CustomEffectImageInputV1 {
+            image: user0_image,
+            uv: UvRect::FULL,
+            sampling: ImageSamplingHint::Linear,
+        }),
+        user1: Some(CustomEffectImageInputV1 {
+            image: user1_image,
+            uv: UvRect::FULL,
+            sampling: ImageSamplingHint::Linear,
+        }),
         sources: CustomEffectSourcesV3 {
             want_raw: false,
             pyramid: None,
