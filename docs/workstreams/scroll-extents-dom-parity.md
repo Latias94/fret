@@ -183,6 +183,25 @@ Evidence anchors:
 - Query example:
   - `fretboard diag query overlay-placement-trace target/fret-diag/<run_id> --kind anchored_panel --anchor-test-id ui-gallery-tooltip-demo-trigger --json`
 
+#### SE-213c evidence (baseline vs post-layout gate)
+
+Status: recorded (2026-03-02, macOS aarch64, debug build).
+
+Runs:
+
+- Baseline (default extents): PASS (`run_id=1772436210204`)
+  - Out dir: `target/fret-diag-se213c2-baseline`
+- Gate on (`FRET_UI_SCROLL_EXTENTS_POST_LAYOUT=1`): PASS (`run_id=1772436308115`)
+  - Out dir: `target/fret-diag-se213c2-post-layout`
+
+Notes:
+
+- `overlay_placement_trace` for tooltips may have `content_test_id=null` (the tooltip root element
+  is used as the content identity). Filter by `--anchor-test-id` when querying.
+- When using `--session-auto`, `fretboard diag query overlay-placement-trace <base_out_dir>`
+  resolves to the nearest evidence-bearing `script.result.json` (session root), not bundle dump
+  subdirectories.
+
 Example (JSON):
 
 - `fretboard diag query overlay-placement-trace target/fret-diag/<run_id> --kind anchored_panel --anchor-test-id ui-gallery-tooltip-demo-trigger --json`

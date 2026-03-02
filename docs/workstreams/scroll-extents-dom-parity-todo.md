@@ -54,7 +54,7 @@ Tracking format:
     - [x] SE-213a Add `fretboard diag query overlay-placement-trace` (reads `script.result.json` evidence).
     - [x] SE-213b Add a UI Gallery script that (1) opens an anchored overlay, (2) expands a doc code tab
       (content growth), and (3) re-opens the overlay and asserts it is still clamped within the window.
-    - [ ] SE-213c Record evidence for baseline vs `FRET_UI_SCROLL_EXTENTS_POST_LAYOUT=1` (optional but recommended).
+    - [x] SE-213c Record evidence for baseline vs `FRET_UI_SCROLL_EXTENTS_POST_LAYOUT=1` (optional but recommended).
 
 ## Rollout
 

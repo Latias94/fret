@@ -82,7 +82,7 @@
       "predicate": {
         "kind": "bounds_within_window",
         "target": { "kind": "test_id", "id": "ui-gallery-tooltip-demo-panel" },
-        "padding_px": 2.0,
+        "padding_px": 0.0,
         "eps_px": 1.0
       }
     },
@@ -155,7 +155,7 @@
       "predicate": {
         "kind": "bounds_within_window",
         "target": { "kind": "test_id", "id": "ui-gallery-tooltip-rtl-top-panel" },
-        "padding_px": 2.0,
+        "padding_px": 0.0,
         "eps_px": 1.0
       }
     },
