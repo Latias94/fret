@@ -5,7 +5,7 @@
     "tags": ["node-graph", "declarative", "paint-only", "drag", "cancel", "cache", "gate"],
     "required_capabilities": ["diag.script_v2"],
     "target_hints": [
-      "Run with `FRET_NODE_GRAPH_DECLARATIVE=paint` so the paint-only declarative surface is active.",
+      "Run the `node_graph_demo` binary (it defaults to the paint-only declarative surface).",
       "Requires `FRET_DIAG=1` (diagnostics-only shortcuts).",
       "Uses the diagnostics-only normalize shortcut (Ctrl+4) to place a node under the canvas center.",
       "Asserts that PointerCancel ends the local drag preview without committing graph changes (no geometry rebuild)."

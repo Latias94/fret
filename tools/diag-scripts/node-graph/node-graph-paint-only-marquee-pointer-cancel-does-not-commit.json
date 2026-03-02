@@ -5,7 +5,7 @@
     "tags": ["node-graph", "declarative", "paint-only", "marquee", "cancel", "selection", "cache", "gate"],
     "required_capabilities": ["diag.script_v2"],
     "target_hints": [
-      "Run with `FRET_NODE_GRAPH_DECLARATIVE=paint` so the paint-only declarative surface is active.",
+      "Run the `node_graph_demo` binary (it defaults to the paint-only declarative surface).",
       "Requires `FRET_DIAG=1` (diagnostics-only shortcuts).",
       "Uses the diagnostics-only normalize+offset shortcut (Ctrl+5) so the canvas center is blank for marquee start.",
       "Asserts that PointerCancel clears marquee state and does not commit selection or rebuild geometry caches."
