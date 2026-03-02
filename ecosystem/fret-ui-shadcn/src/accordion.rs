@@ -2,8 +2,8 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use fret_core::{
-    AttributedText, Color, DecorationLineStyle, Edges, FontId, FontWeight, Point, Px, TextOverflow,
-    TextPaintStyle, TextSpan, TextStyle, TextWrap, Transform2D, UnderlineStyle,
+    AttributedText, Color, DecorationLineStyle, Edges, FontId, FontWeight, Point, Px, TextAlign,
+    TextOverflow, TextPaintStyle, TextSpan, TextStyle, TextWrap, Transform2D, UnderlineStyle,
 };
 use fret_icons::ids;
 use fret_runtime::Model;
@@ -51,7 +51,12 @@ fn trigger_gap(theme: &ThemeSnapshot) -> Px {
         .unwrap_or_else(|| MetricRef::space(Space::N4).resolve(theme))
 }
 
-fn apply_trigger_label_defaults(el: AnyElement, text_style: &TextStyle, fg: Color) -> AnyElement {
+fn apply_trigger_label_defaults(
+    el: AnyElement,
+    text_style: &TextStyle,
+    fg: Color,
+    align: TextAlign,
+) -> AnyElement {
     match el.kind {
         ElementKind::Text(mut props) => {
             if props.style.is_none() {
@@ -64,6 +69,7 @@ fn apply_trigger_label_defaults(el: AnyElement, text_style: &TextStyle, fg: Colo
             props.layout.size.min_width = Some(Length::Px(Px(0.0)));
             props.wrap = TextWrap::Word;
             props.overflow = TextOverflow::Clip;
+            props.align = align;
             AnyElement::new(el.id, ElementKind::Text(props), el.children)
         }
         ElementKind::StyledText(mut props) => {
@@ -77,6 +83,7 @@ fn apply_trigger_label_defaults(el: AnyElement, text_style: &TextStyle, fg: Colo
             props.layout.size.min_width = Some(Length::Px(Px(0.0)));
             props.wrap = TextWrap::Word;
             props.overflow = TextOverflow::Clip;
+            props.align = align;
             AnyElement::new(el.id, ElementKind::StyledText(props), el.children)
         }
         ElementKind::SelectableText(mut props) => {
@@ -90,6 +97,7 @@ fn apply_trigger_label_defaults(el: AnyElement, text_style: &TextStyle, fg: Colo
             props.layout.size.min_width = Some(Length::Px(Px(0.0)));
             props.wrap = TextWrap::Word;
             props.overflow = TextOverflow::Clip;
+            props.align = align;
             AnyElement::new(el.id, ElementKind::SelectableText(props), el.children)
         }
         _ => el,
@@ -267,14 +275,26 @@ pub mod composable {
             value: Arc<str>,
             enabled: bool,
             focusable: bool,
+            dir: LayoutDirection,
         ) -> AnyElement {
             let theme = Theme::global(&*cx.app).snapshot();
 
             let a11y_label = self.a11y_label.unwrap_or_else(|| value.clone());
             let test_id = self.test_id;
+            let chevron_test_id: Option<Arc<str>> = test_id
+                .as_ref()
+                .map(|id| Arc::from(format!("{id}-chevron")));
+            let label_test_id: Option<Arc<str>> =
+                test_id.as_ref().map(|id| Arc::from(format!("{id}-label")));
             let text_style = trigger_text_style(&theme);
             let fg = theme.color_token("foreground");
             let radius = MetricRef::radius(Radius::Md).resolve(&theme);
+            let label_align = if dir == LayoutDirection::Rtl {
+                TextAlign::End
+            } else {
+                TextAlign::Start
+            };
+            let is_rtl = dir == LayoutDirection::Rtl;
 
             let pressable_layout = decl_style::layout_style(
                 &theme,
@@ -362,6 +382,11 @@ pub mod composable {
                                         )]
                                     },
                                 );
+                                let chevron = if let Some(id) = chevron_test_id.clone() {
+                                    chevron.test_id(id)
+                                } else {
+                                    chevron
+                                };
 
                                 let left_layout = decl_style::layout_style(
                                     &theme,
@@ -380,7 +405,7 @@ pub mod composable {
                                                 layout: row_layout,
                                                 gap: trigger_gap(&theme).into(),
                                                 padding: Edges::all(Px(0.0)).into(),
-                                                justify: MainAlign::SpaceBetween,
+                                                justify: MainAlign::Start,
                                                 align: CrossAlign::Start,
                                             },
                                             move |cx| {
@@ -416,6 +441,7 @@ pub mod composable {
                                                             el,
                                                             &text_style,
                                                             fg,
+                                                            label_align,
                                                         );
                                                         if hover_underline {
                                                             apply_trigger_label_hover_underline(el)
@@ -425,16 +451,25 @@ pub mod composable {
                                                     })
                                                     .collect::<Vec<_>>();
 
-                                                vec![
-                                                    cx.container(
-                                                        ContainerProps {
-                                                            layout: left_layout,
-                                                            ..Default::default()
-                                                        },
-                                                        |_cx| left_children,
-                                                    ),
-                                                    chevron,
-                                                ]
+                                                let label = cx.container(
+                                                    ContainerProps {
+                                                        layout: left_layout,
+                                                        ..Default::default()
+                                                    },
+                                                    |_cx| left_children,
+                                                );
+                                                let label = if let Some(id) = label_test_id.clone()
+                                                {
+                                                    label.test_id(id)
+                                                } else {
+                                                    label
+                                                };
+
+                                                if is_rtl {
+                                                    vec![chevron, label]
+                                                } else {
+                                                    vec![label, chevron]
+                                                }
                                             },
                                         )]
                                     },
@@ -793,7 +828,7 @@ pub mod composable {
                 let layout = self.layout;
                 let loop_navigation = self.loop_navigation;
                 let orientation = self.orientation;
-                let dir = self.dir;
+                let dir = fret_ui_kit::primitives::direction::use_direction_in_scope(cx, self.dir);
                 let on_value_change = self.on_value_change;
 
                 let root = match &model {
@@ -819,7 +854,7 @@ pub mod composable {
                 .disabled(group_disabled)
                 .loop_navigation(loop_navigation)
                 .orientation(orientation)
-                .dir(dir);
+                .dir(Some(dir));
 
                 let values: Vec<Arc<str>> = items.iter().map(|i| i.value.clone()).collect();
                 if let Some(on_value_change) = on_value_change.as_ref() {
@@ -904,6 +939,7 @@ pub mod composable {
                                     item.value.clone(),
                                     enabled,
                                     focusable,
+                                    dir,
                                 );
 
                                 let theme = theme.clone();
@@ -1141,14 +1177,26 @@ impl AccordionTrigger {
         value: Arc<str>,
         enabled: bool,
         focusable: bool,
+        dir: LayoutDirection,
     ) -> AnyElement {
         let theme = Theme::global(&*cx.app).snapshot();
 
         let a11y_label = self.a11y_label.unwrap_or_else(|| value.clone());
         let test_id = self.test_id;
+        let chevron_test_id: Option<Arc<str>> = test_id
+            .as_ref()
+            .map(|id| Arc::from(format!("{id}-chevron")));
+        let label_test_id: Option<Arc<str>> =
+            test_id.as_ref().map(|id| Arc::from(format!("{id}-label")));
         let text_style = trigger_text_style(&theme);
         let fg = theme.color_token("foreground");
         let radius = MetricRef::radius(Radius::Md).resolve(&theme);
+        let label_align = if dir == LayoutDirection::Rtl {
+            TextAlign::End
+        } else {
+            TextAlign::Start
+        };
+        let is_rtl = dir == LayoutDirection::Rtl;
 
         let pressable_layout = decl_style::layout_style(
             &theme,
@@ -1234,6 +1282,11 @@ impl AccordionTrigger {
                                     )]
                                 },
                             );
+                            let chevron = if let Some(id) = chevron_test_id.clone() {
+                                chevron.test_id(id)
+                            } else {
+                                chevron
+                            };
 
                             let left_layout = decl_style::layout_style(
                                 &theme,
@@ -1252,7 +1305,7 @@ impl AccordionTrigger {
                                             layout: row_layout,
                                             gap: trigger_gap(&theme).into(),
                                             padding: Edges::all(Px(0.0)).into(),
-                                            justify: MainAlign::SpaceBetween,
+                                            justify: MainAlign::Start,
                                             align: CrossAlign::Start,
                                         },
                                         move |cx| {
@@ -1288,6 +1341,7 @@ impl AccordionTrigger {
                                                         el,
                                                         &text_style,
                                                         fg,
+                                                        label_align,
                                                     );
                                                     if hover_underline {
                                                         apply_trigger_label_hover_underline(el)
@@ -1297,16 +1351,24 @@ impl AccordionTrigger {
                                                 })
                                                 .collect::<Vec<_>>();
 
-                                            vec![
-                                                cx.container(
-                                                    ContainerProps {
-                                                        layout: left_layout,
-                                                        ..Default::default()
-                                                    },
-                                                    |_cx| left_children,
-                                                ),
-                                                chevron,
-                                            ]
+                                            let label = cx.container(
+                                                ContainerProps {
+                                                    layout: left_layout,
+                                                    ..Default::default()
+                                                },
+                                                |_cx| left_children,
+                                            );
+                                            let label = if let Some(id) = label_test_id.clone() {
+                                                label.test_id(id)
+                                            } else {
+                                                label
+                                            };
+
+                                            if is_rtl {
+                                                vec![chevron, label]
+                                            } else {
+                                                vec![label, chevron]
+                                            }
                                         },
                                     )]
                                 },
@@ -1656,7 +1718,7 @@ impl Accordion {
         let layout = self.layout;
             let loop_navigation = self.loop_navigation;
             let orientation = self.orientation;
-            let dir = self.dir;
+            let dir = fret_ui_kit::primitives::direction::use_direction_in_scope(cx, self.dir);
             let on_value_change = self.on_value_change;
 
             let root = match &model {
@@ -1680,7 +1742,7 @@ impl Accordion {
             .disabled(group_disabled)
             .loop_navigation(loop_navigation)
             .orientation(orientation)
-            .dir(dir);
+            .dir(Some(dir));
 
             let values: Vec<Arc<str>> = items.iter().map(|i| i.value.clone()).collect();
             if let Some(on_value_change) = on_value_change.as_ref() {
@@ -1758,6 +1820,7 @@ impl Accordion {
                                 item.value.clone(),
                                 enabled,
                                 focusable,
+                                dir,
                             );
 
                             let content = item.content;
