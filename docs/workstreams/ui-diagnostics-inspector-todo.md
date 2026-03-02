@@ -29,6 +29,7 @@ Related docs:
 - Help output is paged (keyboard scroll via `PageUp/PageDown/Home/End`) to keep the overlay usable as sections grow (explainability + neighborhood + tree).
 - Inspector state is bucketed as `InspectState` (reduces churn and enables future modularization).
 - Inspector/pick ephemeral state, pick-result-to-inspector-state updates, and in-app shortcut handling are bucketed as `InspectController` (reduces churn and keeps `UiDiagnosticsService` manageable).
+- Overlay reads inspector state via a single snapshot model (`InspectOverlayModel`) to avoid proliferating ad-hoc `inspect_*` getters.
 - View cache frame stats exported in bundles (`debug.stats.view_cache_*`, `debug.stats.invalidation_*`)
 - A small regression gate exists in the `ui-gallery-overlay-steady` suite to ensure the in-app inspector can lock a help search match and copy the best selector JSON to the clipboard.
 - A scripted inspector helper step exists (`inspect_help_lock_best_match_and_copy_selector`) to avoid relying on keyboard shortcut injection under `--launch`.
