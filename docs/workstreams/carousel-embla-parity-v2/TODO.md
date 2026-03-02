@@ -246,11 +246,13 @@ Not implemented / not applicable (expected gaps for native retained UI):
 
 ## P5 — Evidence + gates
 
-- [ ] CAR2-510 Add targeted `nextest` tests for the engine:
-  - integrator stability, velocity decay, settle thresholds
+- [x] CAR2-510 Add targeted `nextest` tests for the engine:
+  - [x] integrator stability, velocity decay, settle thresholds
+    - Evidence: `ecosystem/fret-ui-headless/src/embla/scroll_body.rs` (`embla_default_params_settle_and_decay_velocity`)
   - [x] loop wrapping invariants
     - Evidence: `ecosystem/fret-ui-headless/src/embla/engine.rs` (`loop_normalization_*` tests)
-  - slidesInView thresholds + margins
+  - [x] slidesInView thresholds + margins
+    - Evidence: `ecosystem/fret-ui-headless/src/embla/slides_in_view.rs` (`higher_threshold_requires_visible_fraction`, `margin_expands_viewport`)
 - [ ] CAR2-520 Add `fretboard diag` scripts for:
   - [x] inertial swipe (mouse)
     - Gate: `tools/diag-scripts/ui-gallery/carousel/ui-gallery-carousel-demo-inertia-pixels-changed.json`
