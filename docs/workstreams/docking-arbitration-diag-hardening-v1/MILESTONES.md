@@ -63,6 +63,16 @@ Post-merge verification (2026-03-02, after syncing `origin/main` into local `mai
   - overlap z-order switch: run id `1772468892427` (session `1772468392070-85720`)
   - chained tear-off (two tabs): run id `1772468949607` (session `1772468946994-57504`)
 
+Hover peek-behind hardening (2026-03-02):
+
+- Runner hover routing consumes `window_under_moving_window` when transparent payload is requested (or follow is active),
+  so docking previews/resolve can target the overlapped window under a moving payload window.
+  - implementation: `crates/fret-launch/src/runner/desktop/runner/event_routing.rs`
+- Updated gates (all PASS with `--timeout-ms 60000`):
+  - transparent payload z-order switch: run id `1772470944468` (`target/fret-diag-transparent-payload-smoke4`)
+  - under-moving-window peek-behind: run id `1772471076428` (`target/fret-diag-under-moving-hover4`)
+  - overlap z-order switch (non-transparent): run id `1772471119364` (`target/fret-diag-post-peek`)
+
 ## M1.4 — Rebuild reliability for docking demos (Windows/MSVC)
 
 Goal: docking demo binaries used by `--launch` diagnostics can be rebuilt reliably in local dev.

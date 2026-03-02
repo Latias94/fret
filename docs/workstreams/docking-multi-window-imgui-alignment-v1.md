@@ -115,13 +115,19 @@ These gates assert, at minimum:
 
 ## Known gaps / next alignment steps
 
-1) **Separate “hovered window” vs “window under moving window”**
+1) **Consume “window under moving window” for docking previews/resolve (peek-behind)**
 - ImGui tracks both `HoveredWindow` and `HoveredWindowUnderMovingWindow`.
-- Fret now publishes a best-effort “under moving window” snapshot during dock drags:
+- Fret publishes “under moving window” diagnostics during dock drags:
   - `dock_drag_moving_window_is`
   - `dock_drag_window_under_moving_window_is`
   - `dock_drag_window_under_moving_window_source_is`
-- Remaining work: decide how docking previews/resolve should consume this (without breaking existing z-order gates).
+- Delivered (2026-03-02): when transparent payload is requested (or follow-window mode is active), the runner’s
+  hover routing can treat `window_under_moving_window` as the effective hover/drop target so docking previews/resolve
+  can “peek behind” overlap without depending solely on OS click-through.
+  - implementation: `crates/fret-launch/src/runner/desktop/runner/event_routing.rs`
+  - gates:
+    - `tools/diag-scripts/docking/arbitration/docking-arbitration-demo-multiwindow-transparent-payload-zorder-switch.json`
+    - `tools/diag-scripts/docking/arbitration/docking-arbitration-demo-multiwindow-under-moving-window-basic.json`
 
 2) **Diagnostics completeness for tab drags**
 - Ensure docking diagnostics cover both `DRAG_KIND_DOCK_PANEL` and `DRAG_KIND_DOCK_TABS` consistently, so scripts can assert either form of tear-off/re-dock.
@@ -133,5 +139,6 @@ These gates assert, at minimum:
   - a platform-level `NoInputs`/passthrough strategy during drag (best-effort, backend-dependent).
 - Gate coverage:
   - `tools/diag-scripts/docking-arbitration-demo-multiwindow-transparent-payload-drag-tab-back-to-main.json`
+  - `tools/diag-scripts/docking/arbitration/docking-arbitration-demo-multiwindow-transparent-payload-zorder-switch.json`
 
 The preferred vehicle remains: add/extend diag scripts in `tools/diag-scripts/` and keep assertions contract-level (dock graph signatures + docking diagnostics), not pixels.
