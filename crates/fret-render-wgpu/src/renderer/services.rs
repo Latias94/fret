@@ -110,6 +110,74 @@ fn build_and_validate_custom_effect_wgsl_v3(
     )
 }
 
+fn custom_effect_sampled_user_image_supported(adapter: &wgpu::Adapter) -> bool {
+    let fmt = wgpu::TextureFormat::Rgba8Unorm;
+    let f = adapter.get_texture_format_features(fmt);
+    f.allowed_usages
+        .contains(wgpu::TextureUsages::TEXTURE_BINDING)
+        && f.flags
+            .contains(wgpu::TextureFormatFeatureFlags::FILTERABLE)
+}
+
+fn find_existing_custom_effect(
+    renderer: &Renderer,
+    abi: CustomEffectAbi,
+    hash: u64,
+    user_source: &str,
+) -> Option<fret_core::EffectId> {
+    let ids = renderer.custom_effect_hash_index.get(&hash)?;
+    ids.iter().copied().find(|&id| {
+        let Some(existing) = renderer.custom_effects.get(id) else {
+            return false;
+        };
+        existing.abi == abi && existing.raw_source.as_ref() == user_source
+    })
+}
+
+fn register_custom_effect_wgsl(
+    renderer: &mut Renderer,
+    abi: CustomEffectAbi,
+    abi_hash_salt: u64,
+    user_source: String,
+    build_and_validate: fn(
+        &str,
+    ) -> Result<
+        (String, String, String),
+        fret_core::CustomEffectRegistrationError,
+    >,
+) -> Result<fret_core::EffectId, fret_core::CustomEffectRegistrationError> {
+    if user_source.len() > MAX_CUSTOM_EFFECT_WGSL_BYTES {
+        return Err(fret_core::CustomEffectRegistrationError::InvalidSource);
+    }
+
+    let h = mix_u64(hash_bytes(user_source.as_bytes()), abi_hash_salt);
+    if let Some(id) = find_existing_custom_effect(renderer, abi, h, &user_source) {
+        if let Some(entry) = renderer.custom_effects.get_mut(id) {
+            entry.refs = entry.refs.saturating_add(1);
+        }
+        return Ok(id);
+    }
+
+    let (wgsl_unmasked, wgsl_masked, wgsl_mask) = build_and_validate(&user_source)?;
+
+    let raw_source: Arc<str> = Arc::from(user_source);
+    let id = renderer.custom_effects.insert(super::CustomEffectEntry {
+        abi,
+        raw_source: raw_source.clone(),
+        wgsl_unmasked: Arc::from(wgsl_unmasked),
+        wgsl_masked: Arc::from(wgsl_masked),
+        wgsl_mask: Arc::from(wgsl_mask),
+        refs: 1,
+    });
+    renderer
+        .custom_effect_hash_index
+        .entry(h)
+        .or_default()
+        .push(id);
+    renderer.custom_effects_generation = renderer.custom_effects_generation.wrapping_add(1);
+    Ok(id)
+}
+
 impl fret_core::TextService for Renderer {
     fn prepare(
         &mut self,
@@ -465,44 +533,13 @@ impl fret_core::CustomEffectService for Renderer {
         if desc.language != fret_core::CustomEffectProgramLanguage::WgslUtf8 {
             return Err(fret_core::CustomEffectRegistrationError::Unsupported);
         }
-
-        if desc.source.len() > MAX_CUSTOM_EFFECT_WGSL_BYTES {
-            return Err(fret_core::CustomEffectRegistrationError::InvalidSource);
-        }
-
-        let h = mix_u64(hash_bytes(desc.source.as_bytes()), 1);
-        if let Some(ids) = self.custom_effect_hash_index.get(&h) {
-            for &id in ids {
-                let Some(existing) = self.custom_effects.get(id) else {
-                    continue;
-                };
-                if existing.abi != abi {
-                    continue;
-                }
-                if existing.raw_source.as_ref() == desc.source.as_str() {
-                    if let Some(entry) = self.custom_effects.get_mut(id) {
-                        entry.refs = entry.refs.saturating_add(1);
-                    }
-                    return Ok(id);
-                }
-            }
-        }
-
-        let (wgsl_unmasked, wgsl_masked, wgsl_mask) =
-            build_and_validate_custom_effect_wgsl_v1(&desc.source)?;
-
-        let raw_source: Arc<str> = Arc::from(desc.source);
-        let id = self.custom_effects.insert(super::CustomEffectEntry {
+        register_custom_effect_wgsl(
+            self,
             abi,
-            raw_source: raw_source.clone(),
-            wgsl_unmasked: Arc::from(wgsl_unmasked),
-            wgsl_masked: Arc::from(wgsl_masked),
-            wgsl_mask: Arc::from(wgsl_mask),
-            refs: 1,
-        });
-        self.custom_effect_hash_index.entry(h).or_default().push(id);
-        self.custom_effects_generation = self.custom_effects_generation.wrapping_add(1);
-        Ok(id)
+            1,
+            desc.source,
+            build_and_validate_custom_effect_wgsl_v1,
+        )
     }
 
     fn register_custom_effect_v2(
@@ -516,55 +553,16 @@ impl fret_core::CustomEffectService for Renderer {
 
         // V2 requires a filterable sampled input texture (the user image input). Gate the feature
         // on a conservative and widely supported format so apps can reliably probe support.
-        let fmt = wgpu::TextureFormat::Rgba8Unorm;
-        let f = self.adapter.get_texture_format_features(fmt);
-        if !f
-            .allowed_usages
-            .contains(wgpu::TextureUsages::TEXTURE_BINDING)
-            || !f
-                .flags
-                .contains(wgpu::TextureFormatFeatureFlags::FILTERABLE)
-        {
+        if !custom_effect_sampled_user_image_supported(&self.adapter) {
             return Err(fret_core::CustomEffectRegistrationError::Unsupported);
         }
-
-        if desc.source.len() > MAX_CUSTOM_EFFECT_WGSL_BYTES {
-            return Err(fret_core::CustomEffectRegistrationError::InvalidSource);
-        }
-
-        let h = mix_u64(hash_bytes(desc.source.as_bytes()), 2);
-        if let Some(ids) = self.custom_effect_hash_index.get(&h) {
-            for &id in ids {
-                let Some(existing) = self.custom_effects.get(id) else {
-                    continue;
-                };
-                if existing.abi != abi {
-                    continue;
-                }
-                if existing.raw_source.as_ref() == desc.source.as_str() {
-                    if let Some(entry) = self.custom_effects.get_mut(id) {
-                        entry.refs = entry.refs.saturating_add(1);
-                    }
-                    return Ok(id);
-                }
-            }
-        }
-
-        let (wgsl_unmasked, wgsl_masked, wgsl_mask) =
-            build_and_validate_custom_effect_wgsl_v2(&desc.source)?;
-
-        let raw_source: Arc<str> = Arc::from(desc.source);
-        let id = self.custom_effects.insert(super::CustomEffectEntry {
+        register_custom_effect_wgsl(
+            self,
             abi,
-            raw_source: raw_source.clone(),
-            wgsl_unmasked: Arc::from(wgsl_unmasked),
-            wgsl_masked: Arc::from(wgsl_masked),
-            wgsl_mask: Arc::from(wgsl_mask),
-            refs: 1,
-        });
-        self.custom_effect_hash_index.entry(h).or_default().push(id);
-        self.custom_effects_generation = self.custom_effects_generation.wrapping_add(1);
-        Ok(id)
+            2,
+            desc.source,
+            build_and_validate_custom_effect_wgsl_v2,
+        )
     }
 
     fn register_custom_effect_v3(
@@ -579,55 +577,16 @@ impl fret_core::CustomEffectService for Renderer {
         // V3 currently keeps the same conservative requirement as V2 for user image inputs:
         // a filterable sampled texture (RGBA8). Backends that cannot provide it should report
         // `Unsupported` deterministically.
-        let fmt = wgpu::TextureFormat::Rgba8Unorm;
-        let f = self.adapter.get_texture_format_features(fmt);
-        if !f
-            .allowed_usages
-            .contains(wgpu::TextureUsages::TEXTURE_BINDING)
-            || !f
-                .flags
-                .contains(wgpu::TextureFormatFeatureFlags::FILTERABLE)
-        {
+        if !custom_effect_sampled_user_image_supported(&self.adapter) {
             return Err(fret_core::CustomEffectRegistrationError::Unsupported);
         }
-
-        if desc.source.len() > MAX_CUSTOM_EFFECT_WGSL_BYTES {
-            return Err(fret_core::CustomEffectRegistrationError::InvalidSource);
-        }
-
-        let h = mix_u64(hash_bytes(desc.source.as_bytes()), 3);
-        if let Some(ids) = self.custom_effect_hash_index.get(&h) {
-            for &id in ids {
-                let Some(existing) = self.custom_effects.get(id) else {
-                    continue;
-                };
-                if existing.abi != abi {
-                    continue;
-                }
-                if existing.raw_source.as_ref() == desc.source.as_str() {
-                    if let Some(entry) = self.custom_effects.get_mut(id) {
-                        entry.refs = entry.refs.saturating_add(1);
-                    }
-                    return Ok(id);
-                }
-            }
-        }
-
-        let (wgsl_unmasked, wgsl_masked, wgsl_mask) =
-            build_and_validate_custom_effect_wgsl_v3(&desc.source)?;
-
-        let raw_source: Arc<str> = Arc::from(desc.source);
-        let id = self.custom_effects.insert(super::CustomEffectEntry {
+        register_custom_effect_wgsl(
+            self,
             abi,
-            raw_source: raw_source.clone(),
-            wgsl_unmasked: Arc::from(wgsl_unmasked),
-            wgsl_masked: Arc::from(wgsl_masked),
-            wgsl_mask: Arc::from(wgsl_mask),
-            refs: 1,
-        });
-        self.custom_effect_hash_index.entry(h).or_default().push(id);
-        self.custom_effects_generation = self.custom_effects_generation.wrapping_add(1);
-        Ok(id)
+            3,
+            desc.source,
+            build_and_validate_custom_effect_wgsl_v3,
+        )
     }
 
     fn unregister_custom_effect(&mut self, id: fret_core::EffectId) -> bool {
