@@ -1,3 +1,5 @@
+pub const SOURCE: &str = include_str!("demo.rs");
+
 // region: example
 use fret_app::App;
 use fret_core::{Px, SemanticsRole, TimerToken};
@@ -79,7 +81,10 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
                     .is_some();
                 if !armed {
                     let token = cx.app.next_timer_token();
-                    let _ = cx.app.models_mut().update(&timer_token, |v| *v = Some(token));
+                    let _ = cx
+                        .app
+                        .models_mut()
+                        .update(&timer_token, |v| *v = Some(token));
                     let _ = cx.app.models_mut().update(&value, |v| *v = 13.0);
                     cx.app.push_effect(Effect::SetTimer {
                         window: Some(cx.window),
