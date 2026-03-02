@@ -85,6 +85,34 @@ Primary evidence anchors (why this is meaningful):
 
 Goal: build the declarative composition shell that can render and pan/zoom smoothly.
 
+### M1a — Declarative entrypoint (compat retained)
+
+Goal: provide a declarative-first authoring surface immediately, while keeping the current retained
+canvas internal as a migration aid.
+
+Deliverables:
+
+- A declarative surface entrypoint in `fret-node` that:
+  - returns `AnyElement`,
+  - does not expose retained types in its public signature,
+  - hosts the existing retained canvas/editor internally.
+- A demo A/B switch so we can iterate without destabilizing the default retained demo path.
+
+Done criteria:
+
+- `apps/fret-examples/src/node_graph_demo.rs` can run in:
+  - default retained mode (no env var),
+  - declarative root mode (compat retained) (`FRET_NODE_GRAPH_DECLARATIVE=1`),
+  - declarative root mode (paint-only skeleton) (`FRET_NODE_GRAPH_DECLARATIVE=paint`),
+  with the same baseline interaction gates (Escape cancel / pointer capture) remaining valid.
+
+Evidence anchors (required):
+
+- Declarative compat surface entry:
+  - `ecosystem/fret-node/src/ui/declarative/mod.rs` (`node_graph_surface_compat_retained`)
+- Demo wiring:
+  - `apps/fret-examples/src/node_graph_demo.rs` (`NodeGraphDemoDriver::new_from_env`, `render_root`)
+
 Deliverables:
 
 - Declarative surface entrypoint that composes:
@@ -108,6 +136,20 @@ Evidence anchors (required):
 - The declarative surface entry function and its props type.
 - The cache model(s) and their invalidation keys (rev/viewport/scale).
 - A gate that shows “steady-state frames do not rebuild render data”.
+  - Paint-only baseline gate (grid cache steady-state):
+    - `tools/diag-scripts/node-graph/node-graph-paint-only-steady-grid-cache.json`
+  - Paint-only baseline gate (nodes cache steady-state):
+    - `tools/diag-scripts/node-graph/node-graph-paint-only-steady-nodes-cache.json`
+  - Paint-only baseline gate (edges cache steady-state):
+    - `tools/diag-scripts/node-graph/node-graph-paint-only-steady-edges-cache.json`
+  - Paint-only baseline gate (pan does not rebuild geometry):
+    - `tools/diag-scripts/node-graph/node-graph-paint-only-pan-does-not-rebuild-geometry.json`
+  - Paint-only gate (keyboard zoom rebuilds geometry exactly once):
+    - `tools/diag-scripts/node-graph/node-graph-paint-only-keyboard-zoom-rebuilds-geometry.json`
+  - Paint-only gate (diagnostics graph bump rebuilds geometry exactly once):
+    - `tools/diag-scripts/node-graph/node-graph-paint-only-diag-graph-bump-rebuilds-geometry.json`
+  - Paint-only gate (hover + selection do not rebuild geometry caches):
+    - `tools/diag-scripts/node-graph/node-graph-paint-only-hover-and-select-do-not-rebuild-geometry.json`
 
 ## M2 — Interaction + portals in declarative form
 
@@ -117,7 +159,11 @@ Deliverables:
 
 - Selection/marquee/drag workflows implemented via declarative input wiring + model reducers.
 - “Portal” nodes (header/body) hosted as normal elements for the focused/visible subset.
+- Portal subtree bounds harvested via `LayoutQueryRegion` into a local store (frame-lagged by contract),
+  enabling future fit-view/selection unions without retained hit-testing.
 - Overlay surfaces (context menus, rename, toolbars) implemented in ecosystem overlay policy.
+- Paint-only baseline interaction gate(s) that prove selection/marquee state changes do not rebuild
+  geometry caches.
 
 Done criteria:
 
@@ -128,6 +174,21 @@ Evidence anchors (required):
 
 - The declarative interaction reducers (selection/marquee/drag) and their gates.
 - The portal composition code path for visible items only.
+
+Initial paint-only interaction gates (v1 worktree):
+
+- Marquee selection updates selection without rebuilding geometry render data:
+  - `tools/diag-scripts/node-graph/node-graph-paint-only-marquee-select-does-not-rebuild-geometry.json`
+- PointerCancel clears marquee without committing selection:
+  - `tools/diag-scripts/node-graph/node-graph-paint-only-marquee-pointer-cancel-does-not-commit.json`
+- Node drag preview does not rebuild geometry caches; commit rebuilds once:
+  - `tools/diag-scripts/node-graph/node-graph-paint-only-node-drag-preview-and-commit.json`
+- Escape cancels node dragging without committing:
+  - `tools/diag-scripts/node-graph/node-graph-paint-only-node-drag-escape-cancel-does-not-commit.json`
+- PointerCancel cancels node dragging without committing:
+  - `tools/diag-scripts/node-graph/node-graph-paint-only-node-drag-pointer-cancel-does-not-commit.json`
+- PointerCancel clears panning without rebuilding geometry:
+  - `tools/diag-scripts/node-graph/node-graph-paint-only-pan-pointer-cancel-does-not-rebuild-geometry.json`
 
 ## M3 — Remove retained dependency from defaults (compat path only)
 
