@@ -36,7 +36,7 @@ impl View for ImUiActionBasicsView {
             "elements": {
                 "cookbook.imui_action_basics.genui.root": {
                     "type": "VStack",
-                    "props": { "gap": "sm" },
+                    "props": { "gap": "N2" },
                     "children": ["cookbook.imui_action_basics.genui.button.inc"]
                 },
                 "cookbook.imui_action_basics.genui.button.inc": {
