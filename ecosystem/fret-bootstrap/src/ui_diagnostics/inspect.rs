@@ -25,16 +25,6 @@ impl UiDiagnosticsService {
             self.last_hovered_selector_json.clear();
             self.last_picked_node_id.clear();
             self.last_picked_selector_json.clear();
-            self.inspect_help_search_query.clear();
-            self.inspect_help_match_node_ids.clear();
-            self.inspect_help_selected_match_index.clear();
-            self.inspect_help_scroll_offset.clear();
-            self.inspect_tree_open_windows.clear();
-            self.inspect_tree_expanded_node_ids.clear();
-            self.inspect_tree_flat_node_ids.clear();
-            self.inspect_tree_selected_index.clear();
-            self.inspect_tree_selected_node_id.clear();
-            self.inspect_pending_copy_selector_windows.clear();
         }
     }
 
@@ -47,26 +37,28 @@ impl UiDiagnosticsService {
     }
 
     pub fn inspect_is_locked(&self, window: AppWindowId) -> bool {
-        self.inspect_locked_windows.contains(&window)
+        self.inspect.locked_windows.contains(&window)
     }
 
     pub fn inspect_help_is_open(&self, window: AppWindowId) -> bool {
-        self.inspect_help_open_windows.contains(&window)
+        self.inspect.help_open_windows.contains(&window)
     }
 
     pub fn inspect_help_search_query(&self, window: AppWindowId) -> Option<&str> {
-        self.inspect_help_search_query
+        self.inspect
+            .help_search_query
             .get(&window)
             .map(|s| s.as_str())
             .filter(|s| !s.trim().is_empty())
     }
 
     pub(super) fn inspect_help_selected_match_index(&self, window: AppWindowId) -> Option<usize> {
-        self.inspect_help_selected_match_index.get(&window).copied()
+        self.inspect.help_selected_match_index.get(&window).copied()
     }
 
     pub(super) fn inspect_help_scroll_offset(&self, window: AppWindowId) -> usize {
-        self.inspect_help_scroll_offset
+        self.inspect
+            .help_scroll_offset
             .get(&window)
             .copied()
             .unwrap_or(0)
@@ -74,89 +66,95 @@ impl UiDiagnosticsService {
 
     pub(super) fn set_inspect_help_scroll_offset(&mut self, window: AppWindowId, offset: usize) {
         if offset == 0 {
-            self.inspect_help_scroll_offset.remove(&window);
+            self.inspect.help_scroll_offset.remove(&window);
         } else {
-            self.inspect_help_scroll_offset.insert(window, offset);
+            self.inspect.help_scroll_offset.insert(window, offset);
         }
     }
 
     pub(super) fn set_inspect_help_matches(&mut self, window: AppWindowId, matches: Vec<u64>) {
         if matches.is_empty() {
-            self.inspect_help_match_node_ids.remove(&window);
-            self.inspect_help_selected_match_index.remove(&window);
+            self.inspect.help_match_node_ids.remove(&window);
+            self.inspect.help_selected_match_index.remove(&window);
             return;
         }
 
-        self.inspect_help_match_node_ids.insert(window, matches);
+        self.inspect.help_match_node_ids.insert(window, matches);
         let len = self
-            .inspect_help_match_node_ids
+            .inspect
+            .help_match_node_ids
             .get(&window)
             .map(|v| v.len())
             .unwrap_or(0);
         if len == 0 {
-            self.inspect_help_selected_match_index.remove(&window);
+            self.inspect.help_selected_match_index.remove(&window);
             return;
         }
 
         let idx = self
-            .inspect_help_selected_match_index
+            .inspect
+            .help_selected_match_index
             .get(&window)
             .copied()
             .unwrap_or(0)
             .min(len.saturating_sub(1));
-        self.inspect_help_selected_match_index.insert(window, idx);
+        self.inspect.help_selected_match_index.insert(window, idx);
     }
 
     pub(super) fn inspect_tree_is_open(&self, window: AppWindowId) -> bool {
-        self.inspect_tree_open_windows.contains(&window)
+        self.inspect.tree_open_windows.contains(&window)
     }
 
     pub(super) fn set_inspect_tree_items(&mut self, window: AppWindowId, items: Vec<u64>) {
         if items.is_empty() {
-            self.inspect_tree_flat_node_ids.remove(&window);
-            self.inspect_tree_selected_index.remove(&window);
-            self.inspect_tree_selected_node_id.remove(&window);
+            self.inspect.tree_flat_node_ids.remove(&window);
+            self.inspect.tree_selected_index.remove(&window);
+            self.inspect.tree_selected_node_id.remove(&window);
             return;
         }
 
-        self.inspect_tree_flat_node_ids.insert(window, items);
+        self.inspect.tree_flat_node_ids.insert(window, items);
         let items = self
-            .inspect_tree_flat_node_ids
+            .inspect
+            .tree_flat_node_ids
             .get(&window)
             .map(|v| v.as_slice())
             .unwrap_or(&[]);
         if items.is_empty() {
-            self.inspect_tree_selected_index.remove(&window);
-            self.inspect_tree_selected_node_id.remove(&window);
+            self.inspect.tree_selected_index.remove(&window);
+            self.inspect.tree_selected_node_id.remove(&window);
             return;
         }
 
         let mut idx = self
-            .inspect_tree_selected_index
+            .inspect
+            .tree_selected_index
             .get(&window)
             .copied()
             .unwrap_or(0)
             .min(items.len().saturating_sub(1));
 
-        if let Some(want_id) = self.inspect_tree_selected_node_id.get(&window).copied() {
+        if let Some(want_id) = self.inspect.tree_selected_node_id.get(&window).copied() {
             if let Some(pos) = items.iter().position(|id| *id == want_id) {
                 idx = pos;
             }
         }
 
         let selected_id = items.get(idx).copied().unwrap_or_else(|| items[0]);
-        self.inspect_tree_selected_index.insert(window, idx);
-        self.inspect_tree_selected_node_id
+        self.inspect.tree_selected_index.insert(window, idx);
+        self.inspect
+            .tree_selected_node_id
             .insert(window, selected_id);
     }
 
     pub(super) fn inspect_tree_selected_node_id(&self, window: AppWindowId) -> Option<u64> {
-        let items = self.inspect_tree_flat_node_ids.get(&window)?;
+        let items = self.inspect.tree_flat_node_ids.get(&window)?;
         if items.is_empty() {
             return None;
         }
         let idx = self
-            .inspect_tree_selected_index
+            .inspect
+            .tree_selected_index
             .get(&window)
             .copied()
             .unwrap_or(0)
@@ -165,12 +163,13 @@ impl UiDiagnosticsService {
     }
 
     fn inspect_help_selected_match_node_id(&self, window: AppWindowId) -> Option<u64> {
-        let list = self.inspect_help_match_node_ids.get(&window)?;
+        let list = self.inspect.help_match_node_ids.get(&window)?;
         if list.is_empty() {
             return None;
         }
         let idx = self
-            .inspect_help_selected_match_index
+            .inspect
+            .help_selected_match_index
             .get(&window)
             .copied()
             .unwrap_or(0)
@@ -179,27 +178,30 @@ impl UiDiagnosticsService {
     }
 
     pub fn inspect_focus_node_id(&self, window: AppWindowId) -> Option<u64> {
-        self.inspect_focus_node_id.get(&window).copied()
+        self.inspect.focus_node_id.get(&window).copied()
     }
 
     pub fn inspect_focus_summary_line(&self, window: AppWindowId) -> Option<&str> {
-        self.inspect_focus_summary_line
+        self.inspect
+            .focus_summary_line
             .get(&window)
             .map(|s| s.as_str())
     }
 
     pub fn inspect_focus_path_line(&self, window: AppWindowId) -> Option<&str> {
-        self.inspect_focus_path_line
+        self.inspect
+            .focus_path_line
             .get(&window)
             .map(|s| s.as_str())
     }
 
     pub fn inspect_toast_message(&self, window: AppWindowId) -> Option<&str> {
-        self.inspect_toast.get(&window).map(|t| t.message.as_str())
+        self.inspect.toast.get(&window).map(|t| t.message.as_str())
     }
 
     pub fn inspect_best_selector_json(&self, window: AppWindowId) -> Option<&str> {
-        self.inspect_focus_selector_json
+        self.inspect
+            .focus_selector_json
             .get(&window)
             .map(|s| s.as_str())
             .or_else(|| {
@@ -236,17 +238,17 @@ impl UiDiagnosticsService {
             }
         }
 
-        if let Some(toast) = self.inspect_toast.get_mut(&window) {
+        if let Some(toast) = self.inspect.toast.get_mut(&window) {
             toast.remaining_frames = toast.remaining_frames.saturating_sub(1);
             if toast.remaining_frames == 0 {
-                self.inspect_toast.remove(&window);
+                self.inspect.toast.remove(&window);
             }
         }
 
         self.pick_armed_run_id.is_some()
             || grace > 0
             || self.inspect_enabled
-            || self.inspect_toast.contains_key(&window)
+            || self.inspect.toast.contains_key(&window)
             || self
                 .pending_pick
                 .as_ref()
@@ -278,9 +280,9 @@ impl UiDiagnosticsService {
             }
 
             const MAX_QUERY_BYTES: usize = 64;
-            let q = self.inspect_help_search_query.entry(window).or_default();
+            let q = self.inspect.help_search_query.entry(window).or_default();
             let mut chars: Vec<char> = text.chars().collect();
-            if let Some(expected) = self.inspect_help_suppress_next_text_input.remove(&window) {
+            if let Some(expected) = self.inspect.help_suppress_next_text_input.remove(&window) {
                 if chars.first().copied() == Some(expected) {
                     chars.remove(0);
                 }
@@ -299,10 +301,10 @@ impl UiDiagnosticsService {
             }
 
             if q.trim().is_empty() {
-                self.inspect_help_search_query.remove(&window);
-                self.inspect_help_suppress_next_text_input.remove(&window);
+                self.inspect.help_search_query.remove(&window);
+                self.inspect.help_suppress_next_text_input.remove(&window);
             }
-            self.inspect_help_selected_match_index.insert(window, 0);
+            self.inspect.help_selected_match_index.insert(window, 0);
             app.request_redraw(window);
             return true;
         }
@@ -368,21 +370,21 @@ impl UiDiagnosticsService {
                     let _ = touch_file(&self.cfg.inspect_trigger_path);
                 }
 
-                let help_open = if self.inspect_help_open_windows.remove(&window) {
-                    self.inspect_help_search_query.remove(&window);
-                    self.inspect_help_suppress_next_text_input.remove(&window);
-                    self.inspect_help_match_node_ids.remove(&window);
-                    self.inspect_help_selected_match_index.remove(&window);
-                    self.inspect_help_scroll_offset.remove(&window);
-                    self.inspect_tree_open_windows.remove(&window);
-                    self.inspect_tree_expanded_node_ids.remove(&window);
-                    self.inspect_tree_flat_node_ids.remove(&window);
-                    self.inspect_tree_selected_index.remove(&window);
-                    self.inspect_tree_selected_node_id.remove(&window);
+                let help_open = if self.inspect.help_open_windows.remove(&window) {
+                    self.inspect.help_search_query.remove(&window);
+                    self.inspect.help_suppress_next_text_input.remove(&window);
+                    self.inspect.help_match_node_ids.remove(&window);
+                    self.inspect.help_selected_match_index.remove(&window);
+                    self.inspect.help_scroll_offset.remove(&window);
+                    self.inspect.tree_open_windows.remove(&window);
+                    self.inspect.tree_expanded_node_ids.remove(&window);
+                    self.inspect.tree_flat_node_ids.remove(&window);
+                    self.inspect.tree_selected_index.remove(&window);
+                    self.inspect.tree_selected_node_id.remove(&window);
                     false
                 } else {
-                    self.inspect_help_open_windows.insert(window);
-                    self.inspect_help_scroll_offset.remove(&window);
+                    self.inspect.help_open_windows.insert(window);
+                    self.inspect.help_scroll_offset.remove(&window);
                     true
                 };
 
@@ -412,11 +414,12 @@ impl UiDiagnosticsService {
         {
             if self.inspect_help_search_query(window).is_some() {
                 if let Some(node_id) = self.inspect_help_selected_match_node_id(window) {
-                    self.inspect_focus_down_stack.insert(window, Vec::new());
-                    self.inspect_locked_windows.insert(window);
-                    self.inspect_pending_nav
+                    self.inspect.focus_down_stack.insert(window, Vec::new());
+                    self.inspect.locked_windows.insert(window);
+                    self.inspect
+                        .pending_nav
                         .insert(window, InspectNavCommand::SelectNode(node_id));
-                    self.inspect_pending_copy_selector_windows.insert(window);
+                    self.inspect.pending_copy_selector_windows.insert(window);
                     self.push_inspect_toast(
                         window,
                         "inspect: locked match and copied selector".to_string(),
@@ -426,11 +429,12 @@ impl UiDiagnosticsService {
                 }
             } else if self.inspect_tree_is_open(window) {
                 if let Some(node_id) = self.inspect_tree_selected_node_id(window) {
-                    self.inspect_focus_down_stack.insert(window, Vec::new());
-                    self.inspect_locked_windows.insert(window);
-                    self.inspect_pending_nav
+                    self.inspect.focus_down_stack.insert(window, Vec::new());
+                    self.inspect.locked_windows.insert(window);
+                    self.inspect
+                        .pending_nav
                         .insert(window, InspectNavCommand::SelectNode(node_id));
-                    self.inspect_pending_copy_selector_windows.insert(window);
+                    self.inspect.pending_copy_selector_windows.insert(window);
                     self.push_inspect_toast(
                         window,
                         "inspect: locked node and copied selector".to_string(),
@@ -440,10 +444,10 @@ impl UiDiagnosticsService {
                 }
             }
 
-            if self.inspect_help_search_query.remove(&window).is_some() {
-                self.inspect_help_suppress_next_text_input.remove(&window);
-                self.inspect_help_match_node_ids.remove(&window);
-                self.inspect_help_selected_match_index.remove(&window);
+            if self.inspect.help_search_query.remove(&window).is_some() {
+                self.inspect.help_suppress_next_text_input.remove(&window);
+                self.inspect.help_match_node_ids.remove(&window);
+                self.inspect.help_selected_match_index.remove(&window);
                 self.push_inspect_toast(window, "inspect: search cleared".to_string());
             }
             app.request_redraw(window);
@@ -455,15 +459,15 @@ impl UiDiagnosticsService {
             && !(modifiers.alt || modifiers.alt_gr)
             && *key == KeyCode::KeyT
         {
-            let tree_open = if self.inspect_tree_open_windows.remove(&window) {
-                self.inspect_tree_expanded_node_ids.remove(&window);
-                self.inspect_tree_flat_node_ids.remove(&window);
-                self.inspect_tree_selected_index.remove(&window);
-                self.inspect_tree_selected_node_id.remove(&window);
+            let tree_open = if self.inspect.tree_open_windows.remove(&window) {
+                self.inspect.tree_expanded_node_ids.remove(&window);
+                self.inspect.tree_flat_node_ids.remove(&window);
+                self.inspect.tree_selected_index.remove(&window);
+                self.inspect.tree_selected_node_id.remove(&window);
                 self.set_inspect_help_scroll_offset(window, 0);
                 false
             } else {
-                self.inspect_tree_open_windows.insert(window);
+                self.inspect.tree_open_windows.insert(window);
                 // Jump towards the bottom so the tree section is visible even when the help output
                 // grows (explainability + neighborhood + matches).
                 self.set_inspect_help_scroll_offset(window, usize::MAX / 4);
@@ -489,22 +493,25 @@ impl UiDiagnosticsService {
                 KeyCode::ArrowUp => {
                     if self.inspect_help_search_query(window).is_some()
                         && self
-                            .inspect_help_match_node_ids
+                            .inspect
+                            .help_match_node_ids
                             .get(&window)
                             .is_some_and(|m| !m.is_empty())
                     {
                         let len = self
-                            .inspect_help_match_node_ids
+                            .inspect
+                            .help_match_node_ids
                             .get(&window)
                             .map(|v| v.len())
                             .unwrap_or(0);
                         let idx = self
-                            .inspect_help_selected_match_index
+                            .inspect
+                            .help_selected_match_index
                             .get(&window)
                             .copied()
                             .unwrap_or(0);
                         let next = if idx == 0 { len - 1 } else { idx - 1 };
-                        self.inspect_help_selected_match_index.insert(window, next);
+                        self.inspect.help_selected_match_index.insert(window, next);
                         app.request_redraw(window);
                         return true;
                     }
@@ -512,22 +519,24 @@ impl UiDiagnosticsService {
                     if self.inspect_help_search_query(window).is_none()
                         && self.inspect_tree_is_open(window)
                         && self
-                            .inspect_tree_flat_node_ids
+                            .inspect
+                            .tree_flat_node_ids
                             .get(&window)
                             .is_some_and(|v| !v.is_empty())
                     {
-                        let items = self.inspect_tree_flat_node_ids.get(&window).unwrap();
+                        let items = self.inspect.tree_flat_node_ids.get(&window).unwrap();
                         let len = items.len();
                         let idx = self
-                            .inspect_tree_selected_index
+                            .inspect
+                            .tree_selected_index
                             .get(&window)
                             .copied()
                             .unwrap_or(0)
                             .min(len.saturating_sub(1));
                         let next = if idx == 0 { len - 1 } else { idx - 1 };
-                        self.inspect_tree_selected_index.insert(window, next);
+                        self.inspect.tree_selected_index.insert(window, next);
                         if let Some(id) = items.get(next).copied() {
-                            self.inspect_tree_selected_node_id.insert(window, id);
+                            self.inspect.tree_selected_node_id.insert(window, id);
                         }
                         app.request_redraw(window);
                         return true;
@@ -536,22 +545,25 @@ impl UiDiagnosticsService {
                 KeyCode::ArrowDown => {
                     if self.inspect_help_search_query(window).is_some()
                         && self
-                            .inspect_help_match_node_ids
+                            .inspect
+                            .help_match_node_ids
                             .get(&window)
                             .is_some_and(|m| !m.is_empty())
                     {
                         let len = self
-                            .inspect_help_match_node_ids
+                            .inspect
+                            .help_match_node_ids
                             .get(&window)
                             .map(|v| v.len())
                             .unwrap_or(0);
                         let idx = self
-                            .inspect_help_selected_match_index
+                            .inspect
+                            .help_selected_match_index
                             .get(&window)
                             .copied()
                             .unwrap_or(0);
                         let next = (idx + 1) % len.max(1);
-                        self.inspect_help_selected_match_index.insert(window, next);
+                        self.inspect.help_selected_match_index.insert(window, next);
                         app.request_redraw(window);
                         return true;
                     }
@@ -559,22 +571,24 @@ impl UiDiagnosticsService {
                     if self.inspect_help_search_query(window).is_none()
                         && self.inspect_tree_is_open(window)
                         && self
-                            .inspect_tree_flat_node_ids
+                            .inspect
+                            .tree_flat_node_ids
                             .get(&window)
                             .is_some_and(|v| !v.is_empty())
                     {
-                        let items = self.inspect_tree_flat_node_ids.get(&window).unwrap();
+                        let items = self.inspect.tree_flat_node_ids.get(&window).unwrap();
                         let len = items.len();
                         let idx = self
-                            .inspect_tree_selected_index
+                            .inspect
+                            .tree_selected_index
                             .get(&window)
                             .copied()
                             .unwrap_or(0)
                             .min(len.saturating_sub(1));
                         let next = (idx + 1) % len.max(1);
-                        self.inspect_tree_selected_index.insert(window, next);
+                        self.inspect.tree_selected_index.insert(window, next);
                         if let Some(id) = items.get(next).copied() {
-                            self.inspect_tree_selected_node_id.insert(window, id);
+                            self.inspect.tree_selected_node_id.insert(window, id);
                         }
                         app.request_redraw(window);
                         return true;
@@ -585,7 +599,8 @@ impl UiDiagnosticsService {
                         && self.inspect_tree_is_open(window)
                     {
                         if let Some(node_id) = self.inspect_tree_selected_node_id(window) {
-                            self.inspect_tree_expanded_node_ids
+                            self.inspect
+                                .tree_expanded_node_ids
                                 .entry(window)
                                 .or_default()
                                 .insert(node_id);
@@ -600,7 +615,8 @@ impl UiDiagnosticsService {
                     {
                         if let Some(node_id) = self.inspect_tree_selected_node_id(window) {
                             if self
-                                .inspect_tree_expanded_node_ids
+                                .inspect
+                                .tree_expanded_node_ids
                                 .entry(window)
                                 .or_default()
                                 .remove(&node_id)
@@ -634,27 +650,28 @@ impl UiDiagnosticsService {
                     return true;
                 }
                 KeyCode::Backspace => {
-                    if let Some(q) = self.inspect_help_search_query.get_mut(&window) {
+                    if let Some(q) = self.inspect.help_search_query.get_mut(&window) {
                         q.pop();
                         if q.trim().is_empty() {
-                            self.inspect_help_search_query.remove(&window);
-                            self.inspect_help_suppress_next_text_input.remove(&window);
+                            self.inspect.help_search_query.remove(&window);
+                            self.inspect.help_suppress_next_text_input.remove(&window);
                         }
                     }
-                    self.inspect_help_selected_match_index.insert(window, 0);
+                    self.inspect.help_selected_match_index.insert(window, 0);
                     app.request_redraw(window);
                     return true;
                 }
                 KeyCode::Enter => {
                     if self.inspect_help_search_query(window).is_some() {
                         if let Some(node_id) = self.inspect_help_selected_match_node_id(window) {
-                            self.inspect_focus_down_stack.insert(window, Vec::new());
-                            self.inspect_locked_windows.insert(window);
+                            self.inspect.focus_down_stack.insert(window, Vec::new());
+                            self.inspect.locked_windows.insert(window);
                             let wants_copy = wants_command;
-                            self.inspect_pending_nav
+                            self.inspect
+                                .pending_nav
                                 .insert(window, InspectNavCommand::SelectNode(node_id));
                             if wants_copy {
-                                self.inspect_pending_copy_selector_windows.insert(window);
+                                self.inspect.pending_copy_selector_windows.insert(window);
                             }
                             if wants_copy {
                                 self.push_inspect_toast(
@@ -673,9 +690,10 @@ impl UiDiagnosticsService {
                         }
                     } else if self.inspect_tree_is_open(window) {
                         if let Some(node_id) = self.inspect_tree_selected_node_id(window) {
-                            self.inspect_focus_down_stack.insert(window, Vec::new());
-                            self.inspect_locked_windows.insert(window);
-                            self.inspect_pending_nav
+                            self.inspect.focus_down_stack.insert(window, Vec::new());
+                            self.inspect.locked_windows.insert(window);
+                            self.inspect
+                                .pending_nav
                                 .insert(window, InspectNavCommand::SelectNode(node_id));
                             self.push_inspect_toast(
                                 window,
@@ -687,10 +705,10 @@ impl UiDiagnosticsService {
                         }
                     }
 
-                    if self.inspect_help_search_query.remove(&window).is_some() {
-                        self.inspect_help_suppress_next_text_input.remove(&window);
-                        self.inspect_help_match_node_ids.remove(&window);
-                        self.inspect_help_selected_match_index.remove(&window);
+                    if self.inspect.help_search_query.remove(&window).is_some() {
+                        self.inspect.help_suppress_next_text_input.remove(&window);
+                        self.inspect.help_match_node_ids.remove(&window);
+                        self.inspect.help_selected_match_index.remove(&window);
                         self.push_inspect_toast(window, "inspect: search cleared".to_string());
                     }
                     app.request_redraw(window);
@@ -698,35 +716,36 @@ impl UiDiagnosticsService {
                 }
                 KeyCode::Space => {
                     const MAX_QUERY_BYTES: usize = 64;
-                    let q = self.inspect_help_search_query.entry(window).or_default();
+                    let q = self.inspect.help_search_query.entry(window).or_default();
                     if q.len() < MAX_QUERY_BYTES {
                         q.push(' ');
                     }
                     if q.trim().is_empty() {
-                        self.inspect_help_search_query.remove(&window);
-                        self.inspect_help_suppress_next_text_input.remove(&window);
+                        self.inspect.help_search_query.remove(&window);
+                        self.inspect.help_suppress_next_text_input.remove(&window);
                     }
-                    self.inspect_help_selected_match_index.insert(window, 0);
+                    self.inspect.help_selected_match_index.insert(window, 0);
                     app.request_redraw(window);
                     return true;
                 }
                 _ => {
                     if let Some(ch) = fret_core::keycode_to_ascii_lowercase(*key) {
                         const MAX_QUERY_BYTES: usize = 64;
-                        let q = self.inspect_help_search_query.entry(window).or_default();
+                        let q = self.inspect.help_search_query.entry(window).or_default();
                         if q.len() < MAX_QUERY_BYTES {
                             let ok = ch.is_ascii_alphanumeric() || ch == '-';
                             if ok {
                                 q.push(ch);
-                                self.inspect_help_suppress_next_text_input
+                                self.inspect
+                                    .help_suppress_next_text_input
                                     .insert(window, ch);
                             }
                         }
                         if q.trim().is_empty() {
-                            self.inspect_help_search_query.remove(&window);
-                            self.inspect_help_suppress_next_text_input.remove(&window);
+                            self.inspect.help_search_query.remove(&window);
+                            self.inspect.help_suppress_next_text_input.remove(&window);
                         }
-                        self.inspect_help_selected_match_index.insert(window, 0);
+                        self.inspect.help_selected_match_index.insert(window, 0);
                         app.request_redraw(window);
                         return true;
                     }
@@ -762,20 +781,20 @@ impl UiDiagnosticsService {
                 false
             }
             KeyCode::KeyL => {
-                if self.inspect_locked_windows.remove(&window) {
-                    self.inspect_focus_down_stack.remove(&window);
+                if self.inspect.locked_windows.remove(&window) {
+                    self.inspect.focus_down_stack.remove(&window);
                     self.push_inspect_toast(window, "inspect: unlocked".to_string());
                 } else if let Some(hovered) = self.last_hovered_node_id.get(&window).copied() {
                     self.last_picked_node_id.insert(window, hovered);
                     if let Some(sel) = self.last_hovered_selector_json.get(&window).cloned() {
                         self.last_picked_selector_json.insert(window, sel);
                     }
-                    self.inspect_focus_node_id.insert(window, hovered);
+                    self.inspect.focus_node_id.insert(window, hovered);
                     if let Some(sel) = self.last_hovered_selector_json.get(&window).cloned() {
-                        self.inspect_focus_selector_json.insert(window, sel);
+                        self.inspect.focus_selector_json.insert(window, sel);
                     }
-                    self.inspect_focus_down_stack.insert(window, Vec::new());
-                    self.inspect_locked_windows.insert(window);
+                    self.inspect.focus_down_stack.insert(window, Vec::new());
+                    self.inspect.locked_windows.insert(window);
                     self.push_inspect_toast(window, "inspect: locked selection".to_string());
                 } else {
                     self.push_inspect_toast(window, "inspect: nothing to lock".to_string());
@@ -789,7 +808,7 @@ impl UiDiagnosticsService {
                     return false;
                 }
                 if modifiers.shift {
-                    self.inspect_pending_copy_details_windows.insert(window);
+                    self.inspect.pending_copy_details_windows.insert(window);
                     self.push_inspect_toast(window, "inspect: copy requested".to_string());
                     app.request_redraw(window);
                     return true;
@@ -812,7 +831,8 @@ impl UiDiagnosticsService {
                 if !self.inspect_enabled {
                     return false;
                 }
-                self.inspect_pending_nav
+                self.inspect
+                    .pending_nav
                     .insert(window, InspectNavCommand::Focus);
                 self.push_inspect_toast(window, "inspect: select focused node".to_string());
                 app.request_redraw(window);
@@ -830,7 +850,8 @@ impl UiDiagnosticsService {
                     app.request_redraw(window);
                     return true;
                 }
-                self.inspect_pending_nav
+                self.inspect
+                    .pending_nav
                     .insert(window, InspectNavCommand::Up);
                 app.request_redraw(window);
                 true
@@ -847,7 +868,8 @@ impl UiDiagnosticsService {
                     app.request_redraw(window);
                     return true;
                 }
-                self.inspect_pending_nav
+                self.inspect
+                    .pending_nav
                     .insert(window, InspectNavCommand::Down);
                 app.request_redraw(window);
                 true
@@ -952,16 +974,16 @@ impl UiDiagnosticsService {
         if let Ok(json) = serde_json::to_string(&selector) {
             self.last_hovered_node_id.insert(window, hovered_id);
             self.last_hovered_selector_json.insert(window, json);
-            self.inspect_focus_node_id.insert(window, hovered_id);
+            self.inspect.focus_node_id.insert(window, hovered_id);
             if let Some(sel) = self.last_hovered_selector_json.get(&window).cloned() {
-                self.inspect_focus_selector_json.insert(window, sel);
+                self.inspect.focus_selector_json.insert(window, sel);
             }
-            self.inspect_focus_down_stack.insert(window, Vec::new());
+            self.inspect.focus_down_stack.insert(window, Vec::new());
         }
     }
 
     fn push_inspect_toast(&mut self, window: AppWindowId, message: String) {
-        self.inspect_toast.insert(
+        self.inspect.toast.insert(
             window,
             InspectToast {
                 message,
@@ -980,10 +1002,10 @@ impl UiDiagnosticsService {
             return;
         }
         if !self.inspect_enabled {
-            self.inspect_pending_nav.remove(&window);
+            self.inspect.pending_nav.remove(&window);
             return;
         }
-        let Some(cmd) = self.inspect_pending_nav.remove(&window) else {
+        let Some(cmd) = self.inspect.pending_nav.remove(&window) else {
             return;
         };
         let Some(snapshot) = snapshot else {
@@ -998,13 +1020,13 @@ impl UiDiagnosticsService {
                     return;
                 };
                 let id = node.data().as_ffi();
-                self.inspect_focus_down_stack.insert(window, Vec::new());
-                self.inspect_locked_windows.insert(window);
+                self.inspect.focus_down_stack.insert(window, Vec::new());
+                self.inspect.locked_windows.insert(window);
                 self.set_inspect_focus(window, snapshot, id, element_runtime);
             }
             InspectNavCommand::SelectNode(node_id) => {
-                self.inspect_focus_down_stack.insert(window, Vec::new());
-                self.inspect_locked_windows.insert(window);
+                self.inspect.focus_down_stack.insert(window, Vec::new());
+                self.inspect.locked_windows.insert(window);
                 self.set_inspect_focus(window, snapshot, node_id, element_runtime);
             }
             InspectNavCommand::Up => {
@@ -1017,7 +1039,8 @@ impl UiDiagnosticsService {
                 }
 
                 let current = self
-                    .inspect_focus_node_id
+                    .inspect
+                    .focus_node_id
                     .get(&window)
                     .copied()
                     .or_else(|| self.last_picked_node_id.get(&window).copied())
@@ -1031,7 +1054,8 @@ impl UiDiagnosticsService {
                     self.push_inspect_toast(window, "inspect: reached root".to_string());
                     return;
                 };
-                self.inspect_focus_down_stack
+                self.inspect
+                    .focus_down_stack
                     .entry(window)
                     .or_default()
                     .push(current);
@@ -1047,7 +1071,8 @@ impl UiDiagnosticsService {
                     return;
                 }
                 let Some(prev) = self
-                    .inspect_focus_down_stack
+                    .inspect
+                    .focus_down_stack
                     .get_mut(&window)
                     .and_then(|s| s.pop())
                 else {
@@ -1090,8 +1115,9 @@ impl UiDiagnosticsService {
             return;
         };
         if let Ok(json) = serde_json::to_string(&selector) {
-            self.inspect_focus_node_id.insert(window, node_id);
-            self.inspect_focus_selector_json
+            self.inspect.focus_node_id.insert(window, node_id);
+            self.inspect
+                .focus_selector_json
                 .insert(window, json.clone());
             self.last_picked_node_id.insert(window, node_id);
             self.last_picked_selector_json.insert(window, json);
@@ -1108,24 +1134,25 @@ impl UiDiagnosticsService {
             return;
         }
         let Some(snapshot) = snapshot else {
-            self.inspect_focus_summary_line.remove(&window);
-            self.inspect_focus_path_line.remove(&window);
-            if self.inspect_pending_copy_details_windows.remove(&window) {
+            self.inspect.focus_summary_line.remove(&window);
+            self.inspect.focus_path_line.remove(&window);
+            if self.inspect.pending_copy_details_windows.remove(&window) {
                 self.push_inspect_toast(window, "inspect: no semantics snapshot".to_string());
             }
             return;
         };
 
         let node_id = self
-            .inspect_focus_node_id
+            .inspect
+            .focus_node_id
             .get(&window)
             .copied()
             .or_else(|| self.last_picked_node_id.get(&window).copied())
             .or_else(|| self.last_hovered_node_id.get(&window).copied());
         let Some(node_id) = node_id else {
-            self.inspect_focus_summary_line.remove(&window);
-            self.inspect_focus_path_line.remove(&window);
-            if self.inspect_pending_copy_details_windows.remove(&window) {
+            self.inspect.focus_summary_line.remove(&window);
+            self.inspect.focus_path_line.remove(&window);
+            if self.inspect.pending_copy_details_windows.remove(&window) {
                 self.push_inspect_toast(window, "inspect: no focused node".to_string());
             }
             return;
@@ -1136,9 +1163,9 @@ impl UiDiagnosticsService {
             .iter()
             .find(|n| n.id.data().as_ffi() == node_id)
         else {
-            self.inspect_focus_summary_line.remove(&window);
-            self.inspect_focus_path_line.remove(&window);
-            if self.inspect_pending_copy_details_windows.remove(&window) {
+            self.inspect.focus_summary_line.remove(&window);
+            self.inspect.focus_path_line.remove(&window);
+            if self.inspect.pending_copy_details_windows.remove(&window) {
                 self.push_inspect_toast(window, "inspect: focused node missing".to_string());
             }
             return;
@@ -1168,14 +1195,14 @@ impl UiDiagnosticsService {
 
         let path = format_inspect_path(snapshot, node_id, self.cfg.redact_text, 10);
 
-        self.inspect_focus_summary_line.insert(window, summary);
+        self.inspect.focus_summary_line.insert(window, summary);
         if let Some(path) = path {
-            self.inspect_focus_path_line.insert(window, path);
+            self.inspect.focus_path_line.insert(window, path);
         } else {
-            self.inspect_focus_path_line.remove(&window);
+            self.inspect.focus_path_line.remove(&window);
         }
 
-        if !self.inspect_pending_copy_details_windows.remove(&window) {
+        if !self.inspect.pending_copy_details_windows.remove(&window) {
             return;
         }
 
@@ -1224,7 +1251,8 @@ impl UiDiagnosticsService {
             return;
         }
 
-        self.inspect_pending_copy_details_payload
+        self.inspect
+            .pending_copy_details_payload
             .insert(window, payload);
         self.push_inspect_toast(window, "inspect: details copied".to_string());
     }

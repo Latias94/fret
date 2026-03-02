@@ -23,7 +23,7 @@ pub(crate) fn render_diag_inspect_overlay(
 
     let pending_copy_payload = app
         .with_global_mut_untracked(UiDiagnosticsService::default, |svc, _app| {
-            svc.inspect_pending_copy_details_payload.remove(&window)
+            svc.inspect.pending_copy_details_payload.remove(&window)
         });
     if let Some(text) = pending_copy_payload {
         app.push_effect(Effect::ClipboardSetText { text });
@@ -31,7 +31,7 @@ pub(crate) fn render_diag_inspect_overlay(
 
     let pending_copy_selector_payload =
         app.with_global_mut_untracked(UiDiagnosticsService::default, |svc, _app| {
-            if !svc.inspect_pending_copy_selector_windows.contains(&window) {
+            if !svc.inspect.pending_copy_selector_windows.contains(&window) {
                 return None;
             }
             svc.inspect_best_selector_json(window)
@@ -40,7 +40,7 @@ pub(crate) fn render_diag_inspect_overlay(
     if let Some(text) = pending_copy_selector_payload {
         app.push_effect(Effect::ClipboardSetText { text });
         app.with_global_mut_untracked(UiDiagnosticsService::default, |svc, _app| {
-            svc.inspect_pending_copy_selector_windows.remove(&window);
+            svc.inspect.pending_copy_selector_windows.remove(&window);
         });
     }
 
@@ -167,15 +167,16 @@ pub(crate) fn render_diag_inspect_overlay(
             // Lazy-init tree state while we have a snapshot and an index.
             app.with_global_mut_untracked(UiDiagnosticsService::default, |svc, _app| {
                 let expanded = svc
-                    .inspect_tree_expanded_node_ids
+                    .inspect
+                    .tree_expanded_node_ids
                     .entry(window)
                     .or_default();
-                let selected = svc.inspect_tree_selected_node_id.get(&window).copied();
+                let selected = svc.inspect.tree_selected_node_id.get(&window).copied();
                 let anchor = selected.or(focus_node_id).or(picked_node_id);
 
                 if selected.is_none() {
                     if let Some(anchor) = anchor {
-                        svc.inspect_tree_selected_node_id.insert(window, anchor);
+                        svc.inspect.tree_selected_node_id.insert(window, anchor);
                     }
                 }
 
@@ -203,11 +204,12 @@ pub(crate) fn render_diag_inspect_overlay(
             let (expanded, selected_node_id) =
                 app.with_global_mut_untracked(UiDiagnosticsService::default, |svc, _app| {
                     (
-                        svc.inspect_tree_expanded_node_ids
+                        svc.inspect
+                            .tree_expanded_node_ids
                             .get(&window)
                             .cloned()
                             .unwrap_or_default(),
-                        svc.inspect_tree_selected_node_id.get(&window).copied(),
+                        svc.inspect.tree_selected_node_id.get(&window).copied(),
                     )
                 });
 

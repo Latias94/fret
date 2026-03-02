@@ -170,10 +170,12 @@ pub(super) fn handle_inspect_help_lock_best_match_and_copy_selector_step(
     if !svc.inspect_is_enabled() {
         svc.set_inspect_enabled(true, svc.inspect_consume_clicks());
     }
-    svc.inspect_help_open_windows.insert(resolved_window);
-    svc.inspect_help_search_query
+    svc.inspect.help_open_windows.insert(resolved_window);
+    svc.inspect
+        .help_search_query
         .insert(resolved_window, state.query.clone());
-    svc.inspect_help_selected_match_index
+    svc.inspect
+        .help_selected_match_index
         .insert(resolved_window, 0);
 
     let Some(snapshot) = semantics_snapshot else {
@@ -236,9 +238,10 @@ pub(super) fn handle_inspect_help_lock_best_match_and_copy_selector_step(
     }
 
     let node_id = matches[0];
-    svc.inspect_focus_down_stack
+    svc.inspect
+        .focus_down_stack
         .insert(resolved_window, Vec::new());
-    svc.inspect_locked_windows.insert(resolved_window);
+    svc.inspect.locked_windows.insert(resolved_window);
 
     let Some(node) = snapshot
         .nodes
@@ -279,8 +282,9 @@ pub(super) fn handle_inspect_help_lock_best_match_and_copy_selector_step(
 
     // Mirror the in-app inspector focus/lock semantics so overlay code can copy the selector and
     // subsequent steps can observe a stable `inspect_best_selector_json`.
-    svc.inspect_focus_node_id.insert(resolved_window, node_id);
-    svc.inspect_focus_selector_json
+    svc.inspect.focus_node_id.insert(resolved_window, node_id);
+    svc.inspect
+        .focus_selector_json
         .insert(resolved_window, selector_json.clone());
     svc.last_picked_node_id.insert(resolved_window, node_id);
     svc.last_picked_selector_json
@@ -289,7 +293,7 @@ pub(super) fn handle_inspect_help_lock_best_match_and_copy_selector_step(
     output.effects.push(Effect::ClipboardSetText {
         text: selector_json,
     });
-    svc.inspect_toast.insert(
+    svc.inspect.toast.insert(
         resolved_window,
         inspect::InspectToast {
             message: "inspect: locked match and copied selector".to_string(),
@@ -385,11 +389,13 @@ pub(super) fn handle_inspect_help_tree_lock_best_match_and_copy_selector_step(
     if !svc.inspect_is_enabled() {
         svc.set_inspect_enabled(true, svc.inspect_consume_clicks());
     }
-    svc.inspect_help_open_windows.insert(resolved_window);
-    svc.inspect_tree_open_windows.insert(resolved_window);
-    svc.inspect_help_search_query
+    svc.inspect.help_open_windows.insert(resolved_window);
+    svc.inspect.tree_open_windows.insert(resolved_window);
+    svc.inspect
+        .help_search_query
         .insert(resolved_window, state.query.clone());
-    svc.inspect_help_selected_match_index
+    svc.inspect
+        .help_selected_match_index
         .insert(resolved_window, 0);
     svc.set_inspect_help_scroll_offset(resolved_window, usize::MAX / 4);
 
@@ -457,11 +463,13 @@ pub(super) fn handle_inspect_help_tree_lock_best_match_and_copy_selector_step(
     }
 
     let node_id = matches[0];
-    svc.inspect_tree_selected_node_id
+    svc.inspect
+        .tree_selected_node_id
         .insert(resolved_window, node_id);
 
     let expanded = svc
-        .inspect_tree_expanded_node_ids
+        .inspect
+        .tree_expanded_node_ids
         .entry(resolved_window)
         .or_default();
     let mut cur = Some(node_id);
@@ -545,11 +553,13 @@ pub(super) fn handle_inspect_help_tree_lock_best_match_and_copy_selector_step(
         return true;
     };
 
-    svc.inspect_focus_down_stack
+    svc.inspect
+        .focus_down_stack
         .insert(resolved_window, Vec::new());
-    svc.inspect_locked_windows.insert(resolved_window);
-    svc.inspect_focus_node_id.insert(resolved_window, node_id);
-    svc.inspect_focus_selector_json
+    svc.inspect.locked_windows.insert(resolved_window);
+    svc.inspect.focus_node_id.insert(resolved_window, node_id);
+    svc.inspect
+        .focus_selector_json
         .insert(resolved_window, selector_json.clone());
     svc.last_picked_node_id.insert(resolved_window, node_id);
     svc.last_picked_selector_json
@@ -558,7 +568,7 @@ pub(super) fn handle_inspect_help_tree_lock_best_match_and_copy_selector_step(
     output.effects.push(Effect::ClipboardSetText {
         text: selector_json,
     });
-    svc.inspect_toast.insert(
+    svc.inspect.toast.insert(
         resolved_window,
         inspect::InspectToast {
             message: "inspect: locked tree match and copied selector".to_string(),

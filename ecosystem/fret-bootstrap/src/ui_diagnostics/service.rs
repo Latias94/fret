@@ -30,30 +30,7 @@ pub struct UiDiagnosticsService {
     last_picked_selector_json: HashMap<AppWindowId, String>,
     last_hovered_node_id: HashMap<AppWindowId, u64>,
     last_hovered_selector_json: HashMap<AppWindowId, String>,
-    inspect_focus_node_id: HashMap<AppWindowId, u64>,
-    inspect_focus_selector_json: HashMap<AppWindowId, String>,
-    inspect_focus_down_stack: HashMap<AppWindowId, Vec<u64>>,
-    inspect_pending_nav: HashMap<AppWindowId, inspect::InspectNavCommand>,
-    inspect_focus_summary_line: HashMap<AppWindowId, String>,
-    inspect_focus_path_line: HashMap<AppWindowId, String>,
-    inspect_locked_windows: HashSet<AppWindowId>,
-    inspect_help_open_windows: HashSet<AppWindowId>,
-    inspect_help_search_query: HashMap<AppWindowId, String>,
-    inspect_help_suppress_next_text_input: HashMap<AppWindowId, char>,
-    inspect_help_match_node_ids: HashMap<AppWindowId, Vec<u64>>,
-    inspect_help_selected_match_index: HashMap<AppWindowId, usize>,
-    inspect_help_scroll_offset: HashMap<AppWindowId, usize>,
-
-    // Help-mode tree browser (keyboard-driven; diagnostics-only).
-    inspect_tree_open_windows: HashSet<AppWindowId>,
-    inspect_tree_expanded_node_ids: HashMap<AppWindowId, HashSet<u64>>,
-    inspect_tree_flat_node_ids: HashMap<AppWindowId, Vec<u64>>,
-    inspect_tree_selected_index: HashMap<AppWindowId, usize>,
-    inspect_tree_selected_node_id: HashMap<AppWindowId, u64>,
-    inspect_pending_copy_selector_windows: HashSet<AppWindowId>,
-    inspect_pending_copy_details_windows: HashSet<AppWindowId>,
-    inspect_pending_copy_details_payload: HashMap<AppWindowId, String>,
-    inspect_toast: HashMap<AppWindowId, inspect::InspectToast>,
+    inspect: inspect_state::InspectState,
     pick_overlay_grace_frames: HashMap<AppWindowId, u32>,
     pick_armed_run_id: Option<u64>,
     pending_pick: Option<PendingPick>,
@@ -558,8 +535,8 @@ impl UiDiagnosticsService {
                 .as_ref()
                 .is_some_and(|p| p.window == window)
             || self.inspect_enabled
-            || self.inspect_locked_windows.contains(&window)
-            || self.inspect_toast.contains_key(&window)
+            || self.inspect.locked_windows.contains(&window)
+            || self.inspect.toast.contains_key(&window)
         {
             return true;
         }
@@ -616,44 +593,11 @@ impl UiDiagnosticsService {
     }
 
     pub(super) fn clear_inspect_state_for_window(&mut self, window: AppWindowId) {
-        self.inspect_focus_node_id.remove(&window);
-        self.inspect_focus_selector_json.remove(&window);
-        self.inspect_focus_down_stack.remove(&window);
-        self.inspect_pending_nav.remove(&window);
-        self.inspect_focus_summary_line.remove(&window);
-        self.inspect_focus_path_line.remove(&window);
-        self.inspect_locked_windows.remove(&window);
-        self.inspect_help_open_windows.remove(&window);
-        self.inspect_help_search_query.remove(&window);
-        self.inspect_help_match_node_ids.remove(&window);
-        self.inspect_help_selected_match_index.remove(&window);
-        self.inspect_pending_copy_selector_windows.remove(&window);
-        self.inspect_pending_copy_details_windows.remove(&window);
-        self.inspect_pending_copy_details_payload.remove(&window);
-        self.inspect_toast.remove(&window);
+        self.inspect.clear_for_window(window);
     }
 
     pub(super) fn clear_inspect_state_all_windows(&mut self) {
-        let windows: Vec<AppWindowId> = self.inspect_focus_node_id.keys().copied().collect();
-        for window in windows {
-            self.clear_inspect_state_for_window(window);
-        }
-
-        self.inspect_locked_windows.clear();
-        self.inspect_help_open_windows.clear();
-        self.inspect_help_search_query.clear();
-        self.inspect_help_match_node_ids.clear();
-        self.inspect_help_selected_match_index.clear();
-        self.inspect_pending_copy_selector_windows.clear();
-        self.inspect_pending_copy_details_windows.clear();
-        self.inspect_pending_copy_details_payload.clear();
-        self.inspect_focus_node_id.clear();
-        self.inspect_focus_selector_json.clear();
-        self.inspect_focus_down_stack.clear();
-        self.inspect_pending_nav.clear();
-        self.inspect_focus_summary_line.clear();
-        self.inspect_focus_path_line.clear();
-        self.inspect_toast.clear();
+        self.inspect.clear_all();
     }
 
     fn reset_diagnostics_ring_for_window(&mut self, window: AppWindowId) {

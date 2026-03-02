@@ -27,6 +27,7 @@ Related docs:
 - Selector validation exists (uniqueness + optional `root_z_index` gating) and is used by in-app “copy details” and focus selection.
 - Explainability panel (“why is input blocked?”) implemented and shown in help mode (cheap: bounded lists; no label printing).
 - Help output is paged (keyboard scroll via `PageUp/PageDown/Home/End`) to keep the overlay usable as sections grow (explainability + neighborhood + tree).
+- Inspector state is bucketed as `InspectState` (reduces churn and enables future modularization).
 - View cache frame stats exported in bundles (`debug.stats.view_cache_*`, `debug.stats.invalidation_*`)
 - A small regression gate exists in the `ui-gallery-overlay-steady` suite to ensure the in-app inspector can lock a help search match and copy the best selector JSON to the clipboard.
 - A scripted inspector helper step exists (`inspect_help_lock_best_match_and_copy_selector`) to avoid relying on keyboard shortcut injection under `--launch`.
@@ -120,6 +121,16 @@ Related docs:
 - Do we want a “headless” runner for behavior tests, or a “robot” runner (real window + event injection)?
 - On Windows CI, can we reliably run a UI window and inject events without flakiness?
 - If we can’t: should we treat scripted tests as “developer regression pack” instead of CI-gating?
+
+## Script authoring surface (JSON vs Rust)
+
+Proposed direction:
+
+- Keep JSON as the primary authoring + sharing format for scripts. Scripts are portable artifacts that can be attached
+  to issues and reviewed like data (and they match the bundle-first philosophy).
+- If we need richer logic (loops/conditionals), prefer adding a small set of deterministic control-flow steps to
+  `crates/fret-diag-protocol` (e.g. `repeat`, `repeat_until`, `with_timeout`, `for_each_window`) and/or tooling that
+  generates JSON, rather than making Rust code the primary test scripting surface.
 
 ## Notes / constraints
 

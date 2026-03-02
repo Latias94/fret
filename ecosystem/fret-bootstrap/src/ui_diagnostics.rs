@@ -61,6 +61,7 @@ mod inspect_explain;
 mod inspect_neighborhood;
 #[cfg(feature = "diagnostics")]
 mod inspect_overlay;
+mod inspect_state;
 #[cfg(feature = "diagnostics")]
 mod inspect_tree;
 mod pick;
@@ -3107,7 +3108,8 @@ mod tests {
         svc.cfg.enabled = true;
         svc.inspect_enabled = true;
 
-        svc.inspect_pending_nav
+        svc.inspect
+            .pending_nav
             .insert(window, inspect::InspectNavCommand::Focus);
         svc.apply_inspect_navigation(window, Some(&snapshot), None);
 
@@ -3127,7 +3129,7 @@ mod tests {
         let mut svc = UiDiagnosticsService::default();
         svc.cfg.enabled = true;
         svc.inspect_enabled = true;
-        svc.inspect_help_open_windows.insert(window);
+        svc.inspect.help_open_windows.insert(window);
 
         let mut app = App::new();
 
@@ -3164,7 +3166,7 @@ mod tests {
         let mut svc = UiDiagnosticsService::default();
         svc.cfg.enabled = true;
         svc.inspect_enabled = true;
-        svc.inspect_help_open_windows.insert(window);
+        svc.inspect.help_open_windows.insert(window);
 
         let mut app = App::new();
 

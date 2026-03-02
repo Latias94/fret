@@ -97,9 +97,9 @@ impl UiDiagnosticsService {
 
                     if let Some(json) = selector_json {
                         self.last_picked_selector_json.insert(window, json.clone());
-                        self.inspect_focus_node_id.insert(window, sel.node.id);
-                        self.inspect_focus_selector_json.insert(window, json);
-                        self.inspect_focus_down_stack.insert(window, Vec::new());
+                        self.inspect.focus_node_id.insert(window, sel.node.id);
+                        self.inspect.focus_selector_json.insert(window, json);
+                        self.inspect.focus_down_stack.insert(window, Vec::new());
                     }
 
                     self.pick_overlay_grace_frames.insert(window, 10);
