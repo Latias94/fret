@@ -39,6 +39,7 @@ mod native_select;
 mod navigation_menu;
 mod pagination;
 mod popover;
+mod progress;
 mod radio_group;
 mod scroll_area;
 mod select;
@@ -198,6 +199,13 @@ pub(super) fn preview_popover(
     open: Model<bool>,
 ) -> Vec<AnyElement> {
     popover::preview_popover(cx, open)
+}
+
+pub(super) fn preview_progress(
+    cx: &mut ElementContext<'_, App>,
+    progress: Model<f32>,
+) -> Vec<AnyElement> {
+    progress::preview_progress(cx, progress)
 }
 
 pub(super) fn preview_sheet(

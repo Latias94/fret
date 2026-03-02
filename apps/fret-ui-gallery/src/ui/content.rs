@@ -538,7 +538,7 @@ fn page_preview(
         PAGE_TABS => preview_tabs(cx, tabs_value),
         PAGE_ACCORDION => preview_accordion(cx, accordion_value),
         PAGE_TABLE => preview_table(cx),
-        PAGE_PROGRESS => preview_progress(cx, progress),
+        PAGE_PROGRESS => pages::preview_progress(cx, progress),
         PAGE_MENUS => preview_menus(cx, dropdown_open, context_menu_open, last_action.clone()),
         PAGE_COMMAND => {
             pages::preview_command_palette(cx, cmdk_open, cmdk_query, last_action.clone())
