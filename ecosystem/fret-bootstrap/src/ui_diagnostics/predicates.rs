@@ -39,14 +39,16 @@ fn dock_drag_window_under_cursor_source_is(
 fn eval_predicate_without_semantics(
     window: AppWindowId,
     known_windows: &[AppWindowId],
+    open_window_count: u32,
     platform_caps: Option<&fret_runtime::PlatformCapabilities>,
     docking: Option<&fret_runtime::DockingInteractionDiagnostics>,
+    workspace: Option<&fret_runtime::WorkspaceInteractionDiagnostics>,
     dock_drag_runtime: Option<&DockDragRuntimeState>,
     pred: &UiPredicateV1,
 ) -> Option<bool> {
     match pred {
-        UiPredicateV1::KnownWindowCountGe { n } => Some((known_windows.len() as u32) >= *n),
-        UiPredicateV1::KnownWindowCountIs { n } => Some((known_windows.len() as u32) == *n),
+        UiPredicateV1::KnownWindowCountGe { n } => Some(open_window_count >= *n),
+        UiPredicateV1::KnownWindowCountIs { n } => Some(open_window_count == *n),
         UiPredicateV1::PlatformUiWindowHoverDetectionIs { quality } => Some(
             platform_caps.is_some_and(|c| c.ui.window_hover_detection.as_str() == quality.as_str()),
         ),
@@ -166,6 +168,46 @@ fn eval_predicate_without_semantics(
                 .and_then(|d| d.resolved.as_ref())?;
             Some(resolved.insert_index == Some(*index as usize))
         }
+        UiPredicateV1::DockTabStripActiveOverflowIs { overflow } => Some(
+            docking
+                .and_then(|d| d.tab_strip_active_visibility.as_ref())
+                .is_some_and(|s| s.overflow == *overflow),
+        ),
+        UiPredicateV1::DockTabStripActiveVisibleIs { visible } => Some(
+            docking
+                .and_then(|d| d.tab_strip_active_visibility.as_ref())
+                .is_some_and(|s| s.active_visible == *visible),
+        ),
+        UiPredicateV1::WorkspaceTabStripActiveOverflowIs { overflow, pane_id } => Some(
+            workspace
+                .and_then(|w| {
+                    w.tab_strip_active_visibility.iter().rev().find(|s| {
+                        s.status
+                            == fret_runtime::WorkspaceTabStripActiveVisibilityStatusDiagnostics::Ok
+                            && pane_id.as_ref().is_none_or(|id| {
+                                s.pane_id
+                                    .as_ref()
+                                    .is_some_and(|p| p.as_ref() == id.as_str())
+                            })
+                    })
+                })
+                .is_some_and(|s| s.overflow == *overflow),
+        ),
+        UiPredicateV1::WorkspaceTabStripActiveVisibleIs { visible, pane_id } => Some(
+            workspace
+                .and_then(|w| {
+                    w.tab_strip_active_visibility.iter().rev().find(|s| {
+                        s.status
+                            == fret_runtime::WorkspaceTabStripActiveVisibilityStatusDiagnostics::Ok
+                            && pane_id.as_ref().is_none_or(|id| {
+                                s.pane_id
+                                    .as_ref()
+                                    .is_some_and(|p| p.as_ref() == id.as_str())
+                            })
+                    })
+                })
+                .is_some_and(|s| s.active_visible == *visible),
+        ),
         UiPredicateV1::DockGraphCanonicalIs { canonical } => Some(
             docking
                 .and_then(|d| d.dock_graph_stats)
@@ -216,8 +258,10 @@ fn eval_predicate(
     render_text: Option<fret_core::RendererTextPerfSnapshot>,
     render_text_font_trace: Option<&fret_core::RendererTextFontTraceSnapshot>,
     known_windows: &[AppWindowId],
+    open_window_count: u32,
     platform_caps: Option<&fret_runtime::PlatformCapabilities>,
     docking: Option<&fret_runtime::DockingInteractionDiagnostics>,
+    workspace: Option<&fret_runtime::WorkspaceInteractionDiagnostics>,
     dock_drag_runtime: Option<&DockDragRuntimeState>,
     text_font_stack_key_stable_frames: u32,
     font_catalog_populated: bool,
@@ -827,8 +871,8 @@ fn eval_predicate(
             let overlap_h = (ay1.min(by1) - ay0.max(by0)).max(0.0);
             overlap_h > eps
         }
-        UiPredicateV1::KnownWindowCountGe { n } => (known_windows.len() as u32) >= *n,
-        UiPredicateV1::KnownWindowCountIs { n } => (known_windows.len() as u32) == *n,
+        UiPredicateV1::KnownWindowCountGe { n } => open_window_count >= *n,
+        UiPredicateV1::KnownWindowCountIs { n } => open_window_count == *n,
         UiPredicateV1::PlatformUiWindowHoverDetectionIs { quality } => {
             if let Some(input_ctx) = input_ctx {
                 input_ctx.caps.ui.window_hover_detection.as_str() == quality.as_str()
@@ -971,6 +1015,32 @@ fn eval_predicate(
             .and_then(|d| d.dock_drop_resolve.as_ref())
             .and_then(|d| d.resolved.as_ref())
             .is_some_and(|d| d.insert_index == Some(*index as usize)),
+        UiPredicateV1::DockTabStripActiveOverflowIs { overflow } => docking
+            .and_then(|d| d.tab_strip_active_visibility.as_ref())
+            .is_some_and(|s| s.overflow == *overflow),
+        UiPredicateV1::DockTabStripActiveVisibleIs { visible } => docking
+            .and_then(|d| d.tab_strip_active_visibility.as_ref())
+            .is_some_and(|s| s.active_visible == *visible),
+        UiPredicateV1::WorkspaceTabStripActiveOverflowIs { overflow, pane_id } => workspace
+            .and_then(|w| {
+                w.tab_strip_active_visibility.iter().rev().find(|s| {
+                    s.status == fret_runtime::WorkspaceTabStripActiveVisibilityStatusDiagnostics::Ok
+                        && pane_id.as_ref().is_none_or(|id| {
+                            s.pane_id.as_ref().is_some_and(|p| p.as_ref() == id.as_str())
+                        })
+                })
+            })
+            .is_some_and(|s| s.overflow == *overflow),
+        UiPredicateV1::WorkspaceTabStripActiveVisibleIs { visible, pane_id } => workspace
+            .and_then(|w| {
+                w.tab_strip_active_visibility.iter().rev().find(|s| {
+                    s.status == fret_runtime::WorkspaceTabStripActiveVisibilityStatusDiagnostics::Ok
+                        && pane_id.as_ref().is_none_or(|id| {
+                            s.pane_id.as_ref().is_some_and(|p| p.as_ref() == id.as_str())
+                        })
+                })
+            })
+            .is_some_and(|s| s.active_visible == *visible),
         UiPredicateV1::DockGraphCanonicalIs { canonical } => docking
             .and_then(|d| d.dock_graph_stats)
             .is_some_and(|s| s.canonical_ok == *canonical),

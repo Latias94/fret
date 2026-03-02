@@ -120,4 +120,3 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
     .test_id("ui-gallery-card-demo")
 }
 // endregion: example
-

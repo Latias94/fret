@@ -159,7 +159,7 @@ pub use carousel::{
     CarouselBreakpoint, CarouselContainScroll, CarouselContent, CarouselContext, CarouselEvent,
     CarouselEventCursor, CarouselItem, CarouselNext, CarouselOptions, CarouselOptionsPatch,
     CarouselOrientation, CarouselPrevious, CarouselSlidesInViewSnapshot, CarouselSlidesToScroll,
-    carousel_context, useCarousel, use_carousel,
+    carousel_context, use_carousel, useCarousel,
 };
 pub use chart::{
     ChartConfig, ChartConfigItem, ChartContainer, ChartContext, ChartLegend, ChartLegendContent,
@@ -223,7 +223,7 @@ pub use dialog::{
     Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, DialogHeader,
     DialogOverlay, DialogPortal, DialogTitle, DialogTrigger,
 };
-pub use direction::{DirectionProvider, LayoutDirection, useDirection, use_direction};
+pub use direction::{DirectionProvider, LayoutDirection, use_direction, useDirection};
 pub use drawer::{
     Drawer, DrawerClose, DrawerContent, DrawerDescription, DrawerFooter, DrawerHeader,
     DrawerOverlay, DrawerPortal, DrawerSide, DrawerSnapPoint, DrawerTitle, DrawerTrigger, drawer,
@@ -318,7 +318,7 @@ pub use sidebar::{
     SidebarMenuAction, SidebarMenuBadge, SidebarMenuButton, SidebarMenuButtonVariant,
     SidebarMenuItem, SidebarMenuSkeleton, SidebarMenuSub, SidebarMenuSubButton,
     SidebarMenuSubButtonSize, SidebarMenuSubItem, SidebarProvider, SidebarRail, SidebarSeparator,
-    SidebarSide, SidebarTrigger, SidebarVariant, useSidebar, use_sidebar,
+    SidebarSide, SidebarTrigger, SidebarVariant, use_sidebar, useSidebar,
 };
 pub use skeleton::Skeleton;
 pub use slider::{Slider, slider};

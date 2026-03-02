@@ -32,4 +32,3 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
         .into_element(cx)
 }
 // endregion: example
-

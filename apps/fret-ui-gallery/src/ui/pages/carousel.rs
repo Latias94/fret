@@ -129,4 +129,3 @@ pub(super) fn preview_carousel(cx: &mut ElementContext<'_, App>) -> Vec<AnyEleme
         vec![body.test_id("ui-gallery-carousel-component")]
     })
 }
-

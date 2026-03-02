@@ -3743,7 +3743,7 @@
       ],
       "target_hints": [
         "Asserts initial pos_in_set for a known tab.",
-        "Drags the first tab to reorder within the strip and drops it.",
+        "Drags the first tab to the end and drops it.",
         "Asserts pos_in_set updates after the reorder."
       ]
     }

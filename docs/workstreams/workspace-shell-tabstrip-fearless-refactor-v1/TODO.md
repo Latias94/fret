@@ -4,16 +4,16 @@ This file is an execution checklist for the design in `DESIGN.md`.
 
 ## Setup / Inventory
 
-- [ ] Inventory current tab strip usage:
-  - [ ] Workspace shell: `apps/fret-ui-gallery/src/driver/chrome.rs`
-  - [ ] Workspace shell composition: `ecosystem/fret/src/workspace_shell.rs`
-  - [ ] Docking tab bars: `ecosystem/fret-docking/src/dock/*`
-- [ ] List all existing tab-related commands and decide ownership:
+- [x] Inventory current tab strip usage:
+  - [x] Workspace shell: `apps/fret-ui-gallery/src/driver/chrome.rs`
+  - [x] Workspace shell composition: `ecosystem/fret/src/workspace_shell.rs`
+  - [x] Docking tab bars: `ecosystem/fret-docking/src/dock/*`
+- [x] List all existing tab-related commands and decide ownership:
   - activate, close, close others, close left/right
   - move active before/after target (reorder)
   - pin/unpin
   - preview open/commit
-- [ ] Confirm `test_id` conventions for:
+- [x] Confirm `test_id` conventions for:
   - tab strip root
   - each tab trigger (and close button)
   - overflow control + overflow list entries
@@ -41,7 +41,8 @@ This file is an execution checklist for the design in `DESIGN.md`.
 - [ ] Gates:
   - [x] test: pin/unpin preserves active, pinned count, and order
   - [x] test: pinned boundary exposes stable `test_id`
-  - [ ] diag: drag a tab across pinned boundary
+  - [x] diag: drag a tab across pinned boundary
+    - `tools/diag-scripts/workspace/shell-demo/workspace-shell-demo-tab-pinned-boundary-toggle-smoke.json`
 
 ## M3 — Preview tabs
 
@@ -56,9 +57,10 @@ This file is an execution checklist for the design in `DESIGN.md`.
 
 ## M4 — Kernel extraction + docking reuse
 
-- [ ] Decide the extraction target:
-  - [ ] keep in `ecosystem/fret-workspace` as `tab_strip_kernel` module, or
-  - [ ] new crate `ecosystem/fret-editor-chrome` consumed by both workspace and docking.
+- [ ] Decide the extraction target (recommendation):
+  - Prefer extracting **shared, headless** hit-testing/overflow/autoscroll helpers into
+    `ecosystem/fret-ui-kit` (policy/headless layer) to avoid a new crate and to enable docking reuse.
+  - Keep workspace-specific policy (pinned/preview/editor focus rules) in `ecosystem/fret-workspace`.
 - [ ] Define kernel interfaces:
   - [ ] inputs: rects, pointer position, viewport size, state snapshot
   - [ ] outputs: intents (activate/reorder/move/split/scroll)

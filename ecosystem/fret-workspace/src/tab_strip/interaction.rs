@@ -61,6 +61,7 @@ pub(super) fn tab_pointer_down_handler(
                 return PressablePointerDownResult::Continue;
             }
 
+            host.capture_pointer();
             let _ = host.models_mut().update(&drag_model, |st| {
                 st.pointer = Some(down.pointer_id);
                 st.start_tick = down.tick_id;

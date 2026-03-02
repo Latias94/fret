@@ -359,7 +359,7 @@ fn stamp_is_newer(slot: &mut Option<u64>, stamp: Option<u64>) -> bool {
 }
 
 fn read_touch_stamp(path: &Path) -> Option<u64> {
-    let bytes = std::fs::read(path).ok()?;
+    let bytes = crate::util::read_file_bytes_shared(path)?;
     let s = std::str::from_utf8(&bytes).ok()?;
     s.lines()
         .rev()

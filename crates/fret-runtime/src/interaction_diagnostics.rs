@@ -34,12 +34,37 @@ pub struct ViewportCaptureDiagnostics {
     pub target: RenderTargetId,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum DockTabStripActiveVisibilityStatusDiagnostics {
+    Ok,
+    MissingWindowRoot,
+    NoTabsFound,
+    MissingLayoutRect,
+    MissingTabsNode,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct DockTabStripActiveVisibilityDiagnostics {
+    pub status: DockTabStripActiveVisibilityStatusDiagnostics,
+    pub tabs_node: Option<DockNodeId>,
+    /// True when the tab strip reports overflow (i.e. `max_scroll > 0`).
+    pub overflow: bool,
+    pub tab_count: usize,
+    pub active: usize,
+    pub scroll: fret_core::geometry::Px,
+    pub max_scroll: fret_core::geometry::Px,
+    /// True when `active` is visible at the current `scroll` (best-effort).
+    pub active_visible: bool,
+}
+
 #[derive(Debug, Clone, PartialEq, Default)]
 pub struct DockingInteractionDiagnostics {
     pub dock_drag: Option<DockDragDiagnostics>,
     pub floating_drag: Option<DockFloatingDragDiagnostics>,
     pub dock_drop_resolve: Option<DockDropResolveDiagnostics>,
     pub viewport_capture: Option<ViewportCaptureDiagnostics>,
+    /// Best-effort diagnostics for ensuring the active tab remains visible after selection.
+    pub tab_strip_active_visibility: Option<DockTabStripActiveVisibilityDiagnostics>,
     /// Best-effort dock graph stats snapshot for the current window.
     pub dock_graph_stats: Option<DockGraphStatsDiagnostics>,
     /// Best-effort stable signature for the current window's dock graph.
@@ -47,6 +72,37 @@ pub struct DockingInteractionDiagnostics {
     /// This is intended for scripted regression gates that want to assert an exact layout shape
     /// (dockview-style) without relying on pixels.
     pub dock_graph_signature: Option<DockGraphSignatureDiagnostics>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum WorkspaceTabStripActiveVisibilityStatusDiagnostics {
+    Ok,
+    NoActiveTab,
+    MissingScrollViewportRect,
+    MissingActiveTabRect,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct WorkspaceTabStripActiveVisibilityDiagnostics {
+    pub status: WorkspaceTabStripActiveVisibilityStatusDiagnostics,
+    pub pane_id: Option<std::sync::Arc<str>>,
+    pub active_tab_id: Option<std::sync::Arc<str>>,
+    pub tab_count: usize,
+    pub overflow: bool,
+    pub scroll_x: fret_core::geometry::Px,
+    pub max_scroll_x: fret_core::geometry::Px,
+    pub scroll_viewport_rect: Option<Rect>,
+    pub active_tab_rect: Option<Rect>,
+    pub active_visible: bool,
+}
+
+#[derive(Debug, Clone, PartialEq, Default)]
+pub struct WorkspaceInteractionDiagnostics {
+    /// Best-effort tab strip visibility diagnostics published by workspace shells.
+    ///
+    /// Multiple strips may exist per window (multi-pane); publishers should include `pane_id`
+    /// so scripted gates can select deterministically.
+    pub tab_strip_active_visibility: Vec<WorkspaceTabStripActiveVisibilityDiagnostics>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -169,6 +225,8 @@ struct WindowInteractionDiagnosticsFrame {
     frame_id: FrameId,
     docking: DockingInteractionDiagnostics,
     latest_docking: DockingInteractionDiagnostics,
+    workspace: WorkspaceInteractionDiagnostics,
+    latest_workspace: WorkspaceInteractionDiagnostics,
 }
 
 impl WindowInteractionDiagnosticsStore {
@@ -177,6 +235,7 @@ impl WindowInteractionDiagnosticsStore {
         if w.frame_id != frame_id {
             w.frame_id = frame_id;
             w.docking = DockingInteractionDiagnostics::default();
+            w.workspace = WorkspaceInteractionDiagnostics::default();
         }
     }
 
@@ -192,6 +251,18 @@ impl WindowInteractionDiagnosticsStore {
         w.latest_docking = diagnostics;
     }
 
+    pub fn record_workspace_tab_strip_active_visibility(
+        &mut self,
+        window: AppWindowId,
+        frame_id: FrameId,
+        diagnostics: WorkspaceTabStripActiveVisibilityDiagnostics,
+    ) {
+        self.begin_frame(window, frame_id);
+        let w = self.per_window.entry(window).or_default();
+        w.workspace.tab_strip_active_visibility.push(diagnostics);
+        w.latest_workspace = w.workspace.clone();
+    }
+
     pub fn docking_for_window(
         &self,
         window: AppWindowId,
@@ -201,11 +272,27 @@ impl WindowInteractionDiagnosticsStore {
         (w.frame_id == frame_id).then_some(&w.docking)
     }
 
+    pub fn workspace_for_window(
+        &self,
+        window: AppWindowId,
+        frame_id: FrameId,
+    ) -> Option<&WorkspaceInteractionDiagnostics> {
+        let w = self.per_window.get(&window)?;
+        (w.frame_id == frame_id).then_some(&w.workspace)
+    }
+
     pub fn docking_latest_for_window(
         &self,
         window: AppWindowId,
     ) -> Option<&DockingInteractionDiagnostics> {
         self.per_window.get(&window).map(|w| &w.latest_docking)
+    }
+
+    pub fn workspace_latest_for_window(
+        &self,
+        window: AppWindowId,
+    ) -> Option<&WorkspaceInteractionDiagnostics> {
+        self.per_window.get(&window).map(|w| &w.latest_workspace)
     }
 }
 
@@ -247,6 +334,42 @@ mod tests {
             store
                 .docking_for_window(window, FrameId(2))
                 .is_some_and(|d| d.dock_graph_stats.is_none()),
+            "frame-scoped snapshot should be cleared by begin_frame when not recorded"
+        );
+    }
+
+    #[test]
+    fn workspace_latest_is_stable_across_begin_frame_resets() {
+        let mut store = WindowInteractionDiagnosticsStore::default();
+        let window = AppWindowId::default();
+
+        let snapshot = WorkspaceTabStripActiveVisibilityDiagnostics {
+            status: WorkspaceTabStripActiveVisibilityStatusDiagnostics::Ok,
+            pane_id: Some(std::sync::Arc::<str>::from("pane-a")),
+            active_tab_id: Some(std::sync::Arc::<str>::from("doc-a-2")),
+            tab_count: 3,
+            overflow: true,
+            scroll_x: fret_core::geometry::Px(12.0),
+            max_scroll_x: fret_core::geometry::Px(120.0),
+            scroll_viewport_rect: None,
+            active_tab_rect: None,
+            active_visible: true,
+        };
+
+        store.record_workspace_tab_strip_active_visibility(window, FrameId(1), snapshot);
+        store.begin_frame(window, FrameId(2));
+
+        assert!(
+            store
+                .workspace_latest_for_window(window)
+                .is_some_and(|w| !w.tab_strip_active_visibility.is_empty()),
+            "latest snapshot should persist even when the current frame snapshot is reset"
+        );
+
+        assert!(
+            store
+                .workspace_for_window(window, FrameId(2))
+                .is_some_and(|w| w.tab_strip_active_visibility.is_empty()),
             "frame-scoped snapshot should be cleared by begin_frame when not recorded"
         );
     }

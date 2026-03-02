@@ -18,6 +18,7 @@ mod prelude_ui;
 mod services;
 mod tab_bar_drop_target;
 mod tab_bar_geometry;
+mod tab_bar_kernel;
 mod tab_overflow;
 mod types;
 mod viewport;

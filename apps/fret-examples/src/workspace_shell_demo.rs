@@ -280,7 +280,7 @@ impl WorkspaceShellDemoDriver {
                                                         },
                                                         ..Default::default()
                                                     },
-                                                    move |cx, _st| {
+                                                    move |cx, _state| {
                                                         vec![cx.container(
                                                             ContainerProps {
                                                                 layout: fill_layout(),

@@ -89,11 +89,14 @@ fn render_frame(
     for i in 0..32 {
         let id: Arc<str> = Arc::from(format!("t{i:02}"));
         let title: Arc<str> = Arc::from(format!("Tab {i:02}"));
-        tabs.push(WorkspaceTab::new(
-            id,
-            title,
-            CommandId::from("test.workspace.tab.activate"),
-        ));
+        tabs.push(
+            WorkspaceTab::new(
+                id.clone(),
+                title,
+                CommandId::from("test.workspace.tab.activate"),
+            )
+            .close_command(CommandId::new(format!("test.workspace.tab.close.{id}"))),
+        );
     }
 
     let root = fret_ui::declarative::render_root(
@@ -183,7 +186,7 @@ fn tab_strip_overflow_menu_renders_entries() {
 
     let bounds = Rect::new(
         Point::new(Px(0.0), Px(0.0)),
-        CoreSize::new(Px(240.0), Px(40.0)),
+        CoreSize::new(Px(240.0), Px(240.0)),
     );
 
     // Two frames so scroll metrics + element bounds settle.
@@ -213,6 +216,7 @@ fn tab_strip_overflow_menu_renders_entries() {
     );
 
     render_frame(&mut ui, &mut app, &mut services, window, bounds);
+    let _ = app.flush_effects();
     let snap = ui.semantics_snapshot().expect("semantics snapshot").clone();
 
     let overflow_entry_count = snap
@@ -230,5 +234,70 @@ fn tab_strip_overflow_menu_renders_entries() {
         overflow_entry_count > 0,
         "expected overflow menu to render at least one entry; nodes={}",
         snap.nodes.len()
+    );
+
+    let close_button = snap
+        .nodes
+        .iter()
+        .find(|n| {
+            n.role == SemanticsRole::Button
+                && n.test_id.as_deref().is_some_and(|id| {
+                    id.starts_with("tabstrip.overflow_entry.") && id.ends_with(".close")
+                })
+        })
+        .expect("expected overflow menu to expose close buttons");
+    let close_test_id = close_button
+        .test_id
+        .as_deref()
+        .expect("close button has test id");
+    let tab_id = close_test_id
+        .strip_prefix("tabstrip.overflow_entry.")
+        .and_then(|rest| rest.strip_suffix(".close"))
+        .expect("close button test id encodes tab id");
+
+    let overflow_item_test_id = format!("tabstrip.overflow_entry.{tab_id}");
+    let overflow_item = snap
+        .nodes
+        .iter()
+        .find(|n| n.test_id.as_deref() == Some(overflow_item_test_id.as_str()))
+        .expect("expected overflow menu item node for close target");
+
+    let click_pos = center(&close_button.bounds);
+    dispatch_pointer_down(
+        &mut ui,
+        &mut app,
+        &mut services,
+        MouseButton::Left,
+        click_pos,
+    );
+    dispatch_pointer_up(
+        &mut ui,
+        &mut app,
+        &mut services,
+        MouseButton::Left,
+        click_pos,
+    );
+
+    let effects = app.flush_effects();
+    let close_cmd = CommandId::new(format!("test.workspace.tab.close.{tab_id}"));
+    assert!(
+        effects.iter().any(|e| matches!(
+            e,
+            fret_runtime::Effect::Command { window: Some(w), command }
+                if *w == window && *command == close_cmd
+        )),
+        "expected clicking overflow close to dispatch close command; tab_id={tab_id}; effects={effects:?}; close_bounds={:?}; item_bounds={:?}; click_local_x={}; item_w={}",
+        close_button.bounds,
+        overflow_item.bounds,
+        (click_pos.x.0 - overflow_item.bounds.origin.x.0),
+        overflow_item.bounds.size.width.0,
+    );
+    assert!(
+        !effects.iter().any(|e| matches!(
+            e,
+            fret_runtime::Effect::Command { command, .. }
+                if *command == CommandId::from("test.workspace.tab.activate")
+        )),
+        "expected clicking overflow close to not dispatch activate command; effects={effects:?}"
     );
 }
