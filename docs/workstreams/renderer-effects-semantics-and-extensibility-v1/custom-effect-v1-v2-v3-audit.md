@@ -466,6 +466,10 @@ Notes:
     - `renderer_render_plan_custom_effect_chain_base_required_full_targets_max`
     - `renderer_render_plan_custom_effect_chain_optional_mask_max_bytes`
     - `renderer_render_plan_custom_effect_chain_optional_pyramid_max_bytes`
+  - Triage-derived headroom (computed from the above, shown in hint evidence when available):
+    - `custom_effect_chain_headroom_before_optional_bytes`
+    - `custom_effect_chain_headroom_after_mask_bytes`
+    - `custom_effect_chain_headroom_after_optional_bytes`
   - `renderer_intermediate_peak_in_use_bytes`.
 
 Conformance:
