@@ -16,7 +16,7 @@
 - [x] Add conformance tests (invalidation + invariants)
 - [x] Apply per-edge paint overrides to emitted wire `SceneOp::Path.paint`
 - [x] Apply per-node paint overrides to emitted node body/background paint
-- [ ] Conformance: paint overrides do not mutate serialized `Graph`
+- [x] Conformance: paint overrides do not mutate serialized `Graph`
 
 ## Optional (nice-to-have)
 

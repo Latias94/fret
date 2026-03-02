@@ -15,7 +15,7 @@
 
 - [x] Include `paint_overrides.revision()` in paint cache keys only
 - [x] Conformance: paint overrides change does **not** rebuild derived geometry/index
-- [ ] Conformance: overrides do not mutate serialized `Graph`
+- [x] Conformance: overrides do not mutate serialized `Graph`
 
 ## M3: Per-edge paint overrides
 
