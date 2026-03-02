@@ -1,3 +1,5 @@
+pub const SOURCE: &str = include_str!("demo.rs");
+
 // region: example
 use fret_app::App;
 use fret_core::Px;
@@ -24,25 +26,27 @@ fn make_invoice_table(
     let method_w = Px(180.0);
     let amount_w = Px(132.0);
 
-    let header = shadcn::TableHeader::new(vec![shadcn::TableRow::new(
-        4,
-        vec![
-            shadcn::TableHead::new("Invoice")
-                .refine_layout(LayoutRefinement::default().w_px(invoice_w))
-                .into_element(cx),
-            shadcn::TableHead::new("Status")
-                .refine_layout(LayoutRefinement::default().w_px(status_w))
-                .into_element(cx),
-            shadcn::TableHead::new("Method")
-                .refine_layout(LayoutRefinement::default().w_px(method_w))
-                .into_element(cx),
-            shadcn::TableHead::new("Amount")
-                .refine_layout(LayoutRefinement::default().w_px(amount_w))
-                .into_element(cx),
-        ],
-    )
-    .border_bottom(true)
-    .into_element(cx)])
+    let header = shadcn::TableHeader::new(vec![
+        shadcn::TableRow::new(
+            4,
+            vec![
+                shadcn::TableHead::new("Invoice")
+                    .refine_layout(LayoutRefinement::default().w_px(invoice_w))
+                    .into_element(cx),
+                shadcn::TableHead::new("Status")
+                    .refine_layout(LayoutRefinement::default().w_px(status_w))
+                    .into_element(cx),
+                shadcn::TableHead::new("Method")
+                    .refine_layout(LayoutRefinement::default().w_px(method_w))
+                    .into_element(cx),
+                shadcn::TableHead::new("Amount")
+                    .refine_layout(LayoutRefinement::default().w_px(amount_w))
+                    .into_element(cx),
+            ],
+        )
+        .border_bottom(true)
+        .into_element(cx),
+    ])
     .into_element(cx);
 
     let body_rows = rows
@@ -80,25 +84,27 @@ fn make_invoice_table(
 
     let mut children = vec![header, body];
     if include_footer {
-        let footer = shadcn::TableFooter::new(vec![shadcn::TableRow::new(
-            4,
-            vec![
-                shadcn::TableCell::new(cx.text("Total"))
-                    .col_span(3)
-                    .refine_layout(
-                        LayoutRefinement::default().w_px(invoice_w + status_w + method_w),
-                    )
-                    .into_element(cx),
-                {
-                    let total_amount = cx.text("$2,500.00");
-                    shadcn::TableCell::new(align_end(cx, total_amount))
-                        .refine_layout(LayoutRefinement::default().w_px(amount_w))
-                        .into_element(cx)
-                },
-            ],
-        )
-        .border_bottom(false)
-        .into_element(cx)])
+        let footer = shadcn::TableFooter::new(vec![
+            shadcn::TableRow::new(
+                4,
+                vec![
+                    shadcn::TableCell::new(cx.text("Total"))
+                        .col_span(3)
+                        .refine_layout(
+                            LayoutRefinement::default().w_px(invoice_w + status_w + method_w),
+                        )
+                        .into_element(cx),
+                    {
+                        let total_amount = cx.text("$2,500.00");
+                        shadcn::TableCell::new(align_end(cx, total_amount))
+                            .refine_layout(LayoutRefinement::default().w_px(amount_w))
+                            .into_element(cx)
+                    },
+                ],
+            )
+            .border_bottom(false)
+            .into_element(cx),
+        ])
         .into_element(cx);
         children.push(footer);
     }
@@ -126,4 +132,3 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
 }
 
 // endregion: example
-

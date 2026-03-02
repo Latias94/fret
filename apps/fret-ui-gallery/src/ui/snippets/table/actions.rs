@@ -1,3 +1,5 @@
+pub const SOURCE: &str = include_str!("actions.rs");
+
 // region: example
 use fret_app::App;
 use fret_ui_shadcn::{self as shadcn, prelude::*};
@@ -12,7 +14,11 @@ struct TableModels {
 
 fn ensure_models(cx: &mut ElementContext<'_, App>) -> (Model<bool>, Model<bool>, Model<bool>) {
     let state = cx.with_state(TableModels::default, |st| st.clone());
-    match (state.actions_open_1, state.actions_open_2, state.actions_open_3) {
+    match (
+        state.actions_open_1,
+        state.actions_open_2,
+        state.actions_open_3,
+    ) {
         (Some(open_1), Some(open_2), Some(open_3)) => (open_1, open_2, open_3),
         _ => {
             let models = cx.app.models_mut();
@@ -65,9 +71,8 @@ fn action_row(
                 shadcn::DropdownMenuEntry::Item(shadcn::DropdownMenuItem::new("Duplicate")),
                 shadcn::DropdownMenuEntry::Separator,
                 shadcn::DropdownMenuEntry::Item(
-                    shadcn::DropdownMenuItem::new("Delete").variant(
-                        shadcn::dropdown_menu::DropdownMenuItemVariant::Destructive,
-                    ),
+                    shadcn::DropdownMenuItem::new("Delete")
+                        .variant(shadcn::dropdown_menu::DropdownMenuItemVariant::Destructive),
                 ),
             ]
         },
@@ -92,22 +97,24 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
     let (open_1, open_2, open_3) = ensure_models(cx);
 
     shadcn::Table::new(vec![
-        shadcn::TableHeader::new(vec![shadcn::TableRow::new(
-            3,
-            vec![
-                shadcn::TableHead::new("Product")
-                    .refine_layout(LayoutRefinement::default().w_px(Px(280.0)))
-                    .into_element(cx),
-                shadcn::TableHead::new("Price")
-                    .refine_layout(LayoutRefinement::default().w_px(Px(180.0)))
-                    .into_element(cx),
-                shadcn::TableHead::new("Actions")
-                    .refine_layout(LayoutRefinement::default().w_px(Px(120.0)))
-                    .into_element(cx),
-            ],
-        )
-        .border_bottom(true)
-        .into_element(cx)])
+        shadcn::TableHeader::new(vec![
+            shadcn::TableRow::new(
+                3,
+                vec![
+                    shadcn::TableHead::new("Product")
+                        .refine_layout(LayoutRefinement::default().w_px(Px(280.0)))
+                        .into_element(cx),
+                    shadcn::TableHead::new("Price")
+                        .refine_layout(LayoutRefinement::default().w_px(Px(180.0)))
+                        .into_element(cx),
+                    shadcn::TableHead::new("Actions")
+                        .refine_layout(LayoutRefinement::default().w_px(Px(120.0)))
+                        .into_element(cx),
+                ],
+            )
+            .border_bottom(true)
+            .into_element(cx),
+        ])
         .into_element(cx),
         shadcn::TableBody::new(vec![
             action_row(cx, "Gaming Mouse", "$129.99", open_1, "row-1"),
@@ -122,4 +129,3 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
 }
 
 // endregion: example
-

@@ -17,29 +17,25 @@ pub(super) fn preview_table(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement>
                 .description("Matches the shadcn table demo structure (header + body + caption).")
                 .max_w(Px(760.0))
                 .test_id_prefix("ui-gallery-table-demo")
-                .code_rust_from_file_region(include_str!("../snippets/table/demo.rs"), "example"),
+                .code_rust_from_file_region(snippets::demo::SOURCE, "example"),
             DocSection::new("Footer", footer)
                 .description("Adds a <TableFooter /> section.")
                 .max_w(Px(760.0))
                 .test_id_prefix("ui-gallery-table-footer")
-                .code_rust_from_file_region(include_str!("../snippets/table/footer.rs"), "example"),
+                .code_rust_from_file_region(snippets::footer::SOURCE, "example"),
             DocSection::new("Actions", actions)
                 .description("Uses <DropdownMenu /> as an actions column.")
                 .max_w(Px(760.0))
                 .test_id_prefix("ui-gallery-table-actions")
-                .code_rust_from_file_region(
-                    include_str!("../snippets/table/actions.rs"),
-                    "example",
-                ),
+                .code_rust_from_file_region(snippets::actions::SOURCE, "example"),
             DocSection::new("RTL", rtl)
                 .description("Validates right-to-left direction support.")
                 .max_w(Px(760.0))
                 .test_id_prefix("ui-gallery-table-rtl")
-                .code_rust_from_file_region(include_str!("../snippets/table/rtl.rs"), "example"),
+                .code_rust_from_file_region(snippets::rtl::SOURCE, "example"),
         ],
     )
     .test_id("ui-gallery-table-root");
 
     vec![page]
 }
-
