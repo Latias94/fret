@@ -172,7 +172,7 @@ pub(super) fn build_inspect_neighborhood_model(
             .map(|n| n.id.data().as_ffi());
 
         out.push(format!(
-            "matches: {matches_total} (showing {}) (Up/Down select, Enter lock)",
+            "matches: {matches_total} (showing {}) (Up/Down select, Enter lock, Ctrl/Cmd+Enter lock+copy)",
             matches.len()
         ));
         for m in matches.iter().copied() {

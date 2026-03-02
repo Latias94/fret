@@ -28,6 +28,20 @@ pub(crate) fn render_diag_inspect_overlay(
         app.push_effect(Effect::ClipboardSetText { text });
     }
 
+    let pending_copy_selector = app
+        .with_global_mut_untracked(UiDiagnosticsService::default, |svc, _app| {
+            svc.inspect_pending_copy_selector_windows.remove(&window)
+        });
+    if pending_copy_selector {
+        let payload = app.with_global_mut_untracked(UiDiagnosticsService::default, |svc, _app| {
+            svc.inspect_best_selector_json(window)
+                .map(|s| s.to_string())
+        });
+        if let Some(text) = payload {
+            app.push_effect(Effect::ClipboardSetText { text });
+        }
+    }
+
     if !inspection_active {
         let root_node = fret_ui::declarative::render_root(
             ui,

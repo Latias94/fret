@@ -28,6 +28,7 @@ impl UiDiagnosticsService {
             self.inspect_help_search_query.clear();
             self.inspect_help_match_node_ids.clear();
             self.inspect_help_selected_match_index.clear();
+            self.inspect_pending_copy_selector_windows.clear();
         }
     }
 
@@ -343,13 +344,24 @@ impl UiDiagnosticsService {
                         if let Some(node_id) = self.inspect_help_selected_match_node_id(window) {
                             self.inspect_focus_down_stack.insert(window, Vec::new());
                             self.inspect_locked_windows.insert(window);
+                            let wants_copy = wants_command;
                             self.inspect_pending_nav
                                 .insert(window, InspectNavCommand::SelectNode(node_id));
-                            self.push_inspect_toast(
-                                window,
-                                "inspect: locked match selection (press Ctrl/Cmd+C to copy selector)"
-                                    .to_string(),
-                            );
+                            if wants_copy {
+                                self.inspect_pending_copy_selector_windows.insert(window);
+                            }
+                            if wants_copy {
+                                self.push_inspect_toast(
+                                    window,
+                                    "inspect: locked match and copied selector".to_string(),
+                                );
+                            } else {
+                                self.push_inspect_toast(
+                                    window,
+                                    "inspect: locked match selection (press Ctrl/Cmd+C to copy selector)"
+                                        .to_string(),
+                                );
+                            }
                             app.request_redraw(window);
                             return true;
                         }

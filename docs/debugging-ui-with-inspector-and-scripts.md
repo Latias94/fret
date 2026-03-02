@@ -48,7 +48,8 @@ In-app shortcuts while inspect mode is active:
 - `L`: lock/unlock selection (freeze hover)
 - `Alt+Up` / `Alt+Down`: walk the semantics parent chain (and “back to child”)
 - (Help open) Type to filter the neighborhood view; `Backspace` deletes.
-- (Help open, search active) `Up/Down` selects a match; `Enter` locks selection (or clears search when there are no matches).
+- (Help open, search active) `Up/Down` selects a match; `Enter` locks selection.
+- (Help open, search active) `Ctrl/Cmd+Enter` locks selection and copies the best selector JSON.
 
 ### What to look at
 
