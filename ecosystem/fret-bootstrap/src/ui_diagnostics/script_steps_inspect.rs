@@ -171,17 +171,7 @@ pub(super) fn handle_inspect_help_lock_best_match_and_copy_selector_step(
         svc.set_inspect_enabled(true, svc.inspect_consume_clicks());
     }
     svc.inspector
-        .state
-        .help_open_windows
-        .insert(resolved_window);
-    svc.inspector
-        .state
-        .help_search_query
-        .insert(resolved_window, state.query.clone());
-    svc.inspector
-        .state
-        .help_selected_match_index
-        .insert(resolved_window, 0);
+        .script_prepare_help_search(resolved_window, state.query.clone());
 
     let Some(snapshot) = semantics_snapshot else {
         state.remaining_frames = state.remaining_frames.saturating_sub(1);
@@ -387,22 +377,7 @@ pub(super) fn handle_inspect_help_tree_lock_best_match_and_copy_selector_step(
         svc.set_inspect_enabled(true, svc.inspect_consume_clicks());
     }
     svc.inspector
-        .state
-        .help_open_windows
-        .insert(resolved_window);
-    svc.inspector
-        .state
-        .tree_open_windows
-        .insert(resolved_window);
-    svc.inspector
-        .state
-        .help_search_query
-        .insert(resolved_window, state.query.clone());
-    svc.inspector
-        .state
-        .help_selected_match_index
-        .insert(resolved_window, 0);
-    svc.set_inspect_help_scroll_offset(resolved_window, usize::MAX / 4);
+        .script_prepare_help_tree_search(resolved_window, state.query.clone());
 
     let Some(snapshot) = semantics_snapshot else {
         state.remaining_frames = state.remaining_frames.saturating_sub(1);
@@ -469,32 +444,13 @@ pub(super) fn handle_inspect_help_tree_lock_best_match_and_copy_selector_step(
 
     let node_id = matches[0];
     svc.inspector
-        .state
-        .tree_selected_node_id
-        .insert(resolved_window, node_id);
-
-    let expanded = svc
-        .inspector
-        .state
-        .tree_expanded_node_ids
-        .entry(resolved_window)
-        .or_default();
-    let mut cur = Some(node_id);
-    for _ in 0..64 {
-        let Some(id) = cur else {
-            break;
-        };
-        expanded.insert(id);
-        cur = index
-            .by_id
-            .get(&id)
-            .and_then(|n| n.parent.map(|p| p.data().as_ffi()));
-    }
+        .script_select_tree_node_and_expand_ancestors(resolved_window, node_id, &index);
+    let (expanded, _) = svc.inspector.tree_state_snapshot(resolved_window);
 
     let model = build_inspect_tree_model(
         snapshot,
         &index,
-        expanded,
+        &expanded,
         Some(node_id),
         svc.cfg.redact_text,
     );

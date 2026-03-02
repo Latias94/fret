@@ -173,6 +173,40 @@ impl InspectController {
         );
     }
 
+    pub(super) fn script_prepare_help_search(&mut self, window: AppWindowId, query: String) {
+        self.state.help_open_windows.insert(window);
+        self.state.help_search_query.insert(window, query);
+        self.state.help_selected_match_index.insert(window, 0);
+    }
+
+    pub(super) fn script_prepare_help_tree_search(&mut self, window: AppWindowId, query: String) {
+        self.script_prepare_help_search(window, query);
+        self.state.tree_open_windows.insert(window);
+        self.set_help_scroll_offset(window, usize::MAX / 4);
+    }
+
+    pub(super) fn script_select_tree_node_and_expand_ancestors(
+        &mut self,
+        window: AppWindowId,
+        node_id: u64,
+        index: &super::selector::SemanticsIndex<'_>,
+    ) {
+        self.state.tree_selected_node_id.insert(window, node_id);
+
+        let expanded = self.state.tree_expanded_node_ids.entry(window).or_default();
+        let mut cur = Some(node_id);
+        for _ in 0..64 {
+            let Some(id) = cur else {
+                break;
+            };
+            expanded.insert(id);
+            cur = index
+                .by_id
+                .get(&id)
+                .and_then(|n| n.parent.map(|p| p.data().as_ffi()));
+        }
+    }
+
     pub(super) fn take_pending_copy_details_payload(
         &mut self,
         window: AppWindowId,
