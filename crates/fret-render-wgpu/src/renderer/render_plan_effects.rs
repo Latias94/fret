@@ -14,12 +14,16 @@ fn required_bytes_for_full_size_targets(full_target_bytes: u64, target_count: u6
     full_target_bytes.saturating_mul(target_count)
 }
 
-fn has_budget_for_full_size_targets(
-    budget_bytes: u64,
-    full_target_bytes: u64,
-    target_count: u64,
-) -> bool {
-    required_bytes_for_full_size_targets(full_target_bytes, target_count) <= budget_bytes
+fn base_required_bytes_for_srcdst_and_single_scratch(full_target_bytes: u64) -> u64 {
+    required_bytes_for_full_size_targets(full_target_bytes, 2)
+}
+
+fn base_required_bytes_for_srcdst_and_two_scratch(full_target_bytes: u64) -> u64 {
+    required_bytes_for_full_size_targets(full_target_bytes, 3)
+}
+
+fn base_required_bytes_for_srcdst_and_three_scratch(full_target_bytes: u64) -> u64 {
+    required_bytes_for_full_size_targets(full_target_bytes, 4)
 }
 
 fn budget_excluding_full_size_targets(
@@ -241,7 +245,7 @@ pub(super) fn apply_chain_in_place(
             .any(|s| matches!(*s, fret_core::EffectStep::DropShadowV1(_)));
 
         let full = estimate_texture_bytes(ctx.viewport_size, ctx.format, 1);
-        let min_budget_for_work = required_bytes_for_full_size_targets(full, 3);
+        let min_budget_for_work = base_required_bytes_for_srcdst_and_two_scratch(full);
         let has_work = scratch_targets.len() >= 2;
         let has_mask = mask_uniform_index.is_some() || mask.is_some();
         let last_step_is_custom = steps.last().is_some_and(|s| {
@@ -270,7 +274,7 @@ pub(super) fn apply_chain_in_place(
             let chain_raw = (chain_wants_raw
                 && group_raw.is_none()
                 && scratch_targets.len() >= 3
-                && has_budget_for_full_size_targets(budget_bytes, full, 4))
+                && budget_bytes >= base_required_bytes_for_srcdst_and_three_scratch(full))
             .then_some(scratch_targets[1]);
             let work_scratch_targets = if chain_raw.is_some() {
                 &scratch_targets[2..]
@@ -537,7 +541,7 @@ pub(super) fn apply_chain_in_place(
     let full = estimate_texture_bytes(ctx.viewport_size, ctx.format, 1);
     let (chain_raw, scratch_targets): (Option<PlanTarget>, &[PlanTarget]) = if chain_wants_raw
         && scratch_targets.len() >= 2
-        && has_budget_for_full_size_targets(budget_bytes, full, 2)
+        && budget_bytes >= base_required_bytes_for_srcdst_and_single_scratch(full)
     {
         let chain_raw = scratch_targets[0];
         passes.push(RenderPlanPass::FullscreenBlit(FullscreenBlitPass {
@@ -640,7 +644,7 @@ pub(super) fn apply_chain_in_place(
                             continue;
                         }
                         let full = estimate_texture_bytes(ctx.viewport_size, ctx.format, 1);
-                        let required = required_bytes_for_full_size_targets(full, 2);
+                        let required = base_required_bytes_for_srcdst_and_single_scratch(full);
                         if required > budget_bytes {
                             effect_degradations
                                 .gaussian_blur
@@ -746,7 +750,7 @@ pub(super) fn apply_chain_in_place(
                     continue;
                 }
                 let full = estimate_texture_bytes(ctx.viewport_size, ctx.format, 1);
-                let required = required_bytes_for_full_size_targets(full, 2);
+                let required = base_required_bytes_for_srcdst_and_single_scratch(full);
                 if required > budget_bytes {
                     effect_degradations
                         .gaussian_blur
@@ -963,7 +967,7 @@ pub(super) fn apply_chain_in_place(
                 // If budgets are too tight to hold the full blurred pipeline deterministically,
                 // we fall back to a hard shadow (no blur) that uses only a single scratch target.
                 let can_blur = scratch_targets.len() >= 2
-                    && has_budget_for_full_size_targets(budget_bytes, full, 3);
+                    && budget_bytes >= base_required_bytes_for_srcdst_and_two_scratch(full);
                 if !can_blur {
                     let Some(&scratch_original) = scratch_targets.first() else {
                         effect_degradations.drop_shadow.degraded_target_exhausted =
@@ -973,7 +977,7 @@ pub(super) fn apply_chain_in_place(
                                 .saturating_add(1);
                         continue;
                     };
-                    if !has_budget_for_full_size_targets(budget_bytes, full, 2) {
+                    if budget_bytes < base_required_bytes_for_srcdst_and_single_scratch(full) {
                         effect_degradations.drop_shadow.degraded_budget_insufficient =
                             effect_degradations
                                 .drop_shadow
@@ -1625,10 +1629,11 @@ pub(super) fn apply_chain_in_place(
                     scissor,
                     ctx,
                     &mut budget_bytes,
-                    required_bytes_for_full_size_targets(
-                        estimate_texture_bytes(ctx.viewport_size, ctx.format, 1),
-                        2,
-                    ),
+                    base_required_bytes_for_srcdst_and_single_scratch(estimate_texture_bytes(
+                        ctx.viewport_size,
+                        ctx.format,
+                        1,
+                    )),
                     &mut effect_degradations.custom_effect_v3_sources,
                 );
                 append_custom_effect_v3_in_place_single_scratch(
@@ -2312,10 +2317,11 @@ fn apply_step_in_place_with_scratch_targets(
                 scissor,
                 ctx,
                 budget_bytes,
-                required_bytes_for_full_size_targets(
-                    estimate_texture_bytes(ctx.viewport_size, ctx.format, 1),
-                    2,
-                ),
+                base_required_bytes_for_srcdst_and_single_scratch(estimate_texture_bytes(
+                    ctx.viewport_size,
+                    ctx.format,
+                    1,
+                )),
                 &mut effect_degradations.custom_effect_v3_sources,
             );
             append_custom_effect_v3_in_place_single_scratch(
@@ -2477,7 +2483,7 @@ fn compile_gaussian_blur_in_place(
     }
 
     let full = estimate_texture_bytes(ctx.viewport_size, ctx.format, 1);
-    let required = required_bytes_for_full_size_targets(full, 2);
+    let required = base_required_bytes_for_srcdst_and_single_scratch(full);
     if required > *budget_bytes {
         effect_degradations
             .gaussian_blur
@@ -2548,7 +2554,7 @@ pub(super) fn color_adjust_enabled(
         return false;
     }
     let full = estimate_texture_bytes(viewport_size, format, 1);
-    has_budget_for_full_size_targets(budget_bytes, full, 2)
+    budget_bytes >= base_required_bytes_for_srcdst_and_single_scratch(full)
 }
 
 pub(super) fn dither_enabled(
