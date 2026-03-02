@@ -1,6 +1,6 @@
 # Workstream: `fret-node` Declarative-First Fearless Refactor (v1)
 
-Status: Draft
+Status: In progress (last updated 2026-03-02)
 Scope: `ecosystem/fret-node` (+ `ecosystem/fret-canvas` composition patterns)
 
 ## Intent
@@ -16,6 +16,41 @@ canvas UI” in the ecosystem:
 This workstream is explicitly *not* about “removing every retained line immediately”. It is about
 making the **default** and **recommended** authoring surface declarative, while leaving a narrowly
 scoped compatibility escape hatch when unavoidable (feature-gated and delete-planned).
+
+## Progress snapshot
+
+This is a living snapshot of what is already in place vs what remains.
+
+- M0 (baseline + gates): **Present**
+  - Minimal runnable demo: `cargo run -p fretboard -- dev native --bin node_graph_demo`
+  - Diagnostics suite (paint-only): `fret-examples-node-graph-paint-only`
+- M1 (declarative surface skeleton, paint-only): **Present**
+  - Declarative paint-only surface (`FRET_NODE_GRAPH_DECLARATIVE=paint`) with hosted caches
+  - Steady-state cache gates exist (grid/nodes/edges)
+- M2 (interaction + portals, paint-only baselines): **Partially present**
+  - Marquee/drag cancellation + portal bounds harvest + fit-view baselines are gated
+  - Remaining: policy parity (selection/marquee reducers, overlays, richer portal hosting)
+- M3 (defaults + compatibility): **Not started**
+  - Remaining: remove retained bridge from defaults; keep retained as opt-in compat only
+
+## How to run the paint-only gates
+
+PowerShell (Windows-friendly):
+
+```powershell
+$env:FRET_DIAG='1'
+cargo run -p fretboard -- diag suite fret-examples-node-graph-paint-only `
+  --env FRET_NODE_GRAPH_DECLARATIVE=paint `
+  --dir target/fret-diag-node-graph `
+  --launch -- cargo run -p fret-demo --bin node_graph_demo --features node-graph-demos
+```
+
+Notes:
+
+- `FRET_DIAG` is a reserved variable for `fretboard diag --launch` and should be set in the shell,
+  not passed via `--env FRET_DIAG=...`.
+- For GPU screenshots, pass `--env FRET_DIAG_GPU_SCREENSHOTS=1` and use a screenshot script (see
+  `tools/diag-scripts/node-graph/node-graph-paint-only-wires-screenshot.json`).
 
 ## Recommendation (default declarative, compat retained)
 
