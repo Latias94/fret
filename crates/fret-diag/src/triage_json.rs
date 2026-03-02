@@ -155,6 +155,46 @@ pub(crate) fn triage_json_from_stats(
             .and_then(|v| v.as_u64())
             .unwrap_or(0);
 
+        let custom_effect_chain_present =
+            worst.renderer_render_plan_custom_effect_chain_budget_samples > 0;
+        let custom_effect_chain_effective_budget_bytes = custom_effect_chain_present
+            .then_some(worst.renderer_render_plan_custom_effect_chain_effective_budget_min_bytes);
+        let custom_effect_chain_base_required_bytes = custom_effect_chain_present
+            .then_some(worst.renderer_render_plan_custom_effect_chain_base_required_max_bytes);
+        let custom_effect_chain_optional_required_bytes = custom_effect_chain_present
+            .then_some(worst.renderer_render_plan_custom_effect_chain_optional_required_max_bytes);
+        let custom_effect_chain_optional_mask_bytes = custom_effect_chain_present
+            .then_some(worst.renderer_render_plan_custom_effect_chain_optional_mask_max_bytes);
+        let custom_effect_chain_headroom_before_optional_bytes = custom_effect_chain_present
+            .then_some(
+                worst
+                    .renderer_render_plan_custom_effect_chain_effective_budget_min_bytes
+                    .saturating_sub(
+                        worst.renderer_render_plan_custom_effect_chain_base_required_max_bytes,
+                    ),
+            );
+        let custom_effect_chain_headroom_after_mask_bytes = custom_effect_chain_present.then_some(
+            worst
+                .renderer_render_plan_custom_effect_chain_effective_budget_min_bytes
+                .saturating_sub(
+                    worst.renderer_render_plan_custom_effect_chain_base_required_max_bytes,
+                )
+                .saturating_sub(
+                    worst.renderer_render_plan_custom_effect_chain_optional_mask_max_bytes,
+                ),
+        );
+        let custom_effect_chain_headroom_after_optional_bytes = custom_effect_chain_present
+            .then_some(
+                worst
+                    .renderer_render_plan_custom_effect_chain_effective_budget_min_bytes
+                    .saturating_sub(
+                        worst.renderer_render_plan_custom_effect_chain_base_required_max_bytes,
+                    )
+                    .saturating_sub(
+                        worst.renderer_render_plan_custom_effect_chain_optional_required_max_bytes,
+                    ),
+            );
+
         // Heuristics are intentionally simple, bounded, and explainable.
         // Keep thresholds conservative; they are hints, not gates.
 
@@ -397,6 +437,13 @@ pub(crate) fn triage_json_from_stats(
                     "renderer_render_plan_custom_effect_chain_base_required_full_targets_max": worst.renderer_render_plan_custom_effect_chain_base_required_full_targets_max,
                     "renderer_render_plan_custom_effect_chain_optional_mask_max_bytes": worst.renderer_render_plan_custom_effect_chain_optional_mask_max_bytes,
                     "renderer_render_plan_custom_effect_chain_optional_pyramid_max_bytes": worst.renderer_render_plan_custom_effect_chain_optional_pyramid_max_bytes,
+                    "custom_effect_chain_effective_budget_bytes": custom_effect_chain_effective_budget_bytes,
+                    "custom_effect_chain_base_required_bytes": custom_effect_chain_base_required_bytes,
+                    "custom_effect_chain_optional_required_bytes": custom_effect_chain_optional_required_bytes,
+                    "custom_effect_chain_optional_mask_bytes": custom_effect_chain_optional_mask_bytes,
+                    "custom_effect_chain_headroom_before_optional_bytes": custom_effect_chain_headroom_before_optional_bytes,
+                    "custom_effect_chain_headroom_after_mask_bytes": custom_effect_chain_headroom_after_mask_bytes,
+                    "custom_effect_chain_headroom_after_optional_bytes": custom_effect_chain_headroom_after_optional_bytes,
                     "min_budget_for_two_full_targets_bytes": min_budget_for_two_full_targets_bytes,
                     "renderer_intermediate_peak_in_use_bytes": worst.renderer_intermediate_peak_in_use_bytes,
                 }
@@ -432,6 +479,13 @@ pub(crate) fn triage_json_from_stats(
                     "renderer_render_plan_custom_effect_chain_base_required_full_targets_max": worst.renderer_render_plan_custom_effect_chain_base_required_full_targets_max,
                     "renderer_render_plan_custom_effect_chain_optional_mask_max_bytes": worst.renderer_render_plan_custom_effect_chain_optional_mask_max_bytes,
                     "renderer_render_plan_custom_effect_chain_optional_pyramid_max_bytes": worst.renderer_render_plan_custom_effect_chain_optional_pyramid_max_bytes,
+                    "custom_effect_chain_effective_budget_bytes": custom_effect_chain_effective_budget_bytes,
+                    "custom_effect_chain_base_required_bytes": custom_effect_chain_base_required_bytes,
+                    "custom_effect_chain_optional_required_bytes": custom_effect_chain_optional_required_bytes,
+                    "custom_effect_chain_optional_mask_bytes": custom_effect_chain_optional_mask_bytes,
+                    "custom_effect_chain_headroom_before_optional_bytes": custom_effect_chain_headroom_before_optional_bytes,
+                    "custom_effect_chain_headroom_after_mask_bytes": custom_effect_chain_headroom_after_mask_bytes,
+                    "custom_effect_chain_headroom_after_optional_bytes": custom_effect_chain_headroom_after_optional_bytes,
                     "min_budget_for_two_full_targets_bytes": min_budget_for_two_full_targets_bytes,
                     "renderer_intermediate_peak_in_use_bytes": worst.renderer_intermediate_peak_in_use_bytes,
                 }
@@ -473,6 +527,13 @@ pub(crate) fn triage_json_from_stats(
                     "renderer_render_plan_custom_effect_chain_base_required_full_targets_max": worst.renderer_render_plan_custom_effect_chain_base_required_full_targets_max,
                     "renderer_render_plan_custom_effect_chain_optional_mask_max_bytes": worst.renderer_render_plan_custom_effect_chain_optional_mask_max_bytes,
                     "renderer_render_plan_custom_effect_chain_optional_pyramid_max_bytes": worst.renderer_render_plan_custom_effect_chain_optional_pyramid_max_bytes,
+                    "custom_effect_chain_effective_budget_bytes": custom_effect_chain_effective_budget_bytes,
+                    "custom_effect_chain_base_required_bytes": custom_effect_chain_base_required_bytes,
+                    "custom_effect_chain_optional_required_bytes": custom_effect_chain_optional_required_bytes,
+                    "custom_effect_chain_optional_mask_bytes": custom_effect_chain_optional_mask_bytes,
+                    "custom_effect_chain_headroom_before_optional_bytes": custom_effect_chain_headroom_before_optional_bytes,
+                    "custom_effect_chain_headroom_after_mask_bytes": custom_effect_chain_headroom_after_mask_bytes,
+                    "custom_effect_chain_headroom_after_optional_bytes": custom_effect_chain_headroom_after_optional_bytes,
                     "min_budget_for_two_full_targets_bytes": min_budget_for_two_full_targets_bytes,
                     "renderer_intermediate_peak_in_use_bytes": worst.renderer_intermediate_peak_in_use_bytes,
                 }
@@ -513,6 +574,13 @@ pub(crate) fn triage_json_from_stats(
                     "renderer_render_plan_custom_effect_chain_base_required_full_targets_max": worst.renderer_render_plan_custom_effect_chain_base_required_full_targets_max,
                     "renderer_render_plan_custom_effect_chain_optional_mask_max_bytes": worst.renderer_render_plan_custom_effect_chain_optional_mask_max_bytes,
                     "renderer_render_plan_custom_effect_chain_optional_pyramid_max_bytes": worst.renderer_render_plan_custom_effect_chain_optional_pyramid_max_bytes,
+                    "custom_effect_chain_effective_budget_bytes": custom_effect_chain_effective_budget_bytes,
+                    "custom_effect_chain_base_required_bytes": custom_effect_chain_base_required_bytes,
+                    "custom_effect_chain_optional_required_bytes": custom_effect_chain_optional_required_bytes,
+                    "custom_effect_chain_optional_mask_bytes": custom_effect_chain_optional_mask_bytes,
+                    "custom_effect_chain_headroom_before_optional_bytes": custom_effect_chain_headroom_before_optional_bytes,
+                    "custom_effect_chain_headroom_after_mask_bytes": custom_effect_chain_headroom_after_mask_bytes,
+                    "custom_effect_chain_headroom_after_optional_bytes": custom_effect_chain_headroom_after_optional_bytes,
                     "renderer_intermediate_peak_in_use_bytes": worst.renderer_intermediate_peak_in_use_bytes,
                 }
             }));
