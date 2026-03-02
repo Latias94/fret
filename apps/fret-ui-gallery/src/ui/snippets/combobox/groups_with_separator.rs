@@ -1,3 +1,5 @@
+pub const SOURCE: &str = include_str!("groups_with_separator.rs");
+
 // region: example
 use fret_app::App;
 use fret_ui_kit::declarative::{ElementContextThemeExt, style as decl_style};

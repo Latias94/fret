@@ -46,19 +46,16 @@ pub(super) fn preview_combobox(
                     "Small deterministic surface for `fretboard diag suite ui-gallery-combobox` scripts.",
                 )
                 .no_shell()
-                .code_rust_from_file_region(
-                    include_str!("../snippets/combobox/conformance_demo.rs"),
-                    "example",
-                ),
+                .code_rust_from_file_region(snippets::conformance_demo::SOURCE, "example"),
             DocSection::new("Basic", basic)
                 .description("Upstream shadcn demo: basic framework combobox with search.")
-                .code_rust_from_file_region(include_str!("../snippets/combobox/basic.rs"), "example"),
+                .code_rust_from_file_region(snippets::basic::SOURCE, "example"),
             DocSection::new("Auto Highlight", auto_highlight)
                 .description(
                     "Base UI opt-in: highlight the first enabled match on open/filter (`autoHighlight`).",
                 )
                 .code_rust_from_file_region(
-                    include_str!("../snippets/combobox/auto_highlight.rs"),
+                    snippets::auto_highlight::SOURCE,
                     "example",
                 )
                 .no_shell(),
@@ -67,35 +64,35 @@ pub(super) fn preview_combobox(
                     "Enable `show_clear` to show a clear affordance when a value is selected.",
                 )
                 .code_rust_from_file_region(
-                    include_str!("../snippets/combobox/clear_button.rs"),
+                    snippets::clear_button::SOURCE,
                     "example",
                 ),
             DocSection::new("Groups", groups)
                 .description(
                     "Upstream groups items; Fret exposes grouped entries via `ComboboxGroup`.",
                 )
-                .code_rust_from_file_region(include_str!("../snippets/combobox/groups.rs"), "example")
+                .code_rust_from_file_region(snippets::groups::SOURCE, "example")
                 .no_shell(),
             DocSection::new("Groups + Separator", groups_with_separator)
                 .description(
                     "Use `.group_separators(true)` to insert separators between groups (shadcn `ComboboxSeparator`).",
                 )
                 .code_rust_from_file_region(
-                    include_str!("../snippets/combobox/groups_with_separator.rs"),
+                    snippets::groups_with_separator::SOURCE,
                     "example",
                 )
                 .no_shell(),
             DocSection::new("Trigger Button", trigger_button)
                 .description("Aligns Base UI combobox \"Popup\" recipe: a button-like trigger with the searchable listbox in the popover content.")
                 .code_rust_from_file_region(
-                    include_str!("../snippets/combobox/trigger_button.rs"),
+                    snippets::trigger_button::SOURCE,
                     "example",
                 )
                 .no_shell(),
             DocSection::new("Multiple Selection", multiple)
                 .description("Upstream multi-select chips recipe: select multiple values and remove them via chips.")
                 .code_rust_from_file_region(
-                    include_str!("../snippets/combobox/multiple_selection.rs"),
+                    snippets::multiple_selection::SOURCE,
                     "example",
                 ),
             DocSection::new("Extras: Custom Items", custom_items)
@@ -103,7 +100,7 @@ pub(super) fn preview_combobox(
                     "Structured item details (e.g. suffix metadata) without pre-formatting richer labels.",
                 )
                 .code_rust_from_file_region(
-                    include_str!("../snippets/combobox/custom_items.rs"),
+                    snippets::custom_items::SOURCE,
                     "example",
                 ),
             DocSection::new("Extras: Long List", long_list)
@@ -111,30 +108,30 @@ pub(super) fn preview_combobox(
                     "Supports long-list scroll regression gates (and future virtualization invariants).",
                 )
                 .code_rust_from_file_region(
-                    include_str!("../snippets/combobox/long_list.rs"),
+                    snippets::long_list::SOURCE,
                     "example",
                 ),
             DocSection::new("Extras: Invalid", invalid)
                 .description("Invalid visual uses `aria_invalid(true)` on the combobox trigger.")
                 .code_rust_from_file_region(
-                    include_str!("../snippets/combobox/invalid.rs"),
+                    snippets::invalid::SOURCE,
                     "example",
                 ),
             DocSection::new("Extras: Disabled", disabled)
                 .description("Disabled state should block open/selection and use muted styling.")
                 .code_rust_from_file_region(
-                    include_str!("../snippets/combobox/disabled.rs"),
+                    snippets::disabled::SOURCE,
                     "example",
                 ),
             DocSection::new("Extras: Input Group", input_group)
                 .description("Inline keybinding + input grouping example.")
                 .code_rust_from_file_region(
-                    include_str!("../snippets/combobox/input_group.rs"),
+                    snippets::input_group::SOURCE,
                     "example",
                 ),
             DocSection::new("Extras: RTL", rtl)
                 .description("All shadcn components should work under an RTL direction provider.")
-                .code_rust_from_file_region(include_str!("../snippets/combobox/rtl.rs"), "example"),
+                .code_rust_from_file_region(snippets::rtl::SOURCE, "example"),
             DocSection::new("Notes", notes)
                 .test_id_prefix("ui-gallery-combobox-notes")
                 .description("Guidelines and parity notes for combobox recipes."),
