@@ -363,7 +363,8 @@ pub(super) fn handle_drag_pointer_until_step(
             // If the predicate is already satisfied (e.g. after runner-owned hover routing on a
             // previous frame), release immediately.
             let dock_drag_runtime = dock_drag_runtime_state(app, svc.known_windows.as_slice());
-        let open_window_count = UiDiagnosticsService::open_window_count_for_predicates(app);
+            let open_window_count =
+                UiDiagnosticsService::open_window_count_for_predicates(app);
             let move_steps = state.playback.steps.max(1);
             let reached_end = state.playback.frame > move_steps;
             let predicate_ok_without_semantics = match &state.predicate {

@@ -1,0 +1,57 @@
+{
+  "schema_version": 2,
+  "meta": {
+    "name": "Workspace shell demo: split preview suppressed while pointer stays in tab strip row (smoke)",
+    "tags": ["workspace", "tabstrip", "drag_to_split", "drop_preview", "smoke", "gate"],
+    "required_capabilities": ["diag.script_v2"],
+    "target_hints": [
+      "Drag a tab from pane A over pane B while staying in pane B's tab strip row.",
+      "Asserts the right-edge split preview does not activate until the pointer leaves the tab strip row."
+    ]
+  },
+  "steps": [
+    { "type": "set_window_inner_size", "width_px": 1280.0, "height_px": 720.0 },
+    { "type": "wait_frames", "n": 10 },
+
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "workspace-shell-pane-pane-a-tab-doc-a-0" }
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": { "kind": "exists", "target": { "kind": "test_id", "id": "workspace-shell-pane-pane-b-root" } },
+      "timeout_frames": 240
+    },
+
+    {
+      "type": "pointer_down",
+      "window": { "kind": "current" },
+      "target": { "kind": "test_id", "id": "workspace-shell-pane-pane-a-tab-doc-a-0" },
+      "button": "left"
+    },
+
+    { "type": "pointer_move", "window": { "kind": "current" }, "delta_x": 4000.0, "delta_y": 0.0, "steps": 160 },
+    { "type": "wait_frames", "n": 4 },
+
+    {
+      "type": "wait_until",
+      "predicate": { "kind": "exists", "target": { "kind": "test_id", "id": "workspace-pane-pane-b.drop_preview.center" } },
+      "timeout_frames": 240
+    },
+    {
+      "type": "assert",
+      "predicate": { "kind": "not_exists", "target": { "kind": "test_id", "id": "workspace-pane-pane-b.drop_preview.right" } }
+    },
+
+    { "type": "press_key", "key": "escape" },
+    { "type": "wait_frames", "n": 2 },
+    { "type": "pointer_up", "window": { "kind": "current" } },
+    { "type": "wait_frames", "n": 6 },
+
+    { "type": "capture_bundle", "label": "workspace-shell-demo-tab-drag-to-split-right-row-suppressed-smoke" }
+  ]
+}

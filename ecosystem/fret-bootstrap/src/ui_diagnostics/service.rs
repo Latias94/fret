@@ -203,16 +203,11 @@ impl UiDiagnosticsService {
         current_window: AppWindowId,
         target: Option<&UiWindowTargetV1>,
     ) -> Option<AppWindowId> {
-        let first_seen = self
-            .known_windows
-            .iter()
-            .copied()
-            .min_by_key(|w| w.data().as_ffi());
-        let last_seen = self
-            .known_windows
-            .iter()
-            .copied()
-            .max_by_key(|w| w.data().as_ffi());
+        // `known_windows` is insertion-ordered by first observation. Treat `first_seen` /
+        // `last_seen` as "seen order", not numeric window ids (which are not guaranteed to be
+        // monotonic across backends).
+        let first_seen = self.known_windows.first().copied();
+        let last_seen = self.known_windows.last().copied();
         match target.copied().unwrap_or(UiWindowTargetV1::Current) {
             UiWindowTargetV1::Current => Some(current_window),
             UiWindowTargetV1::FirstSeen => first_seen,
@@ -221,14 +216,14 @@ impl UiDiagnosticsService {
                 .iter()
                 .copied()
                 .filter(|w| *w != current_window)
-                .min_by_key(|w| w.data().as_ffi()),
+                .next(),
             UiWindowTargetV1::LastSeen => last_seen,
             UiWindowTargetV1::LastSeenOther => self
                 .known_windows
                 .iter()
                 .copied()
                 .filter(|w| *w != current_window)
-                .max_by_key(|w| w.data().as_ffi()),
+                .last(),
             UiWindowTargetV1::WindowFfi { window } => {
                 let want = AppWindowId::from(KeyData::from_ffi(window));
                 self.known_windows.contains(&want).then_some(want)

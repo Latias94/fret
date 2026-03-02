@@ -62,42 +62,25 @@ fn eval_docking_predicate_from_recent_debug_snapshot(
             Some(resolved.insert_index == Some(*index as u64))
         }
         UiPredicateV1::DockGraphCanonicalIs { canonical } => Some(
-            docking
-                .dock_graph_stats
-                .is_some_and(|s| s.canonical_ok == *canonical),
+            docking.dock_graph_stats.as_ref()?.canonical_ok == *canonical,
         ),
         UiPredicateV1::DockGraphHasNestedSameAxisSplitsIs { has_nested } => Some(
-            docking
-                .dock_graph_stats
-                .is_some_and(|s| s.has_nested_same_axis_splits == *has_nested),
+            docking.dock_graph_stats.as_ref()?.has_nested_same_axis_splits == *has_nested,
         ),
         UiPredicateV1::DockGraphNodeCountLe { max } => Some(
-            docking
-                .dock_graph_stats
-                .is_some_and(|s| s.node_count <= *max),
+            docking.dock_graph_stats.as_ref()?.node_count <= *max,
         ),
         UiPredicateV1::DockGraphMaxSplitDepthLe { max } => Some(
-            docking
-                .dock_graph_stats
-                .is_some_and(|s| s.max_split_depth <= *max),
+            docking.dock_graph_stats.as_ref()?.max_split_depth <= *max,
         ),
         UiPredicateV1::DockGraphSignatureIs { signature } => Some(
-            docking
-                .dock_graph_signature
-                .as_ref()
-                .is_some_and(|s| s.signature == *signature),
+            docking.dock_graph_signature.as_ref()?.signature == *signature,
         ),
         UiPredicateV1::DockGraphSignatureContains { needle } => Some(
-            docking
-                .dock_graph_signature
-                .as_ref()
-                .is_some_and(|s| s.signature.contains(needle)),
+            docking.dock_graph_signature.as_ref()?.signature.contains(needle),
         ),
         UiPredicateV1::DockGraphSignatureFingerprint64Is { fingerprint64 } => Some(
-            docking
-                .dock_graph_signature
-                .as_ref()
-                .is_some_and(|s| s.fingerprint64 == *fingerprint64),
+            docking.dock_graph_signature.as_ref()?.fingerprint64 == *fingerprint64,
         ),
         _ => None,
     }
@@ -628,7 +611,8 @@ pub(super) fn handle_wait_until_step(
                     .and_then(|svc| svc.snapshot(predicate_window));
                 let dock_drag_runtime = dock_drag_runtime_state(app, svc.known_windows.as_slice());
                 let platform_caps = app.global::<fret_runtime::PlatformCapabilities>();
-                let open_window_count = UiDiagnosticsService::open_window_count_for_predicates(app);
+                let open_window_count =
+                    UiDiagnosticsService::open_window_count_for_predicates(app);
 
                 if predicate_window == window {
                     if let Some(snapshot) = semantics_snapshot {

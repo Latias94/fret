@@ -22,6 +22,9 @@
 - Extract a `tab_bar_kernel` module:
   - Inputs: tabs geometry + header geometry + pointer
   - Outputs: resolved zone + insert index (+ split placement)
+- Status: partially extracted (drop-surface + insert-index resolution)
+  - Evidence: `ecosystem/fret-docking/src/dock/tab_bar_kernel.rs` (`resolve_tab_bar_drop`)
+  - Consumer: `ecosystem/fret-docking/src/dock/tab_bar_drop_target.rs` (thin wrapper)
 - Add unit tests for edge cases:
   - empty stack
   - one tab

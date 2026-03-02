@@ -3,10 +3,8 @@
 // It is intentionally `pub(super)` only; the public API lives in `dock/mod.rs`.
 
 use super::prelude_core::*;
-use super::tab_bar_geometry::TabBarGeometry;
-use super::tab_bar_kernel::compute_tab_bar_overflow_candidate_geometry;
+use super::tab_bar_kernel::resolve_tab_bar_drop;
 use fret_ui::ThemeSnapshot;
-use fret_ui_headless::tab_strip_surface::{TabStripSurface, classify_tab_strip_surface_no_tabs};
 
 pub(super) fn tab_bar_insert_index_for_drop(
     theme: ThemeSnapshot,
@@ -16,41 +14,7 @@ pub(super) fn tab_bar_insert_index_for_drop(
     scroll: Px,
     position: Point,
 ) -> Option<usize> {
-    if tab_count == 0 {
-        return None;
-    }
-    if !tab_bar.contains(position) {
-        return None;
-    }
-
-    let candidate =
-        compute_tab_bar_overflow_candidate_geometry(theme.clone(), tab_bar, tab_count, tab_widths);
-    if candidate.overflows {
-        return match classify_tab_strip_surface_no_tabs(
-            position,
-            None,
-            Some(candidate.reserved_header_space_rect),
-            Some(candidate.strip_rect),
-            Some(candidate.overflow_button_rect),
-            None,
-            None,
-        ) {
-            TabStripSurface::OverflowControl => None,
-            TabStripSurface::HeaderSpace => Some(tab_count),
-            TabStripSurface::TabsViewport => {
-                Some(candidate.geom.compute_insert_index(position, scroll))
-            }
-            TabStripSurface::Outside
-            | TabStripSurface::ScrollControls
-            | TabStripSurface::PinnedBoundary => None,
-        };
-    }
-
-    let geom_full = tab_widths
-        .filter(|w| w.len() == tab_count)
-        .map(|w| TabBarGeometry::variable(tab_bar, (*w).clone()))
-        .unwrap_or_else(|| TabBarGeometry::fixed(tab_bar, tab_count));
-    Some(geom_full.compute_insert_index(position, scroll))
+    resolve_tab_bar_drop(theme, tab_bar, tab_count, tab_widths, scroll, position).insert_index
 }
 
 #[cfg(test)]
