@@ -625,7 +625,8 @@
         "diag.script_v2"
       ],
       "suite_memberships": [
-        "docking-arbitration"
+        "docking-arbitration",
+        "diag-hardening-smoke-docking"
       ],
       "tags": [
         "docking",
