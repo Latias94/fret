@@ -53,9 +53,11 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
                         .a11y_label("Navigate")
                         .test_id(format!("{test_prefix}-nav")),
                 )
-                .actions(vec![TopAppBarAction::new(ids::ui::MORE_HORIZONTAL)
-                    .a11y_label("More actions")
-                    .test_id(format!("{test_prefix}-more"))])
+                .actions(vec![
+                    TopAppBarAction::new(ids::ui::MORE_HORIZONTAL)
+                        .a11y_label("More actions")
+                        .test_id(format!("{test_prefix}-more")),
+                ])
                 .test_id(test_prefix)
                 .into_element(cx);
 

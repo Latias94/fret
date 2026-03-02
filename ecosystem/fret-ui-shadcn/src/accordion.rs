@@ -2,14 +2,15 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use fret_core::{
-    Color, Edges, FontId, FontWeight, Point, Px, TextOverflow, TextStyle, TextWrap, Transform2D,
+    AttributedText, Color, DecorationLineStyle, Edges, FontId, FontWeight, Point, Px, TextOverflow,
+    TextPaintStyle, TextSpan, TextStyle, TextWrap, Transform2D, UnderlineStyle,
 };
 use fret_icons::ids;
 use fret_runtime::Model;
 use fret_ui::element::{
-    AnyElement, ColumnProps, ContainerProps, CrossAlign, ElementKind, InteractivityGateProps,
-    LayoutStyle, Length, MainAlign, OpacityProps, PressableProps, RovingFlexProps,
-    RovingFocusProps, RowProps, VisualTransformProps,
+    AnyElement, ColumnProps, ContainerProps, CrossAlign, ElementKind, HoverRegionProps,
+    InteractivityGateProps, LayoutStyle, Length, MainAlign, OpacityProps, PressableProps,
+    RovingFlexProps, RovingFocusProps, RowProps, StyledTextProps, VisualTransformProps,
 };
 use fret_ui::{ElementContext, Theme, ThemeSnapshot, UiHost};
 use fret_ui_kit::declarative::icon as decl_icon;
@@ -89,6 +90,60 @@ fn apply_trigger_label_defaults(el: AnyElement, text_style: &TextStyle, fg: Colo
             props.layout.size.min_width = Some(Length::Px(Px(0.0)));
             props.wrap = TextWrap::Word;
             props.overflow = TextOverflow::Clip;
+            AnyElement::new(el.id, ElementKind::SelectableText(props), el.children)
+        }
+        _ => el,
+    }
+}
+
+fn underline_rich_text(rich: AttributedText) -> AttributedText {
+    let spans = rich
+        .spans
+        .iter()
+        .map(|span| {
+            let mut span = span.clone();
+            if span.paint.underline.is_none() {
+                span.paint.underline = Some(UnderlineStyle {
+                    color: None,
+                    style: DecorationLineStyle::Solid,
+                });
+            }
+            span
+        })
+        .collect::<Vec<_>>();
+    AttributedText::new(rich.text, Arc::from(spans.into_boxed_slice()))
+}
+
+fn apply_trigger_label_hover_underline(el: AnyElement) -> AnyElement {
+    match el.kind {
+        ElementKind::Text(props) => {
+            let text = props.text.clone();
+            let mut span = TextSpan::new(text.as_ref().len());
+            span.paint = TextPaintStyle {
+                underline: Some(UnderlineStyle {
+                    color: None,
+                    style: DecorationLineStyle::Solid,
+                }),
+                ..Default::default()
+            };
+            let rich = AttributedText::new(text, Arc::from(vec![span].into_boxed_slice()));
+
+            let mut styled = StyledTextProps::new(rich);
+            styled.layout = props.layout;
+            styled.style = props.style;
+            styled.color = props.color;
+            styled.wrap = props.wrap;
+            styled.overflow = props.overflow;
+            styled.align = props.align;
+            styled.ink_overflow = props.ink_overflow;
+            AnyElement::new(el.id, ElementKind::StyledText(styled), el.children)
+        }
+        ElementKind::StyledText(mut props) => {
+            props.rich = underline_rich_text(props.rich);
+            AnyElement::new(el.id, ElementKind::StyledText(props), el.children)
+        }
+        ElementKind::SelectableText(mut props) => {
+            props.rich = underline_rich_text(props.rich);
             AnyElement::new(el.id, ElementKind::SelectableText(props), el.children)
         }
         _ => el,
@@ -315,54 +370,73 @@ pub mod composable {
                                 let mut row_layout = LayoutStyle::default();
                                 row_layout.size.width = Length::Fill;
                                 row_layout.size.min_width = Some(Length::Px(Px(0.0)));
-                                vec![cx.row(
-                                    RowProps {
-                                        layout: row_layout,
-                                        gap: trigger_gap(&theme).into(),
-                                        padding: Edges::all(Px(0.0)).into(),
-                                        justify: MainAlign::SpaceBetween,
-                                        align: CrossAlign::Start,
-                                    },
-                                    move |cx| {
-                                        let left_children = if children.is_empty() {
-                                            let mut label_text = ui::text(cx, a11y_label.clone())
-                                                .text_size_px(text_style.size)
-                                                .font_weight(text_style.weight)
-                                                .text_color(ColorRef::Color(fg))
-                                                .wrap(TextWrap::Word)
-                                                .overflow(TextOverflow::Clip);
-                                            if let Some(line_height) = text_style.line_height {
-                                                label_text = label_text
-                                                    .line_height_px(line_height)
-                                                    .line_height_policy(
-                                                        fret_core::TextLineHeightPolicy::FixedFromStyle,
-                                                    );
-                                            }
-                                            if let Some(letter_spacing_em) =
-                                                text_style.letter_spacing_em
-                                            {
-                                                label_text =
-                                                    label_text.letter_spacing_em(letter_spacing_em);
-                                            }
-                                            vec![label_text.into_element(cx)]
-                                        } else {
-                                            children
-                                        };
-                                        let left_children = left_children
-                                            .into_iter()
-                                            .map(|el| apply_trigger_label_defaults(el, &text_style, fg))
-                                            .collect::<Vec<_>>();
+                                let hover_layout = row_layout;
+                                vec![cx.hover_region(
+                                    HoverRegionProps { layout: hover_layout },
+                                    move |cx, hovered| {
+                                        let hover_underline = hovered && enabled;
+                                        vec![cx.row(
+                                            RowProps {
+                                                layout: row_layout,
+                                                gap: trigger_gap(&theme).into(),
+                                                padding: Edges::all(Px(0.0)).into(),
+                                                justify: MainAlign::SpaceBetween,
+                                                align: CrossAlign::Start,
+                                            },
+                                            move |cx| {
+                                                let left_children = if children.is_empty() {
+                                                    let mut label_text =
+                                                        ui::text(cx, a11y_label.clone())
+                                                            .text_size_px(text_style.size)
+                                                            .font_weight(text_style.weight)
+                                                            .text_color(ColorRef::Color(fg))
+                                                            .wrap(TextWrap::Word)
+                                                            .overflow(TextOverflow::Clip);
+                                                    if let Some(line_height) = text_style.line_height {
+                                                        label_text = label_text
+                                                            .line_height_px(line_height)
+                                                            .line_height_policy(
+                                                                fret_core::TextLineHeightPolicy::FixedFromStyle,
+                                                            );
+                                                    }
+                                                    if let Some(letter_spacing_em) =
+                                                        text_style.letter_spacing_em
+                                                    {
+                                                        label_text = label_text
+                                                            .letter_spacing_em(letter_spacing_em);
+                                                    }
+                                                    vec![label_text.into_element(cx)]
+                                                } else {
+                                                    children
+                                                };
+                                                let left_children = left_children
+                                                    .into_iter()
+                                                    .map(|el| {
+                                                        let el = apply_trigger_label_defaults(
+                                                            el,
+                                                            &text_style,
+                                                            fg,
+                                                        );
+                                                        if hover_underline {
+                                                            apply_trigger_label_hover_underline(el)
+                                                        } else {
+                                                            el
+                                                        }
+                                                    })
+                                                    .collect::<Vec<_>>();
 
-                                        vec![
-                                            cx.container(
-                                                ContainerProps {
-                                                    layout: left_layout,
-                                                    ..Default::default()
-                                                },
-                                                |_cx| left_children,
-                                            ),
-                                            chevron,
-                                        ]
+                                                vec![
+                                                    cx.container(
+                                                        ContainerProps {
+                                                            layout: left_layout,
+                                                            ..Default::default()
+                                                        },
+                                                        |_cx| left_children,
+                                                    ),
+                                                    chevron,
+                                                ]
+                                            },
+                                        )]
                                     },
                                 )]
                             },
@@ -370,10 +444,16 @@ pub mod composable {
                     },
                 );
 
-            if let Some(test_id) = test_id {
+            let trigger = if let Some(test_id) = test_id {
                 trigger.test_id(test_id)
             } else {
                 trigger
+            };
+
+            if enabled {
+                trigger
+            } else {
+                cx.opacity(0.5, move |_cx| [trigger])
             }
         }
     }
@@ -382,6 +462,7 @@ pub mod composable {
         test_id: Option<Arc<str>>,
         chrome: ChromeRefinement,
         layout: LayoutRefinement,
+        gap: Option<MetricRef>,
         children: Vec<AnyElement>,
     }
 
@@ -391,6 +472,7 @@ pub mod composable {
                 .field("test_id", &self.test_id.as_ref().map(|s| s.as_ref()))
                 .field("chrome", &self.chrome)
                 .field("layout", &self.layout)
+                .field("gap", &self.gap)
                 .field("children_len", &self.children.len())
                 .finish()
         }
@@ -403,12 +485,19 @@ pub mod composable {
                 test_id: None,
                 chrome: ChromeRefinement::default(),
                 layout: LayoutRefinement::default(),
+                gap: None,
                 children,
             }
         }
 
         pub fn test_id(mut self, id: impl Into<Arc<str>>) -> Self {
             self.test_id = Some(id.into());
+            self
+        }
+
+        /// Controls the vertical spacing between direct children (shadcn `gap-*`).
+        pub fn gap(mut self, gap: impl Into<MetricRef>) -> Self {
+            self.gap = Some(gap.into());
             self
         }
 
@@ -436,6 +525,10 @@ pub mod composable {
             );
             props.layout.overflow = fret_ui::element::Overflow::Clip;
 
+            let gap = self
+                .gap
+                .unwrap_or_else(|| MetricRef::space(Space::N4))
+                .resolve(&theme);
             let children = self.children;
 
             cx.container(props, move |cx| {
@@ -445,7 +538,7 @@ pub mod composable {
                 vec![cx.column(
                     ColumnProps {
                         layout: column_layout,
-                        gap: MetricRef::space(Space::N4).resolve(&theme).into(),
+                        gap: gap.into(),
                         padding: Edges::all(Px(0.0)).into(),
                         justify: MainAlign::Start,
                         align: CrossAlign::Stretch,
@@ -1149,54 +1242,73 @@ impl AccordionTrigger {
                             let mut row_layout = LayoutStyle::default();
                             row_layout.size.width = Length::Fill;
                             row_layout.size.min_width = Some(Length::Px(Px(0.0)));
-                            vec![cx.row(
-                                RowProps {
-                                    layout: row_layout,
-                                    gap: trigger_gap(&theme).into(),
-                                    padding: Edges::all(Px(0.0)).into(),
-                                    justify: MainAlign::SpaceBetween,
-                                    align: CrossAlign::Start,
-                                },
-                                move |cx| {
-                                    let left_children = if children.is_empty() {
-                                        let mut label_text = ui::text(cx, a11y_label.clone())
-                                            .text_size_px(text_style.size)
-                                            .font_weight(text_style.weight)
-                                            .text_color(ColorRef::Color(fg))
-                                            .wrap(TextWrap::Word)
-                                            .overflow(TextOverflow::Clip);
-                                        if let Some(line_height) = text_style.line_height {
-                                            label_text = label_text
-                                                .line_height_px(line_height)
-                                                .line_height_policy(
-                                                    fret_core::TextLineHeightPolicy::FixedFromStyle,
-                                                );
-                                        }
-                                        if let Some(letter_spacing_em) =
-                                            text_style.letter_spacing_em
-                                        {
-                                            label_text =
-                                                label_text.letter_spacing_em(letter_spacing_em);
-                                        }
-                                        vec![label_text.into_element(cx)]
-                                    } else {
-                                        children
-                                    };
-                                    let left_children = left_children
-                                        .into_iter()
-                                        .map(|el| apply_trigger_label_defaults(el, &text_style, fg))
-                                        .collect::<Vec<_>>();
+                            let hover_layout = row_layout;
+                            vec![cx.hover_region(
+                                HoverRegionProps { layout: hover_layout },
+                                move |cx, hovered| {
+                                    let hover_underline = hovered && enabled;
+                                    vec![cx.row(
+                                        RowProps {
+                                            layout: row_layout,
+                                            gap: trigger_gap(&theme).into(),
+                                            padding: Edges::all(Px(0.0)).into(),
+                                            justify: MainAlign::SpaceBetween,
+                                            align: CrossAlign::Start,
+                                        },
+                                        move |cx| {
+                                            let left_children = if children.is_empty() {
+                                                let mut label_text =
+                                                    ui::text(cx, a11y_label.clone())
+                                                        .text_size_px(text_style.size)
+                                                        .font_weight(text_style.weight)
+                                                        .text_color(ColorRef::Color(fg))
+                                                        .wrap(TextWrap::Word)
+                                                        .overflow(TextOverflow::Clip);
+                                                if let Some(line_height) = text_style.line_height {
+                                                    label_text = label_text
+                                                        .line_height_px(line_height)
+                                                        .line_height_policy(
+                                                            fret_core::TextLineHeightPolicy::FixedFromStyle,
+                                                        );
+                                                }
+                                                if let Some(letter_spacing_em) =
+                                                    text_style.letter_spacing_em
+                                                {
+                                                    label_text = label_text
+                                                        .letter_spacing_em(letter_spacing_em);
+                                                }
+                                                vec![label_text.into_element(cx)]
+                                            } else {
+                                                children
+                                            };
+                                            let left_children = left_children
+                                                .into_iter()
+                                                .map(|el| {
+                                                    let el = apply_trigger_label_defaults(
+                                                        el,
+                                                        &text_style,
+                                                        fg,
+                                                    );
+                                                    if hover_underline {
+                                                        apply_trigger_label_hover_underline(el)
+                                                    } else {
+                                                        el
+                                                    }
+                                                })
+                                                .collect::<Vec<_>>();
 
-                                    vec![
-                                        cx.container(
-                                            ContainerProps {
-                                                layout: left_layout,
-                                                ..Default::default()
-                                            },
-                                            |_cx| left_children,
-                                        ),
-                                        chevron,
-                                    ]
+                                            vec![
+                                                cx.container(
+                                                    ContainerProps {
+                                                        layout: left_layout,
+                                                        ..Default::default()
+                                                    },
+                                                    |_cx| left_children,
+                                                ),
+                                                chevron,
+                                            ]
+                                        },
+                                    )]
                                 },
                             )]
                         },
@@ -1204,10 +1316,16 @@ impl AccordionTrigger {
                 },
             );
 
-        if let Some(test_id) = test_id {
+        let trigger = if let Some(test_id) = test_id {
             trigger.test_id(test_id)
         } else {
             trigger
+        };
+
+        if enabled {
+            trigger
+        } else {
+            cx.opacity(0.5, move |_cx| [trigger])
         }
     }
 }
@@ -1216,6 +1334,7 @@ pub struct AccordionContent {
     test_id: Option<Arc<str>>,
     chrome: ChromeRefinement,
     layout: LayoutRefinement,
+    gap: Option<MetricRef>,
     children: Vec<AnyElement>,
 }
 
@@ -1225,6 +1344,7 @@ impl std::fmt::Debug for AccordionContent {
             .field("test_id", &self.test_id.as_ref().map(|s| s.as_ref()))
             .field("chrome", &self.chrome)
             .field("layout", &self.layout)
+            .field("gap", &self.gap)
             .field("children_len", &self.children.len())
             .finish()
     }
@@ -1237,12 +1357,19 @@ impl AccordionContent {
             test_id: None,
             chrome: ChromeRefinement::default(),
             layout: LayoutRefinement::default(),
+            gap: None,
             children,
         }
     }
 
     pub fn test_id(mut self, id: impl Into<Arc<str>>) -> Self {
         self.test_id = Some(id.into());
+        self
+    }
+
+    /// Controls the vertical spacing between direct children (shadcn `gap-*`).
+    pub fn gap(mut self, gap: impl Into<MetricRef>) -> Self {
+        self.gap = Some(gap.into());
         self
     }
 
@@ -1270,6 +1397,10 @@ impl AccordionContent {
         );
         props.layout.overflow = fret_ui::element::Overflow::Clip;
 
+        let gap = self
+            .gap
+            .unwrap_or_else(|| MetricRef::space(Space::N4))
+            .resolve(&theme);
         let children = self.children;
 
         cx.container(props, move |cx| {
@@ -1279,7 +1410,7 @@ impl AccordionContent {
             vec![cx.column(
                 ColumnProps {
                     layout: column_layout,
-                    gap: MetricRef::space(Space::N4).resolve(&theme).into(),
+                    gap: gap.into(),
                     padding: Edges::all(Px(0.0)).into(),
                     justify: MainAlign::Start,
                     align: CrossAlign::Stretch,

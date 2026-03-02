@@ -195,4 +195,3 @@ fn select_test_ids_survive_open_close_open() {
     assert_has_test_id(&snap, "select-trigger");
     assert_has_test_id(&snap, "select-scroll-viewport");
 }
-

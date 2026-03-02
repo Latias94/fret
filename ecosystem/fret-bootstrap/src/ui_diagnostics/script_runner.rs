@@ -59,6 +59,7 @@ impl UiDiagnosticsService {
             wait_frames_remaining: 0,
             wait_until: None,
             wait_shortcut_routing_trace: None,
+            wait_command_dispatch_trace: None,
             wait_overlay_placement_trace: None,
             screenshot_wait: None,
             v2_step_state: None,
@@ -73,6 +74,8 @@ impl UiDiagnosticsService {
             focus_trace: Vec::new(),
             shortcut_routing_trace: Vec::new(),
             last_shortcut_routing_seq: 0,
+            command_dispatch_trace: Vec::new(),
+            last_command_dispatch_seq: 0,
             overlay_placement_trace: Vec::new(),
             web_ime_trace: Vec::new(),
             ime_event_trace: Vec::new(),
@@ -664,6 +667,7 @@ impl UiDiagnosticsService {
                 | UiActionStepV2::EnsureVisible { .. }
                 | UiActionStepV2::ScrollIntoView { .. }
                 | UiActionStepV2::TypeTextInto { .. }
+                | UiActionStepV2::PasteTextInto { .. }
                 | UiActionStepV2::MenuSelect { .. }
                 | UiActionStepV2::MenuSelectPath { .. }
                 | UiActionStepV2::DragPointer { .. }

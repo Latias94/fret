@@ -121,6 +121,21 @@
       "timeout_frames": 240
     },
     {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists_under",
+        "scope": {
+          "kind": "test_id",
+          "id": "select-scroll-viewport"
+        },
+        "target": {
+          "kind": "test_id",
+          "id": "ui-gallery-select-item-banana"
+        }
+      },
+      "timeout_frames": 240
+    },
+    {
       "type": "wait_overlay_placement_trace",
       "query": {
         "kind": "placed_rect",

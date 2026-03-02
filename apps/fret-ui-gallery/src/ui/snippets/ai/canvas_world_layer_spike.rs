@@ -211,7 +211,10 @@ pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement
     world_props.pan_zoom.canvas.cache_policy = CanvasCachePolicy::smooth_default();
 
     let (bg, grid) = cx.with_theme(|theme| {
-        (theme.color_required("background"), theme.color_required("border"))
+        (
+            theme.color_required("background"),
+            theme.color_required("border"),
+        )
     });
     let paint = {
         move |p: &mut CanvasPainter<'_>, paint_cx: fret_canvas::ui::PanZoomCanvasPaintCx| {

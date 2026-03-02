@@ -71,7 +71,7 @@ impl<H: UiHost> ComponentResolver<H> for ShadcnResolver {
             "Box" => Ok(self.render_box(cx, resolved_props, children)),
             "Separator" => Ok(self.render_separator(cx, resolved_props)),
             "ScrollArea" => Ok(self.render_scroll_area(cx, resolved_props, children)),
-            "Button" => Ok(self.render_button(cx, resolved_props, children, on_event)),
+            "Button" => Ok(self.render_button(cx, element, resolved_props, children, on_event)),
             "Form" => Ok(self.render_form(cx, key, children, on_event)),
             "Input" => Ok(self.render_input(cx, key, props, children)),
             "Textarea" => Ok(self.render_textarea(cx, key, props, children)),

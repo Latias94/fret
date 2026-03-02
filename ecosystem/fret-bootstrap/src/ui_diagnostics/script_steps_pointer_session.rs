@@ -2,7 +2,8 @@ use super::*;
 
 fn dock_drag_active(app: &App) -> bool {
     app.drag(fret_core::PointerId(0)).is_some_and(|d| {
-        (d.kind == fret_runtime::DRAG_KIND_DOCK_PANEL || d.kind == fret_runtime::DRAG_KIND_DOCK_TABS)
+        (d.kind == fret_runtime::DRAG_KIND_DOCK_PANEL
+            || d.kind == fret_runtime::DRAG_KIND_DOCK_TABS)
             && d.dragging
     })
 }
@@ -63,7 +64,7 @@ pub(super) fn handle_pointer_down_step(
 
     if !*stop_script {
         let test_id_hint = match &target {
-            UiSelectorV1::TestId { id } => Some(id.as_str()),
+            UiSelectorV1::TestId { id, .. } => Some(id.as_str()),
             _ => None,
         };
         if let Some(target_window) = svc.resolve_window_target_for_active_step_with_test_id_hint(
@@ -295,7 +296,9 @@ pub(super) fn handle_pointer_move_step(
                     // belongs to a different window.
                     if allow_cross_window_migration && target_window_spec.is_some() {
                         if let Some(seed) =
-                            seed_pointer_session_position_from_explicit_cursor_override(active, window)
+                            seed_pointer_session_position_from_explicit_cursor_override(
+                                active, window,
+                            )
                         {
                             session.window = window;
                             session.position = seed;
@@ -553,7 +556,9 @@ pub(super) fn handle_pointer_up_step(
                 } else if session.window != window {
                     if allow_cross_window_migration && target_window_spec.is_some() {
                         if let Some(seed) =
-                            seed_pointer_session_position_from_explicit_cursor_override(active, window)
+                            seed_pointer_session_position_from_explicit_cursor_override(
+                                active, window,
+                            )
                         {
                             session.window = window;
                             session.position = seed;
@@ -677,8 +682,9 @@ pub(super) fn handle_pointer_up_step(
                     active.next_step = active.next_step.saturating_add(1);
                     output.request_redraw = true;
                     if svc.cfg.script_auto_dump {
-                        *force_dump_label =
-                            Some(format!("script-step-{step_index:04}-pointer_up-cross-window"));
+                        *force_dump_label = Some(format!(
+                            "script-step-{step_index:04}-pointer_up-cross-window"
+                        ));
                     }
                     return true;
                 }

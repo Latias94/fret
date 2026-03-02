@@ -1,0 +1,51 @@
+{
+  "schema_version": 2,
+  "meta": {
+    "name": "Docking arbitration demo: close viewport-left panel removes its viewport",
+    "tags": ["docking", "close", "panel", "gate"],
+    "required_capabilities": ["diag.script_v2"],
+    "target_hints": [
+      "Closes the left viewport panel via a harness button and asserts the viewport node disappears."
+    ]
+  },
+  "steps": [
+    { "type": "set_window_inner_size", "width_px": 1600.0, "height_px": 900.0 },
+    { "type": "wait_frames", "n": 10 },
+    { "type": "press_key", "key": "escape" },
+    { "type": "wait_frames", "n": 5 },
+
+    {
+      "type": "wait_until",
+      "predicate": { "kind": "exists", "target": { "kind": "test_id", "id": "dock-arb-dock-space" } },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": { "kind": "exists", "target": { "kind": "test_id", "id": "dock-arb-viewport-left" } },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": { "kind": "exists", "target": { "kind": "test_id", "id": "dock-arb-close-viewport-left" } },
+      "timeout_frames": 240
+    },
+
+    { "type": "click_stable", "target": { "kind": "test_id", "id": "dock-arb-close-viewport-left" }, "button": "left", "stable_frames": 10, "max_move_px": 0.5, "timeout_frames": 600 },
+    {
+      "type": "wait_until",
+      "predicate": { "kind": "not_exists", "target": { "kind": "test_id", "id": "dock-arb-viewport-left" } },
+      "timeout_frames": 240
+    },
+    {
+      "type": "assert",
+      "predicate": { "kind": "dock_graph_signature_contains", "needle": "demo.viewport.right" }
+    },
+    {
+      "type": "assert",
+      "predicate": { "kind": "dock_graph_canonical_is", "canonical": true }
+    },
+
+    { "type": "capture_bundle", "label": "docking-arbitration-demo-close-viewport-left" }
+  ]
+}
+

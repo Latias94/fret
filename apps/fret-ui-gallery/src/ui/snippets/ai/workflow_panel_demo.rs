@@ -9,7 +9,6 @@ use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, Radius, Space};
 use fret_ui_shadcn::prelude::*;
 
 pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement {
-
     let panel = ui_ai::WorkflowPanel::new([stack::vstack(
         cx,
         stack::VStackProps::default()

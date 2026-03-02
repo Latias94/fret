@@ -1,9 +1,9 @@
 use fret_app::App;
 use fret_core::{AppWindowId, FrameId, KeyCode, Point, Px, Rect, SemanticsRole, Size as CoreSize};
 use fret_runtime::Model;
+use fret_ui::ElementContext;
 use fret_ui::element::{AnyElement, SemanticsProps};
 use fret_ui::tree::UiTree;
-use fret_ui::ElementContext;
 use fret_ui_kit::OverlayController;
 use std::sync::Arc;
 
@@ -91,10 +91,12 @@ fn build_menu(cx: &mut ElementContext<'_, App>, model: Model<Option<Arc<str>>>) 
             .trigger_test_id("nav-trigger-beta"),
     ];
 
-    vec![fret_ui_shadcn::NavigationMenu::new(model)
-        .items(items)
-        .viewport_test_id("nav-viewport")
-        .into_element(cx)]
+    vec![
+        fret_ui_shadcn::NavigationMenu::new(model)
+            .items(items)
+            .viewport_test_id("nav-viewport")
+            .into_element(cx),
+    ]
 }
 
 fn build_root(

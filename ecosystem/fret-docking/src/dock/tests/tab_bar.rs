@@ -375,7 +375,10 @@ fn dock_tab_drop_across_panes_end_inserts_at_target_end() {
     let settings = fret_runtime::DockingInteractionSettings::default();
     let (_chrome, dock_bounds) = dock_space_regions(bounds);
     let (split_root, layout) = app.with_global_mut(DockManager::default, |dock, _app| {
-        let split_root = dock.graph.window_root(window).expect("expected window root");
+        let split_root = dock
+            .graph
+            .window_root(window)
+            .expect("expected window root");
         let layout = compute_layout_map(
             &dock.graph,
             split_root,

@@ -16,8 +16,7 @@ pub struct UiDiagnosticsService {
     ready_write_warned: bool,
     capabilities_written: bool,
     capabilities_write_warned: bool,
-    inspect_enabled: bool,
-    inspect_consume_clicks: bool,
+    inspector: inspect_controller::InspectController,
     pending_script: Option<PendingScript>,
     pending_script_run_id: Option<u64>,
     active_scripts: HashMap<AppWindowId, ActiveScript>,
@@ -25,22 +24,6 @@ pub struct UiDiagnosticsService {
     last_dump_dir: Option<PathBuf>,
     last_dump_artifact_stats: Option<UiArtifactStatsV1>,
     last_script_run_id: u64,
-    last_pick_run_id: u64,
-    last_picked_node_id: HashMap<AppWindowId, u64>,
-    last_picked_selector_json: HashMap<AppWindowId, String>,
-    last_hovered_node_id: HashMap<AppWindowId, u64>,
-    last_hovered_selector_json: HashMap<AppWindowId, String>,
-    inspect_focus_node_id: HashMap<AppWindowId, u64>,
-    inspect_focus_selector_json: HashMap<AppWindowId, String>,
-    inspect_focus_down_stack: HashMap<AppWindowId, Vec<u64>>,
-    inspect_pending_nav: HashMap<AppWindowId, inspect::InspectNavCommand>,
-    inspect_focus_summary_line: HashMap<AppWindowId, String>,
-    inspect_focus_path_line: HashMap<AppWindowId, String>,
-    inspect_locked_windows: HashSet<AppWindowId>,
-    inspect_toast: HashMap<AppWindowId, inspect::InspectToast>,
-    pick_overlay_grace_frames: HashMap<AppWindowId, u32>,
-    pick_armed_run_id: Option<u64>,
-    pending_pick: Option<PendingPick>,
     clipboard_text_responses: std::collections::VecDeque<DiagClipboardTextResponse>,
     next_clipboard_token: u64,
     app_snapshot_provider:
@@ -331,7 +314,7 @@ impl UiDiagnosticsService {
         }?;
 
         match target {
-            UiSelectorV1::TestId { id } => Some(id.as_str()),
+            UiSelectorV1::TestId { id, .. } => Some(id.as_str()),
             _ => None,
         }
     }
@@ -400,10 +383,10 @@ impl UiDiagnosticsService {
     ) -> CachedTestIdPredicateEval {
         let test_id = match predicate {
             UiPredicateV1::Exists {
-                target: UiSelectorV1::TestId { id },
+                target: UiSelectorV1::TestId { id, .. },
             }
             | UiPredicateV1::NotExists {
-                target: UiSelectorV1::TestId { id },
+                target: UiSelectorV1::TestId { id, .. },
             } => Some(id.clone()),
             _ => None,
         };
@@ -758,14 +741,15 @@ impl UiDiagnosticsService {
             return true;
         }
 
-        if self.pick_armed_run_id.is_some()
+        if self.inspector.pick_armed_run_id.is_some()
             || self
+                .inspector
                 .pending_pick
                 .as_ref()
                 .is_some_and(|p| p.window == window)
-            || self.inspect_enabled
-            || self.inspect_locked_windows.contains(&window)
-            || self.inspect_toast.contains_key(&window)
+            || self.inspector.enabled
+            || self.inspector.state.locked_windows.contains(&window)
+            || self.inspector.state.toast.contains_key(&window)
         {
             return true;
         }
@@ -790,36 +774,25 @@ impl UiDiagnosticsService {
     }
 
     pub fn last_picked_node_id(&self, window: AppWindowId) -> Option<u64> {
-        self.last_picked_node_id.get(&window).copied()
+        self.inspector.last_picked_node_id.get(&window).copied()
     }
 
     pub fn pick_is_armed(&self) -> bool {
-        self.pick_armed_run_id.is_some()
+        self.inspector.pick_armed_run_id.is_some()
+    }
+
+    pub(super) fn pick_is_pending(&self, window: AppWindowId) -> bool {
+        self.inspector
+            .pending_pick
+            .as_ref()
+            .is_some_and(|pending| pending.window == window)
     }
 
     pub fn clear_window(&mut self, window: AppWindowId) {
         self.per_window.remove(&window);
         self.known_windows.retain(|w| *w != window);
         self.active_scripts.remove(&window);
-        self.last_picked_node_id.remove(&window);
-        self.last_picked_selector_json.remove(&window);
-        self.last_hovered_node_id.remove(&window);
-        self.last_hovered_selector_json.remove(&window);
-        self.inspect_focus_node_id.remove(&window);
-        self.inspect_focus_selector_json.remove(&window);
-        self.inspect_focus_down_stack.remove(&window);
-        self.inspect_pending_nav.remove(&window);
-        self.inspect_focus_summary_line.remove(&window);
-        self.inspect_focus_path_line.remove(&window);
-        self.inspect_locked_windows.remove(&window);
-        self.inspect_toast.remove(&window);
-        if self
-            .pending_pick
-            .as_ref()
-            .is_some_and(|p| p.window == window)
-        {
-            self.pending_pick = None;
-        }
+        self.inspector.clear_for_window(window);
     }
 
     fn reset_diagnostics_ring_for_window(&mut self, window: AppWindowId) {
@@ -968,10 +941,10 @@ impl UiDiagnosticsService {
             )
         });
 
-        if self.inspect_enabled {
+        if self.inspector.enabled {
             let hovered = last_pointer_position.and_then(|pos| {
                 raw_semantics.and_then(|snap| {
-                    pick_semantics_node_by_bounds(snap, pos).map(|n| n.id.data().as_ffi())
+                    pick::pick_semantics_node_at(snap, ui, pos).map(|n| n.id.data().as_ffi())
                 })
             });
             self.update_inspect_hover(window, raw_semantics, hovered, element_runtime);
@@ -1166,17 +1139,10 @@ impl UiDiagnosticsService {
         ring.push_snapshot(&self.cfg, snapshot);
 
         self.record_shortcut_routing_trace_for_window(app, window);
+        self.record_command_dispatch_trace_for_window(app, window);
 
-        if let Some(pending) = self.pending_pick.clone()
-            && pending.window == window
-        {
-            self.resolve_pending_pick_for_window(
-                window,
-                pending.position,
-                raw_semantics,
-                ui,
-                element_runtime,
-            );
+        if let Some(pending) = self.inspector.take_pending_pick_for_window(window) {
+            self.resolve_pending_pick_for_window(pending, raw_semantics, ui, element_runtime);
         }
     }
 
@@ -1238,6 +1204,62 @@ impl UiDiagnosticsService {
                     command: decision.command.as_ref().map(|c| c.as_str().to_string()),
                     command_enabled: decision.command_enabled,
                     pending_sequence_len: Some(decision.pending_sequence_len),
+                },
+            );
+        }
+    }
+
+    fn record_command_dispatch_trace_for_window(&mut self, app: &App, window: AppWindowId) {
+        let Some(active) = self.active_scripts.get_mut(&window) else {
+            return;
+        };
+        let Some(store) = app.global::<fret_runtime::WindowCommandDispatchDiagnosticsStore>()
+        else {
+            return;
+        };
+
+        let step_index = active
+            .last_injected_step
+            .unwrap_or_else(|| active.next_step.min(u32::MAX as usize) as u32);
+
+        let max_entries = MAX_SHORTCUT_ROUTING_TRACE_ENTRIES;
+        let decisions =
+            store.snapshot_since(window, active.last_command_dispatch_seq, max_entries);
+        if decisions.is_empty() {
+            return;
+        }
+
+        for decision in decisions {
+            active.last_command_dispatch_seq = active
+                .last_command_dispatch_seq
+                .max(decision.seq.saturating_add(1));
+
+            let source_kind = match decision.source.kind {
+                fret_runtime::CommandDispatchSourceKindV1::Pointer => "pointer",
+                fret_runtime::CommandDispatchSourceKindV1::Keyboard => "keyboard",
+                fret_runtime::CommandDispatchSourceKindV1::Shortcut => "shortcut",
+                fret_runtime::CommandDispatchSourceKindV1::Programmatic => "programmatic",
+            };
+
+            push_command_dispatch_trace(
+                &mut active.command_dispatch_trace,
+                UiScriptCommandDispatchTraceEntryV1 {
+                    step_index,
+                    frame_id: decision.frame_id.0,
+                    command: decision.command.as_str().to_string(),
+                    handled: decision.handled,
+                    handled_by_scope: decision.handled_by_scope.map(|s| match s {
+                        fret_runtime::CommandScope::Widget => "widget".to_string(),
+                        fret_runtime::CommandScope::Window => "window".to_string(),
+                        fret_runtime::CommandScope::App => "app".to_string(),
+                    }),
+                    handled_by_driver: decision.handled_by_driver,
+                    stopped: decision.stopped,
+                    source_kind: source_kind.to_string(),
+                    source_element: decision.source.element,
+                    handled_by_element: decision.handled_by_element,
+                    started_from_focus: decision.started_from_focus,
+                    used_default_root_fallback: decision.used_default_root_fallback,
                 },
             );
         }

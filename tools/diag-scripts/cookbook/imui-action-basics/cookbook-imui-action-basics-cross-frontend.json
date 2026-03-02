@@ -1,0 +1,180 @@
+{
+  "schema_version": 2,
+  "meta": {
+    "name": "Cookbook: imui action basics (cross-frontend)",
+    "tags": ["cookbook", "imui", "view_runtime", "actions", "smoke"],
+    "required_capabilities": ["diag.script_v2", "diag.command_dispatch_trace"],
+    "target_hints": [
+      "Invokes the command palette, clicks a declarative button, a GenUI-rendered button, a GenUI dropdown menu item, and an imui button that dispatch the same ActionId.",
+      "Asserts all triggers update the same view-local state via a shared typed action handler."
+    ]
+  },
+  "steps": [
+    { "type": "reset_diagnostics" },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "cookbook.imui_action_basics.root" }
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "label_contains",
+        "target": { "kind": "test_id", "id": "cookbook.imui_action_basics.count" },
+        "text": "Count: 0"
+      }
+    },
+    { "type": "press_key", "key": "escape" },
+    { "type": "wait_frames", "n": 2 },
+    { "type": "press_shortcut", "shortcut": "primary+p" },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "role_and_name", "role": "dialog", "name": "Command palette" }
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_command_dispatch_trace",
+      "query": {
+        "command": "app.command_palette",
+        "handled": true,
+        "handled_by_driver": true
+      },
+      "timeout_frames": 240
+    },
+    { "type": "type_text", "text": "increment (action-first)" },
+    { "type": "press_key", "key": "enter" },
+    { "type": "wait_frames", "n": 2 },
+    {
+      "type": "wait_command_dispatch_trace",
+      "query": { "command": "cookbook.imui_action_basics.inc.v1", "handled": true },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "not_exists",
+        "target": { "kind": "role_and_name", "role": "dialog", "name": "Command palette" }
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "label_contains",
+        "target": { "kind": "test_id", "id": "cookbook.imui_action_basics.count" },
+        "text": "Count: 1"
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "click_stable",
+      "target": { "kind": "test_id", "id": "cookbook.imui_action_basics.button.declarative" }
+    },
+    {
+      "type": "wait_command_dispatch_trace",
+      "query": {
+        "command": "cookbook.imui_action_basics.inc.v1",
+        "source_kind": "pointer",
+        "handled": true
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "label_contains",
+        "target": { "kind": "test_id", "id": "cookbook.imui_action_basics.count" },
+        "text": "Count: 2"
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "click_stable",
+      "target": { "kind": "test_id", "id": "genui:cookbook.imui_action_basics.genui.button.inc" }
+    },
+    {
+      "type": "wait_command_dispatch_trace",
+      "query": {
+        "command": "cookbook.imui_action_basics.inc.v1",
+        "source_kind": "pointer",
+        "handled": true
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "label_contains",
+        "target": { "kind": "test_id", "id": "cookbook.imui_action_basics.count" },
+        "text": "Count: 3"
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "click_stable",
+      "target": { "kind": "role_and_name", "role": "button", "name": "Open (genui menu)" }
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "cookbook.imui_action_basics.genui.menu.inc" }
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "click_stable",
+      "target": { "kind": "test_id", "id": "cookbook.imui_action_basics.genui.menu.inc" }
+    },
+    {
+      "type": "wait_command_dispatch_trace",
+      "query": {
+        "command": "cookbook.imui_action_basics.inc.v1",
+        "source_kind": "pointer",
+        "handled": true
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "label_contains",
+        "target": { "kind": "test_id", "id": "cookbook.imui_action_basics.count" },
+        "text": "Count: 4"
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "click_stable",
+      "target": { "kind": "test_id", "id": "cookbook.imui_action_basics.button.imui" }
+    },
+    {
+      "type": "wait_command_dispatch_trace",
+      "query": {
+        "command": "cookbook.imui_action_basics.inc.v1",
+        "source_kind": "pointer",
+        "handled": true
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "label_contains",
+        "target": { "kind": "test_id", "id": "cookbook.imui_action_basics.count" },
+        "text": "Count: 5"
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "capture_bundle",
+      "label": "cookbook-imui-action-basics-cross-frontend"
+    }
+  ]
+}

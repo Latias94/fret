@@ -62,4 +62,3 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>, value: Model<f32>) -> A
 }
 
 // endregion: example
-

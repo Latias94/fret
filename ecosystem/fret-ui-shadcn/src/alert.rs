@@ -125,12 +125,13 @@ fn alpha_mul(mut c: Color, mul: f32) -> Color {
     c
 }
 
-fn maybe_patch_svg_icon(el: &mut AnyElement, color: Color, size: Px) {
+fn patch_svg_icon_to_inherit_current_color(el: &mut AnyElement, fallback: Color, size: Px) {
     let ElementKind::SvgIcon(props) = &mut el.kind else {
         return;
     };
 
-    props.color = color;
+    props.color = fallback;
+    props.inherit_color = true;
     props.layout.size.width = fret_ui::element::Length::Px(size);
     props.layout.size.height = fret_ui::element::Length::Px(size);
 }
@@ -150,6 +151,25 @@ fn maybe_patch_text_color(el: &mut AnyElement, from: Color, to: Color) {
     }
 }
 
+fn patch_text_color_recursive(el: &mut AnyElement, from: Color, to: Color) {
+    maybe_patch_text_color(el, from, to);
+    for child in &mut el.children {
+        patch_text_color_recursive(child, from, to);
+    }
+}
+
+fn patch_foreground_scope_recursive(el: &mut AnyElement, from: Color, to: Color) {
+    if let ElementKind::ForegroundScope(props) = &mut el.kind {
+        if props.foreground == Some(from) {
+            props.foreground = Some(to);
+        }
+    }
+
+    for child in &mut el.children {
+        patch_foreground_scope_recursive(child, from, to);
+    }
+}
+
 fn alert_with_patch<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     variant: AlertVariant,
@@ -164,10 +184,16 @@ fn alert_with_patch<H: UiHost>(
     let destructive = theme.color_token("destructive");
     let card_fg = theme.color_token("card-foreground");
     let muted_fg = theme.color_token("muted-foreground");
-    let fg = match variant {
+
+    let fg_default = match variant {
         AlertVariant::Default => card_fg,
         AlertVariant::Destructive => destructive,
     };
+    let fg = chrome_override
+        .text_color
+        .as_ref()
+        .map(|c| c.resolve(&theme))
+        .unwrap_or(fg_default);
     let destructive_description = alpha_mul(destructive, 0.9);
 
     let icon = match children.first() {
@@ -185,6 +211,13 @@ fn alert_with_patch<H: UiHost>(
     });
     let action = action_idx.map(|idx| body_children.remove(idx));
 
+    if variant == AlertVariant::Destructive {
+        if let Some(description) = body_children.get_mut(1) {
+            patch_text_color_recursive(description, muted_fg, destructive_description);
+            patch_foreground_scope_recursive(description, muted_fg, destructive_description);
+        }
+    }
+
     let props = decl_style::container_props(
         &theme,
         ChromeRefinement::default()
@@ -194,26 +227,10 @@ fn alert_with_patch<H: UiHost>(
             .border_1()
             .bg(ColorRef::Color(bg))
             .border_color(ColorRef::Color(border))
-            .text_color(ColorRef::Color(fg))
             .merge(chrome_override),
         // shadcn/ui v4: Alert root uses `w-full` by default.
         LayoutRefinement::default().w_full().merge(layout_override),
     );
-
-    if let Some(from) = theme.color_by_key("foreground") {
-        if let Some(title) = body_children.first_mut() {
-            maybe_patch_text_color(title, from, fg);
-        }
-    }
-
-    if let Some(description) = body_children.get_mut(1) {
-        match variant {
-            AlertVariant::Default => maybe_patch_text_color(description, muted_fg, muted_fg),
-            AlertVariant::Destructive => {
-                maybe_patch_text_color(description, muted_fg, destructive_description);
-            }
-        }
-    }
 
     let body = stack::vstack(
         cx,
@@ -224,7 +241,7 @@ fn alert_with_patch<H: UiHost>(
     );
 
     let main = if let Some(mut icon) = icon {
-        maybe_patch_svg_icon(&mut icon, fg, Px(16.0));
+        patch_svg_icon_to_inherit_current_color(&mut icon, fg, Px(16.0));
         let icon = cx.container(
             decl_style::container_props(
                 &theme,
@@ -249,8 +266,8 @@ fn alert_with_patch<H: UiHost>(
     let mut props = props;
     props.layout.position = PositionStyle::Relative;
 
-    cx.container(props, move |_cx| {
-        let mut out: Vec<AnyElement> = vec![main];
+    cx.container(props, move |cx| {
+        let mut out: Vec<AnyElement> = vec![cx.foreground_scope(fg, move |_cx| vec![main])];
         if let Some(action) = action {
             out.push(action);
         }
@@ -272,7 +289,6 @@ impl AlertTitle {
     #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app).snapshot();
-        let fg = theme.color_token("foreground");
         let px = theme
             .metric_by_key("component.alert.title_px")
             .or_else(|| theme.metric_by_key("font.size"))
@@ -286,21 +302,36 @@ impl AlertTitle {
             .text_size_px(px)
             .line_height_px(line_height)
             .font_weight(FontWeight::MEDIUM)
+            // Tailwind: `tracking-tight` ~= `-0.025em`.
+            .letter_spacing_em(-0.025)
             // Upstream shadcn/ui `AlertTitle` uses `line-clamp-1` (single-line truncation).
             .truncate()
-            .text_color(ColorRef::Color(fg))
             .into_element(cx)
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct AlertDescription {
-    text: Arc<str>,
+    content: AlertDescriptionContent,
+}
+
+#[derive(Debug)]
+enum AlertDescriptionContent {
+    Text(Arc<str>),
+    Children(Vec<AnyElement>),
 }
 
 impl AlertDescription {
     pub fn new(text: impl Into<Arc<str>>) -> Self {
-        Self { text: text.into() }
+        Self {
+            content: AlertDescriptionContent::Text(text.into()),
+        }
+    }
+
+    pub fn new_children(children: impl IntoIterator<Item = AnyElement>) -> Self {
+        Self {
+            content: AlertDescriptionContent::Children(children.into_iter().collect()),
+        }
     }
 
     #[track_caller]
@@ -316,13 +347,28 @@ impl AlertDescription {
             .or_else(|| theme.metric_by_key("font.line_height"))
             .unwrap_or_else(|| theme.metric_token("font.line_height"));
 
-        ui::text(cx, self.text)
-            .text_size_px(px)
-            .line_height_px(line_height)
-            .font_weight(FontWeight::NORMAL)
-            .wrap(TextWrap::Word)
-            .text_color(ColorRef::Color(fg))
-            .into_element(cx)
+        match self.content {
+            AlertDescriptionContent::Text(text) => cx.foreground_scope(fg, move |cx| {
+                vec![
+                    ui::text(cx, text)
+                        .text_size_px(px)
+                        .line_height_px(line_height)
+                        .font_weight(FontWeight::NORMAL)
+                        .wrap(TextWrap::Word)
+                        .into_element(cx),
+                ]
+            }),
+            AlertDescriptionContent::Children(children) => cx.foreground_scope(fg, move |cx| {
+                vec![stack::vstack(
+                    cx,
+                    stack::VStackProps::default()
+                        .gap(Space::N1)
+                        .items_start()
+                        .layout(LayoutRefinement::default().w_full()),
+                    move |_cx| children,
+                )]
+            }),
+        }
     }
 }
 
@@ -331,8 +377,10 @@ mod tests {
     use super::*;
 
     use fret_app::App;
-    use fret_core::{AppWindowId, Point, Px, Rect, Size, TextOverflow};
+    use fret_core::{AppWindowId, Color, Point, Px, Rect, Size, TextOverflow};
+    use fret_icons::IconId;
     use fret_ui::element::ElementKind;
+    use fret_ui_kit::declarative::icon as decl_icon;
 
     #[test]
     fn alert_stamps_role_without_layout_wrapper() {
@@ -381,5 +429,55 @@ mod tests {
 
         assert_eq!(props.wrap, TextWrap::None);
         assert_eq!(props.overflow, TextOverflow::Ellipsis);
+    }
+
+    #[test]
+    fn alert_forces_icon_to_inherit_current_color() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(240.0), Px(120.0)),
+        );
+
+        let element = fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            let icon = decl_icon::icon_with(
+                cx,
+                IconId::new_static("lucide.terminal"),
+                None,
+                Some(ColorRef::Color(Color {
+                    r: 1.0,
+                    g: 0.0,
+                    b: 0.0,
+                    a: 1.0,
+                })),
+            );
+
+            Alert::new([
+                icon,
+                AlertTitle::new("Heads up!").into_element(cx),
+                AlertDescription::new("You can add components to your app.").into_element(cx),
+            ])
+            .into_element(cx)
+        });
+
+        fn find_first_svg_icon(el: &AnyElement) -> Option<&fret_ui::element::SvgIconProps> {
+            if let ElementKind::SvgIcon(props) = &el.kind {
+                return Some(props);
+            }
+            for child in &el.children {
+                if let Some(found) = find_first_svg_icon(child) {
+                    return Some(found);
+                }
+            }
+            None
+        }
+
+        let icon = find_first_svg_icon(&element).expect("expected an svg icon under Alert");
+        assert!(
+            icon.inherit_color,
+            "expected Alert icon to inherit currentColor via ForegroundScope"
+        );
     }
 }

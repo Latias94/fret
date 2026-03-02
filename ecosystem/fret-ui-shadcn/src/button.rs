@@ -595,6 +595,15 @@ impl Button {
         self
     }
 
+    /// Bind a stable action ID to this button (action-first authoring).
+    ///
+    /// v1 compatibility: `ActionId` is `CommandId`-compatible (ADR 0307), so this dispatches
+    /// through the existing command pipeline.
+    pub fn action(mut self, action: impl Into<fret_runtime::ActionId>) -> Self {
+        self.command = Some(action.into());
+        self
+    }
+
     pub fn on_click(mut self, command: impl Into<CommandId>) -> Self {
         self.command = Some(command.into());
         self
@@ -769,6 +778,14 @@ impl Button {
             }
 
             let pressable_layout = decl_style::layout_style(&theme, base_layout);
+            let content_fill_w = matches!(
+                pressable_layout.size.width,
+                fret_ui::element::Length::Px(_) | fret_ui::element::Length::Fill
+            ) || pressable_layout.flex.grow > 0.0;
+            let content_fill_h = matches!(
+                pressable_layout.size.height,
+                fret_ui::element::Length::Px(_) | fret_ui::element::Length::Fill
+            );
 
             let command = self.command;
             let on_activate = self.on_activate;
@@ -1027,11 +1044,20 @@ impl Button {
                             .justify(content_justify)
                             .items_center()
                             .gap_x(gap);
-                        if is_icon {
-                            // shadcn/ui icon buttons are `inline-flex items-center justify-center`
-                            // in a fixed square. Ensure the content stack stretches so the icon
-                            // is centered within that box.
-                            props = props.layout(LayoutRefinement::default().w_full().h_full());
+                        if content_fill_w || content_fill_h {
+                            // Match shadcn/ui's `inline-flex items-center justify-center` behavior:
+                            // when the control resolves to a definite box (fixed size, `w-full`, or
+                            // flex-grow), let the content stack fill that box so cross-axis
+                            // centering behaves like CSS flexbox even when padding/border leave a
+                            // smaller content box (notably `outline`).
+                            let mut layout = LayoutRefinement::default();
+                            if content_fill_w {
+                                layout = layout.w_full();
+                            }
+                            if content_fill_h {
+                                layout = layout.h_full();
+                            }
+                            props = props.layout(layout);
                         }
 
                         vec![fret_ui_kit::declarative::stack::hstack(cx, props, |_cx| {
@@ -1429,6 +1455,79 @@ mod tests {
         };
 
         assert_eq!(props.layout.flex.shrink, 0.0);
+    }
+
+    fn find_first_row(el: &AnyElement) -> Option<fret_ui::element::RowProps> {
+        match &el.kind {
+            ElementKind::Row(props) => Some(*props),
+            _ => el.children.iter().find_map(find_first_row),
+        }
+    }
+
+    #[test]
+    fn button_content_row_fills_height_for_definite_controls() {
+        let mut app = App::new();
+        let window = AppWindowId::default();
+
+        crate::shadcn_themes::apply_shadcn_new_york_v4(
+            &mut app,
+            crate::shadcn_themes::ShadcnBaseColor::Neutral,
+            crate::shadcn_themes::ShadcnColorScheme::Light,
+        );
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            CoreSize::new(Px(240.0), Px(160.0)),
+        );
+
+        let element =
+            elements::with_element_cx(&mut app, window, bounds, "button-content-row-fill", |cx| {
+                Button::new("Back")
+                    .variant(ButtonVariant::Outline)
+                    .leading_icon(IconId::new_static("lucide.arrow-left"))
+                    .test_id("test-button-outline-back")
+                    .into_element(cx)
+            });
+
+        let row = find_first_row(&element).expect("expected Button to render a Row content stack");
+        assert_eq!(row.layout.size.height, Length::Fill);
+        assert_eq!(row.layout.size.width, Length::Auto);
+    }
+
+    #[test]
+    fn button_content_row_fills_width_when_button_fills() {
+        let mut app = App::new();
+        let window = AppWindowId::default();
+
+        crate::shadcn_themes::apply_shadcn_new_york_v4(
+            &mut app,
+            crate::shadcn_themes::ShadcnBaseColor::Neutral,
+            crate::shadcn_themes::ShadcnColorScheme::Light,
+        );
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            CoreSize::new(Px(240.0), Px(160.0)),
+        );
+
+        let element = elements::with_element_cx(
+            &mut app,
+            window,
+            bounds,
+            "button-content-row-fill-width",
+            |cx| {
+                Button::new("Back")
+                    .variant(ButtonVariant::Outline)
+                    .leading_icon(IconId::new_static("lucide.arrow-left"))
+                    .refine_layout(LayoutRefinement::default().w_full())
+                    .test_id("test-button-outline-back-w-full")
+                    .into_element(cx)
+            },
+        );
+
+        let row = find_first_row(&element).expect("expected Button to render a Row content stack");
+        assert_eq!(row.layout.size.height, Length::Fill);
+        assert_eq!(row.layout.size.width, Length::Fill);
     }
 
     #[test]

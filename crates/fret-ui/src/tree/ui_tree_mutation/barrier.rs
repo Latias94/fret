@@ -135,6 +135,9 @@ impl<H: UiHost> UiTree<H> {
             UiDebugInvalidationSource::Other,
         );
 
+        // Keep subtree layout-dirty aggregation in sync with barrier child changes.
+        self.recompute_node_subtree_layout_dirty_count_and_propagate(parent);
+
         self.pending_barrier_relayouts.push(parent);
     }
 
@@ -154,6 +157,7 @@ impl<H: UiHost> UiTree<H> {
         }
 
         let mut counter_update: Option<(InvalidationFlags, InvalidationFlags)> = None;
+        let mut layout_transition: Option<(bool, bool)> = None;
         if let Some(n) = self.nodes.get_mut(parent) {
             let prev = n.invalidation;
             let layout_before = n.invalidation.layout;
@@ -165,9 +169,17 @@ impl<H: UiHost> UiTree<H> {
                 layout_after,
             );
             counter_update = Some((prev, n.invalidation));
+            layout_transition = Some((layout_before, layout_after));
         }
         if let Some((prev, next)) = counter_update {
             self.update_invalidation_counters(prev, next);
+        }
+        if let Some((layout_before, layout_after)) = layout_transition {
+            self.note_layout_invalidation_transition_for_subtree_aggregation(
+                parent,
+                layout_before,
+                layout_after,
+            );
         }
 
         // Ensure routing/painting sees the follow-up frame, but avoid bubbling a full relayout.

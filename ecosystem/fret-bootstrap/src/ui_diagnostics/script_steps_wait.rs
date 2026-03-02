@@ -61,27 +61,35 @@ fn eval_docking_predicate_from_recent_debug_snapshot(
             let resolved = docking.dock_drop_resolve.as_ref()?.resolved.as_ref()?;
             Some(resolved.insert_index == Some(*index as u64))
         }
-        UiPredicateV1::DockGraphCanonicalIs { canonical } => Some(
-            docking.dock_graph_stats.as_ref()?.canonical_ok == *canonical,
-        ),
+        UiPredicateV1::DockGraphCanonicalIs { canonical } => {
+            Some(docking.dock_graph_stats.as_ref()?.canonical_ok == *canonical)
+        }
         UiPredicateV1::DockGraphHasNestedSameAxisSplitsIs { has_nested } => Some(
-            docking.dock_graph_stats.as_ref()?.has_nested_same_axis_splits == *has_nested,
+            docking
+                .dock_graph_stats
+                .as_ref()?
+                .has_nested_same_axis_splits
+                == *has_nested,
         ),
-        UiPredicateV1::DockGraphNodeCountLe { max } => Some(
-            docking.dock_graph_stats.as_ref()?.node_count <= *max,
-        ),
-        UiPredicateV1::DockGraphMaxSplitDepthLe { max } => Some(
-            docking.dock_graph_stats.as_ref()?.max_split_depth <= *max,
-        ),
-        UiPredicateV1::DockGraphSignatureIs { signature } => Some(
-            docking.dock_graph_signature.as_ref()?.signature == *signature,
-        ),
+        UiPredicateV1::DockGraphNodeCountLe { max } => {
+            Some(docking.dock_graph_stats.as_ref()?.node_count <= *max)
+        }
+        UiPredicateV1::DockGraphMaxSplitDepthLe { max } => {
+            Some(docking.dock_graph_stats.as_ref()?.max_split_depth <= *max)
+        }
+        UiPredicateV1::DockGraphSignatureIs { signature } => {
+            Some(docking.dock_graph_signature.as_ref()?.signature == *signature)
+        }
         UiPredicateV1::DockGraphSignatureContains { needle } => Some(
-            docking.dock_graph_signature.as_ref()?.signature.contains(needle),
+            docking
+                .dock_graph_signature
+                .as_ref()?
+                .signature
+                .contains(needle),
         ),
-        UiPredicateV1::DockGraphSignatureFingerprint64Is { fingerprint64 } => Some(
-            docking.dock_graph_signature.as_ref()?.fingerprint64 == *fingerprint64,
-        ),
+        UiPredicateV1::DockGraphSignatureFingerprint64Is { fingerprint64 } => {
+            Some(docking.dock_graph_signature.as_ref()?.fingerprint64 == *fingerprint64)
+        }
         _ => None,
     }
 }
@@ -356,6 +364,68 @@ pub(super) fn handle_wait_shortcut_routing_trace_step(
     true
 }
 
+pub(super) fn handle_wait_command_dispatch_trace_step(
+    app: &App,
+    step_index: usize,
+    step: UiActionStepV2,
+    active: &mut ActiveScript,
+    output: &mut UiScriptFrameOutput,
+    force_dump_label: &mut Option<String>,
+    stop_script: &mut bool,
+    failure_reason: &mut Option<String>,
+) -> bool {
+    let UiActionStepV2::WaitCommandDispatchTrace {
+        query,
+        timeout_frames,
+    } = step
+    else {
+        return false;
+    };
+
+    active.wait_until = None;
+    active.screenshot_wait = None;
+
+    let state = match active.wait_command_dispatch_trace.take() {
+        Some(mut state) if state.step_index == step_index => {
+            state.remaining_frames = state.remaining_frames.min(timeout_frames);
+            state
+        }
+        _ => WaitCommandDispatchTraceState {
+            step_index,
+            remaining_frames: timeout_frames,
+            start_frame_id: app.frame_id().0.saturating_sub(1),
+        },
+    };
+
+    let found = active.command_dispatch_trace.iter().any(|entry| {
+        entry.frame_id >= state.start_frame_id
+            && command_dispatch_trace_entry_matches_query(entry, &query)
+    });
+
+    if found {
+        active.wait_command_dispatch_trace = None;
+        active.next_step = active.next_step.saturating_add(1);
+        output.request_redraw = true;
+    } else if state.remaining_frames == 0 {
+        *force_dump_label = Some(format!(
+            "script-step-{step_index:04}-wait_command_dispatch_trace-timeout"
+        ));
+        *stop_script = true;
+        *failure_reason = Some("wait_command_dispatch_trace_timeout".to_string());
+        active.wait_command_dispatch_trace = None;
+        output.request_redraw = true;
+    } else {
+        active.wait_command_dispatch_trace = Some(WaitCommandDispatchTraceState {
+            step_index: state.step_index,
+            remaining_frames: state.remaining_frames.saturating_sub(1),
+            start_frame_id: state.start_frame_id,
+        });
+        output.request_redraw = true;
+    }
+
+    true
+}
+
 pub(super) fn handle_wait_overlay_placement_trace_step(
     window: AppWindowId,
     step_index: usize,
@@ -575,77 +645,95 @@ pub(super) fn handle_wait_until_step(
             false
         }
         None => match &predicate {
-        UiPredicateV1::EventKindSeen { event_kind } => svc
-            .per_window
-            .get(&predicate_window)
-            .is_some_and(|ring| ring.events.iter().any(|e| e.kind == *event_kind)),
-        UiPredicateV1::RunnerAccessibilityActivated => app
-            .global::<fret_runtime::RunnerAccessibilityDiagnosticsStore>()
-            .and_then(|store| store.snapshot(predicate_window))
-            .is_some_and(|snapshot| snapshot.activation_requests > 0),
-        UiPredicateV1::TextFontStackKeyStable { stable_frames } => {
-            text_font_stack_key_stable_frames >= *stable_frames
-        }
-        UiPredicateV1::FontCatalogPopulated => font_catalog_populated,
-        UiPredicateV1::SystemFontRescanIdle => system_font_rescan_idle,
-        _ => {
-            if let Some(ok) = eval_docking_predicate_from_recent_debug_snapshot(
-                svc,
-                predicate_window,
-                &predicate,
-                250,
-            ) {
-                ok
-            } else {
-                let docking_diag = app
-                    .global::<fret_runtime::WindowInteractionDiagnosticsStore>()
-                    .and_then(|store| store.docking_latest_for_window(predicate_window));
-                let workspace_diag = app
-                    .global::<fret_runtime::WindowInteractionDiagnosticsStore>()
-                    .and_then(|store| store.workspace_latest_for_window(predicate_window));
-                let input_ctx = app
-                    .global::<fret_runtime::WindowInputContextService>()
-                    .and_then(|svc| svc.snapshot(predicate_window));
-                let text_input_snapshot = app
-                    .global::<fret_runtime::WindowTextInputSnapshotService>()
-                    .and_then(|svc| svc.snapshot(predicate_window));
-                let dock_drag_runtime = dock_drag_runtime_state(app, svc.known_windows.as_slice());
-                let platform_caps = app.global::<fret_runtime::PlatformCapabilities>();
-                let open_window_count =
-                    UiDiagnosticsService::open_window_count_for_predicates(app);
+            UiPredicateV1::EventKindSeen { event_kind } => svc
+                .per_window
+                .get(&predicate_window)
+                .is_some_and(|ring| ring.events.iter().any(|e| e.kind == *event_kind)),
+            UiPredicateV1::RunnerAccessibilityActivated => app
+                .global::<fret_runtime::RunnerAccessibilityDiagnosticsStore>()
+                .and_then(|store| store.snapshot(predicate_window))
+                .is_some_and(|snapshot| snapshot.activation_requests > 0),
+            UiPredicateV1::TextFontStackKeyStable { stable_frames } => {
+                text_font_stack_key_stable_frames >= *stable_frames
+            }
+            UiPredicateV1::FontCatalogPopulated => font_catalog_populated,
+            UiPredicateV1::SystemFontRescanIdle => system_font_rescan_idle,
+            _ => {
+                if let Some(ok) = eval_docking_predicate_from_recent_debug_snapshot(
+                    svc,
+                    predicate_window,
+                    &predicate,
+                    250,
+                ) {
+                    ok
+                } else {
+                    let docking_diag = app
+                        .global::<fret_runtime::WindowInteractionDiagnosticsStore>()
+                        .and_then(|store| store.docking_latest_for_window(predicate_window));
+                    let workspace_diag = app
+                        .global::<fret_runtime::WindowInteractionDiagnosticsStore>()
+                        .and_then(|store| store.workspace_latest_for_window(predicate_window));
+                    let input_ctx = app
+                        .global::<fret_runtime::WindowInputContextService>()
+                        .and_then(|svc| svc.snapshot(predicate_window));
+                    let text_input_snapshot = app
+                        .global::<fret_runtime::WindowTextInputSnapshotService>()
+                        .and_then(|svc| svc.snapshot(predicate_window));
+                    let dock_drag_runtime =
+                        dock_drag_runtime_state(app, svc.known_windows.as_slice());
+                    let platform_caps = app.global::<fret_runtime::PlatformCapabilities>();
+                    let open_window_count =
+                        UiDiagnosticsService::open_window_count_for_predicates(app);
 
-                if predicate_window == window {
-                    if let Some(snapshot) = semantics_snapshot {
-                        record_overlay_placement_trace(
-                            &mut active.overlay_placement_trace,
-                            element_runtime,
-                            Some(snapshot),
-                            window,
-                            step_index as u32,
-                            "wait_until",
-                        );
-                        eval_predicate(
-                            snapshot,
-                            window_bounds,
-                            predicate_window,
-                            active.scope_root_for_window(predicate_window),
-                            input_ctx,
-                            element_runtime,
-                            text_input_snapshot,
-                            app.global::<fret_core::RendererTextPerfSnapshot>().copied(),
-                            app.global::<fret_core::RendererTextFontTraceSnapshot>(),
-                            svc.known_windows.as_slice(),
-                            open_window_count,
-                            platform_caps,
-                            docking_diag,
-                            workspace_diag,
-                            dock_drag_runtime.as_ref(),
-                            text_font_stack_key_stable_frames,
-                            font_catalog_populated,
-                            system_font_rescan_idle,
-                            &predicate,
-                        )
+                    if predicate_window == window {
+                        if let Some(snapshot) = semantics_snapshot {
+                            record_overlay_placement_trace(
+                                &mut active.overlay_placement_trace,
+                                element_runtime,
+                                Some(snapshot),
+                                window,
+                                step_index as u32,
+                                "wait_until",
+                            );
+                            eval_predicate(
+                                snapshot,
+                                window_bounds,
+                                predicate_window,
+                                active.scope_root_for_window(predicate_window),
+                                input_ctx,
+                                element_runtime,
+                                text_input_snapshot,
+                                app.global::<fret_core::RendererTextPerfSnapshot>().copied(),
+                                app.global::<fret_core::RendererTextFontTraceSnapshot>(),
+                                svc.known_windows.as_slice(),
+                                open_window_count,
+                                platform_caps,
+                                docking_diag,
+                                workspace_diag,
+                                dock_drag_runtime.as_ref(),
+                                text_font_stack_key_stable_frames,
+                                font_catalog_populated,
+                                system_font_rescan_idle,
+                                &predicate,
+                            )
+                        } else {
+                            eval_predicate_without_semantics(
+                                predicate_window,
+                                svc.known_windows.as_slice(),
+                                open_window_count,
+                                platform_caps,
+                                docking_diag,
+                                workspace_diag,
+                                dock_drag_runtime.as_ref(),
+                                &predicate,
+                            )
+                            .unwrap_or_else(|| {
+                                output.request_redraw = true;
+                                false
+                            })
+                        }
                     } else {
+                        // Off-window predicates must not reuse the current window's semantics snapshot.
                         eval_predicate_without_semantics(
                             predicate_window,
                             svc.known_windows.as_slice(),
@@ -661,25 +749,8 @@ pub(super) fn handle_wait_until_step(
                             false
                         })
                     }
-                } else {
-                    // Off-window predicates must not reuse the current window's semantics snapshot.
-                    eval_predicate_without_semantics(
-                        predicate_window,
-                        svc.known_windows.as_slice(),
-                        open_window_count,
-                        platform_caps,
-                        docking_diag,
-                        workspace_diag,
-                        dock_drag_runtime.as_ref(),
-                        &predicate,
-                    )
-                    .unwrap_or_else(|| {
-                        output.request_redraw = true;
-                        false
-                    })
                 }
             }
-        }
         },
     };
 

@@ -88,7 +88,6 @@ fn dropdown(cx: &mut ElementContext<'_, App>, models: &OverlayModels) -> AnyElem
                 shadcn::Button::new("DropdownMenu")
                     .variant(shadcn::ButtonVariant::Outline)
                     .test_id("ui-gallery-dropdown-trigger")
-                    .toggle_model(dropdown_open.clone())
                     .into_element(cx)
             },
             |_cx| {
@@ -351,7 +350,9 @@ fn dialog(cx: &mut ElementContext<'_, App>, models: &OverlayModels) -> AnyElemen
         },
         |cx| {
             shadcn::DialogContent::new(vec![
-                shadcn::DialogClose::new(dialog_open.clone()).into_element(cx),
+                shadcn::DialogClose::new(dialog_open.clone())
+                    .into_element(cx)
+                    .test_id("ui-gallery-dialog-x-close"),
                 shadcn::DialogHeader::new(vec![
                     shadcn::DialogTitle::new("Dialog").into_element(cx),
                     shadcn::DialogDescription::new("Escape / overlay click closes")
@@ -425,7 +426,9 @@ fn dialog_glass(cx: &mut ElementContext<'_, App>, models: &OverlayModels) -> Any
             },
             |cx| {
                 shadcn::DialogContent::new(vec![
-                    shadcn::DialogClose::new(dialog_open.clone()).into_element(cx),
+                    shadcn::DialogClose::new(dialog_open.clone())
+                        .into_element(cx)
+                        .test_id("ui-gallery-dialog-glass-x-close"),
                     shadcn::DialogHeader::new(vec![
                         shadcn::DialogTitle::new("Dialog (Glass)").into_element(cx),
                         shadcn::DialogDescription::new(

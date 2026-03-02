@@ -2,8 +2,8 @@ pub const SOURCE: &str = include_str!("icon_button.rs");
 
 // region: example
 use fret_icons::ids;
-use fret_ui_material3 as material3;
 use fret_ui_kit::{ColorRef, WidgetStateProperty, WidgetStates};
+use fret_ui_material3 as material3;
 use fret_ui_shadcn::prelude::*;
 
 #[derive(Default)]
@@ -22,41 +22,42 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
         }
     };
 
-    let row =
-        |cx: &mut ElementContext<'_, H>, variant: material3::IconButtonVariant, label: &'static str| {
-            stack::hstack(
-                cx,
-                stack::HStackProps::default().gap(Space::N2).items_center(),
-                move |cx| {
-                    let hover_accent = fret_ui_kit::colors::linear_from_hex_rgb(0xe5_33_e5);
-                    let override_style = material3::IconButtonStyle::default()
-                        .icon_color(
-                            WidgetStateProperty::new(None)
-                                .when(WidgetStates::HOVERED, Some(ColorRef::Color(hover_accent))),
-                        )
-                        .state_layer_color(
-                            WidgetStateProperty::new(None)
-                                .when(WidgetStates::HOVERED, Some(ColorRef::Color(hover_accent))),
-                        );
-                    vec![
-                        material3::IconButton::new(ids::ui::CLOSE)
-                            .variant(variant)
-                            .a11y_label(label)
-                            .into_element(cx),
-                        material3::IconButton::new(ids::ui::CLOSE)
-                            .variant(variant)
-                            .a11y_label("Override")
-                            .style(override_style)
-                            .into_element(cx),
-                        material3::IconButton::new(ids::ui::CLOSE)
-                            .variant(variant)
-                            .a11y_label("Disabled")
-                            .disabled(true)
-                            .into_element(cx),
-                    ]
-                },
-            )
-        };
+    let row = |cx: &mut ElementContext<'_, H>,
+               variant: material3::IconButtonVariant,
+               label: &'static str| {
+        stack::hstack(
+            cx,
+            stack::HStackProps::default().gap(Space::N2).items_center(),
+            move |cx| {
+                let hover_accent = fret_ui_kit::colors::linear_from_hex_rgb(0xe5_33_e5);
+                let override_style = material3::IconButtonStyle::default()
+                    .icon_color(
+                        WidgetStateProperty::new(None)
+                            .when(WidgetStates::HOVERED, Some(ColorRef::Color(hover_accent))),
+                    )
+                    .state_layer_color(
+                        WidgetStateProperty::new(None)
+                            .when(WidgetStates::HOVERED, Some(ColorRef::Color(hover_accent))),
+                    );
+                vec![
+                    material3::IconButton::new(ids::ui::CLOSE)
+                        .variant(variant)
+                        .a11y_label(label)
+                        .into_element(cx),
+                    material3::IconButton::new(ids::ui::CLOSE)
+                        .variant(variant)
+                        .a11y_label("Override")
+                        .style(override_style)
+                        .into_element(cx),
+                    material3::IconButton::new(ids::ui::CLOSE)
+                        .variant(variant)
+                        .a11y_label("Disabled")
+                        .disabled(true)
+                        .into_element(cx),
+                ]
+            },
+        )
+    };
 
     let toggles = stack::hstack(
         cx,
@@ -81,11 +82,13 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
         cx,
         stack::HStackProps::default().gap(Space::N2).items_center(),
         move |cx| {
-            vec![material3::IconButton::new(ids::ui::CLOSE)
-                .variant(material3::IconButtonVariant::Filled)
-                .a11y_label("Material 3 icon button (centered chrome)")
-                .test_id("ui-gallery-material3-icon-button-centered")
-                .into_element(cx)]
+            vec![
+                material3::IconButton::new(ids::ui::CLOSE)
+                    .variant(material3::IconButtonVariant::Filled)
+                    .a11y_label("Material 3 icon button (centered chrome)")
+                    .test_id("ui-gallery-material3-icon-button-centered")
+                    .into_element(cx),
+            ]
         },
     );
 
@@ -97,8 +100,12 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
             .items_start(),
         move |cx| {
             vec![
-                cx.text("Material 3 Icon Buttons: token-driven colors + state layer + bounded ripple."),
-                cx.text("Centered fixed chrome: hit box can exceed visual chrome (min touch target)."),
+                cx.text(
+                    "Material 3 Icon Buttons: token-driven colors + state layer + bounded ripple.",
+                ),
+                cx.text(
+                    "Centered fixed chrome: hit box can exceed visual chrome (min touch target).",
+                ),
                 centered_gate,
                 row(cx, material3::IconButtonVariant::Standard, "Standard"),
                 row(cx, material3::IconButtonVariant::Filled, "Filled"),
@@ -112,4 +119,3 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
 }
 
 // endregion: example
-

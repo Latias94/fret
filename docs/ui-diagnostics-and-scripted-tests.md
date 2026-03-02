@@ -799,6 +799,7 @@ Supported selectors (v1 MVP):
 - `press_shortcut` (schema v2 only; shortcut strings like `primary+p`, `primary+shift+p`, `alt+f`; supports
   modifier aliases `primary`/`cmd_or_ctrl`/`command_or_control` and `meta`/`cmd`/`command`)
 - `type_text`
+- `paste_text_into` (schema v2 only; click + set clipboard + `Primary+V`; gates paste-specific code paths with less boilerplate)
 - `ime` (schema v2 only; deterministic IME event injection for composition/commit/preedit)
 - `reset_diagnostics` (clears the diagnostics ring buffer for the current window; useful to avoid mount/settle frames in perf captures)
 - `wait_frames` (schema v2 only: optional `window` target)
@@ -811,6 +812,7 @@ Supported selectors (v1 MVP):
 - `set_clipboard_force_unavailable` (schema v2 only; simulates clipboard read denial; capability-gated behind `diag.clipboard_force_unavailable`)
 - `set_clipboard_text` (schema v2 only; sets OS clipboard text; capability-gated behind `diag.clipboard_text`)
 - `assert_clipboard_text` (schema v2 only; asserts OS clipboard text equals an expected value; capability-gated behind `diag.clipboard_text`)
+- `inspect_help_lock_best_match_and_copy_selector` (schema v2 only; in-app inspector helper: open help, search for `query`, lock the best match, and copy the best selector JSON to the clipboard; intended to avoid relying on shortcut injection in `--launch` runs)
 - `set_window_inner_size` (schema v2 only; optional `window` target)
 - `set_window_insets` (schema v2 only; overrides safe-area/occlusion insets; capability-gated behind `diag.window_insets_override`)
 - `set_window_outer_position` (schema v2 only; optional `window` target)
@@ -905,8 +907,10 @@ Supported intent steps (v2):
 - `move_pointer_sweep` (move pointer across frames while staying relative to a target; optional `window` target)
 - `scroll_into_view` (wheel a container until a target becomes visible; optional `window` target)
 - `type_text_into` (wait + click + type; optional `window` target)
+- `paste_text_into` (wait + click + paste via clipboard + `Primary+V`; optional `window` target)
 - `menu_select` (wait + open menu + click item; optional `window` target)
 - `menu_select_path` (wait + open nested menus + click final item; optional `window` target)
+- `inspect_help_lock_best_match_and_copy_selector` (open inspector help, search for `query`, lock the best match, and copy the best selector JSON; optional `window` target)
 - `drag_to` (drag between two semantics targets; optional `window` target)
 - `set_slider_value` (drag a slider to a desired value; optional `window` target; requires a parseable semantics `value`)
 - `set_window_inner_size` (emit `WindowRequest::SetInnerSize`)
@@ -1011,7 +1015,7 @@ Implementation pointers:
 
 Script authoring tip:
 
-- Avoid `value_contains` gates when `FRET_DIAG_REDACT_TEXT=1` (default): text/value fields may be
+- Avoid `value_contains` / `value_equals` gates when `FRET_DIAG_REDACT_TEXT=1` (default): text/value fields may be
   redacted. Prefer `exists(test_id)` + intent steps, or add a value-free semantics flag that uses
   `semantics_present()` (see `NodeGraphDiagConnectingFlag`).
 
@@ -1040,10 +1044,14 @@ Predicates (v1 MVP):
 
 - `{"kind":"exists","target":<selector>}`
 - `{"kind":"not_exists","target":<selector>}`
+- `{"kind":"exists_under","scope":<selector>,"target":<selector>}` (scoped existence; disambiguates when multiple widgets match)
+- `{"kind":"not_exists_under","scope":<selector>,"target":<selector>}` (scoped absence; returns false if `scope` does not exist)
 - `{"kind":"focus_is","target":<selector>}`
+- `{"kind":"focused_descendant_is","scope":<selector>,"target":<selector>}` (focused node equals `target` and is under `scope`)
 - `{"kind":"role_is","target":<selector>,"role":"button"}`
 - `{"kind":"label_contains","target":<selector>,"text":"Search"}`
 - `{"kind":"value_contains","target":<selector>,"text":"foo"}`
+- `{"kind":"value_equals","target":<selector>,"text":"foo"}` (exact value match; requires unredacted `value`)
 - `{"kind":"pos_in_set_is","target":<selector>,"pos_in_set":2}`
 - `{"kind":"set_size_is","target":<selector>,"set_size":10}`
 - `{"kind":"checked_is","target":<selector>,"checked":true}`

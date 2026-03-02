@@ -20,7 +20,9 @@ pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement
         Some(model) => model,
         None => {
             let model = cx.app.models_mut().insert(false);
-            cx.with_state(DemoModels::default, |st| st.item_1_completed = Some(model.clone()));
+            cx.with_state(DemoModels::default, |st| {
+                st.item_1_completed = Some(model.clone())
+            });
             model
         }
     };
@@ -211,4 +213,3 @@ pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement
     )
 }
 // endregion: example
-

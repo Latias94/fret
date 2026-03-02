@@ -411,8 +411,8 @@ pub fn handle_dock_op<H: UiHost>(app: &mut H, op: DockOp) -> bool {
                 return false;
             }
 
-            let tearoff_log = std::env::var_os("FRET_DOCK_TEAROFF_LOG")
-                .is_some_and(|v| !v.is_empty());
+            let tearoff_log =
+                std::env::var_os("FRET_DOCK_TEAROFF_LOG").is_some_and(|v| !v.is_empty());
             let mut windows_to_auto_close: Vec<AppWindowId> = Vec::new();
             let handled = app.with_global_mut(DockManager::default, |dock, app| {
                 let now = app.tick_id();

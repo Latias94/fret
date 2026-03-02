@@ -369,6 +369,7 @@ impl ShadcnResolver {
     pub(super) fn render_button<H: UiHost>(
         &mut self,
         cx: &mut ElementContext<'_, H>,
+        element: &fret_genui_core::spec::ElementV1,
         resolved_props: &serde_json::Map<String, serde_json::Value>,
         children: Vec<AnyElement>,
         on_event: &dyn Fn(&str) -> Option<OnActivate>,
@@ -412,7 +413,36 @@ impl ShadcnResolver {
             .variant(variant)
             .size(size)
             .refine_layout(layout);
-        if let Some(on_activate) = on_event("press") {
+
+        // Action-first binding: if the spec binds a stable, namespaced action id (v1: `ActionId == CommandId`),
+        // dispatch it through the command/action pipeline directly.
+        //
+        // Fallback: for non-command-like actions (e.g. GenUI standard actions), keep using the
+        // `on_event` emission path (queue/executor loop).
+        let press_action_id: Option<fret_runtime::CommandId> = element
+            .on
+            .as_ref()
+            .and_then(|on| on.get("press"))
+            .and_then(|binding| match binding {
+                fret_genui_core::spec::OnBindingV1::One(b) => Some(b),
+                fret_genui_core::spec::OnBindingV1::Many(_) => None,
+            })
+            .and_then(|b| {
+                let looks_like_action_id = b.action.contains('.') && b.action.ends_with(".v1");
+                let is_unit = b.params.as_ref().is_none_or(|p| p.is_empty())
+                    && b.confirm.is_none()
+                    && b.on_success.is_none()
+                    && b.on_error.is_none();
+                if looks_like_action_id && is_unit {
+                    Some(fret_runtime::CommandId::new(b.action.clone()))
+                } else {
+                    None
+                }
+            });
+
+        if let Some(action_id) = press_action_id {
+            button = button.action(action_id);
+        } else if let Some(on_activate) = on_event("press") {
             button = button.on_activate(on_activate);
         }
         button.into_element(cx)
