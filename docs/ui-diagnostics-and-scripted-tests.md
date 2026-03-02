@@ -817,6 +817,7 @@ Supported selectors (v1 MVP):
 - `raise_window` (schema v2 only; optional `window` target)
 - `set_cursor_screen_pos` (schema v2 only; runner-level cursor screen-position override, physical pixels; intended for cross-window routing in scripted runs)
 - `set_cursor_in_window` (schema v2 only; runner-level cursor override using window-client physical pixels; intended for cross-window routing without hardcoding DPI)
+- `set_cursor_in_window_logical` (schema v2 only; runner-level cursor override using window-client logical pixels; preferred when you need to seed a cross-window `pointer_down` session for later `pointer_move`/`pointer_up` window migration)
 - `set_mouse_buttons` (schema v2 only; runner-level mouse button state override; capability-gated behind `diag.mouse_buttons_override`)
 - `inject_incoming_open` (schema v2 only; simulates "open in..." / share-target flows; capability-gated behind `diag.incoming_open_inject`)
 - `drag_pointer_until` (schema v2 only; optional `window` target; drag across frames until a predicate passes or timeout; intended for cross-window routing; optional `release_on_success` to end while keeping the pointer pressed)
@@ -830,6 +831,15 @@ Pointer kind note (as of 2026-02-27):
   Tooling fails fast and writes `check.capabilities.json` evidence when the capability is missing.
 - For cross-step pointer sessions (`pointer_down`/`pointer_move`/`pointer_up`), `pointer_down.pointer_kind` sets the
   session kind; `pointer_move`/`pointer_up` must either omit `pointer_kind` or match the session kind.
+
+Cross-window docking note (pointer sessions):
+
+- During cross-window docking drags, a script may intentionally release the drag in a different window than where the
+  pointer session started (e.g. start the drag in a torn-off window, then `pointer_up` in the main window to ensure the
+  drop resolves in the correct dock graph).
+- To keep this deterministic, seed the target window coordinates via `set_cursor_in_window_logical` before attempting to
+  migrate `pointer_move`/`pointer_up` to that window.
+  - Example: `tools/diag-scripts/docking/arbitration/docking-arbitration-demo-multiwindow-chained-tearoff-two-tabs-merge.json`
 
 Additional predicate kinds are occasionally added to unblock new regression gates (for example menu a11y checks).
 When authoring scripts, prefer stable `test_id` selectors and stick to predicates documented here; see
