@@ -31,7 +31,28 @@ Migration steps:
 1) Introduce action IDs for the existing command IDs (prefer keeping the same string).
 2) Update UI widgets to bind `.action(...)` rather than `.on_click(cmd_id)` where appropriate.
 3) Update handler registration:
-   - `on_command` hooks become `on_action` hooks (or a unified handler path).
+   - v1: keep using the existing command dispatch pipeline (`on_command`) while we land the
+     view/runtime-level handler table work.
+   - later (post-M1/M2): converge toward `on_action` hooks backed by an action handler table.
+
+### 2.1 Typed unit action IDs (recommended v1 authoring style)
+
+Define typed unit actions with explicit stable ID strings:
+
+```rust,ignore
+mod act {
+    fret::actions!([
+        EditorSave = "app.editor.save.v1",
+        WorkspaceTabClose = "workspace.tabs.close.v1",
+    ]);
+}
+```
+
+Bind a shadcn button to the action:
+
+```rust,ignore
+shadcn::Button::new("Save").action(act::EditorSave);
+```
 
 ---
 
@@ -83,4 +104,3 @@ Migration steps:
 1) Standardize action ID naming conventions (namespace + `.v1` suffix).
 2) Expose action metadata to the GenUI inspector surfaces (optional v1).
 3) Keep GenUI guardrails: do not allow specs to dispatch arbitrary actions without catalog approval.
-

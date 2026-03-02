@@ -40,6 +40,10 @@ pub use fret_icons::IconRegistry;
 #[cfg(all(not(target_arch = "wasm32"), feature = "desktop"))]
 pub use fret_bootstrap::ui_app_driver::ViewElements;
 
+/// Re-export portable action/command identity types for app code and macros.
+pub use fret_runtime::{ActionId, CommandId, TypedAction};
+
+pub mod actions;
 pub mod workspace_menu;
 pub mod workspace_shell;
 

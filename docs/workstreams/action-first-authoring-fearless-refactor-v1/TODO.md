@@ -44,10 +44,16 @@ ID format:
 
 ## B. Action System (Additive v1)
 
-- [ ] AFA-actions-010 Define the `ActionId` type and metadata surface.
+- [~] AFA-actions-010 Define the `ActionId` type and metadata surface.
   - Evidence: `docs/adr/0307-action-registry-and-typed-action-dispatch-v1.md`
-- [ ] AFA-actions-011 Provide an ecosystem macro for defining typed unit actions with stable IDs.
+  - Status (as of 2026-03-02):
+    - Implemented: `ActionId` portable identity (`crates/fret-runtime/src/action.rs`)
+    - Pending: metadata surface (registry convergence, palette/menu integration)
+- [x] AFA-actions-011 Provide an ecosystem macro for defining typed unit actions with stable IDs.
   - Goal: avoid stringly `"my.action.id"` constants in app code.
+  - Evidence:
+    - Macro: `ecosystem/fret/src/actions.rs`
+    - Compile/test: `cargo test -p fret --lib actions::tests::typed_actions_convert_to_command_id`
 - [ ] AFA-actions-012 Add a minimal action handler table API for views/frontends.
   - Goal: IR binds `ActionId`; handlers live in view/app layer.
 - [ ] AFA-actions-013 Integrate action availability queries with input dispatch v2 semantics.
@@ -58,6 +64,15 @@ ID format:
   - dispatch path resolution.
 - [ ] AFA-actions-015 Converge command palette/menu invocation with action dispatch.
   - Goal: palette/menu triggers and pointer triggers share the same action pipeline.
+
+### B.1 Authoring integration (pointer triggers)
+
+- [x] AFA-actions-016 Add action-first binding convenience for shadcn `Button`.
+  - Evidence: `ecosystem/fret-ui-shadcn/src/button.rs` (`Button::action`)
+- [x] AFA-actions-017 Add action-first naming parity helpers in `fret-ui-kit`.
+  - Evidence:
+    - `ecosystem/fret-ui-kit/src/command.rs` (`action_is_enabled`, `dispatch_action_if_enabled`)
+    - `ecosystem/fret-ui-kit/src/declarative/action_hooks.rs` (`pressable_dispatch_action_if_enabled`)
 
 ---
 

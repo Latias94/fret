@@ -22,6 +22,7 @@
 //! commands.register(CommandId::from("app.quit"), CommandMeta::new("Quit"));
 //! ```
 
+pub mod action;
 pub mod capabilities;
 pub mod clipboard_diagnostics;
 pub mod command;
@@ -64,6 +65,7 @@ pub mod window_text_input_snapshot;
 // -----------------------------------------------------------------------------
 // Stable re-exports (portable runtime contract surface)
 // -----------------------------------------------------------------------------
+pub use action::{ActionId, TypedAction};
 pub use capabilities::{
     ExecBackgroundWork, ExecCapabilities, ExecTimers, ExecWake, ExternalDragPayloadKind,
     ExternalDragPositionQuality, PlatformCapabilities, ShellCapabilities,

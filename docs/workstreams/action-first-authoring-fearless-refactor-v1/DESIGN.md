@@ -324,9 +324,9 @@ Target authoring outcome (Rust):
 
 ```rust,ignore
 mod act {
-    actions!(fret, [
-        EditorSave,        // "app.editor.save.v1"
-        WorkspaceTabClose, // "workspace.tabs.close.v1"
+    fret::actions!([
+        EditorSave = "app.editor.save.v1",
+        WorkspaceTabClose = "workspace.tabs.close.v1",
     ]);
 }
 ```

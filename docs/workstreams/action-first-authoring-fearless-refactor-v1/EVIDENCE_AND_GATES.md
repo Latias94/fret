@@ -15,6 +15,19 @@ small, deterministic gates (tests and scripted diagnostics), not just manual QA.
 - ADR (view runtime): `docs/adr/0308-view-authoring-runtime-and-hooks-v1.md`
 - Workstream: `docs/workstreams/action-first-authoring-fearless-refactor-v1/DESIGN.md`
 
+### Implementation anchors (as of 2026-03-02)
+
+Action identity + typed unit actions:
+
+- `crates/fret-runtime/src/action.rs` (`ActionId`, `TypedAction`)
+- `ecosystem/fret/src/actions.rs` (`fret::actions!` macro + unit test)
+
+Pointer-trigger authoring integration (v1 still dispatches through the command pipeline):
+
+- `ecosystem/fret-ui-shadcn/src/button.rs` (`Button::action`)
+- `ecosystem/fret-ui-kit/src/command.rs` (`action_is_enabled`, `dispatch_action_if_enabled`)
+- `ecosystem/fret-ui-kit/src/declarative/action_hooks.rs` (`pressable_dispatch_action_if_enabled`)
+
 ---
 
 ## 2) Regression gates (required)
