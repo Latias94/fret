@@ -1,24 +1,23 @@
-use super::super::super::super::*;
+pub const SOURCE: &str = include_str!("prompt_input_provider_demo.rs");
 
-pub(in crate::ui) fn preview_ai_prompt_input_provider_demo(
-    cx: &mut ElementContext<'_, App>,
-    _theme: &Theme,
-) -> Vec<AnyElement> {
-    use std::sync::Arc;
+// region: example
+use fret_core::{Corners, Edges, Px, SemanticsRole};
+use fret_runtime::Model;
+use fret_ui::element::{ContainerProps, PressableA11y, PressableProps};
+use fret_ui_ai as ui_ai;
+use fret_ui_kit::declarative::stack;
+use fret_ui_kit::{ColorRef, LayoutRefinement, Space, ui};
+use fret_ui_shadcn::prelude::*;
+use std::sync::Arc;
 
-    use fret_core::{Corners, Edges, Px, SemanticsRole};
-    use fret_runtime::Model;
-    use fret_ui::element::{ContainerProps, PressableA11y, PressableProps};
-    use fret_ui_kit::declarative::stack;
-    use fret_ui_kit::{ColorRef, LayoutRefinement, Space, ui};
+#[derive(Default)]
+struct DemoModels {
+    text: Option<Model<String>>,
+    attachments: Option<Model<Vec<ui_ai::AttachmentData>>>,
+    sent_count: Option<Model<u32>>,
+}
 
-    #[derive(Default)]
-    struct DemoModels {
-        text: Option<Model<String>>,
-        attachments: Option<Model<Vec<ui_ai::AttachmentData>>>,
-        sent_count: Option<Model<u32>>,
-    }
-
+pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement {
     let text = cx.with_state(DemoModels::default, |st| st.text.clone());
     let text = match text {
         Some(model) => model,
@@ -37,9 +36,7 @@ pub(in crate::ui) fn preview_ai_prompt_input_provider_demo(
                 .app
                 .models_mut()
                 .insert(Vec::<ui_ai::AttachmentData>::new());
-            cx.with_state(DemoModels::default, |st| {
-                st.attachments = Some(model.clone())
-            });
+            cx.with_state(DemoModels::default, |st| st.attachments = Some(model.clone()));
             model
         }
     };
@@ -49,9 +46,7 @@ pub(in crate::ui) fn preview_ai_prompt_input_provider_demo(
         Some(model) => model,
         None => {
             let model = cx.app.models_mut().insert(0u32);
-            cx.with_state(DemoModels::default, |st| {
-                st.sent_count = Some(model.clone())
-            });
+            cx.with_state(DemoModels::default, |st| st.sent_count = Some(model.clone()));
             model
         }
     };
@@ -169,7 +164,7 @@ pub(in crate::ui) fn preview_ai_prompt_input_provider_demo(
             )]
         });
 
-    vec![stack::vstack(
+    stack::vstack(
         cx,
         stack::VStackProps::default()
             .layout(LayoutRefinement::default().w_full().min_w_0())
@@ -181,5 +176,7 @@ pub(in crate::ui) fn preview_ai_prompt_input_provider_demo(
                 body,
             ]
         },
-    )]
+    )
 }
+// endregion: example
+

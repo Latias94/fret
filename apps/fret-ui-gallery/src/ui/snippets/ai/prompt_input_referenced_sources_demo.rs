@@ -1,21 +1,20 @@
-use super::super::super::super::*;
+pub const SOURCE: &str = include_str!("prompt_input_referenced_sources_demo.rs");
 
-pub(in crate::ui) fn preview_ai_prompt_input_referenced_sources_demo(
-    cx: &mut ElementContext<'_, App>,
-    _theme: &Theme,
-) -> Vec<AnyElement> {
-    use std::sync::Arc;
+// region: example
+use fret_runtime::Model;
+use fret_ui_ai as ui_ai;
+use fret_ui_kit::declarative::stack;
+use fret_ui_kit::{LayoutRefinement, Space};
+use fret_ui_shadcn::prelude::*;
+use fret_ui_shadcn::{Button, ButtonSize, ButtonVariant};
+use std::sync::Arc;
 
-    use fret_runtime::Model;
-    use fret_ui_kit::declarative::stack;
-    use fret_ui_kit::{LayoutRefinement, Space};
-    use fret_ui_shadcn::{Button, ButtonSize, ButtonVariant};
+#[derive(Default)]
+struct DemoModels {
+    sources: Option<Model<Vec<ui_ai::AttachmentSourceDocumentData>>>,
+}
 
-    #[derive(Default)]
-    struct DemoModels {
-        sources: Option<Model<Vec<ui_ai::AttachmentSourceDocumentData>>>,
-    }
-
+pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement {
     let sources = cx.with_state(DemoModels::default, |st| st.sources.clone());
     let sources = match sources {
         Some(model) => model,
@@ -60,7 +59,7 @@ pub(in crate::ui) fn preview_ai_prompt_input_referenced_sources_demo(
             block_end: Vec::new(),
         });
 
-    vec![stack::vstack(
+    stack::vstack(
         cx,
         stack::VStackProps::default()
             .layout(LayoutRefinement::default().w_full().min_w_0())
@@ -73,5 +72,7 @@ pub(in crate::ui) fn preview_ai_prompt_input_referenced_sources_demo(
                 input,
             ]
         },
-    )]
+    )
 }
+// endregion: example
+

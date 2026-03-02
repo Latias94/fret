@@ -3,6 +3,9 @@ use super::*;
 mod accordion;
 mod ai_attachments_demo;
 mod ai_code_block_demo;
+mod ai_prompt_input_action_menu_demo;
+mod ai_prompt_input_provider_demo;
+mod ai_prompt_input_referenced_sources_demo;
 mod ai_snippet_demo;
 mod ai_terminal_demo;
 mod ai_tool_demo;
@@ -106,6 +109,29 @@ pub(super) fn preview_ai_tool_demo(
     theme: &Theme,
 ) -> Vec<AnyElement> {
     ai_tool_demo::preview_ai_tool_demo(cx, theme)
+}
+
+pub(super) fn preview_ai_prompt_input_provider_demo(
+    cx: &mut ElementContext<'_, App>,
+    theme: &Theme,
+) -> Vec<AnyElement> {
+    ai_prompt_input_provider_demo::preview_ai_prompt_input_provider_demo(cx, theme)
+}
+
+pub(super) fn preview_ai_prompt_input_action_menu_demo(
+    cx: &mut ElementContext<'_, App>,
+    theme: &Theme,
+) -> Vec<AnyElement> {
+    ai_prompt_input_action_menu_demo::preview_ai_prompt_input_action_menu_demo(cx, theme)
+}
+
+pub(super) fn preview_ai_prompt_input_referenced_sources_demo(
+    cx: &mut ElementContext<'_, App>,
+    theme: &Theme,
+) -> Vec<AnyElement> {
+    ai_prompt_input_referenced_sources_demo::preview_ai_prompt_input_referenced_sources_demo(
+        cx, theme,
+    )
 }
 
 pub(super) fn preview_accordion(

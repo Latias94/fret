@@ -1,20 +1,19 @@
-use super::super::super::super::*;
+pub const SOURCE: &str = include_str!("prompt_input_action_menu_demo.rs");
 
-pub(in crate::ui) fn preview_ai_prompt_input_action_menu_demo(
-    cx: &mut ElementContext<'_, App>,
-    _theme: &Theme,
-) -> Vec<AnyElement> {
-    use std::sync::Arc;
+// region: example
+use fret_runtime::Model;
+use fret_ui_ai as ui_ai;
+use fret_ui_kit::declarative::stack;
+use fret_ui_kit::{LayoutRefinement, Space};
+use fret_ui_shadcn::prelude::*;
+use std::sync::Arc;
 
-    use fret_runtime::Model;
-    use fret_ui_kit::declarative::stack;
-    use fret_ui_kit::{LayoutRefinement, Space};
+#[derive(Default)]
+struct DemoModels {
+    attachments: Option<Model<Vec<ui_ai::AttachmentData>>>,
+}
 
-    #[derive(Default)]
-    struct DemoModels {
-        attachments: Option<Model<Vec<ui_ai::AttachmentData>>>,
-    }
-
+pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement {
     let attachments = cx.with_state(DemoModels::default, |st| st.attachments.clone());
     let attachments = match attachments {
         Some(model) => model,
@@ -23,9 +22,7 @@ pub(in crate::ui) fn preview_ai_prompt_input_action_menu_demo(
                 .app
                 .models_mut()
                 .insert(Vec::<ui_ai::AttachmentData>::new());
-            cx.with_state(DemoModels::default, |st| {
-                st.attachments = Some(model.clone())
-            });
+            cx.with_state(DemoModels::default, |st| st.attachments = Some(model.clone()));
             model
         }
     };
@@ -72,7 +69,7 @@ pub(in crate::ui) fn preview_ai_prompt_input_action_menu_demo(
             }
         });
 
-    vec![stack::vstack(
+    stack::vstack(
         cx,
         stack::VStackProps::default()
             .layout(LayoutRefinement::default().w_full().min_w_0())
@@ -84,5 +81,7 @@ pub(in crate::ui) fn preview_ai_prompt_input_action_menu_demo(
                 input,
             ]
         },
-    )]
+    )
 }
+// endregion: example
+
