@@ -28,6 +28,12 @@ impl UiDiagnosticsService {
             self.inspect_help_search_query.clear();
             self.inspect_help_match_node_ids.clear();
             self.inspect_help_selected_match_index.clear();
+            self.inspect_help_scroll_offset.clear();
+            self.inspect_tree_open_windows.clear();
+            self.inspect_tree_expanded_node_ids.clear();
+            self.inspect_tree_flat_node_ids.clear();
+            self.inspect_tree_selected_index.clear();
+            self.inspect_tree_selected_node_id.clear();
             self.inspect_pending_copy_selector_windows.clear();
         }
     }
@@ -59,6 +65,21 @@ impl UiDiagnosticsService {
         self.inspect_help_selected_match_index.get(&window).copied()
     }
 
+    pub(super) fn inspect_help_scroll_offset(&self, window: AppWindowId) -> usize {
+        self.inspect_help_scroll_offset
+            .get(&window)
+            .copied()
+            .unwrap_or(0)
+    }
+
+    pub(super) fn set_inspect_help_scroll_offset(&mut self, window: AppWindowId, offset: usize) {
+        if offset == 0 {
+            self.inspect_help_scroll_offset.remove(&window);
+        } else {
+            self.inspect_help_scroll_offset.insert(window, offset);
+        }
+    }
+
     pub(super) fn set_inspect_help_matches(&mut self, window: AppWindowId, matches: Vec<u64>) {
         if matches.is_empty() {
             self.inspect_help_match_node_ids.remove(&window);
@@ -84,6 +105,63 @@ impl UiDiagnosticsService {
             .unwrap_or(0)
             .min(len.saturating_sub(1));
         self.inspect_help_selected_match_index.insert(window, idx);
+    }
+
+    pub(super) fn inspect_tree_is_open(&self, window: AppWindowId) -> bool {
+        self.inspect_tree_open_windows.contains(&window)
+    }
+
+    pub(super) fn set_inspect_tree_items(&mut self, window: AppWindowId, items: Vec<u64>) {
+        if items.is_empty() {
+            self.inspect_tree_flat_node_ids.remove(&window);
+            self.inspect_tree_selected_index.remove(&window);
+            self.inspect_tree_selected_node_id.remove(&window);
+            return;
+        }
+
+        self.inspect_tree_flat_node_ids.insert(window, items);
+        let items = self
+            .inspect_tree_flat_node_ids
+            .get(&window)
+            .map(|v| v.as_slice())
+            .unwrap_or(&[]);
+        if items.is_empty() {
+            self.inspect_tree_selected_index.remove(&window);
+            self.inspect_tree_selected_node_id.remove(&window);
+            return;
+        }
+
+        let mut idx = self
+            .inspect_tree_selected_index
+            .get(&window)
+            .copied()
+            .unwrap_or(0)
+            .min(items.len().saturating_sub(1));
+
+        if let Some(want_id) = self.inspect_tree_selected_node_id.get(&window).copied() {
+            if let Some(pos) = items.iter().position(|id| *id == want_id) {
+                idx = pos;
+            }
+        }
+
+        let selected_id = items.get(idx).copied().unwrap_or_else(|| items[0]);
+        self.inspect_tree_selected_index.insert(window, idx);
+        self.inspect_tree_selected_node_id
+            .insert(window, selected_id);
+    }
+
+    pub(super) fn inspect_tree_selected_node_id(&self, window: AppWindowId) -> Option<u64> {
+        let items = self.inspect_tree_flat_node_ids.get(&window)?;
+        if items.is_empty() {
+            return None;
+        }
+        let idx = self
+            .inspect_tree_selected_index
+            .get(&window)
+            .copied()
+            .unwrap_or(0)
+            .min(items.len().saturating_sub(1));
+        items.get(idx).copied()
     }
 
     fn inspect_help_selected_match_node_id(&self, window: AppWindowId) -> Option<u64> {
@@ -201,7 +279,14 @@ impl UiDiagnosticsService {
 
             const MAX_QUERY_BYTES: usize = 64;
             let q = self.inspect_help_search_query.entry(window).or_default();
-            for ch in text.chars() {
+            let mut chars: Vec<char> = text.chars().collect();
+            if let Some(expected) = self.inspect_help_suppress_next_text_input.remove(&window) {
+                if chars.first().copied() == Some(expected) {
+                    chars.remove(0);
+                }
+            }
+
+            for ch in chars {
                 if q.len() >= MAX_QUERY_BYTES {
                     break;
                 }
@@ -215,6 +300,7 @@ impl UiDiagnosticsService {
 
             if q.trim().is_empty() {
                 self.inspect_help_search_query.remove(&window);
+                self.inspect_help_suppress_next_text_input.remove(&window);
             }
             self.inspect_help_selected_match_index.insert(window, 0);
             app.request_redraw(window);
@@ -284,11 +370,19 @@ impl UiDiagnosticsService {
 
                 let help_open = if self.inspect_help_open_windows.remove(&window) {
                     self.inspect_help_search_query.remove(&window);
+                    self.inspect_help_suppress_next_text_input.remove(&window);
                     self.inspect_help_match_node_ids.remove(&window);
                     self.inspect_help_selected_match_index.remove(&window);
+                    self.inspect_help_scroll_offset.remove(&window);
+                    self.inspect_tree_open_windows.remove(&window);
+                    self.inspect_tree_expanded_node_ids.remove(&window);
+                    self.inspect_tree_flat_node_ids.remove(&window);
+                    self.inspect_tree_selected_index.remove(&window);
+                    self.inspect_tree_selected_node_id.remove(&window);
                     false
                 } else {
                     self.inspect_help_open_windows.insert(window);
+                    self.inspect_help_scroll_offset.remove(&window);
                     true
                 };
 
@@ -330,13 +424,60 @@ impl UiDiagnosticsService {
                     app.request_redraw(window);
                     return true;
                 }
+            } else if self.inspect_tree_is_open(window) {
+                if let Some(node_id) = self.inspect_tree_selected_node_id(window) {
+                    self.inspect_focus_down_stack.insert(window, Vec::new());
+                    self.inspect_locked_windows.insert(window);
+                    self.inspect_pending_nav
+                        .insert(window, InspectNavCommand::SelectNode(node_id));
+                    self.inspect_pending_copy_selector_windows.insert(window);
+                    self.push_inspect_toast(
+                        window,
+                        "inspect: locked node and copied selector".to_string(),
+                    );
+                    app.request_redraw(window);
+                    return true;
+                }
             }
 
             if self.inspect_help_search_query.remove(&window).is_some() {
+                self.inspect_help_suppress_next_text_input.remove(&window);
                 self.inspect_help_match_node_ids.remove(&window);
                 self.inspect_help_selected_match_index.remove(&window);
                 self.push_inspect_toast(window, "inspect: search cleared".to_string());
             }
+            app.request_redraw(window);
+            return true;
+        }
+
+        if self.inspect_help_is_open(window)
+            && (modifiers.ctrl || modifiers.meta)
+            && !(modifiers.alt || modifiers.alt_gr)
+            && *key == KeyCode::KeyT
+        {
+            let tree_open = if self.inspect_tree_open_windows.remove(&window) {
+                self.inspect_tree_expanded_node_ids.remove(&window);
+                self.inspect_tree_flat_node_ids.remove(&window);
+                self.inspect_tree_selected_index.remove(&window);
+                self.inspect_tree_selected_node_id.remove(&window);
+                self.set_inspect_help_scroll_offset(window, 0);
+                false
+            } else {
+                self.inspect_tree_open_windows.insert(window);
+                // Jump towards the bottom so the tree section is visible even when the help output
+                // grows (explainability + neighborhood + matches).
+                self.set_inspect_help_scroll_offset(window, usize::MAX / 4);
+                true
+            };
+
+            self.push_inspect_toast(
+                window,
+                if tree_open {
+                    "inspect: tree shown".to_string()
+                } else {
+                    "inspect: tree hidden".to_string()
+                },
+            );
             app.request_redraw(window);
             return true;
         }
@@ -367,6 +508,30 @@ impl UiDiagnosticsService {
                         app.request_redraw(window);
                         return true;
                     }
+
+                    if self.inspect_help_search_query(window).is_none()
+                        && self.inspect_tree_is_open(window)
+                        && self
+                            .inspect_tree_flat_node_ids
+                            .get(&window)
+                            .is_some_and(|v| !v.is_empty())
+                    {
+                        let items = self.inspect_tree_flat_node_ids.get(&window).unwrap();
+                        let len = items.len();
+                        let idx = self
+                            .inspect_tree_selected_index
+                            .get(&window)
+                            .copied()
+                            .unwrap_or(0)
+                            .min(len.saturating_sub(1));
+                        let next = if idx == 0 { len - 1 } else { idx - 1 };
+                        self.inspect_tree_selected_index.insert(window, next);
+                        if let Some(id) = items.get(next).copied() {
+                            self.inspect_tree_selected_node_id.insert(window, id);
+                        }
+                        app.request_redraw(window);
+                        return true;
+                    }
                 }
                 KeyCode::ArrowDown => {
                     if self.inspect_help_search_query(window).is_some()
@@ -390,12 +555,90 @@ impl UiDiagnosticsService {
                         app.request_redraw(window);
                         return true;
                     }
+
+                    if self.inspect_help_search_query(window).is_none()
+                        && self.inspect_tree_is_open(window)
+                        && self
+                            .inspect_tree_flat_node_ids
+                            .get(&window)
+                            .is_some_and(|v| !v.is_empty())
+                    {
+                        let items = self.inspect_tree_flat_node_ids.get(&window).unwrap();
+                        let len = items.len();
+                        let idx = self
+                            .inspect_tree_selected_index
+                            .get(&window)
+                            .copied()
+                            .unwrap_or(0)
+                            .min(len.saturating_sub(1));
+                        let next = (idx + 1) % len.max(1);
+                        self.inspect_tree_selected_index.insert(window, next);
+                        if let Some(id) = items.get(next).copied() {
+                            self.inspect_tree_selected_node_id.insert(window, id);
+                        }
+                        app.request_redraw(window);
+                        return true;
+                    }
+                }
+                KeyCode::ArrowRight => {
+                    if self.inspect_help_search_query(window).is_none()
+                        && self.inspect_tree_is_open(window)
+                    {
+                        if let Some(node_id) = self.inspect_tree_selected_node_id(window) {
+                            self.inspect_tree_expanded_node_ids
+                                .entry(window)
+                                .or_default()
+                                .insert(node_id);
+                            app.request_redraw(window);
+                            return true;
+                        }
+                    }
+                }
+                KeyCode::ArrowLeft => {
+                    if self.inspect_help_search_query(window).is_none()
+                        && self.inspect_tree_is_open(window)
+                    {
+                        if let Some(node_id) = self.inspect_tree_selected_node_id(window) {
+                            if self
+                                .inspect_tree_expanded_node_ids
+                                .entry(window)
+                                .or_default()
+                                .remove(&node_id)
+                            {
+                                app.request_redraw(window);
+                                return true;
+                            }
+                        }
+                    }
+                }
+                KeyCode::PageUp => {
+                    let offset = self.inspect_help_scroll_offset(window);
+                    self.set_inspect_help_scroll_offset(window, offset.saturating_sub(20));
+                    app.request_redraw(window);
+                    return true;
+                }
+                KeyCode::PageDown => {
+                    let offset = self.inspect_help_scroll_offset(window);
+                    self.set_inspect_help_scroll_offset(window, offset.saturating_add(20));
+                    app.request_redraw(window);
+                    return true;
+                }
+                KeyCode::Home => {
+                    self.set_inspect_help_scroll_offset(window, 0);
+                    app.request_redraw(window);
+                    return true;
+                }
+                KeyCode::End => {
+                    self.set_inspect_help_scroll_offset(window, usize::MAX / 4);
+                    app.request_redraw(window);
+                    return true;
                 }
                 KeyCode::Backspace => {
                     if let Some(q) = self.inspect_help_search_query.get_mut(&window) {
                         q.pop();
                         if q.trim().is_empty() {
                             self.inspect_help_search_query.remove(&window);
+                            self.inspect_help_suppress_next_text_input.remove(&window);
                         }
                     }
                     self.inspect_help_selected_match_index.insert(window, 0);
@@ -428,9 +671,24 @@ impl UiDiagnosticsService {
                             app.request_redraw(window);
                             return true;
                         }
+                    } else if self.inspect_tree_is_open(window) {
+                        if let Some(node_id) = self.inspect_tree_selected_node_id(window) {
+                            self.inspect_focus_down_stack.insert(window, Vec::new());
+                            self.inspect_locked_windows.insert(window);
+                            self.inspect_pending_nav
+                                .insert(window, InspectNavCommand::SelectNode(node_id));
+                            self.push_inspect_toast(
+                                window,
+                                "inspect: locked node selection (press Ctrl/Cmd+C to copy selector)"
+                                    .to_string(),
+                            );
+                            app.request_redraw(window);
+                            return true;
+                        }
                     }
 
                     if self.inspect_help_search_query.remove(&window).is_some() {
+                        self.inspect_help_suppress_next_text_input.remove(&window);
                         self.inspect_help_match_node_ids.remove(&window);
                         self.inspect_help_selected_match_index.remove(&window);
                         self.push_inspect_toast(window, "inspect: search cleared".to_string());
@@ -439,15 +697,36 @@ impl UiDiagnosticsService {
                     return true;
                 }
                 KeyCode::Space => {
-                    // Prefer `Event::TextInput` for actual text entry to avoid double-appending
-                    // characters on platforms that deliver both KeyDown + TextInput.
+                    const MAX_QUERY_BYTES: usize = 64;
+                    let q = self.inspect_help_search_query.entry(window).or_default();
+                    if q.len() < MAX_QUERY_BYTES {
+                        q.push(' ');
+                    }
+                    if q.trim().is_empty() {
+                        self.inspect_help_search_query.remove(&window);
+                        self.inspect_help_suppress_next_text_input.remove(&window);
+                    }
+                    self.inspect_help_selected_match_index.insert(window, 0);
                     app.request_redraw(window);
                     return true;
                 }
                 _ => {
-                    // Prefer `Event::TextInput` for actual text entry to avoid double-appending
-                    // characters on platforms that deliver both KeyDown + TextInput.
-                    if fret_core::keycode_to_ascii_lowercase(*key).is_some() {
+                    if let Some(ch) = fret_core::keycode_to_ascii_lowercase(*key) {
+                        const MAX_QUERY_BYTES: usize = 64;
+                        let q = self.inspect_help_search_query.entry(window).or_default();
+                        if q.len() < MAX_QUERY_BYTES {
+                            let ok = ch.is_ascii_alphanumeric() || ch == '-';
+                            if ok {
+                                q.push(ch);
+                                self.inspect_help_suppress_next_text_input
+                                    .insert(window, ch);
+                            }
+                        }
+                        if q.trim().is_empty() {
+                            self.inspect_help_search_query.remove(&window);
+                            self.inspect_help_suppress_next_text_input.remove(&window);
+                        }
+                        self.inspect_help_selected_match_index.insert(window, 0);
                         app.request_redraw(window);
                         return true;
                     }

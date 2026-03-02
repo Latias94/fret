@@ -61,6 +61,8 @@ mod inspect_explain;
 mod inspect_neighborhood;
 #[cfg(feature = "diagnostics")]
 mod inspect_overlay;
+#[cfg(feature = "diagnostics")]
+mod inspect_tree;
 mod pick;
 mod pick_flow;
 mod snapshot_recording;

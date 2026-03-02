@@ -39,8 +39,17 @@ pub struct UiDiagnosticsService {
     inspect_locked_windows: HashSet<AppWindowId>,
     inspect_help_open_windows: HashSet<AppWindowId>,
     inspect_help_search_query: HashMap<AppWindowId, String>,
+    inspect_help_suppress_next_text_input: HashMap<AppWindowId, char>,
     inspect_help_match_node_ids: HashMap<AppWindowId, Vec<u64>>,
     inspect_help_selected_match_index: HashMap<AppWindowId, usize>,
+    inspect_help_scroll_offset: HashMap<AppWindowId, usize>,
+
+    // Help-mode tree browser (keyboard-driven; diagnostics-only).
+    inspect_tree_open_windows: HashSet<AppWindowId>,
+    inspect_tree_expanded_node_ids: HashMap<AppWindowId, HashSet<u64>>,
+    inspect_tree_flat_node_ids: HashMap<AppWindowId, Vec<u64>>,
+    inspect_tree_selected_index: HashMap<AppWindowId, usize>,
+    inspect_tree_selected_node_id: HashMap<AppWindowId, u64>,
     inspect_pending_copy_selector_windows: HashSet<AppWindowId>,
     inspect_pending_copy_details_windows: HashSet<AppWindowId>,
     inspect_pending_copy_details_payload: HashMap<AppWindowId, String>,

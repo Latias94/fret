@@ -5,6 +5,7 @@ use fret_core::AppWindowId;
 use super::UiDiagnosticsService;
 use super::inspect_explain::build_inspect_explainability_lines;
 use super::inspect_neighborhood::build_inspect_neighborhood_model;
+use super::inspect_tree::build_inspect_tree_model;
 use super::selector::SemanticsIndex;
 
 #[cfg(feature = "diagnostics")]
@@ -77,6 +78,8 @@ pub(crate) fn render_diag_inspect_overlay(
         locked,
         help_search_query,
         help_selected_match_index,
+        help_scroll_offset,
+        tree_open,
     ) = app.with_global_mut_untracked(UiDiagnosticsService::default, |svc, _app| {
         (
             svc.last_pointer_position(window),
@@ -91,6 +94,8 @@ pub(crate) fn render_diag_inspect_overlay(
             svc.inspect_is_locked(window),
             svc.inspect_help_search_query(window).map(|s| s.to_string()),
             svc.inspect_help_selected_match_index(window),
+            svc.inspect_help_scroll_offset(window),
+            svc.inspect_tree_is_open(window),
         )
     });
 
@@ -108,7 +113,8 @@ pub(crate) fn render_diag_inspect_overlay(
     }
 
     let snapshot = ui.semantics_snapshot();
-    let (hovered, picked, focus, neighborhood_model) = if let Some(snapshot) = snapshot {
+    let (hovered, picked, focus, neighborhood_model, tree_model) = if let Some(snapshot) = snapshot
+    {
         let index = SemanticsIndex::new(snapshot);
 
         let hovered = pointer_pos.and_then(|pos| {
@@ -157,14 +163,79 @@ pub(crate) fn render_diag_inspect_overlay(
             )
         });
 
+        let tree_model = (help_open && tree_open).then(|| {
+            // Lazy-init tree state while we have a snapshot and an index.
+            app.with_global_mut_untracked(UiDiagnosticsService::default, |svc, _app| {
+                let expanded = svc
+                    .inspect_tree_expanded_node_ids
+                    .entry(window)
+                    .or_default();
+                let selected = svc.inspect_tree_selected_node_id.get(&window).copied();
+                let anchor = selected.or(focus_node_id).or(picked_node_id);
+
+                if selected.is_none() {
+                    if let Some(anchor) = anchor {
+                        svc.inspect_tree_selected_node_id.insert(window, anchor);
+                    }
+                }
+
+                if expanded.is_empty() {
+                    if let Some(anchor) = anchor {
+                        let mut cur = Some(anchor);
+                        for _ in 0..64 {
+                            let Some(id) = cur else {
+                                break;
+                            };
+                            expanded.insert(id);
+                            cur = index
+                                .by_id
+                                .get(&id)
+                                .and_then(|n| n.parent.map(|p| p.data().as_ffi()));
+                        }
+                    } else {
+                        for r in snapshot.roots.iter().filter(|r| r.visible) {
+                            expanded.insert(r.root.data().as_ffi());
+                        }
+                    }
+                }
+            });
+
+            let (expanded, selected_node_id) =
+                app.with_global_mut_untracked(UiDiagnosticsService::default, |svc, _app| {
+                    (
+                        svc.inspect_tree_expanded_node_ids
+                            .get(&window)
+                            .cloned()
+                            .unwrap_or_default(),
+                        svc.inspect_tree_selected_node_id.get(&window).copied(),
+                    )
+                });
+
+            let model = build_inspect_tree_model(
+                snapshot,
+                &index,
+                &expanded,
+                selected_node_id,
+                redact_text,
+            );
+            app.with_global_mut_untracked(UiDiagnosticsService::default, |svc, _app| {
+                svc.set_inspect_tree_items(window, model.flat_node_ids.clone());
+            });
+            model
+        });
+
         (
             hovered,
             picked,
             focus,
             neighborhood_model.unwrap_or_default(),
+            tree_model.unwrap_or_default(),
         )
     } else {
-        (None, None, None, Default::default())
+        app.with_global_mut_untracked(UiDiagnosticsService::default, |svc, _app| {
+            svc.set_inspect_tree_items(window, Vec::new());
+        });
+        (None, None, None, Default::default(), Default::default())
     };
 
     app.with_global_mut_untracked(UiDiagnosticsService::default, |svc, _app| {
@@ -195,6 +266,114 @@ pub(crate) fn render_diag_inspect_overlay(
             )
         });
 
+    let should_show_hud = pick_armed
+        || pick_pending
+        || inspect_enabled
+        || help_open
+        || toast.is_some()
+        || best_selector.is_some()
+        || focus_summary.is_some()
+        || focus_path.is_some();
+
+    let hud_lines: Option<Vec<String>> = should_show_hud.then(|| {
+        let mut header_lines: Vec<String> = Vec::new();
+        let mut body_lines: Vec<String> = Vec::new();
+
+        if pick_armed || pick_pending {
+            header_lines
+                .push("INSPECT: click to pick a target (Esc to cancel, Ctrl+Alt+H help)".to_string());
+        } else if help_open {
+            header_lines.push(format!(
+                "INSPECT (enabled={inspect_enabled}, consume_clicks={consume_clicks}, locked={locked})"
+            ));
+            header_lines.push("Ctrl/Cmd+Alt+I: toggle inspect".to_string());
+            header_lines.push("Ctrl/Cmd+Alt+H: toggle help".to_string());
+            header_lines.push("Esc: exit inspect / disarm pick".to_string());
+            header_lines.push("Ctrl/Cmd+C: copy best selector".to_string());
+            header_lines.push("Ctrl/Cmd+Shift+C: copy inspect details".to_string());
+            header_lines.push("F: select focused node".to_string());
+            header_lines.push("L: lock/unlock selection".to_string());
+            header_lines.push("Alt+Up/Down: navigate parent chain (locked)".to_string());
+            header_lines.push("Ctrl/Cmd+T: toggle tree view".to_string());
+            header_lines.push("PageUp/PageDown/Home/End: scroll help output".to_string());
+            header_lines.push(
+                "Ctrl/Cmd+Enter (help search): lock selected match + copy selector".to_string(),
+            );
+
+            if !explainability_lines.is_empty() {
+                body_lines.extend(explainability_lines.iter().cloned());
+            }
+            if !neighborhood_model.lines.is_empty() {
+                if !body_lines.is_empty() {
+                    body_lines.push(String::new());
+                }
+                body_lines.extend(neighborhood_model.lines.iter().cloned());
+            }
+            if !tree_model.lines.is_empty() {
+                if !body_lines.is_empty() {
+                    body_lines.push(String::new());
+                }
+                body_lines.extend(tree_model.lines.iter().cloned());
+            }
+
+            const BODY_PAGE_LINES: usize = 28;
+            let total = body_lines.len();
+            let mut offset = help_scroll_offset;
+            let max_offset = total.saturating_sub(BODY_PAGE_LINES);
+            if offset > max_offset {
+                offset = max_offset;
+                app.with_global_mut_untracked(UiDiagnosticsService::default, |svc, _app| {
+                    svc.set_inspect_help_scroll_offset(window, offset);
+                });
+            }
+
+            if total > 0 {
+                let start_1 = offset.saturating_add(1);
+                let end_1 = (offset + BODY_PAGE_LINES).min(total);
+                header_lines.push(format!("help: {start_1}-{end_1}/{total}"));
+                body_lines = body_lines
+                    .into_iter()
+                    .skip(offset)
+                    .take(BODY_PAGE_LINES)
+                    .collect();
+            } else {
+                header_lines.push("help: <empty>".to_string());
+                body_lines.clear();
+            }
+        } else {
+            header_lines.push(format!(
+                "INSPECT: Ctrl+Alt+I toggle | Ctrl+Alt+H help | Esc exit | Ctrl+C copy selector | F focus | L lock | Alt+Up/Down nav (consume_clicks={consume_clicks}, locked={locked})"
+            ));
+        }
+
+        if let Some(t) = toast.as_deref() {
+            header_lines.push(format!("status: {t}"));
+        }
+        if let Some(summary) = focus_summary.as_deref() {
+            header_lines.push(summary.to_string());
+        }
+        if let Some(path) = focus_path.as_deref() {
+            header_lines.push(path.to_string());
+        }
+        if let Some(sel) = best_selector.as_deref() {
+            let trimmed = if sel.chars().take(181).count() > 180 {
+                let mut s: String = sel.chars().take(180).collect();
+                s.push('…');
+                s
+            } else {
+                sel.to_string()
+            };
+            header_lines.push(format!("selector: {trimmed}"));
+        }
+
+        let mut lines = header_lines;
+        if !body_lines.is_empty() {
+            lines.push(String::new());
+            lines.extend(body_lines);
+        }
+        lines
+    });
+
     let root_node = fret_ui::declarative::render_root(
         ui,
         app,
@@ -210,15 +389,7 @@ pub(crate) fn render_diag_inspect_overlay(
 
             let mut children = Vec::new();
 
-            if pick_armed
-                || pick_pending
-                || inspect_enabled
-                || help_open
-                || toast.is_some()
-                || best_selector.is_some()
-                || focus_summary.is_some()
-                || focus_path.is_some()
-            {
+            if let Some(lines) = hud_lines.as_ref() {
                 let mut layout = LayoutStyle::default();
                 layout.position = PositionStyle::Absolute;
                 layout.inset = InsetStyle {
@@ -245,65 +416,12 @@ pub(crate) fn render_diag_inspect_overlay(
                     a: 1.0,
                 });
 
-                let mut lines: Vec<String> = Vec::new();
-                if pick_armed || pick_pending {
-                    lines.push(
-                        "INSPECT: click to pick a target (Esc to cancel, Ctrl+Alt+H help)"
-                            .to_string(),
-                    );
-                } else {
-                    if help_open {
-                        lines.push(format!(
-                            "INSPECT (enabled={inspect_enabled}, consume_clicks={consume_clicks}, locked={locked})"
-                        ));
-                        lines.push("Ctrl/Cmd+Alt+I: toggle inspect".to_string());
-                        lines.push("Ctrl/Cmd+Alt+H: toggle help".to_string());
-                        lines.push("Esc: exit inspect / disarm pick".to_string());
-                        lines.push("Ctrl/Cmd+C: copy best selector".to_string());
-                        lines.push("Ctrl/Cmd+Shift+C: copy inspect details".to_string());
-                        lines.push("F: select focused node".to_string());
-                        lines.push("L: lock/unlock selection".to_string());
-                        lines.push("Alt+Up/Down: navigate parent chain (locked)".to_string());
-                        lines.push(
-                            "Ctrl/Cmd+Enter (help search): lock selected match + copy selector"
-                                .to_string(),
-                        );
-
-                        if !explainability_lines.is_empty() {
-                            lines.push(String::new());
-                            lines.extend(explainability_lines.iter().cloned());
-                        }
-
-                        if !neighborhood_model.lines.is_empty() {
-                            lines.push(String::new());
-                            lines.extend(neighborhood_model.lines.iter().cloned());
-                        }
-                    } else {
-                        lines.push(format!(
-                            "INSPECT: Ctrl+Alt+I toggle | Ctrl+Alt+H help | Esc exit | Ctrl+C copy selector | F focus | L lock | Alt+Up/Down nav (consume_clicks={consume_clicks}, locked={locked})"
-                        ));
-                    }
-                }
-                if let Some(t) = toast.as_deref() {
-                    lines.push(format!("status: {t}"));
-                }
-                if let Some(summary) = focus_summary.as_deref() {
-                    lines.push(summary.to_string());
-                }
-                if let Some(path) = focus_path.as_deref() {
-                    lines.push(path.to_string());
-                }
-                if let Some(sel) = best_selector.as_deref() {
-                    let trimmed = if sel.len() > 180 {
-                        format!("{}…", &sel[..180])
-                    } else {
-                        sel.to_string()
-                    };
-                    lines.push(format!("selector: {trimmed}"));
-                }
-
                 children.push(cx.container(props, |cx| {
-                    lines.into_iter().map(|t| cx.text(t)).collect::<Vec<_>>()
+                    lines
+                        .iter()
+                        .cloned()
+                        .map(|t| cx.text(t))
+                        .collect::<Vec<_>>()
                 }));
             }
 
