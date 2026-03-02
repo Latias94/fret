@@ -3033,15 +3033,7 @@ impl ContextMenu {
             let open = self.open;
             let on_dismiss_request = self.on_dismiss_request.clone();
             let on_open_auto_focus = self.on_open_auto_focus.clone();
-            let on_close_auto_focus = self.on_close_auto_focus.clone().or_else(|| {
-                Some(Arc::new(
-                    |_host: &mut dyn fret_ui::action::UiFocusActionHost,
-                     _cx: fret_ui::action::ActionCx,
-                     req: &mut fret_ui::action::AutoFocusRequestCx| {
-                        req.prevent_default();
-                    },
-                ))
-            });
+            let on_close_auto_focus = self.on_close_auto_focus.clone();
             let open_model_id = open.id();
             let cancel_open: ContextMenuCancelOpenShared =
                 cx.with_state(context_menu_cancel_open_shared, |shared| shared.clone());

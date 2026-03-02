@@ -16,11 +16,11 @@ use fret_ui_kit::declarative::stack;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::primitives::controllable_state;
 use fret_ui_kit::primitives::popover as radix_popover;
-use fret_ui_kit::recipes::input::{resolve_input_chrome, InputTokenKeys};
+use fret_ui_kit::recipes::input::{InputTokenKeys, resolve_input_chrome};
 use fret_ui_kit::typography;
 use fret_ui_kit::{
-    ui, ChromeRefinement, ColorFallback, ColorRef, LayoutRefinement, Radius, ShadowPreset,
-    Size as ComponentSize, Space, WidgetState, WidgetStateProperty, WidgetStates,
+    ChromeRefinement, ColorFallback, ColorRef, LayoutRefinement, Radius, ShadowPreset,
+    Size as ComponentSize, Space, WidgetState, WidgetStateProperty, WidgetStates, ui,
 };
 
 use crate::{
@@ -868,11 +868,13 @@ mod tests {
             bounds,
             "native-select-test-id-prefix",
             |cx| {
-                vec![NativeSelect::new(value.clone(), open.clone())
-                    .test_id_prefix("ns")
-                    .option(NativeSelectOption::placeholder("Pick one"))
-                    .option(NativeSelectOption::new("x1", "X1"))
-                    .into_element(cx)]
+                vec![
+                    NativeSelect::new(value.clone(), open.clone())
+                        .test_id_prefix("ns")
+                        .option(NativeSelectOption::placeholder("Pick one"))
+                        .option(NativeSelectOption::new("x1", "X1"))
+                        .into_element(cx),
+                ]
             },
         );
         ui.set_root(root);
@@ -891,11 +893,13 @@ mod tests {
             bounds,
             "native-select-test-id-prefix",
             |cx| {
-                vec![NativeSelect::new(value, open)
-                    .test_id_prefix("ns")
-                    .option(NativeSelectOption::placeholder("Pick one"))
-                    .option(NativeSelectOption::new("x1", "X1"))
-                    .into_element(cx)]
+                vec![
+                    NativeSelect::new(value, open)
+                        .test_id_prefix("ns")
+                        .option(NativeSelectOption::placeholder("Pick one"))
+                        .option(NativeSelectOption::new("x1", "X1"))
+                        .into_element(cx),
+                ]
             },
         );
         ui.set_root(root);
