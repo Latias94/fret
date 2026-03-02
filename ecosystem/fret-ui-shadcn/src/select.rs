@@ -1166,6 +1166,19 @@ impl SelectContent {
         Self::default()
     }
 
+    /// Wraps this content configuration with nested entries, matching the upstream v4 call-site
+    /// shape where `SelectContent` owns the option tree (groups/items/labels/separators).
+    pub fn with_entries(
+        self,
+        entries: impl IntoIterator<Item = SelectEntry>,
+    ) -> SelectContentParts {
+        SelectContentParts::new(self, entries)
+    }
+
+    pub fn with_entry(self, entry: impl Into<SelectEntry>) -> SelectContentParts {
+        SelectContentParts::new(self, [entry.into()])
+    }
+
     pub fn align(mut self, align: SelectAlign) -> Self {
         self.align = align;
         self
@@ -1219,6 +1232,34 @@ impl SelectContent {
 
     pub fn scroll_down_button(mut self, button: SelectScrollDownButton) -> Self {
         self.scroll_down_button = Some(button);
+        self
+    }
+}
+
+/// Nested `SelectContent` authoring surface aligned with shadcn/ui v4 call-site composition.
+///
+/// This is a thin adapter over Fret's current configuration + entries implementation.
+#[derive(Debug, Clone)]
+pub struct SelectContentParts {
+    pub(crate) content: SelectContent,
+    pub(crate) entries: Vec<SelectEntry>,
+}
+
+impl SelectContentParts {
+    pub fn new(content: SelectContent, entries: impl IntoIterator<Item = SelectEntry>) -> Self {
+        Self {
+            content,
+            entries: entries.into_iter().collect(),
+        }
+    }
+
+    pub fn entry(mut self, entry: impl Into<SelectEntry>) -> Self {
+        self.entries.push(entry.into());
+        self
+    }
+
+    pub fn entries(mut self, entries: impl IntoIterator<Item = SelectEntry>) -> Self {
+        self.entries.extend(entries);
         self
     }
 }
@@ -1445,6 +1486,28 @@ impl Select {
         let select = self.trigger(trigger(cx)).content(content.into());
         let entries = entries(cx);
         select.entries(entries).into_element(cx)
+    }
+
+    /// Part-based authoring surface aligned with shadcn/ui v4 exports (nested-content shape).
+    ///
+    /// This adapter makes the call site closer to upstream:
+    ///
+    /// - `SelectTrigger` config is provided as a nested part.
+    /// - `SelectContent` owns the option tree (`SelectGroup`/`SelectItem`/`SelectLabel`/`SelectSeparator`).
+    ///
+    /// Internally this still maps to Fret's configuration + entries implementation.
+    #[track_caller]
+    pub fn into_element_parts_v4<H: UiHost>(
+        self,
+        cx: &mut ElementContext<'_, H>,
+        trigger: impl FnOnce(&mut ElementContext<'_, H>) -> SelectTrigger,
+        content: impl FnOnce(&mut ElementContext<'_, H>) -> SelectContentParts,
+    ) -> AnyElement {
+        let parts = content(cx);
+        self.trigger(trigger(cx))
+            .content(parts.content)
+            .entries(parts.entries)
+            .into_element(cx)
     }
 
     pub fn item(mut self, item: SelectItem) -> Self {
@@ -4714,6 +4777,114 @@ mod tests {
             assert_eq!(select.position, SelectPosition::Popper);
             assert_eq!(select.side_offset_override, Some(Px(7.0)));
         });
+    }
+
+    #[test]
+    fn select_into_element_parts_v4_allows_nesting_entries_under_content() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        crate::shadcn_themes::apply_shadcn_new_york_v4(
+            &mut app,
+            crate::shadcn_themes::ShadcnBaseColor::Slate,
+            crate::shadcn_themes::ShadcnColorScheme::Light,
+        );
+
+        let model = app.models_mut().insert(None::<Arc<str>>);
+        let open = app.models_mut().insert(true);
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(420.0), Px(240.0)),
+        );
+        let mut services = FakeServices::default();
+
+        fn render_frame(
+            ui: &mut UiTree<App>,
+            app: &mut App,
+            services: &mut dyn UiServices,
+            window: AppWindowId,
+            bounds: Rect,
+            model: Model<Option<Arc<str>>>,
+            open: Model<bool>,
+        ) {
+            let next_frame = FrameId(app.frame_id().0.saturating_add(1));
+            app.set_frame_id(next_frame);
+
+            fret_ui_kit::OverlayController::begin_frame(app, window);
+            let root = fret_ui::declarative::render_root(
+                ui,
+                app,
+                services,
+                window,
+                bounds,
+                "select-parts-v4",
+                |cx| {
+                    vec![
+                        Select::new(model, open)
+                            .trigger_test_id("select-trigger")
+                            .into_element_parts_v4(
+                                cx,
+                                |_cx| {
+                                    SelectTrigger::new()
+                                        .value(SelectValue::new().placeholder("Select a fruit"))
+                                },
+                                |_cx| {
+                                    SelectContent::new().with_entries([SelectGroup::new([
+                                        SelectLabel::new("Fruits").into(),
+                                        SelectItem::new("apple", "Apple")
+                                            .test_id("select.item.apple")
+                                            .into(),
+                                        SelectItem::new("banana", "Banana")
+                                            .test_id("select.item.banana")
+                                            .into(),
+                                    ])
+                                    .into()])
+                                },
+                            ),
+                    ]
+                },
+            );
+            ui.set_root(root);
+            fret_ui_kit::OverlayController::render(ui, app, services, window, bounds);
+            ui.request_semantics_snapshot();
+            ui.layout_all(app, services, bounds, 1.0);
+        }
+
+        // Allow the overlay to mount and settle its presence/motion state.
+        for _ in 0..3 {
+            render_frame(
+                &mut ui,
+                &mut app,
+                &mut services,
+                window,
+                bounds,
+                model.clone(),
+                open.clone(),
+            );
+        }
+
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        assert!(
+            snap.nodes
+                .iter()
+                .any(|n| n.test_id.as_deref() == Some("select-scroll-viewport")),
+            "expected select overlay content to mount"
+        );
+        assert!(
+            snap.nodes
+                .iter()
+                .any(|n| n.test_id.as_deref() == Some("select.item.apple")),
+            "expected nested v4 entries to reach listbox items"
+        );
+        assert!(
+            snap.nodes
+                .iter()
+                .any(|n| n.test_id.as_deref() == Some("select.item.banana")),
+            "expected nested v4 entries to reach listbox items"
+        );
     }
 
     #[test]
