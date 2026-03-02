@@ -1,5 +1,7 @@
 #[cfg(feature = "diagnostics")]
 mod diagnostics;
+#[cfg(feature = "diagnostics")]
+mod dispatch_snapshot;
 mod frame_stats;
 mod internal;
 mod invalidation;
@@ -43,6 +45,10 @@ pub use diagnostics::{
     UiDebugRemoveSubtreeOutcome, UiDebugRemoveSubtreeRecord, UiDebugSetChildrenWrite,
     UiDebugSetLayerVisibleWrite,
 };
+#[cfg(feature = "diagnostics")]
+pub use dispatch_snapshot::UiDebugDispatchSnapshotParityReport;
+#[cfg(feature = "diagnostics")]
+pub use dispatch_snapshot::{UiDebugDispatchSnapshot, UiDebugDispatchSnapshotNode};
 
 pub(in crate::tree) use internal::{
     DebugLayoutStackFrame, DebugPaintStackFrame, DebugWidgetMeasureStackFrame,

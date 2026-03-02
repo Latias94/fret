@@ -35,7 +35,14 @@ impl<H: UiHost> UiTree<H> {
             return CommandAvailability::NotHandled;
         };
 
-        let (active_layers, barrier_root) = self.active_input_layers();
+        let (_active_input_layers, input_barrier_root) = self.active_input_layers();
+        let (active_focus_layers, focus_barrier_root) = self.active_focus_layers();
+        let barrier_root = focus_barrier_root.or(input_barrier_root);
+        let dispatch_snapshot = self.build_dispatch_snapshot_for_layer_roots(
+            app.frame_id(),
+            active_focus_layers.as_slice(),
+            barrier_root,
+        );
         let caps = app
             .global::<PlatformCapabilities>()
             .cloned()
@@ -43,7 +50,7 @@ impl<H: UiHost> UiTree<H> {
         let mut input_ctx: InputContext = InputContext {
             platform: Platform::current(),
             caps,
-            ui_has_modal: barrier_root.is_some(),
+            ui_has_modal: input_barrier_root.is_some(),
             window_arbitration: None,
             focus_is_text_input: self.focus_is_text_input(app),
             text_boundary_mode: fret_runtime::TextBoundaryMode::UnicodeWord,
@@ -74,7 +81,7 @@ impl<H: UiHost> UiTree<H> {
         }
 
         let Some(start) =
-            self.command_availability_start_node(base_root, &active_layers, barrier_root)
+            self.command_availability_start_node(base_root, &dispatch_snapshot, barrier_root)
         else {
             return CommandAvailability::NotHandled;
         };
@@ -84,7 +91,7 @@ impl<H: UiHost> UiTree<H> {
         if availability == CommandAvailability::NotHandled
             && matches!(command.as_str(), "focus.next" | "focus.previous")
         {
-            return self.focus_traversal_command_availability(&active_layers, barrier_root);
+            return self.focus_traversal_command_availability(&dispatch_snapshot, barrier_root);
         }
 
         availability
@@ -92,7 +99,7 @@ impl<H: UiHost> UiTree<H> {
 
     fn focus_traversal_command_availability(
         &mut self,
-        active_layers: &[NodeId],
+        dispatch_snapshot: &UiDispatchSnapshot,
         barrier_root: Option<NodeId>,
     ) -> CommandAvailability {
         let Some(base_root) = self
@@ -110,8 +117,8 @@ impl<H: UiHost> UiTree<H> {
             .unwrap_or_default();
 
         let mut focusables: Vec<NodeId> = Vec::new();
-        for &root in active_layers {
-            self.collect_focusables(root, active_layers, scope_bounds, &mut focusables);
+        for &root in &dispatch_snapshot.active_layer_roots {
+            self.collect_focusables(root, dispatch_snapshot, scope_bounds, &mut focusables);
         }
 
         if focusables.is_empty() {
@@ -124,14 +131,14 @@ impl<H: UiHost> UiTree<H> {
     fn command_availability_start_node(
         &mut self,
         base_root: NodeId,
-        active_layers: &[NodeId],
+        dispatch_snapshot: &UiDispatchSnapshot,
         barrier_root: Option<NodeId>,
     ) -> Option<NodeId> {
         if self
             .focus
-            .is_some_and(|n| !self.node_in_any_layer(n, active_layers))
+            .is_some_and(|n| dispatch_snapshot.pre.get(n).is_none())
         {
-            self.focus = None;
+            self.set_focus_unchecked(None, "commands: focus missing from dispatch snapshot");
         }
 
         let default_root = barrier_root.unwrap_or(base_root);
@@ -200,9 +207,16 @@ impl<H: UiHost> UiTree<H> {
         else {
             return;
         };
-        let (active_layers, barrier_root) = self.active_input_layers();
+        let (_active_input_layers, input_barrier_root) = self.active_input_layers();
+        let (active_focus_layers, focus_barrier_root) = self.active_focus_layers();
+        let barrier_root = focus_barrier_root.or(input_barrier_root);
+        let dispatch_snapshot = self.build_dispatch_snapshot_for_layer_roots(
+            app.frame_id(),
+            active_focus_layers.as_slice(),
+            barrier_root,
+        );
         let Some(start) =
-            self.command_availability_start_node(base_root, &active_layers, barrier_root)
+            self.command_availability_start_node(base_root, &dispatch_snapshot, barrier_root)
         else {
             return;
         };
@@ -228,7 +242,7 @@ impl<H: UiHost> UiTree<H> {
                 && matches!(id.as_str(), "focus.next" | "focus.previous")
             {
                 availability =
-                    self.focus_traversal_command_availability(&active_layers, barrier_root);
+                    self.focus_traversal_command_availability(&dispatch_snapshot, barrier_root);
             }
             if availability == CommandAvailability::NotHandled && id.as_str() == "focus.menu_bar" {
                 let present = app
@@ -280,7 +294,14 @@ impl<H: UiHost> UiTree<H> {
             return false;
         };
 
-        let (active_layers, barrier_root) = self.active_input_layers();
+        let (active_layers, input_barrier_root) = self.active_input_layers();
+        let (active_focus_layers, focus_barrier_root) = self.active_focus_layers();
+        let barrier_root = focus_barrier_root.or(input_barrier_root);
+        let dispatch_snapshot = self.build_dispatch_snapshot_for_layer_roots(
+            app.frame_id(),
+            active_focus_layers.as_slice(),
+            barrier_root,
+        );
         let caps = app
             .global::<PlatformCapabilities>()
             .cloned()
@@ -288,7 +309,7 @@ impl<H: UiHost> UiTree<H> {
         let mut input_ctx = InputContext {
             platform: Platform::current(),
             caps,
-            ui_has_modal: barrier_root.is_some(),
+            ui_has_modal: input_barrier_root.is_some(),
             window_arbitration: None,
             focus_is_text_input: self.focus_is_text_input(app),
             text_boundary_mode: fret_runtime::TextBoundaryMode::UnicodeWord,
@@ -337,9 +358,9 @@ impl<H: UiHost> UiTree<H> {
 
         if self
             .focus
-            .is_some_and(|n| !self.node_in_any_layer(n, &active_layers))
+            .is_some_and(|n| dispatch_snapshot.pre.get(n).is_none())
         {
-            self.focus = None;
+            self.set_focus_unchecked(None, "commands: focus missing from dispatch snapshot");
         }
 
         let default_root = barrier_root.unwrap_or(base_root);
@@ -393,8 +414,19 @@ impl<H: UiHost> UiTree<H> {
             }
 
             if let Some(focus) = requested_focus {
-                let (active_roots, _barrier_root) = self.active_input_layers();
-                if self.focus_request_is_allowed(app, self.window, &active_roots, focus) {
+                let (active_roots, barrier_root) = self.active_input_layers();
+                let snapshot = self.build_dispatch_snapshot_for_layer_roots(
+                    app.frame_id(),
+                    active_roots.as_slice(),
+                    barrier_root,
+                );
+                if self.focus_request_is_allowed(
+                    app,
+                    self.window,
+                    &active_roots,
+                    focus,
+                    Some(&snapshot),
+                ) {
                     if let Some(prev) = self.focus {
                         self.mark_invalidation(prev, Invalidation::Paint);
                     }
@@ -533,6 +565,11 @@ impl<H: UiHost> UiTree<H> {
             return true;
         };
         let (active_layers, barrier_root) = self.active_input_layers();
+        let dispatch_snapshot = self.build_dispatch_snapshot_for_layer_roots(
+            app.frame_id(),
+            active_layers.as_slice(),
+            barrier_root,
+        );
 
         let scope_root = scope_root.or(barrier_root).unwrap_or(base_root);
         let scope_bounds = self
@@ -543,7 +580,7 @@ impl<H: UiHost> UiTree<H> {
 
         let mut focusables: Vec<NodeId> = Vec::new();
         for &root in roots {
-            self.collect_focusables(root, &active_layers, scope_bounds, &mut focusables);
+            self.collect_focusables(root, &dispatch_snapshot, scope_bounds, &mut focusables);
         }
         if focusables.is_empty() {
             return true;

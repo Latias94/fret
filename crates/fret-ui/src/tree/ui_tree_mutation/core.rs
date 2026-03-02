@@ -118,6 +118,14 @@ impl<H: UiHost> UiTree<H> {
         }
     }
 
+    #[cfg(test)]
+    pub(crate) fn test_set_node_parent(&mut self, node: NodeId, parent: Option<NodeId>) {
+        let Some(n) = self.nodes.get_mut(node) else {
+            return;
+        };
+        n.parent = parent;
+    }
+
     pub fn set_root(&mut self, root: NodeId) {
         let _ = self.set_base_root(root);
     }
