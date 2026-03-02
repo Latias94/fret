@@ -427,6 +427,7 @@ Changes:
   - In progress (land as a small series of commits / local PR-sized steps).
   - Landed:
     - BackdropSourceGroup pyramid headroom accounting fix (avoid double-counting `raw_bytes`).
+    - Centralize intermediate budget math helpers (effective budget + allocation checks) in the RenderPlan compiler.
   - In progress:
     - Centralize “base required bytes” helpers to replace ad-hoc `full * N` budget checks.
 - Landable steps (3–8, PR-sized):
