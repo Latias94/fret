@@ -2536,6 +2536,16 @@
       "target_hints": []
     },
     {
+      "id": "ui-gallery-context-menu-occlusion-wheel-pass-through",
+      "path": "tools/diag-scripts/ui-gallery/overlay/ui-gallery-context-menu-occlusion-wheel-pass-through.json",
+      "required_capabilities": [],
+      "suite_memberships": [
+        "ui-gallery-overlay-steady"
+      ],
+      "tags": [],
+      "target_hints": []
+    },
+    {
       "id": "ui-gallery-context-menu-right-click",
       "path": "tools/diag-scripts/ui-gallery/context-menu/ui-gallery-context-menu-right-click.json",
       "required_capabilities": [],
