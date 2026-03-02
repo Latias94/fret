@@ -112,6 +112,8 @@ Prefer `cargo nextest run` when available.
 - wasm smoke:
   - `cargo check -p fret -p fret-ui-kit --target wasm32-unknown-unknown`
   - `tools/gates_wasm_smoke.ps1`
+- Run the cross-frontend action demo via a curated diag suite:
+  - `cargo run -p fretboard -- diag suite cookbook-imui-action-basics --dir target/fret-diag-cookbook-imui-action-basics --launch -- cargo run -p fret-cookbook --example imui_action_basics`
 
 ---
 
