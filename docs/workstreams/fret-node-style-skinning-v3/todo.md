@@ -21,5 +21,5 @@
 ## Optional (nice-to-have)
 
 - [ ] Add debug overlay counters for “paint caches rebuilt due to overrides”
-- [ ] Add a small JSON preset format for edge paint recipes (optional; do not couple to `Graph`)
+- [x] Add a small JSON preset format for theme presets (paint-only; do not couple to `Graph`)
 - [x] Capture a XyFlow parity crosswalk note (`xyflow-style-parity.md`)

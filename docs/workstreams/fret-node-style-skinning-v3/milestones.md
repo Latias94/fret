@@ -28,12 +28,16 @@
 
 - [x] Support `body_background`, `border_paint`, and `header_background` overrides
 
-## M4 (deferred): Gradient/material wire styling recipes
+## M4a: Wire paint cookbook (v1)
 
-- [ ] Provide a small “wire paint cookbook” doc:
+- [x] Provide a small “wire paint cookbook” doc:
   - solid
-  - linear gradient in `StrokeS01`
-  - viewport-fixed highlight
-  - material-based animated “flow” (if enabled)
+  - dashed (preview / invalid / emphasis vocabulary)
 - [x] Provide a JSON-loadable theme preset file + parsing entry-point for iteration
-- [ ] Add a demo / diagnostic harness in `apps/` to validate wire paint presets visually
+- [x] Add a demo / diagnostic harness in `apps/` to validate wire paint recipes visually
+
+## M4b (deferred): Gradient/material wire styling recipes (v2)
+
+- [ ] Along-wire gradient recipe demo (`PaintEvalSpaceV1::StrokeS01`)
+- [ ] Viewport-fixed highlight recipe demo (`PaintEvalSpaceV1::ViewportPx`)
+- [ ] Material-based animated “flow” recipe (if enabled)
