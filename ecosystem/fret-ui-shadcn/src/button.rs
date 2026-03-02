@@ -16,8 +16,8 @@ use fret_ui_kit::declarative::current_color;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::typography;
 use fret_ui_kit::{
-    ChromeRefinement, ColorFallback, ColorRef, Justify, LayoutRefinement, OverrideSlot,
-    Radius, ShadowPreset, Size as ComponentSize, Space, WidgetStateProperty, WidgetStates,
+    ChromeRefinement, ColorFallback, ColorRef, Justify, LayoutRefinement, OverrideSlot, Radius,
+    ShadowPreset, Size as ComponentSize, Space, WidgetStateProperty, WidgetStates,
     resolve_override_slot, ui,
 };
 
@@ -366,7 +366,11 @@ pub fn button_variants(
 
 /// Upstream shadcn/ui compat alias for copy/paste parity.
 #[allow(non_snake_case)]
-pub fn buttonVariants(theme: &ThemeSnapshot, variant: ButtonVariant, size: ButtonSize) -> ButtonVariants {
+pub fn buttonVariants(
+    theme: &ThemeSnapshot,
+    variant: ButtonVariant,
+    size: ButtonSize,
+) -> ButtonVariants {
     button_variants(theme, variant, size)
 }
 

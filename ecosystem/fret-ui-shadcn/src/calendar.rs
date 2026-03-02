@@ -2451,7 +2451,8 @@ fn calendar_day_cell<H: UiHost>(
             .clone()
             .merge(ChromeRefinement::default().bg(ColorRef::Color(bg)));
 
-        let mut chrome_props = decl_style::container_props(theme, chrome, day_button.layout.clone());
+        let mut chrome_props =
+            decl_style::container_props(theme, chrome, day_button.layout.clone());
         // Keep chrome margins cleared; calendar row gaps are modeled by the outer slot wrapper.
         chrome_props.layout.margin = Default::default();
 

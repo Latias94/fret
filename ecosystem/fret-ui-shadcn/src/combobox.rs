@@ -753,10 +753,12 @@ fn combobox_parts_patch(parts: Vec<ComboboxPart>) -> ComboboxPartsPatch {
                                 let items = items
                                     .iter()
                                     .map(|item| {
-                                        let mut option =
-                                            ComboboxOption::new(item.value.clone(), item.label.clone())
-                                                .disabled(item.disabled)
-                                                .keywords(item.keywords.clone());
+                                        let mut option = ComboboxOption::new(
+                                            item.value.clone(),
+                                            item.label.clone(),
+                                        )
+                                        .disabled(item.disabled)
+                                        .keywords(item.keywords.clone());
                                         if let Some(detail) = item.detail.clone() {
                                             option = option.detail(detail);
                                         }

@@ -137,18 +137,20 @@ pub use avatar::{
     Avatar, AvatarBadge, AvatarFallback, AvatarGroup, AvatarGroupCount, AvatarImage, AvatarSize,
     avatar_sized,
 };
-pub use badge::{Badge, BadgeRender, BadgeVariant, BadgeVariants, badge, badgeVariants, badge_variants};
+pub use badge::{
+    Badge, BadgeRender, BadgeVariant, BadgeVariants, badge, badge_variants, badgeVariants,
+};
 pub use breadcrumb::primitives::{
     BreadcrumbEllipsis, BreadcrumbLink, BreadcrumbList, BreadcrumbPage,
 };
 pub use breadcrumb::{Breadcrumb, BreadcrumbItem, BreadcrumbSeparator};
 pub use button::{
-    Button, ButtonRender, ButtonSize, ButtonVariant, ButtonVariants, buttonVariants,
-    button_variants,
+    Button, ButtonRender, ButtonSize, ButtonVariant, ButtonVariants, button_variants,
+    buttonVariants,
 };
 pub use button_group::{
     ButtonGroup, ButtonGroupItem, ButtonGroupOrientation, ButtonGroupSeparator, ButtonGroupText,
-    ButtonGroupVariants, buttonGroupVariants, button_group_variants,
+    ButtonGroupVariants, button_group_variants, buttonGroupVariants,
 };
 pub use calendar::{Calendar, CalendarCaptionLayout, CalendarDayButton};
 pub use calendar_hijri::CalendarHijri;
@@ -281,7 +283,7 @@ pub use navigation_menu::{
     NavigationMenu, NavigationMenuContent, NavigationMenuIndicator, NavigationMenuItem,
     NavigationMenuLink, NavigationMenuList, NavigationMenuRoot, NavigationMenuTrigger,
     NavigationMenuTriggerStyle, NavigationMenuViewport, navigation_menu, navigation_menu_list,
-    navigationMenuTriggerStyle, navigation_menu_trigger_style, navigation_menu_uncontrolled,
+    navigation_menu_trigger_style, navigation_menu_uncontrolled, navigationMenuTriggerStyle,
 };
 pub use pagination::{
     Pagination, PaginationContent, PaginationEllipsis, PaginationItem, PaginationLink,
@@ -336,12 +338,12 @@ pub use table::{
 };
 pub use tabs::{
     Tabs, TabsContent, TabsItem, TabsList, TabsListVariant, TabsListVariants, TabsRoot,
-    TabsTrigger, tabs, tabsListVariants, tabs_list_variants, tabs_uncontrolled,
+    TabsTrigger, tabs, tabs_list_variants, tabs_uncontrolled, tabsListVariants,
 };
 pub use textarea::{Textarea, textarea};
 pub use toggle::{
-    Toggle, ToggleRoot, ToggleSize, ToggleVariant, ToggleVariants, toggle, toggleVariants,
-    toggle_uncontrolled, toggle_variants,
+    Toggle, ToggleRoot, ToggleSize, ToggleVariant, ToggleVariants, toggle, toggle_uncontrolled,
+    toggle_variants, toggleVariants,
 };
 pub use toggle_group::{
     ToggleGroup, ToggleGroupItem, ToggleGroupKind, toggle_group_multiple,

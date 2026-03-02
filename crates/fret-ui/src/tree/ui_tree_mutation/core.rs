@@ -64,7 +64,11 @@ impl<H: UiHost> UiTree<H> {
             layout_before,
             layout_after,
         );
-        self.note_layout_invalidation_transition_for_subtree_aggregation(node, layout_before, layout_after);
+        self.note_layout_invalidation_transition_for_subtree_aggregation(
+            node,
+            layout_before,
+            layout_after,
+        );
     }
 
     #[cfg(test)]
@@ -77,10 +81,16 @@ impl<H: UiHost> UiTree<H> {
                 if value {
                     n.invalidation.paint = true;
                 }
-                let should_mark_contained_cache_root_dirty =
-                    value && view_cache_active && n.view_cache.enabled && n.view_cache.contained_layout;
+                let should_mark_contained_cache_root_dirty = value
+                    && view_cache_active
+                    && n.view_cache.enabled
+                    && n.view_cache.contained_layout;
                 let layout_after = n.invalidation.layout;
-                (layout_before, layout_after, should_mark_contained_cache_root_dirty)
+                (
+                    layout_before,
+                    layout_after,
+                    should_mark_contained_cache_root_dirty,
+                )
             })
         else {
             return;
@@ -90,7 +100,11 @@ impl<H: UiHost> UiTree<H> {
             layout_before,
             layout_after,
         );
-        self.note_layout_invalidation_transition_for_subtree_aggregation(node, layout_before, layout_after);
+        self.note_layout_invalidation_transition_for_subtree_aggregation(
+            node,
+            layout_before,
+            layout_after,
+        );
 
         if should_mark_contained_cache_root_dirty {
             self.mark_cache_root_dirty(

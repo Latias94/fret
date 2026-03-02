@@ -93,7 +93,11 @@ pub fn toggle_variants(
 
 /// Upstream shadcn/ui compat alias for copy/paste parity.
 #[allow(non_snake_case)]
-pub fn toggleVariants(theme: &ThemeSnapshot, variant: ToggleVariant, size: ToggleSize) -> ToggleVariants {
+pub fn toggleVariants(
+    theme: &ThemeSnapshot,
+    variant: ToggleVariant,
+    size: ToggleSize,
+) -> ToggleVariants {
     toggle_variants(theme, variant, size)
 }
 
