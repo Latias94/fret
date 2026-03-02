@@ -144,8 +144,8 @@ When multiple visible roots exist (multiple overlays / viewports), the selector 
 
 This workstream intentionally keeps “evidence anchors” stable so future refactors can be audited quickly:
 
-- In-app inspector shortcuts + state machine: `ecosystem/fret-bootstrap/src/ui_diagnostics/inspect.rs`
-- Inspector controller bucket: `ecosystem/fret-bootstrap/src/ui_diagnostics/inspect_controller.rs` (`InspectController`)
+- In-app inspector shortcuts + state machine: `ecosystem/fret-bootstrap/src/ui_diagnostics/inspect_controller.rs` (`InspectController`)
+- `UiDiagnosticsService` compatibility wrapper (delegates to `InspectController`): `ecosystem/fret-bootstrap/src/ui_diagnostics/inspect.rs`
 - Inspector per-window state bucket: `ecosystem/fret-bootstrap/src/ui_diagnostics/inspect_state.rs` (`InspectState`)
 - In-app overlay rendering: `ecosystem/fret-bootstrap/src/ui_diagnostics/inspect_overlay.rs`
 - Explainability panel lines (why input is blocked): `ecosystem/fret-bootstrap/src/ui_diagnostics/inspect_explain.rs`

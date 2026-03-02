@@ -574,10 +574,6 @@ impl UiDiagnosticsService {
         self.inspector.clear_for_window(window);
     }
 
-    pub(super) fn clear_inspect_state_all_windows(&mut self) {
-        self.inspector.state.clear_all();
-    }
-
     fn reset_diagnostics_ring_for_window(&mut self, window: AppWindowId) {
         self.per_window.entry(window).or_default().clear();
     }
