@@ -52,19 +52,27 @@
       "type": "wait_until",
       "predicate": {
         "kind": "exists",
-        "target": { "kind": "test_id", "id": "ui-gallery-popover" }
+        "target": { "kind": "test_id", "id": "ui-gallery-page-popover" }
       },
       "timeout_frames": 600
     },
 
     {
       "type": "scroll_into_view",
-      "container": { "kind": "test_id", "id": "ui-gallery-content-viewport" },
-      "target": { "kind": "test_id", "id": "ui-gallery-popover-with-form-trigger" },
+      "container": { "kind": "test_id", "id": "ui-gallery-content-scroll" },
+      "target": { "kind": "test_id", "id": "ui-gallery-popover-with-form" },
       "delta_y": -120.0,
       "require_fully_within_window": true,
       "padding_px": 24.0,
-      "timeout_frames": 900
+      "timeout_frames": 1800
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-popover-with-form-trigger" }
+      },
+      "timeout_frames": 600
     },
     {
       "type": "click_stable",
@@ -105,7 +113,7 @@
 
     {
       "type": "scroll_into_view",
-      "container": { "kind": "test_id", "id": "ui-gallery-content-viewport" },
+      "container": { "kind": "test_id", "id": "ui-gallery-content-scroll" },
       "target": { "kind": "test_id", "id": "ui-gallery-popover-basic-tabs-trigger-code" },
       "delta_y": -120.0,
       "require_fully_within_window": true,
@@ -136,12 +144,20 @@
 
     {
       "type": "scroll_into_view",
-      "container": { "kind": "test_id", "id": "ui-gallery-content-viewport" },
-      "target": { "kind": "test_id", "id": "ui-gallery-popover-with-form-trigger" },
+      "container": { "kind": "test_id", "id": "ui-gallery-content-scroll" },
+      "target": { "kind": "test_id", "id": "ui-gallery-popover-with-form" },
       "delta_y": -120.0,
       "require_fully_within_window": true,
       "padding_px": 24.0,
-      "timeout_frames": 900
+      "timeout_frames": 1800
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-popover-with-form-trigger" }
+      },
+      "timeout_frames": 600
     },
     {
       "type": "click_stable",
