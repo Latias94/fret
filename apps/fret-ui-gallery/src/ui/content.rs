@@ -550,7 +550,7 @@ fn page_preview(
         PAGE_ASPECT_RATIO => pages::preview_aspect_ratio(cx),
         PAGE_BREADCRUMB => pages::preview_breadcrumb(cx, last_action.clone()),
         PAGE_BUTTON_GROUP => pages::preview_button_group(cx),
-        PAGE_CALENDAR => preview_calendar(cx, date_picker_month, date_picker_selected),
+        PAGE_CALENDAR => pages::preview_calendar(cx, date_picker_month, date_picker_selected),
         PAGE_CAROUSEL => pages::preview_carousel(cx),
         PAGE_CHART => pages::preview_chart(cx),
         PAGE_CHECKBOX => pages::preview_checkbox(cx, checkbox),

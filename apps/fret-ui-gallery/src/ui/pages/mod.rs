@@ -9,6 +9,7 @@ mod badge;
 mod breadcrumb;
 mod button;
 mod button_group;
+mod calendar;
 mod card;
 mod carousel;
 mod chart;
@@ -87,6 +88,14 @@ pub(super) fn preview_button(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement
 
 pub(super) fn preview_button_group(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
     button_group::preview_button_group(cx)
+}
+
+pub(super) fn preview_calendar(
+    cx: &mut ElementContext<'_, App>,
+    month: Model<fret_ui_headless::calendar::CalendarMonth>,
+    selected: Model<Option<Date>>,
+) -> Vec<AnyElement> {
+    calendar::preview_calendar(cx, month, selected)
 }
 
 pub(super) fn preview_alert_dialog(
