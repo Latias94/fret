@@ -109,6 +109,8 @@ V3 has explicit counters + plan visibility for:
 Triage hint codes (worst frame):
 
 - `renderer.custom_effect_v3_requested_but_skipped` (requested by effect chain, but no passes emitted)
+- `renderer.custom_effect_v2_user_image_incompatible_fallbacks` (CustomV2 bound fallback user image due to incompatible format)
+- `renderer.custom_effect_v3_user_image_incompatible_fallbacks` (CustomV3 bound fallback user images due to incompatible formats)
 - `renderer.custom_effect_v3_raw_aliased_to_src` (raw snapshot unavailable; `src_raw` aliases)
 - `renderer.custom_effect_v3_pyramid_degraded_to_one` (pyramid levels degraded under budget pressure)
 - `renderer.custom_effect_v3_pyramid_cache_miss_heavy` (pyramid requested/applied but cache reuse is poor in-frame)
@@ -122,6 +124,10 @@ Interpretation note:
 - `renderer.custom_effect_v3_pyramid_cache_miss_heavy` is an efficiency hint: it reports
   `custom_effect_v3_pyramid_cache_hits/misses` (frame-local reuse) when misses dominate across multiple pyramid uses in
   the worst frame.
+- `renderer.custom_effect_v2_user_image_incompatible_fallbacks` and
+  `renderer.custom_effect_v3_user_image_incompatible_fallbacks` are correctness hints: they indicate that at least one
+  CustomEffect user image input was provided but was non-filterable (or otherwise incompatible), so the renderer bound a
+  deterministic 1x1 transparent fallback instead.
 
 Anchors:
 
