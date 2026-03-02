@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use fret_app::{App, Effect};
 use fret_core::AppWindowId;
-use fret_core::{Event, KeyCode};
+use fret_core::{Event, KeyCode, Point};
 use fret_diag_protocol::UiInspectConfigV1;
 use fret_ui::elements::ElementRuntime;
 use slotmap::Key as _;
@@ -589,6 +589,32 @@ impl InspectController {
             }
             _ => false,
         }
+    }
+
+    pub(super) fn try_consume_armed_pick(&mut self, window: AppWindowId, position: Point) -> bool {
+        let Some(run_id) = self.pick_armed_run_id.take() else {
+            return false;
+        };
+        self.pending_pick = Some(super::PendingPick {
+            run_id,
+            window,
+            position,
+        });
+        true
+    }
+
+    pub(super) fn start_pending_pick(
+        &mut self,
+        window: AppWindowId,
+        run_id: u64,
+        position: Point,
+    ) -> bool {
+        self.pending_pick = Some(super::PendingPick {
+            run_id,
+            window,
+            position,
+        });
+        self.consume_clicks
     }
 
     pub(super) fn update_hover(

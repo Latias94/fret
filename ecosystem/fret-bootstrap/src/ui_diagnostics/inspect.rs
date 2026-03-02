@@ -899,12 +899,7 @@ impl UiDiagnosticsService {
             return false;
         };
 
-        if let Some(run_id) = self.inspector.pick_armed_run_id.take() {
-            self.inspector.pending_pick = Some(PendingPick {
-                run_id,
-                window,
-                position: *position,
-            });
+        if self.inspector.try_consume_armed_pick(window, *position) {
             app.request_redraw(window);
             return true;
         }
@@ -915,13 +910,9 @@ impl UiDiagnosticsService {
 
         let run_id = self.next_pick_run_id();
 
-        self.inspector.pending_pick = Some(PendingPick {
-            run_id,
-            window,
-            position: *position,
-        });
+        let consume_clicks = self.inspector.start_pending_pick(window, run_id, *position);
         app.request_redraw(window);
-        self.inspector.consume_clicks
+        consume_clicks
     }
 
     pub fn update_inspect_hover(
