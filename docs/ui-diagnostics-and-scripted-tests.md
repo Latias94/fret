@@ -801,7 +801,7 @@ Supported selectors (v1 MVP):
 - `type_text`
 - `ime` (schema v2 only; deterministic IME event injection for composition/commit/preedit)
 - `reset_diagnostics` (clears the diagnostics ring buffer for the current window; useful to avoid mount/settle frames in perf captures)
-- `wait_frames`
+- `wait_frames` (schema v2 only: optional `window` target)
 - `wait_until` (schema v2 only: optional `window` target)
 - `wait_shortcut_routing_trace` (schema v2 only; wait until the shortcut routing trace contains a matching entry)
 - `wait_overlay_placement_trace` (schema v2 only; wait until overlay placement trace contains a matching entry)
@@ -1162,6 +1162,38 @@ For the UI gallery, run:
 
 - `cargo run -p fretboard -- diag suite ui-gallery`
 
+### Liquid glass / CustomV3 degradation suites
+
+The liquid glass demos ship a pair of suites that intentionally force **deterministic renderer degradation**
+paths so `diag triage` can surface actionable hints (budget pressure, source aliasing, pyramid level loss).
+
+Suites:
+
+- `tools/diag-scripts/suites/liquid-glass-custom-v3-degraded/`
+  - Forces an extreme low intermediate budget to trigger **BackdropSourceGroup** degradation.
+  - Expected triage hint codes:
+    - `renderer.backdrop_source_groups_raw_degraded`
+    - `renderer.backdrop_source_groups_pyramid_degraded`
+- `tools/diag-scripts/suites/liquid-glass-custom-v3-sources-degraded/`
+  - Uses a “sweet spot” budget that keeps **CustomV3 active**, but degrades its requested renderer sources:
+    - `src_raw` aliases to `src`,
+    - pyramid degrades to 1 level.
+  - Expected triage hint codes:
+    - `renderer.custom_effect_v3_raw_aliased_to_src`
+    - `renderer.custom_effect_v3_pyramid_degraded_to_one`
+
+Run example (native, launch-managed):
+
+- `cargo run -p fretboard -- diag suite liquid-glass-custom-v3-sources-degraded --dir target/fret-diag/lg-v3 --session-auto --launch -- cargo run -p fret-demo --bin liquid_glass_demo`
+- `cargo run -p fretboard -- diag triage target/fret-diag/lg-v3/sessions/<session_id> --warmup-frames 0`
+
+Notes:
+
+- These suites require `FRET_DIAG_RENDERER_PERF=1` to populate renderer perf counters.
+- If the intermediate budget is *too* low, the renderer may skip emitting a CustomV3 pass entirely.
+  `diag triage` should surface `renderer.custom_effect_v3_requested_but_skipped`, and the source-level degradation counters
+  will stay at 0. Prefer the curated suite budgets when you want `CustomV3 sources` degradation signals specifically.
+
 Note:
 
 - The script library is modularized via a taxonomy plus a minimal, generated registry for “promoted” scripts
@@ -1190,6 +1222,12 @@ For component-focused conformance scripts (built-in suites), run:
 - `cargo run -p fretboard -- diag suite ui-gallery-select --timeout-ms 240000 --launch -- cargo run -p fret-ui-gallery --release`
 - `cargo run -p fretboard -- diag suite ui-gallery-combobox --timeout-ms 240000 --launch -- cargo run -p fret-ui-gallery --release`
 - `cargo run -p fretboard -- diag suite ui-gallery-text-ime --timeout-ms 240000 --launch -- cargo run -p fret-ui-gallery --release`
+
+For Embla-engine-dependent Carousel gates, run:
+
+- `cargo run -p fretboard -- diag suite ui-gallery-carousel-embla-engine --launch -- cargo run -p fret-ui-gallery --release`
+
+To force-disable the Embla engine (debug), set `FRET_DEBUG_CAROUSEL_EMBLA_ENGINE=0`.
 
 To keep “Rust template ↔ JSON script” closure, check that the committed scripts match typed templates:
 
@@ -1325,3 +1363,4 @@ Notes:
 **Multiple windows**
 
 - bundles are per-window; scripts currently execute against the first window that picks up the pending script.
+- for z-order / overlap cases during cross-window drags, prefer targeting `wait_frames.window` to a window that is actively producing frames (e.g. `first_seen`).

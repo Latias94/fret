@@ -476,7 +476,9 @@ pub(super) fn handle_wait_until_step(
         svc.resolve_window_target_for_active_step(window, anchor_window, target_window.as_ref())
     {
         if target_window != window {
-            if UiDiagnosticsService::predicate_can_eval_off_window(&predicate) {
+            if UiDiagnosticsService::predicate_can_eval_off_window(&predicate)
+                || UiDiagnosticsService::predicate_can_eval_from_cached_test_id_bounds(&predicate)
+            {
                 predicate_window = target_window;
                 output.effects.push(Effect::Redraw(target_window));
                 output
@@ -524,7 +526,9 @@ pub(super) fn handle_wait_until_step(
         },
     };
 
-    let ok = match &predicate {
+    let ok = match svc.eval_predicate_from_cached_test_id_bounds(predicate_window, &predicate) {
+        Some(ok) => ok,
+        None => match &predicate {
         UiPredicateV1::EventKindSeen { event_kind } => svc
             .per_window
             .get(&predicate_window)
@@ -561,15 +565,15 @@ pub(super) fn handle_wait_until_step(
                     .and_then(|svc| svc.snapshot(predicate_window));
                 let dock_drag_runtime = dock_drag_runtime_state(app, svc.known_windows.as_slice());
                 let platform_caps = app.global::<fret_runtime::PlatformCapabilities>();
-                let open_window_count = app
-                    .global::<fret_runtime::WindowInputContextService>()
-                    .map(|ctx_svc| ctx_svc.window_count() as u32)
-                    .unwrap_or(0)
-                    .max(svc.known_windows.len() as u32);
-
-                if predicate_window == window {
-                    if let Some(snapshot) = semantics_snapshot {
-                        record_overlay_placement_trace(
+	                let open_window_count = app
+	                    .global::<fret_runtime::WindowInputContextService>()
+	                    .map(|ctx_svc| ctx_svc.window_count() as u32)
+	                    .unwrap_or(0)
+	                    .max(svc.known_windows.len() as u32);
+	
+	                if predicate_window == window {
+	                    if let Some(snapshot) = semantics_snapshot {
+	                        record_overlay_placement_trace(
                             &mut active.overlay_placement_trace,
                             element_runtime,
                             Some(snapshot),
@@ -633,6 +637,7 @@ pub(super) fn handle_wait_until_step(
                 }
             }
         }
+        },
     };
 
     if ok {

@@ -1,3 +1,5 @@
+pub const SOURCE: &str = include_str!("choice_card.rs");
+
 // region: example
 use fret_core::Px;
 use fret_ui_shadcn::{self as shadcn, prelude::*};

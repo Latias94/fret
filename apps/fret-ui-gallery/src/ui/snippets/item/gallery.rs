@@ -1,11 +1,14 @@
+pub const SOURCE: &str = include_str!("gallery.rs");
+
 // region: example
-use crate::spec::CMD_APP_OPEN;
 use fret_app::App;
 use fret_ui::Theme;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::ui;
 use fret_ui_shadcn::{self as shadcn, prelude::*};
 use std::sync::Arc;
+
+const CMD_APP_OPEN: &str = "ui_gallery.app.open";
 
 #[derive(Default, Clone)]
 struct Models {
@@ -584,13 +587,14 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
         .test_id("ui-gallery-item-column-issues")
     };
 
-    let gallery_demo = crate::ui::doc_layout::wrap_row_snapshot(
-        cx,
-        &theme,
-        Space::N6,
-        fret_ui::element::CrossAlign::Start,
-        |_cx| vec![column_basic, column_people, column_music, column_issues],
-    )
+    let gallery_demo = ui::h_flex(cx, |_cx| {
+        vec![column_basic, column_people, column_music, column_issues]
+    })
+    .gap(Space::N6)
+    .wrap()
+    .w_full()
+    .items_start()
+    .into_element(cx)
     .test_id("ui-gallery-item-gallery-demo");
 
     gallery_demo

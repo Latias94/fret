@@ -150,3 +150,36 @@ pub fn selectable_label<H: UiHost>(
         interactive_spans: Arc::from([]),
     })
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    use fret_app::App;
+    use fret_core::{AppWindowId, Point, Px, Rect, Size};
+    use fret_ui::element::ElementKind;
+
+    #[test]
+    fn label_defaults_match_shadcn_expectations() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(240.0), Px(120.0)),
+        );
+
+        let el = fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            label(cx, "Email")
+        });
+
+        let ElementKind::Text(props) = &el.kind else {
+            panic!("expected label(...) to build a Text element");
+        };
+
+        assert_eq!(props.wrap, TextWrap::None);
+        assert_eq!(props.overflow, TextOverflow::Clip);
+
+        let style = props.style.as_ref().expect("label text style");
+        assert_eq!(style.weight, FontWeight::MEDIUM);
+    }
+}

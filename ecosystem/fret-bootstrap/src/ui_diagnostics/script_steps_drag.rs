@@ -363,14 +363,14 @@ pub(super) fn handle_drag_pointer_until_step(
             // If the predicate is already satisfied (e.g. after runner-owned hover routing on a
             // previous frame), release immediately.
             let dock_drag_runtime = dock_drag_runtime_state(app, svc.known_windows.as_slice());
-            let open_window_count = app
-                .global::<fret_runtime::WindowInputContextService>()
-                .map(|ctx_svc| ctx_svc.window_count() as u32)
-                .unwrap_or(0)
-                .max(svc.known_windows.len() as u32);
-            let move_steps = state.playback.steps.max(1);
-            let reached_end = state.playback.frame > move_steps;
-            let predicate_ok_without_semantics = match &state.predicate {
+	            let open_window_count = app
+	                .global::<fret_runtime::WindowInputContextService>()
+	                .map(|ctx_svc| ctx_svc.window_count() as u32)
+	                .unwrap_or(0)
+	                .max(svc.known_windows.len() as u32);
+	            let move_steps = state.playback.steps.max(1);
+	            let reached_end = state.playback.frame > move_steps;
+	            let predicate_ok_without_semantics = match &state.predicate {
                 UiPredicateV1::EventKindSeen { event_kind } => svc
                     .per_window
                     .get(&window)
@@ -566,18 +566,13 @@ pub(super) fn handle_drag_pointer_until_step(
                     }
 
                     if !state.release_on_success {
-                        let cross_window_hover_active = dock_drag_runtime
-                            .as_ref()
-                            .is_some_and(|d| d.cross_window_hover);
-                        if !cross_window_hover_active {
-                            active.pointer_session = Some(V2PointerSessionState {
-                                window: state.playback.window,
-                                button: state.playback.button,
-                                pointer_type,
-                                modifiers: Modifiers::default(),
-                                position: release_pos,
-                            });
-                        }
+                        active.pointer_session = Some(V2PointerSessionState {
+                            window: state.playback.window,
+                            button: state.playback.button,
+                            pointer_type,
+                            modifiers: Modifiers::default(),
+                            position: release_pos,
+                        });
                         active.v2_step_state = None;
                         active.next_step = active.next_step.saturating_add(1);
                         output.request_redraw = true;

@@ -13,16 +13,10 @@ pub(super) fn preview_navigation_menu(cx: &mut ElementContext<'_, App>) -> Vec<A
         vec![
             DocSection::new("Demo", demo_with_toggle)
                 .max_w(Px(820.0))
-                .code_rust_from_file_region(
-                    include_str!("../snippets/navigation_menu/demo.rs"),
-                    "example",
-                ),
+                .code_rust_from_file_region(snippets::demo::SOURCE, "example"),
             DocSection::new("RTL", rtl)
                 .max_w(Px(820.0))
-                .code_rust_from_file_region(
-                    include_str!("../snippets/navigation_menu/rtl.rs"),
-                    "example",
-                ),
+                .code_rust_from_file_region(snippets::rtl::SOURCE, "example"),
         ],
     );
 

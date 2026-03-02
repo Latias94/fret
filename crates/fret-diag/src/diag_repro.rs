@@ -97,6 +97,7 @@ pub(crate) fn cmd_repro(ctx: ReproCmdContext) -> Result<(), String> {
         check_node_graph_cull_window_shifts_max,
         check_node_graph_cull_window_shifts_min,
         check_notify_hotspot_file_max,
+        check_triage_hint_absent_codes: _,
         check_overlay_synthesis_min,
         check_pixels_changed_test_id,
         check_prepaint_actions_min,

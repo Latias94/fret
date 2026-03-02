@@ -14,6 +14,7 @@ use fret_core::scene::{
     EffectQuality, EffectStep,
 };
 use fret_core::{Color, Corners, Edges, EffectId, Px};
+use fret_render::RendererCapabilities;
 use fret_runtime::Model;
 use fret_ui::Invalidation;
 use fret_ui::element::{
@@ -78,9 +79,9 @@ fn install_app_globals(app: &mut App) {
 
 fn register_custom_effect_v3(app: &mut App, effects: &mut dyn fret_core::CustomEffectService) {
     app.with_global_mut(DemoGlobals::new, |g, _app| {
-        g.program
-            .ensure_registered(effects)
-            .expect("custom effect v3 registration must succeed on wgpu backends");
+        if let Err(err) = g.program.ensure_registered(effects) {
+            tracing::warn!(?err, "custom effect v3 registration failed");
+        }
     });
 }
 
@@ -112,8 +113,17 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut State) -> Elements {
 
     let globals = cx.app.global::<DemoGlobals>();
     let effect = globals.and_then(|g| g.program.id());
+    let supported = cx
+        .app
+        .global::<RendererCapabilities>()
+        .is_some_and(|caps| caps.custom_effect_v3);
     let Some(effect) = effect else {
-        return vec![shadcn::typography::h3(cx, "Custom effects unavailable")].into();
+        let msg = if supported {
+            "CustomV3 is unavailable (registration failed)"
+        } else {
+            "CustomV3 is unsupported on this backend"
+        };
+        return vec![shadcn::typography::h3(cx, msg)].into();
     };
 
     let enabled = cx.watch_model(&st.enabled).layout().copied_or(true);
@@ -501,6 +511,8 @@ fn custom_effect_lens(
             [1.0, 1.0, 1.0, 0.08],
         ],
     };
+    let max_sample_offset_px =
+        crate::effect_authoring::custom_effect_v3_lens_max_sample_offset_px(34.0, 0.55);
 
     let chain = EffectChain::from_steps(&[
         EffectStep::GaussianBlur {
@@ -510,8 +522,7 @@ fn custom_effect_lens(
         EffectStep::CustomV3 {
             id: effect,
             params,
-            // Refraction + dispersion can reach beyond 40px at the rim; keep the bound generous.
-            max_sample_offset_px: Px(96.0),
+            max_sample_offset_px,
             user0: None,
             user1: None,
             sources: CustomEffectSourcesV3 {

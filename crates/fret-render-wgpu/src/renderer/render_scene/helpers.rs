@@ -433,33 +433,36 @@ pub(super) fn render_plan_pass_trace_meta(pass: &RenderPlanPass) -> RenderPlanPa
             render_size,
         },
         RenderPlanPass::CustomEffect(pass) => RenderPlanPassTraceMeta {
-            src: Some(pass.src),
-            dst: Some(pass.dst),
-            load: Some(load_label(pass.load)),
-            scissor: pass.dst_scissor.map(|s| s.0),
+            src: Some(pass.common.src),
+            dst: Some(pass.common.dst),
+            load: Some(load_label(pass.common.load)),
+            scissor: pass.common.dst_scissor.map(|s| s.0),
             scissor_space: pass
+                .common
                 .dst_scissor
                 .map(|_| RenderPlanPassTraceScissorSpace::DstLocal),
             render_origin,
             render_size,
         },
         RenderPlanPass::CustomEffectV2(pass) => RenderPlanPassTraceMeta {
-            src: Some(pass.src),
-            dst: Some(pass.dst),
-            load: Some(load_label(pass.load)),
-            scissor: pass.dst_scissor.map(|s| s.0),
+            src: Some(pass.common.src),
+            dst: Some(pass.common.dst),
+            load: Some(load_label(pass.common.load)),
+            scissor: pass.common.dst_scissor.map(|s| s.0),
             scissor_space: pass
+                .common
                 .dst_scissor
                 .map(|_| RenderPlanPassTraceScissorSpace::DstLocal),
             render_origin,
             render_size,
         },
         RenderPlanPass::CustomEffectV3(pass) => RenderPlanPassTraceMeta {
-            src: Some(pass.src),
-            dst: Some(pass.dst),
-            load: Some(load_label(pass.load)),
-            scissor: pass.dst_scissor.map(|s| s.0),
+            src: Some(pass.common.src),
+            dst: Some(pass.common.dst),
+            load: Some(load_label(pass.common.load)),
+            scissor: pass.common.dst_scissor.map(|s| s.0),
             scissor_space: pass
+                .common
                 .dst_scissor
                 .map(|_| RenderPlanPassTraceScissorSpace::DstLocal),
             render_origin,
@@ -560,36 +563,36 @@ pub(super) fn render_plan_pass_render_space(
         RenderPlanPass::Noise(pass) => Some(((0, 0), pass.dst_size)),
         RenderPlanPass::DropShadow(pass) => Some(((0, 0), pass.dst_size)),
         RenderPlanPass::CustomEffect(pass) => {
-            if let Some(LocalScissorRect(scissor)) = pass.dst_scissor {
+            if let Some(LocalScissorRect(scissor)) = pass.common.dst_scissor {
                 if scissor.w == 0 || scissor.h == 0 {
                     None
                 } else {
                     Some(((scissor.x, scissor.y), (scissor.w, scissor.h)))
                 }
             } else {
-                Some(((0, 0), pass.dst_size))
+                Some(((0, 0), pass.common.dst_size))
             }
         }
         RenderPlanPass::CustomEffectV2(pass) => {
-            if let Some(LocalScissorRect(scissor)) = pass.dst_scissor {
+            if let Some(LocalScissorRect(scissor)) = pass.common.dst_scissor {
                 if scissor.w == 0 || scissor.h == 0 {
                     None
                 } else {
                     Some(((scissor.x, scissor.y), (scissor.w, scissor.h)))
                 }
             } else {
-                Some(((0, 0), pass.dst_size))
+                Some(((0, 0), pass.common.dst_size))
             }
         }
         RenderPlanPass::CustomEffectV3(pass) => {
-            if let Some(LocalScissorRect(scissor)) = pass.dst_scissor {
+            if let Some(LocalScissorRect(scissor)) = pass.common.dst_scissor {
                 if scissor.w == 0 || scissor.h == 0 {
                     None
                 } else {
                     Some(((scissor.x, scissor.y), (scissor.w, scissor.h)))
                 }
             } else {
-                Some(((0, 0), pass.dst_size))
+                Some(((0, 0), pass.common.dst_size))
             }
         }
         RenderPlanPass::FullscreenBlit(pass) => Some(((0, 0), pass.dst_size)),

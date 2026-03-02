@@ -209,27 +209,33 @@ Fret mapping (current baseline):
 Embla `loop=true` is not “wrap index on prev/next”. It is a loop engine that wraps translations
 continuously using loopers.
 
-Fret v2 intent:
+Contract:
 
-- If `loop=true` is in scope for v2, we implement:
-  - scroll looper + slide looper translation wrapping,
-  - without duplicating semantics/test ids in a way that breaks automation.
-
-If we cannot implement seamless loop safely, we must explicitly keep `loop` as “selection wrap”
-and **not** claim Embla parity for looping.
+- When `loop=true` is enabled, the engine **must not clamp** at the start/end scroll limits.
+- The scroll motion is kept continuous by wrapping `location`/`target` by `±content_size` while
+  preserving velocity (no “teleport” that resets integrator state).
+- The viewport is kept visually continuous by applying per-slide translations of `0`, `+content_size`,
+  or `-content_size` (a looper), without duplicating semantics/test ids.
+  - Recipes can still apply their own virtualization/mount policies on top (out of scope for v2 MVP).
 
 Implementation (MVP shipped):
 
 - Headless engine wraps `location`/`target` by applying the loop distance without resetting motion.
 - The shadcn recipe applies an additional per-slide `RenderTransform` translation (`±content_size`)
   so the viewport remains visually continuous when the scroll location wraps.
+- Note: `slide_looper.rs` is intentionally not a full 1:1 port of Embla’s gap-fitting loop point
+  selection. It implements the smallest observable outcome needed for recipe-level continuity.
 
 Evidence anchors:
 
+- Upstream references:
+  - `repo-ref/embla-carousel/packages/embla-carousel/src/components/ScrollLooper.ts`
+  - `repo-ref/embla-carousel/packages/embla-carousel/src/components/SlideLooper.ts`
 - Scroll loop normalization: `ecosystem/fret-ui-headless/src/embla/engine.rs`
 - Loop distance application: `ecosystem/fret-ui-headless/src/embla/scroll_body.rs`
 - Slide translation helper: `ecosystem/fret-ui-headless/src/embla/slide_looper.rs`
 - Recipe wiring: `ecosystem/fret-ui-shadcn/src/carousel.rs`
+- Gate: `tools/diag-scripts/ui-gallery/carousel/ui-gallery-carousel-loop-continuity-touch-gate.json`
 
 ## Slides in view semantics
 

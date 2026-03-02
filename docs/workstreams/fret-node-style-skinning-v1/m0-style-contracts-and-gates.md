@@ -131,4 +131,4 @@ Recommended local gate:
 - Theme/token plumbing contract: `docs/node-graph-addons-theming.md`
 - Style tokens: `ecosystem/fret-node/src/ui/style.rs`
 - Wire path builder (native dash entry point): `ecosystem/fret-node/src/ui/canvas/paint.rs`
-- Existing style conformance: `ecosystem/fret-node/src/ui/canvas/widget/tests/xyflow_style_conformance.rs`
+- Existing style conformance: `ecosystem/fret-node/src/ui/canvas/widget/tests/compact_style_conformance.rs`

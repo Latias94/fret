@@ -45,17 +45,27 @@ impl<H: UiHost> UiTree<H> {
     }
 
     pub(in crate::tree) fn mark_invalidation_local(&mut self, node: NodeId, inv: Invalidation) {
-        let Some(n) = self.nodes.get_mut(node) else {
-            return;
+        let (prev, next, layout_before, layout_after) = {
+            let Some(n) = self.nodes.get_mut(node) else {
+                return;
+            };
+            let prev = n.invalidation;
+            let layout_before = n.invalidation.layout;
+            Self::mark_node_invalidation_state(n, inv);
+            let next = n.invalidation;
+            let layout_after = n.invalidation.layout;
+            (prev, next, layout_before, layout_after)
         };
-        let prev = n.invalidation;
-        let layout_before = n.invalidation.layout;
-        Self::mark_node_invalidation_state(n, inv);
-        let next = n.invalidation;
+
         record_layout_invalidation_transition(
             &mut self.layout_invalidations_count,
             layout_before,
-            n.invalidation.layout,
+            layout_after,
+        );
+        self.note_layout_invalidation_transition_for_subtree_aggregation(
+            node,
+            layout_before,
+            layout_after,
         );
         self.update_invalidation_counters(prev, next);
     }

@@ -27,33 +27,24 @@ pub(super) fn preview_tooltip(cx: &mut ElementContext<'_, App>) -> Vec<AnyElemen
         vec![
             DocSection::new("Demo", demo_tooltip)
                 .description("Basic tooltip with an arrow and a short content label.")
-                .code_rust_from_file_region(include_str!("../snippets/tooltip/demo.rs"), "example"),
+                .code_rust_from_file_region(snippets::demo::SOURCE, "example"),
             DocSection::new("Keyboard Focus", focus_row)
                 .description("Tooltips should open when the trigger receives keyboard focus.")
-                .code_rust_from_file_region(
-                    include_str!("../snippets/tooltip/keyboard_focus.rs"),
-                    "example",
-                ),
+                .code_rust_from_file_region(snippets::keyboard_focus::SOURCE, "example"),
             DocSection::new("Side", side_row)
                 .description("Tooltips can be placed on the four sides of the trigger.")
-                .code_rust_from_file_region(include_str!("../snippets/tooltip/sides.rs"), "example"),
+                .code_rust_from_file_region(snippets::sides::SOURCE, "example"),
             DocSection::new("With Keyboard Shortcut", keyboard_tooltip)
                 .description("Compose richer content (e.g. key hints) inside the tooltip panel.")
-                .code_rust_from_file_region(
-                    include_str!("../snippets/tooltip/keyboard_shortcut.rs"),
-                    "example",
-                ),
+                .code_rust_from_file_region(snippets::keyboard_shortcut::SOURCE, "example"),
             DocSection::new("Disabled Button", disabled_tooltip)
                 .description(
                     "Use a non-disabled wrapper as the trigger so hover/focus can still open the tooltip.",
                 )
-                .code_rust_from_file_region(
-                    include_str!("../snippets/tooltip/disabled_button.rs"),
-                    "example",
-                ),
+                .code_rust_from_file_region(snippets::disabled_button::SOURCE, "example"),
             DocSection::new("RTL", rtl_row)
                 .description("Tooltip placement and alignment should work under RTL.")
-                .code_rust_from_file_region(include_str!("../snippets/tooltip/rtl.rs"), "example"),
+                .code_rust_from_file_region(snippets::rtl::SOURCE, "example"),
             DocSection::new("Notes", notes)
                 .description("Implementation notes and regression guidelines."),
         ],

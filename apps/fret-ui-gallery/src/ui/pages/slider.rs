@@ -60,14 +60,11 @@ pub(super) fn preview_slider(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement
                 DocSection::new("Demo", demo)
                     .description("shadcn demo: single, range, multiple, vertical, and controlled.")
                     .max_w(Px(520.0))
-                    .code_rust_from_file_region(include_str!("../snippets/slider/demo.rs"), "example"),
+                    .code_rust_from_file_region(snippets::demo::SOURCE, "example"),
                 DocSection::new("Extras", extras)
                     .description("Fret extras: disabled, RTL, inverted, and onValueCommit.")
                     .max_w(Px(520.0))
-                    .code_rust_from_file_region(
-                        include_str!("../snippets/slider/extras.rs"),
-                        "example",
-                    ),
+                    .code_rust_from_file_region(snippets::extras::SOURCE, "example"),
                 DocSection::new("Notes", notes).description("Behavior notes."),
             ],
         );

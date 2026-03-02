@@ -1,3 +1,5 @@
+pub const SOURCE: &str = include_str!("background.rs");
+
 // region: example
 use fret_core::scene::{ColorSpace, GradientStop, LinearGradient, MAX_STOPS, Paint, TileMode};
 use fret_ui::Invalidation;

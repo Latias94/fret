@@ -2,7 +2,7 @@
 //!
 //! The node graph UI is implemented as a retained widget subtree. This module provides a small
 //! bridge that hosts that subtree inside the declarative element runtime via the
-//! `unstable-retained-bridge` feature.
+//! `compat-retained-canvas` feature (which enables `fret-ui/unstable-retained-bridge`).
 
 use fret_authoring::UiWriter;
 use fret_core::NodeId;

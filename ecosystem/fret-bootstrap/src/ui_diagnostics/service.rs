@@ -267,6 +267,34 @@ impl UiDiagnosticsService {
         )
     }
 
+    fn predicate_can_eval_from_cached_test_id_bounds(predicate: &UiPredicateV1) -> bool {
+        matches!(
+            predicate,
+            UiPredicateV1::Exists {
+                target: UiSelectorV1::TestId { .. }
+            } | UiPredicateV1::NotExists {
+                target: UiSelectorV1::TestId { .. }
+            }
+        )
+    }
+
+    fn eval_predicate_from_cached_test_id_bounds(
+        &self,
+        window: AppWindowId,
+        predicate: &UiPredicateV1,
+    ) -> Option<bool> {
+        let ring = self.per_window.get(&window)?;
+        match predicate {
+            UiPredicateV1::Exists {
+                target: UiSelectorV1::TestId { id },
+            } => Some(ring.test_id_bounds.contains_key(id)),
+            UiPredicateV1::NotExists {
+                target: UiSelectorV1::TestId { id },
+            } => Some(!ring.test_id_bounds.contains_key(id)),
+            _ => None,
+        }
+    }
+
     fn preferred_window_for_active_script(active: &ActiveScript) -> Option<AppWindowId> {
         if let Some(step) = active.steps.get(active.next_step) {
             match step {
@@ -286,6 +314,27 @@ impl UiDiagnosticsService {
             // The first few steps typically establish window geometry and must run consistently.
             if active.next_step == 0 {
                 return Some(active.anchor_window);
+            }
+
+            // `wait_frames` is often used as a short "yield" between runner-level window ops
+            // (raise/move) and subsequent assertions. During cross-window drags, the drag source
+            // window can become fully occluded and starved of redraw callbacks; honoring an
+            // explicit `wait_frames.window` target keeps scripts deterministic without requiring
+            // the occluded window to tick.
+            match step {
+                UiActionStepV2::WaitFrames {
+                    window: Some(UiWindowTargetV1::FirstSeen),
+                    ..
+                } => return Some(active.anchor_window),
+                UiActionStepV2::WaitFrames {
+                    window: Some(UiWindowTargetV1::WindowFfi { window }),
+                    ..
+                } => return Some(AppWindowId::from(KeyData::from_ffi(*window))),
+                UiActionStepV2::WaitFrames {
+                    window: Some(UiWindowTargetV1::Current),
+                    ..
+                } => return None,
+                _ => {}
             }
 
             // Prefer preserving captured-pointer continuity over window-target pinning. During
@@ -347,6 +396,7 @@ impl UiDiagnosticsService {
                 | UiActionStepV2::SetCursorInWindowLogical { window, .. }
                 | UiActionStepV2::SetMouseButtons { window, .. }
                 | UiActionStepV2::RaiseWindow { window, .. }
+                | UiActionStepV2::WaitFrames { window, .. }
                 | UiActionStepV2::WaitUntil { window, .. }
                 | UiActionStepV2::Assert { window, .. } => window.as_ref(),
                 _ => None,
@@ -391,6 +441,7 @@ impl UiDiagnosticsService {
             | UiActionStepV2::SetCursorInWindowLogical { window, .. }
             | UiActionStepV2::SetMouseButtons { window, .. }
             | UiActionStepV2::RaiseWindow { window, .. }
+            | UiActionStepV2::WaitFrames { window, .. }
             | UiActionStepV2::WaitUntil { window, .. }
             | UiActionStepV2::Assert { window, .. } => window.as_ref(),
             _ => None,
@@ -698,6 +749,22 @@ impl UiDiagnosticsService {
         if !self.is_enabled() {
             return;
         }
+
+        // Keep `known_windows` aligned to currently-open windows so window targets like
+        // `last_seen` do not get stuck pointing at a window that has already been closed (common
+        // after tear-off auto-close).
+        if let Some(ctx) = app.global::<fret_runtime::WindowInputContextService>() {
+            let mut to_clear: Vec<AppWindowId> = Vec::new();
+            for w in self.known_windows.iter().copied() {
+                if ctx.snapshot(w).is_none() {
+                    to_clear.push(w);
+                }
+            }
+            for w in to_clear {
+                self.clear_window(w);
+            }
+        }
+        self.note_window_seen(window);
 
         let last_pointer_position = self
             .per_window

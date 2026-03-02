@@ -25,14 +25,14 @@ use crate::action::{
 };
 use crate::canvas::{CanvasPaintHooks, CanvasPainter, OnCanvasPaint};
 use crate::element::{
-    AnyElement, CanvasProps, ColumnProps, CompositeGroupProps, ContainerProps, EffectLayerProps,
-    ElementKind, FlexProps, FocusTraversalGateProps, ForegroundScopeProps, GridProps,
-    HitTestGateProps, HoverRegionProps, ImageProps, InteractivityGateProps, LayoutQueryRegionProps,
-    LayoutStyle, MaskLayerProps, OpacityProps, PointerRegionProps, PressableProps, PressableState,
-    ResizablePanelGroupProps, RowProps, ScrollProps, ScrollbarProps, SelectableTextProps,
-    SpacerProps, SpinnerProps, StackProps, StyledTextProps, SvgIconProps, TextAreaProps,
-    TextInputProps, TextProps, ViewportSurfaceProps, VirtualListOptions, VirtualListProps,
-    VirtualListState, VisualTransformProps,
+    AnyElement, BackdropSourceGroupProps, CanvasProps, ColumnProps, CompositeGroupProps,
+    ContainerProps, EffectLayerProps, ElementKind, FlexProps, FocusTraversalGateProps,
+    ForegroundScopeProps, GridProps, HitTestGateProps, HoverRegionProps, ImageProps,
+    InteractivityGateProps, LayoutQueryRegionProps, LayoutStyle, MaskLayerProps, OpacityProps,
+    PointerRegionProps, PressableProps, PressableState, ResizablePanelGroupProps, RowProps,
+    ScrollProps, ScrollbarProps, SelectableTextProps, SpacerProps, SpinnerProps, StackProps,
+    StyledTextProps, SvgIconProps, TextAreaProps, TextInputProps, TextProps, ViewportSurfaceProps,
+    VirtualListOptions, VirtualListProps, VirtualListState, VisualTransformProps,
 };
 use crate::overlay_placement::{AnchoredPanelLayoutTrace, Side};
 use crate::widget::Invalidation;
@@ -1263,6 +1263,43 @@ impl<'a, H: UiHost> ElementContext<'a, H> {
             let built = f(cx);
             let children = cx.collect_children(built);
             cx.new_any_element(id, ElementKind::EffectLayer(props), children)
+        })
+    }
+
+    #[track_caller]
+    pub fn backdrop_source_group_v1<I>(
+        &mut self,
+        pyramid: Option<fret_core::scene::CustomEffectPyramidRequestV1>,
+        quality: EffectQuality,
+        f: impl FnOnce(&mut Self) -> I,
+    ) -> AnyElement
+    where
+        I: IntoIterator<Item = AnyElement>,
+    {
+        self.backdrop_source_group_v1_props(
+            BackdropSourceGroupProps {
+                pyramid,
+                quality,
+                ..Default::default()
+            },
+            f,
+        )
+    }
+
+    #[track_caller]
+    pub fn backdrop_source_group_v1_props<I>(
+        &mut self,
+        props: BackdropSourceGroupProps,
+        f: impl FnOnce(&mut Self) -> I,
+    ) -> AnyElement
+    where
+        I: IntoIterator<Item = AnyElement>,
+    {
+        self.scope(|cx| {
+            let id = cx.root_id();
+            let built = f(cx);
+            let children = cx.collect_children(built);
+            cx.new_any_element(id, ElementKind::BackdropSourceGroup(props), children)
         })
     }
 

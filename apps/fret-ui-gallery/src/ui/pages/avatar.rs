@@ -49,44 +49,32 @@ pub(super) fn preview_avatar(
         vec![
             DocSection::new("Basic", basic)
                 .description("A basic avatar with an image + fallback.")
-                .code_rust_from_file_region(include_str!("../snippets/avatar/basic.rs"), "example"),
+                .code_rust_from_file_region(snippets::basic::SOURCE, "example"),
             DocSection::new("With Badge", with_badge)
                 .description(
                     "`AvatarBadge` overlays a status dot or icon at the avatar's bottom-right.",
                 )
-                .code_rust_from_file_region(
-                    include_str!("../snippets/avatar/with_badge.rs"),
-                    "example",
-                ),
+                .code_rust_from_file_region(snippets::with_badge::SOURCE, "example"),
             DocSection::new("Avatar Group", avatar_group)
                 .description("Overlapping avatar group (`-space-x-2`).")
-                .code_rust_from_file_region(include_str!("../snippets/avatar/group.rs"), "example"),
+                .code_rust_from_file_region(snippets::group::SOURCE, "example"),
             DocSection::new("Avatar Group Count", group_count)
                 .description("Trailing count bubble that matches the group's size.")
-                .code_rust_from_file_region(
-                    include_str!("../snippets/avatar/group_count.rs"),
-                    "example",
-                ),
+                .code_rust_from_file_region(snippets::group_count::SOURCE, "example"),
             DocSection::new("Sizes", sizes)
                 .description("Upstream: `size=\"sm\" | \"default\" | \"lg\"`.")
-                .code_rust_from_file_region(include_str!("../snippets/avatar/sizes.rs"), "example"),
+                .code_rust_from_file_region(snippets::sizes::SOURCE, "example"),
             DocSection::new("Dropdown", dropdown)
                 .description(
                     "Use Avatar as a DropdownMenu trigger (shadcn `asChild`-style composition).",
                 )
-                .code_rust_from_file_region(
-                    include_str!("../snippets/avatar/dropdown.rs"),
-                    "example",
-                ),
+                .code_rust_from_file_region(snippets::dropdown::SOURCE, "example"),
             DocSection::new("RTL", rtl)
                 .description("Avatar should behave under an RTL direction provider.")
-                .code_rust_from_file_region(include_str!("../snippets/avatar/rtl.rs"), "example"),
+                .code_rust_from_file_region(snippets::rtl::SOURCE, "example"),
             DocSection::new("Extras: Fallback only", fallback)
                 .description("Fallback-only avatars at each size.")
-                .code_rust_from_file_region(
-                    include_str!("../snippets/avatar/fallback_only.rs"),
-                    "example",
-                ),
+                .code_rust_from_file_region(snippets::fallback_only::SOURCE, "example"),
             DocSection::new("Notes", notes).description("Usage notes."),
         ],
     );

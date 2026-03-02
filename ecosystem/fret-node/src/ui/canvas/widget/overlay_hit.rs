@@ -5,9 +5,9 @@ pub(super) fn context_menu_size_at_zoom(
     item_count: usize,
     zoom: f32,
 ) -> Size {
-    let w = style.context_menu_width / zoom;
-    let item_h = style.context_menu_item_height / zoom;
-    let pad = style.context_menu_padding / zoom;
+    let w = style.paint.context_menu_width / zoom;
+    let item_h = style.paint.context_menu_item_height / zoom;
+    let pad = style.paint.context_menu_padding / zoom;
     let h = (2.0 * pad + item_h * item_count.max(1) as f32).max(item_h + 2.0 * pad);
     Size::new(Px(w), Px(h))
 }
@@ -39,9 +39,9 @@ pub(super) fn searcher_rect_at(
 }
 
 pub(super) fn searcher_size_at_zoom(style: &NodeGraphStyle, row_count: usize, zoom: f32) -> Size {
-    let w = style.context_menu_width / zoom;
-    let item_h = style.context_menu_item_height / zoom;
-    let pad = style.context_menu_padding / zoom;
+    let w = style.paint.context_menu_width / zoom;
+    let item_h = style.paint.context_menu_item_height / zoom;
+    let pad = style.paint.context_menu_padding / zoom;
 
     let list_rows = row_count.max(1) as f32;
     let h = 3.0 * pad + item_h * (1.0 + list_rows);
@@ -60,8 +60,8 @@ pub(super) fn hit_searcher_row(
         return None;
     }
 
-    let pad = style.context_menu_padding / zoom;
-    let item_h = style.context_menu_item_height / zoom;
+    let pad = style.paint.context_menu_padding / zoom;
+    let item_h = style.paint.context_menu_item_height / zoom;
 
     let list_top = rect.origin.y.0 + pad + item_h + pad;
     let y = pos.y.0 - list_top;
@@ -93,8 +93,8 @@ pub(super) fn hit_context_menu_item(
         return None;
     }
 
-    let pad = style.context_menu_padding / zoom;
-    let item_h = style.context_menu_item_height / zoom;
+    let pad = style.paint.context_menu_padding / zoom;
+    let item_h = style.paint.context_menu_item_height / zoom;
     let inner_top = rect.origin.y.0 + pad;
     let y = pos.y.0 - inner_top;
     if y < 0.0 {

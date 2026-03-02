@@ -36,6 +36,18 @@ Practical v1 staging:
 - If metrics show parent-walk cost is high in real workloads, switch to the two-tier design without
   changing the consumer API.
 
+Current status:
+
+- v1 currently ships **eager-to-root** aggregation updates.
+- Invalidation marking can truncate at view-cache roots, but aggregation continues walking parent
+  pointers above the truncation point to apply the pending delta.
+
+Important caveat:
+
+- Even if aggregation propagates across cache roots, the generic layout loop must not treat
+  “ancestor subtree dirty” as “ancestor must relayout”, otherwise contained cache-root invalidations
+  can be cleared in the wrong phase (breaking the intended `contained_layout` semantics).
+
 ## 2) Counter vs epoch
 
 Alternative designs:
@@ -104,5 +116,17 @@ Guidance:
 
 - Consumers that decide whether to **reuse cached measurement/extent** should consult
   `subtree_layout_dirty(...)`.
-- The aggregation is a **signal**, not an invalidation; consumers should not “force mark dirty” as a
-  workaround once the aggregation is in place.
+- The aggregation is a **signal**, not an invalidation.
+  - The signal is primarily intended to gate **cache reuse** decisions, not to force traversal.
+
+### New open question: should we expose a “boundary-aware” subtree query?
+
+If future consumers want to make traversal / relayout decisions based on subtree dirtiness, we
+likely need a second semantic:
+
+- `subtree_layout_dirty_any(...)`: current meaning, includes contained cache roots.
+- `subtree_layout_dirty_excluding_contained(...)`: ignores descendants that are fully owned by a
+  `contained_layout` cache root (definite sizing), because those changes are not supposed to affect
+  ancestor layout.
+
+Recommendation: defer until a real consumer needs it; keep v1 minimal.

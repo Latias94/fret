@@ -200,20 +200,18 @@ fn carousel_card_content(
 ) -> AnyElement {
     let theme = Theme::global(&*cx.app).clone();
 
-    let mut layout = LayoutRefinement::default().w_full();
-    if aspect_square {
-        layout = layout.aspect_ratio(1.0);
-    }
-
     let text = ui::text(cx, format!("{number}"))
         .text_size_px(text_px)
         .line_height_px(line_height)
         .font_semibold()
         .into_element(cx);
 
-    cx.flex(
+    let content = cx.flex(
         FlexProps {
-            layout: fret_ui_kit::declarative::style::layout_style(&theme, layout),
+            layout: fret_ui_kit::declarative::style::layout_style(
+                &theme,
+                LayoutRefinement::default().w_full(),
+            ),
             direction: fret_core::Axis::Horizontal,
             justify: MainAlign::Center,
             align: CrossAlign::Center,
@@ -221,7 +219,13 @@ fn carousel_card_content(
             ..Default::default()
         },
         move |_cx| vec![text],
-    )
+    );
+
+    if aspect_square {
+        fret_ui_shadcn::AspectRatio::new(1.0, content).into_element(cx)
+    } else {
+        content
+    }
 }
 
 fn carousel_slide(
@@ -238,9 +242,15 @@ fn carousel_slide(
     if with_p1_wrapper {
         ui::container(cx, move |_cx| vec![card])
             .p_1()
+            .w_full()
             .into_element(cx)
     } else {
-        card
+        fret_ui_kit::declarative::stack::vstack(
+            cx,
+            fret_ui_kit::declarative::stack::VStackProps::default()
+                .layout(LayoutRefinement::default().w_full()),
+            move |_cx| vec![card],
+        )
     }
 }
 

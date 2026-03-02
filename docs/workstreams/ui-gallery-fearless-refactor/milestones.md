@@ -3,6 +3,13 @@
 This file defines milestones and acceptance criteria for the UI Gallery refactor described in
 `plan.md`.
 
+## Status
+
+As of 2026-03-02:
+
+- Milestones 0–3 are effectively complete in-tree (snippet-backed pages + enforcement tests + drift audit).
+- Milestone 4 remains optional / follow-up (taxonomy polish, consistency, etc).
+
 ## Milestone 0 — Foundations
 
 **Deliverables**

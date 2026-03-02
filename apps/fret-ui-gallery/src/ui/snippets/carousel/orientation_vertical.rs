@@ -1,3 +1,5 @@
+pub const SOURCE: &str = include_str!("orientation_vertical.rs");
+
 // region: example
 use fret_app::App;
 use fret_core::Edges;
@@ -34,6 +36,7 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
 
             let card = shadcn::Card::new([body]).into_element(cx);
             ui::container(cx, move |_cx| vec![card])
+                .w_full()
                 .p_1()
                 .into_element(cx)
         })

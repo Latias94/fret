@@ -155,6 +155,46 @@ pub(crate) fn triage_json_from_stats(
             .and_then(|v| v.as_u64())
             .unwrap_or(0);
 
+        let custom_effect_chain_present =
+            worst.renderer_render_plan_custom_effect_chain_budget_samples > 0;
+        let custom_effect_chain_effective_budget_bytes = custom_effect_chain_present
+            .then_some(worst.renderer_render_plan_custom_effect_chain_effective_budget_min_bytes);
+        let custom_effect_chain_base_required_bytes = custom_effect_chain_present
+            .then_some(worst.renderer_render_plan_custom_effect_chain_base_required_max_bytes);
+        let custom_effect_chain_optional_required_bytes = custom_effect_chain_present
+            .then_some(worst.renderer_render_plan_custom_effect_chain_optional_required_max_bytes);
+        let custom_effect_chain_optional_mask_bytes = custom_effect_chain_present
+            .then_some(worst.renderer_render_plan_custom_effect_chain_optional_mask_max_bytes);
+        let custom_effect_chain_headroom_before_optional_bytes = custom_effect_chain_present
+            .then_some(
+                worst
+                    .renderer_render_plan_custom_effect_chain_effective_budget_min_bytes
+                    .saturating_sub(
+                        worst.renderer_render_plan_custom_effect_chain_base_required_max_bytes,
+                    ),
+            );
+        let custom_effect_chain_headroom_after_mask_bytes = custom_effect_chain_present.then_some(
+            worst
+                .renderer_render_plan_custom_effect_chain_effective_budget_min_bytes
+                .saturating_sub(
+                    worst.renderer_render_plan_custom_effect_chain_base_required_max_bytes,
+                )
+                .saturating_sub(
+                    worst.renderer_render_plan_custom_effect_chain_optional_mask_max_bytes,
+                ),
+        );
+        let custom_effect_chain_headroom_after_optional_bytes = custom_effect_chain_present
+            .then_some(
+                worst
+                    .renderer_render_plan_custom_effect_chain_effective_budget_min_bytes
+                    .saturating_sub(
+                        worst.renderer_render_plan_custom_effect_chain_base_required_max_bytes,
+                    )
+                    .saturating_sub(
+                        worst.renderer_render_plan_custom_effect_chain_optional_required_max_bytes,
+                    ),
+            );
+
         // Heuristics are intentionally simple, bounded, and explainable.
         // Keep thresholds conservative; they are hints, not gates.
 
@@ -364,6 +404,249 @@ pub(crate) fn triage_json_from_stats(
                         "gpu_copy": worst.renderer_viewport_draw_calls_ingest_gpu_copy,
                         "cpu_upload": worst.renderer_viewport_draw_calls_ingest_cpu_upload,
                     },
+                }
+            }));
+        }
+
+        // renderer.custom_effect_v1_requested_but_skipped
+        if worst.renderer_custom_effect_v1_steps_requested > 0
+            && worst.renderer_custom_effect_v1_passes_emitted == 0
+        {
+            let min_budget_for_two_full_targets_bytes = worst
+                .renderer_intermediate_full_target_bytes
+                .saturating_mul(2);
+            out.push(json!({
+                "code": "renderer.custom_effect_v1_requested_but_skipped",
+                "severity": "warn",
+                "message": "CustomEffectV1 was requested but no CustomEffect passes were emitted in the worst frame (likely skipped due to intermediate budget / target constraints).",
+                "evidence": {
+                    "custom_effect_v1_steps_requested": worst.renderer_custom_effect_v1_steps_requested,
+                    "custom_effect_v1_passes_emitted": worst.renderer_custom_effect_v1_passes_emitted,
+                    "renderer_intermediate_budget_bytes": worst.renderer_intermediate_budget_bytes,
+                    "renderer_intermediate_full_target_bytes": worst.renderer_intermediate_full_target_bytes,
+                    "renderer_render_plan_effect_chain_budget_samples": worst.renderer_render_plan_effect_chain_budget_samples,
+                    "renderer_render_plan_effect_chain_effective_budget_min_bytes": worst.renderer_render_plan_effect_chain_effective_budget_min_bytes,
+                    "renderer_render_plan_effect_chain_effective_budget_max_bytes": worst.renderer_render_plan_effect_chain_effective_budget_max_bytes,
+                    "renderer_render_plan_effect_chain_other_live_max_bytes": worst.renderer_render_plan_effect_chain_other_live_max_bytes,
+                    "renderer_render_plan_custom_effect_chain_budget_samples": worst.renderer_render_plan_custom_effect_chain_budget_samples,
+                    "renderer_render_plan_custom_effect_chain_effective_budget_min_bytes": worst.renderer_render_plan_custom_effect_chain_effective_budget_min_bytes,
+                    "renderer_render_plan_custom_effect_chain_effective_budget_max_bytes": worst.renderer_render_plan_custom_effect_chain_effective_budget_max_bytes,
+                    "renderer_render_plan_custom_effect_chain_other_live_max_bytes": worst.renderer_render_plan_custom_effect_chain_other_live_max_bytes,
+                    "renderer_render_plan_custom_effect_chain_base_required_max_bytes": worst.renderer_render_plan_custom_effect_chain_base_required_max_bytes,
+                    "renderer_render_plan_custom_effect_chain_optional_required_max_bytes": worst.renderer_render_plan_custom_effect_chain_optional_required_max_bytes,
+                    "renderer_render_plan_custom_effect_chain_base_required_full_targets_max": worst.renderer_render_plan_custom_effect_chain_base_required_full_targets_max,
+                    "renderer_render_plan_custom_effect_chain_optional_mask_max_bytes": worst.renderer_render_plan_custom_effect_chain_optional_mask_max_bytes,
+                    "renderer_render_plan_custom_effect_chain_optional_pyramid_max_bytes": worst.renderer_render_plan_custom_effect_chain_optional_pyramid_max_bytes,
+                    "custom_effect_chain_effective_budget_bytes": custom_effect_chain_effective_budget_bytes,
+                    "custom_effect_chain_base_required_bytes": custom_effect_chain_base_required_bytes,
+                    "custom_effect_chain_optional_required_bytes": custom_effect_chain_optional_required_bytes,
+                    "custom_effect_chain_optional_mask_bytes": custom_effect_chain_optional_mask_bytes,
+                    "custom_effect_chain_headroom_before_optional_bytes": custom_effect_chain_headroom_before_optional_bytes,
+                    "custom_effect_chain_headroom_after_mask_bytes": custom_effect_chain_headroom_after_mask_bytes,
+                    "custom_effect_chain_headroom_after_optional_bytes": custom_effect_chain_headroom_after_optional_bytes,
+                    "min_budget_for_two_full_targets_bytes": min_budget_for_two_full_targets_bytes,
+                    "renderer_intermediate_peak_in_use_bytes": worst.renderer_intermediate_peak_in_use_bytes,
+                }
+            }));
+        }
+
+        // renderer.custom_effect_v2_requested_but_skipped
+        if worst.renderer_custom_effect_v2_steps_requested > 0
+            && worst.renderer_custom_effect_v2_passes_emitted == 0
+        {
+            let min_budget_for_two_full_targets_bytes = worst
+                .renderer_intermediate_full_target_bytes
+                .saturating_mul(2);
+            out.push(json!({
+                "code": "renderer.custom_effect_v2_requested_but_skipped",
+                "severity": "warn",
+                "message": "CustomEffectV2 was requested but no CustomEffectV2 passes were emitted in the worst frame (likely skipped due to intermediate budget / target constraints).",
+                "evidence": {
+                    "custom_effect_v2_steps_requested": worst.renderer_custom_effect_v2_steps_requested,
+                    "custom_effect_v2_passes_emitted": worst.renderer_custom_effect_v2_passes_emitted,
+                    "renderer_intermediate_budget_bytes": worst.renderer_intermediate_budget_bytes,
+                    "renderer_intermediate_full_target_bytes": worst.renderer_intermediate_full_target_bytes,
+                    "renderer_render_plan_effect_chain_budget_samples": worst.renderer_render_plan_effect_chain_budget_samples,
+                    "renderer_render_plan_effect_chain_effective_budget_min_bytes": worst.renderer_render_plan_effect_chain_effective_budget_min_bytes,
+                    "renderer_render_plan_effect_chain_effective_budget_max_bytes": worst.renderer_render_plan_effect_chain_effective_budget_max_bytes,
+                    "renderer_render_plan_effect_chain_other_live_max_bytes": worst.renderer_render_plan_effect_chain_other_live_max_bytes,
+                    "renderer_render_plan_custom_effect_chain_budget_samples": worst.renderer_render_plan_custom_effect_chain_budget_samples,
+                    "renderer_render_plan_custom_effect_chain_effective_budget_min_bytes": worst.renderer_render_plan_custom_effect_chain_effective_budget_min_bytes,
+                    "renderer_render_plan_custom_effect_chain_effective_budget_max_bytes": worst.renderer_render_plan_custom_effect_chain_effective_budget_max_bytes,
+                    "renderer_render_plan_custom_effect_chain_other_live_max_bytes": worst.renderer_render_plan_custom_effect_chain_other_live_max_bytes,
+                    "renderer_render_plan_custom_effect_chain_base_required_max_bytes": worst.renderer_render_plan_custom_effect_chain_base_required_max_bytes,
+                    "renderer_render_plan_custom_effect_chain_optional_required_max_bytes": worst.renderer_render_plan_custom_effect_chain_optional_required_max_bytes,
+                    "renderer_render_plan_custom_effect_chain_base_required_full_targets_max": worst.renderer_render_plan_custom_effect_chain_base_required_full_targets_max,
+                    "renderer_render_plan_custom_effect_chain_optional_mask_max_bytes": worst.renderer_render_plan_custom_effect_chain_optional_mask_max_bytes,
+                    "renderer_render_plan_custom_effect_chain_optional_pyramid_max_bytes": worst.renderer_render_plan_custom_effect_chain_optional_pyramid_max_bytes,
+                    "custom_effect_chain_effective_budget_bytes": custom_effect_chain_effective_budget_bytes,
+                    "custom_effect_chain_base_required_bytes": custom_effect_chain_base_required_bytes,
+                    "custom_effect_chain_optional_required_bytes": custom_effect_chain_optional_required_bytes,
+                    "custom_effect_chain_optional_mask_bytes": custom_effect_chain_optional_mask_bytes,
+                    "custom_effect_chain_headroom_before_optional_bytes": custom_effect_chain_headroom_before_optional_bytes,
+                    "custom_effect_chain_headroom_after_mask_bytes": custom_effect_chain_headroom_after_mask_bytes,
+                    "custom_effect_chain_headroom_after_optional_bytes": custom_effect_chain_headroom_after_optional_bytes,
+                    "min_budget_for_two_full_targets_bytes": min_budget_for_two_full_targets_bytes,
+                    "renderer_intermediate_peak_in_use_bytes": worst.renderer_intermediate_peak_in_use_bytes,
+                }
+            }));
+        }
+
+        // renderer.custom_effect_v3_requested_but_skipped
+        //
+        // This catches the case where the UI requested CustomEffectV3 (effect chains include a
+        // CustomV3 step) but the render plan compiler did not emit any CustomEffectV3 passes for
+        // the frame. This is usually explained by intermediate budget pressure or target
+        // exhaustion preventing the pass from being scheduled at all (so downstream source-level
+        // degradation counters remain at 0).
+        if worst.renderer_custom_effect_v3_steps_requested > 0
+            && worst.renderer_custom_effect_v3_passes_emitted == 0
+        {
+            let min_budget_for_two_full_targets_bytes = worst
+                .renderer_intermediate_full_target_bytes
+                .saturating_mul(2);
+            out.push(json!({
+                "code": "renderer.custom_effect_v3_requested_but_skipped",
+                "severity": "warn",
+                "message": "CustomEffectV3 was requested but no CustomEffectV3 passes were emitted in the worst frame (likely skipped due to intermediate budget / target constraints).",
+                "evidence": {
+                    "custom_effect_v3_steps_requested": worst.renderer_custom_effect_v3_steps_requested,
+                    "custom_effect_v3_passes_emitted": worst.renderer_custom_effect_v3_passes_emitted,
+                    "renderer_intermediate_budget_bytes": worst.renderer_intermediate_budget_bytes,
+                    "renderer_intermediate_full_target_bytes": worst.renderer_intermediate_full_target_bytes,
+                    "renderer_render_plan_effect_chain_budget_samples": worst.renderer_render_plan_effect_chain_budget_samples,
+                    "renderer_render_plan_effect_chain_effective_budget_min_bytes": worst.renderer_render_plan_effect_chain_effective_budget_min_bytes,
+                    "renderer_render_plan_effect_chain_effective_budget_max_bytes": worst.renderer_render_plan_effect_chain_effective_budget_max_bytes,
+                    "renderer_render_plan_effect_chain_other_live_max_bytes": worst.renderer_render_plan_effect_chain_other_live_max_bytes,
+                    "renderer_render_plan_custom_effect_chain_budget_samples": worst.renderer_render_plan_custom_effect_chain_budget_samples,
+                    "renderer_render_plan_custom_effect_chain_effective_budget_min_bytes": worst.renderer_render_plan_custom_effect_chain_effective_budget_min_bytes,
+                    "renderer_render_plan_custom_effect_chain_effective_budget_max_bytes": worst.renderer_render_plan_custom_effect_chain_effective_budget_max_bytes,
+                    "renderer_render_plan_custom_effect_chain_other_live_max_bytes": worst.renderer_render_plan_custom_effect_chain_other_live_max_bytes,
+                    "renderer_render_plan_custom_effect_chain_base_required_max_bytes": worst.renderer_render_plan_custom_effect_chain_base_required_max_bytes,
+                    "renderer_render_plan_custom_effect_chain_optional_required_max_bytes": worst.renderer_render_plan_custom_effect_chain_optional_required_max_bytes,
+                    "renderer_render_plan_custom_effect_chain_base_required_full_targets_max": worst.renderer_render_plan_custom_effect_chain_base_required_full_targets_max,
+                    "renderer_render_plan_custom_effect_chain_optional_mask_max_bytes": worst.renderer_render_plan_custom_effect_chain_optional_mask_max_bytes,
+                    "renderer_render_plan_custom_effect_chain_optional_pyramid_max_bytes": worst.renderer_render_plan_custom_effect_chain_optional_pyramid_max_bytes,
+                    "custom_effect_chain_effective_budget_bytes": custom_effect_chain_effective_budget_bytes,
+                    "custom_effect_chain_base_required_bytes": custom_effect_chain_base_required_bytes,
+                    "custom_effect_chain_optional_required_bytes": custom_effect_chain_optional_required_bytes,
+                    "custom_effect_chain_optional_mask_bytes": custom_effect_chain_optional_mask_bytes,
+                    "custom_effect_chain_headroom_before_optional_bytes": custom_effect_chain_headroom_before_optional_bytes,
+                    "custom_effect_chain_headroom_after_mask_bytes": custom_effect_chain_headroom_after_mask_bytes,
+                    "custom_effect_chain_headroom_after_optional_bytes": custom_effect_chain_headroom_after_optional_bytes,
+                    "min_budget_for_two_full_targets_bytes": min_budget_for_two_full_targets_bytes,
+                    "renderer_intermediate_peak_in_use_bytes": worst.renderer_intermediate_peak_in_use_bytes,
+                }
+            }));
+        }
+
+        // renderer.custom_effect_v3_sources_degraded
+        //
+        // These are correctness/ceiling signals: for liquid-glass-like looks, losing `src_raw` or
+        // degrading the pyramid to 1 level can materially change the appearance.
+        let worst_v3_pyr_degraded = worst
+            .renderer_custom_effect_v3_sources_pyramid_degraded_to_one_budget_zero
+            .saturating_add(
+                worst.renderer_custom_effect_v3_sources_pyramid_degraded_to_one_budget_insufficient,
+            );
+        if worst_v3_pyr_degraded > 0 {
+            let custom_effect_v3_pyramid_required_bytes_levels2_est = worst
+                .renderer_intermediate_full_target_bytes
+                .saturating_add(worst.renderer_intermediate_full_target_bytes / 4);
+            let custom_effect_v3_pyramid_would_fit_levels2_est =
+                custom_effect_chain_headroom_after_mask_bytes
+                    .map(|h| h >= custom_effect_v3_pyramid_required_bytes_levels2_est);
+            out.push(json!({
+                "code": "renderer.custom_effect_v3_pyramid_degraded_to_one",
+                "severity": "warn",
+                "message": "CustomEffectV3 pyramid was degraded to 1 level in the worst frame (budget pressure).",
+                "evidence": {
+                    "custom_effect_v3_sources_pyramid_requested": worst.renderer_custom_effect_v3_sources_pyramid_requested,
+                    "custom_effect_v3_sources_pyramid_applied_levels_ge2": worst.renderer_custom_effect_v3_sources_pyramid_applied_levels_ge2,
+                    "custom_effect_v3_sources_pyramid_degraded_to_one_budget_zero": worst.renderer_custom_effect_v3_sources_pyramid_degraded_to_one_budget_zero,
+                    "custom_effect_v3_sources_pyramid_degraded_to_one_budget_insufficient": worst.renderer_custom_effect_v3_sources_pyramid_degraded_to_one_budget_insufficient,
+                    "renderer_intermediate_budget_bytes": worst.renderer_intermediate_budget_bytes,
+                    "renderer_intermediate_full_target_bytes": worst.renderer_intermediate_full_target_bytes,
+                    "custom_effect_v3_pyramid_required_bytes_levels2_est": custom_effect_v3_pyramid_required_bytes_levels2_est,
+                    "custom_effect_v3_pyramid_would_fit_levels2_est": custom_effect_v3_pyramid_would_fit_levels2_est,
+                    "renderer_render_plan_effect_chain_budget_samples": worst.renderer_render_plan_effect_chain_budget_samples,
+                    "renderer_render_plan_effect_chain_effective_budget_min_bytes": worst.renderer_render_plan_effect_chain_effective_budget_min_bytes,
+                    "renderer_render_plan_effect_chain_effective_budget_max_bytes": worst.renderer_render_plan_effect_chain_effective_budget_max_bytes,
+                    "renderer_render_plan_effect_chain_other_live_max_bytes": worst.renderer_render_plan_effect_chain_other_live_max_bytes,
+                    "renderer_render_plan_custom_effect_chain_budget_samples": worst.renderer_render_plan_custom_effect_chain_budget_samples,
+                    "renderer_render_plan_custom_effect_chain_effective_budget_min_bytes": worst.renderer_render_plan_custom_effect_chain_effective_budget_min_bytes,
+                    "renderer_render_plan_custom_effect_chain_effective_budget_max_bytes": worst.renderer_render_plan_custom_effect_chain_effective_budget_max_bytes,
+                    "renderer_render_plan_custom_effect_chain_other_live_max_bytes": worst.renderer_render_plan_custom_effect_chain_other_live_max_bytes,
+                    "renderer_render_plan_custom_effect_chain_base_required_max_bytes": worst.renderer_render_plan_custom_effect_chain_base_required_max_bytes,
+                    "renderer_render_plan_custom_effect_chain_optional_required_max_bytes": worst.renderer_render_plan_custom_effect_chain_optional_required_max_bytes,
+                    "renderer_render_plan_custom_effect_chain_base_required_full_targets_max": worst.renderer_render_plan_custom_effect_chain_base_required_full_targets_max,
+                    "renderer_render_plan_custom_effect_chain_optional_mask_max_bytes": worst.renderer_render_plan_custom_effect_chain_optional_mask_max_bytes,
+                    "renderer_render_plan_custom_effect_chain_optional_pyramid_max_bytes": worst.renderer_render_plan_custom_effect_chain_optional_pyramid_max_bytes,
+                    "custom_effect_chain_effective_budget_bytes": custom_effect_chain_effective_budget_bytes,
+                    "custom_effect_chain_base_required_bytes": custom_effect_chain_base_required_bytes,
+                    "custom_effect_chain_optional_required_bytes": custom_effect_chain_optional_required_bytes,
+                    "custom_effect_chain_optional_mask_bytes": custom_effect_chain_optional_mask_bytes,
+                    "custom_effect_chain_headroom_before_optional_bytes": custom_effect_chain_headroom_before_optional_bytes,
+                    "custom_effect_chain_headroom_after_mask_bytes": custom_effect_chain_headroom_after_mask_bytes,
+                    "custom_effect_chain_headroom_after_optional_bytes": custom_effect_chain_headroom_after_optional_bytes,
+                    "renderer_intermediate_peak_in_use_bytes": worst.renderer_intermediate_peak_in_use_bytes,
+                }
+            }));
+        }
+
+        if worst.renderer_custom_effect_v3_sources_raw_requested > 0
+            && worst.renderer_custom_effect_v3_sources_raw_aliased_to_src > 0
+        {
+            out.push(json!({
+                "code": "renderer.custom_effect_v3_raw_aliased_to_src",
+                "severity": "info",
+                "message": "CustomEffectV3 `src_raw` was aliased to `src` in the worst frame (raw snapshot unavailable).",
+                "evidence": {
+                    "custom_effect_v3_sources_raw_requested": worst.renderer_custom_effect_v3_sources_raw_requested,
+                    "custom_effect_v3_sources_raw_distinct": worst.renderer_custom_effect_v3_sources_raw_distinct,
+                    "custom_effect_v3_sources_raw_aliased_to_src": worst.renderer_custom_effect_v3_sources_raw_aliased_to_src,
+                }
+            }));
+        }
+
+        // renderer.backdrop_source_group_degraded
+        let worst_bsg_raw_degraded = worst
+            .renderer_backdrop_source_groups_raw_degraded_budget_zero
+            .saturating_add(worst.renderer_backdrop_source_groups_raw_degraded_budget_insufficient)
+            .saturating_add(worst.renderer_backdrop_source_groups_raw_degraded_target_exhausted);
+        if worst.renderer_backdrop_source_groups_requested > 0 && worst_bsg_raw_degraded > 0 {
+            out.push(json!({
+                "code": "renderer.backdrop_source_groups_raw_degraded",
+                "severity": "warn",
+                "message": "Backdrop source group raw snapshot was degraded in the worst frame (sharing ceiling reduced).",
+                "evidence": {
+                    "backdrop_source_groups_requested": worst.renderer_backdrop_source_groups_requested,
+                    "backdrop_source_groups_applied_raw": worst.renderer_backdrop_source_groups_applied_raw,
+                    "backdrop_source_groups_raw_degraded_budget_zero": worst.renderer_backdrop_source_groups_raw_degraded_budget_zero,
+                    "backdrop_source_groups_raw_degraded_budget_insufficient": worst.renderer_backdrop_source_groups_raw_degraded_budget_insufficient,
+                    "backdrop_source_groups_raw_degraded_target_exhausted": worst.renderer_backdrop_source_groups_raw_degraded_target_exhausted,
+                }
+            }));
+        }
+
+        let worst_bsg_pyr_degraded = worst
+            .renderer_backdrop_source_groups_pyramid_degraded_to_one_budget_zero
+            .saturating_add(
+                worst.renderer_backdrop_source_groups_pyramid_degraded_to_one_budget_insufficient,
+            )
+            .saturating_add(worst.renderer_backdrop_source_groups_pyramid_skipped_raw_unavailable);
+        if worst.renderer_backdrop_source_groups_pyramid_requested > 0 && worst_bsg_pyr_degraded > 0
+        {
+            out.push(json!({
+                "code": "renderer.backdrop_source_groups_pyramid_degraded",
+                "severity": "info",
+                "message": "Backdrop source group pyramid sharing was degraded in the worst frame.",
+                "evidence": {
+                    "backdrop_source_groups_pyramid_requested": worst.renderer_backdrop_source_groups_pyramid_requested,
+                    "backdrop_source_groups_pyramid_applied_levels_ge2": worst.renderer_backdrop_source_groups_pyramid_applied_levels_ge2,
+                    "backdrop_source_groups_pyramid_degraded_to_one_budget_zero": worst.renderer_backdrop_source_groups_pyramid_degraded_to_one_budget_zero,
+                    "backdrop_source_groups_pyramid_degraded_to_one_budget_insufficient": worst.renderer_backdrop_source_groups_pyramid_degraded_to_one_budget_insufficient,
+                    "backdrop_source_groups_pyramid_skipped_raw_unavailable": worst.renderer_backdrop_source_groups_pyramid_skipped_raw_unavailable,
                 }
             }));
         }

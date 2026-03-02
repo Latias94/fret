@@ -49,6 +49,25 @@ Status update (2026-03-02):
   - `wait_until dock_graph_canonical_is(true)`,
   - and structural `dock_graph_signature_contains(...)` assertions rather than a single exact signature match.
   - Script: `tools/diag-scripts/docking/arbitration/docking-arbitration-demo-multiwindow-drag-tab-back-to-main.json`
+- `wait_frames` now supports an optional schema v2 `window` target; this fixes overlap/z-order scripts that could stall
+  when the drag source window is fully occluded and stops producing redraw callbacks.
+  - Script: `tools/diag-scripts/docking/arbitration/docking-arbitration-demo-multiwindow-overlap-zorder-switch.json`
+
+Status update (2026-03-02, later):
+
+- Fixed a class of “`step_index` stuck (no progress) while `fretboard diag run` waits for `script.result.json`” failures:
+  - Root cause: window-targeted `wait_until/assert` steps (e.g. `exists` by `test_id`) could force script migration to
+    an occluded window, stalling timeouts and leaving the script permanently `running`.
+  - Fix: allow `exists/not_exists` for `test_id` selectors to be evaluated against cached per-window `test_id_bounds`
+    (no forced window handoff), and allow migration to follow whichever window is producing frames.
+- Made `drag_pointer_until` usable as a “hold the drag, then reposition + release later” primitive even for cross-window
+  dock drags by always materializing a pointer session when `release_on_success: false`.
+- Improved bundle debuggability: UI debug snapshots now fall back to `WindowInteractionDiagnosticsStore::*_latest_for_window`
+  when the frame-scoped snapshot is empty, so bundles reliably include `dock_graph_signature` / `dock_graph_stats`.
+- Current product-level gap (vs desired “returns to canonical signature”): the chained tear-off + merge-back script now
+  runs through both merges but fails the final exact signature assertion. The last observed signature in a failing run:
+  - `dock(root=tabs(a=1:[demo.controls,demo.viewport.right]);floatings=[])`
+  - fingerprint64: `2526963005150391245` (expected `7509174212363425732`)
 
 ## 4) Should overlap-based “peek-behind” be required?
 

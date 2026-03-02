@@ -92,6 +92,41 @@ pub enum CalendarCaptionLayout {
     Dropdown,
 }
 
+/// Upstream shadcn/ui `CalendarDayButton` equivalent.
+///
+/// In the web implementation this is a custom `DayButton` component. In Fret we expose the
+/// equivalent **styling surface** as mergeable refinements applied to the day pressable chrome.
+#[derive(Debug, Clone)]
+pub struct CalendarDayButton {
+    pub chrome: ChromeRefinement,
+    pub layout: LayoutRefinement,
+}
+
+impl Default for CalendarDayButton {
+    fn default() -> Self {
+        Self {
+            chrome: ChromeRefinement::default().rounded(Radius::Md),
+            layout: LayoutRefinement::default(),
+        }
+    }
+}
+
+impl CalendarDayButton {
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    pub fn refine_chrome(mut self, chrome: ChromeRefinement) -> Self {
+        self.chrome = self.chrome.merge(chrome);
+        self
+    }
+
+    pub fn refine_layout(mut self, layout: LayoutRefinement) -> Self {
+        self.layout = self.layout.merge(layout);
+        self
+    }
+}
+
 impl Default for CalendarLocale {
     fn default() -> Self {
         Self::En
@@ -260,6 +295,7 @@ pub struct Calendar {
     test_id_prefix: Option<Arc<str>>,
     today: Option<Date>,
     modifiers: DayPickerModifiers,
+    day_button: CalendarDayButton,
     close_on_select: Option<Model<bool>>,
     initial_focus_out: Option<Rc<Cell<Option<fret_ui::elements::GlobalElementId>>>>,
     chrome: ChromeRefinement,
@@ -310,6 +346,7 @@ impl Calendar {
             test_id_prefix: None,
             today: None,
             modifiers: DayPickerModifiers::default(),
+            day_button: CalendarDayButton::default(),
             close_on_select: None,
             initial_focus_out: None,
             chrome: ChromeRefinement::default(),
@@ -412,6 +449,12 @@ impl Calendar {
         self
     }
 
+    /// Overrides the day-cell button styling contract (upstream `CalendarDayButton`).
+    pub fn day_button(mut self, day_button: CalendarDayButton) -> Self {
+        self.day_button = day_button;
+        self
+    }
+
     pub fn disabled_by(mut self, f: impl Fn(Date) -> bool + Send + Sync + 'static) -> Self {
         // Preserve the previous `disabled_by` semantics: treat it as "set the disabled predicate".
         self.modifiers.disabled.clear();
@@ -461,6 +504,7 @@ impl Calendar {
         let disable_outside_days = self.disable_outside_days;
         let show_week_number = self.show_week_number;
         let modifiers: Arc<DayPickerModifiers> = Arc::new(self.modifiers);
+        let day_button = self.day_button.clone();
         let close_on_select = self.close_on_select.clone();
         let initial_focus_out = self.initial_focus_out.clone();
         let required = self.required;
@@ -721,6 +765,7 @@ impl Calendar {
                             initial_focus_out.clone(),
                             grid_text_style.clone(),
                             test_id_prefix.clone(),
+                            day_button.clone(),
                         );
                     }
                     vec![stack::vstack(
@@ -1340,6 +1385,7 @@ impl Calendar {
                                             test_id_prefix_for_days.as_ref(),
                                             &selected_model,
                                             required,
+                                            &day_button,
                                             close_on_select.clone(),
                                             initial_focus_out.clone(),
                                         )
@@ -1458,6 +1504,7 @@ fn calendar_multi_month_view<H: UiHost>(
     initial_focus_out: Option<Rc<Cell<Option<fret_ui::elements::GlobalElementId>>>>,
     grid_text_style: TextStyle,
     test_id_prefix: Option<Arc<str>>,
+    day_button: CalendarDayButton,
 ) -> Vec<AnyElement> {
     let gap_px = decl_style::space(theme, Space::N4);
     let months_span = if is_row {
@@ -1581,6 +1628,7 @@ fn calendar_multi_month_view<H: UiHost>(
                         selected_model.clone(),
                         required,
                         modifiers.clone(),
+                        day_button.clone(),
                         close_on_select.clone(),
                         initial_focus_out.clone(),
                         grid_text_style.clone(),
@@ -1631,6 +1679,7 @@ fn calendar_multi_month_view<H: UiHost>(
                         selected_model.clone(),
                         required,
                         modifiers.clone(),
+                        day_button.clone(),
                         close_on_select.clone(),
                         initial_focus_out.clone(),
                         grid_text_style.clone(),
@@ -1686,6 +1735,7 @@ fn calendar_month_view<H: UiHost>(
     selected_model: Model<Option<Date>>,
     required: bool,
     modifiers: Arc<DayPickerModifiers>,
+    day_button: CalendarDayButton,
     close_on_select: Option<Model<bool>>,
     initial_focus_out: Option<Rc<Cell<Option<fret_ui::elements::GlobalElementId>>>>,
     grid_text_style: TextStyle,
@@ -1957,6 +2007,7 @@ fn calendar_month_view<H: UiHost>(
                     test_id_prefix,
                     &selected_model,
                     required,
+                    &day_button,
                     close_on_select.clone(),
                     initial_focus_out.clone(),
                 )
@@ -2299,6 +2350,7 @@ fn calendar_day_cell<H: UiHost>(
     test_id_prefix: Option<&Arc<str>>,
     selected_model: &Model<Option<Date>>,
     required: bool,
+    day_button: &CalendarDayButton,
     close_on_select: Option<Model<bool>>,
     initial_focus_out: Option<Rc<Cell<Option<fret_ui::elements::GlobalElementId>>>>,
 ) -> AnyElement {
@@ -2394,12 +2446,13 @@ fn calendar_day_cell<H: UiHost>(
         };
 
         // Align with shadcn-web: day buttons are `rounded-md` and `today` is filled (`bg-accent`).
-        let chrome = ChromeRefinement::default()
-            .rounded(Radius::Md)
-            .bg(ColorRef::Color(bg));
+        let chrome = day_button
+            .chrome
+            .clone()
+            .merge(ChromeRefinement::default().bg(ColorRef::Color(bg)));
 
         let mut chrome_props =
-            decl_style::container_props(theme, chrome, LayoutRefinement::default());
+            decl_style::container_props(theme, chrome, day_button.layout.clone());
         // Keep chrome margins cleared; calendar row gaps are modeled by the outer slot wrapper.
         chrome_props.layout.margin = Default::default();
 

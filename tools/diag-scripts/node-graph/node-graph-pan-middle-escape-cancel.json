@@ -1,0 +1,50 @@
+{
+  "schema_version": 2,
+  "meta": {
+    "name": "Node graph: middle-mouse pan + Escape cancels",
+    "tags": ["node-graph", "pan", "escape", "gate-baseline"],
+    "required_capabilities": ["diag.script_v2"],
+    "target_hints": [
+      "This script is a baseline repro artifact for the node graph surface.",
+      "It starts middle-mouse panning on `node_graph.canvas`, presses Escape mid-gesture, then captures a bundle.",
+      "A stronger assertion gate is currently provided by the Rust conformance test in `ecosystem/fret-node`."
+    ]
+  },
+  "steps": [
+    { "type": "press_key", "key": "escape" },
+    { "type": "wait_frames", "n": 5 },
+
+    {
+      "type": "wait_until",
+      "predicate": { "kind": "exists", "target": { "kind": "test_id", "id": "node_graph.canvas" } },
+      "timeout_frames": 600
+    },
+    { "type": "move_pointer", "target": { "kind": "test_id", "id": "node_graph.canvas" } },
+
+    {
+      "type": "pointer_down",
+      "window": { "kind": "current" },
+      "target": { "kind": "test_id", "id": "node_graph.canvas" },
+      "button": "middle"
+    },
+    { "type": "wait_until", "predicate": { "kind": "event_kind_seen", "event_kind": "pointer.down" }, "timeout_frames": 120 },
+
+    { "type": "pointer_move", "window": { "kind": "current" }, "delta_x": 240.0, "delta_y": 120.0, "steps": 24 },
+    { "type": "wait_frames", "n": 2 },
+    {
+      "type": "wait_until",
+      "predicate": { "kind": "value_contains", "target": { "kind": "test_id", "id": "node_graph.canvas" }, "text": "panning true" },
+      "timeout_frames": 120
+    },
+    { "type": "press_key", "key": "escape" },
+    { "type": "wait_frames", "n": 2 },
+    {
+      "type": "wait_until",
+      "predicate": { "kind": "value_contains", "target": { "kind": "test_id", "id": "node_graph.canvas" }, "text": "panning false" },
+      "timeout_frames": 120
+    },
+    { "type": "pointer_up", "window": { "kind": "current" } },
+
+    { "type": "capture_bundle", "label": "node-graph-pan-middle-escape-cancel" }
+  ]
+}

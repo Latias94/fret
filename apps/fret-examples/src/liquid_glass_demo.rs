@@ -17,6 +17,7 @@ use fret_core::scene::{
     WarpMapEncodingV1,
 };
 use fret_core::{Color, Corners, Edges, EffectId, ImageColorSpace, Px};
+use fret_render::RendererCapabilities;
 use fret_runtime::Model;
 use fret_ui::Invalidation;
 use fret_ui::element::{
@@ -349,6 +350,8 @@ struct LiquidGlassState {
     show_warp_v2: Model<bool>,
     show_custom_v2: Model<bool>,
     show_custom_v3: Model<bool>,
+    custom_v3_pair: Model<bool>,
+    custom_v3_source_group: Model<bool>,
     show_inspector: Model<bool>,
     animate: Model<bool>,
     phase_speed: Model<Vec<f32>>,
@@ -370,6 +373,10 @@ struct LiquidGlassState {
     custom_grain_strength: Model<Vec<f32>>,
     custom_grain_scale: Model<Vec<f32>>,
 
+    custom_v3_bevel_strength: Model<Vec<f32>>,
+    custom_v3_bevel_angle_deg: Model<Vec<f32>>,
+    custom_v3_bevel_secondary: Model<Vec<f32>>,
+
     blur_radius_px: Model<Vec<f32>>,
     blur_downsample: Model<Vec<f32>>,
     saturation: Model<Vec<f32>>,
@@ -383,6 +390,8 @@ struct LiquidGlassState {
 #[derive(Debug, Clone)]
 enum Msg {
     Reset,
+    ApplyCustomV3BevelPreset,
+    DisableCustomV3Bevel,
     ToggleInspector,
 }
 
@@ -449,6 +458,8 @@ impl MvuProgram for LiquidGlassProgram {
             show_warp_v2: app.models_mut().insert(false),
             show_custom_v2: app.models_mut().insert(false),
             show_custom_v3: app.models_mut().insert(false),
+            custom_v3_pair: app.models_mut().insert(false),
+            custom_v3_source_group: app.models_mut().insert(false),
             show_inspector: app.models_mut().insert(false),
             animate: app.models_mut().insert(true),
             phase_speed: app.models_mut().insert(vec![0.65]),
@@ -470,6 +481,10 @@ impl MvuProgram for LiquidGlassProgram {
             custom_grain_strength: app.models_mut().insert(vec![0.06]),
             custom_grain_scale: app.models_mut().insert(vec![1.0]),
 
+            custom_v3_bevel_strength: app.models_mut().insert(vec![1.0]),
+            custom_v3_bevel_angle_deg: app.models_mut().insert(vec![45.0]),
+            custom_v3_bevel_secondary: app.models_mut().insert(vec![1.0]),
+
             // Keep defaults stable: perf scripts/baselines assume a visible blur chain.
             blur_radius_px: app.models_mut().insert(vec![16.0]),
             blur_downsample: app.models_mut().insert(vec![2.0]),
@@ -489,6 +504,10 @@ impl MvuProgram for LiquidGlassProgram {
             let _ = app.models_mut().update(&st.show_warp_v2, |v| *v = false);
             let _ = app.models_mut().update(&st.show_custom_v2, |v| *v = false);
             let _ = app.models_mut().update(&st.show_custom_v3, |v| *v = false);
+            let _ = app.models_mut().update(&st.custom_v3_pair, |v| *v = false);
+            let _ = app
+                .models_mut()
+                .update(&st.custom_v3_source_group, |v| *v = false);
             let _ = app.models_mut().update(&st.show_inspector, |v| *v = false);
             let _ = app.models_mut().update(&st.animate, |v| *v = true);
             let _ = app
@@ -524,6 +543,15 @@ impl MvuProgram for LiquidGlassProgram {
                 .update(&st.custom_grain_scale, |v| *v = vec![1.0]);
             let _ = app
                 .models_mut()
+                .update(&st.custom_v3_bevel_strength, |v| *v = vec![1.0]);
+            let _ = app
+                .models_mut()
+                .update(&st.custom_v3_bevel_angle_deg, |v| *v = vec![45.0]);
+            let _ = app
+                .models_mut()
+                .update(&st.custom_v3_bevel_secondary, |v| *v = vec![1.0]);
+            let _ = app
+                .models_mut()
                 .update(&st.blur_radius_px, |v| *v = vec![16.0]);
             let _ = app
                 .models_mut()
@@ -533,6 +561,20 @@ impl MvuProgram for LiquidGlassProgram {
             let _ = app.models_mut().update(&st.contrast, |v| *v = vec![1.02]);
             let _ = app.models_mut().update(&st.use_backdrop, |v| *v = true);
             let _ = app.models_mut().update(&st.use_dither, |v| *v = true);
+        } else if matches!(message, Msg::ApplyCustomV3BevelPreset) {
+            let _ = app
+                .models_mut()
+                .update(&st.custom_v3_bevel_strength, |v| *v = vec![1.0]);
+            let _ = app
+                .models_mut()
+                .update(&st.custom_v3_bevel_angle_deg, |v| *v = vec![45.0]);
+            let _ = app
+                .models_mut()
+                .update(&st.custom_v3_bevel_secondary, |v| *v = vec![1.0]);
+        } else if matches!(message, Msg::DisableCustomV3Bevel) {
+            let _ = app
+                .models_mut()
+                .update(&st.custom_v3_bevel_strength, |v| *v = vec![0.0]);
         } else if matches!(message, Msg::ToggleInspector) {
             let _ = app.models_mut().update(&st.show_inspector, |v| *v = !*v);
         }
@@ -565,6 +607,8 @@ fn view(
     let show_warp_v2_model = st.show_warp_v2.clone();
     let show_custom_v2_model = st.show_custom_v2.clone();
     let show_custom_v3_model = st.show_custom_v3.clone();
+    let custom_v3_pair_model = st.custom_v3_pair.clone();
+    let custom_v3_source_group_model = st.custom_v3_source_group.clone();
     let animate_model = st.animate.clone();
     let phase_speed_model = st.phase_speed.clone();
     let show_inspector_model = st.show_inspector.clone();
@@ -582,6 +626,10 @@ fn view(
     let custom_grain_model = st.custom_grain_strength.clone();
     let custom_grain_scale_model = st.custom_grain_scale.clone();
 
+    let custom_v3_bevel_strength_model = st.custom_v3_bevel_strength.clone();
+    let custom_v3_bevel_angle_model = st.custom_v3_bevel_angle_deg.clone();
+    let custom_v3_bevel_secondary_model = st.custom_v3_bevel_secondary.clone();
+
     let blur_radius_model = st.blur_radius_px.clone();
     let blur_downsample_model = st.blur_downsample.clone();
     let saturation_model = st.saturation.clone();
@@ -596,6 +644,11 @@ fn view(
     let show_warp_v2 = cx.watch_model(&st.show_warp_v2).layout().copied_or(false);
     let show_custom_v2 = cx.watch_model(&st.show_custom_v2).layout().copied_or(false);
     let show_custom_v3 = cx.watch_model(&st.show_custom_v3).layout().copied_or(false);
+    let custom_v3_pair = cx.watch_model(&st.custom_v3_pair).layout().copied_or(false);
+    let custom_v3_source_group = cx
+        .watch_model(&st.custom_v3_source_group)
+        .layout()
+        .copied_or(false);
     let show_inspector = cx.watch_model(&st.show_inspector).layout().copied_or(true);
     let animate = cx.watch_model(&st.animate).layout().copied_or(true);
     let phase_speed = watch_first_f32(cx, &st.phase_speed, 0.65);
@@ -620,6 +673,10 @@ fn view(
     let custom_shadow_strength = watch_first_f32(cx, &st.custom_shadow_strength, 0.55);
     let custom_grain_strength = watch_first_f32(cx, &st.custom_grain_strength, 0.06);
     let custom_grain_scale = watch_first_f32(cx, &st.custom_grain_scale, 1.0);
+
+    let custom_v3_bevel_strength = watch_first_f32(cx, &st.custom_v3_bevel_strength, 0.0);
+    let custom_v3_bevel_angle_deg = watch_first_f32(cx, &st.custom_v3_bevel_angle_deg, 45.0);
+    let custom_v3_bevel_secondary = watch_first_f32(cx, &st.custom_v3_bevel_secondary, 1.0);
 
     let use_backdrop = cx.watch_model(&st.use_backdrop).layout().copied_or(true);
     let use_dither = cx.watch_model(&st.use_dither).layout().copied_or(true);
@@ -648,6 +705,16 @@ fn view(
         )
     });
     let warp_map_loaded = warp_image.is_some();
+
+    let renderer_caps = cx.app.global::<RendererCapabilities>().cloned();
+    let custom_v2_capable = renderer_caps
+        .as_ref()
+        .map(|c| c.custom_effect_v2_user_image)
+        .unwrap_or(false);
+    let custom_v3_capable = renderer_caps
+        .as_ref()
+        .map(|c| c.custom_effect_v3)
+        .unwrap_or(false);
 
     let custom_v2_effect = cx
         .app
@@ -742,9 +809,11 @@ fn view(
                         ],
                     ],
                 },
-                max_sample_offset_px: Px(warp_base.strength_px.0
-                    + warp_base.chromatic_aberration_px.0
-                    + 8.0),
+                max_sample_offset_px:
+                    crate::effect_authoring::custom_effect_warp_max_sample_offset_px(
+                        warp_base.strength_px.0,
+                        warp_base.chromatic_aberration_px.0,
+                    ),
                 input_image: Some(CustomEffectImageInputV1 {
                     image,
                     uv: UvRect::FULL,
@@ -783,9 +852,11 @@ fn view(
                         ],
                     ],
                 },
-                max_sample_offset_px: Px(warp_base.strength_px.0
-                    + warp_base.chromatic_aberration_px.0
-                    + 8.0),
+                max_sample_offset_px:
+                    crate::effect_authoring::custom_effect_warp_max_sample_offset_px(
+                        warp_base.strength_px.0,
+                        warp_base.chromatic_aberration_px.0,
+                    ),
                 input_image: None,
             }),
             _ => None,
@@ -808,7 +879,13 @@ fn view(
         let refraction_height_px = custom_edge_falloff_px.clamp(0.0, 64.0);
         // Map the demo's warp strength to a more noticeable refraction amount.
         let refraction_amount_px = (warp_strength_px * 3.2 + 8.0).clamp(0.0, 96.0);
+        let dispersion = 0.55;
         let noise_alpha = (custom_grain_strength * 0.2).clamp(0.0, 0.1);
+        let max_sample_offset_px =
+            crate::effect_authoring::custom_effect_v3_lens_max_sample_offset_px(
+                refraction_amount_px,
+                dispersion,
+            );
 
         let mut steps: Vec<EffectStep> = Vec::new();
         if blur_radius_px > 0.0 && steps.len() < EffectChain::MAX_STEPS {
@@ -830,14 +907,19 @@ fn view(
                             0.75,
                         ],
                         // (corner_radius_px, depth_effect, dispersion, dispersion_quality)
-                        [lens_radius_px * sf, 0.18, 0.55, 1.0],
-                        // (noise_alpha, reserved, reserved, reserved)
-                        [noise_alpha, 0.0, 0.0, 0.0],
+                        [lens_radius_px * sf, 0.18, dispersion, 1.0],
+                        // (noise_alpha, bevel_strength, bevel_light_angle_deg, bevel_secondary_strength)
+                        [
+                            noise_alpha,
+                            custom_v3_bevel_strength.clamp(0.0, 1.0),
+                            custom_v3_bevel_angle_deg,
+                            custom_v3_bevel_secondary.clamp(0.0, 1.0),
+                        ],
                         // tint (rgb + alpha)
                         [1.0, 1.0, 1.0, 0.08],
                     ],
                 },
-                max_sample_offset_px: Px(96.0),
+                max_sample_offset_px,
                 user0: None,
                 user1: None,
                 sources: CustomEffectSourcesV3 {
@@ -877,6 +959,8 @@ fn view(
     let reset_stage = msg.cmd(Msg::Reset);
     let reset_inspector = msg.cmd(Msg::Reset);
     let toggle_inspector = msg.cmd(Msg::ToggleInspector);
+    let bevel_preset = msg.cmd(Msg::ApplyCustomV3BevelPreset);
+    let bevel_off = msg.cmd(Msg::DisableCustomV3Bevel);
 
     let root = cx
         .container(
@@ -1166,9 +1250,47 @@ fn view(
                                                     |cx| {
                                                         vec![
                                                             shadcn::Switch::new(
+                                                                custom_v3_pair_model.clone(),
+                                                            )
+                                                            .a11y_label(
+                                                                "Show two custom v3 lenses",
+                                                            )
+                                                            .test_id(
+                                                                "liquid-glass-switch-custom-v3-pair",
+                                                            )
+                                                            .into_element(cx),
+                                                            shadcn::Label::new("V3 pair")
+                                                                .into_element(cx),
+                                                            shadcn::Switch::new(
+                                                                custom_v3_source_group_model
+                                                                    .clone(),
+                                                            )
+                                                            .a11y_label(
+                                                                "Use custom v3 backdrop source group",
+                                                            )
+                                                            .test_id(
+                                                                "liquid-glass-switch-custom-v3-source-group",
+                                                            )
+                                                            .into_element(cx),
+                                                            shadcn::Label::new("V3 group")
+                                                                .into_element(cx),
+                                                        ]
+                                                    },
+                                                ),
+                                                shadcn::stack::hstack(
+                                                    cx,
+                                                    shadcn::stack::HStackProps::default()
+                                                        .gap(Space::N2)
+                                                        .items_center(),
+                                                    |cx| {
+                                                        vec![
+                                                            shadcn::Switch::new(
                                                                 use_backdrop_model.clone(),
                                                             )
                                                             .a11y_label("Backdrop mode")
+                                                            .test_id(
+                                                                "liquid-glass-switch-use-backdrop",
+                                                            )
                                                             .into_element(cx),
                                                             shadcn::Label::new("Backdrop")
                                                                 .into_element(cx),
@@ -1176,6 +1298,9 @@ fn view(
                                                                 use_dither_model.clone(),
                                                             )
                                                             .a11y_label("Dither")
+                                                            .test_id(
+                                                                "liquid-glass-switch-use-dither",
+                                                            )
                                                             .into_element(cx),
                                                             shadcn::Label::new("Dither")
                                                                 .into_element(cx),
@@ -1183,6 +1308,7 @@ fn view(
                                                                 animate_model.clone(),
                                                             )
                                                             .a11y_label("Animate phase")
+                                                            .test_id("liquid-glass-switch-animate")
                                                             .into_element(cx),
                                                             shadcn::Label::new("Animate")
                                                                 .into_element(cx),
@@ -1223,6 +1349,9 @@ fn view(
                                                                 )
                                                                 .size(shadcn::ButtonSize::Sm)
                                                                 .on_click(reset_stage)
+                                                                .test_id(
+                                                                    "liquid-glass-button-reset-stage",
+                                                                )
                                                                 .into_element(cx),
                                                         ]
                                                     },
@@ -1286,7 +1415,11 @@ fn view(
                                     }
                                     if show_custom_v2 {
                                         let label = if !custom_v2_supported {
-                                            Arc::from("CustomV2 (unsupported)")
+                                            if !custom_v2_capable {
+                                                Arc::from("CustomV2 (unsupported backend)")
+                                            } else {
+                                                Arc::from("CustomV2 (registration failed)")
+                                            }
                                         } else if warp_map_loaded {
                                             Arc::from("CustomV2 (image warp + rim/grain)")
                                         } else {
@@ -1298,16 +1431,66 @@ fn view(
                                         );
                                     }
                                     if show_custom_v3 {
-                                        let label = if !custom_v3_supported {
-                                            Arc::from("CustomV3 (unsupported)")
+                                        let label: Arc<str> = if !custom_v3_supported {
+                                            if !custom_v3_capable {
+                                                Arc::from("CustomV3 (unsupported backend)")
+                                            } else {
+                                                Arc::from("CustomV3 (registration failed)")
+                                            }
                                         } else {
                                             Arc::from("CustomV3 (lens refraction; raw+pyramid)")
                                         };
                                         let chain = custom_v3_chain.unwrap_or(fake_chain.clone());
-                                        out.push(
-                                            lens_panel(cx, label, lens_radius, mode, chain)
-                                                .test_id("liquid-glass-lens-custom-v3"),
-                                        );
+                                        if custom_v3_pair {
+                                            let lens_a = lens_panel(
+                                                cx,
+                                                label.clone(),
+                                                lens_radius,
+                                                mode,
+                                                chain.clone(),
+                                            )
+                                                    .test_id("liquid-glass-lens-custom-v3");
+                                            let lens_b = lens_panel(
+                                                cx,
+                                                Arc::from("CustomV3 (lens B; ordering drift)"),
+                                                lens_radius,
+                                                mode,
+                                                chain,
+                                            )
+                                            .test_id("liquid-glass-lens-custom-v3-b");
+
+                                            let pair = cx.row(
+                                                RowProps {
+                                                    layout: LayoutStyle::default(),
+                                                    gap: SpacingLength::Px(Px(14.0)),
+                                                    justify: MainAlign::Start,
+                                                    align: CrossAlign::Start,
+                                                    ..Default::default()
+                                                },
+                                                move |_cx| vec![lens_a, lens_b],
+                                            );
+
+                                            let wants_group = custom_v3_source_group
+                                                && custom_v3_supported
+                                                && mode == EffectMode::Backdrop;
+                                            if wants_group {
+                                                out.push(cx.backdrop_source_group_v1(
+                                                    Some(CustomEffectPyramidRequestV1 {
+                                                        max_levels: 6,
+                                                        max_radius_px: Px(32.0),
+                                                    }),
+                                                    EffectQuality::Auto,
+                                                    move |_cx| vec![pair],
+                                                ));
+                                            } else {
+                                                out.push(pair);
+                                            }
+                                        } else {
+                                            out.push(
+                                                lens_panel(cx, label, lens_radius, mode, chain)
+                                                    .test_id("liquid-glass-lens-custom-v3"),
+                                            );
+                                        }
                                     }
                                     out
                                 },
@@ -1539,6 +1722,75 @@ fn view(
                                     },
                                 );
 
+                                let custom_v3_bevel_strength_row = shadcn::stack::vstack(
+                                    cx,
+                                    shadcn::stack::VStackProps::default().gap(Space::N2),
+                                    |cx| {
+                                        vec![
+                                            label_row(
+                                                cx,
+                                                "CustomV3 bevel strength",
+                                                format!("{custom_v3_bevel_strength:.2}"),
+                                            ),
+                                            shadcn::Slider::new(
+                                                custom_v3_bevel_strength_model.clone(),
+                                            )
+                                            .range(0.0, 1.0)
+                                            .step(0.01)
+                                            .into_element(cx)
+                                            .test_id(
+                                                "liquid-glass-slider-custom-v3-bevel-strength",
+                                            ),
+                                        ]
+                                    },
+                                );
+
+                                let custom_v3_bevel_angle_row = shadcn::stack::vstack(
+                                    cx,
+                                    shadcn::stack::VStackProps::default().gap(Space::N2),
+                                    |cx| {
+                                        vec![
+                                            label_row(
+                                                cx,
+                                                "CustomV3 bevel light angle (deg)",
+                                                format!("{custom_v3_bevel_angle_deg:.0}"),
+                                            ),
+                                            shadcn::Slider::new(
+                                                custom_v3_bevel_angle_model.clone(),
+                                            )
+                                            .range(0.0, 360.0)
+                                            .step(1.0)
+                                            .into_element(cx)
+                                            .test_id(
+                                                "liquid-glass-slider-custom-v3-bevel-angle-deg",
+                                            ),
+                                        ]
+                                    },
+                                );
+
+                                let custom_v3_bevel_secondary_row = shadcn::stack::vstack(
+                                    cx,
+                                    shadcn::stack::VStackProps::default().gap(Space::N2),
+                                    |cx| {
+                                        vec![
+                                            label_row(
+                                                cx,
+                                                "CustomV3 bevel secondary strength",
+                                                format!("{custom_v3_bevel_secondary:.2}"),
+                                            ),
+                                            shadcn::Slider::new(
+                                                custom_v3_bevel_secondary_model.clone(),
+                                            )
+                                            .range(0.0, 1.0)
+                                            .step(0.01)
+                                            .into_element(cx)
+                                            .test_id(
+                                                "liquid-glass-slider-custom-v3-bevel-secondary",
+                                            ),
+                                        ]
+                                    },
+                                );
+
                                 let phase_row = shadcn::stack::vstack(
                                     cx,
                                     shadcn::stack::VStackProps::default().gap(Space::N2),
@@ -1656,11 +1908,30 @@ fn view(
                                         .items_center(),
                                     |cx| {
                                         vec![
+                                            shadcn::Button::new("Bevel preset")
+                                                .variant(shadcn::ButtonVariant::Secondary)
+                                                .size(shadcn::ButtonSize::Sm)
+                                                .on_click(bevel_preset)
+                                                .test_id(
+                                                    "liquid-glass-button-custom-v3-bevel-preset",
+                                                )
+                                                .into_element(cx),
+                                            shadcn::Button::new("Bevel off")
+                                                .variant(shadcn::ButtonVariant::Secondary)
+                                                .size(shadcn::ButtonSize::Sm)
+                                                .on_click(bevel_off)
+                                                .test_id(
+                                                    "liquid-glass-button-custom-v3-bevel-off",
+                                                )
+                                                .into_element(cx),
                                             cx.spacer(SpacerProps::default()),
                                             shadcn::Button::new("Reset")
                                                 .variant(shadcn::ButtonVariant::Secondary)
                                                 .size(shadcn::ButtonSize::Sm)
                                                 .on_click(reset_inspector)
+                                                .test_id(
+                                                    "liquid-glass-button-reset-inspector",
+                                                )
                                                 .into_element(cx),
                                         ]
                                     },
@@ -1688,6 +1959,9 @@ fn view(
                                             custom_shadow_row,
                                             custom_grain_row,
                                             custom_grain_scale_row,
+                                            custom_v3_bevel_strength_row,
+                                            custom_v3_bevel_angle_row,
+                                            custom_v3_bevel_secondary_row,
                                             shadcn::Separator::new().into_element(cx),
                                             blur_row,
                                             downsample_row,

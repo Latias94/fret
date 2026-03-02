@@ -12,8 +12,56 @@ use fret_ui_kit::declarative::action_hooks::ActionHooksExt as _;
 use fret_ui_kit::declarative::chrome::control_chrome_pressable_with_id_props;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::{
-    ChromeRefinement, ColorRef, LayoutRefinement, LengthRefinement, MetricRef, Radius, Space, ui,
+    ui, ChromeRefinement, ColorRef, LayoutRefinement, LengthRefinement, MetricRef, Radius, Space,
 };
+
+#[derive(Debug, Default)]
+struct ItemSizeProviderState {
+    current: Option<ItemSize>,
+}
+
+fn item_size_in_scope<H: UiHost>(cx: &ElementContext<'_, H>) -> ItemSize {
+    cx.inherited_state_where::<ItemSizeProviderState>(|st| st.current.is_some())
+        .and_then(|st| st.current)
+        .unwrap_or_default()
+}
+
+#[track_caller]
+fn with_item_size_provider<H: UiHost, R>(
+    cx: &mut ElementContext<'_, H>,
+    size: ItemSize,
+    f: impl FnOnce(&mut ElementContext<'_, H>) -> R,
+) -> R {
+    let prev = cx.with_state(ItemSizeProviderState::default, |st| {
+        let prev = st.current;
+        st.current = Some(size);
+        prev
+    });
+    let out = f(cx);
+    cx.with_state(ItemSizeProviderState::default, |st| {
+        st.current = prev;
+    });
+    out
+}
+
+/// Build an item and its parts inside a size provider.
+///
+/// This avoids footguns where callers construct `ItemMedia` / `ItemContent` outside the `Item`
+/// subtree and accidentally miss size-dependent defaults (shadcn `group-data-[size=...]/item:*`).
+#[track_caller]
+pub fn item_sized<H: UiHost, I>(
+    cx: &mut ElementContext<'_, H>,
+    size: ItemSize,
+    f: impl FnOnce(&mut ElementContext<'_, H>) -> I,
+) -> AnyElement
+where
+    I: IntoIterator<Item = AnyElement>,
+{
+    let children = with_item_size_provider(cx, size, |cx| {
+        f(cx).into_iter().collect::<Vec<AnyElement>>()
+    });
+    Item::new(children).size(size).into_element(cx)
+}
 
 #[derive(Debug, Clone)]
 pub enum ItemRender {
@@ -51,6 +99,7 @@ pub enum ItemSize {
     #[default]
     Default,
     Sm,
+    Xs,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
@@ -74,9 +123,13 @@ fn item_radius(theme: &Theme) -> Px {
 
 fn item_gap(theme: &Theme, size: ItemSize) -> Px {
     match size {
-        // shadcn/ui v4 (new-york-v4 goldens): default item uses `gap-4`.
-        ItemSize::Default => MetricRef::space(Space::N4).resolve(theme),
-        ItemSize::Sm => MetricRef::space(Space::N2p5).resolve(theme),
+        // shadcn/ui v4 (`repo-ref/ui/apps/v4/registry/styles/style-*.css`):
+        // - default: `gap-3.5`
+        // - sm: `gap-3.5`
+        // - xs: `gap-2.5`
+        ItemSize::Default => MetricRef::space(Space::N3p5).resolve(theme),
+        ItemSize::Sm => MetricRef::space(Space::N3p5).resolve(theme),
+        ItemSize::Xs => MetricRef::space(Space::N2p5).resolve(theme),
     }
 }
 
@@ -108,6 +161,7 @@ fn base_item_border_color(theme: &Theme, variant: ItemVariant) -> Option<Color> 
 #[derive(Debug)]
 pub struct ItemGroup {
     kind: ItemGroupKind,
+    size: ItemSize,
     layout: LayoutRefinement,
     gap: Option<Px>,
     children: Vec<AnyElement>,
@@ -127,10 +181,21 @@ impl ItemGroup {
         let children = children.into_iter().collect();
         Self {
             kind: ItemGroupKind::Column,
+            size: ItemSize::Default,
             layout: LayoutRefinement::default().w_full(),
             gap: None.into(),
             children,
         }
+    }
+
+    /// Sets the sizing intent for the group gap.
+    ///
+    /// In upstream shadcn/ui this is expressed as `has-data-[size=sm]:gap-2.5` and
+    /// `has-data-[size=xs]:gap-2` in CSS. In Fret we can't infer this from descendants, so the
+    /// group exposes an explicit knob.
+    pub fn size(mut self, size: ItemSize) -> Self {
+        self.size = size;
+        self
     }
 
     pub fn grid(mut self, cols: u16) -> Self {
@@ -150,11 +215,16 @@ impl ItemGroup {
 
     #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        let layout = {
+        let (layout, gap) = {
             let theme = Theme::global(&*cx.app);
-            decl_style::layout_style(theme, self.layout)
+            let layout = decl_style::layout_style(theme, self.layout);
+            let gap = self.gap.unwrap_or_else(|| match self.size {
+                ItemSize::Default => MetricRef::space(Space::N4).resolve(theme),
+                ItemSize::Sm => MetricRef::space(Space::N2p5).resolve(theme),
+                ItemSize::Xs => MetricRef::space(Space::N2).resolve(theme),
+            });
+            (layout, gap)
         };
-        let gap = self.gap.unwrap_or(Px(0.0));
         let children = self.children;
 
         let el = match self.kind {
@@ -198,7 +268,7 @@ impl ItemSeparator {
 
     #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        let (border, layout) = {
+        let (border, mut layout, margin_y) = {
             let theme = Theme::global(&*cx.app);
             let border = theme
                 .color_by_key("border")
@@ -209,8 +279,11 @@ impl ItemSeparator {
                     .w_full()
                     .h_px(MetricRef::Px(Px(1.0))),
             );
-            (border, layout)
+            let margin_y = MetricRef::space(Space::N2).resolve(theme);
+            (border, layout, margin_y)
         };
+        layout.margin.top = margin_y.into();
+        layout.margin.bottom = margin_y.into();
         cx.container(
             ContainerProps {
                 layout,
@@ -231,6 +304,7 @@ impl Default for ItemSeparator {
 #[derive(Debug)]
 pub struct ItemMedia {
     variant: ItemMediaVariant,
+    item_size: Option<ItemSize>,
     layout: LayoutRefinement,
     children: Vec<AnyElement>,
 }
@@ -240,6 +314,7 @@ impl ItemMedia {
         let children = children.into_iter().collect();
         Self {
             variant: ItemMediaVariant::default(),
+            item_size: None,
             layout: LayoutRefinement::default(),
             children,
         }
@@ -247,6 +322,14 @@ impl ItemMedia {
 
     pub fn variant(mut self, variant: ItemMediaVariant) -> Self {
         self.variant = variant;
+        self
+    }
+
+    /// Explicit size override for this media part.
+    ///
+    /// Prefer using `item_sized(...)` so all parts share the same size scope.
+    pub fn item_size(mut self, size: ItemSize) -> Self {
+        self.item_size = Some(size);
         self
     }
 
@@ -258,30 +341,28 @@ impl ItemMedia {
     #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let variant = self.variant;
+        let item_size = self.item_size.unwrap_or_else(|| item_size_in_scope(cx));
         let user_layout = self.layout;
         let children = self.children;
         let (props, inner_layout, gap) = {
             let theme = Theme::global(&*cx.app);
 
             let (size, chrome) = match variant {
-                ItemMediaVariant::Default => (None, ChromeRefinement::default()),
-                ItemMediaVariant::Icon => {
-                    let bg = theme
-                        .color_by_key("muted")
-                        .unwrap_or_else(|| theme.color_token("muted.background"));
-                    let border = theme
-                        .color_by_key("border")
-                        .unwrap_or_else(|| theme.color_token("border"));
-                    let chrome = ChromeRefinement::default()
-                        .rounded(Radius::Sm)
-                        .border_1()
-                        .bg(ColorRef::Color(bg))
-                        .border_color(ColorRef::Color(border));
-                    (Some(MetricRef::space(Space::N8).resolve(theme)), chrome)
+                ItemMediaVariant::Default | ItemMediaVariant::Icon => {
+                    (None, ChromeRefinement::default())
                 }
                 ItemMediaVariant::Image => {
+                    // shadcn/ui v4:
+                    // - base: `size-10`
+                    // - `group-data-[size=sm]/item:size-8`
+                    // - `group-data-[size=xs]/item:size-6`
+                    let side = match item_size {
+                        ItemSize::Default => MetricRef::space(Space::N10).resolve(theme),
+                        ItemSize::Sm => MetricRef::space(Space::N8).resolve(theme),
+                        ItemSize::Xs => MetricRef::space(Space::N6).resolve(theme),
+                    };
                     let chrome = ChromeRefinement::default().rounded(Radius::Sm);
-                    (Some(MetricRef::space(Space::N10).resolve(theme)), chrome)
+                    (Some(side), chrome)
                 }
             };
 
@@ -328,6 +409,7 @@ pub struct ItemContent {
     layout: LayoutRefinement,
     children: Vec<AnyElement>,
     gap: Option<Px>,
+    item_size: Option<ItemSize>,
     justify: MainAlign,
     align: CrossAlign,
 }
@@ -342,9 +424,18 @@ impl ItemContent {
                 .overflow_hidden(),
             children,
             gap: None.into(),
+            item_size: None,
             justify: MainAlign::Start,
             align: CrossAlign::Stretch,
         }
+    }
+
+    /// Explicit size override for this content part.
+    ///
+    /// Prefer using `item_sized(...)` so all parts share the same size scope.
+    pub fn item_size(mut self, size: ItemSize) -> Self {
+        self.item_size = Some(size);
+        self
     }
 
     pub fn gap(mut self, gap: Px) -> Self {
@@ -371,9 +462,11 @@ impl ItemContent {
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let (gap, layout) = {
             let theme = Theme::global(&*cx.app);
-            let gap = self
-                .gap
-                .unwrap_or_else(|| MetricRef::space(Space::N1).resolve(theme));
+            let size = self.item_size.unwrap_or_else(|| item_size_in_scope(cx));
+            let gap = self.gap.unwrap_or_else(|| match size {
+                ItemSize::Default | ItemSize::Sm => MetricRef::space(Space::N1).resolve(theme),
+                ItemSize::Xs => MetricRef::space(Space::N0p5).resolve(theme),
+            });
             let layout = decl_style::layout_style(theme, self.layout);
             (gap, layout)
         };
@@ -760,8 +853,6 @@ impl Item {
             border_color,
             focus_border_color,
             base_bg,
-            hover_bg,
-            pressed_bg,
             pressable_layout,
             pressable_size,
             radius,
@@ -774,11 +865,6 @@ impl Item {
                 .color_by_key("ring")
                 .unwrap_or_else(|| theme.color_token("ring"));
             let base_bg = base_item_background(theme, variant);
-            let accent = theme
-                .color_by_key("accent")
-                .unwrap_or_else(|| theme.color_token("accent"));
-            let hover_bg = alpha(accent, 0.5);
-            let pressed_bg = alpha(accent, 0.7);
             let pressable_layout = decl_style::layout_style(theme, layout.clone());
             let pressable_size = pressable_layout.size;
             let radius = item_radius(theme);
@@ -788,8 +874,6 @@ impl Item {
                 border_color,
                 focus_border_color,
                 base_bg,
-                hover_bg,
-                pressed_bg,
                 pressable_layout,
                 pressable_size,
                 radius,
@@ -816,11 +900,13 @@ impl Item {
             None => (None, PressableKeyActivation::EnterAndSpace, None),
         };
         let padding = match size {
-            // shadcn/ui v4 (new-york-v4 goldens):
-            // - default: `p-4`
-            // - sm: `px-4 py-3`
-            ItemSize::Default => ChromeRefinement::default().px(Space::N4).py(Space::N4),
-            ItemSize::Sm => ChromeRefinement::default().px(Space::N4).py(Space::N3),
+            // shadcn/ui v4 (`repo-ref/ui/apps/v4/registry/styles/style-*.css`):
+            // - default: `px-4 py-3.5`
+            // - sm: `px-3.5 py-3`
+            // - xs: `px-3 py-2.5`
+            ItemSize::Default => ChromeRefinement::default().px(Space::N4).py(Space::N3p5),
+            ItemSize::Sm => ChromeRefinement::default().px(Space::N3p5).py(Space::N3),
+            ItemSize::Xs => ChromeRefinement::default().px(Space::N3).py(Space::N2p5),
         };
 
         if on_click.is_some() || on_activate.is_some() || render_role.is_some() {
@@ -833,19 +919,9 @@ impl Item {
                     cx.pressable_on_activate(on_activate);
                 }
 
-                let hovered = st.hovered && enabled;
-                let pressed = st.pressed && enabled;
                 let focused = st.focused && enabled;
 
-                let bg = if !enabled {
-                    base_bg
-                } else if pressed {
-                    Some(pressed_bg)
-                } else if hovered {
-                    Some(hover_bg)
-                } else {
-                    base_bg
-                };
+                let bg = base_bg;
 
                 let mut chrome = padding.clone().merge(ChromeRefinement {
                     radius: Some(MetricRef::Px(radius)),
@@ -944,5 +1020,218 @@ impl Item {
                 )]
             })
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    use fret_app::App;
+    use fret_core::{AppWindowId, Point, Px, Rect, Size as CoreSize};
+    use fret_ui::element::{ElementKind, PressableKeyActivation, SpacingLength};
+
+    fn bounds() -> Rect {
+        Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            CoreSize::new(Px(320.0), Px(240.0)),
+        )
+    }
+
+    fn find_element_by_test_id<'a>(el: &'a AnyElement, test_id: &str) -> Option<&'a AnyElement> {
+        if el
+            .semantics_decoration
+            .as_ref()
+            .and_then(|d| d.test_id.as_deref())
+            == Some(test_id)
+        {
+            return Some(el);
+        }
+        match &el.kind {
+            ElementKind::Semantics(props) => {
+                if props.test_id.as_deref() == Some(test_id) {
+                    return Some(el);
+                }
+            }
+            _ => {}
+        }
+        for child in &el.children {
+            if let Some(found) = find_element_by_test_id(child, test_id) {
+                return Some(found);
+            }
+        }
+        None
+    }
+
+    fn item_chrome_container(el: &AnyElement) -> &fret_ui::element::ContainerProps {
+        match &el.kind {
+            ElementKind::Pressable(_) => match el.children.first().map(|c| &c.kind) {
+                Some(ElementKind::Container(props)) => props,
+                other => panic!("expected chrome container child, got {other:?}"),
+            },
+            ElementKind::Container(props) => props,
+            other => panic!("expected item root to be pressable or container, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn item_default_padding_matches_shadcn_registry_defaults() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let bounds = bounds();
+
+        crate::shadcn_themes::apply_shadcn_new_york_v4(
+            &mut app,
+            crate::shadcn_themes::ShadcnBaseColor::Neutral,
+            crate::shadcn_themes::ShadcnColorScheme::Light,
+        );
+
+        let element = fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            let content =
+                ItemContent::new([ItemTitle::new("Title").into_element(cx)]).into_element(cx);
+            Item::new([content])
+                .on_activate(Arc::new(|_host, _cx, _reason| {}))
+                .into_element(cx)
+        });
+
+        let chrome = item_chrome_container(&element);
+        let theme = Theme::global(&app);
+        let px = MetricRef::space(Space::N4).resolve(theme);
+        let py = MetricRef::space(Space::N3p5).resolve(theme);
+
+        assert_eq!(chrome.padding.left, SpacingLength::Px(px));
+        assert_eq!(chrome.padding.right, SpacingLength::Px(px));
+        assert_eq!(chrome.padding.top, SpacingLength::Px(py));
+        assert_eq!(chrome.padding.bottom, SpacingLength::Px(py));
+    }
+
+    #[test]
+    fn item_link_stamps_link_role_and_enter_only_key_activation() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let bounds = bounds();
+
+        let element = fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            let content =
+                ItemContent::new([ItemTitle::new("Title").into_element(cx)]).into_element(cx);
+            Item::new([content])
+                .render(ItemRender::Link {
+                    href: Arc::from("https://example.com"),
+                    target: None,
+                    rel: None,
+                })
+                .into_element(cx)
+        });
+
+        let ElementKind::Pressable(pressable) = &element.kind else {
+            panic!("expected link item to render as pressable");
+        };
+        assert_eq!(pressable.a11y.role, Some(SemanticsRole::Link));
+        assert_eq!(pressable.key_activation, PressableKeyActivation::EnterOnly);
+    }
+
+    #[test]
+    fn item_sized_provides_size_defaults_to_parts() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let bounds = bounds();
+
+        crate::shadcn_themes::apply_shadcn_new_york_v4(
+            &mut app,
+            crate::shadcn_themes::ShadcnBaseColor::Neutral,
+            crate::shadcn_themes::ShadcnColorScheme::Light,
+        );
+
+        let element = fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            item_sized(cx, ItemSize::Xs, |cx| {
+                let media = ItemMedia::new([ui::text(cx, "m").into_element(cx)])
+                    .variant(ItemMediaVariant::Image)
+                    .into_element(cx)
+                    .test_id("media");
+                let content = ItemContent::new([ui::text(cx, "c").into_element(cx)])
+                    .into_element(cx)
+                    .test_id("content");
+                [media, content]
+            })
+        });
+
+        let media = find_element_by_test_id(&element, "media").expect("media element");
+        let ElementKind::Container(media_props) = &media.kind else {
+            panic!("expected media to be a container");
+        };
+        let theme = Theme::global(&app);
+        let expected_media_side = MetricRef::space(Space::N6).resolve(theme);
+        assert_eq!(
+            media_props.layout.size.width,
+            fret_ui::element::Length::Px(expected_media_side)
+        );
+        assert_eq!(
+            media_props.layout.size.height,
+            fret_ui::element::Length::Px(expected_media_side)
+        );
+
+        let content = find_element_by_test_id(&element, "content").expect("content element");
+        let ElementKind::Flex(content_props) = &content.kind else {
+            panic!("expected content to be a flex element");
+        };
+        let expected_gap = MetricRef::space(Space::N0p5).resolve(theme);
+        assert_eq!(content_props.gap, SpacingLength::Px(expected_gap));
+    }
+
+    #[test]
+    fn item_group_gap_defaults_follow_size_intent() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let bounds = bounds();
+
+        crate::shadcn_themes::apply_shadcn_new_york_v4(
+            &mut app,
+            crate::shadcn_themes::ShadcnBaseColor::Neutral,
+            crate::shadcn_themes::ShadcnColorScheme::Light,
+        );
+
+        let element = fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            ItemGroup::new(std::iter::empty())
+                .size(ItemSize::Sm)
+                .into_element(cx)
+        });
+
+        let ElementKind::Column(props) = &element.kind else {
+            panic!("expected item group default to be a column");
+        };
+        let theme = Theme::global(&app);
+        let expected_gap = MetricRef::space(Space::N2p5).resolve(theme);
+        assert_eq!(props.gap, SpacingLength::Px(expected_gap));
+    }
+
+    #[test]
+    fn item_separator_has_vertical_margin_like_shadcn() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let bounds = bounds();
+
+        crate::shadcn_themes::apply_shadcn_new_york_v4(
+            &mut app,
+            crate::shadcn_themes::ShadcnBaseColor::Neutral,
+            crate::shadcn_themes::ShadcnColorScheme::Light,
+        );
+
+        let element = fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            ItemSeparator::new().into_element(cx)
+        });
+
+        let ElementKind::Container(props) = &element.kind else {
+            panic!("expected separator to be a container");
+        };
+        let theme = Theme::global(&app);
+        let expected_my = MetricRef::space(Space::N2).resolve(theme);
+        assert_eq!(
+            props.layout.margin.top,
+            fret_ui::element::MarginEdge::Px(expected_my)
+        );
+        assert_eq!(
+            props.layout.margin.bottom,
+            fret_ui::element::MarginEdge::Px(expected_my)
+        );
     }
 }

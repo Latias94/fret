@@ -2,6 +2,32 @@ use super::*;
 use std::collections::HashSet;
 
 impl<H: UiHost> UiTree<H> {
+    fn active_trapped_focus_scope_root_in_snapshot(
+        &self,
+        app: &mut H,
+        window: Option<AppWindowId>,
+        snapshot: &UiDispatchSnapshot,
+    ) -> Option<NodeId> {
+        let window = window?;
+        let mut node = self.focus?;
+        if snapshot.pre.get(node).is_none() {
+            return None;
+        }
+
+        loop {
+            if let Some(record) = declarative::element_record_for_node(app, window, node)
+                && matches!(
+                    record.instance,
+                    declarative::ElementInstance::FocusScope(p) if p.trap_focus
+                )
+            {
+                return Some(node);
+            }
+
+            node = snapshot.parent.get(node).copied().flatten()?;
+        }
+    }
+
     fn active_trapped_focus_scope_root(
         &self,
         app: &mut H,
@@ -29,6 +55,7 @@ impl<H: UiHost> UiTree<H> {
         window: Option<AppWindowId>,
         active_roots: &[NodeId],
         requested_focus: NodeId,
+        snapshot: Option<&UiDispatchSnapshot>,
     ) -> bool {
         if self.focus == Some(requested_focus) {
             return false;
@@ -36,14 +63,34 @@ impl<H: UiHost> UiTree<H> {
         // Focus gating should be resilient to temporarily-broken parent pointers under retained /
         // view-cache-reused subtrees. Use reachability from active layer roots via child edges as
         // the authoritative layer membership check.
-        if !self.is_reachable_from_any_root_via_children(requested_focus, active_roots) {
+        let in_active_layers = if let Some(snapshot) = snapshot {
+            snapshot.pre.get(requested_focus).is_some()
+        } else {
+            self.is_reachable_from_any_root_via_children(requested_focus, active_roots)
+        };
+        if !in_active_layers {
             return false;
         }
 
-        let Some(trap_root) = self.active_trapped_focus_scope_root(app, window) else {
+        let trap_root = if let Some(snapshot) = snapshot {
+            // When a dispatch snapshot is available, avoid depending on retained parent pointers.
+            self.active_trapped_focus_scope_root_in_snapshot(app, window, snapshot)
+        } else {
+            self.active_trapped_focus_scope_root(app, window)
+        };
+
+        let Some(trap_root) = trap_root else {
             return true;
         };
-        self.is_descendant(trap_root, requested_focus)
+
+        if let Some(snapshot) = snapshot
+            && snapshot.pre.get(trap_root).is_some()
+            && snapshot.pre.get(requested_focus).is_some()
+        {
+            return snapshot.is_descendant(trap_root, requested_focus);
+        }
+
+        self.is_reachable_from_root_via_children(trap_root, requested_focus)
     }
 
     pub(in crate::tree) fn is_reachable_from_any_root_via_children(
@@ -115,18 +162,5 @@ impl<H: UiHost> UiTree<H> {
         }
 
         false
-    }
-
-    pub(in crate::tree) fn first_reachable_root_via_children(
-        &self,
-        target: NodeId,
-        roots_in_priority_order: &[NodeId],
-    ) -> Option<NodeId> {
-        for &root in roots_in_priority_order {
-            if self.is_reachable_from_root_via_children(root, target) {
-                return Some(root);
-            }
-        }
-        None
     }
 }

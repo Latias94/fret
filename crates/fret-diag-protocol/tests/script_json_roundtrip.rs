@@ -590,6 +590,18 @@ fn script_v2_roundtrip_pointer_up_window_target() {
 }
 
 #[test]
+fn script_v2_roundtrip_pointer_cancel_window_target() {
+    assert_script_v2_roundtrip(
+        r#"{
+  "schema_version": 2,
+  "steps": [
+    { "type": "pointer_cancel", "window": { "kind": "last_seen_other" } }
+  ]
+}"#,
+    );
+}
+
+#[test]
 fn script_v2_roundtrip_wait_until_window_target() {
     assert_script_v2_roundtrip(
         r#"{

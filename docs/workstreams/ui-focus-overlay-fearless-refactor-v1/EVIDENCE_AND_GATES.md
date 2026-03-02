@@ -7,6 +7,8 @@
   - `cargo nextest run -p fret-ui --lib outside_press_branch_containment_uses_child_edges_not_parent_pointers`
   - `cargo nextest run -p fret-ui --lib dismissible_outside_press_prevent_default_keeps_focus`
   - `cargo nextest run -p fret-ui --lib dismissible_outside_press_without_prevent_default_clears_focus`
+- Targeted regression tests (view-cache + hover correctness):
+  - `cargo nextest run -p fret-ui --lib hover_region_marks_view_cache_root_dirty_on_hover_edges`
 - Full suite (when practical): `cargo nextest run -p fret-ui`
 - `python3 tools/check_layering.py`
 
@@ -17,7 +19,28 @@
 - Focus scope trap: `crates/fret-ui/src/tree/tests/focus_scope.rs`
 - Declarative dismissible interactions: `crates/fret-ui/src/declarative/tests/interactions/dismissible.rs`
 
+## Phase C anchors (snapshot PR0)
+
+- Snapshot types + builder: `crates/fret-ui/src/tree/dispatch_snapshot.rs`
+- Debug entrypoint (no behavior change): `crates/fret-ui/src/tree/ui_tree_debug/query.rs` (`debug_dispatch_snapshot`)
+- Snapshot parity report: `crates/fret-ui/src/tree/ui_tree_debug/query.rs` (`debug_dispatch_snapshot_parity`)
+- Outside-press routed via snapshot (PR2): `crates/fret-ui/src/tree/ui_tree_outside_press.rs` and
+  `crates/fret-ui/src/tree/dispatch/window.rs`
+
 ## New artifacts (Phase A/B)
 
 - Unit test: stale parent pointers do not break outside-press branch exclusion.
 - Unit tests: outside-press default focus clearing vs `prevent_default` suppression.
+
+## View-cache + hover regression artifacts
+
+- Unit test: `crates/fret-ui/src/declarative/tests/layout/interactivity.rs`
+  (`hover_region_marks_view_cache_root_dirty_on_hover_edges`).
+- Scripted gate (run under view-cache env):
+
+```powershell
+cargo run -p fretboard -- diag run ui-gallery-hovercard-open `
+  --env FRET_UI_GALLERY_VIEW_CACHE=1 `
+  --env FRET_UI_GALLERY_VIEW_CACHE_SHELL=1 `
+  --launch -- cargo run -p fret-ui-gallery --release
+```

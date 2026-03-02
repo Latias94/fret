@@ -99,7 +99,8 @@ pub(super) fn active_script_needs_semantics_snapshot(active: &ActiveScript) -> b
         | UiActionStepV2::SetMouseButtons { .. }
         | UiActionStepV2::RaiseWindow { .. }
         | UiActionStepV2::PointerMove { .. }
-        | UiActionStepV2::PointerUp { .. } => false,
+        | UiActionStepV2::PointerUp { .. }
+        | UiActionStepV2::PointerCancel { .. } => false,
     }
 }
 
@@ -117,6 +118,10 @@ pub(super) fn script_step_kind_name(step: &UiActionStepV2) -> &'static str {
         UiActionStepV2::DragPointer { .. } => "drag_pointer",
         UiActionStepV2::DragPointerUntil { .. } => "drag_pointer_until",
         UiActionStepV2::DragTo { .. } => "drag_to",
+        UiActionStepV2::PointerDown { .. } => "pointer_down",
+        UiActionStepV2::PointerMove { .. } => "pointer_move",
+        UiActionStepV2::PointerUp { .. } => "pointer_up",
+        UiActionStepV2::PointerCancel { .. } => "pointer_cancel",
         UiActionStepV2::Wheel { .. } => "wheel",
         UiActionStepV2::TypeText { .. } => "type_text",
         UiActionStepV2::TypeTextInto { .. } => "type_text_into",
@@ -707,6 +712,22 @@ pub(super) fn dispatch_drive_script_step(
                 app,
                 window,
                 anchor_window,
+                step_index,
+                step,
+                active,
+                output,
+                force_dump_label,
+                handoff_to,
+                stop_script,
+                failure_reason,
+            );
+            debug_assert!(handled);
+        }
+        step @ UiActionStepV2::PointerCancel { .. } => {
+            let handled = script_steps_pointer_session::handle_pointer_cancel_step(
+                service,
+                app,
+                window,
                 step_index,
                 step,
                 active,

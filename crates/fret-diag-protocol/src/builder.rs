@@ -283,6 +283,13 @@ impl ScriptV2Builder {
         })
     }
 
+    pub fn pointer_cancel(self) -> Self {
+        self.push(UiActionStepV2::PointerCancel {
+            window: None,
+            pointer_kind: None,
+        })
+    }
+
     pub fn click_stable(self, target: UiSelectorV1) -> Self {
         self.push(UiActionStepV2::ClickStable {
             window: None,
@@ -436,7 +443,7 @@ impl ScriptV2Builder {
     }
 
     pub fn wait_frames(self, n: u32) -> Self {
-        self.push(UiActionStepV2::WaitFrames { n })
+        self.push(UiActionStepV2::WaitFrames { window: None, n })
     }
 
     pub fn wait_until(self, predicate: UiPredicateV1, timeout_frames: u32) -> Self {

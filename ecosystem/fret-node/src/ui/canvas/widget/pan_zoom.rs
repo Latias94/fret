@@ -19,7 +19,8 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
             return;
         }
 
-        let new_zoom = (zoom * factor).clamp(self.style.min_zoom, self.style.max_zoom);
+        let new_zoom =
+            (zoom * factor).clamp(self.style.geometry.min_zoom, self.style.geometry.max_zoom);
         if (new_zoom - zoom).abs() <= 1.0e-6 {
             return;
         }
@@ -55,7 +56,8 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
             return;
         }
 
-        let new_zoom = (zoom * factor).clamp(self.style.min_zoom, self.style.max_zoom);
+        let new_zoom =
+            (zoom * factor).clamp(self.style.geometry.min_zoom, self.style.geometry.max_zoom);
         if (new_zoom - zoom).abs() <= 1.0e-6 {
             return;
         }

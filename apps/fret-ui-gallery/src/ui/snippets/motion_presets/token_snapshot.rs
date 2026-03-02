@@ -1,3 +1,5 @@
+pub const SOURCE: &str = include_str!("token_snapshot.rs");
+
 // region: example
 use fret_app::App;
 use fret_ui::Theme;

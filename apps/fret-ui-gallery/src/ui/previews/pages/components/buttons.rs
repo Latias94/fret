@@ -263,7 +263,7 @@ pub(in crate::ui) fn preview_button_legacy(cx: &mut ElementContext<'_, App>) -> 
     };
 
     let button_group = {
-        let demo = preview_button_group(cx)
+        let demo = crate::ui::pages::preview_button_group(cx)
             .into_iter()
             .next()
             .unwrap_or_else(|| cx.text("ButtonGroup demo is missing"));

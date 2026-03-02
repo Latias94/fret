@@ -1,7 +1,8 @@
 use fret::prelude::*;
 use fret_core::ImageColorSpace;
+use fret_icons::FrozenIconRegistry;
 use fret_ui::element::{ImageProps, SvgIconProps};
-use fret_ui_assets::ui::{ImageSourceElementContextExt as _, SvgFileElementContextExt as _};
+use fret_ui_assets::ui::ImageSourceElementContextExt as _;
 use std::path::PathBuf;
 use std::sync::Arc;
 
@@ -13,8 +14,16 @@ const TEST_ID_PANEL_IMAGE: &str = "cookbook.icons_and_assets_basics.panel.image"
 const TEST_ID_IMAGE_STATUS: &str = "cookbook.icons_and_assets_basics.image.status";
 const TEST_ID_SVG_STATUS: &str = "cookbook.icons_and_assets_basics.svg.status";
 
-fn file_path(s: &str) -> Arc<PathBuf> {
-    Arc::new(PathBuf::from(s))
+fn repo_root_from_manifest_dir() -> PathBuf {
+    // Cookbook examples should not depend on the process CWD (fretboard/dev runners may vary it).
+    // Resolve paths relative to the workspace root via `CARGO_MANIFEST_DIR`.
+    PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+        .join("..")
+        .join("..")
+}
+
+fn repo_path(rel: &str) -> Arc<PathBuf> {
+    Arc::new(repo_root_from_manifest_dir().join(rel))
 }
 
 fn checkerboard_rgba8(width: u32, height: u32, cell: u32) -> Vec<u8> {
@@ -65,7 +74,7 @@ impl MvuProgram for IconsAndAssetsBasicsProgram {
         );
 
         let file_image =
-            fret_ui_assets::ImageSource::from_path(file_path("assets/textures/test.jpg"));
+            fret_ui_assets::ImageSource::from_path(repo_path("assets/textures/test.jpg"));
         let memory_image = fret_ui_assets::ImageSource::rgba8(
             128,
             128,
@@ -76,7 +85,7 @@ impl MvuProgram for IconsAndAssetsBasicsProgram {
         // `SvgIconProps` is an icon-style SVG element (monochrome + currentColor), not a full SVG
         // image renderer. Use an icon-like SVG (stroke=currentColor, fill=none) for this demo.
         let svg_file =
-            fret_ui_assets::SvgFileSource::from_path(file_path("assets/demo/icon-search.svg"));
+            fret_ui_assets::SvgFileSource::from_path(repo_path("assets/demo/icon-search.svg"));
 
         Self::State {
             window,
@@ -204,7 +213,32 @@ impl MvuProgram for IconsAndAssetsBasicsProgram {
                         .gap_y(Space::N4)
                         .layout(LayoutRefinement::default().w_full()),
                     |cx| {
+                        let frozen = cx.app.global::<FrozenIconRegistry>().cloned();
+                        let preload = cx
+                            .app
+                            .global::<fret_ui_kit::declarative::icon::IconSvgPreloadDiagnostics>()
+                            .copied();
+                        let frozen_len = frozen.as_ref().map(|v| v.len()).unwrap_or(0);
+                        let preload_entries = preload.map(|v| v.entries).unwrap_or(0);
+                        let preload_bytes = preload.map(|v| v.bytes_ready).unwrap_or(0);
+
                         [
+                            ui::h_flex(cx, |cx| {
+                                [
+                                    shadcn::Badge::new(format!("frozen icons: {frozen_len}"))
+                                        .variant(shadcn::BadgeVariant::Secondary)
+                                        .into_element(cx),
+                                    shadcn::Badge::new(format!(
+                                        "preloaded: {preload_entries} ({} KB)",
+                                        preload_bytes / 1024
+                                    ))
+                                    .variant(shadcn::BadgeVariant::Secondary)
+                                    .into_element(cx),
+                                ]
+                            })
+                            .gap(Space::N2)
+                            .items_center()
+                            .into_element(cx),
                             icon_row(
                                 cx,
                                 "Semantic ids (ui.*)",
@@ -339,16 +373,25 @@ impl MvuProgram for IconsAndAssetsBasicsProgram {
         .into_element(cx)
         .test_id(TEST_ID_PANEL_IMAGE);
 
-        let svg_source = cx.svg_source_from_file(&state.svg_file);
-        let svg_status = if svg_source.is_some() {
+        // SVG file loading is synchronous (cached) so we can surface useful error strings directly.
+        cx.observe_global::<fret_ui_assets::UiAssetsReloadEpoch>(Invalidation::Paint);
+        let svg_file_state = fret_ui_assets::read_svg_file_cached(&mut *cx.app, &state.svg_file);
+        let svg_status = if svg_file_state.error.is_some() {
+            "error"
+        } else if svg_file_state.bytes.is_some() {
             "ready"
         } else {
-            "loading"
+            "missing"
         };
 
         let svg_box = ui::container(cx, |cx| {
-            if let Some(svg) = svg_source {
-                let mut props = SvgIconProps::new(svg);
+            if let Some(err) = svg_file_state.error.clone() {
+                let el = ui::text(cx, format!("Failed to read SVG: {err}"))
+                    .text_color(ColorRef::Color(theme.color_token("destructive")))
+                    .into_element(cx);
+                [el]
+            } else if let Some(bytes) = svg_file_state.bytes.clone() {
+                let mut props = SvgIconProps::new(fret_ui::SvgSource::Bytes(bytes));
                 props.layout = style::layout_style(
                     &theme,
                     LayoutRefinement::default().w_px(Px(160.0)).h_px(Px(160.0)),
@@ -420,19 +463,7 @@ impl MvuProgram for IconsAndAssetsBasicsProgram {
                 .max_w(Px(900.0))
                 .into_element(cx);
 
-        ui::container(cx, |cx| {
-            [ui::v_flex(cx, |_cx| [card])
-                .gap(Space::N6)
-                .items_center()
-                .justify_center()
-                .size_full()
-                .into_element(cx)]
-        })
-        .bg(ColorRef::Color(theme.color_token("background")))
-        .p(Space::N6)
-        .into_element(cx)
-        .test_id(TEST_ID_ROOT)
-        .into()
+        fret_cookbook::scaffold::centered_page_background(cx, TEST_ID_ROOT, card).into()
     }
 }
 
