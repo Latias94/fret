@@ -6,6 +6,7 @@ contracts early to avoid large rewrites later.
 New to the repo? Start with:
 
 - First hour onboarding (native): `docs/first-hour.md`
+- Examples index (templates + cookbook + gallery + labs): `docs/examples/README.md`
 
 ## Sources of Truth
 
