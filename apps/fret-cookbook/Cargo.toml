@@ -24,3 +24,5 @@ fret-markdown = { path = "../../ecosystem/fret-markdown", default-features = fal
 fret-code-view = { path = "../../ecosystem/fret-code-view", default-features = false }
 fret-undo = { path = "../../ecosystem/fret-undo" }
 fret-canvas = { path = "../../ecosystem/fret-canvas", default-features = false, features = ["ui"] }
+fret-docking = { path = "../../ecosystem/fret-docking", default-features = false, features = ["ui"] }
+fret-bootstrap = { path = "../../ecosystem/fret-bootstrap", default-features = false, features = ["ui-app-driver", "diagnostics", "ui-assets", "icons-ui-semantic-lucide"] }

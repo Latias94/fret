@@ -55,6 +55,7 @@ examples and should be treated as product surfaces.
 | cookbook.async_inbox_basics | Keep | `apps/fret-cookbook/examples/async_inbox_basics.rs` | `cargo run -p fret-cookbook --example async_inbox_basics` | Portable async pattern: background task → inbox → runner drain, with cancellation + progress semantics gate. |
 | cookbook.markdown_and_code_basics | Keep | `apps/fret-cookbook/examples/markdown_and_code_basics.rs` | `cargo run -p fret-cookbook --example markdown_and_code_basics` | Markdown rendering + fenced code blocks (code-view/syntax) + copy affordance, with a minimal diag smoke script. |
 | cookbook.theme_switching_basics | Keep | `apps/fret-cookbook/examples/theme_switching_basics.rs` | `cargo run -p fret-cookbook --example theme_switching_basics` | Minimal theme switching (shadcn New York v4 Light/Dark) with stable `test_id` stamps. |
+| cookbook.docking_basics | Keep | `apps/fret-cookbook/examples/docking_basics.rs` | `cargo run -p fret-cookbook --example docking_basics` | Minimal docking surface: retained dock host + app-owned panel registry + runner `dock_op` wiring. |
 
 ## Cookbook crate (planned v1 additions)
 
@@ -62,7 +63,6 @@ These are the next "small but high-signal" recipes to add, in easy -> hard order
 
 | ID | State | Target anchors | Notes |
 |---|---|---|---|
-| cookbook.docking_basics | Planned | `apps/fret-cookbook/examples/docking_basics.rs` | Minimal docking surface: core model ops + UI policy via `fret-docking`. |
 | cookbook.chart_interactions_basics | Planned | `apps/fret-cookbook/examples/chart_interactions_basics.rs` | `fret-chart` or `fret-plot` interactions (hover/drag) with a minimal diag script. |
 | cookbook.gizmo_basics | Planned | `apps/fret-cookbook/examples/gizmo_basics.rs` | `fret-gizmo` wiring + viewport-style transforms (native-first). |
 

@@ -189,7 +189,7 @@ Legend:
 | cookbook.icons_and_assets_basics | 2 | App | assets | Example | ✅ | ✅ | icons + image/SVG budgets | screenshot gate |
 | data-table | 3 | App | data | Gallery Page | ✅ | ✅ | headless table + sizing/pinning | layout gate + perf baseline |
 | cookbook.markdown_and_code_basics | 3 | App | docs | Example | ✅ | ✅ | markdown + syntax + copy button | screenshot gate |
-| docking-basics | 3 | Interop | docking | Example | ✅ | ⛔ | dock model + UI policy | diag script + checklist anchor |
+| cookbook.docking_basics | 3 | Interop | docking | Example | ✅ | ⛔ | dock model + UI policy | diag script + checklist anchor |
 | docking-arbitration | 4 | Interop | docking | Harness | ✅ | ⛔ | multi-root overlays + input arbitration | diag suite (ADR checklist) |
 | multi-window-tearoff | 4 | Interop | windows | Lab/Harness | ✅ | ⛔ | tear-off + DPI + drag | manual + diag evidence |
 | embedded-viewport | 3 | Interop | viewport | Example | ✅ | (optional) | viewport surface + input forwarding | diag script: pointer mapping |

@@ -93,7 +93,7 @@ Interop Track:
   - [ ] external texture import (native + web)
   - [ ] gizmo + viewport integration (native)
 - [ ] Docking story:
-  - [ ] docking basics (cookbook)
+  - [x] docking basics (cookbook)
   - [ ] docking arbitration harness (kept as maintainer-grade, but linked as “editor-grade ref”)
 
 Renderer Track:
