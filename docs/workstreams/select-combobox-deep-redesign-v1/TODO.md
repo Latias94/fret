@@ -152,8 +152,8 @@ These anchors are intended to make audits and future refactors cheaper (searchab
   - `ecosystem/fret-ui-kit/src/primitives/combobox.rs:280` (`on_close_auto_focus_with_reason`)
   - `ecosystem/fret-ui-kit/src/primitives/active_descendant.rs:4` (`active_descendant_for_index` re-export)
 - Current shadcn recipes/adapters:
-  - `ecosystem/fret-ui-shadcn/src/select.rs:1227` (`Select`)
-  - `ecosystem/fret-ui-shadcn/src/select.rs:1435` (`Select::into_element_parts`)
+  - `ecosystem/fret-ui-shadcn/src/select.rs:1268` (`Select`)
+  - `ecosystem/fret-ui-shadcn/src/select.rs:1484` (`Select::into_element_parts`)
   - `ecosystem/fret-ui-shadcn/src/combobox.rs:108` (`useComboboxAnchor`)
   - `ecosystem/fret-ui-shadcn/src/combobox.rs:793` (`Combobox`)
   - `ecosystem/fret-ui-shadcn/src/combobox.rs:888` (`Combobox::into_element_parts`)
