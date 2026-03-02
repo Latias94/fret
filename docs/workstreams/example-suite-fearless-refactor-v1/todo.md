@@ -90,7 +90,7 @@ Goal: avoid duplicated demo lists across native/web/tooling.
 Interop Track:
 
 - [ ] Add/curate “engine embedding” examples:
-  - [ ] embedded viewport + input forwarding
+  - [x] embedded viewport + input forwarding: `cookbook.embedded_viewport_basics`
   - [ ] external texture import (native + web)
   - [x] gizmo + viewport integration (native): `cookbook.gizmo_basics`
 - [ ] Docking story:

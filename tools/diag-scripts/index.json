@@ -181,6 +181,28 @@
       ]
     },
     {
+      "id": "cookbook-embedded-viewport-basics-smoke",
+      "path": "tools/diag-scripts/cookbook/embedded-viewport-basics/cookbook-embedded-viewport-basics-smoke.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "cookbook-embedded-viewport-basics"
+      ],
+      "tags": [
+        "cookbook",
+        "interop",
+        "smoke",
+        "viewport"
+      ],
+      "target_hints": [
+        "Clicks inside the embedded viewport surface to verify explicit input forwarding.",
+        "Switches the render target size preset and verifies the target size gate updates.",
+        "Captures a screenshot + diagnostics bundle."
+      ]
+    },
+    {
       "id": "cookbook-gizmo-basics-smoke",
       "path": "tools/diag-scripts/cookbook/gizmo-basics/cookbook-gizmo-basics-smoke.json",
       "required_capabilities": [

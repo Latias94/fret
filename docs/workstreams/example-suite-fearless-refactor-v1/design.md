@@ -192,7 +192,7 @@ Legend:
 | cookbook.docking_basics | 3 | Interop | docking | Example | ✅ | ⛔ | dock model + UI policy | diag script + checklist anchor |
 | docking-arbitration | 4 | Interop | docking | Harness | ✅ | ⛔ | multi-root overlays + input arbitration | diag suite (ADR checklist) |
 | multi-window-tearoff | 4 | Interop | windows | Lab/Harness | ✅ | ⛔ | tear-off + DPI + drag | manual + diag evidence |
-| embedded-viewport | 3 | Interop | viewport | Example | ✅ | (optional) | viewport surface + input forwarding | diag script: pointer mapping |
+| cookbook.embedded_viewport_basics | 3 | Interop | viewport | Example | ✅ | (optional) | viewport surface + explicit input forwarding | diag script: pointer mapping |
 | cookbook.gizmo_basics | 4 | Interop | viewport | Example | ✅ | ⛔ | gizmo + viewport tool math | screenshot + interaction script |
 | external-texture-import | 3 | Interop | render I/O | Example | ✅ | ✅ | external texture paths | diag run + capability check |
 | external-video-import | 4 | Interop | render I/O | Lab | ✅ | ⛔ | video import (platform-specific) | platform-gated smoke |

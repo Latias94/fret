@@ -17,6 +17,7 @@ fret-app = { path = "../../crates/fret-app" }
 fret-core = { path = "../../crates/fret-core" }
 fret-runtime = { path = "../../crates/fret-runtime" }
 fret-ui = { path = "../../crates/fret-ui" }
+fret-render = { path = "../../crates/fret-render" }
 fret-icons-radix = { path = "../../ecosystem/fret-icons-radix", default-features = false, features = ["app-integration"] }
 fret-ui-assets = { path = "../../ecosystem/fret-ui-assets", default-features = false, features = ["ui", "image-decode"] }
 fret-executor = { path = "../../ecosystem/fret-executor" }
@@ -30,3 +31,4 @@ fret-chart = { path = "../../ecosystem/fret-chart" }
 delinea = { path = "../../ecosystem/delinea" }
 fret-gizmo = { path = "../../ecosystem/fret-gizmo" }
 glam.workspace = true
+wgpu.workspace = true
