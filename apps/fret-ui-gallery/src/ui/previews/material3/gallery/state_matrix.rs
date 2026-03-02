@@ -79,7 +79,7 @@ pub(in crate::ui) fn material3_state_matrix_content(
     out.push(snippets::material3::radio::render(cx, material3_radio_value));
 
     out.push(cx.text("— Text Field —"));
-    out.extend(preview_material3_text_field(
+    out.push(snippets::material3::text_field::render(
         cx,
         material3_text_field_value,
         material3_text_field_disabled,
@@ -99,7 +99,11 @@ pub(in crate::ui) fn material3_state_matrix_content(
     ));
 
     out.push(cx.text("— Menu —"));
-    out.extend(preview_material3_menu(cx, material3_menu_open, last_action));
+    out.push(snippets::material3::menu::render(
+        cx,
+        material3_menu_open,
+        last_action,
+    ));
 
     out
 }
