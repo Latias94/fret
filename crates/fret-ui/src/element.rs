@@ -2603,6 +2603,8 @@ pub struct ScrollbarState {
     pub dragging_thumb: bool,
     pub drag_start_pointer: Px,
     pub drag_start_offset: Px,
+    pub drag_baseline_viewport: Option<Px>,
+    pub drag_baseline_content: Option<Px>,
     pub hovered: bool,
 }
 

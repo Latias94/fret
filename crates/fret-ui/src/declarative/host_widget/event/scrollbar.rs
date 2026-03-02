@@ -92,15 +92,28 @@ pub(super) fn handle_scrollbar<H: UiHost>(
                 this.element,
                 crate::element::ScrollbarState::default,
                 |state| {
-                    let (viewport, content, max_offset) = if is_horizontal {
-                        let viewport = Px(handle.viewport_size().width.0.max(0.0));
-                        let content = Px(handle.content_size().width.0.max(0.0));
-                        (viewport, content, Px((content.0 - viewport.0).max(0.0)))
+                    let (viewport_now, content_now) = if is_horizontal {
+                        (
+                            Px(handle.viewport_size().width.0.max(0.0)),
+                            Px(handle.content_size().width.0.max(0.0)),
+                        )
                     } else {
-                        let viewport = Px(handle.viewport_size().height.0.max(0.0));
-                        let content = Px(handle.content_size().height.0.max(0.0));
-                        (viewport, content, Px((content.0 - viewport.0).max(0.0)))
+                        (
+                            Px(handle.viewport_size().height.0.max(0.0)),
+                            Px(handle.content_size().height.0.max(0.0)),
+                        )
                     };
+                    let viewport = if state.dragging_thumb {
+                        state.drag_baseline_viewport.unwrap_or(viewport_now)
+                    } else {
+                        viewport_now
+                    };
+                    let content = if state.dragging_thumb {
+                        state.drag_baseline_content.unwrap_or(content_now)
+                    } else {
+                        content_now
+                    };
+                    let max_offset = Px((content.0 - viewport.0).max(0.0));
 
                     let hovered = bounds.contains(position);
                     if state.hovered != hovered && !state.dragging_thumb {
@@ -254,6 +267,8 @@ pub(super) fn handle_scrollbar<H: UiHost>(
 
                     if thumb.contains(position) {
                         state.dragging_thumb = true;
+                        state.drag_baseline_viewport = Some(viewport);
+                        state.drag_baseline_content = Some(content);
                         state.drag_start_pointer = if is_horizontal {
                             position.x
                         } else {
@@ -339,6 +354,8 @@ pub(super) fn handle_scrollbar<H: UiHost>(
                     if state.dragging_thumb {
                         did_handle = true;
                         state.dragging_thumb = false;
+                        state.drag_baseline_viewport = None;
+                        state.drag_baseline_content = None;
                     }
                 },
             );

@@ -507,6 +507,199 @@ fn scroll_thumb_drag_updates_offset() {
 }
 
 #[test]
+fn scroll_thumb_drag_uses_baseline_metrics_when_content_grows_mid_drag() {
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+    ui.set_debug_enabled(true);
+
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(120.0), Px(40.0)),
+    );
+    let mut text = FakeTextService::default();
+    let scroll_handle = crate::scroll::ScrollHandle::default();
+
+    let root = render_root(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds,
+        "mvp-scrollbar-drag-baseline",
+        |cx| {
+            let scroll_handle = scroll_handle.clone();
+
+            let mut stack_layout = crate::element::LayoutStyle::default();
+            stack_layout.size.width = crate::element::Length::Fill;
+            stack_layout.size.height = crate::element::Length::Fill;
+
+            vec![cx.stack_props(
+                crate::element::StackProps {
+                    layout: stack_layout,
+                },
+                |cx| {
+                    let mut scroll_layout = crate::element::LayoutStyle::default();
+                    scroll_layout.size.width = crate::element::Length::Fill;
+                    scroll_layout.size.height = crate::element::Length::Fill;
+                    scroll_layout.overflow = crate::element::Overflow::Clip;
+
+                    let scroll = cx.scroll(
+                        crate::element::ScrollProps {
+                            layout: scroll_layout,
+                            scroll_handle: Some(scroll_handle.clone()),
+                            ..Default::default()
+                        },
+                        |cx| {
+                            vec![cx.column(
+                                crate::element::ColumnProps {
+                                    gap: Px(0.0).into(),
+                                    ..Default::default()
+                                },
+                                |cx| {
+                                    vec![
+                                        cx.text("a"),
+                                        cx.text("b"),
+                                        cx.text("c"),
+                                        cx.text("d"),
+                                        cx.text("e"),
+                                        cx.text("f"),
+                                    ]
+                                },
+                            )]
+                        },
+                    );
+
+                    let scrollbar_layout = crate::element::LayoutStyle {
+                        position: crate::element::PositionStyle::Absolute,
+                        inset: crate::element::InsetStyle {
+                            top: Some(Px(0.0)).into(),
+                            right: Some(Px(0.0)).into(),
+                            bottom: Some(Px(0.0)).into(),
+                            left: None.into(),
+                        },
+                        size: crate::element::SizeStyle {
+                            width: crate::element::Length::Px(Px(10.0)),
+                            ..Default::default()
+                        },
+                        ..Default::default()
+                    };
+
+                    let scrollbar = cx.scrollbar(crate::element::ScrollbarProps {
+                        layout: scrollbar_layout,
+                        axis: crate::element::ScrollbarAxis::Vertical,
+                        scroll_target: Some(scroll.id),
+                        scroll_handle: scroll_handle.clone(),
+                        style: crate::element::ScrollbarStyle::default(),
+                    });
+
+                    vec![scroll, scrollbar]
+                },
+            )]
+        },
+    );
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut text, bounds, 1.0);
+
+    let stack_node = ui.children(root)[0];
+    let scrollbar_node = ui.children(stack_node)[1];
+
+    let baseline_viewport = scroll_handle.viewport_size().height;
+    let baseline_content = scroll_handle.content_size().height;
+
+    // Start a thumb drag at offset=0.
+    let scrollbar_bounds = ui
+        .debug_node_bounds(scrollbar_node)
+        .expect("scrollbar bounds");
+    let thumb = crate::declarative::paint_helpers::scrollbar_thumb_rect(
+        scrollbar_bounds,
+        baseline_viewport,
+        baseline_content,
+        scroll_handle.offset().y,
+        crate::element::ScrollbarStyle::default().track_padding,
+    )
+    .expect("thumb rect");
+    let down_pos = fret_core::Point::new(Px(thumb.origin.x.0 + 1.0), Px(thumb.origin.y.0 + 1.0));
+    let move_pos = fret_core::Point::new(down_pos.x, Px(down_pos.y.0 + 8.0));
+
+    ui.dispatch_event(
+        &mut app,
+        &mut text,
+        &fret_core::Event::Pointer(fret_core::PointerEvent::Down {
+            position: down_pos,
+            button: fret_core::MouseButton::Left,
+            modifiers: fret_core::Modifiers::default(),
+            click_count: 1,
+            pointer_id: fret_core::PointerId(0),
+            pointer_type: fret_core::PointerType::Mouse,
+        }),
+    );
+    assert_eq!(
+        ui.captured(),
+        Some(scrollbar_node),
+        "expected thumb down to capture the pointer on the scrollbar node"
+    );
+
+    // Simulate content growth while dragging (e.g. measurement updates in a vlist-like surface).
+    scroll_handle.set_content_size(Size::new(
+        scroll_handle.content_size().width,
+        Px(baseline_content.0 + 200.0),
+    ));
+
+    ui.dispatch_event(
+        &mut app,
+        &mut text,
+        &fret_core::Event::Pointer(fret_core::PointerEvent::Move {
+            position: move_pos,
+            buttons: fret_core::MouseButtons {
+                left: true,
+                ..Default::default()
+            },
+            modifiers: fret_core::Modifiers::default(),
+            pointer_id: fret_core::PointerId(0),
+            pointer_type: fret_core::PointerType::Mouse,
+        }),
+    );
+
+    let pad = crate::declarative::paint_helpers::scrollbar_track_padding_px(
+        scrollbar_bounds.size.height.0,
+        crate::element::ScrollbarStyle::default().track_padding,
+    );
+    let inner = (scrollbar_bounds.size.height.0 - pad * 2.0).max(0.0);
+    let max_thumb_y = (inner - thumb.size.height.0).max(0.0);
+    assert!(max_thumb_y > 0.0, "expected a draggable thumb track");
+
+    let baseline_max_offset = Px((baseline_content.0 - baseline_viewport.0).max(0.0));
+    let delta_y = move_pos.y.0 - down_pos.y.0;
+    let scale = baseline_max_offset.0 / max_thumb_y;
+    let expected = Px((delta_y * scale).max(0.0).min(baseline_max_offset.0));
+    let actual = scroll_handle.offset().y;
+
+    assert!(
+        (actual.0 - expected.0).abs() <= 0.5,
+        "expected baseline-locked drag delta: actual={:?} expected={:?} baseline_max_offset={:?}",
+        actual,
+        expected,
+        baseline_max_offset
+    );
+
+    ui.dispatch_event(
+        &mut app,
+        &mut text,
+        &fret_core::Event::Pointer(fret_core::PointerEvent::Up {
+            position: move_pos,
+            button: fret_core::MouseButton::Left,
+            modifiers: fret_core::Modifiers::default(),
+            is_click: false,
+            click_count: 1,
+            pointer_id: fret_core::PointerId(0),
+            pointer_type: fret_core::PointerType::Mouse,
+        }),
+    );
+}
+
+#[test]
 fn scroll_handle_set_offset_triggers_visual_scroll_without_manual_invalidate() {
     let mut app = TestHost::new();
     let mut ui: UiTree<TestHost> = UiTree::new();
