@@ -55,6 +55,7 @@ pub mod skeleton;
 pub mod slider;
 pub mod spinner;
 pub mod switch;
+pub mod tabs;
 pub mod toggle;
 pub mod toggle_group;
 pub mod textarea;
