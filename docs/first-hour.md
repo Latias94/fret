@@ -27,6 +27,12 @@ cargo run -p fretboard -- new simple-todo --name my-simple-todo
 cargo run --manifest-path local/my-simple-todo/Cargo.toml
 ```
 
+If you prefer an in-tree example (no local scaffold), run the cookbook version:
+
+```bash
+cargo run -p fret-cookbook --example simple_todo
+```
+
 Why `simple-todo`?
 
 - It is **Model + MVU messages + keyed lists** only.
