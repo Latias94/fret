@@ -103,11 +103,11 @@ impl NodeGraphTuningOverlay {
     }
 
     fn compute_layout(&self, bounds: Rect) -> TuningLayout {
-        let margin = self.style.minimap_margin.max(10.0);
-        let pad = self.style.context_menu_padding.max(8.0);
+        let margin = self.style.paint.minimap_margin.max(10.0);
+        let pad = self.style.paint.context_menu_padding.max(8.0);
         let gap = 6.0;
-        let row_h = self.style.context_menu_item_height.max(22.0);
-        let btn = self.style.controls_button_size.max(22.0);
+        let row_h = self.style.paint.context_menu_item_height.max(22.0);
+        let btn = self.style.paint.controls_button_size.max(22.0);
 
         let panel_w = 340.0;
         let mut rows = 17.0;
@@ -657,10 +657,11 @@ impl NodeGraphTuningOverlay {
             align: fret_core::TextAlign::Start,
             scale_factor: cx.scale_factor,
         };
-        let (id, metrics) =
-            cx.services
-                .text()
-                .prepare_str(text, &self.style.context_menu_text_style, constraints);
+        let (id, metrics) = cx.services.text().prepare_str(
+            text,
+            &self.style.geometry.context_menu_text_style,
+            constraints,
+        );
         self.text_blobs.push(id);
         cx.scene.push(SceneOp::Text {
             order: DrawOrder(order),
@@ -765,22 +766,22 @@ impl<H: UiHost> Widget<H> for NodeGraphTuningOverlay {
             .unwrap_or_default();
         let layout = self.compute_layout(cx.bounds);
 
-        let corner = self.style.context_menu_corner_radius;
+        let corner = self.style.paint.context_menu_corner_radius;
         cx.scene.push(SceneOp::Quad {
             order: DrawOrder(22_000),
             rect: layout.panel,
-            background: fret_core::Paint::Solid(self.style.context_menu_background).into(),
+            background: fret_core::Paint::Solid(self.style.paint.context_menu_background).into(),
 
             border: Edges::all(Px(1.0)),
-            border_paint: fret_core::Paint::Solid(self.style.context_menu_border).into(),
+            border_paint: fret_core::Paint::Solid(self.style.paint.context_menu_border).into(),
 
             corner_radii: Corners::all(Px(corner)),
         });
 
-        let pad = self.style.context_menu_padding.max(8.0);
+        let pad = self.style.paint.context_menu_padding.max(8.0);
         let gap = 6.0;
-        let row_h = self.style.context_menu_item_height.max(22.0);
-        let btn = self.style.controls_button_size.max(22.0);
+        let row_h = self.style.paint.context_menu_item_height.max(22.0);
+        let btn = self.style.paint.controls_button_size.max(22.0);
 
         let left = layout.panel.origin.x.0 + pad;
         let right = layout.panel.origin.x.0 + layout.panel.size.width.0 - pad;
@@ -798,7 +799,7 @@ impl<H: UiHost> Widget<H> for NodeGraphTuningOverlay {
             22_010,
             Point::new(Px(left), Px(cy)),
             &row("Connect mode", mode_str),
-            self.style.context_menu_text,
+            self.style.paint.context_menu_text,
         );
         // Mode button
         let mode_btn_rect = Rect::new(
@@ -806,7 +807,7 @@ impl<H: UiHost> Widget<H> for NodeGraphTuningOverlay {
             Size::new(Px(btn), Px(btn)),
         );
         let mode_bg = if self.hovered == Some(TuningHit::ToggleMode) {
-            self.style.controls_hover_background
+            self.style.paint.controls_hover_background
         } else {
             Color::TRANSPARENT
         };
@@ -832,7 +833,7 @@ impl<H: UiHost> Widget<H> for NodeGraphTuningOverlay {
                 Px(mode_btn_rect.origin.y.0 + 0.5 * (btn - 12.0)),
             ),
             mode_short,
-            self.style.controls_text,
+            self.style.paint.controls_text,
         );
         cy += row_h + gap;
 
@@ -849,7 +850,7 @@ impl<H: UiHost> Widget<H> for NodeGraphTuningOverlay {
                 22_010,
                 Point::new(Px(left), Px(y)),
                 &text,
-                this.style.context_menu_text,
+                this.style.paint.context_menu_text,
             );
 
             let dec_rect = Rect::new(
@@ -866,7 +867,7 @@ impl<H: UiHost> Widget<H> for NodeGraphTuningOverlay {
 
             let bg = |hit: TuningHit| {
                 if this.hovered == Some(hit) {
-                    this.style.controls_hover_background
+                    this.style.paint.controls_hover_background
                 } else {
                     Color::TRANSPARENT
                 }
@@ -901,7 +902,7 @@ impl<H: UiHost> Widget<H> for NodeGraphTuningOverlay {
                     Px(dec_rect.origin.y.0 + 0.5 * (btn - 12.0)),
                 ),
                 "–",
-                this.style.controls_text,
+                this.style.paint.controls_text,
             );
             this.draw_text(
                 cx,
@@ -911,7 +912,7 @@ impl<H: UiHost> Widget<H> for NodeGraphTuningOverlay {
                     Px(inc_rect.origin.y.0 + 0.5 * (btn - 12.0)),
                 ),
                 "+",
-                this.style.controls_text,
+                this.style.paint.controls_text,
             );
         };
 
@@ -936,14 +937,14 @@ impl<H: UiHost> Widget<H> for NodeGraphTuningOverlay {
             22_010,
             Point::new(Px(left), Px(cy)),
             &row("Pan on scroll", wheel_pan_text),
-            self.style.context_menu_text,
+            self.style.paint.context_menu_text,
         );
         let wheel_pan_btn_rect = Rect::new(
             Point::new(Px(right - btn), Px(cy + 0.5 * (row_h - btn).max(0.0))),
             Size::new(Px(btn), Px(btn)),
         );
         let wheel_pan_bg = if self.hovered == Some(TuningHit::TogglePanOnScroll) {
-            self.style.controls_hover_background
+            self.style.paint.controls_hover_background
         } else {
             Color::TRANSPARENT
         };
@@ -965,7 +966,7 @@ impl<H: UiHost> Widget<H> for NodeGraphTuningOverlay {
                 Px(wheel_pan_btn_rect.origin.y.0 + 0.5 * (btn - 12.0)),
             ),
             wheel_pan_text,
-            self.style.controls_text,
+            self.style.paint.controls_text,
         );
         cy += row_h + gap;
 
@@ -979,14 +980,14 @@ impl<H: UiHost> Widget<H> for NodeGraphTuningOverlay {
             22_010,
             Point::new(Px(left), Px(cy)),
             &row("Pan inertia", pan_inertia_text),
-            self.style.context_menu_text,
+            self.style.paint.context_menu_text,
         );
         let pan_inertia_btn_rect = Rect::new(
             Point::new(Px(right - btn), Px(cy + 0.5 * (row_h - btn).max(0.0))),
             Size::new(Px(btn), Px(btn)),
         );
         let pan_inertia_bg = if self.hovered == Some(TuningHit::TogglePanInertia) {
-            self.style.controls_hover_background
+            self.style.paint.controls_hover_background
         } else {
             Color::TRANSPARENT
         };
@@ -1008,7 +1009,7 @@ impl<H: UiHost> Widget<H> for NodeGraphTuningOverlay {
                 Px(pan_inertia_btn_rect.origin.y.0 + 0.5 * (btn - 12.0)),
             ),
             pan_inertia_text,
-            self.style.controls_text,
+            self.style.paint.controls_text,
         );
         cy += row_h + gap;
 
@@ -1022,14 +1023,14 @@ impl<H: UiHost> Widget<H> for NodeGraphTuningOverlay {
             22_010,
             Point::new(Px(left), Px(cy)),
             &row("Zoom on scroll", wheel_zoom_text),
-            self.style.context_menu_text,
+            self.style.paint.context_menu_text,
         );
         let wheel_zoom_btn_rect = Rect::new(
             Point::new(Px(right - btn), Px(cy + 0.5 * (row_h - btn).max(0.0))),
             Size::new(Px(btn), Px(btn)),
         );
         let wheel_zoom_bg = if self.hovered == Some(TuningHit::ToggleZoomOnScroll) {
-            self.style.controls_hover_background
+            self.style.paint.controls_hover_background
         } else {
             Color::TRANSPARENT
         };
@@ -1051,7 +1052,7 @@ impl<H: UiHost> Widget<H> for NodeGraphTuningOverlay {
                 Px(wheel_zoom_btn_rect.origin.y.0 + 0.5 * (btn - 12.0)),
             ),
             wheel_zoom_text,
-            self.style.controls_text,
+            self.style.paint.controls_text,
         );
         cy += row_h + gap;
 
@@ -1066,14 +1067,14 @@ impl<H: UiHost> Widget<H> for NodeGraphTuningOverlay {
             22_010,
             Point::new(Px(left), Px(cy)),
             &row("Zoom activation", zoom_key_str),
-            self.style.context_menu_text,
+            self.style.paint.context_menu_text,
         );
         let zoom_key_btn_rect = Rect::new(
             Point::new(Px(right - btn), Px(cy + 0.5 * (row_h - btn).max(0.0))),
             Size::new(Px(btn), Px(btn)),
         );
         let zoom_key_bg = if self.hovered == Some(TuningHit::CycleZoomActivationKey) {
-            self.style.controls_hover_background
+            self.style.paint.controls_hover_background
         } else {
             Color::TRANSPARENT
         };
@@ -1101,7 +1102,7 @@ impl<H: UiHost> Widget<H> for NodeGraphTuningOverlay {
                 Px(zoom_key_btn_rect.origin.y.0 + 0.5 * (btn - 12.0)),
             ),
             zoom_key_short,
-            self.style.controls_text,
+            self.style.paint.controls_text,
         );
         cy += row_h + gap;
 
@@ -1137,14 +1138,14 @@ impl<H: UiHost> Widget<H> for NodeGraphTuningOverlay {
             22_010,
             Point::new(Px(left), Px(cy)),
             &row("Connect on click", connect_on_click_text),
-            self.style.context_menu_text,
+            self.style.paint.context_menu_text,
         );
         let connect_on_click_btn_rect = Rect::new(
             Point::new(Px(right - btn), Px(cy + 0.5 * (row_h - btn).max(0.0))),
             Size::new(Px(btn), Px(btn)),
         );
         let connect_on_click_bg = if self.hovered == Some(TuningHit::ToggleConnectOnClick) {
-            self.style.controls_hover_background
+            self.style.paint.controls_hover_background
         } else {
             Color::TRANSPARENT
         };
@@ -1166,7 +1167,7 @@ impl<H: UiHost> Widget<H> for NodeGraphTuningOverlay {
                 Px(connect_on_click_btn_rect.origin.y.0 + 0.5 * (btn - 12.0)),
             ),
             connect_on_click_text,
-            self.style.controls_text,
+            self.style.paint.controls_text,
         );
         cy += row_h + gap;
 
@@ -1190,14 +1191,14 @@ impl<H: UiHost> Widget<H> for NodeGraphTuningOverlay {
             22_010,
             Point::new(Px(left), Px(cy)),
             &row("Node drag handle", drag_handle_str),
-            self.style.context_menu_text,
+            self.style.paint.context_menu_text,
         );
         let drag_handle_btn_rect = Rect::new(
             Point::new(Px(right - btn), Px(cy + 0.5 * (row_h - btn).max(0.0))),
             Size::new(Px(btn), Px(btn)),
         );
         let drag_handle_bg = if self.hovered == Some(TuningHit::ToggleNodeDragHandle) {
-            self.style.controls_hover_background
+            self.style.paint.controls_hover_background
         } else {
             Color::TRANSPARENT
         };
@@ -1223,7 +1224,7 @@ impl<H: UiHost> Widget<H> for NodeGraphTuningOverlay {
                 Px(drag_handle_btn_rect.origin.y.0 + 0.5 * (btn - 12.0)),
             ),
             drag_handle_short,
-            self.style.controls_text,
+            self.style.paint.controls_text,
         );
         cy += row_h + gap;
 
@@ -1253,7 +1254,7 @@ impl<H: UiHost> Widget<H> for NodeGraphTuningOverlay {
                 22_010,
                 Point::new(Px(left), Px(y)),
                 &text,
-                this.style.context_menu_text,
+                this.style.paint.context_menu_text,
             );
 
             let toggle_rect = Rect::new(
@@ -1277,7 +1278,7 @@ impl<H: UiHost> Widget<H> for NodeGraphTuningOverlay {
 
             let bg = |hit: TuningHit| {
                 if this.hovered == Some(hit) {
-                    this.style.controls_hover_background
+                    this.style.paint.controls_hover_background
                 } else {
                     Color::TRANSPARENT
                 }
@@ -1323,7 +1324,7 @@ impl<H: UiHost> Widget<H> for NodeGraphTuningOverlay {
                     Px(toggle_rect.origin.y.0 + 0.5 * (btn - 12.0)),
                 ),
                 toggle_text,
-                this.style.controls_text,
+                this.style.paint.controls_text,
             );
 
             this.draw_text(
@@ -1334,7 +1335,7 @@ impl<H: UiHost> Widget<H> for NodeGraphTuningOverlay {
                     Px(dec_rect.origin.y.0 + 0.5 * (btn - 12.0)),
                 ),
                 "−",
-                this.style.controls_text,
+                this.style.paint.controls_text,
             );
             this.draw_text(
                 cx,
@@ -1344,7 +1345,7 @@ impl<H: UiHost> Widget<H> for NodeGraphTuningOverlay {
                     Px(inc_rect.origin.y.0 + 0.5 * (btn - 12.0)),
                 ),
                 "+",
-                this.style.controls_text,
+                this.style.paint.controls_text,
             );
         };
 
@@ -1418,14 +1419,14 @@ impl<H: UiHost> Widget<H> for NodeGraphTuningOverlay {
             22_010,
             Point::new(Px(left), Px(cy)),
             &row("Edges reconnect", edges_reconnectable_text),
-            self.style.context_menu_text,
+            self.style.paint.context_menu_text,
         );
         let edges_reconnectable_btn_rect = Rect::new(
             Point::new(Px(right - btn), Px(cy + 0.5 * (row_h - btn).max(0.0))),
             Size::new(Px(btn), Px(btn)),
         );
         let edges_reconnectable_bg = if self.hovered == Some(TuningHit::ToggleEdgesReconnectable) {
-            self.style.controls_hover_background
+            self.style.paint.controls_hover_background
         } else {
             Color::TRANSPARENT
         };
@@ -1447,7 +1448,7 @@ impl<H: UiHost> Widget<H> for NodeGraphTuningOverlay {
                 Px(edges_reconnectable_btn_rect.origin.y.0 + 0.5 * (btn - 12.0)),
             ),
             edges_reconnectable_text,
-            self.style.controls_text,
+            self.style.paint.controls_text,
         );
 
         if self.commands.is_none() {
@@ -1461,14 +1462,14 @@ impl<H: UiHost> Widget<H> for NodeGraphTuningOverlay {
             22_010,
             Point::new(Px(left), Px(cy)),
             &row("Graph", "reset"),
-            self.style.context_menu_text,
+            self.style.paint.context_menu_text,
         );
         let reset_btn_rect = Rect::new(
             Point::new(Px(right - btn), Px(cy + 0.5 * (row_h - btn).max(0.0))),
             Size::new(Px(btn), Px(btn)),
         );
         let reset_bg = if self.hovered == Some(TuningHit::ResetGraph) {
-            self.style.controls_hover_background
+            self.style.paint.controls_hover_background
         } else {
             Color::TRANSPARENT
         };
@@ -1490,7 +1491,7 @@ impl<H: UiHost> Widget<H> for NodeGraphTuningOverlay {
                 Px(reset_btn_rect.origin.y.0 + 0.5 * (btn - 12.0)),
             ),
             "Go",
-            self.style.controls_text,
+            self.style.paint.controls_text,
         );
         cy += row_h + gap;
 
@@ -1499,14 +1500,14 @@ impl<H: UiHost> Widget<H> for NodeGraphTuningOverlay {
             22_010,
             Point::new(Px(left), Px(cy)),
             &row("Stress graph", "1k nodes"),
-            self.style.context_menu_text,
+            self.style.paint.context_menu_text,
         );
         let stress_1k_btn_rect = Rect::new(
             Point::new(Px(right - btn), Px(cy + 0.5 * (row_h - btn).max(0.0))),
             Size::new(Px(btn), Px(btn)),
         );
         let stress_1k_bg = if self.hovered == Some(TuningHit::SpawnStress1k) {
-            self.style.controls_hover_background
+            self.style.paint.controls_hover_background
         } else {
             Color::TRANSPARENT
         };
@@ -1528,7 +1529,7 @@ impl<H: UiHost> Widget<H> for NodeGraphTuningOverlay {
                 Px(stress_1k_btn_rect.origin.y.0 + 0.5 * (btn - 12.0)),
             ),
             "Go",
-            self.style.controls_text,
+            self.style.paint.controls_text,
         );
         cy += row_h + gap;
 
@@ -1537,14 +1538,14 @@ impl<H: UiHost> Widget<H> for NodeGraphTuningOverlay {
             22_010,
             Point::new(Px(left), Px(cy)),
             &row("Stress graph", "5k nodes"),
-            self.style.context_menu_text,
+            self.style.paint.context_menu_text,
         );
         let stress_5k_btn_rect = Rect::new(
             Point::new(Px(right - btn), Px(cy + 0.5 * (row_h - btn).max(0.0))),
             Size::new(Px(btn), Px(btn)),
         );
         let stress_5k_bg = if self.hovered == Some(TuningHit::SpawnStress5k) {
-            self.style.controls_hover_background
+            self.style.paint.controls_hover_background
         } else {
             Color::TRANSPARENT
         };
@@ -1566,7 +1567,7 @@ impl<H: UiHost> Widget<H> for NodeGraphTuningOverlay {
                 Px(stress_5k_btn_rect.origin.y.0 + 0.5 * (btn - 12.0)),
             ),
             "Go",
-            self.style.controls_text,
+            self.style.paint.controls_text,
         );
         cy += row_h + gap;
 
@@ -1575,14 +1576,14 @@ impl<H: UiHost> Widget<H> for NodeGraphTuningOverlay {
             22_010,
             Point::new(Px(left), Px(cy)),
             &row("Stress graph", "10k nodes"),
-            self.style.context_menu_text,
+            self.style.paint.context_menu_text,
         );
         let stress_10k_btn_rect = Rect::new(
             Point::new(Px(right - btn), Px(cy + 0.5 * (row_h - btn).max(0.0))),
             Size::new(Px(btn), Px(btn)),
         );
         let stress_10k_bg = if self.hovered == Some(TuningHit::SpawnStress10k) {
-            self.style.controls_hover_background
+            self.style.paint.controls_hover_background
         } else {
             Color::TRANSPARENT
         };
@@ -1604,7 +1605,7 @@ impl<H: UiHost> Widget<H> for NodeGraphTuningOverlay {
                 Px(stress_10k_btn_rect.origin.y.0 + 0.5 * (btn - 12.0)),
             ),
             "Go",
-            self.style.controls_text,
+            self.style.paint.controls_text,
         );
     }
 

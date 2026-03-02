@@ -19,9 +19,9 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                 .is_some_and(|p| Self::rect_contains(rect, p));
 
             let background = if hovered {
-                self.style.context_menu_hover_background
+                self.style.paint.context_menu_hover_background
             } else {
-                self.style.context_menu_background
+                self.style.paint.context_menu_background
             };
 
             cx.scene.push(SceneOp::Quad {
@@ -29,12 +29,12 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                 rect,
                 background: fret_core::Paint::Solid(background).into(),
                 border: Edges::all(Px(1.0 / zoom)),
-                border_paint: fret_core::Paint::Solid(self.style.context_menu_border).into(),
+                border_paint: fret_core::Paint::Solid(self.style.paint.context_menu_border).into(),
 
                 corner_radii: Corners::all(Px(6.0 / zoom)),
             });
 
-            let mut text_style = self.style.context_menu_text_style.clone();
+            let mut text_style = self.style.geometry.context_menu_text_style.clone();
             text_style.size = Px(text_style.size.0 / zoom);
             if let Some(lh) = text_style.line_height.as_mut() {
                 lh.0 /= zoom;
@@ -58,7 +58,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                 order: DrawOrder(61),
                 origin: Point::new(text_x, text_y),
                 text: blob,
-                paint: (self.style.context_menu_text).into(),
+                paint: (self.style.paint.context_menu_text).into(),
                 outline: None,
                 shadow: None,
             });

@@ -265,8 +265,6 @@ fn page_preview(
     let alert_dialog_open = models.alert_dialog_open.clone();
     let sheet_open = models.sheet_open.clone();
     let portal_geometry_popover_open = models.portal_geometry_popover_open.clone();
-    let select_value = models.select_value.clone();
-    let select_open = models.select_open.clone();
     let combobox_value = models.combobox_value.clone();
     let combobox_open = models.combobox_open.clone();
     let combobox_query = models.combobox_query.clone();
@@ -524,7 +522,7 @@ fn page_preview(
         ),
         PAGE_SHADCN_EXTRAS => preview_shadcn_extras(cx),
         PAGE_FORMS => preview_forms(cx, text_input, text_area, checkbox, switch),
-        PAGE_SELECT => preview_select(cx, select_value, select_open),
+        PAGE_SELECT => preview_select(cx),
         PAGE_COMBOBOX => preview_combobox(cx, combobox_value, combobox_open, combobox_query),
         PAGE_DATE_PICKER => preview_date_picker(
             cx,

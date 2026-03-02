@@ -1495,3 +1495,99 @@ fn outside_press_observer_suppression_respects_dismissable_branches() {
         "expected branch click to reach underlay normally"
     );
 }
+
+#[test]
+fn outside_press_branch_containment_uses_child_edges_not_parent_pointers() {
+    struct RecordObserverDown {
+        observer: Model<u32>,
+    }
+
+    impl<H: UiHost> Widget<H> for RecordObserverDown {
+        fn hit_test(&self, _bounds: Rect, _position: Point) -> bool {
+            false
+        }
+
+        fn event_observer(&mut self, cx: &mut crate::widget::ObserverCx<'_, H>, event: &Event) {
+            if cx.input_ctx.dispatch_phase != fret_runtime::InputDispatchPhase::Preview {
+                return;
+            }
+            if matches!(event, Event::Pointer(PointerEvent::Down { .. })) {
+                let _ = cx
+                    .app
+                    .models_mut()
+                    .update(&self.observer, |v: &mut u32| *v += 1);
+            }
+        }
+
+        fn layout(&mut self, cx: &mut LayoutCx<'_, H>) -> Size {
+            cx.available
+        }
+    }
+
+    struct HitTarget;
+
+    impl<H: UiHost> Widget<H> for HitTarget {
+        fn hit_test(&self, bounds: Rect, position: Point) -> bool {
+            bounds.contains(position)
+        }
+
+        fn layout(&mut self, cx: &mut LayoutCx<'_, H>) -> Size {
+            cx.available
+        }
+    }
+
+    let window = AppWindowId::default();
+    let mut app = crate::test_host::TestHost::new();
+    let observer = app.models_mut().insert(0u32);
+
+    let mut ui = UiTree::new();
+    ui.set_window(window);
+
+    let base = ui.create_node(TestStack);
+    ui.set_root(base);
+
+    // Underlay subtree used as the overlay “branch” (e.g. trigger). We intentionally corrupt the
+    // leaf node's parent pointer after layout to simulate retained/view-cache edge cases where
+    // parent pointers can become temporarily stale while child edges remain correct.
+    let branch_root = ui.create_node(TestStack);
+    let branch_leaf = ui.create_node(HitTarget);
+    ui.add_child(branch_root, branch_leaf);
+    ui.add_child(base, branch_root);
+
+    let overlay = ui.create_node(RecordObserverDown {
+        observer: observer.clone(),
+    });
+    let layer = ui.push_overlay_root_ex(overlay, false, true);
+    ui.set_layer_wants_pointer_down_outside_events(layer, true);
+    ui.set_layer_pointer_down_outside_branches(layer, vec![branch_root]);
+
+    let mut services = FakeUiServices;
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(100.0), Px(100.0)),
+    );
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    if let Some(n) = ui.nodes.get_mut(branch_leaf) {
+        n.parent = Some(base);
+    }
+
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &Event::Pointer(PointerEvent::Down {
+            position: Point::new(Px(10.0), Px(10.0)),
+            button: fret_core::MouseButton::Left,
+            modifiers: fret_core::Modifiers::default(),
+            click_count: 1,
+            pointer_id: fret_core::PointerId(0),
+            pointer_type: fret_core::PointerType::Mouse,
+        }),
+    );
+
+    assert_eq!(
+        app.models().get_copied(&observer),
+        Some(0),
+        "expected branch containment to suppress outside-press observer dispatch even when parent pointers are stale"
+    );
+}

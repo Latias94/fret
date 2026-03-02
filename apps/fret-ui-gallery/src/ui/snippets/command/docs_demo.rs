@@ -1,0 +1,98 @@
+// region: example
+use fret_core::Px;
+use fret_ui_shadcn::{self as shadcn, prelude::*};
+use std::sync::Arc;
+
+#[derive(Default)]
+struct Models {
+    query: Option<Model<String>>,
+}
+
+pub fn render<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    last_action: Model<Arc<str>>,
+) -> AnyElement {
+    let query = cx.with_state(Models::default, |st| st.query.clone());
+    let query = match query {
+        Some(query) => query,
+        None => {
+            let query = cx.app.models_mut().insert(String::new());
+            cx.with_state(Models::default, |st| st.query = Some(query.clone()));
+            query
+        }
+    };
+
+    let last_action_model = last_action.clone();
+    let on_select = {
+        let last_action = last_action_model.clone();
+        move |tag: Arc<str>| {
+            let last_action = last_action.clone();
+            Arc::new(
+                move |host: &mut dyn fret_ui::action::UiActionHost,
+                      action_cx: fret_ui::action::ActionCx,
+                      _reason: fret_ui::action::ActivateReason| {
+                    let value = tag.clone();
+                    let _ = host
+                        .models_mut()
+                        .update(&last_action, |cur: &mut Arc<str>| {
+                            *cur = value.clone();
+                        });
+                    host.request_redraw(action_cx.window);
+                },
+            ) as fret_ui::action::OnActivate
+        }
+    };
+
+    let icon_id = fret_icons::IconId::new_static;
+    let entries: Vec<shadcn::CommandEntry> = vec![
+        shadcn::CommandGroup::new([
+            shadcn::CommandItem::new("Calendar")
+                .leading_icon(icon_id("lucide.calendar"))
+                .on_select_action(on_select(Arc::from("command.docs-demo.calendar"))),
+            shadcn::CommandItem::new("Search Emoji")
+                .leading_icon(icon_id("lucide.smile"))
+                .on_select_action(on_select(Arc::from("command.docs-demo.search-emoji"))),
+            shadcn::CommandItem::new("Calculator")
+                .leading_icon(icon_id("lucide.calculator"))
+                .disabled(true),
+        ])
+        .heading("Suggestions")
+        .into(),
+        shadcn::CommandSeparator::new().into(),
+        shadcn::CommandGroup::new([
+            shadcn::CommandItem::new("Profile")
+                .leading_icon(icon_id("lucide.user"))
+                .shortcut("⌘P")
+                .on_select_action(on_select(Arc::from("command.docs-demo.profile"))),
+            shadcn::CommandItem::new("Billing")
+                .leading_icon(icon_id("lucide.credit-card"))
+                .shortcut("⌘B")
+                .on_select_action(on_select(Arc::from("command.docs-demo.billing"))),
+            shadcn::CommandItem::new("Settings")
+                .leading_icon(icon_id("lucide.settings"))
+                .shortcut("⌘S")
+                .on_select_action(on_select(Arc::from("command.docs-demo.settings"))),
+        ])
+        .heading("Settings")
+        .into(),
+    ];
+
+    shadcn::CommandPalette::new(query.clone(), Vec::new())
+        .placeholder("Type a command or search...")
+        .empty_text("No results found.")
+        .a11y_label("Command docs demo")
+        .refine_style(ChromeRefinement::default().shadow(ShadowPreset::Md))
+        .refine_layout(
+            LayoutRefinement::default()
+                .w_full()
+                .max_w(Px(450.0))
+                .min_w_0(),
+        )
+        .entries(entries)
+        .test_id_input("ui-gallery-command-docs-demo-input")
+        .list_test_id("ui-gallery-command-docs-demo-listbox")
+        .test_id_item_prefix("ui-gallery-command-docs-demo-item-")
+        .into_element(cx)
+        .test_id("ui-gallery-command-docs-demo")
+}
+// endregion: example

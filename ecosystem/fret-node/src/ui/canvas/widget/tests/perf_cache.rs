@@ -150,11 +150,11 @@ impl NodeGraphPresenter for CountingPresenter {
     ) -> fret_core::Color {
         self.counts.edge_color.fetch_add(1, Ordering::Relaxed);
         let Some(e) = graph.edges.get(&edge) else {
-            return style.node_border;
+            return style.paint.node_border;
         };
         match e.kind {
-            crate::core::EdgeKind::Data => style.wire_color_data,
-            crate::core::EdgeKind::Exec => style.wire_color_exec,
+            crate::core::EdgeKind::Data => style.paint.wire_color_data,
+            crate::core::EdgeKind::Exec => style.paint.wire_color_exec,
         }
     }
 

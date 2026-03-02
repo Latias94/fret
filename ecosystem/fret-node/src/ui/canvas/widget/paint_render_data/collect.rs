@@ -1,6 +1,7 @@
 use super::*;
 use crate::ui::NodeChromeHint;
 use crate::ui::PortChromeHint;
+use fret_core::scene::PaintBindingV1;
 
 impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
     pub(in super::super) fn collect_render_data<H: UiHost>(
@@ -31,9 +32,9 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
 
                 let geom = geom.as_ref();
                 let index = index.as_ref();
-                let node_pad = this.style.node_padding;
+                let node_pad = this.style.geometry.node_padding;
                 let pin_gap = 8.0;
-                let pin_r = this.style.pin_radius;
+                let pin_r = this.style.geometry.pin_radius;
                 let label_overhead = 2.0 * node_pad + 2.0 * (pin_r + pin_gap);
 
                 if include_groups {
@@ -266,12 +267,41 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                         } else {
                             hint
                         };
+
+                        let mut hint = hint;
+                        let paint_override = this
+                            .paint_overrides
+                            .as_ref()
+                            .and_then(|o| o.edge_paint_override(edge_id));
+                        if let Some(ov) = paint_override {
+                            if let Some(dash) = ov.dash {
+                                hint.dash = Some(dash);
+                            }
+                            if let Some(w) = ov.stroke_width_mul {
+                                hint.width_mul = hint.width_mul * w;
+                            }
+                        }
+                        hint = hint.normalized();
+
                         if let Some(c) = cull {
-                            let pad = (snapshot
-                                .interaction
-                                .edge_interaction_width
-                                .max(this.style.wire_width * this.style.wire_width_selected_mul)
-                                .max(this.style.wire_width * this.style.wire_width_hover_mul))
+                            let interaction_width_px = this
+                                .geometry_overrides
+                                .as_ref()
+                                .and_then(|o| {
+                                    o.edge_geometry_override(edge_id).interaction_width_px
+                                })
+                                .unwrap_or(snapshot.interaction.edge_interaction_width);
+                            let pad = (interaction_width_px
+                                .max(
+                                    this.style.geometry.wire_width
+                                        * hint.width_mul
+                                        * this.style.paint.wire_width_selected_mul,
+                                )
+                                .max(
+                                    this.style.geometry.wire_width
+                                        * hint.width_mul
+                                        * this.style.paint.wire_width_hover_mul,
+                                ))
                                 / zoom;
                             let bounds = if let Some(custom) =
                                 this.edge_custom_path(graph, edge_id, &hint, from, to, zoom)
@@ -291,6 +321,13 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                         let mut color = presenter.edge_color(graph, edge_id, &this.style);
                         if let Some(override_color) = hint.color {
                             color = override_color;
+                        }
+
+                        let mut paint: PaintBindingV1 = color.into();
+                        if let Some(ov) = paint_override {
+                            if let Some(p) = ov.stroke_paint {
+                                paint = p;
+                            }
                         }
 
                         // Keep edge ordering stable and aligned with node z-order.
@@ -314,6 +351,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                             from,
                             to,
                             color,
+                            paint,
                             hint,
                             selected,
                             hovered,

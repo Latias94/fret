@@ -96,6 +96,7 @@ impl DataTableViewOptions {
             |cx| {
                 Button::new("Columns")
                     .variant(ButtonVariant::Outline)
+                    .trailing_icon(fret_icons::IconId::new_static("lucide.chevron-down"))
                     .into_element(cx)
             },
             move |_cx| {

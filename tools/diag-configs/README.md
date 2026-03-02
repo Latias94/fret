@@ -78,6 +78,7 @@ Notes:
   - Env override: `FRET_DIAG_BUNDLE_SCREENSHOT`.
 - `redact_text`:
   - Runtime: `c.redact_text` (fallback default `true`).
+  - Tool-launched default: `fretboard diag ... --launch` sets `FRET_DIAG_REDACT_TEXT=0` unless overridden.
   - Env override: `FRET_DIAG_REDACT_TEXT`.
 - `max_debug_string_bytes`:
   - Runtime: `c.max_debug_string_bytes` (fallback default `4096`), clamped to `[0, 256KiB]`.

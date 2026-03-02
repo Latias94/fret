@@ -26,6 +26,10 @@ Upstream references (local snapshots):
 - **Target**: the desired location we are moving toward.
 - **Seek step**: one integrator step, typically run once per rendered frame.
 - **Settle**: the state where `abs(target - offset_location) < epsilon` (Embla uses `0.001`).
+- **Coordinate system** (important when comparing numbers):
+  - Upstream Embla scroll snaps are typically non-increasing offsets: `0, -x, -2x, ...`.
+  - In-tree Fret recipes expose/render a positive `offset_px` (distance scrolled forward).
+  - Therefore, the mapping is: `embla_location_px = -offset_px` and `embla_scroll_snaps_px = -snap_offsets_px`.
 
 ## Time model (critical)
 
@@ -43,6 +47,21 @@ Therefore:
 - `duration` is **not** a `std::time::Duration` in milliseconds.
 - The observable outcome is “snappiness”/convergence speed, and it depends on how often `seek()`
   is called (frame rate).
+- Note: Embla's drag release shaping uses a hard-coded `baseDuration` (`dragFree ? 43 : 25`) in
+  `DragHandler`, so changing `duration` mostly affects non-drag navigation (e.g. `scrollTo.index`).
+
+### Contract: fixed-step engine ticks (v2 MVP)
+
+Fret v2 MVP intentionally mirrors Embla's *fixed-step* integration model:
+
+- Each `Engine::tick(...)` is one seek step (typically one rendered frame).
+- There is no wall-clock `dt` parameter in the headless engine.
+- Therefore, “time to settle” is best specified in **ticks/frames**, not milliseconds.
+
+Gates should avoid relying on real-time; prefer:
+
+- unit tests that assert invariants in a bounded number of ticks, and/or
+- `fretboard diag run --fixed-frame-delta-ms 16` when screenshot/pixel gates are needed.
 
 ### Fret mapping (v2 decision)
 
@@ -57,8 +76,29 @@ but “Embla parity” claims should be based on (1).
 
 Reduced motion:
 
-- When reduced motion is enabled, the engine should converge faster (or instantly) while remaining
-  logically consistent (events still fire; indices update).
+- When reduced motion is enabled, scroll motion should be reduced/removed while remaining logically
+  consistent (events still fire; indices update).
+
+### Contract: prefers-reduced-motion behavior (v2 decision)
+
+When `prefers-reduced-motion: reduce` is active for the window:
+
+- Carousel does not run inertia/physics settling loops (no continuous RAF churn).
+- Release and programmatic navigation converge immediately (single frame/tick).
+- Observable state still converges:
+  - selected index updates,
+  - `reInit`/`select` remain observable (generations/events).
+
+Implementation guidance (recipe-level policy):
+
+- Disable the Embla-style engine driver for reduced-motion windows (fallback to deterministic path).
+- Force settle duration to `0ms` for reduced-motion windows.
+
+Gates:
+
+- unit test: after a navigation interaction, reduced-motion carousel does not keep requesting
+  `Effect::RequestAnimationFrame` continuously (no animation loop)
+  (`ecosystem/fret-ui-shadcn/tests/carousel_reduced_motion.rs`).
 
 ## Drag semantics
 
@@ -69,6 +109,9 @@ Embla behavior:
 - Drag does not “win” on pointer down.
 - After `dragThreshold` px in the main axis, the drag wins and click is prevented (`preventClick`).
 - On click prevention, the click is stopped and default prevented.
+- When `dragFree=true` and the user mouse-downs while the carousel is still moving
+  (`abs(target - location) >= 2`), Embla also prevents the resulting click so “click-to-stop” does
+  not activate slide content.
 
 Fret translation:
 
@@ -76,6 +119,8 @@ Fret translation:
   - parent can observe capture-phase moves and steal capture after threshold,
   - capture switch emits `PointerCancel` to the previous capture target.
 - We consider “click prevented” satisfied if the descendant activation is suppressed.
+- For the `dragFree` “click-to-stop” case, the recipe may steal pointer capture on down and consume
+  the corresponding up to suppress descendant activation.
 
 ### Contract: force shaping on release
 
@@ -164,27 +209,33 @@ Fret mapping (current baseline):
 Embla `loop=true` is not “wrap index on prev/next”. It is a loop engine that wraps translations
 continuously using loopers.
 
-Fret v2 intent:
+Contract:
 
-- If `loop=true` is in scope for v2, we implement:
-  - scroll looper + slide looper translation wrapping,
-  - without duplicating semantics/test ids in a way that breaks automation.
-
-If we cannot implement seamless loop safely, we must explicitly keep `loop` as “selection wrap”
-and **not** claim Embla parity for looping.
+- When `loop=true` is enabled, the engine **must not clamp** at the start/end scroll limits.
+- The scroll motion is kept continuous by wrapping `location`/`target` by `±content_size` while
+  preserving velocity (no “teleport” that resets integrator state).
+- The viewport is kept visually continuous by applying per-slide translations of `0`, `+content_size`,
+  or `-content_size` (a looper), without duplicating semantics/test ids.
+  - Recipes can still apply their own virtualization/mount policies on top (out of scope for v2 MVP).
 
 Implementation (MVP shipped):
 
 - Headless engine wraps `location`/`target` by applying the loop distance without resetting motion.
 - The shadcn recipe applies an additional per-slide `RenderTransform` translation (`±content_size`)
   so the viewport remains visually continuous when the scroll location wraps.
+- Note: `slide_looper.rs` is intentionally not a full 1:1 port of Embla’s gap-fitting loop point
+  selection. It implements the smallest observable outcome needed for recipe-level continuity.
 
 Evidence anchors:
 
+- Upstream references:
+  - `repo-ref/embla-carousel/packages/embla-carousel/src/components/ScrollLooper.ts`
+  - `repo-ref/embla-carousel/packages/embla-carousel/src/components/SlideLooper.ts`
 - Scroll loop normalization: `ecosystem/fret-ui-headless/src/embla/engine.rs`
 - Loop distance application: `ecosystem/fret-ui-headless/src/embla/scroll_body.rs`
 - Slide translation helper: `ecosystem/fret-ui-headless/src/embla/slide_looper.rs`
 - Recipe wiring: `ecosystem/fret-ui-shadcn/src/carousel.rs`
+- Gate: `tools/diag-scripts/ui-gallery/carousel/ui-gallery-carousel-loop-continuity-touch-gate.json`
 
 ## Slides in view semantics
 

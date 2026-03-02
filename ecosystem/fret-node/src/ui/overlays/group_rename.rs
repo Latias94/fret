@@ -11,8 +11,10 @@ use crate::ui::{NodeGraphEditQueue, NodeGraphStyle};
 use super::{clamp_rect_to_bounds, layout_hidden_child_and_release_focus};
 
 fn group_rename_size_at(style: &NodeGraphStyle) -> Size {
-    let w = style.context_menu_width.max(40.0);
-    let h = (style.context_menu_item_height.max(20.0) + 2.0 * style.context_menu_padding).max(24.0);
+    let w = style.paint.context_menu_width.max(40.0);
+    let h = (style.paint.context_menu_item_height.max(20.0)
+        + 2.0 * style.paint.context_menu_padding)
+        .max(24.0);
     Size::new(Px(w), Px(h))
 }
 

@@ -47,8 +47,17 @@ Gates:
 
 - `nextest` unit tests for integrator invariants.
 - A diag script that asserts “drag produces continued motion after release” (inertia presence).
+- A diag script that asserts `embla_duration` affects settling speed (fast vs slow duration)
+  (`tools/diag-scripts/ui-gallery/carousel/ui-gallery-carousel-duration-fast-vs-slow-settling-gate.json`).
 - A diag script that resizes during engine-driven motion without panics/hangs
   (`tools/diag-scripts/ui-gallery/carousel/ui-gallery-carousel-demo-reinit-resize-gate.json`).
+
+Optional suite (recommended for Embla engine regressions):
+
+- `ui-gallery-carousel-embla-engine` runs the screenshot-based, engine-enabled Carousel gates.
+  - Note: Embla engine is enabled by default; set `FRET_DEBUG_CAROUSEL_EMBLA_ENGINE=0` to force-disable.
+  - Run:
+    - `cargo run -p fretboard -- diag suite ui-gallery-carousel-embla-engine --launch -- cargo run -p fret-ui-gallery --release`
 
 ## Step 3 — Events + API handle (3–6 days)
 
@@ -67,10 +76,13 @@ Gates:
 
 - Implement scroll looper + slide looper translation wrapping.
 - Ensure hit-testing + semantics remain stable (no duplicate `test_id`).
+- Deepen parity by porting Embla `SlideLooper` gap-fitting behavior and `canLoop` downgrade semantics.
 
 Gates:
 
 - Loop continuity diag: N swipes never reaches an “end” state; visual continuity maintained.
+  - Optional additional gate: loop requested but `canLoop=false` behaves like loop disabled
+    (`tools/diag-scripts/ui-gallery/carousel/ui-gallery-carousel-loop-downgrade-cannot-loop-gate.json`).
 
 ## Step 5 — Slides in view + focus + breakpoints (optional, 5–10 days)
 

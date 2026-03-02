@@ -207,8 +207,9 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
         _device_id: Option<winit::event::DeviceId>,
         event: DeviceEvent,
     ) {
+        let internal_drag_pointer_id = self.internal_drag_routing_pointer_id();
         let dock_drag_pointer_id = self.dock_drag_pointer_id();
-        if dock_drag_pointer_id.is_none() && self.dock_tearoff_follow.is_none() {
+        if internal_drag_pointer_id.is_none() && self.dock_tearoff_follow.is_none() {
             return;
         }
 
@@ -271,8 +272,10 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
                         Some(PhysicalPosition::new(pos.x + delta.0, pos.y + delta.1));
                 }
                 self.route_internal_drag_hover_from_cursor();
-                let _ = self.update_dock_tearoff_follow();
-                self.sync_dock_drag_pointer_capture();
+                if dock_drag_pointer_id.is_some() || self.dock_tearoff_follow.is_some() {
+                    let _ = self.update_dock_tearoff_follow();
+                    self.sync_dock_drag_pointer_capture();
+                }
                 self.drain_effects(event_loop);
             }
             DeviceEvent::Button {
@@ -286,7 +289,7 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
                 }
                 // This fallback path is only for releases that occur outside all windows, where
                 // winit may not emit `WindowEvent::MouseInput`.
-                let Some(pointer_id) = dock_drag_pointer_id else {
+                let Some(pointer_id) = internal_drag_pointer_id else {
                     return;
                 };
 
@@ -912,7 +915,7 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
                     );
                 }
 
-                if self.dock_drag_pointer_id().is_some() {
+                if self.internal_drag_routing_pointer_id().is_some() {
                     self.route_internal_drag_hover_from_cursor();
                     self.drain_effects(event_loop);
                 }
@@ -1949,11 +1952,11 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
             }
         }
 
-        // Diagnostics hook: during cross-window dock drags, runner-owned hover routing depends
-        // on cursor screen position. Scripted runs inject pointer events directly into the UI
-        // tree (bypassing OS cursor events), so poll a best-effort cursor override surface once
-        // per event-loop turn while a dock drag is active.
-        if self.dock_drag_pointer_id().is_some() {
+        // Diagnostics hook: during cross-window drags, runner-owned hover routing depends on
+        // cursor screen position. Scripted runs inject pointer events directly into the UI tree
+        // (bypassing OS cursor events), so poll a best-effort cursor override surface once per
+        // event-loop turn while a cross-window drag is active.
+        if self.internal_drag_routing_pointer_id().is_some() {
             let _ = self.poll_diag_cursor_screen_pos_override();
             let mouse_buttons_updated = self.poll_diag_mouse_buttons_override();
             let _ = self.route_internal_drag_hover_from_cursor();
@@ -1961,7 +1964,9 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
                 self.saw_left_mouse_release_this_turn = true;
                 self.route_internal_drag_drop_from_cursor();
             }
-            let _ = self.update_dock_tearoff_follow();
+            if self.dock_drag_pointer_id().is_some() {
+                let _ = self.update_dock_tearoff_follow();
+            }
             self.drain_effects(event_loop);
         }
         self.tick_id.0 = self.tick_id.0.saturating_add(1);

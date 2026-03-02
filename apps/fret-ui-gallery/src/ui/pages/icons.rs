@@ -1,74 +1,11 @@
 use super::super::*;
 
 use crate::ui::doc_layout::{self, DocSection};
-use fret_ui_kit::declarative::style as decl_style;
+use crate::ui::snippets::icons as snippets;
 
 pub(super) fn preview_icons(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
-    use fret_icons::ids;
-
-    let icon_cell =
-        |cx: &mut ElementContext<'_, App>, label: &str, icon_id: IconId| -> AnyElement {
-            let row = stack::hstack(
-                cx,
-                stack::HStackProps::default()
-                    .layout(LayoutRefinement::default().w_full())
-                    .gap(Space::N2)
-                    .items_center(),
-                |cx| {
-                    vec![
-                        icon::icon_with(cx, icon_id, Some(Px(16.0)), None),
-                        cx.text(label),
-                    ]
-                },
-            );
-
-            let theme = Theme::global(&*cx.app);
-            cx.container(
-                decl_style::container_props(
-                    theme,
-                    ChromeRefinement::default()
-                        .rounded(Radius::Md)
-                        .border_1()
-                        .p(Space::N3),
-                    LayoutRefinement::default().w_full(),
-                ),
-                |_cx| [row],
-            )
-        };
-
-    let grid = stack::vstack(
-        cx,
-        stack::VStackProps::default()
-            .layout(LayoutRefinement::default().w_full())
-            .gap(Space::N2),
-        |cx| {
-            vec![
-                icon_cell(cx, "ui.search", ids::ui::SEARCH),
-                icon_cell(cx, "ui.settings", ids::ui::SETTINGS),
-                icon_cell(cx, "ui.chevron.right", ids::ui::CHEVRON_RIGHT),
-                icon_cell(cx, "ui.close", ids::ui::CLOSE),
-                icon_cell(
-                    cx,
-                    "lucide.loader-circle",
-                    IconId::new_static("lucide.loader-circle"),
-                ),
-            ]
-        },
-    )
-    .test_id("ui-gallery-icons-grid");
-
-    let spinner_row = stack::hstack(
-        cx,
-        stack::HStackProps::default().gap(Space::N2).items_center(),
-        |cx| {
-            vec![
-                shadcn::Spinner::new().into_element(cx),
-                shadcn::Spinner::new().speed(0.0).into_element(cx),
-                cx.text("Spinner (animated / static)"),
-            ]
-        },
-    )
-    .test_id("ui-gallery-icons-spinner-row");
+    let grid = snippets::grid::render(cx);
+    let spinner_row = snippets::spinner::render(cx);
 
     let notes = doc_layout::notes(
         cx,
@@ -85,21 +22,12 @@ pub(super) fn preview_icons(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement>
             DocSection::new("Icons", grid)
                 .max_w(Px(980.0))
                 .description("Icons rendered via `fret_icons` IDs.")
-                .code(
-                    "rust",
-                    r#"shadcn::icon::icon_with(
-    cx,
-    fret_icons::IconId::new_static("lucide.loader-circle"),
-    Some(Px(16.0)),
-    None,
-);"#,
-                ),
+                .code_rust_from_file_region(include_str!("../snippets/icons/grid.rs"), "example"),
             DocSection::new("Spinner", spinner_row)
                 .description("Spinner can be animated or static.")
-                .code(
-                    "rust",
-                    r#"shadcn::Spinner::new().into_element(cx);
-shadcn::Spinner::new().speed(0.0).into_element(cx);"#,
+                .code_rust_from_file_region(
+                    include_str!("../snippets/icons/spinner.rs"),
+                    "example",
                 ),
             DocSection::new("Notes", notes).description("Usage notes."),
         ],

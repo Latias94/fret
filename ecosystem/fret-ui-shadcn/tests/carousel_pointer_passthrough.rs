@@ -576,3 +576,157 @@ fn carousel_drag_threshold_can_be_raised_to_allow_small_moves_to_click() {
     assert_eq!(app.models().get_copied(&down_seen), Some(true));
     assert_eq!(app.models().get_copied(&activated), Some(true));
 }
+
+#[test]
+fn carousel_drag_threshold_boundary_allows_click_when_equal() {
+    let window = AppWindowId::default();
+    let mut app = App::new();
+    let mut ui: UiTree<App> = UiTree::new();
+    ui.set_window(window);
+    let mut services = StyleAwareServices::default();
+
+    let down_seen = app.models_mut().insert(false);
+    let activated = app.models_mut().insert(false);
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        CoreSize::new(Px(320.0), Px(200.0)),
+    );
+
+    // Embla uses `diffScroll > dragThreshold` for `preventClick`. Moving exactly 10px should still
+    // allow a descendant click.
+    render_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        down_seen.clone(),
+        activated.clone(),
+        Px(10.0),
+    );
+
+    let pointer_id = PointerId(0);
+    let start = Point::new(Px(20.0), Px(20.0));
+    let moved = Point::new(Px(30.0), Px(20.0)); // delta = 10px
+
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &Event::Pointer(PointerEvent::Down {
+            pointer_id,
+            position: start,
+            button: MouseButton::Left,
+            modifiers: Modifiers::default(),
+            click_count: 1,
+            pointer_type: PointerType::Mouse,
+        }),
+    );
+
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &Event::Pointer(PointerEvent::Move {
+            pointer_id,
+            position: moved,
+            buttons: fret_core::MouseButtons {
+                left: true,
+                ..Default::default()
+            },
+            modifiers: Modifiers::default(),
+            pointer_type: PointerType::Mouse,
+        }),
+    );
+
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &Event::Pointer(PointerEvent::Up {
+            pointer_id,
+            position: moved,
+            button: MouseButton::Left,
+            modifiers: Modifiers::default(),
+            is_click: true,
+            click_count: 1,
+            pointer_type: PointerType::Mouse,
+        }),
+    );
+
+    assert_eq!(app.models().get_copied(&down_seen), Some(true));
+    assert_eq!(app.models().get_copied(&activated), Some(true));
+}
+
+#[test]
+fn carousel_drag_threshold_boundary_suppresses_click_when_exceeded() {
+    let window = AppWindowId::default();
+    let mut app = App::new();
+    let mut ui: UiTree<App> = UiTree::new();
+    ui.set_window(window);
+    let mut services = StyleAwareServices::default();
+
+    let down_seen = app.models_mut().insert(false);
+    let activated = app.models_mut().insert(false);
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        CoreSize::new(Px(320.0), Px(200.0)),
+    );
+
+    render_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        down_seen.clone(),
+        activated.clone(),
+        Px(10.0),
+    );
+
+    let pointer_id = PointerId(0);
+    let start = Point::new(Px(20.0), Px(20.0));
+    let moved = Point::new(Px(31.0), Px(20.0)); // delta = 11px (> 10px)
+
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &Event::Pointer(PointerEvent::Down {
+            pointer_id,
+            position: start,
+            button: MouseButton::Left,
+            modifiers: Modifiers::default(),
+            click_count: 1,
+            pointer_type: PointerType::Mouse,
+        }),
+    );
+
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &Event::Pointer(PointerEvent::Move {
+            pointer_id,
+            position: moved,
+            buttons: fret_core::MouseButtons {
+                left: true,
+                ..Default::default()
+            },
+            modifiers: Modifiers::default(),
+            pointer_type: PointerType::Mouse,
+        }),
+    );
+
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &Event::Pointer(PointerEvent::Up {
+            pointer_id,
+            position: moved,
+            button: MouseButton::Left,
+            modifiers: Modifiers::default(),
+            is_click: true,
+            click_count: 1,
+            pointer_type: PointerType::Mouse,
+        }),
+    );
+
+    assert_eq!(app.models().get_copied(&down_seen), Some(true));
+    assert_eq!(app.models().get_copied(&activated), Some(false));
+}

@@ -1,6 +1,7 @@
 use super::*;
 use crate::ui::NodeChromeHint;
 use crate::ui::PortChromeHint;
+use fret_core::scene::PaintBindingV1;
 
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
 pub(in crate::ui::canvas::widget) struct RenderMetrics {
@@ -42,6 +43,7 @@ pub(in super::super) struct EdgeRender {
     pub(in super::super) from: Point,
     pub(in super::super) to: Point,
     pub(in super::super) color: Color,
+    pub(in super::super) paint: PaintBindingV1,
     pub(in super::super) hint: EdgeRenderHint,
     pub(in super::super) selected: bool,
     pub(in super::super) hovered: bool,

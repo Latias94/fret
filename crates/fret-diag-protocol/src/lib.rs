@@ -1229,10 +1229,36 @@ pub enum UiPredicateV1 {
         target: UiSelectorV1,
         text: String,
     },
+    /// True when the target exists and its semantics `label` length (UTF-8 bytes) matches `len_bytes`.
+    ///
+    /// This is intended to remain stable under diagnostics text redaction, where labels may be
+    /// replaced with placeholders like `<redacted len=123>`.
+    LabelLenIs {
+        target: UiSelectorV1,
+        len_bytes: u32,
+    },
+    /// True when the target exists and its semantics `label` length (UTF-8 bytes) is at least `min_len_bytes`.
+    LabelLenGe {
+        target: UiSelectorV1,
+        min_len_bytes: u32,
+    },
     /// True when the target exists and its semantics `value` contains `text` as a substring.
     ValueContains {
         target: UiSelectorV1,
         text: String,
+    },
+    /// True when the target exists and its semantics `value` length (UTF-8 bytes) matches `len_bytes`.
+    ///
+    /// This is intended to remain stable under diagnostics text redaction, where values may be
+    /// replaced with placeholders like `<redacted len=123>`.
+    ValueLenIs {
+        target: UiSelectorV1,
+        len_bytes: u32,
+    },
+    /// True when the target exists and its semantics `value` length (UTF-8 bytes) is at least `min_len_bytes`.
+    ValueLenGe {
+        target: UiSelectorV1,
+        min_len_bytes: u32,
     },
     /// True when the target exists and its semantics `pos_in_set` equals `pos_in_set`.
     PosInSetIs {
@@ -1657,6 +1683,40 @@ pub enum UiPredicateV1 {
     /// relying on pixels.
     DockDropResolvedInsertIndexIs {
         index: u32,
+    },
+    /// True when the latest docking diagnostics report whether the active tab strip is overflowed.
+    ///
+    /// This predicate reads the best-effort `tab_strip_active_visibility` snapshot recorded by
+    /// docking into `WindowInteractionDiagnosticsStore`.
+    DockTabStripActiveOverflowIs {
+        overflow: bool,
+    },
+    /// True when the latest docking diagnostics report whether the active tab is visible at the
+    /// current tab scroll position.
+    ///
+    /// This predicate is intended to gate the editor-grade invariant:
+    /// "selecting a tab (including via overflow menu) must scroll it into view".
+    DockTabStripActiveVisibleIs {
+        visible: bool,
+    },
+    /// True when the latest workspace diagnostics report whether the active tab strip is overflowed.
+    ///
+    /// This predicate reads the best-effort `workspace_interaction.tab_strip_active_visibility`
+    /// snapshot recorded into `WindowInteractionDiagnosticsStore`.
+    WorkspaceTabStripActiveOverflowIs {
+        overflow: bool,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        pane_id: Option<String>,
+    },
+    /// True when the latest workspace diagnostics report whether the active tab is visible at the
+    /// current tab scroll position.
+    ///
+    /// This predicate is intended to gate the editor-grade invariant:
+    /// "selecting a tab (including via overflow menu) must scroll it into view".
+    WorkspaceTabStripActiveVisibleIs {
+        visible: bool,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        pane_id: Option<String>,
     },
     /// True when the latest dock graph stats snapshot reports a canonical-form layout.
     DockGraphCanonicalIs {

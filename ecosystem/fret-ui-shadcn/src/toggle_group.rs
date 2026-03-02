@@ -76,7 +76,10 @@ fn toggle_group_item_h(theme: &ThemeSnapshot, size: ToggleSize) -> Px {
         ToggleSize::Sm => ("component.toggle_group.item_h_sm", Px(32.0)),
         ToggleSize::Lg => ("component.toggle_group.item_h_lg", Px(40.0)),
     };
-    theme.metric_by_key(key).unwrap_or(fallback)
+    theme
+        .metric_by_key(key)
+        .map(|v| Px(v.0.max(fallback.0)))
+        .unwrap_or(fallback)
 }
 
 fn toggle_group_item_pad_x(theme: &ThemeSnapshot) -> Px {
@@ -742,7 +745,10 @@ impl ToggleGroup {
                     let model_single = model_single.clone();
                     let model_multi = model_multi.clone();
                     let pressable_layout = {
-                        let mut refinement = LayoutRefinement::default().min_h(item_h).min_w_0();
+                        let mut refinement = LayoutRefinement::default()
+                            .h_px(item_h)
+                            .min_h(item_h)
+                            .min_w_0();
                         if items_flex_1 && matches!(orientation, ToggleGroupOrientation::Horizontal)
                         {
                             refinement = refinement.flex_1();
@@ -840,8 +846,22 @@ impl ToggleGroup {
                                             layout: {
                                                 let mut layout =
                                                     fret_ui::element::LayoutStyle::default();
-                                                layout.size.width = fret_ui::element::Length::Fill;
                                                 layout.size.height = fret_ui::element::Length::Fill;
+                                                // Only force a full-width inner layout when the
+                                                // item itself is intended to stretch (Tailwind
+                                                // `flex-1` / "full width" toggle groups). For
+                                                // auto-sized groups, forcing `Fill` here makes the
+                                                // pressable bounds expand and results in large
+                                                // invisible hit boxes.
+                                                if items_flex_1
+                                                    && matches!(
+                                                        orientation,
+                                                        ToggleGroupOrientation::Horizontal
+                                                    )
+                                                {
+                                                    layout.size.width =
+                                                        fret_ui::element::Length::Fill;
+                                                }
                                                 layout
                                             },
                                             direction: fret_core::Axis::Horizontal,

@@ -56,8 +56,8 @@ fn set_viewport_via_view_queue_clamps_zoom_to_style_limits() {
 
     let mut canvas = NodeGraphCanvas::new(graph, view).with_view_queue(queue.clone());
     canvas.interaction.last_bounds = Some(bounds);
-    canvas.style.min_zoom = 0.5;
-    canvas.style.max_zoom = 1.0;
+    canvas.style.geometry.min_zoom = 0.5;
+    canvas.style.geometry.max_zoom = 1.0;
 
     let opts = NodeGraphSetViewportOptions {
         duration_ms: Some(0),

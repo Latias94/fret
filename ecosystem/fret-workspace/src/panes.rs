@@ -17,6 +17,7 @@ use crate::commands::{
     pane_activate_command, pane_move_active_tab_to_command, pane_split_command,
     tab_activate_command, tab_move_active_after_command, tab_move_active_before_command,
 };
+use crate::focus_registry::{WorkspaceTabElementKey, workspace_tab_element_registry_model};
 use crate::layout::{WorkspacePaneLayout, WorkspacePaneTree, WorkspaceWindowLayout};
 use crate::tab_drag::{
     DRAG_KIND_WORKSPACE_TAB, WorkspacePaneDragGeometry, WorkspaceTabDragState,
@@ -420,7 +421,7 @@ where
         let Some(session) = host.drag(drag.pointer_id) else {
             return false;
         };
-        if session.kind != DRAG_KIND_WORKSPACE_TAB || !session.dragging {
+        if session.kind != DRAG_KIND_WORKSPACE_TAB {
             return false;
         }
         if session.current_window != acx.window {
@@ -712,6 +713,7 @@ where
 
     let window_model = window.clone();
     let tab_drag_model = tab_drag.clone();
+    let tab_element_registry = workspace_tab_element_registry_model(cx);
 
     let drag_handler: OnInternalDrag = {
         let pane_id = pane_id.clone();
@@ -723,7 +725,7 @@ where
             let Some(session) = host.drag(drag.pointer_id) else {
                 return false;
             };
-            if session.kind != DRAG_KIND_WORKSPACE_TAB || !session.dragging {
+            if session.kind != DRAG_KIND_WORKSPACE_TAB {
                 return false;
             }
             if session.current_window != acx.window {
@@ -999,6 +1001,60 @@ where
                         },
                     );
                     pane_bounds_element.set(Some(inner.id));
+
+                    // Focus transfer contract:
+                    //
+                    // When command routing comes from anywhere inside a pane (editor surface,
+                    // tab strip, etc.), `workspace.pane.focus_tab_strip` should move focus into
+                    // the pane's tab strip (active tab).
+                    {
+                        let pane_id_for_command = pane_id.clone();
+                        let window_for_command = window_model.clone();
+                        let registry_for_command = tab_element_registry.clone();
+
+                        cx.command_on_command_for(
+                            inner.id,
+                            Arc::new(move |host, acx, command| {
+                                if command.as_str()
+                                    != crate::commands::CMD_WORKSPACE_PANE_FOCUS_TAB_STRIP
+                                {
+                                    return false;
+                                }
+
+                                let tab_id = host
+                                    .models_mut()
+                                    .read(&window_for_command, |w| {
+                                        let pane =
+                                            w.pane_tree.find_pane(pane_id_for_command.as_ref())?;
+                                        pane.tabs.active().cloned()
+                                    })
+                                    .ok()
+                                    .flatten();
+                                let Some(tab_id) = tab_id else {
+                                    return false;
+                                };
+
+                                let key = WorkspaceTabElementKey {
+                                    window: acx.window,
+                                    pane_id: Some(pane_id_for_command.clone()),
+                                    tab_id,
+                                };
+
+                                let target = host
+                                    .models_mut()
+                                    .read(&registry_for_command, |reg| reg.get(&key))
+                                    .ok()
+                                    .flatten();
+                                let Some(target) = target else {
+                                    return false;
+                                };
+
+                                host.request_focus(target);
+                                host.request_redraw(acx.window);
+                                true
+                            }),
+                        );
+                    }
 
                     let preview = if can_drop {
                         drop_zone.map(|zone| {

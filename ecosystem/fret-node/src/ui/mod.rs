@@ -11,8 +11,10 @@ pub mod commands;
 pub mod declarative;
 pub mod edge_types;
 pub mod edit_queue;
+pub mod geometry_overrides;
 pub mod internals;
 pub mod measured;
+pub mod paint_overrides;
 pub mod portal_layout;
 pub mod presenter;
 pub mod presets;
@@ -39,16 +41,11 @@ pub mod portal;
 
 pub use declarative::{NodeGraphSurfacePaintOnlyProps, node_graph_surface_paint_only};
 
-#[cfg(feature = "compat-retained-canvas")]
-pub use a11y::NodeGraphA11yActiveDescendant;
-#[cfg(feature = "compat-retained-canvas")]
-pub use a11y::{NodeGraphA11yFocusedEdge, NodeGraphA11yFocusedNode, NodeGraphA11yFocusedPort};
+pub use canvas::NodeResizeHandle;
 #[cfg(feature = "compat-retained-canvas")]
 pub use canvas::NodeGraphCanvas;
 #[cfg(feature = "compat-retained-canvas")]
 pub use canvas::NodeGraphCanvasWith;
-#[cfg(feature = "compat-retained-canvas")]
-pub use canvas::NodeResizeHandle;
 #[cfg(feature = "compat-retained-canvas")]
 pub use canvas::{
     NodeGraphCanvasCommandOutcome, NodeGraphCanvasCommitOutcome, NodeGraphCanvasEventOutcome,
@@ -58,17 +55,21 @@ pub use canvas::{
 pub use commands::register_node_graph_commands;
 pub use edge_types::{EdgeCustomPath, EdgePathInput, EdgeTypeKey, NodeGraphEdgeTypes};
 pub use edit_queue::NodeGraphEditQueue;
-pub use internals::{
-    NodeGraphCanvasTransform, NodeGraphInternalsSnapshot, NodeGraphInternalsStore,
+pub use geometry_overrides::{
+    EdgeGeometryOverrideV1, NodeGeometryOverrideV1, NodeGraphGeometryOverrides,
+    NodeGraphGeometryOverridesMap, NodeGraphGeometryOverridesRef,
 };
-pub use measured::{
-    FallbackMeasuredNodeGraphPresenter, MeasuredGeometryStore, MeasuredNodeGraphPresenter,
+pub use internals::{NodeGraphCanvasTransform, NodeGraphInternalsSnapshot, NodeGraphInternalsStore};
+pub use measured::{FallbackMeasuredNodeGraphPresenter, MeasuredGeometryStore, MeasuredNodeGraphPresenter};
+pub use paint_overrides::{
+    EdgePaintOverrideV1, NodeGraphPaintOverrides, NodeGraphPaintOverridesMap,
+    NodeGraphPaintOverridesRef, NodePaintOverrideV1,
 };
 pub use portal_layout::NodeGraphPortalNodeLayout;
 pub use presenter::{
     DefaultNodeGraphPresenter, EdgeMarker, EdgeMarkerKind, EdgeRenderHint, EdgeRouteKind,
     InsertNodeCandidate, NodeGraphContextMenuAction, NodeGraphContextMenuItem, NodeGraphPresenter,
-    NodeResizeConstraintsPx, NodeResizeHandleSet, RegistryNodeGraphPresenter,
+    NodeResizeConstraintsPx, NodeResizeHandleSet, RegistryNodeGraphPresenter, PortAnchorHint,
 };
 pub use presets::{NodeGraphPresetFamily, NodeGraphPresetSkinV1};
 pub use registry::{NodeGraphNodeRenderer, NodeGraphNodeTypes};
@@ -78,14 +79,15 @@ pub use skin::{
     PortShapeHint, WireGlowHint, WireHighlightHint, WireOutlineHint,
 };
 pub use style::{NodeGraphColorMode, NodeGraphStyle};
-pub use view_queue::{
-    NodeGraphFitViewOptions, NodeGraphSetViewportOptions, NodeGraphViewQueue, NodeGraphViewRequest,
-};
+pub use view_queue::{NodeGraphFitViewOptions, NodeGraphSetViewportOptions, NodeGraphViewQueue, NodeGraphViewRequest};
 pub use viewport_helper::NodeGraphViewportHelper;
 
 #[cfg(feature = "compat-retained-canvas")]
+pub use a11y::NodeGraphA11yActiveDescendant;
+#[cfg(feature = "compat-retained-canvas")]
+pub use a11y::{NodeGraphA11yFocusedEdge, NodeGraphA11yFocusedNode, NodeGraphA11yFocusedPort};
+#[cfg(feature = "compat-retained-canvas")]
 pub use declarative::{NodeGraphSurfaceCompatRetainedProps, node_graph_surface_compat_retained};
-
 #[cfg(feature = "compat-retained-canvas")]
 pub use diag_anchors::{NodeGraphDiagAnchor, NodeGraphDiagConnectingFlag};
 #[cfg(feature = "compat-retained-canvas")]
@@ -97,16 +99,6 @@ pub use editors::{
     PortalTextEditorUi,
 };
 #[cfg(feature = "compat-retained-canvas")]
-pub use panel::{NodeGraphPanel, NodeGraphPanelPosition, NodeGraphPanelSize};
-#[cfg(feature = "compat-retained-canvas")]
-pub use portal::{
-    CMD_CANCEL_TEXT_PREFIX, CMD_STEP_TEXT_PREFIX, CMD_SUBMIT_TEXT_PREFIX,
-    NodeGraphPortalCommandHandler, NodeGraphPortalHost,
-    PortalCommandHandlerChain, PortalCommandOutcome, PortalNoopCommandHandler, PortalTextCommand,
-    PortalTextStepMode, parse_portal_text_command, portal_cancel_text_command,
-    portal_step_text_command, portal_step_text_command_with_mode, portal_submit_text_command,
-};
-#[cfg(feature = "compat-retained-canvas")]
 pub use overlays::{
     GroupRenameOverlay, NodeGraphBlackboardOverlay, NodeGraphControlsBindings,
     NodeGraphControlsCommandBinding, NodeGraphControlsOverlay, NodeGraphEdgeToolbar,
@@ -115,3 +107,14 @@ pub use overlays::{
     NodeGraphToolbarPosition, NodeGraphToolbarSize, NodeGraphToolbarVisibility,
     SymbolRenameOverlay,
 };
+#[cfg(feature = "compat-retained-canvas")]
+pub use panel::{NodeGraphPanel, NodeGraphPanelPosition, NodeGraphPanelSize};
+#[cfg(feature = "compat-retained-canvas")]
+pub use portal::{
+    CMD_CANCEL_TEXT_PREFIX, CMD_STEP_TEXT_PREFIX, CMD_SUBMIT_TEXT_PREFIX,
+    NodeGraphPortalCommandHandler, NodeGraphPortalHost, PortalCommandHandlerChain,
+    PortalCommandOutcome, PortalNoopCommandHandler, PortalTextCommand, PortalTextStepMode,
+    parse_portal_text_command, portal_cancel_text_command, portal_step_text_command,
+    portal_step_text_command_with_mode, portal_submit_text_command,
+};
+

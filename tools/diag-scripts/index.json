@@ -64,6 +64,482 @@
       "target_hints": []
     },
     {
+      "id": "cookbook-async-inbox-basics-smoke",
+      "path": "tools/diag-scripts/cookbook/async-inbox-basics/cookbook-async-inbox-basics-smoke.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "cookbook-async-inbox-basics"
+      ],
+      "tags": [
+        "async",
+        "cancellation",
+        "cookbook",
+        "inbox",
+        "smoke"
+      ],
+      "target_hints": []
+    },
+    {
+      "id": "cookbook-canvas-pan-zoom-basics-smoke",
+      "path": "tools/diag-scripts/cookbook/canvas-pan-zoom-basics/cookbook-canvas-pan-zoom-basics-smoke.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "cookbook-canvas-pan-zoom-basics"
+      ],
+      "tags": [
+        "canvas",
+        "cookbook",
+        "pan_zoom",
+        "smoke"
+      ],
+      "target_hints": []
+    },
+    {
+      "id": "cookbook-chart-interactions-basics-smoke",
+      "path": "tools/diag-scripts/cookbook/chart-interactions-basics/cookbook-chart-interactions-basics-smoke.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "cookbook-chart-interactions-basics"
+      ],
+      "tags": [
+        "chart",
+        "cookbook",
+        "data_viz",
+        "smoke"
+      ],
+      "target_hints": []
+    },
+    {
+      "id": "cookbook-commands-keymap-basics-shortcut-and-gating",
+      "path": "tools/diag-scripts/cookbook/commands-keymap-basics/cookbook-commands-keymap-basics-shortcut-and-gating.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "cookbook-commands-keymap-basics"
+      ],
+      "tags": [
+        "commands",
+        "commands_keymap_basics",
+        "cookbook",
+        "keymap",
+        "smoke"
+      ],
+      "target_hints": [
+        "Waits for the example root to exist.",
+        "Toggles the panel via shortcut.",
+        "Disables availability and asserts the shortcut no longer toggles."
+      ]
+    },
+    {
+      "id": "cookbook-customv1-basics-smoke",
+      "path": "tools/diag-scripts/cookbook/customv1-basics/cookbook-customv1-basics-smoke.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "cookbook-customv1-basics"
+      ],
+      "tags": [
+        "cookbook",
+        "customv1",
+        "effects",
+        "renderer",
+        "smoke"
+      ],
+      "target_hints": [
+        "Waits for CustomV1 support + registration semantics.",
+        "Toggles the effect on/off and adjusts a strength preset.",
+        "Captures a screenshot + diagnostics bundle."
+      ]
+    },
+    {
+      "id": "cookbook-docking-basics-smoke",
+      "path": "tools/diag-scripts/cookbook/docking-basics/cookbook-docking-basics-smoke.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "cookbook-docking-basics"
+      ],
+      "tags": [
+        "cookbook",
+        "docking",
+        "interop",
+        "smoke"
+      ],
+      "target_hints": []
+    },
+    {
+      "id": "cookbook-effects-layer-basics-screenshots",
+      "path": "tools/diag-scripts/cookbook/effects-layer-basics/cookbook-effects-layer-basics-screenshots.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "cookbook-effects-layer-basics"
+      ],
+      "tags": [
+        "cookbook",
+        "effects",
+        "effects_layer_basics",
+        "screenshots",
+        "smoke"
+      ],
+      "target_hints": [
+        "Waits for the example root to exist.",
+        "Toggles Pixelate/Blur/None and captures screenshots + bundle."
+      ]
+    },
+    {
+      "id": "cookbook-embedded-viewport-basics-smoke",
+      "path": "tools/diag-scripts/cookbook/embedded-viewport-basics/cookbook-embedded-viewport-basics-smoke.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "cookbook-embedded-viewport-basics"
+      ],
+      "tags": [
+        "cookbook",
+        "interop",
+        "smoke",
+        "viewport"
+      ],
+      "target_hints": [
+        "Clicks inside the embedded viewport surface to verify explicit input forwarding.",
+        "Switches the render target size preset and verifies the target size gate updates.",
+        "Captures a screenshot + diagnostics bundle."
+      ]
+    },
+    {
+      "id": "cookbook-external-texture-import-basics-smoke",
+      "path": "tools/diag-scripts/cookbook/external-texture-import-basics/cookbook-external-texture-import-basics-smoke.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "cookbook-external-texture-import-basics"
+      ],
+      "tags": [
+        "cookbook",
+        "external_texture",
+        "interop",
+        "render_io",
+        "smoke"
+      ],
+      "target_hints": [
+        "Verifies an imported render target is visible via ViewportSurface.",
+        "Switches the target size preset and asserts numeric semantics update.",
+        "Captures a screenshot + diagnostics bundle."
+      ]
+    },
+    {
+      "id": "cookbook-gizmo-basics-smoke",
+      "path": "tools/diag-scripts/cookbook/gizmo-basics/cookbook-gizmo-basics-smoke.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "cookbook-gizmo-basics"
+      ],
+      "tags": [
+        "cookbook",
+        "gizmo",
+        "smoke",
+        "viewport"
+      ],
+      "target_hints": [
+        "Waits for the root to exist.",
+        "Performs a simple pointer drag + wheel interaction over the viewport.",
+        "Verifies the position-length numeric semantics are present (reset returns to ~0).",
+        "Captures a screenshot + bundle."
+      ]
+    },
+    {
+      "id": "cookbook-hello-baseline",
+      "path": "tools/diag-scripts/cookbook/hello/cookbook-hello-baseline.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "cookbook-hello"
+      ],
+      "tags": [
+        "cookbook",
+        "hello",
+        "screenshots",
+        "smoke"
+      ],
+      "target_hints": [
+        "Waits for the hello example root to exist.",
+        "Captures a baseline screenshot + bundle."
+      ]
+    },
+    {
+      "id": "cookbook-hello-counter-baseline",
+      "path": "tools/diag-scripts/cookbook/hello-counter/cookbook-hello-counter-baseline.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "cookbook-hello-counter"
+      ],
+      "tags": [
+        "cookbook",
+        "hello_counter",
+        "screenshots",
+        "smoke"
+      ],
+      "target_hints": [
+        "Waits for the counter view to exist.",
+        "Clicks increment and captures a screenshot + bundle."
+      ]
+    },
+    {
+      "id": "cookbook-icons-and-assets-basics-smoke",
+      "path": "tools/diag-scripts/cookbook/icons-and-assets-basics/cookbook-icons-and-assets-basics-smoke.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "cookbook-icons-and-assets-basics"
+      ],
+      "tags": [
+        "cookbook",
+        "cookbook.icons_and_assets_basics"
+      ],
+      "target_hints": [
+        "Validates that icon + asset panels mount and that the reload epoch button is wired."
+      ]
+    },
+    {
+      "id": "cookbook-markdown-and-code-basics-smoke",
+      "path": "tools/diag-scripts/cookbook/markdown-and-code-basics/cookbook-markdown-and-code-basics-smoke.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "cookbook-markdown-and-code-basics"
+      ],
+      "tags": [
+        "code_view",
+        "cookbook",
+        "copy",
+        "markdown",
+        "smoke"
+      ],
+      "target_hints": []
+    },
+    {
+      "id": "cookbook-node-graph-theme-presets-screenshots",
+      "path": "tools/diag-scripts/cookbook/node-graph-theme-presets/node-graph-theme-presets-screenshots.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "cookbook-node-graph-theme-presets"
+      ],
+      "tags": [
+        "cookbook",
+        "node_graph",
+        "theme_presets",
+        "screenshots",
+        "smoke"
+      ],
+      "target_hints": [
+        "Waits for node_graph.canvas to exist.",
+        "Cycles preset family (Ctrl+Shift+P) and captures 3 screenshots + bundle.",
+        "Optional: set FRET_NODE_GRAPH_DEMO_PRESET_JSON_PATH to load custom JSON presets."
+      ]
+    },
+    {
+      "id": "cookbook-node-graph-wire-paint-cookbook-screenshots",
+      "path": "tools/diag-scripts/cookbook/node-graph-wire-paint-cookbook/node-graph-wire-paint-cookbook-screenshots.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "cookbook-node-graph-wire-paint-cookbook"
+      ],
+      "tags": [
+        "cookbook",
+        "node_graph",
+        "wire_paint",
+        "screenshots",
+        "smoke"
+      ],
+      "target_hints": [
+        "Waits for node_graph.canvas to exist.",
+        "Cycles preset family (Ctrl+Shift+P) and captures 3 screenshots + bundle.",
+        "Requires FRET_NODE_GRAPH_DEMO_WIRE_PAINT_COOKBOOK=1.",
+        "Optional: set FRET_NODE_GRAPH_DEMO_PRESET_JSON_PATH to load custom JSON presets."
+      ]
+    },
+    {
+      "id": "cookbook-overlay-basics-dialog-close",
+      "path": "tools/diag-scripts/cookbook/overlay-basics/cookbook-overlay-basics-dialog-close.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "cookbook-overlay-basics"
+      ],
+      "tags": [
+        "cookbook",
+        "dialog",
+        "overlay_basics",
+        "smoke"
+      ],
+      "target_hints": [
+        "Opens the dialog via the trigger.",
+        "Clicks the close affordance.",
+        "Waits for the content node to disappear.",
+        "Captures a screenshot + bundle."
+      ]
+    },
+    {
+      "id": "cookbook-overlay-basics-dialog-open-screenshot",
+      "path": "tools/diag-scripts/cookbook/overlay-basics/cookbook-overlay-basics-dialog-open-screenshot.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "cookbook-overlay-basics"
+      ],
+      "tags": [
+        "cookbook",
+        "dialog",
+        "overlay_basics",
+        "screenshots",
+        "smoke"
+      ],
+      "target_hints": [
+        "Clicks the dialog trigger.",
+        "Waits for the content node to exist.",
+        "Captures a screenshot + bundle."
+      ]
+    },
+    {
+      "id": "cookbook-simple-todo-smoke",
+      "path": "tools/diag-scripts/cookbook/simple-todo/cookbook-simple-todo-smoke.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "cookbook-simple-todo"
+      ],
+      "tags": [
+        "cookbook",
+        "mvu",
+        "simple_todo",
+        "smoke"
+      ],
+      "target_hints": []
+    },
+    {
+      "id": "cookbook-text-input-basics-submit-and-clear",
+      "path": "tools/diag-scripts/cookbook/text-input-basics/cookbook-text-input-basics-submit-and-clear.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "cookbook-text-input-basics"
+      ],
+      "tags": [
+        "commands",
+        "cookbook",
+        "input",
+        "smoke",
+        "text_input"
+      ],
+      "target_hints": []
+    },
+    {
+      "id": "cookbook-theme-switching-basics-screenshots",
+      "path": "tools/diag-scripts/cookbook/theme-switching-basics/cookbook-theme-switching-basics-screenshots.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "cookbook-theme-switching-basics"
+      ],
+      "tags": [
+        "cookbook",
+        "screenshots",
+        "smoke",
+        "theme",
+        "theme_switching_basics"
+      ],
+      "target_hints": [
+        "Waits for the example root to exist.",
+        "Captures Light and Dark screenshots + bundle."
+      ]
+    },
+    {
+      "id": "cookbook-undo-basics-smoke",
+      "path": "tools/diag-scripts/cookbook/undo-basics/cookbook-undo-basics-smoke.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "cookbook-undo-basics"
+      ],
+      "tags": [
+        "commands",
+        "cookbook",
+        "smoke",
+        "undo"
+      ],
+      "target_hints": []
+    },
+    {
+      "id": "cookbook-virtual-list-basics-smoke",
+      "path": "tools/diag-scripts/cookbook/virtual-list-basics/cookbook-virtual-list-basics-smoke.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "cookbook-virtual-list-basics"
+      ],
+      "tags": [
+        "cookbook",
+        "reorder",
+        "scroll",
+        "smoke",
+        "virtual_list"
+      ],
+      "target_hints": []
+    },
+    {
       "id": "docking-arbitration-demo-default-layout-signature",
       "path": "tools/diag-scripts/docking/arbitration/docking-arbitration-demo-default-layout-signature.json",
       "required_capabilities": [
@@ -1189,6 +1665,16 @@
       "target_hints": []
     },
     {
+      "id": "ui-gallery-card-content-button-hitbox-not-stretched",
+      "path": "tools/diag-scripts/ui-gallery/card/ui-gallery-card-content-button-hitbox-not-stretched.json",
+      "required_capabilities": [],
+      "suite_memberships": [
+        "ui-gallery-shadcn-conformance"
+      ],
+      "tags": [],
+      "target_hints": []
+    },
+    {
       "id": "ui-gallery-card-description-no-early-wrap",
       "path": "tools/diag-scripts/ui-gallery/card/ui-gallery-card-description-no-early-wrap.json",
       "required_capabilities": [],
@@ -1207,6 +1693,143 @@
       ],
       "tags": [],
       "target_hints": []
+    },
+    {
+      "id": "ui-gallery-carousel-demo-inertia-pixels-changed",
+      "path": "tools/diag-scripts/ui-gallery/carousel/ui-gallery-carousel-demo-inertia-pixels-changed.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "ui-gallery-carousel-embla-engine"
+      ],
+      "tags": [
+        "carousel",
+        "inertia",
+        "pixels-changed",
+        "screenshot",
+        "ui-gallery"
+      ],
+      "target_hints": [
+        "Embla engine is enabled by default (set FRET_DEBUG_CAROUSEL_EMBLA_ENGINE=0 to force-disable).",
+        "Expected behavior: after releasing a flick, the carousel continues moving for a short time."
+      ]
+    },
+    {
+      "id": "ui-gallery-carousel-demo-inertia-touch-pixels-changed",
+      "path": "tools/diag-scripts/ui-gallery/carousel/ui-gallery-carousel-demo-inertia-touch-pixels-changed.json",
+      "required_capabilities": [
+        "diag.pointer_kind_touch",
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "ui-gallery-carousel-embla-engine"
+      ],
+      "tags": [
+        "carousel",
+        "inertia",
+        "pixels-changed",
+        "screenshot",
+        "touch",
+        "ui-gallery"
+      ],
+      "target_hints": [
+        "Embla engine is enabled by default (set FRET_DEBUG_CAROUSEL_EMBLA_ENGINE=0 to force-disable).",
+        "Expected behavior: after releasing a touch flick, the carousel continues moving for a short time."
+      ]
+    },
+    {
+      "id": "ui-gallery-carousel-demo-reinit-resize-gate",
+      "path": "tools/diag-scripts/ui-gallery/carousel/ui-gallery-carousel-demo-reinit-resize-gate.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "ui-gallery-carousel-embla-engine"
+      ],
+      "tags": [
+        "carousel",
+        "gate",
+        "reinit",
+        "resize",
+        "screenshot",
+        "ui-gallery"
+      ],
+      "target_hints": [
+        "Embla engine is enabled by default (set FRET_DEBUG_CAROUSEL_EMBLA_ENGINE=0 to force-disable).",
+        "Expected behavior: resizing during an Embla-driven settle does not panic and items remain visible."
+      ]
+    },
+    {
+      "id": "ui-gallery-carousel-focus-watch-tab-scrolls-gate",
+      "path": "tools/diag-scripts/ui-gallery/carousel/ui-gallery-carousel-focus-watch-tab-scrolls-gate.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "ui-gallery-motion-pilot"
+      ],
+      "tags": [
+        "carousel",
+        "focus",
+        "gate",
+        "ui-gallery"
+      ],
+      "target_hints": [
+        "Navigate to the Carousel page and use Tab to move focus between slide buttons.",
+        "Expected behavior: when focus moves to an offscreen slide, the carousel scrolls it into view."
+      ]
+    },
+    {
+      "id": "ui-gallery-carousel-loop-continuity-touch-gate",
+      "path": "tools/diag-scripts/ui-gallery/carousel/ui-gallery-carousel-loop-continuity-touch-gate.json",
+      "required_capabilities": [
+        "diag.pointer_kind_touch",
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "ui-gallery-carousel-embla-engine",
+        "ui-gallery-motion-pilot"
+      ],
+      "tags": [
+        "carousel",
+        "gate",
+        "loop",
+        "screenshot",
+        "touch",
+        "ui-gallery"
+      ],
+      "target_hints": [
+        "Requires the UI gallery Carousel page to include a `Loop` section with `loop=true` + Embla engine enabled.",
+        "Expected behavior: repeated touch swipes do not clamp at ends or hang; content remains visible."
+      ]
+    },
+    {
+      "id": "ui-gallery-carousel-loop-downgrade-cannot-loop-gate",
+      "path": "tools/diag-scripts/ui-gallery/carousel/ui-gallery-carousel-loop-downgrade-cannot-loop-gate.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "ui-gallery-carousel-embla-engine"
+      ],
+      "tags": [
+        "can-loop",
+        "carousel",
+        "gate",
+        "loop",
+        "screenshot",
+        "ui-gallery"
+      ],
+      "target_hints": [
+        "Embla engine is enabled by default (set FRET_DEBUG_CAROUSEL_EMBLA_ENGINE=0 to force-disable).",
+        "Expected behavior: when `loop=true` but the slide set cannot loop, the carousel behaves like loop=false (no wrap)."
+      ]
     },
     {
       "id": "ui-gallery-chart-accessibility-layer-keyboard",
@@ -1902,6 +2525,26 @@
       "target_hints": []
     },
     {
+      "id": "ui-gallery-data-table-guide-demo-checkbox-only-selection",
+      "path": "tools/diag-scripts/ui-gallery/data-table/ui-gallery-data-table-guide-demo-checkbox-only-selection.json",
+      "required_capabilities": [],
+      "suite_memberships": [
+        "ui-gallery-data-table"
+      ],
+      "tags": [],
+      "target_hints": []
+    },
+    {
+      "id": "ui-gallery-data-table-listlike-pointer-selection",
+      "path": "tools/diag-scripts/ui-gallery/data-table/ui-gallery-data-table-listlike-pointer-selection.json",
+      "required_capabilities": [],
+      "suite_memberships": [
+        "ui-gallery-data-table"
+      ],
+      "tags": [],
+      "target_hints": []
+    },
+    {
       "id": "ui-gallery-data-table-retained-column-actions-menu",
       "path": "tools/diag-scripts/ui-gallery/data-table/ui-gallery-data-table-retained-column-actions-menu.json",
       "required_capabilities": [],
@@ -2017,7 +2660,8 @@
       "path": "tools/diag-scripts/ui-gallery/data-table/ui-gallery-data-table-smoke.json",
       "required_capabilities": [],
       "suite_memberships": [
-        "ui-gallery"
+        "ui-gallery",
+        "ui-gallery-data-table"
       ],
       "tags": [],
       "target_hints": []
@@ -3663,6 +4307,28 @@
       ]
     },
     {
+      "id": "workspace-shell-demo-tab-close-mru-fallback-smoke",
+      "path": "tools/diag-scripts/workspace/shell-demo/workspace-shell-demo-tab-close-mru-fallback-smoke.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "diag-hardening-smoke-workspace"
+      ],
+      "tags": [
+        "close",
+        "gate",
+        "smoke",
+        "tabstrip",
+        "workspace"
+      ],
+      "target_hints": [
+        "Activates doc-a-1 (pane A) so MRU is deterministic.",
+        "Closes doc-a-1 via the close button.",
+        "Asserts doc-a-1 is removed and selection falls back to doc-a-2 (MRU fallback)."
+      ]
+    },
+    {
       "id": "workspace-shell-demo-tab-cross-pane-move-to-end",
       "path": "tools/diag-scripts/workspace/shell-demo/workspace-shell-demo-tab-cross-pane-move-to-end.json",
       "required_capabilities": [
@@ -3815,7 +4481,7 @@
       ],
       "target_hints": [
         "Asserts initial pos_in_set for a known tab.",
-        "Drags the first tab to reorder within the strip and drops it.",
+        "Drags the first tab to the end and drops it.",
         "Asserts pos_in_set updates after the reorder."
       ]
     }

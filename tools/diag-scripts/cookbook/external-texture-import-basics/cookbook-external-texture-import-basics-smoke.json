@@ -1,0 +1,83 @@
+{
+  "schema_version": 2,
+  "meta": {
+    "name": "cookbook-external-texture-import-basics-smoke",
+    "required_capabilities": ["diag.script_v2", "diag.screenshot_png"],
+    "tags": ["cookbook", "interop", "render_io", "external_texture", "smoke"],
+    "target_hints": [
+      "Verifies an imported render target is visible via ViewportSurface.",
+      "Switches the target size preset and asserts numeric semantics update.",
+      "Captures a screenshot + diagnostics bundle."
+    ]
+  },
+  "steps": [
+    { "type": "reset_diagnostics" },
+    { "type": "set_window_inner_size", "width_px": 1120.0, "height_px": 780.0 },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "cookbook.external_texture_import_basics.root" }
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "semantics_numeric_approx_eq",
+        "target": { "kind": "test_id", "id": "cookbook.external_texture_import_basics.target_w" },
+        "field": "value",
+        "value": 960.0,
+        "eps": 0.5
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "semantics_numeric_approx_eq",
+        "target": { "kind": "test_id", "id": "cookbook.external_texture_import_basics.target_h" },
+        "field": "value",
+        "value": 540.0,
+        "eps": 0.5
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "click_stable",
+      "target": { "kind": "test_id", "id": "cookbook.external_texture_import_basics.size_1280" }
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "semantics_numeric_approx_eq",
+        "target": { "kind": "test_id", "id": "cookbook.external_texture_import_basics.target_w" },
+        "field": "value",
+        "value": 1280.0,
+        "eps": 0.5
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "semantics_numeric_approx_eq",
+        "target": { "kind": "test_id", "id": "cookbook.external_texture_import_basics.target_h" },
+        "field": "value",
+        "value": 720.0,
+        "eps": 0.5
+      },
+      "timeout_frames": 240
+    },
+    { "type": "wait_frames", "n": 10 },
+    {
+      "type": "capture_screenshot",
+      "label": "cookbook-external-texture-import-basics-smoke"
+    },
+    {
+      "type": "capture_bundle",
+      "label": "cookbook-external-texture-import-basics-smoke"
+    }
+  ]
+}
+

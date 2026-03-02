@@ -52,6 +52,10 @@ pub const CMD_WORKSPACE_PANE_MOVE_ACTIVE_TAB_LEFT: &str = "workspace.pane.move_a
 pub const CMD_WORKSPACE_PANE_MOVE_ACTIVE_TAB_UP: &str = "workspace.pane.move_active_tab.up";
 pub const CMD_WORKSPACE_PANE_MOVE_ACTIVE_TAB_DOWN: &str = "workspace.pane.move_active_tab.down";
 
+pub const CMD_WORKSPACE_PANE_FOCUS_TAB_STRIP: &str = "workspace.pane.focus_tab_strip";
+pub const CMD_WORKSPACE_PANE_FOCUS_CONTENT: &str = "workspace.pane.focus_content";
+pub const CMD_WORKSPACE_PANE_TOGGLE_TAB_STRIP_FOCUS: &str = "workspace.pane.toggle_tab_strip_focus";
+
 /// Prefix for "activate a specific tab" commands.
 ///
 /// This is intentionally a prefix-based command family so apps can implement their own tab models
@@ -469,6 +473,32 @@ pub fn register_workspace_commands(registry: &mut CommandRegistry) {
         CommandMeta::new("Move Active Tab to Previous Pane")
             .with_category("Workspace")
             .with_keywords(["move", "tab", "pane", "previous", "workspace"]),
+    );
+
+    registry.register(
+        CommandId::new(CMD_WORKSPACE_PANE_FOCUS_TAB_STRIP),
+        CommandMeta::new("Focus Tab Strip")
+            .with_category("Workspace")
+            .with_keywords(["focus", "tab", "tabstrip", "pane", "workspace"]),
+    );
+
+    registry.register(
+        CommandId::new(CMD_WORKSPACE_PANE_FOCUS_CONTENT),
+        CommandMeta::new("Focus Pane Content")
+            .with_category("Workspace")
+            .with_keywords(["focus", "content", "pane", "workspace"]),
+    );
+
+    registry.register(
+        CommandId::new(CMD_WORKSPACE_PANE_TOGGLE_TAB_STRIP_FOCUS),
+        CommandMeta::new("Toggle Tab Strip Focus")
+            .with_category("Workspace")
+            .with_keywords(["toggle", "focus", "tab", "tabstrip", "pane", "workspace"])
+            .with_default_keybindings([
+                win_ctrl(KeyCode::F6, false),
+                linux_ctrl(KeyCode::F6, false),
+                mac_ctrl(KeyCode::F6, false),
+            ]),
     );
 
     registry.register(

@@ -28,6 +28,48 @@ fn default_overlay_color(theme: &ThemeSnapshot) -> Color {
     scrim
 }
 
+/// shadcn/ui `AlertDialogPortal` (v4).
+///
+/// Fret installs alert dialogs through the overlay controller, which implies a portal-like
+/// boundary already. This type is a no-op marker that exists to align the shadcn part surface and
+/// leave room for future portal configuration.
+#[derive(Debug, Clone, Copy, Default)]
+pub struct AlertDialogPortal;
+
+impl AlertDialogPortal {
+    pub fn new() -> Self {
+        Self
+    }
+}
+
+/// shadcn/ui `AlertDialogOverlay` (v4).
+///
+/// Upstream exposes the overlay (scrim/backdrop) as a distinct part with styling concerns. Fret's
+/// alert dialog surface currently owns the overlay knobs on [`AlertDialog`]. This type is a thin
+/// adapter so part-based call sites can keep configuration in a shadcn-like location.
+#[derive(Debug, Clone, Default)]
+pub struct AlertDialogOverlay {
+    color: Option<Color>,
+}
+
+impl AlertDialogOverlay {
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    pub fn color(mut self, color: Color) -> Self {
+        self.color = Some(color);
+        self
+    }
+
+    fn apply_to(self, mut dialog: AlertDialog) -> AlertDialog {
+        if let Some(v) = self.color {
+            dialog.overlay_color = Some(v);
+        }
+        dialog
+    }
+}
+
 type OnOpenChange = Arc<dyn Fn(bool) + Send + Sync + 'static>;
 
 #[derive(Default)]
@@ -160,6 +202,23 @@ impl AlertDialog {
     ) -> Self {
         self.on_open_change_complete = on_open_change_complete;
         self
+    }
+
+    /// Part-based authoring surface aligned with shadcn/ui v4 exports.
+    ///
+    /// This is a thin adapter over [`AlertDialog::into_element`] that accepts shadcn-style parts
+    /// (`AlertDialogTrigger`, `AlertDialogPortal`, `AlertDialogOverlay`).
+    #[track_caller]
+    pub fn into_element_parts<H: UiHost>(
+        self,
+        cx: &mut ElementContext<'_, H>,
+        trigger: impl FnOnce(&mut ElementContext<'_, H>) -> AlertDialogTrigger,
+        _portal: AlertDialogPortal,
+        overlay: AlertDialogOverlay,
+        content: impl FnOnce(&mut ElementContext<'_, H>) -> AnyElement,
+    ) -> AnyElement {
+        let dialog = overlay.apply_to(self);
+        dialog.into_element(cx, |cx| trigger(cx).into_element(cx), content)
     }
 
     #[track_caller]

@@ -1,6 +1,6 @@
 ---
 name: fret-shadcn-source-alignment
-description: "This skill should be used when the user asks to \"align shadcn components\", \"match Radix behaviors\", \"debug parity mismatches\", or \"port upstream shadcn/ui v4 recipes\". Provides an upstream-alignment workflow (shadcn/Radix/Base UI) that maps changes to the correct Fret layer and locks outcomes with targeted tests and `fretboard diag` scripts."
+description: "Align shadcn/ui v4 + Radix behavior and composition to Fret. Use when user says \"align shadcn\", \"parity mismatch\", \"match Radix\", \"port shadcn v4\", or reports issues like \"items-stretch\", \"w-full\", \"hit box too big\", or layout/interaction drift. Maps fixes to the correct layer (mechanism vs policy vs recipe) and locks outcomes with focused tests and `fretboard diag` scripts."
 ---
 
 # Shadcn / Radix source alignment
@@ -66,6 +66,16 @@ Rule of thumb: treat “fill/grow/shrink/truncate” as **recipe policy** (shadc
 3. Land a gate: a small invariant test and/or a `tools/diag-scripts/*.json` scripted repro with stable `test_id`.
 
 ## Workflow
+
+### 0) If this is a layout / sizing mismatch, run the layout footgun checklist first
+
+Many “looks right but feels wrong” shadcn parity bugs are actually *layout policy defaults* (stretch,
+fill, shrink, wrapping) that accidentally change interaction surfaces (hit boxes) in a GPU-first
+renderer.
+
+Before doing token tweaks or adding goldens, consult:
+
+- `.agents/skills/fret-shadcn-source-alignment/references/layout-parity-footguns.md`
 
 ### 0) Run the mechanism checklist first (don’t chase pixels yet)
 
@@ -345,6 +355,22 @@ Motion token guidance (ecosystem-level; keep stable for parity work):
   - **layout/style** mismatch ⇒ deterministic invariant test (tokens/geometry/paint outcomes).
 - Evidence anchors in the PR/commit message: upstream link(s) + in-tree file(s) + test/script path(s).
 
+## Practical gates (what to actually run)
+
+Prefer bounded, fast gates that catch regressions without compiling the entire world:
+
+- Layout-only / default-policy fixes (like “child got stretched, hit box grew”):
+  - Add a focused unit test in the component file (`#[cfg(test)]`) that checks the relevant layout
+    node props (e.g. column cross-axis alignment).
+  - Add a `tools/diag-scripts/**.json` script that gates a simple geometry predicate
+    (`bounds_max_size`, `bounds_approx_equal`, etc.) against stable `test_id`s.
+  - Add the script to an appropriate suite via a redirect stub under `tools/diag-scripts/suites/`.
+  - Regenerate the promoted registry: `python tools/check_diag_scripts_registry.py --write`.
+- When running tests on constrained Windows machines, avoid compiling large integration tests when
+  you only need the unit test signal:
+  - Prefer `cargo test -p fret-ui-shadcn --lib <test_name>` (or the equivalent `nextest` filter if
+    available).
+
 ## Evidence anchors
 
 - Layers and contracts: `docs/architecture.md`, `docs/runtime-contract-matrix.md`
@@ -352,6 +378,7 @@ Motion token guidance (ecosystem-level; keep stable for parity work):
 - Shadcn parity tracker (canonical; treat older audits as historical): `docs/shadcn-declarative-progress.md`
 - Mechanism checklist (this skill): `.agents/skills/fret-shadcn-source-alignment/references/mechanism-parity-checklist.md`
 - Style checklist (this skill): `.agents/skills/fret-shadcn-source-alignment/references/style-parity-checklist.md`
+- Layout footguns checklist (this skill): `.agents/skills/fret-shadcn-source-alignment/references/layout-parity-footguns.md`
 - Action hooks (component-owned policy): `docs/action-hooks.md`
 - Overlay ADRs:
   - `docs/adr/0067-overlay-policy-architecture-dismissal-focus-portal.md`
@@ -382,6 +409,7 @@ Motion token guidance (ecosystem-level; keep stable for parity work):
 - Missing stable `test_id` targets, causing scripts to rot during refactors.
 - Mixing “parity work” and “new design work” without leaving any regression protection behind.
 - Treating Base UI as a 1:1 “implementation port”: use it as a headless reference, then translate to Fret’s GPU-first renderer (semantics/hit-testing/focus routing).
+- Deriving `Clone` on types that store `AnyElement` (move-only by contract); prefer move-only builders or store inputs (models/ids) rather than elements.
 
 ## Troubleshooting
 

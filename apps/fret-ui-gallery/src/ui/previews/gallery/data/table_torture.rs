@@ -287,7 +287,7 @@ pub(in crate::ui) fn preview_data_table_torture(
                     t = t.keep_alive(keep_alive);
                 }
                 t.overscan(10)
-                    .row_height(Px(28.0))
+                    .row_height(Px(32.0))
                     .measure_rows(variable_height)
                     .column_actions_menu(true)
                     .refine_layout(LayoutRefinement::default().w_full().h_px(Px(420.0)))
@@ -333,7 +333,7 @@ pub(in crate::ui) fn preview_data_table_torture(
                     t = t.keep_alive(keep_alive);
                 }
                 t.overscan(10)
-                    .row_height(Px(28.0))
+                    .row_height(Px(32.0))
                     .measure_rows(variable_height)
                     .column_actions_menu(true)
                     .refine_layout(LayoutRefinement::default().w_full().h_px(Px(420.0)))

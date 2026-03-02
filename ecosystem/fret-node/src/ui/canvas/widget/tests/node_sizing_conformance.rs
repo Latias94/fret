@@ -9,10 +9,12 @@ use crate::ui::{DefaultNodeGraphPresenter, NodeGraphStyle};
 fn default_node_size_has_minimum_single_row_even_without_ports() {
     let style = NodeGraphStyle::default();
     let (w, h) = node_size_default_px(0, 0, &style);
-    assert_eq!(w, style.node_width);
+    assert_eq!(w, style.geometry.node_width);
     assert_eq!(
         h,
-        style.node_header_height + 2.0 * style.node_padding + style.pin_row_height
+        style.geometry.node_header_height
+            + 2.0 * style.geometry.node_padding
+            + style.geometry.pin_row_height
     );
 }
 
@@ -51,13 +53,14 @@ fn geometry_uses_default_node_size_for_portless_nodes() {
         1.0,
         origin,
         &mut presenter,
+        None,
     );
 
     let expected = {
         let (_w, h) = node_size_default_px(0, 0, &style);
         Rect::new(
             Point::new(Px(10.0), Px(20.0)),
-            Size::new(Px(style.node_width), Px(h)),
+            Size::new(Px(style.geometry.node_width), Px(h)),
         )
     };
 
