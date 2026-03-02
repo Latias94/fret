@@ -174,7 +174,8 @@ impl UiDiagnosticsService {
         let step_window_target = Self::active_step_window_target(other_active);
         let other_step_index = other_active.next_step;
         let step_allows_off_window_cached_test_id_predicate = step.is_some_and(|step| match step {
-            UiActionStepV2::WaitUntil { predicate, .. } | UiActionStepV2::Assert { predicate, .. } => {
+            UiActionStepV2::WaitUntil { predicate, .. }
+            | UiActionStepV2::Assert { predicate, .. } => {
                 UiDiagnosticsService::predicate_can_eval_from_cached_test_id_bounds(predicate)
             }
             _ => false,

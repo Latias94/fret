@@ -421,7 +421,8 @@ pub(super) fn handle_pointer_up_step(
     if let Some(session) = active.pointer_session.clone() {
         let pointer_id = PointerId(0);
         let cross_window_dock_drag_active = app.drag(pointer_id).is_some_and(|d| {
-            (d.kind == fret_runtime::DRAG_KIND_DOCK_PANEL || d.kind == fret_runtime::DRAG_KIND_DOCK_TABS)
+            (d.kind == fret_runtime::DRAG_KIND_DOCK_PANEL
+                || d.kind == fret_runtime::DRAG_KIND_DOCK_TABS)
                 && d.dragging
                 && d.cross_window_hover
         });
@@ -480,9 +481,9 @@ pub(super) fn handle_pointer_up_step(
                     "script-step-{step_index:04}-pointer_up-pointer-kind-mismatch"
                 ));
                 *stop_script = true;
-                 *failure_reason = Some("pointer_session_pointer_kind_mismatch".to_string());
-                 output.request_redraw = true;
-                 active.v2_step_state = None;
+                *failure_reason = Some("pointer_session_pointer_kind_mismatch".to_string());
+                output.request_redraw = true;
+                active.v2_step_state = None;
             } else {
                 // When a cross-window dock drag is active, the desktop runner owns drop routing
                 // (`InternalDragKind::Drop`) based on the current cursor override. Injecting a
@@ -539,8 +540,9 @@ pub(super) fn handle_pointer_up_step(
                     active.next_step = active.next_step.saturating_add(1);
                     output.request_redraw = true;
                     if svc.cfg.script_auto_dump {
-                        *force_dump_label =
-                            Some(format!("script-step-{step_index:04}-pointer_up-cross-window"));
+                        *force_dump_label = Some(format!(
+                            "script-step-{step_index:04}-pointer_up-cross-window"
+                        ));
                     }
                     return true;
                 }
