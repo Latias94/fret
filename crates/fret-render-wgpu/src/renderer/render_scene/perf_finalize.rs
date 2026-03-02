@@ -200,6 +200,7 @@ impl Renderer {
             .saturating_add(frame_perf.text_atlas_resets);
 
         self.perf.intermediate_budget_bytes = frame_perf.intermediate_budget_bytes;
+        self.perf.intermediate_full_target_bytes = frame_perf.intermediate_full_target_bytes;
         self.perf.intermediate_in_use_bytes = self
             .perf
             .intermediate_in_use_bytes
@@ -562,6 +563,7 @@ impl Renderer {
             text_atlas_evicted_page_glyphs: frame_perf.text_atlas_evicted_page_glyphs,
             text_atlas_resets: frame_perf.text_atlas_resets,
             intermediate_budget_bytes: frame_perf.intermediate_budget_bytes,
+            intermediate_full_target_bytes: frame_perf.intermediate_full_target_bytes,
             intermediate_in_use_bytes: frame_perf.intermediate_in_use_bytes,
             intermediate_peak_in_use_bytes: frame_perf.intermediate_peak_in_use_bytes,
             intermediate_release_targets: frame_perf.intermediate_release_targets,

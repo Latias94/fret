@@ -372,6 +372,9 @@ pub(crate) fn triage_json_from_stats(
         if worst.renderer_custom_effect_v1_steps_requested > 0
             && worst.renderer_custom_effect_v1_passes_emitted == 0
         {
+            let min_budget_for_two_full_targets_bytes = worst
+                .renderer_intermediate_full_target_bytes
+                .saturating_mul(2);
             out.push(json!({
                 "code": "renderer.custom_effect_v1_requested_but_skipped",
                 "severity": "warn",
@@ -380,6 +383,8 @@ pub(crate) fn triage_json_from_stats(
                     "custom_effect_v1_steps_requested": worst.renderer_custom_effect_v1_steps_requested,
                     "custom_effect_v1_passes_emitted": worst.renderer_custom_effect_v1_passes_emitted,
                     "renderer_intermediate_budget_bytes": worst.renderer_intermediate_budget_bytes,
+                    "renderer_intermediate_full_target_bytes": worst.renderer_intermediate_full_target_bytes,
+                    "min_budget_for_two_full_targets_bytes": min_budget_for_two_full_targets_bytes,
                     "renderer_intermediate_peak_in_use_bytes": worst.renderer_intermediate_peak_in_use_bytes,
                 }
             }));
@@ -389,6 +394,9 @@ pub(crate) fn triage_json_from_stats(
         if worst.renderer_custom_effect_v2_steps_requested > 0
             && worst.renderer_custom_effect_v2_passes_emitted == 0
         {
+            let min_budget_for_two_full_targets_bytes = worst
+                .renderer_intermediate_full_target_bytes
+                .saturating_mul(2);
             out.push(json!({
                 "code": "renderer.custom_effect_v2_requested_but_skipped",
                 "severity": "warn",
@@ -397,6 +405,8 @@ pub(crate) fn triage_json_from_stats(
                     "custom_effect_v2_steps_requested": worst.renderer_custom_effect_v2_steps_requested,
                     "custom_effect_v2_passes_emitted": worst.renderer_custom_effect_v2_passes_emitted,
                     "renderer_intermediate_budget_bytes": worst.renderer_intermediate_budget_bytes,
+                    "renderer_intermediate_full_target_bytes": worst.renderer_intermediate_full_target_bytes,
+                    "min_budget_for_two_full_targets_bytes": min_budget_for_two_full_targets_bytes,
                     "renderer_intermediate_peak_in_use_bytes": worst.renderer_intermediate_peak_in_use_bytes,
                 }
             }));
@@ -412,6 +422,9 @@ pub(crate) fn triage_json_from_stats(
         if worst.renderer_custom_effect_v3_steps_requested > 0
             && worst.renderer_custom_effect_v3_passes_emitted == 0
         {
+            let min_budget_for_two_full_targets_bytes = worst
+                .renderer_intermediate_full_target_bytes
+                .saturating_mul(2);
             out.push(json!({
                 "code": "renderer.custom_effect_v3_requested_but_skipped",
                 "severity": "warn",
@@ -420,6 +433,8 @@ pub(crate) fn triage_json_from_stats(
                     "custom_effect_v3_steps_requested": worst.renderer_custom_effect_v3_steps_requested,
                     "custom_effect_v3_passes_emitted": worst.renderer_custom_effect_v3_passes_emitted,
                     "renderer_intermediate_budget_bytes": worst.renderer_intermediate_budget_bytes,
+                    "renderer_intermediate_full_target_bytes": worst.renderer_intermediate_full_target_bytes,
+                    "min_budget_for_two_full_targets_bytes": min_budget_for_two_full_targets_bytes,
                     "renderer_intermediate_peak_in_use_bytes": worst.renderer_intermediate_peak_in_use_bytes,
                 }
             }));
@@ -445,6 +460,7 @@ pub(crate) fn triage_json_from_stats(
                     "custom_effect_v3_sources_pyramid_degraded_to_one_budget_zero": worst.renderer_custom_effect_v3_sources_pyramid_degraded_to_one_budget_zero,
                     "custom_effect_v3_sources_pyramid_degraded_to_one_budget_insufficient": worst.renderer_custom_effect_v3_sources_pyramid_degraded_to_one_budget_insufficient,
                     "renderer_intermediate_budget_bytes": worst.renderer_intermediate_budget_bytes,
+                    "renderer_intermediate_full_target_bytes": worst.renderer_intermediate_full_target_bytes,
                     "renderer_intermediate_peak_in_use_bytes": worst.renderer_intermediate_peak_in_use_bytes,
                 }
             }));

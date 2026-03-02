@@ -314,6 +314,7 @@ pub(super) struct BundleStatsSnapshotRow {
     pub(super) renderer_text_atlas_upload_bytes: u64,
     pub(super) renderer_text_atlas_evicted_pages: u64,
     pub(super) renderer_intermediate_budget_bytes: u64,
+    pub(super) renderer_intermediate_full_target_bytes: u64,
     pub(super) renderer_intermediate_in_use_bytes: u64,
     pub(super) renderer_intermediate_peak_in_use_bytes: u64,
     pub(super) renderer_intermediate_release_targets: u64,

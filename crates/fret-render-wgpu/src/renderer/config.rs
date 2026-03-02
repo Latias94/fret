@@ -103,6 +103,7 @@ impl Renderer {
             text_atlas_evicted_page_glyphs: self.perf.text_atlas_evicted_page_glyphs,
             text_atlas_resets: self.perf.text_atlas_resets,
             intermediate_budget_bytes: self.perf.intermediate_budget_bytes,
+            intermediate_full_target_bytes: self.perf.intermediate_full_target_bytes,
             intermediate_in_use_bytes: self.perf.intermediate_in_use_bytes,
             intermediate_peak_in_use_bytes: self.perf.intermediate_peak_in_use_bytes,
             intermediate_release_targets: self.perf.intermediate_release_targets,

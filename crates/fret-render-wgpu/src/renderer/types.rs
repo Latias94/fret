@@ -467,6 +467,12 @@ pub struct RenderPerfSnapshot {
 
     // Intermediate pool churn (best-effort; used for blur/effect pipelines).
     pub intermediate_budget_bytes: u64,
+    /// Estimated bytes required for a single full-viewport intermediate target at the current
+    /// viewport size and format.
+    ///
+    /// This is intended for diagnostics / triage evidence (to interpret budget thresholds like
+    /// “needs >= 2 full targets”) and should not be treated as a stable API surface.
+    pub intermediate_full_target_bytes: u64,
     pub intermediate_in_use_bytes: u64,
     pub intermediate_peak_in_use_bytes: u64,
     pub intermediate_release_targets: u64,
@@ -644,6 +650,7 @@ pub(super) struct RenderPerfStats {
     pub(super) text_atlas_resets: u64,
 
     pub(super) intermediate_budget_bytes: u64,
+    pub(super) intermediate_full_target_bytes: u64,
     pub(super) intermediate_in_use_bytes: u64,
     pub(super) intermediate_peak_in_use_bytes: u64,
     pub(super) intermediate_release_targets: u64,

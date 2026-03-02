@@ -696,6 +696,10 @@ pub(super) fn bundle_stats_from_json_with_options(
                 .and_then(|m| m.get("renderer_intermediate_budget_bytes"))
                 .and_then(|v| v.as_u64())
                 .unwrap_or(0);
+            let renderer_intermediate_full_target_bytes = stats
+                .and_then(|m| m.get("renderer_intermediate_full_target_bytes"))
+                .and_then(|v| v.as_u64())
+                .unwrap_or(0);
             let renderer_intermediate_in_use_bytes = stats
                 .and_then(|m| m.get("renderer_intermediate_in_use_bytes"))
                 .and_then(|v| v.as_u64())
@@ -1572,6 +1576,7 @@ pub(super) fn bundle_stats_from_json_with_options(
                 renderer_text_atlas_upload_bytes,
                 renderer_text_atlas_evicted_pages,
                 renderer_intermediate_budget_bytes,
+                renderer_intermediate_full_target_bytes,
                 renderer_intermediate_in_use_bytes,
                 renderer_intermediate_peak_in_use_bytes,
                 renderer_intermediate_release_targets,

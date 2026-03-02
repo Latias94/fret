@@ -66,6 +66,8 @@ impl Renderer {
             frame_perf.render_plan_degradations = plan.degradations.len() as u64;
             frame_perf.effect_degradations = plan.compile_stats.effect_degradations;
             frame_perf.effect_blur_quality = plan.compile_stats.effect_blur_quality;
+            frame_perf.intermediate_full_target_bytes =
+                crate::renderer::estimate_texture_bytes(viewport_size, format, 1);
             frame_perf.custom_effect_v1_steps_requested = custom_effect_v1_steps_requested;
             frame_perf.custom_effect_v1_passes_emitted = custom_effect_v1_passes_emitted;
             frame_perf.custom_effect_v2_steps_requested = custom_effect_v2_steps_requested;

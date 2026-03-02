@@ -440,6 +440,8 @@ pub struct UiFrameStatsV1 {
     #[serde(default)]
     pub renderer_intermediate_budget_bytes: u64,
     #[serde(default)]
+    pub renderer_intermediate_full_target_bytes: u64,
+    #[serde(default)]
     pub renderer_intermediate_in_use_bytes: u64,
     #[serde(default)]
     pub renderer_intermediate_peak_in_use_bytes: u64,
@@ -840,6 +842,7 @@ impl UiFrameStatsV1 {
             renderer_text_atlas_evicted_page_glyphs: 0,
             renderer_text_atlas_resets: 0,
             renderer_intermediate_budget_bytes: 0,
+            renderer_intermediate_full_target_bytes: 0,
             renderer_intermediate_in_use_bytes: 0,
             renderer_intermediate_peak_in_use_bytes: 0,
             renderer_intermediate_release_targets: 0,
@@ -962,6 +965,8 @@ impl UiFrameStatsV1 {
                 sample.perf.text_atlas_evicted_page_glyphs;
             out.renderer_text_atlas_resets = sample.perf.text_atlas_resets;
             out.renderer_intermediate_budget_bytes = sample.perf.intermediate_budget_bytes;
+            out.renderer_intermediate_full_target_bytes =
+                sample.perf.intermediate_full_target_bytes;
             out.renderer_intermediate_in_use_bytes = sample.perf.intermediate_in_use_bytes;
             out.renderer_intermediate_peak_in_use_bytes =
                 sample.perf.intermediate_peak_in_use_bytes;
