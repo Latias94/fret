@@ -13,8 +13,8 @@ Status labels:
 
 | Demo (module) | Gallery route | Legacy preview | Snippet | Page | Status |
 |---|---|---|---|---|---|
-| `agent_demo` | `PAGE_AI_AGENT_DEMO` | `apps/fret-ui-gallery/src/ui/previews/gallery/ai/agent_demo.rs` | — | — | Legacy preview |
-| `artifact_demo` | `PAGE_AI_ARTIFACT_DEMO` | `apps/fret-ui-gallery/src/ui/previews/gallery/ai/artifact_demo.rs` | — | — | Legacy preview |
+| `agent_demo` | `PAGE_AI_AGENT_DEMO` | (removed) | `apps/fret-ui-gallery/src/ui/snippets/ai/agent_demo.rs` | `apps/fret-ui-gallery/src/ui/pages/ai_agent_demo.rs` | Snippet-backed |
+| `artifact_demo` | `PAGE_AI_ARTIFACT_DEMO` | (removed) | `apps/fret-ui-gallery/src/ui/snippets/ai/artifact_demo.rs` | `apps/fret-ui-gallery/src/ui/pages/ai_artifact_demo.rs` | Snippet-backed |
 | `attachments_demo` | `PAGE_AI_ATTACHMENTS_DEMO` | (removed) | `apps/fret-ui-gallery/src/ui/snippets/ai/attachments_demo.rs` | `apps/fret-ui-gallery/src/ui/pages/ai_attachments_demo.rs` | Snippet-backed |
 | `audio_player_demo` | `PAGE_AI_AUDIO_PLAYER_DEMO` | `apps/fret-ui-gallery/src/ui/previews/gallery/ai/audio_player_demo.rs` | — | — | Legacy preview |
 | `canvas_world_layer_spike` | `PAGE_AI_CANVAS_WORLD_LAYER_SPIKE` | `apps/fret-ui-gallery/src/ui/previews/gallery/ai/canvas_world_layer_spike.rs` | — | — | Legacy preview |
@@ -37,15 +37,15 @@ Status labels:
 | `model_selector_demo` | `PAGE_AI_MODEL_SELECTOR_DEMO` | (removed) | `apps/fret-ui-gallery/src/ui/snippets/ai/model_selector_demo.rs` | `apps/fret-ui-gallery/src/ui/pages/ai_model_selector_demo.rs` | Snippet-backed |
 | `open_in_chat_demo` | `PAGE_AI_OPEN_IN_CHAT_DEMO` | (removed) | `apps/fret-ui-gallery/src/ui/snippets/ai/open_in_chat_demo.rs` | `apps/fret-ui-gallery/src/ui/pages/ai_open_in_chat_demo.rs` | Snippet-backed |
 | `package_info_demo` | `PAGE_AI_PACKAGE_INFO_DEMO` | (removed) | `apps/fret-ui-gallery/src/ui/snippets/ai/package_info_demo.rs` | `apps/fret-ui-gallery/src/ui/pages/ai_package_info_demo.rs` | Snippet-backed |
-| `persona_demo` | `PAGE_AI_PERSONA_DEMO` | `apps/fret-ui-gallery/src/ui/previews/gallery/ai/persona_demo.rs` | — | — | Legacy preview |
-| `plan_demo` | `PAGE_AI_PLAN_DEMO` | `apps/fret-ui-gallery/src/ui/previews/gallery/ai/plan_demo.rs` | — | — | Legacy preview |
+| `persona_demo` | `PAGE_AI_PERSONA_DEMO` | (removed) | `apps/fret-ui-gallery/src/ui/snippets/ai/persona_demo.rs` | `apps/fret-ui-gallery/src/ui/pages/ai_persona_demo.rs` | Snippet-backed |
+| `plan_demo` | `PAGE_AI_PLAN_DEMO` | (removed) | `apps/fret-ui-gallery/src/ui/snippets/ai/plan_demo.rs` | `apps/fret-ui-gallery/src/ui/pages/ai_plan_demo.rs` | Snippet-backed |
 | `prompt_input_action_menu_demo` | `PAGE_AI_PROMPT_INPUT_ACTION_MENU_DEMO` | (removed) | `apps/fret-ui-gallery/src/ui/snippets/ai/prompt_input_action_menu_demo.rs` | `apps/fret-ui-gallery/src/ui/pages/ai_prompt_input_action_menu_demo.rs` | Snippet-backed |
 | `prompt_input_provider_demo` | `PAGE_AI_PROMPT_INPUT_PROVIDER_DEMO` | (removed) | `apps/fret-ui-gallery/src/ui/snippets/ai/prompt_input_provider_demo.rs` | `apps/fret-ui-gallery/src/ui/pages/ai_prompt_input_provider_demo.rs` | Snippet-backed |
 | `prompt_input_referenced_sources_demo` | `PAGE_AI_PROMPT_INPUT_REFERENCED_SOURCES_DEMO` | (removed) | `apps/fret-ui-gallery/src/ui/snippets/ai/prompt_input_referenced_sources_demo.rs` | `apps/fret-ui-gallery/src/ui/pages/ai_prompt_input_referenced_sources_demo.rs` | Snippet-backed |
 | `queue_demo` | `PAGE_AI_QUEUE_DEMO` | `apps/fret-ui-gallery/src/ui/previews/gallery/ai/queue_demo.rs` | — | — | Legacy preview |
 | `reasoning_demo` | `PAGE_AI_REASONING_DEMO` | (removed) | `apps/fret-ui-gallery/src/ui/snippets/ai/reasoning_demo.rs` | `apps/fret-ui-gallery/src/ui/pages/ai_reasoning_demo.rs` | Snippet-backed |
 | `sandbox_demo` | `PAGE_AI_SANDBOX_DEMO` | `apps/fret-ui-gallery/src/ui/previews/gallery/ai/sandbox_demo.rs` | — | — | Legacy preview |
-| `schema_display_demo` | `PAGE_AI_SCHEMA_DISPLAY_DEMO` | `apps/fret-ui-gallery/src/ui/previews/gallery/ai/schema_display_demo.rs` | — | — | Legacy preview |
+| `schema_display_demo` | `PAGE_AI_SCHEMA_DISPLAY_DEMO` | (removed) | `apps/fret-ui-gallery/src/ui/snippets/ai/schema_display_demo.rs` | `apps/fret-ui-gallery/src/ui/pages/ai_schema_display_demo.rs` | Snippet-backed |
 | `shimmer_demo` | `PAGE_AI_SHIMMER_DEMO` | (removed) | `apps/fret-ui-gallery/src/ui/snippets/ai/shimmer_demo.rs` | `apps/fret-ui-gallery/src/ui/pages/ai_shimmer_demo.rs` | Snippet-backed |
 | `snippet_demo` | `PAGE_AI_SNIPPET_DEMO` | (removed) | `apps/fret-ui-gallery/src/ui/snippets/ai/snippet_demo.rs` | `apps/fret-ui-gallery/src/ui/pages/ai_snippet_demo.rs` | Snippet-backed |
 | `sources_demo` | `PAGE_AI_SOURCES_DEMO` | (removed) | `apps/fret-ui-gallery/src/ui/snippets/ai/sources_demo.rs` | `apps/fret-ui-gallery/src/ui/pages/ai_sources_demo.rs` | Snippet-backed |

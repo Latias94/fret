@@ -1,14 +1,13 @@
-use super::super::super::super::*;
+pub const SOURCE: &str = include_str!("schema_display_demo.rs");
 
-pub(in crate::ui) fn preview_ai_schema_display_demo(
-    cx: &mut ElementContext<'_, App>,
-    _theme: &Theme,
-) -> Vec<AnyElement> {
-    use std::sync::Arc;
+// region: example
+use fret_ui_ai as ui_ai;
+use fret_ui_kit::declarative::stack;
+use fret_ui_kit::{LayoutRefinement, Space};
+use fret_ui_shadcn::prelude::*;
+use std::sync::Arc;
 
-    use fret_ui_kit::declarative::stack;
-    use fret_ui_kit::{LayoutRefinement, Space};
-
+pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement {
     let request_props: Arc<[ui_ai::SchemaProperty]> = Arc::from(vec![
         ui_ai::SchemaProperty::new("request", "object")
             .required(true)
@@ -44,7 +43,9 @@ pub(in crate::ui) fn preview_ai_schema_display_demo(
     let response_section = ui_ai::SchemaDisplayResponse::new(response_props)
         .default_open(true)
         .test_id_first_property_trigger("ui-ai-schema-display-response-prop0-trigger")
-        .test_id_first_property_child0_trigger("ui-ai-schema-display-response-prop0-child0-trigger")
+        .test_id_first_property_child0_trigger(
+            "ui-ai-schema-display-response-prop0-child0-trigger",
+        )
         .into_element(cx);
 
     let schema = ui_ai::SchemaDisplay::new(ui_ai::HttpMethod::Post, "/v1/chat")
@@ -70,7 +71,7 @@ pub(in crate::ui) fn preview_ai_schema_display_demo(
         .test_id_root("ui-ai-schema-display-root")
         .into_element(cx);
 
-    vec![stack::vstack(
+    stack::vstack(
         cx,
         stack::VStackProps::default()
             .layout(LayoutRefinement::default().w_full().min_w_0())
@@ -82,5 +83,7 @@ pub(in crate::ui) fn preview_ai_schema_display_demo(
                 schema,
             ]
         },
-    )]
+    )
 }
+// endregion: example
+

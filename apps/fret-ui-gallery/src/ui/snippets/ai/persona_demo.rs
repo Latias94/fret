@@ -1,14 +1,14 @@
-use super::super::super::super::*;
+pub const SOURCE: &str = include_str!("persona_demo.rs");
 
-pub(in crate::ui) fn preview_ai_persona_demo(
-    cx: &mut ElementContext<'_, App>,
-    _theme: &Theme,
-) -> Vec<AnyElement> {
-    use fret_core::Px;
-    use fret_ui_kit::declarative::stack;
-    use fret_ui_kit::declarative::style as decl_style;
-    use fret_ui_kit::{ChromeRefinement, LayoutRefinement, MetricRef, Space};
+// region: example
+use fret_core::Px;
+use fret_ui_ai as ui_ai;
+use fret_ui_kit::declarative::stack;
+use fret_ui_kit::declarative::style as decl_style;
+use fret_ui_kit::{ChromeRefinement, LayoutRefinement, MetricRef, Space};
+use fret_ui_shadcn::prelude::*;
 
+pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement {
     let max_w = LayoutRefinement::default()
         .w_full()
         .max_w(MetricRef::Px(Px(760.0)))
@@ -46,11 +46,12 @@ pub(in crate::ui) fn preview_ai_persona_demo(
         },
     );
 
-    let shell_props = cx
-        .with_theme(|theme| decl_style::container_props(theme, ChromeRefinement::default(), max_w));
+    let shell_props = cx.with_theme(|theme| {
+        decl_style::container_props(theme, ChromeRefinement::default(), max_w)
+    });
     let shell = cx.container(shell_props, move |_cx| [row]);
 
-    vec![stack::vstack(
+    stack::vstack(
         cx,
         stack::VStackProps::default()
             .layout(LayoutRefinement::default().w_full().min_w_0())
@@ -62,5 +63,7 @@ pub(in crate::ui) fn preview_ai_persona_demo(
                 shell,
             ]
         },
-    )]
+    )
 }
+// endregion: example
+

@@ -1,14 +1,15 @@
-use super::super::super::super::*;
+pub const SOURCE: &str = include_str!("agent_demo.rs");
 
-pub(in crate::ui) fn preview_ai_agent_demo(
-    cx: &mut ElementContext<'_, App>,
-    _theme: &Theme,
-) -> Vec<AnyElement> {
-    use fret_core::Px;
-    use fret_ui_kit::declarative::stack;
-    use fret_ui_kit::{LayoutRefinement, MetricRef, Space};
-    use serde_json::json;
+// region: example
+use fret_core::Px;
+use fret_ui_ai as ui_ai;
+use fret_ui_kit::declarative::stack;
+use fret_ui_kit::{LayoutRefinement, MetricRef, Space};
+use fret_ui_shadcn::{self as shadcn, prelude::*};
+use serde_json::json;
+use std::sync::Arc;
 
+pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement {
     let max_w = LayoutRefinement::default()
         .w_full()
         .max_w(MetricRef::Px(Px(760.0)))
@@ -75,7 +76,7 @@ pub(in crate::ui) fn preview_ai_agent_demo(
     .refine_layout(max_w)
     .into_element(cx);
 
-    vec![stack::vstack(
+    stack::vstack(
         cx,
         stack::VStackProps::default()
             .layout(LayoutRefinement::default().w_full().min_w_0())
@@ -87,5 +88,7 @@ pub(in crate::ui) fn preview_ai_agent_demo(
                 agent,
             ]
         },
-    )]
+    )
 }
+// endregion: example
+

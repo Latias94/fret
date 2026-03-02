@@ -2,6 +2,8 @@ use super::*;
 
 mod accordion;
 mod ai_attachments_demo;
+mod ai_agent_demo;
+mod ai_artifact_demo;
 mod ai_checkpoint_demo;
 mod ai_code_block_demo;
 mod ai_commit_demo;
@@ -14,12 +16,15 @@ mod ai_message_demo;
 mod ai_model_selector_demo;
 mod ai_mic_selector_demo;
 mod ai_open_in_chat_demo;
+mod ai_persona_demo;
+mod ai_plan_demo;
 mod ai_package_info_demo;
 mod ai_prompt_input_action_menu_demo;
 mod ai_prompt_input_provider_demo;
 mod ai_prompt_input_referenced_sources_demo;
 mod ai_reasoning_demo;
 mod ai_sources_demo;
+mod ai_schema_display_demo;
 mod ai_shimmer_demo;
 mod ai_snippet_demo;
 mod ai_suggestions_demo;
@@ -106,6 +111,20 @@ pub(super) fn preview_ai_attachments_demo(
     ai_attachments_demo::preview_ai_attachments_demo(cx, theme)
 }
 
+pub(super) fn preview_ai_agent_demo(
+    cx: &mut ElementContext<'_, App>,
+    theme: &Theme,
+) -> Vec<AnyElement> {
+    ai_agent_demo::preview_ai_agent_demo(cx, theme)
+}
+
+pub(super) fn preview_ai_artifact_demo(
+    cx: &mut ElementContext<'_, App>,
+    theme: &Theme,
+) -> Vec<AnyElement> {
+    ai_artifact_demo::preview_ai_artifact_demo(cx, theme)
+}
+
 pub(super) fn preview_ai_checkpoint_demo(
     cx: &mut ElementContext<'_, App>,
     theme: &Theme,
@@ -174,6 +193,27 @@ pub(super) fn preview_ai_open_in_chat_demo(
     theme: &Theme,
 ) -> Vec<AnyElement> {
     ai_open_in_chat_demo::preview_ai_open_in_chat_demo(cx, theme)
+}
+
+pub(super) fn preview_ai_persona_demo(
+    cx: &mut ElementContext<'_, App>,
+    theme: &Theme,
+) -> Vec<AnyElement> {
+    ai_persona_demo::preview_ai_persona_demo(cx, theme)
+}
+
+pub(super) fn preview_ai_plan_demo(
+    cx: &mut ElementContext<'_, App>,
+    theme: &Theme,
+) -> Vec<AnyElement> {
+    ai_plan_demo::preview_ai_plan_demo(cx, theme)
+}
+
+pub(super) fn preview_ai_schema_display_demo(
+    cx: &mut ElementContext<'_, App>,
+    theme: &Theme,
+) -> Vec<AnyElement> {
+    ai_schema_display_demo::preview_ai_schema_display_demo(cx, theme)
 }
 
 pub(super) fn preview_ai_terminal_demo(
