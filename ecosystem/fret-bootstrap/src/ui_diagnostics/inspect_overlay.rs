@@ -263,6 +263,10 @@ pub(crate) fn render_diag_inspect_overlay(
                         lines.push("F: select focused node".to_string());
                         lines.push("L: lock/unlock selection".to_string());
                         lines.push("Alt+Up/Down: navigate parent chain (locked)".to_string());
+                        lines.push(
+                            "Ctrl/Cmd+Enter (help search): lock selected match + copy selector"
+                                .to_string(),
+                        );
 
                         if !explainability_lines.is_empty() {
                             lines.push(String::new());
