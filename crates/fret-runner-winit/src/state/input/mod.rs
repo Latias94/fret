@@ -16,6 +16,10 @@ use crate::mapping::{
     map_pointer_type_from_pointer_source, map_wheel_delta, sanitize_text_input, set_mouse_buttons,
 };
 
+fn winit_coalesce_wheel_enabled() -> bool {
+    std::env::var_os("FRET_WINIT_COALESCE_WHEEL").is_some_and(|v| !v.is_empty() && v != "0")
+}
+
 #[derive(Debug, Default, Clone)]
 pub struct WinitInputState {
     pub cursor_pos: Point,
@@ -157,6 +161,37 @@ fn distance_px(a: Point, b: Point) -> f32 {
 }
 
 impl WinitInputState {
+    fn push_pointer_event_with_coalescing(&self, out: &mut Vec<Event>, evt: PointerEvent) {
+        if winit_coalesce_wheel_enabled()
+            && let PointerEvent::Wheel {
+                pointer_id,
+                position,
+                delta,
+                modifiers,
+                pointer_type,
+            } = evt
+            && let Some(Event::Pointer(PointerEvent::Wheel {
+                pointer_id: prev_pointer_id,
+                position: prev_position,
+                delta: prev_delta,
+                modifiers: prev_modifiers,
+                pointer_type: prev_pointer_type,
+            })) = out.last_mut()
+            && *prev_pointer_id == pointer_id
+            && *prev_position == position
+            && *prev_modifiers == modifiers
+            && *prev_pointer_type == pointer_type
+        {
+            *prev_delta = Point::new(
+                Px(prev_delta.x.0 + delta.x.0),
+                Px(prev_delta.y.0 + delta.y.0),
+            );
+            return;
+        }
+
+        out.push(Event::Pointer(evt));
+    }
+
     fn pointer_state_mut(&mut self, pointer_id: PointerId) -> &mut PointerState {
         let state = self.pointers.entry(pointer_id).or_default();
         if pointer_id == PointerId(0) {
@@ -401,13 +436,16 @@ impl WinitInputState {
             }
             WindowEvent::MouseWheel { delta, .. } => {
                 let scroll = map_wheel_delta(*delta, window_scale_factor, wheel);
-                out.push(Event::Pointer(PointerEvent::Wheel {
-                    pointer_id: PointerId(0),
-                    position: self.cursor_pos,
-                    delta: scroll,
-                    modifiers: self.modifiers,
-                    pointer_type: fret_core::PointerType::Mouse,
-                }));
+                self.push_pointer_event_with_coalescing(
+                    out,
+                    PointerEvent::Wheel {
+                        pointer_id: PointerId(0),
+                        position: self.cursor_pos,
+                        delta: scroll,
+                        modifiers: self.modifiers,
+                        pointer_type: fret_core::PointerType::Mouse,
+                    },
+                );
             }
             WindowEvent::PinchGesture { delta, .. } => {
                 if delta.is_nan() {
@@ -497,6 +535,52 @@ impl WinitInputState {
                 modifiers: self.modifiers,
             }),
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn coalesces_consecutive_wheel_events_when_enabled() {
+        unsafe {
+            std::env::set_var("FRET_WINIT_COALESCE_WHEEL", "1");
+        }
+
+        let st = WinitInputState::default();
+        let mut out: Vec<Event> = Vec::new();
+
+        st.push_pointer_event_with_coalescing(
+            &mut out,
+            PointerEvent::Wheel {
+                pointer_id: PointerId(0),
+                position: Point::new(Px(10.0), Px(20.0)),
+                delta: Point::new(Px(0.0), Px(-10.0)),
+                modifiers: Modifiers::default(),
+                pointer_type: fret_core::PointerType::Mouse,
+            },
+        );
+        st.push_pointer_event_with_coalescing(
+            &mut out,
+            PointerEvent::Wheel {
+                pointer_id: PointerId(0),
+                position: Point::new(Px(10.0), Px(20.0)),
+                delta: Point::new(Px(0.0), Px(-5.0)),
+                modifiers: Modifiers::default(),
+                pointer_type: fret_core::PointerType::Mouse,
+            },
+        );
+
+        assert_eq!(out.len(), 1);
+        let Event::Pointer(PointerEvent::Wheel { delta, .. }) = out[0].clone() else {
+            panic!("expected a single coalesced wheel event");
+        };
+        assert!(
+            (delta.y.0 - (-15.0)).abs() <= 0.001,
+            "delta_y={:?}",
+            delta.y
+        );
     }
 }
 
