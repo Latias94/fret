@@ -359,7 +359,7 @@ Rollback:
 
 Status:
 
-- In progress.
+- Landed.
 
 Goal:
 
@@ -373,11 +373,12 @@ Changes:
   - Add `custom_effect_v3_diagnostics` to the dump root (CustomEffectV3 sources + BackdropSourceGroup degradation counters).
 - Suites:
   - Pin a high intermediate budget for the BackdropSourceGroup liquid-glass suite to reduce cross-machine drift and make “known-good” runs more deterministic.
+  - Add a post-run suite gate `--check-triage-hint-absent <code>` so suites can assert “no degradations” via triage hints.
 
 Gates:
 
 - `cargo test -p fret-render-wgpu --lib render_plan_dump`
-- (Optional) `cargo run -p fretboard -- diag suite liquid-glass-custom-v3 --dir target/fret-diag/liquid-glass-custom-v3 --session-auto --launch -- .\\target\\debug\\liquid_glass_demo.exe`
+- (Optional) `cargo run -p fretboard -- diag suite liquid-glass-custom-v3 --dir target/fret-diag/liquid-glass-custom-v3 --session-auto --check-triage-hint-absent renderer.custom_effect_v3_requested_but_skipped --check-triage-hint-absent renderer.custom_effect_v3_raw_aliased_to_src --check-triage-hint-absent renderer.custom_effect_v3_pyramid_degraded_to_one --check-triage-hint-absent renderer.backdrop_source_groups_raw_degraded --check-triage-hint-absent renderer.backdrop_source_groups_pyramid_degraded --launch -- .\\target\\debug\\liquid_glass_demo.exe`
 
 Rollback:
 
