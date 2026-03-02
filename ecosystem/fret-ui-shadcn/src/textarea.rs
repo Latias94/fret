@@ -3,8 +3,10 @@ use std::sync::Arc;
 use fret_core::{Color, Corners, CursorIcon, Edges, FontId, MouseButton, Px};
 use fret_runtime::Model;
 use fret_ui::element::{
-    AnyElement, ContainerProps, Length, PressableProps, SizeStyle, TextAreaProps,
+    AnyElement, ContainerProps, Length, PressableProps, SemanticsDecoration, SizeStyle,
+    TextAreaProps,
 };
+use fret_ui::elements::GlobalElementId;
 use fret_ui::{ElementContext, TextAreaStyle, Theme, UiHost, action};
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::recipes::input::{InputTokenKeys, resolve_input_chrome};
@@ -57,6 +59,7 @@ fn textarea_resize_models<H: UiHost>(
 pub struct Textarea {
     model: Model<String>,
     a11y_label: Option<Arc<str>>,
+    labelled_by_element: Option<GlobalElementId>,
     placeholder: Option<Arc<str>>,
     aria_invalid: bool,
     aria_required: bool,
@@ -92,6 +95,7 @@ impl Textarea {
         Self {
             model,
             a11y_label: None,
+            labelled_by_element: None,
             placeholder: None,
             aria_invalid: false,
             aria_required: false,
@@ -107,6 +111,12 @@ impl Textarea {
 
     pub fn a11y_label(mut self, label: impl Into<Arc<str>>) -> Self {
         self.a11y_label = Some(label.into());
+        self
+    }
+
+    /// Associates this control with a label element (ARIA `aria-labelledby`-like outcome).
+    pub fn labelled_by_element(mut self, label: GlobalElementId) -> Self {
+        self.labelled_by_element = Some(label);
         self
     }
 
@@ -168,6 +178,7 @@ impl Textarea {
             cx,
             self.model,
             self.a11y_label,
+            self.labelled_by_element,
             self.placeholder,
             self.aria_invalid,
             self.aria_required,
@@ -186,6 +197,7 @@ pub fn textarea<H: UiHost>(
     cx: &mut ElementContext<'_, H>,
     model: Model<String>,
     a11y_label: Option<Arc<str>>,
+    labelled_by_element: Option<GlobalElementId>,
     placeholder: Option<Arc<str>>,
     aria_invalid: bool,
     aria_required: bool,
@@ -299,7 +311,15 @@ pub fn textarea<H: UiHost>(
         },
         move |cx| {
             if !show_resize_handle {
-                return vec![cx.text_area(props)];
+                let textarea = cx.text_area(props);
+                let textarea = if let Some(label) = labelled_by_element {
+                    textarea.attach_semantics(
+                        SemanticsDecoration::default().labelled_by_element(label.0),
+                    )
+                } else {
+                    textarea
+                };
+                return vec![textarea];
             }
 
             let (height_override, drag) = textarea_resize_models(cx);
@@ -334,6 +354,12 @@ pub fn textarea<H: UiHost>(
             }
 
             let textarea = cx.text_area(props);
+            let textarea = if let Some(label) = labelled_by_element {
+                textarea
+                    .attach_semantics(SemanticsDecoration::default().labelled_by_element(label.0))
+            } else {
+                textarea
+            };
 
             let resize_handle = cx.pressable_with_id_props(move |cx, _st, id| {
                 let height_override_down = height_override.clone();
@@ -520,5 +546,52 @@ mod tests {
             );
         };
         assert_eq!(props.layout.size.width, Length::Fill);
+    }
+
+    #[test]
+    fn textarea_can_reference_a_label_element_for_a11y_association() {
+        let mut app = App::new();
+        crate::shadcn_themes::apply_shadcn_new_york_v4(
+            &mut app,
+            crate::shadcn_themes::ShadcnBaseColor::Slate,
+            crate::shadcn_themes::ShadcnColorScheme::Light,
+        );
+
+        let window = AppWindowId::default();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            CoreSize::new(Px(320.0), Px(180.0)),
+        );
+
+        let model = app.models_mut().insert(String::new());
+        let root = elements::with_element_cx(&mut app, window, bounds, "labelled-textarea", |cx| {
+            let label = crate::Label::new("Notes").into_element(cx);
+            let label_id = label.id;
+
+            let textarea = Textarea::new(model.clone())
+                .a11y_label("Textarea")
+                .labelled_by_element(label_id)
+                .resizable(false)
+                .into_element(cx);
+
+            cx.column(fret_ui::element::ColumnProps::default(), |_cx| {
+                vec![label, textarea]
+            })
+        });
+
+        let textarea = root.children.get(1).expect("textarea child");
+        let ElementKind::Container(_) = &textarea.kind else {
+            panic!("expected Textarea to wrap in a Container");
+        };
+
+        let text_area = textarea.children.first().expect("text area");
+        let ElementKind::TextArea(_) = &text_area.kind else {
+            panic!("expected Textarea inner node to be a TextArea");
+        };
+        let decoration = text_area
+            .semantics_decoration
+            .as_ref()
+            .expect("expected labelled_by decoration on TextArea");
+        assert_eq!(decoration.labelled_by_element, Some(root.children[0].id.0));
     }
 }

@@ -3,7 +3,10 @@ use std::sync::Arc;
 use fret_core::{Corners, FontId, KeyCode, NodeId, Px, SemanticsRole};
 use fret_runtime::{CommandId, Model};
 use fret_ui::action::{ActionCx, KeyDownCx, UiFocusActionHost};
-use fret_ui::element::{AnyElement, Length, Overflow, SizeStyle, TextInputProps};
+use fret_ui::element::{
+    AnyElement, Length, Overflow, SemanticsDecoration, SizeStyle, TextInputProps,
+};
+use fret_ui::elements::GlobalElementId;
 use fret_ui::{ElementContext, TextInputStyle, Theme, UiHost};
 use fret_ui_kit::command::ElementCommandGatingExt as _;
 use fret_ui_kit::declarative::style as decl_style;
@@ -70,6 +73,7 @@ pub struct Input {
     model: Model<String>,
     a11y_label: Option<Arc<str>>,
     a11y_role: Option<SemanticsRole>,
+    labelled_by_element: Option<GlobalElementId>,
     test_id: Option<Arc<str>>,
     placeholder: Option<Arc<str>>,
     aria_invalid: bool,
@@ -94,6 +98,7 @@ impl Input {
             model,
             a11y_label: None,
             a11y_role: None,
+            labelled_by_element: None,
             test_id: None,
             placeholder: None,
             aria_invalid: false,
@@ -120,6 +125,15 @@ impl Input {
 
     pub fn a11y_role(mut self, role: SemanticsRole) -> Self {
         self.a11y_role = Some(role);
+        self
+    }
+
+    /// Associates this control with a label element (ARIA `aria-labelledby`-like outcome).
+    ///
+    /// This is the preferred way to model shadcn/Radix `Label` → `Input` association in Fret,
+    /// since we do not have DOM `id`/`htmlFor`.
+    pub fn labelled_by_element(mut self, label: GlobalElementId) -> Self {
+        self.labelled_by_element = Some(label);
         self
     }
 
@@ -257,6 +271,7 @@ impl Input {
             self.style,
             self.chrome,
             self.layout,
+            self.labelled_by_element,
             self.border_width_override,
             self.corner_radii_override,
         )
@@ -293,6 +308,7 @@ pub fn input<H: UiHost>(
         InputStyle::default(),
         ChromeRefinement::default(),
         LayoutRefinement::default(),
+        None,
         BorderWidthOverride::default(),
         None,
     )
@@ -319,6 +335,7 @@ fn input_with_style_and_submit<H: UiHost>(
     style_override: InputStyle,
     chrome_override: ChromeRefinement,
     layout_override: LayoutRefinement,
+    labelled_by_element: Option<GlobalElementId>,
     border_width_override: BorderWidthOverride,
     corner_radii_override: Option<Corners>,
 ) -> AnyElement {
@@ -476,6 +493,11 @@ fn input_with_style_and_submit<H: UiHost>(
         props.model = model_for_hook.clone();
         props
     });
+    let input = if let Some(label) = labelled_by_element {
+        input.attach_semantics(SemanticsDecoration::default().labelled_by_element(label.0))
+    } else {
+        input
+    };
 
     let input = cx.container(
         fret_ui::element::ContainerProps {
@@ -577,5 +599,59 @@ mod tests {
         };
         assert_eq!(props.layout.size.width, Length::Fill);
         assert_eq!(props.layout.size.height, Length::Fill);
+    }
+
+    #[test]
+    fn input_can_reference_a_label_element_for_a11y_association() {
+        let mut app = App::new();
+        crate::shadcn_themes::apply_shadcn_new_york_v4(
+            &mut app,
+            crate::shadcn_themes::ShadcnBaseColor::Slate,
+            crate::shadcn_themes::ShadcnColorScheme::Light,
+        );
+
+        let window = AppWindowId::default();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            CoreSize::new(Px(320.0), Px(120.0)),
+        );
+
+        let model = app.models_mut().insert(String::new());
+
+        let root = elements::with_element_cx(&mut app, window, bounds, "labelled-input", |cx| {
+            let label = crate::Label::new("Email").into_element(cx);
+            let label_id = label.id;
+
+            let input = Input::new(model.clone())
+                .labelled_by_element(label_id)
+                .into_element(cx);
+
+            cx.column(fret_ui::element::ColumnProps::default(), |_cx| {
+                vec![label, input]
+            })
+        });
+
+        let ElementKind::Column(col) = &root.kind else {
+            panic!("expected test root to be a Column, got {:?}", root.kind);
+        };
+        assert_eq!(
+            col.layout.size.width,
+            Length::Auto,
+            "sanity: ColumnProps default width stays Auto"
+        );
+
+        let input = root.children.get(1).expect("input child");
+        let ElementKind::Container(_) = &input.kind else {
+            panic!("expected Input to wrap in a Container");
+        };
+        let text_input = input.children.first().expect("text input");
+        let ElementKind::TextInput(_) = &text_input.kind else {
+            panic!("expected Input inner node to be a TextInput");
+        };
+        let decoration = text_input
+            .semantics_decoration
+            .as_ref()
+            .expect("expected labelled_by decoration on TextInput");
+        assert_eq!(decoration.labelled_by_element, Some(root.children[0].id.0));
     }
 }

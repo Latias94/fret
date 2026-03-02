@@ -58,7 +58,7 @@ without having to grep the whole crate.
 | `input-otp` | `repo-ref/ui/apps/v4/registry/bases/radix/ui/input-otp.tsx` | `ecosystem/fret-ui-shadcn/src/input_otp.rs` | recipe + adapter | Yes | Yes | `aria-invalid` is global, not per-slot. |
 | `item` | `repo-ref/ui/apps/v4/registry/bases/radix/ui/item.tsx` | `ecosystem/fret-ui-shadcn/src/item.rs` | parts | No | No | Not audited yet. |
 | `kbd` | `repo-ref/ui/apps/v4/registry/bases/radix/ui/kbd.tsx` | `ecosystem/fret-ui-shadcn/src/kbd.rs` | parts | No | No | Not audited yet. |
-| `label` | `repo-ref/ui/apps/v4/registry/bases/radix/ui/label.tsx` | `ecosystem/fret-ui-shadcn/src/label.rs` | parts | No | Yes | Re-exports the primitive; typography defaults are gated in `fret-ui-kit` tests. |
+| `label` | `repo-ref/ui/apps/v4/registry/bases/radix/ui/label.tsx` | `ecosystem/fret-ui-shadcn/src/label.rs` | parts | No | Yes | Re-exports the primitive; association uses `labelled_by_element(...)` on controls; defaults are gated in `fret-ui-kit` tests. |
 | `menubar` | `repo-ref/ui/apps/v4/registry/bases/radix/ui/menubar.tsx` | `ecosystem/fret-ui-shadcn/src/menubar.rs` | recipe + adapter | Yes | Yes | Portal is a no-op wrapper; trigger/content are adapters. |
 | `native-select` | `repo-ref/ui/apps/v4/registry/bases/radix/ui/native-select.tsx` | `ecosystem/fret-ui-shadcn/src/native_select.rs` | parts | No | No | Not audited yet. |
 | `navigation-menu` | `repo-ref/ui/apps/v4/registry/bases/radix/ui/navigation-menu.tsx` | `ecosystem/fret-ui-shadcn/src/navigation_menu.rs` | parts (+ style helper) | No | Yes | `navigation_menu_trigger_style(...)` is a typed refinement helper. |
