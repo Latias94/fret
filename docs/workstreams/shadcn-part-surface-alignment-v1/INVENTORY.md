@@ -17,10 +17,9 @@ without having to grep the whole crate.
 
 ## Recommended next audit order (dev sequence)
 
-1. `sonner` (toast/notification stack; part surface + deterministic automation ids)
-2. `toggle-group` / `button-group` (composites; keyboard expectations + spacing defaults)
-3. `button` / `toggle` (variants helpers parity; ensure copy/paste authoring stays stable)
-4. **Defer last**: `select` / `combobox` deeper redesign (structural drift is known and deeper than “just names”)
+1. `toggle-group` / `button-group` (composites; keyboard expectations + spacing defaults)
+2. `button` / `toggle` (variants helpers parity; ensure copy/paste authoring stays stable)
+3. **Defer last**: `select` / `combobox` deeper redesign (structural drift is known and deeper than “just names”)
 
 ## Inventory table (upstream radix base → Fret module)
 
@@ -72,7 +71,7 @@ without having to grep the whole crate.
 | `sidebar` | `repo-ref/ui/apps/v4/registry/bases/radix/ui/sidebar.tsx` | `ecosystem/fret-ui-shadcn/src/sidebar.rs` | parts | No | Yes | Motion + width invariants are gated by unit tests; includes `useSidebar` + `use_sidebar` alias. |
 | `skeleton` | `repo-ref/ui/apps/v4/registry/bases/radix/ui/skeleton.tsx` | `ecosystem/fret-ui-shadcn/src/skeleton.rs` | parts | No | Yes | Default layout + pulse stability policy are gated by unit tests. |
 | `slider` | `repo-ref/ui/apps/v4/registry/bases/radix/ui/slider.tsx` | `ecosystem/fret-ui-shadcn/src/slider.rs` | parts | No | Yes | Keyboard/pointer + a11y SetValue outcomes are gated by unit tests. |
-| `sonner` | `repo-ref/ui/apps/v4/registry/bases/radix/ui/sonner.tsx` | `ecosystem/fret-ui-shadcn/src/sonner.rs` | parts | No | No | Not audited yet. |
+| `sonner` | `repo-ref/ui/apps/v4/registry/bases/radix/ui/sonner.tsx` | `ecosystem/fret-ui-shadcn/src/sonner.rs` | parts | No | Yes | Unit tests lock Toaster layout neutrality and toast layer visibility gating. |
 | `spinner` | `repo-ref/ui/apps/v4/registry/bases/radix/ui/spinner.tsx` | `ecosystem/fret-ui-shadcn/src/spinner.rs` | parts | No | Yes | Default `size-4` + loading semantics stamping are gated by unit tests. |
 | `switch` | `repo-ref/ui/apps/v4/registry/bases/radix/ui/switch.tsx` | `ecosystem/fret-ui-shadcn/src/switch.rs` | parts | No | Yes | Thumb centering + semantics role outcomes are gated by unit tests. |
 | `table` | `repo-ref/ui/apps/v4/registry/bases/radix/ui/table.tsx` | `ecosystem/fret-ui-shadcn/src/table.rs` | parts | No | Yes | `ScrollArea(axis=X)` wrapper is best-effort; unit tests lock width defaults + border clearing. |

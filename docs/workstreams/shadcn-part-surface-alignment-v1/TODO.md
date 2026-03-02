@@ -27,9 +27,9 @@ See also: `docs/workstreams/shadcn-part-surface-alignment-v1/INVENTORY.md`.
 This is the suggested dev sequence for the next parity passes (optimize for “high leverage” and
 “high risk”):
 
-1. `sonner` (toast/notification stacking + action surface)
-2. `toggle-group` (composite; keyboard expectations + part surface)
-3. `button-group` (variants helper + spacing defaults)
+1. `toggle-group` (composite; keyboard expectations + part surface)
+2. `button-group` (variants helper + spacing defaults)
+3. `button` / `toggle` variants helpers (copy/paste parity; reduce drift)
 4. **Defer last**: `select` / `combobox` deeper redesign (structural drift is known; deeper than naming)
 
 ## Tracker table
@@ -84,6 +84,7 @@ This is the suggested dev sequence for the next parity passes (optimize for “h
 | `context-menu` | `ContextMenu, Trigger, Portal, Content, Item, CheckboxItem, RadioItem, Label, Separator, Shortcut, Group, Sub, SubTrigger, SubContent, RadioGroup` | `ContextMenu` + `ContextMenuTrigger/Portal/Content` adapters + submenu helpers | Portal is a no-op wrapper; submenu parts are helpers over `ContextMenuItem::submenu(...)` | High | Keep closure API; expose part adapters + submenu helper parts; add diag script when UI gallery uses it | unit tests in `ecosystem/fret-ui-shadcn/src/context_menu.rs` | P0 | Done (with known gaps) |
 | `kbd` | `Kbd, KbdGroup, kbd_icon` | `Kbd, KbdGroup, kbd_icon` | none (token-mapped defaults) | Low | Keep surface; lock layout + typography invariants and tooltip slot alpha mapping | unit tests in `ecosystem/fret-ui-shadcn/src/kbd.rs` | P2 | Done |
 | `resizable` | `ResizablePanelGroup, ResizablePanel, ResizableHandle` | `ResizablePanelGroup, ResizablePanel, ResizableHandle` (+ `test_id_prefix`) | Per-handle disabling is ignored; omits `SetValue` steps when fractions are missing/degenerate | Low | Keep part surface; lock splitter semantics + orientation + `with_handle` hit thickness | unit tests in `ecosystem/fret-ui-shadcn/src/resizable.rs` | P1 | Done (with known gaps) |
+| `sonner` | `Toaster` | `Toaster` (+ `Sonner` toast API) | Defaults differ from Sonner DOM library in minor ways; focus/keyboard viewport commands live in `fret-ui-kit` | Low | Keep part surface; lock toaster layout neutrality and toast layer visibility gating | unit tests in `ecosystem/fret-ui-shadcn/src/sonner.rs` | P1 | Done (with known gaps) |
 
 ## Backlog (not audited yet)
 
@@ -91,7 +92,7 @@ This is the short “next few” list. Full inventory is in `INVENTORY.md`.
 
 | Component | Upstream base file | Fret module | Priority | Status | Notes |
 |---|---|---|---:|---|---|
-| `sonner` | `repo-ref/ui/apps/v4/registry/bases/radix/ui/sonner.tsx` | `ecosystem/fret-ui-shadcn/src/sonner.rs` | P1 | Not started | Gate: toast stack composition + action surface + deterministic test ids (if used in UI gallery). |
+| `toggle-group` | `repo-ref/ui/apps/v4/registry/bases/radix/ui/toggle-group.tsx` | `ecosystem/fret-ui-shadcn/src/toggle_group.rs` | P1 | Not started | Gate: roving focus + selection semantics + variant/size defaults. |
 
 ## Notes / recurring hazards
 
