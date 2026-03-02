@@ -184,8 +184,17 @@ impl Renderer {
             custom_effect_v1_passes_emitted: self.perf.custom_effect_v1_passes_emitted,
             custom_effect_v2_steps_requested: self.perf.custom_effect_v2_steps_requested,
             custom_effect_v2_passes_emitted: self.perf.custom_effect_v2_passes_emitted,
+            custom_effect_v2_user_image_incompatible_fallbacks: self
+                .perf
+                .custom_effect_v2_user_image_incompatible_fallbacks,
             custom_effect_v3_steps_requested: self.perf.custom_effect_v3_steps_requested,
             custom_effect_v3_passes_emitted: self.perf.custom_effect_v3_passes_emitted,
+            custom_effect_v3_user0_image_incompatible_fallbacks: self
+                .perf
+                .custom_effect_v3_user0_image_incompatible_fallbacks,
+            custom_effect_v3_user1_image_incompatible_fallbacks: self
+                .perf
+                .custom_effect_v3_user1_image_incompatible_fallbacks,
             custom_effect_v3_pyramid_cache_hits: self.perf.custom_effect_v3_pyramid_cache_hits,
             custom_effect_v3_pyramid_cache_misses: self.perf.custom_effect_v3_pyramid_cache_misses,
             clip_path_mask_cache_bytes_live: self.perf.clip_path_mask_cache_bytes_live,

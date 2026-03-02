@@ -373,6 +373,7 @@ struct LiquidGlassState {
     custom_grain_strength: Model<Vec<f32>>,
     custom_grain_scale: Model<Vec<f32>>,
 
+    custom_v3_dispersion: Model<Vec<f32>>,
     custom_v3_bevel_strength: Model<Vec<f32>>,
     custom_v3_bevel_angle_deg: Model<Vec<f32>>,
     custom_v3_bevel_secondary: Model<Vec<f32>>,
@@ -481,6 +482,7 @@ impl MvuProgram for LiquidGlassProgram {
             custom_grain_strength: app.models_mut().insert(vec![0.06]),
             custom_grain_scale: app.models_mut().insert(vec![1.0]),
 
+            custom_v3_dispersion: app.models_mut().insert(vec![0.55]),
             custom_v3_bevel_strength: app.models_mut().insert(vec![1.0]),
             custom_v3_bevel_angle_deg: app.models_mut().insert(vec![45.0]),
             custom_v3_bevel_secondary: app.models_mut().insert(vec![1.0]),
@@ -541,6 +543,9 @@ impl MvuProgram for LiquidGlassProgram {
             let _ = app
                 .models_mut()
                 .update(&st.custom_grain_scale, |v| *v = vec![1.0]);
+            let _ = app
+                .models_mut()
+                .update(&st.custom_v3_dispersion, |v| *v = vec![0.55]);
             let _ = app
                 .models_mut()
                 .update(&st.custom_v3_bevel_strength, |v| *v = vec![1.0]);
@@ -609,6 +614,7 @@ fn view(
     let show_custom_v3_model = st.show_custom_v3.clone();
     let custom_v3_pair_model = st.custom_v3_pair.clone();
     let custom_v3_source_group_model = st.custom_v3_source_group.clone();
+    let custom_v3_dispersion_model = st.custom_v3_dispersion.clone();
     let animate_model = st.animate.clone();
     let phase_speed_model = st.phase_speed.clone();
     let show_inspector_model = st.show_inspector.clone();
@@ -674,6 +680,7 @@ fn view(
     let custom_grain_strength = watch_first_f32(cx, &st.custom_grain_strength, 0.06);
     let custom_grain_scale = watch_first_f32(cx, &st.custom_grain_scale, 1.0);
 
+    let custom_v3_dispersion = watch_first_f32(cx, &st.custom_v3_dispersion, 0.55);
     let custom_v3_bevel_strength = watch_first_f32(cx, &st.custom_v3_bevel_strength, 0.0);
     let custom_v3_bevel_angle_deg = watch_first_f32(cx, &st.custom_v3_bevel_angle_deg, 45.0);
     let custom_v3_bevel_secondary = watch_first_f32(cx, &st.custom_v3_bevel_secondary, 1.0);
@@ -879,7 +886,7 @@ fn view(
         let refraction_height_px = custom_edge_falloff_px.clamp(0.0, 64.0);
         // Map the demo's warp strength to a more noticeable refraction amount.
         let refraction_amount_px = (warp_strength_px * 3.2 + 8.0).clamp(0.0, 96.0);
-        let dispersion = 0.55;
+        let dispersion = custom_v3_dispersion.clamp(0.0, 1.0);
         let noise_alpha = (custom_grain_strength * 0.2).clamp(0.0, 0.1);
         let max_sample_offset_px =
             crate::effect_authoring::custom_effect_v3_lens_max_sample_offset_px(
@@ -1791,6 +1798,27 @@ fn view(
                                     },
                                 );
 
+                                let custom_v3_dispersion_row = shadcn::stack::vstack(
+                                    cx,
+                                    shadcn::stack::VStackProps::default().gap(Space::N2),
+                                    |cx| {
+                                        vec![
+                                            label_row(
+                                                cx,
+                                                "CustomV3 dispersion",
+                                                format!("{custom_v3_dispersion:.2}"),
+                                            ),
+                                            shadcn::Slider::new(custom_v3_dispersion_model.clone())
+                                                .range(0.0, 1.0)
+                                                .step(0.01)
+                                                .into_element(cx)
+                                                .test_id(
+                                                    "liquid-glass-slider-custom-v3-dispersion",
+                                                ),
+                                        ]
+                                    },
+                                );
+
                                 let phase_row = shadcn::stack::vstack(
                                     cx,
                                     shadcn::stack::VStackProps::default().gap(Space::N2),
@@ -1962,6 +1990,7 @@ fn view(
                                             custom_v3_bevel_strength_row,
                                             custom_v3_bevel_angle_row,
                                             custom_v3_bevel_secondary_row,
+                                            custom_v3_dispersion_row,
                                             shadcn::Separator::new().into_element(cx),
                                             blur_row,
                                             downsample_row,

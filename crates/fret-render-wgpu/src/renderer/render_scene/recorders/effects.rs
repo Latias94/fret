@@ -848,6 +848,7 @@ pub(in super::super) fn record_custom_effect_v2_pass(
     );
     let dst_view = dst_view_owned.as_ref().unwrap_or(exec.target_view);
 
+    let mut input_incompatible = false;
     let input_view = pass
         .input_image
         .and_then(|id| {
@@ -859,9 +860,21 @@ pub(in super::super) fn record_custom_effect_v2_pass(
                 .contains(wgpu::TextureUsages::TEXTURE_BINDING);
             let ok_sample_type = format.sample_type(None, Some(exec.device.features()))
                 == Some(wgpu::TextureSampleType::Float { filterable: true });
-            (ok_usage && ok_sample_type).then_some(view)
+            if ok_usage && ok_sample_type {
+                Some(view)
+            } else {
+                input_incompatible = true;
+                None
+            }
         })
         .unwrap_or(&exec.renderer.globals.custom_effect_input_fallback_view);
+    if exec.perf_enabled && input_incompatible {
+        exec.frame_perf
+            .custom_effect_v2_user_image_incompatible_fallbacks = exec
+            .frame_perf
+            .custom_effect_v2_user_image_incompatible_fallbacks
+            .saturating_add(1);
+    }
 
     let input_sampler = match pass.input_sampling {
         fret_core::scene::ImageSamplingHint::Nearest => {
@@ -1288,6 +1301,7 @@ pub(in super::super) fn record_custom_effect_v3_pass(
     );
     let dst_view = dst_view_owned.as_ref().unwrap_or(exec.target_view);
 
+    let mut user0_incompatible = false;
     let user0_view = pass
         .user0_image
         .and_then(|id| {
@@ -1299,10 +1313,23 @@ pub(in super::super) fn record_custom_effect_v3_pass(
                 .contains(wgpu::TextureUsages::TEXTURE_BINDING);
             let ok_sample_type = format.sample_type(None, Some(exec.device.features()))
                 == Some(wgpu::TextureSampleType::Float { filterable: true });
-            (ok_usage && ok_sample_type).then_some(view)
+            if ok_usage && ok_sample_type {
+                Some(view)
+            } else {
+                user0_incompatible = true;
+                None
+            }
         })
         .unwrap_or(&exec.renderer.globals.custom_effect_input_fallback_view);
+    if exec.perf_enabled && user0_incompatible {
+        exec.frame_perf
+            .custom_effect_v3_user0_image_incompatible_fallbacks = exec
+            .frame_perf
+            .custom_effect_v3_user0_image_incompatible_fallbacks
+            .saturating_add(1);
+    }
 
+    let mut user1_incompatible = false;
     let user1_view = pass
         .user1_image
         .and_then(|id| {
@@ -1314,9 +1341,21 @@ pub(in super::super) fn record_custom_effect_v3_pass(
                 .contains(wgpu::TextureUsages::TEXTURE_BINDING);
             let ok_sample_type = format.sample_type(None, Some(exec.device.features()))
                 == Some(wgpu::TextureSampleType::Float { filterable: true });
-            (ok_usage && ok_sample_type).then_some(view)
+            if ok_usage && ok_sample_type {
+                Some(view)
+            } else {
+                user1_incompatible = true;
+                None
+            }
         })
         .unwrap_or(&exec.renderer.globals.custom_effect_input_fallback_view);
+    if exec.perf_enabled && user1_incompatible {
+        exec.frame_perf
+            .custom_effect_v3_user1_image_incompatible_fallbacks = exec
+            .frame_perf
+            .custom_effect_v3_user1_image_incompatible_fallbacks
+            .saturating_add(1);
+    }
 
     let user0_sampler = match pass.user0_sampling {
         fret_core::scene::ImageSamplingHint::Nearest => {

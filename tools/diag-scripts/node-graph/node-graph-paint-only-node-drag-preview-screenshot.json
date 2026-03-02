@@ -1,0 +1,55 @@
+{
+  "schema_version": 2,
+  "meta": {
+    "name": "Node graph (paint-only): node drag preview screenshots (canvas vs portals coupling)",
+    "tags": ["node-graph", "declarative", "paint-only", "drag", "screenshot"],
+    "required_capabilities": ["diag.script_v2", "diag.screenshot_png"],
+    "target_hints": [
+      "Run the `node_graph_demo` binary (it defaults to the paint-only declarative surface).",
+      "Requires `FRET_DIAG=1` (diagnostics-only shortcuts).",
+      "Requires `FRET_DIAG_GPU_SCREENSHOTS=1` to actually emit GPU screenshots.",
+      "Captures a before / mid-drag / after-commit screenshot to debug 'drag not following' reports."
+    ]
+  },
+  "steps": [
+    { "type": "press_key", "key": "escape" },
+    { "type": "wait_frames", "n": 5 },
+    {
+      "type": "wait_until",
+      "predicate": { "kind": "exists", "target": { "kind": "test_id", "id": "node_graph.canvas" } },
+      "timeout_frames": 600
+    },
+    { "type": "move_pointer", "target": { "kind": "test_id", "id": "node_graph.canvas" } },
+
+    { "type": "click", "target": { "kind": "test_id", "id": "node_graph.canvas" }, "button": "middle" },
+    { "type": "wait_frames", "n": 2 },
+
+    { "type": "press_key", "key": "4", "modifiers": { "ctrl": true } },
+    { "type": "wait_frames", "n": 10 },
+
+    { "type": "capture_bundle", "label": "node-graph-paint-only-node-drag-before" },
+    { "type": "capture_screenshot", "label": "node-graph-paint-only-node-drag-before" },
+
+    {
+      "type": "pointer_down",
+      "window": { "kind": "current" },
+      "target": { "kind": "test_id", "id": "node_graph.canvas" },
+      "button": "left"
+    },
+    { "type": "wait_until", "predicate": { "kind": "event_kind_seen", "event_kind": "pointer.down" }, "timeout_frames": 120 },
+    { "type": "pointer_move", "window": { "kind": "current" }, "delta_x": 120.0, "delta_y": 60.0, "steps": 12 },
+    { "type": "wait_until",
+      "predicate": { "kind": "value_contains", "target": { "kind": "test_id", "id": "node_graph.canvas" }, "text": "node_dragging:true;" },
+      "timeout_frames": 240
+    },
+
+    { "type": "capture_bundle", "label": "node-graph-paint-only-node-drag-mid" },
+    { "type": "capture_screenshot", "label": "node-graph-paint-only-node-drag-mid" },
+
+    { "type": "pointer_up", "window": { "kind": "current" } },
+    { "type": "wait_frames", "n": 10 },
+
+    { "type": "capture_bundle", "label": "node-graph-paint-only-node-drag-after-commit" },
+    { "type": "capture_screenshot", "label": "node-graph-paint-only-node-drag-after-commit" }
+  ]
+}

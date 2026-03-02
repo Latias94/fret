@@ -1442,6 +1442,52 @@
       ]
     },
     {
+      "id": "node-graph-paint-only-paint-overrides-revision-does-not-rebuild-geometry",
+      "path": "tools/diag-scripts/node-graph/node-graph-paint-only-paint-overrides-revision-does-not-rebuild-geometry.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "fret-examples-node-graph-paint-only"
+      ],
+      "tags": [
+        "cache",
+        "declarative",
+        "gate",
+        "node-graph",
+        "overrides",
+        "paint-only",
+        "paint"
+      ],
+      "target_hints": [
+        "Run with `FRET_NODE_GRAPH_DECLARATIVE=paint` so the paint-only declarative surface is active.",
+        "Requires `FRET_DIAG=1` (Ctrl+6 shortcut).",
+        "Asserts that paint override revision bumps do not rebuild derived geometry or draw caches."
+      ]
+    },
+    {
+      "id": "node-graph-paint-only-paint-overrides-screenshot",
+      "path": "tools/diag-scripts/node-graph/node-graph-paint-only-paint-overrides-screenshot.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "suite_memberships": [],
+      "tags": [
+        "declarative",
+        "node-graph",
+        "overrides",
+        "paint-only",
+        "paint",
+        "screenshot"
+      ],
+      "target_hints": [
+        "Run with `FRET_NODE_GRAPH_DECLARATIVE=paint` so the paint-only declarative surface is active.",
+        "Requires `FRET_DIAG=1` (Ctrl+6 shortcut).",
+        "Requires `FRET_DIAG_GPU_SCREENSHOTS=1` to emit GPU screenshots."
+      ]
+    },
+    {
       "id": "tooling-suite-prelude-reset-diagnostics",
       "path": "tools/diag-scripts/_prelude/tooling-suite-prelude-reset-diagnostics.json",
       "required_capabilities": [],
@@ -1893,7 +1939,6 @@
         "diag.script_v2"
       ],
       "suite_memberships": [
-        "ui-gallery-scroll-extents-dom-parity",
         "ui-gallery-shadcn-conformance"
       ],
       "tags": [
@@ -2553,6 +2598,16 @@
       ],
       "suite_memberships": [
         "ui-gallery-combobox"
+      ],
+      "tags": [],
+      "target_hints": []
+    },
+    {
+      "id": "ui-gallery-context-menu-occlusion-wheel-pass-through",
+      "path": "tools/diag-scripts/ui-gallery/overlay/ui-gallery-context-menu-occlusion-wheel-pass-through.json",
+      "required_capabilities": [],
+      "suite_memberships": [
+        "ui-gallery-overlay-steady"
       ],
       "tags": [],
       "target_hints": []
@@ -3470,11 +3525,31 @@
       "target_hints": []
     },
     {
+      "id": "ui-gallery-modal-barrier-focus-restore",
+      "path": "tools/diag-scripts/ui-gallery/overlay/ui-gallery-modal-barrier-focus-restore.json",
+      "required_capabilities": [],
+      "suite_memberships": [
+        "ui-gallery-overlay-steady"
+      ],
+      "tags": [],
+      "target_hints": []
+    },
+    {
       "id": "ui-gallery-modal-barrier-underlay-block",
       "path": "tools/diag-scripts/ui-gallery/overlay/ui-gallery-modal-barrier-underlay-block.json",
       "required_capabilities": [],
       "suite_memberships": [
         "ui-gallery"
+      ],
+      "tags": [],
+      "target_hints": []
+    },
+    {
+      "id": "ui-gallery-modal-barrier-wheel-block",
+      "path": "tools/diag-scripts/ui-gallery/overlay/ui-gallery-modal-barrier-wheel-block.json",
+      "required_capabilities": [],
+      "suite_memberships": [
+        "ui-gallery-overlay-steady"
       ],
       "tags": [],
       "target_hints": []
@@ -3551,6 +3626,26 @@
         "ui_gallery"
       ],
       "target_hints": []
+    },
+    {
+      "id": "ui-gallery-overlay-pointer-move-steady",
+      "path": "tools/diag-scripts/ui-gallery/perf/ui-gallery-overlay-pointer-move-steady.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "perf-ui-gallery-steady"
+      ],
+      "tags": [
+        "overlay",
+        "perf",
+        "pointer_move",
+        "steady",
+        "ui_gallery"
+      ],
+      "target_hints": [
+        "Perf probe: pointer-move dispatch/hit-test under overlay stacks (dispatch snapshot cost is included in dispatch time)."
+      ]
     },
     {
       "id": "ui-gallery-overlay-torture",
@@ -4271,7 +4366,6 @@
         "diag.script_v2"
       ],
       "suite_memberships": [
-        "ui-gallery-scroll-extents-dom-parity",
         "ui-gallery-shadcn-conformance"
       ],
       "tags": [
@@ -4597,6 +4691,49 @@
         "Opens the overflow menu.",
         "Selects a known tab entry from the overflow list.",
         "Asserts the tab becomes selected."
+      ]
+    },
+    {
+      "id": "workspace-shell-demo-tab-preview-commit-keeps-old-tab-smoke",
+      "path": "tools/diag-scripts/workspace/shell-demo/workspace-shell-demo-tab-preview-commit-keeps-old-tab-smoke.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "workspace-shell-demo"
+      ],
+      "tags": [
+        "commit",
+        "gate",
+        "preview",
+        "smoke",
+        "tabstrip",
+        "workspace"
+      ],
+      "target_hints": [
+        "Opens preview A, commits it, then opens preview B.",
+        "Asserts the committed preview remains as a normal tab and the new preview is marked as preview."
+      ]
+    },
+    {
+      "id": "workspace-shell-demo-tab-preview-replaces-existing-smoke",
+      "path": "tools/diag-scripts/workspace/shell-demo/workspace-shell-demo-tab-preview-replaces-existing-smoke.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "workspace-shell-demo"
+      ],
+      "tags": [
+        "gate",
+        "preview",
+        "smoke",
+        "tabstrip",
+        "workspace"
+      ],
+      "target_hints": [
+        "Clicks the demo-only debug controls to open preview A, then preview B.",
+        "Asserts the previous preview tab is replaced (removed) and the new one is marked as preview."
       ]
     },
     {

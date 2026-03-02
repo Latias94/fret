@@ -39,8 +39,10 @@ Suggested run commands (Windows-friendly):
 
 - [x] Define the declarative “surface” API (public) that does not expose retained types.
 - [x] Provide a declarative entrypoint that can host the current retained canvas internally.
-- [x] Add a demo A/B switch for declarative root vs retained demo (`FRET_NODE_GRAPH_DECLARATIVE=1`).
-- [x] Add a paint-only declarative skeleton surface (`FRET_NODE_GRAPH_DECLARATIVE=paint`).
+- [x] Split demos so the default path is declarative-first:
+  - `apps/fret-examples/src/node_graph_demo.rs` (paint-only declarative)
+  - `apps/fret-examples/src/node_graph_legacy_demo.rs` (legacy retained bridge, feature-gated)
+- [x] Add a paint-only declarative skeleton surface (hosted caches, revisioned keys).
 - [x] Implement `Canvas` paint pass for:
   - [x] grid/background
   - [x] edges (initial)
@@ -48,6 +50,9 @@ Suggested run commands (Windows-friendly):
 - [x] Introduce externalized render-data caches:
   - [x] stable key strategy (node/edge ids + view/style keys)
   - [x] cache invalidation by revision + viewport + scale factor (pan is paint-only)
+- [x] Reduce debug grid cache churn under pan:
+  - snap grid ops extents to grid indices (no per-pixel rebuild)
+  - key grid cache by snapped indices + theme-derived colors
 - [ ] Investigate “wire looks truncated / partially missing” reports in paint-only:
   - [ ] confirm whether it is viewport culling (`cull_margin_screen_px`) vs edge bbox math vs raster cache,
   - [x] add a regression artifact (render snapshot gate preferred; semantics proxy acceptable).
@@ -71,6 +76,8 @@ Suggested run commands (Windows-friendly):
 - [x] Wire `NodeGraphGeometryOverrides` into derived geometry + spatial index cache keys (revisioned).
 - [x] Wire `NodeGraphPaintOverrides` into paint-only rendering + add a diag gate (revision bump does not rebuild geometry):
   - `tools/diag-scripts/node-graph/node-graph-paint-only-paint-overrides-revision-does-not-rebuild-geometry.json` (Ctrl+6, requires `FRET_DIAG=1`)
+- [x] Add a screenshot repro for non-solid edge paint overrides:
+  - `tools/diag-scripts/node-graph/node-graph-paint-only-paint-overrides-screenshot.json` (Ctrl+6, requires `FRET_DIAG=1`, `FRET_DIAG_GPU_SCREENSHOTS=1`)
 
 ## M2 — Interaction + portals
 
@@ -78,6 +85,10 @@ Suggested run commands (Windows-friendly):
   - `tools/diag-scripts/node-graph/node-graph-paint-only-marquee-select-does-not-rebuild-geometry.json`
 - [x] Add a paint-only node dragging baseline + gate:
   - `tools/diag-scripts/node-graph/node-graph-paint-only-node-drag-preview-and-commit.json`
+- [x] Fix “drag not following” coupling gap under paint caching:
+  - Root cause: canvas node could replay cached ops while portal/layout updated.
+  - Evidence anchor: `ecosystem/fret-node/src/ui/declarative/paint_only.rs` (`CanvasPainter::observe_model_id`)
+  - Repro artifact (screenshots): `tools/diag-scripts/node-graph/node-graph-paint-only-node-drag-preview-screenshot.json`
 - [x] Add a paint-only Escape cancel baseline + gate:
   - `tools/diag-scripts/node-graph/node-graph-paint-only-node-drag-escape-cancel-does-not-commit.json`
 - [x] Add a paint-only PointerCancel baseline + gate:

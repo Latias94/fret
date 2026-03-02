@@ -5,7 +5,7 @@
     "tags": ["node-graph", "declarative", "paint-only", "pan", "cancel", "cache", "gate"],
     "required_capabilities": ["diag.script_v2"],
     "target_hints": [
-      "Run with `FRET_NODE_GRAPH_DECLARATIVE=paint` so the paint-only declarative surface is active.",
+      "Run the `node_graph_demo` binary (it defaults to the paint-only declarative surface).",
       "Asserts that panning becomes active, then a scripted PointerCancel clears the pan state.",
       "Verifies that cancel does not rebuild cached node/edge geometry render data."
     ]
@@ -109,4 +109,3 @@
     { "type": "capture_bundle", "label": "node-graph-paint-only-pan-pointer-cancel-does-not-rebuild-geometry" }
   ]
 }
-

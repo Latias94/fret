@@ -62,6 +62,11 @@ pub(crate) const STATS_LITE_SUPPORTED_CHECKS: &[StatsLiteCheckSupport] = &[
         note: "uses out-dir artifacts",
     },
     StatsLiteCheckSupport {
+        check_name: "check-pixels-unchanged",
+        kind: StatsLiteCheckKind::OutDirOnly,
+        note: "uses out-dir artifacts",
+    },
+    StatsLiteCheckSupport {
         check_name: "check-semantics-changed-repainted",
         kind: StatsLiteCheckKind::StreamingBundle,
         note: "streams bundle JSON; loads schema2 semantics table nodes for diffs",
@@ -173,6 +178,7 @@ mod tests {
         assert!(stats_lite_support_for("check-retained-vlist-attach-detach-max").is_some());
         assert!(stats_lite_support_for("check-view-cache-reuse-min").is_some());
         assert!(stats_lite_support_for("check-wheel-scroll").is_some());
+        assert!(stats_lite_support_for("check-pixels-unchanged").is_some());
         assert!(stats_lite_support_for("check-drag-cache-root-paint-only").is_some());
         assert!(stats_lite_support_for("check-not-a-real-check").is_none());
     }
@@ -186,6 +192,7 @@ mod tests {
             "check-stale-scene",
             "check-idle-no-paint-min",
             "check-pixels-changed",
+            "check-pixels-unchanged",
             "check-semantics-changed-repainted",
             "check-wheel-scroll",
             "check-wheel-scroll-hit-changes",

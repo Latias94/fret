@@ -100,6 +100,7 @@ pub(crate) fn cmd_repro(ctx: ReproCmdContext) -> Result<(), String> {
         check_triage_hint_absent_codes: _,
         check_overlay_synthesis_min,
         check_pixels_changed_test_id,
+        check_pixels_unchanged_test_id,
         check_prepaint_actions_min,
         check_retained_vlist_attach_detach_max,
         check_retained_vlist_keep_alive_budget,
@@ -221,6 +222,7 @@ pub(crate) fn cmd_repro(ctx: ReproCmdContext) -> Result<(), String> {
         &fs_transport_cfg,
         pack_defaults.2
             || check_pixels_changed_test_id.is_some()
+            || check_pixels_unchanged_test_id.is_some()
             || scripts.iter().any(|p| script_requests_screenshots(p)),
         launch_write_bundle_json,
         timeout_ms,
@@ -490,6 +492,7 @@ pub(crate) fn cmd_repro(ctx: ReproCmdContext) -> Result<(), String> {
                 || check_stale_scene_test_id.is_some()
                 || check_idle_no_paint_min.is_some()
                 || check_pixels_changed_test_id.is_some()
+                || check_pixels_unchanged_test_id.is_some()
                 || check_ui_gallery_code_editor_torture_marker_present
                 || check_ui_gallery_code_editor_torture_undo_redo
                 || check_ui_gallery_code_editor_torture_geom_fallbacks_low

@@ -31,7 +31,7 @@ fn rect_intersection(a: Rect, b: Rect) -> Option<Rect> {
 
 pub(super) fn handle_scroll_into_view_step(
     svc: &mut UiDiagnosticsService,
-    app: &App,
+    _app: &App,
     window: AppWindowId,
     window_bounds: Rect,
     step_index: usize,
@@ -95,7 +95,7 @@ pub(super) fn handle_scroll_into_view_step(
         },
     };
 
-    let _ = app;
+    let _ = _app;
     let container_node = select_semantics_node_with_trace(
         snapshot,
         window,

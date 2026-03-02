@@ -310,6 +310,68 @@ fn pointer_occlusion_block_mouse_suppresses_underlay_hit_dispatch_including_whee
 }
 
 #[test]
+fn modal_barrier_scoping_blocks_underlay_wheel_even_when_barrier_is_hit_test_inert() {
+    let window = AppWindowId::default();
+
+    let mut app = crate::test_host::TestHost::new();
+    let counts = Counts {
+        moves: app.models_mut().insert(0u32),
+        downs: app.models_mut().insert(0u32),
+        wheels: app.models_mut().insert(0u32),
+    };
+
+    let mut ui = UiTree::new();
+    ui.set_window(window);
+
+    let base = ui.create_node(CounterWidget {
+        counts: counts.clone(),
+    });
+    ui.set_root(base);
+
+    // A modal barrier layer that is hit-test-inert (e.g. during a close transition). The barrier
+    // must still scope wheel routing and prevent the underlay from receiving wheel events.
+    let barrier_root = ui.create_node(HitTestTransparent);
+    let _barrier_layer =
+        ui.push_overlay_root_ex(barrier_root, /* blocks_underlay_input */ true, false);
+
+    let mut services = FakeUiServices;
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(100.0), Px(100.0)),
+    );
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    let hit = ui.debug_hit_test(Point::new(Px(10.0), Px(10.0)));
+    assert_eq!(
+        hit.hit, None,
+        "expected modal barrier scoping to suppress underlay hit-testing",
+    );
+    assert_eq!(
+        hit.barrier_root,
+        Some(barrier_root),
+        "expected modal barrier scoping to be active"
+    );
+
+    ui.dispatch_event(
+        &mut app,
+        &mut services,
+        &Event::Pointer(PointerEvent::Wheel {
+            position: Point::new(Px(10.0), Px(10.0)),
+            delta: fret_core::Point::new(Px(0.0), Px(-10.0)),
+            modifiers: fret_core::Modifiers::default(),
+            pointer_id: fret_core::PointerId(0),
+            pointer_type: fret_core::PointerType::Mouse,
+        }),
+    );
+
+    assert_eq!(
+        app.models().get_copied(&counts.wheels).unwrap_or(0),
+        0,
+        "expected wheel to be scoped by the modal barrier and not reach the underlay",
+    );
+}
+
+#[test]
 fn pointer_occlusion_block_mouse_except_scroll_is_window_global_across_pointers() {
     let window = AppWindowId::default();
 
