@@ -2,7 +2,7 @@
 
 This tracker is **workstream-local**. It is not the global roadmap source of truth.
 
-Last audit snapshot: **2026-03-01**.
+Last audit snapshot: **2026-03-02**.
 
 ## How to use this tracker
 
@@ -24,6 +24,9 @@ Last audit snapshot: **2026-03-01**.
 
 | Component | Upstream parts (radix base) | Fret surface today | Gaps / drift | Footgun risk | Proposed refactor / additions | Gate | Priority | Status |
 |---|---|---|---|---:|---|---|---:|---|
+| `combobox` | `Combobox, ComboboxInput, ComboboxContent, ComboboxList, ComboboxItem, ComboboxGroup, ComboboxLabel, ComboboxCollection, ComboboxEmpty, ComboboxSeparator, ComboboxChips, ComboboxChip, ComboboxChipsInput, ComboboxTrigger, ComboboxValue, useComboboxAnchor` | `Combobox*` parts + chips surface (`combobox_chips.rs`) | Still a “recipe adapter” over `Popover + Command`; some upstream DOM affordances (focus/selectors) are approximated | Medium | Keep recipe adapter; lock part composition + provide copy/paste-friendly examples in UI gallery | existing unit tests + `web_vs_fret_overlay_*` combobox fixtures | P0 | In progress |
+| `carousel` | `Carousel, CarouselContent, CarouselItem, CarouselPrevious, CarouselNext, useCarousel` | `Carousel*` parts (+ embla integration) | Ensure `useCarousel` parity for controls enable/disable + orientation + keybinds | Medium | Keep embla-based mechanism; expose part surface + ensure UI gallery snippets match upstream docs | unit tests + diag script (TODO) | P1 | In progress |
+| `select` | `Select, SelectTrigger, SelectContent, SelectItem, SelectGroup, SelectLabel, SelectSeparator, SelectValue, SelectScrollUpButton, SelectScrollDownButton` | `Select*` recipe + adapters | Known gaps: search/combobox-like UX and complex keyboard/a11y behaviors | High | Defer deep parity until combobox surface is stable; then refactor `Select` to share primitives | fixture-driven conformance (planned) | P2 | Deferred (planned) |
 | `card` | `Card, CardHeader, CardTitle, CardDescription, CardAction, CardContent, CardFooter` (+ `size`) | `Card*` parts + `CardSize` + `card_sized` | `CardAction` styling override was missing; `size=sm` spacing drift | Low | Keep part surface; lock `size=sm` spacing + add safe builders (already landed) | unit tests in `ecosystem/fret-ui-shadcn/src/card.rs` | P0 | Done |
 | `direction` | `DirectionProvider, useDirection` | `DirectionProvider, useDirection` (+ `use_direction` alias) | none (alias provided for copy/paste parity) | Low | Keep as thin wrappers; treat this as the shadcn-aligned entrypoint | unit tests in `ecosystem/fret-ui-shadcn/src/direction.rs` | P2 | Done |
 | `breadcrumb` | `Breadcrumb, BreadcrumbList, BreadcrumbItem, BreadcrumbLink, BreadcrumbPage, BreadcrumbSeparator, BreadcrumbEllipsis` | `Breadcrumb` recipe builder + re-exported primitives (`BreadcrumbList/Link/Page/Ellipsis`) | Root part name conflicts (`Breadcrumb` recipe vs upstream `Breadcrumb` root part) | Low | Keep recipe as-is; keep primitives available for upstream-shaped composition | unit tests in `ecosystem/fret-ui-shadcn/src/breadcrumb.rs` | P2 | Done (with known gaps) |
