@@ -27,8 +27,7 @@ See also: `docs/workstreams/shadcn-part-surface-alignment-v1/INVENTORY.md`.
 This is the suggested dev sequence for the next parity passes (optimize for “high leverage” and
 “high risk”):
 
-1. `button` / `toggle` variants helpers (copy/paste parity; reduce drift)
-2. **Defer last**: `select` / `combobox` deeper redesign (structural drift is known; deeper than naming)
+1. **Defer last**: `select` / `combobox` deeper redesign (structural drift is known; deeper than naming)
 
 ## Tracker table
 
@@ -85,14 +84,16 @@ This is the suggested dev sequence for the next parity passes (optimize for “h
 | `sonner` | `Toaster` | `Toaster` (+ `Sonner` toast API) | Defaults differ from Sonner DOM library in minor ways; focus/keyboard viewport commands live in `fret-ui-kit` | Low | Keep part surface; lock toaster layout neutrality and toast layer visibility gating | unit tests in `ecosystem/fret-ui-shadcn/src/sonner.rs` | P1 | Done (with known gaps) |
 | `toggle-group` | `ToggleGroup, ToggleGroupItem` | `ToggleGroup, ToggleGroupItem` (+ `spacing: Space`, `ToggleVariant/ToggleSize` pass-through) | No DOM `data-*` attrs / selectors; vertical orientation now stretches items to match shadcn | Low | Keep surface; lock w-fit root + gap and vertical `items-stretch` via unit tests | unit tests in `ecosystem/fret-ui-shadcn/src/toggle_group.rs` | P1 | Done (with known gaps) |
 | `button-group` | `ButtonGroup, ButtonGroupText, ButtonGroupSeparator, buttonGroupVariants` | `ButtonGroup*` parts + `buttonGroupVariants(...)` | No DOM `data-slot` selectors; separator margins are modeled as explicit layout defaults | Low | Keep part surface; lock w-fit root + stretch + border/corner merging and separator `mx/my-px` defaults via unit tests | unit tests in `ecosystem/fret-ui-shadcn/src/button_group.rs` | P1 | Done (with known gaps) |
+| `button` | `Button, buttonVariants` | `Button` + `buttonVariants(...)` | No DOM `data-*` attrs / selectors; link behavior is modeled via `ButtonRender::Link` | Low | Keep surface; lock shrink-0, disabled focusability, icon sizing, and focus-ring/border outcomes via unit tests | unit tests in `ecosystem/fret-ui-shadcn/src/button.rs` | P1 | Done (with known gaps) |
+| `toggle` | `Toggle, toggleVariants` | `Toggle` + `toggleVariants(...)` | No DOM `data-*` attrs / selectors | Low | Keep surface; lock uncontrolled pressed defaults, semantics stamping, and command gating via unit tests | unit tests in `ecosystem/fret-ui-shadcn/src/toggle.rs` | P1 | Done (with known gaps) |
 
-## Backlog (not audited yet)
+## Backlog (next up)
 
 This is the short “next few” list. Full inventory is in `INVENTORY.md`.
 
 | Component | Upstream base file | Fret module | Priority | Status | Notes |
 |---|---|---|---:|---|---|
-| `button` | `repo-ref/ui/apps/v4/registry/bases/radix/ui/button.tsx` | `ecosystem/fret-ui-shadcn/src/button.rs` | P1 | Not started | Gate: variants helper (`buttonVariants`) default constraints (`w-full`, `min-w-0`) and icon sizing. |
+| `select` / `combobox` deep redesign | (see per-module refs) | `ecosystem/fret-ui-shadcn/src/select.rs` / `ecosystem/fret-ui-shadcn/src/combobox.rs` | P0 | Deferred (planned) | Structural drift is known; keep for last (see existing unit tests as behavior baselines). |
 
 ## Notes / recurring hazards
 

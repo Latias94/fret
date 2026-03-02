@@ -17,8 +17,7 @@ without having to grep the whole crate.
 
 ## Recommended next audit order (dev sequence)
 
-1. `button` / `toggle` (variants helpers parity; ensure copy/paste authoring stays stable)
-2. **Defer last**: `select` / `combobox` deeper redesign (structural drift is known and deeper than “just names”)
+1. **Defer last**: `select` / `combobox` deeper redesign (structural drift is known and deeper than “just names”)
 
 ## Inventory table (upstream radix base → Fret module)
 
@@ -31,7 +30,7 @@ without having to grep the whole crate.
 | `avatar` | `repo-ref/ui/apps/v4/registry/bases/radix/ui/avatar.tsx` | `ecosystem/fret-ui-shadcn/src/avatar.rs` | parts | No | Yes | Size scope footgun candidates. |
 | `badge` | `repo-ref/ui/apps/v4/registry/bases/radix/ui/badge.tsx` | `ecosystem/fret-ui-shadcn/src/badge.rs` | parts | No | Yes | Variant fg + shrink-0 + overflow clip are gated by unit tests. |
 | `breadcrumb` | `repo-ref/ui/apps/v4/registry/bases/radix/ui/breadcrumb.tsx` | `ecosystem/fret-ui-shadcn/src/breadcrumb.rs` | recipe (+ primitive aliases) | No | Yes | Root name conflict (`Breadcrumb` recipe vs upstream root part). |
-| `button` | `repo-ref/ui/apps/v4/registry/bases/radix/ui/button.tsx` | `ecosystem/fret-ui-shadcn/src/button.rs` | parts | No | No | Has `buttonVariants(...)` mapping; not tracked as a component row (yet). |
+| `button` | `repo-ref/ui/apps/v4/registry/bases/radix/ui/button.tsx` | `ecosystem/fret-ui-shadcn/src/button.rs` | parts | No | Yes | Unit tests lock shrink-0, icon sizing, and disabled focusability outcomes. |
 | `button-group` | `repo-ref/ui/apps/v4/registry/bases/radix/ui/button-group.tsx` | `ecosystem/fret-ui-shadcn/src/button_group.rs` | parts | No | Yes | Unit tests lock merged borders/corners and separator margin defaults. |
 | `calendar` | `repo-ref/ui/apps/v4/registry/bases/radix/ui/calendar.tsx` | `ecosystem/fret-ui-shadcn/src/calendar.rs` | parts | No | No | Calendar variants live in multiple modules (`calendar_*`). |
 | `card` | `repo-ref/ui/apps/v4/registry/bases/radix/ui/card.tsx` | `ecosystem/fret-ui-shadcn/src/card.rs` | parts | No | Yes | Includes `CardSize` support. |
@@ -76,7 +75,7 @@ without having to grep the whole crate.
 | `table` | `repo-ref/ui/apps/v4/registry/bases/radix/ui/table.tsx` | `ecosystem/fret-ui-shadcn/src/table.rs` | parts | No | Yes | `ScrollArea(axis=X)` wrapper is best-effort; unit tests lock width defaults + border clearing. |
 | `tabs` | `repo-ref/ui/apps/v4/registry/bases/radix/ui/tabs.tsx` | `ecosystem/fret-ui-shadcn/src/tabs.rs` | parts (+ helper) | No | Yes | Part surface + style helper are tracked as “Done (with known gaps)”. |
 | `textarea` | `repo-ref/ui/apps/v4/registry/bases/radix/ui/textarea.tsx` | `ecosystem/fret-ui-shadcn/src/textarea.rs` | parts | No | Yes | Shadow wrapper + resize handle policy are gated by unit tests. |
-| `toggle` | `repo-ref/ui/apps/v4/registry/bases/radix/ui/toggle.tsx` | `ecosystem/fret-ui-shadcn/src/toggle.rs` | parts (+ helper) | No | No | Has `toggleVariants(...)` mapping; not audited yet. |
+| `toggle` | `repo-ref/ui/apps/v4/registry/bases/radix/ui/toggle.tsx` | `ecosystem/fret-ui-shadcn/src/toggle.rs` | parts (+ helper) | No | Yes | Unit tests lock uncontrolled defaults, semantics stamping, and command gating outcomes. |
 | `toggle-group` | `repo-ref/ui/apps/v4/registry/bases/radix/ui/toggle-group.tsx` | `ecosystem/fret-ui-shadcn/src/toggle_group.rs` | parts | No | Yes | Unit tests lock shadcn-aligned root sizing + gap and vertical stretch behavior. |
 | `tooltip` | `repo-ref/ui/apps/v4/registry/bases/radix/ui/tooltip.tsx` | `ecosystem/fret-ui-shadcn/src/tooltip.rs` | parts | No | Yes | Inherited defaults + max width are gated by unit tests. |
 
