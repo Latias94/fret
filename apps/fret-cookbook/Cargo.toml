@@ -26,3 +26,5 @@ fret-undo = { path = "../../ecosystem/fret-undo" }
 fret-canvas = { path = "../../ecosystem/fret-canvas", default-features = false, features = ["ui"] }
 fret-docking = { path = "../../ecosystem/fret-docking", default-features = false, features = ["ui"] }
 fret-bootstrap = { path = "../../ecosystem/fret-bootstrap", default-features = false, features = ["ui-app-driver", "diagnostics", "ui-assets", "icons-ui-semantic-lucide"] }
+fret-chart = { path = "../../ecosystem/fret-chart" }
+delinea = { path = "../../ecosystem/delinea" }

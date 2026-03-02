@@ -1,0 +1,93 @@
+{
+  "schema_version": 2,
+  "meta": {
+    "name": "cookbook-chart-interactions-basics-smoke",
+    "required_capabilities": ["diag.script_v2", "diag.screenshot_png"],
+    "tags": ["cookbook", "chart", "data_viz", "smoke"]
+  },
+  "steps": [
+    { "type": "reset_diagnostics" },
+    { "type": "set_window_inner_size", "width_px": 1120.0, "height_px": 780.0 },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "cookbook.chart_interactions_basics.root" }
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "semantics_numeric_approx_eq",
+        "target": { "kind": "test_id", "id": "cookbook.chart_interactions_basics.x_span" },
+        "field": "value",
+        "value": 11.0,
+        "eps": 0.02
+      },
+      "timeout_frames": 240
+    },
+    { "type": "click", "target": { "kind": "test_id", "id": "cookbook.chart_interactions_basics.zoom_in" } },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "semantics_numeric_approx_eq",
+        "target": { "kind": "test_id", "id": "cookbook.chart_interactions_basics.x_span" },
+        "field": "value",
+        "value": 5.5,
+        "eps": 0.02
+      },
+      "timeout_frames": 240
+    },
+    { "type": "click", "target": { "kind": "test_id", "id": "cookbook.chart_interactions_basics.zoom_in" } },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "semantics_numeric_approx_eq",
+        "target": { "kind": "test_id", "id": "cookbook.chart_interactions_basics.x_span" },
+        "field": "value",
+        "value": 2.75,
+        "eps": 0.02
+      },
+      "timeout_frames": 240
+    },
+    { "type": "click", "target": { "kind": "test_id", "id": "cookbook.chart_interactions_basics.zoom_out" } },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "semantics_numeric_approx_eq",
+        "target": { "kind": "test_id", "id": "cookbook.chart_interactions_basics.x_span" },
+        "field": "value",
+        "value": 5.5,
+        "eps": 0.02
+      },
+      "timeout_frames": 240
+    },
+    { "type": "click", "target": { "kind": "test_id", "id": "cookbook.chart_interactions_basics.reset_view" } },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "semantics_numeric_approx_eq",
+        "target": { "kind": "test_id", "id": "cookbook.chart_interactions_basics.x_span" },
+        "field": "value",
+        "value": 11.0,
+        "eps": 0.02
+      },
+      "timeout_frames": 240
+    },
+    { "type": "move_pointer", "target": { "kind": "test_id", "id": "cookbook.chart_interactions_basics.canvas" } },
+    {
+      "type": "drag_pointer",
+      "target": { "kind": "test_id", "id": "cookbook.chart_interactions_basics.canvas" },
+      "button": "left",
+      "delta_x": 120.0,
+      "delta_y": 0.0,
+      "steps": 10
+    },
+    { "type": "wheel", "target": { "kind": "test_id", "id": "cookbook.chart_interactions_basics.canvas" }, "delta_y": -240.0 },
+    { "type": "wait_frames", "n": 10 },
+    { "type": "capture_screenshot", "label": "cookbook-chart-interactions-basics-smoke" },
+    { "type": "capture_bundle", "label": "cookbook-chart-interactions-basics-smoke" }
+  ]
+}
+

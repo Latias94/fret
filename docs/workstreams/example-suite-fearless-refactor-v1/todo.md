@@ -61,6 +61,7 @@ Goal: create a lightweight, user-facing cookbook that does not pull “everythin
   - [x] async inbox + cancellation (`async_inbox_basics`)
   - [x] markdown + code (`markdown_and_code_basics`)
   - [x] effects layer basics (`effects_layer_basics`)
+  - [x] chart interactions basics (`chart_interactions_basics`)
 
 Gates:
 

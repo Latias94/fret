@@ -203,7 +203,7 @@ Legend:
 | customv2 | 4 | Renderer | custom effects | Lab | ✅ | ✅ | CustomV2 authoring + presets | script-driven repro |
 | customv3-pass-graph | 4 | Renderer | custom effects | Lab | ✅ | ✅ | CustomV3 pass planning semantics | script + perf attribution |
 | node-graph-basics | 3 | App | canvas | Example | ✅ | ⛔ | node graph navigation + selection | screenshot gate |
-| charts-plot | 3 | App | viz | Example | ✅ | ✅ | charts/plot interactions | screenshot + drag script |
+| cookbook.chart_interactions_basics | 3 | App | viz | Example | ✅ | ✅ | charts interactions | screenshot + drag script |
 | inspector-and-diag | 3 | Maint | diagnostics | Harness | ✅ | ✅ | inspector + bundle export | `fretboard diag` docs gate |
 
 Notes:

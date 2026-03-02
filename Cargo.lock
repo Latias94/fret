@@ -1886,10 +1886,12 @@ name = "fret-cookbook"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "delinea",
  "fret",
  "fret-app",
  "fret-bootstrap",
  "fret-canvas",
+ "fret-chart",
  "fret-code-view",
  "fret-core",
  "fret-docking",
