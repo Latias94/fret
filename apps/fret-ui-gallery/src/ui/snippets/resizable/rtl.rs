@@ -1,3 +1,5 @@
+pub const SOURCE: &str = include_str!("rtl.rs");
+
 // region: example
 use fret_core::Axis;
 use fret_ui_kit::primitives::direction::{LayoutDirection, with_direction_provider};
@@ -22,7 +24,11 @@ fn box_group<H: UiHost>(
     cx.container(props, move |_cx| [body])
 }
 
-fn panel<H: UiHost>(cx: &mut ElementContext<'_, H>, label: &'static str, height: Option<Px>) -> AnyElement {
+fn panel<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    label: &'static str,
+    height: Option<Px>,
+) -> AnyElement {
     let layout = match height {
         Some(h) => LayoutRefinement::default().w_full().h_px(h),
         None => LayoutRefinement::default().w_full().h_full(),
@@ -37,11 +43,8 @@ fn panel<H: UiHost>(cx: &mut ElementContext<'_, H>, label: &'static str, height:
         move |cx| vec![shadcn::typography::small(cx, label)],
     );
 
-    let props = decl_style::container_props(
-        cx.theme(),
-        ChromeRefinement::default().p(Space::N6),
-        layout,
-    );
+    let props =
+        decl_style::container_props(cx.theme(), ChromeRefinement::default().p(Space::N6), layout);
     cx.container(props, move |_cx| [body])
 }
 
@@ -92,4 +95,3 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
     .test_id("ui-gallery-resizable-rtl")
 }
 // endregion: example
-

@@ -1,3 +1,5 @@
+pub const SOURCE: &str = include_str!("vertical.rs");
+
 // region: example
 use fret_core::Axis;
 use fret_ui_shadcn::{self as shadcn, prelude::*};
@@ -67,4 +69,3 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
     .test_id("ui-gallery-resizable-vertical")
 }
 // endregion: example
-
