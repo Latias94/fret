@@ -90,6 +90,7 @@ pub(super) fn handle_window_effect_steps(
             let trigger_path = svc.cfg.out_dir.join("cursor_screen_pos.touch");
             let _ = std::fs::create_dir_all(&svc.cfg.out_dir);
             if std::fs::write(text_path, payload).is_ok() && touch_file(&trigger_path).is_ok() {
+                active.last_explicit_cursor_override = Some(CursorOverrideTarget::ScreenPhysical);
                 active.wait_until = None;
                 active.screenshot_wait = None;
                 active.next_step = active.next_step.saturating_add(1);
@@ -123,6 +124,8 @@ pub(super) fn handle_window_effect_steps(
                 let trigger_path = svc.cfg.out_dir.join("cursor_screen_pos.touch");
                 let _ = std::fs::create_dir_all(&svc.cfg.out_dir);
                 if std::fs::write(text_path, payload).is_ok() && touch_file(&trigger_path).is_ok() {
+                    active.last_explicit_cursor_override =
+                        Some(CursorOverrideTarget::WindowClientPhysical(target_window));
                     active.wait_until = None;
                     active.screenshot_wait = None;
                     active.next_step = active.next_step.saturating_add(1);
@@ -162,6 +165,8 @@ pub(super) fn handle_window_effect_steps(
                 )
                 .is_ok()
                 {
+                    active.last_explicit_cursor_override =
+                        Some(CursorOverrideTarget::WindowClientLogical(target_window));
                     active.wait_until = None;
                     active.screenshot_wait = None;
                     active.next_step = active.next_step.saturating_add(1);
@@ -190,7 +195,11 @@ pub(super) fn handle_window_effect_steps(
             middle,
         } => {
             let resolved_window = if let Some(target_window) = target_window.as_ref() {
-                svc.resolve_window_target_for_active_step(window, anchor_window, Some(target_window))
+                svc.resolve_window_target_for_active_step(
+                    window,
+                    anchor_window,
+                    Some(target_window),
+                )
             } else {
                 None
             };

@@ -76,6 +76,7 @@ impl UiDiagnosticsService {
             overlay_placement_trace: Vec::new(),
             web_ime_trace: Vec::new(),
             ime_event_trace: Vec::new(),
+            last_explicit_cursor_override: None,
         };
 
         // Avoid leaking clipboard responses across runs. Script steps that assert clipboard state
