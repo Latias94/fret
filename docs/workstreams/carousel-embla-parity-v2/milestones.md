@@ -59,6 +59,11 @@ Outcome:
 
 - `loop=true` is no longer “wrap selection”; it is a continuous loop engine.
 
+Follow-ups (deeper parity):
+
+- Port Embla `SlideLooper` “gap fitting” semantics for non-uniform slide sizes and stable recycling.
+- Implement Embla `canLoop` downgrade behavior (loop requested, but disabled when content cannot loop).
+
 Risks / notes:
 
 - Must avoid duplicate semantics/test ids.

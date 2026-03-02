@@ -76,10 +76,12 @@ Gates:
 
 - Implement scroll looper + slide looper translation wrapping.
 - Ensure hit-testing + semantics remain stable (no duplicate `test_id`).
+- Deepen parity by porting Embla `SlideLooper` gap-fitting behavior and `canLoop` downgrade semantics.
 
 Gates:
 
 - Loop continuity diag: N swipes never reaches an “end” state; visual continuity maintained.
+  - Optional additional gate: loop requested but `canLoop=false` behaves like loop disabled.
 
 ## Step 5 — Slides in view + focus + breakpoints (optional, 5–10 days)
 

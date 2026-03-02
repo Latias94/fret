@@ -157,6 +157,28 @@ Not implemented / not applicable (expected gaps for native retained UI):
     - `cargo test -p fret-ui-headless` (loop + slide looper unit tests)
     - `tools/diag-scripts/ui-gallery/carousel/ui-gallery-carousel-loop-continuity-touch-gate.json`
 
+#### Deeper loop parity (Embla SlideLooper / canLoop)
+
+- [ ] CAR2-141 Port Embla `SlideLooper` “gap fitting” semantics (beyond `±content_size` nearest wrap).
+  - Outcome:
+    - loop points pick the same slides Embla would recycle across the edges
+    - translation decisions are stable under resize and non-uniform slide sizes
+  - Upstream:
+    - `repo-ref/embla-carousel/packages/embla-carousel/src/components/SlideLooper.ts`
+    - `repo-ref/embla-carousel/packages/embla-carousel/src/components/SlideSizes.ts`
+  - In-tree target:
+    - `ecosystem/fret-ui-headless/src/embla/slide_looper.rs`
+- [ ] CAR2-142 Implement Embla `canLoop` downgrade semantics.
+  - Embla behavior: `loop=true` in options is ignored if `!engine.slideLooper.canLoop()`.
+  - In-tree target:
+    - Headless: `ecosystem/fret-ui-headless/src/embla/slide_looper.rs` (`can_loop`)
+    - Recipe: `ecosystem/fret-ui-shadcn/src/carousel.rs` (effective_loop_enabled)
+- [ ] CAR2-143 Add unit tests for loop points on non-uniform slide sizes + gaps.
+  - Gate: `cargo nextest run -p fret-ui-headless` (new `slide_looper_*` tests)
+- [ ] CAR2-144 (Optional) Add a diag gate for “loop requested but canLoop=false” behavior.
+  - Outcome: loop=true configuration behaves like loop=false (no visual wrap/translates).
+  - Gate: new `tools/diag-scripts/ui-gallery/carousel/...` script promoted into the loop suite.
+
 ### Slides in view
 
 - [x] CAR2-150 Implement `slidesInView` with `inViewThreshold` + `inViewMargin`.

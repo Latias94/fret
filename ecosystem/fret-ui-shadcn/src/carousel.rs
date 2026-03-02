@@ -1344,11 +1344,28 @@ impl Carousel {
                                     scroll_snaps.push(0.0);
                                 }
 
+                                let can_loop = cx
+                                    .app
+                                    .models_mut()
+                                    .read(&slides_model, |slides| {
+                                        let slides = slides
+                                            .iter()
+                                            .map(|s| headless_embla::slide_looper::Slide1D {
+                                                start: s.start.0,
+                                                size: s.size.0,
+                                            })
+                                            .collect::<Vec<_>>();
+                                        headless_embla::slide_looper::can_loop(&slides, view_size)
+                                    })
+                                    .ok()
+                                    .unwrap_or(false);
+                                let loop_enabled = options.loop_enabled && can_loop;
+
                                 let mut engine = headless_embla::engine::Engine::new(
                                     scroll_snaps,
                                     content_size,
                                     headless_embla::engine::EngineConfig {
-                                        loop_enabled: options.loop_enabled,
+                                        loop_enabled,
                                         drag_free: options.drag_free,
                                         skip_snaps: options.skip_snaps,
                                         duration: options.embla_duration.max(0.0),
@@ -2501,12 +2518,16 @@ impl Carousel {
                         size: s.size.0,
                     })
                     .collect::<Vec<_>>();
-                headless_embla::slide_looper::compute_slide_translates(
-                    &slides,
-                    axis_offset.0,
-                    content_size_prev,
-                    view_size_prev.0,
-                )
+                if headless_embla::slide_looper::can_loop(&slides, view_size_prev.0) {
+                    headless_embla::slide_looper::compute_slide_translates(
+                        &slides,
+                        axis_offset.0,
+                        content_size_prev,
+                        view_size_prev.0,
+                    )
+                } else {
+                    Vec::new()
+                }
             } else {
                 Vec::new()
             };
@@ -2856,6 +2877,24 @@ impl Carousel {
                                 let cur = cx.watch_model(&offset_model).copied().unwrap_or(Px(0.0));
                                 let start_snap = cx.watch_model(&index_model).copied().unwrap_or(0);
 
+                                let loop_enabled = if options.loop_enabled {
+                                    let slides_prev: Arc<[headless_carousel::CarouselSlide1D]> = cx
+                                        .watch_model(&slides_model)
+                                        .layout()
+                                        .cloned()
+                                        .unwrap_or_else(|| Arc::from(Vec::<headless_carousel::CarouselSlide1D>::new()));
+                                    let slides = slides_prev
+                                        .iter()
+                                        .map(|s| headless_embla::slide_looper::Slide1D {
+                                            start: s.start.0,
+                                            size: s.size.0,
+                                        })
+                                        .collect::<Vec<_>>();
+                                    headless_embla::slide_looper::can_loop(&slides, view_size_now.0.max(0.0))
+                                } else {
+                                    false
+                                };
+
                                 let mut next_selected = None;
                                 let mut next_offset = None;
                                 let _ = cx.app.models_mut().update(&embla_engine_model, |v| {
@@ -2880,7 +2919,7 @@ impl Carousel {
                                         scroll_snaps,
                                         content_size,
                                         headless_embla::engine::EngineConfig {
-                                            loop_enabled: options.loop_enabled,
+                                            loop_enabled,
                                             drag_free: options.drag_free,
                                             skip_snaps: options.skip_snaps,
                                             duration: 0.0,
