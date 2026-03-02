@@ -5,14 +5,16 @@ This tracker scopes the **Material 3** portion of UI Gallery.
 Status (2026-03-02):
 
 - shadcn + AI Elements pages are snippet-backed (Preview ≡ Code).
-- Material 3 pages are still implemented as legacy previews under `apps/fret-ui-gallery/src/ui/previews/material3/**`
-  and are **not** snippet-backed yet.
+- Material 3 pages are now snippet-backed (Preview ≡ Code), but still implemented as legacy previews under
+  `apps/fret-ui-gallery/src/ui/previews/material3/**` (tracker currently uses `Partial` for these).
 
 Goal:
 
 - Migrate Material 3 pages to the same snippet-backed contract:
   - Preview renders compiled Rust snippet code.
   - Code tab displays `include_str!` of that same snippet file (drift-free).
+  - Then migrate legacy preview pages into `apps/fret-ui-gallery/src/ui/pages/**` so the `previews/material3/**`
+    layer can be deleted incrementally.
 
 References (reading aids):
 
