@@ -160,8 +160,8 @@ AndroidLiquidGlass reference anchors (for parity comparisons):
 Parity notes (intentional / known drifts):
 
 - Dispersion sign: Android’s dispersion intensity uses the signed `(centered.x * centered.y) / (half.x * half.y)` term.
-  The demo WGSL currently uses `abs(...)`, which makes dispersion symmetric across quadrants. This is a look choice; if
-  we want closer parity, drop `abs` (authoring-only change).
+  The demo WGSL matches this sign behavior (no `abs`), so dispersion direction flips across quadrants (authoring-only,
+  parity-oriented choice).
 - Corner radii: Android’s rounded-rect shader assumes a per-corner radii vector; the demo uses a uniform radius.
   This avoids observable drift today, but we should keep the `radius_at(centered, radii)` helper correct for future
   non-uniform radii authoring.
@@ -174,9 +174,16 @@ Anchors:
 - `apps/fret-examples/src/liquid_glass_demo.rs` (CustomV3 chain + bevel controls + optional backdrop source group)
 - Diagnostics suites:
   - `tools/diag-scripts/suites/liquid-glass-custom-v3/`
+    - Dispersion baseline script: `tools/diag-scripts/suites/liquid-glass-custom-v3/liquid-glass-lens-custom-v3-dispersion-screenshot.json`
   - `tools/diag-scripts/suites/liquid-glass-custom-v3-degraded/`
   - `tools/diag-scripts/suites/liquid-glass-custom-v3-sources-degraded/`
   - `tools/diag-scripts/suites/perf-liquid-glass-custom-v3-steady/`
+
+Repro note (local evidence; do not check in the bundle):
+
+- `cargo run -p fretboard -- diag run tools/diag-scripts/suites/liquid-glass-custom-v3/liquid-glass-lens-custom-v3-dispersion-screenshot.json --dir target/fret-diag/lg-v3-dispersion --session-auto --launch -- cargo run -p fret-demo --bin liquid_glass_demo`
+- `cargo run -p fretboard -- diag latest --dir target/fret-diag/lg-v3-dispersion`
+- `cargo run -p fretboard -- diag triage <bundle_dir> --warmup-frames 0 --json --out target/fret-diag/lg-v3-dispersion/triage.liquid-glass-lens-custom-v3-dispersion.json`
 
 ### Known gaps / intentional differences
 
