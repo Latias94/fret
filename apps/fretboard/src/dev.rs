@@ -569,8 +569,13 @@ pub(crate) fn dev_native(args: Vec<String>) -> Result<(), String> {
         cargo_features.push("hotpatch");
         cmd.env("FRET_HOTPATCH", "1");
     }
-    if matches!(bin.as_str(), "node_graph_demo" | "node_graph_domain_demo") {
+    if matches!(bin.as_str(), "node_graph_demo") {
         cargo_features.push("node-graph-demos");
+    } else if matches!(
+        bin.as_str(),
+        "node_graph_domain_demo" | "node_graph_legacy_demo" | "imui_node_graph_demo"
+    ) {
+        cargo_features.push("node-graph-demos-legacy");
     }
     let cargo_features = cargo_features.join(",");
     if !cargo_features.is_empty() {
@@ -1352,8 +1357,13 @@ fn dev_native_hotpatch_dx(
     }
 
     let mut cargo_features: Vec<&str> = vec!["hotpatch"];
-    if matches!(bin, "node_graph_demo" | "node_graph_domain_demo") {
+    if matches!(bin, "node_graph_demo") {
         cargo_features.push("node-graph-demos");
+    } else if matches!(
+        bin,
+        "node_graph_domain_demo" | "node_graph_legacy_demo" | "imui_node_graph_demo"
+    ) {
+        cargo_features.push("node-graph-demos-legacy");
     }
     let cargo_features = cargo_features.join(",");
 

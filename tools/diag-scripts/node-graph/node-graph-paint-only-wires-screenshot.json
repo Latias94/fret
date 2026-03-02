@@ -5,7 +5,7 @@
     "tags": ["node-graph", "declarative", "paint-only", "wires", "screenshot"],
     "required_capabilities": ["diag.script_v2", "diag.screenshot_png"],
     "target_hints": [
-      "Run with `FRET_NODE_GRAPH_DECLARATIVE=paint` so the paint-only declarative surface is active.",
+      "Run the `node_graph_demo` binary (it defaults to the paint-only declarative surface).",
       "Requires `FRET_DIAG_GPU_SCREENSHOTS=1` to actually emit GPU screenshots."
     ]
   },
