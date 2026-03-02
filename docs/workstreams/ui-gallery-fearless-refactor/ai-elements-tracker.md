@@ -30,7 +30,7 @@ Status labels:
 | `environment_variables_demo` | `PAGE_AI_ENVIRONMENT_VARIABLES_DEMO` | `apps/fret-ui-gallery/src/ui/previews/gallery/ai/environment_variables_demo.rs` | — | — | Legacy preview |
 | `file_tree_demo` | `PAGE_AI_FILE_TREE_DEMO` | `apps/fret-ui-gallery/src/ui/previews/gallery/ai/file_tree_demo.rs` | — | — | Legacy preview |
 | `image_demo` | `PAGE_AI_IMAGE_DEMO` | `apps/fret-ui-gallery/src/ui/previews/gallery/ai/image_demo.rs` | — | — | Legacy preview |
-| `inline_citation_demo` | `PAGE_AI_INLINE_CITATION_DEMO` | `apps/fret-ui-gallery/src/ui/previews/gallery/ai/inline_citation_demo.rs` | — | — | Legacy preview |
+| `inline_citation_demo` | `PAGE_AI_INLINE_CITATION_DEMO` | (removed) | `apps/fret-ui-gallery/src/ui/snippets/ai/inline_citation_demo.rs` | `apps/fret-ui-gallery/src/ui/pages/ai_inline_citation_demo.rs` | Snippet-backed |
 | `message_branch_demo` | `PAGE_AI_MESSAGE_BRANCH_DEMO` | `apps/fret-ui-gallery/src/ui/previews/gallery/ai/message_branch_demo.rs` | — | — | Legacy preview |
 | `message_demo` | `PAGE_AI_MESSAGE_DEMO` | `apps/fret-ui-gallery/src/ui/previews/gallery/ai/message_demo.rs` | — | — | Legacy preview |
 | `mic_selector_demo` | `PAGE_AI_MIC_SELECTOR_DEMO` | (removed) | `apps/fret-ui-gallery/src/ui/snippets/ai/mic_selector_demo.rs` | `apps/fret-ui-gallery/src/ui/pages/ai_mic_selector_demo.rs` | Snippet-backed |
@@ -48,7 +48,7 @@ Status labels:
 | `schema_display_demo` | `PAGE_AI_SCHEMA_DISPLAY_DEMO` | `apps/fret-ui-gallery/src/ui/previews/gallery/ai/schema_display_demo.rs` | — | — | Legacy preview |
 | `shimmer_demo` | `PAGE_AI_SHIMMER_DEMO` | `apps/fret-ui-gallery/src/ui/previews/gallery/ai/shimmer_demo.rs` | — | — | Legacy preview |
 | `snippet_demo` | `PAGE_AI_SNIPPET_DEMO` | (removed) | `apps/fret-ui-gallery/src/ui/snippets/ai/snippet_demo.rs` | `apps/fret-ui-gallery/src/ui/pages/ai_snippet_demo.rs` | Snippet-backed |
-| `sources_demo` | `PAGE_AI_SOURCES_DEMO` | `apps/fret-ui-gallery/src/ui/previews/gallery/ai/sources_demo.rs` | — | — | Legacy preview |
+| `sources_demo` | `PAGE_AI_SOURCES_DEMO` | (removed) | `apps/fret-ui-gallery/src/ui/snippets/ai/sources_demo.rs` | `apps/fret-ui-gallery/src/ui/pages/ai_sources_demo.rs` | Snippet-backed |
 | `speech_input_demo` | `PAGE_AI_SPEECH_INPUT_DEMO` | `apps/fret-ui-gallery/src/ui/previews/gallery/ai/speech_input_demo.rs` | — | — | Legacy preview |
 | `stack_trace_demo` | `PAGE_AI_STACK_TRACE_DEMO` | `apps/fret-ui-gallery/src/ui/previews/gallery/ai/stack_trace_demo.rs` | — | — | Legacy preview |
 | `stack_trace_large_demo` | `PAGE_AI_STACK_TRACE_LARGE_DEMO` | `apps/fret-ui-gallery/src/ui/previews/gallery/ai/stack_trace_large_demo.rs` | — | — | Legacy preview |
@@ -61,7 +61,7 @@ Status labels:
 | `transcript_torture` | `PAGE_AI_TRANSCRIPT_TORTURE` | `apps/fret-ui-gallery/src/ui/previews/gallery/ai/transcript_torture.rs` | — | — | Legacy preview |
 | `transcription_demo` | `PAGE_AI_TRANSCRIPTION_DEMO` | `apps/fret-ui-gallery/src/ui/previews/gallery/ai/transcription_demo.rs` | — | — | Legacy preview |
 | `voice_selector_demo` | `PAGE_AI_VOICE_SELECTOR_DEMO` | (removed) | `apps/fret-ui-gallery/src/ui/snippets/ai/voice_selector_demo.rs` | `apps/fret-ui-gallery/src/ui/pages/ai_voice_selector_demo.rs` | Snippet-backed |
-| `web_preview_demo` | `PAGE_AI_WEB_PREVIEW_DEMO` | `apps/fret-ui-gallery/src/ui/previews/gallery/ai/web_preview_demo.rs` | — | — | Legacy preview |
+| `web_preview_demo` | `PAGE_AI_WEB_PREVIEW_DEMO` | (removed) | `apps/fret-ui-gallery/src/ui/snippets/ai/web_preview_demo.rs` | `apps/fret-ui-gallery/src/ui/pages/ai_web_preview_demo.rs` | Snippet-backed |
 | `workflow_canvas_demo` | `PAGE_AI_WORKFLOW_CANVAS_DEMO` | `apps/fret-ui-gallery/src/ui/previews/gallery/ai/workflow_canvas_demo.rs` | — | — | Legacy preview |
 | `workflow_chrome_demo` | `PAGE_AI_WORKFLOW_CHROME_DEMO` | `apps/fret-ui-gallery/src/ui/previews/gallery/ai/workflow_chrome_demo.rs` | — | — | Legacy preview |
 | `workflow_connection_demo` | `PAGE_AI_WORKFLOW_CONNECTION_DEMO` | `apps/fret-ui-gallery/src/ui/previews/gallery/ai/workflow_connection_demo.rs` | — | — | Legacy preview |

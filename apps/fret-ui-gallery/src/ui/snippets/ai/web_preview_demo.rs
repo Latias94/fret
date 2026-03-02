@@ -1,24 +1,23 @@
-use super::super::super::super::*;
+pub const SOURCE: &str = include_str!("web_preview_demo.rs");
 
-pub(in crate::ui) fn preview_ai_web_preview_demo(
-    cx: &mut ElementContext<'_, App>,
-    _theme: &Theme,
-) -> Vec<AnyElement> {
-    use std::sync::Arc;
+// region: example
+use fret_runtime::Model;
+use fret_ui::Invalidation;
+use fret_ui_ai as ui_ai;
+use fret_ui_kit::declarative::stack;
+use fret_ui_kit::{LayoutRefinement, Space};
+use fret_ui_shadcn::prelude::*;
+use std::sync::Arc;
 
-    use fret_runtime::Model;
-    use fret_ui::Invalidation;
-    use fret_ui_kit::declarative::stack;
-    use fret_ui_kit::{LayoutRefinement, Space};
+#[derive(Default)]
+struct DemoModels {
+    history: Option<Model<Vec<String>>>,
+    history_ix: Option<Model<usize>>,
+    committed: Option<Model<bool>>,
+    loading: Option<Model<bool>>,
+}
 
-    #[derive(Default)]
-    struct DemoModels {
-        history: Option<Model<Vec<String>>>,
-        history_ix: Option<Model<usize>>,
-        committed: Option<Model<bool>>,
-        loading: Option<Model<bool>>,
-    }
-
+pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement {
     let history = cx.with_state(DemoModels::default, |st| st.history.clone());
     let history = match history {
         Some(model) => model,
@@ -34,9 +33,7 @@ pub(in crate::ui) fn preview_ai_web_preview_demo(
         Some(model) => model,
         None => {
             let model = cx.app.models_mut().insert(0usize);
-            cx.with_state(DemoModels::default, |st| {
-                st.history_ix = Some(model.clone())
-            });
+            cx.with_state(DemoModels::default, |st| st.history_ix = Some(model.clone()));
             model
         }
     };
@@ -88,15 +85,9 @@ pub(in crate::ui) fn preview_ai_web_preview_demo(
             out.push(cx.text("").test_id("ui-ai-web-preview-demo-can-back-true"));
         }
         if can_forward {
-            out.push(
-                cx.text("")
-                    .test_id("ui-ai-web-preview-demo-can-forward-true"),
-            );
+            out.push(cx.text("").test_id("ui-ai-web-preview-demo-can-forward-true"));
         } else {
-            out.push(
-                cx.text("")
-                    .test_id("ui-ai-web-preview-demo-can-forward-false"),
-            );
+            out.push(cx.text("").test_id("ui-ai-web-preview-demo-can-forward-false"));
         }
         out
     };
@@ -213,7 +204,7 @@ pub(in crate::ui) fn preview_ai_web_preview_demo(
             out
         });
 
-    vec![stack::vstack(
+    stack::vstack(
         cx,
         stack::VStackProps::default()
             .layout(LayoutRefinement::default().w_full().min_w_0())
@@ -225,5 +216,7 @@ pub(in crate::ui) fn preview_ai_web_preview_demo(
                 view,
             ]
         },
-    )]
+    )
 }
+// endregion: example
+

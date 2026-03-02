@@ -465,7 +465,7 @@ fn page_preview(
         PAGE_AI_ENVIRONMENT_VARIABLES_DEMO => preview_ai_environment_variables_demo(cx, theme),
         PAGE_AI_PLAN_DEMO => preview_ai_plan_demo(cx, theme),
         PAGE_AI_TOOL_DEMO => pages::preview_ai_tool_demo(cx, theme),
-        PAGE_AI_WEB_PREVIEW_DEMO => preview_ai_web_preview_demo(cx, theme),
+        PAGE_AI_WEB_PREVIEW_DEMO => pages::preview_ai_web_preview_demo(cx, theme),
         PAGE_AI_PROMPT_INPUT_PROVIDER_DEMO => pages::preview_ai_prompt_input_provider_demo(cx, theme),
         PAGE_AI_PROMPT_INPUT_ACTION_MENU_DEMO => {
             pages::preview_ai_prompt_input_action_menu_demo(cx, theme)
@@ -473,8 +473,8 @@ fn page_preview(
         PAGE_AI_PROMPT_INPUT_REFERENCED_SOURCES_DEMO => {
             pages::preview_ai_prompt_input_referenced_sources_demo(cx, theme)
         }
-        PAGE_AI_INLINE_CITATION_DEMO => preview_ai_inline_citation_demo(cx, theme),
-        PAGE_AI_SOURCES_DEMO => preview_ai_sources_demo(cx, theme),
+        PAGE_AI_INLINE_CITATION_DEMO => pages::preview_ai_inline_citation_demo(cx, theme),
+        PAGE_AI_SOURCES_DEMO => pages::preview_ai_sources_demo(cx, theme),
         PAGE_AI_CHAIN_OF_THOUGHT_DEMO => preview_ai_chain_of_thought_demo(cx, theme),
         PAGE_AI_SNIPPET_DEMO => pages::preview_ai_snippet_demo(cx, theme),
         PAGE_AI_IMAGE_DEMO => preview_ai_image_demo(cx, theme),

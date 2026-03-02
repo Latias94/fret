@@ -3,16 +3,19 @@ use super::*;
 mod accordion;
 mod ai_attachments_demo;
 mod ai_code_block_demo;
+mod ai_inline_citation_demo;
 mod ai_model_selector_demo;
 mod ai_mic_selector_demo;
 mod ai_package_info_demo;
 mod ai_prompt_input_action_menu_demo;
 mod ai_prompt_input_provider_demo;
 mod ai_prompt_input_referenced_sources_demo;
+mod ai_sources_demo;
 mod ai_snippet_demo;
 mod ai_terminal_demo;
 mod ai_tool_demo;
 mod ai_voice_selector_demo;
+mod ai_web_preview_demo;
 mod alert;
 mod alert_dialog;
 mod aspect_ratio;
@@ -164,6 +167,24 @@ pub(super) fn preview_ai_voice_selector_demo(
     theme: &Theme,
 ) -> Vec<AnyElement> {
     ai_voice_selector_demo::preview_ai_voice_selector_demo(cx, theme)
+}
+
+pub(super) fn preview_ai_inline_citation_demo(
+    cx: &mut ElementContext<'_, App>,
+    theme: &Theme,
+) -> Vec<AnyElement> {
+    ai_inline_citation_demo::preview_ai_inline_citation_demo(cx, theme)
+}
+
+pub(super) fn preview_ai_sources_demo(cx: &mut ElementContext<'_, App>, theme: &Theme) -> Vec<AnyElement> {
+    ai_sources_demo::preview_ai_sources_demo(cx, theme)
+}
+
+pub(super) fn preview_ai_web_preview_demo(
+    cx: &mut ElementContext<'_, App>,
+    theme: &Theme,
+) -> Vec<AnyElement> {
+    ai_web_preview_demo::preview_ai_web_preview_demo(cx, theme)
 }
 
 pub(super) fn preview_accordion(
