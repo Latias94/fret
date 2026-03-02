@@ -1,17 +1,18 @@
-use super::super::super::super::*;
+pub const SOURCE: &str = include_str!("workflow_controls_demo.rs");
 
-pub(in crate::ui) fn preview_ai_workflow_controls_demo(
-    cx: &mut ElementContext<'_, App>,
-    theme: &Theme,
-) -> Vec<AnyElement> {
+// region: example
+use fret_ui_ai as ui_ai;
+use fret_ui_kit::declarative::stack;
+use fret_ui_kit::declarative::style as decl_style;
+use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, Radius, Space};
+use fret_ui_shadcn::prelude::*;
+
+pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement {
     use std::sync::Arc;
 
     use fret_runtime::Model;
     use fret_ui::Invalidation;
     use fret_ui::action::OnActivate;
-    use fret_ui_kit::declarative::stack;
-    use fret_ui_kit::declarative::style as decl_style;
-    use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, Radius, Space};
 
     #[derive(Default)]
     struct DemoModels {
@@ -62,18 +63,20 @@ pub(in crate::ui) fn preview_ai_workflow_controls_demo(
     .test_id("ui-ai-workflow-controls-demo-controls")
     .into_element(cx);
 
-    let chrome = ChromeRefinement::default()
-        .rounded(Radius::Lg)
-        .border_1()
-        .border_color(ColorRef::Color(theme.color_token("border")))
-        .p(Space::N4);
-    let props = decl_style::container_props(
-        theme,
-        chrome,
-        LayoutRefinement::default().w_full().min_w_0(),
-    );
+    let props = cx.with_theme(|theme| {
+        let chrome = ChromeRefinement::default()
+            .rounded(Radius::Lg)
+            .border_1()
+            .border_color(ColorRef::Color(theme.color_token("border")))
+            .p(Space::N4);
+        decl_style::container_props(
+            theme,
+            chrome,
+            LayoutRefinement::default().w_full().min_w_0(),
+        )
+    });
 
-    vec![stack::vstack(
+    stack::vstack(
         cx,
         stack::VStackProps::default()
             .layout(LayoutRefinement::default().w_full().min_w_0())
@@ -85,5 +88,6 @@ pub(in crate::ui) fn preview_ai_workflow_controls_demo(
                 cx.container(props, move |_cx| vec![controls]),
             ]
         },
-    )]
+    )
 }
+// endregion: example

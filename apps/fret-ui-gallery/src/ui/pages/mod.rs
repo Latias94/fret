@@ -47,6 +47,10 @@ mod ai_tool_demo;
 mod ai_voice_selector_demo;
 mod ai_web_preview_demo;
 mod ai_workflow_connection_demo;
+mod ai_workflow_controls_demo;
+mod ai_workflow_canvas_demo;
+mod ai_workflow_edge_demo;
+mod ai_workflow_node_demo;
 mod ai_workflow_panel_demo;
 mod ai_workflow_toolbar_demo;
 mod alert;
@@ -452,6 +456,34 @@ pub(super) fn preview_ai_workflow_connection_demo(
     theme: &Theme,
 ) -> Vec<AnyElement> {
     ai_workflow_connection_demo::preview_ai_workflow_connection_demo(cx, theme)
+}
+
+pub(super) fn preview_ai_workflow_controls_demo(
+    cx: &mut ElementContext<'_, App>,
+    theme: &Theme,
+) -> Vec<AnyElement> {
+    ai_workflow_controls_demo::preview_ai_workflow_controls_demo(cx, theme)
+}
+
+pub(super) fn preview_ai_workflow_canvas_demo(
+    cx: &mut ElementContext<'_, App>,
+    theme: &Theme,
+) -> Vec<AnyElement> {
+    ai_workflow_canvas_demo::preview_ai_workflow_canvas_demo(cx, theme)
+}
+
+pub(super) fn preview_ai_workflow_node_demo(
+    cx: &mut ElementContext<'_, App>,
+    theme: &Theme,
+) -> Vec<AnyElement> {
+    ai_workflow_node_demo::preview_ai_workflow_node_demo(cx, theme)
+}
+
+pub(super) fn preview_ai_workflow_edge_demo(
+    cx: &mut ElementContext<'_, App>,
+    theme: &Theme,
+) -> Vec<AnyElement> {
+    ai_workflow_edge_demo::preview_ai_workflow_edge_demo(cx, theme)
 }
 
 pub(super) fn preview_accordion(

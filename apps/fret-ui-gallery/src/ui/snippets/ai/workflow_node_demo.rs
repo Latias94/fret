@@ -1,12 +1,13 @@
-use super::super::super::super::*;
+pub const SOURCE: &str = include_str!("workflow_node_demo.rs");
 
-pub(in crate::ui) fn preview_ai_workflow_node_demo(
-    cx: &mut ElementContext<'_, App>,
-    theme: &Theme,
-) -> Vec<AnyElement> {
-    use fret_ui_kit::declarative::stack;
-    use fret_ui_kit::declarative::style as decl_style;
-    use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, Radius, Space};
+// region: example
+use fret_ui_ai as ui_ai;
+use fret_ui_kit::declarative::stack;
+use fret_ui_kit::declarative::style as decl_style;
+use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, Radius, Space};
+use fret_ui_shadcn::prelude::*;
+
+pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement {
 
     let node = ui_ai::WorkflowNode::new([
         ui_ai::WorkflowNodeHeader::new([ui_ai::WorkflowNodeTitle::new("Summarize")
@@ -32,18 +33,20 @@ pub(in crate::ui) fn preview_ai_workflow_node_demo(
     .refine_layout(LayoutRefinement::default().w_px(Px(320.0)).min_w_0())
     .into_element(cx);
 
-    let chrome = ChromeRefinement::default()
-        .rounded(Radius::Lg)
-        .border_1()
-        .border_color(ColorRef::Color(theme.color_token("border")))
-        .p(Space::N4);
-    let props = decl_style::container_props(
-        theme,
-        chrome,
-        LayoutRefinement::default().w_full().min_w_0(),
-    );
+    let props = cx.with_theme(|theme| {
+        let chrome = ChromeRefinement::default()
+            .rounded(Radius::Lg)
+            .border_1()
+            .border_color(ColorRef::Color(theme.color_token("border")))
+            .p(Space::N4);
+        decl_style::container_props(
+            theme,
+            chrome,
+            LayoutRefinement::default().w_full().min_w_0(),
+        )
+    });
 
-    vec![stack::vstack(
+    stack::vstack(
         cx,
         stack::VStackProps::default()
             .layout(LayoutRefinement::default().w_full().min_w_0())
@@ -54,5 +57,6 @@ pub(in crate::ui) fn preview_ai_workflow_node_demo(
                 cx.container(props, move |_cx| vec![node]),
             ]
         },
-    )]
+    )
 }
+// endregion: example
