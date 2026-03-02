@@ -905,10 +905,7 @@ fn web_vs_fret_layout_field_select_geometry() {
             move |cx| {
                 vec![
                     fret_ui_shadcn::Select::new(value, open)
-                        .value(
-                            fret_ui_shadcn::SelectValue::new()
-                                .placeholder("Choose department"),
-                        )
+                        .value(fret_ui_shadcn::SelectValue::new().placeholder("Choose department"))
                         .items([
                             fret_ui_shadcn::SelectItem::new("engineering", "Engineering"),
                             fret_ui_shadcn::SelectItem::new("design", "Design"),

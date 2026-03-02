@@ -1263,7 +1263,10 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
                     // Cross-window drags are runner-routed (Enter/Over/Drop), so ensure the
                     // drag session cannot get "stuck" if no widget ends it.
                     if let Some(released) = cancel_pointer_id.or(left_up_pointer_id)
-                        && self.app.drag(released).is_some_and(|d| d.cross_window_hover)
+                        && self
+                            .app
+                            .drag(released)
+                            .is_some_and(|d| d.cross_window_hover)
                     {
                         self.app.cancel_drag(released);
                         let _ = self.clear_internal_drag_hover_if_needed();
