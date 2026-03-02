@@ -423,11 +423,12 @@ Goal:
 
 Changes:
 
-- Status:
+  - Status:
   - In progress (land as a small series of commits / local PR-sized steps).
   - Landed:
     - BackdropSourceGroup pyramid headroom accounting fix (avoid double-counting `raw_bytes`).
     - Centralize intermediate budget math helpers (effective budget + allocation checks) in the RenderPlan compiler.
+    - Carry effect-chain intermediate budget evidence (effective budget min/max + other-live max) into perf snapshots + diag stats.
   - In progress:
     - Centralize “base required bytes” helpers to replace ad-hoc `full * N` budget checks.
 - Landable steps (3–8, PR-sized):
@@ -442,6 +443,10 @@ Notes:
 - For triage evidence, prefer carrying byte-scaled context instead of relying on viewport/format inference:
   - `renderer_intermediate_full_target_bytes` (bytes for one full-viewport intermediate target),
   - `renderer_intermediate_budget_bytes`,
+  - `renderer_render_plan_effect_chain_budget_samples`,
+  - `renderer_render_plan_effect_chain_effective_budget_min_bytes`,
+  - `renderer_render_plan_effect_chain_effective_budget_max_bytes`,
+  - `renderer_render_plan_effect_chain_other_live_max_bytes`,
   - `renderer_intermediate_peak_in_use_bytes`.
 
 Conformance:
