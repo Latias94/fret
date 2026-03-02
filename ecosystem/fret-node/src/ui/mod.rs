@@ -14,6 +14,7 @@ pub mod geometry_overrides;
 pub mod internals;
 pub mod measured;
 pub mod overlays;
+pub mod paint_overrides;
 pub mod panel;
 pub mod portal;
 pub mod presenter;
@@ -53,6 +54,10 @@ pub use internals::{
 };
 pub use measured::{
     FallbackMeasuredNodeGraphPresenter, MeasuredGeometryStore, MeasuredNodeGraphPresenter,
+};
+pub use paint_overrides::{
+    EdgePaintOverrideV1, NodeGraphPaintOverrides, NodeGraphPaintOverridesMap,
+    NodeGraphPaintOverridesRef, NodePaintOverrideV1,
 };
 pub use panel::{NodeGraphPanel, NodeGraphPanelPosition, NodeGraphPanelSize};
 pub use portal::{

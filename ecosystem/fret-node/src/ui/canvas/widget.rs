@@ -69,7 +69,7 @@ use crate::ui::{
     FallbackMeasuredNodeGraphPresenter, GroupRenameOverlay, MeasuredGeometryStore,
     NodeGraphCanvasTransform, NodeGraphEdgeTypes, NodeGraphEditQueue, NodeGraphFitViewOptions,
     NodeGraphGeometryOverridesRef, NodeGraphInternalsSnapshot, NodeGraphInternalsStore,
-    NodeGraphOverlayState, NodeGraphSkinRef, NodeGraphViewQueue,
+    NodeGraphOverlayState, NodeGraphPaintOverridesRef, NodeGraphSkinRef, NodeGraphViewQueue,
 };
 
 use super::middleware::{
@@ -244,6 +244,7 @@ pub struct NodeGraphCanvasWith<M> {
     skin: Option<NodeGraphSkinRef>,
     skin_last_rev: Option<u64>,
     geometry_overrides: Option<NodeGraphGeometryOverridesRef>,
+    paint_overrides: Option<NodeGraphPaintOverridesRef>,
     close_command: Option<CommandId>,
 
     auto_measured: Arc<MeasuredGeometryStore>,
@@ -479,6 +480,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
             skin: None,
             skin_last_rev: None,
             geometry_overrides: None,
+            paint_overrides: None,
             close_command: None,
             auto_measured,
             auto_measured_key: None,
@@ -540,6 +542,12 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
         self
     }
 
+    /// Attaches a UI-only per-entity paint override provider (ADR 0309).
+    pub fn with_paint_overrides(mut self, overrides: NodeGraphPaintOverridesRef) -> Self {
+        self.paint_overrides = Some(overrides);
+        self
+    }
+
     /// Attaches a B-layer `edgeTypes` registry to override edge render hints.
     pub fn with_edge_types(mut self, edge_types: NodeGraphEdgeTypes) -> Self {
         self.edge_types = Some(edge_types);
@@ -576,6 +584,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
             skin: self.skin,
             skin_last_rev: self.skin_last_rev,
             geometry_overrides: self.geometry_overrides,
+            paint_overrides: self.paint_overrides,
             close_command: self.close_command,
             auto_measured: self.auto_measured,
             auto_measured_key: self.auto_measured_key,
