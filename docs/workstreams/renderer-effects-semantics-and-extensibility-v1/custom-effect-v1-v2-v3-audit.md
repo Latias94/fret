@@ -435,6 +435,13 @@ Changes:
   3) Centralize intermediate budget charging helpers (mask targets + CustomV3 pyramid bytes), so “budget available / required” evidence is computed from a single source of truth.
   4) Add a tiny table-driven conformance set for budget edges (budget=0 / insufficient / target exhausted) per ABI.
   5) Extend diagnostics evidence to report the computed budget model inputs for the worst frame (budget, base required, optional required, chosen plan).
+
+Notes:
+
+- For triage evidence, prefer carrying byte-scaled context instead of relying on viewport/format inference:
+  - `renderer_intermediate_full_target_bytes` (bytes for one full-viewport intermediate target),
+  - `renderer_intermediate_budget_bytes`,
+  - `renderer_intermediate_peak_in_use_bytes`.
 - Centralize intermediate budget charging helpers used by V1/V2/V3 (including mask targets and pyramid bytes).
 - Make “base required bytes” semantics explicit and shared (srcdst + required scratch), so triage evidence can report:
   - budget available
