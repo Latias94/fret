@@ -91,3 +91,7 @@ cargo run -p fretboard -- diag run ui-gallery-context-menu-keyboard-escape-focus
 cargo run -p fretboard -- diag run ui-gallery-dropdown-nonmodal-outside-press-focus-underlay `
   --launch -- cargo run -p fret-ui-gallery --release
 ```
+
+Note: this gate assumes the underlay click target is not occluded by the dropdown panel (so it is a
+true outside-press). The UI Gallery keeps `ui-gallery-overlay-underlay` in a top row to avoid
+accidental overlap.
