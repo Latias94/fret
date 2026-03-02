@@ -1,6 +1,8 @@
+use std::collections::BTreeMap;
 use std::sync::Arc;
 
 use fret_core::{Corners, Edges, Px, SemanticsRole};
+use fret_icons::IconId;
 use fret_ui::element::{
     AnyElement, ContainerProps, CrossAlign, FlexProps, LayoutStyle, Length, MainAlign,
     SemanticsDecoration, SizeStyle, SpacerProps,
@@ -10,6 +12,247 @@ use fret_ui_kit::declarative::stack;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::theme_tokens;
 use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, Radius, Space, ui};
+
+/// Upstream shadcn/ui v4 `ChartConfig` entry.
+#[derive(Debug, Clone)]
+pub struct ChartConfigItem {
+    pub label: Option<Arc<str>>,
+    pub icon: Option<IconId>,
+    pub color: Option<ColorRef>,
+}
+
+impl ChartConfigItem {
+    pub fn new() -> Self {
+        Self {
+            label: None,
+            icon: None,
+            color: None,
+        }
+    }
+
+    pub fn label(mut self, label: impl Into<Arc<str>>) -> Self {
+        self.label = Some(label.into());
+        self
+    }
+
+    pub fn icon(mut self, icon: IconId) -> Self {
+        self.icon = Some(icon);
+        self
+    }
+
+    pub fn color(mut self, color: ColorRef) -> Self {
+        self.color = Some(color);
+        self
+    }
+}
+
+impl Default for ChartConfigItem {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+/// Upstream shadcn/ui v4 `ChartConfig` (a key -> entry map).
+pub type ChartConfig = BTreeMap<Arc<str>, ChartConfigItem>;
+
+#[derive(Default)]
+struct ChartContextProviderState {
+    current: Option<ChartContext>,
+}
+
+/// Chart context surface aligned with upstream `useChart`.
+#[derive(Debug, Clone)]
+pub struct ChartContext {
+    pub chart_id: Arc<str>,
+    pub config: Arc<ChartConfig>,
+}
+
+pub fn chart_context<H: UiHost>(cx: &ElementContext<'_, H>) -> Option<ChartContext> {
+    cx.inherited_state_where::<ChartContextProviderState>(|st| st.current.is_some())
+        .and_then(|st| st.current.clone())
+}
+
+#[track_caller]
+pub fn use_chart<H: UiHost>(cx: &ElementContext<'_, H>) -> ChartContext {
+    chart_context(cx).expect("use_chart must be used within a `ChartContainer`")
+}
+
+/// shadcn/ui v4 `ChartTooltip`.
+///
+/// Upstream exports the Recharts `Tooltip` primitive. Fret does not yet wire chart engine tooltips,
+/// so this is a thin wrapper that exists to preserve the part surface shape. Today it simply
+/// renders the configured [`ChartTooltipContent`].
+#[derive(Debug, Clone)]
+pub struct ChartTooltip {
+    content: ChartTooltipContent,
+}
+
+impl ChartTooltip {
+    pub fn new(content: ChartTooltipContent) -> Self {
+        Self { content }
+    }
+
+    #[track_caller]
+    pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        self.content.into_element(cx)
+    }
+}
+
+/// shadcn/ui v4 `ChartLegend`.
+///
+/// Upstream exports the Recharts `Legend` primitive. Fret does not yet wire chart engine legends,
+/// so this is a thin wrapper that exists to preserve the part surface shape. Today it simply
+/// renders the configured [`ChartLegendContent`].
+#[derive(Debug, Clone)]
+pub struct ChartLegend {
+    content: ChartLegendContent,
+}
+
+impl ChartLegend {
+    pub fn new(content: ChartLegendContent) -> Self {
+        Self { content }
+    }
+
+    #[track_caller]
+    pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        self.content.into_element(cx)
+    }
+}
+
+/// shadcn/ui v4 `ChartStyle`.
+///
+/// Upstream uses `<style>` injection to define `--color-*` CSS variables under a chart-scoped
+/// selector. Fret does not have CSS variables, so this is currently a no-op element that exists to
+/// keep the part surface aligned.
+#[derive(Debug, Clone)]
+pub struct ChartStyle {
+    id: Arc<str>,
+    config: Arc<ChartConfig>,
+}
+
+impl ChartStyle {
+    pub fn new(id: impl Into<Arc<str>>, config: Arc<ChartConfig>) -> Self {
+        Self {
+            id: id.into(),
+            config,
+        }
+    }
+
+    #[track_caller]
+    pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
+        let _ = (self.id, self.config);
+        cx.container(
+            ContainerProps {
+                layout: LayoutStyle {
+                    size: SizeStyle {
+                        width: Length::Px(Px(0.0)),
+                        height: Length::Px(Px(0.0)),
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                },
+                ..Default::default()
+            },
+            |_cx| Vec::new(),
+        )
+    }
+}
+
+/// shadcn/ui v4 `ChartContainer`.
+///
+/// Note: Upstream owns Recharts wiring and CSS variable injection. In Fret, `ChartContainer` is a
+/// lightweight context + layout wrapper. The actual chart engine integration lives elsewhere.
+#[derive(Debug, Clone)]
+pub struct ChartContainer {
+    id: Option<Arc<str>>,
+    config: Arc<ChartConfig>,
+    layout: LayoutRefinement,
+    test_id: Option<Arc<str>>,
+}
+
+impl ChartContainer {
+    pub fn new(config: ChartConfig) -> Self {
+        Self {
+            id: None,
+            config: Arc::new(config),
+            // Upstream uses `aspect-video` and centers the chart surface.
+            layout: LayoutRefinement::default()
+                .w_full()
+                .aspect_ratio(16.0 / 9.0),
+            test_id: None,
+        }
+    }
+
+    pub fn id(mut self, id: impl Into<Arc<str>>) -> Self {
+        self.id = Some(id.into());
+        self
+    }
+
+    pub fn refine_layout(mut self, layout: LayoutRefinement) -> Self {
+        self.layout = self.layout.merge(layout);
+        self
+    }
+
+    pub fn test_id(mut self, id: impl Into<Arc<str>>) -> Self {
+        self.test_id = Some(id.into());
+        self
+    }
+
+    #[track_caller]
+    pub fn into_element<H: UiHost>(
+        self,
+        cx: &mut ElementContext<'_, H>,
+        child: impl FnOnce(&mut ElementContext<'_, H>) -> AnyElement,
+    ) -> AnyElement {
+        let theme = Theme::global(&*cx.app).snapshot();
+        let layout = decl_style::layout_style(&theme, self.layout);
+        let config = self.config.clone();
+        let config_for_state = config.clone();
+        let chart_id: Arc<str> = self
+            .id
+            .clone()
+            .map(|id| Arc::<str>::from(format!("chart-{id}")))
+            .unwrap_or_else(|| Arc::<str>::from("chart"));
+        let chart_id_for_state = chart_id.clone();
+
+        cx.with_state(ChartContextProviderState::default, |st| {
+            st.current = Some(ChartContext {
+                chart_id: chart_id_for_state,
+                config: config_for_state,
+            });
+        });
+
+        let mut el = cx.container(
+            ContainerProps {
+                layout,
+                ..Default::default()
+            },
+            move |cx| {
+                vec![
+                    ChartStyle::new(chart_id.clone(), config.clone()).into_element(cx),
+                    child(cx),
+                ]
+            },
+        );
+
+        if let Some(test_id) = self.test_id {
+            el = el.attach_semantics(
+                SemanticsDecoration::default()
+                    .role(SemanticsRole::Panel)
+                    .label("chart")
+                    .test_id(test_id),
+            );
+        } else {
+            el = el.attach_semantics(
+                SemanticsDecoration::default()
+                    .role(SemanticsRole::Panel)
+                    .label("chart"),
+            );
+        }
+
+        el
+    }
+}
 
 fn wrap_panel_semantics<H: UiHost>(
     _cx: &mut ElementContext<'_, H>,
@@ -43,6 +286,7 @@ mod tests {
     use fret_app::App;
     use fret_core::{AppWindowId, Point, Px, Rect, Size};
     use fret_ui::element::ElementKind;
+    use std::sync::Mutex;
 
     #[test]
     fn chart_panel_semantics_stamps_role_without_layout_wrapper() {
@@ -73,6 +317,41 @@ mod tests {
                 .as_ref()
                 .and_then(|d| d.label.as_deref()),
             Some("Panel")
+        );
+    }
+
+    #[test]
+    fn chart_container_installs_context_for_use_chart() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(320.0), Px(200.0)),
+        );
+
+        let captured: Arc<Mutex<Option<ChartContext>>> = Arc::new(Mutex::new(None));
+        let captured_for_child = captured.clone();
+
+        let mut config = ChartConfig::default();
+        config.insert(Arc::from("sales"), ChartConfigItem::new().label("Sales"));
+
+        let _ = fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            ChartContainer::new(config)
+                .id("a")
+                .test_id("chart-container")
+                .into_element(cx, move |cx| {
+                    let ctx = use_chart(cx);
+                    *captured_for_child.lock().expect("lock") = Some(ctx);
+                    cx.text("chart")
+                })
+        });
+
+        let ctx = captured.lock().expect("lock").clone().expect("context");
+        assert_eq!(ctx.chart_id.as_ref(), "chart-a");
+        assert!(
+            ctx.config.contains_key("sales"),
+            "expected chart config to be visible through `use_chart`"
         );
     }
 }

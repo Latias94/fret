@@ -1,0 +1,121 @@
+// region: example
+use fret_core::Px;
+use fret_ui_shadcn::{self as shadcn, prelude::*};
+use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
+
+#[derive(Default, Clone)]
+struct Models {
+    username: Option<Model<String>>,
+    responsive_message: Option<Model<String>>,
+    wide: Option<Model<bool>>,
+}
+
+fn ensure_models<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+) -> (Model<String>, Model<String>, Model<bool>) {
+    let state = cx.with_state(Models::default, |st| st.clone());
+    match (state.username, state.responsive_message, state.wide) {
+        (Some(username), Some(message), Some(wide)) => (username, message, wide),
+        _ => {
+            let models = cx.app.models_mut();
+            let username = models.insert(String::new());
+            let message = models.insert(String::new());
+            let wide = models.insert(false);
+            cx.with_state(Models::default, |st| {
+                st.username = Some(username.clone());
+                st.responsive_message = Some(message.clone());
+                st.wide = Some(wide.clone());
+            });
+            (username, message, wide)
+        }
+    }
+}
+
+pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
+    let (username, responsive_message, wide) = ensure_models(cx);
+
+    let wide_value = cx.watch_model(&wide).layout().copied().unwrap_or(false);
+    let max_w = if wide_value { Px(900.0) } else { Px(520.0) };
+
+    let width_toggle = shadcn::FieldGroup::new([shadcn::Field::new([
+        shadcn::FieldContent::new([
+            shadcn::FieldLabel::new("Responsive width").into_element(cx),
+            shadcn::FieldDescription::new(
+                "Toggle the container width to exercise responsive orientation via container queries.",
+            )
+            .into_element(cx),
+        ])
+        .into_element(cx),
+        shadcn::Switch::new(wide)
+            .control_id("ui-gallery-field-responsive-width-switch")
+            .test_id("ui-gallery-field-responsive-width-switch")
+            .a11y_label("Use wide responsive container")
+            .into_element(cx),
+    ])
+    .orientation(shadcn::FieldOrientation::Horizontal)
+    .into_element(cx)])
+    .into_element(cx)
+    .test_id("ui-gallery-field-responsive-width-toggle");
+
+    let content = shadcn::FieldSet::new([
+        shadcn::FieldLegend::new("Profile").into_element(cx),
+        shadcn::FieldDescription::new("Fill in your profile information.").into_element(cx),
+        shadcn::FieldSeparator::new().into_element(cx),
+        shadcn::FieldGroup::new([
+            shadcn::Field::new([
+                shadcn::FieldContent::new([
+                    shadcn::FieldLabel::new("Name").into_element(cx),
+                    shadcn::FieldDescription::new("Provide your full name for identification.")
+                        .into_element(cx),
+                ])
+                .into_element(cx)
+                .test_id("ui-gallery-field-responsive-name-content"),
+                shadcn::Input::new(username)
+                    .placeholder("Evil Rabbit")
+                    .a11y_label("Name")
+                    .into_element(cx)
+                    .test_id("ui-gallery-field-responsive-name-input"),
+            ])
+            .orientation(shadcn::FieldOrientation::Responsive)
+            .into_element(cx),
+            shadcn::FieldSeparator::new().into_element(cx),
+            shadcn::Field::new([
+                shadcn::FieldContent::new([
+                    shadcn::FieldLabel::new("Message").into_element(cx),
+                    shadcn::FieldDescription::new("Keep it short, preferably under 100 chars.")
+                        .into_element(cx),
+                ])
+                .into_element(cx),
+                shadcn::Textarea::new(responsive_message)
+                    .a11y_label("Message")
+                    .refine_layout(LayoutRefinement::default().h_px(Px(96.0)).min_w(Px(280.0)))
+                    .into_element(cx),
+            ])
+            .orientation(shadcn::FieldOrientation::Responsive)
+            .into_element(cx),
+            shadcn::FieldSeparator::new().into_element(cx),
+            shadcn::Field::new([
+                shadcn::Button::new("Submit").into_element(cx),
+                shadcn::Button::new("Cancel")
+                    .variant(shadcn::ButtonVariant::Outline)
+                    .into_element(cx),
+            ])
+            .orientation(shadcn::FieldOrientation::Responsive)
+            .into_element(cx),
+        ])
+        .into_element(cx),
+    ])
+    .refine_layout(LayoutRefinement::default().w_full().max_w(max_w))
+    .into_element(cx)
+    .test_id("ui-gallery-field-responsive");
+
+    stack::vstack(
+        cx,
+        stack::VStackProps::default()
+            .gap(Space::N3)
+            .items_start()
+            .layout(LayoutRefinement::default().w_full().min_w_0()),
+        move |_cx| vec![width_toggle, content],
+    )
+}
+// endregion: example

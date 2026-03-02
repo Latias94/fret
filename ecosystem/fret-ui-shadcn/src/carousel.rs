@@ -3852,3 +3852,12 @@ pub fn carousel_context<H: UiHost>(cx: &ElementContext<'_, H>) -> Option<Carouse
 pub fn use_carousel<H: UiHost>(cx: &ElementContext<'_, H>) -> CarouselContext {
     carousel_context(cx).expect("use_carousel must be used within a `Carousel`")
 }
+
+/// shadcn/ui `useCarousel` (v4).
+///
+/// Alias for [`use_carousel`] to preserve copy/paste parity with upstream docs and sources.
+#[allow(non_snake_case)]
+#[track_caller]
+pub fn useCarousel<H: UiHost>(cx: &ElementContext<'_, H>) -> CarouselContext {
+    use_carousel(cx)
+}

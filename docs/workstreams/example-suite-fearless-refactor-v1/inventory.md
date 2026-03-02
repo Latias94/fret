@@ -26,6 +26,17 @@ Legend:
 | components_gallery | Replace | `apps/fret-examples/src/components_gallery.rs`, `apps/fret-demo/src/bin/components_gallery.rs` | `fretboard dev native --bin components_gallery` | Keep behavior, but the registry/discovery story should unify. |
 | ui_gallery | Keep | `apps/fret-ui-gallery/src/*`, `apps/fret-demo/src/bin/ui_gallery.rs` | `cargo run -p fret-ui-gallery` | Treat as component catalog + conformance harness. |
 
+## Reference apps (planned)
+
+These are app-scale examples (Zed-like anchors). They are intentionally larger than cookbook
+examples and should be treated as product surfaces.
+
+| ID | State | Target anchors | Notes |
+|---|---|---|---|
+| workbench | Planned | `apps/workbench/` (TBD) | Editor-grade shell: docking + command palette + settings + file tree + doc surfaces. |
+| viz-studio | Planned | `apps/viz-studio/` (TBD) | Viz workspace: charts/plot + canvas + node graph (optional) + perf-friendly virtualization. |
+| shader-lab | Planned | `apps/shader-lab/` (TBD) | Renderer lab: built-in steps + CustomV1/V2/V3 tracks + budgets/capabilities surfaced. |
+
 ## Cookbook crate (current)
 
 | ID | State | Current anchors | Run (today) | Notes |
@@ -36,7 +47,18 @@ Legend:
 | cookbook.commands_keymap_basics | Keep | `apps/fret-cookbook/examples/commands_keymap_basics.rs` | `cargo run -p fret-cookbook --example commands_keymap_basics` | Command registration + default keybinding + availability gating. |
 | cookbook.text_input_basics | Keep | `apps/fret-cookbook/examples/text_input_basics.rs` | `cargo run -p fret-cookbook --example text_input_basics` | Input submit/clear via commands (Enter/Escape) + numeric semantics gates. |
 | cookbook.effects_layer_basics | Keep | `apps/fret-cookbook/examples/effects_layer_basics.rs` | `cargo run -p fret-cookbook --example effects_layer_basics` | Minimal effect layer example (Pixelate/Blur) with stable `test_id` stamps. |
+| cookbook.icons_and_assets_basics | Keep | `apps/fret-cookbook/examples/icons_and_assets_basics.rs` | `cargo run -p fret-cookbook --example icons_and_assets_basics` | Icon packs (lucide/radix) + semantic `ui.*` ids + file-based SVG/images via `fret-ui-assets`. |
+| cookbook.virtual_list_basics | Keep | `apps/fret-cookbook/examples/virtual_list_basics.rs` | `cargo run -p fret-cookbook --example virtual_list_basics` | Keyed virtualization + items_revision + scroll-to-item, with a minimal diag smoke script. |
+| cookbook.async_inbox_basics | Keep | `apps/fret-cookbook/examples/async_inbox_basics.rs` | `cargo run -p fret-cookbook --example async_inbox_basics` | Portable async pattern: background task → inbox → runner drain, with cancellation + progress semantics gate. |
 | cookbook.theme_switching_basics | Keep | `apps/fret-cookbook/examples/theme_switching_basics.rs` | `cargo run -p fret-cookbook --example theme_switching_basics` | Minimal theme switching (shadcn New York v4 Light/Dark) with stable `test_id` stamps. |
+
+## Cookbook crate (planned v1 additions)
+
+These are the next "small but high-signal" recipes to add, in easy -> hard order.
+
+| ID | State | Target anchors | Notes |
+|---|---|---|---|
+| cookbook.markdown_and_code_basics | Planned | `apps/fret-cookbook/examples/markdown_and_code_basics.rs` | Markdown rendering + code-view/syntax + copy affordances + `test_id`/gates. |
 
 ## Interop + renderer “high ceiling” mapping
 
