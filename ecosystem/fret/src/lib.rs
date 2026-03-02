@@ -44,6 +44,7 @@ pub use fret_bootstrap::ui_app_driver::ViewElements;
 pub use fret_runtime::{ActionId, CommandId, TypedAction};
 
 pub mod actions;
+pub mod view;
 pub mod workspace_menu;
 pub mod workspace_shell;
 
@@ -172,6 +173,7 @@ pub mod prelude {
 
     #[cfg(all(not(target_arch = "wasm32"), feature = "desktop"))]
     pub use crate::ViewElements;
+    pub use crate::view::{View, ViewCx};
     pub use fret_app::{App, Effect};
     pub use fret_core::{Event, SemanticsRole};
     pub use fret_ui::ThemeSnapshot;

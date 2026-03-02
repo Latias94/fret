@@ -65,6 +65,18 @@ Target outcome:
   - `enum Msg`,
   - the `update(msg)` boilerplate.
 
+Recommended v1 entry point:
+
+```rust,ignore
+fn main() -> anyhow::Result<()> {
+    FretApp::new("my-demo")
+        .window("my-demo", (560.0, 360.0))
+        .install_app(fret_cookbook::install_cookbook_defaults)
+        .run_view::<MyView>()
+        .map_err(anyhow::Error::from)
+}
+```
+
 Migration steps:
 
 1) Move state into:

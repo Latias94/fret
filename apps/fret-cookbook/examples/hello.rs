@@ -10,56 +10,39 @@ const TEST_ID_LABEL: &str = "cookbook.hello.label";
 const TEST_ID_BUTTON: &str = "cookbook.hello.button";
 const TEST_ID_COUNT: &str = "cookbook.hello.count";
 
-struct HelloState {
-    count: Model<u32>,
-}
+struct HelloView;
 
-struct HelloProgram;
-
-impl MvuProgram for HelloProgram {
-    type State = HelloState;
-    type Message = ();
-
-    fn init(app: &mut App, _window: AppWindowId) -> Self::State {
-        Self::State {
-            count: app.models_mut().insert(0),
-        }
+impl View for HelloView {
+    fn init(_app: &mut App, _window: AppWindowId) -> Self {
+        Self
     }
 
-    fn update(_app: &mut App, _state: &mut Self::State, _message: Self::Message) {}
+    fn render(&mut self, cx: &mut ViewCx<'_, '_, App>) -> Elements {
+        let count = cx.use_state::<u32>();
+        let count_value = cx.watch_model(&count).layout().copied_or(0);
 
-    fn view(
-        cx: &mut ElementContext<'_, App>,
-        state: &mut Self::State,
-        _msg: &mut MessageRouter<Self::Message>,
-    ) -> Elements {
-        let base_root = cx.root_id();
-
-        let count = cx.watch_model(&state.count).layout().copied_or(0);
-
-        let count_model = state.count.clone();
-        let (on_command, on_command_availability) = fret::actions::ActionHandlerTable::new()
-            .on::<act::Click>(move |host, acx| {
+        cx.on_action::<act::Click>({
+            let count = count.clone();
+            move |host, acx| {
                 let _ = host
                     .models_mut()
-                    .update(&count_model, |v| *v = v.saturating_add(1));
-
+                    .update(&count, |v| *v = v.saturating_add(1));
                 println!("hello: clicked");
                 host.request_redraw(acx.window);
+                host.notify(acx);
                 true
-            })
-            .availability::<act::Click>(|_host, _acx| CommandAvailability::Available)
-            .build();
+            }
+        });
 
-        cx.command_on_command_for(base_root, on_command);
-        cx.command_on_command_availability_for(base_root, on_command_availability);
+        cx.on_action_availability::<act::Click>(|_host, _acx| CommandAvailability::Available);
 
         ui::v_flex(cx, |cx| {
             [
                 shadcn::Label::new("Hello, Fret cookbook!")
                     .into_element(cx)
                     .test_id(TEST_ID_LABEL),
-                cx.text(format!("Count: {count}")).test_id(TEST_ID_COUNT),
+                cx.text(format!("Count: {count_value}"))
+                    .test_id(TEST_ID_COUNT),
                 shadcn::Button::new("Click me")
                     .action(act::Click)
                     .into_element(cx)
@@ -81,6 +64,6 @@ fn main() -> anyhow::Result<()> {
     FretApp::new("cookbook-hello")
         .window("cookbook-hello", (560.0, 360.0))
         .install_app(fret_cookbook::install_cookbook_defaults)
-        .run_mvu::<HelloProgram>()
+        .run_view::<HelloView>()
         .map_err(anyhow::Error::from)
 }

@@ -83,12 +83,16 @@ ID format:
 - [x] AFA-view-020 Decide crate placement for the view runtime:
   - Decision: land in `ecosystem/fret` for v1; defer split crate until after adoption.
   - Evidence: ADR 0308 “v1 decision (locked)”.
-- [ ] AFA-view-021 Implement a minimal `View` trait + `ViewCx` with:
+- [x] AFA-view-021 Implement a minimal `View` trait + `ViewCx` with:
   - action handler registration,
   - `notify()` dirty marking,
   - `use_state` (element/view state slots),
   - `use_selector` (re-export from `fret-selector`),
   - `use_query` (re-export from `fret-query`).
+  - Status (as of 2026-03-02):
+    - Implemented (v1): `ecosystem/fret/src/view.rs`
+    - Entry points: `ecosystem/fret/src/app_entry.rs` (`App::run_view`)
+    - First adoption: `apps/fret-cookbook/examples/hello.rs`
 - [ ] AFA-view-022 Define and document hook keying rules:
   - stable callsite key for non-loop hooks,
   - required keyed variants for loops (`use_*_keyed`),
@@ -128,7 +132,7 @@ ID format:
   - Status (as of 2026-03-02):
     - Action-first bindings landed for `commands_keymap_basics` (still MVU; view runtime pending):
       `apps/fret-cookbook/examples/commands_keymap_basics.rs`
-    - Action-first button binding + handler table landed for `hello` (still MVU; view runtime pending):
+    - View runtime + action-first adoption landed for `hello`:
       `apps/fret-cookbook/examples/hello.rs`
     - Action-first bindings landed for `overlay_basics` (still MVU; view runtime pending):
       `apps/fret-cookbook/examples/overlay_basics.rs`

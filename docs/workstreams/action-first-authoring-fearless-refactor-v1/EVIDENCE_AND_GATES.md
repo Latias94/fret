@@ -22,13 +22,18 @@ Action identity + typed unit actions:
 - `crates/fret-runtime/src/action.rs` (`ActionId`, `TypedAction`)
 - `ecosystem/fret/src/actions.rs` (`fret::actions!` macro, `ActionHandlerTable` + unit test)
 
+View runtime (v1):
+
+- `ecosystem/fret/src/view.rs` (`View`, `ViewCx`, `use_state`/`use_selector`/`use_query`)
+- `ecosystem/fret/src/app_entry.rs` (`App::run_view`)
+
 Pointer-trigger authoring integration (v1 still dispatches through the command pipeline):
 
 - `ecosystem/fret-ui-shadcn/src/button.rs` (`Button::action`)
 - `ecosystem/fret-ui-kit/src/command.rs` (`action_is_enabled`, `dispatch_action_if_enabled`)
 - `ecosystem/fret-ui-kit/src/declarative/action_hooks.rs` (`pressable_dispatch_action_if_enabled`)
 - `apps/fret-cookbook/examples/commands_keymap_basics.rs` (example adoption: typed action ID + button binding)
-- `apps/fret-cookbook/examples/hello.rs` (example adoption: typed action ID + button binding + handler table)
+- `apps/fret-cookbook/examples/hello.rs` (example adoption: view runtime + action-first button + handler registration)
 - `apps/fret-cookbook/examples/overlay_basics.rs` (example adoption: action + keymap + modal barrier gate)
 
 ---
