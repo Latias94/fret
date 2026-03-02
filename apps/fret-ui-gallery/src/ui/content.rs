@@ -579,7 +579,7 @@ fn page_preview(
         PAGE_SEPARATOR => pages::preview_separator(cx),
         PAGE_SHEET => pages::preview_sheet(cx, sheet_open),
         PAGE_SIDEBAR => preview_sidebar(cx),
-        PAGE_SPINNER => preview_spinner(cx),
+        PAGE_SPINNER => pages::preview_spinner(cx),
         PAGE_SWITCH => pages::preview_switch(cx, switch),
         PAGE_TEXTAREA => pages::preview_textarea(cx, text_area),
         PAGE_TOGGLE => pages::preview_toggle(cx),
