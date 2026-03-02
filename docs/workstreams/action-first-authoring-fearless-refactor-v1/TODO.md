@@ -82,7 +82,7 @@ ID format:
   - Goal: palette/menu triggers and pointer triggers share the same action pipeline.
   - Evidence:
     - `ecosystem/fret-bootstrap/src/ui_app_driver.rs` (command palette overlay builds command entries and dispatches via the window command pipeline)
-    - `ecosystem/fret-ui-shadcn/src/command.rs` (`host.dispatch_command(...)` on selection)
+    - `ecosystem/fret-ui-shadcn/src/command.rs` (command palette selection queues a pending command and dispatches via `Effect::Command` after close-on-select completes)
     - `tools/diag-scripts/cookbook/imui-action-basics/cookbook-imui-action-basics-cross-frontend.json` (command palette → action handler gate)
 
 ### B.1 Authoring integration (pointer triggers)
@@ -172,7 +172,7 @@ ID format:
 
 ## E. Adoption (Cookbook + Gallery + Editor-grade shells)
 
-- [~] AFA-adopt-040 Migrate 2–3 cookbook demos to the new View + actions path.
+- [x] AFA-adopt-040 Migrate 2–3 cookbook demos to the new View + actions path.
   - Suggested: `apps/fret-cookbook/examples/hello.rs`, `overlay_basics.rs`, `commands_keymap_basics.rs`.
   - Status (as of 2026-03-02):
     - View runtime + action-first adoption landed for `commands_keymap_basics`:
@@ -184,8 +184,11 @@ ID format:
 - [ ] AFA-adopt-041 Add at least one ui-gallery page/snippet using actions + view runtime.
 - [ ] AFA-adopt-042 Add one editor-grade harness adoption:
   - docking/workspace shell uses actions for tab/command semantics (where appropriate).
-- [ ] AFA-adopt-043 Update `fretboard` scaffold templates to prefer action-first patterns (once v1 is stable).
+- [~] AFA-adopt-043 Update `fretboard` scaffold templates to prefer action-first patterns (once v1 is stable).
   - Rule: do not ship two different default paradigms in templates.
+  - Status (as of 2026-03-02):
+    - `fretboard new hello` migrated to View runtime + typed unit actions:
+      `apps/fretboard/src/scaffold/templates.rs` (`hello_template_main_rs`)
 
 ---
 

@@ -107,6 +107,11 @@ fn main() -> anyhow::Result<()> {
 }
 ```
 
+Template reference:
+
+- `fretboard new hello` uses this pattern (View runtime + typed unit actions):
+  `apps/fretboard/src/scaffold/templates.rs` (`hello_template_main_rs`)
+
 Migration steps:
 
 1) Move state into:
