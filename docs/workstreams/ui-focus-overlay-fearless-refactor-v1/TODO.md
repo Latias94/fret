@@ -44,4 +44,6 @@ Tracking doc: `docs/workstreams/ui-focus-overlay-fearless-refactor-v1/DESIGN.md`
 - [x] Minimal hovercard-open scripted gate under view-cache reuse (hover edge should rerender the
   relevant cache root).
   - Script: `tools/diag-scripts/ui-gallery/overlay/ui-gallery-hovercard-open.json`
-- [ ] Perf probe: snapshot build cost vs frame budget in UI gallery worst-case overlays.
+- [x] Perf probe: snapshot build cost vs frame budget in UI gallery worst-case overlays.
+  - Script: `tools/diag-scripts/ui-gallery/perf/ui-gallery-overlay-pointer-move-steady.json`
+  - Suite membership: `tools/diag-scripts/suites/perf-ui-gallery-steady/ui-gallery-overlay-pointer-move-steady.json`

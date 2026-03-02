@@ -11,6 +11,8 @@
   - `cargo nextest run -p fret-ui --lib hover_region_marks_view_cache_root_dirty_on_hover_edges`
 - Full suite (when practical): `cargo nextest run -p fret-ui`
 - `python3 tools/check_layering.py`
+- Perf probe (optional, Phase C guardrail):
+  - `cargo run -p fretboard -- diag perf ui-gallery-steady --repeat 3 --warmup-frames 5 --perf-baseline-seed-preset docs/workstreams/perf-baselines/policies/ui-gallery-steady.v2.json --launch -- cargo run -p fret-ui-gallery --release`
 
 ## Existing regression coverage (anchors)
 
