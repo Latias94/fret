@@ -167,8 +167,9 @@ Anchor:
 
 ### H2 — Internal duplication increases drift risk
 
-The `services.rs` WGSL stitch+validate code is duplicated for v1/v2/v3. This is safe today but tends to drift (logging
-wording, validation flags, max-size rules, etc.).
+The `services.rs` custom effect registration path (hash reuse + refcounting + insertion) and WGSL stitch+validate code
+used to be duplicated for v1/v2/v3. This is safe but tends to drift (logging wording, validation flags, max-size rules,
+capability gating, etc.).
 
 Anchor:
 
@@ -256,12 +257,15 @@ Status:
 
 Goal:
 
-- Remove v1/v2/v3 duplication in `build_and_validate_custom_effect_wgsl_v*` without changing the public surface.
+- Remove v1/v2/v3 duplication in CustomEffect registration and `build_and_validate_custom_effect_wgsl_v*` without
+  changing the public surface.
 
 Changes (landed):
 
 - Introduce internal helper `build_and_validate_custom_effect_wgsl_with_sources(...)`.
-- Keep per-ABI stitch generators as-is; route v1/v2/v3 through the shared helper.
+- Introduce internal helper `register_custom_effect_wgsl(...)` to share the hash reuse + insertion path.
+- Introduce internal helper `custom_effect_sampled_user_image_supported(...)` to share V2/V3 capability gating.
+- Keep per-ABI stitch generators as-is; route v1/v2/v3 through the shared helpers.
 
 Risks:
 
