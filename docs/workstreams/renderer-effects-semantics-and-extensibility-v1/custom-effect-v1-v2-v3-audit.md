@@ -351,6 +351,8 @@ Changes (landed):
 - Extend `apps/fret-examples/tests/wgsl_smoke.rs` to validate stitched WGSL for v1 and v2 in addition to v3.
 - (Optional) Extract a small shared helper in `fret-render-wgpu` tests for stitching/parsing to avoid duplicating the
   prelude glue across tests.
+- Keep `services.rs` validation warnings structured (log message stable; ABI/version reported via fields) to reduce
+  wording drift in downstream log scrapers.
 
 Gates:
 
