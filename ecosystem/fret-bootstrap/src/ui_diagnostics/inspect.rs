@@ -120,19 +120,16 @@ impl UiDiagnosticsService {
             return false;
         };
 
-        if self.inspector.try_consume_armed_pick(window, *position) {
-            app.request_redraw(window);
-            return true;
-        }
-
-        if !self.inspector.enabled {
+        let decision = self
+            .inspector
+            .on_pointer_down_for_picking(window, *position);
+        if !decision.intercepted {
             return false;
         }
-
-        let run_id = self.inspector.next_pick_run_id();
-        let consume_clicks = self.inspector.start_pending_pick(window, run_id, *position);
-        app.request_redraw(window);
-        consume_clicks
+        if decision.request_redraw {
+            app.request_redraw(window);
+        }
+        decision.consumed
     }
 
     pub fn update_inspect_hover(

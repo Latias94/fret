@@ -18,6 +18,13 @@ pub(super) struct PendingPick {
 }
 
 #[derive(Debug, Clone, Copy)]
+pub(super) struct PickInterceptDecision {
+    pub(super) intercepted: bool,
+    pub(super) consumed: bool,
+    pub(super) request_redraw: bool,
+}
+
+#[derive(Debug, Clone, Copy)]
 pub(super) enum InspectNavCommand {
     Up,
     Down,
@@ -62,6 +69,36 @@ impl InspectController {
     pub(super) fn arm_pick(&mut self, run_id: u64) {
         self.pending_pick = None;
         self.pick_armed_run_id = Some(run_id);
+    }
+
+    pub(super) fn on_pointer_down_for_picking(
+        &mut self,
+        window: AppWindowId,
+        position: Point,
+    ) -> PickInterceptDecision {
+        if self.try_consume_armed_pick(window, position) {
+            return PickInterceptDecision {
+                intercepted: true,
+                consumed: true,
+                request_redraw: true,
+            };
+        }
+
+        if !self.enabled {
+            return PickInterceptDecision {
+                intercepted: false,
+                consumed: false,
+                request_redraw: false,
+            };
+        }
+
+        let run_id = self.next_pick_run_id();
+        let consumed = self.start_pending_pick(window, run_id, position);
+        PickInterceptDecision {
+            intercepted: true,
+            consumed,
+            request_redraw: true,
+        }
     }
 
     pub(super) fn set_enabled(&mut self, enabled: bool, consume_clicks: bool) {

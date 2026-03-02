@@ -1156,6 +1156,37 @@ mod tests {
         }
     }
 
+    #[test]
+    fn inspect_controller_pointer_down_picking_consumes_when_armed() {
+        let mut c = inspect_controller::InspectController::default();
+        c.arm_pick(123);
+        let decision = c.on_pointer_down_for_picking(window_id(1), Point::new(Px(10.0), Px(20.0)));
+        assert!(decision.intercepted);
+        assert!(decision.consumed);
+        assert!(decision.request_redraw);
+
+        let pending = c.pending_pick.as_ref().unwrap();
+        assert_eq!(pending.run_id, 123);
+        assert_eq!(pending.window, window_id(1));
+        assert_eq!(pending.position, Point::new(Px(10.0), Px(20.0)));
+    }
+
+    #[test]
+    fn inspect_controller_pointer_down_picking_starts_pending_when_enabled() {
+        let mut c = inspect_controller::InspectController::default();
+        c.set_enabled(true, false);
+
+        let decision = c.on_pointer_down_for_picking(window_id(1), Point::new(Px(10.0), Px(20.0)));
+        assert!(decision.intercepted);
+        assert!(!decision.consumed);
+        assert!(decision.request_redraw);
+
+        let pending = c.pending_pick.as_ref().unwrap();
+        assert_eq!(pending.window, window_id(1));
+        assert_eq!(pending.position, Point::new(Px(10.0), Px(20.0)));
+        assert_eq!(pending.run_id, c.last_pick_run_id);
+    }
+
     fn dock_node_id(id: u64) -> fret_core::DockNodeId {
         fret_core::DockNodeId::from(KeyData::from_ffi(id))
     }
