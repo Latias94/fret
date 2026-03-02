@@ -45,6 +45,7 @@ mod select;
 mod separator;
 mod shadcn_extras;
 mod sheet;
+mod sidebar;
 mod skeleton;
 mod slider;
 mod spinner;
@@ -282,6 +283,10 @@ pub(super) fn preview_scroll_area(cx: &mut ElementContext<'_, App>) -> Vec<AnyEl
 
 pub(super) fn preview_separator(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
     separator::preview_separator(cx)
+}
+
+pub(super) fn preview_sidebar(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
+    sidebar::preview_sidebar(cx)
 }
 
 pub(super) fn preview_motion_presets(

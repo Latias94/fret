@@ -1,0 +1,228 @@
+// region: example
+use fret_core::Px;
+use fret_ui::element::SemanticsDecoration;
+use fret_ui_shadcn::{self as shadcn, prelude::*};
+use std::sync::Arc;
+
+#[derive(Default, Clone)]
+struct SidebarModels {
+    open: Option<Model<bool>>,
+    selected: Option<Model<Arc<str>>>,
+}
+
+fn ensure_models<H: UiHost>(cx: &mut ElementContext<'_, H>) -> (Model<bool>, Model<Arc<str>>) {
+    let state = cx.with_state(SidebarModels::default, |st| st.clone());
+    match (state.open, state.selected) {
+        (Some(open), Some(selected)) => (open, selected),
+        _ => {
+            let models = cx.app.models_mut();
+            let open = models.insert(true);
+            let selected = models.insert(Arc::<str>::from("design-engineering"));
+            cx.with_state(SidebarModels::default, |st| {
+                st.open = Some(open.clone());
+                st.selected = Some(selected.clone());
+            });
+            (open, selected)
+        }
+    }
+}
+
+fn resolve_selected<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    model: &Model<Arc<str>>,
+    fallback: &'static str,
+) -> Arc<str> {
+    cx.get_model_cloned(model, Invalidation::Layout)
+        .unwrap_or_else(|| Arc::<str>::from(fallback))
+}
+
+fn menu_button<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    selected_model: Model<Arc<str>>,
+    active_value: &Arc<str>,
+    value: &'static str,
+    label: &'static str,
+    icon: &'static str,
+    test_id: Arc<str>,
+) -> AnyElement {
+    let collapsed = shadcn::use_sidebar(cx).is_some_and(|ctx| !ctx.is_mobile && ctx.collapsed());
+    let is_active = active_value.as_ref() == value;
+    let selected_for_activate = selected_model.clone();
+    let value_for_activate: Arc<str> = Arc::from(value);
+    let on_activate: fret_ui::action::OnActivate = Arc::new(move |host, action_cx, _reason| {
+        let _ = host
+            .models_mut()
+            .update(&selected_for_activate, |v| *v = value_for_activate.clone());
+        host.request_redraw(action_cx.window);
+    });
+
+    shadcn::SidebarMenuButton::new(label)
+        .icon(fret_icons::IconId::new_static(icon))
+        .active(is_active)
+        .collapsed(collapsed)
+        .on_activate(on_activate)
+        .test_id(test_id)
+        .into_element(cx)
+}
+
+pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
+    let (open, selected) = ensure_models(cx);
+
+    let content = shadcn::SidebarProvider::new()
+        .open(Some(open.clone()))
+        .with(cx, |cx| {
+            let open_now = cx.get_model_cloned(&open, Invalidation::Paint).unwrap_or(true);
+            let selected_value = resolve_selected(cx, &selected, "design-engineering");
+
+            let open_for_toggle = open.clone();
+            let on_toggle_open: fret_ui::action::OnActivate =
+                Arc::new(move |host, action_cx, _reason| {
+                    let _ = host.models_mut().update(&open_for_toggle, |v| *v = !*v);
+                    host.request_redraw(action_cx.window);
+                });
+
+            let header = stack::hstack(
+                cx,
+                stack::HStackProps::default()
+                    .gap(Space::N2)
+                    .items_center()
+                    .layout(LayoutRefinement::default().w_full()),
+                |cx| {
+                    vec![
+                        shadcn::Button::new(if open_now { "Close Sidebar" } else { "Open Sidebar" })
+                            .variant(shadcn::ButtonVariant::Outline)
+                            .size(shadcn::ButtonSize::Sm)
+                            .on_activate(on_toggle_open.clone())
+                            .test_id("ui-gallery-sidebar-controlled-toggle")
+                            .into_element(cx),
+                        shadcn::typography::muted(
+                            cx,
+                            "Controlled via SidebarProvider.open(Some(model)).",
+                        ),
+                    ]
+                },
+            );
+
+            let projects = shadcn::SidebarGroup::new([
+                shadcn::SidebarGroupLabel::new("Projects").into_element(cx),
+                shadcn::SidebarMenu::new([
+                    shadcn::SidebarMenuItem::new(menu_button(
+                        cx,
+                        selected.clone(),
+                        &selected_value,
+                        "design-engineering",
+                        "Design Engineering",
+                        "lucide.frame",
+                        Arc::from("ui-gallery-sidebar-controlled-item-design-engineering"),
+                    ))
+                    .into_element(cx),
+                    shadcn::SidebarMenuItem::new(menu_button(
+                        cx,
+                        selected.clone(),
+                        &selected_value,
+                        "sales-marketing",
+                        "Sales & Marketing",
+                        "lucide.chart-pie",
+                        Arc::from("ui-gallery-sidebar-controlled-item-sales-marketing"),
+                    ))
+                    .into_element(cx),
+                    shadcn::SidebarMenuItem::new(menu_button(
+                        cx,
+                        selected.clone(),
+                        &selected_value,
+                        "travel",
+                        "Travel",
+                        "lucide.map",
+                        Arc::from("ui-gallery-sidebar-controlled-item-travel"),
+                    ))
+                    .into_element(cx),
+                    shadcn::SidebarMenuItem::new(menu_button(
+                        cx,
+                        selected.clone(),
+                        &selected_value,
+                        "support",
+                        "Support",
+                        "lucide.life-buoy",
+                        Arc::from("ui-gallery-sidebar-controlled-item-support"),
+                    ))
+                    .into_element(cx),
+                    shadcn::SidebarMenuItem::new(menu_button(
+                        cx,
+                        selected.clone(),
+                        &selected_value,
+                        "feedback",
+                        "Feedback",
+                        "lucide.send",
+                        Arc::from("ui-gallery-sidebar-controlled-item-feedback"),
+                    ))
+                    .into_element(cx),
+                ])
+                .into_element(cx),
+            ])
+            .into_element(cx);
+
+            let sidebar =
+                shadcn::Sidebar::new([shadcn::SidebarContent::new([projects]).into_element(cx)])
+                    .collapsible(shadcn::SidebarCollapsible::Offcanvas)
+                    .refine_layout(LayoutRefinement::default().h_full())
+                    .into_element(cx)
+                    .attach_semantics(
+                        SemanticsDecoration::default()
+                            .role(fret_core::SemanticsRole::Group)
+                            .test_id("ui-gallery-sidebar-controlled-sidebar"),
+                    );
+
+            let trigger = shadcn::SidebarTrigger::new()
+                .test_id("ui-gallery-sidebar-controlled-trigger")
+                .into_element(cx);
+
+            let inset = shadcn::SidebarInset::new([shadcn::Card::new(vec![
+                shadcn::CardHeader::new(vec![
+                    shadcn::CardTitle::new("Sidebar Inset").into_element(cx),
+                ])
+                .into_element(cx),
+                shadcn::CardContent::new(vec![
+                    cx.text("Use a main content panel next to Sidebar when controlled."),
+                    cx.text(format!("open={}", open_now)),
+                    cx.text(format!("selected={}", selected_value.as_ref())),
+                ])
+                .into_element(cx),
+            ])
+            .refine_layout(LayoutRefinement::default().w_full().h_full().min_w_0())
+            .into_element(cx)])
+            .into_element(cx);
+
+            let frame = stack::hstack(
+                cx,
+                stack::HStackProps::default()
+                    .gap(Space::N4)
+                    .items_start()
+                    .layout(LayoutRefinement::default().w_full().h_px(Px(320.0))),
+                |_cx| vec![sidebar, inset],
+            )
+            .attach_semantics(
+                SemanticsDecoration::default()
+                    .role(fret_core::SemanticsRole::Group)
+                    .test_id("ui-gallery-sidebar-controlled"),
+            );
+
+            let body = stack::vstack(
+                cx,
+                stack::VStackProps::default()
+                    .gap(Space::N3)
+                    .items_start()
+                    .layout(LayoutRefinement::default().w_full()),
+                |_cx| vec![header, trigger, frame],
+            );
+
+            vec![body]
+        });
+
+    content
+        .into_iter()
+        .next()
+        .unwrap_or_else(|| cx.text("Missing sidebar controlled content."))
+}
+
+// endregion: example
+

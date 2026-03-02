@@ -578,7 +578,7 @@ fn page_preview(
         PAGE_RADIO_GROUP => pages::preview_radio_group(cx),
         PAGE_SEPARATOR => pages::preview_separator(cx),
         PAGE_SHEET => pages::preview_sheet(cx, sheet_open),
-        PAGE_SIDEBAR => preview_sidebar(cx),
+        PAGE_SIDEBAR => pages::preview_sidebar(cx),
         PAGE_SPINNER => pages::preview_spinner(cx),
         PAGE_SWITCH => pages::preview_switch(cx, switch),
         PAGE_TEXTAREA => pages::preview_textarea(cx, text_area),
