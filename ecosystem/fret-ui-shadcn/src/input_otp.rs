@@ -1047,12 +1047,12 @@ mod tests {
 
     #[test]
     fn input_otp_parts_infer_length_and_respect_explicit_separators() {
-        use crate::shadcn_themes::{ShadcnBaseColor, ShadcnColorScheme, apply_shadcn_new_york_v4};
+        use crate::shadcn_themes::{ShadcnBaseColor, ShadcnColorScheme, apply_shadcn_new_york};
         use fret_core::{AppWindowId, Point, Px, Rect, Size};
 
         let window = AppWindowId::default();
         let mut app = App::new();
-        apply_shadcn_new_york_v4(&mut app, ShadcnBaseColor::Neutral, ShadcnColorScheme::Light);
+        apply_shadcn_new_york(&mut app, ShadcnBaseColor::Neutral, ShadcnColorScheme::Light);
         let model = app.models_mut().insert("12a 34-5678".to_string());
 
         let bounds = Rect::new(

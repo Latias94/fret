@@ -48,10 +48,8 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
             .trigger_test_id("ui-gallery-select-invalid-trigger")
             .into_element_parts(
                 cx,
-                |_cx| {
-                    shadcn::SelectTrigger::new()
-                        .value(shadcn::SelectValue::new().placeholder("Select a fruit"))
-                },
+                |_cx| shadcn::SelectTrigger::new(),
+                |_cx| shadcn::SelectValue::new().placeholder("Select a fruit"),
                 |_cx| {
                     shadcn::SelectContent::new().with_entries([shadcn::SelectGroup::new([
                         shadcn::SelectItem::new("apple", "Apple")

@@ -97,7 +97,7 @@ pub fn run() -> anyhow::Result<()> {
     let builder = fret::mvu::app::<CustomEffectV2Program>("custom-effect-v2-demo")?
         .with_main_window("custom_effect_v2_demo", (1100.0, 720.0))
         .init_app(|app| {
-            shadcn::shadcn_themes::apply_shadcn_new_york_v4(
+            shadcn::shadcn_themes::apply_shadcn_new_york(
                 app,
                 shadcn::shadcn_themes::ShadcnBaseColor::Slate,
                 shadcn::shadcn_themes::ShadcnColorScheme::Dark,
@@ -780,7 +780,7 @@ fn inspector(
                     vec![
                         label_row(cx, "Input sampling", sampling_value.to_string()),
                         shadcn::Select::new(sampling_model.clone(), sampling_open_model.clone())
-                            .placeholder("Pick sampling")
+                            .value(shadcn::SelectValue::new().placeholder("Pick sampling"))
                             .items([
                                 shadcn::SelectItem::new("default", "Default"),
                                 shadcn::SelectItem::new("linear", "Linear"),

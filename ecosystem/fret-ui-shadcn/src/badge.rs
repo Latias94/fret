@@ -708,7 +708,7 @@ mod tests {
     #[test]
     fn destructive_badge_text_contrast_is_reasonable_in_zinc_dark() {
         let mut app = App::new();
-        crate::shadcn_themes::apply_shadcn_new_york_v4(
+        crate::shadcn_themes::apply_shadcn_new_york(
             &mut app,
             crate::shadcn_themes::ShadcnBaseColor::Zinc,
             crate::shadcn_themes::ShadcnColorScheme::Dark,

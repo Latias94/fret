@@ -55,7 +55,7 @@ fn select_test_ids_survive_open_close_open() {
     );
 
     let mut app = App::new();
-    fret_ui_shadcn::shadcn_themes::apply_shadcn_new_york_v4(
+    fret_ui_shadcn::shadcn_themes::apply_shadcn_new_york(
         &mut app,
         fret_ui_shadcn::shadcn_themes::ShadcnBaseColor::Neutral,
         fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Light,
@@ -86,7 +86,7 @@ fn select_test_ids_survive_open_close_open() {
         move |cx| {
             vec![
                 fret_ui_shadcn::Select::new(value_frame_1.clone(), open_frame_1.clone())
-                    .placeholder("Select an item")
+                    .value(fret_ui_shadcn::SelectValue::new().placeholder("Select an item"))
                     .a11y_label("Select")
                     .trigger_test_id("select-trigger")
                     .items(items_frame_1.clone())
@@ -117,7 +117,7 @@ fn select_test_ids_survive_open_close_open() {
         move |cx| {
             vec![
                 fret_ui_shadcn::Select::new(value_frame_2.clone(), open_frame_2.clone())
-                    .placeholder("Select an item")
+                    .value(fret_ui_shadcn::SelectValue::new().placeholder("Select an item"))
                     .a11y_label("Select")
                     .trigger_test_id("select-trigger")
                     .items(items_frame_2.clone())
@@ -149,7 +149,7 @@ fn select_test_ids_survive_open_close_open() {
         move |cx| {
             vec![
                 fret_ui_shadcn::Select::new(value_frame_3.clone(), open_frame_3.clone())
-                    .placeholder("Select an item")
+                    .value(fret_ui_shadcn::SelectValue::new().placeholder("Select an item"))
                     .a11y_label("Select")
                     .trigger_test_id("select-trigger")
                     .items(items_frame_3.clone())
@@ -180,7 +180,7 @@ fn select_test_ids_survive_open_close_open() {
         move |cx| {
             vec![
                 fret_ui_shadcn::Select::new(value_frame_4.clone(), open_frame_4.clone())
-                    .placeholder("Select an item")
+                    .value(fret_ui_shadcn::SelectValue::new().placeholder("Select an item"))
                     .a11y_label("Select")
                     .trigger_test_id("select-trigger")
                     .items(items_frame_4.clone())
@@ -195,4 +195,3 @@ fn select_test_ids_survive_open_close_open() {
     assert_has_test_id(&snap, "select-trigger");
     assert_has_test_id(&snap, "select-scroll-viewport");
 }
-

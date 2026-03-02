@@ -14,7 +14,7 @@ use fret_runtime::{
     PlatformCapabilities, TickId, TimeHost,
 };
 use fret_ui::UiTree;
-use fret_ui_shadcn::shadcn_themes::{ShadcnBaseColor, ShadcnColorScheme, apply_shadcn_new_york_v4};
+use fret_ui_shadcn::shadcn_themes::{ShadcnBaseColor, ShadcnColorScheme, apply_shadcn_new_york};
 
 #[derive(Default)]
 struct TestHost {
@@ -385,7 +385,7 @@ fn code_block_wrap_grapheme_and_selection_smoke() {
     let mut app = TestHost::default();
     app.set_global(PlatformCapabilities::default());
 
-    apply_shadcn_new_york_v4(&mut app, ShadcnBaseColor::Neutral, ShadcnColorScheme::Light);
+    apply_shadcn_new_york(&mut app, ShadcnBaseColor::Neutral, ShadcnColorScheme::Light);
 
     let window = AppWindowId::default();
     let mut services = RecordingUiServices::default();
@@ -493,7 +493,7 @@ fn code_block_wrap_grapheme_and_selection_smoke() {
 fn code_block_max_height_shrinks_when_content_is_short() {
     let mut app = TestHost::default();
     app.set_global(PlatformCapabilities::default());
-    apply_shadcn_new_york_v4(&mut app, ShadcnBaseColor::Neutral, ShadcnColorScheme::Light);
+    apply_shadcn_new_york(&mut app, ShadcnBaseColor::Neutral, ShadcnColorScheme::Light);
 
     let window = AppWindowId::default();
     let mut services = RecordingUiServices::default();
@@ -558,7 +558,7 @@ fn code_block_max_height_shrinks_when_content_is_short() {
 fn code_block_max_height_clamps_when_content_is_tall() {
     let mut app = TestHost::default();
     app.set_global(PlatformCapabilities::default());
-    apply_shadcn_new_york_v4(&mut app, ShadcnBaseColor::Neutral, ShadcnColorScheme::Light);
+    apply_shadcn_new_york(&mut app, ShadcnBaseColor::Neutral, ShadcnColorScheme::Light);
 
     let window = AppWindowId::default();
     let mut services = RecordingUiServices::default();

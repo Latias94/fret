@@ -79,7 +79,10 @@ fn fret_select_tracks_trigger_when_underlay_scrolls() {
                                 vec![
                                     fret_ui_shadcn::Select::new(value, open)
                                         .a11y_label("Select")
-                                        .placeholder("Select an option")
+                                        .value(
+                                            fret_ui_shadcn::SelectValue::new()
+                                                .placeholder("Select an option"),
+                                        )
                                         .trigger_test_id(trigger_test_id)
                                         .refine_layout(
                                             fret_ui_kit::LayoutRefinement::default()
@@ -400,7 +403,7 @@ fn assert_select_demo_overlay_placement_matches_impl(web_name: &str) {
 
             fret_ui_shadcn::Select::new(value, open.clone())
                 .a11y_label("Select")
-                .placeholder("Select a fruit")
+                .value(fret_ui_shadcn::SelectValue::new().placeholder("Select a fruit"))
                 .refine_layout(fret_ui_kit::LayoutRefinement::default().w_px(Px(180.0)))
                 .entries(entries)
                 .into_element(cx)
@@ -421,7 +424,7 @@ fn assert_select_scrollable_overlay_placement_matches_impl(web_name: &str) {
 
             fret_ui_shadcn::Select::new(value, open.clone())
                 .a11y_label("Select")
-                .placeholder("Select a timezone")
+                .value(fret_ui_shadcn::SelectValue::new().placeholder("Select a timezone"))
                 .refine_layout(fret_ui_kit::LayoutRefinement::default().w_px(Px(280.0)))
                 .entries(entries)
                 .into_element(cx)

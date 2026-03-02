@@ -269,7 +269,7 @@ impl fret_core::MaterialService for FakeServices {
 }
 
 fn setup_app_with_shadcn_theme(app: &mut App) {
-    fret_ui_shadcn::shadcn_themes::apply_shadcn_new_york_v4(
+    fret_ui_shadcn::shadcn_themes::apply_shadcn_new_york(
         app,
         fret_ui_shadcn::shadcn_themes::ShadcnBaseColor::Neutral,
         fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Light,
@@ -2668,7 +2668,7 @@ fn web_vs_fret_button_group_select_geometry_and_chrome_match() {
         let radius = Px(8.0);
 
         let select = fret_ui_shadcn::Select::new(select_value, select_open)
-            .placeholder(Arc::from(""))
+            .value(fret_ui_shadcn::SelectValue::new().placeholder(""))
             .a11y_label("ButtonGroupSelectCombobox")
             .refine_layout(
                 fret_ui_kit::LayoutRefinement::default()

@@ -750,7 +750,7 @@ fn radix_web_popover_open_geometry_matches_fret() {
     let window = AppWindowId::default();
     let mut app = App::new();
     {
-        let mut cfg = fret_ui_shadcn::shadcn_themes::shadcn_new_york_v4_config(
+        let mut cfg = fret_ui_shadcn::shadcn_themes::shadcn_new_york_config(
             fret_ui_shadcn::shadcn_themes::ShadcnBaseColor::Neutral,
             fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Light,
         );
@@ -1022,7 +1022,7 @@ fn radix_web_dropdown_menu_open_geometry_matches_fret() {
 
     let window = AppWindowId::default();
     let mut app = App::new();
-    fret_ui_shadcn::shadcn_themes::apply_shadcn_new_york_v4(
+    fret_ui_shadcn::shadcn_themes::apply_shadcn_new_york(
         &mut app,
         fret_ui_shadcn::shadcn_themes::ShadcnBaseColor::Neutral,
         fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Light,
@@ -1257,7 +1257,7 @@ fn radix_web_select_item_aligned_geometry_matches_fret() {
     let window = AppWindowId::default();
     let mut app = App::new();
     {
-        let mut cfg = fret_ui_shadcn::shadcn_themes::shadcn_new_york_v4_config(
+        let mut cfg = fret_ui_shadcn::shadcn_themes::shadcn_new_york_config(
             fret_ui_shadcn::shadcn_themes::ShadcnBaseColor::Neutral,
             fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Light,
         );
@@ -1318,7 +1318,10 @@ fn radix_web_select_item_aligned_geometry_matches_fret() {
                         |cx| {
                             vec![
                                 fret_ui_shadcn::Select::new(value.clone(), open.clone())
-                                    .placeholder("Select a fruit")
+                                    .value(
+                                        fret_ui_shadcn::SelectValue::new()
+                                            .placeholder("Select a fruit"),
+                                    )
                                     .a11y_label("Select a fruit")
                                     .position(fret_ui_shadcn::select::SelectPosition::ItemAligned)
                                     .items(items.clone())
@@ -1396,7 +1399,10 @@ fn radix_web_select_item_aligned_geometry_matches_fret() {
                             |cx| {
                                 vec![
                                     fret_ui_shadcn::Select::new(value.clone(), open.clone())
-                                        .placeholder("Select a fruit")
+                                        .value(
+                                            fret_ui_shadcn::SelectValue::new()
+                                                .placeholder("Select a fruit"),
+                                        )
                                         .a11y_label("Select a fruit")
                                         .position(
                                             fret_ui_shadcn::select::SelectPosition::ItemAligned,
@@ -1563,7 +1569,7 @@ fn radix_web_tooltip_hover_geometry_matches_fret() {
     let window = AppWindowId::default();
     let mut app = App::new();
     {
-        let mut cfg = fret_ui_shadcn::shadcn_themes::shadcn_new_york_v4_config(
+        let mut cfg = fret_ui_shadcn::shadcn_themes::shadcn_new_york_config(
             fret_ui_shadcn::shadcn_themes::ShadcnBaseColor::Neutral,
             fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Light,
         );
@@ -1722,7 +1728,7 @@ fn radix_web_hover_card_hover_geometry_matches_fret() {
 
     let window = AppWindowId::default();
     let mut app = App::new();
-    fret_ui_shadcn::shadcn_themes::apply_shadcn_new_york_v4(
+    fret_ui_shadcn::shadcn_themes::apply_shadcn_new_york(
         &mut app,
         fret_ui_shadcn::shadcn_themes::ShadcnBaseColor::Neutral,
         fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Light,
@@ -1901,7 +1907,7 @@ fn radix_web_context_menu_open_geometry_matches_fret() {
 
     let window = AppWindowId::default();
     let mut app = App::new();
-    fret_ui_shadcn::shadcn_themes::apply_shadcn_new_york_v4(
+    fret_ui_shadcn::shadcn_themes::apply_shadcn_new_york(
         &mut app,
         fret_ui_shadcn::shadcn_themes::ShadcnBaseColor::Neutral,
         fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Light,
@@ -2266,7 +2272,7 @@ fn radix_web_navigation_menu_open_geometry_matches_fret() {
 
     let window = AppWindowId::default();
     let mut app = App::new();
-    fret_ui_shadcn::shadcn_themes::apply_shadcn_new_york_v4(
+    fret_ui_shadcn::shadcn_themes::apply_shadcn_new_york(
         &mut app,
         fret_ui_shadcn::shadcn_themes::ShadcnBaseColor::Neutral,
         fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Light,
@@ -2510,7 +2516,7 @@ fn radix_web_menubar_open_geometry_matches_fret() {
 
     let window = AppWindowId::default();
     let mut app = App::new();
-    fret_ui_shadcn::shadcn_themes::apply_shadcn_new_york_v4(
+    fret_ui_shadcn::shadcn_themes::apply_shadcn_new_york(
         &mut app,
         fret_ui_shadcn::shadcn_themes::ShadcnBaseColor::Neutral,
         fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Light,
@@ -2768,7 +2774,7 @@ fn radix_web_menubar_open_geometry_matches_fret() {
 
     let window = AppWindowId::default();
     let mut app = App::new();
-    fret_ui_shadcn::shadcn_themes::apply_shadcn_new_york_v4(
+    fret_ui_shadcn::shadcn_themes::apply_shadcn_new_york(
         &mut app,
         fret_ui_shadcn::shadcn_themes::ShadcnBaseColor::Neutral,
         fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Light,
@@ -3078,7 +3084,7 @@ fn radix_web_dialog_open_geometry_matches_fret() {
 
     let window = AppWindowId::default();
     let mut app = App::new();
-    fret_ui_shadcn::shadcn_themes::apply_shadcn_new_york_v4(
+    fret_ui_shadcn::shadcn_themes::apply_shadcn_new_york(
         &mut app,
         fret_ui_shadcn::shadcn_themes::ShadcnBaseColor::Neutral,
         fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Light,
@@ -3194,7 +3200,7 @@ fn radix_web_alert_dialog_open_geometry_matches_fret() {
 
     let window = AppWindowId::default();
     let mut app = App::new();
-    fret_ui_shadcn::shadcn_themes::apply_shadcn_new_york_v4(
+    fret_ui_shadcn::shadcn_themes::apply_shadcn_new_york(
         &mut app,
         fret_ui_shadcn::shadcn_themes::ShadcnBaseColor::Neutral,
         fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Light,

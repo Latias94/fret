@@ -304,15 +304,18 @@ impl WinitAppDriver for FormDemoDriver {
                             FormField::new(
                                 form_state.clone(),
                                 "role",
-                                vec![
-                                    Select::new(role.clone(), role_open.clone())
-                                        .a11y_label("Role")
-                                        .placeholder("Pick a role")
-                                        .items([
-                                            SelectItem::new("admin", "Admin"),
-                                            SelectItem::new("editor", "Editor"),
-                                            SelectItem::new("viewer", "Viewer"),
-                                        ])
+	                                vec![
+	                                    Select::new(role.clone(), role_open.clone())
+	                                        .a11y_label("Role")
+	                                        .value(
+	                                            fret_ui_shadcn::SelectValue::new()
+	                                                .placeholder("Pick a role"),
+	                                        )
+	                                        .items([
+	                                            SelectItem::new("admin", "Admin"),
+	                                            SelectItem::new("editor", "Editor"),
+	                                            SelectItem::new("viewer", "Viewer"),
+	                                        ])
                                         .into_element(cx),
                                 ],
                             )

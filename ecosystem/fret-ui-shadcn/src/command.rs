@@ -4213,7 +4213,7 @@ mod tests {
         let render_frame = |ui: &mut UiTree<App>, app: &mut App, services: &mut FakeServices| {
             let next_frame = fret_runtime::FrameId(app.frame_id().0.saturating_add(1));
             app.set_frame_id(next_frame);
-            crate::shadcn_themes::apply_shadcn_new_york_v4(
+            crate::shadcn_themes::apply_shadcn_new_york(
                 app,
                 crate::shadcn_themes::ShadcnBaseColor::Neutral,
                 crate::shadcn_themes::ShadcnColorScheme::Light,
@@ -4458,7 +4458,7 @@ mod tests {
         let next_frame = fret_runtime::FrameId(app.frame_id().0.saturating_add(1));
         app.set_frame_id(next_frame);
 
-        crate::shadcn_themes::apply_shadcn_new_york_v4(
+        crate::shadcn_themes::apply_shadcn_new_york(
             app,
             crate::shadcn_themes::ShadcnBaseColor::Neutral,
             crate::shadcn_themes::ShadcnColorScheme::Light,

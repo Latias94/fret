@@ -1738,7 +1738,7 @@ mod tests {
         use fret_runtime::Effect;
         use fret_ui_kit::OverlayController;
         use fret_ui_shadcn::shadcn_themes::{
-            ShadcnBaseColor, ShadcnColorScheme, apply_shadcn_new_york_v4,
+            ShadcnBaseColor, ShadcnColorScheme, apply_shadcn_new_york,
         };
 
         #[derive(Default)]
@@ -1845,7 +1845,7 @@ mod tests {
             let next_frame = fret_runtime::FrameId(app.frame_id().0.saturating_add(1));
             app.set_frame_id(next_frame);
 
-            apply_shadcn_new_york_v4(app, ShadcnBaseColor::Neutral, ShadcnColorScheme::Light);
+            apply_shadcn_new_york(app, ShadcnBaseColor::Neutral, ShadcnColorScheme::Light);
             OverlayController::begin_frame(app, window);
 
             let root = fret_ui::declarative::render_root(

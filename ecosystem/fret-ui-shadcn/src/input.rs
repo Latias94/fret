@@ -601,7 +601,7 @@ mod tests {
     #[test]
     fn input_selection_color_uses_primary_in_shadcn_light_theme() {
         let mut app = fret_app::App::new();
-        crate::shadcn_themes::apply_shadcn_new_york_v4(
+        crate::shadcn_themes::apply_shadcn_new_york(
             &mut app,
             crate::shadcn_themes::ShadcnBaseColor::Slate,
             crate::shadcn_themes::ShadcnColorScheme::Light,
@@ -630,7 +630,7 @@ mod tests {
     #[test]
     fn input_wraps_in_shadow_container_like_shadcn() {
         let mut app = App::new();
-        crate::shadcn_themes::apply_shadcn_new_york_v4(
+        crate::shadcn_themes::apply_shadcn_new_york(
             &mut app,
             crate::shadcn_themes::ShadcnBaseColor::Slate,
             crate::shadcn_themes::ShadcnColorScheme::Light,
@@ -676,7 +676,7 @@ mod tests {
     #[test]
     fn input_can_reference_a_label_element_for_a11y_association() {
         let mut app = App::new();
-        crate::shadcn_themes::apply_shadcn_new_york_v4(
+        crate::shadcn_themes::apply_shadcn_new_york(
             &mut app,
             crate::shadcn_themes::ShadcnBaseColor::Slate,
             crate::shadcn_themes::ShadcnColorScheme::Light,
@@ -730,7 +730,7 @@ mod tests {
     #[test]
     fn input_control_id_uses_registry_labelled_by_and_described_by_elements() {
         let mut app = App::new();
-        crate::shadcn_themes::apply_shadcn_new_york_v4(
+        crate::shadcn_themes::apply_shadcn_new_york(
             &mut app,
             crate::shadcn_themes::ShadcnBaseColor::Slate,
             crate::shadcn_themes::ShadcnColorScheme::Light,

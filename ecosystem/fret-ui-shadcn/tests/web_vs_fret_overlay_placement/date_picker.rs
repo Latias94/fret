@@ -59,7 +59,7 @@ fn web_vs_fret_date_picker_with_presets_select_listbox_scroll_matches_web_scroll
                             let select_open = select_open.clone();
 
                             let select = fret_ui_shadcn::Select::new(value, select_open)
-                                .placeholder("Select")
+                                .value(fret_ui_shadcn::SelectValue::new().placeholder("Select"))
                                 .position(SelectPosition::Popper)
                                 .items([
                                     fret_ui_shadcn::SelectItem::new("0", "Today"),

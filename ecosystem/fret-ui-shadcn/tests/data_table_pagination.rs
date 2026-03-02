@@ -1,11 +1,11 @@
 use fret_app::App;
 use fret_core::{AppWindowId, FrameId, Point, Px, Rect, SemanticsRole, Size as CoreSize};
 use fret_runtime::Model;
-use fret_ui::tree::UiTree;
 use fret_ui::ElementContext;
+use fret_ui::tree::UiTree;
 use fret_ui_headless::table::{ColumnDef, RowKey, TableState};
-use fret_ui_kit::declarative::stack;
 use fret_ui_kit::OverlayController;
+use fret_ui_kit::declarative::stack;
 use std::sync::Arc;
 
 #[path = "support/fake_services.rs"]
@@ -135,7 +135,7 @@ fn data_table_pagination_buttons_update_page_index_and_disabled_states() {
     );
 
     let mut app = App::new();
-    fret_ui_shadcn::shadcn_themes::apply_shadcn_new_york_v4(
+    fret_ui_shadcn::shadcn_themes::apply_shadcn_new_york(
         &mut app,
         fret_ui_shadcn::shadcn_themes::ShadcnBaseColor::Neutral,
         fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Light,
