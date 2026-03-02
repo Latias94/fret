@@ -2,6 +2,7 @@ pub mod button;
 pub mod badge;
 pub mod checkbox;
 pub mod dialog;
+pub mod gallery;
 pub mod icon_button;
 pub mod modal_navigation_drawer;
 pub mod menu;
