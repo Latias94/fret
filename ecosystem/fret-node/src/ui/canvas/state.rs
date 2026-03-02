@@ -541,6 +541,7 @@ pub(crate) struct DerivedBaseKey {
     pub(crate) draw_order: DrawOrderFingerprint,
     pub(crate) presenter_rev: u64,
     pub(crate) edge_types_rev: u64,
+    pub(crate) overrides_rev: u64,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]

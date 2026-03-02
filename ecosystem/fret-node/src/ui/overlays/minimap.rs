@@ -118,9 +118,9 @@ impl NodeGraphMiniMapOverlay {
         if self.placement == OverlayPlacement::PanelBounds {
             return bounds;
         }
-        let w = self.style.minimap_width.max(40.0);
-        let h = self.style.minimap_height.max(30.0);
-        let margin = self.style.minimap_margin.max(0.0);
+        let w = self.style.paint.minimap_width.max(40.0);
+        let h = self.style.paint.minimap_height.max(30.0);
+        let margin = self.style.paint.minimap_margin.max(0.0);
 
         let x = bounds.origin.x.0 + (bounds.size.width.0 - margin - w).max(0.0);
         let y = bounds.origin.y.0 + (bounds.size.height.0 - margin - h).max(0.0);
@@ -189,7 +189,7 @@ impl NodeGraphMiniMapOverlay {
         });
 
         let mut out = out.unwrap_or(viewport);
-        let pad = self.style.minimap_world_padding.max(0.0);
+        let pad = self.style.paint.minimap_world_padding.max(0.0);
         out.origin.x.0 -= pad;
         out.origin.y.0 -= pad;
         out.size.width.0 += 2.0 * pad;
@@ -305,8 +305,8 @@ impl<H: UiHost> Widget<H> for NodeGraphMiniMapOverlay {
     }
 
     fn measure(&mut self, _cx: &mut MeasureCx<'_, H>) -> Size {
-        let w = self.style.minimap_width.max(0.0);
-        let h = self.style.minimap_height.max(0.0);
+        let w = self.style.paint.minimap_width.max(0.0);
+        let h = self.style.paint.minimap_height.max(0.0);
         Size::new(Px(w), Px(h))
     }
 
@@ -374,8 +374,8 @@ impl<H: UiHost> Widget<H> for NodeGraphMiniMapOverlay {
                     };
 
                     let mut new_zoom = zoom * factor;
-                    let min_zoom = self.style.min_zoom;
-                    let max_zoom = self.style.max_zoom;
+                    let min_zoom = self.style.geometry.min_zoom;
+                    let max_zoom = self.style.geometry.max_zoom;
                     if min_zoom.is_finite()
                         && max_zoom.is_finite()
                         && min_zoom > 0.0
@@ -527,21 +527,21 @@ impl<H: UiHost> Widget<H> for NodeGraphMiniMapOverlay {
         let snapshot = self.internals.snapshot();
         let canvas_bounds = Self::canvas_bounds_from_internals(&snapshot);
         let world = self.compute_world_bounds(canvas_bounds, &snapshot);
-        let corner = self.style.context_menu_corner_radius;
+        let corner = self.style.paint.context_menu_corner_radius;
 
         cx.scene.push(SceneOp::Quad {
             order: DrawOrder(20_000),
             rect: minimap,
-            background: fret_core::Paint::Solid(self.style.context_menu_background).into(),
+            background: fret_core::Paint::Solid(self.style.paint.context_menu_background).into(),
 
             border: Edges::all(Px(1.0)),
-            border_paint: fret_core::Paint::Solid(self.style.context_menu_border).into(),
+            border_paint: fret_core::Paint::Solid(self.style.paint.context_menu_border).into(),
 
             corner_radii: Corners::all(Px(corner)),
         });
 
-        let node_fill = self.style.node_background;
-        let node_border = self.style.node_border;
+        let node_fill = self.style.paint.node_background;
+        let node_border = self.style.paint.node_border;
 
         for rect in snapshot.nodes_window.values().copied() {
             let r = self.invert_window_rect_to_canvas(rect, &snapshot);
@@ -565,11 +565,11 @@ impl<H: UiHost> Widget<H> for NodeGraphMiniMapOverlay {
             rect: rr,
             background: fret_core::Paint::Solid(Color {
                 a: 0.12,
-                ..self.style.node_border_selected
+                ..self.style.paint.node_border_selected
             })
             .into(),
             border: Edges::all(Px(1.0)),
-            border_paint: fret_core::Paint::Solid(self.style.node_border_selected).into(),
+            border_paint: fret_core::Paint::Solid(self.style.paint.node_border_selected).into(),
 
             corner_radii: Corners::all(Px(2.0)),
         });

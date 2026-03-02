@@ -28,7 +28,8 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
 
         let zoom = snapshot.zoom;
         if zoom.is_finite() && zoom > 0.0 {
-            self.cached_zoom = zoom.clamp(self.style.min_zoom, self.style.max_zoom);
+            self.cached_zoom =
+                zoom.clamp(self.style.geometry.min_zoom, self.style.geometry.max_zoom);
         } else {
             self.cached_zoom = 1.0;
         }

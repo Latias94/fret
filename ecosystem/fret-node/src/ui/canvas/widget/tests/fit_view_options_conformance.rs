@@ -24,8 +24,8 @@ fn fit_view_options_min_zoom_clamps() {
 
     let mut canvas = NodeGraphCanvas::new(graph, view).with_view_queue(queue.clone());
     canvas.interaction.last_bounds = Some(bounds);
-    canvas.style.min_zoom = 0.01;
-    canvas.style.max_zoom = 10.0;
+    canvas.style.geometry.min_zoom = 0.01;
+    canvas.style.geometry.max_zoom = 10.0;
 
     let opts = NodeGraphFitViewOptions {
         duration_ms: Some(0),
@@ -61,8 +61,8 @@ fn fit_view_options_max_zoom_clamps() {
 
     let mut canvas = NodeGraphCanvas::new(graph, view).with_view_queue(queue.clone());
     canvas.interaction.last_bounds = Some(bounds);
-    canvas.style.min_zoom = 0.01;
-    canvas.style.max_zoom = 10.0;
+    canvas.style.geometry.min_zoom = 0.01;
+    canvas.style.geometry.max_zoom = 10.0;
 
     let opts = NodeGraphFitViewOptions {
         duration_ms: Some(0),

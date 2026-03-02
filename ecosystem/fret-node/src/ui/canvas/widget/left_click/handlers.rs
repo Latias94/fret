@@ -353,9 +353,12 @@ pub(super) fn handle_hit<H: UiHost, M: NodeGraphCanvasMiddleware>(
                 .unwrap_or_else(|| vec![node]);
             let drag_enabled = match snapshot.interaction.node_drag_handle_mode {
                 NodeGraphDragHandleMode::Any => true,
-                NodeGraphDragHandleMode::Header => {
-                    super::node_header_hit(rect, canvas.style.node_header_height, zoom, position)
-                }
+                NodeGraphDragHandleMode::Header => super::node_header_hit(
+                    rect,
+                    canvas.style.geometry.node_header_height,
+                    zoom,
+                    position,
+                ),
             };
             let drag_enabled = drag_enabled && node_draggable;
             canvas.interaction.pending_node_drag = Some(PendingNodeDrag {

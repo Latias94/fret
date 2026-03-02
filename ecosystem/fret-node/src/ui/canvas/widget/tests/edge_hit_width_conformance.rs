@@ -53,7 +53,7 @@ fn run_case(zoom: f32, edge_interaction_width: f32, wire_width: f32) -> (bool, b
     });
 
     let mut canvas = NodeGraphCanvas::new(graph, view).with_edge_types(edge_types);
-    canvas.style.wire_width = wire_width;
+    canvas.style.geometry.wire_width = wire_width;
 
     let mut services = NullServices::default();
     let mut prevented_default_actions = fret_runtime::DefaultActionSet::default();

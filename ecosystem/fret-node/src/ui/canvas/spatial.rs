@@ -392,6 +392,7 @@ mod tests {
             1.0,
             NodeGraphNodeOrigin::default(),
             &mut presenter,
+            None,
         );
 
         let index = CanvasSpatialDerived::build(&graph, &geom, 1.0, 0.0, 64.0);
@@ -425,6 +426,7 @@ mod tests {
             1.0,
             NodeGraphNodeOrigin::default(),
             &mut presenter,
+            None,
         );
 
         let index = CanvasSpatialDerived::build(&graph, &geom, 1.0, -123.0, 64.0);

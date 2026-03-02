@@ -52,7 +52,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
             return;
         };
 
-        let text_style = self.style.context_menu_text_style.clone();
+        let text_style = self.style.geometry.context_menu_text_style.clone();
         let constraints = TextConstraints {
             max_width: None,
             wrap: TextWrap::None,
@@ -61,9 +61,9 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
             scale_factor: cx.scale_factor,
         };
 
-        let node_pad = self.style.node_padding;
+        let node_pad = self.style.geometry.node_padding;
         let pin_gap = 8.0;
-        let pin_r = self.style.pin_radius;
+        let pin_r = self.style.geometry.pin_radius;
         let label_overhead = 2.0 * node_pad + 2.0 * (pin_r + pin_gap);
 
         let mut measured: Vec<(GraphNodeId, (f32, f32))> = Vec::with_capacity(nodes.len());
@@ -104,7 +104,12 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
 
             let w_by_title = title_w + 2.0 * node_pad;
             let w_by_labels = max_in.max(max_out) + label_overhead;
-            let w = self.style.node_width.max(w_by_title).max(w_by_labels);
+            let w = self
+                .style
+                .geometry
+                .node_width
+                .max(w_by_title)
+                .max(w_by_labels);
 
             let (_default_w, h) =
                 node_size_default_px(node.inputs.len(), node.outputs.len(), &self.style);

@@ -103,11 +103,11 @@ impl NodeGraphBlackboardOverlay {
     }
 
     fn row_height_px(&self) -> f32 {
-        self.style.context_menu_item_height.max(20.0)
+        self.style.paint.context_menu_item_height.max(20.0)
     }
 
     fn panel_width_px(&self) -> f32 {
-        self.style.context_menu_width.max(120.0)
+        self.style.paint.context_menu_width.max(120.0)
     }
 
     fn header_height_px(&self) -> f32 {
@@ -115,7 +115,7 @@ impl NodeGraphBlackboardOverlay {
     }
 
     fn panel_size_px_for_rows(&self, rows: usize) -> Size {
-        let pad = self.style.context_menu_padding.max(0.0);
+        let pad = self.style.paint.context_menu_padding.max(0.0);
         let w = self.panel_width_px();
         let h =
             (self.header_height_px() + rows as f32 * self.row_height_px() + 2.0 * pad).max(24.0);
@@ -170,7 +170,7 @@ impl NodeGraphBlackboardOverlay {
         );
         let panel = clamp_rect_to_bounds(Rect::new(desired_origin, size), bounds);
 
-        let pad = self.style.context_menu_padding.max(0.0);
+        let pad = self.style.paint.context_menu_padding.max(0.0);
         let row_h = self.row_height_px();
         let header_h = self.header_height_px();
 
@@ -411,7 +411,7 @@ impl NodeGraphBlackboardOverlay {
     }
 
     fn text_style(&self) -> TextStyle {
-        self.style.context_menu_text_style.clone()
+        self.style.geometry.context_menu_text_style.clone()
     }
 }
 
@@ -615,11 +615,11 @@ impl<H: fret_ui::UiHost> Widget<H> for NodeGraphBlackboardOverlay {
         let layout = self.compute_layout(cx.bounds, &symbols);
         self.last_layout = Some(layout.clone());
 
-        let bg = self.style.context_menu_background;
-        let border = self.style.context_menu_border;
-        let hover_bg = self.style.context_menu_hover_background;
-        let text_color = self.style.context_menu_text;
-        let corner = self.style.context_menu_corner_radius;
+        let bg = self.style.paint.context_menu_background;
+        let border = self.style.paint.context_menu_border;
+        let hover_bg = self.style.paint.context_menu_hover_background;
+        let text_color = self.style.paint.context_menu_text;
+        let corner = self.style.paint.context_menu_corner_radius;
 
         cx.scene.push(SceneOp::Quad {
             order: DrawOrder(20_900),

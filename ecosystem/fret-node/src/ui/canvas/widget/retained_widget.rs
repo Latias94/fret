@@ -16,6 +16,7 @@ impl<H: UiHost, M: NodeGraphCanvasMiddleware> Widget<H> for NodeGraphCanvasWith<
         let theme = cx.theme().snapshot();
         self.sync_style_from_color_mode(theme, Some(cx.services));
         self.sync_skin(Some(cx.services));
+        self.sync_paint_overrides(Some(cx.services));
         let snapshot = self.sync_view_state(cx.app);
         if cx.input_ctx.focus_is_text_input
             && (command.as_str().starts_with("node_graph.")
@@ -129,6 +130,7 @@ impl<H: UiHost, M: NodeGraphCanvasMiddleware> Widget<H> for NodeGraphCanvasWith<
         let theme = Theme::global(&*cx.app).snapshot();
         self.sync_style_from_color_mode(theme, None);
         self.sync_skin(None);
+        self.sync_paint_overrides(None);
         self.interaction.last_bounds = Some(cx.bounds);
         let snapshot = self.sync_view_state(cx.app);
 
@@ -342,6 +344,7 @@ impl<H: UiHost, M: NodeGraphCanvasMiddleware> Widget<H> for NodeGraphCanvasWith<
         let theme = cx.theme().snapshot();
         self.sync_style_from_color_mode(theme, Some(cx.services));
         self.sync_skin(Some(cx.services));
+        self.sync_paint_overrides(Some(cx.services));
         let snapshot = self.sync_view_state(cx.app);
         self.interaction.last_bounds = Some(cx.bounds);
 
@@ -370,6 +373,7 @@ impl<H: UiHost, M: NodeGraphCanvasMiddleware> Widget<H> for NodeGraphCanvasWith<
         let theme = cx.theme().snapshot();
         self.sync_style_from_color_mode(theme, Some(cx.services));
         self.sync_skin(Some(cx.services));
+        self.sync_paint_overrides(Some(cx.services));
         self.paint_root(cx);
     }
 }

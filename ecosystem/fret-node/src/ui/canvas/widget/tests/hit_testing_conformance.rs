@@ -82,7 +82,7 @@ fn strict_requires_pointer_inside_pin_bounds_while_loose_accepts_radius() {
         .expect("target port handle should exist");
 
     let inside = handle.center;
-    let r = hit_test_canvas_units_from_screen_px(canvas.style.pin_radius, snapshot.zoom);
+    let r = hit_test_canvas_units_from_screen_px(canvas.style.geometry.pin_radius, snapshot.zoom);
     let outside_but_near = Point::new(Px(handle.bounds.origin.x.0 - 0.5 * r), inside.y);
 
     let _ = view.update(&mut host, |s, _cx| {

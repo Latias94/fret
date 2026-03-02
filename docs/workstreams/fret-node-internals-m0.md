@@ -340,7 +340,7 @@ After M0A gates are green:
   - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/tests/portal_measured_geometry_conformance.rs`
   - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/tests/portal_measured_internals_conformance.rs`
   - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/tests/op_batching_determinism_conformance.rs`
-  - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/tests/xyflow_style_conformance.rs`
+  - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/tests/compact_style_conformance.rs`
   - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/tests/a11y_active_descendant_conformance.rs`
   - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/tests/draw_order_invalidation_conformance.rs`
   - Evidence: `ecosystem/fret-node/src/ui/canvas/widget/tests/drag_preview_conformance.rs`
