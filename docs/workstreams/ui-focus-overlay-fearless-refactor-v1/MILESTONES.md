@@ -73,3 +73,12 @@ Status: In progress (2026-03-02)
   - regression test: `crates/fret-ui/src/declarative/tests/layout/interactivity.rs`
 - Scripted diag repro exists for overlay focus trap + hover/cursor chains:
   - `tools/diag-scripts/ui-gallery/overlay/ui-gallery-overlay-focus-trap-hover-cursor.json`
+
+- View-cache reuse cannot hide hover transitions:
+  - HoverRegion “hover edge” invalidation disables view-cache reuse for the containing cache roots
+    (rerender-on-hover-edge), so hover-driven overlays and pseudoclass-driven style changes remain
+    correct under cache hits.
+  - Regression test: `crates/fret-ui/src/declarative/tests/layout/interactivity.rs`
+    (`hover_region_marks_view_cache_root_dirty_on_hover_edges`).
+  - Scripted gate: `tools/diag-scripts/ui-gallery/overlay/ui-gallery-hovercard-open.json` (run with
+    `FRET_UI_GALLERY_VIEW_CACHE=1` + `FRET_UI_GALLERY_VIEW_CACHE_SHELL=1`).

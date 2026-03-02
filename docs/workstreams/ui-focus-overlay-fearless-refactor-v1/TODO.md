@@ -30,6 +30,8 @@ Tracking doc: `docs/workstreams/ui-focus-overlay-fearless-refactor-v1/DESIGN.md`
     `crates/fret-ui/src/tree/dispatch/event_chain.rs` (threaded from `dispatch/window.rs` and
     `dispatch/chain.rs`).
 - [x] Make hover ancestor queries resilient to stale retained `parent` pointers (Pressable/HoverRegion).
+- [x] Make HoverRegion “hover edge” transitions disable view-cache reuse for the containing cache
+  roots (rerender-on-hover-edge), so hover-driven overlays cannot get stuck behind cache hits.
 - [ ] Add conformance coverage for nested scenarios:
   - [x] trapped focus scope inside a modal overlay root (portal-style nested roots)
   - [x] multiple stacked trapped scopes (inner scope wins)
@@ -39,4 +41,7 @@ Tracking doc: `docs/workstreams/ui-focus-overlay-fearless-refactor-v1/DESIGN.md`
 
 - [x] `fretboard diag` scripted repro covering overlay focus trap + hover/cursor outcomes.
   - Script: `tools/diag-scripts/ui-gallery/overlay/ui-gallery-overlay-focus-trap-hover-cursor.json`
+- [x] Minimal hovercard-open scripted gate under view-cache reuse (hover edge should rerender the
+  relevant cache root).
+  - Script: `tools/diag-scripts/ui-gallery/overlay/ui-gallery-hovercard-open.json`
 - [ ] Perf probe: snapshot build cost vs frame budget in UI gallery worst-case overlays.

@@ -86,6 +86,16 @@ invalidations without forcing a rerender:
   observed on the next frame.
 - `notify()` remains the escape hatch for structural/state changes that must rerender.
 
+Under view-cache reuse (ADR 0213), a paint invalidation may still need to **disable cache-hit reuse** so the relevant
+render closures run and can re-evaluate pseudoclass-driven style decisions:
+
+- HoverRegion “hover edge” transitions MUST mark the containing view-cache reuse roots as `needs_rerender` (cache miss on
+  the next frame), while still keeping the invalidation at `Paint` by default.
+- Rationale: without this, cache hits can hide hover transitions behind a retained subtree replay, causing hover-driven
+  overlays (hovercards/tooltips) and hover-driven style refinements to get stuck.
+- Future evolution: a paint-time style refinement path could make more hover transitions “correct on cache hit”, but v1
+  correctness must not depend on that.
+
 ### 4) Cache boundary compatibility rule
 
 When a subtree is behind a cache boundary (ADR 0213):
@@ -142,4 +152,3 @@ This ADR instead defines a runtime contract + tooling enforcement, while leaving
   - ADR 0213: `docs/adr/0224-view-cache-subtree-reuse-and-state-retention.md`
 - Fret runtime contract surface and layering:
   - ADR 0066: `docs/adr/0066-fret-ui-runtime-contract-surface.md`
-
