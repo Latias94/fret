@@ -422,7 +422,9 @@ fn cmd_query_scroll_extents_observation(
     let bundle_path = match positionals.as_slice() {
         [bundle_src] => {
             let bundle_src = crate::resolve_path(workspace_root, PathBuf::from(bundle_src));
-            crate::resolve_bundle_artifact_path(&bundle_src)
+            let resolved =
+                resolve::maybe_resolve_base_or_session_out_dir_to_latest_bundle_dir(&bundle_src);
+            crate::resolve_bundle_artifact_path(&resolved)
         }
         [] => resolve_bundle_artifact_path_or_latest(None, workspace_root, out_dir)?,
         _ => unreachable!(),
@@ -493,6 +495,7 @@ fn cmd_query_scroll_extents_observation(
                     "timestamp_unix_ms": timestamp_unix_ms,
                     "node": n.get("node").and_then(|v| v.as_u64()),
                     "element": n.get("element").and_then(|v| v.as_u64()),
+                    "test_id": n.get("test_id").and_then(|v| v.as_str()),
                     "axis": n.get("axis").and_then(|v| v.as_str()),
                     "offset_x": n.get("offset_x").and_then(|v| v.as_f64()),
                     "offset_y": n.get("offset_y").and_then(|v| v.as_f64()),
@@ -2024,7 +2027,11 @@ mod tests {
 
         let query_out = out_dir.join("out.json");
         cmd_query_scroll_extents_observation(
-            &[bundle.display().to_string(), "--top".to_string(), "10".to_string()],
+            &[
+                bundle.display().to_string(),
+                "--top".to_string(),
+                "10".to_string(),
+            ],
             Path::new("."),
             &out_dir,
             Some(query_out.clone()),

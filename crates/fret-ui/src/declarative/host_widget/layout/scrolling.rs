@@ -11,6 +11,7 @@ use crate::tree::{
 use fret_core::FrameId;
 use fret_core::time::{Duration, Instant};
 use std::sync::OnceLock;
+use std::sync::Arc;
 
 #[derive(Debug, Clone)]
 struct ScrollLayoutProfileConfig {
@@ -1382,6 +1383,29 @@ impl ElementHostWidget {
         let mut content_w = Px(content_w.0.max(desired.width.0.max(0.0)));
         let mut content_h = Px(content_h.0.max(desired.height.0.max(0.0)));
 
+        let debug_test_id: Option<Arc<str>> = if cx.tree.debug_enabled() {
+            let mut current = Some(cx.node);
+            let mut steps: u8 = 0;
+            let mut found: Option<Arc<str>> = None;
+            while let Some(node) = current {
+                if let Some(record) = crate::declarative::element_record_for_node(cx.app, window, node)
+                    && let Some(decoration) = record.semantics_decoration.as_ref()
+                    && let Some(test_id) = decoration.test_id.as_ref()
+                {
+                    found = Some(test_id.clone());
+                    break;
+                }
+                current = cx.tree.node_parent(node);
+                steps = steps.saturating_add(1);
+                if steps >= 48 {
+                    break;
+                }
+            }
+            found
+        } else {
+            None
+        };
+
         // Avoid mutating the imperative handle during "probe" layout passes that use an
         // effectively-unbounded available space, otherwise scroll position can be clamped to zero
         // prematurely.
@@ -1395,6 +1419,7 @@ impl ElementHostWidget {
                 .debug_record_scroll_node_telemetry(UiDebugScrollNodeTelemetry {
                     node: cx.node,
                     element: Some(self.element),
+                    test_id: debug_test_id.clone(),
                     axis: match props.axis {
                         crate::element::ScrollAxis::X => UiDebugScrollAxis::X,
                         crate::element::ScrollAxis::Y => UiDebugScrollAxis::Y,
@@ -1603,6 +1628,7 @@ impl ElementHostWidget {
                     .debug_record_scroll_node_telemetry(UiDebugScrollNodeTelemetry {
                         node: cx.node,
                         element: Some(self.element),
+                        test_id: debug_test_id.clone(),
                         axis: match props.axis {
                             crate::element::ScrollAxis::X => UiDebugScrollAxis::X,
                             crate::element::ScrollAxis::Y => UiDebugScrollAxis::Y,
@@ -1684,6 +1710,7 @@ impl ElementHostWidget {
                         .debug_record_scroll_node_telemetry(UiDebugScrollNodeTelemetry {
                             node: cx.node,
                             element: Some(self.element),
+                            test_id: debug_test_id.clone(),
                             axis: match props.axis {
                                 crate::element::ScrollAxis::X => UiDebugScrollAxis::X,
                                 crate::element::ScrollAxis::Y => UiDebugScrollAxis::Y,
@@ -1741,6 +1768,7 @@ impl ElementHostWidget {
                     .debug_record_scroll_node_telemetry(UiDebugScrollNodeTelemetry {
                         node: cx.node,
                         element: Some(self.element),
+                        test_id: debug_test_id.clone(),
                         axis: match props.axis {
                             crate::element::ScrollAxis::X => UiDebugScrollAxis::X,
                             crate::element::ScrollAxis::Y => UiDebugScrollAxis::Y,
