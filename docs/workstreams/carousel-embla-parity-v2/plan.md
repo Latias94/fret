@@ -52,6 +52,13 @@ Gates:
 - A diag script that resizes during engine-driven motion without panics/hangs
   (`tools/diag-scripts/ui-gallery/carousel/ui-gallery-carousel-demo-reinit-resize-gate.json`).
 
+Optional suite (recommended for Embla engine regressions):
+
+- `ui-gallery-carousel-embla-engine` runs the screenshot-based, engine-enabled Carousel gates.
+  - Requires `FRET_DEBUG_CAROUSEL_EMBLA_ENGINE=1`.
+  - Run:
+    - `cargo run -p fretboard -- diag suite ui-gallery-carousel-embla-engine --env FRET_DEBUG_CAROUSEL_EMBLA_ENGINE=1 --launch -- cargo run -p fret-ui-gallery --release`
+
 ## Step 3 — Events + API handle (3–6 days)
 
 - Add a Rust-native `CarouselApi` handle:
