@@ -43,73 +43,71 @@ fn validate_custom_effect_wgsl_triplet(
     Ok(())
 }
 
-fn build_and_validate_custom_effect_wgsl_v1(
+fn build_and_validate_custom_effect_wgsl_with_sources(
     user_source: &str,
+    unmasked_source: fn(&str) -> String,
+    masked_source: fn(&str) -> String,
+    mask_source: fn(&str) -> String,
+    parse_failed_msg: &'static str,
+    validation_failed_msg: &'static str,
 ) -> Result<(String, String, String), fret_core::CustomEffectRegistrationError> {
     if user_source.len() > MAX_CUSTOM_EFFECT_WGSL_BYTES {
         return Err(fret_core::CustomEffectRegistrationError::InvalidSource);
     }
 
-    let wgsl_unmasked = custom_effect_unmasked_shader_source(user_source);
-    let wgsl_masked = custom_effect_masked_shader_source(user_source);
-    let wgsl_mask = custom_effect_mask_shader_source(user_source);
+    let wgsl_unmasked = unmasked_source(user_source);
+    let wgsl_masked = masked_source(user_source);
+    let wgsl_mask = mask_source(user_source);
 
     validate_custom_effect_wgsl_triplet(
         user_source,
         &wgsl_unmasked,
         &wgsl_masked,
         &wgsl_mask,
-        "custom effect v1 wgsl parse failed",
-        "custom effect v1 wgsl validation failed",
+        parse_failed_msg,
+        validation_failed_msg,
     )?;
 
     Ok((wgsl_unmasked, wgsl_masked, wgsl_mask))
+}
+
+fn build_and_validate_custom_effect_wgsl_v1(
+    user_source: &str,
+) -> Result<(String, String, String), fret_core::CustomEffectRegistrationError> {
+    build_and_validate_custom_effect_wgsl_with_sources(
+        user_source,
+        custom_effect_unmasked_shader_source,
+        custom_effect_masked_shader_source,
+        custom_effect_mask_shader_source,
+        "custom effect v1 wgsl parse failed",
+        "custom effect v1 wgsl validation failed",
+    )
 }
 
 fn build_and_validate_custom_effect_wgsl_v2(
     user_source: &str,
 ) -> Result<(String, String, String), fret_core::CustomEffectRegistrationError> {
-    if user_source.len() > MAX_CUSTOM_EFFECT_WGSL_BYTES {
-        return Err(fret_core::CustomEffectRegistrationError::InvalidSource);
-    }
-
-    let wgsl_unmasked = custom_effect_v2_unmasked_shader_source(user_source);
-    let wgsl_masked = custom_effect_v2_masked_shader_source(user_source);
-    let wgsl_mask = custom_effect_v2_mask_shader_source(user_source);
-
-    validate_custom_effect_wgsl_triplet(
+    build_and_validate_custom_effect_wgsl_with_sources(
         user_source,
-        &wgsl_unmasked,
-        &wgsl_masked,
-        &wgsl_mask,
+        custom_effect_v2_unmasked_shader_source,
+        custom_effect_v2_masked_shader_source,
+        custom_effect_v2_mask_shader_source,
         "custom effect v2 wgsl parse failed",
         "custom effect v2 wgsl validation failed",
-    )?;
-
-    Ok((wgsl_unmasked, wgsl_masked, wgsl_mask))
+    )
 }
 
 fn build_and_validate_custom_effect_wgsl_v3(
     user_source: &str,
 ) -> Result<(String, String, String), fret_core::CustomEffectRegistrationError> {
-    if user_source.len() > MAX_CUSTOM_EFFECT_WGSL_BYTES {
-        return Err(fret_core::CustomEffectRegistrationError::InvalidSource);
-    }
-
-    let wgsl_unmasked = custom_effect_v3_unmasked_shader_source(user_source);
-    let wgsl_masked = custom_effect_v3_masked_shader_source(user_source);
-    let wgsl_mask = custom_effect_v3_mask_shader_source(user_source);
-
-    validate_custom_effect_wgsl_triplet(
+    build_and_validate_custom_effect_wgsl_with_sources(
         user_source,
-        &wgsl_unmasked,
-        &wgsl_masked,
-        &wgsl_mask,
+        custom_effect_v3_unmasked_shader_source,
+        custom_effect_v3_masked_shader_source,
+        custom_effect_v3_mask_shader_source,
         "custom effect v3 wgsl parse failed",
         "custom effect v3 wgsl validation failed",
-    )?;
-
-    Ok((wgsl_unmasked, wgsl_masked, wgsl_mask))
+    )
 }
 
 impl fret_core::TextService for Renderer {
