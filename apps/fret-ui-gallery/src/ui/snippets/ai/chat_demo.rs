@@ -1,9 +1,11 @@
-use super::super::super::super::*;
+pub const SOURCE: &str = include_str!("chat_demo.rs");
 
-pub(in crate::ui) fn preview_ai_chat_demo(
-    cx: &mut ElementContext<'_, App>,
-    _theme: &Theme,
-) -> Vec<AnyElement> {
+// region: example
+use fret_core::Px;
+use fret_ui_ai as ui_ai;
+use fret_ui_shadcn::{self as shadcn, prelude::*};
+
+pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement {
     use std::sync::Arc;
 
     use fret_runtime::Model;
@@ -703,11 +705,20 @@ pub(in crate::ui) fn preview_ai_chat_demo(
         )
     });
 
-    vec![
-        header,
-        actions_demo,
-        chat,
-        prompt_non_empty_marker.unwrap_or_else(|| cx.text("")),
-        exported.unwrap_or_else(|| cx.text("")),
-    ]
+    stack::vstack(
+        cx,
+        stack::VStackProps::default()
+            .layout(LayoutRefinement::default().w_full().min_w_0())
+            .gap(Space::N3),
+        move |cx| {
+            vec![
+                header,
+                actions_demo,
+                chat,
+                prompt_non_empty_marker.unwrap_or_else(|| cx.text("")),
+                exported.unwrap_or_else(|| cx.text("")),
+            ]
+        },
+    )
 }
+// endregion: example

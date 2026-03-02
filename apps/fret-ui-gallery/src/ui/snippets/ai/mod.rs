@@ -5,6 +5,7 @@ pub mod attachments_demo;
 pub mod canvas_world_layer_spike;
 pub mod checkpoint_demo;
 pub mod chain_of_thought_demo;
+pub mod chat_demo;
 pub mod code_block_demo;
 pub mod commit_demo;
 pub mod commit_large_demo;
