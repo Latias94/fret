@@ -378,6 +378,9 @@ impl WorkspaceShellDemoDriver {
                                                     let commit = CommandId::new(Arc::<str>::from(
                                                         "workspace.tab.commit_preview",
                                                     ));
+                                                    let toggle_pin = CommandId::new(Arc::<str>::from(
+                                                        "workspace.tab.toggle_pin",
+                                                    ));
 
                                                     let bar = cx.flex(
                                                         FlexProps {
@@ -418,6 +421,12 @@ impl WorkspaceShellDemoDriver {
                                                                     "workspace-shell-pane-pane-a-debug-commit-preview",
                                                                     "Commit preview",
                                                                     commit.clone(),
+                                                                ),
+                                                                button(
+                                                                    cx,
+                                                                    "workspace-shell-pane-pane-a-debug-toggle-pin",
+                                                                    "Toggle pin",
+                                                                    toggle_pin.clone(),
                                                                 ),
                                                             ]
                                                         },

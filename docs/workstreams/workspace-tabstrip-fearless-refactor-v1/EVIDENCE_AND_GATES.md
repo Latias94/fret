@@ -27,6 +27,10 @@ Gates (examples):
 - preview (commit/replace):
   - `tools/diag-scripts/workspace/shell-demo/workspace-shell-demo-tab-preview-replaces-existing-smoke.json`
   - `tools/diag-scripts/workspace/shell-demo/workspace-shell-demo-tab-preview-commit-keeps-old-tab-smoke.json`
+- pinned (anchors + cross-boundary discipline):
+  - `tools/diag-scripts/workspace/shell-demo/workspace-shell-demo-tab-pinned-boundary-toggle-smoke.json`
+  - `tools/diag-scripts/workspace/shell-demo/workspace-shell-demo-tab-pinned-cross-boundary-drop-does-not-pin-smoke.json`
+  - `tools/diag-scripts/workspace/shell-demo/workspace-shell-demo-tab-pin-commits-preview-smoke.json`
 
 Harness:
 

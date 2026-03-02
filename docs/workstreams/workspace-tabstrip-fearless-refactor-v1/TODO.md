@@ -72,6 +72,10 @@ ID format:
 
 - [ ] WTS-editor-030 Pinned tabs (policy) in workspace layer:
   - pinned region model, reorder rules, close affordances.
+  - Diag gates:
+    - `tools/diag-scripts/workspace/shell-demo/workspace-shell-demo-tab-pinned-boundary-toggle-smoke.json`
+    - `tools/diag-scripts/workspace/shell-demo/workspace-shell-demo-tab-pinned-cross-boundary-drop-does-not-pin-smoke.json`
+    - `tools/diag-scripts/workspace/shell-demo/workspace-shell-demo-tab-pin-commits-preview-smoke.json`
 - [x] WTS-editor-031 Preview tab slot (Zed-style):
   - activate/commit rules, replacement rules.
   - Diag gates:

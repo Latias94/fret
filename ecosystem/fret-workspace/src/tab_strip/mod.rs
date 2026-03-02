@@ -592,6 +592,9 @@ impl WorkspaceTabStrip {
                                                 let tab_preview_test_id = tab_test_id
                                                     .as_ref()
                                                     .map(|id| Arc::<str>::from(format!("{id}.preview")));
+                                                let tab_pinned_test_id = tab_test_id
+                                                    .as_ref()
+                                                    .map(|id| Arc::<str>::from(format!("{id}.pinned")));
                                                 let tab_element = cx.pressable_with_id(
                                                     PressableProps {
                                                         layout: {
@@ -1414,6 +1417,44 @@ impl WorkspaceTabStrip {
                                                                                         role: SemanticsRole::Generic,
                                                                                         label: Some(Arc::<str>::from(
                                                                                             "Preview tab",
+                                                                                        )),
+                                                                                        test_id: Some(test_id),
+                                                                                        ..Default::default()
+                                                                                    },
+                                                                                    |_cx| Vec::new(),
+                                                                                )]
+                                                                            },
+                                                                        ));
+                                                                    }
+                                                                }
+                                                                if tab_pinned {
+                                                                    if let Some(test_id) =
+                                                                        tab_pinned_test_id.clone()
+                                                                    {
+                                                                        let mut layout =
+                                                                            LayoutStyle::default();
+                                                                        layout.position =
+                                                                            PositionStyle::Absolute;
+                                                                        layout.inset.top =
+                                                                            InsetEdge::Px(Px(0.0));
+                                                                        layout.inset.left =
+                                                                            InsetEdge::Px(Px(0.0));
+                                                                        layout.size.width =
+                                                                            Length::Px(Px(1.0));
+                                                                        layout.size.height =
+                                                                            Length::Px(Px(1.0));
+                                                                        out.push(cx.hit_test_gate_props(
+                                                                            HitTestGateProps {
+                                                                                layout,
+                                                                                hit_test: false,
+                                                                            },
+                                                                            move |cx| {
+                                                                                vec![cx.semantics(
+                                                                                    SemanticsProps {
+                                                                                        layout: fill_layout(),
+                                                                                        role: SemanticsRole::Generic,
+                                                                                        label: Some(Arc::<str>::from(
+                                                                                            "Pinned tab",
                                                                                         )),
                                                                                         test_id: Some(test_id),
                                                                                         ..Default::default()
