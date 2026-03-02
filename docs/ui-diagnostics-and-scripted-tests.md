@@ -1204,6 +1204,24 @@ Run example:
 - `cargo run -p fretboard -- diag suite cookbook-customv2-basics --dir target/fret-diag/customv2 --session-auto --launch -- cargo run -p fret-demo --bin custom_effect_v2_demo`
 - `cargo run -p fretboard -- diag triage target/fret-diag/customv2/sessions/<session_id> --warmup-frames 0`
 
+### CustomV3 user-image compatibility suite
+
+This suite is the CustomV3 counterpart: it binds an intentionally incompatible `user0` image (a non-filterable float
+format) while the CustomV3 ABI expects filterable sampled textures. The backend should bind a deterministic 1x1
+transparent fallback image instead of triggering a wgpu validation error, and should surface the hint:
+
+- `renderer.custom_effect_v3_user_image_incompatible_fallbacks`
+
+Suite:
+
+- `tools/diag-scripts/suites/cookbook-customv3-basics/`
+  - `custom-effect-v3-non-filterable-user0-fallback-screenshot.json`
+
+Run example:
+
+- `cargo run -p fretboard -- diag suite cookbook-customv3-basics --dir target/fret-diag/customv3 --session-auto --launch -- cargo run -p fret-demo --bin custom_effect_v3_demo`
+- `cargo run -p fretboard -- diag triage target/fret-diag/customv3/sessions/<session_id> --warmup-frames 0`
+
 Note:
 
 - The script library is modularized via a taxonomy plus a minimal, generated registry for “promoted” scripts

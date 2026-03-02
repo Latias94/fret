@@ -180,6 +180,8 @@ Anchors:
   - `tools/diag-scripts/suites/perf-liquid-glass-custom-v3-steady/`
   - `tools/diag-scripts/suites/cookbook-customv2-basics/`
     - CustomV2 incompatible user-image fallback script: `tools/diag-scripts/suites/cookbook-customv2-basics/custom-effect-v2-non-filterable-input-fallback-screenshot.json`
+  - `tools/diag-scripts/suites/cookbook-customv3-basics/`
+    - CustomV3 incompatible user0 fallback script: `tools/diag-scripts/suites/cookbook-customv3-basics/custom-effect-v3-non-filterable-user0-fallback-screenshot.json`
 
 Repro note (local evidence; do not check in the bundle):
 
@@ -188,6 +190,8 @@ Repro note (local evidence; do not check in the bundle):
 - `cargo run -p fretboard -- diag triage <bundle_dir> --warmup-frames 0 --json --out target/fret-diag/lg-v3-dispersion/triage.liquid-glass-lens-custom-v3-dispersion.json`
 - `cargo run -p fretboard -- diag suite cookbook-customv2-basics --dir target/fret-diag/customv2 --session-auto --launch -- cargo run -p fret-demo --bin custom_effect_v2_demo`
 - `cargo run -p fretboard -- diag triage <bundle_dir> --warmup-frames 0 --json --out target/fret-diag/customv2/triage.custom-effect-v2-non-filterable-input-fallback.json`
+- `cargo run -p fretboard -- diag suite cookbook-customv3-basics --dir target/fret-diag/customv3 --session-auto --launch -- cargo run -p fret-demo --bin custom_effect_v3_demo`
+- `cargo run -p fretboard -- diag triage <bundle_dir> --warmup-frames 0 --json --out target/fret-diag/customv3/triage.custom-effect-v3-non-filterable-user0-fallback.json`
 
 ### Known gaps / intentional differences
 
