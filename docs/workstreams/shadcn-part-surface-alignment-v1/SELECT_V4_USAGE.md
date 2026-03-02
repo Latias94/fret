@@ -63,6 +63,15 @@ The entries list is made of `SelectEntry`, typically built from:
 - `SelectItem::new(value, label)`
 - `SelectSeparator::new()`
 
+### Optional: `into_element_parts(...)` adapter (nested authoring)
+
+If you prefer a more shadcn-like "nested parts" call site, use:
+
+- `Select::into_element_parts(cx, trigger, content, entries)`
+
+This still maps to the underlying configuration + entries implementation, but lets you keep the
+call site closer to the upstream docs structure.
+
 ## Example (docs-shaped, Rust-shaped)
 
 ```rust
@@ -103,4 +112,3 @@ fn view<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
 
 If you need strict copy/paste parity for the nested part tree, track Milestone 6 in
 `MILESTONES.md` (Select v4 part surface convergence).
-

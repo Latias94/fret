@@ -1426,6 +1426,27 @@ impl Select {
         self
     }
 
+    /// Part-based authoring surface aligned with shadcn/ui v4 exports.
+    ///
+    /// This is a thin adapter over [`Select::into_element`] that accepts shadcn-style parts
+    /// (`SelectTrigger`, `SelectContent`) in a nested shape, while still mapping onto Fret's
+    /// current configuration + entries implementation.
+    #[track_caller]
+    pub fn into_element_parts<H: UiHost, I>(
+        self,
+        cx: &mut ElementContext<'_, H>,
+        trigger: impl FnOnce(&mut ElementContext<'_, H>) -> SelectTrigger,
+        content: impl Into<SelectContent>,
+        entries: impl FnOnce(&mut ElementContext<'_, H>) -> I,
+    ) -> AnyElement
+    where
+        I: IntoIterator<Item = SelectEntry>,
+    {
+        let select = self.trigger(trigger(cx)).content(content.into());
+        let entries = entries(cx);
+        select.entries(entries).into_element(cx)
+    }
+
     pub fn item(mut self, item: SelectItem) -> Self {
         self.entries.push(SelectEntry::Item(item));
         self
