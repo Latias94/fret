@@ -1396,8 +1396,82 @@ pub fn node_graph_surface_paint_only<H: UiHost + 'static>(
         .get_model_copied(&portal_debug_flags, Invalidation::Paint)
         .unwrap_or_default()
         .disable_portals;
+
+    // Lightweight observability for “wires missing/truncated” reports:
+    // estimate how many edges are drawn vs culled in the paint-only surface.
+    //
+    // Note: This is an approximation based on cached edge draws + best-effort bounds tracking
+    // (grid cache bounds). It is intended for diagnostics gating, not as a correctness oracle.
+    let (edges_paint_total, edges_paint_drawn, edges_paint_culled, edges_paint_dragged, edges_paint_missing_ports) =
+        edges_cache_value
+            .draws
+            .as_deref()
+            .map(|draws| {
+                let mut total: u32 = draws.len() as u32;
+                let mut drawn: u32 = 0;
+                let mut culled: u32 = 0;
+                let mut dragged: u32 = 0;
+                let mut missing_ports: u32 = 0;
+
+                let bounds = grid_cache_value.bounds;
+                let view = PanZoom2D {
+                    pan: Point::new(Px(view_value.pan.x), Px(view_value.pan.y)),
+                    zoom: view_value.zoom,
+                };
+                let Some(cull) = canvas_viewport_rect(bounds, view, cull_margin_screen_px) else {
+                    return (total, drawn, culled, dragged, missing_ports);
+                };
+
+                let drag_active = node_drag_value.as_ref().is_some_and(|d| d.active && !d.canceled);
+                let geom = derived_cache_value.geom.as_deref();
+
+                for d in draws.iter() {
+                    let mut affected_by_drag = false;
+                    if drag_active {
+                        let from_node = geom.and_then(|g| g.ports.get(&d.from)).map(|h| h.node);
+                        let to_node = geom.and_then(|g| g.ports.get(&d.to)).map(|h| h.node);
+                        affected_by_drag = from_node
+                            .is_some_and(|id| {
+                                node_drag_value
+                                    .as_ref()
+                                    .is_some_and(|drag| node_drag_contains(drag, id))
+                            })
+                            || to_node.is_some_and(|id| {
+                                node_drag_value
+                                    .as_ref()
+                                    .is_some_and(|drag| node_drag_contains(drag, id))
+                            });
+                    }
+
+                    if affected_by_drag {
+                        dragged += 1;
+                        let ok_from = geom.and_then(|g| g.port_center(d.from)).is_some();
+                        let ok_to = geom.and_then(|g| g.port_center(d.to)).is_some();
+                        if ok_from && ok_to {
+                            drawn += 1;
+                        } else {
+                            missing_ports += 1;
+                        }
+                        continue;
+                    }
+
+                    if !rects_intersect(cull, d.bbox) {
+                        culled += 1;
+                    } else {
+                        drawn += 1;
+                    }
+                }
+
+                // Keep `total` consistent even if the vec length exceeds u32 (shouldn't in practice).
+                if draws.len() > (u32::MAX as usize) {
+                    total = u32::MAX;
+                }
+                (total, drawn, culled, dragged, missing_ports)
+            })
+            .unwrap_or((0, 0, 0, 0, 0));
+    let edges_paint_ok = edges_paint_total > 0 && edges_paint_drawn > 0 && edges_paint_missing_ports == 0;
     let semantics_value: Arc<str> = Arc::from(format!(
-        "panning {panning}; marquee_active:{marquee_active}; node_drag_armed:{node_drag_armed}; node_dragging:{node_dragging}; hovered_node:{hovered}; selected_nodes:{selected_nodes_len}; grid_cached:{grid_cached}; grid_rebuilds:{}; geom_cached:{geom_cached}; geom_rebuilds:{}; nodes_cached:{nodes_cached}; nodes_rebuilds:{}; edges_cached:{edges_cached}; edges_rebuilds:{}; view_pan:{:.2},{:.2}; view_zoom:{:.4}; portal_fit_count:{portal_fit_count}; portal_fit_pending:{portal_fit_pending}; portal_union_wh:{portal_union_w:.2}x{portal_union_h:.2}; portal_bounds_entries:{portal_bounds_entries}; portals_disabled:{portals_disabled};",
+        "panning {panning}; marquee_active:{marquee_active}; node_drag_armed:{node_drag_armed}; node_dragging:{node_dragging}; hovered_node:{hovered}; selected_nodes:{selected_nodes_len}; grid_cached:{grid_cached}; grid_rebuilds:{}; geom_cached:{geom_cached}; geom_rebuilds:{}; nodes_cached:{nodes_cached}; nodes_rebuilds:{}; edges_cached:{edges_cached}; edges_rebuilds:{}; edges_paint_total:{edges_paint_total}; edges_paint_drawn:{edges_paint_drawn}; edges_paint_culled:{edges_paint_culled}; edges_paint_dragged:{edges_paint_dragged}; edges_paint_missing_ports:{edges_paint_missing_ports}; edges_paint_ok:{edges_paint_ok}; view_pan:{:.2},{:.2}; view_zoom:{:.4}; portal_fit_count:{portal_fit_count}; portal_fit_pending:{portal_fit_pending}; portal_union_wh:{portal_union_w:.2}x{portal_union_h:.2}; portal_bounds_entries:{portal_bounds_entries}; portals_disabled:{portals_disabled};",
         grid_cache_value.rebuilds,
         derived_cache_value.rebuilds,
         nodes_cache_value.rebuilds,

@@ -51,6 +51,9 @@ Suggested run commands (Windows-friendly):
 - [ ] Investigate “wire looks truncated / partially missing” reports in paint-only:
   - [ ] confirm whether it is viewport culling (`cull_margin_screen_px`) vs edge bbox math vs raster cache,
   - [ ] add a regression artifact (render snapshot gate preferred; semantics proxy acceptable).
+    - [ ] semantics proxy gate: `tools/diag-scripts/node-graph/node-graph-paint-only-edges-paint-stats-ok.json` (asserts `edges_paint_ok:true;` on `test_id=node_graph.canvas`)
+  - [ ] capture repro screenshots:
+    - `tools/diag-scripts/node-graph/node-graph-paint-only-wires-screenshot.json` (requires `FRET_DIAG_GPU_SCREENSHOTS=1`)
 - [ ] Add cache observability counters (prepares/hits/evictions) for tuning.
 - [ ] Add one “steady-state” gate:
   - [x] fixed viewport + idle frames do not rebuild heavy render data (paint-only baselines):

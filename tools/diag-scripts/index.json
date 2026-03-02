@@ -552,6 +552,28 @@
       ]
     },
     {
+      "id": "node-graph-paint-only-edges-paint-stats-ok",
+      "path": "tools/diag-scripts/node-graph/node-graph-paint-only-edges-paint-stats-ok.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "fret-examples-node-graph-paint-only"
+      ],
+      "tags": [
+        "declarative",
+        "diagnostics",
+        "gate",
+        "node-graph",
+        "paint-only",
+        "wires"
+      ],
+      "target_hints": [
+        "Run with `FRET_NODE_GRAPH_DECLARATIVE=paint` so the paint-only declarative surface is active.",
+        "This is a lightweight gate for regressions where edges stop painting due to culling/geometry issues."
+      ]
+    },
+    {
       "id": "node-graph-paint-only-fit-view-to-portals-updates-view",
       "path": "tools/diag-scripts/node-graph/node-graph-paint-only-fit-view-to-portals-updates-view.json",
       "required_capabilities": [
