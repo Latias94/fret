@@ -226,6 +226,91 @@ fn open_status_actions_menu(
     }
 }
 
+fn focus_menu_item(
+    ui: &mut UiTree<App>,
+    app: &mut App,
+    services: &mut dyn fret_core::UiServices,
+    timers: &mut TimerQueue,
+    window: AppWindowId,
+    bounds: Rect,
+    data: &Arc<[RowData]>,
+    state: &Model<TableState>,
+    columns: &Arc<[ColumnDef<RowData>]>,
+    revision: u64,
+    target_label: &str,
+) {
+    for _ in 0..16 {
+        dispatch_key_press(ui, app, services, KeyCode::ArrowDown);
+        pump_effects(ui, app, services, timers);
+        render_frame(
+            ui,
+            app,
+            services,
+            window,
+            bounds,
+            data.clone(),
+            revision,
+            state.clone(),
+            columns.clone(),
+        );
+
+        let snap = ui
+            .semantics_snapshot()
+            .cloned()
+            .expect("expected semantics snapshot");
+        let focused_label = snap
+            .nodes
+            .iter()
+            .find(|n| n.flags.focused)
+            .and_then(|n| n.label.as_deref());
+        if focused_label == Some(target_label) {
+            return;
+        }
+    }
+
+    let snap = ui
+        .semantics_snapshot()
+        .cloned()
+        .expect("expected semantics snapshot");
+    let focused_label = snap
+        .nodes
+        .iter()
+        .find(|n| n.flags.focused)
+        .and_then(|n| n.label.as_deref());
+    panic!("failed to focus menu item {target_label:?}; final focused_label={focused_label:?}");
+}
+
+fn activate_focused_menu_item(
+    ui: &mut UiTree<App>,
+    app: &mut App,
+    services: &mut dyn fret_core::UiServices,
+    timers: &mut TimerQueue,
+    window: AppWindowId,
+    bounds: Rect,
+    data: &Arc<[RowData]>,
+    state: &Model<TableState>,
+    columns: &Arc<[ColumnDef<RowData>]>,
+    revision: u64,
+) {
+    dispatch_key_press(ui, app, services, KeyCode::Enter);
+    pump_effects(ui, app, services, timers);
+
+    let close_settle_frames = shadcn_motion::ticks_100() + 2;
+    for _ in 0..close_settle_frames {
+        render_frame(
+            ui,
+            app,
+            services,
+            window,
+            bounds,
+            data.clone(),
+            revision,
+            state.clone(),
+            columns.clone(),
+        );
+    }
+}
+
 #[test]
 fn data_table_column_actions_menu_sort_asc_updates_state_and_closes() {
     let window = AppWindowId::default();
@@ -361,6 +446,148 @@ fn data_table_column_actions_menu_sort_asc_updates_state_and_closes() {
 }
 
 #[test]
+fn data_table_column_actions_menu_sort_desc_and_clear_sort_update_state() {
+    let window = AppWindowId::default();
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        CoreSize::new(Px(800.0), Px(420.0)),
+    );
+
+    let mut app = App::new();
+    fret_ui_shadcn::shadcn_themes::apply_shadcn_new_york_v4(
+        &mut app,
+        fret_ui_shadcn::shadcn_themes::ShadcnBaseColor::Neutral,
+        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Light,
+    );
+
+    let data: Arc<[RowData]> = Arc::from(
+        vec![
+            RowData {
+                status: "success",
+                email: "a@example.com",
+            },
+            RowData {
+                status: "pending",
+                email: "b@example.com",
+            },
+        ]
+        .into_boxed_slice(),
+    );
+    let columns: Arc<[ColumnDef<RowData>]> =
+        Arc::from(vec![ColumnDef::new("status"), ColumnDef::new("email")].into_boxed_slice());
+    let state: Model<TableState> = app.models_mut().insert(TableState::default());
+
+    let mut ui: UiTree<App> = UiTree::new();
+    ui.set_window(window);
+    let mut services = FakeServices;
+    let mut timers = TimerQueue::default();
+
+    mount_table(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        &data,
+        &state,
+        &columns,
+        1,
+    );
+    open_status_actions_menu(
+        &mut ui,
+        &mut app,
+        &mut services,
+        &mut timers,
+        window,
+        bounds,
+        &data,
+        &state,
+        &columns,
+        2,
+    );
+
+    focus_menu_item(
+        &mut ui,
+        &mut app,
+        &mut services,
+        &mut timers,
+        window,
+        bounds,
+        &data,
+        &state,
+        &columns,
+        3,
+        "Sort Desc",
+    );
+    activate_focused_menu_item(
+        &mut ui,
+        &mut app,
+        &mut services,
+        &mut timers,
+        window,
+        bounds,
+        &data,
+        &state,
+        &columns,
+        4,
+    );
+
+    let st = app.models().get_cloned(&state).expect("table state");
+    assert_eq!(
+        st.sorting,
+        vec![SortSpec {
+            column: Arc::<str>::from("status"),
+            desc: true
+        }],
+        "expected Sort Desc to set sorting desc=true"
+    );
+
+    open_status_actions_menu(
+        &mut ui,
+        &mut app,
+        &mut services,
+        &mut timers,
+        window,
+        bounds,
+        &data,
+        &state,
+        &columns,
+        5,
+    );
+    focus_menu_item(
+        &mut ui,
+        &mut app,
+        &mut services,
+        &mut timers,
+        window,
+        bounds,
+        &data,
+        &state,
+        &columns,
+        6,
+        "Clear sort",
+    );
+    activate_focused_menu_item(
+        &mut ui,
+        &mut app,
+        &mut services,
+        &mut timers,
+        window,
+        bounds,
+        &data,
+        &state,
+        &columns,
+        7,
+    );
+
+    let st = app.models().get_cloned(&state).expect("table state");
+    assert!(
+        st.sorting.is_empty(),
+        "expected Clear sort to remove the sorting spec"
+    );
+}
+
+#[test]
 fn data_table_column_actions_menu_hide_sets_column_visibility_false_and_closes() {
     let window = AppWindowId::default();
     let bounds = Rect::new(
@@ -421,51 +648,31 @@ fn data_table_column_actions_menu_hide_sets_column_visibility_false_and_closes()
         2,
     );
 
-    // From the trigger, ArrowDown focuses Sort Asc. Hide is the 4th focusable item.
-    for _ in 0..4 {
-        dispatch_key_press(&mut ui, &mut app, &mut services, KeyCode::ArrowDown);
-        pump_effects(&mut ui, &mut app, &mut services, &mut timers);
-        render_frame(
-            &mut ui,
-            &mut app,
-            &mut services,
-            window,
-            bounds,
-            data.clone(),
-            3,
-            state.clone(),
-            columns.clone(),
-        );
-    }
-
-    let snap = ui
-        .semantics_snapshot()
-        .cloned()
-        .expect("expected semantics snapshot");
-    let focused_label = snap
-        .nodes
-        .iter()
-        .find(|n| n.flags.focused)
-        .and_then(|n| n.label.as_deref());
-    assert_eq!(focused_label, Some("Hide"));
-
-    dispatch_key_press(&mut ui, &mut app, &mut services, KeyCode::Enter);
-    pump_effects(&mut ui, &mut app, &mut services, &mut timers);
-
-    let close_settle_frames = shadcn_motion::ticks_100() + 2;
-    for _ in 0..close_settle_frames {
-        render_frame(
-            &mut ui,
-            &mut app,
-            &mut services,
-            window,
-            bounds,
-            data.clone(),
-            4,
-            state.clone(),
-            columns.clone(),
-        );
-    }
+    focus_menu_item(
+        &mut ui,
+        &mut app,
+        &mut services,
+        &mut timers,
+        window,
+        bounds,
+        &data,
+        &state,
+        &columns,
+        3,
+        "Hide",
+    );
+    activate_focused_menu_item(
+        &mut ui,
+        &mut app,
+        &mut services,
+        &mut timers,
+        window,
+        bounds,
+        &data,
+        &state,
+        &columns,
+        4,
+    );
 
     let st = app.models().get_cloned(&state).expect("table state");
     let status_col = Arc::<str>::from("status");
@@ -546,39 +753,31 @@ fn data_table_column_actions_menu_pin_left_and_unpin_update_column_pinning() {
         2,
     );
 
-    // Pin Left is the 5th focusable item.
-    for _ in 0..5 {
-        dispatch_key_press(&mut ui, &mut app, &mut services, KeyCode::ArrowDown);
-        pump_effects(&mut ui, &mut app, &mut services, &mut timers);
-        render_frame(
-            &mut ui,
-            &mut app,
-            &mut services,
-            window,
-            bounds,
-            data.clone(),
-            3,
-            state.clone(),
-            columns.clone(),
-        );
-    }
-    dispatch_key_press(&mut ui, &mut app, &mut services, KeyCode::Enter);
-    pump_effects(&mut ui, &mut app, &mut services, &mut timers);
-
-    let close_settle_frames = shadcn_motion::ticks_100() + 2;
-    for _ in 0..close_settle_frames {
-        render_frame(
-            &mut ui,
-            &mut app,
-            &mut services,
-            window,
-            bounds,
-            data.clone(),
-            4,
-            state.clone(),
-            columns.clone(),
-        );
-    }
+    focus_menu_item(
+        &mut ui,
+        &mut app,
+        &mut services,
+        &mut timers,
+        window,
+        bounds,
+        &data,
+        &state,
+        &columns,
+        3,
+        "Pin Left",
+    );
+    activate_focused_menu_item(
+        &mut ui,
+        &mut app,
+        &mut services,
+        &mut timers,
+        window,
+        bounds,
+        &data,
+        &state,
+        &columns,
+        4,
+    );
 
     let st = app.models().get_cloned(&state).expect("table state");
     assert_eq!(
@@ -604,38 +803,31 @@ fn data_table_column_actions_menu_pin_left_and_unpin_update_column_pinning() {
         &columns,
         5,
     );
-    for _ in 0..7 {
-        dispatch_key_press(&mut ui, &mut app, &mut services, KeyCode::ArrowDown);
-        pump_effects(&mut ui, &mut app, &mut services, &mut timers);
-        render_frame(
-            &mut ui,
-            &mut app,
-            &mut services,
-            window,
-            bounds,
-            data.clone(),
-            6,
-            state.clone(),
-            columns.clone(),
-        );
-    }
-    dispatch_key_press(&mut ui, &mut app, &mut services, KeyCode::Enter);
-    pump_effects(&mut ui, &mut app, &mut services, &mut timers);
-
-    let close_settle_frames = shadcn_motion::ticks_100() + 2;
-    for _ in 0..close_settle_frames {
-        render_frame(
-            &mut ui,
-            &mut app,
-            &mut services,
-            window,
-            bounds,
-            data.clone(),
-            7,
-            state.clone(),
-            columns.clone(),
-        );
-    }
+    focus_menu_item(
+        &mut ui,
+        &mut app,
+        &mut services,
+        &mut timers,
+        window,
+        bounds,
+        &data,
+        &state,
+        &columns,
+        6,
+        "Unpin",
+    );
+    activate_focused_menu_item(
+        &mut ui,
+        &mut app,
+        &mut services,
+        &mut timers,
+        window,
+        bounds,
+        &data,
+        &state,
+        &columns,
+        7,
+    );
 
     let st = app.models().get_cloned(&state).expect("table state");
     assert!(
