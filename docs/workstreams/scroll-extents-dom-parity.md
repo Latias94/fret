@@ -258,6 +258,31 @@ probes), we likely need at least one of these mechanism-level additions:
    - Add a way for `layout_in(...)` / `LayoutCx` to carry “scroll axis budget is MaxContent” without
      requiring a giant `Rect` bounds.
    - Budget-clamping wrappers (positioned containers, container shells) must consult this budget
+
+## Verification Plan (SE-210)
+
+This section defines the minimal set of unit-testable invariants that lock down correctness while
+SE-200 remains behind a gate.
+
+### Unit-testable invariants (pure geometry)
+
+- **Observed overflow is in content space**: extents are derived from `node_bounds` projected into
+  `content_bounds.origin` coordinates (scroll offsets must not influence extents).
+- **Wrapper peeling is safe**: “same-bounds” single-child wrapper chains do not hide overflow.
+- **Bounded deep scan catches overflow**: when immediate children bounds do not reveal overflow
+  (because wrappers are also forced to the content rect), a bounded DFS can still discover deeper
+  overflow and grow extents.
+
+Evidence anchors:
+
+- Implementation: `crates/fret-ui/src/declarative/host_widget/layout/scrolling.rs`
+- Unit tests: `crates/fret-ui/src/declarative/host_widget/layout/scrolling.rs`
+
+### Non-unit-testable (for now)
+
+- **Overlay anchoring parity** (reanchoring and scroll extent updates staying in sync) requires a
+  higher-level harness (diag scripts or integration tests) and is tracked separately until the
+  overlay/anchor query surface is directly assertable in unit tests.
      when probing/measuring children.
 2. **Explicit overflow contexts**:
    - Install an inherited mechanism state at `Scroll` roots indicating which axis is allowed to

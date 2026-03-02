@@ -14,8 +14,23 @@ Tracking format:
 - [x] SE-010 Repro and evidence for “scroll probe stall” in UI Gallery.
   - Script: `tools/diag-scripts/ui-gallery-nav-card-click-latency.json`
   - Tracker: `docs/workstreams/ui-gallery-perf-scroll-measure.md`
-- [ ] SE-020 Record a stable before/after table for dt_ms + layout_time_us for the repro script.
+- [x] SE-020 Record a stable before/after table for dt_ms + layout_time_us for the repro script.
   - Goal: p95/max dt_ms < 33ms in dev builds for nav clicks on common pages.
+  - Note: tool-launched runs (`--launch`/`--reuse-launch`) require `schema_version=2`, so use the
+    resolved script path: `tools/diag-scripts/ui-gallery/navigation/ui-gallery-nav-card-click-latency.json`.
+  - Method (2026-03-02, macOS aarch64, debug build):
+    - `dt_ms` is derived from `bundle.index.json` snapshot timestamp deltas.
+    - `layout_time_us` is taken from `fretboard diag stats ... --json` (`max.layout_time_us`) for the captured
+      `...-second` bundle.
+  - Baseline (no post-layout extents):
+    - Command: `fretboard diag perf tools/diag-scripts/ui-gallery/navigation/ui-gallery-nav-card-click-latency.json --repeat 3 --warmup-frames 0 --env RUST_LOG=error ...`
+    - `dt_ms` min/p50/p95/max = `61/62/62/62`
+    - `layout_time_us` min/p50/p95/max = `32093/32651/33184/33184`
+    - Bundles: `target/fret-diag-se020-baseline/*ui-gallery-nav-card-click-latency-second/bundle.json`
+  - Gate on (`FRET_UI_SCROLL_EXTENTS_POST_LAYOUT=1`):
+    - `dt_ms` min/p50/p95/max = `59/61/63/63`
+    - `layout_time_us` min/p50/p95/max = `30913/31956/32330/32330`
+    - Bundles: `target/fret-diag-se020-post-layout/*ui-gallery-nav-card-click-latency-second/bundle.json`
 
 ## Design (Contract)
 
@@ -32,7 +47,10 @@ Tracking format:
 - [x] SE-200 Add an opt-in implementation (env flag or compile-time flag) for “post-layout scroll extents”.
   - Must not change default behavior yet.
   - Env: `FRET_UI_SCROLL_EXTENTS_POST_LAYOUT=1`
-- [ ] SE-210 Add focused unit tests around offset clamping + scrollbars + overlay reanchoring.
+- [~] SE-210 Add focused unit tests (incremental).
+  - [x] SE-211 Pure-geometry overflow observation (wrapper peeling + bounded deep scan).
+  - [x] SE-212 Offset clamping invariants (`ScrollHandle`).
+  - [ ] SE-213 Scrollbar + overlay anchoring parity (needs harness).
 
 ## Rollout
 
