@@ -75,7 +75,9 @@ Related docs:
 1. **More scripted actions**
    - Status:
      - Implemented (v2): pointer move/down/up/drag, wheel, scroll-into-view, long press, pointer sweeps.
-     - Remaining gaps: double-click action, and a higher-level “paste” action (beyond `set_clipboard_text`).
+     - Implemented: multi-click via `click_count` (double/triple click baselines).
+     - Implemented: `paste_text_into` (clipboard + `Primary+V`) to gate paste paths with less boilerplate.
+     - Remaining gaps: a touch-first multi-tap gesture surface (double-tap / triple-tap) if we need to gate mobile-style policies.
 
 2. **More predicates and assertions**
    - `focused_descendant_is` (done)

@@ -793,6 +793,31 @@ pub enum UiActionStepV2 {
         #[serde(default = "default_action_timeout_frames")]
         timeout_frames: u32,
     },
+    /// Paste `text` into a target text surface by:
+    ///
+    /// 1) clicking the target to focus it,
+    /// 2) setting the OS clipboard text (best-effort),
+    /// 3) issuing the platform "paste" shortcut (`Primary+V`).
+    ///
+    /// This is intentionally higher-level than `set_clipboard_text + press_shortcut` so scripts
+    /// can gate paste-specific code paths with less boilerplate.
+    ///
+    /// Notes:
+    ///
+    /// - The clipboard write is best-effort and runner/platform dependent.
+    /// - `clear_before_paste` uses `SetTextSelection { anchor=0, focus=u32::MAX }` (not `Ctrl+A`).
+    PasteTextInto {
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        window: Option<UiWindowTargetV1>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        pointer_kind: Option<UiPointerKindV1>,
+        target: UiSelectorV1,
+        text: String,
+        #[serde(default)]
+        clear_before_paste: bool,
+        #[serde(default = "default_action_timeout_frames")]
+        timeout_frames: u32,
+    },
     MenuSelect {
         #[serde(default, skip_serializing_if = "Option::is_none")]
         window: Option<UiWindowTargetV1>,
@@ -2982,5 +3007,34 @@ mod tests {
                 ..
             }
         ));
+    }
+
+    #[test]
+    fn step_paste_text_into_deserializes_with_defaults() {
+        let value = serde_json::json!({
+            "type": "paste_text_into",
+            "target": { "kind": "test_id", "id": "field" },
+            "text": "Hello"
+        });
+
+        let step: UiActionStepV2 = serde_json::from_value(value).unwrap();
+        match step {
+            UiActionStepV2::PasteTextInto {
+                window,
+                pointer_kind,
+                target,
+                text,
+                clear_before_paste,
+                timeout_frames,
+            } => {
+                assert!(window.is_none());
+                assert!(pointer_kind.is_none());
+                assert!(matches!(target, UiSelectorV1::TestId { .. }));
+                assert_eq!(text, "Hello");
+                assert!(!clear_before_paste);
+                assert_eq!(timeout_frames, default_action_timeout_frames());
+            }
+            _ => panic!("expected paste_text_into"),
+        }
     }
 }

@@ -22,6 +22,7 @@ pub(super) fn active_script_needs_semantics_snapshot(active: &ActiveScript) -> b
                 | V2StepState::EnsureVisible(_)
                 | V2StepState::ScrollIntoView(_)
                 | V2StepState::TypeTextInto(_)
+                | V2StepState::PasteTextInto(_)
                 | V2StepState::MenuSelect(_)
                 | V2StepState::MenuSelectPath(_)
                 | V2StepState::DragPointerUntil(_)
@@ -56,6 +57,7 @@ pub(super) fn active_script_needs_semantics_snapshot(active: &ActiveScript) -> b
         | UiActionStepV2::EnsureVisible { .. }
         | UiActionStepV2::ScrollIntoView { .. }
         | UiActionStepV2::TypeTextInto { .. }
+        | UiActionStepV2::PasteTextInto { .. }
         | UiActionStepV2::MenuSelect { .. }
         | UiActionStepV2::MenuSelectPath { .. }
         | UiActionStepV2::DragTo { .. }
@@ -104,6 +106,7 @@ pub(super) fn script_step_kind_name(step: &UiActionStepV2) -> &'static str {
         UiActionStepV2::Wheel { .. } => "wheel",
         UiActionStepV2::TypeText { .. } => "type_text",
         UiActionStepV2::TypeTextInto { .. } => "type_text_into",
+        UiActionStepV2::PasteTextInto { .. } => "paste_text_into",
         UiActionStepV2::WaitFrames { .. } => "wait_frames",
         UiActionStepV2::WaitUntil { .. } => "wait_until",
         UiActionStepV2::Assert { .. } => "assert",
@@ -841,6 +844,25 @@ pub(super) fn dispatch_drive_script_step(
         }
         step @ UiActionStepV2::TypeTextInto { .. } => {
             let handled = script_steps_input::handle_type_text_into_step(
+                service,
+                app,
+                window,
+                window_bounds,
+                step_index,
+                step,
+                element_runtime,
+                semantics_snapshot,
+                ui.as_deref_mut(),
+                active,
+                output,
+                force_dump_label,
+                stop_script,
+                failure_reason,
+            );
+            debug_assert!(handled);
+        }
+        step @ UiActionStepV2::PasteTextInto { .. } => {
+            let handled = script_steps_input::handle_paste_text_into_step(
                 service,
                 app,
                 window,

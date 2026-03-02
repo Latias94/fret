@@ -150,6 +150,15 @@ Fret’s scripted actions are *selector-driven* and run inside the app via file 
 - When UI structure changes, update selectors using:
   - `cargo run -p fretboard -- diag pick-apply <script> --ptr <json-pointer>`
 
+### Generating scripts (when JSON is too limiting)
+
+Keep committed scripts as **plain JSON** (portable, reviewable, diffable). When you need loops,
+branching, or a large matrix:
+
+- Write a small generator (Rust/Python) that emits JSON fixtures into `tools/diag-scripts/`.
+- Treat the generator as *authoring ergonomics*; the runtime should still execute the emitted JSON
+  deterministically (no embedded scripting language in-app).
+
 ### Visual overlay debugging (optional screenshots)
 
 If a bug is “bounds look right but pixels look wrong”, enable GPU-readback screenshots and author scripts with
