@@ -35,8 +35,10 @@ Status update (2026-03-02, later):
 
 Stability check (2026-03-02):
 
-- `fretboard diag repeat` passes 7x when launch env includes `FRET_DOCK_ALLOW_MULTI_WINDOW_TEAR_OFF=1` and repeat
-  comparison ignores window bounds + scene fingerprint (expected to vary run-to-run for a multi-window docking demo).
+- `fretboard diag repeat` passes 7x with:
+  - `--env FRET_DOCK_ALLOW_MULTI_WINDOW_TEAR_OFF=1`,
+  - `--reuse-launch`,
+  - `--compare-ignore-bounds --compare-ignore-scene-fingerprint` (expected to drift for multi-window demos).
 
 ## M1.4 — Rebuild reliability for docking demos (Windows/MSVC)
 

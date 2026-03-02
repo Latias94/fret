@@ -5,17 +5,14 @@ with special focus on multi-window tear-off + drag-back sequences.
 
 ## Immediate TODOs (next)
 
-- Unblock local rebuilds for docking demos on Windows/MSVC (currently observed: `taffy`-related LNK2019 unresolved
-  externals when building `docking_arbitration_demo`).
-- Make `docking-arbitration-demo-multiwindow-chained-tearoff-two-tabs-merge` deterministic enough to be a regression
-  gate:
-  - stabilize drop targeting (hint selection + tie-breakers),
-  - add “pre-warm hover” steps only if required (document why),
-  - keep intermediate structural assertions close to the failure point.
 - Decide the contract for “scripted cross-window drag release”:
   - which subsystem owns `Drop` routing (runner vs in-app diagnostics injection),
   - which coordinate space is the source of truth (screen vs window-client),
   - what the required evidence gates are (bundle fields + assertions).
+- Document the repeat-mode contract for multi-window docking demos:
+  - required env (e.g. `FRET_DOCK_ALLOW_MULTI_WINDOW_TEAR_OFF=1`),
+  - recommended tooling flags (e.g. ignore window bounds / scene fingerprint drift),
+  - whether `--reuse-launch` is required for stability.
 - Convert any remaining schema v1 docking scripts to schema v2.
 - Reduce coupling to layout presets (prefer fingerprints / structural assertions where possible).
 
@@ -46,5 +43,8 @@ with special focus on multi-window tear-off + drag-back sequences.
 - Runner: isolate scripted cursor overrides from physical mouse movement.
 - Window counting: `known_window_count_*` predicates use a runner-owned source-of-truth.
 - Cached `test_id` predicate evaluation is freshness-bounded and emits evidence when used.
+- Unblocked Windows/MSVC rebuild of docking demos (`taffy`-related LNK2019) by compiling `taffy` with a single
+  codegen unit in dev profiles.
 - Chained tear-off (two tabs) now returns to the pre-tearoff fingerprint after two merge-backs (script-level targeting
   fix: avoid hint retargeting to the wrong leaf by explicitly hovering a stable viewport in the destination window).
+- Added the chained tear-off script to `diag-hardening-smoke-docking`.

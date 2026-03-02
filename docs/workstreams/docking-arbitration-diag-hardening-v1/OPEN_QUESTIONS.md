@@ -76,10 +76,10 @@ Status update (2026-03-02, later):
   dock drags by always materializing a pointer session when `release_on_success: false`.
 - Improved bundle debuggability: UI debug snapshots now fall back to `WindowInteractionDiagnosticsStore::*_latest_for_window`
   when the frame-scoped snapshot is empty, so bundles reliably include `dock_graph_signature` / `dock_graph_stats`.
-- Current product-level gap (vs desired “returns to canonical signature”): the chained tear-off + merge-back script now
-  runs through both merges but fails the final exact signature assertion. The last observed signature in a failing run:
-  - `dock(root=tabs(a=1:[demo.controls,demo.viewport.right]);floatings=[])`
-  - fingerprint64: `2526963005150391245` (expected `7509174212363425732`)
+- Chained tear-off status: the chained tear-off + merge-back script now returns to the baseline dock graph fingerprint
+  (exact fingerprint gate passes) and is included in `diag-hardening-smoke-docking`.
+- Repeat-mode note: multi-window docking demos are expected to vary in window bounds + scene fingerprint across runs,
+  so `diag repeat` should ignore those fields when validating determinism.
 
 ## 3.1) Is cache-based `test_id` predicate evaluation acceptable?
 
