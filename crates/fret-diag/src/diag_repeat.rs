@@ -359,6 +359,8 @@ pub(crate) fn cmd_repeat(ctx: RepeatCmdContext) -> Result<(), String> {
             })?;
         }
 
+        clear_script_result_files(&resolved_script_result_path, &resolved_script_result_trigger_path);
+
         let mut summary = run_script_and_wait(
             &src,
             &resolved_script_path,

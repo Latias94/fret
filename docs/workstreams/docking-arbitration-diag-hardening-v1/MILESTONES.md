@@ -40,6 +40,17 @@ Stability check (2026-03-02):
   - `--reuse-launch`,
   - `--compare-ignore-bounds --compare-ignore-scene-fingerprint` (expected to drift for multi-window demos).
 
+Post-merge verification (2026-03-02):
+
+- Note: when iterating on in-app diagnostics logic, rebuild the launched demo binary (`docking_arbitration_demo.exe`);
+  `fretboard` itself does not rebuild the demo when using `--launch -- target/debug/...exe`.
+- `fretboard diag run` is green with `--timeout-ms 60000`:
+  - out dir: `target/fret-diag-step35-fix3b`
+  - run id: `1772462696715`
+- `fretboard diag repeat` is green 3x with:
+  - `--timeout-ms 60000 --reuse-launch --compare-ignore-bounds --compare-ignore-scene-fingerprint`
+  - out dir: `target/fret-diag-step35-fix3b-repeat2`
+
 ## M1.4 — Rebuild reliability for docking demos (Windows/MSVC)
 
 Goal: docking demo binaries used by `--launch` diagnostics can be rebuilt reliably in local dev.
