@@ -2,7 +2,10 @@
 use fret_ui_shadcn::{self as shadcn, prelude::*};
 use std::sync::Arc;
 
-pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>, last_action: Model<Arc<str>>) -> AnyElement {
+pub fn render<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    last_action: Model<Arc<str>>,
+) -> AnyElement {
     let last = cx
         .app
         .models()
@@ -26,10 +29,12 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>, last_action: Model<Arc<
                     cx,
                     "Fret exposes extra knobs (position, pinned + swipe dismiss) for testing overlay behavior.",
                 ),
-                shadcn::typography::muted(cx, "API reference: `ecosystem/fret-ui-shadcn/src/sonner.rs`."),
+                shadcn::typography::muted(
+                    cx,
+                    "API reference: `ecosystem/fret-ui-shadcn/src/sonner.rs`.",
+                ),
             ]
         },
     )
 }
 // endregion: example
-

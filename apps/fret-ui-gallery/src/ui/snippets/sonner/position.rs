@@ -1,3 +1,5 @@
+pub const SOURCE: &str = include_str!("position.rs");
+
 // region: example
 use fret_core::{Axis, Edges};
 use fret_ui::element::{FlexProps, LayoutStyle, Length, SemanticsDecoration};

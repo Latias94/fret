@@ -1,3 +1,5 @@
+pub const SOURCE: &str = include_str!("demo.rs");
+
 // region: example
 use fret_core::{Axis, Edges};
 use fret_ui::element::{FlexProps, LayoutStyle, Length, SemanticsDecoration};
@@ -35,21 +37,27 @@ fn wrap_controls_row<H: UiHost>(
     )
 }
 
-pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>, last_action: Model<Arc<str>>) -> AnyElement {
+pub fn render<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    last_action: Model<Arc<str>>,
+) -> AnyElement {
     // Keep the action id in one place so UI Gallery's driver can record it.
     // Replace this with your app's command id.
     const CMD_TOAST_ACTION: &str = "ui_gallery.toast.action";
 
     let sonner = shadcn::Sonner::global(&mut *cx.app);
 
-    let (pending_promise, active_type) =
-        cx.with_state(Models::default, |st| (st.pending_promise.clone(), st.active_type.clone()));
+    let (pending_promise, active_type) = cx.with_state(Models::default, |st| {
+        (st.pending_promise.clone(), st.active_type.clone())
+    });
 
     let pending_promise = match pending_promise {
         Some(model) => model,
         None => {
             let model = cx.app.models_mut().insert(None::<shadcn::ToastId>);
-            cx.with_state(Models::default, |st| st.pending_promise = Some(model.clone()));
+            cx.with_state(Models::default, |st| {
+                st.pending_promise = Some(model.clone())
+            });
             model
         }
     };
@@ -371,7 +379,9 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>, last_action: Model<Arc<
             let pending = host.models_mut().get_copied(&pending_model).flatten();
             if let Some(id) = pending {
                 sonner.toast_success_update(host, action_cx.window, id, "Event has been created");
-                let _ = host.models_mut().update(&pending_model, |slot| *slot = None);
+                let _ = host
+                    .models_mut()
+                    .update(&pending_model, |slot| *slot = None);
                 let _ = host.models_mut().update(&active_type_model, |v| {
                     *v = Arc::<str>::from("Promise");
                 });

@@ -1,3 +1,5 @@
+pub const SOURCE: &str = include_str!("extras.rs");
+
 // region: example
 use fret_core::{Axis, Edges};
 use fret_ui::element::{FlexProps, LayoutStyle, Length, SemanticsDecoration};
@@ -29,7 +31,10 @@ fn wrap_controls_row<H: UiHost>(
     )
 }
 
-pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>, last_action: Model<Arc<str>>) -> AnyElement {
+pub fn render<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    last_action: Model<Arc<str>>,
+) -> AnyElement {
     let sonner = shadcn::Sonner::global(&mut *cx.app);
     let last_action_model = last_action.clone();
 
