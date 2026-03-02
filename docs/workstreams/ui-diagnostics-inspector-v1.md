@@ -146,6 +146,8 @@ This workstream intentionally keeps “evidence anchors” stable so future refa
 - Help neighborhood view lines (parent/siblings/children + filter): `ecosystem/fret-bootstrap/src/ui_diagnostics/inspect_neighborhood.rs`
 - “Inspection active” wiring (view-cache correctness): `ecosystem/fret-bootstrap/src/ui_app_driver.rs`
 - Selector scoring/validation: `ecosystem/fret-bootstrap/src/ui_diagnostics/selector/validate.rs`
+- Scripted inspector helper step (protocol + runner): `crates/fret-diag-protocol/src/lib.rs` (`InspectHelpLockBestMatchAndCopySelector`) and `ecosystem/fret-bootstrap/src/ui_diagnostics/script_steps_inspect.rs`
+- Regression gate (suite-level): `tools/diag-scripts/suites/ui-gallery-overlay-steady/ui-gallery-inspector-help-lock-match-copy-selector-steady.json`
 
 ## Non-goals (v1)
 

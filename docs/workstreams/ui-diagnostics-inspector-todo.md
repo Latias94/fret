@@ -27,6 +27,8 @@ Related docs:
 - Selector validation exists (uniqueness + optional `root_z_index` gating) and is used by in-app “copy details” and focus selection.
 - Explainability panel (“why is input blocked?”) implemented and shown in help mode (cheap: bounded lists; no label printing).
 - View cache frame stats exported in bundles (`debug.stats.view_cache_*`, `debug.stats.invalidation_*`)
+- A small regression gate exists in the `ui-gallery-overlay-steady` suite to ensure the in-app inspector can lock a help search match and copy the best selector JSON to the clipboard.
+- A scripted inspector helper step exists (`inspect_help_lock_best_match_and_copy_selector`) to avoid relying on keyboard shortcut injection under `--launch`.
 
 ## Milestone M1: “Inspect UX parity” (highest ROI)
 
