@@ -68,3 +68,6 @@ Status: In progress (2026-03-02)
 - Key dispatch capture/bubble chains no longer depend on retained `parent` pointers:
   - `crates/fret-ui/src/tree/dispatch/window.rs`
   - regression test: `crates/fret-ui/src/tree/tests/dispatch_phase.rs`
+- Hover derivation (Pressable/HoverRegion ancestor queries) no longer depends on retained `parent` pointers:
+  - `crates/fret-ui/src/tree/dispatch/hover.rs`
+  - regression test: `crates/fret-ui/src/declarative/tests/layout/interactivity.rs`

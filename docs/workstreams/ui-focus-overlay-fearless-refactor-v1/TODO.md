@@ -29,6 +29,7 @@ Tracking doc: `docs/workstreams/ui-focus-overlay-fearless-refactor-v1/DESIGN.md`
   - Evidence: event chain construction uses dispatch snapshots for ancestor traversal in
     `crates/fret-ui/src/tree/dispatch/event_chain.rs` (threaded from `dispatch/window.rs` and
     `dispatch/chain.rs`).
+- [x] Make hover ancestor queries resilient to stale retained `parent` pointers (Pressable/HoverRegion).
 - [ ] Add conformance coverage for nested scenarios:
   - [x] trapped focus scope inside a modal overlay root (portal-style nested roots)
   - [x] multiple stacked trapped scopes (inner scope wins)

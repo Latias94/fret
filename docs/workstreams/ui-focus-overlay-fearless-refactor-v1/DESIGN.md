@@ -58,6 +58,8 @@ Evidence anchors:
   `crates/fret-ui/src/tree/dispatch/event_chain.rs`
 - Key dispatch capture/bubble chains use focus snapshots (no retained-parent walks):
   `crates/fret-ui/src/tree/dispatch/window.rs`
+- Hover derivation (Pressable/HoverRegion ancestor queries) uses dispatch snapshots (no retained-parent walks):
+  `crates/fret-ui/src/tree/dispatch/hover.rs`
 - Focus traversal snapshot membership + snapshot parent traversal:
   `crates/fret-ui/src/tree/ui_tree_outside_press.rs`
 - Regression tests (trap + stale parent pointers): `crates/fret-ui/src/tree/tests/focus_scope.rs`
@@ -65,6 +67,8 @@ Evidence anchors:
   `crates/fret-ui/src/tree/tests/cursor_icon_query.rs`
 - Regression test (key dispatch under stale parent pointers):
   `crates/fret-ui/src/tree/tests/dispatch_phase.rs`
+- Regression test (hover region under stale parent pointers):
+  `crates/fret-ui/src/declarative/tests/layout/interactivity.rs`
 - Regression test (focus traversal availability under stale parent pointers):
   `crates/fret-ui/src/tree/tests/focus_traversal_availability.rs`
 - Regression test (hit-test-inert focus barrier layer):
