@@ -2,9 +2,9 @@ use std::collections::HashMap;
 use std::sync::Arc;
 
 use fret_core::{Color, Px, Rect, TextStyle};
+use fret_ui::{ElementContext, UiHost};
 use fret_ui_headless::tab_strip_overflow::compute_overflowed_tab_indices;
 use fret_ui_shadcn::{DropdownMenuEntry, DropdownMenuItem};
-use fret_ui::{ElementContext, UiHost};
 
 use super::WorkspaceTab;
 use crate::tab_drag::WorkspaceTabHitRect;
@@ -53,25 +53,20 @@ pub(crate) fn compute_overflow_menu_entries<H: UiHost>(
         .filter_map(|id| {
             let tab_ix = tabs.iter().position(|t| t.id.as_ref() == id.as_ref())?;
             let tab = tabs.get(tab_ix)?;
-            let test_id = root_test_id.map(|root| {
-                Arc::<str>::from(format!("{root}.overflow_entry.{}", tab.id.as_ref()))
-            });
+            let test_id = root_test_id
+                .map(|root| Arc::<str>::from(format!("{root}.overflow_entry.{}", tab.id.as_ref())));
             let close_test_id = root_test_id.map(|root| {
-                Arc::<str>::from(format!(
-                    "{root}.overflow_entry.{}.close",
-                    tab.id.as_ref()
-                ))
+                Arc::<str>::from(format!("{root}.overflow_entry.{}.close", tab.id.as_ref()))
             });
 
-            let close_slot = tab
-                .close_command
-                .as_ref()
-                .map(|_cmd| super::widgets::overflow_menu_close_slot(
+            let close_slot = tab.close_command.as_ref().map(|_cmd| {
+                super::widgets::overflow_menu_close_slot(
                     cx,
                     text_style.clone(),
                     inactive_fg,
                     close_test_id,
-                ));
+                )
+            });
 
             let mut item = DropdownMenuItem::new(tab.title.clone())
                 .close_on_select(true)

@@ -65,9 +65,9 @@ pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement
                 .into_element(cx),
             ])
             .into_element(cx),
-            ui_ai::ArtifactContent::new([cx.text(
-                "Artifacts are chrome-only: apps own rendering, export, and lifecycle.",
-            )])
+            ui_ai::ArtifactContent::new([
+                cx.text("Artifacts are chrome-only: apps own rendering, export, and lifecycle.")
+            ])
             .into_element(cx),
         ])
         .test_id_root("ui-ai-artifact-root")
@@ -92,4 +92,3 @@ pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement
     )
 }
 // endregion: example
-

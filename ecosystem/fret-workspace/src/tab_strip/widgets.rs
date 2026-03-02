@@ -244,9 +244,7 @@ pub(super) fn tab_strip_overflow_button<H: UiHost>(
     text_style: TextStyle,
     test_id: Option<Arc<str>>,
 ) -> AnyElement {
-    use fret_ui::action::{
-        OnPressablePointerDown, PressablePointerDownResult,
-    };
+    use fret_ui::action::{OnPressablePointerDown, PressablePointerDownResult};
 
     let on_down: OnPressablePointerDown = Arc::new(|host, _acx, _down| {
         host.prevent_default(fret_runtime::DefaultAction::FocusOnPointerDown);

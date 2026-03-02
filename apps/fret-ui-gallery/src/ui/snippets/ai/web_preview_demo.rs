@@ -33,7 +33,9 @@ pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement
         Some(model) => model,
         None => {
             let model = cx.app.models_mut().insert(0usize);
-            cx.with_state(DemoModels::default, |st| st.history_ix = Some(model.clone()));
+            cx.with_state(DemoModels::default, |st| {
+                st.history_ix = Some(model.clone())
+            });
             model
         }
     };
@@ -85,9 +87,15 @@ pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement
             out.push(cx.text("").test_id("ui-ai-web-preview-demo-can-back-true"));
         }
         if can_forward {
-            out.push(cx.text("").test_id("ui-ai-web-preview-demo-can-forward-true"));
+            out.push(
+                cx.text("")
+                    .test_id("ui-ai-web-preview-demo-can-forward-true"),
+            );
         } else {
-            out.push(cx.text("").test_id("ui-ai-web-preview-demo-can-forward-false"));
+            out.push(
+                cx.text("")
+                    .test_id("ui-ai-web-preview-demo-can-forward-false"),
+            );
         }
         out
     };
@@ -219,4 +227,3 @@ pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement
     )
 }
 // endregion: example
-

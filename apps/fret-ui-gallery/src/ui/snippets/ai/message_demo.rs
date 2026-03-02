@@ -19,7 +19,9 @@ pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement
     let needs_init = cx.with_state(DemoModels::default, |st| st.last_action.is_none());
     if needs_init {
         let model = cx.app.models_mut().insert(None::<Arc<str>>);
-        cx.with_state(DemoModels::default, |st| st.last_action = Some(model.clone()));
+        cx.with_state(DemoModels::default, |st| {
+            st.last_action = Some(model.clone())
+        });
     }
 
     let last_action_model = cx
@@ -120,4 +122,3 @@ pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement
     )
 }
 // endregion: example
-

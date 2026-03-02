@@ -1,6 +1,9 @@
 pub mod button;
+pub mod badge;
 pub mod checkbox;
 pub mod icon_button;
 pub mod radio;
+pub mod segmented_button;
 pub mod slider;
 pub mod switch;
+pub mod top_app_bar;

@@ -473,9 +473,12 @@ Evidence anchors:
 
 ### Non-unit-testable (for now)
 
-- **Overlay anchoring parity** (reanchoring and scroll extent updates staying in sync) requires a
-  higher-level harness (diag scripts or integration tests) and is tracked separately until the
-  overlay/anchor query surface is directly assertable in unit tests.
+- **Overlay anchoring parity** (reanchoring and scroll extent updates staying in sync) is covered
+  via UI Gallery diag scripts while SE-200 remains behind a gate:
+  - Tooltip (hover-triggered anchored panel): `tools/diag-scripts/ui-gallery/overlay/ui-gallery-tooltip-overlay-placement-after-code-tab-scroll-range.json`
+  - Popover (click-triggered anchored panel): `tools/diag-scripts/ui-gallery/popover/ui-gallery-popover-overlay-placement-after-code-tab-scroll-range.json`
+  - These scripts assert (1) scroll extents remain finite after code-tab content growth and (2)
+    reopened overlays remain clamped within the window.
 
 ## Reference Direction (GPUI / DOM)
 

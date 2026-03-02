@@ -21,11 +21,10 @@ pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement
                 .gap(Space::N2),
             move |cx| {
                 vec![
-                    cx.text("").attach_semantics(
-                        SemanticsDecoration::default().test_id(Arc::<str>::from(format!(
-                            "ui-ai-message-branch-active-marker-{index}"
-                        ))),
-                    ),
+                    cx.text("")
+                        .attach_semantics(SemanticsDecoration::default().test_id(
+                            Arc::<str>::from(format!("ui-ai-message-branch-active-marker-{index}")),
+                        )),
                     cx.container(
                         decl_style::container_props(
                             &theme,
@@ -69,4 +68,3 @@ pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement
     )
 }
 // endregion: example
-

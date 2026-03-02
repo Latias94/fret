@@ -22,7 +22,9 @@ pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement
                 .app
                 .models_mut()
                 .insert(Vec::<ui_ai::AttachmentData>::new());
-            cx.with_state(DemoModels::default, |st| st.attachments = Some(model.clone()));
+            cx.with_state(DemoModels::default, |st| {
+                st.attachments = Some(model.clone())
+            });
             model
         }
     };
@@ -84,4 +86,3 @@ pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement
     )
 }
 // endregion: example
-

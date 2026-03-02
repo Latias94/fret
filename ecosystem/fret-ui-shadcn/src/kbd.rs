@@ -10,9 +10,9 @@ use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_kit::declarative::icon as decl_icon;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::primitives::direction as direction_prim;
-use fret_ui_kit::{ui, ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, Radius, Space};
+use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, Radius, Space, ui};
 
-use crate::surface_slot::{surface_slot_in_scope, ShadcnSurfaceSlot};
+use crate::surface_slot::{ShadcnSurfaceSlot, surface_slot_in_scope};
 
 #[derive(Debug)]
 enum KbdContent {

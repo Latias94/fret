@@ -17,8 +17,9 @@ struct DemoModels {
 }
 
 pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement {
-    let needs_init =
-        cx.with_state(DemoModels::default, |st| st.open.is_none() || st.value.is_none());
+    let needs_init = cx.with_state(DemoModels::default, |st| {
+        st.open.is_none() || st.value.is_none()
+    });
     if needs_init {
         let open = cx.app.models_mut().insert(false);
         let value = cx.app.models_mut().insert(None::<Arc<str>>);
@@ -112,4 +113,3 @@ pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement
     )
 }
 // endregion: example
-

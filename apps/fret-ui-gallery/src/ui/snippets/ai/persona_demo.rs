@@ -3,6 +3,7 @@ pub const SOURCE: &str = include_str!("persona_demo.rs");
 // region: example
 use fret_core::Px;
 use fret_ui_ai as ui_ai;
+use fret_ui_kit::declarative::ElementContextThemeExt;
 use fret_ui_kit::declarative::stack;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::{ChromeRefinement, LayoutRefinement, MetricRef, Space};
@@ -46,9 +47,8 @@ pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement
         },
     );
 
-    let shell_props = cx.with_theme(|theme| {
-        decl_style::container_props(theme, ChromeRefinement::default(), max_w)
-    });
+    let shell_props = cx
+        .with_theme(|theme| decl_style::container_props(theme, ChromeRefinement::default(), max_w));
     let shell = cx.container(shell_props, move |_cx| [row]);
 
     stack::vstack(
@@ -66,4 +66,3 @@ pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement
     )
 }
 // endregion: example
-

@@ -43,9 +43,7 @@ pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement
     let response_section = ui_ai::SchemaDisplayResponse::new(response_props)
         .default_open(true)
         .test_id_first_property_trigger("ui-ai-schema-display-response-prop0-trigger")
-        .test_id_first_property_child0_trigger(
-            "ui-ai-schema-display-response-prop0-child0-trigger",
-        )
+        .test_id_first_property_child0_trigger("ui-ai-schema-display-response-prop0-child0-trigger")
         .into_element(cx);
 
     let schema = ui_ai::SchemaDisplay::new(ui_ai::HttpMethod::Post, "/v1/chat")
@@ -86,4 +84,3 @@ pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement
     )
 }
 // endregion: example
-
