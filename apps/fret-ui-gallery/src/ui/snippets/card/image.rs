@@ -1,18 +1,23 @@
+pub const SOURCE: &str = include_str!("image.rs");
+
 // region: example
 use fret_app::App;
 use fret_core::{Color as CoreColor, ImageId};
 use fret_ui::Theme;
+use fret_ui_assets::ui::ImageSourceElementContextExt as _;
 use fret_ui_kit::declarative::{ModelWatchExt as _, style as decl_style};
 use fret_ui_kit::ui;
 use fret_ui_shadcn::{self as shadcn, prelude::*};
 use std::sync::{Arc, OnceLock};
-use fret_ui_assets::ui::ImageSourceElementContextExt as _;
 
 fn icon(cx: &mut ElementContext<'_, App>, id: &'static str) -> AnyElement {
     shadcn::icon::icon(cx, fret_icons::IconId::new_static(id))
 }
 
-pub fn render(cx: &mut ElementContext<'_, App>, event_cover_image: Model<Option<ImageId>>) -> AnyElement {
+pub fn render(
+    cx: &mut ElementContext<'_, App>,
+    event_cover_image: Model<Option<ImageId>>,
+) -> AnyElement {
     let theme = Theme::global(&*cx.app).snapshot();
     let max_w_sm = LayoutRefinement::default()
         .w_full()

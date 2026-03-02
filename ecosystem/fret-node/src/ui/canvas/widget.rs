@@ -68,8 +68,8 @@ use crate::ui::style::{NodeGraphBackgroundStyle, NodeGraphColorMode, NodeGraphSt
 use crate::ui::{
     FallbackMeasuredNodeGraphPresenter, GroupRenameOverlay, MeasuredGeometryStore,
     NodeGraphCanvasTransform, NodeGraphEdgeTypes, NodeGraphEditQueue, NodeGraphFitViewOptions,
-    NodeGraphInternalsSnapshot, NodeGraphInternalsStore, NodeGraphOverlayState, NodeGraphSkinRef,
-    NodeGraphViewQueue,
+    NodeGraphGeometryOverridesRef, NodeGraphInternalsSnapshot, NodeGraphInternalsStore,
+    NodeGraphOverlayState, NodeGraphPaintOverridesRef, NodeGraphSkinRef, NodeGraphViewQueue,
 };
 
 use super::middleware::{
@@ -243,6 +243,9 @@ pub struct NodeGraphCanvasWith<M> {
     color_mode_theme_rev: Option<u64>,
     skin: Option<NodeGraphSkinRef>,
     skin_last_rev: Option<u64>,
+    geometry_overrides: Option<NodeGraphGeometryOverridesRef>,
+    paint_overrides: Option<NodeGraphPaintOverridesRef>,
+    paint_overrides_last_rev: Option<u64>,
     close_command: Option<CommandId>,
 
     auto_measured: Arc<MeasuredGeometryStore>,
@@ -357,7 +360,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
         let viewport_rect = viewport.visible_canvas_rect();
         let viewport_w = viewport_rect.size.width.0;
         let viewport_h = viewport_rect.size.height.0;
-        let margin_screen = self.style.render_cull_margin_px;
+        let margin_screen = self.style.paint.render_cull_margin_px;
 
         if !margin_screen.is_finite()
             || margin_screen <= 0.0
@@ -477,6 +480,9 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
             color_mode_theme_rev: None,
             skin: None,
             skin_last_rev: None,
+            geometry_overrides: None,
+            paint_overrides: None,
+            paint_overrides_last_rev: None,
             close_command: None,
             auto_measured,
             auto_measured_key: None,
@@ -529,6 +535,22 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
         self
     }
 
+    /// Attaches a UI-only per-entity geometry override provider (ADR 0308).
+    pub fn with_geometry_overrides(mut self, overrides: NodeGraphGeometryOverridesRef) -> Self {
+        self.geometry_overrides = Some(overrides);
+        self.geometry.geom_key = None;
+        self.geometry.index_key = None;
+        self.geometry.drag_preview = None;
+        self
+    }
+
+    /// Attaches a UI-only per-entity paint override provider (ADR 0309).
+    pub fn with_paint_overrides(mut self, overrides: NodeGraphPaintOverridesRef) -> Self {
+        self.paint_overrides = Some(overrides);
+        self.paint_overrides_last_rev = None;
+        self
+    }
+
     /// Attaches a B-layer `edgeTypes` registry to override edge render hints.
     pub fn with_edge_types(mut self, edge_types: NodeGraphEdgeTypes) -> Self {
         self.edge_types = Some(edge_types);
@@ -564,6 +586,9 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
             color_mode_theme_rev: self.color_mode_theme_rev,
             skin: self.skin,
             skin_last_rev: self.skin_last_rev,
+            geometry_overrides: self.geometry_overrides,
+            paint_overrides: self.paint_overrides,
+            paint_overrides_last_rev: self.paint_overrides_last_rev,
             close_command: self.close_command,
             auto_measured: self.auto_measured,
             auto_measured_key: self.auto_measured_key,
@@ -708,14 +733,22 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
             NodeGraphColorMode::Light | NodeGraphColorMode::Dark => None,
         };
 
-        self.style = NodeGraphStyle::from_snapshot_with_color_mode(theme, mode);
+        let prev_geometry_fp = self.style.geometry_fingerprint();
+
+        let mut next_style = NodeGraphStyle::from_snapshot_with_color_mode(theme, mode);
         if let Some(background) = self.background_override {
-            let style = std::mem::take(&mut self.style);
-            self.style = style.with_background_style(background);
+            next_style = next_style.with_background_style(background);
         }
-        self.geometry.geom_key = None;
-        self.geometry.index_key = None;
-        self.geometry.drag_preview = None;
+
+        let next_geometry_fp = next_style.geometry_fingerprint();
+        let geometry_changed = prev_geometry_fp != next_geometry_fp;
+        self.style = next_style;
+
+        if geometry_changed {
+            self.geometry.geom_key = None;
+            self.geometry.index_key = None;
+            self.geometry.drag_preview = None;
+        }
 
         if let Some(services) = services {
             self.paint_cache.clear(services);
@@ -742,6 +775,30 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
             return;
         }
         self.skin_last_rev = Some(rev);
+        self.grid_scene_cache.clear();
+        self.groups_scene_cache.clear();
+        self.nodes_scene_cache.clear();
+        self.edges_scene_cache.clear();
+        self.edge_labels_scene_cache.clear();
+        self.edges_build_states.clear();
+        self.edge_labels_build_states.clear();
+        self.edge_labels_build_state = None;
+    }
+
+    fn sync_paint_overrides(&mut self, _services: Option<&mut dyn fret_core::UiServices>) {
+        let Some(overrides) = self.paint_overrides.as_ref() else {
+            self.paint_overrides_last_rev = None;
+            return;
+        };
+
+        let rev = overrides.revision();
+        if self.paint_overrides_last_rev == Some(rev) {
+            return;
+        }
+        self.paint_overrides_last_rev = Some(rev);
+
+        // Paint overrides must be paint-only: invalidate paint caches without touching derived
+        // geometry/spatial index caches.
         self.grid_scene_cache.clear();
         self.groups_scene_cache.clear();
         self.nodes_scene_cache.clear();

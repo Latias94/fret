@@ -1,3 +1,5 @@
+pub const SOURCE: &str = include_str!("table.rs");
+
 // region: example
 use fret_ui_shadcn::{self as shadcn, prelude::*};
 
@@ -81,4 +83,3 @@ pub fn render<H: UiHost>(
     .test_id("ui-gallery-checkbox-table")
 }
 // endregion: example
-

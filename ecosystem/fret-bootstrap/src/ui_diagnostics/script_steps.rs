@@ -5,6 +5,7 @@ use fret_diag_protocol::{DiagScreenshotRequestV1, DiagScreenshotWindowRequestV1}
 pub(super) fn handle_window_effect_steps(
     svc: &mut UiDiagnosticsService,
     window: AppWindowId,
+    anchor_window: AppWindowId,
     step_index: usize,
     step: UiActionStepV2,
     active: &mut ActiveScript,
@@ -19,7 +20,11 @@ pub(super) fn handle_window_effect_steps(
             width_px,
             height_px,
         } => {
-            if let Some(target_window) = svc.resolve_window_target(window, target_window.as_ref()) {
+            if let Some(target_window) = svc.resolve_window_target_for_active_step(
+                window,
+                anchor_window,
+                target_window.as_ref(),
+            ) {
                 let size = fret_core::Size::new(fret_core::Px(width_px), fret_core::Px(height_px));
                 output
                     .effects
@@ -48,7 +53,11 @@ pub(super) fn handle_window_effect_steps(
             x_px,
             y_px,
         } => {
-            if let Some(target_window) = svc.resolve_window_target(window, target_window.as_ref()) {
+            if let Some(target_window) = svc.resolve_window_target_for_active_step(
+                window,
+                anchor_window,
+                target_window.as_ref(),
+            ) {
                 output
                     .effects
                     .push(Effect::Window(fret_app::WindowRequest::SetOuterPosition {
@@ -81,6 +90,7 @@ pub(super) fn handle_window_effect_steps(
             let trigger_path = svc.cfg.out_dir.join("cursor_screen_pos.touch");
             let _ = std::fs::create_dir_all(&svc.cfg.out_dir);
             if std::fs::write(text_path, payload).is_ok() && touch_file(&trigger_path).is_ok() {
+                active.last_explicit_cursor_override = Some(CursorOverrideTarget::ScreenPhysical);
                 active.wait_until = None;
                 active.screenshot_wait = None;
                 active.next_step = active.next_step.saturating_add(1);
@@ -99,7 +109,11 @@ pub(super) fn handle_window_effect_steps(
             x_px,
             y_px,
         } => {
-            if let Some(target_window) = svc.resolve_window_target(window, target_window.as_ref()) {
+            if let Some(target_window) = svc.resolve_window_target_for_active_step(
+                window,
+                anchor_window,
+                target_window.as_ref(),
+            ) {
                 let payload = format!(
                     "schema_version=1\nkind=window_client_physical\nwindow={}\nx_px={}\ny_px={}\n",
                     target_window.data().as_ffi(),
@@ -110,6 +124,8 @@ pub(super) fn handle_window_effect_steps(
                 let trigger_path = svc.cfg.out_dir.join("cursor_screen_pos.touch");
                 let _ = std::fs::create_dir_all(&svc.cfg.out_dir);
                 if std::fs::write(text_path, payload).is_ok() && touch_file(&trigger_path).is_ok() {
+                    active.last_explicit_cursor_override =
+                        Some(CursorOverrideTarget::WindowClientPhysical(target_window));
                     active.wait_until = None;
                     active.screenshot_wait = None;
                     active.next_step = active.next_step.saturating_add(1);
@@ -136,7 +152,11 @@ pub(super) fn handle_window_effect_steps(
             x_px,
             y_px,
         } => {
-            if let Some(target_window) = svc.resolve_window_target(window, target_window.as_ref()) {
+            if let Some(target_window) = svc.resolve_window_target_for_active_step(
+                window,
+                anchor_window,
+                target_window.as_ref(),
+            ) {
                 if write_cursor_override_window_client_logical(
                     &svc.cfg.out_dir,
                     target_window,
@@ -145,6 +165,8 @@ pub(super) fn handle_window_effect_steps(
                 )
                 .is_ok()
                 {
+                    active.last_explicit_cursor_override =
+                        Some(CursorOverrideTarget::WindowClientLogical(target_window));
                     active.wait_until = None;
                     active.screenshot_wait = None;
                     active.next_step = active.next_step.saturating_add(1);
@@ -173,7 +195,11 @@ pub(super) fn handle_window_effect_steps(
             middle,
         } => {
             let resolved_window = if let Some(target_window) = target_window.as_ref() {
-                svc.resolve_window_target(window, Some(target_window))
+                svc.resolve_window_target_for_active_step(
+                    window,
+                    anchor_window,
+                    Some(target_window),
+                )
             } else {
                 None
             };
@@ -222,7 +248,11 @@ pub(super) fn handle_window_effect_steps(
         UiActionStepV2::RaiseWindow {
             window: target_window,
         } => {
-            if let Some(target_window) = svc.resolve_window_target(window, target_window.as_ref()) {
+            if let Some(target_window) = svc.resolve_window_target_for_active_step(
+                window,
+                anchor_window,
+                target_window.as_ref(),
+            ) {
                 output
                     .effects
                     .push(Effect::Window(fret_app::WindowRequest::Raise {

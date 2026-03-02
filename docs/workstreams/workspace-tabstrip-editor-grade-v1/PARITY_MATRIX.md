@@ -8,22 +8,22 @@ Legend:
 
 | Feature / invariant | Workspace TabStrip (Fret) | Docking TabBar (Fret) | Zed | dockview | gpui-component |
 |---|---:|---:|---:|---:|---:|
-| Select tab | 🟡 | 🟡 | ✅ | ✅ | ✅ |
+| Select tab | ✅ (gate) | 🟡 | ✅ | ✅ | ✅ |
 | Close tab (button) | ✅ | 🟡 | ✅ | ✅ | ✅ |
 | Dirty indicator | 🟡 | ❌ | ✅ | 🟡 | 🟡 |
-| Preview tab semantics | 🟡 | ❌ | ✅ | ❌ | ❌ |
-| Pinned tabs + boundary | 🟡 | ❌ | ✅ | ❌ | ❌ |
+| Preview tab semantics | ✅ (unit) | ❌ | ✅ | ❌ | ❌ |
+| Pinned tabs + boundary | ✅ (unit + gate) | ❌ | ✅ | ❌ | ❌ |
 | Reorder within strip | ✅ (smoke) | 🟡 | ✅ | ✅ | ✅ |
 | Cross-pane move | ✅ | 🟡 | ✅ | ✅ | 🟡 |
 | End-drop surface (`insert_index == tab_count`) | ✅ | 🟡 | ✅ | ✅ | ✅ |
-| Header-space drop surface | 🟡 | 🟡 | ✅ | ✅ | 🟡 |
-| Overflow detection | 🟡 | 🟡 | ✅ | ✅ | 🟡 |
-| Overflow menu/list | ✅ (unit) | 🟡 | ✅ | ✅ | ❌ |
-| Canonical index mapping under overflow | 🟡 | ❌ | ✅ | ✅ | 🟡 |
-| Scroll-to-active | 🟡 | 🟡 | ✅ | 🟡 | 🟡 |
+| Header-space drop surface | ✅ (unit) | 🟡 | ✅ | ✅ | 🟡 |
+| Overflow detection | ✅ (unit) | 🟡 | ✅ | ✅ | 🟡 |
+| Overflow menu/list | ✅ (unit + gate) | 🟡 | ✅ | ✅ | ❌ |
+| Canonical index mapping under overflow | ✅ (smoke) | ❌ | ✅ | ✅ | 🟡 |
+| Scroll-to-active | ✅ (gate) | 🟡 | ✅ | 🟡 | 🟡 |
 | Edge auto-scroll during drag | 🟡 | 🟡 | ✅ | 🟡 | 🟡 |
 | Drag-to-split integration | ✅ | 🟡 | ✅ | ✅ | 🟡 |
-| Keyboard roving focus | 🟡 | ❌ | ✅ | 🟡 | 🟡 |
+| Keyboard roving focus | ✅ (unit) | ❌ | ✅ | 🟡 | 🟡 |
 | Focus tab strip (command) | ✅ (unit) | ❌ | ✅ | 🟡 | 🟡 |
 | Toggle tab strip focus (Ctrl+F6) | ✅ (unit) | ❌ | ✅ | 🟡 | 🟡 |
 | Exit tab strip (Escape → content) | ✅ (unit) | ❌ | ✅ | 🟡 | 🟡 |

@@ -1,3 +1,5 @@
+pub const SOURCE: &str = include_str!("input.rs");
+
 // region: example
 use fret_core::Px;
 use fret_ui_shadcn::{self as shadcn, prelude::*};
@@ -41,8 +43,7 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
         .into_element(cx),
         shadcn::Field::new([
             shadcn::FieldLabel::new("Password").into_element(cx),
-            shadcn::FieldDescription::new("Must be at least 8 characters long.")
-                .into_element(cx),
+            shadcn::FieldDescription::new("Must be at least 8 characters long.").into_element(cx),
             shadcn::Input::new(password)
                 .placeholder("••••••••")
                 .a11y_label("Password")
@@ -56,4 +57,3 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
     .test_id("ui-gallery-field-input")
 }
 // endregion: example
-

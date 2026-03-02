@@ -96,3 +96,92 @@ impl Skeleton {
         cx.container(props, |_cx| Vec::new())
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    use fret_app::App;
+    use fret_core::{AppWindowId, Point, Px, Rect, Size};
+    use fret_runtime::FrameId;
+    use fret_ui::element::{ElementKind, Length};
+
+    fn bounds() -> Rect {
+        Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(200.0), Px(120.0)),
+        )
+    }
+
+    fn find_bg_alpha(el: &AnyElement) -> Option<f32> {
+        let ElementKind::Container(props) = &el.kind else {
+            return None;
+        };
+        props.background.map(|c| c.a)
+    }
+
+    #[test]
+    fn skeleton_defaults_to_w_full_and_nonzero_height() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+
+        let el = fret_ui::elements::with_element_cx(&mut app, window, bounds(), "test", |cx| {
+            Skeleton::new().into_element(cx)
+        });
+
+        let ElementKind::Container(props) = &el.kind else {
+            panic!("expected Skeleton to build a Container element");
+        };
+        assert_eq!(props.layout.size.width, Length::Fill);
+        match props.layout.size.height {
+            Length::Px(px) => assert!(px.0 > 0.0, "expected non-zero Skeleton height"),
+            other => panic!("expected Skeleton height to be Px, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn skeleton_pulse_changes_background_alpha_across_frames() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+
+        app.set_frame_id(FrameId(0));
+        let a0 = fret_ui::elements::with_element_cx(&mut app, window, bounds(), "test", |cx| {
+            Skeleton::new().into_element(cx)
+        });
+        let a0 = find_bg_alpha(&a0).expect("background alpha");
+
+        app.set_frame_id(FrameId(10));
+        let a10 = fret_ui::elements::with_element_cx(&mut app, window, bounds(), "test", |cx| {
+            Skeleton::new().into_element(cx)
+        });
+        let a10 = find_bg_alpha(&a10).expect("background alpha");
+
+        assert_ne!(
+            a0, a10,
+            "expected animated Skeleton to modulate background alpha across frames"
+        );
+    }
+
+    #[test]
+    fn skeleton_without_pulse_is_stable_across_frames() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+
+        app.set_frame_id(FrameId(0));
+        let a0 = fret_ui::elements::with_element_cx(&mut app, window, bounds(), "test", |cx| {
+            Skeleton::new().animate_pulse(false).into_element(cx)
+        });
+        let a0 = find_bg_alpha(&a0).expect("background alpha");
+
+        app.set_frame_id(FrameId(10));
+        let a10 = fret_ui::elements::with_element_cx(&mut app, window, bounds(), "test", |cx| {
+            Skeleton::new().animate_pulse(false).into_element(cx)
+        });
+        let a10 = find_bg_alpha(&a10).expect("background alpha");
+
+        assert_eq!(
+            a0, a10,
+            "expected Skeleton(animate_pulse=false) to keep background alpha stable"
+        );
+    }
+}

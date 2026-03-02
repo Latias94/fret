@@ -38,101 +38,59 @@ pub(super) fn preview_input_group(cx: &mut ElementContext<'_, App>) -> Vec<AnyEl
             DocSection::new("Demo", demo)
                 .description("A compact input group and a textarea-style input group.")
                 .test_id_prefix("ui-gallery-input-group-demo")
-                .code_rust_from_file_region(
-                    include_str!("../snippets/input_group/demo.rs"),
-                    "example",
-                ),
+                .code_rust_from_file_region(snippets::demo::SOURCE, "example"),
             DocSection::new("Align / inline-start", align_inline_start)
                 .description("Inline-start addon (leading slot).")
                 .test_id_prefix("ui-gallery-input-group-align-inline-start")
-                .code_rust_from_file_region(
-                    include_str!("../snippets/input_group/align_inline_start.rs"),
-                    "example",
-                ),
+                .code_rust_from_file_region(snippets::align_inline_start::SOURCE, "example"),
             DocSection::new("Align / inline-end", align_inline_end)
                 .description("Inline-end addon (trailing slot).")
                 .test_id_prefix("ui-gallery-input-group-align-inline-end")
-                .code_rust_from_file_region(
-                    include_str!("../snippets/input_group/align_inline_end.rs"),
-                    "example",
-                ),
+                .code_rust_from_file_region(snippets::align_inline_end::SOURCE, "example"),
             DocSection::new("Align / block-start", align_block_start)
                 .description("Block-start helper text with a divider.")
                 .test_id_prefix("ui-gallery-input-group-align-block-start")
-                .code_rust_from_file_region(
-                    include_str!("../snippets/input_group/align_block_start.rs"),
-                    "example",
-                ),
+                .code_rust_from_file_region(snippets::align_block_start::SOURCE, "example"),
             DocSection::new("Align / block-end", align_block_end)
                 .description("Textarea-style block-end footer with buttons.")
                 .test_id_prefix("ui-gallery-input-group-align-block-end")
-                .code_rust_from_file_region(
-                    include_str!("../snippets/input_group/align_block_end.rs"),
-                    "example",
-                ),
+                .code_rust_from_file_region(snippets::align_block_end::SOURCE, "example"),
             DocSection::new("Icon", icon)
                 .description("Icon-like leading adornment.")
                 .test_id_prefix("ui-gallery-input-group-icon")
-                .code_rust_from_file_region(
-                    include_str!("../snippets/input_group/icon.rs"),
-                    "example",
-                ),
+                .code_rust_from_file_region(snippets::icon::SOURCE, "example"),
             DocSection::new("Text", text)
                 .description("Leading/trailing text addons should not overlap the control.")
                 .test_id_prefix("ui-gallery-input-group-text")
-                .code_rust_from_file_region(
-                    include_str!("../snippets/input_group/text.rs"),
-                    "example",
-                ),
+                .code_rust_from_file_region(snippets::text::SOURCE, "example"),
             DocSection::new("Button", button)
                 .description("Trailing button; set `trailing_has_button(true)` for layout.")
                 .test_id_prefix("ui-gallery-input-group-button")
-                .code_rust_from_file_region(
-                    include_str!("../snippets/input_group/button.rs"),
-                    "example",
-                ),
+                .code_rust_from_file_region(snippets::button::SOURCE, "example"),
             DocSection::new("Kbd", kbd)
                 .description("Kbd-like addons (layout hints for monospace pills).")
                 .test_id_prefix("ui-gallery-input-group-kbd")
-                .code_rust_from_file_region(
-                    include_str!("../snippets/input_group/kbd.rs"),
-                    "example",
-                ),
+                .code_rust_from_file_region(snippets::kbd::SOURCE, "example"),
             DocSection::new("Dropdown", dropdown)
                 .description("Leading button with a chevron icon (wire it to a menu in app code).")
                 .test_id_prefix("ui-gallery-input-group-dropdown")
-                .code_rust_from_file_region(
-                    include_str!("../snippets/input_group/dropdown.rs"),
-                    "example",
-                ),
+                .code_rust_from_file_region(snippets::dropdown::SOURCE, "example"),
             DocSection::new("Spinner", spinner)
                 .description("Leading spinner while fetching results.")
                 .test_id_prefix("ui-gallery-input-group-spinner")
-                .code_rust_from_file_region(
-                    include_str!("../snippets/input_group/spinner.rs"),
-                    "example",
-                ),
+                .code_rust_from_file_region(snippets::spinner::SOURCE, "example"),
             DocSection::new("Textarea", textarea)
                 .description("Textarea mode with a footer row and min height.")
                 .test_id_prefix("ui-gallery-input-group-textarea")
-                .code_rust_from_file_region(
-                    include_str!("../snippets/input_group/textarea.rs"),
-                    "example",
-                ),
+                .code_rust_from_file_region(snippets::textarea::SOURCE, "example"),
             DocSection::new("Custom Input", custom_input)
                 .description("Custom/extended input chrome via slots.")
                 .test_id_prefix("ui-gallery-input-group-custom-input")
-                .code_rust_from_file_region(
-                    include_str!("../snippets/input_group/custom_input.rs"),
-                    "example",
-                ),
+                .code_rust_from_file_region(snippets::custom_input::SOURCE, "example"),
             DocSection::new("RTL", rtl)
                 .description("InputGroup layout under an RTL direction provider.")
                 .test_id_prefix("ui-gallery-input-group-rtl")
-                .code_rust_from_file_region(
-                    include_str!("../snippets/input_group/rtl.rs"),
-                    "example",
-                ),
+                .code_rust_from_file_region(snippets::rtl::SOURCE, "example"),
             DocSection::new("Notes", notes).description("API reference pointers and invariants."),
         ],
     );

@@ -23,6 +23,7 @@ use fret_runtime::{
     WhenExpr,
 };
 use fret_ui::Theme;
+use fret_ui::declarative as ui_declarative;
 use fret_ui::retained_bridge::{BoundTextInput, UiTreeRetainedExt as _, *};
 use fret_ui::{UiFrameCx, UiHost, UiTree};
 use serde_json::Value;
@@ -45,22 +46,23 @@ use fret_node::schema::{
     NodeKindMigrateError, NodeKindMigrator, NodeRegistry, NodeSchema, PortDecl,
 };
 use fret_node::ui::canvas::RejectNonFiniteTx;
+use fret_node::ui::declarative::NodeGraphSurfacePaintOnlyProps;
 use fret_node::ui::presenter::{
     EdgeMarker, EdgeRenderHint, EdgeRouteKind, InsertNodeCandidate, NodeGraphContextMenuItem,
     NodeGraphPresenter, PortAnchorHint,
 };
 use fret_node::ui::style::{NodeGraphBackgroundPattern, NodeGraphStyle};
 use fret_node::ui::{
-    MeasuredGeometryStore, MeasuredNodeGraphPresenter, NodeGraphA11yFocusedEdge,
-    NodeGraphA11yFocusedNode, NodeGraphA11yFocusedPort, NodeGraphBlackboardOverlay,
-    NodeGraphCanvas, NodeGraphControlsOverlay, NodeGraphDiagAnchor, NodeGraphDiagConnectingFlag,
-    NodeGraphEdgeToolbar, NodeGraphEdgeTypes, NodeGraphEditQueue, NodeGraphEditor,
-    NodeGraphInternalsStore, NodeGraphMiniMapOverlay, NodeGraphNodeToolbar, NodeGraphNodeTypes,
-    NodeGraphOverlayHost, NodeGraphOverlayState, NodeGraphPanel, NodeGraphPanelPosition,
-    NodeGraphPortalHost, NodeGraphPortalNodeLayout, NodeGraphPresetFamily, NodeGraphPresetSkinV1,
-    NodeGraphToolbarAlign, NodeGraphToolbarPosition, PortalNumberEditHandler, PortalNumberEditSpec,
-    PortalNumberEditSubmit, PortalNumberEditor, RegistryNodeGraphPresenter,
-    register_node_graph_commands,
+    EdgePaintOverrideV1, MeasuredGeometryStore, MeasuredNodeGraphPresenter,
+    NodeGraphA11yFocusedEdge, NodeGraphA11yFocusedNode, NodeGraphA11yFocusedPort,
+    NodeGraphBlackboardOverlay, NodeGraphCanvas, NodeGraphControlsOverlay, NodeGraphDiagAnchor,
+    NodeGraphDiagConnectingFlag, NodeGraphEdgeToolbar, NodeGraphEdgeTypes, NodeGraphEditQueue,
+    NodeGraphEditor, NodeGraphInternalsStore, NodeGraphMiniMapOverlay, NodeGraphNodeToolbar,
+    NodeGraphNodeTypes, NodeGraphOverlayHost, NodeGraphOverlayState, NodeGraphPaintOverridesMap,
+    NodeGraphPanel, NodeGraphPanelPosition, NodeGraphPortalHost, NodeGraphPortalNodeLayout,
+    NodeGraphPresetFamily, NodeGraphPresetSkinV1, NodeGraphToolbarAlign, NodeGraphToolbarPosition,
+    PortalNumberEditHandler, PortalNumberEditSpec, PortalNumberEditSubmit, PortalNumberEditor,
+    RegistryNodeGraphPresenter, register_node_graph_commands,
 };
 
 #[derive(Clone)]
@@ -99,6 +101,9 @@ const CMD_TOGGLE_BLACKBOARD_OVERLAY: &str = "node_graph_demo.toggle_blackboard_o
 const CMD_TOGGLE_CONTROLS_PLACEMENT: &str = "node_graph_demo.toggle_controls_placement";
 const CMD_TOGGLE_MINIMAP_PLACEMENT: &str = "node_graph_demo.toggle_minimap_placement";
 const WEIRD_KIND: &str = "demo.weird_layout";
+const ENV_PRESET_JSON_PATH: &str = "FRET_NODE_GRAPH_DEMO_PRESET_JSON_PATH";
+const ENV_PRESET_FAMILY: &str = "FRET_NODE_GRAPH_DEMO_PRESET_FAMILY";
+const ENV_WIRE_PAINT_COOKBOOK: &str = "FRET_NODE_GRAPH_DEMO_WIRE_PAINT_COOKBOOK";
 
 #[derive(Debug)]
 struct NodeGraphDemoStyleState {
@@ -129,6 +134,80 @@ impl NodeGraphDemoStyleState {
             1 => NodeGraphBackgroundPattern::Dots,
             2 => NodeGraphBackgroundPattern::Cross,
             _ => NodeGraphBackgroundPattern::Lines,
+        }
+    }
+}
+
+#[derive(Debug)]
+struct NodeGraphDemoWirePaintCookbookState {
+    enabled: bool,
+    applied: AtomicBool,
+    overrides: Arc<NodeGraphPaintOverridesMap>,
+}
+
+impl NodeGraphDemoWirePaintCookbookState {
+    fn new_from_env() -> Self {
+        let enabled = std::env::var(ENV_WIRE_PAINT_COOKBOOK)
+            .ok()
+            .is_some_and(|v| !v.trim().is_empty() && v.trim() != "0");
+        Self {
+            enabled,
+            applied: AtomicBool::new(false),
+            overrides: Arc::new(NodeGraphPaintOverridesMap::default()),
+        }
+    }
+
+    fn ensure_applied_once(&self, app: &mut App, graph: &fret_runtime::Model<Graph>) {
+        if !self.enabled {
+            return;
+        }
+        if self.applied.swap(true, Ordering::Relaxed) {
+            return;
+        }
+
+        if let Some(skin) = app.global::<Arc<NodeGraphPresetSkinV1>>().cloned()
+            && !skin.edge_markers_enabled()
+        {
+            let _ = skin.toggle_edge_markers();
+        }
+
+        let edges: Vec<(EdgeId, EdgeKind)> = graph
+            .read_ref(app, |g| {
+                g.edges.iter().map(|(id, e)| (*id, e.kind)).collect()
+            })
+            .unwrap_or_default();
+
+        self.overrides.clear();
+
+        let mut data_i: usize = 0;
+        for (edge_id, kind) in edges {
+            let mut ov = EdgePaintOverrideV1::default();
+            match kind {
+                EdgeKind::Data => {
+                    if data_i == 0 {
+                        // Recipe (v1): solid emphasis.
+                        ov.stroke_paint = Some(Color::from_srgb_hex_rgb(0x22_d3_ee).into());
+                        ov.stroke_width_mul = Some(1.4);
+                    } else {
+                        // Recipe: solid + dash (preview / invalid / emphasis vocabulary).
+                        ov.stroke_paint = Some(Color::from_srgb_hex_rgb(0xff_bf_24).into());
+                        ov.dash = Some(fret_core::scene::DashPatternV1::new(
+                            Px(8.0),
+                            Px(4.0),
+                            Px(0.0),
+                        ));
+                        ov.stroke_width_mul = Some(1.2);
+                    }
+                    data_i = data_i.saturating_add(1);
+                }
+                EdgeKind::Exec => {
+                    // Recipe (v1): solid exec wire.
+                    ov.stroke_paint = Some(Color::from_srgb_hex_rgb(0xf9_71_71).into());
+                    ov.stroke_width_mul = Some(1.6);
+                }
+            }
+
+            self.overrides.set_edge_override(edge_id, Some(ov));
         }
     }
 }
@@ -462,9 +541,9 @@ impl NodeGraphPresenter for DemoPresenter {
         };
         if n.kind.0.as_str() == "demo.float" {
             let extra_body = 30.0;
-            let pins = style.pin_row_height;
-            let base = style.node_header_height + 2.0 * style.node_padding + pins;
-            return Some((style.node_width, base + extra_body));
+            let pins = style.geometry.pin_row_height;
+            let base = style.geometry.node_header_height + 2.0 * style.geometry.node_padding + pins;
+            return Some((style.geometry.node_width, base + extra_body));
         }
 
         None
@@ -484,7 +563,7 @@ impl NodeGraphPresenter for DemoPresenter {
         let p = graph.ports.get(&port)?;
         let key = p.key.0.as_str();
         let (w, h) = self.weird_size_px();
-        Self::weird_anchor_for_key(false, key, (w, h), style.pin_radius)
+        Self::weird_anchor_for_key(false, key, (w, h), style.geometry.pin_radius)
     }
 }
 
@@ -1329,7 +1408,34 @@ fn build_stress_graph(graph_id: GraphId, target_nodes: usize) -> Graph {
 
 struct NodeGraphDemoWindowState {
     ui: UiTree<App>,
-    root: fret_core::NodeId,
+    root: Option<fret_core::NodeId>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum NodeGraphDemoDeclarativeMode {
+    Off,
+    CompatRetained,
+    PaintOnly,
+}
+
+impl NodeGraphDemoDeclarativeMode {
+    fn enabled(self) -> bool {
+        self != Self::Off
+    }
+
+    fn from_env() -> Self {
+        let Some(raw) = std::env::var("FRET_NODE_GRAPH_DECLARATIVE").ok() else {
+            return Self::Off;
+        };
+        let v = raw.trim();
+        if v.is_empty() || v == "0" {
+            return Self::Off;
+        }
+        match v.to_ascii_lowercase().as_str() {
+            "paint" | "paint_only" | "paint-only" => Self::PaintOnly,
+            _ => Self::CompatRetained,
+        }
+    }
 }
 
 #[derive(Debug, Default, Clone, Copy)]
@@ -1429,13 +1535,25 @@ impl PortalNumberEditSpec for DemoFloatPortalSpec {
     }
 }
 
-#[derive(Default)]
 struct NodeGraphDemoDriver {
+    declarative_mode: NodeGraphDemoDeclarativeMode,
     pending_view_state_save: bool,
     last_view_state_save_at: Option<Instant>,
 }
 
 impl NodeGraphDemoDriver {
+    fn new(declarative_mode: NodeGraphDemoDeclarativeMode) -> Self {
+        Self {
+            declarative_mode,
+            pending_view_state_save: false,
+            last_view_state_save_at: None,
+        }
+    }
+
+    fn new_from_env() -> Self {
+        Self::new(NodeGraphDemoDeclarativeMode::from_env())
+    }
+
     const VIEW_STATE_SAVE_DEBOUNCE: Duration = Duration::from_millis(500);
 
     fn save_view_state(&mut self, app: &mut App) {
@@ -1599,6 +1717,15 @@ impl NodeGraphDemoDriver {
             .with_internals_store(internals)
             .with_measured_output_store(measured.derived.clone())
             .with_close_command(CommandId::new("node_graph_demo.close"));
+        if let Some(cookbook) = app
+            .global::<Arc<NodeGraphDemoWirePaintCookbookState>>()
+            .cloned()
+        {
+            cookbook.ensure_applied_once(app, &graph);
+            if cookbook.enabled {
+                canvas = canvas.with_paint_overrides(cookbook.overrides.clone());
+            }
+        }
         if !diag_anchor_ports.is_empty() {
             canvas = canvas.with_diagnostics_anchor_ports(4, diag_anchor_ports.clone());
         }
@@ -1675,7 +1802,7 @@ impl NodeGraphDemoDriver {
             portal_root,
             node_types.into_portal_renderer(),
         )
-        .with_cull_margin_px(style.render_cull_margin_px)
+        .with_cull_margin_px(style.paint.render_cull_margin_px)
         .with_edit_queue(models.edits.clone())
         .with_canvas_focus_target(canvas_node)
         .with_command_handler(PortalNumberEditHandler::new(
@@ -1696,7 +1823,7 @@ impl NodeGraphDemoDriver {
             let controls_overlay_node = ui.create_node_retained(controls_overlay);
 
             let controls_panel = NodeGraphPanel::new(NodeGraphPanelPosition::TopRight)
-                .with_margin_px(style.controls_margin);
+                .with_margin_px(style.paint.controls_margin);
             let controls_node = ui.create_node_retained(controls_panel);
             ui.set_children(controls_node, vec![controls_overlay_node]);
             Some(controls_node)
@@ -1748,7 +1875,7 @@ impl NodeGraphDemoDriver {
             let minimap_overlay_node = ui.create_node_retained(minimap_overlay);
 
             let minimap_panel = NodeGraphPanel::new(NodeGraphPanelPosition::BottomRight)
-                .with_margin_px(style.minimap_margin);
+                .with_margin_px(style.paint.minimap_margin);
             let minimap_node = ui.create_node_retained(minimap_panel);
             ui.set_children(minimap_node, vec![minimap_overlay_node]);
             Some(minimap_node)
@@ -1824,7 +1951,23 @@ impl NodeGraphDemoDriver {
         ui.set_children(root, children);
         ui.set_root(root);
 
-        NodeGraphDemoWindowState { ui, root }
+        NodeGraphDemoWindowState {
+            ui,
+            root: Some(root),
+        }
+    }
+
+    fn build_ui_declarative(_app: &mut App, window: AppWindowId) -> NodeGraphDemoWindowState {
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        NodeGraphDemoWindowState { ui, root: None }
+    }
+}
+
+impl Default for NodeGraphDemoDriver {
+    fn default() -> Self {
+        Self::new(NodeGraphDemoDeclarativeMode::Off)
     }
 }
 
@@ -1832,7 +1975,11 @@ impl WinitAppDriver for NodeGraphDemoDriver {
     type WindowState = NodeGraphDemoWindowState;
 
     fn create_window_state(&mut self, app: &mut App, window: AppWindowId) -> Self::WindowState {
-        Self::build_ui(app, window)
+        if self.declarative_mode.enabled() {
+            Self::build_ui_declarative(app, window)
+        } else {
+            Self::build_ui(app, window)
+        }
     }
 
     fn handle_model_changes(
@@ -2063,7 +2210,11 @@ impl WinitAppDriver for NodeGraphDemoDriver {
             let pattern = style_state.cycle_background_pattern();
             tracing::info!(?pattern, "node graph demo background pattern changed");
 
-            *state = Self::build_ui(app, window);
+            *state = if self.declarative_mode.enabled() {
+                Self::build_ui_declarative(app, window)
+            } else {
+                Self::build_ui(app, window)
+            };
             app.request_redraw(window);
             return;
         }
@@ -2124,7 +2275,11 @@ impl WinitAppDriver for NodeGraphDemoDriver {
                 return;
             };
             toggles.toggle_show_help();
-            *state = Self::build_ui(app, window);
+            *state = if self.declarative_mode.enabled() {
+                Self::build_ui_declarative(app, window)
+            } else {
+                Self::build_ui(app, window)
+            };
             app.request_redraw(window);
             return;
         }
@@ -2134,7 +2289,11 @@ impl WinitAppDriver for NodeGraphDemoDriver {
                 return;
             };
             toggles.toggle_show_toolbars();
-            *state = Self::build_ui(app, window);
+            *state = if self.declarative_mode.enabled() {
+                Self::build_ui_declarative(app, window)
+            } else {
+                Self::build_ui(app, window)
+            };
             app.request_redraw(window);
             return;
         }
@@ -2144,7 +2303,11 @@ impl WinitAppDriver for NodeGraphDemoDriver {
                 return;
             };
             toggles.toggle_show_blackboard();
-            *state = Self::build_ui(app, window);
+            *state = if self.declarative_mode.enabled() {
+                Self::build_ui_declarative(app, window)
+            } else {
+                Self::build_ui(app, window)
+            };
             app.request_redraw(window);
             return;
         }
@@ -2154,7 +2317,11 @@ impl WinitAppDriver for NodeGraphDemoDriver {
                 return;
             };
             toggles.toggle_controls_placement();
-            *state = Self::build_ui(app, window);
+            *state = if self.declarative_mode.enabled() {
+                Self::build_ui_declarative(app, window)
+            } else {
+                Self::build_ui(app, window)
+            };
             app.request_redraw(window);
             return;
         }
@@ -2164,7 +2331,11 @@ impl WinitAppDriver for NodeGraphDemoDriver {
                 return;
             };
             toggles.toggle_minimap_placement();
-            *state = Self::build_ui(app, window);
+            *state = if self.declarative_mode.enabled() {
+                Self::build_ui_declarative(app, window)
+            } else {
+                Self::build_ui(app, window)
+            };
             app.request_redraw(window);
             return;
         }
@@ -2295,11 +2466,20 @@ impl WinitAppDriver for NodeGraphDemoDriver {
             let mut next_view = NodeGraphViewState::default();
             next_view.sanitize_for_graph(&next_graph);
 
+            // Keep the standalone graph/view models in sync with the store so declarative surfaces
+            // that are not store-backed (e.g. paint-only skeleton) observe demo commands.
+            let next_graph_for_models = next_graph.clone();
+            let next_view_for_models = next_view.clone();
+
             let _ = models.store.update(app, |store, _cx| {
                 store.replace_graph(next_graph);
                 store.replace_view_state(next_view);
                 store.clear_history();
             });
+            let _ = models
+                .graph
+                .update(app, |g, _cx| *g = next_graph_for_models);
+            let _ = models.view.update(app, |v, _cx| *v = next_view_for_models);
 
             app.request_redraw(window);
             return;
@@ -2317,7 +2497,59 @@ impl WinitAppDriver for NodeGraphDemoDriver {
             scene,
         } = context;
 
-        state.ui.set_root(state.root);
+        if self.declarative_mode.enabled() {
+            if let Some(models) = app.global::<NodeGraphDemoModels>().cloned() {
+                let internals = app.global::<Arc<NodeGraphInternalsStore>>().cloned();
+                let mode = self.declarative_mode;
+                let root = ui_declarative::RenderRootContext::new(
+                    &mut state.ui,
+                    app,
+                    services,
+                    window,
+                    bounds,
+                )
+                .render_root("node-graph-demo-declarative", move |cx| {
+                    cx.observe_model(&models.graph, Invalidation::Layout);
+                    cx.observe_model(&models.view, Invalidation::Paint);
+                    cx.observe_model(&models.edits, Invalidation::Paint);
+                    cx.observe_model(&models.overlays, Invalidation::Paint);
+
+                    let surface = match mode {
+                        NodeGraphDemoDeclarativeMode::Off => unreachable!(),
+                        NodeGraphDemoDeclarativeMode::CompatRetained => {
+                            let mut surface_props =
+                                fret_node::ui::declarative::NodeGraphSurfaceCompatRetainedProps::new(
+                                    models.graph.clone(),
+                                    models.view.clone(),
+                                );
+                            surface_props.store = Some(models.store.clone());
+                            surface_props.edit_queue = Some(models.edits.clone());
+                            surface_props.overlays = Some(models.overlays.clone());
+                            surface_props.internals = internals;
+                            surface_props.test_id =
+                                Some(Arc::<str>::from("node_graph_demo.declarative.compat"));
+                            fret_node::ui::declarative::node_graph_surface_compat_retained(
+                                cx,
+                                surface_props,
+                            )
+                        }
+                        NodeGraphDemoDeclarativeMode::PaintOnly => {
+                            let props =
+                                NodeGraphSurfacePaintOnlyProps::new(models.graph.clone(), models.view.clone());
+                            fret_node::ui::declarative::node_graph_surface_paint_only(cx, props)
+                        }
+                    };
+                    vec![surface]
+                });
+                state.root = Some(root);
+            } else {
+                tracing::warn!("NodeGraphDemoModels global missing; skipping declarative render");
+            }
+        }
+
+        if let Some(root) = state.root {
+            state.ui.set_root(root);
+        }
         state.ui.request_semantics_snapshot();
         state.ui.ingest_paint_cache_source(scene);
 
@@ -2518,10 +2750,28 @@ pub fn run() -> anyhow::Result<()> {
     app.set_global(Arc::new(DemoWeirdLayoutMeasuredState::new()));
     app.set_global(Arc::new(NodeGraphDemoStyleState::new()));
     app.set_global(Arc::new(NodeGraphDemoOverlayToggles::new()));
-    app.set_global(NodeGraphPresetSkinV1::new_from_snapshot(
-        Theme::global(&app).snapshot(),
-        NodeGraphPresetFamily::WorkflowClean,
-    ));
+    app.set_global(Arc::new(NodeGraphDemoWirePaintCookbookState::new_from_env()));
+
+    let initial_family = std::env::var(ENV_PRESET_FAMILY)
+        .ok()
+        .map(|v| match v.trim().to_ascii_lowercase().as_str() {
+            "workflowclean" | "workflow_clean" | "clean" => NodeGraphPresetFamily::WorkflowClean,
+            "schematiccontrast" | "schematic_contrast" | "schematic" | "contrast" => {
+                NodeGraphPresetFamily::SchematicContrast
+            }
+            "graphdark" | "graph_dark" | "dark" => NodeGraphPresetFamily::GraphDark,
+            _ => NodeGraphPresetFamily::WorkflowClean,
+        })
+        .unwrap_or(NodeGraphPresetFamily::WorkflowClean);
+
+    let skin = std::env::var(ENV_PRESET_JSON_PATH)
+        .ok()
+        .and_then(|path| std::fs::read_to_string(path).ok())
+        .and_then(|raw| NodeGraphPresetSkinV1::try_new_from_json_str(&raw, initial_family).ok())
+        .unwrap_or_else(|| {
+            NodeGraphPresetSkinV1::new_from_snapshot(Theme::global(&app).snapshot(), initial_family)
+        });
+    app.set_global(skin);
 
     let config = WinitRunnerConfig {
         main_window_title: "fret-demo node_graph_demo".to_string(),
@@ -2529,7 +2779,14 @@ pub fn run() -> anyhow::Result<()> {
         ..Default::default()
     };
 
-    fret::run_native_demo(config, app, NodeGraphDemoDriver::default()).map_err(anyhow::Error::from)
+    let driver = NodeGraphDemoDriver::new_from_env();
+    if driver.declarative_mode.enabled() {
+        tracing::info!(
+            mode = ?driver.declarative_mode,
+            "node_graph_demo: declarative root enabled (FRET_NODE_GRAPH_DECLARATIVE)"
+        );
+    }
+    fret::run_native_demo(config, app, driver).map_err(anyhow::Error::from)
 }
 
 fn kb(platform: PlatformFilter, key: KeyCode, mods: Modifiers) -> DefaultKeybinding {
@@ -2938,7 +3195,13 @@ fn register_demo_commands(registry: &mut CommandRegistry) {
             .with_category("Demo")
             .with_keywords(["reset", "graph", "demo"])
             .with_scope(CommandScope::App)
-            .with_when(WhenExpr::parse("!focus.is_text_input").expect("valid when expr")),
+            .with_when(WhenExpr::parse("!focus.is_text_input").expect("valid when expr"))
+            .with_default_keybindings([
+                mac_cmd_shift(KeyCode::KeyR),
+                win_ctrl_shift(KeyCode::KeyR),
+                linux_ctrl_shift(KeyCode::KeyR),
+                web_ctrl_shift(KeyCode::KeyR),
+            ]),
     );
 
     registry.register(
@@ -3145,20 +3408,20 @@ impl<H: UiHost> Widget<H> for DemoHelpOverlay {
         }
 
         let rect = self.rect(cx.bounds);
-        let corner = self.style.context_menu_corner_radius.max(6.0);
+        let corner = self.style.paint.context_menu_corner_radius.max(6.0);
 
         cx.scene.push(SceneOp::Quad {
             order: DrawOrder(21_600),
             rect,
-            background: fret_core::Paint::Solid(self.style.context_menu_background),
+            background: fret_core::Paint::Solid(self.style.paint.context_menu_background).into(),
 
             border: Edges::all(Px(1.0)),
-            border_paint: fret_core::Paint::Solid(self.style.context_menu_border),
+            border_paint: fret_core::Paint::Solid(self.style.paint.context_menu_border).into(),
 
             corner_radii: Corners::all(Px(corner)),
         });
 
-        let text_style = self.style.controls_text_style.clone();
+        let text_style = self.style.paint.controls_text_style.clone();
         let constraints = TextConstraints {
             max_width: Some(Px(rect.size.width.0 - 2.0 * Self::PAD_PX)),
             wrap: TextWrap::Word,
@@ -3215,7 +3478,7 @@ impl<H: UiHost> Widget<H> for DemoHelpOverlay {
                 order: DrawOrder(21_601),
                 text: id,
                 origin: Point::new(Px(rect.origin.x.0 + Self::PAD_PX), Px(cy)),
-                paint: self.style.controls_text.into(),
+                paint: self.style.paint.controls_text.into(),
                 outline: None,
                 shadow: None,
             });
@@ -3298,20 +3561,20 @@ impl<H: UiHost> Widget<H> for DemoToolbarStrip {
         }
 
         let layout = self.compute_layout(cx.bounds);
-        let corner = self.style.context_menu_corner_radius.max(6.0);
+        let corner = self.style.paint.context_menu_corner_radius.max(6.0);
 
         cx.scene.push(SceneOp::Quad {
             order: DrawOrder(21_500),
             rect: layout.panel,
-            background: fret_core::Paint::Solid(self.style.context_menu_background),
+            background: fret_core::Paint::Solid(self.style.paint.context_menu_background).into(),
 
             border: Edges::all(Px(1.0)),
-            border_paint: fret_core::Paint::Solid(self.style.context_menu_border),
+            border_paint: fret_core::Paint::Solid(self.style.paint.context_menu_border).into(),
 
             corner_radii: Corners::all(Px(corner)),
         });
 
-        let text_style = self.style.controls_text_style.clone();
+        let text_style = self.style.paint.controls_text_style.clone();
         let constraints = TextConstraints {
             max_width: None,
             wrap: TextWrap::None,
@@ -3332,7 +3595,7 @@ impl<H: UiHost> Widget<H> for DemoToolbarStrip {
             order: DrawOrder(21_501),
             text: label_id,
             origin: Point::new(Px(lx), Px(ly)),
-            paint: self.style.controls_text.into(),
+            paint: self.style.paint.controls_text.into(),
             outline: None,
             shadow: None,
         });
@@ -3345,9 +3608,9 @@ impl<H: UiHost> Widget<H> for DemoToolbarStrip {
             let hovered = self.hovered == Some(btn);
             let pressed = self.pressed == Some(btn);
             let bg = if pressed {
-                self.style.controls_active_background
+                self.style.paint.controls_active_background
             } else if hovered {
-                self.style.controls_hover_background
+                self.style.paint.controls_hover_background
             } else {
                 Color::TRANSPARENT
             };
@@ -3355,10 +3618,10 @@ impl<H: UiHost> Widget<H> for DemoToolbarStrip {
             cx.scene.push(SceneOp::Quad {
                 order: DrawOrder(21_501),
                 rect,
-                background: fret_core::Paint::Solid(bg),
+                background: fret_core::Paint::Solid(bg).into(),
 
                 border: Edges::all(Px(0.0)),
-                border_paint: fret_core::Paint::TRANSPARENT,
+                border_paint: fret_core::Paint::TRANSPARENT.into(),
 
                 corner_radii: Corners::all(Px((corner - 2.0).max(4.0))),
             });
@@ -3375,7 +3638,7 @@ impl<H: UiHost> Widget<H> for DemoToolbarStrip {
                 order: DrawOrder(21_502),
                 text: id,
                 origin: Point::new(Px(tx), Px(ty)),
-                paint: self.style.controls_text.into(),
+                paint: self.style.paint.controls_text.into(),
                 outline: None,
                 shadow: None,
             });

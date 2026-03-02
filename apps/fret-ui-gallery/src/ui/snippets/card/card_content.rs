@@ -1,3 +1,5 @@
+pub const SOURCE: &str = include_str!("card_content.rs");
+
 // region: example
 use fret_app::App;
 use fret_ui_kit::ui;
@@ -18,9 +20,11 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
             .into_element(cx),
         ])
         .into_element(cx),
-        shadcn::CardContent::new(vec![shadcn::Button::new("Inline Button")
-            .into_element(cx)
-            .test_id("ui-gallery-card-content-inline-button")])
+        shadcn::CardContent::new(vec![
+            shadcn::Button::new("Inline Button")
+                .into_element(cx)
+                .test_id("ui-gallery-card-content-inline-button"),
+        ])
         .into_element(cx),
         shadcn::CardFooter::new(vec![ui::text(cx, "Footer").text_sm().into_element(cx)])
             .into_element(cx),
@@ -30,4 +34,3 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
     .test_id("ui-gallery-card-content-inline-button-demo")
 }
 // endregion: example
-

@@ -1,5 +1,6 @@
+pub const SOURCE: &str = include_str!("rtl.rs");
+
 // region: example
-use crate::ui::doc_layout;
 use fret_app::App;
 use fret_ui_shadcn::{self as shadcn, prelude::*};
 
@@ -47,7 +48,7 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
             .test_id(test_id)
     };
 
-    doc_layout::rtl(cx, |cx| {
+    shadcn::DirectionProvider::new(shadcn::LayoutDirection::Rtl).into_element(cx, |cx| {
         stack::vstack(
             cx,
             stack::VStackProps::default()

@@ -134,38 +134,23 @@ pub(super) fn preview_native_select(cx: &mut ElementContext<'_, App>) -> Vec<Any
                 .description("A styled native-select-like control (upstream is a DOM `<select>`).")
                 .no_shell()
                 .max_w(Px(980.0))
-                .code_rust_from_file_region(
-                    include_str!("../snippets/native_select/demo.rs"),
-                    "example",
-                ),
+                .code_rust_from_file_region(snippets::demo::SOURCE, "example"),
             DocSection::new("With Groups", with_groups)
                 .description("Organize options using `NativeSelectOptGroup`.")
                 .max_w(Px(980.0))
-                .code_rust_from_file_region(
-                    include_str!("../snippets/native_select/with_groups.rs"),
-                    "example",
-                ),
+                .code_rust_from_file_region(snippets::with_groups::SOURCE, "example"),
             DocSection::new("Disabled State", disabled_state)
                 .description("Disable the select with `disabled(true)`.")
                 .max_w(Px(980.0))
-                .code_rust_from_file_region(
-                    include_str!("../snippets/native_select/disabled.rs"),
-                    "example",
-                ),
+                .code_rust_from_file_region(snippets::disabled::SOURCE, "example"),
             DocSection::new("Invalid State", invalid_state)
                 .description("Show validation errors with `aria_invalid(true)`.")
                 .max_w(Px(980.0))
-                .code_rust_from_file_region(
-                    include_str!("../snippets/native_select/invalid.rs"),
-                    "example",
-                ),
+                .code_rust_from_file_region(snippets::invalid::SOURCE, "example"),
             DocSection::new("Extras", rtl)
                 .description("RTL smoke check (not present in upstream docs).")
                 .max_w(Px(980.0))
-                .code_rust_from_file_region(
-                    include_str!("../snippets/native_select/rtl.rs"),
-                    "example",
-                ),
+                .code_rust_from_file_region(snippets::rtl::SOURCE, "example"),
             DocSection::new("Notes", notes)
                 .description("API reference pointers and caveats.")
                 .max_w(Px(820.0)),

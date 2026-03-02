@@ -34,56 +34,50 @@ pub(super) fn preview_card(
             DocSection::new("Demo", login)
                 .no_shell()
                 .max_w(Px(980.0))
-                .description("Login card layout (CardHeader + CardAction + CardContent + CardFooter).")
-                .code_rust_from_file_region(include_str!("../snippets/card/demo.rs"), "example"),
+                .description(
+                    "Login card layout (CardHeader + CardAction + CardContent + CardFooter).",
+                )
+                .code_rust_from_file_region(snippets::demo::SOURCE, "example"),
             DocSection::new("Usage", usage)
                 .no_shell()
                 .max_w(Px(980.0))
-                .description("Basic structure (header/content/footer) with an optional action slot.")
-                .code_rust_from_file_region(include_str!("../snippets/card/usage.rs"), "example"),
+                .description(
+                    "Basic structure (header/content/footer) with an optional action slot.",
+                )
+                .code_rust_from_file_region(snippets::usage::SOURCE, "example"),
             DocSection::new("Size", size)
                 .no_shell()
                 .max_w(Px(980.0))
                 .description("Use `CardSize::Sm` for a more compact spacing preset.")
-                .code_rust_from_file_region(include_str!("../snippets/card/size.rs"), "example"),
+                .code_rust_from_file_region(snippets::size::SOURCE, "example"),
             DocSection::new("CardContent", card_content_inline_button)
                 .no_shell()
                 .max_w(Px(980.0))
                 .description("CardContent should preserve intrinsic sizes for inline children.")
-                .code_rust_from_file_region(
-                    include_str!("../snippets/card/card_content.rs"),
-                    "example",
-                ),
+                .code_rust_from_file_region(snippets::card_content::SOURCE, "example"),
             DocSection::new("Meeting Notes", meeting_notes)
                 .no_shell()
                 .max_w(Px(980.0))
                 .description("Card with text content and a footer stack.")
-                .code_rust_from_file_region(
-                    include_str!("../snippets/card/meeting_notes.rs"),
-                    "example",
-                ),
+                .code_rust_from_file_region(snippets::meeting_notes::SOURCE, "example"),
             DocSection::new("Image", image)
                 .no_shell()
                 .max_w(Px(980.0))
                 .description("Card with a media cover and a richer footer row.")
-                .code_rust_from_file_region(include_str!("../snippets/card/image.rs"), "example"),
+                .code_rust_from_file_region(snippets::image::SOURCE, "example"),
             DocSection::new("RTL", rtl)
                 .no_shell()
                 .max_w(Px(980.0))
                 .description("Card should respect right-to-left direction context.")
-                .code_rust_from_file_region(include_str!("../snippets/card/rtl.rs"), "example"),
+                .code_rust_from_file_region(snippets::rtl::SOURCE, "example"),
             DocSection::new("Compositions", compositions)
                 .no_shell()
                 .max_w(Px(980.0))
                 .description("Spot-check slot combinations: header/content/footer permutations.")
-                .code_rust_from_file_region(
-                    include_str!("../snippets/card/compositions.rs"),
-                    "example",
-                ),
+                .code_rust_from_file_region(snippets::compositions::SOURCE, "example"),
             DocSection::new("Notes", notes).description("Implementation notes and pointers."),
         ],
     );
 
     vec![body.test_id("ui-gallery-card")]
 }
-

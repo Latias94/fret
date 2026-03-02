@@ -1,3 +1,5 @@
+pub const SOURCE: &str = include_str!("description.rs");
+
 // region: example
 use fret_ui_shadcn::{self as shadcn, prelude::*};
 
@@ -25,4 +27,3 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>, description: Model<bool
     .test_id("ui-gallery-checkbox-description-field")
 }
 // endregion: example
-

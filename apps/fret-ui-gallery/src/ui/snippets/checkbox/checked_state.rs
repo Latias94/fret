@@ -1,3 +1,5 @@
+pub const SOURCE: &str = include_str!("checked_state.rs");
+
 // region: example
 use fret_ui_shadcn::{self as shadcn, prelude::*};
 
@@ -60,4 +62,3 @@ pub fn render<H: UiHost>(
     .test_id("ui-gallery-checkbox-checked-state")
 }
 // endregion: example
-

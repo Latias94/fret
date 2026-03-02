@@ -1,3 +1,5 @@
+pub const SOURCE: &str = include_str!("rtl.rs");
+
 // region: example
 use fret_ui_shadcn::{self as shadcn, prelude::*};
 
@@ -24,4 +26,3 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>, rtl: Model<bool>) -> An
     .test_id("ui-gallery-checkbox-rtl-field")
 }
 // endregion: example
-

@@ -1,3 +1,5 @@
+pub const SOURCE: &str = include_str!("list.rs");
+
 // region: example
 use fret_ui_shadcn::{self as shadcn, prelude::*};
 use std::sync::Arc;
@@ -14,4 +16,3 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
     .test_id("ui-gallery-typography-list")
 }
 // endregion: example
-

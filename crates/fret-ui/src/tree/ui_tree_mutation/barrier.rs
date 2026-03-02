@@ -1,16 +1,6 @@
 use super::super::*;
 
 impl<H: UiHost> UiTree<H> {
-    fn recompute_node_subtree_layout_dirty_count_and_propagate(&mut self, _root: NodeId) {}
-
-    fn note_layout_invalidation_transition_for_subtree_aggregation(
-        &mut self,
-        _node: NodeId,
-        _before: bool,
-        _after: bool,
-    ) {
-    }
-
     /// Set a node's child list without forcing ancestor relayout.
     ///
     /// This is intended for explicit layout barriers (virtualization, scroll, etc.) whose bounds

@@ -1,8 +1,11 @@
+pub const SOURCE: &str = include_str!("link.rs");
+
 // region: example
-use crate::spec::CMD_APP_OPEN;
 use fret_app::App;
 use fret_ui_shadcn::{self as shadcn, prelude::*};
 use std::sync::Arc;
+
+const CMD_APP_OPEN: &str = "ui_gallery.app.open";
 
 fn icon(cx: &mut ElementContext<'_, App>, id: &'static str) -> AnyElement {
     shadcn::icon::icon(cx, fret_icons::IconId::new_static(id))
@@ -64,4 +67,3 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
     .test_id("ui-gallery-item-link")
 }
 // endregion: example
-

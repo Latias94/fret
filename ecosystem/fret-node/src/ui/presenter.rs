@@ -314,21 +314,21 @@ pub trait NodeGraphPresenter {
 
     fn port_color(&self, graph: &Graph, port: PortId, style: &NodeGraphStyle) -> Color {
         let Some(p) = graph.ports.get(&port) else {
-            return style.node_border;
+            return style.paint.node_border;
         };
         match p.kind {
-            PortKind::Data => style.pin_color_data,
-            PortKind::Exec => style.pin_color_exec,
+            PortKind::Data => style.paint.pin_color_data,
+            PortKind::Exec => style.paint.pin_color_exec,
         }
     }
 
     fn edge_color(&self, graph: &Graph, edge: EdgeId, style: &NodeGraphStyle) -> Color {
         let Some(e) = graph.edges.get(&edge) else {
-            return style.node_border;
+            return style.paint.node_border;
         };
         match e.kind {
-            crate::core::EdgeKind::Data => style.wire_color_data,
-            crate::core::EdgeKind::Exec => style.wire_color_exec,
+            crate::core::EdgeKind::Data => style.paint.wire_color_data,
+            crate::core::EdgeKind::Exec => style.paint.wire_color_exec,
         }
     }
 

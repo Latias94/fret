@@ -1,4 +1,6 @@
 use crate::ui::canvas::widget::*;
+use fret_core::scene::PaintBindingV1;
+use fret_core::scene::PaintEvalSpaceV1;
 
 impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
     pub(in super::super) fn paint_edge_overlays_selected_hovered<H: UiHost>(
@@ -22,11 +24,20 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
             return;
         }
 
+        fn marker_paint_binding_for_wire(paint: PaintBindingV1, color: Color) -> PaintBindingV1 {
+            if paint.eval_space == PaintEvalSpaceV1::StrokeS01 {
+                color.into()
+            } else {
+                paint
+            }
+        }
+
         struct OverlayEdgeDraw {
             from: Point,
             to: Point,
             hint: EdgeRenderHint,
-            color: Color,
+            paint: PaintBindingV1,
+            marker_paint: PaintBindingV1,
             width: f32,
         }
 
@@ -55,26 +66,49 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                 }
                 .normalized();
 
+                let mut hint = hint;
+                let paint_override = self
+                    .paint_overrides
+                    .as_ref()
+                    .and_then(|o| o.edge_paint_override(*edge_id));
+                if let Some(ov) = paint_override {
+                    if let Some(dash) = ov.dash {
+                        hint.dash = Some(dash);
+                    }
+                    if let Some(w) = ov.stroke_width_mul {
+                        hint.width_mul = hint.width_mul * w;
+                    }
+                }
+                hint = hint.normalized();
+
                 let mut color = presenter.edge_color(g, *edge_id, style);
                 if let Some(override_color) = hint.color {
                     color = override_color;
                 }
 
-                let mut width = style.wire_width * hint.width_mul;
+                let mut paint: PaintBindingV1 = color.into();
+                if let Some(ov) = paint_override {
+                    if let Some(p) = ov.stroke_paint {
+                        paint = p;
+                    }
+                }
+
+                let mut width = style.geometry.wire_width * hint.width_mul;
                 let is_selected = selected_edges.contains(edge_id);
                 let is_hovered = hovered_edge == Some(*edge_id);
                 if is_selected {
-                    width *= style.wire_width_selected_mul;
+                    width *= style.paint.wire_width_selected_mul;
                 }
                 if is_hovered {
-                    width *= style.wire_width_hover_mul;
+                    width *= style.paint.wire_width_hover_mul;
                 }
 
                 edges_to_draw.push(OverlayEdgeDraw {
                     from,
                     to,
                     hint,
-                    color,
+                    paint,
+                    marker_paint: marker_paint_binding_for_wire(paint, color),
                     width,
                 });
             }
@@ -97,7 +131,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                     order: DrawOrder(2),
                     origin: Point::new(Px(0.0), Px(0.0)),
                     path,
-                    paint: edge.color.into(),
+                    paint: edge.paint,
                 });
             }
 
@@ -110,7 +144,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                     zoom,
                     cx.scale_factor,
                     marker,
-                    self.style.pin_radius,
+                    self.style.geometry.pin_radius,
                     &mut marker_budget,
                 );
                 if let Some(path) = path {
@@ -118,7 +152,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                         order: DrawOrder(2),
                         origin: Point::new(Px(0.0), Px(0.0)),
                         path,
-                        paint: edge.color.into(),
+                        paint: edge.marker_paint,
                     });
                 }
             }
@@ -132,7 +166,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                     zoom,
                     cx.scale_factor,
                     marker,
-                    self.style.pin_radius,
+                    self.style.geometry.pin_radius,
                     &mut marker_budget,
                 );
                 if let Some(path) = path {
@@ -140,7 +174,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                         order: DrawOrder(2),
                         origin: Point::new(Px(0.0), Px(0.0)),
                         path,
-                        paint: edge.color.into(),
+                        paint: edge.marker_paint,
                     });
                 }
             }

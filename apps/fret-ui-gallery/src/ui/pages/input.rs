@@ -42,67 +42,51 @@ pub(super) fn preview_input(
         vec![
             DocSection::new("Basic", basic)
                 .description("Single input field (used by IME routing regression scripts).")
-                .code_rust_from_file_region(include_str!("../snippets/input/basic.rs"), "example"),
+                .code_rust_from_file_region(snippets::basic::SOURCE, "example"),
             DocSection::new("Field", field)
                 .description("Field composition with label, description, and error slots.")
-                .code_rust_from_file_region(include_str!("../snippets/input/field.rs"), "example"),
+                .code_rust_from_file_region(snippets::field::SOURCE, "example"),
             DocSection::new("Field Group", field_group)
                 .description("FieldGroup stacks related fields and action rows.")
-                .code_rust_from_file_region(
-                    include_str!("../snippets/input/field_group.rs"),
-                    "example",
-                ),
+                .code_rust_from_file_region(snippets::field_group::SOURCE, "example"),
             DocSection::new("Disabled", disabled)
                 .description(
                     "Disabled inputs should block focus/interaction and use muted styling.",
                 )
-                .code_rust_from_file_region(
-                    include_str!("../snippets/input/disabled.rs"),
-                    "example",
-                ),
+                .code_rust_from_file_region(snippets::disabled::SOURCE, "example"),
             DocSection::new("Invalid", invalid)
                 .description("Invalid state uses `aria_invalid` + field-level error copy.")
-                .code_rust_from_file_region(include_str!("../snippets/input/invalid.rs"), "example"),
+                .code_rust_from_file_region(snippets::invalid::SOURCE, "example"),
             DocSection::new("File", file)
                 .description("Native file picking uses a file dialog; diagnostics runs mock it.")
-                .code_rust_from_file_region(include_str!("../snippets/input/file.rs"), "example"),
+                .code_rust_from_file_region(snippets::file::SOURCE, "example"),
             DocSection::new("Inline", inline)
                 .description("Horizontal Field orientation is useful for compact toolbars.")
-                .code_rust_from_file_region(include_str!("../snippets/input/inline.rs"), "example"),
+                .code_rust_from_file_region(snippets::inline::SOURCE, "example"),
             DocSection::new("Grid", grid)
                 .description("Two-column input layout with shared row alignment.")
-                .code_rust_from_file_region(include_str!("../snippets/input/grid.rs"), "example"),
+                .code_rust_from_file_region(snippets::grid::SOURCE, "example"),
             DocSection::new("Required", required)
                 .description("Required affordance is represented by label copy in this gallery.")
-                .code_rust_from_file_region(
-                    include_str!("../snippets/input/required.rs"),
-                    "example",
-                ),
+                .code_rust_from_file_region(snippets::required::SOURCE, "example"),
             DocSection::new("Badge", badge)
                 .description("Use Badge inside a label row.")
-                .code_rust_from_file_region(include_str!("../snippets/input/badge.rs"), "example"),
+                .code_rust_from_file_region(snippets::badge::SOURCE, "example"),
             DocSection::new("Input Group", input_group)
                 .description("Inline addons and trailing buttons via InputGroup composition.")
-                .code_rust_from_file_region(
-                    include_str!("../snippets/input/input_group.rs"),
-                    "example",
-                ),
+                .code_rust_from_file_region(snippets::input_group::SOURCE, "example"),
             DocSection::new("Button Group", button_group)
                 .description("ButtonGroup composes an input and a button with shared chrome.")
-                .code_rust_from_file_region(
-                    include_str!("../snippets/input/button_group.rs"),
-                    "example",
-                ),
+                .code_rust_from_file_region(snippets::button_group::SOURCE, "example"),
             DocSection::new("Form", form)
                 .description("Multi-field form layout using FieldGroup + responsive rows.")
-                .code_rust_from_file_region(include_str!("../snippets/input/form.rs"), "example"),
+                .code_rust_from_file_region(snippets::form::SOURCE, "example"),
             DocSection::new("RTL", rtl)
                 .description("Input + Field composition under an RTL direction provider.")
-                .code_rust_from_file_region(include_str!("../snippets/input/rtl.rs"), "example"),
+                .code_rust_from_file_region(snippets::rtl::SOURCE, "example"),
             DocSection::new("Notes", notes).description("API reference pointers and caveats."),
         ],
     );
 
     vec![body.test_id("ui-gallery-input")]
 }
-

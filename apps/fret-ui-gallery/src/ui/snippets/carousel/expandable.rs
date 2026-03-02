@@ -1,3 +1,5 @@
+pub const SOURCE: &str = include_str!("expandable.rs");
+
 // region: example
 use fret_app::App;
 use fret_core::Edges;
@@ -22,11 +24,16 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
         Some(model) => model,
         None => {
             let model: Model<Option<usize>> = cx.app.models_mut().insert(None);
-            cx.with_state(Models::default, |st| st.expandable_selected = Some(model.clone()));
+            cx.with_state(Models::default, |st| {
+                st.expandable_selected = Some(model.clone())
+            });
             model
         }
     };
-    let expandable_selected_now = cx.watch_model(&expandable_selected).copied().unwrap_or(None);
+    let expandable_selected_now = cx
+        .watch_model(&expandable_selected)
+        .copied()
+        .unwrap_or(None);
 
     let set_expandable_selected = |next: Option<usize>| {
         let expandable_selected = expandable_selected.clone();
@@ -53,7 +60,10 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
 
             let body = cx.flex(
                 FlexProps {
-                    layout: decl_style::layout_style(&theme, LayoutRefinement::default().w_full().h_px(height)),
+                    layout: decl_style::layout_style(
+                        &theme,
+                        LayoutRefinement::default().w_full().h_px(height),
+                    ),
                     direction: fret_core::Axis::Vertical,
                     justify: MainAlign::Start,
                     align: CrossAlign::Stretch,
@@ -66,7 +76,10 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
 
                     let header = cx.flex(
                         FlexProps {
-                            layout: decl_style::layout_style(&theme, LayoutRefinement::default().w_full()),
+                            layout: decl_style::layout_style(
+                                &theme,
+                                LayoutRefinement::default().w_full(),
+                            ),
                             direction: fret_core::Axis::Horizontal,
                             justify: MainAlign::SpaceBetween,
                             align: CrossAlign::Center,
@@ -79,12 +92,16 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
                                 .font_semibold()
                                 .nowrap()
                                 .into_element(cx);
-                            let toggle = shadcn::Button::new(if expanded { "Collapse" } else { "Expand" })
-                                .variant(shadcn::ButtonVariant::Outline)
-                                .size(shadcn::ButtonSize::Sm)
-                                .test_id(format!("ui-gallery-carousel-expandable-item-{}-toggle", idx))
-                                .on_activate(set_expandable_selected(Some(idx)))
-                                .into_element(cx);
+                            let toggle =
+                                shadcn::Button::new(if expanded { "Collapse" } else { "Expand" })
+                                    .variant(shadcn::ButtonVariant::Outline)
+                                    .size(shadcn::ButtonSize::Sm)
+                                    .test_id(format!(
+                                        "ui-gallery-carousel-expandable-item-{}-toggle",
+                                        idx
+                                    ))
+                                    .on_activate(set_expandable_selected(Some(idx)))
+                                    .into_element(cx);
                             vec![title, toggle]
                         },
                     );
@@ -100,13 +117,20 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
             );
 
             let card = shadcn::Card::new([body]).into_element(cx);
-            ui::container(cx, move |_cx| vec![card]).p_1().into_element(cx)
+            ui::container(cx, move |_cx| vec![card])
+                .w_full()
+                .p_1()
+                .into_element(cx)
         })
         .collect::<Vec<_>>();
 
     shadcn::Carousel::new(expandable_items)
-        .refine_track_layout(LayoutRefinement::default().w_px(Px(336.0)))
-        .refine_layout(LayoutRefinement::default().w_full().max_w(max_w_xs).mx_auto())
+        .refine_layout(
+            LayoutRefinement::default()
+                .w_full()
+                .max_w(max_w_xs)
+                .mx_auto(),
+        )
         .test_id("ui-gallery-carousel-expandable")
         .into_element(cx)
 }

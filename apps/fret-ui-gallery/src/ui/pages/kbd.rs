@@ -28,25 +28,22 @@ pub(super) fn preview_kbd(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
         vec![
             DocSection::new("Demo", demo)
                 .description("Two shortcut display patterns (icons and chord).")
-                .code_rust_from_file_region(include_str!("../snippets/kbd/demo.rs"), "example"),
+                .code_rust_from_file_region(snippets::demo::SOURCE, "example"),
             DocSection::new("Group", group)
                 .description("Use `KbdGroup` to keep spacing consistent across tokens.")
-                .code_rust_from_file_region(include_str!("../snippets/kbd/group.rs"), "example"),
+                .code_rust_from_file_region(snippets::group::SOURCE, "example"),
             DocSection::new("Button", button)
                 .description("kbd tokens can be composed into button labels for discoverability.")
-                .code_rust_from_file_region(include_str!("../snippets/kbd/button.rs"), "example"),
+                .code_rust_from_file_region(snippets::button::SOURCE, "example"),
             DocSection::new("Tooltip", tooltip)
                 .description("Tooltips often include shortcut hints for expert users.")
-                .code_rust_from_file_region(include_str!("../snippets/kbd/tooltip.rs"), "example"),
+                .code_rust_from_file_region(snippets::tooltip::SOURCE, "example"),
             DocSection::new("Input Group", input_group)
                 .description("Trailing kbd hints can be rendered inside an input group.")
-                .code_rust_from_file_region(
-                    include_str!("../snippets/kbd/input_group.rs"),
-                    "example",
-                ),
+                .code_rust_from_file_region(snippets::input_group::SOURCE, "example"),
             DocSection::new("RTL", rtl)
                 .description("kbd token order should respect right-to-left direction context.")
-                .code_rust_from_file_region(include_str!("../snippets/kbd/rtl.rs"), "example"),
+                .code_rust_from_file_region(snippets::rtl::SOURCE, "example"),
             DocSection::new("Notes", notes)
                 .description("Implementation notes and regression guidelines."),
         ],

@@ -1,3 +1,5 @@
+pub const SOURCE: &str = include_str!("field_group.rs");
+
 // region: example
 use fret_core::Px;
 use fret_ui_shadcn::{self as shadcn, prelude::*};
@@ -44,8 +46,7 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
                 .a11y_label("Email")
                 .placeholder("name@example.com")
                 .into_element(cx),
-            shadcn::FieldDescription::new("We'll send updates to this address.")
-                .into_element(cx),
+            shadcn::FieldDescription::new("We'll send updates to this address.").into_element(cx),
         ])
         .into_element(cx),
         shadcn::Field::new([
@@ -62,4 +63,3 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
     .test_id("ui-gallery-input-field-group")
 }
 // endregion: example
-

@@ -47,6 +47,12 @@ pub struct UiTreeDebugSnapshotV1 {
     /// crates (e.g. docking), and is intended for debugging arbitration regressions without logs.
     #[serde(default)]
     pub docking_interaction: Option<UiDockingInteractionSnapshotV1>,
+    /// Workspace interaction snapshot (best-effort).
+    ///
+    /// This is sourced from `WindowInteractionDiagnosticsStore` and is intended for gating
+    /// editor-grade invariants (e.g. “active tab stays visible”) without relying on pixels.
+    #[serde(default)]
+    pub workspace_interaction: Option<UiWorkspaceInteractionSnapshotV1>,
     #[serde(default)]
     pub removed_subtrees: Vec<UiRemovedSubtreeV1>,
     #[serde(default)]

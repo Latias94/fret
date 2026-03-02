@@ -87,6 +87,14 @@ impl<H: UiHost> UiTree<H> {
         self.debug_stats.layout_semantics_refresh_time = Duration::default();
         self.debug_stats.layout_focus_repair_time = Duration::default();
         self.debug_stats.layout_deferred_cleanup_time = Duration::default();
+        self.debug_stats.layout_subtree_dirty_agg_enabled =
+            crate::runtime_config::ui_runtime_config().layout_subtree_dirty_aggregation;
+        self.debug_stats.layout_subtree_dirty_agg_updates = 0;
+        self.debug_stats.layout_subtree_dirty_agg_nodes_touched = 0;
+        self.debug_stats.layout_subtree_dirty_agg_max_parent_walk = 0;
+        self.debug_stats.layout_subtree_dirty_agg_rebuild_nodes = 0;
+        self.debug_stats
+            .layout_subtree_dirty_agg_validation_failures = 0;
         self.debug_stats.model_change_invalidation_roots = 0;
         self.debug_stats.model_change_models = 0;
         self.debug_stats.model_change_observation_edges = 0;

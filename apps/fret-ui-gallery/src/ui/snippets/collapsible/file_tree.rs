@@ -1,3 +1,5 @@
+pub const SOURCE: &str = include_str!("file_tree.rs");
+
 // region: example
 use fret_core::{Point, Transform2D};
 use fret_ui::Theme;

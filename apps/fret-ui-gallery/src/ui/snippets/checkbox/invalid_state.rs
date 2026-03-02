@@ -1,3 +1,5 @@
+pub const SOURCE: &str = include_str!("invalid_state.rs");
+
 // region: example
 use fret_ui_shadcn::{self as shadcn, prelude::*};
 
@@ -24,4 +26,3 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>, invalid: Model<bool>) -
     .test_id("ui-gallery-checkbox-invalid-field")
 }
 // endregion: example
-

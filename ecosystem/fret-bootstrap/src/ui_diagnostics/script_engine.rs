@@ -5,6 +5,22 @@
 
 use super::*;
 
+fn append_diag_script_handoff_trace(out_dir: &std::path::Path, line: &str) {
+    if std::env::var_os("FRET_DIAG_SCRIPT_MIGRATION_TRACE").is_none() {
+        return;
+    }
+
+    let path = out_dir.join("ui_diag_script_migration_trace.log");
+    if let Ok(mut file) = std::fs::OpenOptions::new()
+        .create(true)
+        .append(true)
+        .open(path)
+    {
+        use std::io::Write as _;
+        let _ = writeln!(file, "{}", line);
+    }
+}
+
 pub(super) fn active_script_needs_semantics_snapshot(active: &ActiveScript) -> bool {
     if active.wait_until.is_some() {
         return true;
@@ -84,7 +100,8 @@ pub(super) fn active_script_needs_semantics_snapshot(active: &ActiveScript) -> b
         | UiActionStepV2::SetMouseButtons { .. }
         | UiActionStepV2::RaiseWindow { .. }
         | UiActionStepV2::PointerMove { .. }
-        | UiActionStepV2::PointerUp { .. } => false,
+        | UiActionStepV2::PointerUp { .. }
+        | UiActionStepV2::PointerCancel { .. } => false,
     }
 }
 
@@ -102,6 +119,10 @@ pub(super) fn script_step_kind_name(step: &UiActionStepV2) -> &'static str {
         UiActionStepV2::DragPointer { .. } => "drag_pointer",
         UiActionStepV2::DragPointerUntil { .. } => "drag_pointer_until",
         UiActionStepV2::DragTo { .. } => "drag_to",
+        UiActionStepV2::PointerDown { .. } => "pointer_down",
+        UiActionStepV2::PointerMove { .. } => "pointer_move",
+        UiActionStepV2::PointerUp { .. } => "pointer_up",
+        UiActionStepV2::PointerCancel { .. } => "pointer_cancel",
         UiActionStepV2::Wheel { .. } => "wheel",
         UiActionStepV2::TypeText { .. } => "type_text",
         UiActionStepV2::TypeTextInto { .. } => "type_text_into",
@@ -334,6 +355,7 @@ pub(super) fn dispatch_drive_script_step(
             script_steps::handle_window_effect_steps(
                 service,
                 window,
+                anchor_window,
                 step_index,
                 step,
                 active,
@@ -645,11 +667,12 @@ pub(super) fn dispatch_drive_script_step(
             debug_assert!(handled);
         }
         step @ UiActionStepV2::MovePointer { .. } => {
-            let should_return = script_steps_pointer::handle_move_pointer_step(
+            let _ = script_steps_pointer::handle_move_pointer_step(
                 service,
                 app,
                 window,
                 window_bounds,
+                anchor_window,
                 step_index,
                 step,
                 element_runtime,
@@ -658,10 +681,10 @@ pub(super) fn dispatch_drive_script_step(
                 active,
                 output,
                 force_dump_label,
+                handoff_to,
+                stop_script,
+                failure_reason,
             );
-            if should_return {
-                return DriveScriptStepDispatchOutcome::ReturnOutput;
-            }
         }
         step @ UiActionStepV2::PointerDown { .. } => {
             let handled = script_steps_pointer_session::handle_pointer_down_step(
@@ -700,6 +723,22 @@ pub(super) fn dispatch_drive_script_step(
         }
         step @ UiActionStepV2::PointerUp { .. } => {
             let handled = script_steps_pointer_session::handle_pointer_up_step(
+                service,
+                app,
+                window,
+                step_index,
+                step,
+                active,
+                output,
+                force_dump_label,
+                handoff_to,
+                stop_script,
+                failure_reason,
+            );
+            debug_assert!(handled);
+        }
+        step @ UiActionStepV2::PointerCancel { .. } => {
+            let handled = script_steps_pointer_session::handle_pointer_cancel_step(
                 service,
                 app,
                 window,
@@ -1004,7 +1043,23 @@ pub(super) fn finalize_drive_script_for_window(
             stop_script = true;
             failure_reason = Some("script_handoff_target_window_busy".to_string());
         } else {
+            append_diag_script_handoff_trace(
+                &service.cfg.out_dir,
+                &format!(
+                    "unix_ms={} kind=handoff from={:?} to={:?} step_index={} step_kind={}",
+                    unix_ms_now(),
+                    window,
+                    target_window,
+                    step_index,
+                    step_kind,
+                ),
+            );
             service.active_scripts.insert(target_window, active);
+            // Ensure the target window keeps producing frames; multi-window drags can temporarily
+            // starve the "inactive" window of redraw callbacks on some platforms.
+            app.request_redraw(target_window);
+            app.push_effect(Effect::Redraw(target_window));
+            app.push_effect(Effect::RequestAnimationFrame(target_window));
             return output;
         }
     }

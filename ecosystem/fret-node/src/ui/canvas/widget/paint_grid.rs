@@ -21,8 +21,8 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
             crate::ui::CanvasChromeHint::default()
         };
 
-        let pattern = self.style.grid_pattern;
-        let spacing = self.style.grid_spacing;
+        let pattern = self.style.paint.grid_pattern;
+        let spacing = self.style.paint.grid_spacing;
         if !(spacing.is_finite() && spacing > 1.0e-3) {
             return;
         }
@@ -32,12 +32,14 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
             && v > 0.0
         {
             v
-        } else if self.style.grid_line_width.is_finite() && self.style.grid_line_width > 0.0 {
-            self.style.grid_line_width
+        } else if self.style.paint.grid_line_width.is_finite()
+            && self.style.paint.grid_line_width > 0.0
+        {
+            self.style.paint.grid_line_width
         } else {
             1.0
         };
-        let major_every = self.style.grid_major_every.max(1) as i64;
+        let major_every = self.style.paint.grid_major_every.max(1) as i64;
         let z = zoom.max(1.0e-6);
         let thickness_px = line_width_px.max(0.25);
         let thickness = Px(thickness_px / z);
@@ -50,10 +52,10 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
 
         let major_color = canvas_hint
             .grid_major
-            .unwrap_or(self.style.grid_major_color);
+            .unwrap_or(self.style.paint.grid_major_color);
         let minor_color = canvas_hint
             .grid_minor
-            .unwrap_or(self.style.grid_minor_color);
+            .unwrap_or(self.style.paint.grid_minor_color);
         let spacing_bits = spacing.to_bits();
         let thickness_bits = thickness.0.to_bits();
         let pattern_tag: u32 = match pattern {
@@ -62,9 +64,9 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
             NodeGraphBackgroundPattern::Cross => 2,
         };
         let line_width_bits = line_width_px.to_bits();
-        let dot_size = self.style.grid_dot_size;
+        let dot_size = self.style.paint.grid_dot_size;
         let dot_size_bits = dot_size.to_bits();
-        let cross_size = self.style.grid_cross_size;
+        let cross_size = self.style.paint.grid_cross_size;
         let cross_size_bits = cross_size.to_bits();
 
         if matches!(pattern, NodeGraphBackgroundPattern::Dots)

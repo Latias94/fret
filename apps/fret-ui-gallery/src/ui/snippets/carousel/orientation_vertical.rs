@@ -1,3 +1,5 @@
+pub const SOURCE: &str = include_str!("orientation_vertical.rs");
+
 // region: example
 use fret_app::App;
 use fret_core::Edges;
@@ -33,7 +35,10 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
             );
 
             let card = shadcn::Card::new([body]).into_element(cx);
-            ui::container(cx, move |_cx| vec![card]).p_1().into_element(cx)
+            ui::container(cx, move |_cx| vec![card])
+                .w_full()
+                .p_1()
+                .into_element(cx)
         })
         .collect::<Vec<_>>();
 
@@ -45,7 +50,12 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
         .refine_track_layout(LayoutRefinement::default().h_px(Px(200.0)))
         .track_start_neg_margin(Space::N1)
         .item_padding_start(Space::N1)
-        .refine_layout(LayoutRefinement::default().w_full().max_w(max_w_xs).mx_auto())
+        .refine_layout(
+            LayoutRefinement::default()
+                .w_full()
+                .max_w(max_w_xs)
+                .mx_auto(),
+        )
         .test_id("ui-gallery-carousel-orientation-vertical")
         .into_element(cx)
 }

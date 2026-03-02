@@ -16,11 +16,11 @@ use fret_ui_kit::declarative::stack;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::primitives::controllable_state;
 use fret_ui_kit::primitives::popover as radix_popover;
-use fret_ui_kit::recipes::input::{InputTokenKeys, resolve_input_chrome};
+use fret_ui_kit::recipes::input::{resolve_input_chrome, InputTokenKeys};
 use fret_ui_kit::typography;
 use fret_ui_kit::{
-    ChromeRefinement, ColorFallback, ColorRef, LayoutRefinement, Radius, ShadowPreset,
-    Size as ComponentSize, Space, WidgetState, WidgetStateProperty, WidgetStates, ui,
+    ui, ChromeRefinement, ColorFallback, ColorRef, LayoutRefinement, Radius, ShadowPreset,
+    Size as ComponentSize, Space, WidgetState, WidgetStateProperty, WidgetStates,
 };
 
 use crate::{
@@ -698,4 +698,229 @@ pub fn native_select<H: UiHost>(
             },
         )
     })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    use fret_app::App;
+    use fret_core::{
+        AppWindowId, FrameId, MaterialId, MaterialRegistrationError, MaterialService, PathCommand,
+        PathConstraints, PathId, PathMetrics, PathService, PathStyle, Point, Px, Rect,
+        Size as CoreSize, SvgId, SvgService, TextBlobId, TextConstraints, TextInput, TextMetrics,
+        TextService,
+    };
+    use fret_ui::element::{ElementKind, PressableProps};
+    use fret_ui::tree::UiTree;
+    use fret_ui_kit::OverlayController;
+
+    struct FakeServices;
+
+    impl TextService for FakeServices {
+        fn prepare(
+            &mut self,
+            _input: &TextInput,
+            _constraints: TextConstraints,
+        ) -> (TextBlobId, TextMetrics) {
+            (
+                TextBlobId::default(),
+                TextMetrics {
+                    size: CoreSize::new(Px(10.0), Px(10.0)),
+                    baseline: Px(8.0),
+                },
+            )
+        }
+
+        fn release(&mut self, _blob: TextBlobId) {}
+    }
+
+    impl PathService for FakeServices {
+        fn prepare(
+            &mut self,
+            _commands: &[PathCommand],
+            _style: PathStyle,
+            _constraints: PathConstraints,
+        ) -> (PathId, PathMetrics) {
+            (PathId::default(), PathMetrics::default())
+        }
+
+        fn release(&mut self, _path: PathId) {}
+    }
+
+    impl SvgService for FakeServices {
+        fn register_svg(&mut self, _bytes: &[u8]) -> SvgId {
+            SvgId::default()
+        }
+
+        fn unregister_svg(&mut self, _svg: SvgId) -> bool {
+            true
+        }
+    }
+
+    impl MaterialService for FakeServices {
+        fn register_material(
+            &mut self,
+            _desc: fret_core::MaterialDescriptor,
+        ) -> Result<MaterialId, MaterialRegistrationError> {
+            Ok(MaterialId::default())
+        }
+
+        fn unregister_material(&mut self, _id: MaterialId) -> bool {
+            true
+        }
+    }
+
+    fn bounds() -> Rect {
+        Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            CoreSize::new(Px(320.0), Px(240.0)),
+        )
+    }
+
+    fn find_pressable_by_test_id<'a>(
+        el: &'a AnyElement,
+        test_id: &str,
+    ) -> Option<&'a PressableProps> {
+        match &el.kind {
+            ElementKind::Pressable(props) => {
+                if props.a11y.test_id.as_deref() == Some(test_id) {
+                    return Some(props);
+                }
+            }
+            _ => {}
+        }
+
+        for child in &el.children {
+            if let Some(found) = find_pressable_by_test_id(child, test_id) {
+                return Some(found);
+            }
+        }
+
+        None
+    }
+
+    #[test]
+    fn native_select_trigger_stamps_combobox_role_and_expanded_state() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+
+        let value = app.models_mut().insert(None::<Arc<str>>);
+        let open = app.models_mut().insert(false);
+
+        let element =
+            fret_ui::elements::with_element_cx(&mut app, window, bounds(), "test", |cx| {
+                NativeSelect::new(value.clone(), open.clone())
+                    .option(NativeSelectOption::new("a", "A"))
+                    .a11y_label("Choose")
+                    .trigger_test_id("native-select-trigger")
+                    .into_element(cx)
+            });
+
+        let trigger = find_pressable_by_test_id(&element, "native-select-trigger")
+            .expect("trigger pressable");
+        assert_eq!(trigger.a11y.role, Some(SemanticsRole::ComboBox));
+        assert_eq!(trigger.a11y.label.as_deref(), Some("Choose"));
+        assert_eq!(trigger.a11y.expanded, Some(false));
+
+        let _ = app.models_mut().update(&open, |v| *v = true);
+        let element =
+            fret_ui::elements::with_element_cx(&mut app, window, bounds(), "test", |cx| {
+                NativeSelect::new(value.clone(), open.clone())
+                    .option(NativeSelectOption::new("a", "A"))
+                    .a11y_label("Choose")
+                    .trigger_test_id("native-select-trigger")
+                    .into_element(cx)
+            });
+
+        let trigger = find_pressable_by_test_id(&element, "native-select-trigger")
+            .expect("trigger pressable");
+        assert_eq!(trigger.a11y.expanded, Some(true));
+    }
+
+    #[test]
+    fn native_select_test_id_prefix_stamps_listbox_items_and_icon_when_open() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        crate::shadcn_themes::apply_shadcn_new_york_v4(
+            &mut app,
+            crate::shadcn_themes::ShadcnBaseColor::Neutral,
+            crate::shadcn_themes::ShadcnColorScheme::Light,
+        );
+
+        let value = app.models_mut().insert(None::<Arc<str>>);
+        let open = app.models_mut().insert(false);
+
+        let bounds = bounds();
+        let mut services = FakeServices;
+
+        // Frame 0: closed render to establish stable trigger bounds.
+        OverlayController::begin_frame(&mut app, window);
+        let root = fret_ui::declarative::render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "native-select-test-id-prefix",
+            |cx| {
+                vec![NativeSelect::new(value.clone(), open.clone())
+                    .test_id_prefix("ns")
+                    .option(NativeSelectOption::placeholder("Pick one"))
+                    .option(NativeSelectOption::new("x1", "X1"))
+                    .into_element(cx)]
+            },
+        );
+        ui.set_root(root);
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        // Frame 1: open render should request and surface overlay children.
+        let _ = app.models_mut().update(&open, |v| *v = true);
+        app.set_frame_id(FrameId(app.frame_id().0.saturating_add(1)));
+
+        OverlayController::begin_frame(&mut app, window);
+        let root = fret_ui::declarative::render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "native-select-test-id-prefix",
+            |cx| {
+                vec![NativeSelect::new(value, open)
+                    .test_id_prefix("ns")
+                    .option(NativeSelectOption::placeholder("Pick one"))
+                    .option(NativeSelectOption::new("x1", "X1"))
+                    .into_element(cx)]
+            },
+        );
+        ui.set_root(root);
+        OverlayController::render(&mut ui, &mut app, &mut services, window, bounds);
+        ui.request_semantics_snapshot();
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        let snapshot = ui.semantics_snapshot().expect("semantics snapshot");
+        let ids: Vec<&str> = snapshot
+            .nodes
+            .iter()
+            .filter_map(|n| n.test_id.as_deref())
+            .collect();
+
+        assert!(
+            ids.iter().copied().any(|id| id == "ns-listbox"),
+            "expected `ns-listbox` test id, got {ids:?}"
+        );
+        assert!(
+            ids.iter().copied().any(|id| id == "ns-item-x1"),
+            "expected `ns-item-x1` test id, got {ids:?}"
+        );
+        assert!(
+            ids.iter().copied().any(|id| id == "ns-icon"),
+            "expected `ns-icon` test id, got {ids:?}"
+        );
+    }
 }

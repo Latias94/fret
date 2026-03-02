@@ -1,3 +1,5 @@
+pub const SOURCE: &str = include_str!("loop_carousel.rs");
+
 // region: example
 use fret_app::App;
 use fret_core::Edges;
@@ -25,7 +27,10 @@ fn slide_card(cx: &mut ElementContext<'_, App>, idx: usize, visual: SlideVisual)
 
     let content = cx.flex(
         FlexProps {
-            layout: decl_style::layout_style(&theme, LayoutRefinement::default().w_full().aspect_ratio(1.0)),
+            layout: decl_style::layout_style(
+                &theme,
+                LayoutRefinement::default().w_full().aspect_ratio(1.0),
+            ),
             direction: fret_core::Axis::Horizontal,
             justify: MainAlign::Center,
             align: CrossAlign::Center,
@@ -40,7 +45,10 @@ fn slide_card(cx: &mut ElementContext<'_, App>, idx: usize, visual: SlideVisual)
 
 fn slide(cx: &mut ElementContext<'_, App>, idx: usize, visual: SlideVisual) -> AnyElement {
     let card = slide_card(cx, idx, visual);
-    ui::container(cx, move |_cx| vec![card]).p_1().into_element(cx)
+    ui::container(cx, move |_cx| vec![card])
+        .w_full()
+        .p_1()
+        .into_element(cx)
 }
 
 pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
@@ -50,12 +58,22 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
         text_px: Px(36.0),
         line_height_px: Px(40.0),
     };
-    let items = (1..=5).map(|idx| slide(cx, idx, visual)).collect::<Vec<_>>();
+    let items = (1..=5)
+        .map(|idx| slide(cx, idx, visual))
+        .collect::<Vec<_>>();
 
     shadcn::Carousel::new(items)
-        .opts(shadcn::CarouselOptions::new().loop_enabled(true).embla_engine(true))
-        .refine_track_layout(LayoutRefinement::default().w_px(Px(336.0)))
-        .refine_layout(LayoutRefinement::default().w_full().max_w(max_w_xs).mx_auto())
+        .opts(
+            shadcn::CarouselOptions::new()
+                .loop_enabled(true)
+                .embla_engine(true),
+        )
+        .refine_layout(
+            LayoutRefinement::default()
+                .w_full()
+                .max_w(max_w_xs)
+                .mx_auto(),
+        )
         .test_id("ui-gallery-carousel-loop")
         .into_element(cx)
 }

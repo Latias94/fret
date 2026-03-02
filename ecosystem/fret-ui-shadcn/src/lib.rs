@@ -137,16 +137,23 @@ pub use avatar::{
     Avatar, AvatarBadge, AvatarFallback, AvatarGroup, AvatarGroupCount, AvatarImage, AvatarSize,
     avatar_sized,
 };
-pub use badge::{Badge, BadgeRender, BadgeVariant, badge};
+pub use badge::{
+    Badge, BadgeRender, BadgeVariant, BadgeVariants, badge, badge_variants, badgeVariants,
+};
 pub use breadcrumb::primitives::{
-    BreadcrumbEllipsis, BreadcrumbLink, BreadcrumbList, BreadcrumbPage,
+    Breadcrumb as BreadcrumbRoot, BreadcrumbEllipsis, BreadcrumbItem as BreadcrumbItemPart,
+    BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator as BreadcrumbSeparatorPart,
 };
 pub use breadcrumb::{Breadcrumb, BreadcrumbItem, BreadcrumbSeparator};
-pub use button::{Button, ButtonRender, ButtonSize, ButtonVariant};
+pub use button::{
+    Button, ButtonRender, ButtonSize, ButtonVariant, ButtonVariants, button_variants,
+    buttonVariants,
+};
 pub use button_group::{
     ButtonGroup, ButtonGroupItem, ButtonGroupOrientation, ButtonGroupSeparator, ButtonGroupText,
+    ButtonGroupVariants, button_group_variants, buttonGroupVariants,
 };
-pub use calendar::{Calendar, CalendarCaptionLayout};
+pub use calendar::{Calendar, CalendarCaptionLayout, CalendarDayButton};
 pub use calendar_hijri::CalendarHijri;
 pub use calendar_multiple::CalendarMultiple;
 pub use calendar_range::CalendarRange;
@@ -171,14 +178,12 @@ pub use collapsible::{
     Collapsible, CollapsibleContent, CollapsibleTrigger, collapsible, collapsible_uncontrolled,
 };
 pub use combobox::{
-    Combobox, ComboboxCollection, ComboboxContent, ComboboxContentPart, ComboboxEmpty,
-    ComboboxGroup, ComboboxInput, ComboboxItem, ComboboxLabel, ComboboxList, ComboboxPart,
-    ComboboxSeparator, ComboboxTriggerVariant, combobox, combobox_option, combobox_option_group,
-    useComboboxAnchor,
+    Combobox, ComboboxChip, ComboboxChipsInput, ComboboxCollection, ComboboxContent,
+    ComboboxContentPart, ComboboxEmpty, ComboboxGroup, ComboboxInput, ComboboxItem, ComboboxLabel,
+    ComboboxList, ComboboxPart, ComboboxSeparator, ComboboxTrigger, ComboboxTriggerVariant,
+    ComboboxValue, combobox, combobox_option, combobox_option_group, useComboboxAnchor,
 };
-pub use combobox_chips::{
-    ComboboxChip, ComboboxChips, ComboboxChipsInput, ComboboxChipsPart, ComboboxValue,
-};
+pub use combobox_chips::{ComboboxChips, ComboboxChipsPart};
 pub use combobox_data::{ComboboxOption, ComboboxOptionGroup};
 pub use command::{
     Command, CommandDialog, CommandEmpty, CommandEntry, CommandGroup, CommandInput, CommandItem,
@@ -279,7 +284,7 @@ pub use navigation_menu::{
     NavigationMenu, NavigationMenuContent, NavigationMenuIndicator, NavigationMenuItem,
     NavigationMenuLink, NavigationMenuList, NavigationMenuRoot, NavigationMenuTrigger,
     NavigationMenuTriggerStyle, NavigationMenuViewport, navigation_menu, navigation_menu_list,
-    navigation_menu_trigger_style, navigation_menu_uncontrolled,
+    navigation_menu_trigger_style, navigation_menu_uncontrolled, navigationMenuTriggerStyle,
 };
 pub use pagination::{
     Pagination, PaginationContent, PaginationEllipsis, PaginationItem, PaginationLink,
@@ -334,10 +339,13 @@ pub use table::{
 };
 pub use tabs::{
     Tabs, TabsContent, TabsItem, TabsList, TabsListVariant, TabsListVariants, TabsRoot,
-    TabsTrigger, tabs, tabs_list_variants, tabs_uncontrolled,
+    TabsTrigger, tabs, tabs_list_variants, tabs_uncontrolled, tabsListVariants,
 };
 pub use textarea::{Textarea, textarea};
-pub use toggle::{Toggle, ToggleRoot, ToggleSize, ToggleVariant, toggle, toggle_uncontrolled};
+pub use toggle::{
+    Toggle, ToggleRoot, ToggleSize, ToggleVariant, ToggleVariants, toggle, toggle_uncontrolled,
+    toggle_variants, toggleVariants,
+};
 pub use toggle_group::{
     ToggleGroup, ToggleGroupItem, ToggleGroupKind, toggle_group_multiple,
     toggle_group_multiple_uncontrolled, toggle_group_single, toggle_group_single_uncontrolled,

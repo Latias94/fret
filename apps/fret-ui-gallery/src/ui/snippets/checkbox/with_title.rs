@@ -1,3 +1,5 @@
+pub const SOURCE: &str = include_str!("with_title.rs");
+
 // region: example
 use fret_ui_shadcn::{self as shadcn, prelude::*};
 
@@ -52,4 +54,3 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>, with_title: Model<bool>
     .test_id("ui-gallery-checkbox-with-title-section")
 }
 // endregion: example
-

@@ -1,3 +1,5 @@
+pub const SOURCE: &str = include_str!("basic.rs");
+
 // region: example
 use fret_core::Px;
 use fret_ui_shadcn::{self as shadcn, prelude::*};
@@ -13,4 +15,3 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>, value: Model<String>) -
         .test_id("ui-gallery-input-basic")
 }
 // endregion: example
-

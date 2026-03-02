@@ -1,3 +1,5 @@
+pub const SOURCE: &str = include_str!("demo.rs");
+
 // region: example
 use fret_app::App;
 use fret_ui_shadcn::{self as shadcn, prelude::*};
@@ -120,4 +122,3 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
     .test_id("ui-gallery-card-demo")
 }
 // endregion: example
-

@@ -1,3 +1,5 @@
+pub const SOURCE: &str = include_str!("dropdown.rs");
+
 // region: example
 use fret_app::App;
 use fret_core::Edges;
@@ -52,7 +54,7 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
                     .enumerate()
                     .map(|(idx, (username, initials, email))| {
                         let avatar = shadcn::Avatar::new([
-                            shadcn::AvatarFallback::new(initials).into_element(cx),
+                            shadcn::AvatarFallback::new(initials).into_element(cx)
                         ])
                         .refine_layout(LayoutRefinement::default().w_px(Px(32.0)).h_px(Px(32.0)))
                         .into_element(cx);

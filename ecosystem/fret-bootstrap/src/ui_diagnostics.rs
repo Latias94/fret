@@ -98,8 +98,11 @@ use selector::SemanticsIndex;
 pub(crate) use selector::semantics_role_label;
 use selector::{
     best_selector_for_node, format_inspect_path, parent_node_id, parse_semantics_role,
-    select_semantics_node, select_semantics_node_scoped, suggest_selectors, truncate_debug_value,
+    select_semantics_node_scoped, suggest_selectors, truncate_debug_value,
 };
+
+#[cfg(test)]
+use selector::select_semantics_node;
 
 mod trace_helpers;
 use trace_helpers::{
@@ -722,6 +725,8 @@ include!("ui_diagnostics/debug_snapshot_types.rs");
 include!("ui_diagnostics/debug_snapshot_impl.rs");
 
 include!("ui_diagnostics/docking_diagnostics.rs");
+
+include!("ui_diagnostics/workspace_diagnostics.rs");
 
 include!("ui_diagnostics/viewport_input_types.rs");
 

@@ -585,6 +585,16 @@ pub enum UiActionStepV2 {
         #[serde(default, skip_serializing_if = "Option::is_none")]
         button: Option<UiMouseButtonV1>,
     },
+    /// Cancel an active `pointer_down` session.
+    ///
+    /// This emits `Event::PointerCancel` and mirrors internal drag routing by emitting
+    /// `InternalDrag::Cancel`.
+    PointerCancel {
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        window: Option<UiWindowTargetV1>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        pointer_kind: Option<UiPointerKindV1>,
+    },
     MovePointerSweep {
         #[serde(default, skip_serializing_if = "Option::is_none")]
         window: Option<UiWindowTargetV1>,
@@ -1682,6 +1692,40 @@ pub enum UiPredicateV1 {
     /// relying on pixels.
     DockDropResolvedInsertIndexIs {
         index: u32,
+    },
+    /// True when the latest docking diagnostics report whether the active tab strip is overflowed.
+    ///
+    /// This predicate reads the best-effort `tab_strip_active_visibility` snapshot recorded by
+    /// docking into `WindowInteractionDiagnosticsStore`.
+    DockTabStripActiveOverflowIs {
+        overflow: bool,
+    },
+    /// True when the latest docking diagnostics report whether the active tab is visible at the
+    /// current tab scroll position.
+    ///
+    /// This predicate is intended to gate the editor-grade invariant:
+    /// "selecting a tab (including via overflow menu) must scroll it into view".
+    DockTabStripActiveVisibleIs {
+        visible: bool,
+    },
+    /// True when the latest workspace diagnostics report whether the active tab strip is overflowed.
+    ///
+    /// This predicate reads the best-effort `workspace_interaction.tab_strip_active_visibility`
+    /// snapshot recorded into `WindowInteractionDiagnosticsStore`.
+    WorkspaceTabStripActiveOverflowIs {
+        overflow: bool,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        pane_id: Option<String>,
+    },
+    /// True when the latest workspace diagnostics report whether the active tab is visible at the
+    /// current tab scroll position.
+    ///
+    /// This predicate is intended to gate the editor-grade invariant:
+    /// "selecting a tab (including via overflow menu) must scroll it into view".
+    WorkspaceTabStripActiveVisibleIs {
+        visible: bool,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        pane_id: Option<String>,
     },
     /// True when the latest dock graph stats snapshot reports a canonical-form layout.
     DockGraphCanonicalIs {

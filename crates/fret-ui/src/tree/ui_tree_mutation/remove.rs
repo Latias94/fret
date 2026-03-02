@@ -348,6 +348,7 @@ impl<H: UiHost> UiTree<H> {
                 continue;
             };
             let layout_invalidated = n.invalidation.layout;
+            let subtree_layout_dirty_count = n.subtree_layout_dirty_count;
 
             if !children_pushed {
                 let children = n.children.clone();
@@ -363,6 +364,11 @@ impl<H: UiHost> UiTree<H> {
                 && let Some(p) = self.nodes.get_mut(parent)
             {
                 p.children.retain(|&c| c != node);
+                if self.subtree_layout_dirty_aggregation_enabled() && subtree_layout_dirty_count > 0
+                {
+                    let delta = -(subtree_layout_dirty_count.min(i32::MAX as u32) as i32);
+                    self.apply_subtree_layout_dirty_delta_to_node_and_ancestors(parent, delta);
+                }
             }
 
             if self.focus == Some(node) {

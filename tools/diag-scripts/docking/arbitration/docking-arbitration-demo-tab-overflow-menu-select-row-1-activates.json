@@ -1,0 +1,65 @@
+{
+  "schema_version": 2,
+  "meta": {
+    "name": "Docking arbitration demo: overflow menu row-1 click activates a non-active tab",
+    "tags": ["docking", "tabbar", "overflow", "gate"],
+    "required_capabilities": ["diag.script_v2"],
+    "env_defaults": {
+      "FRET_DOCK_ARB_PRESET": "overflow_tabs"
+    },
+    "target_hints": [
+      "Builds a long tab stack by merging multiple single-tab viewports into one leaf, then opens the overflow menu and selects row 1.",
+      "Uses non-hit-test semantics anchors so pointer injection targets real docking chrome."
+    ]
+  },
+  "steps": [
+    { "type": "press_key", "key": "escape" },
+    { "type": "wait_frames", "n": 5 },
+    { "type": "set_window_inner_size", "width_px": 980.0, "height_px": 720.0 },
+    { "type": "wait_frames", "n": 12 },
+
+    {
+      "type": "wait_until",
+      "predicate": { "kind": "exists", "target": { "kind": "test_id", "id": "dock-arb-dock-space" } },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": { "kind": "exists", "target": { "kind": "test_id", "id": "dock-arb-tab-overflow-button-anchor-left" } },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": { "kind": "exists", "target": { "kind": "test_id", "id": "dock-arb-tab-overflow-menu-row-anchor-left-1" } },
+      "timeout_frames": 240
+    },
+    { "type": "set_window_inner_size", "width_px": 420.0, "height_px": 720.0 },
+    { "type": "wait_frames", "n": 16 },
+
+    { "type": "click", "window": { "kind": "current" }, "target": { "kind": "test_id", "id": "dock-arb-tab-overflow-button-anchor-left" } },
+    { "type": "wait_frames", "n": 6 },
+    { "type": "click", "window": { "kind": "current" }, "target": { "kind": "test_id", "id": "dock-arb-tab-overflow-menu-row-anchor-left-1" } },
+    { "type": "wait_frames", "n": 8 },
+
+    {
+      "type": "wait_until",
+      "predicate": { "kind": "dock_tab_strip_active_overflow_is", "overflow": true },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": { "kind": "dock_tab_strip_active_visible_is", "visible": true },
+      "timeout_frames": 240
+    },
+
+    {
+      "type": "wait_until",
+      "predicate": { "kind": "dock_graph_signature_contains", "needle": "tabs(a=1:" },
+      "timeout_frames": 240
+    },
+    { "type": "assert", "predicate": { "kind": "dock_graph_signature_contains", "needle": "demo.viewport.left" } },
+    { "type": "assert", "predicate": { "kind": "dock_graph_signature_contains", "needle": "demo.viewport.extra.7" } },
+
+    { "type": "capture_bundle", "label": "docking-arbitration-demo-tab-overflow-menu-select-row-1-activates" }
+  ]
+}

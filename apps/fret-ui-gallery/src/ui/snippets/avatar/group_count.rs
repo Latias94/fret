@@ -1,3 +1,5 @@
+pub const SOURCE: &str = include_str!("group_count.rs");
+
 // region: example
 use fret_core::{ImageId, Px};
 use fret_ui::Theme;

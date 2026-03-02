@@ -27,43 +27,25 @@ pub(super) fn preview_skeleton(cx: &mut ElementContext<'_, App>) -> Vec<AnyEleme
         vec![
             DocSection::new("Demo", demo)
                 .description("Avatar row + card list.")
-                .code_rust_from_file_region(
-                    include_str!("../snippets/skeleton/demo.rs"),
-                    "example",
-                ),
+                .code_rust_from_file_region(snippets::demo::SOURCE, "example"),
             DocSection::new("Avatar", avatar)
                 .description("Smaller avatar placeholder.")
-                .code_rust_from_file_region(
-                    include_str!("../snippets/skeleton/avatar.rs"),
-                    "example",
-                ),
+                .code_rust_from_file_region(snippets::avatar::SOURCE, "example"),
             DocSection::new("Card", card)
                 .description("Skeletons inside a card layout.")
-                .code_rust_from_file_region(
-                    include_str!("../snippets/skeleton/card.rs"),
-                    "example",
-                ),
+                .code_rust_from_file_region(snippets::card::SOURCE, "example"),
             DocSection::new("Text", text_section)
                 .description("Multiple lines with varying widths.")
-                .code_rust_from_file_region(
-                    include_str!("../snippets/skeleton/text.rs"),
-                    "example",
-                ),
+                .code_rust_from_file_region(snippets::text::SOURCE, "example"),
             DocSection::new("Form", form)
                 .description("Form-like blocks.")
-                .code_rust_from_file_region(
-                    include_str!("../snippets/skeleton/form.rs"),
-                    "example",
-                ),
+                .code_rust_from_file_region(snippets::form::SOURCE, "example"),
             DocSection::new("Table", table)
                 .description("Row skeletons.")
-                .code_rust_from_file_region(
-                    include_str!("../snippets/skeleton/table.rs"),
-                    "example",
-                ),
+                .code_rust_from_file_region(snippets::table::SOURCE, "example"),
             DocSection::new("RTL", rtl)
                 .description("Direction provider should not break layout.")
-                .code_rust_from_file_region(include_str!("../snippets/skeleton/rtl.rs"), "example"),
+                .code_rust_from_file_region(snippets::rtl::SOURCE, "example"),
             DocSection::new("Notes", notes).description("Usage notes."),
         ],
     );

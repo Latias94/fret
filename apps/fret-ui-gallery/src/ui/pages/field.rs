@@ -36,72 +36,51 @@ pub(super) fn preview_field(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement>
         vec![
             DocSection::new("Input", input)
                 .description("Basic text inputs with labels + helper copy.")
-                .code_rust_from_file_region(include_str!("../snippets/field/input.rs"), "example"),
+                .code_rust_from_file_region(snippets::input::SOURCE, "example"),
             DocSection::new("Validation and Errors", validation_and_errors)
                 .description("Field invalid state + control `aria_invalid` styling.")
-                .code_rust_from_file_region(
-                    include_str!("../snippets/field/validation_and_errors.rs"),
-                    "example",
-                ),
+                .code_rust_from_file_region(snippets::validation_and_errors::SOURCE, "example"),
             DocSection::new("Textarea", textarea)
                 .description("Textarea field with explicit height and helper copy.")
-                .code_rust_from_file_region(
-                    include_str!("../snippets/field/textarea.rs"),
-                    "example",
-                ),
+                .code_rust_from_file_region(snippets::textarea::SOURCE, "example"),
             DocSection::new("Select", select)
                 .description("Select composed inside a Field shell.")
-                .code_rust_from_file_region(include_str!("../snippets/field/select.rs"), "example"),
+                .code_rust_from_file_region(snippets::select::SOURCE, "example"),
             DocSection::new("Slider", slider)
                 .description(
                     "Non-text controls should still use FieldTitle/Description for context.",
                 )
-                .code_rust_from_file_region(include_str!("../snippets/field/slider.rs"), "example"),
+                .code_rust_from_file_region(snippets::slider::SOURCE, "example"),
             DocSection::new("Fieldset", fieldset)
                 .description("FieldSet groups multiple fields with a legend + description.")
-                .code_rust_from_file_region(
-                    include_str!("../snippets/field/fieldset.rs"),
-                    "example",
-                ),
+                .code_rust_from_file_region(snippets::fieldset::SOURCE, "example"),
             DocSection::new("Checkbox", checkbox)
                 .description("Horizontal Field orientation keeps checkbox + label aligned.")
-                .code_rust_from_file_region(
-                    include_str!("../snippets/field/checkbox.rs"),
-                    "example",
-                ),
+                .code_rust_from_file_region(snippets::checkbox::SOURCE, "example"),
             DocSection::new("Radio", radio)
                 .description("RadioGroup nested under Field for label copy.")
-                .code_rust_from_file_region(include_str!("../snippets/field/radio.rs"), "example"),
+                .code_rust_from_file_region(snippets::radio::SOURCE, "example"),
             DocSection::new("Switch", switch)
                 .description("Switch composed with title + description.")
-                .code_rust_from_file_region(include_str!("../snippets/field/switch.rs"), "example"),
+                .code_rust_from_file_region(snippets::switch::SOURCE, "example"),
             DocSection::new("Choice Card", choice_card)
                 .description("Choice-card radios combine FieldContent with rich labels.")
-                .code_rust_from_file_region(
-                    include_str!("../snippets/field/choice_card.rs"),
-                    "example",
-                ),
+                .code_rust_from_file_region(snippets::choice_card::SOURCE, "example"),
             DocSection::new("Field Group", field_group)
                 .description("FieldGroup provides separators and checkbox-group composition.")
-                .code_rust_from_file_region(
-                    include_str!("../snippets/field/field_group.rs"),
-                    "example",
-                ),
+                .code_rust_from_file_region(snippets::field_group::SOURCE, "example"),
             DocSection::new("RTL", rtl)
                 .description("All Field compositions should render correctly under RTL direction.")
-                .code_rust_from_file_region(include_str!("../snippets/field/rtl.rs"), "example"),
+                .code_rust_from_file_region(snippets::rtl::SOURCE, "example"),
             DocSection::new("Responsive Layout", responsive)
                 .description(
                     "Responsive orientation collapses label/content layouts for narrow containers.",
                 )
-                .code_rust_from_file_region(
-                    include_str!("../snippets/field/responsive.rs"),
-                    "example",
-                ),
-            DocSection::new("Notes", notes).description("API reference pointers and stability guidance."),
+                .code_rust_from_file_region(snippets::responsive::SOURCE, "example"),
+            DocSection::new("Notes", notes)
+                .description("API reference pointers and stability guidance."),
         ],
     );
 
     vec![body.test_id("ui-gallery-field")]
 }
-

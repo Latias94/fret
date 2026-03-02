@@ -38,7 +38,7 @@ fn hit_edge_slow(
     let bezier_steps = usize::from(snapshot.interaction.bezier_hit_test_steps.max(1));
     let hit_w =
         hit_test_canvas_units_from_screen_px(snapshot.interaction.edge_interaction_width, zoom)
-            .max(canvas.style.wire_width / zoom_z(zoom));
+            .max(canvas.style.geometry.wire_width / zoom_z(zoom));
     let threshold2 = hit_w * hit_w;
     let eps = zoom_eps(zoom);
 

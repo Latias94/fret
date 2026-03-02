@@ -73,7 +73,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                 }
 
                 let tile_cull_rect = {
-                    let margin_screen = self.style.render_cull_margin_px;
+                    let margin_screen = self.style.paint.render_cull_margin_px;
                     if margin_screen.is_finite() && margin_screen > 0.0 {
                         inflate_rect(tile_rect, margin_screen / zoom)
                     } else {
@@ -198,7 +198,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
             );
 
             let tile_cull_rect = {
-                let margin_screen = self.style.render_cull_margin_px;
+                let margin_screen = self.style.paint.render_cull_margin_px;
                 if margin_screen.is_finite() && margin_screen > 0.0 {
                     inflate_rect(tile_rect, margin_screen / zoom)
                 } else {

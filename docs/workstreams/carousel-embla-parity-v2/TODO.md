@@ -1,6 +1,6 @@
 # Carousel Embla parity (v2) — TODO
 
-Status: In progress (contracts locked; deeper parity ongoing)
+Status: Complete (MVP gated; contracts + engine parity locked)
 
 Goal: Deeper Embla alignment for Carousel beyond the shadcn/ui docs outcomes, while keeping Fret’s
 layering contract intact (mechanism vs policy vs recipes).
@@ -27,6 +27,10 @@ In-tree surfaces (current baseline):
 - UI gallery: `apps/fret-ui-gallery/src/ui/pages/carousel.rs`
 - Web-vs-Fret layout harness: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout/carousel.rs`
 
+Verification (native, 2026-03-02):
+
+- `cargo run -p fretboard -- diag suite ui-gallery-carousel-embla-engine --launch -- cargo run -p fret-ui-gallery --release` PASS
+
 Non-goals (v2):
 
 - Perfect pixel parity with web DOM (that’s covered by the existing web-golden harness).
@@ -51,8 +55,11 @@ Non-goals (v2):
     - `ecosystem/fret-ui-shadcn/src/carousel.rs` (reduced-motion disables embla engine + instant settle)
     - Gate: `ecosystem/fret-ui-shadcn/tests/carousel_reduced_motion.rs`
   - Note: promote to an ADR only if/when the physics semantics become a stable public contract.
-- [ ] CAR2-040 Workstream design: seamless loop engine semantics (if in scope).
+- [x] CAR2-040 Workstream design: seamless loop engine semantics.
   - Deliverable: `docs/workstreams/carousel-embla-parity-v2/contracts.md` (loop section) + gates
+  - Evidence:
+    - `docs/workstreams/carousel-embla-parity-v2/contracts.md` (Loop semantics)
+    - Gate: `tools/diag-scripts/ui-gallery/carousel/ui-gallery-carousel-loop-continuity-touch-gate.json`
   - Note: promote to an ADR only if/when we commit to a stable, long-lived loop contract.
 
 ---
@@ -84,8 +91,45 @@ Non-goals (v2):
   - Evidence:
     - `apps/fret-ui-gallery/src/ui/pages/carousel.rs` ("Duration (Embla)" section)
     - `ecosystem/fret-ui-shadcn/src/carousel.rs` (`CarouselApiSnapshot.settling`)
+    - `ecosystem/fret-ui-shadcn/src/carousel.rs` (nav handlers schedule `RequestAnimationFrame` and the embla tick loop requests frames until settled)
   - Gate:
     - `tools/diag-scripts/ui-gallery/carousel/ui-gallery-carousel-duration-fast-vs-slow-settling-gate.json`
+   - Notes:
+     - The gate asserts that the "slow" carousel is **not** at the selected snap after a couple of frames,
+       and then eventually reaches the snap within a bounded timeout.
+     - The UI gallery duration demo disables focus watching (`watch_focus(false)`) to keep the gate about
+       duration-driven motion only. Focus-driven scroll-to-view parity is tracked separately under the
+       focus semantics section.
+
+---
+
+## Upstream options coverage (v2 snapshot)
+
+Upstream reference: `repo-ref/embla-carousel/packages/embla-carousel/src/components/Options.ts`.
+
+Implemented (v2 MVP, in-tree mapping):
+
+- `align` → recipe option (`CarouselAlign`) + headless snap model alignment
+- `axis` (x/y) → recipe `orientation={horizontal|vertical}`
+- `containScroll` → headless snap model + Embla ports (`ScrollContain`/`ScrollSnapList`)
+- `direction` → recipe `LayoutDirection` (LTR/RTL) for deltas + controls + keys
+- `slidesToScroll` → headless snap model grouping
+- `dragFree`, `skipSnaps`, `duration`, `startSnap`, `draggable`, `loop` → recipe options + headless engine config
+- `inViewThreshold`, `inViewMargin` → headless `SlidesInView` tracker + recipe snapshot
+- `resize`, `slideChanges` → modeled via geometry/content-id driven `reInit` (MVP), not via DOM observers
+
+Not implemented / not applicable (expected gaps for native retained UI):
+
+- `container`, `slides` selector plumbing (DOM-only)
+- `active` (Embla instance enable/disable as a first-class option)
+- Embla's DOM-observer-driven `resize`/`slideChanges` behavior and exact timing
+- `ssr` (Embla SSR snap list injection)
+- [x] CAR2-128 Align `dragThreshold` boundary semantics (strict `>`) and gate pointer arbitration.
+  - Embla sets `preventClick` when `diffScroll > dragThreshold` (see `DragHandler.ts`).
+  - Fret maps this to "start dragging / steal capture only once we exceed `drag_threshold_px`".
+  - Evidence:
+    - `ecosystem/fret-ui-headless/src/carousel.rs` (`on_pointer_move` threshold check)
+    - `ecosystem/fret-ui-shadcn/tests/carousel_pointer_passthrough.rs` (boundary regression tests)
 - [x] CAR2-125 Port core targeting helpers (snap selection + limits) needed by the engine.
   - Evidence:
     - `ecosystem/fret-ui-headless/src/embla/scroll_target.rs`
@@ -116,6 +160,37 @@ Non-goals (v2):
   - Gates:
     - `cargo test -p fret-ui-headless` (loop + slide looper unit tests)
     - `tools/diag-scripts/ui-gallery/carousel/ui-gallery-carousel-loop-continuity-touch-gate.json`
+
+#### Deeper loop parity (Embla SlideLooper / canLoop)
+
+- [x] CAR2-141 Port Embla `SlideLooper` “gap fitting” semantics (beyond `±content_size` nearest wrap).
+  - Outcome:
+    - loop points pick the same slides Embla would recycle across the edges
+    - translation decisions are stable under resize and non-uniform slide sizes
+  - Upstream:
+    - `repo-ref/embla-carousel/packages/embla-carousel/src/components/SlideLooper.ts`
+    - `repo-ref/embla-carousel/packages/embla-carousel/src/components/SlideSizes.ts`
+  - In-tree target:
+    - `ecosystem/fret-ui-headless/src/embla/slide_looper.rs`
+  - Notes:
+    - This uses a headless approximation for `slideSizesWithGaps` (start-to-start deltas).
+    - We do not currently model CSS `margin-end` (`endGap`) in native retained layout.
+- [x] CAR2-142 Implement Embla `canLoop` downgrade semantics.
+  - Embla behavior: `loop=true` in options is ignored if `!engine.slideLooper.canLoop()`.
+  - In-tree target:
+    - Headless: `ecosystem/fret-ui-headless/src/embla/slide_looper.rs` (`can_loop`)
+    - Recipe: `ecosystem/fret-ui-shadcn/src/carousel.rs` (effective_loop_enabled)
+  - Evidence:
+    - Headless: `ecosystem/fret-ui-headless/src/embla/slide_looper.rs` (`can_loop` + `compute_slide_translates`)
+    - Recipe: `ecosystem/fret-ui-shadcn/src/carousel.rs` (gates loop translates + engine loop_enabled on `can_loop`)
+- [x] CAR2-143 Add unit tests for loop points on non-uniform slide sizes + gaps.
+  - Gate: `cargo nextest run -p fret-ui-headless` (new `slide_looper_*` tests)
+- [x] CAR2-144 (Optional) Add a diag gate for “loop requested but canLoop=false” behavior.
+  - Outcome: loop=true configuration behaves like loop=false (no visual wrap/translates).
+  - Evidence:
+    - `apps/fret-ui-gallery/src/ui/snippets/carousel/loop_downgrade_cannot_loop.rs`
+  - Gate:
+    - `tools/diag-scripts/ui-gallery/carousel/ui-gallery-carousel-loop-downgrade-cannot-loop-gate.json`
 
 ### Slides in view
 
@@ -190,13 +265,11 @@ Non-goals (v2):
 
 ## P4 — Focus semantics
 
-- [ ] CAR2-410 Implement Embla-like `focus` behavior:
-  - focusing a slide (or focus entering slide) scrolls it into view
-  - keyboard navigation remains predictable with roving focus policies
--  Evidence:
-  - `ecosystem/fret-ui-shadcn/src/carousel.rs` (`watch_focus`, Tab watcher)
-  - Gate: `ecosystem/fret-ui-shadcn/tests/carousel_focus_watch_tab_scrolls.rs`
 - [x] CAR2-410 Implement Embla-like `focus` behavior (MVP).
+  - Focusing a slide (or focus entering a slide) scrolls it into view.
+  - Evidence:
+    - `ecosystem/fret-ui-shadcn/src/carousel.rs` (`watch_focus`, Tab watcher)
+    - Gate: `ecosystem/fret-ui-shadcn/tests/carousel_focus_watch_tab_scrolls.rs`
 - [x] CAR2-420 A11y: role/roledescription + slide semantics parity audit (with known gaps).
   - Note: we currently stamp role/label/orientation, but do not yet have a portable
     `aria-roledescription` equivalent in core semantics.
@@ -208,11 +281,19 @@ Non-goals (v2):
 
 ## P5 — Evidence + gates
 
-- [ ] CAR2-510 Add targeted `nextest` tests for the engine:
-  - integrator stability, velocity decay, settle thresholds
-  - loop wrapping invariants
-  - slidesInView thresholds + margins
-- [ ] CAR2-520 Add `fretboard diag` scripts for:
-  - inertial swipe (touch + mouse)
-  - loop visual continuity
-  - focus-in triggers scroll-to-view
+- [x] CAR2-510 Add targeted `nextest` tests for the engine:
+  - [x] integrator stability, velocity decay, settle thresholds
+    - Evidence: `ecosystem/fret-ui-headless/src/embla/scroll_body.rs` (`embla_default_params_settle_and_decay_velocity`)
+  - [x] loop wrapping invariants
+    - Evidence: `ecosystem/fret-ui-headless/src/embla/engine.rs` (`loop_normalization_*` tests)
+  - [x] slidesInView thresholds + margins
+    - Evidence: `ecosystem/fret-ui-headless/src/embla/slides_in_view.rs` (`higher_threshold_requires_visible_fraction`, `margin_expands_viewport`)
+- [x] CAR2-520 Add `fretboard diag` scripts for:
+  - [x] inertial swipe (mouse)
+    - Gate: `tools/diag-scripts/ui-gallery/carousel/ui-gallery-carousel-demo-inertia-pixels-changed.json`
+  - [x] inertial swipe (touch)
+    - Gate: `tools/diag-scripts/ui-gallery/carousel/ui-gallery-carousel-demo-inertia-touch-pixels-changed.json`
+  - [x] loop visual continuity
+    - Gate: `tools/diag-scripts/ui-gallery/carousel/ui-gallery-carousel-loop-continuity-touch-gate.json`
+  - [x] focus-in triggers scroll-to-view
+    - Gate: `tools/diag-scripts/ui-gallery/carousel/ui-gallery-carousel-focus-watch-tab-scrolls-gate.json`

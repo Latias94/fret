@@ -49,6 +49,12 @@ const DRAWER_SIDE_PANEL_MAX_WIDTH_PX: Px = Px(384.0);
 #[derive(Debug, Clone, Copy, Default)]
 pub struct DrawerPortal;
 
+impl DrawerPortal {
+    pub fn new() -> Self {
+        Self
+    }
+}
+
 /// shadcn/ui `DrawerOverlay` (v4).
 ///
 /// In upstream, `DrawerOverlay` is a styled overlay element rendered inside the portal. In Fret the
@@ -462,6 +468,46 @@ impl Drawer {
             self.inner = self.inner.overlay_color(color);
         }
         self
+    }
+
+    /// Part-based authoring surface aligned with shadcn/ui v4 exports.
+    ///
+    /// This is a thin adapter over [`Drawer::into_element`] that accepts shadcn-style parts
+    /// (`DrawerTrigger`, `DrawerPortal`, `DrawerOverlay`).
+    ///
+    /// It also installs a default "open on activate" behavior on the trigger element when the
+    /// trigger is a `Pressable` (e.g. shadcn `Button`), matching the upstream trigger contract.
+    #[track_caller]
+    pub fn into_element_parts<H: UiHost>(
+        self,
+        cx: &mut ElementContext<'_, H>,
+        trigger: impl FnOnce(&mut ElementContext<'_, H>) -> DrawerTrigger,
+        _portal: DrawerPortal,
+        overlay: DrawerOverlay,
+        content: impl FnOnce(&mut ElementContext<'_, H>) -> AnyElement,
+    ) -> AnyElement {
+        let drawer = self.overlay_component(overlay);
+        let open_for_trigger = drawer.open.clone();
+        drawer.into_element(
+            cx,
+            move |cx| {
+                let trigger_el = trigger(cx).into_element(cx);
+                let open = open_for_trigger.clone();
+                cx.pressable_add_on_activate_for(
+                    trigger_el.id,
+                    Arc::new(
+                        move |host: &mut dyn fret_ui::action::UiActionHost,
+                              acx: fret_ui::action::ActionCx,
+                              _reason: fret_ui::action::ActivateReason| {
+                            let _ = host.models_mut().update(&open, |v| *v = true);
+                            host.request_redraw(acx.window);
+                        },
+                    ),
+                );
+                trigger_el
+            },
+            content,
+        )
     }
 
     /// Enables Vaul-style snap points for bottom drawers.
@@ -1263,6 +1309,79 @@ mod tests {
         fn unregister_material(&mut self, _id: fret_core::MaterialId) -> bool {
             true
         }
+    }
+
+    #[test]
+    fn drawer_into_element_parts_trigger_opens_on_activate() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(320.0), Px(200.0)),
+        );
+        let mut services = FakeServices;
+
+        let open = app.models_mut().insert(false);
+
+        let root = fret_ui::declarative::render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "shadcn-drawer-into-element-parts-trigger-opens",
+            |cx| {
+                vec![Drawer::new(open.clone()).into_element_parts(
+                    cx,
+                    |cx| DrawerTrigger::new(crate::Button::new("Open").into_element(cx)),
+                    DrawerPortal::default(),
+                    DrawerOverlay::new(),
+                    |cx| DrawerContent::new([cx.text("Content")]).into_element(cx),
+                )]
+            },
+        );
+        ui.set_root(root);
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        assert_eq!(app.models().get_copied(&open), Some(false));
+
+        let trigger_node = ui.children(root)[0];
+        let trigger_bounds = ui.debug_node_bounds(trigger_node).expect("trigger bounds");
+        let position = Point::new(
+            Px(trigger_bounds.origin.x.0 + trigger_bounds.size.width.0 * 0.5),
+            Px(trigger_bounds.origin.y.0 + trigger_bounds.size.height.0 * 0.5),
+        );
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Down {
+                pointer_id: fret_core::PointerId(0),
+                position,
+                button: fret_core::MouseButton::Left,
+                modifiers: fret_core::Modifiers::default(),
+                pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
+            }),
+        );
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Up {
+                pointer_id: fret_core::PointerId(0),
+                position,
+                button: fret_core::MouseButton::Left,
+                modifiers: fret_core::Modifiers::default(),
+                is_click: true,
+                pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
+            }),
+        );
+
+        assert_eq!(app.models().get_copied(&open), Some(true));
     }
 
     fn render_drawer_frame_with_underlay(

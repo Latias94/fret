@@ -16,65 +16,39 @@ pub(super) fn preview_shadcn_extras(cx: &mut ElementContext<'_, App>) -> Vec<Any
 
     let body = doc_layout::render_doc_page(
         cx,
-        Some("A small grab-bag of shadcn-style extras; each section is intentionally self-contained."),
+        Some(
+            "A small grab-bag of shadcn-style extras; each section is intentionally self-contained.",
+        ),
         vec![
             DocSection::new("Announcement", announcement)
                 .max_w(Px(860.0))
-                .code_rust_from_file_region(
-                    include_str!("../snippets/shadcn_extras/announcement.rs"),
-                    "example",
-                ),
+                .code_rust_from_file_region(snippets::announcement::SOURCE, "example"),
             DocSection::new("Banner (dismissible)", banner)
                 .max_w(Px(860.0))
-                .code_rust_from_file_region(
-                    include_str!("../snippets/shadcn_extras/banner.rs"),
-                    "example",
-                ),
+                .code_rust_from_file_region(snippets::banner::SOURCE, "example"),
             DocSection::new("Tags", tags)
                 .max_w(Px(860.0))
-                .code_rust_from_file_region(
-                    include_str!("../snippets/shadcn_extras/tags.rs"),
-                    "example",
-                ),
+                .code_rust_from_file_region(snippets::tags::SOURCE, "example"),
             DocSection::new("Marquee (pause on hover)", marquee)
                 .max_w(Px(860.0))
-                .code_rust_from_file_region(
-                    include_str!("../snippets/shadcn_extras/marquee.rs"),
-                    "example",
-                ),
+                .code_rust_from_file_region(snippets::marquee::SOURCE, "example"),
             DocSection::new("Kanban (drag & drop)", kanban)
                 .max_w(Px(860.0))
-                .code_rust_from_file_region(
-                    include_str!("../snippets/shadcn_extras/kanban.rs"),
-                    "example",
-                ),
+                .code_rust_from_file_region(snippets::kanban::SOURCE, "example"),
             DocSection::new("Ticker", ticker)
                 .max_w(Px(860.0))
-                .code_rust_from_file_region(
-                    include_str!("../snippets/shadcn_extras/ticker.rs"),
-                    "example",
-                ),
+                .code_rust_from_file_region(snippets::ticker::SOURCE, "example"),
             DocSection::new("Relative time", relative_time)
                 .max_w(Px(860.0))
-                .code_rust_from_file_region(
-                    include_str!("../snippets/shadcn_extras/relative_time.rs"),
-                    "example",
-                ),
+                .code_rust_from_file_region(snippets::relative_time::SOURCE, "example"),
             DocSection::new("Rating", rating)
                 .max_w(Px(860.0))
-                .code_rust_from_file_region(
-                    include_str!("../snippets/shadcn_extras/rating.rs"),
-                    "example",
-                ),
+                .code_rust_from_file_region(snippets::rating::SOURCE, "example"),
             DocSection::new("Avatar stack", avatar_stack)
                 .max_w(Px(860.0))
-                .code_rust_from_file_region(
-                    include_str!("../snippets/shadcn_extras/avatar_stack.rs"),
-                    "example",
-                ),
+                .code_rust_from_file_region(snippets::avatar_stack::SOURCE, "example"),
         ],
     );
 
     vec![body.test_id("ui-gallery-shadcn-extras-component")]
 }
-

@@ -1,3 +1,5 @@
+pub const SOURCE: &str = include_str!("invalid.rs");
+
 // region: example
 use fret_core::Px;
 use fret_ui_shadcn::{self as shadcn, prelude::*};
@@ -29,8 +31,7 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
             .a11y_label("Invalid input")
             .aria_invalid(true)
             .into_element(cx),
-        shadcn::FieldDescription::new("This field contains validation errors.")
-            .into_element(cx),
+        shadcn::FieldDescription::new("This field contains validation errors.").into_element(cx),
         shadcn::FieldError::new("Please provide a valid email format.").into_element(cx),
     ])
     .invalid(true)
@@ -39,4 +40,3 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
     .test_id("ui-gallery-input-invalid")
 }
 // endregion: example
-

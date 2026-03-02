@@ -1,5 +1,7 @@
 use crate::ui::canvas::widget::*;
 use fret_core::scene::DashPatternV1;
+use fret_core::scene::PaintBindingV1;
+use fret_core::scene::PaintEvalSpaceV1;
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub(super) struct WireHighlightPaint {
@@ -8,6 +10,17 @@ pub(super) struct WireHighlightPaint {
 }
 
 impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
+    fn marker_paint_binding_for_wire(paint: PaintBindingV1, color: Color) -> PaintBindingV1 {
+        // Marker paths are independent vector paths; when the wire uses `StrokeS01` evaluation,
+        // the marker's stroke arclength parameter is unrelated to the wire's. Conservatively
+        // fall back to the resolved solid color so markers remain visually stable.
+        if paint.eval_space == PaintEvalSpaceV1::StrokeS01 {
+            color.into()
+        } else {
+            paint
+        }
+    }
+
     pub(super) fn push_edge_wire_and_markers_budgeted(
         &mut self,
         scene: &mut fret_core::Scene,
@@ -17,6 +30,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
         route: EdgeRouteKind,
         from: Point,
         to: Point,
+        paint: PaintBindingV1,
         color: Color,
         width: f32,
         dash: Option<DashPatternV1>,
@@ -31,6 +45,8 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
             return (true, 0);
         }
 
+        let marker_paint = Self::marker_paint_binding_for_wire(paint, color);
+
         let mut marker_skipped: u32 = 0;
 
         let end_path = if stop_on_marker_skip {
@@ -43,7 +59,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                     zoom,
                     scale_factor,
                     marker,
-                    self.style.pin_radius,
+                    self.style.geometry.pin_radius,
                     marker_budget,
                 );
                 if skipped_by_budget {
@@ -67,7 +83,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                     zoom,
                     scale_factor,
                     marker,
-                    self.style.pin_radius,
+                    self.style.geometry.pin_radius,
                     marker_budget,
                 );
                 if skipped_by_budget {
@@ -89,7 +105,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                 order: DrawOrder(2),
                 origin: Point::new(Px(0.0), Px(0.0)),
                 path,
-                paint: color.into(),
+                paint,
             });
         }
 
@@ -122,7 +138,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                     order: DrawOrder(2),
                     origin: Point::new(Px(0.0), Px(0.0)),
                     path,
-                    paint: color.into(),
+                    paint: marker_paint,
                 });
             }
             if let Some(path) = start_path {
@@ -130,7 +146,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                     order: DrawOrder(2),
                     origin: Point::new(Px(0.0), Px(0.0)),
                     path,
-                    paint: color.into(),
+                    paint: marker_paint,
                 });
             }
         } else {
@@ -143,7 +159,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                     zoom,
                     scale_factor,
                     marker,
-                    self.style.pin_radius,
+                    self.style.geometry.pin_radius,
                     marker_budget,
                 );
                 if skipped_by_budget {
@@ -154,7 +170,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                         order: DrawOrder(2),
                         origin: Point::new(Px(0.0), Px(0.0)),
                         path,
-                        paint: color.into(),
+                        paint: marker_paint,
                     });
                 }
             }
@@ -168,7 +184,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                     zoom,
                     scale_factor,
                     marker,
-                    self.style.pin_radius,
+                    self.style.geometry.pin_radius,
                     marker_budget,
                 );
                 if skipped_by_budget {
@@ -179,7 +195,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                         order: DrawOrder(2),
                         origin: Point::new(Px(0.0), Px(0.0)),
                         path,
-                        paint: color.into(),
+                        paint: marker_paint,
                     });
                 }
             }
@@ -200,6 +216,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
         scale_factor: f32,
         from: Point,
         to: Point,
+        paint: PaintBindingV1,
         color: Color,
         width: f32,
         dash: Option<DashPatternV1>,
@@ -214,6 +231,8 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
             return (true, 0);
         }
 
+        let marker_paint = Self::marker_paint_binding_for_wire(paint, color);
+
         let mut marker_skipped: u32 = 0;
 
         let end_path = if stop_on_marker_skip {
@@ -226,7 +245,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                         zoom,
                         scale_factor,
                         marker,
-                        self.style.pin_radius,
+                        self.style.geometry.pin_radius,
                         marker_budget,
                     );
                 if skipped_by_budget {
@@ -251,7 +270,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                         zoom,
                         scale_factor,
                         marker,
-                        self.style.pin_radius,
+                        self.style.geometry.pin_radius,
                         marker_budget,
                     );
                 if skipped_by_budget {
@@ -278,7 +297,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                 order: DrawOrder(2),
                 origin: Point::new(Px(0.0), Px(0.0)),
                 path,
-                paint: color.into(),
+                paint,
             });
         }
 
@@ -310,7 +329,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                     order: DrawOrder(2),
                     origin: Point::new(Px(0.0), Px(0.0)),
                     path,
-                    paint: color.into(),
+                    paint: marker_paint,
                 });
             }
             if let Some(path) = start_path {
@@ -318,7 +337,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                     order: DrawOrder(2),
                     origin: Point::new(Px(0.0), Px(0.0)),
                     path,
-                    paint: color.into(),
+                    paint: marker_paint,
                 });
             }
         } else {
@@ -331,7 +350,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                         zoom,
                         scale_factor,
                         marker,
-                        self.style.pin_radius,
+                        self.style.geometry.pin_radius,
                         marker_budget,
                     );
                 if skipped_by_budget {
@@ -342,7 +361,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                         order: DrawOrder(2),
                         origin: Point::new(Px(0.0), Px(0.0)),
                         path,
-                        paint: color.into(),
+                        paint: marker_paint,
                     });
                 }
             }
@@ -357,7 +376,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                         zoom,
                         scale_factor,
                         marker,
-                        self.style.pin_radius,
+                        self.style.geometry.pin_radius,
                         marker_budget,
                     );
                 if skipped_by_budget {
@@ -368,7 +387,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                         order: DrawOrder(2),
                         origin: Point::new(Px(0.0), Px(0.0)),
                         path,
-                        paint: color.into(),
+                        paint: marker_paint,
                     });
                 }
             }

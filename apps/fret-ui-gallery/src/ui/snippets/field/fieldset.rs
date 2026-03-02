@@ -1,3 +1,5 @@
+pub const SOURCE: &str = include_str!("fieldset.rs");
+
 // region: example
 use fret_core::Px;
 use fret_ui_shadcn::{self as shadcn, prelude::*};
@@ -9,7 +11,9 @@ struct Models {
     zip: Option<Model<String>>,
 }
 
-fn ensure_models<H: UiHost>(cx: &mut ElementContext<'_, H>) -> (Model<String>, Model<String>, Model<String>) {
+fn ensure_models<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+) -> (Model<String>, Model<String>, Model<String>) {
     let state = cx.with_state(Models::default, |st| st.clone());
     match (state.street, state.city, state.zip) {
         (Some(street), Some(city), Some(zip)) => (street, city, zip),
@@ -83,4 +87,3 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
     .test_id("ui-gallery-field-fieldset")
 }
 // endregion: example
-

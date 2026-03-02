@@ -1,10 +1,13 @@
+pub const SOURCE: &str = include_str!("image.rs");
+
 // region: example
-use crate::spec::CMD_APP_OPEN;
 use fret_app::App;
 use fret_ui::Theme;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_shadcn::{self as shadcn, prelude::*};
 use std::sync::Arc;
+
+const CMD_APP_OPEN: &str = "ui_gallery.app.open";
 
 pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
     let max_w_md = LayoutRefinement::default()
@@ -90,4 +93,3 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
     .test_id("ui-gallery-item-image")
 }
 // endregion: example
-

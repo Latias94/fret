@@ -38,74 +38,47 @@ pub(super) fn preview_context_menu(
                 .description("Right click on the trigger surface to open the menu.")
                 .max_w(Px(760.0))
                 .test_id_prefix("ui-gallery-context-menu-basic")
-                .code_rust_from_file_region(
-                    include_str!("../snippets/context_menu/basic.rs"),
-                    "example",
-                ),
+                .code_rust_from_file_region(snippets::basic::SOURCE, "example"),
             DocSection::new("Submenu", submenu)
                 .description("Nested submenu entries for grouped actions.")
                 .max_w(Px(760.0))
                 .test_id_prefix("ui-gallery-context-menu-submenu")
-                .code_rust_from_file_region(
-                    include_str!("../snippets/context_menu/submenu.rs"),
-                    "example",
-                ),
+                .code_rust_from_file_region(snippets::submenu::SOURCE, "example"),
             DocSection::new("Shortcuts", shortcuts)
                 .description("Use `ContextMenuShortcut` to show keyboard hints.")
                 .max_w(Px(760.0))
                 .test_id_prefix("ui-gallery-context-menu-shortcuts")
-                .code_rust_from_file_region(
-                    include_str!("../snippets/context_menu/shortcuts.rs"),
-                    "example",
-                ),
+                .code_rust_from_file_region(snippets::shortcuts::SOURCE, "example"),
             DocSection::new("Groups", groups)
                 .description("Group related actions and separate them with dividers.")
                 .max_w(Px(760.0))
                 .test_id_prefix("ui-gallery-context-menu-groups")
-                .code_rust_from_file_region(
-                    include_str!("../snippets/context_menu/groups.rs"),
-                    "example",
-                ),
+                .code_rust_from_file_region(snippets::groups::SOURCE, "example"),
             DocSection::new("Icons", icons)
                 .description("Combine icons with labels for quick scanning.")
                 .max_w(Px(760.0))
                 .test_id_prefix("ui-gallery-context-menu-icons")
-                .code_rust_from_file_region(
-                    include_str!("../snippets/context_menu/icons.rs"),
-                    "example",
-                ),
+                .code_rust_from_file_region(snippets::icons::SOURCE, "example"),
             DocSection::new("Checkboxes", checkboxes)
                 .description("Use checkbox items for toggles.")
                 .max_w(Px(760.0))
                 .test_id_prefix("ui-gallery-context-menu-checkboxes")
-                .code_rust_from_file_region(
-                    include_str!("../snippets/context_menu/checkboxes.rs"),
-                    "example",
-                ),
+                .code_rust_from_file_region(snippets::checkboxes::SOURCE, "example"),
             DocSection::new("Radio", radio)
                 .description("Use a radio group for exclusive choices.")
                 .max_w(Px(760.0))
                 .test_id_prefix("ui-gallery-context-menu-radio")
-                .code_rust_from_file_region(
-                    include_str!("../snippets/context_menu/radio.rs"),
-                    "example",
-                ),
+                .code_rust_from_file_region(snippets::radio::SOURCE, "example"),
             DocSection::new("Destructive", destructive)
                 .description("Use `variant=Destructive` for irreversible actions.")
                 .max_w(Px(760.0))
                 .test_id_prefix("ui-gallery-context-menu-destructive")
-                .code_rust_from_file_region(
-                    include_str!("../snippets/context_menu/destructive.rs"),
-                    "example",
-                ),
+                .code_rust_from_file_region(snippets::destructive::SOURCE, "example"),
             DocSection::new("RTL", rtl)
                 .description("RTL layout keeps spacing and submenu direction parity-auditable.")
                 .max_w(Px(760.0))
                 .test_id_prefix("ui-gallery-context-menu-rtl")
-                .code_rust_from_file_region(
-                    include_str!("../snippets/context_menu/rtl.rs"),
-                    "example",
-                ),
+                .code_rust_from_file_region(snippets::rtl::SOURCE, "example"),
             DocSection::new("Notes", notes).max_w(Px(820.0)),
         ],
     );

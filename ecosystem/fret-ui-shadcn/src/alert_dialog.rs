@@ -208,6 +208,10 @@ impl AlertDialog {
     ///
     /// This is a thin adapter over [`AlertDialog::into_element`] that accepts shadcn-style parts
     /// (`AlertDialogTrigger`, `AlertDialogPortal`, `AlertDialogOverlay`).
+    ///
+    /// It also installs a default "open on activate" behavior on the trigger element when the
+    /// trigger is a `Pressable` (e.g. shadcn `Button`), matching the upstream Radix trigger
+    /// contract.
     #[track_caller]
     pub fn into_element_parts<H: UiHost>(
         self,
@@ -218,7 +222,27 @@ impl AlertDialog {
         content: impl FnOnce(&mut ElementContext<'_, H>) -> AnyElement,
     ) -> AnyElement {
         let dialog = overlay.apply_to(self);
-        dialog.into_element(cx, |cx| trigger(cx).into_element(cx), content)
+        let open_for_trigger = dialog.open.clone();
+        dialog.into_element(
+            cx,
+            move |cx| {
+                let trigger_el = trigger(cx).into_element(cx);
+                let open = open_for_trigger.clone();
+                cx.pressable_add_on_activate_for(
+                    trigger_el.id,
+                    Arc::new(
+                        move |host: &mut dyn fret_ui::action::UiActionHost,
+                              acx: fret_ui::action::ActionCx,
+                              _reason: fret_ui::action::ActivateReason| {
+                            let _ = host.models_mut().update(&open, |v| *v = true);
+                            host.request_redraw(acx.window);
+                        },
+                    ),
+                );
+                trigger_el
+            },
+            content,
+        )
     }
 
     #[track_caller]
@@ -1144,6 +1168,79 @@ mod tests {
         fn unregister_material(&mut self, _id: fret_core::MaterialId) -> bool {
             true
         }
+    }
+
+    #[test]
+    fn alert_dialog_into_element_parts_trigger_opens_on_activate() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(320.0), Px(200.0)),
+        );
+        let mut services = FakeServices;
+
+        let open = app.models_mut().insert(false);
+
+        let root = fret_ui::declarative::render_root(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            "shadcn-alert-dialog-into-element-parts-trigger-opens",
+            |cx| {
+                vec![AlertDialog::new(open.clone()).into_element_parts(
+                    cx,
+                    |cx| AlertDialogTrigger::new(crate::Button::new("Open").into_element(cx)),
+                    AlertDialogPortal::new(),
+                    AlertDialogOverlay::new(),
+                    |cx| AlertDialogContent::new([cx.text("Content")]).into_element(cx),
+                )]
+            },
+        );
+        ui.set_root(root);
+        ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+        assert_eq!(app.models().get_copied(&open), Some(false));
+
+        let trigger_node = ui.children(root)[0];
+        let trigger_bounds = ui.debug_node_bounds(trigger_node).expect("trigger bounds");
+        let position = Point::new(
+            Px(trigger_bounds.origin.x.0 + trigger_bounds.size.width.0 * 0.5),
+            Px(trigger_bounds.origin.y.0 + trigger_bounds.size.height.0 * 0.5),
+        );
+
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Down {
+                pointer_id: fret_core::PointerId(0),
+                position,
+                button: fret_core::MouseButton::Left,
+                modifiers: fret_core::Modifiers::default(),
+                pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
+            }),
+        );
+        ui.dispatch_event(
+            &mut app,
+            &mut services,
+            &fret_core::Event::Pointer(fret_core::PointerEvent::Up {
+                pointer_id: fret_core::PointerId(0),
+                position,
+                button: fret_core::MouseButton::Left,
+                modifiers: fret_core::Modifiers::default(),
+                is_click: true,
+                pointer_type: fret_core::PointerType::Mouse,
+                click_count: 1,
+            }),
+        );
+
+        assert_eq!(app.models().get_copied(&open), Some(true));
     }
 
     fn render_alert_dialog_frame(
