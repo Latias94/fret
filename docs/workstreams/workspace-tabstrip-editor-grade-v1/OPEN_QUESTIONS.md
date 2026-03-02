@@ -17,6 +17,8 @@ Recommendation:
 Gate:
 - Keep `workspace-shell-demo-tab-drag-to-split-right-drop-preview-screenshot` (screenshot) and add
   an invariants-based split gate once preview routing is stable.
+- Keep `workspace-shell-demo-tab-drag-to-split-right-row-suppressed-smoke` as a non-screenshot guardrail:
+  it asserts that the right-edge split preview does not activate until the pointer leaves the tab strip row.
 
 Status:
 - Implemented (best-effort) in workspace pane drop-zone arbitration so split zones do not latch
