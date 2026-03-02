@@ -5,6 +5,9 @@
 use super::prelude_core::*;
 use super::tab_bar_geometry::TabBarGeometry;
 use fret_ui::ThemeSnapshot;
+use fret_ui_headless::tab_strip_drop_target::{
+    TabInsertionSide, TabStripDropTarget, compute_tab_strip_drop_target_midpoint,
+};
 use fret_ui_headless::tab_strip_surface::{TabStripSurface, classify_tab_strip_surface_no_tabs};
 
 #[derive(Debug, Clone)]
@@ -107,15 +110,30 @@ pub(super) fn resolve_tab_bar_drop(
             None,
             None,
         );
-        let insert_index = match surface {
-            TabStripSurface::TabsViewport => {
-                Some(candidate.geom.compute_insert_index(position, scroll))
-            }
-            TabStripSurface::HeaderSpace => Some(tab_count),
-            TabStripSurface::OverflowControl
-            | TabStripSurface::Outside
-            | TabStripSurface::ScrollControls
-            | TabStripSurface::PinnedBoundary => None,
+
+        let indices: Vec<usize> = (0..tab_count).collect();
+        let drop = compute_tab_strip_drop_target_midpoint(
+            position,
+            &indices,
+            |ix| candidate.geom.tab_rect(*ix, scroll),
+            |_ix| false,
+            None,
+            Some(candidate.reserved_header_space_rect),
+            Some(candidate.strip_rect),
+            Some(candidate.overflow_button_rect),
+            None,
+            None,
+        );
+        let insert_index = match drop {
+            TabStripDropTarget::None | TabStripDropTarget::PinnedBoundary => None,
+            TabStripDropTarget::End => Some(tab_count),
+            TabStripDropTarget::Tab { index, side } => Some(
+                index
+                    + match side {
+                        TabInsertionSide::Before => 0,
+                        TabInsertionSide::After => 1,
+                    },
+            ),
         };
         return TabBarDropResolution {
             surface,
@@ -127,9 +145,35 @@ pub(super) fn resolve_tab_bar_drop(
         .filter(|w| w.len() == tab_count)
         .map(|w| TabBarGeometry::variable(tab_bar, (*w).clone()))
         .unwrap_or_else(|| TabBarGeometry::fixed(tab_bar, tab_count));
+
+    let indices: Vec<usize> = (0..tab_count).collect();
+    let drop = compute_tab_strip_drop_target_midpoint(
+        position,
+        &indices,
+        |ix| geom_full.tab_rect(*ix, scroll),
+        |_ix| false,
+        None,
+        None,
+        Some(tab_bar),
+        None,
+        None,
+        None,
+    );
+    let insert_index = match drop {
+        TabStripDropTarget::None | TabStripDropTarget::PinnedBoundary => None,
+        TabStripDropTarget::End => Some(tab_count),
+        TabStripDropTarget::Tab { index, side } => Some(
+            index
+                + match side {
+                    TabInsertionSide::Before => 0,
+                    TabInsertionSide::After => 1,
+                },
+        ),
+    };
+
     TabBarDropResolution {
         surface: TabStripSurface::TabsViewport,
-        insert_index: Some(geom_full.compute_insert_index(position, scroll)),
+        insert_index,
     }
 }
 

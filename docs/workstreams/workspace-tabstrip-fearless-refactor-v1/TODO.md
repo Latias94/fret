@@ -46,6 +46,7 @@ ID format:
 
 - [x] WTS-kernel-010 Workspace TabStrip uses `fret-ui-headless` for:
   - surface classification (`TabStripSurface`),
+  - midpoint drop target kernel (`compute_tab_strip_drop_target_midpoint`),
   - overflow membership / geometry helpers (if needed).
 - [x] WTS-kernel-011 Click arbitration policy lives in `ecosystem/fret-ui-kit`:
   - Evidence: `ecosystem/fret-ui-headless/src/tab_strip_controller.rs` (re-exported via `ecosystem/fret-ui-kit/src/headless/tab_strip_controller.rs`).
