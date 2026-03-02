@@ -10,7 +10,7 @@ As of 2026-03-02:
 - Milestones 0–3 are effectively complete in-tree (snippet-backed pages + enforcement tests + drift audit).
 - Milestone 4 remains optional / follow-up (taxonomy polish, consistency, etc).
 - AI Elements demos are snippet-backed (see `ai-elements-tracker.md`).
-- Material 3 pages are snippet-backed but still live as legacy previews; see `material3-tracker.md` for next steps (move into `src/ui/pages/**`).
+- Material 3 pages are snippet-backed and routed through `src/ui/pages/material3/mod.rs`; see `material3-tracker.md` for remaining cleanup (delete legacy previews incrementally).
 
 ## Milestone 0 — Foundations
 

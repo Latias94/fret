@@ -56,7 +56,7 @@ Notes:
 
 - Use `tools/check_ui_gallery_code_literals.py --deny --only <page.rs>` to enforce “no multi-line Rust literals”
   on snippet-backed/migrated pages.
-- Material 3 pages are tracked separately because they still live under `src/ui/previews/material3/**` (even though they are now snippet-backed):
+- Material 3 pages are tracked separately because they still have an in-tree legacy preview layer under `src/ui/previews/material3/**` (even though the routed pages are now snippet-backed):
   `docs/workstreams/ui-gallery-fearless-refactor/material3-tracker.md`.
 
 ## Shadcn component tracker (gallery refactor status)
