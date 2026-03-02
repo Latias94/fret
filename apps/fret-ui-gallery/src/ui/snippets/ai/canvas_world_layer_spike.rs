@@ -2,6 +2,7 @@ pub const SOURCE: &str = include_str!("canvas_world_layer_spike.rs");
 
 // region: example
 use fret_ui_ai as ui_ai;
+use fret_ui_kit::declarative::ElementContextThemeExt;
 use fret_ui_kit::declarative::stack;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::{ChromeRefinement, ColorFallback, ColorRef, LayoutRefinement, Radius, Space};
@@ -23,7 +24,7 @@ pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement
     use fret_core::{Corners, DrawOrder, Edges, Point, Px, Rect, SceneOp, Size};
     use fret_ui::action::OnActivate;
     use fret_ui::canvas::CanvasPainter;
-    use fret_ui::element::{CanvasCachePolicy, Length, PointerRegionProps};
+    use fret_ui::element::{CanvasCachePolicy, Length, PointerRegionProps, SemanticsDecoration};
     use fret_ui_shadcn::ButtonVariant;
 
     #[derive(Debug, Clone, Copy, PartialEq)]

@@ -5,6 +5,7 @@ use fret_runtime::Model;
 use fret_ui::action::ActionCx;
 use fret_ui::element::SemanticsProps;
 use fret_ui_ai as ui_ai;
+use fret_ui_kit::declarative::ModelWatchExt;
 use fret_ui_kit::declarative::stack;
 use fret_ui_kit::{LayoutRefinement, Space};
 use fret_ui_shadcn::prelude::*;
@@ -116,4 +117,3 @@ pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement
     )
 }
 // endregion: example
-

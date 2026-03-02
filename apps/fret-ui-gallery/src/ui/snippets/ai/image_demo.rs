@@ -5,6 +5,7 @@ use crate::driver::UiGalleryImageSourceDemoAssets;
 use fret_core::Px;
 use fret_ui_ai as ui_ai;
 use fret_ui_assets as ui_assets;
+use fret_ui_kit::declarative::ElementContextThemeExt;
 use fret_ui_kit::declarative::stack;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, Radius, Space};
@@ -22,6 +23,7 @@ pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement
         .text(format!("status={:?}", state.status))
         .test_id("ui-ai-image-demo-status");
 
+    let border = cx.with_theme(|theme| theme.color_token("border"));
     let image = state.image.map(|id| {
         ui_ai::Image::new(id)
             .alt("Generated image")
@@ -29,7 +31,7 @@ pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement
                 ChromeRefinement::default()
                     .rounded(Radius::Lg)
                     .border_1()
-                    .border_color(ColorRef::Color(theme.color_token("border"))),
+                    .border_color(ColorRef::Color(border)),
             )
             .refine_layout(LayoutRefinement::default().w_px(Px(300.0)).h_px(Px(300.0)))
             .test_id("ui-ai-image-demo-image")

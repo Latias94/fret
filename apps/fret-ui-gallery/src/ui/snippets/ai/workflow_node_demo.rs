@@ -1,6 +1,8 @@
 pub const SOURCE: &str = include_str!("workflow_node_demo.rs");
 
 // region: example
+use fret_core::Px;
+use fret_ui_kit::declarative::ElementContextThemeExt;
 use fret_ui_ai as ui_ai;
 use fret_ui_kit::declarative::stack;
 use fret_ui_kit::declarative::style as decl_style;

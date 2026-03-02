@@ -2,6 +2,7 @@ pub const SOURCE: &str = include_str!("workflow_edge_demo.rs");
 
 // region: example
 use fret_ui_ai as ui_ai;
+use fret_ui_kit::declarative::ElementContextThemeExt;
 use fret_ui_kit::declarative::stack;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, Radius, Space};
@@ -9,6 +10,7 @@ use fret_ui_shadcn::prelude::*;
 
 pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement {
     use fret_core::Point;
+    use fret_core::Px;
 
     let from = Point::new(Px(48.0), Px(56.0));
     let to = Point::new(Px(312.0), Px(176.0));

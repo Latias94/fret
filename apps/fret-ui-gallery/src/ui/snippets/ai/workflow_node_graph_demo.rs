@@ -2,6 +2,7 @@ pub const SOURCE: &str = include_str!("workflow_node_graph_demo.rs");
 
 // region: example
 use fret_ui_ai as ui_ai;
+use fret_ui_kit::declarative::ElementContextThemeExt;
 use fret_ui_kit::declarative::stack;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::{
@@ -20,6 +21,7 @@ pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement
         CanvasPoint, Edge, EdgeId, EdgeKind, Graph, GraphId, Node, NodeId, NodeKindKey, Port,
         PortCapacity, PortDirection, PortId, PortKey, PortKind,
     };
+    use fret_runtime::Model;
     use fret_ui::action::OnActivate;
     use fret_ui::element::{LayoutStyle, SemanticsProps};
     use fret_ui::retained_bridge::RetainedSubtreeProps;
