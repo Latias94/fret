@@ -171,9 +171,52 @@ pub(super) fn handle_assert_step(
     } else if handoff_to.is_some() {
         // This step is window-targeted; the runtime will migrate the script.
     } else {
-        let ok = match svc.eval_predicate_from_cached_test_id_bounds(predicate_window, &predicate) {
-            Some(ok) => ok,
-            None => match &predicate {
+        let cache_eval = svc.eval_predicate_from_cached_test_id_bounds(predicate_window, &predicate);
+        if cache_eval.used_cache {
+            let kind = if cache_eval.stale {
+                "diag.cached_test_id_predicate.stale"
+            } else {
+                "diag.cached_test_id_predicate.hit"
+            };
+            push_script_event_log(
+                active,
+                &svc.cfg,
+                UiScriptEventLogEntryV1 {
+                    unix_ms: unix_ms_now(),
+                    kind: kind.to_string(),
+                    step_index: Some(step_index.min(u32::MAX as usize) as u32),
+                    note: Some(format!(
+                        "predicate_window={} test_id={:?} ok={:?} age_ms={:?} snapshot_seq={:?} max_age_ms={:?}",
+                        predicate_window.data().as_ffi(),
+                        cache_eval.test_id.as_deref(),
+                        cache_eval.ok,
+                        cache_eval.age_ms,
+                        cache_eval.window_snapshot_seq,
+                        cache_eval.max_age_ms
+                    )),
+                    bundle_dir: None,
+                    window: Some(window.data().as_ffi()),
+                    tick_id: Some(app.tick_id().0),
+                    frame_id: Some(app.frame_id().0),
+                    window_snapshot_seq: None,
+                },
+            );
+        }
+
+        if cache_eval.used_cache
+            && cache_eval.stale
+            && UiDiagnosticsService::predicate_can_eval_from_cached_test_id_bounds(&predicate)
+        {
+            *force_dump_label = Some(format!(
+                "script-step-{step_index:04}-assert-stale-test-id-cache"
+            ));
+            *stop_script = true;
+            *failure_reason = Some("cached_test_id_predicate_stale".to_string());
+            output.request_redraw = true;
+        } else {
+            let ok = match cache_eval.ok {
+                Some(ok) => ok,
+                None => match &predicate {
             UiPredicateV1::EventKindSeen { event_kind } => svc
                 .per_window
                 .get(&predicate_window)
@@ -295,14 +338,15 @@ pub(super) fn handle_assert_step(
             },
         };
 
-        if ok {
-            active.next_step = active.next_step.saturating_add(1);
-            output.request_redraw = true;
-        } else {
-            *force_dump_label = Some(format!("script-step-{step_index:04}-assert-failed"));
-            *stop_script = true;
-            *failure_reason = Some("assert_failed".to_string());
-            output.request_redraw = true;
+            if ok {
+                active.next_step = active.next_step.saturating_add(1);
+                output.request_redraw = true;
+            } else {
+                *force_dump_label = Some(format!("script-step-{step_index:04}-assert-failed"));
+                *stop_script = true;
+                *failure_reason = Some("assert_failed".to_string());
+                output.request_redraw = true;
+            }
         }
     }
 

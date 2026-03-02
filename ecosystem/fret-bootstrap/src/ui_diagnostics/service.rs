@@ -73,6 +73,17 @@ struct TextFontStackKeyStability {
     stable_frames: u32,
 }
 
+#[derive(Debug, Clone)]
+struct CachedTestIdPredicateEval {
+    used_cache: bool,
+    ok: Option<bool>,
+    stale: bool,
+    test_id: Option<String>,
+    age_ms: Option<u64>,
+    window_snapshot_seq: Option<u64>,
+    max_age_ms: Option<u64>,
+}
+
 thread_local! {
     static SCRIPT_INJECTION_SCOPE: std::cell::Cell<bool> = std::cell::Cell::new(false);
 }
@@ -283,20 +294,83 @@ impl UiDiagnosticsService {
         )
     }
 
+    const CACHED_TEST_ID_PREDICATE_MAX_AGE_MS: u64 = 30_000;
+
     fn eval_predicate_from_cached_test_id_bounds(
         &self,
         window: AppWindowId,
         predicate: &UiPredicateV1,
-    ) -> Option<bool> {
-        let ring = self.per_window.get(&window)?;
-        match predicate {
+    ) -> CachedTestIdPredicateEval {
+        let test_id = match predicate {
             UiPredicateV1::Exists {
                 target: UiSelectorV1::TestId { id },
-            } => Some(ring.test_id_bounds.contains_key(id)),
-            UiPredicateV1::NotExists {
+            }
+            | UiPredicateV1::NotExists {
                 target: UiSelectorV1::TestId { id },
-            } => Some(!ring.test_id_bounds.contains_key(id)),
+            } => Some(id.clone()),
             _ => None,
+        };
+        let Some(test_id) = test_id else {
+            return CachedTestIdPredicateEval {
+                used_cache: false,
+                ok: None,
+                stale: false,
+                test_id: None,
+                age_ms: None,
+                window_snapshot_seq: None,
+                max_age_ms: None,
+            };
+        };
+
+        let Some(ring) = self.per_window.get(&window) else {
+            return CachedTestIdPredicateEval {
+                used_cache: false,
+                ok: None,
+                stale: false,
+                test_id: Some(test_id),
+                age_ms: None,
+                window_snapshot_seq: None,
+                max_age_ms: None,
+            };
+        };
+        let Some(snapshot) = ring.snapshots.back() else {
+            return CachedTestIdPredicateEval {
+                used_cache: false,
+                ok: None,
+                stale: false,
+                test_id: Some(test_id),
+                age_ms: None,
+                window_snapshot_seq: None,
+                max_age_ms: None,
+            };
+        };
+
+        let age_ms = unix_ms_now().saturating_sub(snapshot.timestamp_unix_ms);
+        if age_ms > Self::CACHED_TEST_ID_PREDICATE_MAX_AGE_MS {
+            return CachedTestIdPredicateEval {
+                used_cache: true,
+                ok: None,
+                stale: true,
+                test_id: Some(test_id),
+                age_ms: Some(age_ms),
+                window_snapshot_seq: Some(snapshot.window_snapshot_seq),
+                max_age_ms: Some(Self::CACHED_TEST_ID_PREDICATE_MAX_AGE_MS),
+            };
+        }
+
+        let ok = match predicate {
+            UiPredicateV1::Exists { .. } => ring.test_id_bounds.contains_key(&test_id),
+            UiPredicateV1::NotExists { .. } => !ring.test_id_bounds.contains_key(&test_id),
+            _ => unreachable!("predicate already checked for test_id selector"),
+        };
+        CachedTestIdPredicateEval {
+            used_cache: true,
+            ok: Some(ok),
+            stale: false,
+            test_id: Some(test_id),
+            age_ms: Some(age_ms),
+            window_snapshot_seq: Some(snapshot.window_snapshot_seq),
+            max_age_ms: Some(Self::CACHED_TEST_ID_PREDICATE_MAX_AGE_MS),
         }
     }
 

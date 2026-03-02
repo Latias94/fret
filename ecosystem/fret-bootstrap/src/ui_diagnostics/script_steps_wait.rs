@@ -532,7 +532,7 @@ pub(super) fn handle_wait_until_step(
         return true;
     }
 
-    let state = match active.wait_until.take() {
+    let mut state = match active.wait_until.take() {
         Some(mut state) if state.step_index == step_index => {
             state.remaining_frames = state.remaining_frames.min(timeout_frames);
             state
@@ -540,11 +540,57 @@ pub(super) fn handle_wait_until_step(
         _ => WaitUntilState {
             step_index,
             remaining_frames: timeout_frames,
+            cached_test_id_predicate_last_stale: None,
         },
     };
 
-    let ok = match svc.eval_predicate_from_cached_test_id_bounds(predicate_window, &predicate) {
+    let cache_eval = svc.eval_predicate_from_cached_test_id_bounds(predicate_window, &predicate);
+    if cache_eval.used_cache {
+        let should_log = state
+            .cached_test_id_predicate_last_stale
+            .map(|prev| prev != cache_eval.stale)
+            .unwrap_or(true);
+        if should_log {
+            let kind = if cache_eval.stale {
+                "diag.cached_test_id_predicate.stale"
+            } else {
+                "diag.cached_test_id_predicate.hit"
+            };
+            push_script_event_log(
+                active,
+                &svc.cfg,
+                UiScriptEventLogEntryV1 {
+                    unix_ms: unix_ms_now(),
+                    kind: kind.to_string(),
+                    step_index: Some(step_index.min(u32::MAX as usize) as u32),
+                    note: Some(format!(
+                        "predicate_window={} test_id={:?} ok={:?} age_ms={:?} snapshot_seq={:?} max_age_ms={:?}",
+                        predicate_window.data().as_ffi(),
+                        cache_eval.test_id.as_deref(),
+                        cache_eval.ok,
+                        cache_eval.age_ms,
+                        cache_eval.window_snapshot_seq,
+                        cache_eval.max_age_ms
+                    )),
+                    bundle_dir: None,
+                    window: Some(window.data().as_ffi()),
+                    tick_id: Some(app.tick_id().0),
+                    frame_id: Some(app.frame_id().0),
+                    window_snapshot_seq: None,
+                },
+            );
+            state.cached_test_id_predicate_last_stale = Some(cache_eval.stale);
+        }
+    }
+
+    let ok = match cache_eval.ok {
         Some(ok) => ok,
+        None if cache_eval.used_cache
+            && cache_eval.stale
+            && UiDiagnosticsService::predicate_can_eval_from_cached_test_id_bounds(&predicate) =>
+        {
+            false
+        }
         None => match &predicate {
         UiPredicateV1::EventKindSeen { event_kind } => svc
             .per_window
@@ -671,6 +717,7 @@ pub(super) fn handle_wait_until_step(
         active.wait_until = Some(WaitUntilState {
             step_index: state.step_index,
             remaining_frames: state.remaining_frames.saturating_sub(1),
+            cached_test_id_predicate_last_stale: state.cached_test_id_predicate_last_stale,
         });
         output.request_redraw = true;
     }
