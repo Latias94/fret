@@ -2536,6 +2536,16 @@
       "target_hints": []
     },
     {
+      "id": "ui-gallery-context-menu-keyboard-escape-focus-restore",
+      "path": "tools/diag-scripts/ui-gallery/overlay/ui-gallery-context-menu-keyboard-escape-focus-restore.json",
+      "required_capabilities": [],
+      "suite_memberships": [
+        "ui-gallery-overlay-steady"
+      ],
+      "tags": [],
+      "target_hints": []
+    },
+    {
       "id": "ui-gallery-context-menu-occlusion-wheel-pass-through",
       "path": "tools/diag-scripts/ui-gallery/overlay/ui-gallery-context-menu-occlusion-wheel-pass-through.json",
       "required_capabilities": [],
