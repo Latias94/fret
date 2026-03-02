@@ -1472,22 +1472,6 @@ impl Select {
     /// This is a thin adapter over [`Select::into_element`] that accepts shadcn-style parts
     /// (`SelectTrigger`, `SelectContent`) in a nested shape, while still mapping onto Fret's
     /// current configuration + entries implementation.
-    #[track_caller]
-    pub fn into_element_parts<H: UiHost, I>(
-        self,
-        cx: &mut ElementContext<'_, H>,
-        trigger: impl FnOnce(&mut ElementContext<'_, H>) -> SelectTrigger,
-        content: impl Into<SelectContent>,
-        entries: impl FnOnce(&mut ElementContext<'_, H>) -> I,
-    ) -> AnyElement
-    where
-        I: IntoIterator<Item = SelectEntry>,
-    {
-        let select = self.trigger(trigger(cx)).content(content.into());
-        let entries = entries(cx);
-        select.entries(entries).into_element(cx)
-    }
-
     /// Part-based authoring surface aligned with shadcn/ui v4 exports (nested-content shape).
     ///
     /// This adapter makes the call site closer to upstream:
@@ -1497,7 +1481,7 @@ impl Select {
     ///
     /// Internally this still maps to Fret's configuration + entries implementation.
     #[track_caller]
-    pub fn into_element_parts_v4<H: UiHost>(
+    pub fn into_element_parts<H: UiHost>(
         self,
         cx: &mut ElementContext<'_, H>,
         trigger: impl FnOnce(&mut ElementContext<'_, H>) -> SelectTrigger,
@@ -4780,7 +4764,7 @@ mod tests {
     }
 
     #[test]
-    fn select_into_element_parts_v4_allows_nesting_entries_under_content() {
+    fn select_into_element_parts_allows_nesting_entries_under_content() {
         let window = AppWindowId::default();
         let mut app = App::new();
         let mut ui: UiTree<App> = UiTree::new();
@@ -4825,7 +4809,7 @@ mod tests {
                     vec![
                         Select::new(model, open)
                             .trigger_test_id("select-trigger")
-                            .into_element_parts_v4(
+                            .into_element_parts(
                                 cx,
                                 |_cx| {
                                     SelectTrigger::new()

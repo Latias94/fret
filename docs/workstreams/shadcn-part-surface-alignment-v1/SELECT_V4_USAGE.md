@@ -69,7 +69,9 @@ The entries list is made of `SelectEntry`, typically built from:
 
 If you prefer a more shadcn-like "nested parts" call site, use:
 
-- `Select::into_element_parts(cx, trigger, content, entries)`
+- `Select::into_element_parts(cx, trigger, content)`
+
+Where `content` can be built with `SelectContent::new().with_entries(...)`.
 
 This still maps to the underlying configuration + entries implementation, but lets you keep the
 call site closer to the upstream docs structure.
@@ -84,24 +86,23 @@ fn view<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
     let value: Model<Option<Arc<str>>> = cx.app.models_mut().insert(None);
     let open: Model<bool> = cx.app.models_mut().insert(false);
 
-    let entries: Vec<shadcn::SelectEntry> = vec![
-        shadcn::SelectGroup::new([
-            shadcn::SelectLabel::new("Fruits").into(),
-            shadcn::SelectItem::new("apple", "Apple").into(),
-            shadcn::SelectItem::new("banana", "Banana").into(),
-            shadcn::SelectSeparator::new().into(),
-            shadcn::SelectItem::new("grape", "Grape").into(),
-        ])
-        .into(),
-    ];
-
-    shadcn::Select::new(value, open)
-        .trigger(
+    shadcn::Select::new(value, open).into_element_parts(
+        cx,
+        |_cx| {
             shadcn::SelectTrigger::new()
-                .value(shadcn::SelectValue::new().placeholder("Select a fruit")),
-        )
-        .entries(entries)
-        .into_element(cx)
+                .value(shadcn::SelectValue::new().placeholder("Select a fruit"))
+        },
+        |_cx| {
+            shadcn::SelectContent::new().with_entries([shadcn::SelectGroup::new([
+                shadcn::SelectLabel::new("Fruits").into(),
+                shadcn::SelectItem::new("apple", "Apple").into(),
+                shadcn::SelectItem::new("banana", "Banana").into(),
+                shadcn::SelectSeparator::new().into(),
+                shadcn::SelectItem::new("grape", "Grape").into(),
+            ])
+            .into()])
+        },
+    )
 }
 ```
 
