@@ -78,6 +78,8 @@ Stage gates for merge-back correctness (2026-03-03):
 - Chained tear-off: added per-drop `dock_drop_resolved_*` gates + bounded bundles to pinpoint where a panel is lost
   (drop vs auto-close/cleanup).
   - PASS: run id `1772493305362` (`target/fret-diag-stage-gates2`)
+- Chained tear-off: added additional bundles right after each auto-close window-count gate (explicit “after close” stage).
+  - PASS: run id `1772494218337` (`target/fret-diag-stage-gates5`)
 - Transparent payload drag-back: switched the merge-back targeting to `dock-arb-hint-inner-right` to avoid `wrap_binary`
   outcomes from outer-hint drops, and added a drop-stage bundle.
   - PASS: run id `1772493899790` (`target/fret-diag-stage-gates4`)

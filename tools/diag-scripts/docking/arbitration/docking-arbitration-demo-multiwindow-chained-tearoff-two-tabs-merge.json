@@ -165,6 +165,11 @@
       "predicate": { "kind": "known_window_count_is", "n": 2 },
       "timeout_frames": 600
     },
+    { "type": "wait_frames", "n": 2 },
+    {
+      "type": "capture_bundle",
+      "label": "docking-arbitration-demo-multiwindow-chained-tearoff-two-tabs-merge-after-close1"
+    },
     {
       "type": "wait_until",
       "window": { "kind": "first_seen" },
@@ -239,6 +244,11 @@
       "type": "wait_until",
       "predicate": { "kind": "known_window_count_is", "n": 1 },
       "timeout_frames": 600
+    },
+    { "type": "wait_frames", "n": 2 },
+    {
+      "type": "capture_bundle",
+      "label": "docking-arbitration-demo-multiwindow-chained-tearoff-two-tabs-merge-after-close2"
     },
 
     {
