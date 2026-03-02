@@ -13,7 +13,8 @@ remains a **configuration + entries** API rather than a true nested part tree (`
 
 - Upstream composes a nested part tree.
 - Fret currently composes via:
-  - `Select::trigger(SelectTrigger { ... })` for trigger/value configuration, and
+  - `Select::trigger(SelectTrigger { ... })` for trigger configuration,
+  - `Select::value(SelectValue { ... })` for collapsed-state placeholder/value configuration, and
   - `Select::entries(Vec<SelectEntry>)` for content (items, groups, labels, separators).
 - This is structurally different, but most docs examples translate 1:1.
 
@@ -48,7 +49,7 @@ Create them in your view state and pass them to:
 Upstream:
 
 - `SelectTrigger` → in Fret: `Select::trigger(SelectTrigger::new() ...)`
-- `SelectValue` → in Fret: `SelectTrigger::value(SelectValue::new() ...)`
+- `SelectValue` → in Fret: `Select::value(SelectValue::new() ...)`
 
 Placeholder maps to:
 
@@ -69,7 +70,7 @@ The entries list is made of `SelectEntry`, typically built from:
 
 If you prefer a more shadcn-like "nested parts" call site, use:
 
-- `Select::into_element_parts(cx, trigger, content)`
+- `Select::into_element_parts(cx, trigger, value, content)`
 
 Where `content` can be built with `SelectContent::new().with_entries(...)`.
 
@@ -88,10 +89,8 @@ fn view<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
 
     shadcn::Select::new(value, open).into_element_parts(
         cx,
-        |_cx| {
-            shadcn::SelectTrigger::new()
-                .value(shadcn::SelectValue::new().placeholder("Select a fruit"))
-        },
+        |_cx| shadcn::SelectTrigger::new(),
+        |_cx| shadcn::SelectValue::new().placeholder("Select a fruit"),
         |_cx| {
             shadcn::SelectContent::new().with_entries([shadcn::SelectGroup::new([
                 shadcn::SelectLabel::new("Fruits").into(),
