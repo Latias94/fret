@@ -19,6 +19,7 @@ pub mod carousel;
 pub mod chart;
 pub mod checkbox;
 pub mod collapsible;
+pub mod combobox;
 pub mod command;
 pub mod context_menu;
 pub mod data_table;
