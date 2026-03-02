@@ -1,3 +1,5 @@
+pub const SOURCE: &str = include_str!("rtl.rs");
+
 // region: example
 use crate::spec::{CMD_APP_OPEN, CMD_APP_SAVE};
 use crate::ui::doc_layout;

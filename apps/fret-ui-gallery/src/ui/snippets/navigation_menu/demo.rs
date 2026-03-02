@@ -1,3 +1,5 @@
+pub const SOURCE: &str = include_str!("demo.rs");
+
 // region: example
 use crate::spec::{CMD_APP_OPEN, CMD_APP_SAVE};
 use fret_app::App;
