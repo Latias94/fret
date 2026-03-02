@@ -24,7 +24,7 @@ Action identity + typed unit actions:
 
 View runtime (v1):
 
-- `ecosystem/fret/src/view.rs` (`View`, `ViewCx`, `use_state`/`use_selector`/`use_query`)
+- `ecosystem/fret/src/view.rs` (`View`, `ViewCx`, `use_state`/`use_state_keyed`/`use_selector`/`use_query`, view-cache reuse + handler keepalive)
 - `ecosystem/fret/src/app_entry.rs` (`App::run_view`)
 
 Pointer-trigger authoring integration (v1 still dispatches through the command pipeline):
@@ -71,6 +71,7 @@ Current scripts (as of 2026-03-02):
 
 - `tools/diag-scripts/cookbook/commands-keymap-basics/cookbook-commands-keymap-basics-shortcut-and-gating.json`
 - `tools/diag-scripts/cookbook/hello/cookbook-hello-click-count.json`
+- `tools/diag-scripts/cookbook/hello/cookbook-hello-view-cache-reuse-and-handler-keepalive.json`
 - `tools/diag-scripts/cookbook/overlay-basics/cookbook-overlay-basics-modal-barrier-shortcut-gating.json`
 
 ### 2.3 wasm smoke (build-only)

@@ -101,24 +101,69 @@ impl<'cx, 'a, H: UiHost> ViewCx<'cx, 'a, H> {
         let key = (callsite.file(), callsite.line(), callsite.column());
 
         self.cx.keyed(key, |cx| {
+            struct UseStateSlot<T> {
+                model: Option<Model<T>>,
+                #[cfg(debug_assertions)]
+                last_frame_id: u64,
+                #[cfg(debug_assertions)]
+                calls_in_frame: u32,
+            }
+
+            impl<T> Default for UseStateSlot<T> {
+                fn default() -> Self {
+                    Self {
+                        model: None,
+                        #[cfg(debug_assertions)]
+                        last_frame_id: 0,
+                        #[cfg(debug_assertions)]
+                        calls_in_frame: 0,
+                    }
+                }
+            }
+
+            #[cfg(debug_assertions)]
+            {
+                let frame_id = cx.frame_id.0;
+                cx.with_state(UseStateSlot::<T>::default, |slot| {
+                    if slot.last_frame_id != frame_id {
+                        slot.last_frame_id = frame_id;
+                        slot.calls_in_frame = 0;
+                    }
+                    slot.calls_in_frame = slot.calls_in_frame.saturating_add(1);
+                    if slot.calls_in_frame == 2 {
+                        eprintln!(
+                            "use_state called multiple times per frame at the same callsite ({}:{}:{}); wrap in `cx.keyed(...)` or use `use_state_keyed(...)` to avoid state collisions",
+                            callsite.file(),
+                            callsite.line(),
+                            callsite.column()
+                        );
+                    }
+                });
+            }
+
             // Two-phase init to avoid capturing `cx` in `with_state` init closures.
-            let existing = cx.with_state(|| Option::<Model<T>>::None, |slot| slot.clone());
+            let existing = cx.with_state(UseStateSlot::<T>::default, |slot| slot.model.clone());
             if let Some(model) = existing {
                 return model;
             }
 
             let model = cx.app.models_mut().insert(T::default());
-            cx.with_state(
-                || Option::<Model<T>>::None,
-                |slot| {
-                    if slot.is_none() {
-                        *slot = Some(model.clone());
-                    }
-                    slot.clone()
-                        .expect("state slot must contain a model after init")
-                },
-            )
+            cx.with_state(UseStateSlot::<T>::default, |slot| {
+                if slot.model.is_none() {
+                    slot.model = Some(model.clone());
+                }
+                slot.model.clone().expect("state slot must contain a model after init")
+            })
         })
+    }
+
+    /// Keyed variant of [`use_state`], intended for loops.
+    #[track_caller]
+    pub fn use_state_keyed<K: Hash, T>(&mut self, key: K) -> Model<T>
+    where
+        T: Any + Default,
+    {
+        self.keyed(key, |cx| cx.use_state::<T>())
     }
 
     /// Derived state hook backed by `ecosystem/fret-selector` (UI feature).
@@ -291,4 +336,23 @@ pub fn view_view<'a, V: View>(
     );
 
     root.into()
+}
+
+#[cfg(all(not(target_arch = "wasm32"), feature = "desktop"))]
+#[doc(hidden)]
+pub fn view_record_engine_frame<V: View>(
+    _app: &mut App,
+    _window: AppWindowId,
+    ui: &mut fret_ui::UiTree<App>,
+    _state: &mut ViewWindowState<V>,
+    _context: &crate::kernel::render::WgpuContext,
+    _renderer: &mut crate::kernel::render::Renderer,
+    _scale_factor: f32,
+    _tick_id: fret_runtime::TickId,
+    _frame_id: fret_runtime::FrameId,
+) -> fret_launch::EngineFrameUpdate {
+    if !ui.view_cache_enabled() {
+        ui.set_view_cache_enabled(true);
+    }
+    fret_launch::EngineFrameUpdate::default()
 }

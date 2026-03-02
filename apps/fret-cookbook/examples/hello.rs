@@ -9,6 +9,7 @@ const TEST_ID_ROOT: &str = "cookbook.hello.root";
 const TEST_ID_LABEL: &str = "cookbook.hello.label";
 const TEST_ID_BUTTON: &str = "cookbook.hello.button";
 const TEST_ID_COUNT: &str = "cookbook.hello.count";
+const TEST_ID_RENDER_MARKER: &str = "cookbook.hello.render_marker";
 
 struct HelloView;
 
@@ -18,6 +19,20 @@ impl View for HelloView {
     }
 
     fn render(&mut self, cx: &mut ViewCx<'_, '_, App>) -> Elements {
+        let rendered_once = cx.with_state(
+            || false,
+            |v| {
+                let first = !*v;
+                *v = true;
+                first
+            },
+        );
+        let render_marker = if rendered_once {
+            "RenderedOnce"
+        } else {
+            "RenderedAgain"
+        };
+
         let count = cx.use_state::<u32>();
         let count_value = cx.watch_model(&count).layout().copied_or(0);
 
@@ -41,6 +56,7 @@ impl View for HelloView {
                 shadcn::Label::new("Hello, Fret cookbook!")
                     .into_element(cx)
                     .test_id(TEST_ID_LABEL),
+                cx.text(render_marker).test_id(TEST_ID_RENDER_MARKER),
                 cx.text(format!("Count: {count_value}"))
                     .test_id(TEST_ID_COUNT),
                 shadcn::Button::new("Click me")

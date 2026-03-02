@@ -115,12 +115,18 @@ Where:
 The view runtime provides:
 
 - `use_state(...)` for local state slots (stored in element/view state),
+- `use_state_keyed(...)` (or `cx.keyed(...)`) for loops,
 - `use_selector(...)` / `use_selector_keyed(...)` backed by `ecosystem/fret-selector`,
 - `use_query(...)` backed by `ecosystem/fret-query`.
 
 Key rule:
 
 - loops must use keyed variants or `cx.keyed(...)` scoping to prevent “unstable order” collisions.
+
+Diagnostics rail (debug-only):
+
+- hook helpers should warn when the same hook callsite is invoked multiple times per frame without
+  a keyed scope, as this is a strong indicator of an accidental loop callsite collision.
 
 ### C3 — Dirty marking (`notify`)
 

@@ -188,7 +188,7 @@ impl App {
             root_name,
             crate::view::view_init_window::<V>,
             crate::view::view_view::<V>,
-            |d| d,
+            |d| d.record_engine_frame(crate::view::view_record_engine_frame::<V>),
         );
 
         for f in install_app_hooks {

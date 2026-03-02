@@ -93,10 +93,13 @@ ID format:
     - Implemented (v1): `ecosystem/fret/src/view.rs`
     - Entry points: `ecosystem/fret/src/app_entry.rs` (`App::run_view`)
     - First adoption: `apps/fret-cookbook/examples/hello.rs`
-- [ ] AFA-view-022 Define and document hook keying rules:
+- [x] AFA-view-022 Define and document hook keying rules:
   - stable callsite key for non-loop hooks,
   - required keyed variants for loops (`use_*_keyed`),
   - diagnostics for misuse (debug-only).
+  - Evidence:
+    - ADR update: `docs/adr/0308-view-authoring-runtime-and-hooks-v1.md`
+    - `use_state_keyed` + debug rail: `ecosystem/fret/src/view.rs`
 - [ ] AFA-view-023 Add a view-cache boundary helper aligned with ADR 0213:
   - “cached unless dirty” semantics,
   - inspection/picking disables reuse.
