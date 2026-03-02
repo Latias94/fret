@@ -236,6 +236,24 @@ impl<H: UiHost> UiTree<H> {
                             Some(command.clone()),
                             Some(true),
                         );
+                        #[cfg(feature = "diagnostics")]
+                        if let Some(window) = self.window {
+                            app.with_global_mut(
+                                fret_runtime::WindowPendingCommandDispatchSourceService::default,
+                                |svc, app| {
+                                    svc.record(
+                                        window,
+                                        app.tick_id(),
+                                        command.clone(),
+                                        fret_runtime::CommandDispatchSourceV1 {
+                                            kind:
+                                                fret_runtime::CommandDispatchSourceKindV1::Shortcut,
+                                            element: None,
+                                        },
+                                    );
+                                },
+                            );
+                        }
                         self.suppress_text_input_until_key_up = Some(params.key);
                         if self.window.is_some() && self.dispatch_command(app, services, &command) {
                             self.request_redraw_coalesced(app);
@@ -343,6 +361,23 @@ impl<H: UiHost> UiTree<H> {
                         Some(command.clone()),
                         Some(true),
                     );
+                    #[cfg(feature = "diagnostics")]
+                    if let Some(window) = self.window {
+                        app.with_global_mut(
+                            fret_runtime::WindowPendingCommandDispatchSourceService::default,
+                            |svc, app| {
+                                svc.record(
+                                    window,
+                                    app.tick_id(),
+                                    command.clone(),
+                                    fret_runtime::CommandDispatchSourceV1 {
+                                        kind: fret_runtime::CommandDispatchSourceKindV1::Shortcut,
+                                        element: None,
+                                    },
+                                );
+                            },
+                        );
+                    }
                     self.clear_pending_shortcut(app);
                     self.suppress_text_input_until_key_up = Some(params.key);
                     if self.window.is_some() && self.dispatch_command(app, services, &command) {
@@ -439,6 +474,23 @@ impl<H: UiHost> UiTree<H> {
                     Some(command.clone()),
                     Some(true),
                 );
+                #[cfg(feature = "diagnostics")]
+                if let Some(window) = self.window {
+                    app.with_global_mut(
+                        fret_runtime::WindowPendingCommandDispatchSourceService::default,
+                        |svc, app| {
+                            svc.record(
+                                window,
+                                app.tick_id(),
+                                command.clone(),
+                                fret_runtime::CommandDispatchSourceV1 {
+                                    kind: fret_runtime::CommandDispatchSourceKindV1::Shortcut,
+                                    element: None,
+                                },
+                            );
+                        },
+                    );
+                }
                 self.suppress_text_input_until_key_up = Some(params.key);
                 if self.window.is_some() && self.dispatch_command(app, services, &command) {
                     self.request_redraw_coalesced(app);

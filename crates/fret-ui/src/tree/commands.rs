@@ -366,11 +366,12 @@ impl<H: UiHost> UiTree<H> {
         let focus = self.focus;
         let focus_in_default_root = focus.is_some_and(|n| self.is_descendant(default_root, n));
 
-        let mut bubble_from = |start: NodeId| -> (bool, bool, bool) {
+        let mut bubble_from = |start: NodeId| -> (bool, bool, bool, Option<NodeId>) {
             let mut node_id = start;
             let mut handled = false;
             let mut needs_redraw = false;
             let mut stopped = false;
+            let mut handled_by_node: Option<NodeId> = None;
 
             loop {
                 let (did_handle, invalidations, requested_focus, stop_bubbling, parent) = self
@@ -402,6 +403,7 @@ impl<H: UiHost> UiTree<H> {
 
                 if did_handle {
                     handled = true;
+                    handled_by_node = handled_by_node.or(Some(node_id));
                 }
 
                 if !invalidations.is_empty() || requested_focus.is_some() {
@@ -437,22 +439,25 @@ impl<H: UiHost> UiTree<H> {
                 };
             }
 
-            (handled, needs_redraw, stopped)
+            (handled, needs_redraw, stopped, handled_by_node)
         };
 
-        let (mut handled, mut needs_redraw, mut stopped) =
+        let (mut handled, mut needs_redraw, mut stopped, mut handled_by_node) =
             bubble_from(focus.unwrap_or(default_root));
 
+        let mut used_default_root_fallback = false;
         if !handled
             && !stopped
             && focus.is_some()
             && !focus_in_default_root
             && focus.unwrap_or(default_root) != default_root
         {
-            let (handled2, needs_redraw2, stopped2) = bubble_from(default_root);
+            used_default_root_fallback = true;
+            let (handled2, needs_redraw2, stopped2, handled_by_node2) = bubble_from(default_root);
             handled = handled || handled2;
             needs_redraw = needs_redraw || needs_redraw2;
             stopped = stopped || stopped2;
+            handled_by_node = handled_by_node.or(handled_by_node2);
         }
 
         if !handled && !stopped && is_focus_traversal_command {
@@ -525,6 +530,39 @@ impl<H: UiHost> UiTree<H> {
             }
 
             self.publish_window_command_action_availability_snapshot(app, &input_ctx);
+        }
+
+        if let Some(window) = self.window {
+            let source = app.with_global_mut(
+                fret_runtime::WindowPendingCommandDispatchSourceService::default,
+                |svc, app| {
+                    svc.consume(window, app.tick_id(), command)
+                        .unwrap_or_else(fret_runtime::CommandDispatchSourceV1::programmatic)
+                },
+            );
+            let handled_by_element = handled_by_node
+                .and_then(|node| self.node_element(node))
+                .map(|id| id.0);
+            let started_from_focus = focus.is_some();
+
+            app.with_global_mut(
+                fret_runtime::WindowCommandDispatchDiagnosticsStore::default,
+                |store, app| {
+                    store.record(fret_runtime::CommandDispatchDecisionV1 {
+                        seq: 0,
+                        frame_id: app.frame_id(),
+                        tick_id: app.tick_id(),
+                        window,
+                        command: command.clone(),
+                        source,
+                        handled,
+                        handled_by_element,
+                        stopped,
+                        started_from_focus,
+                        used_default_root_fallback,
+                    });
+                },
+            );
         }
 
         handled

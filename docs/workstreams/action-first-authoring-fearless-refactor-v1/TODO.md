@@ -69,8 +69,12 @@ ID format:
       `ecosystem/fret-bootstrap/src/ui_diagnostics/service.rs` (`UiShortcutRoutingTraceEntryV1.command`)
     - Implemented (availability gating outcome): `ecosystem/fret-bootstrap/src/ui_diagnostics/command_gating_trace.rs`
       (`debug.command_gating_trace[*]`)
-    - Pending: dispatch path resolution (which handler scope handled the action) and a pointer-triggered explainability
-      trace that binds “clicked element selector” → resolved ActionId.
+    - Implemented (dispatch path resolution, best-effort): `crates/fret-runtime/src/command_dispatch_diagnostics.rs` +
+      `crates/fret-ui/src/tree/commands.rs` + `ecosystem/fret-bootstrap/src/ui_diagnostics/debug_snapshot_types.rs`
+      (`debug.command_dispatch_trace[*]`, including handled-by element + default-root fallback)
+    - Pending: “which handler scope handled the action” (focused widget vs window vs app) as an explicit, stable field,
+      and a first-class pointer-triggered mapping from stable selectors (`test_id`) → dispatched `ActionId` (currently
+      recorded as `GlobalElementId.0`, which can be correlated via element runtime/semantics snapshots).
 - [x] AFA-actions-015 Converge command palette/menu invocation with action dispatch.
   - Goal: palette/menu triggers and pointer triggers share the same action pipeline.
   - Evidence:

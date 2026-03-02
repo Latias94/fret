@@ -62,6 +62,15 @@ Keymap/availability explainability (diagnostics traces):
 - `ecosystem/fret-bootstrap/src/ui_diagnostics/service.rs` (`record_shortcut_routing_trace_for_window`, `UiShortcutRoutingTraceEntryV1`)
 - `ecosystem/fret-bootstrap/src/ui_diagnostics/command_gating_trace.rs` (`debug.command_gating_trace[*]`)
 
+Dispatch path explainability (diagnostics traces):
+
+- `crates/fret-runtime/src/command_dispatch_diagnostics.rs` (`WindowCommandDispatchDiagnosticsStore`, `WindowPendingCommandDispatchSourceService`)
+- `crates/fret-ui/src/action.rs` (`UiActionHost::record_pending_command_dispatch_source` default hook + adapter implementation)
+- `ecosystem/fret-ui-kit/src/declarative/action_hooks.rs` (records pointer activation → pending dispatch source)
+- `crates/fret-ui/src/tree/shortcuts.rs` (records shortcut routing → pending dispatch source)
+- `crates/fret-ui/src/tree/commands.rs` (records dispatch outcome + handled-by element)
+- `ecosystem/fret-bootstrap/src/ui_diagnostics/debug_snapshot_types.rs` (`debug.command_dispatch_trace[*]`)
+
 ---
 
 ## 2) Regression gates (required)

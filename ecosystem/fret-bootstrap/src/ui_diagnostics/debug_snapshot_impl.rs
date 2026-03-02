@@ -265,6 +265,38 @@ impl UiTreeDebugSnapshotV1 {
                 window,
                 max_gating_trace_entries,
             ),
+            command_dispatch_trace: app
+                .global::<fret_runtime::WindowCommandDispatchDiagnosticsStore>()
+                .map(|store| {
+                    store
+                        .decisions_for_frame(window, app.frame_id(), max_gating_trace_entries)
+                        .into_iter()
+                        .map(|decision| UiCommandDispatchTraceEntryV1 {
+                            command: decision.command.as_str().to_string(),
+                            handled: decision.handled,
+                            stopped: decision.stopped,
+                            source_kind: match decision.source.kind {
+                                fret_runtime::CommandDispatchSourceKindV1::Pointer => {
+                                    "pointer".to_string()
+                                }
+                                fret_runtime::CommandDispatchSourceKindV1::Keyboard => {
+                                    "keyboard".to_string()
+                                }
+                                fret_runtime::CommandDispatchSourceKindV1::Shortcut => {
+                                    "shortcut".to_string()
+                                }
+                                fret_runtime::CommandDispatchSourceKindV1::Programmatic => {
+                                    "programmatic".to_string()
+                                }
+                            },
+                            source_element: decision.source.element,
+                            handled_by_element: decision.handled_by_element,
+                            started_from_focus: decision.started_from_focus,
+                            used_default_root_fallback: decision.used_default_root_fallback,
+                        })
+                        .collect()
+                })
+                .unwrap_or_default(),
             layers_in_paint_order: ui
                 .debug_layers_in_paint_order()
                 .into_iter()

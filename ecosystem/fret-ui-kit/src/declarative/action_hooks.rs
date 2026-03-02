@@ -104,7 +104,8 @@ impl<H: UiHost> ActionHooksExt for ElementContext<'_, H> {
         if !self.command_is_enabled(&command) {
             return;
         }
-        self.pressable_add_on_activate(Arc::new(move |host, acx, _reason| {
+        self.pressable_add_on_activate(Arc::new(move |host, acx, reason| {
+            host.record_pending_command_dispatch_source(acx, &command, reason);
             host.dispatch_command(Some(acx.window), command.clone());
         }));
     }
