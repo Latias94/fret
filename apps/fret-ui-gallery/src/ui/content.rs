@@ -67,7 +67,7 @@ pub(crate) fn content_view(
                 models.theme_preset.clone(),
                 models.theme_preset_open.clone(),
             )
-            .placeholder("Theme preset")
+            .value(shadcn::SelectValue::new().placeholder("Theme preset"))
             .trigger_test_id("ui-gallery-theme-preset-trigger")
             .items([
                 shadcn::SelectItem::new("zinc/light", "Zinc (light)")
@@ -95,7 +95,7 @@ pub(crate) fn content_view(
                 models.motion_preset.clone(),
                 models.motion_preset_open.clone(),
             )
-            .placeholder("Motion preset")
+            .value(shadcn::SelectValue::new().placeholder("Motion preset"))
             .trigger_test_id("ui-gallery-motion-preset-trigger")
             .items([
                 shadcn::SelectItem::new("theme", "Theme (baseline)")

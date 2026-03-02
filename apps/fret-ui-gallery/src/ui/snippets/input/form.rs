@@ -70,7 +70,7 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
     let max_w_sm = LayoutRefinement::default().w_full().max_w(Px(420.0));
 
     let country = shadcn::Select::new(country, country_open)
-        .placeholder("Country")
+        .value(shadcn::SelectValue::new().placeholder("Country"))
         .items([
             shadcn::SelectItem::new("us", "United States"),
             shadcn::SelectItem::new("uk", "United Kingdom"),
