@@ -43,6 +43,10 @@ This file is an execution checklist for the design in `DESIGN.md`.
   - [x] test: pinned boundary exposes stable `test_id`
   - [x] diag: drag a tab across pinned boundary
     - `tools/diag-scripts/workspace/shell-demo/workspace-shell-demo-tab-pinned-boundary-toggle-smoke.json`
+  - [x] diag: "close left" keeps pinned
+    - `tools/diag-scripts/workspace/shell-demo/workspace-shell-demo-tab-close-left-keeps-pinned-smoke.json`
+  - [x] diag: "close others" keeps pinned
+    - `tools/diag-scripts/workspace/shell-demo/workspace-shell-demo-tab-close-others-keeps-pinned-smoke.json`
 
 ## M3 — Preview tabs
 

@@ -31,6 +31,24 @@
       "predicate": { "kind": "exists", "target": { "kind": "test_id", "id": "workspace-shell-pane-pane-a-tab-doc-a-0.pinned" } },
       "timeout_frames": 240
     },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "pos_in_set_is",
+        "target": { "kind": "test_id", "id": "workspace-shell-pane-pane-a-tab-doc-a-0" },
+        "pos_in_set": 1
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "pos_in_set_is",
+        "target": { "kind": "test_id", "id": "workspace-shell-pane-pane-a-tab-doc-a-1" },
+        "pos_in_set": 2
+      },
+      "timeout_frames": 240
+    },
 
     {
       "type": "drag_to",
@@ -43,6 +61,8 @@
 
     { "type": "assert", "predicate": { "kind": "exists", "target": { "kind": "test_id", "id": "workspace-shell-pane-pane-a-tab-doc-a-0.pinned" } } },
     { "type": "assert", "predicate": { "kind": "not_exists", "target": { "kind": "test_id", "id": "workspace-shell-pane-pane-a-tab-doc-a-1.pinned" } } },
+    { "type": "assert", "predicate": { "kind": "pos_in_set_is", "target": { "kind": "test_id", "id": "workspace-shell-pane-pane-a-tab-doc-a-0" }, "pos_in_set": 1 } },
+    { "type": "assert", "predicate": { "kind": "pos_in_set_is", "target": { "kind": "test_id", "id": "workspace-shell-pane-pane-a-tab-doc-a-1" }, "pos_in_set": 2 } },
 
     { "type": "capture_bundle", "label": "workspace-shell-demo-tab-pinned-cross-boundary-drop-does-not-pin-smoke" }
   ]

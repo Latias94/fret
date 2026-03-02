@@ -595,18 +595,23 @@ impl WorkspaceTabStrip {
                                                 let tab_pinned_test_id = tab_test_id
                                                     .as_ref()
                                                     .map(|id| Arc::<str>::from(format!("{id}.pinned")));
-                                                let tab_element = cx.pressable_with_id(
-                                                    PressableProps {
-                                                        layout: {
-                                                            let mut layout =
-                                                                LayoutStyle::default();
-                                                            layout.size.height = Length::Fill;
-                                                            layout.size.width = Length::Auto;
-                                                            layout
-                                                        },
-                                                        a11y: PressableA11y {
-                                                            role: Some(SemanticsRole::Tab),
-                                                            label: Some(tab_title.clone()),
+                                                        let tab_element = cx.pressable_with_id(
+                                                            PressableProps {
+                                                                layout: {
+                                                                    let mut layout =
+                                                                        LayoutStyle::default();
+                                                                    layout.size.height = Length::Fill;
+                                                                    layout.size.width = Length::Auto;
+                                                                    // Allow tabs to shrink so long titles don't push later tabs
+                                                                    // fully off-screen (ellipsis needs min-width: 0 behavior).
+                                                                    layout.size.min_width =
+                                                                        Some(Length::Px(Px(0.0)));
+                                                                    layout.flex.shrink = 1.0;
+                                                                    layout
+                                                                },
+                                                                a11y: PressableA11y {
+                                                                    role: Some(SemanticsRole::Tab),
+                                                                    label: Some(tab_title.clone()),
                                                             test_id: tab_test_id.clone(),
                                                             selected: is_active,
                                                             pos_in_set: Some(pos_in_set),
@@ -806,6 +811,19 @@ impl WorkspaceTabStrip {
                                                                         )
                                                                     })
                                                                     .unwrap_or(WorkspaceTabStripDropTarget::None);
+                                                                } else if let WorkspaceTabStripDropTarget::Tab(target, _) =
+                                                                    &drop_target
+                                                                {
+                                                                    let dragged_is_pinned =
+                                                                        pinned_by_id.get(dragged.as_ref()).copied().unwrap_or(false);
+                                                                    let target_is_pinned = pinned_by_id
+                                                                        .get(target)
+                                                                        .copied()
+                                                                        .unwrap_or(false);
+                                                                    if dragged_is_pinned != target_is_pinned {
+                                                                        drop_target =
+                                                                            WorkspaceTabStripDropTarget::None;
+                                                                    }
                                                                 }
 
                                                                 let _ = host.models_mut().update(&drag_model, |st| {
@@ -1053,6 +1071,20 @@ impl WorkspaceTabStrip {
                                                                                     )
                                                                                 })
                                                                                 .unwrap_or(WorkspaceTabStripDropTarget::None);
+                                                                            } else if let WorkspaceTabStripDropTarget::Tab(target, _) =
+                                                                                &next_drop
+                                                                            {
+                                                                                let dragged_is_pinned = pinned_by_id
+                                                                                    .get(dragged.as_ref())
+                                                                                    .copied()
+                                                                                    .unwrap_or(false);
+                                                                                let target_is_pinned = pinned_by_id
+                                                                                    .get(target)
+                                                                                    .copied()
+                                                                                    .unwrap_or(false);
+                                                                                if dragged_is_pinned != target_is_pinned {
+                                                                                    next_drop = WorkspaceTabStripDropTarget::None;
+                                                                                }
                                                                             }
 
                                                                             maybe_drop = next_drop;
@@ -1510,6 +1542,10 @@ impl WorkspaceTabStrip {
                                                                                         LayoutStyle::default();
                                                                                     layout.size.max_width =
                                                                                         Some(Length::Px(tab_max_width));
+                                                                                    layout.size.min_width =
+                                                                                        Some(Length::Px(Px(0.0)));
+                                                                                    layout.flex.grow = 1.0;
+                                                                                    layout.flex.shrink = 1.0;
                                                                                     layout
                                                                                 },
                                                                                 text: label,
@@ -1571,61 +1607,141 @@ impl WorkspaceTabStrip {
                                                     },
                                                 );
 
-                                                #[cfg(feature = "shadcn-context-menu")]
-                                                {
-                                                    let open = get_context_menu_open_model(cx);
-                                                    let close_cmd = tab_close_command.clone();
-                                                    let tab_id_for_menu = tab_id.clone();
-                                                    let tab_pinned_for_menu = tab_pinned;
-                                                    let has_left = has_left;
-                                                    let has_right = has_right;
-                                                    let has_others = has_others;
-                                                    ContextMenu::new(open).into_element(
-                                                        cx,
-                                                        |_cx| tab_element,
-                                                        move |_cx| {
-                                                            let mut entries = Vec::new();
-                                                            if let Some(cmd) = close_cmd {
-                                                                entries.push(ContextMenuEntry::Item(
-                                                                    ContextMenuItem::new("Close Tab").on_select(cmd),
-                                                                ));
-                                                            }
-                                                            if tab_pinned_for_menu {
-                                                                if let Some(cmd) = tab_unpin_command(tab_id_for_menu.as_ref()) {
-                                                                    entries.push(ContextMenuEntry::Item(
-                                                                        ContextMenuItem::new("Unpin Tab").on_select(cmd),
-                                                                    ));
-                                                                }
-                                                            } else if let Some(cmd) = tab_pin_command(tab_id_for_menu.as_ref()) {
-                                                                entries.push(ContextMenuEntry::Item(
-                                                                    ContextMenuItem::new("Pin Tab").on_select(cmd),
-                                                                ));
-                                                            }
-                                                            entries.push(ContextMenuEntry::Item(
-                                                                ContextMenuItem::new("Close Other Tabs")
-                                                                    .disabled(!has_others)
-                                                                    .on_select(CommandId::new(
-                                                                        crate::commands::CMD_WORKSPACE_TAB_CLOSE_OTHERS,
-                                                                    )),
-                                                            ));
-                                                            entries.push(ContextMenuEntry::Item(
-                                                                ContextMenuItem::new("Close Tabs to the Left")
-                                                                    .disabled(!has_left)
-                                                                    .on_select(CommandId::new(
-                                                                        crate::commands::CMD_WORKSPACE_TAB_CLOSE_LEFT,
-                                                                    )),
-                                                            ));
-                                                            entries.push(ContextMenuEntry::Item(
-                                                                ContextMenuItem::new("Close Tabs to the Right")
-                                                                    .disabled(!has_right)
-                                                                    .on_select(CommandId::new(
-                                                                        crate::commands::CMD_WORKSPACE_TAB_CLOSE_RIGHT,
-                                                                    )),
-                                                            ));
-                                                            entries.push(ContextMenuEntry::Separator);
-                                                            entries.push(ContextMenuEntry::Item(
-                                                                ContextMenuItem::new("Split Right").on_select(
-                                                                    CommandId::new(crate::commands::CMD_WORKSPACE_PANE_SPLIT_RIGHT),
+	                                                #[cfg(feature = "shadcn-context-menu")]
+	                                                {
+	                                                    let open = get_context_menu_open_model(cx, &tab_id);
+	                                                    let close_cmd = tab_close_command.clone();
+	                                                    let tab_id_for_menu = tab_id.clone();
+	                                                    let tab_pinned_for_menu = tab_pinned;
+	                                                    let has_left = has_left;
+	                                                    let has_right = has_right;
+	                                                    let has_others = has_others;
+	                                                    let menu_test_id_base = tab_test_id
+	                                                        .as_ref()
+	                                                        .map(|id| Arc::<str>::from(format!("{id}.menu")));
+	                                                    ContextMenu::new(open).into_element(
+	                                                        cx,
+	                                                        |_cx| tab_element,
+	                                                        move |_cx| {
+	                                                            let mut entries = Vec::new();
+	                                                            if let Some(cmd) = close_cmd {
+	                                                                let mut item =
+	                                                                    ContextMenuItem::new("Close Tab")
+	                                                                        .on_select(cmd);
+	                                                                if let Some(base) =
+	                                                                    menu_test_id_base.as_ref()
+	                                                                {
+	                                                                    item = item.test_id(Arc::<str>::from(format!(
+	                                                                        "{base}.close_tab"
+	                                                                    )));
+	                                                                }
+	                                                                entries.push(ContextMenuEntry::Item(item));
+	                                                            }
+	                                                            if tab_pinned_for_menu {
+	                                                                if let Some(cmd) = tab_unpin_command(tab_id_for_menu.as_ref()) {
+	                                                                    let mut item =
+	                                                                        ContextMenuItem::new("Unpin Tab")
+	                                                                            .on_select(cmd);
+	                                                                    if let Some(base) =
+	                                                                        menu_test_id_base.as_ref()
+	                                                                    {
+	                                                                        item = item.test_id(
+	                                                                            Arc::<str>::from(
+	                                                                                format!(
+	                                                                                    "{base}.unpin"
+	                                                                                ),
+	                                                                            ),
+	                                                                        );
+	                                                                    }
+	                                                                    entries.push(
+	                                                                        ContextMenuEntry::Item(item),
+	                                                                    );
+	                                                                }
+	                                                            } else if let Some(cmd) = tab_pin_command(tab_id_for_menu.as_ref()) {
+	                                                                let mut item =
+	                                                                    ContextMenuItem::new("Pin Tab")
+	                                                                        .on_select(cmd);
+	                                                                if let Some(base) =
+	                                                                    menu_test_id_base.as_ref()
+	                                                                {
+	                                                                    item = item.test_id(Arc::<str>::from(format!(
+	                                                                        "{base}.pin"
+	                                                                    )));
+	                                                                }
+	                                                                entries.push(ContextMenuEntry::Item(item));
+	                                                            }
+	                                                            {
+	                                                                let mut item =
+	                                                                    ContextMenuItem::new("Close Other Tabs")
+	                                                                        .disabled(!has_others)
+	                                                                        .on_select(CommandId::new(
+	                                                                            crate::commands::CMD_WORKSPACE_TAB_CLOSE_OTHERS,
+	                                                                        ));
+	                                                                if let Some(base) =
+	                                                                    menu_test_id_base.as_ref()
+	                                                                {
+	                                                                    item = item.test_id(
+	                                                                        Arc::<str>::from(
+	                                                                            format!(
+	                                                                                "{base}.close_others"
+	                                                                            ),
+	                                                                        ),
+	                                                                    );
+	                                                                }
+	                                                                entries.push(
+	                                                                    ContextMenuEntry::Item(item),
+	                                                                );
+	                                                            }
+	                                                            {
+	                                                                let mut item = ContextMenuItem::new(
+	                                                                    "Close Tabs to the Left",
+	                                                                )
+	                                                                .disabled(!has_left)
+	                                                                .on_select(CommandId::new(
+	                                                                    crate::commands::CMD_WORKSPACE_TAB_CLOSE_LEFT,
+	                                                                ));
+	                                                                if let Some(base) =
+	                                                                    menu_test_id_base.as_ref()
+	                                                                {
+	                                                                    item = item.test_id(
+	                                                                        Arc::<str>::from(
+	                                                                            format!(
+	                                                                                "{base}.close_left"
+	                                                                            ),
+	                                                                        ),
+	                                                                    );
+	                                                                }
+	                                                                entries.push(
+	                                                                    ContextMenuEntry::Item(item),
+	                                                                );
+	                                                            }
+	                                                            {
+	                                                                let mut item = ContextMenuItem::new(
+	                                                                    "Close Tabs to the Right",
+	                                                                )
+	                                                                .disabled(!has_right)
+	                                                                .on_select(CommandId::new(
+	                                                                    crate::commands::CMD_WORKSPACE_TAB_CLOSE_RIGHT,
+	                                                                ));
+	                                                                if let Some(base) =
+	                                                                    menu_test_id_base.as_ref()
+	                                                                {
+	                                                                    item = item.test_id(
+	                                                                        Arc::<str>::from(
+	                                                                            format!(
+	                                                                                "{base}.close_right"
+	                                                                            ),
+	                                                                        ),
+	                                                                    );
+	                                                                }
+	                                                                entries.push(
+	                                                                    ContextMenuEntry::Item(item),
+	                                                                );
+	                                                            }
+	                                                            entries.push(ContextMenuEntry::Separator);
+	                                                            entries.push(ContextMenuEntry::Item(
+	                                                                ContextMenuItem::new("Split Right").on_select(
+	                                                                    CommandId::new(crate::commands::CMD_WORKSPACE_PANE_SPLIT_RIGHT),
                                                                 ),
                                                             ));
                                                             entries.push(ContextMenuEntry::Item(
