@@ -1532,6 +1532,35 @@ impl ElementHostWidget {
                 );
             }
 
+            // If we cannot confidently observe overflow in post-layout geometry (budget hit), fall
+            // back to a measured unbounded probe on the next frame when the user is already at
+            // the current scroll extent edge. This avoids "pinned scroll range" regressions (e.g.
+            // expanding a code tab at the bottom of a docs page).
+            if post_layout_extents_mode
+                && at_scroll_extent_edge
+                && (observation.wrapper_peel_budget_hit || observation.deep_scan_budget_hit)
+            {
+                let first_set = crate::elements::with_element_state(
+                    &mut *cx.app,
+                    window,
+                    self.element,
+                    crate::element::ScrollState::default,
+                    |state| {
+                        let prev = state.pending_extent_probe;
+                        state.pending_extent_probe = true;
+                        !prev
+                    },
+                );
+                if first_set {
+                    cx.tree.schedule_barrier_relayout_with_source_and_detail(
+                        cx.node,
+                        UiDebugInvalidationSource::Other,
+                        UiDebugInvalidationDetail::ScrollExtentsObservationBudgetHit,
+                    );
+                    cx.request_redraw();
+                }
+            }
+
             // Best-effort: if post-layout child bounds exceed the probed extent (cached/deferral
             // cases), expand the scroll handle immediately so users can reach the new content.
             let mut changed_grow = false;
