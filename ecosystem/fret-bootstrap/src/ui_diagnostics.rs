@@ -97,6 +97,9 @@ use selector::{
     select_semantics_node_scoped, suggest_selectors, truncate_debug_value,
 };
 
+#[cfg(test)]
+use selector::select_semantics_node;
+
 mod trace_helpers;
 use trace_helpers::{
     MAX_CLICK_STABLE_TRACE_ENTRIES, MAX_FOCUS_TRACE_ENTRIES, MAX_IME_EVENT_TRACE_ENTRIES,
@@ -718,6 +721,8 @@ include!("ui_diagnostics/debug_snapshot_types.rs");
 include!("ui_diagnostics/debug_snapshot_impl.rs");
 
 include!("ui_diagnostics/docking_diagnostics.rs");
+
+include!("ui_diagnostics/workspace_diagnostics.rs");
 
 include!("ui_diagnostics/viewport_input_types.rs");
 

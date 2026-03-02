@@ -155,7 +155,9 @@ pub fn on_pointer_move(
     }
 
     let delta = axis_delta_with_direction(axis, direction, state.start, position);
-    if !state.dragging && state.armed && delta.abs() < config.drag_threshold_px {
+    // Embla sets `preventClick` when `diffScroll > dragThreshold` (strictly greater).
+    // Mirror that boundary by starting a drag only once we exceed the threshold.
+    if !state.dragging && state.armed && delta.abs() <= config.drag_threshold_px {
         return CarouselDragMoveOutput {
             steal_capture: false,
             consumed: false,
@@ -846,6 +848,25 @@ mod tests {
             Axis::Horizontal,
             LayoutDirection::Ltr,
             Point::new(Px(10.0), Px(0.0)),
+            true,
+            CarouselDragInputKind::Mouse,
+            Px(100.0),
+        );
+        assert_eq!(
+            out,
+            CarouselDragMoveOutput {
+                steal_capture: false,
+                consumed: false,
+                next_offset: None
+            }
+        );
+
+        let out = on_pointer_move(
+            CarouselDragConfig::default(),
+            &mut state,
+            Axis::Horizontal,
+            LayoutDirection::Ltr,
+            Point::new(Px(11.0), Px(0.0)),
             true,
             CarouselDragInputKind::Mouse,
             Px(100.0),

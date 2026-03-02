@@ -71,3 +71,27 @@ pub(super) fn get_context_menu_open_model<H: UiHost>(
     });
     model
 }
+
+#[cfg(feature = "shadcn-context-menu")]
+#[derive(Debug, Default)]
+struct WorkspaceTabStripOverflowMenuState {
+    open: Option<Model<bool>>,
+}
+
+#[cfg(feature = "shadcn-context-menu")]
+pub(super) fn get_overflow_menu_open_model<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+) -> Model<bool> {
+    let existing = cx.with_state(WorkspaceTabStripOverflowMenuState::default, |st| {
+        st.open.clone()
+    });
+    if let Some(m) = existing {
+        return m;
+    }
+
+    let model = cx.app.models_mut().insert(false);
+    cx.with_state(WorkspaceTabStripOverflowMenuState::default, |st| {
+        st.open = Some(model.clone());
+    });
+    model
+}

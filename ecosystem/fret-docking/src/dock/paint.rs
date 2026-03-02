@@ -9,9 +9,9 @@ use super::prelude_core::*;
 use super::tab_bar_geometry::TabBarGeometry;
 use super::tab_bar_geometry::dock_tab_width_for_title;
 use super::tab_overflow::{
-    TabOverflowMenuState, overflow_menu_max_scroll, overflow_menu_row_count,
-    overflow_menu_row_height, tab_overflow_button_rect, tab_overflow_menu_rect,
-    tab_strip_rect_with_overflow_button,
+    TabOverflowMenuState, overflow_menu_close_rect, overflow_menu_max_scroll,
+    overflow_menu_row_count, overflow_menu_row_height, overflow_menu_row_rect,
+    tab_overflow_button_rect, tab_overflow_menu_rect, tab_strip_rect_with_overflow_button,
 };
 use fret_ui::retained_bridge::ResizeHandle;
 use fret_ui::retained_bridge::resizable_panel_group as resizable;
@@ -304,7 +304,9 @@ pub(super) fn paint_dock(
         if overflow {
             let button_rect = tab_overflow_button_rect(theme.clone(), tab_bar);
             let hovered = hovered_tab_overflow_button == Some(node_id);
-            let open = tab_overflow_menu.is_some_and(|m| m.tabs == node_id);
+            let open = tab_overflow_menu
+                .as_ref()
+                .is_some_and(|m| m.tabs == node_id);
             if hovered || open {
                 scene.push(SceneOp::Quad {
                     order: fret_core::DrawOrder(10),
@@ -353,11 +355,15 @@ pub(super) fn paint_dock(
             }
         }
 
-        if let Some(menu) = tab_overflow_menu
+        if let Some(menu) = tab_overflow_menu.as_ref()
             && menu.tabs == node_id
         {
-            let menu_rect = tab_overflow_menu_rect(theme.clone(), tab_bar, tabs.len());
-            let max_scroll = overflow_menu_max_scroll(tab_bar, tabs.len());
+            let item_count = menu.items.len();
+            if item_count == 0 {
+                continue;
+            }
+            let menu_rect = tab_overflow_menu_rect(theme.clone(), tab_bar, item_count);
+            let max_scroll = overflow_menu_max_scroll(tab_bar, item_count);
             let scroll = Px(menu.scroll.0.clamp(0.0, max_scroll.0));
             let row_h = overflow_menu_row_height(tab_bar).0;
             if row_h > 0.0 {
@@ -374,21 +380,20 @@ pub(super) fn paint_dock(
 
                 scene.push(SceneOp::PushClipRect { rect: menu_rect });
                 let first = (scroll.0 / row_h).floor().max(0.0) as usize;
-                let offset = scroll.0 - first as f32 * row_h;
-                let visible = overflow_menu_row_count(tabs.len());
+                let visible = overflow_menu_row_count(item_count);
                 for row in 0..visible {
                     let idx = first + row;
-                    let Some(panel) = tabs.get(idx) else {
+                    let Some(&tab_ix) = menu.items.get(idx) else {
                         break;
                     };
-                    let y = menu_rect.origin.y.0 + row as f32 * row_h - offset;
-                    let row_rect = Rect::new(
-                        Point::new(menu_rect.origin.x, Px(y)),
-                        Size::new(menu_rect.size.width, Px(row_h)),
-                    );
+                    let Some(panel) = tabs.get(tab_ix) else {
+                        break;
+                    };
+                    let row_rect = overflow_menu_row_rect(menu_rect, tab_bar, scroll, idx);
+                    let close_rect = overflow_menu_close_rect(theme.clone(), row_rect);
 
                     let is_hovered = menu.hovered == Some(idx);
-                    let is_active = idx == *active;
+                    let is_active = tab_ix == *active;
                     if is_hovered {
                         scene.push(SceneOp::Quad {
                             order: fret_core::DrawOrder(101),
@@ -402,16 +407,62 @@ pub(super) fn paint_dock(
 
                     if let Some(title) = tab_titles.get(panel) {
                         let pad_x = pad_md;
+                        let text_clip_w =
+                            Px((close_rect.origin.x.0 - row_rect.origin.x.0).max(1.0));
+                        let text_clip = Rect::new(
+                            row_rect.origin,
+                            Size::new(text_clip_w, row_rect.size.height),
+                        );
                         let text_x = Px(row_rect.origin.x.0 + pad_x.0);
                         let inner_y =
                             row_rect.origin.y.0 + ((row_h - title.metrics.size.height.0) * 0.5);
                         let text_y = Px(inner_y + title.metrics.baseline.0);
                         let text_color = if is_active { fg } else { fg_muted };
+                        scene.push(SceneOp::PushClipRect { rect: text_clip });
                         scene.push(SceneOp::Text {
                             order: fret_core::DrawOrder(102),
                             origin: Point::new(text_x, text_y),
                             text: title.blob,
                             paint: (text_color).into(),
+                            outline: None,
+                            shadow: None,
+                        });
+                        scene.push(SceneOp::PopClip);
+                    }
+
+                    // Close button (always visible) - clicking this in the overflow menu should not activate the tab.
+                    let close_color = if is_hovered { fg } else { fg_muted };
+                    if let Some(svg) = tab_close_svg {
+                        let pad = Px(2.0);
+                        let rect = Rect {
+                            origin: Point::new(
+                                Px(close_rect.origin.x.0 + pad.0),
+                                Px(close_rect.origin.y.0 + pad.0),
+                            ),
+                            size: Size::new(
+                                Px((close_rect.size.width.0 - pad.0 * 2.0).max(1.0)),
+                                Px((close_rect.size.height.0 - pad.0 * 2.0).max(1.0)),
+                            ),
+                        };
+                        scene.push(SceneOp::SvgMaskIcon {
+                            order: fret_core::DrawOrder(103),
+                            rect,
+                            svg,
+                            fit: fret_core::SvgFit::Contain,
+                            color: close_color,
+                            opacity: 1.0,
+                        });
+                    } else if let Some(glyph) = tab_close_glyph {
+                        let text_x = Px(close_rect.origin.x.0
+                            + (close_rect.size.width.0 - glyph.metrics.size.width.0) * 0.5);
+                        let inner_y = close_rect.origin.y.0
+                            + ((close_rect.size.height.0 - glyph.metrics.size.height.0) * 0.5);
+                        let text_y = Px(inner_y + glyph.metrics.baseline.0);
+                        scene.push(SceneOp::Text {
+                            order: fret_core::DrawOrder(103),
+                            origin: Point::new(text_x, text_y),
+                            text: glyph.blob,
+                            paint: (close_color).into(),
                             outline: None,
                             shadow: None,
                         });

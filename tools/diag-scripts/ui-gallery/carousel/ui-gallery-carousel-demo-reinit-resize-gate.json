@@ -5,7 +5,7 @@
     "tags": ["ui-gallery", "carousel", "reinit", "resize", "gate", "screenshot"],
     "required_capabilities": ["diag.script_v2", "diag.screenshot_png"],
     "target_hints": [
-      "Requires Embla engine MVP to be enabled (set FRET_DEBUG_CAROUSEL_EMBLA_ENGINE=1).",
+      "Embla engine is enabled by default (set FRET_DEBUG_CAROUSEL_EMBLA_ENGINE=0 to force-disable).",
       "Expected behavior: resizing during an Embla-driven settle does not panic and items remain visible."
     ]
   },

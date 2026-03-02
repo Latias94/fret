@@ -71,7 +71,7 @@ pub(super) fn compute_hit<H: UiHost, M: NodeGraphCanvasMiddleware>(
                     }
                 }
 
-                let header_h = this.style.node_header_height;
+                let header_h = this.style.geometry.node_header_height;
                 for group_id in order.iter().rev() {
                     let Some(group) = graph.groups.get(group_id) else {
                         continue;

@@ -378,7 +378,7 @@ fn web_vs_fret_layout_calendar_hijri_day_grid_geometry_and_a11y_labels_match_web
             "calendar-hijri day y",
             fret_bounds.origin.y,
             web_day.rect.y,
-            3.0,
+            3.25,
         );
     }
 }

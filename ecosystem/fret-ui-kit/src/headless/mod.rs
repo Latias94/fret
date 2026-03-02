@@ -1,5 +1,6 @@
 pub mod dismissible_layer;
 pub mod focus_scope;
+pub mod tab_strip_controller;
 
 pub use fret_ui_headless::calendar;
 pub use fret_ui_headless::carousel;

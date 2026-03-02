@@ -1,0 +1,72 @@
+{
+  "schema_version": 2,
+  "meta": {
+    "name": "cookbook-undo-basics-smoke",
+    "required_capabilities": ["diag.script_v2", "diag.screenshot_png"],
+    "tags": ["cookbook", "undo", "commands", "smoke"]
+  },
+  "steps": [
+    { "type": "reset_diagnostics" },
+    { "type": "set_window_inner_size", "width_px": 900.0, "height_px": 560.0 },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "cookbook.undo_basics.root" }
+      },
+      "timeout_frames": 240
+    },
+    { "type": "click", "target": { "kind": "test_id", "id": "cookbook.undo_basics.inc" } },
+    { "type": "click", "target": { "kind": "test_id", "id": "cookbook.undo_basics.inc" } },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "semantics_numeric_approx_eq",
+        "target": { "kind": "test_id", "id": "cookbook.undo_basics.value" },
+        "field": "value",
+        "value": 2.0,
+        "eps": 0.01
+      },
+      "timeout_frames": 240
+    },
+    { "type": "press_shortcut", "shortcut": "primary+z" },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "semantics_numeric_approx_eq",
+        "target": { "kind": "test_id", "id": "cookbook.undo_basics.value" },
+        "field": "value",
+        "value": 1.0,
+        "eps": 0.01
+      },
+      "timeout_frames": 240
+    },
+    { "type": "press_shortcut", "shortcut": "primary+z" },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "semantics_numeric_approx_eq",
+        "target": { "kind": "test_id", "id": "cookbook.undo_basics.value" },
+        "field": "value",
+        "value": 0.0,
+        "eps": 0.01
+      },
+      "timeout_frames": 240
+    },
+    { "type": "press_shortcut", "shortcut": "primary+shift+z" },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "semantics_numeric_approx_eq",
+        "target": { "kind": "test_id", "id": "cookbook.undo_basics.value" },
+        "field": "value",
+        "value": 1.0,
+        "eps": 0.01
+      },
+      "timeout_frames": 240
+    },
+    { "type": "capture_screenshot", "label": "cookbook-undo-basics-smoke" },
+    { "type": "capture_bundle", "label": "cookbook-undo-basics-smoke" }
+  ]
+}
+

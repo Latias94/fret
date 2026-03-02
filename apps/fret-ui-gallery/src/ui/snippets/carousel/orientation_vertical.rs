@@ -36,6 +36,7 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
 
             let card = shadcn::Card::new([body]).into_element(cx);
             ui::container(cx, move |_cx| vec![card])
+                .w_full()
                 .p_1()
                 .into_element(cx)
         })

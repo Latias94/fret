@@ -32,15 +32,15 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                 _ => HashSet::new(),
             };
 
-        let mut node_text_style = self.style.context_menu_text_style.clone();
+        let mut node_text_style = self.style.geometry.context_menu_text_style.clone();
         node_text_style.size = Px(node_text_style.size.0 / zoom);
         if let Some(lh) = node_text_style.line_height.as_mut() {
             lh.0 /= zoom;
         }
 
-        let corner = Px(self.style.node_corner_radius / zoom);
-        let title_pad = self.style.node_padding / zoom;
-        let title_h = self.style.node_header_height / zoom;
+        let corner = Px(self.style.paint.node_corner_radius / zoom);
+        let title_pad = self.style.geometry.node_padding / zoom;
+        let title_h = self.style.geometry.node_header_height / zoom;
 
         let node_hints: HashMap<GraphNodeId, NodeChromeHint> =
             if let Some(skin) = self.skin.as_ref() {
@@ -84,9 +84,9 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                 Size::new(Px(w), Px(h)),
             );
 
-            let mut bg = self.style.node_background;
+            let mut bg = self.style.paint.node_background;
             bg.a *= 0.55;
-            let mut border_color = self.style.node_border_selected;
+            let mut border_color = self.style.paint.node_border_selected;
             border_color.a *= 0.85;
             cx.scene.push(SceneOp::Quad {
                 order: DrawOrder(3),
@@ -120,7 +120,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                     order: DrawOrder(4),
                     origin: Point::new(text_x, text_y),
                     text: blob,
-                    paint: (self.style.context_menu_text).into(),
+                    paint: (self.style.paint.context_menu_text).into(),
                     outline: None,
                     shadow: None,
                 });
@@ -132,13 +132,13 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
             let rect = *rect;
             let hint = node_hints.get(node).copied().unwrap_or_default();
 
-            let bg = hint.background.unwrap_or(self.style.node_background);
+            let bg = hint.background.unwrap_or(self.style.paint.node_background);
             let border_color = if *is_selected {
                 hint.border_selected
                     .or(hint.border)
-                    .unwrap_or(self.style.node_border_selected)
+                    .unwrap_or(self.style.paint.node_border_selected)
             } else {
-                hint.border.unwrap_or(self.style.node_border)
+                hint.border.unwrap_or(self.style.paint.node_border)
             };
             cx.scene.push(SceneOp::Quad {
                 order: DrawOrder(3),
@@ -191,12 +191,16 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                     cx.scene.push(SceneOp::Quad {
                         order: DrawOrder(5),
                         rect,
-                        background: fret_core::Paint::Solid(self.style.resize_handle_background)
-                            .into(),
+                        background: fret_core::Paint::Solid(
+                            self.style.paint.resize_handle_background,
+                        )
+                        .into(),
 
                         border: Edges::all(Px(1.0 / zoom)),
-                        border_paint: fret_core::Paint::Solid(self.style.resize_handle_border)
-                            .into(),
+                        border_paint: fret_core::Paint::Solid(
+                            self.style.paint.resize_handle_border,
+                        )
+                        .into(),
 
                         corner_radii: Corners::all(Px(2.0 / zoom)),
                     });
@@ -228,7 +232,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                     text: blob,
                     paint: hint
                         .title_text
-                        .unwrap_or(self.style.context_menu_text)
+                        .unwrap_or(self.style.paint.context_menu_text)
                         .into(),
                     outline: None,
                     shadow: None,
@@ -240,10 +244,10 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
             {
                 let pin_rows = (*pin_rows).max(0) as f32;
                 let body_top = rect.origin.y.0
-                    + (self.style.node_header_height
-                        + self.style.node_padding
-                        + pin_rows * self.style.pin_row_height
-                        + self.style.node_padding)
+                    + (self.style.geometry.node_header_height
+                        + self.style.geometry.node_padding
+                        + pin_rows * self.style.geometry.pin_row_height
+                        + self.style.geometry.node_padding)
                         / zoom;
 
                 let max_w = (rect.size.width.0 - 2.0 * title_pad).max(0.0);
@@ -267,14 +271,14 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                     order: DrawOrder(4),
                     origin: Point::new(text_x, Px(inner_y)),
                     text: blob,
-                    paint: (self.style.context_menu_text).into(),
+                    paint: (self.style.paint.context_menu_text).into(),
                     outline: None,
                     shadow: None,
                 });
             }
         }
 
-        let pin_r = self.style.pin_radius / zoom;
+        let pin_r = self.style.geometry.pin_radius / zoom;
         let pin_gap = 8.0 / zoom;
 
         for (port_id, info) in &render.port_labels {
@@ -305,7 +309,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                 order: DrawOrder(4),
                 origin: Point::new(x, y),
                 text: blob,
-                paint: (self.style.context_menu_text).into(),
+                paint: (self.style.paint.context_menu_text).into(),
                 outline: None,
                 shadow: None,
             });
@@ -381,7 +385,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                         Color::from_srgb_hex_rgb(0xe6_59_59)
                     }
                 } else {
-                    self.style.node_border_selected
+                    self.style.paint.node_border_selected
                 };
 
                 let pad = 2.0 / zoom;

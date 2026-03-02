@@ -56,7 +56,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
             1.0
         };
         let min_size = 1.0 / zoom.max(1.0e-6);
-        let size = (self.style.resize_handle_size / zoom).max(min_size);
+        let size = (self.style.geometry.resize_handle_size / zoom).max(min_size);
 
         let max_w = (0.25 * node_rect.size.width.0.max(0.0)).max(min_size);
         let max_h = (0.25 * node_rect.size.height.0.max(0.0)).max(min_size);

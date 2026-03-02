@@ -1,7 +1,7 @@
 ---
 title: fret-node style/skin layer v1 — Milestones
 status: active
-date: 2026-02-27
+date: 2026-03-01
 scope: ecosystem/fret-node
 ---
 
@@ -48,7 +48,7 @@ Evidence anchors:
 - Selected/focus ring conformance:
   - `ecosystem/fret-node/src/ui/canvas/widget/tests/skin_node_ring_hints_conformance.rs`
 
-## M2 — Theme integration + presets (In progress)
+## M2 — Theme integration + presets (Done)
 
 Acceptance:
 
@@ -73,7 +73,7 @@ Evidence anchors (current implementation):
 - Demo preset switching:
   - `apps/fret-examples/src/node_graph_demo.rs`
 
-## M3 — Blueprint-grade styling (effects) (In progress)
+## M3 — Blueprint-grade styling (effects) (Done, v0)
 
 Acceptance (v0):
 
@@ -81,6 +81,7 @@ Acceptance (v0):
 - Selected wires and drag preview wires can render with a soft glow for editor-grade readability.
 - Selected/hovered wires can render with an inner highlight stroke (paint-only) for blueprint-style contrast.
 - Wires can render with an outline stroke (including base outlines) for blueprint-style contrast, with deterministic WorkBudget degradation.
+- True “stroke-space” wire gradients remain out of scope (track as renderer mechanism work).
 
 Evidence anchors:
 

@@ -243,6 +243,10 @@ impl UiTreeDebugSnapshotV1 {
                 .global::<fret_runtime::WindowInteractionDiagnosticsStore>()
                 .and_then(|store| store.docking_for_window(window, app.frame_id()))
                 .map(UiDockingInteractionSnapshotV1::from_snapshot),
+            workspace_interaction: app
+                .global::<fret_runtime::WindowInteractionDiagnosticsStore>()
+                .and_then(|store| store.workspace_for_window(window, app.frame_id()))
+                .map(UiWorkspaceInteractionSnapshotV1::from_snapshot),
             removed_subtrees,
             layout_engine_solves,
             layout_hotspots,

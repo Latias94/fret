@@ -10,6 +10,8 @@ pub(super) struct WindowRing {
     pub(super) viewport_input_this_frame: Vec<UiViewportInputEventV1>,
     pub(super) last_changed_models: Vec<u64>,
     pub(super) last_changed_globals: Vec<String>,
+    pub(super) test_id_bounds: HashMap<String, Rect>,
+    pub(super) test_id_bounds_fingerprint: Option<u64>,
 }
 
 impl WindowRing {
@@ -62,6 +64,8 @@ impl WindowRing {
         self.viewport_input_this_frame.clear();
         self.last_changed_models.clear();
         self.last_changed_globals.clear();
+        self.test_id_bounds.clear();
+        self.test_id_bounds_fingerprint = None;
     }
 
     pub(super) fn push_event(&mut self, cfg: &UiDiagnosticsConfig, event: RecordedUiEventV1) {

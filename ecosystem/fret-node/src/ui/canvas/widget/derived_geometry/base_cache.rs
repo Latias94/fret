@@ -73,6 +73,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
             let draw_order = snapshot.draw_order.clone();
             let graph = self.graph.clone();
             let presenter = &mut *self.presenter;
+            let overrides = self.geometry_overrides.as_deref();
 
             let geom = graph
                 .read_ref(host, |graph| {
@@ -83,6 +84,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                         zoom,
                         node_origin,
                         presenter,
+                        overrides,
                     )
                 })
                 .ok()

@@ -69,13 +69,19 @@ Prefer nextest tests for “hard” behaviors that do not require real rendering
 
 For drag/drop and overflow UX, scripted `fretboard diag` gates are preferred:
 
-### Suggested script names (to be added when implementing milestones)
+### Script gates (current)
 
-- `tools/diag-scripts/workspace-tabstrip-overflow-open-select.json`
-- `tools/diag-scripts/workspace-tabstrip-drag-reorder.json`
-- `tools/diag-scripts/workspace-tabstrip-cross-pane-move.json`
-- `tools/diag-scripts/workspace-shell-demo-tab-drag-to-split-right.json`
-- `tools/diag-scripts/workspace-tabstrip-pinned-boundary.json`
+- Suite:
+  - `diag-hardening-smoke-workspace` (promoted via `tools/diag-scripts/index.json`)
+- Workspace shell demo:
+  - `tools/diag-scripts/workspace/shell-demo/workspace-shell-demo-tab-reorder-first-to-end-smoke.json`
+  - `tools/diag-scripts/workspace/shell-demo/workspace-shell-demo-tab-reorder-first-to-end-overflow-smoke.json`
+  - `tools/diag-scripts/workspace/shell-demo/workspace-shell-demo-tab-cross-pane-move-to-end.json`
+  - `tools/diag-scripts/workspace/shell-demo/workspace-shell-demo-tab-drag-to-split-right.json`
+  - `tools/diag-scripts/workspace/shell-demo/workspace-shell-demo-tab-drag-to-split-right-drop-preview-screenshot.json`
+  - `tools/diag-scripts/workspace/shell-demo/workspace-shell-demo-tab-overflow-activate-hidden-smoke.json`
+  - `tools/diag-scripts/workspace/shell-demo/workspace-shell-demo-tab-close-mru-fallback-smoke.json`
+  - `tools/diag-scripts/workspace/shell-demo/workspace-shell-demo-tab-pinned-boundary-toggle-smoke.json`
 
 ### Determinism knobs
 

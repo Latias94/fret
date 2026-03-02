@@ -15,12 +15,13 @@ shared across the UI tree.
 
 ### `NodeGraphStyle` (node editor tokens)
 
-`NodeGraphStyle` is the node editor’s explicit token bundle:
+`NodeGraphStyle` is the node editor’s explicit token bundle. v2 splits it into two planes:
 
-- background/grid tokens,
-- node/chrome sizing tokens,
-- overlay sizing/margins tokens (minimap/controls),
-- render culling + zoom clamps.
+- `style.paint`: paint-only chrome (colors, dashes, shadows, overlay sizing tokens).
+- `style.geometry`: geometry-affecting metrics (layout, hit-testing, measurement).
+
+This split exists to keep geometry caches stable: paint-only changes should not rebuild derived
+geometry or hit-testing indexes.
 
 It can be constructed from the host theme:
 
@@ -48,7 +49,8 @@ from the current theme snapshot:
 - `System`: tracks theme revision (for live theme switches),
 - `Light` / `Dark`: forces the corresponding XyFlow-like palettes.
 
-This sync clears paint caches and can invalidate style-derived render artifacts.
+This sync clears paint caches. Derived geometry / spatial index invalidation is **gated by the
+geometry fingerprint** (paint-only palette changes must not rebuild geometry).
 
 ### 3) Background overrides are additive
 
@@ -83,6 +85,8 @@ Evidence (demo):
 
 - Background updates do not rebuild derived geometry:
   `ecosystem/fret-node/src/ui/canvas/widget/tests/background_style_conformance.rs`
+- Theme-driven style sync does not rebuild derived geometry when only paint tokens change:
+  `ecosystem/fret-node/src/ui/canvas/widget/tests/theme_style_invalidation_conformance.rs`
 
 ## Accessibility note
 

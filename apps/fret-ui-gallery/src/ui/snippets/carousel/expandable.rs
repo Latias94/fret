@@ -118,13 +118,13 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
 
             let card = shadcn::Card::new([body]).into_element(cx);
             ui::container(cx, move |_cx| vec![card])
+                .w_full()
                 .p_1()
                 .into_element(cx)
         })
         .collect::<Vec<_>>();
 
     shadcn::Carousel::new(expandable_items)
-        .refine_track_layout(LayoutRefinement::default().w_px(Px(336.0)))
         .refine_layout(
             LayoutRefinement::default()
                 .w_full()
