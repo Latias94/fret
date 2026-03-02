@@ -80,6 +80,11 @@ This workstream aims to make downstream ecosystem authors productive without tou
   - `fret-node = { version = "0.1.0", features = ["fret-ui"] }`
 - Compose the node graph surface as a normal declarative element:
   - paint-only milestone surface: `fret_node::ui::node_graph_surface_paint_only`
+- Optional (advanced): provide UI-only geometry overrides (per-node size, edge hit slop) without
+  mutating the serialized `Graph`:
+  - implement `fret_node::ui::NodeGraphGeometryOverrides` (or use `NodeGraphGeometryOverridesMap`)
+  - pass it via `NodeGraphSurfacePaintOnlyProps.geometry_overrides`
+  - bump `revision()` when overrides change so derived geometry + hit-testing caches rebuild
 - Keep editor state in models:
   - graph: `Model<Graph>`
   - view state: `Model<NodeGraphViewState>`

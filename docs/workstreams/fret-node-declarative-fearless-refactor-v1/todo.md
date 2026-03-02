@@ -66,8 +66,9 @@ Suggested run commands (Windows-friendly):
     - `tools/diag-scripts/node-graph/node-graph-paint-only-keyboard-zoom-rebuilds-geometry.json`
   - [x] diagnostics graph bump rebuilds geometry exactly once (paint-only baseline):
     - `tools/diag-scripts/node-graph/node-graph-paint-only-diag-graph-bump-rebuilds-geometry.json`
-  - [x] hover + selection do not rebuild geometry caches (paint-only baseline):
+- [x] hover + selection do not rebuild geometry caches (paint-only baseline):
     - `tools/diag-scripts/node-graph/node-graph-paint-only-hover-and-select-do-not-rebuild-geometry.json`
+- [x] Wire `NodeGraphGeometryOverrides` into derived geometry + spatial index cache keys (revisioned).
 
 ## M2 — Interaction + portals
 
