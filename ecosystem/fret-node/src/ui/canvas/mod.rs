@@ -21,7 +21,9 @@ pub use state::NodeResizeHandle;
 pub use widget::NodeGraphCanvas;
 pub use widget::NodeGraphCanvasWith;
 
+pub(crate) use geometry::CanvasGeometry;
 pub(crate) use geometry::{node_order, node_ports, node_size_default_px};
+pub(crate) use spatial::CanvasSpatialDerived;
 
 pub use middleware::{
     NodeGraphCanvasCommandOutcome, NodeGraphCanvasCommitOutcome, NodeGraphCanvasEventOutcome,

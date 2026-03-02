@@ -1,0 +1,76 @@
+{
+  "schema_version": 2,
+  "meta": {
+    "name": "Node graph (paint-only): pan does not rebuild node/edge geometry caches",
+    "tags": ["node-graph", "declarative", "paint-only", "pan", "cache", "gate"],
+    "required_capabilities": ["diag.script_v2"],
+    "target_hints": [
+      "Run with `FRET_NODE_GRAPH_DECLARATIVE=paint` so the paint-only declarative surface is active.",
+      "This asserts that panning changes the view transform without rebuilding cached node/edge geometry render data."
+    ]
+  },
+  "steps": [
+    { "type": "press_key", "key": "escape" },
+    { "type": "wait_frames", "n": 5 },
+
+    {
+      "type": "wait_until",
+      "predicate": { "kind": "exists", "target": { "kind": "test_id", "id": "node_graph.canvas" } },
+      "timeout_frames": 600
+    },
+    { "type": "move_pointer", "target": { "kind": "test_id", "id": "node_graph.canvas" } },
+
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "value_contains",
+        "target": { "kind": "test_id", "id": "node_graph.canvas" },
+        "text": "nodes_rebuilds:1;"
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "value_contains",
+        "target": { "kind": "test_id", "id": "node_graph.canvas" },
+        "text": "edges_rebuilds:1;"
+      },
+      "timeout_frames": 600
+    },
+
+    {
+      "type": "pointer_down",
+      "window": { "kind": "current" },
+      "target": { "kind": "test_id", "id": "node_graph.canvas" },
+      "button": "middle"
+    },
+    { "type": "wait_until", "predicate": { "kind": "event_kind_seen", "event_kind": "pointer.down" }, "timeout_frames": 120 },
+    { "type": "pointer_move", "window": { "kind": "current" }, "delta_x": 180.0, "delta_y": 90.0, "steps": 18 },
+    { "type": "wait_frames", "n": 2 },
+    { "type": "pointer_up", "window": { "kind": "current" } },
+
+    { "type": "wait_frames", "n": 10 },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "value_contains",
+        "target": { "kind": "test_id", "id": "node_graph.canvas" },
+        "text": "nodes_rebuilds:1;"
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "value_contains",
+        "target": { "kind": "test_id", "id": "node_graph.canvas" },
+        "text": "edges_rebuilds:1;"
+      },
+      "timeout_frames": 600
+    },
+
+    { "type": "capture_bundle", "label": "node-graph-paint-only-pan-does-not-rebuild-geometry" }
+  ]
+}
+

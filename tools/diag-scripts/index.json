@@ -529,6 +529,198 @@
       ]
     },
     {
+      "id": "node-graph-paint-only-steady-grid-cache",
+      "path": "tools/diag-scripts/node-graph/node-graph-paint-only-steady-grid-cache.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "fret-examples-node-graph-paint-only"
+      ],
+      "tags": ["node_graph", "paint_only", "cache", "gate"],
+      "target_hints": ["Run with `--env FRET_NODE_GRAPH_DECLARATIVE=paint`."]
+    },
+    {
+      "id": "node-graph-paint-only-steady-nodes-cache",
+      "path": "tools/diag-scripts/node-graph/node-graph-paint-only-steady-nodes-cache.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "fret-examples-node-graph-paint-only"
+      ],
+      "tags": ["node_graph", "paint_only", "cache", "gate"],
+      "target_hints": ["Run with `--env FRET_NODE_GRAPH_DECLARATIVE=paint`."]
+    },
+    {
+      "id": "node-graph-paint-only-steady-edges-cache",
+      "path": "tools/diag-scripts/node-graph/node-graph-paint-only-steady-edges-cache.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "fret-examples-node-graph-paint-only"
+      ],
+      "tags": ["node_graph", "paint_only", "cache", "gate"],
+      "target_hints": ["Run with `--env FRET_NODE_GRAPH_DECLARATIVE=paint`."]
+    },
+    {
+      "id": "node-graph-paint-only-pan-does-not-rebuild-geometry",
+      "path": "tools/diag-scripts/node-graph/node-graph-paint-only-pan-does-not-rebuild-geometry.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "fret-examples-node-graph-paint-only"
+      ],
+      "tags": ["node_graph", "paint_only", "pan", "cache", "gate"],
+      "target_hints": ["Run with `--env FRET_NODE_GRAPH_DECLARATIVE=paint`."]
+    },
+    {
+      "id": "node-graph-paint-only-keyboard-zoom-rebuilds-geometry",
+      "path": "tools/diag-scripts/node-graph/node-graph-paint-only-keyboard-zoom-rebuilds-geometry.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "fret-examples-node-graph-paint-only"
+      ],
+      "tags": ["node_graph", "paint_only", "zoom", "cache", "gate"],
+      "target_hints": ["Run with `--env FRET_NODE_GRAPH_DECLARATIVE=paint`."]
+    },
+    {
+      "id": "node-graph-paint-only-diag-graph-bump-rebuilds-geometry",
+      "path": "tools/diag-scripts/node-graph/node-graph-paint-only-diag-graph-bump-rebuilds-geometry.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "fret-examples-node-graph-paint-only"
+      ],
+      "tags": ["node_graph", "paint_only", "cache", "gate"],
+      "target_hints": ["Requires `FRET_DIAG=1` (Ctrl+3 shortcut; set in shell, not via `--env`)."]
+    },
+    {
+      "id": "node-graph-paint-only-hover-and-select-do-not-rebuild-geometry",
+      "path": "tools/diag-scripts/node-graph/node-graph-paint-only-hover-and-select-do-not-rebuild-geometry.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "fret-examples-node-graph-paint-only"
+      ],
+      "tags": ["node_graph", "paint_only", "selection", "cache", "gate"],
+      "target_hints": ["Run with `--env FRET_NODE_GRAPH_DECLARATIVE=paint`."]
+    },
+    {
+      "id": "node-graph-paint-only-marquee-select-does-not-rebuild-geometry",
+      "path": "tools/diag-scripts/node-graph/node-graph-paint-only-marquee-select-does-not-rebuild-geometry.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "fret-examples-node-graph-paint-only"
+      ],
+      "tags": ["node_graph", "paint_only", "marquee", "selection", "cache", "gate"],
+      "target_hints": ["Requires `FRET_DIAG=1` (Ctrl+5 shortcut; set in shell, not via `--env`)."]
+    },
+    {
+      "id": "node-graph-paint-only-node-drag-preview-and-commit",
+      "path": "tools/diag-scripts/node-graph/node-graph-paint-only-node-drag-preview-and-commit.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "fret-examples-node-graph-paint-only"
+      ],
+      "tags": ["node_graph", "paint_only", "drag", "cache", "gate"],
+      "target_hints": ["Requires `FRET_DIAG=1` (Ctrl+4 shortcut; set in shell, not via `--env`)."]
+    },
+    {
+      "id": "node-graph-paint-only-node-drag-escape-cancel-does-not-commit",
+      "path": "tools/diag-scripts/node-graph/node-graph-paint-only-node-drag-escape-cancel-does-not-commit.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "fret-examples-node-graph-paint-only"
+      ],
+      "tags": ["node_graph", "paint_only", "drag", "cancel", "gate"],
+      "target_hints": ["Requires `FRET_DIAG=1` (Ctrl+4 shortcut; set in shell, not via `--env`)."]
+    },
+    {
+      "id": "node-graph-paint-only-node-drag-pointer-cancel-does-not-commit",
+      "path": "tools/diag-scripts/node-graph/node-graph-paint-only-node-drag-pointer-cancel-does-not-commit.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "fret-examples-node-graph-paint-only"
+      ],
+      "tags": ["node_graph", "paint_only", "drag", "cancel", "gate"],
+      "target_hints": ["Requires `FRET_DIAG=1` (Ctrl+4 shortcut; set in shell, not via `--env`)."]
+    },
+    {
+      "id": "node-graph-paint-only-pan-pointer-cancel-does-not-rebuild-geometry",
+      "path": "tools/diag-scripts/node-graph/node-graph-paint-only-pan-pointer-cancel-does-not-rebuild-geometry.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "fret-examples-node-graph-paint-only"
+      ],
+      "tags": ["node_graph", "paint_only", "pan", "cancel", "cache", "gate"],
+      "target_hints": ["Run with `--env FRET_NODE_GRAPH_DECLARATIVE=paint`."]
+    },
+    {
+      "id": "node-graph-paint-only-marquee-pointer-cancel-does-not-commit",
+      "path": "tools/diag-scripts/node-graph/node-graph-paint-only-marquee-pointer-cancel-does-not-commit.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "fret-examples-node-graph-paint-only"
+      ],
+      "tags": ["node_graph", "paint_only", "marquee", "cancel", "selection", "gate"],
+      "target_hints": ["Requires `FRET_DIAG=1` (Ctrl+5 shortcut; set in shell, not via `--env`)."]
+    },
+    {
+      "id": "node-graph-paint-only-fit-view-to-portals-updates-view",
+      "path": "tools/diag-scripts/node-graph/node-graph-paint-only-fit-view-to-portals-updates-view.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "fret-examples-node-graph-paint-only"
+      ],
+      "tags": ["node_graph", "paint_only", "portal", "fit_view", "gate"],
+      "target_hints": ["Requires `FRET_DIAG=1` (Ctrl+9 shortcut; set in shell, not via `--env`)."]
+    },
+    {
+      "id": "node-graph-paint-only-hover-shows-portal-tooltip",
+      "path": "tools/diag-scripts/node-graph/node-graph-paint-only-hover-shows-portal-tooltip.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "fret-examples-node-graph-paint-only"
+      ],
+      "tags": ["node_graph", "paint_only", "portal", "hover", "tooltip", "gate"],
+      "target_hints": ["Requires `FRET_DIAG=1` (Ctrl+4 normalize, Ctrl+7 enable portals; set in shell, not via `--env`)."]
+    },
+    {
+      "id": "node-graph-paint-only-hover-tooltip-falls-back-to-hover-anchor",
+      "path": "tools/diag-scripts/node-graph/node-graph-paint-only-hover-tooltip-falls-back-to-hover-anchor.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "fret-examples-node-graph-paint-only"
+      ],
+      "tags": ["node_graph", "paint_only", "portal", "hover", "tooltip", "gate", "fallback"],
+      "target_hints": ["Requires `FRET_DIAG=1` (Ctrl+4 normalize, Ctrl+8 disable portals; set in shell, not via `--env`)."]
+    },
+    {
       "id": "tooling-suite-prelude-reset-diagnostics",
       "path": "tools/diag-scripts/_prelude/tooling-suite-prelude-reset-diagnostics.json",
       "required_capabilities": [],

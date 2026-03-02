@@ -1,0 +1,112 @@
+{
+  "schema_version": 2,
+  "meta": {
+    "name": "Node graph (paint-only): PointerCancel during pan clears panning without rebuilding geometry",
+    "tags": ["node-graph", "declarative", "paint-only", "pan", "cancel", "cache", "gate"],
+    "required_capabilities": ["diag.script_v2"],
+    "target_hints": [
+      "Run with `FRET_NODE_GRAPH_DECLARATIVE=paint` so the paint-only declarative surface is active.",
+      "Asserts that panning becomes active, then a scripted PointerCancel clears the pan state.",
+      "Verifies that cancel does not rebuild cached node/edge geometry render data."
+    ]
+  },
+  "steps": [
+    { "type": "press_key", "key": "escape" },
+    { "type": "wait_frames", "n": 5 },
+    {
+      "type": "wait_until",
+      "predicate": { "kind": "exists", "target": { "kind": "test_id", "id": "node_graph.canvas" } },
+      "timeout_frames": 600
+    },
+    { "type": "move_pointer", "target": { "kind": "test_id", "id": "node_graph.canvas" } },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "value_contains",
+        "target": { "kind": "test_id", "id": "node_graph.canvas" },
+        "text": "nodes_rebuilds:1;"
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "value_contains",
+        "target": { "kind": "test_id", "id": "node_graph.canvas" },
+        "text": "edges_rebuilds:1;"
+      },
+      "timeout_frames": 600
+    },
+
+    {
+      "type": "pointer_down",
+      "window": { "kind": "current" },
+      "target": { "kind": "test_id", "id": "node_graph.canvas" },
+      "button": "middle"
+    },
+    { "type": "wait_until", "predicate": { "kind": "event_kind_seen", "event_kind": "pointer.down" }, "timeout_frames": 120 },
+    { "type": "pointer_move", "window": { "kind": "current" }, "delta_x": 240.0, "delta_y": 120.0, "steps": 24 },
+    { "type": "wait_frames", "n": 2 },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "value_contains",
+        "target": { "kind": "test_id", "id": "node_graph.canvas" },
+        "text": "panning true"
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "value_contains",
+        "target": { "kind": "test_id", "id": "node_graph.canvas" },
+        "text": "nodes_rebuilds:1;"
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "value_contains",
+        "target": { "kind": "test_id", "id": "node_graph.canvas" },
+        "text": "edges_rebuilds:1;"
+      },
+      "timeout_frames": 240
+    },
+
+    { "type": "pointer_cancel", "window": { "kind": "current" } },
+    { "type": "wait_until", "predicate": { "kind": "event_kind_seen", "event_kind": "pointer.cancel.left_window" }, "timeout_frames": 120 },
+    { "type": "wait_frames", "n": 2 },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "value_contains",
+        "target": { "kind": "test_id", "id": "node_graph.canvas" },
+        "text": "panning false"
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "value_contains",
+        "target": { "kind": "test_id", "id": "node_graph.canvas" },
+        "text": "nodes_rebuilds:1;"
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "value_contains",
+        "target": { "kind": "test_id", "id": "node_graph.canvas" },
+        "text": "edges_rebuilds:1;"
+      },
+      "timeout_frames": 240
+    },
+
+    { "type": "capture_bundle", "label": "node-graph-paint-only-pan-pointer-cancel-does-not-rebuild-geometry" }
+  ]
+}
+

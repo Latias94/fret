@@ -5,6 +5,7 @@
 pub mod a11y;
 pub mod canvas;
 pub mod commands;
+pub mod declarative;
 pub mod diag_anchors;
 pub mod edge_types;
 pub mod edit_queue;
