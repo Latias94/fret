@@ -15,7 +15,7 @@ fret-canvas = { version = "0.1.0", path = "../fret-canvas", optional = true }
 fret-app = { version = "0.1.0", path = "../../crates/fret-app", optional = true }
 fret-core = { version = "0.1.0", path = "../../crates/fret-core" }
 fret-runtime = { version = "0.1.0", path = "../../crates/fret-runtime", optional = true }
-fret-ui = { version = "0.1.0", path = "../../crates/fret-ui", optional = true, features = ["unstable-retained-bridge"] }
+fret-ui = { version = "0.1.0", path = "../../crates/fret-ui", optional = true }
 fret-authoring = { version = "0.1.0", path = "../fret-authoring", optional = true }
 fret-ui-kit = { version = "0.1.0", path = "../fret-ui-kit", optional = true, default-features = false, features = ["dnd"] }
 serde.workspace = true
@@ -32,10 +32,17 @@ default = ["fret-ui", "kit"]
 # - `ui` implies the existing `fret-ui` integration surface.
 # - `imui` adds immediate-mode authoring adapters on top of `ui`.
 ui = ["fret-ui"]
-imui = ["ui", "dep:fret-authoring"]
+imui = ["ui", "dep:fret-authoring", "compat-retained-canvas"]
 
 # Enables integration helpers for `crates/fret-ui` (canvas widget, action hooks, styling surfaces).
 fret-ui = ["dep:fret-ui", "dep:fret-runtime", "dep:fret-canvas", "dep:fret-ui-kit"]
+
+# Compatibility: opt into retained-bridge-backed UI surfaces.
+#
+# This is intentionally not part of the default feature set; the long-term direction is
+# declarative-first authoring with retained kept as a tightly scoped, delete-planned escape hatch.
+compat-retained-bridge = ["fret-ui", "fret-ui/unstable-retained-bridge"]
+compat-retained-canvas = ["compat-retained-bridge"]
 
 # Opt into the `rstar` spatial index backend for large graphs.
 canvas-rstar = ["fret-ui", "fret-canvas/rstar"]

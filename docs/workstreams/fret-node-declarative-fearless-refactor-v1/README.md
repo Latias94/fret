@@ -60,6 +60,13 @@ We explicitly choose a “default declarative” posture:
 - Retained widgets may remain as an **internal** implementation for narrow hotspots behind an
   explicit compatibility feature (opt-in), with exit criteria and a delete plan.
 
+## Feature flags (public integration posture)
+
+- `fret-node/fret-ui`: Enables the declarative-first UI integration surface (elements + canvas paint-only).
+- `fret-node/compat-retained-canvas`: Opt-in compatibility surface for the legacy retained
+  widget/editor stack. This enables `fret-ui/unstable-retained-bridge` transitively and is
+  intentionally **not** part of `fret-node`'s default feature set.
+
 ## Context (current state)
 
 Today, `fret-node` is structurally “headless model + optional UI”. The UI/editor side uses a

@@ -99,8 +99,8 @@ Suggested run commands (Windows-friendly):
 
 ## M3 — Defaults and compatibility
 
-- [ ] Remove `unstable-retained-bridge` from `fret-node` default features.
-- [ ] Keep retained implementation behind an explicit `compat-retained-canvas` (or similar) feature.
+- [x] Remove `unstable-retained-bridge` from `fret-node` default features.
+- [x] Keep retained implementation behind an explicit `compat-retained-canvas` feature.
 - [ ] Add a short “Ecosystem authoring guide” section describing:
   - [ ] when to use declarative canvas composition,
   - [ ] when a compatibility path is justified.
