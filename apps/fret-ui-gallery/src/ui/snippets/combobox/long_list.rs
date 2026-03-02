@@ -96,13 +96,16 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
 
     let combo = shadcn::Combobox::new(value.clone(), open.clone())
         .a11y_label("Combobox long list")
-        .width(Px(320.0))
-        .placeholder("Pick an item")
         .query_model(query.clone())
         .test_id_prefix("ui-gallery-combobox-long-list")
         .trigger_test_id("ui-gallery-combobox-long-list-trigger")
         .items(items)
-        .into_element(cx);
+        .into_element_parts(cx, |_cx| {
+            vec![
+                shadcn::ComboboxPart::from(shadcn::ComboboxTrigger::new().width_px(Px(320.0))),
+                shadcn::ComboboxPart::from(shadcn::ComboboxInput::new().placeholder("Pick an item")),
+            ]
+        });
 
     stack::vstack(
         cx,
