@@ -60,7 +60,7 @@ Last updated: 2026-03-02.
 | `radio-group` | `repo-ref/ui/apps/v4/content/docs/components/radix/radio-group.mdx` | `repo-ref/ui/apps/v4/registry/bases/radix/ui/radio-group.tsx` | `ecosystem/fret-ui-shadcn/src/radio_group.rs` | (none yet) | Not audited |
 | `resizable` | `repo-ref/ui/apps/v4/content/docs/components/radix/resizable.mdx` | `repo-ref/ui/apps/v4/registry/bases/radix/ui/resizable.tsx` | `ecosystem/fret-ui-shadcn/src/resizable.rs` | (none yet) | Not audited |
 | `scroll-area` | `repo-ref/ui/apps/v4/content/docs/components/radix/scroll-area.mdx` | `repo-ref/ui/apps/v4/registry/bases/radix/ui/scroll-area.tsx` | `ecosystem/fret-ui-shadcn/src/scroll_area.rs` | (none yet) | Not audited |
-| `select` | `repo-ref/ui/apps/v4/content/docs/components/radix/select.mdx` | `repo-ref/ui/apps/v4/registry/bases/radix/ui/select.tsx` | `ecosystem/fret-ui-shadcn/src/select.rs` | `ecosystem/fret-ui-shadcn/tests/select_test_id_stability.rs`, `ecosystem/fret-ui-shadcn/tests/select_keyboard_navigation.rs`, `ecosystem/fret-ui-shadcn/tests/select_escape_dismiss_focus_restore.rs`, `ecosystem/fret-ui-shadcn/tests/select_typeahead.rs` | In progress |
+| `select` | `repo-ref/ui/apps/v4/content/docs/components/radix/select.mdx` | `repo-ref/ui/apps/v4/registry/bases/radix/ui/select.tsx` | `ecosystem/fret-ui-shadcn/src/select.rs` | `ecosystem/fret-ui-shadcn/tests/select_test_id_stability.rs`, `ecosystem/fret-ui-shadcn/tests/select_keyboard_navigation.rs`, `ecosystem/fret-ui-shadcn/tests/select_escape_dismiss_focus_restore.rs`, `ecosystem/fret-ui-shadcn/tests/select_typeahead.rs` | Done |
 | `separator` | `repo-ref/ui/apps/v4/content/docs/components/radix/separator.mdx` | `repo-ref/ui/apps/v4/registry/bases/radix/ui/separator.tsx` | `ecosystem/fret-ui-shadcn/src/separator.rs` | (none yet) | Not audited |
 | `sheet` | `repo-ref/ui/apps/v4/content/docs/components/radix/sheet.mdx` | `repo-ref/ui/apps/v4/registry/bases/radix/ui/sheet.tsx` | `ecosystem/fret-ui-shadcn/src/sheet.rs` | (none yet) | Not audited |
 | `sidebar` | `repo-ref/ui/apps/v4/content/docs/components/radix/sidebar.mdx` | `repo-ref/ui/apps/v4/registry/bases/radix/ui/sidebar.tsx` | `ecosystem/fret-ui-shadcn/src/sidebar.rs` | (none yet) | Not audited |
@@ -80,7 +80,7 @@ Last updated: 2026-03-02.
 
 ### Proposed audit order (v1)
 
-1. `select` / `combobox` (deep redesign workstream already created)
+1. `combobox` (deep redesign workstream already created; `select` is done)
 2. Overlay family: `dropdown-menu` → `context-menu` → `dialog` → `popover` → `tooltip`
 3. Composite nav: `menubar` → `navigation-menu` → `tabs`
 4. Tables: `table` + `data-table` overflow and responsive behavior

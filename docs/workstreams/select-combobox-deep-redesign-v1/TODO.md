@@ -62,7 +62,7 @@ mean roughly the same thing.
 | `ComboboxChips` | same | `ComboboxChips` | same | Part exists in Fret as an adapter; chips rendering is recipe-owned today. |
 | `ComboboxChip` | same | `ComboboxChip` | same | Part exists; removal affordance is recipe-owned today. |
 | `ComboboxChipsInput` | same | `ComboboxChipsInput` | same | Part exists. |
-| `useComboboxAnchor` | same | `useComboboxAnchor` (PascalCase) | same | Upstream returns a DOM ref; Fret returns a layout-only `PopoverAnchor` wrapper exposing a stable element id. |
+| `useComboboxAnchor` | same | `use_combobox_anchor` | same | Upstream returns a DOM ref; Fret returns a layout-only `PopoverAnchor` wrapper exposing a stable element id. |
 
 #### Fret-only helper exports (migration ergonomics)
 
@@ -83,7 +83,7 @@ These do not exist upstream but reduce churn when porting examples:
 
 | Component | Target surface | Current state (Fret) | Known gaps / risks | Proposed changes (layer) | Gates | Status |
 |---|---|---|---|---|---|---|
-| `select` | shadcn part surface (`Select*`) + stable `test_id` | Part adapters exist (`Select::into_element_parts` + `SelectContent::with_entries`); call-site parity is mostly achieved in-tree | Composition drift, focus/keyboard edge cases, automation surfaces not uniformly documented | Extract/align shared listbox substrate (`kit`), keep shadcn defaults (`shadcn`); decide a single focus model and gate it | Unit tests: `ecosystem/fret-ui-shadcn/tests/select_test_id_stability.rs` (locks trigger + viewport `test_id`), `ecosystem/fret-ui-shadcn/tests/select_keyboard_navigation.rs` (ArrowDown + Enter selects + closes), `ecosystem/fret-ui-shadcn/tests/select_escape_dismiss_focus_restore.rs` (Escape closes + focus restore), `ecosystem/fret-ui-shadcn/tests/select_typeahead.rs` (KeyB typeahead selects matching item) | In progress |
+| `select` | shadcn part surface (`Select*`) + stable `test_id` | Part adapters exist (`Select::into_element_parts` + `SelectContent::with_entries`); call-site parity is mostly achieved in-tree | Composition drift, focus/keyboard edge cases, automation surfaces not uniformly documented | Extract/align shared listbox substrate (`kit`), keep shadcn defaults (`shadcn`); decide a single focus model and gate it | Unit tests: `ecosystem/fret-ui-shadcn/tests/select_test_id_stability.rs` (locks trigger + viewport `test_id`), `ecosystem/fret-ui-shadcn/tests/select_keyboard_navigation.rs` (ArrowDown + Enter selects + closes), `ecosystem/fret-ui-shadcn/tests/select_escape_dismiss_focus_restore.rs` (Escape closes + focus restore), `ecosystem/fret-ui-shadcn/tests/select_typeahead.rs` (KeyB typeahead selects matching item) | Done (with known gaps) |
 | `combobox` | shadcn part surface (`Combobox*`) + docs-aligned examples | Part adapters exist; legacy option model has been removed; known structural drift remains by design | Input-in-trigger ergonomics, Base UI-style expectations, structural adapter debt | Shared substrate (`kit`), refine part surface + adapters (`shadcn`), document explicit differences | Unit tests: `ecosystem/fret-ui-shadcn/tests/combobox_test_id_prefix_semantics.rs` (locks prefix scheme + item slugging), `ecosystem/fret-ui-shadcn/tests/combobox_keyboard_navigation.rs` (ArrowDown + Enter selects + closes), `ecosystem/fret-ui-shadcn/tests/combobox_escape_dismiss_focus_restore.rs` (Escape closes + focus restore), `ecosystem/fret-ui-shadcn/tests/combobox_filtering.rs` (TextInput filters + Enter selects) | In progress |
 
 ### Proposed `test_id` scheme (for gates + scripted diags)
@@ -157,7 +157,7 @@ These anchors are intended to make audits and future refactors cheaper (searchab
 - Current shadcn recipes/adapters:
   - `ecosystem/fret-ui-shadcn/src/select.rs:1268` (`Select`)
   - `ecosystem/fret-ui-shadcn/src/select.rs:1484` (`Select::into_element_parts`)
-  - `ecosystem/fret-ui-shadcn/src/combobox.rs:108` (`useComboboxAnchor`)
+- `ecosystem/fret-ui-shadcn/src/combobox.rs:108` (`use_combobox_anchor`)
   - `ecosystem/fret-ui-shadcn/src/combobox.rs:793` (`Combobox`)
   - `ecosystem/fret-ui-shadcn/src/combobox.rs:888` (`Combobox::into_element_parts`)
 - Gates:

@@ -489,19 +489,10 @@ impl CustomEffectImageInputV1 {
 /// This stays bounded and deterministic: callers can request a distinct `src_raw` source and an
 /// optional bounded pyramid, but backends may degrade by aliasing sources under budgets or
 /// unsupported capabilities.
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq, Default)]
 pub struct CustomEffectSourcesV3 {
     pub want_raw: bool,
     pub pyramid: Option<CustomEffectPyramidRequestV1>,
-}
-
-impl Default for CustomEffectSourcesV3 {
-    fn default() -> Self {
-        Self {
-            want_raw: false,
-            pyramid: None,
-        }
-    }
 }
 
 /// Bounded request for a renderer-owned blur pyramid derived from `src_raw` (v3).
@@ -664,7 +655,7 @@ impl EffectStep {
                 };
 
                 sources.pyramid = sources.pyramid.map(|req| {
-                    let max_levels = req.max_levels.max(1).min(7);
+                    let max_levels = req.max_levels.clamp(1, 7);
                     let max_radius_px = if req.max_radius_px.0.is_finite() {
                         crate::Px(req.max_radius_px.0.max(0.0))
                     } else {

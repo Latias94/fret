@@ -48,7 +48,7 @@ ID format:
   - surface classification (`TabStripSurface`),
   - overflow membership / geometry helpers (if needed).
 - [x] WTS-kernel-011 Click arbitration policy lives in `ecosystem/fret-ui-kit`:
-  - Evidence: `ecosystem/fret-ui-kit/src/headless/tab_strip_controller.rs`.
+  - Evidence: `ecosystem/fret-ui-headless/src/tab_strip_controller.rs` (re-exported via `ecosystem/fret-ui-kit/src/headless/tab_strip_controller.rs`).
 - [x] WTS-kernel-012 Workspace-specific kernel exists:
   - mapping pointer → hit target,
   - mapping hit target → insert index (including end-drop),
@@ -86,7 +86,7 @@ ID format:
   - Diag gates:
     - [x] `tools/diag-scripts/workspace/shell-demo/workspace-shell-demo-tab-close-left-keeps-pinned-smoke.json`
     - [x] `tools/diag-scripts/workspace/shell-demo/workspace-shell-demo-tab-close-others-keeps-pinned-smoke.json`
-    - [ ] (TODO) close right keeps pinned
+    - [x] `tools/diag-scripts/workspace/shell-demo/workspace-shell-demo-tab-close-right-keeps-pinned-smoke.json`
 - [ ] WTS-editor-032 Dirty close confirmation hooks (workspace-level, not tab mechanism).
 
 ## E. Cleanup + Convergence

@@ -78,9 +78,7 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
                         .font(FontId::monospace())
                         .label_policy(shadcn::SelectTriggerLabelPolicy::Value)
                 },
-                |_cx| {
-                    shadcn::SelectValue::new()
-                },
+                |_cx| shadcn::SelectValue::new(),
                 move |_cx| {
                     shadcn::SelectContent::new()
                         .align(shadcn::SelectAlign::Start)

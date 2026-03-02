@@ -88,10 +88,7 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
 
     let combo = shadcn::Combobox::new(value.clone(), open.clone())
         .a11y_label("Combobox popup trigger")
-        .width(Px(256.0))
-        .placeholder("Select a framework")
         .query_model(query.clone())
-        .trigger_variant(shadcn::ComboboxTriggerVariant::Button)
         .trigger_test_id("ui-gallery-combobox-popup-trigger")
         .test_id_prefix("ui-gallery-combobox-popup")
         .items([
@@ -101,7 +98,18 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
             shadcn::ComboboxItem::new("remix", "Remix"),
             shadcn::ComboboxItem::new("astro", "Astro"),
         ])
-        .into_element(cx);
+        .into_element_parts(cx, |_cx| {
+            vec![
+                shadcn::ComboboxPart::from(
+                    shadcn::ComboboxTrigger::new()
+                        .variant(shadcn::ComboboxTriggerVariant::Button)
+                        .width_px(Px(256.0)),
+                ),
+                shadcn::ComboboxPart::from(
+                    shadcn::ComboboxInput::new().placeholder("Select a framework"),
+                ),
+            ]
+        });
 
     stack::vstack(
         cx,

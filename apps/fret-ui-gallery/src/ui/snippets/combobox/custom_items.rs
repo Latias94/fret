@@ -88,8 +88,6 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
 
     let custom_combo = shadcn::Combobox::new(value.clone(), open.clone())
         .a11y_label("Combobox custom items")
-        .width(Px(280.0))
-        .placeholder("Select framework")
         .query_model(query.clone())
         .test_id_prefix("ui-gallery-combobox-custom-items")
         .trigger_test_id("ui-gallery-combobox-custom-items-trigger")
@@ -99,7 +97,12 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
             shadcn::ComboboxItem::new("svelte", "SvelteKit").detail("Svelte"),
             shadcn::ComboboxItem::new("astro", "Astro").detail("Hybrid"),
         ])
-        .into_element(cx);
+        .into_element_parts(cx, |_cx| {
+            vec![
+                shadcn::ComboboxPart::from(shadcn::ComboboxTrigger::new().width_px(Px(280.0))),
+                shadcn::ComboboxPart::from(shadcn::ComboboxInput::new().placeholder("Select framework")),
+            ]
+        });
 
     stack::vstack(
         cx,

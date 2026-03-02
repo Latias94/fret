@@ -589,25 +589,23 @@ fn page_preview(
         PAGE_TOGGLE => pages::preview_toggle(cx),
         PAGE_TOGGLE_GROUP => pages::preview_toggle_group(cx),
         PAGE_TYPOGRAPHY => pages::preview_typography(cx),
-        PAGE_MATERIAL3_GALLERY => pages::material3::material3_scoped_page(
-            cx,
-            material3_expressive.clone(),
-            |cx| {
-            pages::material3::preview_material3_gallery(
-                cx,
-                material3_checkbox,
-                material3_switch,
-                material3_radio_value,
-                material3_tabs_value,
-                material3_list_value,
-                material3_navigation_bar_value,
-                material3_text_field_value,
-                material3_text_field_disabled,
-                material3_text_field_error,
-                last_action.clone(),
-            )
-        },
-        ),
+        PAGE_MATERIAL3_GALLERY => {
+            pages::material3::material3_scoped_page(cx, material3_expressive.clone(), |cx| {
+                pages::material3::preview_material3_gallery(
+                    cx,
+                    material3_checkbox,
+                    material3_switch,
+                    material3_radio_value,
+                    material3_tabs_value,
+                    material3_list_value,
+                    material3_navigation_bar_value,
+                    material3_text_field_value,
+                    material3_text_field_disabled,
+                    material3_text_field_error,
+                    last_action.clone(),
+                )
+            })
+        }
         PAGE_MATERIAL3_STATE_MATRIX => {
             pages::material3::material3_scoped_page(cx, material3_expressive.clone(), |cx| {
                 pages::material3::preview_material3_state_matrix(
@@ -646,34 +644,26 @@ fn page_preview(
             material3_expressive.clone(),
             pages::material3::preview_material3_icon_button,
         ),
-        PAGE_MATERIAL3_CHECKBOX => pages::material3::material3_scoped_page(
-            cx,
-            material3_expressive.clone(),
-            |cx| {
-            pages::material3::preview_material3_checkbox(cx, material3_checkbox)
-        },
-        ),
-        PAGE_MATERIAL3_SWITCH => pages::material3::material3_scoped_page(
-            cx,
-            material3_expressive.clone(),
-            |cx| {
-            pages::material3::preview_material3_switch(cx, material3_switch)
-        },
-        ),
-        PAGE_MATERIAL3_SLIDER => pages::material3::material3_scoped_page(
-            cx,
-            material3_expressive.clone(),
-            |cx| {
-            pages::material3::preview_material3_slider(cx, material3_slider_value)
-        },
-        ),
-        PAGE_MATERIAL3_RADIO => pages::material3::material3_scoped_page(
-            cx,
-            material3_expressive.clone(),
-            |cx| {
-            pages::material3::preview_material3_radio(cx, material3_radio_value)
-        },
-        ),
+        PAGE_MATERIAL3_CHECKBOX => {
+            pages::material3::material3_scoped_page(cx, material3_expressive.clone(), |cx| {
+                pages::material3::preview_material3_checkbox(cx, material3_checkbox)
+            })
+        }
+        PAGE_MATERIAL3_SWITCH => {
+            pages::material3::material3_scoped_page(cx, material3_expressive.clone(), |cx| {
+                pages::material3::preview_material3_switch(cx, material3_switch)
+            })
+        }
+        PAGE_MATERIAL3_SLIDER => {
+            pages::material3::material3_scoped_page(cx, material3_expressive.clone(), |cx| {
+                pages::material3::preview_material3_slider(cx, material3_slider_value)
+            })
+        }
+        PAGE_MATERIAL3_RADIO => {
+            pages::material3::material3_scoped_page(cx, material3_expressive.clone(), |cx| {
+                pages::material3::preview_material3_radio(cx, material3_radio_value)
+            })
+        }
         PAGE_MATERIAL3_BADGE => pages::material3::material3_scoped_page(
             cx,
             material3_expressive.clone(),
@@ -713,13 +703,11 @@ fn page_preview(
             material3_expressive.clone(),
             pages::material3::preview_material3_segmented_button,
         ),
-        PAGE_MATERIAL3_SELECT => pages::material3::material3_scoped_page(
-            cx,
-            material3_expressive.clone(),
-            |cx| {
-            pages::material3::preview_material3_select(cx)
-        },
-        ),
+        PAGE_MATERIAL3_SELECT => {
+            pages::material3::material3_scoped_page(cx, material3_expressive.clone(), |cx| {
+                pages::material3::preview_material3_select(cx)
+            })
+        }
         PAGE_MATERIAL3_AUTOCOMPLETE => {
             pages::material3::material3_scoped_page(cx, material3_expressive.clone(), |cx| {
                 pages::material3::preview_material3_autocomplete(
@@ -741,20 +729,16 @@ fn page_preview(
                 )
             })
         }
-        PAGE_MATERIAL3_TABS => pages::material3::material3_scoped_page(
-            cx,
-            material3_expressive.clone(),
-            |cx| {
-            pages::material3::preview_material3_tabs(cx, material3_tabs_value)
-        },
-        ),
-        PAGE_MATERIAL3_LIST => pages::material3::material3_scoped_page(
-            cx,
-            material3_expressive.clone(),
-            |cx| {
-            pages::material3::preview_material3_list(cx, material3_list_value)
-        },
-        ),
+        PAGE_MATERIAL3_TABS => {
+            pages::material3::material3_scoped_page(cx, material3_expressive.clone(), |cx| {
+                pages::material3::preview_material3_tabs(cx, material3_tabs_value)
+            })
+        }
+        PAGE_MATERIAL3_LIST => {
+            pages::material3::material3_scoped_page(cx, material3_expressive.clone(), |cx| {
+                pages::material3::preview_material3_list(cx, material3_list_value)
+            })
+        }
         PAGE_MATERIAL3_NAVIGATION_BAR => {
             pages::material3::material3_scoped_page(cx, material3_expressive.clone(), |cx| {
                 pages::material3::preview_material3_navigation_bar(
@@ -788,31 +772,29 @@ fn page_preview(
                 )
             })
         }
-        PAGE_MATERIAL3_DIALOG => pages::material3::material3_scoped_page(
-            cx,
-            material3_expressive.clone(),
-            |cx| {
-            pages::material3::preview_material3_dialog(
-                cx,
-                material3_dialog_open,
-                last_action.clone(),
-            )
-        },
-        ),
-        PAGE_MATERIAL3_MENU => pages::material3::material3_scoped_page(
-            cx,
-            material3_expressive.clone(),
-            |cx| {
-            pages::material3::preview_material3_menu(cx, material3_menu_open, last_action.clone())
-        },
-        ),
-        PAGE_MATERIAL3_SNACKBAR => pages::material3::material3_scoped_page(
-            cx,
-            material3_expressive.clone(),
-            |cx| {
-            pages::material3::preview_material3_snackbar(cx, last_action.clone())
-        },
-        ),
+        PAGE_MATERIAL3_DIALOG => {
+            pages::material3::material3_scoped_page(cx, material3_expressive.clone(), |cx| {
+                pages::material3::preview_material3_dialog(
+                    cx,
+                    material3_dialog_open,
+                    last_action.clone(),
+                )
+            })
+        }
+        PAGE_MATERIAL3_MENU => {
+            pages::material3::material3_scoped_page(cx, material3_expressive.clone(), |cx| {
+                pages::material3::preview_material3_menu(
+                    cx,
+                    material3_menu_open,
+                    last_action.clone(),
+                )
+            })
+        }
+        PAGE_MATERIAL3_SNACKBAR => {
+            pages::material3::material3_scoped_page(cx, material3_expressive.clone(), |cx| {
+                pages::material3::preview_material3_snackbar(cx, last_action.clone())
+            })
+        }
         PAGE_MATERIAL3_TOOLTIP => pages::material3::material3_scoped_page(
             cx,
             material3_expressive.clone(),

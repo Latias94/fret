@@ -7,6 +7,8 @@ Status (2026-03-02):
 - shadcn + AI Elements pages are snippet-backed (Preview ≡ Code).
 - Material 3 pages are snippet-backed (Preview ≡ Code) and routed through
   `apps/fret-ui-gallery/src/ui/pages/material3/mod.rs` (no more dependency on `previews/material3/**`).
+- Material 3 pages share a single `render_material3_demo_page(...)` scaffold helper in
+  `apps/fret-ui-gallery/src/ui/pages/material3/mod.rs` (reduces per-page boilerplate).
 - The legacy implementation under `apps/fret-ui-gallery/src/ui/previews/material3/**` still exists in-tree but
   is not compiled; delete it incrementally once the working tree is clean (avoid deleting local edits).
 

@@ -527,7 +527,11 @@ fn demo_shell(cx: &mut ElementContext<'_, App>, max_w: Px, body: AnyElement) -> 
                 .border_1()
                 .rounded(Radius::Md)
                 .p(Space::N4),
-            LayoutRefinement::default().w_full().min_w_0().max_w(max_w),
+            LayoutRefinement::default()
+                .w_full()
+                .min_w_0()
+                .max_w(max_w)
+                .overflow_visible(),
         )
     });
     cx.container(props, move |_cx| [body])
@@ -653,7 +657,11 @@ fn code_block_shell(
             // Match the Preview tab's comfortable padding so Code tabs don't look "flush-left"
             // compared to the demo shell.
             ChromeRefinement::default().p(Space::N4),
-            LayoutRefinement::default().w_full().min_w_0().max_w(max_w),
+            LayoutRefinement::default()
+                .w_full()
+                .min_w_0()
+                .max_w(max_w)
+                .overflow_visible(),
         )
     });
     cx.container(props, move |_cx| [code_block])

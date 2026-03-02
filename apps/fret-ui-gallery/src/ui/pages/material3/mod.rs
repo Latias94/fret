@@ -3,6 +3,24 @@ use super::*;
 use crate::ui::doc_layout::{self, DocSection};
 use crate::ui::snippets;
 
+const MATERIAL3_INTRO: &str =
+    "Material 3 surfaces are still migrating to snippet-backed pages (Preview ≡ Code).";
+
+fn render_material3_demo_page(
+    cx: &mut ElementContext<'_, App>,
+    intro: Option<&'static str>,
+    demo: AnyElement,
+    source: &'static str,
+) -> Vec<AnyElement> {
+    let page = doc_layout::render_doc_page(
+        cx,
+        intro,
+        vec![DocSection::new("Demo", demo).code_rust_from_file_region(source, "example")],
+    );
+
+    vec![page]
+}
+
 pub(in crate::ui) fn material3_scoped_page<I, F>(
     cx: &mut ElementContext<'_, App>,
     material3_expressive: Model<bool>,
@@ -92,16 +110,7 @@ pub(in crate::ui) fn preview_material3_gallery(
         material3_text_field_error,
     );
 
-    let page = doc_layout::render_doc_page(
-        cx,
-        Some("Material 3 surfaces are still migrating to snippet-backed pages (Preview ≡ Code)."),
-        vec![
-            DocSection::new("Demo", demo)
-                .code_rust_from_file_region(snippets::material3::gallery::SOURCE, "example"),
-        ],
-    );
-
-    vec![page]
+    render_material3_demo_page(cx, Some(MATERIAL3_INTRO), demo, snippets::material3::gallery::SOURCE)
 }
 
 pub(in crate::ui) fn preview_material3_state_matrix(
@@ -131,16 +140,12 @@ pub(in crate::ui) fn preview_material3_state_matrix(
         last_action,
     );
 
-    let page = doc_layout::render_doc_page(
+    render_material3_demo_page(
         cx,
-        Some("Material 3 surfaces are still migrating to snippet-backed pages (Preview ≡ Code)."),
-        vec![
-            DocSection::new("Demo", demo)
-                .code_rust_from_file_region(snippets::material3::state_matrix::SOURCE, "example"),
-        ],
-    );
-
-    vec![page]
+        Some(MATERIAL3_INTRO),
+        demo,
+        snippets::material3::state_matrix::SOURCE,
+    )
 }
 
 pub(in crate::ui) fn preview_material3_touch_targets(
@@ -158,31 +163,25 @@ pub(in crate::ui) fn preview_material3_touch_targets(
         material3_tabs_value,
     );
 
-    let page = doc_layout::render_doc_page(
+    render_material3_demo_page(
         cx,
-        Some("Material 3 surfaces are still migrating to snippet-backed pages (Preview ≡ Code)."),
-        vec![
-            DocSection::new("Demo", demo)
-                .code_rust_from_file_region(snippets::material3::touch_targets::SOURCE, "example"),
-        ],
-    );
-
-    vec![page]
+        Some(MATERIAL3_INTRO),
+        demo,
+        snippets::material3::touch_targets::SOURCE,
+    )
 }
 
 pub(in crate::ui) fn preview_material3_button(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
     let demo = snippets::material3::button::render(cx);
 
-    let page = doc_layout::render_doc_page(
+    render_material3_demo_page(
         cx,
         Some(
             "Material 3 surfaces are still migrating to snippet-backed pages. This page is the first scaffolded example.",
         ),
-        vec![DocSection::new("Demo", demo)
-            .code_rust_from_file_region(snippets::material3::button::SOURCE, "example")],
-    );
-
-    vec![page]
+        demo,
+        snippets::material3::button::SOURCE,
+    )
 }
 
 pub(in crate::ui) fn preview_material3_icon_button(
@@ -190,14 +189,12 @@ pub(in crate::ui) fn preview_material3_icon_button(
 ) -> Vec<AnyElement> {
     let demo = snippets::material3::icon_button::render(cx);
 
-    let page = doc_layout::render_doc_page(
+    render_material3_demo_page(
         cx,
-        Some("Material 3 surfaces are still migrating to snippet-backed pages (Preview ≡ Code)."),
-        vec![DocSection::new("Demo", demo)
-            .code_rust_from_file_region(snippets::material3::icon_button::SOURCE, "example")],
-    );
-
-    vec![page]
+        Some(MATERIAL3_INTRO),
+        demo,
+        snippets::material3::icon_button::SOURCE,
+    )
 }
 
 pub(in crate::ui) fn preview_material3_checkbox(
@@ -206,14 +203,12 @@ pub(in crate::ui) fn preview_material3_checkbox(
 ) -> Vec<AnyElement> {
     let demo = snippets::material3::checkbox::render(cx, checked);
 
-    let page = doc_layout::render_doc_page(
+    render_material3_demo_page(
         cx,
-        Some("Material 3 surfaces are still migrating to snippet-backed pages (Preview ≡ Code)."),
-        vec![DocSection::new("Demo", demo)
-            .code_rust_from_file_region(snippets::material3::checkbox::SOURCE, "example")],
-    );
-
-    vec![page]
+        Some(MATERIAL3_INTRO),
+        demo,
+        snippets::material3::checkbox::SOURCE,
+    )
 }
 
 pub(in crate::ui) fn preview_material3_switch(
@@ -222,14 +217,7 @@ pub(in crate::ui) fn preview_material3_switch(
 ) -> Vec<AnyElement> {
     let demo = snippets::material3::switch::render(cx, selected);
 
-    let page = doc_layout::render_doc_page(
-        cx,
-        Some("Material 3 surfaces are still migrating to snippet-backed pages (Preview ≡ Code)."),
-        vec![DocSection::new("Demo", demo)
-            .code_rust_from_file_region(snippets::material3::switch::SOURCE, "example")],
-    );
-
-    vec![page]
+    render_material3_demo_page(cx, Some(MATERIAL3_INTRO), demo, snippets::material3::switch::SOURCE)
 }
 
 pub(in crate::ui) fn preview_material3_slider(
@@ -238,14 +226,7 @@ pub(in crate::ui) fn preview_material3_slider(
 ) -> Vec<AnyElement> {
     let demo = snippets::material3::slider::render(cx, value);
 
-    let page = doc_layout::render_doc_page(
-        cx,
-        Some("Material 3 surfaces are still migrating to snippet-backed pages (Preview ≡ Code)."),
-        vec![DocSection::new("Demo", demo)
-            .code_rust_from_file_region(snippets::material3::slider::SOURCE, "example")],
-    );
-
-    vec![page]
+    render_material3_demo_page(cx, Some(MATERIAL3_INTRO), demo, snippets::material3::slider::SOURCE)
 }
 
 pub(in crate::ui) fn preview_material3_radio(
@@ -254,27 +235,13 @@ pub(in crate::ui) fn preview_material3_radio(
 ) -> Vec<AnyElement> {
     let demo = snippets::material3::radio::render(cx, group_value);
 
-    let page = doc_layout::render_doc_page(
-        cx,
-        Some("Material 3 surfaces are still migrating to snippet-backed pages (Preview ≡ Code)."),
-        vec![DocSection::new("Demo", demo)
-            .code_rust_from_file_region(snippets::material3::radio::SOURCE, "example")],
-    );
-
-    vec![page]
+    render_material3_demo_page(cx, Some(MATERIAL3_INTRO), demo, snippets::material3::radio::SOURCE)
 }
 
 pub(in crate::ui) fn preview_material3_badge(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
     let demo = snippets::material3::badge::render(cx);
 
-    let page = doc_layout::render_doc_page(
-        cx,
-        Some("Material 3 surfaces are still migrating to snippet-backed pages (Preview ≡ Code)."),
-        vec![DocSection::new("Demo", demo)
-            .code_rust_from_file_region(snippets::material3::badge::SOURCE, "example")],
-    );
-
-    vec![page]
+    render_material3_demo_page(cx, Some(MATERIAL3_INTRO), demo, snippets::material3::badge::SOURCE)
 }
 
 pub(in crate::ui) fn preview_material3_top_app_bar(
@@ -282,14 +249,12 @@ pub(in crate::ui) fn preview_material3_top_app_bar(
 ) -> Vec<AnyElement> {
     let demo = snippets::material3::top_app_bar::render(cx);
 
-    let page = doc_layout::render_doc_page(
+    render_material3_demo_page(
         cx,
-        Some("Material 3 surfaces are still migrating to snippet-backed pages (Preview ≡ Code)."),
-        vec![DocSection::new("Demo", demo)
-            .code_rust_from_file_region(snippets::material3::top_app_bar::SOURCE, "example")],
-    );
-
-    vec![page]
+        Some(MATERIAL3_INTRO),
+        demo,
+        snippets::material3::top_app_bar::SOURCE,
+    )
 }
 
 pub(in crate::ui) fn preview_material3_bottom_sheet(
@@ -298,14 +263,12 @@ pub(in crate::ui) fn preview_material3_bottom_sheet(
 ) -> Vec<AnyElement> {
     let demo = snippets::material3::bottom_sheet::render(cx, open);
 
-    let page = doc_layout::render_doc_page(
+    render_material3_demo_page(
         cx,
-        Some("Material 3 surfaces are still migrating to snippet-backed pages (Preview ≡ Code)."),
-        vec![DocSection::new("Demo", demo)
-            .code_rust_from_file_region(snippets::material3::bottom_sheet::SOURCE, "example")],
-    );
-
-    vec![page]
+        Some(MATERIAL3_INTRO),
+        demo,
+        snippets::material3::bottom_sheet::SOURCE,
+    )
 }
 
 pub(in crate::ui) fn preview_material3_date_picker(
@@ -316,14 +279,12 @@ pub(in crate::ui) fn preview_material3_date_picker(
 ) -> Vec<AnyElement> {
     let demo = snippets::material3::date_picker::render(cx, open, month, selected);
 
-    let page = doc_layout::render_doc_page(
+    render_material3_demo_page(
         cx,
-        Some("Material 3 surfaces are still migrating to snippet-backed pages (Preview ≡ Code)."),
-        vec![DocSection::new("Demo", demo)
-            .code_rust_from_file_region(snippets::material3::date_picker::SOURCE, "example")],
-    );
-
-    vec![page]
+        Some(MATERIAL3_INTRO),
+        demo,
+        snippets::material3::date_picker::SOURCE,
+    )
 }
 
 pub(in crate::ui) fn preview_material3_time_picker(
@@ -333,14 +294,12 @@ pub(in crate::ui) fn preview_material3_time_picker(
 ) -> Vec<AnyElement> {
     let demo = snippets::material3::time_picker::render(cx, open, selected);
 
-    let page = doc_layout::render_doc_page(
+    render_material3_demo_page(
         cx,
-        Some("Material 3 surfaces are still migrating to snippet-backed pages (Preview ≡ Code)."),
-        vec![DocSection::new("Demo", demo)
-            .code_rust_from_file_region(snippets::material3::time_picker::SOURCE, "example")],
-    );
-
-    vec![page]
+        Some(MATERIAL3_INTRO),
+        demo,
+        snippets::material3::time_picker::SOURCE,
+    )
 }
 
 pub(in crate::ui) fn preview_material3_segmented_button(
@@ -348,29 +307,18 @@ pub(in crate::ui) fn preview_material3_segmented_button(
 ) -> Vec<AnyElement> {
     let demo = snippets::material3::segmented_button::render(cx);
 
-    let page = doc_layout::render_doc_page(
+    render_material3_demo_page(
         cx,
-        Some("Material 3 surfaces are still migrating to snippet-backed pages (Preview ≡ Code)."),
-        vec![DocSection::new("Demo", demo).code_rust_from_file_region(
-            snippets::material3::segmented_button::SOURCE,
-            "example",
-        )],
-    );
-
-    vec![page]
+        Some(MATERIAL3_INTRO),
+        demo,
+        snippets::material3::segmented_button::SOURCE,
+    )
 }
 
 pub(in crate::ui) fn preview_material3_select(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
     let demo = snippets::material3::select::render(cx);
 
-    let page = doc_layout::render_doc_page(
-        cx,
-        Some("Material 3 surfaces are still migrating to snippet-backed pages (Preview ≡ Code)."),
-        vec![DocSection::new("Demo", demo)
-            .code_rust_from_file_region(snippets::material3::select::SOURCE, "example")],
-    );
-
-    vec![page]
+    render_material3_demo_page(cx, Some(MATERIAL3_INTRO), demo, snippets::material3::select::SOURCE)
 }
 
 pub(in crate::ui) fn preview_material3_autocomplete(
@@ -382,14 +330,12 @@ pub(in crate::ui) fn preview_material3_autocomplete(
 ) -> Vec<AnyElement> {
     let demo = snippets::material3::autocomplete::render(cx, value, disabled, error, dialog_open);
 
-    let page = doc_layout::render_doc_page(
+    render_material3_demo_page(
         cx,
-        Some("Material 3 surfaces are still migrating to snippet-backed pages (Preview ≡ Code)."),
-        vec![DocSection::new("Demo", demo)
-            .code_rust_from_file_region(snippets::material3::autocomplete::SOURCE, "example")],
-    );
-
-    vec![page]
+        Some(MATERIAL3_INTRO),
+        demo,
+        snippets::material3::autocomplete::SOURCE,
+    )
 }
 
 pub(in crate::ui) fn preview_material3_text_field(
@@ -400,14 +346,12 @@ pub(in crate::ui) fn preview_material3_text_field(
 ) -> Vec<AnyElement> {
     let demo = snippets::material3::text_field::render(cx, value, disabled, error);
 
-    let page = doc_layout::render_doc_page(
+    render_material3_demo_page(
         cx,
-        Some("Material 3 surfaces are still migrating to snippet-backed pages (Preview ≡ Code)."),
-        vec![DocSection::new("Demo", demo)
-            .code_rust_from_file_region(snippets::material3::text_field::SOURCE, "example")],
-    );
-
-    vec![page]
+        Some(MATERIAL3_INTRO),
+        demo,
+        snippets::material3::text_field::SOURCE,
+    )
 }
 
 pub(in crate::ui) fn preview_material3_tabs(
@@ -416,14 +360,7 @@ pub(in crate::ui) fn preview_material3_tabs(
 ) -> Vec<AnyElement> {
     let demo = snippets::material3::tabs::render(cx, value);
 
-    let page = doc_layout::render_doc_page(
-        cx,
-        Some("Material 3 surfaces are still migrating to snippet-backed pages (Preview ≡ Code)."),
-        vec![DocSection::new("Demo", demo)
-            .code_rust_from_file_region(snippets::material3::tabs::SOURCE, "example")],
-    );
-
-    vec![page]
+    render_material3_demo_page(cx, Some(MATERIAL3_INTRO), demo, snippets::material3::tabs::SOURCE)
 }
 
 pub(in crate::ui) fn preview_material3_list(
@@ -432,14 +369,7 @@ pub(in crate::ui) fn preview_material3_list(
 ) -> Vec<AnyElement> {
     let demo = snippets::material3::list::render(cx, value);
 
-    let page = doc_layout::render_doc_page(
-        cx,
-        Some("Material 3 surfaces are still migrating to snippet-backed pages (Preview ≡ Code)."),
-        vec![DocSection::new("Demo", demo)
-            .code_rust_from_file_region(snippets::material3::list::SOURCE, "example")],
-    );
-
-    vec![page]
+    render_material3_demo_page(cx, Some(MATERIAL3_INTRO), demo, snippets::material3::list::SOURCE)
 }
 
 pub(in crate::ui) fn preview_material3_navigation_bar(
@@ -448,16 +378,12 @@ pub(in crate::ui) fn preview_material3_navigation_bar(
 ) -> Vec<AnyElement> {
     let demo = snippets::material3::navigation_bar::render(cx, value);
 
-    let page = doc_layout::render_doc_page(
+    render_material3_demo_page(
         cx,
-        Some("Material 3 surfaces are still migrating to snippet-backed pages (Preview ≡ Code)."),
-        vec![DocSection::new("Demo", demo).code_rust_from_file_region(
-            snippets::material3::navigation_bar::SOURCE,
-            "example",
-        )],
-    );
-
-    vec![page]
+        Some(MATERIAL3_INTRO),
+        demo,
+        snippets::material3::navigation_bar::SOURCE,
+    )
 }
 
 pub(in crate::ui) fn preview_material3_navigation_rail(
@@ -466,16 +392,12 @@ pub(in crate::ui) fn preview_material3_navigation_rail(
 ) -> Vec<AnyElement> {
     let demo = snippets::material3::navigation_rail::render(cx, value);
 
-    let page = doc_layout::render_doc_page(
+    render_material3_demo_page(
         cx,
-        Some("Material 3 surfaces are still migrating to snippet-backed pages (Preview ≡ Code)."),
-        vec![DocSection::new("Demo", demo).code_rust_from_file_region(
-            snippets::material3::navigation_rail::SOURCE,
-            "example",
-        )],
-    );
-
-    vec![page]
+        Some(MATERIAL3_INTRO),
+        demo,
+        snippets::material3::navigation_rail::SOURCE,
+    )
 }
 
 pub(in crate::ui) fn preview_material3_navigation_drawer(
@@ -484,16 +406,12 @@ pub(in crate::ui) fn preview_material3_navigation_drawer(
 ) -> Vec<AnyElement> {
     let demo = snippets::material3::navigation_drawer::render(cx, value);
 
-    let page = doc_layout::render_doc_page(
+    render_material3_demo_page(
         cx,
-        Some("Material 3 surfaces are still migrating to snippet-backed pages (Preview ≡ Code)."),
-        vec![DocSection::new("Demo", demo).code_rust_from_file_region(
-            snippets::material3::navigation_drawer::SOURCE,
-            "example",
-        )],
-    );
-
-    vec![page]
+        Some(MATERIAL3_INTRO),
+        demo,
+        snippets::material3::navigation_drawer::SOURCE,
+    )
 }
 
 pub(in crate::ui) fn preview_material3_modal_navigation_drawer(
@@ -503,16 +421,12 @@ pub(in crate::ui) fn preview_material3_modal_navigation_drawer(
 ) -> Vec<AnyElement> {
     let demo = snippets::material3::modal_navigation_drawer::render(cx, open, value);
 
-    let page = doc_layout::render_doc_page(
+    render_material3_demo_page(
         cx,
-        Some("Material 3 surfaces are still migrating to snippet-backed pages (Preview ≡ Code)."),
-        vec![DocSection::new("Demo", demo).code_rust_from_file_region(
-            snippets::material3::modal_navigation_drawer::SOURCE,
-            "example",
-        )],
-    );
-
-    vec![page]
+        Some(MATERIAL3_INTRO),
+        demo,
+        snippets::material3::modal_navigation_drawer::SOURCE,
+    )
 }
 
 pub(in crate::ui) fn preview_material3_dialog(
@@ -522,14 +436,7 @@ pub(in crate::ui) fn preview_material3_dialog(
 ) -> Vec<AnyElement> {
     let demo = snippets::material3::dialog::render(cx, open, last_action);
 
-    let page = doc_layout::render_doc_page(
-        cx,
-        Some("Material 3 surfaces are still migrating to snippet-backed pages (Preview ≡ Code)."),
-        vec![DocSection::new("Demo", demo)
-            .code_rust_from_file_region(snippets::material3::dialog::SOURCE, "example")],
-    );
-
-    vec![page]
+    render_material3_demo_page(cx, Some(MATERIAL3_INTRO), demo, snippets::material3::dialog::SOURCE)
 }
 
 pub(in crate::ui) fn preview_material3_menu(
@@ -539,14 +446,7 @@ pub(in crate::ui) fn preview_material3_menu(
 ) -> Vec<AnyElement> {
     let demo = snippets::material3::menu::render(cx, open, last_action);
 
-    let page = doc_layout::render_doc_page(
-        cx,
-        Some("Material 3 surfaces are still migrating to snippet-backed pages (Preview ≡ Code)."),
-        vec![DocSection::new("Demo", demo)
-            .code_rust_from_file_region(snippets::material3::menu::SOURCE, "example")],
-    );
-
-    vec![page]
+    render_material3_demo_page(cx, Some(MATERIAL3_INTRO), demo, snippets::material3::menu::SOURCE)
 }
 
 pub(in crate::ui) fn preview_material3_snackbar(
@@ -555,14 +455,12 @@ pub(in crate::ui) fn preview_material3_snackbar(
 ) -> Vec<AnyElement> {
     let demo = snippets::material3::snackbar::render(cx, last_action);
 
-    let page = doc_layout::render_doc_page(
+    render_material3_demo_page(
         cx,
-        Some("Material 3 surfaces are still migrating to snippet-backed pages (Preview ≡ Code)."),
-        vec![DocSection::new("Demo", demo)
-            .code_rust_from_file_region(snippets::material3::snackbar::SOURCE, "example")],
-    );
-
-    vec![page]
+        Some(MATERIAL3_INTRO),
+        demo,
+        snippets::material3::snackbar::SOURCE,
+    )
 }
 
 pub(in crate::ui) fn preview_material3_tooltip(
@@ -570,12 +468,10 @@ pub(in crate::ui) fn preview_material3_tooltip(
 ) -> Vec<AnyElement> {
     let demo = snippets::material3::tooltip::render(cx);
 
-    let page = doc_layout::render_doc_page(
+    render_material3_demo_page(
         cx,
-        Some("Material 3 surfaces are still migrating to snippet-backed pages (Preview ≡ Code)."),
-        vec![DocSection::new("Demo", demo)
-            .code_rust_from_file_region(snippets::material3::tooltip::SOURCE, "example")],
-    );
-
-    vec![page]
+        Some(MATERIAL3_INTRO),
+        demo,
+        snippets::material3::tooltip::SOURCE,
+    )
 }
