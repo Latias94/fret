@@ -175,6 +175,97 @@ To avoid jarring oscillation on frames where probes/observation are partial, imp
 apply small hysteresis (e.g. sub-pixel tolerances), but must not permanently “pin” content extents
 to stale values.
 
+## SE-110: Overflow Blockers Audit (as of 2026-03-02)
+
+This section inventories current mechanism behaviors that can prevent post-layout extent derivation
+from observing true overflow unless an explicit MaxContent/unbounded probe is performed.
+
+The intent is to make SE-200 (prototype) realistic by identifying the smallest set of mechanism
+changes required to support DOM/GPUI-like overflow.
+
+### Root architectural constraint: layout uses definite `Rect` bounds
+
+In `fret-ui` today, the layout phase passes **definite bounds** (`Rect`) from parent to child
+(`layout_in(...)`). Many widgets treat `cx.available` (the bounds size) as a **hard maximum**
+through `clamp_to_constraints(...)`.
+
+Implication:
+
+- Without an explicit “unbounded/MaxContent budget” concept in *layout*, the only way to allow a
+  subtree to grow beyond its viewport-sized ancestor is to feed it a larger bounds rect (or to run
+  a separate intrinsic measurement probe that computes such bounds).
+
+This is the core reason the current scroll implementation uses `probe_unbounded` + deep
+`measure_in(...)` to compute a `content_bounds` rect before laying out children.
+
+### Budget-clamping wrappers (block overflow discovery)
+
+Several common wrappers explicitly measure/probe children **within the parent’s constrained size**
+to avoid “infinite viewport” outcomes during intrinsic sizing and to keep virtualized content from
+seeing unbounded budgets.
+
+These are correct for their original goals, but they also mean a post-layout extent strategy will
+under-observe overflow unless the scroll mechanism provides a layout-time “scroll axis is
+unbounded” budget that is visible to these wrappers.
+
+Evidence anchors:
+
+- Positioned containers:
+  - `crates/fret-ui/src/declarative/host_widget/layout/positioned_container.rs`
+  - uses `probe_available = clamp_to_constraints(cx.available, layout, cx.available)` and measures
+    children with `probe_constraints_for_size(probe_bounds.size)` (definite).
+- Generic container-like layouts:
+  - `crates/fret-ui/src/declarative/host_widget/layout.rs`
+  - “Probe within the available height budget” patterns appear in multiple element instances
+    (container-ish shells, translated wrappers, etc.).
+
+### Flex/Grid probe-pass behavior
+
+`flex` and `grid` widgets treat `LayoutPassKind::Probe` as “run measure() under definite available
+space”.
+
+This preserves “probe pass does not see infinite viewport” invariants, but it also means that any
+prototype that uses probe passes to derive extents must ensure probe constraints represent the
+intended scroll-axis budget (or avoid probe passes entirely for extent derivation).
+
+Evidence anchors:
+
+- Flex: `crates/fret-ui/src/declarative/host_widget/layout/flex.rs`
+- Grid: `crates/fret-ui/src/declarative/host_widget/layout/grid.rs`
+
+### Absolute-positioned nodes inclusion is inconsistent
+
+Intrinsic measurement probes often exclude absolute-positioned children:
+
+- e.g. `max_non_absolute_children(...)` in `crates/fret-ui/src/declarative/host_widget/measure.rs`
+
+However, post-layout observed bounds unions (used by scroll correctness guardrails today) can
+include absolute descendants unless explicitly filtered.
+
+Decision needed for parity:
+
+- Default should likely **exclude** absolute nodes from scroll extents, matching the intuition that
+  overlays/chrome should not silently change scroll range.
+- If a component wants absolute nodes to affect extents, it should do so explicitly via normal-flow
+  wrappers or a dedicated mechanism switch.
+
+### Minimum change set for SE-200 to be viable
+
+To make a “post-layout extents” prototype realistic (without relying on deep pre-layout measure
+probes), we likely need at least one of these mechanism-level additions:
+
+1. **Layout-time available-space budgets**:
+   - Add a way for `layout_in(...)` / `LayoutCx` to carry “scroll axis budget is MaxContent” without
+     requiring a giant `Rect` bounds.
+   - Budget-clamping wrappers (positioned containers, container shells) must consult this budget
+     when probing/measuring children.
+2. **Explicit overflow contexts**:
+   - Install an inherited mechanism state at `Scroll` roots indicating which axis is allowed to
+     overflow and how wrappers should treat `cx.available` during probes.
+3. **Standardize absolute exclusion**:
+   - Ensure the extent derivation path and the intrinsic measurement path agree on whether absolute
+     nodes contribute to extents (default: exclude).
+
 ## Reference Direction (GPUI / DOM)
 
 The DOM model (and GPUI’s implementation style) treats scroll extent as a property that can be

@@ -23,8 +23,9 @@ Tracking format:
   - Include: padding/border, negative origins policy, rounding policy.
   - Include: interaction with overlays and anchoring.
   - Draft: `docs/workstreams/scroll-extents-dom-parity.md` (Target Contract / SE-100)
-- [ ] SE-110 Identify current “available size clamping” behaviors that prevent overflow.
+- [~] SE-110 Identify current “available size clamping” behaviors that prevent overflow.
   - List the minimum set of element types that must change to allow DOM-like overflow.
+  - Initial inventory: `docs/workstreams/scroll-extents-dom-parity.md` (SE-110)
 
 ## Prototype (Behind a Gate)
 
