@@ -136,6 +136,98 @@ pub enum ComboboxTriggerVariant {
     Button,
 }
 
+/// shadcn/ui `ComboboxValue` (v4).
+///
+/// Upstream renders whatever children are passed (a string label in the simple case, chips in
+/// `multiple` mode). In Fret, the `Combobox` recipe always renders the selected label itself, so
+/// this type is primarily used by the chips adapter (`ComboboxChipsPart::Value`).
+#[derive(Debug, Default)]
+pub struct ComboboxValue {
+    pub(crate) chips: Vec<ComboboxChip>,
+}
+
+impl ComboboxValue {
+    pub fn new(chips: impl IntoIterator<Item = ComboboxChip>) -> Self {
+        Self {
+            chips: chips.into_iter().collect(),
+        }
+    }
+
+    pub fn chip(mut self, chip: ComboboxChip) -> Self {
+        self.chips.push(chip);
+        self
+    }
+
+    pub fn chips(mut self, chips: impl IntoIterator<Item = ComboboxChip>) -> Self {
+        self.chips.extend(chips);
+        self
+    }
+}
+
+/// shadcn/ui `ComboboxChip` (v4).
+#[derive(Debug)]
+pub struct ComboboxChip {
+    pub(crate) value: Arc<str>,
+    pub(crate) show_remove: bool,
+}
+
+impl ComboboxChip {
+    pub fn new(value: impl Into<Arc<str>>) -> Self {
+        Self {
+            value: value.into(),
+            show_remove: true,
+        }
+    }
+
+    pub fn show_remove(mut self, show_remove: bool) -> Self {
+        self.show_remove = show_remove;
+        self
+    }
+}
+
+/// shadcn/ui `ComboboxChipsInput` (v4).
+#[derive(Debug, Default)]
+pub struct ComboboxChipsInput {
+    pub(crate) placeholder: Option<Arc<str>>,
+}
+
+impl ComboboxChipsInput {
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    pub fn placeholder(mut self, placeholder: impl Into<Arc<str>>) -> Self {
+        self.placeholder = Some(placeholder.into());
+        self
+    }
+}
+
+/// shadcn/ui `ComboboxTrigger` (v4).
+///
+/// Upstream supports a `render` prop to use a button-like trigger. In Fret, this maps to
+/// recipe-level knobs (`trigger_variant`, `width`, etc.).
+#[derive(Debug, Default)]
+pub struct ComboboxTrigger {
+    variant: Option<ComboboxTriggerVariant>,
+    width: Option<Px>,
+}
+
+impl ComboboxTrigger {
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    pub fn variant(mut self, variant: ComboboxTriggerVariant) -> Self {
+        self.variant = Some(variant);
+        self
+    }
+
+    pub fn width_px(mut self, width: Px) -> Self {
+        self.width = Some(width);
+        self
+    }
+}
+
 /// Part-based authoring surface aligned with shadcn/ui v4 exports.
 ///
 /// Upstream uses Base UI render props to map `items` → list rows. In Fret we expose a structured
@@ -143,11 +235,16 @@ pub enum ComboboxTriggerVariant {
 /// “Usage” shapes remain expressible in Rust.
 #[derive(Debug)]
 pub enum ComboboxPart {
+    Trigger(ComboboxTrigger),
     Input(ComboboxInput),
     Content(ComboboxContent),
 }
 
 impl ComboboxPart {
+    pub fn trigger(trigger: ComboboxTrigger) -> Self {
+        Self::Trigger(trigger)
+    }
+
     pub fn input(input: ComboboxInput) -> Self {
         Self::Input(input)
     }
@@ -169,13 +266,19 @@ impl From<ComboboxContent> for ComboboxPart {
     }
 }
 
+impl From<ComboboxTrigger> for ComboboxPart {
+    fn from(value: ComboboxTrigger) -> Self {
+        Self::Trigger(value)
+    }
+}
+
 /// shadcn/ui `ComboboxInput` (v4).
 #[derive(Debug, Default)]
 pub struct ComboboxInput {
-    placeholder: Option<Arc<str>>,
-    disabled: Option<bool>,
-    show_trigger: Option<bool>,
-    show_clear: Option<bool>,
+    pub(crate) placeholder: Option<Arc<str>>,
+    pub(crate) disabled: Option<bool>,
+    pub(crate) show_trigger: Option<bool>,
+    pub(crate) show_clear: Option<bool>,
 }
 
 impl ComboboxInput {
@@ -257,12 +360,17 @@ impl ComboboxContent {
 /// Part-based children inside `ComboboxContent`.
 #[derive(Debug)]
 pub enum ComboboxContentPart {
+    Input(ComboboxInput),
     Empty(ComboboxEmpty),
     List(ComboboxList),
     Separator(ComboboxSeparator),
 }
 
 impl ComboboxContentPart {
+    pub fn input(input: ComboboxInput) -> Self {
+        Self::Input(input)
+    }
+
     pub fn empty(empty: ComboboxEmpty) -> Self {
         Self::Empty(empty)
     }
@@ -279,6 +387,12 @@ impl ComboboxContentPart {
 impl From<ComboboxEmpty> for ComboboxContentPart {
     fn from(value: ComboboxEmpty) -> Self {
         Self::Empty(value)
+    }
+}
+
+impl From<ComboboxInput> for ComboboxContentPart {
+    fn from(value: ComboboxInput) -> Self {
+        Self::Input(value)
     }
 }
 
@@ -452,7 +566,10 @@ impl ComboboxGroup {
 
 #[derive(Debug, Default)]
 struct ComboboxPartsPatch {
+    trigger_variant: Option<ComboboxTriggerVariant>,
+    width: Option<Px>,
     placeholder: Option<Arc<str>>,
+    search_placeholder: Option<Arc<str>>,
     disabled: Option<bool>,
     show_trigger: Option<bool>,
     show_clear: Option<bool>,
@@ -473,6 +590,14 @@ fn combobox_parts_patch(parts: Vec<ComboboxPart>) -> ComboboxPartsPatch {
 
     for part in parts {
         match part {
+            ComboboxPart::Trigger(trigger) => {
+                if trigger.variant.is_some() {
+                    patch.trigger_variant = trigger.variant;
+                }
+                if trigger.width.is_some() {
+                    patch.width = trigger.width;
+                }
+            }
             ComboboxPart::Input(input) => {
                 if input.placeholder.is_some() {
                     patch.placeholder = input.placeholder;
@@ -513,6 +638,11 @@ fn combobox_parts_patch(parts: Vec<ComboboxPart>) -> ComboboxPartsPatch {
         let mut saw_separator = false;
         for child in content.children {
             match child {
+                ComboboxContentPart::Input(input) => {
+                    if input.placeholder.is_some() {
+                        patch.search_placeholder = input.placeholder;
+                    }
+                }
                 ComboboxContentPart::Empty(empty) => {
                     patch.empty_text = Some(empty.text);
                 }
@@ -689,8 +819,17 @@ impl Combobox {
         parts: impl FnOnce(&mut ElementContext<'_, H>) -> Vec<ComboboxPart>,
     ) -> AnyElement {
         let patch = combobox_parts_patch(parts(cx));
+        if let Some(variant) = patch.trigger_variant {
+            self.trigger_variant = variant;
+        }
+        if let Some(width) = patch.width {
+            self.width = Some(width);
+        }
         if let Some(placeholder) = patch.placeholder {
             self.placeholder = placeholder;
+        }
+        if let Some(placeholder) = patch.search_placeholder {
+            self.search_placeholder = placeholder;
         }
         if let Some(disabled) = patch.disabled {
             self.disabled = disabled;
@@ -2660,6 +2799,11 @@ mod tests {
     #[test]
     fn combobox_parts_patch_maps_input_content_and_list() {
         let parts = vec![
+            ComboboxPart::trigger(
+                ComboboxTrigger::new()
+                    .variant(ComboboxTriggerVariant::Button)
+                    .width_px(Px(256.0)),
+            ),
             ComboboxPart::input(
                 ComboboxInput::new()
                     .placeholder("Pick one")
@@ -2669,6 +2813,9 @@ mod tests {
             ),
             ComboboxPart::content(
                 ComboboxContent::new([
+                    ComboboxContentPart::input(
+                        ComboboxInput::new().placeholder("Search frameworks..."),
+                    ),
                     ComboboxContentPart::empty(ComboboxEmpty::new("Nothing found.")),
                     ComboboxContentPart::list(
                         ComboboxList::new()
@@ -2688,7 +2835,13 @@ mod tests {
         ];
 
         let patch = combobox_parts_patch(parts);
+        assert_eq!(patch.trigger_variant, Some(ComboboxTriggerVariant::Button));
+        assert_eq!(patch.width, Some(Px(256.0)));
         assert_eq!(patch.placeholder.as_deref(), Some("Pick one"));
+        assert_eq!(
+            patch.search_placeholder.as_deref(),
+            Some("Search frameworks...")
+        );
         assert_eq!(patch.disabled, Some(true));
         assert_eq!(patch.show_trigger, Some(false));
         assert_eq!(patch.show_clear, Some(true));

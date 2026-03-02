@@ -159,7 +159,7 @@ pub use carousel::{
     CarouselBreakpoint, CarouselContainScroll, CarouselContent, CarouselContext, CarouselEvent,
     CarouselEventCursor, CarouselItem, CarouselNext, CarouselOptions, CarouselOptionsPatch,
     CarouselOrientation, CarouselPrevious, CarouselSlidesInViewSnapshot, CarouselSlidesToScroll,
-    carousel_context, useCarousel, use_carousel,
+    carousel_context, use_carousel, useCarousel,
 };
 pub use chart::{
     ChartConfig, ChartConfigItem, ChartContainer, ChartContext, ChartLegend, ChartLegendContent,
@@ -171,14 +171,12 @@ pub use collapsible::{
     Collapsible, CollapsibleContent, CollapsibleTrigger, collapsible, collapsible_uncontrolled,
 };
 pub use combobox::{
-    Combobox, ComboboxCollection, ComboboxContent, ComboboxContentPart, ComboboxEmpty,
-    ComboboxGroup, ComboboxInput, ComboboxItem, ComboboxLabel, ComboboxList, ComboboxPart,
-    ComboboxSeparator, ComboboxTriggerVariant, combobox, combobox_option, combobox_option_group,
-    useComboboxAnchor,
+    Combobox, ComboboxChip, ComboboxChipsInput, ComboboxCollection, ComboboxContent,
+    ComboboxContentPart, ComboboxEmpty, ComboboxGroup, ComboboxInput, ComboboxItem, ComboboxLabel,
+    ComboboxList, ComboboxPart, ComboboxSeparator, ComboboxTrigger, ComboboxTriggerVariant,
+    ComboboxValue, combobox, combobox_option, combobox_option_group, useComboboxAnchor,
 };
-pub use combobox_chips::{
-    ComboboxChip, ComboboxChips, ComboboxChipsInput, ComboboxChipsPart, ComboboxValue,
-};
+pub use combobox_chips::{ComboboxChips, ComboboxChipsPart};
 pub use combobox_data::{ComboboxOption, ComboboxOptionGroup};
 pub use command::{
     Command, CommandDialog, CommandEmpty, CommandEntry, CommandGroup, CommandInput, CommandItem,
@@ -223,7 +221,7 @@ pub use dialog::{
     Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, DialogHeader,
     DialogOverlay, DialogPortal, DialogTitle, DialogTrigger,
 };
-pub use direction::{DirectionProvider, LayoutDirection, useDirection, use_direction};
+pub use direction::{DirectionProvider, LayoutDirection, use_direction, useDirection};
 pub use drawer::{
     Drawer, DrawerClose, DrawerContent, DrawerDescription, DrawerFooter, DrawerHeader,
     DrawerOverlay, DrawerPortal, DrawerSide, DrawerSnapPoint, DrawerTitle, DrawerTrigger, drawer,
@@ -318,7 +316,7 @@ pub use sidebar::{
     SidebarMenuAction, SidebarMenuBadge, SidebarMenuButton, SidebarMenuButtonVariant,
     SidebarMenuItem, SidebarMenuSkeleton, SidebarMenuSub, SidebarMenuSubButton,
     SidebarMenuSubButtonSize, SidebarMenuSubItem, SidebarProvider, SidebarRail, SidebarSeparator,
-    SidebarSide, SidebarTrigger, SidebarVariant, useSidebar, use_sidebar,
+    SidebarSide, SidebarTrigger, SidebarVariant, use_sidebar, useSidebar,
 };
 pub use skeleton::Skeleton;
 pub use slider::{Slider, slider};

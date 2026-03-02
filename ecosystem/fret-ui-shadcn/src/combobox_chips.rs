@@ -23,8 +23,9 @@ use fret_ui_kit::{
 };
 
 use crate::combobox::{
-    ComboboxContent, ComboboxContentPart, ComboboxGroup as V4ComboboxGroup,
-    ComboboxItem as V4ComboboxItem, ComboboxOpenChangeReason, ComboboxStyle,
+    ComboboxChip, ComboboxChipsInput, ComboboxContent, ComboboxContentPart,
+    ComboboxGroup as V4ComboboxGroup, ComboboxItem as V4ComboboxItem, ComboboxOpenChangeReason,
+    ComboboxStyle, ComboboxValue,
 };
 use crate::combobox_data::{ComboboxOption, ComboboxOptionGroup};
 use crate::command::CommandPaletteA11ySelectedMode;
@@ -56,71 +57,6 @@ impl From<ComboboxChipsInput> for ComboboxChipsPart {
 impl From<ComboboxContent> for ComboboxChipsPart {
     fn from(value: ComboboxContent) -> Self {
         Self::Content(value)
-    }
-}
-
-/// shadcn/ui `ComboboxValue` (v4).
-///
-/// This adapter uses `ComboboxValue` as a configuration surface for chip behavior rather than as a
-/// literal nested element (Fret renders chips via the `ComboboxChips` recipe).
-#[derive(Debug, Default)]
-pub struct ComboboxValue {
-    chips: Vec<ComboboxChip>,
-}
-
-impl ComboboxValue {
-    pub fn new(chips: impl IntoIterator<Item = ComboboxChip>) -> Self {
-        Self {
-            chips: chips.into_iter().collect(),
-        }
-    }
-
-    pub fn chip(mut self, chip: ComboboxChip) -> Self {
-        self.chips.push(chip);
-        self
-    }
-
-    pub fn chips(mut self, chips: impl IntoIterator<Item = ComboboxChip>) -> Self {
-        self.chips.extend(chips);
-        self
-    }
-}
-
-/// shadcn/ui `ComboboxChip` (v4).
-#[derive(Debug)]
-pub struct ComboboxChip {
-    value: Arc<str>,
-    show_remove: bool,
-}
-
-impl ComboboxChip {
-    pub fn new(value: impl Into<Arc<str>>) -> Self {
-        Self {
-            value: value.into(),
-            show_remove: true,
-        }
-    }
-
-    pub fn show_remove(mut self, show_remove: bool) -> Self {
-        self.show_remove = show_remove;
-        self
-    }
-}
-
-/// shadcn/ui `ComboboxChipsInput` (v4).
-#[derive(Debug, Default)]
-pub struct ComboboxChipsInput {
-    placeholder: Option<Arc<str>>,
-}
-
-impl ComboboxChipsInput {
-    pub fn new() -> Self {
-        Self::default()
-    }
-
-    pub fn placeholder(mut self, placeholder: impl Into<Arc<str>>) -> Self {
-        self.placeholder = Some(placeholder.into());
-        self
     }
 }
 
@@ -397,6 +333,11 @@ fn apply_parts_patch_to_chips(chips: &mut ComboboxChips, parts: Vec<ComboboxChip
 fn apply_v4_content_patch_to_chips(chips: &mut ComboboxChips, content: ComboboxContent) {
     for child in content.children {
         match child {
+            ComboboxContentPart::Input(input) => {
+                if let Some(placeholder) = input.placeholder {
+                    chips.search_placeholder = placeholder;
+                }
+            }
             ComboboxContentPart::Empty(empty) => {
                 chips.empty_text = empty.text;
             }
