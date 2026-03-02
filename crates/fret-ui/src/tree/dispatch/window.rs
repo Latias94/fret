@@ -673,7 +673,6 @@ impl<H: UiHost> UiTree<H> {
 
         let mut cursor_choice: Option<fret_core::CursorIcon> = None;
         let mut cursor_choice_from_query = false;
-        let mut cursor_query_choice: Option<fret_core::CursorIcon> = None;
         let mut stop_propagation_requested = false;
         let mut stop_propagation_requested_by: Option<NodeId> = None;
         let mut pointer_down_outside = PointerDownOutsideOutcome::default();
@@ -986,7 +985,7 @@ impl<H: UiHost> UiTree<H> {
             }
 
             if input_ctx.caps.ui.cursor_icons
-                && cursor_query_choice.is_none()
+                && cursor_choice.is_none()
                 && matches!(event, Event::Pointer(PointerEvent::Move { .. }))
             {
                 let (_, elapsed) = fret_perf::measure_span(
@@ -994,20 +993,14 @@ impl<H: UiHost> UiTree<H> {
                     trace_enabled,
                     || tracing::trace_span!("fret.ui.dispatch.cursor_query"),
                     || {
-                        let mut node = captured.or(hit_for_hover);
-                        while let Some(id) = node {
-                            let (bounds, parent) = self
-                                .nodes
-                                .get(id)
-                                .map(|n| (n.bounds, n.parent))
-                                .unwrap_or_default();
-                            if let Some(icon) = self.with_widget_mut(id, |widget, _tree| {
-                                widget.cursor_icon_at(bounds, pos, &input_ctx)
-                            }) {
-                                cursor_query_choice = Some(icon);
-                                break;
-                            }
-                            node = parent;
+                        if let Some(start) = captured.or(hit_for_hover) {
+                            cursor_choice = self.cursor_icon_query_for_pointer_hit(
+                                start,
+                                &input_ctx,
+                                event,
+                                Some(pointer_chain_snapshot),
+                            );
+                            cursor_choice_from_query = cursor_choice.is_some();
                         }
                     },
                 );
@@ -1108,7 +1101,7 @@ impl<H: UiHost> UiTree<H> {
                             {
                                 return Some(node);
                             }
-                            node = self.nodes.get(node).and_then(|n| n.parent)?;
+                            node = pointer_chain_snapshot.parent.get(node).copied().flatten()?;
                         }
                     })
                 })()
@@ -1690,7 +1683,15 @@ impl<H: UiHost> UiTree<H> {
             let mut cur = Some(node_id);
             while let Some(id) = cur {
                 chain.push(id);
-                cur = self.nodes.get(id).and_then(|n| n.parent);
+                if dispatch_cx.focus_snapshot.pre.get(id).is_none() {
+                    debug_assert!(
+                        false,
+                        "dispatch/window: key chain node missing from focus snapshot (node={id:?}, frame_id={:?}, window={:?})",
+                        dispatch_cx.focus_snapshot.frame_id, dispatch_cx.focus_snapshot.window
+                    );
+                    break;
+                }
+                cur = dispatch_cx.focus_snapshot.parent.get(id).copied().flatten();
             }
 
             let mut stopped_in_capture = false;
@@ -1855,8 +1856,6 @@ impl<H: UiHost> UiTree<H> {
                                 notify_requested_location,
                                 stop_propagation,
                             ) = self.with_widget_mut(node_id, |widget, tree| {
-                                let parent = tree.nodes.get(node_id).and_then(|n| n.parent);
-                                let _ = parent;
                                 let (children, bounds) = tree
                                     .nodes
                                     .get(node_id)
@@ -2020,9 +2019,7 @@ impl<H: UiHost> UiTree<H> {
                     notify_requested,
                     notify_requested_location,
                     stop_propagation,
-                    parent,
                 ) = self.with_widget_mut(node_id, |widget, tree| {
-                    let parent = tree.nodes.get(node_id).and_then(|n| n.parent);
                     let (children, bounds) = tree
                         .nodes
                         .get(node_id)
@@ -2063,7 +2060,6 @@ impl<H: UiHost> UiTree<H> {
                         cx.notify_requested,
                         cx.notify_requested_location,
                         cx.stop_propagation,
-                        parent,
                     )
                 });
                 if !invalidations.is_empty()
@@ -2154,7 +2150,21 @@ impl<H: UiHost> UiTree<H> {
                     break;
                 }
 
-                node_id = match parent {
+                if dispatch_cx.focus_snapshot.pre.get(node_id).is_none() {
+                    debug_assert!(
+                        false,
+                        "dispatch/window: bubble chain node missing from focus snapshot (node={node_id:?}, frame_id={:?}, window={:?})",
+                        dispatch_cx.focus_snapshot.frame_id, dispatch_cx.focus_snapshot.window
+                    );
+                    break;
+                }
+                node_id = match dispatch_cx
+                    .focus_snapshot
+                    .parent
+                    .get(node_id)
+                    .copied()
+                    .flatten()
+                {
                     Some(parent) => parent,
                     None => break,
                 };
@@ -2618,9 +2628,7 @@ impl<H: UiHost> UiTree<H> {
             && let Some(window) = self.window
             && matches!(event, Event::Pointer(_))
         {
-            let icon = cursor_choice
-                .or(cursor_query_choice)
-                .unwrap_or(fret_core::CursorIcon::Default);
+            let icon = cursor_choice.unwrap_or(fret_core::CursorIcon::Default);
             let (_, elapsed) = fret_perf::measure_span(
                 self.debug_enabled,
                 trace_enabled,
