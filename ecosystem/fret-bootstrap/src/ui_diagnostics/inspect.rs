@@ -277,6 +277,38 @@ impl UiDiagnosticsService {
             return false;
         }
 
+        // Help mode: allow `Ctrl/Cmd+Enter` while search is active to lock the selected match and
+        // immediately copy the best selector (without requiring a separate `Ctrl/Cmd+C` press).
+        if self.inspect_help_is_open(window)
+            && (modifiers.ctrl || modifiers.meta)
+            && !(modifiers.alt || modifiers.alt_gr)
+            && *key == KeyCode::Enter
+        {
+            if self.inspect_help_search_query(window).is_some() {
+                if let Some(node_id) = self.inspect_help_selected_match_node_id(window) {
+                    self.inspect_focus_down_stack.insert(window, Vec::new());
+                    self.inspect_locked_windows.insert(window);
+                    self.inspect_pending_nav
+                        .insert(window, InspectNavCommand::SelectNode(node_id));
+                    self.inspect_pending_copy_selector_windows.insert(window);
+                    self.push_inspect_toast(
+                        window,
+                        "inspect: locked match and copied selector".to_string(),
+                    );
+                    app.request_redraw(window);
+                    return true;
+                }
+            }
+
+            if self.inspect_help_search_query.remove(&window).is_some() {
+                self.inspect_help_match_node_ids.remove(&window);
+                self.inspect_help_selected_match_index.remove(&window);
+                self.push_inspect_toast(window, "inspect: search cleared".to_string());
+            }
+            app.request_redraw(window);
+            return true;
+        }
+
         if self.inspect_help_is_open(window)
             && !(modifiers.ctrl || modifiers.meta || modifiers.alt || modifiers.alt_gr)
         {
