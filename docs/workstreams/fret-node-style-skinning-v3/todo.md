@@ -12,8 +12,8 @@
 
 - [x] Add `NodeGraphPaintOverrides` + `NodeGraphPaintOverridesMap` in `ecosystem/fret-node`
 - [x] Thread overrides handle through `NodeGraphCanvas` builder
-- [ ] Update paint cache keys to include paint override revision
-- [ ] Add conformance tests (invalidation + invariants)
+- [x] Update paint cache keys to include paint override revision
+- [x] Add conformance tests (invalidation + invariants)
 
 ## Optional (nice-to-have)
 
