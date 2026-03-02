@@ -1,9 +1,9 @@
 use fret_app::App;
 use fret_core::{AppWindowId, FrameId, KeyCode, Point, Px, Rect, Size as CoreSize};
 use fret_runtime::Model;
+use fret_ui::ElementContext;
 use fret_ui::element::AnyElement;
 use fret_ui::tree::UiTree;
-use fret_ui::ElementContext;
 use fret_ui_kit::OverlayController;
 use std::sync::Arc;
 
@@ -67,7 +67,7 @@ fn select_arrow_down_enter_selects_item_and_closes() {
     );
 
     let mut app = App::new();
-    fret_ui_shadcn::shadcn_themes::apply_shadcn_new_york_v4(
+    fret_ui_shadcn::shadcn_themes::apply_shadcn_new_york(
         &mut app,
         fret_ui_shadcn::shadcn_themes::ShadcnBaseColor::Neutral,
         fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Light,
@@ -97,12 +97,14 @@ fn select_arrow_down_enter_selects_item_and_closes() {
         bounds,
         true,
         move |cx| {
-            vec![fret_ui_shadcn::Select::new(value_frame_1, open_frame_1)
-                .placeholder("Select")
-                .a11y_label("Select")
-                .trigger_test_id("select-trigger")
-                .items(items_frame_1)
-                .into_element(cx)]
+            vec![
+                fret_ui_shadcn::Select::new(value_frame_1, open_frame_1)
+                    .value(fret_ui_shadcn::SelectValue::new().placeholder("Select"))
+                    .a11y_label("Select")
+                    .trigger_test_id("select-trigger")
+                    .items(items_frame_1)
+                    .into_element(cx),
+            ]
         },
     );
 
@@ -137,12 +139,14 @@ fn select_arrow_down_enter_selects_item_and_closes() {
             bounds,
             request_semantics,
             move |cx| {
-                vec![fret_ui_shadcn::Select::new(value_frame, open_frame)
-                    .placeholder("Select")
-                    .a11y_label("Select")
-                    .trigger_test_id("select-trigger")
-                    .items(items_frame)
-                    .into_element(cx)]
+                vec![
+                    fret_ui_shadcn::Select::new(value_frame, open_frame)
+                        .value(fret_ui_shadcn::SelectValue::new().placeholder("Select"))
+                        .a11y_label("Select")
+                        .trigger_test_id("select-trigger")
+                        .items(items_frame)
+                        .into_element(cx),
+                ]
             },
         );
     }
@@ -162,12 +166,14 @@ fn select_arrow_down_enter_selects_item_and_closes() {
         bounds,
         true,
         move |cx| {
-            vec![fret_ui_shadcn::Select::new(value_frame_3, open_frame_3)
-                .placeholder("Select")
-                .a11y_label("Select")
-                .trigger_test_id("select-trigger")
-                .items(items_frame_3)
-                .into_element(cx)]
+            vec![
+                fret_ui_shadcn::Select::new(value_frame_3, open_frame_3)
+                    .value(fret_ui_shadcn::SelectValue::new().placeholder("Select"))
+                    .a11y_label("Select")
+                    .trigger_test_id("select-trigger")
+                    .items(items_frame_3)
+                    .into_element(cx),
+            ]
         },
     );
 

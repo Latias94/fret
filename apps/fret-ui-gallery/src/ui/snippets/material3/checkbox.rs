@@ -1,8 +1,8 @@
 pub const SOURCE: &str = include_str!("checkbox.rs");
 
 // region: example
-use fret_ui_material3 as material3;
 use fret_ui_kit::{ColorRef, WidgetStateProperty, WidgetStates};
+use fret_ui_material3 as material3;
 use fret_ui_shadcn::prelude::*;
 
 #[derive(Default)]
@@ -101,4 +101,3 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>, checked: Model<bool>) -
 }
 
 // endregion: example
-

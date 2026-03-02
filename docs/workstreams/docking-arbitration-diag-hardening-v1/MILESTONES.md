@@ -32,6 +32,10 @@ Status update (2026-03-02, later):
 - M1.5 delivered: the chained tear-off script is now deterministic enough to be a regression gate (stable hover
   retargeting + explicit zone selection).
 - M1.6 delivered: chained tear-off + merge-back returns to the pre-tearoff dock graph fingerprint (idempotence).
+- M1.7 delivered: multi-window overlap z-order switching is stable again under `--timeout-ms 60000` by:
+  - avoiding global dock-drag cancellation on `PointerCancel` (`ecosystem/fret-docking/src/dock/space.rs`),
+  - allowing global predicate steps to run off-window (avoid occlusion stalls) (`ecosystem/fret-bootstrap/src/ui_diagnostics/script_runner.rs`),
+  - canceling runner-routed cross-window drags using the internal routing pointer id on mouse-up (`crates/fret-launch/src/runner/desktop/runner/app_handler.rs`).
 
 Stability check (2026-03-02):
 
@@ -39,6 +43,35 @@ Stability check (2026-03-02):
   - `--env FRET_DOCK_ALLOW_MULTI_WINDOW_TEAR_OFF=1`,
   - `--reuse-launch`,
   - `--compare-ignore-bounds --compare-ignore-scene-fingerprint` (expected to drift for multi-window demos).
+
+Post-merge verification (2026-03-02):
+
+- Note: when iterating on in-app diagnostics logic, rebuild the launched demo binary (`docking_arbitration_demo.exe`);
+  `fretboard` itself does not rebuild the demo when using `--launch -- target/debug/...exe`.
+- `fretboard diag run` is green with `--timeout-ms 60000`:
+  - out dir: `target/fret-diag-step35-fix3b`
+  - run id: `1772462696715`
+- `fretboard diag repeat` is green 3x with:
+  - `--timeout-ms 60000 --reuse-launch --compare-ignore-bounds --compare-ignore-scene-fingerprint`
+  - out dir: `target/fret-diag-step35-fix3b-repeat2`
+
+Post-merge verification (2026-03-02, after syncing `origin/main` into local `main`):
+
+- Merge commit: `d3d97c321`.
+- Base out dir: `target/fret-diag-merge-smoke`.
+- `fretboard diag run` PASS with `--timeout-ms 60000`:
+  - overlap z-order switch: run id `1772468892427` (session `1772468392070-85720`)
+  - chained tear-off (two tabs): run id `1772468949607` (session `1772468946994-57504`)
+
+Hover peek-behind hardening (2026-03-02):
+
+- Runner hover routing consumes `window_under_moving_window` when transparent payload is requested (or follow is active),
+  so docking previews/resolve can target the overlapped window under a moving payload window.
+  - implementation: `crates/fret-launch/src/runner/desktop/runner/event_routing.rs`
+- Updated gates (all PASS with `--timeout-ms 60000`):
+  - transparent payload z-order switch: run id `1772470944468` (`target/fret-diag-transparent-payload-smoke4`)
+  - under-moving-window peek-behind: run id `1772471076428` (`target/fret-diag-under-moving-hover4`)
+  - overlap z-order switch (non-transparent): run id `1772471119364` (`target/fret-diag-post-peek`)
 
 ## M1.4 — Rebuild reliability for docking demos (Windows/MSVC)
 

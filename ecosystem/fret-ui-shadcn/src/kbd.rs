@@ -259,7 +259,7 @@ mod tests {
         let window = AppWindowId::default();
         let mut app = App::new();
 
-        crate::shadcn_themes::apply_shadcn_new_york_v4(
+        crate::shadcn_themes::apply_shadcn_new_york(
             &mut app,
             crate::shadcn_themes::ShadcnBaseColor::Neutral,
             crate::shadcn_themes::ShadcnColorScheme::Light,
@@ -310,7 +310,7 @@ mod tests {
             (crate::shadcn_themes::ShadcnColorScheme::Dark, 0.10),
         ] {
             let mut app = App::new();
-            crate::shadcn_themes::apply_shadcn_new_york_v4(
+            crate::shadcn_themes::apply_shadcn_new_york(
                 &mut app,
                 crate::shadcn_themes::ShadcnBaseColor::Neutral,
                 scheme,
@@ -338,7 +338,7 @@ mod tests {
     fn kbd_group_gap_matches_shadcn() {
         let window = AppWindowId::default();
         let mut app = App::new();
-        crate::shadcn_themes::apply_shadcn_new_york_v4(
+        crate::shadcn_themes::apply_shadcn_new_york(
             &mut app,
             crate::shadcn_themes::ShadcnBaseColor::Neutral,
             crate::shadcn_themes::ShadcnColorScheme::Light,
@@ -399,7 +399,7 @@ mod tests {
         let window = AppWindowId::default();
         let mut app = App::new();
 
-        crate::shadcn_themes::apply_shadcn_new_york_v4(
+        crate::shadcn_themes::apply_shadcn_new_york(
             &mut app,
             crate::shadcn_themes::ShadcnBaseColor::Neutral,
             crate::shadcn_themes::ShadcnColorScheme::Light,

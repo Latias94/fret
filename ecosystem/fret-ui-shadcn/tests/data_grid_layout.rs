@@ -146,7 +146,7 @@ fn data_grid_header_does_not_overlap_body() {
     ui.set_window(window);
     let mut services = FakeServices;
 
-    shadcn::shadcn_themes::apply_shadcn_new_york_v4(
+    shadcn::shadcn_themes::apply_shadcn_new_york(
         &mut app,
         shadcn::shadcn_themes::ShadcnBaseColor::Neutral,
         shadcn::shadcn_themes::ShadcnColorScheme::Light,

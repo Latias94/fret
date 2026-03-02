@@ -220,7 +220,7 @@ impl ComponentsGalleryDriver {
             _ => return,
         };
 
-        shadcn::shadcn_themes::apply_shadcn_new_york_v4(app, base, scheme);
+        shadcn::shadcn_themes::apply_shadcn_new_york(app, base, scheme);
         state.applied_theme_preset = Some(preset);
     }
 
@@ -973,15 +973,18 @@ impl ComponentsGalleryDriver {
                                             .unwrap_or("<none>")
                                             .to_owned();
 
-                                        vec![
-                                            shadcn::Select::new(select, select_open)
-                                                .a11y_label("Demo select")
-                                                    .placeholder("Pick a fruit")
-                                                .items([
-                                                    shadcn::SelectItem::new("apple", "Apple"),
-                                                    shadcn::SelectItem::new("banana", "Banana"),
-                                                    shadcn::SelectItem::new("cherry", "Cherry"),
-                                                ])
+	                                        vec![
+	                                            shadcn::Select::new(select, select_open)
+	                                                .a11y_label("Demo select")
+	                                                .value(
+	                                                    shadcn::SelectValue::new()
+	                                                        .placeholder("Pick a fruit"),
+	                                                )
+	                                                .items([
+	                                                    shadcn::SelectItem::new("apple", "Apple"),
+	                                                    shadcn::SelectItem::new("banana", "Banana"),
+	                                                    shadcn::SelectItem::new("cherry", "Cherry"),
+	                                                ])
                                                 .into_element(cx),
                                             cx.text(format!("select: {value}")),
                                         ]
@@ -2083,7 +2086,7 @@ impl WinitAppDriver for ComponentsGalleryDriver {
 pub fn build_app() -> App {
     let mut app = App::new();
     app.set_global(PlatformCapabilities::default());
-    shadcn::shadcn_themes::apply_shadcn_new_york_v4(
+    shadcn::shadcn_themes::apply_shadcn_new_york(
         &mut app,
         shadcn::shadcn_themes::ShadcnBaseColor::Zinc,
         shadcn::shadcn_themes::ShadcnColorScheme::Dark,

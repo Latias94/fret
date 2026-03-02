@@ -441,15 +441,11 @@ impl UiDiagnosticsService {
                 let Ok(cfg) = serde_json::from_value::<UiInspectConfigV1>(msg.payload) else {
                     return;
                 };
-                self.inspect_enabled = cfg.enabled;
-                self.inspect_consume_clicks = cfg.consume_clicks;
-                if !self.inspect_enabled {
-                    self.inspect_locked_windows.clear();
-                }
+                self.set_inspect_enabled(cfg.enabled, cfg.consume_clicks);
             }
             "pick.arm" => {
-                self.pending_pick = None;
-                self.pick_armed_run_id = Some(self.next_pick_run_id());
+                let run_id = self.inspector.next_pick_run_id();
+                self.inspector.arm_pick(run_id);
             }
             "bundle.dump" => {
                 let (label, dump_max_snapshots) =

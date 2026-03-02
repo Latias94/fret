@@ -12,7 +12,8 @@ use std::sync::Arc;
 
 use fret_core::{Axis, Corners, Edges, FontId, FontWeight, Px, TextStyle};
 use fret_ui::element::{
-    AnyElement, FlexProps, LayoutStyle, Length, SemanticsDecoration, SizeStyle,
+    AnyElement, ContainerProps, CrossAlign, FlexProps, LayoutStyle, Length, SemanticsDecoration,
+    SizeStyle,
 };
 use fret_ui::{ElementContext, Theme, UiHost};
 use fret_ui_kit::declarative::style as decl_style;
@@ -498,9 +499,16 @@ impl ButtonGroup {
             ButtonGroupOrientation::Vertical => Axis::Vertical,
         };
 
-        let layout = decl_style::layout_style(&theme, self.layout);
+        let mut outer_layout = decl_style::layout_style(&theme, self.layout);
+        // Upstream shadcn/ui v4 `ButtonGroup` includes `w-fit` so groups do not stretch under parent
+        // stacks using `items-stretch`. Approximate that by opting out of cross-axis stretch unless
+        // a width is explicitly requested.
+        if outer_layout.flex.align_self.is_none() && matches!(outer_layout.size.width, Length::Auto)
+        {
+            outer_layout.flex.align_self = Some(CrossAlign::Start);
+        }
         let props = FlexProps {
-            layout,
+            layout: LayoutStyle::default(),
             direction,
             gap: gap.into(),
             padding: Edges::all(Px(0.0)).into(),
@@ -753,7 +761,14 @@ impl ButtonGroup {
         if let Some(a11y_label) = a11y_label {
             decoration = decoration.label(a11y_label);
         }
-        group.attach_semantics(decoration)
+        cx.container(
+            ContainerProps {
+                layout: outer_layout,
+                ..Default::default()
+            },
+            move |_cx| vec![group],
+        )
+        .attach_semantics(decoration)
     }
 }
 
@@ -766,7 +781,7 @@ mod tests {
     use fret_ui::element::{ElementKind, Length, MarginEdge};
 
     fn apply_theme(app: &mut App) {
-        crate::shadcn_themes::apply_shadcn_new_york_v4(
+        crate::shadcn_themes::apply_shadcn_new_york(
             app,
             crate::shadcn_themes::ShadcnBaseColor::Neutral,
             crate::shadcn_themes::ShadcnColorScheme::Light,
@@ -831,11 +846,20 @@ mod tests {
         apply_theme(&mut app);
 
         let element = render_group(&mut app, window, ButtonGroup::new(basic_text_items()));
-        let ElementKind::Flex(props) = &element.kind else {
-            panic!("expected ButtonGroup to render as a flex element");
+        let ElementKind::Container(outer) = &element.kind else {
+            panic!("expected ButtonGroup to render as a container wrapper");
+        };
+        assert_eq!(outer.layout.size.width, Length::Auto);
+        assert_eq!(
+            outer.layout.flex.align_self,
+            Some(fret_ui::element::CrossAlign::Start)
+        );
+
+        assert_eq!(element.children.len(), 1);
+        let ElementKind::Flex(props) = &element.children[0].kind else {
+            panic!("expected ButtonGroup inner to render as a flex element");
         };
 
-        assert_eq!(props.layout.size.width, Length::Auto);
         assert_eq!(props.direction, fret_core::Axis::Horizontal);
         assert_eq!(props.align, fret_ui::element::CrossAlign::Stretch);
         assert_eq!(props.gap, Px(0.0).into());
@@ -847,7 +871,9 @@ mod tests {
         let mut app = App::new();
         apply_theme(&mut app);
 
-        let element = render_group(&mut app, window, ButtonGroup::new(basic_text_items()));
+        let outer = render_group(&mut app, window, ButtonGroup::new(basic_text_items()));
+        assert_eq!(outer.children.len(), 1);
+        let element = &outer.children[0];
         assert_eq!(element.children.len(), 2);
 
         let left = &element.children[0];
@@ -876,13 +902,15 @@ mod tests {
         let mut app = App::new();
         apply_theme(&mut app);
 
-        let element = render_group(
+        let outer = render_group(
             &mut app,
             window,
             ButtonGroup::new(basic_text_items()).orientation(ButtonGroupOrientation::Vertical),
         );
+        assert_eq!(outer.children.len(), 1);
+        let element = &outer.children[0];
         let ElementKind::Flex(props) = &element.kind else {
-            panic!("expected ButtonGroup to render as a flex element");
+            panic!("expected ButtonGroup inner to render as a flex element");
         };
         assert_eq!(props.direction, fret_core::Axis::Vertical);
         assert_eq!(props.align, fret_ui::element::CrossAlign::Stretch);
@@ -912,7 +940,7 @@ mod tests {
         apply_theme(&mut app);
 
         let nested = ButtonGroup::new([ButtonGroupText::new("N").into()]);
-        let element = render_group(
+        let outer = render_group(
             &mut app,
             window,
             ButtonGroup::new([
@@ -920,8 +948,10 @@ mod tests {
                 ButtonGroupText::new("A").into(),
             ]),
         );
+        assert_eq!(outer.children.len(), 1);
+        let element = &outer.children[0];
         let ElementKind::Flex(props) = &element.kind else {
-            panic!("expected ButtonGroup to render as a flex element");
+            panic!("expected ButtonGroup inner to render as a flex element");
         };
         assert_eq!(props.gap, Px(8.0).into());
     }

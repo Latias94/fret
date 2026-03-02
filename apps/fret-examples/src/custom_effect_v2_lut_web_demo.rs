@@ -676,7 +676,7 @@ impl CustomEffectV2LutWebDriver {
                         vec![
                             label_row(cx, "Effect mode", mode_value.clone()),
                             shadcn::Select::new(controls.mode.clone(), controls.mode_open.clone())
-                                .placeholder("Pick mode")
+                                .value(shadcn::SelectValue::new().placeholder("Pick mode"))
                                 .items([
                                     shadcn::SelectItem::new("backdrop", "Backdrop"),
                                     shadcn::SelectItem::new("filter_content", "FilterContent"),
@@ -696,7 +696,7 @@ impl CustomEffectV2LutWebDriver {
                                 controls.quality.clone(),
                                 controls.quality_open.clone(),
                             )
-                            .placeholder("Pick quality")
+                            .value(shadcn::SelectValue::new().placeholder("Pick quality"))
                             .items([
                                 shadcn::SelectItem::new("auto", "Auto"),
                                 shadcn::SelectItem::new("low", "Low"),
@@ -718,7 +718,7 @@ impl CustomEffectV2LutWebDriver {
                                 controls.sampling.clone(),
                                 controls.sampling_open.clone(),
                             )
-                            .placeholder("Pick sampling")
+                            .value(shadcn::SelectValue::new().placeholder("Pick sampling"))
                             .items([
                                 shadcn::SelectItem::new("default", "Default"),
                                 shadcn::SelectItem::new("linear", "Linear"),
@@ -1285,7 +1285,7 @@ impl WinitAppDriver for CustomEffectV2LutWebDriver {
 
 pub fn build_app() -> App {
     let mut app = App::new();
-    shadcn::shadcn_themes::apply_shadcn_new_york_v4(
+    shadcn::shadcn_themes::apply_shadcn_new_york(
         &mut app,
         shadcn::shadcn_themes::ShadcnBaseColor::Slate,
         shadcn::shadcn_themes::ShadcnColorScheme::Dark,

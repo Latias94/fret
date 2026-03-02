@@ -59,6 +59,7 @@ impl UiDiagnosticsService {
             wait_frames_remaining: 0,
             wait_until: None,
             wait_shortcut_routing_trace: None,
+            wait_command_dispatch_trace: None,
             wait_overlay_placement_trace: None,
             screenshot_wait: None,
             v2_step_state: None,
@@ -73,6 +74,8 @@ impl UiDiagnosticsService {
             focus_trace: Vec::new(),
             shortcut_routing_trace: Vec::new(),
             last_shortcut_routing_seq: 0,
+            command_dispatch_trace: Vec::new(),
+            last_command_dispatch_seq: 0,
             overlay_placement_trace: Vec::new(),
             web_ime_trace: Vec::new(),
             ime_event_trace: Vec::new(),
@@ -174,9 +177,10 @@ impl UiDiagnosticsService {
         let step = other_active.steps.get(other_active.next_step);
         let step_window_target = Self::active_step_window_target(other_active);
         let other_step_index = other_active.next_step;
-        let step_allows_off_window_cached_test_id_predicate = step.is_some_and(|step| match step {
+        let step_allows_off_window_eval = step.is_some_and(|step| match step {
             UiActionStepV2::WaitUntil { predicate, .. } | UiActionStepV2::Assert { predicate, .. } => {
                 UiDiagnosticsService::predicate_can_eval_from_cached_test_id_bounds(predicate)
+                    || UiDiagnosticsService::predicate_can_eval_off_window(predicate)
             }
             _ => false,
         });
@@ -196,6 +200,41 @@ impl UiDiagnosticsService {
         let allow_migrate_for_dock_drag =
             dock_drag_source_window == Some(window) && step_allows_dock_drag_migration;
 
+        // Pointer-session starts (`pointer_down`) are especially sensitive to window migration:
+        // they must run in the window that owns the targeted semantics snapshot. If the runner is
+        // currently driving a different window (e.g. occlusion/z-order), migrating the script can
+        // create a ping-pong loop where `pointer_down` keeps handing off back to the intended
+        // window, but migration immediately steals it away again before any snapshots arrive.
+        //
+        // For relative targets (last_seen/other), keep the script pinned to its current active
+        // window and aggressively wake it until it produces frames.
+        let pointer_down_relative = matches!(step, Some(UiActionStepV2::PointerDown { .. }))
+            && matches!(
+                step_window_target,
+                Some(
+                    UiWindowTargetV1::LastSeen
+                        | UiWindowTargetV1::LastSeenOther
+                        | UiWindowTargetV1::FirstSeenOther
+                )
+            );
+        if pointer_down_relative && !allow_migrate_for_dock_drag {
+            app.request_redraw(other_window);
+            app.push_effect(Effect::Redraw(other_window));
+            app.push_effect(Effect::RequestAnimationFrame(other_window));
+            append_diag_script_migration_trace(
+                &self.cfg.out_dir,
+                &format!(
+                    "unix_ms={} kind=nudge_active_pointer_down_window active_window={:?} requested_from={:?} step_index={} step_window_target={:?}",
+                    unix_ms_now(),
+                    other_window,
+                    window,
+                    other_step_index,
+                    step_window_target,
+                ),
+            );
+            return;
+        }
+
         // Avoid migration loops for window-targeted steps.
         //
         // If a step resolves to a specific window (e.g. `last_seen`), do not migrate the active
@@ -204,13 +243,15 @@ impl UiDiagnosticsService {
         //
         // Exception: during an active dock drag, allow migration to follow the runner-owned drag
         // source window (ImGui-style tear-off), since the captured drag itself can be remapped.
-        if !step_allows_off_window_cached_test_id_predicate
+        let test_id_hint = step.and_then(Self::step_test_id_hint);
+        if !step_allows_off_window_eval
             && !allow_migrate_for_dock_drag
             && let Some(step_window_target) = step_window_target.as_ref()
-            && let Some(resolved) = self.resolve_window_target_for_active_step(
+            && let Some(resolved) = self.resolve_window_target_for_active_step_with_test_id_hint(
                 other_window,
                 other_active.anchor_window,
                 Some(step_window_target),
+                test_id_hint,
             )
             && resolved != window
         {
@@ -626,6 +667,7 @@ impl UiDiagnosticsService {
                 | UiActionStepV2::EnsureVisible { .. }
                 | UiActionStepV2::ScrollIntoView { .. }
                 | UiActionStepV2::TypeTextInto { .. }
+                | UiActionStepV2::PasteTextInto { .. }
                 | UiActionStepV2::MenuSelect { .. }
                 | UiActionStepV2::MenuSelectPath { .. }
                 | UiActionStepV2::DragPointer { .. }

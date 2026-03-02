@@ -52,6 +52,7 @@ pub(super) fn compose_body(
                 cx.with_theme(|theme| fret_ui_kit::MetricRef::space(Space::N2).resolve(theme));
 
             vec![
+                row_end(cx, gap, vec![widgets.underlay]),
                 row(
                     cx,
                     gap,
@@ -69,7 +70,6 @@ pub(super) fn compose_body(
                         widgets.tooltip,
                         widgets.hover_card,
                         widgets.popover,
-                        widgets.underlay,
                         widgets.dialog,
                         widgets.dialog_glass,
                     ],

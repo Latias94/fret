@@ -88,6 +88,14 @@ fn command_dialog_open_change_reason_from_dismiss_reason(
 #[derive(Default)]
 struct CommandDialogState {
     open_change_reason: Option<Arc<std::sync::Mutex<Option<CommandDialogOpenChangeReason>>>>,
+    pending_dispatch: Option<Arc<std::sync::Mutex<Option<PendingCommandDispatch>>>>,
+    close_complete: Option<Arc<std::sync::Mutex<bool>>>,
+}
+
+#[derive(Debug, Clone)]
+struct PendingCommandDispatch {
+    command: CommandId,
+    reason: ActivateReason,
 }
 
 #[derive(Debug, Clone, Copy, Default)]
@@ -1899,6 +1907,7 @@ pub struct CommandPalette {
     list_multiselectable: bool,
     a11y_selected_mode: CommandPaletteA11ySelectedMode,
     on_value_change: Option<OnValueChange>,
+    pending_dispatch: Option<Arc<std::sync::Mutex<Option<PendingCommandDispatch>>>>,
     input_wrapper_h: MetricRef,
     input_h: MetricRef,
     input_icon_size: MetricRef,
@@ -2262,6 +2271,7 @@ impl CommandPalette {
             list_multiselectable: false,
             a11y_selected_mode: CommandPaletteA11ySelectedMode::Active,
             on_value_change: None,
+            pending_dispatch: None,
             input_wrapper_h: Px(36.0).into(),
             input_h: Px(40.0).into(),
             input_icon_size: Px(16.0).into(),
@@ -2312,6 +2322,14 @@ impl CommandPalette {
         self.group_pad_x = MetricRef::space(Space::N2);
         self.group_pad_y = MetricRef::space(Space::N1);
         self.group_next_top_pad_zero = true;
+        self
+    }
+
+    fn pending_dispatch(
+        mut self,
+        pending_dispatch: Arc<std::sync::Mutex<Option<PendingCommandDispatch>>>,
+    ) -> Self {
+        self.pending_dispatch = Some(pending_dispatch);
         self
     }
 
@@ -2540,6 +2558,7 @@ impl CommandPalette {
             let list_id_out_cell = self.list_id_out_cell.clone();
             let a11y_selected_mode = self.a11y_selected_mode;
             let on_value_change = self.on_value_change.clone();
+            let pending_dispatch = self.pending_dispatch.clone();
             let test_id_input = self.test_id_input;
             let test_id_item_prefix = self.test_id_item_prefix;
             let test_id_heading_prefix = self.test_id_heading_prefix;
@@ -2868,6 +2887,7 @@ impl CommandPalette {
                         *count = count.saturating_add(1);
 
                         let active_for_row = active.clone();
+                        let pending_dispatch_for_row = pending_dispatch.clone();
                         cx.keyed((base, occ), |cx| {
                             let enabled = disabled_flags.get(idx).copied() == Some(false);
                             let active_row = active_idx.is_some_and(|i| i == idx);
@@ -2921,7 +2941,26 @@ impl CommandPalette {
                                     ..Default::default()
                                 },
                                 move |cx, st| {
-                                    cx.pressable_dispatch_command_if_enabled_opt(command);
+                                    if enabled
+                                        && let Some(command) = command.clone()
+                                        && let Some(pending_dispatch) =
+                                            pending_dispatch_for_row.clone()
+                                    {
+                                        cx.pressable_add_on_activate(Arc::new({
+                                            let command = command.clone();
+                                            move |host, action_cx, reason| {
+                                                if let Ok(mut slot) = pending_dispatch.lock() {
+                                                    *slot = Some(PendingCommandDispatch {
+                                                        command: command.clone(),
+                                                        reason,
+                                                    });
+                                                }
+                                                host.request_redraw(action_cx.window);
+                                            }
+                                        }));
+                                    } else {
+                                        cx.pressable_dispatch_command_if_enabled_opt(command);
+                                    }
                                     if on_select.is_some() || on_select_value.is_some() {
                                         let on_select = on_select.clone();
                                         let on_select_value = on_select_value.clone();
@@ -3437,7 +3476,16 @@ impl CommandPalette {
                                     }
 
                                     if let Some(command) = entry.command.clone() {
-                                        host.dispatch_command(Some(action_cx.window), command);
+                                        if let Some(pending_dispatch) = pending_dispatch.clone() {
+                                            if let Ok(mut slot) = pending_dispatch.lock() {
+                                                *slot = Some(PendingCommandDispatch {
+                                                    command,
+                                                    reason: ActivateReason::Keyboard,
+                                                });
+                                            }
+                                        } else {
+                                            host.dispatch_command(Some(action_cx.window), command);
+                                        }
                                     }
                                     true
                                 }
@@ -3815,6 +3863,33 @@ impl CommandDialog {
                 cell
             }
         };
+        let pending_dispatch_cell = {
+            let existing = cx.with_state(CommandDialogState::default, |st| {
+                st.pending_dispatch.clone()
+            });
+            if let Some(cell) = existing {
+                cell
+            } else {
+                let cell = Arc::new(std::sync::Mutex::new(None));
+                cx.with_state(CommandDialogState::default, |st| {
+                    st.pending_dispatch = Some(cell.clone())
+                });
+                cell
+            }
+        };
+        let close_complete_cell = {
+            let existing =
+                cx.with_state(CommandDialogState::default, |st| st.close_complete.clone());
+            if let Some(cell) = existing {
+                cell
+            } else {
+                let cell = Arc::new(std::sync::Mutex::new(false));
+                cx.with_state(CommandDialogState::default, |st| {
+                    st.close_complete = Some(cell.clone())
+                });
+                cell
+            }
+        };
         let entries = self.entries;
         let a11y_label = self
             .a11y_label
@@ -3837,6 +3912,63 @@ impl CommandDialog {
         let on_open_change_with_reason_for_dialog = on_open_change_with_reason.clone();
         let open_change_reason_cell_for_open_change = open_change_reason_cell.clone();
         let on_open_change_for_dialog = on_open_change.clone();
+        let on_open_change_complete_for_dialog = on_open_change_complete.clone();
+        let close_complete_cell_for_open_change_complete = close_complete_cell.clone();
+        let dialog_on_open_change_complete: Option<OnOpenChange> = Some(Arc::new(move |is_open| {
+            if let Ok(mut slot) = close_complete_cell_for_open_change_complete.lock() {
+                *slot = !is_open;
+            }
+            if let Some(handler) = on_open_change_complete_for_dialog.as_ref() {
+                handler(is_open);
+            }
+        }));
+
+        let is_open = cx.watch_model(&open_model).layout().copied_or(false);
+        let should_dispatch = if is_open {
+            false
+        } else if let Ok(mut close_complete) = close_complete_cell.lock() {
+            if *close_complete {
+                *close_complete = false;
+                true
+            } else {
+                false
+            }
+        } else {
+            false
+        };
+
+        if should_dispatch {
+            if let Ok(mut slot) = pending_dispatch_cell.lock() {
+                if let Some(pending) = slot.take() {
+                    let kind = match pending.reason {
+                        ActivateReason::Pointer => {
+                            fret_runtime::CommandDispatchSourceKindV1::Pointer
+                        }
+                        ActivateReason::Keyboard => {
+                            fret_runtime::CommandDispatchSourceKindV1::Keyboard
+                        }
+                    };
+                    cx.app.with_global_mut(
+                        fret_runtime::WindowPendingCommandDispatchSourceService::default,
+                        |svc, app| {
+                            svc.record(
+                                cx.window,
+                                app.tick_id(),
+                                pending.command.clone(),
+                                fret_runtime::CommandDispatchSourceV1 {
+                                    kind,
+                                    element: None,
+                                },
+                            );
+                        },
+                    );
+                    cx.app.push_effect(fret_runtime::Effect::Command {
+                        window: Some(cx.window),
+                        command: pending.command,
+                    });
+                }
+            }
+        }
 
         let dialog_on_open_change: Option<OnOpenChange> = if on_open_change_for_dialog.is_none()
             && on_open_change_with_reason_for_dialog.is_none()
@@ -3864,7 +3996,7 @@ impl CommandDialog {
 
         Dialog::new(open)
             .on_open_change(dialog_on_open_change)
-            .on_open_change_complete(on_open_change_complete)
+            .on_open_change_complete(dialog_on_open_change_complete)
             .on_dismiss_request(Some(Arc::new({
                 let open_change_reason_cell = open_change_reason_cell.clone();
                 move |_host, _cx, req| {
@@ -3952,6 +4084,10 @@ impl CommandDialog {
                     .disable_pointer_selection(disable_pointer_selection)
                     .empty_text(empty_text)
                     .refine_scroll_layout(LayoutRefinement::default().h_px(list_h).max_h(list_h));
+
+                if close_on_select {
+                    palette = palette.pending_dispatch(pending_dispatch_cell.clone());
+                }
 
                 if let Some(default_value) = default_value.as_ref() {
                     palette = palette.default_value(default_value.clone());
@@ -4213,7 +4349,7 @@ mod tests {
         let render_frame = |ui: &mut UiTree<App>, app: &mut App, services: &mut FakeServices| {
             let next_frame = fret_runtime::FrameId(app.frame_id().0.saturating_add(1));
             app.set_frame_id(next_frame);
-            crate::shadcn_themes::apply_shadcn_new_york_v4(
+            crate::shadcn_themes::apply_shadcn_new_york(
                 app,
                 crate::shadcn_themes::ShadcnBaseColor::Neutral,
                 crate::shadcn_themes::ShadcnColorScheme::Light,
@@ -4458,7 +4594,7 @@ mod tests {
         let next_frame = fret_runtime::FrameId(app.frame_id().0.saturating_add(1));
         app.set_frame_id(next_frame);
 
-        crate::shadcn_themes::apply_shadcn_new_york_v4(
+        crate::shadcn_themes::apply_shadcn_new_york(
             app,
             crate::shadcn_themes::ShadcnBaseColor::Neutral,
             crate::shadcn_themes::ShadcnColorScheme::Light,

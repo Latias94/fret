@@ -457,7 +457,9 @@ pub fn render(cx: &mut ElementContext<'_, App>, max_w_sm: LayoutRefinement) -> A
         form_state.clone(),
         "email",
         [shadcn::Select::new(email.clone(), email_open.clone())
-            .placeholder("Select a verified email to display")
+            .value(
+                shadcn::SelectValue::new().placeholder("Select a verified email to display"),
+            )
             .item(shadcn::SelectItem::new("m@example.com", "m@example.com"))
             .item(shadcn::SelectItem::new("m@google.com", "m@google.com"))
             .item(shadcn::SelectItem::new("m@support.com", "m@support.com"))

@@ -22,9 +22,11 @@
 //! commands.register(CommandId::from("app.quit"), CommandMeta::new("Quit"));
 //! ```
 
+pub mod action;
 pub mod capabilities;
 pub mod clipboard_diagnostics;
 pub mod command;
+pub mod command_dispatch_diagnostics;
 pub mod commands;
 pub mod docking_settings;
 pub mod drag;
@@ -65,6 +67,7 @@ pub mod window_text_input_snapshot;
 // -----------------------------------------------------------------------------
 // Stable re-exports (portable runtime contract surface)
 // -----------------------------------------------------------------------------
+pub use action::{ActionId, ActionMeta, ActionRegistry, TypedAction};
 pub use capabilities::{
     ExecBackgroundWork, ExecCapabilities, ExecTimers, ExecWake, ExternalDragPayloadKind,
     ExternalDragPositionQuality, PlatformCapabilities, ShellCapabilities,
@@ -74,6 +77,10 @@ pub use clipboard_diagnostics::{
     ClipboardReadDiagnostics, ClipboardWriteDiagnostics, WindowClipboardDiagnosticsStore,
 };
 pub use command::CommandId;
+pub use command_dispatch_diagnostics::{
+    CommandDispatchDecisionV1, CommandDispatchSourceKindV1, CommandDispatchSourceV1,
+    WindowCommandDispatchDiagnosticsStore, WindowPendingCommandDispatchSourceService,
+};
 pub use commands::{CommandMeta, CommandRegistry, CommandScope, OsAction};
 pub use docking_settings::{
     DockDragInversionModifier, DockDragInversionPolicy, DockDragInversionSettings,

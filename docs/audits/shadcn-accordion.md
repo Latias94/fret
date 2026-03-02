@@ -46,8 +46,7 @@ while the shadcn wrapper keeps a builder-style ergonomic API.
 
 - Pass: Trigger activation toggles open state.
 - Pass: Arrow-key roving navigation is implemented via `RovingFlex` + `cx.roving_nav_apg()`.
-- Partial: Hover underline styling is intentionally simplified compared to the upstream Tailwind
-  implementation.
+- Pass: Trigger hover underline matches the upstream `hover:underline` behavior.
 - Pass: Content open/close animations are driven by a cached measured height + presence timeline,
   matching Radix/shadcn's outcomes (without CSS variables).
   - Shared helper: `ecosystem/fret-ui-kit/src/primitives/collapsible.rs` (delegates to `declarative/collapsible_motion.rs`)
@@ -67,6 +66,8 @@ while the shadcn wrapper keeps a builder-style ergonomic API.
 - `cargo test -p fret-ui-shadcn --lib accordion`
 - shadcn web golden (geometry-first): `cargo nextest run -p fret-ui-shadcn --test web_vs_fret_layout`
   - Gates: `web_vs_fret_layout_accordion_demo_geometry_light` / `web_vs_fret_layout_accordion_demo_geometry_dark`
+- Diag hover gate (screenshot-backed, use with pixels-changed check):
+  - `cargo run -p fretboard -- diag run ui-gallery-accordion-trigger-hover-underline-pixels-changed --check-pixels-changed ui-gallery-accordion-demo-shipping-trigger --launch -- cargo run -p fret-ui-gallery --release`
 
 ## Follow-ups (recommended)
 

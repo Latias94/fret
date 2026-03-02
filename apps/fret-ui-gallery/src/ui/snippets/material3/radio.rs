@@ -2,8 +2,8 @@ pub const SOURCE: &str = include_str!("radio.rs");
 
 // region: example
 use fret_core::Px;
-use fret_ui_material3 as material3;
 use fret_ui_kit::{ColorRef, WidgetStateProperty, WidgetStates};
+use fret_ui_material3 as material3;
 use fret_ui_shadcn::prelude::*;
 use std::sync::Arc;
 
@@ -21,7 +21,9 @@ pub fn render<H: UiHost>(
         Some(model) => model,
         None => {
             let model = cx.app.models_mut().insert(false);
-            cx.with_state(Models::default, |st| st.standalone_selected = Some(model.clone()));
+            cx.with_state(Models::default, |st| {
+                st.standalone_selected = Some(model.clone())
+            });
             model
         }
     };
@@ -78,24 +80,26 @@ pub fn render<H: UiHost>(
         cx,
         stack::HStackProps::default().gap(Space::N4).items_center(),
         move |cx| {
-            vec![material3::RadioGroup::new(group_value_for_group_overridden.clone())
-                .a11y_label("Material 3 RadioGroup (override)")
-                .style(override_style_for_group.clone())
-                .orientation(material3::RadioGroupOrientation::Horizontal)
-                .gap(Px(8.0))
-                .items(vec![
-                    material3::RadioGroupItem::new("Alpha")
-                        .a11y_label("Radio Alpha (override)")
-                        .test_id("ui-gallery-material3-radio-a-overridden"),
-                    material3::RadioGroupItem::new("Beta")
-                        .a11y_label("Radio Beta (override)")
-                        .test_id("ui-gallery-material3-radio-b-overridden"),
-                    material3::RadioGroupItem::new("Charlie")
-                        .a11y_label("Radio Charlie (disabled)")
-                        .disabled(true)
-                        .test_id("ui-gallery-material3-radio-c-disabled-overridden"),
-                ])
-                .into_element(cx)]
+            vec![
+                material3::RadioGroup::new(group_value_for_group_overridden.clone())
+                    .a11y_label("Material 3 RadioGroup (override)")
+                    .style(override_style_for_group.clone())
+                    .orientation(material3::RadioGroupOrientation::Horizontal)
+                    .gap(Px(8.0))
+                    .items(vec![
+                        material3::RadioGroupItem::new("Alpha")
+                            .a11y_label("Radio Alpha (override)")
+                            .test_id("ui-gallery-material3-radio-a-overridden"),
+                        material3::RadioGroupItem::new("Beta")
+                            .a11y_label("Radio Beta (override)")
+                            .test_id("ui-gallery-material3-radio-b-overridden"),
+                        material3::RadioGroupItem::new("Charlie")
+                            .a11y_label("Radio Charlie (disabled)")
+                            .disabled(true)
+                            .test_id("ui-gallery-material3-radio-c-disabled-overridden"),
+                    ])
+                    .into_element(cx),
+            ]
         },
     );
 
@@ -138,4 +142,3 @@ pub fn render<H: UiHost>(
 }
 
 // endregion: example
-

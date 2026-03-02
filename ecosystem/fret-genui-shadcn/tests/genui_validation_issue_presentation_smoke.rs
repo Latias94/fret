@@ -70,7 +70,7 @@ fn render_root(
 fn genui_validation_issue_presentation_smoke_repeat_and_visible_filtering() {
     let mut app = App::new();
 
-    fret_ui_shadcn::shadcn_themes::apply_shadcn_new_york_v4(
+    fret_ui_shadcn::shadcn_themes::apply_shadcn_new_york(
         &mut app,
         fret_ui_shadcn::shadcn_themes::ShadcnBaseColor::Slate,
         fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Light,

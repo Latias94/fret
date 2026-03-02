@@ -1,10 +1,10 @@
 use fret_app::App;
 use fret_core::{AppWindowId, FrameId, KeyCode, Point, Px, Rect, SemanticsRole, Size as CoreSize};
 use fret_runtime::Model;
+use fret_ui::ElementContext;
 use fret_ui::action::OnActivate;
 use fret_ui::element::AnyElement;
 use fret_ui::tree::UiTree;
-use fret_ui::ElementContext;
 use fret_ui_kit::OverlayController;
 use std::sync::Arc;
 
@@ -72,7 +72,7 @@ fn dropdown_menu_arrow_down_enter_activates_item_and_closes() {
     );
 
     let mut app = App::new();
-    fret_ui_shadcn::shadcn_themes::apply_shadcn_new_york_v4(
+    fret_ui_shadcn::shadcn_themes::apply_shadcn_new_york(
         &mut app,
         fret_ui_shadcn::shadcn_themes::ShadcnBaseColor::Neutral,
         fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Light,

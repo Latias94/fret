@@ -55,9 +55,7 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>, value: Model<Arc<str>>)
             .items_start(),
         |cx| {
             vec![
-                cx.text(
-                    "Material 3 Navigation Rail: roving focus + state layer + bounded ripple.",
-                ),
+                cx.text("Material 3 Navigation Rail: roving focus + state layer + bounded ripple."),
                 container,
                 cx.text(format!("value={}", current.as_ref())),
             ]

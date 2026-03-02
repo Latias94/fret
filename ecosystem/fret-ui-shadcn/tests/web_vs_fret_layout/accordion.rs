@@ -33,7 +33,7 @@ fn web_vs_fret_layout_accordion_demo_geometry_light() {
 
     let window = AppWindowId::default();
     let mut app = App::new();
-    fret_ui_shadcn::shadcn_themes::apply_shadcn_new_york_v4(
+    fret_ui_shadcn::shadcn_themes::apply_shadcn_new_york(
         &mut app,
         fret_ui_shadcn::shadcn_themes::ShadcnBaseColor::Neutral,
         fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Light,
@@ -45,7 +45,7 @@ fn web_vs_fret_layout_accordion_demo_geometry_light() {
 
     let default_value = Some(Arc::from("item-1"));
     let render = |cx: &mut fret_ui::ElementContext<'_, App>| {
-        use fret_ui_shadcn::{Accordion, AccordionContent, AccordionItem, AccordionTrigger};
+        use fret_ui_shadcn::{Accordion, AccordionContent, AccordionItem, AccordionTrigger, Space};
 
         let item_1 = AccordionItem::new(
             Arc::from("item-1"),
@@ -59,7 +59,8 @@ fn web_vs_fret_layout_accordion_demo_geometry_light() {
                     cx,
                     "Key features include advanced processing capabilities, and an intuitive user interface designed for both beginners and experts.",
                 ),
-            ]),
+            ])
+            .gap(Space::N4),
         );
         let item_2 = AccordionItem::new(
             Arc::from("item-2"),
@@ -249,7 +250,7 @@ fn web_vs_fret_layout_accordion_demo_geometry_dark() {
 
     let window = AppWindowId::default();
     let mut app = App::new();
-    fret_ui_shadcn::shadcn_themes::apply_shadcn_new_york_v4(
+    fret_ui_shadcn::shadcn_themes::apply_shadcn_new_york(
         &mut app,
         fret_ui_shadcn::shadcn_themes::ShadcnBaseColor::Neutral,
         fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Dark,

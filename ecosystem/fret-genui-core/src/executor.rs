@@ -13,6 +13,7 @@
 use std::collections::BTreeMap;
 use std::sync::Arc;
 
+use fret_runtime::CommandId;
 use fret_runtime::Effect;
 use fret_runtime::Model;
 use fret_ui::action::UiActionHost;
@@ -84,6 +85,40 @@ impl GenUiActionExecutorV1 {
             confirm: None,
             limits: GenUiExecutionLimits::default(),
         }
+    }
+
+    /// Register an action handler that dispatches a stable `CommandId` through the host command
+    /// pipeline.
+    ///
+    /// This is the recommended glue for Action-first convergence when a GenUI spec binds an app
+    /// action by stable id (v1: `ActionId == CommandId`).
+    pub fn register_dispatch_command_action(&mut self, command: impl Into<CommandId>) {
+        let command: CommandId = command.into();
+        let handler: GenUiActionHandlerV1 = Arc::new({
+            let command = command.clone();
+            move |host, _state, inv| {
+                host.dispatch_command(Some(inv.window), command.clone());
+                Ok(())
+            }
+        });
+        self.handlers.insert(command.0.clone(), handler);
+    }
+
+    /// Register multiple action handlers that dispatch stable `CommandId`s through the host
+    /// command pipeline.
+    ///
+    /// Note: handlers registered here are keyed by the command id string. Avoid colliding with
+    /// GenUI standard actions (`setState`, `incrementState`, …) by using a namespaced id with a
+    /// version suffix (e.g. `"app.editor.save.v1"`).
+    pub fn with_dispatch_command_actions<I>(mut self, actions: I) -> Self
+    where
+        I: IntoIterator,
+        I::Item: Into<CommandId>,
+    {
+        for a in actions {
+            self.register_dispatch_command_action(a);
+        }
+        self
     }
 
     pub fn limits(mut self, limits: GenUiExecutionLimits) -> Self {

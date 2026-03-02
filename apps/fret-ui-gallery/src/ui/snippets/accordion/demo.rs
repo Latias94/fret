@@ -26,7 +26,8 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
                         cx,
                         "Key features include advanced processing capabilities, and an intuitive user interface designed for both beginners and experts.",
                     ),
-                ]),
+                ])
+                .gap(Space::N4),
             ),
             shadcn::AccordionItem::new(
                 "item-2",
@@ -42,6 +43,7 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
                         "All orders are carefully packaged and fully insured. Track your shipment in real-time through our dedicated tracking portal.",
                     ),
                 ])
+                .gap(Space::N4)
                 .test_id("ui-gallery-accordion-demo-shipping-content"),
             )
             .test_id("ui-gallery-accordion-demo-shipping-item"),
@@ -59,6 +61,7 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
                         "Our hassle-free return process includes free return shipping and full refunds processed within 48 hours of receiving the returned item.",
                     ),
                 ])
+                .gap(Space::N4)
                 .test_id("ui-gallery-accordion-demo-returns-content"),
             )
             .test_id("ui-gallery-accordion-demo-returns-item"),

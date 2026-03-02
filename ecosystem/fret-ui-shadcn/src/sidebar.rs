@@ -3827,7 +3827,7 @@ mod tests {
     use super::*;
     use std::sync::Mutex;
 
-    use crate::shadcn_themes::{ShadcnBaseColor, ShadcnColorScheme, apply_shadcn_new_york_v4};
+    use crate::shadcn_themes::{ShadcnBaseColor, ShadcnColorScheme, apply_shadcn_new_york};
     use fret_app::App;
     use fret_core::{
         AppWindowId, PathCommand, PathConstraints, PathId, PathMetrics, PathService, Point, Px,
@@ -4023,7 +4023,7 @@ mod tests {
     fn sidebar_collapse_animates_width_between_expanded_and_icon() {
         let window = AppWindowId::default();
         let mut app = App::new();
-        apply_shadcn_new_york_v4(&mut app, ShadcnBaseColor::Neutral, ShadcnColorScheme::Light);
+        apply_shadcn_new_york(&mut app, ShadcnBaseColor::Neutral, ShadcnColorScheme::Light);
         let mut ui: UiTree<App> = UiTree::new();
         ui.set_window(window);
         let mut services = FakeServices;
@@ -4089,7 +4089,7 @@ mod tests {
     fn sidebar_collapse_settles_to_icon_width() {
         let window = AppWindowId::default();
         let mut app = App::new();
-        apply_shadcn_new_york_v4(&mut app, ShadcnBaseColor::Neutral, ShadcnColorScheme::Light);
+        apply_shadcn_new_york(&mut app, ShadcnBaseColor::Neutral, ShadcnColorScheme::Light);
         let mut ui: UiTree<App> = UiTree::new();
         ui.set_window(window);
         let mut services = FakeServices;
@@ -4140,7 +4140,7 @@ mod tests {
     fn sidebar_variant_floating_and_inset_expand_outer_width_on_desktop() {
         let window = AppWindowId::default();
         let mut app = App::new();
-        apply_shadcn_new_york_v4(&mut app, ShadcnBaseColor::Neutral, ShadcnColorScheme::Light);
+        apply_shadcn_new_york(&mut app, ShadcnBaseColor::Neutral, ShadcnColorScheme::Light);
         let mut ui: UiTree<App> = UiTree::new();
         ui.set_window(window);
         let mut services = FakeServices;
@@ -4203,7 +4203,7 @@ mod tests {
     fn sidebar_inset_variant_collapsed_adds_left_margin_step() {
         let window = AppWindowId::default();
         let mut app = App::new();
-        apply_shadcn_new_york_v4(&mut app, ShadcnBaseColor::Neutral, ShadcnColorScheme::Light);
+        apply_shadcn_new_york(&mut app, ShadcnBaseColor::Neutral, ShadcnColorScheme::Light);
         let mut ui: UiTree<App> = UiTree::new();
         ui.set_window(window);
         let mut services = FakeServices;
@@ -4250,7 +4250,7 @@ mod tests {
     fn sidebar_provider_collapsed_drives_sidebar_width_without_manual_prop() {
         let window = AppWindowId::default();
         let mut app = App::new();
-        apply_shadcn_new_york_v4(&mut app, ShadcnBaseColor::Neutral, ShadcnColorScheme::Light);
+        apply_shadcn_new_york(&mut app, ShadcnBaseColor::Neutral, ShadcnColorScheme::Light);
         let mut ui: UiTree<App> = UiTree::new();
         ui.set_window(window);
         let mut services = FakeServices;
@@ -4296,7 +4296,7 @@ mod tests {
     fn sidebar_mobile_branch_uses_sheet_dialog_semantics_and_renders_content() {
         let window = AppWindowId::default();
         let mut app = App::new();
-        apply_shadcn_new_york_v4(&mut app, ShadcnBaseColor::Neutral, ShadcnColorScheme::Light);
+        apply_shadcn_new_york(&mut app, ShadcnBaseColor::Neutral, ShadcnColorScheme::Light);
         let mut ui: UiTree<App> = UiTree::new();
         ui.set_window(window);
         let mut services = FakeServices;
@@ -4358,7 +4358,7 @@ mod tests {
     fn sidebar_provider_infers_mobile_from_viewport_width_when_unset() {
         let window = AppWindowId::default();
         let mut app = App::new();
-        apply_shadcn_new_york_v4(&mut app, ShadcnBaseColor::Neutral, ShadcnColorScheme::Light);
+        apply_shadcn_new_york(&mut app, ShadcnBaseColor::Neutral, ShadcnColorScheme::Light);
         let mut ui: UiTree<App> = UiTree::new();
         ui.set_window(window);
         let mut services = FakeServices;
@@ -4419,7 +4419,7 @@ mod tests {
     fn sidebar_mobile_provider_open_false_does_not_hide_collapsed_sensitive_children() {
         let window = AppWindowId::default();
         let mut app = App::new();
-        apply_shadcn_new_york_v4(&mut app, ShadcnBaseColor::Neutral, ShadcnColorScheme::Light);
+        apply_shadcn_new_york(&mut app, ShadcnBaseColor::Neutral, ShadcnColorScheme::Light);
         let mut ui: UiTree<App> = UiTree::new();
         ui.set_window(window);
         let mut services = FakeServices;
@@ -4471,7 +4471,7 @@ mod tests {
     fn sidebar_menu_button_collapsed_uses_tooltip_semantics_not_hover_card() {
         let window = AppWindowId::default();
         let mut app = App::new();
-        apply_shadcn_new_york_v4(&mut app, ShadcnBaseColor::Neutral, ShadcnColorScheme::Light);
+        apply_shadcn_new_york(&mut app, ShadcnBaseColor::Neutral, ShadcnColorScheme::Light);
         let mut ui: UiTree<App> = UiTree::new();
         ui.set_window(window);
         let mut services = FakeServices;
@@ -4579,7 +4579,7 @@ mod tests {
     fn sidebar_input_and_separator_match_shadcn_base_metrics() {
         let window = AppWindowId::default();
         let mut app = App::new();
-        apply_shadcn_new_york_v4(&mut app, ShadcnBaseColor::Neutral, ShadcnColorScheme::Light);
+        apply_shadcn_new_york(&mut app, ShadcnBaseColor::Neutral, ShadcnColorScheme::Light);
         let mut ui: UiTree<App> = UiTree::new();
         ui.set_window(window);
         let mut services = FakeServices;
@@ -4643,7 +4643,7 @@ mod tests {
     fn sidebar_trigger_toggles_provider_open_model_on_activate() {
         let window = AppWindowId::default();
         let mut app = App::new();
-        apply_shadcn_new_york_v4(&mut app, ShadcnBaseColor::Neutral, ShadcnColorScheme::Light);
+        apply_shadcn_new_york(&mut app, ShadcnBaseColor::Neutral, ShadcnColorScheme::Light);
         let mut ui: UiTree<App> = UiTree::new();
         ui.set_window(window);
         let mut services = FakeServices;
@@ -4732,7 +4732,7 @@ mod tests {
     fn sidebar_menu_and_item_expose_list_semantics() {
         let window = AppWindowId::default();
         let mut app = App::new();
-        apply_shadcn_new_york_v4(&mut app, ShadcnBaseColor::Neutral, ShadcnColorScheme::Light);
+        apply_shadcn_new_york(&mut app, ShadcnBaseColor::Neutral, ShadcnColorScheme::Light);
         let mut ui: UiTree<App> = UiTree::new();
         ui.set_window(window);
         let mut services = FakeServices;
@@ -4789,7 +4789,7 @@ mod tests {
     fn sidebar_header_and_footer_apply_gap_two_spacing_contract() {
         let window = AppWindowId::default();
         let mut app = App::new();
-        apply_shadcn_new_york_v4(&mut app, ShadcnBaseColor::Neutral, ShadcnColorScheme::Light);
+        apply_shadcn_new_york(&mut app, ShadcnBaseColor::Neutral, ShadcnColorScheme::Light);
         let mut ui: UiTree<App> = UiTree::new();
         ui.set_window(window);
         let mut services = FakeServices;
@@ -4876,7 +4876,7 @@ mod tests {
     fn sidebar_group_wrapper_is_relative_and_stretches_width() {
         let window = AppWindowId::default();
         let mut app = App::new();
-        apply_shadcn_new_york_v4(&mut app, ShadcnBaseColor::Neutral, ShadcnColorScheme::Light);
+        apply_shadcn_new_york(&mut app, ShadcnBaseColor::Neutral, ShadcnColorScheme::Light);
         let mut ui: UiTree<App> = UiTree::new();
         ui.set_window(window);
         let mut services = FakeServices;
@@ -4930,7 +4930,7 @@ mod tests {
     fn sidebar_group_action_mobile_hit_area_expands_vs_desktop() {
         let window = AppWindowId::default();
         let mut app = App::new();
-        apply_shadcn_new_york_v4(&mut app, ShadcnBaseColor::Neutral, ShadcnColorScheme::Light);
+        apply_shadcn_new_york(&mut app, ShadcnBaseColor::Neutral, ShadcnColorScheme::Light);
         let mut ui: UiTree<App> = UiTree::new();
         ui.set_window(window);
         let mut services = FakeServices;
@@ -5011,7 +5011,7 @@ mod tests {
     fn sidebar_content_uses_collapse_only_for_overflow_not_padding() {
         let window = AppWindowId::default();
         let mut app = App::new();
-        apply_shadcn_new_york_v4(&mut app, ShadcnBaseColor::Neutral, ShadcnColorScheme::Light);
+        apply_shadcn_new_york(&mut app, ShadcnBaseColor::Neutral, ShadcnColorScheme::Light);
         let mut ui: UiTree<App> = UiTree::new();
         ui.set_window(window);
         let mut services = FakeServices;
@@ -5081,7 +5081,7 @@ mod tests {
     fn sidebar_menu_action_top_offset_tracks_menu_button_size() {
         let window = AppWindowId::default();
         let mut app = App::new();
-        apply_shadcn_new_york_v4(&mut app, ShadcnBaseColor::Neutral, ShadcnColorScheme::Light);
+        apply_shadcn_new_york(&mut app, ShadcnBaseColor::Neutral, ShadcnColorScheme::Light);
         let mut ui: UiTree<App> = UiTree::new();
         ui.set_window(window);
         let mut services = FakeServices;
@@ -5153,7 +5153,7 @@ mod tests {
     fn sidebar_menu_action_mobile_hit_area_expands_vs_desktop() {
         let window = AppWindowId::default();
         let mut app = App::new();
-        apply_shadcn_new_york_v4(&mut app, ShadcnBaseColor::Neutral, ShadcnColorScheme::Light);
+        apply_shadcn_new_york(&mut app, ShadcnBaseColor::Neutral, ShadcnColorScheme::Light);
         let mut ui: UiTree<App> = UiTree::new();
         ui.set_window(window);
         let mut services = FakeServices;
@@ -5239,7 +5239,7 @@ mod tests {
     fn sidebar_collapsed_hides_group_and_menu_affordances() {
         let window = AppWindowId::default();
         let mut app = App::new();
-        apply_shadcn_new_york_v4(&mut app, ShadcnBaseColor::Neutral, ShadcnColorScheme::Light);
+        apply_shadcn_new_york(&mut app, ShadcnBaseColor::Neutral, ShadcnColorScheme::Light);
         let mut ui: UiTree<App> = UiTree::new();
         ui.set_window(window);
         let mut services = FakeServices;
@@ -5327,7 +5327,7 @@ mod tests {
     fn sidebar_rail_toggles_provider_open_model_on_activate() {
         let window = AppWindowId::default();
         let mut app = App::new();
-        apply_shadcn_new_york_v4(&mut app, ShadcnBaseColor::Neutral, ShadcnColorScheme::Light);
+        apply_shadcn_new_york(&mut app, ShadcnBaseColor::Neutral, ShadcnColorScheme::Light);
         let mut ui: UiTree<App> = UiTree::new();
         ui.set_window(window);
         let mut services = FakeServices;
@@ -5414,7 +5414,7 @@ mod tests {
     fn sidebar_rail_hover_sets_col_resize_cursor_icon() {
         let window = AppWindowId::default();
         let mut app = App::new();
-        apply_shadcn_new_york_v4(&mut app, ShadcnBaseColor::Neutral, ShadcnColorScheme::Light);
+        apply_shadcn_new_york(&mut app, ShadcnBaseColor::Neutral, ShadcnColorScheme::Light);
         let mut ui: UiTree<App> = UiTree::new();
         ui.set_window(window);
         let mut services = FakeServices;
@@ -5486,7 +5486,7 @@ mod tests {
     fn sidebar_rail_tracks_side_and_offcanvas_position_matrix() {
         let window = AppWindowId::default();
         let mut app = App::new();
-        apply_shadcn_new_york_v4(&mut app, ShadcnBaseColor::Neutral, ShadcnColorScheme::Light);
+        apply_shadcn_new_york(&mut app, ShadcnBaseColor::Neutral, ShadcnColorScheme::Light);
         let mut ui: UiTree<App> = UiTree::new();
         ui.set_window(window);
         let mut services = FakeServices;
@@ -5574,7 +5574,7 @@ mod tests {
     fn sidebar_menu_action_show_on_hover_hides_until_item_hovered_on_desktop() {
         let window = AppWindowId::default();
         let mut app = App::new();
-        apply_shadcn_new_york_v4(&mut app, ShadcnBaseColor::Neutral, ShadcnColorScheme::Light);
+        apply_shadcn_new_york(&mut app, ShadcnBaseColor::Neutral, ShadcnColorScheme::Light);
         let mut ui: UiTree<App> = UiTree::new();
         ui.set_window(window);
         let mut services = FakeServices;
@@ -5673,7 +5673,7 @@ mod tests {
     fn sidebar_menu_action_show_on_hover_visible_when_item_open_without_hover() {
         let window = AppWindowId::default();
         let mut app = App::new();
-        apply_shadcn_new_york_v4(&mut app, ShadcnBaseColor::Neutral, ShadcnColorScheme::Light);
+        apply_shadcn_new_york(&mut app, ShadcnBaseColor::Neutral, ShadcnColorScheme::Light);
         let mut ui: UiTree<App> = UiTree::new();
         ui.set_window(window);
         let mut services = FakeServices;
@@ -5728,7 +5728,7 @@ mod tests {
     fn sidebar_menu_action_show_on_hover_visible_when_menu_item_focus_within() {
         let window = AppWindowId::default();
         let mut app = App::new();
-        apply_shadcn_new_york_v4(&mut app, ShadcnBaseColor::Neutral, ShadcnColorScheme::Light);
+        apply_shadcn_new_york(&mut app, ShadcnBaseColor::Neutral, ShadcnColorScheme::Light);
         let mut ui: UiTree<App> = UiTree::new();
         ui.set_window(window);
         let mut services = FakeServices;
@@ -5845,7 +5845,7 @@ mod tests {
     fn sidebar_menu_action_as_child_keeps_button_semantics_and_dispatches_activate() {
         let window = AppWindowId::default();
         let mut app = App::new();
-        apply_shadcn_new_york_v4(&mut app, ShadcnBaseColor::Neutral, ShadcnColorScheme::Light);
+        apply_shadcn_new_york(&mut app, ShadcnBaseColor::Neutral, ShadcnColorScheme::Light);
         let mut ui: UiTree<App> = UiTree::new();
         ui.set_window(window);
         let mut services = FakeServices;
@@ -5949,7 +5949,7 @@ mod tests {
     fn sidebar_menu_sub_button_href_path_uses_link_semantics_and_dispatches_navigation() {
         let window = AppWindowId::default();
         let mut app = App::new();
-        apply_shadcn_new_york_v4(&mut app, ShadcnBaseColor::Neutral, ShadcnColorScheme::Light);
+        apply_shadcn_new_york(&mut app, ShadcnBaseColor::Neutral, ShadcnColorScheme::Light);
         let mut ui: UiTree<App> = UiTree::new();
         ui.set_window(window);
         let mut services = FakeServices;
@@ -6050,7 +6050,7 @@ mod tests {
     fn sidebar_menu_button_href_path_uses_link_semantics_and_dispatches_navigation() {
         let window = AppWindowId::default();
         let mut app = App::new();
-        apply_shadcn_new_york_v4(&mut app, ShadcnBaseColor::Neutral, ShadcnColorScheme::Light);
+        apply_shadcn_new_york(&mut app, ShadcnBaseColor::Neutral, ShadcnColorScheme::Light);
         let mut ui: UiTree<App> = UiTree::new();
         ui.set_window(window);
         let mut services = FakeServices;
@@ -6151,7 +6151,7 @@ mod tests {
     fn sidebar_menu_sub_button_href_without_on_navigate_emits_open_url_effect() {
         let window = AppWindowId::default();
         let mut app = App::new();
-        apply_shadcn_new_york_v4(&mut app, ShadcnBaseColor::Neutral, ShadcnColorScheme::Light);
+        apply_shadcn_new_york(&mut app, ShadcnBaseColor::Neutral, ShadcnColorScheme::Light);
         let mut ui: UiTree<App> = UiTree::new();
         ui.set_window(window);
         let mut services = FakeServices;
@@ -6255,7 +6255,7 @@ mod tests {
     fn sidebar_menu_button_href_without_on_navigate_emits_open_url_effect() {
         let window = AppWindowId::default();
         let mut app = App::new();
-        apply_shadcn_new_york_v4(&mut app, ShadcnBaseColor::Neutral, ShadcnColorScheme::Light);
+        apply_shadcn_new_york(&mut app, ShadcnBaseColor::Neutral, ShadcnColorScheme::Light);
         let mut ui: UiTree<App> = UiTree::new();
         ui.set_window(window);
         let mut services = FakeServices;
@@ -6359,7 +6359,7 @@ mod tests {
     fn sidebar_menu_button_outline_variant_adds_chrome_while_default_remains_plain() {
         let window = AppWindowId::default();
         let mut app = App::new();
-        apply_shadcn_new_york_v4(&mut app, ShadcnBaseColor::Neutral, ShadcnColorScheme::Light);
+        apply_shadcn_new_york(&mut app, ShadcnBaseColor::Neutral, ShadcnColorScheme::Light);
         let mut ui: UiTree<App> = UiTree::new();
         ui.set_window(window);
         let mut services = FakeServices;
@@ -6430,7 +6430,7 @@ mod tests {
     fn sidebar_menu_skeleton_hides_in_collapsed_state() {
         let window = AppWindowId::default();
         let mut app = App::new();
-        apply_shadcn_new_york_v4(&mut app, ShadcnBaseColor::Neutral, ShadcnColorScheme::Light);
+        apply_shadcn_new_york(&mut app, ShadcnBaseColor::Neutral, ShadcnColorScheme::Light);
         let mut ui: UiTree<App> = UiTree::new();
         ui.set_window(window);
         let mut services = FakeServices;
@@ -6482,7 +6482,7 @@ mod tests {
     fn sidebar_menu_sub_surfaces_expose_list_semantics() {
         let window = AppWindowId::default();
         let mut app = App::new();
-        apply_shadcn_new_york_v4(&mut app, ShadcnBaseColor::Neutral, ShadcnColorScheme::Light);
+        apply_shadcn_new_york(&mut app, ShadcnBaseColor::Neutral, ShadcnColorScheme::Light);
         let mut ui: UiTree<App> = UiTree::new();
         ui.set_window(window);
         let mut services = FakeServices;
@@ -6539,7 +6539,7 @@ mod tests {
     fn sidebar_menu_sub_button_sizes_match_shadcn_row_height() {
         let window = AppWindowId::default();
         let mut app = App::new();
-        apply_shadcn_new_york_v4(&mut app, ShadcnBaseColor::Neutral, ShadcnColorScheme::Light);
+        apply_shadcn_new_york(&mut app, ShadcnBaseColor::Neutral, ShadcnColorScheme::Light);
         let mut ui: UiTree<App> = UiTree::new();
         ui.set_window(window);
         let mut services = FakeServices;
@@ -6591,7 +6591,7 @@ mod tests {
     fn sidebar_menu_sub_button_as_child_renders_custom_children() {
         let window = AppWindowId::default();
         let mut app = App::new();
-        apply_shadcn_new_york_v4(&mut app, ShadcnBaseColor::Neutral, ShadcnColorScheme::Light);
+        apply_shadcn_new_york(&mut app, ShadcnBaseColor::Neutral, ShadcnColorScheme::Light);
         let mut ui: UiTree<App> = UiTree::new();
         ui.set_window(window);
         let mut services = FakeServices;
@@ -6651,7 +6651,7 @@ mod tests {
     fn sidebar_menu_button_as_child_renders_custom_children() {
         let window = AppWindowId::default();
         let mut app = App::new();
-        apply_shadcn_new_york_v4(&mut app, ShadcnBaseColor::Neutral, ShadcnColorScheme::Light);
+        apply_shadcn_new_york(&mut app, ShadcnBaseColor::Neutral, ShadcnColorScheme::Light);
         let mut ui: UiTree<App> = UiTree::new();
         ui.set_window(window);
         let mut services = FakeServices;
@@ -6711,7 +6711,7 @@ mod tests {
     fn sidebar_menu_sub_button_as_child_with_href_keeps_button_semantics() {
         let window = AppWindowId::default();
         let mut app = App::new();
-        apply_shadcn_new_york_v4(&mut app, ShadcnBaseColor::Neutral, ShadcnColorScheme::Light);
+        apply_shadcn_new_york(&mut app, ShadcnBaseColor::Neutral, ShadcnColorScheme::Light);
         let mut ui: UiTree<App> = UiTree::new();
         ui.set_window(window);
         let mut services = FakeServices;
@@ -6770,7 +6770,7 @@ mod tests {
     fn sidebar_menu_button_as_child_with_href_keeps_button_semantics() {
         let window = AppWindowId::default();
         let mut app = App::new();
-        apply_shadcn_new_york_v4(&mut app, ShadcnBaseColor::Neutral, ShadcnColorScheme::Light);
+        apply_shadcn_new_york(&mut app, ShadcnBaseColor::Neutral, ShadcnColorScheme::Light);
         let mut ui: UiTree<App> = UiTree::new();
         ui.set_window(window);
         let mut services = FakeServices;
@@ -6874,7 +6874,7 @@ mod tests {
     fn sidebar_provider_open_change_callbacks_follow_model_changes() {
         let window = AppWindowId::default();
         let mut app = App::new();
-        apply_shadcn_new_york_v4(&mut app, ShadcnBaseColor::Neutral, ShadcnColorScheme::Light);
+        apply_shadcn_new_york(&mut app, ShadcnBaseColor::Neutral, ShadcnColorScheme::Light);
         let mut ui: UiTree<App> = UiTree::new();
         ui.set_window(window);
         let mut services = FakeServices;
@@ -6997,7 +6997,7 @@ mod tests {
     fn sidebar_context_set_open_and_set_open_mobile_update_models() {
         let window = AppWindowId::default();
         let mut app = App::new();
-        apply_shadcn_new_york_v4(&mut app, ShadcnBaseColor::Neutral, ShadcnColorScheme::Light);
+        apply_shadcn_new_york(&mut app, ShadcnBaseColor::Neutral, ShadcnColorScheme::Light);
         let mut ui: UiTree<App> = UiTree::new();
         ui.set_window(window);
         let mut services = FakeServices;
@@ -7055,7 +7055,7 @@ mod tests {
     fn sidebar_context_function_style_setters_update_from_previous_value() {
         let window = AppWindowId::default();
         let mut app = App::new();
-        apply_shadcn_new_york_v4(&mut app, ShadcnBaseColor::Neutral, ShadcnColorScheme::Light);
+        apply_shadcn_new_york(&mut app, ShadcnBaseColor::Neutral, ShadcnColorScheme::Light);
         let mut ui: UiTree<App> = UiTree::new();
         ui.set_window(window);
         let mut services = FakeServices;
@@ -7116,7 +7116,7 @@ mod tests {
     fn sidebar_provider_handles_sidebar_toggle_command_in_focus_subtree() {
         let window = AppWindowId::default();
         let mut app = App::new();
-        apply_shadcn_new_york_v4(&mut app, ShadcnBaseColor::Neutral, ShadcnColorScheme::Light);
+        apply_shadcn_new_york(&mut app, ShadcnBaseColor::Neutral, ShadcnColorScheme::Light);
         let mut ui: UiTree<App> = UiTree::new();
         ui.set_window(window);
         let mut services = FakeServices;
@@ -7185,7 +7185,7 @@ mod tests {
     fn sidebar_provider_registers_ctrl_or_meta_b_shortcut_binding() {
         let window = AppWindowId::default();
         let mut app = App::new();
-        apply_shadcn_new_york_v4(&mut app, ShadcnBaseColor::Neutral, ShadcnColorScheme::Light);
+        apply_shadcn_new_york(&mut app, ShadcnBaseColor::Neutral, ShadcnColorScheme::Light);
         let mut ui: UiTree<App> = UiTree::new();
         ui.set_window(window);
         let mut services = FakeServices;

@@ -205,7 +205,7 @@ struct ShadcnCssVars {
 /// - Base palette: `repo-ref/ui/apps/v4/public/r/styles/new-york-v4/theme-*.json` (vendored).
 /// - App default overrides: `repo-ref/ui/apps/v4/styles/globals.css` (the web golden harness uses
 ///   these as the effective runtime values).
-pub fn shadcn_new_york_v4_config(base: ShadcnBaseColor, scheme: ShadcnColorScheme) -> ThemeConfig {
+pub fn shadcn_new_york_config(base: ShadcnBaseColor, scheme: ShadcnColorScheme) -> ThemeConfig {
     let raw = match base {
         ShadcnBaseColor::Neutral => {
             include_str!("../assets/shadcn/themes/new-york-v4/theme-neutral.json")
@@ -892,12 +892,12 @@ fn seed_syntax_colors(colors: &mut HashMap<String, String>) {
 }
 
 /// Apply a shadcn preset into the global `Theme`.
-pub fn apply_shadcn_new_york_v4<H: UiHost>(
+pub fn apply_shadcn_new_york<H: UiHost>(
     app: &mut H,
     base: ShadcnBaseColor,
     scheme: ShadcnColorScheme,
 ) {
-    let cfg = shadcn_new_york_v4_config(base, scheme);
+    let cfg = shadcn_new_york_config(base, scheme);
     Theme::with_global_mut(app, |theme| theme.apply_config(&cfg));
 }
 
@@ -953,7 +953,7 @@ mod tests {
     fn new_york_v4_seeds_component_text_metrics() {
         for &base in ShadcnBaseColor::ALL {
             for scheme in [ShadcnColorScheme::Light, ShadcnColorScheme::Dark] {
-                let cfg = shadcn_new_york_v4_config(base, scheme);
+                let cfg = shadcn_new_york_config(base, scheme);
                 assert!(
                     cfg.metrics
                         .contains_key(theme_tokens::metric::COMPONENT_TEXT_SM_PX)
@@ -976,7 +976,7 @@ mod tests {
 
     #[test]
     fn new_york_v4_seeds_kbd_metrics() {
-        let cfg = shadcn_new_york_v4_config(ShadcnBaseColor::Neutral, ShadcnColorScheme::Light);
+        let cfg = shadcn_new_york_config(ShadcnBaseColor::Neutral, ShadcnColorScheme::Light);
         assert_eq!(
             cfg.metrics.get("component.kbd.text_px").copied(),
             Some(12.0)
@@ -987,7 +987,7 @@ mod tests {
         );
 
         let mut app = fret_app::App::new();
-        apply_shadcn_new_york_v4(&mut app, ShadcnBaseColor::Neutral, ShadcnColorScheme::Light);
+        apply_shadcn_new_york(&mut app, ShadcnBaseColor::Neutral, ShadcnColorScheme::Light);
         let theme = Theme::global(&app);
         assert_eq!(
             theme.metric_by_key("component.kbd.text_px"),
@@ -1001,7 +1001,7 @@ mod tests {
 
     #[test]
     fn new_york_v4_seeds_control_sizing_metrics() {
-        let cfg = shadcn_new_york_v4_config(ShadcnBaseColor::Neutral, ShadcnColorScheme::Light);
+        let cfg = shadcn_new_york_config(ShadcnBaseColor::Neutral, ShadcnColorScheme::Light);
         assert_eq!(
             cfg.metrics.get("component.size.md.button.h").copied(),
             Some(36.0)
@@ -1034,7 +1034,7 @@ mod tests {
         );
 
         let mut app = fret_app::App::new();
-        apply_shadcn_new_york_v4(&mut app, ShadcnBaseColor::Neutral, ShadcnColorScheme::Light);
+        apply_shadcn_new_york(&mut app, ShadcnBaseColor::Neutral, ShadcnColorScheme::Light);
 
         let theme = Theme::global(&app);
         assert_eq!(
@@ -1049,14 +1049,14 @@ mod tests {
 
     #[test]
     fn new_york_v4_sets_color_scheme_metadata() {
-        let cfg = shadcn_new_york_v4_config(ShadcnBaseColor::Neutral, ShadcnColorScheme::Light);
+        let cfg = shadcn_new_york_config(ShadcnBaseColor::Neutral, ShadcnColorScheme::Light);
         assert_eq!(cfg.color_scheme, Some(ColorScheme::Light));
 
-        let cfg = shadcn_new_york_v4_config(ShadcnBaseColor::Neutral, ShadcnColorScheme::Dark);
+        let cfg = shadcn_new_york_config(ShadcnBaseColor::Neutral, ShadcnColorScheme::Dark);
         assert_eq!(cfg.color_scheme, Some(ColorScheme::Dark));
 
         let mut app = fret_app::App::new();
-        apply_shadcn_new_york_v4(&mut app, ShadcnBaseColor::Neutral, ShadcnColorScheme::Dark);
+        apply_shadcn_new_york(&mut app, ShadcnBaseColor::Neutral, ShadcnColorScheme::Dark);
         let theme = Theme::global(&app);
         assert_eq!(theme.color_scheme, Some(ColorScheme::Dark));
     }
@@ -1064,8 +1064,8 @@ mod tests {
     #[test]
     fn new_york_v4_seeds_component_variant_colors() {
         for &base in ShadcnBaseColor::ALL {
-            let cfg_light = shadcn_new_york_v4_config(base, ShadcnColorScheme::Light);
-            let cfg_dark = shadcn_new_york_v4_config(base, ShadcnColorScheme::Dark);
+            let cfg_light = shadcn_new_york_config(base, ShadcnColorScheme::Light);
+            let cfg_dark = shadcn_new_york_config(base, ShadcnColorScheme::Dark);
 
             for cfg in [&cfg_light, &cfg_dark] {
                 for key in ["chart-1", "chart-2", "chart-3", "chart-4", "chart-5"] {
@@ -1568,7 +1568,7 @@ mod tests {
 
     #[test]
     fn new_york_v4_seeds_menu_item_hover_in_dark_scheme() {
-        let cfg = shadcn_new_york_v4_config(ShadcnBaseColor::Neutral, ShadcnColorScheme::Dark);
+        let cfg = shadcn_new_york_config(ShadcnBaseColor::Neutral, ShadcnColorScheme::Dark);
         let accent = cfg.colors.get("accent").cloned().expect("missing accent");
         let expected = with_oklch_alpha(&accent, 0.5).expect("accent token is oklch");
         assert_eq!(
@@ -1579,7 +1579,7 @@ mod tests {
 
     #[test]
     fn new_york_v4_seeds_navigation_menu_viewport_gap_metric() {
-        let cfg = shadcn_new_york_v4_config(ShadcnBaseColor::Neutral, ShadcnColorScheme::Light);
+        let cfg = shadcn_new_york_config(ShadcnBaseColor::Neutral, ShadcnColorScheme::Light);
         assert_eq!(
             cfg.metrics
                 .get("component.navigation_menu.viewport.side_offset")
@@ -1588,7 +1588,7 @@ mod tests {
         );
 
         let mut app = fret_app::App::new();
-        apply_shadcn_new_york_v4(&mut app, ShadcnBaseColor::Neutral, ShadcnColorScheme::Light);
+        apply_shadcn_new_york(&mut app, ShadcnBaseColor::Neutral, ShadcnColorScheme::Light);
         let theme = Theme::global(&app);
         assert_eq!(
             theme.metric_by_key("component.navigation_menu.viewport.side_offset"),
@@ -1598,7 +1598,7 @@ mod tests {
 
     #[test]
     fn new_york_v4_seeds_canonical_motion_tokens() {
-        let cfg = shadcn_new_york_v4_config(ShadcnBaseColor::Neutral, ShadcnColorScheme::Light);
+        let cfg = shadcn_new_york_config(ShadcnBaseColor::Neutral, ShadcnColorScheme::Light);
 
         assert_eq!(
             cfg.durations_ms

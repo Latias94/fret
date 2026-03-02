@@ -2,6 +2,7 @@ use std::sync::Arc;
 
 use fret_genui_core::props::{PropResolutionContext, ResolvedProps, resolve_action_param};
 use fret_genui_core::render::GenUiRenderScope;
+use fret_runtime::CommandId;
 use fret_ui::action::OnActivate;
 use fret_ui::element::AnyElement;
 use fret_ui::{ElementContext, UiHost};
@@ -180,28 +181,47 @@ impl ShadcnResolver {
                         .map(Arc::<str>::from);
                     let params =
                         action_params_map(obj.get("params").or_else(|| obj.get("actionParams")));
+                    let test_id = obj
+                        .get("testId")
+                        .and_then(|v| v.as_str())
+                        .map(Arc::<str>::from);
 
                     let mut menu_item =
                         fret_ui_shadcn::DropdownMenuItem::new(Arc::<str>::from(label))
                             .disabled(disabled)
                             .variant(variant);
 
-                    if let (Some(scope), Some(action)) = (scope.clone(), action) {
-                        let element_key = element_key.clone();
-                        let action_for_hook = action.clone();
-                        let params_for_hook = params.clone();
-                        let on_activate: OnActivate = Arc::new(move |host, acx, _reason| {
-                            emit_action_from_ui_hook(
-                                host,
-                                acx,
-                                &scope,
-                                element_key.clone(),
-                                "select",
-                                action_for_hook.clone(),
-                                params_for_hook.clone(),
-                            );
-                        });
-                        menu_item = menu_item.on_activate(on_activate);
+                    if let Some(test_id) = test_id {
+                        menu_item = menu_item.test_id(test_id);
+                    }
+
+                    if let Some(action) = action {
+                        // Action-first mapping for menu items (v1): when a menu entry binds a stable, namespaced
+                        // unit action id (no params), dispatch it through the command/action pipeline rather than
+                        // enqueuing a GenUI action invocation.
+                        let is_action_id =
+                            action.as_ref().contains('.') && action.as_ref().ends_with(".v1");
+                        let is_unit = params.is_empty();
+                        if is_action_id && is_unit {
+                            menu_item =
+                                menu_item.on_select(CommandId::new(action.as_ref().to_string()));
+                        } else if let Some(scope) = scope.clone() {
+                            let element_key = element_key.clone();
+                            let action_for_hook = action.clone();
+                            let params_for_hook = params.clone();
+                            let on_activate: OnActivate = Arc::new(move |host, acx, _reason| {
+                                emit_action_from_ui_hook(
+                                    host,
+                                    acx,
+                                    &scope,
+                                    element_key.clone(),
+                                    "select",
+                                    action_for_hook.clone(),
+                                    params_for_hook.clone(),
+                                );
+                            });
+                            menu_item = menu_item.on_activate(on_activate);
+                        }
                     }
 
                     entries.push(fret_ui_shadcn::DropdownMenuEntry::Item(menu_item));

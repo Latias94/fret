@@ -15,6 +15,10 @@ pub enum UiDebugCacheRootReuseReason {
     FirstMount,
     NodeRecreated,
     MarkedReuseRoot,
+    /// View caching is disabled globally (`UiTree::view_cache_enabled=false`).
+    ViewCacheDisabled,
+    /// View caching is disabled for correctness during inspection/picking (`UiTree::inspection_active=true`).
+    InspectionActive,
     NotMarkedReuseRoot,
     CacheKeyMismatch,
     NeedsRerender,
@@ -28,6 +32,8 @@ impl UiDebugCacheRootReuseReason {
             Self::FirstMount => "first_mount",
             Self::NodeRecreated => "node_recreated",
             Self::MarkedReuseRoot => "marked_reuse_root",
+            Self::ViewCacheDisabled => "view_cache_disabled",
+            Self::InspectionActive => "inspection_active",
             Self::NotMarkedReuseRoot => "not_marked_reuse_root",
             Self::CacheKeyMismatch => "cache_key_mismatch",
             Self::NeedsRerender => "needs_rerender",

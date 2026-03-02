@@ -55,7 +55,7 @@ fn combobox_prefix_test_ids_survive_open_close_open() {
     );
 
     let mut app = App::new();
-    fret_ui_shadcn::shadcn_themes::apply_shadcn_new_york_v4(
+    fret_ui_shadcn::shadcn_themes::apply_shadcn_new_york(
         &mut app,
         fret_ui_shadcn::shadcn_themes::ShadcnBaseColor::Neutral,
         fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Light,
@@ -94,16 +94,16 @@ fn combobox_prefix_test_ids_survive_open_close_open() {
                                 fret_ui_shadcn::ComboboxInput::new()
                                     .placeholder("Select a framework"),
                             ),
-                            fret_ui_shadcn::ComboboxPart::from(fret_ui_shadcn::ComboboxContent::new(
-                                [
+                            fret_ui_shadcn::ComboboxPart::from(
+                                fret_ui_shadcn::ComboboxContent::new([
                                     fret_ui_shadcn::ComboboxContentPart::from(
                                         fret_ui_shadcn::ComboboxEmpty::new("No items found."),
                                     ),
                                     fret_ui_shadcn::ComboboxContentPart::from(
                                         fret_ui_shadcn::ComboboxList::new().items(items),
                                     ),
-                                ],
-                            )),
+                                ]),
+                            ),
                         ]
                     }),
             ]
@@ -137,16 +137,16 @@ fn combobox_prefix_test_ids_survive_open_close_open() {
                                 fret_ui_shadcn::ComboboxInput::new()
                                     .placeholder("Select a framework"),
                             ),
-                            fret_ui_shadcn::ComboboxPart::from(fret_ui_shadcn::ComboboxContent::new(
-                                [
+                            fret_ui_shadcn::ComboboxPart::from(
+                                fret_ui_shadcn::ComboboxContent::new([
                                     fret_ui_shadcn::ComboboxContentPart::from(
                                         fret_ui_shadcn::ComboboxEmpty::new("No items found."),
                                     ),
                                     fret_ui_shadcn::ComboboxContentPart::from(
                                         fret_ui_shadcn::ComboboxList::new().items(items),
                                     ),
-                                ],
-                            )),
+                                ]),
+                            ),
                         ]
                     }),
             ]
@@ -189,16 +189,16 @@ fn combobox_prefix_test_ids_survive_open_close_open() {
                                 fret_ui_shadcn::ComboboxInput::new()
                                     .placeholder("Select a framework"),
                             ),
-                            fret_ui_shadcn::ComboboxPart::from(fret_ui_shadcn::ComboboxContent::new(
-                                [
+                            fret_ui_shadcn::ComboboxPart::from(
+                                fret_ui_shadcn::ComboboxContent::new([
                                     fret_ui_shadcn::ComboboxContentPart::from(
                                         fret_ui_shadcn::ComboboxEmpty::new("No items found."),
                                     ),
                                     fret_ui_shadcn::ComboboxContentPart::from(
                                         fret_ui_shadcn::ComboboxList::new().items(items),
                                     ),
-                                ],
-                            )),
+                                ]),
+                            ),
                         ]
                     }),
             ]
@@ -232,16 +232,16 @@ fn combobox_prefix_test_ids_survive_open_close_open() {
                                 fret_ui_shadcn::ComboboxInput::new()
                                     .placeholder("Select a framework"),
                             ),
-                            fret_ui_shadcn::ComboboxPart::from(fret_ui_shadcn::ComboboxContent::new(
-                                [
+                            fret_ui_shadcn::ComboboxPart::from(
+                                fret_ui_shadcn::ComboboxContent::new([
                                     fret_ui_shadcn::ComboboxContentPart::from(
                                         fret_ui_shadcn::ComboboxEmpty::new("No items found."),
                                     ),
                                     fret_ui_shadcn::ComboboxContentPart::from(
                                         fret_ui_shadcn::ComboboxList::new().items(items),
                                     ),
-                                ],
-                            )),
+                                ]),
+                            ),
                         ]
                     }),
             ]

@@ -2043,7 +2043,7 @@ fn web_vs_fret_layout_calendar_14_hover_day_background_matches_web() {
 
     let window = AppWindowId::default();
     let mut app = App::new();
-    fret_ui_shadcn::shadcn_themes::apply_shadcn_new_york_v4(
+    fret_ui_shadcn::shadcn_themes::apply_shadcn_new_york(
         &mut app,
         fret_ui_shadcn::shadcn_themes::ShadcnBaseColor::Neutral,
         fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Light,
@@ -2292,7 +2292,7 @@ fn web_vs_fret_layout_calendar_14_vp375x320_hover_day_background_matches_web() {
 
     let window = AppWindowId::default();
     let mut app = App::new();
-    fret_ui_shadcn::shadcn_themes::apply_shadcn_new_york_v4(
+    fret_ui_shadcn::shadcn_themes::apply_shadcn_new_york(
         &mut app,
         fret_ui_shadcn::shadcn_themes::ShadcnBaseColor::Neutral,
         fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Light,
@@ -3051,7 +3051,7 @@ fn web_vs_fret_layout_calendar_22_open_background_matches_web() {
     let window = AppWindowId::default();
     let mut app = App::new();
 
-    fret_ui_shadcn::shadcn_themes::apply_shadcn_new_york_v4(
+    fret_ui_shadcn::shadcn_themes::apply_shadcn_new_york(
         &mut app,
         fret_ui_shadcn::shadcn_themes::ShadcnBaseColor::Neutral,
         fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Light,
@@ -3151,7 +3151,7 @@ fn web_vs_fret_layout_calendar_background_transparent_in_card_content_scope() {
     let window = AppWindowId::default();
     let mut app = App::new();
 
-    fret_ui_shadcn::shadcn_themes::apply_shadcn_new_york_v4(
+    fret_ui_shadcn::shadcn_themes::apply_shadcn_new_york(
         &mut app,
         fret_ui_shadcn::shadcn_themes::ShadcnBaseColor::Neutral,
         fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Light,

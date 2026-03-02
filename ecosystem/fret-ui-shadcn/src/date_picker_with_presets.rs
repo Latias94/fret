@@ -20,7 +20,7 @@ use time::{Date, Duration, OffsetDateTime, Weekday};
 use crate::button::{Button, ButtonSize, ButtonStyle, ButtonVariant, button_text_style};
 use crate::calendar::Calendar;
 use crate::popover::{Popover, PopoverAlign, PopoverContent, PopoverSide};
-use crate::select::{Select, SelectItem, SelectPosition};
+use crate::select::{Select, SelectItem, SelectPosition, SelectValue};
 
 /// shadcn/ui example: `date-picker-with-presets` (v4).
 ///
@@ -247,7 +247,7 @@ impl DatePickerWithPresets {
                             None,
                             false,
                         )
-                        .placeholder("Select")
+                        .value(SelectValue::new().placeholder("Select"))
                         .refine_layout(LayoutRefinement::default().w_full().min_w_0())
                         .position(SelectPosition::Popper)
                         .on_value_change({

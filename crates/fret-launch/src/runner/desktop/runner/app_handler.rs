@@ -1252,6 +1252,7 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
                 if saw_left_up {
                     self.left_mouse_down = false;
                     self.saw_left_mouse_release_this_turn = true;
+                    let cancel_pointer_id = self.internal_drag_routing_pointer_id();
                     // Deliver the cursor-based drop on any left mouse release; this keeps docking
                     // robust even when the drag pointer id is not `PointerId(0)`.
                     self.route_internal_drag_drop_from_cursor();
@@ -1261,11 +1262,8 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
 
                     // Cross-window drags are runner-routed (Enter/Over/Drop), so ensure the
                     // drag session cannot get "stuck" if no widget ends it.
-                    if let Some(released) = left_up_pointer_id
-                        && self
-                            .app
-                            .drag(released)
-                            .is_some_and(|d| d.cross_window_hover)
+                    if let Some(released) = cancel_pointer_id.or(left_up_pointer_id)
+                        && self.app.drag(released).is_some_and(|d| d.cross_window_hover)
                     {
                         self.app.cancel_drag(released);
                         let _ = self.clear_internal_drag_hover_if_needed();

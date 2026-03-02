@@ -29,7 +29,7 @@ pub fn install_app(app: &mut fret_app::App) {
 
 /// Installs the default shadcn theme into the app and stores the configuration in app globals.
 pub fn install_app_with(app: &mut fret_app::App, config: ShadcnInstallConfig) {
-    crate::shadcn_themes::apply_shadcn_new_york_v4(app, config.base_color, config.scheme);
+    crate::shadcn_themes::apply_shadcn_new_york(app, config.base_color, config.scheme);
     app.with_global_mut_untracked(ShadcnInstallConfig::default, |stored, _app| {
         *stored = config;
     });
@@ -80,7 +80,7 @@ pub fn sync_theme_from_environment(
         });
 
     if should_apply {
-        crate::shadcn_themes::apply_shadcn_new_york_v4(app, base_color, desired);
+        crate::shadcn_themes::apply_shadcn_new_york(app, base_color, desired);
     }
 
     desired

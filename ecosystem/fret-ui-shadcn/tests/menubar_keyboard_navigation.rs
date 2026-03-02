@@ -1,9 +1,9 @@
 use fret_app::{App, Effect};
 use fret_core::{AppWindowId, FrameId, KeyCode, Point, Px, Rect, Size as CoreSize};
 use fret_runtime::CommandId;
+use fret_ui::ElementContext;
 use fret_ui::element::AnyElement;
 use fret_ui::tree::UiTree;
-use fret_ui::ElementContext;
 use fret_ui_kit::OverlayController;
 
 #[path = "support/fake_services.rs"]
@@ -74,7 +74,7 @@ fn menubar_arrow_down_enter_dispatches_command_and_closes() {
     );
 
     let mut app = App::new();
-    fret_ui_shadcn::shadcn_themes::apply_shadcn_new_york_v4(
+    fret_ui_shadcn::shadcn_themes::apply_shadcn_new_york(
         &mut app,
         fret_ui_shadcn::shadcn_themes::ShadcnBaseColor::Neutral,
         fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Light,
