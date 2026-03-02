@@ -1664,6 +1664,52 @@ pub(super) fn preview_carousel(cx: &mut ElementContext<'_, App>) -> Vec<AnyEleme
         .test_id("ui-gallery-carousel-orientation-vertical")
         .into_element(cx);
 
+    let focus_items = (1..=5)
+        .map(|idx| {
+            let theme = Theme::global(&*cx.app).snapshot();
+
+            let button = shadcn::Button::new(format!("Button {idx}"))
+                .test_id(format!("ui-gallery-carousel-focus-button-{idx}"))
+                .into_element(cx);
+
+            let body = cx.flex(
+                FlexProps {
+                    layout: decl_style::layout_style(&theme, LayoutRefinement::default().w_full()),
+                    direction: fret_core::Axis::Horizontal,
+                    justify: MainAlign::Center,
+                    align: CrossAlign::Center,
+                    padding: Edges::all(Px(24.0)).into(),
+                    ..Default::default()
+                },
+                move |_cx| vec![button],
+            );
+
+            let card = shadcn::Card::new([body]).into_element(cx);
+            ui::container(cx, move |_cx| vec![card]).p_1().into_element(cx)
+        })
+        .collect::<Vec<_>>();
+
+    let focus = shadcn::Carousel::new(focus_items)
+        .opts(
+            shadcn::CarouselOptions::new()
+                .watch_focus(true)
+                .embla_engine(true)
+                .ignore_reduced_motion(true),
+        )
+        .track_start_neg_margin(Space::N0)
+        .item_padding_start(Space::N0)
+        .item_basis_main_px(Px(200.0))
+        .refine_layout(
+            LayoutRefinement::default()
+                .w_px(Px(200.0))
+                .h_px(Px(120.0))
+                .mx_auto(),
+        )
+        .refine_viewport_layout(LayoutRefinement::default().h_px(Px(120.0)))
+        .refine_track_layout(LayoutRefinement::default().h_px(Px(120.0)))
+        .test_id("ui-gallery-carousel-focus")
+        .into_element(cx);
+
     let body = doc_layout::render_doc_page(
         cx,
         Some("Preview follows shadcn Carousel demo cards (Fret builder API; not Embla)."),
@@ -1676,6 +1722,12 @@ pub(super) fn preview_carousel(cx: &mut ElementContext<'_, App>) -> Vec<AnyEleme
                 .description("Seamless looping (`loop=true`) using the Embla-style headless engine.")
                 .max_w(Px(760.0))
                 .test_id_prefix("ui-gallery-carousel-loop"),
+            DocSection::new("Focus", focus)
+                .description(
+                    "`watch_focus=true`: Tab into an offscreen slide and scroll it into view (Embla engine enabled).",
+                )
+                .max_w(Px(760.0))
+                .test_id_prefix("ui-gallery-carousel-focus"),
             DocSection::new("Basic", basic)
                 .description("Default slide width (basis-full).")
                 .max_w(Px(760.0))
