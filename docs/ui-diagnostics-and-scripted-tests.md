@@ -1219,6 +1219,14 @@ Example (run one script against the demo, launching a fresh process):
 
 - `cargo run -p fretboard -- diag run tools/diag-scripts/docking-arbitration-demo-multiwindow-drag-tab-back-to-main.json --launch -- cargo run -p fret-demo --bin docking_arbitration_demo --release`
 
+Local debugging note:
+
+- For “not yet suite-worthy” helper scripts (especially bundle-capture scripts used to debug flaky multi-window cases),
+  keep them under a `local-debug/` directory inside the canonical taxonomy location (example:
+  `tools/diag-scripts/docking/arbitration/local-debug/`).
+- These scripts are intentionally *not* promoted into `tools/diag-scripts/index.json` and should not be relied on by
+  CI-style suites.
+
 ### View-cache regression gating
 
 Some scripted regressions only matter when view-cache reuse actually happens. To avoid false positives,

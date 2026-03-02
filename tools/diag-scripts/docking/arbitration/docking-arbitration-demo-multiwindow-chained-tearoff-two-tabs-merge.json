@@ -61,14 +61,14 @@
     },
     { "type": "wait_until", "predicate": { "kind": "known_window_count_ge", "n": 2 }, "timeout_frames": 240 },
     { "type": "wait_frames", "n": 30 },
+    { "type": "set_window_outer_position", "window": { "kind": "last_seen" }, "x_px": 1560.0, "y_px": 180.0 },
+    { "type": "wait_frames", "n": 10 },
     {
       "type": "wait_until",
       "window": { "kind": "last_seen" },
-      "predicate": { "kind": "exists", "target": { "kind": "test_id", "id": "dock-arb-dock-space" } },
+      "predicate": { "kind": "exists", "target": { "kind": "test_id", "id": "dock-arb-tab-drag-anchor-left" } },
       "timeout_frames": 240
     },
-    { "type": "set_window_outer_position", "window": { "kind": "last_seen" }, "x_px": 1560.0, "y_px": 180.0 },
-    { "type": "wait_frames", "n": 10 },
 
     {
       "type": "drag_pointer_until",
@@ -82,14 +82,14 @@
     },
     { "type": "wait_until", "predicate": { "kind": "known_window_count_ge", "n": 3 }, "timeout_frames": 240 },
     { "type": "wait_frames", "n": 30 },
+    { "type": "set_window_outer_position", "window": { "kind": "last_seen" }, "x_px": 180.0, "y_px": 180.0 },
+    { "type": "wait_frames", "n": 10 },
     {
       "type": "wait_until",
       "window": { "kind": "last_seen" },
-      "predicate": { "kind": "exists", "target": { "kind": "test_id", "id": "dock-arb-dock-space" } },
+      "predicate": { "kind": "exists", "target": { "kind": "test_id", "id": "dock-arb-tab-drag-anchor-right" } },
       "timeout_frames": 240
     },
-    { "type": "set_window_outer_position", "window": { "kind": "last_seen" }, "x_px": 180.0, "y_px": 180.0 },
-    { "type": "wait_frames", "n": 10 },
 
     { "type": "raise_window", "window": { "kind": "last_seen" } },
     { "type": "set_cursor_in_window_logical", "window": { "kind": "last_seen" }, "x_px": 640.0, "y_px": 260.0 },

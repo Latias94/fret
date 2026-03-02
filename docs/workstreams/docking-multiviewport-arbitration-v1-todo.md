@@ -87,6 +87,10 @@ Each TODO is labeled:
   - Evidence:
     - script: `tools/diag-scripts/docking-arbitration-demo-modal-dock-drag-viewport-capture.json`
     - anchors: `apps/fret-examples/src/docking_arbitration_demo.rs` (`dock-arb-tab-drag-anchor-left`, `dock-arb-dialog-*`, `dock-arb-popover-*`)
+  - Debug helper:
+    - when investigating multi-window tear-off flakiness, prefer a dedicated `capture_bundle` helper script that runs the
+      minimal tear-off sequence and captures a bundle in the last-seen window (to verify anchors are present):
+      `tools/diag-scripts/docking/arbitration/local-debug/docking-arbitration-demo-multiwindow-chained-tearoff-after-first-tearoff-bundle.json`
 
 - [x] DMV1-reg-032 Add a built-in diag suite for docking arbitration scripts.
   - Target: a single `fretboard diag suite docking-arbitration` entrypoint, with default diagnostic gates enabled.
