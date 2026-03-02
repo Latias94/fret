@@ -872,9 +872,44 @@ struct JsonDumpCustomEffectSummary {
     #[serde(skip_serializing_if = "Option::is_none")]
     pyramid_degraded_to_one: Option<usize>,
     #[serde(skip_serializing_if = "Option::is_none")]
+    pyramid_levels_min: Option<u32>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pyramid_levels_max: Option<u32>,
     #[serde(skip_serializing_if = "Option::is_none")]
+    pyramid_levels_sum: Option<u64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pyramid_build_scissor_some: Option<usize>,
+}
+
+#[derive(Debug, serde::Serialize)]
+struct JsonDumpCustomEffectV3SourceDegradations {
+    raw_requested: u64,
+    raw_distinct: u64,
+    raw_aliased_to_src: u64,
+    pyramid_requested: u64,
+    pyramid_applied_levels_ge2: u64,
+    pyramid_degraded_to_one_budget_zero: u64,
+    pyramid_degraded_to_one_budget_insufficient: u64,
+}
+
+#[derive(Debug, serde::Serialize)]
+struct JsonDumpBackdropSourceGroupDegradations {
+    requested: u64,
+    applied_raw: u64,
+    raw_degraded_budget_zero: u64,
+    raw_degraded_budget_insufficient: u64,
+    raw_degraded_target_exhausted: u64,
+    pyramid_requested: u64,
+    pyramid_applied_levels_ge2: u64,
+    pyramid_degraded_to_one_budget_zero: u64,
+    pyramid_degraded_to_one_budget_insufficient: u64,
+    pyramid_skipped_raw_unavailable: u64,
+}
+
+#[derive(Debug, serde::Serialize)]
+struct JsonDumpCustomEffectV3DiagnosticsSummary {
+    custom_effect_v3_sources: JsonDumpCustomEffectV3SourceDegradations,
+    backdrop_source_groups: JsonDumpBackdropSourceGroupDegradations,
 }
 
 #[derive(Debug, serde::Serialize)]
@@ -910,7 +945,9 @@ fn summarize_custom_effects(passes: &[RenderPlanPass]) -> Vec<JsonDumpCustomEffe
         pyramid_requested: usize,
         pyramid_applied_levels_ge2: usize,
         pyramid_degraded_to_one: usize,
+        pyramid_levels_min: u32,
         pyramid_levels_max: u32,
+        pyramid_levels_sum: u64,
         pyramid_build_scissor_some: usize,
     }
 
@@ -957,10 +994,18 @@ fn summarize_custom_effects(passes: &[RenderPlanPass]) -> Vec<JsonDumpCustomEffe
                         acc.pyramid_degraded_to_one += 1;
                     } else {
                         acc.pyramid_applied_levels_ge2 += 1;
-                        acc.pyramid_levels_max = acc.pyramid_levels_max.max(p.pyramid_levels);
-                        if p.pyramid_build_scissor.is_some() {
-                            acc.pyramid_build_scissor_some += 1;
-                        }
+                    }
+
+                    let levels = p.pyramid_levels.max(1);
+                    acc.pyramid_levels_sum = acc.pyramid_levels_sum.saturating_add(levels as u64);
+                    acc.pyramid_levels_max = acc.pyramid_levels_max.max(levels);
+                    if acc.pyramid_levels_min == 0 {
+                        acc.pyramid_levels_min = levels;
+                    } else {
+                        acc.pyramid_levels_min = acc.pyramid_levels_min.min(levels);
+                    }
+                    if p.pyramid_build_scissor.is_some() {
+                        acc.pyramid_build_scissor_some += 1;
                     }
                 }
             }
@@ -990,8 +1035,12 @@ fn summarize_custom_effects(passes: &[RenderPlanPass]) -> Vec<JsonDumpCustomEffe
             pyramid_requested: (abi == Abi::V3).then_some(acc.pyramid_requested),
             pyramid_applied_levels_ge2: (abi == Abi::V3).then_some(acc.pyramid_applied_levels_ge2),
             pyramid_degraded_to_one: (abi == Abi::V3).then_some(acc.pyramid_degraded_to_one),
-            pyramid_levels_max: (abi == Abi::V3 && acc.pyramid_levels_max > 0)
+            pyramid_levels_min: (abi == Abi::V3 && acc.pyramid_requested > 0)
+                .then_some(acc.pyramid_levels_min),
+            pyramid_levels_max: (abi == Abi::V3 && acc.pyramid_requested > 0)
                 .then_some(acc.pyramid_levels_max),
+            pyramid_levels_sum: (abi == Abi::V3 && acc.pyramid_requested > 0)
+                .then_some(acc.pyramid_levels_sum),
             pyramid_build_scissor_some: (abi == Abi::V3).then_some(acc.pyramid_build_scissor_some),
         })
         .collect();
@@ -1167,7 +1216,9 @@ fn summarize_target_usage(passes: &[RenderPlanPass]) -> Vec<JsonDumpTargetUsage>
 #[cfg(all(test, not(target_arch = "wasm32")))]
 mod tests {
     use super::*;
-    use crate::renderer::render_plan::{CustomEffectPass, CustomEffectV2Pass, RenderPlanPass};
+    use crate::renderer::render_plan::{
+        CustomEffectPass, CustomEffectV2Pass, CustomEffectV3Pass, RenderPlanPass,
+    };
     use slotmap::SlotMap;
 
     #[test]
@@ -1245,6 +1296,84 @@ mod tests {
     }
 
     #[test]
+    fn custom_effect_v3_summary_tracks_pyramid_levels_min_max_sum() {
+        let mut effects: SlotMap<fret_core::EffectId, ()> = SlotMap::with_key();
+        let effect_v3 = effects.insert(());
+
+        let passes = vec![
+            RenderPlanPass::CustomEffectV3(CustomEffectV3Pass {
+                src: PlanTarget::Intermediate0,
+                src_raw: PlanTarget::Intermediate1,
+                src_pyramid: PlanTarget::Intermediate2,
+                pyramid_levels: 1,
+                pyramid_build_scissor: None,
+                raw_wanted: true,
+                pyramid_wanted: true,
+                dst: PlanTarget::Intermediate0,
+                src_size: (100, 100),
+                dst_size: (100, 100),
+                dst_scissor: None,
+                mask_uniform_index: None,
+                mask: None,
+                effect: effect_v3,
+                params: fret_core::EffectParamsV1::ZERO,
+                user0_image: None,
+                user0_uv: fret_core::scene::UvRect::FULL,
+                user0_sampling: fret_core::scene::ImageSamplingHint::Default,
+                user1_image: None,
+                user1_uv: fret_core::scene::UvRect::FULL,
+                user1_sampling: fret_core::scene::ImageSamplingHint::Default,
+                load: wgpu::LoadOp::Load,
+            }),
+            RenderPlanPass::CustomEffectV3(CustomEffectV3Pass {
+                src: PlanTarget::Intermediate0,
+                src_raw: PlanTarget::Intermediate1,
+                src_pyramid: PlanTarget::Intermediate2,
+                pyramid_levels: 3,
+                pyramid_build_scissor: Some(LocalScissorRect(ScissorRect {
+                    x: 10,
+                    y: 20,
+                    w: 30,
+                    h: 40,
+                })),
+                raw_wanted: true,
+                pyramid_wanted: true,
+                dst: PlanTarget::Intermediate0,
+                src_size: (100, 100),
+                dst_size: (100, 100),
+                dst_scissor: None,
+                mask_uniform_index: None,
+                mask: None,
+                effect: effect_v3,
+                params: fret_core::EffectParamsV1::ZERO,
+                user0_image: None,
+                user0_uv: fret_core::scene::UvRect::FULL,
+                user0_sampling: fret_core::scene::ImageSamplingHint::Default,
+                user1_image: None,
+                user1_uv: fret_core::scene::UvRect::FULL,
+                user1_sampling: fret_core::scene::ImageSamplingHint::Default,
+                load: wgpu::LoadOp::Load,
+            }),
+        ];
+
+        let summary = summarize_custom_effects(&passes);
+        assert_eq!(summary.len(), 1);
+
+        let v3 = summary
+            .iter()
+            .find(|s| s.abi == "custom_v3.renderer_sources")
+            .expect("v3 summary");
+        assert_eq!(v3.pass_count, 2);
+        assert_eq!(v3.pyramid_requested, Some(2));
+        assert_eq!(v3.pyramid_applied_levels_ge2, Some(1));
+        assert_eq!(v3.pyramid_degraded_to_one, Some(1));
+        assert_eq!(v3.pyramid_levels_min, Some(1));
+        assert_eq!(v3.pyramid_levels_max, Some(3));
+        assert_eq!(v3.pyramid_levels_sum, Some(4));
+        assert_eq!(v3.pyramid_build_scissor_some, Some(1));
+    }
+
+    #[test]
     fn target_usage_tracks_max_size() {
         let mut effects: SlotMap<fret_core::EffectId, ()> = SlotMap::with_key();
         let effect = effects.insert(());
@@ -1301,6 +1430,7 @@ struct RenderPlanJsonDump<'a> {
     custom_effects: &'a [JsonDumpCustomEffectSummary],
     target_usage: &'a [JsonDumpTargetUsage],
     estimated_peak_intermediate_bytes: u64,
+    custom_effect_v3_diagnostics: JsonDumpCustomEffectV3DiagnosticsSummary,
     degradations: &'a [JsonDumpDegradation],
     passes: &'a [JsonDumpPass],
 }
@@ -1347,6 +1477,51 @@ fn encode_degradation(d: RenderPlanDegradation) -> JsonDumpDegradation {
 
 fn parse_env_u64(name: &str) -> Option<u64> {
     std::env::var(name).ok().and_then(|v| v.parse::<u64>().ok())
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+fn encode_custom_effect_v3_diagnostics_summary(
+    snapshot: super::EffectDegradationSnapshot,
+) -> JsonDumpCustomEffectV3DiagnosticsSummary {
+    JsonDumpCustomEffectV3DiagnosticsSummary {
+        custom_effect_v3_sources: JsonDumpCustomEffectV3SourceDegradations {
+            raw_requested: snapshot.custom_effect_v3_sources.raw_requested,
+            raw_distinct: snapshot.custom_effect_v3_sources.raw_distinct,
+            raw_aliased_to_src: snapshot.custom_effect_v3_sources.raw_aliased_to_src,
+            pyramid_requested: snapshot.custom_effect_v3_sources.pyramid_requested,
+            pyramid_applied_levels_ge2: snapshot
+                .custom_effect_v3_sources
+                .pyramid_applied_levels_ge2,
+            pyramid_degraded_to_one_budget_zero: snapshot
+                .custom_effect_v3_sources
+                .pyramid_degraded_to_one_budget_zero,
+            pyramid_degraded_to_one_budget_insufficient: snapshot
+                .custom_effect_v3_sources
+                .pyramid_degraded_to_one_budget_insufficient,
+        },
+        backdrop_source_groups: JsonDumpBackdropSourceGroupDegradations {
+            requested: snapshot.backdrop_source_groups.requested,
+            applied_raw: snapshot.backdrop_source_groups.applied_raw,
+            raw_degraded_budget_zero: snapshot.backdrop_source_groups.raw_degraded_budget_zero,
+            raw_degraded_budget_insufficient: snapshot
+                .backdrop_source_groups
+                .raw_degraded_budget_insufficient,
+            raw_degraded_target_exhausted: snapshot
+                .backdrop_source_groups
+                .raw_degraded_target_exhausted,
+            pyramid_requested: snapshot.backdrop_source_groups.pyramid_requested,
+            pyramid_applied_levels_ge2: snapshot.backdrop_source_groups.pyramid_applied_levels_ge2,
+            pyramid_degraded_to_one_budget_zero: snapshot
+                .backdrop_source_groups
+                .pyramid_degraded_to_one_budget_zero,
+            pyramid_degraded_to_one_budget_insufficient: snapshot
+                .backdrop_source_groups
+                .pyramid_degraded_to_one_budget_insufficient,
+            pyramid_skipped_raw_unavailable: snapshot
+                .backdrop_source_groups
+                .pyramid_skipped_raw_unavailable,
+        },
+    }
 }
 
 #[cfg(not(target_arch = "wasm32"))]
@@ -1478,7 +1653,7 @@ pub(super) fn maybe_dump_render_plan_json(
     let _ = std::fs::create_dir_all(&dir);
 
     let dump = RenderPlanJsonDump {
-        schema_version: 6,
+        schema_version: 7,
         frame_index,
         viewport_size: [viewport_size.0, viewport_size.1],
         format: format!("{format:?}"),
@@ -1490,6 +1665,9 @@ pub(super) fn maybe_dump_render_plan_json(
         custom_effects: &dump_scratch.custom_effects,
         target_usage: &dump_scratch.target_usage,
         estimated_peak_intermediate_bytes: plan.compile_stats.estimated_peak_intermediate_bytes,
+        custom_effect_v3_diagnostics: encode_custom_effect_v3_diagnostics_summary(
+            plan.compile_stats.effect_degradations,
+        ),
         degradations: &dump_scratch.degradations,
         passes: &dump_scratch.passes,
     };
