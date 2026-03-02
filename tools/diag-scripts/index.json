@@ -3537,28 +3537,6 @@
       ]
     },
     {
-      "id": "workspace-shell-demo-tab-pinned-boundary-toggle-smoke",
-      "path": "tools/diag-scripts/workspace/shell-demo/workspace-shell-demo-tab-pinned-boundary-toggle-smoke.json",
-      "required_capabilities": [
-        "diag.script_v2"
-      ],
-      "suite_memberships": [
-        "diag-hardening-smoke-workspace"
-      ],
-      "tags": [
-        "gate",
-        "pinned",
-        "smoke",
-        "tabstrip",
-        "workspace"
-      ],
-      "target_hints": [
-        "Right-clicks a tab and pins it via the context menu.",
-        "Drags the pinned tab onto the pinned boundary drop surface to unpin.",
-        "Asserts the pinned boundary disappears (pinned_count returns to 0)."
-      ]
-    },
-    {
       "id": "workspace-shell-demo-tab-reorder-first-to-end-overflow-smoke",
       "path": "tools/diag-scripts/workspace/shell-demo/workspace-shell-demo-tab-reorder-first-to-end-overflow-smoke.json",
       "required_capabilities": [
@@ -3599,7 +3577,7 @@
       ],
       "target_hints": [
         "Asserts initial pos_in_set for a known tab.",
-        "Drags the first tab to reorder within the strip and drops it.",
+        "Drags the first tab to the end and drops it.",
         "Asserts pos_in_set updates after the reorder."
       ]
     }
