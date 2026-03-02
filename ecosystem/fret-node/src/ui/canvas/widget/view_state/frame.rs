@@ -23,8 +23,8 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
         let snapshot = self.sync_view_state(host);
         let include_hidden_nodes = options.is_some_and(|o| o.include_hidden_nodes);
 
-        let mut target_min_zoom = self.style.min_zoom;
-        let mut target_max_zoom = self.style.max_zoom;
+        let mut target_min_zoom = self.style.geometry.min_zoom;
+        let mut target_max_zoom = self.style.geometry.max_zoom;
         if let Some(options) = options {
             if let Some(min) = options.min_zoom {
                 if min.is_finite() && min > 0.0 {
@@ -43,8 +43,8 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
             || target_max_zoom <= 0.0
             || target_min_zoom > target_max_zoom
         {
-            target_min_zoom = self.style.min_zoom;
-            target_max_zoom = self.style.max_zoom;
+            target_min_zoom = self.style.geometry.min_zoom;
+            target_max_zoom = self.style.geometry.max_zoom;
         }
 
         if node_ids.is_empty() {

@@ -437,13 +437,6 @@ impl<H: UiHost> UiTree<H> {
         }
     }
 
-    pub(in crate::tree) fn node_in_any_layer(&self, node: NodeId, layer_roots: &[NodeId]) -> bool {
-        let Some(node_root) = self.node_root(node) else {
-            return false;
-        };
-        layer_roots.contains(&node_root)
-    }
-
     pub(in crate::tree) fn node_root(&self, mut node: NodeId) -> Option<NodeId> {
         while let Some(parent) = self.nodes.get(node).and_then(|n| n.parent) {
             node = parent;

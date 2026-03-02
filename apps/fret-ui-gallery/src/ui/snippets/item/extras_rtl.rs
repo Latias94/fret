@@ -1,8 +1,11 @@
+pub const SOURCE: &str = include_str!("extras_rtl.rs");
+
 // region: example
-use crate::spec::CMD_APP_OPEN;
 use fret_app::App;
 use fret_ui_kit::primitives::direction::{LayoutDirection, with_direction_provider};
 use fret_ui_shadcn::{self as shadcn, prelude::*};
+
+const CMD_APP_OPEN: &str = "ui_gallery.app.open";
 
 fn outline_button_sm(cx: &mut ElementContext<'_, App>, label: &'static str) -> AnyElement {
     shadcn::Button::new(label)

@@ -3,10 +3,16 @@ use std::sync::Arc;
 use fret_core::{Corners, FontId, KeyCode, NodeId, Px, SemanticsRole};
 use fret_runtime::{CommandId, Model};
 use fret_ui::action::{ActionCx, KeyDownCx, UiFocusActionHost};
-use fret_ui::element::{AnyElement, Length, Overflow, SizeStyle, TextInputProps};
+use fret_ui::element::{
+    AnyElement, Length, Overflow, SemanticsDecoration, SizeStyle, TextInputProps,
+};
+use fret_ui::elements::GlobalElementId;
 use fret_ui::{ElementContext, TextInputStyle, Theme, UiHost};
 use fret_ui_kit::command::ElementCommandGatingExt as _;
 use fret_ui_kit::declarative::style as decl_style;
+use fret_ui_kit::primitives::control_registry::{
+    ControlAction, ControlEntry, ControlId, control_registry_model,
+};
 use fret_ui_kit::recipes::input::{InputTokenKeys, resolve_input_chrome};
 use fret_ui_kit::typography;
 use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, Size};
@@ -70,6 +76,8 @@ pub struct Input {
     model: Model<String>,
     a11y_label: Option<Arc<str>>,
     a11y_role: Option<SemanticsRole>,
+    labelled_by_element: Option<GlobalElementId>,
+    control_id: Option<ControlId>,
     test_id: Option<Arc<str>>,
     placeholder: Option<Arc<str>>,
     aria_invalid: bool,
@@ -94,6 +102,8 @@ impl Input {
             model,
             a11y_label: None,
             a11y_role: None,
+            labelled_by_element: None,
+            control_id: None,
             test_id: None,
             placeholder: None,
             aria_invalid: false,
@@ -120,6 +130,22 @@ impl Input {
 
     pub fn a11y_role(mut self, role: SemanticsRole) -> Self {
         self.a11y_role = Some(role);
+        self
+    }
+
+    /// Associates this control with a label element (ARIA `aria-labelledby`-like outcome).
+    ///
+    /// This is the preferred way to model shadcn/Radix `Label` → `Input` association in Fret,
+    /// since we do not have DOM `id`/`htmlFor`.
+    pub fn labelled_by_element(mut self, label: GlobalElementId) -> Self {
+        self.labelled_by_element = Some(label);
+        self
+    }
+
+    /// Associates this input with a logical form control id so related elements (e.g. labels,
+    /// helper text) can forward activation and attach `labelled-by` / `described-by` semantics.
+    pub fn control_id(mut self, id: impl Into<ControlId>) -> Self {
+        self.control_id = Some(id.into());
         self
     }
 
@@ -257,6 +283,8 @@ impl Input {
             self.style,
             self.chrome,
             self.layout,
+            self.labelled_by_element,
+            self.control_id,
             self.border_width_override,
             self.corner_radii_override,
         )
@@ -293,6 +321,8 @@ pub fn input<H: UiHost>(
         InputStyle::default(),
         ChromeRefinement::default(),
         LayoutRefinement::default(),
+        None,
+        None,
         BorderWidthOverride::default(),
         None,
     )
@@ -319,6 +349,8 @@ fn input_with_style_and_submit<H: UiHost>(
     style_override: InputStyle,
     chrome_override: ChromeRefinement,
     layout_override: LayoutRefinement,
+    labelled_by_element: Option<GlobalElementId>,
+    control_id: Option<ControlId>,
     border_width_override: BorderWidthOverride,
     corner_radii_override: Option<Corners>,
 ) -> AnyElement {
@@ -326,6 +358,7 @@ fn input_with_style_and_submit<H: UiHost>(
     let theme_snapshot = theme.snapshot();
     let submit_command = submit_command.filter(|cmd| cx.command_is_enabled(cmd));
     let cancel_command = cancel_command.filter(|cmd| cx.command_is_enabled(cmd));
+    let has_a11y_label = a11y_label.is_some();
 
     let resolved = resolve_input_chrome(
         theme,
@@ -450,7 +483,22 @@ fn input_with_style_and_submit<H: UiHost>(
     let model_for_hook = props.model.clone();
     let on_submit_hook = on_submit.clone();
     let submit_command_for_hook = submit_command.clone();
+    let control_id = control_id.clone();
+    let control_registry = control_id.as_ref().map(|_| control_registry_model(cx));
     let input = cx.text_input_with_id_props(|cx, id| {
+        if let (Some(control_id), Some(control_registry)) =
+            (control_id.clone(), control_registry.clone())
+        {
+            let entry = ControlEntry {
+                element: id,
+                enabled: !disabled,
+                action: ControlAction::Noop,
+            };
+            let _ = cx.app.models_mut().update(&control_registry, |reg| {
+                reg.register_control(cx.window, cx.frame_id, control_id, entry);
+            });
+        }
+
         if let Some(on_submit_hook) = on_submit_hook.clone() {
             cx.key_add_on_key_down_for(
                 id,
@@ -476,6 +524,51 @@ fn input_with_style_and_submit<H: UiHost>(
         props.model = model_for_hook.clone();
         props
     });
+
+    let labelled_by_element = if labelled_by_element.is_some() {
+        labelled_by_element
+    } else if has_a11y_label {
+        None
+    } else if let (Some(control_id), Some(control_registry)) =
+        (control_id.as_ref(), control_registry.as_ref())
+    {
+        cx.app
+            .models()
+            .read(control_registry, |reg| {
+                reg.label_for(cx.window, control_id).map(|l| l.element)
+            })
+            .ok()
+            .flatten()
+    } else {
+        None
+    };
+
+    let described_by_element = if let (Some(control_id), Some(control_registry)) =
+        (control_id.as_ref(), control_registry.as_ref())
+    {
+        cx.app
+            .models()
+            .read(control_registry, |reg| {
+                reg.described_by_for(cx.window, control_id)
+            })
+            .ok()
+            .flatten()
+    } else {
+        None
+    };
+
+    let input = if labelled_by_element.is_some() || described_by_element.is_some() {
+        let mut decoration = SemanticsDecoration::default();
+        if let Some(label) = labelled_by_element {
+            decoration = decoration.labelled_by_element(label.0);
+        }
+        if let Some(desc) = described_by_element {
+            decoration = decoration.described_by_element(desc.0);
+        }
+        input.attach_semantics(decoration)
+    } else {
+        input
+    };
 
     let input = cx.container(
         fret_ui::element::ContainerProps {
@@ -503,6 +596,7 @@ mod tests {
     use fret_core::{AppWindowId, Point, Px, Rect, Size as CoreSize};
     use fret_ui::element::{ElementKind, Length};
     use fret_ui::elements;
+    use fret_ui_kit::primitives::control_registry::ControlId;
 
     #[test]
     fn input_selection_color_uses_primary_in_shadcn_light_theme() {
@@ -577,5 +671,116 @@ mod tests {
         };
         assert_eq!(props.layout.size.width, Length::Fill);
         assert_eq!(props.layout.size.height, Length::Fill);
+    }
+
+    #[test]
+    fn input_can_reference_a_label_element_for_a11y_association() {
+        let mut app = App::new();
+        crate::shadcn_themes::apply_shadcn_new_york_v4(
+            &mut app,
+            crate::shadcn_themes::ShadcnBaseColor::Slate,
+            crate::shadcn_themes::ShadcnColorScheme::Light,
+        );
+
+        let window = AppWindowId::default();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            CoreSize::new(Px(320.0), Px(120.0)),
+        );
+
+        let model = app.models_mut().insert(String::new());
+
+        let root = elements::with_element_cx(&mut app, window, bounds, "labelled-input", |cx| {
+            let label = crate::Label::new("Email").into_element(cx);
+            let label_id = label.id;
+
+            let input = Input::new(model.clone())
+                .labelled_by_element(label_id)
+                .into_element(cx);
+
+            cx.column(fret_ui::element::ColumnProps::default(), |_cx| {
+                vec![label, input]
+            })
+        });
+
+        let ElementKind::Column(col) = &root.kind else {
+            panic!("expected test root to be a Column, got {:?}", root.kind);
+        };
+        assert_eq!(
+            col.layout.size.width,
+            Length::Auto,
+            "sanity: ColumnProps default width stays Auto"
+        );
+
+        let input = root.children.get(1).expect("input child");
+        let ElementKind::Container(_) = &input.kind else {
+            panic!("expected Input to wrap in a Container");
+        };
+        let text_input = input.children.first().expect("text input");
+        let ElementKind::TextInput(_) = &text_input.kind else {
+            panic!("expected Input inner node to be a TextInput");
+        };
+        let decoration = text_input
+            .semantics_decoration
+            .as_ref()
+            .expect("expected labelled_by decoration on TextInput");
+        assert_eq!(decoration.labelled_by_element, Some(root.children[0].id.0));
+    }
+
+    #[test]
+    fn input_control_id_uses_registry_labelled_by_and_described_by_elements() {
+        let mut app = App::new();
+        crate::shadcn_themes::apply_shadcn_new_york_v4(
+            &mut app,
+            crate::shadcn_themes::ShadcnBaseColor::Slate,
+            crate::shadcn_themes::ShadcnColorScheme::Light,
+        );
+
+        let window = AppWindowId::default();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            CoreSize::new(Px(320.0), Px(180.0)),
+        );
+
+        let model = app.models_mut().insert(String::new());
+
+        let root = elements::with_element_cx(&mut app, window, bounds, "control-id-input", |cx| {
+            let id = ControlId::from("email");
+
+            cx.column(fret_ui::element::ColumnProps::default(), move |cx| {
+                vec![
+                    crate::field::FieldLabel::new("Email")
+                        .for_control(id.clone())
+                        .into_element(cx),
+                    crate::field::FieldDescription::new("We will never share it.")
+                        .for_control(id.clone())
+                        .into_element(cx),
+                    Input::new(model.clone()).control_id(id).into_element(cx),
+                ]
+            })
+        });
+
+        let label_id = root.children[0].id;
+        let desc_id = root.children[1].id;
+
+        fn find_text_input(el: &AnyElement) -> Option<&AnyElement> {
+            if matches!(el.kind, ElementKind::TextInput(_)) {
+                return Some(el);
+            }
+            for child in &el.children {
+                if let Some(found) = find_text_input(child) {
+                    return Some(found);
+                }
+            }
+            None
+        }
+
+        let input = find_text_input(&root).expect("expected a TextInput node");
+        let decoration = input
+            .semantics_decoration
+            .as_ref()
+            .expect("expected semantics decoration on TextInput");
+        assert_eq!(decoration.labelled_by_element, Some(label_id.0));
+        assert_eq!(decoration.described_by_element, Some(desc_id.0));
     }
 }

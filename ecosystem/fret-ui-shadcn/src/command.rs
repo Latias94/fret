@@ -4029,6 +4029,13 @@ mod tests {
     };
     use fret_ui::tree::UiTree;
 
+    fn snapshot_contains_text(snap: &fret_core::SemanticsSnapshot, text: &str) -> bool {
+        snap.nodes.iter().any(|n| {
+            n.role == SemanticsRole::Text
+                && (n.label.as_deref() == Some(text) || n.value.as_deref() == Some(text))
+        })
+    }
+
     fn bounds() -> Rect {
         Rect::new(
             Point::new(Px(0.0), Px(0.0)),
@@ -5055,6 +5062,48 @@ mod tests {
         assert!(
             active_node.flags.selected,
             "highlighted row should be selected"
+        );
+    }
+
+    #[test]
+    fn cmdk_renders_empty_state_when_filtered_to_no_items() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let query = app.models_mut().insert(String::from("zzz"));
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(400.0), Px(240.0)),
+        );
+        let mut services = FakeServices::default();
+
+        let _root = render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            query,
+            vec![CommandItem::new("Alpha"), CommandItem::new("Beta")],
+        );
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+
+        assert!(
+            snap.nodes.iter().any(|n| n.role == SemanticsRole::ListBox),
+            "expected cmdk empty state to keep listbox semantics (cmdk-compatible structure)"
+        );
+        assert!(
+            snap.nodes
+                .iter()
+                .all(|n| n.role != SemanticsRole::ListBoxOption),
+            "expected cmdk empty state to render without listbox options"
+        );
+        assert!(
+            snapshot_contains_text(&snap, "No results."),
+            "expected cmdk empty state to render the default empty text"
         );
     }
 

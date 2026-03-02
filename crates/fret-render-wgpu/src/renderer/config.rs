@@ -103,6 +103,7 @@ impl Renderer {
             text_atlas_evicted_page_glyphs: self.perf.text_atlas_evicted_page_glyphs,
             text_atlas_resets: self.perf.text_atlas_resets,
             intermediate_budget_bytes: self.perf.intermediate_budget_bytes,
+            intermediate_full_target_bytes: self.perf.intermediate_full_target_bytes,
             intermediate_in_use_bytes: self.perf.intermediate_in_use_bytes,
             intermediate_peak_in_use_bytes: self.perf.intermediate_peak_in_use_bytes,
             intermediate_release_targets: self.perf.intermediate_release_targets,
@@ -119,6 +120,45 @@ impl Renderer {
             render_plan_segments_changed: self.perf.render_plan_segments_changed,
             render_plan_segments_passes_increased: self.perf.render_plan_segments_passes_increased,
             render_plan_degradations: self.perf.render_plan_degradations,
+            render_plan_effect_chain_budget_samples: self
+                .perf
+                .render_plan_effect_chain_budget_samples,
+            render_plan_effect_chain_effective_budget_min_bytes: self
+                .perf
+                .render_plan_effect_chain_effective_budget_min_bytes,
+            render_plan_effect_chain_effective_budget_max_bytes: self
+                .perf
+                .render_plan_effect_chain_effective_budget_max_bytes,
+            render_plan_effect_chain_other_live_max_bytes: self
+                .perf
+                .render_plan_effect_chain_other_live_max_bytes,
+            render_plan_custom_effect_chain_budget_samples: self
+                .perf
+                .render_plan_custom_effect_chain_budget_samples,
+            render_plan_custom_effect_chain_effective_budget_min_bytes: self
+                .perf
+                .render_plan_custom_effect_chain_effective_budget_min_bytes,
+            render_plan_custom_effect_chain_effective_budget_max_bytes: self
+                .perf
+                .render_plan_custom_effect_chain_effective_budget_max_bytes,
+            render_plan_custom_effect_chain_other_live_max_bytes: self
+                .perf
+                .render_plan_custom_effect_chain_other_live_max_bytes,
+            render_plan_custom_effect_chain_base_required_max_bytes: self
+                .perf
+                .render_plan_custom_effect_chain_base_required_max_bytes,
+            render_plan_custom_effect_chain_optional_required_max_bytes: self
+                .perf
+                .render_plan_custom_effect_chain_optional_required_max_bytes,
+            render_plan_custom_effect_chain_base_required_full_targets_max: self
+                .perf
+                .render_plan_custom_effect_chain_base_required_full_targets_max,
+            render_plan_custom_effect_chain_optional_mask_max_bytes: self
+                .perf
+                .render_plan_custom_effect_chain_optional_mask_max_bytes,
+            render_plan_custom_effect_chain_optional_pyramid_max_bytes: self
+                .perf
+                .render_plan_custom_effect_chain_optional_pyramid_max_bytes,
             render_plan_degradations_budget_zero: self.perf.render_plan_degradations_budget_zero,
             render_plan_degradations_budget_insufficient: self
                 .perf
@@ -140,6 +180,12 @@ impl Renderer {
                 .render_plan_degradations_composite_group_blend_to_over,
             effect_degradations: self.perf.effect_degradations,
             effect_blur_quality: self.perf.effect_blur_quality,
+            custom_effect_v1_steps_requested: self.perf.custom_effect_v1_steps_requested,
+            custom_effect_v1_passes_emitted: self.perf.custom_effect_v1_passes_emitted,
+            custom_effect_v2_steps_requested: self.perf.custom_effect_v2_steps_requested,
+            custom_effect_v2_passes_emitted: self.perf.custom_effect_v2_passes_emitted,
+            custom_effect_v3_steps_requested: self.perf.custom_effect_v3_steps_requested,
+            custom_effect_v3_passes_emitted: self.perf.custom_effect_v3_passes_emitted,
             custom_effect_v3_pyramid_cache_hits: self.perf.custom_effect_v3_pyramid_cache_hits,
             custom_effect_v3_pyramid_cache_misses: self.perf.custom_effect_v3_pyramid_cache_misses,
             clip_path_mask_cache_bytes_live: self.perf.clip_path_mask_cache_bytes_live,
@@ -387,13 +433,47 @@ impl Renderer {
         });
     }
 
+    fn intermediate_budget_override_bytes_from_env() -> Option<u64> {
+        static OVERRIDE: OnceLock<Option<u64>> = OnceLock::new();
+        *OVERRIDE.get_or_init(|| {
+            let Ok(raw) = std::env::var("FRET_RENDER_WGPU_INTERMEDIATE_BUDGET_BYTES") else {
+                return None;
+            };
+
+            let trimmed = raw.trim();
+            if trimmed.is_empty() {
+                return None;
+            }
+
+            match trimmed.parse::<u64>() {
+                Ok(bytes) => {
+                    tracing::warn!(
+                        intermediate_budget_bytes = bytes,
+                        "Renderer intermediate budget overridden via FRET_RENDER_WGPU_INTERMEDIATE_BUDGET_BYTES."
+                    );
+                    Some(bytes)
+                }
+                Err(_) => {
+                    tracing::warn!(
+                        raw = trimmed,
+                        "Invalid FRET_RENDER_WGPU_INTERMEDIATE_BUDGET_BYTES; ignoring override."
+                    );
+                    None
+                }
+            }
+        })
+    }
+
     pub fn intermediate_budget_bytes(&self) -> u64 {
         self.intermediate_budget_bytes
     }
 
     pub fn set_intermediate_budget_bytes(&mut self, bytes: u64) {
-        // Keep a small non-zero floor so callers can't accidentally force unbounded thrash.
-        self.intermediate_budget_bytes = bytes.max(1024);
+        let bytes = Self::intermediate_budget_override_bytes_from_env().unwrap_or(bytes);
+
+        // Allow 0 for deterministic "no intermediates" modes (diagnostics, conformance, low-end).
+        // Otherwise keep a small non-zero floor so callers can't accidentally force unbounded thrash.
+        self.intermediate_budget_bytes = if bytes == 0 { 0 } else { bytes.max(1024) };
         self.intermediate_pool
             .enforce_budget(self.intermediate_budget_bytes);
         self.clip_path_mask_cache.enforce_budget(

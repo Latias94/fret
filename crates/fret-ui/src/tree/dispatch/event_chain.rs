@@ -1,6 +1,43 @@
 use super::*;
 
 impl<H: UiHost> UiTree<H> {
+    fn build_event_chain_nodes_leaf_to_root(
+        &self,
+        start: NodeId,
+        snapshot: Option<&UiDispatchSnapshot>,
+    ) -> Vec<NodeId> {
+        let mut chain: Vec<NodeId> = Vec::new();
+
+        match snapshot {
+            Some(snapshot) => {
+                if snapshot.pre.get(start).is_none() {
+                    debug_assert!(
+                        false,
+                        "build_event_chain_nodes_leaf_to_root: start node missing from snapshot (start={start:?}, frame_id={:?}, window={:?})",
+                        snapshot.frame_id, snapshot.window
+                    );
+                    chain.push(start);
+                    return chain;
+                }
+
+                let mut cur = Some(start);
+                while let Some(id) = cur {
+                    chain.push(id);
+                    cur = snapshot.parent.get(id).copied().flatten();
+                }
+            }
+            None => {
+                let mut cur = Some(start);
+                while let Some(id) = cur {
+                    chain.push(id);
+                    cur = self.nodes.get(id).and_then(|n| n.parent);
+                }
+            }
+        }
+
+        chain
+    }
+
     fn event_with_mapped_position(event: &Event, position: Point, delta: Option<Point>) -> Event {
         match event {
             Event::Pointer(e) => {
@@ -101,6 +138,7 @@ impl<H: UiHost> UiTree<H> {
         &self,
         start: NodeId,
         event: &Event,
+        snapshot: Option<&UiDispatchSnapshot>,
     ) -> Vec<(NodeId, Event)> {
         let Some(pos) = event_position(event) else {
             return vec![(start, event.clone())];
@@ -115,12 +153,7 @@ impl<H: UiHost> UiTree<H> {
                 })
             );
 
-        let mut chain: Vec<NodeId> = Vec::new();
-        let mut cur = Some(start);
-        while let Some(id) = cur {
-            chain.push(id);
-            cur = self.nodes.get(id).and_then(|n| n.parent);
-        }
+        let chain = self.build_event_chain_nodes_leaf_to_root(start, snapshot);
 
         let mut nodes_root_to_leaf = chain.clone();
         nodes_root_to_leaf.reverse();
@@ -203,14 +236,12 @@ impl<H: UiHost> UiTree<H> {
         &self,
         start: NodeId,
         event: &Event,
+        snapshot: Option<&UiDispatchSnapshot>,
     ) -> Vec<(NodeId, Event)> {
-        let mut out: Vec<(NodeId, Event)> = Vec::new();
-        let mut cur = Some(start);
-        while let Some(id) = cur {
-            out.push((id, event.clone()));
-            cur = self.nodes.get(id).and_then(|n| n.parent);
-        }
-        out
+        self.build_event_chain_nodes_leaf_to_root(start, snapshot)
+            .into_iter()
+            .map(|id| (id, event.clone()))
+            .collect()
     }
 
     pub(in crate::tree::dispatch) fn cursor_icon_query_for_pointer_hit(
@@ -218,10 +249,11 @@ impl<H: UiHost> UiTree<H> {
         start: NodeId,
         input_ctx: &InputContext,
         event: &Event,
+        snapshot: Option<&UiDispatchSnapshot>,
     ) -> Option<fret_core::CursorIcon> {
         event_position(event)?;
 
-        let chain = self.build_mapped_event_chain(start, event);
+        let chain = self.build_mapped_event_chain(start, event, snapshot);
         for (node_id, mapped_event) in chain {
             let Some(position) = event_position(&mapped_event) else {
                 continue;

@@ -1,3 +1,5 @@
+pub const SOURCE: &str = include_str!("stack_shift_list_demo.rs");
+
 // region: example
 use fret_app::App;
 use fret_ui::Theme;

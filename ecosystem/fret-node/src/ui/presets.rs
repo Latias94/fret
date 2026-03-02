@@ -73,15 +73,18 @@ pub struct NodeGraphPresetSkinV1 {
 }
 
 impl NodeGraphPresetSkinV1 {
-    pub fn new_builtin(initial: NodeGraphPresetFamily) -> Arc<Self> {
-        let presets = Arc::new(builtin_presets().clone());
+    fn new_with_presets(
+        presets: Arc<NodeGraphThemePresetsV1>,
+        initial_revision: u64,
+        initial: NodeGraphPresetFamily,
+    ) -> Arc<Self> {
         let mut id_to_index: HashMap<String, usize> = HashMap::new();
         for (i, p) in presets.presets.iter().enumerate() {
             id_to_index.insert(p.id.clone(), i);
         }
         let index = id_to_index.get(initial.preset_id()).copied().unwrap_or(0);
         Arc::new(Self {
-            rev: AtomicU64::new(1),
+            rev: AtomicU64::new(initial_revision.max(1)),
             index: AtomicUsize::new(index),
             wire_glow_enabled: AtomicBool::new(true),
             wire_highlight_enabled: AtomicBool::new(true),
@@ -91,24 +94,29 @@ impl NodeGraphPresetSkinV1 {
         })
     }
 
+    pub fn new_builtin(initial: NodeGraphPresetFamily) -> Arc<Self> {
+        let presets = Arc::new(builtin_presets().clone());
+        Self::new_with_presets(presets, 1, initial)
+    }
+
     pub fn new_from_snapshot(theme: ThemeSnapshot, initial: NodeGraphPresetFamily) -> Arc<Self> {
         let presets = Arc::new(fret_ui_kit::node_graph::presets::theme_derived_presets(
             &theme,
         ));
-        let mut id_to_index: HashMap<String, usize> = HashMap::new();
-        for (i, p) in presets.presets.iter().enumerate() {
-            id_to_index.insert(p.id.clone(), i);
-        }
-        let index = id_to_index.get(initial.preset_id()).copied().unwrap_or(0);
-        Arc::new(Self {
-            rev: AtomicU64::new(theme.revision.max(1)),
-            index: AtomicUsize::new(index),
-            wire_glow_enabled: AtomicBool::new(true),
-            wire_highlight_enabled: AtomicBool::new(true),
-            edge_markers_enabled: AtomicBool::new(false),
-            presets,
-            id_to_index,
-        })
+        Self::new_with_presets(presets, theme.revision, initial)
+    }
+
+    /// Load presets from a JSON string and build a skin around them.
+    ///
+    /// This is intended for editor shells that want to iterate on node-graph looks by feeding
+    /// a design-tool-generated JSON blob (matching the `node_graph_theme_presets.v1` schema)
+    /// into the runtime.
+    pub fn try_new_from_json_str(
+        raw: &str,
+        initial: NodeGraphPresetFamily,
+    ) -> Result<Arc<Self>, serde_json::Error> {
+        let parsed = fret_ui_kit::node_graph::presets::parse_node_graph_theme_presets_v1(raw)?;
+        Ok(Self::new_with_presets(Arc::new(parsed), 1, initial))
     }
 
     pub fn preset_family(&self) -> NodeGraphPresetFamily {
@@ -571,6 +579,23 @@ mod tests {
         assert_close(a.g, b.g);
         assert_close(a.b, b.b);
         assert_close(a.a, b.a);
+    }
+
+    #[test]
+    fn preset_skin_can_load_custom_json_presets() {
+        let raw = include_str!("../../../../themes/node-graph-presets.v1.json");
+        let skin = NodeGraphPresetSkinV1::try_new_from_json_str(
+            raw,
+            NodeGraphPresetFamily::SchematicContrast,
+        )
+        .expect("custom preset json must parse");
+        assert_eq!(
+            skin.preset_family(),
+            NodeGraphPresetFamily::SchematicContrast
+        );
+
+        skin.set_preset_family(NodeGraphPresetFamily::GraphDark);
+        assert_eq!(skin.preset_family(), NodeGraphPresetFamily::GraphDark);
     }
 
     #[test]

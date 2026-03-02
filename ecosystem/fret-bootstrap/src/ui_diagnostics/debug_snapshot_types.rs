@@ -20,6 +20,8 @@ pub struct UiTreeDebugSnapshotV1 {
     #[serde(default)]
     pub scroll_handle_changes: Vec<UiScrollHandleChangeV1>,
     #[serde(default)]
+    pub scroll_nodes: Vec<UiScrollNodeTelemetryV1>,
+    #[serde(default)]
     pub prepaint_actions: Vec<UiPrepaintActionV1>,
     #[serde(default)]
     pub model_change_hotspots: Vec<UiModelChangeHotspotV1>,

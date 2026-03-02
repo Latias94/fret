@@ -1310,10 +1310,13 @@ mod tests {
     use std::task::{RawWaker, RawWakerVTable};
 
     use fret_executor::{FutureSpawner, FutureSpawnerHandle};
+    use fret_runtime::FrameId;
     use fret_runtime::{
         DispatchPriority, Dispatcher, DispatcherHandle, ExecCapabilities, Runnable,
     };
     use fret_ui::action::UiActionHostAdapter;
+    use fret_ui::element::ElementKind;
+    use fret_ui::tree::UiTree;
 
     fn noop_waker() -> Waker {
         unsafe fn clone(_: *const ()) -> RawWaker {
@@ -1326,6 +1329,101 @@ mod tests {
         static VTABLE: RawWakerVTable = RawWakerVTable::new(clone, wake, wake_by_ref, drop);
 
         unsafe { Waker::from_raw(RawWaker::new(std::ptr::null(), &VTABLE)) }
+    }
+
+    #[derive(Default)]
+    struct FakeServices;
+
+    impl fret_core::TextService for FakeServices {
+        fn prepare(
+            &mut self,
+            _input: &fret_core::TextInput,
+            _constraints: fret_core::TextConstraints,
+        ) -> (fret_core::TextBlobId, fret_core::TextMetrics) {
+            (
+                fret_core::TextBlobId::default(),
+                fret_core::TextMetrics {
+                    size: fret_core::Size::new(Px(10.0), Px(10.0)),
+                    baseline: Px(8.0),
+                },
+            )
+        }
+
+        fn release(&mut self, _blob: fret_core::TextBlobId) {}
+    }
+
+    impl fret_core::PathService for FakeServices {
+        fn prepare(
+            &mut self,
+            _commands: &[fret_core::PathCommand],
+            _style: fret_core::PathStyle,
+            _constraints: fret_core::PathConstraints,
+        ) -> (fret_core::PathId, fret_core::PathMetrics) {
+            (
+                fret_core::PathId::default(),
+                fret_core::PathMetrics::default(),
+            )
+        }
+
+        fn release(&mut self, _path: fret_core::PathId) {}
+    }
+
+    impl fret_core::SvgService for FakeServices {
+        fn register_svg(&mut self, _bytes: &[u8]) -> fret_core::SvgId {
+            fret_core::SvgId::default()
+        }
+
+        fn unregister_svg(&mut self, _svg: fret_core::SvgId) -> bool {
+            true
+        }
+    }
+
+    impl fret_core::MaterialService for FakeServices {
+        fn register_material(
+            &mut self,
+            _desc: fret_core::MaterialDescriptor,
+        ) -> Result<fret_core::MaterialId, fret_core::MaterialRegistrationError> {
+            Ok(fret_core::MaterialId::default())
+        }
+
+        fn unregister_material(&mut self, _id: fret_core::MaterialId) -> bool {
+            true
+        }
+    }
+
+    fn bounds() -> fret_core::Rect {
+        fret_core::Rect::new(
+            fret_core::Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(800.0), Px(600.0)),
+        )
+    }
+
+    fn apply_theme(app: &mut fret_app::App) {
+        crate::shadcn_themes::apply_shadcn_new_york_v4(
+            app,
+            crate::shadcn_themes::ShadcnBaseColor::Neutral,
+            crate::shadcn_themes::ShadcnColorScheme::Light,
+        );
+    }
+
+    fn render_frame(
+        ui: &mut UiTree<fret_app::App>,
+        app: &mut fret_app::App,
+        services: &mut dyn fret_core::UiServices,
+        window: AppWindowId,
+        frame_id: u64,
+        f: impl FnOnce(&mut ElementContext<'_, fret_app::App>) -> Vec<AnyElement>,
+    ) {
+        app.set_frame_id(FrameId(frame_id));
+        apply_theme(app);
+        OverlayController::begin_frame(app, window);
+
+        let root =
+            fret_ui::declarative::render_root(ui, app, services, window, bounds(), "test", f);
+        ui.set_root(root);
+        OverlayController::render(ui, app, services, window, bounds());
+        ui.request_semantics_snapshot();
+        ui.layout_all(app, services, bounds(), 1.0);
     }
 
     #[test]
@@ -1481,6 +1579,68 @@ mod tests {
             matches!(poll, Poll::Ready(Ok(7))),
             "expected Ok(7), got {poll:?}"
         );
+    }
+
+    #[test]
+    fn toaster_into_element_is_layout_neutral() {
+        let window = AppWindowId::default();
+        let mut app = fret_app::App::new();
+        apply_theme(&mut app);
+
+        let element =
+            fret_ui::elements::with_element_cx(&mut app, window, bounds(), "test", |cx| {
+                Toaster::new().into_element(cx)
+            });
+
+        let ElementKind::Spacer(props) = &element.kind else {
+            panic!("expected Toaster to render as a spacer");
+        };
+        assert_eq!(props.layout.size.width, Length::Px(Px(0.0)));
+        assert_eq!(props.layout.size.height, Length::Px(Px(0.0)));
+        assert_eq!(props.layout.flex.grow, 0.0);
+        assert_eq!(props.layout.flex.shrink, 0.0);
+        assert_eq!(props.layout.flex.basis, Length::Px(Px(0.0)));
+        assert_eq!(props.min, Px(0.0));
+    }
+
+    #[test]
+    fn toaster_installs_toast_layer_and_visibility_tracks_toast_presence() {
+        let window = AppWindowId::default();
+        let mut app = fret_app::App::new();
+        let mut ui: UiTree<fret_app::App> = UiTree::new();
+        ui.set_window(window);
+        let mut services = FakeServices::default();
+
+        render_frame(&mut ui, &mut app, &mut services, window, 1, |cx| {
+            vec![Toaster::new().into_element(cx)]
+        });
+
+        let snap = OverlayController::stack_snapshot_for_window(&ui, &mut app, window);
+        let toast_entry = snap
+            .stack
+            .iter()
+            .find(|e| e.kind == fret_ui_kit::OverlayStackEntryKind::ToastLayer)
+            .expect("toast layer stack entry");
+        assert!(!toast_entry.visible);
+        assert!(!toast_entry.hit_testable);
+
+        let sonner = Sonner::global(&mut app);
+        let mut host = fret_ui::action::UiActionHostAdapter { app: &mut app };
+        let _ = sonner.toast(&mut host, window, ToastRequest::new("Hello").duration(None));
+
+        render_frame(&mut ui, &mut app, &mut services, window, 2, |cx| {
+            vec![Toaster::new().into_element(cx)]
+        });
+
+        let snap = OverlayController::stack_snapshot_for_window(&ui, &mut app, window);
+        let topmost_toast_layer = snap
+            .stack
+            .iter()
+            .rev()
+            .find(|e| e.kind == fret_ui_kit::OverlayStackEntryKind::ToastLayer && e.visible)
+            .and_then(|e| e.id)
+            .expect("visible toast layer id (after toast)");
+        assert_eq!(snap.topmost_overlay, Some(topmost_toast_layer));
     }
 
     #[test]

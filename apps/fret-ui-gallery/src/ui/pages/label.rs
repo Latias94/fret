@@ -23,16 +23,13 @@ pub(super) fn preview_label(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement>
         vec![
             DocSection::new("Demo", demo)
                 .description("Basic label above an input.")
-                .code_rust_from_file_region(include_str!("../snippets/label/demo.rs"), "example"),
+                .code_rust_from_file_region(snippets::demo::SOURCE, "example"),
             DocSection::new("Label in Field", label_in_field)
                 .description("Prefer Field + FieldLabel for form layouts.")
-                .code_rust_from_file_region(
-                    include_str!("../snippets/label/label_in_field.rs"),
-                    "example",
-                ),
+                .code_rust_from_file_region(snippets::label_in_field::SOURCE, "example"),
             DocSection::new("RTL", rtl)
                 .description("Label and input alignment under an RTL direction provider.")
-                .code_rust_from_file_region(include_str!("../snippets/label/rtl.rs"), "example"),
+                .code_rust_from_file_region(snippets::rtl::SOURCE, "example"),
             DocSection::new("Notes", notes).description("API reference pointers and caveats."),
         ],
     );

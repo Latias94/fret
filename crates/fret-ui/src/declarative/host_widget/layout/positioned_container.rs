@@ -5,7 +5,7 @@ use crate::declarative::layout_helpers::{
     layout_positioned_child, positioned_layout_style,
 };
 use crate::declarative::prelude::*;
-use crate::layout_constraints::{AvailableSpace, LayoutConstraints, LayoutSize};
+use crate::layout_constraints::AvailableSpace;
 
 impl ElementHostWidget {
     pub(super) fn layout_positioned_container_impl<H: UiHost>(
@@ -19,7 +19,7 @@ impl ElementHostWidget {
         // absolute-positioned children measure against the same size budget used for placement.
         let probe_available = clamp_to_constraints(cx.available, layout, cx.available);
         let probe_bounds = Rect::new(cx.bounds.origin, probe_available);
-        let probe_constraints = probe_constraints_for_size(probe_bounds.size);
+        let probe_constraints = cx.probe_constraints_for_size(probe_bounds.size);
         let mut child_measure_constraints = probe_constraints;
         if cx.available.width.0 <= 0.0 {
             child_measure_constraints.available.width = AvailableSpace::MaxContent;
@@ -141,7 +141,7 @@ impl ElementHostWidget {
         // viewport.
         let probe_available = clamp_to_constraints(cx.available, layout, cx.available);
         let probe_bounds = Rect::new(cx.bounds.origin, probe_available);
-        let probe_constraints = probe_constraints_for_size(probe_bounds.size);
+        let probe_constraints = cx.probe_constraints_for_size(probe_bounds.size);
         let mut child_measure_constraints = probe_constraints;
         if cx.available.width.0 <= 0.0 {
             child_measure_constraints.available.width = AvailableSpace::MaxContent;
@@ -215,12 +215,5 @@ impl ElementHostWidget {
     }
 }
 
-fn probe_constraints_for_size(size: Size) -> LayoutConstraints {
-    LayoutConstraints::new(
-        LayoutSize::new(None, None),
-        LayoutSize::new(
-            AvailableSpace::Definite(size.width),
-            AvailableSpace::Definite(size.height),
-        ),
-    )
-}
+// Intentionally omitted: probe constraint construction is context-dependent (scroll overflow
+// contexts may override the scroll axis to `MaxContent`). Use `LayoutCx::probe_constraints_for_size`.

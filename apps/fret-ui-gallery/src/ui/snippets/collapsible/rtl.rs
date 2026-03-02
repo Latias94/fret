@@ -1,3 +1,5 @@
+pub const SOURCE: &str = include_str!("rtl.rs");
+
 // region: example
 use fret_ui_kit::declarative::ElementContextThemeExt;
 use fret_ui_kit::declarative::style as decl_style;

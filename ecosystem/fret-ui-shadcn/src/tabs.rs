@@ -148,6 +148,12 @@ pub fn tabs_list_variants(theme: &ThemeSnapshot, variant: TabsListVariant) -> Ta
     }
 }
 
+/// Upstream shadcn/ui compat alias for copy/paste parity.
+#[allow(non_snake_case)]
+pub fn tabsListVariants(theme: &ThemeSnapshot, variant: TabsListVariant) -> TabsListVariants {
+    tabs_list_variants(theme, variant)
+}
+
 fn tabs_trigger_text_style(theme: &ThemeSnapshot) -> TextStyle {
     let px = theme
         .metric_by_key("component.tabs.trigger.text_px")
@@ -1579,19 +1585,13 @@ impl Tabs {
             list_props.layout.flex.align_self = Some(CrossAlign::Start);
         }
         let tab_panel_layout = {
-            let root_layout = decl_style::layout_style(&theme, layout.clone());
-            let root_main_axis_is_definite = match orientation {
-                TabsOrientation::Horizontal => root_layout.size.height != Length::Auto,
-                TabsOrientation::Vertical => root_layout.size.width != Length::Auto,
-            };
-
             // `TabsContent` should fill the available width by default. Without this, max-content
             // descendants (long lines / unwrapped text) can force the tab panel wider than its
             // parent, causing horizontal overflow in app shells like the UI gallery.
             let mut refinement = LayoutRefinement::default().w_full().min_w_0();
-            if content_fill_remaining && root_main_axis_is_definite {
+            if content_fill_remaining {
                 // shadcn/ui uses `flex-1` on `TabsContent`. In practice that intent is "fill the
-                // remaining main-axis space when the parent is a definite-size flex container".
+                // remaining main-axis space when the parent is a flex container".
                 //
                 // Note: Avoid Tailwind's `flex: 1 1 0%` (`basis=0`) here. Taffy currently
                 // shrink-wraps some auto-sized flex containers around the sum of flex bases, which

@@ -11,6 +11,17 @@ use fret_core::{Color, Px};
 use fret_ui::ThemeSnapshot;
 use serde::Deserialize;
 
+/// Parse a `node_graph_theme_presets.v1` JSON document.
+///
+/// This is intentionally a thin wrapper around `serde_json::from_str` so higher-level crates can
+/// share a consistent entry-point for preset loading without depending on the caller's `serde`
+/// glue.
+pub fn parse_node_graph_theme_presets_v1(
+    raw: &str,
+) -> Result<NodeGraphThemePresetsV1, serde_json::Error> {
+    serde_json::from_str(raw)
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum NodeGraphPresetFamily {
     WorkflowClean,

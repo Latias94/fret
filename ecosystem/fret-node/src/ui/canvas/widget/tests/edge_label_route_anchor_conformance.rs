@@ -120,8 +120,8 @@ fn extract_label_text_origin(scene: &Scene, style: &NodeGraphStyle) -> Option<Po
         if order != fret_core::DrawOrder(2) {
             continue;
         }
-        if background.paint != fret_core::Paint::Solid(style.edge_label_background)
-            || border_paint.paint != fret_core::Paint::Solid(style.edge_label_border)
+        if background.paint != fret_core::Paint::Solid(style.paint.edge_label_background)
+            || border_paint.paint != fret_core::Paint::Solid(style.paint.edge_label_border)
         {
             continue;
         }
@@ -228,7 +228,7 @@ fn expected_text_origin_straight(
     let d = Point::new(Px(to.x.0 - from.x.0), Px(to.y.0 - from.y.0));
     let normal = normal_from_tangent(d);
     let z = zoom.max(1.0e-6);
-    let off = style.edge_label_offset / z;
+    let off = style.paint.edge_label_offset / z;
     let anchor = Point::new(
         Px(pos.x.0 + normal.x.0 * off),
         Px(pos.y.0 + normal.y.0 * off),
@@ -253,7 +253,7 @@ fn expected_text_origin_step(
     let mx = 0.5 * (from.x.0 + to.x.0);
     let pos = Point::new(Px(mx), Px(0.5 * (from.y.0 + to.y.0)));
     let z = zoom.max(1.0e-6);
-    let off = style.edge_label_offset / z;
+    let off = style.paint.edge_label_offset / z;
     let anchor = Point::new(Px(pos.x.0), Px(pos.y.0 - off));
 
     let w = label.len() as f32 * 7.0;
@@ -278,7 +278,7 @@ fn expected_text_origin_bezier(
     let normal = normal_from_tangent(d);
 
     let z = zoom.max(1.0e-6);
-    let off = style.edge_label_offset / z;
+    let off = style.paint.edge_label_offset / z;
     let anchor = Point::new(
         Px(pos.x.0 + normal.x.0 * off),
         Px(pos.y.0 + normal.y.0 * off),
@@ -335,11 +335,11 @@ fn capture_label_origin_for_route(route: EdgeRouteKind, zoom: f32) -> (Point, Po
     let mut canvas = NodeGraphCanvas::new(graph, view).with_presenter(presenter);
 
     // Use non-default tokens so the test catches any accidental hard-coded constants.
-    canvas.style.edge_label_offset = 37.0;
-    canvas.style.edge_label_padding = 9.0;
-    canvas.style.edge_label_corner_radius = 13.0;
-    canvas.style.edge_label_border_width = 2.0;
-    canvas.style.edge_label_max_width = 300.0;
+    canvas.style.paint.edge_label_offset = 37.0;
+    canvas.style.paint.edge_label_padding = 9.0;
+    canvas.style.paint.edge_label_corner_radius = 13.0;
+    canvas.style.paint.edge_label_border_width = 2.0;
+    canvas.style.paint.edge_label_max_width = 300.0;
 
     let snapshot = canvas.sync_view_state(&mut host);
     let geom = canvas.canvas_geometry(&host, &snapshot);

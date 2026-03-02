@@ -227,6 +227,17 @@ pub struct UiDebugFrameStats {
     pub layout_engine_widget_fallback_solves: u64,
     pub layout_fast_path_taken: bool,
     pub layout_invalidations_count: u32,
+    pub layout_subtree_dirty_agg_enabled: bool,
+    /// Number of aggregation update operations performed during the current frame.
+    pub layout_subtree_dirty_agg_updates: u32,
+    /// Total number of nodes whose aggregation counter was updated during the current frame.
+    pub layout_subtree_dirty_agg_nodes_touched: u32,
+    /// Max parent-walk length observed in a single aggregation update during the current frame.
+    pub layout_subtree_dirty_agg_max_parent_walk: u32,
+    /// Total nodes processed by subtree rebuilds during the current frame.
+    pub layout_subtree_dirty_agg_rebuild_nodes: u32,
+    /// Count of validation failures observed during the current frame.
+    pub layout_subtree_dirty_agg_validation_failures: u32,
     /// Unique nodes observed as invalidation roots for model changes during the current frame.
     pub model_change_invalidation_roots: u32,
     /// Count of changed models consumed for propagation during the current frame.

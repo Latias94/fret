@@ -9,8 +9,20 @@ impl<H: UiHost> UiTree<H> {
         invalidation_visited: &mut impl InvalidationVisited,
     ) -> PointerDownOutsideOutcome {
         let hit = params.hit;
-        let hit_root = hit
-            .and_then(|hit| self.first_reachable_root_via_children(hit, params.active_layer_roots));
+
+        let snapshot = self.build_dispatch_snapshot_for_layer_roots(
+            app.frame_id(),
+            params.active_layer_roots,
+            params.barrier_root,
+        );
+
+        let hit_root = hit.and_then(|hit| {
+            snapshot
+                .active_layer_roots
+                .iter()
+                .copied()
+                .find(|&root| snapshot.is_descendant(root, hit))
+        });
 
         let (event_pointer_id, touch_candidate): (
             Option<PointerId>,
@@ -84,7 +96,13 @@ impl<H: UiHost> UiTree<H> {
                     .pointer_down_outside_branches
                     .iter()
                     .copied()
-                    .any(|branch| self.is_reachable_from_root_via_children(branch, hit))
+                    .any(|branch| {
+                        if snapshot.pre.get(branch).is_some() && snapshot.pre.get(hit).is_some() {
+                            snapshot.is_descendant(branch, hit)
+                        } else {
+                            self.is_reachable_from_root_via_children(branch, hit)
+                        }
+                    })
             }) {
                 break;
             }
@@ -145,6 +163,7 @@ impl<H: UiHost> UiTree<H> {
                 params.input_ctx,
                 root,
                 params.event,
+                Some(&snapshot),
                 invalidation_visited,
             );
             // Match Radix/web outcomes: clicking outside a dismissible overlay should clear focus
@@ -211,11 +230,11 @@ impl<H: UiHost> UiTree<H> {
     pub(in crate::tree) fn collect_focusables(
         &self,
         node: NodeId,
-        active_layers: &[NodeId],
+        dispatch_snapshot: &UiDispatchSnapshot,
         scope_bounds: Rect,
         out: &mut Vec<NodeId>,
     ) {
-        if !self.node_in_any_layer(node, active_layers) {
+        if dispatch_snapshot.pre.get(node).is_none() {
             return;
         }
 
@@ -226,7 +245,7 @@ impl<H: UiHost> UiTree<H> {
             return;
         }
         if !Self::rects_intersect(n.bounds, scope_bounds)
-            && !self.node_has_scrollable_ancestor_in_scope(node, active_layers, scope_bounds)
+            && !self.node_has_scrollable_ancestor_in_scope(node, dispatch_snapshot, scope_bounds)
         {
             return;
         }
@@ -253,7 +272,7 @@ impl<H: UiHost> UiTree<H> {
             });
         if traverse_children {
             for &child in &n.children {
-                self.collect_focusables(child, active_layers, scope_bounds, out);
+                self.collect_focusables(child, dispatch_snapshot, scope_bounds, out);
             }
         }
     }
@@ -261,18 +280,19 @@ impl<H: UiHost> UiTree<H> {
     fn node_has_scrollable_ancestor_in_scope(
         &self,
         mut node: NodeId,
-        active_layers: &[NodeId],
+        dispatch_snapshot: &UiDispatchSnapshot,
         scope_bounds: Rect,
     ) -> bool {
         loop {
-            let Some(parent) = self.nodes.get(node).and_then(|n| n.parent) else {
+            let Some(parent) = dispatch_snapshot.parent.get(node).copied().flatten() else {
                 return false;
             };
             node = parent;
 
-            if !self.node_in_any_layer(node, active_layers) {
-                return false;
-            }
+            debug_assert!(
+                dispatch_snapshot.pre.get(node).is_some(),
+                "snapshot parent traversal must stay within the snapshot forest"
+            );
 
             let Some(n) = self.nodes.get(node) else {
                 return false;

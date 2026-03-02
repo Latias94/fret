@@ -435,13 +435,13 @@ pub(super) fn handle_scroll<H: UiHost>(
             crate::element::ScrollAxis::Both => (delta.x, delta.y),
         };
 
-        let consumed = if let Some(handle) = props.scroll_handle.as_ref() {
+        let (consumed, clamped_at_edge) = if let Some(handle) = props.scroll_handle.as_ref() {
             let prev = handle.offset();
+            let max = handle.max_offset();
             let desired = Point::new(Px(prev.x.0 - delta_x.0), Px(prev.y.0 - delta_y.0));
             handle.set_offset(desired);
             let next = handle.offset();
             if crate::runtime_config::ui_runtime_config().debug_scroll_wheel {
-                let max = handle.max_offset();
                 eprintln!(
                     "scroll wheel element={:?} handle_key={} axis={:?} delta=({:.3},{:.3}) prev=({:.3},{:.3}) next=({:.3},{:.3}) max=({:.3},{:.3})",
                     this.element,
@@ -457,8 +457,34 @@ pub(super) fn handle_scroll<H: UiHost>(
                     max.y.0,
                 );
             }
-            (prev.x.0 - next.x.0).abs() > SCROLL_CONSUMED_EPS
-                || (prev.y.0 - next.y.0).abs() > SCROLL_CONSUMED_EPS
+            let has_delta =
+                delta_x.0.abs() > SCROLL_CONSUMED_EPS || delta_y.0.abs() > SCROLL_CONSUMED_EPS;
+            let moved = (prev.x.0 - next.x.0).abs() > SCROLL_CONSUMED_EPS
+                || (prev.y.0 - next.y.0).abs() > SCROLL_CONSUMED_EPS;
+            let consumed = has_delta && moved;
+            // If a wheel delta is clamped at the scroll extent edge, the scroll container may be
+            // relying on cached content extents even though descendants have grown (e.g. expanding
+            // a tabs panel near the bottom of a docs page). Schedule an extent probe so the next
+            // layout pass remeasures the subtree and updates max offsets.
+            let clamp_x_max = props.axis.scroll_x()
+                && delta_x.0 < -SCROLL_CONSUMED_EPS
+                && desired.x.0 > max.x.0 + 0.5
+                && next.x.0 + 0.5 >= max.x.0;
+            let clamp_x_min = props.axis.scroll_x()
+                && delta_x.0 > SCROLL_CONSUMED_EPS
+                && desired.x.0 < -0.5
+                && next.x.0 <= 0.5;
+            let clamp_y_max = props.axis.scroll_y()
+                && delta_y.0 < -SCROLL_CONSUMED_EPS
+                && desired.y.0 > max.y.0 + 0.5
+                && next.y.0 + 0.5 >= max.y.0;
+            let clamp_y_min = props.axis.scroll_y()
+                && delta_y.0 > SCROLL_CONSUMED_EPS
+                && desired.y.0 < -0.5
+                && next.y.0 <= 0.5;
+            let clamped_at_edge =
+                has_delta && (clamp_x_max || clamp_x_min || clamp_y_max || clamp_y_min);
+            (consumed, clamped_at_edge)
         } else {
             crate::elements::with_element_state(
                 &mut *cx.app,
@@ -467,11 +493,34 @@ pub(super) fn handle_scroll<H: UiHost>(
                 crate::element::ScrollState::default,
                 |state| {
                     let prev = state.scroll_handle.offset();
+                    let max = state.scroll_handle.max_offset();
                     let desired = Point::new(Px(prev.x.0 - delta_x.0), Px(prev.y.0 - delta_y.0));
                     state.scroll_handle.set_offset(desired);
                     let next = state.scroll_handle.offset();
-                    (prev.x.0 - next.x.0).abs() > SCROLL_CONSUMED_EPS
-                        || (prev.y.0 - next.y.0).abs() > SCROLL_CONSUMED_EPS
+                    let has_delta = delta_x.0.abs() > SCROLL_CONSUMED_EPS
+                        || delta_y.0.abs() > SCROLL_CONSUMED_EPS;
+                    let moved = (prev.x.0 - next.x.0).abs() > SCROLL_CONSUMED_EPS
+                        || (prev.y.0 - next.y.0).abs() > SCROLL_CONSUMED_EPS;
+                    let consumed = has_delta && moved;
+                    let clamp_x_max = props.axis.scroll_x()
+                        && delta_x.0 < -SCROLL_CONSUMED_EPS
+                        && desired.x.0 > max.x.0 + 0.5
+                        && next.x.0 + 0.5 >= max.x.0;
+                    let clamp_x_min = props.axis.scroll_x()
+                        && delta_x.0 > SCROLL_CONSUMED_EPS
+                        && desired.x.0 < -0.5
+                        && next.x.0 <= 0.5;
+                    let clamp_y_max = props.axis.scroll_y()
+                        && delta_y.0 < -SCROLL_CONSUMED_EPS
+                        && desired.y.0 > max.y.0 + 0.5
+                        && next.y.0 + 0.5 >= max.y.0;
+                    let clamp_y_min = props.axis.scroll_y()
+                        && delta_y.0 > SCROLL_CONSUMED_EPS
+                        && desired.y.0 < -0.5
+                        && next.y.0 <= 0.5;
+                    let clamped_at_edge =
+                        has_delta && (clamp_x_max || clamp_x_min || clamp_y_max || clamp_y_min);
+                    (consumed, clamped_at_edge)
                 },
             )
         };
@@ -488,6 +537,26 @@ pub(super) fn handle_scroll<H: UiHost>(
             cx.invalidate_self(Invalidation::HitTestOnly);
             cx.request_redraw();
             cx.stop_propagation();
+        } else if clamped_at_edge {
+            let first_set = crate::elements::with_element_state(
+                &mut *cx.app,
+                window,
+                this.element,
+                crate::element::ScrollState::default,
+                |state| {
+                    let prev = state.pending_extent_probe;
+                    state.pending_extent_probe = true;
+                    !prev
+                },
+            );
+            if first_set && crate::runtime_config::ui_runtime_config().debug_scroll_extent_probe {
+                eprintln!(
+                    "scroll extent probe scheduled element={:?} axis={:?}",
+                    this.element, props.axis
+                );
+            }
+            cx.invalidate_self(Invalidation::Layout);
+            cx.request_redraw();
         }
         return true;
     }

@@ -5521,31 +5521,45 @@ where
                                                                 vec![cx.container(
                                                                     ContainerProps {
                                                                         background: bg,
-                                                                        border: Edges {
-                                                                            left: if is_active {
-                                                                                Px(2.0)
-                                                                            } else {
-                                                                                Px(0.0)
-                                                                            },
-                                                                            ..Default::default()
-                                                                        },
-                                                                        border_color: if is_active {
-                                                                            Some(ring)
-                                                                        } else {
-                                                                            None
-                                                                        },
                                                                         layout: LayoutStyle {
-                                                                        size:
-                                                                            fret_ui::element::SizeStyle {
+                                                                            size: fret_ui::element::SizeStyle {
                                                                                 width: Length::Fill,
                                                                                 height: body_row_height,
                                                                                 ..Default::default()
                                                                             },
-                                                                        ..Default::default()
+                                                                            position:
+                                                                                fret_ui::element::PositionStyle::Relative,
+                                                                            ..Default::default()
                                                                         },
                                                                         ..Default::default()
                                                                     },
                                                                     |cx| {
+                                                                        let mut out = Vec::new();
+                                                                        if is_active {
+                                                                            out.push(cx.container(
+                                                                                ContainerProps {
+                                                                                    background: Some(ring),
+                                                                                    layout: LayoutStyle {
+                                                                                        size: fret_ui::element::SizeStyle {
+                                                                                            width: Length::Px(Px(2.0)),
+                                                                                            height: Length::Fill,
+                                                                                            ..Default::default()
+                                                                                        },
+                                                                                        position:
+                                                                                            fret_ui::element::PositionStyle::Absolute,
+                                                                                        inset: fret_ui::element::InsetStyle {
+                                                                                            top: Some(Px(0.0)).into(),
+                                                                                            right: None.into(),
+                                                                                            bottom: Some(Px(0.0)).into(),
+                                                                                            left: Some(Px(0.0)).into(),
+                                                                                        },
+                                                                                        ..Default::default()
+                                                                                    },
+                                                                                    ..Default::default()
+                                                                                },
+                                                                                |_| Vec::new(),
+                                                                            ));
+                                                                        }
                                                                         let render_group =
                                                                             |cx: &mut ElementContext<
                                                                                 '_,
@@ -5867,7 +5881,7 @@ where
                                                                                 }
                                                                             };
 
-                                                                        vec![stack::hstack(
+                                                                        out.push(stack::hstack(
                                                                             cx,
                                                                             stack::HStackProps::default()
                                                                                 .gap_x(Space::N0)
@@ -5954,7 +5968,8 @@ where
 
                                                                                 vec![left, center, right]
                                                                             },
-                                                                        )]
+                                                                        ));
+                                                                        out
                                                                     },
                                                                 )]
                                                             },
@@ -6188,22 +6203,46 @@ where
                                                         vec![cx.container(
                                                             ContainerProps {
                                                                 background: bg,
-                                                                border: Edges {
-                                                                    left: if is_active { Px(2.0) } else { Px(0.0) },
-                                                                    ..Default::default()
-                                                                },
-                                                                border_color: if is_active { Some(ring) } else { None },
                                                                 layout: LayoutStyle {
                                                                     size: fret_ui::element::SizeStyle {
                                                                         width: Length::Fill,
                                                                         height: body_row_height,
                                                                         ..Default::default()
                                                                     },
+                                                                    position:
+                                                                        fret_ui::element::PositionStyle::Relative,
                                                                     ..Default::default()
                                                                 },
                                                                 ..Default::default()
                                                             },
                                                             |cx| {
+                                                            let mut out = Vec::new();
+                                                            if is_active {
+                                                                out.push(cx.container(
+                                                                    ContainerProps {
+                                                                        background: Some(ring),
+                                                                        layout: LayoutStyle {
+                                                                            size:
+                                                                                fret_ui::element::SizeStyle {
+                                                                                    width: Length::Px(Px(2.0)),
+                                                                                    height: Length::Fill,
+                                                                                    ..Default::default()
+                                                                                },
+                                                                            position:
+                                                                                fret_ui::element::PositionStyle::Absolute,
+                                                                            inset: fret_ui::element::InsetStyle {
+                                                                                top: Some(Px(0.0)).into(),
+                                                                                right: None.into(),
+                                                                                bottom: Some(Px(0.0)).into(),
+                                                                                left: Some(Px(0.0)).into(),
+                                                                            },
+                                                                            ..Default::default()
+                                                                        },
+                                                                        ..Default::default()
+                                                                    },
+                                                                    |_| Vec::new(),
+                                                                ));
+                                                            }
                                                             let mut render_row_group =
                                                                 |cx: &mut ElementContext<'_, H>,
                                                                  cols: &[&ColumnDef<TData>],
@@ -6436,7 +6475,7 @@ where
                                                                     }
                                                                 };
 
-                                                            vec![stack::hstack(
+                                                            out.push(stack::hstack(
                                                                 cx,
                                                                 stack::HStackProps::default()
                                                                     .gap_x(Space::N0)
@@ -6510,7 +6549,8 @@ where
                                                                         render_row_group(cx, &right_cols, None);
                                                                     vec![left, center, right]
                                                                 },
-                                                            )]
+                                                            ));
+                                                            out
                                                         },
                                                     )]
                                                 },

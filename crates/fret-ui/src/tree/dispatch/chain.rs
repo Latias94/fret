@@ -10,6 +10,7 @@ impl<H: UiHost> UiTree<H> {
         &mut self,
         app: &mut H,
         services: &mut dyn UiServices,
+        dispatch_cx: &DispatchCx,
         input_ctx: &InputContext,
         start: NodeId,
         event: &Event,
@@ -34,9 +35,10 @@ impl<H: UiHost> UiTree<H> {
             _ => None,
         };
 
-        let (active_roots, _barrier_root) = self.active_input_layers();
+        let node_in_active_layers = |node: NodeId| dispatch_cx.node_in_active_input_layers(node);
         if event_position(event).is_some() {
-            let chain = self.build_mapped_event_chain(start, event);
+            let chain =
+                self.build_mapped_event_chain(start, event, Some(&dispatch_cx.input_snapshot));
             let pointer_hit_is_text_input =
                 if matches!(event, Event::Pointer(PointerEvent::Down { .. }))
                     && let Some(window) = self.window
@@ -141,7 +143,13 @@ impl<H: UiHost> UiTree<H> {
                 }
 
                 if let Some(focus) = requested_focus
-                    && self.focus_request_is_allowed(app, self.window, &active_roots, focus)
+                    && self.focus_request_is_allowed(
+                        app,
+                        self.window,
+                        dispatch_cx.active_focus_roots.as_slice(),
+                        focus,
+                        Some(&dispatch_cx.focus_snapshot),
+                    )
                 {
                     if let Some(prev) = self.focus {
                         Self::pending_invalidation_merge(
@@ -173,14 +181,14 @@ impl<H: UiHost> UiTree<H> {
                 }
 
                 if let Some(capture) = requested_capture
-                    && capture.is_none_or(|n| self.node_in_any_layer(n, &active_roots))
+                    && capture.is_none_or(|n| node_in_active_layers(n))
                     && let Some(pointer_id) = pointer_id_for_capture
                 {
                     if let Some(new_capture) = capture
                         && !matches!(event, Event::PointerCancel(_))
                         && let Some(old_capture) = self.captured.get(&pointer_id).copied()
                         && old_capture != new_capture
-                        && self.node_in_any_layer(old_capture, &active_roots)
+                        && node_in_active_layers(old_capture)
                     {
                         // When a component steals pointer capture mid-sequence (e.g. gesture arena
                         // outcomes), cancel the previous capture target so pressables/widgets can
@@ -190,6 +198,7 @@ impl<H: UiHost> UiTree<H> {
                         let _ = self.dispatch_event_to_node_chain(
                             app,
                             services,
+                            dispatch_cx,
                             input_ctx,
                             old_capture,
                             &cancel_event,
@@ -234,9 +243,7 @@ impl<H: UiHost> UiTree<H> {
                 notify_requested,
                 notify_requested_location,
                 stop_propagation,
-                parent,
             ) = self.with_widget_mut(node_id, |widget, tree| {
-                let parent = tree.nodes.get(node_id).and_then(|n| n.parent);
                 let (children, bounds) = tree
                     .nodes
                     .get(node_id)
@@ -275,7 +282,6 @@ impl<H: UiHost> UiTree<H> {
                     cx.notify_requested,
                     cx.notify_requested_location,
                     cx.stop_propagation,
-                    parent,
                 )
             });
 
@@ -314,7 +320,13 @@ impl<H: UiHost> UiTree<H> {
             }
 
             if let Some(focus) = requested_focus
-                && self.focus_request_is_allowed(app, self.window, &active_roots, focus)
+                && self.focus_request_is_allowed(
+                    app,
+                    self.window,
+                    dispatch_cx.active_focus_roots.as_slice(),
+                    focus,
+                    Some(&dispatch_cx.focus_snapshot),
+                )
             {
                 if let Some(prev) = self.focus {
                     Self::pending_invalidation_merge(
@@ -344,19 +356,20 @@ impl<H: UiHost> UiTree<H> {
             }
 
             if let Some(capture) = requested_capture
-                && capture.is_none_or(|n| self.node_in_any_layer(n, &active_roots))
+                && capture.is_none_or(|n| node_in_active_layers(n))
                 && let Some(pointer_id) = pointer_id_for_capture
             {
                 if let Some(new_capture) = capture
                     && !matches!(event, Event::PointerCancel(_))
                     && let Some(old_capture) = self.captured.get(&pointer_id).copied()
                     && old_capture != new_capture
-                    && self.node_in_any_layer(old_capture, &active_roots)
+                    && node_in_active_layers(old_capture)
                 {
                     let cancel_event = pointer_cancel_event_for_capture_switch(event, pointer_id);
                     let _ = self.dispatch_event_to_node_chain(
                         app,
                         services,
+                        dispatch_cx,
                         input_ctx,
                         old_capture,
                         &cancel_event,
@@ -384,6 +397,21 @@ impl<H: UiHost> UiTree<H> {
                 return true;
             }
 
+            let parent = if dispatch_cx.input_snapshot.pre.get(node_id).is_some() {
+                dispatch_cx
+                    .input_snapshot
+                    .parent
+                    .get(node_id)
+                    .copied()
+                    .flatten()
+            } else {
+                debug_assert!(
+                    false,
+                    "dispatch/chain: node missing from input snapshot (node={node_id:?}, frame_id={:?}, window={:?})",
+                    dispatch_cx.input_snapshot.frame_id, dispatch_cx.input_snapshot.window
+                );
+                self.nodes.get(node_id).and_then(|n| n.parent)
+            };
             node_id = match parent {
                 Some(parent) => parent,
                 None => break,

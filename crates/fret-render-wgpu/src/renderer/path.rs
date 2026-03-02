@@ -27,8 +27,6 @@ pub(super) enum StrokeS01ModeV1 {
     None,
     /// Stroke-space arclength (`s01`) is continuous across the entire stroke.
     Continuous,
-    /// Stroke-space `s01` was derived from a dashed path decomposition and may reset per dash.
-    ResetByDash,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -374,111 +372,169 @@ impl DashState {
     }
 }
 
-fn build_dashed_lyon_path(
-    path: &lyon::path::Path,
-    pattern: fret_core::scene::DashPatternV1,
-    tolerance: f32,
-) -> Option<lyon::path::Path> {
-    use lyon::math::point;
-    use std::cmp::Ordering;
+#[derive(Debug, Clone, Copy)]
+struct FlatLineSegment {
+    from: lyon::math::Point,
+    to: lyon::math::Point,
+    len: f32,
+}
 
-    let mut dash = DashState::new(pattern)?;
-    let mut builder = lyon::path::Path::builder();
-    let mut active = false;
+#[derive(Debug, Default, Clone)]
+struct FlatSubpath {
+    segments: Vec<FlatLineSegment>,
+    total_len: f32,
+}
+
+fn flatten_lyon_path_to_subpaths(path: &lyon::path::Path, tolerance: f32) -> Vec<FlatSubpath> {
+    use lyon::path::Event;
+
+    fn dist(a: lyon::math::Point, b: lyon::math::Point) -> f32 {
+        let dx = b.x - a.x;
+        let dy = b.y - a.y;
+        (dx * dx + dy * dy).sqrt()
+    }
+
+    let mut out: Vec<FlatSubpath> = Vec::new();
+    let mut cur: FlatSubpath = FlatSubpath::default();
 
     for evt in path.iter().flattened(tolerance) {
         match evt {
-            lyon::path::Event::Begin { .. } => {
-                if active {
-                    builder.end(false);
-                    active = false;
+            Event::Begin { .. } => {
+                if !cur.segments.is_empty() {
+                    out.push(cur);
                 }
-                dash.reset();
+                cur = FlatSubpath::default();
             }
-            lyon::path::Event::Line { from, to } => {
-                let dx = to.x - from.x;
-                let dy = to.y - from.y;
-                let len = (dx * dx + dy * dy).sqrt();
-                if len.partial_cmp(&0.0) != Some(Ordering::Greater) {
-                    continue;
-                }
-
-                let inv_len = 1.0 / len;
-                let mut traveled = 0.0f32;
-                let mut cur = from;
-
-                while traveled < len {
-                    let step = dash.remaining.min(len - traveled);
-                    if step.partial_cmp(&0.0) != Some(Ordering::Greater) {
-                        break;
-                    }
-
-                    traveled += step;
-                    let t = traveled * inv_len;
-                    let next = point(from.x + dx * t, from.y + dy * t);
-
-                    if dash.on {
-                        if !active {
-                            builder.begin(cur);
-                            active = true;
-                        }
-                        builder.line_to(next);
-                    } else if active {
-                        builder.end(false);
-                        active = false;
-                    }
-
-                    cur = next;
-                    dash.consume(step);
+            Event::Line { from, to } => {
+                let len = dist(from, to);
+                if len.is_finite() && len > 0.0 {
+                    cur.segments.push(FlatLineSegment { from, to, len });
+                    cur.total_len += len;
                 }
             }
-            lyon::path::Event::End { last, first, close } => {
+            Event::End { last, first, close } => {
                 if close {
-                    let dx = first.x - last.x;
-                    let dy = first.y - last.y;
-                    let len = (dx * dx + dy * dy).sqrt();
-                    if len > 0.0 {
-                        let inv_len = 1.0 / len;
-                        let mut traveled = 0.0f32;
-                        let mut cur = last;
-                        while traveled < len {
-                            let step = dash.remaining.min(len - traveled);
-                            if step.partial_cmp(&0.0) != Some(Ordering::Greater) {
-                                break;
-                            }
-                            traveled += step;
-                            let t = traveled * inv_len;
-                            let next = point(last.x + dx * t, last.y + dy * t);
-                            if dash.on {
-                                if !active {
-                                    builder.begin(cur);
-                                    active = true;
-                                }
-                                builder.line_to(next);
-                            } else if active {
-                                builder.end(false);
-                                active = false;
-                            }
-                            cur = next;
-                            dash.consume(step);
-                        }
+                    let len = dist(last, first);
+                    if len.is_finite() && len > 0.0 {
+                        cur.segments.push(FlatLineSegment {
+                            from: last,
+                            to: first,
+                            len,
+                        });
+                        cur.total_len += len;
                     }
                 }
-
-                if active {
-                    builder.end(false);
-                    active = false;
+                if !cur.segments.is_empty() {
+                    out.push(cur);
                 }
+                cur = FlatSubpath::default();
             }
-            lyon::path::Event::Quadratic { .. } | lyon::path::Event::Cubic { .. } => {}
+            Event::Quadratic { .. } | Event::Cubic { .. } => {}
         }
     }
 
-    if active {
-        builder.end(false);
+    if !cur.segments.is_empty() {
+        out.push(cur);
     }
 
-    Some(builder.build())
+    out
+}
+
+#[derive(Debug, Clone)]
+struct DashedSubpath {
+    path: lyon::path::Path,
+    start_adv: f32,
+}
+
+fn build_dashed_lyon_subpaths(
+    path: &lyon::path::Path,
+    pattern: fret_core::scene::DashPatternV1,
+    tolerance: f32,
+) -> Option<(Vec<DashedSubpath>, f32)> {
+    use lyon::math::point;
+    use std::cmp::Ordering;
+
+    let subpaths = flatten_lyon_path_to_subpaths(path, tolerance);
+    if subpaths.is_empty() {
+        return None;
+    }
+    let denom = subpaths
+        .iter()
+        .fold(0.0_f32, |acc, sp| acc.max(sp.total_len));
+    if !denom.is_finite() || denom <= 1e-6 {
+        return None;
+    }
+
+    let mut out: Vec<DashedSubpath> = Vec::new();
+
+    for sp in subpaths {
+        let mut dash = DashState::new(pattern)?;
+        dash.reset();
+
+        let mut s = 0.0f32;
+        let mut active_builder: Option<lyon::path::path::Builder> = None;
+        let mut active_start_adv = 0.0f32;
+
+        for seg in &sp.segments {
+            let dx = seg.to.x - seg.from.x;
+            let dy = seg.to.y - seg.from.y;
+            let len = seg.len;
+            if len.partial_cmp(&0.0) != Some(Ordering::Greater) {
+                continue;
+            }
+
+            let inv_len = 1.0 / len;
+            let mut traveled = 0.0f32;
+            let mut cur = seg.from;
+
+            while traveled < len {
+                let step = dash.remaining.min(len - traveled);
+                if step.partial_cmp(&0.0) != Some(Ordering::Greater) {
+                    break;
+                }
+
+                let next_s = s + step;
+                traveled += step;
+                let t = traveled * inv_len;
+                let next = point(seg.from.x + dx * t, seg.from.y + dy * t);
+
+                if dash.on {
+                    if active_builder.is_none() {
+                        let mut b = lyon::path::Path::builder();
+                        b.begin(cur);
+                        active_start_adv = s;
+                        active_builder = Some(b);
+                    }
+                    if let Some(b) = active_builder.as_mut() {
+                        b.line_to(next);
+                    }
+                } else if let Some(mut b) = active_builder.take() {
+                    b.end(false);
+                    out.push(DashedSubpath {
+                        path: b.build(),
+                        start_adv: active_start_adv,
+                    });
+                }
+
+                cur = next;
+                s = next_s;
+                dash.consume(step);
+            }
+        }
+
+        if let Some(mut b) = active_builder.take() {
+            b.end(false);
+            out.push(DashedSubpath {
+                path: b.build(),
+                start_adv: active_start_adv,
+            });
+        }
+    }
+
+    if out.is_empty() {
+        return None;
+    }
+    Some((out, denom))
 }
 
 #[derive(Clone, Copy)]
@@ -503,6 +559,7 @@ pub(super) fn tessellate_path_commands(
 
     let mut buffers: VertexBuffers<PathTessVertex, u32> = VertexBuffers::new();
     let mut stroke_s01_mode = StrokeS01ModeV1::None;
+    let mut stroke_s01_denominator_override: Option<f32> = None;
     match style {
         fret_core::PathStyle::Fill(fill) => {
             let fill_rule = match fill.rule {
@@ -568,14 +625,6 @@ pub(super) fn tessellate_path_commands(
                 4.0
             };
 
-            let dashed_path = stroke
-                .dash
-                .and_then(|pattern| build_dashed_lyon_path(&path, pattern, tolerance));
-            let path = dashed_path.as_ref().unwrap_or(&path);
-            if stroke.dash.is_some() && dashed_path.is_some() {
-                stroke_s01_mode = StrokeS01ModeV1::ResetByDash;
-            }
-
             let opts = StrokeOptions::default()
                 .with_line_width(width)
                 .with_tolerance(tolerance)
@@ -584,17 +633,37 @@ pub(super) fn tessellate_path_commands(
                 .with_start_cap(cap)
                 .with_end_cap(cap);
             let mut tessellator = StrokeTessellator::new();
-            let _ = tessellator.tessellate_path(
-                path,
-                &opts,
-                &mut BuffersBuilder::new(&mut buffers, |v: StrokeVertex| {
-                    let p = v.position();
-                    PathTessVertex {
-                        pos: [p.x, p.y],
-                        advancement: v.advancement(),
-                    }
-                }),
-            );
+            if let Some(pattern) = stroke.dash
+                && let Some((dashed, denom)) = build_dashed_lyon_subpaths(&path, pattern, tolerance)
+            {
+                stroke_s01_denominator_override = Some(denom);
+                for sub in dashed {
+                    let adv_offset = sub.start_adv;
+                    let _ = tessellator.tessellate_path(
+                        &sub.path,
+                        &opts,
+                        &mut BuffersBuilder::new(&mut buffers, move |v: StrokeVertex| {
+                            let p = v.position();
+                            PathTessVertex {
+                                pos: [p.x, p.y],
+                                advancement: adv_offset + v.advancement(),
+                            }
+                        }),
+                    );
+                }
+            } else {
+                let _ = tessellator.tessellate_path(
+                    &path,
+                    &opts,
+                    &mut BuffersBuilder::new(&mut buffers, |v: StrokeVertex| {
+                        let p = v.position();
+                        PathTessVertex {
+                            pos: [p.x, p.y],
+                            advancement: v.advancement(),
+                        }
+                    }),
+                );
+            }
         }
     }
 
@@ -602,8 +671,9 @@ pub(super) fn tessellate_path_commands(
         .vertices
         .iter()
         .fold(0.0_f32, |acc, v| acc.max(v.advancement));
-    let inv_max_adv = if max_adv.is_finite() && max_adv > 1e-6 {
-        1.0 / max_adv
+    let denom = stroke_s01_denominator_override.unwrap_or(max_adv);
+    let inv_denom = if denom.is_finite() && denom > 1e-6 {
+        1.0 / denom
     } else {
         0.0
     };
@@ -613,7 +683,7 @@ pub(super) fn tessellate_path_commands(
         if let Some(v) = buffers.vertices.get(idx as usize) {
             out.push(PathTriangleVertex {
                 pos: v.pos,
-                stroke_s01: (v.advancement * inv_max_adv).clamp(0.0, 1.0),
+                stroke_s01: (v.advancement * inv_denom).clamp(0.0, 1.0),
             });
         }
     }

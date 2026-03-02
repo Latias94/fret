@@ -104,6 +104,11 @@ impl Engine {
         }
     }
 
+    #[inline]
+    pub fn loop_enabled(&self) -> bool {
+        self.config.loop_enabled
+    }
+
     pub fn reinit(
         &mut self,
         scroll_snaps: Vec<f32>,
@@ -450,5 +455,103 @@ mod tests {
         }
 
         assert_eq!(engine.index_current, 0);
+    }
+
+    #[test]
+    fn loop_normalization_wraps_large_offsets_into_limit_range() {
+        let snaps = vec![0.0, -100.0, -200.0, -300.0, -400.0];
+        let mut engine = Engine::new(
+            snaps,
+            500.0,
+            EngineConfig {
+                loop_enabled: true,
+                drag_free: false,
+                skip_snaps: false,
+                duration: 25.0,
+                base_friction: 0.9,
+                view_size: 100.0,
+                start_snap: 0,
+            },
+        );
+
+        // Values far outside the [-content_size, 0] range should wrap deterministically.
+        engine.scroll_body.set_location(1020.0);
+        engine.scroll_body.set_target(980.0);
+        engine.scroll_target.set_target_vector(980.0);
+        let displacement_before = engine.scroll_body.target() - engine.scroll_body.location();
+        engine.normalize_loop_entities();
+
+        let loc = engine.scroll_body.location();
+        assert!(loc <= engine.limit.max && loc >= engine.limit.min);
+        // Embla-style loop normalization uses the location bound crossing as the trigger and applies
+        // the same loop distance to all entities. This preserves the displacement even if the target
+        // ends up outside the wrapped range in the same step.
+        let displacement_after = engine.scroll_body.target() - engine.scroll_body.location();
+        assert!((displacement_before - displacement_after).abs() <= 0.0001);
+    }
+
+    #[test]
+    fn loop_normalization_is_idempotent() {
+        let snaps = vec![0.0, -100.0, -200.0, -300.0, -400.0];
+        let mut engine = Engine::new(
+            snaps,
+            500.0,
+            EngineConfig {
+                loop_enabled: true,
+                drag_free: false,
+                skip_snaps: false,
+                duration: 25.0,
+                base_friction: 0.9,
+                view_size: 100.0,
+                start_snap: 0,
+            },
+        );
+
+        engine.scroll_body.set_location(-980.0);
+        engine.scroll_body.set_target(-980.0);
+        engine.scroll_target.set_target_vector(-980.0);
+        engine.normalize_loop_entities();
+
+        let first = engine.scroll_body.snapshot();
+        engine.normalize_loop_entities();
+        let second = engine.scroll_body.snapshot();
+
+        assert!((first.location - second.location).abs() <= 0.0001);
+        assert!((first.target - second.target).abs() <= 0.0001);
+        assert!((first.previous_location - second.previous_location).abs() <= 0.0001);
+    }
+
+    #[test]
+    fn loop_normalization_preserves_scroll_velocity() {
+        let snaps = vec![0.0, -100.0, -200.0, -300.0, -400.0];
+        let mut engine = Engine::new(
+            snaps,
+            500.0,
+            EngineConfig {
+                loop_enabled: true,
+                drag_free: false,
+                skip_snaps: false,
+                duration: 25.0,
+                base_friction: 0.9,
+                view_size: 100.0,
+                start_snap: 0,
+            },
+        );
+
+        // Create non-zero motion and then normalize while outside bounds.
+        engine.scroll_body.set_target(200.0);
+        engine.scroll_body.seek();
+        engine
+            .scroll_target
+            .set_target_vector(engine.scroll_body.target());
+        let before = engine.scroll_body.snapshot();
+        assert!(before.velocity != 0.0);
+
+        engine.normalize_loop_entities();
+        let after = engine.scroll_body.snapshot();
+
+        assert!((before.velocity - after.velocity).abs() <= 0.0001);
+        assert!(after.location <= engine.limit.max && after.location >= engine.limit.min);
+        assert!(after.target <= engine.limit.max && after.target >= engine.limit.min);
     }
 }

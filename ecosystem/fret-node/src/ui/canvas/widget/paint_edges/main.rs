@@ -2,6 +2,7 @@ use crate::ui::canvas::widget::paint_render_data::RenderData;
 use crate::ui::canvas::widget::*;
 use fret_core::scene::DashPatternV1;
 use fret_core::scene::DropShadowV1;
+use fret_core::scene::PaintBindingV1;
 use fret_core::{EffectChain, EffectMode, EffectQuality, EffectStep};
 use std::collections::hash_map::DefaultHasher;
 use std::hash::{Hash, Hasher};
@@ -24,6 +25,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
             from: Point,
             to: Point,
             color: Color,
+            paint: PaintBindingV1,
             width: f32,
             route: EdgeRouteKind,
             dash: Option<DashPatternV1>,
@@ -224,17 +226,17 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                         edge.color,
                     )
                 } else {
-                    (p.pos, self.style.wire_color_preview)
+                    (p.pos, self.style.paint.wire_color_preview)
                 }
             });
 
         for edge in &render.edges {
-            let mut width = self.style.wire_width * edge.hint.width_mul.max(0.0);
+            let mut width = self.style.geometry.wire_width * edge.hint.width_mul.max(0.0);
             if edge.selected {
-                width *= self.style.wire_width_selected_mul;
+                width *= self.style.paint.wire_width_selected_mul;
             }
             if edge.hovered {
-                width *= self.style.wire_width_hover_mul;
+                width *= self.style.paint.wire_width_hover_mul;
             }
 
             let route = edge.hint.route;
@@ -244,6 +246,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                 from: edge.from,
                 to: edge.to,
                 color: edge.color,
+                paint: edge.paint,
                 width,
                 route,
                 dash: edge.hint.dash,
@@ -452,6 +455,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                     cx.scale_factor,
                     edge.from,
                     edge.to,
+                    edge.paint,
                     edge.color,
                     edge.width,
                     edge.dash,
@@ -471,6 +475,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                     edge.route,
                     edge.from,
                     edge.to,
+                    edge.paint,
                     edge.color,
                     edge.width,
                     edge.dash,
@@ -647,7 +652,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
             });
             let preview = interaction_hint
                 .preview_wire
-                .unwrap_or(self.style.wire_color_preview);
+                .unwrap_or(self.style.paint.wire_color_preview);
             let dash_invalid = interaction_hint.dash_invalid;
             let dash_preview = interaction_hint.dash_preview;
 
@@ -682,7 +687,8 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                     if !outline_budget.try_consume(1) {
                         outline_budget_skipped = outline_budget_skipped.saturating_add(1);
                     } else {
-                        let outline_width = self.style.wire_width * outline.width_mul.max(0.0);
+                        let outline_width =
+                            self.style.geometry.wire_width * outline.width_mul.max(0.0);
                         if let Some(path) = self.paint_cache.wire_path(
                             cx.services,
                             EdgeRouteKind::Bezier,
@@ -710,7 +716,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                         from,
                         to,
                         zoom,
-                        self.style.wire_width,
+                        self.style.geometry.wire_width,
                         g.blur_radius_px,
                     )
                 });
@@ -751,7 +757,7 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
                     to,
                     zoom,
                     cx.scale_factor,
-                    self.style.wire_width,
+                    self.style.geometry.wire_width,
                     dash,
                 ) {
                     cx.scene.push(SceneOp::Path {

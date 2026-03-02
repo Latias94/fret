@@ -7,7 +7,9 @@ use fret_ui::element::{
 };
 use fret_ui::{ElementContext, Invalidation, Theme, ThemeSnapshot, UiHost};
 use fret_ui_kit::declarative::style as decl_style;
-use fret_ui_kit::primitives::control_registry::{ControlId, LabelEntry, control_registry_model};
+use fret_ui_kit::primitives::control_registry::{
+    ControlId, DescriptionEntry, ErrorEntry, LabelEntry, control_registry_model,
+};
 use fret_ui_kit::primitives::direction as direction_prim;
 use fret_ui_kit::primitives::field_state as field_state_prim;
 use fret_ui_kit::theme_tokens;
@@ -1093,6 +1095,7 @@ impl FieldLabel {
 #[derive(Debug, Clone)]
 pub struct FieldDescription {
     text: Arc<str>,
+    for_control: Option<ControlId>,
     wrap: Option<TextWrap>,
     overflow: Option<TextOverflow>,
 }
@@ -1101,9 +1104,15 @@ impl FieldDescription {
     pub fn new(text: impl Into<Arc<str>>) -> Self {
         Self {
             text: text.into(),
+            for_control: None,
             wrap: None,
             overflow: None,
         }
+    }
+
+    pub fn for_control(mut self, id: impl Into<ControlId>) -> Self {
+        self.for_control = Some(id.into());
+        self
     }
 
     pub fn wrap(mut self, wrap: TextWrap) -> Self {
@@ -1150,7 +1159,7 @@ impl FieldDescription {
         };
         let wrap = self.wrap.unwrap_or(TextWrap::Word);
         let overflow = self.overflow.unwrap_or(TextOverflow::Clip);
-        ui::text(cx, self.text)
+        let el = ui::text(cx, self.text)
             .text_size_px(px)
             .line_height_px(line_height)
             .font_normal()
@@ -1160,13 +1169,28 @@ impl FieldDescription {
             .text_align(align)
             .w_full()
             .min_w_0()
-            .into_element(cx)
+            .into_element(cx);
+
+        if let Some(for_control) = self.for_control {
+            let control_registry = control_registry_model(cx);
+            let _ = cx.app.models_mut().update(&control_registry, |reg| {
+                reg.register_description(
+                    cx.window,
+                    cx.frame_id,
+                    for_control,
+                    DescriptionEntry { element: el.id },
+                );
+            });
+        }
+
+        el
     }
 }
 
 #[derive(Debug, Clone)]
 pub struct FieldError {
     text: Arc<str>,
+    for_control: Option<ControlId>,
     wrap: Option<TextWrap>,
     overflow: Option<TextOverflow>,
 }
@@ -1175,9 +1199,15 @@ impl FieldError {
     pub fn new(text: impl Into<Arc<str>>) -> Self {
         Self {
             text: text.into(),
+            for_control: None,
             wrap: None,
             overflow: None,
         }
+    }
+
+    pub fn for_control(mut self, id: impl Into<ControlId>) -> Self {
+        self.for_control = Some(id.into());
+        self
     }
 
     pub fn wrap(mut self, wrap: TextWrap) -> Self {
@@ -1224,7 +1254,7 @@ impl FieldError {
         };
         let wrap = self.wrap.unwrap_or(TextWrap::Word);
         let overflow = self.overflow.unwrap_or(TextOverflow::Clip);
-        ui::text(cx, self.text)
+        let el = ui::text(cx, self.text)
             .text_size_px(px)
             .line_height_px(line_height)
             .line_height_policy(fret_core::TextLineHeightPolicy::FixedFromStyle)
@@ -1235,7 +1265,21 @@ impl FieldError {
             .text_align(align)
             .w_full()
             .min_w_0()
-            .into_element(cx)
+            .into_element(cx);
+
+        if let Some(for_control) = self.for_control {
+            let control_registry = control_registry_model(cx);
+            let _ = cx.app.models_mut().update(&control_registry, |reg| {
+                reg.register_error(
+                    cx.window,
+                    cx.frame_id,
+                    for_control,
+                    ErrorEntry { element: el.id },
+                );
+            });
+        }
+
+        el
     }
 }
 
@@ -1629,6 +1673,7 @@ mod tests {
 
     use fret_app::App;
     use fret_core::{AppWindowId, Point, Rect, Size};
+    use fret_ui_kit::primitives::control_registry::ControlId;
 
     #[test]
     fn checkbox_group_stamps_list_role_without_layout_wrapper() {
@@ -1693,5 +1738,93 @@ mod tests {
             expected.0,
             gap.0
         );
+    }
+
+    #[test]
+    fn field_registers_label_and_helper_text_for_control_registry_association() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(240.0), Px(180.0)),
+        );
+
+        let model = app.models_mut().insert(String::new());
+        let id = ControlId::from("email");
+
+        let _ = fret_ui::elements::with_element_cx(&mut app, window, bounds, "field-assoc", |cx| {
+            cx.column(fret_ui::element::ColumnProps::default(), |cx| {
+                vec![
+                    FieldLabel::new("Email")
+                        .for_control(id.clone())
+                        .into_element(cx),
+                    FieldDescription::new("We will never share it.")
+                        .for_control(id.clone())
+                        .into_element(cx),
+                    FieldError::new("Required.")
+                        .for_control(id.clone())
+                        .into_element(cx),
+                    crate::Input::new(model.clone())
+                        .control_id(id.clone())
+                        .into_element(cx),
+                ]
+            })
+        });
+        let root =
+            fret_ui::elements::with_element_cx(&mut app, window, bounds, "field-assoc", |cx| {
+                cx.column(fret_ui::element::ColumnProps::default(), |cx| {
+                    vec![
+                        FieldLabel::new("Email")
+                            .for_control(id.clone())
+                            .into_element(cx),
+                        FieldDescription::new("We will never share it.")
+                            .for_control(id.clone())
+                            .into_element(cx),
+                        FieldError::new("Required.")
+                            .for_control(id.clone())
+                            .into_element(cx),
+                        crate::Input::new(model.clone())
+                            .control_id(id.clone())
+                            .into_element(cx),
+                    ]
+                })
+            });
+
+        fn find_text_input(el: &AnyElement) -> Option<&AnyElement> {
+            if matches!(el.kind, ElementKind::TextInput(_)) {
+                return Some(el);
+            }
+            for child in &el.children {
+                if let Some(found) = find_text_input(child) {
+                    return Some(found);
+                }
+            }
+            None
+        }
+
+        let label = &root.children[0];
+        let desc = &root.children[1];
+        let err = &root.children[2];
+        let text_input = find_text_input(&root).expect("expected a TextInput node");
+
+        let decoration = text_input
+            .semantics_decoration
+            .as_ref()
+            .expect("expected semantics decoration on TextInput");
+        assert_eq!(decoration.labelled_by_element, Some(label.id.0));
+        // Error takes precedence over description for `described-by`.
+        assert_eq!(decoration.described_by_element, Some(err.id.0));
+
+        let ElementKind::Pressable(pressable) = &label.kind else {
+            panic!("expected FieldLabel(for_control) to be a Pressable");
+        };
+        assert!(
+            pressable.a11y.controls_element.is_some(),
+            "expected FieldLabel to set `controls_element` when a control is registered"
+        );
+
+        // Sanity: the description/error nodes we register are stable elements in the tree.
+        assert!(desc.id.0 != 0);
+        assert!(err.id.0 != 0);
     }
 }

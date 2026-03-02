@@ -1,3 +1,5 @@
+pub const SOURCE: &str = include_str!("api.rs");
+
 // region: example
 use fret_app::App;
 use fret_core::Edges;
@@ -131,7 +133,6 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
         .collect::<Vec<_>>();
     let api_carousel = shadcn::Carousel::new(api_items)
         .api_handle_model(api_handle.clone())
-        .refine_track_layout(LayoutRefinement::default().w_px(Px(336.0)))
         .refine_layout(LayoutRefinement::default().w_full().max_w(max_w_xs))
         .test_id("ui-gallery-carousel-api")
         .into_element(cx);

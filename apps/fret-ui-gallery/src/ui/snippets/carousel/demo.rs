@@ -1,3 +1,5 @@
+pub const SOURCE: &str = include_str!("demo.rs");
+
 // region: example
 use fret_app::App;
 use fret_core::Edges;
@@ -610,6 +612,7 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
 
         let card = shadcn::Card::new([content]).into_element(cx);
         ui::container(cx, move |_cx| vec![card])
+            .w_full()
             .p_1()
             .into_element(cx)
     };
@@ -623,8 +626,6 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
         .collect::<Vec<_>>();
 
     shadcn::Carousel::new(demo_items)
-        // Web goldens: track width accounts for the negative start margin (`-ml-4`).
-        .refine_track_layout(LayoutRefinement::default().w_px(Px(336.0)))
         .refine_layout(
             LayoutRefinement::default()
                 .w_full()

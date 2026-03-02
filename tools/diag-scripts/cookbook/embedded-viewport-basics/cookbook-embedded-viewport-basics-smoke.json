@@ -1,0 +1,124 @@
+{
+  "schema_version": 2,
+  "meta": {
+    "name": "cookbook-embedded-viewport-basics-smoke",
+    "required_capabilities": ["diag.script_v2", "diag.screenshot_png"],
+    "tags": ["cookbook", "interop", "viewport", "smoke"],
+    "target_hints": [
+      "Clicks inside the embedded viewport surface to verify explicit input forwarding.",
+      "Switches the render target size preset and verifies the target size gate updates.",
+      "Captures a screenshot + diagnostics bundle."
+    ]
+  },
+  "steps": [
+    { "type": "reset_diagnostics" },
+    { "type": "set_window_inner_size", "width_px": 1120.0, "height_px": 780.0 },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "cookbook.embedded_viewport_basics.root" }
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "semantics_numeric_approx_eq",
+        "target": { "kind": "test_id", "id": "cookbook.embedded_viewport_basics.clicks" },
+        "field": "value",
+        "value": 0.0,
+        "eps": 0.0001
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "click_stable",
+      "target": { "kind": "test_id", "id": "cookbook.embedded_viewport_basics.surface" }
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "semantics_numeric_approx_eq",
+        "target": { "kind": "test_id", "id": "cookbook.embedded_viewport_basics.clicks" },
+        "field": "value",
+        "value": 1.0,
+        "eps": 0.0001
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "semantics_numeric_approx_eq",
+        "target": { "kind": "test_id", "id": "cookbook.embedded_viewport_basics.uv_x" },
+        "field": "value",
+        "value": 0.5,
+        "eps": 0.08
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "semantics_numeric_approx_eq",
+        "target": { "kind": "test_id", "id": "cookbook.embedded_viewport_basics.uv_y" },
+        "field": "value",
+        "value": 0.5,
+        "eps": 0.08
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "click_stable",
+      "target": { "kind": "test_id", "id": "cookbook.embedded_viewport_basics.size_1280" }
+    },
+    {
+      "type": "click_stable",
+      "target": { "kind": "test_id", "id": "cookbook.embedded_viewport_basics.surface" }
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "semantics_numeric_approx_eq",
+        "target": { "kind": "test_id", "id": "cookbook.embedded_viewport_basics.clicks" },
+        "field": "value",
+        "value": 2.0,
+        "eps": 0.0001
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "semantics_numeric_approx_eq",
+        "target": { "kind": "test_id", "id": "cookbook.embedded_viewport_basics.target_w" },
+        "field": "value",
+        "value": 1280.0,
+        "eps": 0.5
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "semantics_numeric_approx_eq",
+        "target": { "kind": "test_id", "id": "cookbook.embedded_viewport_basics.target_h" },
+        "field": "value",
+        "value": 720.0,
+        "eps": 0.5
+      },
+      "timeout_frames": 240
+    },
+    { "type": "wait_frames", "n": 10 },
+    {
+      "type": "capture_screenshot",
+      "label": "cookbook-embedded-viewport-basics-smoke"
+    },
+    {
+      "type": "capture_bundle",
+      "label": "cookbook-embedded-viewport-basics-smoke"
+    }
+  ]
+}
+

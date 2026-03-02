@@ -11,6 +11,7 @@ impl<H: UiHost> UiTree<H> {
         input_ctx: &InputContext,
         start: NodeId,
         event: &Event,
+        snapshot: Option<&UiDispatchSnapshot>,
         invalidation_visited: &mut impl InvalidationVisited,
     ) -> bool {
         let pointer_id_for_capture: Option<fret_core::PointerId> = match event {
@@ -27,11 +28,10 @@ impl<H: UiHost> UiTree<H> {
         let mut did_work = false;
 
         if event_position(event).is_some() {
-            let chain = self.build_mapped_event_chain(start, event);
+            let chain = self.build_mapped_event_chain(start, event, snapshot);
             for (node_id, event_for_node) in chain {
-                let (invalidations, notify_requested, notify_requested_location, _parent) = self
+                let (invalidations, notify_requested, notify_requested_location) = self
                     .with_widget_mut(node_id, |widget, tree| {
-                        let parent = tree.nodes.get(node_id).and_then(|n| n.parent);
                         let (children, bounds) = tree
                             .nodes
                             .get(node_id)
@@ -61,7 +61,6 @@ impl<H: UiHost> UiTree<H> {
                             cx.invalidations,
                             cx.notify_requested,
                             cx.notify_requested_location,
-                            parent,
                         )
                     });
 
@@ -102,9 +101,8 @@ impl<H: UiHost> UiTree<H> {
 
         let mut node_id = start;
         loop {
-            let (invalidations, notify_requested, notify_requested_location, parent) = self
+            let (invalidations, notify_requested, notify_requested_location) = self
                 .with_widget_mut(node_id, |widget, tree| {
-                    let parent = tree.nodes.get(node_id).and_then(|n| n.parent);
                     let (children, bounds) = tree
                         .nodes
                         .get(node_id)
@@ -134,7 +132,6 @@ impl<H: UiHost> UiTree<H> {
                         cx.invalidations,
                         cx.notify_requested,
                         cx.notify_requested_location,
-                        parent,
                     )
                 });
 
@@ -166,6 +163,12 @@ impl<H: UiHost> UiTree<H> {
                 );
             }
 
+            let parent = match snapshot {
+                Some(snapshot) if snapshot.pre.get(node_id).is_some() => {
+                    snapshot.parent.get(node_id).copied().flatten()
+                }
+                _ => self.nodes.get(node_id).and_then(|n| n.parent),
+            };
             node_id = match parent {
                 Some(parent) => parent,
                 None => break,

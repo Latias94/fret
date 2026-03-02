@@ -30,40 +30,22 @@ pub(super) fn preview_hover_card(cx: &mut ElementContext<'_, App>) -> Vec<AnyEle
                 .description(
                     "Basic hover card surface with a short open delay and a longer close delay.",
                 )
-                .code_rust_from_file_region(
-                    include_str!("../snippets/hover_card/demo.rs"),
-                    "example",
-                ),
+                .code_rust_from_file_region(snippets::demo::SOURCE, "example"),
             DocSection::new("Trigger Delays", trigger_delays)
                 .description("Compare instant vs delayed open/close behavior.")
-                .code_rust_from_file_region(
-                    include_str!("../snippets/hover_card/trigger_delays.rs"),
-                    "example",
-                ),
+                .code_rust_from_file_region(snippets::trigger_delays::SOURCE, "example"),
             DocSection::new("Positioning", positioning)
                 .description("Placement is controlled by `side` and `align`.")
-                .code_rust_from_file_region(
-                    include_str!("../snippets/hover_card/positioning.rs"),
-                    "example",
-                ),
+                .code_rust_from_file_region(snippets::positioning::SOURCE, "example"),
             DocSection::new("Basic", basic)
                 .description("A basic hover card surface matching the upstream example.")
-                .code_rust_from_file_region(
-                    include_str!("../snippets/hover_card/basic.rs"),
-                    "example",
-                ),
+                .code_rust_from_file_region(snippets::basic::SOURCE, "example"),
             DocSection::new("Sides", sides)
                 .description("Visual sweep of side placements.")
-                .code_rust_from_file_region(
-                    include_str!("../snippets/hover_card/sides.rs"),
-                    "example",
-                ),
+                .code_rust_from_file_region(snippets::sides::SOURCE, "example"),
             DocSection::new("RTL", rtl)
                 .description("Hover card should respect right-to-left direction context.")
-                .code_rust_from_file_region(
-                    include_str!("../snippets/hover_card/rtl.rs"),
-                    "example",
-                ),
+                .code_rust_from_file_region(snippets::rtl::SOURCE, "example"),
             DocSection::new("Notes", notes)
                 .description("Implementation notes and regression guidelines."),
         ],

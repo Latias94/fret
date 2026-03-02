@@ -24,9 +24,9 @@ impl<M: NodeGraphCanvasMiddleware> NodeGraphCanvasWith<M> {
             .read_ref(host, |graph| {
                 let mut out = RenderData::default();
 
-                let node_pad = this.style.node_padding;
+                let node_pad = this.style.geometry.node_padding;
                 let pin_gap = 8.0;
-                let pin_r = this.style.pin_radius;
+                let pin_r = this.style.geometry.pin_radius;
                 let label_overhead = 2.0 * node_pad + 2.0 * (pin_r + pin_gap);
 
                 for node in selected_nodes.iter().copied() {

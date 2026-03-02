@@ -1887,14 +1887,29 @@ name = "fret-cookbook"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "delinea",
  "fret",
  "fret-app",
+ "fret-bootstrap",
+ "fret-canvas",
+ "fret-chart",
+ "fret-code-view",
  "fret-core",
+ "fret-docking",
  "fret-executor",
+ "fret-gizmo",
+ "fret-icons",
  "fret-icons-radix",
+ "fret-launch",
+ "fret-markdown",
+ "fret-render",
  "fret-runtime",
  "fret-ui",
  "fret-ui-assets",
+ "fret-ui-kit",
+ "fret-undo",
+ "glam 0.30.10",
+ "wgpu",
 ]
 
 [[package]]
@@ -2121,6 +2136,7 @@ dependencies = [
  "glam 0.30.10",
  "image",
  "js-sys",
+ "naga",
  "serde_json",
  "slotmap",
  "time",

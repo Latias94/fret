@@ -207,6 +207,7 @@ fn update_edges_for_ports_dedups_edge_ids_and_updates_index() {
         1.0,
         NodeGraphNodeOrigin::default(),
         &mut presenter,
+        None,
     );
     let mut index = CanvasSpatialDerived::build(&graph, &geom, 1.0, 2.0, 64.0);
 

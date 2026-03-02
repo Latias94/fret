@@ -196,8 +196,8 @@ fn bezier_markers_align_with_bezier_start_end_tangents() {
     });
 
     let mut style = NodeGraphStyle::default();
-    style.node_width = 200.0;
-    style.pin_radius = 6.0;
+    style.geometry.node_width = 200.0;
+    style.geometry.pin_radius = 6.0;
 
     let edge_types = NodeGraphEdgeTypes::new().with_fallback(|_g, _e, _style, mut h| {
         h.start_marker = Some(EdgeMarker::arrow(12.0));

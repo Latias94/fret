@@ -53,9 +53,91 @@ impl Default for NodeGraphColorMode {
     }
 }
 
-/// Visual tuning for the node graph canvas.
-#[derive(Debug, Clone)]
-pub struct NodeGraphStyle {
+/// Geometry-affecting style tokens for the node graph canvas.
+///
+/// These values participate in derived geometry, hit-testing, and automatic node measurement.
+/// Changing them must invalidate geometry caches.
+#[derive(Debug, Clone, PartialEq)]
+pub struct NodeGraphGeometryTokensV1 {
+    pub node_width: f32,
+    pub node_header_height: f32,
+    pub node_padding: f32,
+    pub pin_row_height: f32,
+    pub pin_radius: f32,
+
+    pub resize_handle_size: f32,
+
+    /// Base wire stroke width in screen-space logical px.
+    ///
+    /// Note: hit-testing falls back to `max(edge_interaction_width, wire_width)`.
+    pub wire_width: f32,
+
+    pub min_zoom: f32,
+    pub max_zoom: f32,
+
+    /// Text style used for auto-measuring node title/port labels.
+    pub context_menu_text_style: TextStyle,
+}
+
+impl Default for NodeGraphGeometryTokensV1 {
+    fn default() -> Self {
+        Self {
+            node_width: 220.0,
+            node_header_height: 28.0,
+            node_padding: 10.0,
+            pin_row_height: 22.0,
+            pin_radius: 6.0,
+            resize_handle_size: 12.0,
+            wire_width: 3.0,
+            min_zoom: 0.15,
+            max_zoom: 4.0,
+            context_menu_text_style: TextStyle {
+                size: Px(13.0),
+                ..TextStyle::default()
+            },
+        }
+    }
+}
+
+impl NodeGraphGeometryTokensV1 {
+    /// Fingerprint of geometry-affecting tokens.
+    ///
+    /// This is intended for cache invalidation decisions (derived geometry / spatial index).
+    /// It must stay stable across platforms.
+    pub fn fingerprint(&self) -> u64 {
+        fn mix_u64(mut state: u64, value: u64) -> u64 {
+            state ^= value.wrapping_add(0x9E37_79B9_7F4A_7C15);
+            state = state.rotate_left(7);
+            state = state.wrapping_mul(0xD6E8_FEB8_6659_FD93);
+            state
+        }
+
+        fn mix_f32(state: u64, value: f32) -> u64 {
+            mix_u64(state, u64::from(value.to_bits()))
+        }
+
+        let mut state = 0u64;
+        state = mix_f32(state, self.node_width);
+        state = mix_f32(state, self.node_header_height);
+        state = mix_f32(state, self.node_padding);
+        state = mix_f32(state, self.pin_row_height);
+        state = mix_f32(state, self.pin_radius);
+        state = mix_f32(state, self.resize_handle_size);
+        state = mix_f32(state, self.wire_width);
+        state = mix_f32(state, self.min_zoom);
+        state = mix_f32(state, self.max_zoom);
+        state = mix_f32(state, self.context_menu_text_style.size.0);
+        state = mix_u64(state, u64::from(self.context_menu_text_style.weight.0));
+        state
+    }
+}
+
+/// Paint-only (chrome) style tokens for the node graph canvas.
+///
+/// These values must not affect derived geometry or hit-testing. Changing them should invalidate
+/// paint caches only.
+#[derive(Debug, Clone, PartialEq)]
+pub struct NodeGraphPaintTokensV1 {
     pub background: Color,
 
     pub grid_pattern: NodeGraphBackgroundPattern,
@@ -70,12 +152,7 @@ pub struct NodeGraphStyle {
     /// Cross size in canvas units at zoom=1 (XyFlow `BackgroundProps.size` for cross).
     pub grid_cross_size: f32,
 
-    pub node_width: f32,
-    pub node_header_height: f32,
-    pub node_padding: f32,
     pub node_corner_radius: f32,
-    pub pin_row_height: f32,
-    pub pin_radius: f32,
 
     pub node_background: Color,
     pub node_border: Color,
@@ -84,14 +161,16 @@ pub struct NodeGraphStyle {
     pub group_background: Color,
     pub group_border: Color,
 
-    pub resize_handle_size: f32,
     pub resize_handle_background: Color,
     pub resize_handle_border: Color,
 
     pub pin_color_data: Color,
     pub pin_color_exec: Color,
 
-    pub wire_width: f32,
+    /// Wire hit slop width in screen-space pixels (logical px).
+    ///
+    /// Note: this is retained for now as a convenience token for UI-layer defaults, but the
+    /// authoritative hit slop is persisted in `NodeGraphInteractionState.edge_interaction_width`.
     pub wire_interaction_width: f32,
     pub wire_color_data: Color,
     pub wire_color_exec: Color,
@@ -135,7 +214,6 @@ pub struct NodeGraphStyle {
     pub context_menu_hover_background: Color,
     pub context_menu_text: Color,
     pub context_menu_text_disabled: Color,
-    pub context_menu_text_style: TextStyle,
 
     /// Minimap overlay width in screen pixels.
     pub minimap_width: f32,
@@ -168,12 +246,9 @@ pub struct NodeGraphStyle {
     /// This is used to avoid emitting `SceneOp`s for far-offscreen nodes/edges in large graphs,
     /// while keeping a small prefetch band to reduce pop-in during panning.
     pub render_cull_margin_px: f32,
-
-    pub min_zoom: f32,
-    pub max_zoom: f32,
 }
 
-impl Default for NodeGraphStyle {
+impl Default for NodeGraphPaintTokensV1 {
     fn default() -> Self {
         Self {
             background: Color::from_srgb_hex_rgb(0x14_17_1a),
@@ -187,12 +262,7 @@ impl Default for NodeGraphStyle {
             grid_dot_size: 1.0,
             grid_cross_size: 6.0,
 
-            node_width: 220.0,
-            node_header_height: 28.0,
-            node_padding: 10.0,
             node_corner_radius: 8.0,
-            pin_row_height: 22.0,
-            pin_radius: 6.0,
 
             node_background: Color::from_srgb_hex_rgb(0x1f_21_24),
             node_border: Color::from_srgb_hex_rgb(0x3d_40_42),
@@ -207,7 +277,6 @@ impl Default for NodeGraphStyle {
                 ..Color::from_srgb_hex_rgb(0x3d_40_42)
             },
 
-            resize_handle_size: 12.0,
             resize_handle_background: Color {
                 a: 0.95,
                 ..Color::from_srgb_hex_rgb(0x24_26_29)
@@ -220,7 +289,6 @@ impl Default for NodeGraphStyle {
             pin_color_data: Color::from_srgb_hex_rgb(0x33_8c_f2),
             pin_color_exec: Color::from_srgb_hex_rgb(0xf2_bf_33),
 
-            wire_width: 3.0,
             wire_interaction_width: 14.0,
             wire_color_data: Color::from_srgb_hex_rgb(0x33_8c_f2),
             wire_color_exec: Color::from_srgb_hex_rgb(0xf2_bf_33),
@@ -279,10 +347,6 @@ impl Default for NodeGraphStyle {
             context_menu_hover_background: Color::from_srgb_hex_rgb(0x2b_2e_30),
             context_menu_text: Color::from_srgb_hex_rgb(0xeb_ed_f0),
             context_menu_text_disabled: Color::from_srgb_hex_rgb(0x99_9e_a3),
-            context_menu_text_style: TextStyle {
-                size: Px(13.0),
-                ..TextStyle::default()
-            },
 
             minimap_width: 220.0,
             minimap_height: 140.0,
@@ -305,9 +369,22 @@ impl Default for NodeGraphStyle {
             },
 
             render_cull_margin_px: 256.0,
+        }
+    }
+}
 
-            min_zoom: 0.15,
-            max_zoom: 4.0,
+/// Visual tuning for the node graph canvas.
+#[derive(Debug, Clone)]
+pub struct NodeGraphStyle {
+    pub paint: NodeGraphPaintTokensV1,
+    pub geometry: NodeGraphGeometryTokensV1,
+}
+
+impl Default for NodeGraphStyle {
+    fn default() -> Self {
+        Self {
+            paint: NodeGraphPaintTokensV1::default(),
+            geometry: NodeGraphGeometryTokensV1::default(),
         }
     }
 }
@@ -320,62 +397,66 @@ impl NodeGraphStyle {
     pub fn from_snapshot_with_color_mode(theme: ThemeSnapshot, mode: NodeGraphColorMode) -> Self {
         match mode {
             NodeGraphColorMode::System => Self::from_snapshot(theme),
-            NodeGraphColorMode::Light => Self::xyflow_light_defaults(),
-            NodeGraphColorMode::Dark => Self::default(),
+            NodeGraphColorMode::Light => Self::light_defaults(),
+            NodeGraphColorMode::Dark => Self::dark_defaults(),
         }
     }
 
-    pub fn xyflow_light_defaults() -> Self {
+    /// Light defaults tuned for node editor canvases.
+    ///
+    /// Note: This is intentionally neutral naming. See `docs/workstreams/xyflow-gap-analysis.md`
+    /// for upstream comparisons.
+    pub fn light_defaults() -> Self {
         let mut s = Self::default();
 
-        s.background = Color::from_srgb_hex_rgb(0xfa_fa_fa);
+        s.paint.background = Color::from_srgb_hex_rgb(0xfa_fa_fa);
 
-        s.grid_minor_color = Color::from_srgb_hex_rgb(0xe6_e6_e6);
-        s.grid_major_color = Color::from_srgb_hex_rgb(0xd6_d6_d6);
+        s.paint.grid_minor_color = Color::from_srgb_hex_rgb(0xe6_e6_e6);
+        s.paint.grid_major_color = Color::from_srgb_hex_rgb(0xd6_d6_d6);
 
-        s.node_background = Color::from_srgb_hex_rgb(0xff_ff_ff);
-        s.node_border = Color::from_srgb_hex_rgb(0xc7_c7_c7);
+        s.paint.node_background = Color::from_srgb_hex_rgb(0xff_ff_ff);
+        s.paint.node_border = Color::from_srgb_hex_rgb(0xc7_c7_c7);
 
-        s.group_background = Color {
+        s.paint.group_background = Color {
             a: 0.45,
             ..Color::from_srgb_hex_rgb(0xe6_e6_e6)
         };
-        s.group_border = Color {
+        s.paint.group_border = Color {
             a: 0.90,
             ..Color::from_srgb_hex_rgb(0xc7_c7_c7)
         };
 
-        s.resize_handle_background = Color {
+        s.paint.resize_handle_background = Color {
             a: 0.98,
             ..Color::from_srgb_hex_rgb(0xf5_f5_f5)
         };
-        s.resize_handle_border = Color {
+        s.paint.resize_handle_border = Color {
             a: 0.90,
             ..Color::from_srgb_hex_rgb(0xb3_b3_b3)
         };
 
-        s.wire_color_preview = Color {
+        s.paint.wire_color_preview = Color {
             a: 0.60,
             ..Color::from_srgb_hex_rgb(0x1a_1a_1a)
         };
 
-        s.context_menu_background = Color {
+        s.paint.context_menu_background = Color {
             a: 0.98,
             ..Color::from_srgb_hex_rgb(0xff_ff_ff)
         };
-        s.context_menu_border = Color::from_srgb_hex_rgb(0xc7_c7_c7);
-        s.context_menu_hover_background = Color::from_srgb_hex_rgb(0xeb_f2_ff);
-        s.context_menu_text = Color::from_srgb_hex_rgb(0x1f_1f_1f);
-        s.context_menu_text_disabled = Color::from_srgb_hex_rgb(0x73_73_73);
+        s.paint.context_menu_border = Color::from_srgb_hex_rgb(0xc7_c7_c7);
+        s.paint.context_menu_hover_background = Color::from_srgb_hex_rgb(0xeb_f2_ff);
+        s.paint.context_menu_text = Color::from_srgb_hex_rgb(0x1f_1f_1f);
+        s.paint.context_menu_text_disabled = Color::from_srgb_hex_rgb(0x73_73_73);
 
-        s.edge_label_background = s.context_menu_background;
-        s.edge_label_border = s.context_menu_border;
-        s.edge_label_text = s.context_menu_text;
-        s.edge_label_text_style = s.context_menu_text_style.clone();
+        s.paint.edge_label_background = s.paint.context_menu_background;
+        s.paint.edge_label_border = s.paint.context_menu_border;
+        s.paint.edge_label_text = s.paint.context_menu_text;
+        s.paint.edge_label_text_style = s.geometry.context_menu_text_style.clone();
 
-        s.controls_text = s.context_menu_text;
-        s.controls_hover_background = s.context_menu_hover_background;
-        s.controls_active_background = Color {
+        s.paint.controls_text = s.paint.context_menu_text;
+        s.paint.controls_hover_background = s.paint.context_menu_hover_background;
+        s.paint.controls_active_background = Color {
             a: 0.22,
             ..Color::from_srgb_hex_rgb(0x33_8c_f2)
         };
@@ -383,24 +464,25 @@ impl NodeGraphStyle {
         s
     }
 
-    /// Applies XyFlow default node style tokens (width/padding/radius/handle size/font size).
-    ///
-    /// This only touches node-related sizing/chrome fields. Colors remain unchanged so callers
-    /// can combine it with theme-driven palettes or `colorMode` overrides.
-    pub fn apply_xyflow_default_node_style(&mut self) {
-        // From `@xyflow/system` style defaults (adapted to fret-node's retained rendering):
-        // - node: width 150, padding 10, border radius 3, font-size 12
-        // - handle: 6x6 circle
-        self.node_width = 150.0;
-        self.node_padding = 10.0;
-        self.node_corner_radius = 3.0;
-        self.pin_radius = 3.0;
-        self.context_menu_text_style.size = Px(12.0);
-        self.edge_label_text_style.size = Px(12.0);
+    pub fn dark_defaults() -> Self {
+        Self::default()
     }
 
-    pub fn with_xyflow_default_node_style(mut self) -> Self {
-        self.apply_xyflow_default_node_style();
+    /// Applies compact node style defaults (width/padding/radius/pin size/font size).
+    ///
+    /// This only touches node-related sizing/chrome fields. Colors remain unchanged so callers can
+    /// combine it with theme-driven palettes or `colorMode` overrides.
+    pub fn apply_compact_node_style(&mut self) {
+        self.geometry.node_width = 150.0;
+        self.geometry.node_padding = 10.0;
+        self.paint.node_corner_radius = 3.0;
+        self.geometry.pin_radius = 3.0;
+        self.geometry.context_menu_text_style.size = Px(12.0);
+        self.paint.edge_label_text_style.size = Px(12.0);
+    }
+
+    pub fn with_compact_node_style(mut self) -> Self {
+        self.apply_compact_node_style();
         self
     }
 
@@ -433,129 +515,141 @@ impl NodeGraphStyle {
         let pin_color_exec = theme.colors.viewport_rotate_gizmo;
 
         Self {
-            background,
+            paint: NodeGraphPaintTokensV1 {
+                background,
 
-            grid_pattern: NodeGraphBackgroundPattern::Lines,
-            grid_spacing: 64.0,
-            grid_minor_color: alpha(border, 0.32),
-            grid_major_every: 4,
-            grid_major_color: alpha(border, 0.52),
-            grid_line_width: 1.0,
-            grid_dot_size: 1.0,
-            grid_cross_size: 6.0,
+                grid_pattern: NodeGraphBackgroundPattern::Lines,
+                grid_spacing: 64.0,
+                grid_minor_color: alpha(border, 0.32),
+                grid_major_every: 4,
+                grid_major_color: alpha(border, 0.52),
+                grid_line_width: 1.0,
+                grid_dot_size: 1.0,
+                grid_cross_size: 6.0,
 
-            node_width: 220.0,
-            node_header_height: 28.0,
-            node_padding: padding_md,
-            node_corner_radius: radius_sm.max(8.0),
-            pin_row_height: 22.0,
-            pin_radius: radius_sm,
+                node_corner_radius: radius_sm.max(8.0),
 
-            node_background: card,
-            node_border: border,
-            node_border_selected: alpha(ring, 1.0),
+                node_background: card,
+                node_border: border,
+                node_border_selected: alpha(ring, 1.0),
 
-            group_background: alpha(card, 0.25),
-            group_border: alpha(border, 0.90),
+                group_background: alpha(card, 0.25),
+                group_border: alpha(border, 0.90),
 
-            resize_handle_size: 12.0,
-            resize_handle_background: alpha(popover, 0.95),
-            resize_handle_border: alpha(border, 0.90),
+                resize_handle_background: alpha(popover, 0.95),
+                resize_handle_border: alpha(border, 0.90),
 
-            pin_color_data,
-            pin_color_exec,
+                pin_color_data,
+                pin_color_exec,
 
-            wire_width: 3.0,
-            wire_interaction_width: 14.0,
-            wire_color_data: pin_color_data,
-            wire_color_exec: pin_color_exec,
-            wire_color_preview: alpha(theme.color_token("foreground"), 0.85),
+                wire_interaction_width: 14.0,
+                wire_color_data: pin_color_data,
+                wire_color_exec: pin_color_exec,
+                wire_color_preview: alpha(theme.color_token("foreground"), 0.85),
 
-            wire_width_selected_mul: 1.6,
-            wire_width_hover_mul: 1.25,
+                wire_width_selected_mul: 1.6,
+                wire_width_hover_mul: 1.25,
 
-            edge_label_padding: padding_sm.max(6.0),
-            edge_label_corner_radius: radius_sm,
-            edge_label_offset: 10.0,
-            edge_label_max_width: 220.0,
-            edge_label_background: alpha(popover, 0.98),
-            edge_label_border: alpha(popover_border, 1.0),
-            edge_label_border_width: 1.0,
-            edge_label_text: popover_foreground,
-            edge_label_text_style: TextStyle {
-                size: Px(font_size),
-                ..TextStyle::default()
+                edge_label_padding: padding_sm.max(6.0),
+                edge_label_corner_radius: radius_sm,
+                edge_label_offset: 10.0,
+                edge_label_max_width: 220.0,
+                edge_label_background: alpha(popover, 0.98),
+                edge_label_border: alpha(popover_border, 1.0),
+                edge_label_border_width: 1.0,
+                edge_label_text: popover_foreground,
+                edge_label_text_style: TextStyle {
+                    size: Px(font_size),
+                    ..TextStyle::default()
+                },
+
+                marquee_fill: theme.colors.viewport_selection_fill,
+                marquee_border: theme.colors.viewport_selection_stroke,
+                marquee_border_width: 1.0,
+
+                snapline_color: theme.colors.viewport_marker,
+                snapline_width: 1.0,
+
+                context_menu_width: 200.0,
+                context_menu_padding: padding_sm.max(6.0),
+                context_menu_item_height: 26.0,
+                context_menu_corner_radius: radius_sm,
+                context_menu_background: alpha(popover, 0.98),
+                context_menu_border: alpha(popover_border, 1.0),
+                context_menu_hover_background: accent,
+                context_menu_text: popover_foreground,
+                context_menu_text_disabled: muted_foreground,
+
+                minimap_width: 220.0,
+                minimap_height: 140.0,
+                minimap_margin: padding_md.max(10.0),
+                minimap_world_padding: 48.0,
+
+                controls_button_size: 30.0,
+                controls_gap: padding_sm.max(6.0),
+                controls_margin: padding_md.max(10.0),
+                controls_padding: padding_sm.max(6.0),
+                controls_text: popover_foreground,
+                controls_text_style: TextStyle {
+                    size: Px(font_size),
+                    ..TextStyle::default()
+                },
+                controls_hover_background: accent,
+                controls_active_background: alpha(ring, 0.22),
+
+                render_cull_margin_px: 256.0,
             },
-
-            marquee_fill: theme.colors.viewport_selection_fill,
-            marquee_border: theme.colors.viewport_selection_stroke,
-            marquee_border_width: 1.0,
-
-            snapline_color: theme.colors.viewport_marker,
-            snapline_width: 1.0,
-
-            context_menu_width: 200.0,
-            context_menu_padding: padding_sm.max(6.0),
-            context_menu_item_height: 26.0,
-            context_menu_corner_radius: radius_sm,
-            context_menu_background: alpha(popover, 0.98),
-            context_menu_border: alpha(popover_border, 1.0),
-            context_menu_hover_background: accent,
-            context_menu_text: popover_foreground,
-            context_menu_text_disabled: muted_foreground,
-            context_menu_text_style: TextStyle {
-                size: Px(font_size),
-                ..TextStyle::default()
+            geometry: NodeGraphGeometryTokensV1 {
+                node_width: 220.0,
+                node_header_height: 28.0,
+                node_padding: padding_md,
+                pin_row_height: 22.0,
+                pin_radius: radius_sm,
+                resize_handle_size: 12.0,
+                wire_width: 3.0,
+                min_zoom: 0.15,
+                max_zoom: 4.0,
+                context_menu_text_style: TextStyle {
+                    size: Px(font_size),
+                    ..TextStyle::default()
+                },
             },
-
-            minimap_width: 220.0,
-            minimap_height: 140.0,
-            minimap_margin: padding_md.max(10.0),
-            minimap_world_padding: 48.0,
-
-            controls_button_size: 30.0,
-            controls_gap: padding_sm.max(6.0),
-            controls_margin: padding_md.max(10.0),
-            controls_padding: padding_sm.max(6.0),
-            controls_text: popover_foreground,
-            controls_text_style: TextStyle {
-                size: Px(font_size),
-                ..TextStyle::default()
-            },
-            controls_hover_background: accent,
-            controls_active_background: alpha(ring, 0.22),
-
-            render_cull_margin_px: 256.0,
-
-            min_zoom: 0.15,
-            max_zoom: 4.0,
         }
     }
 
     pub fn background_style(&self) -> NodeGraphBackgroundStyle {
         NodeGraphBackgroundStyle {
-            background: self.background,
-            grid_pattern: self.grid_pattern,
-            grid_spacing: self.grid_spacing,
-            grid_minor_color: self.grid_minor_color,
-            grid_major_every: self.grid_major_every,
-            grid_major_color: self.grid_major_color,
-            grid_line_width: self.grid_line_width,
-            grid_dot_size: self.grid_dot_size,
-            grid_cross_size: self.grid_cross_size,
+            background: self.paint.background,
+            grid_pattern: self.paint.grid_pattern,
+            grid_spacing: self.paint.grid_spacing,
+            grid_minor_color: self.paint.grid_minor_color,
+            grid_major_every: self.paint.grid_major_every,
+            grid_major_color: self.paint.grid_major_color,
+            grid_line_width: self.paint.grid_line_width,
+            grid_dot_size: self.paint.grid_dot_size,
+            grid_cross_size: self.paint.grid_cross_size,
         }
     }
 
     pub fn with_background_style(mut self, background: NodeGraphBackgroundStyle) -> Self {
-        self.background = background.background;
-        self.grid_pattern = background.grid_pattern;
-        self.grid_spacing = background.grid_spacing;
-        self.grid_minor_color = background.grid_minor_color;
-        self.grid_major_every = background.grid_major_every;
-        self.grid_major_color = background.grid_major_color;
-        self.grid_line_width = background.grid_line_width;
-        self.grid_dot_size = background.grid_dot_size;
-        self.grid_cross_size = background.grid_cross_size;
+        self.paint.background = background.background;
+        self.paint.grid_pattern = background.grid_pattern;
+        self.paint.grid_spacing = background.grid_spacing;
+        self.paint.grid_minor_color = background.grid_minor_color;
+        self.paint.grid_major_every = background.grid_major_every;
+        self.paint.grid_major_color = background.grid_major_color;
+        self.paint.grid_line_width = background.grid_line_width;
+        self.paint.grid_dot_size = background.grid_dot_size;
+        self.paint.grid_cross_size = background.grid_cross_size;
         self
+    }
+
+    /// Fingerprint of geometry-affecting tokens.
+    ///
+    /// This is intended for cache invalidation decisions (derived geometry / spatial index).
+    /// It must stay stable across platforms and should only include tokens that change node/port
+    /// bounds or anchors.
+    pub fn geometry_fingerprint(&self) -> u64 {
+        self.geometry.fingerprint()
     }
 }

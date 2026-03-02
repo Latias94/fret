@@ -11,9 +11,9 @@ pub(crate) fn node_size_default_px(
     // Keep a minimum chrome height even for nodes without ports so they don't collapse to a tiny
     // header-only box (XyFlow default nodes effectively have at least one source/target handle).
     let rows = input_count.max(output_count).max(1) as f32;
-    let base = style.node_header_height + 2.0 * style.node_padding;
-    let pin_area = rows * style.pin_row_height;
-    (style.node_width, base + pin_area)
+    let base = style.geometry.node_header_height + 2.0 * style.geometry.node_padding;
+    let pin_area = rows * style.geometry.pin_row_height;
+    (style.geometry.node_width, base + pin_area)
 }
 
 pub(crate) fn port_center(
@@ -28,8 +28,8 @@ pub(crate) fn port_center(
         PortDirection::Out => node_rect.origin.x.0 + node_rect.size.width.0,
     };
     let y = node_rect.origin.y.0
-        + (style.node_header_height + style.node_padding) / zoom
-        + (row as f32 + 0.5) * (style.pin_row_height / zoom);
+        + (style.geometry.node_header_height + style.geometry.node_padding) / zoom
+        + (row as f32 + 0.5) * (style.geometry.pin_row_height / zoom);
 
     Point::new(Px(x), Px(y))
 }

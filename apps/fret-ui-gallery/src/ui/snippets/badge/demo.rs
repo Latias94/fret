@@ -1,3 +1,5 @@
+pub const SOURCE: &str = include_str!("demo.rs");
+
 // region: example
 use fret_core::window::ColorScheme;
 use fret_ui::Invalidation;

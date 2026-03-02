@@ -1,3 +1,5 @@
+pub const SOURCE: &str = include_str!("required.rs");
+
 // region: example
 use fret_core::Px;
 use fret_ui::element::SemanticsDecoration;

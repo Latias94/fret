@@ -83,6 +83,9 @@ then tighten behavior and add gates.
 
 ## Milestone 5 — Combobox v4 part surface convergence
 
+Note: This work is now tracked in `docs/workstreams/select-combobox-deep-redesign-v1/`.
+Keep this milestone for historical context only.
+
 `combobox` is the largest remaining surface gap because upstream is Base UI-rooted and the shadcn
 v4 part surface is not yet represented in Rust. The prior naming conflict (`ComboboxItem` as a
 data model) has been resolved by moving option structs to `ComboboxOption` /
@@ -105,6 +108,9 @@ data model) has been resolved by moving option structs to `ComboboxOption` /
   some Tailwind constraints map to explicit `.w_full()` / `.min_w_0()` calls).
 
 ## Milestone 6 — Select v4 part surface convergence (Deferred)
+
+Note: This work is now tracked in `docs/workstreams/select-combobox-deep-redesign-v1/`.
+Keep this milestone for historical context only.
 
 `select` is currently implemented as a configuration + entries surface. This is productive, but it
 is structurally different from shadcn/ui v4’s part-based composition model (Trigger/Value/Content

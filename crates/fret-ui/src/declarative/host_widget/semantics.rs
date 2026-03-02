@@ -365,6 +365,7 @@ impl ElementHostWidget {
             | ElementInstance::ForegroundScope(_)
             | ElementInstance::Opacity(_)
             | ElementInstance::EffectLayer(_)
+            | ElementInstance::BackdropSourceGroup(_)
             | ElementInstance::MaskLayer(_)
             | ElementInstance::CompositeGroup(_)
             | ElementInstance::VisualTransform(_)

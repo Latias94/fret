@@ -57,6 +57,9 @@ fn viewport_cancel_reason_label(reason: fret_core::PointerCancelReason) -> &'sta
 fn event_kind(event: &Event) -> String {
     match event {
         Event::Pointer(p) => format!("pointer.{}", p.kind()),
+        Event::PointerCancel(e) => {
+            format!("pointer.cancel.{}", viewport_cancel_reason_label(e.reason))
+        }
         Event::KeyDown { .. } => "key.down".to_string(),
         Event::KeyUp { .. } => "key.up".to_string(),
         Event::TextInput(_) => "text.input".to_string(),

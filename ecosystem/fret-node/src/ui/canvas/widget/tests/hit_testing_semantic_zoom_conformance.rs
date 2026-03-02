@@ -60,7 +60,7 @@ fn port_hit_testing_is_screen_px_invariant_under_semantic_zoom() {
     let mut canvas = NodeGraphCanvas::new(graph, view.clone());
 
     let anchor_window = Point::new(Px(300.0), Px(200.0));
-    let r_px = canvas.style.pin_radius.max(0.0);
+    let r_px = canvas.style.geometry.pin_radius.max(0.0);
 
     // Test a spread of zoom levels; the port visual radius stays constant in window space
     // under semantic zoom.

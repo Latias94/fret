@@ -254,6 +254,42 @@ mod tests {
     }
 
     #[test]
+    fn progress_opt_none_matches_shadcn_value_or_zero_and_stamps_semantics() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+
+        fret_ui::elements::with_element_cx(&mut app, window, bounds(), "test", |cx| {
+            let model = cx.app.models_mut().insert(None::<f32>);
+            let el = Progress::new_opt(model).into_element(cx);
+
+            // shadcn/ui: `transform: translateX(-${100 - (value || 0)}%)`
+            // When value is None, treat it as 0%.
+            let tx = find_translate_x_fraction(&el).expect("translate_x_fraction");
+            assert!(
+                (tx + 1.0).abs() <= 1e-6,
+                "expected translate fraction -1.0, got {tx}"
+            );
+
+            let semantics = el
+                .semantics_decoration
+                .as_ref()
+                .expect("semantics decoration");
+            assert_eq!(semantics.role, Some(SemanticsRole::ProgressBar));
+            assert_eq!(
+                semantics.orientation,
+                Some(SemanticsOrientation::Horizontal),
+                "expected progress bar to be horizontal by default"
+            );
+            assert_eq!(semantics.min_numeric_value, Some(0.0));
+            assert_eq!(semantics.max_numeric_value, Some(100.0));
+            assert_eq!(
+                semantics.numeric_value, None,
+                "expected None value to omit numeric_value"
+            );
+        });
+    }
+
+    #[test]
     fn progress_values_first_reads_first_entry() {
         let window = AppWindowId::default();
         let mut app = App::new();
