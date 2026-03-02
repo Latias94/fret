@@ -121,12 +121,15 @@ fn fret_custom_effect(src: vec4<f32>, _uv: vec2<f32>, pos_px: vec2<f32>, params:
   let refract = -d * g1;
 
   // Dispersion: either cheap 3-tap (default) or Android-like 7-tap (higher cost, nicer color).
-  let disp_k = dispersion * abs((centered.x * centered.y) / max(half_size.x * half_size.y, 1.0));
+  //
+  // Note: match AndroidLiquidGlass's `dispersionIntensity` sign behavior (no `abs`), so the
+  // dispersion direction flips across quadrants.
+  let disp_k = dispersion * ((centered.x * centered.y) / max(half_size.x * half_size.y, 1.0));
   let disp = refract * disp_k;
   let use_7tap = dispersion_quality > 0.5;
 
   var raw = fret_sample_src_raw_bilinear_at_pos(pos_px + refract);
-  if (dispersion > 0.0 && disp_k > 1.0e-6) {
+  if (dispersion > 0.0 && abs(disp_k) > 1.0e-6) {
     if (!use_7tap) {
       let raw_r = fret_sample_src_raw_bilinear_at_pos(pos_px + refract + disp);
       let raw_g = raw;
