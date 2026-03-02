@@ -67,6 +67,35 @@ We explicitly choose a “default declarative” posture:
   widget/editor stack. This enables `fret-ui/unstable-retained-bridge` transitively and is
   intentionally **not** part of `fret-node`'s default feature set.
 
+## Ecosystem authoring guide (recommended)
+
+This workstream aims to make downstream ecosystem authors productive without touching retained APIs.
+
+### Recommended (declarative-first)
+
+- Depend on `fret-node` with UI enabled, without the retained bridge:
+  - `fret-node = { version = "0.1.0", features = ["fret-ui"] }`
+- Compose the node graph surface as a normal declarative element:
+  - paint-only milestone surface: `fret_node::ui::node_graph_surface_paint_only`
+- Keep editor state in models:
+  - graph: `Model<Graph>`
+  - view state: `Model<NodeGraphViewState>`
+  - derived caches: `Model<...>` keyed by (rev, viewport/cull, effective scale)
+
+### Compatibility (retained escape hatch)
+
+Enable this only when you have a concrete missing declarative mechanism and an exit plan:
+
+- `fret-node = { version = "0.1.0", features = ["compat-retained-canvas"] }`
+- Use retained-backed entrypoints internally:
+  - declarative root hosting retained: `fret_node::ui::node_graph_surface_compat_retained`
+  - `imui` subtree adapter: `fret_node::imui::*`
+
+### API red lines
+
+- Do not expose `UiTree`, `Widget`, or `fret_ui::retained_bridge::*` in downstream public APIs.
+- Prefer caches + invalidation discipline over per-frame recomputation.
+
 ## Context (current state)
 
 Today, `fret-node` is structurally “headless model + optional UI”. The UI/editor side uses a

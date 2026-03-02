@@ -102,8 +102,8 @@ Suggested run commands (Windows-friendly):
 - [x] Remove `unstable-retained-bridge` from `fret-node` default features.
 - [x] Keep retained implementation behind an explicit `compat-retained-canvas` feature.
 - [ ] Add a short “Ecosystem authoring guide” section describing:
-  - [ ] when to use declarative canvas composition,
-  - [ ] when a compatibility path is justified.
+  - [x] when to use declarative canvas composition,
+  - [x] when a compatibility path is justified.
 
 ## Contract gap log (living)
 
