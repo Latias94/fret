@@ -11,12 +11,11 @@ use std::collections::hash_map::Entry;
 const MAX_CUSTOM_EFFECT_WGSL_BYTES: usize = 64 * 1024;
 
 fn validate_custom_effect_wgsl_triplet(
+    abi: CustomEffectAbi,
     user_source: &str,
     wgsl_unmasked: &str,
     wgsl_masked: &str,
     wgsl_mask: &str,
-    parse_failed_msg: &'static str,
-    validation_failed_msg: &'static str,
 ) -> Result<(), fret_core::CustomEffectRegistrationError> {
     use naga::valid::{Capabilities, ValidationFlags, Validator};
 
@@ -31,11 +30,11 @@ fn validate_custom_effect_wgsl_triplet(
         ("mask", wgsl_mask),
     ] {
         let module = naga::front::wgsl::parse_str(src).map_err(|err| {
-            tracing::warn!(?err, %label, "{parse_failed_msg}");
+            tracing::warn!(?err, %label, ?abi, "custom effect wgsl parse failed");
             fret_core::CustomEffectRegistrationError::InvalidSource
         })?;
         validator.validate(&module).map_err(|err| {
-            tracing::warn!(?err, %label, "{validation_failed_msg}");
+            tracing::warn!(?err, %label, ?abi, "custom effect wgsl validation failed");
             fret_core::CustomEffectRegistrationError::InvalidSource
         })?;
     }
@@ -44,12 +43,11 @@ fn validate_custom_effect_wgsl_triplet(
 }
 
 fn build_and_validate_custom_effect_wgsl_with_sources(
+    abi: CustomEffectAbi,
     user_source: &str,
     unmasked_source: fn(&str) -> String,
     masked_source: fn(&str) -> String,
     mask_source: fn(&str) -> String,
-    parse_failed_msg: &'static str,
-    validation_failed_msg: &'static str,
 ) -> Result<(String, String, String), fret_core::CustomEffectRegistrationError> {
     if user_source.len() > MAX_CUSTOM_EFFECT_WGSL_BYTES {
         return Err(fret_core::CustomEffectRegistrationError::InvalidSource);
@@ -60,12 +58,11 @@ fn build_and_validate_custom_effect_wgsl_with_sources(
     let wgsl_mask = mask_source(user_source);
 
     validate_custom_effect_wgsl_triplet(
+        abi,
         user_source,
         &wgsl_unmasked,
         &wgsl_masked,
         &wgsl_mask,
-        parse_failed_msg,
-        validation_failed_msg,
     )?;
 
     Ok((wgsl_unmasked, wgsl_masked, wgsl_mask))
@@ -75,12 +72,11 @@ fn build_and_validate_custom_effect_wgsl_v1(
     user_source: &str,
 ) -> Result<(String, String, String), fret_core::CustomEffectRegistrationError> {
     build_and_validate_custom_effect_wgsl_with_sources(
+        CustomEffectAbi::V1,
         user_source,
         custom_effect_unmasked_shader_source,
         custom_effect_masked_shader_source,
         custom_effect_mask_shader_source,
-        "custom effect v1 wgsl parse failed",
-        "custom effect v1 wgsl validation failed",
     )
 }
 
@@ -88,12 +84,11 @@ fn build_and_validate_custom_effect_wgsl_v2(
     user_source: &str,
 ) -> Result<(String, String, String), fret_core::CustomEffectRegistrationError> {
     build_and_validate_custom_effect_wgsl_with_sources(
+        CustomEffectAbi::V2,
         user_source,
         custom_effect_v2_unmasked_shader_source,
         custom_effect_v2_masked_shader_source,
         custom_effect_v2_mask_shader_source,
-        "custom effect v2 wgsl parse failed",
-        "custom effect v2 wgsl validation failed",
     )
 }
 
@@ -101,12 +96,11 @@ fn build_and_validate_custom_effect_wgsl_v3(
     user_source: &str,
 ) -> Result<(String, String, String), fret_core::CustomEffectRegistrationError> {
     build_and_validate_custom_effect_wgsl_with_sources(
+        CustomEffectAbi::V3,
         user_source,
         custom_effect_v3_unmasked_shader_source,
         custom_effect_v3_masked_shader_source,
         custom_effect_v3_mask_shader_source,
-        "custom effect v3 wgsl parse failed",
-        "custom effect v3 wgsl validation failed",
     )
 }
 
