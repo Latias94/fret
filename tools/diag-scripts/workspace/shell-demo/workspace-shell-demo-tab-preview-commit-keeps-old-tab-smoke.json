@@ -1,0 +1,62 @@
+{
+  "schema_version": 2,
+  "meta": {
+    "name": "Workspace shell demo: committing preview keeps old tab when opening a new preview (smoke)",
+    "tags": ["workspace", "tabstrip", "preview", "commit", "smoke", "gate"],
+    "required_capabilities": ["diag.script_v2"],
+    "env_defaults": {
+      "FRET_WORKSPACE_SHELL_DEBUG_PREVIEW": "1"
+    },
+    "target_hints": [
+      "Opens preview A, commits it, then opens preview B.",
+      "Asserts the committed preview remains as a normal tab and the new preview is marked as preview."
+    ]
+  },
+  "steps": [
+    { "type": "set_window_inner_size", "width_px": 1280.0, "height_px": 720.0 },
+    { "type": "wait_frames", "n": 10 },
+
+    {
+      "type": "wait_until",
+      "predicate": { "kind": "exists", "target": { "kind": "test_id", "id": "workspace-shell-pane-pane-a-debug-open-preview-a" } },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": { "kind": "exists", "target": { "kind": "test_id", "id": "workspace-shell-pane-pane-a-debug-commit-preview" } },
+      "timeout_frames": 240
+    },
+
+    { "type": "click", "target": { "kind": "test_id", "id": "workspace-shell-pane-pane-a-debug-open-preview-a" } },
+    { "type": "wait_frames", "n": 6 },
+    {
+      "type": "wait_until",
+      "predicate": { "kind": "exists", "target": { "kind": "test_id", "id": "workspace-shell-pane-pane-a-tab-doc-a-preview-a.preview" } },
+      "timeout_frames": 240
+    },
+
+    { "type": "click", "target": { "kind": "test_id", "id": "workspace-shell-pane-pane-a-debug-commit-preview" } },
+    { "type": "wait_frames", "n": 6 },
+    {
+      "type": "wait_until",
+      "predicate": { "kind": "not_exists", "target": { "kind": "test_id", "id": "workspace-shell-pane-pane-a-tab-doc-a-preview-a.preview" } },
+      "timeout_frames": 240
+    },
+
+    { "type": "click", "target": { "kind": "test_id", "id": "workspace-shell-pane-pane-a-debug-open-preview-b" } },
+    { "type": "wait_frames", "n": 6 },
+    {
+      "type": "wait_until",
+      "predicate": { "kind": "exists", "target": { "kind": "test_id", "id": "workspace-shell-pane-pane-a-tab-doc-a-preview-a" } },
+      "timeout_frames": 240
+    },
+    { "type": "assert", "predicate": { "kind": "not_exists", "target": { "kind": "test_id", "id": "workspace-shell-pane-pane-a-tab-doc-a-preview-a.preview" } } },
+    {
+      "type": "wait_until",
+      "predicate": { "kind": "exists", "target": { "kind": "test_id", "id": "workspace-shell-pane-pane-a-tab-doc-a-preview-b.preview" } },
+      "timeout_frames": 240
+    },
+
+    { "type": "capture_bundle", "label": "workspace-shell-demo-tab-preview-commit-keeps-old-tab-smoke" }
+  ]
+}

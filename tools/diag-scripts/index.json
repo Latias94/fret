@@ -4555,6 +4555,49 @@
       ]
     },
     {
+      "id": "workspace-shell-demo-tab-preview-commit-keeps-old-tab-smoke",
+      "path": "tools/diag-scripts/workspace/shell-demo/workspace-shell-demo-tab-preview-commit-keeps-old-tab-smoke.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "workspace-shell-demo"
+      ],
+      "tags": [
+        "commit",
+        "gate",
+        "preview",
+        "smoke",
+        "tabstrip",
+        "workspace"
+      ],
+      "target_hints": [
+        "Opens preview A, commits it, then opens preview B.",
+        "Asserts the committed preview remains as a normal tab and the new preview is marked as preview."
+      ]
+    },
+    {
+      "id": "workspace-shell-demo-tab-preview-replaces-existing-smoke",
+      "path": "tools/diag-scripts/workspace/shell-demo/workspace-shell-demo-tab-preview-replaces-existing-smoke.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "workspace-shell-demo"
+      ],
+      "tags": [
+        "gate",
+        "preview",
+        "smoke",
+        "tabstrip",
+        "workspace"
+      ],
+      "target_hints": [
+        "Clicks the demo-only debug controls to open preview A, then preview B.",
+        "Asserts the previous preview tab is replaced (removed) and the new one is marked as preview."
+      ]
+    },
+    {
       "id": "workspace-shell-demo-tab-reorder-first-to-end-overflow-smoke",
       "path": "tools/diag-scripts/workspace/shell-demo/workspace-shell-demo-tab-reorder-first-to-end-overflow-smoke.json",
       "required_capabilities": [
