@@ -543,7 +543,7 @@ fn page_preview(
         PAGE_COMMAND => {
             pages::preview_command_palette(cx, cmdk_open, cmdk_query, last_action.clone())
         }
-        PAGE_TOAST => preview_toast(cx, last_action.clone()),
+        PAGE_TOAST => pages::preview_toast(cx, last_action.clone()),
         PAGE_SONNER => preview_sonner(cx, last_action.clone(), sonner_position.clone()),
         PAGE_ALERT => pages::preview_alert(cx),
         PAGE_ALERT_DIALOG => pages::preview_alert_dialog(cx, alert_dialog_open),

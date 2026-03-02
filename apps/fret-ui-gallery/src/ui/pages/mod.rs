@@ -53,6 +53,7 @@ mod spinner;
 mod switch;
 mod table;
 mod tabs;
+mod toast;
 mod toggle;
 mod toggle_group;
 mod textarea;
@@ -164,6 +165,13 @@ pub(super) fn preview_command_palette(
     last_action: Model<Arc<str>>,
 ) -> Vec<AnyElement> {
     command::preview_command_palette(cx, open, query, last_action)
+}
+
+pub(super) fn preview_toast(
+    cx: &mut ElementContext<'_, App>,
+    last_action: Model<Arc<str>>,
+) -> Vec<AnyElement> {
+    toast::preview_toast(cx, last_action)
 }
 
 pub(super) fn preview_context_menu(

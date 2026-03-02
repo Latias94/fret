@@ -1,19 +1,20 @@
-use super::super::super::super::*;
+// region: example
+use crate::spec::CMD_NAV_SONNER;
+use fret_app::App;
+use fret_core::Px;
+use fret_ui_shadcn::{self as shadcn, prelude::*};
 
-pub(in crate::ui) fn preview_toast(
-    cx: &mut ElementContext<'_, App>,
-    _last_action: Model<Arc<str>>,
-) -> Vec<AnyElement> {
-    let centered = |cx: &mut ElementContext<'_, App>, body: AnyElement| {
-        stack::hstack(
-            cx,
-            stack::HStackProps::default()
-                .layout(LayoutRefinement::default().w_full())
-                .justify_center(),
-            move |_cx| [body],
-        )
-    };
+fn centered(cx: &mut ElementContext<'_, App>, body: AnyElement) -> AnyElement {
+    stack::hstack(
+        cx,
+        stack::HStackProps::default()
+            .layout(LayoutRefinement::default().w_full())
+            .justify_center(),
+        move |_cx| [body],
+    )
+}
 
+pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
     let deprecated_card = shadcn::Card::new(vec![
         shadcn::CardHeader::new(vec![
             shadcn::CardTitle::new("Toast is deprecated").into_element(cx),
@@ -41,10 +42,8 @@ pub(in crate::ui) fn preview_toast(
     .into_element(cx)
     .test_id("ui-gallery-toast-deprecated");
 
-    let centered_card = centered(cx, deprecated_card);
-
-    vec![
-        cx.text("A succinct message that is displayed temporarily."),
-        centered_card,
-    ]
+    centered(cx, deprecated_card)
 }
+
+// endregion: example
+

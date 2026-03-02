@@ -57,6 +57,7 @@ pub mod spinner;
 pub mod switch;
 pub mod table;
 pub mod tabs;
+pub mod toast;
 pub mod toggle;
 pub mod toggle_group;
 pub mod textarea;
