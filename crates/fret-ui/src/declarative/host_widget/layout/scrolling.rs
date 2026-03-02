@@ -107,6 +107,7 @@ fn observe_scroll_overflow_extents<T: ScrollOverflowTree>(
     axis: crate::element::ScrollAxis,
     content_size: Size,
     extent_may_be_stale: bool,
+    deep_scan_allowed: bool,
 ) -> (Size, UiDebugScrollOverflowObservationTelemetry) {
     let mut observed = Size::new(Px(0.0), Px(0.0));
     const MAX_BARRIER_WRAPPER_CHAIN: usize = 8;
@@ -197,7 +198,8 @@ fn observe_scroll_overflow_extents<T: ScrollOverflowTree>(
             observed.height = Px(observed.height.0.max(bottom));
         }
 
-        if extent_may_be_stale
+        if deep_scan_allowed
+            && extent_may_be_stale
             && ((axis.scroll_x() && observed.width.0 <= content_size.width.0 + 0.5)
                 || (axis.scroll_y() && observed.height.0 <= content_size.height.0 + 0.5))
         {
@@ -1538,6 +1540,7 @@ impl ElementHostWidget {
                 props.axis,
                 Size::new(content_w, content_h),
                 extent_may_be_stale,
+                at_scroll_extent_edge && extent_may_be_stale && !must_probe_for_growing_extent,
             );
 
             if crate::runtime_config::ui_runtime_config().debug_scroll_extent_probe
@@ -1907,6 +1910,7 @@ mod tests {
             crate::element::ScrollAxis::Y,
             Size::new(Px(100.0), Px(100.0)),
             false,
+            false,
         );
 
         assert_eq!(observed.height, Px(300.0));
@@ -1945,6 +1949,7 @@ mod tests {
             content_bounds,
             crate::element::ScrollAxis::Y,
             Size::new(Px(100.0), Px(100.0)),
+            true,
             true,
         );
 
@@ -1985,6 +1990,7 @@ mod tests {
             crate::element::ScrollAxis::Y,
             Size::new(Px(100.0), Px(100.0)),
             false,
+            true,
         );
 
         assert_eq!(observed.height, Px(100.0));
@@ -2015,6 +2021,7 @@ mod tests {
             content_bounds,
             crate::element::ScrollAxis::Y,
             Size::new(Px(100.0), Px(100.0)),
+            true,
             true,
         );
 
@@ -2055,6 +2062,7 @@ mod tests {
             content_bounds,
             crate::element::ScrollAxis::Y,
             Size::new(Px(100.0), Px(100.0)),
+            true,
             true,
         );
 
