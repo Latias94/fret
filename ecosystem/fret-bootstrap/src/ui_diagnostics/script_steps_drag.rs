@@ -808,6 +808,8 @@ pub(super) fn handle_drag_to_step(
                 step_index,
                 remaining_frames: timeout_frames,
                 playback: None,
+                down_issued: false,
+                mouse_buttons_override_issued: false,
             },
         };
 
@@ -961,8 +963,51 @@ pub(super) fn handle_drag_to_step(
             drag_playback_last_position(&playback).x.0,
             drag_playback_last_position(&playback).y.0,
         );
+
+        if playback.frame >= 1 {
+            state.down_issued = true;
+        }
+        if state.down_issued
+            && !state.mouse_buttons_override_issued
+            && matches!(pointer_type, PointerType::Mouse)
+        {
+            let _ = write_mouse_buttons_override_all_windows_v1(
+                &svc.cfg.out_dir,
+                match playback.button {
+                    UiMouseButtonV1::Left => Some(true),
+                    _ => None,
+                },
+                match playback.button {
+                    UiMouseButtonV1::Right => Some(true),
+                    _ => None,
+                },
+                match playback.button {
+                    UiMouseButtonV1::Middle => Some(true),
+                    _ => None,
+                },
+            );
+            state.mouse_buttons_override_issued = true;
+        }
+
         output.request_redraw = true;
         if done {
+            if state.mouse_buttons_override_issued && matches!(pointer_type, PointerType::Mouse) {
+                let _ = write_mouse_buttons_override_all_windows_v1(
+                    &svc.cfg.out_dir,
+                    match playback.button {
+                        UiMouseButtonV1::Left => Some(false),
+                        _ => None,
+                    },
+                    match playback.button {
+                        UiMouseButtonV1::Right => Some(false),
+                        _ => None,
+                    },
+                    match playback.button {
+                        UiMouseButtonV1::Middle => Some(false),
+                        _ => None,
+                    },
+                );
+            }
             active.pending_cancel_cross_window_drag =
                 Some(PendingCancelCrossWindowDrag::new(PointerId(0)));
             active.v2_step_state = None;

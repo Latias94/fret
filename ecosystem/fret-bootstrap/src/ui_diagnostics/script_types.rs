@@ -305,6 +305,11 @@ pub(super) struct V2DragToState {
     pub(super) step_index: usize,
     pub(super) remaining_frames: u32,
     pub(super) playback: Option<V2DragPointerState>,
+    /// If true, the step has issued a pointer down and should release on completion.
+    pub(super) down_issued: bool,
+    /// If true, a runner-visible mouse button override has been emitted to mirror the pressed
+    /// state of the synthetic drag session.
+    pub(super) mouse_buttons_override_issued: bool,
 }
 
 #[derive(Debug, Clone)]

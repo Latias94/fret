@@ -41,8 +41,21 @@ This workstream is intentionally scoped to “editor-grade tab UX”:
       - Bundle snapshot mapping: `ecosystem/fret-bootstrap/src/ui_diagnostics/workspace_diagnostics.rs`
       - Predicates + script runner wiring: `ecosystem/fret-bootstrap/src/ui_diagnostics/predicates.rs`
       - Protocol predicate variants: `crates/fret-diag-protocol/src/lib.rs`
-  - [ ] Drag end-drop on overflow header space resolves canonical insert_index:
-    - Existing docking gate covers end-drop under overflow; workspace coverage still needed.
+  - [x] Drag end-drop on overflow header space resolves canonical insert_index:
+    - Workspace gate: drag first tab to end-drop while overflowed.
+      - Script: `tools/diag-scripts/workspace/shell-demo/workspace-shell-demo-tab-reorder-first-to-end-overflow-smoke.json`
+      - End-drop surface: `workspace-shell-pane-pane-a-tab-strip.drop_end`
+      - Overflow precondition: `workspace_tab_strip_active_overflow_is overflow=true pane_id="pane-a"`
+      - Verified: 2026-03-02 (PASS run_id=1772422873574)
+  - [x] Cross-pane move-to-end drops into target pane:
+    - Workspace gate: drag a tab from pane A onto pane B end-drop.
+      - Script: `tools/diag-scripts/workspace/shell-demo/workspace-shell-demo-tab-cross-pane-move-to-end.json`
+      - Target surface: `workspace-shell-pane-pane-b-tab-strip.drop_end`
+      - Verified: 2026-03-02 (PASS run_id=1772422901186)
+  - [x] In-pane reorder can land on the explicit end-drop surface:
+    - Workspace gate: drag first tab to end (non-overflow).
+      - Script: `tools/diag-scripts/workspace/shell-demo/workspace-shell-demo-tab-reorder-first-to-end-smoke.json`
+      - Verified: 2026-03-02 (PASS run_id=1772422846249)
 - [x] Add minimal unit tests where headless helpers are used by adapters.
 
 ## Non-goals

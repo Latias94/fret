@@ -33,6 +33,14 @@ fn diag_dock_drag_trace(args: fmt::Arguments<'_>) {
 }
 
 impl<D: WinitAppDriver> WinitRunner<D> {
+    pub(super) fn internal_drag_routing_pointer_id(&self) -> Option<fret_core::PointerId> {
+        if let Some(pointer_id) = self.dock_drag_pointer_id() {
+            return Some(pointer_id);
+        }
+        use fret_runtime::DragHost as _;
+        self.app.find_drag_pointer_id(|d| d.cross_window_hover)
+    }
+
     pub(super) fn deliver_window_event_now(
         &mut self,
         window: fret_core::AppWindowId,
@@ -122,7 +130,7 @@ impl<D: WinitAppDriver> WinitRunner<D> {
         let Some(window) = self.internal_drag_hover_window else {
             return false;
         };
-        if self.dock_drag_pointer_id().is_some() {
+        if self.internal_drag_routing_pointer_id().is_some() {
             return false;
         }
         let pointer_id = self
@@ -146,7 +154,7 @@ impl<D: WinitAppDriver> WinitRunner<D> {
             }
         }
 
-        let Some(pointer_id) = self.dock_drag_pointer_id() else {
+        let Some(pointer_id) = self.internal_drag_routing_pointer_id() else {
             return self.clear_internal_drag_hover_if_needed();
         };
         let Some((drag_kind, drag_source_window, cross_window_hover)) = self
@@ -487,7 +495,7 @@ impl<D: WinitAppDriver> WinitRunner<D> {
             }
         }
 
-        let Some(pointer_id) = self.dock_drag_pointer_id() else {
+        let Some(pointer_id) = self.internal_drag_routing_pointer_id() else {
             return false;
         };
         let Some((drag_kind, drag_source_window, cross_window_hover)) = self
