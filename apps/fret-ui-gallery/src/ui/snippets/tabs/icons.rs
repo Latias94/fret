@@ -1,3 +1,5 @@
+pub const SOURCE: &str = include_str!("icons.rs");
+
 // region: example
 use fret_app::App;
 use fret_core::Px;
@@ -18,4 +20,3 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
 }
 
 // endregion: example
-

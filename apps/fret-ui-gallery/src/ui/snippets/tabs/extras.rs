@@ -1,3 +1,5 @@
+pub const SOURCE: &str = include_str!("extras.rs");
+
 // region: example
 use crate::ui::doc_layout;
 use fret_app::App;
@@ -48,4 +50,3 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
 }
 
 // endregion: example
-

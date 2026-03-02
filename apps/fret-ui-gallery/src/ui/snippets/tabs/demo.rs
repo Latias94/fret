@@ -1,3 +1,5 @@
+pub const SOURCE: &str = include_str!("demo.rs");
+
 // region: example
 use fret_app::App;
 use fret_core::Px;
@@ -47,7 +49,9 @@ fn ensure_models(
         Some(model) => model,
         None => {
             let model = cx.app.models_mut().insert(String::new());
-            cx.with_state(TabsModels::default, |st| st.new_password = Some(model.clone()));
+            cx.with_state(TabsModels::default, |st| {
+                st.new_password = Some(model.clone())
+            });
             model
         }
     };
@@ -94,10 +98,12 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
                 .gap(Space::N4)
                 .items_start()
                 .layout(LayoutRefinement::default().w_full().min_w_0()),
-            move |cx| vec![
-                field(cx, "Name", name.clone(), "Name"),
-                field(cx, "Username", username.clone(), "Username"),
-            ],
+            move |cx| {
+                vec![
+                    field(cx, "Name", name.clone(), "Name"),
+                    field(cx, "Username", username.clone(), "Username"),
+                ]
+            },
         );
         let content = shadcn::CardContent::new(vec![content]).into_element(cx);
         let footer =
@@ -122,15 +128,17 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
                 .gap(Space::N4)
                 .items_start()
                 .layout(LayoutRefinement::default().w_full().min_w_0()),
-            move |cx| vec![
-                field(
-                    cx,
-                    "Current password",
-                    current_password.clone(),
-                    "Current password",
-                ),
-                field(cx, "New password", new_password.clone(), "New password"),
-            ],
+            move |cx| {
+                vec![
+                    field(
+                        cx,
+                        "Current password",
+                        current_password.clone(),
+                        "Current password",
+                    ),
+                    field(cx, "New password", new_password.clone(), "New password"),
+                ]
+            },
         );
         let content = shadcn::CardContent::new(vec![content]).into_element(cx);
         let footer =
@@ -151,4 +159,3 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
 }
 
 // endregion: example
-
