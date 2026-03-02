@@ -727,21 +727,23 @@ impl ElementHostWidget {
         // This keeps scroll probing stable across probe/final passes and avoids accidental
         // "infinite window" layouts (e.g. text reflowing as a single long line) during probes.
         let external_handle = props.scroll_handle.clone();
-        let (handle, intrinsic_measure_cache) = crate::elements::with_element_state(
-            &mut *cx.app,
-            window,
-            self.element,
-            crate::element::ScrollState::default,
-            |state| {
-                (
-                    external_handle
-                        .as_ref()
-                        .unwrap_or(&state.scroll_handle)
-                        .clone(),
-                    state.intrinsic_measure_cache,
-                )
-            },
-        );
+        let (handle, intrinsic_measure_cache, pending_extent_probe) =
+            crate::elements::with_element_state(
+                &mut *cx.app,
+                window,
+                self.element,
+                crate::element::ScrollState::default,
+                |state| {
+                    (
+                        external_handle
+                            .as_ref()
+                            .unwrap_or(&state.scroll_handle)
+                            .clone(),
+                        state.intrinsic_measure_cache,
+                        state.pending_extent_probe,
+                    )
+                },
+            );
 
         let available = if is_probe_layout {
             let last = handle.viewport_size();
@@ -962,7 +964,9 @@ impl ElementHostWidget {
         }
 
         let must_probe_for_growing_extent = at_scroll_extent_edge
-            && (children_layout_invalidated || defer_state.pending_invalidation_probe);
+            && (children_layout_invalidated
+                || pending_extent_probe
+                || defer_state.pending_invalidation_probe);
         if must_probe_for_growing_extent {
             cached_max_child = None;
         }
@@ -1031,6 +1035,13 @@ impl ElementHostWidget {
                 self.element,
                 ScrollDeferredUnboundedProbeState::default,
                 |state| state.pending_invalidation_probe = false,
+            );
+            crate::elements::with_element_state(
+                &mut *cx.app,
+                window,
+                self.element,
+                crate::element::ScrollState::default,
+                |state| state.pending_extent_probe = false,
             );
 
             max_child
@@ -1243,8 +1254,46 @@ impl ElementHostWidget {
         }
 
         if !is_probe_layout {
+            // If we didn't do a deep unbounded probe for `max_child` this frame, scroll extents can
+            // be temporarily pinned to cached values even if descendants overflow the forced
+            // `content_bounds` rect (common with wrapper-heavy trees like docs pages and tab
+            // panels). In that mode we allow a small, bounded subtree scan to discover overflow
+            // and grow the scroll handle immediately.
+            let extent_may_be_stale =
+                defer_this_frame || cached_max_child.is_some() || cached.is_some();
             let mut observed = Size::new(Px(0.0), Px(0.0));
+            const MAX_BARRIER_WRAPPER_CHAIN: usize = 8;
+            const OVERFLOW_SCAN_BUDGET_NODES: usize = 256;
             for &barrier_root in cx.children {
+                // Peel common "same-bounds wrapper" chains (e.g. interactivity gates / test-id
+                // wrappers) so we can observe extents from the first node whose children may
+                // actually overflow the forced `content_bounds` rect.
+                let mut observe_root = barrier_root;
+                for _ in 0..MAX_BARRIER_WRAPPER_CHAIN {
+                    let children = cx.tree.children_ref(observe_root);
+                    if children.len() != 1 {
+                        break;
+                    }
+                    let child = children[0];
+                    let Some(parent_bounds) = cx.tree.node_bounds(observe_root) else {
+                        break;
+                    };
+                    let Some(child_bounds) = cx.tree.node_bounds(child) else {
+                        break;
+                    };
+                    let same_origin = (parent_bounds.origin.x.0 - child_bounds.origin.x.0).abs()
+                        <= 0.5
+                        && (parent_bounds.origin.y.0 - child_bounds.origin.y.0).abs() <= 0.5;
+                    let same_size = (parent_bounds.size.width.0 - child_bounds.size.width.0).abs()
+                        <= 0.5
+                        && (parent_bounds.size.height.0 - child_bounds.size.height.0).abs() <= 0.5;
+                    if same_origin && same_size {
+                        observe_root = child;
+                        continue;
+                    }
+                    break;
+                }
+
                 // Scroll content is commonly implemented as a layout barrier root whose bounds are
                 // forced to `content_bounds`. When descendants overflow that forced rect (e.g.
                 // tab panels expanding near the bottom), `node_bounds(barrier_root)` alone can
@@ -1253,7 +1302,7 @@ impl ElementHostWidget {
                 // Prefer observing immediate children of the barrier root, falling back to the
                 // barrier root bounds when no children are present.
                 let mut any = false;
-                for &child in cx.tree.children_ref(barrier_root) {
+                for &child in cx.tree.children_ref(observe_root) {
                     let Some(bounds) = cx.tree.node_bounds(child) else {
                         continue;
                     };
@@ -1271,18 +1320,60 @@ impl ElementHostWidget {
                     observed.width = Px(observed.width.0.max(right));
                     observed.height = Px(observed.height.0.max(bottom));
                 }
-                if any {
-                    continue;
+                if !any {
+                    let Some(bounds) = cx.tree.node_bounds(observe_root) else {
+                        continue;
+                    };
+                    let right = (bounds.origin.x.0 + bounds.size.width.0
+                        - content_bounds.origin.x.0)
+                        .max(0.0);
+                    let bottom = (bounds.origin.y.0 + bounds.size.height.0
+                        - content_bounds.origin.y.0)
+                        .max(0.0);
+                    observed.width = Px(observed.width.0.max(right));
+                    observed.height = Px(observed.height.0.max(bottom));
                 }
-                let Some(bounds) = cx.tree.node_bounds(barrier_root) else {
-                    continue;
-                };
-                let right =
-                    (bounds.origin.x.0 + bounds.size.width.0 - content_bounds.origin.x.0).max(0.0);
-                let bottom =
-                    (bounds.origin.y.0 + bounds.size.height.0 - content_bounds.origin.y.0).max(0.0);
-                observed.width = Px(observed.width.0.max(right));
-                observed.height = Px(observed.height.0.max(bottom));
+
+                if extent_may_be_stale
+                    && ((props.axis.scroll_x() && observed.width.0 <= content_w.0 + 0.5)
+                        || (props.axis.scroll_y() && observed.height.0 <= content_h.0 + 0.5))
+                {
+                    // Fallback: bounded scan under the peeled root to catch deeper overflow chains
+                    // that don't show up in immediate children bounds (e.g. single-child wrappers
+                    // that also get forced to `content_bounds`).
+                    let mut visited: usize = 0;
+                    let mut stack: Vec<NodeId> = Vec::new();
+                    for &child in cx.tree.children_ref(observe_root) {
+                        stack.push(child);
+                    }
+                    while let Some(id) = stack.pop() {
+                        visited = visited.saturating_add(1);
+                        if visited > OVERFLOW_SCAN_BUDGET_NODES {
+                            break;
+                        }
+                        let Some(bounds) = cx.tree.node_bounds(id) else {
+                            continue;
+                        };
+                        let right = (bounds.origin.x.0 + bounds.size.width.0
+                            - content_bounds.origin.x.0)
+                            .max(0.0);
+                        let bottom = (bounds.origin.y.0 + bounds.size.height.0
+                            - content_bounds.origin.y.0)
+                            .max(0.0);
+                        observed.width = Px(observed.width.0.max(right));
+                        observed.height = Px(observed.height.0.max(bottom));
+
+                        if (!props.axis.scroll_x() || observed.width.0 > content_w.0 + 0.5)
+                            && (!props.axis.scroll_y() || observed.height.0 > content_h.0 + 0.5)
+                        {
+                            break;
+                        }
+
+                        for &child in cx.tree.children_ref(id) {
+                            stack.push(child);
+                        }
+                    }
+                }
             }
 
             // Best-effort: if post-layout child bounds exceed the probed extent (cached/deferral
@@ -1303,6 +1394,22 @@ impl ElementHostWidget {
                 changed_grow = true;
             }
             if changed_grow {
+                if crate::runtime_config::ui_runtime_config().debug_scroll_extent_probe {
+                    eprintln!(
+                        "scroll extent grew element={:?} node={:?} axis={:?} content=({:.1},{:.1}) observed=({:.1},{:.1}) viewport=({:.1},{:.1}) pending_probe={} must_probe={}",
+                        self.element,
+                        cx.node,
+                        props.axis,
+                        handle.content_size().width.0,
+                        handle.content_size().height.0,
+                        observed.width.0,
+                        observed.height.0,
+                        handle.viewport_size().width.0,
+                        handle.viewport_size().height.0,
+                        pending_extent_probe,
+                        must_probe_for_growing_extent,
+                    );
+                }
                 handle.set_content_size_internal(Size::new(content_w, content_h));
                 let prev = handle.offset();
                 handle.set_offset_internal(prev);

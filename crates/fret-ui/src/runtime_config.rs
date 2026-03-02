@@ -36,6 +36,7 @@ pub(crate) struct UiRuntimeEnvConfig {
     pub(crate) debug_pointer_region_move_backtrace: bool,
     pub(crate) debug_scroll_wheel_vlist: bool,
     pub(crate) debug_scroll_wheel: bool,
+    pub(crate) debug_scroll_extent_probe: bool,
     pub(crate) debug_scroll_handle_set_offset: bool,
     pub(crate) resizable_split_log: bool,
 
@@ -149,6 +150,7 @@ impl UiRuntimeEnvConfig {
 
         let debug_scroll_wheel_vlist = env_is_one("FRET_DEBUG_SCROLL_WHEEL_VLIST");
         let debug_scroll_wheel = env_is_one("FRET_DEBUG_SCROLL_WHEEL");
+        let debug_scroll_extent_probe = env_is_one("FRET_DEBUG_SCROLL_EXTENT_PROBE");
         let debug_scroll_handle_set_offset = env_enabled("FRET_DEBUG_SCROLL_HANDLE_SET_OFFSET");
 
         let resizable_split_log = env_present("FRET_RESIZABLE_SPLIT_LOG");
@@ -310,6 +312,7 @@ impl UiRuntimeEnvConfig {
             debug_pointer_region_move_backtrace,
             debug_scroll_wheel_vlist,
             debug_scroll_wheel,
+            debug_scroll_extent_probe,
             debug_scroll_handle_set_offset,
             resizable_split_log,
             hit_test_bounds_tree_disabled,

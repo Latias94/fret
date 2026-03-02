@@ -912,77 +912,122 @@ impl<H: UiHost> UiTree<H> {
             return;
         }
 
-        let pending = self.take_pending_barrier_relayouts();
-        if pending.is_empty() {
-            return;
-        }
+        // Barrier relayouts can update descendant layout without invalidating ancestors. That
+        // means scroll containers that rely on cached content extents can "pin" their scroll
+        // ranges to the previous frame if a contained barrier expands near the bottom of a scroll
+        // view.
+        //
+        // To keep scroll extents consistent, allow barrier relayouts to schedule a follow-up
+        // relayout for the nearest scrollable ancestor.
+        const MAX_PASSES: usize = 4;
+        let mut passes: usize = 0;
+        let mut scheduled_followups: HashSet<NodeId> = HashSet::new();
 
-        let mut unique = HashSet::<NodeId>::with_capacity(pending.len());
-        let mut targets: Vec<NodeId> = Vec::with_capacity(pending.len());
-        for node in pending {
-            if unique.insert(node) {
-                targets.push(node);
-            }
-        }
+        while passes < MAX_PASSES {
+            passes = passes.saturating_add(1);
 
-        let mut roots_with_bounds: Vec<(NodeId, Rect)> = Vec::with_capacity(targets.len());
-        for root in targets {
-            let Some(node) = self.nodes.get(root) else {
-                continue;
-            };
-            if !node.invalidation.layout {
-                continue;
+            let pending = self.take_pending_barrier_relayouts();
+            if pending.is_empty() {
+                break;
             }
 
-            // Barrier relayouts intentionally do not invalidate ancestors. Prefer the retained
-            // bounds (stable barrier viewport), but fall back to resolving bounds from the parent
-            // layout-engine rect when needed (e.g. newly mounted nodes with default bounds).
-            let mut bounds = node.bounds;
-            if (bounds.size == Size::default() || bounds.origin == Point::default())
-                && let Some(parent) = node.parent
-                && let Some(parent_bounds) = self.nodes.get(parent).map(|n| n.bounds)
-                && let Some(local) = self.layout_engine_child_local_rect(parent, root)
-            {
-                let resolved = Rect::new(
-                    Point::new(
-                        Px(parent_bounds.origin.x.0 + local.origin.x.0),
-                        Px(parent_bounds.origin.y.0 + local.origin.y.0),
-                    ),
-                    local.size,
-                );
-                if resolved.size != Size::default() {
-                    bounds = resolved;
+            let mut unique = HashSet::<NodeId>::with_capacity(pending.len());
+            let mut targets: Vec<NodeId> = Vec::with_capacity(pending.len());
+            for node in pending {
+                if unique.insert(node) {
+                    targets.push(node);
                 }
             }
 
-            if bounds.size == Size::default() {
-                continue;
+            let mut roots_with_bounds: Vec<(NodeId, Rect)> = Vec::with_capacity(targets.len());
+            for root in targets {
+                let Some(node) = self.nodes.get(root) else {
+                    continue;
+                };
+                if !node.invalidation.layout {
+                    continue;
+                }
+
+                // Barrier relayouts intentionally do not invalidate ancestors. Prefer the retained
+                // bounds (stable barrier viewport), but fall back to resolving bounds from the parent
+                // layout-engine rect when needed (e.g. newly mounted nodes with default bounds).
+                let mut bounds = node.bounds;
+                if (bounds.size == Size::default() || bounds.origin == Point::default())
+                    && let Some(parent) = node.parent
+                    && let Some(parent_bounds) = self.nodes.get(parent).map(|n| n.bounds)
+                    && let Some(local) = self.layout_engine_child_local_rect(parent, root)
+                {
+                    let resolved = Rect::new(
+                        Point::new(
+                            Px(parent_bounds.origin.x.0 + local.origin.x.0),
+                            Px(parent_bounds.origin.y.0 + local.origin.y.0),
+                        ),
+                        local.size,
+                    );
+                    if resolved.size != Size::default() {
+                        bounds = resolved;
+                    }
+                }
+
+                if bounds.size == Size::default() {
+                    continue;
+                }
+
+                roots_with_bounds.push((root, bounds));
             }
 
-            roots_with_bounds.push((root, bounds));
-        }
+            // Pending barrier relayouts run as contained solves. Pre-solve each root via the
+            // layout engine to avoid widget-local fallback solves (which amplify tail latency by
+            // triggering extra out-of-band engine passes).
+            self.solve_barrier_flow_roots_if_needed(app, services, &roots_with_bounds, scale_factor);
 
-        // Pending barrier relayouts run as contained solves. Pre-solve each root via the layout
-        // engine to avoid widget-local fallback solves (which amplify tail latency by triggering
-        // extra out-of-band engine passes).
-        self.solve_barrier_flow_roots_if_needed(app, services, &roots_with_bounds, scale_factor);
+            for (root, bounds) in roots_with_bounds {
+                let _ = self.layout_in_with_pass_kind(
+                    app,
+                    services,
+                    root,
+                    bounds,
+                    scale_factor,
+                    pass_kind,
+                );
+                if self.debug_enabled {
+                    self.debug_stats.barrier_relayouts_performed = self
+                        .debug_stats
+                        .barrier_relayouts_performed
+                        .saturating_add(1);
+                }
 
-        for (root, bounds) in roots_with_bounds {
-            let _ =
-                self.layout_in_with_pass_kind(app, services, root, bounds, scale_factor, pass_kind);
-            if self.debug_enabled {
-                self.debug_stats.barrier_relayouts_performed = self
-                    .debug_stats
-                    .barrier_relayouts_performed
-                    .saturating_add(1);
+                // After contained relayout, schedule a follow-up barrier relayout for the nearest
+                // scrollable ancestor so it can recompute scroll extents against the new subtree
+                // bounds without forcing a full ancestor relayout.
+                let mut current = self.nodes.get(root).and_then(|n| n.parent);
+                while let Some(id) = current {
+                    let can_scroll = self
+                        .nodes
+                        .get(id)
+                        .and_then(|n| n.widget.as_ref())
+                        .is_some_and(|w| w.can_scroll_descendant_into_view());
+                    if can_scroll {
+                        if scheduled_followups.insert(id) {
+                            self.schedule_barrier_relayout_with_source_and_detail(
+                                id,
+                                UiDebugInvalidationSource::Other,
+                                UiDebugInvalidationDetail::Unknown,
+                            );
+                        }
+                        break;
+                    }
+                    current = self.nodes.get(id).and_then(|n| n.parent);
+                }
+
+                self.flush_viewport_roots_after_root(
+                    app,
+                    services,
+                    scale_factor,
+                    pass_kind,
+                    viewport_cursor,
+                );
             }
-            self.flush_viewport_roots_after_root(
-                app,
-                services,
-                scale_factor,
-                pass_kind,
-                viewport_cursor,
-            );
         }
     }
 
