@@ -1897,6 +1897,7 @@ dependencies = [
  "fret-docking",
  "fret-executor",
  "fret-gizmo",
+ "fret-icons",
  "fret-icons-radix",
  "fret-launch",
  "fret-markdown",

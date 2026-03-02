@@ -317,6 +317,7 @@
       "id": "cookbook-icons-and-assets-basics-smoke",
       "path": "tools/diag-scripts/cookbook/icons-and-assets-basics/cookbook-icons-and-assets-basics-smoke.json",
       "required_capabilities": [
+        "diag.screenshot_png",
         "diag.script_v2"
       ],
       "suite_memberships": [
