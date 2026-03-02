@@ -333,11 +333,15 @@ Rollback:
 
 ### PR5 — Guardrails: extend WGSL smoke gates to V1/V2 and unify “stitch then parse” helpers
 
+Status:
+
+- Landed (the smoke test covers v1/v2/v3 + the liquid-glass lens program).
+
 Goal:
 
 - Catch “snippet compiles alone but fails when stitched” earlier (especially for author demos and future recipes).
 
-Changes:
+Changes (landed):
 
 - Extend `apps/fret-examples/tests/wgsl_smoke.rs` to validate stitched WGSL for v1 and v2 in addition to v3.
 - (Optional) Extract a small shared helper in `fret-render-wgpu` tests for stitching/parsing to avoid duplicating the
