@@ -2375,7 +2375,7 @@ impl fret_core::MaterialService for StyleAwareServices {
 }
 
 fn setup_app_with_shadcn_theme(app: &mut App) {
-    fret_ui_shadcn::shadcn_themes::apply_shadcn_new_york_v4(
+    fret_ui_shadcn::shadcn_themes::apply_shadcn_new_york(
         app,
         fret_ui_shadcn::shadcn_themes::ShadcnBaseColor::Neutral,
         fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Light,
@@ -7032,7 +7032,7 @@ fn assert_select_demo_open_option_metrics_match(web_name: &str) {
 
             let content = fret_ui_shadcn::Select::new(value, open.clone())
                 .a11y_label("Select")
-                .placeholder("Select a fruit")
+                .value(fret_ui_shadcn::SelectValue::new().placeholder("Select a fruit"))
                 .refine_layout(fret_ui_kit::LayoutRefinement::default().w_px(Px(180.0)))
                 .entries(entries)
                 .into_element(cx);
@@ -7071,7 +7071,7 @@ fn assert_select_demo_open_option_metrics_match(web_name: &str) {
 
                 let content = fret_ui_shadcn::Select::new(value, open.clone())
                     .a11y_label("Select")
-                    .placeholder("Select a fruit")
+                    .value(fret_ui_shadcn::SelectValue::new().placeholder("Select a fruit"))
                     .refine_layout(fret_ui_kit::LayoutRefinement::default().w_px(Px(180.0)))
                     .entries(entries)
                     .into_element(cx);
@@ -7268,7 +7268,7 @@ fn assert_select_scrollable_listbox_option_insets_match(web_name: &str) {
 
         fret_ui_shadcn::Select::new(value.clone(), open.clone())
             .a11y_label("Select")
-            .placeholder("Select a timezone")
+            .value(fret_ui_shadcn::SelectValue::new().placeholder("Select a timezone"))
             .refine_layout(fret_ui_kit::LayoutRefinement::default().w_px(Px(280.0)))
             .entries(entries)
             .into_element(cx)
@@ -7468,7 +7468,7 @@ fn assert_select_scrollable_listbox_option_height_matches(web_name: &str) {
 
         fret_ui_shadcn::Select::new(value, open)
             .a11y_label("Select")
-            .placeholder("Select a timezone")
+            .value(fret_ui_shadcn::SelectValue::new().placeholder("Select a timezone"))
             .refine_layout(fret_ui_kit::LayoutRefinement::default().w_px(Px(280.0)))
             .entries(entries)
             .into_element(cx)
@@ -7603,7 +7603,7 @@ fn assert_select_scrollable_listbox_height_matches(web_name: &str) {
 
         fret_ui_shadcn::Select::new(value, open)
             .a11y_label("Select")
-            .placeholder("Select a timezone")
+            .value(fret_ui_shadcn::SelectValue::new().placeholder("Select a timezone"))
             .refine_layout(fret_ui_kit::LayoutRefinement::default().w_px(Px(280.0)))
             .entries(entries)
             .into_element(cx)
@@ -7734,7 +7734,7 @@ fn assert_select_scrollable_scroll_button_height_matches(web_name: &str) {
 
         fret_ui_shadcn::Select::new(value, open)
             .a11y_label("Select")
-            .placeholder("Select a timezone")
+            .value(fret_ui_shadcn::SelectValue::new().placeholder("Select a timezone"))
             .refine_layout(fret_ui_kit::LayoutRefinement::default().w_px(Px(280.0)))
             .entries(entries)
             .into_element(cx)
@@ -7990,7 +7990,7 @@ fn assert_select_scrollable_viewport_insets_match(web_name: &str) {
 
         fret_ui_shadcn::Select::new(value, open)
             .a11y_label("Select")
-            .placeholder("Select a timezone")
+            .value(fret_ui_shadcn::SelectValue::new().placeholder("Select a timezone"))
             .refine_layout(fret_ui_kit::LayoutRefinement::default().w_px(Px(280.0)))
             .entries(entries)
             .into_element(cx)
@@ -8179,7 +8179,7 @@ fn assert_select_scrollable_listbox_width_matches(web_name: &str) {
 
         fret_ui_shadcn::Select::new(value.clone(), open.clone())
             .a11y_label("Select")
-            .placeholder("Select a timezone")
+            .value(fret_ui_shadcn::SelectValue::new().placeholder("Select a timezone"))
             .refine_layout(fret_ui_kit::LayoutRefinement::default().w_px(Px(280.0)))
             .entries(entries)
             .into_element(cx)

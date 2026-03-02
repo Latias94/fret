@@ -25,7 +25,7 @@ fn collect_text_nodes(el: &AnyElement, out: &mut Vec<Arc<str>>) {
 fn genui_forms_layout_smoke_renders_under_strict_catalog_validation() {
     let mut app = App::new();
 
-    fret_ui_shadcn::shadcn_themes::apply_shadcn_new_york_v4(
+    fret_ui_shadcn::shadcn_themes::apply_shadcn_new_york(
         &mut app,
         fret_ui_shadcn::shadcn_themes::ShadcnBaseColor::Slate,
         fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Light,

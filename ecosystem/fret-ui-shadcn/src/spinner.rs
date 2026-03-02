@@ -134,7 +134,7 @@ mod tests {
     fn spinner_defaults_to_size_4_and_has_loading_semantics() {
         let window = AppWindowId::default();
         let mut app = App::new();
-        crate::shadcn_themes::apply_shadcn_new_york_v4(
+        crate::shadcn_themes::apply_shadcn_new_york(
             &mut app,
             crate::shadcn_themes::ShadcnBaseColor::Slate,
             crate::shadcn_themes::ShadcnColorScheme::Light,

@@ -5,7 +5,7 @@ use fret_core::{
 };
 use fret_ui::Theme;
 use fret_ui::tree::UiTree;
-use fret_ui_shadcn::shadcn_themes::{ShadcnBaseColor, ShadcnColorScheme, apply_shadcn_new_york_v4};
+use fret_ui_shadcn::shadcn_themes::{ShadcnBaseColor, ShadcnColorScheme, apply_shadcn_new_york};
 
 fn assert_color_close(label: &str, actual: Color, expected: Color, tol: f32) {
     let dr = (actual.r - expected.r).abs();
@@ -150,7 +150,7 @@ fn fret_kbd_in_tooltip_content_overrides_bg_and_fg() {
     let window = AppWindowId::default();
 
     let mut app = App::new();
-    apply_shadcn_new_york_v4(&mut app, ShadcnBaseColor::Neutral, ShadcnColorScheme::Light);
+    apply_shadcn_new_york(&mut app, ShadcnBaseColor::Neutral, ShadcnColorScheme::Light);
     let theme = Theme::global(&app).snapshot();
     let expected_text_fg = theme.color_token("background");
     let expected_kbd_bg = alpha_mul(expected_text_fg, 0.20);

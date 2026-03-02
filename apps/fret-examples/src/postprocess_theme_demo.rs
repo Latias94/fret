@@ -145,7 +145,7 @@ pub fn run() -> anyhow::Result<()> {
     fret::mvu::app::<ThemePostprocessProgram>("postprocess-theme-demo")?
         .with_main_window("postprocess_theme_demo", (1200.0, 760.0))
         .init_app(|app| {
-            shadcn::shadcn_themes::apply_shadcn_new_york_v4(
+            shadcn::shadcn_themes::apply_shadcn_new_york(
                 app,
                 shadcn::shadcn_themes::ShadcnBaseColor::Slate,
                 shadcn::shadcn_themes::ShadcnColorScheme::Dark,
@@ -710,7 +710,7 @@ fn inspector(
                     vec![
                         label_row(cx, "Theme", theme.to_string()),
                         shadcn::Select::new(theme_model.clone(), theme_open_model.clone())
-                            .placeholder("Pick a theme")
+                            .value(shadcn::SelectValue::new().placeholder("Pick a theme"))
                             .items([
                                 shadcn::SelectItem::new("none", "None"),
                                 shadcn::SelectItem::new("cyberpunk", "Cyberpunk"),

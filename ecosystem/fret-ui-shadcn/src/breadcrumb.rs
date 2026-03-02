@@ -1101,7 +1101,7 @@ mod tests {
     use fret_core::{AppWindowId, Point, Rect, Size};
     use fret_ui::UiTree;
 
-    use crate::shadcn_themes::{ShadcnBaseColor, ShadcnColorScheme, apply_shadcn_new_york_v4};
+    use crate::shadcn_themes::{ShadcnBaseColor, ShadcnColorScheme, apply_shadcn_new_york};
 
     #[derive(Default)]
     struct FakeServices;
@@ -1167,7 +1167,7 @@ mod tests {
     fn breadcrumb_item_href_attaches_link_value_semantics() {
         let window = AppWindowId::default();
         let mut app = App::new();
-        apply_shadcn_new_york_v4(&mut app, ShadcnBaseColor::Neutral, ShadcnColorScheme::Light);
+        apply_shadcn_new_york(&mut app, ShadcnBaseColor::Neutral, ShadcnColorScheme::Light);
         let mut ui: UiTree<App> = UiTree::new();
         ui.set_window(window);
         let mut services = FakeServices::default();

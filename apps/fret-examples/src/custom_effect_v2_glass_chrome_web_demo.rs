@@ -522,7 +522,7 @@ impl CustomEffectV2GlassChromeWebDriver {
                 vec![
                     shadcn::Label::new("Mode").into_element(cx),
                     shadcn::Select::new(mode_model.clone(), mode_open_model.clone())
-                        .placeholder("Pick mode")
+                        .value(shadcn::SelectValue::new().placeholder("Pick mode"))
                         .items([
                             shadcn::SelectItem::new("backdrop", "Backdrop"),
                             shadcn::SelectItem::new("filter_content", "FilterContent"),
@@ -542,7 +542,7 @@ impl CustomEffectV2GlassChromeWebDriver {
                 vec![
                     shadcn::Label::new("Quality").into_element(cx),
                     shadcn::Select::new(quality_model.clone(), quality_open_model.clone())
-                        .placeholder("Pick quality")
+                        .value(shadcn::SelectValue::new().placeholder("Pick quality"))
                         .items([
                             shadcn::SelectItem::new("high", "High"),
                             shadcn::SelectItem::new("auto", "Auto"),
@@ -563,7 +563,7 @@ impl CustomEffectV2GlassChromeWebDriver {
                 vec![
                     shadcn::Label::new("Input sampling").into_element(cx),
                     shadcn::Select::new(sampling_model.clone(), sampling_open_model.clone())
-                        .placeholder("Pick sampling")
+                        .value(shadcn::SelectValue::new().placeholder("Pick sampling"))
                         .items([
                             shadcn::SelectItem::new("default", "Default"),
                             shadcn::SelectItem::new("linear", "Linear"),
@@ -924,7 +924,7 @@ impl WinitAppDriver for CustomEffectV2GlassChromeWebDriver {
 
 pub fn build_app() -> App {
     let mut app = App::new();
-    shadcn::shadcn_themes::apply_shadcn_new_york_v4(
+    shadcn::shadcn_themes::apply_shadcn_new_york(
         &mut app,
         shadcn::shadcn_themes::ShadcnBaseColor::Slate,
         shadcn::shadcn_themes::ShadcnColorScheme::Dark,

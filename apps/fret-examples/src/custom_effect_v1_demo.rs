@@ -202,7 +202,7 @@ pub fn run() -> anyhow::Result<()> {
     fret::mvu::app::<CustomEffectV1Program>("custom-effect-v1-demo")?
         .with_main_window("custom_effect_v1_demo", (1100.0, 720.0))
         .init_app(|app| {
-            shadcn::shadcn_themes::apply_shadcn_new_york_v4(
+            shadcn::shadcn_themes::apply_shadcn_new_york(
                 app,
                 shadcn::shadcn_themes::ShadcnBaseColor::Slate,
                 shadcn::shadcn_themes::ShadcnColorScheme::Dark,

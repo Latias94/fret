@@ -2354,7 +2354,7 @@ mod tests {
     #[test]
     fn tabs_list_variants_match_upstream_default_and_line_intent() {
         let mut app = App::new();
-        crate::shadcn_themes::apply_shadcn_new_york_v4(
+        crate::shadcn_themes::apply_shadcn_new_york(
             &mut app,
             crate::shadcn_themes::ShadcnBaseColor::Slate,
             crate::shadcn_themes::ShadcnColorScheme::Light,
@@ -2382,7 +2382,7 @@ mod tests {
     fn tabs_content_defaults_to_flex_grow_fill_like_shadcn() {
         let window = AppWindowId::default();
         let mut app = App::new();
-        crate::shadcn_themes::apply_shadcn_new_york_v4(
+        crate::shadcn_themes::apply_shadcn_new_york(
             &mut app,
             crate::shadcn_themes::ShadcnBaseColor::Slate,
             crate::shadcn_themes::ShadcnColorScheme::Light,

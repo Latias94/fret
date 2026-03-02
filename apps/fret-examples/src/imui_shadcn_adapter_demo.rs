@@ -19,7 +19,7 @@ pub fn run() -> anyhow::Result<()> {
 }
 
 fn init_window(app: &mut App, _window: AppWindowId) -> ImUiShadcnAdapterState {
-    shadcn::shadcn_themes::apply_shadcn_new_york_v4(
+    shadcn::shadcn_themes::apply_shadcn_new_york(
         app,
         shadcn::shadcn_themes::ShadcnBaseColor::Slate,
         shadcn::shadcn_themes::ShadcnColorScheme::Light,

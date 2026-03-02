@@ -71,8 +71,8 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
             |_cx| {
                 shadcn::SelectTrigger::new()
                     .refine_layout(LayoutRefinement::default().w_px(Px(180.0)))
-                    .value(shadcn::SelectValue::new().placeholder("Select a fruit"))
             },
+            |_cx| shadcn::SelectValue::new().placeholder("Select a fruit"),
             |_cx| shadcn::SelectContent::new().with_entries(entries),
         );
 

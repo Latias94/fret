@@ -998,7 +998,6 @@ pub struct SelectTrigger {
     size: SelectTriggerSize,
     chrome: ChromeRefinement,
     layout: LayoutRefinement,
-    value: SelectValue,
     chevron_icon_override: Option<IconId>,
     chevron_size_override: Option<Px>,
     chevron_opacity_override: Option<f32>,
@@ -1014,7 +1013,6 @@ impl Default for SelectTrigger {
             size: SelectTriggerSize::default(),
             chrome: ChromeRefinement::default(),
             layout: LayoutRefinement::default(),
-            value: SelectValue::default(),
             chevron_icon_override: None,
             chevron_size_override: None,
             chevron_opacity_override: None,
@@ -1043,11 +1041,6 @@ impl SelectTrigger {
 
     pub fn refine_layout(mut self, layout: LayoutRefinement) -> Self {
         self.layout = self.layout.merge(layout);
-        self
-    }
-
-    pub fn value(mut self, value: SelectValue) -> Self {
-        self.value = value;
         self
     }
 
@@ -1134,7 +1127,7 @@ pub struct SelectContent {
     side: SelectSide,
     align_offset: Px,
     side_offset: Option<Px>,
-    align_item_with_trigger: bool,
+    position: SelectPosition,
     arrow: bool,
     arrow_size_override: Option<Px>,
     arrow_padding_override: Option<Px>,
@@ -1150,7 +1143,7 @@ impl Default for SelectContent {
             side: SelectSide::default(),
             align_offset: Px(0.0),
             side_offset: Some(Px(4.0)),
-            align_item_with_trigger: true,
+            position: SelectPosition::ItemAligned,
             arrow: false,
             arrow_size_override: None,
             arrow_padding_override: None,
@@ -1199,9 +1192,9 @@ impl SelectContent {
         self
     }
 
-    /// When true (default), positions the popup so the selected item aligns with the trigger.
-    pub fn align_item_with_trigger(mut self, align: bool) -> Self {
-        self.align_item_with_trigger = align;
+    /// Matches Radix Select `position` (`item-aligned` vs `popper`).
+    pub fn position(mut self, position: SelectPosition) -> Self {
+        self.position = position;
         self
     }
 
@@ -1396,9 +1389,6 @@ impl Select {
         self.chrome = self.chrome.merge(trigger.chrome);
         self.layout = self.layout.merge(trigger.layout);
 
-        if let Some(placeholder) = trigger.value.placeholder {
-            self.placeholder = placeholder;
-        }
         if trigger.gap_override.is_some() {
             self.trigger_gap_override = trigger.gap_override;
         }
@@ -1436,11 +1426,7 @@ impl Select {
         self.side = content.side;
         self.align_offset = content.align_offset;
         self.side_offset_override = content.side_offset;
-        self.position = if content.align_item_with_trigger {
-            SelectPosition::ItemAligned
-        } else {
-            SelectPosition::Popper
-        };
+        self.position = content.position;
 
         self.arrow = content.arrow;
         if content.arrow_size_override.is_some() {
@@ -1470,25 +1456,24 @@ impl Select {
     /// Part-based authoring surface aligned with shadcn/ui v4 exports.
     ///
     /// This is a thin adapter over [`Select::into_element`] that accepts shadcn-style parts
-    /// (`SelectTrigger`, `SelectContent`) in a nested shape, while still mapping onto Fret's
-    /// current configuration + entries implementation.
-    /// Part-based authoring surface aligned with shadcn/ui v4 exports (nested-content shape).
+    /// (`SelectTrigger`, `SelectValue`, `SelectContent`) while still mapping onto Fret's current
+    /// configuration + entries implementation.
     ///
-    /// This adapter makes the call site closer to upstream:
-    ///
+    /// Notes:
     /// - `SelectTrigger` config is provided as a nested part.
+    /// - `SelectValue` is the single source of truth for placeholder text.
     /// - `SelectContent` owns the option tree (`SelectGroup`/`SelectItem`/`SelectLabel`/`SelectSeparator`).
-    ///
-    /// Internally this still maps to Fret's configuration + entries implementation.
     #[track_caller]
     pub fn into_element_parts<H: UiHost>(
         self,
         cx: &mut ElementContext<'_, H>,
         trigger: impl FnOnce(&mut ElementContext<'_, H>) -> SelectTrigger,
+        value: impl FnOnce(&mut ElementContext<'_, H>) -> SelectValue,
         content: impl FnOnce(&mut ElementContext<'_, H>) -> SelectContentParts,
     ) -> AnyElement {
         let parts = content(cx);
         self.trigger(trigger(cx))
+            .value(value(cx))
             .content(parts.content)
             .entries(parts.entries)
             .into_element(cx)
@@ -1525,11 +1510,6 @@ impl Select {
 
     pub fn entries(mut self, entries: impl IntoIterator<Item = SelectEntry>) -> Self {
         self.entries.extend(entries);
-        self
-    }
-
-    pub fn placeholder(mut self, placeholder: impl Into<Arc<str>>) -> Self {
-        self.placeholder = placeholder.into();
         self
     }
 
@@ -1750,60 +1730,6 @@ impl Select {
             self.trigger_label_policy,
         )
     }
-}
-
-pub fn select<H: UiHost>(
-    cx: &mut ElementContext<'_, H>,
-    model: Model<Option<Arc<str>>>,
-    open: Model<bool>,
-    items: &[SelectItem],
-    placeholder: Arc<str>,
-    disabled: bool,
-    a11y_label: Option<Arc<str>>,
-    layout: LayoutRefinement,
-) -> AnyElement {
-    let entries: Vec<SelectEntry> = items.iter().cloned().map(SelectEntry::Item).collect();
-    select_impl(
-        cx,
-        model,
-        open,
-        None,
-        &entries,
-        placeholder,
-        disabled,
-        radix_select::SelectMousePolicies::default(),
-        None,
-        a11y_label,
-        false,
-        None,
-        None,
-        None,
-        ChromeRefinement::default(),
-        layout,
-        ComponentSize::default(),
-        SelectStyle::default(),
-        SelectAlign::default(),
-        SelectSide::default(),
-        Px(0.0),
-        None,
-        SelectPosition::default(),
-        true,
-        false,
-        None,
-        None,
-        SelectScrollButtons::default(),
-        None,
-        None,
-        BorderWidthOverride::default(),
-        None,
-        None,
-        None,
-        None,
-        None,
-        None,
-        None,
-        SelectTriggerLabelPolicy::default(),
-    )
 }
 
 fn select_impl<H: UiHost>(
@@ -4623,7 +4549,7 @@ mod tests {
     fn select_trigger_uses_shadow_xs_and_gap_2_like_shadcn() {
         let window = AppWindowId::default();
         let mut app = App::new();
-        crate::shadcn_themes::apply_shadcn_new_york_v4(
+        crate::shadcn_themes::apply_shadcn_new_york(
             &mut app,
             crate::shadcn_themes::ShadcnBaseColor::Slate,
             crate::shadcn_themes::ShadcnColorScheme::Light,
@@ -4743,7 +4669,7 @@ mod tests {
     }
 
     #[test]
-    fn select_content_align_item_with_trigger_false_sets_position_popper() {
+    fn select_content_position_popper_sets_select_position() {
         let window = AppWindowId::default();
         let mut app = App::new();
         let bounds = Rect::new(
@@ -4754,7 +4680,7 @@ mod tests {
         fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
             let select = Select::new_controllable(cx, None, None::<Arc<str>>, None, false).content(
                 SelectContent::new()
-                    .align_item_with_trigger(false)
+                    .position(SelectPosition::Popper)
                     .side_offset(Px(7.0)),
             );
 
@@ -4770,7 +4696,7 @@ mod tests {
         let mut ui: UiTree<App> = UiTree::new();
         ui.set_window(window);
 
-        crate::shadcn_themes::apply_shadcn_new_york_v4(
+        crate::shadcn_themes::apply_shadcn_new_york(
             &mut app,
             crate::shadcn_themes::ShadcnBaseColor::Slate,
             crate::shadcn_themes::ShadcnColorScheme::Light,
@@ -4811,10 +4737,8 @@ mod tests {
                             .trigger_test_id("select-trigger")
                             .into_element_parts(
                                 cx,
-                                |_cx| {
-                                    SelectTrigger::new()
-                                        .value(SelectValue::new().placeholder("Select a fruit"))
-                                },
+                                |_cx| SelectTrigger::new(),
+                                |_cx| SelectValue::new().placeholder("Select a fruit"),
                                 |_cx| {
                                     SelectContent::new().with_entries([SelectGroup::new([
                                         SelectLabel::new("Fruits").into(),

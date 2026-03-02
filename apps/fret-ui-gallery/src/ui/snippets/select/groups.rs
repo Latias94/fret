@@ -10,10 +10,8 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
         .refine_layout(LayoutRefinement::default().w_full().max_w(Px(192.0)))
         .into_element_parts(
             cx,
-            |_cx| {
-                shadcn::SelectTrigger::new()
-                    .value(shadcn::SelectValue::new().placeholder("Select a fruit"))
-            },
+            |_cx| shadcn::SelectTrigger::new(),
+            |_cx| shadcn::SelectValue::new().placeholder("Select a fruit"),
             |_cx| {
                 shadcn::SelectContent::new().with_entries([
                     shadcn::SelectGroup::new([

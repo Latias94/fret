@@ -584,14 +584,14 @@ fn header_bar(
                 })
                 .unwrap_or_default();
 
-            let session_select = shadcn::Select::new(
-                st.selected_session_id.clone(),
-                st.selected_session_open.clone(),
-            )
-            .placeholder("Session")
-            .items(session_items)
-            .refine_layout(fret_ui_kit::LayoutRefinement::default().w_px(Px(220.0)))
-            .into_element(cx);
+	            let session_select = shadcn::Select::new(
+	                st.selected_session_id.clone(),
+	                st.selected_session_open.clone(),
+	            )
+	            .value(shadcn::SelectValue::new().placeholder("Session"))
+	            .items(session_items)
+	            .refine_layout(fret_ui_kit::LayoutRefinement::default().w_px(Px(220.0)))
+	            .into_element(cx);
 
             let left = fret_ui_kit::declarative::stack::hstack(
                 cx,
@@ -1483,14 +1483,14 @@ fn center_panel(
         shadcn::SelectItem::new("node_id", "node_id"),
         shadcn::SelectItem::new("global_element_id", "global_element_id"),
     ];
-    let selector_kind_select = shadcn::Select::new(
-        st.script_selector_kind.clone(),
-        st.script_selector_kind_open.clone(),
-    )
-    .placeholder("selector kind")
-    .items(selector_kind_items)
-    .refine_layout(fret_ui_kit::LayoutRefinement::default().w_full())
-    .into_element(cx);
+	    let selector_kind_select = shadcn::Select::new(
+	        st.script_selector_kind.clone(),
+	        st.script_selector_kind_open.clone(),
+	    )
+	    .value(shadcn::SelectValue::new().placeholder("selector kind"))
+	    .items(selector_kind_items)
+	    .refine_layout(fret_ui_kit::LayoutRefinement::default().w_full())
+	    .into_element(cx);
 
     let selector_kind = cx
         .app
@@ -1618,14 +1618,14 @@ fn center_panel(
         shadcn::SelectItem::new("bounds_overlapping_x", "bounds_overlapping_x"),
         shadcn::SelectItem::new("bounds_overlapping_y", "bounds_overlapping_y"),
     ];
-    let predicate_kind_select = shadcn::Select::new(
-        st.script_predicate_kind.clone(),
-        st.script_predicate_kind_open.clone(),
-    )
-    .placeholder("predicate kind")
-    .items(predicate_kind_items)
-    .refine_layout(fret_ui_kit::LayoutRefinement::default().w_full())
-    .into_element(cx);
+	    let predicate_kind_select = shadcn::Select::new(
+	        st.script_predicate_kind.clone(),
+	        st.script_predicate_kind_open.clone(),
+	    )
+	    .value(shadcn::SelectValue::new().placeholder("predicate kind"))
+	    .items(predicate_kind_items)
+	    .refine_layout(fret_ui_kit::LayoutRefinement::default().w_full())
+	    .into_element(cx);
 
     let predicate_kind = cx
         .app
@@ -3076,32 +3076,32 @@ fn predicate_fields(cx: &mut ElementContext<'_, App>, st: &State, kind: &str) ->
                 shadcn::SelectItem::new("false", "false"),
             ];
 
-            let barrier_root = shadcn::Select::new(
-                st.script_predicate_barrier_root.clone(),
-                st.script_predicate_barrier_root_open.clone(),
-            )
-            .placeholder("barrier_root")
-            .items(barrier_root_items)
-            .refine_layout(fret_ui_kit::LayoutRefinement::default().w_full())
-            .into_element(cx);
+	            let barrier_root = shadcn::Select::new(
+	                st.script_predicate_barrier_root.clone(),
+	                st.script_predicate_barrier_root_open.clone(),
+	            )
+	            .value(shadcn::SelectValue::new().placeholder("barrier_root"))
+	            .items(barrier_root_items)
+	            .refine_layout(fret_ui_kit::LayoutRefinement::default().w_full())
+	            .into_element(cx);
 
-            let focus_root = shadcn::Select::new(
-                st.script_predicate_focus_barrier_root.clone(),
-                st.script_predicate_focus_barrier_root_open.clone(),
-            )
-            .placeholder("focus_barrier_root")
-            .items(focus_root_items)
-            .refine_layout(fret_ui_kit::LayoutRefinement::default().w_full())
-            .into_element(cx);
+	            let focus_root = shadcn::Select::new(
+	                st.script_predicate_focus_barrier_root.clone(),
+	                st.script_predicate_focus_barrier_root_open.clone(),
+	            )
+	            .value(shadcn::SelectValue::new().placeholder("focus_barrier_root"))
+	            .items(focus_root_items)
+	            .refine_layout(fret_ui_kit::LayoutRefinement::default().w_full())
+	            .into_element(cx);
 
-            let require_equal = shadcn::Select::new(
-                st.script_predicate_require_equal.clone(),
-                st.script_predicate_require_equal_open.clone(),
-            )
-            .placeholder("require_equal")
-            .items(require_items)
-            .refine_layout(fret_ui_kit::LayoutRefinement::default().w_full())
-            .into_element(cx);
+	            let require_equal = shadcn::Select::new(
+	                st.script_predicate_require_equal.clone(),
+	                st.script_predicate_require_equal_open.clone(),
+	            )
+	            .value(shadcn::SelectValue::new().placeholder("require_equal"))
+	            .items(require_items)
+	            .refine_layout(fret_ui_kit::LayoutRefinement::default().w_full())
+	            .into_element(cx);
 
             let other_selector =
                 shadcn::Textarea::new(st.script_predicate_other_selector_json.clone())

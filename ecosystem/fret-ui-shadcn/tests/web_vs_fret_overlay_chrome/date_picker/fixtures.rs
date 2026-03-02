@@ -62,7 +62,7 @@ fn build_date_picker_with_presets_select_open(
             },
             move |cx| {
                 let select = fret_ui_shadcn::Select::new(value.clone(), open.clone())
-                    .placeholder("Select")
+                    .value(fret_ui_shadcn::SelectValue::new().placeholder("Select"))
                     .position(SelectPosition::Popper)
                     .items([
                         fret_ui_shadcn::SelectItem::new("0", "Today"),

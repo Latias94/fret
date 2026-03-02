@@ -189,7 +189,7 @@ fn context_menu_content_height_clamps_to_available_height() {
     ui.set_window(window);
     let mut services = FakeServices;
 
-    shadcn_themes::apply_shadcn_new_york_v4(
+    shadcn_themes::apply_shadcn_new_york(
         &mut app,
         shadcn_themes::ShadcnBaseColor::Neutral,
         shadcn_themes::ShadcnColorScheme::Light,
