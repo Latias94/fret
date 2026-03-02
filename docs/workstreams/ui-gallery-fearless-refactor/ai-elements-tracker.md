@@ -64,10 +64,10 @@ Status labels:
 | `web_preview_demo` | `PAGE_AI_WEB_PREVIEW_DEMO` | (removed) | `apps/fret-ui-gallery/src/ui/snippets/ai/web_preview_demo.rs` | `apps/fret-ui-gallery/src/ui/pages/ai_web_preview_demo.rs` | Snippet-backed |
 | `workflow_canvas_demo` | `PAGE_AI_WORKFLOW_CANVAS_DEMO` | `apps/fret-ui-gallery/src/ui/previews/gallery/ai/workflow_canvas_demo.rs` | — | — | Legacy preview |
 | `workflow_chrome_demo` | `PAGE_AI_WORKFLOW_CHROME_DEMO` | `apps/fret-ui-gallery/src/ui/previews/gallery/ai/workflow_chrome_demo.rs` | — | — | Legacy preview |
-| `workflow_connection_demo` | `PAGE_AI_WORKFLOW_CONNECTION_DEMO` | `apps/fret-ui-gallery/src/ui/previews/gallery/ai/workflow_connection_demo.rs` | — | — | Legacy preview |
+| `workflow_connection_demo` | `PAGE_AI_WORKFLOW_CONNECTION_DEMO` | (removed) | `apps/fret-ui-gallery/src/ui/snippets/ai/workflow_connection_demo.rs` | `apps/fret-ui-gallery/src/ui/pages/ai_workflow_connection_demo.rs` | Snippet-backed |
 | `workflow_controls_demo` | `PAGE_AI_WORKFLOW_CONTROLS_DEMO` | `apps/fret-ui-gallery/src/ui/previews/gallery/ai/workflow_controls_demo.rs` | — | — | Legacy preview |
 | `workflow_edge_demo` | `PAGE_AI_WORKFLOW_EDGE_DEMO` | `apps/fret-ui-gallery/src/ui/previews/gallery/ai/workflow_edge_demo.rs` | — | — | Legacy preview |
 | `workflow_node_demo` | `PAGE_AI_WORKFLOW_NODE_DEMO` | `apps/fret-ui-gallery/src/ui/previews/gallery/ai/workflow_node_demo.rs` | — | — | Legacy preview |
 | `workflow_node_graph_demo` | `PAGE_AI_WORKFLOW_NODE_GRAPH_DEMO` | `apps/fret-ui-gallery/src/ui/previews/gallery/ai/workflow_node_graph_demo.rs` | — | — | Legacy preview |
-| `workflow_panel_demo` | `PAGE_AI_WORKFLOW_PANEL_DEMO` | `apps/fret-ui-gallery/src/ui/previews/gallery/ai/workflow_panel_demo.rs` | — | — | Legacy preview |
-| `workflow_toolbar_demo` | `PAGE_AI_WORKFLOW_TOOLBAR_DEMO` | `apps/fret-ui-gallery/src/ui/previews/gallery/ai/workflow_toolbar_demo.rs` | — | — | Legacy preview |
+| `workflow_panel_demo` | `PAGE_AI_WORKFLOW_PANEL_DEMO` | (removed) | `apps/fret-ui-gallery/src/ui/snippets/ai/workflow_panel_demo.rs` | `apps/fret-ui-gallery/src/ui/pages/ai_workflow_panel_demo.rs` | Snippet-backed |
+| `workflow_toolbar_demo` | `PAGE_AI_WORKFLOW_TOOLBAR_DEMO` | (removed) | `apps/fret-ui-gallery/src/ui/snippets/ai/workflow_toolbar_demo.rs` | `apps/fret-ui-gallery/src/ui/pages/ai_workflow_toolbar_demo.rs` | Snippet-backed |

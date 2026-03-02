@@ -46,6 +46,9 @@ mod ai_transcription_demo;
 mod ai_tool_demo;
 mod ai_voice_selector_demo;
 mod ai_web_preview_demo;
+mod ai_workflow_connection_demo;
+mod ai_workflow_panel_demo;
+mod ai_workflow_toolbar_demo;
 mod alert;
 mod alert_dialog;
 mod aspect_ratio;
@@ -428,6 +431,27 @@ pub(super) fn preview_ai_web_preview_demo(
     theme: &Theme,
 ) -> Vec<AnyElement> {
     ai_web_preview_demo::preview_ai_web_preview_demo(cx, theme)
+}
+
+pub(super) fn preview_ai_workflow_toolbar_demo(
+    cx: &mut ElementContext<'_, App>,
+    theme: &Theme,
+) -> Vec<AnyElement> {
+    ai_workflow_toolbar_demo::preview_ai_workflow_toolbar_demo(cx, theme)
+}
+
+pub(super) fn preview_ai_workflow_panel_demo(
+    cx: &mut ElementContext<'_, App>,
+    theme: &Theme,
+) -> Vec<AnyElement> {
+    ai_workflow_panel_demo::preview_ai_workflow_panel_demo(cx, theme)
+}
+
+pub(super) fn preview_ai_workflow_connection_demo(
+    cx: &mut ElementContext<'_, App>,
+    theme: &Theme,
+) -> Vec<AnyElement> {
+    ai_workflow_connection_demo::preview_ai_workflow_connection_demo(cx, theme)
 }
 
 pub(super) fn preview_accordion(

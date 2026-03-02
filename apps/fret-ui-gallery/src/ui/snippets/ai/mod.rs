@@ -43,3 +43,6 @@ pub mod transcription_demo;
 pub mod tool_demo;
 pub mod voice_selector_demo;
 pub mod web_preview_demo;
+pub mod workflow_connection_demo;
+pub mod workflow_panel_demo;
+pub mod workflow_toolbar_demo;
