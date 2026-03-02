@@ -1,6 +1,6 @@
-use super::super::super::super::super::*;
+use super::super::*;
 
-pub(in crate::ui) fn preview_popover(
+pub(super) fn preview_popover(
     cx: &mut ElementContext<'_, App>,
     _open: Model<bool>,
 ) -> Vec<AnyElement> {
@@ -30,35 +30,35 @@ pub(in crate::ui) fn preview_popover(
                 .max_w(Px(760.0))
                 .test_id_prefix("ui-gallery-popover-demo")
                 .code_rust_from_file_region(
-                    include_str!("../../../../snippets/popover/demo.rs"),
+                    include_str!("../snippets/popover/demo.rs"),
                     "example",
                 ),
             DocSection::new("Basic", basic)
                 .max_w(Px(760.0))
                 .test_id_prefix("ui-gallery-popover-basic")
                 .code_rust_from_file_region(
-                    include_str!("../../../../snippets/popover/basic.rs"),
+                    include_str!("../snippets/popover/basic.rs"),
                     "example",
                 ),
             DocSection::new("Align", align)
                 .max_w(Px(980.0))
                 .test_id_prefix("ui-gallery-popover-align")
                 .code_rust_from_file_region(
-                    include_str!("../../../../snippets/popover/align.rs"),
+                    include_str!("../snippets/popover/align.rs"),
                     "example",
                 ),
             DocSection::new("With Form", with_form)
                 .max_w(Px(760.0))
                 .test_id_prefix("ui-gallery-popover-with-form")
                 .code_rust_from_file_region(
-                    include_str!("../../../../snippets/popover/with_form.rs"),
+                    include_str!("../snippets/popover/with_form.rs"),
                     "example",
                 ),
             DocSection::new("RTL", rtl)
                 .max_w(Px(760.0))
                 .test_id_prefix("ui-gallery-popover-rtl")
                 .code_rust_from_file_region(
-                    include_str!("../../../../snippets/popover/rtl.rs"),
+                    include_str!("../snippets/popover/rtl.rs"),
                     "example",
                 ),
             DocSection::new("Notes", notes).max_w(Px(820.0)),

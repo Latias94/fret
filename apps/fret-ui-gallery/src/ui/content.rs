@@ -570,7 +570,7 @@ fn page_preview(
         PAGE_NATIVE_SELECT => preview_native_select(cx),
         PAGE_NAVIGATION_MENU => preview_navigation_menu(cx),
         PAGE_PAGINATION => preview_pagination(cx),
-        PAGE_POPOVER => preview_popover(cx, popover_open),
+        PAGE_POPOVER => pages::preview_popover(cx, popover_open),
         PAGE_RADIO_GROUP => preview_radio_group(cx),
         PAGE_SEPARATOR => preview_separator(cx),
         PAGE_SHEET => preview_sheet(cx, sheet_open),
