@@ -1,23 +1,21 @@
-use super::super::super::super::*;
+pub const SOURCE: &str = include_str!("confirmation_demo.rs");
 
-pub(in crate::ui) fn preview_ai_confirmation_demo(
-    cx: &mut ElementContext<'_, App>,
-    _theme: &Theme,
-) -> Vec<AnyElement> {
-    use std::sync::Arc;
+// region: example
+use fret_runtime::Model;
+use fret_ui::Invalidation;
+use fret_ui_ai as ui_ai;
+use fret_ui_kit::declarative::stack;
+use fret_ui_kit::{LayoutRefinement, Space};
+use fret_ui_shadcn::{prelude::*, Button, ButtonSize, ButtonVariant};
+use std::sync::Arc;
 
-    use fret_runtime::Model;
-    use fret_ui::Invalidation;
-    use fret_ui_kit::declarative::stack;
-    use fret_ui_kit::{LayoutRefinement, Space};
-    use fret_ui_shadcn::{Button, ButtonSize, ButtonVariant};
+#[derive(Default)]
+struct DemoModels {
+    state: Option<Model<ui_ai::ToolUiPartState>>,
+    approval: Option<Model<Option<ui_ai::ToolUiPartApproval>>>,
+}
 
-    #[derive(Default)]
-    struct DemoModels {
-        state: Option<Model<ui_ai::ToolUiPartState>>,
-        approval: Option<Model<Option<ui_ai::ToolUiPartApproval>>>,
-    }
-
+pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement {
     let state = cx.with_state(DemoModels::default, |st| st.state.clone());
     let state = match state {
         Some(model) => model,
@@ -115,7 +113,7 @@ pub(in crate::ui) fn preview_ai_confirmation_demo(
     }
     let confirmation = confirmation.into_element(cx);
 
-    vec![stack::vstack(
+    stack::vstack(
         cx,
         stack::VStackProps::default()
             .layout(LayoutRefinement::default().w_full().min_w_0())
@@ -128,5 +126,7 @@ pub(in crate::ui) fn preview_ai_confirmation_demo(
                 confirmation,
             ]
         },
-    )]
+    )
 }
+// endregion: example
+

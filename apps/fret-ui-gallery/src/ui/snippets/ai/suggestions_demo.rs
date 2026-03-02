@@ -1,22 +1,21 @@
-use super::super::super::super::*;
+pub const SOURCE: &str = include_str!("suggestions_demo.rs");
 
-pub(in crate::ui) fn preview_ai_suggestions_demo(
-    cx: &mut ElementContext<'_, App>,
-    _theme: &Theme,
-) -> Vec<AnyElement> {
-    use std::sync::Arc;
+// region: example
+use fret_runtime::Model;
+use fret_ui::Invalidation;
+use fret_ui::element::SemanticsProps;
+use fret_ui_ai as ui_ai;
+use fret_ui_kit::declarative::stack;
+use fret_ui_kit::{LayoutRefinement, Space};
+use fret_ui_shadcn::prelude::*;
+use std::sync::Arc;
 
-    use fret_runtime::Model;
-    use fret_ui::Invalidation;
-    use fret_ui::element::SemanticsProps;
-    use fret_ui_kit::declarative::stack;
-    use fret_ui_kit::{LayoutRefinement, Space};
+#[derive(Default)]
+struct DemoModels {
+    clicked: Option<Model<bool>>,
+}
 
-    #[derive(Default)]
-    struct DemoModels {
-        clicked: Option<Model<bool>>,
-    }
-
+pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement {
     let clicked = cx.with_state(DemoModels::default, |st| st.clicked.clone());
     let clicked = match clicked {
         Some(model) => model,
@@ -66,7 +65,7 @@ pub(in crate::ui) fn preview_ai_suggestions_demo(
     .test_id_root("ui-ai-suggestions-root")
     .into_element(cx);
 
-    vec![stack::vstack(
+    stack::vstack(
         cx,
         stack::VStackProps::default()
             .layout(LayoutRefinement::default().w_full().min_w_0())
@@ -82,5 +81,7 @@ pub(in crate::ui) fn preview_ai_suggestions_demo(
             }
             out
         },
-    )]
+    )
 }
+// endregion: example
+

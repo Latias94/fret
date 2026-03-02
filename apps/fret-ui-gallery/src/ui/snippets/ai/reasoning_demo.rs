@@ -1,22 +1,20 @@
-use super::super::super::super::*;
+pub const SOURCE: &str = include_str!("reasoning_demo.rs");
 
-pub(in crate::ui) fn preview_ai_reasoning_demo(
-    cx: &mut ElementContext<'_, App>,
-    _theme: &Theme,
-) -> Vec<AnyElement> {
-    use std::sync::Arc;
+// region: example
+use fret_runtime::Model;
+use fret_ui::Invalidation;
+use fret_ui_ai as ui_ai;
+use fret_ui_kit::declarative::stack;
+use fret_ui_kit::{LayoutRefinement, Space};
+use fret_ui_shadcn::{prelude::*, Button, ButtonSize, ButtonVariant};
+use std::sync::Arc;
 
-    use fret_runtime::Model;
-    use fret_ui::Invalidation;
-    use fret_ui_kit::declarative::stack;
-    use fret_ui_kit::{LayoutRefinement, Space};
-    use fret_ui_shadcn::{Button, ButtonSize, ButtonVariant};
+#[derive(Default)]
+struct DemoModels {
+    streaming: Option<Model<bool>>,
+}
 
-    #[derive(Default)]
-    struct DemoModels {
-        streaming: Option<Model<bool>>,
-    }
-
+pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement {
     let streaming = cx.with_state(DemoModels::default, |st| st.streaming.clone());
     let streaming = match streaming {
         Some(model) => model,
@@ -77,7 +75,7 @@ pub(in crate::ui) fn preview_ai_reasoning_demo(
         move |_cx| vec![start, stop],
     );
 
-    vec![stack::vstack(
+    stack::vstack(
         cx,
         stack::VStackProps::default()
             .layout(LayoutRefinement::default().w_full().min_w_0())
@@ -90,5 +88,7 @@ pub(in crate::ui) fn preview_ai_reasoning_demo(
                 reasoning,
             ]
         },
-    )]
+    )
 }
+// endregion: example
+

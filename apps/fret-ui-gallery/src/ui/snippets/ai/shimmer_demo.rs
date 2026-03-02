@@ -1,12 +1,14 @@
-use super::super::super::super::*;
+pub const SOURCE: &str = include_str!("shimmer_demo.rs");
 
-pub(in crate::ui) fn preview_ai_shimmer_demo(
-    cx: &mut ElementContext<'_, App>,
-    _theme: &Theme,
-) -> Vec<AnyElement> {
-    use fret_ui_kit::declarative::stack;
-    use fret_ui_kit::{LayoutRefinement, Space};
+// region: example
+use fret_core::Px;
+use fret_ui_ai as ui_ai;
+use fret_ui_kit::declarative::stack;
+use fret_ui_kit::{LayoutRefinement, Space};
+use fret_ui_shadcn::prelude::*;
+use std::sync::Arc;
 
+pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement {
     let shimmer = ui_ai::Shimmer::new(Arc::<str>::from("Streaming"))
         .test_id("ui-ai-shimmer-root")
         .refine_layout(
@@ -17,7 +19,7 @@ pub(in crate::ui) fn preview_ai_shimmer_demo(
         )
         .into_element(cx);
 
-    vec![stack::vstack(
+    stack::vstack(
         cx,
         stack::VStackProps::default()
             .layout(LayoutRefinement::default().w_full().min_w_0())
@@ -29,5 +31,7 @@ pub(in crate::ui) fn preview_ai_shimmer_demo(
                 shimmer,
             ]
         },
-    )]
+    )
 }
+// endregion: example
+

@@ -2,7 +2,10 @@ use super::*;
 
 mod accordion;
 mod ai_attachments_demo;
+mod ai_checkpoint_demo;
 mod ai_code_block_demo;
+mod ai_confirmation_demo;
+mod ai_environment_variables_demo;
 mod ai_inline_citation_demo;
 mod ai_model_selector_demo;
 mod ai_mic_selector_demo;
@@ -10,8 +13,11 @@ mod ai_package_info_demo;
 mod ai_prompt_input_action_menu_demo;
 mod ai_prompt_input_provider_demo;
 mod ai_prompt_input_referenced_sources_demo;
+mod ai_reasoning_demo;
 mod ai_sources_demo;
+mod ai_shimmer_demo;
 mod ai_snippet_demo;
+mod ai_suggestions_demo;
 mod ai_terminal_demo;
 mod ai_tool_demo;
 mod ai_voice_selector_demo;
@@ -90,6 +96,13 @@ pub(super) fn preview_ai_attachments_demo(
     ai_attachments_demo::preview_ai_attachments_demo(cx, theme)
 }
 
+pub(super) fn preview_ai_checkpoint_demo(
+    cx: &mut ElementContext<'_, App>,
+    theme: &Theme,
+) -> Vec<AnyElement> {
+    ai_checkpoint_demo::preview_ai_checkpoint_demo(cx, theme)
+}
+
 pub(super) fn preview_ai_code_block_demo(
     cx: &mut ElementContext<'_, App>,
     theme: &Theme,
@@ -97,11 +110,25 @@ pub(super) fn preview_ai_code_block_demo(
     ai_code_block_demo::preview_ai_code_block_demo(cx, theme)
 }
 
+pub(super) fn preview_ai_confirmation_demo(
+    cx: &mut ElementContext<'_, App>,
+    theme: &Theme,
+) -> Vec<AnyElement> {
+    ai_confirmation_demo::preview_ai_confirmation_demo(cx, theme)
+}
+
 pub(super) fn preview_ai_snippet_demo(
     cx: &mut ElementContext<'_, App>,
     theme: &Theme,
 ) -> Vec<AnyElement> {
     ai_snippet_demo::preview_ai_snippet_demo(cx, theme)
+}
+
+pub(super) fn preview_ai_environment_variables_demo(
+    cx: &mut ElementContext<'_, App>,
+    theme: &Theme,
+) -> Vec<AnyElement> {
+    ai_environment_variables_demo::preview_ai_environment_variables_demo(cx, theme)
 }
 
 pub(super) fn preview_ai_terminal_demo(
@@ -116,6 +143,27 @@ pub(super) fn preview_ai_tool_demo(
     theme: &Theme,
 ) -> Vec<AnyElement> {
     ai_tool_demo::preview_ai_tool_demo(cx, theme)
+}
+
+pub(super) fn preview_ai_reasoning_demo(
+    cx: &mut ElementContext<'_, App>,
+    theme: &Theme,
+) -> Vec<AnyElement> {
+    ai_reasoning_demo::preview_ai_reasoning_demo(cx, theme)
+}
+
+pub(super) fn preview_ai_shimmer_demo(
+    cx: &mut ElementContext<'_, App>,
+    theme: &Theme,
+) -> Vec<AnyElement> {
+    ai_shimmer_demo::preview_ai_shimmer_demo(cx, theme)
+}
+
+pub(super) fn preview_ai_suggestions_demo(
+    cx: &mut ElementContext<'_, App>,
+    theme: &Theme,
+) -> Vec<AnyElement> {
+    ai_suggestions_demo::preview_ai_suggestions_demo(cx, theme)
 }
 
 pub(super) fn preview_ai_prompt_input_provider_demo(
