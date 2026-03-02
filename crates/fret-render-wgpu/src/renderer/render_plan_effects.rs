@@ -440,16 +440,18 @@ pub(super) fn apply_chain_in_place(
                         max_sample_offset_px: _,
                     } => {
                         passes.push(RenderPlanPass::CustomEffect(CustomEffectPass {
-                            src: work,
-                            dst: srcdst,
-                            src_size: ctx.viewport_size,
-                            dst_size: ctx.viewport_size,
-                            dst_scissor: Some(LocalScissorRect(scissor)),
-                            mask_uniform_index,
-                            mask,
-                            effect: id,
-                            params,
-                            load: wgpu::LoadOp::Load,
+                            common: super::CustomEffectPassCommon {
+                                src: work,
+                                dst: srcdst,
+                                src_size: ctx.viewport_size,
+                                dst_size: ctx.viewport_size,
+                                dst_scissor: Some(LocalScissorRect(scissor)),
+                                mask_uniform_index,
+                                mask,
+                                effect: id,
+                                params,
+                                load: wgpu::LoadOp::Load,
+                            },
                         }));
                     }
                     fret_core::EffectStep::CustomV2 {
@@ -467,19 +469,21 @@ pub(super) fn apply_chain_in_place(
                             Some(input) => (Some(input.image), input.uv, input.sampling),
                         };
                         passes.push(RenderPlanPass::CustomEffectV2(CustomEffectV2Pass {
-                            src: work,
-                            dst: srcdst,
-                            src_size: ctx.viewport_size,
-                            dst_size: ctx.viewport_size,
-                            dst_scissor: Some(LocalScissorRect(scissor)),
-                            mask_uniform_index,
-                            mask,
-                            effect: id,
-                            params,
+                            common: super::CustomEffectPassCommon {
+                                src: work,
+                                dst: srcdst,
+                                src_size: ctx.viewport_size,
+                                dst_size: ctx.viewport_size,
+                                dst_scissor: Some(LocalScissorRect(scissor)),
+                                mask_uniform_index,
+                                mask,
+                                effect: id,
+                                params,
+                                load: wgpu::LoadOp::Load,
+                            },
                             input_image,
                             input_uv,
                             input_sampling,
-                            load: wgpu::LoadOp::Load,
                         }));
                     }
                     fret_core::EffectStep::CustomV3 {
@@ -522,28 +526,30 @@ pub(super) fn apply_chain_in_place(
                         );
 
                         passes.push(RenderPlanPass::CustomEffectV3(CustomEffectV3Pass {
-                            src: work,
                             src_raw: v3_sources_plan.src_raw,
                             src_pyramid: v3_sources_plan.src_raw,
                             pyramid_levels: v3_sources_plan.pyramid_levels,
                             pyramid_build_scissor: v3_sources_plan.pyramid_build_scissor,
                             raw_wanted: sources.want_raw,
                             pyramid_wanted: sources.pyramid.is_some(),
-                            dst: srcdst,
-                            src_size: ctx.viewport_size,
-                            dst_size: ctx.viewport_size,
-                            dst_scissor: Some(LocalScissorRect(scissor)),
-                            mask_uniform_index,
-                            mask,
-                            effect: id,
-                            params,
+                            common: super::CustomEffectPassCommon {
+                                src: work,
+                                dst: srcdst,
+                                src_size: ctx.viewport_size,
+                                dst_size: ctx.viewport_size,
+                                dst_scissor: Some(LocalScissorRect(scissor)),
+                                mask_uniform_index,
+                                mask,
+                                effect: id,
+                                params,
+                                load: wgpu::LoadOp::Load,
+                            },
                             user0_image,
                             user0_uv,
                             user0_sampling,
                             user1_image,
                             user1_uv,
                             user1_sampling,
-                            load: wgpu::LoadOp::Load,
                         }));
                     }
                     _ => {}
@@ -3053,7 +3059,9 @@ mod tests {
             _ => None,
         });
         assert!(
-            custom.is_some_and(|p| p.mask_uniform_index.is_some() || p.mask.is_some()),
+            custom.is_some_and(|p| {
+                p.common.mask_uniform_index.is_some() || p.common.mask.is_some()
+            }),
             "the final step must apply clip coverage"
         );
     }
@@ -3126,10 +3134,10 @@ mod tests {
         });
         assert!(
             custom.is_some_and(|p| {
-                p.src == PlanTarget::Intermediate1
-                    && p.dst == PlanTarget::Intermediate0
-                    && p.dst_scissor == Some(LocalScissorRect(scissor))
-                    && (p.mask_uniform_index.is_some() || p.mask.is_some())
+                p.common.src == PlanTarget::Intermediate1
+                    && p.common.dst == PlanTarget::Intermediate0
+                    && p.common.dst_scissor == Some(LocalScissorRect(scissor))
+                    && (p.common.mask_uniform_index.is_some() || p.common.mask.is_some())
             }),
             "final CustomEffect should read from the work buffer and apply clip coverage once"
         );
@@ -4017,31 +4025,35 @@ fn append_custom_effect_in_place_single_scratch(
             load: wgpu::LoadOp::Clear(clear),
         }));
         passes.push(RenderPlanPass::CustomEffect(CustomEffectPass {
-            src: scratch,
-            dst: srcdst,
-            src_size: size,
-            dst_size: size,
-            dst_scissor: Some(LocalScissorRect(scissor)),
-            mask_uniform_index,
-            mask,
-            effect,
-            params,
-            load: wgpu::LoadOp::Load,
+            common: super::CustomEffectPassCommon {
+                src: scratch,
+                dst: srcdst,
+                src_size: size,
+                dst_size: size,
+                dst_scissor: Some(LocalScissorRect(scissor)),
+                mask_uniform_index,
+                mask,
+                effect,
+                params,
+                load: wgpu::LoadOp::Load,
+            },
         }));
         return;
     }
 
     passes.push(RenderPlanPass::CustomEffect(CustomEffectPass {
-        src: srcdst,
-        dst: scratch,
-        src_size: size,
-        dst_size: size,
-        dst_scissor: None,
-        mask_uniform_index: None,
-        mask: None,
-        effect,
-        params,
-        load: wgpu::LoadOp::Clear(clear),
+        common: super::CustomEffectPassCommon {
+            src: srcdst,
+            dst: scratch,
+            src_size: size,
+            dst_size: size,
+            dst_scissor: None,
+            mask_uniform_index: None,
+            mask: None,
+            effect,
+            params,
+            load: wgpu::LoadOp::Clear(clear),
+        },
     }));
     passes.push(RenderPlanPass::FullscreenBlit(FullscreenBlitPass {
         src: scratch,
@@ -4089,37 +4101,41 @@ fn append_custom_effect_v2_in_place_single_scratch(
             load: wgpu::LoadOp::Clear(clear),
         }));
         passes.push(RenderPlanPass::CustomEffectV2(CustomEffectV2Pass {
-            src: scratch,
-            dst: srcdst,
-            src_size: size,
-            dst_size: size,
-            dst_scissor: Some(LocalScissorRect(scissor)),
-            mask_uniform_index,
-            mask,
-            effect,
-            params,
+            common: super::CustomEffectPassCommon {
+                src: scratch,
+                dst: srcdst,
+                src_size: size,
+                dst_size: size,
+                dst_scissor: Some(LocalScissorRect(scissor)),
+                mask_uniform_index,
+                mask,
+                effect,
+                params,
+                load: wgpu::LoadOp::Load,
+            },
             input_image,
             input_uv,
             input_sampling,
-            load: wgpu::LoadOp::Load,
         }));
         return;
     }
 
     passes.push(RenderPlanPass::CustomEffectV2(CustomEffectV2Pass {
-        src: srcdst,
-        dst: scratch,
-        src_size: size,
-        dst_size: size,
-        dst_scissor: None,
-        mask_uniform_index: None,
-        mask: None,
-        effect,
-        params,
+        common: super::CustomEffectPassCommon {
+            src: srcdst,
+            dst: scratch,
+            src_size: size,
+            dst_size: size,
+            dst_scissor: None,
+            mask_uniform_index: None,
+            mask: None,
+            effect,
+            params,
+            load: wgpu::LoadOp::Clear(clear),
+        },
         input_image,
         input_uv,
         input_sampling,
-        load: wgpu::LoadOp::Clear(clear),
     }));
     passes.push(RenderPlanPass::FullscreenBlit(FullscreenBlitPass {
         src: scratch,
@@ -4176,56 +4192,60 @@ fn append_custom_effect_v3_in_place_single_scratch(
         let src_pyramid = src_raw;
 
         passes.push(RenderPlanPass::CustomEffectV3(CustomEffectV3Pass {
-            src: scratch,
             src_raw,
             src_pyramid,
             pyramid_levels,
             pyramid_build_scissor,
             raw_wanted: sources.want_raw,
             pyramid_wanted: sources.pyramid.is_some(),
-            dst: srcdst,
-            src_size: size,
-            dst_size: size,
-            dst_scissor: Some(LocalScissorRect(scissor)),
-            mask_uniform_index,
-            mask,
-            effect,
-            params,
+            common: super::CustomEffectPassCommon {
+                src: scratch,
+                dst: srcdst,
+                src_size: size,
+                dst_size: size,
+                dst_scissor: Some(LocalScissorRect(scissor)),
+                mask_uniform_index,
+                mask,
+                effect,
+                params,
+                load: wgpu::LoadOp::Load,
+            },
             user0_image,
             user0_uv,
             user0_sampling,
             user1_image,
             user1_uv,
             user1_sampling,
-            load: wgpu::LoadOp::Load,
         }));
         return;
     }
     let src_pyramid = src_raw;
 
     passes.push(RenderPlanPass::CustomEffectV3(CustomEffectV3Pass {
-        src: srcdst,
         src_raw,
         src_pyramid,
         pyramid_levels,
         pyramid_build_scissor,
         raw_wanted: sources.want_raw,
         pyramid_wanted: sources.pyramid.is_some(),
-        dst: scratch,
-        src_size: size,
-        dst_size: size,
-        dst_scissor: None,
-        mask_uniform_index: None,
-        mask: None,
-        effect,
-        params,
+        common: super::CustomEffectPassCommon {
+            src: srcdst,
+            dst: scratch,
+            src_size: size,
+            dst_size: size,
+            dst_scissor: None,
+            mask_uniform_index: None,
+            mask: None,
+            effect,
+            params,
+            load: wgpu::LoadOp::Clear(clear),
+        },
         user0_image,
         user0_uv,
         user0_sampling,
         user1_image,
         user1_uv,
         user1_sampling,
-        load: wgpu::LoadOp::Clear(clear),
     }));
     passes.push(RenderPlanPass::FullscreenBlit(FullscreenBlitPass {
         src: scratch,

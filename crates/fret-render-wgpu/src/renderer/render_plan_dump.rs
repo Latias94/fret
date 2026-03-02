@@ -649,27 +649,27 @@ fn encode_pass(p: &RenderPlanPass) -> JsonDumpPass {
             load: encode_load_op(pass.load),
         },
         RenderPlanPass::CustomEffect(pass) => JsonDumpPass::CustomEffect {
-            src: plan_target_name(pass.src),
-            dst: plan_target_name(pass.dst),
-            src_size: [pass.src_size.0, pass.src_size.1],
-            dst_size: [pass.dst_size.0, pass.dst_size.1],
-            dst_scissor: pass.dst_scissor.map(Into::into),
-            dst_scissor_space: pass.dst_scissor.map(|_| "dst_local"),
-            mask_uniform_index: pass.mask_uniform_index,
-            mask: pass.mask.map(Into::into),
-            effect: format!("{:?}", pass.effect),
-            load: encode_load_op(pass.load),
+            src: plan_target_name(pass.common.src),
+            dst: plan_target_name(pass.common.dst),
+            src_size: [pass.common.src_size.0, pass.common.src_size.1],
+            dst_size: [pass.common.dst_size.0, pass.common.dst_size.1],
+            dst_scissor: pass.common.dst_scissor.map(Into::into),
+            dst_scissor_space: pass.common.dst_scissor.map(|_| "dst_local"),
+            mask_uniform_index: pass.common.mask_uniform_index,
+            mask: pass.common.mask.map(Into::into),
+            effect: format!("{:?}", pass.common.effect),
+            load: encode_load_op(pass.common.load),
         },
         RenderPlanPass::CustomEffectV2(pass) => JsonDumpPass::CustomEffectV2 {
-            src: plan_target_name(pass.src),
-            dst: plan_target_name(pass.dst),
-            src_size: [pass.src_size.0, pass.src_size.1],
-            dst_size: [pass.dst_size.0, pass.dst_size.1],
-            dst_scissor: pass.dst_scissor.map(Into::into),
-            dst_scissor_space: pass.dst_scissor.map(|_| "dst_local"),
-            mask_uniform_index: pass.mask_uniform_index,
-            mask: pass.mask.map(Into::into),
-            effect: format!("{:?}", pass.effect),
+            src: plan_target_name(pass.common.src),
+            dst: plan_target_name(pass.common.dst),
+            src_size: [pass.common.src_size.0, pass.common.src_size.1],
+            dst_size: [pass.common.dst_size.0, pass.common.dst_size.1],
+            dst_scissor: pass.common.dst_scissor.map(Into::into),
+            dst_scissor_space: pass.common.dst_scissor.map(|_| "dst_local"),
+            mask_uniform_index: pass.common.mask_uniform_index,
+            mask: pass.common.mask.map(Into::into),
+            effect: format!("{:?}", pass.common.effect),
             input_image: pass.input_image.map(|id| format!("{id:?}")),
             input_uv: [
                 pass.input_uv.u0,
@@ -682,10 +682,10 @@ fn encode_pass(p: &RenderPlanPass) -> JsonDumpPass {
                 fret_core::scene::ImageSamplingHint::Linear => "linear",
                 fret_core::scene::ImageSamplingHint::Nearest => "nearest",
             },
-            load: encode_load_op(pass.load),
+            load: encode_load_op(pass.common.load),
         },
         RenderPlanPass::CustomEffectV3(pass) => JsonDumpPass::CustomEffectV3 {
-            src: plan_target_name(pass.src),
+            src: plan_target_name(pass.common.src),
             src_raw: plan_target_name(pass.src_raw),
             src_pyramid: plan_target_name(pass.src_pyramid),
             pyramid_levels: pass.pyramid_levels,
@@ -693,14 +693,14 @@ fn encode_pass(p: &RenderPlanPass) -> JsonDumpPass {
             pyramid_build_scissor_space: pass.pyramid_build_scissor.map(|_| "dst_local"),
             raw_wanted: pass.raw_wanted,
             pyramid_wanted: pass.pyramid_wanted,
-            dst: plan_target_name(pass.dst),
-            src_size: [pass.src_size.0, pass.src_size.1],
-            dst_size: [pass.dst_size.0, pass.dst_size.1],
-            dst_scissor: pass.dst_scissor.map(Into::into),
-            dst_scissor_space: pass.dst_scissor.map(|_| "dst_local"),
-            mask_uniform_index: pass.mask_uniform_index,
-            mask: pass.mask.map(Into::into),
-            effect: format!("{:?}", pass.effect),
+            dst: plan_target_name(pass.common.dst),
+            src_size: [pass.common.src_size.0, pass.common.src_size.1],
+            dst_size: [pass.common.dst_size.0, pass.common.dst_size.1],
+            dst_scissor: pass.common.dst_scissor.map(Into::into),
+            dst_scissor_space: pass.common.dst_scissor.map(|_| "dst_local"),
+            mask_uniform_index: pass.common.mask_uniform_index,
+            mask: pass.common.mask.map(Into::into),
+            effect: format!("{:?}", pass.common.effect),
             user0_image: pass.user0_image.map(|id| format!("{id:?}")),
             user0_uv: [
                 pass.user0_uv.u0,
@@ -725,7 +725,7 @@ fn encode_pass(p: &RenderPlanPass) -> JsonDumpPass {
                 fret_core::scene::ImageSamplingHint::Linear => "linear",
                 fret_core::scene::ImageSamplingHint::Nearest => "nearest",
             },
-            load: encode_load_op(pass.load),
+            load: encode_load_op(pass.common.load),
         },
         RenderPlanPass::ClipMask(pass) => JsonDumpPass::ClipMask {
             dst: plan_target_name(pass.dst),
@@ -955,11 +955,11 @@ fn summarize_custom_effects(passes: &[RenderPlanPass]) -> Vec<JsonDumpCustomEffe
     for p in passes {
         match p {
             RenderPlanPass::CustomEffect(p) => {
-                let acc = by_effect.entry((p.effect, Abi::V1)).or_default();
+                let acc = by_effect.entry((p.common.effect, Abi::V1)).or_default();
                 acc.pass_count += 1;
             }
             RenderPlanPass::CustomEffectV2(p) => {
-                let acc = by_effect.entry((p.effect, Abi::V2)).or_default();
+                let acc = by_effect.entry((p.common.effect, Abi::V2)).or_default();
                 acc.pass_count += 1;
                 if p.input_image.is_some() {
                     acc.input_image_some += 1;
@@ -968,7 +968,7 @@ fn summarize_custom_effects(passes: &[RenderPlanPass]) -> Vec<JsonDumpCustomEffe
                 }
             }
             RenderPlanPass::CustomEffectV3(p) => {
-                let acc = by_effect.entry((p.effect, Abi::V3)).or_default();
+                let acc = by_effect.entry((p.common.effect, Abi::V3)).or_default();
                 acc.pass_count += 1;
                 if p.user0_image.is_some() {
                     acc.user0_image_some += 1;
@@ -982,7 +982,7 @@ fn summarize_custom_effects(passes: &[RenderPlanPass]) -> Vec<JsonDumpCustomEffe
                 }
                 if p.raw_wanted {
                     acc.raw_requested += 1;
-                    if p.src_raw == p.src {
+                    if p.src_raw == p.common.src {
                         acc.raw_aliased += 1;
                     } else {
                         acc.raw_distinct += 1;
@@ -1179,25 +1179,25 @@ fn summarize_target_usage(passes: &[RenderPlanPass]) -> Vec<JsonDumpTargetUsage>
                 }
             }
             RenderPlanPass::CustomEffect(pass) => {
-                bump_usage(&mut usage, pass.src, "src", pass.src_size);
-                bump_usage(&mut usage, pass.dst, "dst", pass.dst_size);
-                if let Some(mask) = pass.mask {
+                bump_usage(&mut usage, pass.common.src, "src", pass.common.src_size);
+                bump_usage(&mut usage, pass.common.dst, "dst", pass.common.dst_size);
+                if let Some(mask) = pass.common.mask {
                     bump_usage(&mut usage, mask.target, "mask", mask.size);
                 }
             }
             RenderPlanPass::CustomEffectV2(pass) => {
-                bump_usage(&mut usage, pass.src, "src", pass.src_size);
-                bump_usage(&mut usage, pass.dst, "dst", pass.dst_size);
-                if let Some(mask) = pass.mask {
+                bump_usage(&mut usage, pass.common.src, "src", pass.common.src_size);
+                bump_usage(&mut usage, pass.common.dst, "dst", pass.common.dst_size);
+                if let Some(mask) = pass.common.mask {
                     bump_usage(&mut usage, mask.target, "mask", mask.size);
                 }
             }
             RenderPlanPass::CustomEffectV3(pass) => {
-                bump_usage(&mut usage, pass.src, "src", pass.src_size);
-                bump_usage(&mut usage, pass.src_raw, "src", pass.src_size);
-                bump_usage(&mut usage, pass.src_pyramid, "src", pass.src_size);
-                bump_usage(&mut usage, pass.dst, "dst", pass.dst_size);
-                if let Some(mask) = pass.mask {
+                bump_usage(&mut usage, pass.common.src, "src", pass.common.src_size);
+                bump_usage(&mut usage, pass.src_raw, "src", pass.common.src_size);
+                bump_usage(&mut usage, pass.src_pyramid, "src", pass.common.src_size);
+                bump_usage(&mut usage, pass.common.dst, "dst", pass.common.dst_size);
+                if let Some(mask) = pass.common.mask {
                     bump_usage(&mut usage, mask.target, "mask", mask.size);
                 }
             }
@@ -1217,7 +1217,8 @@ fn summarize_target_usage(passes: &[RenderPlanPass]) -> Vec<JsonDumpTargetUsage>
 mod tests {
     use super::*;
     use crate::renderer::render_plan::{
-        CustomEffectPass, CustomEffectV2Pass, CustomEffectV3Pass, RenderPlanPass,
+        CustomEffectPass, CustomEffectPassCommon, CustomEffectV2Pass, CustomEffectV3Pass,
+        RenderPlanPass,
     };
     use slotmap::SlotMap;
 
@@ -1232,46 +1233,52 @@ mod tests {
 
         let passes = vec![
             RenderPlanPass::CustomEffect(CustomEffectPass {
-                src: PlanTarget::Output,
-                dst: PlanTarget::Intermediate0,
-                src_size: (10, 11),
-                dst_size: (12, 13),
-                dst_scissor: None,
-                mask_uniform_index: None,
-                mask: None,
-                effect: effect_v1,
-                params: fret_core::EffectParamsV1::ZERO,
-                load: wgpu::LoadOp::Load,
+                common: CustomEffectPassCommon {
+                    src: PlanTarget::Output,
+                    dst: PlanTarget::Intermediate0,
+                    src_size: (10, 11),
+                    dst_size: (12, 13),
+                    dst_scissor: None,
+                    mask_uniform_index: None,
+                    mask: None,
+                    effect: effect_v1,
+                    params: fret_core::EffectParamsV1::ZERO,
+                    load: wgpu::LoadOp::Load,
+                },
             }),
             RenderPlanPass::CustomEffectV2(CustomEffectV2Pass {
-                src: PlanTarget::Intermediate0,
-                dst: PlanTarget::Intermediate1,
-                src_size: (12, 13),
-                dst_size: (20, 21),
-                dst_scissor: None,
-                mask_uniform_index: None,
-                mask: None,
-                effect: effect_v2,
-                params: fret_core::EffectParamsV1::ZERO,
+                common: CustomEffectPassCommon {
+                    src: PlanTarget::Intermediate0,
+                    dst: PlanTarget::Intermediate1,
+                    src_size: (12, 13),
+                    dst_size: (20, 21),
+                    dst_scissor: None,
+                    mask_uniform_index: None,
+                    mask: None,
+                    effect: effect_v2,
+                    params: fret_core::EffectParamsV1::ZERO,
+                    load: wgpu::LoadOp::Load,
+                },
                 input_image: Some(image),
                 input_uv: fret_core::scene::UvRect::FULL,
                 input_sampling: fret_core::scene::ImageSamplingHint::Linear,
-                load: wgpu::LoadOp::Load,
             }),
             RenderPlanPass::CustomEffectV2(CustomEffectV2Pass {
-                src: PlanTarget::Intermediate1,
-                dst: PlanTarget::Output,
-                src_size: (20, 21),
-                dst_size: (30, 31),
-                dst_scissor: None,
-                mask_uniform_index: None,
-                mask: None,
-                effect: effect_v2,
-                params: fret_core::EffectParamsV1::ZERO,
+                common: CustomEffectPassCommon {
+                    src: PlanTarget::Intermediate1,
+                    dst: PlanTarget::Output,
+                    src_size: (20, 21),
+                    dst_size: (30, 31),
+                    dst_scissor: None,
+                    mask_uniform_index: None,
+                    mask: None,
+                    effect: effect_v2,
+                    params: fret_core::EffectParamsV1::ZERO,
+                    load: wgpu::LoadOp::Load,
+                },
                 input_image: None,
                 input_uv: fret_core::scene::UvRect::FULL,
                 input_sampling: fret_core::scene::ImageSamplingHint::Nearest,
-                load: wgpu::LoadOp::Load,
             }),
         ];
 
@@ -1302,31 +1309,32 @@ mod tests {
 
         let passes = vec![
             RenderPlanPass::CustomEffectV3(CustomEffectV3Pass {
-                src: PlanTarget::Intermediate0,
                 src_raw: PlanTarget::Intermediate1,
                 src_pyramid: PlanTarget::Intermediate2,
                 pyramid_levels: 1,
                 pyramid_build_scissor: None,
                 raw_wanted: true,
                 pyramid_wanted: true,
-                dst: PlanTarget::Intermediate0,
-                src_size: (100, 100),
-                dst_size: (100, 100),
-                dst_scissor: None,
-                mask_uniform_index: None,
-                mask: None,
-                effect: effect_v3,
-                params: fret_core::EffectParamsV1::ZERO,
+                common: CustomEffectPassCommon {
+                    src: PlanTarget::Intermediate0,
+                    dst: PlanTarget::Intermediate0,
+                    src_size: (100, 100),
+                    dst_size: (100, 100),
+                    dst_scissor: None,
+                    mask_uniform_index: None,
+                    mask: None,
+                    effect: effect_v3,
+                    params: fret_core::EffectParamsV1::ZERO,
+                    load: wgpu::LoadOp::Load,
+                },
                 user0_image: None,
                 user0_uv: fret_core::scene::UvRect::FULL,
                 user0_sampling: fret_core::scene::ImageSamplingHint::Default,
                 user1_image: None,
                 user1_uv: fret_core::scene::UvRect::FULL,
                 user1_sampling: fret_core::scene::ImageSamplingHint::Default,
-                load: wgpu::LoadOp::Load,
             }),
             RenderPlanPass::CustomEffectV3(CustomEffectV3Pass {
-                src: PlanTarget::Intermediate0,
                 src_raw: PlanTarget::Intermediate1,
                 src_pyramid: PlanTarget::Intermediate2,
                 pyramid_levels: 3,
@@ -1338,21 +1346,24 @@ mod tests {
                 })),
                 raw_wanted: true,
                 pyramid_wanted: true,
-                dst: PlanTarget::Intermediate0,
-                src_size: (100, 100),
-                dst_size: (100, 100),
-                dst_scissor: None,
-                mask_uniform_index: None,
-                mask: None,
-                effect: effect_v3,
-                params: fret_core::EffectParamsV1::ZERO,
+                common: CustomEffectPassCommon {
+                    src: PlanTarget::Intermediate0,
+                    dst: PlanTarget::Intermediate0,
+                    src_size: (100, 100),
+                    dst_size: (100, 100),
+                    dst_scissor: None,
+                    mask_uniform_index: None,
+                    mask: None,
+                    effect: effect_v3,
+                    params: fret_core::EffectParamsV1::ZERO,
+                    load: wgpu::LoadOp::Load,
+                },
                 user0_image: None,
                 user0_uv: fret_core::scene::UvRect::FULL,
                 user0_sampling: fret_core::scene::ImageSamplingHint::Default,
                 user1_image: None,
                 user1_uv: fret_core::scene::UvRect::FULL,
                 user1_sampling: fret_core::scene::ImageSamplingHint::Default,
-                load: wgpu::LoadOp::Load,
             }),
         ];
 
@@ -1380,28 +1391,32 @@ mod tests {
 
         let passes = vec![
             RenderPlanPass::CustomEffect(CustomEffectPass {
-                src: PlanTarget::Output,
-                dst: PlanTarget::Intermediate0,
-                src_size: (100, 100),
-                dst_size: (10, 11),
-                dst_scissor: None,
-                mask_uniform_index: None,
-                mask: None,
-                effect,
-                params: fret_core::EffectParamsV1::ZERO,
-                load: wgpu::LoadOp::Load,
+                common: CustomEffectPassCommon {
+                    src: PlanTarget::Output,
+                    dst: PlanTarget::Intermediate0,
+                    src_size: (100, 100),
+                    dst_size: (10, 11),
+                    dst_scissor: None,
+                    mask_uniform_index: None,
+                    mask: None,
+                    effect,
+                    params: fret_core::EffectParamsV1::ZERO,
+                    load: wgpu::LoadOp::Load,
+                },
             }),
             RenderPlanPass::CustomEffect(CustomEffectPass {
-                src: PlanTarget::Intermediate0,
-                dst: PlanTarget::Intermediate0,
-                src_size: (20, 21),
-                dst_size: (22, 23),
-                dst_scissor: None,
-                mask_uniform_index: None,
-                mask: None,
-                effect,
-                params: fret_core::EffectParamsV1::ZERO,
-                load: wgpu::LoadOp::Load,
+                common: CustomEffectPassCommon {
+                    src: PlanTarget::Intermediate0,
+                    dst: PlanTarget::Intermediate0,
+                    src_size: (20, 21),
+                    dst_size: (22, 23),
+                    dst_scissor: None,
+                    mask_uniform_index: None,
+                    mask: None,
+                    effect,
+                    params: fret_core::EffectParamsV1::ZERO,
+                    load: wgpu::LoadOp::Load,
+                },
             }),
         ];
 

@@ -513,16 +513,25 @@ Rollback:
 
 Status:
 
-- Planned.
+- Landed.
 
 Goal:
 
 - Reduce “same field list repeated in 3 places” drift in pass validation, dumping, and recording.
 
-Changes (proposed):
+Changes (landed):
 
 - Introduce an internal `CustomEffectPassCommon` (src/dst, sizes, scissor, mask, effect id, params, load).
 - Re-home shared validation/dump helpers to operate on the common struct.
+
+Anchors:
+
+- `crates/fret-render-wgpu/src/renderer/render_plan.rs` (`CustomEffectPassCommon`, pass structs, validation helpers)
+- `crates/fret-render-wgpu/src/renderer/render_plan_effects.rs` (pass construction)
+- `crates/fret-render-wgpu/src/renderer/render_plan_dump.rs` (dump + summaries)
+- `crates/fret-render-wgpu/src/renderer/render_scene/recorders/effects.rs` (pass recording)
+- `crates/fret-render-wgpu/src/renderer/render_scene/effect_pipelines.rs` (pipeline prewarming)
+- `crates/fret-render-wgpu/src/renderer/render_scene/executor.rs` (write-epoch bumps)
 
 Gates:
 
