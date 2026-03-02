@@ -141,7 +141,7 @@
     {
       "type": "move_pointer",
       "window": { "kind": "first_seen" },
-      "target": { "kind": "test_id", "id": "dock-arb-viewport-left" }
+      "target": { "kind": "test_id", "id": "dock-arb-dock-space" }
     },
     { "type": "wait_frames", "n": 2 },
     {
@@ -214,7 +214,7 @@
     {
       "type": "move_pointer",
       "window": { "kind": "first_seen" },
-      "target": { "kind": "test_id", "id": "dock-arb-viewport-right" }
+      "target": { "kind": "test_id", "id": "dock-arb-dock-space" }
     },
     { "type": "wait_frames", "n": 2 },
     {
