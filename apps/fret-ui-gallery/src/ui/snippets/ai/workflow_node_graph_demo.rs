@@ -1,9 +1,15 @@
-use super::super::super::super::*;
+pub const SOURCE: &str = include_str!("workflow_node_graph_demo.rs");
 
-pub(in crate::ui) fn preview_ai_workflow_node_graph_demo(
-    cx: &mut ElementContext<'_, App>,
-    theme: &Theme,
-) -> Vec<AnyElement> {
+// region: example
+use fret_ui_ai as ui_ai;
+use fret_ui_kit::declarative::stack;
+use fret_ui_kit::declarative::style as decl_style;
+use fret_ui_kit::{
+    ChromeRefinement, ColorFallback, ColorRef, Items, LayoutRefinement, MetricRef, Radius, Space,
+};
+use fret_ui_shadcn::{self as shadcn, prelude::*};
+
+pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement {
     use std::sync::Arc;
 
     use fret_core::Px;
@@ -440,22 +446,24 @@ pub(in crate::ui) fn preview_ai_workflow_node_graph_demo(
         .relative()
         .overflow_hidden();
 
-    let stage_props = decl_style::container_props(
-        theme,
-        ChromeRefinement::default()
-            .rounded(Radius::Md)
-            .border_1()
-            .bg(ColorRef::Token {
-                key: "card",
-                fallback: ColorFallback::ThemePanelBackground,
-            })
-            .border_color(ColorRef::Token {
-                key: "border",
-                fallback: ColorFallback::ThemePanelBorder,
-            })
-            .p(Space::N0),
-        stage_layout,
-    );
+    let stage_props = cx.with_theme(|theme| {
+        decl_style::container_props(
+            theme,
+            ChromeRefinement::default()
+                .rounded(Radius::Md)
+                .border_1()
+                .bg(ColorRef::Token {
+                    key: "card",
+                    fallback: ColorFallback::ThemePanelBackground,
+                })
+                .border_color(ColorRef::Token {
+                    key: "border",
+                    fallback: ColorFallback::ThemePanelBorder,
+                })
+                .p(Space::N0),
+            stage_layout,
+        )
+    });
 
     let stage = cx.container(stage_props, move |cx| {
         let graph = graph.clone();
@@ -467,7 +475,7 @@ pub(in crate::ui) fn preview_ai_workflow_node_graph_demo(
         layout.size.width = fret_ui::element::Length::Fill;
         layout.size.height = fret_ui::element::Length::Fill;
 
-        let props = RetainedSubtreeProps::new::<App>(move |ui| {
+        let props = RetainedSubtreeProps::new::<H>(move |ui| {
             use fret_ui::retained_bridge::UiTreeRetainedExt as _;
 
             let editor = ui.create_node_retained(NodeGraphEditor::new());
@@ -504,11 +512,12 @@ pub(in crate::ui) fn preview_ai_workflow_node_graph_demo(
         .refine_layout(max_w)
         .into_element(cx);
 
-    vec![cx.semantics(
+    cx.semantics(
         SemanticsProps {
             test_id: Some(Arc::<str>::from("ui-ai-workflow-node-graph-demo-page")),
             ..Default::default()
         },
         move |_cx| vec![panel],
-    )]
+    )
 }
+// endregion: example

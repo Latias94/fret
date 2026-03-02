@@ -1,19 +1,20 @@
-use super::super::super::super::*;
+pub const SOURCE: &str = include_str!("workflow_chrome_demo.rs");
 
-pub(in crate::ui) fn preview_ai_workflow_chrome_demo(
-    cx: &mut ElementContext<'_, App>,
-    _theme: &Theme,
-) -> Vec<AnyElement> {
+// region: example
+use fret_ui_ai as ui_ai;
+use fret_ui_kit::declarative::stack;
+use fret_ui_kit::declarative::style as decl_style;
+use fret_ui_kit::{
+    ChromeRefinement, ColorFallback, ColorRef, LayoutRefinement, MetricRef, Radius, Space,
+};
+use fret_ui_shadcn::{self as shadcn, prelude::*};
+
+pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement {
     use fret_canvas::ui::{CanvasInputExemptRegionProps, canvas_input_exempt_region};
     use fret_core::Point;
     use fret_core::Px;
     use fret_icons::IconId;
     use fret_ui::element::PointerRegionProps;
-    use fret_ui_kit::declarative::stack;
-    use fret_ui_kit::declarative::style as decl_style;
-    use fret_ui_kit::{
-        ChromeRefinement, ColorFallback, ColorRef, LayoutRefinement, MetricRef, Radius, Space,
-    };
 
     let max_w = LayoutRefinement::default()
         .w_full()
@@ -118,13 +119,15 @@ pub(in crate::ui) fn preview_ai_workflow_chrome_demo(
             // XyFlow-style `.nowheel`/`.nopan` behavior: overlay chrome should not trigger canvas
             // wheel-pan or middle-drag pan when the pointer is over the panel.
             let mut pr = PointerRegionProps::default();
-            pr.layout = decl_style::layout_style(
-                _theme,
-                LayoutRefinement::default()
-                    .absolute()
-                    .top(Space::N0)
-                    .left(Space::N0),
-            );
+            pr.layout = cx.with_theme(|theme| {
+                decl_style::layout_style(
+                    theme,
+                    LayoutRefinement::default()
+                        .absolute()
+                        .top(Space::N0)
+                        .left(Space::N0),
+                )
+            });
             let canvas_overlay_panel = canvas_input_exempt_region(
                 cx,
                 CanvasInputExemptRegionProps {
@@ -163,22 +166,24 @@ pub(in crate::ui) fn preview_ai_workflow_chrome_demo(
                         .min_w_0()
                         .relative();
 
-                    let stage_props = decl_style::container_props(
-                        _theme,
-                        ChromeRefinement::default()
-                            .rounded(Radius::Md)
-                            .border_1()
-                            .bg(ColorRef::Token {
-                                key: "card",
-                                fallback: ColorFallback::ThemePanelBackground,
-                            })
-                            .border_color(ColorRef::Token {
-                                key: "border",
-                                fallback: ColorFallback::ThemePanelBorder,
-                            })
-                            .p(Space::N2),
-                        stage_layout,
-                    );
+                    let stage_props = cx.with_theme(|theme| {
+                        decl_style::container_props(
+                            theme,
+                            ChromeRefinement::default()
+                                .rounded(Radius::Md)
+                                .border_1()
+                                .bg(ColorRef::Token {
+                                    key: "card",
+                                    fallback: ColorFallback::ThemePanelBackground,
+                                })
+                                .border_color(ColorRef::Token {
+                                    key: "border",
+                                    fallback: ColorFallback::ThemePanelBorder,
+                                })
+                                .p(Space::N2),
+                            stage_layout,
+                        )
+                    });
 
                     let abs = LayoutRefinement::default().absolute().inset(Space::N0);
 
@@ -222,7 +227,7 @@ pub(in crate::ui) fn preview_ai_workflow_chrome_demo(
         .refine_layout(max_w)
         .into_element(cx);
 
-    vec![stack::vstack(
+    stack::vstack(
         cx,
         stack::VStackProps::default()
             .layout(LayoutRefinement::default().w_full().min_w_0())
@@ -234,5 +239,6 @@ pub(in crate::ui) fn preview_ai_workflow_chrome_demo(
                 panel,
             ]
         },
-    )]
+    )
 }
+// endregion: example
