@@ -3157,11 +3157,13 @@ mod tests {
             .insert(window, inspect::InspectNavCommand::Focus);
         svc.apply_inspect_navigation(window, Some(&snapshot), None);
 
-        assert!(svc.inspect_is_locked(window));
+        let model = svc.inspect_overlay_model(window);
+        assert!(model.locked);
         let focus_id = snapshot.focus.expect("focus").data().as_ffi();
-        assert_eq!(svc.inspect_focus_node_id(window), Some(focus_id));
+        assert_eq!(model.focus_node_id, Some(focus_id));
         assert!(
-            svc.inspect_best_selector_json(window)
+            model
+                .best_selector_json
                 .is_some_and(|s| s.contains("test_id"))
         );
     }
@@ -3186,7 +3188,8 @@ mod tests {
             svc.maybe_intercept_event_for_inspect_shortcuts(&mut app, window, &event),
             "expected inspect help to consume typed keys"
         );
-        assert_eq!(svc.inspect_help_search_query(window), Some("a"));
+        let model = svc.inspect_overlay_model(window);
+        assert_eq!(model.help_search_query.as_deref(), Some("a"));
 
         let event = Event::KeyDown {
             key: KeyCode::Backspace,
@@ -3197,8 +3200,9 @@ mod tests {
             svc.maybe_intercept_event_for_inspect_shortcuts(&mut app, window, &event),
             "expected backspace to be consumed by inspect help search"
         );
+        let model = svc.inspect_overlay_model(window);
         assert!(
-            svc.inspect_help_search_query(window).is_none(),
+            model.help_search_query.is_none(),
             "expected backspace to clear the query"
         );
     }
@@ -3223,7 +3227,7 @@ mod tests {
             svc.maybe_intercept_event_for_inspect_shortcuts(&mut app, window, &event),
             "expected PageDown to be consumed by inspect help"
         );
-        assert_eq!(svc.inspect_help_scroll_offset(window), 20);
+        assert_eq!(svc.inspect_overlay_model(window).help_scroll_offset, 20);
 
         let event = Event::KeyDown {
             key: KeyCode::PageUp,
@@ -3234,7 +3238,7 @@ mod tests {
             svc.maybe_intercept_event_for_inspect_shortcuts(&mut app, window, &event),
             "expected PageUp to be consumed by inspect help"
         );
-        assert_eq!(svc.inspect_help_scroll_offset(window), 0);
+        assert_eq!(svc.inspect_overlay_model(window).help_scroll_offset, 0);
 
         let event = Event::KeyDown {
             key: KeyCode::End,
@@ -3245,7 +3249,10 @@ mod tests {
             svc.maybe_intercept_event_for_inspect_shortcuts(&mut app, window, &event),
             "expected End to be consumed by inspect help"
         );
-        assert_eq!(svc.inspect_help_scroll_offset(window), usize::MAX / 4);
+        assert_eq!(
+            svc.inspect_overlay_model(window).help_scroll_offset,
+            usize::MAX / 4
+        );
 
         let event = Event::KeyDown {
             key: KeyCode::Home,
@@ -3256,7 +3263,7 @@ mod tests {
             svc.maybe_intercept_event_for_inspect_shortcuts(&mut app, window, &event),
             "expected Home to be consumed by inspect help"
         );
-        assert_eq!(svc.inspect_help_scroll_offset(window), 0);
+        assert_eq!(svc.inspect_overlay_model(window).help_scroll_offset, 0);
     }
 
     #[test]
