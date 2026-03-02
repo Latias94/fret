@@ -680,11 +680,34 @@ impl<D: WinitAppDriver> WinitRunner<D> {
         if matches!(
             drag_kind,
             fret_app::DRAG_KIND_DOCK_PANEL | fret_runtime::DRAG_KIND_DOCK_TABS
-        ) && moving_window.is_some()
+        ) && let Some(moving_window) = moving_window
             && window_under_moving_window.is_some()
         {
-            target = window_under_moving_window;
-            window_under_cursor_source = window_under_moving_window_source;
+            // Only treat the "window under moving window" as the drop target when the cursor is
+            // actually inside (or very near) the moving window. During tear-off, scripts (and
+            // sometimes OS scheduling) can temporarily report cursor positions outside all windows
+            // while the moving window is still being positioned; dropping in that state should
+            // finalize the tear-off (drop to the moving/source window), not immediately re-dock
+            // into the overlapped window.
+            let cursor_in_moving_window = self.screen_pos_in_window(moving_window, screen_pos);
+            let cursor_near_moving_window = self
+                .window_client_rect_screen(moving_window)
+                .is_some_and(|(origin, size)| {
+                    // Small tolerance for 1-2 frame drift during scripted cursor overrides.
+                    let margin = 4.0;
+                    let max_x = origin.x + (size.width as f64) + margin;
+                    let max_y = origin.y + (size.height as f64) + margin;
+                    let min_x = origin.x - margin;
+                    let min_y = origin.y - margin;
+                    screen_pos.x >= min_x
+                        && screen_pos.x <= max_x
+                        && screen_pos.y >= min_y
+                        && screen_pos.y <= max_y
+                });
+            if cursor_in_moving_window || cursor_near_moving_window {
+                target = window_under_moving_window;
+                window_under_cursor_source = window_under_moving_window_source;
+            }
         }
 
         // If the cursor is outside all windows (Unity/ImGui-style tear-off), still deliver the

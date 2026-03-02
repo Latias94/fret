@@ -1884,6 +1884,8 @@ pub(super) fn handle_move_pointer_step(
                             x,
                             y,
                         );
+                        active.last_explicit_cursor_override =
+                            Some(CursorOverrideTarget::WindowClientLogical(target_window));
                         push_script_event_log(
                             active,
                             &svc.cfg,
@@ -2074,6 +2076,7 @@ pub(super) fn handle_move_pointer_step(
         output.events.push(move_pointer_event(pos, pointer_type));
     }
     let _ = write_cursor_override_window_client_logical(&svc.cfg.out_dir, window, pos.x.0, pos.y.0);
+    active.last_explicit_cursor_override = Some(CursorOverrideTarget::WindowClientLogical(window));
 
     active.wait_until = None;
     active.screenshot_wait = None;
