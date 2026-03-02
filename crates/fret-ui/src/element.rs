@@ -1,7 +1,7 @@
 use crate::UiHost;
 use crate::elements::{ElementContext, GlobalElementId};
 use crate::overlay_placement::{Align, AnchoredPanelLayout, AnchoredPanelOptions, Side};
-use fret_core::scene::{BlendMode, Mask, Paint};
+use fret_core::scene::{BlendMode, CustomEffectPyramidRequestV1, Mask, Paint};
 use fret_core::{
     AttributedText, CaretAffinity, Color, Corners, Edges, EffectChain, EffectMode, EffectQuality,
     ImageId, KeyCode, NodeId, Px, Rect, RenderTargetId, SemanticsLive, SemanticsOrientation,
@@ -132,6 +132,8 @@ pub enum ElementKind {
     Opacity(OpacityProps),
     /// A scoped post-processing effect group wrapper (ADR 0117).
     EffectLayer(EffectLayerProps),
+    /// A scoped backdrop source group wrapper (ADR 0305).
+    BackdropSourceGroup(BackdropSourceGroupProps),
     /// A scoped alpha mask layer wrapper (ADR 0239).
     ///
     /// This emits a `SceneOp::PushMask/PopMask` pair around the subtree during painting. The
@@ -1181,6 +1183,27 @@ impl Default for EffectLayerProps {
             layout: LayoutStyle::default(),
             mode: EffectMode::FilterContent,
             chain: EffectChain::EMPTY,
+            quality: EffectQuality::Auto,
+        }
+    }
+}
+
+/// Scoped backdrop source group wrapper for declarative element subtrees (ADR 0305).
+///
+/// This emits a `SceneOp::PushBackdropSourceGroupV1/PopBackdropSourceGroup` pair around the
+/// subtree during painting. The group's computation bounds are the wrapper's final layout bounds.
+#[derive(Debug, Clone, Copy)]
+pub struct BackdropSourceGroupProps {
+    pub layout: LayoutStyle,
+    pub pyramid: Option<CustomEffectPyramidRequestV1>,
+    pub quality: EffectQuality,
+}
+
+impl Default for BackdropSourceGroupProps {
+    fn default() -> Self {
+        Self {
+            layout: LayoutStyle::default(),
+            pyramid: None,
             quality: EffectQuality::Auto,
         }
     }

@@ -1412,6 +1412,7 @@ fn mount_element<H: UiHost + 'static>(
         ElementKind::ForegroundScope(p) => ElementInstance::ForegroundScope(p),
         ElementKind::Opacity(p) => ElementInstance::Opacity(p),
         ElementKind::EffectLayer(p) => ElementInstance::EffectLayer(p),
+        ElementKind::BackdropSourceGroup(p) => ElementInstance::BackdropSourceGroup(p),
         ElementKind::MaskLayer(p) => ElementInstance::MaskLayer(p),
         ElementKind::CompositeGroup(p) => ElementInstance::CompositeGroup(p),
         ElementKind::ViewCache(p) => ElementInstance::ViewCache(p),

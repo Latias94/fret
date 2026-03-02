@@ -19,12 +19,94 @@ impl Renderer {
                 RenderPlanDegradationReason as DegradationReason,
             };
 
+            let mut custom_effect_v3_steps_requested: u64 = 0;
+            let mut custom_effect_v2_steps_requested: u64 = 0;
+            let mut custom_effect_v1_steps_requested: u64 = 0;
+            for marker in effect_markers {
+                let EffectMarkerKind::Push { chain, .. } = &marker.kind else {
+                    continue;
+                };
+                for step in chain.iter() {
+                    match step {
+                        fret_core::EffectStep::CustomV1 { .. } => {
+                            custom_effect_v1_steps_requested =
+                                custom_effect_v1_steps_requested.saturating_add(1);
+                        }
+                        fret_core::EffectStep::CustomV2 { .. } => {
+                            custom_effect_v2_steps_requested =
+                                custom_effect_v2_steps_requested.saturating_add(1);
+                        }
+                        fret_core::EffectStep::CustomV3 { .. } => {
+                            custom_effect_v3_steps_requested =
+                                custom_effect_v3_steps_requested.saturating_add(1);
+                        }
+                        _ => {}
+                    }
+                }
+            }
+            let custom_effect_v1_passes_emitted = plan
+                .passes
+                .iter()
+                .filter(|p| matches!(p, RenderPlanPass::CustomEffect(_)))
+                .count() as u64;
+            let custom_effect_v2_passes_emitted = plan
+                .passes
+                .iter()
+                .filter(|p| matches!(p, RenderPlanPass::CustomEffectV2(_)))
+                .count() as u64;
+            let custom_effect_v3_passes_emitted = plan
+                .passes
+                .iter()
+                .filter(|p| matches!(p, RenderPlanPass::CustomEffectV3(_)))
+                .count() as u64;
+
             frame_perf.render_plan_estimated_peak_intermediate_bytes =
                 plan.compile_stats.estimated_peak_intermediate_bytes;
             frame_perf.render_plan_segments = plan.segments.len() as u64;
             frame_perf.render_plan_degradations = plan.degradations.len() as u64;
+            frame_perf.render_plan_effect_chain_budget_samples =
+                plan.compile_stats.effect_chain_budget_samples;
+            frame_perf.render_plan_effect_chain_effective_budget_min_bytes =
+                plan.compile_stats.effect_chain_effective_budget_min_bytes;
+            frame_perf.render_plan_effect_chain_effective_budget_max_bytes =
+                plan.compile_stats.effect_chain_effective_budget_max_bytes;
+            frame_perf.render_plan_effect_chain_other_live_max_bytes =
+                plan.compile_stats.effect_chain_other_live_max_bytes;
+            frame_perf.render_plan_custom_effect_chain_budget_samples =
+                plan.compile_stats.custom_effect_chain_budget_samples;
+            frame_perf.render_plan_custom_effect_chain_effective_budget_min_bytes = plan
+                .compile_stats
+                .custom_effect_chain_effective_budget_min_bytes;
+            frame_perf.render_plan_custom_effect_chain_effective_budget_max_bytes = plan
+                .compile_stats
+                .custom_effect_chain_effective_budget_max_bytes;
+            frame_perf.render_plan_custom_effect_chain_other_live_max_bytes =
+                plan.compile_stats.custom_effect_chain_other_live_max_bytes;
+            frame_perf.render_plan_custom_effect_chain_base_required_max_bytes = plan
+                .compile_stats
+                .custom_effect_chain_base_required_max_bytes;
+            frame_perf.render_plan_custom_effect_chain_optional_required_max_bytes = plan
+                .compile_stats
+                .custom_effect_chain_optional_required_max_bytes;
+            frame_perf.render_plan_custom_effect_chain_base_required_full_targets_max = plan
+                .compile_stats
+                .custom_effect_chain_base_required_full_targets_max;
+            frame_perf.render_plan_custom_effect_chain_optional_mask_max_bytes = plan
+                .compile_stats
+                .custom_effect_chain_optional_mask_max_bytes;
+            frame_perf.render_plan_custom_effect_chain_optional_pyramid_max_bytes = plan
+                .compile_stats
+                .custom_effect_chain_optional_pyramid_max_bytes;
             frame_perf.effect_degradations = plan.compile_stats.effect_degradations;
             frame_perf.effect_blur_quality = plan.compile_stats.effect_blur_quality;
+            frame_perf.intermediate_full_target_bytes =
+                crate::renderer::estimate_texture_bytes(viewport_size, format, 1);
+            frame_perf.custom_effect_v1_steps_requested = custom_effect_v1_steps_requested;
+            frame_perf.custom_effect_v1_passes_emitted = custom_effect_v1_passes_emitted;
+            frame_perf.custom_effect_v2_steps_requested = custom_effect_v2_steps_requested;
+            frame_perf.custom_effect_v2_passes_emitted = custom_effect_v2_passes_emitted;
+            frame_perf.custom_effect_v3_steps_requested = custom_effect_v3_steps_requested;
+            frame_perf.custom_effect_v3_passes_emitted = custom_effect_v3_passes_emitted;
             for d in &plan.degradations {
                 match d.reason {
                     DegradationReason::BudgetZero => {

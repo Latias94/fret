@@ -181,6 +181,69 @@ fn effect_layer_element_emits_effect_stack_ops() {
 }
 
 #[test]
+fn backdrop_source_group_element_emits_backdrop_source_group_stack_ops() {
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(100.0), Px(80.0)),
+    );
+    let mut services = FakeTextService::default();
+
+    let root = render_root(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        "backdrop-source-group-element-emits-ops",
+        |cx| {
+            let mut layout = crate::element::LayoutStyle::default();
+            layout.size.width = Length::Fill;
+            layout.size.height = Length::Fill;
+
+            let props = crate::element::BackdropSourceGroupProps {
+                layout,
+                pyramid: Some(fret_core::scene::CustomEffectPyramidRequestV1 {
+                    max_levels: 6,
+                    max_radius_px: Px(32.0),
+                }),
+                quality: fret_core::EffectQuality::Auto,
+            };
+
+            vec![cx.backdrop_source_group_v1_props(props, |cx| {
+                let mut props = crate::element::ContainerProps::default();
+                props.layout.size.width = Length::Fill;
+                props.layout.size.height = Length::Fill;
+                props.background = Some(Color {
+                    r: 1.0,
+                    g: 0.0,
+                    b: 0.0,
+                    a: 1.0,
+                });
+                vec![cx.container(props, |_| Vec::new())]
+            })]
+        },
+    );
+    ui.set_root(root);
+    ui.layout_all(&mut app, &mut services, bounds, 1.0);
+
+    let mut scene = Scene::default();
+    ui.paint_all(&mut app, &mut services, bounds, &mut scene, 1.0);
+
+    assert_eq!(scene.ops_len(), 3);
+    assert!(matches!(
+        scene.ops()[0],
+        SceneOp::PushBackdropSourceGroupV1 { bounds: b, .. } if b == bounds
+    ));
+    assert!(matches!(scene.ops()[1], SceneOp::Quad { .. }));
+    assert!(matches!(scene.ops()[2], SceneOp::PopBackdropSourceGroup));
+}
+
+#[test]
 fn mask_layer_element_emits_mask_stack_ops() {
     let mut app = TestHost::new();
     let mut ui: UiTree<TestHost> = UiTree::new();
