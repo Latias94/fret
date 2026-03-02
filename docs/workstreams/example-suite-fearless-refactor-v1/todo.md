@@ -49,13 +49,14 @@ Goal: create a lightweight, user-facing cookbook that does not pull “everythin
   - [x] `hello`
   - [x] `simple-todo`
   - [ ] `todo` (or keep as template-only, but ensure the runnable “golden” stays obvious)
-- [ ] Add 6–10 focused cookbook examples (App Track):
+- [ ] Add 6–12 focused cookbook examples (App Track):
   - [x] overlays basics (`overlay_basics`)
   - [x] commands + keymap (`commands_keymap_basics`)
   - [x] undo/redo basics (`undo_basics`)
   - [x] text input basics (`text_input_basics`)
   - [x] theme switching (`theme_switching_basics`)
   - [x] icons + assets budgets (`icons_and_assets_basics`)
+  - [x] canvas pan/zoom (`canvas_pan_zoom_basics`)
   - [x] virtual list (`virtual_list_basics`)
   - [x] async inbox + cancellation (`async_inbox_basics`)
   - [x] markdown + code (`markdown_and_code_basics`)

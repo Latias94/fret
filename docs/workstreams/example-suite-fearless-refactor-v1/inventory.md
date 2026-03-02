@@ -50,6 +50,7 @@ examples and should be treated as product surfaces.
 | cookbook.text_input_basics | Keep | `apps/fret-cookbook/examples/text_input_basics.rs` | `cargo run -p fret-cookbook --example text_input_basics` | Input submit/clear via commands (Enter/Escape) + numeric semantics gates. |
 | cookbook.effects_layer_basics | Keep | `apps/fret-cookbook/examples/effects_layer_basics.rs` | `cargo run -p fret-cookbook --example effects_layer_basics` | Minimal effect layer example (Pixelate/Blur) with stable `test_id` stamps. |
 | cookbook.icons_and_assets_basics | Keep | `apps/fret-cookbook/examples/icons_and_assets_basics.rs` | `cargo run -p fret-cookbook --example icons_and_assets_basics` | Icon packs (lucide/radix) + semantic `ui.*` ids + file-based SVG/images via `fret-ui-assets`. |
+| cookbook.canvas_pan_zoom_basics | Keep | `apps/fret-cookbook/examples/canvas_pan_zoom_basics.rs` | `cargo run -p fret-cookbook --example canvas_pan_zoom_basics` | Pan/zoom wiring (`fret-canvas/ui`) + a tiny app-owned drag tool for one item. |
 | cookbook.virtual_list_basics | Keep | `apps/fret-cookbook/examples/virtual_list_basics.rs` | `cargo run -p fret-cookbook --example virtual_list_basics` | Keyed virtualization + items_revision + scroll-to-item, with a minimal diag smoke script. |
 | cookbook.async_inbox_basics | Keep | `apps/fret-cookbook/examples/async_inbox_basics.rs` | `cargo run -p fret-cookbook --example async_inbox_basics` | Portable async pattern: background task → inbox → runner drain, with cancellation + progress semantics gate. |
 | cookbook.markdown_and_code_basics | Keep | `apps/fret-cookbook/examples/markdown_and_code_basics.rs` | `cargo run -p fret-cookbook --example markdown_and_code_basics` | Markdown rendering + fenced code blocks (code-view/syntax) + copy affordance, with a minimal diag smoke script. |
@@ -62,7 +63,6 @@ These are the next "small but high-signal" recipes to add, in easy -> hard order
 | ID | State | Target anchors | Notes |
 |---|---|---|---|
 | cookbook.docking_basics | Planned | `apps/fret-cookbook/examples/docking_basics.rs` | Minimal docking surface: core model ops + UI policy via `fret-docking`. |
-| cookbook.canvas_pan_zoom_basics | Planned | `apps/fret-cookbook/examples/canvas_pan_zoom_basics.rs` | `fret-canvas` pan/zoom + hit-testing + selection basics. |
 | cookbook.chart_interactions_basics | Planned | `apps/fret-cookbook/examples/chart_interactions_basics.rs` | `fret-chart` or `fret-plot` interactions (hover/drag) with a minimal diag script. |
 | cookbook.gizmo_basics | Planned | `apps/fret-cookbook/examples/gizmo_basics.rs` | `fret-gizmo` wiring + viewport-style transforms (native-first). |
 

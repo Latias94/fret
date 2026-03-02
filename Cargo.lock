@@ -1888,6 +1888,7 @@ dependencies = [
  "anyhow",
  "fret",
  "fret-app",
+ "fret-canvas",
  "fret-code-view",
  "fret-core",
  "fret-executor",
