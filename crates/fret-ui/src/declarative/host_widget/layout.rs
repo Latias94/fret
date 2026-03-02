@@ -2,7 +2,7 @@ use super::super::frame::*;
 use super::super::layout_helpers::*;
 use super::super::prelude::*;
 use super::ElementHostWidget;
-use crate::layout_constraints::{AvailableSpace, LayoutConstraints, LayoutSize};
+use crate::layout_constraints::AvailableSpace;
 use crate::widget::MeasureCx;
 
 mod flex;
@@ -274,7 +274,12 @@ impl ElementHostWidget {
                     Px((max_child.width.0 + pad_w).max(0.0)),
                     Px((max_child.height.0 + pad_h).max(0.0)),
                 );
-                let desired = clamp_to_constraints(desired, props.layout, cx.available);
+                let desired = clamp_to_constraints_with_overflow_context(
+                    desired,
+                    props.layout,
+                    cx.available,
+                    cx.overflow_ctx,
+                );
 
                 let inner_origin = fret_core::Point::new(
                     Px(cx.bounds.origin.x.0 + pad_left),
@@ -483,7 +488,12 @@ impl ElementHostWidget {
                     max_child.height = Px(max_child.height.0.max(child_size.height.0));
                 }
 
-                let desired = clamp_to_constraints(max_child, props.layout, cx.available);
+                let desired = clamp_to_constraints_with_overflow_context(
+                    max_child,
+                    props.layout,
+                    cx.available,
+                    cx.overflow_ctx,
+                );
                 let base = Rect::new(cx.bounds.origin, desired);
                 for &child in cx.children {
                     let layout_style = layout_style_for_node(cx.app, window, child);
@@ -528,7 +538,12 @@ impl ElementHostWidget {
                     max_child.height = Px(max_child.height.0.max(child_size.height.0));
                 }
 
-                let desired = clamp_to_constraints(max_child, props.layout, cx.available);
+                let desired = clamp_to_constraints_with_overflow_context(
+                    max_child,
+                    props.layout,
+                    cx.available,
+                    cx.overflow_ctx,
+                );
                 let base = Rect::new(cx.bounds.origin, desired);
                 for &child in cx.children {
                     let layout_style = layout_style_for_node(cx.app, window, child);
@@ -573,7 +588,12 @@ impl ElementHostWidget {
                     max_child.height = Px(max_child.height.0.max(child_size.height.0));
                 }
 
-                let desired = clamp_to_constraints(max_child, props.layout, cx.available);
+                let desired = clamp_to_constraints_with_overflow_context(
+                    max_child,
+                    props.layout,
+                    cx.available,
+                    cx.overflow_ctx,
+                );
                 let base = Rect::new(cx.bounds.origin, desired);
                 for &child in cx.children {
                     let layout_style = layout_style_for_node(cx.app, window, child);
@@ -607,7 +627,12 @@ impl ElementHostWidget {
                     max_child.height = Px(max_child.height.0.max(child_size.height.0));
                 }
 
-                let desired = clamp_to_constraints(max_child, props.layout, cx.available);
+                let desired = clamp_to_constraints_with_overflow_context(
+                    max_child,
+                    props.layout,
+                    cx.available,
+                    cx.overflow_ctx,
+                );
                 let base = Rect::new(cx.bounds.origin, desired);
                 for &child in cx.children {
                     let layout_style = layout_style_for_node(cx.app, window, child);
@@ -667,7 +692,12 @@ impl ElementHostWidget {
                     max_child.height = Px(max_child.height.0.max(child_size.height.0));
                 }
 
-                let desired = clamp_to_constraints(max_child, props.layout, cx.available);
+                let desired = clamp_to_constraints_with_overflow_context(
+                    max_child,
+                    props.layout,
+                    cx.available,
+                    cx.overflow_ctx,
+                );
                 let base = Rect::new(cx.bounds.origin, desired);
                 for &child in cx.children {
                     let layout_style = layout_style_for_node(cx.app, window, child);
@@ -723,7 +753,12 @@ impl ElementHostWidget {
                     max_child.height = Px(max_child.height.0.max(child_size.height.0));
                 }
 
-                let desired = clamp_to_constraints(max_child, props.layout, cx.available);
+                let desired = clamp_to_constraints_with_overflow_context(
+                    max_child,
+                    props.layout,
+                    cx.available,
+                    cx.overflow_ctx,
+                );
                 let base = Rect::new(cx.bounds.origin, desired);
                 for &child in cx.children {
                     let layout_style = layout_style_for_node(cx.app, window, child);
@@ -1049,17 +1084,22 @@ impl ElementHostWidget {
                     metrics.size.width,
                     Px((metrics.size.height.0 + pad_top.0 + pad_bottom.0).max(0.0)),
                 );
-                clamp_to_constraints(desired, props.layout, cx.available)
+                clamp_to_constraints_with_overflow_context(
+                    desired,
+                    props.layout,
+                    cx.available,
+                    cx.overflow_ctx,
+                )
             }
             ElementInstance::StyledText(props) => {
                 if cx.pass_kind == crate::layout_pass::LayoutPassKind::Probe {
-                    let constraints = LayoutConstraints::new(
-                        LayoutSize::new(None, None),
-                        LayoutSize::new(
-                            AvailableSpace::Definite(cx.available.width),
-                            AvailableSpace::Definite(cx.available.height),
-                        ),
-                    );
+                    let mut constraints = cx.probe_constraints_for_size(cx.available);
+                    if cx.available.width.0 <= 0.0 {
+                        constraints.available.width = AvailableSpace::MaxContent;
+                    }
+                    if cx.available.height.0 <= 0.0 {
+                        constraints.available.height = AvailableSpace::MaxContent;
+                    }
 
                     let mut measure_cx = MeasureCx {
                         app: cx.app,
@@ -1212,17 +1252,22 @@ impl ElementHostWidget {
                     metrics.size.width,
                     Px((metrics.size.height.0 + pad_top.0 + pad_bottom.0).max(0.0)),
                 );
-                clamp_to_constraints(desired, props.layout, cx.available)
+                clamp_to_constraints_with_overflow_context(
+                    desired,
+                    props.layout,
+                    cx.available,
+                    cx.overflow_ctx,
+                )
             }
             ElementInstance::SelectableText(props) => {
                 if cx.pass_kind == crate::layout_pass::LayoutPassKind::Probe {
-                    let constraints = LayoutConstraints::new(
-                        LayoutSize::new(None, None),
-                        LayoutSize::new(
-                            AvailableSpace::Definite(cx.available.width),
-                            AvailableSpace::Definite(cx.available.height),
-                        ),
-                    );
+                    let mut constraints = cx.probe_constraints_for_size(cx.available);
+                    if cx.available.width.0 <= 0.0 {
+                        constraints.available.width = AvailableSpace::MaxContent;
+                    }
+                    if cx.available.height.0 <= 0.0 {
+                        constraints.available.height = AvailableSpace::MaxContent;
+                    }
 
                     let mut measure_cx = MeasureCx {
                         app: cx.app,
@@ -1375,7 +1420,12 @@ impl ElementHostWidget {
                     metrics.size.width,
                     Px((metrics.size.height.0 + pad_top.0 + pad_bottom.0).max(0.0)),
                 );
-                clamp_to_constraints(desired, props.layout, cx.available)
+                clamp_to_constraints_with_overflow_context(
+                    desired,
+                    props.layout,
+                    cx.available,
+                    cx.overflow_ctx,
+                )
             }
             ElementInstance::TextInput(props) => {
                 let model = props.model.clone();
