@@ -12,11 +12,6 @@ that block copy/paste alignment with upstream docs.
 ## Results (missing exports)
 
 Total upstream components scanned: **55**.  
-Total missing exports detected: **4**.
+Total missing exports detected: **0**.
 
-| Component (upstream file) | Missing export(s) | Category | Notes / next action |
-|---|---|---|---|
-| `badge.tsx` | `badgeVariants` | style helper | We intentionally prefer typed enums (`BadgeVariant`) + the `Badge` recipe. Consider adding a compat helper only if copy/paste friction is high. |
-| `button.tsx` | `buttonVariants` | style helper | Upstream uses this to style non-button nodes. If needed, map to a reusable `ChromeRefinement`/`LayoutRefinement` preset instead of a “class string” concept. |
-| `button-group.tsx` | `buttonGroupVariants` | style helper | Same as above; likely not needed unless upstream snippets use it directly. |
-| `toggle.tsx` | `toggleVariants` | style helper | We intentionally prefer typed enums (`ToggleVariant`, `ToggleSize`) + the `Toggle` recipe. |
+No missing exports detected in this snapshot.

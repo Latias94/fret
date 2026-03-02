@@ -4,7 +4,7 @@ use fret_core::{Color, Edges, FontId, FontWeight, Px, TextStyle};
 use fret_icons::IconId;
 use fret_runtime::{CommandId, Model};
 use fret_ui::element::{AnyElement, CrossAlign, FlexProps, Length, MainAlign, PressableProps};
-use fret_ui::{ElementContext, Theme, UiHost};
+use fret_ui::{ElementContext, Theme, ThemeSnapshot, UiHost};
 use fret_ui_kit::command::ElementCommandGatingExt as _;
 use fret_ui_kit::declarative::action_hooks::ActionHooksExt as _;
 use fret_ui_kit::declarative::chrome::control_chrome_pressable_with_id_props;
@@ -43,6 +43,58 @@ impl ToggleSize {
             Self::Lg => ComponentSize::Large,
         }
     }
+}
+
+/// Upstream shadcn/ui `toggleVariants(...)` compat surface.
+///
+/// Upstream returns a Tailwind/CVA class string. In Fret we expose the closest equivalent as
+/// mergeable refinements.
+#[derive(Debug, Clone)]
+pub struct ToggleVariants {
+    pub chrome: ChromeRefinement,
+    pub layout: LayoutRefinement,
+}
+
+fn toggle_h_snapshot(theme: &ThemeSnapshot, size: ToggleSize) -> Px {
+    let (key, fallback) = match size {
+        ToggleSize::Default => ("component.toggle.h", Px(36.0)),
+        ToggleSize::Sm => ("component.toggle.h_sm", Px(32.0)),
+        ToggleSize::Lg => ("component.toggle.h_lg", Px(40.0)),
+    };
+    theme.metric_by_key(key).unwrap_or(fallback)
+}
+
+pub fn toggle_variants(
+    theme: &ThemeSnapshot,
+    variant: ToggleVariant,
+    size: ToggleSize,
+) -> ToggleVariants {
+    let radius = MetricRef::radius(Radius::Md).resolve(theme);
+    let border = theme.color_token("input");
+    let fg = theme.color_token("foreground");
+
+    let chrome = match variant {
+        ToggleVariant::Default => ChromeRefinement::default()
+            .radius(radius)
+            .border_width(Px(1.0))
+            .border_color(ColorRef::Color(Color::TRANSPARENT)),
+        ToggleVariant::Outline => ChromeRefinement::default()
+            .radius(radius)
+            .border_width(Px(1.0))
+            .border_color(ColorRef::Color(border)),
+    }
+    .text_color(ColorRef::Color(fg));
+
+    let h = toggle_h_snapshot(theme, size);
+    let layout = LayoutRefinement::default().h_px(h).min_w(h);
+
+    ToggleVariants { chrome, layout }
+}
+
+/// Upstream shadcn/ui compat alias for copy/paste parity.
+#[allow(non_snake_case)]
+pub fn toggleVariants(theme: &ThemeSnapshot, variant: ToggleVariant, size: ToggleSize) -> ToggleVariants {
+    toggle_variants(theme, variant, size)
 }
 
 fn alpha_mul(mut c: Color, mul: f32) -> Color {

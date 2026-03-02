@@ -397,6 +397,34 @@ pub enum ButtonGroupOrientation {
     Vertical,
 }
 
+/// Upstream shadcn/ui `buttonGroupVariants(...)` compat surface.
+///
+/// Upstream returns a Tailwind/CVA class string. In Fret the button-group recipe applies the
+/// important per-child border/corner merging directly, so this helper is primarily for copy/paste
+/// parity in ports.
+#[derive(Debug, Clone)]
+pub struct ButtonGroupVariants {
+    pub orientation: ButtonGroupOrientation,
+    pub layout: LayoutRefinement,
+    pub chrome: ChromeRefinement,
+}
+
+pub fn button_group_variants(orientation: ButtonGroupOrientation) -> ButtonGroupVariants {
+    ButtonGroupVariants {
+        orientation,
+        // Upstream base includes `flex w-fit items-stretch`. Layout direction is owned by the
+        // `ButtonGroup` element in Fret (not by this helper).
+        layout: LayoutRefinement::default(),
+        chrome: ChromeRefinement::default(),
+    }
+}
+
+/// Upstream shadcn/ui compat alias for copy/paste parity.
+#[allow(non_snake_case)]
+pub fn buttonGroupVariants(orientation: ButtonGroupOrientation) -> ButtonGroupVariants {
+    button_group_variants(orientation)
+}
+
 pub struct ButtonGroup {
     items: Vec<ButtonGroupItem>,
     orientation: ButtonGroupOrientation,

@@ -137,14 +137,18 @@ pub use avatar::{
     Avatar, AvatarBadge, AvatarFallback, AvatarGroup, AvatarGroupCount, AvatarImage, AvatarSize,
     avatar_sized,
 };
-pub use badge::{Badge, BadgeRender, BadgeVariant, badge};
+pub use badge::{Badge, BadgeRender, BadgeVariant, BadgeVariants, badge, badgeVariants, badge_variants};
 pub use breadcrumb::primitives::{
     BreadcrumbEllipsis, BreadcrumbLink, BreadcrumbList, BreadcrumbPage,
 };
 pub use breadcrumb::{Breadcrumb, BreadcrumbItem, BreadcrumbSeparator};
-pub use button::{Button, ButtonRender, ButtonSize, ButtonVariant};
+pub use button::{
+    Button, ButtonRender, ButtonSize, ButtonVariant, ButtonVariants, buttonVariants,
+    button_variants,
+};
 pub use button_group::{
     ButtonGroup, ButtonGroupItem, ButtonGroupOrientation, ButtonGroupSeparator, ButtonGroupText,
+    ButtonGroupVariants, buttonGroupVariants, button_group_variants,
 };
 pub use calendar::{Calendar, CalendarCaptionLayout, CalendarDayButton};
 pub use calendar_hijri::CalendarHijri;
@@ -335,7 +339,10 @@ pub use tabs::{
     TabsTrigger, tabs, tabsListVariants, tabs_list_variants, tabs_uncontrolled,
 };
 pub use textarea::{Textarea, textarea};
-pub use toggle::{Toggle, ToggleRoot, ToggleSize, ToggleVariant, toggle, toggle_uncontrolled};
+pub use toggle::{
+    Toggle, ToggleRoot, ToggleSize, ToggleVariant, ToggleVariants, toggle, toggleVariants,
+    toggle_uncontrolled, toggle_variants,
+};
 pub use toggle_group::{
     ToggleGroup, ToggleGroupItem, ToggleGroupKind, toggle_group_multiple,
     toggle_group_multiple_uncontrolled, toggle_group_single, toggle_group_single_uncontrolled,
