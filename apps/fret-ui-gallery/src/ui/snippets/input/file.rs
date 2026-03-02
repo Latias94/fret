@@ -1,3 +1,5 @@
+pub const SOURCE: &str = include_str!("file.rs");
+
 // region: example
 use crate::spec::CMD_INPUT_PICTURE_BROWSE;
 use fret_core::Px;
