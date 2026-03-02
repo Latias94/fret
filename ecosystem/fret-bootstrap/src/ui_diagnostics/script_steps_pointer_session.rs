@@ -64,7 +64,7 @@ pub(super) fn handle_pointer_down_step(
 
     if !*stop_script {
         let test_id_hint = match &target {
-            UiSelectorV1::TestId { id } => Some(id.as_str()),
+            UiSelectorV1::TestId { id, .. } => Some(id.as_str()),
             _ => None,
         };
         if let Some(target_window) = svc.resolve_window_target_for_active_step_with_test_id_hint(

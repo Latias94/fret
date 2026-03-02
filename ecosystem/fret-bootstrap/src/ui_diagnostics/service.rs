@@ -314,7 +314,7 @@ impl UiDiagnosticsService {
         }?;
 
         match target {
-            UiSelectorV1::TestId { id } => Some(id.as_str()),
+            UiSelectorV1::TestId { id, .. } => Some(id.as_str()),
             _ => None,
         }
     }
