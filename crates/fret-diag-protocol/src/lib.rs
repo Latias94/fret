@@ -2995,8 +2995,8 @@ mod tests {
 
     #[test]
     fn predicate_dock_tab_strip_scroll_predicates_serialize_and_deserialize() {
-        let value = serde_json::to_value(UiPredicateV1::DockTabStripActiveScrollPxGe { px: 12.0 })
-            .unwrap();
+        let value =
+            serde_json::to_value(UiPredicateV1::DockTabStripActiveScrollPxGe { px: 12.0 }).unwrap();
         assert_eq!(
             value,
             serde_json::json!({
@@ -3010,8 +3010,8 @@ mod tests {
             UiPredicateV1::DockTabStripActiveScrollPxGe { .. }
         ));
 
-        let value = serde_json::to_value(UiPredicateV1::DockTabStripActiveScrollPxLe { px: 0.0 })
-            .unwrap();
+        let value =
+            serde_json::to_value(UiPredicateV1::DockTabStripActiveScrollPxLe { px: 0.0 }).unwrap();
         assert_eq!(
             value,
             serde_json::json!({
