@@ -192,8 +192,6 @@ fn preview_content(cx: &mut ElementContext<'_, App>, label: &str) -> AnyElement 
 }
 
 fn view(cx: &mut ElementContext<'_, App>, st: &mut CustomV1BasicsWindowState) -> ViewElements {
-    let theme = Theme::global(&*cx.app).snapshot();
-
     let caps_supported = cx
         .app
         .global::<RendererCapabilities>()
@@ -380,53 +378,38 @@ fn view(cx: &mut ElementContext<'_, App>, st: &mut CustomV1BasicsWindowState) ->
         panel_shell(cx, "CustomV1 (FilterContent)", disabled_body)
     };
 
-    let content = ui::v_flex(cx, |cx| {
-        let panels = ui::h_flex(cx, |_cx| [plain, custom_panel])
-            .gap(Space::N3)
-            .items_stretch()
-            .into_element(cx);
+    let panels = ui::h_flex(cx, |_cx| [plain, custom_panel])
+        .gap(Space::N3)
+        .items_stretch()
+        .into_element(cx);
 
-        let body = stack::vstack(
-            cx,
-            stack::VStackProps::default()
-                .gap_y(Space::N3)
-                .layout(LayoutRefinement::default().w_full()),
-            |_cx| [toolbar, panels],
-        );
+    let body = stack::vstack(
+        cx,
+        stack::VStackProps::default()
+            .gap_y(Space::N4)
+            .layout(LayoutRefinement::default().w_full()),
+        |_cx| [toolbar, panels],
+    );
 
-        [
-            shadcn::CardHeader::new(vec![
-                shadcn::CardTitle::new("CustomV1 basics").into_element(cx),
-                shadcn::CardDescription::new(
-                    "Registers a bounded WGSL snippet at on_gpu_ready and applies EffectStep::CustomV1 (single pass).",
-                )
-                .into_element(cx),
-            ])
-            .into_element(cx),
-            shadcn::CardContent::new(vec![body]).into_element(cx),
-        ]
-    })
+    let header = shadcn::CardHeader::new([
+        shadcn::CardTitle::new("CustomV1 basics").into_element(cx),
+        shadcn::CardDescription::new(
+            "Registers a bounded WGSL snippet at on_gpu_ready and applies EffectStep::CustomV1 (single pass).",
+        )
+        .into_element(cx),
+    ])
     .into_element(cx);
 
-    let card = shadcn::Card::new(vec![content])
+    let content = shadcn::CardContent::new([body]).into_element(cx);
+
+    let card = shadcn::Card::new([header, content])
         .ui()
         .w_full()
         .h_full()
         .max_w(Px(1180.0))
         .into_element(cx);
 
-    let root = ui::container(cx, |cx| {
-        vec![ui::v_flex(cx, |_cx| vec![card])
-            .items_center()
-            .justify_center()
-            .size_full()
-            .into_element(cx)]
-    })
-    .bg(ColorRef::Color(theme.color_token("background")))
-    .p(Space::N6)
-    .size_full()
-    .into_element(cx)
-    .test_id(TEST_ID_ROOT);
+    let root = fret_cookbook::scaffold::centered_page_background(cx, TEST_ID_ROOT, card);
 
     vec![root].into()
 }

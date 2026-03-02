@@ -1,7 +1,7 @@
 use super::frame_targets::downsampled_size;
 use super::render_plan_effects::{map_scissor_downsample_nearest, map_scissor_to_size};
 use super::{SceneEncoding, ScissorRect};
-use crate::renderer::estimate_texture_bytes;
+use crate::renderer::{estimate_clip_mask_bytes, estimate_texture_bytes};
 use std::ops::Range;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -32,6 +32,71 @@ pub(super) struct RenderPlanCompileStats {
     pub(super) degradation_count: u64,
     pub(super) effect_degradations: super::EffectDegradationSnapshot,
     pub(super) effect_blur_quality: super::BlurQualitySnapshot,
+    /// Counts how many effect chains were compiled through `apply_chain_in_place` for the frame.
+    ///
+    /// This is a best-effort diagnostics signal (not a stable API).
+    pub(super) effect_chain_budget_samples: u64,
+    /// Minimum effective intermediate budget observed across effect chain compilation for the
+    /// frame.
+    ///
+    /// This is a best-effort diagnostics signal (not a stable API).
+    pub(super) effect_chain_effective_budget_min_bytes: u64,
+    /// Maximum effective intermediate budget observed across effect chain compilation for the
+    /// frame.
+    ///
+    /// This is a best-effort diagnostics signal (not a stable API).
+    pub(super) effect_chain_effective_budget_max_bytes: u64,
+    /// Maximum "other live bytes" observed while compiling effect chains for the frame.
+    ///
+    /// This represents intermediate bytes that were effectively unavailable due to other live
+    /// targets and reserved bytes (clip path masks, backdrop source groups), excluding `srcdst`.
+    ///
+    /// This is a best-effort diagnostics signal (not a stable API).
+    pub(super) effect_chain_other_live_max_bytes: u64,
+
+    /// Counts how many effect chains containing at least one CustomEffect step (v1/v2/v3) were
+    /// compiled through `apply_chain_in_place` for the frame.
+    ///
+    /// This is a best-effort diagnostics signal (not a stable API).
+    pub(super) custom_effect_chain_budget_samples: u64,
+    /// Minimum effective intermediate budget observed across CustomEffect chain compilation.
+    ///
+    /// This is a best-effort diagnostics signal (not a stable API).
+    pub(super) custom_effect_chain_effective_budget_min_bytes: u64,
+    /// Maximum effective intermediate budget observed across CustomEffect chain compilation.
+    ///
+    /// This is a best-effort diagnostics signal (not a stable API).
+    pub(super) custom_effect_chain_effective_budget_max_bytes: u64,
+    /// Maximum "other live bytes" observed across CustomEffect chain compilation.
+    ///
+    /// This is a best-effort diagnostics signal (not a stable API).
+    pub(super) custom_effect_chain_other_live_max_bytes: u64,
+    /// Maximum "base required bytes" observed across CustomEffect chain compilation.
+    ///
+    /// Base required bytes are expressed as full-size intermediate targets for the chain
+    /// (`srcdst` + required scratch/work/raw targets), excluding optional resources (mask/pyramid).
+    ///
+    /// This is a best-effort diagnostics signal (not a stable API).
+    pub(super) custom_effect_chain_base_required_max_bytes: u64,
+    /// Maximum "optional required bytes" observed across CustomEffect chain compilation.
+    ///
+    /// Optional required bytes cover non-full intermediate allocations like clip masks and v3
+    /// pyramids.
+    ///
+    /// This is a best-effort diagnostics signal (not a stable API).
+    pub(super) custom_effect_chain_optional_required_max_bytes: u64,
+    /// Maximum full-size target count implied by "base required bytes" across CustomEffect chains.
+    ///
+    /// This is a best-effort diagnostics signal (not a stable API).
+    pub(super) custom_effect_chain_base_required_full_targets_max: u32,
+    /// Maximum clip-mask bytes observed across CustomEffect chains.
+    ///
+    /// This is a best-effort diagnostics signal (not a stable API).
+    pub(super) custom_effect_chain_optional_mask_max_bytes: u64,
+    /// Maximum pyramid bytes observed across CustomEffect chains.
+    ///
+    /// This is a best-effort diagnostics signal (not a stable API).
+    pub(super) custom_effect_chain_optional_pyramid_max_bytes: u64,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -291,7 +356,7 @@ pub(super) struct DropShadowPass {
 }
 
 #[derive(Debug, Clone, Copy)]
-pub(super) struct CustomEffectPass {
+pub(super) struct CustomEffectPassCommon {
     pub(super) src: PlanTarget,
     pub(super) dst: PlanTarget,
     pub(super) src_size: (u32, u32),
@@ -302,28 +367,23 @@ pub(super) struct CustomEffectPass {
     pub(super) effect: fret_core::EffectId,
     pub(super) params: fret_core::EffectParamsV1,
     pub(super) load: wgpu::LoadOp<wgpu::Color>,
+}
+
+#[derive(Debug, Clone, Copy)]
+pub(super) struct CustomEffectPass {
+    pub(super) common: CustomEffectPassCommon,
 }
 
 #[derive(Debug, Clone, Copy)]
 pub(super) struct CustomEffectV2Pass {
-    pub(super) src: PlanTarget,
-    pub(super) dst: PlanTarget,
-    pub(super) src_size: (u32, u32),
-    pub(super) dst_size: (u32, u32),
-    pub(super) dst_scissor: Option<LocalScissorRect>,
-    pub(super) mask_uniform_index: Option<u32>,
-    pub(super) mask: Option<MaskRef>,
-    pub(super) effect: fret_core::EffectId,
-    pub(super) params: fret_core::EffectParamsV1,
+    pub(super) common: CustomEffectPassCommon,
     pub(super) input_image: Option<fret_core::ImageId>,
     pub(super) input_uv: fret_core::scene::UvRect,
     pub(super) input_sampling: fret_core::scene::ImageSamplingHint,
-    pub(super) load: wgpu::LoadOp<wgpu::Color>,
 }
 
 #[derive(Debug, Clone, Copy)]
 pub(super) struct CustomEffectV3Pass {
-    pub(super) src: PlanTarget,
     pub(super) src_raw: PlanTarget,
     pub(super) src_pyramid: PlanTarget,
     pub(super) pyramid_levels: u32,
@@ -333,21 +393,13 @@ pub(super) struct CustomEffectV3Pass {
     pub(super) pyramid_build_scissor: Option<LocalScissorRect>,
     pub(super) raw_wanted: bool,
     pub(super) pyramid_wanted: bool,
-    pub(super) dst: PlanTarget,
-    pub(super) src_size: (u32, u32),
-    pub(super) dst_size: (u32, u32),
-    pub(super) dst_scissor: Option<LocalScissorRect>,
-    pub(super) mask_uniform_index: Option<u32>,
-    pub(super) mask: Option<MaskRef>,
-    pub(super) effect: fret_core::EffectId,
-    pub(super) params: fret_core::EffectParamsV1,
+    pub(super) common: CustomEffectPassCommon,
     pub(super) user0_image: Option<fret_core::ImageId>,
     pub(super) user0_uv: fret_core::scene::UvRect,
     pub(super) user0_sampling: fret_core::scene::ImageSamplingHint,
     pub(super) user1_image: Option<fret_core::ImageId>,
     pub(super) user1_uv: fret_core::scene::UvRect,
     pub(super) user1_sampling: fret_core::scene::ImageSamplingHint,
-    pub(super) load: wgpu::LoadOp<wgpu::Color>,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -439,10 +491,10 @@ impl RenderPlan {
             segments,
             passes,
             compile_stats: RenderPlanCompileStats {
-                estimated_peak_intermediate_bytes: 0,
                 degradation_count: degradations.len() as u64,
                 effect_degradations,
                 effect_blur_quality,
+                ..Default::default()
             },
             degradations,
         };
@@ -750,11 +802,14 @@ fn validate_plan_target_lifetimes(passes: &[RenderPlanPass]) -> Result<(), Strin
                 mark_write(&mut live, &mut initialized, pass_index, dst, Some(load))?;
             }
             RenderPlanPass::CustomEffect(CustomEffectPass {
-                src,
-                dst,
-                mask,
-                load,
-                ..
+                common:
+                    CustomEffectPassCommon {
+                        src,
+                        dst,
+                        mask,
+                        load,
+                        ..
+                    },
             }) => {
                 mark_read(&live, &initialized, pass_index, src)?;
                 if let Some(mask) = mask {
@@ -763,10 +818,14 @@ fn validate_plan_target_lifetimes(passes: &[RenderPlanPass]) -> Result<(), Strin
                 mark_write(&mut live, &mut initialized, pass_index, dst, Some(load))?;
             }
             RenderPlanPass::CustomEffectV2(CustomEffectV2Pass {
-                src,
-                dst,
-                mask,
-                load,
+                common:
+                    CustomEffectPassCommon {
+                        src,
+                        dst,
+                        mask,
+                        load,
+                        ..
+                    },
                 ..
             }) => {
                 mark_read(&live, &initialized, pass_index, src)?;
@@ -776,12 +835,16 @@ fn validate_plan_target_lifetimes(passes: &[RenderPlanPass]) -> Result<(), Strin
                 mark_write(&mut live, &mut initialized, pass_index, dst, Some(load))?;
             }
             RenderPlanPass::CustomEffectV3(CustomEffectV3Pass {
-                src,
                 src_raw,
                 src_pyramid,
-                dst,
-                mask,
-                load,
+                common:
+                    CustomEffectPassCommon {
+                        src,
+                        dst,
+                        mask,
+                        load,
+                        ..
+                    },
                 ..
             }) => {
                 mark_read(&live, &initialized, pass_index, src)?;
@@ -1127,54 +1190,54 @@ fn validate_plan_scissors(passes: &[RenderPlanPass]) -> Result<(), String> {
                 }
             }
             RenderPlanPass::CustomEffect(pass) => {
-                if let Some(scissor) = pass.dst_scissor.map(|s| s.0)
-                    && !within_local(scissor, pass.dst_size)
+                if let Some(scissor) = pass.common.dst_scissor.map(|s| s.0)
+                    && !within_local(scissor, pass.common.dst_size)
                 {
                     return Err(format!(
                         "pass[{pass_index}] CustomEffect dst_scissor exceeds destination size"
                     ));
                 }
-                if let Some(mask) = pass.mask {
-                    if pass.mask_uniform_index.is_none() {
+                if let Some(mask) = pass.common.mask {
+                    if pass.common.mask_uniform_index.is_none() {
                         return Err(format!(
                             "pass[{pass_index}] CustomEffect mask requires mask_uniform_index"
                         ));
                     }
-                    validate_mask_ref(pass_index, "CustomEffect", pass.dst_size, mask)?;
+                    validate_mask_ref(pass_index, "CustomEffect", pass.common.dst_size, mask)?;
                 }
             }
             RenderPlanPass::CustomEffectV2(pass) => {
-                if let Some(scissor) = pass.dst_scissor.map(|s| s.0)
-                    && !within_local(scissor, pass.dst_size)
+                if let Some(scissor) = pass.common.dst_scissor.map(|s| s.0)
+                    && !within_local(scissor, pass.common.dst_size)
                 {
                     return Err(format!(
                         "pass[{pass_index}] CustomEffectV2 dst_scissor exceeds destination size"
                     ));
                 }
-                if let Some(mask) = pass.mask {
-                    if pass.mask_uniform_index.is_none() {
+                if let Some(mask) = pass.common.mask {
+                    if pass.common.mask_uniform_index.is_none() {
                         return Err(format!(
                             "pass[{pass_index}] CustomEffectV2 mask requires mask_uniform_index"
                         ));
                     }
-                    validate_mask_ref(pass_index, "CustomEffectV2", pass.dst_size, mask)?;
+                    validate_mask_ref(pass_index, "CustomEffectV2", pass.common.dst_size, mask)?;
                 }
             }
             RenderPlanPass::CustomEffectV3(pass) => {
-                if let Some(scissor) = pass.dst_scissor.map(|s| s.0)
-                    && !within_local(scissor, pass.dst_size)
+                if let Some(scissor) = pass.common.dst_scissor.map(|s| s.0)
+                    && !within_local(scissor, pass.common.dst_size)
                 {
                     return Err(format!(
                         "pass[{pass_index}] CustomEffectV3 dst_scissor exceeds destination size"
                     ));
                 }
-                if let Some(mask) = pass.mask {
-                    if pass.mask_uniform_index.is_none() {
+                if let Some(mask) = pass.common.mask {
+                    if pass.common.mask_uniform_index.is_none() {
                         return Err(format!(
                             "pass[{pass_index}] CustomEffectV3 mask requires mask_uniform_index"
                         ));
                     }
-                    validate_mask_ref(pass_index, "CustomEffectV3", pass.dst_size, mask)?;
+                    validate_mask_ref(pass_index, "CustomEffectV3", pass.common.dst_size, mask)?;
                 }
             }
             RenderPlanPass::FullscreenBlit(pass) => {
@@ -1277,18 +1340,29 @@ fn validate_plan_first_output_write_is_clear(passes: &[RenderPlanPass]) -> Resul
                 ..
             }) => Some(load),
             RenderPlanPass::CustomEffect(CustomEffectPass {
-                dst: PlanTarget::Output,
-                load,
-                ..
+                common:
+                    CustomEffectPassCommon {
+                        dst: PlanTarget::Output,
+                        load,
+                        ..
+                    },
             }) => Some(load),
             RenderPlanPass::CustomEffectV2(CustomEffectV2Pass {
-                dst: PlanTarget::Output,
-                load,
+                common:
+                    CustomEffectPassCommon {
+                        dst: PlanTarget::Output,
+                        load,
+                        ..
+                    },
                 ..
             }) => Some(load),
             RenderPlanPass::CustomEffectV3(CustomEffectV3Pass {
-                dst: PlanTarget::Output,
-                load,
+                common:
+                    CustomEffectPassCommon {
+                        dst: PlanTarget::Output,
+                        load,
+                        ..
+                    },
                 ..
             }) => Some(load),
             _ => None,
@@ -1414,13 +1488,21 @@ fn estimate_plan_peak_intermediate_bytes(
             RenderPlanPass::DropShadow(DropShadowPass { dst, dst_size, .. }) => {
                 mark_live(&mut live, &mut sizes, dst, dst_size);
             }
-            RenderPlanPass::CustomEffect(CustomEffectPass { dst, dst_size, .. }) => {
+            RenderPlanPass::CustomEffect(CustomEffectPass {
+                common: CustomEffectPassCommon { dst, dst_size, .. },
+            }) => {
                 mark_live(&mut live, &mut sizes, dst, dst_size);
             }
-            RenderPlanPass::CustomEffectV2(CustomEffectV2Pass { dst, dst_size, .. }) => {
+            RenderPlanPass::CustomEffectV2(CustomEffectV2Pass {
+                common: CustomEffectPassCommon { dst, dst_size, .. },
+                ..
+            }) => {
                 mark_live(&mut live, &mut sizes, dst, dst_size);
             }
-            RenderPlanPass::CustomEffectV3(CustomEffectV3Pass { dst, dst_size, .. }) => {
+            RenderPlanPass::CustomEffectV3(CustomEffectV3Pass {
+                common: CustomEffectPassCommon { dst, dst_size, .. },
+                ..
+            }) => {
                 mark_live(&mut live, &mut sizes, dst, dst_size);
             }
             RenderPlanPass::ReleaseTarget(t) => {
@@ -1441,11 +1523,13 @@ fn estimate_plan_peak_intermediate_bytes(
             if !live[idx(t)] {
                 continue;
             }
-            cur = cur.saturating_add(estimate_texture_bytes(
-                sizes[idx(t)],
-                target_format(t, scene_format),
-                1,
-            ));
+            let bytes = match t {
+                PlanTarget::Mask0 | PlanTarget::Mask1 | PlanTarget::Mask2 => {
+                    estimate_clip_mask_bytes(sizes[idx(t)])
+                }
+                _ => estimate_texture_bytes(sizes[idx(t)], target_format(t, scene_format), 1),
+            };
+            cur = cur.saturating_add(bytes);
         }
         peak = peak.max(cur);
     }
@@ -1496,25 +1580,25 @@ fn insert_early_releases(passes: &mut Vec<RenderPlanPass>) -> u64 {
                 }
             }
             RenderPlanPass::CustomEffect(p) => {
-                mark(p.src);
-                mark(p.dst);
-                if let Some(mask) = p.mask {
+                mark(p.common.src);
+                mark(p.common.dst);
+                if let Some(mask) = p.common.mask {
                     mark(mask.target);
                 }
             }
             RenderPlanPass::CustomEffectV2(p) => {
-                mark(p.src);
-                mark(p.dst);
-                if let Some(mask) = p.mask {
+                mark(p.common.src);
+                mark(p.common.dst);
+                if let Some(mask) = p.common.mask {
                     mark(mask.target);
                 }
             }
             RenderPlanPass::CustomEffectV3(p) => {
-                mark(p.src);
+                mark(p.common.src);
                 mark(p.src_raw);
                 mark(p.src_pyramid);
-                mark(p.dst);
-                if let Some(mask) = p.mask {
+                mark(p.common.dst);
+                if let Some(mask) = p.common.mask {
                     mark(mask.target);
                 }
             }

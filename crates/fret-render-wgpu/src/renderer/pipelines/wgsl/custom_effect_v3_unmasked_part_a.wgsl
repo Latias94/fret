@@ -81,6 +81,46 @@ struct CustomEffectV3MetaV1 {
 @group(1) @binding(7) var user1_texture: texture_2d<f32>;
 @group(1) @binding(8) var user1_sampler: sampler;
 
+fn fret_clamp_pixel_pos(pos_px: vec2<f32>, dims_u: vec2<u32>) -> vec2<f32> {
+  let dims = vec2<f32>(f32(dims_u.x), f32(dims_u.y));
+  return clamp(pos_px, vec2<f32>(0.5), dims - vec2<f32>(0.5));
+}
+
+fn fret_sample_src_at_pos(pos_px: vec2<f32>) -> vec4<f32> {
+  let dims_u = textureDimensions(src_texture);
+  if (dims_u.x == 0u || dims_u.y == 0u) {
+    return vec4<f32>(0.0);
+  }
+  let x = clamp(i32(floor(pos_px.x)), 0, i32(dims_u.x) - 1);
+  let y = clamp(i32(floor(pos_px.y)), 0, i32(dims_u.y) - 1);
+  return textureLoad(src_texture, vec2<i32>(x, y), 0);
+}
+
+fn fret_sample_src_bilinear_at_pos(pos_px: vec2<f32>) -> vec4<f32> {
+  let dims_u = textureDimensions(src_texture);
+  if (dims_u.x == 0u || dims_u.y == 0u) {
+    return vec4<f32>(0.0);
+  }
+
+  let px = fret_clamp_pixel_pos(pos_px, dims_u);
+  let base = floor(px - vec2<f32>(0.5));
+  let f = px - (base + vec2<f32>(0.5));
+
+  let x0 = clamp(i32(base.x), 0, i32(dims_u.x) - 1);
+  let y0 = clamp(i32(base.y), 0, i32(dims_u.y) - 1);
+  let x1 = clamp(x0 + 1, 0, i32(dims_u.x) - 1);
+  let y1 = clamp(y0 + 1, 0, i32(dims_u.y) - 1);
+
+  let c00 = textureLoad(src_texture, vec2<i32>(x0, y0), 0);
+  let c10 = textureLoad(src_texture, vec2<i32>(x1, y0), 0);
+  let c01 = textureLoad(src_texture, vec2<i32>(x0, y1), 0);
+  let c11 = textureLoad(src_texture, vec2<i32>(x1, y1), 0);
+
+  let top = mix(c00, c10, f.x);
+  let bot = mix(c01, c11, f.x);
+  return mix(top, bot, f.y);
+}
+
 fn fret_sample_src_raw_at_pos(pos_px: vec2<f32>) -> vec4<f32> {
   let dims_u = textureDimensions(src_raw_texture);
   if (dims_u.x == 0u || dims_u.y == 0u) {
@@ -89,6 +129,31 @@ fn fret_sample_src_raw_at_pos(pos_px: vec2<f32>) -> vec4<f32> {
   let x = clamp(i32(floor(pos_px.x)), 0, i32(dims_u.x) - 1);
   let y = clamp(i32(floor(pos_px.y)), 0, i32(dims_u.y) - 1);
   return textureLoad(src_raw_texture, vec2<i32>(x, y), 0);
+}
+
+fn fret_sample_src_raw_bilinear_at_pos(pos_px: vec2<f32>) -> vec4<f32> {
+  let dims_u = textureDimensions(src_raw_texture);
+  if (dims_u.x == 0u || dims_u.y == 0u) {
+    return vec4<f32>(0.0);
+  }
+
+  let px = fret_clamp_pixel_pos(pos_px, dims_u);
+  let base = floor(px - vec2<f32>(0.5));
+  let f = px - (base + vec2<f32>(0.5));
+
+  let x0 = clamp(i32(base.x), 0, i32(dims_u.x) - 1);
+  let y0 = clamp(i32(base.y), 0, i32(dims_u.y) - 1);
+  let x1 = clamp(x0 + 1, 0, i32(dims_u.x) - 1);
+  let y1 = clamp(y0 + 1, 0, i32(dims_u.y) - 1);
+
+  let c00 = textureLoad(src_raw_texture, vec2<i32>(x0, y0), 0);
+  let c10 = textureLoad(src_raw_texture, vec2<i32>(x1, y0), 0);
+  let c01 = textureLoad(src_raw_texture, vec2<i32>(x0, y1), 0);
+  let c11 = textureLoad(src_raw_texture, vec2<i32>(x1, y1), 0);
+
+  let top = mix(c00, c10, f.x);
+  let bot = mix(c01, c11, f.x);
+  return mix(top, bot, f.y);
 }
 
 fn fret_pyramid_levels() -> u32 {
@@ -107,6 +172,36 @@ fn fret_sample_src_pyramid_at_pos(level: u32, pos_px: vec2<f32>) -> vec4<f32> {
   let x = clamp(i32(floor(p.x)), 0, i32(dims_u.x) - 1);
   let y = clamp(i32(floor(p.y)), 0, i32(dims_u.y) - 1);
   return textureLoad(src_pyramid_texture, vec2<i32>(x, y), i32(l));
+}
+
+fn fret_sample_src_pyramid_bilinear_at_pos(level: u32, pos_px: vec2<f32>) -> vec4<f32> {
+  let l = min(level, fret_pyramid_levels() - 1u);
+  let scale_u = 1u << l;
+  let scale = max(f32(scale_u), 1.0);
+  let p = pos_px / vec2<f32>(scale);
+
+  let dims_u = textureDimensions(src_pyramid_texture, i32(l));
+  if (dims_u.x == 0u || dims_u.y == 0u) {
+    return vec4<f32>(0.0);
+  }
+
+  let px = fret_clamp_pixel_pos(p, dims_u);
+  let base = floor(px - vec2<f32>(0.5));
+  let f = px - (base + vec2<f32>(0.5));
+
+  let x0 = clamp(i32(base.x), 0, i32(dims_u.x) - 1);
+  let y0 = clamp(i32(base.y), 0, i32(dims_u.y) - 1);
+  let x1 = clamp(x0 + 1, 0, i32(dims_u.x) - 1);
+  let y1 = clamp(y0 + 1, 0, i32(dims_u.y) - 1);
+
+  let c00 = textureLoad(src_pyramid_texture, vec2<i32>(x0, y0), i32(l));
+  let c10 = textureLoad(src_pyramid_texture, vec2<i32>(x1, y0), i32(l));
+  let c01 = textureLoad(src_pyramid_texture, vec2<i32>(x0, y1), i32(l));
+  let c11 = textureLoad(src_pyramid_texture, vec2<i32>(x1, y1), i32(l));
+
+  let top = mix(c00, c10, f.x);
+  let bot = mix(c01, c11, f.x);
+  return mix(top, bot, f.y);
 }
 
 fn fret_user0_uv_from_local(local_px: vec2<f32>) -> vec2<f32> {

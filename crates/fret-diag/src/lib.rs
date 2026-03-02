@@ -415,6 +415,7 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
     let mut perf_baseline_seed_preset_paths: Vec<PathBuf> = Vec::new();
     let mut perf_baseline_seed_specs: Vec<String> = Vec::new();
     let mut check_idle_no_paint_min: Option<u64> = None;
+    let mut check_triage_hint_absent_codes: Vec<String> = Vec::new();
     let mut check_stale_paint_test_id: Option<String> = None;
     let mut check_stale_paint_eps: f32 = 0.5;
     let mut check_stale_scene_test_id: Option<String> = None;
@@ -1232,6 +1233,14 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                     v.parse::<u64>()
                         .map_err(|_| "invalid value for --check-idle-no-paint-min".to_string())?,
                 );
+                i += 1;
+            }
+            "--check-triage-hint-absent" => {
+                i += 1;
+                let Some(v) = args.get(i).cloned() else {
+                    return Err("missing value for --check-triage-hint-absent".to_string());
+                };
+                check_triage_hint_absent_codes.push(v);
                 i += 1;
             }
             "--check-stale-paint" => {
@@ -2540,6 +2549,7 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
         check_node_graph_cull_window_shifts_max: check_node_graph_cull_window_shifts_max.clone(),
         check_node_graph_cull_window_shifts_min: check_node_graph_cull_window_shifts_min.clone(),
         check_notify_hotspot_file_max: check_notify_hotspot_file_max.clone(),
+        check_triage_hint_absent_codes: check_triage_hint_absent_codes.clone(),
         check_overlay_synthesis_min: check_overlay_synthesis_min.clone(),
         check_pixels_changed_test_id: check_pixels_changed_test_id.clone(),
         check_prepaint_actions_min: check_prepaint_actions_min.clone(),
@@ -2795,6 +2805,7 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
                 check_node_graph_cull_window_shifts_max: check_node_graph_cull_window_shifts_max.clone(),
                 check_node_graph_cull_window_shifts_min: check_node_graph_cull_window_shifts_min.clone(),
                 check_notify_hotspot_file_max: check_notify_hotspot_file_max.clone(),
+                check_triage_hint_absent_codes: check_triage_hint_absent_codes.clone(),
                 check_overlay_synthesis_min: check_overlay_synthesis_min.clone(),
                 check_pixels_changed_test_id: check_pixels_changed_test_id.clone(),
                 check_prepaint_actions_min: check_prepaint_actions_min.clone(),

@@ -977,6 +977,83 @@
       "target_hints": []
     },
     {
+      "id": "liquid-glass-custom-v3-steady",
+      "path": "tools/diag-scripts/renderer/effects/liquid-glass-custom-v3-steady.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "perf-liquid-glass-custom-v3-steady"
+      ],
+      "tags": [
+        "effects",
+        "gate",
+        "liquid_glass",
+        "perf"
+      ],
+      "target_hints": [
+        "Shows only the CustomV3 lens and captures a steady-state diagnostics bundle.",
+        "Intended as a perf regression baseline for CustomV3 raw+pyramid paths."
+      ]
+    },
+    {
+      "id": "liquid-glass-lens-custom-v3-corners-screenshot",
+      "path": "tools/diag-scripts/suites/liquid-glass-custom-v3/liquid-glass-lens-custom-v3-corners-screenshot.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "liquid-glass-custom-v3"
+      ],
+      "tags": [
+        "effects",
+        "gate",
+        "liquid_glass"
+      ],
+      "target_hints": [
+        "Shows the CustomV3 lens corners without other effect variants.",
+        "Sets bevel sliders to deterministic values and captures a screenshot + diagnostics bundle."
+      ]
+    },
+    {
+      "id": "liquid-glass-lens-custom-v3-source-group-screenshot",
+      "path": "tools/diag-scripts/suites/liquid-glass-custom-v3/liquid-glass-lens-custom-v3-source-group-screenshot.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "liquid-glass-custom-v3"
+      ],
+      "tags": [
+        "effects",
+        "gate",
+        "liquid_glass"
+      ],
+      "target_hints": [
+        "Enables the CustomV3 pair and BackdropSourceGroup toggles in the liquid glass demo.",
+        "Captures a screenshot and diagnostics bundle for ordering drift vs shared snapshot debugging."
+      ]
+    },
+    {
+      "id": "liquid-glass-lens-custom-v3-bevel-screenshot",
+      "path": "tools/diag-scripts/suites/liquid-glass-custom-v3/liquid-glass-lens-custom-v3-bevel-screenshot.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "liquid-glass-custom-v3"
+      ],
+      "tags": [
+        "effects",
+        "gate",
+        "liquid_glass"
+      ],
+      "target_hints": [
+        "Shows the CustomV3 lens and opens the inspector.",
+        "Sets bevel sliders to deterministic values and captures a screenshot + diagnostics bundle."
+      ]
+    },
+    {
       "id": "node-graph-demo-preset-families-paint-only",
       "path": "tools/diag-scripts/extras/node-graph-demo-preset-families-paint-only.json",
       "required_capabilities": [

@@ -5,6 +5,7 @@
 //! - rim-only refraction ("refraction height" gate)
 //! - circle-map displacement taper
 //! - optional chromatic dispersion (cheap 3-tap)
+//! - optional bevel lighting modulation (ported from AndroidLiquidGlass SdfShader)
 
 pub const CUSTOM_EFFECT_V3_LENS_WGSL: &str = r#"
 fn radius_at(centered: vec2<f32>, radii: vec4<f32>) -> f32 {
@@ -67,7 +68,13 @@ fn fret_custom_effect(src: vec4<f32>, _uv: vec2<f32>, pos_px: vec2<f32>, params:
 
   // params.vec4s[2]:
   // - x: noise_alpha (0..0.1)
+  // - y: bevel_strength (0..1)
+  // - z: bevel_light_angle_deg
+  // - w: bevel_secondary_strength (0..1)
   let noise_alpha = clamp(params.vec4s[2].x, 0.0, 0.1);
+  let bevel_strength = clamp(params.vec4s[2].y, 0.0, 1.0);
+  let bevel_angle_deg = params.vec4s[2].z;
+  let bevel_secondary_strength = clamp(params.vec4s[2].w, 0.0, 1.0);
 
   // params.vec4s[3]: tint (rgb + alpha)
   let tint = vec4<f32>(
@@ -90,7 +97,7 @@ fn fret_custom_effect(src: vec4<f32>, _uv: vec2<f32>, pos_px: vec2<f32>, params:
   }
 
   // Frosted source: chain input (blurred) + optional extra pyramid sampling from raw.
-  let pyr = fret_sample_src_pyramid_at_pos(pyramid_level, pos_px);
+  let pyr = fret_sample_src_pyramid_bilinear_at_pos(pyramid_level, pos_px);
   let frosted = mix(src, pyr, frost_mix);
 
   let inside_px = clamp(-sd, 0.0, 4096.0);
@@ -109,7 +116,8 @@ fn fret_custom_effect(src: vec4<f32>, _uv: vec2<f32>, pos_px: vec2<f32>, params:
   let g1 = normalize(g0 + depth_effect * normalize(centered + vec2<f32>(1.0e-6, 0.0)));
 
   // AndroidLiquidGlass uses a negated refraction amount so the rim refracts inward.
-  let d = circle_map(1.0 - inside01) * refraction_amount_px;
+  let intensity01 = circle_map(1.0 - inside01);
+  let d = intensity01 * refraction_amount_px;
   let refract = -d * g1;
 
   // Dispersion: either cheap 3-tap (default) or Android-like 7-tap (higher cost, nicer color).
@@ -117,23 +125,23 @@ fn fret_custom_effect(src: vec4<f32>, _uv: vec2<f32>, pos_px: vec2<f32>, params:
   let disp = refract * disp_k;
   let use_7tap = dispersion_quality > 0.5;
 
-  var raw = fret_sample_src_raw_at_pos(pos_px + refract);
+  var raw = fret_sample_src_raw_bilinear_at_pos(pos_px + refract);
   if (dispersion > 0.0 && disp_k > 1.0e-6) {
     if (!use_7tap) {
-      let raw_r = fret_sample_src_raw_at_pos(pos_px + refract + disp);
+      let raw_r = fret_sample_src_raw_bilinear_at_pos(pos_px + refract + disp);
       let raw_g = raw;
-      let raw_b = fret_sample_src_raw_at_pos(pos_px + refract - disp);
+      let raw_b = fret_sample_src_raw_bilinear_at_pos(pos_px + refract - disp);
       raw = vec4<f32>(raw_r.r, raw_g.g, raw_b.b, raw_g.a);
     } else {
       // Match AndroidLiquidGlass channel accumulation weights (7 taps):
       // red, orange, yellow, green, cyan, blue, purple.
-      let red = fret_sample_src_raw_at_pos(pos_px + refract + disp);
-      let orange = fret_sample_src_raw_at_pos(pos_px + refract + disp * (2.0 / 3.0));
-      let yellow = fret_sample_src_raw_at_pos(pos_px + refract + disp * (1.0 / 3.0));
+      let red = fret_sample_src_raw_bilinear_at_pos(pos_px + refract + disp);
+      let orange = fret_sample_src_raw_bilinear_at_pos(pos_px + refract + disp * (2.0 / 3.0));
+      let yellow = fret_sample_src_raw_bilinear_at_pos(pos_px + refract + disp * (1.0 / 3.0));
       let green = raw;
-      let cyan = fret_sample_src_raw_at_pos(pos_px + refract - disp * (1.0 / 3.0));
-      let blue = fret_sample_src_raw_at_pos(pos_px + refract - disp * (2.0 / 3.0));
-      let purple = fret_sample_src_raw_at_pos(pos_px + refract - disp);
+      let cyan = fret_sample_src_raw_bilinear_at_pos(pos_px + refract - disp * (1.0 / 3.0));
+      let blue = fret_sample_src_raw_bilinear_at_pos(pos_px + refract - disp * (2.0 / 3.0));
+      let purple = fret_sample_src_raw_bilinear_at_pos(pos_px + refract - disp);
 
       var c = vec4<f32>(0.0);
 
@@ -164,6 +172,24 @@ fn fret_custom_effect(src: vec4<f32>, _uv: vec2<f32>, pos_px: vec2<f32>, params:
 
       raw = c;
     }
+  }
+
+  // Optional bevel lighting modulation (ported from AndroidLiquidGlass SdfShader):
+  // - two-sided light response based on the refraction normal
+  // - primary term scales with rim intensity, secondary term adds a thin band highlight
+  if (bevel_strength > 0.0) {
+    let angle = bevel_angle_deg * (3.1415926 / 180.0);
+    let light_dir = vec2<f32>(cos(angle), sin(angle));
+    let n = normalize(g1 + vec2<f32>(1.0e-6, 0.0));
+
+    let b0 = clamp(dot(n, light_dir), 0.0, 1.0);
+    let m0 = 1.0 + 0.5 * bevel_strength * intensity01 * b0;
+    raw = vec4<f32>(raw.rgb * m0, raw.a);
+
+    let b1 = clamp(dot(n, -light_dir), 0.0, 1.0);
+    let band = min(1.0, smoothstep(1.0, 0.0, abs(intensity01 - 0.25) * 6.0));
+    let m1 = 1.0 + 0.5 * bevel_strength * bevel_secondary_strength * b1 * band;
+    raw = vec4<f32>(raw.rgb * m1, raw.a);
   }
 
   let rim = 1.0 - smoothstep(0.0, 1.0, inside01);

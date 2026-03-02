@@ -398,144 +398,151 @@ impl<H: fret_ui::UiHost> Widget<H> for DockingArbitrationHarnessRoot {
             ),
         );
 
-        let (overflow_button_anchor_rect, overflow_row_1_anchor_rect, tab_drop_end_anchor_rect) = (|| {
-            use fret_core::{DockGraph, DockNode, DockNodeId, PanelKey};
+        let (overflow_button_anchor_rect, overflow_row_1_anchor_rect, tab_drop_end_anchor_rect) =
+            (|| {
+                use fret_core::{DockGraph, DockNode, DockNodeId, PanelKey};
 
-            fn tabs_rect_for_panel(
-                graph: &DockGraph,
-                node: DockNodeId,
-                rect: Rect,
-                split_handle_gap: Px,
-                split_handle_hit_thickness: Px,
-                panel: &PanelKey,
-            ) -> Option<Rect> {
-                match graph.node(node)? {
-                    DockNode::Tabs { tabs, .. } => tabs.iter().any(|p| p == panel).then_some(rect),
-                    DockNode::Floating { child } => tabs_rect_for_panel(
-                        graph,
-                        *child,
-                        rect,
-                        split_handle_gap,
-                        split_handle_hit_thickness,
-                        panel,
-                    ),
-                    DockNode::Split {
-                        axis,
-                        children,
-                        fractions,
-                    } => {
-                        let min_px = vec![Px(0.0); children.len()];
-                        let computed = resizable::compute_layout(
-                            *axis,
+                fn tabs_rect_for_panel(
+                    graph: &DockGraph,
+                    node: DockNodeId,
+                    rect: Rect,
+                    split_handle_gap: Px,
+                    split_handle_hit_thickness: Px,
+                    panel: &PanelKey,
+                ) -> Option<Rect> {
+                    match graph.node(node)? {
+                        DockNode::Tabs { tabs, .. } => {
+                            tabs.iter().any(|p| p == panel).then_some(rect)
+                        }
+                        DockNode::Floating { child } => tabs_rect_for_panel(
+                            graph,
+                            *child,
                             rect,
-                            children.len(),
-                            fractions,
                             split_handle_gap,
                             split_handle_hit_thickness,
-                            &min_px,
-                        );
-                        for (child, &child_rect) in children.iter().zip(computed.panel_rects.iter())
-                        {
-                            if let Some(found) = tabs_rect_for_panel(
-                                graph,
-                                *child,
-                                child_rect,
+                            panel,
+                        ),
+                        DockNode::Split {
+                            axis,
+                            children,
+                            fractions,
+                        } => {
+                            let min_px = vec![Px(0.0); children.len()];
+                            let computed = resizable::compute_layout(
+                                *axis,
+                                rect,
+                                children.len(),
+                                fractions,
                                 split_handle_gap,
                                 split_handle_hit_thickness,
-                                panel,
-                            ) {
-                                return Some(found);
+                                &min_px,
+                            );
+                            for (child, &child_rect) in
+                                children.iter().zip(computed.panel_rects.iter())
+                            {
+                                if let Some(found) = tabs_rect_for_panel(
+                                    graph,
+                                    *child,
+                                    child_rect,
+                                    split_handle_gap,
+                                    split_handle_hit_thickness,
+                                    panel,
+                                ) {
+                                    return Some(found);
+                                }
                             }
+                            None
                         }
-                        None
                     }
                 }
-            }
 
-            let dock = cx.app.global::<DockManager>()?;
-            let root = dock.graph.window_root(self.window)?;
+                let dock = cx.app.global::<DockManager>()?;
+                let root = dock.graph.window_root(self.window)?;
 
-            // Anchor overflow geometry to the left viewport's tabs container. Most arbitration
-            // scripts build tab overflow by merging additional tabs into that leaf.
-            let left_panel = PanelKey::new("demo.viewport.left");
-            let tabs_rect = tabs_rect_for_panel(
-                &dock.graph,
-                root,
-                bounds,
-                split_handle_gap,
-                split_handle_hit_thickness,
-                &left_panel,
-            )?;
-            let (tabs_node, _active) = dock.graph.find_panel_in_window(self.window, &left_panel)?;
-            let tab_count = match dock.graph.node(tabs_node)? {
-                DockNode::Tabs { tabs, .. } => tabs.len(),
-                _ => 0,
-            };
-            if tab_count == 0 {
-                return None;
-            }
+                // Anchor overflow geometry to the left viewport's tabs container. Most arbitration
+                // scripts build tab overflow by merging additional tabs into that leaf.
+                let left_panel = PanelKey::new("demo.viewport.left");
+                let tabs_rect = tabs_rect_for_panel(
+                    &dock.graph,
+                    root,
+                    bounds,
+                    split_handle_gap,
+                    split_handle_hit_thickness,
+                    &left_panel,
+                )?;
+                let (tabs_node, _active) =
+                    dock.graph.find_panel_in_window(self.window, &left_panel)?;
+                let tab_count = match dock.graph.node(tabs_node)? {
+                    DockNode::Tabs { tabs, .. } => tabs.len(),
+                    _ => 0,
+                };
+                if tab_count == 0 {
+                    return None;
+                }
 
-            // Duplicate the docking overflow geometry formula in order to keep scripted anchors
-            // stable without reaching into crate-private helpers.
-            let theme = cx.theme().snapshot();
-            let tab_bar = Rect {
-                origin: tabs_rect.origin,
-                size: Size::new(
-                    tabs_rect.size.width,
-                    Px(DOCKING_ARBITRATION_TAB_BAR_H.0.min(tabs_rect.size.height.0)),
-                ),
-            };
-            let pad = theme.metric_token("metric.padding.sm").0.max(0.0);
-            let button_size = (tab_bar.size.height.0 * 0.80).clamp(18.0, 24.0);
-            let button_rect = Rect::new(
-                Point::new(
-                    Px(tab_bar.origin.x.0 + tab_bar.size.width.0 - pad - button_size),
-                    Px(tab_bar.origin.y.0 + (tab_bar.size.height.0 - button_size) * 0.5),
-                ),
-                Size::new(Px(button_size), Px(button_size)),
-            );
+                // Duplicate the docking overflow geometry formula in order to keep scripted anchors
+                // stable without reaching into crate-private helpers.
+                let theme = cx.theme().snapshot();
+                let tab_bar = Rect {
+                    origin: tabs_rect.origin,
+                    size: Size::new(
+                        tabs_rect.size.width,
+                        Px(DOCKING_ARBITRATION_TAB_BAR_H.0.min(tabs_rect.size.height.0)),
+                    ),
+                };
+                let pad = theme.metric_token("metric.padding.sm").0.max(0.0);
+                let button_size = (tab_bar.size.height.0 * 0.80).clamp(18.0, 24.0);
+                let button_rect = Rect::new(
+                    Point::new(
+                        Px(tab_bar.origin.x.0 + tab_bar.size.width.0 - pad - button_size),
+                        Px(tab_bar.origin.y.0 + (tab_bar.size.height.0 - button_size) * 0.5),
+                    ),
+                    Size::new(Px(button_size), Px(button_size)),
+                );
 
-            let menu_width = (tab_bar.size.width.0 * 0.55).clamp(180.0, 320.0);
-            let rows = (tab_count.clamp(1, 10)) as f32;
-            let menu_height = (rows * tab_bar.size.height.0).clamp(tab_bar.size.height.0 * 2.0, 320.0);
-            let menu_rect = Rect::new(
-                Point::new(
-                    Px(tab_bar.origin.x.0 + tab_bar.size.width.0 - pad - menu_width),
-                    Px(tab_bar.origin.y.0 + tab_bar.size.height.0 + pad),
-                ),
-                Size::new(Px(menu_width), Px(menu_height)),
-            );
-            let row_h = Px(tab_bar.size.height.0.max(0.0));
-            let row_1_rect = Rect::new(
-                Point::new(menu_rect.origin.x, Px(menu_rect.origin.y.0 + row_h.0)),
-                Size::new(menu_rect.size.width, row_h),
-            );
+                let menu_width = (tab_bar.size.width.0 * 0.55).clamp(180.0, 320.0);
+                let rows = (tab_count.clamp(1, 10)) as f32;
+                let menu_height =
+                    (rows * tab_bar.size.height.0).clamp(tab_bar.size.height.0 * 2.0, 320.0);
+                let menu_rect = Rect::new(
+                    Point::new(
+                        Px(tab_bar.origin.x.0 + tab_bar.size.width.0 - pad - menu_width),
+                        Px(tab_bar.origin.y.0 + tab_bar.size.height.0 + pad),
+                    ),
+                    Size::new(Px(menu_width), Px(menu_height)),
+                );
+                let row_h = Px(tab_bar.size.height.0.max(0.0));
+                let row_1_rect = Rect::new(
+                    Point::new(menu_rect.origin.x, Px(menu_rect.origin.y.0 + row_h.0)),
+                    Size::new(menu_rect.size.width, row_h),
+                );
 
-            let button_cx = button_rect.origin.x.0 + button_rect.size.width.0 * 0.5;
-            let button_cy = button_rect.origin.y.0 + button_rect.size.height.0 * 0.5;
+                let button_cx = button_rect.origin.x.0 + button_rect.size.width.0 * 0.5;
+                let button_cy = button_rect.origin.y.0 + button_rect.size.height.0 * 0.5;
 
-            // Prefer clicking towards the left side of the row to avoid the trailing close
-            // affordance.
-            let row_cx = row_1_rect.origin.x.0 + row_1_rect.size.width.0 * 0.25;
-            let row_cy = row_1_rect.origin.y.0 + row_1_rect.size.height.0 * 0.5;
+                // Prefer clicking towards the left side of the row to avoid the trailing close
+                // affordance.
+                let row_cx = row_1_rect.origin.x.0 + row_1_rect.size.width.0 * 0.25;
+                let row_cy = row_1_rect.origin.y.0 + row_1_rect.size.height.0 * 0.5;
 
-            // Anchor a "drop at end" position to the reserved header space to the left of the
-            // overflow button. This avoids fragile `set_cursor_in_window_logical` coordinates in
-            // scripts while still gating the same dock drop resolution contract.
-            let end_cx = {
-                let x_right = tab_bar.origin.x.0 + tab_bar.size.width.0;
-                let x_before_button = (button_rect.origin.x.0 - 2.0).max(tab_bar.origin.x.0 + pad);
-                (x_right - pad - 2.0).min(x_before_button)
-            };
-            let end_cy = tab_bar.origin.y.0 + tab_bar.size.height.0 * 0.5;
+                // Anchor a "drop at end" position to the reserved header space to the left of the
+                // overflow button. This avoids fragile `set_cursor_in_window_logical` coordinates in
+                // scripts while still gating the same dock drop resolution contract.
+                let end_cx = {
+                    let x_right = tab_bar.origin.x.0 + tab_bar.size.width.0;
+                    let x_before_button =
+                        (button_rect.origin.x.0 - 2.0).max(tab_bar.origin.x.0 + pad);
+                    (x_right - pad - 2.0).min(x_before_button)
+                };
+                let end_cy = tab_bar.origin.y.0 + tab_bar.size.height.0 * 0.5;
 
-            Some((
-                rect(button_cx, button_cy),
-                rect(row_cx, row_cy),
-                rect(end_cx, end_cy),
-            ))
-        })()
-        .unwrap_or((hidden, hidden, hidden));
+                Some((
+                    rect(button_cx, button_cy),
+                    rect(row_cx, row_cy),
+                    rect(end_cx, end_cy),
+                ))
+            })()
+            .unwrap_or((hidden, hidden, hidden));
 
         let _ = cx.layout_in(self.tab_overflow_button_anchor, overflow_button_anchor_rect);
         let _ = cx.layout_in(

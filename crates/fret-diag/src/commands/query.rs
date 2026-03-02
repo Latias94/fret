@@ -300,6 +300,17 @@ pub(crate) fn cmd_query(
             query_out,
             stats_json,
         ),
+        "scroll-extents-observation"
+        | "scroll_extents_observation"
+        | "scroll-observation"
+        | "scroll_observation" => cmd_query_scroll_extents_observation(
+            &rest[1..],
+            workspace_root,
+            out_dir,
+            query_out,
+            warmup_frames,
+            stats_json,
+        ),
         other => Err(format!("unknown query kind: {other}")),
     }
 }
@@ -328,6 +339,247 @@ fn find_nearest_script_result_json_preferring_evidence(start: &Path) -> Option<P
 fn read_script_result_typed(path: &Path) -> Option<fret_diag_protocol::UiScriptResultV1> {
     let bytes = std::fs::read(path).ok()?;
     serde_json::from_slice::<fret_diag_protocol::UiScriptResultV1>(&bytes).ok()
+}
+
+fn read_bundle_artifact_json(path: &Path) -> Result<serde_json::Value, String> {
+    let bytes = std::fs::read(path).map_err(|e| {
+        format!(
+            "failed to read bundle artifact (bundle.json or bundle.schema2.json): {}\n  {}",
+            path.display(),
+            e
+        )
+    })?;
+    serde_json::from_slice::<serde_json::Value>(&bytes).map_err(|e| {
+        format!(
+            "failed to parse bundle JSON (bundle.json or bundle.schema2.json): {}\n  {}",
+            path.display(),
+            e
+        )
+    })
+}
+
+#[allow(clippy::too_many_arguments)]
+fn cmd_query_scroll_extents_observation(
+    rest: &[String],
+    workspace_root: &Path,
+    out_dir: &Path,
+    query_out: Option<PathBuf>,
+    warmup_frames: u64,
+    stats_json: bool,
+) -> Result<(), String> {
+    let mut top: usize = 200;
+    let mut window_filter: Option<u64> = None;
+    let mut include_all: bool = false;
+
+    let mut positionals: Vec<String> = Vec::new();
+    let mut i: usize = 0;
+    while i < rest.len() {
+        match rest[i].as_str() {
+            "--top" => {
+                i += 1;
+                let Some(v) = rest.get(i).cloned() else {
+                    return Err("missing value for --top".to_string());
+                };
+                top = v
+                    .parse::<usize>()
+                    .map_err(|_| "invalid value for --top (expected usize)".to_string())?;
+                i += 1;
+            }
+            "--window" => {
+                i += 1;
+                let Some(v) = rest.get(i).cloned() else {
+                    return Err("missing value for --window".to_string());
+                };
+                window_filter = Some(
+                    v.parse::<u64>()
+                        .map_err(|_| "invalid value for --window (expected u64)".to_string())?,
+                );
+                i += 1;
+            }
+            "--all" => {
+                include_all = true;
+                i += 1;
+            }
+            other if other.starts_with("--") => {
+                return Err(format!(
+                    "unknown flag for query scroll-extents-observation: {other}"
+                ));
+            }
+            other => {
+                positionals.push(other.to_string());
+                i += 1;
+            }
+        }
+    }
+
+    if positionals.len() > 1 {
+        return Err(format!(
+            "unexpected arguments: {}",
+            positionals[1..].join(" ")
+        ));
+    }
+
+    let bundle_path = match positionals.as_slice() {
+        [bundle_src] => {
+            let bundle_src = crate::resolve_path(workspace_root, PathBuf::from(bundle_src));
+            crate::resolve_bundle_artifact_path(&bundle_src)
+        }
+        [] => resolve_bundle_artifact_path_or_latest(None, workspace_root, out_dir)?,
+        _ => unreachable!(),
+    };
+
+    let bundle = read_bundle_artifact_json(&bundle_path)?;
+    let windows = bundle
+        .get("windows")
+        .and_then(|v| v.as_array())
+        .map(|v| v.as_slice())
+        .unwrap_or(&[]);
+
+    let mut results: Vec<serde_json::Value> = Vec::new();
+    for w in windows {
+        let window_id = w.get("window").and_then(|v| v.as_u64()).unwrap_or(0);
+        if let Some(filter) = window_filter
+            && filter != window_id
+        {
+            continue;
+        }
+
+        let snaps_empty = Vec::new();
+        let snaps = w
+            .get("snapshots")
+            .and_then(|v| v.as_array())
+            .unwrap_or(&snaps_empty);
+
+        for s in snaps {
+            let frame_id = crate::json_bundle::snapshot_frame_id(s);
+            if frame_id < warmup_frames {
+                continue;
+            }
+
+            let tick_id = s.get("tick_id").and_then(|v| v.as_u64());
+            let window_snapshot_seq = crate::json_bundle::snapshot_window_snapshot_seq(s);
+            let timestamp_unix_ms = s.get("timestamp_unix_ms").and_then(|v| v.as_u64());
+
+            let Some(debug) = s.get("debug").and_then(|v| v.as_object()) else {
+                continue;
+            };
+            let scroll_nodes = debug
+                .get("scroll_nodes")
+                .and_then(|v| v.as_array())
+                .map(|v| v.as_slice())
+                .unwrap_or(&[]);
+
+            for n in scroll_nodes {
+                let overflow_observation = n.get("overflow_observation");
+                let budget_hit = overflow_observation
+                    .and_then(|o| o.as_object())
+                    .is_some_and(|o| {
+                        o.get("wrapper_peel_budget_hit")
+                            .and_then(|v| v.as_bool())
+                            .unwrap_or(false)
+                            || o.get("deep_scan_budget_hit")
+                                .and_then(|v| v.as_bool())
+                                .unwrap_or(false)
+                    });
+                if !include_all && !budget_hit {
+                    continue;
+                }
+
+                results.push(serde_json::json!({
+                    "window": window_id,
+                    "tick_id": tick_id,
+                    "frame_id": frame_id,
+                    "window_snapshot_seq": window_snapshot_seq,
+                    "timestamp_unix_ms": timestamp_unix_ms,
+                    "node": n.get("node").and_then(|v| v.as_u64()),
+                    "element": n.get("element").and_then(|v| v.as_u64()),
+                    "axis": n.get("axis").and_then(|v| v.as_str()),
+                    "offset_x": n.get("offset_x").and_then(|v| v.as_f64()),
+                    "offset_y": n.get("offset_y").and_then(|v| v.as_f64()),
+                    "viewport_w": n.get("viewport_w").and_then(|v| v.as_f64()),
+                    "viewport_h": n.get("viewport_h").and_then(|v| v.as_f64()),
+                    "content_w": n.get("content_w").and_then(|v| v.as_f64()),
+                    "content_h": n.get("content_h").and_then(|v| v.as_f64()),
+                    "observed_w": n.get("observed_w").and_then(|v| v.as_f64()),
+                    "observed_h": n.get("observed_h").and_then(|v| v.as_f64()),
+                    "overflow_observation": overflow_observation.cloned().unwrap_or(serde_json::Value::Null),
+                }));
+
+                if top > 0 && results.len() >= top {
+                    break;
+                }
+            }
+
+            if top > 0 && results.len() >= top {
+                break;
+            }
+        }
+
+        if top > 0 && results.len() >= top {
+            break;
+        }
+    }
+
+    let payload = serde_json::json!({
+        "schema_version": 1,
+        "kind": "query.scroll_extents_observation",
+        "bundle": bundle_path.display().to_string(),
+        "warmup_frames": warmup_frames,
+        "top": top,
+        "window": window_filter,
+        "all": include_all,
+        "results": results,
+    });
+
+    if let Some(out) = query_out.map(|p| crate::resolve_path(workspace_root, p)) {
+        if let Some(parent) = out.parent() {
+            std::fs::create_dir_all(parent).map_err(|e| e.to_string())?;
+        }
+        let pretty = serde_json::to_string_pretty(&payload).unwrap_or_else(|_| "{}".to_string());
+        std::fs::write(&out, pretty.as_bytes()).map_err(|e| e.to_string())?;
+        if !stats_json {
+            println!("{}", out.display());
+            return Ok(());
+        }
+    }
+
+    if stats_json {
+        println!(
+            "{}",
+            serde_json::to_string_pretty(&payload).unwrap_or_else(|_| "{}".to_string())
+        );
+        return Ok(());
+    }
+
+    let results = payload
+        .get("results")
+        .and_then(|v| v.as_array())
+        .cloned()
+        .unwrap_or_default();
+    for r in results {
+        let window = r.get("window").and_then(|v| v.as_u64()).unwrap_or(0);
+        let frame_id = r.get("frame_id").and_then(|v| v.as_u64()).unwrap_or(0);
+        let node = r.get("node").and_then(|v| v.as_u64()).unwrap_or(0);
+        let axis = r.get("axis").and_then(|v| v.as_str()).unwrap_or("unknown");
+        let obs = r.get("overflow_observation").and_then(|v| v.as_object());
+        let peel = obs
+            .and_then(|o| o.get("wrapper_peeled_max").and_then(|v| v.as_u64()))
+            .unwrap_or(0);
+        let peel_budget = obs
+            .and_then(|o| o.get("wrapper_peel_budget").and_then(|v| v.as_u64()))
+            .unwrap_or(0);
+        let deep = obs
+            .and_then(|o| o.get("deep_scan_visited").and_then(|v| v.as_u64()))
+            .unwrap_or(0);
+        let deep_budget = obs
+            .and_then(|o| o.get("deep_scan_budget_nodes").and_then(|v| v.as_u64()))
+            .unwrap_or(0);
+        println!(
+            "--window {window} (frame_id={frame_id} node={node} axis={axis} peel={peel}/{peel_budget} deep_scan={deep}/{deep_budget})"
+        );
+    }
+
+    Ok(())
 }
 
 fn parse_overlay_side(s: &str) -> Option<fret_diag_protocol::UiOverlaySideV1> {
@@ -1715,5 +1967,88 @@ mod tests {
             .cloned()
             .unwrap_or_default();
         assert_eq!(results.len(), 1);
+    }
+
+    fn write_bundle_schema2_with_scroll_observation(dir: &Path) -> PathBuf {
+        let bundle = serde_json::json!({
+            "schema_version": 2,
+            "windows": [{
+                "window": 1u64,
+                "snapshots": [{
+                    "tick_id": 10u64,
+                    "frame_id": 20u64,
+                    "timestamp_unix_ms": 30u64,
+                    "debug": {
+                        "scroll_nodes": [{
+                            "node": 999u64,
+                            "element": 123u64,
+                            "axis": "y",
+                            "offset_x": 0.0,
+                            "offset_y": 100.0,
+                            "viewport_w": 200.0,
+                            "viewport_h": 300.0,
+                            "content_w": 200.0,
+                            "content_h": 400.0,
+                            "observed_w": 200.0,
+                            "observed_h": 450.0,
+                            "overflow_observation": {
+                                "extent_may_be_stale": true,
+                                "barrier_roots": 1u64,
+                                "wrapper_peel_budget": 8u64,
+                                "wrapper_peeled_max": 8u64,
+                                "wrapper_peel_budget_hit": true,
+                                "immediate_children_visited": 1u64,
+                                "immediate_children_skipped_absolute": 0u64,
+                                "deep_scan_enabled": true,
+                                "deep_scan_budget_nodes": 256u64,
+                                "deep_scan_visited": 256u64,
+                                "deep_scan_budget_hit": true,
+                                "deep_scan_skipped_absolute": 0u64,
+                            }
+                        }]
+                    }
+                }]
+            }]
+        });
+
+        let path = dir.join("bundle.schema2.json");
+        let bytes = serde_json::to_vec(&bundle).expect("serialize bundle.schema2.json");
+        std::fs::write(&path, bytes).expect("write bundle.schema2.json");
+        path
+    }
+
+    #[test]
+    fn query_scroll_extents_observation_writes_json() {
+        let out_dir = make_temp_dir("fret-diag-query-scroll-extents-observation");
+        let bundle = write_bundle_schema2_with_scroll_observation(&out_dir);
+
+        let query_out = out_dir.join("out.json");
+        cmd_query_scroll_extents_observation(
+            &[bundle.display().to_string(), "--top".to_string(), "10".to_string()],
+            Path::new("."),
+            &out_dir,
+            Some(query_out.clone()),
+            0,
+            true,
+        )
+        .expect("query ok");
+
+        let bytes = std::fs::read(&query_out).expect("read out.json");
+        let v: serde_json::Value = serde_json::from_slice(&bytes).expect("parse out.json");
+        let results = v
+            .get("results")
+            .and_then(|v| v.as_array())
+            .cloned()
+            .unwrap_or_default();
+        assert_eq!(results.len(), 1);
+        assert_eq!(results[0].get("window").and_then(|v| v.as_u64()), Some(1));
+        assert_eq!(results[0].get("node").and_then(|v| v.as_u64()), Some(999));
+        assert_eq!(
+            results[0]
+                .get("overflow_observation")
+                .and_then(|v| v.get("deep_scan_budget_hit"))
+                .and_then(|v| v.as_bool()),
+            Some(true)
+        );
     }
 }

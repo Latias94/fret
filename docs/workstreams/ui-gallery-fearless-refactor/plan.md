@@ -15,6 +15,11 @@ especially when layout constraints must be explicit (e.g. `flex_1()` / `min_w_0(
 This workstream aims to make UI Gallery **fearlessly refactorable** by enforcing a single source of
 truth for examples.
 
+## Status
+
+As of 2026-03-02, UI Gallery pages in `apps/fret-ui-gallery/src/ui/pages/**` are snippet-backed
+(Preview ≡ Code), and enforcement lives in tests + the informational build-time drift audit.
+
 ## Goals
 
 1. **Single-source examples**: the preview and copyable snippet are generated from the same code.
@@ -178,6 +183,14 @@ Macros (`stringify!`) tend to:
    - Select (overlay + scroll + alignment policy)
 3. Continue migrating component pages in small batches.
 4. Once a page is fully migrated, forbid new `r#"...` code literals on that page.
+
+## Next (post-migration follow-ups)
+
+Now that drift is eliminated by construction, the highest leverage follow-ups are:
+
+- Expand the drift audit to cover any non-`src/ui/pages/**` preview surfaces (if present).
+- Normalize DocSection chrome/layout (max widths, padding, “Notes” shell usage) across pages so the gallery feels consistent.
+- Optional: align page taxonomy + section ordering to upstream shadcn MDX navigation (Base as primary, Radix as cross-check).
 
 ## Definition of done
 

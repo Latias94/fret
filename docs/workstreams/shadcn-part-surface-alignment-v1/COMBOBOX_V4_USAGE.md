@@ -3,6 +3,8 @@
 This note documents how to express the shadcn/ui v4 Combobox docs shapes in Fret using the
 `into_element_parts(...)` adapters.
 
+Deeper structural convergence work is tracked in `docs/workstreams/select-combobox-deep-redesign-v1/`.
+
 Sources of truth:
 
 - Upstream docs: `repo-ref/ui/apps/v4/content/docs/components/radix/combobox.mdx`

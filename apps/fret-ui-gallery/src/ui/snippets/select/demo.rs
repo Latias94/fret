@@ -32,26 +32,26 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
         }
     };
 
-    let entries: Vec<shadcn::SelectEntry> = vec![
-        shadcn::SelectGroup::new([
-            shadcn::SelectLabel::new("Fruits").into(),
-            shadcn::SelectItem::new("apple", "Apple").into(),
-            shadcn::SelectItem::new("banana", "Banana").into(),
-            shadcn::SelectItem::new("blueberry", "Blueberry").into(),
-            shadcn::SelectItem::new("grapes", "Grapes").into(),
-            shadcn::SelectItem::new("pineapple", "Pineapple").into(),
-        ])
-        .into(),
-    ];
-
     shadcn::Select::new(value, open)
         .trigger_test_id("ui-gallery-select-shadcn-demo-trigger")
-        .trigger(
-            shadcn::SelectTrigger::new()
-                .refine_layout(LayoutRefinement::default().w_px(Px(180.0)))
-                .value(shadcn::SelectValue::new().placeholder("Select a fruit")),
+        .into_element_parts(
+            cx,
+            |_cx| {
+                shadcn::SelectTrigger::new()
+                    .refine_layout(LayoutRefinement::default().w_px(Px(180.0)))
+                    .value(shadcn::SelectValue::new().placeholder("Select a fruit"))
+            },
+            |_cx| {
+                shadcn::SelectContent::new().with_entries([shadcn::SelectGroup::new([
+                    shadcn::SelectLabel::new("Fruits").into(),
+                    shadcn::SelectItem::new("apple", "Apple").into(),
+                    shadcn::SelectItem::new("banana", "Banana").into(),
+                    shadcn::SelectItem::new("blueberry", "Blueberry").into(),
+                    shadcn::SelectItem::new("grapes", "Grapes").into(),
+                    shadcn::SelectItem::new("pineapple", "Pineapple").into(),
+                ])
+                .into()])
+            },
         )
-        .entries(entries)
-        .into_element(cx)
 }
 // endregion: example
