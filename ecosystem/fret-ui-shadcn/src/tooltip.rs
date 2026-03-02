@@ -1470,7 +1470,15 @@ impl TooltipContent {
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
         let theme = Theme::global(&*cx.app).snapshot();
 
-        let base_layout = LayoutRefinement::default().flex_shrink_0();
+        // shadcn/ui v4 uses `w-fit max-w-xs` for tooltip content.
+        // Model this as "shrink-to-content with a max width hint" so long text wraps similarly.
+        let max_w = theme
+            .metric_by_key("component.tooltip.max_w")
+            .unwrap_or(Px(320.0)); // Tailwind `max-w-xs` = 20rem.
+        let base_layout = LayoutRefinement::default()
+            .flex_shrink_0()
+            .max_w(max_w)
+            .min_w_0();
         let chrome = tooltip_content_chrome(&theme).merge(self.chrome);
         let props = decl_style::container_props(&theme, chrome, base_layout.merge(self.layout));
         let fg = tooltip_text_fg(&theme);
@@ -1507,6 +1515,34 @@ mod tests {
     use fret_ui::overlay_placement::{Align, Side, anchored_panel_bounds_sized};
     use fret_ui::tree::UiTree;
     use fret_ui_kit::OverlayController;
+
+    #[test]
+    fn tooltip_content_default_max_width_matches_shadcn() {
+        use fret_ui::element::Length;
+        use fret_ui::elements::GlobalElementId;
+
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            CoreSize::new(Px(200.0), Px(120.0)),
+        );
+
+        fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
+            let content = TooltipContent::new(vec![AnyElement::new(
+                GlobalElementId(1),
+                ElementKind::Text(TextProps::new("tip")),
+                Vec::new(),
+            )])
+            .into_element(cx);
+
+            let ElementKind::Container(props) = content.kind else {
+                panic!("expected TooltipContent to build a Container element");
+            };
+
+            assert_eq!(props.layout.size.max_width, Some(Length::Px(Px(320.0))));
+        });
+    }
 
     #[derive(Default)]
     struct FakeServices;

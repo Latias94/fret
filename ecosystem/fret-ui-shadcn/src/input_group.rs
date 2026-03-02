@@ -9,9 +9,8 @@ use fret_icons::IconId;
 use fret_runtime::{CommandId, Model};
 use fret_ui::action::{OnKeyDown, UiPointerActionHost};
 use fret_ui::element::{
-    AnyElement, ContainerProps, FlexProps, LayoutStyle, Length, Overflow, PressableA11y,
-    PointerRegionProps, PressableProps, SemanticsDecoration, TextAreaProps, TextInputProps,
-    TextProps,
+    AnyElement, ContainerProps, FlexProps, LayoutStyle, Length, Overflow, PointerRegionProps,
+    PressableA11y, PressableProps, SemanticsDecoration, TextAreaProps, TextInputProps, TextProps,
 };
 use fret_ui::{ElementContext, TextAreaStyle, TextInputStyle, Theme, UiHost};
 use fret_ui_kit::command::ElementCommandGatingExt as _;
@@ -475,61 +474,64 @@ impl InputGroup {
                 ..Default::default()
             },
             |cx| {
-                let build_inline_addon =
-                    |cx: &mut ElementContext<'_, H>,
-                     children: Vec<AnyElement>,
-                     is_start: bool,
-                     has_button: bool,
-                     has_kbd: bool,
-                     control_focus_target: Option<fret_ui::elements::GlobalElementId>| {
-                        let mut layout = LayoutRefinement::default()
-                            .flex_none()
-                            .order(if is_start { -1 } else { 1 });
-                        if has_button {
-                            layout = if is_start {
-                                layout.ml_neg(Space::N2)
-                            } else {
-                                layout.mr_neg(Space::N2)
-                            };
-                        } else if has_kbd {
-                            layout = if is_start {
-                                layout.ml_neg(Space::N1p5)
-                            } else {
-                                layout.mr_neg(Space::N1p5)
-                            };
-                        }
-
-                        let (layout, gap) = {
-                            let theme = Theme::global(&*cx.app);
-                            (
-                                decl_style::layout_style(theme, layout),
-                                fret_ui_kit::MetricRef::space(Space::N2).resolve(theme),
-                            )
-                        };
-
-                        let padding = if is_start {
-                            Edges {
-                                top: addon_py,
-                                right: Px(0.0),
-                                bottom: addon_py,
-                                left: addon_pl,
-                            }
+                let build_inline_addon = |cx: &mut ElementContext<'_, H>,
+                                          children: Vec<AnyElement>,
+                                          is_start: bool,
+                                          has_button: bool,
+                                          has_kbd: bool,
+                                          control_focus_target: Option<
+                    fret_ui::elements::GlobalElementId,
+                >| {
+                    let mut layout = LayoutRefinement::default().flex_none().order(if is_start {
+                        -1
+                    } else {
+                        1
+                    });
+                    if has_button {
+                        layout = if is_start {
+                            layout.ml_neg(Space::N2)
                         } else {
-                            Edges {
-                                top: addon_py,
-                                right: addon_pl,
-                                bottom: addon_py,
-                                left: Px(0.0),
-                            }
+                            layout.mr_neg(Space::N2)
                         };
+                    } else if has_kbd {
+                        layout = if is_start {
+                            layout.ml_neg(Space::N1p5)
+                        } else {
+                            layout.mr_neg(Space::N1p5)
+                        };
+                    }
 
-                        let should_click_to_focus = control_focus_target.is_some() && !has_button;
+                    let (layout, gap) = {
+                        let theme = Theme::global(&*cx.app);
+                        (
+                            decl_style::layout_style(theme, layout),
+                            fret_ui_kit::MetricRef::space(Space::N2).resolve(theme),
+                        )
+                    };
 
-                        if should_click_to_focus {
-                            let control_focus_target =
-                                control_focus_target.expect("control_focus_target");
+                    let padding = if is_start {
+                        Edges {
+                            top: addon_py,
+                            right: Px(0.0),
+                            bottom: addon_py,
+                            left: addon_pl,
+                        }
+                    } else {
+                        Edges {
+                            top: addon_py,
+                            right: addon_pl,
+                            bottom: addon_py,
+                            left: Px(0.0),
+                        }
+                    };
 
-                            let on_down = Arc::new(
+                    let should_click_to_focus = control_focus_target.is_some() && !has_button;
+
+                    if should_click_to_focus {
+                        let control_focus_target =
+                            control_focus_target.expect("control_focus_target");
+
+                        let on_down = Arc::new(
                                 move |host: &mut dyn UiPointerActionHost,
                                       _cx: fret_ui::action::ActionCx,
                                       down: fret_ui::action::PointerDownCx| {
@@ -540,45 +542,45 @@ impl InputGroup {
                                 },
                             );
 
-                            let flex = cx.flex(
-                                FlexProps {
-                                    layout: LayoutStyle::default(),
-                                    direction: Axis::Horizontal,
-                                    gap: gap.into(),
-                                    padding: padding.into(),
-                                    justify: fret_ui::element::MainAlign::Center,
-                                    align: fret_ui::element::CrossAlign::Center,
-                                    wrap: false,
-                                },
-                                |_cx| children,
-                            );
+                        let flex = cx.flex(
+                            FlexProps {
+                                layout: LayoutStyle::default(),
+                                direction: Axis::Horizontal,
+                                gap: gap.into(),
+                                padding: padding.into(),
+                                justify: fret_ui::element::MainAlign::Center,
+                                align: fret_ui::element::CrossAlign::Center,
+                                wrap: false,
+                            },
+                            |_cx| children,
+                        );
 
-                            cx.pointer_region(
-                                PointerRegionProps {
-                                    layout,
-                                    enabled: true,
-                                    capture_phase_pointer_moves: false,
-                                },
-                                move |cx| {
-                                    cx.pointer_region_on_pointer_down(on_down);
-                                    vec![flex]
-                                },
-                            )
-                        } else {
-                            cx.flex(
-                                FlexProps {
-                                    layout,
-                                    direction: Axis::Horizontal,
-                                    gap: gap.into(),
-                                    padding: padding.into(),
-                                    justify: fret_ui::element::MainAlign::Center,
-                                    align: fret_ui::element::CrossAlign::Center,
-                                    wrap: false,
-                                },
-                                |_cx| children,
-                            )
-                        }
-                    };
+                        cx.pointer_region(
+                            PointerRegionProps {
+                                layout,
+                                enabled: true,
+                                capture_phase_pointer_moves: false,
+                            },
+                            move |cx| {
+                                cx.pointer_region_on_pointer_down(on_down);
+                                vec![flex]
+                            },
+                        )
+                    } else {
+                        cx.flex(
+                            FlexProps {
+                                layout,
+                                direction: Axis::Horizontal,
+                                gap: gap.into(),
+                                padding: padding.into(),
+                                justify: fret_ui::element::MainAlign::Center,
+                                align: fret_ui::element::CrossAlign::Center,
+                                wrap: false,
+                            },
+                            |_cx| children,
+                        )
+                    }
+                };
 
                 if is_block_layout {
                     let control_el = match control {
@@ -2015,9 +2017,11 @@ mod tests {
             bounds,
             "shadcn-input-group-addon-click-to-focus",
             |cx| {
-                vec![InputGroup::new(model.clone())
-                    .leading([cx.text("lead")])
-                    .into_element(cx)]
+                vec![
+                    InputGroup::new(model.clone())
+                        .leading([cx.text("lead")])
+                        .into_element(cx),
+                ]
             },
         );
         ui.set_root(root);
@@ -2074,10 +2078,12 @@ mod tests {
             bounds,
             "shadcn-input-group-addon-click-to-focus-suppressed-by-hint",
             |cx| {
-                vec![InputGroup::new(model.clone())
-                    .leading([cx.text("lead")])
-                    .leading_has_button(true)
-                    .into_element(cx)]
+                vec![
+                    InputGroup::new(model.clone())
+                        .leading([cx.text("lead")])
+                        .leading_has_button(true)
+                        .into_element(cx),
+                ]
             },
         );
         ui.set_root(root);

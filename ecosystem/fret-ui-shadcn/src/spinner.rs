@@ -1,5 +1,5 @@
 use fret_core::{Point, Px, SemanticsLive, SemanticsRole, Transform2D};
-use fret_icons::{ids, IconId};
+use fret_icons::{IconId, ids};
 use fret_ui::element::{
     AnyElement, LayoutStyle, Length, SemanticsDecoration, SvgIconProps, VisualTransformProps,
 };
