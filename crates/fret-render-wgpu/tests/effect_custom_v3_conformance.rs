@@ -635,6 +635,103 @@ fn fret_custom_effect(src: vec4<f32>, _uv: vec2<f32>, _pos_px: vec2<f32>, _param
 }
 
 #[test]
+fn gpu_custom_effect_v3_requested_but_skipped_due_to_target_exhaustion() {
+    let ctx = match pollster::block_on(WgpuContext::new()) {
+        Ok(ctx) => ctx,
+        Err(_err) => return,
+    };
+
+    let mut renderer = Renderer::new(&ctx.adapter, &ctx.device);
+    renderer.set_intermediate_budget_bytes(u64::MAX);
+    renderer.set_perf_enabled(true);
+
+    let wgsl = r#"
+fn fret_custom_effect(src: vec4<f32>, _uv: vec2<f32>, _pos_px: vec2<f32>, _params: EffectParamsV1) -> vec4<f32> {
+  return src;
+}
+"#;
+
+    let effect = renderer
+        .register_custom_effect_v3(CustomEffectDescriptorV3::wgsl_utf8(wgsl))
+        .expect("custom effect v3 registration must succeed on wgpu backends");
+
+    let size = (32u32, 32u32);
+    let bounds = Rect::new(
+        Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(size.0 as f32), Px(size.1 as f32)),
+    );
+
+    // Exhaust all intermediate targets by nesting four FilterContent scopes. The innermost scope
+    // still allocates its content target, but has no free scratch target for CustomEffectV3. The
+    // render plan should therefore skip CustomEffectV3 pass emission with a target-exhausted
+    // degradation.
+    let mut scene = Scene::default();
+    for _ in 0..3 {
+        scene.push(SceneOp::PushEffect {
+            bounds,
+            mode: EffectMode::FilterContent,
+            chain: EffectChain::from_steps(&[]),
+            quality: EffectQuality::Auto,
+        });
+    }
+    scene.push(SceneOp::PushEffect {
+        bounds,
+        mode: EffectMode::FilterContent,
+        chain: EffectChain::from_steps(&[EffectStep::CustomV3 {
+            id: effect,
+            params: EffectParamsV1::ZERO,
+            max_sample_offset_px: Px(0.0),
+            user0: None,
+            user1: None,
+            sources: CustomEffectSourcesV3 {
+                want_raw: false,
+                pyramid: None,
+            },
+        }]),
+        quality: EffectQuality::Auto,
+    });
+    scene.push(SceneOp::Quad {
+        order: DrawOrder(0),
+        rect: bounds,
+        background: (Paint::Solid(Color {
+            r: 1.0,
+            g: 0.0,
+            b: 0.0,
+            a: 1.0,
+        }))
+        .into(),
+        border: Edges::all(Px(0.0)),
+        border_paint: (Paint::Solid(Color::TRANSPARENT)).into(),
+        corner_radii: Default::default(),
+    });
+    for _ in 0..4 {
+        scene.push(SceneOp::PopEffect);
+    }
+
+    let _pixels = render_and_readback(&ctx, &mut renderer, &scene, size);
+
+    let snap = renderer
+        .take_last_frame_perf_snapshot()
+        .expect("expected last_frame_perf snapshot with perf enabled");
+    assert_eq!(
+        snap.custom_effect_v3_steps_requested, 1,
+        "expected one CustomV3 step to be requested by the effect chain"
+    );
+    assert_eq!(
+        snap.custom_effect_v3_passes_emitted, 0,
+        "expected CustomEffectV3 pass emission to be skipped when no scratch target is available"
+    );
+    assert!(
+        snap.render_plan_degradations_target_exhausted > 0,
+        "expected at least one target-exhausted degradation when intermediates are fully occupied"
+    );
+    assert!(
+        snap.render_plan_degradations_filter_content_disabled > 0,
+        "expected FilterContentDisabled degradation when the effect chain cannot be applied"
+    );
+}
+
+#[test]
 fn gpu_custom_effect_v3_pyramid_level1_differs_from_raw_near_an_unaligned_edge() {
     let ctx = match pollster::block_on(WgpuContext::new()) {
         Ok(ctx) => ctx,
