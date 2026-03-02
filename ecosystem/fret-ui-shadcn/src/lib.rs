@@ -146,7 +146,7 @@ pub use button::{Button, ButtonRender, ButtonSize, ButtonVariant};
 pub use button_group::{
     ButtonGroup, ButtonGroupItem, ButtonGroupOrientation, ButtonGroupSeparator, ButtonGroupText,
 };
-pub use calendar::{Calendar, CalendarCaptionLayout};
+pub use calendar::{Calendar, CalendarCaptionLayout, CalendarDayButton};
 pub use calendar_hijri::CalendarHijri;
 pub use calendar_multiple::CalendarMultiple;
 pub use calendar_range::CalendarRange;
@@ -277,7 +277,7 @@ pub use navigation_menu::{
     NavigationMenu, NavigationMenuContent, NavigationMenuIndicator, NavigationMenuItem,
     NavigationMenuLink, NavigationMenuList, NavigationMenuRoot, NavigationMenuTrigger,
     NavigationMenuTriggerStyle, NavigationMenuViewport, navigation_menu, navigation_menu_list,
-    navigation_menu_trigger_style, navigation_menu_uncontrolled,
+    navigationMenuTriggerStyle, navigation_menu_trigger_style, navigation_menu_uncontrolled,
 };
 pub use pagination::{
     Pagination, PaginationContent, PaginationEllipsis, PaginationItem, PaginationLink,
@@ -332,7 +332,7 @@ pub use table::{
 };
 pub use tabs::{
     Tabs, TabsContent, TabsItem, TabsList, TabsListVariant, TabsListVariants, TabsRoot,
-    TabsTrigger, tabs, tabs_list_variants, tabs_uncontrolled,
+    TabsTrigger, tabs, tabsListVariants, tabs_list_variants, tabs_uncontrolled,
 };
 pub use textarea::{Textarea, textarea};
 pub use toggle::{Toggle, ToggleRoot, ToggleSize, ToggleVariant, toggle, toggle_uncontrolled};
