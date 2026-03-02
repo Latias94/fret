@@ -293,6 +293,7 @@ impl From<ComboboxClear> for ComboboxPart {
 pub struct ComboboxInput {
     pub(crate) placeholder: Option<Arc<str>>,
     pub(crate) disabled: Option<bool>,
+    pub(crate) aria_invalid: Option<bool>,
     pub(crate) show_trigger: Option<bool>,
     pub(crate) show_clear: Option<bool>,
 }
@@ -309,6 +310,12 @@ impl ComboboxInput {
 
     pub fn disabled(mut self, disabled: bool) -> Self {
         self.disabled = Some(disabled);
+        self
+    }
+
+    /// Apply the upstream `aria-invalid` error state chrome (border + focus ring color).
+    pub fn aria_invalid(mut self, aria_invalid: bool) -> Self {
+        self.aria_invalid = Some(aria_invalid);
         self
     }
 
@@ -598,6 +605,7 @@ struct ComboboxPartsPatch {
     placeholder: Option<Arc<str>>,
     search_placeholder: Option<Arc<str>>,
     disabled: Option<bool>,
+    aria_invalid: Option<bool>,
     show_trigger: Option<bool>,
     show_clear: Option<bool>,
     content_side: Option<popper::Side>,
@@ -631,6 +639,9 @@ fn combobox_parts_patch(parts: Vec<ComboboxPart>) -> ComboboxPartsPatch {
                 }
                 if input.disabled.is_some() {
                     patch.disabled = input.disabled;
+                }
+                if input.aria_invalid.is_some() {
+                    patch.aria_invalid = input.aria_invalid;
                 }
                 if input.show_trigger.is_some() {
                     patch.show_trigger = input.show_trigger;
@@ -821,6 +832,9 @@ impl Combobox {
         if let Some(disabled) = patch.disabled {
             self.disabled = disabled;
         }
+        if let Some(aria_invalid) = patch.aria_invalid {
+            self.aria_invalid = aria_invalid;
+        }
         if let Some(show_trigger) = patch.show_trigger {
             self.show_trigger = show_trigger;
         }
@@ -877,51 +891,6 @@ impl Combobox {
             .open_model(cx);
         let value = controllable_state::use_controllable_model(cx, value, || default_value).model();
         Self::new(value, open)
-    }
-
-    /// When set, applies a fixed width to both the trigger and the popover content (shadcn demo
-    /// uses `w-[200px]`).
-    pub fn width(mut self, width: Px) -> Self {
-        self.width = Some(width);
-        self
-    }
-
-    /// Controls the popper placement side for the combobox content.
-    ///
-    /// Default matches the existing shadcn recipe behavior (`bottom`).
-    pub fn content_side(mut self, side: popper::Side) -> Self {
-        self.content_side = side;
-        self
-    }
-
-    /// Controls the popper placement alignment for the combobox content.
-    ///
-    /// Default matches the existing shadcn recipe behavior (`center`).
-    pub fn content_align(mut self, align: popper::Align) -> Self {
-        self.content_align = align;
-        self
-    }
-
-    /// Controls the main-axis offset (gap) between trigger and content.
-    ///
-    /// Default matches the existing shadcn recipe behavior (`4px`).
-    pub fn content_side_offset_px(mut self, offset: Px) -> Self {
-        self.content_side_offset = offset;
-        self
-    }
-
-    /// Controls the cross-axis alignment offset for the combobox content.
-    ///
-    /// Default matches the existing shadcn recipe behavior (`0px`).
-    pub fn content_align_offset_px(mut self, offset: Px) -> Self {
-        self.content_align_offset = offset;
-        self
-    }
-
-    /// Overrides the anchor element used for popper positioning.
-    pub fn anchor_element_id(mut self, anchor: GlobalElementId) -> Self {
-        self.anchor_element_id = Some(anchor);
-        self
     }
 
     /// When enabled, follows the upstream shadcn "responsive combobox" recipe: it uses a Drawer on
@@ -997,32 +966,6 @@ impl Combobox {
         self
     }
 
-    pub fn placeholder(mut self, placeholder: impl Into<Arc<str>>) -> Self {
-        self.placeholder = placeholder.into();
-        self
-    }
-
-    pub fn search_placeholder(mut self, placeholder: impl Into<Arc<str>>) -> Self {
-        self.search_placeholder = placeholder.into();
-        self
-    }
-
-    pub fn empty_text(mut self, text: impl Into<Arc<str>>) -> Self {
-        self.empty_text = text.into();
-        self
-    }
-
-    /// Apply the upstream `aria-invalid` error state chrome (border + focus ring color).
-    pub fn aria_invalid(mut self, aria_invalid: bool) -> Self {
-        self.aria_invalid = aria_invalid;
-        self
-    }
-
-    pub fn disabled(mut self, disabled: bool) -> Self {
-        self.disabled = disabled;
-        self
-    }
-
     pub fn a11y_label(mut self, label: impl Into<Arc<str>>) -> Self {
         self.a11y_label = Some(label.into());
         self
@@ -1030,26 +973,6 @@ impl Combobox {
 
     pub fn search_enabled(mut self, enabled: bool) -> Self {
         self.search_enabled = enabled;
-        self
-    }
-
-    /// When enabled, shows a clear affordance on the trigger when a value is selected.
-    pub fn show_clear(mut self, show_clear: bool) -> Self {
-        self.show_clear = show_clear;
-        self
-    }
-
-    /// When disabled, hides the default trigger affordance icon (Base UI `showTrigger`).
-    ///
-    /// Note: this only affects visuals; the trigger control still toggles the popover.
-    pub fn show_trigger(mut self, show_trigger: bool) -> Self {
-        self.show_trigger = show_trigger;
-        self
-    }
-
-    /// Controls the trigger preset used by the recipe (e.g. "Popup / Trigger Button" styling).
-    pub fn trigger_variant(mut self, variant: ComboboxTriggerVariant) -> Self {
-        self.trigger_variant = variant;
         self
     }
 
