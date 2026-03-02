@@ -109,10 +109,14 @@ ID format:
 - [ ] AFA-view-024 Provide an adapter path for MVU:
   - keep MVU available while views are adopted,
   - document “when to use MVU vs View” in cookbook guidance.
-- [ ] AFA-view-025 Add view-level observability:
+- [x] AFA-view-025 Add view-level observability:
   - “why did this view rebuild?”
   - “why was reuse skipped?”
   - “which models/globals were observed?”
+  - Evidence:
+    - `debug.dirty_views` + `debug.notify_requests`: `ecosystem/fret-bootstrap/src/ui_diagnostics/invalidation_diagnostics.rs`
+    - `debug.cache_roots[*].reuse_reason`: `ecosystem/fret-bootstrap/src/ui_diagnostics/cache_root_diagnostics.rs`
+    - view-cache reason source: `crates/fret-ui/src/declarative/mount.rs`
 
 ---
 

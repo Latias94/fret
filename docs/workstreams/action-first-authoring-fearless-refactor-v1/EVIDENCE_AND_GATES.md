@@ -27,6 +27,11 @@ View runtime (v1):
 - `ecosystem/fret/src/view.rs` (`View`, `ViewCx`, `use_state`/`use_state_keyed`/`use_selector`/`use_query`, view-cache reuse + handler keepalive)
 - `ecosystem/fret/src/app_entry.rs` (`App::run_view`)
 
+View/cache observability (diagnostics):
+
+- `ecosystem/fret-bootstrap/src/ui_diagnostics/invalidation_diagnostics.rs` (`dirty_views`, `notify_requests`)
+- `ecosystem/fret-bootstrap/src/ui_diagnostics/cache_root_diagnostics.rs` (`cache_roots[*].reuse_reason`)
+
 Pointer-trigger authoring integration (v1 still dispatches through the command pipeline):
 
 - `ecosystem/fret-ui-shadcn/src/button.rs` (`Button::action`)

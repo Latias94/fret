@@ -1370,6 +1370,10 @@ fn mount_element<H: UiHost + 'static>(
                 crate::tree::UiDebugCacheRootReuseReason::NodeRecreated
             } else if reuse_view_cache {
                 crate::tree::UiDebugCacheRootReuseReason::MarkedReuseRoot
+            } else if !ui.view_cache_enabled() {
+                crate::tree::UiDebugCacheRootReuseReason::ViewCacheDisabled
+            } else if ui.inspection_active() {
+                crate::tree::UiDebugCacheRootReuseReason::InspectionActive
             } else if window_state.view_cache_key_mismatch(id) {
                 crate::tree::UiDebugCacheRootReuseReason::CacheKeyMismatch
             } else if ui.view_cache_node_needs_rerender(node) {

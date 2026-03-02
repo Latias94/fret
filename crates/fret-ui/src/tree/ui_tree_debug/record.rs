@@ -219,6 +219,8 @@ impl<H: UiHost> UiTree<H> {
                     .view_cache_roots_cache_key_mismatch
                     .saturating_add(1);
             }
+            UiDebugCacheRootReuseReason::ViewCacheDisabled
+            | UiDebugCacheRootReuseReason::InspectionActive => {}
             UiDebugCacheRootReuseReason::NotMarkedReuseRoot => {
                 self.debug_stats.view_cache_roots_not_marked_reuse_root = self
                     .debug_stats
