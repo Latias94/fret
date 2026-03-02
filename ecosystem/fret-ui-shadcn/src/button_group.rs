@@ -604,7 +604,7 @@ impl ButtonGroup {
 
                             let input = match orientation {
                                 ButtonGroupOrientation::Horizontal => input
-                                    .refine_layout(LayoutRefinement::default().flex_1().min_w_0()),
+                                    .refine_layout(LayoutRefinement::default().flex_1()),
                                 ButtonGroupOrientation::Vertical => input,
                             };
 
@@ -648,7 +648,7 @@ impl ButtonGroup {
 
                             let group = match orientation {
                                 ButtonGroupOrientation::Horizontal => group
-                                    .refine_layout(LayoutRefinement::default().flex_1().min_w_0()),
+                                    .refine_layout(LayoutRefinement::default().flex_1()),
                                 ButtonGroupOrientation::Vertical => group,
                             };
 

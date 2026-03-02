@@ -85,8 +85,7 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
     let amount = shadcn::Input::new(amount_value)
         .a11y_label("Amount")
         .placeholder("10.00")
-        .test_id("ui-gallery-button-group-select-amount")
-        .refine_layout(LayoutRefinement::default().flex_1().min_w_0());
+        .test_id("ui-gallery-button-group-select-amount");
 
     let send = shadcn::Button::new("")
         .a11y_label("Send")
