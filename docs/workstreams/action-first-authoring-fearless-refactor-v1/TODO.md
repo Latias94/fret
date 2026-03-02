@@ -29,8 +29,8 @@ ID format:
 
 ## A. Decision + Contract Locking
 
-- [ ] AFA-adr-001 Review ADR 0307 (actions) for scope/ownership boundaries.
-- [ ] AFA-adr-002 Review ADR 0308 (view runtime) for hook order/keying rules and cache boundary semantics.
+- [x] AFA-adr-001 Review ADR 0307 (actions) for scope/ownership boundaries.
+- [x] AFA-adr-002 Review ADR 0308 (view runtime) for hook order/keying rules and cache boundary semantics.
 - [x] AFA-adr-003 Update `docs/adr/README.md` jump table with new action/view ADR anchors.
 - [x] AFA-adr-004 Decide keymap strategy (v1):
   - Decision: `ActionId == CommandId` (alias/wrapper; no keymap schema churn in v1).

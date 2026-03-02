@@ -11,7 +11,7 @@ Related:
 
 ## Current status snapshot (as of 2026-03-02)
 
-- **M0**: Not met (ADRs 0307/0308 are still `Proposed`; ADR index jump table is updated).
+- **M0**: Met (ADRs 0307/0308 are accepted; ADR index jump table is updated).
 - **M1**: Met (ActionId identity + typed unit actions + converged metadata via command registry; dispatch diagnostics include handler scope and driver-handled classification).
 - **M2**: Met (View runtime v1 + hooks + view-cache keepalive + gates exist; cookbook adoption landed).
 - **M3**: Met (Declarative + imui + GenUI converge on the same ActionId dispatch and stable selectors; cross-frontend diag gate exists).

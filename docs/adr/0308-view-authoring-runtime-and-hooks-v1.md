@@ -1,6 +1,6 @@
 # ADR 0308: View Authoring Runtime and Hooks (v1)
 
-Status: Proposed
+Status: Accepted
 
 ## Context
 
