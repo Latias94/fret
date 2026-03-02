@@ -42,7 +42,7 @@ Status labels:
 | `prompt_input_action_menu_demo` | `PAGE_AI_PROMPT_INPUT_ACTION_MENU_DEMO` | (removed) | `apps/fret-ui-gallery/src/ui/snippets/ai/prompt_input_action_menu_demo.rs` | `apps/fret-ui-gallery/src/ui/pages/ai_prompt_input_action_menu_demo.rs` | Snippet-backed |
 | `prompt_input_provider_demo` | `PAGE_AI_PROMPT_INPUT_PROVIDER_DEMO` | (removed) | `apps/fret-ui-gallery/src/ui/snippets/ai/prompt_input_provider_demo.rs` | `apps/fret-ui-gallery/src/ui/pages/ai_prompt_input_provider_demo.rs` | Snippet-backed |
 | `prompt_input_referenced_sources_demo` | `PAGE_AI_PROMPT_INPUT_REFERENCED_SOURCES_DEMO` | (removed) | `apps/fret-ui-gallery/src/ui/snippets/ai/prompt_input_referenced_sources_demo.rs` | `apps/fret-ui-gallery/src/ui/pages/ai_prompt_input_referenced_sources_demo.rs` | Snippet-backed |
-| `queue_demo` | `PAGE_AI_QUEUE_DEMO` | `apps/fret-ui-gallery/src/ui/previews/gallery/ai/queue_demo.rs` | — | — | Legacy preview |
+| `queue_demo` | `PAGE_AI_QUEUE_DEMO` | (removed) | `apps/fret-ui-gallery/src/ui/snippets/ai/queue_demo.rs` | `apps/fret-ui-gallery/src/ui/pages/ai_queue_demo.rs` | Snippet-backed |
 | `reasoning_demo` | `PAGE_AI_REASONING_DEMO` | (removed) | `apps/fret-ui-gallery/src/ui/snippets/ai/reasoning_demo.rs` | `apps/fret-ui-gallery/src/ui/pages/ai_reasoning_demo.rs` | Snippet-backed |
 | `sandbox_demo` | `PAGE_AI_SANDBOX_DEMO` | `apps/fret-ui-gallery/src/ui/previews/gallery/ai/sandbox_demo.rs` | — | — | Legacy preview |
 | `schema_display_demo` | `PAGE_AI_SCHEMA_DISPLAY_DEMO` | (removed) | `apps/fret-ui-gallery/src/ui/snippets/ai/schema_display_demo.rs` | `apps/fret-ui-gallery/src/ui/pages/ai_schema_display_demo.rs` | Snippet-backed |

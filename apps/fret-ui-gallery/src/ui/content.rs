@@ -457,7 +457,7 @@ fn page_preview(
         PAGE_AI_SHIMMER_DEMO => pages::preview_ai_shimmer_demo(cx, theme),
         PAGE_AI_SUGGESTIONS_DEMO => pages::preview_ai_suggestions_demo(cx, theme),
         PAGE_AI_REASONING_DEMO => pages::preview_ai_reasoning_demo(cx, theme),
-        PAGE_AI_QUEUE_DEMO => preview_ai_queue_demo(cx, theme),
+        PAGE_AI_QUEUE_DEMO => pages::preview_ai_queue_demo(cx, theme),
         PAGE_AI_TEST_RESULTS_DEMO => pages::preview_ai_test_results_demo(cx, theme),
         PAGE_AI_TEST_RESULTS_LARGE_DEMO => pages::preview_ai_test_results_large_demo(cx, theme),
         PAGE_AI_CHECKPOINT_DEMO => pages::preview_ai_checkpoint_demo(cx, theme),

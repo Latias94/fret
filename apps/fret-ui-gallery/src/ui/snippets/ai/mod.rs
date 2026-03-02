@@ -21,6 +21,7 @@ pub mod plan_demo;
 pub mod prompt_input_action_menu_demo;
 pub mod prompt_input_provider_demo;
 pub mod prompt_input_referenced_sources_demo;
+pub mod queue_demo;
 pub mod reasoning_demo;
 pub mod schema_display_demo;
 pub mod shimmer_demo;

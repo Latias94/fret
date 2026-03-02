@@ -1,29 +1,26 @@
-use super::super::super::super::*;
+pub const SOURCE: &str = include_str!("queue_demo.rs");
 
-pub(in crate::ui) fn preview_ai_queue_demo(
-    cx: &mut ElementContext<'_, App>,
-    _theme: &Theme,
-) -> Vec<AnyElement> {
-    use std::sync::Arc;
+// region: example
+use fret_runtime::Model;
+use fret_ui::Invalidation;
+use fret_ui_ai as ui_ai;
+use fret_ui_kit::declarative::stack;
+use fret_ui_kit::{LayoutRefinement, Space};
+use fret_ui_shadcn::prelude::*;
+use std::sync::Arc;
 
-    use fret_runtime::Model;
-    use fret_ui::Invalidation;
-    use fret_ui_kit::declarative::stack;
-    use fret_ui_kit::{LayoutRefinement, Space};
+#[derive(Default)]
+struct DemoModels {
+    item_1_completed: Option<Model<bool>>,
+}
 
-    #[derive(Default)]
-    struct DemoModels {
-        item_1_completed: Option<Model<bool>>,
-    }
-
+pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement {
     let item_1_completed = cx.with_state(DemoModels::default, |st| st.item_1_completed.clone());
     let item_1_completed = match item_1_completed {
         Some(model) => model,
         None => {
             let model = cx.app.models_mut().insert(false);
-            cx.with_state(DemoModels::default, |st| {
-                st.item_1_completed = Some(model.clone())
-            });
+            cx.with_state(DemoModels::default, |st| st.item_1_completed = Some(model.clone()));
             model
         }
     };
@@ -198,7 +195,7 @@ pub(in crate::ui) fn preview_ai_queue_demo(
     .test_id("ui-ai-queue-root")
     .into_element(cx);
 
-    vec![stack::vstack(
+    stack::vstack(
         cx,
         stack::VStackProps::default()
             .layout(LayoutRefinement::default().w_full().min_w_0())
@@ -211,5 +208,7 @@ pub(in crate::ui) fn preview_ai_queue_demo(
                 complete_marker,
             ]
         },
-    )]
+    )
 }
+// endregion: example
+

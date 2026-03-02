@@ -24,6 +24,7 @@ mod ai_plan_demo;
 mod ai_prompt_input_action_menu_demo;
 mod ai_prompt_input_provider_demo;
 mod ai_prompt_input_referenced_sources_demo;
+mod ai_queue_demo;
 mod ai_reasoning_demo;
 mod ai_schema_display_demo;
 mod ai_shimmer_demo;
@@ -230,6 +231,13 @@ pub(super) fn preview_ai_schema_display_demo(
     theme: &Theme,
 ) -> Vec<AnyElement> {
     ai_schema_display_demo::preview_ai_schema_display_demo(cx, theme)
+}
+
+pub(super) fn preview_ai_queue_demo(
+    cx: &mut ElementContext<'_, App>,
+    theme: &Theme,
+) -> Vec<AnyElement> {
+    ai_queue_demo::preview_ai_queue_demo(cx, theme)
 }
 
 pub(super) fn preview_ai_terminal_demo(
