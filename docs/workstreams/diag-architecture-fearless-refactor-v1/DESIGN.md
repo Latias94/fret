@@ -208,6 +208,13 @@ Introduce explicit registries so adding features does not require editing giant 
 - `CheckRegistry`: check name → check implementation (lint/perf/hotspots)
 - `ScriptLibrary`: promoted scripts discovery + metadata indexing
 
+Status (as of 2026-03-03):
+
+- Initial scaffolding landed:
+  - `crates/fret-diag/src/registry/suites.rs`
+  - `crates/fret-diag/src/registry/checks.rs`
+  - `crates/fret-diag/src/diag_list.rs` now resolves suites via `SuiteRegistry`.
+
 ## Plan (phased)
 
 See:
@@ -230,4 +237,3 @@ For any landable refactor step:
 - Where should the long-term “extensions registry” live: `fret-bootstrap` (ecosystem) or `fret-runtime` (core)?
 - Do we need a typed “layout snapshot protocol” (beyond sidecars) for DevTools live inspection?
 - What is the minimal layout “explainability” payload that is worth capturing without perf cliffs?
-

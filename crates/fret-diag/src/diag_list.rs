@@ -1,5 +1,6 @@
 use std::path::Path;
 
+use crate::registry::suites::SuiteRegistry;
 use crate::script_registry::{PromotedScriptRegistry, promoted_registry_default_path};
 
 #[derive(Debug, Default)]
@@ -95,28 +96,8 @@ fn cmd_list_suites(
 ) -> Result<(), String> {
     let opts = parse_list_filter_options("suites", rest)?;
 
-    let registry_path = promoted_registry_default_path(workspace_root);
-    if !registry_path.is_file() {
-        return Err(format!(
-            "promoted scripts registry is missing: {}\n\
-hint: generate it via `python tools/check_diag_scripts_registry.py --write`",
-            registry_path.display()
-        ));
-    }
-
-    let registry = PromotedScriptRegistry::load_from_path(&registry_path)?;
-
-    use std::collections::BTreeMap;
-    let mut counts: BTreeMap<&str, usize> = BTreeMap::new();
-    for e in registry.entries() {
-        for s in &e.suite_memberships {
-            *counts.entry(s.as_str()).or_insert(0) += 1;
-        }
-    }
-    let mut suites: Vec<(String, usize)> = counts
-        .into_iter()
-        .map(|(k, v)| (k.to_string(), v))
-        .collect();
+    let registry = SuiteRegistry::load_from_workspace_root(workspace_root)?;
+    let mut suites: Vec<(String, usize)> = registry.list_suites();
 
     if let Some(needle) = opts.contains.as_deref() {
         let needle_lower = needle.to_ascii_lowercase();

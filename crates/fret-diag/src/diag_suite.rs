@@ -2,6 +2,8 @@ use super::*;
 
 pub(crate) type SuiteChecks = diag_run::RunChecks;
 
+use crate::registry::suites::SuiteRegistry;
+
 #[derive(Debug, Clone)]
 pub(crate) struct SuiteCmdContext {
     pub pack_after_run: bool,
@@ -293,27 +295,14 @@ hint: list suites via `fretboard diag list suites`"
         expand_script_inputs(&workspace_root, &inputs)
     };
 
+    let suite_registry: Option<SuiteRegistry> =
+        SuiteRegistry::try_load_from_workspace_root(&workspace_root)?;
     let scripts_from_promoted_registry_suite =
         |suite: &str| -> Result<Option<Vec<PathBuf>>, String> {
-            let registry_path =
-                crate::script_registry::promoted_registry_default_path(&workspace_root);
-            if !registry_path.is_file() {
+            let Some(registry) = suite_registry.as_ref() else {
                 return Ok(None);
-            }
-            let registry =
-                crate::script_registry::PromotedScriptRegistry::load_from_path(&registry_path)?;
-            let mut scripts: Vec<PathBuf> = registry
-                .resolve_suite(suite)
-                .into_iter()
-                .map(|e| resolve_path(&workspace_root, PathBuf::from(e.path.as_str())))
-                .collect();
-            scripts.sort();
-            scripts.dedup();
-            if scripts.is_empty() {
-                Ok(None)
-            } else {
-                Ok(Some(scripts))
-            }
+            };
+            Ok(registry.resolve_promoted_suite_scripts(&workspace_root, suite))
         };
 
     let suite_dir_exists = |suite: &str| -> bool {

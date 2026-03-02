@@ -13,8 +13,9 @@ This TODO is organized by milestones (see `MILESTONES.md`). Keep tasks **small a
 
 ## M1 — Tooling engine seams (within `crates/fret-diag`)
 
-- [ ] Introduce `SuiteRegistry` (data-driven suite resolution) and migrate one suite.
-- [ ] Introduce `CheckRegistry` for lint/perf checks (no functional change).
+- [x] Introduce `SuiteRegistry` (initial scaffolding) and migrate one command path (`diag list suites`).
+- [x] Introduce `CheckRegistry` scaffolding (seam only; no behavior change yet).
+- [x] Migrate `diag suite` promoted-suite resolution to `SuiteRegistry` (remove duplicate loading logic).
 - [ ] Split “artifact materialization + integrity” into one focused module boundary with stable APIs.
 - [ ] Remove any remaining “global state by convention” patterns in favor of explicit context objects.
 
@@ -49,4 +50,3 @@ This TODO is organized by milestones (see `MILESTONES.md`). Keep tasks **small a
 - [ ] Write a short “How to debug layout” cookbook that unifies: inspect → selector → gate → sidecar.
 - [ ] Update `docs/workstreams/diag-devtools-gui-v1.md` to reference the extension contract.
 - [ ] Add a minimal “ecosystem diagnostics authoring guide” with one end-to-end example.
-
