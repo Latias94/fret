@@ -480,19 +480,25 @@ Rollback:
 
 Status:
 
-- Planned.
+- Landed.
 
 Goal:
 
 - Reduce drift risk in CustomV3 by making “raw/pyramid choice + degradation + scissor ROI” explicit and unit-testable.
 
-Changes (proposed):
+Changes (landed):
 
-- Extract CustomV3 source planning into a small helper module (pure-ish functions, table-driven tests):
+- Centralize CustomV3 source planning into a small helper + focused unit tests:
   - raw choice (distinct vs aliased),
   - pyramid level selection (budget vs group vs request),
   - pyramid build scissor ROI choice.
-- Make both padded-chain and non-padded-chain paths share the same planning code.
+- Route all CustomV3 emission paths through the same planning code (padded chain, in-place single-scratch, and step
+  compilation).
+
+Anchors:
+
+- `crates/fret-render-wgpu/src/renderer/render_plan_effects.rs` (`plan_custom_v3_sources_and_charge_budget`)
+- `crates/fret-render-wgpu/src/renderer/render_plan_effects.rs` (unit tests: `custom_v3_sources_plan_*`)
 
 Gates:
 
