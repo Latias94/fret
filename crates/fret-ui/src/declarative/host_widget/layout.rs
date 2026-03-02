@@ -857,7 +857,12 @@ impl ElementHostWidget {
                 }
 
                 let desired_child = max_child;
-                let desired = clamp_to_constraints(desired_child, props.layout, cx.available);
+                let desired = clamp_to_constraints_with_overflow_context(
+                    desired_child,
+                    props.layout,
+                    cx.available,
+                    cx.overflow_ctx,
+                );
                 let base = Rect::new(cx.bounds.origin, desired);
 
                 for &child in cx.children {
@@ -1436,7 +1441,12 @@ impl ElementHostWidget {
                 let Some(input) = self.text_input.as_mut() else {
                     debug_assert!(false, "text input must be initialized");
                     let desired = Size::new(Px(0.0), Px(0.0));
-                    return clamp_to_constraints(desired, props.layout, cx.available);
+                    return clamp_to_constraints_with_overflow_context(
+                        desired,
+                        props.layout,
+                        cx.available,
+                        cx.overflow_ctx,
+                    );
                 };
                 if input.model_id() != model_id {
                     input.set_model(model);
@@ -1448,7 +1458,12 @@ impl ElementHostWidget {
                 input.set_cancel_command(props.cancel_command);
 
                 let desired = input.layout(cx);
-                clamp_to_constraints(desired, props.layout, cx.available)
+                clamp_to_constraints_with_overflow_context(
+                    desired,
+                    props.layout,
+                    cx.available,
+                    cx.overflow_ctx,
+                )
             }
             ElementInstance::TextArea(props) => {
                 let model = props.model.clone();
@@ -1459,7 +1474,12 @@ impl ElementHostWidget {
                 let Some(area) = self.text_area.as_mut() else {
                     debug_assert!(false, "text area must be initialized");
                     let desired = Size::new(Px(0.0), Px(0.0));
-                    return clamp_to_constraints(desired, props.layout, cx.available);
+                    return clamp_to_constraints_with_overflow_context(
+                        desired,
+                        props.layout,
+                        cx.available,
+                        cx.overflow_ctx,
+                    );
                 };
                 if area.model_id() != model_id {
                     area.set_model(model);
@@ -1470,7 +1490,12 @@ impl ElementHostWidget {
                 area.set_min_height(props.min_height);
 
                 let desired = area.layout(cx);
-                clamp_to_constraints(desired, props.layout, cx.available)
+                clamp_to_constraints_with_overflow_context(
+                    desired,
+                    props.layout,
+                    cx.available,
+                    cx.overflow_ctx,
+                )
             }
             ElementInstance::ResizablePanelGroup(props) => {
                 let model = props.model.clone();
@@ -1485,7 +1510,12 @@ impl ElementHostWidget {
                 let Some(group) = self.resizable_panel_group.as_mut() else {
                     debug_assert!(false, "resizable panel group must be initialized");
                     let desired = Size::new(Px(0.0), Px(0.0));
-                    return clamp_to_constraints(desired, props.layout, cx.available);
+                    return clamp_to_constraints_with_overflow_context(
+                        desired,
+                        props.layout,
+                        cx.available,
+                        cx.overflow_ctx,
+                    );
                 };
                 if group.model_id() != model_id {
                     group.set_model(model);
@@ -1496,7 +1526,12 @@ impl ElementHostWidget {
                 group.set_style(props.chrome.clone());
 
                 let desired = group.layout(cx);
-                clamp_to_constraints(desired, props.layout, cx.available)
+                clamp_to_constraints_with_overflow_context(
+                    desired,
+                    props.layout,
+                    cx.available,
+                    cx.overflow_ctx,
+                )
             }
             ElementInstance::VirtualList(props) => self.layout_virtual_list_impl(cx, window, props),
             ElementInstance::Flex(props) => self.layout_flex_impl(cx, window, props),

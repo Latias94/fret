@@ -434,6 +434,7 @@ Implementation status:
   - Evidence:
     - Context field: `crates/fret-ui/src/layout/overflow.rs` (`allow_overflow_on_auto`)
     - Clamp helper: `crates/fret-ui/src/declarative/layout_helpers.rs` (`clamp_to_constraints_with_overflow_context`)
+    - Clamp adoption: `crates/fret-ui/src/declarative/host_widget/layout.rs`
     - Scroll installs: `crates/fret-ui/src/declarative/host_widget/layout/scrolling.rs`
 - SE-113 (absolute exclusion parity) is implemented. Post-layout overflow observation now excludes
   absolute-positioned nodes by default, matching the intrinsic measurement skip behavior.
