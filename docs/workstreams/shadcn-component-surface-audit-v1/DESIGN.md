@@ -54,3 +54,20 @@ For each component:
 - Upstream Radix base export surfaces have corresponding Rust symbols across the shadcn crate.
 - Remaining parity work is primarily about **behavior outcomes** (dismiss/focus/keyboard) and
   **composition defaults** (layout constraints), not missing part splits.
+
+### Export parity check (Radix base surface)
+
+As a quick sanity check for “missing splits”, we can compare:
+
+- Upstream: `repo-ref/ui/apps/v4/registry/bases/radix/ui/*.tsx` `export { ... }` surfaces
+- Fret: `ecosystem/fret-ui-shadcn/src/lib.rs` `pub use ...` crate-root exports
+
+Result (2026-03-02): **0 missing upstream export names** when compared against crate-root exports.
+
+This means the remaining gaps are unlikely to be “we forgot to split a part”, and are more likely
+to be:
+
+- missing *helper/builder knobs* (e.g. stable `test_id` surfaces, sizing/layout refinements),
+- recipe default drift (constraints like `w-full`, `flex-1`, `min-w-0`, overflow),
+- kit primitive behavior drift (dismiss/focus/roving focus/typeahead),
+- or core mechanism drift (semantics/hit-testing/layout snapshot correctness).
