@@ -2,7 +2,7 @@
 
 ## Minimum gates (local)
 
-- `cargo fmt`
+- `cargo fmt -p fret-ui -p fret-bootstrap -p fret-ui-gallery`
 - Targeted regression tests (Phase A/B invariants):
   - `cargo nextest run -p fret-ui --lib outside_press_branch_containment_uses_child_edges_not_parent_pointers`
   - `cargo nextest run -p fret-ui --lib dismissible_outside_press_prevent_default_keeps_focus`
@@ -36,6 +36,10 @@
 
 - Unit test: `crates/fret-ui/src/declarative/tests/layout/interactivity.rs`
   (`hover_region_marks_view_cache_root_dirty_on_hover_edges`).
+- Mechanism anchors (hover edge redrawability under view-cache / retained drift):
+  - Hovered HoverRegion node tracking: `crates/fret-ui/src/elements/runtime.rs` (`hovered_hover_region_node`)
+  - Update hook: `crates/fret-ui/src/elements/access.rs` (`update_hovered_hover_region_with_node`)
+  - Dispatch derivation: `crates/fret-ui/src/tree/dispatch/hover.rs`
 - Scripted gate (run under view-cache env):
 
 ```powershell
