@@ -39,7 +39,7 @@ tests are in place.
 
 ### Next (post-migration)
 
-- [ ] Expand drift audit coverage to include any non-`src/ui/pages/**` preview surfaces (if present).
+- [x] Expand drift audit coverage to include non-`src/ui/pages/**` preview surfaces (`src/ui/previews/**`).
 - [ ] Normalize DocSection chrome/layout (max widths, padding, “Notes” shell usage) across pages.
 - [ ] Optional: align page taxonomy + section ordering to upstream shadcn MDX navigation.
 

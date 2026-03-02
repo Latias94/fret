@@ -66,12 +66,14 @@ fn main() {
     let out_dir = PathBuf::from(env::var("OUT_DIR").expect("OUT_DIR"));
 
     let pages_dir = manifest_dir.join("src/ui/pages");
+    let previews_dir = manifest_dir.join("src/ui/previews");
     let snippets_dir = manifest_dir.join("src/ui/snippets");
 
     // Rebuild the report when any UI source changes. This is an app-only convenience surface; it
     // should never gate builds/tests.
     println!("cargo:rerun-if-changed=build.rs");
     println!("cargo:rerun-if-changed={}", pages_dir.display());
+    println!("cargo:rerun-if-changed={}", previews_dir.display());
     println!("cargo:rerun-if-changed={}", snippets_dir.display());
 
     let mut page_files = Vec::new();
@@ -81,6 +83,10 @@ fn main() {
     let mut snippet_files = Vec::new();
     visit_rs_files(&snippets_dir, &mut snippet_files);
     snippet_files.sort();
+
+    let mut preview_files = Vec::new();
+    visit_rs_files(&previews_dir, &mut preview_files);
+    preview_files.sort();
 
     let mut report = String::new();
     report.push_str("# UI Gallery drift audit (Preview ≡ Code)\n\n");
@@ -95,6 +101,25 @@ fn main() {
     report.push_str("| Path | `.code(\"rust\", ...)` | `include_str!(\"../snippets/\")` |\n");
     report.push_str("| --- | --- | --- |\n");
     for path in &page_files {
+        let src = fs::read_to_string(path)
+            .unwrap_or_else(|e| panic!("read_to_string failed for {}: {e}", path.display()));
+        let has_literals = has_rust_code_literal(&src);
+        let has_relative = has_relative_snippet_include(&src);
+        report.push_str(&format!(
+            "| `{}` | {} | {} |\n",
+            rel_path_str(&manifest_dir, path),
+            bool_cell(has_literals),
+            bool_cell(has_relative)
+        ));
+    }
+
+    report.push_str("\n## Previews\n\n");
+    report.push_str("These sources back non-shadcn preview pages (harnesses, torture cases, etc).\n");
+    report.push_str("If these ever start rendering copyable code tabs, they should follow the same\n");
+    report.push_str("snippet-backed pattern to stay drift-free.\n\n");
+    report.push_str("| Path | `.code(\"rust\", ...)` | `include_str!(\"../snippets/\")` |\n");
+    report.push_str("| --- | --- | --- |\n");
+    for path in &preview_files {
         let src = fs::read_to_string(path)
             .unwrap_or_else(|e| panic!("read_to_string failed for {}: {e}", path.display()));
         let has_literals = has_rust_code_literal(&src);
