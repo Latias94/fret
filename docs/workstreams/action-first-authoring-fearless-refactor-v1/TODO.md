@@ -186,8 +186,16 @@ ID format:
   - Evidence:
     - `apps/fret-ui-gallery/src/ui/snippets/command/action_first_view.rs`
     - `apps/fret-ui-gallery/src/ui/pages/command.rs`
-- [ ] AFA-adopt-042 Add one editor-grade harness adoption:
+- [x] AFA-adopt-042 Add one editor-grade harness adoption:
   - docking/workspace shell uses actions for tab/command semantics (where appropriate).
+  - Status (as of 2026-03-02):
+    - Workspace tab strip pointer-triggered dispatches record a command dispatch trace source:
+      - `ecosystem/fret-workspace/src/tab_strip/mod.rs` (tab activate)
+      - `ecosystem/fret-workspace/src/tab_strip/widgets.rs` (tab close button)
+      - `ecosystem/fret-workspace/src/tab_strip/interaction.rs` (right/middle click behaviors)
+    - Scripted diagnostics gate:
+      - `tools/diag-scripts/workspace/shell-demo/workspace-shell-demo-tab-close-button-closes-tab-smoke.json` (asserts `source_kind=pointer` for the close command)
+      - `tools/diag_gate_action_first_authoring_v1.ps1` (includes workspace shell demo gate)
 - [~] AFA-adopt-043 Update `fretboard` scaffold templates to prefer action-first patterns (once v1 is stable).
   - Rule: do not ship two different default paradigms in templates.
   - Status (as of 2026-03-02):

@@ -15,7 +15,8 @@ Related:
 - **M1**: Met (ActionId identity + typed unit actions + converged metadata via command registry; dispatch diagnostics include handler scope and driver-handled classification).
 - **M2**: Met (View runtime v1 + hooks + view-cache keepalive + gates exist; cookbook adoption landed).
 - **M3**: Met (Declarative + imui + GenUI converge on the same ActionId dispatch and stable selectors; cross-frontend diag gate exists).
-- **M4**: In progress (ui-gallery includes an action-first view runtime snippet; templates/editor-grade adoption still pending).
+- **M4**: In progress (ui-gallery includes an action-first view runtime snippet; templates are still pending).
+- **M5**: Met (workspace shell demo tab strip uses action-first pointer dispatch hooks; scripted diag gate asserts pointer dispatch trace exists).
 
 ---
 
