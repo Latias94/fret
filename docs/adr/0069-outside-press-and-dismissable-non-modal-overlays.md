@@ -86,7 +86,7 @@ When a `PointerEvent::Down` occurs and there is no pointer capture, the runtime 
     `InputDispatchPhase::Preview` (observer); the runtime ignores focus/capture/propagation requests during
     this pass (except for the explicit consume-on-outside-pointer-down suppression described
     above).
-- Focus clearing: to match Radix/DOM “click outside blurs” outcomes, the runtime may apply a
+- Focus clearing: to match Radix/DOM “click outside blurs” outcomes, the runtime applies a
   **default side effect** after outside-press observer dispatch: clear focus (set it to `None`).
   This is intentionally a *mechanism-level* effect that enables the subsequent hit-tested
   dispatch to move focus to the underlay target without fighting “stale overlay focus”.

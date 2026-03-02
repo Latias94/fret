@@ -104,9 +104,9 @@ impl<D: WinitAppDriver> WinitRunner<D> {
         pointer_id: fret_core::PointerId,
         kind: InternalDragKind,
         position: Point,
-    ) {
+    ) -> bool {
         let Some(state) = self.windows.get_mut(window) else {
-            return;
+            return false;
         };
         let modifiers = state.platform.input.modifiers;
         let services = Self::ui_services_mut(&mut self.renderer, &mut self.no_services);
@@ -124,6 +124,7 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                 modifiers,
             }),
         );
+        true
     }
 
     pub(super) fn clear_internal_drag_hover_if_needed(&mut self) -> bool {
@@ -139,7 +140,8 @@ impl<D: WinitAppDriver> WinitRunner<D> {
             .unwrap_or(fret_core::PointerId(0));
         self.internal_drag_hover_window = None;
         let pos = self.internal_drag_hover_pos.take().unwrap_or_default();
-        self.dispatch_internal_drag_event(window, pointer_id, InternalDragKind::Cancel, pos);
+        let _ =
+            self.dispatch_internal_drag_event(window, pointer_id, InternalDragKind::Cancel, pos);
         true
     }
 
@@ -295,17 +297,22 @@ impl<D: WinitAppDriver> WinitRunner<D> {
         let follow_active = self.dock_tearoff_follow.is_some_and(|follow| {
             follow.source_window == drag_source_window && follow.manual_follow
         });
-        let hovered =
-            if follow_active && allow_window_under_cursor && window_under_moving_window.is_some() {
-                window_under_cursor_source = window_under_moving_window_source;
-                window_under_moving_window
-            } else {
-                hovered
-            };
+        let hover_under_moving_window =
+            follow_active || std::env::var_os("FRET_DOCK_DRAG_HOVER_UNDER_MOVING_WINDOW").is_some();
+        let hovered = if hover_under_moving_window
+            && allow_window_under_cursor
+            && window_under_moving_window.is_some()
+        {
+            window_under_cursor_source = window_under_moving_window_source;
+            window_under_moving_window
+        } else {
+            hovered
+        };
 
-        // Note: we intentionally keep `hovered` as the OS-selected window under the cursor.
-        // `window_under_moving_window` is reported separately so diagnostics (and future policy)
-        // can distinguish "HoveredWindow" vs "HoveredWindowUnderMovingWindow" (ImGui terminology).
+        // Note: by default we keep `hovered` as the OS-selected window under the cursor.
+        // `window_under_moving_window` is always reported separately so diagnostics (and future
+        // policy) can distinguish "HoveredWindow" vs "HoveredWindowUnderMovingWindow" (ImGui
+        // terminology). The env gate above allows opt-in routing to the under-moving window.
 
         // When the cursor is outside all windows, prefer latching to whichever window we were
         // already hovering. This makes scripted cross-window drags deterministic even if the
@@ -336,7 +343,12 @@ impl<D: WinitAppDriver> WinitRunner<D> {
             if let Some(next) = hovered
                 && let Some(pos) = self.local_pos_for_window(next, screen_pos)
             {
-                self.dispatch_internal_drag_event(next, pointer_id, InternalDragKind::Enter, pos);
+                let _ = self.dispatch_internal_drag_event(
+                    next,
+                    pointer_id,
+                    InternalDragKind::Enter,
+                    pos,
+                );
                 self.internal_drag_hover_window = Some(next);
                 self.internal_drag_hover_pos = Some(pos);
                 self.internal_drag_pointer_id = Some(pointer_id);
@@ -346,7 +358,22 @@ impl<D: WinitAppDriver> WinitRunner<D> {
         let Some(current) = self.internal_drag_hover_window else {
             return false;
         };
-        let Some(pos) = self.local_pos_for_window(current, screen_pos) else {
+        let diag_cursor_override_recent = self
+            .diag_last_cursor_override_tick
+            .is_some_and(|t| self.tick_id.0.saturating_sub(t.0) <= 2);
+        let diag_mouse_buttons_override_recent = self
+            .diag_last_mouse_buttons_override_tick
+            .is_some_and(|t| self.tick_id.0.saturating_sub(t.0) <= 2);
+        let diag_override_recent =
+            diag_cursor_override_recent || diag_mouse_buttons_override_recent;
+
+        let screen_pos_for_pos = if diag_override_recent && current != drag_source_window {
+            self.clamp_screen_pos_to_window_client(current, screen_pos)
+                .unwrap_or(screen_pos)
+        } else {
+            screen_pos
+        };
+        let Some(pos) = self.local_pos_for_window(current, screen_pos_for_pos) else {
             return false;
         };
 
@@ -463,7 +490,7 @@ impl<D: WinitAppDriver> WinitRunner<D> {
         let main_rect: Option<(i32, i32, i32, i32)> = None;
 
         diag_dock_drag_trace(format_args!(
-            "[hover] tick={} pointer={:?} kind={:?} src={:?} cur={:?} moving={:?} under_moving={:?} cursor_src={:?} under_src={:?} screen=({:.1},{:.1}) moving_rect={:?} main_rect={:?}",
+            "[hover] tick={} pointer={:?} kind={:?} src={:?} cur={:?} moving={:?} under_moving={:?} cursor_src={:?} under_src={:?} screen=({:.1},{:.1}) local=({:.1},{:.1}) moving_rect={:?} main_rect={:?}",
             self.tick_id.0,
             pointer_id,
             drag_kind,
@@ -475,12 +502,17 @@ impl<D: WinitAppDriver> WinitRunner<D> {
             window_under_moving_window_source,
             screen_pos.x,
             screen_pos.y,
+            pos.x.0,
+            pos.y.0,
             moving_rect,
             main_rect,
         ));
 
         self.internal_drag_hover_pos = Some(pos);
-        self.dispatch_internal_drag_event(current, pointer_id, InternalDragKind::Over, pos);
+        let _ = self.dispatch_internal_drag_event(current, pointer_id, InternalDragKind::Over, pos);
+        if let Some(state) = self.windows.get(current) {
+            state.window.request_redraw();
+        }
         true
     }
 
@@ -658,13 +690,31 @@ impl<D: WinitAppDriver> WinitRunner<D> {
         // If the cursor is outside all windows (Unity/ImGui-style tear-off), still deliver the
         // drop to the source window using the last known screen cursor position.
         let target = target.unwrap_or(drag_source_window);
-        let pos = self.local_pos_for_window(target, screen_pos).or_else(|| {
-            if self.internal_drag_hover_window == Some(target) {
-                self.internal_drag_hover_pos
-            } else {
-                None
-            }
-        });
+        let diag_cursor_override_recent = self
+            .diag_last_cursor_override_tick
+            .is_some_and(|t| self.tick_id.0.saturating_sub(t.0) <= 2);
+        let diag_mouse_buttons_override_recent = self
+            .diag_last_mouse_buttons_override_tick
+            .is_some_and(|t| self.tick_id.0.saturating_sub(t.0) <= 2);
+        let diag_override_recent =
+            diag_cursor_override_recent || diag_mouse_buttons_override_recent;
+
+        let screen_pos_for_pos = if diag_override_recent && target != drag_source_window {
+            self.clamp_screen_pos_to_window_client(target, screen_pos)
+                .unwrap_or(screen_pos)
+        } else {
+            screen_pos
+        };
+
+        let pos = self
+            .local_pos_for_window(target, screen_pos_for_pos)
+            .or_else(|| {
+                if self.internal_drag_hover_window == Some(target) {
+                    self.internal_drag_hover_pos
+                } else {
+                    None
+                }
+            });
         let Some(pos) = pos else {
             return false;
         };
@@ -751,19 +801,26 @@ impl<D: WinitAppDriver> WinitRunner<D> {
             d.window_under_moving_window_source = window_under_moving_window_source;
         }
         diag_dock_drag_trace(format_args!(
-            "[drop] tick={} pointer={:?} kind={:?} src={:?} target={:?} moving={:?} under_moving={:?} cursor_src={:?} under_src={:?}",
+            "[drop] tick={} pointer={:?} kind={:?} src={:?} target={:?} local=({:.1},{:.1}) moving={:?} under_moving={:?} cursor_src={:?} under_src={:?}",
             self.tick_id.0,
             pointer_id,
             drag_kind,
             drag_source_window,
             target,
+            pos.x.0,
+            pos.y.0,
             moving_window,
             window_under_moving_window,
             window_under_cursor_source,
             window_under_moving_window_source,
         ));
 
-        self.dispatch_internal_drag_event(target, pointer_id, InternalDragKind::Drop, pos);
+        let dispatched =
+            self.dispatch_internal_drag_event(target, pointer_id, InternalDragKind::Drop, pos);
+        diag_dock_drag_trace(format_args!(
+            "[drop-dispatch] tick={} pointer={:?} target={:?} ok={}",
+            self.tick_id.0, pointer_id, target, dispatched
+        ));
 
         // Cross-window dock drags are runner-routed (Enter/Over/Drop). Ensure the drag session
         // cannot get stuck if the pointer release is delivered to a different window than the

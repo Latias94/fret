@@ -262,6 +262,28 @@ impl DropdownMenuContent {
     }
 }
 
+/// shadcn/ui `DropdownMenuPortal` (v4).
+///
+/// Upstream exports a distinct portal part even though `DropdownMenuContent` mounts itself in a
+/// portal by default. In Fret the overlay is already rendered in an overlay root, so this is a
+/// no-op wrapper that exists for part surface parity (copy/paste examples).
+#[derive(Debug, Clone, Default)]
+pub struct DropdownMenuPortal {
+    content: DropdownMenuContent,
+}
+
+impl DropdownMenuPortal {
+    pub fn new(content: DropdownMenuContent) -> Self {
+        Self { content }
+    }
+}
+
+impl From<DropdownMenuPortal> for DropdownMenuContent {
+    fn from(value: DropdownMenuPortal) -> Self {
+        value.content
+    }
+}
+
 /// shadcn/ui `DropdownMenuSeparator` (v4).
 ///
 /// In upstream this is a primitive part. In Fret menus we model it as an entry variant.
@@ -1689,13 +1711,13 @@ impl DropdownMenu {
         self,
         cx: &mut ElementContext<'_, H>,
         trigger: impl FnOnce(&mut ElementContext<'_, H>) -> DropdownMenuTrigger,
-        content: DropdownMenuContent,
+        content: impl Into<DropdownMenuContent>,
         entries: impl FnOnce(&mut ElementContext<'_, H>) -> I,
     ) -> AnyElement
     where
         I: IntoIterator<Item = DropdownMenuEntry>,
     {
-        let menu = content.apply_to(self);
+        let menu = content.into().apply_to(self);
         menu.into_element(cx, |cx| trigger(cx).into_element(cx), entries)
     }
 
@@ -4223,6 +4245,17 @@ mod tests {
             let menu = DropdownMenu::new_controllable(cx, Some(controlled.clone()), false);
             assert_eq!(menu.open, controlled);
         });
+    }
+
+    #[test]
+    fn dropdown_menu_portal_wraps_content_config() {
+        let mut app = App::new();
+        let open = app.models_mut().insert(false);
+
+        let content = DropdownMenuPortal::new(DropdownMenuContent::new().side_offset(Px(9.0)));
+        let menu = DropdownMenuContent::from(content).apply_to(DropdownMenu::new(open));
+
+        assert_eq!(menu.side_offset, Px(9.0));
     }
 
     #[test]

@@ -30,5 +30,4 @@ Done when:
 - Migration is decomposed into 3–6 landable PRs with clear acceptance criteria.
 - Evidence plan exists (diag script or debug report) to prove parity with Phase A/B invariants.
 
-Status: Draft (design exists; migration breakdown still TODO).
-
+Status: Draft (design exists; migration breakdown drafted; diagnostics + implementation still TODO).

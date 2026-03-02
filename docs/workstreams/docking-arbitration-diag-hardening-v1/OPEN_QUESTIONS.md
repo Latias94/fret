@@ -40,6 +40,16 @@ Recommendation:
 - Short term: assert dock graph fingerprint + window count.
 - Medium term: add a destination-window predicate that can be awaited during a captured-pointer drag.
 
+Status update (2026-03-02):
+
+- `known_window_count_is(n=1)` now reflects the runner-reported open window count (rather than “windows ever seen”),
+  so it is a reliable post-condition for “tear-off window auto-closed after re-dock”.
+- The current drag-back gate uses:
+  - `wait_until known_window_count_is(1)`,
+  - `wait_until dock_graph_canonical_is(true)`,
+  - and structural `dock_graph_signature_contains(...)` assertions rather than a single exact signature match.
+  - Script: `tools/diag-scripts/docking/arbitration/docking-arbitration-demo-multiwindow-drag-tab-back-to-main.json`
+
 ## 4) Should overlap-based “peek-behind” be required?
 
 Options:
@@ -51,4 +61,3 @@ Recommendation:
 
 - Keep both modes, but ensure the non-follow path is explicitly tested by a script that moves the
   cursor into the destination window (not just overlap).
-

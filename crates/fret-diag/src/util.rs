@@ -1,5 +1,32 @@
 use std::path::Path;
 
+pub(crate) fn read_file_bytes_shared(path: &Path) -> Option<Vec<u8>> {
+    #[cfg(windows)]
+    {
+        use std::io::Read as _;
+        use std::os::windows::fs::OpenOptionsExt as _;
+
+        // Allow the UI process to update files while tooling polls them (Windows sharing semantics).
+        const FILE_SHARE_READ: u32 = 0x0000_0001;
+        const FILE_SHARE_WRITE: u32 = 0x0000_0002;
+        const FILE_SHARE_DELETE: u32 = 0x0000_0004;
+
+        let mut file = std::fs::OpenOptions::new()
+            .read(true)
+            .share_mode(FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE)
+            .open(path)
+            .ok()?;
+        let mut bytes = Vec::new();
+        file.read_to_end(&mut bytes).ok()?;
+        Some(bytes)
+    }
+
+    #[cfg(not(windows))]
+    {
+        std::fs::read(path).ok()
+    }
+}
+
 pub(crate) fn now_unix_ms() -> u64 {
     std::time::SystemTime::now()
         .duration_since(std::time::SystemTime::UNIX_EPOCH)
@@ -8,7 +35,7 @@ pub(crate) fn now_unix_ms() -> u64 {
 }
 
 pub(crate) fn read_json_value(path: &Path) -> Option<serde_json::Value> {
-    let bytes = std::fs::read(path).ok()?;
+    let bytes = read_file_bytes_shared(path)?;
     serde_json::from_slice(&bytes).ok()
 }
 

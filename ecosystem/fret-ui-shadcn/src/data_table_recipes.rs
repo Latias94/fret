@@ -894,13 +894,10 @@ impl<TData> DataTableToolbar<TData> {
                             Button::new(columns_button_label.clone())
                                 .variant(ButtonVariant::Outline)
                                 .size(ButtonSize::Sm)
-                                .children([
-                                    crate::icon::icon(
-                                        cx,
-                                        fret_icons::IconId::new_static("lucide.settings-2"),
-                                    ),
-                                    ui::text(cx, columns_button_label.clone()).into_element(cx),
-                                ])
+                                // Upstream shadcn: "Columns <ChevronDown />"
+                                .trailing_icon(fret_icons::IconId::new_static(
+                                    "lucide.chevron-down",
+                                ))
                                 .into_element(cx)
                         },
                         move |_cx| {
@@ -1745,7 +1742,7 @@ impl DataTablePagination {
                     cx.spacer(fret_ui::element::SpacerProps::default()),
                     Button::new("Go to first page")
                         .variant(ButtonVariant::Outline)
-                        .size(ButtonSize::IconSm)
+                        .size(ButtonSize::Icon)
                         .disabled(!first_enabled)
                         .on_activate(first_on_activate.clone())
                         .children([crate::icon::icon(
@@ -1755,7 +1752,7 @@ impl DataTablePagination {
                         .into_element(cx),
                     Button::new("Go to previous page")
                         .variant(ButtonVariant::Outline)
-                        .size(ButtonSize::IconSm)
+                        .size(ButtonSize::Icon)
                         .disabled(!prev_enabled)
                         .on_activate(prev_on_activate.clone())
                         .children([crate::icon::icon(
@@ -1770,7 +1767,7 @@ impl DataTablePagination {
                         .into_element(cx),
                     Button::new("Go to next page")
                         .variant(ButtonVariant::Outline)
-                        .size(ButtonSize::IconSm)
+                        .size(ButtonSize::Icon)
                         .disabled(!next_enabled)
                         .on_activate(next_on_activate.clone())
                         .children([crate::icon::icon(
@@ -1780,7 +1777,7 @@ impl DataTablePagination {
                         .into_element(cx),
                     Button::new("Go to last page")
                         .variant(ButtonVariant::Outline)
-                        .size(ButtonSize::IconSm)
+                        .size(ButtonSize::Icon)
                         .disabled(!last_enabled)
                         .on_activate(last_on_activate.clone())
                         .children([crate::icon::icon(

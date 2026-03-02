@@ -138,6 +138,8 @@ struct DockingArbitrationHarnessRoot {
     tab_drop_end_anchor: fret_core::NodeId,
     tab_overflow_button_anchor: fret_core::NodeId,
     tab_overflow_menu_row_1_anchor: fret_core::NodeId,
+    dock_hint_inner_anchors: Vec<(DropZone, fret_core::NodeId)>,
+    dock_hint_outer_anchors: Vec<(DropZone, fret_core::NodeId)>,
 }
 
 impl<H: fret_ui::UiHost> Widget<H> for DockingArbitrationHarnessRoot {
@@ -378,6 +380,24 @@ impl<H: fret_ui::UiHost> Widget<H> for DockingArbitrationHarnessRoot {
             ),
         );
 
+        let hint_candidates = cx
+            .app
+            .global::<fret_runtime::WindowInteractionDiagnosticsStore>()
+            .and_then(|store| store.docking_latest_for_window(self.window))
+            .and_then(|d| d.dock_drop_resolve.as_ref())
+            .map(|d| d.candidates.clone())
+            .unwrap_or_default();
+        let fallback_hint_rect = Rect::new(
+            Point::new(
+                Px(bounds.origin.x.0 + bounds.size.width.0 * 0.5 - half),
+                Px(bounds.origin.y.0 + bounds.size.height.0 * 0.5 - half),
+            ),
+            Size::new(
+                DOCKING_ARBITRATION_DRAG_ANCHOR_SIZE,
+                DOCKING_ARBITRATION_DRAG_ANCHOR_SIZE,
+            ),
+        );
+
         let (overflow_button_anchor_rect, overflow_row_1_anchor_rect, tab_drop_end_anchor_rect) = (|| {
             use fret_core::{DockGraph, DockNode, DockNodeId, PanelKey};
 
@@ -524,6 +544,25 @@ impl<H: fret_ui::UiHost> Widget<H> for DockingArbitrationHarnessRoot {
         );
         let _ = cx.layout_in(self.tab_drop_end_anchor, tab_drop_end_anchor_rect);
 
+        let candidate_rect_for = |kind: fret_runtime::DockDropCandidateRectKind, zone: DropZone| {
+            hint_candidates
+                .iter()
+                .find(|c| c.kind == kind && c.zone == Some(zone))
+                .map(|c| c.rect)
+        };
+        for (zone, anchor) in self.dock_hint_inner_anchors.iter().copied() {
+            let rect =
+                candidate_rect_for(fret_runtime::DockDropCandidateRectKind::InnerHintRect, zone)
+                    .unwrap_or(fallback_hint_rect);
+            let _ = cx.layout_in(anchor, rect);
+        }
+        for (zone, anchor) in self.dock_hint_outer_anchors.iter().copied() {
+            let rect =
+                candidate_rect_for(fret_runtime::DockDropCandidateRectKind::OuterHintRect, zone)
+                    .unwrap_or(fallback_hint_rect);
+            let _ = cx.layout_in(anchor, rect);
+        }
+
         let floating_anchor_rect = (|| {
             let dock = cx.app.global::<DockManager>()?;
             let floating = dock.graph.floating_windows(self.window).last()?;
@@ -655,6 +694,20 @@ impl<H: fret_ui::UiHost> Widget<H> for DockingArbitrationHarnessRoot {
     }
 
     fn paint(&mut self, cx: &mut PaintCx<'_, H>) {
+        // Keep retained diagnostics anchors (e.g. dock hint rect test_ids) synced to the latest
+        // docking candidate rects while a dock drag is in flight. The harness lays out these
+        // anchors from `WindowInteractionDiagnosticsStore` during layout, so ensure layout runs
+        // continuously during drags even if only paint would otherwise be invalidated.
+        let dock_drag_active = cx.app.drag(fret_core::PointerId(0)).is_some_and(|d| {
+            (d.kind == fret_runtime::DRAG_KIND_DOCK_PANEL
+                || d.kind == fret_runtime::DRAG_KIND_DOCK_TABS)
+                && d.dragging
+        });
+        if dock_drag_active {
+            cx.request_animation_frame();
+            cx.tree.invalidate(cx.node, Invalidation::Layout);
+        }
+
         if let Some(bounds) = cx.child_bounds(self.dock_space) {
             cx.paint(self.dock_space, bounds);
         } else {
@@ -2079,6 +2132,35 @@ impl DockingArbitrationDriver {
                     .create_node_retained(DockingArbitrationDragAnchor::new(
                         "dock-arb-tab-drop-end-anchor-left",
                     ));
+            let hint_zones = [
+                (DropZone::Center, "center"),
+                (DropZone::Left, "left"),
+                (DropZone::Right, "right"),
+                (DropZone::Top, "top"),
+                (DropZone::Bottom, "bottom"),
+            ];
+            let dock_hint_inner_anchors = hint_zones
+                .iter()
+                .map(|(zone, label)| {
+                    let node = state
+                        .ui
+                        .create_node_retained(DockingArbitrationDragAnchor::new(format!(
+                            "dock-arb-hint-inner-{label}"
+                        )));
+                    (*zone, node)
+                })
+                .collect::<Vec<_>>();
+            let dock_hint_outer_anchors = hint_zones
+                .iter()
+                .map(|(zone, label)| {
+                    let node = state
+                        .ui
+                        .create_node_retained(DockingArbitrationDragAnchor::new(format!(
+                            "dock-arb-hint-outer-{label}"
+                        )));
+                    (*zone, node)
+                })
+                .collect::<Vec<_>>();
             let root = state
                 .ui
                 .create_node_retained(DockingArbitrationHarnessRoot {
@@ -2093,6 +2175,8 @@ impl DockingArbitrationDriver {
                     tab_drop_end_anchor,
                     tab_overflow_button_anchor,
                     tab_overflow_menu_row_1_anchor,
+                    dock_hint_inner_anchors: dock_hint_inner_anchors.clone(),
+                    dock_hint_outer_anchors: dock_hint_outer_anchors.clone(),
                 });
             state.ui.set_root(root);
             // Ensure the retained harness nodes participate in hit-testing and event routing.
@@ -2105,6 +2189,8 @@ impl DockingArbitrationDriver {
                 .chain(std::iter::once(float_zone_anchor))
                 .chain(std::iter::once(viewport_split_handle_anchor))
                 .chain(std::iter::once(floating_title_bar_anchor))
+                .chain(dock_hint_inner_anchors.iter().map(|(_, node)| *node))
+                .chain(dock_hint_outer_anchors.iter().map(|(_, node)| *node))
                 .chain(std::iter::once(tab_drop_end_anchor))
                 .chain(std::iter::once(tab_overflow_button_anchor))
                 .chain(std::iter::once(tab_overflow_menu_row_1_anchor))

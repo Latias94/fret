@@ -6043,22 +6043,22 @@ where
 
                                                     cx.pressable_add_on_pointer_up(Arc::new(
                                                         move |host, action_cx, up| {
-																if up.button
-																	!= fret_core::MouseButton::Left
-																	|| !up.is_click
-																{
-																	return PressablePointerUpResult::Continue;
-																}
-																host.request_focus(focus_target);
-																if props.enable_row_selection
-																	&& props.pointer_row_selection
-																{
-																	let policy =
-																		props.pointer_row_selection_policy;
-																	let modifiers = up.modifiers;
-																	let row_key = row_key_for_pointer;
-																	let single = props.single_row_selection;
-																let meta = row_meta_for_pointer
+															if up.button
+																!= fret_core::MouseButton::Left
+																|| !up.is_click
+															{
+																return PressablePointerUpResult::Continue;
+															}
+															host.request_focus(focus_target);
+                                                            let pointer_row_selection_enabled = props.enable_row_selection
+                                                                && props.pointer_row_selection;
+															if pointer_row_selection_enabled {
+																let policy =
+																	props.pointer_row_selection_policy;
+																let modifiers = up.modifiers;
+																let row_key = row_key_for_pointer;
+																let single = props.single_row_selection;
+															let meta = row_meta_for_pointer
 																	.borrow()
 																	.clone();
 																let range_keys = if policy
@@ -6160,13 +6160,15 @@ where
 																} else {
 																	Some(row_key)
 																};
-																	anchor_index_for_pointer_up
-																		.set(next_anchor);
+																anchor_index_for_pointer_up
+																	.set(next_anchor);
 															}
 															host.request_redraw(action_cx.window);
-															PressablePointerUpResult::Continue
-                                                        },
-                                                    ));
+                                                            // When pointer-driven row selection is enabled, a click should not
+                                                            // also activate the row command (avoid "selection + activate" conflicts).
+															PressablePointerUpResult::SkipActivate
+	                                                        },
+	                                                    ));
 
 														if active_index.get() == Some(i) {
 															active_element.set(Some(cx.root_id()));

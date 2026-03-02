@@ -40,8 +40,10 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
                     .test_id("ui-gallery-dialog-parts-close"),
                 shadcn::DialogHeader::new([
                     shadcn::DialogTitle::new("Parts dialog").into_element(cx),
-                    shadcn::DialogDescription::new("Part surface adapter for shadcn-style authoring.")
-                        .into_element(cx),
+                    shadcn::DialogDescription::new(
+                        "Part surface adapter for shadcn-style authoring.",
+                    )
+                    .into_element(cx),
                 ])
                 .into_element(cx),
             ])
@@ -51,4 +53,3 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
     )
 }
 // endregion: example
-

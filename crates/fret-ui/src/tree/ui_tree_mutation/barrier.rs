@@ -26,6 +26,7 @@ impl<H: UiHost> UiTree<H> {
                     n.parent = Some(parent);
                 }
             }
+            self.recompute_node_subtree_layout_dirty_count_and_propagate(parent);
             return;
         }
 
@@ -127,6 +128,8 @@ impl<H: UiHost> UiTree<H> {
             self.update_invalidation_counters(prev, next);
         }
 
+        self.recompute_node_subtree_layout_dirty_count_and_propagate(parent);
+
         // Structural changes must invalidate paint/hit-testing so routing and rendering see the
         // updated tree, but we intentionally avoid forcing a full ancestor relayout.
         self.mark_invalidation_with_source(
@@ -154,16 +157,22 @@ impl<H: UiHost> UiTree<H> {
         }
 
         let mut counter_update: Option<(InvalidationFlags, InvalidationFlags)> = None;
+        let mut layout_transition: Option<(NodeId, bool, bool)> = None;
         if let Some(n) = self.nodes.get_mut(parent) {
             let prev = n.invalidation;
             let layout_before = n.invalidation.layout;
             n.invalidation.mark(Invalidation::Layout);
+            let layout_after = n.invalidation.layout;
             record_layout_invalidation_transition(
                 &mut self.layout_invalidations_count,
                 layout_before,
-                n.invalidation.layout,
+                layout_after,
             );
+            layout_transition = Some((parent, layout_before, layout_after));
             counter_update = Some((prev, n.invalidation));
+        }
+        if let Some((id, before, after)) = layout_transition {
+            self.note_layout_invalidation_transition_for_subtree_aggregation(id, before, after);
         }
         if let Some((prev, next)) = counter_update {
             self.update_invalidation_counters(prev, next);
@@ -228,5 +237,18 @@ impl<H: UiHost> UiTree<H> {
 
     pub(crate) fn take_pending_barrier_relayouts(&mut self) -> Vec<NodeId> {
         std::mem::take(&mut self.pending_barrier_relayouts)
+    }
+
+    // Compatibility hooks: barrier mutations rely on subtree-level layout invalidation aggregation
+    // in some branches/workstreams. The current tree does not maintain a dedicated subtree counter,
+    // so these are no-ops for now.
+    fn recompute_node_subtree_layout_dirty_count_and_propagate(&mut self, _node: NodeId) {}
+
+    fn note_layout_invalidation_transition_for_subtree_aggregation(
+        &mut self,
+        _node: NodeId,
+        _before: bool,
+        _after: bool,
+    ) {
     }
 }

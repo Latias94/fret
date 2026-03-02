@@ -17,22 +17,28 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
                 .test_id("ui-gallery-tooltip-keyboard-trigger")
                 .into_element(cx);
 
-            vec![shadcn::Tooltip::new(
-                keyboard_trigger,
-                shadcn::TooltipContent::new(vec![stack::hstack(
-                    cx,
-                    stack::HStackProps::default().gap(Space::N2).items_center(),
-                    |cx| vec![cx.text("Save Changes"), shadcn::Kbd::new("S").into_element(cx)],
-                )])
-                .into_element(cx),
-            )
-            .side(shadcn::TooltipSide::Top)
-            .into_element(cx)
-            .test_id("ui-gallery-tooltip-keyboard")]
+            vec![
+                shadcn::Tooltip::new(
+                    keyboard_trigger,
+                    shadcn::TooltipContent::new(vec![stack::hstack(
+                        cx,
+                        stack::HStackProps::default().gap(Space::N2).items_center(),
+                        |cx| {
+                            vec![
+                                cx.text("Save Changes"),
+                                shadcn::Kbd::new("S").into_element(cx),
+                            ]
+                        },
+                    )])
+                    .into_element(cx),
+                )
+                .side(shadcn::TooltipSide::Top)
+                .into_element(cx)
+                .test_id("ui-gallery-tooltip-keyboard"),
+            ]
         })
         .into_iter()
         .next()
         .expect("tooltip provider returns one root element")
 }
 // endregion: example
-

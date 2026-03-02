@@ -1219,10 +1219,36 @@ pub enum UiPredicateV1 {
         target: UiSelectorV1,
         text: String,
     },
+    /// True when the target exists and its semantics `label` length (UTF-8 bytes) matches `len_bytes`.
+    ///
+    /// This is intended to remain stable under diagnostics text redaction, where labels may be
+    /// replaced with placeholders like `<redacted len=123>`.
+    LabelLenIs {
+        target: UiSelectorV1,
+        len_bytes: u32,
+    },
+    /// True when the target exists and its semantics `label` length (UTF-8 bytes) is at least `min_len_bytes`.
+    LabelLenGe {
+        target: UiSelectorV1,
+        min_len_bytes: u32,
+    },
     /// True when the target exists and its semantics `value` contains `text` as a substring.
     ValueContains {
         target: UiSelectorV1,
         text: String,
+    },
+    /// True when the target exists and its semantics `value` length (UTF-8 bytes) matches `len_bytes`.
+    ///
+    /// This is intended to remain stable under diagnostics text redaction, where values may be
+    /// replaced with placeholders like `<redacted len=123>`.
+    ValueLenIs {
+        target: UiSelectorV1,
+        len_bytes: u32,
+    },
+    /// True when the target exists and its semantics `value` length (UTF-8 bytes) is at least `min_len_bytes`.
+    ValueLenGe {
+        target: UiSelectorV1,
+        min_len_bytes: u32,
     },
     /// True when the target exists and its semantics `pos_in_set` equals `pos_in_set`.
     PosInSetIs {

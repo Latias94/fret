@@ -36,6 +36,14 @@ pub(super) struct ActiveScript {
     pub(super) overlay_placement_trace: Vec<UiOverlayPlacementTraceEntryV1>,
     pub(super) web_ime_trace: Vec<UiWebImeTraceEntryV1>,
     pub(super) ime_event_trace: Vec<UiImeEventTraceEntryV1>,
+    pub(super) last_explicit_cursor_override: Option<CursorOverrideTarget>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(super) enum CursorOverrideTarget {
+    ScreenPhysical,
+    WindowClientPhysical(AppWindowId),
+    WindowClientLogical(AppWindowId),
 }
 
 #[derive(Debug, Clone, Copy)]

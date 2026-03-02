@@ -7,7 +7,11 @@ struct Models {
     open: Option<Model<bool>>,
 }
 
-fn lorem_block<H: UiHost>(cx: &mut ElementContext<'_, H>, prefix: &'static str, lines: usize) -> AnyElement {
+fn lorem_block<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    prefix: &'static str,
+    lines: usize,
+) -> AnyElement {
     stack::vstack(
         cx,
         stack::VStackProps::default()
@@ -80,4 +84,3 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
     )
 }
 // endregion: example
-

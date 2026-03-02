@@ -486,7 +486,7 @@ pub(in crate::ui) fn preview_data_table_legacy(
                         let trigger = shadcn::Button::new("")
                             .a11y_label("Open menu")
                             .variant(shadcn::ButtonVariant::Ghost)
-                            .size(shadcn::ButtonSize::IconSm)
+                            .size(shadcn::ButtonSize::IconXs)
                             .test_id(Arc::<str>::from(format!(
                                 "ui-gallery-data-table-row-actions-open-{}",
                                 row.id

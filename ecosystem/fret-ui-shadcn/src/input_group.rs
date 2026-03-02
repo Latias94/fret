@@ -961,6 +961,382 @@ pub fn input_group<H: UiHost>(cx: &mut ElementContext<'_, H>, group: InputGroup)
     group.into_element(cx)
 }
 
+/// Upstream `InputGroupAddon` alignment variants (shadcn/ui v4).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum InputGroupAddonAlign {
+    #[default]
+    InlineStart,
+    InlineEnd,
+    BlockStart,
+    BlockEnd,
+}
+
+/// shadcn/ui `InputGroupAddon` (v4).
+///
+/// In the upstream DOM implementation, addons can be aligned to any edge of the group
+/// (`inline-start`, `inline-end`, `block-start`, `block-end`).
+///
+/// Fret's `InputGroup` recipe is slot-based (`leading/trailing/block_start/block_end`), so this
+/// type acts as a part adapter that can be routed into the appropriate slot via
+/// [`InputGroup::into_element_parts`].
+#[derive(Debug)]
+pub struct InputGroupAddon {
+    align: InputGroupAddonAlign,
+    children: Vec<AnyElement>,
+    has_button: bool,
+    has_kbd: bool,
+}
+
+impl InputGroupAddon {
+    pub fn new(children: impl IntoIterator<Item = AnyElement>) -> Self {
+        Self {
+            align: InputGroupAddonAlign::default(),
+            children: children.into_iter().collect(),
+            has_button: false,
+            has_kbd: false,
+        }
+    }
+
+    pub fn align(mut self, align: InputGroupAddonAlign) -> Self {
+        self.align = align;
+        self
+    }
+
+    /// Hint: addon subtree contains a `Button`.
+    ///
+    /// Upstream uses selectors like `has-[>button]:ml-[-0.45rem]`. Fret does not have selectors,
+    /// so callers (or recipes) can provide this hint to match the same geometry.
+    pub fn has_button(mut self, has_button: bool) -> Self {
+        self.has_button = has_button;
+        self
+    }
+
+    /// Hint: addon subtree contains a `Kbd`.
+    ///
+    /// Upstream uses selectors like `has-[>kbd]:ml-[-0.35rem]`. Fret does not have selectors, so
+    /// callers (or recipes) can provide this hint to match the same geometry.
+    pub fn has_kbd(mut self, has_kbd: bool) -> Self {
+        self.has_kbd = has_kbd;
+        self
+    }
+}
+
+/// shadcn/ui `InputGroupInput` (v4).
+///
+/// Upstream wraps the `Input` component and applies `flex-1` and related classes.
+/// In Fret the control is owned by the `InputGroup` recipe, so this type is a configuration part
+/// that can be applied via [`InputGroup::into_element_parts`].
+#[derive(Default, Clone)]
+pub struct InputGroupInput {
+    placeholder: Option<Arc<str>>,
+    disabled: Option<bool>,
+    aria_invalid: Option<bool>,
+    a11y_label: Option<Arc<str>>,
+    submit_command: Option<CommandId>,
+    cancel_command: Option<CommandId>,
+    test_id: Option<Arc<str>>,
+    on_key_down: Option<OnKeyDown>,
+}
+
+impl std::fmt::Debug for InputGroupInput {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("InputGroupInput")
+            .field("placeholder", &self.placeholder.as_deref())
+            .field("disabled", &self.disabled)
+            .field("aria_invalid", &self.aria_invalid)
+            .field("a11y_label", &self.a11y_label.as_deref())
+            .field("submit_command", &self.submit_command)
+            .field("cancel_command", &self.cancel_command)
+            .field("test_id", &self.test_id.as_deref())
+            .field("on_key_down", &self.on_key_down.is_some())
+            .finish()
+    }
+}
+
+impl InputGroupInput {
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    pub fn placeholder(mut self, placeholder: impl Into<Arc<str>>) -> Self {
+        self.placeholder = Some(placeholder.into());
+        self
+    }
+
+    pub fn disabled(mut self, disabled: bool) -> Self {
+        self.disabled = Some(disabled);
+        self
+    }
+
+    pub fn aria_invalid(mut self, aria_invalid: bool) -> Self {
+        self.aria_invalid = Some(aria_invalid);
+        self
+    }
+
+    pub fn a11y_label(mut self, label: impl Into<Arc<str>>) -> Self {
+        self.a11y_label = Some(label.into());
+        self
+    }
+
+    pub fn submit_command(mut self, command: CommandId) -> Self {
+        self.submit_command = Some(command);
+        self
+    }
+
+    pub fn cancel_command(mut self, command: CommandId) -> Self {
+        self.cancel_command = Some(command);
+        self
+    }
+
+    pub fn test_id(mut self, id: impl Into<Arc<str>>) -> Self {
+        self.test_id = Some(id.into());
+        self
+    }
+
+    pub fn on_key_down(mut self, handler: OnKeyDown) -> Self {
+        self.on_key_down = Some(handler);
+        self
+    }
+}
+
+/// shadcn/ui `InputGroupTextarea` (v4).
+///
+/// Upstream wraps the `Textarea` component and applies `flex-1 resize-none` and related classes.
+/// In Fret the control is owned by the `InputGroup` recipe, so this type is a configuration part
+/// that can be applied via [`InputGroup::into_element_parts`].
+#[derive(Default, Clone)]
+pub struct InputGroupTextarea {
+    placeholder: Option<Arc<str>>,
+    disabled: Option<bool>,
+    aria_invalid: Option<bool>,
+    a11y_label: Option<Arc<str>>,
+    submit_command: Option<CommandId>,
+    cancel_command: Option<CommandId>,
+    test_id: Option<Arc<str>>,
+    on_key_down: Option<OnKeyDown>,
+    min_height: Option<Px>,
+    max_height: Option<Px>,
+}
+
+impl std::fmt::Debug for InputGroupTextarea {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("InputGroupTextarea")
+            .field("placeholder", &self.placeholder.as_deref())
+            .field("disabled", &self.disabled)
+            .field("aria_invalid", &self.aria_invalid)
+            .field("a11y_label", &self.a11y_label.as_deref())
+            .field("submit_command", &self.submit_command)
+            .field("cancel_command", &self.cancel_command)
+            .field("test_id", &self.test_id.as_deref())
+            .field("on_key_down", &self.on_key_down.is_some())
+            .field("min_height", &self.min_height)
+            .field("max_height", &self.max_height)
+            .finish()
+    }
+}
+
+impl InputGroupTextarea {
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    pub fn placeholder(mut self, placeholder: impl Into<Arc<str>>) -> Self {
+        self.placeholder = Some(placeholder.into());
+        self
+    }
+
+    pub fn disabled(mut self, disabled: bool) -> Self {
+        self.disabled = Some(disabled);
+        self
+    }
+
+    pub fn aria_invalid(mut self, aria_invalid: bool) -> Self {
+        self.aria_invalid = Some(aria_invalid);
+        self
+    }
+
+    pub fn a11y_label(mut self, label: impl Into<Arc<str>>) -> Self {
+        self.a11y_label = Some(label.into());
+        self
+    }
+
+    pub fn submit_command(mut self, command: CommandId) -> Self {
+        self.submit_command = Some(command);
+        self
+    }
+
+    pub fn cancel_command(mut self, command: CommandId) -> Self {
+        self.cancel_command = Some(command);
+        self
+    }
+
+    pub fn test_id(mut self, id: impl Into<Arc<str>>) -> Self {
+        self.test_id = Some(id.into());
+        self
+    }
+
+    pub fn on_key_down(mut self, handler: OnKeyDown) -> Self {
+        self.on_key_down = Some(handler);
+        self
+    }
+
+    pub fn min_height(mut self, min_height: Px) -> Self {
+        self.min_height = Some(min_height);
+        self
+    }
+
+    pub fn max_height(mut self, max_height: Px) -> Self {
+        self.max_height = Some(max_height);
+        self
+    }
+}
+
+/// Part-based authoring surface aligned with shadcn/ui v4 exports.
+#[derive(Debug)]
+pub enum InputGroupPart {
+    Addon(InputGroupAddon),
+    Input(InputGroupInput),
+    Textarea(InputGroupTextarea),
+}
+
+impl InputGroupPart {
+    pub fn addon(addon: InputGroupAddon) -> Self {
+        Self::Addon(addon)
+    }
+
+    pub fn input(input: InputGroupInput) -> Self {
+        Self::Input(input)
+    }
+
+    pub fn textarea(textarea: InputGroupTextarea) -> Self {
+        Self::Textarea(textarea)
+    }
+}
+
+impl InputGroup {
+    /// Part-based authoring adapter aligned with shadcn/ui v4.
+    ///
+    /// This routes `InputGroupAddon` alignments into the recipe's slot-based surface and applies
+    /// `InputGroupInput` / `InputGroupTextarea` control configuration.
+    ///
+    /// Note: In the upstream DOM implementation, addons can click-to-focus the inner input.
+    /// Fret's current recipe does not implement that behavior yet; this adapter focuses on part
+    /// surface parity (copy/paste parity + fearless refactors) rather than DOM event emulation.
+    #[track_caller]
+    pub fn into_element_parts<H: UiHost>(
+        self,
+        cx: &mut ElementContext<'_, H>,
+        parts: impl FnOnce(&mut ElementContext<'_, H>) -> Vec<InputGroupPart>,
+    ) -> AnyElement {
+        let mut group = self;
+        let parts = parts(cx);
+
+        let mut leading = std::mem::take(&mut group.leading);
+        let mut trailing = std::mem::take(&mut group.trailing);
+        let mut block_start = std::mem::take(&mut group.block_start);
+        let mut block_end = std::mem::take(&mut group.block_end);
+
+        let mut leading_has_button = group.leading_has_button;
+        let mut trailing_has_button = group.trailing_has_button;
+        let mut leading_has_kbd = group.leading_has_kbd;
+        let mut trailing_has_kbd = group.trailing_has_kbd;
+
+        for part in parts {
+            match part {
+                InputGroupPart::Addon(addon) => match addon.align {
+                    InputGroupAddonAlign::InlineStart => {
+                        leading_has_button |= addon.has_button;
+                        leading_has_kbd |= addon.has_kbd;
+                        leading.extend(addon.children);
+                    }
+                    InputGroupAddonAlign::InlineEnd => {
+                        trailing_has_button |= addon.has_button;
+                        trailing_has_kbd |= addon.has_kbd;
+                        trailing.extend(addon.children);
+                    }
+                    InputGroupAddonAlign::BlockStart => {
+                        block_start.extend(addon.children);
+                    }
+                    InputGroupAddonAlign::BlockEnd => {
+                        block_end.extend(addon.children);
+                    }
+                },
+                InputGroupPart::Input(input) => {
+                    if let Some(placeholder) = input.placeholder {
+                        group.placeholder = Some(placeholder);
+                    }
+                    if let Some(disabled) = input.disabled {
+                        group.disabled = disabled;
+                    }
+                    if let Some(aria_invalid) = input.aria_invalid {
+                        group.aria_invalid = aria_invalid;
+                    }
+                    if let Some(label) = input.a11y_label {
+                        group.a11y_label = Some(label);
+                    }
+                    if let Some(cmd) = input.submit_command {
+                        group.submit_command = Some(cmd);
+                    }
+                    if let Some(cmd) = input.cancel_command {
+                        group.cancel_command = Some(cmd);
+                    }
+                    if let Some(test_id) = input.test_id {
+                        group.control_test_id = Some(test_id);
+                    }
+                    if let Some(handler) = input.on_key_down {
+                        group.control_on_key_down = Some(handler);
+                    }
+                }
+                InputGroupPart::Textarea(textarea) => {
+                    group.control = InputGroupControlKind::Textarea;
+
+                    if let Some(placeholder) = textarea.placeholder {
+                        group.placeholder = Some(placeholder);
+                    }
+                    if let Some(disabled) = textarea.disabled {
+                        group.disabled = disabled;
+                    }
+                    if let Some(aria_invalid) = textarea.aria_invalid {
+                        group.aria_invalid = aria_invalid;
+                    }
+                    if let Some(label) = textarea.a11y_label {
+                        group.a11y_label = Some(label);
+                    }
+                    if let Some(cmd) = textarea.submit_command {
+                        group.submit_command = Some(cmd);
+                    }
+                    if let Some(cmd) = textarea.cancel_command {
+                        group.cancel_command = Some(cmd);
+                    }
+                    if let Some(test_id) = textarea.test_id {
+                        group.control_test_id = Some(test_id);
+                    }
+                    if let Some(handler) = textarea.on_key_down {
+                        group.control_on_key_down = Some(handler);
+                    }
+                    if let Some(min_h) = textarea.min_height {
+                        group.textarea_min_height = min_h;
+                    }
+                    if let Some(max_h) = textarea.max_height {
+                        group.textarea_max_height = Some(max_h);
+                    }
+                }
+            }
+        }
+
+        group.leading = leading;
+        group.trailing = trailing;
+        group.block_start = block_start;
+        group.block_end = block_end;
+        group.leading_has_button = leading_has_button;
+        group.trailing_has_button = trailing_has_button;
+        group.leading_has_kbd = leading_has_kbd;
+        group.trailing_has_kbd = trailing_has_kbd;
+
+        group.into_element(cx)
+    }
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum InputGroupTextSize {
     #[default]
@@ -1381,5 +1757,115 @@ impl InputGroupButton {
                 (pressable_props, chrome_props, content)
             })
         })
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    use fret_app::App;
+    use fret_core::{AppWindowId, Point, Px, Rect, Size};
+    use fret_runtime::Model;
+    use fret_ui::element::{ElementKind, TextInputProps, TextProps};
+
+    use crate::shadcn_themes::{ShadcnBaseColor, ShadcnColorScheme, apply_shadcn_new_york_v4};
+
+    fn bounds() -> Rect {
+        Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(800.0), Px(200.0)),
+        )
+    }
+
+    fn find_text_input<'a>(node: &'a AnyElement) -> Option<&'a TextInputProps> {
+        match &node.kind {
+            ElementKind::TextInput(props) => Some(props),
+            _ => node.children.iter().find_map(find_text_input),
+        }
+    }
+
+    fn find_text<'a>(node: &'a AnyElement, text: &str) -> Option<&'a TextProps> {
+        match &node.kind {
+            ElementKind::Text(props) if props.text.as_ref() == text => Some(props),
+            _ => node.children.iter().find_map(|c| find_text(c, text)),
+        }
+    }
+
+    fn find_flex_with_text_and_order(node: &AnyElement, text: &str, order: i32) -> bool {
+        let matches = match &node.kind {
+            ElementKind::Flex(FlexProps { layout, .. }) => {
+                layout.flex.order == order && find_text(node, text).is_some()
+            }
+            _ => false,
+        };
+        if matches {
+            return true;
+        }
+        node.children
+            .iter()
+            .any(|c| find_flex_with_text_and_order(c, text, order))
+    }
+
+    #[test]
+    fn input_group_parts_apply_placeholder_to_control() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        apply_shadcn_new_york_v4(&mut app, ShadcnBaseColor::Neutral, ShadcnColorScheme::Light);
+
+        fret_ui::elements::with_element_cx(&mut app, window, bounds(), "input_group_parts", |cx| {
+            let model: Model<String> = cx.app.models_mut().insert(String::new());
+            let el = InputGroup::new(model).into_element_parts(cx, |cx| {
+                vec![
+                    InputGroupPart::addon(
+                        InputGroupAddon::new([cx.text("lead")])
+                            .align(InputGroupAddonAlign::InlineStart),
+                    ),
+                    InputGroupPart::input(InputGroupInput::new().placeholder("placeholder")),
+                ]
+            });
+
+            let props = find_text_input(&el).expect("expected text input in InputGroup");
+            assert_eq!(props.placeholder.as_deref(), Some("placeholder"));
+        });
+    }
+
+    #[test]
+    fn input_group_parts_route_inline_addons_by_align_order() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        apply_shadcn_new_york_v4(&mut app, ShadcnBaseColor::Neutral, ShadcnColorScheme::Light);
+
+        fret_ui::elements::with_element_cx(
+            &mut app,
+            window,
+            bounds(),
+            "input_group_addons",
+            |cx| {
+                let model: Model<String> = cx.app.models_mut().insert(String::new());
+                let el = InputGroup::new(model).into_element_parts(cx, |cx| {
+                    vec![
+                        InputGroupPart::addon(
+                            InputGroupAddon::new([cx.text("lead")])
+                                .align(InputGroupAddonAlign::InlineStart),
+                        ),
+                        InputGroupPart::addon(
+                            InputGroupAddon::new([cx.text("trail")])
+                                .align(InputGroupAddonAlign::InlineEnd),
+                        ),
+                        InputGroupPart::input(InputGroupInput::new()),
+                    ]
+                });
+
+                assert!(
+                    find_flex_with_text_and_order(&el, "lead", -1),
+                    "expected inline-start addon flex to carry order=-1"
+                );
+                assert!(
+                    find_flex_with_text_and_order(&el, "trail", 1),
+                    "expected inline-end addon flex to carry order=1"
+                );
+            },
+        );
     }
 }

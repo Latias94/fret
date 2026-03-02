@@ -281,38 +281,7 @@ pub(super) fn handle_drag_pointer_until_step(
     active.screenshot_wait = None;
     output.request_redraw = true;
 
-    let step_has_state = active.v2_step_state.as_ref().is_some_and(|s| match s {
-        V2StepState::DragPointerUntil(state) => state.step_index == step_index,
-        _ => false,
-    });
-
-    if !step_has_state {
-        if let Some(target_window) =
-            svc.resolve_window_target_for_active_step(window, anchor_window, target_window.as_ref())
-        {
-            if target_window != window {
-                *handoff_to = Some(target_window);
-                output
-                    .effects
-                    .push(Effect::RequestAnimationFrame(target_window));
-                output.request_redraw = true;
-                active.v2_step_state = None;
-            }
-        } else if target_window.is_some() {
-            *force_dump_label = Some(format!(
-                "script-step-{step_index:04}-drag_pointer_until-window-not-found"
-            ));
-            *stop_script = true;
-            *failure_reason = Some("window_target_unresolved".to_string());
-            active.v2_step_state = None;
-            output.request_redraw = true;
-        }
-    }
-
     if *stop_script {
-        active.v2_step_state = None;
-    } else if handoff_to.is_some() {
-        // This step is window-targeted; the runtime will migrate the script.
         active.v2_step_state = None;
     } else {
         let docking_diag = app
@@ -344,6 +313,28 @@ pub(super) fn handle_drag_pointer_until_step(
             },
         };
 
+        let desired_window = svc.resolve_window_target_for_active_step(
+            window,
+            anchor_window,
+            target_window.as_ref(),
+        );
+        if desired_window.is_none() && target_window.is_some() {
+            *force_dump_label = Some(format!(
+                "script-step-{step_index:04}-drag_pointer_until-window-not-found"
+            ));
+            *stop_script = true;
+            *failure_reason = Some("window_target_unresolved".to_string());
+            active.v2_step_state = None;
+            output.request_redraw = true;
+            return true;
+        }
+        if let Some(desired_window) = desired_window
+            && !state.down_issued
+            && state.playback.frame == 0
+        {
+            state.playback.window = desired_window;
+        }
+
         // Diagnostics drag playback behaves like a captured pointer: all events for a
         // `drag_pointer_until` step must be injected into the same window. If this
         // script frame is running on a different window (e.g. because the new tear-off
@@ -372,6 +363,11 @@ pub(super) fn handle_drag_pointer_until_step(
             // If the predicate is already satisfied (e.g. after runner-owned hover routing on a
             // previous frame), release immediately.
             let dock_drag_runtime = dock_drag_runtime_state(app, svc.known_windows.as_slice());
+            let open_window_count = app
+                .global::<fret_runtime::WindowInputContextService>()
+                .map(|ctx_svc| ctx_svc.window_count() as u32)
+                .filter(|n| *n > 0)
+                .unwrap_or_else(|| svc.known_windows.len() as u32);
             let move_steps = state.playback.steps.max(1);
             let reached_end = state.playback.frame > move_steps;
             let predicate_ok_without_semantics = match &state.predicate {
@@ -384,8 +380,8 @@ pub(super) fn handle_drag_pointer_until_step(
                 }
                 UiPredicateV1::FontCatalogPopulated => font_catalog_populated,
                 UiPredicateV1::SystemFontRescanIdle => system_font_rescan_idle,
-                UiPredicateV1::KnownWindowCountGe { n } => (svc.known_windows.len() as u32) >= *n,
-                UiPredicateV1::KnownWindowCountIs { n } => (svc.known_windows.len() as u32) == *n,
+                UiPredicateV1::KnownWindowCountGe { n } => open_window_count >= *n,
+                UiPredicateV1::KnownWindowCountIs { n } => open_window_count == *n,
                 UiPredicateV1::PlatformUiWindowHoverDetectionIs { quality } => app
                     .global::<fret_runtime::PlatformCapabilities>()
                     .is_some_and(|c| c.ui.window_hover_detection.as_str() == quality.as_str()),
@@ -517,6 +513,7 @@ pub(super) fn handle_drag_pointer_until_step(
                     app.global::<fret_core::RendererTextPerfSnapshot>().copied(),
                     app.global::<fret_core::RendererTextFontTraceSnapshot>(),
                     svc.known_windows.as_slice(),
+                    open_window_count,
                     app.global::<fret_runtime::PlatformCapabilities>(),
                     docking_diag,
                     workspace_diag,
@@ -533,6 +530,16 @@ pub(super) fn handle_drag_pointer_until_step(
                 &state.predicate,
                 UiPredicateV1::DockDragCurrentWindowIs { .. }
             );
+            let preserve_explicit_cursor_override = is_current_window_predicate
+                && active
+                    .last_explicit_cursor_override
+                    .is_some_and(|t| match t {
+                        CursorOverrideTarget::WindowClientPhysical(w)
+                        | CursorOverrideTarget::WindowClientLogical(w) => {
+                            w != state.playback.window
+                        }
+                        CursorOverrideTarget::ScreenPhysical => false,
+                    });
             let predicate_ok = if is_current_window_predicate && !reached_end {
                 false
             } else {
@@ -543,21 +550,34 @@ pub(super) fn handle_drag_pointer_until_step(
             if predicate_ok {
                 if state.down_issued {
                     let release_pos = drag_playback_last_position(&state.playback);
-                    let _ = write_cursor_override_window_client_logical(
-                        &svc.cfg.out_dir,
-                        state.playback.window,
-                        release_pos.x.0,
-                        release_pos.y.0,
-                    );
+                    // For `DockDragCurrentWindowIs` predicates, some scripts rely on preserving a
+                    // prior, explicit cursor placement in a different window so runner hover
+                    // routing can observe the correct "current window" at the moment we
+                    // resolve/release. When no explicit cross-window placement has been issued,
+                    // keep the cursor override synced to the playback position so scripts can
+                    // still simulate crossing window boundaries.
+                    if !preserve_explicit_cursor_override {
+                        let _ = write_cursor_override_window_client_logical(
+                            &svc.cfg.out_dir,
+                            state.playback.window,
+                            release_pos.x.0,
+                            release_pos.y.0,
+                        );
+                    }
 
                     if !state.release_on_success {
-                        active.pointer_session = Some(V2PointerSessionState {
-                            window: state.playback.window,
-                            button: state.playback.button,
-                            pointer_type,
-                            modifiers: Modifiers::default(),
-                            position: release_pos,
-                        });
+                        let cross_window_hover_active = dock_drag_runtime
+                            .as_ref()
+                            .is_some_and(|d| d.cross_window_hover);
+                        if !cross_window_hover_active {
+                            active.pointer_session = Some(V2PointerSessionState {
+                                window: state.playback.window,
+                                button: state.playback.button,
+                                pointer_type,
+                                modifiers: Modifiers::default(),
+                                position: release_pos,
+                            });
+                        }
                         active.v2_step_state = None;
                         active.next_step = active.next_step.saturating_add(1);
                         output.request_redraw = true;
@@ -674,31 +694,55 @@ pub(super) fn handle_drag_pointer_until_step(
                 } else if !*stop_script {
                     let move_steps = state.playback.steps.max(1);
                     let reached_end = state.playback.frame > move_steps;
+                    let cross_window_hover_active = dock_drag_runtime
+                        .as_ref()
+                        .is_some_and(|d| d.cross_window_hover);
+                    let suppress_pointer_events_for_cross_window_hover = cross_window_hover_active
+                        && matches!(pointer_type, PointerType::Mouse)
+                        && dock_drag_runtime
+                            .as_ref()
+                            .is_some_and(|d| d.current_window != state.playback.window)
+                        && state.playback.frame >= 1;
 
                     // Drive pointer-down + move segments until we reach `end`. Do not emit a
                     // pointer-up until the predicate is satisfied; `drag_pointer_until` is
                     // allowed to "hold" the drag at the end position across frames.
                     if !reached_end {
-                        let _ = push_drag_playback_frame(
-                            &mut state.playback,
-                            &mut output.events,
-                            pointer_type,
-                        );
+                        if suppress_pointer_events_for_cross_window_hover {
+                            state.playback.frame = state.playback.frame.saturating_add(1);
+                        } else {
+                            let _ = push_drag_playback_frame(
+                                &mut state.playback,
+                                &mut output.events,
+                                pointer_type,
+                            );
+                        }
                     } else {
-                        output.events.extend(pointer_move_with_internal_over_events(
-                            state.playback.button,
-                            state.playback.end,
-                            pointer_type,
-                        ));
+                        if !suppress_pointer_events_for_cross_window_hover {
+                            output.events.extend(pointer_move_with_internal_over_events(
+                                state.playback.button,
+                                state.playback.end,
+                                pointer_type,
+                            ));
+                        }
                     }
 
-                    let cursor_pos = drag_playback_last_position(&state.playback);
-                    let _ = write_cursor_override_window_client_logical(
-                        &svc.cfg.out_dir,
-                        state.playback.window,
-                        cursor_pos.x.0,
-                        cursor_pos.y.0,
-                    );
+                    // For cross-window hover, the runner's "true cursor" must remain over the
+                    // hovered window for hover routing to stay active. Avoid overwriting the
+                    // cursor override with a position expressed in the playback window's client
+                    // coordinates; keep the most recent explicit cursor placement instead (e.g.
+                    // a prior `set_cursor_in_window` step).
+                    if !preserve_explicit_cursor_override
+                        && !suppress_pointer_events_for_cross_window_hover
+                    {
+                        let cursor_pos = drag_playback_last_position(&state.playback);
+                        let _ = write_cursor_override_window_client_logical(
+                            &svc.cfg.out_dir,
+                            state.playback.window,
+                            cursor_pos.x.0,
+                            cursor_pos.y.0,
+                        );
+                    }
                     if state.playback.frame >= 1 {
                         state.down_issued = true;
                     }

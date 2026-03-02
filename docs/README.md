@@ -10,6 +10,7 @@ New to the repo? Start with:
 ## Sources of Truth
 
 - Progress: `docs/roadmap.md` and `docs/shadcn-declarative-progress.md`
+- Action-first authoring + view runtime refactor: `docs/workstreams/action-first-authoring-fearless-refactor-v1/DESIGN.md`
 - Examples redesign (Flutter-like ladder + cookbook + labs + gates): `docs/workstreams/example-suite-fearless-refactor-v1/design.md`
 - Framework modularity (Bevy-like consumption profiles): `docs/workstreams/framework-modularity-fearless-refactor-v1/design.md`
 - Overlay + input arbitration v2: `docs/overlay-and-input-arbitration-v2-refactor-roadmap.md`
@@ -81,6 +82,9 @@ Fret’s kernel primitives are intentionally small (`Model<T>`, explicit invalid
 so the default authoring story lives in ecosystem crates.
 
   - Workstream: `docs/workstreams/state-management-v1.md` and `docs/workstreams/state-management-v1-todo.md`
+  - Planned upgrade (in design): action-first authoring + view runtime:
+    - Workstream: `docs/workstreams/action-first-authoring-fearless-refactor-v1/DESIGN.md`
+    - ADRs: `docs/adr/0307-action-registry-and-typed-action-dispatch-v1.md`, `docs/adr/0308-view-authoring-runtime-and-hooks-v1.md`
   - Recommended building blocks:
   - Typed UI → app routing (dynamic per-item actions): `fret::mvu::MessageRouter<M>`
   - Derived state (selectors/computed): `ecosystem/fret-selector`

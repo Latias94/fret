@@ -14,4 +14,8 @@ This crate intentionally favors:
 cargo run -p fret-cookbook --example hello
 cargo run -p fret-cookbook --example hello_counter
 cargo run -p fret-cookbook --example overlay_basics
+cargo run -p fret-cookbook --example commands_keymap_basics
+cargo run -p fret-cookbook --example text_input_basics
+cargo run -p fret-cookbook --example effects_layer_basics
+cargo run -p fret-cookbook --example theme_switching_basics
 ```
