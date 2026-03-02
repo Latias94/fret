@@ -1,3 +1,5 @@
+pub const SOURCE: &str = include_str!("rtl.rs");
+
 // region: example
 use fret_core::Px;
 use fret_ui_kit::primitives::direction::{LayoutDirection, with_direction_provider};
@@ -42,4 +44,3 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
 }
 
 // endregion: example
-
