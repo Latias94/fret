@@ -24,7 +24,7 @@ fn has_docsection_rust_code_literal(src: &str) -> bool {
 #[test]
 fn ui_pages_do_not_embed_rust_code_literals() {
     let pages_dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("src/ui/pages");
-    let allowlist = ["date_picker.rs", "form.rs"];
+    let allowlist = ["form.rs"];
 
     let entries = fs::read_dir(&pages_dir)
         .unwrap_or_else(|e| panic!("read_dir failed for {}: {e}", pages_dir.display()));
