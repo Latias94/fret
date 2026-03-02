@@ -62,7 +62,9 @@ pub(super) use interaction_gates::{
 };
 pub(super) use notify_gates::check_bundle_for_notify_hotspot_file_max;
 pub(super) use overlay_gates::check_bundle_for_overlay_synthesis_min;
-pub(super) use pixels_changed::check_out_dir_for_pixels_changed;
+pub(super) use pixels_changed::{
+    check_out_dir_for_pixels_changed, check_out_dir_for_pixels_unchanged,
+};
 pub(super) use retained_vlist_gates::{
     check_bundle_for_retained_vlist_attach_detach_max,
     check_bundle_for_retained_vlist_keep_alive_budget,
