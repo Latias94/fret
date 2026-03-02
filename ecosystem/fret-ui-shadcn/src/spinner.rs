@@ -1,6 +1,8 @@
-use fret_core::{Point, Px, Transform2D};
-use fret_icons::{IconId, ids};
-use fret_ui::element::{AnyElement, LayoutStyle, Length, SvgIconProps, VisualTransformProps};
+use fret_core::{Point, Px, SemanticsLive, SemanticsRole, Transform2D};
+use fret_icons::{ids, IconId};
+use fret_ui::element::{
+    AnyElement, LayoutStyle, Length, SemanticsDecoration, SvgIconProps, VisualTransformProps,
+};
 use fret_ui::{ElementContext, Invalidation, SvgSource, Theme, UiHost};
 use fret_ui_kit::declarative::icon as icon_runtime;
 use fret_ui_kit::declarative::prefers_reduced_motion;
@@ -109,5 +111,59 @@ impl Spinner {
             props.inherit_color = inherit_color;
             vec![cx.svg_icon_props(props)]
         })
+        .attach_semantics(
+            SemanticsDecoration::default()
+                .role(SemanticsRole::ProgressBar)
+                .label("Loading")
+                .busy(true)
+                .live(Some(SemanticsLive::Polite)),
+        )
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    use fret_app::App;
+    use fret_core::{AppWindowId, Point, Px, Rect, Size};
+    use fret_ui::element::{ElementKind, Length};
+    use fret_ui::elements;
+
+    #[test]
+    fn spinner_defaults_to_size_4_and_has_loading_semantics() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        crate::shadcn_themes::apply_shadcn_new_york_v4(
+            &mut app,
+            crate::shadcn_themes::ShadcnBaseColor::Slate,
+            crate::shadcn_themes::ShadcnColorScheme::Light,
+        );
+
+        let bounds = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(160.0), Px(80.0)));
+
+        let el = elements::with_element_cx(&mut app, window, bounds, "spinner", |cx| {
+            Spinner::new().into_element(cx)
+        });
+
+        let ElementKind::VisualTransform(props) = &el.kind else {
+            panic!("expected Spinner to build a VisualTransform wrapper");
+        };
+        assert_eq!(props.layout.size.width, Length::Px(Px(16.0)));
+        assert_eq!(props.layout.size.height, Length::Px(Px(16.0)));
+
+        let sem = el
+            .semantics_decoration
+            .as_ref()
+            .expect("semantics decoration");
+        assert_eq!(sem.role, Some(SemanticsRole::ProgressBar));
+        assert_eq!(sem.label.as_deref(), Some("Loading"));
+        assert_eq!(sem.busy, Some(true));
+        assert_eq!(sem.live, Some(Some(SemanticsLive::Polite)));
+
+        let child = el.children.first().expect("visual transform child");
+        let ElementKind::SvgIcon(_) = &child.kind else {
+            panic!("expected Spinner child to be an SvgIcon");
+        };
     }
 }
