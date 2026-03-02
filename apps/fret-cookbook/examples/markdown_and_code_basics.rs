@@ -77,8 +77,6 @@ impl MvuProgram for MarkdownAndCodeBasicsProgram {
         state: &mut Self::State,
         msg: &mut MessageRouter<Self::Message>,
     ) -> Elements {
-        let theme = Theme::global(&*cx.app).snapshot();
-
         let source = cx.watch_model(&state.source).layout().cloned_or_default();
         let wrap = state
             .wrap
@@ -218,19 +216,7 @@ impl MvuProgram for MarkdownAndCodeBasicsProgram {
             .max_w(Px(980.0))
             .into_element(cx);
 
-        ui::container(cx, |cx| {
-            [ui::v_flex(cx, |_cx| [card])
-                .gap(Space::N6)
-                .items_center()
-                .justify_center()
-                .size_full()
-                .into_element(cx)]
-        })
-        .bg(ColorRef::Color(theme.color_token("background")))
-        .p(Space::N6)
-        .into_element(cx)
-        .test_id(TEST_ID_ROOT)
-        .into()
+        fret_cookbook::scaffold::centered_page_background(cx, TEST_ID_ROOT, card).into()
     }
 }
 

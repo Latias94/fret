@@ -137,8 +137,6 @@ impl MvuProgram for CommandsKeymapBasicsProgram {
         // Attach command handlers to the window's declarative root so shortcuts work even when
         // nothing inside the view has focus (the dispatch path doesn't walk descendants).
         let base_root = cx.root_id();
-
-        let theme = Theme::global(&*cx.app).snapshot();
         let cmd = CommandId::from(CMD_TOGGLE_PANEL);
 
         let panel_open = state
@@ -287,18 +285,7 @@ impl MvuProgram for CommandsKeymapBasicsProgram {
         let (on_command, on_command_availability) =
             command_handlers(state.panel_open.clone(), state.allow_command.clone());
 
-        let root = ui::container(cx, |cx| {
-            [ui::v_flex(cx, |_cx| [card])
-                .gap(Space::N6)
-                .items_center()
-                .justify_center()
-                .size_full()
-                .into_element(cx)]
-        })
-        .bg(ColorRef::Color(theme.color_token("background")))
-        .p(Space::N6)
-        .into_element(cx)
-        .test_id(TEST_ID_ROOT);
+        let root = fret_cookbook::scaffold::centered_page_background(cx, TEST_ID_ROOT, card);
 
         cx.command_on_command_for(base_root, on_command);
         cx.command_on_command_availability_for(base_root, on_command_availability);
