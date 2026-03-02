@@ -28,6 +28,7 @@ Multi-window tear-off + merge-back gates (runner-routed cross-window drags):
 
 - `cargo nextest run -p fret-docking`
   - Evidence: `ecosystem/fret-docking/src/dock/tab_bar_drop_target.rs`
+  - Evidence: `ecosystem/fret-docking/src/dock/tests/tab_bar.rs` (`dock_tab_drop_across_panes_end_inserts_at_target_end`)
   - Evidence: `ecosystem/fret-ui-headless/src/tab_strip_surface.rs`
   - Evidence: `ecosystem/fret-ui-headless/src/tab_strip_overflow.rs`
   - Evidence: `ecosystem/fret-docking/src/dock/tab_overflow.rs`

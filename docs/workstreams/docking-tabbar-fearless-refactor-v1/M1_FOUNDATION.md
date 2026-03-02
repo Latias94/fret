@@ -24,4 +24,4 @@ can be unit-tested independent of rendering.
 Status:
 
 - 1/2-tab drop-end: covered by `dock::tab_bar_kernel::tests::resolve_tab_bar_drop_no_overflow_drop_end_resolves_to_tab_count`.
-- cross-pane drop-end: pending (needs an end-to-end docking test that exercises dropping into a different tabs node).
+- cross-pane drop-end: covered by `dock::tests::tab_bar::dock_tab_drop_across_panes_end_inserts_at_target_end`.
