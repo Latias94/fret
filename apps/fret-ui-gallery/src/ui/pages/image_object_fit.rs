@@ -39,16 +39,10 @@ pub(super) fn preview_image_object_fit(
                 .description(
                     "Compare Stretch / Contain / Cover across wide, tall, and square sources.",
                 )
-                .code_rust_from_file_region(
-                    include_str!("../snippets/image_object_fit/mapping.rs"),
-                    "example",
-                ),
+                .code_rust_from_file_region(snippets::mapping::SOURCE, "example"),
             DocSection::new("Sampling", sampling)
                 .description("Linear vs nearest sampling (useful for pixel art).")
-                .code_rust_from_file_region(
-                    include_str!("../snippets/image_object_fit/sampling.rs"),
-                    "example",
-                ),
+                .code_rust_from_file_region(snippets::sampling::SOURCE, "example"),
             DocSection::new("Notes", notes).description("Usage notes."),
         ],
     );

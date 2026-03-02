@@ -1,3 +1,5 @@
+pub const SOURCE: &str = include_str!("sampling.rs");
+
 // region: example
 use crate::ui::ImageId;
 use fret_core::scene::ImageSamplingHint;
