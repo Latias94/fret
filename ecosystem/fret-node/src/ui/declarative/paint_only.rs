@@ -1,8 +1,8 @@
 use std::sync::Arc;
 
 use fret_canvas::view::{
-    DEFAULT_WHEEL_ZOOM_BASE, DEFAULT_WHEEL_ZOOM_STEP, PanZoom2D, screen_rect_to_canvas_rect,
-    wheel_zoom_factor,
+    screen_rect_to_canvas_rect, wheel_zoom_factor, PanZoom2D, DEFAULT_WHEEL_ZOOM_BASE,
+    DEFAULT_WHEEL_ZOOM_STEP,
 };
 use fret_canvas::wires as canvas_wires;
 use fret_core::{
@@ -313,7 +313,7 @@ fn derived_geometry_cache_key(
     let edge_aabb_pad_screen_px = tuning
         .edge_aabb_pad_screen_px
         .max(interaction.edge_interaction_width)
-        .max(style.wire_width)
+        .max(style.geometry.wire_width)
         .max(0.0);
 
     let v = DerivedGeometryCacheKeyV1 {
@@ -326,7 +326,7 @@ fn derived_geometry_cache_key(
         min_cell_size_screen_bits: tuning.min_cell_size_screen_px.to_bits(),
         edge_aabb_pad_screen_bits: edge_aabb_pad_screen_px.to_bits(),
         edge_interaction_width_bits: interaction.edge_interaction_width.to_bits(),
-        wire_width_bits: style.wire_width.to_bits(),
+        wire_width_bits: style.geometry.wire_width.to_bits(),
     };
 
     CanvasKey::from_hash(&("fret-node.derived-geometry.paint-only.v1", v))
@@ -764,7 +764,7 @@ fn build_edges_draws_paint_only(
             Point::new(Px(min_x), Px(min_y)),
             fret_core::Size::new(Px((max_x - min_x).max(0.0)), Px((max_y - min_y).max(0.0))),
         );
-        let pad = (style.wire_width / zoom).max(0.0);
+        let pad = (style.geometry.wire_width / zoom).max(0.0);
         bbox = Rect::new(
             Point::new(Px(bbox.origin.x.0 - pad), Px(bbox.origin.y.0 - pad)),
             fret_core::Size::new(
@@ -786,8 +786,8 @@ fn build_edges_draws_paint_only(
         // Stable hosted path key: edge identity + graph model revision.
         let path_key = CanvasKey::from_hash(&("fret-node.edge-path.v1", graph_rev, edge_id)).0;
         let color = match edge.kind {
-            crate::core::EdgeKind::Data => style.wire_color_data,
-            crate::core::EdgeKind::Exec => style.wire_color_exec,
+            crate::core::EdgeKind::Data => style.paint.wire_color_data,
+            crate::core::EdgeKind::Exec => style.paint.wire_color_exec,
         };
 
         out.push(EdgePathDraw {
@@ -828,7 +828,7 @@ fn paint_edges_cached(
 
     let zoom = PanZoom2D::sanitize_zoom(view.zoom, 1.0).max(1.0e-6);
     let raster_scale_factor = p.scale_factor() * zoom;
-    let stroke_width = (style_tokens.wire_width / zoom).max(0.0);
+    let stroke_width = (style_tokens.geometry.wire_width / zoom).max(0.0);
     let style = PathStyle::StrokeV2(StrokeStyleV2 {
         width: Px(stroke_width),
         join: StrokeJoinV1::Round,
@@ -896,7 +896,7 @@ fn paint_edges_cached(
                         Px((max_y - min_y).max(0.0)),
                     ),
                 );
-                let pad = (style_tokens.wire_width / zoom).max(0.0);
+                let pad = (style_tokens.geometry.wire_width / zoom).max(0.0);
                 bbox = Rect::new(
                     Point::new(Px(bbox.origin.x.0 - pad), Px(bbox.origin.y.0 - pad)),
                     fret_core::Size::new(
@@ -1001,21 +1001,21 @@ fn paint_nodes_cached(
         return;
     };
 
-    let fill = fret_core::scene::Paint::Solid(style_tokens.node_background).into();
+    let fill = fret_core::scene::Paint::Solid(style_tokens.paint.node_background).into();
     let transparent_fill = fret_core::scene::Paint::Solid(Color {
         a: 0.0,
-        ..style_tokens.node_background
+        ..style_tokens.paint.node_background
     })
     .into();
-    let border_base = style_tokens.node_border;
+    let border_base = style_tokens.paint.node_border;
     let border_hover = Color {
         a: 0.75,
-        ..style_tokens.node_border_selected
+        ..style_tokens.paint.node_border_selected
     };
-    let border_selected = style_tokens.node_border_selected;
+    let border_selected = style_tokens.paint.node_border_selected;
     let zoom = PanZoom2D::sanitize_zoom(view.zoom, 1.0).max(1.0e-6);
     let border_w = (1.0 / zoom).max(0.0);
-    let corner_r = (style_tokens.node_corner_radius / zoom).max(0.0);
+    let corner_r = (style_tokens.paint.node_corner_radius / zoom).max(0.0);
     let border = fret_core::Edges::all(Px(border_w));
     let no_border = fret_core::Edges::all(Px(0.0));
     let corner_radii = fret_core::Corners::all(Px(corner_r));
@@ -1235,13 +1235,14 @@ pub fn node_graph_surface_paint_only<H: UiHost + 'static>(
                         zoom,
                         node_origin,
                         &mut presenter,
+                        None,
                     );
 
                     let tuning = view_value.interaction.spatial_index;
                     let edge_aabb_pad_screen_px = tuning
                         .edge_aabb_pad_screen_px
                         .max(view_value.interaction.edge_interaction_width)
-                        .max(style_tokens.wire_width)
+                        .max(style_tokens.geometry.wire_width)
                         .max(0.0);
                     let cell_size_canvas = (tuning.cell_size_screen_px / z)
                         .max(tuning.min_cell_size_screen_px / z)
@@ -1402,74 +1403,80 @@ pub fn node_graph_surface_paint_only<H: UiHost + 'static>(
     //
     // Note: This is an approximation based on cached edge draws + best-effort bounds tracking
     // (grid cache bounds). It is intended for diagnostics gating, not as a correctness oracle.
-    let (edges_paint_total, edges_paint_drawn, edges_paint_culled, edges_paint_dragged, edges_paint_missing_ports) =
-        edges_cache_value
-            .draws
-            .as_deref()
-            .map(|draws| {
-                let mut total: u32 = draws.len() as u32;
-                let mut drawn: u32 = 0;
-                let mut culled: u32 = 0;
-                let mut dragged: u32 = 0;
-                let mut missing_ports: u32 = 0;
+    let (
+        edges_paint_total,
+        edges_paint_drawn,
+        edges_paint_culled,
+        edges_paint_dragged,
+        edges_paint_missing_ports,
+    ) = edges_cache_value
+        .draws
+        .as_deref()
+        .map(|draws| {
+            let mut total: u32 = draws.len() as u32;
+            let mut drawn: u32 = 0;
+            let mut culled: u32 = 0;
+            let mut dragged: u32 = 0;
+            let mut missing_ports: u32 = 0;
 
-                let bounds = grid_cache_value.bounds;
-                let view = PanZoom2D {
-                    pan: Point::new(Px(view_value.pan.x), Px(view_value.pan.y)),
-                    zoom: view_value.zoom,
-                };
-                let Some(cull) = canvas_viewport_rect(bounds, view, cull_margin_screen_px) else {
-                    return (total, drawn, culled, dragged, missing_ports);
-                };
+            let bounds = grid_cache_value.bounds;
+            let view = PanZoom2D {
+                pan: Point::new(Px(view_value.pan.x), Px(view_value.pan.y)),
+                zoom: view_value.zoom,
+            };
+            let Some(cull) = canvas_viewport_rect(bounds, view, cull_margin_screen_px) else {
+                return (total, drawn, culled, dragged, missing_ports);
+            };
 
-                let drag_active = node_drag_value.as_ref().is_some_and(|d| d.active && !d.canceled);
-                let geom = derived_cache_value.geom.as_deref();
+            let drag_active = node_drag_value
+                .as_ref()
+                .is_some_and(|d| d.active && !d.canceled);
+            let geom = derived_cache_value.geom.as_deref();
 
-                for d in draws.iter() {
-                    let mut affected_by_drag = false;
-                    if drag_active {
-                        let from_node = geom.and_then(|g| g.ports.get(&d.from)).map(|h| h.node);
-                        let to_node = geom.and_then(|g| g.ports.get(&d.to)).map(|h| h.node);
-                        affected_by_drag = from_node
-                            .is_some_and(|id| {
-                                node_drag_value
-                                    .as_ref()
-                                    .is_some_and(|drag| node_drag_contains(drag, id))
-                            })
-                            || to_node.is_some_and(|id| {
-                                node_drag_value
-                                    .as_ref()
-                                    .is_some_and(|drag| node_drag_contains(drag, id))
-                            });
-                    }
+            for d in draws.iter() {
+                let mut affected_by_drag = false;
+                if drag_active {
+                    let from_node = geom.and_then(|g| g.ports.get(&d.from)).map(|h| h.node);
+                    let to_node = geom.and_then(|g| g.ports.get(&d.to)).map(|h| h.node);
+                    affected_by_drag = from_node.is_some_and(|id| {
+                        node_drag_value
+                            .as_ref()
+                            .is_some_and(|drag| node_drag_contains(drag, id))
+                    }) || to_node.is_some_and(|id| {
+                        node_drag_value
+                            .as_ref()
+                            .is_some_and(|drag| node_drag_contains(drag, id))
+                    });
+                }
 
-                    if affected_by_drag {
-                        dragged += 1;
-                        let ok_from = geom.and_then(|g| g.port_center(d.from)).is_some();
-                        let ok_to = geom.and_then(|g| g.port_center(d.to)).is_some();
-                        if ok_from && ok_to {
-                            drawn += 1;
-                        } else {
-                            missing_ports += 1;
-                        }
-                        continue;
-                    }
-
-                    if !rects_intersect(cull, d.bbox) {
-                        culled += 1;
-                    } else {
+                if affected_by_drag {
+                    dragged += 1;
+                    let ok_from = geom.and_then(|g| g.port_center(d.from)).is_some();
+                    let ok_to = geom.and_then(|g| g.port_center(d.to)).is_some();
+                    if ok_from && ok_to {
                         drawn += 1;
+                    } else {
+                        missing_ports += 1;
                     }
+                    continue;
                 }
 
-                // Keep `total` consistent even if the vec length exceeds u32 (shouldn't in practice).
-                if draws.len() > (u32::MAX as usize) {
-                    total = u32::MAX;
+                if !rects_intersect(cull, d.bbox) {
+                    culled += 1;
+                } else {
+                    drawn += 1;
                 }
-                (total, drawn, culled, dragged, missing_ports)
-            })
-            .unwrap_or((0, 0, 0, 0, 0));
-    let edges_paint_ok = edges_paint_total > 0 && edges_paint_drawn > 0 && edges_paint_missing_ports == 0;
+            }
+
+            // Keep `total` consistent even if the vec length exceeds u32 (shouldn't in practice).
+            if draws.len() > (u32::MAX as usize) {
+                total = u32::MAX;
+            }
+            (total, drawn, culled, dragged, missing_ports)
+        })
+        .unwrap_or((0, 0, 0, 0, 0));
+    let edges_paint_ok =
+        edges_paint_total > 0 && edges_paint_drawn > 0 && edges_paint_missing_ports == 0;
     let semantics_value: Arc<str> = Arc::from(format!(
         "panning {panning}; marquee_active:{marquee_active}; node_drag_armed:{node_drag_armed}; node_dragging:{node_dragging}; hovered_node:{hovered}; selected_nodes:{selected_nodes_len}; grid_cached:{grid_cached}; grid_rebuilds:{}; geom_cached:{geom_cached}; geom_rebuilds:{}; nodes_cached:{nodes_cached}; nodes_rebuilds:{}; edges_cached:{edges_cached}; edges_rebuilds:{}; edges_paint_total:{edges_paint_total}; edges_paint_drawn:{edges_paint_drawn}; edges_paint_culled:{edges_paint_culled}; edges_paint_dragged:{edges_paint_dragged}; edges_paint_missing_ports:{edges_paint_missing_ports}; edges_paint_ok:{edges_paint_ok}; view_pan:{:.2},{:.2}; view_zoom:{:.4}; portal_fit_count:{portal_fit_count}; portal_fit_pending:{portal_fit_pending}; portal_union_wh:{portal_union_w:.2}x{portal_union_h:.2}; portal_bounds_entries:{portal_bounds_entries}; portals_disabled:{portals_disabled};",
         grid_cache_value.rebuilds,
@@ -2671,12 +2678,12 @@ pub fn node_graph_surface_paint_only<H: UiHost + 'static>(
                                                 } else {
                                                     0.16
                                                 },
-                                                ..style_tokens.node_background
+                                                ..style_tokens.paint.node_background
                                             });
                                             p.border = fret_core::Edges::all(Px(1.0));
                                             p.border_color = Some(Color {
                                                 a: 0.35,
-                                                ..style_tokens.node_border
+                                                ..style_tokens.paint.node_border
                                             });
 
                                             let header = cx
@@ -2913,12 +2920,12 @@ pub fn node_graph_surface_paint_only<H: UiHost + 'static>(
                                             p.snap_to_device_pixels = true;
                                             p.background = Some(Color {
                                                 a: 0.26,
-                                                ..style_tokens.node_background
+                                                ..style_tokens.paint.node_background
                                             });
                                             p.border = fret_core::Edges::all(Px(1.0));
                                             p.border_color = Some(Color {
                                                 a: 0.35,
-                                                ..style_tokens.node_border
+                                                ..style_tokens.paint.node_border
                                             });
 
                                             cx.container(p, move |cx| {
@@ -3052,11 +3059,12 @@ pub fn node_graph_surface_paint_only<H: UiHost + 'static>(
                             p.layout.inset.top = Some(top).into();
                             p.layout.size.width = Length::Px(rect.size.width);
                             p.layout.size.height = Length::Px(rect.size.height);
-                            p.background = Some(style_tokens.marquee_fill);
+                            p.background = Some(style_tokens.paint.marquee_fill);
                             p.border = fret_core::Edges::all(Px(style_tokens
+                                .paint
                                 .marquee_border_width
                                 .max(0.0)));
-                            p.border_color = Some(style_tokens.marquee_border);
+                            p.border_color = Some(style_tokens.paint.marquee_border);
                             p.snap_to_device_pixels = true;
 
                             overlay_children.push(
