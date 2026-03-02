@@ -510,7 +510,8 @@ impl Default for CarouselOptions {
             skip_snaps: false,
             drag_free: false,
             duration: Duration::from_millis(25),
-            embla_engine: false,
+            // v2 parity default: use the Embla-style headless engine unless explicitly disabled.
+            embla_engine: true,
             embla_duration: 25.0,
             ignore_reduced_motion: false,
             in_view_threshold: 0.0,
@@ -1248,10 +1249,11 @@ impl Carousel {
             let reduced_motion =
                 prefers_reduced_motion(cx, Invalidation::Paint, false) && !options.ignore_reduced_motion;
 
-            let embla_engine_enabled = options.embla_engine
-                || std::env::var("FRET_DEBUG_CAROUSEL_EMBLA_ENGINE")
-                    .ok()
-                    .is_some_and(|v| v == "1" || v.eq_ignore_ascii_case("true"));
+            let embla_engine_enabled = match std::env::var("FRET_DEBUG_CAROUSEL_EMBLA_ENGINE").ok() {
+                Some(v) if v == "0" || v.eq_ignore_ascii_case("false") => false,
+                Some(v) if v == "1" || v.eq_ignore_ascii_case("true") => true,
+                _ => options.embla_engine,
+            };
             let embla_engine_enabled = embla_engine_enabled && !reduced_motion;
 
             let mut applied_api_command = false;
