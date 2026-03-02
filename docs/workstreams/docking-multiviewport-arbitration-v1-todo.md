@@ -98,6 +98,16 @@ Each TODO is labeled:
     - scripts: `tools/diag-scripts/docking-arbitration-demo-split-viewports.json`, `tools/diag-scripts/docking-arbitration-demo-modal-dock-drag-viewport-capture.json`
     - runner: `crates/fret-diag/src/lib.rs` (`diag suite docking-arbitration`; `apps/fretboard/src/diag.rs` is a thin wrapper)
 
+- [~] DMV1-reg-033 Add a scripted diag regression for “multi-window chained tear-off + merge” (docking arbitration demo).
+  - Target: cover the editor-grade workflow: tear off a tab into a new window, tear off a second tab from that new window,
+    then merge back by docking into the original window.
+  - Evidence:
+    - script: `tools/diag-scripts/docking/arbitration/docking-arbitration-demo-multiwindow-chained-tearoff-two-tabs-merge.json`
+    - debug helper (bundle-first): `tools/diag-scripts/docking/arbitration/local-debug/docking-arbitration-demo-multiwindow-chained-tearoff-after-first-tearoff-bundle.json`
+  - Notes:
+    - prefer `known_window_count_*` predicates for window birth detection; the harness must tolerate runner-reported window-count lag.
+    - if this gate is flaky, isolate with the debug helper and archive the failing bundle as evidence.
+
 ## P2 — Unification Opportunities (Optional)
 
 - [x] DMV1-opt-040 Consider consolidating viewport forwarding helpers between docking and `viewport_surface_panel`.

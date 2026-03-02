@@ -843,7 +843,7 @@ Recent additions:
 - `dock_drop_preview_kind_is` (assert coarse docking drop preview decision: `wrap_binary` vs `insert_into_split`)
 - `dock_graph_canonical_is` / `dock_graph_has_nested_same_axis_splits_is` (assert N-ary docking canonical-form invariants via a cheap stats snapshot)
 - `dock_graph_node_count_le` / `dock_graph_max_split_depth_le` (assert dock graph size/depth stays bounded after repeated operations)
-- `known_window_count_ge` / `known_window_count_is` (assert number of currently open windows as reported by the runner; useful for multi-window tear-off scripts)
+- `known_window_count_ge` / `known_window_count_is` (assert number of currently open windows as best-effort reported by the runner; computed as `max(runner_window_count, diag_known_windows)` to avoid backend lag in multi-window tear-off scripts)
 - `dock_drag_current_window_is` (assert that a dock drag session is active and its `current_window` matches a window target)
 - `dock_drag_moving_window_is` (assert the runner-reported moving window for a dock drag; ImGui-style “follow window”)
 - `dock_drag_window_under_moving_window_is` (assert the best-effort “window under moving window” selection during a dock drag)
