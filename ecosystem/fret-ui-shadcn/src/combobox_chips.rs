@@ -28,6 +28,7 @@ use crate::combobox::{
     ComboboxOpenChangeReason, ComboboxStyle, ComboboxValue,
 };
 use crate::command::CommandPaletteA11ySelectedMode;
+use crate::test_id::test_id_slug;
 use crate::{
     CommandEntry, CommandGroup, CommandItem, CommandPalette, CommandSeparator, Popover,
     PopoverContent,
@@ -62,18 +63,6 @@ impl From<ComboboxContent> for ComboboxChipsPart {
 fn alpha_mul(mut c: Color, mul: f32) -> Color {
     c.a = (c.a * mul).clamp(0.0, 1.0);
     c
-}
-
-fn test_id_slug(s: &str) -> String {
-    let mut out = String::with_capacity(s.len());
-    for c in s.chars() {
-        if c.is_ascii_alphanumeric() {
-            out.push(c.to_ascii_lowercase());
-        } else {
-            out.push('-');
-        }
-    }
-    out.trim_matches('-').to_string()
 }
 
 fn combobox_group_items<'a>(group: &'a ComboboxGroup) -> &'a [ComboboxItem] {
@@ -341,13 +330,13 @@ fn apply_parts_patch_to_chips(chips: &mut ComboboxChips, parts: Vec<ComboboxChip
                 }
             }
             ComboboxChipsPart::Content(content) => {
-                apply_v4_content_patch_to_chips(chips, content);
+                apply_content_patch_to_chips(chips, content);
             }
         }
     }
 }
 
-fn apply_v4_content_patch_to_chips(chips: &mut ComboboxChips, content: ComboboxContent) {
+fn apply_content_patch_to_chips(chips: &mut ComboboxChips, content: ComboboxContent) {
     for child in content.children {
         match child {
             ComboboxContentPart::Input(input) => {

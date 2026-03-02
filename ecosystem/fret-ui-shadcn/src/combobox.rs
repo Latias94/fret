@@ -27,6 +27,7 @@ use fret_ui_kit::{
     resolve_override_slot, ui,
 };
 
+use crate::test_id::test_id_slug;
 use crate::{
     CommandEntry, CommandGroup, CommandItem, CommandList, CommandPalette, CommandSeparator, Drawer,
     DrawerContent, Popover, PopoverAnchor, PopoverContent,
@@ -35,18 +36,6 @@ use crate::{
 fn alpha_mul(mut c: Color, mul: f32) -> Color {
     c.a = (c.a * mul).clamp(0.0, 1.0);
     c
-}
-
-fn test_id_slug(s: &str) -> String {
-    let mut out = String::with_capacity(s.len());
-    for c in s.chars() {
-        if c.is_ascii_alphanumeric() {
-            out.push(c.to_ascii_lowercase());
-        } else {
-            out.push('-');
-        }
-    }
-    out.trim_matches('-').to_string()
 }
 
 fn combobox_group_items<'a>(group: &'a ComboboxGroup) -> &'a [ComboboxItem] {
