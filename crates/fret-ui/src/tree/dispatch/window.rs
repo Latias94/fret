@@ -227,30 +227,22 @@ impl<H: UiHost> UiTree<H> {
             }
             roots
         });
-        let hit_test_layer_roots: &[NodeId] = wheel_hit_test_layers
-            .as_deref()
-            .unwrap_or(active_layers.as_slice());
+        let dispatch_cx = self.build_dispatch_cx(app.frame_id(), active_layers, barrier_root);
+        let active_layers: &[NodeId] = dispatch_cx.active_input_roots.as_slice();
+        let barrier_root = dispatch_cx.input_barrier_root;
 
-        let dispatch_snapshot = self.build_dispatch_snapshot_for_layer_roots(
-            app.frame_id(),
-            active_layers.as_slice(),
-            barrier_root,
-        );
-        let node_in_active_layers = |node: NodeId| dispatch_snapshot.pre.get(node).is_some();
+        let hit_test_layer_roots: &[NodeId] =
+            wheel_hit_test_layers.as_deref().unwrap_or(active_layers);
+
+        let node_in_active_layers = |node: NodeId| dispatch_cx.node_in_active_input_layers(node);
 
         // Focus barriers (trap scopes / modal focus arbitration) must not rely on retained parent
         // pointers for correctness under retained/view-cache reuse. Enforce focus-barrier scope
         // using a snapshot forest built from child edges.
-        let (focus_roots, focus_barrier_root) = self.active_focus_layers();
-        if focus_barrier_root.is_some() && self.focus.is_some() {
-            let focus_snapshot = self.build_dispatch_snapshot_for_layer_roots(
-                app.frame_id(),
-                focus_roots.as_slice(),
-                focus_barrier_root,
-            );
+        if dispatch_cx.focus_barrier_root.is_some() && self.focus.is_some() {
             if self
                 .focus
-                .is_some_and(|n| focus_snapshot.pre.get(n).is_none())
+                .is_some_and(|n| !dispatch_cx.node_in_active_focus_layers(n))
             {
                 self.set_focus_unchecked(None, "dispatch/window: focus barrier scope");
             }
@@ -510,6 +502,7 @@ impl<H: UiHost> UiTree<H> {
                                 self.dispatch_event_to_node_chain(
                                     app,
                                     services,
+                                    &dispatch_cx,
                                     &input_ctx,
                                     node,
                                     event,
@@ -565,6 +558,7 @@ impl<H: UiHost> UiTree<H> {
                                     let stopped = self.dispatch_event_to_node_chain(
                                         app,
                                         services,
+                                        &dispatch_cx,
                                         &input_ctx,
                                         layer.root,
                                         event,
@@ -1390,9 +1384,9 @@ impl<H: UiHost> UiTree<H> {
                                 && self.focus_request_is_allowed(
                                     app,
                                     self.window,
-                                    &active_layers,
+                                    dispatch_cx.active_focus_roots.as_slice(),
                                     focus,
-                                    Some(&dispatch_snapshot),
+                                    Some(&dispatch_cx.focus_snapshot),
                                 )
                             {
                                 focus_requested = true;
@@ -1437,6 +1431,7 @@ impl<H: UiHost> UiTree<H> {
                                                 let _ = self.dispatch_event_to_node_chain(
                                                     app,
                                                     services,
+                                                    &dispatch_cx,
                                                     &cancel_ctx,
                                                     old_capture,
                                                     &cancel_event,
@@ -1577,9 +1572,9 @@ impl<H: UiHost> UiTree<H> {
                                 && self.focus_request_is_allowed(
                                     app,
                                     self.window,
-                                    &active_layers,
+                                    dispatch_cx.active_focus_roots.as_slice(),
                                     focus,
-                                    Some(&dispatch_snapshot),
+                                    Some(&dispatch_cx.focus_snapshot),
                                 )
                             {
                                 focus_requested = true;
@@ -1627,6 +1622,7 @@ impl<H: UiHost> UiTree<H> {
                                                 let _ = self.dispatch_event_to_node_chain(
                                                     app,
                                                     services,
+                                                    &dispatch_cx,
                                                     &cancel_ctx,
                                                     old_capture,
                                                     &cancel_event,
@@ -1771,9 +1767,9 @@ impl<H: UiHost> UiTree<H> {
                                 && self.focus_request_is_allowed(
                                     app,
                                     self.window,
-                                    &active_layers,
+                                    dispatch_cx.active_focus_roots.as_slice(),
                                     focus,
-                                    Some(&dispatch_snapshot),
+                                    Some(&dispatch_cx.focus_snapshot),
                                 )
                             {
                                 focus_requested = true;
@@ -1915,9 +1911,9 @@ impl<H: UiHost> UiTree<H> {
                                 && self.focus_request_is_allowed(
                                     app,
                                     self.window,
-                                    &active_layers,
+                                    dispatch_cx.active_focus_roots.as_slice(),
                                     focus,
-                                    Some(&dispatch_snapshot),
+                                    Some(&dispatch_cx.focus_snapshot),
                                 )
                             {
                                 focus_requested = true;
@@ -2081,9 +2077,9 @@ impl<H: UiHost> UiTree<H> {
                     && self.focus_request_is_allowed(
                         app,
                         self.window,
-                        &active_layers,
+                        dispatch_cx.active_focus_roots.as_slice(),
                         focus,
-                        Some(&dispatch_snapshot),
+                        Some(&dispatch_cx.focus_snapshot),
                     )
                 {
                     focus_requested = true;
@@ -2166,9 +2162,9 @@ impl<H: UiHost> UiTree<H> {
                 && self.focus_request_is_allowed(
                     app,
                     self.window,
-                    &active_layers,
+                    dispatch_cx.active_focus_roots.as_slice(),
                     focus,
-                    Some(&dispatch_snapshot),
+                    Some(&dispatch_cx.focus_snapshot),
                 )
             {
                 if let Some(prev) = self.focus {

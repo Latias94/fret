@@ -10,6 +10,7 @@ impl<H: UiHost> UiTree<H> {
         &mut self,
         app: &mut H,
         services: &mut dyn UiServices,
+        dispatch_cx: &DispatchCx,
         input_ctx: &InputContext,
         start: NodeId,
         event: &Event,
@@ -34,13 +35,7 @@ impl<H: UiHost> UiTree<H> {
             _ => None,
         };
 
-        let (active_roots, barrier_root) = self.active_input_layers();
-        let dispatch_snapshot = self.build_dispatch_snapshot_for_layer_roots(
-            app.frame_id(),
-            active_roots.as_slice(),
-            barrier_root,
-        );
-        let node_in_active_layers = |node: NodeId| dispatch_snapshot.pre.get(node).is_some();
+        let node_in_active_layers = |node: NodeId| dispatch_cx.node_in_active_input_layers(node);
         if event_position(event).is_some() {
             let chain = self.build_mapped_event_chain(start, event);
             let pointer_hit_is_text_input =
@@ -150,9 +145,9 @@ impl<H: UiHost> UiTree<H> {
                     && self.focus_request_is_allowed(
                         app,
                         self.window,
-                        &active_roots,
+                        dispatch_cx.active_focus_roots.as_slice(),
                         focus,
-                        Some(&dispatch_snapshot),
+                        Some(&dispatch_cx.focus_snapshot),
                     )
                 {
                     if let Some(prev) = self.focus {
@@ -202,6 +197,7 @@ impl<H: UiHost> UiTree<H> {
                         let _ = self.dispatch_event_to_node_chain(
                             app,
                             services,
+                            dispatch_cx,
                             input_ctx,
                             old_capture,
                             &cancel_event,
@@ -329,9 +325,9 @@ impl<H: UiHost> UiTree<H> {
                 && self.focus_request_is_allowed(
                     app,
                     self.window,
-                    &active_roots,
+                    dispatch_cx.active_focus_roots.as_slice(),
                     focus,
-                    Some(&dispatch_snapshot),
+                    Some(&dispatch_cx.focus_snapshot),
                 )
             {
                 if let Some(prev) = self.focus {
@@ -375,6 +371,7 @@ impl<H: UiHost> UiTree<H> {
                     let _ = self.dispatch_event_to_node_chain(
                         app,
                         services,
+                        dispatch_cx,
                         input_ctx,
                         old_capture,
                         &cancel_event,
