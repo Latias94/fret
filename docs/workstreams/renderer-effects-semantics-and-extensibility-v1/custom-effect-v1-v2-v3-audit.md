@@ -430,12 +430,13 @@ Changes:
     - Centralize intermediate budget math helpers (effective budget + allocation checks) in the RenderPlan compiler.
     - Carry effect-chain intermediate budget evidence (effective budget min/max + other-live max) into perf snapshots + diag stats.
     - Centralize “base required bytes” helpers to replace ad-hoc `full * N` budget checks.
-  - In progress:
     - Centralize intermediate budget charging helpers (mask targets + CustomV3 pyramid bytes), so “budget available / required” evidence is computed from a single source of truth.
+  - In progress:
+    - Extend diagnostics evidence to report the computed budget model inputs for the worst frame (budget, base required, optional required, chosen plan).
 - Landable steps (3–8, PR-sized):
   1) [Landed] Fix BackdropSourceGroup pyramid headroom accounting (avoid double-counting `raw_bytes`) and lock with a unit test.
   2) [Landed] Centralize “base required bytes” helpers used by CustomV1/V2/V3 (single-scratch, padded-chain work path, optional chain-raw) and use them everywhere instead of ad-hoc `full * N`.
-  3) [In progress] Centralize intermediate budget charging helpers (mask targets + CustomV3 pyramid bytes), so “budget available / required” evidence is computed from a single source of truth.
+  3) [Landed] Centralize intermediate budget charging helpers (mask targets + CustomV3 pyramid bytes), so “budget available / required” evidence is computed from a single source of truth.
   4) [Landed] Add a tiny table-driven conformance set for budget edges (budget=0 / insufficient / target exhausted) per ABI.
   5) [Planned] Extend diagnostics evidence to report the computed budget model inputs for the worst frame (budget, base required, optional required, chosen plan).
 
@@ -464,8 +465,6 @@ Conformance:
 
 Remaining:
 
-- Centralize intermediate budget charging helpers used by V1/V2/V3 (mask targets + pyramid bytes).
-- Add a tiny table-driven conformance test set that locks a few budget edge cases (budget=0, insufficient, target exhausted) per ABI.
 - Extend diagnostics evidence to report budget model inputs (budget, base required, optional required, chosen plan).
 
 Gates:
