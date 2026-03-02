@@ -339,18 +339,18 @@ Evidence anchors:
 
 ### Flex/Grid probe-pass behavior
 
-`flex` and `grid` widgets treat `LayoutPassKind::Probe` as “run measure() under definite available
-space”.
+`flex`, `grid`, and `text` widgets treat `LayoutPassKind::Probe` as “run measure() under a
+viewport-sized budget”, but the budget is now constructed via `LayoutCx::probe_constraints_for_size(...)`
+so overflow contexts can override the scroll axis to `MaxContent`.
 
-This preserves “probe pass does not see infinite viewport” invariants, but it also means that any
-prototype that uses probe passes to derive extents must ensure probe constraints represent the
-intended scroll-axis budget (or avoid probe passes entirely for extent derivation).
+This preserves “probe pass does not see infinite viewport” invariants on the cross axis, while
+still allowing scroll surfaces to opt into DOM/GPUI-like overflow observability.
 
 Evidence anchors:
 
 - Flex: `crates/fret-ui/src/declarative/host_widget/layout/flex.rs`
 - Grid: `crates/fret-ui/src/declarative/host_widget/layout/grid.rs`
-- Text (probe pass also hard-codes definite available space): `crates/fret-ui/src/declarative/host_widget/layout.rs`
+- Text: `crates/fret-ui/src/declarative/host_widget/layout.rs`
 
 ### Absolute-positioned nodes inclusion is inconsistent
 
