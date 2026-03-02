@@ -69,6 +69,8 @@ Suggested run commands (Windows-friendly):
 - [x] hover + selection do not rebuild geometry caches (paint-only baseline):
     - `tools/diag-scripts/node-graph/node-graph-paint-only-hover-and-select-do-not-rebuild-geometry.json`
 - [x] Wire `NodeGraphGeometryOverrides` into derived geometry + spatial index cache keys (revisioned).
+- [x] Wire `NodeGraphPaintOverrides` into paint-only rendering + add a diag gate (revision bump does not rebuild geometry):
+  - `tools/diag-scripts/node-graph/node-graph-paint-only-paint-overrides-revision-does-not-rebuild-geometry.json` (Ctrl+6, requires `FRET_DIAG=1`)
 
 ## M2 — Interaction + portals
 
