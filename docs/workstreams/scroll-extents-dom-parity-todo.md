@@ -47,7 +47,7 @@ Tracking format:
     - Absolute-positioned nodes inclusion/exclusion inconsistencies.
     - Observation boundedness (wrapper peeling depth + DFS budget) needs telemetry.
 
-- [ ] SE-111 Decide the mechanism contract for “fill vs fit” along the scroll axis.
+- [x] SE-111 Decide and implement the mechanism contract for “fill vs fit” along the scroll axis.
   - Goal: make “auto can overflow” vs “fill must clamp” an explicit, testable contract.
   - Evidence: `docs/workstreams/scroll-extents-dom-parity.md` (SE-110, clamp policy blockers).
 - [~] SE-112 Add a layout-time “overflow context” / available-space budget carrier.

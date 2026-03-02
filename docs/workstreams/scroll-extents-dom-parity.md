@@ -428,6 +428,13 @@ Implementation status:
   propagated through `LayoutCx` / `UiTree::layout_in_with_pass_kind`. In the post-layout extents
   gate, scroll roots install a context that sets the scroll axis probe budget to `MaxContent` so
   wrapper-heavy subtrees can measure descendants without a hard scroll-axis clamp.
+- SE-111 (clamp policy hook) is implemented. Under the scroll-installed overflow context, `Auto`
+  sizing is allowed to exceed the viewport-sized `available` budget on the scroll axis, so
+  overflow becomes visible in `node_bounds` for post-layout extent derivation.
+  - Evidence:
+    - Context field: `crates/fret-ui/src/layout/overflow.rs` (`allow_overflow_on_auto`)
+    - Clamp helper: `crates/fret-ui/src/declarative/layout_helpers.rs` (`clamp_to_constraints_with_overflow_context`)
+    - Scroll installs: `crates/fret-ui/src/declarative/host_widget/layout/scrolling.rs`
 - SE-113 (absolute exclusion parity) is implemented. Post-layout overflow observation now excludes
   absolute-positioned nodes by default, matching the intrinsic measurement skip behavior.
 - SE-114 (bounded-observation telemetry) is implemented. When wrapper peeling or bounded deep scan
