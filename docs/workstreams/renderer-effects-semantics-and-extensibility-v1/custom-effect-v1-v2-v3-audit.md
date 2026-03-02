@@ -226,11 +226,15 @@ Rollback:
 
 ### PR1 — Docs: audit + authoring guidance links
 
+Status:
+
+- Landed.
+
 Goal:
 
 - Make the current V1/V2/V3 semantics and known gaps discoverable from the workstream index.
 
-Changes:
+Changes (landed):
 
 - Add this audit note.
 - Add links from the workstream README to the audit note and the liquid-glass-related diag suites.
@@ -245,14 +249,18 @@ Rollback:
 
 ### PR2 — Refactor: dedupe WGSL stitch+validate in `services.rs` (no behavior change)
 
+Status:
+
+- Landed.
+
 Goal:
 
 - Remove v1/v2/v3 duplication in `build_and_validate_custom_effect_wgsl_v*` without changing the public surface.
 
-Changes:
+Changes (landed):
 
-- Introduce an internal helper like `build_and_validate_custom_effect_wgsl(abi, user_source, generators...)`.
-- Keep the per-ABI prelude generators as-is (just call the shared loop).
+- Introduce internal helper `build_and_validate_custom_effect_wgsl_with_sources(...)`.
+- Keep per-ABI stitch generators as-is; route v1/v2/v3 through the shared helper.
 
 Risks:
 
