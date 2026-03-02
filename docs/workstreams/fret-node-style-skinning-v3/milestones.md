@@ -2,8 +2,8 @@
 
 ## M0: Contract
 
-- [ ] ADR 0309 accepted
-- [ ] Evidence anchors identified (where paint caches live; where overrides apply)
+- [x] ADR 0309 accepted
+- [x] Evidence anchors identified (where paint caches live; where overrides apply)
 
 ## M1: UI-only paint overrides surface (no behavior yet)
 
@@ -22,6 +22,7 @@
 - [x] Implement `EdgePaintOverrideV1` resolution order:
   - `NodeGraphStyle.paint` defaults → presenter/edge_types hint → skin hints → paint overrides
 - [x] Support `stroke_paint`, `stroke_width_mul`, and `dash` overrides
+- [x] Markers reuse resolved wire paint binding (except `StrokeS01`, which conservatively falls back)
 
 ## M3b: Per-node paint overrides
 

@@ -1,6 +1,6 @@
 # ADR 0309: Node graph per-entity paint overrides (v1)
 
-- Status: Proposed
+- Status: Accepted
 - Date: 2026-03-02
 - Scope: `ecosystem/fret-node` (UI-only surface)
 
@@ -114,4 +114,3 @@ semantic categories, runtime previews) without cloning whole theme presets or fo
 - Add conformance gates:
   - paint overrides bump paint caches but do not rebuild geometry/index caches
   - per-edge overrides do not mutate serialized `Graph`
-

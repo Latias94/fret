@@ -1,6 +1,6 @@
 # Fret node graph style & skinning (v3)
 
-Status: Draft
+Status: Implemented (M4 deferred)
 
 This workstream continues the node graph styling work after:
 

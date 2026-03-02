@@ -46,7 +46,7 @@ overrides**:
 - XyFlow `edge.style.strokeDasharray` → Fret `EdgePaintOverrideV1.dash = DashPatternV1 { ... }`
 - XyFlow `interactionWidth` → Fret `EdgeGeometryOverrideV1.interaction_width_px`
 - XyFlow `markerStart/markerEnd` → Fret `EdgeRenderHint.{start_marker,end_marker}` (policy via
-  presenter/edge types/skin; marker paint binding is currently color-only)
+  presenter/edge types/skin; markers reuse the resolved wire `PaintBindingV1` when supported)
 
 ## Known gaps / planned extension points
 

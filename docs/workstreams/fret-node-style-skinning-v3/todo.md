@@ -2,11 +2,11 @@
 
 ## Design checks
 
-- [ ] Verify paint-only invariants (no geometry/hit-test dependencies on paint overrides)
+- [x] Verify paint-only invariants (no geometry/hit-test dependencies on paint overrides)
 - [x] Decide the minimal v1 override structs:
   - Edge: stroke paint/width mul/dash
   - Node: background/border paint (and optional header paint)
-- [ ] Define deterministic normalization rules for override structs (finite checks; clamping)
+- [x] Define deterministic normalization rules for override structs (finite checks; clamping)
 
 ## Implementation tasks
 
