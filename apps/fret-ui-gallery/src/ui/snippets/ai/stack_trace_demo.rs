@@ -1,12 +1,13 @@
-use super::super::super::super::*;
+pub const SOURCE: &str = include_str!("stack_trace_demo.rs");
 
-pub(in crate::ui) fn preview_ai_stack_trace_demo(
-    cx: &mut ElementContext<'_, App>,
-    _theme: &Theme,
-) -> Vec<AnyElement> {
-    use fret_ui_kit::declarative::stack;
-    use fret_ui_kit::{LayoutRefinement, Space};
+// region: example
+use fret_ui_ai as ui_ai;
+use fret_ui_kit::declarative::stack;
+use fret_ui_kit::{LayoutRefinement, Space};
+use fret_ui_shadcn::prelude::*;
+use std::sync::Arc;
 
+pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement {
     let trace: Arc<str> = Arc::from(
         "Error: failed to render\n    at render (src/render.rs:42:9)\n    at main (src/main.rs:10:1)\n",
     );
@@ -21,7 +22,7 @@ pub(in crate::ui) fn preview_ai_stack_trace_demo(
         .test_id_frames("ui-ai-stack-trace-frames")
         .into_element(cx);
 
-    vec![stack::vstack(
+    stack::vstack(
         cx,
         stack::VStackProps::default()
             .layout(LayoutRefinement::default().w_full().min_w_0())
@@ -33,5 +34,7 @@ pub(in crate::ui) fn preview_ai_stack_trace_demo(
                 stack,
             ]
         },
-    )]
+    )
 }
+// endregion: example
+

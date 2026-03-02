@@ -1,21 +1,20 @@
-use super::super::super::super::*;
+pub const SOURCE: &str = include_str!("test_results_large_demo.rs");
 
-pub(in crate::ui) fn preview_ai_test_results_large_demo(
-    cx: &mut ElementContext<'_, App>,
-    _theme: &Theme,
-) -> Vec<AnyElement> {
-    use std::sync::Arc;
+// region: example
+use fret_runtime::Model;
+use fret_ui::Invalidation;
+use fret_ui_ai as ui_ai;
+use fret_ui_kit::declarative::stack;
+use fret_ui_kit::{LayoutRefinement, Space};
+use fret_ui_shadcn::prelude::*;
+use std::sync::Arc;
 
-    use fret_runtime::Model;
-    use fret_ui::Invalidation;
-    use fret_ui_kit::declarative::stack;
-    use fret_ui_kit::{LayoutRefinement, Space};
+#[derive(Default)]
+struct DemoModels {
+    activated: Option<Model<bool>>,
+}
 
-    #[derive(Default)]
-    struct DemoModels {
-        activated: Option<Model<bool>>,
-    }
-
+pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement {
     let activated = cx.with_state(DemoModels::default, |st| st.activated.clone());
     let activated = match activated {
         Some(model) => model,
@@ -73,7 +72,7 @@ pub(in crate::ui) fn preview_ai_test_results_large_demo(
         .test_id_root("ui-ai-test-results-large-root")
         .into_element(cx);
 
-    vec![stack::vstack(
+    stack::vstack(
         cx,
         stack::VStackProps::default()
             .layout(LayoutRefinement::default().w_full().min_w_0())
@@ -85,5 +84,7 @@ pub(in crate::ui) fn preview_ai_test_results_large_demo(
                 root,
             ]
         },
-    )]
+    )
 }
+// endregion: example
+

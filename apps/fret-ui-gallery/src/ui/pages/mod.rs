@@ -19,6 +19,11 @@ mod ai_shimmer_demo;
 mod ai_snippet_demo;
 mod ai_suggestions_demo;
 mod ai_terminal_demo;
+mod ai_stack_trace_demo;
+mod ai_stack_trace_large_demo;
+mod ai_task_demo;
+mod ai_test_results_demo;
+mod ai_test_results_large_demo;
 mod ai_tool_demo;
 mod ai_voice_selector_demo;
 mod ai_web_preview_demo;
@@ -138,6 +143,20 @@ pub(super) fn preview_ai_terminal_demo(
     ai_terminal_demo::preview_ai_terminal_demo(cx, theme)
 }
 
+pub(super) fn preview_ai_stack_trace_demo(
+    cx: &mut ElementContext<'_, App>,
+    theme: &Theme,
+) -> Vec<AnyElement> {
+    ai_stack_trace_demo::preview_ai_stack_trace_demo(cx, theme)
+}
+
+pub(super) fn preview_ai_stack_trace_large_demo(
+    cx: &mut ElementContext<'_, App>,
+    theme: &Theme,
+) -> Vec<AnyElement> {
+    ai_stack_trace_large_demo::preview_ai_stack_trace_large_demo(cx, theme)
+}
+
 pub(super) fn preview_ai_tool_demo(
     cx: &mut ElementContext<'_, App>,
     theme: &Theme,
@@ -164,6 +183,24 @@ pub(super) fn preview_ai_suggestions_demo(
     theme: &Theme,
 ) -> Vec<AnyElement> {
     ai_suggestions_demo::preview_ai_suggestions_demo(cx, theme)
+}
+
+pub(super) fn preview_ai_task_demo(cx: &mut ElementContext<'_, App>, theme: &Theme) -> Vec<AnyElement> {
+    ai_task_demo::preview_ai_task_demo(cx, theme)
+}
+
+pub(super) fn preview_ai_test_results_demo(
+    cx: &mut ElementContext<'_, App>,
+    theme: &Theme,
+) -> Vec<AnyElement> {
+    ai_test_results_demo::preview_ai_test_results_demo(cx, theme)
+}
+
+pub(super) fn preview_ai_test_results_large_demo(
+    cx: &mut ElementContext<'_, App>,
+    theme: &Theme,
+) -> Vec<AnyElement> {
+    ai_test_results_large_demo::preview_ai_test_results_large_demo(cx, theme)
 }
 
 pub(super) fn preview_ai_prompt_input_provider_demo(

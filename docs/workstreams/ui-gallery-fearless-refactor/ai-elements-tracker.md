@@ -50,13 +50,13 @@ Status labels:
 | `snippet_demo` | `PAGE_AI_SNIPPET_DEMO` | (removed) | `apps/fret-ui-gallery/src/ui/snippets/ai/snippet_demo.rs` | `apps/fret-ui-gallery/src/ui/pages/ai_snippet_demo.rs` | Snippet-backed |
 | `sources_demo` | `PAGE_AI_SOURCES_DEMO` | (removed) | `apps/fret-ui-gallery/src/ui/snippets/ai/sources_demo.rs` | `apps/fret-ui-gallery/src/ui/pages/ai_sources_demo.rs` | Snippet-backed |
 | `speech_input_demo` | `PAGE_AI_SPEECH_INPUT_DEMO` | `apps/fret-ui-gallery/src/ui/previews/gallery/ai/speech_input_demo.rs` | — | — | Legacy preview |
-| `stack_trace_demo` | `PAGE_AI_STACK_TRACE_DEMO` | `apps/fret-ui-gallery/src/ui/previews/gallery/ai/stack_trace_demo.rs` | — | — | Legacy preview |
-| `stack_trace_large_demo` | `PAGE_AI_STACK_TRACE_LARGE_DEMO` | `apps/fret-ui-gallery/src/ui/previews/gallery/ai/stack_trace_large_demo.rs` | — | — | Legacy preview |
+| `stack_trace_demo` | `PAGE_AI_STACK_TRACE_DEMO` | (removed) | `apps/fret-ui-gallery/src/ui/snippets/ai/stack_trace_demo.rs` | `apps/fret-ui-gallery/src/ui/pages/ai_stack_trace_demo.rs` | Snippet-backed |
+| `stack_trace_large_demo` | `PAGE_AI_STACK_TRACE_LARGE_DEMO` | (removed) | `apps/fret-ui-gallery/src/ui/snippets/ai/stack_trace_large_demo.rs` | `apps/fret-ui-gallery/src/ui/pages/ai_stack_trace_large_demo.rs` | Snippet-backed |
 | `suggestions_demo` | `PAGE_AI_SUGGESTIONS_DEMO` | (removed) | `apps/fret-ui-gallery/src/ui/snippets/ai/suggestions_demo.rs` | `apps/fret-ui-gallery/src/ui/pages/ai_suggestions_demo.rs` | Snippet-backed |
-| `task_demo` | `PAGE_AI_TASK_DEMO` | `apps/fret-ui-gallery/src/ui/previews/gallery/ai/task_demo.rs` | — | — | Legacy preview |
+| `task_demo` | `PAGE_AI_TASK_DEMO` | (removed) | `apps/fret-ui-gallery/src/ui/snippets/ai/task_demo.rs` | `apps/fret-ui-gallery/src/ui/pages/ai_task_demo.rs` | Snippet-backed |
 | `terminal_demo` | `PAGE_AI_TERMINAL_DEMO` | (removed) | `apps/fret-ui-gallery/src/ui/snippets/ai/terminal_demo.rs` | `apps/fret-ui-gallery/src/ui/pages/ai_terminal_demo.rs` | Snippet-backed |
-| `test_results_demo` | `PAGE_AI_TEST_RESULTS_DEMO` | `apps/fret-ui-gallery/src/ui/previews/gallery/ai/test_results_demo.rs` | — | — | Legacy preview |
-| `test_results_large_demo` | `PAGE_AI_TEST_RESULTS_LARGE_DEMO` | `apps/fret-ui-gallery/src/ui/previews/gallery/ai/test_results_large_demo.rs` | — | — | Legacy preview |
+| `test_results_demo` | `PAGE_AI_TEST_RESULTS_DEMO` | (removed) | `apps/fret-ui-gallery/src/ui/snippets/ai/test_results_demo.rs` | `apps/fret-ui-gallery/src/ui/pages/ai_test_results_demo.rs` | Snippet-backed |
+| `test_results_large_demo` | `PAGE_AI_TEST_RESULTS_LARGE_DEMO` | (removed) | `apps/fret-ui-gallery/src/ui/snippets/ai/test_results_large_demo.rs` | `apps/fret-ui-gallery/src/ui/pages/ai_test_results_large_demo.rs` | Snippet-backed |
 | `tool_demo` | `PAGE_AI_TOOL_DEMO` | (removed) | `apps/fret-ui-gallery/src/ui/snippets/ai/tool_demo.rs` | `apps/fret-ui-gallery/src/ui/pages/ai_tool_demo.rs` | Snippet-backed |
 | `transcript_torture` | `PAGE_AI_TRANSCRIPT_TORTURE` | `apps/fret-ui-gallery/src/ui/previews/gallery/ai/transcript_torture.rs` | — | — | Legacy preview |
 | `transcription_demo` | `PAGE_AI_TRANSCRIPTION_DEMO` | `apps/fret-ui-gallery/src/ui/previews/gallery/ai/transcription_demo.rs` | — | — | Legacy preview |
