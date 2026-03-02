@@ -41,6 +41,23 @@ Tracking format:
 - [~] SE-110 Identify current “available size clamping” behaviors that prevent overflow.
   - List the minimum set of element types that must change to allow DOM-like overflow.
   - Initial inventory: `docs/workstreams/scroll-extents-dom-parity.md` (SE-110)
+  - Blockers called out so far:
+    - `clamp_to_constraints(...)` treats `available` as a hard maximum (even for `Auto`).
+    - Layout probe paths that always use definite `Rect` budgets (container-ish wrappers, flex/grid).
+    - Absolute-positioned nodes inclusion/exclusion inconsistencies.
+    - Observation boundedness (wrapper peeling depth + DFS budget) needs telemetry.
+
+- [ ] SE-111 Decide the mechanism contract for “fill vs fit” along the scroll axis.
+  - Goal: make “auto can overflow” vs “fill must clamp” an explicit, testable contract.
+  - Evidence: `docs/workstreams/scroll-extents-dom-parity.md` (SE-110, clamp policy blockers).
+- [ ] SE-112 Add a layout-time “overflow context” / available-space budget carrier.
+  - Goal: let layout paths express `MaxContent` on the scroll axis without requiring a huge `Rect`.
+  - Targets: `LayoutCx` + the key budget-clamping wrappers (container-ish layouts, positioned
+    containers, flex/grid probe paths).
+- [ ] SE-113 Standardize absolute-positioned node exclusion for extents.
+  - Goal: ensure post-layout extents observation and intrinsic sizing agree (default: exclude).
+- [ ] SE-114 Surface bounded-observation telemetry for extents (budget hits).
+  - Goal: detect when wrapper peeling/DFS budgets under-observe overflow in real UIs.
 
 ## Prototype (Behind a Gate)
 

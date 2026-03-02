@@ -278,6 +278,23 @@ Implication:
 This is the core reason the current scroll implementation uses `probe_unbounded` + deep
 `measure_in(...)` to compute a `content_bounds` rect before laying out children.
 
+### Blocker: `clamp_to_constraints(...)` treats `available` as a hard maximum (even for `Auto`)
+
+`clamp_to_constraints(...)` always clamps the final `size.{width,height}` to `available`, even when
+the corresponding style length is `Auto`.
+
+This makes “auto-sized children can exceed the viewport and overflow” difficult to express in pure
+post-layout terms: if parents consistently pass viewport-sized `Rect`s and children clamp to that
+available size, then overflow never materializes in `node_bounds` for extents observation to union.
+
+Evidence anchors:
+
+- `crates/fret-ui/src/declarative/layout_helpers.rs` (`clamp_to_constraints`, final clamp to
+  `available`)
+- Callsite notes that depend on this behavior:
+  - `crates/fret-ui/src/declarative/host_widget/layout/scrolling.rs`
+  - `crates/fret-ui/src/declarative/host_widget/layout/positioned_container.rs`
+
 ### Budget-clamping wrappers (block overflow discovery)
 
 Several common wrappers explicitly measure/probe children **within the parent’s constrained size**
@@ -334,10 +351,22 @@ Decision needed for parity:
 To make a “post-layout extents” prototype realistic (without relying on deep pre-layout measure
 probes), we likely need at least one of these mechanism-level additions:
 
-1. **Layout-time available-space budgets**:
+1. **Layout-time available-space budgets / overflow contexts**:
    - Add a way for `layout_in(...)` / `LayoutCx` to carry “scroll axis budget is MaxContent” without
      requiring a giant `Rect` bounds.
-   - Budget-clamping wrappers (positioned containers, container shells) must consult this budget
+   - Budget-clamping wrappers (positioned containers, container shells, flex/grid probe paths) must
+     consult this budget when probing/measuring children.
+2. **A mechanism-level clamp policy hook (scoped)**:
+   - Keep `clamp_to_constraints(...)` as the default (it is widely relied on today),
+   - but allow scroll roots (or any explicit “overflow context”) to request a different clamp
+     policy on the scroll axis, so auto-sized descendants can exceed the viewport and still be
+     clipped/observed for extents.
+3. **Standardize absolute exclusion**:
+   - Ensure the extent derivation path and the intrinsic measurement path agree on whether absolute
+     nodes contribute to extents (default: exclude).
+4. **Keep observation bounded and debuggable**:
+   - Maintain a bounded scan budget (as we do today) and surface “budget hit” telemetry so we can
+     detect cases where wrapper chains exceed peeling/scan limits.
 
 ## Verification Plan (SE-210)
 
@@ -363,13 +392,6 @@ Evidence anchors:
 - **Overlay anchoring parity** (reanchoring and scroll extent updates staying in sync) requires a
   higher-level harness (diag scripts or integration tests) and is tracked separately until the
   overlay/anchor query surface is directly assertable in unit tests.
-     when probing/measuring children.
-2. **Explicit overflow contexts**:
-   - Install an inherited mechanism state at `Scroll` roots indicating which axis is allowed to
-     overflow and how wrappers should treat `cx.available` during probes.
-3. **Standardize absolute exclusion**:
-   - Ensure the extent derivation path and the intrinsic measurement path agree on whether absolute
-     nodes contribute to extents (default: exclude).
 
 ## Reference Direction (GPUI / DOM)
 
