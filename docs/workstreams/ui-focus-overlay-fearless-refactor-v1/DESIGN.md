@@ -58,6 +58,8 @@ Evidence anchors:
 - Regression tests (trap + stale parent pointers): `crates/fret-ui/src/tree/tests/focus_scope.rs`
 - Regression test (focus traversal availability under stale parent pointers):
   `crates/fret-ui/src/tree/tests/focus_traversal_availability.rs`
+- Regression test (hit-test-inert focus barrier layer):
+  `crates/fret-ui/src/tree/tests/focus_barrier_transition.rs`
 
 ## Plan: A + B → C (snapshot-first dispatch)
 

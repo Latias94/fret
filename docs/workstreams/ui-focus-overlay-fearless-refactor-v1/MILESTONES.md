@@ -30,6 +30,11 @@ Exit gates:
 - Add at least 3 focused regression tests in `crates/fret-ui` and/or shadcn recipe tests in
   `ecosystem/fret-ui-shadcn` that exercise the above sequences.
 
+Progress (2026-03-02):
+
+- Close-transition style focus barrier (hit-test-inert layer) is covered by:
+  - `crates/fret-ui/src/tree/tests/focus_barrier_transition.rs`
+
 ## M3 — Snapshot-first dispatch (C phase)
 
 Goal: containment during dispatch never depends on retained `parent` pointers.
