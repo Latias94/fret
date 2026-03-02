@@ -189,6 +189,11 @@ impl UiTreeDebugSnapshotV1 {
                 .iter()
                 .map(UiScrollHandleChangeV1::from_change)
                 .collect(),
+            scroll_nodes: ui
+                .debug_scroll_nodes()
+                .iter()
+                .map(UiScrollNodeTelemetryV1::from_record)
+                .collect(),
             prepaint_actions: ui
                 .debug_prepaint_actions()
                 .iter()

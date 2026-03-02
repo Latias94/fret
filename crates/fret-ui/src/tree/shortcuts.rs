@@ -21,6 +21,7 @@ pub(super) struct PendingShortcut {
 pub(super) struct PointerDownOutsideParams<'a> {
     pub(super) input_ctx: &'a InputContext,
     pub(super) active_layer_roots: &'a [NodeId],
+    pub(super) barrier_root: Option<NodeId>,
     pub(super) base_root: NodeId,
     pub(super) hit: Option<NodeId>,
     pub(super) event: &'a Event,

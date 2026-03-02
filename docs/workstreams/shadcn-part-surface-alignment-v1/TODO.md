@@ -27,10 +27,7 @@ See also: `docs/workstreams/shadcn-part-surface-alignment-v1/INVENTORY.md`.
 This is the suggested dev sequence for the next parity passes (optimize for “high leverage” and
 “high risk”):
 
-1. `toggle-group` (composite; keyboard expectations + part surface)
-2. `button-group` (variants helper + spacing defaults)
-3. `button` / `toggle` variants helpers (copy/paste parity; reduce drift)
-4. **Defer last**: `select` / `combobox` deeper redesign (structural drift is known; deeper than naming)
+1. **Defer last**: `select` / `combobox` deeper redesign (structural drift is known; deeper than naming). See `docs/workstreams/select-combobox-deep-redesign-v1/`.
 
 ## Tracker table
 
@@ -85,14 +82,18 @@ This is the suggested dev sequence for the next parity passes (optimize for “h
 | `kbd` | `Kbd, KbdGroup, kbd_icon` | `Kbd, KbdGroup, kbd_icon` | none (token-mapped defaults) | Low | Keep surface; lock layout + typography invariants and tooltip slot alpha mapping | unit tests in `ecosystem/fret-ui-shadcn/src/kbd.rs` | P2 | Done |
 | `resizable` | `ResizablePanelGroup, ResizablePanel, ResizableHandle` | `ResizablePanelGroup, ResizablePanel, ResizableHandle` (+ `test_id_prefix`) | Per-handle disabling is ignored; omits `SetValue` steps when fractions are missing/degenerate | Low | Keep part surface; lock splitter semantics + orientation + `with_handle` hit thickness | unit tests in `ecosystem/fret-ui-shadcn/src/resizable.rs` | P1 | Done (with known gaps) |
 | `sonner` | `Toaster` | `Toaster` (+ `Sonner` toast API) | Defaults differ from Sonner DOM library in minor ways; focus/keyboard viewport commands live in `fret-ui-kit` | Low | Keep part surface; lock toaster layout neutrality and toast layer visibility gating | unit tests in `ecosystem/fret-ui-shadcn/src/sonner.rs` | P1 | Done (with known gaps) |
+| `toggle-group` | `ToggleGroup, ToggleGroupItem` | `ToggleGroup, ToggleGroupItem` (+ `spacing: Space`, `ToggleVariant/ToggleSize` pass-through) | No DOM `data-*` attrs / selectors; vertical orientation now stretches items to match shadcn | Low | Keep surface; lock w-fit root + gap and vertical `items-stretch` via unit tests | unit tests in `ecosystem/fret-ui-shadcn/src/toggle_group.rs` | P1 | Done (with known gaps) |
+| `button-group` | `ButtonGroup, ButtonGroupText, ButtonGroupSeparator, buttonGroupVariants` | `ButtonGroup*` parts + `buttonGroupVariants(...)` | No DOM `data-slot` selectors; separator margins are modeled as explicit layout defaults | Low | Keep part surface; lock w-fit root + stretch + border/corner merging and separator `mx/my-px` defaults via unit tests | unit tests in `ecosystem/fret-ui-shadcn/src/button_group.rs` | P1 | Done (with known gaps) |
+| `button` | `Button, buttonVariants` | `Button` + `buttonVariants(...)` | No DOM `data-*` attrs / selectors; link behavior is modeled via `ButtonRender::Link` | Low | Keep surface; lock shrink-0, disabled focusability, icon sizing, and focus-ring/border outcomes via unit tests | unit tests in `ecosystem/fret-ui-shadcn/src/button.rs` | P1 | Done (with known gaps) |
+| `toggle` | `Toggle, toggleVariants` | `Toggle` + `toggleVariants(...)` | No DOM `data-*` attrs / selectors | Low | Keep surface; lock uncontrolled pressed defaults, semantics stamping, and command gating via unit tests | unit tests in `ecosystem/fret-ui-shadcn/src/toggle.rs` | P1 | Done (with known gaps) |
 
-## Backlog (not audited yet)
+## Backlog (next up)
 
 This is the short “next few” list. Full inventory is in `INVENTORY.md`.
 
 | Component | Upstream base file | Fret module | Priority | Status | Notes |
 |---|---|---|---:|---|---|
-| `toggle-group` | `repo-ref/ui/apps/v4/registry/bases/radix/ui/toggle-group.tsx` | `ecosystem/fret-ui-shadcn/src/toggle_group.rs` | P1 | Not started | Gate: roving focus + selection semantics + variant/size defaults. |
+| `select` / `combobox` deep redesign | (see per-module refs) | `ecosystem/fret-ui-shadcn/src/select.rs` / `ecosystem/fret-ui-shadcn/src/combobox.rs` | P0 | Deferred (planned) | Structural drift is known; keep for last. Workstream: `docs/workstreams/select-combobox-deep-redesign-v1/`. |
 
 ## Notes / recurring hazards
 

@@ -64,10 +64,15 @@ Tracking format:
     - `crates/fret-ui/src/declarative/host_widget/layout/scrolling.rs` (scroll installs context under gate)
     - `crates/fret-ui/src/declarative/host_widget/layout.rs` and
       `crates/fret-ui/src/declarative/host_widget/layout/positioned_container.rs` (probe helpers consult context)
-- [ ] SE-113 Standardize absolute-positioned node exclusion for extents.
+- [x] SE-113 Standardize absolute-positioned node exclusion for extents.
   - Goal: ensure post-layout extents observation and intrinsic sizing agree (default: exclude).
-- [ ] SE-114 Surface bounded-observation telemetry for extents (budget hits).
+  - Implementation evidence:
+    - `crates/fret-ui/src/declarative/host_widget/layout/scrolling.rs` (`observe_scroll_overflow_extents`, filters absolute nodes)
+- [x] SE-114 Surface bounded-observation telemetry for extents (budget hits).
   - Goal: detect when wrapper peeling/DFS budgets under-observe overflow in real UIs.
+  - Implementation evidence:
+    - `crates/fret-ui/src/tree/debug/scroll.rs` (`UiDebugScrollOverflowObservationTelemetry`)
+    - `crates/fret-ui/src/declarative/host_widget/layout/scrolling.rs` (`observe_scroll_overflow_extents`, budget-hit recording)
 
 ## Prototype (Behind a Gate)
 

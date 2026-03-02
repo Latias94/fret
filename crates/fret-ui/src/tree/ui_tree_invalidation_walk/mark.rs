@@ -15,16 +15,17 @@ impl<H: UiHost> UiTree<H> {
             UiDebugInvalidationSource::Notify
                 | UiDebugInvalidationSource::ModelChange
                 | UiDebugInvalidationSource::GlobalChange
-        ) || (inv != Invalidation::Paint
-            && matches!(
-                detail,
-                UiDebugInvalidationDetail::ScrollHandleLayout
-                    | UiDebugInvalidationDetail::ScrollHandleWindowUpdate
-                    | UiDebugInvalidationDetail::ScrollHandleScrollToItemWindowUpdate
-                    | UiDebugInvalidationDetail::ScrollHandleViewportResizeWindowUpdate
-                    | UiDebugInvalidationDetail::ScrollHandleItemsRevisionWindowUpdate
-                    | UiDebugInvalidationDetail::ScrollHandlePrefetchWindowUpdate
-            ))
+        ) || matches!(detail, UiDebugInvalidationDetail::HoverRegionEdge)
+            || (inv != Invalidation::Paint
+                && matches!(
+                    detail,
+                    UiDebugInvalidationDetail::ScrollHandleLayout
+                        | UiDebugInvalidationDetail::ScrollHandleWindowUpdate
+                        | UiDebugInvalidationDetail::ScrollHandleScrollToItemWindowUpdate
+                        | UiDebugInvalidationDetail::ScrollHandleViewportResizeWindowUpdate
+                        | UiDebugInvalidationDetail::ScrollHandleItemsRevisionWindowUpdate
+                        | UiDebugInvalidationDetail::ScrollHandlePrefetchWindowUpdate
+                ))
     }
 
     fn record_invalidation_walk_call(&mut self, source: UiDebugInvalidationSource) {

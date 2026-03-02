@@ -1,0 +1,103 @@
+{
+  "schema_version": 2,
+  "meta": {
+    "name": "Node graph (paint-only): paint overrides bump does not rebuild geometry caches",
+    "tags": ["node-graph", "declarative", "paint-only", "overrides", "paint", "cache", "gate"],
+    "required_capabilities": ["diag.script_v2"],
+    "target_hints": [
+      "Run with `FRET_NODE_GRAPH_DECLARATIVE=paint` so the paint-only declarative surface is active.",
+      "Uses the diagnostics-only paint overrides toggle (Ctrl+6). Requires `FRET_DIAG=1`.",
+      "Asserts that paint override revision bumps do not rebuild derived geometry/spatial caches."
+    ]
+  },
+  "steps": [
+    { "type": "press_key", "key": "escape" },
+    { "type": "wait_frames", "n": 5 },
+    {
+      "type": "wait_until",
+      "predicate": { "kind": "exists", "target": { "kind": "test_id", "id": "node_graph.canvas" } },
+      "timeout_frames": 600
+    },
+    { "type": "move_pointer", "target": { "kind": "test_id", "id": "node_graph.canvas" } },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "value_contains",
+        "target": { "kind": "test_id", "id": "node_graph.canvas" },
+        "text": "geom_rebuilds:1;"
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "value_contains",
+        "target": { "kind": "test_id", "id": "node_graph.canvas" },
+        "text": "nodes_rebuilds:1;"
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "value_contains",
+        "target": { "kind": "test_id", "id": "node_graph.canvas" },
+        "text": "edges_rebuilds:1;"
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "value_contains",
+        "target": { "kind": "test_id", "id": "node_graph.canvas" },
+        "text": "paint_overrides_rev:0;"
+      },
+      "timeout_frames": 600
+    },
+
+    { "type": "click", "target": { "kind": "test_id", "id": "node_graph.canvas" }, "button": "left" },
+    { "type": "wait_frames", "n": 2 },
+    { "type": "press_key", "key": "6", "modifiers": { "ctrl": true } },
+    { "type": "wait_frames", "n": 10 },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "value_contains",
+        "target": { "kind": "test_id", "id": "node_graph.canvas" },
+        "text": "paint_overrides_rev:1;"
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "value_contains",
+        "target": { "kind": "test_id", "id": "node_graph.canvas" },
+        "text": "geom_rebuilds:1;"
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "value_contains",
+        "target": { "kind": "test_id", "id": "node_graph.canvas" },
+        "text": "nodes_rebuilds:1;"
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "value_contains",
+        "target": { "kind": "test_id", "id": "node_graph.canvas" },
+        "text": "edges_rebuilds:1;"
+      },
+      "timeout_frames": 600
+    },
+
+    { "type": "capture_bundle", "label": "node-graph-paint-only-paint-overrides-revision-does-not-rebuild-geometry" }
+  ]
+}
+

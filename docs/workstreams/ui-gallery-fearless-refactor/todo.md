@@ -9,6 +9,14 @@ Legend:
 
 ## TODO (phased)
 
+## Status
+
+As of 2026-03-02, UI Gallery component pages under `apps/fret-ui-gallery/src/ui/pages/**` are
+**snippet-backed** (Preview ≡ Code) and the core enforcement tests are in place.
+
+Any remaining legacy surfaces that embed raw Rust code strings are tracked via the drift audit
+(`apps/fret-ui-gallery/build.rs`) and should be migrated as follow-up work.
+
 ### Foundations
 
 - [x] Add `apps/fret-ui-gallery/src/ui/snippets/` with a minimal example.
@@ -21,16 +29,24 @@ Legend:
 - [x] Migrate Select page(s) to snippet-backed sections.
 - [x] Migrate Input Group page(s) to snippet-backed sections.
 - [x] Migrate overlay family pages (Alert Dialog, Dropdown Menu, Menubar, Context Menu, Popover, Tooltip, Dialog, Sheet, Drawer).
-- [ ] Migrate form family pages (Input, Input Group, Textarea, Checkbox, Radio Group, Switch, Slider, Toggle, Toggle Group, Select, Combobox).
-- [ ] Migrate layout + data-display pages (Tabs, Table, Data Table, Chart, Calendar, Carousel, Scroll Area, Navigation Menu, Pagination, etc).
+- [x] Migrate form family pages (Input, Input Group, Textarea, Checkbox, Radio Group, Switch, Slider, Toggle, Toggle Group, Select, Combobox).
+- [x] Migrate layout + data-display pages (Tabs, Table, Data Table, Chart, Calendar, Carousel, Scroll Area, Navigation Menu, Pagination, etc).
 
 ### Enforcement
 
 - [x] Add a lint/test that forbids new `DocSection::code("rust", r#"...")` on migrated pages (`apps/fret-ui-gallery/tests/ui_pages_deny_rust_code_literals.rs`).
+- [x] Forbid new `.code("rust", ...)` literals under `src/ui/previews/pages/**` (`apps/fret-ui-gallery/tests/ui_previews_pages_deny_rust_code_literals.rs`).
 - [x] Forbid `include_str!("../snippets/...")` usage in pages; require `snippets::*::SOURCE` to avoid refactor path drift (`apps/fret-ui-gallery/tests/ui_pages_deny_relative_snippet_includes.rs`).
 - [x] Forbid snippet files from importing UI Gallery internals (`crate::ui`, `crate::spec`) (`apps/fret-ui-gallery/tests/ui_snippets_deny_gallery_internal_imports.rs`).
 - [x] Require every snippet file to export a `SOURCE` const (`apps/fret-ui-gallery/tests/ui_snippets_require_source_const.rs`).
-- [ ] Add a small “drift audit” doc section in UI Gallery (optional) to list remaining legacy sections.
+- [x] Add a small “drift audit” doc section in UI Gallery (optional) to list remaining legacy sections (`apps/fret-ui-gallery/build.rs`, `apps/fret-ui-gallery/src/ui/previews/pages/harness/intro.rs`).
+
+### Next (post-migration)
+
+- [x] Expand drift audit coverage to include non-`src/ui/pages/**` preview surfaces (`src/ui/previews/**`).
+- [x] Migrate Calendar page(s) out of `src/ui/previews/**` so copyable code stays drift-free.
+- [ ] Normalize DocSection chrome/layout (max widths, padding, “Notes” shell usage) across pages.
+- [ ] Optional: align page taxonomy + section ordering to upstream shadcn MDX navigation.
 
 Notes:
 
@@ -57,7 +73,7 @@ Source list: upstream shadcn v4 Base/Radix doc trees:
 
 | Component | Base MDX | Radix MDX | Fret module | Gallery Page | Snippet-backed | Status | Gates | Notes |
 |---|---|---|---|---:|---:|---:|---|---|
-| accordion | `repo-ref/ui/apps/v4/content/docs/components/base/accordion.mdx` | `repo-ref/ui/apps/v4/content/docs/components/radix/accordion.mdx` | `accordion` | TBD | No | Not started |  |  |
+| accordion | `repo-ref/ui/apps/v4/content/docs/components/base/accordion.mdx` | `repo-ref/ui/apps/v4/content/docs/components/radix/accordion.mdx` | `accordion` | `apps/fret-ui-gallery/src/ui/pages/accordion.rs` | Yes | Done |  | Snippet-backed previews + region-sliced code tabs (preview ≡ code). Keep `ui-gallery-accordion-demo-*` test_ids stable for future diag scripts. |
 | alert | `repo-ref/ui/apps/v4/content/docs/components/base/alert.mdx` | `repo-ref/ui/apps/v4/content/docs/components/radix/alert.mdx` | `alert` | `apps/fret-ui-gallery/src/ui/pages/alert.rs` | Yes | Done | `tools/diag-scripts/ui-gallery/alert/ui-gallery-alert-*.json` | Snippet-backed previews + region-sliced code tabs (preview ≡ code). Keep `ui-gallery-alert-tabs-trigger-*` stable for diag scripts. |
 | alert-dialog | `repo-ref/ui/apps/v4/content/docs/components/base/alert-dialog.mdx` | `repo-ref/ui/apps/v4/content/docs/components/radix/alert-dialog.mdx` | `alert_dialog` | `apps/fret-ui-gallery/src/ui/pages/alert_dialog.rs` | Yes | Done | `tools/diag-scripts/ui-gallery/overlay/ui-gallery-alert-dialog-*`, `tools/diag-scripts/ui-gallery/alert-dialog/ui-gallery-alert-dialog-part-surface-smoke.json` | Snippet-backed previews + region-sliced code tabs (preview ≡ code). Keep Basic/RTL doc section IDs stable for diag scripts. |
 | aspect-ratio | `repo-ref/ui/apps/v4/content/docs/components/base/aspect-ratio.mdx` | `repo-ref/ui/apps/v4/content/docs/components/radix/aspect-ratio.mdx` | `aspect_ratio` | `apps/fret-ui-gallery/src/ui/pages/aspect_ratio.rs` | Yes | Done | `tools/diag-scripts/ui-gallery/aspect-ratio/ui-gallery-aspect-ratio-*.json` | Snippet-backed previews + region-sliced code tabs (preview ≡ code). Keep Demo section `docsec-demo-*` IDs stable for diag scripts. |
@@ -66,7 +82,7 @@ Source list: upstream shadcn v4 Base/Radix doc trees:
 | breadcrumb | `repo-ref/ui/apps/v4/content/docs/components/base/breadcrumb.mdx` | `repo-ref/ui/apps/v4/content/docs/components/radix/breadcrumb.mdx` | `breadcrumb` | `apps/fret-ui-gallery/src/ui/pages/breadcrumb.rs` | Yes | Done | `tools/diag-scripts/ui-gallery/breadcrumb/ui-gallery-breadcrumb-*.json` | Snippet-backed previews + region-sliced code tabs (preview ≡ code). Keep `ui-gallery-breadcrumb-*` section title test IDs stable for diag scripts. |
 | button | `repo-ref/ui/apps/v4/content/docs/components/base/button.mdx` | `repo-ref/ui/apps/v4/content/docs/components/radix/button.mdx` | `button` | `apps/fret-ui-gallery/src/ui/pages/button.rs` | Yes | Done | `tools/diag-scripts/ui-gallery/button/ui-gallery-button-*.json` | Snippet-backed previews + region-sliced code tabs (preview ≡ code). Keep `ui-gallery-button-variant-*` and `ui-gallery-button-render-link` stable for layout/semantics gates. |
 | button-group | `repo-ref/ui/apps/v4/content/docs/components/base/button-group.mdx` | `repo-ref/ui/apps/v4/content/docs/components/radix/button-group.mdx` | `button_group` | `apps/fret-ui-gallery/src/ui/pages/button_group.rs` | Yes | Done | `tools/diag-scripts/ui-gallery/button/ui-gallery-button-group-demo-screenshots.json`, `tools/diag-scripts/ui-gallery/button/ui-gallery-button-group-select-screenshots.json` | Snippet-backed previews + region-sliced code tabs for all Button Group sections (preview ≡ code). |
-| calendar | `repo-ref/ui/apps/v4/content/docs/components/base/calendar.mdx` | `repo-ref/ui/apps/v4/content/docs/components/radix/calendar.mdx` | `calendar` | TBD | No | Not started |  |  |
+| calendar | `repo-ref/ui/apps/v4/content/docs/components/base/calendar.mdx` | `repo-ref/ui/apps/v4/content/docs/components/radix/calendar.mdx` | `calendar` | `apps/fret-ui-gallery/src/ui/pages/calendar.rs` | Yes | Done | `tools/diag-scripts/ui-gallery/calendar/ui-gallery-calendar-*.json` | Snippet-backed previews + region-sliced code tabs (preview ≡ code). Keep `ui-gallery.calendar.*` test_id prefixes stable for diag scripts. |
 | card | `repo-ref/ui/apps/v4/content/docs/components/base/card.mdx` | `repo-ref/ui/apps/v4/content/docs/components/radix/card.mdx` | `card` | `apps/fret-ui-gallery/src/ui/pages/card.rs` | Yes | Done | `tools/diag-scripts/ui-gallery/card/ui-gallery-card-*.json` | Snippet-backed previews + region-sliced code tabs (preview ≡ code). |
 | carousel | `repo-ref/ui/apps/v4/content/docs/components/base/carousel.mdx` | `repo-ref/ui/apps/v4/content/docs/components/radix/carousel.mdx` | `carousel` | `apps/fret-ui-gallery/src/ui/pages/carousel.rs` | Yes | Done | `tools/diag-scripts/ui-gallery/carousel/ui-gallery-carousel-*.json` | Snippet-backed previews + region-sliced code tabs (preview ≡ code). Keep `ui-gallery-carousel-demo-*` + duration + API `test_id`s stable for diag scripts. |
 | chart | `repo-ref/ui/apps/v4/content/docs/components/base/chart.mdx` | `repo-ref/ui/apps/v4/content/docs/components/radix/chart.mdx` | `chart` | `apps/fret-ui-gallery/src/ui/pages/chart.rs` | Yes | Done | `tools/diag-scripts/ui-gallery/chart/ui-gallery-chart-*.json` | Snippet-backed previews + region-sliced code tabs (preview ≡ code). Keep `ui-gallery-chart-*` `test_id`s stable for diag scripts. |

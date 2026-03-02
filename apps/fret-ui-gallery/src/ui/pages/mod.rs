@@ -2,12 +2,14 @@ use super::*;
 
 mod alert;
 mod alert_dialog;
+mod accordion;
 mod aspect_ratio;
 mod avatar;
 mod badge;
 mod breadcrumb;
 mod button;
 mod button_group;
+mod calendar;
 mod card;
 mod carousel;
 mod chart;
@@ -66,6 +68,13 @@ pub(super) fn preview_alert(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement>
     alert::preview_alert(cx)
 }
 
+pub(super) fn preview_accordion(
+    cx: &mut ElementContext<'_, App>,
+    value: Model<Option<Arc<str>>>,
+) -> Vec<AnyElement> {
+    accordion::preview_accordion(cx, value)
+}
+
 pub(super) fn preview_avatar(
     cx: &mut ElementContext<'_, App>,
     avatar_image: Model<Option<ImageId>>,
@@ -79,6 +88,14 @@ pub(super) fn preview_button(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement
 
 pub(super) fn preview_button_group(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
     button_group::preview_button_group(cx)
+}
+
+pub(super) fn preview_calendar(
+    cx: &mut ElementContext<'_, App>,
+    month: Model<fret_ui_headless::calendar::CalendarMonth>,
+    selected: Model<Option<Date>>,
+) -> Vec<AnyElement> {
+    calendar::preview_calendar(cx, month, selected)
 }
 
 pub(super) fn preview_alert_dialog(

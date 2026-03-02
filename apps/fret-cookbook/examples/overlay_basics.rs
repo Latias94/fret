@@ -68,8 +68,6 @@ impl View for OverlayBasicsView {
     fn render(&mut self, cx: &mut ViewCx<'_, '_, App>) -> Elements {
         let cmd_bump: CommandId = act::BumpUnderlay.into();
 
-        let theme = Theme::global(&*cx.app).snapshot();
-
         let dialog_open = cx.use_state::<bool>();
         let underlay_bumps = cx.use_state::<u32>();
 
@@ -198,19 +196,7 @@ impl View for OverlayBasicsView {
             },
         );
 
-        ui::container(cx, |cx| {
-            [ui::v_flex(cx, |_cx| [dialog])
-                .gap(Space::N6)
-                .items_center()
-                .justify_center()
-                .size_full()
-                .into_element(cx)]
-        })
-        .bg(ColorRef::Color(theme.color_token("muted")))
-        .p(Space::N6)
-        .into_element(cx)
-        .test_id(TEST_ID_ROOT)
-        .into()
+        fret_cookbook::scaffold::centered_page_muted(cx, TEST_ID_ROOT, dialog).into()
     }
 }
 

@@ -70,6 +70,23 @@ impl<H: UiHost> UiTree<H> {
     ) {
         self.begin_debug_frame_if_needed(app.frame_id());
         let trace_enabled = tracing::enabled!(tracing::Level::TRACE);
+        #[cfg(debug_assertions)]
+        let debug_focus_scope = std::env::var_os("FRET_TEST_DEBUG_FOCUS_SCOPE").is_some();
+        #[cfg(debug_assertions)]
+        let mut debug_focus_last = self.focus;
+        #[cfg(debug_assertions)]
+        let mut debug_focus_note = |label: &str, focus: Option<NodeId>| {
+            if !debug_focus_scope {
+                return;
+            }
+            if focus != debug_focus_last {
+                eprintln!(
+                    "debug: dispatch {}: focus {:?} -> {:?}",
+                    label, debug_focus_last, focus
+                );
+                debug_focus_last = focus;
+            }
+        };
 
         if let Some(window) = self.window {
             let frame_id = app.frame_id();
@@ -178,10 +195,11 @@ impl<H: UiHost> UiTree<H> {
             || tracing::trace_span!("fret.ui.dispatch.active_layers"),
             || {
                 let (active_layers, barrier_root) = self.active_input_layers();
-                self.enforce_modal_barrier_scope(&active_layers);
                 (active_layers, barrier_root)
             },
         );
+        #[cfg(debug_assertions)]
+        debug_focus_note("after active layers", self.focus);
         if let Some(active_layers_elapsed) = active_layers_elapsed {
             self.debug_stats.dispatch_active_layers_time += active_layers_elapsed;
         }
@@ -209,24 +227,47 @@ impl<H: UiHost> UiTree<H> {
             }
             roots
         });
-        let hit_test_layer_roots: &[NodeId] = wheel_hit_test_layers
-            .as_deref()
-            .unwrap_or(active_layers.as_slice());
+        let dispatch_cx = self.build_dispatch_cx(app.frame_id(), active_layers, barrier_root);
+        let active_layers: &[NodeId] = dispatch_cx.active_input_roots.as_slice();
+        let barrier_root = dispatch_cx.input_barrier_root;
+
+        let hit_test_layer_roots: &[NodeId] =
+            wheel_hit_test_layers.as_deref().unwrap_or(active_layers);
+        let hit_test_snapshot: Option<UiDispatchSnapshot> =
+            wheel_hit_test_layers.as_deref().map(|roots| {
+                self.build_dispatch_snapshot_for_layer_roots(app.frame_id(), roots, barrier_root)
+            });
+        let pointer_chain_snapshot: &UiDispatchSnapshot = hit_test_snapshot
+            .as_ref()
+            .unwrap_or(&dispatch_cx.input_snapshot);
+
+        let node_in_active_layers = |node: NodeId| dispatch_cx.node_in_active_input_layers(node);
+
+        // Focus barriers (trap scopes / modal focus arbitration) must not rely on retained parent
+        // pointers for correctness under retained/view-cache reuse. Enforce focus-barrier scope
+        // using a snapshot forest built from child edges.
+        if dispatch_cx.focus_barrier_root.is_some() && self.focus.is_some() {
+            if self
+                .focus
+                .is_some_and(|n| !dispatch_cx.node_in_active_focus_layers(n))
+            {
+                self.set_focus_unchecked(None, "dispatch/window: focus barrier scope");
+            }
+        }
 
         let to_remove: Vec<fret_core::PointerId> = self
             .captured
             .iter()
-            .filter_map(|(p, n)| (!self.node_in_any_layer(*n, &active_layers)).then_some(*p))
+            .filter_map(|(p, n)| (!node_in_active_layers(*n)).then_some(*p))
             .collect();
         for p in to_remove {
             self.captured.remove(&p);
         }
-        if self
-            .focus
-            .is_some_and(|n| !self.node_in_any_layer(n, &active_layers))
-        {
-            self.focus = None;
+        if self.focus.is_some_and(|n| !self.node_exists(n)) {
+            self.set_focus_unchecked(None, "dispatch/window: missing focus node");
         }
+        #[cfg(debug_assertions)]
+        debug_focus_note("after pre-dispatch cleanup", self.focus);
 
         let focus_is_text_input = self.focus_is_text_input(app);
         self.update_ime_composing_for_event(focus_is_text_input, event);
@@ -468,6 +509,7 @@ impl<H: UiHost> UiTree<H> {
                                 self.dispatch_event_to_node_chain(
                                     app,
                                     services,
+                                    &dispatch_cx,
                                     &input_ctx,
                                     node,
                                     event,
@@ -523,6 +565,7 @@ impl<H: UiHost> UiTree<H> {
                                     let stopped = self.dispatch_event_to_node_chain(
                                         app,
                                         services,
+                                        &dispatch_cx,
                                         &input_ctx,
                                         layer.root,
                                         event,
@@ -630,7 +673,6 @@ impl<H: UiHost> UiTree<H> {
 
         let mut cursor_choice: Option<fret_core::CursorIcon> = None;
         let mut cursor_choice_from_query = false;
-        let mut cursor_query_choice: Option<fret_core::CursorIcon> = None;
         let mut stop_propagation_requested = false;
         let mut stop_propagation_requested_by: Option<NodeId> = None;
         let mut pointer_down_outside = PointerDownOutsideOutcome::default();
@@ -768,20 +810,20 @@ impl<H: UiHost> UiTree<H> {
             && let Event::InternalDrag(e) = event
             && matches!(e.kind, fret_core::InternalDragKind::Drop)
         {
-            let (drag_kind, cross_window_hover, route, route_in_active_layer) =
-                if let Some(drag) = app.drag(e.pointer_id) {
-                    let route = crate::internal_drag::route(app, window, drag.kind);
-                    let route_in_active_layer =
-                        route.is_some_and(|node| self.node_in_any_layer(node, &active_layers));
-                    (
-                        Some(drag.kind),
-                        drag.cross_window_hover,
-                        route,
-                        route_in_active_layer,
-                    )
-                } else {
-                    (None, false, None, false)
-                };
+            let (drag_kind, cross_window_hover, route, route_in_active_layer) = if let Some(drag) =
+                app.drag(e.pointer_id)
+            {
+                let route = crate::internal_drag::route(app, window, drag.kind);
+                let route_in_active_layer = route.is_some_and(|node| node_in_active_layers(node));
+                (
+                    Some(drag.kind),
+                    drag.cross_window_hover,
+                    route,
+                    route_in_active_layer,
+                )
+            } else {
+                (None, false, None, false)
+            };
             tracing::info!(
                 window = ?window,
                 pointer_id = ?e.pointer_id,
@@ -838,15 +880,37 @@ impl<H: UiHost> UiTree<H> {
                     });
 
                     if !foreign_capture_active && !candidate.moved {
+                        let active_pointer_down_outside_layers =
+                            self.active_pointer_down_outside_layer_roots(barrier_root);
+                        let snapshot = self.build_dispatch_snapshot_for_layer_roots(
+                            app.frame_id(),
+                            active_pointer_down_outside_layers.as_slice(),
+                            barrier_root,
+                        );
+
                         let hit_is_inside_layer = hit.is_some_and(|hit| {
-                            self.is_reachable_from_root_via_children(layer.root, hit)
+                            if snapshot.pre.get(layer.root).is_some()
+                                && snapshot.pre.get(hit).is_some()
+                            {
+                                snapshot.is_descendant(layer.root, hit)
+                            } else {
+                                self.is_reachable_from_root_via_children(layer.root, hit)
+                            }
                         });
                         let hit_is_inside_branch = hit.is_some_and(|hit| {
                             layer
                                 .pointer_down_outside_branches
                                 .iter()
                                 .copied()
-                                .any(|branch| self.is_reachable_from_root_via_children(branch, hit))
+                                .any(|branch| {
+                                    if snapshot.pre.get(branch).is_some()
+                                        && snapshot.pre.get(hit).is_some()
+                                    {
+                                        snapshot.is_descendant(branch, hit)
+                                    } else {
+                                        self.is_reachable_from_root_via_children(branch, hit)
+                                    }
+                                })
                         });
 
                         if !hit_is_inside_layer && !hit_is_inside_branch {
@@ -876,6 +940,7 @@ impl<H: UiHost> UiTree<H> {
                                 &input_ctx,
                                 candidate.root,
                                 &candidate.down_event,
+                                Some(&snapshot),
                                 &mut invalidation_visited,
                             );
                             let mut clear_focus = true;
@@ -960,7 +1025,7 @@ impl<H: UiHost> UiTree<H> {
             }
 
             if input_ctx.caps.ui.cursor_icons
-                && cursor_query_choice.is_none()
+                && cursor_choice.is_none()
                 && matches!(event, Event::Pointer(PointerEvent::Move { .. }))
             {
                 let (_, elapsed) = fret_perf::measure_span(
@@ -968,20 +1033,14 @@ impl<H: UiHost> UiTree<H> {
                     trace_enabled,
                     || tracing::trace_span!("fret.ui.dispatch.cursor_query"),
                     || {
-                        let mut node = captured.or(hit_for_hover);
-                        while let Some(id) = node {
-                            let (bounds, parent) = self
-                                .nodes
-                                .get(id)
-                                .map(|n| (n.bounds, n.parent))
-                                .unwrap_or_default();
-                            if let Some(icon) = self.with_widget_mut(id, |widget, _tree| {
-                                widget.cursor_icon_at(bounds, pos, &input_ctx)
-                            }) {
-                                cursor_query_choice = Some(icon);
-                                break;
-                            }
-                            node = parent;
+                        if let Some(start) = captured.or(hit_for_hover) {
+                            cursor_choice = self.cursor_icon_query_for_pointer_hit(
+                                start,
+                                &input_ctx,
+                                event,
+                                Some(pointer_chain_snapshot),
+                            );
+                            cursor_choice_from_query = cursor_choice.is_some();
                         }
                     },
                 );
@@ -1012,6 +1071,7 @@ impl<H: UiHost> UiTree<H> {
                         PointerDownOutsideParams {
                             input_ctx: &input_ctx,
                             active_layer_roots: &active_pointer_down_outside_layers,
+                            barrier_root,
                             base_root,
                             hit,
                             event,
@@ -1045,6 +1105,7 @@ impl<H: UiHost> UiTree<H> {
                     hit_for_hover,
                     hit_for_hover_region,
                     hit_for_raw_below_barrier,
+                    Some(pointer_chain_snapshot),
                     &mut invalidation_visited,
                     &mut needs_redraw,
                 );
@@ -1081,7 +1142,7 @@ impl<H: UiHost> UiTree<H> {
                             {
                                 return Some(node);
                             }
-                            node = self.nodes.get(node).and_then(|n| n.parent)?;
+                            node = pointer_chain_snapshot.parent.get(node).copied().flatten()?;
                         }
                     })
                 })()
@@ -1109,8 +1170,7 @@ impl<H: UiHost> UiTree<H> {
                     .copied()
                     .flatten();
                 if barrier_root.is_some()
-                    && last_pointer_move_hit
-                        .is_some_and(|n| !self.node_in_any_layer(n, &active_layers))
+                    && last_pointer_move_hit.is_some_and(|n| !node_in_active_layers(n))
                 {
                     self.last_pointer_move_hit.remove(pointer_id);
                     last_pointer_move_hit = None;
@@ -1134,7 +1194,7 @@ impl<H: UiHost> UiTree<H> {
                     self.last_internal_drag_target = Some(node);
                 } else if self
                     .last_internal_drag_target
-                    .is_some_and(|n| !self.node_in_any_layer(n, &active_layers))
+                    .is_some_and(|n| !node_in_active_layers(n))
                 {
                     self.last_internal_drag_target = None;
                 }
@@ -1217,7 +1277,12 @@ impl<H: UiHost> UiTree<H> {
             && matches!(event, Event::Pointer(_))
             && let Some(hit) = pointer_hit
         {
-            cursor_choice = self.cursor_icon_query_for_pointer_hit(hit, &input_ctx, event);
+            cursor_choice = self.cursor_icon_query_for_pointer_hit(
+                hit,
+                &input_ctx,
+                event,
+                Some(pointer_chain_snapshot),
+            );
             cursor_choice_from_query = cursor_choice.is_some();
         }
 
@@ -1236,9 +1301,13 @@ impl<H: UiHost> UiTree<H> {
                 || tracing::trace_span!("fret.ui.dispatch.event_chain_build"),
                 || {
                     if event_position(event).is_some() {
-                        self.build_mapped_event_chain(node_id, event)
+                        self.build_mapped_event_chain(node_id, event, Some(pointer_chain_snapshot))
                     } else {
-                        self.build_unmapped_event_chain(node_id, event)
+                        self.build_unmapped_event_chain(
+                            node_id,
+                            event,
+                            Some(&dispatch_cx.focus_snapshot),
+                        )
                     }
                 },
             );
@@ -1366,8 +1435,9 @@ impl<H: UiHost> UiTree<H> {
                                 && self.focus_request_is_allowed(
                                     app,
                                     self.window,
-                                    &active_layers,
+                                    dispatch_cx.active_focus_roots.as_slice(),
                                     focus,
+                                    Some(&dispatch_cx.focus_snapshot),
                                 )
                             {
                                 focus_requested = true;
@@ -1400,8 +1470,7 @@ impl<H: UiHost> UiTree<H> {
                                                 && let Some(old_capture) =
                                                     self.captured.get(&pointer_id).copied()
                                                 && old_capture != node
-                                                && self
-                                                    .node_in_any_layer(old_capture, &active_layers)
+                                                && node_in_active_layers(old_capture)
                                             {
                                                 let mut cancel_ctx = input_ctx.clone();
                                                 cancel_ctx.dispatch_phase =
@@ -1413,6 +1482,7 @@ impl<H: UiHost> UiTree<H> {
                                                 let _ = self.dispatch_event_to_node_chain(
                                                     app,
                                                     services,
+                                                    &dispatch_cx,
                                                     &cancel_ctx,
                                                     old_capture,
                                                     &cancel_event,
@@ -1553,8 +1623,9 @@ impl<H: UiHost> UiTree<H> {
                                 && self.focus_request_is_allowed(
                                     app,
                                     self.window,
-                                    &active_layers,
+                                    dispatch_cx.active_focus_roots.as_slice(),
                                     focus,
+                                    Some(&dispatch_cx.focus_snapshot),
                                 )
                             {
                                 focus_requested = true;
@@ -1590,8 +1661,7 @@ impl<H: UiHost> UiTree<H> {
                                                 && let Some(old_capture) =
                                                     self.captured.get(&pointer_id).copied()
                                                 && old_capture != node
-                                                && self
-                                                    .node_in_any_layer(old_capture, &active_layers)
+                                                && node_in_active_layers(old_capture)
                                             {
                                                 let mut cancel_ctx = input_ctx.clone();
                                                 cancel_ctx.dispatch_phase =
@@ -1603,6 +1673,7 @@ impl<H: UiHost> UiTree<H> {
                                                 let _ = self.dispatch_event_to_node_chain(
                                                     app,
                                                     services,
+                                                    &dispatch_cx,
                                                     &cancel_ctx,
                                                     old_capture,
                                                     &cancel_event,
@@ -1653,7 +1724,15 @@ impl<H: UiHost> UiTree<H> {
             let mut cur = Some(node_id);
             while let Some(id) = cur {
                 chain.push(id);
-                cur = self.nodes.get(id).and_then(|n| n.parent);
+                if dispatch_cx.focus_snapshot.pre.get(id).is_none() {
+                    debug_assert!(
+                        false,
+                        "dispatch/window: key chain node missing from focus snapshot (node={id:?}, frame_id={:?}, window={:?})",
+                        dispatch_cx.focus_snapshot.frame_id, dispatch_cx.focus_snapshot.window
+                    );
+                    break;
+                }
+                cur = dispatch_cx.focus_snapshot.parent.get(id).copied().flatten();
             }
 
             let mut stopped_in_capture = false;
@@ -1747,8 +1826,9 @@ impl<H: UiHost> UiTree<H> {
                                 && self.focus_request_is_allowed(
                                     app,
                                     self.window,
-                                    &active_layers,
+                                    dispatch_cx.active_focus_roots.as_slice(),
                                     focus,
+                                    Some(&dispatch_cx.focus_snapshot),
                                 )
                             {
                                 focus_requested = true;
@@ -1817,8 +1897,6 @@ impl<H: UiHost> UiTree<H> {
                                 notify_requested_location,
                                 stop_propagation,
                             ) = self.with_widget_mut(node_id, |widget, tree| {
-                                let parent = tree.nodes.get(node_id).and_then(|n| n.parent);
-                                let _ = parent;
                                 let (children, bounds) = tree
                                     .nodes
                                     .get(node_id)
@@ -1890,8 +1968,9 @@ impl<H: UiHost> UiTree<H> {
                                 && self.focus_request_is_allowed(
                                     app,
                                     self.window,
-                                    &active_layers,
+                                    dispatch_cx.active_focus_roots.as_slice(),
                                     focus,
+                                    Some(&dispatch_cx.focus_snapshot),
                                 )
                             {
                                 focus_requested = true;
@@ -1981,9 +2060,7 @@ impl<H: UiHost> UiTree<H> {
                     notify_requested,
                     notify_requested_location,
                     stop_propagation,
-                    parent,
                 ) = self.with_widget_mut(node_id, |widget, tree| {
-                    let parent = tree.nodes.get(node_id).and_then(|n| n.parent);
                     let (children, bounds) = tree
                         .nodes
                         .get(node_id)
@@ -2024,7 +2101,6 @@ impl<H: UiHost> UiTree<H> {
                         cx.notify_requested,
                         cx.notify_requested_location,
                         cx.stop_propagation,
-                        parent,
                     )
                 });
                 if !invalidations.is_empty()
@@ -2052,7 +2128,13 @@ impl<H: UiHost> UiTree<H> {
                 }
 
                 if let Some(focus) = requested_focus
-                    && self.focus_request_is_allowed(app, self.window, &active_layers, focus)
+                    && self.focus_request_is_allowed(
+                        app,
+                        self.window,
+                        dispatch_cx.active_focus_roots.as_slice(),
+                        focus,
+                        Some(&dispatch_cx.focus_snapshot),
+                    )
                 {
                     focus_requested = true;
                     if let Some(prev) = self.focus {
@@ -2109,7 +2191,21 @@ impl<H: UiHost> UiTree<H> {
                     break;
                 }
 
-                node_id = match parent {
+                if dispatch_cx.focus_snapshot.pre.get(node_id).is_none() {
+                    debug_assert!(
+                        false,
+                        "dispatch/window: bubble chain node missing from focus snapshot (node={node_id:?}, frame_id={:?}, window={:?})",
+                        dispatch_cx.focus_snapshot.frame_id, dispatch_cx.focus_snapshot.window
+                    );
+                    break;
+                }
+                node_id = match dispatch_cx
+                    .focus_snapshot
+                    .parent
+                    .get(node_id)
+                    .copied()
+                    .flatten()
+                {
                     Some(parent) => parent,
                     None => break,
                 };
@@ -2131,7 +2227,13 @@ impl<H: UiHost> UiTree<H> {
         {
             let candidate = self.first_focusable_ancestor_including_declarative(app, window, hit);
             if let Some(focus) = candidate
-                && self.focus_request_is_allowed(app, self.window, &active_layers, focus)
+                && self.focus_request_is_allowed(
+                    app,
+                    self.window,
+                    dispatch_cx.active_focus_roots.as_slice(),
+                    focus,
+                    Some(&dispatch_cx.focus_snapshot),
+                )
             {
                 if let Some(prev) = self.focus {
                     self.mark_invalidation(prev, Invalidation::Paint);
@@ -2461,7 +2563,7 @@ impl<H: UiHost> UiTree<H> {
         if let Event::Pointer(PointerEvent::Move { .. }) = event
             && let Some(prev) = synth_pointer_move_prev_target
             && captured.is_none()
-            && self.node_in_any_layer(prev, &active_layers)
+            && node_in_active_layers(prev)
         {
             // Forward a synthetic hover-move to the previously hovered target so retained
             // widgets can clear hover state when the pointer crosses between siblings.
@@ -2479,6 +2581,7 @@ impl<H: UiHost> UiTree<H> {
                         &input_ctx,
                         prev,
                         event,
+                        Some(&dispatch_cx.input_snapshot),
                         &mut invalidation_visited,
                     );
                     needs_redraw = true;
@@ -2552,6 +2655,7 @@ impl<H: UiHost> UiTree<H> {
                         hit_for_hover,
                         hit_for_hover_region,
                         hit_for_raw_below_barrier,
+                        Some(pointer_chain_snapshot),
                         &mut invalidation_visited,
                         &mut needs_redraw,
                     );
@@ -2566,9 +2670,7 @@ impl<H: UiHost> UiTree<H> {
             && let Some(window) = self.window
             && matches!(event, Event::Pointer(_))
         {
-            let icon = cursor_choice
-                .or(cursor_query_choice)
-                .unwrap_or(fret_core::CursorIcon::Default);
+            let icon = cursor_choice.unwrap_or(fret_core::CursorIcon::Default);
             let (_, elapsed) = fret_perf::measure_span(
                 self.debug_enabled,
                 trace_enabled,

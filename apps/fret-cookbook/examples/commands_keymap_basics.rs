@@ -78,7 +78,6 @@ impl View for CommandsKeymapBasicsView {
     }
 
     fn render(&mut self, cx: &mut ViewCx<'_, '_, App>) -> Elements {
-        let theme = Theme::global(&*cx.app).snapshot();
         let cmd: CommandId = act::TogglePanel.into();
 
         let panel_open = cx.watch_model(&self.panel_open).layout().copied_or(false);
@@ -248,18 +247,7 @@ impl View for CommandsKeymapBasicsView {
             }
         });
 
-        let root = ui::container(cx, |cx| {
-            [ui::v_flex(cx, |_cx| [card])
-                .gap(Space::N6)
-                .items_center()
-                .justify_center()
-                .size_full()
-                .into_element(cx)]
-        })
-        .bg(ColorRef::Color(theme.color_token("background")))
-        .p(Space::N6)
-        .into_element(cx)
-        .test_id(TEST_ID_ROOT);
+        let root = fret_cookbook::scaffold::centered_page_background(cx, TEST_ID_ROOT, card);
 
         root.into()
     }

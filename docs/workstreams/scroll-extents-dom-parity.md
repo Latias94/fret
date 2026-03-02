@@ -230,6 +230,19 @@ Evidence (2026-03-02, macOS aarch64, debug build):
   - `ui-gallery-typography-inline-code-tab-scroll-range`: `run_id=1772438027683`
   - Summary: `target/fret-diag-se213-suite-post-layout/sessions/1772437763689-21483/suite.summary.json`
 
+Evidence (2026-03-02, macOS aarch64, debug build, after SE-112 overflow-context wiring):
+
+- Baseline out dir: `target/fret-diag-se112-suite-baseline3`
+  - `ui-gallery-checkbox-invalid-code-tab-scroll-range`: `run_id=1772442112463`
+  - `ui-gallery-tooltip-overlay-placement-after-code-tab-scroll-range`: `run_id=1772442117838`
+  - `ui-gallery-typography-inline-code-tab-scroll-range`: `run_id=1772442123499`
+  - Summary: `target/fret-diag-se112-suite-baseline3/sessions/1772442109769-12830/suite.summary.json`
+- Gate on out dir: `target/fret-diag-se112-suite-post-layout3`
+  - `ui-gallery-checkbox-invalid-code-tab-scroll-range`: `run_id=1772442136322`
+  - `ui-gallery-tooltip-overlay-placement-after-code-tab-scroll-range`: `run_id=1772442141765`
+  - `ui-gallery-typography-inline-code-tab-scroll-range`: `run_id=1772442147987`
+  - Summary: `target/fret-diag-se112-suite-post-layout3/sessions/1772442133993-13204/suite.summary.json`
+
 Example (JSON):
 
 - `fretboard diag query overlay-placement-trace target/fret-diag/<run_id> --kind anchored_panel --anchor-test-id ui-gallery-tooltip-demo-trigger --json`
@@ -241,8 +254,9 @@ These rules define which nodes can influence the scrollable extent:
 - **Exclude** absolute-positioned nodes by default.
   - Motivation: absolute nodes often represent overlays, chrome, or hit-test scaffolding that
     should not silently change scroll ranges.
-  - Note: current implementation inconsistently handles this (intrinsic probing skips absolute
-    children, layout probing does not). Parity work should standardize this as part of SE-110.
+  - Status: standardized in SE-113 (post-layout observation now filters absolute nodes, matching
+    the intrinsic measurement path).
+  - Evidence: `crates/fret-ui/src/declarative/host_widget/layout/scrolling.rs`
 - **Include** normal-flow descendants (including wrapper nodes) even if their own bounds are forced
   to match the viewport/content rect, as long as their descendants’ layout bounds overflow.
 
@@ -369,12 +383,12 @@ probes), we likely need at least one of these mechanism-level additions:
    - but allow scroll roots (or any explicit “overflow context”) to request a different clamp
      policy on the scroll axis, so auto-sized descendants can exceed the viewport and still be
      clipped/observed for extents.
-3. **Standardize absolute exclusion**:
+3. **Standardize absolute exclusion (SE-113 implemented)**:
    - Ensure the extent derivation path and the intrinsic measurement path agree on whether absolute
      nodes contribute to extents (default: exclude).
 4. **Keep observation bounded and debuggable**:
    - Maintain a bounded scan budget (as we do today) and surface “budget hit” telemetry so we can
-     detect cases where wrapper chains exceed peeling/scan limits.
+     detect cases where wrapper chains exceed peeling/scan limits (SE-114 implemented).
 
 ### SE-111 draft: overflow contexts + clamp policy (contract sketch)
 
@@ -414,6 +428,12 @@ Implementation status:
   propagated through `LayoutCx` / `UiTree::layout_in_with_pass_kind`. In the post-layout extents
   gate, scroll roots install a context that sets the scroll axis probe budget to `MaxContent` so
   wrapper-heavy subtrees can measure descendants without a hard scroll-axis clamp.
+- SE-113 (absolute exclusion parity) is implemented. Post-layout overflow observation now excludes
+  absolute-positioned nodes by default, matching the intrinsic measurement skip behavior.
+- SE-114 (bounded-observation telemetry) is implemented. When wrapper peeling or bounded deep scan
+  hits its budget, `UiDebugScrollNodeTelemetry` records an `overflow_observation` payload for the
+  scroll node (and `FRET_DEBUG_SCROLL_EXTENT_PROBE=1` prints a budget-hit log line).
+  - Tooling: `fretboard diag query scroll-extents-observation <bundle_dir|bundle.schema2.json> --json`
 
 ## Verification Plan (SE-210)
 

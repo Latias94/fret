@@ -1,6 +1,7 @@
 #[cfg(not(target_arch = "wasm32"))]
 pub mod alloc_profile;
 
+pub(crate) mod effect_authoring;
 pub(crate) mod hotpatch;
 
 #[cfg(not(target_arch = "wasm32"))]

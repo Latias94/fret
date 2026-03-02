@@ -1,5 +1,11 @@
 {
   "schema_version": 2,
+  "meta": {
+    "notes": [
+      "Liquid glass CustomV3 steady perf baseline.",
+      "Shows only the CustomV3 lens and captures a bundle after a short warmup."
+    ]
+  },
   "steps": [
     { "type": "set_window_inner_size", "width_px": 1280.0, "height_px": 720.0 },
     {
@@ -13,8 +19,6 @@
 
     { "type": "click_stable", "target": { "kind": "test_id", "id": "liquid-glass-switch-show-fake" }, "stable_frames": 6, "max_move_px": 0.5, "timeout_frames": 600 },
     { "type": "click_stable", "target": { "kind": "test_id", "id": "liquid-glass-switch-show-warp-v1" }, "stable_frames": 6, "max_move_px": 0.5, "timeout_frames": 600 },
-    { "type": "click_stable", "target": { "kind": "test_id", "id": "liquid-glass-switch-show-warp-v2" }, "stable_frames": 6, "max_move_px": 0.5, "timeout_frames": 600 },
-    { "type": "click_stable", "target": { "kind": "test_id", "id": "liquid-glass-switch-show-custom-v2" }, "stable_frames": 6, "max_move_px": 0.5, "timeout_frames": 600 },
     { "type": "click_stable", "target": { "kind": "test_id", "id": "liquid-glass-switch-show-custom-v3" }, "stable_frames": 6, "max_move_px": 0.5, "timeout_frames": 600 },
 
     {
@@ -29,9 +33,7 @@
     { "type": "wait_frames", "n": 12 },
     { "type": "reset_diagnostics" },
 
-    { "type": "wait_frames", "n": 120 },
-    { "type": "capture_screenshot", "label": "liquid-glass-lens-custom-v3-corners" },
-    { "type": "capture_bundle", "label": "liquid-glass-lens-custom-v3-corners" }
+    { "type": "wait_frames", "n": 180 },
+    { "type": "capture_bundle", "label": "liquid-glass-custom-v3-steady" }
   ]
 }
-
