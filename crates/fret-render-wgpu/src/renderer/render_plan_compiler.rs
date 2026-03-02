@@ -9,7 +9,7 @@ use super::{
     LocalScissorRect, OrderedDraw, RenderPlanDegradation, RenderPlanDegradationKind,
     RenderPlanDegradationReason, RenderPlanPass, SceneDrawRangePass, SceneEncoding, ScissorRect,
 };
-use crate::renderer::estimate_texture_bytes;
+use crate::renderer::{estimate_clip_mask_bytes, estimate_texture_bytes};
 use slotmap::Key;
 
 fn mix_u64(mut state: u64, value: u64) -> u64 {
@@ -995,7 +995,7 @@ fn compile_for_scene_inner(
                             {
                                 let required_color =
                                     estimate_texture_bytes(content_size, format, 1);
-                                let required_mask = effects::estimate_clip_mask_bytes(mask_size);
+                                let required_mask = estimate_clip_mask_bytes(mask_size);
                                 if !can_allocate_intermediate_bytes(
                                     intermediate_budget_bytes,
                                     &draw_scopes,
@@ -1060,7 +1060,7 @@ fn compile_for_scene_inner(
                             });
 
                             clip_path_mask_in_use_bytes = clip_path_mask_in_use_bytes
-                                .saturating_add(effects::estimate_clip_mask_bytes(mask_size));
+                                .saturating_add(estimate_clip_mask_bytes(mask_size));
                         }
 
                         clip_path_scopes.push(ClipPathScope {
@@ -1118,7 +1118,7 @@ fn compile_for_scene_inner(
                             let _ = draw_scopes.pop();
 
                             clip_path_mask_in_use_bytes = clip_path_mask_in_use_bytes
-                                .saturating_sub(effects::estimate_clip_mask_bytes(scope.mask_size));
+                                .saturating_sub(estimate_clip_mask_bytes(scope.mask_size));
                         } else {
                             let _ = scope.mask_draw_index;
                         }

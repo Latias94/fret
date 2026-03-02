@@ -1,6 +1,8 @@
 use super::blur_primitive;
 use super::frame_targets::downsampled_size;
-use super::intermediate_pool::{estimate_mipped_texture_bytes, estimate_texture_bytes};
+use super::intermediate_pool::{
+    estimate_clip_mask_bytes, estimate_mipped_texture_bytes, estimate_texture_bytes,
+};
 use super::{
     AlphaThresholdPass, BackdropWarpPass, BlurAxis, BlurPass, ClipMaskPass, ColorAdjustPass,
     ColorMatrixPass, CustomEffectPass, CustomEffectV2Pass, CustomEffectV3Pass, DitherPass,
@@ -2606,10 +2608,6 @@ pub(super) fn pixelate_enabled(
         .unwrap_or(viewport_size);
     let down = estimate_texture_bytes(downsampled_size(down_base, scale), format, 1);
     full.saturating_add(down) <= budget_bytes
-}
-
-pub(super) fn estimate_clip_mask_bytes(mask_size: (u32, u32)) -> u64 {
-    estimate_texture_bytes(mask_size, wgpu::TextureFormat::R8Unorm, 1)
 }
 
 fn choose_clip_mask_target_capped(

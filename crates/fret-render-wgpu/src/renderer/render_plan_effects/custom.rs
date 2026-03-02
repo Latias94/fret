@@ -173,7 +173,7 @@ fn choose_custom_v3_pyramid_levels_and_charge(
     let budget_before = *budget_bytes;
     let headroom_before = budget_before.saturating_sub(base_required_bytes);
     while levels >= 2 {
-        let required = estimate_mipped_texture_bytes(size, format, 1, levels);
+        let required = estimate_custom_v3_pyramid_bytes(size, format, levels);
         if required <= headroom_before {
             *budget_bytes = (*budget_bytes).saturating_sub(required);
             v3.pyramid_applied_levels_ge2 = v3.pyramid_applied_levels_ge2.saturating_add(1);
@@ -212,7 +212,7 @@ pub(super) fn choose_custom_v3_pyramid_choice_for_request(
 
     let headroom_before = budget_bytes.saturating_sub(base_required_bytes);
     while levels >= 2 {
-        let required = estimate_mipped_texture_bytes(size, format, 1, levels);
+        let required = estimate_custom_v3_pyramid_bytes(size, format, levels);
         if required <= headroom_before {
             return CustomV3PyramidChoice {
                 levels,

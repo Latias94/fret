@@ -1,7 +1,7 @@
 use super::frame_targets::downsampled_size;
 use super::render_plan_effects::{map_scissor_downsample_nearest, map_scissor_to_size};
 use super::{SceneEncoding, ScissorRect};
-use crate::renderer::estimate_texture_bytes;
+use crate::renderer::{estimate_clip_mask_bytes, estimate_texture_bytes};
 use std::ops::Range;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -1483,11 +1483,13 @@ fn estimate_plan_peak_intermediate_bytes(
             if !live[idx(t)] {
                 continue;
             }
-            cur = cur.saturating_add(estimate_texture_bytes(
-                sizes[idx(t)],
-                target_format(t, scene_format),
-                1,
-            ));
+            let bytes = match t {
+                PlanTarget::Mask0 | PlanTarget::Mask1 | PlanTarget::Mask2 => {
+                    estimate_clip_mask_bytes(sizes[idx(t)])
+                }
+                _ => estimate_texture_bytes(sizes[idx(t)], target_format(t, scene_format), 1),
+            };
+            cur = cur.saturating_add(bytes);
         }
         peak = peak.max(cur);
     }
