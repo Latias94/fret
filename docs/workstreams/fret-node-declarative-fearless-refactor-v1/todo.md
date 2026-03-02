@@ -17,9 +17,9 @@ Keep this list concrete. Prefer tasks that can land independently with a single 
 
 ## M0 — Baseline + gates
 
-- [ ] Identify the smallest runnable node-graph demo target (native-first).
-- [ ] Add one scripted regression artifact:
-  - [ ] `fretboard diag` script for pan/zoom + pointer capture cancellation, or
+- [x] Identify the smallest runnable node-graph demo target (native-first).
+- [x] Add one scripted regression artifact:
+  - [x] `fretboard diag` script for pan/zoom + pointer capture cancellation, or
   - [ ] integration test for input mapping invariants.
 - [ ] Document current retained-only hot spots and why they exist (perf vs missing contracts).
 
@@ -50,10 +50,10 @@ Suggested run commands (Windows-friendly):
   - [x] cache invalidation by revision + viewport + scale factor (pan is paint-only)
 - [ ] Investigate “wire looks truncated / partially missing” reports in paint-only:
   - [ ] confirm whether it is viewport culling (`cull_margin_screen_px`) vs edge bbox math vs raster cache,
-  - [ ] add a regression artifact (render snapshot gate preferred; semantics proxy acceptable).
-    - [ ] semantics proxy gate: `tools/diag-scripts/node-graph/node-graph-paint-only-edges-paint-stats-ok.json` (asserts `edges_paint_ok:true;` on `test_id=node_graph.canvas`)
-  - [ ] capture repro screenshots:
-    - `tools/diag-scripts/node-graph/node-graph-paint-only-wires-screenshot.json` (requires `FRET_DIAG_GPU_SCREENSHOTS=1`)
+  - [x] add a regression artifact (render snapshot gate preferred; semantics proxy acceptable).
+    - [x] semantics proxy gate: `tools/diag-scripts/node-graph/node-graph-paint-only-edges-paint-stats-ok.json` (asserts `edges_paint_ok:true;` on `test_id=node_graph.canvas`)
+  - [x] add repro screenshot script:
+    - [x] `tools/diag-scripts/node-graph/node-graph-paint-only-wires-screenshot.json` (requires `FRET_DIAG_GPU_SCREENSHOTS=1`)
 - [ ] Add cache observability counters (prepares/hits/evictions) for tuning.
 - [ ] Add one “steady-state” gate:
   - [x] fixed viewport + idle frames do not rebuild heavy render data (paint-only baselines):
