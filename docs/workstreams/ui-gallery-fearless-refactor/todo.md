@@ -56,6 +56,8 @@ Notes:
 
 - Use `tools/check_ui_gallery_code_literals.py --deny --only <page.rs>` to enforce “no multi-line Rust literals”
   on snippet-backed/migrated pages.
+- Material 3 pages are tracked separately because they currently live under `src/ui/previews/material3/**`:
+  `docs/workstreams/ui-gallery-fearless-refactor/material3-tracker.md`.
 
 ## Shadcn component tracker (gallery refactor status)
 
