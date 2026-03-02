@@ -12,9 +12,6 @@ with special focus on multi-window tear-off + drag-back sequences.
   - stabilize drop targeting (hint selection + tie-breakers),
   - add “pre-warm hover” steps only if required (document why),
   - keep intermediate structural assertions close to the failure point.
-- Fix chained tear-off + merge-back correctness (product correctness, not just diag):
-  - after two tear-offs and two merge-backs, the dock graph should return to the pre-tearoff fingerprint (no panel loss,
-    stable split/tab structure, stable tab ordering where applicable).
 - Decide the contract for “scripted cross-window drag release”:
   - which subsystem owns `Drop` routing (runner vs in-app diagnostics injection),
   - which coordinate space is the source of truth (screen vs window-client),
@@ -49,3 +46,5 @@ with special focus on multi-window tear-off + drag-back sequences.
 - Runner: isolate scripted cursor overrides from physical mouse movement.
 - Window counting: `known_window_count_*` predicates use a runner-owned source-of-truth.
 - Cached `test_id` predicate evaluation is freshness-bounded and emits evidence when used.
+- Chained tear-off (two tabs) now returns to the pre-tearoff fingerprint after two merge-backs (script-level targeting
+  fix: avoid hint retargeting to the wrong leaf by explicitly hovering a stable viewport in the destination window).

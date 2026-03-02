@@ -29,6 +29,9 @@ Status update (2026-03-02, later):
 - M1.3 delivered: `known_window_count_*` predicates use a runner-owned source-of-truth (`crates/fret-runtime/src/runner_window_lifecycle_diagnostics.rs`).
 - M1.4 delivered: Windows/MSVC `docking_arbitration_demo` rebuilds no longer fail with `taffy`-related LNK2019 unresolved
   externals by forcing `taffy` to compile with a single codegen unit in dev profiles (`Cargo.toml`).
+- M1.5 delivered: the chained tear-off script is now deterministic enough to be a regression gate (stable hover
+  retargeting + explicit zone selection).
+- M1.6 delivered: chained tear-off + merge-back returns to the pre-tearoff dock graph fingerprint (idempotence).
 
 ## M1.4 — Rebuild reliability for docking demos (Windows/MSVC)
 
