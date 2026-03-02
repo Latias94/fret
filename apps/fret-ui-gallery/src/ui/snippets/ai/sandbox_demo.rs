@@ -1,28 +1,27 @@
-use super::super::super::super::*;
+pub const SOURCE: &str = include_str!("sandbox_demo.rs");
 
-pub(in crate::ui) fn preview_ai_sandbox_demo(
-    cx: &mut ElementContext<'_, App>,
-    _theme: &Theme,
-) -> Vec<AnyElement> {
-    use fret_core::Px;
-    use fret_ui::element::SemanticsDecoration;
-    use fret_ui_kit::declarative::stack;
-    use fret_ui_kit::declarative::style as decl_style;
-    use fret_ui_kit::{ChromeRefinement, LayoutRefinement, MetricRef, Radius, Space};
+// region: example
+use fret_core::Px;
+use fret_ui::element::SemanticsDecoration;
+use fret_ui_ai as ui_ai;
+use fret_ui_kit::declarative::stack;
+use fret_ui_kit::declarative::style as decl_style;
+use fret_ui_kit::{ChromeRefinement, LayoutRefinement, MetricRef, Radius, Space};
+use fret_ui_shadcn::{self as shadcn, prelude::*};
 
+pub fn render<H: UiHost + 'static>(cx: &mut ElementContext<'_, H>) -> AnyElement {
     let max_w = LayoutRefinement::default()
         .w_full()
         .max_w(MetricRef::Px(Px(760.0)))
         .min_w_0();
 
-    let tab_label =
-        |cx: &mut ElementContext<'_, App>, text: &'static str, test_id: &'static str| {
-            cx.text(text).attach_semantics(
-                SemanticsDecoration::default()
-                    .role(fret_core::SemanticsRole::Generic)
-                    .test_id(test_id),
-            )
-        };
+    let tab_label = |cx: &mut ElementContext<'_, H>, text: &'static str, test_id: &'static str| {
+        cx.text(text).attach_semantics(
+            SemanticsDecoration::default()
+                .role(fret_core::SemanticsRole::Generic)
+                .test_id(test_id),
+        )
+    };
 
     let list = shadcn::TabsList::new()
         .trigger(
@@ -112,7 +111,7 @@ pub(in crate::ui) fn preview_ai_sandbox_demo(
     .refine_style(ChromeRefinement::default().rounded(Radius::Md))
     .into_element(cx);
 
-    vec![stack::vstack(
+    stack::vstack(
         cx,
         stack::VStackProps::default()
             .layout(LayoutRefinement::default().w_full().min_w_0())
@@ -124,5 +123,7 @@ pub(in crate::ui) fn preview_ai_sandbox_demo(
                 sandbox,
             ]
         },
-    )]
+    )
 }
+// endregion: example
+

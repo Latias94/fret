@@ -32,6 +32,7 @@ mod ai_shimmer_demo;
 mod ai_snippet_demo;
 mod ai_sources_demo;
 mod ai_speech_input_demo;
+mod ai_sandbox_demo;
 mod ai_stack_trace_demo;
 mod ai_stack_trace_large_demo;
 mod ai_suggestions_demo;
@@ -397,6 +398,13 @@ pub(super) fn preview_ai_speech_input_demo(
     theme: &Theme,
 ) -> Vec<AnyElement> {
     ai_speech_input_demo::preview_ai_speech_input_demo(cx, theme)
+}
+
+pub(super) fn preview_ai_sandbox_demo(
+    cx: &mut ElementContext<'_, App>,
+    theme: &Theme,
+) -> Vec<AnyElement> {
+    ai_sandbox_demo::preview_ai_sandbox_demo(cx, theme)
 }
 
 pub(super) fn preview_ai_web_preview_demo(

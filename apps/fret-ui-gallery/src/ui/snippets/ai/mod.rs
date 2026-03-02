@@ -24,6 +24,7 @@ pub mod prompt_input_provider_demo;
 pub mod prompt_input_referenced_sources_demo;
 pub mod queue_demo;
 pub mod reasoning_demo;
+pub mod sandbox_demo;
 pub mod schema_display_demo;
 pub mod shimmer_demo;
 pub mod snippet_demo;

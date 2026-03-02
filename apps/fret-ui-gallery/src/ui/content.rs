@@ -431,7 +431,7 @@ fn page_preview(
         PAGE_AI_SPEECH_INPUT_DEMO => pages::preview_ai_speech_input_demo(cx, theme),
         PAGE_AI_VOICE_SELECTOR_DEMO => pages::preview_ai_voice_selector_demo(cx, theme),
         PAGE_AI_AGENT_DEMO => pages::preview_ai_agent_demo(cx, theme),
-        PAGE_AI_SANDBOX_DEMO => preview_ai_sandbox_demo(cx, theme),
+        PAGE_AI_SANDBOX_DEMO => pages::preview_ai_sandbox_demo(cx, theme),
         PAGE_AI_PERSONA_DEMO => pages::preview_ai_persona_demo(cx, theme),
         PAGE_AI_OPEN_IN_CHAT_DEMO => pages::preview_ai_open_in_chat_demo(cx, theme),
         PAGE_AI_WORKFLOW_CHROME_DEMO => preview_ai_workflow_chrome_demo(cx, theme),
