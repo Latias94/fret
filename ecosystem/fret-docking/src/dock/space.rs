@@ -34,6 +34,7 @@ use super::{DockingPolicy, DockingPolicyService, default_viewport_min_content_si
 use crate::invalidation::DockInvalidationService;
 use fret_ui::retained_bridge::resizable_panel_group as resizable;
 use fret_ui_headless::easing as headless_easing;
+use fret_ui_headless::tab_strip_controller as tabstrip_controller;
 
 const DOCK_FLOATING_BORDER: Px = Px(1.0);
 const DOCK_FLOATING_TITLE_H: Px = Px(22.0);
@@ -3688,49 +3689,66 @@ impl<H: UiHost> Widget<H> for DockSpace {
                                                     scroll,
                                                     row,
                                                 );
-                                                let close_rect = overflow_menu_close_rect(
-                                                    theme.clone(),
-                                                    row_rect,
-                                                );
-                                                if close_rect.contains(*position) {
-                                                    if let Some(panel) = tabs.get(tab_ix) {
-                                                        pending_effects.push(Effect::Dock(
-                                                            DockOp::ClosePanel {
-                                                                window: self.window,
-                                                                panel: panel.clone(),
-                                                            },
-                                                        ));
-                                                        invalidate_layout = true;
-                                                        invalidate_paint = true;
-                                                        pending_redraws.push(self.window);
-                                                        keep_open = false;
-                                                    }
-                                                } else {
-                                                    self.last_active_tabs = Some(menu.tabs);
-                                                    pending_effects.push(Effect::Dock(
-                                                        DockOp::SetActiveTab {
-                                                            tabs: menu.tabs,
-                                                            active: tab_ix,
-                                                        },
-                                                    ));
-                                                    self.clamp_and_ensure_active_visible(
-                                                        theme.clone(),
-                                                        menu.tabs,
-                                                        tab_bar,
-                                                        tabs.len(),
-                                                        tab_ix,
-                                                    );
-                                                    if let Some(panel) = tabs.get(tab_ix) {
-                                                        request_focus_panel = Some(panel.clone());
-                                                    }
-                                                    invalidate_layout = true;
-                                                    invalidate_paint = true;
-                                                    pending_redraws.push(self.window);
-                                                    keep_open = false;
-                                                }
-                                            }
-                                            handled = true;
-                                        } else if button_rect.contains(*position) {
+	                                                let close_rect = overflow_menu_close_rect(
+	                                                    theme.clone(),
+	                                                    row_rect,
+	                                                );
+	                                                let hit = if close_rect.contains(*position) {
+	                                                    tabstrip_controller::TabStripHitTarget::OverflowMenuRow {
+	                                                        index: tab_ix,
+	                                                        part: tabstrip_controller::OverflowMenuPart::Close,
+	                                                    }
+	                                                } else {
+	                                                    tabstrip_controller::TabStripHitTarget::OverflowMenuRow {
+	                                                        index: tab_ix,
+	                                                        part: tabstrip_controller::OverflowMenuPart::Content,
+	                                                    }
+	                                                };
+
+	                                                match tabstrip_controller::intent_for_click(hit) {
+	                                                    tabstrip_controller::TabStripIntent::Close { index } => {
+	                                                        if let Some(panel) = tabs.get(index) {
+	                                                            pending_effects.push(Effect::Dock(
+	                                                                DockOp::ClosePanel {
+	                                                                    window: self.window,
+	                                                                    panel: panel.clone(),
+	                                                                },
+	                                                            ));
+	                                                            invalidate_layout = true;
+	                                                            invalidate_paint = true;
+	                                                            pending_redraws.push(self.window);
+	                                                            keep_open = false;
+	                                                        }
+	                                                    }
+	                                                    tabstrip_controller::TabStripIntent::Activate { index, .. } => {
+	                                                        self.last_active_tabs = Some(menu.tabs);
+	                                                        pending_effects.push(Effect::Dock(
+	                                                            DockOp::SetActiveTab {
+	                                                                tabs: menu.tabs,
+	                                                                active: index,
+	                                                            },
+	                                                        ));
+	                                                        self.clamp_and_ensure_active_visible(
+	                                                            theme.clone(),
+	                                                            menu.tabs,
+	                                                            tab_bar,
+	                                                            tabs.len(),
+	                                                            index,
+	                                                        );
+	                                                        if let Some(panel) = tabs.get(index) {
+	                                                            request_focus_panel = Some(panel.clone());
+	                                                        }
+	                                                        invalidate_layout = true;
+	                                                        invalidate_paint = true;
+	                                                        pending_redraws.push(self.window);
+	                                                        keep_open = false;
+	                                                    }
+	                                                    tabstrip_controller::TabStripIntent::ToggleOverflowMenu
+	                                                    | tabstrip_controller::TabStripIntent::None => {}
+	                                                }
+	                                            }
+	                                            handled = true;
+	                                        } else if button_rect.contains(*position) {
                                             // Toggle: clicking the overflow button closes the menu.
                                             keep_open = false;
                                             invalidate_paint = true;
