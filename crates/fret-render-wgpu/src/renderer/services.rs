@@ -749,7 +749,7 @@ fn fret_custom_effect(src: vec4<f32>, _uv: vec2<f32>, _pos_px: vec2<f32>, _param
     }
 
     #[test]
-    fn unregister_custom_effect_evicts_custom_v3_pipelines() {
+    fn unregister_custom_effect_evicts_custom_effect_pipelines() {
         let ctx = match pollster::block_on(crate::WgpuContext::new()) {
             Ok(ctx) => ctx,
             Err(_err) => return,
@@ -762,29 +762,76 @@ fn fret_custom_effect(src: vec4<f32>, _uv: vec2<f32>, _pos_px: vec2<f32>, _param
 }
 "#;
 
-        let id = renderer
+        let id_v1 = renderer
+            .register_custom_effect_v1(fret_core::CustomEffectDescriptorV1::wgsl_utf8(src))
+            .expect("custom effect v1 registration must succeed on wgpu backends");
+        let id_v2 = renderer
+            .register_custom_effect_v2(fret_core::CustomEffectDescriptorV2::wgsl_utf8(src))
+            .expect("custom effect v2 registration must succeed on wgpu backends");
+        let id_v3 = renderer
             .register_custom_effect_v3(fret_core::CustomEffectDescriptorV3::wgsl_utf8(src))
             .expect("custom effect v3 registration must succeed on wgpu backends");
+
+        renderer.ensure_custom_effect_pipelines(
+            &ctx.device,
+            wgpu::TextureFormat::Rgba8Unorm,
+            id_v1,
+        );
+        assert!(
+            renderer
+                .pipelines
+                .custom_effect_pipelines
+                .contains_key(&id_v1),
+            "expected v1 pipelines to be cached for the effect"
+        );
+        assert!(renderer.unregister_custom_effect(id_v1));
+        assert!(
+            !renderer
+                .pipelines
+                .custom_effect_pipelines
+                .contains_key(&id_v1),
+            "expected v1 pipelines to be evicted when the effect is unregistered"
+        );
+
+        renderer.ensure_custom_effect_v2_pipelines(
+            &ctx.device,
+            wgpu::TextureFormat::Rgba8Unorm,
+            id_v2,
+        );
+        assert!(
+            renderer
+                .pipelines
+                .custom_effect_v2_pipelines
+                .contains_key(&id_v2),
+            "expected v2 pipelines to be cached for the effect"
+        );
+        assert!(renderer.unregister_custom_effect(id_v2));
+        assert!(
+            !renderer
+                .pipelines
+                .custom_effect_v2_pipelines
+                .contains_key(&id_v2),
+            "expected v2 pipelines to be evicted when the effect is unregistered"
+        );
 
         renderer.ensure_custom_effect_v3_pipelines(
             &ctx.device,
             wgpu::TextureFormat::Rgba8Unorm,
-            id,
+            id_v3,
         );
         assert!(
             renderer
                 .pipelines
                 .custom_effect_v3_pipelines
-                .contains_key(&id),
+                .contains_key(&id_v3),
             "expected v3 pipelines to be cached for the effect"
         );
-
-        assert!(renderer.unregister_custom_effect(id));
+        assert!(renderer.unregister_custom_effect(id_v3));
         assert!(
             !renderer
                 .pipelines
                 .custom_effect_v3_pipelines
-                .contains_key(&id),
+                .contains_key(&id_v3),
             "expected v3 pipelines to be evicted when the effect is unregistered"
         );
     }
