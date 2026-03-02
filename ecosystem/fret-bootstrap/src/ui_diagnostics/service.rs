@@ -248,6 +248,94 @@ impl UiDiagnosticsService {
         }
     }
 
+    fn cached_test_id_exists(&self, window: AppWindowId, test_id: &str) -> Option<bool> {
+        let ring = self.per_window.get(&window)?;
+        Some(ring.test_id_bounds.contains_key(test_id))
+    }
+
+    fn resolve_window_target_for_active_step_with_test_id_hint(
+        &self,
+        current_window: AppWindowId,
+        anchor_window: AppWindowId,
+        target: Option<&UiWindowTargetV1>,
+        test_id_hint: Option<&str>,
+    ) -> Option<AppWindowId> {
+        let resolved = self.resolve_window_target_for_active_step(current_window, anchor_window, target)?;
+        let Some(test_id_hint) = test_id_hint else {
+            return Some(resolved);
+        };
+        let Some(target) = target else {
+            return Some(resolved);
+        };
+
+        // Do not override fully explicit targets.
+        match target {
+            UiWindowTargetV1::Current | UiWindowTargetV1::FirstSeen | UiWindowTargetV1::WindowFfi { .. } => {
+                return Some(resolved);
+            }
+            UiWindowTargetV1::FirstSeenOther | UiWindowTargetV1::LastSeenOther | UiWindowTargetV1::LastSeen => {}
+        }
+
+        let candidates: Vec<AppWindowId> = match target {
+            UiWindowTargetV1::FirstSeenOther | UiWindowTargetV1::LastSeenOther => self
+                .known_windows
+                .iter()
+                .copied()
+                .filter(|w| *w != anchor_window)
+                .collect(),
+            UiWindowTargetV1::LastSeen => self.known_windows.clone(),
+            _ => Vec::new(),
+        };
+
+        if candidates.len() <= 1 {
+            return Some(resolved);
+        }
+
+        let mut matches: Option<AppWindowId> = None;
+        for window in candidates {
+            if self.cached_test_id_exists(window, test_id_hint) != Some(true) {
+                continue;
+            }
+            if matches.is_some() {
+                // Ambiguous: multiple windows claim the selector.
+                return Some(resolved);
+            }
+            matches = Some(window);
+        }
+
+        Some(matches.unwrap_or(resolved))
+    }
+
+    fn step_test_id_hint(step: &UiActionStepV2) -> Option<&str> {
+        let target = match step {
+            UiActionStepV2::Click { target, .. }
+            | UiActionStepV2::Tap { target, .. }
+            | UiActionStepV2::LongPress { target, .. }
+            | UiActionStepV2::Swipe { target, .. }
+            | UiActionStepV2::Pinch { target, .. }
+            | UiActionStepV2::SetBaseRef { target, .. }
+            | UiActionStepV2::MovePointer { target, .. }
+            | UiActionStepV2::MovePointerSweep { target, .. }
+            | UiActionStepV2::PointerDown { target, .. }
+            | UiActionStepV2::DragPointer { target, .. }
+            | UiActionStepV2::DragPointerUntil { target, .. }
+            | UiActionStepV2::Wheel { target, .. }
+            | UiActionStepV2::ClickStable { target, .. }
+            | UiActionStepV2::ClickSelectableTextSpanStable { target, .. }
+            | UiActionStepV2::WaitBoundsStable { target, .. }
+            | UiActionStepV2::EnsureVisible { target, .. }
+            | UiActionStepV2::ScrollIntoView { target, .. }
+            | UiActionStepV2::TypeTextInto { target, .. }
+            | UiActionStepV2::SetSliderValue { target, .. } => Some(target),
+            _ => None,
+        }?;
+
+        match target {
+            UiSelectorV1::TestId { id } => Some(id.as_str()),
+            _ => None,
+        }
+    }
+
     fn predicate_can_eval_off_window(predicate: &UiPredicateV1) -> bool {
         matches!(
             predicate,
