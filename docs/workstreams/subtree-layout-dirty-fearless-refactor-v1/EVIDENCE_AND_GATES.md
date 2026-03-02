@@ -35,6 +35,8 @@
     - verifies the target content can be scrolled fully into view
   - Example:
     - `tools/diag-scripts/ui-gallery/typography/ui-gallery-typography-inline-code-tab-scroll-range.json`
+  - Additional (bottom-of-page notes regression):
+    - `tools/diag-scripts/ui-gallery/collapsible/ui-gallery-collapsible-rtl-code-tab-scroll-range.json`
 
 ## “Done” definition
 
