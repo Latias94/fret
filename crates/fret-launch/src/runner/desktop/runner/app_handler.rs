@@ -213,16 +213,11 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
             return;
         }
 
-        let diag_cursor_override_recent = self
-            .diag_last_cursor_override_tick
-            .is_some_and(|t| self.tick_id.0.saturating_sub(t.0) <= 2);
-        let diag_mouse_buttons_override_recent = self
-            .diag_last_mouse_buttons_override_tick
-            .is_some_and(|t| self.tick_id.0.saturating_sub(t.0) <= 2);
+        let isolate_pointer_input = self.diag_pointer_input_isolation_active();
 
         match event {
             DeviceEvent::PointerMotion { delta } => {
-                if self.diag_isolate_pointer_input && diag_cursor_override_recent {
+                if isolate_pointer_input {
                     return;
                 }
                 #[cfg(target_os = "windows")]
@@ -282,9 +277,7 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
                 state: ElementState::Released,
                 ..
             } => {
-                if self.diag_isolate_pointer_input
-                    && (diag_cursor_override_recent || diag_mouse_buttons_override_recent)
-                {
+                if isolate_pointer_input {
                     return;
                 }
                 // This fallback path is only for releases that occur outside all windows, where
@@ -1115,11 +1108,7 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
                     (mapped, pos, external_drag_token, screen_pos, scale_factor)
                 };
 
-                let diag_cursor_override_recent = self
-                    .diag_last_cursor_override_tick
-                    .is_some_and(|t| self.tick_id.0.saturating_sub(t.0) <= 2);
-                let suppress_os_cursor_sample =
-                    self.diag_isolate_pointer_input && diag_cursor_override_recent;
+                let suppress_os_cursor_sample = self.diag_pointer_input_isolation_active();
 
                 if !suppress_os_cursor_sample {
                     if let Some(p) = screen_pos {
