@@ -1,3 +1,5 @@
+pub const SOURCE: &str = include_str!("inline_code.rs");
+
 // region: example
 use fret_ui_shadcn::{self as shadcn, prelude::*};
 
