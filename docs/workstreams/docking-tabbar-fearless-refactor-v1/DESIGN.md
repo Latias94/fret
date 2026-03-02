@@ -57,6 +57,33 @@ Adopt an explicit “end drop surface” concept (dockview / gpui-component styl
 For self-drawn widgets that cannot easily carry fine-grained `test_id`, we keep diagnostics predicates
 as the primary gate, but still aim to expose an explicit geometry surface (even if only internally).
 
+## Contract surface (v1)
+
+The docking tab bar exposes a minimal, testable drop-resolution contract:
+
+- Inputs: `tab_bar` bounds, `tab_count`, optional `tab_widths`, current `scroll`, and pointer
+  `position`.
+- Output: a surface classification + optional `insert_index` (canonical list order).
+
+Current implementation anchor:
+
+- `ecosystem/fret-docking/src/dock/tab_bar_kernel.rs` (`resolve_tab_bar_drop`)
+
+Semantics:
+
+- `TabStripSurface::TabsViewport` → droppable, `insert_index` resolves via tab geometry (`before/after`
+  halves).
+- `TabStripSurface::HeaderSpace` → explicit end-drop surface, `insert_index == tab_count`.
+- `TabStripSurface::OverflowControl` → explicit non-drop surface, `insert_index == None`.
+- `Outside/ScrollControls/PinnedBoundary` → non-drop (docking does not currently model these for the
+  tab bar; reserved for future parity work).
+
+Notes:
+
+- The overflow pipeline is handled by first computing an overflow candidate geometry, then
+  classifying the pointer against explicit rects (strip viewport / header space / overflow button).
+- The reserved header-space rect may overlap the overflow button rect; overflow controls must win.
+
 ## Overflow (pipeline, not a special-case)
 
 Treat overflow as a pipeline stage that produces:
@@ -74,4 +101,3 @@ Key invariant:
 - Zed: editor semantics (pinned/preview/focus-neutral interactions, split behaviors).
 - dockview: overflow pipeline + header-space drop surfaces + DnD ergonomics.
 - gpui-component: minimal wiring shape for `TabBar` + “empty space to drop at end”.
-
