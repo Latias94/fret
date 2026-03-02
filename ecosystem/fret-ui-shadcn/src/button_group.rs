@@ -264,7 +264,17 @@ impl ButtonGroupSeparator {
                     .metric_by_key("component.separator.px")
                     .unwrap_or(Px(1.0))
             });
-            let layout = decl_style::layout_style(theme, self.layout);
+            let mut layout_refinement = self.layout;
+            if layout_refinement.margin.is_none() {
+                // Match shadcn/ui `mx-px` / `my-px` defaults: shorten the line so it doesn't
+                // touch the outer rounded corners.
+                layout_refinement = match self.orientation {
+                    SeparatorOrientation::Horizontal => layout_refinement.mx_px(Px(1.0)),
+                    SeparatorOrientation::Vertical => layout_refinement.my_px(Px(1.0)),
+                };
+            }
+
+            let layout = decl_style::layout_style(theme, layout_refinement);
 
             (bg, thickness, layout)
         };
@@ -753,23 +763,49 @@ mod tests {
 
     use fret_app::App;
     use fret_core::{AppWindowId, Point, Px, Rect, Size};
-    use fret_ui::element::ElementKind;
+    use fret_ui::element::{ElementKind, Length, MarginEdge};
+
+    fn apply_theme(app: &mut App) {
+        crate::shadcn_themes::apply_shadcn_new_york_v4(
+            app,
+            crate::shadcn_themes::ShadcnBaseColor::Neutral,
+            crate::shadcn_themes::ShadcnColorScheme::Light,
+        );
+    }
+
+    fn bounds_320x240() -> Rect {
+        Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(320.0), Px(240.0)),
+        )
+    }
+
+    fn render_group(app: &mut App, window: AppWindowId, group: ButtonGroup) -> AnyElement {
+        fret_ui::elements::with_element_cx(app, window, bounds_320x240(), "test", |cx| {
+            group.into_element(cx)
+        })
+    }
+
+    fn basic_text_items() -> [ButtonGroupItem; 2] {
+        [
+            ButtonGroupText::new("A").into(),
+            ButtonGroupText::new("B").into(),
+        ]
+    }
 
     #[test]
     fn button_group_stamps_role_without_layout_wrapper() {
         let window = AppWindowId::default();
         let mut app = App::new();
 
-        let bounds = Rect::new(
-            Point::new(Px(0.0), Px(0.0)),
-            Size::new(Px(200.0), Px(100.0)),
-        );
+        apply_theme(&mut app);
 
-        let element = fret_ui::elements::with_element_cx(&mut app, window, bounds, "test", |cx| {
-            ButtonGroup::new([ButtonGroupItem::from(cx.text("A"))])
-                .a11y_label("Actions")
-                .into_element(cx)
-        });
+        let element =
+            fret_ui::elements::with_element_cx(&mut app, window, bounds_320x240(), "test", |cx| {
+                ButtonGroup::new([ButtonGroupItem::from(cx.text("A"))])
+                    .a11y_label("Actions")
+                    .into_element(cx)
+            });
 
         assert!(
             !matches!(element.kind, ElementKind::Semantics(_)),
@@ -786,5 +822,136 @@ mod tests {
                 .and_then(|d| d.label.as_deref()),
             Some("Actions")
         );
+    }
+
+    #[test]
+    fn button_group_defaults_to_w_fit_horizontal_stretch_and_no_gap() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        apply_theme(&mut app);
+
+        let element = render_group(&mut app, window, ButtonGroup::new(basic_text_items()));
+        let ElementKind::Flex(props) = &element.kind else {
+            panic!("expected ButtonGroup to render as a flex element");
+        };
+
+        assert_eq!(props.layout.size.width, Length::Auto);
+        assert_eq!(props.direction, fret_core::Axis::Horizontal);
+        assert_eq!(props.align, fret_ui::element::CrossAlign::Stretch);
+        assert_eq!(props.gap, Px(0.0).into());
+    }
+
+    #[test]
+    fn button_group_horizontal_merges_borders_and_corners_for_children() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        apply_theme(&mut app);
+
+        let element = render_group(&mut app, window, ButtonGroup::new(basic_text_items()));
+        assert_eq!(element.children.len(), 2);
+
+        let left = &element.children[0];
+        let right = &element.children[1];
+
+        let ElementKind::Container(left_props) = &left.kind else {
+            panic!("expected left child to be a container (ButtonGroupText)");
+        };
+        let ElementKind::Container(right_props) = &right.kind else {
+            panic!("expected right child to be a container (ButtonGroupText)");
+        };
+
+        // Merged borders: remove the inner border to avoid double-width seams.
+        assert_eq!(right_props.border.left, Px(0.0));
+
+        // Merged corners: middle edges lose radius.
+        assert_eq!(left_props.corner_radii.top_right, Px(0.0));
+        assert_eq!(left_props.corner_radii.bottom_right, Px(0.0));
+        assert_eq!(right_props.corner_radii.top_left, Px(0.0));
+        assert_eq!(right_props.corner_radii.bottom_left, Px(0.0));
+    }
+
+    #[test]
+    fn button_group_vertical_merges_borders_and_corners_for_children() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        apply_theme(&mut app);
+
+        let element = render_group(
+            &mut app,
+            window,
+            ButtonGroup::new(basic_text_items()).orientation(ButtonGroupOrientation::Vertical),
+        );
+        let ElementKind::Flex(props) = &element.kind else {
+            panic!("expected ButtonGroup to render as a flex element");
+        };
+        assert_eq!(props.direction, fret_core::Axis::Vertical);
+        assert_eq!(props.align, fret_ui::element::CrossAlign::Stretch);
+
+        assert_eq!(element.children.len(), 2);
+        let top = &element.children[0];
+        let bottom = &element.children[1];
+
+        let ElementKind::Container(top_props) = &top.kind else {
+            panic!("expected top child to be a container (ButtonGroupText)");
+        };
+        let ElementKind::Container(bottom_props) = &bottom.kind else {
+            panic!("expected bottom child to be a container (ButtonGroupText)");
+        };
+
+        assert_eq!(bottom_props.border.top, Px(0.0));
+        assert_eq!(top_props.corner_radii.bottom_left, Px(0.0));
+        assert_eq!(top_props.corner_radii.bottom_right, Px(0.0));
+        assert_eq!(bottom_props.corner_radii.top_left, Px(0.0));
+        assert_eq!(bottom_props.corner_radii.top_right, Px(0.0));
+    }
+
+    #[test]
+    fn button_group_nested_group_inserts_gap_8px() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        apply_theme(&mut app);
+
+        let nested = ButtonGroup::new([ButtonGroupText::new("N").into()]);
+        let element = render_group(
+            &mut app,
+            window,
+            ButtonGroup::new([
+                ButtonGroupItem::from(nested),
+                ButtonGroupText::new("A").into(),
+            ]),
+        );
+        let ElementKind::Flex(props) = &element.kind else {
+            panic!("expected ButtonGroup to render as a flex element");
+        };
+        assert_eq!(props.gap, Px(8.0).into());
+    }
+
+    #[test]
+    fn button_group_separator_defaults_to_px_margins_based_on_orientation() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        apply_theme(&mut app);
+
+        let vertical =
+            fret_ui::elements::with_element_cx(&mut app, window, bounds_320x240(), "test", |cx| {
+                ButtonGroupSeparator::new().into_element(cx)
+            });
+        let ElementKind::Container(props) = &vertical.kind else {
+            panic!("expected ButtonGroupSeparator to render a container");
+        };
+        assert_eq!(props.layout.margin.top, MarginEdge::Px(Px(1.0)));
+        assert_eq!(props.layout.margin.bottom, MarginEdge::Px(Px(1.0)));
+
+        let horizontal =
+            fret_ui::elements::with_element_cx(&mut app, window, bounds_320x240(), "test", |cx| {
+                ButtonGroupSeparator::new()
+                    .orientation(SeparatorOrientation::Horizontal)
+                    .into_element(cx)
+            });
+        let ElementKind::Container(props) = &horizontal.kind else {
+            panic!("expected ButtonGroupSeparator(horizontal) to render a container");
+        };
+        assert_eq!(props.layout.margin.left, MarginEdge::Px(Px(1.0)));
+        assert_eq!(props.layout.margin.right, MarginEdge::Px(Px(1.0)));
     }
 }
