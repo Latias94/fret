@@ -2,11 +2,13 @@
   "schema_version": 2,
   "meta": {
     "env_defaults": {
-      "FRET_DIAG_RENDERER_PERF": 1
+      "FRET_DIAG_RENDERER_PERF": 1,
+      "FRET_RENDER_WGPU_INTERMEDIATE_BUDGET_BYTES": 134217728
     },
     "notes": [
       "Liquid glass CustomV3 pair screenshot with BackdropSourceGroup enabled.",
-      "This exercises the ADR 0305 ceiling: multiple CustomV3 surfaces sharing a stable raw snapshot + pyramid."
+      "This exercises the ADR 0305 ceiling: multiple CustomV3 surfaces sharing a stable raw snapshot + pyramid.",
+      "Expected: no CustomEffectV3 request/emit mismatch; no CustomEffectV3 src_raw aliasing; no CustomEffectV3 pyramid degraded to 1; no BackdropSourceGroup raw/pyramid degradation."
     ]
   },
   "steps": [
