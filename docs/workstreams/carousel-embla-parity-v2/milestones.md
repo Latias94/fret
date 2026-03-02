@@ -72,6 +72,8 @@ Risks / notes:
 Gates:
 
 - `diag` script: repeated swipes never clamp at ends; continuity maintained.
+- `diag` script: loop requested but cannotLoop downgrades to non-loop (no wrap)
+  (`tools/diag-scripts/ui-gallery/carousel/ui-gallery-carousel-loop-downgrade-cannot-loop-gate.json`).
 
 ## M4 — SlidesInView + focus + breakpoints
 

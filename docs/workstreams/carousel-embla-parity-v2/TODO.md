@@ -181,9 +181,12 @@ Not implemented / not applicable (expected gaps for native retained UI):
     - Recipe: `ecosystem/fret-ui-shadcn/src/carousel.rs` (gates loop translates + engine loop_enabled on `can_loop`)
 - [x] CAR2-143 Add unit tests for loop points on non-uniform slide sizes + gaps.
   - Gate: `cargo nextest run -p fret-ui-headless` (new `slide_looper_*` tests)
-- [ ] CAR2-144 (Optional) Add a diag gate for “loop requested but canLoop=false” behavior.
+- [x] CAR2-144 (Optional) Add a diag gate for “loop requested but canLoop=false” behavior.
   - Outcome: loop=true configuration behaves like loop=false (no visual wrap/translates).
-  - Gate: new `tools/diag-scripts/ui-gallery/carousel/...` script promoted into the loop suite.
+  - Evidence:
+    - `apps/fret-ui-gallery/src/ui/snippets/carousel/loop_downgrade_cannot_loop.rs`
+  - Gate:
+    - `tools/diag-scripts/ui-gallery/carousel/ui-gallery-carousel-loop-downgrade-cannot-loop-gate.json`
 
 ### Slides in view
 

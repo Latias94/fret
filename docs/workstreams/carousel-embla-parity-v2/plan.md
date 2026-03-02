@@ -81,7 +81,8 @@ Gates:
 Gates:
 
 - Loop continuity diag: N swipes never reaches an “end” state; visual continuity maintained.
-  - Optional additional gate: loop requested but `canLoop=false` behaves like loop disabled.
+  - Optional additional gate: loop requested but `canLoop=false` behaves like loop disabled
+    (`tools/diag-scripts/ui-gallery/carousel/ui-gallery-carousel-loop-downgrade-cannot-loop-gate.json`).
 
 ## Step 5 — Slides in view + focus + breakpoints (optional, 5–10 days)
 

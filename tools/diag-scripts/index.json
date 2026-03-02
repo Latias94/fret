@@ -1084,6 +1084,29 @@
       ]
     },
     {
+      "id": "ui-gallery-carousel-loop-downgrade-cannot-loop-gate",
+      "path": "tools/diag-scripts/ui-gallery/carousel/ui-gallery-carousel-loop-downgrade-cannot-loop-gate.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "ui-gallery-carousel-embla-engine"
+      ],
+      "tags": [
+        "can-loop",
+        "carousel",
+        "gate",
+        "loop",
+        "screenshot",
+        "ui-gallery"
+      ],
+      "target_hints": [
+        "Requires Embla engine MVP to be enabled (set FRET_DEBUG_CAROUSEL_EMBLA_ENGINE=1).",
+        "Expected behavior: when `loop=true` but the slide set cannot loop, the carousel behaves like loop=false (no wrap)."
+      ]
+    },
+    {
       "id": "ui-gallery-chart-accessibility-layer-keyboard",
       "path": "tools/diag-scripts/ui-gallery/chart/ui-gallery-chart-accessibility-layer-keyboard.json",
       "required_capabilities": [],

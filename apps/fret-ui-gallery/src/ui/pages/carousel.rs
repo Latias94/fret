@@ -7,6 +7,7 @@ pub(super) fn preview_carousel(cx: &mut ElementContext<'_, App>) -> Vec<AnyEleme
     cx.keyed("ui_gallery.carousel_page", |cx| {
         let demo = snippets::demo::render(cx);
         let loop_carousel = snippets::loop_carousel::render(cx);
+        let loop_downgrade_cannot_loop = snippets::loop_downgrade_cannot_loop::render(cx);
         let focus = snippets::focus_watch::render(cx);
         let basic = snippets::basic::render(cx);
         let parts = snippets::parts::render(cx);
@@ -42,6 +43,16 @@ pub(super) fn preview_carousel(cx: &mut ElementContext<'_, App>) -> Vec<AnyEleme
                     .test_id_prefix("ui-gallery-carousel-loop")
                     .code_rust_from_file_region(
                         include_str!("../snippets/carousel/loop_carousel.rs"),
+                        "example",
+                    ),
+                DocSection::new("Loop downgrade (cannotLoop)", loop_downgrade_cannot_loop)
+                    .description(
+                        "Requested `loop=true` but the slide set cannot loop; Embla downgrades to non-loop behavior.",
+                    )
+                    .max_w(Px(760.0))
+                    .test_id_prefix("ui-gallery-carousel-loop-downgrade-cannot-loop")
+                    .code_rust_from_file_region(
+                        include_str!("../snippets/carousel/loop_downgrade_cannot_loop.rs"),
                         "example",
                     ),
                 DocSection::new("Focus", focus)
@@ -133,4 +144,3 @@ pub(super) fn preview_carousel(cx: &mut ElementContext<'_, App>) -> Vec<AnyEleme
         vec![body.test_id("ui-gallery-carousel-component")]
     })
 }
-
