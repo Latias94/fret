@@ -22,6 +22,7 @@ See:
 - `TODO.md` / `MILESTONES.md` for sequencing
 - `EVIDENCE_AND_GATES.md` for regression artifacts and minimum gates
 - `OPEN_QUESTIONS.md` for unresolved semantics
+- `UPSTREAM_AUDIT_ZED_GPUI.md` for upstream mechanism notes (Zed / GPUI)
 - Related ADRs: `docs/adr/0069-outside-press-and-dismissable-non-modal-overlays.md`
 
 ## Current status

@@ -408,6 +408,7 @@ pub struct WindowElementState {
     pub(super) hovered_pressable_raw_below_barrier: Option<GlobalElementId>,
     pub(super) pressed_pressable: Option<GlobalElementId>,
     pub(super) hovered_hover_region: Option<GlobalElementId>,
+    pub(super) hovered_hover_region_node: Option<NodeId>,
     continuous_frames: Arc<AtomicUsize>,
     #[cfg(feature = "diagnostics")]
     debug_identity: DebugIdentityRegistry,
@@ -1440,6 +1441,7 @@ impl WindowElementState {
             && !is_live_this_frame(id)
         {
             self.hovered_hover_region = None;
+            self.hovered_hover_region_node = None;
         }
     }
 

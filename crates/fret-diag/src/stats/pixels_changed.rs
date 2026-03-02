@@ -45,6 +45,142 @@ pub(crate) fn check_out_dir_for_pixels_changed(
     test_id: &str,
     warmup_frames: u64,
 ) -> Result<(), String> {
+    let resolved = resolve_pixel_check_shots(out_dir, test_id, warmup_frames)?;
+
+    let out_path = out_dir.join("check.pixels_changed.json");
+    let payload = serde_json::json!(payload_for_pixel_check(
+        out_dir,
+        "pixels_changed",
+        test_id,
+        warmup_frames,
+        &resolved
+    ));
+    let _ = write_json_value(&out_path, &payload);
+
+    if resolved.len() < 2 {
+        return Err(format!(
+            "pixels changed check requires at least 2 resolved screenshots for test_id={test_id} (resolved={}, out_dir={})",
+            resolved.len(),
+            out_dir.display()
+        ));
+    }
+
+    let first = &resolved[0];
+    let last = &resolved[resolved.len() - 1];
+    if first.hash != last.hash {
+        return Ok(());
+    }
+
+    Err(format!(
+        "pixels unchanged suspected for test_id={test_id} (hash=0x{hash:016x})\n  first: bundle={b0} file={f0} tick={t0} frame={fr0} rect_px=({x0},{y0})-({x1},{y1})\n  last:  bundle={b1} file={f1} tick={t1} frame={fr1} rect_px=({x2},{y2})-({x3},{y3})\n  evidence: {}",
+        out_path.display(),
+        hash = first.hash,
+        b0 = first.bundle_dir_name,
+        f0 = first.file,
+        t0 = first.tick_id,
+        fr0 = first.frame_id,
+        x0 = first.rect_px.x0,
+        y0 = first.rect_px.y0,
+        x1 = first.rect_px.x1,
+        y1 = first.rect_px.y1,
+        b1 = last.bundle_dir_name,
+        f1 = last.file,
+        t1 = last.tick_id,
+        fr1 = last.frame_id,
+        x2 = last.rect_px.x0,
+        y2 = last.rect_px.y0,
+        x3 = last.rect_px.x1,
+        y3 = last.rect_px.y1,
+    ))
+}
+
+pub(crate) fn check_out_dir_for_pixels_unchanged(
+    out_dir: &Path,
+    test_id: &str,
+    warmup_frames: u64,
+) -> Result<(), String> {
+    let resolved = resolve_pixel_check_shots(out_dir, test_id, warmup_frames)?;
+
+    let out_path = out_dir.join("check.pixels_unchanged.json");
+    let payload = serde_json::json!(payload_for_pixel_check(
+        out_dir,
+        "pixels_unchanged",
+        test_id,
+        warmup_frames,
+        &resolved
+    ));
+    let _ = write_json_value(&out_path, &payload);
+
+    if resolved.len() < 2 {
+        return Err(format!(
+            "pixels unchanged check requires at least 2 resolved screenshots for test_id={test_id} (resolved={}, out_dir={})",
+            resolved.len(),
+            out_dir.display()
+        ));
+    }
+
+    let first = &resolved[0];
+    let last = &resolved[resolved.len() - 1];
+    if first.hash == last.hash {
+        return Ok(());
+    }
+
+    Err(format!(
+        "pixels changed detected for test_id={test_id}\n  first: bundle={b0} file={f0} tick={t0} frame={fr0} hash=0x{h0:016x} rect_px=({x0},{y0})-({x1},{y1})\n  last:  bundle={b1} file={f1} tick={t1} frame={fr1} hash=0x{h1:016x} rect_px=({x2},{y2})-({x3},{y3})\n  evidence: {}",
+        out_path.display(),
+        b0 = first.bundle_dir_name,
+        f0 = first.file,
+        t0 = first.tick_id,
+        fr0 = first.frame_id,
+        h0 = first.hash,
+        x0 = first.rect_px.x0,
+        y0 = first.rect_px.y0,
+        x1 = first.rect_px.x1,
+        y1 = first.rect_px.y1,
+        b1 = last.bundle_dir_name,
+        f1 = last.file,
+        t1 = last.tick_id,
+        fr1 = last.frame_id,
+        h1 = last.hash,
+        x2 = last.rect_px.x0,
+        y2 = last.rect_px.y0,
+        x3 = last.rect_px.x1,
+        y3 = last.rect_px.y1,
+    ))
+}
+
+fn payload_for_pixel_check(
+    out_dir: &Path,
+    kind: &'static str,
+    test_id: &str,
+    warmup_frames: u64,
+    resolved: &[PixelCheckResolvedShot],
+) -> serde_json::Value {
+    serde_json::json!({
+        "schema_version": 1,
+        "generated_unix_ms": now_unix_ms(),
+        "kind": kind,
+        "out_dir": out_dir.display().to_string(),
+        "test_id": test_id,
+        "warmup_frames": warmup_frames,
+        "resolved": resolved.iter().map(|s| serde_json::json!({
+            "bundle_dir_name": s.bundle_dir_name,
+            "file": s.file,
+            "window": s.window,
+            "tick_id": s.tick_id,
+            "frame_id": s.frame_id,
+            "scale_factor": s.scale_factor,
+            "rect_px": { "x0": s.rect_px.x0, "y0": s.rect_px.y0, "x1": s.rect_px.x1, "y1": s.rect_px.y1 },
+            "hash": format!("0x{:016x}", s.hash),
+        })).collect::<Vec<_>>(),
+    })
+}
+
+fn resolve_pixel_check_shots(
+    out_dir: &Path,
+    test_id: &str,
+    warmup_frames: u64,
+) -> Result<Vec<PixelCheckResolvedShot>, String> {
     let screenshots_result_path = out_dir.join("screenshots.result.json");
     if !screenshots_result_path.is_file() {
         return Err(format!(
@@ -188,64 +324,7 @@ pub(crate) fn check_out_dir_for_pixels_changed(
             .then_with(|| a.frame_id.cmp(&b.frame_id))
             .then_with(|| a.file.cmp(&b.file))
     });
-
-    let out_path = out_dir.join("check.pixels_changed.json");
-
-    let payload = serde_json::json!({
-        "schema_version": 1,
-        "generated_unix_ms": now_unix_ms(),
-        "kind": "pixels_changed",
-        "out_dir": out_dir.display().to_string(),
-        "test_id": test_id,
-        "warmup_frames": warmup_frames,
-        "resolved": resolved.iter().map(|s| serde_json::json!({
-            "bundle_dir_name": s.bundle_dir_name,
-            "file": s.file,
-            "window": s.window,
-            "tick_id": s.tick_id,
-            "frame_id": s.frame_id,
-            "scale_factor": s.scale_factor,
-            "rect_px": { "x0": s.rect_px.x0, "y0": s.rect_px.y0, "x1": s.rect_px.x1, "y1": s.rect_px.y1 },
-            "hash": format!("0x{:016x}", s.hash),
-        })).collect::<Vec<_>>(),
-    });
-    let _ = write_json_value(&out_path, &payload);
-
-    if resolved.len() < 2 {
-        return Err(format!(
-            "pixels changed check requires at least 2 resolved screenshots for test_id={test_id} (resolved={}, out_dir={})",
-            resolved.len(),
-            out_dir.display()
-        ));
-    }
-
-    let first = &resolved[0];
-    let last = &resolved[resolved.len() - 1];
-    if first.hash != last.hash {
-        return Ok(());
-    }
-
-    Err(format!(
-        "pixels unchanged suspected for test_id={test_id} (hash=0x{hash:016x})\n  first: bundle={b0} file={f0} tick={t0} frame={fr0} rect_px=({x0},{y0})-({x1},{y1})\n  last:  bundle={b1} file={f1} tick={t1} frame={fr1} rect_px=({x2},{y2})-({x3},{y3})\n  evidence: {}",
-        out_path.display(),
-        hash = first.hash,
-        b0 = first.bundle_dir_name,
-        f0 = first.file,
-        t0 = first.tick_id,
-        fr0 = first.frame_id,
-        x0 = first.rect_px.x0,
-        y0 = first.rect_px.y0,
-        x1 = first.rect_px.x1,
-        y1 = first.rect_px.y1,
-        b1 = last.bundle_dir_name,
-        f1 = last.file,
-        t1 = last.tick_id,
-        fr1 = last.frame_id,
-        x2 = last.rect_px.x0,
-        y2 = last.rect_px.y0,
-        x3 = last.rect_px.x1,
-        y3 = last.rect_px.y1,
-    ))
+    Ok(resolved)
 }
 
 fn find_semantics_bounds_for_test_id(
@@ -382,4 +461,145 @@ fn hash_rgba_region(img: &image::RgbaImage, rect: RectPx) -> u64 {
     }
 
     h
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::path::PathBuf;
+    use std::time::{SystemTime, UNIX_EPOCH};
+
+    fn temp_root(tag: &str) -> PathBuf {
+        let root = std::env::temp_dir().join(format!(
+            "fret-diag-pixels-unchanged-{}-{}",
+            tag,
+            SystemTime::now()
+                .duration_since(UNIX_EPOCH)
+                .unwrap_or_default()
+                .as_millis()
+        ));
+        let _ = std::fs::remove_dir_all(&root);
+        std::fs::create_dir_all(&root).expect("create temp root");
+        root
+    }
+
+    fn write_bundle(out_dir: &Path, bundle_dir_name: &str, window: u64, test_id: &str) {
+        let dir = out_dir.join(bundle_dir_name);
+        std::fs::create_dir_all(&dir).expect("create bundle dir");
+
+        let bundle = serde_json::json!({
+            "schema_version": 1,
+            "windows": [
+                {
+                    "window": window,
+                    "snapshots": [
+                        {
+                            "tick_id": 1,
+                            "frame_id": 0,
+                            "timestamp_unix_ms": 1,
+                            "debug": {
+                                "semantics": {
+                                    "nodes": [
+                                        {
+                                            "test_id": test_id,
+                                            "bounds": { "x": 1.0, "y": 1.0, "w": 2.0, "h": 2.0 }
+                                        }
+                                    ]
+                                }
+                            }
+                        },
+                        {
+                            "tick_id": 2,
+                            "frame_id": 0,
+                            "timestamp_unix_ms": 2,
+                            "debug": {
+                                "semantics": {
+                                    "nodes": [
+                                        {
+                                            "test_id": test_id,
+                                            "bounds": { "x": 1.0, "y": 1.0, "w": 2.0, "h": 2.0 }
+                                        }
+                                    ]
+                                }
+                            }
+                        }
+                    ]
+                }
+            ]
+        });
+        std::fs::write(
+            dir.join("bundle.json"),
+            serde_json::to_vec_pretty(&bundle).unwrap(),
+        )
+        .expect("write bundle.json");
+    }
+
+    fn write_screenshot(out_dir: &Path, bundle_dir_name: &str, file: &str, rgba: [u8; 4]) {
+        let dir = out_dir.join("screenshots").join(bundle_dir_name);
+        std::fs::create_dir_all(&dir).expect("create screenshots dir");
+        let path = dir.join(file);
+
+        let img = image::RgbaImage::from_pixel(4, 4, image::Rgba(rgba));
+        img.save(&path).expect("write screenshot png");
+    }
+
+    fn write_screenshots_result(out_dir: &Path, bundle_dir_name: &str, window: u64) {
+        let payload = serde_json::json!({
+            "schema_version": 1,
+            "completed": [
+                {
+                    "bundle_dir_name": bundle_dir_name,
+                    "window": window,
+                    "tick_id": 1,
+                    "frame_id": 0,
+                    "scale_factor": 1.0,
+                    "file": "a.png",
+                },
+                {
+                    "bundle_dir_name": bundle_dir_name,
+                    "window": window,
+                    "tick_id": 2,
+                    "frame_id": 0,
+                    "scale_factor": 1.0,
+                    "file": "b.png",
+                }
+            ]
+        });
+        std::fs::write(
+            out_dir.join("screenshots.result.json"),
+            serde_json::to_vec_pretty(&payload).unwrap(),
+        )
+        .expect("write screenshots.result.json");
+    }
+
+    #[test]
+    fn pixels_unchanged_check_passes_when_region_hash_is_unchanged() {
+        let out_dir = temp_root("pass");
+        let bundle_dir_name = "123-test";
+        let window = 1u64;
+        let test_id = "pixel-check";
+
+        write_bundle(&out_dir, bundle_dir_name, window, test_id);
+        write_screenshot(&out_dir, bundle_dir_name, "a.png", [0, 0, 0, 255]);
+        write_screenshot(&out_dir, bundle_dir_name, "b.png", [0, 0, 0, 255]);
+        write_screenshots_result(&out_dir, bundle_dir_name, window);
+
+        check_out_dir_for_pixels_unchanged(&out_dir, test_id, 0).expect("check should pass");
+    }
+
+    #[test]
+    fn pixels_unchanged_check_fails_when_region_hash_changes() {
+        let out_dir = temp_root("fail");
+        let bundle_dir_name = "123-test";
+        let window = 1u64;
+        let test_id = "pixel-check";
+
+        write_bundle(&out_dir, bundle_dir_name, window, test_id);
+        write_screenshot(&out_dir, bundle_dir_name, "a.png", [0, 0, 0, 255]);
+        write_screenshot(&out_dir, bundle_dir_name, "b.png", [255, 255, 255, 255]);
+        write_screenshots_result(&out_dir, bundle_dir_name, window);
+
+        let err = check_out_dir_for_pixels_unchanged(&out_dir, test_id, 0).unwrap_err();
+        assert!(err.contains("pixels changed detected"), "err={err}");
+    }
 }

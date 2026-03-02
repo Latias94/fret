@@ -31,7 +31,7 @@ fn rect_intersection(a: Rect, b: Rect) -> Option<Rect> {
 
 pub(super) fn handle_scroll_into_view_step(
     svc: &mut UiDiagnosticsService,
-    app: &App,
+    _app: &App,
     window: AppWindowId,
     window_bounds: Rect,
     step_index: usize,
