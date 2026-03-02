@@ -41,7 +41,7 @@ pub(super) fn preview_command_palette(
                     "This mirrors shadcn's docs structure (`Command` + `CommandInput` + `CommandList`) using Fret's `CommandPalette` recipe.",
                     "Use this pattern for inline command menus (as opposed to `CommandDialog`).",
                 ])
-                .code_rust_from_file_region(include_str!("../snippets/command/usage.rs"), "example"),
+                .code_rust_from_file_region(snippets::usage::SOURCE, "example"),
             DocSection::new("Demo", docs_demo_palette)
                 .max_w(Px(760.0))
                 .test_id_prefix("ui-gallery-command-docs-demo")
@@ -50,36 +50,36 @@ pub(super) fn preview_command_palette(
                     "Use `leading_icon(...)` so icons inherit the row foreground (`currentColor`) for hover/active/disabled states.",
                 ])
                 .code_rust_from_file_region(
-                    include_str!("../snippets/command/docs_demo.rs"),
+                    snippets::docs_demo::SOURCE,
                     "example",
                 ),
             DocSection::new("Basic", basic_dialog)
                 .max_w(Px(760.0))
                 .test_id_prefix("ui-gallery-command-basic")
-                .code_rust_from_file_region(include_str!("../snippets/command/basic.rs"), "example"),
+                .code_rust_from_file_region(snippets::basic::SOURCE, "example"),
             DocSection::new("Shortcuts", shortcuts_section)
                 .max_w(Px(760.0))
                 .test_id_prefix("ui-gallery-command-shortcuts")
                 .code_rust_from_file_region(
-                    include_str!("../snippets/command/shortcuts.rs"),
+                    snippets::shortcuts::SOURCE,
                     "example",
                 ),
             DocSection::new("Groups", groups_palette)
                 .max_w(Px(760.0))
                 .code_rust_from_file_region(
-                    include_str!("../snippets/command/groups.rs"),
+                    snippets::groups::SOURCE,
                     "example",
                 ),
             DocSection::new("Scrollable", scrollable_palette)
                 .max_w(Px(760.0))
                 .test_id_prefix("ui-gallery-command-scrollable")
                 .code_rust_from_file_region(
-                    include_str!("../snippets/command/scrollable.rs"),
+                    snippets::scrollable::SOURCE,
                     "example",
                 ),
             DocSection::new("RTL", rtl)
                 .max_w(Px(760.0))
-                .code_rust_from_file_region(include_str!("../snippets/command/rtl.rs"), "example"),
+                .code_rust_from_file_region(snippets::rtl::SOURCE, "example"),
             DocSection::new("Loading", loading_palette)
                 .max_w(Px(760.0))
                 .test_id_prefix("ui-gallery-command-loading")
@@ -88,7 +88,7 @@ pub(super) fn preview_command_palette(
                     "In Fret this maps to `shadcn::CommandLoading` as an extra `CommandEntry`.",
                 ])
                 .code_rust_from_file_region(
-                    include_str!("../snippets/command/loading.rs"),
+                    snippets::loading::SOURCE,
                     "example",
                 ),
             DocSection::new("Notes", notes_stack).max_w(Px(820.0)),
