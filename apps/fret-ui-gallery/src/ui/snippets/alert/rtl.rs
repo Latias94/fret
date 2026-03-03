@@ -22,7 +22,7 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
                             .into_element(cx),
                         ])
                         .variant(shadcn::AlertVariant::Default)
-                        .refine_layout(LayoutRefinement::default().w_full().max_w(Px(520.0)))
+                        .refine_layout(LayoutRefinement::default().max_w(Px(520.0)))
                         .into_element(cx)
                         .test_id("ui-gallery-alert-rtl"),
                     ]
