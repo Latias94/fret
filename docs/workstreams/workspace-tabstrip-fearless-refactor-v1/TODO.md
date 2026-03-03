@@ -6,6 +6,7 @@ Last updated: 2026-03-03
 Related:
 
 - Design: `docs/workstreams/workspace-tabstrip-fearless-refactor-v1/DESIGN.md`
+- Zed parity checklist: `docs/workstreams/workspace-tabstrip-fearless-refactor-v1/ZED_PARITY_CHECKLIST.md`
 - Milestones:
   - `docs/workstreams/workspace-tabstrip-fearless-refactor-v1/M1_FOUNDATION.md`
   - `docs/workstreams/workspace-tabstrip-fearless-refactor-v1/M2_DRAG_AND_DROP.md`
@@ -97,3 +98,8 @@ ID format:
 - [x] WTS-converge-050 Docking TabBar drop excludes the dragged tab from midpoint candidates:
   - Evidence: `ecosystem/fret-docking/src/dock/space.rs` (passes dragged tab index to the tab-bar kernel)
   - Coverage: `ecosystem/fret-docking/src/dock/tab_bar_kernel.rs` (`resolve_tab_bar_drop_excludes_dragged_tab_from_candidates`)
+
+## F. Parity tracking
+
+- [x] WTS-parity-060 Add a Zed parity checklist with evidence anchors:
+  - `docs/workstreams/workspace-tabstrip-fearless-refactor-v1/ZED_PARITY_CHECKLIST.md`
