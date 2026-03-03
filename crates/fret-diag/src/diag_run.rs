@@ -285,8 +285,8 @@ pub(crate) fn cmd_run(ctx: RunCmdContext) -> Result<(), String> {
         check_ui_gallery_code_editor_a11y_composition_wrap_scroll,
         check_ui_gallery_code_editor_a11y_selection,
         check_ui_gallery_code_editor_a11y_selection_wrap,
-        check_ui_gallery_code_editor_torture_composed_preedit_cancels_on_drag_selection,
-        check_ui_gallery_code_editor_torture_composed_preedit_stable_after_wheel_scroll,
+        check_ui_gallery_code_editor_torture_composed_preedit_cancels_on_drag_selection: _,
+        check_ui_gallery_code_editor_torture_composed_preedit_stable_after_wheel_scroll: _,
         check_ui_gallery_code_editor_torture_decorations_toggle_a11y_composition_consistent_under_inline_preedit_composed:
             _,
         check_ui_gallery_code_editor_torture_decorations_toggle_stable_under_inline_preedit_composed:
@@ -401,8 +401,6 @@ pub(crate) fn cmd_run(ctx: RunCmdContext) -> Result<(), String> {
         || check_ui_gallery_text_fallback_policy_key_bumps_on_settings_change
         || check_ui_gallery_text_fallback_policy_key_bumps_on_locale_change
         || check_ui_gallery_text_mixed_script_bundled_fallback_conformance
-        || check_ui_gallery_code_editor_torture_composed_preedit_stable_after_wheel_scroll
-        || check_ui_gallery_code_editor_torture_composed_preedit_cancels_on_drag_selection
         || check_ui_gallery_code_editor_word_boundary
         || check_ui_gallery_code_editor_a11y_selection
         || check_ui_gallery_code_editor_a11y_composition

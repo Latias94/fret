@@ -221,7 +221,7 @@ Status (as of 2026-03-03):
   - `crates/fret-diag/src/registry/checks.rs` exposes `CheckRegistry::wants_bundle_artifact` so orchestration can request a bounded bundle dump without hard-coding per-check conditions.
   - `crates/fret-diag/src/registry/checks.rs` exposes `CheckRegistry::wants_screenshots` so launch wiring can enable screenshots without hard-coding per-check conditions.
   - Artifacts boundary: `crates/fret-diag/src/artifact_store.rs` (`RunArtifactStore`) routes per-run artifact writes/materialization behind a focused API.
-  - `CheckRegistry` now owns additional post-run gates (generic + markdown/code-editor UI gallery gates, including folds/inlays + inline preedit variants) to reduce `post_run_checks.rs` churn.
+  - `CheckRegistry` now owns additional post-run gates (generic + markdown/code-editor UI gallery gates, including folds/inlays + preedit variants) to reduce `post_run_checks.rs` churn.
 
 ## Plan (phased)
 
