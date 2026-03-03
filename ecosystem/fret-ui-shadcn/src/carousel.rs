@@ -4377,6 +4377,7 @@ impl Carousel {
                                 }
 
                                 if left_hover
+                                    && cfg.pause_on_hover
                                     && cfg.reset_on_hover_leave
                                     && !runtime_snapshot.autoplay_paused_external
                                     && !runtime_snapshot.autoplay_stopped_by_interaction
@@ -4421,7 +4422,7 @@ impl Carousel {
                                     }
                                 }
 
-                                if !hovered
+                                if (!hovered || !cfg.pause_on_hover)
                                     && !runtime_snapshot.autoplay_paused_external
                                     && !runtime_snapshot.autoplay_stopped_by_interaction
                                     && !runtime_snapshot.autoplay_stopped_by_last_snap
