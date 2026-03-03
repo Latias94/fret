@@ -259,9 +259,10 @@ impl<H: UiHost> UiTree<H> {
                     snapshot.insert(id, false);
                 }
                 CommandAvailability::NotHandled => {
-                    if matches!(id.as_str(), "focus.next" | "focus.previous") {
-                        snapshot.insert(id, false);
-                    }
+                    // For widget-scoped commands, “not handled anywhere on the dispatch path”
+                    // means “not available” (disabled) for cross-surface gating (menus, palettes,
+                    // shortcuts).
+                    snapshot.insert(id, false);
                 }
             }
         }
