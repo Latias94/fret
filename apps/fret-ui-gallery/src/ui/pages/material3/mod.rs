@@ -26,4 +26,4 @@ pub(in crate::ui) use overlays::{
     preview_material3_bottom_sheet, preview_material3_dialog, preview_material3_menu,
     preview_material3_snackbar, preview_material3_tooltip,
 };
-pub(in crate::ui) use shared::{material3_scoped_page, material3_variant_toggle_row};
+pub(in crate::ui) use shared::material3_scoped_page;
