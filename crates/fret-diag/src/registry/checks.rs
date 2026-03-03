@@ -306,6 +306,48 @@ const BUILTIN_POST_RUN_CHECKS: &[PostRunCheckEntry] = &[
         run: run_ui_gallery_code_editor_torture_decorations_toggle_a11y_composition_consistent_under_inline_preedit_composed,
     },
     PostRunCheckEntry {
+        id: "ui_gallery_code_editor_torture_folds_placeholder_present_under_inline_preedit_unwrapped",
+        requires_bundle_artifact: true,
+        requires_screenshots: false,
+        should_run: should_run_ui_gallery_code_editor_torture_folds_placeholder_present_under_inline_preedit_unwrapped,
+        run: run_ui_gallery_code_editor_torture_folds_placeholder_present_under_inline_preedit_unwrapped,
+    },
+    PostRunCheckEntry {
+        id: "ui_gallery_code_editor_torture_folds_placeholder_present_under_inline_preedit_with_decorations",
+        requires_bundle_artifact: true,
+        requires_screenshots: false,
+        should_run: should_run_ui_gallery_code_editor_torture_folds_placeholder_present_under_inline_preedit_with_decorations,
+        run: run_ui_gallery_code_editor_torture_folds_placeholder_present_under_inline_preedit_with_decorations,
+    },
+    PostRunCheckEntry {
+        id: "ui_gallery_code_editor_torture_folds_placeholder_present_under_inline_preedit_with_decorations_composed",
+        requires_bundle_artifact: true,
+        requires_screenshots: false,
+        should_run: should_run_ui_gallery_code_editor_torture_folds_placeholder_present_under_inline_preedit_with_decorations_composed,
+        run: run_ui_gallery_code_editor_torture_folds_placeholder_present_under_inline_preedit_with_decorations_composed,
+    },
+    PostRunCheckEntry {
+        id: "ui_gallery_code_editor_torture_inlays_present_under_inline_preedit_unwrapped",
+        requires_bundle_artifact: true,
+        requires_screenshots: false,
+        should_run: should_run_ui_gallery_code_editor_torture_inlays_present_under_inline_preedit_unwrapped,
+        run: run_ui_gallery_code_editor_torture_inlays_present_under_inline_preedit_unwrapped,
+    },
+    PostRunCheckEntry {
+        id: "ui_gallery_code_editor_torture_inlays_present_under_inline_preedit_with_decorations",
+        requires_bundle_artifact: true,
+        requires_screenshots: false,
+        should_run: should_run_ui_gallery_code_editor_torture_inlays_present_under_inline_preedit_with_decorations,
+        run: run_ui_gallery_code_editor_torture_inlays_present_under_inline_preedit_with_decorations,
+    },
+    PostRunCheckEntry {
+        id: "ui_gallery_code_editor_torture_inlays_present_under_inline_preedit_with_decorations_composed",
+        requires_bundle_artifact: true,
+        requires_screenshots: false,
+        should_run: should_run_ui_gallery_code_editor_torture_inlays_present_under_inline_preedit_with_decorations_composed,
+        run: run_ui_gallery_code_editor_torture_inlays_present_under_inline_preedit_with_decorations_composed,
+    },
+    PostRunCheckEntry {
         id: "notify_hotspot_file_max",
         requires_bundle_artifact: true,
         requires_screenshots: false,
@@ -811,6 +853,106 @@ fn run_ui_gallery_code_editor_torture_decorations_toggle_a11y_composition_consis
     _checks: &RunChecks,
 ) -> Result<(), String> {
     crate::stats::check_bundle_for_ui_gallery_code_editor_torture_decorations_toggle_a11y_composition_consistent_under_inline_preedit_composed(
+        ctx.bundle_path,
+        ctx.warmup_frames,
+    )
+}
+
+fn should_run_ui_gallery_code_editor_torture_folds_placeholder_present_under_inline_preedit_unwrapped(
+    checks: &RunChecks,
+) -> bool {
+    checks
+        .check_ui_gallery_code_editor_torture_folds_placeholder_present_under_inline_preedit_unwrapped
+}
+
+fn run_ui_gallery_code_editor_torture_folds_placeholder_present_under_inline_preedit_unwrapped(
+    ctx: PostRunCheckContext<'_>,
+    _checks: &RunChecks,
+) -> Result<(), String> {
+    crate::stats::check_bundle_for_ui_gallery_code_editor_torture_folds_placeholder_present_under_inline_preedit_unwrapped(
+        ctx.bundle_path,
+        ctx.warmup_frames,
+    )
+}
+
+fn should_run_ui_gallery_code_editor_torture_folds_placeholder_present_under_inline_preedit_with_decorations(
+    checks: &RunChecks,
+) -> bool {
+    checks
+        .check_ui_gallery_code_editor_torture_folds_placeholder_present_under_inline_preedit_with_decorations
+}
+
+fn run_ui_gallery_code_editor_torture_folds_placeholder_present_under_inline_preedit_with_decorations(
+    ctx: PostRunCheckContext<'_>,
+    _checks: &RunChecks,
+) -> Result<(), String> {
+    crate::stats::check_bundle_for_ui_gallery_code_editor_torture_folds_placeholder_present_under_inline_preedit_with_decorations(
+        ctx.bundle_path,
+        ctx.warmup_frames,
+    )
+}
+
+fn should_run_ui_gallery_code_editor_torture_folds_placeholder_present_under_inline_preedit_with_decorations_composed(
+    checks: &RunChecks,
+) -> bool {
+    checks
+        .check_ui_gallery_code_editor_torture_folds_placeholder_present_under_inline_preedit_with_decorations_composed
+}
+
+fn run_ui_gallery_code_editor_torture_folds_placeholder_present_under_inline_preedit_with_decorations_composed(
+    ctx: PostRunCheckContext<'_>,
+    _checks: &RunChecks,
+) -> Result<(), String> {
+    crate::stats::check_bundle_for_ui_gallery_code_editor_torture_folds_placeholder_present_under_inline_preedit_with_decorations_composed(
+        ctx.bundle_path,
+        ctx.warmup_frames,
+    )
+}
+
+fn should_run_ui_gallery_code_editor_torture_inlays_present_under_inline_preedit_unwrapped(
+    checks: &RunChecks,
+) -> bool {
+    checks.check_ui_gallery_code_editor_torture_inlays_present_under_inline_preedit_unwrapped
+}
+
+fn run_ui_gallery_code_editor_torture_inlays_present_under_inline_preedit_unwrapped(
+    ctx: PostRunCheckContext<'_>,
+    _checks: &RunChecks,
+) -> Result<(), String> {
+    crate::stats::check_bundle_for_ui_gallery_code_editor_torture_inlays_present_under_inline_preedit_unwrapped(
+        ctx.bundle_path,
+        ctx.warmup_frames,
+    )
+}
+
+fn should_run_ui_gallery_code_editor_torture_inlays_present_under_inline_preedit_with_decorations(
+    checks: &RunChecks,
+) -> bool {
+    checks.check_ui_gallery_code_editor_torture_inlays_present_under_inline_preedit_with_decorations
+}
+
+fn run_ui_gallery_code_editor_torture_inlays_present_under_inline_preedit_with_decorations(
+    ctx: PostRunCheckContext<'_>,
+    _checks: &RunChecks,
+) -> Result<(), String> {
+    crate::stats::check_bundle_for_ui_gallery_code_editor_torture_inlays_present_under_inline_preedit_with_decorations(
+        ctx.bundle_path,
+        ctx.warmup_frames,
+    )
+}
+
+fn should_run_ui_gallery_code_editor_torture_inlays_present_under_inline_preedit_with_decorations_composed(
+    checks: &RunChecks,
+) -> bool {
+    checks
+        .check_ui_gallery_code_editor_torture_inlays_present_under_inline_preedit_with_decorations_composed
+}
+
+fn run_ui_gallery_code_editor_torture_inlays_present_under_inline_preedit_with_decorations_composed(
+    ctx: PostRunCheckContext<'_>,
+    _checks: &RunChecks,
+) -> Result<(), String> {
+    crate::stats::check_bundle_for_ui_gallery_code_editor_torture_inlays_present_under_inline_preedit_with_decorations_composed(
         ctx.bundle_path,
         ctx.warmup_frames,
     )
