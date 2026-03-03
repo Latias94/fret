@@ -6,6 +6,10 @@ use fret_ui_assets::ui::ImageSourceElementContextExt as _;
 use std::path::PathBuf;
 use std::sync::Arc;
 
+mod act {
+    fret::actions!([BumpReload = "cookbook.icons_and_assets_basics.bump_reload.v1"]);
+}
+
 const TEST_ID_ROOT: &str = "cookbook.icons_and_assets_basics.root";
 const TEST_ID_BUMP_RELOAD: &str = "cookbook.icons_and_assets_basics.bump_reload";
 const TEST_ID_PANEL_ICONS: &str = "cookbook.icons_and_assets_basics.panel.icons";
@@ -46,7 +50,7 @@ fn checkerboard_rgba8(width: u32, height: u32, cell: u32) -> Vec<u8> {
     out
 }
 
-struct IconsAndAssetsBasicsState {
+struct IconsAndAssetsBasicsView {
     window: AppWindowId,
     assets_reload_bumps: Model<u64>,
     applied_assets_reload_bumps: u64,
@@ -55,13 +59,8 @@ struct IconsAndAssetsBasicsState {
     svg_file: fret_ui_assets::SvgFileSource,
 }
 
-struct IconsAndAssetsBasicsProgram;
-
-impl MvuProgram for IconsAndAssetsBasicsProgram {
-    type State = IconsAndAssetsBasicsState;
-    type Message = ();
-
-    fn init(app: &mut App, window: AppWindowId) -> Self::State {
+impl View for IconsAndAssetsBasicsView {
+    fn init(app: &mut App, window: AppWindowId) -> Self {
         // Ensure the UI assets caches exist and set budgets explicitly (optional).
         fret_ui_assets::UiAssets::configure(
             app,
@@ -87,7 +86,7 @@ impl MvuProgram for IconsAndAssetsBasicsProgram {
         let svg_file =
             fret_ui_assets::SvgFileSource::from_path(repo_path("assets/demo/icon-search.svg"));
 
-        Self::State {
+        Self {
             window,
             assets_reload_bumps: app.models_mut().insert(0),
             applied_assets_reload_bumps: 0,
@@ -97,35 +96,32 @@ impl MvuProgram for IconsAndAssetsBasicsProgram {
         }
     }
 
-    fn update(_app: &mut App, _state: &mut Self::State, _message: Self::Message) {}
-
-    fn view(
-        cx: &mut ElementContext<'_, App>,
-        state: &mut Self::State,
-        _msg: &mut MessageRouter<Self::Message>,
-    ) -> Elements {
+    fn render(&mut self, cx: &mut ViewCx<'_, '_, App>) -> Elements {
         let theme = Theme::global(&*cx.app).snapshot();
 
-        let bumps_model = state.assets_reload_bumps.clone();
-        let bump_reload: fret_ui::action::OnActivate = Arc::new(move |host, action_cx, _reason| {
-            let _ = host.models_mut().update(&bumps_model, |v| {
-                *v = v.wrapping_add(1);
-            });
-            host.request_redraw(action_cx.window);
-            host.push_effect(Effect::RequestAnimationFrame(action_cx.window));
+        cx.on_action::<act::BumpReload>({
+            let bumps_model = self.assets_reload_bumps.clone();
+            move |host, action_cx| {
+                let _ = host.models_mut().update(&bumps_model, |v| {
+                    *v = v.wrapping_add(1);
+                });
+                host.request_redraw(action_cx.window);
+                host.push_effect(Effect::RequestAnimationFrame(action_cx.window));
+                host.notify(action_cx);
+                true
+            }
         });
 
-        let bumps = state
-            .assets_reload_bumps
-            .read(&mut *cx.app, |_host, v| *v)
-            .ok()
-            .unwrap_or(0);
-        if bumps != state.applied_assets_reload_bumps {
+        let bumps = cx
+            .watch_model(&self.assets_reload_bumps)
+            .layout()
+            .copied_or(0);
+        if bumps != self.applied_assets_reload_bumps {
             fret_ui_assets::bump_ui_assets_reload_epoch(&mut *cx.app);
-            state.applied_assets_reload_bumps = bumps;
-            cx.app.request_redraw(state.window);
+            self.applied_assets_reload_bumps = bumps;
+            cx.app.request_redraw(self.window);
             cx.app
-                .push_effect(Effect::RequestAnimationFrame(state.window));
+                .push_effect(Effect::RequestAnimationFrame(self.window));
         }
 
         let header = shadcn::CardHeader::new([
@@ -150,7 +146,7 @@ impl MvuProgram for IconsAndAssetsBasicsProgram {
                         .variant(shadcn::ButtonVariant::Secondary)
                         .size(shadcn::ButtonSize::Sm)
                         .icon(IconId::new_static("ui.reset"))
-                        .on_activate(bump_reload)
+                        .action(act::BumpReload)
                         .into_element(cx)
                         .test_id(TEST_ID_BUMP_RELOAD),
                     shadcn::Badge::new("Tip: edit the files under `assets/` and click reload.")
@@ -278,8 +274,8 @@ impl MvuProgram for IconsAndAssetsBasicsProgram {
         .into_element(cx)
         .test_id(TEST_ID_PANEL_ICONS);
 
-        let file_image_state = cx.use_image_source_state(&state.file_image);
-        let memory_image_state = cx.use_image_source_state(&state.memory_image);
+        let file_image_state = cx.use_image_source_state(&self.file_image);
+        let memory_image_state = cx.use_image_source_state(&self.memory_image);
 
         let image_status = match file_image_state.status {
             fret_ui_assets::image_asset_state::ImageLoadingStatus::Idle => "idle",
@@ -375,7 +371,7 @@ impl MvuProgram for IconsAndAssetsBasicsProgram {
 
         // SVG file loading is synchronous (cached) so we can surface useful error strings directly.
         cx.observe_global::<fret_ui_assets::UiAssetsReloadEpoch>(Invalidation::Paint);
-        let svg_file_state = fret_ui_assets::read_svg_file_cached(&mut *cx.app, &state.svg_file);
+        let svg_file_state = fret_ui_assets::read_svg_file_cached(&mut *cx.app, &self.svg_file);
         let svg_status = if svg_file_state.error.is_some() {
             "error"
         } else if svg_file_state.bytes.is_some() {
@@ -474,6 +470,6 @@ fn main() -> anyhow::Result<()> {
         // includes them.
         .register_icon_pack(fret_icons_radix::register_vendor_icons)
         .install_app(fret_cookbook::install_cookbook_defaults)
-        .run_mvu::<IconsAndAssetsBasicsProgram>()
+        .run_view::<IconsAndAssetsBasicsView>()
         .map_err(anyhow::Error::from)
 }

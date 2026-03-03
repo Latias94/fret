@@ -32,6 +32,7 @@ Scope:
   - `apps/fret-cookbook/examples/theme_switching_basics.rs`
   - `apps/fret-cookbook/examples/undo_basics.rs`
   - `apps/fret-cookbook/examples/virtual_list_basics.rs`
+  - `apps/fret-cookbook/examples/icons_and_assets_basics.rs`
 
 ## Remaining legacy MVU usage (as of 2026-03-03)
 
@@ -41,7 +42,6 @@ These examples implement `MvuProgram` and/or use `MessageRouter`:
 
 - `apps/fret-cookbook/examples/canvas_pan_zoom_basics.rs`
 - `apps/fret-cookbook/examples/effects_layer_basics.rs`
-- `apps/fret-cookbook/examples/icons_and_assets_basics.rs`
 - `apps/fret-cookbook/examples/markdown_and_code_basics.rs`
 
 Recommendation:
