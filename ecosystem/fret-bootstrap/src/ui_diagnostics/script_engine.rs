@@ -93,6 +93,7 @@ pub(super) fn active_script_needs_semantics_snapshot(active: &ActiveScript) -> b
         | UiActionStepV2::WaitCommandDispatchTrace { .. }
         | UiActionStepV2::CaptureBundle { .. }
         | UiActionStepV2::CaptureScreenshot { .. }
+        | UiActionStepV2::CaptureLayoutSidecar { .. }
         | UiActionStepV2::SetWindowInnerSize { .. }
         | UiActionStepV2::SetWindowInsets { .. }
         | UiActionStepV2::SetClipboardForceUnavailable { .. }
@@ -139,6 +140,7 @@ pub(super) fn script_step_kind_name(step: &UiActionStepV2) -> &'static str {
         UiActionStepV2::Assert { .. } => "assert",
         UiActionStepV2::CaptureBundle { .. } => "capture_bundle",
         UiActionStepV2::CaptureScreenshot { .. } => "capture_screenshot",
+        UiActionStepV2::CaptureLayoutSidecar { .. } => "capture_layout_sidecar",
         UiActionStepV2::ResetDiagnostics => "reset_diagnostics",
         UiActionStepV2::SetClipboardText { .. } => "set_clipboard_text",
         UiActionStepV2::AssertClipboardText { .. } => "assert_clipboard_text",
@@ -213,7 +215,7 @@ pub(super) enum DriveScriptStepDispatchOutcome {
 
 pub(super) fn dispatch_drive_script_step(
     service: &mut UiDiagnosticsService,
-    app: &App,
+    app: &mut App,
     window: AppWindowId,
     window_bounds: Rect,
     anchor_window: AppWindowId,
@@ -455,6 +457,25 @@ pub(super) fn dispatch_drive_script_step(
                 force_dump_max_snapshots,
                 stop_script,
                 failure_reason,
+            );
+            debug_assert!(handled);
+        }
+        UiActionStepV2::CaptureLayoutSidecar {
+            label,
+            root_label_filter,
+        } => {
+            let handled = script_steps::handle_capture_layout_sidecar_step(
+                service,
+                app,
+                window,
+                window_bounds,
+                step_index,
+                label,
+                root_label_filter,
+                scale_factor,
+                ui,
+                active,
+                output,
             );
             debug_assert!(handled);
         }
