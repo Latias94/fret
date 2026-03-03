@@ -2,7 +2,7 @@
   "schema_version": 2,
   "meta": {
     "name": "Cookbook: effects_layer_basics screenshots",
-    "tags": ["cookbook", "effects_layer_basics", "effects", "smoke", "screenshots"],
+    "tags": ["cookbook", "effects_layer_basics", "actions", "effects", "smoke", "screenshots"],
     "required_capabilities": ["diag.script_v2", "diag.screenshot_png"],
     "target_hints": [
       "Waits for the example root to exist.",
@@ -31,4 +31,3 @@
     { "type": "capture_bundle", "label": "cookbook-effects-layer-basics-screenshots" }
   ]
 }
-
