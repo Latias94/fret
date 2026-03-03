@@ -339,6 +339,7 @@ impl WorkspaceTabStrip {
                 let (
                     scroll_handle,
                     last_active,
+                    reveal_pending,
                     cached_tab_rects,
                     cached_scroll_viewport,
                 ) = cx.with_state(
@@ -347,6 +348,7 @@ impl WorkspaceTabStrip {
                         (
                             state.scroll.clone(),
                             state.last_active.clone(),
+                            state.reveal_pending,
                             state.last_tab_rects.clone(),
                             state.last_scroll_viewport,
                         )
@@ -2394,7 +2396,8 @@ impl WorkspaceTabStrip {
                     );
 
                     let active_changed = last_active.as_deref() != active.as_deref();
-                    if active_changed {
+                    let mut reveal_pending = reveal_pending || active_changed;
+                    if reveal_pending {
                         if let (Some(scroll_id), Some(tab_id)) =
                             (scroll_element.get(), active_tab_element.get())
                         {
@@ -2433,6 +2436,7 @@ impl WorkspaceTabStrip {
                                     tab_rect,
                                     margin,
                                 );
+                                reveal_pending = false;
 
                                 if hint.is_some_and(|st| st.tab_id.is_some() || st.reason.is_some())
                                 {
@@ -2450,6 +2454,7 @@ impl WorkspaceTabStrip {
 
                     cx.with_state(WorkspaceTabStripState::default, |state| {
                         state.last_active = active.clone();
+                        state.reveal_pending = reveal_pending;
                     });
 
                     // Best-effort diagnostics hook: publish interaction state into the window-level
