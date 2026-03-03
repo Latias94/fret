@@ -8,23 +8,12 @@ pub(crate) fn apply_post_run_checks(
     checks: &diag_run::RunChecks,
     warmup_frames: u64,
 ) -> Result<(), String> {
-    let check_ui_gallery_code_editor_torture_marker_present =
-        checks.check_ui_gallery_code_editor_torture_marker_present;
-    let check_ui_gallery_code_editor_torture_undo_redo =
-        checks.check_ui_gallery_code_editor_torture_undo_redo;
-    let check_ui_gallery_code_editor_torture_geom_fallbacks_low =
-        checks.check_ui_gallery_code_editor_torture_geom_fallbacks_low;
     let check_ui_gallery_code_editor_torture_read_only_blocks_edits =
         checks.check_ui_gallery_code_editor_torture_read_only_blocks_edits;
     let check_ui_gallery_markdown_editor_source_read_only_blocks_edits =
         checks.check_ui_gallery_markdown_editor_source_read_only_blocks_edits;
     let check_ui_gallery_markdown_editor_source_disabled_blocks_edits =
         checks.check_ui_gallery_markdown_editor_source_disabled_blocks_edits;
-    let check_ui_gallery_markdown_editor_source_soft_wrap_toggle_stable =
-        checks.check_ui_gallery_markdown_editor_source_soft_wrap_toggle_stable;
-    let check_ui_gallery_markdown_editor_source_word_boundary =
-        checks.check_ui_gallery_markdown_editor_source_word_boundary;
-    let check_ui_gallery_web_ime_bridge_enabled = checks.check_ui_gallery_web_ime_bridge_enabled;
     let check_ui_gallery_text_rescan_system_fonts_font_stack_key_bumps =
         checks.check_ui_gallery_text_rescan_system_fonts_font_stack_key_bumps;
     let check_ui_gallery_text_fallback_policy_key_bumps_on_settings_change =
@@ -229,24 +218,6 @@ pub(crate) fn apply_post_run_checks(
     };
     let bundle_path = bundle_path_for_checks.as_path();
 
-    if check_ui_gallery_code_editor_torture_marker_present {
-        stats::check_bundle_for_ui_gallery_code_editor_torture_marker_present(
-            bundle_path,
-            warmup_frames,
-        )?;
-    }
-    if check_ui_gallery_code_editor_torture_undo_redo {
-        stats::check_bundle_for_ui_gallery_code_editor_torture_marker_undo_redo(
-            bundle_path,
-            warmup_frames,
-        )?;
-    }
-    if check_ui_gallery_code_editor_torture_geom_fallbacks_low {
-        stats::check_bundle_for_ui_gallery_code_editor_torture_geom_fallbacks_low(
-            bundle_path,
-            warmup_frames,
-        )?;
-    }
     if check_ui_gallery_code_editor_torture_read_only_blocks_edits {
         stats::check_bundle_for_ui_gallery_code_editor_torture_read_only_blocks_edits(
             bundle_path,
@@ -264,21 +235,6 @@ pub(crate) fn apply_post_run_checks(
             bundle_path,
             warmup_frames,
         )?;
-    }
-    if check_ui_gallery_markdown_editor_source_soft_wrap_toggle_stable {
-        stats::check_bundle_for_ui_gallery_markdown_editor_source_soft_wrap_toggle_stable(
-            bundle_path,
-            warmup_frames,
-        )?;
-    }
-    if check_ui_gallery_markdown_editor_source_word_boundary {
-        stats::check_bundle_for_ui_gallery_markdown_editor_source_word_boundary(
-            bundle_path,
-            warmup_frames,
-        )?;
-    }
-    if check_ui_gallery_web_ime_bridge_enabled {
-        stats::check_bundle_for_ui_gallery_web_ime_bridge_enabled(bundle_path, warmup_frames)?;
     }
     if check_ui_gallery_text_rescan_system_fonts_font_stack_key_bumps {
         check_out_dir_for_ui_gallery_text_rescan_system_fonts_font_stack_key_bumps(out_dir)?;

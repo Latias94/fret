@@ -110,6 +110,48 @@ const BUILTIN_POST_RUN_CHECKS: &[PostRunCheckEntry] = &[
         run: run_idle_no_paint_min,
     },
     PostRunCheckEntry {
+        id: "ui_gallery_code_editor_torture_marker_present",
+        requires_bundle_artifact: true,
+        requires_screenshots: false,
+        should_run: should_run_ui_gallery_code_editor_torture_marker_present,
+        run: run_ui_gallery_code_editor_torture_marker_present,
+    },
+    PostRunCheckEntry {
+        id: "ui_gallery_code_editor_torture_undo_redo",
+        requires_bundle_artifact: true,
+        requires_screenshots: false,
+        should_run: should_run_ui_gallery_code_editor_torture_undo_redo,
+        run: run_ui_gallery_code_editor_torture_undo_redo,
+    },
+    PostRunCheckEntry {
+        id: "ui_gallery_code_editor_torture_geom_fallbacks_low",
+        requires_bundle_artifact: true,
+        requires_screenshots: false,
+        should_run: should_run_ui_gallery_code_editor_torture_geom_fallbacks_low,
+        run: run_ui_gallery_code_editor_torture_geom_fallbacks_low,
+    },
+    PostRunCheckEntry {
+        id: "ui_gallery_markdown_editor_source_soft_wrap_toggle_stable",
+        requires_bundle_artifact: true,
+        requires_screenshots: false,
+        should_run: should_run_ui_gallery_markdown_editor_source_soft_wrap_toggle_stable,
+        run: run_ui_gallery_markdown_editor_source_soft_wrap_toggle_stable,
+    },
+    PostRunCheckEntry {
+        id: "ui_gallery_markdown_editor_source_word_boundary",
+        requires_bundle_artifact: true,
+        requires_screenshots: false,
+        should_run: should_run_ui_gallery_markdown_editor_source_word_boundary,
+        run: run_ui_gallery_markdown_editor_source_word_boundary,
+    },
+    PostRunCheckEntry {
+        id: "ui_gallery_web_ime_bridge_enabled",
+        requires_bundle_artifact: true,
+        requires_screenshots: false,
+        should_run: should_run_ui_gallery_web_ime_bridge_enabled,
+        run: run_ui_gallery_web_ime_bridge_enabled,
+    },
+    PostRunCheckEntry {
         id: "notify_hotspot_file_max",
         requires_bundle_artifact: true,
         requires_screenshots: false,
@@ -189,6 +231,92 @@ fn run_idle_no_paint_min(ctx: PostRunCheckContext<'_>, checks: &RunChecks) -> Re
         ctx.bundle_path,
         ctx.out_dir,
         min,
+        ctx.warmup_frames,
+    )
+}
+
+fn should_run_ui_gallery_code_editor_torture_marker_present(checks: &RunChecks) -> bool {
+    checks.check_ui_gallery_code_editor_torture_marker_present
+}
+
+fn run_ui_gallery_code_editor_torture_marker_present(
+    ctx: PostRunCheckContext<'_>,
+    _checks: &RunChecks,
+) -> Result<(), String> {
+    crate::stats::check_bundle_for_ui_gallery_code_editor_torture_marker_present(
+        ctx.bundle_path,
+        ctx.warmup_frames,
+    )
+}
+
+fn should_run_ui_gallery_code_editor_torture_undo_redo(checks: &RunChecks) -> bool {
+    checks.check_ui_gallery_code_editor_torture_undo_redo
+}
+
+fn run_ui_gallery_code_editor_torture_undo_redo(
+    ctx: PostRunCheckContext<'_>,
+    _checks: &RunChecks,
+) -> Result<(), String> {
+    crate::stats::check_bundle_for_ui_gallery_code_editor_torture_marker_undo_redo(
+        ctx.bundle_path,
+        ctx.warmup_frames,
+    )
+}
+
+fn should_run_ui_gallery_code_editor_torture_geom_fallbacks_low(checks: &RunChecks) -> bool {
+    checks.check_ui_gallery_code_editor_torture_geom_fallbacks_low
+}
+
+fn run_ui_gallery_code_editor_torture_geom_fallbacks_low(
+    ctx: PostRunCheckContext<'_>,
+    _checks: &RunChecks,
+) -> Result<(), String> {
+    crate::stats::check_bundle_for_ui_gallery_code_editor_torture_geom_fallbacks_low(
+        ctx.bundle_path,
+        ctx.warmup_frames,
+    )
+}
+
+fn should_run_ui_gallery_markdown_editor_source_soft_wrap_toggle_stable(
+    checks: &RunChecks,
+) -> bool {
+    checks.check_ui_gallery_markdown_editor_source_soft_wrap_toggle_stable
+}
+
+fn run_ui_gallery_markdown_editor_source_soft_wrap_toggle_stable(
+    ctx: PostRunCheckContext<'_>,
+    _checks: &RunChecks,
+) -> Result<(), String> {
+    crate::stats::check_bundle_for_ui_gallery_markdown_editor_source_soft_wrap_toggle_stable(
+        ctx.bundle_path,
+        ctx.warmup_frames,
+    )
+}
+
+fn should_run_ui_gallery_markdown_editor_source_word_boundary(checks: &RunChecks) -> bool {
+    checks.check_ui_gallery_markdown_editor_source_word_boundary
+}
+
+fn run_ui_gallery_markdown_editor_source_word_boundary(
+    ctx: PostRunCheckContext<'_>,
+    _checks: &RunChecks,
+) -> Result<(), String> {
+    crate::stats::check_bundle_for_ui_gallery_markdown_editor_source_word_boundary(
+        ctx.bundle_path,
+        ctx.warmup_frames,
+    )
+}
+
+fn should_run_ui_gallery_web_ime_bridge_enabled(checks: &RunChecks) -> bool {
+    checks.check_ui_gallery_web_ime_bridge_enabled
+}
+
+fn run_ui_gallery_web_ime_bridge_enabled(
+    ctx: PostRunCheckContext<'_>,
+    _checks: &RunChecks,
+) -> Result<(), String> {
+    crate::stats::check_bundle_for_ui_gallery_web_ime_bridge_enabled(
+        ctx.bundle_path,
         ctx.warmup_frames,
     )
 }

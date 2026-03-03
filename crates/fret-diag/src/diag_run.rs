@@ -295,16 +295,16 @@ pub(crate) fn cmd_run(ctx: RunCmdContext) -> Result<(), String> {
         check_ui_gallery_code_editor_torture_folds_placeholder_present_under_inline_preedit_with_decorations,
         check_ui_gallery_code_editor_torture_folds_placeholder_present_under_inline_preedit_with_decorations_composed,
         check_ui_gallery_code_editor_torture_folds_placeholder_present_under_soft_wrap,
-        check_ui_gallery_code_editor_torture_geom_fallbacks_low,
+        check_ui_gallery_code_editor_torture_geom_fallbacks_low: _,
         check_ui_gallery_code_editor_torture_inlays_absent_under_inline_preedit,
         check_ui_gallery_code_editor_torture_inlays_present,
         check_ui_gallery_code_editor_torture_inlays_present_under_inline_preedit_unwrapped,
         check_ui_gallery_code_editor_torture_inlays_present_under_inline_preedit_with_decorations,
         check_ui_gallery_code_editor_torture_inlays_present_under_inline_preedit_with_decorations_composed,
         check_ui_gallery_code_editor_torture_inlays_present_under_soft_wrap,
-        check_ui_gallery_code_editor_torture_marker_present,
+        check_ui_gallery_code_editor_torture_marker_present: _,
         check_ui_gallery_code_editor_torture_read_only_blocks_edits,
-        check_ui_gallery_code_editor_torture_undo_redo,
+        check_ui_gallery_code_editor_torture_undo_redo: _,
         check_ui_gallery_code_editor_word_boundary,
         check_ui_gallery_markdown_editor_source_a11y_composition,
         check_ui_gallery_markdown_editor_source_a11y_composition_soft_wrap,
@@ -322,13 +322,13 @@ pub(crate) fn cmd_run(ctx: RunCmdContext) -> Result<(), String> {
         check_ui_gallery_markdown_editor_source_line_boundary_triple_click,
         check_ui_gallery_markdown_editor_source_read_only_blocks_edits,
         check_ui_gallery_markdown_editor_source_soft_wrap_editing_selection_wrap_stable,
-        check_ui_gallery_markdown_editor_source_soft_wrap_toggle_stable,
-        check_ui_gallery_markdown_editor_source_word_boundary,
+        check_ui_gallery_markdown_editor_source_soft_wrap_toggle_stable: _,
+        check_ui_gallery_markdown_editor_source_word_boundary: _,
         check_ui_gallery_text_fallback_policy_key_bumps_on_locale_change,
         check_ui_gallery_text_fallback_policy_key_bumps_on_settings_change,
         check_ui_gallery_text_mixed_script_bundled_fallback_conformance,
         check_ui_gallery_text_rescan_system_fonts_font_stack_key_bumps,
-        check_ui_gallery_web_ime_bridge_enabled,
+        check_ui_gallery_web_ime_bridge_enabled: _,
         check_view_cache_reuse_min,
         check_view_cache_reuse_stable_min,
         check_viewport_capture_min,
@@ -388,15 +388,9 @@ pub(crate) fn cmd_run(ctx: RunCmdContext) -> Result<(), String> {
     let check_registry = crate::registry::checks::CheckRegistry::builtin();
     let wants_registered_post_run_checks =
         check_registry.wants_post_run_checks(&checks_for_post_run);
-    let wants_ad_hoc_post_run_checks = check_ui_gallery_code_editor_torture_marker_present
-        || check_ui_gallery_code_editor_torture_undo_redo
-        || check_ui_gallery_code_editor_torture_geom_fallbacks_low
-        || check_ui_gallery_code_editor_torture_read_only_blocks_edits
+    let wants_ad_hoc_post_run_checks = check_ui_gallery_code_editor_torture_read_only_blocks_edits
         || check_ui_gallery_markdown_editor_source_read_only_blocks_edits
         || check_ui_gallery_markdown_editor_source_disabled_blocks_edits
-        || check_ui_gallery_markdown_editor_source_soft_wrap_toggle_stable
-        || check_ui_gallery_markdown_editor_source_word_boundary
-        || check_ui_gallery_web_ime_bridge_enabled
         || check_ui_gallery_text_rescan_system_fonts_font_stack_key_bumps
         || check_ui_gallery_text_fallback_policy_key_bumps_on_settings_change
         || check_ui_gallery_text_fallback_policy_key_bumps_on_locale_change
