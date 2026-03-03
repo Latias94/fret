@@ -524,7 +524,7 @@ pub(crate) fn cmd_doctor_scripts(
         repairs.push(json!({
             "code": "diag-scripts.registry-write",
             "note": "Regenerate tools/diag-scripts/index.json",
-            "command": "python tools/check_diag_scripts_registry.py --write",
+            "command": "cargo run -p fretboard -- diag registry write",
         }));
     } else {
         let registry = PromotedScriptRegistry::load_from_path(&index_path);
@@ -629,7 +629,7 @@ pub(crate) fn cmd_doctor_scripts(
                 repairs.push(json!({
                     "code": "diag-scripts.registry-write",
                     "note": "Regenerate tools/diag-scripts/index.json",
-                    "command": "python tools/check_diag_scripts_registry.py --write",
+                    "command": "cargo run -p fretboard -- diag registry write",
                 }));
             }
         }
@@ -649,7 +649,7 @@ pub(crate) fn cmd_doctor_scripts(
         repairs.push(json!({
             "code": "diag-scripts.registry-write",
             "note": "Regenerate tools/diag-scripts/index.json",
-            "command": "python tools/check_diag_scripts_registry.py --write",
+            "command": "cargo run -p fretboard -- diag registry write",
         }));
     }
     if counts.registry_path_outside_library_total > 0 {

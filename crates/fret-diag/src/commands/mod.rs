@@ -17,6 +17,7 @@ pub(crate) mod layout_perf_summary;
 pub(crate) mod layout_sidecar;
 pub(crate) mod pick;
 pub(crate) mod query;
+pub(crate) mod registry;
 pub(crate) mod resolve;
 pub(crate) mod screenshots;
 pub(crate) mod script;

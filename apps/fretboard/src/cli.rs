@@ -70,6 +70,7 @@ Usage:
   fretboard diag sessions clean [--dir <dir>] --keep <n> [--older-than-days <n>] [--top <n>] [--apply] [--json]
   fretboard diag doctor [<base_or_session_out_dir|bundle_dir|bundle.json|bundle.schema2.json>] [--check|--strict] [--fix|--fix-dry-run] [--fix-schema2] [--json]
   fretboard diag doctor scripts [--max-examples <n>] [--json]
+  fretboard diag registry <check|write|print> [--path <path>] [--json]
   fretboard diag trace <base_or_session_out_dir|bundle_dir|bundle.json|bundle.schema2.json> [--trace-out <path>]
   fretboard diag pack [<base_or_session_out_dir|bundle_dir|bundle.json|bundle.schema2.json>] [--dir <dir>] [--pack-out <path>] [--ai-packet] [--ai-only] [--include-all] [--include-root-artifacts] [--include-triage] [--include-screenshots]
   fretboard diag triage <base_or_session_out_dir|bundle_dir|bundle.json|bundle.schema2.json> [--top <n>] [--sort <key>] [--warmup-frames <n>] [--json] [--out <path>]

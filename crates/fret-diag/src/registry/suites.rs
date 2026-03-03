@@ -17,7 +17,7 @@ impl SuiteRegistry {
         if !registry_path.is_file() {
             return Err(format!(
                 "promoted scripts registry is missing: {}\n\
-hint: generate it via `python tools/check_diag_scripts_registry.py --write`",
+hint: generate it via `cargo run -p fretboard -- diag registry write`",
                 registry_path.display()
             ));
         }

@@ -41,7 +41,7 @@ hint: if you meant a promoted script id, pass the id without any path separators
         return Err(format!(
             "script file not found: {}\n\
 and promoted scripts registry is missing: {}\n\
-hint: pass an explicit path, or ensure `tools/diag-scripts/index.json` exists (run `python tools/check_diag_scripts_registry.py --write`)",
+hint: pass an explicit path, or ensure `tools/diag-scripts/index.json` exists (run `cargo run -p fretboard -- diag registry write`)",
             candidate.display(),
             registry_path.display()
         ));
@@ -58,7 +58,7 @@ hint: pass an explicit path, or ensure `tools/diag-scripts/index.json` exists (r
         return Err(format!(
             "promoted script id resolved to a missing path: {query}\n\
 path: {}\n\
-hint: regenerate tools/diag-scripts/index.json (python tools/check_diag_scripts_registry.py --write)",
+hint: regenerate tools/diag-scripts/index.json (cargo run -p fretboard -- diag registry write)",
             resolved.display()
         ));
     }

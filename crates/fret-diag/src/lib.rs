@@ -60,6 +60,7 @@ mod paths;
 mod perf_hint_gate;
 mod perf_seed_policy;
 mod post_run_checks;
+mod promoted_registry_builder;
 mod registry;
 mod run_artifacts;
 mod script_execution;
@@ -3072,6 +3073,7 @@ pub fn diag_cmd(args: Vec<String>) -> Result<(), String> {
             stats_json,
             layout_sidecar_out.as_deref(),
         ),
+        "registry" => commands::registry::cmd_registry(&rest, &workspace_root, stats_json),
         "config" => commands::config::cmd_config(commands::config::ConfigCmdContext {
             rest: rest.clone(),
             workspace_root: workspace_root.clone(),
