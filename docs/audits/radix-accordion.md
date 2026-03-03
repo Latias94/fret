@@ -43,6 +43,10 @@ Fret does not use React context. Instead, accordion behavior is composed via:
 - Pass: `collapsible` behavior in single mode matches Radix (toggle-off only when enabled).
 - Pass: Trigger can model Radix `aria-controls` via the `controls_element` relationship when given
   a stable content element id.
+- Pass: Content models Radix `role="region"` and `aria-labelledby` outcomes via `SemanticsRole::Region`
+  plus `labelled_by_element` wiring to its trigger.
+- Pass: The open non-collapsible trigger models Radix `aria-disabled` outcomes by suppressing the
+  invoke/click action surface while remaining focusable.
 - Note: Fret uses `RovingFlex` for keyboard navigation rather than a collection of triggers.
 
 ## Follow-ups (recommended)
