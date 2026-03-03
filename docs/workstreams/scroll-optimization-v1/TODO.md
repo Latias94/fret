@@ -57,8 +57,9 @@ Status: Draft
       - p50/p95 `total/layout/solve` us: `11870/18175` / `11185/17468` / `3437/5012`
       - worst bundle: `target/fret-perf-vlist-coalesce-on-r11/1772509420507/bundle.json`
       - log: `target/perf-logs/virtual-list-coalesce-on-r11.log`
-- [ ] Re-run repeat=11 perf after adding the max-abs cap:
+- [x] Re-run repeat=11 perf after adding the max-abs cap (2026-03-03):
   - Goal: keep `perf-ui-gallery-scroll-area` improved, remove `perf-ui-gallery-virtual-list` p95 regression.
+  - Result: `cap=120` still shows high variance for VirtualList; see the “Full rerun” section below.
 
 ### Rerun (2026-03-03) — max-abs cap default (`120`)
 
@@ -87,6 +88,43 @@ Short rerun (repeat=5, warmup=10) to sanity-check the new default cap behavior:
   - [x] stress wheel in a scroll area (`ui-gallery-scroll-area-wheel-torture`),
   - [x] stress wheel in a virtual list (`ui-gallery-virtual-list-wheel-torture`),
   - [x] nested scrollable case (inner X should not consume Y wheel: `ui-gallery-scroll-area-nested-scroll-routing`).
+
+Full rerun (repeat=11, warmup=10) with explicit env overrides (2026-03-03):
+
+- `perf-ui-gallery-virtual-list` (script: `ui-gallery-virtual-list-wheel-torture`)
+  - OFF (`FRET_WINIT_COALESCE_WHEEL=0`):
+    - p50/p95 `total/layout/solve` us: `10619/12213` / `9945/11573` / `2987/3319`
+    - worst bundle: `target/fret-diag/1772517019308/bundle.json`
+    - log: `target/perf-logs/virtual-list-coalesce-off-r11-20260303c.log`
+  - ON (`FRET_WINIT_COALESCE_WHEEL=1`, cap `120`):
+    - p50/p95 `total/layout/solve` us: `11611/24223` / `10978/22757` / `3258/5983`
+    - worst bundle: `target/fret-diag/1772517054654/bundle.json`
+    - log: `target/perf-logs/virtual-list-coalesce-on-cap120-r11-20260303c.log`
+  - ON (`FRET_WINIT_COALESCE_WHEEL=1`, cap `60`):
+    - p50/p95 `total/layout/solve` us: `10872/12343` / `10231/11625` / `3042/3281`
+    - worst bundle: `target/fret-diag/1772517987201/bundle.json`
+    - log: `target/perf-logs/virtual-list-coalesce-on-cap60-r11-20260303c.log`
+
+- `perf-ui-gallery-scroll-area` (script: `ui-gallery-scroll-area-wheel-torture`)
+  - OFF (`FRET_WINIT_COALESCE_WHEEL=0`):
+    - p50/p95 `total/layout/solve` us: `27674/28643` / `26613/27521` / `2844/3019`
+    - worst bundle: `target/fret-diag/1772517184852/bundle.json`
+    - log: `target/perf-logs/scroll-area-coalesce-off-r11-20260303c.log`
+  - ON (`FRET_WINIT_COALESCE_WHEEL=1`, cap `120`):
+    - p50/p95 `total/layout/solve` us: `27873/28904` / `26766/27801` / `2859/3254`
+    - worst bundle: `target/fret-diag/1772517215826/bundle.json`
+    - log: `target/perf-logs/scroll-area-coalesce-on-cap120-r11-20260303c.log`
+  - ON (`FRET_WINIT_COALESCE_WHEEL=1`, cap `60`):
+    - p50/p95 `total/layout/solve` us: `29862/32033` / `28487/30812` / `2965/3549`
+    - worst bundle: `target/fret-diag/1772518038237/bundle.json`
+    - log: `target/perf-logs/scroll-area-coalesce-on-cap60-r11-20260303c.log`
+
+Notes:
+
+- Current evidence suggests the cap is workload-sensitive:
+  - `cap=120` is acceptable for `scroll-area` but shows high variance/regression in `virtual-list`.
+  - `cap=60` removes the `virtual-list` spikes but regresses `scroll-area` in this torture script.
+- Follow-up needed: pick a single safe default (or adjust coalescing semantics) before making coalescing a default-on behavior.
 
 ## Perf harness plumbing
 

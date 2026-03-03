@@ -151,6 +151,19 @@ Current implementation (native, opt-in):
   - Guardrail: cap the absolute delta of a single coalesced event to avoid pathological "one huge
     wheel jump" cases (note: not a complete fix for VirtualList worst-frame regressions):
     - `FRET_WINIT_COALESCE_WHEEL_MAX_ABS_PX` (default: `120`)
+  - Note: this is an in-order coalescer (it merges only adjacent mapped wheel events). In the
+    desktop winit runner today, each `WindowEvent` is typically mapped into a fresh `Vec<Event>`.
+    That means runner-side coalescing is most visible under synthetic/driver bursts (diag), or on
+    platforms/paths that batch multiple wheel events into one delivery turn. If we want strict
+    “one wheel event per frame” semantics, we likely need a small buffering layer at the frame
+    boundary in `crates/fret-launch`.
+
+Design note (cap sensitivity):
+
+- Repeat=11 perf evidence shows `FRET_WINIT_COALESCE_WHEEL_MAX_ABS_PX` is workload-sensitive: a cap
+  that is “safe” for `ScrollArea` can still cause spikes in `VirtualList` under the current
+  coalescing semantics. See `docs/workstreams/scroll-optimization-v1/TODO.md` for concrete numbers
+  and bundles.
 
 Evidence gate:
 
