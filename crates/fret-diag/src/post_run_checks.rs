@@ -22,16 +22,6 @@ pub(crate) fn apply_post_run_checks(
         checks.check_ui_gallery_text_fallback_policy_key_bumps_on_locale_change;
     let check_ui_gallery_text_mixed_script_bundled_fallback_conformance =
         checks.check_ui_gallery_text_mixed_script_bundled_fallback_conformance;
-    let check_ui_gallery_markdown_editor_source_inlays_toggle_stable =
-        checks.check_ui_gallery_markdown_editor_source_inlays_toggle_stable;
-    let check_ui_gallery_markdown_editor_source_inlays_caret_navigation_stable =
-        checks.check_ui_gallery_markdown_editor_source_inlays_caret_navigation_stable;
-    let check_ui_gallery_markdown_editor_source_inlays_present =
-        checks.check_ui_gallery_markdown_editor_source_inlays_present;
-    let check_ui_gallery_markdown_editor_source_inlays_present_under_soft_wrap =
-        checks.check_ui_gallery_markdown_editor_source_inlays_present_under_soft_wrap;
-    let check_ui_gallery_markdown_editor_source_inlays_absent_under_inline_preedit =
-        checks.check_ui_gallery_markdown_editor_source_inlays_absent_under_inline_preedit;
     let check_ui_gallery_code_editor_torture_folds_placeholder_absent_under_inline_preedit =
         checks.check_ui_gallery_code_editor_torture_folds_placeholder_absent_under_inline_preedit;
     let check_ui_gallery_code_editor_torture_folds_placeholder_present_under_inline_preedit_unwrapped =
@@ -228,36 +218,6 @@ pub(crate) fn apply_post_run_checks(
     }
     if check_ui_gallery_text_mixed_script_bundled_fallback_conformance {
         check_out_dir_for_ui_gallery_text_mixed_script_bundled_fallback_conformance(out_dir)?;
-    }
-    if check_ui_gallery_markdown_editor_source_inlays_toggle_stable {
-        stats::check_bundle_for_ui_gallery_markdown_editor_source_inlays_toggle_stable(
-            bundle_path,
-            warmup_frames,
-        )?;
-    }
-    if check_ui_gallery_markdown_editor_source_inlays_caret_navigation_stable {
-        stats::check_bundle_for_ui_gallery_markdown_editor_source_inlays_caret_navigation_stable(
-            bundle_path,
-            warmup_frames,
-        )?;
-    }
-    if check_ui_gallery_markdown_editor_source_inlays_present {
-        stats::check_bundle_for_ui_gallery_markdown_editor_source_inlays_present(
-            bundle_path,
-            warmup_frames,
-        )?;
-    }
-    if check_ui_gallery_markdown_editor_source_inlays_present_under_soft_wrap {
-        stats::check_bundle_for_ui_gallery_markdown_editor_source_inlays_present_under_soft_wrap(
-            bundle_path,
-            warmup_frames,
-        )?;
-    }
-    if check_ui_gallery_markdown_editor_source_inlays_absent_under_inline_preedit {
-        stats::check_bundle_for_ui_gallery_markdown_editor_source_inlays_absent_under_inline_preedit(
-            bundle_path,
-            warmup_frames,
-        )?;
     }
     if check_ui_gallery_code_editor_torture_folds_placeholder_absent_under_inline_preedit {
         stats::check_bundle_for_ui_gallery_code_editor_torture_folds_placeholder_absent_under_inline_preedit(

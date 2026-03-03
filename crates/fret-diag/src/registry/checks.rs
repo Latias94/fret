@@ -215,6 +215,41 @@ const BUILTIN_POST_RUN_CHECKS: &[PostRunCheckEntry] = &[
         run: run_ui_gallery_markdown_editor_source_folds_placeholder_absent_under_inline_preedit,
     },
     PostRunCheckEntry {
+        id: "ui_gallery_markdown_editor_source_inlays_toggle_stable",
+        requires_bundle_artifact: true,
+        requires_screenshots: false,
+        should_run: should_run_ui_gallery_markdown_editor_source_inlays_toggle_stable,
+        run: run_ui_gallery_markdown_editor_source_inlays_toggle_stable,
+    },
+    PostRunCheckEntry {
+        id: "ui_gallery_markdown_editor_source_inlays_caret_navigation_stable",
+        requires_bundle_artifact: true,
+        requires_screenshots: false,
+        should_run: should_run_ui_gallery_markdown_editor_source_inlays_caret_navigation_stable,
+        run: run_ui_gallery_markdown_editor_source_inlays_caret_navigation_stable,
+    },
+    PostRunCheckEntry {
+        id: "ui_gallery_markdown_editor_source_inlays_present",
+        requires_bundle_artifact: true,
+        requires_screenshots: false,
+        should_run: should_run_ui_gallery_markdown_editor_source_inlays_present,
+        run: run_ui_gallery_markdown_editor_source_inlays_present,
+    },
+    PostRunCheckEntry {
+        id: "ui_gallery_markdown_editor_source_inlays_present_under_soft_wrap",
+        requires_bundle_artifact: true,
+        requires_screenshots: false,
+        should_run: should_run_ui_gallery_markdown_editor_source_inlays_present_under_soft_wrap,
+        run: run_ui_gallery_markdown_editor_source_inlays_present_under_soft_wrap,
+    },
+    PostRunCheckEntry {
+        id: "ui_gallery_markdown_editor_source_inlays_absent_under_inline_preedit",
+        requires_bundle_artifact: true,
+        requires_screenshots: false,
+        should_run: should_run_ui_gallery_markdown_editor_source_inlays_absent_under_inline_preedit,
+        run: run_ui_gallery_markdown_editor_source_inlays_absent_under_inline_preedit,
+    },
+    PostRunCheckEntry {
         id: "notify_hotspot_file_max",
         requires_bundle_artifact: true,
         requires_screenshots: false,
@@ -519,6 +554,82 @@ fn run_ui_gallery_markdown_editor_source_folds_placeholder_absent_under_inline_p
     _checks: &RunChecks,
 ) -> Result<(), String> {
     crate::stats::check_bundle_for_ui_gallery_markdown_editor_source_folds_placeholder_absent_under_inline_preedit(
+        ctx.bundle_path,
+        ctx.warmup_frames,
+    )
+}
+
+fn should_run_ui_gallery_markdown_editor_source_inlays_toggle_stable(checks: &RunChecks) -> bool {
+    checks.check_ui_gallery_markdown_editor_source_inlays_toggle_stable
+}
+
+fn run_ui_gallery_markdown_editor_source_inlays_toggle_stable(
+    ctx: PostRunCheckContext<'_>,
+    _checks: &RunChecks,
+) -> Result<(), String> {
+    crate::stats::check_bundle_for_ui_gallery_markdown_editor_source_inlays_toggle_stable(
+        ctx.bundle_path,
+        ctx.warmup_frames,
+    )
+}
+
+fn should_run_ui_gallery_markdown_editor_source_inlays_caret_navigation_stable(
+    checks: &RunChecks,
+) -> bool {
+    checks.check_ui_gallery_markdown_editor_source_inlays_caret_navigation_stable
+}
+
+fn run_ui_gallery_markdown_editor_source_inlays_caret_navigation_stable(
+    ctx: PostRunCheckContext<'_>,
+    _checks: &RunChecks,
+) -> Result<(), String> {
+    crate::stats::check_bundle_for_ui_gallery_markdown_editor_source_inlays_caret_navigation_stable(
+        ctx.bundle_path,
+        ctx.warmup_frames,
+    )
+}
+
+fn should_run_ui_gallery_markdown_editor_source_inlays_present(checks: &RunChecks) -> bool {
+    checks.check_ui_gallery_markdown_editor_source_inlays_present
+}
+
+fn run_ui_gallery_markdown_editor_source_inlays_present(
+    ctx: PostRunCheckContext<'_>,
+    _checks: &RunChecks,
+) -> Result<(), String> {
+    crate::stats::check_bundle_for_ui_gallery_markdown_editor_source_inlays_present(
+        ctx.bundle_path,
+        ctx.warmup_frames,
+    )
+}
+
+fn should_run_ui_gallery_markdown_editor_source_inlays_present_under_soft_wrap(
+    checks: &RunChecks,
+) -> bool {
+    checks.check_ui_gallery_markdown_editor_source_inlays_present_under_soft_wrap
+}
+
+fn run_ui_gallery_markdown_editor_source_inlays_present_under_soft_wrap(
+    ctx: PostRunCheckContext<'_>,
+    _checks: &RunChecks,
+) -> Result<(), String> {
+    crate::stats::check_bundle_for_ui_gallery_markdown_editor_source_inlays_present_under_soft_wrap(
+        ctx.bundle_path,
+        ctx.warmup_frames,
+    )
+}
+
+fn should_run_ui_gallery_markdown_editor_source_inlays_absent_under_inline_preedit(
+    checks: &RunChecks,
+) -> bool {
+    checks.check_ui_gallery_markdown_editor_source_inlays_absent_under_inline_preedit
+}
+
+fn run_ui_gallery_markdown_editor_source_inlays_absent_under_inline_preedit(
+    ctx: PostRunCheckContext<'_>,
+    _checks: &RunChecks,
+) -> Result<(), String> {
+    crate::stats::check_bundle_for_ui_gallery_markdown_editor_source_inlays_absent_under_inline_preedit(
         ctx.bundle_path,
         ctx.warmup_frames,
     )
