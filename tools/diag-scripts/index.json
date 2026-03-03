@@ -4968,6 +4968,30 @@
       ]
     },
     {
+      "id": "workspace-shell-demo-tabstrip-keyboard-reveal-home-restores-scroll-smoke",
+      "path": "tools/diag-scripts/workspace/shell-demo/workspace-shell-demo-tabstrip-keyboard-reveal-home-restores-scroll-smoke.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "diag-hardening-smoke-workspace"
+      ],
+      "tags": [
+        "gate",
+        "keyboard",
+        "scroll",
+        "smoke",
+        "tabstrip",
+        "workspace"
+      ],
+      "target_hints": [
+        "Shrinks the window to force tab strip overflow.",
+        "Enters the tab strip (Ctrl+F6).",
+        "Uses End to activate an overflowed tab (scroll right).",
+        "Uses Home to activate the first tab (scroll back left)."
+      ]
+    },
+    {
       "id": "workspace-shell-demo-tab-cross-pane-move-to-end",
       "path": "tools/diag-scripts/workspace/shell-demo/workspace-shell-demo-tab-cross-pane-move-to-end.json",
       "required_capabilities": [

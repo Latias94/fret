@@ -121,3 +121,5 @@ ID format:
   - `tools/diag-scripts/workspace/shell-demo/workspace-shell-demo-tabstrip-escape-restores-content-focus-smoke.json`
 - [x] WTS-a11y-071 Keyboard activation reveals overflowed active tab:
   - `tools/diag-scripts/workspace/shell-demo/workspace-shell-demo-tabstrip-keyboard-reveal-hidden-smoke.json`
+- [x] WTS-a11y-072 Keyboard Home restores scroll after End reveal:
+  - `tools/diag-scripts/workspace/shell-demo/workspace-shell-demo-tabstrip-keyboard-reveal-home-restores-scroll-smoke.json`
