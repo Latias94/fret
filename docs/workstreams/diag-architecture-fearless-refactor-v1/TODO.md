@@ -38,6 +38,7 @@ This TODO is organized by milestones (see `MILESTONES.md`). Keep tasks **small a
 
 ## M3 — Layout correctness workflow
 
+- [x] Write down the layout sidecar v1 contract (file naming, JSON shape, clipping rules).
 - [ ] Add a script-level “layout sidecar request” concept (design first, then implement).
 - [ ] Tie a Taffy dump into bundle directories as a sidecar (native only, best-effort).
 - [ ] Add a viewer affordance to load/render the sidecar (ok to start as raw JSON view).

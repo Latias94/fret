@@ -16,6 +16,7 @@ Start here:
 - Task tracker: `docs/workstreams/diag-architecture-fearless-refactor-v1/TODO.md`
 - Evidence + gates: `docs/workstreams/diag-architecture-fearless-refactor-v1/EVIDENCE_AND_GATES.md`
 - Crate plan: `docs/workstreams/diag-architecture-fearless-refactor-v1/CRATE_PLAN.md`
+- Layout sidecars v1 (design): `docs/workstreams/diag-architecture-fearless-refactor-v1/LAYOUT_SIDECARS_V1.md`
 - Parity matrix (FS/WS + CLI/GUI): `docs/workstreams/diag-architecture-fearless-refactor-v1/PARITY_MATRIX.md`
 - Risk matrix: `docs/workstreams/diag-architecture-fearless-refactor-v1/RISK_MATRIX.md`
 - Open questions: `docs/workstreams/diag-architecture-fearless-refactor-v1/OPEN_QUESTIONS.md`
