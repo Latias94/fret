@@ -2264,6 +2264,27 @@
       "target_hints": []
     },
     {
+      "id": "ui-gallery-carousel-sizes-md-screenshot",
+      "path": "tools/diag-scripts/ui-gallery/carousel/ui-gallery-carousel-sizes-md-screenshot.json",
+      "required_capabilities": [
+        "diag.script_v2",
+        "diag.screenshot_png"
+      ],
+      "suite_memberships": [
+        "ui-gallery-shadcn-conformance"
+      ],
+      "tags": [
+        "carousel",
+        "docs-parity",
+        "md",
+        "screenshot",
+        "shadcn",
+        "sizes",
+        "ui-gallery"
+      ],
+      "target_hints": []
+    },
+    {
       "id": "ui-gallery-carousel-spacing-screenshot",
       "path": "tools/diag-scripts/ui-gallery/carousel/ui-gallery-carousel-spacing-screenshot.json",
       "required_capabilities": [
