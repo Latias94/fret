@@ -98,7 +98,10 @@ fn view(cx: &mut fret_ui::ElementContext<'_, fret_app::App>, st: &mut State) -> 
 
     let wgpu = cx.app.global::<WgpuAdapterSelectionSnapshot>().cloned();
     let wgpu_text: Arc<str> = Arc::from(match wgpu {
-        Some(s) => format!("wgpu: backend={} adapter={}", s.selected_backend, s.adapter_name),
+        Some(s) => format!(
+            "wgpu: backend={} adapter={}",
+            s.selected_backend, s.adapter_name
+        ),
         None => "wgpu: <unavailable>".to_string(),
     });
 

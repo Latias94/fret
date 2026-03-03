@@ -4,8 +4,8 @@ use std::time::Duration;
 use std::{collections::HashMap, hash::Hasher};
 
 use fret_core::{Color, WindowFrameClockService, WindowMetricsService};
-use fret_ui::{ElementContext, Invalidation, UiHost};
 use fret_ui::elements::GlobalElementId;
+use fret_ui::{ElementContext, Invalidation, UiHost};
 use fret_ui_headless::motion::inertia::{InertiaBounds, InertiaSimulation};
 use fret_ui_headless::motion::simulation::Simulation1D;
 use fret_ui_headless::motion::spring::{SpringDescription, SpringSimulation};
@@ -1191,13 +1191,30 @@ mod tests {
 
         app.set_tick_id(TickId(1));
         app.set_frame_id(FrameId(2));
-        let anchor = with_element_cx(&mut app, window, bounds(), "tween_for_element_cubic", |cx| {
-            cx.keyed("anchor", |cx| cx.root_id())
-        });
+        let anchor = with_element_cx(
+            &mut app,
+            window,
+            bounds(),
+            "tween_for_element_cubic",
+            |cx| cx.keyed("anchor", |cx| cx.root_id()),
+        );
 
-        let _ = with_element_cx(&mut app, window, bounds(), "tween_for_element_cubic", |cx| {
-            drive_tween_f32_for_element(cx, anchor, "value", 0.0, Duration::from_millis(150), ease)
-        });
+        let _ = with_element_cx(
+            &mut app,
+            window,
+            bounds(),
+            "tween_for_element_cubic",
+            |cx| {
+                drive_tween_f32_for_element(
+                    cx,
+                    anchor,
+                    "value",
+                    0.0,
+                    Duration::from_millis(150),
+                    ease,
+                )
+            },
+        );
 
         app.set_tick_id(TickId(2));
         app.set_frame_id(FrameId(3));
@@ -1205,9 +1222,22 @@ mod tests {
             svc.record_frame(window, app.frame_id());
         });
 
-        let out = with_element_cx(&mut app, window, bounds(), "tween_for_element_cubic", |cx| {
-            drive_tween_f32_for_element(cx, anchor, "value", 1.0, Duration::from_millis(150), ease)
-        });
+        let out = with_element_cx(
+            &mut app,
+            window,
+            bounds(),
+            "tween_for_element_cubic",
+            |cx| {
+                drive_tween_f32_for_element(
+                    cx,
+                    anchor,
+                    "value",
+                    1.0,
+                    Duration::from_millis(150),
+                    ease,
+                )
+            },
+        );
 
         assert!(
             out.value > 0.0 && out.value < 1.0,

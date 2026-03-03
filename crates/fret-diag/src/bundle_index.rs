@@ -1838,7 +1838,10 @@ mod tests {
 
         let drag = e0.get("dock_drag").unwrap().as_object().unwrap();
         assert_eq!(drag.get("dragging").and_then(|v| v.as_bool()), Some(true));
-        assert_eq!(drag.get("kind").and_then(|v| v.as_str()), Some("dock_panel"));
+        assert_eq!(
+            drag.get("kind").and_then(|v| v.as_str()),
+            Some("dock_panel")
+        );
         assert_eq!(
             drag.get("cross_window_hover").and_then(|v| v.as_bool()),
             Some(true)
@@ -1848,12 +1851,10 @@ mod tests {
                 .and_then(|v| v.as_str()),
             Some("heuristic_rects")
         );
+        assert_eq!(drag.get("moving_window").and_then(|v| v.as_u64()), Some(2));
         assert_eq!(
-            drag.get("moving_window").and_then(|v| v.as_u64()),
-            Some(2)
-        );
-        assert_eq!(
-            drag.get("window_under_moving_window").and_then(|v| v.as_u64()),
+            drag.get("window_under_moving_window")
+                .and_then(|v| v.as_u64()),
             Some(1)
         );
         assert_eq!(
