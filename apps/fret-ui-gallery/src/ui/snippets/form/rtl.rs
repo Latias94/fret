@@ -11,8 +11,9 @@ struct Models {
 }
 
 pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
-    let (text_input, switch) =
-        cx.with_state(Models::default, |st| (st.text_input.clone(), st.switch.clone()));
+    let (text_input, switch) = cx.with_state(Models::default, |st| {
+        (st.text_input.clone(), st.switch.clone())
+    });
     let (text_input, switch) = match (text_input, switch) {
         (Some(text_input), Some(switch)) => (text_input, switch),
         _ => {
@@ -26,7 +27,10 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
         }
     };
 
-    let max_w_md = LayoutRefinement::default().w_full().min_w_0().max_w(Px(520.0));
+    let max_w_md = LayoutRefinement::default()
+        .w_full()
+        .min_w_0()
+        .max_w(Px(520.0));
 
     with_direction_provider(cx, LayoutDirection::Rtl, |cx| {
         shadcn::FieldSet::new([

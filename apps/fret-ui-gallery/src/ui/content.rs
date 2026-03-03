@@ -549,7 +549,12 @@ fn page_preview(
         PAGE_SONNER => pages::preview_sonner(cx, last_action.clone(), sonner_position.clone()),
         PAGE_ALERT => pages::preview_alert(cx),
         PAGE_ALERT_DIALOG => pages::preview_alert_dialog(cx, alert_dialog_open),
-        PAGE_ASPECT_RATIO => pages::preview_aspect_ratio(cx),
+        PAGE_ASPECT_RATIO => pages::preview_aspect_ratio(
+            cx,
+            Some(models.image_fit_demo_wide_image.clone()),
+            Some(models.image_fit_demo_tall_image.clone()),
+            Some(models.avatar_demo_image.clone()),
+        ),
         PAGE_BREADCRUMB => pages::preview_breadcrumb(cx, last_action.clone()),
         PAGE_BUTTON_GROUP => pages::preview_button_group(cx),
         PAGE_CALENDAR => pages::preview_calendar(cx, date_picker_month, date_picker_selected),
