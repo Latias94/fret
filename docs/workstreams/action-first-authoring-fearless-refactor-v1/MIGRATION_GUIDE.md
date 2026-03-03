@@ -111,6 +111,10 @@ Template reference:
 
 - `fretboard new hello` uses this pattern (View runtime + typed unit actions):
   `apps/fretboard/src/scaffold/templates.rs` (`hello_template_main_rs`)
+- `fretboard new todo` extends the same pattern with selector/query hooks:
+  `apps/fretboard/src/scaffold/templates.rs` (`todo_template_main_rs`)
+- `fretboard new simple-todo` provides the smallest View+actions baseline:
+  `apps/fretboard/src/scaffold/templates.rs` (`simple_todo_template_main_rs`)
 
 UI gallery reference:
 

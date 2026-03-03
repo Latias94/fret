@@ -196,11 +196,15 @@ ID format:
     - Scripted diagnostics gate:
       - `tools/diag-scripts/workspace/shell-demo/workspace-shell-demo-tab-close-button-closes-tab-smoke.json` (asserts `source_kind=pointer` for the close command)
       - `tools/diag_gate_action_first_authoring_v1.ps1` (includes workspace shell demo gate)
-- [~] AFA-adopt-043 Update `fretboard` scaffold templates to prefer action-first patterns (once v1 is stable).
+- [x] AFA-adopt-043 Update `fretboard` scaffold templates to prefer action-first patterns (once v1 is stable).
   - Rule: do not ship two different default paradigms in templates.
-  - Status (as of 2026-03-02):
-    - `fretboard new hello` migrated to View runtime + typed unit actions:
+  - Status (as of 2026-03-03):
+    - `fretboard new hello` uses View runtime + typed unit actions:
       `apps/fretboard/src/scaffold/templates.rs` (`hello_template_main_rs`)
+    - `fretboard new todo` uses View runtime + typed unit actions + selector/query hooks:
+      `apps/fretboard/src/scaffold/templates.rs` (`todo_template_main_rs`)
+    - `fretboard new simple-todo` uses View runtime + typed unit actions:
+      `apps/fretboard/src/scaffold/templates.rs` (`simple_todo_template_main_rs`)
 
 ---
 
