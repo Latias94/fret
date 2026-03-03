@@ -20,6 +20,9 @@ fn seed_shadcn_motion_tokens(cfg: &mut ThemeConfig) {
         .entry("duration.shadcn.motion.100".to_string())
         .or_insert(100);
     cfg.durations_ms
+        .entry("duration.shadcn.motion.150".to_string())
+        .or_insert(150);
+    cfg.durations_ms
         .entry("duration.shadcn.motion.200".to_string())
         .or_insert(200);
     cfg.durations_ms

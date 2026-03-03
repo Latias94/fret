@@ -29,6 +29,7 @@ pub struct UiDiagnosticsService {
     script_keepalive_timer_token: Option<fret_core::TimerToken>,
     app_snapshot_provider:
         Option<Arc<dyn Fn(&App, AppWindowId) -> Option<serde_json::Value> + 'static>>,
+    debug_extensions: Option<extensions::DebugExtensionsRegistryV1>,
     #[cfg(feature = "diagnostics-ws")]
     pending_devtools_screenshot:
         Option<ui_diagnostics_devtools_ws::PendingDevtoolsScreenshotRequest>,
@@ -73,6 +74,20 @@ thread_local! {
 }
 
 impl UiDiagnosticsService {
+    fn debug_extensions_registry_mut(&mut self) -> &mut extensions::DebugExtensionsRegistryV1 {
+        self.debug_extensions
+            .get_or_insert_with(extensions::default_debug_extensions_registry_v1)
+    }
+
+    pub fn register_debug_extension_best_effort(
+        &mut self,
+        key: String,
+        writer: UiDebugExtensionWriterV1,
+    ) {
+        self.debug_extensions_registry_mut()
+            .register_best_effort(key, writer);
+    }
+
     pub(super) fn allocate_clipboard_token(&mut self) -> fret_core::ClipboardToken {
         let next = self.next_clipboard_token.max(1);
         self.next_clipboard_token = next.saturating_add(1);
@@ -329,6 +344,7 @@ impl UiDiagnosticsService {
                 | UiPredicateV1::WindowStyleEffectiveIs { .. }
                 | UiPredicateV1::WindowBackgroundMaterialEffectiveIs { .. }
                 | UiPredicateV1::DockDragCurrentWindowIs { .. }
+                | UiPredicateV1::DockDragKindIs { .. }
                 | UiPredicateV1::DockDragMovingWindowIs { .. }
                 | UiPredicateV1::DockDragWindowUnderMovingWindowIs { .. }
                 | UiPredicateV1::DockDragActiveIs { .. }
@@ -955,6 +971,11 @@ impl UiDiagnosticsService {
             return;
         }
 
+        let extensions = {
+            let captured = self.debug_extensions_registry_mut().capture(app, window);
+            (!captured.is_empty()).then_some(captured)
+        };
+
         // Keep `known_windows` aligned to currently-open windows so window targets like
         // `last_seen` do not get stuck pointing at a window that has already been closed (common
         // after tear-off auto-close).
@@ -1081,6 +1102,7 @@ impl UiDiagnosticsService {
             self.cfg.max_debug_string_bytes,
         );
         debug.viewport_input = viewport_input;
+        debug.extensions = extensions;
 
         let app_snapshot = self
             .app_snapshot_provider

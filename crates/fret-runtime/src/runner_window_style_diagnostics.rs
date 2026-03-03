@@ -38,6 +38,7 @@ impl Default for RunnerWindowStyleEffectiveSnapshotV1 {
 #[derive(Debug, Default)]
 pub struct RunnerWindowStyleDiagnosticsStore {
     effective: HashMap<AppWindowId, RunnerWindowStyleEffectiveSnapshotV1>,
+    transparent_explicit: HashMap<AppWindowId, Option<bool>>,
 }
 
 impl RunnerWindowStyleDiagnosticsStore {
@@ -55,6 +56,8 @@ impl RunnerWindowStyleDiagnosticsStore {
         caps: &PlatformCapabilities,
     ) {
         let mut next = RunnerWindowStyleEffectiveSnapshotV1::default();
+        self.transparent_explicit
+            .insert(window, requested.transparent);
 
         if caps.ui.window_decorations {
             if let Some(decorations) = requested.decorations {
@@ -66,14 +69,20 @@ impl RunnerWindowStyleDiagnosticsStore {
                 next.resizable = resizable;
             }
         }
+        if let Some(material) = requested.background_material {
+            let clamped = clamp_background_material_request(material, caps);
+            next.background_material = clamped;
+        }
+
         if caps.ui.window_transparent {
             if let Some(transparent) = requested.transparent {
                 next.transparent = transparent;
+            } else if next.background_material != WindowBackgroundMaterialRequest::None {
+                // Background materials may require a composited alpha surface. If the caller did
+                // not explicitly request `transparent`, runners may implicitly treat it as true
+                // once a non-None material is effectively applied. See ADR 0310.
+                next.transparent = true;
             }
-        }
-
-        if let Some(material) = requested.background_material {
-            next.background_material = clamp_background_material(material, caps);
         }
 
         if let Some(taskbar) = requested.taskbar {
@@ -114,6 +123,7 @@ impl RunnerWindowStyleDiagnosticsStore {
 
     pub fn record_window_close(&mut self, window: AppWindowId) {
         self.effective.remove(&window);
+        self.transparent_explicit.remove(&window);
     }
 
     pub fn apply_style_patch(
@@ -130,7 +140,22 @@ impl RunnerWindowStyleDiagnosticsStore {
         // See ADR 0139 for patchability rules.
 
         if let Some(material) = patch.background_material {
-            current.background_material = clamp_background_material(material, caps);
+            current.background_material = clamp_background_material_request(material, caps);
+            if caps.ui.window_transparent {
+                let explicit = self.transparent_explicit.get(&window).copied().flatten();
+                current.transparent = match explicit {
+                    Some(v) => v,
+                    None => {
+                        // Best-effort: keep composited transparency "sticky" once it has been
+                        // implied by a background material request.
+                        //
+                        // Rationale: transparency is create-time in winit, so runners can't
+                        // reliably toggle it off once a window has been created composited.
+                        current.transparent
+                            || current.background_material != WindowBackgroundMaterialRequest::None
+                    }
+                };
+            }
         }
 
         if let Some(taskbar) = patch.taskbar {
@@ -166,7 +191,7 @@ impl RunnerWindowStyleDiagnosticsStore {
     }
 }
 
-fn clamp_background_material(
+pub fn clamp_background_material_request(
     requested: WindowBackgroundMaterialRequest,
     caps: &PlatformCapabilities,
 ) -> WindowBackgroundMaterialRequest {

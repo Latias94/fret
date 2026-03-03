@@ -698,6 +698,20 @@ pub enum UiActionStepV2 {
         #[serde(default = "default_capture_screenshot_timeout_frames")]
         timeout_frames: u32,
     },
+    /// Capture a layout sidecar (native-only, best-effort).
+    ///
+    /// This is intended to make layout regressions explainable via a bundle-scoped sidecar file
+    /// (e.g. `layout.taffy.v1.json`) rather than ad-hoc debug UI in demos.
+    ///
+    /// Tooling should treat missing sidecars as warnings, not failures.
+    CaptureLayoutSidecar {
+        /// Optional label used to name the bundle directory for this capture step.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        label: Option<String>,
+        /// Optional debug label filter for selecting a subtree root before dumping.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        root_label_filter: Option<String>,
+    },
 
     // v2 intent-level steps
     /// Click a target only after its bounds have remained stable for `stable_frames`.
@@ -1753,6 +1767,14 @@ pub enum UiPredicateV1 {
     /// matches `window`.
     DockDragCurrentWindowIs {
         window: UiWindowTargetV1,
+    },
+    /// True when the latest diagnostics report an active dock drag whose drag kind matches `kind`.
+    ///
+    /// Supported kinds:
+    /// - `dock_panel`
+    /// - `dock_tabs`
+    DockDragKindIs {
+        drag_kind: String,
     },
     /// True when the latest docking diagnostics report an active dock drag whose runner-owned
     /// moving window matches `window`.

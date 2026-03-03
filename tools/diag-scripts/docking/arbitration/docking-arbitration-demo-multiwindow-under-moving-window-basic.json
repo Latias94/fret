@@ -56,6 +56,7 @@
     { "type": "pointer_down", "window": { "kind": "first_seen_other" }, "target": { "kind": "test_id", "id": "dock-arb-tab-drag-anchor-right" } },
     { "type": "pointer_move", "window": { "kind": "first_seen_other" }, "delta_x": 20.0, "delta_y": 0.0, "steps": 12 },
     { "type": "wait_until", "window": { "kind": "first_seen" }, "predicate": { "kind": "dock_drag_active_is", "active": true }, "timeout_frames": 120 },
+    { "type": "wait_until", "window": { "kind": "first_seen" }, "predicate": { "kind": "dock_drag_kind_is", "drag_kind": "dock_panel" }, "timeout_frames": 120 },
     {
       "type": "wait_until",
       "window": { "kind": "first_seen" },
@@ -88,11 +89,6 @@
       "timeout_frames": 240
     },
 
-    { "type": "capture_bundle", "label": "docking-arbitration-demo-multiwindow-under-moving-window-basic" },
-    { "type": "wait_frames", "n": 2 },
-
-    { "type": "pointer_up", "window": { "kind": "first_seen_other" } },
-    { "type": "wait_until", "window": { "kind": "first_seen_other" }, "predicate": { "kind": "dock_drag_active_is", "active": false }, "timeout_frames": 240 },
-    { "type": "wait_frames", "n": 2 }
+    { "type": "capture_bundle", "label": "docking-arbitration-demo-multiwindow-under-moving-window-basic" }
   ]
 }

@@ -408,6 +408,42 @@ def apply_moves(repo_root: Path, ops: list[MoveOp], write_redirects: bool) -> No
             src.write_text(json.dumps(redirect, indent=2) + "\n", encoding="utf-8")
 
 
+def rewrite_suite_manifests(repo_root: Path, ops: list[MoveOp]) -> int:
+    """
+    Rewrites suite manifests under tools/diag-scripts/suites/**/{suite.json,_suite.json} to point at the
+    canonical (post-move) script paths.
+
+    This avoids suite manifests indirectly depending on legacy redirect stubs after a migration batch.
+
+    Returns the number of manifests changed.
+    """
+    suites_root = (repo_root / SCRIPTS_DIR / "suites").resolve()
+    if not suites_root.exists():
+        return 0
+
+    mapping = {op.src: op.dst for op in ops}
+    changed = 0
+
+    for path in suites_root.rglob("*"):
+        if path.is_dir():
+            continue
+        if path.name not in {"suite.json", "_suite.json"}:
+            continue
+        try:
+            text = path.read_text(encoding="utf-8")
+        except Exception:
+            continue
+
+        new_text = text
+        for old, new in mapping.items():
+            new_text = new_text.replace(old, new)
+        if new_text != text:
+            path.write_text(new_text, encoding="utf-8")
+            changed += 1
+
+    return changed
+
+
 def rewrite_references(repo_root: Path, ops: list[MoveOp], roots: list[Path]) -> int:
     """
     Performs exact-string replacement of old paths -> new paths.
@@ -583,6 +619,10 @@ def main() -> None:
 
     apply_moves(repo_root, ops, write_redirects=args.write_redirects)
     print("applied moves.")
+
+    n = rewrite_suite_manifests(repo_root, ops)
+    if n:
+        print(f"rewrote suite manifests in {n} files.")
 
     if args.rewrite_references != "off":
         roots = [Path("crates"), Path("apps")]

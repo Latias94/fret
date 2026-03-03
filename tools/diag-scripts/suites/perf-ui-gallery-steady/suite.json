@@ -1,0 +1,17 @@
+{
+  "schema_version": 1,
+  "kind": "diag_script_suite_manifest",
+  "scripts": [
+    "tools/diag-scripts/ui-gallery/perf/ui-gallery-context-menu-right-click-steady.json",
+    "tools/diag-scripts/ui-gallery/perf/ui-gallery-dialog-escape-focus-restore-steady.json",
+    "tools/diag-scripts/ui-gallery/perf/ui-gallery-dropdown-open-select-steady.json",
+    "tools/diag-scripts/ui-gallery/perf/ui-gallery-hover-layout-torture-steady.json",
+    "tools/diag-scripts/ui-gallery/perf/ui-gallery-material3-tabs-switch-perf-steady.json",
+    "tools/diag-scripts/ui-gallery/perf/ui-gallery-menubar-keyboard-nav-steady.json",
+    "tools/diag-scripts/ui-gallery/perf/ui-gallery-overlay-pointer-move-steady.json",
+    "tools/diag-scripts/ui-gallery/perf/ui-gallery-overlay-torture-steady.json",
+    "tools/diag-scripts/ui-gallery/perf/ui-gallery-view-cache-toggle-perf-steady.json",
+    "tools/diag-scripts/ui-gallery/perf/ui-gallery-virtual-list-torture-steady.json",
+    "tools/diag-scripts/ui-gallery/perf/ui-gallery-window-resize-stress-steady.json"
+  ]
+}

@@ -885,8 +885,8 @@ mod tests {
     use fret_core::{PathCommand, SvgId, SvgService};
     use fret_core::{PathConstraints, PathId, PathMetrics, PathService, PathStyle};
     use fret_runtime::{FrameId, TickId};
-    use fret_ui::elements::ElementRuntime;
     use fret_ui::ThemeConfig;
+    use fret_ui::elements::ElementRuntime;
     use fret_ui::tree::UiTree;
     use std::time::Duration;
 

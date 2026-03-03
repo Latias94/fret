@@ -51,6 +51,11 @@ Exit criteria:
 
 Status: In progress.
 
+Notes:
+
+- Windows: Mica/Acrylic are implemented via `DWMWA_SYSTEMBACKDROP_TYPE` (best-effort; Win11 22H2+).
+- macOS Vibrancy and Linux remain pending.
+
 ## M4 — Observability hardened
 
 Exit criteria:

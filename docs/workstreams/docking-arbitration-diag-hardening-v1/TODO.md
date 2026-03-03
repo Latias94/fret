@@ -91,7 +91,14 @@ with special focus on multi-window tear-off + drag-back sequences.
   to run a final `capture_bundle` after the last semantic assertion (reduces tooling timeouts at tight `--timeout-ms`).
 - Docs: clarify window-count and docking drop resolve predicate semantics in the main diagnostics reference:
   `docs/ui-diagnostics-and-scripted-tests.md`.
-- Runtime hardening: include `serde_json` parse error details in `script.result.json.reason` for `reason_code=script.parse_failed`
-  (schema v1/v2), so suite failures are actionable without opening logs.
-- Script hardening: fix schema v2 `wait_until` steps missing `timeout_frames` and avoid treating tab order as a contract in
-  `docking-arbitration-demo-tab-bar-drop-end-insert-index-two-tabs` (assert both panels exist instead of a specific ordering).
+- Runtime hardening: include `serde_json` parse error details in `script.result.json.reason` for
+  `reason_code=script.parse_failed` (schema v1/v2), so suite failures are actionable without opening logs.
+- Script hardening: make schema v2 `wait_until` tolerate missing `timeout_frames` and avoid treating tab order as a
+  contract in `docking-arbitration-demo-tab-bar-drop-end-insert-index-two-tabs` (assert both panels exist instead of a
+  specific ordering).
+- Diagnostics input synthesis: allow scripted drags to move outside window bounds (tear-off requires OOB routing)
+  without clamping the end position back inside the window client rect.
+  - implementation: `ecosystem/fret-bootstrap/src/ui_diagnostics/script_steps_drag.rs`
+- Docking UI: include `TextFontStackKey` in the retained tab-title cache key so tab labels do not disappear after a
+  system font rescan / font stack stabilization.
+  - implementation: `ecosystem/fret-docking/src/dock/space.rs`

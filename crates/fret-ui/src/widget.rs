@@ -1287,6 +1287,14 @@ impl<'a, H: UiHost> SemanticsCx<'a, H> {
         self.extra.url = url.map(Into::into);
     }
 
+    pub fn set_role_description<T: Into<String>>(&mut self, role_description: Option<T>) {
+        self.extra.role_description = role_description.map(Into::into);
+    }
+
+    pub fn clear_role_description(&mut self) {
+        self.extra.role_description = None;
+    }
+
     pub fn set_level(&mut self, level: Option<u32>) {
         self.extra.level = level;
     }

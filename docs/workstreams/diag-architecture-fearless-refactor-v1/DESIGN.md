@@ -208,6 +208,21 @@ Introduce explicit registries so adding features does not require editing giant 
 - `CheckRegistry`: check name → check implementation (lint/perf/hotspots)
 - `ScriptLibrary`: promoted scripts discovery + metadata indexing
 
+Status (as of 2026-03-03):
+
+- Initial scaffolding landed:
+  - `crates/fret-diag/src/registry/suites.rs`
+  - `crates/fret-diag/src/registry/checks/mod.rs`
+  - `crates/fret-diag/src/diag_list.rs` now resolves suites via `SuiteRegistry`.
+  - `crates/fret-diag/src/diag_suite.rs` now resolves promoted + suite-dir scripts via `SuiteResolver`.
+  - `crates/fret-diag/src/diag_suite.rs` centralizes builtin suite resolution + default env injection via `resolve_builtin_suite_scripts` (table-driven match).
+  - `crates/fret-diag/src/post_run_checks.rs` now selects the best bundle artifact path for post-run evaluation and delegates all post-run gates to `CheckRegistry`.
+  - `crates/fret-diag/src/registry/checks/mod.rs` exposes `CheckRegistry::wants_post_run_checks` so orchestration can decide whether to run post-run checks without duplicating check-specific logic.
+  - `crates/fret-diag/src/registry/checks/mod.rs` exposes `CheckRegistry::wants_bundle_artifact` so orchestration can request a bounded bundle dump without hard-coding per-check conditions.
+  - `crates/fret-diag/src/registry/checks/mod.rs` exposes `CheckRegistry::wants_screenshots` so launch wiring can enable screenshots without hard-coding per-check conditions.
+  - Artifacts boundary: `crates/fret-diag/src/artifact_store.rs` (`RunArtifactStore`) routes per-run artifact writes/materialization behind a focused API.
+  - `CheckRegistry` now owns the majority of post-run gates (generic + UI gallery gates, including text, wheel/vlist/cull, windowed-rows/layout/view-cache/overlay/viewport/docking/retained-vlist, semantics-changed, a11y/word-boundary, read-only/disabled, folds/inlays + preedit variants) to reduce `post_run_checks.rs` churn.
+
 ## Plan (phased)
 
 See:
@@ -230,4 +245,3 @@ For any landable refactor step:
 - Where should the long-term “extensions registry” live: `fret-bootstrap` (ecosystem) or `fret-runtime` (core)?
 - Do we need a typed “layout snapshot protocol” (beyond sidecars) for DevTools live inspection?
 - What is the minimal layout “explainability” payload that is worth capturing without perf cliffs?
-

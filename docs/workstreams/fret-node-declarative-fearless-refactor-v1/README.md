@@ -327,10 +327,10 @@ Run the promoted paint-only suite (IDs live in `tools/diag-scripts/index.json`):
 
 Maintenance note:
 
-- The suite members are defined via redirect stubs under
-  `tools/diag-scripts/suites/fret-examples-node-graph-paint-only/`.
+- The suite members are defined via a suite manifest under
+  `tools/diag-scripts/suites/fret-examples-node-graph-paint-only/suite.json`.
 - `tools/diag-scripts/index.json` is generated; after changing suite membership, run:
-  - `python tools/check_diag_scripts_registry.py --write`
+  - `cargo run -p fretboard -- diag registry write`
 
 ## Diagnostics shortcuts (paint-only)
 

@@ -126,6 +126,18 @@ These gates assert, at minimum:
 - Bounded triage helpers:
   - `fretboard diag dock-graph <bundle_dir|bundle.schema2.json>` (dock signature + fingerprint summary),
   - `fretboard diag dock-routing <bundle_dir|bundle.schema2.json>` (hover/drop routing contract for dock drags).
+- Diagnostics input synthesis now preserves intentionally out-of-bounds drag coordinates (tear-off requires OOB routing),
+  while still keeping in-bounds positions slightly inside window edges to avoid hit-testing misses:
+  - implementation: `ecosystem/fret-bootstrap/src/ui_diagnostics/script_steps_drag.rs`
+  - docs: `docs/ui-diagnostics-and-scripted-tests.md`
+- Docking UI: retained tab-title caches now rebuild when `TextFontStackKey` changes (system font rescan / font stack
+  stabilization), preventing “tab labels disappear after ~2s” in long-running diag runs:
+  - implementation: `ecosystem/fret-docking/src/dock/space.rs`
+  - evidence repro (local debug): `tools/diag-scripts/docking/arbitration/local-debug/docking-arbitration-demo-tab-text-disappears-after-2s-single-window.json`
+- Windows runner: hardened the Win32 “poll-up finishes cross-window dock drag” fallback to better cooperate with
+  diagnostics pointer/button overrides:
+  - implementation: `crates/fret-launch/src/runner/desktop/runner/docking.rs`
+  - gate: `tools/diag-scripts/docking/arbitration/docking-arbitration-demo-multiwindow-release-outside-windows-poll-up.json`
 
 ## Known gaps / next alignment steps
 
@@ -145,6 +157,8 @@ These gates assert, at minimum:
 
 2) **Diagnostics completeness for tab drags**
 - Ensure docking diagnostics cover both `DRAG_KIND_DOCK_PANEL` and `DRAG_KIND_DOCK_TABS` consistently, so scripts can assert either form of tear-off/re-dock.
+  - Delivered (2026-03-03): added `dock_drag_kind_is` predicate and a dedicated tabs-group peek-behind gate:
+    - `tools/diag-scripts/docking/arbitration/docking-arbitration-demo-multiwindow-under-moving-window-tabs-group.json`
 
 3) **Transparent payload + re-dock semantics**
 - Today, `FRET_DOCK_TEAROFF_TRANSPARENT_PAYLOAD=1` is treated as an **opacity** policy for the moving window during follow.
@@ -156,3 +170,38 @@ These gates assert, at minimum:
   - `tools/diag-scripts/docking/arbitration/docking-arbitration-demo-multiwindow-transparent-payload-zorder-switch.json`
 
 The preferred vehicle remains: add/extend diag scripts in `tools/diag-scripts/` and keep assertions contract-level (dock graph signatures + docking diagnostics), not pixels.
+
+## ImGui multi-viewport gap inventory (what still differs)
+
+This is a practical checklist for editor-grade parity. It intentionally mixes UX outcomes and backend contracts
+(because ImGui’s multi-viewport behavior *is* a backend contract story).
+
+### A. Gestures and windowing
+
+- Title-bar drag docking: ImGui supports docking via dragging a floating window title bar; Fret’s current gates focus on
+  tab-drag anchors. If we want parity, we need a first-class “drag chrome to dock” policy (likely in `ecosystem/fret-docking`)
+  that does not fight custom window chrome.
+- Multi-monitor “hand off” feel: ImGui viewports are routinely dragged across monitors with changing DPI. We should
+  validate (and gate) that tear-off windows preserve expected DPI/scale behavior when crossing monitors (where supported).
+
+### B. Peek-behind and hovered viewport correctness
+
+- ImGui’s preferred path is backend-reported `MouseHoveredViewport`, ideally ignoring viewports marked `NoInputs` while
+  dragging a viewport (Win32 backend: `WM_NCHITTEST` → `HTTRANSPARENT`). If a platform cannot provide this, ImGui falls
+  back to heuristics.
+- Fret’s analogous contract is currently expressed in terms of window hover detection + “under moving window” snapshots.
+  Remaining work is to make “ignore moving window / peek-behind” a consistent end-to-end routing story across platforms
+  and across both `DRAG_KIND_DOCK_PANEL` and `DRAG_KIND_DOCK_TABS`.
+
+### C. Docking UI ergonomics (tab bars)
+
+- Tab overflow + scrolling: ensure overflow behavior is predictable and stable under resize (and ideally gate it).
+- Tab reordering within a tab strip (and across tab strips) to match common ImGui editor workflows.
+- “Close” ergonomics: close button hitboxes + middle-click-to-close (policy decision) should live in the ecosystem layer.
+
+### D. Persistence and correctness
+
+- Layout persistence: ImGui persists docking layouts (ini). For Fret, we should decide the persistence format and the
+  contract surface (likely in `crates/fret-core` for the dock graph model + an app-level storage policy).
+- Stronger canonical-form invariants: beyond “graph is canonical”, we should lock behavior like “no panel loss” under
+  sequences (tear-off → merge → close → reopen) with a small repeatable suite.

@@ -1,0 +1,7 @@
+{
+  "schema_version": 1,
+  "kind": "diag_script_suite_manifest",
+  "scripts": [
+    "tools/diag-scripts/renderer/effects/liquid-glass-lens-custom-v3-sources-degraded-screenshot.json"
+  ]
+}

@@ -21,7 +21,7 @@ Exit criteria:
 - Deprecated env vars/flags are documented and have compatibility shims.
 - A tooling command prints the effective config and highlights deprecated inputs.
 - Tooling produces schema v2 scripts by default (runtime v1 parsing is not required for the common case).
-- Built-in scripted suites are not defined by Rust-side hard-coded file lists (directory inputs + redirect stubs are acceptable as an intermediate step).
+- Built-in scripted suites are not defined by Rust-side hard-coded file lists (directory inputs + suite manifests).
 - `diag perf <suite-name>` suite expansion is single-sourced (avoid drift between perf entrypoints and seed policy) and
   is derived from promoted registry suite memberships (`tools/diag-scripts/index.json` + `suite_memberships`).
 - A script library taxonomy decision is recorded (folder layout + suite definition strategy).
@@ -82,7 +82,7 @@ Exit criteria:
 Evidence anchors:
 
 - Tooling: `crates/fret-diag/src/commands/ai_packet.rs`, `crates/fret-diag/src/pack_zip.rs`
-- Scripts: `tools/diag-scripts/index.json`, `tools/check_diag_scripts_registry.py`
+- Scripts: `tools/diag-scripts/index.json`, `fretboard diag registry` (`crates/fret-diag/src/commands/registry.rs`, legacy: `python tools/check_diag_scripts_registry.py`)
 - Workstream: `docs/workstreams/diag-ai-agent-debugging-v1.md`
 
 ## M3: Compatibility logic boxed (P2)

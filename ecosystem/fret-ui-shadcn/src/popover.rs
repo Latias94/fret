@@ -200,6 +200,8 @@ pub struct Popover {
     side: PopoverSide,
     align_offset: Px,
     side_offset: Px,
+    motion_open_duration: Option<Duration>,
+    motion_close_duration: Option<Duration>,
     shift_cross_axis: Option<bool>,
     window_margin_override: Option<Px>,
     collision_padding_override: Option<Edges>,
@@ -284,6 +286,8 @@ impl Popover {
             side: PopoverSide::default(),
             align_offset: Px(0.0),
             side_offset: Px(4.0),
+            motion_open_duration: None,
+            motion_close_duration: None,
             shift_cross_axis: None,
             window_margin_override: None,
             collision_padding_override: None,
@@ -345,6 +349,16 @@ impl Popover {
 
     pub fn side_offset(mut self, offset: Px) -> Self {
         self.side_offset = offset;
+        self
+    }
+
+    /// Overrides the popper-style presence motion durations (fade/scale/slide).
+    ///
+    /// Upstream shadcn/ui v4 uses `tw-animate-css` defaults (150ms) unless a recipe specifies an
+    /// explicit `duration-*` class.
+    pub fn motion_durations(mut self, open: Duration, close: Duration) -> Self {
+        self.motion_open_duration = Some(open);
+        self.motion_close_duration = Some(close);
         self
     }
 
@@ -712,8 +726,10 @@ impl Popover {
                 radix_presence::scale_fade_presence_with_durations_and_cubic_bezier_duration(
                     cx,
                     is_open,
-                    overlay_motion::shadcn_motion_duration_100(cx),
-                    overlay_motion::shadcn_motion_duration_100(cx),
+                    self.motion_open_duration
+                        .unwrap_or_else(|| overlay_motion::shadcn_motion_duration_150(cx)),
+                    self.motion_close_duration
+                        .unwrap_or_else(|| overlay_motion::shadcn_motion_duration_150(cx)),
                     0.95,
                     1.0,
                     overlay_motion::shadcn_motion_ease_bezier(cx),

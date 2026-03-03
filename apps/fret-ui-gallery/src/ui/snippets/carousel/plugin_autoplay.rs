@@ -64,9 +64,9 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
         .collect::<Vec<_>>();
 
     shadcn::Carousel::default()
-        .autoplay(shadcn::CarouselAutoplayConfig::new(Duration::from_millis(
-            2000,
-        )))
+        .plugins([shadcn::CarouselPlugin::Autoplay(
+            shadcn::CarouselAutoplayConfig::new(Duration::from_millis(2000)),
+        )])
         .refine_layout(
             LayoutRefinement::default()
                 .w_full()

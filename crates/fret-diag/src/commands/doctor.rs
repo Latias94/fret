@@ -171,7 +171,7 @@ pub(crate) fn run_doctor_for_bundle_dir(
         if crate::resolve_bundle_artifact_path_no_materialize(&bundle_dir).is_none() {
             let attempts = [bundle_dir.clone(), bundle_dir.join("_root")];
             for dir in &attempts {
-                match crate::run_artifacts::materialize_bundle_json_from_manifest_chunks_if_missing(
+                match crate::artifact_store::materialize_bundle_json_from_manifest_chunks_if_missing(
                     dir,
                 ) {
                     Ok(Some(out)) => {

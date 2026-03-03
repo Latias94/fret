@@ -2,6 +2,294 @@ use super::*;
 
 pub(crate) type SuiteChecks = diag_run::RunChecks;
 
+use crate::registry::suites::SuiteResolver;
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum BuiltinSuite {
+    UiGallery,
+    UiGalleryCodeEditor,
+    UiGalleryLayout,
+    DockingArbitration,
+    DockingMotionPilot,
+}
+
+fn push_env_if_missing(env: &mut Vec<(String, String)>, key: &str, value: &str) {
+    if env.iter().any(|(k, _v)| k == key) {
+        return;
+    }
+    env.push((key.to_string(), value.to_string()));
+}
+
+fn resolve_builtin_suite_scripts(
+    workspace_root: &Path,
+    suite_name: &str,
+    launch_env: &mut Vec<(String, String)>,
+) -> Result<Option<(Vec<PathBuf>, Option<BuiltinSuite>)>, String> {
+    let scripts_from_suite_dir = |suite: &str| -> Result<Vec<PathBuf>, String> {
+        SuiteResolver::scripts_from_suite_dir(workspace_root, suite)
+    };
+
+    let resolved = match suite_name {
+        "ui-gallery" => {
+            // The UI Gallery suite includes scripts that run the `--check-pixels-changed`
+            // post-run gate. Enable screenshots so those checks can resolve semantics
+            // bounds against captured PNGs.
+            push_env_if_missing(launch_env, "FRET_DIAG_GPU_SCREENSHOTS", "1");
+            let inputs = diag_suite_scripts::ui_gallery_suite_scripts();
+            let scripts = expand_script_inputs(workspace_root, &inputs)?;
+            (scripts, Some(BuiltinSuite::UiGallery))
+        }
+        "ui-gallery-overlay-steady" => {
+            // The overlay-steady suite intentionally exercises role-and-name predicates and
+            // inspector help search queries, which are incompatible with redaction.
+            push_env_if_missing(launch_env, "FRET_DIAG_REDACT_TEXT", "0");
+            let inputs = diag_suite_scripts::ui_gallery_overlay_steady_suite_scripts();
+            let scripts = expand_script_inputs(workspace_root, &inputs)?;
+            (scripts, Some(BuiltinSuite::UiGallery))
+        }
+        "ui-gallery-motion-pilot" => {
+            // The motion pilot suite relies on stable semantics surfaces; keep diagnostics
+            // redaction disabled so any role-and-name selectors remain usable in scripts.
+            push_env_if_missing(launch_env, "FRET_DIAG_REDACT_TEXT", "0");
+            // Some motion feel gates use the `--check-pixels-changed` post-run check, which
+            // requires GPU screenshots.
+            push_env_if_missing(launch_env, "FRET_DIAG_GPU_SCREENSHOTS", "1");
+            let scripts = scripts_from_suite_dir("ui-gallery-motion-pilot")?;
+            (scripts, Some(BuiltinSuite::UiGallery))
+        }
+        "ui-gallery-code-editor" => {
+            // The code-editor-focused UI Gallery suite also includes the pixels-changed
+            // gate (soft-wrap editing baseline), so screenshots must be enabled.
+            push_env_if_missing(launch_env, "FRET_DIAG_GPU_SCREENSHOTS", "1");
+            let inputs = diag_suite_scripts::ui_gallery_code_editor_suite_scripts();
+            let scripts = expand_script_inputs(workspace_root, &inputs)?;
+            (scripts, Some(BuiltinSuite::UiGalleryCodeEditor))
+        }
+        "ui-gallery-date-picker" => {
+            // Keep date picker scripts deterministic (date + page seed) so keyboard navigation and
+            // disabled-day skipping are repeatable.
+            push_env_if_missing(launch_env, "FRET_UI_GALLERY_START_PAGE", "date_picker");
+            push_env_if_missing(launch_env, "FRET_UI_GALLERY_DIAG_CALENDAR_ROVING", "1");
+            push_env_if_missing(launch_env, "FRET_UI_GALLERY_FIXED_TODAY", "2024-02-01");
+            let inputs = diag_suite_scripts::ui_gallery_date_picker_suite_scripts();
+            let scripts = expand_script_inputs(workspace_root, &inputs)?;
+            (scripts, Some(BuiltinSuite::UiGallery))
+        }
+        "ui-gallery-text-ime" => {
+            let inputs = diag_suite_scripts::ui_gallery_text_ime_suite_scripts();
+            let scripts = expand_script_inputs(workspace_root, &inputs)?;
+            (scripts, Some(BuiltinSuite::UiGallery))
+        }
+        "ui-gallery-text-wrap" => {
+            // Text wrap/baseline gates rely on screenshots and should run with deterministic
+            // bundled fonts on desktop.
+            push_env_if_missing(launch_env, "FRET_DIAG_GPU_SCREENSHOTS", "1");
+            push_env_if_missing(launch_env, "FRET_UI_GALLERY_BOOTSTRAP_FONTS", "1");
+            let inputs = diag_suite_scripts::ui_gallery_text_wrap_suite_scripts();
+            let scripts = expand_script_inputs(workspace_root, &inputs)?;
+            (scripts, Some(BuiltinSuite::UiGallery))
+        }
+        "ui-gallery-select" => {
+            // Keep this suite redaction-friendly: scripts should prefer `test_id` selectors so we can
+            // safely share bundles when redaction is enabled.
+            let inputs = diag_suite_scripts::ui_gallery_select_suite_scripts();
+            let scripts = expand_script_inputs(workspace_root, &inputs)?;
+            (scripts, Some(BuiltinSuite::UiGallery))
+        }
+        "ui-gallery-combobox" => {
+            let inputs = diag_suite_scripts::ui_gallery_combobox_suite_scripts();
+            let scripts = expand_script_inputs(workspace_root, &inputs)?;
+            (scripts, Some(BuiltinSuite::UiGallery))
+        }
+        "ui-gallery-shadcn-conformance" => {
+            // Conformance scripts rely on stable role-and-name semantics selectors and use
+            // screenshot evidence for overlap regressions.
+            push_env_if_missing(launch_env, "FRET_DIAG_REDACT_TEXT", "0");
+            push_env_if_missing(launch_env, "FRET_DIAG_GPU_SCREENSHOTS", "1");
+            // Ensure bundled fonts are loaded on desktop so font metrics are deterministic.
+            push_env_if_missing(launch_env, "FRET_UI_GALLERY_BOOTSTRAP_FONTS", "1");
+            let mut scripts = expand_script_inputs(
+                workspace_root,
+                &diag_suite_scripts::ui_gallery_shadcn_conformance_suite_scripts(),
+            )?;
+            scripts.extend(expand_script_inputs(
+                workspace_root,
+                &diag_suite_scripts::ui_gallery_select_suite_scripts(),
+            )?);
+            (scripts, Some(BuiltinSuite::UiGallery))
+        }
+        "ui-gallery-layout" => {
+            let inputs = diag_suite_scripts::ui_gallery_layout_suite_scripts();
+            let scripts = expand_script_inputs(workspace_root, &inputs)?;
+            (scripts, Some(BuiltinSuite::UiGalleryLayout))
+        }
+        "ui-gallery-virt-retained"
+        | "ui-gallery-virt-retained-measured"
+        | "ui-gallery-tree-retained"
+        | "ui-gallery-tree-retained-measured"
+        | "ui-gallery-data-table-retained"
+        | "ui-gallery-data-table-retained-measured"
+        | "ui-gallery-table-retained"
+        | "ui-gallery-table-retained-measured"
+        | "ui-gallery-retained-measured"
+        | "ui-gallery-ui-kit-list-retained"
+        | "ui-gallery-inspector-torture"
+        | "ui-gallery-inspector-torture-keep-alive"
+        | "ui-gallery-file-tree-torture"
+        | "ui-gallery-file-tree-torture-interactive"
+        | "ui-gallery-cache005" => {
+            let scripts = scripts_from_suite_dir(suite_name)?;
+            (scripts, Some(BuiltinSuite::UiGallery))
+        }
+        "workspace-shell-demo" => {
+            let scripts = scripts_from_suite_dir("workspace-shell-demo")?;
+            (scripts, None)
+        }
+        "workspace-shell-demo-file-tree-keep-alive" => {
+            let scripts = scripts_from_suite_dir("workspace-shell-demo-file-tree-keep-alive")?;
+            (scripts, None)
+        }
+        "ui-gallery-data-table-retained-keep-alive" => {
+            let scripts = scripts_from_suite_dir("ui-gallery-data-table-retained-keep-alive")?;
+            (scripts, Some(BuiltinSuite::UiGallery))
+        }
+        "ui-gallery-ai-transcript-retained" => {
+            push_env_if_missing(launch_env, "FRET_UI_GALLERY_VIEW_CACHE", "1");
+            push_env_if_missing(launch_env, "FRET_UI_GALLERY_VIEW_CACHE_SHELL", "1");
+            push_env_if_missing(
+                launch_env,
+                "FRET_UI_GALLERY_AI_TRANSCRIPT_VARIABLE_HEIGHT",
+                "1",
+            );
+            let scripts = scripts_from_suite_dir("ui-gallery-ai-transcript-retained")?;
+            (scripts, Some(BuiltinSuite::UiGallery))
+        }
+        "ui-gallery-canvas-cull"
+        | "ui-gallery-node-graph-cull"
+        | "ui-gallery-node-graph-cull-window-shifts"
+        | "ui-gallery-node-graph-cull-window-no-shifts-small-pan"
+        | "ui-gallery-chart-torture" => {
+            push_env_if_missing(launch_env, "FRET_UI_GALLERY_VIEW_CACHE", "1");
+            push_env_if_missing(launch_env, "FRET_UI_GALLERY_VIEW_CACHE_SHELL", "1");
+            // This harness uses `capture_screenshot` to enable the `--check-pixels-changed` gate.
+            push_env_if_missing(launch_env, "FRET_DIAG_GPU_SCREENSHOTS", "1");
+            let scripts = scripts_from_suite_dir(suite_name)?;
+            (scripts, Some(BuiltinSuite::UiGallery))
+        }
+        "ui-gallery-vlist-window-boundary" => {
+            // The window-boundary harness is specifically intended to exercise the
+            // view-cache + shell reuse seam under a stable (known-heights) VirtualList
+            // baseline. Make these env defaults implicit so the suite is reproducible
+            // without requiring the caller to remember a pile of `--env` flags.
+            //
+            // Callers can still override them explicitly via `--env KEY=...`.
+            push_env_if_missing(launch_env, "FRET_UI_GALLERY_VIEW_CACHE", "1");
+            push_env_if_missing(launch_env, "FRET_UI_GALLERY_VIEW_CACHE_SHELL", "1");
+            push_env_if_missing(launch_env, "FRET_UI_GALLERY_VLIST_KNOWN_HEIGHTS", "1");
+            // Default to the non-retained VirtualList path so this harness gates the
+            // highest-risk, most common implementation track (ADR 0175 Track B). The
+            // retained-host track (ADR 0177) has dedicated suites/scripts.
+            push_env_if_missing(launch_env, "FRET_UI_GALLERY_VLIST_RETAINED", "0");
+            let scripts = scripts_from_suite_dir("ui-gallery-vlist-window-boundary")?;
+            (scripts, Some(BuiltinSuite::UiGallery))
+        }
+        "ui-gallery-vlist-no-window-shifts-small-scroll" => {
+            // Guard rail harness: under view-cache + shell, small scroll deltas should
+            // not force a non-retained VirtualList window shift (which currently implies
+            // a cache-root rerender to rebuild visible items).
+            //
+            // Callers can still override env explicitly via `--env KEY=...`.
+            push_env_if_missing(launch_env, "FRET_UI_GALLERY_VIEW_CACHE", "1");
+            push_env_if_missing(launch_env, "FRET_UI_GALLERY_VIEW_CACHE_SHELL", "1");
+            push_env_if_missing(launch_env, "FRET_UI_GALLERY_VLIST_MINIMAL", "1");
+            push_env_if_missing(launch_env, "FRET_UI_GALLERY_VLIST_KNOWN_HEIGHTS", "1");
+            push_env_if_missing(launch_env, "FRET_UI_GALLERY_VLIST_RETAINED", "0");
+            let scripts = scripts_from_suite_dir("ui-gallery-vlist-no-window-shifts-small-scroll")?;
+            (scripts, Some(BuiltinSuite::UiGallery))
+        }
+        "ui-gallery-vlist-window-boundary-retained" => {
+            // Retained-host counterpart of the window-boundary harness. This suite is used
+            // to validate the ADR 0177 track (retained reconcile) with the same script and
+            // baseline env, while keeping the non-retained suite as the default.
+            //
+            // Callers can still override them explicitly via `--env KEY=...`.
+            push_env_if_missing(launch_env, "FRET_UI_GALLERY_VIEW_CACHE", "1");
+            push_env_if_missing(launch_env, "FRET_UI_GALLERY_VIEW_CACHE_SHELL", "1");
+            push_env_if_missing(launch_env, "FRET_UI_GALLERY_VLIST_KNOWN_HEIGHTS", "1");
+            push_env_if_missing(launch_env, "FRET_UI_GALLERY_VLIST_RETAINED", "1");
+            // Enable keep-alive in the retained-host harness so boundary scroll back can
+            // reuse detached row subtrees (reduces attach cost and stabilizes worst tick).
+            push_env_if_missing(launch_env, "FRET_UI_GALLERY_VLIST_KEEP_ALIVE", "128");
+            let scripts = scripts_from_suite_dir("ui-gallery-vlist-window-boundary-retained")?;
+            (scripts, Some(BuiltinSuite::UiGallery))
+        }
+        "components-gallery-file-tree" => {
+            // components_gallery's "file tree torture" surface is behind env gates; the
+            // scripted harness assumes it is enabled and large enough to cross overscan
+            // boundaries deterministically.
+            push_env_if_missing(launch_env, "FRET_COMPONENTS_GALLERY_FILE_TREE_TORTURE", "1");
+            push_env_if_missing(
+                launch_env,
+                "FRET_COMPONENTS_GALLERY_FILE_TREE_TORTURE_N",
+                "50000",
+            );
+            // Enable view-cache reuse by default for suite regressions. (components_gallery
+            // reads `FRET_EXAMPLES_VIEW_CACHE`.)
+            push_env_if_missing(launch_env, "FRET_EXAMPLES_VIEW_CACHE", "1");
+            // Keep-alive is only observed by the `*bounce*` script, but setting it here
+            // keeps the suite defaults consistent.
+            push_env_if_missing(
+                launch_env,
+                "FRET_COMPONENTS_GALLERY_FILE_TREE_KEEP_ALIVE",
+                "256",
+            );
+            let scripts = scripts_from_suite_dir("components-gallery-file-tree")?;
+            (scripts, None)
+        }
+        "components-gallery-table" => {
+            // components_gallery's "table torture" surface is behind an env gate; the
+            // scripted harness assumes it is enabled.
+            push_env_if_missing(launch_env, "FRET_COMPONENTS_GALLERY_TABLE_TORTURE", "1");
+            push_env_if_missing(
+                launch_env,
+                "FRET_COMPONENTS_GALLERY_TABLE_TORTURE_N",
+                "50000",
+            );
+            push_env_if_missing(launch_env, "FRET_EXAMPLES_VIEW_CACHE", "1");
+            let scripts = scripts_from_suite_dir("components-gallery-table")?;
+            (scripts, None)
+        }
+        "components-gallery-table-keep-alive" => {
+            push_env_if_missing(launch_env, "FRET_COMPONENTS_GALLERY_TABLE_TORTURE", "1");
+            push_env_if_missing(
+                launch_env,
+                "FRET_COMPONENTS_GALLERY_TABLE_TORTURE_N",
+                "50000",
+            );
+            push_env_if_missing(launch_env, "FRET_EXAMPLES_VIEW_CACHE", "1");
+            push_env_if_missing(
+                launch_env,
+                "FRET_COMPONENTS_GALLERY_TABLE_KEEP_ALIVE",
+                "256",
+            );
+            let scripts = scripts_from_suite_dir("components-gallery-table-keep-alive")?;
+            (scripts, None)
+        }
+        "docking-motion-pilot" => {
+            let scripts = scripts_from_suite_dir("docking-motion-pilot")?;
+            (scripts, Some(BuiltinSuite::DockingMotionPilot))
+        }
+        "docking-arbitration" => {
+            let inputs = diag_suite_scripts::docking_arbitration_suite_scripts();
+            let scripts = expand_script_inputs(workspace_root, &inputs)?;
+            (scripts, Some(BuiltinSuite::DockingArbitration))
+        }
+        _ => return Ok(None),
+    };
+
+    Ok(Some(resolved))
+}
+
 #[derive(Debug, Clone)]
 pub(crate) struct SuiteCmdContext {
     pub pack_after_run: bool,
@@ -77,7 +365,7 @@ pub(crate) fn cmd_suite(ctx: SuiteCmdContext) -> Result<(), String> {
         check_chart_sampling_window_shifts_min,
         check_dock_drag_min,
         check_drag_cache_root_paint_only_test_id,
-        check_gc_sweep_liveness,
+        check_gc_sweep_liveness: _,
         check_hover_layout_max,
         check_idle_no_paint_min,
         check_layout_fast_path_min,
@@ -168,12 +456,8 @@ pub(crate) fn cmd_suite(ctx: SuiteCmdContext) -> Result<(), String> {
         dump_semantics_changed_repainted_json: _,
     } = checks;
 
-    fn push_env_if_missing(env: &mut Vec<(String, String)>, key: &str, value: &str) {
-        if env.iter().any(|(k, _v)| k == key) {
-            return;
-        }
-        env.push((key.to_string(), value.to_string()));
-    }
+    let wants_registered_post_run_checks = crate::registry::checks::CheckRegistry::builtin()
+        .wants_post_run_checks(&checks_for_post_run_template);
 
     // Tool-launched suites default to *not* redacting text to keep authoring/debugging ergonomic.
     //
@@ -196,462 +480,63 @@ hint: list suites via `fretboard diag list suites`"
         );
     }
 
-    #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-    enum BuiltinSuite {
-        UiGallery,
-        UiGalleryCodeEditor,
-        UiGalleryLayout,
-        DockingArbitration,
-        DockingMotionPilot,
-    }
-
     let suite_args: Vec<String> = rest.clone();
 
-    let is_ui_gallery_suite = suite_args.len() == 1 && suite_args[0] == "ui-gallery";
-    let is_ui_gallery_overlay_steady_suite =
-        suite_args.len() == 1 && suite_args[0] == "ui-gallery-overlay-steady";
-    let is_ui_gallery_motion_pilot_suite =
-        suite_args.len() == 1 && suite_args[0] == "ui-gallery-motion-pilot";
-    let is_ui_gallery_code_editor_suite =
-        suite_args.len() == 1 && suite_args[0] == "ui-gallery-code-editor";
-    let is_ui_gallery_layout_suite = suite_args.len() == 1 && suite_args[0] == "ui-gallery-layout";
-    let is_ui_gallery_date_picker_suite =
-        suite_args.len() == 1 && suite_args[0] == "ui-gallery-date-picker";
-    let is_ui_gallery_text_ime_suite =
-        suite_args.len() == 1 && suite_args[0] == "ui-gallery-text-ime";
-    let is_ui_gallery_text_wrap_suite =
-        suite_args.len() == 1 && suite_args[0] == "ui-gallery-text-wrap";
-    let is_ui_gallery_combobox_suite =
-        suite_args.len() == 1 && suite_args[0] == "ui-gallery-combobox";
-    let is_ui_gallery_select_suite = suite_args.len() == 1 && suite_args[0] == "ui-gallery-select";
-    let is_ui_gallery_shadcn_conformance_suite =
-        suite_args.len() == 1 && suite_args[0] == "ui-gallery-shadcn-conformance";
-    let is_ui_gallery_virt_retained_suite =
-        suite_args.len() == 1 && suite_args[0] == "ui-gallery-virt-retained";
-    let is_ui_gallery_virt_retained_measured_suite =
-        suite_args.len() == 1 && suite_args[0] == "ui-gallery-virt-retained-measured";
-    let is_ui_gallery_tree_retained_suite =
-        suite_args.len() == 1 && suite_args[0] == "ui-gallery-tree-retained";
-    let is_ui_gallery_tree_retained_measured_suite =
-        suite_args.len() == 1 && suite_args[0] == "ui-gallery-tree-retained-measured";
-    let is_ui_gallery_data_table_retained_suite =
-        suite_args.len() == 1 && suite_args[0] == "ui-gallery-data-table-retained";
-    let is_ui_gallery_data_table_retained_measured_suite =
-        suite_args.len() == 1 && suite_args[0] == "ui-gallery-data-table-retained-measured";
-    let is_ui_gallery_data_table_retained_keep_alive_suite =
-        suite_args.len() == 1 && suite_args[0] == "ui-gallery-data-table-retained-keep-alive";
-    let is_ui_gallery_table_retained_suite =
-        suite_args.len() == 1 && suite_args[0] == "ui-gallery-table-retained";
-    let is_ui_gallery_table_retained_measured_suite =
-        suite_args.len() == 1 && suite_args[0] == "ui-gallery-table-retained-measured";
-    let is_ui_gallery_retained_measured_suite =
-        suite_args.len() == 1 && suite_args[0] == "ui-gallery-retained-measured";
-    let is_ui_gallery_ai_transcript_retained_suite =
-        suite_args.len() == 1 && suite_args[0] == "ui-gallery-ai-transcript-retained";
-    let is_ui_gallery_canvas_cull_suite =
-        suite_args.len() == 1 && suite_args[0] == "ui-gallery-canvas-cull";
-    let is_ui_gallery_node_graph_cull_suite =
-        suite_args.len() == 1 && suite_args[0] == "ui-gallery-node-graph-cull";
+    let is_suite = |name: &str| suite_args.len() == 1 && suite_args[0] == name;
+    let is_ui_gallery_ai_transcript_retained_suite = is_suite("ui-gallery-ai-transcript-retained");
+    let is_ui_gallery_canvas_cull_suite = is_suite("ui-gallery-canvas-cull");
+    let is_ui_gallery_node_graph_cull_suite = is_suite("ui-gallery-node-graph-cull");
     let is_ui_gallery_node_graph_cull_window_shifts_suite =
-        suite_args.len() == 1 && suite_args[0] == "ui-gallery-node-graph-cull-window-shifts";
-    let is_ui_gallery_node_graph_cull_window_no_shifts_small_pan_suite = suite_args.len() == 1
-        && suite_args[0] == "ui-gallery-node-graph-cull-window-no-shifts-small-pan";
-    let is_docking_motion_pilot_suite =
-        suite_args.len() == 1 && suite_args[0] == "docking-motion-pilot";
-    let is_ui_gallery_chart_torture_suite =
-        suite_args.len() == 1 && suite_args[0] == "ui-gallery-chart-torture";
-    let is_ui_gallery_vlist_window_boundary_suite =
-        suite_args.len() == 1 && suite_args[0] == "ui-gallery-vlist-window-boundary";
+        is_suite("ui-gallery-node-graph-cull-window-shifts");
+    let is_ui_gallery_node_graph_cull_window_no_shifts_small_pan_suite =
+        is_suite("ui-gallery-node-graph-cull-window-no-shifts-small-pan");
+    let is_ui_gallery_chart_torture_suite = is_suite("ui-gallery-chart-torture");
+    let is_ui_gallery_vlist_window_boundary_suite = is_suite("ui-gallery-vlist-window-boundary");
     let is_ui_gallery_vlist_window_boundary_retained_suite =
-        suite_args.len() == 1 && suite_args[0] == "ui-gallery-vlist-window-boundary-retained";
+        is_suite("ui-gallery-vlist-window-boundary-retained");
     let is_ui_gallery_vlist_no_window_shifts_small_scroll_suite =
-        suite_args.len() == 1 && suite_args[0] == "ui-gallery-vlist-no-window-shifts-small-scroll";
-    let is_ui_gallery_ui_kit_list_retained_suite =
-        suite_args.len() == 1 && suite_args[0] == "ui-gallery-ui-kit-list-retained";
-    let is_ui_gallery_inspector_torture_suite =
-        suite_args.len() == 1 && suite_args[0] == "ui-gallery-inspector-torture";
-    let is_ui_gallery_inspector_torture_keep_alive_suite =
-        suite_args.len() == 1 && suite_args[0] == "ui-gallery-inspector-torture-keep-alive";
-    let is_ui_gallery_file_tree_torture_suite =
-        suite_args.len() == 1 && suite_args[0] == "ui-gallery-file-tree-torture";
-    let is_ui_gallery_file_tree_torture_interactive_suite =
-        suite_args.len() == 1 && suite_args[0] == "ui-gallery-file-tree-torture-interactive";
-    let is_ui_gallery_cache005_suite =
-        suite_args.len() == 1 && suite_args[0] == "ui-gallery-cache005";
-    let is_components_gallery_file_tree_suite =
-        suite_args.len() == 1 && suite_args[0] == "components-gallery-file-tree";
-    let is_components_gallery_table_suite =
-        suite_args.len() == 1 && suite_args[0] == "components-gallery-table";
+        is_suite("ui-gallery-vlist-no-window-shifts-small-scroll");
+    let is_components_gallery_file_tree_suite = is_suite("components-gallery-file-tree");
+    let is_components_gallery_table_suite = is_suite("components-gallery-table");
     let is_components_gallery_table_keep_alive_suite =
-        suite_args.len() == 1 && suite_args[0] == "components-gallery-table-keep-alive";
-    let is_workspace_shell_demo_suite =
-        suite_args.len() == 1 && suite_args[0] == "workspace-shell-demo";
-    let is_workspace_shell_demo_file_tree_keep_alive_suite =
-        suite_args.len() == 1 && suite_args[0] == "workspace-shell-demo-file-tree-keep-alive";
-    let is_docking_arbitration_suite =
-        suite_args.len() == 1 && suite_args[0] == "docking-arbitration";
+        is_suite("components-gallery-table-keep-alive");
 
-    let scripts_from_suite_dir = |suite: &str| -> Result<Vec<PathBuf>, String> {
-        let inputs = vec![format!("tools/diag-scripts/suites/{suite}")];
-        expand_script_inputs(&workspace_root, &inputs)
-    };
-
-    let scripts_from_promoted_registry_suite =
-        |suite: &str| -> Result<Option<Vec<PathBuf>>, String> {
-            let registry_path =
-                crate::script_registry::promoted_registry_default_path(&workspace_root);
-            if !registry_path.is_file() {
-                return Ok(None);
-            }
-            let registry =
-                crate::script_registry::PromotedScriptRegistry::load_from_path(&registry_path)?;
-            let mut scripts: Vec<PathBuf> = registry
-                .resolve_suite(suite)
-                .into_iter()
-                .map(|e| resolve_path(&workspace_root, PathBuf::from(e.path.as_str())))
-                .collect();
-            scripts.sort();
-            scripts.dedup();
-            if scripts.is_empty() {
-                Ok(None)
-            } else {
-                Ok(Some(scripts))
-            }
-        };
-
-    let suite_dir_exists = |suite: &str| -> bool {
-        workspace_root
-            .join("tools")
-            .join("diag-scripts")
-            .join("suites")
-            .join(suite)
-            .is_dir()
-    };
+    let suite_resolver = SuiteResolver::try_load_from_workspace_root(&workspace_root)?;
 
     let mut used_fallback_paths = false;
-    let (mut scripts, builtin_suite): (Vec<PathBuf>, Option<BuiltinSuite>) = if is_ui_gallery_suite
-    {
-        // The UI Gallery suite includes scripts that run the `--check-pixels-changed`
-        // post-run gate. Enable screenshots so those checks can resolve semantics
-        // bounds against captured PNGs.
-        push_env_if_missing(&mut launch_env, "FRET_DIAG_GPU_SCREENSHOTS", "1");
-        let inputs = diag_suite_scripts::ui_gallery_suite_scripts();
-        let scripts = expand_script_inputs(&workspace_root, &inputs)?;
-        (scripts, Some(BuiltinSuite::UiGallery))
-    } else if is_ui_gallery_overlay_steady_suite {
-        // The overlay-steady suite intentionally exercises role-and-name predicates and
-        // inspector help search queries, which are incompatible with redaction.
-        push_env_if_missing(&mut launch_env, "FRET_DIAG_REDACT_TEXT", "0");
-        let inputs = diag_suite_scripts::ui_gallery_overlay_steady_suite_scripts();
-        let scripts = expand_script_inputs(&workspace_root, &inputs)?;
-        (scripts, Some(BuiltinSuite::UiGallery))
-    } else if is_ui_gallery_motion_pilot_suite {
-        // The motion pilot suite relies on stable semantics surfaces; keep diagnostics
-        // redaction disabled so any role-and-name selectors remain usable in scripts.
-        push_env_if_missing(&mut launch_env, "FRET_DIAG_REDACT_TEXT", "0");
-        // Some motion feel gates use the `--check-pixels-changed` post-run check, which
-        // requires GPU screenshots.
-        push_env_if_missing(&mut launch_env, "FRET_DIAG_GPU_SCREENSHOTS", "1");
-        let scripts = scripts_from_suite_dir("ui-gallery-motion-pilot")?;
-        (scripts, Some(BuiltinSuite::UiGallery))
-    } else if is_ui_gallery_code_editor_suite {
-        // The code-editor-focused UI Gallery suite also includes the pixels-changed
-        // gate (soft-wrap editing baseline), so screenshots must be enabled.
-        push_env_if_missing(&mut launch_env, "FRET_DIAG_GPU_SCREENSHOTS", "1");
-        let inputs = diag_suite_scripts::ui_gallery_code_editor_suite_scripts();
-        let scripts = expand_script_inputs(&workspace_root, &inputs)?;
-        (scripts, Some(BuiltinSuite::UiGalleryCodeEditor))
-    } else if is_ui_gallery_date_picker_suite {
-        // Keep date picker scripts deterministic (date + page seed) so keyboard navigation and
-        // disabled-day skipping are repeatable.
-        push_env_if_missing(&mut launch_env, "FRET_UI_GALLERY_START_PAGE", "date_picker");
-        push_env_if_missing(&mut launch_env, "FRET_UI_GALLERY_DIAG_CALENDAR_ROVING", "1");
-        push_env_if_missing(&mut launch_env, "FRET_UI_GALLERY_FIXED_TODAY", "2024-02-01");
-        let inputs = diag_suite_scripts::ui_gallery_date_picker_suite_scripts();
-        let scripts = expand_script_inputs(&workspace_root, &inputs)?;
-        (scripts, Some(BuiltinSuite::UiGallery))
-    } else if is_ui_gallery_text_ime_suite {
-        let inputs = diag_suite_scripts::ui_gallery_text_ime_suite_scripts();
-        let scripts = expand_script_inputs(&workspace_root, &inputs)?;
-        (scripts, Some(BuiltinSuite::UiGallery))
-    } else if is_ui_gallery_text_wrap_suite {
-        // Text wrap/baseline gates rely on screenshots and should run with deterministic
-        // bundled fonts on desktop.
-        push_env_if_missing(&mut launch_env, "FRET_DIAG_GPU_SCREENSHOTS", "1");
-        push_env_if_missing(&mut launch_env, "FRET_UI_GALLERY_BOOTSTRAP_FONTS", "1");
-
-        let inputs = diag_suite_scripts::ui_gallery_text_wrap_suite_scripts();
-        let scripts = expand_script_inputs(&workspace_root, &inputs)?;
-        (scripts, Some(BuiltinSuite::UiGallery))
-    } else if is_ui_gallery_select_suite {
-        // Keep this suite redaction-friendly: scripts should prefer `test_id` selectors so we can
-        // safely share bundles when redaction is enabled.
-        let inputs = diag_suite_scripts::ui_gallery_select_suite_scripts();
-        let scripts = expand_script_inputs(&workspace_root, &inputs)?;
-        (scripts, Some(BuiltinSuite::UiGallery))
-    } else if is_ui_gallery_combobox_suite {
-        let inputs = diag_suite_scripts::ui_gallery_combobox_suite_scripts();
-        let scripts = expand_script_inputs(&workspace_root, &inputs)?;
-        (scripts, Some(BuiltinSuite::UiGallery))
-    } else if is_ui_gallery_shadcn_conformance_suite {
-        // Conformance scripts rely on stable role-and-name semantics selectors and use
-        // screenshot evidence for overlap regressions.
-        push_env_if_missing(&mut launch_env, "FRET_DIAG_REDACT_TEXT", "0");
-        push_env_if_missing(&mut launch_env, "FRET_DIAG_GPU_SCREENSHOTS", "1");
-        // Ensure bundled fonts are loaded on desktop so font metrics are deterministic.
-        push_env_if_missing(&mut launch_env, "FRET_UI_GALLERY_BOOTSTRAP_FONTS", "1");
-        let mut scripts = expand_script_inputs(
-            &workspace_root,
-            &diag_suite_scripts::ui_gallery_shadcn_conformance_suite_scripts(),
-        )?;
-        scripts.extend(expand_script_inputs(
-            &workspace_root,
-            &diag_suite_scripts::ui_gallery_select_suite_scripts(),
-        )?);
-        (scripts, Some(BuiltinSuite::UiGallery))
-    } else if is_ui_gallery_layout_suite {
-        let inputs = diag_suite_scripts::ui_gallery_layout_suite_scripts();
-        let scripts = expand_script_inputs(&workspace_root, &inputs)?;
-        (scripts, Some(BuiltinSuite::UiGalleryLayout))
-    } else if is_ui_gallery_virt_retained_suite || is_ui_gallery_virt_retained_measured_suite {
-        let suite = if is_ui_gallery_virt_retained_measured_suite {
-            "ui-gallery-virt-retained-measured"
+    let (mut scripts, builtin_suite): (Vec<PathBuf>, Option<BuiltinSuite>) =
+        if suite_args.is_empty() {
+            (Vec::new(), None)
+        } else if suite_args.len() == 1 {
+            let suite_name = suite_args[0].as_str();
+            if let Some(resolved) =
+                resolve_builtin_suite_scripts(&workspace_root, suite_name, &mut launch_env)?
+            {
+                resolved
+            } else if let Some(scripts) =
+                suite_resolver.resolve_suite_scripts(&workspace_root, suite_name)?
+            {
+                (scripts, None)
+            } else {
+                used_fallback_paths = true;
+                (
+                    suite_args
+                        .into_iter()
+                        .map(|p| resolve_path(&workspace_root, PathBuf::from(p)))
+                        .collect(),
+                    None,
+                )
+            }
         } else {
-            "ui-gallery-virt-retained"
+            used_fallback_paths = true;
+            (
+                suite_args
+                    .into_iter()
+                    .map(|p| resolve_path(&workspace_root, PathBuf::from(p)))
+                    .collect(),
+                None,
+            )
         };
-        let scripts = scripts_from_suite_dir(suite)?;
-        (scripts, Some(BuiltinSuite::UiGallery))
-    } else if is_ui_gallery_tree_retained_suite || is_ui_gallery_tree_retained_measured_suite {
-        let suite = if is_ui_gallery_tree_retained_measured_suite {
-            "ui-gallery-tree-retained-measured"
-        } else {
-            "ui-gallery-tree-retained"
-        };
-        let scripts = scripts_from_suite_dir(suite)?;
-        (scripts, Some(BuiltinSuite::UiGallery))
-    } else if is_ui_gallery_data_table_retained_suite
-        || is_ui_gallery_data_table_retained_measured_suite
-    {
-        let suite = if is_ui_gallery_data_table_retained_measured_suite {
-            "ui-gallery-data-table-retained-measured"
-        } else {
-            "ui-gallery-data-table-retained"
-        };
-        let scripts = scripts_from_suite_dir(suite)?;
-        (scripts, Some(BuiltinSuite::UiGallery))
-    } else if is_ui_gallery_data_table_retained_keep_alive_suite {
-        let scripts = scripts_from_suite_dir("ui-gallery-data-table-retained-keep-alive")?;
-        (scripts, Some(BuiltinSuite::UiGallery))
-    } else if is_ui_gallery_table_retained_suite || is_ui_gallery_table_retained_measured_suite {
-        let suite = if is_ui_gallery_table_retained_measured_suite {
-            "ui-gallery-table-retained-measured"
-        } else {
-            "ui-gallery-table-retained"
-        };
-        let scripts = scripts_from_suite_dir(suite)?;
-        (scripts, Some(BuiltinSuite::UiGallery))
-    } else if is_ui_gallery_retained_measured_suite {
-        let scripts = scripts_from_suite_dir("ui-gallery-retained-measured")?;
-        (scripts, Some(BuiltinSuite::UiGallery))
-    } else if is_ui_gallery_ai_transcript_retained_suite {
-        push_env_if_missing(&mut launch_env, "FRET_UI_GALLERY_VIEW_CACHE", "1");
-        push_env_if_missing(&mut launch_env, "FRET_UI_GALLERY_VIEW_CACHE_SHELL", "1");
-        push_env_if_missing(
-            &mut launch_env,
-            "FRET_UI_GALLERY_AI_TRANSCRIPT_VARIABLE_HEIGHT",
-            "1",
-        );
-        let scripts = scripts_from_suite_dir("ui-gallery-ai-transcript-retained")?;
-        (scripts, Some(BuiltinSuite::UiGallery))
-    } else if is_ui_gallery_canvas_cull_suite {
-        push_env_if_missing(&mut launch_env, "FRET_UI_GALLERY_VIEW_CACHE", "1");
-        push_env_if_missing(&mut launch_env, "FRET_UI_GALLERY_VIEW_CACHE_SHELL", "1");
-        // This harness uses `capture_screenshot` to enable the `--check-pixels-changed` gate.
-        push_env_if_missing(&mut launch_env, "FRET_DIAG_GPU_SCREENSHOTS", "1");
-        let scripts = scripts_from_suite_dir("ui-gallery-canvas-cull")?;
-        (scripts, Some(BuiltinSuite::UiGallery))
-    } else if is_ui_gallery_node_graph_cull_suite {
-        push_env_if_missing(&mut launch_env, "FRET_UI_GALLERY_VIEW_CACHE", "1");
-        push_env_if_missing(&mut launch_env, "FRET_UI_GALLERY_VIEW_CACHE_SHELL", "1");
-        // This harness uses `capture_screenshot` to enable the `--check-pixels-changed` gate.
-        push_env_if_missing(&mut launch_env, "FRET_DIAG_GPU_SCREENSHOTS", "1");
-        let scripts = scripts_from_suite_dir("ui-gallery-node-graph-cull")?;
-        (scripts, Some(BuiltinSuite::UiGallery))
-    } else if is_ui_gallery_node_graph_cull_window_shifts_suite {
-        push_env_if_missing(&mut launch_env, "FRET_UI_GALLERY_VIEW_CACHE", "1");
-        push_env_if_missing(&mut launch_env, "FRET_UI_GALLERY_VIEW_CACHE_SHELL", "1");
-        // This harness uses `capture_screenshot` to enable the `--check-pixels-changed` gate.
-        push_env_if_missing(&mut launch_env, "FRET_DIAG_GPU_SCREENSHOTS", "1");
-        let scripts = scripts_from_suite_dir("ui-gallery-node-graph-cull-window-shifts")?;
-        (scripts, Some(BuiltinSuite::UiGallery))
-    } else if is_ui_gallery_node_graph_cull_window_no_shifts_small_pan_suite {
-        push_env_if_missing(&mut launch_env, "FRET_UI_GALLERY_VIEW_CACHE", "1");
-        push_env_if_missing(&mut launch_env, "FRET_UI_GALLERY_VIEW_CACHE_SHELL", "1");
-        // This harness uses `capture_screenshot` to enable the `--check-pixels-changed` gate.
-        push_env_if_missing(&mut launch_env, "FRET_DIAG_GPU_SCREENSHOTS", "1");
-        let scripts =
-            scripts_from_suite_dir("ui-gallery-node-graph-cull-window-no-shifts-small-pan")?;
-        (scripts, Some(BuiltinSuite::UiGallery))
-    } else if is_ui_gallery_chart_torture_suite {
-        push_env_if_missing(&mut launch_env, "FRET_UI_GALLERY_VIEW_CACHE", "1");
-        push_env_if_missing(&mut launch_env, "FRET_UI_GALLERY_VIEW_CACHE_SHELL", "1");
-        // This harness uses `capture_screenshot` to enable the `--check-pixels-changed` gate.
-        push_env_if_missing(&mut launch_env, "FRET_DIAG_GPU_SCREENSHOTS", "1");
-        let scripts = scripts_from_suite_dir("ui-gallery-chart-torture")?;
-        (scripts, Some(BuiltinSuite::UiGallery))
-    } else if is_ui_gallery_vlist_window_boundary_suite {
-        // The window-boundary harness is specifically intended to exercise the
-        // view-cache + shell reuse seam under a stable (known-heights) VirtualList
-        // baseline. Make these env defaults implicit so the suite is reproducible
-        // without requiring the caller to remember a pile of `--env` flags.
-        //
-        // Callers can still override them explicitly via `--env KEY=...`.
-        push_env_if_missing(&mut launch_env, "FRET_UI_GALLERY_VIEW_CACHE", "1");
-        push_env_if_missing(&mut launch_env, "FRET_UI_GALLERY_VIEW_CACHE_SHELL", "1");
-        push_env_if_missing(&mut launch_env, "FRET_UI_GALLERY_VLIST_KNOWN_HEIGHTS", "1");
-        // Default to the non-retained VirtualList path so this harness gates the
-        // highest-risk, most common implementation track (ADR 0175 Track B). The
-        // retained-host track (ADR 0177) has dedicated suites/scripts.
-        push_env_if_missing(&mut launch_env, "FRET_UI_GALLERY_VLIST_RETAINED", "0");
-        let scripts = scripts_from_suite_dir("ui-gallery-vlist-window-boundary")?;
-        (scripts, Some(BuiltinSuite::UiGallery))
-    } else if is_ui_gallery_vlist_no_window_shifts_small_scroll_suite {
-        // Guard rail harness: under view-cache + shell, small scroll deltas should
-        // not force a non-retained VirtualList window shift (which currently implies
-        // a cache-root rerender to rebuild visible items).
-        //
-        // Callers can still override env explicitly via `--env KEY=...`.
-        push_env_if_missing(&mut launch_env, "FRET_UI_GALLERY_VIEW_CACHE", "1");
-        push_env_if_missing(&mut launch_env, "FRET_UI_GALLERY_VIEW_CACHE_SHELL", "1");
-        push_env_if_missing(&mut launch_env, "FRET_UI_GALLERY_VLIST_MINIMAL", "1");
-        push_env_if_missing(&mut launch_env, "FRET_UI_GALLERY_VLIST_KNOWN_HEIGHTS", "1");
-        push_env_if_missing(&mut launch_env, "FRET_UI_GALLERY_VLIST_RETAINED", "0");
-        let scripts = scripts_from_suite_dir("ui-gallery-vlist-no-window-shifts-small-scroll")?;
-        (scripts, Some(BuiltinSuite::UiGallery))
-    } else if is_ui_gallery_vlist_window_boundary_retained_suite {
-        // Retained-host counterpart of the window-boundary harness. This suite is used
-        // to validate the ADR 0177 track (retained reconcile) with the same script and
-        // baseline env, while keeping the non-retained suite as the default.
-        //
-        // Callers can still override them explicitly via `--env KEY=...`.
-        push_env_if_missing(&mut launch_env, "FRET_UI_GALLERY_VIEW_CACHE", "1");
-        push_env_if_missing(&mut launch_env, "FRET_UI_GALLERY_VIEW_CACHE_SHELL", "1");
-        push_env_if_missing(&mut launch_env, "FRET_UI_GALLERY_VLIST_KNOWN_HEIGHTS", "1");
-        push_env_if_missing(&mut launch_env, "FRET_UI_GALLERY_VLIST_RETAINED", "1");
-        // Enable keep-alive in the retained-host harness so boundary scroll back can
-        // reuse detached row subtrees (reduces attach cost and stabilizes worst tick).
-        push_env_if_missing(&mut launch_env, "FRET_UI_GALLERY_VLIST_KEEP_ALIVE", "128");
-        let scripts = scripts_from_suite_dir("ui-gallery-vlist-window-boundary-retained")?;
-        (scripts, Some(BuiltinSuite::UiGallery))
-    } else if is_ui_gallery_ui_kit_list_retained_suite {
-        let scripts = scripts_from_suite_dir("ui-gallery-ui-kit-list-retained")?;
-        (scripts, Some(BuiltinSuite::UiGallery))
-    } else if is_ui_gallery_inspector_torture_suite {
-        let scripts = scripts_from_suite_dir("ui-gallery-inspector-torture")?;
-        (scripts, Some(BuiltinSuite::UiGallery))
-    } else if is_ui_gallery_inspector_torture_keep_alive_suite {
-        let scripts = scripts_from_suite_dir("ui-gallery-inspector-torture-keep-alive")?;
-        (scripts, Some(BuiltinSuite::UiGallery))
-    } else if is_ui_gallery_file_tree_torture_suite {
-        let scripts = scripts_from_suite_dir("ui-gallery-file-tree-torture")?;
-        (scripts, Some(BuiltinSuite::UiGallery))
-    } else if is_ui_gallery_file_tree_torture_interactive_suite {
-        let scripts = scripts_from_suite_dir("ui-gallery-file-tree-torture-interactive")?;
-        (scripts, Some(BuiltinSuite::UiGallery))
-    } else if is_ui_gallery_cache005_suite {
-        let scripts = scripts_from_suite_dir("ui-gallery-cache005")?;
-        (scripts, Some(BuiltinSuite::UiGallery))
-    } else if is_components_gallery_file_tree_suite {
-        // components_gallery's "file tree torture" surface is behind env gates; the
-        // scripted harness assumes it is enabled and large enough to cross overscan
-        // boundaries deterministically.
-        push_env_if_missing(
-            &mut launch_env,
-            "FRET_COMPONENTS_GALLERY_FILE_TREE_TORTURE",
-            "1",
-        );
-        push_env_if_missing(
-            &mut launch_env,
-            "FRET_COMPONENTS_GALLERY_FILE_TREE_TORTURE_N",
-            "50000",
-        );
-        // Enable view-cache reuse by default for suite regressions. (components_gallery
-        // reads `FRET_EXAMPLES_VIEW_CACHE`.)
-        push_env_if_missing(&mut launch_env, "FRET_EXAMPLES_VIEW_CACHE", "1");
-        // Keep-alive is only observed by the `*bounce*` script, but setting it here
-        // keeps the suite defaults consistent.
-        push_env_if_missing(
-            &mut launch_env,
-            "FRET_COMPONENTS_GALLERY_FILE_TREE_KEEP_ALIVE",
-            "256",
-        );
-        let scripts = scripts_from_suite_dir("components-gallery-file-tree")?;
-        (scripts, None)
-    } else if is_components_gallery_table_suite {
-        // components_gallery's "table torture" surface is behind an env gate; the
-        // scripted harness assumes it is enabled.
-        push_env_if_missing(
-            &mut launch_env,
-            "FRET_COMPONENTS_GALLERY_TABLE_TORTURE",
-            "1",
-        );
-        push_env_if_missing(
-            &mut launch_env,
-            "FRET_COMPONENTS_GALLERY_TABLE_TORTURE_N",
-            "50000",
-        );
-        push_env_if_missing(&mut launch_env, "FRET_EXAMPLES_VIEW_CACHE", "1");
-        let scripts = scripts_from_suite_dir("components-gallery-table")?;
-        (scripts, None)
-    } else if is_components_gallery_table_keep_alive_suite {
-        push_env_if_missing(
-            &mut launch_env,
-            "FRET_COMPONENTS_GALLERY_TABLE_TORTURE",
-            "1",
-        );
-        push_env_if_missing(
-            &mut launch_env,
-            "FRET_COMPONENTS_GALLERY_TABLE_TORTURE_N",
-            "50000",
-        );
-        push_env_if_missing(&mut launch_env, "FRET_EXAMPLES_VIEW_CACHE", "1");
-        push_env_if_missing(
-            &mut launch_env,
-            "FRET_COMPONENTS_GALLERY_TABLE_KEEP_ALIVE",
-            "256",
-        );
-        let scripts = scripts_from_suite_dir("components-gallery-table-keep-alive")?;
-        (scripts, None)
-    } else if is_workspace_shell_demo_suite {
-        let scripts = scripts_from_suite_dir("workspace-shell-demo")?;
-        (scripts, None)
-    } else if is_workspace_shell_demo_file_tree_keep_alive_suite {
-        let scripts = scripts_from_suite_dir("workspace-shell-demo-file-tree-keep-alive")?;
-        (scripts, None)
-    } else if is_docking_motion_pilot_suite {
-        let scripts = scripts_from_suite_dir("docking-motion-pilot")?;
-        (scripts, Some(BuiltinSuite::DockingMotionPilot))
-    } else if is_docking_arbitration_suite {
-        let inputs = diag_suite_scripts::docking_arbitration_suite_scripts();
-        let scripts = expand_script_inputs(&workspace_root, &inputs)?;
-        (scripts, Some(BuiltinSuite::DockingArbitration))
-    } else if suite_args.len() == 1
-        && let Some(scripts) = scripts_from_promoted_registry_suite(&suite_args[0])?
-    {
-        (scripts, None)
-    } else if suite_args.len() == 1 && suite_dir_exists(&suite_args[0]) {
-        let scripts = scripts_from_suite_dir(&suite_args[0])?;
-        (scripts, None)
-    } else {
-        used_fallback_paths = true;
-        (
-            suite_args
-                .into_iter()
-                .map(|p| resolve_path(&workspace_root, PathBuf::from(p)))
-                .collect(),
-            None,
-        )
-    };
 
     if !suite_script_inputs.is_empty() {
         scripts.extend(expand_script_inputs(&workspace_root, &suite_script_inputs)?);
@@ -685,8 +570,8 @@ hint: list promoted scripts via `fretboard diag list scripts --contains {name}`"
     }
 
     let suite_wants_screenshots = pack_include_screenshots
-        || check_pixels_changed_test_id.is_some()
-        || check_pixels_unchanged_test_id.is_some()
+        || crate::registry::checks::CheckRegistry::builtin()
+            .wants_screenshots(&checks_for_post_run_template)
         || (check_pixels_changed_test_id.is_none()
             && check_pixels_unchanged_test_id.is_none()
             && scripts
@@ -1452,11 +1337,10 @@ hint: list promoted scripts via `fretboard diag list scripts --contains {name}`"
             check_vlist_window_shifts_non_retained_max.filter(|_| {
                 diag_policy::ui_gallery_script_requires_retained_vlist_reconcile_gate(&src)
             });
-        let wants_post_run_checks_for_script = check_stale_paint_test_id.is_some()
+        let wants_post_run_checks_for_script = wants_registered_post_run_checks
+            || check_stale_paint_test_id.is_some()
             || check_stale_scene_test_id.is_some()
             || check_idle_no_paint_min.is_some()
-            || check_pixels_changed_test_id.is_some()
-            || check_pixels_unchanged_test_id.is_some()
             || check_ui_gallery_web_ime_bridge_enabled
             || check_ui_gallery_text_rescan_system_fonts_font_stack_key_bumps
             || check_ui_gallery_text_fallback_policy_key_bumps_on_settings_change
@@ -1503,8 +1387,6 @@ hint: list promoted scripts via `fretboard diag list scripts --contains {name}`"
             || check_windowed_rows_visible_start_changes_repainted
             || check_layout_fast_path_min.is_some()
             || check_hover_layout_max.is_some()
-            || check_gc_sweep_liveness
-            || !check_notify_hotspot_file_max.is_empty()
             || check_view_cache_reuse_min.is_some()
             || check_view_cache_reuse_stable_min.is_some()
             || check_overlay_synthesis_min.is_some()

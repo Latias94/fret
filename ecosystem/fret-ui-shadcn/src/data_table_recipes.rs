@@ -9,17 +9,18 @@ use fret_ui::action::OnActivate;
 use fret_ui::element::{AnyElement, LayoutQueryRegionProps, LayoutStyle, Length};
 use fret_ui::elements::GlobalElementId;
 use fret_ui::{ElementContext, Theme, UiHost};
-use fret_ui_headless::table::{ColumnDef, ColumnId, ColumnPinPosition, TableState, pin_column};
+use fret_ui_headless::table::{pin_column, ColumnDef, ColumnId, ColumnPinPosition, TableState};
 use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
-use fret_ui_kit::declarative::stack::{HStackProps, hstack};
+use fret_ui_kit::declarative::stack::{hstack, HStackProps};
 use fret_ui_kit::declarative::table::TableViewOutput;
-use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, Radius, Space, ui};
+use fret_ui_kit::{ui, ChromeRefinement, ColorRef, LayoutRefinement, Radius, Space};
 use serde_json::Value;
 
 use crate::button::{Button, ButtonSize, ButtonVariant};
+use crate::direction::{use_direction, LayoutDirection};
 use crate::dropdown_menu::{
-    DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuEntry, DropdownMenuLabel,
-    DropdownMenuRadioGroup, DropdownMenuRadioItemSpec,
+    DropdownMenu, DropdownMenuAlign, DropdownMenuCheckboxItem, DropdownMenuEntry,
+    DropdownMenuLabel, DropdownMenuRadioGroup, DropdownMenuRadioItemSpec,
 };
 use crate::input::Input;
 use crate::{
@@ -486,6 +487,14 @@ impl<TData> DataTableToolbar<TData> {
             "shadcn.data_table.toolbar",
             region_props,
             move |cx, toolbar_region_id| {
+                let dir = use_direction(cx, None);
+                let is_rtl = dir == LayoutDirection::Rtl;
+                let menu_align_inline_end = if is_rtl {
+                    DropdownMenuAlign::Start
+                } else {
+                    DropdownMenuAlign::End
+                };
+
                 let state_value = cx
                     .watch_model(&self.state)
                     .layout()
@@ -888,28 +897,30 @@ impl<TData> DataTableToolbar<TData> {
 
                 let columns_button_label = self.columns_button_label.clone();
                 let cols_menu = self.show_columns_menu.then(|| {
-                    DropdownMenu::new(columns_open.clone()).into_element(
-                        cx,
-                        move |cx| {
-                            Button::new(columns_button_label.clone())
-                                .variant(ButtonVariant::Outline)
-                                .size(ButtonSize::Sm)
-                                // Upstream shadcn: "Columns <ChevronDown />"
-                                .trailing_icon(fret_icons::IconId::new_static(
-                                    "lucide.chevron-down",
-                                ))
-                                .into_element(cx)
-                        },
-                        move |_cx| {
-                            let mut entries = Vec::new();
-                            entries.push(DropdownMenuEntry::Label(
-                                DropdownMenuLabel::new("Toggle columns").inset(true),
-                            ));
-                            entries.push(DropdownMenuEntry::Separator);
-                            entries.extend(visibility_items);
-                            entries
-                        },
-                    )
+                    DropdownMenu::new(columns_open.clone())
+                        .align(menu_align_inline_end)
+                        .into_element(
+                            cx,
+                            move |cx| {
+                                Button::new(columns_button_label.clone())
+                                    .variant(ButtonVariant::Outline)
+                                    .size(ButtonSize::Sm)
+                                    // Upstream shadcn: "Columns <ChevronDown />"
+                                    .trailing_icon(fret_icons::IconId::new_static(
+                                        "lucide.chevron-down",
+                                    ))
+                                    .into_element(cx)
+                            },
+                            move |_cx| {
+                                let mut entries = Vec::new();
+                                entries.push(DropdownMenuEntry::Label(
+                                    DropdownMenuLabel::new("Toggle columns").inset(true),
+                                ));
+                                entries.push(DropdownMenuEntry::Separator);
+                                entries.extend(visibility_items);
+                                entries
+                            },
+                        )
                 });
 
                 let mut pin_items: Vec<DropdownMenuEntry> = pinning_bindings
@@ -948,16 +959,18 @@ impl<TData> DataTableToolbar<TData> {
 
                 let pinning_button_label = self.pinning_button_label.clone();
                 let pin_menu = self.show_pinning_menu.then(|| {
-                    DropdownMenu::new(pinning_open.clone()).into_element(
-                        cx,
-                        move |cx| {
-                            Button::new(pinning_button_label.clone())
-                                .variant(ButtonVariant::Outline)
-                                .size(ButtonSize::Sm)
-                                .into_element(cx)
-                        },
-                        move |_cx| pin_items,
-                    )
+                    DropdownMenu::new(pinning_open.clone())
+                        .align(menu_align_inline_end)
+                        .into_element(
+                            cx,
+                            move |cx| {
+                                Button::new(pinning_button_label.clone())
+                                    .variant(ButtonVariant::Outline)
+                                    .size(ButtonSize::Sm)
+                                    .into_element(cx)
+                            },
+                            move |_cx| pin_items,
+                        )
                 });
 
                 let faceted_menu = self
@@ -1502,7 +1515,13 @@ impl<TData> DataTableToolbar<TData> {
                         .items_center()
                         .justify_between()
                         .gap_x(Space::N2),
-                    move |_cx| vec![left_group, right_group],
+                    move |_cx| {
+                        if is_rtl {
+                            vec![right_group, left_group]
+                        } else {
+                            vec![left_group, right_group]
+                        }
+                    },
                 )]
             },
         )

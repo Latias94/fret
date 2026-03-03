@@ -90,6 +90,15 @@ Exit criteria:
 - adding a new suite/check should not require touching unrelated modules,
 - the public API surface inside the crate stays small and intentional.
 
+Notes (as of 2026-03-03):
+
+- Initial `registry/*` scaffolding exists at:
+  - `crates/fret-diag/src/registry/suites.rs`
+  - `crates/fret-diag/src/registry/checks/mod.rs`
+  - builtin post-run checks are composed in:
+    - `crates/fret-diag/src/registry/checks/builtin_post_run/mod.rs`
+    - with domain modules under `crates/fret-diag/src/registry/checks/builtin_post_run/` (including `ui_gallery/*`)
+
 ---
 
 ## 4) Ecosystem extensibility (contract shape)
@@ -130,4 +139,3 @@ Split trigger conditions:
 - compile times or dependency trees become a bottleneck,
 - ownership boundaries become unclear inside one crate,
 - or we need to embed the engine into another process in a “library first” way.
-

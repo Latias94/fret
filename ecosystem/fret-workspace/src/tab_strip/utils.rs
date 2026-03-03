@@ -4,6 +4,7 @@ use fret_core::{FontId, FontWeight, Point, Px, Rect, TextStyle};
 use fret_ui::Theme;
 use fret_ui::scroll::ScrollHandle;
 use fret_ui_headless::tab_strip_canonical::resolve_end_drop_insert_index_in_canonical_order;
+use fret_ui_headless::tab_strip_scroll::ensure_range_visible_x;
 use fret_ui_kit::dnd as ui_dnd;
 
 pub(super) fn tab_text_style(theme: &Theme) -> TextStyle {
@@ -26,27 +27,21 @@ pub(super) fn scroll_rect_into_view_x_with_margin(
     margin: Px,
 ) {
     let current = handle.offset();
-    let view_left = viewport.origin.x;
-    let view_right = Px(viewport.origin.x.0 + viewport.size.width.0);
-    let child_left = child.origin.x;
-    let child_right = Px(child.origin.x.0 + child.size.width.0);
+    let max_x = handle.max_offset().x;
 
     // Note: `child` bounds are reported in "unscrolled" coordinates while `viewport` is in window
-    // coordinates, so the required scroll offset is absolute (do not add `current.x`).
-    let mut next_x = if child_left.0 < (view_left.0 + margin.0) {
-        Px(child_left.0 - (view_left.0 + margin.0))
-    } else if child_right.0 > (view_right.0 - margin.0) {
-        Px(child_right.0 - (view_right.0 - margin.0))
-    } else {
-        current.x
-    };
+    // coordinates. Convert to a shared content-space by subtracting the viewport origin.
+    let child_start_x = Px(child.origin.x.0 - viewport.origin.x.0);
+    let child_end_x = Px(child_start_x.0 + child.size.width.0);
 
-    let max_x = handle.max_offset().x;
-    if next_x.0 < 0.0 {
-        next_x = Px(0.0);
-    } else if next_x.0 > max_x.0 {
-        next_x = max_x;
-    }
+    let next_x = ensure_range_visible_x(
+        current.x,
+        max_x,
+        viewport.size.width,
+        child_start_x,
+        child_end_x,
+        margin,
+    );
 
     if next_x != current.x {
         handle.set_offset(Point::new(next_x, current.y));

@@ -51,7 +51,7 @@ Exit criteria:
 
 - [x] A demo page exists (gallery or `fret-examples`) and has a scripted diagnostics bundle for regressions.
   - Evidence: `apps/fret-examples/src/liquid_glass_demo.rs`,
-    `tools/diag-scripts/liquid-glass-custom-v2-corners-screenshot.json`.
+    `tools/diag-scripts/renderer/effects/liquid-glass-custom-v2-corners-screenshot.json`.
 - [x] Add at least one additional “authoring template” demo that uses the v2 input image (e.g. LUT/noise/normal-map)
   and documents the expected input color space and sampling hints.
   - Evidence: `apps/fret-examples/src/custom_effect_v2_web_demo.rs`,

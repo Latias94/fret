@@ -6,5 +6,10 @@
 //!
 //! Keep `ui-gallery-badge-*` `test_id`s stable: diag scripts depend on them.
 
+pub mod colors;
 pub mod demo;
+pub mod icon;
 pub mod link;
+pub mod rtl;
+pub mod spinner;
+pub mod variants;

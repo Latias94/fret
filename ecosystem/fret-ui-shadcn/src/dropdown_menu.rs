@@ -1889,13 +1889,17 @@ impl DropdownMenu {
 
             // Pointer/activation open (Radix `DropdownMenuTrigger` click/Enter/Space).
             //
-            // Note: menu trigger helpers intentionally do not wire Enter/Space because many
-            // trigger surfaces implement those through pressable activation hooks. Here we
-            // *do* wire activation so `DropdownMenu` is usable without an explicit Trigger
-            // component. Callers should not also toggle `open` on activation (e.g.
-            // `Button::toggle_model(open)`), or the state can be toggled twice and remain closed.
+            // We intentionally *set* the trigger activation hook instead of "add"-chaining it.
+            //
+            // Rationale: `pressable_add_on_activate_for` is persistent for stable element ids,
+            // so calling it on every render can accumulate stacked handlers (double-toggling the
+            // `open` model and producing "opens then immediately closes" outcomes on subsequent
+            // interactions).
+            //
+            // Contract: the menu trigger is owned by the `DropdownMenu` wrapper; avoid attaching
+            // independent activation side-effects to the trigger element.
             let open_for_trigger_activate = self.open.clone();
-            cx.pressable_add_on_activate_for(
+            cx.pressable_on_activate_for(
                 trigger_id,
                 Arc::new(move |host, _acx, _reason| {
                     if disabled {
@@ -4196,7 +4200,11 @@ impl DropdownMenu {
                     on_dismiss_request,
                     dismissible_on_pointer_move,
                     modal,
-                );
+                )
+                // Radix-aligned dismissal: treat the trigger subtree as a DismissableLayerBranch
+                // so the press that opens the menu is not reinterpreted as an immediate
+                // outside-press dismissal on the next frame.
+                .add_dismissable_branch(trigger_id);
                 OverlayController::request(cx, request);
                 if keyboard_focus_last_on_open {
                     let _ = cx

@@ -1,0 +1,8 @@
+{
+  "schema_version": 1,
+  "kind": "diag_script_suite_manifest",
+  "scripts": [
+    "tools/diag-scripts/ui-gallery-tree-retained-toggle-and-scroll.json",
+    "tools/diag-scripts/ui-gallery-tree-window-boundary-scroll-retained.json"
+  ]
+}

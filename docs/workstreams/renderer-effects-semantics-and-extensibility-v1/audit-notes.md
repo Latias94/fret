@@ -90,7 +90,7 @@ P1 — Visual correctness:
   - Fix: use an isotropic gradient AA estimate for SDF coverage and compute border coverage via multiplication
     (`alpha_outer * (1 - alpha_inner)`).
   - Evidence: `crates/fret-render-wgpu/src/renderer/shaders.rs`.
-  - Regression harness: `tools/diag-scripts/liquid-glass-custom-v2-corners-screenshot.json`.
+  - Regression harness: `tools/diag-scripts/renderer/effects/liquid-glass-custom-v2-corners-screenshot.json`.
 
 P1/P2 — Diagnostics:
 

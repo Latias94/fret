@@ -588,3 +588,181 @@ pub(super) fn handle_capture_steps(
         _ => false,
     }
 }
+
+pub(super) fn handle_capture_layout_sidecar_step(
+    svc: &mut UiDiagnosticsService,
+    app: &mut App,
+    window: AppWindowId,
+    window_bounds: Rect,
+    step_index: usize,
+    label: Option<String>,
+    root_label_filter: Option<String>,
+    scale_factor: f32,
+    ui: &mut Option<&mut UiTree<App>>,
+    active: &mut ActiveScript,
+    output: &mut UiScriptFrameOutput,
+) -> bool {
+    let root_label_filter = root_label_filter
+        .as_deref()
+        .map(|s| s.trim())
+        .filter(|s| !s.is_empty());
+
+    // v1 is native-only, best-effort. Scripts should still pass even if sidecars are missing.
+    if cfg!(target_arch = "wasm32") {
+        push_script_event_log(
+            active,
+            &svc.cfg,
+            UiScriptEventLogEntryV1 {
+                unix_ms: unix_ms_now(),
+                kind: "layout_sidecar.skipped".to_string(),
+                step_index: Some(step_index as u32),
+                note: Some("wasm32_unsupported".to_string()),
+                bundle_dir: None,
+                window: Some(window.data().as_ffi()),
+                tick_id: Some(app.tick_id().0),
+                frame_id: Some(app.frame_id().0),
+                window_snapshot_seq: None,
+            },
+        );
+        active.wait_until = None;
+        active.screenshot_wait = None;
+        active.next_step = active.next_step.saturating_add(1);
+        output.request_redraw = true;
+        return true;
+    }
+
+    let dump_label = label
+        .as_deref()
+        .map(sanitize_label)
+        .unwrap_or_else(|| format!("script-step-{step_index:04}-layout_sidecar"));
+    let dumped_dir = svc.dump_bundle(Some(&dump_label));
+    let Some(dumped_dir) = dumped_dir else {
+        push_script_event_log(
+            active,
+            &svc.cfg,
+            UiScriptEventLogEntryV1 {
+                unix_ms: unix_ms_now(),
+                kind: "layout_sidecar.skipped".to_string(),
+                step_index: Some(step_index as u32),
+                note: Some("bundle_dump_failed".to_string()),
+                bundle_dir: None,
+                window: Some(window.data().as_ffi()),
+                tick_id: Some(app.tick_id().0),
+                frame_id: Some(app.frame_id().0),
+                window_snapshot_seq: None,
+            },
+        );
+        active.wait_until = None;
+        active.screenshot_wait = None;
+        active.next_step = active.next_step.saturating_add(1);
+        output.request_redraw = true;
+        return true;
+    };
+
+    let Some(ui) = ui.as_deref_mut() else {
+        push_script_event_log(
+            active,
+            &svc.cfg,
+            UiScriptEventLogEntryV1 {
+                unix_ms: unix_ms_now(),
+                kind: "layout_sidecar.skipped".to_string(),
+                step_index: Some(step_index as u32),
+                note: Some("ui_unavailable".to_string()),
+                bundle_dir: Some(display_path(&svc.cfg.out_dir, &dumped_dir)),
+                window: Some(window.data().as_ffi()),
+                tick_id: Some(app.tick_id().0),
+                frame_id: Some(app.frame_id().0),
+                window_snapshot_seq: None,
+            },
+        );
+        active.wait_until = None;
+        active.screenshot_wait = None;
+        active.next_step = active.next_step.saturating_add(1);
+        output.request_redraw = true;
+        return true;
+    };
+
+    let Some(root) = ui.base_root() else {
+        push_script_event_log(
+            active,
+            &svc.cfg,
+            UiScriptEventLogEntryV1 {
+                unix_ms: unix_ms_now(),
+                kind: "layout_sidecar.skipped".to_string(),
+                step_index: Some(step_index as u32),
+                note: Some("missing_base_root".to_string()),
+                bundle_dir: Some(display_path(&svc.cfg.out_dir, &dumped_dir)),
+                window: Some(window.data().as_ffi()),
+                tick_id: Some(app.tick_id().0),
+                frame_id: Some(app.frame_id().0),
+                window_snapshot_seq: None,
+            },
+        );
+        active.wait_until = None;
+        active.screenshot_wait = None;
+        active.next_step = active.next_step.saturating_add(1);
+        output.request_redraw = true;
+        return true;
+    };
+
+    let captured_at_unix_ms = unix_ms_now();
+    let sidecar_result = ui.debug_write_layout_sidecar_taffy_v1_json(
+        app,
+        window,
+        root,
+        window_bounds,
+        scale_factor,
+        root_label_filter,
+        &dumped_dir,
+        captured_at_unix_ms,
+    );
+
+    match sidecar_result {
+        Ok(path) => {
+            let note = format!(
+                "path={} root_label_filter={:?}",
+                display_path(&svc.cfg.out_dir, &path),
+                root_label_filter
+            );
+            push_script_event_log(
+                active,
+                &svc.cfg,
+                UiScriptEventLogEntryV1 {
+                    unix_ms: captured_at_unix_ms,
+                    kind: "layout_sidecar.written".to_string(),
+                    step_index: Some(step_index as u32),
+                    note: Some(note),
+                    bundle_dir: Some(display_path(&svc.cfg.out_dir, &dumped_dir)),
+                    window: Some(window.data().as_ffi()),
+                    tick_id: Some(app.tick_id().0),
+                    frame_id: Some(app.frame_id().0),
+                    window_snapshot_seq: None,
+                },
+            );
+        }
+        Err(err) => {
+            let note = format!("error={err} root_label_filter={root_label_filter:?}");
+            push_script_event_log(
+                active,
+                &svc.cfg,
+                UiScriptEventLogEntryV1 {
+                    unix_ms: captured_at_unix_ms,
+                    kind: "layout_sidecar.write_failed".to_string(),
+                    step_index: Some(step_index as u32),
+                    note: Some(note),
+                    bundle_dir: Some(display_path(&svc.cfg.out_dir, &dumped_dir)),
+                    window: Some(window.data().as_ffi()),
+                    tick_id: Some(app.tick_id().0),
+                    frame_id: Some(app.frame_id().0),
+                    window_snapshot_seq: None,
+                },
+            );
+        }
+    }
+
+    active.wait_until = None;
+    active.screenshot_wait = None;
+    active.next_step = active.next_step.saturating_add(1);
+    output.request_redraw = true;
+    true
+}

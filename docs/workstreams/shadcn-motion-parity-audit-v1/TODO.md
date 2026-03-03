@@ -6,12 +6,19 @@ Last updated: 2026-03-03.
 
 - Landed: unit test gate for NavigationMenu trigger chevron rotation transition.
 - Optional: add a fixed-delta diag screenshot pair (`--fixed-frame-delta-ms 16`) for visual review.
+- Landed: `Combobox` popup placement + presence (fade/zoom/side slide) + unit test gate.
+- Landed: `Switch` thumb slides between states (duration-driven tween) + unit test gate.
+- Landed: `Progress` indicator translate animates on value changes (duration-driven tween) + unit test gate.
+- Gap: popper overlays without explicit `duration-*` should default to ~150ms (tw-animate-css default), not 100ms (Tooltip/HoverCard/DropdownMenu/Select/ContextMenu/Menubar; Popover is already 150ms by default).
+- Gap: `NavigationMenu` content open/close duration should be ~200ms (upstream `duration-200`), not 100ms.
 
 ## P1 (timebase correctness: eliminate 60Hz coupling)
 
 - Landed: `Spinner` / `Skeleton` / `InputOtp` continuous animations are duration-driven.
 - Landed: `AvatarFallback` delay is duration-driven (`delay_ms` matches Radix `delayMs`).
 - Landed: shadcn extras `Marquee` uses a duration-driven timebase (no `frame_id` delta coupling).
+- Landed: kit `drive_transition_*` does not advance multiple times per frame (prevents call-count-driven transitions).
+- Gap: common primitives should ease hover/focus style changes (`transition-*` parity), not snap (Button/Badge/Toggle/Input/Textarea/TabsTrigger/Table rows/ScrollArea thumb; requires reusable style transition helpers).
 
 ## P2 (API + token cleanup)
 

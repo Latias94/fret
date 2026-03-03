@@ -41,7 +41,7 @@ Multi-window tear-off + merge-back gates (runner-routed cross-window drags):
 
 ## Script registry sanity check
 
-- `python3 tools/check_diag_scripts_registry.py`
+- `cargo run -p fretboard -- diag registry check`
 
 ## Evidence bundles (fill in after running locally)
 

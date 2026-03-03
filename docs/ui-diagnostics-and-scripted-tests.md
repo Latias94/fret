@@ -914,6 +914,7 @@ Recent additions:
 - `dock_graph_node_count_le` / `dock_graph_max_split_depth_le` (assert dock graph size/depth stays bounded after repeated operations)
 - `known_window_count_ge` / `known_window_count_is` (assert number of currently open windows as best-effort reported by the runner; backed by the runner-owned window lifecycle diagnostics store when available, falling back to the input context service)
 - `dock_drag_current_window_is` (assert that a dock drag session is active and its `current_window` matches a window target)
+- `dock_drag_kind_is` (assert the active dock drag kind: `dock_panel` vs `dock_tabs`)
 - `dock_drag_moving_window_is` (assert the runner-reported moving window for a dock drag; ImGui-style “follow window”)
 - `dock_drag_window_under_moving_window_is` (assert the best-effort “window under moving window” selection during a dock drag)
 - `dock_drag_window_under_moving_window_source_is` (assert which mechanism selected the “window under moving window”: platform vs heuristic)
@@ -934,6 +935,7 @@ Notes:
   - Optional `max_snapshots` caps how many snapshots are included in this export (clamped to `FRET_DIAG_MAX_SNAPSHOTS`).
 - `capture_screenshot` requests a screenshot for the **most recent bundle directory** (`last_dump_dir`) and waits for completion (up to `timeout_frames`, default 300). If no bundle exists yet, the harness creates one first.
 - `drag_pointer` runs over multiple frames so diagnostics bundles can capture and gate frame-to-frame behavior (prepaint outputs, paint-only invalidations, drag indicators). Roughly: 1 frame for `move+down`, `steps` frames of `move`, then 1 frame for `up`.
+  - Pointer synthesis keeps positions slightly inside window bounds when the requested coordinates are still within the window (avoids edge hit-testing misses), but preserves intentionally out-of-bounds positions for tear-off / cross-window docking routes.
 
 ## Script schema v2 (intent-level steps)
 
@@ -1308,24 +1310,26 @@ Note:
 
 - The script library is modularized via a taxonomy plus a minimal, generated registry for “promoted” scripts
   (`tools/diag-scripts/index.json`, scope: suite-reachable + `_prelude`; regenerate via
-  `python tools/check_diag_scripts_registry.py --write`).
+  `cargo run -p fretboard -- diag registry write`).
   `fretboard diag run` accepts either an explicit path or a promoted `script_id` from this registry.
   For discoverability, use `fretboard diag list scripts` to print `script_id -> path` mappings.
   Use `fretboard diag list suites` to print known suites (derived from promoted registry `suite_memberships`).
   To detect taxonomy/registry drift without grepping, use `fretboard diag doctor scripts` (read-only;
   suggests repair commands like `migrate-script-library.py --apply --write-redirects` and
-  `check_diag_scripts_registry.py --write`). Use `--strict` to fail when promoted scripts drift back to schema v1.
+  `diag registry write`). Use `--strict` to fail when promoted scripts drift back to schema v1.
   Prefer directory- and glob-based inputs (`--script-dir`, `--glob`) for ad-hoc runs, and avoid assuming scripts live
   only at the top-level. See: `docs/workstreams/diag-v2-hardening-and-switches-v1/README.md`.
 - Built-in suites are defined as curated directory inputs under `tools/diag-scripts/suites/<suite-name>/`.
-  Each entry is a small `script_redirect` JSON stub that points at the canonical script path; tooling resolves
-  redirects before pushing scripts to the runtime (so redirects never reach the runtime).
+  In-tree suites are expressed via a single `suite.json` manifest (tooling-only) that lists canonical script paths.
+  See: `tools/diag-scripts/suites/README.md`.
 - Use `--suite-prelude <script.json>` to run shared reset/normalization scripts from `tools/diag-scripts/_prelude/*`.
   When the suite reuses a single process, preludes run once before the first script by default; use
   `--suite-prelude-each-run` to run preludes before every script.
 - Migration helper (dry-run by default): `python tools/diag-scripts/migrate-script-library.py`.
 - During migration, legacy script paths may be left behind as small `script_redirect` JSON stubs. Tooling resolves these
   stubs before pushing scripts to the runtime, so redirects never become part of the runtime contract surface.
+- When applying moves, suite manifests (`tools/diag-scripts/suites/**/suite.json`) are rewritten to reference the
+  canonical (post-move) script paths, avoiding indirect dependencies on redirect stubs.
 
 For component-focused conformance scripts (built-in suites), run:
 

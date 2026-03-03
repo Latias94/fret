@@ -400,7 +400,20 @@ pub(crate) fn ensure_dock_routing_json(
                 existing.get("warmup_frames").and_then(|v| v.as_u64()) == Some(warmup_frames);
             let bundle_ok =
                 existing.get("bundle").and_then(|v| v.as_str()) == Some(&expected_bundle);
-            if kind_ok && schema_ok && warmup_ok && bundle_ok {
+            // `dock_routing` is an evolving, "bounded evidence" sidecar. Prefer regenerating when
+            // it appears to be missing newer key fields, even if the schema version matches.
+            let content_ok = existing
+                .get("entries")
+                .and_then(|v| v.as_array())
+                .is_some_and(|entries| {
+                    for e in entries {
+                        if let Some(drag) = e.get("dock_drag").and_then(|v| v.as_object()) {
+                            return drag.contains_key("kind");
+                        }
+                    }
+                    true
+                });
+            if kind_ok && schema_ok && warmup_ok && bundle_ok && content_ok {
                 return Ok(out);
             }
         }
@@ -630,6 +643,10 @@ fn build_dock_routing_payload_from_json(
                 );
                 mix(
                     &mut fp,
+                    hash_str_64(d.get("kind").and_then(|v| v.as_str()).unwrap_or("")),
+                );
+                mix(
+                    &mut fp,
                     d.get("dragging").and_then(|v| v.as_bool()).unwrap_or(false) as u64,
                 );
                 mix(
@@ -646,8 +663,32 @@ fn build_dock_routing_payload_from_json(
                 );
                 mix(
                     &mut fp,
+                    d.get("transparent_payload_mouse_passthrough_applied")
+                        .and_then(|v| v.as_bool())
+                        .unwrap_or(false) as u64,
+                );
+                mix(
+                    &mut fp,
                     hash_str_64(
                         d.get("window_under_cursor_source")
+                            .and_then(|v| v.as_str())
+                            .unwrap_or(""),
+                    ),
+                );
+                mix(
+                    &mut fp,
+                    d.get("moving_window").and_then(|v| v.as_u64()).unwrap_or(0),
+                );
+                mix(
+                    &mut fp,
+                    d.get("window_under_moving_window")
+                        .and_then(|v| v.as_u64())
+                        .unwrap_or(0),
+                );
+                mix(
+                    &mut fp,
+                    hash_str_64(
+                        d.get("window_under_moving_window_source")
                             .and_then(|v| v.as_str())
                             .unwrap_or(""),
                     ),
@@ -696,10 +737,15 @@ fn build_dock_routing_payload_from_json(
                     "pointer_id": d.get("pointer_id").and_then(|v| v.as_u64()).unwrap_or(0),
                     "source_window": d.get("source_window").and_then(|v| v.as_u64()).unwrap_or(0),
                     "current_window": d.get("current_window").and_then(|v| v.as_u64()).unwrap_or(0),
+                    "kind": d.get("kind").cloned().unwrap_or(Value::Null),
                     "dragging": d.get("dragging").and_then(|v| v.as_bool()).unwrap_or(false),
                     "cross_window_hover": d.get("cross_window_hover").and_then(|v| v.as_bool()).unwrap_or(false),
                     "transparent_payload_applied": d.get("transparent_payload_applied").and_then(|v| v.as_bool()).unwrap_or(false),
+                    "transparent_payload_mouse_passthrough_applied": d.get("transparent_payload_mouse_passthrough_applied").and_then(|v| v.as_bool()).unwrap_or(false),
                     "window_under_cursor_source": d.get("window_under_cursor_source").cloned().unwrap_or(Value::Null),
+                    "moving_window": d.get("moving_window").cloned().unwrap_or(Value::Null),
+                    "window_under_moving_window": d.get("window_under_moving_window").cloned().unwrap_or(Value::Null),
+                    "window_under_moving_window_source": d.get("window_under_moving_window_source").cloned().unwrap_or(Value::Null),
                 })
             });
 
@@ -1572,10 +1618,16 @@ mod tests {
                                     "pointer_id": 1,
                                     "source_window": 1,
                                     "current_window": 2,
+                                    "kind": "dock_panel",
                                     "dragging": true,
                                     "cross_window_hover": true,
                                     "transparent_payload_applied": true,
+                                    "transparent_payload_mouse_passthrough_applied": true,
                                     "window_under_cursor_source": "heuristic_rects"
+                                    ,
+                                    "moving_window": 2,
+                                    "window_under_moving_window": 1,
+                                    "window_under_moving_window_source": "platform_win32"
                                 },
                                 "dock_drop_resolve": {
                                     "pointer_id": 1,
@@ -1599,10 +1651,16 @@ mod tests {
                                     "pointer_id": 1,
                                     "source_window": 1,
                                     "current_window": 2,
+                                    "kind": "dock_panel",
                                     "dragging": true,
                                     "cross_window_hover": true,
                                     "transparent_payload_applied": true,
+                                    "transparent_payload_mouse_passthrough_applied": true,
                                     "window_under_cursor_source": "heuristic_rects"
+                                    ,
+                                    "moving_window": 2,
+                                    "window_under_moving_window": 1,
+                                    "window_under_moving_window_source": "platform_win32"
                                 },
                                 "dock_drop_resolve": {
                                     "pointer_id": 1,
@@ -1780,6 +1838,7 @@ mod tests {
 
         let drag = e0.get("dock_drag").unwrap().as_object().unwrap();
         assert_eq!(drag.get("dragging").and_then(|v| v.as_bool()), Some(true));
+        assert_eq!(drag.get("kind").and_then(|v| v.as_str()), Some("dock_panel"));
         assert_eq!(
             drag.get("cross_window_hover").and_then(|v| v.as_bool()),
             Some(true)
@@ -1788,6 +1847,19 @@ mod tests {
             drag.get("window_under_cursor_source")
                 .and_then(|v| v.as_str()),
             Some("heuristic_rects")
+        );
+        assert_eq!(
+            drag.get("moving_window").and_then(|v| v.as_u64()),
+            Some(2)
+        );
+        assert_eq!(
+            drag.get("window_under_moving_window").and_then(|v| v.as_u64()),
+            Some(1)
+        );
+        assert_eq!(
+            drag.get("window_under_moving_window_source")
+                .and_then(|v| v.as_str()),
+            Some("platform_win32")
         );
 
         let drop = e0.get("dock_drop_resolve").unwrap().as_object().unwrap();

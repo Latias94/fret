@@ -92,6 +92,16 @@ fn wire_selection_commands<H: UiHost + 'static>(
     );
 }
 
+fn align_end(cx: &mut ElementContext<'_, App>, child: AnyElement) -> AnyElement {
+    stack::hstack(
+        cx,
+        stack::HStackProps::default()
+            .layout(LayoutRefinement::default().w_full())
+            .justify_end(),
+        move |_cx| [child],
+    )
+}
+
 fn legacy_demo_content(
     cx: &mut ElementContext<'_, App>,
     state: Model<fret_ui_headless::table::TableState>,
@@ -353,7 +363,18 @@ fn legacy_demo_content(
             state.clone(),
             assets.columns.clone(),
             |row, _index, _parent| fret_ui_headless::table::RowKey(row.id),
-            |col| col.id.clone(),
+            |col| match col.id.as_ref() {
+                // Guide demo: prefer shadcn-like title casing for headers.
+                "name" => Arc::<str>::from("Name"),
+                "status" => Arc::<str>::from("Status"),
+                "cpu%" => Arc::<str>::from("CPU%"),
+                "mem_mb" => Arc::<str>::from("mem_mb"),
+                // The row-actions column uses an icon-only trigger and no header label.
+                "actions" => Arc::<str>::from(""),
+                // The select column header is overridden by a checkbox header cell.
+                "select" => Arc::<str>::from(""),
+                _ => col.id.clone(),
+            },
             move |cx, col, _sort_state| {
                 if col.id.as_ref() != "select" {
                     return None;
@@ -472,8 +493,9 @@ fn legacy_demo_content(
                                 "ui-gallery-data-table-row-actions-open-{}",
                                 row.id
                             )))
-                            .icon(fret_icons::IconId::new_static("lucide.ellipsis"))
+                            .icon(fret_icons::ids::ui::MORE_HORIZONTAL)
                             .into_element(cx);
+                        let trigger = align_end(cx, trigger);
 
                         shadcn::DropdownMenu::new(open)
                             .align(shadcn::DropdownMenuAlign::End)

@@ -25,7 +25,10 @@ workstream follows the repo's ADR-driven approach.
 - MVP demo + scripted gate are landed (M2):
   - Demo: `launcher_utility_window_demo` (frameless main window, drag region, resize handle, blink).
   - Script: `tools/diag-scripts/launcher-utility-window-mvp.json`.
-- OS background materials are still "request + clamp + diagnostics" only (M3 is not implemented).
+- Windows Mica/Acrylic are implemented end-to-end (best-effort; Win11 22H2+):
+  - Demo: `launcher_utility_window_materials_demo`.
+  - Script: `tools/diag-scripts/launcher-utility-window-materials-windows.json`.
+- macOS Vibrancy and Linux story are still pending (requests clamp to `None`).
 
 ## Related ADRs (decision gates)
 

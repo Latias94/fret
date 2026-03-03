@@ -11,6 +11,7 @@ use fret_ui_kit::command::ElementCommandGatingExt as _;
 use fret_ui_kit::declarative::action_hooks::ActionHooksExt as _;
 use fret_ui_kit::declarative::chrome::control_chrome_pressable_with_id_props;
 use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
+use fret_ui_kit::declarative::motion as decl_motion;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::primitives::control_registry::{
     ControlAction, ControlEntry, ControlId, control_registry_model,
@@ -23,6 +24,15 @@ use fret_ui_kit::{
     ChromeRefinement, ColorRef, LayoutRefinement, OverrideSlot, Radius, WidgetState,
     WidgetStateProperty, WidgetStates, resolve_override_slot,
 };
+
+use crate::overlay_motion;
+
+const SWITCH_THUMB_TRANSITION_EASE: fret_ui_kit::headless::easing::CubicBezier =
+    fret_ui_kit::headless::easing::CubicBezier::new(0.4, 0.0, 0.2, 1.0);
+
+fn switch_thumb_transition_ease(t: f32) -> f32 {
+    SWITCH_THUMB_TRANSITION_EASE.sample(t)
+}
 
 fn alpha_mul(mut c: Color, mul: f32) -> Color {
     c.a = (c.a * mul).clamp(0.0, 1.0);
@@ -287,46 +297,17 @@ impl Switch {
 
     #[track_caller]
     pub fn into_element<H: UiHost>(self, cx: &mut ElementContext<'_, H>) -> AnyElement {
-        cx.scope(|cx| {
-            let model = self.model;
-            let size = self.size;
+        let motion_key = match &self.model {
+            SwitchModel::Determinate(model) => model.id(),
+            SwitchModel::Optional(model) => model.id(),
+        };
 
-            let (
-                w,
-                h,
-                thumb,
-                pad_x,
-                radius,
-                ring_border,
-                ring,
-                bg_off,
-                bg_on,
-                thumb_bg,
-                pressable_layout,
-            ) = {
-                let theme = Theme::global(&*cx.app);
+        cx.keyed(("shadcn-switch", motion_key), |cx| {
+            cx.scope(|cx| {
+                let model = self.model;
+                let size = self.size;
 
-                let w = switch_track_w(theme, size);
-                let h = switch_track_h(theme, size);
-                let thumb = switch_thumb(theme, size);
-                let pad_x = switch_padding(theme, size);
-
-                let radius = Px((h.0 * 0.5).max(0.0));
-                let ring_border = switch_ring_color(theme);
-                let mut ring = decl_style::focus_ring(theme, radius);
-                ring.color = alpha_mul(ring_border, 0.5);
-
-                let bg_off = switch_bg_off(theme);
-                let bg_on = switch_bg_on(theme);
-                let thumb_bg = switch_thumb_bg(theme);
-
-                let layout = LayoutRefinement::default()
-                    .w_px(w)
-                    .h_px(h)
-                    .merge(self.layout);
-                let pressable_layout = decl_style::layout_style(theme, layout);
-
-                (
+                let (
                     w,
                     h,
                     thumb,
@@ -338,234 +319,284 @@ impl Switch {
                     bg_on,
                     thumb_bg,
                     pressable_layout,
-                )
-            };
+                ) = {
+                    let theme = Theme::global(&*cx.app);
 
-            let default_track_background = WidgetStateProperty::new(ColorRef::Color(bg_off))
-                .when(WidgetStates::SELECTED, ColorRef::Color(bg_on))
-                .when(
-                    WidgetStates::HOVERED,
-                    ColorRef::Color(alpha_mul(bg_off, 0.7)),
-                )
-                .when(
-                    WidgetStates::HOVERED | WidgetStates::SELECTED,
-                    ColorRef::Color(alpha_mul(bg_on, 0.9)),
-                )
-                .when(
-                    WidgetStates::ACTIVE,
-                    ColorRef::Color(alpha_mul(bg_off, 0.6)),
-                )
-                .when(
-                    WidgetStates::ACTIVE | WidgetStates::SELECTED,
-                    ColorRef::Color(alpha_mul(bg_on, 0.8)),
-                );
+                    let w = switch_track_w(theme, size);
+                    let h = switch_track_h(theme, size);
+                    let thumb = switch_thumb(theme, size);
+                    let pad_x = switch_padding(theme, size);
 
-            let default_thumb_background = WidgetStateProperty::new(ColorRef::Color(thumb_bg));
+                    let radius = Px((h.0 * 0.5).max(0.0));
+                    let ring_border = switch_ring_color(theme);
+                    let mut ring = decl_style::focus_ring(theme, radius);
+                    ring.color = alpha_mul(ring_border, 0.5);
 
-            let default_border_color =
-                WidgetStateProperty::new(ColorRef::Color(Color::TRANSPARENT))
-                    .when(WidgetStates::FOCUS_VISIBLE, ColorRef::Color(ring_border));
+                    let bg_off = switch_bg_off(theme);
+                    let bg_on = switch_bg_on(theme);
+                    let thumb_bg = switch_thumb_bg(theme);
 
-            let a11y_label = self.a11y_label.clone();
-            let test_id = self.test_id.clone();
-            let disabled_explicit = self.disabled;
-            let on_click = self.on_click.clone();
-            let disabled = disabled_explicit
-                || on_click
-                    .as_ref()
-                    .is_some_and(|cmd| !cx.command_is_enabled(cmd));
-            let chrome = self.chrome.clone();
-            let style_override = self.style.clone();
-            let control_id = self.control_id.clone();
-            let control_registry = control_id.as_ref().map(|_| control_registry_model(cx));
+                    let layout = LayoutRefinement::default()
+                        .w_px(w)
+                        .h_px(h)
+                        .merge(self.layout);
+                    let pressable_layout = decl_style::layout_style(theme, layout);
 
-            let pressable = control_chrome_pressable_with_id_props(cx, move |cx, st, id| {
-                cx.pressable_dispatch_command_if_enabled_opt(on_click);
-                match &model {
-                    SwitchModel::Determinate(model) => cx.pressable_toggle_bool(model),
-                    SwitchModel::Optional(model) => {
-                        cx.pressable_update_model(model, |v| {
-                            *v = toggle_optional_bool(*v);
+                    (
+                        w,
+                        h,
+                        thumb,
+                        pad_x,
+                        radius,
+                        ring_border,
+                        ring,
+                        bg_off,
+                        bg_on,
+                        thumb_bg,
+                        pressable_layout,
+                    )
+                };
+
+                let default_track_background = WidgetStateProperty::new(ColorRef::Color(bg_off))
+                    .when(WidgetStates::SELECTED, ColorRef::Color(bg_on))
+                    .when(
+                        WidgetStates::HOVERED,
+                        ColorRef::Color(alpha_mul(bg_off, 0.7)),
+                    )
+                    .when(
+                        WidgetStates::HOVERED | WidgetStates::SELECTED,
+                        ColorRef::Color(alpha_mul(bg_on, 0.9)),
+                    )
+                    .when(
+                        WidgetStates::ACTIVE,
+                        ColorRef::Color(alpha_mul(bg_off, 0.6)),
+                    )
+                    .when(
+                        WidgetStates::ACTIVE | WidgetStates::SELECTED,
+                        ColorRef::Color(alpha_mul(bg_on, 0.8)),
+                    );
+
+                let default_thumb_background = WidgetStateProperty::new(ColorRef::Color(thumb_bg));
+
+                let default_border_color =
+                    WidgetStateProperty::new(ColorRef::Color(Color::TRANSPARENT))
+                        .when(WidgetStates::FOCUS_VISIBLE, ColorRef::Color(ring_border));
+
+                let a11y_label = self.a11y_label.clone();
+                let test_id = self.test_id.clone();
+                let disabled_explicit = self.disabled;
+                let on_click = self.on_click.clone();
+                let disabled = disabled_explicit
+                    || on_click
+                        .as_ref()
+                        .is_some_and(|cmd| !cx.command_is_enabled(cmd));
+                let chrome = self.chrome.clone();
+                let style_override = self.style.clone();
+                let control_id = self.control_id.clone();
+                let control_registry = control_id.as_ref().map(|_| control_registry_model(cx));
+
+                let pressable = control_chrome_pressable_with_id_props(cx, move |cx, st, id| {
+                    cx.pressable_dispatch_command_if_enabled_opt(on_click);
+                    match &model {
+                        SwitchModel::Determinate(model) => cx.pressable_toggle_bool(model),
+                        SwitchModel::Optional(model) => {
+                            cx.pressable_update_model(model, |v| {
+                                *v = toggle_optional_bool(*v);
+                            });
+                        }
+                    }
+
+                    let on = match &model {
+                        SwitchModel::Determinate(model) => {
+                            cx.watch_model(model).copied().unwrap_or(false)
+                        }
+                        SwitchModel::Optional(model) => switch_checked_from_optional_bool(
+                            cx.watch_model(model).copied().flatten(),
+                        ),
+                    };
+
+                    let mut states = WidgetStates::from_pressable(cx, st, !disabled);
+                    states.set(WidgetState::Selected, on);
+
+                    let theme = Theme::global(&*cx.app);
+                    let bg = resolve_override_slot(
+                        style_override.track_background.as_ref(),
+                        &default_track_background,
+                        states,
+                    )
+                    .resolve(theme);
+                    let border_color = resolve_override_slot(
+                        style_override.border_color.as_ref(),
+                        &default_border_color,
+                        states,
+                    )
+                    .resolve(theme);
+                    let thumb_color = resolve_override_slot(
+                        style_override.thumb_background.as_ref(),
+                        &default_thumb_background,
+                        states,
+                    )
+                    .resolve(theme);
+
+                    let mut chrome_props = decl_style::container_props(
+                        theme,
+                        ChromeRefinement::default()
+                            .bg(ColorRef::Color(bg))
+                            .rounded(Radius::Full)
+                            .border_1()
+                            .border_color(ColorRef::Color(border_color))
+                            .merge(chrome.clone()),
+                        LayoutRefinement::default(),
+                    );
+                    chrome_props.corner_radii = Corners::all(radius);
+                    chrome_props.shadow = Some(decl_style::shadow_xs(theme, radius));
+                    chrome_props.layout.size = pressable_layout.size;
+
+                    // NOTE: Container layout already treats border as part of layout insets
+                    // (Tailwind-like border-box behavior). Child positioning is relative to the inner
+                    // content area, so we should not double-count border/padding when computing the
+                    // thumb's absolute insets.
+                    let pad_px = |v: fret_ui::element::SpacingLength| match v {
+                        fret_ui::element::SpacingLength::Px(px) => px.0.max(0.0),
+                        fret_ui::element::SpacingLength::Fill
+                        | fret_ui::element::SpacingLength::Fraction(_) => 0.0,
+                    };
+                    let chrome_inset_y = Px(chrome_props.border.top.0.max(0.0)
+                        + chrome_props.border.bottom.0.max(0.0)
+                        + pad_px(chrome_props.padding.top)
+                        + pad_px(chrome_props.padding.bottom));
+
+                    if let (Some(control_id), Some(control_registry)) =
+                        (control_id.clone(), control_registry.clone())
+                    {
+                        let action = match &model {
+                            SwitchModel::Determinate(model) => {
+                                ControlAction::ToggleBool(model.clone())
+                            }
+                            SwitchModel::Optional(model) => {
+                                ControlAction::ToggleOptionalBool(model.clone())
+                            }
+                        };
+                        let entry = ControlEntry {
+                            element: id,
+                            enabled: !disabled,
+                            action,
+                        };
+                        let _ = cx.app.models_mut().update(&control_registry, |reg| {
+                            reg.register_control(cx.window, cx.frame_id, control_id, entry);
                         });
                     }
-                }
 
-                let on = match &model {
-                    SwitchModel::Determinate(model) => {
-                        cx.watch_model(model).copied().unwrap_or(false)
-                    }
-                    SwitchModel::Optional(model) => {
-                        switch_checked_from_optional_bool(cx.watch_model(model).copied().flatten())
-                    }
-                };
-
-                let mut states = WidgetStates::from_pressable(cx, st, !disabled);
-                states.set(WidgetState::Selected, on);
-
-                let theme = Theme::global(&*cx.app);
-                let bg = resolve_override_slot(
-                    style_override.track_background.as_ref(),
-                    &default_track_background,
-                    states,
-                )
-                .resolve(theme);
-                let border_color = resolve_override_slot(
-                    style_override.border_color.as_ref(),
-                    &default_border_color,
-                    states,
-                )
-                .resolve(theme);
-                let thumb_color = resolve_override_slot(
-                    style_override.thumb_background.as_ref(),
-                    &default_thumb_background,
-                    states,
-                )
-                .resolve(theme);
-
-                let mut chrome_props = decl_style::container_props(
-                    theme,
-                    ChromeRefinement::default()
-                        .bg(ColorRef::Color(bg))
-                        .rounded(Radius::Full)
-                        .border_1()
-                        .border_color(ColorRef::Color(border_color))
-                        .merge(chrome.clone()),
-                    LayoutRefinement::default(),
-                );
-                chrome_props.corner_radii = Corners::all(radius);
-                chrome_props.shadow = Some(decl_style::shadow_xs(theme, radius));
-                chrome_props.layout.size = pressable_layout.size;
-
-                // NOTE: Container layout already treats border as part of layout insets
-                // (Tailwind-like border-box behavior). Child positioning is relative to the inner
-                // content area, so we should not double-count border/padding when computing the
-                // thumb's absolute insets.
-                let pad_px = |v: fret_ui::element::SpacingLength| match v {
-                    fret_ui::element::SpacingLength::Px(px) => px.0.max(0.0),
-                    fret_ui::element::SpacingLength::Fill
-                    | fret_ui::element::SpacingLength::Fraction(_) => 0.0,
-                };
-                let chrome_inset_y = Px(chrome_props.border.top.0.max(0.0)
-                    + chrome_props.border.bottom.0.max(0.0)
-                    + pad_px(chrome_props.padding.top)
-                    + pad_px(chrome_props.padding.bottom));
-
-                if let (Some(control_id), Some(control_registry)) =
-                    (control_id.clone(), control_registry.clone())
-                {
-                    let action = match &model {
-                        SwitchModel::Determinate(model) => ControlAction::ToggleBool(model.clone()),
-                        SwitchModel::Optional(model) => {
-                            ControlAction::ToggleOptionalBool(model.clone())
-                        }
-                    };
-                    let entry = ControlEntry {
-                        element: id,
-                        enabled: !disabled,
-                        action,
-                    };
-                    let _ = cx.app.models_mut().update(&control_registry, |reg| {
-                        reg.register_control(cx.window, cx.frame_id, control_id, entry);
-                    });
-                }
-
-                let labelled_by_element = if let (Some(control_id), Some(control_registry)) =
-                    (control_id.as_ref(), control_registry.as_ref())
-                {
-                    cx.app
-                        .models()
-                        .read(control_registry, |reg| {
-                            reg.label_for(cx.window, control_id).map(|l| l.element)
-                        })
-                        .ok()
-                        .flatten()
-                } else {
-                    None
-                };
-
-                // Prefer explicit `a11y_label`, but fall back to `labelled-by` when available.
-                let a11y_label = if a11y_label.is_some() || labelled_by_element.is_none() {
-                    a11y_label.clone()
-                } else {
-                    None
-                };
-
-                let mut a11y = switch_a11y(a11y_label, on);
-                if let Some(label) = labelled_by_element {
-                    a11y.labelled_by_element = Some(label.0);
-                }
-                a11y.test_id = test_id.clone();
-                let pressable_props = PressableProps {
-                    layout: pressable_layout,
-                    enabled: !disabled,
-                    focusable: true,
-                    focus_ring: Some(ring),
-                    a11y,
-                    ..Default::default()
-                };
-
-                let children = move |cx: &mut ElementContext<'_, H>| {
-                    // Align with shadcn-web:
-                    // - Outer track size is border-box (`h-[1.15rem] w-8 border ...`).
-                    // - Thumb is laid out at the content edge, so its outer offset equals the
-                    //   track border (1px) plus any explicit padding.
-                    let chrome_inset_x = Px(chrome_props.border.left.0.max(0.0)
-                        + chrome_props.border.right.0.max(0.0)
-                        + pad_px(chrome_props.padding.left)
-                        + pad_px(chrome_props.padding.right));
-
-                    let inner_w = Px((w.0 - chrome_inset_x.0).max(0.0));
-                    let inner_h = Px((h.0 - chrome_inset_y.0).max(0.0));
-
-                    let y = Px(((inner_h.0 - thumb.0) * 0.5).max(0.0));
-
-                    // Additional inset beyond the border/padding insets (e.g. shadcn `p-[2px]`-like
-                    // outcomes). This is relative to the inner content area.
-                    let extra_x = Px(pad_x.0.max(0.0));
-
-                    let x = if on {
-                        Px((inner_w.0 - extra_x.0 - thumb.0).max(extra_x.0))
+                    let labelled_by_element = if let (Some(control_id), Some(control_registry)) =
+                        (control_id.as_ref(), control_registry.as_ref())
+                    {
+                        cx.app
+                            .models()
+                            .read(control_registry, |reg| {
+                                reg.label_for(cx.window, control_id).map(|l| l.element)
+                            })
+                            .ok()
+                            .flatten()
                     } else {
-                        extra_x
+                        None
                     };
 
-                    let thumb_layout = LayoutStyle {
-                        position: PositionStyle::Absolute,
-                        inset: InsetStyle {
-                            top: Some(y).into(),
-                            left: Some(x).into(),
-                            ..Default::default()
-                        },
-                        size: SizeStyle {
-                            width: Length::Px(thumb),
-                            height: Length::Px(thumb),
-                            ..Default::default()
-                        },
+                    // Prefer explicit `a11y_label`, but fall back to `labelled-by` when available.
+                    let a11y_label = if a11y_label.is_some() || labelled_by_element.is_none() {
+                        a11y_label.clone()
+                    } else {
+                        None
+                    };
+
+                    let mut a11y = switch_a11y(a11y_label, on);
+                    if let Some(label) = labelled_by_element {
+                        a11y.labelled_by_element = Some(label.0);
+                    }
+                    a11y.test_id = test_id.clone();
+                    let pressable_props = PressableProps {
+                        layout: pressable_layout,
+                        enabled: !disabled,
+                        focusable: true,
+                        focus_ring: Some(ring),
+                        a11y,
                         ..Default::default()
                     };
 
-                    let thumb_props = ContainerProps {
-                        layout: thumb_layout,
-                        padding: Edges::all(Px(0.0)).into(),
-                        background: Some(thumb_color),
-                        shadow: None,
-                        border: Edges::all(Px(0.0)),
-                        border_color: None,
-                        corner_radii: Corners::all(Px((thumb.0 * 0.5).max(0.0))),
-                        ..Default::default()
+                    let children = move |cx: &mut ElementContext<'_, H>| {
+                        // Align with shadcn-web:
+                        // - Outer track size is border-box (`h-[1.15rem] w-8 border ...`).
+                        // - Thumb is laid out at the content edge, so its outer offset equals the
+                        //   track border (1px) plus any explicit padding.
+                        let chrome_inset_x = Px(chrome_props.border.left.0.max(0.0)
+                            + chrome_props.border.right.0.max(0.0)
+                            + pad_px(chrome_props.padding.left)
+                            + pad_px(chrome_props.padding.right));
+
+                        let inner_w = Px((w.0 - chrome_inset_x.0).max(0.0));
+                        let inner_h = Px((h.0 - chrome_inset_y.0).max(0.0));
+
+                        let y = Px(((inner_h.0 - thumb.0) * 0.5).max(0.0));
+
+                        // Additional inset beyond the border/padding insets (e.g. shadcn `p-[2px]`-like
+                        // outcomes). This is relative to the inner content area.
+                        let extra_x = Px(pad_x.0.max(0.0));
+
+                        let off_x = extra_x;
+                        let on_x = Px((inner_w.0 - extra_x.0 - thumb.0).max(extra_x.0));
+
+                        let duration = overlay_motion::shadcn_motion_duration_150(cx);
+                        let x_target = if on { on_x } else { off_x };
+
+                        // shadcn/ui v4 uses `transition-transform` for the thumb translation (Tailwind
+                        // default duration) and avoids animating on initial mount.
+                        let x = Px(decl_motion::drive_tween_f32_for_element(
+                            cx,
+                            id,
+                            "thumb-x",
+                            x_target.0,
+                            duration,
+                            switch_thumb_transition_ease,
+                        )
+                        .value);
+
+                        let thumb_layout = LayoutStyle {
+                            position: PositionStyle::Absolute,
+                            inset: InsetStyle {
+                                top: Some(y).into(),
+                                left: Some(x).into(),
+                                ..Default::default()
+                            },
+                            size: SizeStyle {
+                                width: Length::Px(thumb),
+                                height: Length::Px(thumb),
+                                ..Default::default()
+                            },
+                            ..Default::default()
+                        };
+
+                        let thumb_props = ContainerProps {
+                            layout: thumb_layout,
+                            padding: Edges::all(Px(0.0)).into(),
+                            background: Some(thumb_color),
+                            shadow: None,
+                            border: Edges::all(Px(0.0)),
+                            border_color: None,
+                            corner_radii: Corners::all(Px((thumb.0 * 0.5).max(0.0))),
+                            ..Default::default()
+                        };
+
+                        vec![cx.container(thumb_props, |_cx| Vec::new())]
                     };
 
-                    vec![cx.container(thumb_props, |_cx| Vec::new())]
-                };
+                    (pressable_props, chrome_props, children)
+                });
 
-                (pressable_props, chrome_props, children)
-            });
-
-            if disabled {
-                cx.opacity(0.5, |_cx| vec![pressable])
-            } else {
-                pressable
-            }
+                if disabled {
+                    cx.opacity(0.5, |_cx| vec![pressable])
+                } else {
+                    pressable
+                }
+            })
         })
     }
 }
@@ -589,10 +620,10 @@ mod tests {
     use fret_core::{
         AppWindowId, MouseButton, PathCommand, PathConstraints, PathId, PathMetrics, PathService,
         PathStyle, Point, Px, Rect, Scene, Size as CoreSize, SvgId, SvgService, TextBlobId,
-        TextConstraints, TextMetrics, TextService,
+        TextConstraints, TextMetrics, TextService, WindowFrameClockService,
     };
     use fret_runtime::{
-        CommandMeta, CommandScope, WindowCommandActionAvailabilityService,
+        CommandMeta, CommandScope, FrameId, TickId, WindowCommandActionAvailabilityService,
         WindowCommandEnabledService, WindowCommandGatingService, WindowCommandGatingSnapshot,
     };
     use fret_ui::tree::UiTree;
@@ -940,6 +971,111 @@ mod tests {
             .find(|n| n.role == fret_core::SemanticsRole::Switch)
             .expect("switch semantics node");
         assert_eq!(node.flags.checked, Some(true));
+    }
+
+    #[test]
+    fn switch_thumb_slides_between_states_over_time() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+
+        // Stabilize transition duration scaling so the first frame doesn't collapse to a single
+        // tick under host-reported deltas.
+        app.with_global_mut(WindowFrameClockService::default, |svc, _app| {
+            svc.set_fixed_delta(window, Some(std::time::Duration::from_millis(16)));
+        });
+        for fid in [FrameId(1), FrameId(2)] {
+            app.set_frame_id(fid);
+            app.with_global_mut(WindowFrameClockService::default, |svc, app| {
+                svc.record_frame(window, app.frame_id());
+            });
+        }
+
+        app.set_tick_id(TickId(1));
+        app.set_frame_id(FrameId(2));
+        app.with_global_mut(WindowFrameClockService::default, |svc, app| {
+            svc.record_frame(window, app.frame_id());
+        });
+
+        let theme = Theme::global(&app);
+        let thumb_size = switch_thumb(theme, SwitchSize::Default);
+        let thumb_bg = switch_thumb_bg(theme);
+
+        fn find_thumb_left(el: &AnyElement, thumb_bg: Color, thumb_size: Px) -> Option<Px> {
+            match &el.kind {
+                fret_ui::element::ElementKind::Container(props) => {
+                    if props.layout.position == PositionStyle::Absolute
+                        && props.background == Some(thumb_bg)
+                        && props.layout.size.width == Length::Px(thumb_size)
+                        && props.layout.size.height == Length::Px(thumb_size)
+                    {
+                        if let fret_ui::element::InsetEdge::Px(left) = props.layout.inset.left {
+                            return Some(left);
+                        }
+                    }
+                    el.children
+                        .iter()
+                        .find_map(|c| find_thumb_left(c, thumb_bg, thumb_size))
+                }
+                _ => el
+                    .children
+                    .iter()
+                    .find_map(|c| find_thumb_left(c, thumb_bg, thumb_size)),
+            }
+        }
+
+        fn render_switch(app: &mut App, window: AppWindowId, model: Model<bool>) -> AnyElement {
+            fret_ui::elements::with_element_cx(
+                app,
+                window,
+                Rect::new(
+                    Point::new(Px(0.0), Px(0.0)),
+                    CoreSize::new(Px(200.0), Px(120.0)),
+                ),
+                "switch_thumb_slide",
+                |cx| Switch::new(model).into_element(cx),
+            )
+        }
+
+        let model = app.models_mut().insert(false);
+        let off_el = render_switch(&mut app, window, model.clone());
+        let off_x = find_thumb_left(&off_el, thumb_bg, thumb_size)
+            .expect("thumb left inset (off)")
+            .0;
+
+        let _ = app.models_mut().update(&model, |v| *v = true);
+
+        let mut xs = Vec::new();
+        for i in 0..24u64 {
+            app.set_tick_id(TickId(2 + i));
+            app.set_frame_id(FrameId(3 + i));
+            app.with_global_mut(WindowFrameClockService::default, |svc, app| {
+                svc.record_frame(window, app.frame_id());
+            });
+            let el = render_switch(&mut app, window, model.clone());
+            let left = find_thumb_left(&el, thumb_bg, thumb_size).expect("thumb left inset");
+            xs.push(left.0);
+        }
+
+        let on_x = *xs.last().expect("thumb samples");
+        assert!(
+            on_x > off_x + 0.5,
+            "expected thumb to move right, off_x={off_x} on_x={on_x}"
+        );
+
+        let first = xs[0];
+        assert!(
+            first < on_x - 0.1,
+            "expected thumb not to jump to final position on first frame; first={first} on_x={on_x}"
+        );
+
+        for pair in xs.windows(2) {
+            let a = pair[0];
+            let b = pair[1];
+            assert!(
+                b + 0.2 >= a,
+                "expected thumb x to be mostly monotonic; a={a} b={b}"
+            );
+        }
     }
 
     #[test]

@@ -308,6 +308,17 @@ pub(crate) fn pack_bundle_dir_to_zip(
                 std::io::copy(&mut f, &mut zip).map_err(|e| e.to_string())?;
             }
         }
+
+        // Optional layout explainability sidecar produced by scripted diagnostics runs.
+        if let Some(parent) = bundle_artifact.parent() {
+            let path = parent.join("layout.taffy.v1.json");
+            if path.is_file() {
+                let dst = format!("{bundle_name}/_root/layout.taffy.v1.json");
+                zip.start_file(dst, options).map_err(|e| e.to_string())?;
+                let mut f = std::fs::File::open(&path).map_err(|e| e.to_string())?;
+                std::io::copy(&mut f, &mut zip).map_err(|e| e.to_string())?;
+            }
+        }
     }
 
     if include_triage {

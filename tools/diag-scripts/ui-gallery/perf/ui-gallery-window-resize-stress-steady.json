@@ -1,5 +1,10 @@
 {
   "schema_version": 2,
+  "meta": {
+    "name": "UI Gallery: Window resize stress (steady)",
+    "tags": ["ui-gallery", "perf", "layout", "resize", "window", "steady"],
+    "required_capabilities": ["diag.script_v2"]
+  },
   "steps": [
     { "type": "press_key", "key": "escape" },
     { "type": "wait_frames", "n": 2 },

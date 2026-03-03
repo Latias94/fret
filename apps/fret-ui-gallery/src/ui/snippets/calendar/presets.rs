@@ -73,12 +73,7 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
         shadcn::Button::new(label)
             .variant(shadcn::ButtonVariant::Outline)
             .size(shadcn::ButtonSize::Sm)
-            .refine_layout(
-                LayoutRefinement::default()
-                    .flex_grow(1.0)
-                    .flex_shrink(0.0)
-                    .basis(fret_ui_kit::LengthRefinement::Auto),
-            )
+            .refine_layout(LayoutRefinement::default().flex_1().min_w(Px(72.0)))
             .test_id(test_id)
             .on_activate(Arc::new(move |host, _acx, _reason| {
                 let new_date = today + time::Duration::days(days);

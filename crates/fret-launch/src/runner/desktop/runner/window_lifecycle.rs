@@ -7,6 +7,7 @@ impl<D: WinitAppDriver> WinitRunner<D> {
         spec: WindowCreateSpec,
         style: WindowStyleRequest,
         _parent_window: Option<winit::raw_window_handle::RawWindowHandle>,
+        caps: &PlatformCapabilities,
     ) -> Result<(Arc<dyn Window>, Option<accessibility::WinitAccessibility>), RunnerError> {
         let accessibility_enabled = self.config.accessibility_enabled
             && std::env::var_os("FRET_A11Y_DISABLE").is_none_or(|v| v.is_empty());
@@ -30,8 +31,24 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                 attrs = attrs.with_decorations(false);
             }
         }
+        let effective_background_material = style.background_material.map(|m| {
+            fret_runtime::runner_window_style_diagnostics::clamp_background_material_request(
+                m, caps,
+            )
+        });
         if let Some(transparent) = style.transparent {
             attrs = attrs.with_transparent(transparent);
+        } else if caps.ui.window_transparent
+            && effective_background_material
+                .is_some_and(|m| m != fret_runtime::WindowBackgroundMaterialRequest::None)
+        {
+            // Background materials may require a composited alpha surface (ADR 0310). If the caller
+            // did not explicitly request `transparent`, treat it as implied once a non-None
+            // material is effectively applied.
+            //
+            // NOTE: `transparent` is a create-time property in winit; we may keep the window
+            // composited for its lifetime even if the material is later set to None at runtime.
+            attrs = attrs.with_transparent(true);
         }
         if let Some(policy) = style.activation {
             let active = matches!(policy, ActivationPolicy::Activates);
@@ -86,6 +103,10 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                 WindowZLevel::Normal => WindowLevel::Normal,
                 WindowZLevel::AlwaysOnTop => WindowLevel::AlwaysOnTop,
             });
+        }
+
+        if let Some(material) = effective_background_material {
+            let _ = super::window::set_window_background_material(window.as_ref(), material);
         }
 
         if let Some(mouse) = style.mouse {
@@ -186,20 +207,20 @@ impl<D: WinitAppDriver> WinitRunner<D> {
         let parent_window = None;
 
         let style = request.style;
+        let caps = self
+            .app
+            .global::<PlatformCapabilities>()
+            .cloned()
+            .unwrap_or_default();
         let (window, accessibility) =
-            self.create_os_window(event_loop, spec, style, parent_window)?;
+            self.create_os_window(event_loop, spec, style, parent_window, &caps)?;
         let surface = {
             let Some(context) = self.context.as_ref() else {
                 return Err(RunnerError::WgpuNotInitialized);
             };
             context.create_surface(window.clone())?
         };
-        let new_window = self.insert_window(window, accessibility, Some(surface))?;
-        let caps = self
-            .app
-            .global::<PlatformCapabilities>()
-            .cloned()
-            .unwrap_or_default();
+        let new_window = self.insert_window(window, accessibility, Some(surface), style)?;
         self.app.with_global_mut(
             fret_runtime::RunnerWindowStyleDiagnosticsStore::default,
             |svc, _app| {
@@ -321,6 +342,7 @@ impl<D: WinitAppDriver> WinitRunner<D> {
         window: Arc<dyn Window>,
         accessibility: Option<accessibility::WinitAccessibility>,
         surface: Option<wgpu::Surface<'static>>,
+        style: WindowStyleRequest,
     ) -> Result<fret_core::AppWindowId, RunnerError> {
         let surface = if let Some(surface) = surface {
             let Some(context) = self.context.as_ref() else {
@@ -343,14 +365,29 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                     base
                 }
             };
-            Some(SurfaceState::new_with_usage(
+            let mut state = SurfaceState::new_with_usage(
                 &context.adapter,
                 &context.device,
                 surface,
                 size.width,
                 size.height,
                 surface_usage,
-            )?)
+            )?;
+
+            let caps = self
+                .app
+                .global::<PlatformCapabilities>()
+                .cloned()
+                .unwrap_or_default();
+            let want_transparent = want_composited_alpha_for_style(style, &caps);
+            configure_surface_alpha_mode_for_composited_window(
+                &context.adapter,
+                &context.device,
+                &mut state,
+                want_transparent,
+            );
+
+            Some(state)
         } else {
             None
         };
@@ -599,5 +636,67 @@ impl<D: WinitAppDriver> WinitRunner<D> {
         }
 
         true
+    }
+}
+
+fn want_composited_alpha_for_style(style: WindowStyleRequest, caps: &PlatformCapabilities) -> bool {
+    if !caps.ui.window_transparent {
+        return false;
+    }
+
+    if let Some(transparent) = style.transparent {
+        return transparent;
+    }
+
+    if let Some(material) = style.background_material {
+        let clamped = fret_runtime::clamp_background_material_request(material, caps);
+        if clamped != fret_runtime::WindowBackgroundMaterialRequest::None {
+            // Background materials may require a composited alpha surface (ADR 0310). If the
+            // caller did not explicitly request `transparent`, treat it as implied once a
+            // non-None material is effectively applied.
+            return true;
+        }
+    }
+
+    false
+}
+
+pub(super) fn configure_surface_alpha_mode_for_composited_window(
+    adapter: &wgpu::Adapter,
+    device: &wgpu::Device,
+    surface: &mut SurfaceState<'_>,
+    want_transparent: bool,
+) {
+    let capabilities = surface.surface.get_capabilities(adapter);
+    if capabilities.alpha_modes.is_empty() {
+        return;
+    }
+
+    let desired = if want_transparent {
+        // Prefer explicit alpha composition modes over `Opaque` when we want a composited window.
+        // Ordering is "best-effort" and may vary by platform/backend.
+        [
+            wgpu::CompositeAlphaMode::PreMultiplied,
+            wgpu::CompositeAlphaMode::PostMultiplied,
+            wgpu::CompositeAlphaMode::Inherit,
+            // `Auto` may pick an opaque path even for transparent windows on some backends.
+            // Prefer `Inherit` first so the platform can select the appropriate compositing mode.
+            wgpu::CompositeAlphaMode::Auto,
+        ]
+        .into_iter()
+        .find(|m| capabilities.alpha_modes.contains(m))
+        .unwrap_or(capabilities.alpha_modes[0])
+    } else {
+        capabilities
+            .alpha_modes
+            .iter()
+            .copied()
+            .find(|m| matches!(m, wgpu::CompositeAlphaMode::Opaque))
+            .unwrap_or(capabilities.alpha_modes[0])
+    };
+
+    if surface.config.alpha_mode != desired {
+        surface.config.alpha_mode = desired;
+        surface.surface.configure(device, &surface.config);
     }
 }

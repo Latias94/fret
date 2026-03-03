@@ -83,6 +83,14 @@
       }
     },
     {
+      "type": "wait_until",
+      "timeout_frames": 240,
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-calendar-presets-button-today" }
+      }
+    },
+    {
       "type": "scroll_into_view",
       "container": { "kind": "test_id", "id": "ui-gallery-content-scroll" },
       "target": {
@@ -158,6 +166,24 @@
         "eps_px": 1.0
       },
       "timeout_frames": 240
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "bounds_overlapping_y",
+        "a": { "kind": "test_id", "id": "ui-gallery-calendar-presets-button-today" },
+        "b": { "kind": "test_id", "id": "ui-gallery-calendar-presets-button-tomorrow" },
+        "eps_px": 1.0
+      }
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "bounds_non_overlapping",
+        "a": { "kind": "test_id", "id": "ui-gallery-calendar-presets-button-today" },
+        "b": { "kind": "test_id", "id": "ui-gallery-calendar-presets-button-tomorrow" },
+        "eps_px": 1.0
+      }
     },
     { "type": "capture_bundle", "label": "ui-gallery-calendar-presets-buttons" },
     {

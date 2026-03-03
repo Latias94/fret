@@ -74,6 +74,15 @@ Post-merge verification (2026-03-03):
   - `fretboard diag repeat` is green 7x with:
     - `--timeout-ms 60000 --reuse-launch --compare-ignore-bounds --compare-ignore-scene-fingerprint`
     - summary: `target/fret-diag-chained-repeat1/repeat.summary.json`
+- Dock tab titles no longer disappear after a short idle delay (~2s) during diagnostics runs:
+  - Symptom: tab labels vanish while SVG close icons remain (retained docking tabs caching text blobs across frames).
+  - Root cause: `DockSpace` cached prepared tab titles but did not rebuild when `TextFontStackKey` changed (system font
+    rescan / font stack stabilization), so cached `TextBlobId`s became stale.
+  - Fix: include `TextFontStackKey` in the tab-title rebuild cache key.
+    - implementation: `ecosystem/fret-docking/src/dock/space.rs`
+    - evidence repro: `tools/diag-scripts/docking/arbitration/local-debug/docking-arbitration-demo-tab-text-disappears-after-2s-single-window.json`
+      - before: run id `1772532891331` (idle t2s screenshot missing titles)
+      - after: run id `1772534011243` (idle t2s screenshot retains titles)
 
 Hover peek-behind hardening (2026-03-02):
 

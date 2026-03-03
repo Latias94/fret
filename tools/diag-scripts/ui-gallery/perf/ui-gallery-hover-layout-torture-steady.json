@@ -1,5 +1,10 @@
 {
   "schema_version": 2,
+  "meta": {
+    "name": "UI Gallery: Hover layout torture (steady)",
+    "tags": ["ui-gallery", "perf", "layout", "hover", "steady"],
+    "required_capabilities": ["diag.script_v2"]
+  },
   "steps": [
     { "type": "press_key", "key": "escape" },
     { "type": "wait_frames", "n": 2 },

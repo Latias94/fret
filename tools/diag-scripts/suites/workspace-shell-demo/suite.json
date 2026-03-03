@@ -1,0 +1,16 @@
+{
+  "schema_version": 1,
+  "kind": "diag_script_suite_manifest",
+  "scripts": [
+    "tools/diag-scripts/workspace-shell-demo-tab-cross-pane-move-to-end.json",
+    "tools/diag-scripts/workspace-shell-demo-tab-drag-and-scroll.json",
+    "tools/diag-scripts/workspace-shell-demo-tab-drag-to-split-right.json",
+    "tools/diag-scripts/workspace-shell-demo-tab-overflow-activate-hidden-smoke.json",
+    "tools/diag-scripts/workspace-shell-demo-tab-pin-commits-preview-smoke.json",
+    "tools/diag-scripts/workspace-shell-demo-tab-pinned-boundary-toggle-smoke.json",
+    "tools/diag-scripts/workspace-shell-demo-tab-pinned-cross-boundary-drop-does-not-pin-smoke.json",
+    "tools/diag-scripts/workspace-shell-demo-tab-preview-commit-keeps-old-tab-smoke.json",
+    "tools/diag-scripts/workspace-shell-demo-tab-preview-replaces-existing-smoke.json",
+    "tools/diag-scripts/workspace-shell-demo-tab-reorder-first-to-end-overflow-smoke.json"
+  ]
+}
