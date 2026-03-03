@@ -157,6 +157,9 @@ fn perf_suite_membership_name(name: &str) -> Option<&'static str> {
         "ui-gallery-scroll-area" | "perf-ui-gallery-scroll-area" => {
             Some("perf-ui-gallery-scroll-area")
         }
+        "ui-gallery-virtual-list" | "perf-ui-gallery-virtual-list" => {
+            Some("perf-ui-gallery-virtual-list")
+        }
         "ui-resize-probes" | "perf-ui-resize-probes" => Some("perf-ui-resize-probes"),
         "ui-code-editor-resize-probes" | "perf-ui-code-editor-resize-probes" => {
             Some("perf-ui-code-editor-resize-probes")
