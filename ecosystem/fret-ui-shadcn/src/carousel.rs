@@ -1103,7 +1103,9 @@ impl Carousel {
         previous: CarouselPrevious,
         next: CarouselNext,
     ) -> AnyElement {
-        let (api_handle, api_snapshot) = carousel_parts_models(cx);
+        let (default_api_handle, default_api_snapshot) = carousel_parts_models(cx);
+        let api_handle = self.api_handle.clone().unwrap_or(default_api_handle);
+        let api_snapshot = self.api_snapshot.clone().unwrap_or(default_api_snapshot);
         let content = content(cx);
 
         self.items(content.items)

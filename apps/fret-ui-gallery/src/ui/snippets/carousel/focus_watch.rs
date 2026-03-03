@@ -10,7 +10,7 @@ use fret_ui_kit::ui;
 use fret_ui_shadcn::{self as shadcn, prelude::*};
 
 pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
-    let focus_items = (1..=5)
+    let items = (1..=5)
         .map(|idx| {
             let theme = Theme::global(&*cx.app).snapshot();
 
@@ -39,9 +39,10 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
                 .p_1()
                 .into_element(cx)
         })
+        .map(shadcn::CarouselItem::new)
         .collect::<Vec<_>>();
 
-    shadcn::Carousel::new(focus_items)
+    shadcn::Carousel::default()
         .opts(
             shadcn::CarouselOptions::new()
                 .watch_focus(true)
@@ -60,6 +61,11 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
         .refine_viewport_layout(LayoutRefinement::default().h_px(Px(120.0)))
         .refine_track_layout(LayoutRefinement::default().h_px(Px(120.0)))
         .test_id("ui-gallery-carousel-focus")
-        .into_element(cx)
+        .into_element_parts(
+            cx,
+            |_cx| shadcn::CarouselContent::new(items),
+            shadcn::CarouselPrevious::new(),
+            shadcn::CarouselNext::new(),
+        )
 }
 // endregion: example

@@ -30,10 +30,12 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
         vec![bc::BreadcrumbList::new().into_element(cx, |cx| {
             vec![
                 bc::BreadcrumbItem::new().into_element(cx, |cx| {
-                    vec![bc::BreadcrumbLink::new("Home")
-                        .href("/home")
-                        .on_activate(Arc::new(|_host, _acx, _reason| {}))
-                        .into_element(cx)]
+                    vec![
+                        bc::BreadcrumbLink::new("Home")
+                            .href("/home")
+                            .on_activate(Arc::new(|_host, _acx, _reason| {}))
+                            .into_element(cx),
+                    ]
                 }),
                 bc::BreadcrumbSeparator::new().into_element(cx),
                 bc::BreadcrumbItem::new().into_element(cx, |cx| {
@@ -47,9 +49,11 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
                                 Some(Arc::from("ui-gallery-breadcrumb-demo-ellipsis-trigger"));
 
                             cx.pressable(props, move |cx, _st| {
-                                vec![bc::BreadcrumbEllipsis::new()
-                                    .size(fret_core::Px(16.0))
-                                    .into_element(cx)]
+                                vec![
+                                    bc::BreadcrumbEllipsis::new()
+                                        .size(fret_core::Px(16.0))
+                                        .into_element(cx),
+                                ]
                             })
                         },
                         |_cx| {
@@ -73,10 +77,12 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
                 }),
                 bc::BreadcrumbSeparator::new().into_element(cx),
                 bc::BreadcrumbItem::new().into_element(cx, |cx| {
-                    vec![bc::BreadcrumbLink::new("Components")
-                        .href("/components")
-                        .on_activate(Arc::new(|_host, _acx, _reason| {}))
-                        .into_element(cx)]
+                    vec![
+                        bc::BreadcrumbLink::new("Components")
+                            .href("/components")
+                            .on_activate(Arc::new(|_host, _acx, _reason| {}))
+                            .into_element(cx),
+                    ]
                 }),
                 bc::BreadcrumbSeparator::new().into_element(cx),
                 bc::BreadcrumbItem::new().into_element(cx, |cx| {
