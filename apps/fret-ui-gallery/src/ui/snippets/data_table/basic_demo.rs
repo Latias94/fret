@@ -315,7 +315,17 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
             state.clone(),
             assets.1.clone(),
             |row, _index, _parent| RowKey(row.key),
-            |col| col.id.clone(),
+            |col| match col.id.as_ref() {
+                // shadcn docs: title-cased headers.
+                "status" => Arc::<str>::from("Status"),
+                "email" => Arc::<str>::from("Email"),
+                "amount" => Arc::<str>::from("Amount"),
+                // shadcn docs: the row-actions column uses an icon-only trigger and no header label.
+                "actions" => Arc::<str>::from(""),
+                // The select column header is overridden by a checkbox header cell.
+                "select" => Arc::<str>::from(""),
+                _ => col.id.clone(),
+            },
             move |cx, col, _sort_state| {
                 if col.id.as_ref() != "select" {
                     return None;

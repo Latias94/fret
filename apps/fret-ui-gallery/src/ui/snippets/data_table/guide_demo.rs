@@ -353,7 +353,18 @@ fn legacy_demo_content(
             state.clone(),
             assets.columns.clone(),
             |row, _index, _parent| fret_ui_headless::table::RowKey(row.id),
-            |col| col.id.clone(),
+            |col| match col.id.as_ref() {
+                // Guide demo: prefer shadcn-like title casing for headers.
+                "name" => Arc::<str>::from("Name"),
+                "status" => Arc::<str>::from("Status"),
+                "cpu%" => Arc::<str>::from("CPU%"),
+                "mem_mb" => Arc::<str>::from("mem_mb"),
+                // The row-actions column uses an icon-only trigger and no header label.
+                "actions" => Arc::<str>::from(""),
+                // The select column header is overridden by a checkbox header cell.
+                "select" => Arc::<str>::from(""),
+                _ => col.id.clone(),
+            },
             move |cx, col, _sort_state| {
                 if col.id.as_ref() != "select" {
                     return None;
