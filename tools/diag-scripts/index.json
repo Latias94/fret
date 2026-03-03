@@ -4202,6 +4202,20 @@
       "target_hints": []
     },
     {
+      "id": "ui-gallery-select-reopen-no-residue-screenshots",
+      "path": "tools/diag-scripts/ui-gallery/select/ui-gallery-select-reopen-no-residue-screenshots.json",
+      "required_capabilities": [
+        "diag.overlay_placement_trace",
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "ui-gallery-select"
+      ],
+      "tags": [],
+      "target_hints": []
+    },
+    {
       "id": "ui-gallery-select-roving-skips-disabled-orange",
       "path": "tools/diag-scripts/ui-gallery/select/ui-gallery-select-roving-skips-disabled-orange.json",
       "required_capabilities": [
