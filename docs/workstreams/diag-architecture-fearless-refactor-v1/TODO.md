@@ -8,8 +8,8 @@ This TODO is organized by milestones (see `MILESTONES.md`). Keep tasks **small a
 
 - [x] Write a “current architecture map” note with clickable evidence anchors (crates + key entrypoints).
 - [x] Define the “artifact invariants” checklist (what a successful run must always produce).
-- [ ] List the top 10 churn hotspots in `crates/fret-diag` and why they churn.
-- [ ] Identify which parts are demo-specific (UI gallery) vs general engine.
+- [x] List the top 10 churn hotspots in `crates/fret-diag` and why they churn.
+- [x] Identify which parts are demo-specific (UI gallery) vs general engine.
 
 ## M1 — Tooling engine seams (within `crates/fret-diag`)
 

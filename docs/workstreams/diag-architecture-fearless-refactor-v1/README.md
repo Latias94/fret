@@ -9,6 +9,8 @@ Start here:
 - Design overview: `docs/workstreams/diag-architecture-fearless-refactor-v1/DESIGN.md`
 - Current architecture map: `docs/workstreams/diag-architecture-fearless-refactor-v1/CURRENT_ARCHITECTURE_MAP.md`
 - Artifact invariants: `docs/workstreams/diag-architecture-fearless-refactor-v1/ARTIFACT_INVARIANTS.md`
+- Churn hotspots: `docs/workstreams/diag-architecture-fearless-refactor-v1/CHURN_HOTSPOTS.md`
+- Demo vs engine boundary: `docs/workstreams/diag-architecture-fearless-refactor-v1/DEMO_VS_ENGINE.md`
 - Milestones: `docs/workstreams/diag-architecture-fearless-refactor-v1/MILESTONES.md`
 - Task tracker: `docs/workstreams/diag-architecture-fearless-refactor-v1/TODO.md`
 - Evidence + gates: `docs/workstreams/diag-architecture-fearless-refactor-v1/EVIDENCE_AND_GATES.md`
