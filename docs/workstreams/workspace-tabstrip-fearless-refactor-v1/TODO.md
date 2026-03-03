@@ -41,6 +41,7 @@ ID format:
   - end-drop: `{root}.drop_end`
   - overflow button: `{root}.overflow_button`
   - overflow entry + close: `{root}.overflow_entry.{tab_id}[.close]`
+  - per-tab dirty marker: `{tab_test_id}.dirty`
   - pinned boundary: `{root}.drop_pinned_boundary`
 
 ## B. Kernelization (Mechanism vs Policy)
@@ -72,10 +73,11 @@ ID format:
 
 ## D. Editor Semantics (Policy Layer)
 
-- [ ] WTS-editor-030 Pinned tabs (policy) in workspace layer:
+- [x] WTS-editor-030 Pinned tabs (policy) in workspace layer:
   - pinned region model, reorder rules, close affordances.
   - Diag gates:
     - `tools/diag-scripts/workspace/shell-demo/workspace-shell-demo-tab-pinned-boundary-toggle-smoke.json`
+    - `tools/diag-scripts/workspace/shell-demo/workspace-shell-demo-tab-reorder-within-pinned-smoke.json`
     - `tools/diag-scripts/workspace/shell-demo/workspace-shell-demo-tab-pinned-cross-boundary-drop-does-not-pin-smoke.json`
     - `tools/diag-scripts/workspace/shell-demo/workspace-shell-demo-tab-pin-commits-preview-smoke.json`
 - [x] WTS-editor-031 Preview tab slot (Zed-style):
@@ -89,7 +91,9 @@ ID format:
     - [x] `tools/diag-scripts/workspace/shell-demo/workspace-shell-demo-tab-close-left-keeps-pinned-smoke.json`
     - [x] `tools/diag-scripts/workspace/shell-demo/workspace-shell-demo-tab-close-others-keeps-pinned-smoke.json`
     - [x] `tools/diag-scripts/workspace/shell-demo/workspace-shell-demo-tab-close-right-keeps-pinned-smoke.json`
-- [ ] WTS-editor-032 Dirty close confirmation hooks (workspace-level, not tab mechanism).
+- [x] WTS-editor-032 Dirty close confirmation hooks (workspace-level, not tab mechanism).
+  - Evidence: `ecosystem/fret-workspace/src/close_policy.rs` and `ecosystem/fret-workspace/src/tabs.rs` (`apply_command_with_close_policy`)
+  - Diag gate: `tools/diag-scripts/workspace/shell-demo/workspace-shell-demo-tab-close-dirty-is-blocked-smoke.json`
 
 ## E. Cleanup + Convergence
 

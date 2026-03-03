@@ -17,6 +17,9 @@ use fret_ui_kit::OverlayController;
 use fret_ui_kit::declarative::ElementContextThemeExt as _;
 use fret_ui_kit::declarative::file_tree::{FileTreeViewProps, file_tree_view_retained_v0};
 use fret_ui_kit::{TreeItem, TreeState};
+use fret_workspace::close_policy::{
+    WorkspaceDirtyCloseDecision, WorkspaceDirtyClosePolicy, WorkspaceDirtyCloseRequest,
+};
 use fret_workspace::layout::{WorkspacePaneTree, WorkspaceWindowLayout};
 use fret_workspace::{
     WorkspaceCommandScope, WorkspaceFrame, WorkspacePaneContentFocusTarget, WorkspaceTabStrip,
@@ -108,6 +111,26 @@ struct WorkspaceShellWindowState {
 
 #[derive(Default)]
 struct WorkspaceShellDemoDriver;
+
+const CMD_WORKSPACE_SHELL_DEMO_SET_ACTIVE_DIRTY: &str = "workspace.shell_demo.set_active_dirty";
+const CMD_WORKSPACE_SHELL_DEMO_CLEAR_ACTIVE_DIRTY: &str = "workspace.shell_demo.clear_active_dirty";
+
+struct WorkspaceShellDemoDirtyClosePolicy {
+    block: bool,
+}
+
+impl WorkspaceDirtyClosePolicy for WorkspaceShellDemoDirtyClosePolicy {
+    fn decide_dirty_close(
+        &mut self,
+        _request: &WorkspaceDirtyCloseRequest,
+    ) -> WorkspaceDirtyCloseDecision {
+        if self.block {
+            WorkspaceDirtyCloseDecision::Block
+        } else {
+            WorkspaceDirtyCloseDecision::Allow
+        }
+    }
+}
 
 impl WorkspaceShellDemoDriver {
     fn build_ui(app: &mut App, window: AppWindowId) -> WorkspaceShellWindowState {
@@ -384,6 +407,12 @@ impl WorkspaceShellDemoDriver {
                                                     let toggle_pin = CommandId::new(Arc::<str>::from(
                                                         "workspace.tab.toggle_pin",
                                                     ));
+                                                    let set_dirty = CommandId::new(Arc::<str>::from(
+                                                        CMD_WORKSPACE_SHELL_DEMO_SET_ACTIVE_DIRTY,
+                                                    ));
+                                                    let clear_dirty = CommandId::new(Arc::<str>::from(
+                                                        CMD_WORKSPACE_SHELL_DEMO_CLEAR_ACTIVE_DIRTY,
+                                                    ));
                                                     let close_others = CommandId::new(Arc::<str>::from(
                                                         "workspace.tab.close.others",
                                                     ));
@@ -439,6 +468,18 @@ impl WorkspaceShellDemoDriver {
                                                                     "workspace-shell-pane-pane-a-debug-toggle-pin",
                                                                     "Toggle pin",
                                                                     toggle_pin.clone(),
+                                                                ),
+                                                                button(
+                                                                    cx,
+                                                                    "workspace-shell-pane-pane-a-debug-mark-dirty",
+                                                                    "Mark dirty",
+                                                                    set_dirty.clone(),
+                                                                ),
+                                                                button(
+                                                                    cx,
+                                                                    "workspace-shell-pane-pane-a-debug-clear-dirty",
+                                                                    "Clear dirty",
+                                                                    clear_dirty.clone(),
                                                                 ),
                                                                 button(
                                                                     cx,
@@ -539,14 +580,54 @@ impl WinitAppDriver for WorkspaceShellDemoDriver {
             return;
         }
 
+        if matches!(
+            command.as_str(),
+            CMD_WORKSPACE_SHELL_DEMO_SET_ACTIVE_DIRTY | CMD_WORKSPACE_SHELL_DEMO_CLEAR_ACTIVE_DIRTY
+        ) {
+            let dirty = command.as_str() == CMD_WORKSPACE_SHELL_DEMO_SET_ACTIVE_DIRTY;
+            let did_apply = app
+                .models_mut()
+                .update(
+                    &state.window_layout,
+                    |layout: &mut WorkspaceWindowLayout| {
+                        let Some(pane) = layout.pane_tree.find_pane_mut("pane-a") else {
+                            return false;
+                        };
+                        let Some(active) = pane
+                            .tabs
+                            .active()
+                            .cloned()
+                            .or_else(|| pane.tabs.tabs().first().cloned())
+                        else {
+                            return false;
+                        };
+                        pane.tabs.set_dirty(active, dirty);
+                        true
+                    },
+                )
+                .unwrap_or(false);
+            if did_apply {
+                app.request_redraw(window);
+            }
+            return;
+        }
+
         // Important: for "app model" commands (e.g. workspace tab operations), we still want to
         // apply the command even if some UI subtree reports it as handled (e.g. a context menu
         // item dispatching the command while focused inside the menu overlay).
+        let block_dirty_close = env_bool("FRET_WORKSPACE_SHELL_DEBUG_DIRTY_CLOSE_POLICY", false);
+        let mut dirty_close_policy = WorkspaceShellDemoDirtyClosePolicy {
+            block: block_dirty_close,
+        };
         let did_apply = app
             .models_mut()
             .update(
                 &state.window_layout,
-                |layout: &mut WorkspaceWindowLayout| layout.apply_command(&command),
+                |layout: &mut WorkspaceWindowLayout| {
+                    layout
+                        .apply_command_with_close_policy(&command, Some(&mut dirty_close_policy))
+                        .applied
+                },
             )
             .unwrap_or(false);
 

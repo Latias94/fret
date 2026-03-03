@@ -4824,6 +4824,29 @@
       ]
     },
     {
+      "id": "workspace-shell-demo-tab-close-dirty-is-blocked-smoke",
+      "path": "tools/diag-scripts/workspace/shell-demo/workspace-shell-demo-tab-close-dirty-is-blocked-smoke.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "diag-hardening-smoke-workspace"
+      ],
+      "tags": [
+        "close",
+        "dirty",
+        "gate",
+        "smoke",
+        "tabstrip",
+        "workspace"
+      ],
+      "target_hints": [
+        "Marks doc-a-2 dirty via demo debug button.",
+        "Attempts to close doc-a-2 via the close button.",
+        "Asserts the tab still exists (close blocked by policy)."
+      ]
+    },
+    {
       "id": "workspace-shell-demo-tab-cross-pane-move-to-end",
       "path": "tools/diag-scripts/workspace/shell-demo/workspace-shell-demo-tab-cross-pane-move-to-end.json",
       "required_capabilities": [
@@ -4998,6 +5021,28 @@
       "target_hints": [
         "Pins doc-a-0 via context menu, then drags it onto the pinned boundary to unpin.",
         "Asserts the tab's .pinned anchor toggles off after the boundary drop."
+      ]
+    },
+    {
+      "id": "workspace-shell-demo-tab-reorder-within-pinned-smoke",
+      "path": "tools/diag-scripts/workspace/shell-demo/workspace-shell-demo-tab-reorder-within-pinned-smoke.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "diag-hardening-smoke-workspace"
+      ],
+      "tags": [
+        "gate",
+        "pinned",
+        "reorder",
+        "smoke",
+        "tabstrip",
+        "workspace"
+      ],
+      "target_hints": [
+        "Pins doc-a-0 and doc-a-1, then reorders within the pinned group.",
+        "Asserts pos_in_set updates for both tabs."
       ]
     },
     {

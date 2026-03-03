@@ -11,7 +11,7 @@ This workstream is gated by a small set of unit tests and `fretboard diag` scrip
 
 Suite:
 
-- `cargo run -p fretboard -- diag suite workspace-shell-demo --launch -- cargo run -p fret-examples --bin workspace_shell_demo --release`
+- `cargo run -p fretboard -- diag suite workspace-shell-demo --launch -- cargo run -p fret-demo --bin workspace_shell_demo --release`
 
 Gates (examples):
 
@@ -27,6 +27,8 @@ Gates (examples):
 - preview (commit/replace):
   - `tools/diag-scripts/workspace/shell-demo/workspace-shell-demo-tab-preview-replaces-existing-smoke.json`
   - `tools/diag-scripts/workspace/shell-demo/workspace-shell-demo-tab-preview-commit-keeps-old-tab-smoke.json`
+- dirty close (policy hook):
+  - `tools/diag-scripts/workspace/shell-demo/workspace-shell-demo-tab-close-dirty-is-blocked-smoke.json`
 - pinned (anchors + cross-boundary discipline):
   - `tools/diag-scripts/workspace/shell-demo/workspace-shell-demo-tab-pinned-boundary-toggle-smoke.json`
   - `tools/diag-scripts/workspace/shell-demo/workspace-shell-demo-tab-pinned-cross-boundary-drop-does-not-pin-smoke.json`
@@ -34,7 +36,8 @@ Gates (examples):
 
 Harness:
 
-- `apps/fret-examples/src/workspace_shell_demo.rs`
+- Demo entry: `apps/fret-demo/src/bin/workspace_shell_demo.rs`
+- UI implementation: `apps/fret-examples/src/workspace_shell_demo.rs`
 
 ## Evidence bundles (fill in after running locally)
 

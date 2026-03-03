@@ -61,6 +61,7 @@ Related (not a pane tab bar, but useful vocabulary):
 | Drop-to-pin affordance | Zed: dedicated pinned row drop target pins on drop | No | N/A | Could be a future policy affordance (might require two-row UI) | Policy |
 | Close active pinned tab | Zed: close_active_item can refuse and activate an unpinned tab (unless `close_pinned`) | Partial | Fret: bulk-close protection exists; active-close policy not fully modeled | Decide whether “close pinned” should be an explicit override command/policy | Policy |
 | “Close others” unpreviews active | Zed: `close_other_items` unpreviews active item before closing | Partial | Fret: preview is committed/cleared on dirty; bulk-close behavior needs an explicit parity check | Ensure bulk-close does not accidentally preserve preview state | Policy |
+| Dirty close confirmation | Zed prompts (save/discard/cancel) before closing dirty items | Partial | Evidence: `ecosystem/fret-workspace/src/close_policy.rs` + `ecosystem/fret-workspace/src/tabs.rs` (`apply_command_with_close_policy`) + `workspace-shell-demo-tab-close-dirty-is-blocked-smoke.json` | Fret provides a policy hook; apps must implement prompt + follow-up commands | Policy |
 
 ## Priority next steps (recommended)
 
@@ -79,4 +80,3 @@ P1 (editor semantics convergence):
 P2 (command surface parity):
 
 - Consider adding `close_pinned` overrides to bulk-close commands (Zed has `CloseOtherItems { close_pinned }`).
-

@@ -92,4 +92,5 @@ Keep adapter-specific integration while converging on shared headless primitives
 - Workspace shell usage:
   - `ecosystem/fret/src/workspace_shell.rs`
 - Workspace shell demo (for future diag scripts):
-  - `apps/fret-examples/src/workspace_shell_demo.rs`
+  - Demo entry: `apps/fret-demo/src/bin/workspace_shell_demo.rs`
+  - UI implementation: `apps/fret-examples/src/workspace_shell_demo.rs`

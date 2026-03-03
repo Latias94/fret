@@ -24,3 +24,4 @@ mechanism-level regression gates.
   - close-left/close-right/close-others do not close pinned tabs
 - Dirty close policy:
   - close action path consults policy, not tab mechanism
+  - Evidence: `ecosystem/fret-workspace/src/close_policy.rs` and `ecosystem/fret-workspace/src/tabs.rs`
