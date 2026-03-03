@@ -1,6 +1,6 @@
 # Action-First Authoring + View Runtime (Fearless Refactor v1) — TODO
 
-Status: Active
+Status: Landed (v1)
 Last updated: 2026-03-03
 
 Related:
