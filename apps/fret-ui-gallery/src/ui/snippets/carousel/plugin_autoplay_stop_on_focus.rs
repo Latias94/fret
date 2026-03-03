@@ -5,6 +5,7 @@ use fret_app::App;
 use fret_core::Edges;
 use fret_ui::Theme;
 use fret_ui::element::{CrossAlign, FlexProps, MainAlign, SpacingLength, TextProps};
+use fret_ui_kit::declarative::ModelWatchExt;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::ui;
 use fret_ui_shadcn::{self as shadcn, prelude::*};
@@ -59,9 +60,6 @@ fn slide(cx: &mut ElementContext<'_, App>, idx: usize, visual: SlideVisual) -> A
     ui::container(cx, move |_cx| vec![card])
         .w_full()
         .p_1()
-        .test_id(format!(
-            "ui-gallery-carousel-plugin-stop-on-interaction-focus-item-{idx}"
-        ))
         .into_element(cx)
 }
 
