@@ -12,7 +12,7 @@ publish = false
 
 [dependencies]
 anyhow.workspace = true
-fret = { path = "../../ecosystem/fret", default-features = false, features = ["desktop", "diagnostics", "shadcn", "ui-assets", "icons", "preload-icon-svgs", "command-palette"] }
+fret = { path = "../../ecosystem/fret", default-features = false, features = ["desktop", "shadcn", "icons"] }
 fret-app = { path = "../../crates/fret-app" }
 fret-core = { path = "../../crates/fret-core" }
 fret-runtime = { path = "../../crates/fret-runtime" }

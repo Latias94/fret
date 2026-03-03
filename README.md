@@ -1,4 +1,4 @@
-﻿# Fret
+# Fret
 
 <p align="center">
   <img src="assets/fret-icon.svg" width="128" height="128" alt="Fret icon" />
@@ -45,35 +45,58 @@ Upstream/reference links live closer to the code that uses them:
 
 - [`ecosystem/fret-ui-shadcn/README.md`](ecosystem/fret-ui-shadcn/README.md) (shadcn/Radix/cmdk/Base UI references)
 - [`ecosystem/fret-ui-headless/README.md`](ecosystem/fret-ui-headless/README.md) (behavioral ports like cmdk score + Embla)
-- [`docs/reference-stack-ui-behavior.md`](docs/reference-stack-ui-behavior.md) (APG + Radix + Floating UI + cmdk)
+- [`docs/reference-stack-ui-behavior.md`](./docs/reference-stack-ui-behavior.md) (APG + Radix + Floating UI + cmdk)
 
 The goal is to provide a smooth, general-purpose application framework that scales from app UIs to editor-class products.
 
 ## Quick Start
 
-Need help setting up your toolchain or speeding up local builds? See `docs/setup.md`.
+Need help setting up your toolchain or speeding up local builds? See [docs/setup.md](./docs/setup.md).
 
-Create a new native app scaffold (recommended: `simple-todo` first):
+Want the shortest onboarding path? Read [docs/first-hour.md](./docs/first-hour.md).
+
+Need help choosing the right example entry point (templates vs cookbook vs gallery vs labs)? See [docs/examples/README.md](./docs/examples/README.md).
+
+### 1) Run a lightweight cookbook example (recommended)
+
+```bash
+cargo run -p fret-cookbook --example hello
+cargo run -p fret-cookbook --example simple_todo
+```
+
+### 2) Generate a new native app scaffold
+
+Start with `simple-todo` (minimal baseline):
 
 ```bash
 cargo run -p fretboard -- new simple-todo --name my-simple-todo
+cargo run --manifest-path local/my-simple-todo/Cargo.toml
 ```
 
 Then try the best-practice baseline (`todo`, includes selectors + queries):
 
 ```bash
 cargo run -p fretboard -- new todo --name my-todo
+cargo run --manifest-path local/my-todo/Cargo.toml
 ```
 
-Run native demo:
+### 3) Explore runnable demos (workspace)
+
+Discover runnable targets:
 
 ```bash
-cargo run -p fretboard -- dev native --bin todo_demo
+cargo run -p fretboard -- list native-demos
+cargo run -p fretboard -- list cookbook-examples
+cargo run -p fretboard -- list web-demos
 ```
 
-Windows note: `fretboard dev native` defaults to `--profile dev-fast` for faster builds. Override with `--profile dev`.
+Run a native demo shell (optional; heavier than cookbook):
 
-Run web demo:
+```bash
+cargo run -p fretboard -- dev native --bin components_gallery
+```
+
+Run a web demo (optional):
 
 ```bash
 cargo run -p fretboard -- dev web --demo ui_gallery
@@ -81,77 +104,56 @@ cargo run -p fretboard -- dev web --demo ui_gallery
 
 ## Todo App API Taste
 
-This is the interface style we optimize for: typed state, typed messages, and shadcn-based components.
+This is the interface style we optimize for: typed state, typed actions, and shadcn-based components.
 
 ```rust
 use std::sync::Arc;
 use fret::prelude::*;
 
-#[derive(Clone)]
-struct TodoItem {
-    id: u64,
-    done: Model<bool>,
-    text: Arc<str>,
-}
-
-#[derive(Debug, Clone)]
-enum Msg {
-    Add,
-    Remove(u64),
-}
-
-struct TodoState {
-    todos: Model<Vec<TodoItem>>,
-    draft: Model<String>,
-    router: MessageRouter<Msg>,
-    next_id: u64,
+mod act {
+    fret::actions!([Add = "app.todo.add.v1"]);
 }
 
 fn main() -> anyhow::Result<()> {
-    fret::app_with_hooks("todo", init_window, view, |d| d.on_command(on_command))?
-        .with_main_window("todo", (560.0, 520.0))
-        .run()?;
+    FretApp::new("todo")
+        .window("todo", (560.0, 520.0))
+        .run_view::<TodoView>()
+        .map_err(anyhow::Error::from)?;
     Ok(())
 }
 ```
 
 ```rust
-fn view(cx: &mut ElementContext<'_, App>, st: &mut TodoState) -> ViewElements {
-    st.router.clear();
-    let add_cmd = st.router.cmd(Msg::Add);
+struct TodoView;
 
-    let input = shadcn::Input::new(st.draft.clone())
-        .placeholder("Add a task")
-        .submit_command(add_cmd.clone())
-        .into_element(cx);
+impl View for TodoView {
+    fn init(_app: &mut App, _window: AppWindowId) -> Self {
+        Self
+    }
 
-    let add_button = shadcn::Button::new("Add")
-        .on_click(add_cmd)
-        .into_element(cx);
+    fn render(&mut self, cx: &mut ViewCx<'_, '_, App>) -> Elements {
+        let draft = cx.use_state::<String>();
+        let enabled = !cx.watch_model(&draft).layout().cloned_or_default().trim().is_empty();
 
-    let card = shadcn::Card::new([
-        shadcn::CardHeader::new([
-            shadcn::CardTitle::new("Todo").into_element(cx),
-            shadcn::CardDescription::new("State + router + shadcn components").into_element(cx),
-        ])
-        .into_element(cx),
-        shadcn::CardContent::new([
-            ui::v_flex(cx, |_cx| [input, add_button])
-                .gap(Space::N3)
-                .into_element(cx),
-        ])
-        .into_element(cx),
-    ])
-    .into_element(cx);
+        cx.on_action::<act::Add>(|_host, _acx| true);
 
-    vec![card].into()
+        ui::v_flex(cx, |cx| {
+            ui::children![cx;
+                shadcn::Input::new(draft).placeholder("Add a task…"),
+                shadcn::Button::new("Add").disabled(!enabled).action(act::Add),
+            ]
+        })
+        .gap(Space::N3)
+        .into_element(cx)
+        .into()
+    }
 }
 ```
 
 Reference implementation:
 
-- `apps/fret-examples/src/todo_demo.rs`
-- `docs/examples/todo-app-golden-path.md`
+- Cookbook: [`apps/fret-cookbook/examples/simple_todo.rs`](./apps/fret-cookbook/examples/simple_todo.rs)
+- Template guide: [`docs/first-hour.md`](./docs/first-hour.md)
 
 ![Fret gallery 01](screenshots/gallery-01.png)
 ![Fret gallery 02](screenshots/gallery-02.png)
@@ -162,26 +164,26 @@ Reference implementation:
 Fret keeps stable boundaries in `crates/` and incubates faster-moving pieces in `ecosystem/`.
 
 - Component systems:
-  - [`fret-ui-kit`](https://github.com/Latias94/fret/tree/main/ecosystem/fret-ui-kit)
-  - [`fret-ui-shadcn`](https://github.com/Latias94/fret/tree/main/ecosystem/fret-ui-shadcn)
-  - [`fret-ui-material3`](https://github.com/Latias94/fret/tree/main/ecosystem/fret-ui-material3) (in progress)
+  - [`fret-ui-kit`](./ecosystem/fret-ui-kit)
+  - [`fret-ui-shadcn`](./ecosystem/fret-ui-shadcn)
+  - [`fret-ui-material3`](./ecosystem/fret-ui-material3) (in progress)
 - App architecture helpers:
-  - [`fret-router`](https://github.com/Latias94/fret/tree/main/ecosystem/fret-router)
-  - [`fret-query`](https://github.com/Latias94/fret/tree/main/ecosystem/fret-query)
-  - [`fret-selector`](https://github.com/Latias94/fret/tree/main/ecosystem/fret-selector)
+  - [`fret-router`](./ecosystem/fret-router)
+  - [`fret-query`](./ecosystem/fret-query)
+  - [`fret-selector`](./ecosystem/fret-selector)
 - Editor modules:
-  - [`fret-node`](https://github.com/Latias94/fret/tree/main/ecosystem/fret-node)
-  - [`fret-docking`](https://github.com/Latias94/fret/tree/main/ecosystem/fret-docking)
-  - [`fret-viewport-tooling`](https://github.com/Latias94/fret/tree/main/ecosystem/fret-viewport-tooling)
+  - [`fret-node`](./ecosystem/fret-node)
+  - [`fret-docking`](./ecosystem/fret-docking)
+  - [`fret-viewport-tooling`](./ecosystem/fret-viewport-tooling)
 - Visualization modules:
-  - [`fret-chart`](https://github.com/Latias94/fret/tree/main/ecosystem/fret-chart)
-  - [`fret-plot`](https://github.com/Latias94/fret/tree/main/ecosystem/fret-plot)
-  - [`fret-plot3d`](https://github.com/Latias94/fret/tree/main/ecosystem/fret-plot3d)
+  - [`fret-chart`](./ecosystem/fret-chart)
+  - [`fret-plot`](./ecosystem/fret-plot)
+  - [`fret-plot3d`](./ecosystem/fret-plot3d)
 - Icon packs and assets:
-  - [`fret-icons`](https://github.com/Latias94/fret/tree/main/ecosystem/fret-icons)
-  - [`fret-icons-lucide`](https://github.com/Latias94/fret/tree/main/ecosystem/fret-icons-lucide)
-  - [`fret-icons-radix`](https://github.com/Latias94/fret/tree/main/ecosystem/fret-icons-radix)
-  - [`fret-ui-assets`](https://github.com/Latias94/fret/tree/main/ecosystem/fret-ui-assets)
+  - [`fret-icons`](./ecosystem/fret-icons)
+  - [`fret-icons-lucide`](./ecosystem/fret-icons-lucide)
+  - [`fret-icons-radix`](./ecosystem/fret-icons-radix)
+  - [`fret-ui-assets`](./ecosystem/fret-ui-assets)
 
 ## Public Crate Surfaces (v0.1)
 
