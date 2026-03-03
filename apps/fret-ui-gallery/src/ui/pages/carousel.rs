@@ -17,6 +17,7 @@ pub(super) fn preview_carousel(cx: &mut ElementContext<'_, App>) -> Vec<AnyEleme
         let duration = snippets::duration_embla::render(cx);
         let api = snippets::api::render(cx);
         let plugin = snippets::plugin_autoplay::render(cx);
+        let plugin_controlled = snippets::plugin_autoplay_controlled::render(cx);
         let plugin_wheel = snippets::plugin_wheel_gestures::render(cx);
         let expandable = snippets::expandable::render(cx);
         let orientation_vertical = snippets::orientation_vertical::render(cx);
@@ -107,6 +108,13 @@ pub(super) fn preview_carousel(cx: &mut ElementContext<'_, App>) -> Vec<AnyEleme
 
                     .test_id_prefix("ui-gallery-carousel-plugin")
                     .code_rust_from_file_region(snippets::plugin_autoplay::SOURCE, "example"),
+                DocSection::new("Plugin (Autoplay, Controlled)", plugin_controlled)
+                    .description("Autoplay with external stop/reset/play controls (Embla plugin-style outcomes).")
+                    .test_id_prefix("ui-gallery-carousel-plugin-controlled")
+                    .code_rust_from_file_region(
+                        snippets::plugin_autoplay_controlled::SOURCE,
+                        "example",
+                    ),
                 DocSection::new("Plugin (Wheel gestures)", plugin_wheel)
                     .description("Wheel/trackpad gestures: horizontal scroll steps between snaps (Shift swaps axes).")
                     .test_id_prefix("ui-gallery-carousel-plugin-wheel")
