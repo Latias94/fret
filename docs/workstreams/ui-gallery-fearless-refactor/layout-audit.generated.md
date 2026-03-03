@@ -4,7 +4,6 @@
 | `apps/fret-ui-gallery/src/ui/pages/ai_transcript_torture.rs` | 1000.0 |
 | `apps/fret-ui-gallery/src/ui/pages/ai_workflow_canvas_demo.rs` | 1000.0 |
 | `apps/fret-ui-gallery/src/ui/pages/ai_workflow_node_graph_demo.rs` | 1000.0 |
-| `apps/fret-ui-gallery/src/ui/pages/alert.rs` | 720.0 |
 | `apps/fret-ui-gallery/src/ui/pages/calendar.rs` | 980.0 |
 | `apps/fret-ui-gallery/src/ui/pages/card.rs` | 980.0 |
 | `apps/fret-ui-gallery/src/ui/pages/chart.rs` | 1100.0 |

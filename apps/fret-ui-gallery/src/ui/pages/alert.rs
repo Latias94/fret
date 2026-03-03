@@ -29,28 +29,22 @@ pub(super) fn preview_alert(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement>
         vec![
             DocSection::new("Demo", demo)
                 .description("A small set of inline alerts for different message tones.")
-                .max_w(Px(720.0))
                 .test_id_prefix("ui-gallery-alert")
                 .code_rust_from_file_region(snippets::demo::SOURCE, "example"),
             DocSection::new("Basic", basic)
                 .description("Upstream shadcn docs example (icon + title + description).")
-                .max_w(Px(720.0))
                 .code_rust_from_file_region(snippets::basic::SOURCE, "example"),
             DocSection::new("Destructive", destructive)
                 .description("Destructive variant for critical errors.")
-                .max_w(Px(720.0))
                 .code_rust_from_file_region(snippets::destructive::SOURCE, "example"),
             DocSection::new("Action", action)
                 .description("Use `AlertAction` to pin a top-right action inside the alert.")
-                .max_w(Px(720.0))
                 .code_rust_from_file_region(snippets::action::SOURCE, "example"),
             DocSection::new("Custom Colors", custom_colors)
                 .description("Custom chrome override for special emphasis.")
-                .max_w(Px(720.0))
                 .code_rust_from_file_region(snippets::custom_colors::SOURCE, "example"),
             DocSection::new("RTL", rtl)
                 .description("Alert layout under an RTL direction provider.")
-                .max_w(Px(720.0))
                 .code_rust_from_file_region(snippets::rtl::SOURCE, "example"),
             DocSection::new("Notes", notes).description("API reference pointers and caveats."),
         ],
