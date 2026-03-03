@@ -11,8 +11,7 @@ Last updated: 2026-03-03.
 
 - Landed: `Spinner` / `Skeleton` / `InputOtp` continuous animations are duration-driven.
 - Landed: `AvatarFallback` delay is duration-driven (`delay_ms` matches Radix `delayMs`).
-- Next: migrate shadcn extras `Marquee` away from frame-count deltas and toward a duration-driven
-  timebase.
+- Landed: shadcn extras `Marquee` uses a duration-driven timebase (no `frame_id` delta coupling).
 
 ## P2 (API + token cleanup)
 
