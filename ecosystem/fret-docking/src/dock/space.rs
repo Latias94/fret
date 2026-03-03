@@ -1422,11 +1422,12 @@ impl DockSpace {
             min_speed_px_per_tick: base * 0.20,
             max_speed_px_per_tick: base,
         };
-        let Some(dx) = fret_dnd::compute_autoscroll_x(cfg, tab_bar, position) else {
-            return false;
-        };
-
         let prev_scroll = self.tab_scroll_for(tabs);
+        let dx = fret_dnd::compute_autoscroll_x_clamped(cfg, tab_bar, position, prev_scroll, max_scroll);
+        if dx.0.abs() < 0.01 {
+            return false;
+        }
+
         let next_scroll = Px((prev_scroll.0 + dx.0).clamp(0.0, max_scroll.0));
         if (next_scroll.0 - prev_scroll.0).abs() < 0.01 {
             return false;

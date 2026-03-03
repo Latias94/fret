@@ -14,6 +14,10 @@ This file is a short, append-only log of landings and decisions for this workstr
   - Code: `ecosystem/fret-ui-headless/src/tab_strip_scroll.rs`, `ecosystem/fret-workspace/src/tab_strip/utils.rs`,
     `ecosystem/fret-docking/src/dock/tab_bar_geometry.rs`
   - Rationale: keep workspace and docking aligned on the same scroll-to-visible math, so refactors remain fearless.
+- Introduced a shared clamped edge auto-scroll helper and started converging adapters onto it.
+  - Code: `ecosystem/fret-dnd/src/scroll.rs`, `ecosystem/fret-workspace/src/tab_strip/kernel.rs`,
+    `ecosystem/fret-docking/src/dock/space.rs`
+  - Rationale: keep drag-to-scroll behavior consistent (and easier to gate) across workspace and docking.
 
 ## Next (proposed)
 
