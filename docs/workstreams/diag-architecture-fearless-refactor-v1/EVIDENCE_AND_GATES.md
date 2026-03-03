@@ -36,6 +36,7 @@ Tooling engine (CLI/GUI shared):
 
 - `crates/fret-diag/src/lib.rs`
 - Suite resolution seam: `crates/fret-diag/src/registry/suites.rs`
+- Checks seam (post-run): `crates/fret-diag/src/registry/checks.rs`
 - Builtin suite mapping: `crates/fret-diag/src/diag_suite.rs` (`resolve_builtin_suite_scripts`)
 - CLI wrapper: `apps/fretboard/src/cli.rs`
 

@@ -1,4 +1,5 @@
 use super::*;
+use crate::registry::checks::{CheckRegistry, PostRunCheckContext};
 use crate::stats;
 
 pub(crate) fn apply_post_run_checks(
@@ -142,7 +143,6 @@ pub(crate) fn apply_post_run_checks(
     let check_drag_cache_root_paint_only_test_id =
         checks.check_drag_cache_root_paint_only_test_id.as_deref();
     let check_hover_layout_max = checks.check_hover_layout_max;
-    let check_gc_sweep_liveness = checks.check_gc_sweep_liveness;
     let check_notify_hotspot_file_max: &[(String, u64)] =
         checks.check_notify_hotspot_file_max.as_slice();
     let check_view_cache_reuse_stable_min = checks.check_view_cache_reuse_stable_min;
@@ -743,9 +743,14 @@ pub(crate) fn apply_post_run_checks(
             warmup_frames,
         )?;
     }
-    if check_gc_sweep_liveness {
-        stats::check_bundle_for_gc_sweep_liveness(bundle_path, warmup_frames)?;
-    }
+    CheckRegistry::builtin().apply_post_run_checks(
+        PostRunCheckContext {
+            bundle_path,
+            out_dir,
+            warmup_frames,
+        },
+        checks,
+    )?;
     for (file, max) in check_notify_hotspot_file_max {
         stats::check_bundle_for_notify_hotspot_file_max(
             bundle_path,
