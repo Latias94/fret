@@ -72,6 +72,9 @@ ID format:
   - `ecosystem/fret-workspace/src/tab_strip/overflow.rs`
 - [x] WTS-gates-023 Drag autoscroll gate exists:
   - `tools/diag-scripts/workspace/shell-demo/workspace-shell-demo-tabstrip-drag-autoscroll-smoke.json`
+- [x] WTS-gates-024 Drag-to-split preview gate exists:
+  - `tools/diag-scripts/workspace/shell-demo/workspace-shell-demo-tab-drag-to-split-right.json`
+  - `tools/diag-scripts/workspace/shell-demo/workspace-shell-demo-tab-drag-to-split-right-drop-preview-screenshot.json`
 
 ## D. Editor Semantics (Policy Layer)
 

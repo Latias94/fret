@@ -1,5 +1,35 @@
 use super::*;
 
+fn clamp_point_to_rect(pos: Point, bounds: Rect) -> Point {
+    let x0 = bounds.origin.x.0;
+    let y0 = bounds.origin.y.0;
+    let x1 = bounds.origin.x.0 + bounds.size.width.0;
+    let y1 = bounds.origin.y.0 + bounds.size.height.0;
+
+    // Hit-testing treats rect maxima as exclusive in several places. Keep synthesized pointer
+    // positions slightly inside the window bounds so we don't end up with `hit=null` at `x==x1`.
+    // Use a slightly larger epsilon than the minimum needed for half-open bounds, because some
+    // UIs reserve a 1px border/inset inside the window bounds. Keeping the pointer a couple
+    // pixels inside avoids "hover misses" for edge-driven policies (like pane split previews).
+    const EDGE_EPS_PX: f32 = 2.0;
+
+    let mut x = pos.x.0;
+    let mut y = pos.y.0;
+    if x.is_finite() {
+        let min_x = x0.min(x1);
+        let max_x = x0.max(x1);
+        let max_x = (max_x - EDGE_EPS_PX).max(min_x);
+        x = x.clamp(min_x, max_x);
+    }
+    if y.is_finite() {
+        let min_y = y0.min(y1);
+        let max_y = y0.max(y1);
+        let max_y = (max_y - EDGE_EPS_PX).max(min_y);
+        y = y.clamp(min_y, max_y);
+    }
+    Point::new(Px(x), Px(y))
+}
+
 pub(super) fn handle_drag_pointer_step(
     svc: &mut UiDiagnosticsService,
     app: &App,
@@ -181,6 +211,7 @@ pub(super) fn handle_drag_pointer_step(
                     fret_core::Px(start.x.0 + delta_x),
                     fret_core::Px(start.y.0 + delta_y),
                 );
+                let end = clamp_point_to_rect(end, window_bounds);
                 V2DragPointerState {
                     step_index,
                     window,
@@ -682,10 +713,11 @@ pub(super) fn handle_drag_pointer_until_step(
                             &mut active.selector_resolution_trace,
                         ) {
                             let start = center_of_rect_clamped_to_rect(node.bounds, window_bounds);
-                            let end = Point::new(
+                            let mut end = Point::new(
                                 fret_core::Px(start.x.0 + delta_x),
                                 fret_core::Px(start.y.0 + delta_y),
                             );
+                            end = clamp_point_to_rect(end, window_bounds);
                             state.playback.start = start;
                             state.playback.end = end;
                         } else {

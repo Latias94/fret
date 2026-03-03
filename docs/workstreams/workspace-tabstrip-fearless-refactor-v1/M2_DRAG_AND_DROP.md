@@ -22,6 +22,7 @@ Non-goals (v1):
   - reorder within a pane (insert index assertions)
   - move across panes (insert index assertions)
   - drag autoscroll (horizontal scroll while dragging)
+  - drag-to-split preview (pane edge drop preview)
 - Nextest tests cover:
   - canonical insert index mapping under overflow
   - "close does not activate" invariants during drag/drop sequences
