@@ -144,6 +144,7 @@ impl UiDiagnosticsService {
 
         app.request_redraw(anchor_window);
         app.push_effect(Effect::RequestAnimationFrame(anchor_window));
+        self.sync_script_keepalive_timer(app);
     }
 
     pub(super) fn maybe_migrate_single_active_script_to_window(

@@ -26,6 +26,7 @@ pub struct UiDiagnosticsService {
     last_script_run_id: u64,
     clipboard_text_responses: std::collections::VecDeque<DiagClipboardTextResponse>,
     next_clipboard_token: u64,
+    script_keepalive_timer_token: Option<fret_core::TimerToken>,
     app_snapshot_provider:
         Option<Arc<dyn Fn(&App, AppWindowId) -> Option<serde_json::Value> + 'static>>,
     #[cfg(feature = "diagnostics-ws")]

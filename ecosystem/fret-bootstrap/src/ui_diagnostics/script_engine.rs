@@ -1133,6 +1133,7 @@ pub(super) fn finalize_drive_script_for_window(
             app.request_redraw(target_window);
             app.push_effect(Effect::Redraw(target_window));
             app.push_effect(Effect::RequestAnimationFrame(target_window));
+            service.sync_script_keepalive_timer(app);
             return output;
         }
     }
@@ -1313,6 +1314,7 @@ pub(super) fn finalize_drive_script_for_window(
         }
     }
 
+    service.sync_script_keepalive_timer(app);
     output
 }
 
@@ -1698,6 +1700,351 @@ pub(super) fn push_ime_event_trace(
 // --- Extracted from `ui_diagnostics.rs` (fearless refactor) ---
 
 impl UiDiagnosticsService {
+    const SCRIPT_KEEPALIVE_TIMER_INTERVAL: std::time::Duration = std::time::Duration::from_millis(16);
+    const SCRIPT_NO_FRAME_DRIVE_STALL_THRESHOLD_MS: u64 = 750;
+    const SCRIPT_NO_FRAME_DRIVE_HARD_TIMEOUT_MS: u64 = 15_000;
+
+    fn sync_script_keepalive_timer(&mut self, app: &mut App) {
+        let should_run = !self.active_scripts.is_empty();
+
+        match (should_run, self.script_keepalive_timer_token) {
+            (true, None) => {
+                let token = app.next_timer_token();
+                self.script_keepalive_timer_token = Some(token);
+                app.push_effect(Effect::SetTimer {
+                    window: None,
+                    token,
+                    after: Self::SCRIPT_KEEPALIVE_TIMER_INTERVAL,
+                    repeat: Some(Self::SCRIPT_KEEPALIVE_TIMER_INTERVAL),
+                });
+            }
+            (false, Some(token)) => {
+                app.push_effect(Effect::CancelTimer { token });
+                self.script_keepalive_timer_token = None;
+            }
+            _ => {}
+        }
+    }
+
+    pub(crate) fn maybe_handle_script_keepalive_timer_event(
+        &mut self,
+        app: &mut App,
+        _window: AppWindowId,
+        token: fret_core::TimerToken,
+    ) -> bool {
+        let Some(expected) = self.script_keepalive_timer_token else {
+            return false;
+        };
+        if token != expected {
+            return false;
+        }
+        if !self.is_enabled() {
+            return true;
+        }
+
+        let now_unix_ms = unix_ms_now();
+
+        let windows: Vec<AppWindowId> = self.active_scripts.keys().copied().collect();
+        for window in windows {
+            let (bounds, scale_factor, age_ms) = self
+                .per_window
+                .get(&window)
+                .and_then(|ring| ring.snapshots.back())
+                .map(|s| {
+                    (
+                        rect_from_v1(s.window_bounds),
+                        s.scale_factor,
+                        now_unix_ms.saturating_sub(s.timestamp_unix_ms),
+                    )
+                })
+                .unwrap_or_else(|| {
+                    (
+                        Rect::new(
+                            Point::new(Px(0.0), Px(0.0)),
+                            Size::new(Px(0.0), Px(0.0)),
+                        ),
+                        1.0,
+                        u64::MAX,
+                    )
+                });
+
+            if age_ms < Self::SCRIPT_NO_FRAME_DRIVE_STALL_THRESHOLD_MS {
+                continue;
+            }
+
+            let out = self.drive_script_for_window_no_frame(
+                app,
+                window,
+                bounds,
+                scale_factor,
+                age_ms,
+            );
+            for effect in out.effects {
+                app.push_effect(effect);
+            }
+            if out.request_redraw {
+                app.request_redraw(window);
+                app.push_effect(Effect::RequestAnimationFrame(window));
+            }
+        }
+
+        let _ = self.maybe_dump_if_triggered();
+        if self.poll_exit_trigger() {
+            app.push_effect(Effect::QuitApp);
+        }
+
+        self.sync_script_keepalive_timer(app);
+        true
+    }
+
+    fn drive_script_for_window_no_frame(
+        &mut self,
+        app: &mut App,
+        window: AppWindowId,
+        window_bounds: Rect,
+        scale_factor: f32,
+        stall_age_ms: u64,
+    ) -> UiScriptFrameOutput {
+        let Some(mut active) = self.active_scripts.remove(&window) else {
+            return UiScriptFrameOutput::default();
+        };
+
+        self.maybe_write_running_heartbeat_for_active_window(window, &mut active);
+        self.maybe_cancel_pending_cross_window_drag(app, window, &mut active);
+
+        if active.next_step >= active.steps.len() {
+            let passed_step_index = active.steps.len().saturating_sub(1) as u32;
+            push_script_event_log(
+                &mut active,
+                &self.cfg,
+                UiScriptEventLogEntryV1 {
+                    unix_ms: unix_ms_now(),
+                    kind: "script_passed".to_string(),
+                    step_index: Some(passed_step_index),
+                    note: Some("script_completed_during_timer_tick".to_string()),
+                    bundle_dir: None,
+                    window: Some(window.data().as_ffi()),
+                    tick_id: Some(app.tick_id().0),
+                    frame_id: Some(app.frame_id().0),
+                    window_snapshot_seq: None,
+                },
+            );
+            self.write_script_result(UiScriptResultV1 {
+                schema_version: 1,
+                run_id: active.run_id,
+                updated_unix_ms: unix_ms_now(),
+                window: Some(window.data().as_ffi()),
+                stage: UiScriptStageV1::Passed,
+                step_index: Some(passed_step_index),
+                reason_code: None,
+                reason: None,
+                evidence: script_evidence_for_active(&active),
+                last_bundle_dir: self
+                    .last_dump_dir
+                    .as_ref()
+                    .map(|p| display_path(&self.cfg.out_dir, p)),
+                last_bundle_artifact: self.last_dump_artifact_stats.clone(),
+            });
+            return UiScriptFrameOutput::default();
+        }
+
+        self.maybe_write_running_progress_for_active_window(window, &mut active);
+
+        if active.wait_frames_remaining > 0 {
+            active.wait_frames_remaining = active.wait_frames_remaining.saturating_sub(1);
+            self.active_scripts.insert(window, active);
+            return UiScriptFrameOutput {
+                request_redraw: true,
+                ..UiScriptFrameOutput::default()
+            };
+        }
+
+        let prev_next_step = active.next_step;
+        let step_index = active.next_step;
+        let step = active.steps.get(step_index).cloned();
+        let Some(step) = step else {
+            self.active_scripts.insert(window, active);
+            return UiScriptFrameOutput::default();
+        };
+
+        let (step_index_u32, step_kind) =
+            self.note_step_start_and_scope_evidence(app, window, step_index, &step, &mut active);
+
+        let element_runtime = app.global::<ElementRuntime>();
+        let text_font_stack_key_stable_frames =
+            self.update_text_font_stack_key_stability(app, window);
+        let font_catalog_populated = app
+            .global::<fret_runtime::FontCatalog>()
+            .is_some_and(|catalog| !catalog.families.is_empty());
+        let system_font_rescan_idle = match app.global::<fret_runtime::SystemFontRescanState>() {
+            Some(state) => !state.in_flight && !state.pending,
+            None => true,
+        };
+
+        let mut output = UiScriptFrameOutput::default();
+        let mut force_dump_label: Option<String> = None;
+        let mut force_dump_max_snapshots: Option<usize> = None;
+        let mut stop_script = false;
+        let mut failure_reason: Option<String> = None;
+        let mut handoff_to: Option<AppWindowId> = None;
+        let anchor_window = active.anchor_window;
+
+        Self::reset_active_script_state_for_step(&mut active, &step);
+
+        let mut handled = false;
+
+        // Keep this conservative: only run steps that do not require a fresh `UiTree` and are
+        // explicitly safe to evaluate without semantics snapshots.
+        match step.clone() {
+            UiActionStepV2::ClearBaseRef => {
+                active.base_ref = None;
+                push_script_event_log(
+                    &mut active,
+                    &self.cfg,
+                    UiScriptEventLogEntryV1 {
+                        unix_ms: unix_ms_now(),
+                        kind: "base_ref.cleared".to_string(),
+                        step_index: Some(step_index_u32),
+                        note: Some("timer_tick".to_string()),
+                        bundle_dir: None,
+                        window: Some(window.data().as_ffi()),
+                        tick_id: Some(app.tick_id().0),
+                        frame_id: Some(app.frame_id().0),
+                        window_snapshot_seq: None,
+                    },
+                );
+                active.next_step = active.next_step.saturating_add(1);
+                output.request_redraw = true;
+                handled = true;
+            }
+            UiActionStepV2::WaitUntil { .. } => {
+                handled = script_steps_wait::handle_wait_until_step(
+                    self,
+                    app,
+                    window,
+                    window_bounds,
+                    anchor_window,
+                    step_index,
+                    step,
+                    element_runtime,
+                    None,
+                    text_font_stack_key_stable_frames,
+                    font_catalog_populated,
+                    system_font_rescan_idle,
+                    &mut active,
+                    &mut output,
+                    &mut force_dump_label,
+                    &mut handoff_to,
+                    &mut stop_script,
+                    &mut failure_reason,
+                );
+            }
+            UiActionStepV2::Assert { .. } => {
+                handled = script_steps_assert::handle_assert_step(
+                    self,
+                    app,
+                    window,
+                    window_bounds,
+                    anchor_window,
+                    step_index,
+                    step,
+                    element_runtime,
+                    None,
+                    text_font_stack_key_stable_frames,
+                    font_catalog_populated,
+                    system_font_rescan_idle,
+                    &mut active,
+                    &mut output,
+                    &mut force_dump_label,
+                    &mut handoff_to,
+                    &mut stop_script,
+                    &mut failure_reason,
+                );
+            }
+            UiActionStepV2::CaptureBundle { .. } => {
+                handled = script_steps::handle_capture_steps(
+                    self,
+                    app,
+                    window,
+                    step_index,
+                    step,
+                    scale_factor,
+                    &mut active,
+                    &mut output,
+                    &mut force_dump_label,
+                    &mut force_dump_max_snapshots,
+                    &mut stop_script,
+                    &mut failure_reason,
+                );
+            }
+            step @ (UiActionStepV2::SetWindowInnerSize { .. }
+            | UiActionStepV2::SetWindowOuterPosition { .. }
+            | UiActionStepV2::SetCursorScreenPos { .. }
+            | UiActionStepV2::SetCursorInWindow { .. }
+            | UiActionStepV2::SetCursorInWindowLogical { .. }
+            | UiActionStepV2::SetMouseButtons { .. }
+            | UiActionStepV2::RaiseWindow { .. }
+            | UiActionStepV2::SetWindowInsets { .. }) => {
+                script_steps::handle_window_effect_steps(
+                    self,
+                    window,
+                    anchor_window,
+                    step_index,
+                    step,
+                    &mut active,
+                    &mut output,
+                    &mut force_dump_label,
+                    &mut stop_script,
+                    &mut failure_reason,
+                );
+                handled = true;
+            }
+            step @ (UiActionStepV2::SetClipboardForceUnavailable { .. }
+            | UiActionStepV2::SetClipboardText { .. }
+            | UiActionStepV2::InjectIncomingOpen { .. }
+            | UiActionStepV2::WaitFrames { .. }
+            | UiActionStepV2::ResetDiagnostics) => {
+                handled = script_steps::handle_effect_only_steps(self, window, step, &mut active, &mut output);
+            }
+            _ => {}
+        }
+
+        if !handled && stall_age_ms >= Self::SCRIPT_NO_FRAME_DRIVE_HARD_TIMEOUT_MS {
+            force_dump_label = Some(format!(
+                "script-step-{step_index:04}-stalled-no-frames"
+            ));
+            stop_script = true;
+            failure_reason = Some("script_stalled_no_frames".to_string());
+            output.request_redraw = true;
+        }
+
+        if !handled && !stop_script {
+            // Wait for a real frame. The keepalive timer ensures we don't hang forever.
+            output.request_redraw = true;
+            output.effects.push(Effect::Redraw(window));
+            output.effects.push(Effect::RequestAnimationFrame(window));
+            self.active_scripts.insert(window, active);
+            return output;
+        }
+
+        finalize_drive_script_for_window(
+            self,
+            app,
+            window,
+            prev_next_step,
+            step_index,
+            step_index_u32,
+            step_kind,
+            active,
+            output,
+            force_dump_label,
+            force_dump_max_snapshots,
+            stop_script,
+            failure_reason,
+            handoff_to,
+        )
+    }
+
     pub fn drive_script_for_window(
         &mut self,
         app: &mut App,
@@ -1775,6 +2122,7 @@ impl UiDiagnosticsService {
                     .map(|p| display_path(&self.cfg.out_dir, p)),
                 last_bundle_artifact: self.last_dump_artifact_stats.clone(),
             });
+            self.sync_script_keepalive_timer(app);
             return UiScriptFrameOutput {
                 request_redraw: devtools_request_redraw,
                 ..UiScriptFrameOutput::default()
@@ -1877,4 +2225,11 @@ impl UiDiagnosticsService {
         truncate_string_bytes(&mut recorded.debug, self.cfg.max_debug_string_bytes);
         ring.push_event(&self.cfg, recorded);
     }
+}
+
+fn rect_from_v1(r: RectV1) -> Rect {
+    Rect::new(
+        Point::new(Px(r.x), Px(r.y)),
+        Size::new(Px(r.w), Px(r.h)),
+    )
 }

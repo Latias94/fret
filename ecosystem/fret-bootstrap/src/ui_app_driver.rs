@@ -1349,6 +1349,15 @@ fn ui_app_handle_event<S>(
     }
 
     #[cfg(feature = "diagnostics")]
+    if let Event::Timer { token } = event
+        && app.with_global_mut_untracked(UiDiagnosticsService::default, |svc, app| {
+            svc.maybe_handle_script_keepalive_timer_event(app, window, *token)
+        })
+    {
+        return;
+    }
+
+    #[cfg(feature = "diagnostics")]
     if crate::ui_diagnostics::maybe_consume_event(app, window, event) {
         return;
     }
