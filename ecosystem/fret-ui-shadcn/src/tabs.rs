@@ -2098,7 +2098,19 @@ impl Tabs {
                                                             layout: {
                                                                 let mut layout =
                                                                     LayoutStyle::default();
-                                                                layout.size.width = Length::Fill;
+                                                                // Avoid `width: Fill` in shrink-wrapped trigger chrome:
+                                                                // some layout backends (Taffy) can resolve percent sizing
+                                                                // against an auto-sized containing block as 0px, causing the
+                                                                // trigger background to collapse while its children overflow.
+                                                                //
+                                                                // Only opt into fill sizing when the trigger itself is
+                                                                // expected to have a definite width (e.g. `list_full_width`
+                                                                // `flex-1` triggers).
+                                                                layout.size.width = if list_full_width {
+                                                                    Length::Fill
+                                                                } else {
+                                                                    Length::Auto
+                                                                };
                                                                 layout.size.height = Length::Fill;
                                                                 layout
                                                             },
