@@ -287,14 +287,18 @@ Backlog:
   - Evidence:
     - `ecosystem/fret-ui-kit/src/declarative/semantics.rs`
     - cookbook usage: `apps/fret-cookbook/examples/hello.rs`
-  - Note: this covers components/patch targets that implement `UiIntoElement`. Some layout constructor
-    builders still require `.into_element(cx).test_id(...)` at the root.
-- [ ] AUE-semantics-121 Add a `UiBuilder`-level a11y decorator surface:
-  - `a11y_role(...)` (and/or a minimal subset of `attach_semantics` outcomes used by cookbook)
-  - ensure it composes with existing component-level semantics defaults without overriding policy
-- [ ] AUE-semantics-122 Add a compile-only smoke test to lock decorator availability across:
-  - layout constructors (`ui::h_flex/v_flex/stack`)
-  - common shadcn leaves (`Button`, `Label`, `Input`, etc.)
+  - Note: layout constructor roots can use builder-level decorators (see `AUE-semantics-121`). The
+    `UiIntoElement` extension remains useful for values that are not on the `UiBuilder` path.
+- [x] AUE-semantics-121 Add a `UiBuilder`-level semantics decorator surface:
+  - Implemented as late-landing decoration stamped during `UiBuilder::into_element(cx)`.
+  - Includes: `test_id(...)`, `a11y_role(...)`, `a11y_label(...)` (mechanism-only; no policy defaults).
+  - Evidence: `ecosystem/fret-ui-kit/src/ui_builder.rs`
+- [x] AUE-semantics-122 Add compile-only smoke coverage for decorator availability across:
+  - layout constructors (`ui::h_flex/v_flex/stack` roots)
+  - common shadcn leaves (`Button`, `Badge`, etc.)
+  - Evidence:
+    - `ecosystem/fret-ui-kit/src/ui.rs`
+    - `ecosystem/fret-ui-shadcn/tests/ui_builder_smoke.rs`
 - [ ] AUE-semantics-123 Add at least one cookbook/demo refactor that proves the noise reduction:
   - remove “decorate-only” `.into_element(cx)` calls in a small file
   - keep scripted diag gates stable (`test_id` is still the selector source of truth)

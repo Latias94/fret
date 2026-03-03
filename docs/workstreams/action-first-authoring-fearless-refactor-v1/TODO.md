@@ -301,13 +301,12 @@ These are intentionally *not* part of the v1 milestone closure, but they are lik
 practical steps:
 
 - Key context stack + diagnostics-visible context naming/stacking rules.
-- Reduce authoring noise:
-  - `test_id` late landing is available for `UiIntoElement` via `UiIntoElementTestIdExt`:
-    `ecosystem/fret-ui-kit/src/declarative/semantics.rs` (tracked as `AUE-semantics-120`).
-  - builder-level semantics decorators (beyond `test_id`) to avoid “decorate-only” `.into_element(cx)` calls:
-    `docs/workstreams/authoring-ergonomics-fluent-builder-todo.md` (`AUE-semantics-121`…)
-  - unify builder terminals + late-landing decorator coverage:
-    `docs/workstreams/unified-authoring-builder-v1-todo.md` (MVP3)
+- Reduce authoring noise (status):
+  - Done: `UiIntoElement`-level `test_id` late-landing (`AUE-semantics-120`):
+    `ecosystem/fret-ui-kit/src/declarative/semantics.rs`
+  - Done: `UiBuilder`-level semantics late-landing (`AUE-semantics-121`, MVP3):
+    `ecosystem/fret-ui-kit/src/ui_builder.rs`
+  - Remaining: cookbook/demo refactors that remove “decorate-only” early landing (tracked as `AUE-semantics-123`).
 - Pointer-triggered explainability: stable selector → action mapping without relying on script stamping.
 - View runtime ergonomics: reduce `on_action` handler boilerplate (`request_redraw` + `notify`) without weakening
   determinism or layering (ecosystem-only).
