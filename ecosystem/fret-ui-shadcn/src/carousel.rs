@@ -3648,44 +3648,70 @@ impl Carousel {
                 };
             }
 
+            let pointer_down = runtime_snapshot.drag.armed || runtime_snapshot.drag.dragging;
+            let focused_now = cx.focused_element();
+            let focus_changed = focused_now != runtime_snapshot.focus_last_focused_element;
+            let maybe_focused_slide_index_and_center = if !pointer_down && focus_changed {
+                (|| {
+                    let focused = focused_now?;
+                    let focused_bounds = cx
+                        .last_visual_bounds_for_element(focused)
+                        .or_else(|| cx.last_bounds_for_element(focused))?;
+                    let center = Point::new(
+                        Px(focused_bounds.origin.x.0 + focused_bounds.size.width.0 * 0.5),
+                        Px(focused_bounds.origin.y.0 + focused_bounds.size.height.0 * 0.5),
+                    );
+
+                    for (idx, item_id) in item_ids.iter().enumerate() {
+                        let bounds = cx
+                            .last_visual_bounds_for_element(*item_id)
+                            .or_else(|| cx.last_bounds_for_element(*item_id));
+                        if bounds.is_some_and(|b| b.contains(center)) {
+                            return Some((idx, center));
+                        }
+                    }
+                    None
+                })()
+            } else {
+                None
+            };
+
+            // Embla autoplay defaultInteraction stops playback when a slide receives focus
+            // (e.g. keyboard navigation). We mirror the outcome when stopOnInteraction is enabled.
+            if autoplay_stop_on_interaction
+                && autoplay_cfg.is_some()
+                && runtime_snapshot.autoplay_token.is_some()
+                && !runtime_snapshot.autoplay_paused_external
+                && !runtime_snapshot.autoplay_stopped_by_interaction
+                && !runtime_snapshot.autoplay_stopped_by_last_snap
+                && maybe_focused_slide_index_and_center.is_some()
+            {
+                if let Some(token) = runtime_snapshot.autoplay_token {
+                    cx.cancel_timer(token);
+                }
+                let _ = cx.app.models_mut().update(&runtime_model, |st| {
+                    st.autoplay_token = None;
+                    st.autoplay_timer_started_at = None;
+                    st.autoplay_timer_delay = None;
+                    st.autoplay_pause_delay = None;
+                    st.autoplay_stopped_by_interaction = true;
+                });
+                cx.request_frame();
+            }
+
             if options.watch_focus && view_size_now.0 > 0.0 && !snap_by_slide_now.is_empty() {
-                let pointer_down = runtime_snapshot.drag.armed || runtime_snapshot.drag.dragging;
-                let focused_now = cx.focused_element();
-                let focus_changed = focused_now != runtime_snapshot.focus_last_focused_element;
-                if !pointer_down && focus_changed {
+                if let Some((slide_index, center)) = maybe_focused_slide_index_and_center {
                     let tab_pending = runtime_snapshot.focus_tab_generation
                         != runtime_snapshot.focus_last_handled_tab_generation;
-                    let maybe_slide_index_and_center = (|| {
-                        let focused = focused_now?;
-                        let focused_bounds = cx
-                            .last_visual_bounds_for_element(focused)
-                            .or_else(|| cx.last_bounds_for_element(focused))?;
-                        let center = Point::new(
-                            Px(focused_bounds.origin.x.0 + focused_bounds.size.width.0 * 0.5),
-                            Px(focused_bounds.origin.y.0 + focused_bounds.size.height.0 * 0.5),
-                        );
-
-                        for (idx, item_id) in item_ids.iter().enumerate() {
-                            let bounds = cx
-                                .last_visual_bounds_for_element(*item_id)
-                                .or_else(|| cx.last_bounds_for_element(*item_id));
-                            if bounds.is_some_and(|b| b.contains(center)) {
-                                return Some((idx, center));
-                            }
-                        }
-                        None
-                    })();
-
-                    if let Some((slide_index, center)) = maybe_slide_index_and_center {
-                        let focus_offscreen = viewport_bounds.is_some_and(|b| !b.contains(center));
-                        let snap_index = snap_by_slide_now
-                            .get(slide_index)
-                            .copied()
-                            .unwrap_or(slide_index)
-                            .min(snaps_now.len().saturating_sub(1));
-                        if (tab_pending || focus_offscreen)
-                            && let Some(target_snap) = snaps_now.get(snap_index).copied()
-                        {
+                    let focus_offscreen = viewport_bounds.is_some_and(|b| !b.contains(center));
+                    let snap_index = snap_by_slide_now
+                        .get(slide_index)
+                        .copied()
+                        .unwrap_or(slide_index)
+                        .min(snaps_now.len().saturating_sub(1));
+                    if (tab_pending || focus_offscreen)
+                        && let Some(target_snap) = snaps_now.get(snap_index).copied()
+                    {
                             let slides_prev: Arc<[headless_carousel::CarouselSlide1D]> = cx
                                 .watch_model(&slides_model)
                                 .layout()
@@ -3807,7 +3833,6 @@ impl Carousel {
 
                             cx.request_frame();
                         }
-                    }
 
                     if tab_pending {
                         let _ = cx.app.models_mut().update(&runtime_model, |st| {
@@ -3818,8 +3843,7 @@ impl Carousel {
                 }
             }
 
-            let focused_now = cx.focused_element();
-            if focused_now != runtime_snapshot.focus_last_focused_element {
+            if focus_changed {
                 let _ = cx.app.models_mut().update(&runtime_model, |st| {
                     st.focus_last_focused_element = focused_now;
                 });
