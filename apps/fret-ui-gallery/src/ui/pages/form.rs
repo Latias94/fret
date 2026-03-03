@@ -3,9 +3,7 @@ use super::super::*;
 use crate::ui::doc_layout::{self, DocSection};
 use crate::ui::snippets::form as snippets;
 
-pub(super) fn preview_forms(
-    cx: &mut ElementContext<'_, App>,
-) -> Vec<AnyElement> {
+pub(super) fn preview_forms(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
     let upstream_demo = snippets::upstream_demo::render(cx);
     let demo = snippets::demo::render(cx);
     let input = snippets::input::render(cx);

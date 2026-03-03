@@ -16,7 +16,10 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
         model
     });
 
-    let max_w_md = LayoutRefinement::default().w_full().min_w_0().max_w(Px(520.0));
+    let max_w_md = LayoutRefinement::default()
+        .w_full()
+        .min_w_0()
+        .max_w(Px(520.0));
 
     shadcn::Textarea::new(text_area)
         .a11y_label("Message")

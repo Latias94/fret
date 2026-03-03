@@ -3,9 +3,7 @@ use super::super::*;
 use crate::ui::doc_layout::DocSection;
 use crate::ui::snippets::toast as snippets;
 
-pub(super) fn preview_toast(
-    cx: &mut ElementContext<'_, App>,
-) -> Vec<AnyElement> {
+pub(super) fn preview_toast(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
     let deprecated = snippets::deprecated::render(cx);
 
     let body = crate::ui::doc_layout::render_doc_page(

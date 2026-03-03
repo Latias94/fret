@@ -10,7 +10,9 @@ struct Models {
 }
 
 pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
-    let (checkbox, switch) = cx.with_state(Models::default, |st| (st.checkbox.clone(), st.switch.clone()));
+    let (checkbox, switch) = cx.with_state(Models::default, |st| {
+        (st.checkbox.clone(), st.switch.clone())
+    });
     let (checkbox, switch) = match (checkbox, switch) {
         (Some(checkbox), Some(switch)) => (checkbox, switch),
         _ => {
@@ -24,7 +26,10 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
         }
     };
 
-    let max_w_md = LayoutRefinement::default().w_full().min_w_0().max_w(Px(520.0));
+    let max_w_md = LayoutRefinement::default()
+        .w_full()
+        .min_w_0()
+        .max_w(Px(520.0));
 
     stack::vstack(
         cx,

@@ -3,9 +3,7 @@ use super::super::*;
 use crate::ui::doc_layout::{self, DocSection};
 use crate::ui::snippets::input as snippets;
 
-pub(super) fn preview_input(
-    cx: &mut ElementContext<'_, App>,
-) -> Vec<AnyElement> {
+pub(super) fn preview_input(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
     let basic = snippets::basic::render(cx);
     let field = snippets::field::render(cx);
     let field_group = snippets::field_group::render(cx);
