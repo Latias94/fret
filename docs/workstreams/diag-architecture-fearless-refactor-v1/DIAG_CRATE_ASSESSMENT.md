@@ -49,6 +49,8 @@ ADRs and protocol types.
      - new gates/checks,
      - new viewers/panels,
      without touching central wiring in `crates/fret-diag` and `fret-bootstrap`.
+   - Progress: runtime snapshots now expose a bounded `debug.extensions` seam (ADR 0310), but
+     tooling viewers and a broader ecosystem authoring guide are still early.
 
 ## Comparison: strengths vs common open-source UI stacks
 
@@ -103,6 +105,7 @@ This workstream tracks a staged plan for this under `TODO.md` (M3/M4).
      - gates/checks (tooling),
      - viewers/panels (DevTools GUI),
      without central churn.
+   - Status: `debug.extensions` is now implemented; see `docs/workstreams/diag-architecture-fearless-refactor-v1/DEBUG_EXTENSIONS_V1.md`.
 
 4. **Promote layout sidecars to first-class artifacts**
    - Script-level request → bundle-scoped sidecar file(s) → tooling viewer → optional gate hooks.
@@ -114,3 +117,4 @@ This workstream tracks a staged plan for this under `TODO.md` (M3/M4).
 - Add a first “layout correctness” gate script (semantics bounds) and lock it as a regression suite.
 - Design the minimal `debug.extensions` contract (keys, bounds, capability gating) before adding
   runtime payloads.
+- Add a CLI/GUI viewer for extensions (start as raw JSON, then add targeted viewers per key).

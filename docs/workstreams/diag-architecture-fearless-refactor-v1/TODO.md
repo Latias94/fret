@@ -31,10 +31,12 @@ This TODO is organized by milestones (see `MILESTONES.md`). Keep tasks **small a
 
 ## M2 — Runtime extensibility (ecosystem contributions)
 
-- [ ] Add a first-class `debug.extensions` slot in runtime snapshots (bounded, additive).
-- [ ] Implement Option A registry in `fret-bootstrap` (closures registered at init).
-- [ ] Add one real extension (e.g. docking interaction snapshot) via the registry to validate the seam.
-- [ ] Document extension key naming rules and clipping expectations.
+- [x] Add a first-class `debug.extensions` slot in runtime snapshots (bounded, additive).
+- [x] Implement Option A registry in `fret-bootstrap` (closures registered at init).
+- [x] Add one real extension via the registry to validate the seam (`dock.graph.v1`).
+- [x] Document extension key naming rules and clipping expectations.
+  - Design note: `docs/workstreams/diag-architecture-fearless-refactor-v1/DEBUG_EXTENSIONS_V1.md`
+  - ADR: `docs/adr/0310-ui-diagnostics-debug-extensions-v1.md`
 
 ## M3 — Layout correctness workflow
 
