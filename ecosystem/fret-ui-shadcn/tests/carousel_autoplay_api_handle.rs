@@ -101,6 +101,16 @@ fn carousel_autoplay_api_handle_publishes_and_accepts_stop_reset() {
         .flatten()
         .expect("expected CarouselAutoplayApi handle to be published");
 
+    let snap = handle.snapshot(&mut app);
+    assert!(
+        snap.playing,
+        "expected autoplay to be playing after initial mount; snapshot={snap:?}"
+    );
+    assert!(
+        snap.time_until_next.is_some(),
+        "expected time_until_next to be present while playing; snapshot={snap:?}"
+    );
+
     handle.stop(&mut app);
 
     render_frame(
@@ -119,6 +129,10 @@ fn carousel_autoplay_api_handle_publishes_and_accepts_stop_reset() {
     assert!(
         snap.paused_external,
         "expected stop() to pause externally; snapshot={snap:?}"
+    );
+    assert!(
+        !snap.playing,
+        "expected stop() to clear playing flag; snapshot={snap:?}"
     );
 
     handle.reset(&mut app);
@@ -139,5 +153,83 @@ fn carousel_autoplay_api_handle_publishes_and_accepts_stop_reset() {
     assert!(
         !snap.paused_external,
         "expected reset() to clear external pause; snapshot={snap:?}"
+    );
+}
+
+#[test]
+fn carousel_autoplay_api_handle_accepts_pause_and_play() {
+    let window = AppWindowId::default();
+    let bounds = window_bounds();
+
+    let mut app = App::new();
+    let mut ui: UiTree<App> = UiTree::new();
+    ui.set_window(window);
+    let mut services = StyleAwareServices::default();
+
+    let api = app
+        .models_mut()
+        .insert(None::<fret_ui_shadcn::CarouselAutoplayApi>);
+    let opts = fret_ui_shadcn::CarouselOptions::default();
+
+    for _ in 0..3 {
+        render_frame(
+            &mut ui,
+            &mut app,
+            &mut services,
+            window,
+            bounds,
+            api.clone(),
+            opts,
+            Px(200.0),
+            Px(200.0),
+        );
+    }
+
+    let handle = app
+        .models()
+        .get_cloned(&api)
+        .flatten()
+        .expect("expected CarouselAutoplayApi handle to be published");
+
+    handle.pause(&mut app);
+    render_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        api.clone(),
+        opts,
+        Px(200.0),
+        Px(200.0),
+    );
+
+    let snap = handle.snapshot(&mut app);
+    assert!(
+        snap.paused_external && !snap.playing,
+        "expected pause() to stop the timer and mark paused_external; snapshot={snap:?}"
+    );
+
+    handle.play(&mut app);
+    render_frame(
+        &mut ui,
+        &mut app,
+        &mut services,
+        window,
+        bounds,
+        api.clone(),
+        opts,
+        Px(200.0),
+        Px(200.0),
+    );
+
+    let snap = handle.snapshot(&mut app);
+    assert!(
+        !snap.paused_external && snap.playing,
+        "expected play() to resume autoplay; snapshot={snap:?}"
+    );
+    assert!(
+        snap.time_until_next.is_some(),
+        "expected time_until_next to be present after resuming; snapshot={snap:?}"
     );
 }
