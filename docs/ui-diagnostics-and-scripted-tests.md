@@ -127,6 +127,11 @@ Tooling writes `resource.footprint.json` (in the same out dir) with a `killed: b
 If `killed=true`, treat it as a diagnostics/runtime issue (e.g. exit trigger not observed, deadlock, no-frame stall) and
 prefer capturing a bounded failure bundle plus a stable `reason_code` so it can be triaged deterministically.
 
+Tooling note:
+
+- Launch-mode script runs treat `killed=true` as a failure and will report `reason_code=tooling.demo_exit.killed` (even
+  if the script itself reported `stage=passed`).
+
 ## No-frame liveness (script keepalive)
 
 Some script steps historically only progressed when a window produced redraw callbacks. In multi-window scenarios
