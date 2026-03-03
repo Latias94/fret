@@ -10,5 +10,7 @@ pub mod orientation_vertical;
 pub mod parts;
 pub mod plugin_autoplay;
 pub mod plugin_wheel_gestures;
+pub mod rtl;
 pub mod sizes;
 pub mod spacing;
+pub mod spacing_responsive;
