@@ -6,7 +6,7 @@ Last updated: 2026-03-03.
 
 - Landed: unit test gate for NavigationMenu trigger chevron rotation transition.
 - Optional: add a fixed-delta diag screenshot pair (`--fixed-frame-delta-ms 16`) for visual review.
-- Gap: `Combobox` popup should fade/zoom/slide (upstream `duration-100` + `animate-in/out`).
+- Landed: `Combobox` popup placement + presence (fade/zoom/side slide) + unit test gate.
 - Landed: `Switch` thumb slides between states (duration-driven tween) + unit test gate.
 - Landed: `Progress` indicator translate animates on value changes (duration-driven tween) + unit test gate.
 

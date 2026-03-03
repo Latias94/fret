@@ -30,7 +30,7 @@ use fret_ui_kit::{
 use crate::test_id::test_id_slug;
 use crate::{
     CommandEntry, CommandGroup, CommandItem, CommandList, CommandPalette, CommandSeparator, Drawer,
-    DrawerContent, Popover, PopoverAnchor, PopoverContent,
+    DrawerContent, Popover, PopoverAlign, PopoverAnchor, PopoverContent, PopoverSide,
 };
 
 fn alpha_mul(mut c: Color, mul: f32) -> Color {
@@ -773,8 +773,9 @@ impl Combobox {
             trigger_test_id: None,
             width: None,
             content_side: popper::Side::Bottom,
-            content_align: popper::Align::Center,
-            content_side_offset: Px(4.0),
+            content_align: popper::Align::Start,
+            // Upstream shadcn/ui v4 ComboboxContent defaults to `sideOffset=6`.
+            content_side_offset: Px(6.0),
             content_align_offset: Px(0.0),
             anchor_element_id: None,
             responsive: false,
@@ -2155,6 +2156,19 @@ fn combobox_with_patch<H: UiHost>(
         let mut popover = Popover::new(open.clone())
             .auto_focus(true)
             .consume_outside_pointer_events(consume_outside_pointer_events)
+            .side(match content_side {
+                popper::Side::Top => PopoverSide::Top,
+                popper::Side::Right => PopoverSide::Right,
+                popper::Side::Bottom => PopoverSide::Bottom,
+                popper::Side::Left => PopoverSide::Left,
+            })
+            .align(match content_align {
+                popper::Align::Start => PopoverAlign::Start,
+                popper::Align::Center => PopoverAlign::Center,
+                popper::Align::End => PopoverAlign::End,
+            })
+            .side_offset(content_side_offset)
+            .align_offset(content_align_offset)
             .diagnostics_content_element_from_cell(listbox_id_for_diag)
             .on_dismiss_request(Some(
                 kit_combobox::set_open_change_reason_on_dismiss_request(
@@ -2853,10 +2867,10 @@ mod tests {
     use fret_app::App;
     use fret_core::{
         AppWindowId, Point, Px, Rect, SemanticsRole, Size, SvgId, SvgService, TextBlobId,
-        TextConstraints, TextMetrics, TextService, UiServices,
+        TextConstraints, TextMetrics, TextService, UiServices, WindowFrameClockService,
     };
     use fret_core::{PathCommand, PathConstraints, PathId, PathMetrics, PathService, PathStyle};
-    use fret_runtime::FrameId;
+    use fret_runtime::{FrameId, TickId};
     use fret_ui::tree::UiTree;
     use fret_ui_kit::primitives::popover as radix_popover;
 
@@ -2876,6 +2890,313 @@ mod tests {
         assert_eq!(placement.align_offset, Px(12.0));
         assert!(placement.shift_cross_axis);
         assert_eq!(placement.sticky, popper::StickyMode::Partial);
+    }
+
+    #[test]
+    fn combobox_content_side_align_and_offsets_affect_popover_placement_and_slide_motion() {
+        let window = AppWindowId::default();
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            fret_core::Size::new(Px(400.0), Px(400.0)),
+        );
+
+        fn items() -> Vec<ComboboxItem> {
+            vec![
+                ComboboxItem::new("alpha", "Alpha"),
+                ComboboxItem::new("beta", "Beta"),
+                ComboboxItem::new("gamma", "Gamma"),
+            ]
+        }
+
+        fn render_frame_with_content_config(
+            ui: &mut UiTree<App>,
+            app: &mut App,
+            services: &mut dyn UiServices,
+            window: AppWindowId,
+            bounds: Rect,
+            model: Model<Option<Arc<str>>>,
+            open: Model<bool>,
+            side: popper::Side,
+            align: popper::Align,
+            side_offset: Px,
+            align_offset: Px,
+        ) -> (Rect, Option<Rect>, Vec<fret_runtime::Effect>) {
+            let next = app.frame_id().0.saturating_add(1);
+            app.set_frame_id(FrameId(next));
+            app.set_tick_id(TickId(next as u64));
+            app.with_global_mut(WindowFrameClockService::default, |svc, app| {
+                svc.record_frame(window, app.frame_id());
+            });
+
+            fret_ui_kit::OverlayController::begin_frame(app, window);
+            let root = fret_ui::declarative::render_root(
+                ui,
+                app,
+                services,
+                window,
+                bounds,
+                "combobox-content-config",
+                move |cx| {
+                    let fill = {
+                        let mut layout = LayoutStyle::default();
+                        layout.size.width = Length::Fill;
+                        layout.size.height = Length::Fill;
+                        layout
+                    };
+
+                    vec![cx.flex(
+                        FlexProps {
+                            layout: fill,
+                            direction: fret_core::Axis::Vertical,
+                            gap: Px(0.0).into(),
+                            padding: Edges::all(Px(0.0)).into(),
+                            justify: MainAlign::Start,
+                            align: CrossAlign::Start,
+                            wrap: false,
+                        },
+                        move |cx| {
+                            let spacer = cx.container(
+                                ContainerProps {
+                                    layout: {
+                                        let mut layout = LayoutStyle::default();
+                                        layout.size.width = Length::Fill;
+                                        layout.size.height = Length::Px(Px(200.0));
+                                        layout
+                                    },
+                                    ..Default::default()
+                                },
+                                |_cx| Vec::new(),
+                            );
+
+                            let combobox = Combobox::new(model, open)
+                                .test_id_prefix("cb")
+                                .trigger_test_id("cb-trigger")
+                                .into_element_parts(cx, |_cx| {
+                                    vec![
+                                        ComboboxPart::trigger(
+                                            ComboboxTrigger::new().width_px(Px(240.0)),
+                                        ),
+                                        ComboboxPart::input(ComboboxInput::new()),
+                                        ComboboxPart::content(
+                                            ComboboxContent::new([ComboboxContentPart::list(
+                                                ComboboxList::new().items(items()),
+                                            )])
+                                            .side(side)
+                                            .align(align)
+                                            .side_offset_px(side_offset)
+                                            .align_offset_px(align_offset),
+                                        ),
+                                    ]
+                                });
+
+                            vec![spacer, combobox]
+                        },
+                    )]
+                },
+            );
+            ui.set_root(root);
+            fret_ui_kit::OverlayController::render(ui, app, services, window, bounds);
+            ui.request_semantics_snapshot();
+            ui.layout_all(app, services, bounds, 1.0);
+            let effects = app.flush_effects();
+
+            let snap = ui.semantics_snapshot().expect("semantics snapshot");
+            let trigger = snap
+                .nodes
+                .iter()
+                .find(|n| n.test_id.as_deref() == Some("cb-trigger"))
+                .or_else(|| {
+                    snap.nodes
+                        .iter()
+                        .find(|n| n.role == SemanticsRole::ComboBox && n.value.is_none())
+                })
+                .expect("trigger semantics");
+            let list = snap.nodes.iter().find(|n| n.role == SemanticsRole::ListBox);
+
+            let trigger_bounds = ui
+                .debug_node_visual_bounds(trigger.id)
+                .expect("trigger bounds");
+            let list_bounds = list.and_then(|n| ui.debug_node_visual_bounds(n.id));
+            (trigger_bounds, list_bounds, effects)
+        }
+
+        fn settle_and_capture_bounds(
+            window: AppWindowId,
+            bounds: Rect,
+            side: popper::Side,
+            align: popper::Align,
+            side_offset: Px,
+            align_offset: Px,
+        ) -> (Rect, Rect, Rect, Vec<fret_runtime::Effect>) {
+            let mut app = App::new();
+            let mut ui: UiTree<App> = UiTree::new();
+            ui.set_window(window);
+            let mut services = FakeServices::default();
+
+            app.with_global_mut(WindowFrameClockService::default, |svc, _app| {
+                svc.set_fixed_delta(window, Some(std::time::Duration::from_millis(16)));
+            });
+
+            let model = app.models_mut().insert(None::<Arc<str>>);
+            let open = app.models_mut().insert(false);
+
+            // Frame 1: closed (establish stable trigger bounds).
+            let _ = render_frame_with_content_config(
+                &mut ui,
+                &mut app,
+                &mut services,
+                window,
+                bounds,
+                model.clone(),
+                open.clone(),
+                side,
+                align,
+                side_offset,
+                align_offset,
+            );
+            let _ = app.models_mut().update(&open, |v| *v = true);
+
+            // Frame 2+: first open frames. Some recipes may not stamp listbox semantics on the
+            // first open frame; render until it appears.
+            let mut trigger_bounds = Rect::default();
+            let mut list_first = None;
+            let mut effects_first_open: Vec<fret_runtime::Effect> = Vec::new();
+            for _ in 0..4 {
+                let (trigger, list, effects) = render_frame_with_content_config(
+                    &mut ui,
+                    &mut app,
+                    &mut services,
+                    window,
+                    bounds,
+                    model.clone(),
+                    open.clone(),
+                    side,
+                    align,
+                    side_offset,
+                    align_offset,
+                );
+                trigger_bounds = trigger;
+                if effects_first_open.is_empty() {
+                    effects_first_open = effects;
+                }
+                if let Some(list) = list {
+                    list_first = Some(list);
+                    break;
+                }
+            }
+            let list_first = list_first.expect("listbox semantics");
+
+            // Frames 3..: render enough ticks for a ~100ms transition to settle.
+            let mut list_last = list_first;
+            for _ in 0..12 {
+                let (_trigger, list_now, _effects) = render_frame_with_content_config(
+                    &mut ui,
+                    &mut app,
+                    &mut services,
+                    window,
+                    bounds,
+                    model.clone(),
+                    open.clone(),
+                    side,
+                    align,
+                    side_offset,
+                    align_offset,
+                );
+                if let Some(list_now) = list_now {
+                    list_last = list_now;
+                }
+            }
+
+            (trigger_bounds, list_first, list_last, effects_first_open)
+        }
+
+        // Side drives placement + slide direction.
+        {
+            let (trigger, first, settled, open_effects) = settle_and_capture_bounds(
+                window,
+                bounds,
+                popper::Side::Bottom,
+                popper::Align::Start,
+                Px(6.0),
+                Px(0.0),
+            );
+            assert!(
+                first.origin.y.0 >= trigger.origin.y.0 + trigger.size.height.0 - 1.0,
+                "expected bottom-side listbox to be below trigger; trigger={trigger:?} list={first:?}"
+            );
+            assert!(
+                open_effects.iter().any(
+                    |e| matches!(e, fret_runtime::Effect::RequestAnimationFrame(w) if *w == window)
+                ),
+                "expected opening presence to request animation frames; effects={open_effects:?}"
+            );
+            let _ = settled;
+        }
+
+        {
+            let (trigger, first, _settled, _effects) = settle_and_capture_bounds(
+                window,
+                bounds,
+                popper::Side::Top,
+                popper::Align::Start,
+                Px(6.0),
+                Px(0.0),
+            );
+            assert!(
+                first.origin.y.0 + first.size.height.0 <= trigger.origin.y.0 + 1.0,
+                "expected top-side listbox to be above trigger; trigger={trigger:?} list={first:?}"
+            );
+        }
+
+        // Align drives horizontal placement (Start vs Center should differ materially).
+        {
+            let (_trigger, _first, settled_0, _effects) = settle_and_capture_bounds(
+                window,
+                bounds,
+                popper::Side::Bottom,
+                popper::Align::Start,
+                Px(6.0),
+                Px(0.0),
+            );
+            let (_trigger, _first, settled_40, _effects) = settle_and_capture_bounds(
+                window,
+                bounds,
+                popper::Side::Bottom,
+                popper::Align::Start,
+                Px(6.0),
+                Px(40.0),
+            );
+            let dx = (settled_40.origin.x.0 - settled_0.origin.x.0).abs();
+            assert!(
+                dx >= 20.0,
+                "expected align_offset to affect listbox x; off0={settled_0:?} off40={settled_40:?} dx={dx}"
+            );
+        }
+
+        // Side offset should affect vertical placement.
+        {
+            let (_trigger, _first, settled_0, _effects) = settle_and_capture_bounds(
+                window,
+                bounds,
+                popper::Side::Bottom,
+                popper::Align::Start,
+                Px(0.0),
+                Px(0.0),
+            );
+            let (_trigger, _first, settled_24, _effects) = settle_and_capture_bounds(
+                window,
+                bounds,
+                popper::Side::Bottom,
+                popper::Align::Start,
+                Px(24.0),
+                Px(0.0),
+            );
+            let dy = (settled_24.origin.y.0 - settled_0.origin.y.0).abs();
+            assert!(
+                dy >= 12.0,
+                "expected side_offset to affect listbox y; off0={settled_0:?} off24={settled_24:?} dy={dy}"
+            );
+        }
     }
 
     #[test]
