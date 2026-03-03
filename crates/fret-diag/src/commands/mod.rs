@@ -12,6 +12,7 @@ pub(crate) mod extensions;
 pub(crate) mod hotspots;
 pub(crate) mod index;
 pub(crate) mod inspect;
+pub(crate) mod layout_perf_summary;
 pub(crate) mod layout_sidecar;
 pub(crate) mod pick;
 pub(crate) mod query;
