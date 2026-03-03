@@ -23,7 +23,7 @@ pub(super) fn preview_carousel(cx: &mut ElementContext<'_, App>) -> Vec<AnyEleme
             cx,
             [
                 "Preview follows shadcn Carousel demo: Basic, Sizes, and Spacing.",
-                "The upstream demo uses responsive item widths (`md:basis-1/2` / `lg:basis-1/3`). Fret uses a fixed `item_basis_main_px` to keep geometry deterministic in native builds.",
+                "The upstream demo uses responsive item widths (`md:basis-1/2` / `lg:basis-1/3`). Fret mirrors this via `CarouselItem::viewport_layout_breakpoint(tailwind::MD/LG, ...)`.",
                 "Spacing parity depends on pairing `track_start_neg_margin` with `item_padding_start`.",
             ],
         );
