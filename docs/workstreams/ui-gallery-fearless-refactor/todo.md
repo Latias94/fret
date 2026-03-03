@@ -48,6 +48,8 @@ Any remaining legacy surfaces that embed raw Rust code strings are tracked via t
 - [x] Migrate Calendar page(s) out of `src/ui/previews/**` so copyable code stays drift-free.
 - [x] Migrate AI Elements gallery demos to snippet-backed pages (see `docs/workstreams/ui-gallery-fearless-refactor/ai-elements-tracker.md`).
 - [x] Ensure Code tabs are vertically scrollable (wheel scrolling over CodeBlock gutters for windowed snippets).
+  - Evidence: `ecosystem/fret-code-view/src/code_block.rs` adds a `WheelRegion` that drives the
+    windowed CodeBlock VirtualList scroll handle even when wrapped by an X-scroll container.
 - [ ] Normalize DocSection chrome/layout (max widths, padding, “Notes” shell usage) across pages.
   - [x] Remove redundant centering wrappers so Preview/Code tabs share consistent left padding.
   - [x] Center doc pages once (page-level max width) so sections align to the same left gutter.
