@@ -1,0 +1,48 @@
+{
+  "schema_version": 2,
+  "meta": {
+    "name": "Workstream: launcher utility window MVP",
+    "tags": ["workstream", "launcher", "utility_window", "smoke"],
+    "required_capabilities": ["diag.script_v2", "diag.window_style_snapshot"],
+    "target_hints": [
+      "Asserts frameless main window style (effective/clamped).",
+      "Triggers SetVisible via Blink and waits for the UI to reappear.",
+      "Captures a bundle for evidence."
+    ]
+  },
+  "steps": [
+    { "type": "reset_diagnostics" },
+    {
+      "type": "wait_until",
+      "predicate": { "kind": "exists", "target": { "kind": "test_id", "id": "utility-window.root" } },
+      "timeout_frames": 600
+    },
+    {
+      "type": "assert",
+      "predicate": {
+        "kind": "window_style_effective_is",
+        "window": { "kind": "first_seen" },
+        "style": { "decorations": "none", "resizable": true, "transparent": false, "z_level": "normal" }
+      }
+    },
+    {
+      "type": "wait_until",
+      "predicate": { "kind": "exists", "target": { "kind": "test_id", "id": "utility-window.chrome.drag_region" } },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": { "kind": "exists", "target": { "kind": "test_id", "id": "utility-window.chrome.resize_se" } },
+      "timeout_frames": 240
+    },
+    { "type": "click_stable", "target": { "kind": "test_id", "id": "utility-window.blink" } },
+    { "type": "wait_frames", "n": 10 },
+    {
+      "type": "wait_until",
+      "predicate": { "kind": "exists", "target": { "kind": "test_id", "id": "utility-window.root" } },
+      "timeout_frames": 600
+    },
+    { "type": "capture_bundle", "label": "launcher-utility-window-mvp" }
+  ]
+}
+
