@@ -26,6 +26,7 @@ This TODO is organized by milestones (see `MILESTONES.md`). Keep tasks **small a
 - [x] Split “artifact materialization + integrity” into one focused module boundary with stable APIs (`artifact_store`).
 - [x] Migrate remaining ad-hoc post-run checks from `post_run_checks.rs` into `CheckRegistry` (leave only bundle path selection).
 - [x] Split builtin post-run checks into domain modules under `crates/fret-diag/src/registry/checks/builtin_post_run/` (reduce merge conflicts and navigation cost).
+- [x] Split UI gallery post-run checks into submodules (`code_editor`, `markdown_editor`, `web`, `semantics`, `text`) and lock order with a test.
 - [ ] Remove any remaining “global state by convention” patterns in favor of explicit context objects.
 
 ## M2 — Runtime extensibility (ecosystem contributions)

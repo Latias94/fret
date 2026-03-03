@@ -30,9 +30,10 @@ ADRs and protocol types.
 ## Current architectural weaknesses (why it churns)
 
 1. **Orchestration logic is still boolean-heavy**
-   - Many decisions are currently “wired by convention” (OR-chains) instead of metadata-driven
+   - Many decisions used to be “wired by convention” (OR-chains) instead of metadata-driven
      planning.
-   - This makes adding a new check/gate expensive and error-prone.
+   - Post-run planning is now registry-driven; remaining churn tends to come from launch/runtime
+     capability wiring and ad-hoc demo policies.
 
 2. **Engine policy vs demo policy is interleaved**
    - UI gallery / demo-specific rules frequently leak into “engine” code paths.
@@ -113,4 +114,3 @@ This workstream tracks a staged plan for this under `TODO.md` (M3/M4).
 - Add a first “layout correctness” gate script (semantics bounds) and lock it as a regression suite.
 - Design the minimal `debug.extensions` contract (keys, bounds, capability gating) before adding
   runtime payloads.
-

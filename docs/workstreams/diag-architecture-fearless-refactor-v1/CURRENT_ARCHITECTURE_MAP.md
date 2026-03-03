@@ -39,7 +39,8 @@ Goal: new suites/checks should plug in without growing a central match statement
   - `SuiteResolver` (suite name → scripts; promoted suites + suite-dir suites)
 - `crates/fret-diag/src/registry/checks/mod.rs`
   - `CheckRegistry` seam (planning + post-run execution)
-  - builtins live in `crates/fret-diag/src/registry/checks/builtin_post_run/mod.rs`
+  - builtins are composed in `crates/fret-diag/src/registry/checks/builtin_post_run/mod.rs`
+    - with domain modules under `crates/fret-diag/src/registry/checks/builtin_post_run/` (including `ui_gallery/*`)
 
 ## 4) Protocol types (portable schema)
 
