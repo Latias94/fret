@@ -214,13 +214,14 @@ ID format:
 
 ## F. Evidence + Regression Gates
 
-- [~] AFA-gates-050 Add at least one scripted diag repro that exercises:
+- [x] AFA-gates-050 Add at least one scripted diag repro that exercises:
   - a keybinding → action dispatch,
   - a button click → action dispatch,
   - action availability gating (disabled state) under a modal barrier.
-  - Status (as of 2026-03-02):
+  - Status (as of 2026-03-03):
     - Implemented (non-modal gating): `tools/diag-scripts/cookbook/commands-keymap-basics/cookbook-commands-keymap-basics-shortcut-and-gating.json`
     - Implemented (button click + state update): `tools/diag-scripts/cookbook/hello/cookbook-hello-click-count.json`
+    - Implemented (text input submit/clear): `tools/diag-scripts/cookbook/text-input-basics/cookbook-text-input-basics-submit-and-clear.json`
     - Implemented (modal barrier shortcut gating): `tools/diag-scripts/cookbook/overlay-basics/cookbook-overlay-basics-modal-barrier-shortcut-gating.json`
 - [x] AFA-gates-051 Add compile-only wasm smoke gates for the new view runtime surface.
   - Evidence:
