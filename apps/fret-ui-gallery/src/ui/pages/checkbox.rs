@@ -5,7 +5,6 @@ use crate::ui::snippets::checkbox as snippets;
 
 pub(super) fn preview_checkbox(
     cx: &mut ElementContext<'_, App>,
-    _model: Model<bool>,
 ) -> Vec<AnyElement> {
     let demo = snippets::demo::render(cx);
     let checked_state = snippets::checked_state::render(cx);

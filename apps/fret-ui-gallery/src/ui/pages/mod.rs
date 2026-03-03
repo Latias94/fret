@@ -618,9 +618,8 @@ pub(super) fn preview_breadcrumb(
 
 pub(super) fn preview_checkbox(
     cx: &mut ElementContext<'_, App>,
-    model: Model<bool>,
 ) -> Vec<AnyElement> {
-    checkbox::preview_checkbox(cx, model)
+    checkbox::preview_checkbox(cx)
 }
 
 pub(super) fn preview_carousel(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
