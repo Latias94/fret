@@ -321,7 +321,7 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
                 state.clone(),
                 assets.1.clone(),
                 |row, _index, _parent| RowKey(row.key),
-                |col| match col.id.as_ref() {
+                move |col| match col.id.as_ref() {
                     "status" => Arc::<str>::from(lang.status),
                     "email" => Arc::<str>::from(lang.email),
                     "amount" => Arc::<str>::from(lang.amount),
