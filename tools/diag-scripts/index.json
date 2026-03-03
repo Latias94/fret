@@ -4897,6 +4897,53 @@
       ]
     },
     {
+      "id": "workspace-shell-demo-tabstrip-escape-restores-content-focus-smoke",
+      "path": "tools/diag-scripts/workspace/shell-demo/workspace-shell-demo-tabstrip-escape-restores-content-focus-smoke.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "diag-hardening-smoke-workspace"
+      ],
+      "tags": [
+        "a11y",
+        "focus",
+        "gate",
+        "keyboard",
+        "smoke",
+        "tabstrip",
+        "workspace"
+      ],
+      "target_hints": [
+        "Enters the tab strip (Ctrl+F6) from pane content.",
+        "Presses Escape to restore focus to pane content.",
+        "Asserts content focus is restored."
+      ]
+    },
+    {
+      "id": "workspace-shell-demo-tabstrip-keyboard-roving-smoke",
+      "path": "tools/diag-scripts/workspace/shell-demo/workspace-shell-demo-tabstrip-keyboard-roving-smoke.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "diag-hardening-smoke-workspace"
+      ],
+      "tags": [
+        "a11y",
+        "gate",
+        "keyboard",
+        "smoke",
+        "tabstrip",
+        "workspace"
+      ],
+      "target_hints": [
+        "Focuses pane A content, then enters the tab strip (Ctrl+F6).",
+        "Uses Arrow keys and Home/End to rove focus and activate tabs.",
+        "Asserts focus and selection track the roving target."
+      ]
+    },
+    {
       "id": "workspace-shell-demo-tab-cross-pane-move-to-end",
       "path": "tools/diag-scripts/workspace/shell-demo/workspace-shell-demo-tab-cross-pane-move-to-end.json",
       "required_capabilities": [

@@ -113,3 +113,9 @@ ID format:
 
 - [x] WTS-parity-060 Add a Zed parity checklist with evidence anchors:
   - `docs/workstreams/workspace-tabstrip-fearless-refactor-v1/ZED_PARITY_CHECKLIST.md`
+
+## G. Keyboard + A11y
+
+- [x] WTS-a11y-070 Tabstrip keyboard roving and Escape gates exist:
+  - `tools/diag-scripts/workspace/shell-demo/workspace-shell-demo-tabstrip-keyboard-roving-smoke.json`
+  - `tools/diag-scripts/workspace/shell-demo/workspace-shell-demo-tabstrip-escape-restores-content-focus-smoke.json`
