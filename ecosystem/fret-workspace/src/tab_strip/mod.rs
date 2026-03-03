@@ -79,10 +79,7 @@ use widgets::{
 };
 
 #[cfg(feature = "shadcn-context-menu")]
-#[cfg(feature = "shadcn-context-menu")]
 use widgets::tab_strip_overflow_button;
-
-use crate::tab_drag::compute_tab_drop_target;
 
 #[cfg(feature = "shadcn-context-menu")]
 use state::get_context_menu_open_model;
@@ -2120,78 +2117,73 @@ impl WorkspaceTabStrip {
                                     } else {
                                         rects.clone()
                                     };
-                                    let inside_tab_strip = session.is_some_and(|s| {
-                                        if s.kind != DRAG_KIND_WORKSPACE_TAB || !s.dragging {
-                                            return false;
-                                        }
-                                        if s.current_window != cx.window {
-                                            return false;
-                                        }
-                                        let Some(scroll_el) = scroll_element.get() else {
-                                            return false;
-                                        };
-                                        let in_scroll = cx
-                                            .last_bounds_for_element(scroll_el)
-                                            .is_some_and(|b| b.contains(s.position));
-                                        let in_end_drop = end_drop_target_element
-                                            .get()
-                                            .and_then(|id| cx.last_bounds_for_element(id))
-                                            .is_some_and(|b| b.contains(s.position));
-                                        let in_overflow_control = overflow_control_element
-                                            .get()
-                                            .and_then(|id| cx.last_bounds_for_element(id))
-                                            .is_some_and(|b| b.contains(s.position));
-                                        let in_scroll_left_control = scroll_left_control_element
-                                            .get()
-                                            .and_then(|id| cx.last_bounds_for_element(id))
-                                            .is_some_and(|b| b.contains(s.position));
-                                        let in_scroll_right_control = scroll_right_control_element
-                                            .get()
-                                            .and_then(|id| cx.last_bounds_for_element(id))
-                                            .is_some_and(|b| b.contains(s.position));
+                                    let mut next_tab: Option<Arc<str>> = None;
+                                    let mut next_side: Option<WorkspaceTabInsertionSide> = None;
+                                    let next_rects = rects_for_cross;
 
-                                        let in_tab_row = if rects_for_cross.is_empty() {
-                                            false
-                                        } else {
-                                            let mut min_y: Option<f32> = None;
-                                            let mut max_y: Option<f32> = None;
-                                            for r in &rects_for_cross {
-                                                let top = r.rect.origin.y.0;
-                                                let bottom = r.rect.origin.y.0 + r.rect.size.height.0;
-                                                min_y = Some(min_y.map_or(top, |prev| prev.min(top)));
-                                                max_y = Some(max_y.map_or(bottom, |prev| prev.max(bottom)));
-                                            }
-                                            min_y.is_some_and(|min_y| {
-                                                max_y.is_some_and(|max_y| {
-                                                    s.position.y.0 >= min_y && s.position.y.0 <= max_y
+                                    if let Some(session) = session
+                                        && session.kind == DRAG_KIND_WORKSPACE_TAB
+                                        && session.dragging
+                                        && session.current_window == cx.window
+                                        && let Some(dragged) = tab_drag_snapshot.dragged_tab.as_deref()
+                                    {
+                                        let mut drop = compute_workspace_tab_strip_drop_target(
+                                            session.position,
+                                            dragged,
+                                            &next_rects,
+                                            pinned_boundary_rect_now,
+                                            end_drop_target_rect_now,
+                                            viewport_for_hit,
+                                            overflow_control_rect_now,
+                                            scroll_left_control_rect_now,
+                                            scroll_right_control_rect_now,
+                                        );
+
+                                        // Cross-pane drag policy: dropping in end-drop / header space inserts at the
+                                        // end of the canonical order, regardless of scroll position.
+                                        if matches!(drop, WorkspaceTabStripDropTarget::End) {
+                                            drop = canonical_tab_order
+                                                .last()
+                                                .cloned()
+                                                .map(|id| {
+                                                    WorkspaceTabStripDropTarget::Tab(
+                                                        id,
+                                                        WorkspaceTabInsertionSide::After,
+                                                    )
                                                 })
-                                            })
-                                        };
+                                                .unwrap_or(WorkspaceTabStripDropTarget::None);
+                                        }
 
-                                        in_scroll
-                                            || in_end_drop
-                                            || in_overflow_control
-                                            || in_scroll_left_control
-                                            || in_scroll_right_control
-                                            || in_tab_row
-                                    });
+                                        // Do not surface pinned-boundary drops as "insert next to tab" for
+                                        // cross-pane drags. Pinned is a workspace policy affordance.
+                                        if matches!(drop, WorkspaceTabStripDropTarget::PinnedBoundary) {
+                                            drop = WorkspaceTabStripDropTarget::None;
+                                        }
 
-                                    let (next_tab, next_side, next_rects) = if inside_tab_strip {
-                                        let session = session.expect("checked above");
-                                        let drop_target = tab_drag_snapshot
-                                            .dragged_tab
-                                            .as_deref()
-                                            .and_then(|dragged| {
-                                                compute_tab_drop_target(session.position, dragged, &rects_for_cross)
-                                            });
-                                        (
-                                            drop_target.as_ref().map(|(id, _)| id.clone()),
-                                            drop_target.as_ref().map(|(_, side)| *side),
-                                            rects_for_cross,
-                                        )
-                                    } else {
-                                        (None, None, rects_for_cross)
-                                    };
+                                        // Cross-pane drag policy: avoid implicitly pinning tabs by inserting into
+                                        // the pinned region. If the drop target lands on a pinned tab, clamp the
+                                        // insertion to the pinned boundary (insert after the last pinned tab).
+                                        if let WorkspaceTabStripDropTarget::Tab(target, _side) = &drop
+                                            && pinned_by_id.get(target).copied().unwrap_or(false)
+                                        {
+                                            let pinned_count =
+                                                tabs.iter().take_while(|t| t.pinned).count();
+                                            if pinned_count > 0
+                                                && let Some(last_pinned) = canonical_tab_order
+                                                    .get(pinned_count.saturating_sub(1))
+                                            {
+                                                drop = WorkspaceTabStripDropTarget::Tab(
+                                                    last_pinned.clone(),
+                                                    WorkspaceTabInsertionSide::After,
+                                                );
+                                            }
+                                        }
+
+                                        if let WorkspaceTabStripDropTarget::Tab(id, side) = drop {
+                                            next_tab = Some(id);
+                                            next_side = Some(side);
+                                        }
+                                    }
 
                                     if tab_drag_snapshot.hovered_tab != next_tab
                                         || tab_drag_snapshot.hovered_tab_side != next_side
