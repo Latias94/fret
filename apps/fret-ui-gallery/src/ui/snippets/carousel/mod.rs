@@ -10,6 +10,8 @@ pub mod orientation_vertical;
 pub mod parts;
 pub mod plugin_autoplay;
 pub mod plugin_autoplay_controlled;
+pub mod plugin_autoplay_delays;
+pub mod plugin_autoplay_stop_on_last_snap;
 pub mod plugin_wheel_gestures;
 pub mod rtl;
 pub mod sizes;

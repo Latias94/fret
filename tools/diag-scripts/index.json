@@ -2098,6 +2098,28 @@
       ]
     },
     {
+      "id": "ui-gallery-carousel-plugin-autoplay-stop-on-last-snap-gate",
+      "path": "tools/diag-scripts/ui-gallery/carousel/ui-gallery-carousel-plugin-autoplay-stop-on-last-snap-gate.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "ui-gallery-shadcn-conformance"
+      ],
+      "tags": [
+        "autoplay",
+        "carousel",
+        "gate",
+        "plugin",
+        "stopOnLastSnap",
+        "ui-gallery"
+      ],
+      "target_hints": [
+        "Navigate to the UI gallery Carousel page and wait for the autoplay demo to stop at the last snap.",
+        "Expected behavior: `stopOnLastSnap` stops scheduling timers after the last snap is reached."
+      ]
+    },
+    {
       "id": "ui-gallery-chart-accessibility-layer-keyboard",
       "path": "tools/diag-scripts/ui-gallery/chart/ui-gallery-chart-accessibility-layer-keyboard.json",
       "required_capabilities": [],
