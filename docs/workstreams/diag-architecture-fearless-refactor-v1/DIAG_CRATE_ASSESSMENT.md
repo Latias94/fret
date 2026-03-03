@@ -2,6 +2,8 @@
 
 Status: Draft (workstream note)
 
+Last updated: 2026-03-03
+
 This note answers: “How good is `crates/fret-diag` today?”, “What is missing compared to other UI
 projects?”, and “What should we refactor if we can be fearless?”.
 
@@ -39,18 +41,29 @@ ADRs and protocol types.
    - UI gallery / demo-specific rules frequently leak into “engine” code paths.
    - This increases churn and makes it hard to treat `fret-diag` as a reusable subsystem.
 
-3. **Missing a coherent layout debugging workflow**
-   - There is a Taffy dump escape hatch, but it is not a first-class artifact tied to a bundle.
-   - There is no “inspect → pick selector → assert geometry → explain with layout sidecar” path.
+3. **Layout debugging workflow exists, but explainability ergonomics are still early**
+   - Layout sidecars are now first-class bundle-scoped artifacts (native-only, best-effort) and can be
+     captured via scripts and viewed in tooling.
+   - Remaining gaps are mostly UX and correlation:
+     - richer “why layout changed” diffs (hotspots deltas, constraints deltas),
+     - semantics selector ↔ layout node correlation (best-effort mapping),
+     - DevTools GUI affordances (browse sidecars, open viewer, copy selectors/gates).
+   - Evidence anchors:
+     - Sidecar contract: `docs/workstreams/diag-architecture-fearless-refactor-v1/LAYOUT_SIDECARS_V1.md`
+     - Script step: `ecosystem/fret-bootstrap/src/ui_diagnostics/script_steps.rs`
+     - Viewer: `crates/fret-diag/src/commands/layout_sidecar.rs`
 
-4. **Extensibility is still mostly “edit the monolith”**
+4. **Extensibility is improving, but “ecosystem authoring” needs consolidation**
    - Ecosystem crates cannot easily contribute:
-     - new runtime debug payloads,
-     - new gates/checks,
-     - new viewers/panels,
-     without touching central wiring in `crates/fret-diag` and `fret-bootstrap`.
-   - Progress: runtime snapshots now expose a bounded `debug.extensions` seam (ADR 0310), but
-     tooling viewers and a broader ecosystem authoring guide are still early.
+      - new runtime debug payloads,
+      - new gates/checks,
+      - new viewers/panels,
+      without touching central wiring in `crates/fret-diag` and `fret-bootstrap`.
+   - Progress:
+     - runtime snapshots expose a bounded `debug.extensions` seam (ADR 0310),
+     - tooling has a CLI viewer (`fretboard diag extensions ...`) to browse/print extension payloads.
+   - Next: promote a single “how to author diagnostics” guide as the default path for ecosystem PRs
+     (register writer → capture bundle → view evidence → add a gate).
 
 ## Comparison: strengths vs common open-source UI stacks
 
@@ -114,7 +127,9 @@ This workstream tracks a staged plan for this under `TODO.md` (M3/M4).
 
 - Continue migrating ad-hoc post-run checks into `CheckRegistry` until `diag_run.rs` no longer needs
   large OR-chains.
-- Add a first “layout correctness” gate script (semantics bounds) and lock it as a regression suite.
-- Design the minimal `debug.extensions` contract (keys, bounds, capability gating) before adding
-  runtime payloads.
-- Add a CLI/GUI viewer for extensions (start as raw JSON, then add targeted viewers per key).
+- Expand the layout correctness suite (more scenarios + stable reason codes) and add a bounded layout
+  perf summary (M4).
+- Consolidate the ecosystem authoring story into one short guide with an end-to-end example:
+  - register writer → capture bundle → `fretboard diag extensions --key ... --print` → add a gate.
+- Add one targeted “key-specific viewer” to validate the path (e.g. render a dock graph summary as a
+  small table rather than raw JSON), then mirror it in DevTools GUI later (M5).
