@@ -366,7 +366,7 @@ pub(crate) fn cmd_run(ctx: RunCmdContext) -> Result<(), String> {
         checks,
     } = ctx;
 
-    let checks_for_post_run = checks.clone();
+    let mut checks_for_post_run = checks.clone();
 
     let RunChecks {
         check_chart_sampling_window_shifts_min: _,
@@ -522,6 +522,12 @@ pub(crate) fn cmd_run(ctx: RunCmdContext) -> Result<(), String> {
     }
 
     let src = resolve_run_script_source(&workspace_root, &src)?;
+    let policy_wheel_events_max_per_frame =
+        crate::diag_policy::ui_gallery_script_requires_wheel_events_max_per_frame_gate(&src)
+            .then_some(1);
+    let check_wheel_events_max_per_frame =
+        check_wheel_events_max_per_frame.or(policy_wheel_events_max_per_frame);
+    checks_for_post_run.check_wheel_events_max_per_frame = check_wheel_events_max_per_frame;
     let use_devtools_ws =
         devtools_ws_url.is_some() || devtools_token.is_some() || devtools_session_id.is_some();
     if use_devtools_ws {
@@ -555,6 +561,7 @@ pub(crate) fn cmd_run(ctx: RunCmdContext) -> Result<(), String> {
                 src.display()
             );
         }
+
 
         let _ = write_json_value(&resolved_script_path, &script_json);
 
