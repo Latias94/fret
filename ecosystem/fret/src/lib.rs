@@ -129,11 +129,18 @@ impl Default for Defaults {
     }
 }
 
-/// MVU-style authoring helpers (desktop builds).
+/// Legacy MVU-style authoring helpers (desktop builds).
+///
+/// New code should prefer action-first authoring via `View` + typed actions (ADRs 0307/0308).
 #[cfg(all(not(target_arch = "wasm32"), feature = "desktop"))]
 pub mod mvu;
 
-/// MVU-style command routing helpers (portable; desktop + web).
+/// Legacy MVU-style command routing helpers (portable; desktop + web).
+///
+/// These routers exist for compatibility and for cases where you need dynamic, typed routing
+/// without introducing a full action registry surface.
+///
+/// Prefer action-first (`fret::actions!`) whenever possible.
 pub mod mvu_router;
 
 /// Interop helpers for embedding foreign UI as isolated surfaces (desktop builds).

@@ -1,7 +1,13 @@
-//! MVU-style command routing helpers (portable).
+//! Legacy MVU-style command routing helpers (portable).
 //!
 //! This module is intended to be usable across desktop + web builds.
 //! It is intentionally self-contained and does not depend on the desktop-only `UiAppDriver`.
+//!
+//! Current recommendation (v1):
+//!
+//! - Prefer action-first authoring: typed unit actions (`fret::actions!`) + action handlers.
+//! - Use `KeyedMessageRouter` only when you truly need dynamic, typed routing inside cached/reused
+//!   subtrees and cannot express the interaction as a stable action ID.
 
 use std::collections::HashMap;
 use std::hash::Hash;

@@ -234,8 +234,12 @@ ID format:
 
 This phase is intentionally last.
 
-- [ ] AFA-clean-060 Deprecate legacy routing glue that is no longer recommended in templates/docs.
-  - Candidate: per-frame-only message routers in places that should be action-first.
+- [x] AFA-clean-060 Deprecate legacy routing glue that is no longer recommended in templates/docs.
+  - Note: this is a doc-level deprecation in v1 (no compile-time `#[deprecated]` yet).
+  - Evidence:
+    - `ecosystem/fret/src/lib.rs` (MVU modules labeled legacy + recommendation pointer)
+    - `ecosystem/fret/src/mvu.rs` (legacy note + view-cache footgun callout)
+    - `ecosystem/fret/src/mvu_router.rs` (legacy note + action-first recommendation)
 - [x] AFA-clean-061 Update docs and templates:
   - `docs/README.md` state management section shows actions + view runtime as the golden path.
   - `fretboard` templates generate action-first demos by default.
