@@ -306,22 +306,22 @@ pub(crate) fn cmd_run(ctx: RunCmdContext) -> Result<(), String> {
         check_ui_gallery_code_editor_torture_read_only_blocks_edits,
         check_ui_gallery_code_editor_torture_undo_redo: _,
         check_ui_gallery_code_editor_word_boundary,
-        check_ui_gallery_markdown_editor_source_a11y_composition,
-        check_ui_gallery_markdown_editor_source_a11y_composition_soft_wrap,
+        check_ui_gallery_markdown_editor_source_a11y_composition: _,
+        check_ui_gallery_markdown_editor_source_a11y_composition_soft_wrap: _,
         check_ui_gallery_markdown_editor_source_disabled_blocks_edits,
-        check_ui_gallery_markdown_editor_source_folds_clamp_selection_out_of_folds,
-        check_ui_gallery_markdown_editor_source_folds_placeholder_absent_under_inline_preedit,
-        check_ui_gallery_markdown_editor_source_folds_placeholder_present,
-        check_ui_gallery_markdown_editor_source_folds_placeholder_present_under_soft_wrap,
-        check_ui_gallery_markdown_editor_source_folds_toggle_stable,
+        check_ui_gallery_markdown_editor_source_folds_clamp_selection_out_of_folds: _,
+        check_ui_gallery_markdown_editor_source_folds_placeholder_absent_under_inline_preedit: _,
+        check_ui_gallery_markdown_editor_source_folds_placeholder_present: _,
+        check_ui_gallery_markdown_editor_source_folds_placeholder_present_under_soft_wrap: _,
+        check_ui_gallery_markdown_editor_source_folds_toggle_stable: _,
         check_ui_gallery_markdown_editor_source_inlays_absent_under_inline_preedit,
         check_ui_gallery_markdown_editor_source_inlays_caret_navigation_stable,
         check_ui_gallery_markdown_editor_source_inlays_present,
         check_ui_gallery_markdown_editor_source_inlays_present_under_soft_wrap,
         check_ui_gallery_markdown_editor_source_inlays_toggle_stable,
-        check_ui_gallery_markdown_editor_source_line_boundary_triple_click,
+        check_ui_gallery_markdown_editor_source_line_boundary_triple_click: _,
         check_ui_gallery_markdown_editor_source_read_only_blocks_edits,
-        check_ui_gallery_markdown_editor_source_soft_wrap_editing_selection_wrap_stable,
+        check_ui_gallery_markdown_editor_source_soft_wrap_editing_selection_wrap_stable: _,
         check_ui_gallery_markdown_editor_source_soft_wrap_toggle_stable: _,
         check_ui_gallery_markdown_editor_source_word_boundary: _,
         check_ui_gallery_text_fallback_policy_key_bumps_on_locale_change,
@@ -395,15 +395,6 @@ pub(crate) fn cmd_run(ctx: RunCmdContext) -> Result<(), String> {
         || check_ui_gallery_text_fallback_policy_key_bumps_on_settings_change
         || check_ui_gallery_text_fallback_policy_key_bumps_on_locale_change
         || check_ui_gallery_text_mixed_script_bundled_fallback_conformance
-        || check_ui_gallery_markdown_editor_source_line_boundary_triple_click
-        || check_ui_gallery_markdown_editor_source_a11y_composition
-        || check_ui_gallery_markdown_editor_source_a11y_composition_soft_wrap
-        || check_ui_gallery_markdown_editor_source_soft_wrap_editing_selection_wrap_stable
-        || check_ui_gallery_markdown_editor_source_folds_toggle_stable
-        || check_ui_gallery_markdown_editor_source_folds_clamp_selection_out_of_folds
-        || check_ui_gallery_markdown_editor_source_folds_placeholder_present
-        || check_ui_gallery_markdown_editor_source_folds_placeholder_present_under_soft_wrap
-        || check_ui_gallery_markdown_editor_source_folds_placeholder_absent_under_inline_preedit
         || check_ui_gallery_markdown_editor_source_inlays_toggle_stable
         || check_ui_gallery_markdown_editor_source_inlays_caret_navigation_stable
         || check_ui_gallery_markdown_editor_source_inlays_present
