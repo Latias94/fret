@@ -28,7 +28,7 @@ pub(super) fn preview_card(
     let body = doc_layout::render_doc_page(
         cx,
         Some(
-            "Preview follows shadcn Card docs order: Demo, Usage, Size, Image, RTL (plus extra regression-focused sections).",
+            "Preview follows the shadcn Card docs core flow (Demo + Usage), plus extra regression-focused sections (Size, Image, RTL).",
         ),
         vec![
             DocSection::new("Demo", login)
