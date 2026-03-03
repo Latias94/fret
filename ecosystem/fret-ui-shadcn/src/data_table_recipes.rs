@@ -9,15 +9,15 @@ use fret_ui::action::OnActivate;
 use fret_ui::element::{AnyElement, LayoutQueryRegionProps, LayoutStyle, Length};
 use fret_ui::elements::GlobalElementId;
 use fret_ui::{ElementContext, Theme, UiHost};
-use fret_ui_headless::table::{pin_column, ColumnDef, ColumnId, ColumnPinPosition, TableState};
+use fret_ui_headless::table::{ColumnDef, ColumnId, ColumnPinPosition, TableState, pin_column};
 use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
-use fret_ui_kit::declarative::stack::{hstack, HStackProps};
+use fret_ui_kit::declarative::stack::{HStackProps, hstack};
 use fret_ui_kit::declarative::table::TableViewOutput;
-use fret_ui_kit::{ui, ChromeRefinement, ColorRef, LayoutRefinement, Radius, Space};
+use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, Radius, Space, ui};
 use serde_json::Value;
 
 use crate::button::{Button, ButtonSize, ButtonVariant};
-use crate::direction::{use_direction, LayoutDirection};
+use crate::direction::{LayoutDirection, use_direction};
 use crate::dropdown_menu::{
     DropdownMenu, DropdownMenuAlign, DropdownMenuCheckboxItem, DropdownMenuEntry,
     DropdownMenuLabel, DropdownMenuRadioGroup, DropdownMenuRadioItemSpec,
