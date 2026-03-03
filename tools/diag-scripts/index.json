@@ -2910,6 +2910,16 @@
       ]
     },
     {
+      "id": "ui-gallery-data-table-basic-row-actions-menu-toggle-stability",
+      "path": "tools/diag-scripts/ui-gallery/data-table/ui-gallery-data-table-basic-row-actions-menu-toggle-stability.json",
+      "required_capabilities": [],
+      "suite_memberships": [
+        "ui-gallery-data-table"
+      ],
+      "tags": [],
+      "target_hints": []
+    },
+    {
       "id": "ui-gallery-data-table-guide-demo-checkbox-only-selection",
       "path": "tools/diag-scripts/ui-gallery/data-table/ui-gallery-data-table-guide-demo-checkbox-only-selection.json",
       "required_capabilities": [],
