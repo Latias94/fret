@@ -206,6 +206,9 @@ This is a practical checklist for editor-grade parity. It intentionally mixes UX
   - In-window floating: delivered and gated (see above).
   - Floating OS window, custom chrome: delivered and gated via tabs-group drags on empty tab-bar space (see above).
   - OS window chrome (non-client): still a parity gap. If we want ImGui-style multi-viewport title-bar docking, we need a first-class “drag chrome to dock” policy that does not fight custom window chrome and runner window-move policies.
+- Undock whole node (tabs-group tear-off):
+  - Delivered (2026-03-03): tearing off a whole tab stack via tabs-group drag is gated:
+    - `tools/diag-scripts/docking/arbitration/docking-arbitration-demo-multiwindow-tearoff-tabs-group-two-tabs.json`
 - Multi-monitor “hand off” feel: ImGui viewports are routinely dragged across monitors with changing DPI. We should
   validate (and gate) that tear-off windows preserve expected DPI/scale behavior when crossing monitors (where supported).
 
