@@ -1,7 +1,6 @@
 pub const SOURCE: &str = include_str!("upstream_demo.rs");
 
 // region: example
-use fret_app::App;
 use fret_ui_headless::calendar::CalendarMonth;
 use fret_ui_kit::declarative::form::{FormRegistry, FormRegistryOptions, FormRevalidateMode};
 use fret_ui_kit::headless::form_state::{FormState, FormValidateMode};
@@ -9,7 +8,12 @@ use fret_ui_shadcn::{self as shadcn, prelude::*};
 use std::sync::Arc;
 use time::Date;
 
-pub fn render(cx: &mut ElementContext<'_, App>, max_w_sm: LayoutRefinement) -> AnyElement {
+pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
+    let max_w_sm = LayoutRefinement::default()
+        .w_full()
+        .min_w_0()
+        .max_w(Px(384.0));
+
     #[derive(Default)]
     struct FormDemoModels {
         form_state: Option<Model<FormState>>,
@@ -572,7 +576,7 @@ pub fn render(cx: &mut ElementContext<'_, App>, max_w_sm: LayoutRefinement) -> A
                     },
                 );
 
-                let item_row = |cx: &mut ElementContext<'_, App>,
+                let item_row = |cx: &mut ElementContext<'_, H>,
                                 model: Model<bool>,
                                 id: &'static str,
                                 label: &'static str| {

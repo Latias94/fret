@@ -5,39 +5,18 @@ use crate::ui::snippets::form as snippets;
 
 pub(super) fn preview_forms(
     cx: &mut ElementContext<'_, App>,
-    text_input: Model<String>,
-    text_area: Model<String>,
-    checkbox: Model<bool>,
-    switch: Model<bool>,
+    _text_input: Model<String>,
+    _text_area: Model<String>,
+    _checkbox: Model<bool>,
+    _switch: Model<bool>,
 ) -> Vec<AnyElement> {
-    let max_w_md = LayoutRefinement::default().w_full().max_w(Px(520.0));
-    let max_w_sm = LayoutRefinement::default()
-        .w_full()
-        .max_w(Px(384.0))
-        .min_w_0();
-
-    let upstream_demo = snippets::upstream_demo::render(cx, max_w_sm.clone());
-
-    let demo = snippets::demo::render(
-        cx,
-        text_input.clone(),
-        text_area.clone(),
-        checkbox.clone(),
-        switch.clone(),
-        max_w_md.clone(),
-    );
-
-    let input = snippets::input::render(cx, text_input.clone(), max_w_md.clone());
-
-    let textarea = snippets::textarea::render(cx, text_area.clone(), max_w_md.clone());
-
-    let controls =
-        snippets::controls::render(cx, checkbox.clone(), switch.clone(), max_w_md.clone());
-
-    let fieldset =
-        snippets::fieldset::render(cx, text_input.clone(), text_area.clone(), max_w_md.clone());
-
-    let rtl = snippets::rtl::render(cx, text_input.clone(), switch.clone(), max_w_md.clone());
+    let upstream_demo = snippets::upstream_demo::render(cx);
+    let demo = snippets::demo::render(cx);
+    let input = snippets::input::render(cx);
+    let textarea = snippets::textarea::render(cx);
+    let controls = snippets::controls::render(cx);
+    let fieldset = snippets::fieldset::render(cx);
+    let rtl = snippets::rtl::render(cx);
 
     let notes = snippets::notes::render(cx);
 
