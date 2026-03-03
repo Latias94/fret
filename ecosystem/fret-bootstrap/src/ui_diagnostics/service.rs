@@ -336,6 +336,7 @@ impl UiDiagnosticsService {
             | UiActionStepV2::DragPointer { target, .. }
             | UiActionStepV2::DragPointerUntil { target, .. }
             | UiActionStepV2::Wheel { target, .. }
+            | UiActionStepV2::WheelBurst { target, .. }
             | UiActionStepV2::ClickStable { target, .. }
             | UiActionStepV2::ClickSelectableTextSpanStable { target, .. }
             | UiActionStepV2::WaitBoundsStable { target, .. }
@@ -599,6 +600,7 @@ impl UiDiagnosticsService {
                 | UiActionStepV2::DragPointerUntil { window, .. }
                 | UiActionStepV2::DragTo { window, .. }
                 | UiActionStepV2::Wheel { window, .. }
+                | UiActionStepV2::WheelBurst { window, .. }
                 | UiActionStepV2::ClickStable { window, .. }
                 | UiActionStepV2::ClickSelectableTextSpanStable { window, .. }
                 | UiActionStepV2::WaitBoundsStable { window, .. }
@@ -646,6 +648,7 @@ impl UiDiagnosticsService {
             | UiActionStepV2::DragPointerUntil { window, .. }
             | UiActionStepV2::DragTo { window, .. }
             | UiActionStepV2::Wheel { window, .. }
+            | UiActionStepV2::WheelBurst { window, .. }
             | UiActionStepV2::ClickStable { window, .. }
             | UiActionStepV2::ClickSelectableTextSpanStable { window, .. }
             | UiActionStepV2::WaitBoundsStable { window, .. }
