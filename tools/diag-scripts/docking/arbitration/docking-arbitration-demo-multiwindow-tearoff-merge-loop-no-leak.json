@@ -117,6 +117,7 @@
       },
       "timeout_frames": 240
     },
+    { "type": "wait_until", "predicate": { "kind": "known_window_count_is", "n": 1 }, "timeout_frames": 600 },
     { "type": "capture_bundle", "label": "loop-cycle1-after-merge" },
 
     {
@@ -127,7 +128,7 @@
       "delta_y": 0.0,
       "steps": 140
     },
-    { "type": "wait_until", "predicate": { "kind": "known_window_count_ge", "n": 3 }, "timeout_frames": 240 },
+    { "type": "wait_until", "predicate": { "kind": "known_window_count_ge", "n": 2 }, "timeout_frames": 240 },
     { "type": "wait_frames", "n": 30 },
     { "type": "set_window_outer_position", "window": { "kind": "last_seen_other" }, "x_px": 220.0, "y_px": 220.0 },
     { "type": "wait_frames", "n": 10 },
@@ -186,6 +187,7 @@
       },
       "timeout_frames": 240
     },
+    { "type": "wait_until", "predicate": { "kind": "known_window_count_is", "n": 1 }, "timeout_frames": 600 },
     { "type": "capture_bundle", "label": "loop-cycle2-after-merge" },
 
     {
@@ -196,7 +198,7 @@
       "delta_y": 0.0,
       "steps": 140
     },
-    { "type": "wait_until", "predicate": { "kind": "known_window_count_ge", "n": 4 }, "timeout_frames": 240 },
+    { "type": "wait_until", "predicate": { "kind": "known_window_count_ge", "n": 2 }, "timeout_frames": 240 },
     { "type": "wait_frames", "n": 30 },
     { "type": "set_window_outer_position", "window": { "kind": "last_seen_other" }, "x_px": 260.0, "y_px": 260.0 },
     { "type": "wait_frames", "n": 10 },
@@ -243,6 +245,8 @@
       },
       "timeout_frames": 240
     },
+    { "type": "wait_until", "predicate": { "kind": "known_window_count_is", "n": 1 }, "timeout_frames": 600 },
+    { "type": "capture_bundle", "label": "loop-cycle3-after-merge" },
     {
       "type": "assert",
       "window": { "kind": "first_seen" },
