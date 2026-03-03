@@ -38,7 +38,7 @@ impl DocSection {
             preview,
             code: None,
             tabs_sizing: DocTabsSizing::default(),
-            max_w: Px(820.0),
+            max_w: Px(760.0),
             test_id_prefix: None,
             shell: true,
         }
@@ -133,7 +133,7 @@ pub(in crate::ui) fn render_doc_page(
         .iter()
         .map(|s| s.max_w)
         .fold(Px(0.0), |a, b| Px(a.0.max(b.0)));
-    let page_max_w = Px(Px(820.0).0.max(max_section_w.0));
+    let page_max_w = Px(Px(760.0).0.max(max_section_w.0));
 
     let body = stack::vstack(
         cx,
@@ -476,7 +476,7 @@ fn render_section(cx: &mut ElementContext<'_, App>, section: DocSection) -> AnyE
         None => preview,
     };
 
-    let section_max_w = Px(max_w.0.max(Px(820.0).0));
+    let section_max_w = max_w;
     let section_body = stack::vstack(
         cx,
         stack::VStackProps::default()
