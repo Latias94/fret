@@ -224,7 +224,9 @@ ID format:
 - [x] AFA-gates-052 Add a small set of unit tests for action routing / handler table behavior.
   - Evidence:
     - `crates/fret-ui/src/tree/tests/command_dispatch_source_trace.rs`
-- [ ] AFA-gates-053 Add a “risk matrix” review pass for M0/M1 (see `RISK_MATRIX.md`).
+- [x] AFA-gates-053 Add a “risk matrix” review pass for M0/M1 (see `RISK_MATRIX.md`).
+  - Evidence:
+    - `docs/workstreams/action-first-authoring-fearless-refactor-v1/RISK_MATRIX.md` (review pass section)
 
 ---
 
