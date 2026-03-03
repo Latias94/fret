@@ -38,6 +38,9 @@ Status: Draft
   - [x] Native (winit): `FRET_WINIT_COALESCE_WHEEL=1` (coalesce consecutive wheel events).
 - [x] Add a max-abs delta guardrail for a single coalesced wheel event (still needs perf validation on VirtualList):
   - `FRET_WINIT_COALESCE_WHEEL_MAX_ABS_PX` (default: `120`)
+- [x] Implement frame-boundary buffering in the desktop runner (deliver ≤ 1 wheel per frame when enabled):
+  - `crates/fret-launch/src/runner/desktop/runner/app_handler.rs`
+  - `crates/fret-launch/src/runner/desktop/runner/window.rs`
 - [x] Collect repeatable perf evidence (repeat=11, warmup=10):
   - `perf-ui-gallery-scroll-area` (script: `ui-gallery-scroll-area-wheel-torture`)
     - OFF (`FRET_WINIT_COALESCE_WHEEL=0`):
@@ -59,7 +62,8 @@ Status: Draft
       - log: `target/perf-logs/virtual-list-coalesce-on-r11.log`
 - [x] Re-run repeat=11 perf after adding the max-abs cap (2026-03-03):
   - Goal: keep `perf-ui-gallery-scroll-area` improved, remove `perf-ui-gallery-virtual-list` p95 regression.
-  - Result: `cap=120` still shows high variance for VirtualList; see the “Full rerun” section below.
+  - Result (pre frame-boundary buffering): `cap=120` still shows high variance for VirtualList; see the “Full rerun (pre frame-boundary buffering)” section below.
+  - Result (after frame-boundary buffering): `cap=120` is stable for both scripts; see the “Frame-boundary buffering rerun” section below.
 
 ### Rerun (2026-03-03) — max-abs cap default (`120`)
 
@@ -89,7 +93,7 @@ Short rerun (repeat=5, warmup=10) to sanity-check the new default cap behavior:
   - [x] stress wheel in a virtual list (`ui-gallery-virtual-list-wheel-torture`),
   - [x] nested scrollable case (inner X should not consume Y wheel: `ui-gallery-scroll-area-nested-scroll-routing`).
 
-Full rerun (repeat=11, warmup=10) with explicit env overrides (2026-03-03):
+Full rerun (repeat=11, warmup=10) with explicit env overrides (2026-03-03, pre frame-boundary buffering):
 
 - `perf-ui-gallery-virtual-list` (script: `ui-gallery-virtual-list-wheel-torture`)
   - OFF (`FRET_WINIT_COALESCE_WHEEL=0`):
@@ -124,7 +128,29 @@ Notes:
 - Current evidence suggests the cap is workload-sensitive:
   - `cap=120` is acceptable for `scroll-area` but shows high variance/regression in `virtual-list`.
   - `cap=60` removes the `virtual-list` spikes but regresses `scroll-area` in this torture script.
-- Follow-up needed: pick a single safe default (or adjust coalescing semantics) before making coalescing a default-on behavior.
+- Follow-up (partially resolved): frame-boundary buffering makes `cap=120` stable in repeat=11 for both scripts; next step is deciding if/when this becomes default-on across platforms.
+
+Frame-boundary buffering rerun (repeat=11, warmup=10) (2026-03-03):
+
+- `perf-ui-gallery-virtual-list` (script: `ui-gallery-virtual-list-wheel-torture`)
+  - OFF (`FRET_WINIT_COALESCE_WHEEL=0`):
+    - p50/p95 `total/layout/solve` us: `10927/12140` / `10263/11451` / `2986/3307`
+    - worst bundle: `target/fret-diag/1772519046872/bundle.json`
+    - log: `target/perf-logs/virtual-list-coalesce-off-frame-r11-20260303.log`
+  - ON (`FRET_WINIT_COALESCE_WHEEL=1`, cap `120`):
+    - p50/p95 `total/layout/solve` us: `10729/11614` / `10099/10922` / `2985/3187`
+    - worst bundle: `target/fret-diag/1772519094741/bundle.json`
+    - log: `target/perf-logs/virtual-list-coalesce-on-frame-cap120-r11-20260303.log`
+
+- `perf-ui-gallery-scroll-area` (script: `ui-gallery-scroll-area-wheel-torture`)
+  - OFF (`FRET_WINIT_COALESCE_WHEEL=0`):
+    - p50/p95 `total/layout/solve` us: `28544/52680` / `27404/50496` / `2855/5707`
+    - worst bundle: `target/fret-diag/1772519164488/bundle.json`
+    - log: `target/perf-logs/scroll-area-coalesce-off-frame-r11-20260303.log`
+  - ON (`FRET_WINIT_COALESCE_WHEEL=1`, cap `120`):
+    - p50/p95 `total/layout/solve` us: `29282/31195` / `28203/30055` / `2957/3434`
+    - worst bundle: `target/fret-diag/1772519183814/bundle.json`
+    - log: `target/perf-logs/scroll-area-coalesce-on-frame-cap120-r11-20260303.log`
 
 ## Perf harness plumbing
 

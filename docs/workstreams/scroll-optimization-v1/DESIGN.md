@@ -146,24 +146,23 @@ Options:
 
 Current implementation (native, opt-in):
 
-- Winit runner coalesces consecutive wheel events when `FRET_WINIT_COALESCE_WHEEL=1`:
-  - `crates/fret-runner-winit/src/state/input/mod.rs`
-  - Guardrail: cap the absolute delta of a single coalesced event to avoid pathological "one huge
-    wheel jump" cases (note: not a complete fix for VirtualList worst-frame regressions):
+- Desktop runner buffers wheel deltas and delivers at most one `PointerEvent::Wheel` per frame when
+  `FRET_WINIT_COALESCE_WHEEL=1`:
+  - Buffering/flush: `crates/fret-launch/src/runner/desktop/runner/app_handler.rs`
+  - Per-window storage: `WindowRuntime.pending_wheel` in `crates/fret-launch/src/runner/desktop/runner/window.rs`
+  - Mapping still uses winit semantics (`WindowEvent::MouseWheel` -> `PointerEvent::Wheel`) via
+    `crates/fret-runner-winit/src/state/input/mod.rs`.
+  - Guardrail: cap the absolute delta of a single delivered wheel event, carrying remainder over
+    subsequent frames:
     - `FRET_WINIT_COALESCE_WHEEL_MAX_ABS_PX` (default: `120`)
-  - Note: this is an in-order coalescer (it merges only adjacent mapped wheel events). In the
-    desktop winit runner today, each `WindowEvent` is typically mapped into a fresh `Vec<Event>`.
-    That means runner-side coalescing is most visible under synthetic/driver bursts (diag), or on
-    platforms/paths that batch multiple wheel events into one delivery turn. If we want strict
-    “one wheel event per frame” semantics, we likely need a small buffering layer at the frame
-    boundary in `crates/fret-launch`.
 
 Design note (cap sensitivity):
 
-- Repeat=11 perf evidence shows `FRET_WINIT_COALESCE_WHEEL_MAX_ABS_PX` is workload-sensitive: a cap
-  that is “safe” for `ScrollArea` can still cause spikes in `VirtualList` under the current
-  coalescing semantics. See `docs/workstreams/scroll-optimization-v1/TODO.md` for concrete numbers
-  and bundles.
+- Under “adjacent event” coalescing (before frame-boundary buffering), repeat=11 perf evidence
+  showed `FRET_WINIT_COALESCE_WHEEL_MAX_ABS_PX` is workload-sensitive: a cap that is “safe” for
+  `ScrollArea` could still cause spikes in `VirtualList`. After switching to frame-boundary buffering,
+  `cap=120` is stable for both scripts in repeat=11 (see `docs/workstreams/scroll-optimization-v1/TODO.md`
+  for the before/after bundles and logs).
 
 Evidence gate:
 

@@ -347,6 +347,7 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                     },
                     ..Default::default()
                 },
+                pending_wheel: None,
                 #[cfg(target_os = "android")]
                 android_bottom_inset_baseline: None,
                 pending_surface_resize: None,

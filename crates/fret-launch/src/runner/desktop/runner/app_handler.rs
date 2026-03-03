@@ -1,5 +1,6 @@
 //! Winit `ApplicationHandler` integration.
 
+use super::window::PendingWheelEvent;
 use super::*;
 use std::sync::{Mutex, OnceLock};
 
@@ -8,6 +9,70 @@ use fret_platform::external_drop::ExternalDropProvider as _;
 
 #[cfg(feature = "diag-screenshots")]
 use slotmap::Key as _;
+
+fn wheel_coalesce_axis_px(prev: Px, next: Px) -> Px {
+    let prev_v = prev.0;
+    let next_v = next.0;
+    if prev_v.signum() == next_v.signum() {
+        Px(prev_v + next_v)
+    } else {
+        Px(next_v)
+    }
+}
+
+fn wheel_coalesce_delta(prev: Point, next: Point) -> Point {
+    Point::new(
+        wheel_coalesce_axis_px(prev.x, next.x),
+        wheel_coalesce_axis_px(prev.y, next.y),
+    )
+}
+
+fn wheel_split_axis_by_max_abs_px(delta: Px, max_abs: f32) -> (Px, Px) {
+    let v = delta.0;
+    if v.abs() <= max_abs {
+        return (delta, Px(0.0));
+    }
+    let delivered = Px(v.signum() * max_abs);
+    let remainder = Px(v - delivered.0);
+    (delivered, remainder)
+}
+
+fn wheel_split_delta_by_max_abs_px(delta: Point, max_abs: f32) -> (Point, Point) {
+    let (dx, rx) = wheel_split_axis_by_max_abs_px(delta.x, max_abs);
+    let (dy, ry) = wheel_split_axis_by_max_abs_px(delta.y, max_abs);
+    (Point::new(dx, dy), Point::new(rx, ry))
+}
+
+#[cfg(test)]
+mod wheel_coalescing_tests {
+    use super::*;
+
+    #[test]
+    fn wheel_coalesce_axis_overrides_opposite_signs() {
+        assert_eq!(wheel_coalesce_axis_px(Px(-10.0), Px(-5.0)), Px(-15.0));
+        assert_eq!(wheel_coalesce_axis_px(Px(-10.0), Px(5.0)), Px(5.0));
+        assert_eq!(wheel_coalesce_axis_px(Px(10.0), Px(-5.0)), Px(-5.0));
+    }
+
+    #[test]
+    fn wheel_split_axis_by_max_abs_caps_and_carries_remainder() {
+        let (delivered, remainder) = wheel_split_axis_by_max_abs_px(Px(-200.0), 120.0);
+        assert_eq!(delivered, Px(-120.0));
+        assert_eq!(remainder, Px(-80.0));
+
+        let (delivered, remainder) = wheel_split_axis_by_max_abs_px(Px(50.0), 120.0);
+        assert_eq!(delivered, Px(50.0));
+        assert_eq!(remainder, Px(0.0));
+    }
+
+    #[test]
+    fn wheel_split_delta_by_max_abs_caps_per_axis() {
+        let (delivered, remainder) =
+            wheel_split_delta_by_max_abs_px(Point::new(Px(-200.0), Px(50.0)), 120.0);
+        assert_eq!(delivered, Point::new(Px(-120.0), Px(50.0)));
+        assert_eq!(remainder, Point::new(Px(-80.0), Px(0.0)));
+    }
+}
 
 #[derive(Debug, Clone, Copy)]
 struct RedrawHitchConfig {
@@ -140,6 +205,18 @@ fn write_redraw_hitch_log(line: &str) {
 }
 
 impl<D: WinitAppDriver> WinitRunner<D> {
+    fn wheel_coalescing_enabled() -> bool {
+        std::env::var_os("FRET_WINIT_COALESCE_WHEEL").is_some_and(|v| !v.is_empty() && v != "0")
+    }
+
+    fn wheel_coalescing_max_abs_px() -> f32 {
+        std::env::var("FRET_WINIT_COALESCE_WHEEL_MAX_ABS_PX")
+            .ok()
+            .and_then(|v| v.parse::<f32>().ok())
+            .filter(|v| v.is_finite() && *v > 0.0)
+            .unwrap_or(120.0)
+    }
+
     fn try_create_missing_surfaces(&mut self) {
         let Some(context) = self.context.as_ref() else {
             return;
@@ -1263,7 +1340,10 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
                     // Cross-window drags are runner-routed (Enter/Over/Drop), so ensure the
                     // drag session cannot get "stuck" if no widget ends it.
                     if let Some(released) = cancel_pointer_id.or(left_up_pointer_id)
-                        && self.app.drag(released).is_some_and(|d| d.cross_window_hover)
+                        && self
+                            .app
+                            .drag(released)
+                            .is_some_and(|d| d.cross_window_hover)
                     {
                         self.app.cancel_drag(released);
                         let _ = self.clear_internal_drag_hover_if_needed();
@@ -1357,6 +1437,53 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
                     frame_id = self.app.frame_id().0,
                 );
                 let _redraw_guard = redraw_span.enter();
+
+                if Self::wheel_coalescing_enabled() {
+                    let max_abs = Self::wheel_coalescing_max_abs_px();
+                    let mut to_deliver: Option<PendingWheelEvent> = None;
+                    let mut remainder: Option<PendingWheelEvent> = None;
+
+                    if let Some(state) = self.windows.get_mut(app_window)
+                        && let Some(pending) = state.pending_wheel.take()
+                    {
+                        let (delivered_delta, remainder_delta) =
+                            wheel_split_delta_by_max_abs_px(pending.delta, max_abs);
+                        if delivered_delta.x.0.abs() > 0.0001 || delivered_delta.y.0.abs() > 0.0001
+                        {
+                            to_deliver = Some(PendingWheelEvent {
+                                delta: delivered_delta,
+                                ..pending
+                            });
+                        }
+                        if remainder_delta.x.0.abs() > 0.0001 || remainder_delta.y.0.abs() > 0.0001
+                        {
+                            remainder = Some(PendingWheelEvent {
+                                delta: remainder_delta,
+                                ..pending
+                            });
+                        }
+                    }
+
+                    if let Some(remainder) = remainder {
+                        if let Some(state) = self.windows.get_mut(app_window) {
+                            state.pending_wheel = Some(remainder);
+                        }
+                        self.app.request_redraw(app_window);
+                    }
+
+                    if let Some(wheel) = to_deliver {
+                        self.deliver_window_event_now(
+                            app_window,
+                            &Event::Pointer(fret_core::PointerEvent::Wheel {
+                                pointer_id: wheel.pointer_id,
+                                position: wheel.position,
+                                delta: wheel.delta,
+                                modifiers: wheel.modifiers,
+                                pointer_type: wheel.pointer_type,
+                            }),
+                        );
+                    }
+                }
 
                 let window_ref = self.windows.get(app_window).map(|s| s.window.clone());
                 if let Some(window_ref) = window_ref {
@@ -1850,6 +1977,69 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
                     );
                     mapped
                 };
+
+                let wheel_coalescing_enabled = Self::wheel_coalescing_enabled();
+                let mut saw_wheel = false;
+                let mapped = if wheel_coalescing_enabled {
+                    let mut passthrough = Vec::with_capacity(mapped.len());
+                    let mut pending: Option<PendingWheelEvent> = None;
+
+                    for evt in mapped {
+                        match evt {
+                            Event::Pointer(fret_core::PointerEvent::Wheel {
+                                pointer_id,
+                                position,
+                                delta,
+                                modifiers,
+                                pointer_type,
+                            }) => {
+                                saw_wheel = true;
+                                pending = Some(match pending {
+                                    Some(mut prev) => {
+                                        prev.delta = wheel_coalesce_delta(prev.delta, delta);
+                                        prev.position = position;
+                                        prev.modifiers = modifiers;
+                                        prev.pointer_type = pointer_type;
+                                        prev.pointer_id = pointer_id;
+                                        prev
+                                    }
+                                    None => PendingWheelEvent {
+                                        pointer_id,
+                                        position,
+                                        delta,
+                                        modifiers,
+                                        pointer_type,
+                                    },
+                                });
+                            }
+                            other => passthrough.push(other),
+                        }
+                    }
+
+                    if let Some(pending) = pending {
+                        if let Some(state) = self.windows.get_mut(app_window) {
+                            state.pending_wheel = Some(match state.pending_wheel.take() {
+                                Some(mut prev) => {
+                                    prev.delta = wheel_coalesce_delta(prev.delta, pending.delta);
+                                    prev.position = pending.position;
+                                    prev.modifiers = pending.modifiers;
+                                    prev.pointer_type = pending.pointer_type;
+                                    prev.pointer_id = pending.pointer_id;
+                                    prev
+                                }
+                                None => pending,
+                            });
+                        }
+                    }
+
+                    passthrough
+                } else {
+                    mapped
+                };
+
+                if saw_wheel {
+                    self.app.request_redraw(app_window);
+                }
 
                 if mapped.iter().any(|evt| {
                     matches!(
