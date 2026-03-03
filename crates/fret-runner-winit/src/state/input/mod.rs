@@ -28,6 +28,11 @@ pub struct WinitInputState {
     pub modifiers: Modifiers,
     pub raw_modifiers: ModifiersState,
     pub alt_gr_down: bool,
+    /// Whether the runner believes an IME preedit session is currently active.
+    ///
+    /// This is used to suppress `KeyboardInput.text` -> `Event::TextInput` emission while composing,
+    /// since `Event::TextInput` is reserved for committed insertion text.
+    pub ime_composing: bool,
     pub last_pointer_type: fret_core::PointerType,
     pointers: HashMap<PointerId, PointerState>,
 }
@@ -212,6 +217,15 @@ impl WinitInputState {
                 }));
             }
             WindowEvent::Ime(ime) => {
+                self.ime_composing = match ime {
+                    winit::event::Ime::Preedit(text, cursor) => {
+                        !text.is_empty() || cursor.is_some()
+                    }
+                    winit::event::Ime::Commit(_) | winit::event::Ime::Disabled => false,
+                    winit::event::Ime::Enabled | winit::event::Ime::DeleteSurrounding { .. } => {
+                        self.ime_composing
+                    }
+                };
                 let mapped = match ime {
                     winit::event::Ime::Enabled => fret_core::ImeEvent::Enabled,
                     winit::event::Ime::Disabled => fret_core::ImeEvent::Disabled,
@@ -488,7 +502,9 @@ impl WinitInputState {
                     modifiers: self.modifiers,
                     repeat,
                 });
-                if let Some(text) = event.text.as_ref().and_then(|t| sanitize_text_input(t)) {
+                if !self.ime_composing
+                    && let Some(text) = event.text.as_ref().and_then(|t| sanitize_text_input(t))
+                {
                     out.push(Event::TextInput(text));
                 }
             }
@@ -502,3 +518,79 @@ impl WinitInputState {
 
 #[cfg(test)]
 mod click_tracker_tests;
+
+#[cfg(test)]
+mod ime_text_input_suppression_tests {
+    use super::*;
+    use winit::event::Ime;
+    use winit::keyboard::{Key, KeyCode, KeyLocation, PhysicalKey};
+
+    fn key_event_with_text(text: &str) -> KeyEvent {
+        KeyEvent {
+            physical_key: PhysicalKey::Code(KeyCode::KeyA),
+            logical_key: Key::Character("a".into()),
+            text: Some(text.into()),
+            location: KeyLocation::Standard,
+            state: ElementState::Pressed,
+            repeat: false,
+            text_with_all_modifiers: Some(text.into()),
+            key_without_modifiers: Key::Character("a".into()),
+        }
+    }
+
+    #[test]
+    fn suppresses_text_input_during_ime_preedit() {
+        let mut state = WinitInputState::default();
+        let mut out = Vec::new();
+
+        state.handle_window_event(
+            1.0,
+            &WindowEvent::Ime(Ime::Preedit("a".into(), None)),
+            &mut out,
+        );
+        assert!(state.ime_composing);
+
+        out.clear();
+        state.handle_window_event(
+            1.0,
+            &WindowEvent::KeyboardInput {
+                device_id: None,
+                event: key_event_with_text("x"),
+                is_synthetic: false,
+            },
+            &mut out,
+        );
+
+        assert!(out.iter().any(|e| matches!(e, Event::KeyDown { .. })));
+        assert!(!out.iter().any(|e| matches!(e, Event::TextInput(_))));
+    }
+
+    #[test]
+    fn allows_text_input_after_composition_clears() {
+        let mut state = WinitInputState::default();
+        let mut out = Vec::new();
+
+        state.handle_window_event(
+            1.0,
+            &WindowEvent::Ime(Ime::Preedit("a".into(), Some((0, 1)))),
+            &mut out,
+        );
+        assert!(state.ime_composing);
+
+        out.clear();
+        state.handle_window_event(1.0, &WindowEvent::Ime(Ime::Commit("x".into())), &mut out);
+        assert!(!state.ime_composing);
+
+        out.clear();
+        state.handle_window_event(
+            1.0,
+            &WindowEvent::KeyboardInput {
+                device_id: None,
+                event: key_event_with_text("x"),
+                is_synthetic: false,
+            },
+            &mut out,
+        );
+        assert!(out.iter().any(|e| matches!(e, Event::TextInput(_))));
+    }
+}
