@@ -756,6 +756,59 @@ fn ime_delete_surrounding_deletes_base_text_without_clearing_preedit() {
     assert_eq!(input.preedit_cursor, Some((0, 1)));
 }
 
+fn varying_ascii_text(len: usize) -> String {
+    let mut out = String::with_capacity(len);
+    for i in 0..len {
+        let b = b'a' + (u8::try_from(i % 26).unwrap_or(0));
+        out.push(b as char);
+    }
+    out
+}
+
+#[test]
+fn surrounding_text_snapshot_is_cached_across_frames() {
+    let mut input = TextInput::new();
+    input.text = varying_ascii_text(5000);
+    input.caret = 2500;
+    input.selection_anchor = 2500;
+
+    let s1 = <TextInput as Widget<TestHost>>::platform_text_input_snapshot(&input)
+        .expect("expected snapshot");
+    let s2 = <TextInput as Widget<TestHost>>::platform_text_input_snapshot(&input)
+        .expect("expected snapshot");
+
+    let t1 = s1
+        .surrounding_text
+        .expect("expected surrounding text to be present");
+    let t2 = s2
+        .surrounding_text
+        .expect("expected surrounding text to be present");
+
+    assert!(Arc::ptr_eq(&t1.text, &t2.text));
+    assert_eq!(t1.cursor, t2.cursor);
+    assert_eq!(t1.anchor, t2.anchor);
+
+    // Changing the caret/anchor should produce a different excerpt (and then cache again).
+    input.caret = 2501;
+    input.selection_anchor = 2501;
+    let s3 = <TextInput as Widget<TestHost>>::platform_text_input_snapshot(&input)
+        .expect("expected snapshot");
+    let s4 = <TextInput as Widget<TestHost>>::platform_text_input_snapshot(&input)
+        .expect("expected snapshot");
+
+    let t3 = s3
+        .surrounding_text
+        .expect("expected surrounding text to be present");
+    let t4 = s4
+        .surrounding_text
+        .expect("expected surrounding text to be present");
+
+    assert_ne!(t1.text.as_ref(), t3.text.as_ref());
+    assert!(Arc::ptr_eq(&t3.text, &t4.text));
+    assert_eq!(t3.cursor, t4.cursor);
+    assert_eq!(t3.anchor, t4.anchor);
+}
+
 #[derive(Default)]
 struct ImeTextService {}
 

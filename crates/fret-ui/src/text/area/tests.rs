@@ -9,6 +9,59 @@ use fret_core::{
 use fret_runtime::{Effect, PlatformCapabilities};
 use slotmap::KeyData;
 use std::collections::HashMap;
+use std::sync::Arc;
+
+fn varying_ascii_text(len: usize) -> String {
+    let mut out = String::with_capacity(len);
+    for i in 0..len {
+        let b = b'a' + (u8::try_from(i % 26).unwrap_or(0));
+        out.push(b as char);
+    }
+    out
+}
+
+#[test]
+fn surrounding_text_snapshot_is_cached_across_frames() {
+    let mut area = TextArea::default();
+    area.set_text(varying_ascii_text(5000));
+    area.caret = 2500;
+    area.selection_anchor = 2500;
+
+    let s1 = <TextArea as Widget<TestHost>>::platform_text_input_snapshot(&area)
+        .expect("expected snapshot");
+    let s2 = <TextArea as Widget<TestHost>>::platform_text_input_snapshot(&area)
+        .expect("expected snapshot");
+
+    let t1 = s1
+        .surrounding_text
+        .expect("expected surrounding text to be present");
+    let t2 = s2
+        .surrounding_text
+        .expect("expected surrounding text to be present");
+
+    assert!(Arc::ptr_eq(&t1.text, &t2.text));
+    assert_eq!(t1.cursor, t2.cursor);
+    assert_eq!(t1.anchor, t2.anchor);
+
+    area.caret = 2501;
+    area.selection_anchor = 2501;
+    let s3 = <TextArea as Widget<TestHost>>::platform_text_input_snapshot(&area)
+        .expect("expected snapshot");
+    let s4 = <TextArea as Widget<TestHost>>::platform_text_input_snapshot(&area)
+        .expect("expected snapshot");
+
+    let t3 = s3
+        .surrounding_text
+        .expect("expected surrounding text to be present");
+    let t4 = s4
+        .surrounding_text
+        .expect("expected surrounding text to be present");
+
+    assert_ne!(t1.text.as_ref(), t3.text.as_ref());
+    assert!(Arc::ptr_eq(&t3.text, &t4.text));
+    assert_eq!(t3.cursor, t4.cursor);
+    assert_eq!(t3.anchor, t4.anchor);
+}
 
 #[derive(Debug, Clone, Copy)]
 struct RenderTransformWrapper {
