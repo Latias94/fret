@@ -39,6 +39,10 @@ Use `fret-ui-review` when the goal is an architecture/UX audit rather than produ
 ## Best practices (repeatable habits)
 
 - Prefer `--launch` for determinism; avoid relying on parent-shell `FRET_DIAG_*` for tool-launched runs.
+- For tool-launched runs, use `resource.footprint.json` as the “shutdown outcome” hint:
+  - `killed=false` typically means the app observed `exit.touch` and exited cleanly.
+  - `killed=true` means tooling had to force-kill the demo after a grace window (often indicates exit trigger not
+    observed, a deadlock, or a no-frame stall).
 - Treat `--dir` (`FRET_DIAG_DIR`) as a **session boundary**:
   - Do not share the same out dir between multiple concurrent runs (multiple terminals, multiple AI agents, or multiple
     demos at once). The filesystem transport uses shared control-plane files (`*.touch`, `script.json`, `script.result.json`,
@@ -246,6 +250,8 @@ For evidence-first triage (reason codes + bounded traces), see: `references/evid
     redraw callbacks, so `wait_frames`/timeouts do not progress.
   - Fix: remove trailing `wait_frames`, or rewrite it into a semantic `wait_until` (then end with `capture_bundle`).
   - If this happens right after a `capture_bundle`, ensure that `capture_bundle` is the final step.
+  - If `script_keepalive` is enabled, prefer expecting a stable failure with `reason_code=timeout.no_frames` instead of
+    a tooling timeout.
 - “artifacts are unexpectedly huge”
   - Quick self-check (launch policy): `fretboard diag config doctor --mode launch --print-launch-policy`
   - Run `fretboard diag config doctor --mode launch` to spot output-explosion risks before rerunning.

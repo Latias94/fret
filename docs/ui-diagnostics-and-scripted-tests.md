@@ -127,6 +127,31 @@ Tooling writes `resource.footprint.json` (in the same out dir) with a `killed: b
 If `killed=true`, treat it as a diagnostics/runtime issue (e.g. exit trigger not observed, deadlock, no-frame stall) and
 prefer capturing a bounded failure bundle plus a stable `reason_code` so it can be triaged deterministically.
 
+## No-frame liveness (script keepalive)
+
+Some script steps historically only progressed when a window produced redraw callbacks. In multi-window scenarios
+(especially docking tear-off + overlap + z-order churn), a relevant window can become fully occluded or idle/throttled
+and stop producing redraw callbacks. If your script tail still depends on additional frames (e.g. trailing
+`wait_frames`), this can leave `script.result.json` stuck at `stage=running` and push the failure into tooling timeouts.
+
+Launch-mode tooling mitigations (recommended):
+
+- Tool-launched `--launch` runs write `script_keepalive=true` into the per-run `diag.config.json`.
+- When enabled, the in-app diagnostics runtime arms a repeating timer while scripts are pending/active. On each tick it
+  polls triggers and can advance a conservative subset of steps even if no window is producing redraw callbacks.
+- If the next step cannot safely progress without frames for a bounded wall time, the script fails with
+  `reason_code=timeout.no_frames` (instead of hanging).
+
+Manual runs (escape hatch):
+
+- Set `FRET_DIAG_SCRIPT_KEEPALIVE=1` (or set `script_keepalive=true` in the config file) when authoring/triaging
+  occlusion-heavy scripts that might otherwise hang.
+
+Important limitation:
+
+- Keepalive ticks are intentionally conservative: pointer-dispatch steps and semantics-dependent selector resolution
+  still require real UI frames/snapshots. Keepalive is a liveness safety net, not a “renderless UI simulator”.
+
 Footgun / recommendation:
 
 - Avoid running `rg`/`grep` directly on `bundle.json` dumps (they can be huge and can easily explode your terminal output).
