@@ -906,9 +906,13 @@ Recent additions:
 - `checked_is` / `checked_is_none` (assert `checked` flag state; useful for checkbox/radio menu items)
 - `active_item_is` (assert the active item for composite widgets: matches either container `active_descendant` or roving focus)
 - `dock_drop_preview_kind_is` (assert coarse docking drop preview decision: `wrap_binary` vs `insert_into_split`)
+- `dock_drop_resolve_source_is` (assert which mechanism selected the current docking drop preview)
+- `dock_drop_resolved_is_some` (assert whether the drop preview has a resolved target or stays `None`)
+- `dock_drop_resolved_zone_is` (assert the resolved docking zone: left/right/top/bottom/center)
+- `dock_drop_resolved_insert_index_is` (assert the resolved insert index when dropping into a tab strip)
 - `dock_graph_canonical_is` / `dock_graph_has_nested_same_axis_splits_is` (assert N-ary docking canonical-form invariants via a cheap stats snapshot)
 - `dock_graph_node_count_le` / `dock_graph_max_split_depth_le` (assert dock graph size/depth stays bounded after repeated operations)
-- `known_window_count_ge` / `known_window_count_is` (assert number of currently open windows as best-effort reported by the runner; computed as `max(runner_window_count, diag_known_windows)` to avoid backend lag in multi-window tear-off scripts)
+- `known_window_count_ge` / `known_window_count_is` (assert number of currently open windows as best-effort reported by the runner; backed by the runner-owned window lifecycle diagnostics store when available, falling back to the input context service)
 - `dock_drag_current_window_is` (assert that a dock drag session is active and its `current_window` matches a window target)
 - `dock_drag_moving_window_is` (assert the runner-reported moving window for a dock drag; ImGui-style “follow window”)
 - `dock_drag_window_under_moving_window_is` (assert the best-effort “window under moving window” selection during a dock drag)
@@ -1121,6 +1125,10 @@ Docking predicates (require a `WindowInteractionDiagnosticsStore` publisher, typ
 
 - `{"kind":"dock_drop_preview_kind_is","preview_kind":"wrap_binary"}`
 - `{"kind":"dock_drop_preview_kind_is","preview_kind":"insert_into_split"}`
+- `{"kind":"dock_drop_resolve_source_is","source":"tab_bar"}`
+- `{"kind":"dock_drop_resolved_is_some","some":true}`
+- `{"kind":"dock_drop_resolved_zone_is","zone":"right"}`
+- `{"kind":"dock_drop_resolved_insert_index_is","index":0}`
 - `{"kind":"dock_graph_canonical_is","canonical":true}`
 - `{"kind":"dock_graph_has_nested_same_axis_splits_is","has_nested":false}`
 - `{"kind":"known_window_count_ge","n":2}`
@@ -1464,5 +1472,12 @@ Notes:
 
 **Multiple windows**
 
-- bundles are per-window; scripts currently execute against the first window that picks up the pending script.
-- for z-order / overlap cases during cross-window drags, prefer targeting `wait_frames.window` to a window that is actively producing frames (e.g. `first_seen`).
+- Bundles are per-window; scripts currently execute against the first window that picks up the pending script.
+- `known_window_count_*` gates are for **currently open windows** (runner best-effort). Use them to:
+  - wait for tear-off window birth (`known_window_count_ge`),
+  - wait for auto-close after merge-back (`known_window_count_is`).
+  If you need an “ever seen windows” gate, add a dedicated predicate instead of overloading window count.
+- For z-order / overlap cases during cross-window drags:
+  - prefer tool-launched `--launch` (input isolation + keepalive),
+  - seed the target window cursor model with `set_cursor_in_window_logical` before migrating `pointer_move`/`pointer_up`,
+  - if a step exposes a `window` target (e.g. `wait_frames.window`), prefer a window that is actively producing frames (e.g. `first_seen`).
