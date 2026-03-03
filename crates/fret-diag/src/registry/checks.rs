@@ -71,6 +71,11 @@ const BUILTIN_POST_RUN_CHECKS: &[PostRunCheckEntry] = &[
         should_run: should_run_notify_hotspot_file_max,
         run: run_notify_hotspot_file_max,
     },
+    PostRunCheckEntry {
+        id: "triage_hint_absent_codes",
+        should_run: should_run_triage_hint_absent_codes,
+        run: run_triage_hint_absent_codes,
+    },
 ];
 
 fn should_run_gc_sweep_liveness(checks: &RunChecks) -> bool {
@@ -97,5 +102,58 @@ fn run_notify_hotspot_file_max(
             ctx.warmup_frames,
         )?;
     }
+    Ok(())
+}
+
+fn should_run_triage_hint_absent_codes(checks: &RunChecks) -> bool {
+    !checks.check_triage_hint_absent_codes.is_empty()
+}
+
+fn run_triage_hint_absent_codes(
+    ctx: PostRunCheckContext<'_>,
+    checks: &RunChecks,
+) -> Result<(), String> {
+    let sort = crate::BundleStatsSort::Invalidation;
+    let report = crate::bundle_stats_from_path(
+        ctx.bundle_path,
+        1,
+        sort,
+        crate::BundleStatsOptions {
+            warmup_frames: ctx.warmup_frames,
+        },
+    )?;
+    let triage = crate::triage_json_from_stats(ctx.bundle_path, &report, sort, ctx.warmup_frames);
+    let present_codes: Vec<String> = triage
+        .get("hints")
+        .and_then(|v| v.as_array())
+        .map(|hints| {
+            hints
+                .iter()
+                .filter_map(|h| {
+                    h.get("code")
+                        .and_then(|c| c.as_str())
+                        .map(|s| s.to_string())
+                })
+                .collect()
+        })
+        .unwrap_or_default();
+
+    let mut violations: Vec<String> = Vec::new();
+    for code in checks.check_triage_hint_absent_codes.iter() {
+        if present_codes.iter().any(|c| c == code) {
+            violations.push(code.clone());
+        }
+    }
+    if !violations.is_empty() {
+        return Err(format!(
+            "triage hint(s) present but forbidden by --check-triage-hint-absent: {}\n\
+ bundle={}\n\
+ present_hints={}",
+            violations.join(", "),
+            ctx.bundle_path.display(),
+            present_codes.join(", ")
+        ));
+    }
+
     Ok(())
 }
