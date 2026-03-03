@@ -1,41 +1,92 @@
 {
-  "schema_version": 2,
   "meta": {
     "name": "Workspace shell demo: close button closes active tab (smoke)",
-    "tags": ["workspace", "tabstrip", "close", "smoke", "gate"],
-    "required_capabilities": ["diag.script_v2"],
+    "required_capabilities": [
+      "diag.script_v2"
+    ],
+    "tags": [
+      "workspace",
+      "tabstrip",
+      "close",
+      "smoke",
+      "gate"
+    ],
     "target_hints": [
-      "Waits for the close button on the active tab (pane A, doc-a-2).",
+      "Activates doc-a-0 (pane A) so the close target is guaranteed to be in-view.",
+      "Waits for the close button on the active tab (pane A, doc-a-0).",
       "Clicks the close button.",
       "Asserts the tab is removed from the UI tree."
     ]
   },
+  "schema_version": 2,
   "steps": [
-    { "type": "set_window_inner_size", "width_px": 1280.0, "height_px": 720.0 },
-    { "type": "wait_frames", "n": 10 },
-
     {
-      "type": "wait_until",
+      "height_px": 720.0,
+      "type": "set_window_inner_size",
+      "width_px": 1280.0
+    },
+    {
+      "n": 10,
+      "type": "wait_frames"
+    },
+    {
       "predicate": {
         "kind": "exists",
-        "target": { "kind": "test_id", "id": "workspace-shell-pane-pane-a-tab-doc-a-2.close" }
+        "target": {
+          "id": "workspace-shell-pane-pane-a-tab-doc-a-0",
+          "kind": "test_id"
+        }
       },
-      "timeout_frames": 240
+      "timeout_frames": 240,
+      "type": "wait_until"
     },
-
-    { "type": "click", "target": { "kind": "test_id", "id": "workspace-shell-pane-pane-a-tab-doc-a-2.close" } },
-    { "type": "wait_frames", "n": 10 },
-
     {
-      "type": "wait_until",
+      "target": {
+        "id": "workspace-shell-pane-pane-a-tab-doc-a-0",
+        "kind": "test_id"
+      },
+      "type": "click"
+    },
+    {
+      "n": 6,
+      "type": "wait_frames"
+    },
+    {
+      "predicate": {
+        "kind": "exists",
+        "target": {
+          "id": "workspace-shell-pane-pane-a-tab-doc-a-0.close",
+          "kind": "test_id"
+        }
+      },
+      "timeout_frames": 240,
+      "type": "wait_until"
+    },
+    {
+      "target": {
+        "id": "workspace-shell-pane-pane-a-tab-doc-a-0.close",
+        "kind": "test_id"
+      },
+      "type": "click"
+    },
+    {
+      "n": 10,
+      "type": "wait_frames"
+    },
+    {
       "predicate": {
         "kind": "not_exists",
-        "target": { "kind": "test_id", "id": "workspace-shell-pane-pane-a-tab-doc-a-2" }
+        "target": {
+          "id": "workspace-shell-pane-pane-a-tab-doc-a-0",
+          "kind": "test_id"
+        }
       },
-      "timeout_frames": 240
+      "timeout_frames": 240,
+      "type": "wait_until"
     },
-
-    { "type": "capture_bundle", "label": "workspace-shell-demo-tab-close-button-closes-tab-smoke" }
+    {
+      "label": "workspace-shell-demo-tab-close-button-closes-tab-smoke",
+      "type": "capture_bundle"
+    }
   ]
 }
-

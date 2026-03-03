@@ -1,78 +1,202 @@
 {
-  "schema_version": 2,
   "meta": {
     "name": "Workspace shell demo: tabstrip close keeps focus in strip (smoke)",
-    "tags": ["workspace", "tabstrip", "focus", "close", "smoke", "gate"],
-    "required_capabilities": ["diag.script_v2"],
+    "required_capabilities": [
+      "diag.script_v2"
+    ],
+    "tags": [
+      "workspace",
+      "tabstrip",
+      "focus",
+      "close",
+      "smoke",
+      "gate"
+    ],
     "target_hints": [
       "Sets MRU by activating doc-a-2 then doc-a-1.",
+      "Moves focus into pane content so command routing is focus-anchored.",
       "Moves keyboard focus into the tab strip (Ctrl+F6).",
       "Closes the active tab via the close button.",
       "Asserts selection and focus stay within the tab strip (MRU fallback)."
     ]
   },
+  "schema_version": 2,
   "steps": [
-    { "type": "set_window_inner_size", "width_px": 1280.0, "height_px": 720.0 },
-    { "type": "wait_frames", "n": 10 },
-
     {
-      "type": "wait_until",
+      "height_px": 720.0,
+      "type": "set_window_inner_size",
+      "width_px": 1280.0
+    },
+    {
+      "n": 10,
+      "type": "wait_frames"
+    },
+    {
       "predicate": {
         "kind": "exists",
-        "target": { "kind": "test_id", "id": "workspace-shell-pane-pane-a-tab-doc-a-2" }
+        "target": {
+          "id": "workspace-shell-pane-pane-a-tab-doc-a-2",
+          "kind": "test_id"
+        }
       },
-      "timeout_frames": 240
+      "timeout_frames": 240,
+      "type": "wait_until"
     },
-
-    { "type": "click", "target": { "kind": "test_id", "id": "workspace-shell-pane-pane-a-tab-doc-a-2" } },
-    { "type": "wait_frames", "n": 6 },
-    { "type": "click", "target": { "kind": "test_id", "id": "workspace-shell-pane-pane-a-tab-doc-a-1" } },
-    { "type": "wait_frames", "n": 6 },
-
-    { "type": "press_key", "key": "f6", "modifiers": { "ctrl": true }, "repeat": false },
-    { "type": "wait_frames", "n": 10 },
     {
-      "type": "wait_until",
-      "predicate": {
-        "kind": "focus_is",
-        "target": { "kind": "test_id", "id": "workspace-shell-pane-pane-a-tab-doc-a-1" }
-      },
-      "timeout_frames": 240
-    },
-
-    {
-      "type": "click_stable",
-      "target": { "kind": "test_id", "id": "workspace-shell-pane-pane-a-tab-doc-a-1.close" },
       "button": "left",
-      "stable_frames": 2,
-      "max_move_px": 1.0,
-      "timeout_frames": 240
-    },
-    { "type": "wait_frames", "n": 20 },
-
-    {
-      "type": "wait_until",
-      "predicate": { "kind": "not_exists", "target": { "kind": "test_id", "id": "workspace-shell-pane-pane-a-tab-doc-a-1" } },
-      "timeout_frames": 240
+      "target": {
+        "id": "workspace-shell-pane-pane-a-tab-doc-a-2",
+        "kind": "test_id"
+      },
+      "type": "pointer_down",
+      "window": {
+        "kind": "current"
+      }
     },
     {
-      "type": "wait_until",
+      "type": "pointer_up",
+      "window": {
+        "kind": "current"
+      }
+    },
+    {
       "predicate": {
         "kind": "selected_is",
-        "target": { "kind": "test_id", "id": "workspace-shell-pane-pane-a-tab-doc-a-2" },
-        "selected": true
+        "selected": true,
+        "target": {
+          "id": "workspace-shell-pane-pane-a-tab-doc-a-2",
+          "kind": "test_id"
+        }
       },
-      "timeout_frames": 240
+      "timeout_frames": 240,
+      "type": "wait_until"
     },
     {
-      "type": "wait_until",
+      "button": "left",
+      "target": {
+        "id": "workspace-shell-pane-pane-a-tab-doc-a-1",
+        "kind": "test_id"
+      },
+      "type": "pointer_down",
+      "window": {
+        "kind": "current"
+      }
+    },
+    {
+      "type": "pointer_up",
+      "window": {
+        "kind": "current"
+      }
+    },
+    {
+      "predicate": {
+        "kind": "selected_is",
+        "selected": true,
+        "target": {
+          "id": "workspace-shell-pane-pane-a-tab-doc-a-1",
+          "kind": "test_id"
+        }
+      },
+      "timeout_frames": 240,
+      "type": "wait_until"
+    },
+    {
+      "target": {
+        "id": "workspace-shell-pane-pane-a-content",
+        "kind": "test_id"
+      },
+      "type": "click"
+    },
+    {
+      "n": 6,
+      "type": "wait_frames"
+    },
+    {
       "predicate": {
         "kind": "focus_is",
-        "target": { "kind": "test_id", "id": "workspace-shell-pane-pane-a-tab-doc-a-2" }
+        "target": {
+          "id": "workspace-shell-pane-pane-a-content",
+          "kind": "test_id"
+        }
       },
-      "timeout_frames": 240
+      "timeout_frames": 240,
+      "type": "wait_until"
     },
-
-    { "type": "capture_bundle", "label": "workspace-shell-demo-tabstrip-close-keeps-focus-smoke" }
+    {
+      "key": "f6",
+      "modifiers": {
+        "ctrl": true
+      },
+      "repeat": false,
+      "type": "press_key"
+    },
+    {
+      "n": 6,
+      "type": "wait_frames"
+    },
+    {
+      "predicate": {
+        "kind": "focus_is",
+        "target": {
+          "id": "workspace-shell-pane-pane-a-tab-doc-a-1",
+          "kind": "test_id"
+        }
+      },
+      "timeout_frames": 240,
+      "type": "wait_until"
+    },
+    {
+      "button": "left",
+      "max_move_px": 1.0,
+      "stable_frames": 2,
+      "target": {
+        "id": "workspace-shell-pane-pane-a-tab-doc-a-1.close",
+        "kind": "test_id"
+      },
+      "timeout_frames": 240,
+      "type": "click_stable"
+    },
+    {
+      "n": 20,
+      "type": "wait_frames"
+    },
+    {
+      "predicate": {
+        "kind": "not_exists",
+        "target": {
+          "id": "workspace-shell-pane-pane-a-tab-doc-a-1",
+          "kind": "test_id"
+        }
+      },
+      "timeout_frames": 240,
+      "type": "wait_until"
+    },
+    {
+      "predicate": {
+        "kind": "selected_is",
+        "selected": true,
+        "target": {
+          "id": "workspace-shell-pane-pane-a-tab-doc-a-2",
+          "kind": "test_id"
+        }
+      },
+      "timeout_frames": 240,
+      "type": "wait_until"
+    },
+    {
+      "predicate": {
+        "kind": "focus_is",
+        "target": {
+          "id": "workspace-shell-pane-pane-a-tab-doc-a-2",
+          "kind": "test_id"
+        }
+      },
+      "timeout_frames": 240,
+      "type": "wait_until"
+    },
+    {
+      "label": "workspace-shell-demo-tabstrip-close-keeps-focus-smoke",
+      "type": "capture_bundle"
+    }
   ]
 }

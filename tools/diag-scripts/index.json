@@ -4796,7 +4796,8 @@
         "workspace"
       ],
       "target_hints": [
-        "Waits for the close button on the active tab (pane A, doc-a-2).",
+        "Activates doc-a-0 (pane A) so the close target is guaranteed to be in-view.",
+        "Waits for the close button on the active tab (pane A, doc-a-0).",
         "Clicks the close button.",
         "Asserts the tab is removed from the UI tree."
       ]
@@ -4889,6 +4890,7 @@
       ],
       "target_hints": [
         "Sets MRU by activating doc-a-2 then doc-a-1.",
+        "Moves focus into pane content so command routing is focus-anchored.",
         "Moves keyboard focus into the tab strip (Ctrl+F6).",
         "Closes the active tab via the close button.",
         "Asserts selection and focus stay within the tab strip (MRU fallback)."
