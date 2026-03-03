@@ -2164,6 +2164,26 @@
       ]
     },
     {
+      "id": "ui-gallery-carousel-rtl-controls-gate",
+      "path": "tools/diag-scripts/ui-gallery/carousel/ui-gallery-carousel-rtl-controls-gate.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "ui-gallery-shadcn-conformance"
+      ],
+      "tags": [
+        "carousel",
+        "gate",
+        "rtl",
+        "ui-gallery"
+      ],
+      "target_hints": [
+        "Navigate to the UI gallery Carousel page and scroll to the RTL section.",
+        "Expected behavior: Previous/Next controls remain clickable and update the selected index."
+      ]
+    },
+    {
       "id": "ui-gallery-chart-accessibility-layer-keyboard",
       "path": "tools/diag-scripts/ui-gallery/chart/ui-gallery-chart-accessibility-layer-keyboard.json",
       "required_capabilities": [],

@@ -172,7 +172,7 @@ pub(super) fn preview_carousel(cx: &mut ElementContext<'_, App>) -> Vec<AnyEleme
                     .code_rust_from_file_region(snippets::orientation_vertical::SOURCE, "example"),
                 DocSection::new("RTL", rtl)
                     .description(
-                        "RTL carousel: set `DirectionProvider` and `CarouselOptions::direction(Rtl)` (shadcn `dir` + `opts.direction`).",
+                        "RTL carousel: set `DirectionProvider` and `CarouselOptions::direction(Rtl)` (shadcn `dir` + `opts.direction`). Prev/Next remain physically left/right (shadcn docs), while arrow direction adapts to RTL.",
                     )
 
                     .test_id_prefix("ui-gallery-carousel-rtl")

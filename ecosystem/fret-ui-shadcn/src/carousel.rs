@@ -4258,43 +4258,22 @@ impl Carousel {
                 let button_size = MetricRef::Px(Px(32.0));
 
                 let (prev_layout, next_layout) = match orientation {
-                    CarouselOrientation::Horizontal => {
-                        if rtl_controls {
-                            (
-                                LayoutRefinement::default()
-                                    .absolute()
-                                    .top(Space::N0)
-                                    .bottom(Space::N0)
-                                    .right_neg_px(offset.clone())
-                                    .w_px(button_size.clone())
-                                    .merge(prev_part.layout),
-                                LayoutRefinement::default()
-                                    .absolute()
-                                    .top(Space::N0)
-                                    .bottom(Space::N0)
-                                    .left_neg_px(offset)
-                                    .w_px(button_size)
-                                    .merge(next_part.layout),
-                            )
-                        } else {
-                            (
-                                LayoutRefinement::default()
-                                    .absolute()
-                                    .top(Space::N0)
-                                    .bottom(Space::N0)
-                                    .left_neg_px(offset.clone())
-                                    .w_px(button_size.clone())
-                                    .merge(prev_part.layout),
-                                LayoutRefinement::default()
-                                    .absolute()
-                                    .top(Space::N0)
-                                    .bottom(Space::N0)
-                                    .right_neg_px(offset)
-                                    .w_px(button_size)
-                                    .merge(next_part.layout),
-                            )
-                        }
-                    }
+                    CarouselOrientation::Horizontal => (
+                        LayoutRefinement::default()
+                            .absolute()
+                            .top(Space::N0)
+                            .bottom(Space::N0)
+                            .left_neg_px(offset.clone())
+                            .w_px(button_size.clone())
+                            .merge(prev_part.layout),
+                        LayoutRefinement::default()
+                            .absolute()
+                            .top(Space::N0)
+                            .bottom(Space::N0)
+                            .right_neg_px(offset)
+                            .w_px(button_size)
+                            .merge(next_part.layout),
+                    ),
                     CarouselOrientation::Vertical => (
                         LayoutRefinement::default()
                             .absolute()
