@@ -277,7 +277,7 @@ fn page_preview(
     let resizable_v_fractions = models.resizable_v_fractions.clone();
     let data_table_state = models.data_table_state.clone();
     let data_grid_selected_row = models.data_grid_selected_row.clone();
-    let tabs_value = models.tabs_value.clone();
+    let _tabs_value = models.tabs_value.clone();
     let accordion_value = models.accordion_value.clone();
     let avatar_demo_image = models.avatar_demo_image.clone();
     let image_fit_demo_wide_image = models.image_fit_demo_wide_image.clone();
@@ -525,7 +525,7 @@ fn page_preview(
             last_action.clone(),
         ),
         PAGE_SHADCN_EXTRAS => pages::preview_shadcn_extras(cx),
-        PAGE_FORMS => pages::preview_forms(cx, text_input, text_area, checkbox, switch),
+        PAGE_FORMS => pages::preview_forms(cx),
         PAGE_SELECT => pages::preview_select(cx),
         PAGE_COMBOBOX => pages::preview_combobox(cx, combobox_value, combobox_open, combobox_query),
         PAGE_DATE_PICKER => pages::preview_date_picker(
@@ -539,18 +539,18 @@ fn page_preview(
         }
         PAGE_DATA_TABLE => pages::preview_data_table(cx, data_table_state),
         PAGE_DATA_GRID => preview_data_grid(cx, data_grid_selected_row),
-        PAGE_TABS => pages::preview_tabs(cx, tabs_value),
+        PAGE_TABS => pages::preview_tabs(cx),
         PAGE_ACCORDION => pages::preview_accordion(cx, accordion_value),
         PAGE_TABLE => pages::preview_table(cx),
         PAGE_PROGRESS => pages::preview_progress(cx),
         PAGE_MENUS => preview_menus(cx, dropdown_open, context_menu_open, last_action.clone()),
         PAGE_COMMAND => pages::preview_command_palette(cx, last_action.clone()),
-        PAGE_TOAST => pages::preview_toast(cx, last_action.clone()),
+        PAGE_TOAST => pages::preview_toast(cx),
         PAGE_SONNER => pages::preview_sonner(cx, last_action.clone(), sonner_position.clone()),
         PAGE_ALERT => pages::preview_alert(cx),
-        PAGE_ALERT_DIALOG => pages::preview_alert_dialog(cx, alert_dialog_open),
+        PAGE_ALERT_DIALOG => pages::preview_alert_dialog(cx),
         PAGE_ASPECT_RATIO => pages::preview_aspect_ratio(cx),
-        PAGE_BREADCRUMB => pages::preview_breadcrumb(cx, last_action.clone()),
+        PAGE_BREADCRUMB => pages::preview_breadcrumb(cx),
         PAGE_BUTTON_GROUP => pages::preview_button_group(cx),
         PAGE_CALENDAR => pages::preview_calendar(cx, date_picker_month, date_picker_selected),
         PAGE_CAROUSEL => pages::preview_carousel(cx),
@@ -562,7 +562,7 @@ fn page_preview(
         PAGE_DRAWER => pages::preview_drawer(cx),
         PAGE_DROPDOWN_MENU => pages::preview_dropdown_menu(cx),
         PAGE_EMPTY => pages::preview_empty(cx),
-        PAGE_FORM => pages::preview_forms(cx, text_input, text_area, checkbox, switch),
+        PAGE_FORM => pages::preview_forms(cx),
         PAGE_HOVER_CARD => pages::preview_hover_card(cx),
         PAGE_INPUT => pages::preview_input(cx),
         PAGE_INPUT_GROUP => pages::preview_input_group(cx),
@@ -580,7 +580,7 @@ fn page_preview(
         PAGE_SHEET => pages::preview_sheet(cx),
         PAGE_SIDEBAR => pages::preview_sidebar(cx),
         PAGE_SPINNER => pages::preview_spinner(cx),
-        PAGE_SWITCH => pages::preview_switch(cx, switch),
+        PAGE_SWITCH => pages::preview_switch(cx),
         PAGE_TEXTAREA => pages::preview_textarea(cx),
         PAGE_TOGGLE => pages::preview_toggle(cx),
         PAGE_TOGGLE_GROUP => pages::preview_toggle_group(cx),

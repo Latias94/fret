@@ -567,9 +567,8 @@ pub(super) fn preview_calendar(
 
 pub(super) fn preview_alert_dialog(
     cx: &mut ElementContext<'_, App>,
-    open: Model<bool>,
 ) -> Vec<AnyElement> {
-    alert_dialog::preview_alert_dialog(cx, open)
+    alert_dialog::preview_alert_dialog(cx)
 }
 
 pub(super) fn preview_aspect_ratio(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
@@ -611,9 +610,8 @@ pub(super) fn preview_badge(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement>
 
 pub(super) fn preview_breadcrumb(
     cx: &mut ElementContext<'_, App>,
-    last_action: Model<Arc<str>>,
 ) -> Vec<AnyElement> {
-    breadcrumb::preview_breadcrumb(cx, last_action)
+    breadcrumb::preview_breadcrumb(cx)
 }
 
 pub(super) fn preview_checkbox(
@@ -652,9 +650,8 @@ pub(super) fn preview_command_palette(
 
 pub(super) fn preview_toast(
     cx: &mut ElementContext<'_, App>,
-    last_action: Model<Arc<str>>,
 ) -> Vec<AnyElement> {
-    toast::preview_toast(cx, last_action)
+    toast::preview_toast(cx)
 }
 
 pub(super) fn preview_context_menu(
@@ -708,12 +705,8 @@ pub(super) fn preview_field(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement>
 
 pub(super) fn preview_forms(
     cx: &mut ElementContext<'_, App>,
-    text_input: Model<String>,
-    text_area: Model<String>,
-    checkbox: Model<bool>,
-    switch: Model<bool>,
 ) -> Vec<AnyElement> {
-    form::preview_forms(cx, text_input, text_area, checkbox, switch)
+    form::preview_forms(cx)
 }
 
 pub(super) fn preview_hover_card(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
@@ -828,9 +821,8 @@ pub(super) fn preview_sonner(
 
 pub(super) fn preview_tabs(
     cx: &mut ElementContext<'_, App>,
-    value: Model<Option<Arc<str>>>,
 ) -> Vec<AnyElement> {
-    tabs::preview_tabs(cx, value)
+    tabs::preview_tabs(cx)
 }
 
 pub(super) fn preview_table(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
@@ -843,9 +835,8 @@ pub(super) fn preview_spinner(cx: &mut ElementContext<'_, App>) -> Vec<AnyElemen
 
 pub(super) fn preview_switch(
     cx: &mut ElementContext<'_, App>,
-    model: Model<bool>,
 ) -> Vec<AnyElement> {
-    switch::preview_switch(cx, model)
+    switch::preview_switch(cx)
 }
 
 pub(super) fn preview_textarea(

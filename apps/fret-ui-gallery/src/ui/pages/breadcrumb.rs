@@ -5,7 +5,6 @@ use crate::ui::snippets::breadcrumb as snippets;
 
 pub(super) fn preview_breadcrumb(
     cx: &mut ElementContext<'_, App>,
-    _last_action: Model<Arc<str>>,
 ) -> Vec<AnyElement> {
     let demo = snippets::demo::render(cx);
     let basic = snippets::basic::render(cx);

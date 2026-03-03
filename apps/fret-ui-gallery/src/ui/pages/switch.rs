@@ -5,7 +5,6 @@ use crate::ui::snippets::switch as snippets;
 
 pub(super) fn preview_switch(
     cx: &mut ElementContext<'_, App>,
-    _model: Model<bool>,
 ) -> Vec<AnyElement> {
     let sizes = snippets::sizes::render(cx);
     let airplane_mode = snippets::airplane_mode::render(cx);

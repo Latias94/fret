@@ -5,7 +5,6 @@ use crate::ui::snippets::alert_dialog as snippets;
 
 pub(super) fn preview_alert_dialog(
     cx: &mut ElementContext<'_, App>,
-    _open: Model<bool>,
 ) -> Vec<AnyElement> {
     let demo = snippets::demo::render(cx);
     let basic = snippets::basic::render(cx);

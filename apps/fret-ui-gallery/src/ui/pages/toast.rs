@@ -5,7 +5,6 @@ use crate::ui::snippets::toast as snippets;
 
 pub(super) fn preview_toast(
     cx: &mut ElementContext<'_, App>,
-    _last_action: Model<Arc<str>>,
 ) -> Vec<AnyElement> {
     let deprecated = snippets::deprecated::render(cx);
 
