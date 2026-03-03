@@ -1,4 +1,4 @@
-pub const SOURCE: &str = include_str!("spacing.rs");
+pub const SOURCE: &str = include_str!("spacing_responsive.rs");
 
 // region: example
 use fret_app::App;
@@ -6,6 +6,7 @@ use fret_core::Edges;
 use fret_ui::Theme;
 use fret_ui::element::{CrossAlign, FlexProps, MainAlign};
 use fret_ui_kit::declarative::style as decl_style;
+use fret_ui_kit::declarative::viewport_queries::tailwind;
 use fret_ui_kit::ui;
 use fret_ui_shadcn::{self as shadcn, prelude::*};
 
@@ -59,8 +60,11 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
         line_height_px: Px(32.0),
     };
     let items = (1..=5)
-        .map(|idx| shadcn::CarouselItem::new(slide(cx, idx, visual)))
-        .map(|item| item.padding_start(Space::N1))
+        .map(|idx| {
+            shadcn::CarouselItem::new(slide(cx, idx, visual))
+                .padding_start(Space::N2)
+                .viewport_padding_start_breakpoint(tailwind::MD, Space::N4)
+        })
         .collect::<Vec<_>>();
 
     shadcn::Carousel::default()
@@ -71,10 +75,14 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
                 .max_w(max_w_sm)
                 .mx_auto(),
         )
-        .test_id("ui-gallery-carousel-spacing")
+        .test_id("ui-gallery-carousel-spacing-responsive")
         .into_element_parts(
             cx,
-            |_cx| shadcn::CarouselContent::new(items).track_start_neg_margin(Space::N1),
+            |_cx| {
+                shadcn::CarouselContent::new(items)
+                    .track_start_neg_margin(Space::N2)
+                    .viewport_track_start_neg_margin_breakpoint(tailwind::MD, Space::N4)
+            },
             shadcn::CarouselPrevious::new(),
             shadcn::CarouselNext::new(),
         )

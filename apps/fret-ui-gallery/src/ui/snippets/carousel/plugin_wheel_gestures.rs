@@ -1,4 +1,4 @@
-pub const SOURCE: &str = include_str!("spacing.rs");
+pub const SOURCE: &str = include_str!("plugin_wheel_gestures.rs");
 
 // region: example
 use fret_app::App;
@@ -52,29 +52,30 @@ fn slide(cx: &mut ElementContext<'_, App>, idx: usize, visual: SlideVisual) -> A
 }
 
 pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
-    let max_w_sm = Px(384.0);
+    let max_w_xs = Px(320.0);
 
     let visual = SlideVisual {
-        text_px: Px(24.0),
-        line_height_px: Px(32.0),
+        text_px: Px(36.0),
+        line_height_px: Px(40.0),
     };
     let items = (1..=5)
         .map(|idx| shadcn::CarouselItem::new(slide(cx, idx, visual)))
-        .map(|item| item.padding_start(Space::N1))
         .collect::<Vec<_>>();
 
     shadcn::Carousel::default()
-        .item_basis_main_px(Px(129.328))
+        .plugins([shadcn::CarouselPlugin::WheelGestures(
+            shadcn::CarouselWheelGesturesConfig::new(),
+        )])
         .refine_layout(
             LayoutRefinement::default()
                 .w_full()
-                .max_w(max_w_sm)
+                .max_w(max_w_xs)
                 .mx_auto(),
         )
-        .test_id("ui-gallery-carousel-spacing")
+        .test_id("ui-gallery-carousel-plugin-wheel")
         .into_element_parts(
             cx,
-            |_cx| shadcn::CarouselContent::new(items).track_start_neg_margin(Space::N1),
+            |_cx| shadcn::CarouselContent::new(items),
             shadcn::CarouselPrevious::new(),
             shadcn::CarouselNext::new(),
         )

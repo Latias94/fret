@@ -2205,6 +2205,25 @@
       "target_hints": []
     },
     {
+      "id": "ui-gallery-code-editor-a11y-composition-ime-surrounding-valid",
+      "path": "tools/diag-scripts/ui-gallery/code-editor/ui-gallery-code-editor-a11y-composition-ime-surrounding-valid.json",
+      "required_capabilities": [
+        "diag.inject_ime",
+        "diag.script_v2",
+        "diag.text_input_snapshot"
+      ],
+      "suite_memberships": [
+        "ui-gallery-code-editor"
+      ],
+      "tags": [
+        "code_editor",
+        "ime",
+        "surrounding_text",
+        "ui_gallery"
+      ],
+      "target_hints": []
+    },
+    {
       "id": "ui-gallery-code-editor-a11y-composition-soft-wrap-baseline",
       "path": "tools/diag-scripts/ui-gallery/code-editor/ui-gallery-code-editor-a11y-composition-soft-wrap-baseline.json",
       "required_capabilities": [],
@@ -2891,6 +2910,16 @@
       ]
     },
     {
+      "id": "ui-gallery-data-table-basic-row-actions-menu-toggle-stability",
+      "path": "tools/diag-scripts/ui-gallery/data-table/ui-gallery-data-table-basic-row-actions-menu-toggle-stability.json",
+      "required_capabilities": [],
+      "suite_memberships": [
+        "ui-gallery-data-table"
+      ],
+      "tags": [],
+      "target_hints": []
+    },
+    {
       "id": "ui-gallery-data-table-guide-demo-checkbox-only-selection",
       "path": "tools/diag-scripts/ui-gallery/data-table/ui-gallery-data-table-guide-demo-checkbox-only-selection.json",
       "required_capabilities": [],
@@ -3052,25 +3081,6 @@
         "ui-gallery-retained-measured"
       ],
       "tags": [],
-      "target_hints": []
-    },
-    {
-      "id": "ui-gallery-date-picker-docs-screenshots",
-      "path": "tools/diag-scripts/ui-gallery/date-picker/ui-gallery-date-picker-docs-screenshots.json",
-      "required_capabilities": [
-        "diag.screenshot_png",
-        "diag.script_v2"
-      ],
-      "suite_memberships": [
-        "ui-gallery-date-picker"
-      ],
-      "tags": [
-        "date_picker",
-        "docs",
-        "screenshots",
-        "shadcn",
-        "ui_gallery"
-      ],
       "target_hints": []
     },
     {
@@ -3488,6 +3498,25 @@
         "ui-gallery-shadcn-conformance"
       ],
       "tags": [],
+      "target_hints": []
+    },
+    {
+      "id": "ui-gallery-input-ime-delete-surrounding-emoji",
+      "path": "tools/diag-scripts/ui-gallery/text-ime/ui-gallery-input-ime-delete-surrounding-emoji.json",
+      "required_capabilities": [
+        "diag.inject_ime",
+        "diag.script_v2",
+        "diag.text_input_snapshot"
+      ],
+      "suite_memberships": [
+        "ui-gallery-text-ime"
+      ],
+      "tags": [
+        "delete_surrounding",
+        "ime",
+        "input",
+        "ui_gallery"
+      ],
       "target_hints": []
     },
     {
@@ -4654,6 +4683,30 @@
       ]
     },
     {
+      "id": "ui-gallery-tabs-vertical-list-grows",
+      "path": "tools/diag-scripts/ui-gallery/tabs/ui-gallery-tabs-vertical-list-grows.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "ui-gallery-shadcn-conformance"
+      ],
+      "tags": [
+        "layout",
+        "screenshot",
+        "shadcn",
+        "tabs",
+        "ui_gallery",
+        "vertical"
+      ],
+      "target_hints": [
+        "Navigates to the Tabs page.",
+        "Scrolls the Vertical + Vertical (Line) examples into view.",
+        "Asserts the vertical tab list grows to show multiple triggers (no clipping)."
+      ]
+    },
+    {
       "id": "ui-gallery-tabs-wrap-and-baseline-screenshots",
       "path": "tools/diag-scripts/ui-gallery/text-wrap/ui-gallery-tabs-wrap-and-baseline-screenshots.json",
       "required_capabilities": [
@@ -4737,6 +4790,25 @@
       "target_hints": [
         "fret-ui-gallery"
       ]
+    },
+    {
+      "id": "ui-gallery-textarea-ime-delete-surrounding-emoji",
+      "path": "tools/diag-scripts/ui-gallery/text-ime/ui-gallery-textarea-ime-delete-surrounding-emoji.json",
+      "required_capabilities": [
+        "diag.inject_ime",
+        "diag.script_v2",
+        "diag.text_input_snapshot"
+      ],
+      "suite_memberships": [
+        "ui-gallery-text-ime"
+      ],
+      "tags": [
+        "delete_surrounding",
+        "ime",
+        "textarea",
+        "ui_gallery"
+      ],
+      "target_hints": []
     },
     {
       "id": "ui-gallery-tooltip-disabled-code-tab-scroll-range",

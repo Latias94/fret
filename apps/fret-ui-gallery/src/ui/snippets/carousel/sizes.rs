@@ -6,6 +6,7 @@ use fret_core::Edges;
 use fret_ui::Theme;
 use fret_ui::element::{CrossAlign, FlexProps, MainAlign};
 use fret_ui_kit::declarative::style as decl_style;
+use fret_ui_kit::declarative::viewport_queries::tailwind;
 use fret_ui_kit::ui;
 use fret_ui_shadcn::{self as shadcn, prelude::*};
 
@@ -59,12 +60,21 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
         line_height_px: Px(36.0),
     };
     let items = (1..=5)
-        .map(|idx| shadcn::CarouselItem::new(slide(cx, idx, visual)))
+        .map(|idx| {
+            shadcn::CarouselItem::new(slide(cx, idx, visual))
+                .viewport_layout_breakpoint(
+                    tailwind::MD,
+                    LayoutRefinement::default().basis_fraction(0.5),
+                )
+                .viewport_layout_breakpoint(
+                    tailwind::LG,
+                    LayoutRefinement::default().basis_fraction(1.0 / 3.0),
+                )
+        })
         .collect::<Vec<_>>();
 
     shadcn::Carousel::default()
         .opts(shadcn::CarouselOptions::new().align(shadcn::CarouselAlign::Start))
-        .item_basis_main_px(Px(133.328))
         .refine_layout(
             LayoutRefinement::default()
                 .w_full()

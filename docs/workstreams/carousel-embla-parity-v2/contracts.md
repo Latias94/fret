@@ -163,13 +163,9 @@ Evidence + gates:
 
 Recipe-level stamping (v2 MVP):
 
-- Root: `SemanticsRole::Panel`, `label="Carousel"`, `orientation={horizontal|vertical}`.
-- Slides: `SemanticsRole::Group`, `label="Slide N of M"`.
-
-Known gap:
-
-- Core semantics does not currently expose a portable `aria-roledescription` equivalent, so we
-  cannot represent `aria-roledescription="carousel"` / `"slide"` yet.
+- Root: `SemanticsRole::Region`, `role_description="carousel"`, `label="Carousel"`,
+  `orientation={horizontal|vertical}`.
+- Slides: `SemanticsRole::Group`, `role_description="slide"`, `label="Slide N of M"`.
 
 Evidence + gates:
 

@@ -1,3 +1,5 @@
+pub const SOURCE: &str = include_str!("images.rs");
+
 use fret_core::ImageId;
 use fret_ui::{ElementContext, UiHost};
 use fret_ui_assets::{ImageSource, ui::ImageSourceElementContextExt as _};

@@ -112,8 +112,9 @@ Legend:
 ### Accessibility semantics
 
 - Upstream uses `role="region"` + `aria-roledescription="carousel"` and item semantics like
-  `aria-roledescription="slide"`. Fret currently stamps group roles for diagnostics and automation;
-  richer semantics should be considered if/when we expand the accessibility contract.
+  `aria-roledescription="slide"`. Fret models this via `SemanticsRole::Region` +
+  `role_description="carousel"` on the root, and `SemanticsRole::Group` + `role_description="slide"`
+  on items (labels remain present for diagnostics and automation).
 
 ## Mechanism prerequisites for Embla-like drag (Fret-specific)
 

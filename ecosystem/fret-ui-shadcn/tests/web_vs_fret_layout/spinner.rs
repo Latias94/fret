@@ -1136,21 +1136,42 @@ fn fret_badge_spinner_rotation_uses_visual_transform_center_after_badge_resize_p
         CoreSize::new(Px(800.0), Px(200.0)),
     );
 
-    let mut services = StyleAwareServices::default();
-    let _snap = run_fret_root_with_services(bounds, &mut services, |cx| {
-        cx.app.set_frame_id(fret_runtime::FrameId(1));
+    let window = AppWindowId::default();
+    let mut app = App::new();
+    fret_ui_shadcn::shadcn_themes::apply_shadcn_new_york(
+        &mut app,
+        fret_ui_shadcn::shadcn_themes::ShadcnBaseColor::Neutral,
+        fret_ui_shadcn::shadcn_themes::ShadcnColorScheme::Light,
+    );
 
-        let badge = fret_ui_shadcn::Badge::new("Syncing")
+    // Frame 0: initialize the spinner's loop-progress state under a stable `root_id`.
+    app.set_frame_id(fret_runtime::FrameId(0));
+    fret_ui::elements::with_element_cx(&mut app, window, bounds, "badge-spinner-rotation", |cx| {
+        let _ = fret_ui_shadcn::Badge::new("Syncing")
             .children(vec![
                 fret_ui_shadcn::Spinner::new().speed(1.0).into_element(cx),
             ])
             .into_element(cx);
-
-        let props = first_visual_transform_props(&badge).expect("expected spinner VisualTransform");
-        let expected_center = Point::new(Px(6.0), Px(6.0));
-        let expected = Transform2D::rotation_about_radians(1.0_f32, expected_center);
-        assert_transform_close("badge spinner transform", props.transform, expected, 1e-5);
-
-        Vec::new()
     });
+
+    // Frame 1: observe a 60Hz tick of rotation.
+    app.set_frame_id(fret_runtime::FrameId(1));
+    let badge = fret_ui::elements::with_element_cx(
+        &mut app,
+        window,
+        bounds,
+        "badge-spinner-rotation",
+        |cx| {
+            fret_ui_shadcn::Badge::new("Syncing")
+                .children(vec![
+                    fret_ui_shadcn::Spinner::new().speed(1.0).into_element(cx),
+                ])
+                .into_element(cx)
+        },
+    );
+
+    let props = first_visual_transform_props(&badge).expect("expected spinner VisualTransform");
+    let expected_center = Point::new(Px(6.0), Px(6.0));
+    let expected = Transform2D::rotation_about_radians(1.0_f32, expected_center);
+    assert_transform_close("badge spinner transform", props.transform, expected, 1e-5);
 }

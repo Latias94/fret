@@ -13,17 +13,20 @@ pub(super) fn preview_carousel(cx: &mut ElementContext<'_, App>) -> Vec<AnyEleme
         let parts = snippets::parts::render(cx);
         let sizes = snippets::sizes::render(cx);
         let spacing = snippets::spacing::render(cx);
+        let spacing_responsive = snippets::spacing_responsive::render(cx);
         let duration = snippets::duration_embla::render(cx);
         let api = snippets::api::render(cx);
         let plugin = snippets::plugin_autoplay::render(cx);
+        let plugin_wheel = snippets::plugin_wheel_gestures::render(cx);
         let expandable = snippets::expandable::render(cx);
         let orientation_vertical = snippets::orientation_vertical::render(cx);
+        let rtl = snippets::rtl::render(cx);
 
         let notes_stack = doc_layout::notes(
             cx,
             [
                 "Preview follows shadcn Carousel demo: Basic, Sizes, and Spacing.",
-                "The upstream demo uses responsive item widths (`md:basis-1/2` / `lg:basis-1/3`). Fret uses a fixed `item_basis_main_px` to keep geometry deterministic in native builds.",
+                "The upstream demo uses responsive item widths (`md:basis-1/2` / `lg:basis-1/3`). Fret mirrors this via `CarouselItem::viewport_layout_breakpoint(tailwind::MD/LG, ...)`.",
                 "Spacing parity depends on pairing `track_start_neg_margin` with `item_padding_start`.",
             ],
         );
@@ -79,6 +82,16 @@ pub(super) fn preview_carousel(cx: &mut ElementContext<'_, App>) -> Vec<AnyEleme
 
                     .test_id_prefix("ui-gallery-carousel-spacing")
                     .code_rust_from_file_region(snippets::spacing::SOURCE, "example"),
+                DocSection::new("Spacing (Responsive)", spacing_responsive)
+                    .description(
+                        "Viewport breakpoints for spacing (shadcn `-ml-2 md:-ml-4` / `pl-2 md:pl-4`).",
+                    )
+
+                    .test_id_prefix("ui-gallery-carousel-spacing-responsive")
+                    .code_rust_from_file_region(
+                        snippets::spacing_responsive::SOURCE,
+                        "example",
+                    ),
                 DocSection::new("Duration (Embla)", duration)
                     .description("Embla `duration` (integrator parameter) affects settle speed for button navigation (this demo ignores prefers-reduced-motion).")
 
@@ -94,6 +107,13 @@ pub(super) fn preview_carousel(cx: &mut ElementContext<'_, App>) -> Vec<AnyEleme
 
                     .test_id_prefix("ui-gallery-carousel-plugin")
                     .code_rust_from_file_region(snippets::plugin_autoplay::SOURCE, "example"),
+                DocSection::new("Plugin (Wheel gestures)", plugin_wheel)
+                    .description("Wheel/trackpad gestures: horizontal scroll steps between snaps (Shift swaps axes).")
+                    .test_id_prefix("ui-gallery-carousel-plugin-wheel")
+                    .code_rust_from_file_region(
+                        snippets::plugin_wheel_gestures::SOURCE,
+                        "example",
+                    ),
                 DocSection::new("Expandable", expandable)
                     .description("Content-driven height changes (used by the motion pilot suite).")
 
@@ -104,6 +124,13 @@ pub(super) fn preview_carousel(cx: &mut ElementContext<'_, App>) -> Vec<AnyEleme
 
                     .test_id_prefix("ui-gallery-carousel-orientation-vertical")
                     .code_rust_from_file_region(snippets::orientation_vertical::SOURCE, "example"),
+                DocSection::new("RTL", rtl)
+                    .description(
+                        "RTL carousel: set `DirectionProvider` and `CarouselOptions::direction(Rtl)` (shadcn `dir` + `opts.direction`).",
+                    )
+
+                    .test_id_prefix("ui-gallery-carousel-rtl")
+                    .code_rust_from_file_region(snippets::rtl::SOURCE, "example"),
                 DocSection::new("Notes", notes_stack),
             ],
         );

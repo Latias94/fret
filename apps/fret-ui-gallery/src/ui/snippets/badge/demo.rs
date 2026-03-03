@@ -61,35 +61,38 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
                 .test_id("ui-gallery-badge-demo-verified")
                 .into_element(cx),
             shadcn::Badge::new("8")
+                .label_font_monospace()
                 .label_tabular_nums()
                 .refine_style(
                     ChromeRefinement::default()
                         .rounded(Radius::Full)
                         .px(Space::N1),
                 )
-                .refine_layout(LayoutRefinement::default().min_w(Px(20.0)))
+                .refine_layout(LayoutRefinement::default().h_px(Px(20.0)).min_w(Px(20.0)))
                 .test_id("ui-gallery-badge-demo-count")
                 .into_element(cx),
             shadcn::Badge::new("99")
                 .variant(shadcn::BadgeVariant::Destructive)
+                .label_font_monospace()
                 .label_tabular_nums()
                 .refine_style(
                     ChromeRefinement::default()
                         .rounded(Radius::Full)
                         .px(Space::N1),
                 )
-                .refine_layout(LayoutRefinement::default().min_w(Px(20.0)))
+                .refine_layout(LayoutRefinement::default().h_px(Px(20.0)).min_w(Px(20.0)))
                 .test_id("ui-gallery-badge-demo-count-destructive")
                 .into_element(cx),
             shadcn::Badge::new("20+")
                 .variant(shadcn::BadgeVariant::Outline)
+                .label_font_monospace()
                 .label_tabular_nums()
                 .refine_style(
                     ChromeRefinement::default()
                         .rounded(Radius::Full)
                         .px(Space::N1),
                 )
-                .refine_layout(LayoutRefinement::default().min_w(Px(20.0)))
+                .refine_layout(LayoutRefinement::default().h_px(Px(20.0)).min_w(Px(20.0)))
                 .test_id("ui-gallery-badge-demo-count-outline")
                 .into_element(cx),
         ]

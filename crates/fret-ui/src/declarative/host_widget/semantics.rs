@@ -449,6 +449,9 @@ impl ElementHostWidget {
             if let Some(label) = decoration.label.as_ref() {
                 cx.set_label(label.as_ref().to_string());
             }
+            if let Some(role_description) = decoration.role_description.as_ref() {
+                cx.set_role_description(Some(role_description.as_ref().to_string()));
+            }
             if let Some(test_id) = decoration.test_id.as_ref() {
                 cx.set_test_id(test_id.as_ref().to_string());
             }

@@ -6,7 +6,9 @@ use fret_core::{
 };
 use fret_icons::ids;
 use fret_runtime::{Effect, Model, ModelHost, ModelStore, TimerToken};
-use fret_ui::action::{ActionCx, ActivateReason, KeyDownCx, OnKeyDown, UiActionHost};
+use fret_ui::action::{
+    ActionCx, ActivateReason, KeyDownCx, OnKeyDown, OnWheel, UiActionHost, WheelCx,
+};
 use fret_ui::element::{
     AnyElement, ContainerProps, CrossAlign, ElementKind, FlexProps, HoverRegionProps, LayoutStyle,
     MainAlign, PointerRegionProps, RenderTransformProps, SemanticsDecoration, VisualTransformProps,
@@ -304,6 +306,107 @@ impl CarouselAutoplayConfig {
     }
 }
 
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct CarouselWheelGesturesConfig {
+    /// Amount of accumulated wheel delta in the carousel main axis required to trigger a single
+    /// snap step.
+    pub step_threshold_px: Px,
+    /// Maximum number of snap steps to apply per wheel event.
+    pub max_steps_per_event: usize,
+    /// When true, ignore wheel deltas that are not dominant on the carousel main axis.
+    ///
+    /// This avoids accidentally intercepting vertical page scrolling when a horizontal carousel
+    /// is hovered.
+    pub require_main_axis_dominant: bool,
+    /// When true, allow `Shift` to swap the wheel axes (typical desktop "horizontal scroll" UX).
+    pub allow_shift_to_swap_axes: bool,
+}
+
+impl Default for CarouselWheelGesturesConfig {
+    fn default() -> Self {
+        Self {
+            // Tailwind `-left-12` / `-right-12` is 48px; use it as a conservative default step.
+            step_threshold_px: Px(48.0),
+            max_steps_per_event: 1,
+            require_main_axis_dominant: true,
+            allow_shift_to_swap_axes: true,
+        }
+    }
+}
+
+impl CarouselWheelGesturesConfig {
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    pub fn step_threshold_px(mut self, threshold: Px) -> Self {
+        self.step_threshold_px = threshold;
+        self
+    }
+
+    pub fn max_steps_per_event(mut self, max: usize) -> Self {
+        self.max_steps_per_event = max;
+        self
+    }
+
+    pub fn require_main_axis_dominant(mut self, enabled: bool) -> Self {
+        self.require_main_axis_dominant = enabled;
+        self
+    }
+
+    pub fn allow_shift_to_swap_axes(mut self, enabled: bool) -> Self {
+        self.allow_shift_to_swap_axes = enabled;
+        self
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum CarouselPlugin {
+    Autoplay(CarouselAutoplayConfig),
+    WheelGestures(CarouselWheelGesturesConfig),
+}
+
+fn wheel_delta_main_axis(
+    orientation: CarouselOrientation,
+    wheel: WheelCx,
+    config: CarouselWheelGesturesConfig,
+) -> Option<f32> {
+    let dx = wheel.delta.x.0;
+    let dy = wheel.delta.y.0;
+    if !dx.is_finite() || !dy.is_finite() {
+        return None;
+    }
+
+    match orientation {
+        CarouselOrientation::Horizontal => {
+            let mut main = dx;
+            if config.allow_shift_to_swap_axes && wheel.modifiers.shift && main.abs() <= 0.001 {
+                main = dy;
+            }
+            if config.require_main_axis_dominant && dy.abs() > main.abs() {
+                return None;
+            }
+            if main.abs() <= 0.001 {
+                return None;
+            }
+            Some(main)
+        }
+        CarouselOrientation::Vertical => {
+            let mut main = dy;
+            if config.allow_shift_to_swap_axes && wheel.modifiers.shift && main.abs() <= 0.001 {
+                main = dx;
+            }
+            if config.require_main_axis_dominant && dx.abs() > main.abs() {
+                return None;
+            }
+            if main.abs() <= 0.001 {
+                return None;
+            }
+            Some(main)
+        }
+    }
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum CarouselOrientation {
     #[default]
@@ -398,6 +501,68 @@ pub struct CarouselBreakpoint {
     pub patch: CarouselOptionsPatch,
 }
 
+#[derive(Debug, Clone, Copy)]
+pub struct CarouselSpaceBreakpoint {
+    pub min_width_px: Px,
+    pub value: Space,
+}
+
+fn resolve_space_breakpoints(
+    viewport_width_px: Px,
+    base: Space,
+    breakpoints: &[CarouselSpaceBreakpoint],
+) -> Space {
+    if viewport_width_px.0 <= 0.0 || breakpoints.is_empty() {
+        return base;
+    }
+
+    let mut value = base;
+    for bp in breakpoints {
+        if viewport_width_px.0 >= bp.min_width_px.0 {
+            value = bp.value;
+        }
+    }
+    value
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn resolve_space_breakpoints_returns_base_when_unmeasured() {
+        let base = Space::N2;
+        let out = resolve_space_breakpoints(
+            Px(0.0),
+            base,
+            &[CarouselSpaceBreakpoint {
+                min_width_px: Px(10.0),
+                value: Space::N4,
+            }],
+        );
+        assert_eq!(out, base);
+    }
+
+    #[test]
+    fn resolve_space_breakpoints_selects_last_matching_breakpoint() {
+        let out = resolve_space_breakpoints(
+            Px(320.0),
+            Space::N1,
+            &[
+                CarouselSpaceBreakpoint {
+                    min_width_px: Px(200.0),
+                    value: Space::N2,
+                },
+                CarouselSpaceBreakpoint {
+                    min_width_px: Px(300.0),
+                    value: Space::N4,
+                },
+            ],
+        );
+        assert_eq!(out, Space::N4);
+    }
+}
+
 fn resolve_breakpoint_options(
     base: CarouselOptions,
     view_width: Px,
@@ -469,7 +634,14 @@ pub struct CarouselOptions {
     pub start_snap: usize,
     /// Whether pointer dragging is enabled (Embla `draggable`).
     pub draggable: bool,
-    /// Wrap prev/next selection (note: this is *not* a seamless loop engine yet).
+    /// Enable Embla-style loop behavior (`loop: true`).
+    ///
+    /// Notes:
+    /// - When slide geometry is measurable, this follows Embla's `canLoop` downgrade (it behaves
+    ///   like `loop=false` when content cannot physically loop).
+    /// - Seamless loop visuals require the Embla-style engine (`embla_engine=true`). When the
+    ///   engine is disabled, loop still uses the same `canLoop` gating but falls back to the
+    ///   deterministic v1 settle path (no momentum physics).
     pub loop_enabled: bool,
     /// Embla-style skipSnaps (best-effort without momentum physics).
     pub skip_snaps: bool,
@@ -620,14 +792,18 @@ impl CarouselOptions {
 
 #[derive(Debug)]
 pub struct Carousel {
-    items: Vec<AnyElement>,
+    items: Vec<CarouselItem>,
     layout: LayoutRefinement,
     viewport_layout: LayoutRefinement,
     track_layout: LayoutRefinement,
     item_layout: LayoutRefinement,
     orientation: CarouselOrientation,
     track_start_neg_margin: Space,
+    track_start_neg_margin_viewport_breakpoints: Vec<CarouselSpaceBreakpoint>,
+    track_start_neg_margin_layout_breakpoints: Vec<CarouselSpaceBreakpoint>,
     item_padding_start: Space,
+    item_padding_start_viewport_breakpoints: Vec<CarouselSpaceBreakpoint>,
+    item_padding_start_layout_breakpoints: Vec<CarouselSpaceBreakpoint>,
     item_basis_main_px: Option<Px>,
     breakpoints: Vec<CarouselBreakpoint>,
     options: CarouselOptions,
@@ -635,7 +811,7 @@ pub struct Carousel {
     api_snapshot: Option<Model<CarouselApiSnapshot>>,
     api_handle: Option<Model<Option<CarouselApi>>>,
     slides_in_view_snapshot: Option<Model<CarouselSlidesInViewSnapshot>>,
-    autoplay: Option<CarouselAutoplayConfig>,
+    plugins: Vec<CarouselPlugin>,
     controls: CarouselControls,
     test_id: Option<Arc<str>>,
 }
@@ -646,6 +822,7 @@ struct CarouselRuntime {
     settling: bool,
     embla_settling: bool,
     prevent_click: bool,
+    wheel_accum_main_px: f32,
     settle_from: Px,
     settle_to: Px,
     settle_generation: u64,
@@ -670,6 +847,7 @@ impl Default for CarouselRuntime {
             settling: false,
             embla_settling: false,
             prevent_click: false,
+            wheel_accum_main_px: 0.0,
             settle_from: Px(0.0),
             settle_to: Px(0.0),
             settle_generation: 0,
@@ -908,21 +1086,29 @@ fn carousel_parts_models<H: UiHost>(
 
 impl Default for Carousel {
     fn default() -> Self {
-        Self::new(Vec::new())
+        Self::new(Vec::<CarouselItem>::new())
     }
 }
 
 impl Carousel {
-    pub fn new(items: impl IntoIterator<Item = AnyElement>) -> Self {
+    pub fn new<I>(items: I) -> Self
+    where
+        I: IntoIterator,
+        I::Item: Into<CarouselItem>,
+    {
         Self {
-            items: items.into_iter().collect(),
+            items: items.into_iter().map(Into::into).collect(),
             layout: LayoutRefinement::default(),
             viewport_layout: LayoutRefinement::default(),
             track_layout: LayoutRefinement::default(),
             item_layout: LayoutRefinement::default(),
             orientation: CarouselOrientation::Horizontal,
             track_start_neg_margin: Space::N4,
+            track_start_neg_margin_viewport_breakpoints: Vec::new(),
+            track_start_neg_margin_layout_breakpoints: Vec::new(),
             item_padding_start: Space::N4,
+            item_padding_start_viewport_breakpoints: Vec::new(),
+            item_padding_start_layout_breakpoints: Vec::new(),
             item_basis_main_px: None,
             breakpoints: Vec::new(),
             options: CarouselOptions::default(),
@@ -930,14 +1116,18 @@ impl Carousel {
             api_snapshot: None,
             api_handle: None,
             slides_in_view_snapshot: None,
-            autoplay: None,
+            plugins: Vec::new(),
             controls: CarouselControls::BuiltIn,
             test_id: None,
         }
     }
 
-    pub fn items(mut self, items: impl IntoIterator<Item = AnyElement>) -> Self {
-        self.items = items.into_iter().collect();
+    pub fn items<I>(mut self, items: I) -> Self
+    where
+        I: IntoIterator,
+        I::Item: Into<CarouselItem>,
+    {
+        self.items = items.into_iter().map(Into::into).collect();
         self
     }
 
@@ -1023,10 +1213,25 @@ impl Carousel {
         self
     }
 
-    /// Adds an Embla-style autoplay policy surface (shadcn `carousel-plugin` outcome).
-    pub fn autoplay(mut self, config: CarouselAutoplayConfig) -> Self {
-        self.autoplay = Some(config);
+    /// Embla-style plugin surface aligned with shadcn/ui `plugins`.
+    pub fn plugin(mut self, plugin: CarouselPlugin) -> Self {
+        self.plugins.push(plugin);
         self
+    }
+
+    pub fn plugins(mut self, plugins: impl IntoIterator<Item = CarouselPlugin>) -> Self {
+        self.plugins.extend(plugins);
+        self
+    }
+
+    /// Adds an Embla-style autoplay policy surface (shadcn `carousel-plugin` outcome).
+    pub fn autoplay(self, config: CarouselAutoplayConfig) -> Self {
+        self.plugin(CarouselPlugin::Autoplay(config))
+    }
+
+    /// Adds wheel/trackpad gesture navigation (Embla wheel-gestures-style outcome).
+    pub fn wheel_gestures(self, config: CarouselWheelGesturesConfig) -> Self {
+        self.plugin(CarouselPlugin::WheelGestures(config))
     }
 
     pub fn track_start_neg_margin(mut self, margin: Space) -> Self {
@@ -1034,8 +1239,73 @@ impl Carousel {
         self
     }
 
+    /// Breakpoint-based track start negative margin patches for the **window viewport** width
+    /// (Tailwind `md:` / `lg:`).
+    ///
+    /// This matches shadcn's responsive `md:-ml-*` / `md:-mt-*` semantics on `CarouselContent`.
+    pub fn viewport_track_start_neg_margin_breakpoint(
+        mut self,
+        min_width_px: Px,
+        margin: Space,
+    ) -> Self {
+        self.track_start_neg_margin_viewport_breakpoints
+            .push(CarouselSpaceBreakpoint {
+                min_width_px,
+                value: margin,
+            });
+        self.track_start_neg_margin_viewport_breakpoints
+            .sort_by(|a, b| a.min_width_px.0.total_cmp(&b.min_width_px.0));
+        self
+    }
+
+    /// Breakpoint-based track start negative margin patches for the **carousel viewport** width
+    /// (container-query style).
+    pub fn track_start_neg_margin_breakpoint(mut self, min_width_px: Px, margin: Space) -> Self {
+        self.track_start_neg_margin_layout_breakpoints
+            .push(CarouselSpaceBreakpoint {
+                min_width_px,
+                value: margin,
+            });
+        self.track_start_neg_margin_layout_breakpoints
+            .sort_by(|a, b| a.min_width_px.0.total_cmp(&b.min_width_px.0));
+        self
+    }
+
     pub fn item_padding_start(mut self, padding: Space) -> Self {
         self.item_padding_start = padding;
+        self
+    }
+
+    /// Breakpoint-based default item start padding patches for the **window viewport** width
+    /// (Tailwind `md:` / `lg:`).
+    ///
+    /// This matches shadcn's responsive `md:pl-*` / `md:pt-*` semantics on `CarouselItem` when
+    /// the same value applies to all items.
+    pub fn viewport_item_padding_start_breakpoint(
+        mut self,
+        min_width_px: Px,
+        padding: Space,
+    ) -> Self {
+        self.item_padding_start_viewport_breakpoints
+            .push(CarouselSpaceBreakpoint {
+                min_width_px,
+                value: padding,
+            });
+        self.item_padding_start_viewport_breakpoints
+            .sort_by(|a, b| a.min_width_px.0.total_cmp(&b.min_width_px.0));
+        self
+    }
+
+    /// Breakpoint-based default item start padding patches for the **carousel viewport** width
+    /// (container-query style).
+    pub fn item_padding_start_breakpoint(mut self, min_width_px: Px, padding: Space) -> Self {
+        self.item_padding_start_layout_breakpoints
+            .push(CarouselSpaceBreakpoint {
+                min_width_px,
+                value: padding,
+            });
+        self.item_padding_start_layout_breakpoints
+            .sort_by(|a, b| a.min_width_px.0.total_cmp(&b.min_width_px.0));
         self
     }
 
@@ -1107,9 +1377,22 @@ impl Carousel {
         let api_handle = self.api_handle.clone().unwrap_or(default_api_handle);
         let api_snapshot = self.api_snapshot.clone().unwrap_or(default_api_snapshot);
         let content = content(cx);
+        let track_start_neg_margin = content.track_start_neg_margin;
 
-        self.items(content.items)
-            .refine_viewport_layout(content.viewport_layout)
+        let mut this = self.items(content.items);
+        if let Some(margin) = track_start_neg_margin {
+            this = this.track_start_neg_margin(margin);
+        }
+        this.track_start_neg_margin_viewport_breakpoints
+            .extend(content.track_start_neg_margin_viewport_breakpoints);
+        this.track_start_neg_margin_viewport_breakpoints
+            .sort_by(|a, b| a.min_width_px.0.total_cmp(&b.min_width_px.0));
+        this.track_start_neg_margin_layout_breakpoints
+            .extend(content.track_start_neg_margin_layout_breakpoints);
+        this.track_start_neg_margin_layout_breakpoints
+            .sort_by(|a, b| a.min_width_px.0.total_cmp(&b.min_width_px.0));
+
+        this.refine_viewport_layout(content.viewport_layout)
             .refine_track_layout(content.track_layout)
             .refine_item_layout(content.item_layout)
             .api_handle_model(api_handle)
@@ -1125,7 +1408,15 @@ impl Carousel {
             let orientation = self.orientation;
             let options_base = self.options;
             let breakpoints = self.breakpoints;
-            let autoplay_cfg = self.autoplay;
+            let plugins = self.plugins;
+            let mut autoplay_cfg: Option<CarouselAutoplayConfig> = None;
+            let mut wheel_cfg: Option<CarouselWheelGesturesConfig> = None;
+            for plugin in plugins {
+                match plugin {
+                    CarouselPlugin::Autoplay(cfg) => autoplay_cfg = Some(cfg),
+                    CarouselPlugin::WheelGestures(cfg) => wheel_cfg = Some(cfg),
+                }
+            }
             let autoplay_stop_on_interaction =
                 autoplay_cfg.is_some_and(|cfg| cfg.stop_on_interaction);
             let root_test_id = self.test_id.unwrap_or_else(|| Arc::from("carousel"));
@@ -1209,6 +1500,8 @@ impl Carousel {
                     .merge(self.layout),
             );
 
+            let viewport_width_for_viewport_breakpoints =
+                cx.environment_viewport_width(Invalidation::Layout);
             let viewport_layout = decl_style::layout_style(
                 &theme,
                 LayoutRefinement::default()
@@ -1220,16 +1513,49 @@ impl Carousel {
             let track_layout = match orientation {
                 CarouselOrientation::Horizontal => LayoutRefinement::default()
                     .w_full()
-                    .ml_neg(self.track_start_neg_margin)
+                    .ml_neg({
+                        let space = resolve_space_breakpoints(
+                            viewport_width_for_viewport_breakpoints,
+                            self.track_start_neg_margin,
+                            &self.track_start_neg_margin_viewport_breakpoints,
+                        );
+                        resolve_space_breakpoints(
+                            view_width_for_breakpoints,
+                            space,
+                            &self.track_start_neg_margin_layout_breakpoints,
+                        )
+                    })
                     .merge(self.track_layout),
                 CarouselOrientation::Vertical => LayoutRefinement::default()
                     .w_full()
-                    .mt_neg(self.track_start_neg_margin)
+                    .mt_neg({
+                        let space = resolve_space_breakpoints(
+                            viewport_width_for_viewport_breakpoints,
+                            self.track_start_neg_margin,
+                            &self.track_start_neg_margin_viewport_breakpoints,
+                        );
+                        resolve_space_breakpoints(
+                            view_width_for_breakpoints,
+                            space,
+                            &self.track_start_neg_margin_layout_breakpoints,
+                        )
+                    })
                     .merge(self.track_layout),
             };
             let track_layout = decl_style::layout_style(&theme, track_layout);
 
-            let item_pad = decl_style::space(&theme, self.item_padding_start);
+            let item_pad_default_space = {
+                let space = resolve_space_breakpoints(
+                    viewport_width_for_viewport_breakpoints,
+                    self.item_padding_start,
+                    &self.item_padding_start_viewport_breakpoints,
+                );
+                resolve_space_breakpoints(
+                    view_width_for_breakpoints,
+                    space,
+                    &self.item_padding_start_layout_breakpoints,
+                )
+            };
 
             let (track_direction, button_axis) = match orientation {
                 CarouselOrientation::Horizontal => {
@@ -1248,6 +1574,7 @@ impl Carousel {
             let items = self.items;
             let theme_for_items = theme.clone();
             let root_test_id_for_items = root_test_id.clone();
+            let viewport_width_for_item_breakpoints = view_width_for_breakpoints;
 
             let index_now = cx.watch_model(&index_model).copied().unwrap_or(0);
             let offset_now = cx.watch_model(&offset_model).copied().unwrap_or(Px(0.0));
@@ -1309,39 +1636,26 @@ impl Carousel {
                             .read(&index_model, |v| *v)
                             .ok()
                             .unwrap_or(0);
-                        let view_size_for_loop = if embla_engine_enabled {
-                            cx.app
-                                .models_mut()
-                                .read(&extent_model, |v| v.0.max(0.0))
-                                .ok()
-                                .unwrap_or(0.0)
-                        } else {
-                            0.0
-                        };
-                        let loop_enabled_effective = if options.loop_enabled && embla_engine_enabled {
-                            cx.app
-                                .models_mut()
-                                .read(&slides_model, |slides| {
-                                    if slides.len() != items_len {
-                                        return true;
-                                    }
-                                    let slides = slides
-                                        .iter()
-                                        .map(|s| headless_embla::slide_looper::Slide1D {
-                                            start: s.start.0,
-                                            size: s.size.0,
-                                        })
-                                        .collect::<Vec<_>>();
-                                    headless_embla::slide_looper::can_loop(
-                                        &slides,
-                                        view_size_for_loop,
-                                    )
-                                })
-                                .ok()
-                                .unwrap_or(false)
-                        } else {
-                            options.loop_enabled
-                        };
+                        let view_size_for_loop = cx
+                            .app
+                            .models_mut()
+                            .read(&extent_model, |v| v.0.max(0.0))
+                            .ok()
+                            .unwrap_or(0.0);
+                        let slides_for_loop: Arc<[headless_carousel::CarouselSlide1D]> = cx
+                            .app
+                            .models_mut()
+                            .read(&slides_model, |slides| slides.clone())
+                            .ok()
+                            .unwrap_or_else(|| {
+                                Arc::from(Vec::<headless_carousel::CarouselSlide1D>::new())
+                            });
+                        let loop_enabled_effective = resolve_loop_enabled_effective(
+                            options.loop_enabled,
+                            items_len,
+                            view_size_for_loop,
+                            &slides_for_loop,
+                        );
                         let target_index = match cmd {
                             CarouselCommand::ScrollPrev => {
                                 if loop_enabled_effective {
@@ -1666,20 +1980,15 @@ impl Carousel {
                     .unwrap_or(0);
 
                 let can_use_embla_engine = embla_engine_enabled_for_down && snaps.len() > 1;
-                let loop_enabled = if can_use_embla_engine && loop_requested_for_down {
+                let loop_enabled = if can_use_embla_engine {
                     host.models_mut()
                         .read(&slides_for_down, |slides| {
-                            if slides.len() != items_len {
-                                return true;
-                            }
-                            let slides = slides
-                                .iter()
-                                .map(|s| headless_embla::slide_looper::Slide1D {
-                                    start: s.start.0,
-                                    size: s.size.0,
-                                })
-                                .collect::<Vec<_>>();
-                            headless_embla::slide_looper::can_loop(&slides, view_size)
+                            resolve_loop_enabled_effective(
+                                loop_requested_for_down,
+                                items_len,
+                                view_size,
+                                slides,
+                            )
                         })
                         .ok()
                         .unwrap_or(loop_requested_for_down)
@@ -1885,6 +2194,7 @@ impl Carousel {
             let drag_free_for_up = options.drag_free;
             let loop_requested_for_up = options.loop_enabled;
             let slides_for_up = slides_model.clone();
+            let extent_for_up = extent_model.clone();
             let direction_for_up = layout_direction;
             let on_up: fret_ui::action::OnPointerUp = Arc::new(move |host, cx, up| {
                 let runtime = host
@@ -1928,25 +2238,38 @@ impl Carousel {
                     .ok()
                     .unwrap_or_else(|| Arc::from(Vec::<Px>::new()));
 
-                let can_use_embla_engine =
-                    embla_engine_enabled_for_up && snaps.len() > 1 && up.velocity_window.is_some();
+                let view_size_for_loop = host
+                    .models_mut()
+                    .read(&extent_for_up, |v| v.0.max(0.0))
+                    .ok()
+                    .unwrap_or(0.0);
+                let loop_enabled_effective = if loop_requested_for_up {
+                    host.models_mut()
+                        .read(&slides_for_up, |slides| {
+                            resolve_loop_enabled_effective(
+                                true,
+                                items_len,
+                                view_size_for_loop,
+                                slides,
+                            )
+                        })
+                        .ok()
+                        .unwrap_or(false)
+                } else {
+                    false
+                };
+
+                let can_use_embla_engine = embla_engine_enabled_for_up && snaps.len() > 1;
 
                 if can_use_embla_engine {
-                    let bounds = host.bounds();
-                    let view_size = match track_direction {
-                        fret_core::Axis::Horizontal => bounds.size.width.0.max(0.0),
-                        fret_core::Axis::Vertical => bounds.size.height.0.max(0.0),
-                    };
+                    let view_size = view_size_for_loop;
 
                     let content_size = if max_offset.0 > 0.0 {
                         max_offset.0 + view_size
                     } else {
                         let extent = match item_basis {
                             Some(px) => px,
-                            None => match track_direction {
-                                fret_core::Axis::Horizontal => bounds.size.width,
-                                fret_core::Axis::Vertical => bounds.size.height,
-                            },
+                            None => Px(view_size),
                         };
                         (extent.0 * (items_len as f32)).max(0.0)
                     };
@@ -1962,32 +2285,11 @@ impl Carousel {
                         .ok()
                         .unwrap_or(0);
 
-                    let loop_enabled = if loop_requested_for_up {
-                        host.models_mut()
-                            .read(&slides_for_up, |slides| {
-                                if slides.len() != items_len {
-                                    return true;
-                                }
-                                let slides = slides
-                                    .iter()
-                                    .map(|s| headless_embla::slide_looper::Slide1D {
-                                        start: s.start.0,
-                                        size: s.size.0,
-                                    })
-                                    .collect::<Vec<_>>();
-                                headless_embla::slide_looper::can_loop(&slides, view_size)
-                            })
-                            .ok()
-                            .unwrap_or(false)
-                    } else {
-                        false
-                    };
-
                     let mut engine = headless_embla::engine::Engine::new(
                         scroll_snaps,
                         content_size,
                         headless_embla::engine::EngineConfig {
-                            loop_enabled,
+                            loop_enabled: loop_enabled_effective,
                             drag_free: drag_free_for_up,
                             skip_snaps: skip_snaps_for_up,
                             duration: embla_duration_for_up.max(0.0),
@@ -2058,7 +2360,7 @@ impl Carousel {
                         up.position,
                         &snaps,
                         max_offset,
-                        loop_requested_for_up,
+                        loop_enabled_effective,
                         skip_snaps_for_up,
                         drag_free_for_up,
                     )
@@ -2171,12 +2473,23 @@ impl Carousel {
                         return;
                     }
 
-                    if embla_engine_enabled_for_prev {
-                        let view_size = host
-                            .models_mut()
-                            .read(&extent_for_prev, |v| v.0.max(0.0))
+                    let view_size = host
+                        .models_mut()
+                        .read(&extent_for_prev, |v| v.0.max(0.0))
+                        .ok()
+                        .unwrap_or(0.0);
+                    let loop_enabled_effective = if loop_requested_for_prev {
+                        host.models_mut()
+                            .read(&slides_for_prev, |slides| {
+                                resolve_loop_enabled_effective(true, items_len, view_size, slides)
+                            })
                             .ok()
-                            .unwrap_or(0.0);
+                            .unwrap_or(false)
+                    } else {
+                        false
+                    };
+
+                    if embla_engine_enabled_for_prev {
                         let max_offset = host
                             .models_mut()
                             .read(&max_offset_for_prev, |v| *v)
@@ -2188,32 +2501,11 @@ impl Carousel {
                             scroll_snaps.push(0.0);
                         }
 
-                        let loop_enabled = if loop_requested_for_prev {
-                            host.models_mut()
-                                .read(&slides_for_prev, |slides| {
-                                    if slides.len() != items_len {
-                                        return true;
-                                    }
-                                    let slides = slides
-                                        .iter()
-                                        .map(|s| headless_embla::slide_looper::Slide1D {
-                                            start: s.start.0,
-                                            size: s.size.0,
-                                        })
-                                        .collect::<Vec<_>>();
-                                    headless_embla::slide_looper::can_loop(&slides, view_size)
-                                })
-                                .ok()
-                                .unwrap_or(false)
-                        } else {
-                            false
-                        };
-
                         let mut engine = headless_embla::engine::Engine::new(
                             scroll_snaps,
                             content_size,
                             headless_embla::engine::EngineConfig {
-                                loop_enabled,
+                                loop_enabled: loop_enabled_effective,
                                 drag_free: drag_free_for_prev,
                                 skip_snaps: skip_snaps_for_prev,
                                 duration: embla_duration_for_prev.max(0.0),
@@ -2252,7 +2544,7 @@ impl Carousel {
                         return;
                     }
 
-                    let target_index = if loop_requested_for_prev {
+                    let target_index = if loop_enabled_effective {
                         headless_snap_points::step_index_wrapped(snaps.len(), index, -1)
                     } else {
                         headless_snap_points::step_index_clamped(snaps.len(), index, -1)
@@ -2329,12 +2621,23 @@ impl Carousel {
                         return;
                     }
 
-                    if embla_engine_enabled_for_next {
-                        let view_size = host
-                            .models_mut()
-                            .read(&extent_for_next, |v| v.0.max(0.0))
+                    let view_size = host
+                        .models_mut()
+                        .read(&extent_for_next, |v| v.0.max(0.0))
+                        .ok()
+                        .unwrap_or(0.0);
+                    let loop_enabled_effective = if loop_requested_for_next {
+                        host.models_mut()
+                            .read(&slides_for_next, |slides| {
+                                resolve_loop_enabled_effective(true, items_len, view_size, slides)
+                            })
                             .ok()
-                            .unwrap_or(0.0);
+                            .unwrap_or(false)
+                    } else {
+                        false
+                    };
+
+                    if embla_engine_enabled_for_next {
                         let max_offset = host
                             .models_mut()
                             .read(&max_offset_for_next, |v| *v)
@@ -2346,32 +2649,11 @@ impl Carousel {
                             scroll_snaps.push(0.0);
                         }
 
-                        let loop_enabled = if loop_requested_for_next {
-                            host.models_mut()
-                                .read(&slides_for_next, |slides| {
-                                    if slides.len() != items_len {
-                                        return true;
-                                    }
-                                    let slides = slides
-                                        .iter()
-                                        .map(|s| headless_embla::slide_looper::Slide1D {
-                                            start: s.start.0,
-                                            size: s.size.0,
-                                        })
-                                        .collect::<Vec<_>>();
-                                    headless_embla::slide_looper::can_loop(&slides, view_size)
-                                })
-                                .ok()
-                                .unwrap_or(false)
-                        } else {
-                            false
-                        };
-
                         let mut engine = headless_embla::engine::Engine::new(
                             scroll_snaps,
                             content_size,
                             headless_embla::engine::EngineConfig {
-                                loop_enabled,
+                                loop_enabled: loop_enabled_effective,
                                 drag_free: drag_free_for_next,
                                 skip_snaps: skip_snaps_for_next,
                                 duration: embla_duration_for_next.max(0.0),
@@ -2410,7 +2692,7 @@ impl Carousel {
                         return;
                     }
 
-                    let target_index = if loop_requested_for_next {
+                    let target_index = if loop_enabled_effective {
                         headless_snap_points::step_index_wrapped(snaps.len(), index, 1)
                     } else {
                         headless_snap_points::step_index_clamped(snaps.len(), index, 1)
@@ -2519,17 +2801,12 @@ impl Carousel {
                     let loop_enabled = if loop_requested_for_key {
                         host.models_mut()
                             .read(&slides_for_key, |slides| {
-                                if slides.len() != items_len {
-                                    return true;
-                                }
-                                let slides = slides
-                                    .iter()
-                                    .map(|s| headless_embla::slide_looper::Slide1D {
-                                        start: s.start.0,
-                                        size: s.size.0,
-                                    })
-                                    .collect::<Vec<_>>();
-                                headless_embla::slide_looper::can_loop(&slides, view_size_for_loop)
+                                resolve_loop_enabled_effective(
+                                    true,
+                                    items_len,
+                                    view_size_for_loop,
+                                    slides,
+                                )
                             })
                             .ok()
                             .unwrap_or(false)
@@ -2639,12 +2916,16 @@ impl Carousel {
                 .iter()
                 .map(|s| s.start.0 + s.size.0)
                 .fold(0.0f32, |a, b| a.max(b));
-            let loop_translates = if options.loop_enabled
-                && embla_engine_enabled
-                && slides_prev.len() == items_len
-                && content_size_prev > 0.0
-                && view_size_prev.0 > 0.0
-            {
+            let loop_enabled_for_translates = embla_engine_enabled
+                && resolve_loop_enabled_effective(
+                    options.loop_enabled,
+                    items_len,
+                    view_size_prev.0.max(0.0),
+                    &slides_prev,
+                );
+            let loop_translates =
+                if loop_enabled_for_translates && content_size_prev > 0.0 && view_size_prev.0 > 0.0
+                {
                 let slides = slides_prev
                     .iter()
                     .map(|s| headless_embla::slide_looper::Slide1D {
@@ -2679,45 +2960,73 @@ impl Carousel {
                     items
                         .into_iter()
                         .enumerate()
-                        .map(|(idx, content)| {
+                        .map(|(idx, item)| {
+                            let per_item_layout_patch = item
+                                .layout
+                                .merge(resolve_item_viewport_layout_breakpoints(
+                                    viewport_width_for_viewport_breakpoints,
+                                    &item.viewport_layout_breakpoints,
+                                ))
+                                .merge(resolve_item_layout_breakpoints(
+                                    viewport_width_for_item_breakpoints,
+                                    &item.layout_breakpoints,
+                                ));
+                            let per_item_basis = per_item_layout_patch
+                                .flex_item
+                                .as_ref()
+                                .and_then(|f| f.basis.as_ref())
+                                .is_some();
+
+                            let item_pad_space = {
+                                let space = item.padding_start.unwrap_or(item_pad_default_space);
+                                let space = resolve_space_breakpoints(
+                                    viewport_width_for_viewport_breakpoints,
+                                    space,
+                                    &item.viewport_padding_start_breakpoints,
+                                );
+                                resolve_space_breakpoints(
+                                    viewport_width_for_item_breakpoints,
+                                    space,
+                                    &item.padding_start_breakpoints,
+                                )
+                            };
+                            let item_pad = decl_style::space(&theme_for_items, item_pad_space);
+
+                            let content = item.child;
                             slide_content_ids_ref.push(content.id);
 
                             let mut item_layout = LayoutRefinement::default()
-                                .flex_none()
+                                .flex_grow(0.0)
+                                .flex_shrink(0.0)
                                 .min_w(MetricRef::Px(Px(0.0)))
-                                .merge(item_layout_patch.clone());
+                                .merge(item_layout_patch.clone())
+                                .merge(per_item_layout_patch);
 
-                            if let Some(basis) = item_basis {
-                                item_layout =
-                                    item_layout.basis(LengthRefinement::Px(MetricRef::Px(basis)));
-
-                                // When an explicit item basis is provided, treat it as the
-                                // authoritative snap extent and clamp the item's main-axis size
-                                // to match. This keeps `item_basis_main_px` deterministic even
-                                // when children would otherwise expand the flex item.
-                                if track_direction == fret_core::Axis::Vertical {
+                            if !per_item_basis {
+                                if let Some(basis) = item_basis {
                                     item_layout = item_layout
-                                        .h_px(MetricRef::Px(basis))
-                                        .min_h(MetricRef::Px(basis))
-                                        .max_h(MetricRef::Px(basis));
+                                        .basis(LengthRefinement::Px(MetricRef::Px(basis)));
+
+                                    // When an explicit item basis is provided, treat it as the
+                                    // authoritative snap extent and clamp the item's main-axis size
+                                    // to match. This keeps `item_basis_main_px` deterministic even
+                                    // when children would otherwise expand the flex item.
+                                    if track_direction == fret_core::Axis::Vertical {
+                                        item_layout = item_layout
+                                            .h_px(MetricRef::Px(basis))
+                                            .min_h(MetricRef::Px(basis))
+                                            .max_h(MetricRef::Px(basis));
+                                    }
+                                } else if item_layout
+                                    .flex_item
+                                    .as_ref()
+                                    .and_then(|f| f.basis.as_ref())
+                                    .is_none()
+                                {
+                                    // Match shadcn/ui v4 `basis-full` default.
+                                    item_layout = item_layout.basis_fraction(1.0);
                                 }
-                             } else {
-                                  // Match shadcn/ui v4 `basis-full` default for horizontal tracks.
-                                  //
-                                  // For vertical tracks, the upstream demo uses `md:basis-1/2` and
-                                  // relies on breakpoint-dependent item sizing, but the base class
-                                  // still includes `basis-full` (i.e. fill the viewport on the main
-                                  // axis). Match that default so `orientation="vertical"` behaves
-                                  // like the docs without requiring `item_basis_main_px`.
-                                  item_layout = match track_direction {
-                                      fret_core::Axis::Horizontal => {
-                                          item_layout.basis_fraction(1.0)
-                                      }
-                                      fret_core::Axis::Vertical => {
-                                          item_layout.basis_fraction(1.0)
-                                      }
-                                  };
-                              }
+                            }
 
                             let item_layout =
                                 decl_style::layout_style(&theme_for_items, item_layout);
@@ -2752,6 +3061,7 @@ impl Carousel {
                             let item = item.attach_semantics(
                                 SemanticsDecoration::default()
                                     .role(SemanticsRole::Group)
+                                    .role_description("slide")
                                     .label(Arc::from(format!("Slide {} of {}", idx + 1, items_len)))
                                     .test_id(test_id),
                             );
@@ -2793,11 +3103,75 @@ impl Carousel {
             let pointer_layout =
                 decl_style::layout_style(&theme, LayoutRefinement::default().size_full());
 
+            let on_wheel: Option<OnWheel> = wheel_cfg.map(|cfg| {
+                let snaps_for_wheel = snaps_model.clone();
+                let runtime_for_wheel = runtime_model.clone();
+                let on_prev_for_wheel = on_prev.clone();
+                let on_next_for_wheel = on_next.clone();
+                let handler: OnWheel = Arc::new(
+                    move |host: &mut dyn fret_ui::action::UiPointerActionHost,
+                          cx: ActionCx,
+                          wheel: WheelCx| {
+                        let snaps_len = host
+                            .models_mut()
+                            .read(&snaps_for_wheel, |v: &Arc<[Px]>| v.len())
+                            .ok()
+                            .unwrap_or(0);
+                        if snaps_len <= 1 {
+                            return false;
+                        }
+
+                        let Some(delta_main) = wheel_delta_main_axis(orientation, wheel, cfg) else {
+                            return false;
+                        };
+
+                        let threshold = cfg.step_threshold_px.0.max(1.0);
+                        let max_steps = cfg.max_steps_per_event.max(1).min(8);
+
+                        let (prev_steps, next_steps) = host
+                            .models_mut()
+                            .update(&runtime_for_wheel, |st| {
+                                let mut accum = st.wheel_accum_main_px;
+                                if accum != 0.0 && accum.signum() != delta_main.signum() {
+                                    accum = 0.0;
+                                }
+                                accum += delta_main;
+
+                                let mut prev = 0usize;
+                                let mut next = 0usize;
+                                while accum >= threshold && prev < max_steps {
+                                    prev = prev.saturating_add(1);
+                                    accum -= threshold;
+                                }
+                                while accum <= -threshold && next < max_steps {
+                                    next = next.saturating_add(1);
+                                    accum += threshold;
+                                }
+
+                                st.wheel_accum_main_px = accum;
+                                (prev, next)
+                            })
+                            .unwrap_or((0usize, 0usize));
+
+                        let host_action: &mut dyn UiActionHost = host;
+                        for _ in 0..prev_steps {
+                            on_prev_for_wheel(host_action, cx, ActivateReason::Pointer);
+                        }
+                        for _ in 0..next_steps {
+                            on_next_for_wheel(host_action, cx, ActivateReason::Pointer);
+                        }
+
+                        true
+                    },
+                );
+                handler
+            });
+
             let drag_enabled = items_len > 1 && options.draggable;
             let pointer_region = cx.pointer_region(
                 PointerRegionProps {
                     layout: pointer_layout,
-                    enabled: drag_enabled,
+                    enabled: drag_enabled || on_wheel.is_some(),
                     capture_phase_pointer_moves: true,
                 },
                 move |cx| {
@@ -2805,6 +3179,9 @@ impl Carousel {
                     cx.pointer_region_on_pointer_move(on_move);
                     cx.pointer_region_on_pointer_up(on_up);
                     cx.pointer_region_on_pointer_cancel(on_cancel);
+                    if let Some(on_wheel) = on_wheel.clone() {
+                        cx.pointer_region_on_wheel(on_wheel);
+                    }
                     vec![track]
                 },
             );
@@ -2989,34 +3366,21 @@ impl Carousel {
                         if (tab_pending || focus_offscreen)
                             && let Some(target_snap) = snaps_now.get(snap_index).copied()
                         {
-                            let loop_enabled_effective = if options.loop_enabled {
-                                let slides_prev: Arc<[headless_carousel::CarouselSlide1D]> = cx
-                                    .watch_model(&slides_model)
-                                    .layout()
-                                    .cloned()
-                                    .unwrap_or_else(|| {
-                                        Arc::from(Vec::<headless_carousel::CarouselSlide1D>::new())
-                                    });
-                                if slides_prev.len() == items_len {
-                                    let slides = slides_prev
-                                        .iter()
-                                        .map(|s| headless_embla::slide_looper::Slide1D {
-                                            start: s.start.0,
-                                            size: s.size.0,
-                                        })
-                                        .collect::<Vec<_>>();
-                                    headless_embla::slide_looper::can_loop(
-                                        &slides,
-                                        view_size_now.0.max(0.0),
-                                    )
-                                } else {
-                                    true
-                                }
-                            } else {
-                                false
-                            };
+                            let slides_prev: Arc<[headless_carousel::CarouselSlide1D]> = cx
+                                .watch_model(&slides_model)
+                                .layout()
+                                .cloned()
+                                .unwrap_or_else(|| {
+                                    Arc::from(Vec::<headless_carousel::CarouselSlide1D>::new())
+                                });
+                            let loop_enabled_effective = resolve_loop_enabled_effective(
+                                options.loop_enabled,
+                                items_len,
+                                view_size_now.0.max(0.0),
+                                &slides_prev,
+                            );
 
-                            let offset_max = if loop_enabled_effective {
+                            let offset_max = if embla_engine_enabled && loop_enabled_effective {
                                 (max_offset_now.0 + view_size_now.0).max(0.0)
                             } else {
                                 max_offset_now.0.max(0.0)
@@ -3267,18 +3631,12 @@ impl Carousel {
                 let scroll_snaps = snaps_now.iter().map(|px| -px.0).collect::<Vec<_>>();
                 let content_size = (max_offset_now.0 + view_size_now.0).max(0.0);
                 let view_size = view_size_now.0.max(0.0);
-                let loop_enabled_effective = if options.loop_enabled && slides_arc.len() == items_len {
-                    let slides = slides_arc
-                        .iter()
-                        .map(|s| headless_embla::slide_looper::Slide1D {
-                            start: s.start.0,
-                            size: s.size.0,
-                        })
-                        .collect::<Vec<_>>();
-                    headless_embla::slide_looper::can_loop(&slides, view_size)
-                } else {
-                    options.loop_enabled
-                };
+                let loop_enabled_effective = resolve_loop_enabled_effective(
+                    options.loop_enabled,
+                    items_len,
+                    view_size,
+                    &slides_arc,
+                );
 
                 let pointer_down =
                     runtime_snapshot.drag.armed || runtime_snapshot.drag.dragging;
@@ -3332,19 +3690,13 @@ impl Carousel {
                     .models_mut()
                     .update(&index_model, |v| *v = clamped_index);
             }
-            let loop_enabled_effective = if options.loop_enabled && slides_arc.len() == items_len {
-                let slides = slides_arc
-                    .iter()
-                    .map(|s| headless_embla::slide_looper::Slide1D {
-                        start: s.start.0,
-                        size: s.size.0,
-                    })
-                    .collect::<Vec<_>>();
-                headless_embla::slide_looper::can_loop(&slides, view_size_now.0.max(0.0))
-            } else {
-                options.loop_enabled
-            };
-            let offset_max = if loop_enabled_effective {
+            let loop_enabled_effective = resolve_loop_enabled_effective(
+                options.loop_enabled,
+                items_len,
+                view_size_now.0.max(0.0),
+                &slides_arc,
+            );
+            let offset_max = if embla_engine_enabled && loop_enabled_effective {
                 (max_offset_now.0 + view_size_now.0).max(0.0)
             } else {
                 max_offset_now.0.max(0.0)
@@ -3413,7 +3765,7 @@ impl Carousel {
                         .get(clamped_index)
                         .copied()
                         .unwrap_or(Px(0.0));
-                let offset_max = if loop_enabled_effective {
+                let offset_max = if embla_engine_enabled && loop_enabled_effective {
                     (max_offset_now.0 + view_size_now.0).max(0.0)
                 } else {
                     max_offset_now.0.max(0.0)
@@ -3823,17 +4175,12 @@ impl Carousel {
                         let loop_enabled = if loop_requested_for_timer {
                             host.models_mut()
                                 .read(&slides_for_timer, |slides| {
-                                    if slides.len() != items_len {
-                                        return true;
-                                    }
-                                    let slides = slides
-                                        .iter()
-                                        .map(|s| headless_embla::slide_looper::Slide1D {
-                                            start: s.start.0,
-                                            size: s.size.0,
-                                        })
-                                        .collect::<Vec<_>>();
-                                    headless_embla::slide_looper::can_loop(&slides, view_size_for_loop)
+                                    resolve_loop_enabled_effective(
+                                        true,
+                                        items_len,
+                                        view_size_for_loop,
+                                        slides,
+                                    )
                                 })
                                 .ok()
                                 .unwrap_or(false)
@@ -3888,7 +4235,8 @@ impl Carousel {
             };
             root.attach_semantics(
                 SemanticsDecoration::default()
-                    .role(SemanticsRole::Panel)
+                    .role(SemanticsRole::Region)
+                    .role_description("carousel")
                     .label("Carousel")
                     .orientation(orientation_semantics)
                     .test_id(root_test_id),
@@ -3900,19 +4248,25 @@ impl Carousel {
 /// shadcn/ui `CarouselContent` (v4).
 #[derive(Debug)]
 pub struct CarouselContent {
-    items: Vec<AnyElement>,
+    items: Vec<CarouselItem>,
     viewport_layout: LayoutRefinement,
     track_layout: LayoutRefinement,
     item_layout: LayoutRefinement,
+    track_start_neg_margin: Option<Space>,
+    track_start_neg_margin_viewport_breakpoints: Vec<CarouselSpaceBreakpoint>,
+    track_start_neg_margin_layout_breakpoints: Vec<CarouselSpaceBreakpoint>,
 }
 
 impl CarouselContent {
     pub fn new(items: impl IntoIterator<Item = CarouselItem>) -> Self {
         Self {
-            items: items.into_iter().map(|i| i.child).collect(),
+            items: items.into_iter().collect(),
             viewport_layout: LayoutRefinement::default(),
             track_layout: LayoutRefinement::default(),
             item_layout: LayoutRefinement::default(),
+            track_start_neg_margin: None,
+            track_start_neg_margin_viewport_breakpoints: Vec::new(),
+            track_start_neg_margin_layout_breakpoints: Vec::new(),
         }
     }
 
@@ -3930,18 +4284,276 @@ impl CarouselContent {
         self.item_layout = self.item_layout.merge(layout);
         self
     }
+
+    /// Match shadcn's `CarouselContent className="-ml-4"` / `"-mt-4"` spacing approach.
+    ///
+    /// This is a convenience surface that maps to [`Carousel::track_start_neg_margin`].
+    pub fn track_start_neg_margin(mut self, margin: Space) -> Self {
+        self.track_start_neg_margin = Some(margin);
+        self
+    }
+
+    /// Breakpoint-based track start negative margin patches for the **window viewport** width
+    /// (Tailwind `md:` / `lg:`).
+    pub fn viewport_track_start_neg_margin_breakpoint(
+        mut self,
+        min_width_px: Px,
+        margin: Space,
+    ) -> Self {
+        self.track_start_neg_margin_viewport_breakpoints
+            .push(CarouselSpaceBreakpoint {
+                min_width_px,
+                value: margin,
+            });
+        self.track_start_neg_margin_viewport_breakpoints
+            .sort_by(|a, b| a.min_width_px.0.total_cmp(&b.min_width_px.0));
+        self
+    }
+
+    pub fn viewport_track_start_neg_margin_breakpoints(
+        mut self,
+        breakpoints: impl IntoIterator<Item = CarouselSpaceBreakpoint>,
+    ) -> Self {
+        self.track_start_neg_margin_viewport_breakpoints
+            .extend(breakpoints.into_iter().collect::<Vec<_>>());
+        self.track_start_neg_margin_viewport_breakpoints
+            .sort_by(|a, b| a.min_width_px.0.total_cmp(&b.min_width_px.0));
+        self
+    }
+
+    /// Breakpoint-based track start negative margin patches for the **carousel viewport** width
+    /// (container-query style).
+    pub fn track_start_neg_margin_breakpoint(mut self, min_width_px: Px, margin: Space) -> Self {
+        self.track_start_neg_margin_layout_breakpoints
+            .push(CarouselSpaceBreakpoint {
+                min_width_px,
+                value: margin,
+            });
+        self.track_start_neg_margin_layout_breakpoints
+            .sort_by(|a, b| a.min_width_px.0.total_cmp(&b.min_width_px.0));
+        self
+    }
+
+    pub fn track_start_neg_margin_breakpoints(
+        mut self,
+        breakpoints: impl IntoIterator<Item = CarouselSpaceBreakpoint>,
+    ) -> Self {
+        self.track_start_neg_margin_layout_breakpoints
+            .extend(breakpoints.into_iter().collect::<Vec<_>>());
+        self.track_start_neg_margin_layout_breakpoints
+            .sort_by(|a, b| a.min_width_px.0.total_cmp(&b.min_width_px.0));
+        self
+    }
 }
 
 /// shadcn/ui `CarouselItem` (v4).
 #[derive(Debug)]
 pub struct CarouselItem {
     child: AnyElement,
+    layout: LayoutRefinement,
+    padding_start: Option<Space>,
+    viewport_padding_start_breakpoints: Vec<CarouselSpaceBreakpoint>,
+    padding_start_breakpoints: Vec<CarouselSpaceBreakpoint>,
+    viewport_layout_breakpoints: Vec<CarouselItemLayoutBreakpoint>,
+    layout_breakpoints: Vec<CarouselItemLayoutBreakpoint>,
 }
 
 impl CarouselItem {
     pub fn new(child: AnyElement) -> Self {
-        Self { child }
+        Self {
+            child,
+            layout: LayoutRefinement::default(),
+            padding_start: None,
+            viewport_padding_start_breakpoints: Vec::new(),
+            padding_start_breakpoints: Vec::new(),
+            viewport_layout_breakpoints: Vec::new(),
+            layout_breakpoints: Vec::new(),
+        }
     }
+
+    /// Matches shadcn's per-item `className` surface (e.g. `md:basis-1/2`).
+    pub fn refine_layout(mut self, layout: LayoutRefinement) -> Self {
+        self.layout = self.layout.merge(layout);
+        self
+    }
+
+    /// Breakpoint-based layout patches for the **window viewport** width (Tailwind `md:` / `lg:`).
+    ///
+    /// This matches shadcn's responsive `md:` / `lg:` semantics (device/viewport-driven), but uses
+    /// explicit pixel thresholds and typed layout patches instead of Tailwind strings.
+    pub fn viewport_layout_breakpoint(mut self, min_width_px: Px, patch: LayoutRefinement) -> Self {
+        self.viewport_layout_breakpoints
+            .push(CarouselItemLayoutBreakpoint {
+                min_width_px,
+                patch,
+            });
+        self.viewport_layout_breakpoints
+            .sort_by(|a, b| a.min_width_px.0.total_cmp(&b.min_width_px.0));
+        self
+    }
+
+    pub fn viewport_layout_breakpoints(
+        mut self,
+        breakpoints: impl IntoIterator<Item = CarouselItemLayoutBreakpoint>,
+    ) -> Self {
+        self.viewport_layout_breakpoints
+            .extend(breakpoints.into_iter().collect::<Vec<_>>());
+        self.viewport_layout_breakpoints
+            .sort_by(|a, b| a.min_width_px.0.total_cmp(&b.min_width_px.0));
+        self
+    }
+
+    /// Breakpoint-based layout patches for the **carousel viewport** width (container-query style).
+    ///
+    /// This is useful for panel-width responsiveness inside docking/panels. For Tailwind-aligned
+    /// device/viewport breakpoints, prefer [`CarouselItem::viewport_layout_breakpoint`].
+    ///
+    /// Note: breakpoints are evaluated against the measured carousel viewport width. The value is
+    /// frame-lagged (ADR 0231). On initial mount, the carousel viewport width is discovered after
+    /// the first layout pass, so breakpoint patches may apply starting from the third frame.
+    pub fn layout_breakpoint(mut self, min_width_px: Px, patch: LayoutRefinement) -> Self {
+        self.layout_breakpoints.push(CarouselItemLayoutBreakpoint {
+            min_width_px,
+            patch,
+        });
+        self.layout_breakpoints
+            .sort_by(|a, b| a.min_width_px.0.total_cmp(&b.min_width_px.0));
+        self
+    }
+
+    pub fn layout_breakpoints(
+        mut self,
+        breakpoints: impl IntoIterator<Item = CarouselItemLayoutBreakpoint>,
+    ) -> Self {
+        self.layout_breakpoints
+            .extend(breakpoints.into_iter().collect::<Vec<_>>());
+        self.layout_breakpoints
+            .sort_by(|a, b| a.min_width_px.0.total_cmp(&b.min_width_px.0));
+        self
+    }
+
+    /// Matches shadcn's per-item `className="pl-4"` / `pt-4` spacing approach.
+    ///
+    /// This is a convenience surface that maps to the recipe's start padding for each slide.
+    pub fn padding_start(mut self, padding: Space) -> Self {
+        self.padding_start = Some(padding);
+        self
+    }
+
+    /// Breakpoint-based item start padding patches for the **window viewport** width
+    /// (Tailwind `md:` / `lg:`).
+    pub fn viewport_padding_start_breakpoint(mut self, min_width_px: Px, padding: Space) -> Self {
+        self.viewport_padding_start_breakpoints
+            .push(CarouselSpaceBreakpoint {
+                min_width_px,
+                value: padding,
+            });
+        self.viewport_padding_start_breakpoints
+            .sort_by(|a, b| a.min_width_px.0.total_cmp(&b.min_width_px.0));
+        self
+    }
+
+    pub fn viewport_padding_start_breakpoints(
+        mut self,
+        breakpoints: impl IntoIterator<Item = CarouselSpaceBreakpoint>,
+    ) -> Self {
+        self.viewport_padding_start_breakpoints
+            .extend(breakpoints.into_iter().collect::<Vec<_>>());
+        self.viewport_padding_start_breakpoints
+            .sort_by(|a, b| a.min_width_px.0.total_cmp(&b.min_width_px.0));
+        self
+    }
+
+    /// Breakpoint-based item start padding patches for the **carousel viewport** width
+    /// (container-query style).
+    pub fn padding_start_breakpoint(mut self, min_width_px: Px, padding: Space) -> Self {
+        self.padding_start_breakpoints
+            .push(CarouselSpaceBreakpoint {
+                min_width_px,
+                value: padding,
+            });
+        self.padding_start_breakpoints
+            .sort_by(|a, b| a.min_width_px.0.total_cmp(&b.min_width_px.0));
+        self
+    }
+
+    pub fn padding_start_breakpoints(
+        mut self,
+        breakpoints: impl IntoIterator<Item = CarouselSpaceBreakpoint>,
+    ) -> Self {
+        self.padding_start_breakpoints
+            .extend(breakpoints.into_iter().collect::<Vec<_>>());
+        self.padding_start_breakpoints
+            .sort_by(|a, b| a.min_width_px.0.total_cmp(&b.min_width_px.0));
+        self
+    }
+}
+
+impl From<AnyElement> for CarouselItem {
+    fn from(child: AnyElement) -> Self {
+        Self::new(child)
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct CarouselItemLayoutBreakpoint {
+    pub min_width_px: Px,
+    pub patch: LayoutRefinement,
+}
+
+fn resolve_item_viewport_layout_breakpoints(
+    viewport_width_px: Px,
+    breakpoints: &[CarouselItemLayoutBreakpoint],
+) -> LayoutRefinement {
+    let mut patch = LayoutRefinement::default();
+    for bp in breakpoints {
+        if viewport_width_px.0 >= bp.min_width_px.0 {
+            patch = patch.merge(bp.patch.clone());
+        }
+    }
+    patch
+}
+
+fn resolve_item_layout_breakpoints(
+    viewport_width_px: Px,
+    breakpoints: &[CarouselItemLayoutBreakpoint],
+) -> LayoutRefinement {
+    let mut patch = LayoutRefinement::default();
+    for bp in breakpoints {
+        if viewport_width_px.0 >= bp.min_width_px.0 {
+            patch = patch.merge(bp.patch.clone());
+        }
+    }
+    patch
+}
+
+fn resolve_loop_enabled_effective(
+    loop_requested: bool,
+    items_len: usize,
+    view_size: f32,
+    slides: &[headless_carousel::CarouselSlide1D],
+) -> bool {
+    if !loop_requested {
+        return false;
+    }
+
+    // Embla downgrades `loop=true` when content cannot physically loop. We mirror that outcome
+    // when geometry is measurable. Until then, keep loop requested to avoid flicker.
+    if view_size <= 0.0 {
+        return true;
+    }
+    if slides.len() != items_len {
+        return true;
+    }
+
+    let slides = slides
+        .iter()
+        .map(|s| headless_embla::slide_looper::Slide1D {
+            start: s.start.0,
+            size: s.size.0,
+        })
+        .collect::<Vec<_>>();
+    headless_embla::slide_looper::can_loop(&slides, view_size)
 }
 
 /// shadcn/ui `CarouselPrevious` (v4).
