@@ -279,12 +279,12 @@ pub(crate) fn cmd_run(ctx: RunCmdContext) -> Result<(), String> {
         check_stale_paint_test_id: _,
         check_stale_scene_eps: _,
         check_stale_scene_test_id: _,
-        check_ui_gallery_code_editor_a11y_composition,
+        check_ui_gallery_code_editor_a11y_composition: _,
         check_ui_gallery_code_editor_a11y_composition_drag: _,
-        check_ui_gallery_code_editor_a11y_composition_wrap,
-        check_ui_gallery_code_editor_a11y_composition_wrap_scroll,
-        check_ui_gallery_code_editor_a11y_selection,
-        check_ui_gallery_code_editor_a11y_selection_wrap,
+        check_ui_gallery_code_editor_a11y_composition_wrap: _,
+        check_ui_gallery_code_editor_a11y_composition_wrap_scroll: _,
+        check_ui_gallery_code_editor_a11y_selection: _,
+        check_ui_gallery_code_editor_a11y_selection_wrap: _,
         check_ui_gallery_code_editor_torture_composed_preedit_cancels_on_drag_selection: _,
         check_ui_gallery_code_editor_torture_composed_preedit_stable_after_wheel_scroll: _,
         check_ui_gallery_code_editor_torture_decorations_toggle_a11y_composition_consistent_under_inline_preedit_composed:
@@ -311,7 +311,7 @@ pub(crate) fn cmd_run(ctx: RunCmdContext) -> Result<(), String> {
         check_ui_gallery_code_editor_torture_marker_present: _,
         check_ui_gallery_code_editor_torture_read_only_blocks_edits,
         check_ui_gallery_code_editor_torture_undo_redo: _,
-        check_ui_gallery_code_editor_word_boundary,
+        check_ui_gallery_code_editor_word_boundary: _,
         check_ui_gallery_markdown_editor_source_a11y_composition: _,
         check_ui_gallery_markdown_editor_source_a11y_composition_soft_wrap: _,
         check_ui_gallery_markdown_editor_source_disabled_blocks_edits,
@@ -401,12 +401,6 @@ pub(crate) fn cmd_run(ctx: RunCmdContext) -> Result<(), String> {
         || check_ui_gallery_text_fallback_policy_key_bumps_on_settings_change
         || check_ui_gallery_text_fallback_policy_key_bumps_on_locale_change
         || check_ui_gallery_text_mixed_script_bundled_fallback_conformance
-        || check_ui_gallery_code_editor_word_boundary
-        || check_ui_gallery_code_editor_a11y_selection
-        || check_ui_gallery_code_editor_a11y_composition
-        || check_ui_gallery_code_editor_a11y_selection_wrap
-        || check_ui_gallery_code_editor_a11y_composition_wrap
-        || check_ui_gallery_code_editor_a11y_composition_wrap_scroll
         || check_semantics_changed_repainted
         || check_wheel_scroll_test_id.is_some()
         || check_wheel_scroll_hit_changes_test_id.is_some()

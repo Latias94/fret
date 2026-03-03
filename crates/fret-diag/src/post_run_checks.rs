@@ -22,20 +22,6 @@ pub(crate) fn apply_post_run_checks(
         checks.check_ui_gallery_text_fallback_policy_key_bumps_on_locale_change;
     let check_ui_gallery_text_mixed_script_bundled_fallback_conformance =
         checks.check_ui_gallery_text_mixed_script_bundled_fallback_conformance;
-    let check_ui_gallery_code_editor_word_boundary =
-        checks.check_ui_gallery_code_editor_word_boundary;
-    let check_ui_gallery_code_editor_a11y_selection =
-        checks.check_ui_gallery_code_editor_a11y_selection;
-    let check_ui_gallery_code_editor_a11y_composition =
-        checks.check_ui_gallery_code_editor_a11y_composition;
-    let check_ui_gallery_code_editor_a11y_selection_wrap =
-        checks.check_ui_gallery_code_editor_a11y_selection_wrap;
-    let check_ui_gallery_code_editor_a11y_composition_wrap =
-        checks.check_ui_gallery_code_editor_a11y_composition_wrap;
-    let check_ui_gallery_code_editor_a11y_composition_wrap_scroll =
-        checks.check_ui_gallery_code_editor_a11y_composition_wrap_scroll;
-    let check_ui_gallery_code_editor_a11y_composition_drag =
-        checks.check_ui_gallery_code_editor_a11y_composition_drag;
     let check_semantics_changed_repainted = checks.check_semantics_changed_repainted;
     let dump_semantics_changed_repainted_json = checks.dump_semantics_changed_repainted_json;
     let check_wheel_scroll_test_id = checks.check_wheel_scroll_test_id.as_deref();
@@ -186,42 +172,6 @@ pub(crate) fn apply_post_run_checks(
     }
     if check_ui_gallery_text_mixed_script_bundled_fallback_conformance {
         check_out_dir_for_ui_gallery_text_mixed_script_bundled_fallback_conformance(out_dir)?;
-    }
-    if check_ui_gallery_code_editor_word_boundary {
-        stats::check_bundle_for_ui_gallery_code_editor_word_boundary(bundle_path, warmup_frames)?;
-    }
-    if check_ui_gallery_code_editor_a11y_selection {
-        stats::check_bundle_for_ui_gallery_code_editor_a11y_selection(bundle_path, warmup_frames)?;
-    }
-    if check_ui_gallery_code_editor_a11y_composition {
-        stats::check_bundle_for_ui_gallery_code_editor_a11y_composition(
-            bundle_path,
-            warmup_frames,
-        )?;
-    }
-    if check_ui_gallery_code_editor_a11y_selection_wrap {
-        stats::check_bundle_for_ui_gallery_code_editor_a11y_selection_wrap(
-            bundle_path,
-            warmup_frames,
-        )?;
-    }
-    if check_ui_gallery_code_editor_a11y_composition_wrap {
-        stats::check_bundle_for_ui_gallery_code_editor_a11y_composition_wrap(
-            bundle_path,
-            warmup_frames,
-        )?;
-    }
-    if check_ui_gallery_code_editor_a11y_composition_wrap_scroll {
-        stats::check_bundle_for_ui_gallery_code_editor_a11y_composition_wrap_scroll(
-            bundle_path,
-            warmup_frames,
-        )?;
-    }
-    if check_ui_gallery_code_editor_a11y_composition_drag {
-        stats::check_bundle_for_ui_gallery_code_editor_a11y_composition_drag(
-            bundle_path,
-            warmup_frames,
-        )?;
     }
     if check_semantics_changed_repainted {
         stats::check_bundle_for_semantics_changed_repainted(

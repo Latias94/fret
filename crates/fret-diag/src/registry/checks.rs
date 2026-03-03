@@ -362,6 +362,55 @@ const BUILTIN_POST_RUN_CHECKS: &[PostRunCheckEntry] = &[
         run: run_ui_gallery_code_editor_torture_composed_preedit_cancels_on_drag_selection,
     },
     PostRunCheckEntry {
+        id: "ui_gallery_code_editor_word_boundary",
+        requires_bundle_artifact: true,
+        requires_screenshots: false,
+        should_run: should_run_ui_gallery_code_editor_word_boundary,
+        run: run_ui_gallery_code_editor_word_boundary,
+    },
+    PostRunCheckEntry {
+        id: "ui_gallery_code_editor_a11y_selection",
+        requires_bundle_artifact: true,
+        requires_screenshots: false,
+        should_run: should_run_ui_gallery_code_editor_a11y_selection,
+        run: run_ui_gallery_code_editor_a11y_selection,
+    },
+    PostRunCheckEntry {
+        id: "ui_gallery_code_editor_a11y_composition",
+        requires_bundle_artifact: true,
+        requires_screenshots: false,
+        should_run: should_run_ui_gallery_code_editor_a11y_composition,
+        run: run_ui_gallery_code_editor_a11y_composition,
+    },
+    PostRunCheckEntry {
+        id: "ui_gallery_code_editor_a11y_selection_wrap",
+        requires_bundle_artifact: true,
+        requires_screenshots: false,
+        should_run: should_run_ui_gallery_code_editor_a11y_selection_wrap,
+        run: run_ui_gallery_code_editor_a11y_selection_wrap,
+    },
+    PostRunCheckEntry {
+        id: "ui_gallery_code_editor_a11y_composition_wrap",
+        requires_bundle_artifact: true,
+        requires_screenshots: false,
+        should_run: should_run_ui_gallery_code_editor_a11y_composition_wrap,
+        run: run_ui_gallery_code_editor_a11y_composition_wrap,
+    },
+    PostRunCheckEntry {
+        id: "ui_gallery_code_editor_a11y_composition_wrap_scroll",
+        requires_bundle_artifact: true,
+        requires_screenshots: false,
+        should_run: should_run_ui_gallery_code_editor_a11y_composition_wrap_scroll,
+        run: run_ui_gallery_code_editor_a11y_composition_wrap_scroll,
+    },
+    PostRunCheckEntry {
+        id: "ui_gallery_code_editor_a11y_composition_drag",
+        requires_bundle_artifact: true,
+        requires_screenshots: false,
+        should_run: should_run_ui_gallery_code_editor_a11y_composition_drag,
+        run: run_ui_gallery_code_editor_a11y_composition_drag,
+    },
+    PostRunCheckEntry {
         id: "notify_hotspot_file_max",
         requires_bundle_artifact: true,
         requires_screenshots: false,
@@ -999,6 +1048,104 @@ fn run_ui_gallery_code_editor_torture_composed_preedit_cancels_on_drag_selection
     _checks: &RunChecks,
 ) -> Result<(), String> {
     crate::stats::check_bundle_for_ui_gallery_code_editor_torture_composed_preedit_cancels_on_drag_selection(
+        ctx.bundle_path,
+        ctx.warmup_frames,
+    )
+}
+
+fn should_run_ui_gallery_code_editor_word_boundary(checks: &RunChecks) -> bool {
+    checks.check_ui_gallery_code_editor_word_boundary
+}
+
+fn run_ui_gallery_code_editor_word_boundary(
+    ctx: PostRunCheckContext<'_>,
+    _checks: &RunChecks,
+) -> Result<(), String> {
+    crate::stats::check_bundle_for_ui_gallery_code_editor_word_boundary(
+        ctx.bundle_path,
+        ctx.warmup_frames,
+    )
+}
+
+fn should_run_ui_gallery_code_editor_a11y_selection(checks: &RunChecks) -> bool {
+    checks.check_ui_gallery_code_editor_a11y_selection
+}
+
+fn run_ui_gallery_code_editor_a11y_selection(
+    ctx: PostRunCheckContext<'_>,
+    _checks: &RunChecks,
+) -> Result<(), String> {
+    crate::stats::check_bundle_for_ui_gallery_code_editor_a11y_selection(
+        ctx.bundle_path,
+        ctx.warmup_frames,
+    )
+}
+
+fn should_run_ui_gallery_code_editor_a11y_composition(checks: &RunChecks) -> bool {
+    checks.check_ui_gallery_code_editor_a11y_composition
+}
+
+fn run_ui_gallery_code_editor_a11y_composition(
+    ctx: PostRunCheckContext<'_>,
+    _checks: &RunChecks,
+) -> Result<(), String> {
+    crate::stats::check_bundle_for_ui_gallery_code_editor_a11y_composition(
+        ctx.bundle_path,
+        ctx.warmup_frames,
+    )
+}
+
+fn should_run_ui_gallery_code_editor_a11y_selection_wrap(checks: &RunChecks) -> bool {
+    checks.check_ui_gallery_code_editor_a11y_selection_wrap
+}
+
+fn run_ui_gallery_code_editor_a11y_selection_wrap(
+    ctx: PostRunCheckContext<'_>,
+    _checks: &RunChecks,
+) -> Result<(), String> {
+    crate::stats::check_bundle_for_ui_gallery_code_editor_a11y_selection_wrap(
+        ctx.bundle_path,
+        ctx.warmup_frames,
+    )
+}
+
+fn should_run_ui_gallery_code_editor_a11y_composition_wrap(checks: &RunChecks) -> bool {
+    checks.check_ui_gallery_code_editor_a11y_composition_wrap
+}
+
+fn run_ui_gallery_code_editor_a11y_composition_wrap(
+    ctx: PostRunCheckContext<'_>,
+    _checks: &RunChecks,
+) -> Result<(), String> {
+    crate::stats::check_bundle_for_ui_gallery_code_editor_a11y_composition_wrap(
+        ctx.bundle_path,
+        ctx.warmup_frames,
+    )
+}
+
+fn should_run_ui_gallery_code_editor_a11y_composition_wrap_scroll(checks: &RunChecks) -> bool {
+    checks.check_ui_gallery_code_editor_a11y_composition_wrap_scroll
+}
+
+fn run_ui_gallery_code_editor_a11y_composition_wrap_scroll(
+    ctx: PostRunCheckContext<'_>,
+    _checks: &RunChecks,
+) -> Result<(), String> {
+    crate::stats::check_bundle_for_ui_gallery_code_editor_a11y_composition_wrap_scroll(
+        ctx.bundle_path,
+        ctx.warmup_frames,
+    )
+}
+
+fn should_run_ui_gallery_code_editor_a11y_composition_drag(checks: &RunChecks) -> bool {
+    checks.check_ui_gallery_code_editor_a11y_composition_drag
+}
+
+fn run_ui_gallery_code_editor_a11y_composition_drag(
+    ctx: PostRunCheckContext<'_>,
+    _checks: &RunChecks,
+) -> Result<(), String> {
+    crate::stats::check_bundle_for_ui_gallery_code_editor_a11y_composition_drag(
         ctx.bundle_path,
         ctx.warmup_frames,
     )
