@@ -57,6 +57,8 @@ Layout deep debug escape hatch (Taffy dump):
 
 - `crates/fret-ui/src/tree/layout/taffy_debug.rs`
 - env wiring: `crates/fret-ui/src/runtime_config.rs`
+- Script step (bundle-scoped layout sidecar): `crates/fret-diag-protocol/src/lib.rs` (`UiActionStepV2::CaptureLayoutSidecar`)
+- Runtime capture (writes `layout.taffy.v1.json`): `ecosystem/fret-bootstrap/src/ui_diagnostics/script_steps.rs` (`handle_capture_layout_sidecar_step`)
 
 ---
 

@@ -70,10 +70,9 @@ Top-level:
 - `schema_version`: `"v1"`
 - `engine`: `"taffy"`
 - `captured_at_unix_ms`: number
-- `bundle_run_id`: string (optional, if known at capture time)
-- `window`: object (optional; window id/bounds when captured)
 - `clip`: object (required; indicates whether the dump was clipped)
-- `roots`: array of layout root nodes (required; may be empty)
+- `meta`: object (required; capture context)
+- `taffy`: object (required; engine dump payload)
 
 Clipping metadata:
 
@@ -82,30 +81,32 @@ Clipping metadata:
 - `clip.clipped_nodes`: number
 - `clip.clipped_bytes`: number
 
-Node shape (illustrative, not exhaustive):
+Meta fields (v1):
 
-- `node_id`: number (engine-local id)
-- `parent_id`: number or null
-- `debug_label`: string (optional; best-effort)
-- `test_id`: string (optional; semantics selector correlation)
-- `constraints`: object (min/max sizes, margins, etc.)
-- `style`: object (engine-relevant style inputs; bounded)
-- `layout`: object (computed size/position)
-- `children`: array of `node_id` (optional; may omit if represented by `parent_id`)
+- `meta.window`: debug window id string
+- `meta.root_bounds`: `{x,y,w,h}` in logical px
+- `meta.scale_factor`: number
+- `meta.root_label_filter`: string or null
+
+Taffy dump payload:
+
+- `taffy` is currently the internal Taffy debug subtree dump (node list + rects + style debug).
+- Tooling should treat this payload as debug-oriented and avoid depending on exact field names.
 
 Guidance:
 
-- Prefer `test_id` linkage when available. When not available, keep linkage best-effort.
-- Keep values numeric and explicit; avoid lossy formatted strings.
+- Prefer semantics-first gates (`test_id` bounds predicates) for correctness; use the sidecar to
+  explain *why* a subtree changed.
 - Always write `clip` even when not clipped (`clipped_* = 0`).
 
 ## How `diag` should request/collect the sidecar
 
 Two compatible request modes:
 
-1. **Script meta capability** (preferred)
-   - A script declares it can emit `layout_sidecar.taffy.v1` (capability).
-   - Runtime emits the sidecar when the capability is present.
+1. **Script step** (preferred)
+   - Add a script step (e.g. `capture_layout_sidecar`) that:
+     - dumps a bundle dir for the step,
+     - writes `layout.taffy.v1.json` into that bundle dir (best-effort).
 
 2. **Tooling flag** (escape hatch)
    - `fretboard diag run --dump-layout-sidecar` (name TBD).
@@ -129,9 +130,8 @@ locate and open the sidecar path.
 
 ## Next steps
 
-1. Decide the exact request surface (capability vs flag) and name it.
-2. Implement a tiny capture path for `layout.taffy.v1.json` (native only) and ensure it is bounded.
-3. Add one deterministic layout gate script that:
+1. Add one deterministic layout gate script that:
    - asserts semantics bounds,
    - on failure, points to the sidecar file as additional evidence.
-
+2. Add a minimal viewer affordance (raw JSON ok) in tooling.
+3. Add clipping/budget controls (`max_nodes`/`max_bytes`) once we have real-world size data.
