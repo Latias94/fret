@@ -78,6 +78,10 @@ Use `fret-ui-review` when the goal is an architecture/UX audit rather than produ
     avoid accidental human interference.
   - Multi-window docking scripts may also use runner cursor overrides (`set_cursor_in_window_logical`) to drive
     window-hover routing; this updates the runner's internal cursor model and does **not** warp the OS cursor.
+- Cross-window dock drops: ensure the final release is expressed in the *target window* coordinate space.
+  - Prefer `move_pointer` (or `set_cursor_in_window_logical` + `pointer_move`) targeted at the destination window
+    before `pointer_up`. Otherwise `dock_drop_resolve` may remain `source=none` and the floating window will not
+    auto-close after the drop.
 - Docking / multi-window scripts: prefer *deterministic termination*:
   - Avoid trailing `wait_frames` as the last step (especially after an end-of-script `capture_bundle`).
     - If the remaining window becomes occluded/idle (or throttled), redraw callbacks may stop and a `wait_frames`
