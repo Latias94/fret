@@ -899,6 +899,12 @@ impl UiDiagnosticsService {
         if !self.is_enabled() {
             return;
         }
+        if self.cfg.simulate_no_frames {
+            // Diagnostics-only test hook: keep windows "seen" but do not record per-frame
+            // snapshots. Script liveness should be provided by the keepalive/no-frame path.
+            self.note_window_seen(window);
+            return;
+        }
 
         // Keep `known_windows` aligned to currently-open windows so window targets like
         // `last_seen` do not get stuck pointing at a window that has already been closed (common

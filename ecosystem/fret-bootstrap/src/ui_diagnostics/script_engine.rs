@@ -1198,6 +1198,8 @@ pub(super) fn finalize_drive_script_for_window(
                 }
             }
         } else if let Some(label) = force_dump_label {
+            // Even when script auto-dumps are disabled, a script failure should produce a bounded
+            // evidence bundle that can be located via `script.result.json`.
             let note = format_bundle_dump_note(&label, force_dump_max_snapshots, None);
             push_script_event_log(
                 &mut active,
@@ -1214,13 +1216,28 @@ pub(super) fn finalize_drive_script_for_window(
                     window_snapshot_seq: None,
                 },
             );
-            service.request_force_dump(
-                label,
+            let dumped_dir = service.dump_bundle_with_options(
+                Some(&label),
                 force_dump_max_snapshots,
-                Some(active.run_id),
-                Some(step_index as u32),
                 None,
             );
+            if let Some(dir) = dumped_dir.as_ref() {
+                push_script_event_log(
+                    &mut active,
+                    &service.cfg,
+                    UiScriptEventLogEntryV1 {
+                        unix_ms: unix_ms_now(),
+                        kind: "bundle_dumped".to_string(),
+                        step_index: Some(step_index as u32),
+                        note: Some(format_bundle_dump_note(&label, force_dump_max_snapshots, None)),
+                        bundle_dir: Some(display_path(&service.cfg.out_dir, dir)),
+                        window: Some(window.data().as_ffi()),
+                        tick_id: Some(app.tick_id().0),
+                        frame_id: Some(app.frame_id().0),
+                        window_snapshot_seq: None,
+                    },
+                );
+            }
         }
 
         let reason_code = failure_reason
@@ -2090,6 +2107,10 @@ impl UiDiagnosticsService {
         self.maybe_start_pending_script(app, window);
 
         self.maybe_migrate_single_active_script_to_window(app, window);
+
+        if self.cfg.simulate_no_frames {
+            return self.script_output_for_non_active_window(app, devtools_request_redraw);
+        }
 
         let Some(mut active) = self.active_scripts.remove(&window) else {
             return self.script_output_for_non_active_window(app, devtools_request_redraw);
