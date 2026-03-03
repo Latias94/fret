@@ -301,5 +301,13 @@ These are intentionally *not* part of the v1 milestone closure, but they are lik
 practical steps:
 
 - Key context stack + diagnostics-visible context naming/stacking rules.
+- Reduce authoring noise:
+  - builder-level semantics decorators (avoid “decorate-only” `.into_element(cx)` calls):
+    `docs/workstreams/authoring-ergonomics-fluent-builder-todo.md`
+    (`AUE-semantics-120`…)
+  - unify builder terminals + late-landing decorator coverage:
+    `docs/workstreams/unified-authoring-builder-v1-todo.md` (MVP3)
 - Pointer-triggered explainability: stable selector → action mapping without relying on script stamping.
+- View runtime ergonomics: reduce `on_action` handler boilerplate (`request_redraw` + `notify`) without weakening
+  determinism or layering (ecosystem-only).
 - Payload actions (v2+), behind strict determinism + validation rules.

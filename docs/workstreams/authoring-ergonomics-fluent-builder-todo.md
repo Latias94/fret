@@ -264,3 +264,34 @@ Next TODOs (suggested order: low-risk → high-risk):
 - [x] AUE-adopt-text-112 Migrate `DataTable` recipe text callsites.
   - Evidence: `ecosystem/fret-ui-shadcn/src/data_table_recipes.rs`
   - Tests: `ecosystem/fret-ui-shadcn/tests/web_vs_fret_layout.rs`
+
+---
+
+## F. Semantics / Diagnostics Decorators (Reduce `into_element(cx)` Noise)
+
+Goal:
+
+- Allow common semantics/diagnostics decorators (e.g. `test_id`, a11y role) to be attached on the fluent
+  authoring path **before** the terminal `.into_element(cx)`, so simple demos do not need to “land” early just
+  to decorate.
+
+Constraints:
+
+- Do not move policy into `crates/fret-ui` (ADR 0066).
+- Keep the mechanism/IR surface data-oriented so future frontends (GenUI / DSL) can reuse it.
+
+Backlog:
+
+- [ ] AUE-semantics-120 Add a `UiBuilder`-level decorator surface for stable diagnostics selectors:
+  - `test_id(...)` on `UiBuilder<T>`
+  - apply it during `.into_element(cx)` (and any other terminals)
+  - keep `test_id` stamping deterministic under keyed scopes
+- [ ] AUE-semantics-121 Add a `UiBuilder`-level a11y decorator surface:
+  - `a11y_role(...)` (and/or a minimal subset of `attach_semantics` outcomes used by cookbook)
+  - ensure it composes with existing component-level semantics defaults without overriding policy
+- [ ] AUE-semantics-122 Add a compile-only smoke test to lock decorator availability across:
+  - layout constructors (`ui::h_flex/v_flex/stack`)
+  - common shadcn leaves (`Button`, `Label`, `Input`, etc.)
+- [ ] AUE-semantics-123 Add at least one cookbook/demo refactor that proves the noise reduction:
+  - remove “decorate-only” `.into_element(cx)` calls in a small file
+  - keep scripted diag gates stable (`test_id` is still the selector source of truth)
