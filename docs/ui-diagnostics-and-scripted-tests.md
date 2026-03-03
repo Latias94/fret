@@ -1318,8 +1318,8 @@ Note:
   Prefer directory- and glob-based inputs (`--script-dir`, `--glob`) for ad-hoc runs, and avoid assuming scripts live
   only at the top-level. See: `docs/workstreams/diag-v2-hardening-and-switches-v1/README.md`.
 - Built-in suites are defined as curated directory inputs under `tools/diag-scripts/suites/<suite-name>/`.
-  Each entry is a small `script_redirect` JSON stub that points at the canonical script path; tooling resolves
-  redirects before pushing scripts to the runtime (so redirects never reach the runtime).
+  In-tree suites are expressed via a single `suite.json` manifest (tooling-only) that lists canonical script paths.
+  See: `tools/diag-scripts/suites/README.md`.
 - Use `--suite-prelude <script.json>` to run shared reset/normalization scripts from `tools/diag-scripts/_prelude/*`.
   When the suite reuses a single process, preludes run once before the first script by default; use
   `--suite-prelude-each-run` to run preludes before every script.
