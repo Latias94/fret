@@ -35,6 +35,8 @@ Gates (examples):
 - dirty close (policy hook):
   - `tools/diag-scripts/workspace/shell-demo/workspace-shell-demo-tab-close-dirty-is-blocked-smoke.json`
   - `tools/diag-scripts/workspace/shell-demo/workspace-shell-demo-tab-close-dirty-shows-prompt-and-discard-closes-smoke.json`
+- close button dispatch source (action-first):
+  - `tools/diag-scripts/workspace/shell-demo/workspace-shell-demo-tab-close-button-closes-tab-smoke.json`
 - focus restore on close:
   - `tools/diag-scripts/workspace/shell-demo/workspace-shell-demo-tabstrip-close-keeps-focus-smoke.json`
 - keyboard roving + Escape:
@@ -64,5 +66,6 @@ Stability notes (important for CI + scripted diagnostics):
 
 ## Evidence bundles (fill in after running locally)
 
-- (TODO) 2026-03-xx workspace tabstrip suite out dir:
-  - `target/fret-diag-ws-workspace-tabstrip-YYYY-MM-DD/sessions/...`
+- 2026-03-03 workspace shell demo suite out dir:
+  - `target/fret-diag-codex-workspace-shell/sessions/1772526003977-23850`
+  - suite summary: `target/fret-diag-codex-workspace-shell/sessions/1772526003977-23850/suite.summary.json`

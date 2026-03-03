@@ -69,6 +69,8 @@ with special focus on multi-window tear-off + drag-back sequences.
 
 - Script termination hardening: avoid trailing `wait_frames` after a final `capture_bundle` in multi-window docking
   scripts, because the last remaining window can be occluded/idle and stop producing redraw callbacks (tooling timeout).
+- `drag_pointer_until` hardening: allow out-of-window cursor motion when waiting on window-count predicates
+  (`known_window_count_*`) so tear-off creation scripts can drive the cursor beyond the active window bounds.
 - Runtime hardening: while a diagnostics script is active, arm a keepalive timer that can advance a conservative subset
   of script steps (and fail with `timeout.no_frames`) even if redraw callbacks stop (occlusion/idle).
 - Runtime hardening: allow a small “burst” of frame-independent tail steps so scripts do not require an additional frame
