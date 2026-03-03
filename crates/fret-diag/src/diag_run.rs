@@ -309,12 +309,12 @@ pub(crate) fn cmd_run(ctx: RunCmdContext) -> Result<(), String> {
             _,
         check_ui_gallery_code_editor_torture_inlays_present_under_soft_wrap: _,
         check_ui_gallery_code_editor_torture_marker_present: _,
-        check_ui_gallery_code_editor_torture_read_only_blocks_edits,
+        check_ui_gallery_code_editor_torture_read_only_blocks_edits: _,
         check_ui_gallery_code_editor_torture_undo_redo: _,
         check_ui_gallery_code_editor_word_boundary: _,
         check_ui_gallery_markdown_editor_source_a11y_composition: _,
         check_ui_gallery_markdown_editor_source_a11y_composition_soft_wrap: _,
-        check_ui_gallery_markdown_editor_source_disabled_blocks_edits,
+        check_ui_gallery_markdown_editor_source_disabled_blocks_edits: _,
         check_ui_gallery_markdown_editor_source_folds_clamp_selection_out_of_folds: _,
         check_ui_gallery_markdown_editor_source_folds_placeholder_absent_under_inline_preedit: _,
         check_ui_gallery_markdown_editor_source_folds_placeholder_present: _,
@@ -326,7 +326,7 @@ pub(crate) fn cmd_run(ctx: RunCmdContext) -> Result<(), String> {
         check_ui_gallery_markdown_editor_source_inlays_present_under_soft_wrap: _,
         check_ui_gallery_markdown_editor_source_inlays_toggle_stable: _,
         check_ui_gallery_markdown_editor_source_line_boundary_triple_click: _,
-        check_ui_gallery_markdown_editor_source_read_only_blocks_edits,
+        check_ui_gallery_markdown_editor_source_read_only_blocks_edits: _,
         check_ui_gallery_markdown_editor_source_soft_wrap_editing_selection_wrap_stable: _,
         check_ui_gallery_markdown_editor_source_soft_wrap_toggle_stable: _,
         check_ui_gallery_markdown_editor_source_word_boundary: _,
@@ -394,43 +394,41 @@ pub(crate) fn cmd_run(ctx: RunCmdContext) -> Result<(), String> {
     let check_registry = crate::registry::checks::CheckRegistry::builtin();
     let wants_registered_post_run_checks =
         check_registry.wants_post_run_checks(&checks_for_post_run);
-    let wants_ad_hoc_post_run_checks = check_ui_gallery_code_editor_torture_read_only_blocks_edits
-        || check_ui_gallery_markdown_editor_source_read_only_blocks_edits
-        || check_ui_gallery_markdown_editor_source_disabled_blocks_edits
-        || check_ui_gallery_text_rescan_system_fonts_font_stack_key_bumps
-        || check_ui_gallery_text_fallback_policy_key_bumps_on_settings_change
-        || check_ui_gallery_text_fallback_policy_key_bumps_on_locale_change
-        || check_ui_gallery_text_mixed_script_bundled_fallback_conformance
-        || check_semantics_changed_repainted
-        || check_wheel_scroll_test_id.is_some()
-        || check_wheel_scroll_hit_changes_test_id.is_some()
-        || check_prepaint_actions_min.is_some()
-        || check_chart_sampling_window_shifts_min.is_some()
-        || check_node_graph_cull_window_shifts_min.is_some()
-        || check_node_graph_cull_window_shifts_max.is_some()
-        || check_vlist_visible_range_refreshes_min.is_some()
-        || check_vlist_visible_range_refreshes_max.is_some()
-        || check_vlist_window_shifts_explainable
-        || check_vlist_window_shifts_have_prepaint_actions
-        || check_vlist_window_shifts_non_retained_max.is_some()
-        || check_vlist_window_shifts_prefetch_max.is_some()
-        || check_vlist_window_shifts_escape_max.is_some()
-        || check_vlist_policy_key_stable
-        || check_windowed_rows_offset_changes_min.is_some()
-        || check_windowed_rows_visible_start_changes_repainted
-        || check_layout_fast_path_min.is_some()
-        || check_drag_cache_root_paint_only_test_id.is_some()
-        || check_hover_layout_max.is_some()
-        || check_view_cache_reuse_min.is_some()
-        || check_view_cache_reuse_stable_min.is_some()
-        || check_overlay_synthesis_min.is_some()
-        || check_viewport_input_min.is_some()
-        || check_dock_drag_min.is_some()
-        || check_viewport_capture_min.is_some()
-        || check_retained_vlist_reconcile_no_notify_min.is_some()
-        || check_retained_vlist_attach_detach_max.is_some()
-        || check_retained_vlist_keep_alive_reuse_min.is_some()
-        || check_retained_vlist_keep_alive_budget.is_some();
+    let wants_ad_hoc_post_run_checks =
+        check_ui_gallery_text_rescan_system_fonts_font_stack_key_bumps
+            || check_ui_gallery_text_fallback_policy_key_bumps_on_settings_change
+            || check_ui_gallery_text_fallback_policy_key_bumps_on_locale_change
+            || check_ui_gallery_text_mixed_script_bundled_fallback_conformance
+            || check_semantics_changed_repainted
+            || check_wheel_scroll_test_id.is_some()
+            || check_wheel_scroll_hit_changes_test_id.is_some()
+            || check_prepaint_actions_min.is_some()
+            || check_chart_sampling_window_shifts_min.is_some()
+            || check_node_graph_cull_window_shifts_min.is_some()
+            || check_node_graph_cull_window_shifts_max.is_some()
+            || check_vlist_visible_range_refreshes_min.is_some()
+            || check_vlist_visible_range_refreshes_max.is_some()
+            || check_vlist_window_shifts_explainable
+            || check_vlist_window_shifts_have_prepaint_actions
+            || check_vlist_window_shifts_non_retained_max.is_some()
+            || check_vlist_window_shifts_prefetch_max.is_some()
+            || check_vlist_window_shifts_escape_max.is_some()
+            || check_vlist_policy_key_stable
+            || check_windowed_rows_offset_changes_min.is_some()
+            || check_windowed_rows_visible_start_changes_repainted
+            || check_layout_fast_path_min.is_some()
+            || check_drag_cache_root_paint_only_test_id.is_some()
+            || check_hover_layout_max.is_some()
+            || check_view_cache_reuse_min.is_some()
+            || check_view_cache_reuse_stable_min.is_some()
+            || check_overlay_synthesis_min.is_some()
+            || check_viewport_input_min.is_some()
+            || check_dock_drag_min.is_some()
+            || check_viewport_capture_min.is_some()
+            || check_retained_vlist_reconcile_no_notify_min.is_some()
+            || check_retained_vlist_attach_detach_max.is_some()
+            || check_retained_vlist_keep_alive_reuse_min.is_some()
+            || check_retained_vlist_keep_alive_budget.is_some();
     let wants_post_run_checks = wants_registered_post_run_checks || wants_ad_hoc_post_run_checks;
 
     let wants_bundle_artifact = wants_post_run_bundle

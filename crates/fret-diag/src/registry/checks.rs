@@ -411,6 +411,27 @@ const BUILTIN_POST_RUN_CHECKS: &[PostRunCheckEntry] = &[
         run: run_ui_gallery_code_editor_a11y_composition_drag,
     },
     PostRunCheckEntry {
+        id: "ui_gallery_code_editor_torture_read_only_blocks_edits",
+        requires_bundle_artifact: true,
+        requires_screenshots: false,
+        should_run: should_run_ui_gallery_code_editor_torture_read_only_blocks_edits,
+        run: run_ui_gallery_code_editor_torture_read_only_blocks_edits,
+    },
+    PostRunCheckEntry {
+        id: "ui_gallery_markdown_editor_source_read_only_blocks_edits",
+        requires_bundle_artifact: true,
+        requires_screenshots: false,
+        should_run: should_run_ui_gallery_markdown_editor_source_read_only_blocks_edits,
+        run: run_ui_gallery_markdown_editor_source_read_only_blocks_edits,
+    },
+    PostRunCheckEntry {
+        id: "ui_gallery_markdown_editor_source_disabled_blocks_edits",
+        requires_bundle_artifact: true,
+        requires_screenshots: false,
+        should_run: should_run_ui_gallery_markdown_editor_source_disabled_blocks_edits,
+        run: run_ui_gallery_markdown_editor_source_disabled_blocks_edits,
+    },
+    PostRunCheckEntry {
         id: "notify_hotspot_file_max",
         requires_bundle_artifact: true,
         requires_screenshots: false,
@@ -1146,6 +1167,48 @@ fn run_ui_gallery_code_editor_a11y_composition_drag(
     _checks: &RunChecks,
 ) -> Result<(), String> {
     crate::stats::check_bundle_for_ui_gallery_code_editor_a11y_composition_drag(
+        ctx.bundle_path,
+        ctx.warmup_frames,
+    )
+}
+
+fn should_run_ui_gallery_code_editor_torture_read_only_blocks_edits(checks: &RunChecks) -> bool {
+    checks.check_ui_gallery_code_editor_torture_read_only_blocks_edits
+}
+
+fn run_ui_gallery_code_editor_torture_read_only_blocks_edits(
+    ctx: PostRunCheckContext<'_>,
+    _checks: &RunChecks,
+) -> Result<(), String> {
+    crate::stats::check_bundle_for_ui_gallery_code_editor_torture_read_only_blocks_edits(
+        ctx.bundle_path,
+        ctx.warmup_frames,
+    )
+}
+
+fn should_run_ui_gallery_markdown_editor_source_read_only_blocks_edits(checks: &RunChecks) -> bool {
+    checks.check_ui_gallery_markdown_editor_source_read_only_blocks_edits
+}
+
+fn run_ui_gallery_markdown_editor_source_read_only_blocks_edits(
+    ctx: PostRunCheckContext<'_>,
+    _checks: &RunChecks,
+) -> Result<(), String> {
+    crate::stats::check_bundle_for_ui_gallery_markdown_editor_source_read_only_blocks_edits(
+        ctx.bundle_path,
+        ctx.warmup_frames,
+    )
+}
+
+fn should_run_ui_gallery_markdown_editor_source_disabled_blocks_edits(checks: &RunChecks) -> bool {
+    checks.check_ui_gallery_markdown_editor_source_disabled_blocks_edits
+}
+
+fn run_ui_gallery_markdown_editor_source_disabled_blocks_edits(
+    ctx: PostRunCheckContext<'_>,
+    _checks: &RunChecks,
+) -> Result<(), String> {
+    crate::stats::check_bundle_for_ui_gallery_markdown_editor_source_disabled_blocks_edits(
         ctx.bundle_path,
         ctx.warmup_frames,
     )

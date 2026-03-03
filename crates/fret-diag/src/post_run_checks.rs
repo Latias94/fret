@@ -8,12 +8,6 @@ pub(crate) fn apply_post_run_checks(
     checks: &diag_run::RunChecks,
     warmup_frames: u64,
 ) -> Result<(), String> {
-    let check_ui_gallery_code_editor_torture_read_only_blocks_edits =
-        checks.check_ui_gallery_code_editor_torture_read_only_blocks_edits;
-    let check_ui_gallery_markdown_editor_source_read_only_blocks_edits =
-        checks.check_ui_gallery_markdown_editor_source_read_only_blocks_edits;
-    let check_ui_gallery_markdown_editor_source_disabled_blocks_edits =
-        checks.check_ui_gallery_markdown_editor_source_disabled_blocks_edits;
     let check_ui_gallery_text_rescan_system_fonts_font_stack_key_bumps =
         checks.check_ui_gallery_text_rescan_system_fonts_font_stack_key_bumps;
     let check_ui_gallery_text_fallback_policy_key_bumps_on_settings_change =
@@ -143,24 +137,6 @@ pub(crate) fn apply_post_run_checks(
     };
     let bundle_path = bundle_path_for_checks.as_path();
 
-    if check_ui_gallery_code_editor_torture_read_only_blocks_edits {
-        stats::check_bundle_for_ui_gallery_code_editor_torture_read_only_blocks_edits(
-            bundle_path,
-            warmup_frames,
-        )?;
-    }
-    if check_ui_gallery_markdown_editor_source_read_only_blocks_edits {
-        stats::check_bundle_for_ui_gallery_markdown_editor_source_read_only_blocks_edits(
-            bundle_path,
-            warmup_frames,
-        )?;
-    }
-    if check_ui_gallery_markdown_editor_source_disabled_blocks_edits {
-        stats::check_bundle_for_ui_gallery_markdown_editor_source_disabled_blocks_edits(
-            bundle_path,
-            warmup_frames,
-        )?;
-    }
     if check_ui_gallery_text_rescan_system_fonts_font_stack_key_bumps {
         check_out_dir_for_ui_gallery_text_rescan_system_fonts_font_stack_key_bumps(out_dir)?;
     }
