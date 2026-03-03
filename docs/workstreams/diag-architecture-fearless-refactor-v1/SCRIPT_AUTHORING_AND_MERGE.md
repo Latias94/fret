@@ -30,6 +30,8 @@ Formatting churn causes conflicts even when semantics did not change. Use the bu
 
 - Normalize + rewrite:
   - `cargo run -p fretboard -- diag script normalize tools/diag-scripts/ui-gallery/perf/foo.json --write`
+- Or normalize all changed scripts in your working tree (and refresh `index.json`):
+  - `powershell -ExecutionPolicy Bypass -File tools/diag_scripts_refresh.ps1`
 - Normalize + check (CI-friendly for a local gate):
   - `cargo run -p fretboard -- diag script normalize tools/diag-scripts/ui-gallery/perf/foo.json --check`
 
@@ -94,4 +96,3 @@ If we still see frequent conflicts in big sweeps, the next step is a tooling-onl
 - This avoids changing the runtime contract while enabling split ownership (one file per page/section).
 
 If we pursue this, it should be proposed via a small design note/ADR first.
-
