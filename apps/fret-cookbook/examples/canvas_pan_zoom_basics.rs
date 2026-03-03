@@ -14,6 +14,13 @@ use fret_ui::action::{OnPointerDown, OnPointerMove, OnPointerUp};
 use fret_ui::canvas::CanvasPainter;
 use fret_ui::element::SemanticsDecoration;
 
+mod act {
+    fret::actions!([
+        ResetView = "cookbook.canvas_pan_zoom_basics.reset_view.v1",
+        ResetNode = "cookbook.canvas_pan_zoom_basics.reset_node.v1"
+    ]);
+}
+
 const TEST_ID_ROOT: &str = "cookbook.canvas_pan_zoom_basics.root";
 const TEST_ID_CANVAS: &str = "cookbook.canvas_pan_zoom_basics.canvas";
 const TEST_ID_RESET_VIEW: &str = "cookbook.canvas_pan_zoom_basics.reset_view";
@@ -39,27 +46,16 @@ struct NodeDragState {
     origin_at_start: Point,
 }
 
-#[derive(Debug, Clone)]
-enum Msg {
-    ResetView,
-    ResetNode,
-}
-
-struct CanvasPanZoomBasicsState {
+struct CanvasPanZoomBasicsView {
     view: Model<PanZoom2D>,
     node_origin: Model<Point>,
     node_drag: Model<Option<NodeDragState>>,
     node_drag_count: Model<u64>,
 }
 
-struct CanvasPanZoomBasicsProgram;
-
-impl MvuProgram for CanvasPanZoomBasicsProgram {
-    type State = CanvasPanZoomBasicsState;
-    type Message = Msg;
-
-    fn init(app: &mut App, _window: AppWindowId) -> Self::State {
-        Self::State {
+impl View for CanvasPanZoomBasicsView {
+    fn init(app: &mut App, _window: AppWindowId) -> Self {
+        Self {
             view: app.models_mut().insert(PanZoom2D::default()),
             node_origin: app.models_mut().insert(Point::new(Px(120.0), Px(120.0))),
             node_drag: app.models_mut().insert(None),
@@ -67,38 +63,44 @@ impl MvuProgram for CanvasPanZoomBasicsProgram {
         }
     }
 
-    fn update(app: &mut App, st: &mut Self::State, msg: Self::Message) {
-        match msg {
-            Msg::ResetView => {
-                let _ = app
-                    .models_mut()
-                    .update(&st.view, |v| *v = PanZoom2D::default());
-            }
-            Msg::ResetNode => {
-                let _ = app
-                    .models_mut()
-                    .update(&st.node_origin, |p| *p = Point::new(Px(120.0), Px(120.0)));
-                let _ = app.models_mut().update(&st.node_drag_count, |n| *n = 0);
-            }
-        }
-    }
-
-    fn view(
-        cx: &mut ElementContext<'_, App>,
-        st: &mut Self::State,
-        msg: &mut MessageRouter<Self::Message>,
-    ) -> Elements {
+    fn render(&mut self, cx: &mut ViewCx<'_, '_, App>) -> Elements {
         let theme = Theme::global(&*cx.app).snapshot();
 
-        let view_value = cx.watch_model(&st.view).paint().copied_or_default();
-        let node_origin = cx.watch_model(&st.node_origin).paint().copied_or_default();
+        let view_value = cx.watch_model(&self.view).paint().copied_or_default();
+        let node_origin = cx
+            .watch_model(&self.node_origin)
+            .paint()
+            .copied_or_default();
         let node_drag_count = cx
-            .watch_model(&st.node_drag_count)
+            .watch_model(&self.node_drag_count)
             .paint()
             .copied_or_default();
 
-        let reset_view = msg.cmd(Msg::ResetView);
-        let reset_node = msg.cmd(Msg::ResetNode);
+        cx.on_action::<act::ResetView>({
+            let view = self.view.clone();
+            move |host, acx| {
+                let _ = host
+                    .models_mut()
+                    .update(&view, |v| *v = PanZoom2D::default());
+                host.request_redraw(acx.window);
+                host.notify(acx);
+                true
+            }
+        });
+
+        cx.on_action::<act::ResetNode>({
+            let node_origin = self.node_origin.clone();
+            let node_drag_count = self.node_drag_count.clone();
+            move |host, acx| {
+                let _ = host
+                    .models_mut()
+                    .update(&node_origin, |p| *p = Point::new(Px(120.0), Px(120.0)));
+                let _ = host.models_mut().update(&node_drag_count, |n| *n = 0);
+                host.request_redraw(acx.window);
+                host.notify(acx);
+                true
+            }
+        });
 
         let zoom_badge = shadcn::Badge::new(format!("Zoom: {:.2}", view_value.zoom))
             .variant(shadcn::BadgeVariant::Secondary)
@@ -144,12 +146,12 @@ impl MvuProgram for CanvasPanZoomBasicsProgram {
             [
                 shadcn::Button::new("Reset view")
                     .variant(shadcn::ButtonVariant::Outline)
-                    .on_click(reset_view)
+                    .action(act::ResetView)
                     .into_element(cx)
                     .test_id(TEST_ID_RESET_VIEW),
                 shadcn::Button::new("Reset node")
                     .variant(shadcn::ButtonVariant::Outline)
-                    .on_click(reset_node)
+                    .action(act::ResetNode)
                     .into_element(cx)
                     .test_id(TEST_ID_RESET_NODE),
                 zoom_badge,
@@ -173,10 +175,10 @@ impl MvuProgram for CanvasPanZoomBasicsProgram {
         .into_element(cx);
 
         let canvas = {
-            let view_model = st.view.clone();
-            let node_origin_model = st.node_origin.clone();
-            let drag_model = st.node_drag.clone();
-            let drag_count_model = st.node_drag_count.clone();
+            let view_model = self.view.clone();
+            let node_origin_model = self.node_origin.clone();
+            let drag_model = self.node_drag.clone();
+            let drag_count_model = self.node_drag_count.clone();
 
             let view_model_down = view_model.clone();
             let node_origin_model_down = node_origin_model.clone();
@@ -321,7 +323,7 @@ impl MvuProgram for CanvasPanZoomBasicsProgram {
 
             let mut props = PanZoomCanvasSurfacePanelProps::default();
             props.preset = PanZoomInputPreset::DesktopCanvasCad;
-            props.view = Some(st.view.clone());
+            props.view = Some(self.view.clone());
             props.default_view = PanZoom2D::default();
             props.pan_button = MouseButton::Middle;
             props.on_pointer_down = Some(on_pointer_down);
@@ -452,6 +454,6 @@ fn main() -> anyhow::Result<()> {
         .window("cookbook-canvas-pan-zoom-basics", (1120.0, 780.0))
         .config_files(false)
         .install_app(fret_cookbook::install_cookbook_defaults)
-        .run_mvu::<CanvasPanZoomBasicsProgram>()
+        .run_view::<CanvasPanZoomBasicsView>()
         .map_err(anyhow::Error::from)
 }

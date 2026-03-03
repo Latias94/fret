@@ -1543,6 +1543,18 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
                         {
                             dirty |= state.platform.set_ime_cursor_area(rect);
                         }
+                        if snapshot.focus_is_text_input {
+                            let surrounding = snapshot.surrounding_text.as_ref().map(|s| {
+                                fret_runner_winit::ImeSurroundingTextUpdate {
+                                    text: s.text.to_string(),
+                                    cursor: usize::try_from(s.cursor).unwrap_or(usize::MAX),
+                                    anchor: usize::try_from(s.anchor).unwrap_or(usize::MAX),
+                                }
+                            });
+                            dirty |= state.platform.set_ime_surrounding_text(surrounding);
+                        } else {
+                            dirty |= state.platform.set_ime_surrounding_text(None);
+                        }
 
                         if dirty {
                             if std::env::var_os("FRET_IME_DEBUG").is_some_and(|v| !v.is_empty()) {

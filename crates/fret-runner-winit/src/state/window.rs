@@ -3,6 +3,13 @@ use winit::window::Window;
 
 use crate::mapping::map_cursor_icon;
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ImeSurroundingTextUpdate {
+    pub text: String,
+    pub cursor: usize,
+    pub anchor: usize,
+}
+
 #[derive(Debug, Default, Clone)]
 pub struct WinitWindowState {
     ime_allowed: bool,
@@ -10,6 +17,7 @@ pub struct WinitWindowState {
     ime_cursor_area_dispatched_px: Option<ImeCursorAreaPx>,
     last_prepared_scale_factor: Option<f64>,
     cursor_icon: CursorIcon,
+    ime_surrounding_text: Option<ImeSurroundingTextUpdate>,
     pending: WinitWindowPendingState,
 }
 
@@ -40,11 +48,12 @@ fn quantize_ime_cursor_area_px(rect: Rect, scale_factor: f64) -> ImeCursorAreaPx
     }
 }
 
-#[derive(Debug, Default, Clone, Copy)]
+#[derive(Debug, Default, Clone)]
 struct WinitWindowPendingState {
     ime_allowed: Option<bool>,
     ime_cursor_area: Option<Rect>,
     cursor_icon: Option<CursorIcon>,
+    ime_surrounding_text: Option<ImeSurroundingTextUpdate>,
 }
 
 impl WinitWindowState {
@@ -97,6 +106,18 @@ impl WinitWindowState {
         true
     }
 
+    pub fn set_ime_surrounding_text(
+        &mut self,
+        surrounding: Option<ImeSurroundingTextUpdate>,
+    ) -> bool {
+        if self.ime_surrounding_text == surrounding {
+            return false;
+        }
+        self.ime_surrounding_text = surrounding.clone();
+        self.pending.ime_surrounding_text = surrounding;
+        true
+    }
+
     pub fn ime_cursor_area(&self) -> Option<Rect> {
         self.ime_cursor_area
     }
@@ -112,30 +133,6 @@ impl WinitWindowState {
 
     pub fn prepare_frame(&mut self, window: &dyn Window) {
         let scale_factor = self.begin_prepare_frame(window.scale_factor());
-
-        let pending_cursor_area = self.pending.ime_cursor_area.take();
-        if let Some(rect) = pending_cursor_area
-            && self.ime_allowed
-            && self.should_dispatch_ime_cursor_area(rect, scale_factor)
-        {
-            #[cfg(windows)]
-            {
-                crate::windows_ime::set_ime_cursor_area(window, rect);
-            }
-
-            #[cfg(not(windows))]
-            {
-                let request_data = winit::window::ImeRequestData::default().with_cursor_area(
-                    winit::dpi::LogicalPosition::new(rect.origin.x.0, rect.origin.y.0).into(),
-                    winit::dpi::LogicalSize::new(
-                        rect.size.width.0.max(1.0),
-                        rect.size.height.0.max(1.0),
-                    )
-                    .into(),
-                );
-                let _ = window.request_ime_update(winit::window::ImeRequest::Update(request_data));
-            }
-        }
 
         if let Some(enabled) = self.pending.ime_allowed.take() {
             if enabled {
@@ -163,16 +160,77 @@ impl WinitWindowState {
                     winit::dpi::LogicalSize::new(cursor_area_w, cursor_area_h).into(),
                 );
 
-                let caps = winit::window::ImeCapabilities::new().with_cursor_area();
+                let mut request_data = request_data;
+                let surrounding = self
+                    .ime_surrounding_text
+                    .clone()
+                    .and_then(|u| {
+                        winit::window::ImeSurroundingText::new(u.text, u.cursor, u.anchor).ok()
+                    })
+                    .unwrap_or_else(|| {
+                        winit::window::ImeSurroundingText::new(String::new(), 0, 0)
+                            .expect("empty surrounding text is always valid")
+                    });
+                request_data = request_data.with_surrounding_text(surrounding);
+
+                let caps = winit::window::ImeCapabilities::new()
+                    .with_cursor_area()
+                    .with_surrounding_text();
                 if let Some(enable) = winit::window::ImeEnableRequest::new(caps, request_data) {
                     let _ = window.request_ime_update(winit::window::ImeRequest::Enable(enable));
                     self.ime_cursor_area_dispatched_px =
                         Some(quantize_ime_cursor_area_px(rect, scale_factor));
                 }
+                // The enable request carries the initial cursor area + surrounding text. Avoid
+                // immediately re-sending them via `ImeRequest::Update` in the same frame.
+                self.pending.ime_cursor_area = None;
+                self.pending.ime_surrounding_text = None;
             } else {
                 let _ = window.request_ime_update(winit::window::ImeRequest::Disable);
                 self.reset_ime_cursor_area_dispatch();
+                self.ime_surrounding_text = None;
+                self.pending.ime_surrounding_text = None;
             }
+        }
+
+        let pending_cursor_area = self.pending.ime_cursor_area.take();
+        let pending_surrounding = self.pending.ime_surrounding_text.take();
+        let mut needs_winit_update = false;
+        let mut request_data = winit::window::ImeRequestData::default();
+        if let Some(rect) = pending_cursor_area
+            && self.ime_allowed
+            && self.should_dispatch_ime_cursor_area(rect, scale_factor)
+        {
+            #[cfg(windows)]
+            {
+                crate::windows_ime::set_ime_cursor_area(window, rect);
+            }
+
+            #[cfg(not(windows))]
+            {
+                request_data = request_data.with_cursor_area(
+                    winit::dpi::LogicalPosition::new(rect.origin.x.0, rect.origin.y.0).into(),
+                    winit::dpi::LogicalSize::new(
+                        rect.size.width.0.max(1.0),
+                        rect.size.height.0.max(1.0),
+                    )
+                    .into(),
+                );
+                needs_winit_update = true;
+            }
+        }
+
+        if let Some(update) = pending_surrounding
+            && self.ime_allowed
+            && let Ok(surrounding) =
+                winit::window::ImeSurroundingText::new(update.text, update.cursor, update.anchor)
+        {
+            request_data = request_data.with_surrounding_text(surrounding);
+            needs_winit_update = true;
+        }
+
+        if needs_winit_update {
+            let _ = window.request_ime_update(winit::window::ImeRequest::Update(request_data));
         }
 
         if let Some(icon) = self.pending.cursor_icon.take() {

@@ -7,6 +7,14 @@ use fret_ui::{
     scroll::VirtualListScrollHandle,
 };
 
+mod act {
+    fret::actions!([
+        RotateItems = "cookbook.virtual_list_basics.rotate.v1",
+        ScrollToTarget = "cookbook.virtual_list_basics.scroll_to_target.v1",
+        ScrollJump = "cookbook.virtual_list_basics.scroll_jump.v1"
+    ]);
+}
+
 const TEST_ID_ROOT: &str = "cookbook.virtual_list_basics.root";
 const TEST_ID_MODE: &str = "cookbook.virtual_list_basics.mode";
 const TEST_ID_MODE_MEASURED: &str = "cookbook.virtual_list_basics.mode.measured";
@@ -55,7 +63,7 @@ fn row_height_at(index: usize, tall_rows: bool) -> Px {
     }
 }
 
-struct VirtualListBasicsState {
+struct VirtualListBasicsView {
     items: Model<Arc<Vec<RowItem>>>,
     mode: Model<Option<Arc<str>>>,
     tall_rows: Model<bool>,
@@ -66,15 +74,9 @@ struct VirtualListBasicsState {
     scroll: VirtualListScrollHandle,
 }
 
-struct VirtualListBasicsProgram;
-
-impl MvuProgram for VirtualListBasicsProgram {
-    type State = VirtualListBasicsState;
-    type Message = ();
-
-    fn init(app: &mut App, window: AppWindowId) -> Self::State {
-        let _ = window;
-        Self::State {
+impl View for VirtualListBasicsView {
+    fn init(app: &mut App, _window: AppWindowId) -> Self {
+        Self {
             items: app.models_mut().insert(make_items(LIST_LEN)),
             mode: app.models_mut().insert(Some(Arc::from(MODE_MEASURED))),
             tall_rows: app.models_mut().insert(false),
@@ -86,32 +88,26 @@ impl MvuProgram for VirtualListBasicsProgram {
         }
     }
 
-    fn update(_app: &mut App, _state: &mut Self::State, _message: Self::Message) {}
-
-    fn view(
-        cx: &mut ElementContext<'_, App>,
-        state: &mut Self::State,
-        _msg: &mut MessageRouter<Self::Message>,
-    ) -> Elements {
+    fn render(&mut self, cx: &mut ViewCx<'_, '_, App>) -> Elements {
         let theme = Theme::global(&*cx.app).snapshot();
 
         let items = cx
-            .watch_model(&state.items)
+            .watch_model(&self.items)
             .layout()
             .cloned_or_else(|| Arc::new(Vec::new()));
         let len = items.len();
 
-        let mode = state
+        let mode = self
             .mode
             .read(&mut *cx.app, |_host, v| v.clone())
             .ok()
             .flatten()
             .unwrap_or_else(|| Arc::from(MODE_MEASURED));
-        let tall_rows = cx.watch_model(&state.tall_rows).layout().copied_or(false);
-        let reversed = cx.watch_model(&state.reversed).layout().copied_or(false);
-        let index_keys = cx.watch_model(&state.index_keys).layout().copied_or(false);
+        let tall_rows = cx.watch_model(&self.tall_rows).layout().copied_or(false);
+        let reversed = cx.watch_model(&self.reversed).layout().copied_or(false);
+        let index_keys = cx.watch_model(&self.index_keys).layout().copied_or(false);
         let visible_only_keys = cx
-            .watch_model(&state.visible_only_keys)
+            .watch_model(&self.visible_only_keys)
             .layout()
             .copied_or(false);
 
@@ -120,13 +116,13 @@ impl MvuProgram for VirtualListBasicsProgram {
         // effective items revision when those inputs change.
         let store = cx.app.models();
         let items_revision = store
-            .revision(&state.items)
+            .revision(&self.items)
             .unwrap_or(0)
-            .wrapping_add(store.revision(&state.mode).unwrap_or(0))
-            .wrapping_add(store.revision(&state.tall_rows).unwrap_or(0))
-            .wrapping_add(store.revision(&state.reversed).unwrap_or(0))
-            .wrapping_add(store.revision(&state.index_keys).unwrap_or(0))
-            .wrapping_add(store.revision(&state.visible_only_keys).unwrap_or(0));
+            .wrapping_add(store.revision(&self.mode).unwrap_or(0))
+            .wrapping_add(store.revision(&self.tall_rows).unwrap_or(0))
+            .wrapping_add(store.revision(&self.reversed).unwrap_or(0))
+            .wrapping_add(store.revision(&self.index_keys).unwrap_or(0))
+            .wrapping_add(store.revision(&self.visible_only_keys).unwrap_or(0));
 
         let mut options = match mode.as_ref() {
             MODE_FIXED => VirtualListOptions::fixed(Px(28.0), 10),
@@ -176,7 +172,7 @@ impl MvuProgram for VirtualListBasicsProgram {
                 list_layout,
                 len,
                 options,
-                &state.scroll,
+                &self.scroll,
                 key_at,
                 move |cx, index| {
                     let mapped = if reversed {
@@ -243,9 +239,9 @@ impl MvuProgram for VirtualListBasicsProgram {
             )
             .test_id(TEST_ID_LIST);
 
-        let rotate_items: fret_ui::action::OnActivate = {
-            let items = state.items.clone();
-            Arc::new(move |host, acx, _reason| {
+        cx.on_action::<act::RotateItems>({
+            let items = self.items.clone();
+            move |host, acx| {
                 let _ = host.models_mut().update(&items, |v| {
                     let items = Arc::make_mut(v);
                     if items.is_empty() {
@@ -255,14 +251,16 @@ impl MvuProgram for VirtualListBasicsProgram {
                     items.rotate_left(by);
                 });
                 host.request_redraw(acx.window);
-            })
-        };
+                host.notify(acx);
+                true
+            }
+        });
 
-        let scroll_to_target: fret_ui::action::OnActivate = {
-            let items = state.items.clone();
-            let reversed = state.reversed.clone();
-            let scroll = state.scroll.clone();
-            Arc::new(move |host, acx, _reason| {
+        cx.on_action::<act::ScrollToTarget>({
+            let items = self.items.clone();
+            let reversed = self.reversed.clone();
+            let scroll = self.scroll.clone();
+            move |host, acx| {
                 let items = host
                     .models_mut()
                     .read(&items, Arc::clone)
@@ -283,13 +281,15 @@ impl MvuProgram for VirtualListBasicsProgram {
 
                 scroll.scroll_to_item(index, ScrollStrategy::Start);
                 host.request_redraw(acx.window);
-            })
-        };
+                host.notify(acx);
+                true
+            }
+        });
 
-        let scroll_jump: fret_ui::action::OnActivate = {
-            let jump = state.jump.clone();
-            let scroll = state.scroll.clone();
-            Arc::new(move |host, acx, _reason| {
+        cx.on_action::<act::ScrollJump>({
+            let jump = self.jump.clone();
+            let scroll = self.scroll.clone();
+            move |host, acx| {
                 let raw = host
                     .models_mut()
                     .read(&jump, Clone::clone)
@@ -298,10 +298,12 @@ impl MvuProgram for VirtualListBasicsProgram {
                 let index = raw.trim().parse::<usize>().ok().unwrap_or(0);
                 scroll.scroll_to_item(index, ScrollStrategy::Start);
                 host.request_redraw(acx.window);
-            })
-        };
+                host.notify(acx);
+                true
+            }
+        });
 
-        let mode_toggle = shadcn::ToggleGroup::single(state.mode.clone())
+        let mode_toggle = shadcn::ToggleGroup::single(self.mode.clone())
             .items([
                 shadcn::ToggleGroupItem::new(MODE_MEASURED, [cx.text("Measured")])
                     .a11y_label("Measured virtualization")
@@ -335,7 +337,7 @@ impl MvuProgram for VirtualListBasicsProgram {
                 ui::h_flex(cx, |cx| {
                     [
                         shadcn::Label::new("Tall rows:").into_element(cx),
-                        shadcn::Switch::new(state.tall_rows.clone())
+                        shadcn::Switch::new(self.tall_rows.clone())
                             .test_id(TEST_ID_TALL_ROWS)
                             .into_element(cx),
                     ]
@@ -346,7 +348,7 @@ impl MvuProgram for VirtualListBasicsProgram {
                 ui::h_flex(cx, |cx| {
                     [
                         shadcn::Label::new("Reversed:").into_element(cx),
-                        shadcn::Switch::new(state.reversed.clone())
+                        shadcn::Switch::new(self.reversed.clone())
                             .test_id(TEST_ID_REVERSED)
                             .into_element(cx),
                     ]
@@ -357,7 +359,7 @@ impl MvuProgram for VirtualListBasicsProgram {
                 ui::h_flex(cx, |cx| {
                     [
                         shadcn::Label::new("Use index keys (bad):").into_element(cx),
-                        shadcn::Switch::new(state.index_keys.clone())
+                        shadcn::Switch::new(self.index_keys.clone())
                             .test_id(TEST_ID_INDEX_KEYS)
                             .into_element(cx),
                     ]
@@ -368,7 +370,7 @@ impl MvuProgram for VirtualListBasicsProgram {
                 ui::h_flex(cx, |cx| {
                     [
                         shadcn::Label::new("Key cache: visible only").into_element(cx),
-                        shadcn::Switch::new(state.visible_only_keys.clone())
+                        shadcn::Switch::new(self.visible_only_keys.clone())
                             .test_id(TEST_ID_VISIBLE_ONLY_KEYS)
                             .into_element(cx),
                     ]
@@ -381,19 +383,19 @@ impl MvuProgram for VirtualListBasicsProgram {
                     .variant(shadcn::ButtonVariant::Outline)
                     .size(shadcn::ButtonSize::Sm)
                     .icon(IconId::new_static("ui.refresh"))
-                    .on_activate(rotate_items)
+                    .action(act::RotateItems)
                     .into_element(cx)
                     .test_id(TEST_ID_ROTATE),
                 shadcn::Button::new(format!("Scroll to item #{TARGET_ID}"))
                     .variant(shadcn::ButtonVariant::Secondary)
                     .size(shadcn::ButtonSize::Sm)
                     .icon(IconId::new_static("ui.arrow_down"))
-                    .on_activate(scroll_to_target)
+                    .action(act::ScrollToTarget)
                     .into_element(cx)
                     .test_id(TEST_ID_SCROLL_TARGET),
                 ui::h_flex(cx, |cx| {
                     [
-                        shadcn::Input::new(state.jump.clone())
+                        shadcn::Input::new(self.jump.clone())
                             .a11y_label("Scroll to index")
                             .placeholder("Index…")
                             .test_id(TEST_ID_SCROLL_JUMP_INPUT)
@@ -401,7 +403,7 @@ impl MvuProgram for VirtualListBasicsProgram {
                         shadcn::Button::new("Go")
                             .variant(shadcn::ButtonVariant::Outline)
                             .size(shadcn::ButtonSize::Sm)
-                            .on_activate(scroll_jump)
+                            .action(act::ScrollJump)
                             .into_element(cx)
                             .test_id(TEST_ID_SCROLL_JUMP_GO),
                     ]
@@ -478,6 +480,6 @@ fn main() -> anyhow::Result<()> {
     FretApp::new("cookbook-virtual-list-basics")
         .window("cookbook-virtual-list-basics", (1020.0, 720.0))
         .install_app(fret_cookbook::install_cookbook_defaults)
-        .run_mvu::<VirtualListBasicsProgram>()
+        .run_view::<VirtualListBasicsView>()
         .map_err(anyhow::Error::from)
 }

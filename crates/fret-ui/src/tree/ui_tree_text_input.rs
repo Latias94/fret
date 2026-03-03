@@ -187,6 +187,7 @@ impl<H: UiHost> UiTree<H> {
         range: fret_runtime::Utf16Range,
         text: &str,
         marked: Option<fret_runtime::Utf16Range>,
+        selected: Option<fret_runtime::Utf16Range>,
     ) -> bool {
         if !self.focus_is_text_input(app) {
             return false;
@@ -210,7 +211,7 @@ impl<H: UiHost> UiTree<H> {
                 };
                 let changed =
                     text_input_region_platform_text_input_replace_and_mark_text_in_range_utf16_with_hooks(
-                        app, services, ctx, range, text, marked,
+                        app, services, ctx, range, text, marked, selected,
                     );
                 if changed {
                     self.invalidate(focus, Invalidation::Layout);
@@ -229,7 +230,9 @@ impl<H: UiHost> UiTree<H> {
                 bounds,
                 scale_factor,
             };
-            w.platform_text_input_replace_and_mark_text_in_range_utf16(&mut cx, range, text, marked)
+            w.platform_text_input_replace_and_mark_text_in_range_utf16(
+                &mut cx, range, text, marked, selected,
+            )
         });
         if changed {
             self.invalidate(focus, Invalidation::Layout);
@@ -298,6 +301,7 @@ pub(in crate::tree) fn text_input_region_platform_text_input_snapshot(
         selection_utf16,
         marked_utf16,
         ime_cursor_area: props.ime_cursor_area,
+        surrounding_text: props.ime_surrounding_text.clone(),
     }
 }
 
@@ -547,6 +551,7 @@ pub(in crate::tree) fn text_input_region_platform_text_input_replace_and_mark_te
     range: fret_runtime::Utf16Range,
     text: &str,
     marked: Option<fret_runtime::Utf16Range>,
+    selected: Option<fret_runtime::Utf16Range>,
 ) -> bool {
     let hook = crate::elements::with_element_state(
         app,
@@ -611,5 +616,6 @@ pub(in crate::tree) fn text_input_region_platform_text_input_replace_and_mark_te
         range,
         text,
         marked,
+        selected,
     )
 }

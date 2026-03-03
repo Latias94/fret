@@ -5,7 +5,7 @@ use winit::window::Window;
 use crate::mapping::WheelConfig;
 
 use super::input::WinitInputState;
-use super::window::WinitWindowState;
+use super::window::{ImeSurroundingTextUpdate, WinitWindowState};
 
 #[derive(Debug, Default, Clone)]
 pub struct WinitPlatform {
@@ -31,6 +31,13 @@ impl WinitPlatform {
 
     pub fn set_ime_cursor_area(&mut self, rect: Rect) -> bool {
         self.window.set_ime_cursor_area(rect)
+    }
+
+    pub fn set_ime_surrounding_text(
+        &mut self,
+        surrounding: Option<ImeSurroundingTextUpdate>,
+    ) -> bool {
+        self.window.set_ime_surrounding_text(surrounding)
     }
 
     pub fn ime_cursor_area(&self) -> Option<Rect> {

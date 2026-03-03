@@ -525,12 +525,12 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
         line_height_px: Px(40.0),
     };
     let duration_items_fast = (1..=5)
-        .map(|idx| slide(cx, idx, duration_visual))
+        .map(|idx| shadcn::CarouselItem::new(slide(cx, idx, duration_visual)))
         .collect::<Vec<_>>();
     let duration_items_slow = (1..=5)
-        .map(|idx| slide(cx, idx, duration_visual))
+        .map(|idx| shadcn::CarouselItem::new(slide(cx, idx, duration_visual)))
         .collect::<Vec<_>>();
-    let duration_fast = shadcn::Carousel::new(duration_items_fast)
+    let duration_fast = shadcn::Carousel::default()
         .opts(
             shadcn::CarouselOptions::new()
                 .embla_engine(true)
@@ -540,8 +540,13 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
         .api_snapshot_model(duration_fast_api_snapshot.clone())
         .refine_layout(LayoutRefinement::default().w_full())
         .test_id("ui-gallery-carousel-duration-fast")
-        .into_element(cx);
-    let duration_slow = shadcn::Carousel::new(duration_items_slow)
+        .into_element_parts(
+            cx,
+            |_cx| shadcn::CarouselContent::new(duration_items_fast),
+            shadcn::CarouselPrevious::new(),
+            shadcn::CarouselNext::new(),
+        );
+    let duration_slow = shadcn::Carousel::default()
         .opts(
             shadcn::CarouselOptions::new()
                 .embla_engine(true)
@@ -551,7 +556,12 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
         .api_snapshot_model(duration_slow_api_snapshot.clone())
         .refine_layout(LayoutRefinement::default().w_full())
         .test_id("ui-gallery-carousel-duration-slow")
-        .into_element(cx);
+        .into_element_parts(
+            cx,
+            |_cx| shadcn::CarouselContent::new(duration_items_slow),
+            shadcn::CarouselPrevious::new(),
+            shadcn::CarouselNext::new(),
+        );
 
     cx.flex(
         FlexProps {

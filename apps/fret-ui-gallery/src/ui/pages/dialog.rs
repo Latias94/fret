@@ -5,7 +5,6 @@ use crate::ui::snippets::dialog as snippets;
 
 pub(super) fn preview_dialog(
     cx: &mut ElementContext<'_, App>,
-    _open: Model<bool>,
 ) -> Vec<AnyElement> {
     let demo = snippets::demo::render(cx);
     let parts = snippets::parts::render(cx);

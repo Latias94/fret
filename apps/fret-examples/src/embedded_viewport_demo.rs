@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use fret::interop::embedded_viewport as embedded;
-use fret::prelude::*;
+use fret::legacy::prelude::*;
 use fret_core::ViewportFit;
 use fret_render::{RenderTargetColorSpace, Renderer, WgpuContext};
 use fret_runtime::{FrameId, TickId};

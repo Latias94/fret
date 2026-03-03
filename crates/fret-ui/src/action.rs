@@ -732,6 +732,7 @@ pub type OnTextInputRegionPlatformTextInputReplaceAndMarkTextInRangeUtf16 = Arc<
             Utf16Range,
             &str,
             Option<Utf16Range>,
+            Option<Utf16Range>,
         ) -> bool
         + 'static,
 >;

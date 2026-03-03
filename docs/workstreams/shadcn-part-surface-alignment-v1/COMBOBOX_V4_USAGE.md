@@ -177,7 +177,9 @@ Upstream uses a single `Combobox` root with `multiple`, `ComboboxChips`, `Combob
 In Fret, multi-select is currently modeled as a dedicated recipe: `ComboboxChips`. The part adapter
 is available as `ComboboxChips::into_element_parts(...)` and supports:
 
-- `ComboboxChipsInput::placeholder(...)` → mapped to the overlay search input placeholder.
+- `ComboboxChipsInput::placeholder(...)` → mapped to both the trigger placeholder (when no chips
+  are selected) and the overlay search input placeholder.
+- `ComboboxTrigger::width_px(...)` → mapped to the recipe width override.
 - `ComboboxChip::show_remove(false)` → disables the recipe’s chip remove affordance.
 - `ComboboxContent(Empty/List/Group/Item...)` → overrides `empty_text` and (optionally) items/groups.
 

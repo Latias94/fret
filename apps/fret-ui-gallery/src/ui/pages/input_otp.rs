@@ -23,10 +23,9 @@ pub(super) fn preview_input_otp(cx: &mut ElementContext<'_, App>) -> Vec<AnyElem
         vec![
             DocSection::new("Demo", demo)
                 .no_shell()
-                .max_w(Px(980.0))
                 .test_id_prefix("ui-gallery-input-otp-demo")
                 .code_rust_from_file_region(snippets::demo::SOURCE, "example"),
-            DocSection::new("Notes", notes).max_w(Px(820.0)),
+            DocSection::new("Notes", notes),
         ],
     );
 

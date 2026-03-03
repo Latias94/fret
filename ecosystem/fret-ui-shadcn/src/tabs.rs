@@ -148,12 +148,6 @@ pub fn tabs_list_variants(theme: &ThemeSnapshot, variant: TabsListVariant) -> Ta
     }
 }
 
-/// Upstream shadcn/ui compat alias for copy/paste parity.
-#[allow(non_snake_case)]
-pub fn tabsListVariants(theme: &ThemeSnapshot, variant: TabsListVariant) -> TabsListVariants {
-    tabs_list_variants(theme, variant)
-}
-
 fn tabs_trigger_text_style(theme: &ThemeSnapshot) -> TextStyle {
     let px = theme
         .metric_by_key("component.tabs.trigger.text_px")
@@ -1792,13 +1786,16 @@ impl Tabs {
                                 // new-york-v4: trigger uses `h-[calc(100%-1px)]` relative to the list
                                 // content box (after list padding).
                                 //
-                                // In Fret, centering a `-1px` height delta produces a half-pixel
-                                // offset which can snap inconsistently (esp. at non-integer scale
-                                // factors) and read as a 1px vertical misalignment. Prefer an even
-                                // delta so the centered position lands on whole pixels.
-                                let trigger_h = Px(
-                                    (list_height.0 - list_padding.0 * 2.0 - 2.0).max(0.0),
-                                );
+                                // In a GPU-first renderer, the 1px delta is a frequent source of
+                                // rounding drift at non-integer scale factors. More importantly,
+                                // shadcn's trigger chrome includes `py-1` + a 1px border; a 2px
+                                // height reduction can starve the inner content box enough to read
+                                // as bottom-heavy (the label overflows into the bottom padding).
+                                //
+                                // Prefer filling the list content box by default; this preserves a
+                                // stable baseline for vertical centering while keeping the list's
+                                // outer padding (`p-[3px]`) as the primary visual inset.
+                                let trigger_h = Px((list_height.0 - list_padding.0 * 2.0).max(0.0));
                                 let trigger_refinement = if list_full_width {
                                     LayoutRefinement::default().flex_1().h_px(trigger_h)
                                 } else {

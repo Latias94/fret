@@ -14,7 +14,6 @@ pub(super) fn preview_ai_environment_variables_demo(
         Some("AI Elements are policy-level compositions built on top of lower-level primitives."),
         vec![
             DocSection::new("Environment Variables", demo)
-                .max_w(Px(820.0))
                 .test_id_prefix("ui-gallery-ai-environment-variables-demo")
                 .code_rust_from_file_region(
                     snippets::environment_variables_demo::SOURCE,

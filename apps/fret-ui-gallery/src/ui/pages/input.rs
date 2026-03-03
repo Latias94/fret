@@ -5,15 +5,13 @@ use crate::ui::snippets::input as snippets;
 
 pub(super) fn preview_input(
     cx: &mut ElementContext<'_, App>,
-    value: Model<String>,
-    file_value: Model<String>,
 ) -> Vec<AnyElement> {
-    let basic = snippets::basic::render(cx, value.clone());
+    let basic = snippets::basic::render(cx);
     let field = snippets::field::render(cx);
     let field_group = snippets::field_group::render(cx);
     let disabled = snippets::disabled::render(cx);
     let invalid = snippets::invalid::render(cx);
-    let file = snippets::file::render(cx, file_value.clone());
+    let file = snippets::file::render(cx);
     let inline = snippets::inline::render(cx);
     let grid = snippets::grid::render(cx);
     let required = snippets::required::render(cx);

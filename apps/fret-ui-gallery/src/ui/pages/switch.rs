@@ -5,14 +5,14 @@ use crate::ui::snippets::switch as snippets;
 
 pub(super) fn preview_switch(
     cx: &mut ElementContext<'_, App>,
-    model: Model<bool>,
+    _model: Model<bool>,
 ) -> Vec<AnyElement> {
     let sizes = snippets::sizes::render(cx);
-    let airplane_mode = snippets::airplane_mode::render(cx, model.clone());
+    let airplane_mode = snippets::airplane_mode::render(cx);
     let bluetooth = snippets::bluetooth::render(cx);
     let label_card = snippets::label_card::render(cx);
     let rtl = snippets::rtl::render(cx);
-    let extras = snippets::extras::render(cx, model.clone());
+    let extras = snippets::extras::render(cx);
 
     let notes = doc_layout::notes(
         cx,
@@ -30,30 +30,24 @@ pub(super) fn preview_switch(
         ),
         vec![
             DocSection::new("Sizes", sizes)
-                .max_w(Px(760.0))
                 .test_id_prefix("ui-gallery-switch-sizes")
                 .code_rust_from_file_region(snippets::sizes::SOURCE, "example"),
             DocSection::new("Airplane Mode", airplane_mode)
-                .max_w(Px(760.0))
                 .test_id_prefix("ui-gallery-switch-airplane")
                 .code_rust_from_file_region(snippets::airplane_mode::SOURCE, "example"),
             DocSection::new("Bluetooth", bluetooth)
-                .max_w(Px(760.0))
                 .test_id_prefix("ui-gallery-switch-bluetooth")
                 .code_rust_from_file_region(snippets::bluetooth::SOURCE, "example"),
             DocSection::new("Label Card", label_card)
-                .max_w(Px(980.0))
                 .test_id_prefix("ui-gallery-switch-label-card")
                 .code_rust_from_file_region(snippets::label_card::SOURCE, "example"),
             DocSection::new("RTL", rtl)
-                .max_w(Px(760.0))
                 .test_id_prefix("ui-gallery-switch-rtl")
                 .code_rust_from_file_region(snippets::rtl::SOURCE, "example"),
             DocSection::new("Extras", extras)
-                .max_w(Px(980.0))
                 .test_id_prefix("ui-gallery-switch-extras")
                 .code_rust_from_file_region(snippets::extras::SOURCE, "example"),
-            DocSection::new("Notes", notes).max_w(Px(820.0)),
+            DocSection::new("Notes", notes),
         ],
     );
 

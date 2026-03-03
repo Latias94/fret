@@ -24,7 +24,7 @@ pub(super) fn preview_badge(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement>
                 .description("Default shadcn badge variants and common compositions.")
                 .code_rust_from_file_region(snippets::demo::SOURCE, "example"),
             DocSection::new("Link", link)
-                .description("Badges can be composed with link semantics and trailing icons.")
+                .description("Badges can be composed with link semantics (shadcn `asChild`).")
                 .code_rust_from_file_region(snippets::link::SOURCE, "example"),
             DocSection::new("Notes", notes).description("API reference pointers and caveats."),
         ],

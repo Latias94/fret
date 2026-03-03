@@ -456,7 +456,7 @@ pub(super) fn preview_date_picker(
                     "A date picker component with a dropdown caption layout for month/year selection.",
                 )
                 .code_rust_from_file_region(snippets::dob::SOURCE, "example")
-                .max_w(Px(780.0))
+                .max_w(Px(980.0))
                 .no_shell(),
             DocSection::new("Input", input)
                 .description(
@@ -466,7 +466,7 @@ pub(super) fn preview_date_picker(
                     snippets::input::SOURCE,
                     "example",
                 )
-                .max_w(Px(780.0))
+                .max_w(Px(980.0))
                 .no_shell(),
             DocSection::new("Time Picker", time_picker)
                 .description("Date + time fields side-by-side (docs: Date Picker Time).")
@@ -474,7 +474,7 @@ pub(super) fn preview_date_picker(
                     snippets::time_picker::SOURCE,
                     "example",
                 )
-                .max_w(Px(780.0))
+                .max_w(Px(980.0))
                 .no_shell(),
             DocSection::new("Natural Language Picker", natural_language)
                 .description("This example parses natural language into a date (subset).")
@@ -482,12 +482,12 @@ pub(super) fn preview_date_picker(
                     snippets::natural_language::SOURCE,
                     "example",
                 )
-                .max_w(Px(780.0))
+                .max_w(Px(980.0))
                 .no_shell(),
             DocSection::new("RTL", rtl)
                 .description("All shadcn components should work under an RTL direction provider.")
                 .code_rust_from_file_region(snippets::rtl::SOURCE, "example")
-                .max_w(Px(780.0))
+                .max_w(Px(980.0))
                 .no_shell(),
             DocSection::new("Extras: With Presets", presets)
                 .description("shadcn `date-picker-with-presets` (Select + Calendar in a popover).")
@@ -495,7 +495,7 @@ pub(super) fn preview_date_picker(
                     snippets::presets::SOURCE,
                     "example",
                 )
-                .max_w(Px(780.0))
+                .max_w(Px(980.0))
                 .no_shell(),
             DocSection::new("Extras: With Dropdowns", dropdowns)
                 .description(
@@ -505,11 +505,11 @@ pub(super) fn preview_date_picker(
                     snippets::dropdowns::SOURCE,
                     "example",
                 )
-                .max_w(Px(780.0))
+                .max_w(Px(980.0))
                 .no_shell(),
             DocSection::new("Notes", notes_stack)
                 .description("Guidelines and parity notes for date picker recipes.")
-                .max_w(Px(780.0))
+                .max_w(Px(980.0))
                 .code_rust_from_file_region(snippets::notes::SOURCE, "example"),
         ],
     );

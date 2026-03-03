@@ -3,7 +3,8 @@ use std::sync::Arc;
 use fret_core::{Modifiers, MouseButton};
 use fret_runtime::{CommandId, DefaultAction, Model};
 use fret_ui::action::{
-    ActionCx, OnPressablePointerDown, PressablePointerDownResult, UiPointerActionHost,
+    ActionCx, ActivateReason, OnPressablePointerDown, PressablePointerDownResult,
+    UiPointerActionHost,
 };
 
 use fret_ui_kit::dnd as ui_dnd;
@@ -29,9 +30,19 @@ pub(super) fn tab_pointer_down_handler(
             match down.button {
                 MouseButton::Middle => {
                     if let Some(cmd) = pane_activate_cmd.clone() {
+                        host.record_pending_command_dispatch_source(
+                            acx,
+                            &cmd,
+                            ActivateReason::Pointer,
+                        );
                         dispatch_intent(host, acx.window, WorkspaceTabStripIntent::Activate(cmd));
                     }
                     if let Some(cmd) = tab_close_command.clone() {
+                        host.record_pending_command_dispatch_source(
+                            acx,
+                            &cmd,
+                            ActivateReason::Pointer,
+                        );
                         dispatch_intent(host, acx.window, WorkspaceTabStripIntent::Close(cmd));
                         dispatch_intent(host, acx.window, WorkspaceTabStripIntent::RequestRedraw);
                     }
@@ -40,8 +51,18 @@ pub(super) fn tab_pointer_down_handler(
                 }
                 MouseButton::Right => {
                     if let Some(cmd) = pane_activate_cmd.clone() {
+                        host.record_pending_command_dispatch_source(
+                            acx,
+                            &cmd,
+                            ActivateReason::Pointer,
+                        );
                         dispatch_intent(host, acx.window, WorkspaceTabStripIntent::Activate(cmd));
                     }
+                    host.record_pending_command_dispatch_source(
+                        acx,
+                        &tab_activate_command,
+                        ActivateReason::Pointer,
+                    );
                     dispatch_intent(
                         host,
                         acx.window,

@@ -262,6 +262,11 @@ pub struct TextInputRegionProps {
     pub a11y_text_selection: Option<(u32, u32)>,
     /// Optional IME composition range (start, end) in UTF-8 byte offsets within `a11y_value`.
     pub a11y_text_composition: Option<(u32, u32)>,
+    /// Best-effort surrounding text excerpt for IME backends that support it.
+    ///
+    /// This SHOULD exclude any active preedit/composing text and SHOULD be limited to
+    /// `WindowImeSurroundingText::MAX_TEXT_BYTES`.
+    pub ime_surrounding_text: Option<fret_runtime::WindowImeSurroundingText>,
 }
 
 /// An internal drag event listener region primitive.
@@ -323,6 +328,7 @@ impl Default for TextInputRegionProps {
             a11y_invalid: None,
             a11y_text_selection: None,
             a11y_text_composition: None,
+            ime_surrounding_text: None,
         }
     }
 }

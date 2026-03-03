@@ -1,17 +1,21 @@
-use std::sync::Arc;
-
 use fret::prelude::*;
 use fret_app::{
     CommandMeta, CommandScope, DefaultKeybinding, InputContext, KeyChord, KeymapService, Platform,
     PlatformFilter, format_sequence,
 };
 use fret_core::{FontWeight, KeyCode, Modifiers};
-use fret_ui::{
-    CommandAvailability,
-    action::{OnCommand, OnCommandAvailability},
-    element::SemanticsDecoration,
-};
+use fret_ui::{CommandAvailability, element::SemanticsDecoration};
 use fret_undo::{CMD_EDIT_REDO, CMD_EDIT_UNDO, UndoHistory, UndoRecord, ValueTx};
+
+mod act {
+    fret::actions!([
+        Inc = "cookbook.undo_basics.inc.v1",
+        Dec = "cookbook.undo_basics.dec.v1",
+        Reset = "cookbook.undo_basics.reset.v1",
+        Undo = "edit.undo",
+        Redo = "edit.redo"
+    ]);
+}
 
 const TEST_ID_ROOT: &str = "cookbook.undo_basics.root";
 const TEST_ID_VALUE: &str = "cookbook.undo_basics.value";
@@ -26,20 +30,11 @@ const TEST_ID_REDO_SHORTCUT: &str = "cookbook.undo_basics.redo_shortcut";
 const TEST_ID_NEXT_UNDO: &str = "cookbook.undo_basics.next_undo";
 const TEST_ID_NEXT_REDO: &str = "cookbook.undo_basics.next_redo";
 
-#[derive(Debug, Clone)]
-enum Msg {
-    Inc,
-    Dec,
-    Reset,
-}
-
-struct UndoBasicsState {
+struct UndoBasicsView {
     value: Model<i32>,
     history: Model<UndoHistory<ValueTx<i32>>>,
     coalesce: Model<bool>,
 }
-
-struct UndoBasicsProgram;
 
 fn install_commands(app: &mut App) {
     let undo_cmd = CommandId::from(CMD_EDIT_UNDO);
@@ -131,20 +126,24 @@ fn install_commands(app: &mut App) {
 }
 
 fn record_value_tx(
-    app: &mut App,
+    host: &mut dyn fret_ui::action::UiFocusActionHost,
     value: &Model<i32>,
     history: &Model<UndoHistory<ValueTx<i32>>>,
     label: &'static str,
     coalesce_key: Option<&'static str>,
     after: i32,
 ) {
-    let before = app.models().read(value, |v| *v).ok().unwrap_or_default();
+    let before = host
+        .models_mut()
+        .read(value, |v| *v)
+        .ok()
+        .unwrap_or_default();
     if before == after {
         return;
     }
 
-    let _ = app.models_mut().update(value, |v| *v = after);
-    let _ = app.models_mut().update(history, |h| {
+    let _ = host.models_mut().update(value, |v| *v = after);
+    let _ = host.models_mut().update(history, |h| {
         let record = UndoRecord::new(ValueTx::new(before, after)).label(label);
         if let Some(k) = coalesce_key {
             let mut record = record.coalesce_key(k);
@@ -161,156 +160,22 @@ fn record_value_tx(
     });
 }
 
-fn command_handlers(
-    value: Model<i32>,
-    history: Model<UndoHistory<ValueTx<i32>>>,
-) -> (OnCommand, OnCommandAvailability) {
-    let undo_value = value.clone();
-    let undo_history = history.clone();
-
-    let on_command: OnCommand = Arc::new(move |host, acx, command| {
-        let cmd = command.as_str();
-        if cmd != CMD_EDIT_UNDO && cmd != CMD_EDIT_REDO {
-            return false;
-        }
-
-        let next_value = host
-            .models_mut()
-            .update(&undo_history, |h| {
-                let mut next = None;
-                match cmd {
-                    CMD_EDIT_UNDO => {
-                        let _ = h.undo_invertible(|rec| {
-                            next = Some(rec.tx.after);
-                            Ok::<(), ()>(())
-                        });
-                    }
-                    CMD_EDIT_REDO => {
-                        let _ = h.redo_invertible(|rec| {
-                            next = Some(rec.tx.after);
-                            Ok::<(), ()>(())
-                        });
-                    }
-                    _ => {}
-                }
-                next
-            })
-            .ok()
-            .flatten();
-
-        let Some(next_value) = next_value else {
-            return false;
-        };
-
-        let _ = host.models_mut().update(&undo_value, |v| *v = next_value);
-        host.request_redraw(acx.window);
-        host.push_effect(Effect::RequestAnimationFrame(acx.window));
-        true
-    });
-
-    let on_command_availability: OnCommandAvailability =
-        Arc::new(move |host, _acx, command| match command.as_str() {
-            CMD_EDIT_UNDO => {
-                let can = host
-                    .models_mut()
-                    .read(&history, |h| h.can_undo())
-                    .ok()
-                    .unwrap_or(false);
-                if can {
-                    CommandAvailability::Available
-                } else {
-                    CommandAvailability::Blocked
-                }
-            }
-            CMD_EDIT_REDO => {
-                let can = host
-                    .models_mut()
-                    .read(&history, |h| h.can_redo())
-                    .ok()
-                    .unwrap_or(false);
-                if can {
-                    CommandAvailability::Available
-                } else {
-                    CommandAvailability::Blocked
-                }
-            }
-            _ => CommandAvailability::NotHandled,
-        });
-
-    (on_command, on_command_availability)
-}
-
-impl MvuProgram for UndoBasicsProgram {
-    type State = UndoBasicsState;
-    type Message = Msg;
-
-    fn init(app: &mut App, _window: AppWindowId) -> Self::State {
-        Self::State {
+impl View for UndoBasicsView {
+    fn init(app: &mut App, _window: AppWindowId) -> Self {
+        Self {
             value: app.models_mut().insert(0),
             history: app.models_mut().insert(UndoHistory::with_limit(64)),
             coalesce: app.models_mut().insert(false),
         }
     }
 
-    fn update(app: &mut App, st: &mut Self::State, msg: Self::Message) {
-        let coalesce = app
-            .models()
-            .read(&st.coalesce, |v| *v)
-            .ok()
-            .unwrap_or(false);
-
-        match msg {
-            Msg::Inc => {
-                let after = app
-                    .models()
-                    .read(&st.value, |v| v.saturating_add(1))
-                    .ok()
-                    .unwrap_or(1);
-                record_value_tx(
-                    app,
-                    &st.value,
-                    &st.history,
-                    "Increment",
-                    coalesce.then_some("value"),
-                    after,
-                );
-            }
-            Msg::Dec => {
-                let after = app
-                    .models()
-                    .read(&st.value, |v| v.saturating_sub(1))
-                    .ok()
-                    .unwrap_or(-1);
-                record_value_tx(
-                    app,
-                    &st.value,
-                    &st.history,
-                    "Decrement",
-                    coalesce.then_some("value"),
-                    after,
-                );
-            }
-            Msg::Reset => {
-                record_value_tx(app, &st.value, &st.history, "Reset", None, 0);
-            }
-        }
-    }
-
-    fn view(
-        cx: &mut ElementContext<'_, App>,
-        state: &mut Self::State,
-        msg: &mut MessageRouter<Self::Message>,
-    ) -> Elements {
-        // Attach command handlers to the window's declarative root so shortcuts work even when
-        // nothing inside the view has focus (the dispatch path doesn't walk descendants).
-        let base_root = cx.root_id();
-
+    fn render(&mut self, cx: &mut ViewCx<'_, '_, App>) -> Elements {
         let theme = Theme::global(&*cx.app).snapshot();
-        let undo_cmd = CommandId::from(CMD_EDIT_UNDO);
-        let redo_cmd = CommandId::from(CMD_EDIT_REDO);
+        let undo_cmd: CommandId = act::Undo.into();
+        let redo_cmd: CommandId = act::Redo.into();
 
-        let value = cx.watch_model(&state.value).paint().copied_or_default();
-        let history = cx.watch_model(&state.history).paint().cloned_or_default();
+        let value = cx.watch_model(&self.value).paint().copied_or_default();
+        let history = cx.watch_model(&self.history).paint().cloned_or_default();
         let can_undo = history.can_undo();
         let can_redo = history.can_redo();
 
@@ -323,7 +188,7 @@ impl MvuProgram for UndoBasicsProgram {
             .and_then(|rec| rec.label.as_deref())
             .unwrap_or("None");
 
-        let coalesce = cx.watch_model(&state.coalesce).paint().copied_or_default();
+        let coalesce = cx.watch_model(&self.coalesce).paint().copied_or_default();
         let coalesce_label = if coalesce { "On" } else { "Off" };
 
         let undo_shortcut = cx
@@ -404,25 +269,21 @@ impl MvuProgram for UndoBasicsProgram {
         .gap(Space::N1)
         .into_element(cx);
 
-        let inc_cmd = msg.cmd(Msg::Inc);
-        let dec_cmd = msg.cmd(Msg::Dec);
-        let reset_cmd = msg.cmd(Msg::Reset);
-
         let row_edits = ui::h_flex(cx, |cx| {
             [
                 shadcn::Button::new("-1")
                     .variant(shadcn::ButtonVariant::Secondary)
-                    .on_click(dec_cmd)
+                    .action(act::Dec)
                     .into_element(cx)
                     .test_id(TEST_ID_DEC),
                 shadcn::Button::new("+1")
                     .variant(shadcn::ButtonVariant::Secondary)
-                    .on_click(inc_cmd)
+                    .action(act::Inc)
                     .into_element(cx)
                     .test_id(TEST_ID_INC),
                 shadcn::Button::new("Reset")
                     .variant(shadcn::ButtonVariant::Outline)
-                    .on_click(reset_cmd)
+                    .action(act::Reset)
                     .into_element(cx)
                     .test_id(TEST_ID_RESET),
             ]
@@ -436,13 +297,13 @@ impl MvuProgram for UndoBasicsProgram {
                 shadcn::Button::new("Undo")
                     .disabled(!can_undo)
                     .variant(shadcn::ButtonVariant::Default)
-                    .on_click(undo_cmd.clone())
+                    .action(act::Undo)
                     .into_element(cx)
                     .test_id(TEST_ID_UNDO),
                 shadcn::Button::new("Redo")
                     .disabled(!can_redo)
                     .variant(shadcn::ButtonVariant::Default)
-                    .on_click(redo_cmd.clone())
+                    .action(act::Redo)
                     .into_element(cx)
                     .test_id(TEST_ID_REDO),
             ]
@@ -454,7 +315,7 @@ impl MvuProgram for UndoBasicsProgram {
         let row_coalesce = ui::h_flex(cx, |cx| {
             [
                 shadcn::Label::new("Coalesce nudges (key = \"value\"):").into_element(cx),
-                shadcn::Switch::new(state.coalesce.clone())
+                shadcn::Switch::new(self.coalesce.clone())
                     .test_id(TEST_ID_COALESCE)
                     .into_element(cx),
                 shadcn::Badge::new(coalesce_label)
@@ -503,15 +364,166 @@ impl MvuProgram for UndoBasicsProgram {
                 .max_w(Px(760.0))
                 .into_element(cx);
 
-        let (on_command, on_command_availability) =
-            command_handlers(state.value.clone(), state.history.clone());
+        cx.on_action::<act::Inc>({
+            let value = self.value.clone();
+            let history = self.history.clone();
+            let coalesce = self.coalesce.clone();
+            move |host, acx| {
+                let coalesce = host
+                    .models_mut()
+                    .read(&coalesce, |v| *v)
+                    .ok()
+                    .unwrap_or(false);
+                let after = host
+                    .models_mut()
+                    .read(&value, |v| v.saturating_add(1))
+                    .ok()
+                    .unwrap_or(1);
+                record_value_tx(
+                    host,
+                    &value,
+                    &history,
+                    "Increment",
+                    coalesce.then_some("value"),
+                    after,
+                );
+                host.request_redraw(acx.window);
+                host.notify(acx);
+                true
+            }
+        });
 
-        let root = fret_cookbook::scaffold::centered_page_background(cx, TEST_ID_ROOT, card);
+        cx.on_action::<act::Dec>({
+            let value = self.value.clone();
+            let history = self.history.clone();
+            let coalesce = self.coalesce.clone();
+            move |host, acx| {
+                let coalesce = host
+                    .models_mut()
+                    .read(&coalesce, |v| *v)
+                    .ok()
+                    .unwrap_or(false);
+                let after = host
+                    .models_mut()
+                    .read(&value, |v| v.saturating_sub(1))
+                    .ok()
+                    .unwrap_or(-1);
+                record_value_tx(
+                    host,
+                    &value,
+                    &history,
+                    "Decrement",
+                    coalesce.then_some("value"),
+                    after,
+                );
+                host.request_redraw(acx.window);
+                host.notify(acx);
+                true
+            }
+        });
 
-        cx.command_on_command_for(base_root, on_command);
-        cx.command_on_command_availability_for(base_root, on_command_availability);
+        cx.on_action::<act::Reset>({
+            let value = self.value.clone();
+            let history = self.history.clone();
+            move |host, acx| {
+                record_value_tx(host, &value, &history, "Reset", None, 0);
+                host.request_redraw(acx.window);
+                host.notify(acx);
+                true
+            }
+        });
 
-        root.into()
+        cx.on_action::<act::Undo>({
+            let value = self.value.clone();
+            let history = self.history.clone();
+            move |host, acx| {
+                let next_value = host
+                    .models_mut()
+                    .update(&history, |h| {
+                        let mut next = None;
+                        let _ = h.undo_invertible(|rec| {
+                            next = Some(rec.tx.after);
+                            Ok::<(), ()>(())
+                        });
+                        next
+                    })
+                    .ok()
+                    .flatten();
+
+                let Some(next_value) = next_value else {
+                    return false;
+                };
+
+                let _ = host.models_mut().update(&value, |v| *v = next_value);
+                host.request_redraw(acx.window);
+                host.push_effect(Effect::RequestAnimationFrame(acx.window));
+                host.notify(acx);
+                true
+            }
+        });
+
+        cx.on_action::<act::Redo>({
+            let value = self.value.clone();
+            let history = self.history.clone();
+            move |host, acx| {
+                let next_value = host
+                    .models_mut()
+                    .update(&history, |h| {
+                        let mut next = None;
+                        let _ = h.redo_invertible(|rec| {
+                            next = Some(rec.tx.after);
+                            Ok::<(), ()>(())
+                        });
+                        next
+                    })
+                    .ok()
+                    .flatten();
+
+                let Some(next_value) = next_value else {
+                    return false;
+                };
+
+                let _ = host.models_mut().update(&value, |v| *v = next_value);
+                host.request_redraw(acx.window);
+                host.push_effect(Effect::RequestAnimationFrame(acx.window));
+                host.notify(acx);
+                true
+            }
+        });
+
+        cx.on_action_availability::<act::Undo>({
+            let history = self.history.clone();
+            move |host, _acx| {
+                let can = host
+                    .models_mut()
+                    .read(&history, |h| h.can_undo())
+                    .ok()
+                    .unwrap_or(false);
+                if can {
+                    CommandAvailability::Available
+                } else {
+                    CommandAvailability::Blocked
+                }
+            }
+        });
+
+        cx.on_action_availability::<act::Redo>({
+            let history = self.history.clone();
+            move |host, _acx| {
+                let can = host
+                    .models_mut()
+                    .read(&history, |h| h.can_redo())
+                    .ok()
+                    .unwrap_or(false);
+                if can {
+                    CommandAvailability::Available
+                } else {
+                    CommandAvailability::Blocked
+                }
+            }
+        });
+
+        fret_cookbook::scaffold::centered_page_background(cx, TEST_ID_ROOT, card).into()
     }
 }
 
@@ -521,6 +533,6 @@ fn main() -> anyhow::Result<()> {
         .config_files(false)
         .install_app(install_commands)
         .install_app(fret_cookbook::install_cookbook_defaults)
-        .run_mvu::<UndoBasicsProgram>()
+        .run_view::<UndoBasicsView>()
         .map_err(anyhow::Error::from)
 }

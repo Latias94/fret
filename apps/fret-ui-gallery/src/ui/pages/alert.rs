@@ -24,37 +24,29 @@ pub(super) fn preview_alert(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement>
     let body = doc_layout::render_doc_page(
         cx,
         Some(
-            "Preview follows shadcn Alert docs order: Demo, Basic, Destructive, Action, Custom Colors, RTL.",
+            "Preview follows shadcn Alert docs order: Demo, Basic (docs example), Destructive, Action, Custom Colors, RTL.",
         ),
         vec![
             DocSection::new("Demo", demo)
                 .description("A small set of inline alerts for different message tones.")
-                .max_w(Px(720.0))
                 .test_id_prefix("ui-gallery-alert")
                 .code_rust_from_file_region(snippets::demo::SOURCE, "example"),
             DocSection::new("Basic", basic)
-                .description("Default variant for neutral info.")
-                .max_w(Px(720.0))
+                .description("Upstream shadcn docs example (icon + title + description).")
                 .code_rust_from_file_region(snippets::basic::SOURCE, "example"),
             DocSection::new("Destructive", destructive)
                 .description("Destructive variant for critical errors.")
-                .max_w(Px(720.0))
                 .code_rust_from_file_region(snippets::destructive::SOURCE, "example"),
             DocSection::new("Action", action)
                 .description("Use `AlertAction` to pin a top-right action inside the alert.")
-                .max_w(Px(720.0))
                 .code_rust_from_file_region(snippets::action::SOURCE, "example"),
             DocSection::new("Custom Colors", custom_colors)
                 .description("Custom chrome override for special emphasis.")
-                .max_w(Px(720.0))
                 .code_rust_from_file_region(snippets::custom_colors::SOURCE, "example"),
             DocSection::new("RTL", rtl)
                 .description("Alert layout under an RTL direction provider.")
-                .max_w(Px(720.0))
                 .code_rust_from_file_region(snippets::rtl::SOURCE, "example"),
-            DocSection::new("Notes", notes)
-                .description("API reference pointers and caveats.")
-                .max_w(Px(820.0)),
+            DocSection::new("Notes", notes).description("API reference pointers and caveats."),
         ],
     );
 

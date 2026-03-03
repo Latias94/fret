@@ -14,7 +14,6 @@ pub(super) fn preview_ai_test_results_large_demo(
         Some("AI Elements are policy-level compositions built on top of lower-level primitives."),
         vec![
             DocSection::new("Test Results (Large)", demo)
-                .max_w(Px(820.0))
                 .test_id_prefix("ui-gallery-ai-test-results-large-demo")
                 .code_rust_from_file_region(snippets::test_results_large_demo::SOURCE, "example"),
         ],

@@ -64,12 +64,6 @@ pub fn badge_variants(theme: &ThemeSnapshot, variant: BadgeVariant) -> BadgeVari
     BadgeVariants { chrome, layout }
 }
 
-/// Upstream shadcn/ui compat alias for copy/paste parity.
-#[allow(non_snake_case)]
-pub fn badgeVariants(theme: &ThemeSnapshot, variant: BadgeVariant) -> BadgeVariants {
-    badge_variants(theme, variant)
-}
-
 #[derive(Debug, Clone)]
 pub enum BadgeRender {
     Link {
@@ -268,6 +262,11 @@ fn bg_for(theme: &ThemeSnapshot, variant: BadgeVariant) -> Option<Color> {
     }
 }
 
+fn with_alpha(mut color: Color, alpha: f32) -> Color {
+    color.a = alpha.clamp(0.0, 1.0);
+    color
+}
+
 fn apply_badge_child_icon_size(mut element: AnyElement, icon_px: Px) -> AnyElement {
     fn set_layout_px(layout: &mut LayoutStyle, icon_px: Px) {
         layout.size.width = Length::Px(icon_px);
@@ -430,6 +429,7 @@ fn badge_with_patch<H: UiHost>(
     let mut chrome_props = decl_style::container_props(&theme, chrome, LayoutRefinement::default());
     chrome_props.layout.size = pressable_layout.size;
     chrome_props.layout.overflow = fret_ui::element::Overflow::Clip;
+    chrome_props.focus_border_color = Some(theme.color_token("ring"));
 
     let text_px = theme
         .metric_by_key("component.badge.text_px")
@@ -518,7 +518,7 @@ fn badge_with_patch<H: UiHost>(
 
     if render_role.is_some() || render_on_activate.is_some() {
         let visited = visited && render_role == Some(SemanticsRole::Link);
-        return control_chrome_pressable_with_id_props(cx, move |cx, _st, _id| {
+        return control_chrome_pressable_with_id_props(cx, move |cx, st, _id| {
             if let Some(on_activate) = render_on_activate.clone() {
                 cx.pressable_on_activate(on_activate);
             }
@@ -539,7 +539,14 @@ fn badge_with_patch<H: UiHost>(
                 ..Default::default()
             };
 
-            let chrome_props = chrome_props;
+            let mut chrome_props = chrome_props;
+            // Upstream shadcn applies `[a&]:hover:bg-*/90` for the default/secondary/destructive
+            // badge variants. Model this only for link semantics (our `asChild` equivalent).
+            if render_role == Some(SemanticsRole::Link) && st.hovered {
+                if let Some(bg) = bg_for(&theme, variant) {
+                    chrome_props.background = Some(with_alpha(bg, 0.9));
+                }
+            }
             (pressable_props, chrome_props, content_children)
         });
     }

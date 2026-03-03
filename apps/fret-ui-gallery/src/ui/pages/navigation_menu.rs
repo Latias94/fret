@@ -12,10 +12,8 @@ pub(super) fn preview_navigation_menu(cx: &mut ElementContext<'_, App>) -> Vec<A
         Some("Preview follows shadcn Navigation Menu docs order: Demo, RTL."),
         vec![
             DocSection::new("Demo", demo_with_toggle)
-                .max_w(Px(820.0))
                 .code_rust_from_file_region(snippets::demo::SOURCE, "example"),
             DocSection::new("RTL", rtl)
-                .max_w(Px(820.0))
                 .code_rust_from_file_region(snippets::rtl::SOURCE, "example"),
         ],
     );

@@ -430,12 +430,6 @@ pub fn button_group_variants(orientation: ButtonGroupOrientation) -> ButtonGroup
     }
 }
 
-/// Upstream shadcn/ui compat alias for copy/paste parity.
-#[allow(non_snake_case)]
-pub fn buttonGroupVariants(orientation: ButtonGroupOrientation) -> ButtonGroupVariants {
-    button_group_variants(orientation)
-}
-
 pub struct ButtonGroup {
     items: Vec<ButtonGroupItem>,
     orientation: ButtonGroupOrientation,

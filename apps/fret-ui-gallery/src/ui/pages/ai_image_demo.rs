@@ -14,7 +14,6 @@ pub(super) fn preview_ai_image_demo(
         Some("AI Image is a presentation surface; apps own image generation pipelines."),
         vec![
             DocSection::new("Image", demo)
-                .max_w(Px(820.0))
                 .test_id_prefix("ui-gallery-ai-image-demo")
                 .code_rust_from_file_region(snippets::image_demo::SOURCE, "example"),
         ],

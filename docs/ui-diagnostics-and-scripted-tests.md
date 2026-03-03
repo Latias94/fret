@@ -1112,6 +1112,7 @@ Predicates (v1 MVP):
 - `{"kind":"visible_in_window","target":<selector>}` (target exists and intersects the window bounds)
 - `{"kind":"bounds_within_window","target":<selector>,"padding_px":0,"eps_px":0}` (target bounds must be fully contained within the window, optionally padded inward; `eps_px` allows a small tolerance for subpixel rounding at non-1.0 DPI)
 - `{"kind":"text_input_ime_cursor_area_within_window","padding_px":0,"eps_px":0}` (focused text input's IME cursor area must be fully contained within the window, optionally padded inward; intended for keyboard-avoidance / caret-visibility gates; requires `diag.text_input_snapshot`)
+- `{"kind":"ime_surrounding_text_valid"}` (window-level IME surrounding text excerpt must be present and satisfy winit-style constraints: max bytes + UTF-8 char-boundary offsets; requires `diag.text_input_snapshot`)
 
 Note: this list is intentionally incomplete; additional predicate kinds exist for specialized suites.
 The authoritative list lives in `crates/fret-diag-protocol/src/lib.rs` (`UiPredicateV1`).

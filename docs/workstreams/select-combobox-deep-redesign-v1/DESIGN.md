@@ -55,11 +55,10 @@ Rules of thumb:
   - Interactive state styling remains recipe-owned (driven by `WidgetStates` + typed overrides).
 - Naming:
   - Prefer Rust idioms as the canonical export (`snake_case` function + typed enums).
-  - If upstream uses a camelCase helper name and it is valuable for copy/paste parity, add a thin
-    alias (e.g. `buttonVariants(...)` forwarding to `button_variants(...)`) in `fret-ui-shadcn`.
-- Do not expose “versioned” identifiers in **component/recipe** public APIs (`v4`, `V4`, etc.).
-  Treat versions as documentation-only. (Theme preset helpers may remain versioned when they map to
-  an upstream versioned theme name.)
+  - Do not expose camelCase helper aliases; keep the public surface consistently Rust-style.
+  - Do not expose “versioned” identifiers in **component/recipe** public APIs (`v4`, `V4`, etc.).
+    Treat versions as documentation-only. (Theme preset helpers may remain versioned when they map to
+    an upstream versioned theme name.)
 
 ### Existing substrate (reuse-first)
 

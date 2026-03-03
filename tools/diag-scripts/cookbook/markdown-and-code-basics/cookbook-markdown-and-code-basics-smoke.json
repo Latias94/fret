@@ -3,7 +3,7 @@
   "meta": {
     "name": "cookbook-markdown-and-code-basics-smoke",
     "required_capabilities": ["diag.script_v2", "diag.screenshot_png"],
-    "tags": ["cookbook", "markdown", "code_view", "copy", "smoke"]
+    "tags": ["cookbook", "markdown", "code_view", "actions", "copy", "smoke"]
   },
   "steps": [
     {
@@ -35,4 +35,3 @@
     { "type": "capture_bundle", "label": "cookbook-markdown-and-code-basics-smoke" }
   ]
 }
-

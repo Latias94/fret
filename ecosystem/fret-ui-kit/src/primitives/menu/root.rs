@@ -64,6 +64,8 @@ pub struct MenuCloseAutoFocusGuardPolicy {
     pub prevent_on_outside_press: bool,
     /// Prevent close auto-focus when dismissed due to focus moving outside the dismissible layer.
     pub prevent_on_focus_outside: bool,
+    /// Prevent close auto-focus when dismissed via Escape.
+    pub prevent_on_escape: bool,
 }
 
 impl MenuCloseAutoFocusGuardPolicy {
@@ -77,6 +79,7 @@ impl MenuCloseAutoFocusGuardPolicy {
         Self {
             prevent_on_outside_press: !modal,
             prevent_on_focus_outside: true,
+            prevent_on_escape: false,
         }
     }
 
@@ -85,7 +88,13 @@ impl MenuCloseAutoFocusGuardPolicy {
         Self {
             prevent_on_outside_press: true,
             prevent_on_focus_outside: true,
+            prevent_on_escape: true,
         }
+    }
+
+    pub fn prevent_on_escape(mut self, prevent: bool) -> Self {
+        self.prevent_on_escape = prevent;
+        self
     }
 }
 
@@ -139,6 +148,7 @@ pub fn menu_close_auto_focus_guard_hooks<H: UiHost>(
                 let should_prevent = match req.reason {
                     DismissReason::OutsidePress { .. } => policy.prevent_on_outside_press,
                     DismissReason::FocusOutside => policy.prevent_on_focus_outside,
+                    DismissReason::Escape => policy.prevent_on_escape,
                     _ => false,
                 };
                 let _ = host.models_mut().update(&dismiss_reason_for_hook, |v| {
@@ -179,6 +189,7 @@ pub fn menu_close_auto_focus_guard_hooks<H: UiHost>(
             let should_prevent = match reason {
                 Some(DismissReason::OutsidePress { .. }) => policy.prevent_on_outside_press,
                 Some(DismissReason::FocusOutside) => policy.prevent_on_focus_outside,
+                Some(DismissReason::Escape) => policy.prevent_on_escape,
                 _ => false,
             };
             if should_prevent {

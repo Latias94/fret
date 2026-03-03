@@ -615,6 +615,67 @@ fn text_input_draws_preedit_underline_when_composing() {
 }
 
 #[test]
+fn text_input_draws_preedit_background_when_composing() {
+    let window = AppWindowId::default();
+    let bounds = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(240.0), Px(80.0)));
+
+    let mut ui = UiTree::new();
+    ui.set_window(window);
+
+    let bg_color = fret_core::Color {
+        r: 0.9,
+        g: 0.1,
+        b: 0.7,
+        a: 0.5,
+    };
+
+    let mut input = TextInput::new().with_text("hello");
+    input.set_chrome_style(TextInputStyle {
+        preedit_bg_color: bg_color,
+        ..Default::default()
+    });
+
+    let root = ui.create_node(input);
+    ui.set_root(root);
+    ui.set_focus(Some(root));
+
+    let mut app = TestHost::new();
+    app.set_global(PlatformCapabilities::default());
+    let mut text = FakeTextService::default();
+
+    ui.layout_all(&mut app, &mut text, bounds, 1.0);
+    let _ = app.take_effects();
+
+    ui.dispatch_event(
+        &mut app,
+        &mut text,
+        &Event::Ime(ImeEvent::Preedit {
+            text: "yo".to_string(),
+            cursor: Some((2, 2)),
+        }),
+    );
+
+    let mut scene = fret_core::Scene::default();
+    ui.paint(&mut app, &mut text, root, bounds, &mut scene, 1.0);
+
+    let preedit_bg = scene.ops().iter().rev().find_map(|op| match op {
+        fret_core::SceneOp::Quad {
+            rect, background, ..
+        } if *background == fret_core::Paint::Solid(bg_color).into()
+            && rect.size.height.0 > 1.0 =>
+        {
+            Some(*rect)
+        }
+        _ => None,
+    });
+
+    assert!(
+        preedit_bg.is_some(),
+        "expected a preedit background quad to be present in the scene"
+    );
+}
+
+#[test]
 fn ime_commit_replaces_original_selection_after_preedit_starts() {
     let window = AppWindowId::default();
     let node = fret_core::NodeId::default();

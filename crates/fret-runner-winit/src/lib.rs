@@ -24,4 +24,4 @@ pub use mapping::{
     map_pointer_id_from_pointer_source, map_pointer_kind, map_pointer_type,
     map_pointer_type_from_pointer_source, map_wheel_delta, sanitize_text_input, set_mouse_buttons,
 };
-pub use state::{WinitInputState, WinitPlatform, WinitWindowState};
+pub use state::{ImeSurroundingTextUpdate, WinitInputState, WinitPlatform, WinitWindowState};

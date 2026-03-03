@@ -80,13 +80,27 @@ impl<H: UiHost> UiTree<H> {
             input_ctx.window_arbitration = Some(self.window_input_arbitration_snapshot());
         }
 
-        let Some(start) =
-            self.command_availability_start_node(base_root, &dispatch_snapshot, barrier_root)
-        else {
-            return CommandAvailability::NotHandled;
-        };
+        if self
+            .focus
+            .is_some_and(|n| dispatch_snapshot.pre.get(n).is_none())
+        {
+            self.set_focus_unchecked(None, "commands: focus missing from dispatch snapshot");
+        }
 
-        let availability = self.command_availability_from_node(app, &input_ctx, start, command);
+        let default_root = barrier_root.unwrap_or(base_root);
+        let focus = self.focus;
+        let focus_in_default_root = focus.is_some_and(|n| self.is_descendant(default_root, n));
+
+        let start = focus.unwrap_or(default_root);
+        let mut availability = self.command_availability_from_node(app, &input_ctx, start, command);
+        if availability == CommandAvailability::NotHandled
+            && focus.is_some()
+            && !focus_in_default_root
+            && start != default_root
+        {
+            availability =
+                self.command_availability_from_node(app, &input_ctx, default_root, command);
+        }
 
         if availability == CommandAvailability::NotHandled
             && matches!(command.as_str(), "focus.next" | "focus.previous")
@@ -259,9 +273,10 @@ impl<H: UiHost> UiTree<H> {
                     snapshot.insert(id, false);
                 }
                 CommandAvailability::NotHandled => {
-                    if matches!(id.as_str(), "focus.next" | "focus.previous") {
-                        snapshot.insert(id, false);
-                    }
+                    // For widget-scoped commands, “not handled anywhere on the dispatch path”
+                    // means “not available” (disabled) for cross-surface gating (menus, palettes,
+                    // shortcuts).
+                    snapshot.insert(id, false);
                 }
             }
         }

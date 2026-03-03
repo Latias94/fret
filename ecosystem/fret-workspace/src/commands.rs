@@ -1,6 +1,7 @@
 use fret_core::{KeyCode, Modifiers};
 use fret_runtime::{
-    CommandId, CommandMeta, CommandRegistry, DefaultKeybinding, KeyChord, PlatformFilter,
+    ActionId, CommandId, CommandMeta, CommandRegistry, DefaultKeybinding, KeyChord, PlatformFilter,
+    TypedAction,
 };
 use std::sync::Arc;
 
@@ -63,6 +64,70 @@ pub const CMD_WORKSPACE_PANE_MOVE_ACTIVE_TAB_DOWN: &str = "workspace.pane.move_a
 pub const CMD_WORKSPACE_PANE_FOCUS_TAB_STRIP: &str = "workspace.pane.focus_tab_strip";
 pub const CMD_WORKSPACE_PANE_FOCUS_CONTENT: &str = "workspace.pane.focus_content";
 pub const CMD_WORKSPACE_PANE_TOGGLE_TAB_STRIP_FOCUS: &str = "workspace.pane.toggle_tab_strip_focus";
+
+/// Typed unit actions for action-first authoring (v1).
+///
+/// v1 strategy: `ActionId` is an alias over `CommandId` (ADR 0307), so these marker types provide a
+/// typed authoring surface without introducing new runtime schemas.
+pub mod act {
+    use super::*;
+
+    pub struct WorkspaceTabNext;
+    impl TypedAction for WorkspaceTabNext {
+        fn action_id() -> ActionId {
+            ActionId::new(CMD_WORKSPACE_TAB_NEXT)
+        }
+    }
+
+    pub struct WorkspaceTabPrev;
+    impl TypedAction for WorkspaceTabPrev {
+        fn action_id() -> ActionId {
+            ActionId::new(CMD_WORKSPACE_TAB_PREV)
+        }
+    }
+
+    pub struct WorkspaceTabClose;
+    impl TypedAction for WorkspaceTabClose {
+        fn action_id() -> ActionId {
+            ActionId::new(CMD_WORKSPACE_TAB_CLOSE)
+        }
+    }
+
+    pub struct WorkspaceTabTogglePin;
+    impl TypedAction for WorkspaceTabTogglePin {
+        fn action_id() -> ActionId {
+            ActionId::new(CMD_WORKSPACE_TAB_TOGGLE_PIN)
+        }
+    }
+
+    pub struct WorkspacePaneNext;
+    impl TypedAction for WorkspacePaneNext {
+        fn action_id() -> ActionId {
+            ActionId::new(CMD_WORKSPACE_PANE_NEXT)
+        }
+    }
+
+    pub struct WorkspacePanePrev;
+    impl TypedAction for WorkspacePanePrev {
+        fn action_id() -> ActionId {
+            ActionId::new(CMD_WORKSPACE_PANE_PREV)
+        }
+    }
+
+    pub struct WorkspacePaneFocusTabStrip;
+    impl TypedAction for WorkspacePaneFocusTabStrip {
+        fn action_id() -> ActionId {
+            ActionId::new(CMD_WORKSPACE_PANE_FOCUS_TAB_STRIP)
+        }
+    }
+
+    pub struct WorkspacePaneFocusContent;
+    impl TypedAction for WorkspacePaneFocusContent {
+        fn action_id() -> ActionId {
+            ActionId::new(CMD_WORKSPACE_PANE_FOCUS_CONTENT)
+        }
+    }
+}
 
 /// Prefix for "activate a specific tab" commands.
 ///

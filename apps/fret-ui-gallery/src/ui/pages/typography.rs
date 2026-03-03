@@ -37,67 +37,51 @@ pub(super) fn preview_typography(cx: &mut ElementContext<'_, App>) -> Vec<AnyEle
         vec![
             DocSection::new("Demo", demo)
                 .description("A long-form story sample combining headings, paragraphs, and lists.")
-                .max_w(Px(760.0))
                 .code_rust_from_file_region(snippets::demo::SOURCE, "example"),
             DocSection::new("h1", h1)
                 .description("Top-level heading.")
-                .max_w(Px(760.0))
                 .code_rust_from_file_region(snippets::h1::SOURCE, "example"),
             DocSection::new("h2", h2)
                 .description("Section heading.")
-                .max_w(Px(760.0))
                 .code_rust_from_file_region(snippets::h2::SOURCE, "example"),
             DocSection::new("h3", h3)
                 .description("Sub-section heading.")
-                .max_w(Px(760.0))
                 .code_rust_from_file_region(snippets::h3::SOURCE, "example"),
             DocSection::new("h4", h4)
                 .description("Low-level heading for grouped content.")
-                .max_w(Px(760.0))
                 .code_rust_from_file_region(snippets::h4::SOURCE, "example"),
             DocSection::new("p", p)
                 .description("Body paragraph text.")
-                .max_w(Px(760.0))
                 .code_rust_from_file_region(snippets::p::SOURCE, "example"),
             DocSection::new("blockquote", blockquote)
                 .description("Quoted callout text.")
-                .max_w(Px(760.0))
                 .code_rust_from_file_region(snippets::blockquote::SOURCE, "example"),
             DocSection::new("table", table)
                 .description("Tabular content using shadcn Table parts.")
-                .max_w(Px(760.0))
                 .code_rust_from_file_region(snippets::table::SOURCE, "example"),
             DocSection::new("list", list)
                 .description("Bulleted/ordered list content.")
-                .max_w(Px(760.0))
                 .code_rust_from_file_region(snippets::list::SOURCE, "example"),
             DocSection::new("Inline Code", inline_code)
                 .description("Inline code styling for commands and identifiers.")
-                .max_w(Px(760.0))
                 .code_rust_from_file_region(snippets::inline_code::SOURCE, "example"),
             DocSection::new("Lead", lead)
                 .description("Intro lead paragraph for sections.")
-                .max_w(Px(760.0))
                 .code_rust_from_file_region(snippets::lead::SOURCE, "example"),
             DocSection::new("Large", large)
                 .description("Emphasis text for short callouts.")
-                .max_w(Px(760.0))
                 .code_rust_from_file_region(snippets::large::SOURCE, "example"),
             DocSection::new("Small", small)
                 .description("Helper text and metadata.")
-                .max_w(Px(760.0))
                 .code_rust_from_file_region(snippets::small::SOURCE, "example"),
             DocSection::new("Muted", muted)
                 .description("De-emphasized hint/explanation text.")
-                .max_w(Px(760.0))
                 .code_rust_from_file_region(snippets::muted::SOURCE, "example"),
             DocSection::new("RTL", rtl)
                 .description("Direction provider sample to validate RTL wrapping/alignment.")
-                .max_w(Px(760.0))
                 .code_rust_from_file_region(snippets::rtl::SOURCE, "example"),
             DocSection::new("Notes", notes)
-                .description("API reference pointers and authoring notes.")
-                .max_w(Px(820.0)),
+                .description("API reference pointers and authoring notes."),
         ],
     );
 

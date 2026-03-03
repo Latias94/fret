@@ -1472,6 +1472,11 @@ pub(super) fn command_dispatch_trace_entry_matches_query(
     {
         return false;
     }
+    if let Some(source_test_id) = &query.source_test_id
+        && entry.source_test_id.as_ref() != Some(source_test_id)
+    {
+        return false;
+    }
     if let Some(handled) = query.handled
         && entry.handled != handled
     {
@@ -1484,6 +1489,11 @@ pub(super) fn command_dispatch_trace_entry_matches_query(
     }
     if let Some(handled_by_driver) = query.handled_by_driver
         && entry.handled_by_driver != handled_by_driver
+    {
+        return false;
+    }
+    if let Some(handled_by_test_id) = &query.handled_by_test_id
+        && entry.handled_by_test_id.as_ref() != Some(handled_by_test_id)
     {
         return false;
     }

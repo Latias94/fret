@@ -14,7 +14,6 @@ pub(super) fn preview_ai_speech_input_demo(
         Some("AI Elements are policy-level compositions built on top of lower-level primitives."),
         vec![
             DocSection::new("Speech Input", demo)
-                .max_w(Px(820.0))
                 .test_id_prefix("ui-gallery-ai-speech-input-demo")
                 .code_rust_from_file_region(snippets::speech_input_demo::SOURCE, "example"),
         ],

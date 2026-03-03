@@ -55,27 +55,21 @@ pub(super) fn preview_button_group(cx: &mut ElementContext<'_, App>) -> Vec<AnyE
                 .test_id_prefix("ui-gallery-button-group-text")
                 .code_rust_from_file_region(snippets::text::SOURCE, "example"),
             DocSection::new("Flex-1 items", flex_1)
-                .max_w(Px(980.0))
                 .test_id_prefix("ui-gallery-button-group-flex1")
                 .code_rust_from_file_region(snippets::flex_1_items::SOURCE, "example"),
             DocSection::new("Input", input)
-                .max_w(Px(760.0))
                 .test_id_prefix("ui-gallery-button-group-input")
                 .code_rust_from_file_region(snippets::input::SOURCE, "example"),
             DocSection::new("Input Group", input_group)
-                .max_w(Px(820.0))
                 .test_id_prefix("ui-gallery-button-group-input-group")
                 .code_rust_from_file_region(snippets::input_group::SOURCE, "example"),
             DocSection::new("Dropdown Menu", dropdown)
-                .max_w(Px(820.0))
                 .test_id_prefix("ui-gallery-button-group-dropdown")
                 .code_rust_from_file_region(snippets::dropdown_menu::SOURCE, "example"),
             DocSection::new("Select", select)
-                .max_w(Px(820.0))
                 .test_id_prefix("ui-gallery-button-group-select")
                 .code_rust_from_file_region(snippets::button_group_select::SOURCE, "example"),
             DocSection::new("Popover", popover)
-                .max_w(Px(820.0))
                 .test_id_prefix("ui-gallery-button-group-popover")
                 .code_rust_from_file_region(snippets::popover::SOURCE, "example"),
             DocSection::new("RTL", rtl)
