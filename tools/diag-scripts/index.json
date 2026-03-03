@@ -5487,6 +5487,23 @@
       "target_hints": []
     },
     {
+      "id": "ui-gallery-scroll-area-expand-at-bottom",
+      "path": "tools/diag-scripts/ui-gallery/scroll-area/ui-gallery-scroll-area-expand-at-bottom.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "diag-hardening-smoke"
+      ],
+      "tags": [
+        "extents",
+        "regression_pack",
+        "scroll",
+        "ui_gallery"
+      ],
+      "target_hints": []
+    },
+    {
       "id": "ui-gallery-scroll-area-horizontal-max-scroll-screenshot",
       "path": "tools/diag-scripts/ui-gallery/scroll-area/ui-gallery-scroll-area-horizontal-max-scroll-screenshot.json",
       "required_capabilities": [

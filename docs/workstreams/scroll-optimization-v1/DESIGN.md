@@ -77,6 +77,10 @@ Diagnostics scripts:
 - `tools/diag-scripts/ui-gallery/scroll-area/ui-gallery-scroll-area-toggle-code-tabs.json`
   - Toggles doc section `Preview`/`Code` tabs for the scroll-area page (smoke coverage for subtree bookkeeping).
   - Suite: `tools/diag-scripts/suites/ui-gallery-scroll-area/`.
+- `tools/diag-scripts/ui-gallery/scroll-area/ui-gallery-scroll-area-expand-at-bottom.json`
+  - Expands content while already at the scroll extent edge (pinned extents regression coverage).
+  - Harness snippet: `apps/fret-ui-gallery/src/ui/snippets/scroll_area/expand_at_bottom.rs`.
+  - Suite: `tools/diag-scripts/suites/diag-hardening-smoke/`.
 - `tools/diag-scripts/ui-gallery/virtual-list/ui-gallery-virtual-list-wheel-torture.json`
   - Repeated wheel input against the VirtualList torture harness (captures a bundle for perf attribution).
   - Suites:
