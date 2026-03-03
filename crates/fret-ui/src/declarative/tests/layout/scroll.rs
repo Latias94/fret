@@ -171,6 +171,154 @@ fn scroll_wheel_updates_offset_and_shifts_child_bounds() {
 }
 
 #[test]
+fn scroll_wheel_bubbles_to_ancestor_when_axis_mismatch() {
+    let mut app = TestHost::new();
+    let mut ui: UiTree<TestHost> = UiTree::new();
+    let window = AppWindowId::default();
+    ui.set_window(window);
+    ui.set_debug_enabled(true);
+
+    let bounds = Rect::new(
+        fret_core::Point::new(Px(0.0), Px(0.0)),
+        Size::new(Px(140.0), Px(80.0)),
+    );
+    let mut text = FakeTextService::default();
+
+    let outer_handle = crate::scroll::ScrollHandle::default();
+    let inner_handle = crate::scroll::ScrollHandle::default();
+
+    let root = render_root(
+        &mut ui,
+        &mut app,
+        &mut text,
+        window,
+        bounds,
+        "scroll-wheel-bubbles-to-ancestor-axis-mismatch",
+        |cx| {
+            let outer_handle = outer_handle.clone();
+            let inner_handle = inner_handle.clone();
+
+            let mut outer_layout = crate::element::LayoutStyle::default();
+            outer_layout.size.width = crate::element::Length::Fill;
+            outer_layout.size.height = crate::element::Length::Px(Px(48.0));
+            outer_layout.overflow = crate::element::Overflow::Clip;
+
+            vec![cx.scroll(
+                crate::element::ScrollProps {
+                    layout: outer_layout,
+                    axis: crate::element::ScrollAxis::Y,
+                    scroll_handle: Some(outer_handle),
+                    ..Default::default()
+                },
+                move |cx| {
+                    vec![cx.column(
+                        crate::element::ColumnProps {
+                            gap: Px(0.0).into(),
+                            ..Default::default()
+                        },
+                        move |cx| {
+                            let mut inner_layout = crate::element::LayoutStyle::default();
+                            inner_layout.size.width = crate::element::Length::Fill;
+                            inner_layout.size.height = crate::element::Length::Px(Px(20.0));
+                            inner_layout.overflow = crate::element::Overflow::Clip;
+
+                            let inner = cx.scroll(
+                                crate::element::ScrollProps {
+                                    layout: inner_layout,
+                                    axis: crate::element::ScrollAxis::X,
+                                    scroll_handle: Some(inner_handle),
+                                    ..Default::default()
+                                },
+                                |cx| {
+                                    vec![cx.row(crate::element::RowProps::default(), |cx| {
+                                        (0..6)
+                                            .map(|i| {
+                                                cx.container(
+                                                    crate::element::ContainerProps {
+                                                        layout: crate::element::LayoutStyle {
+                                                            size: crate::element::SizeStyle {
+                                                                width: crate::element::Length::Px(
+                                                                    Px(60.0),
+                                                                ),
+                                                                height: crate::element::Length::Px(
+                                                                    Px(20.0),
+                                                                ),
+                                                                ..Default::default()
+                                                            },
+                                                            ..Default::default()
+                                                        },
+                                                        ..Default::default()
+                                                    },
+                                                    move |cx| vec![cx.text(format!("x{i}"))],
+                                                )
+                                            })
+                                            .collect::<Vec<_>>()
+                                    })]
+                                },
+                            );
+
+                            let mut children = Vec::new();
+                            for i in 0..16 {
+                                children.push(cx.text(format!("row{i}")));
+                            }
+                            children.insert(6, inner);
+                            children
+                        },
+                    )]
+                },
+            )]
+        },
+    );
+    ui.set_root(root);
+
+    ui.layout_all(&mut app, &mut text, bounds, 1.0);
+
+    assert!(
+        outer_handle.offset().y.0.abs() <= 0.01,
+        "expected initial outer scroll offset to be 0, got={:?}",
+        outer_handle.offset().y
+    );
+    assert!(
+        inner_handle.offset().x.0.abs() <= 0.01,
+        "expected initial inner scroll offset to be 0, got={:?}",
+        inner_handle.offset().x
+    );
+
+    let outer_scroll_node = ui.children(root)[0];
+    let outer_column_node = ui.children(outer_scroll_node)[0];
+    let inner_scroll_node = ui.children(outer_column_node)[6];
+    let inner_bounds = ui.debug_node_bounds(inner_scroll_node).expect("inner bounds");
+    let wheel_pos = fret_core::Point::new(
+        Px(inner_bounds.origin.x.0 + 5.0),
+        Px(inner_bounds.origin.y.0 + 5.0),
+    );
+
+    ui.dispatch_event(
+        &mut app,
+        &mut text,
+        &fret_core::Event::Pointer(fret_core::PointerEvent::Wheel {
+            position: wheel_pos,
+            delta: fret_core::Point::new(Px(0.0), Px(-10.0)),
+            modifiers: fret_core::Modifiers::default(),
+            pointer_id: fret_core::PointerId(0),
+            pointer_type: fret_core::PointerType::Mouse,
+        }),
+    );
+
+    assert!(
+        outer_handle.offset().y.0 > 0.01,
+        "expected vertical wheel on inner horizontal scroll to bubble to ancestor Y scroll; outer_offset={:?} inner_offset={:?}",
+        outer_handle.offset(),
+        inner_handle.offset()
+    );
+    assert!(
+        inner_handle.offset().x.0.abs() <= 0.01,
+        "expected vertical wheel on inner horizontal scroll to not move inner X offset; got={:?}",
+        inner_handle.offset()
+    );
+}
+
+#[test]
 fn scroll_translation_does_not_force_layout_engine_solves() {
     let mut app = TestHost::new();
     let mut ui: UiTree<TestHost> = UiTree::new();
