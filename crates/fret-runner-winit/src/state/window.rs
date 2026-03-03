@@ -2,12 +2,22 @@ use fret_core::{CursorIcon, Rect};
 use winit::window::Window;
 
 use crate::mapping::map_cursor_icon;
+use std::sync::Arc;
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, Eq)]
 pub struct ImeSurroundingTextUpdate {
-    pub text: String,
-    pub cursor: usize,
-    pub anchor: usize,
+    pub text: Arc<str>,
+    pub cursor: u32,
+    pub anchor: u32,
+}
+
+impl PartialEq for ImeSurroundingTextUpdate {
+    fn eq(&self, other: &Self) -> bool {
+        if self.cursor != other.cursor || self.anchor != other.anchor {
+            return false;
+        }
+        Arc::ptr_eq(&self.text, &other.text) || self.text.as_ref() == other.text.as_ref()
+    }
 }
 
 #[derive(Debug, Default, Clone)]
@@ -165,7 +175,12 @@ impl WinitWindowState {
                     .ime_surrounding_text
                     .clone()
                     .and_then(|u| {
-                        winit::window::ImeSurroundingText::new(u.text, u.cursor, u.anchor).ok()
+                        winit::window::ImeSurroundingText::new(
+                            u.text.as_ref().to_string(),
+                            usize::try_from(u.cursor).unwrap_or(usize::MAX),
+                            usize::try_from(u.anchor).unwrap_or(usize::MAX),
+                        )
+                        .ok()
                     })
                     .unwrap_or_else(|| {
                         winit::window::ImeSurroundingText::new(String::new(), 0, 0)
@@ -222,8 +237,11 @@ impl WinitWindowState {
 
         if let Some(update) = pending_surrounding
             && self.ime_allowed
-            && let Ok(surrounding) =
-                winit::window::ImeSurroundingText::new(update.text, update.cursor, update.anchor)
+            && let Ok(surrounding) = winit::window::ImeSurroundingText::new(
+                update.text.as_ref().to_string(),
+                usize::try_from(update.cursor).unwrap_or(usize::MAX),
+                usize::try_from(update.anchor).unwrap_or(usize::MAX),
+            )
         {
             request_data = request_data.with_surrounding_text(surrounding);
             needs_winit_update = true;
