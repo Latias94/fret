@@ -1,12 +1,12 @@
 {
   "schema_version": 2,
   "meta": {
-    "name": "Docking arbitration demo: floating title drag clamps to window bounds",
+    "name": "Docking arbitration demo: floating title drag docks back to main",
     "tags": ["docking", "floating", "gate"],
     "required_capabilities": ["diag.script_v2"],
     "target_hints": [
-      "Create an in-window floating container via float-zone, then drag its title bar far outside the window.",
-      "Expected behavior: the floating rect is clamped to window bounds (ImGui-style hand feel) and the drag is observed by diagnostics."
+      "Create an in-window floating container via float-zone, then drag its title bar onto docking hint rectangles.",
+      "Expected behavior: while dragging, docking hint routing is published and on drop the floating container merges back into the main dock tree (ImGui-style)."
     ]
   },
   "steps": [
@@ -29,7 +29,17 @@
     },
     {
       "type": "wait_until",
+      "predicate": { "kind": "exists", "target": { "kind": "test_id", "id": "dock-arb-tab-drag-anchor-left" } },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
       "predicate": { "kind": "exists", "target": { "kind": "test_id", "id": "dock-arb-float-zone-anchor" } },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "predicate": { "kind": "exists", "target": { "kind": "test_id", "id": "dock-arb-hint-inner-center" } },
       "timeout_frames": 240
     },
     {
@@ -61,25 +71,31 @@
       "timeout_frames": 240
     },
 
-    { "type": "pointer_down", "target": { "kind": "test_id", "id": "dock-arb-floating-title-bar-anchor" } },
-    { "type": "pointer_move", "delta_x": 4.0, "delta_y": 0.0, "steps": 2 },
-    { "type": "wait_until", "predicate": { "kind": "dock_floating_drag_active_is", "active": true }, "timeout_frames": 120 },
-    { "type": "pointer_move", "delta_x": -4000.0, "delta_y": -4000.0, "steps": 80 },
-    { "type": "pointer_up" },
-    { "type": "wait_until", "predicate": { "kind": "dock_floating_drag_active_is", "active": false }, "timeout_frames": 120 },
-    { "type": "wait_frames", "n": 2 },
+    {
+      "type": "drag_to",
+      "from": { "kind": "test_id", "id": "dock-arb-floating-title-bar-anchor" },
+      "to": { "kind": "test_id", "id": "dock-arb-tab-drag-anchor-left" },
+      "steps": 72,
+      "timeout_frames": 240
+    },
 
+    {
+      "type": "wait_until",
+      "predicate": { "kind": "dock_graph_signature_contains", "needle": "floatings=[]" },
+      "timeout_frames": 240
+    },
     {
       "type": "assert",
       "predicate": {
-        "kind": "bounds_within_window",
-        "target": { "kind": "test_id", "id": "dock-arb-floating-title-bar-anchor" },
-        "padding_px": 4.0
+        "kind": "dock_graph_signature_contains",
+        "needle": "demo.viewport.left"
       }
     },
+    { "type": "assert", "predicate": { "kind": "dock_graph_signature_contains", "needle": "demo.viewport.right" } },
+    { "type": "assert", "predicate": { "kind": "dock_graph_signature_contains", "needle": "demo.controls" } },
     { "type": "assert", "predicate": { "kind": "dock_graph_canonical_is", "canonical": true } },
     { "type": "assert", "predicate": { "kind": "dock_graph_has_nested_same_axis_splits_is", "has_nested": false } },
 
-    { "type": "capture_bundle", "label": "docking-arbitration-demo-floating-title-drag-clamps-to-window" }
+    { "type": "capture_bundle", "label": "docking-arbitration-demo-floating-title-drag-docks-to-main" }
   ]
 }
