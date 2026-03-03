@@ -16,6 +16,7 @@ P1:
   - force an occlusion/idle scenario,
   - verify `timeout.no_frames` appears (not a tooling timeout),
   - verify at least one bounded evidence bundle is captured.
+  - optional test hook: `FRET_DIAG_SIMULATE_NO_FRAMES=1` to deterministically exercise the keepalive/no-frame path.
 - Persist “shutdown outcome” evidence for tool-launched runs:
   - write `resource.footprint.json` in the out dir (tooling-owned),
   - use `killed=true` as a first-class triage hint for “exit trigger not observed / deadlock / no-frame stall”.
