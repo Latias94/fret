@@ -200,7 +200,7 @@ fn scroll_wheel_bubbles_to_ancestor_when_axis_mismatch() {
 
             let mut outer_layout = crate::element::LayoutStyle::default();
             outer_layout.size.width = crate::element::Length::Fill;
-            outer_layout.size.height = crate::element::Length::Px(Px(48.0));
+            outer_layout.size.height = crate::element::Length::Px(Px(80.0));
             outer_layout.overflow = crate::element::Overflow::Clip;
 
             vec![cx.scroll(
@@ -284,6 +284,14 @@ fn scroll_wheel_bubbles_to_ancestor_when_axis_mismatch() {
         inner_handle.offset().x
     );
 
+    assert!(
+        outer_handle.max_offset().y.0 > 0.01,
+        "expected outer scroll to be scrollable; max_offset={:?} viewport={:?} content={:?}",
+        outer_handle.max_offset(),
+        outer_handle.viewport_size(),
+        outer_handle.content_size()
+    );
+
     let outer_scroll_node = ui.children(root)[0];
     let outer_column_node = ui.children(outer_scroll_node)[0];
     let inner_scroll_node = ui.children(outer_column_node)[6];
@@ -294,7 +302,6 @@ fn scroll_wheel_bubbles_to_ancestor_when_axis_mismatch() {
         Px(inner_bounds.origin.x.0 + 5.0),
         Px(inner_bounds.origin.y.0 + 5.0),
     );
-
     ui.dispatch_event(
         &mut app,
         &mut text,

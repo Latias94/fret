@@ -218,11 +218,13 @@ ID format:
     - `apps/fret-ui-gallery/src/ui/pages/command.rs`
 - [x] AFA-adopt-042 Add one editor-grade harness adoption:
   - docking/workspace shell uses actions for tab/command semantics (where appropriate).
-  - Status (as of 2026-03-02):
+  - Status (as of 2026-03-03):
     - Workspace tab strip pointer-triggered dispatches record a command dispatch trace source:
       - `ecosystem/fret-workspace/src/tab_strip/mod.rs` (tab activate)
+      - `ecosystem/fret-workspace/src/tab_strip/state.rs` (one-shot reveal of the active tab on first layout, to stabilize hit targets for scripts and users)
       - `ecosystem/fret-workspace/src/tab_strip/widgets.rs` (tab close button)
       - `ecosystem/fret-workspace/src/tab_strip/interaction.rs` (right/middle click behaviors)
+      - `ecosystem/fret-workspace/src/command_scope.rs` (workspace-level command scope fallback for `workspace.*` commands)
     - Scripted diagnostics gate:
       - `tools/diag-scripts/workspace/shell-demo/workspace-shell-demo-tab-close-button-closes-tab-smoke.json` (asserts `source_kind=pointer` for the close command)
       - `tools/diag_gate_action_first_authoring_v1.ps1` (includes workspace shell demo gate)
@@ -301,14 +303,19 @@ These are intentionally *not* part of the v1 milestone closure, but they are lik
 practical steps:
 
 - Key context stack + diagnostics-visible context naming/stacking rules.
-- Reduce authoring noise:
-  - `test_id` late landing is available for `UiIntoElement` via `UiIntoElementTestIdExt`:
-    `ecosystem/fret-ui-kit/src/declarative/semantics.rs` (tracked as `AUE-semantics-120`).
-  - builder-level semantics decorators (beyond `test_id`) to avoid “decorate-only” `.into_element(cx)` calls:
-    `docs/workstreams/authoring-ergonomics-fluent-builder-todo.md` (`AUE-semantics-121`…)
-  - unify builder terminals + late-landing decorator coverage:
-    `docs/workstreams/unified-authoring-builder-v1-todo.md` (MVP3)
+- Reduce authoring noise (status):
+  - Done: `UiIntoElement`-level `test_id` late-landing (`AUE-semantics-120`):
+    `ecosystem/fret-ui-kit/src/declarative/semantics.rs`
+  - Done: `UiBuilder`-level semantics late-landing (`AUE-semantics-121`, MVP3):
+    `ecosystem/fret-ui-kit/src/ui_builder.rs`
+  - Remaining: cookbook/demo refactors that remove “decorate-only” early landing (tracked as `AUE-semantics-123`).
 - Pointer-triggered explainability: stable selector → action mapping without relying on script stamping.
+  - Status (as of 2026-03-03): `debug.command_dispatch_trace[*].source_test_id` is inferred from the
+    current semantics snapshot when `source_element` is available (fallbacks remain for cases where
+    semantics/test IDs are unavailable).
+  - Evidence:
+    - `ecosystem/fret-bootstrap/src/ui_diagnostics/service.rs` (`infer_pointer_source_test_id_from_semantics`)
+    - `ecosystem/fret-bootstrap/src/ui_diagnostics.rs` (`command_dispatch_trace_infers_pointer_source_test_id_from_semantics_snapshot`)
 - View runtime ergonomics: reduce `on_action` handler boilerplate (`request_redraw` + `notify`) without weakening
   determinism or layering (ecosystem-only).
 - Payload actions (v2+), behind strict determinism + validation rules.
