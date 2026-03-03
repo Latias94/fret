@@ -186,10 +186,13 @@ fn drive_transition_with_durations_and_easing_impl<H: UiHost>(
             st.timeline.set_durations(open_ticks, close_ticks);
         }
 
+        let mut advance_tick = false;
+
         if !st.initialized {
             st.initialized = true;
             st.last_app_tick = app_tick;
             st.last_frame_tick = frame_tick;
+            advance_tick = true;
 
             if !animate_on_mount {
                 if open {
@@ -214,13 +217,18 @@ fn drive_transition_with_durations_and_easing_impl<H: UiHost>(
             }
         }
 
+        // Drive transitions from time progression (frame/app ticks), not call count. This avoids
+        // accidental speed-ups when the same transition is evaluated multiple times within a
+        // single render pass.
         if st.last_frame_tick != frame_tick {
             st.last_frame_tick = frame_tick;
-            st.tick = st.tick.saturating_add(1);
+            advance_tick = true;
         } else if st.last_app_tick != app_tick {
             st.last_app_tick = app_tick;
-            st.tick = st.tick.saturating_add(1);
-        } else {
+            advance_tick = true;
+        }
+
+        if advance_tick {
             st.tick = st.tick.saturating_add(1);
         }
 
@@ -389,6 +397,7 @@ pub fn drive_transition_with_durations_and_cubic_bezier<H: UiHost>(
 
             let (output, start_lease, stop_lease) =
                 cx.with_state(TransitionDriverState::default, |st| {
+                    let mut advance_tick = false;
                     if st.configured_open_ticks != open_ticks
                         || st.configured_close_ticks != close_ticks
                     {
@@ -397,13 +406,23 @@ pub fn drive_transition_with_durations_and_cubic_bezier<H: UiHost>(
                         st.timeline.set_durations(open_ticks, close_ticks);
                     }
 
+                    if !st.initialized {
+                        st.initialized = true;
+                        st.last_app_tick = app_tick;
+                        st.last_frame_tick = frame_tick;
+                        advance_tick = true;
+                    }
+
+                    // Drive transitions from time progression (frame/app ticks), not call count.
                     if st.last_frame_tick != frame_tick {
                         st.last_frame_tick = frame_tick;
-                        st.tick = st.tick.saturating_add(1);
+                        advance_tick = true;
                     } else if st.last_app_tick != app_tick {
                         st.last_app_tick = app_tick;
-                        st.tick = st.tick.saturating_add(1);
-                    } else {
+                        advance_tick = true;
+                    }
+
+                    if advance_tick {
                         st.tick = st.tick.saturating_add(1);
                     }
 
@@ -493,6 +512,7 @@ pub fn drive_transition_with_durations_and_cubic_bezier_with_mount_behavior<H: U
 
             let (output, start_lease, stop_lease) =
                 cx.with_state(TransitionDriverState::default, |st| {
+                    let mut advance_tick = false;
                     if st.configured_open_ticks != open_ticks
                         || st.configured_close_ticks != close_ticks
                     {
@@ -505,6 +525,7 @@ pub fn drive_transition_with_durations_and_cubic_bezier_with_mount_behavior<H: U
                         st.initialized = true;
                         st.last_app_tick = app_tick;
                         st.last_frame_tick = frame_tick;
+                        advance_tick = true;
 
                         if !animate_on_mount {
                             if open {
@@ -533,13 +554,16 @@ pub fn drive_transition_with_durations_and_cubic_bezier_with_mount_behavior<H: U
                         }
                     }
 
+                    // Drive transitions from time progression (frame/app ticks), not call count.
                     if st.last_frame_tick != frame_tick {
                         st.last_frame_tick = frame_tick;
-                        st.tick = st.tick.saturating_add(1);
+                        advance_tick = true;
                     } else if st.last_app_tick != app_tick {
                         st.last_app_tick = app_tick;
-                        st.tick = st.tick.saturating_add(1);
-                    } else {
+                        advance_tick = true;
+                    }
+
+                    if advance_tick {
                         st.tick = st.tick.saturating_add(1);
                     }
 
@@ -769,5 +793,44 @@ mod tests {
         // With a fixed delta of 8ms (~125Hz), a 12-tick (60Hz) transition targets ~200ms, which
         // requires ~25 frames.
         assert_eq!(frames, 25);
+    }
+
+    #[test]
+    fn transition_does_not_advance_multiple_times_within_one_frame() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+
+        // Ensure we have a stable frame delta so duration scaling (if enabled) is deterministic.
+        app.with_global_mut(WindowFrameClockService::default, |svc, _app| {
+            svc.set_fixed_delta(window, Some(Duration::from_millis(16)));
+        });
+
+        app.set_tick_id(TickId(1));
+        app.set_frame_id(FrameId(1));
+        app.with_global_mut(WindowFrameClockService::default, |svc, app| {
+            svc.record_frame(window, app.frame_id());
+        });
+
+        let (first, second) =
+            fret_ui::elements::with_element_cx(&mut app, window, bounds(), "t_same_frame", |cx| {
+                let mut first = None;
+                let mut second = None;
+                for i in 0..2 {
+                    let next = drive_transition_with_durations(cx, true, 12, 12);
+                    if i == 0 {
+                        first = Some(next);
+                    } else {
+                        second = Some(next);
+                    }
+                }
+                (first.expect("first output"), second.expect("second output"))
+            });
+
+        assert!(first.present);
+        assert!(first.animating);
+        assert!((first.progress - second.progress).abs() < 1e-6);
+        assert!((first.linear - second.linear).abs() < 1e-6);
+        assert_eq!(first.present, second.present);
+        assert_eq!(first.animating, second.animating);
     }
 }
