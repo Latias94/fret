@@ -41,11 +41,13 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
         let list = shadcn::breadcrumb::primitives::BreadcrumbList::new().into_element(cx, |cx| {
             let home =
                 shadcn::breadcrumb::primitives::BreadcrumbItem::new().into_element(cx, |cx| {
-                    vec![shadcn::breadcrumb::primitives::BreadcrumbLink::new("Home")
-                        .href("/home")
-                        .on_activate(Arc::new(|_host, _acx, _reason| {}))
-                        .into_element(cx)
-                        .test_id("ui-gallery-breadcrumb-dropdown-home-link")]
+                    vec![
+                        shadcn::breadcrumb::primitives::BreadcrumbLink::new("Home")
+                            .href("/home")
+                            .on_activate(Arc::new(|_host, _acx, _reason| {}))
+                            .into_element(cx)
+                            .test_id("ui-gallery-breadcrumb-dropdown-home-link"),
+                    ]
                 });
 
             let components_dropdown = shadcn::breadcrumb::primitives::BreadcrumbItem::new()
