@@ -2472,6 +2472,8 @@ impl WorkspaceTabStrip {
                         let scroll_x = scroll_handle.offset().x;
                         let max_scroll_x = scroll_handle.max_offset().x;
                         let overflow = max_scroll_x.0 > 0.5;
+                        let drag_pointer_id = drag_snapshot.pointer;
+                        let dragged_tab_id = dragged_tab.clone();
 
                         let viewport_now = scroll_element
                             .get()
@@ -2525,6 +2527,16 @@ impl WorkspaceTabStrip {
                                         scroll_viewport_rect,
                                         active_tab_rect: active_tab_rect_diag,
                                         active_visible,
+                                    },
+                                );
+                                store.record_workspace_tab_strip_drag(
+                                    cx.window,
+                                    frame_id,
+                                    fret_runtime::WorkspaceTabStripDragDiagnostics {
+                                        pane_id: pane_id.clone(),
+                                        pointer_id: drag_pointer_id,
+                                        dragging,
+                                        dragged_tab_id: dragged_tab_id.clone(),
                                     },
                                 );
                             },
