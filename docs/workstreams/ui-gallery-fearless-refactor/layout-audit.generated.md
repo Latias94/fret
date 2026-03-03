@@ -12,7 +12,7 @@
 | `apps/fret-ui-gallery/src/ui/pages/form.rs` | 384.0, 520.0, 840.0 |
 | `apps/fret-ui-gallery/src/ui/pages/icons.rs` | 980.0 |
 | `apps/fret-ui-gallery/src/ui/pages/image_object_fit.rs` | 980.0 |
-| `apps/fret-ui-gallery/src/ui/pages/item.rs` | 640.0, 720.0, 980.0, 1100.0 |
+| `apps/fret-ui-gallery/src/ui/pages/item.rs` | 1100.0 |
 | `apps/fret-ui-gallery/src/ui/pages/shadcn_extras.rs` | 860.0 |
 | `apps/fret-ui-gallery/src/ui/pages/sheet.rs` | 980.0 |
 | `apps/fret-ui-gallery/src/ui/pages/sidebar.rs` | 980.0 |
