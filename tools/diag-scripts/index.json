@@ -4047,6 +4047,7 @@
         "diag.script_v2"
       ],
       "suite_memberships": [
+        "diag-hardening-smoke",
         "ui-gallery-scroll-area"
       ],
       "tags": [
