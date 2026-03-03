@@ -1161,7 +1161,7 @@ impl UiDiagnosticsService {
         ring.push_snapshot(&self.cfg, snapshot);
 
         self.record_shortcut_routing_trace_for_window(app, window);
-        self.record_command_dispatch_trace_for_window(app, window);
+        self.record_command_dispatch_trace_for_window(app, window, raw_semantics, element_runtime);
 
         if let Some(pending) = self.inspector.take_pending_pick_for_window(window) {
             self.resolve_pending_pick_for_window(pending, raw_semantics, ui, element_runtime);
@@ -1231,7 +1231,13 @@ impl UiDiagnosticsService {
         }
     }
 
-    fn record_command_dispatch_trace_for_window(&mut self, app: &App, window: AppWindowId) {
+    fn record_command_dispatch_trace_for_window(
+        &mut self,
+        app: &App,
+        window: AppWindowId,
+        semantics_snapshot: Option<&fret_core::SemanticsSnapshot>,
+        element_runtime: Option<&ElementRuntime>,
+    ) {
         let Some(active) = self.active_scripts.get_mut(&window) else {
             return;
         };
@@ -1280,9 +1286,21 @@ impl UiDiagnosticsService {
                 fret_runtime::CommandDispatchSourceKindV1::Programmatic => "programmatic",
             };
 
+            let inferred_source_test_id: Option<String> = decision.source.element.and_then(|raw| {
+                let element_runtime = element_runtime?;
+                let semantics = semantics_snapshot?;
+                let element = fret_ui::elements::GlobalElementId(raw);
+                let node = element_runtime.node_for_element(window, element)?;
+                semantics
+                    .nodes
+                    .iter()
+                    .find(|n| n.id == node)
+                    .and_then(|n| n.test_id.clone())
+            });
+
             let source_test_id = match decision.source.kind {
                 fret_runtime::CommandDispatchSourceKindV1::Pointer => {
-                    pointer_source_test_id_for_step.clone()
+                    inferred_source_test_id.or_else(|| pointer_source_test_id_for_step.clone())
                 }
                 _ => None,
             };

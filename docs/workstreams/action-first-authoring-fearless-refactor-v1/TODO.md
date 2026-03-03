@@ -310,6 +310,9 @@ practical steps:
     `ecosystem/fret-ui-kit/src/ui_builder.rs`
   - Remaining: cookbook/demo refactors that remove “decorate-only” early landing (tracked as `AUE-semantics-123`).
 - Pointer-triggered explainability: stable selector → action mapping without relying on script stamping.
+  - Status (as of 2026-03-03): `debug.command_dispatch_trace[*].source_test_id` is inferred from the
+    current semantics snapshot when `source_element` is available (fallbacks remain for cases where
+    semantics/test IDs are unavailable).
 - View runtime ergonomics: reduce `on_action` handler boilerplate (`request_redraw` + `notify`) without weakening
   determinism or layering (ecosystem-only).
 - Payload actions (v2+), behind strict determinism + validation rules.
