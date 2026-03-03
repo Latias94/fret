@@ -39,6 +39,8 @@ pub(crate) fn write_perf_thresholds_json(
     prelude_each_run: bool,
     cli_thresholds: &PerfThresholds,
     baseline_summary: Option<serde_json::Value>,
+    layout_perf_summary: Option<serde_json::Value>,
+    layout_perf_summary_path: Option<String>,
     rows: &[serde_json::Value],
     failures: &[serde_json::Value],
 ) -> PathBuf {
@@ -66,6 +68,8 @@ pub(crate) fn write_perf_thresholds_json(
             "max_run_paint_cache_hit_test_only_replay_rejected_key_mismatch_max": cli_thresholds.max_run_paint_cache_hit_test_only_replay_rejected_key_mismatch_max,
         },
         "baseline": baseline_summary,
+        "layout_perf_summary": layout_perf_summary,
+        "layout_perf_summary_path": layout_perf_summary_path,
         "rows": rows,
         "failures": failures,
     });
@@ -77,6 +81,8 @@ pub(crate) fn write_perf_hints_json(
     out_dir: &Path,
     warmup_frames: u64,
     perf_hint_gate_opts: &PerfHintGateOptions,
+    layout_perf_summary: Option<serde_json::Value>,
+    layout_perf_summary_path: Option<String>,
     rows: &[serde_json::Value],
     failures: &[serde_json::Value],
 ) -> PathBuf {
@@ -89,6 +95,8 @@ pub(crate) fn write_perf_hints_json(
         "warmup_frames": warmup_frames,
         "min_severity": perf_hint_gate_opts.min_severity.as_str(),
         "deny": perf_hint_gate_opts.deny_codes.iter().cloned().collect::<Vec<_>>(),
+        "layout_perf_summary": layout_perf_summary,
+        "layout_perf_summary_path": layout_perf_summary_path,
         "rows": rows,
         "failures": failures,
     });

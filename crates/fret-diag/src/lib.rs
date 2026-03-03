@@ -52,6 +52,7 @@ mod json_bundle;
 mod json_stream;
 mod latest;
 mod launch_env_policy;
+mod layout_perf_summary;
 mod lint;
 mod math;
 mod pack_zip;
