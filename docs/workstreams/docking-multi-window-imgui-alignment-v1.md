@@ -88,6 +88,7 @@ Key multi-window gates:
   - `tools/diag-scripts/docking-arbitration-demo-multiwindow-drag-tab-back-to-main.json`
   - `tools/diag-scripts/docking-arbitration-demo-multiwindow-drag-tab-into-left-tabs.json`
   - `tools/diag-scripts/docking-arbitration-demo-multiwindow-chained-tearoff-two-tabs-merge.json`
+  - `tools/diag-scripts/docking/arbitration/docking-arbitration-demo-multiwindow-title-bar-drag-docks-to-main.json`
 - Separate `HoveredWindow` vs `WindowUnderMovingWindow` contract (ImGui terminology):
   - `tools/diag-scripts/docking-arbitration-demo-multiwindow-under-moving-window-basic.json`
 - Structural “no leak / no growth” loops:
@@ -187,6 +188,11 @@ These gates assert, at minimum:
   - gate: `tools/diag-scripts/docking/arbitration/docking-arbitration-demo-floating-title-drag-docks-to-main.json`
   - note: this gates the in-window floating path. OS window chrome title-bar docking remains an explicit policy decision.
 
+5) **Floating OS window “title bar” drag docking (custom chrome / tabs-group drag)**
+- Delivered (2026-03-03): after tear-off, starting a **tabs-group** drag from empty tab-bar space in a floating OS window can dock it back into the main window and auto-close the floating window.
+  - gate: `tools/diag-scripts/docking/arbitration/docking-arbitration-demo-multiwindow-title-bar-drag-docks-to-main.json`
+  - script authoring note: for cross-window drags, ensure the final drop position is expressed in the *target window* coordinate space (e.g. `move_pointer` in the target window) before releasing; otherwise drop-resolve can remain `source=none` and the floating window will not close.
+
 The preferred vehicle remains: add/extend diag scripts in `tools/diag-scripts/` and keep assertions contract-level (dock graph signatures + docking diagnostics), not pixels.
 
 ## ImGui multi-viewport gap inventory (what still differs)
@@ -198,8 +204,8 @@ This is a practical checklist for editor-grade parity. It intentionally mixes UX
 
 - Title-bar drag docking:
   - In-window floating: delivered and gated (see above).
-  - OS window chrome: still a parity gap. If we want ImGui-style multi-viewport title-bar docking, we need a first-class
-    “drag chrome to dock” policy that does not fight custom window chrome and runner window-move policies.
+  - Floating OS window, custom chrome: delivered and gated via tabs-group drags on empty tab-bar space (see above).
+  - OS window chrome (non-client): still a parity gap. If we want ImGui-style multi-viewport title-bar docking, we need a first-class “drag chrome to dock” policy that does not fight custom window chrome and runner window-move policies.
 - Multi-monitor “hand off” feel: ImGui viewports are routinely dragged across monitors with changing DPI. We should
   validate (and gate) that tear-off windows preserve expected DPI/scale behavior when crossing monitors (where supported).
 
