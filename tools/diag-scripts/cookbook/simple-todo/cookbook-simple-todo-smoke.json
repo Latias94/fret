@@ -3,7 +3,7 @@
   "meta": {
     "name": "cookbook-simple-todo-smoke",
     "required_capabilities": ["diag.script_v2", "diag.screenshot_png"],
-    "tags": ["cookbook", "simple_todo", "mvu", "smoke"]
+    "tags": ["cookbook", "simple_todo", "actions", "smoke"]
   },
   "steps": [
     {
@@ -59,4 +59,3 @@
     { "type": "capture_bundle", "label": "cookbook-simple-todo-smoke" }
   ]
 }
-

@@ -5,6 +5,7 @@ use fret_ui::element::{
     AnyElement, HoverRegionProps, LayoutQueryRegionProps, VisualTransformProps,
 };
 use fret_ui::{ElementContext, Invalidation, Theme, UiHost};
+use fret_ui_kit::declarative::motion;
 use fret_ui_kit::declarative::scheduling;
 use fret_ui_kit::declarative::stack;
 use fret_ui_kit::declarative::style as decl_style;
@@ -24,7 +25,10 @@ use crate::test_id::attach_test_id;
 pub struct Marquee {
     items: Vec<Arc<str>>,
     direction: MarqueeDirection,
-    /// Scroll speed in pixels per frame (`0` disables animation).
+    /// Scroll speed in pixels per 60Hz tick (`0` disables animation).
+    ///
+    /// This is duration-driven under the hood, so the perceived speed remains stable under
+    /// `--fixed-frame-delta-ms` and across different refresh rates.
     speed_px_per_frame: Px,
     /// Pause continuous motion while hovered.
     ///
@@ -199,21 +203,27 @@ impl Marquee {
                             false,
                         );
                         let paused = paused || reduced_motion;
-                        let animating = speed.0.abs() > 0.0 && !paused;
+                        let speed_px_per_sec = speed.0 * 60.0;
+                        let animating = speed_px_per_sec.abs() > 0.0 && !paused;
                         scheduling::set_continuous_frames(cx, animating);
 
-                        let frame = cx.app.frame_id().0;
+                        let frame = cx.frame_id.0;
+                        let dt = motion::effective_frame_delta_for_cx(cx);
                         let phase =
                             cx.with_state_for(marquee_id, MarqueePhaseState::default, |st| {
                                 if st.last_frame == 0 {
-                                    // Align with the previous `frame_id * speed` behavior by counting the
-                                    // first observed frame as a single tick.
-                                    st.last_frame = frame.saturating_sub(1);
+                                    st.last_frame = frame;
+                                    if animating {
+                                        st.phase_px += dt.as_secs_f32() * speed_px_per_sec;
+                                    }
+                                    return st.phase_px;
                                 }
-                                let delta = frame.saturating_sub(st.last_frame);
+                                if st.last_frame == frame {
+                                    return st.phase_px;
+                                }
                                 st.last_frame = frame;
 
-                                if speed.0.abs() <= 0.0 {
+                                if speed_px_per_sec.abs() <= 0.0 {
                                     st.phase_px = 0.0;
                                     return st.phase_px;
                                 }
@@ -222,11 +232,11 @@ impl Marquee {
                                     return st.phase_px;
                                 }
 
-                                st.phase_px += (delta as f32) * speed.0;
+                                st.phase_px += dt.as_secs_f32() * speed_px_per_sec;
                                 st.phase_px
                             });
 
-                        let translate_x = if speed.0.abs() > 0.0 {
+                        let translate_x = if speed_px_per_sec.abs() > 0.0 {
                             let cycle = base_cycle_width_px.0.max(0.0) + track_gap_px.0.max(0.0);
                             if cycle > 0.0 {
                                 phase.rem_euclid(cycle)

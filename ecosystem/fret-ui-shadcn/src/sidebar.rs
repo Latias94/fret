@@ -364,16 +364,6 @@ pub fn use_sidebar<H: UiHost>(cx: &ElementContext<'_, H>) -> Option<SidebarConte
         .and_then(|st| st.context.clone())
 }
 
-/// shadcn/ui `useSidebar` (v4).
-///
-/// Alias for [`use_sidebar`] (strict form) to preserve copy/paste parity with upstream docs and
-/// sources.
-#[allow(non_snake_case)]
-#[track_caller]
-pub fn useSidebar<H: UiHost>(cx: &ElementContext<'_, H>) -> SidebarContext {
-    use_sidebar(cx).expect("useSidebar must be used within a SidebarProvider.")
-}
-
 fn use_sidebar_surface<H: UiHost>(cx: &ElementContext<'_, H>) -> Option<SidebarSurfaceContext> {
     cx.inherited_state_where::<SidebarSurfaceProviderState>(|st| st.context.is_some())
         .and_then(|st| st.context)

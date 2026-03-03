@@ -1,7 +1,7 @@
 # Action-First Authoring + View Runtime (Fearless Refactor v1) — TODO
 
-Status: Active
-Last updated: 2026-03-02
+Status: Landed (v1)
+Last updated: 2026-03-03
 
 Related:
 
@@ -46,7 +46,7 @@ ID format:
 
 - [x] AFA-actions-010 Define the `ActionId` type and metadata surface.
   - Evidence: `docs/adr/0307-action-registry-and-typed-action-dispatch-v1.md`
-  - Status (as of 2026-03-02):
+  - Status (as of 2026-03-03):
     - Implemented: `ActionId` portable identity (`crates/fret-runtime/src/action.rs`)
     - Implemented: action metadata aliases (`ActionMeta` / `ActionRegistry`) reuse the command registry surface (`crates/fret-runtime/src/action.rs`)
     - Implemented: command palette uses host command registry (`ecosystem/fret-ui-shadcn/src/command.rs`)
@@ -59,13 +59,16 @@ ID format:
   - Goal: IR binds `ActionId`; handlers live in view/app layer.
   - Evidence:
     - `ecosystem/fret/src/actions.rs` (`ActionHandlerTable`, `build()` adapters)
-- [ ] AFA-actions-013 Integrate action availability queries with input dispatch v2 semantics.
-  - Evidence: `docs/adr/0218-input-dispatch-phases-prevent-default-and-action-availability-v2.md`
-- [~] AFA-actions-014 Add diagnostics traces for:
+- [x] AFA-actions-013 Integrate action availability queries with input dispatch v2 semantics.
+  - Evidence:
+    - `docs/adr/0218-input-dispatch-phases-prevent-default-and-action-availability-v2.md`
+    - `crates/fret-ui/src/tree/commands.rs` (`publish_window_command_action_availability_snapshot`)
+    - `crates/fret-ui/src/tree/tests/window_command_action_availability_snapshot.rs`
+- [x] AFA-actions-014 Add diagnostics traces for:
   - keymap resolution → action id,
   - availability gating outcome,
   - dispatch path resolution.
-  - Status (as of 2026-03-02):
+  - Status (as of 2026-03-03):
     - Implemented (keymap → action id): `crates/fret-runtime/src/shortcut_routing_diagnostics.rs` +
       `ecosystem/fret-bootstrap/src/ui_diagnostics/service.rs` (`UiShortcutRoutingTraceEntryV1.command`)
     - Implemented (availability gating outcome): `ecosystem/fret-bootstrap/src/ui_diagnostics/command_gating_trace.rs`
@@ -75,9 +78,20 @@ ID format:
       `ecosystem/fret-bootstrap/src/ui_app_driver.rs`
       (`debug.command_dispatch_trace[*]` / script evidence, including handled-by element, handled-by scope, driver-handled classification, and default-root fallback)
     - Gated (scripted): `crates/fret-diag-protocol/src/lib.rs` (`UiActionStepV2::WaitCommandDispatchTrace`) +
+      `ecosystem/fret-bootstrap/src/ui_diagnostics/script_steps_wait.rs` (`handle_wait_command_dispatch_trace_step`) +
       `tools/diag-scripts/cookbook/imui-action-basics/cookbook-imui-action-basics-cross-frontend.json`
-    - Pending: a first-class pointer-triggered mapping from stable selectors (`test_id`) → dispatched `ActionId`
-      (today the dispatch trace records `GlobalElementId.0`, which can be correlated via element runtime/semantics snapshots).
+    - Implemented (pointer → stable selector): command dispatch trace entries can include `source_test_id`
+      for pointer-triggered dispatch (best-effort).
+      - Scripted pointer injection: stamps the selector `test_id` as the `source_test_id` and records
+        it alongside the injected step.
+      - Fallback: derives `source_test_id` from the hit-test trace when available.
+    - Gated (scripted): `tools/diag-scripts/cookbook/hello/cookbook-hello-click-count.json` asserts
+      `source_test_id == cookbook.hello.button` for `cookbook.hello.click.v1`.
+    - Implemented (script determinism): the golden-path driver flushes `Effect::Command` after
+      script-injected input so `wait_command_dispatch_trace` can observe dispatch decisions without
+      depending on runner-level effect timing.
+    - Implemented (shortcut correctness): widget-scoped shortcut gating prefers live UI-tree
+      availability to avoid stale `command_disabled` decisions after modal barriers close.
 - [x] AFA-actions-015 Converge command palette/menu invocation with action dispatch.
   - Goal: palette/menu triggers and pointer triggers share the same action pipeline.
   - Evidence:
@@ -129,9 +143,11 @@ ID format:
   - Evidence:
     - Helper: `ecosystem/fret-ui-kit/src/declarative/cached_subtree.rs`
     - Reuse gating: `crates/fret-ui/src/tree/ui_tree_view_cache.rs` (`UiTree::view_cache_active`)
-- [ ] AFA-view-024 Provide an adapter path for MVU:
+- [x] AFA-view-024 Provide an adapter path for MVU:
   - keep MVU available while views are adopted,
   - document “when to use MVU vs View” in cookbook guidance.
+  - Evidence:
+    - `docs/workstreams/action-first-authoring-fearless-refactor-v1/MIGRATION_GUIDE.md` (“When to use MVU vs View”)
 - [x] AFA-view-025 Add view-level observability:
   - “why did this view rebuild?”
   - “why was reuse skipped?”
@@ -174,42 +190,77 @@ ID format:
 
 - [x] AFA-adopt-040 Migrate 2–3 cookbook demos to the new View + actions path.
   - Suggested: `apps/fret-cookbook/examples/hello.rs`, `overlay_basics.rs`, `commands_keymap_basics.rs`.
-  - Status (as of 2026-03-02):
+  - Status (as of 2026-03-03):
     - View runtime + action-first adoption landed for `commands_keymap_basics`:
       `apps/fret-cookbook/examples/commands_keymap_basics.rs`
     - View runtime + action-first adoption landed for `hello`:
       `apps/fret-cookbook/examples/hello.rs`
     - View runtime + action-first adoption landed for `overlay_basics`:
       `apps/fret-cookbook/examples/overlay_basics.rs`
+    - View runtime + action-first adoption landed for `hello_counter`:
+      `apps/fret-cookbook/examples/hello_counter.rs`
+    - View runtime + action-first adoption landed for `text_input_basics`:
+      `apps/fret-cookbook/examples/text_input_basics.rs`
+    - Additional cookbook migrations landed (now fully converged on view runtime + typed actions):
+      - `apps/fret-cookbook/examples/simple_todo.rs`
+      - `apps/fret-cookbook/examples/theme_switching_basics.rs`
+      - `apps/fret-cookbook/examples/undo_basics.rs`
+      - `apps/fret-cookbook/examples/async_inbox_basics.rs`
+      - `apps/fret-cookbook/examples/virtual_list_basics.rs`
+      - `apps/fret-cookbook/examples/icons_and_assets_basics.rs`
+      - `apps/fret-cookbook/examples/effects_layer_basics.rs`
+      - `apps/fret-cookbook/examples/markdown_and_code_basics.rs`
+      - `apps/fret-cookbook/examples/canvas_pan_zoom_basics.rs`
+    - Inventory: `docs/workstreams/action-first-authoring-fearless-refactor-v1/LEGACY_MVU_INVENTORY.md`
 - [x] AFA-adopt-041 Add at least one ui-gallery page/snippet using actions + view runtime.
   - Evidence:
     - `apps/fret-ui-gallery/src/ui/snippets/command/action_first_view.rs`
     - `apps/fret-ui-gallery/src/ui/pages/command.rs`
-- [ ] AFA-adopt-042 Add one editor-grade harness adoption:
+- [x] AFA-adopt-042 Add one editor-grade harness adoption:
   - docking/workspace shell uses actions for tab/command semantics (where appropriate).
-- [~] AFA-adopt-043 Update `fretboard` scaffold templates to prefer action-first patterns (once v1 is stable).
-  - Rule: do not ship two different default paradigms in templates.
   - Status (as of 2026-03-02):
-    - `fretboard new hello` migrated to View runtime + typed unit actions:
+    - Workspace tab strip pointer-triggered dispatches record a command dispatch trace source:
+      - `ecosystem/fret-workspace/src/tab_strip/mod.rs` (tab activate)
+      - `ecosystem/fret-workspace/src/tab_strip/widgets.rs` (tab close button)
+      - `ecosystem/fret-workspace/src/tab_strip/interaction.rs` (right/middle click behaviors)
+    - Scripted diagnostics gate:
+      - `tools/diag-scripts/workspace/shell-demo/workspace-shell-demo-tab-close-button-closes-tab-smoke.json` (asserts `source_kind=pointer` for the close command)
+      - `tools/diag_gate_action_first_authoring_v1.ps1` (includes workspace shell demo gate)
+- [x] AFA-adopt-043 Update `fretboard` scaffold templates to prefer action-first patterns (once v1 is stable).
+  - Rule: do not ship two different default paradigms in templates.
+  - Status (as of 2026-03-03):
+    - `fretboard new hello` uses View runtime + typed unit actions:
       `apps/fretboard/src/scaffold/templates.rs` (`hello_template_main_rs`)
+    - `fretboard new todo` uses View runtime + typed unit actions + selector/query hooks:
+      `apps/fretboard/src/scaffold/templates.rs` (`todo_template_main_rs`)
+    - `fretboard new simple-todo` uses View runtime + typed unit actions:
+      `apps/fretboard/src/scaffold/templates.rs` (`simple_todo_template_main_rs`)
 
 ---
 
 ## F. Evidence + Regression Gates
 
-- [~] AFA-gates-050 Add at least one scripted diag repro that exercises:
+- [x] AFA-gates-050 Add at least one scripted diag repro that exercises:
   - a keybinding → action dispatch,
   - a button click → action dispatch,
   - action availability gating (disabled state) under a modal barrier.
-  - Status (as of 2026-03-02):
+  - Status (as of 2026-03-03):
     - Implemented (non-modal gating): `tools/diag-scripts/cookbook/commands-keymap-basics/cookbook-commands-keymap-basics-shortcut-and-gating.json`
     - Implemented (button click + state update): `tools/diag-scripts/cookbook/hello/cookbook-hello-click-count.json`
+    - Implemented (text input submit/clear): `tools/diag-scripts/cookbook/text-input-basics/cookbook-text-input-basics-submit-and-clear.json`
     - Implemented (modal barrier shortcut gating): `tools/diag-scripts/cookbook/overlay-basics/cookbook-overlay-basics-modal-barrier-shortcut-gating.json`
 - [x] AFA-gates-051 Add compile-only wasm smoke gates for the new view runtime surface.
   - Evidence:
     - `tools/gates_wasm_smoke.ps1`
-- [ ] AFA-gates-052 Add a small set of unit tests for action routing / handler table behavior.
-- [ ] AFA-gates-053 Add a “risk matrix” review pass for M0/M1 (see `RISK_MATRIX.md`).
+- [x] AFA-gates-052 Add a small set of unit tests for action routing / handler table behavior.
+  - Evidence:
+    - `crates/fret-ui/src/tree/tests/command_dispatch_source_trace.rs`
+- [x] AFA-gates-053 Add a “risk matrix” review pass for M0/M1 (see `RISK_MATRIX.md`).
+  - Evidence:
+    - `docs/workstreams/action-first-authoring-fearless-refactor-v1/RISK_MATRIX.md` (review pass section)
+- [x] AFA-gates-054 Add a small repo-local gate that prevents legacy MVU from drifting back into the cookbook.
+  - Evidence:
+    - `tools/gate_no_mvu_in_cookbook.ps1`
 
 ---
 
@@ -217,10 +268,27 @@ ID format:
 
 This phase is intentionally last.
 
-- [ ] AFA-clean-060 Deprecate legacy routing glue that is no longer recommended in templates/docs.
-  - Candidate: per-frame-only message routers in places that should be action-first.
-- [ ] AFA-clean-061 Update docs and templates:
+- [x] AFA-clean-060 Deprecate legacy routing glue that is no longer recommended in templates/docs.
+  - Note: this is a doc-level deprecation in v1 (no compile-time `#[deprecated]` yet).
+  - Evidence:
+    - `ecosystem/fret/src/lib.rs` (MVU modules labeled legacy + recommendation pointer)
+    - `ecosystem/fret/src/mvu.rs` (legacy note + view-cache footgun callout)
+    - `ecosystem/fret/src/mvu_router.rs` (legacy note + action-first recommendation)
+- [x] AFA-clean-061 Update docs and templates:
   - `docs/README.md` state management section shows actions + view runtime as the golden path.
   - `fretboard` templates generate action-first demos by default.
-- [ ] AFA-clean-062 Delete or quarantine redundant APIs/modules once adoption is complete.
+  - Evidence:
+    - `docs/README.md`
+    - `apps/fretboard/src/scaffold/templates.rs` (`todo_template_main_rs`, `simple_todo_template_main_rs`, `hello_template_main_rs`)
+- [x] AFA-clean-062 Delete or quarantine redundant APIs/modules once adoption is complete.
   - Rule: do not delete until all in-tree demos + ecosystem crates have migrated or have explicit “legacy” labeling.
+  - Migration inventory:
+    - `docs/workstreams/action-first-authoring-fearless-refactor-v1/LEGACY_MVU_INVENTORY.md`
+  - Status (as of 2026-03-03):
+    - Quarantined: `fret::prelude::*` no longer re-exports MVU authoring types (use `fret::legacy::prelude::*` for MVU demos).
+    - Gated: cookbook does not contain MVU usage (`pwsh tools/gate_no_mvu_in_cookbook.ps1`).
+  - Evidence:
+    - `ecosystem/fret/src/lib.rs` (prelude quarantine)
+    - `ecosystem/fret/src/legacy.rs` (explicit legacy prelude)
+    - `apps/fret-examples/src/todo_demo.rs` (example: legacy prelude import)
+    - `tools/gate_no_mvu_in_cookbook.ps1`

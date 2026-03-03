@@ -358,6 +358,8 @@ These ADRs are intentionally prioritized because they tend to cause large rewrit
 - `docs/adr/0090-platform-backends-native-web.md`
 - `docs/adr/0093-window-close-and-web-runner-destroy.md`
 - `docs/adr/0139-window-styles-and-utility-windows.md`
+- `docs/adr/0311-window-chrome-actions-and-visibility-v1.md`
+- `docs/adr/0310-window-background-materials-v1.md`
 - `docs/adr/0017-multi-window-display-and-dpi.md`
 - `docs/adr/0033-semantics-tree-and-accessibility-bridge.md`
 - `docs/adr/0034-timers-animation-and-redraw-scheduling.md`

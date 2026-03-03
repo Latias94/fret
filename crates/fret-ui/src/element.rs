@@ -262,6 +262,11 @@ pub struct TextInputRegionProps {
     pub a11y_text_selection: Option<(u32, u32)>,
     /// Optional IME composition range (start, end) in UTF-8 byte offsets within `a11y_value`.
     pub a11y_text_composition: Option<(u32, u32)>,
+    /// Best-effort surrounding text excerpt for IME backends that support it.
+    ///
+    /// This SHOULD exclude any active preedit/composing text and SHOULD be limited to
+    /// `WindowImeSurroundingText::MAX_TEXT_BYTES`.
+    pub ime_surrounding_text: Option<fret_runtime::WindowImeSurroundingText>,
 }
 
 /// An internal drag event listener region primitive.
@@ -323,6 +328,7 @@ impl Default for TextInputRegionProps {
             a11y_invalid: None,
             a11y_text_selection: None,
             a11y_text_composition: None,
+            ime_surrounding_text: None,
         }
     }
 }
@@ -731,6 +737,11 @@ pub struct SemanticsDecoration {
     pub described_by_element: Option<u64>,
     /// Declarative-only: element ID of a node which this node controls (`aria-controls`).
     pub controls_element: Option<u64>,
+    /// Overrides whether this node supports the platform "invoke"/click action.
+    ///
+    /// This is useful for modeling ARIA patterns like Radix Accordion's `aria-disabled` trigger
+    /// state, where the element remains focusable but should not expose an "activate" action.
+    pub invokable: Option<bool>,
 }
 
 impl SemanticsDecoration {
@@ -773,6 +784,7 @@ impl SemanticsDecoration {
             labelled_by_element: other.labelled_by_element.or(self.labelled_by_element),
             described_by_element: other.described_by_element.or(self.described_by_element),
             controls_element: other.controls_element.or(self.controls_element),
+            invokable: other.invokable.or(self.invokable),
         }
     }
 
@@ -923,6 +935,11 @@ impl SemanticsDecoration {
 
     pub fn controls_element(mut self, element: u64) -> Self {
         self.controls_element = Some(element);
+        self
+    }
+
+    pub fn invokable(mut self, invokable: bool) -> Self {
+        self.invokable = Some(invokable);
         self
     }
 }
@@ -2603,6 +2620,8 @@ pub struct ScrollbarState {
     pub dragging_thumb: bool,
     pub drag_start_pointer: Px,
     pub drag_start_offset: Px,
+    pub drag_baseline_viewport: Option<Px>,
+    pub drag_baseline_content: Option<Px>,
     pub hovered: bool,
 }
 

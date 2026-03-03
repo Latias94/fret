@@ -1,0 +1,81 @@
+{
+  "schema_version": 2,
+  "meta": {
+    "name": "UI Gallery: Calendar caption dropdown screenshot",
+    "tags": ["ui-gallery", "calendar", "shadcn", "caption", "dropdown", "screenshots"],
+    "required_capabilities": ["diag.script_v2", "diag.screenshot_png"],
+    "env_defaults": {
+      "FRET_UI_GALLERY_FIXED_TODAY": "2026-05-15"
+    }
+  },
+  "steps": [
+    { "type": "reset_diagnostics" },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-nav-search" }
+      },
+      "timeout_frames": 1800
+    },
+    { "type": "press_key", "key": "escape" },
+    { "type": "wait_frames", "n": 2 },
+    { "type": "set_window_inner_size", "width_px": 1280.0, "height_px": 900.0 },
+    { "type": "wait_frames", "n": 15 },
+
+    { "type": "click", "target": { "kind": "test_id", "id": "ui-gallery-nav-search" } },
+    { "type": "press_key", "key": "a", "modifiers": { "ctrl": true } },
+    { "type": "press_key", "key": "backspace" },
+    { "type": "type_text", "text": "calendar" },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-nav-calendar" }
+      },
+      "timeout_frames": 1800
+    },
+    { "type": "click", "target": { "kind": "test_id", "id": "ui-gallery-nav-calendar" } },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-page-calendar" }
+      },
+      "timeout_frames": 1800
+    },
+
+    {
+      "type": "scroll_into_view",
+      "container": { "kind": "test_id", "id": "ui-gallery-content-scroll" },
+      "target": {
+        "kind": "test_id",
+        "id": "ui-gallery.calendar.caption.caption-month-trigger"
+      },
+      "delta_y": -240.0,
+      "require_fully_within_window": true,
+      "padding_px": 16.0,
+      "timeout_frames": 1800
+    },
+    {
+      "type": "click_stable",
+      "target": {
+        "kind": "test_id",
+        "id": "ui-gallery.calendar.caption.caption-month-trigger"
+      },
+      "stable_frames": 2,
+      "max_move_px": 1.0,
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": { "kind": "exists", "target": { "kind": "test_id", "id": "select-scroll-viewport" } },
+      "timeout_frames": 600
+    },
+
+    { "type": "wait_frames", "n": 10 },
+    { "type": "capture_bundle", "label": "ui-gallery-calendar-caption-dropdown-screenshot" },
+    { "type": "capture_screenshot", "label": "ui-gallery-calendar-caption-dropdown-screenshot" }
+  ]
+}
+

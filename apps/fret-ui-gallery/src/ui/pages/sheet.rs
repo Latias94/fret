@@ -1,9 +1,6 @@
 use super::super::*;
 
-pub(super) fn preview_sheet(
-    cx: &mut ElementContext<'_, App>,
-    _open: Model<bool>,
-) -> Vec<AnyElement> {
+pub(super) fn preview_sheet(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
     use crate::ui::doc_layout::{self, DocSection};
     use crate::ui::snippets::sheet as snippets;
 

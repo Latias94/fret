@@ -30,6 +30,5 @@ Key upstream concepts:
 
 ## Current parity notes
 
-- Pass: `AspectRatio` stamps `layout.aspect_ratio = Some(ratio)` and defaults to clipped overflow,
-  matching the upstream outcome.
-
+- Pass: `AspectRatio` stamps `layout.aspect_ratio = Some(ratio)` and preserves the default
+  `Overflow::Visible`, matching the upstream primitive (no implicit clipping).

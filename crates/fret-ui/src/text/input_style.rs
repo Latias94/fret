@@ -16,6 +16,7 @@ pub struct TextInputStyle {
     pub placeholder_color: Color,
     pub selection_color: Color,
     pub caret_color: Color,
+    pub preedit_bg_color: Color,
     pub preedit_color: Color,
     pub preedit_underline_color: Color,
 }
@@ -74,6 +75,12 @@ impl Default for TextInputStyle {
                 b: 0.92,
                 a: 1.0,
             },
+            preedit_bg_color: Color {
+                r: 0.24,
+                g: 0.34,
+                b: 0.52,
+                a: 0.22,
+            },
             preedit_color: Color {
                 r: 0.85,
                 g: 0.65,
@@ -109,6 +116,11 @@ impl TextInputStyle {
             placeholder_color: theme.color_token("muted-foreground"),
             selection_color: theme.color_token("selection.background"),
             caret_color: theme.color_token("foreground"),
+            preedit_bg_color: {
+                let mut bg = theme.color_token("selection.background");
+                bg.a = (bg.a * 0.35).clamp(0.0, 1.0);
+                bg
+            },
             preedit_color: theme.color_token("primary"),
             preedit_underline_color: theme.color_token("primary"),
         }

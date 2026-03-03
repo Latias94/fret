@@ -10,7 +10,7 @@ use crate::launch_env_policy::{TOOL_LAUNCH_SCRUB_ENV_PREFIXES, tool_launch_env_k
 
 use super::LaunchedDemo;
 use super::stats::BundleStatsSort;
-use super::util::{now_unix_ms, touch};
+use super::util::{now_unix_ms, touch, write_json_value};
 
 #[derive(Debug, Clone, Copy)]
 pub(super) struct CompareOptions {
@@ -676,6 +676,9 @@ fn tool_launched_diag_config(
         // step is useful during script authoring but is too explosive for suites.
         script_auto_dump: Some(false),
         pick_auto_dump: Some(false),
+        // Keep the diagnostics runtime alive between frames so filesystem-triggered scripts
+        // can be observed and started even if the app goes idle between runs.
+        script_keepalive: Some(true),
         // Bound the length of exported debug strings (paths, etc).
         max_debug_string_bytes: Some(2048),
         // Keep tool-launched scripted runs deterministic even if the user moves/clicks the real
@@ -1458,6 +1461,8 @@ pub(crate) fn stop_launched_demo(
     poll_ms: u64,
 ) -> Option<serde_json::Value> {
     let demo = child.as_mut()?;
+    let out_dir = exit_path.parent().unwrap_or_else(|| Path::new("."));
+    let footprint_path = out_dir.join("resource.footprint.json");
 
     let _ = touch(exit_path);
     #[cfg(not(windows))]
@@ -1483,6 +1488,9 @@ pub(crate) fn stop_launched_demo(
                     None
                 }
             }));
+            if let Some(footprint) = &footprint {
+                let _ = write_json_value(&footprint_path, footprint);
+            }
             if let Some(mut c) = child.take().map(|d| d.child) {
                 let _ = c.wait();
             }
@@ -1504,6 +1512,9 @@ pub(crate) fn stop_launched_demo(
             None
         }
     }));
+    if let Some(footprint) = &footprint {
+        let _ = write_json_value(&footprint_path, footprint);
+    }
     kill_launched_demo(child);
     footprint
 }

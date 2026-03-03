@@ -9,32 +9,37 @@ struct Models {
     choice_share: Option<Model<bool>>,
     choice_notifications: Option<Model<bool>>,
     invalid: Option<Model<bool>>,
+    disabled: Option<Model<bool>>,
 }
 
-pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>, model: Model<bool>) -> AnyElement {
-    let (choice_share, choice_notifications, invalid) = cx.with_state(Models::default, |st| {
-        (
-            st.choice_share.clone(),
-            st.choice_notifications.clone(),
-            st.invalid.clone(),
-        )
-    });
+pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
+    let (choice_share, choice_notifications, invalid, disabled) =
+        cx.with_state(Models::default, |st| {
+            (
+                st.choice_share.clone(),
+                st.choice_notifications.clone(),
+                st.invalid.clone(),
+                st.disabled.clone(),
+            )
+        });
 
-    let (choice_share, choice_notifications, invalid) =
-        match (choice_share, choice_notifications, invalid) {
-            (Some(choice_share), Some(choice_notifications), Some(invalid)) => {
-                (choice_share, choice_notifications, invalid)
+    let (choice_share, choice_notifications, invalid, disabled) =
+        match (choice_share, choice_notifications, invalid, disabled) {
+            (Some(choice_share), Some(choice_notifications), Some(invalid), Some(disabled)) => {
+                (choice_share, choice_notifications, invalid, disabled)
             }
             _ => {
                 let choice_share = cx.app.models_mut().insert(false);
                 let choice_notifications = cx.app.models_mut().insert(true);
                 let invalid = cx.app.models_mut().insert(false);
+                let disabled = cx.app.models_mut().insert(false);
                 cx.with_state(Models::default, |st| {
                     st.choice_share = Some(choice_share.clone());
                     st.choice_notifications = Some(choice_notifications.clone());
                     st.invalid = Some(invalid.clone());
+                    st.disabled = Some(disabled.clone());
                 });
-                (choice_share, choice_notifications, invalid)
+                (choice_share, choice_notifications, invalid, disabled)
             }
         };
 
@@ -97,7 +102,7 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>, model: Model<bool>) -> 
 
     let disabled_section = {
         shadcn::Field::new([
-            shadcn::Switch::new(model)
+            shadcn::Switch::new(disabled)
                 .disabled(true)
                 .a11y_label("Disabled switch")
                 .test_id("ui-gallery-switch-disabled-toggle")

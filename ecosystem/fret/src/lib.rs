@@ -44,6 +44,7 @@ pub use fret_bootstrap::ui_app_driver::ViewElements;
 pub use fret_runtime::{ActionId, ActionMeta, ActionRegistry, CommandId, TypedAction};
 
 pub mod actions;
+pub mod legacy;
 pub mod view;
 pub mod workspace_menu;
 pub mod workspace_shell;
@@ -129,11 +130,18 @@ impl Default for Defaults {
     }
 }
 
-/// MVU-style authoring helpers (desktop builds).
+/// Legacy MVU-style authoring helpers (desktop builds).
+///
+/// New code should prefer action-first authoring via `View` + typed actions (ADRs 0307/0308).
 #[cfg(all(not(target_arch = "wasm32"), feature = "desktop"))]
 pub mod mvu;
 
-/// MVU-style command routing helpers (portable; desktop + web).
+/// Legacy MVU-style command routing helpers (portable; desktop + web).
+///
+/// These routers exist for compatibility and for cases where you need dynamic, typed routing
+/// without introducing a full action registry surface.
+///
+/// Prefer action-first (`fret::actions!`) whenever possible.
 pub mod mvu_router;
 
 /// Interop helpers for embedding foreign UI as isolated surfaces (desktop builds).
@@ -178,9 +186,6 @@ pub mod prelude {
     pub use fret_core::{Event, SemanticsRole};
     pub use fret_ui::ThemeSnapshot;
     pub use fret_ui::element::{Elements, HoverRegionProps, Length, SemanticsProps};
-
-    #[cfg(all(not(target_arch = "wasm32"), feature = "desktop"))]
-    pub use crate::mvu::{KeyedMessageRouter, MessageRouter, Program as MvuProgram};
 
     #[cfg(all(not(target_arch = "wasm32"), feature = "desktop"))]
     pub use crate::interop;

@@ -110,6 +110,12 @@ pub struct UiDiagnosticsConfig {
     /// This is intended for scripted diagnostics runs where the external driver triggers scripts
     /// via filesystem touch stamps, but the app might otherwise go idle between frames.
     pub script_keepalive: bool,
+    /// Diagnostics-only test hook: simulate a "no redraw callbacks" environment.
+    ///
+    /// When enabled, the diagnostics runtime will avoid recording per-frame snapshots and avoid
+    /// driving scripts from redraw callbacks. This is intended for regression tests of the
+    /// keepalive/no-frame liveness path (e.g. `reason_code=timeout.no_frames`).
+    pub simulate_no_frames: bool,
     pub max_events: usize,
     pub max_snapshots: usize,
     /// Maximum number of snapshots to include in script-driven bundle dumps (auto-dump and
@@ -292,6 +298,8 @@ impl Default for UiDiagnosticsConfig {
             && env_flag_override("FRET_DIAG_SCRIPT_KEEPALIVE")
                 .or_else(|| config_file.as_ref().and_then(|c| c.script_keepalive))
                 .unwrap_or(true);
+        let simulate_no_frames =
+            enabled && env_flag_override("FRET_DIAG_SIMULATE_NO_FRAMES").unwrap_or(false);
         if enabled
             || raw_diag.as_ref().is_some_and(|v| !v.is_empty())
             || raw_out_dir.as_ref().is_some_and(|v| !v.is_empty())
@@ -581,6 +589,7 @@ impl Default for UiDiagnosticsConfig {
             exit_path,
             allow_script_schema_v1,
             script_keepalive,
+            simulate_no_frames,
             max_events,
             max_snapshots,
             script_dump_max_snapshots,

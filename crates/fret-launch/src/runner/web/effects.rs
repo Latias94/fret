@@ -1119,8 +1119,11 @@ impl<D: WinitAppDriver> WinitRunner<D> {
                     }
                     WindowRequest::Create(_)
                     | WindowRequest::Raise { .. }
+                    | WindowRequest::SetVisible { .. }
                     | WindowRequest::SetInnerSize { .. }
                     | WindowRequest::SetOuterPosition { .. }
+                    | WindowRequest::BeginDrag { .. }
+                    | WindowRequest::BeginResize { .. }
                     | WindowRequest::SetStyle { .. } => {}
                 },
                 Effect::QuitApp => {

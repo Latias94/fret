@@ -3102,18 +3102,28 @@ fn select_impl<H: UiHost>(
                                 .lock()
                                 .unwrap_or_else(|e| e.into_inner());
 
-                             if is_open {
-                                 if !state.was_open {
-                                     state.was_open = true;
-                                     state.content.reset_on_open(initial_active_row);
-                                     state.trigger.reset_typeahead_buffer();
-                                     state.pending_active_align_top_scroll = !state.opened_by_pointer;
-                                 }
-                             } else {
-                                 state.was_open = false;
-                                 state.content.set_active_row(None);
-                                 state.pending_active_align_top_scroll = false;
-                                 state.last_item_aligned_layout = None;
+                            if is_open {
+                                if !state.was_open {
+                                    state.was_open = true;
+
+                                    // Radix Select does not pre-highlight an option when opened via
+                                    // pointer interaction; items become highlighted as the pointer
+                                    // moves (or via keyboard navigation).
+                                    let initial_active_row = if state.opened_by_pointer {
+                                        None
+                                    } else {
+                                        initial_active_row
+                                    };
+
+                                    state.content.reset_on_open(initial_active_row);
+                                    state.trigger.reset_typeahead_buffer();
+                                    state.pending_active_align_top_scroll = !state.opened_by_pointer;
+                                }
+                            } else {
+                                state.was_open = false;
+                                state.content.set_active_row(None);
+                                state.pending_active_align_top_scroll = false;
+                                state.last_item_aligned_layout = None;
                                 state.opened_by_pointer = false;
                                 state.opened_by_touch = false;
                             }
@@ -3691,6 +3701,8 @@ fn select_impl<H: UiHost>(
 
                                                                                         let hover_clear_token_for_hover =
                                                                                             hover_clear_token.clone();
+                                                                                        let state_for_hover_change =
+                                                                                            state_for_hover.clone();
                                                                                         cx.pressable_add_on_hover_change(Arc::new(
                                                                                             move |host, action_cx, hovered| {
                                                                                                 let mut hover_token = hover_clear_token_for_hover
@@ -3700,18 +3712,14 @@ fn select_impl<H: UiHost>(
                                                                                                     host.push_effect(Effect::CancelTimer { token });
                                                                                                 }
 
-                                                                                                let mut state = state_for_hover
+                                                                                                let state = state_for_hover_change
                                                                                                     .lock()
                                                                                                     .unwrap_or_else(|e| e.into_inner());
-                                                                                                if hovered {
-                                                                                                    if state.content.active_row()
-                                                                                                        != Some(row_idx_for_hover)
-                                                                                                    {
-                                                                                                        state.content.set_active_row(Some(row_idx_for_hover));
-                                                                                                        host.request_redraw(action_cx.window);
-                                                                                                    }
-                                                                                                } else if state.content.active_row()
-                                                                                                    == Some(row_idx_for_hover)
+                                                                                                let opened_by_pointer = state.opened_by_pointer;
+                                                                                                if !hovered
+                                                                                                    && opened_by_pointer
+                                                                                                    && state.content.active_row()
+                                                                                                        == Some(row_idx_for_hover)
                                                                                                 {
                                                                                                     // Base UI clears the active index on pointer leave via `setTimeout(0)`
                                                                                                     // to avoid flicker when moving between adjacent rows.
@@ -3724,6 +3732,34 @@ fn select_impl<H: UiHost>(
                                                                                                         repeat: None,
                                                                                                     });
                                                                                                 }
+                                                                                            },
+                                                                                        ));
+
+                                                                                        let state_for_pointer_move =
+                                                                                            state_for_hover.clone();
+                                                                                        let row_idx_for_pointer_move =
+                                                                                            row_idx_for_hover;
+                                                                                        cx.pressable_add_on_pointer_move(Arc::new(
+                                                                                            move |host, action_cx, mv| {
+                                                                                                if !matches!(
+                                                                                                    mv.pointer_type,
+                                                                                                    fret_core::PointerType::Mouse
+                                                                                                        | fret_core::PointerType::Unknown
+                                                                                                ) {
+                                                                                                    return false;
+                                                                                                }
+
+                                                                                                let mut state = state_for_pointer_move
+                                                                                                    .lock()
+                                                                                                    .unwrap_or_else(|e| e.into_inner());
+                                                                                                if state.content.active_row()
+                                                                                                    != Some(row_idx_for_pointer_move)
+                                                                                                {
+                                                                                                    state.content
+                                                                                                        .set_active_row(Some(row_idx_for_pointer_move));
+                                                                                                    host.request_redraw(action_cx.window);
+                                                                                                }
+                                                                                                false
                                                                                             },
                                                                                         ));
                                                                                     }

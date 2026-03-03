@@ -48,41 +48,32 @@ pub(super) fn preview_select(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement
             DocSection::new("Diag Surface", diag_surface)
                 .description("Long-list surface with stable test_ids used by diagnostics scripts.")
                 .test_id_prefix("ui-gallery-select-diag-surface")
-                .code_rust_from_file_region(snippets::diag_surface::SOURCE, "example")
-                .max_w(Px(540.0)),
+                .code_rust_from_file_region(snippets::diag_surface::SOURCE, "example"),
             DocSection::new("Align Item With Trigger", align_item)
                 .description("Toggle between item-aligned and popper-style positioning.")
                 .test_id_prefix("ui-gallery-select-align-item")
-                .code_rust_from_file_region(snippets::align_item_with_trigger::SOURCE, "example")
-                .max_w(Px(540.0)),
+                .code_rust_from_file_region(snippets::align_item_with_trigger::SOURCE, "example"),
             DocSection::new("Groups", groups)
                 .description("Group labels + separator patterns used by shadcn Select.")
                 .test_id_prefix("ui-gallery-select-groups")
-                .code_rust_from_file_region(snippets::groups::SOURCE, "example")
-                .max_w(Px(540.0)),
+                .code_rust_from_file_region(snippets::groups::SOURCE, "example"),
             DocSection::new("Scrollable", scrollable)
                 .description("Long lists should clamp height and expose scroll affordances.")
                 .test_id_prefix("ui-gallery-select-scrollable")
-                .code_rust_from_file_region(snippets::scrollable::SOURCE, "example")
-                .max_w(Px(620.0)),
+                .code_rust_from_file_region(snippets::scrollable::SOURCE, "example"),
             DocSection::new("Disabled", disabled)
                 .description("Disabled state should block open/selection and use muted styling.")
                 .test_id_prefix("ui-gallery-select-disabled")
-                .code_rust_from_file_region(snippets::disabled::SOURCE, "example")
-                .max_w(Px(540.0)),
+                .code_rust_from_file_region(snippets::disabled::SOURCE, "example"),
             DocSection::new("Invalid", invalid)
                 .description("Invalid styling is typically shown with a Field + error message.")
                 .test_id_prefix("ui-gallery-select-invalid")
-                .code_rust_from_file_region(snippets::invalid::SOURCE, "example")
-                .max_w(Px(620.0)),
+                .code_rust_from_file_region(snippets::invalid::SOURCE, "example"),
             DocSection::new("RTL", rtl)
                 .description("All shadcn components should work under an RTL direction provider.")
                 .test_id_prefix("ui-gallery-select-rtl")
-                .code_rust_from_file_region(snippets::rtl::SOURCE, "example")
-                .max_w(Px(620.0)),
-            DocSection::new("Notes", notes)
-                .description("Parity notes and usage guidance.")
-                .max_w(Px(820.0)),
+                .code_rust_from_file_region(snippets::rtl::SOURCE, "example"),
+            DocSection::new("Notes", notes).description("Parity notes and usage guidance."),
         ],
     );
 

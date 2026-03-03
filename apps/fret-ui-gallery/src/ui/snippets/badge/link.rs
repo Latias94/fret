@@ -7,8 +7,8 @@ use std::sync::Arc;
 pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
     fret_ui_kit::ui::h_flex(cx, |cx| {
         vec![
-            shadcn::Badge::new("Open Link")
-                .variant(shadcn::BadgeVariant::Link)
+            // Upstream shadcn: `<Badge asChild><Link href="/">Badge</Link></Badge>`.
+            shadcn::Badge::new("Badge")
                 .render(shadcn::BadgeRender::Link {
                     href: Arc::from("https://example.com"),
                     target: None,
@@ -18,7 +18,6 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
                 // link semantics and Enter-only activation.
                 .on_activate(Arc::new(|_host, _acx, _reason| {}))
                 .test_id("ui-gallery-badge-link")
-                .trailing_icon(fret_icons::IconId::new_static("lucide.arrow-right"))
                 .into_element(cx),
         ]
     })

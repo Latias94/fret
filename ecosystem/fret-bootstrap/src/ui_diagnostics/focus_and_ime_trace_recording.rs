@@ -105,18 +105,26 @@ fn record_focus_trace(
             text_input_snapshot: app
                 .global::<fret_runtime::WindowTextInputSnapshotService>()
                 .and_then(|svc| svc.snapshot(window).cloned())
-                .map(|snapshot| UiTextInputSnapshotV1 {
-                    focus_is_text_input: snapshot.focus_is_text_input,
-                    is_composing: snapshot.is_composing,
-                    text_len_utf16: snapshot.text_len_utf16,
-                    selection_utf16: snapshot.selection_utf16,
-                    marked_utf16: snapshot.marked_utf16,
-                    ime_cursor_area: snapshot.ime_cursor_area.map(|r| UiRectV1 {
-                        x_px: r.origin.x.0,
-                        y_px: r.origin.y.0,
-                        w_px: r.size.width.0,
-                        h_px: r.size.height.0,
-                    }),
+                .map(|snapshot| {
+                    let surrounding = snapshot.surrounding_text.as_ref();
+                    UiTextInputSnapshotV1 {
+                        focus_is_text_input: snapshot.focus_is_text_input,
+                        is_composing: snapshot.is_composing,
+                        text_len_utf16: snapshot.text_len_utf16,
+                        selection_utf16: snapshot.selection_utf16,
+                        marked_utf16: snapshot.marked_utf16,
+                        ime_cursor_area: snapshot.ime_cursor_area.map(|r| UiRectV1 {
+                            x_px: r.origin.x.0,
+                            y_px: r.origin.y.0,
+                            w_px: r.size.width.0,
+                            h_px: r.size.height.0,
+                        }),
+                        ime_surrounding_text_len_bytes: surrounding.map(|s| {
+                            u32::try_from(s.text.len()).unwrap_or(u32::MAX)
+                        }),
+                        ime_surrounding_cursor_bytes: surrounding.map(|s| s.cursor),
+                        ime_surrounding_anchor_bytes: surrounding.map(|s| s.anchor),
+                    }
                 }),
             expected_node_id,
             expected_test_id: expected_test_id.map(|s| s.to_string()),

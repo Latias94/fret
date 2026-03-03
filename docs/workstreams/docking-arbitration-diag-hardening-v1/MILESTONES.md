@@ -73,6 +73,33 @@ Hover peek-behind hardening (2026-03-02):
   - under-moving-window peek-behind: run id `1772471076428` (`target/fret-diag-under-moving-hover4`)
   - overlap z-order switch (non-transparent): run id `1772471119364` (`target/fret-diag-post-peek`)
 
+Stage gates for merge-back correctness (2026-03-03):
+
+- Chained tear-off: added per-drop `dock_drop_resolved_*` gates + bounded bundles to pinpoint where a panel is lost
+  (drop vs auto-close/cleanup).
+  - PASS: run id `1772493305362` (`target/fret-diag-stage-gates2`)
+- Chained tear-off: added additional bundles right after each auto-close window-count gate (explicit “after close” stage).
+  - PASS: run id `1772494218337` (`target/fret-diag-stage-gates5`)
+- Transparent payload drag-back: switched the merge-back targeting to `dock-arb-hint-inner-right` to avoid `wrap_binary`
+  outcomes from outer-hint drops, and added a drop-stage bundle.
+  - PASS: run id `1772493899790` (`target/fret-diag-stage-gates4`)
+- Chained tear-off: removed trailing `wait_frames` after the final `capture_bundle` to avoid “script.result timeout”
+  when the last remaining window is occluded/idle and stops producing redraw callbacks.
+  - PASS: run id `1772495444909` (`target/fret-diag-chained-check2`)
+- Diagnostics runtime: arm a keepalive timer while scripts are active so `wait_frames` / `wait_until` can progress (or
+  fail with `timeout.no_frames`) even when redraw callbacks stop (occlusion/idle).
+  - PASS: run id `1772497918062` (`target/fret-diag-chained-postfix`)
+- Diagnostics runtime: allow a small “burst” of frame-independent tail steps per drive call so scripts do not require an
+  additional rendered frame to execute a final `capture_bundle` after the last semantic assertion (avoids launch-mode
+  timeouts under occlusion/idle throttling and tight tooling budgets).
+  - implementation: `ecosystem/fret-bootstrap/src/ui_diagnostics/script_engine.rs`
+- Tear-off + drag-back loop script hardening:
+  - `tools/diag-scripts/docking/arbitration/docking-arbitration-demo-multiwindow-tearoff-merge-loop-no-leak.json` now
+    captures stage bundles (`loop-cycle*-drop` and `loop-cycle*-after-merge` after `known_window_count_is n=1`) and uses
+    open-window semantics consistently across cycles.
+  - Repeat check is green 20x with `--reuse-launch --compare-ignore-bounds --compare-ignore-scene-fingerprint`:
+    `target/fret-diag-docking-loop-repeat2`.
+
 ## M1.4 — Rebuild reliability for docking demos (Windows/MSVC)
 
 Goal: docking demo binaries used by `--launch` diagnostics can be rebuilt reliably in local dev.

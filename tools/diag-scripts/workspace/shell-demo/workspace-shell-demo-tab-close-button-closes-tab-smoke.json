@@ -2,7 +2,8 @@
   "meta": {
     "name": "Workspace shell demo: close button closes active tab (smoke)",
     "required_capabilities": [
-      "diag.script_v2"
+      "diag.script_v2",
+      "diag.command_dispatch_trace"
     ],
     "tags": [
       "workspace",
@@ -12,14 +13,17 @@
       "gate"
     ],
     "target_hints": [
-      "Activates doc-a-0 (pane A) so the close target is guaranteed to be in-view.",
-      "Waits for the close button on the active tab (pane A, doc-a-0).",
-      "Clicks the close button.",
+      "Resets diagnostics so dispatch trace assertions are deterministic.",
+      "Activates doc-a-0 (pane A) so the close target is in-view.",
+      "Clicks the close button and asserts a pointer-triggered dispatch trace entry exists.",
       "Asserts the tab is removed from the UI tree."
     ]
   },
   "schema_version": 2,
   "steps": [
+    {
+      "type": "reset_diagnostics"
+    },
     {
       "height_px": 720.0,
       "type": "set_window_inner_size",
@@ -45,11 +49,19 @@
         "id": "workspace-shell-pane-pane-a-tab-doc-a-0",
         "kind": "test_id"
       },
-      "type": "click"
+      "type": "click_stable"
     },
     {
-      "n": 6,
-      "type": "wait_frames"
+      "predicate": {
+        "kind": "selected_is",
+        "selected": true,
+        "target": {
+          "id": "workspace-shell-pane-pane-a-tab-doc-a-0",
+          "kind": "test_id"
+        }
+      },
+      "timeout_frames": 240,
+      "type": "wait_until"
     },
     {
       "predicate": {
@@ -67,11 +79,17 @@
         "id": "workspace-shell-pane-pane-a-tab-doc-a-0.close",
         "kind": "test_id"
       },
-      "type": "click"
+      "type": "click_stable"
     },
     {
-      "n": 10,
-      "type": "wait_frames"
+      "query": {
+        "command": "workspace.tab.close.doc-a-0",
+        "handled": true,
+        "source_kind": "pointer",
+        "source_test_id": "workspace-shell-pane-pane-a-tab-doc-a-0.close"
+      },
+      "timeout_frames": 240,
+      "type": "wait_command_dispatch_trace"
     },
     {
       "predicate": {

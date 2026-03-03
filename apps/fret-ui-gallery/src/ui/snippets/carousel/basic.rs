@@ -58,11 +58,11 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
         text_px: Px(36.0),
         line_height_px: Px(40.0),
     };
-    let basic_items = (1..=5)
-        .map(|idx| slide(cx, idx, basic_visual))
+    let items = (1..=5)
+        .map(|idx| shadcn::CarouselItem::new(slide(cx, idx, basic_visual)))
         .collect::<Vec<_>>();
 
-    shadcn::Carousel::new(basic_items)
+    shadcn::Carousel::default()
         .refine_layout(
             LayoutRefinement::default()
                 .w_full()
@@ -70,6 +70,11 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
                 .mx_auto(),
         )
         .test_id("ui-gallery-carousel-basic")
-        .into_element(cx)
+        .into_element_parts(
+            cx,
+            |_cx| shadcn::CarouselContent::new(items),
+            shadcn::CarouselPrevious::new(),
+            shadcn::CarouselNext::new(),
+        )
 }
 // endregion: example

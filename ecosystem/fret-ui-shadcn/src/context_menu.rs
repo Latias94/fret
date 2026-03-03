@@ -4376,7 +4376,8 @@ impl ContextMenu {
                 let (on_dismiss_request, on_close_auto_focus) =
                     menu::root::menu_close_auto_focus_guard_hooks(
                         cx,
-                        menu::root::MenuCloseAutoFocusGuardPolicy::for_modal(modal),
+                        menu::root::MenuCloseAutoFocusGuardPolicy::for_modal(modal)
+                            .prevent_on_escape(true),
                         open.clone(),
                         on_dismiss_request.clone(),
                         on_close_auto_focus.clone(),

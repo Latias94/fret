@@ -3,16 +3,14 @@ use super::super::*;
 use crate::ui::doc_layout::{self, DocSection};
 use crate::ui::snippets::breadcrumb as snippets;
 
-pub(super) fn preview_breadcrumb(
-    cx: &mut ElementContext<'_, App>,
-    _last_action: Model<Arc<str>>,
-) -> Vec<AnyElement> {
+pub(super) fn preview_breadcrumb(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
     let demo = snippets::demo::render(cx);
     let basic = snippets::basic::render(cx);
     let custom_separator = snippets::custom_separator::render(cx);
     let dropdown = snippets::dropdown::render(cx);
     let collapsed = snippets::collapsed::render(cx);
     let link_component = snippets::link_component::render(cx);
+    let responsive = snippets::responsive::render(cx);
     let rtl = snippets::rtl::render(cx);
 
     let notes = doc_layout::notes(
@@ -55,6 +53,10 @@ pub(super) fn preview_breadcrumb(
                 .title_test_id("ui-gallery-breadcrumb-section-title-link-component")
                 .description("Example of a truncated router-link style item.")
                 .code_rust_from_file_region(snippets::link_component::SOURCE, "example"),
+            DocSection::new("Responsive", responsive)
+                .title_test_id("ui-gallery-breadcrumb-section-title-responsive")
+                .description("Responsive breadcrumb: dropdown on desktop, drawer on mobile.")
+                .code_rust_from_file_region(snippets::responsive::SOURCE, "example"),
             DocSection::new("RTL", rtl)
                 .title_test_id("ui-gallery-breadcrumb-section-title-rtl")
                 .description("Breadcrumb layout should follow right-to-left direction context.")

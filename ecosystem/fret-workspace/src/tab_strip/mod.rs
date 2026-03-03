@@ -9,8 +9,8 @@ use fret_core::{
 };
 use fret_runtime::{CommandId, Effect, Model};
 use fret_ui::action::{
-    ActivateReason, OnActivate, OnInternalDrag, OnPressablePointerMove, OnPressablePointerUp,
-    OnWheel, PressablePointerUpResult,
+    ActivateReason, OnInternalDrag, OnPressablePointerMove, OnPressablePointerUp, OnWheel,
+    PressablePointerUpResult,
 };
 use fret_ui::element::ElementKind;
 use fret_ui::element::{
@@ -674,46 +674,32 @@ impl WorkspaceTabStrip {
                                                             );
                                                         }
 
-                                                        let tab_activate_cmd_for_activate =
-                                                            tab_activate_command.clone();
-                                                        let pane_activate_cmd_for_activate_handler =
-                                                            pane_activate_cmd_for_activate.clone();
-                                                        let reveal_hint_model_for_activate =
-                                                            reveal_hint_model.clone();
-                                                        let tab_id_for_activate =
-                                                            tab_id.clone();
-                                                        let handler: OnActivate = Arc::new(
-                                                            move |host, acx, reason| {
-                                                                let _ = host.models_mut().update(
-                                                                    &reveal_hint_model_for_activate,
-                                                                    |st| {
-                                                                        st.tab_id = Some(
-                                                                            tab_id_for_activate
-                                                                                .clone(),
-                                                                        );
-                                                                        st.reason = Some(reason);
-                                                                    },
-                                                                );
-                                                                if let Some(cmd) =
-                                                                    pane_activate_cmd_for_activate_handler
-                                                                        .clone()
-                                                                {
-                                                                    dispatch_intent(
-                                                                        host,
-                                                                        acx.window,
-                                                                        WorkspaceTabStripIntent::Activate(cmd),
+                                                        {
+                                                            let reveal_hint_model_for_activate =
+                                                                reveal_hint_model.clone();
+                                                            let tab_id_for_activate = tab_id.clone();
+                                                            cx.pressable_add_on_activate(Arc::new(
+                                                                move |host, acx, reason| {
+                                                                    let _ = host.models_mut().update(
+                                                                        &reveal_hint_model_for_activate,
+                                                                        |st| {
+                                                                            st.tab_id = Some(
+                                                                                tab_id_for_activate.clone(),
+                                                                            );
+                                                                            st.reason = Some(reason);
+                                                                        },
                                                                     );
-                                                                }
-                                                                dispatch_intent(
-                                                                    host,
-                                                                    acx.window,
-                                                                    WorkspaceTabStripIntent::Activate(
-                                                                        tab_activate_cmd_for_activate.clone(),
-                                                                    ),
-                                                                );
-                                                            },
+                                                                    host.request_redraw(acx.window);
+                                                                },
+                                                            ));
+                                                        }
+
+                                                        cx.pressable_dispatch_action_if_enabled_opt(
+                                                            pane_activate_cmd_for_activate.clone(),
                                                         );
-                                                        cx.pressable_on_activate(handler);
+                                                        cx.pressable_dispatch_action_if_enabled(
+                                                            tab_activate_command.clone(),
+                                                        );
 
                                                         cx.pressable_on_pointer_down(
                                                             tab_pointer_down_handler(

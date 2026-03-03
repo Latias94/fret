@@ -34,6 +34,20 @@ impl Default for PlatformCapabilities {
                 window_hover_detection: WindowHoverDetectionQuality::Reliable,
                 window_set_outer_position: WindowSetOuterPositionQuality::Reliable,
                 window_z_level: WindowZLevelQuality::Reliable,
+                window_decorations: true,
+                window_resizable: true,
+                window_transparent: true,
+                window_skip_taskbar: true,
+                window_non_activating: true,
+                window_mouse_passthrough: true,
+                window_set_visible: true,
+                window_begin_drag: true,
+                window_begin_resize: true,
+                window_background_material_system_default: true,
+                window_background_material_mica: true,
+                window_background_material_acrylic: true,
+                window_background_material_vibrancy: true,
+                native_window_handle: false,
             },
             clipboard: ClipboardCapabilities {
                 text: ClipboardTextCapabilities {
@@ -83,6 +97,32 @@ impl PlatformCapabilities {
             keys::UI_MULTI_WINDOW => Some(self.ui.multi_window),
             keys::UI_WINDOW_TEAR_OFF => Some(self.ui.window_tear_off),
             keys::UI_CURSOR_ICONS => Some(self.ui.cursor_icons),
+            keys::UI_WINDOW_DECORATIONS => Some(self.ui.window_decorations),
+            keys::UI_WINDOW_RESIZABLE => Some(self.ui.window_resizable),
+            keys::UI_WINDOW_TRANSPARENT => Some(self.ui.window_transparent),
+            keys::UI_WINDOW_ALWAYS_ON_TOP => Some(!matches!(
+                self.ui.window_z_level,
+                super::WindowZLevelQuality::None
+            )),
+            keys::UI_WINDOW_SKIP_TASKBAR => Some(self.ui.window_skip_taskbar),
+            keys::UI_WINDOW_NON_ACTIVATING => Some(self.ui.window_non_activating),
+            keys::UI_WINDOW_MOUSE_PASSTHROUGH => Some(self.ui.window_mouse_passthrough),
+            keys::UI_WINDOW_SET_VISIBLE => Some(self.ui.window_set_visible),
+            keys::UI_WINDOW_BEGIN_DRAG => Some(self.ui.window_begin_drag),
+            keys::UI_WINDOW_BEGIN_RESIZE => Some(self.ui.window_begin_resize),
+            keys::UI_WINDOW_BACKGROUND_MATERIAL_SYSTEM_DEFAULT => {
+                Some(self.ui.window_background_material_system_default)
+            }
+            keys::UI_WINDOW_BACKGROUND_MATERIAL_MICA => {
+                Some(self.ui.window_background_material_mica)
+            }
+            keys::UI_WINDOW_BACKGROUND_MATERIAL_ACRYLIC => {
+                Some(self.ui.window_background_material_acrylic)
+            }
+            keys::UI_WINDOW_BACKGROUND_MATERIAL_VIBRANCY => {
+                Some(self.ui.window_background_material_vibrancy)
+            }
+            keys::UI_NATIVE_WINDOW_HANDLE => Some(self.ui.native_window_handle),
             keys::CLIPBOARD_TEXT => Some(self.clipboard.text.read && self.clipboard.text.write),
             keys::CLIPBOARD_TEXT_READ => Some(self.clipboard.text.read),
             keys::CLIPBOARD_TEXT_WRITE => Some(self.clipboard.text.write),

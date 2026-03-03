@@ -15,7 +15,9 @@ use fret_ui::element::{
 use fret_ui::{ElementContext, Theme, ThemeSnapshot, UiHost};
 use fret_ui_kit::declarative::icon as decl_icon;
 use fret_ui_kit::declarative::style as decl_style;
-use fret_ui_kit::declarative::transition::ticks_60hz_for_duration;
+use fret_ui_kit::declarative::transition::{
+    drive_transition_with_durations_and_cubic_bezier, ticks_60hz_for_duration,
+};
 use fret_ui_kit::primitives::accordion as radix_accordion;
 use fret_ui_kit::primitives::collapsible as radix_collapsible;
 use fret_ui_kit::primitives::direction::LayoutDirection;
@@ -54,16 +56,12 @@ fn trigger_gap(theme: &ThemeSnapshot) -> Px {
 fn apply_trigger_label_defaults(
     el: AnyElement,
     text_style: &TextStyle,
-    fg: Color,
     align: TextAlign,
 ) -> AnyElement {
     match el.kind {
         ElementKind::Text(mut props) => {
             if props.style.is_none() {
                 props.style = Some(text_style.clone());
-            }
-            if props.color.is_none() {
-                props.color = Some(fg);
             }
             props.layout.size.width = Length::Fill;
             props.layout.size.min_width = Some(Length::Px(Px(0.0)));
@@ -76,9 +74,6 @@ fn apply_trigger_label_defaults(
             if props.style.is_none() {
                 props.style = Some(text_style.clone());
             }
-            if props.color.is_none() {
-                props.color = Some(fg);
-            }
             props.layout.size.width = Length::Fill;
             props.layout.size.min_width = Some(Length::Px(Px(0.0)));
             props.wrap = TextWrap::Word;
@@ -89,9 +84,6 @@ fn apply_trigger_label_defaults(
         ElementKind::SelectableText(mut props) => {
             if props.style.is_none() {
                 props.style = Some(text_style.clone());
-            }
-            if props.color.is_none() {
-                props.color = Some(fg);
             }
             props.layout.size.width = Length::Fill;
             props.layout.size.min_width = Some(Length::Px(Px(0.0)));
@@ -287,7 +279,6 @@ pub mod composable {
             let label_test_id: Option<Arc<str>> =
                 test_id.as_ref().map(|id| Arc::from(format!("{id}-label")));
             let text_style = trigger_text_style(&theme);
-            let fg = theme.color_token("foreground");
             let radius = MetricRef::radius(Radius::Md).resolve(&theme);
             let label_align = if dir == LayoutDirection::Rtl {
                 TextAlign::End
@@ -295,6 +286,7 @@ pub mod composable {
                 TextAlign::Start
             };
             let is_rtl = dir == LayoutDirection::Rtl;
+            let chevron_motion_key = value.clone();
 
             let pressable_layout = decl_style::layout_style(
                 &theme,
@@ -359,7 +351,52 @@ pub mod composable {
                                 {
                                     chevron_center = Point::new(Px(w.0 * 0.5), Px(h.0 * 0.5));
                                 }
-                                let chevron_rotation = if is_open { 180.0 } else { 0.0 };
+                                let chevron_motion = cx.keyed(
+                                    ("accordion-chevron-motion", chevron_motion_key.clone()),
+                                    |cx| {
+                                        let theme_full = Theme::global(&*cx.app);
+                                        let duration = theme_full
+                                            .duration_ms_by_key(
+                                                "duration.shadcn.motion.collapsible.toggle",
+                                            )
+                                            .or_else(|| {
+                                                theme_full.duration_ms_by_key(
+                                                    "duration.motion.collapsible.toggle",
+                                                )
+                                            })
+                                            .or_else(|| {
+                                                theme_full.duration_ms_by_key(
+                                                    "duration.shadcn.motion.200",
+                                                )
+                                            })
+                                            .map(|ms| Duration::from_millis(ms as u64))
+                                            .unwrap_or(Duration::from_millis(200));
+                                        let ticks = ticks_60hz_for_duration(duration);
+                                        let easing = theme_full
+                                            .easing_by_key(
+                                                "easing.shadcn.motion.collapsible.toggle",
+                                            )
+                                            .or_else(|| {
+                                                theme_full.easing_by_key(
+                                                    "easing.motion.collapsible.toggle",
+                                                )
+                                            })
+                                            .or_else(|| {
+                                                theme_full.easing_by_key("easing.shadcn.motion")
+                                            })
+                                            .or_else(|| {
+                                                theme_full.easing_by_key("easing.motion.standard")
+                                            })
+                                            .unwrap_or_else(|| {
+                                                overlay_motion::shadcn_motion_ease_bezier(cx)
+                                            });
+
+                                        drive_transition_with_durations_and_cubic_bezier(
+                                            cx, is_open, ticks, ticks, easing,
+                                        )
+                                    },
+                                );
+                                let chevron_rotation = 180.0 * chevron_motion.progress;
                                 let chevron_offset_y =
                                     MetricRef::space(Space::N0p5).resolve(&theme);
                                 let chevron_transform =
@@ -414,7 +451,6 @@ pub mod composable {
                                                         ui::text(cx, a11y_label.clone())
                                                             .text_size_px(text_style.size)
                                                             .font_weight(text_style.weight)
-                                                            .text_color(ColorRef::Color(fg))
                                                             .wrap(TextWrap::Word)
                                                             .overflow(TextOverflow::Clip);
                                                     if let Some(line_height) = text_style.line_height {
@@ -440,7 +476,6 @@ pub mod composable {
                                                         let el = apply_trigger_label_defaults(
                                                             el,
                                                             &text_style,
-                                                            fg,
                                                             label_align,
                                                         );
                                                         if hover_underline {
@@ -562,7 +597,7 @@ pub mod composable {
 
             let gap = self
                 .gap
-                .unwrap_or_else(|| MetricRef::space(Space::N4))
+                .unwrap_or_else(|| MetricRef::Px(Px(0.0)))
                 .resolve(&theme);
             let children = self.children;
 
@@ -576,7 +611,7 @@ pub mod composable {
                         gap: gap.into(),
                         padding: Edges::all(Px(0.0)).into(),
                         justify: MainAlign::Start,
-                        align: CrossAlign::Stretch,
+                        align: CrossAlign::Start,
                     },
                     move |_cx| children,
                 )]
@@ -830,6 +865,8 @@ pub mod composable {
                 let orientation = self.orientation;
                 let dir = fret_ui_kit::primitives::direction::use_direction_in_scope(cx, self.dir);
                 let on_value_change = self.on_value_change;
+                let single_non_collapsible =
+                    matches!(&model, AccordionModel::Single { collapsible: false, .. });
 
                 let root = match &model {
                     AccordionModel::Single {
@@ -932,6 +969,7 @@ pub mod composable {
                                 let enabled = !item_disabled;
                                 let focusable = tab_stop.is_some_and(|i| i == idx);
                                 let is_open = root.is_item_open(cx, item.value.as_ref());
+                                let aria_disabled = single_non_collapsible && is_open;
 
                                 let trigger = trigger.into_element(
                                     cx,
@@ -941,6 +979,7 @@ pub mod composable {
                                     focusable,
                                     dir,
                                 );
+                                let trigger_element = trigger.id;
 
                                 let theme = theme.clone();
                                 let value = item.value.clone();
@@ -1067,9 +1106,18 @@ pub mod composable {
                                     let trigger = radix_accordion::apply_accordion_trigger_controls(
                                         trigger, content_id,
                                     );
+                                    let trigger = radix_accordion::apply_accordion_trigger_aria_disabled(
+                                        trigger,
+                                        aria_disabled,
+                                    );
                                     children.push(trigger);
 
                                     if let Some(wrapper_el) = wrapper_el {
+                                        let wrapper_el =
+                                            radix_accordion::apply_accordion_content_region_labelled_by(
+                                                wrapper_el,
+                                                trigger_element,
+                                            );
                                         let _ = radix_collapsible::update_measured_for_motion(
                                             cx,
                                             motion_for_update,
@@ -1189,7 +1237,6 @@ impl AccordionTrigger {
         let label_test_id: Option<Arc<str>> =
             test_id.as_ref().map(|id| Arc::from(format!("{id}-label")));
         let text_style = trigger_text_style(&theme);
-        let fg = theme.color_token("foreground");
         let radius = MetricRef::radius(Radius::Md).resolve(&theme);
         let label_align = if dir == LayoutDirection::Rtl {
             TextAlign::End
@@ -1197,6 +1244,7 @@ impl AccordionTrigger {
             TextAlign::Start
         };
         let is_rtl = dir == LayoutDirection::Rtl;
+        let chevron_motion_key = value.clone();
 
         let pressable_layout = decl_style::layout_style(
             &theme,
@@ -1260,7 +1308,48 @@ impl AccordionTrigger {
                             {
                                 chevron_center = Point::new(Px(w.0 * 0.5), Px(h.0 * 0.5));
                             }
-                            let chevron_rotation = if is_open { 180.0 } else { 0.0 };
+                            let chevron_motion = cx.keyed(
+                                ("accordion-chevron-motion", chevron_motion_key.clone()),
+                                |cx| {
+                                    let theme_full = Theme::global(&*cx.app);
+                                    let duration = theme_full
+                                        .duration_ms_by_key(
+                                            "duration.shadcn.motion.collapsible.toggle",
+                                        )
+                                        .or_else(|| {
+                                            theme_full.duration_ms_by_key(
+                                                "duration.motion.collapsible.toggle",
+                                            )
+                                        })
+                                        .or_else(|| {
+                                            theme_full.duration_ms_by_key(
+                                                "duration.shadcn.motion.200",
+                                            )
+                                        })
+                                        .map(|ms| Duration::from_millis(ms as u64))
+                                        .unwrap_or(Duration::from_millis(200));
+                                    let ticks = ticks_60hz_for_duration(duration);
+                                    let easing = theme_full
+                                        .easing_by_key(
+                                            "easing.shadcn.motion.collapsible.toggle",
+                                        )
+                                        .or_else(|| {
+                                            theme_full.easing_by_key(
+                                                "easing.motion.collapsible.toggle",
+                                            )
+                                        })
+                                        .or_else(|| theme_full.easing_by_key("easing.shadcn.motion"))
+                                        .or_else(|| theme_full.easing_by_key("easing.motion.standard"))
+                                        .unwrap_or_else(|| {
+                                            overlay_motion::shadcn_motion_ease_bezier(cx)
+                                        });
+
+                                    drive_transition_with_durations_and_cubic_bezier(
+                                        cx, is_open, ticks, ticks, easing,
+                                    )
+                                },
+                            );
+                            let chevron_rotation = 180.0 * chevron_motion.progress;
                             let chevron_offset_y = MetricRef::space(Space::N0p5).resolve(&theme);
                             let chevron_transform =
                                 Transform2D::translation(Point::new(Px(0.0), chevron_offset_y))
@@ -1314,7 +1403,6 @@ impl AccordionTrigger {
                                                     ui::text(cx, a11y_label.clone())
                                                         .text_size_px(text_style.size)
                                                         .font_weight(text_style.weight)
-                                                        .text_color(ColorRef::Color(fg))
                                                         .wrap(TextWrap::Word)
                                                         .overflow(TextOverflow::Clip);
                                                 if let Some(line_height) = text_style.line_height {
@@ -1340,7 +1428,6 @@ impl AccordionTrigger {
                                                     let el = apply_trigger_label_defaults(
                                                         el,
                                                         &text_style,
-                                                        fg,
                                                         label_align,
                                                     );
                                                     if hover_underline {
@@ -1461,7 +1548,7 @@ impl AccordionContent {
 
         let gap = self
             .gap
-            .unwrap_or_else(|| MetricRef::space(Space::N4))
+            .unwrap_or_else(|| MetricRef::Px(Px(0.0)))
             .resolve(&theme);
         let children = self.children;
 
@@ -1475,7 +1562,7 @@ impl AccordionContent {
                     gap: gap.into(),
                     padding: Edges::all(Px(0.0)).into(),
                     justify: MainAlign::Start,
-                    align: CrossAlign::Stretch,
+                    align: CrossAlign::Start,
                 },
                 move |_cx| children,
             )]
@@ -1720,6 +1807,8 @@ impl Accordion {
             let orientation = self.orientation;
             let dir = fret_ui_kit::primitives::direction::use_direction_in_scope(cx, self.dir);
             let on_value_change = self.on_value_change;
+            let single_non_collapsible =
+                matches!(&model, AccordionModel::Single { collapsible: false, .. });
 
             let root = match &model {
                 AccordionModel::Single {
@@ -1813,6 +1902,7 @@ impl Accordion {
                             let enabled = !item_disabled;
                             let focusable = tab_stop.is_some_and(|i| i == idx);
                             let is_open = root.is_item_open(cx, item.value.as_ref());
+                            let aria_disabled = single_non_collapsible && is_open;
 
                             let trigger = item.trigger.into_element(
                                 cx,
@@ -1822,6 +1912,7 @@ impl Accordion {
                                 focusable,
                                 dir,
                             );
+                            let trigger_element = trigger.id;
 
                             let content = item.content;
                             let theme = theme.clone();
@@ -1942,9 +2033,18 @@ impl Accordion {
                                 let trigger = radix_accordion::apply_accordion_trigger_controls(
                                     trigger, content_id,
                                 );
+                                let trigger = radix_accordion::apply_accordion_trigger_aria_disabled(
+                                    trigger,
+                                    aria_disabled,
+                                );
                                 children.push(trigger);
 
                                 if let Some(wrapper_el) = wrapper_el {
+                                    let wrapper_el =
+                                        radix_accordion::apply_accordion_content_region_labelled_by(
+                                            wrapper_el,
+                                            trigger_element,
+                                        );
                                     let _ = radix_collapsible::update_measured_for_motion(
                                         cx,
                                         motion_for_update,
@@ -2038,15 +2138,67 @@ mod tests {
     use fret_app::App;
     use fret_core::{AppWindowId, PathCommand, Point, Rect, Size, SvgId, SvgService};
     use fret_core::{PathConstraints, PathId, PathMetrics, PathService, PathStyle};
-    use fret_core::{Px, TextBlobId, TextConstraints, TextMetrics, TextService};
+    use fret_core::{Px, TextAlign, TextBlobId, TextConstraints, TextMetrics, TextService};
     use fret_runtime::{FrameId, TickId};
+    use fret_ui::Theme;
     use fret_ui::UiTree;
+    use fret_ui::element::{CrossAlign, ElementKind, SpacingLength, TextProps};
     use fret_ui_kit::LayoutRefinement;
 
     use super::{
-        Accordion, AccordionContent, AccordionItem, AccordionTrigger,
-        composable as composable_accordion,
+        Accordion, AccordionContent, AccordionItem, AccordionTrigger, apply_trigger_label_defaults,
+        composable as composable_accordion, trigger_text_style,
     };
+
+    fn bounds() -> Rect {
+        Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(200.0), Px(120.0)),
+        )
+    }
+
+    #[test]
+    fn accordion_trigger_label_defaults_do_not_force_foreground_color() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let b = bounds();
+
+        fret_ui::elements::with_element_cx(&mut app, window, b, "test", |cx| {
+            let theme = Theme::global(&*cx.app).snapshot();
+            let text_style = trigger_text_style(&theme);
+
+            let mut text = TextProps::new("hello");
+            text.color = None;
+            let el = cx.text_props(text);
+
+            let out = apply_trigger_label_defaults(el, &text_style, TextAlign::Start);
+            let ElementKind::Text(props) = &out.kind else {
+                panic!("expected Text element");
+            };
+            assert!(
+                props.color.is_none(),
+                "expected AccordionTrigger label to inherit foreground color from scope (e.g. Card foreground)"
+            );
+        });
+    }
+
+    #[test]
+    fn accordion_content_defaults_use_zero_gap_and_do_not_stretch_children() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let b = bounds();
+
+        fret_ui::elements::with_element_cx(&mut app, window, b, "test", |cx| {
+            let el = AccordionContent::new([cx.text("a"), cx.text("b")]).into_element(cx);
+            let child = el.children.first().expect("content child");
+
+            let ElementKind::Column(props) = &child.kind else {
+                panic!("expected Column child");
+            };
+            assert_eq!(props.align, CrossAlign::Start);
+            assert_eq!(props.gap, SpacingLength::Px(Px(0.0)));
+        });
+    }
 
     #[derive(Default)]
     struct FakeServices;
@@ -2905,6 +3057,111 @@ mod tests {
     }
 
     #[test]
+    fn accordion_content_is_region_and_labelled_by_trigger_when_open() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let open = app
+            .models_mut()
+            .insert::<Option<Arc<str>>>(Some(Arc::from("item-1")));
+        let mut services = FakeServices;
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(800.0), Px(600.0)),
+        );
+
+        for _ in 0..4 {
+            render_accordion_frame_with_semantics(
+                &mut ui,
+                &mut app,
+                &mut services,
+                window,
+                bounds,
+                open.clone(),
+                true,
+            );
+        }
+
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let trigger_node = snap
+            .nodes
+            .iter()
+            .find(|n| {
+                n.role == fret_core::SemanticsRole::Button && n.label.as_deref() == Some("item-1")
+            })
+            .expect("trigger semantics node");
+
+        let content_id = *trigger_node
+            .controls
+            .first()
+            .expect("trigger controls node");
+        let content_node = snap
+            .nodes
+            .iter()
+            .find(|n| n.id == content_id)
+            .expect("content semantics node");
+
+        assert_eq!(
+            content_node.role,
+            fret_core::SemanticsRole::Region,
+            "expected accordion content to surface as role=region"
+        );
+        assert!(
+            content_node.labelled_by.contains(&trigger_node.id),
+            "expected accordion content to be labelled_by its trigger"
+        );
+    }
+
+    #[test]
+    fn accordion_trigger_open_non_collapsible_is_aria_disabled() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let open = app
+            .models_mut()
+            .insert::<Option<Arc<str>>>(Some(Arc::from("item-1")));
+        let mut services = FakeServices;
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(800.0), Px(600.0)),
+        );
+
+        for _ in 0..4 {
+            render_accordion_frame_with_semantics(
+                &mut ui,
+                &mut app,
+                &mut services,
+                window,
+                bounds,
+                open.clone(),
+                false,
+            );
+        }
+
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let trigger_node = snap
+            .nodes
+            .iter()
+            .find(|n| {
+                n.role == fret_core::SemanticsRole::Button && n.label.as_deref() == Some("item-1")
+            })
+            .expect("trigger semantics node");
+
+        assert!(
+            trigger_node.flags.disabled,
+            "expected open non-collapsible trigger to be disabled for assistive tech (aria-disabled)"
+        );
+        assert!(
+            !trigger_node.actions.invoke,
+            "expected open non-collapsible trigger to suppress the click/invoke action"
+        );
+    }
+
+    #[test]
     fn accordion_trigger_controls_resolves_to_content_when_open_composable() {
         let window = AppWindowId::default();
         let mut app = App::new();
@@ -2947,6 +3204,111 @@ mod tests {
                 .iter()
                 .any(|id| snap.nodes.iter().any(|n| n.id == *id)),
             "expected trigger controls relationship to resolve when content is mounted"
+        );
+    }
+
+    #[test]
+    fn accordion_content_is_region_and_labelled_by_trigger_when_open_composable() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let open = app
+            .models_mut()
+            .insert::<Option<Arc<str>>>(Some(Arc::from("item-1")));
+        let mut services = FakeServices;
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(800.0), Px(600.0)),
+        );
+
+        for _ in 0..4 {
+            render_accordion_frame_composable_with_semantics(
+                &mut ui,
+                &mut app,
+                &mut services,
+                window,
+                bounds,
+                open.clone(),
+                true,
+            );
+        }
+
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let trigger_node = snap
+            .nodes
+            .iter()
+            .find(|n| {
+                n.role == fret_core::SemanticsRole::Button && n.label.as_deref() == Some("item-1")
+            })
+            .expect("trigger semantics node");
+
+        let content_id = *trigger_node
+            .controls
+            .first()
+            .expect("trigger controls node");
+        let content_node = snap
+            .nodes
+            .iter()
+            .find(|n| n.id == content_id)
+            .expect("content semantics node");
+
+        assert_eq!(
+            content_node.role,
+            fret_core::SemanticsRole::Region,
+            "expected accordion content to surface as role=region"
+        );
+        assert!(
+            content_node.labelled_by.contains(&trigger_node.id),
+            "expected accordion content to be labelled_by its trigger"
+        );
+    }
+
+    #[test]
+    fn accordion_trigger_open_non_collapsible_is_aria_disabled_composable() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+        let mut ui: UiTree<App> = UiTree::new();
+        ui.set_window(window);
+
+        let open = app
+            .models_mut()
+            .insert::<Option<Arc<str>>>(Some(Arc::from("item-1")));
+        let mut services = FakeServices;
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(800.0), Px(600.0)),
+        );
+
+        for _ in 0..4 {
+            render_accordion_frame_composable_with_semantics(
+                &mut ui,
+                &mut app,
+                &mut services,
+                window,
+                bounds,
+                open.clone(),
+                false,
+            );
+        }
+
+        let snap = ui.semantics_snapshot().expect("semantics snapshot");
+        let trigger_node = snap
+            .nodes
+            .iter()
+            .find(|n| {
+                n.role == fret_core::SemanticsRole::Button && n.label.as_deref() == Some("item-1")
+            })
+            .expect("trigger semantics node");
+
+        assert!(
+            trigger_node.flags.disabled,
+            "expected open non-collapsible trigger to be disabled for assistive tech (aria-disabled)"
+        );
+        assert!(
+            !trigger_node.actions.invoke,
+            "expected open non-collapsible trigger to suppress the click/invoke action"
         );
     }
 

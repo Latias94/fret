@@ -22,18 +22,15 @@ pub(super) fn preview_pagination(cx: &mut ElementContext<'_, App>) -> Vec<AnyEle
         Some("Preview follows shadcn Pagination demo: Previous, numbered links, ellipsis, Next."),
         vec![
             DocSection::new("Demo", demo)
-                .max_w(Px(760.0))
                 .test_id_prefix("ui-gallery-pagination-demo")
                 .code_rust_from_file_region(snippets::demo::SOURCE, "example"),
             DocSection::new("RTL", rtl)
-                .max_w(Px(760.0))
                 .test_id_prefix("ui-gallery-pagination-rtl")
                 .code_rust_from_file_region(snippets::rtl::SOURCE, "example"),
             DocSection::new("Extras", extras)
-                .max_w(Px(980.0))
                 .test_id_prefix("ui-gallery-pagination-extras")
                 .code_rust_from_file_region(snippets::extras::SOURCE, "example"),
-            DocSection::new("Notes", notes).max_w(Px(820.0)),
+            DocSection::new("Notes", notes),
         ],
     );
 

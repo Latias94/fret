@@ -94,6 +94,17 @@
       "type": "wait_until"
     },
     {
+      "predicate": {
+        "kind": "exists",
+        "target": {
+          "id": "ui-gallery-data-table-basic-root",
+          "kind": "test_id"
+        }
+      },
+      "timeout_frames": 240,
+      "type": "wait_until"
+    },
+    {
       "container": {
         "id": "ui-gallery-content-scroll",
         "kind": "test_id"

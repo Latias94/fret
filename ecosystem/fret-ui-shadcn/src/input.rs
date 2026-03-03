@@ -369,9 +369,6 @@ fn input_with_style_and_submit<H: UiHost>(
             border: Some("input"),
             border_focus: Some("ring"),
             fg: Some("foreground"),
-            // shadcn/ui v4 `Input` uses `selection:bg-primary selection:text-primary-foreground`.
-            // We currently model the background color only.
-            selection: Some("primary"),
             ..InputTokenKeys::none()
         },
     );
@@ -599,7 +596,7 @@ mod tests {
     use fret_ui_kit::primitives::control_registry::ControlId;
 
     #[test]
-    fn input_selection_color_uses_primary_in_shadcn_light_theme() {
+    fn input_selection_color_uses_selection_background_in_shadcn_light_theme() {
         let mut app = fret_app::App::new();
         crate::shadcn_themes::apply_shadcn_new_york(
             &mut app,
@@ -608,7 +605,7 @@ mod tests {
         );
 
         let theme = Theme::global(&app);
-        let expected = theme.color_token("primary");
+        let expected = theme.color_token("selection.background");
 
         let resolved = resolve_input_chrome(
             theme,
@@ -619,7 +616,6 @@ mod tests {
                 border: Some("input"),
                 border_focus: Some("ring"),
                 fg: Some("foreground"),
-                selection: Some("primary"),
                 ..InputTokenKeys::none()
             },
         );

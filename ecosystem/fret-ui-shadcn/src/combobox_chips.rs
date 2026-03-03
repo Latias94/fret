@@ -25,7 +25,7 @@ use fret_ui_kit::{
 
 use crate::combobox::{
     ComboboxChipsInput, ComboboxContent, ComboboxContentPart, ComboboxGroup, ComboboxItem,
-    ComboboxOpenChangeReason, ComboboxStyle, ComboboxValue, combobox_group_items,
+    ComboboxOpenChangeReason, ComboboxStyle, ComboboxTrigger, ComboboxValue, combobox_group_items,
 };
 use crate::command::CommandPaletteA11ySelectedMode;
 use crate::test_id::test_id_slug;
@@ -39,6 +39,7 @@ use crate::{
 pub enum ComboboxChipsPart {
     Value(ComboboxValue),
     ChipsInput(ComboboxChipsInput),
+    Trigger(ComboboxTrigger),
     Content(ComboboxContent),
 }
 
@@ -51,6 +52,12 @@ impl From<ComboboxValue> for ComboboxChipsPart {
 impl From<ComboboxChipsInput> for ComboboxChipsPart {
     fn from(value: ComboboxChipsInput) -> Self {
         Self::ChipsInput(value)
+    }
+}
+
+impl From<ComboboxTrigger> for ComboboxChipsPart {
+    fn from(value: ComboboxTrigger) -> Self {
+        Self::Trigger(value)
     }
 }
 
@@ -178,21 +185,6 @@ impl ComboboxChips {
         self
     }
 
-    pub fn width(mut self, width: Px) -> Self {
-        self.width = Some(width);
-        self
-    }
-
-    pub fn placeholder(mut self, placeholder: impl Into<Arc<str>>) -> Self {
-        self.placeholder = placeholder.into();
-        self
-    }
-
-    pub fn search_placeholder(mut self, placeholder: impl Into<Arc<str>>) -> Self {
-        self.search_placeholder = placeholder.into();
-        self
-    }
-
     pub fn empty_text(mut self, text: impl Into<Arc<str>>) -> Self {
         self.empty_text = text.into();
         self
@@ -313,10 +305,18 @@ fn apply_parts_patch_to_chips(chips: &mut ComboboxChips, parts: Vec<ComboboxChip
             }
             ComboboxChipsPart::ChipsInput(input) => {
                 if let Some(placeholder) = input.placeholder {
-                    // In Base UI, chips input is the editable surface used to filter items.
-                    // Fret renders the filter input in the overlay, so we map the placeholder to
-                    // `search_placeholder` for the closest outcome.
+                    // In Base UI, chips input is the editable surface used to filter items and
+                    // renders the placeholder in-trigger when no chips are selected. Fret renders
+                    // chips + the selected label in the trigger and uses an overlay search input,
+                    // so we map the placeholder to both "trigger placeholder" and "search
+                    // placeholder" for the closest outcomes.
+                    chips.placeholder = placeholder.clone();
                     chips.search_placeholder = placeholder;
+                }
+            }
+            ComboboxChipsPart::Trigger(trigger) => {
+                if let Some(width) = trigger.width {
+                    chips.width = Some(width);
                 }
             }
             ComboboxChipsPart::Content(content) => {
@@ -388,6 +388,7 @@ mod tests {
             ],
         );
 
+        assert_eq!(chips.placeholder.as_ref(), "Add framework");
         assert_eq!(chips.search_placeholder.as_ref(), "Add framework");
         assert_eq!(chips.empty_text.as_ref(), "Nothing found.");
         assert!(!chips.chip_show_remove);
@@ -406,6 +407,21 @@ mod tests {
         );
         assert_eq!(chips.groups[0].items.len(), 1);
         assert_eq!(chips.groups[0].items[0].value.as_ref(), "b");
+    }
+
+    #[test]
+    fn combobox_chips_parts_patch_maps_trigger_width() {
+        let mut app = App::new();
+        let values = app.models_mut().insert(Vec::<Arc<str>>::new());
+        let open = app.models_mut().insert(false);
+        let mut chips = ComboboxChips::new(values, open);
+
+        apply_parts_patch_to_chips(
+            &mut chips,
+            vec![ComboboxTrigger::new().width_px(Px(320.0)).into()],
+        );
+
+        assert_eq!(chips.width, Some(Px(320.0)));
     }
 }
 

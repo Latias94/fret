@@ -1,5 +1,5 @@
 use anyhow::Context as _;
-use fret::prelude::MessageRouter;
+use fret::legacy::prelude::MessageRouter;
 use fret_app::{App, CommandId, Effect};
 use fret_core::{AppWindowId, Event, ImageColorSpace, Px, Rect, SvgFit, UiServices};
 use fret_launch::{

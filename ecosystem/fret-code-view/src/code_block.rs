@@ -13,7 +13,7 @@ use fret_ui::element::{
     AnyElement, ContainerProps, HoverRegionProps, InsetStyle, LayoutStyle, Length, OpacityProps,
     Overflow, PositionStyle, ScrollAxis, ScrollProps, ScrollbarAxis, ScrollbarProps,
     ScrollbarStyle, SelectableTextProps, SizeStyle, StackProps, StyledTextProps, TextInkOverflow,
-    TextProps, VirtualListKeyCacheMode, VirtualListOptions,
+    TextProps, VirtualListKeyCacheMode, VirtualListOptions, WheelRegionProps,
 };
 use fret_ui::scroll::{ScrollHandle, VirtualListScrollHandle};
 use fret_ui::{ElementContext, Theme, UiHost};
@@ -1339,7 +1339,21 @@ fn render_code_block_windowed_lines<H: UiHost + 'static>(
                 },
             );
 
-            out.push(scroll_x_and_bar);
+            // `windowed_lines` code blocks wrap the VirtualList inside a horizontal `Scroll` for X
+            // overflow. That `Scroll` can end up capturing wheel events, preventing the VirtualList
+            // from receiving vertical wheel deltas. A WheelRegion drives the VirtualList's shared
+            // scroll handle so vertical wheel scrolling always works.
+            let scroll_y_base_handle = scroll_y_handle.base_handle().clone();
+            let wheel_region = cx.wheel_region(
+                WheelRegionProps {
+                    layout: fill_layout(),
+                    axis: ScrollAxis::Y,
+                    scroll_target: Some(list_id),
+                    scroll_handle: scroll_y_base_handle,
+                },
+                |_cx| vec![scroll_x_and_bar],
+            );
+            out.push(wheel_region);
 
             if scrollbar_y_enabled {
                 let scrollbar_layout = LayoutStyle {

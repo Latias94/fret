@@ -1,4 +1,5 @@
 use std::sync::{Arc, Mutex};
+use std::time::Duration;
 
 use fret_core::Transform2D;
 use fret_core::{
@@ -20,6 +21,9 @@ use fret_ui::{ElementContext, GlobalElementId, Invalidation, Theme, ThemeSnapsho
 use fret_ui_kit::declarative::icon as decl_icon;
 use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
 use fret_ui_kit::declarative::style as decl_style;
+use fret_ui_kit::declarative::transition::{
+    drive_transition_with_durations_and_cubic_bezier, ticks_60hz_for_duration,
+};
 use fret_ui_kit::headless::safe_hover;
 use fret_ui_kit::primitives::direction as direction_prim;
 use fret_ui_kit::primitives::navigation_menu as radix_navigation_menu;
@@ -33,6 +37,33 @@ use fret_ui_kit::{
 };
 
 use crate::overlay_motion;
+
+fn drive_navigation_menu_trigger_chevron_motion<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    key: Arc<str>,
+    open: bool,
+) -> fret_ui_kit::headless::transition::TransitionOutput {
+    cx.keyed(("navigation-menu-trigger-chevron-motion", key), |cx| {
+        let theme_full = Theme::global(&*cx.app);
+        let duration = theme_full
+            .duration_ms_by_key("duration.shadcn.motion.navigation_menu.trigger_chevron")
+            .or_else(|| {
+                theme_full.duration_ms_by_key("duration.motion.navigation_menu.trigger_chevron")
+            })
+            .or_else(|| theme_full.duration_ms_by_key("duration.shadcn.motion.300"))
+            .map(|ms| Duration::from_millis(ms as u64))
+            .unwrap_or(Duration::from_millis(300));
+        let ticks = ticks_60hz_for_duration(duration);
+        let easing = theme_full
+            .easing_by_key("easing.shadcn.motion.navigation_menu.trigger_chevron")
+            .or_else(|| theme_full.easing_by_key("easing.motion.navigation_menu.trigger_chevron"))
+            .or_else(|| theme_full.easing_by_key("easing.shadcn.motion"))
+            .or_else(|| theme_full.easing_by_key("easing.motion.standard"))
+            .unwrap_or_else(|| overlay_motion::shadcn_motion_ease_bezier(cx));
+
+        drive_transition_with_durations_and_cubic_bezier(cx, open, ticks, ticks, easing)
+    })
+}
 
 fn alpha_mul(mut c: Color, mul: f32) -> Color {
     c.a = (c.a * mul).clamp(0.0, 1.0);
@@ -233,12 +264,6 @@ pub fn navigation_menu_trigger_style(_theme: &ThemeSnapshot) -> NavigationMenuTr
         chrome: ChromeRefinement::default(),
         layout: LayoutRefinement::default().h_px(Px(36.0)).flex_shrink_0(),
     }
-}
-
-/// Upstream shadcn/ui compat alias for copy/paste parity.
-#[allow(non_snake_case)]
-pub fn navigationMenuTriggerStyle(theme: &ThemeSnapshot) -> NavigationMenuTriggerStyle {
-    navigation_menu_trigger_style(theme)
 }
 
 fn nav_menu_viewport_bg(theme: &ThemeSnapshot) -> Color {
@@ -1554,7 +1579,12 @@ impl NavigationMenu {
                                             });
 
                                         let fg_ref_for_chevron = fg_ref.clone();
-                                        let chevron_rotation = if is_open { 180.0 } else { 0.0 };
+                                        let chevron_motion = drive_navigation_menu_trigger_chevron_motion(
+                                            cx,
+                                            item_value.clone(),
+                                            is_open,
+                                        );
+                                        let chevron_rotation = 180.0 * chevron_motion.progress;
                                         let chevron_size = Px(12.0); // Tailwind `size-3`
                                         let chevron_center =
                                             Point::new(Px(chevron_size.0 * 0.5), Px(chevron_size.0 * 0.5));
@@ -2363,6 +2393,88 @@ mod tests {
     fn bump_frame(app: &mut App) {
         app.set_tick_id(TickId(app.tick_id().0.saturating_add(1)));
         app.set_frame_id(FrameId(app.frame_id().0.saturating_add(1)));
+    }
+
+    #[test]
+    fn trigger_chevron_motion_advances_and_settles_like_a_300ms_transition() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+
+        let bounds = Rect::new(
+            Point::new(Px(0.0), Px(0.0)),
+            Size::new(Px(400.0), Px(240.0)),
+        );
+
+        app.set_tick_id(TickId(1));
+        app.set_frame_id(FrameId(1));
+        let closed = fret_ui::elements::with_element_cx(&mut app, window, bounds, "nav-menu", |cx| {
+            drive_navigation_menu_trigger_chevron_motion(cx, Arc::<str>::from("alpha"), false)
+        });
+        assert!(!closed.present);
+        assert_eq!(closed.progress, 0.0);
+        assert!(!closed.animating);
+
+        let expected_ticks = ticks_60hz_for_duration(Duration::from_millis(300));
+        let mut frames = 0u64;
+        let mut last_progress = 0.0f32;
+        loop {
+            frames += 1;
+            app.set_tick_id(TickId(1 + frames));
+            app.set_frame_id(FrameId(1 + frames));
+
+            let out = fret_ui::elements::with_element_cx(&mut app, window, bounds, "nav-menu", |cx| {
+                drive_navigation_menu_trigger_chevron_motion(cx, Arc::<str>::from("alpha"), true)
+            });
+
+            assert!(out.present, "expected chevron transition to be present while open=true");
+            assert!(
+                out.progress + 1e-6 >= last_progress,
+                "expected chevron progress to be monotonic (last={last_progress} now={})",
+                out.progress
+            );
+            last_progress = out.progress;
+
+            if !out.animating {
+                assert!(
+                    (out.progress - 1.0).abs() <= 1e-3,
+                    "expected chevron to settle at progress=1 (got {})",
+                    out.progress
+                );
+                break;
+            }
+
+            assert!(
+                frames <= expected_ticks + 12,
+                "expected chevron transition to settle near 300ms (ticks={expected_ticks}, frames={frames})"
+            );
+        }
+
+        // Closing should animate back toward 0 and settle deterministically.
+        let mut frames = 0u64;
+        loop {
+            frames += 1;
+            app.set_tick_id(TickId(10_000 + frames));
+            app.set_frame_id(FrameId(10_000 + frames));
+
+            let out = fret_ui::elements::with_element_cx(&mut app, window, bounds, "nav-menu", |cx| {
+                drive_navigation_menu_trigger_chevron_motion(cx, Arc::<str>::from("alpha"), false)
+            });
+
+            if !out.animating {
+                assert!(!out.present);
+                assert!(
+                    out.progress.abs() <= 1e-3,
+                    "expected chevron to settle at progress=0 (got {})",
+                    out.progress
+                );
+                break;
+            }
+
+            assert!(
+                frames <= expected_ticks + 12,
+                "expected chevron close transition to settle near 300ms (ticks={expected_ticks}, frames={frames})"
+            );
+        }
     }
 
     fn assert_align_start_for_desired_width(

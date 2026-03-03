@@ -221,6 +221,7 @@ impl<H: UiHost> Widget<H> for BoundTextArea {
         range: fret_runtime::Utf16Range,
         text: &str,
         marked: Option<fret_runtime::Utf16Range>,
+        selected: Option<fret_runtime::Utf16Range>,
     ) -> bool {
         let before = self.area.text.clone();
         let changed =
@@ -230,6 +231,7 @@ impl<H: UiHost> Widget<H> for BoundTextArea {
                 range,
                 text,
                 marked,
+                selected,
             );
         if changed && self.area.text != before {
             self.dirty_since_sync = true;

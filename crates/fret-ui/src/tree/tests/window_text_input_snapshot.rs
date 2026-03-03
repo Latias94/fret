@@ -47,6 +47,7 @@ fn paint_publishes_window_text_input_snapshot_for_focused_text_widget() {
                 selection_utf16: Some((1, 3)),
                 marked_utf16: Some((3, 5)),
                 ime_cursor_area: self.ime_cursor_area,
+                surrounding_text: None,
             })
         }
     }
@@ -144,6 +145,7 @@ fn snapshot_resets_when_focus_is_not_text_input() {
                 selection_utf16: Some((0, 1)),
                 marked_utf16: None,
                 ime_cursor_area: None,
+                surrounding_text: None,
             })
         }
     }
@@ -334,9 +336,16 @@ fn snapshot_reports_composed_utf16_ranges_for_mixed_script_text_during_ime_preed
     );
     assert_eq!(
         snapshot.selection_utf16,
-        Some((composed_utf16_len, composed_utf16_len))
+        Some((base_utf16_len, base_utf16_len + preedit_utf16_len))
     );
     assert!(snapshot.ime_cursor_area.is_some());
+    let surrounding = snapshot
+        .surrounding_text
+        .as_ref()
+        .expect("expected surrounding text snapshot");
+    assert_eq!(surrounding.text.as_ref(), base);
+    assert_eq!(surrounding.cursor, u32::try_from(base.len()).unwrap());
+    assert_eq!(surrounding.anchor, u32::try_from(base.len()).unwrap());
 }
 
 #[test]
@@ -395,7 +404,14 @@ fn snapshot_reports_composed_utf16_ranges_for_emoji_sequences_during_ime_preedit
     );
     assert_eq!(
         snapshot.selection_utf16,
-        Some((composed_utf16_len, composed_utf16_len))
+        Some((base_utf16_len, base_utf16_len + preedit_utf16_len))
     );
     assert!(snapshot.ime_cursor_area.is_some());
+    let surrounding = snapshot
+        .surrounding_text
+        .as_ref()
+        .expect("expected surrounding text snapshot");
+    assert_eq!(surrounding.text.as_ref(), base);
+    assert_eq!(surrounding.cursor, u32::try_from(base.len()).unwrap());
+    assert_eq!(surrounding.anchor, u32::try_from(base.len()).unwrap());
 }

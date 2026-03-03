@@ -1349,6 +1349,15 @@ fn ui_app_handle_event<S>(
     }
 
     #[cfg(feature = "diagnostics")]
+    if let Event::Timer { token } = event
+        && app.with_global_mut_untracked(UiDiagnosticsService::default, |svc, app| {
+            svc.maybe_handle_script_keepalive_timer_event(app, window, *token)
+        })
+    {
+        return;
+    }
+
+    #[cfg(feature = "diagnostics")]
     if crate::ui_diagnostics::maybe_consume_event(app, window, event) {
         return;
     }
@@ -2217,8 +2226,10 @@ fn ui_app_render<S>(
             app.push_effect(Effect::RequestAnimationFrame(window));
         }
 
+        let mut injected_any = false;
         UiDiagnosticsService::with_script_injection_scope(|| {
             for event in drive.events {
+                injected_any = true;
                 ui_app_handle_event(
                     driver,
                     WinitEventContext {
@@ -2231,6 +2242,56 @@ fn ui_app_render<S>(
                 );
             }
         });
+
+        // Scripted pointer steps often dispatch actions via `Effect::Command`. Flush those command
+        // effects eagerly so:
+        // - UI tree handlers run in the same render tick as the injected input, and
+        // - command dispatch diagnostics are available to scripted `wait_command_dispatch_trace`
+        //   without depending on runner-level effect timing.
+        if injected_any {
+            UiDiagnosticsService::with_script_injection_scope(|| {
+                const MAX_SCRIPT_COMMAND_FLUSH_ROUNDS: usize = 8;
+                let mut deferred_effects: Vec<Effect> = Vec::new();
+                for _ in 0..MAX_SCRIPT_COMMAND_FLUSH_ROUNDS {
+                    let effects = app.flush_effects();
+                    if effects.is_empty() {
+                        break;
+                    }
+
+                    let mut applied_any_command = false;
+                    for effect in effects {
+                        match effect {
+                            Effect::Command { window: w, command } => {
+                                if w.is_none() || w == Some(window) {
+                                    applied_any_command = true;
+                                    ui_app_handle_command(
+                                        driver,
+                                        WinitCommandContext {
+                                            app,
+                                            services,
+                                            window,
+                                            state,
+                                        },
+                                        command,
+                                    );
+                                } else {
+                                    deferred_effects.push(Effect::Command { window: w, command });
+                                }
+                            }
+                            other => deferred_effects.push(other),
+                        }
+                    }
+
+                    if !applied_any_command {
+                        break;
+                    }
+                }
+
+                for effect in deferred_effects {
+                    app.push_effect(effect);
+                }
+            });
+        }
 
         app.with_global_mut_untracked(UiDiagnosticsService::default, |svc, app| {
             let element_runtime = app.global::<fret_ui::elements::ElementRuntime>();

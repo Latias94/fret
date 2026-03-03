@@ -127,11 +127,11 @@
       "predicate": { "kind": "dock_drag_active_is", "active": true },
       "timeout_frames": 120
     },
-    { "type": "wait_frames", "n": 2 },
+    { "type": "wait_frames", "window": { "kind": "last_seen_other" }, "n": 2 },
 
     { "type": "raise_window", "window": { "kind": "first_seen" } },
     { "type": "wait_frames", "window": { "kind": "first_seen" }, "n": 2 },
-    { "type": "wait_frames", "n": 2 },
+    { "type": "wait_frames", "window": { "kind": "first_seen" }, "n": 2 },
     {
       "type": "move_pointer",
       "window": { "kind": "first_seen" },
@@ -151,16 +151,24 @@
       "timeout_frames": 240
     },
     { "type": "pointer_up", "window": { "kind": "first_seen" } },
+    { "type": "wait_until", "predicate": { "kind": "dock_drop_resolved_is_some", "some": true }, "timeout_frames": 240 },
+    { "type": "assert", "window": { "kind": "first_seen" }, "predicate": { "kind": "dock_drop_resolved_zone_is", "zone": "top" } },
     {
       "type": "wait_until",
       "predicate": { "kind": "dock_drag_active_is", "active": false },
       "timeout_frames": 240
     },
+    { "type": "capture_bundle", "label": "docking-arbitration-demo-multiwindow-chained-tearoff-two-tabs-merge-drop1" },
     { "type": "wait_frames", "n": 20 },
     {
       "type": "wait_until",
       "predicate": { "kind": "known_window_count_is", "n": 2 },
       "timeout_frames": 600
+    },
+    { "type": "wait_frames", "n": 2 },
+    {
+      "type": "capture_bundle",
+      "label": "docking-arbitration-demo-multiwindow-chained-tearoff-two-tabs-merge-after-close1"
     },
     {
       "type": "wait_until",
@@ -209,7 +217,7 @@
 
     { "type": "raise_window", "window": { "kind": "first_seen" } },
     { "type": "wait_frames", "window": { "kind": "first_seen" }, "n": 2 },
-    { "type": "wait_frames", "n": 2 },
+    { "type": "wait_frames", "window": { "kind": "first_seen" }, "n": 2 },
     {
       "type": "move_pointer",
       "window": { "kind": "first_seen" },
@@ -224,15 +232,23 @@
     { "type": "wait_frames", "n": 2 },
     { "type": "wait_until", "window": { "kind": "first_seen" }, "predicate": { "kind": "dock_drag_current_window_is", "window": { "kind": "first_seen" } }, "timeout_frames": 240 },
     { "type": "pointer_up", "window": { "kind": "first_seen" } },
+    { "type": "wait_until", "predicate": { "kind": "dock_drop_resolved_is_some", "some": true }, "timeout_frames": 240 },
+    { "type": "assert", "window": { "kind": "first_seen" }, "predicate": { "kind": "dock_drop_resolved_zone_is", "zone": "left" } },
     {
       "type": "wait_until",
       "predicate": { "kind": "dock_drag_active_is", "active": false },
       "timeout_frames": 240
     },
+    { "type": "capture_bundle", "label": "docking-arbitration-demo-multiwindow-chained-tearoff-two-tabs-merge-drop2" },
     {
       "type": "wait_until",
       "predicate": { "kind": "known_window_count_is", "n": 1 },
       "timeout_frames": 600
+    },
+    { "type": "wait_frames", "n": 2 },
+    {
+      "type": "capture_bundle",
+      "label": "docking-arbitration-demo-multiwindow-chained-tearoff-two-tabs-merge-after-close2"
     },
 
     {
@@ -268,8 +284,15 @@
       "window": { "kind": "first_seen" },
       "predicate": { "kind": "dock_graph_signature_contains", "needle": "floatings=[]" }
     },
+    {
+      "type": "assert",
+      "window": { "kind": "first_seen" },
+      "predicate": {
+        "kind": "dock_graph_signature_fingerprint64_is",
+        "fingerprint64": 7509174212363425732
+      }
+    },
 
-    { "type": "capture_bundle", "label": "docking-arbitration-demo-multiwindow-chained-tearoff-two-tabs-merge" },
-    { "type": "wait_frames", "n": 2 }
+    { "type": "capture_bundle", "label": "docking-arbitration-demo-multiwindow-chained-tearoff-two-tabs-merge" }
   ]
 }

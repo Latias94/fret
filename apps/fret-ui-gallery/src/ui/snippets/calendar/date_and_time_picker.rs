@@ -2,17 +2,17 @@ pub const SOURCE: &str = include_str!("date_and_time_picker.rs");
 
 // region: example
 use fret_core::Px;
-use fret_ui::Theme;
 use fret_ui_headless::calendar::CalendarMonth;
+use fret_ui_kit::declarative::stack;
 use fret_ui_shadcn::{self as shadcn, prelude::*};
 use time::Date;
 
 #[derive(Default)]
 struct Models {
+    open: Option<Model<bool>>,
     month: Option<Model<CalendarMonth>>,
     selected: Option<Model<Option<Date>>>,
-    from: Option<Model<String>>,
-    to: Option<Model<String>>,
+    time: Option<Model<String>>,
 }
 
 fn parse_iso_date_ymd(raw: &str) -> Option<Date> {
@@ -35,19 +35,33 @@ fn today_from_env_or_now() -> Date {
         .unwrap_or_else(|| time::OffsetDateTime::now_utc().date())
 }
 
+fn format_date_locale_short_en_us(date: Date) -> String {
+    let month = u8::from(date.month());
+    format!("{month}/{}/{}", date.day(), date.year())
+}
+
 pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
-    let (month, selected, from, to) = cx.with_state(Models::default, |st| {
+    let (open, month, selected, time_value) = cx.with_state(Models::default, |st| {
         (
+            st.open.clone(),
             st.month.clone(),
             st.selected.clone(),
-            st.from.clone(),
-            st.to.clone(),
+            st.time.clone(),
         )
     });
 
     let today = today_from_env_or_now();
     let time_date =
         time::Date::from_calendar_date(today.year(), today.month(), 12).expect("valid time date");
+
+    let open = match open {
+        Some(model) => model,
+        None => {
+            let model = cx.app.models_mut().insert(false);
+            cx.with_state(Models::default, |st| st.open = Some(model.clone()));
+            model
+        }
+    };
 
     let month = match month {
         Some(model) => model,
@@ -68,69 +82,86 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
             model
         }
     };
-    let from = match from {
+    let time_value = match time_value {
         Some(model) => model,
         None => {
             let model = cx.app.models_mut().insert(String::from("10:30:00"));
-            cx.with_state(Models::default, |st| st.from = Some(model.clone()));
-            model
-        }
-    };
-    let to = match to {
-        Some(model) => model,
-        None => {
-            let model = cx.app.models_mut().insert(String::from("12:30:00"));
-            cx.with_state(Models::default, |st| st.to = Some(model.clone()));
+            cx.with_state(Models::default, |st| st.time = Some(model.clone()));
             model
         }
     };
 
-    let theme = Theme::global(&*cx.app).snapshot();
-    let clock_fg = ColorRef::Color(theme.color_token("muted-foreground"));
-    let clock_icon = |cx: &mut ElementContext<'_, H>| {
-        shadcn::icon::icon_with(
-            cx,
-            IconId::new_static("lucide.clock-2"),
-            None,
-            Some(clock_fg.clone()),
-        )
-    };
+    let open_for_calendar = open.clone();
+    let selected_for_calendar = selected.clone();
 
-    let calendar = shadcn::Calendar::new(month, selected)
+    let button_text = cx
+        .app
+        .models()
+        .read(&selected, |v| *v)
+        .ok()
+        .flatten()
+        .map(format_date_locale_short_en_us)
+        .unwrap_or_else(|| String::from("Select date"));
+
+    let calendar = shadcn::Calendar::new(month, selected_for_calendar)
         .test_id_prefix("ui-gallery.calendar.time")
-        .refine_style(ChromeRefinement::default().p(Space::N0))
-        .into_element(cx);
+        .caption_layout(shadcn::CalendarCaptionLayout::Dropdown)
+        .close_on_select(open_for_calendar.clone())
+        .into_element(cx)
+        .test_id("ui-gallery.calendar.time.calendar");
 
-    let footer = shadcn::FieldGroup::new([
-        shadcn::Field::new([
-            shadcn::FieldLabel::new("Start Time").into_element(cx),
-            shadcn::InputGroup::new(from)
-                .a11y_label("Start Time")
-                .trailing([clock_icon(cx)])
-                .into_element(cx),
-        ])
-        .into_element(cx),
-        shadcn::Field::new([
-            shadcn::FieldLabel::new("End Time").into_element(cx),
-            shadcn::InputGroup::new(to)
-                .a11y_label("End Time")
-                .trailing([clock_icon(cx)])
-                .into_element(cx),
-        ])
-        .into_element(cx),
-    ])
-    .into_element(cx);
+    let popover = shadcn::Popover::new(open.clone())
+        .align(shadcn::PopoverAlign::Start)
+        .into_element(
+            cx,
+            move |cx| {
+                let trigger = shadcn::Button::new(button_text.clone())
+                    .variant(shadcn::ButtonVariant::Outline)
+                    .content_justify(fret_ui_kit::Justify::Between)
+                    .text_weight(fret_core::FontWeight::NORMAL)
+                    .trailing_icon(fret_icons::IconId::new_static("lucide.chevron-down"))
+                    .refine_layout(LayoutRefinement::default().w_px(Px(128.0)))
+                    .into_element(cx)
+                    .test_id("ui-gallery.calendar.time.date-trigger");
 
-    shadcn::Card::new(vec![
-        shadcn::CardContent::new(vec![calendar])
-            .size(shadcn::CardSize::Sm)
-            .into_element(cx),
-        shadcn::CardFooter::new(vec![footer])
-            .size(shadcn::CardSize::Sm)
-            .into_element(cx),
-    ])
-    .size(shadcn::CardSize::Sm)
-    .refine_layout(LayoutRefinement::default().min_w_0().max_w(Px(360.0)))
-    .into_element(cx)
+                shadcn::PopoverTrigger::new(trigger).into_element(cx)
+            },
+            move |cx| {
+                shadcn::PopoverContent::new([calendar])
+                    .refine_style(ChromeRefinement::default().p(Space::N0))
+                    .refine_layout(
+                        LayoutRefinement::default()
+                            .w(fret_ui_kit::LengthRefinement::Auto)
+                            .overflow_hidden(),
+                    )
+                    .into_element(cx)
+                    .test_id("ui-gallery.calendar.time.popover-content")
+            },
+        );
+
+    let date_column = stack::vstack(
+        cx,
+        stack::VStackProps::default().gap(Space::N3).items_start(),
+        |cx| vec![shadcn::FieldLabel::new("Date").into_element(cx), popover],
+    );
+
+    let time_column = stack::vstack(
+        cx,
+        stack::VStackProps::default().gap(Space::N3).items_start(),
+        |cx| {
+            vec![
+                shadcn::FieldLabel::new("Time").into_element(cx),
+                shadcn::InputGroup::new(time_value)
+                    .a11y_label("Time")
+                    .into_element(cx)
+                    .test_id("ui-gallery.calendar.time.time-input"),
+            ]
+        },
+    );
+
+    stack::hstack(cx, stack::HStackProps::default().gap(Space::N4), |_cx| {
+        vec![date_column, time_column]
+    })
+    .test_id("ui-gallery.calendar.time.picker")
 }
 // endregion: example

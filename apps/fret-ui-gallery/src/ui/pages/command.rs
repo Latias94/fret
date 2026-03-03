@@ -5,8 +5,6 @@ use crate::ui::snippets::command as snippets;
 
 pub(super) fn preview_command_palette(
     cx: &mut ElementContext<'_, App>,
-    _open: Model<bool>,
-    _query: Model<String>,
     last_action: Model<Arc<str>>,
 ) -> Vec<AnyElement> {
     let usage_palette = snippets::usage::render(cx, last_action.clone());
@@ -36,7 +34,7 @@ pub(super) fn preview_command_palette(
         ),
         vec![
             DocSection::new("Usage", usage_palette)
-                .max_w(Px(760.0))
+
                 .test_id_prefix("ui-gallery-command-usage")
                 .descriptions([
                     "This mirrors shadcn's docs structure (`Command` + `CommandInput` + `CommandList`) using Fret's `CommandPalette` recipe.",
@@ -44,7 +42,7 @@ pub(super) fn preview_command_palette(
                 ])
                 .code_rust_from_file_region(snippets::usage::SOURCE, "example"),
             DocSection::new("Demo", docs_demo_palette)
-                .max_w(Px(760.0))
+
                 .test_id_prefix("ui-gallery-command-docs-demo")
                 .descriptions([
                     "This aligns with the shadcn `command-demo` example (icons + disabled item + shortcuts).",
@@ -55,18 +53,18 @@ pub(super) fn preview_command_palette(
                     "example",
                 ),
             DocSection::new("Basic", basic_dialog)
-                .max_w(Px(760.0))
+
                 .test_id_prefix("ui-gallery-command-basic")
                 .code_rust_from_file_region(snippets::basic::SOURCE, "example"),
             DocSection::new("Shortcuts", shortcuts_section)
-                .max_w(Px(760.0))
+
                 .test_id_prefix("ui-gallery-command-shortcuts")
                 .code_rust_from_file_region(
                     snippets::shortcuts::SOURCE,
                     "example",
                 ),
             DocSection::new("Action-first (View runtime)", action_first_view_runtime)
-                .max_w(Px(760.0))
+
                 .test_id_prefix("ui-gallery-command-action-first-view-runtime")
                 .descriptions([
                     "This section demonstrates action-first authoring using the ecosystem view runtime (`View` + `ViewCx`).",
@@ -77,23 +75,23 @@ pub(super) fn preview_command_palette(
                     "example",
                 ),
             DocSection::new("Groups", groups_palette)
-                .max_w(Px(760.0))
+
                 .code_rust_from_file_region(
                     snippets::groups::SOURCE,
                     "example",
                 ),
             DocSection::new("Scrollable", scrollable_palette)
-                .max_w(Px(760.0))
+
                 .test_id_prefix("ui-gallery-command-scrollable")
                 .code_rust_from_file_region(
                     snippets::scrollable::SOURCE,
                     "example",
                 ),
             DocSection::new("RTL", rtl)
-                .max_w(Px(760.0))
+
                 .code_rust_from_file_region(snippets::rtl::SOURCE, "example"),
             DocSection::new("Loading", loading_palette)
-                .max_w(Px(760.0))
+
                 .test_id_prefix("ui-gallery-command-loading")
                 .descriptions([
                     "cmdk supports a non-selectable loading row inside the list (`Command.Loading`).",
@@ -103,7 +101,7 @@ pub(super) fn preview_command_palette(
                     snippets::loading::SOURCE,
                     "example",
                 ),
-            DocSection::new("Notes", notes_stack).max_w(Px(820.0)),
+            DocSection::new("Notes", notes_stack),
         ],
     );
 

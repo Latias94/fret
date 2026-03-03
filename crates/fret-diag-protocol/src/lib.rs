@@ -1276,6 +1276,71 @@ impl UiKeyModifiersV1 {
     }
 }
 
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum UiWindowDecorationsRequestV1 {
+    System,
+    None,
+    Server,
+    Client,
+}
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum UiTaskbarVisibilityV1 {
+    Show,
+    Hide,
+}
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum UiActivationPolicyV1 {
+    Activates,
+    NonActivating,
+}
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum UiWindowZLevelV1 {
+    Normal,
+    AlwaysOnTop,
+}
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum UiMousePolicyV1 {
+    Normal,
+    Passthrough,
+}
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum UiWindowBackgroundMaterialRequestV1 {
+    None,
+    SystemDefault,
+    Mica,
+    Acrylic,
+    Vibrancy,
+}
+
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+pub struct UiWindowStyleMatchV1 {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub decorations: Option<UiWindowDecorationsRequestV1>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub resizable: Option<bool>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub transparent: Option<bool>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub taskbar: Option<UiTaskbarVisibilityV1>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub activation: Option<UiActivationPolicyV1>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub z_level: Option<UiWindowZLevelV1>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub mouse: Option<UiMousePolicyV1>,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(tag = "kind", rename_all = "snake_case")]
 pub enum UiPredicateV1 {
@@ -1460,6 +1525,19 @@ pub enum UiPredicateV1 {
         #[serde(default)]
         eps_px: f32,
     },
+    /// True when the diagnostics runtime has a window-level IME surrounding text excerpt.
+    ///
+    /// Notes:
+    /// - This reads `WindowTextInputSnapshot.surrounding_text`.
+    /// - Offsets are UTF-8 byte offsets within the excerpt and should be on char boundaries.
+    ImeSurroundingTextIsSome {
+        is_some: bool,
+    },
+    /// True when the window-level IME surrounding text excerpt is present and internally valid.
+    ///
+    /// This is a coarse regression gate for platform text-input interop (winit `ImeSurroundingText`
+    /// constraints: max bytes, offsets within range, char boundaries).
+    ImeSurroundingTextValid,
     CheckedIsNone {
         target: UiSelectorV1,
     },
@@ -1650,6 +1728,22 @@ pub enum UiPredicateV1 {
     /// - `reliable`
     PlatformUiWindowHoverDetectionIs {
         quality: String,
+    },
+    /// True when the effective (clamped) OS window style for `window` matches the provided facets.
+    ///
+    /// This predicate is capability-gated and intended for non-pixel regression gates for utility
+    /// windows (frameless/transparent/always-on-top posture).
+    WindowStyleEffectiveIs {
+        window: UiWindowTargetV1,
+        style: UiWindowStyleMatchV1,
+    },
+    /// True when the effective (clamped) OS window background material for `window` matches `material`.
+    ///
+    /// This predicate is capability-gated and intended to gate deterministic degradation paths
+    /// when OS materials are unsupported.
+    WindowBackgroundMaterialEffectiveIs {
+        window: UiWindowTargetV1,
+        material: UiWindowBackgroundMaterialRequestV1,
     },
     /// True when the latest docking diagnostics report an active dock drag whose `current_window`
     /// matches `window`.
@@ -2468,6 +2562,16 @@ pub struct UiTextInputSnapshotV1 {
     pub marked_utf16: Option<(u32, u32)>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub ime_cursor_area: Option<UiRectV1>,
+    /// Optional IME surrounding text excerpt metadata (bytes).
+    ///
+    /// This is derived from `WindowTextInputSnapshot.surrounding_text` and is intended for
+    /// lightweight debugging without embedding potentially sensitive text contents in bundles.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub ime_surrounding_text_len_bytes: Option<u32>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub ime_surrounding_cursor_bytes: Option<u32>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub ime_surrounding_anchor_bytes: Option<u32>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -2539,8 +2643,23 @@ pub struct UiCommandDispatchTraceEntryV1 {
     pub source_kind: String,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub source_element: Option<u64>,
+    /// Best-effort stable selector attribution for pointer-triggered dispatch.
+    ///
+    /// This is intended to help scripted diagnostics answer:
+    /// “which `test_id` caused this command to dispatch?”
+    ///
+    /// Notes:
+    /// - This is a best-effort hint (additive). Tooling should fall back to correlating
+    ///   `source_element` with the semantics snapshot if needed.
+    /// - When available, this is usually populated from the hit-test trace recorded for the
+    ///   injected pointer step.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub source_test_id: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub handled_by_element: Option<u64>,
+    /// Best-effort stable selector attribution for the first widget that handled the command.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub handled_by_test_id: Option<String>,
     #[serde(default)]
     pub started_from_focus: bool,
     #[serde(default)]
@@ -2554,11 +2673,15 @@ pub struct UiCommandDispatchTraceQueryV1 {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub source_kind: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub source_test_id: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub handled: Option<bool>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub handled_by_scope: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub handled_by_driver: Option<bool>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub handled_by_test_id: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub started_from_focus: Option<bool>,
     #[serde(default, skip_serializing_if = "Option::is_none")]

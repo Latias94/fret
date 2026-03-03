@@ -16,7 +16,6 @@ pub(super) fn preview_ai_chat_demo(
         ),
         vec![
             DocSection::new("Chat Demo", demo)
-                .max_w(Px(820.0))
                 .test_id_prefix("ui-gallery-ai-chat-demo")
                 .code_rust_from_file_region(snippets::chat_demo::SOURCE, "example"),
         ],

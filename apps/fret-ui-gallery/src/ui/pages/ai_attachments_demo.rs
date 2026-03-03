@@ -14,7 +14,6 @@ pub(super) fn preview_ai_attachments_demo(
         Some("AI Elements are policy-level compositions built on top of lower-level primitives."),
         vec![
             DocSection::new("Attachments", demo)
-                .max_w(Px(820.0))
                 .test_id_prefix("ui-gallery-ai-attachments-demo")
                 .code_rust_from_file_region(snippets::attachments_demo::SOURCE, "example"),
         ],

@@ -568,6 +568,7 @@ pub(super) fn handle_drag_pointer_until_step(
                     svc.known_windows.as_slice(),
                     open_window_count,
                     app.global::<fret_runtime::PlatformCapabilities>(),
+                    app.global::<fret_runtime::RunnerWindowStyleDiagnosticsStore>(),
                     docking_diag,
                     workspace_diag,
                     dock_drag_runtime.as_ref(),

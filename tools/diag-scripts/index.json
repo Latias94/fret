@@ -93,6 +93,7 @@
         "cookbook-canvas-pan-zoom-basics"
       ],
       "tags": [
+        "actions",
         "canvas",
         "cookbook",
         "pan_zoom",
@@ -192,6 +193,7 @@
         "cookbook-effects-layer-basics"
       ],
       "tags": [
+        "actions",
         "cookbook",
         "effects",
         "effects_layer_basics",
@@ -324,8 +326,10 @@
         "cookbook-icons-and-assets-basics"
       ],
       "tags": [
+        "actions",
         "cookbook",
-        "cookbook.icons_and_assets_basics"
+        "cookbook.icons_and_assets_basics",
+        "smoke"
       ],
       "target_hints": [
         "Validates that icon + asset panels mount and that the reload epoch button is wired."
@@ -364,6 +368,7 @@
         "cookbook-markdown-and-code-basics"
       ],
       "tags": [
+        "actions",
         "code_view",
         "cookbook",
         "copy",
@@ -429,8 +434,8 @@
         "cookbook-simple-todo"
       ],
       "tags": [
+        "actions",
         "cookbook",
-        "mvu",
         "simple_todo",
         "smoke"
       ],
@@ -506,6 +511,7 @@
         "cookbook-virtual-list-basics"
       ],
       "tags": [
+        "actions",
         "cookbook",
         "reorder",
         "scroll",
@@ -1642,6 +1648,16 @@
       "target_hints": []
     },
     {
+      "id": "ui-gallery-accordion-extras-borders-card-screenshots",
+      "path": "tools/diag-scripts/ui-gallery/accordion/ui-gallery-accordion-extras-borders-card-screenshots.json",
+      "required_capabilities": [],
+      "suite_memberships": [
+        "ui-gallery-shadcn-conformance"
+      ],
+      "tags": [],
+      "target_hints": []
+    },
+    {
       "id": "ui-gallery-accordion-extras-rtl-trigger-non-overlap",
       "path": "tools/diag-scripts/ui-gallery/accordion/ui-gallery-accordion-extras-rtl-trigger-non-overlap.json",
       "required_capabilities": [],
@@ -1771,6 +1787,23 @@
       "target_hints": []
     },
     {
+      "id": "ui-gallery-breadcrumb-demo-ellipsis-dropdown",
+      "path": "tools/diag-scripts/ui-gallery/breadcrumb/ui-gallery-breadcrumb-demo-ellipsis-dropdown.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "ui-gallery-shadcn-conformance"
+      ],
+      "tags": [
+        "breadcrumb",
+        "dropdown_menu",
+        "shadcn",
+        "ui_gallery"
+      ],
+      "target_hints": []
+    },
+    {
       "id": "ui-gallery-breadcrumb-dot-separator-single-line",
       "path": "tools/diag-scripts/ui-gallery/breadcrumb/ui-gallery-breadcrumb-dot-separator-single-line.json",
       "required_capabilities": [],
@@ -1793,6 +1826,25 @@
         "breadcrumb",
         "link",
         "semantics",
+        "shadcn",
+        "ui_gallery"
+      ],
+      "target_hints": []
+    },
+    {
+      "id": "ui-gallery-breadcrumb-responsive-toggle",
+      "path": "tools/diag-scripts/ui-gallery/breadcrumb/ui-gallery-breadcrumb-responsive-toggle.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "ui-gallery-shadcn-conformance"
+      ],
+      "tags": [
+        "breadcrumb",
+        "drawer",
+        "dropdown_menu",
+        "responsive",
         "shadcn",
         "ui_gallery"
       ],
@@ -1867,6 +1919,25 @@
         "ui-gallery-shadcn-conformance"
       ],
       "tags": [],
+      "target_hints": []
+    },
+    {
+      "id": "ui-gallery-card-demo-screenshot",
+      "path": "tools/diag-scripts/ui-gallery/card/ui-gallery-card-demo-screenshot.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "ui-gallery-shadcn-conformance"
+      ],
+      "tags": [
+        "card",
+        "docs-parity",
+        "screenshot",
+        "shadcn",
+        "ui-gallery"
+      ],
       "target_hints": []
     },
     {
@@ -2984,6 +3055,25 @@
       "target_hints": []
     },
     {
+      "id": "ui-gallery-date-picker-docs-screenshots",
+      "path": "tools/diag-scripts/ui-gallery/date-picker/ui-gallery-date-picker-docs-screenshots.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "ui-gallery-date-picker"
+      ],
+      "tags": [
+        "date_picker",
+        "docs",
+        "screenshots",
+        "shadcn",
+        "ui_gallery"
+      ],
+      "target_hints": []
+    },
+    {
       "id": "ui-gallery-date-picker-dropdowns-mobile-drawer",
       "path": "tools/diag-scripts/ui-gallery/date-picker/ui-gallery-date-picker-dropdowns-mobile-drawer.json",
       "required_capabilities": [
@@ -4051,6 +4141,104 @@
       "target_hints": []
     },
     {
+      "id": "ui-gallery-scroll-area-nested-scroll-routing",
+      "path": "tools/diag-scripts/ui-gallery/scroll-area/ui-gallery-scroll-area-nested-scroll-routing.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "diag-hardening-smoke",
+        "ui-gallery-scroll-area"
+      ],
+      "tags": [
+        "nested_scroll",
+        "regression_pack",
+        "scroll",
+        "ui_gallery"
+      ],
+      "target_hints": []
+    },
+    {
+      "id": "ui-gallery-scroll-area-toggle-code-tabs",
+      "path": "tools/diag-scripts/ui-gallery/scroll-area/ui-gallery-scroll-area-toggle-code-tabs.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "ui-gallery-scroll-area"
+      ],
+      "tags": [
+        "regression_pack",
+        "scroll",
+        "ui_gallery"
+      ],
+      "target_hints": []
+    },
+    {
+      "id": "ui-gallery-scroll-area-wheel-scroll",
+      "path": "tools/diag-scripts/ui-gallery/scroll-area/ui-gallery-scroll-area-wheel-scroll.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "ui-gallery-scroll-area"
+      ],
+      "tags": [],
+      "target_hints": []
+    },
+    {
+      "id": "ui-gallery-scroll-area-wheel-torture",
+      "path": "tools/diag-scripts/ui-gallery/scroll-area/ui-gallery-scroll-area-wheel-torture.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "perf-ui-gallery-scroll-area"
+      ],
+      "tags": [
+        "perf",
+        "scroll",
+        "ui_gallery",
+        "wheel"
+      ],
+      "target_hints": []
+    },
+    {
+      "id": "ui-gallery-scrollbar-drag-baseline-content-growth",
+      "path": "tools/diag-scripts/ui-gallery/scroll-area/ui-gallery-scrollbar-drag-baseline-content-growth.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "ui-gallery-scroll-area"
+      ],
+      "tags": [
+        "regression_pack",
+        "scroll",
+        "scrollbar",
+        "ui_gallery"
+      ],
+      "target_hints": []
+    },
+    {
+      "id": "ui-gallery-scroll-into-view-padding-is-soft",
+      "path": "tools/diag-scripts/ui-gallery/card/ui-gallery-scroll-into-view-padding-is-soft.json",
+      "required_capabilities": [],
+      "suite_memberships": [
+        "ui-gallery-shadcn-conformance"
+      ],
+      "tags": [
+        "card",
+        "regression",
+        "scroll",
+        "scroll_into_view",
+        "ui-gallery"
+      ],
+      "target_hints": [
+        "Guards against ScrollIntoView treating padding as a hard visibility requirement, which can cause stuck loops at scroll boundaries."
+      ]
+    },
+    {
       "id": "ui-gallery-select-commit-and-label-update-bundle",
       "path": "tools/diag-scripts/ui-gallery/select/ui-gallery-select-commit-and-label-update-bundle.json",
       "required_capabilities": [
@@ -4120,6 +4308,20 @@
       "path": "tools/diag-scripts/ui-gallery/select/ui-gallery-select-open-jitter-click-stable-v2.json",
       "required_capabilities": [
         "diag.overlay_placement_trace",
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "ui-gallery-select"
+      ],
+      "tags": [],
+      "target_hints": []
+    },
+    {
+      "id": "ui-gallery-select-reopen-no-residue-screenshots",
+      "path": "tools/diag-scripts/ui-gallery/select/ui-gallery-select-reopen-no-residue-screenshots.json",
+      "required_capabilities": [
+        "diag.overlay_placement_trace",
+        "diag.screenshot_png",
         "diag.script_v2"
       ],
       "suite_memberships": [
@@ -4428,6 +4630,30 @@
       "target_hints": []
     },
     {
+      "id": "ui-gallery-tabs-demo-tab-text-centering-420",
+      "path": "tools/diag-scripts/ui-gallery/tabs/ui-gallery-tabs-demo-tab-text-centering-420.json",
+      "required_capabilities": [
+        "diag.screenshot_png",
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "ui-gallery-shadcn-conformance"
+      ],
+      "tags": [
+        "centering",
+        "screenshot",
+        "shadcn",
+        "tabs",
+        "text",
+        "ui_gallery"
+      ],
+      "target_hints": [
+        "Navigates to the Tabs page.",
+        "Sets window width=1280px to avoid sidebar clipping in the native gallery shell.",
+        "Captures a screenshot + bundle close to the Demo tab triggers for centering triage."
+      ]
+    },
+    {
       "id": "ui-gallery-tabs-wrap-and-baseline-screenshots",
       "path": "tools/diag-scripts/ui-gallery/text-wrap/ui-gallery-tabs-wrap-and-baseline-screenshots.json",
       "required_capabilities": [
@@ -4716,6 +4942,25 @@
       "target_hints": []
     },
     {
+      "id": "ui-gallery-virtual-list-wheel-torture",
+      "path": "tools/diag-scripts/ui-gallery/virtual-list/ui-gallery-virtual-list-wheel-torture.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "perf-ui-gallery-virtual-list",
+        "ui-gallery-virtual-list"
+      ],
+      "tags": [
+        "perf",
+        "scroll",
+        "ui_gallery",
+        "virtual_list",
+        "wheel"
+      ],
+      "target_hints": []
+    },
+    {
       "id": "ui-gallery-virtual-list-window-boundary-scroll",
       "path": "tools/diag-scripts/ui-gallery/virtual-list/ui-gallery-virtual-list-window-boundary-scroll.json",
       "required_capabilities": [],
@@ -4783,6 +5028,7 @@
       "id": "workspace-shell-demo-tab-close-button-closes-tab-smoke",
       "path": "tools/diag-scripts/workspace/shell-demo/workspace-shell-demo-tab-close-button-closes-tab-smoke.json",
       "required_capabilities": [
+        "diag.command_dispatch_trace",
         "diag.script_v2"
       ],
       "suite_memberships": [
@@ -4796,9 +5042,10 @@
         "workspace"
       ],
       "target_hints": [
-        "Activates doc-a-0 (pane A) so the close target is guaranteed to be in-view.",
-        "Waits for the close button on the active tab (pane A, doc-a-0).",
+        "Resets diagnostics so dispatch trace assertions are deterministic.",
+        "Activates doc-a-0 (pane A) so the close target is in-view.",
         "Clicks the close button.",
+        "Asserts a pointer-triggered command dispatch trace entry exists for the close command.",
         "Asserts the tab is removed from the UI tree."
       ]
     },
@@ -5187,10 +5434,7 @@
         "tabstrip",
         "workspace"
       ],
-      "target_hints": [
-        "Pins doc-a-0 via context menu, then drags it onto the pinned boundary to unpin.",
-        "Asserts the tab's .pinned anchor toggles off after the boundary drop."
-      ]
+      "target_hints": []
     },
     {
       "id": "workspace-shell-demo-tab-reorder-within-pinned-smoke",
@@ -5321,72 +5565,6 @@
         "Asserts initial pos_in_set for a known tab.",
         "Drags the first tab to the end and drops it.",
         "Asserts pos_in_set updates after the reorder."
-      ]
-    },
-    {
-      "id": "workspace-shell-demo-tab-close-others-keeps-pinned-smoke",
-      "path": "tools/diag-scripts/workspace/shell-demo/workspace-shell-demo-tab-close-others-keeps-pinned-smoke.json",
-      "required_capabilities": [
-        "diag.script_v2"
-      ],
-      "suite_memberships": [
-        "workspace-shell-demo"
-      ],
-      "tags": [
-        "close",
-        "gate",
-        "pinned",
-        "smoke",
-        "tabstrip",
-        "workspace"
-      ],
-      "target_hints": [
-        "Pins doc-a-0, then runs Close Other Tabs from doc-a-2's context menu.",
-        "Asserts the pinned tab is kept and only the active unpinned tab remains."
-      ]
-    },
-    {
-      "id": "workspace-shell-demo-tab-close-left-keeps-pinned-smoke",
-      "path": "tools/diag-scripts/workspace/shell-demo/workspace-shell-demo-tab-close-left-keeps-pinned-smoke.json",
-      "required_capabilities": [
-        "diag.script_v2"
-      ],
-      "suite_memberships": [
-        "workspace-shell-demo"
-      ],
-      "tags": [
-        "close",
-        "gate",
-        "pinned",
-        "smoke",
-        "tabstrip",
-        "workspace"
-      ],
-      "target_hints": [
-        "Pins doc-a-0, activates doc-a-2, then runs Close Tabs to the Left.",
-        "Asserts doc-a-1 is closed but the pinned tab is kept."
-      ]
-    },
-    {
-      "id": "workspace-shell-demo-tab-close-right-keeps-pinned-smoke",
-      "path": "tools/diag-scripts/workspace/shell-demo/workspace-shell-demo-tab-close-right-keeps-pinned-smoke.json",
-      "required_capabilities": [
-        "diag.script_v2"
-      ],
-      "suite_memberships": [
-        "workspace-shell-demo"
-      ],
-      "tags": [
-        "close",
-        "gate",
-        "pinned",
-        "smoke",
-        "tabstrip",
-        "workspace"
-      ],
-      "target_hints": [
-        "Pins doc-a-0, activates doc-a-1, then runs Close Tabs to the Right.",
-        "Asserts doc-a-2 is closed but the pinned tab is kept."
       ]
     }
   ]

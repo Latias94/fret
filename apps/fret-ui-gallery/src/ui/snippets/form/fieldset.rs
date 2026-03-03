@@ -1,15 +1,36 @@
 pub const SOURCE: &str = include_str!("fieldset.rs");
 
 // region: example
-use fret_app::App;
 use fret_ui_shadcn::{self as shadcn, prelude::*};
 
-pub fn render(
-    cx: &mut ElementContext<'_, App>,
-    text_input: Model<String>,
-    text_area: Model<String>,
-    max_w_md: LayoutRefinement,
-) -> AnyElement {
+#[derive(Default)]
+struct Models {
+    text_input: Option<Model<String>>,
+    text_area: Option<Model<String>>,
+}
+
+pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
+    let (text_input, text_area) = cx.with_state(Models::default, |st| {
+        (st.text_input.clone(), st.text_area.clone())
+    });
+    let (text_input, text_area) = match (text_input, text_area) {
+        (Some(text_input), Some(text_area)) => (text_input, text_area),
+        _ => {
+            let text_input = cx.app.models_mut().insert(String::new());
+            let text_area = cx.app.models_mut().insert(String::new());
+            cx.with_state(Models::default, |st| {
+                st.text_input = Some(text_input.clone());
+                st.text_area = Some(text_area.clone());
+            });
+            (text_input, text_area)
+        }
+    };
+
+    let max_w_md = LayoutRefinement::default()
+        .w_full()
+        .min_w_0()
+        .max_w(Px(520.0));
+
     shadcn::FieldSet::new([
         shadcn::FieldLegend::new("Profile").into_element(cx),
         shadcn::FieldDescription::new("Group related fields to keep structure explicit.")

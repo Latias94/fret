@@ -192,8 +192,8 @@ impl ComboboxChipsInput {
 /// recipe-level knobs (`trigger_variant`, `width`, etc.).
 #[derive(Debug, Default)]
 pub struct ComboboxTrigger {
-    variant: Option<ComboboxTriggerVariant>,
-    width: Option<Px>,
+    pub(crate) variant: Option<ComboboxTriggerVariant>,
+    pub(crate) width: Option<Px>,
 }
 
 impl ComboboxTrigger {
