@@ -1,6 +1,6 @@
 # Launcher + Utility Windows v1 — Milestones
 
-Status: In progress (M2)
+Status: In progress (M3)
 
 Milestones are landable checkpoints (each should be buildable + gated).
 
@@ -39,7 +39,7 @@ Exit criteria:
   - effective style predicates pass for the expected facets,
   - capability inference fails fast when required `diag.*` is missing.
 
-Status: In progress.
+Status: Completed (landed 2026-03-03).
 
 ## M3 — Desktop runner: transparent + background materials (best-effort)
 
@@ -47,16 +47,18 @@ Exit criteria:
 
 - Transparent composited window behavior is capability-gated and observable.
 - At least one OS material variant is implemented end-to-end (platform-specific).
-- Capabilities truthfully advertise supported material variants (no “always true”).
+- Capabilities truthfully advertise supported material variants (no "always true").
+
+Status: In progress.
 
 ## M4 — Observability hardened
 
 Exit criteria:
 
-- “effective/clamped window style/material” is visible in diagnostics/inspection for scripted repros.
+- "effective/clamped window style/material" is visible in diagnostics/inspection for scripted repros.
 - Basic regression gates exist (diag script predicates or stable snapshot checks).
 
 Notes:
 
-- v1 currently exposes “effective (post-clamp)” snapshots; requested/base snapshots and clamp
+- v1 currently exposes "effective (post-clamp)" snapshots; requested/base snapshots and clamp
   reasons are an M4 follow-up once platform behavior is stable.
