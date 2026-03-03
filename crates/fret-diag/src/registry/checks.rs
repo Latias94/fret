@@ -31,6 +31,7 @@ pub(crate) struct PostRunCheckContext<'a> {
 struct PostRunCheckEntry {
     #[allow(dead_code)]
     id: &'static str,
+    requires_bundle_artifact: bool,
     requires_screenshots: bool,
     should_run: fn(&RunChecks) -> bool,
     run: fn(PostRunCheckContext<'_>, &RunChecks) -> Result<(), String>,
@@ -51,6 +52,12 @@ impl CheckRegistry {
         self.post_run_checks
             .iter()
             .any(|entry| (entry.should_run)(checks))
+    }
+
+    pub(crate) fn wants_bundle_artifact(&self, checks: &RunChecks) -> bool {
+        self.post_run_checks
+            .iter()
+            .any(|entry| entry.requires_bundle_artifact && (entry.should_run)(checks))
     }
 
     pub(crate) fn wants_screenshots(&self, checks: &RunChecks) -> bool {
@@ -76,30 +83,35 @@ impl CheckRegistry {
 const BUILTIN_POST_RUN_CHECKS: &[PostRunCheckEntry] = &[
     PostRunCheckEntry {
         id: "gc_sweep_liveness",
+        requires_bundle_artifact: true,
         requires_screenshots: false,
         should_run: should_run_gc_sweep_liveness,
         run: run_gc_sweep_liveness,
     },
     PostRunCheckEntry {
         id: "notify_hotspot_file_max",
+        requires_bundle_artifact: true,
         requires_screenshots: false,
         should_run: should_run_notify_hotspot_file_max,
         run: run_notify_hotspot_file_max,
     },
     PostRunCheckEntry {
         id: "triage_hint_absent_codes",
+        requires_bundle_artifact: true,
         requires_screenshots: false,
         should_run: should_run_triage_hint_absent_codes,
         run: run_triage_hint_absent_codes,
     },
     PostRunCheckEntry {
         id: "pixels_changed_test_id",
+        requires_bundle_artifact: true,
         requires_screenshots: true,
         should_run: should_run_pixels_changed_test_id,
         run: run_pixels_changed_test_id,
     },
     PostRunCheckEntry {
         id: "pixels_unchanged_test_id",
+        requires_bundle_artifact: true,
         requires_screenshots: true,
         should_run: should_run_pixels_unchanged_test_id,
         run: run_pixels_unchanged_test_id,

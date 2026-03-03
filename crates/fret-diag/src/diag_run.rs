@@ -385,10 +385,10 @@ pub(crate) fn cmd_run(ctx: RunCmdContext) -> Result<(), String> {
         || pack_include_triage
         || pack_include_screenshots;
     let wants_post_run_bundle = wants_pack_zip || ensure_ai_packet;
-    let wants_registered_post_run_checks = crate::registry::checks::CheckRegistry::builtin()
-        .wants_post_run_checks(&checks_for_post_run);
-    let wants_post_run_checks = wants_registered_post_run_checks
-        || check_stale_paint_test_id.is_some()
+    let check_registry = crate::registry::checks::CheckRegistry::builtin();
+    let wants_registered_post_run_checks =
+        check_registry.wants_post_run_checks(&checks_for_post_run);
+    let wants_ad_hoc_post_run_checks = check_stale_paint_test_id.is_some()
         || check_stale_scene_test_id.is_some()
         || check_idle_no_paint_min.is_some()
         || check_ui_gallery_code_editor_torture_marker_present
@@ -470,6 +470,11 @@ pub(crate) fn cmd_run(ctx: RunCmdContext) -> Result<(), String> {
         || check_retained_vlist_attach_detach_max.is_some()
         || check_retained_vlist_keep_alive_reuse_min.is_some()
         || check_retained_vlist_keep_alive_budget.is_some();
+    let wants_post_run_checks = wants_registered_post_run_checks || wants_ad_hoc_post_run_checks;
+
+    let wants_bundle_artifact = wants_post_run_bundle
+        || wants_ad_hoc_post_run_checks
+        || check_registry.wants_bundle_artifact(&checks_for_post_run);
 
     let mut pack_defaults = (
         pack_include_root_artifacts,
@@ -538,7 +543,7 @@ pub(crate) fn cmd_run(ctx: RunCmdContext) -> Result<(), String> {
             &resolved_out_dir,
             &connected,
             script_json,
-            wants_post_run_checks || wants_pack_zip || ensure_ai_packet,
+            wants_bundle_artifact,
             trace_chrome,
             Some("diag-run"),
             None,
@@ -712,8 +717,7 @@ pub(crate) fn cmd_run(ctx: RunCmdContext) -> Result<(), String> {
         &resolved_exit_path,
         &fs_transport_cfg,
         pack_defaults.2
-            || crate::registry::checks::CheckRegistry::builtin()
-                .wants_screenshots(&checks_for_post_run)
+            || check_registry.wants_screenshots(&checks_for_post_run)
             || script_wants_screenshots,
         launch_write_bundle_json,
         timeout_ms,
@@ -776,7 +780,7 @@ pub(crate) fn cmd_run(ctx: RunCmdContext) -> Result<(), String> {
         &resolved_out_dir,
         &connected,
         script_json,
-        wants_post_run_bundle,
+        wants_bundle_artifact,
         trace_chrome,
         Some("diag-run"),
         None,
