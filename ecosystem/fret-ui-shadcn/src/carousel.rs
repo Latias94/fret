@@ -501,6 +501,68 @@ pub struct CarouselBreakpoint {
     pub patch: CarouselOptionsPatch,
 }
 
+#[derive(Debug, Clone, Copy)]
+pub struct CarouselSpaceBreakpoint {
+    pub min_width_px: Px,
+    pub value: Space,
+}
+
+fn resolve_space_breakpoints(
+    viewport_width_px: Px,
+    base: Space,
+    breakpoints: &[CarouselSpaceBreakpoint],
+) -> Space {
+    if viewport_width_px.0 <= 0.0 || breakpoints.is_empty() {
+        return base;
+    }
+
+    let mut value = base;
+    for bp in breakpoints {
+        if viewport_width_px.0 >= bp.min_width_px.0 {
+            value = bp.value;
+        }
+    }
+    value
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn resolve_space_breakpoints_returns_base_when_unmeasured() {
+        let base = Space::N2;
+        let out = resolve_space_breakpoints(
+            Px(0.0),
+            base,
+            &[CarouselSpaceBreakpoint {
+                min_width_px: Px(10.0),
+                value: Space::N4,
+            }],
+        );
+        assert_eq!(out, base);
+    }
+
+    #[test]
+    fn resolve_space_breakpoints_selects_last_matching_breakpoint() {
+        let out = resolve_space_breakpoints(
+            Px(320.0),
+            Space::N1,
+            &[
+                CarouselSpaceBreakpoint {
+                    min_width_px: Px(200.0),
+                    value: Space::N2,
+                },
+                CarouselSpaceBreakpoint {
+                    min_width_px: Px(300.0),
+                    value: Space::N4,
+                },
+            ],
+        );
+        assert_eq!(out, Space::N4);
+    }
+}
+
 fn resolve_breakpoint_options(
     base: CarouselOptions,
     view_width: Px,
@@ -737,7 +799,11 @@ pub struct Carousel {
     item_layout: LayoutRefinement,
     orientation: CarouselOrientation,
     track_start_neg_margin: Space,
+    track_start_neg_margin_viewport_breakpoints: Vec<CarouselSpaceBreakpoint>,
+    track_start_neg_margin_layout_breakpoints: Vec<CarouselSpaceBreakpoint>,
     item_padding_start: Space,
+    item_padding_start_viewport_breakpoints: Vec<CarouselSpaceBreakpoint>,
+    item_padding_start_layout_breakpoints: Vec<CarouselSpaceBreakpoint>,
     item_basis_main_px: Option<Px>,
     breakpoints: Vec<CarouselBreakpoint>,
     options: CarouselOptions,
@@ -1038,7 +1104,11 @@ impl Carousel {
             item_layout: LayoutRefinement::default(),
             orientation: CarouselOrientation::Horizontal,
             track_start_neg_margin: Space::N4,
+            track_start_neg_margin_viewport_breakpoints: Vec::new(),
+            track_start_neg_margin_layout_breakpoints: Vec::new(),
             item_padding_start: Space::N4,
+            item_padding_start_viewport_breakpoints: Vec::new(),
+            item_padding_start_layout_breakpoints: Vec::new(),
             item_basis_main_px: None,
             breakpoints: Vec::new(),
             options: CarouselOptions::default(),
@@ -1169,8 +1239,73 @@ impl Carousel {
         self
     }
 
+    /// Breakpoint-based track start negative margin patches for the **window viewport** width
+    /// (Tailwind `md:` / `lg:`).
+    ///
+    /// This matches shadcn's responsive `md:-ml-*` / `md:-mt-*` semantics on `CarouselContent`.
+    pub fn viewport_track_start_neg_margin_breakpoint(
+        mut self,
+        min_width_px: Px,
+        margin: Space,
+    ) -> Self {
+        self.track_start_neg_margin_viewport_breakpoints
+            .push(CarouselSpaceBreakpoint {
+                min_width_px,
+                value: margin,
+            });
+        self.track_start_neg_margin_viewport_breakpoints
+            .sort_by(|a, b| a.min_width_px.0.total_cmp(&b.min_width_px.0));
+        self
+    }
+
+    /// Breakpoint-based track start negative margin patches for the **carousel viewport** width
+    /// (container-query style).
+    pub fn track_start_neg_margin_breakpoint(mut self, min_width_px: Px, margin: Space) -> Self {
+        self.track_start_neg_margin_layout_breakpoints
+            .push(CarouselSpaceBreakpoint {
+                min_width_px,
+                value: margin,
+            });
+        self.track_start_neg_margin_layout_breakpoints
+            .sort_by(|a, b| a.min_width_px.0.total_cmp(&b.min_width_px.0));
+        self
+    }
+
     pub fn item_padding_start(mut self, padding: Space) -> Self {
         self.item_padding_start = padding;
+        self
+    }
+
+    /// Breakpoint-based default item start padding patches for the **window viewport** width
+    /// (Tailwind `md:` / `lg:`).
+    ///
+    /// This matches shadcn's responsive `md:pl-*` / `md:pt-*` semantics on `CarouselItem` when
+    /// the same value applies to all items.
+    pub fn viewport_item_padding_start_breakpoint(
+        mut self,
+        min_width_px: Px,
+        padding: Space,
+    ) -> Self {
+        self.item_padding_start_viewport_breakpoints
+            .push(CarouselSpaceBreakpoint {
+                min_width_px,
+                value: padding,
+            });
+        self.item_padding_start_viewport_breakpoints
+            .sort_by(|a, b| a.min_width_px.0.total_cmp(&b.min_width_px.0));
+        self
+    }
+
+    /// Breakpoint-based default item start padding patches for the **carousel viewport** width
+    /// (container-query style).
+    pub fn item_padding_start_breakpoint(mut self, min_width_px: Px, padding: Space) -> Self {
+        self.item_padding_start_layout_breakpoints
+            .push(CarouselSpaceBreakpoint {
+                min_width_px,
+                value: padding,
+            });
+        self.item_padding_start_layout_breakpoints
+            .sort_by(|a, b| a.min_width_px.0.total_cmp(&b.min_width_px.0));
         self
     }
 
@@ -1248,6 +1383,14 @@ impl Carousel {
         if let Some(margin) = track_start_neg_margin {
             this = this.track_start_neg_margin(margin);
         }
+        this.track_start_neg_margin_viewport_breakpoints
+            .extend(content.track_start_neg_margin_viewport_breakpoints);
+        this.track_start_neg_margin_viewport_breakpoints
+            .sort_by(|a, b| a.min_width_px.0.total_cmp(&b.min_width_px.0));
+        this.track_start_neg_margin_layout_breakpoints
+            .extend(content.track_start_neg_margin_layout_breakpoints);
+        this.track_start_neg_margin_layout_breakpoints
+            .sort_by(|a, b| a.min_width_px.0.total_cmp(&b.min_width_px.0));
 
         this.refine_viewport_layout(content.viewport_layout)
             .refine_track_layout(content.track_layout)
@@ -1357,6 +1500,8 @@ impl Carousel {
                     .merge(self.layout),
             );
 
+            let viewport_width_for_viewport_breakpoints =
+                cx.environment_viewport_width(Invalidation::Layout);
             let viewport_layout = decl_style::layout_style(
                 &theme,
                 LayoutRefinement::default()
@@ -1368,16 +1513,49 @@ impl Carousel {
             let track_layout = match orientation {
                 CarouselOrientation::Horizontal => LayoutRefinement::default()
                     .w_full()
-                    .ml_neg(self.track_start_neg_margin)
+                    .ml_neg({
+                        let space = resolve_space_breakpoints(
+                            viewport_width_for_viewport_breakpoints,
+                            self.track_start_neg_margin,
+                            &self.track_start_neg_margin_viewport_breakpoints,
+                        );
+                        resolve_space_breakpoints(
+                            view_width_for_breakpoints,
+                            space,
+                            &self.track_start_neg_margin_layout_breakpoints,
+                        )
+                    })
                     .merge(self.track_layout),
                 CarouselOrientation::Vertical => LayoutRefinement::default()
                     .w_full()
-                    .mt_neg(self.track_start_neg_margin)
+                    .mt_neg({
+                        let space = resolve_space_breakpoints(
+                            viewport_width_for_viewport_breakpoints,
+                            self.track_start_neg_margin,
+                            &self.track_start_neg_margin_viewport_breakpoints,
+                        );
+                        resolve_space_breakpoints(
+                            view_width_for_breakpoints,
+                            space,
+                            &self.track_start_neg_margin_layout_breakpoints,
+                        )
+                    })
                     .merge(self.track_layout),
             };
             let track_layout = decl_style::layout_style(&theme, track_layout);
 
-            let item_pad_default_space = self.item_padding_start;
+            let item_pad_default_space = {
+                let space = resolve_space_breakpoints(
+                    viewport_width_for_viewport_breakpoints,
+                    self.item_padding_start,
+                    &self.item_padding_start_viewport_breakpoints,
+                );
+                resolve_space_breakpoints(
+                    view_width_for_breakpoints,
+                    space,
+                    &self.item_padding_start_layout_breakpoints,
+                )
+            };
 
             let (track_direction, button_axis) = match orientation {
                 CarouselOrientation::Horizontal => {
@@ -2765,8 +2943,6 @@ impl Carousel {
                 Vec::new()
             };
             let loop_translates_for_items = loop_translates.clone();
-            let viewport_width_for_viewport_breakpoints =
-                cx.environment_viewport_width(Invalidation::Layout);
 
             let mut item_ids = Vec::with_capacity(items_len);
             let item_ids_ref = &mut item_ids;
@@ -2801,8 +2977,19 @@ impl Carousel {
                                 .and_then(|f| f.basis.as_ref())
                                 .is_some();
 
-                            let item_pad_space =
-                                item.padding_start.unwrap_or(item_pad_default_space);
+                            let item_pad_space = {
+                                let space = item.padding_start.unwrap_or(item_pad_default_space);
+                                let space = resolve_space_breakpoints(
+                                    viewport_width_for_viewport_breakpoints,
+                                    space,
+                                    &item.viewport_padding_start_breakpoints,
+                                );
+                                resolve_space_breakpoints(
+                                    viewport_width_for_item_breakpoints,
+                                    space,
+                                    &item.padding_start_breakpoints,
+                                )
+                            };
                             let item_pad = decl_style::space(&theme_for_items, item_pad_space);
 
                             let content = item.child;
@@ -4066,6 +4253,8 @@ pub struct CarouselContent {
     track_layout: LayoutRefinement,
     item_layout: LayoutRefinement,
     track_start_neg_margin: Option<Space>,
+    track_start_neg_margin_viewport_breakpoints: Vec<CarouselSpaceBreakpoint>,
+    track_start_neg_margin_layout_breakpoints: Vec<CarouselSpaceBreakpoint>,
 }
 
 impl CarouselContent {
@@ -4076,6 +4265,8 @@ impl CarouselContent {
             track_layout: LayoutRefinement::default(),
             item_layout: LayoutRefinement::default(),
             track_start_neg_margin: None,
+            track_start_neg_margin_viewport_breakpoints: Vec::new(),
+            track_start_neg_margin_layout_breakpoints: Vec::new(),
         }
     }
 
@@ -4101,6 +4292,58 @@ impl CarouselContent {
         self.track_start_neg_margin = Some(margin);
         self
     }
+
+    /// Breakpoint-based track start negative margin patches for the **window viewport** width
+    /// (Tailwind `md:` / `lg:`).
+    pub fn viewport_track_start_neg_margin_breakpoint(
+        mut self,
+        min_width_px: Px,
+        margin: Space,
+    ) -> Self {
+        self.track_start_neg_margin_viewport_breakpoints
+            .push(CarouselSpaceBreakpoint {
+                min_width_px,
+                value: margin,
+            });
+        self.track_start_neg_margin_viewport_breakpoints
+            .sort_by(|a, b| a.min_width_px.0.total_cmp(&b.min_width_px.0));
+        self
+    }
+
+    pub fn viewport_track_start_neg_margin_breakpoints(
+        mut self,
+        breakpoints: impl IntoIterator<Item = CarouselSpaceBreakpoint>,
+    ) -> Self {
+        self.track_start_neg_margin_viewport_breakpoints
+            .extend(breakpoints.into_iter().collect::<Vec<_>>());
+        self.track_start_neg_margin_viewport_breakpoints
+            .sort_by(|a, b| a.min_width_px.0.total_cmp(&b.min_width_px.0));
+        self
+    }
+
+    /// Breakpoint-based track start negative margin patches for the **carousel viewport** width
+    /// (container-query style).
+    pub fn track_start_neg_margin_breakpoint(mut self, min_width_px: Px, margin: Space) -> Self {
+        self.track_start_neg_margin_layout_breakpoints
+            .push(CarouselSpaceBreakpoint {
+                min_width_px,
+                value: margin,
+            });
+        self.track_start_neg_margin_layout_breakpoints
+            .sort_by(|a, b| a.min_width_px.0.total_cmp(&b.min_width_px.0));
+        self
+    }
+
+    pub fn track_start_neg_margin_breakpoints(
+        mut self,
+        breakpoints: impl IntoIterator<Item = CarouselSpaceBreakpoint>,
+    ) -> Self {
+        self.track_start_neg_margin_layout_breakpoints
+            .extend(breakpoints.into_iter().collect::<Vec<_>>());
+        self.track_start_neg_margin_layout_breakpoints
+            .sort_by(|a, b| a.min_width_px.0.total_cmp(&b.min_width_px.0));
+        self
+    }
 }
 
 /// shadcn/ui `CarouselItem` (v4).
@@ -4109,6 +4352,8 @@ pub struct CarouselItem {
     child: AnyElement,
     layout: LayoutRefinement,
     padding_start: Option<Space>,
+    viewport_padding_start_breakpoints: Vec<CarouselSpaceBreakpoint>,
+    padding_start_breakpoints: Vec<CarouselSpaceBreakpoint>,
     viewport_layout_breakpoints: Vec<CarouselItemLayoutBreakpoint>,
     layout_breakpoints: Vec<CarouselItemLayoutBreakpoint>,
 }
@@ -4119,6 +4364,8 @@ impl CarouselItem {
             child,
             layout: LayoutRefinement::default(),
             padding_start: None,
+            viewport_padding_start_breakpoints: Vec::new(),
+            padding_start_breakpoints: Vec::new(),
             viewport_layout_breakpoints: Vec::new(),
             layout_breakpoints: Vec::new(),
         }
@@ -4190,6 +4437,54 @@ impl CarouselItem {
     /// This is a convenience surface that maps to the recipe's start padding for each slide.
     pub fn padding_start(mut self, padding: Space) -> Self {
         self.padding_start = Some(padding);
+        self
+    }
+
+    /// Breakpoint-based item start padding patches for the **window viewport** width
+    /// (Tailwind `md:` / `lg:`).
+    pub fn viewport_padding_start_breakpoint(mut self, min_width_px: Px, padding: Space) -> Self {
+        self.viewport_padding_start_breakpoints
+            .push(CarouselSpaceBreakpoint {
+                min_width_px,
+                value: padding,
+            });
+        self.viewport_padding_start_breakpoints
+            .sort_by(|a, b| a.min_width_px.0.total_cmp(&b.min_width_px.0));
+        self
+    }
+
+    pub fn viewport_padding_start_breakpoints(
+        mut self,
+        breakpoints: impl IntoIterator<Item = CarouselSpaceBreakpoint>,
+    ) -> Self {
+        self.viewport_padding_start_breakpoints
+            .extend(breakpoints.into_iter().collect::<Vec<_>>());
+        self.viewport_padding_start_breakpoints
+            .sort_by(|a, b| a.min_width_px.0.total_cmp(&b.min_width_px.0));
+        self
+    }
+
+    /// Breakpoint-based item start padding patches for the **carousel viewport** width
+    /// (container-query style).
+    pub fn padding_start_breakpoint(mut self, min_width_px: Px, padding: Space) -> Self {
+        self.padding_start_breakpoints
+            .push(CarouselSpaceBreakpoint {
+                min_width_px,
+                value: padding,
+            });
+        self.padding_start_breakpoints
+            .sort_by(|a, b| a.min_width_px.0.total_cmp(&b.min_width_px.0));
+        self
+    }
+
+    pub fn padding_start_breakpoints(
+        mut self,
+        breakpoints: impl IntoIterator<Item = CarouselSpaceBreakpoint>,
+    ) -> Self {
+        self.padding_start_breakpoints
+            .extend(breakpoints.into_iter().collect::<Vec<_>>());
+        self.padding_start_breakpoints
+            .sort_by(|a, b| a.min_width_px.0.total_cmp(&b.min_width_px.0));
         self
     }
 }
