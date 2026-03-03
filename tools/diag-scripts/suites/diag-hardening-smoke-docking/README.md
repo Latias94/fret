@@ -14,3 +14,4 @@ Notes:
 - Requires desktop runners with `diag.multi_window` capability.
 - Some scripts rely on reliable window hover detection (`ui.window_hover_detection=Reliable`).
 - `diag suite` runs `diag lint` for captured bundles by default and fails on error-level findings.
+- Includes a multi-window “title bar” docking gate by starting a tabs-group drag on empty tab-bar space in a floating OS window.
