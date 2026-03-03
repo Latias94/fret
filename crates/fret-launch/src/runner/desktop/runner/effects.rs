@@ -1613,14 +1613,24 @@ impl<D: super::WinitAppDriver> WinitRunner<D> {
                             self.app.request_redraw(new_window);
                         }
                         WindowRequest::SetInnerSize { window, size } => {
-                            if let Some(state) = self.windows.get(window) {
-                                let _ = state.window.request_surface_size(
-                                    winit::dpi::LogicalSize::new(
-                                        size.width.0 as f64,
-                                        size.height.0 as f64,
-                                    )
-                                    .into(),
+                            if let Some(state) = self.windows.get_mut(window) {
+                                let requested = winit::dpi::LogicalSize::new(
+                                    size.width.0 as f64,
+                                    size.height.0 as f64,
                                 );
+                                let applied = state
+                                    .window
+                                    .request_surface_size(requested.into())
+                                    // Some platforms apply the resize without emitting a resize
+                                    // event *and* return `None` here. Fall back to querying the
+                                    // current surface size so scripted diagnostics still converge.
+                                    .unwrap_or_else(|| state.window.surface_size());
+
+                                // If the platform doesn't emit a resize event, queue the applied
+                                // size so the runner still reconfigures the surface and delivers
+                                // metrics updates on the next redraw (critical for scripted
+                                // diagnostics).
+                                state.pending_surface_resize = Some(applied);
                                 state.window.request_redraw();
                             }
                         }
