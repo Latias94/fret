@@ -19,7 +19,7 @@ This TODO is organized by milestones (see `MILESTONES.md`). Keep tasks **small a
 - [x] Migrate additional post-run checks to validate registry flexibility (`notify_hotspot_file_max`, `triage_hint_absent_codes`).
 - [x] Migrate `diag suite` promoted-suite resolution to `SuiteRegistry` (remove duplicate loading logic).
 - [x] Centralize builtin suite script resolution + env defaults in `resolve_builtin_suite_scripts` (reduce `diag_suite.rs` churn).
-- [ ] Split “artifact materialization + integrity” into one focused module boundary with stable APIs.
+- [x] Split “artifact materialization + integrity” into one focused module boundary with stable APIs (`artifact_store`).
 - [ ] Remove any remaining “global state by convention” patterns in favor of explicit context objects.
 
 ## M2 — Runtime extensibility (ecosystem contributions)

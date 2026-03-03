@@ -194,7 +194,7 @@ pub(crate) fn resolve_bundle_artifact_path(path: &Path) -> PathBuf {
         return root;
     }
 
-    match crate::run_artifacts::materialize_bundle_json_from_manifest_chunks_if_missing(path) {
+    match crate::artifact_store::materialize_bundle_json_from_manifest_chunks_if_missing(path) {
         Ok(Some(v2)) if v2.is_file() => {
             return v2;
         }
@@ -208,7 +208,7 @@ pub(crate) fn resolve_bundle_artifact_path(path: &Path) -> PathBuf {
     }
 
     if let Some(run_id) = crate::util::read_script_result_run_id(&path.join("script.result.json")) {
-        let run_id_dir = crate::run_artifacts::run_id_artifact_dir(path, run_id);
+        let run_id_dir = crate::artifact_store::run_id_artifact_dir(path, run_id);
         let run_id_schema2 = run_id_dir.join("bundle.schema2.json");
         if run_id_schema2.is_file() {
             return run_id_schema2;
@@ -218,7 +218,7 @@ pub(crate) fn resolve_bundle_artifact_path(path: &Path) -> PathBuf {
         if run_id_bundle.is_file() {
             return run_id_bundle;
         }
-        match crate::run_artifacts::materialize_run_id_bundle_json_from_chunks_if_missing(
+        match crate::artifact_store::materialize_run_id_bundle_json_from_chunks_if_missing(
             path, run_id,
         ) {
             Ok(Some(v2)) if v2.is_file() => {
@@ -227,7 +227,7 @@ pub(crate) fn resolve_bundle_artifact_path(path: &Path) -> PathBuf {
             Ok(_) => {}
             Err(err) => {
                 record_tooling_artifact_integrity_failure_for_dir(
-                    &crate::run_artifacts::run_id_artifact_dir(path, run_id),
+                    &crate::artifact_store::run_id_artifact_dir(path, run_id),
                     &format!("failed to materialize raw bundle.json from chunks: {err}"),
                 );
             }
@@ -356,7 +356,7 @@ pub(crate) fn wait_for_bundle_artifact_from_script_result(
 
     let deadline = Instant::now() + Duration::from_millis(timeout_ms.clamp(250, 5_000));
     while Instant::now() < deadline {
-        let run_id_dir = crate::run_artifacts::run_id_artifact_dir(out_dir, result.run_id);
+        let run_id_dir = crate::artifact_store::run_id_artifact_dir(out_dir, result.run_id);
         let run_id_schema2 = run_id_dir.join("bundle.schema2.json");
         if run_id_schema2.is_file() {
             return Some(run_id_schema2);

@@ -22,6 +22,7 @@ use fret_diag_protocol::{
 
 pub mod api;
 mod artifact_lint;
+mod artifact_store;
 pub mod artifacts;
 mod bundle_index;
 mod cli;
@@ -95,6 +96,7 @@ pub(crate) use paths::{
     wait_for_bundle_artifact_in_dir,
 };
 
+use artifact_store::{RunArtifactStore, run_id_artifact_dir};
 use compare::{
     CompareOptions, CompareReport, PerfThresholdAggregate, PerfThresholds, RenderdocDumpAttempt,
     apply_perf_baseline_floor, apply_perf_baseline_headroom, cargo_run_inject_feature,
@@ -110,10 +112,6 @@ use gates::{
 };
 use lint::{LintOptions, lint_bundle_from_path};
 use perf_seed_policy::{PerfBaselineSeed, PerfSeedMetric, ResolvedPerfBaselineSeedPolicy};
-use run_artifacts::{
-    refresh_run_id_manifest_file_index, run_id_artifact_dir, write_run_id_bundle_json,
-    write_run_id_script_result,
-};
 
 use stats::{
     BundleStatsOptions, BundleStatsReport, BundleStatsSort, ScriptResultSummary,
@@ -4086,7 +4084,7 @@ fn run_script_over_transport(
                 script_result_path,
                 &serde_json::to_value(&parsed).unwrap_or_else(|_| serde_json::json!({})),
             );
-            write_run_id_script_result(out_dir, parsed.run_id, &parsed);
+            RunArtifactStore::new(out_dir, parsed.run_id).write_script_result(&parsed);
 
             if matches!(
                 parsed.stage,
@@ -4191,9 +4189,10 @@ fn run_script_over_transport(
                 return Err(err);
             }
         };
-        write_run_id_bundle_json(out_dir, result.run_id, &bundle_path);
+        let run_artifacts = RunArtifactStore::new(out_dir, result.run_id);
+        run_artifacts.write_bundle_artifact(&bundle_path);
         if trace_chrome {
-            let run_dir = run_id_artifact_dir(out_dir, result.run_id);
+            let run_dir = run_artifacts.run_dir();
             let stable_bundle_path = crate::resolve_bundle_artifact_path(&run_dir);
             let src = if stable_bundle_path.is_file() {
                 stable_bundle_path
@@ -4204,7 +4203,7 @@ fn run_script_over_transport(
             if let Err(err) = crate::trace::write_chrome_trace_from_bundle_path(&src, &trace_path) {
                 push_tooling_event_log_entry(&mut result, "tooling_trace_chrome_failed", Some(err));
             } else {
-                refresh_run_id_manifest_file_index(out_dir, result.run_id);
+                run_artifacts.refresh_manifest_file_index();
             }
         }
         result.last_bundle_dir = Some(devtools_sanitize_export_dir_name(&dumped.dir));

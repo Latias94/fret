@@ -4,7 +4,7 @@ use fret_diag_protocol::{
     UiScriptEventLogEntryV1, UiScriptEvidenceV1, UiScriptResultV1, UiScriptStageV1,
 };
 
-use crate::run_artifacts::write_run_id_script_result;
+use crate::artifact_store::RunArtifactStore;
 use crate::util::{now_unix_ms, read_json_value, write_json_value};
 
 fn script_result_has_stable_reason_code(script_result_path: &Path) -> bool {
@@ -116,7 +116,7 @@ pub(crate) fn mark_existing_script_result_tooling_failure(
             script_result_path,
             &serde_json::to_value(&parsed).unwrap_or_else(|_| serde_json::json!({})),
         );
-        write_run_id_script_result(out_dir, parsed.run_id, &parsed);
+        RunArtifactStore::new(out_dir, parsed.run_id).write_script_result(&parsed);
         return;
     }
 
