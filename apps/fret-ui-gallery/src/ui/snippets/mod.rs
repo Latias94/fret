@@ -42,6 +42,7 @@ pub mod input_otp;
 pub mod item;
 pub mod kbd;
 pub mod label;
+#[cfg(feature = "gallery-material3")]
 pub mod material3;
 pub mod menubar;
 pub mod motion_presets;

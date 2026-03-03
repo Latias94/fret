@@ -14,6 +14,9 @@ default-run = "fret-ui-gallery"
 [features]
 default = []
 devtools-ws = ["fret-bootstrap/diagnostics-ws"]
+gallery-dev = []
+gallery-material3 = ["dep:fret-ui-material3"]
+gallery-full = ["gallery-dev", "gallery-material3"]
 
 [dependencies]
 anyhow.workspace = true
@@ -29,7 +32,7 @@ fret-ui-assets = { path = "../../ecosystem/fret-ui-assets", features = ["ui", "i
 fret-ui-ai = { path = "../../ecosystem/fret-ui-ai" }
 fret-ui-magic = { path = "../../ecosystem/fret-ui-magic", features = ["app-integration"] }
 fret-ui-shadcn = { path = "../../ecosystem/fret-ui-shadcn" }
-fret-ui-material3 = { path = "../../ecosystem/fret-ui-material3" }
+fret-ui-material3 = { path = "../../ecosystem/fret-ui-material3", optional = true }
 fret-icons = { path = "../../ecosystem/fret-icons" }
 fret-icons-lucide = { path = "../../ecosystem/fret-icons-lucide" }
 fret-code-editor-view = { path = "../../ecosystem/fret-code-editor-view" }

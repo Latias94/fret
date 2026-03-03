@@ -35,6 +35,7 @@ use fret_ui_ai as ui_ai;
 use fret_ui_kit::declarative::CachedSubtreeExt as _;
 pub(super) use fret_ui_kit::declarative::ElementContextThemeExt;
 use fret_ui_kit::ui;
+#[cfg(feature = "gallery-material3")]
 use fret_ui_material3 as material3;
 use fret_ui_shadcn::{self as shadcn, prelude::*};
 use std::cell::{Cell, RefCell};

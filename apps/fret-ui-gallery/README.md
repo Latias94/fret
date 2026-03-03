@@ -2,6 +2,14 @@
 
 Native + web gallery app for validating `fret-ui-shadcn` component behavior.
 
+## Features
+
+By default the gallery only exposes a small set of Core pages + the Shadcn component set.
+
+- `gallery-dev`: shows internal harness/debug pages (perf torture pages, AI/Magic spikes, etc).
+- `gallery-material3`: enables Material 3 pages (pulls in optional `fret-ui-material3`).
+- `gallery-full`: enables everything (`gallery-dev` + `gallery-material3`).
+
 ## Authoring Notes
 
 - Prefer ecosystem helpers for app/UI text: `fret_ui_kit::ui::{label, text, text_block}`.
@@ -13,6 +21,9 @@ Native + web gallery app for validating `fret-ui-shadcn` component behavior.
 
 Optional:
 
+- Enable internal pages: `cargo run -p fret-ui-gallery --features gallery-dev`
+- Enable Material 3 pages: `cargo run -p fret-ui-gallery --features gallery-material3`
+- Enable all pages: `cargo run -p fret-ui-gallery --features gallery-full`
 - Start on a specific page: `FRET_UI_GALLERY_START_PAGE=data_table`
 - Enable bisect flags: `FRET_UI_GALLERY_BISECT=<u32>`
 
