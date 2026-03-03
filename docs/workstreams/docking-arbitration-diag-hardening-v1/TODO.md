@@ -27,6 +27,9 @@ with special focus on multi-window tear-off + drag-back sequences.
 - Ensure bundle-level evidence is sufficient without logs:
   - `debug.docking_interaction.dock_graph_signature` / `dock_graph_stats` should be present and up-to-date for all frames
     that matter to gates (either by recording every frame, or by an explicit “latest snapshot” contract).
+- Make shutdown failures unambiguous in artifacts:
+  - require `resource.footprint.json` for `--launch` runs,
+  - treat `killed=true` as a “not clean” run that should be investigated (exit trigger not observed / deadlock).
 - “Diag resilience” policy: scripted repros should not be terminated by debug-only internal assertions (e.g. focus
   snapshot invariants) when a safe downgrade is possible and preserves evidence.
   - Prefer fixing the root cause, but allow temporary non-fatal behavior in diag/harness paths if it keeps the repro

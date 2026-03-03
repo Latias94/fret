@@ -112,6 +112,21 @@ On native filesystem dumps, the runtime also writes bounded sidecars next to the
 
 These sidecars are intended to speed up CLI queries and AI triage without opening or grepping a full `bundle.json`.
 
+## Termination semantics (tool-launched runs)
+
+When using `--launch`, tooling requests the demo to exit by touching `exit.touch` in the session out dir.
+
+Tooling waits for a graceful exit (best effort). If the demo does not exit within a grace window, tooling will
+force-kill the process to avoid leaving orphaned demos behind.
+
+Tooling writes `resource.footprint.json` (in the same out dir) with a `killed: bool` field so you can distinguish:
+
+- the script **finished** (`script.result.json: stage=passed`) but the demo still needed to be killed (`killed=true`), vs
+- the script **never finished** (`script.result.json: stage=running` or missing) and the tool likely timed out or aborted.
+
+If `killed=true`, treat it as a diagnostics/runtime issue (e.g. exit trigger not observed, deadlock, no-frame stall) and
+prefer capturing a bounded failure bundle plus a stable `reason_code` so it can be triaged deterministically.
+
 Footgun / recommendation:
 
 - Avoid running `rg`/`grep` directly on `bundle.json` dumps (they can be huge and can easily explode your terminal output).

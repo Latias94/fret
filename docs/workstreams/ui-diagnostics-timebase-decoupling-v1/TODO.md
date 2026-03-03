@@ -16,6 +16,9 @@ P1:
   - force an occlusion/idle scenario,
   - verify `timeout.no_frames` appears (not a tooling timeout),
   - verify at least one bounded evidence bundle is captured.
+- Persist “shutdown outcome” evidence for tool-launched runs:
+  - write `resource.footprint.json` in the out dir (tooling-owned),
+  - use `killed=true` as a first-class triage hint for “exit trigger not observed / deadlock / no-frame stall”.
 
 P2:
 
@@ -38,4 +41,3 @@ P2:
   - last known window snapshot age at failure,
   - whether the no-frame driver advanced anything (count + last advanced step).
 - Make `timeout.no_frames` show up as a first-class triage hint in tooling summaries.
-
