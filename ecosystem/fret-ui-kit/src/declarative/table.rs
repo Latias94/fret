@@ -6375,7 +6375,19 @@ where
                                                                                                                 ..Default::default()
                                                                                                             },
                                                                                                             |cx| {
-                                                                                                                render_cell(cx, &data_row, col)
+                                                                                                                vec![stack::hstack(
+                                                                                                                    cx,
+                                                                                                                    stack::HStackProps::default()
+                                                                                                                        .gap_x(Space::N0)
+                                                                                                                        .justify(Justify::Start)
+                                                                                                                        .items(Items::Center)
+                                                                                                                        .layout(
+                                                                                                                            LayoutRefinement::default()
+                                                                                                                                .w_full()
+                                                                                                                                .h_full(),
+                                                                                                                        ),
+                                                                                                                    |cx| render_cell(cx, &data_row, col),
+                                                                                                                )]
                                                                                                             },
                                                                                                         )
                                                                                                     })
@@ -6426,6 +6438,7 @@ where
                                                                                                            width: Length::Px(col_w),
                                                                                                             min_width: Some(Length::Px(col_w)),
                                                                                                             max_width: Some(Length::Px(col_w)),
+                                                                                                           height: Length::Fill,
                                                                                                            ..Default::default()
                                                                                                        },
                                                                                                    overflow: Overflow::Clip,
@@ -6438,7 +6451,19 @@ where
                                                                                                 ..Default::default()
                                                                                             },
                                                                                             |cx| {
-                                                                                                render_cell(cx, &data_row, col)
+                                                                                                vec![stack::hstack(
+                                                                                                    cx,
+                                                                                                    stack::HStackProps::default()
+                                                                                                        .gap_x(Space::N0)
+                                                                                                        .justify(Justify::Start)
+                                                                                                        .items(Items::Center)
+                                                                                                        .layout(
+                                                                                                            LayoutRefinement::default()
+                                                                                                                .w_full()
+                                                                                                                .h_full(),
+                                                                                                        ),
+                                                                                                    |cx| render_cell(cx, &data_row, col),
+                                                                                                )]
                                                                                             },
                                                                                         )
                                                                                     })
