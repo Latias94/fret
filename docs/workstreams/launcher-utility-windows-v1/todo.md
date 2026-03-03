@@ -1,57 +1,50 @@
 # Launcher + Utility Windows v1 — TODO
 
-Status: Draft
+Status: In progress (M2)
 
-## Docs alignment (contract first)
+## Completed (M0/M1)
 
-- [ ] Review ADR 0139 and ensure it matches implementation intent (create-time vs runtime patchability).
-- [ ] Lock background material vocabulary + capability keys (ADR 0310).
-- [ ] Lock chrome action vocabulary + capability keys (ADR 0311).
+- [x] ADR 0139 aligned (create-time vs runtime patchability).
+- [x] Background material vocabulary + capability keys (ADR 0310).
+- [x] Chrome actions + visibility vocabulary + capability keys (ADR 0311).
+- [x] `fret_runtime::WindowStyleRequest` extended with v1 facets (`decorations/resizable/transparent/background_material`).
+- [x] `PlatformCapabilities` extended with `ui.window.*` facet keys and chrome-action keys.
+- [x] Diagnostics surface for effective/clamped window style + material:
+  - [x] runner records an effective snapshot per window (post-clamp),
+  - [x] diag predicates exist for scripted gating,
+  - [x] `fret-diag` infers required capabilities from these predicates (fail-fast).
 
-## Portable contract plumbing
+## Next (M2) — Desktop runner MVP (frameless utility window)
 
-- [ ] Extend `fret_runtime::WindowStyleRequest` with missing facets:
-  - [ ] `decorations`
-  - [ ] `resizable`
-  - [ ] `transparent`
-  - [ ] `background_material` (ADR 0310)
-- [ ] Extend `PlatformCapabilities` key set (ADR 0054):
-  - [ ] `ui.window.*` style facet keys (ADR 0139)
-  - [ ] `ui.window.background_material.*` (ADR 0310)
-  - [ ] `ui.window.begin_drag` / `ui.window.begin_resize` / `ui.window.set_visible` (ADR 0311)
-- [ ] Add a stable diagnostics surface for “effective/clamped window style” (ADR 0139, ADR 0036).
+- [ ] Add a minimal “utility window” demo:
+  - [ ] open a frameless window via `WindowStyleRequest { decorations: None, .. }`,
+  - [ ] implement a draggable region (policy in `ecosystem/*`) that calls `BeginDrag`,
+  - [ ] implement resize handles that call `BeginResize { direction }`,
+  - [ ] toggle `SetVisible` without closing/recreating the window.
+- [ ] Add a diag script (schema v2) that gates the demo:
+  - [ ] asserts effective decorations/resizable/transparent,
+  - [ ] asserts non-destructive show/hide (window count stable + style snapshot still present),
+  - [ ] asserts begin-drag/begin-resize are capability-gated (fail-fast when unsupported).
 
-## Diagnostics + scripted gates (evidence-first)
+## Next (M3) — OS materials (Windows/macOS best-effort)
 
-- [ ] Add explicit diagnostics capabilities (fail-fast gating) in `capabilities.json`:
-  - [ ] `diag.window_style_snapshot` (requested/base + effective/clamped, per window)
-  - [ ] `diag.window_background_material_snapshot` (requested + effective/clamped, per window)
-- [ ] Add script predicates for window-style assertions (capability-gated):
-  - [ ] `window_style_effective_*` (decorations/resizable/transparent/taskbar/activation/z_level/mouse/opacity)
-  - [ ] `window_background_material_effective_is`
-- [ ] Add at least one small diag script (schema v2) that gates:
-  - [ ] frameless utility window opens with expected effective style,
-  - [ ] show/hide preserves state (no close/recreate),
-  - [ ] background material request clamps deterministically when unsupported.
+- [ ] Windows: implement DWM system backdrop mapping (Mica/Acrylic):
+  - [ ] define backend mapping and version gating (Win11+ where applicable),
+  - [ ] update capabilities to truthfully advertise supported variants,
+  - [ ] ensure transparency + backdrop interaction is deterministic and recorded.
+- [ ] macOS: implement Vibrancy mapping:
+  - [ ] pick the minimal stable API surface (titlebar/toolbar interactions),
+  - [ ] capability gating + diagnostics evidence.
+- [ ] Linux: explicitly clamp to `None/SystemDefault` until we have a stable story (Wayland/X11).
 
-## Desktop runner wiring (best-effort, capability-gated)
+## Next (M4) — Observability hardening
 
-- [ ] Create-time style application:
-  - [ ] decorations / resizable / transparent
-  - [ ] background materials (OS-backed)
-- [ ] Runtime patching (`WindowRequest::SetStyle`) for patchable facets.
-- [ ] Window chrome actions:
-  - [ ] `BeginDrag`
-  - [ ] `BeginResize`
-  - [ ] `SetVisible`
-
-## Validation and gates
-
-- [ ] Add a demo (or scripted diag) that:
-  - [ ] opens a frameless utility window,
-  - [ ] allows drag/resize via custom chrome,
-  - [ ] toggles show/hide without losing state,
-  - [ ] reports effective/clamped style/material results.
+- [ ] Upgrade window-style/material diagnostics snapshot to include:
+  - [ ] requested/base style facets,
+  - [ ] effective/clamped results,
+  - [ ] explicit clamp reasons (optional, best-effort).
+- [ ] Add an inspection pane in `fretboard` or UI gallery to render the snapshot (non-scripted).
+- [ ] Add a “capability truth table” report in `fret-diag` for window style/material facets.
 
 ## Follow-ups (post-v1 decision gates)
 

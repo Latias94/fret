@@ -1,6 +1,6 @@
 # Launcher + Utility Windows v1
 
-Status: Draft
+Status: In progress (M2)
 
 ## Context
 
@@ -14,6 +14,15 @@ We want to support “app launcher” class UX (Vicinae / uTools-like):
 
 This is a contract-heavy surface: getting it wrong tends to cause large rewrites. Therefore this
 workstream follows the repo’s ADR-driven approach.
+
+## Current status (as of 2026-03-03)
+
+- Contracts + portable plumbing are landed (M1).
+- Desktop runner supports:
+  - create-time facets: `decorations/resizable/transparent`,
+  - runtime actions: `set_visible/begin_drag/begin_resize` (best-effort; capability-gated),
+  - diagnostics predicates for effective window style/material, with fail-fast capability inference.
+- OS background materials are still “request + clamp + diagnostics” only (M3 is not implemented).
 
 ## Related ADRs (decision gates)
 
@@ -51,3 +60,5 @@ until timeout”).
   - chrome actions and show/hide (ADR 0311).
 - Capability gating exists for each facet; ecosystem can gate via `when` without `cfg(target_os)`.
 - Runner exposes effective/clamped style/material results to diagnostics/inspection.
+  - Note: v1 currently exposes “effective (post-clamp)” snapshots; requested/base snapshots are a
+    follow-up once the platform implementations are stable.
