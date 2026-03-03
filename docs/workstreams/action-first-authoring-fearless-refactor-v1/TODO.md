@@ -236,8 +236,11 @@ This phase is intentionally last.
 
 - [ ] AFA-clean-060 Deprecate legacy routing glue that is no longer recommended in templates/docs.
   - Candidate: per-frame-only message routers in places that should be action-first.
-- [ ] AFA-clean-061 Update docs and templates:
+- [x] AFA-clean-061 Update docs and templates:
   - `docs/README.md` state management section shows actions + view runtime as the golden path.
   - `fretboard` templates generate action-first demos by default.
+  - Evidence:
+    - `docs/README.md`
+    - `apps/fretboard/src/scaffold/templates.rs` (`todo_template_main_rs`, `simple_todo_template_main_rs`, `hello_template_main_rs`)
 - [ ] AFA-clean-062 Delete or quarantine redundant APIs/modules once adoption is complete.
   - Rule: do not delete until all in-tree demos + ecosystem crates have migrated or have explicit “legacy” labeling.
