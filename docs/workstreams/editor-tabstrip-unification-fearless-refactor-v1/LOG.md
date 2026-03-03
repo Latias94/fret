@@ -30,6 +30,10 @@ This file is a short, append-only log of landings and decisions for this workstr
   - Code: `crates/fret-ui/src/tree/dispatch/hover.rs`, `crates/fret-ui/src/tree/debug/invalidation.rs`
   - Test: `crates/fret-ui/src/declarative/tests/layout/interactivity.rs` (`pressable_hover_marks_view_cache_root_dirty_on_hover_edges`)
   - Rationale: components that mount/unmount children based on `PressableState::hovered` must remain deterministic under view caching.
+- Added a docking diag gate for “close button does not activate inactive tab” (non-overflow tab bar).
+  - Harness anchor: `dock-arb-tab-close-anchor-left-inactive-1` (semantics-only, positions over the close affordance)
+  - Script: `tools/diag-scripts/docking/arbitration/docking-arbitration-demo-tab-close-button-does-not-activate.json`
+  - Rationale: editor-grade docking expects close to be an explicit intent that cannot accidentally re-target activation or drag state.
 
 ## Next (proposed)
 

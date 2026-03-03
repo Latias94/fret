@@ -35,6 +35,8 @@ This workstream is intentionally scoped to “editor-grade tab UX”:
     - `tools/diag-scripts/workspace/shell-demo/workspace-shell-demo-tab-close-button-does-not-activate.json`
   - [x] Docking: overflow dropdown open + select row activates:
     - `tools/diag-scripts/docking/arbitration/docking-arbitration-demo-tab-overflow-menu-select-row-1-activates.json`
+  - [x] Docking: close button does not activate inactive tab:
+    - `tools/diag-scripts/docking/arbitration/docking-arbitration-demo-tab-close-button-does-not-activate.json`
   - [x] Select-from-dropdown keeps active visible (explicit assert / evidence):
     - Docking gate: `dock_tab_strip_active_visible_is visible=true` after selecting a row.
       - Script: `tools/diag-scripts/docking/arbitration/docking-arbitration-demo-tab-overflow-menu-select-row-1-activates.json`
