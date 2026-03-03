@@ -87,6 +87,7 @@ fn platform_replace_and_mark_text_in_range_utf16(
     range: fret_runtime::Utf16Range,
     text: &str,
     marked: Option<fret_runtime::Utf16Range>,
+    selected: Option<fret_runtime::Utf16Range>,
 ) -> bool {
     if !st.interaction.enabled || !st.interaction.editable {
         st.set_preedit(None);
@@ -191,7 +192,8 @@ fn platform_replace_and_mark_text_in_range_utf16(
         return did;
     };
 
-    let (bs, be) = preedit_cursor_bytes_for_marked_range_utf16(range.start, marked, text);
+    let cursor_range = selected.unwrap_or(marked);
+    let (bs, be) = preedit_cursor_bytes_for_marked_range_utf16(range.start, cursor_range, text);
     let next = (!text.is_empty()).then_some(PreeditState {
         text: text.to_string(),
         cursor: Some((bs, be)),
@@ -1121,6 +1123,7 @@ impl CodeEditorHandle {
             range,
             text,
             Some(marked),
+            None,
         );
     }
 
@@ -1161,6 +1164,7 @@ impl CodeEditorHandle {
             range,
             "",
             Some(marked),
+            None,
         );
     }
 
@@ -2080,7 +2084,8 @@ impl CodeEditor {
                               props,
                               range,
                               text,
-                              marked| {
+                              marked,
+                              selected| {
                             let mut st = platform_mark_state.borrow_mut();
                             let Some(value) = props.a11y_value.as_deref() else {
                                 return false;
@@ -2093,6 +2098,7 @@ impl CodeEditor {
                                 range,
                                 text,
                                 marked,
+                                selected,
                             );
 
                             if did {

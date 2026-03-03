@@ -149,6 +149,7 @@ fn composition_selection_replacement_is_reflected_in_a11y_window() {
             fret_runtime::Utf16Range::new(6, 11),
             "X",
             Some(fret_runtime::Utf16Range::new(6, 7)),
+            None,
         )
     };
     assert!(did, "expected replace-and-mark to update editor state");
@@ -1173,6 +1174,7 @@ fn platform_replace_and_mark_non_empty_range_replaces_in_composed_view_without_m
         fret_runtime::Utf16Range::new(1, 4),
         "XY",
         Some(fret_runtime::Utf16Range::new(1, 3)),
+        None,
     );
     assert!(did);
     assert_eq!(st.buffer.text_string(), "hello");
@@ -1222,6 +1224,7 @@ fn platform_replace_and_mark_empty_text_cancels_and_restores_selection() {
         fret_runtime::Utf16Range::new(1, 4),
         "XY",
         Some(fret_runtime::Utf16Range::new(1, 3)),
+        None,
     );
     assert!(did);
     assert_eq!(st.buffer.text_string(), "hello");
@@ -1241,6 +1244,7 @@ fn platform_replace_and_mark_empty_text_cancels_and_restores_selection() {
         fret_runtime::Utf16Range::new(1, 3),
         "",
         Some(fret_runtime::Utf16Range::new(1, 1)),
+        None,
     );
     assert!(did, "cancel must update state");
     assert_eq!(
@@ -1290,6 +1294,7 @@ fn platform_replace_and_mark_empty_text_cancels_and_restores_caret() {
         fret_runtime::Utf16Range::new(2, 2),
         "Z",
         Some(fret_runtime::Utf16Range::new(2, 3)),
+        None,
     );
     assert!(did);
     assert!(st.preedit.is_some());
@@ -1302,6 +1307,7 @@ fn platform_replace_and_mark_empty_text_cancels_and_restores_caret() {
         fret_runtime::Utf16Range::new(2, 3),
         "",
         Some(fret_runtime::Utf16Range::new(2, 2)),
+        None,
     );
     assert!(did);
     assert_eq!(st.preedit, None);
@@ -1341,6 +1347,7 @@ fn platform_replace_and_mark_with_marked_none_behaves_like_replace() {
         fret_runtime::Utf16Range::new(1, 4),
         "X",
         None,
+        None,
     );
     assert!(did);
     assert_eq!(st.buffer.text_string(), "hXo");
@@ -1377,6 +1384,7 @@ fn platform_replace_and_mark_range_spanning_newline_is_clamped_to_anchor_line() 
         fret_runtime::Utf16Range::new(1, 4),
         "X",
         Some(fret_runtime::Utf16Range::new(1, 2)),
+        None,
     );
     assert!(did);
     assert_eq!(
@@ -1990,6 +1998,7 @@ fn caret_for_pointer_snaps_inside_preedit_replacement_span_under_wrap_and_code_w
             "left->".len() as u32,
             ("left->".len() + 1) as u32,
         )),
+        None,
     );
     assert!(did);
     assert!(st.preedit.is_some());
@@ -2226,6 +2235,7 @@ fn pointer_down_cancels_preedit_replacement_and_snaps_to_replace_start() {
             start as u32,
             (start + 1) as u32,
         )),
+        None,
     );
     assert!(did);
     assert!(st.preedit.is_some());
@@ -2354,6 +2364,7 @@ fn triple_click_cancels_preedit_replacement_and_selects_logical_line() {
             start as u32,
             (start + 1) as u32,
         )),
+        None,
     );
     assert!(did);
     assert!(st.preedit.is_some());
@@ -3106,6 +3117,7 @@ fn pointer_down_double_click_cancels_preedit_replacement_and_selects_word() {
             start as u32,
             (start + 1) as u32,
         )),
+        None,
     );
     assert!(did);
     assert!(st.preedit.is_some());
