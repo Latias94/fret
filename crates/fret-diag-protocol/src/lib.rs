@@ -553,6 +553,8 @@ pub enum UiActionStepV2 {
         target: UiSelectorV1,
         #[serde(default)]
         button: UiMouseButtonV1,
+        #[serde(default = "default_true")]
+        clamp_to_window_bounds: bool,
         delta_x: f32,
         delta_y: f32,
         #[serde(default = "default_drag_steps")]
@@ -1094,6 +1096,7 @@ impl From<UiActionStepV1> for UiActionStepV2 {
                 pointer_kind: None,
                 target,
                 button,
+                clamp_to_window_bounds: true,
                 delta_x,
                 delta_y,
                 steps,

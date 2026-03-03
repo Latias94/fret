@@ -54,6 +54,7 @@
       "type": "drag_pointer",
       "window": { "kind": "first_seen" },
       "target": { "kind": "test_id", "id": "dock-arb-tab-drag-anchor-right" },
+      "clamp_to_window_bounds": false,
       "delta_x": 2400.0,
       "delta_y": 0.0,
       "steps": 140
@@ -124,6 +125,7 @@
       "type": "drag_pointer",
       "window": { "kind": "first_seen" },
       "target": { "kind": "test_id", "id": "dock-arb-tab-drag-anchor-right" },
+      "clamp_to_window_bounds": false,
       "delta_x": 2400.0,
       "delta_y": 0.0,
       "steps": 140
@@ -194,6 +196,7 @@
       "type": "drag_pointer",
       "window": { "kind": "first_seen" },
       "target": { "kind": "test_id", "id": "dock-arb-tab-drag-anchor-right" },
+      "clamp_to_window_bounds": false,
       "delta_x": 2400.0,
       "delta_y": 0.0,
       "steps": 140
