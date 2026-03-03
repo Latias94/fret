@@ -93,6 +93,23 @@ impl Defaults {
         }
     }
 
+    /// Recommended desktop-first defaults for app authors.
+    ///
+    /// These defaults are intended to be smooth and practical without pulling in every optional
+    /// integration. In particular, they avoid UI assets caches and GPU-time SVG preloading unless
+    /// explicitly enabled.
+    pub const fn desktop_app() -> Self {
+        Self {
+            diagnostics: true,
+            config_files: false,
+            shadcn: true,
+            ui_assets: false,
+            ui_assets_budgets: None,
+            icons: false,
+            preload_icon_svgs: false,
+        }
+    }
+
     /// Minimal defaults that avoid filesystem config loading and other batteries.
     pub const fn minimal() -> Self {
         Self {
@@ -126,7 +143,7 @@ impl Defaults {
 
 impl Default for Defaults {
     fn default() -> Self {
-        Self::desktop_batteries()
+        Self::desktop_app()
     }
 }
 
@@ -192,6 +209,9 @@ pub mod prelude {
 
     #[cfg(feature = "shadcn")]
     pub use crate::shadcn;
+
+    #[cfg(feature = "state-query")]
+    pub use fret_query::{CancellationToken, QueryError, QueryHandle, QueryKey, QueryPolicy};
 }
 
 #[derive(Debug, thiserror::Error)]
