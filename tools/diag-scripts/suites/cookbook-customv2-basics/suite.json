@@ -2,6 +2,6 @@
   "schema_version": 1,
   "kind": "diag_script_suite_manifest",
   "scripts": [
-    "tools/diag-scripts/custom-effect-v2-non-filterable-input-fallback-screenshot.json"
+    "tools/diag-scripts/tooling/custom-effect-v2-non-filterable-input-fallback-screenshot.json"
   ]
 }

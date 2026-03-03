@@ -16,7 +16,7 @@
     "tools/diag-scripts/ui-gallery-breadcrumb-dot-separator-single-line.json",
     "tools/diag-scripts/ui-gallery-breadcrumb-links-semantic-link.json",
     "tools/diag-scripts/ui-gallery-breadcrumb-responsive-toggle.json",
-    "tools/diag-scripts/ui-gallery-button-group-size-screenshots-zinc-light-dark.json",
+    "tools/diag-scripts/ui-gallery/button/ui-gallery-button-group-size-screenshots-zinc-light-dark.json",
     "tools/diag-scripts/ui-gallery-button-link-render.json",
     "tools/diag-scripts/ui-gallery-button-with-icon-non-overlap.json",
     "tools/diag-scripts/ui-gallery-card-content-button-hitbox-not-stretched.json",

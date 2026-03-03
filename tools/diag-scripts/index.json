@@ -522,7 +522,7 @@
     },
     {
       "id": "custom-effect-v2-non-filterable-input-fallback-screenshot",
-      "path": "tools/diag-scripts/custom-effect-v2-non-filterable-input-fallback-screenshot.json",
+      "path": "tools/diag-scripts/tooling/custom-effect-v2-non-filterable-input-fallback-screenshot.json",
       "required_capabilities": [],
       "suite_memberships": [
         "cookbook-customv2-basics"
@@ -532,7 +532,7 @@
     },
     {
       "id": "custom-effect-v3-non-filterable-user0-fallback-screenshot",
-      "path": "tools/diag-scripts/custom-effect-v3-non-filterable-user0-fallback-screenshot.json",
+      "path": "tools/diag-scripts/tooling/custom-effect-v3-non-filterable-user0-fallback-screenshot.json",
       "required_capabilities": [],
       "suite_memberships": [
         "cookbook-customv3-basics"
@@ -542,7 +542,7 @@
     },
     {
       "id": "custom-effect-v3-non-filterable-user01-fallback-screenshot",
-      "path": "tools/diag-scripts/custom-effect-v3-non-filterable-user01-fallback-screenshot.json",
+      "path": "tools/diag-scripts/tooling/custom-effect-v3-non-filterable-user01-fallback-screenshot.json",
       "required_capabilities": [],
       "suite_memberships": [
         "cookbook-customv3-basics"
@@ -552,7 +552,7 @@
     },
     {
       "id": "custom-effect-v3-non-filterable-user1-fallback-screenshot",
-      "path": "tools/diag-scripts/custom-effect-v3-non-filterable-user1-fallback-screenshot.json",
+      "path": "tools/diag-scripts/tooling/custom-effect-v3-non-filterable-user1-fallback-screenshot.json",
       "required_capabilities": [],
       "suite_memberships": [
         "cookbook-customv3-basics"
@@ -1852,7 +1852,7 @@
     },
     {
       "id": "ui-gallery-button-group-size-screenshots-zinc-light-dark",
-      "path": "tools/diag-scripts/ui-gallery-button-group-size-screenshots-zinc-light-dark.json",
+      "path": "tools/diag-scripts/ui-gallery/button/ui-gallery-button-group-size-screenshots-zinc-light-dark.json",
       "required_capabilities": [
         "diag.screenshot_png",
         "diag.script_v2"
@@ -3546,7 +3546,7 @@
     },
     {
       "id": "ui-gallery-inspector-help-lock-match-copy-selector-steady",
-      "path": "tools/diag-scripts/ui-gallery-inspector-help-lock-match-copy-selector-steady.json",
+      "path": "tools/diag-scripts/ui-gallery/perf/ui-gallery-inspector-help-lock-match-copy-selector-steady.json",
       "required_capabilities": [],
       "suite_memberships": [
         "ui-gallery-overlay-steady"
@@ -3561,7 +3561,7 @@
     },
     {
       "id": "ui-gallery-inspector-help-tree-lock-match-copy-selector-steady",
-      "path": "tools/diag-scripts/ui-gallery-inspector-help-tree-lock-match-copy-selector-steady.json",
+      "path": "tools/diag-scripts/ui-gallery/perf/ui-gallery-inspector-help-tree-lock-match-copy-selector-steady.json",
       "required_capabilities": [],
       "suite_memberships": [
         "ui-gallery-overlay-steady"

@@ -4,8 +4,8 @@
   "scripts": [
     "tools/diag-scripts/renderer/effects/liquid-glass-lens-custom-v3-bevel-screenshot.json",
     "tools/diag-scripts/renderer/effects/liquid-glass-lens-custom-v3-corners-screenshot.json",
-    "tools/diag-scripts/liquid-glass-lens-custom-v3-dispersion-screenshot.json",
-    "tools/diag-scripts/liquid-glass-lens-custom-v3-pair-no-group-screenshot.json",
+    "tools/diag-scripts/renderer/effects/liquid-glass-lens-custom-v3-dispersion-screenshot.json",
+    "tools/diag-scripts/renderer/effects/liquid-glass-lens-custom-v3-pair-no-group-screenshot.json",
     "tools/diag-scripts/renderer/effects/liquid-glass-lens-custom-v3-source-group-screenshot.json"
   ]
 }

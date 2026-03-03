@@ -8,8 +8,8 @@
     "tools/diag-scripts/ui-gallery-dialog-escape-focus-restore-steady.json",
     "tools/diag-scripts/ui-gallery-dropdown-nonmodal-outside-press-focus-underlay.json",
     "tools/diag-scripts/ui-gallery-dropdown-open-select-steady.json",
-    "tools/diag-scripts/ui-gallery-inspector-help-lock-match-copy-selector-steady.json",
-    "tools/diag-scripts/ui-gallery-inspector-help-tree-lock-match-copy-selector-steady.json",
+    "tools/diag-scripts/ui-gallery/perf/ui-gallery-inspector-help-lock-match-copy-selector-steady.json",
+    "tools/diag-scripts/ui-gallery/perf/ui-gallery-inspector-help-tree-lock-match-copy-selector-steady.json",
     "tools/diag-scripts/ui-gallery-modal-barrier-focus-restore.json",
     "tools/diag-scripts/ui-gallery-modal-barrier-wheel-block.json",
     "tools/diag-scripts/ui-gallery-overlay-torture-steady.json"
