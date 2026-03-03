@@ -1854,7 +1854,7 @@ impl Carousel {
                         .ok()
                         .flatten();
                     if let Some(token) = token {
-                        cx.app.push_effect(Effect::CancelTimer { token });
+                        cx.cancel_timer(token);
                     }
 
                     let now = Instant::now();
@@ -1927,7 +1927,7 @@ impl Carousel {
                                 .ok()
                                 .flatten();
                             if let Some(token) = token {
-                                cx.app.push_effect(Effect::CancelTimer { token });
+                                cx.cancel_timer(token);
                             }
                             let _ = cx.app.models_mut().update(&runtime_model, |st| {
                                 st.autoplay_token = None;
@@ -4334,6 +4334,7 @@ impl Carousel {
                     ..Default::default()
                 },
                 move |cx| {
+                    let timer_target = cx.root_id();
                     let hover_overlay = autoplay_cfg.map(|cfg| {
                         cx.hover_region(
                             HoverRegionProps {
@@ -4367,7 +4368,7 @@ impl Carousel {
 
                                 if entered_hover && cfg.pause_on_hover {
                                     if let Some(token) = runtime_snapshot.autoplay_token {
-                                        cx.app.push_effect(Effect::CancelTimer { token });
+                                        cx.cancel_timer(token);
                                     }
                                     let _ = cx.app.models_mut().update(&runtime_for_hover, |st| {
                                         st.autoplay_token = None;
@@ -4413,12 +4414,7 @@ impl Carousel {
                                                 st.autoplay_timer_delay = Some(delay);
                                                 st.autoplay_pause_delay = None;
                                             });
-                                        cx.app.push_effect(Effect::SetTimer {
-                                            window: Some(cx.window),
-                                            token,
-                                            after: delay,
-                                            repeat: None,
-                                        });
+                                        cx.set_timer_for(timer_target, token, delay);
                                     }
                                 }
 
@@ -4460,12 +4456,7 @@ impl Carousel {
                                                 st.autoplay_timer_delay = Some(delay);
                                                 st.autoplay_pause_delay = None;
                                             });
-                                        cx.app.push_effect(Effect::SetTimer {
-                                            window: Some(cx.window),
-                                            token,
-                                            after: delay,
-                                            repeat: None,
-                                        });
+                                        cx.set_timer_for(timer_target, token, delay);
                                     }
                                 }
 
