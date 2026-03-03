@@ -43,7 +43,12 @@ ImGui docking typically supports both:
 - **Drag a tab** (when a window is docked in a tab bar) to tear off / re-dock.
 - **Drag a title bar** (when a window is floating) to move it and drop it onto docking hints.
 
-Current Fret docking arbitration demos primarily gate **tab drag** flows via explicit drag anchors (stable `test_id`s). Title-bar-style docking is not a first-class parity goal for v1 (it is a policy/UX decision and may interact with custom window chrome).
+Current Fret docking arbitration demos gate both:
+
+- **Tab drags** (panel vs tabs-group drag kind).
+- **In-window floating title-bar drags** (ImGui docking with viewports disabled): dragging the floating container chrome can re-dock it back into the main dock tree.
+
+For v1, we intentionally gate *in-window floating* title-bar docking (which is fully controlled by `ecosystem/fret-docking`) rather than OS window chrome title-bar docking (which may interact with custom window chrome and runner policies).
 
 ## Current Fret behavior (mechanism notes)
 
@@ -90,6 +95,13 @@ Key multi-window gates:
   - `tools/diag-scripts/docking-arbitration-demo-multiwindow-large-tearoff-merge-loop-no-leak.json`
 - Edge cases:
   - `tools/diag-scripts/docking-arbitration-demo-multiwindow-release-outside-windows-poll-up.json`
+
+Key in-window floating gates:
+
+- Floating title bar drag clamps to window bounds:
+  - `tools/diag-scripts/docking/arbitration/docking-arbitration-demo-floating-title-drag-clamps-to-window.json`
+- Floating title bar drag can dock back into the main dock tree:
+  - `tools/diag-scripts/docking/arbitration/docking-arbitration-demo-floating-title-drag-docks-to-main.json`
 
 These gates assert, at minimum:
 
@@ -169,6 +181,12 @@ These gates assert, at minimum:
   - `tools/diag-scripts/docking-arbitration-demo-multiwindow-transparent-payload-drag-tab-back-to-main.json`
   - `tools/diag-scripts/docking/arbitration/docking-arbitration-demo-multiwindow-transparent-payload-zorder-switch.json`
 
+4) **In-window floating title-bar drag docking**
+- Delivered (2026-03-03): dragging an in-window floating container title bar resolves dock drop targets against the window dock layout (ignoring the moving floating container), and on center-drop merges the floating container back into the dock tree.
+  - implementation: `ecosystem/fret-docking/src/dock/space.rs`
+  - gate: `tools/diag-scripts/docking/arbitration/docking-arbitration-demo-floating-title-drag-docks-to-main.json`
+  - note: this gates the in-window floating path. OS window chrome title-bar docking remains an explicit policy decision.
+
 The preferred vehicle remains: add/extend diag scripts in `tools/diag-scripts/` and keep assertions contract-level (dock graph signatures + docking diagnostics), not pixels.
 
 ## ImGui multi-viewport gap inventory (what still differs)
@@ -178,9 +196,10 @@ This is a practical checklist for editor-grade parity. It intentionally mixes UX
 
 ### A. Gestures and windowing
 
-- Title-bar drag docking: ImGui supports docking via dragging a floating window title bar; Fret’s current gates focus on
-  tab-drag anchors. If we want parity, we need a first-class “drag chrome to dock” policy (likely in `ecosystem/fret-docking`)
-  that does not fight custom window chrome.
+- Title-bar drag docking:
+  - In-window floating: delivered and gated (see above).
+  - OS window chrome: still a parity gap. If we want ImGui-style multi-viewport title-bar docking, we need a first-class
+    “drag chrome to dock” policy that does not fight custom window chrome and runner window-move policies.
 - Multi-monitor “hand off” feel: ImGui viewports are routinely dragged across monitors with changing DPI. We should
   validate (and gate) that tear-off windows preserve expected DPI/scale behavior when crossing monitors (where supported).
 
