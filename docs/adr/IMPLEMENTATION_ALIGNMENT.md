@@ -76,6 +76,7 @@ It is **non-normative**: the ADR itself remains the source of truth; this file i
 | [`0221-text-overflow-ellipsis-and-line-clamp-v1.md`](0221-text-overflow-ellipsis-and-line-clamp-v1.md) | Accepted | Not audited |  |
 | [`0214-canvas-tiled-sceneop-cache-v1.md`](0214-canvas-tiled-sceneop-cache-v1.md) | Proposed | Not audited |  |
 | [`0189-ui-diagnostics-extensibility-and-capabilities-v1.md`](0189-ui-diagnostics-extensibility-and-capabilities-v1.md) | Proposed | Not audited |  |
+| [`0310-ui-diagnostics-debug-extensions-v1.md`](0310-ui-diagnostics-debug-extensions-v1.md) | Proposed | Aligned (with known gaps) | Runtime snapshots support a bounded, additive `debug.extensions` map for ecosystem-provided debug JSON. Writers register via a best-effort init-time registry and are clipped by per-extension and total budgets. Evidence: registry and budgets (`ecosystem/fret-bootstrap/src/ui_diagnostics/extensions.rs`), snapshot field (`ecosystem/fret-bootstrap/src/ui_diagnostics/debug_snapshot_types.rs`), capture hook (`ecosystem/fret-bootstrap/src/ui_diagnostics/service.rs`). |
 | [`0187-ui-frame-pipeline-ordering.md`](0187-ui-frame-pipeline-ordering.md) | Proposed | Not audited |  |
 | [`0186-kurbo-geometry-backend-for-canvas-hit-testing.md`](0186-kurbo-geometry-backend-for-canvas-hit-testing.md) | Proposed | Not audited |  |
 | [`0183-deterministic-graph-diff-and-patch-units.md`](0183-deterministic-graph-diff-and-patch-units.md) | Accepted | Not audited |  |
