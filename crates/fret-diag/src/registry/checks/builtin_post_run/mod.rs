@@ -90,7 +90,7 @@ fn builtin_post_run_checks() -> &'static [PostRunCheckEntry] {
         .get_or_init(|| {
             let mut out = Vec::new();
             out.extend_from_slice(base::ENTRIES);
-            out.extend_from_slice(ui_gallery::ENTRIES);
+            out.extend_from_slice(ui_gallery::entries());
             out.extend_from_slice(engine::ENTRIES);
             out.extend_from_slice(misc::ENTRIES);
             out
