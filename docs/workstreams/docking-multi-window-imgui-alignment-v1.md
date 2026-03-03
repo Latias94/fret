@@ -157,6 +157,8 @@ These gates assert, at minimum:
 
 2) **Diagnostics completeness for tab drags**
 - Ensure docking diagnostics cover both `DRAG_KIND_DOCK_PANEL` and `DRAG_KIND_DOCK_TABS` consistently, so scripts can assert either form of tear-off/re-dock.
+  - Delivered (2026-03-03): added `dock_drag_kind_is` predicate and a dedicated tabs-group peek-behind gate:
+    - `tools/diag-scripts/docking/arbitration/docking-arbitration-demo-multiwindow-under-moving-window-tabs-group.json`
 
 3) **Transparent payload + re-dock semantics**
 - Today, `FRET_DOCK_TEAROFF_TRANSPARENT_PAYLOAD=1` is treated as an **opacity** policy for the moving window during follow.
