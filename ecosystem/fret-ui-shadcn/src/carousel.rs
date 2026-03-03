@@ -620,7 +620,7 @@ impl CarouselOptions {
 
 #[derive(Debug)]
 pub struct Carousel {
-    items: Vec<AnyElement>,
+    items: Vec<CarouselItem>,
     layout: LayoutRefinement,
     viewport_layout: LayoutRefinement,
     track_layout: LayoutRefinement,
@@ -908,14 +908,18 @@ fn carousel_parts_models<H: UiHost>(
 
 impl Default for Carousel {
     fn default() -> Self {
-        Self::new(Vec::new())
+        Self::new(Vec::<CarouselItem>::new())
     }
 }
 
 impl Carousel {
-    pub fn new(items: impl IntoIterator<Item = AnyElement>) -> Self {
+    pub fn new<I>(items: I) -> Self
+    where
+        I: IntoIterator,
+        I::Item: Into<CarouselItem>,
+    {
         Self {
-            items: items.into_iter().collect(),
+            items: items.into_iter().map(Into::into).collect(),
             layout: LayoutRefinement::default(),
             viewport_layout: LayoutRefinement::default(),
             track_layout: LayoutRefinement::default(),
@@ -936,8 +940,12 @@ impl Carousel {
         }
     }
 
-    pub fn items(mut self, items: impl IntoIterator<Item = AnyElement>) -> Self {
-        self.items = items.into_iter().collect();
+    pub fn items<I>(mut self, items: I) -> Self
+    where
+        I: IntoIterator,
+        I::Item: Into<CarouselItem>,
+    {
+        self.items = items.into_iter().map(Into::into).collect();
         self
     }
 
@@ -2679,45 +2687,48 @@ impl Carousel {
                     items
                         .into_iter()
                         .enumerate()
-                        .map(|(idx, content)| {
+                        .map(|(idx, item)| {
+                            let per_item_layout_patch = item.layout;
+                            let per_item_basis = per_item_layout_patch
+                                .flex_item
+                                .as_ref()
+                                .and_then(|f| f.basis.as_ref())
+                                .is_some();
+
+                            let content = item.child;
                             slide_content_ids_ref.push(content.id);
 
                             let mut item_layout = LayoutRefinement::default()
                                 .flex_none()
                                 .min_w(MetricRef::Px(Px(0.0)))
-                                .merge(item_layout_patch.clone());
+                                .merge(item_layout_patch.clone())
+                                .merge(per_item_layout_patch);
 
-                            if let Some(basis) = item_basis {
-                                item_layout =
-                                    item_layout.basis(LengthRefinement::Px(MetricRef::Px(basis)));
-
-                                // When an explicit item basis is provided, treat it as the
-                                // authoritative snap extent and clamp the item's main-axis size
-                                // to match. This keeps `item_basis_main_px` deterministic even
-                                // when children would otherwise expand the flex item.
-                                if track_direction == fret_core::Axis::Vertical {
+                            if !per_item_basis {
+                                if let Some(basis) = item_basis {
                                     item_layout = item_layout
-                                        .h_px(MetricRef::Px(basis))
-                                        .min_h(MetricRef::Px(basis))
-                                        .max_h(MetricRef::Px(basis));
+                                        .basis(LengthRefinement::Px(MetricRef::Px(basis)));
+
+                                    // When an explicit item basis is provided, treat it as the
+                                    // authoritative snap extent and clamp the item's main-axis size
+                                    // to match. This keeps `item_basis_main_px` deterministic even
+                                    // when children would otherwise expand the flex item.
+                                    if track_direction == fret_core::Axis::Vertical {
+                                        item_layout = item_layout
+                                            .h_px(MetricRef::Px(basis))
+                                            .min_h(MetricRef::Px(basis))
+                                            .max_h(MetricRef::Px(basis));
+                                    }
+                                } else if item_layout
+                                    .flex_item
+                                    .as_ref()
+                                    .and_then(|f| f.basis.as_ref())
+                                    .is_none()
+                                {
+                                    // Match shadcn/ui v4 `basis-full` default.
+                                    item_layout = item_layout.basis_fraction(1.0);
                                 }
-                             } else {
-                                  // Match shadcn/ui v4 `basis-full` default for horizontal tracks.
-                                  //
-                                  // For vertical tracks, the upstream demo uses `md:basis-1/2` and
-                                  // relies on breakpoint-dependent item sizing, but the base class
-                                  // still includes `basis-full` (i.e. fill the viewport on the main
-                                  // axis). Match that default so `orientation="vertical"` behaves
-                                  // like the docs without requiring `item_basis_main_px`.
-                                  item_layout = match track_direction {
-                                      fret_core::Axis::Horizontal => {
-                                          item_layout.basis_fraction(1.0)
-                                      }
-                                      fret_core::Axis::Vertical => {
-                                          item_layout.basis_fraction(1.0)
-                                      }
-                                  };
-                              }
+                            }
 
                             let item_layout =
                                 decl_style::layout_style(&theme_for_items, item_layout);
@@ -3900,7 +3911,7 @@ impl Carousel {
 /// shadcn/ui `CarouselContent` (v4).
 #[derive(Debug)]
 pub struct CarouselContent {
-    items: Vec<AnyElement>,
+    items: Vec<CarouselItem>,
     viewport_layout: LayoutRefinement,
     track_layout: LayoutRefinement,
     item_layout: LayoutRefinement,
@@ -3909,7 +3920,7 @@ pub struct CarouselContent {
 impl CarouselContent {
     pub fn new(items: impl IntoIterator<Item = CarouselItem>) -> Self {
         Self {
-            items: items.into_iter().map(|i| i.child).collect(),
+            items: items.into_iter().collect(),
             viewport_layout: LayoutRefinement::default(),
             track_layout: LayoutRefinement::default(),
             item_layout: LayoutRefinement::default(),
@@ -3936,11 +3947,27 @@ impl CarouselContent {
 #[derive(Debug)]
 pub struct CarouselItem {
     child: AnyElement,
+    layout: LayoutRefinement,
 }
 
 impl CarouselItem {
     pub fn new(child: AnyElement) -> Self {
-        Self { child }
+        Self {
+            child,
+            layout: LayoutRefinement::default(),
+        }
+    }
+
+    /// Matches shadcn's per-item `className` surface (e.g. `md:basis-1/2`).
+    pub fn refine_layout(mut self, layout: LayoutRefinement) -> Self {
+        self.layout = self.layout.merge(layout);
+        self
+    }
+}
+
+impl From<AnyElement> for CarouselItem {
+    fn from(child: AnyElement) -> Self {
+        Self::new(child)
     }
 }
 
