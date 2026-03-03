@@ -38,6 +38,7 @@ impl Default for RunnerWindowStyleEffectiveSnapshotV1 {
 #[derive(Debug, Default)]
 pub struct RunnerWindowStyleDiagnosticsStore {
     effective: HashMap<AppWindowId, RunnerWindowStyleEffectiveSnapshotV1>,
+    transparent_explicit: HashMap<AppWindowId, Option<bool>>,
 }
 
 impl RunnerWindowStyleDiagnosticsStore {
@@ -55,6 +56,8 @@ impl RunnerWindowStyleDiagnosticsStore {
         caps: &PlatformCapabilities,
     ) {
         let mut next = RunnerWindowStyleEffectiveSnapshotV1::default();
+        self.transparent_explicit
+            .insert(window, requested.transparent);
 
         if caps.ui.window_decorations {
             if let Some(decorations) = requested.decorations {
@@ -69,21 +72,16 @@ impl RunnerWindowStyleDiagnosticsStore {
         if let Some(material) = requested.background_material {
             let clamped = clamp_background_material_request(material, caps);
             next.background_material = clamped;
-
-            // Background materials may require a composited alpha surface. If the caller did not
-            // explicitly request `transparent`, runners may implicitly treat it as true once a
-            // non-None material is effectively applied. See ADR 0310.
-            if next.background_material != WindowBackgroundMaterialRequest::None
-                && caps.ui.window_transparent
-                && requested.transparent.is_none()
-            {
-                next.transparent = true;
-            }
         }
 
         if caps.ui.window_transparent {
             if let Some(transparent) = requested.transparent {
                 next.transparent = transparent;
+            } else if next.background_material != WindowBackgroundMaterialRequest::None {
+                // Background materials may require a composited alpha surface. If the caller did
+                // not explicitly request `transparent`, runners may implicitly treat it as true
+                // once a non-None material is effectively applied. See ADR 0310.
+                next.transparent = true;
             }
         }
 
@@ -125,6 +123,7 @@ impl RunnerWindowStyleDiagnosticsStore {
 
     pub fn record_window_close(&mut self, window: AppWindowId) {
         self.effective.remove(&window);
+        self.transparent_explicit.remove(&window);
     }
 
     pub fn apply_style_patch(
@@ -142,6 +141,13 @@ impl RunnerWindowStyleDiagnosticsStore {
 
         if let Some(material) = patch.background_material {
             current.background_material = clamp_background_material_request(material, caps);
+            if caps.ui.window_transparent {
+                let explicit = self.transparent_explicit.get(&window).copied().flatten();
+                current.transparent = match explicit {
+                    Some(v) => v,
+                    None => current.background_material != WindowBackgroundMaterialRequest::None,
+                };
+            }
         }
 
         if let Some(taskbar) = patch.taskbar {

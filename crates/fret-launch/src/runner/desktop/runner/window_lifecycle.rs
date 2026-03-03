@@ -38,14 +38,6 @@ impl<D: WinitAppDriver> WinitRunner<D> {
         });
         if let Some(transparent) = style.transparent {
             attrs = attrs.with_transparent(transparent);
-        } else if caps.ui.window_transparent
-            && effective_background_material
-                .is_some_and(|m| m != fret_runtime::WindowBackgroundMaterialRequest::None)
-        {
-            // Background materials may require a composited alpha surface (ADR 0310). If the caller
-            // did not explicitly request `transparent`, treat it as implied once a non-None
-            // material is effectively applied.
-            attrs = attrs.with_transparent(true);
         }
         if let Some(policy) = style.activation {
             let active = matches!(policy, ActivationPolicy::Activates);
