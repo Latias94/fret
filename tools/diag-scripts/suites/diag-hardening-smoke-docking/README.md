@@ -1,6 +1,7 @@
 # diag-hardening-smoke-docking
 
-This suite is a small post-merge smoke for docking (multi-viewport + multi-window tear-off flows).
+This suite is a small post-merge smoke for docking (multi-viewport + multi-window tear-off flows),
+including in-window floating title-bar drag behaviors.
 
 Recommended run (native):
 

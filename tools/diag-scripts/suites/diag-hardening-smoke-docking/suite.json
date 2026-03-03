@@ -3,6 +3,8 @@
   "kind": "diag_script_suite_manifest",
   "scripts": [
     "tools/diag-scripts/docking/arbitration/docking-arbitration-demo-incoming-open-inject-smoke.json",
-    "tools/diag-scripts/docking-arbitration-demo-multiwindow-drag-tab-back-to-main.json"
+    "tools/diag-scripts/docking-arbitration-demo-multiwindow-drag-tab-back-to-main.json",
+    "tools/diag-scripts/docking/arbitration/docking-arbitration-demo-floating-title-drag-clamps-to-window.json",
+    "tools/diag-scripts/docking/arbitration/docking-arbitration-demo-floating-title-drag-docks-to-main.json"
   ]
 }
