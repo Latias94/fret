@@ -49,3 +49,9 @@ Notes:
   and is materialized into the promoted registry as `suite_memberships`.
 - A minimal, generated registry exists at `tools/diag-scripts/index.json` (scope: suite-reachable scripts + `_prelude`)
   and is validated in CI via `python tools/check_diag_scripts_registry.py`.
+
+Editing a suite safely:
+
+- Add a script to a suite: `python tools/diag_suite_edit.py add <suite> <script.json> --refresh-index`
+- Remove a script: `python tools/diag_suite_edit.py remove <suite> <script.json> --refresh-index`
+- Canonicalize ordering (sorted + de-duped): `python tools/diag_suite_edit.py fmt --suite <suite> --refresh-index`
