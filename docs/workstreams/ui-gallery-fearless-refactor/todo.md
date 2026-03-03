@@ -52,6 +52,7 @@ Any remaining legacy surfaces that embed raw Rust code strings are tracked via t
   - [x] Remove redundant centering wrappers so Preview/Code tabs share consistent left padding.
   - [x] Center doc pages once (page-level max width) so sections align to the same left gutter.
   - [ ] Audit remaining max-width and padding inconsistencies across pages.
+  - [x] Add a coarse `.max_w` audit report: `docs/workstreams/ui-gallery-fearless-refactor/layout-audit.generated.md` (regen via `tools/ui_gallery_layout_audit.py`).
 - [ ] Optional: align page taxonomy + section ordering to upstream shadcn MDX navigation.
 
 Notes:
