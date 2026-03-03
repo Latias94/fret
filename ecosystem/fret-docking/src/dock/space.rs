@@ -4019,7 +4019,20 @@ impl<H: UiHost> Widget<H> for DockSpace {
                                             *position,
                                         )
                                 {
-                                    if close {
+                                    let intent = tabstrip_controller::intent_for_click(
+                                        tabstrip_controller::TabStripHitTarget::Tab {
+                                            index: tab_index,
+                                            part: if close {
+                                                tabstrip_controller::TabPart::Close
+                                            } else {
+                                                tabstrip_controller::TabPart::Content
+                                            },
+                                        },
+                                    );
+                                    if matches!(
+                                        intent,
+                                        tabstrip_controller::TabStripIntent::Close { .. }
+                                    ) {
                                         self.pressed_tab_close =
                                             Some((tabs_node, tab_index, panel_key.clone()));
                                         request_pointer_capture = Some(Some(dock_space_node));
