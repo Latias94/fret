@@ -1,6 +1,7 @@
 use std::path::{Path, PathBuf};
 
 use crate::script_registry::{PromotedScriptRegistry, promoted_registry_default_path};
+use serde::Deserialize;
 
 pub(crate) struct SuiteRegistry {
     promoted: PromotedScriptRegistry,
@@ -90,6 +91,72 @@ impl SuiteResolver {
         workspace_root: &Path,
         suite: &str,
     ) -> Result<Vec<PathBuf>, String> {
+        #[derive(Debug, Deserialize)]
+        struct SuiteManifestV1 {
+            schema_version: u64,
+            kind: String,
+            scripts: Vec<String>,
+        }
+
+        let suite_root = workspace_root
+            .join("tools")
+            .join("diag-scripts")
+            .join("suites")
+            .join(suite);
+
+        for name in ["suite.json", "_suite.json"] {
+            let manifest_path = suite_root.join(name);
+            if !manifest_path.is_file() {
+                continue;
+            }
+
+            let bytes = std::fs::read(&manifest_path).map_err(|e| e.to_string())?;
+            let manifest: SuiteManifestV1 =
+                serde_json::from_slice(&bytes).map_err(|e| e.to_string())?;
+
+            if manifest.schema_version != 1 {
+                return Err(format!(
+                    "invalid suite manifest schema_version (expected 1): {}",
+                    manifest.schema_version
+                ));
+            }
+            if manifest.kind != "diag_script_suite_manifest" {
+                return Err(format!(
+                    "invalid suite manifest kind (expected diag_script_suite_manifest): {:?}",
+                    manifest.kind
+                ));
+            }
+            if manifest.scripts.is_empty() {
+                return Err(format!(
+                    "suite manifest contains no scripts: {}",
+                    manifest_path.display()
+                ));
+            }
+
+            let mut out: Vec<PathBuf> = Vec::with_capacity(manifest.scripts.len());
+            for raw in manifest.scripts {
+                if raw.trim().is_empty() {
+                    return Err(format!(
+                        "suite manifest contains an empty script path: {}",
+                        manifest_path.display()
+                    ));
+                }
+                let resolved = crate::paths::resolve_path(workspace_root, PathBuf::from(raw));
+                if !resolved.exists() {
+                    return Err(format!(
+                        "suite manifest script path does not exist: {} (manifest: {})",
+                        resolved.display(),
+                        manifest_path.display()
+                    ));
+                }
+                out.push(resolved);
+            }
+
+            out.sort();
+            out.dedup();
+            return Ok(out);
+        }
+
         let inputs = vec![format!("tools/diag-scripts/suites/{suite}")];
         crate::paths::expand_script_inputs(workspace_root, &inputs)
     }

@@ -68,5 +68,7 @@ This TODO is organized by milestones (see `MILESTONES.md`). Keep tasks **small a
 
 - [ ] Write a short “How to debug layout” cookbook that unifies: inspect → selector → gate → sidecar.
 - [ ] Update `docs/workstreams/diag-devtools-gui-v1.md` to reference the extension contract.
+- [x] Document merge-friendly script authoring practices (normalize/lint + suite composition).
+- [x] Add a low-noise alternative for suite membership (single-file suite manifest) for low-churn suites.
 - [x] Add a minimal “ecosystem diagnostics authoring guide” with one end-to-end example.
   - `docs/workstreams/diag-architecture-fearless-refactor-v1/MIGRATION_GUIDE.md` (includes `fretboard diag extensions ...`).

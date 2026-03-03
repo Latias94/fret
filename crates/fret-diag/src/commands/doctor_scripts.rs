@@ -68,6 +68,10 @@ fn is_script_redirect(v: &Value) -> bool {
     v.get("kind").and_then(|v| v.as_str()) == Some("script_redirect")
 }
 
+fn is_suite_manifest(v: &Value) -> bool {
+    v.get("kind").and_then(|v| v.as_str()) == Some("diag_script_suite_manifest")
+}
+
 fn read_redirect_to(v: &Value) -> Option<String> {
     v.get("to").and_then(|v| v.as_str()).map(|s| s.to_string())
 }
@@ -335,7 +339,9 @@ pub(crate) fn cmd_doctor_scripts(
         ));
     }
 
-    // Check suites (`tools/diag-scripts/suites/**/*.json`) are redirect stubs with valid targets.
+    // Check suites (`tools/diag-scripts/suites/**/*.json`) are either:
+    // - script_redirect stubs with valid targets, or
+    // - a suite manifest (diag_script_suite_manifest) with valid script paths.
     let suites_root = scripts_root.join("suites");
     if suites_root.is_dir() {
         let suite_paths = json_glob_recursive(&suites_root, "**/*.json")?;
@@ -351,6 +357,72 @@ pub(crate) fn cmd_doctor_scripts(
                 );
                 continue;
             };
+            if is_suite_manifest(&v) {
+                let scripts = v
+                    .get("scripts")
+                    .and_then(|v| v.as_array())
+                    .cloned()
+                    .unwrap_or_default();
+                if scripts.is_empty() {
+                    counts.suites_target_missing_total =
+                        counts.suites_target_missing_total.saturating_add(1);
+                    push_bounded(
+                        &mut examples.suite_target_missing,
+                        max_examples,
+                        format!("{} -> (empty scripts)", path.display()),
+                    );
+                    continue;
+                }
+
+                for raw in scripts {
+                    let Some(to) = raw.as_str().map(|s| s.to_string()) else {
+                        counts.suites_target_missing_total =
+                            counts.suites_target_missing_total.saturating_add(1);
+                        push_bounded(
+                            &mut examples.suite_target_missing,
+                            max_examples,
+                            format!("{} -> (non-string scripts entry)", path.display()),
+                        );
+                        continue;
+                    };
+                    let target = resolve_path(workspace_root, PathBuf::from(&to));
+                    if !target.exists() {
+                        counts.suites_target_missing_total =
+                            counts.suites_target_missing_total.saturating_add(1);
+                        push_bounded(
+                            &mut examples.suite_target_missing,
+                            max_examples,
+                            format!("{} -> {}", path.display(), to),
+                        );
+                        continue;
+                    }
+
+                    match redirect_chain_depth(workspace_root, &target, MAX_REDIRECT_DEPTH) {
+                        Ok(depth) => {
+                            counts.suites_redirect_chain_depth_max =
+                                counts.suites_redirect_chain_depth_max.max(depth);
+                            if depth > 2 {
+                                counts.suites_redirect_chain_depth_gt2_total = counts
+                                    .suites_redirect_chain_depth_gt2_total
+                                    .saturating_add(1);
+                                push_bounded(
+                                    &mut examples.suite_redirect_chain_depth_gt2,
+                                    max_examples,
+                                    target.display().to_string(),
+                                );
+                            }
+                        }
+                        Err(err) => {
+                            errors.push(format!(
+                                "failed to resolve suite manifest script redirect chain for {}: {err}",
+                                target.display()
+                            ));
+                        }
+                    }
+                }
+                continue;
+            }
+
             if !is_script_redirect(&v) {
                 counts.suites_non_redirect_total =
                     counts.suites_non_redirect_total.saturating_add(1);
@@ -426,7 +498,7 @@ pub(crate) fn cmd_doctor_scripts(
     }
     if counts.suites_non_redirect_total > 0 {
         errors.push(format!(
-            "tools/diag-scripts/suites/**/*.json contains non-redirect scripts (expected script_redirect stubs): {}",
+            "tools/diag-scripts/suites/**/*.json contains invalid suite entries (expected script_redirect stubs or suite manifests): {}",
             counts.suites_non_redirect_total
         ));
     }

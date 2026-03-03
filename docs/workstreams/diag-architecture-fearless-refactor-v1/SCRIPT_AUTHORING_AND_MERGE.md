@@ -24,6 +24,12 @@ Suite membership is curated via redirect stubs:
 
 This makes “add a new scenario” a new file, not an edit to a shared list.
 
+Optional (lower file-count noise):
+
+- For low-churn suites, prefer a single suite manifest:
+  - `tools/diag-scripts/suites/<suite-name>/suite.json` with `kind=diag_script_suite_manifest`.
+  - This is less noisy in the tree, but tends to create more merge conflicts if many people edit the same suite.
+
 ## 2) Normalize script formatting before committing
 
 Formatting churn causes conflicts even when semantics did not change. Use the built-in tooling formatter:
