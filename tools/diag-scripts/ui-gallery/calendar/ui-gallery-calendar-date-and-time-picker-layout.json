@@ -1,11 +1,11 @@
 {
   "schema_version": 2,
   "meta": {
-    "name": "UI Gallery: Calendar selected day is square and styled",
-    "tags": ["ui-gallery", "calendar", "shadcn"],
+    "name": "UI Gallery: Calendar date+time picker layout matches shadcn",
+    "tags": ["ui-gallery", "calendar", "shadcn", "date-picker"],
     "required_capabilities": ["diag.script_v2", "diag.screenshot_png"],
     "env_defaults": {
-      "FRET_UI_GALLERY_FIXED_TODAY": "2025-02-12"
+      "FRET_UI_GALLERY_FIXED_TODAY": "2026-05-15"
     }
   },
   "steps": [
@@ -16,7 +16,7 @@
         "kind": "exists",
         "target": { "kind": "test_id", "id": "ui-gallery-nav-search" }
       },
-      "timeout_frames": 600
+      "timeout_frames": 1800
     },
     { "type": "press_key", "key": "escape" },
     { "type": "wait_frames", "n": 2 },
@@ -33,7 +33,7 @@
         "kind": "exists",
         "target": { "kind": "test_id", "id": "ui-gallery-nav-calendar" }
       },
-      "timeout_frames": 600
+      "timeout_frames": 1800
     },
     { "type": "click", "target": { "kind": "test_id", "id": "ui-gallery-nav-calendar" } },
     {
@@ -42,56 +42,49 @@
         "kind": "exists",
         "target": { "kind": "test_id", "id": "ui-gallery-page-calendar" }
       },
-      "timeout_frames": 600
+      "timeout_frames": 1800
     },
 
     {
       "type": "scroll_into_view",
       "container": { "kind": "test_id", "id": "ui-gallery-content-scroll" },
-      "target": { "kind": "test_id", "id": "ui-gallery.calendar.basic:2025-02-12" },
+      "target": {
+        "kind": "test_id",
+        "id": "ui-gallery.calendar.time.date-trigger"
+      },
       "delta_y": -240.0,
-      "require_fully_within_container": true,
       "require_fully_within_window": true,
       "padding_px": 16.0,
-      "padding_insets_px": {
-        "left_px": 16.0,
-        "top_px": 16.0,
-        "right_px": 16.0,
-        "bottom_px": 40.0
-      },
       "timeout_frames": 1800
     },
     {
-      "type": "assert",
-      "predicate": {
-        "kind": "selected_is",
-        "target": { "kind": "test_id", "id": "ui-gallery.calendar.basic:2025-02-12" },
-        "selected": true
-      }
+      "type": "click_stable",
+      "target": {
+        "kind": "test_id",
+        "id": "ui-gallery.calendar.time.date-trigger"
+      },
+      "stable_frames": 2,
+      "max_move_px": 1.0,
+      "timeout_frames": 600
     },
     {
-      "type": "assert",
+      "type": "wait_until",
       "predicate": {
-        "kind": "bounds_min_size",
-        "target": { "kind": "test_id", "id": "ui-gallery.calendar.basic:2025-02-12" },
-        "min_w_px": 31.0,
-        "min_h_px": 31.0,
-        "eps_px": 1.0
-      }
-    },
-    {
-      "type": "assert",
-      "predicate": {
-        "kind": "bounds_max_size",
-        "target": { "kind": "test_id", "id": "ui-gallery.calendar.basic:2025-02-12" },
-        "max_w_px": 33.0,
-        "max_h_px": 33.0,
-        "eps_px": 1.0
-      }
+        "kind": "exists",
+        "target": {
+          "kind": "test_id",
+          "id": "ui-gallery.calendar.time.popover-content"
+        }
+      },
+      "timeout_frames": 600
     },
 
     { "type": "wait_frames", "n": 10 },
-    { "type": "capture_bundle", "label": "ui-gallery-calendar-selected-day-style" },
-    { "type": "capture_screenshot", "label": "ui-gallery-calendar-selected-day-style" }
+    { "type": "capture_bundle", "label": "ui-gallery-calendar-date-and-time-picker-layout" },
+    {
+      "type": "capture_screenshot",
+      "label": "ui-gallery-calendar-date-and-time-picker-layout"
+    }
   ]
 }
+

@@ -1,12 +1,14 @@
+use std::f32::consts::TAU;
+use std::time::Duration;
+
 use fret_core::{Point, Px, SemanticsLive, SemanticsRole, Transform2D};
 use fret_icons::{IconId, ids};
 use fret_ui::element::{
     AnyElement, LayoutStyle, Length, SemanticsDecoration, SvgIconProps, VisualTransformProps,
 };
-use fret_ui::{ElementContext, Invalidation, SvgSource, Theme, UiHost};
+use fret_ui::{ElementContext, SvgSource, Theme, UiHost};
 use fret_ui_kit::declarative::icon as icon_runtime;
-use fret_ui_kit::declarative::prefers_reduced_motion;
-use fret_ui_kit::declarative::scheduling;
+use fret_ui_kit::declarative::motion;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::{ColorRef, LayoutRefinement};
 
@@ -20,7 +22,10 @@ pub struct Spinner {
     layout: LayoutRefinement,
     color: Option<ColorRef>,
     icon: IconId,
-    /// Rotation speed in radians per frame. (`0.0` disables animation.)
+    /// Rotation speed in radians per 60Hz tick. (`0.0` disables animation.)
+    ///
+    /// This is duration-driven under the hood, so the perceived speed remains stable under
+    /// `--fixed-frame-delta-ms` and across different refresh rates.
     speed: f32,
 }
 
@@ -55,7 +60,7 @@ impl Spinner {
         self
     }
 
-    /// Rotation speed in radians per frame. (`0.0` disables animation.)
+    /// Rotation speed in radians per 60Hz tick. (`0.0` disables animation.)
     pub fn speed(mut self, speed: f32) -> Self {
         self.speed = speed;
         self
@@ -93,10 +98,22 @@ impl Spinner {
             center = Point::new(Px(w.0 * 0.5), Px(h.0 * 0.5));
         }
 
-        let reduced_motion = prefers_reduced_motion(cx, Invalidation::Paint, false);
-        let speed = if reduced_motion { 0.0 } else { self.speed };
-        let angle = cx.app.frame_id().0 as f32 * speed;
-        scheduling::set_continuous_frames(cx, speed != 0.0);
+        let angular_speed = self.speed * 60.0;
+        let period = if angular_speed.abs() > 0.0 {
+            Duration::from_secs_f32((TAU / angular_speed.abs()).max(0.0))
+        } else {
+            Duration::ZERO
+        };
+        let spin = motion::drive_loop_progress_keyed(
+            cx,
+            ("shadcn.spinner.spin", cx.root_id()),
+            angular_speed.abs() > 0.0,
+            period,
+        );
+        let mut angle = TAU * spin.progress;
+        if angular_speed < 0.0 {
+            angle = -angle;
+        }
         let transform = Transform2D::rotation_about_radians(angle, center);
 
         cx.visual_transform_props(VisualTransformProps { layout, transform }, |cx| {

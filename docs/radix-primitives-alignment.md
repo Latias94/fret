@@ -83,8 +83,8 @@ Aligned outcomes (what we match):
 Known gaps / deliberate non-1:1 mapping:
 
 - DOM-only composition nodes are not modeled 1:1 (e.g. Radix `AccordionHeader` as `h3` wrapper).
-- Radix `AccordionContent` sets `role="region"` and `aria-labelledby={triggerId}`; Fret currently has no dedicated `Region` semantics role and no “labelled-by” wiring for this surface, so we approximate via `SemanticsRole::List` (root) and pressable semantics on triggers.
-- Radix sets `aria-disabled` on the trigger when the open item is not collapsible; Fret does not currently distinguish this from “disabled” at the accessibility contract level (we keep the trigger enabled but ignore the “close” action when not collapsible).
+- Radix `AccordionContent` sets `role="region"` and `aria-labelledby={triggerId}`; Fret models this via `SemanticsRole::Region` plus a `labelled_by` relationship from the content panel to its trigger.
+- Radix sets `aria-disabled` on the trigger when the open item is not collapsible; Fret models this as a semantics-only disabled flag plus suppression of the invoke/click action surface (the trigger remains focusable and pointer-visible, but activation is a no-op in non-collapsible open state).
 
 Evidence anchors:
 

@@ -7,6 +7,7 @@ pub(crate) fn map_role(role: SemanticsRole) -> Role {
         SemanticsRole::Window => Role::Pane,
         SemanticsRole::Panel => Role::Pane,
         SemanticsRole::Group => Role::Group,
+        SemanticsRole::Region => Role::Region,
         SemanticsRole::Toolbar => Role::Toolbar,
         SemanticsRole::Heading => Role::Heading,
         SemanticsRole::Dialog => Role::Dialog,

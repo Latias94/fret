@@ -737,6 +737,11 @@ pub struct SemanticsDecoration {
     pub described_by_element: Option<u64>,
     /// Declarative-only: element ID of a node which this node controls (`aria-controls`).
     pub controls_element: Option<u64>,
+    /// Overrides whether this node supports the platform "invoke"/click action.
+    ///
+    /// This is useful for modeling ARIA patterns like Radix Accordion's `aria-disabled` trigger
+    /// state, where the element remains focusable but should not expose an "activate" action.
+    pub invokable: Option<bool>,
 }
 
 impl SemanticsDecoration {
@@ -779,6 +784,7 @@ impl SemanticsDecoration {
             labelled_by_element: other.labelled_by_element.or(self.labelled_by_element),
             described_by_element: other.described_by_element.or(self.described_by_element),
             controls_element: other.controls_element.or(self.controls_element),
+            invokable: other.invokable.or(self.invokable),
         }
     }
 
@@ -929,6 +935,11 @@ impl SemanticsDecoration {
 
     pub fn controls_element(mut self, element: u64) -> Self {
         self.controls_element = Some(element);
+        self
+    }
+
+    pub fn invokable(mut self, invokable: bool) -> Self {
+        self.invokable = Some(invokable);
         self
     }
 }

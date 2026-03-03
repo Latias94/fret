@@ -1,4 +1,5 @@
 use std::sync::{Arc, Mutex};
+use std::time::Duration;
 
 use fret_core::Transform2D;
 use fret_core::{
@@ -20,6 +21,9 @@ use fret_ui::{ElementContext, GlobalElementId, Invalidation, Theme, ThemeSnapsho
 use fret_ui_kit::declarative::icon as decl_icon;
 use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
 use fret_ui_kit::declarative::style as decl_style;
+use fret_ui_kit::declarative::transition::{
+    drive_transition_with_durations_and_cubic_bezier, ticks_60hz_for_duration,
+};
 use fret_ui_kit::headless::safe_hover;
 use fret_ui_kit::primitives::direction as direction_prim;
 use fret_ui_kit::primitives::navigation_menu as radix_navigation_menu;
@@ -33,6 +37,31 @@ use fret_ui_kit::{
 };
 
 use crate::overlay_motion;
+
+fn drive_navigation_menu_trigger_chevron_motion<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    key: Arc<str>,
+    open: bool,
+) -> fret_ui_kit::headless::transition::TransitionOutput {
+    cx.keyed(("navigation-menu-trigger-chevron-motion", key), |cx| {
+        let theme_full = Theme::global(&*cx.app);
+        let duration = theme_full
+            .duration_ms_by_key("duration.shadcn.motion.navigation_menu.trigger_chevron")
+            .or_else(|| theme_full.duration_ms_by_key("duration.motion.navigation_menu.trigger_chevron"))
+            .or_else(|| theme_full.duration_ms_by_key("duration.shadcn.motion.300"))
+            .map(|ms| Duration::from_millis(ms as u64))
+            .unwrap_or(Duration::from_millis(300));
+        let ticks = ticks_60hz_for_duration(duration);
+        let easing = theme_full
+            .easing_by_key("easing.shadcn.motion.navigation_menu.trigger_chevron")
+            .or_else(|| theme_full.easing_by_key("easing.motion.navigation_menu.trigger_chevron"))
+            .or_else(|| theme_full.easing_by_key("easing.shadcn.motion"))
+            .or_else(|| theme_full.easing_by_key("easing.motion.standard"))
+            .unwrap_or_else(|| overlay_motion::shadcn_motion_ease_bezier(cx));
+
+        drive_transition_with_durations_and_cubic_bezier(cx, open, ticks, ticks, easing)
+    })
+}
 
 fn alpha_mul(mut c: Color, mul: f32) -> Color {
     c.a = (c.a * mul).clamp(0.0, 1.0);
@@ -1548,7 +1577,12 @@ impl NavigationMenu {
                                             });
 
                                         let fg_ref_for_chevron = fg_ref.clone();
-                                        let chevron_rotation = if is_open { 180.0 } else { 0.0 };
+                                        let chevron_motion = drive_navigation_menu_trigger_chevron_motion(
+                                            cx,
+                                            item_value.clone(),
+                                            is_open,
+                                        );
+                                        let chevron_rotation = 180.0 * chevron_motion.progress;
                                         let chevron_size = Px(12.0); // Tailwind `size-3`
                                         let chevron_center =
                                             Point::new(Px(chevron_size.0 * 0.5), Px(chevron_size.0 * 0.5));
