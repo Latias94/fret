@@ -278,17 +278,27 @@ pub(super) fn dock_hint_pick_zone(
     let cx = (rect.origin.x.0 + rect.size.width.0 * 0.5).trunc();
     let cy = (rect.origin.y.0 + rect.size.height.0 * 0.5).trunc();
 
+    let hint_rects = dock_hint_rects_with_font(rect, font_size, outer_docking);
+
     if !outer_docking {
-        // Custom hit testing for the 5-way selection, designed to reduce flickering when moving
-        // diagonally between sides.
+        // Prefer rect-based center hit-testing so `Center` stays tightly coupled to the visual
+        // direction-pad geometry. This keeps docking previews more predictable and avoids
+        // "sticky center" picks just outside the center rect.
+        if hint_rects
+            .iter()
+            .find_map(|(zone, r)| (*zone == DropZone::Center).then_some(*r))
+            .is_some_and(|r| r.contains(position))
+        {
+            return Some(DropZone::Center);
+        }
+
+        // Custom hit-testing for the 5-way selection, designed to reduce flickering when moving
+        // diagonally between sides. Once we're outside the center rect, bias towards a stable
+        // side selection based on the pointer direction from the pad center.
         let dx = position.x.0 - cx;
         let dy = position.y.0 - cy;
         let len2 = dx * dx + dy * dy;
-        let r_threshold_center = hs_w * 1.4;
         let r_threshold_sides = hs_w * (1.4 + 1.2);
-        if len2 < r_threshold_center * r_threshold_center {
-            return Some(DropZone::Center);
-        }
         if len2 < r_threshold_sides * r_threshold_sides {
             return Some(if dx.abs() > dy.abs() {
                 if dx > 0.0 {
@@ -320,7 +330,7 @@ pub(super) fn dock_hint_pick_zone(
     };
 
     let mut picked: Option<DropZone> = None;
-    for (zone, r) in dock_hint_rects_with_font(rect, font_size, outer_docking) {
+    for (zone, r) in hint_rects {
         let hit = if outer_docking {
             r.contains(position)
         } else {

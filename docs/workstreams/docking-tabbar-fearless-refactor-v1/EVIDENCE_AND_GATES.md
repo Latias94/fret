@@ -45,6 +45,17 @@ Multi-window tear-off + merge-back gates (runner-routed cross-window drags):
 
 ## Evidence bundles (fill in after running locally)
 
+- 2026-03-03 diag-hardening-smoke-docking (PASS):
+  - Session: `target/fret-diag-gpt-docking/sessions/1772539589213-769`
+  - Suite summary: `target/fret-diag-gpt-docking/sessions/1772539589213-769/suite.summary.json`
+  - Scripts:
+    - `docking-arbitration-demo-incoming-open-inject-smoke`
+    - `docking-arbitration-demo-multiwindow-drag-tab-back-to-main`
+
+- 2026-03-03 docking tab bar edge auto-scroll (PASS):
+  - Session: `target/fret-diag-gpt-tabstrip/sessions/1772544101022-19124`
+  - Run id: `1772544102231`
+
 - 2026-03-02 docking-arbitration suite out dir:
   - `target/fret-diag-ws-docking-tabbar-2026-03-02/sessions/1772427715938-32660`
   - Suite summary: `target/fret-diag-ws-docking-tabbar-2026-03-02/sessions/1772427715938-32660/suite.summary.json`

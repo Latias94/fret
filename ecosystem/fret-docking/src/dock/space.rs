@@ -761,8 +761,10 @@ impl DockSpace {
         panel: &PanelKey,
     ) -> Option<Size> {
         let info = dock.panel(panel);
-        if let Some(policy) = docking_policy {
-            return policy.panel_min_content_size(panel, info);
+        if let Some(policy) = docking_policy
+            && let Some(size) = policy.panel_min_content_size(panel, info)
+        {
+            return Some(size);
         }
 
         let is_viewport = info.is_some_and(|p| p.viewport.is_some());
@@ -1420,11 +1422,12 @@ impl DockSpace {
             min_speed_px_per_tick: base * 0.20,
             max_speed_px_per_tick: base,
         };
-        let Some(dx) = fret_dnd::compute_autoscroll_x(cfg, tab_bar, position) else {
-            return false;
-        };
-
         let prev_scroll = self.tab_scroll_for(tabs);
+        let dx = fret_dnd::compute_autoscroll_x_clamped(cfg, tab_bar, position, prev_scroll, max_scroll);
+        if dx.0.abs() < 0.01 {
+            return false;
+        }
+
         let next_scroll = Px((prev_scroll.0 + dx.0).clamp(0.0, max_scroll.0));
         if (next_scroll.0 - prev_scroll.0).abs() < 0.01 {
             return false;
@@ -3968,6 +3971,18 @@ impl<H: UiHost> Widget<H> for DockSpace {
                                             },
                                         )
                                 {
+                                    // If the user (or a diagnostics script) begins a divider drag
+                                    // while split fractions are mid-motion, snap the layout to the
+                                    // current graph immediately.
+                                    //
+                                    // This avoids the "single-frame drag" edge case in scripted
+                                    // playback (down/move/up in one tick): the drag can complete
+                                    // before the next layout pass sees `divider_drag=Some(...)`,
+                                    // which would otherwise allow split-fraction motion to animate
+                                    // the freshly-updated fractions and make scripts observe
+                                    // stale panel bounds.
+                                    self.split_fraction_motion.clear();
+
                                     let min_px = Self::split_child_min_px(
                                         docking_policy.as_deref(),
                                         dock,

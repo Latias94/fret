@@ -3,6 +3,9 @@
 Goal: converge `workspace` tabstrip + `docking` tab bar behaviors onto shared mechanism vocabulary
 (`fret-ui-headless`) while keeping policy in ecosystem layers.
 
+Rolling log:
+- `docs/workstreams/editor-tabstrip-unification-fearless-refactor-v1/LOG.md`
+
 This workstream is intentionally scoped to “editor-grade tab UX”:
 - overflow behavior (membership, dropdown list, close affordances)
 - drag & drop targets (tab halves, end-drop surfaces, overflow button exclusion)

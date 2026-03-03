@@ -821,7 +821,43 @@ impl UiDiagnosticsService {
     pub fn clear_window(&mut self, window: AppWindowId) {
         self.per_window.remove(&window);
         self.known_windows.retain(|w| *w != window);
-        self.active_scripts.remove(&window);
+        if let Some(mut active) = self.active_scripts.remove(&window) {
+            // If the window owning the active script closes (common in multi-window tear-off
+            // sequences), keep the script alive by migrating it to a remaining window instead of
+            // silently dropping it and letting tooling time out.
+            let fallback = if active.anchor_window != window
+                && self.known_windows.iter().any(|w| *w == active.anchor_window)
+            {
+                Some(active.anchor_window)
+            } else {
+                self.known_windows.first().copied()
+            };
+
+            if let Some(fallback) = fallback {
+                if active.anchor_window == window {
+                    active.anchor_window = fallback;
+                }
+                self.active_scripts.insert(fallback, active);
+            } else {
+                // No windows remain; fail the script so tooling can exit cleanly.
+                self.write_script_result(UiScriptResultV1 {
+                    schema_version: 1,
+                    run_id: active.run_id,
+                    updated_unix_ms: unix_ms_now(),
+                    window: None,
+                    stage: UiScriptStageV1::Failed,
+                    step_index: Some(active.next_step.min(u32::MAX as usize) as u32),
+                    reason_code: Some("window.closed".to_string()),
+                    reason: Some("active script window closed and no fallback window exists".to_string()),
+                    evidence: None,
+                    last_bundle_dir: self
+                        .last_dump_dir
+                        .as_ref()
+                        .map(|p| display_path(&self.cfg.out_dir, p)),
+                    last_bundle_artifact: self.last_dump_artifact_stats.clone(),
+                });
+            }
+        }
         self.inspector.clear_for_window(window);
     }
 
