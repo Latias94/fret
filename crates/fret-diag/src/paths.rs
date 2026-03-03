@@ -51,15 +51,12 @@ pub(crate) fn expand_script_inputs(
                 path.display()
             ));
         }
-        let scripts = v
-            .get("scripts")
-            .and_then(|v| v.as_array())
-            .ok_or_else(|| {
-                format!(
-                    "invalid suite manifest (missing array field: scripts): {}",
-                    path.display()
-                )
-            })?;
+        let scripts = v.get("scripts").and_then(|v| v.as_array()).ok_or_else(|| {
+            format!(
+                "invalid suite manifest (missing array field: scripts): {}",
+                path.display()
+            )
+        })?;
         if scripts.is_empty() {
             return Err(format!(
                 "suite manifest contains no scripts: {}",
