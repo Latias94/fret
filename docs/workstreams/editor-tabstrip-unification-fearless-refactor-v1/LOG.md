@@ -35,6 +35,17 @@ This file is a short, append-only log of landings and decisions for this workstr
   - Script: `tools/diag-scripts/docking/arbitration/docking-arbitration-demo-tab-close-button-does-not-activate.json`
   - Rationale: editor-grade docking expects close to be an explicit intent that cannot accidentally re-target activation or drag state.
 
+## 2026-03-04
+
+- Added workspace tab strip drag diagnostics + a predicate to gate “close does not start drag”.
+  - Runtime snapshot: `crates/fret-runtime/src/interaction_diagnostics.rs` (`WorkspaceTabStripDragDiagnostics`)
+  - Workspace publisher: `ecosystem/fret-workspace/src/tab_strip/mod.rs`
+  - Protocol predicate: `crates/fret-diag-protocol/src/lib.rs` (`workspace_tab_strip_drag_active_is`)
+  - Predicate wiring: `ecosystem/fret-bootstrap/src/ui_diagnostics/predicates.rs`
+  - Workspace gate: `tools/diag-scripts/workspace/shell-demo/workspace-shell-demo-tab-close-button-does-not-start-drag.json`
+- Hardened docking close arbitration gate to assert no dock drag is started while pressing close.
+  - Docking gate: `tools/diag-scripts/docking/arbitration/docking-arbitration-demo-tab-close-button-does-not-activate.json`
+
 ## Next (proposed)
 
 - Extract a shared `TabStripController` into `ecosystem/fret-ui-kit/` (policy toolbox):

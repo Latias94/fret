@@ -56,6 +56,9 @@
       "button": "left"
     },
     { "type": "wait_frames", "n": 1 },
+    { "type": "pointer_move", "window": { "kind": "current" }, "delta_x": 8.0, "delta_y": 0.0, "steps": 6 },
+    { "type": "wait_frames", "n": 1 },
+    { "type": "assert", "predicate": { "kind": "dock_drag_active_is", "active": false } },
     { "type": "assert", "predicate": { "kind": "dock_graph_signature_contains", "needle": "tabs(a=0:" } },
     { "type": "assert", "predicate": { "kind": "exists", "target": { "kind": "test_id", "id": "dock-arb-viewport-right" } } },
 
