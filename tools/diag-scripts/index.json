@@ -4053,6 +4053,40 @@
       "target_hints": []
     },
     {
+      "id": "ui-gallery-scroll-area-wheel-torture",
+      "path": "tools/diag-scripts/ui-gallery/scroll-area/ui-gallery-scroll-area-wheel-torture.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "perf-ui-gallery-scroll-area"
+      ],
+      "tags": [
+        "perf",
+        "scroll",
+        "ui_gallery",
+        "wheel"
+      ],
+      "target_hints": []
+    },
+    {
+      "id": "ui-gallery-scrollbar-drag-baseline-content-growth",
+      "path": "tools/diag-scripts/ui-gallery/scroll-area/ui-gallery-scrollbar-drag-baseline-content-growth.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "ui-gallery-scroll-area"
+      ],
+      "tags": [
+        "regression_pack",
+        "scroll",
+        "scrollbar",
+        "ui_gallery"
+      ],
+      "target_hints": []
+    },
+    {
       "id": "ui-gallery-select-commit-and-label-update-bundle",
       "path": "tools/diag-scripts/ui-gallery/select/ui-gallery-select-commit-and-label-update-bundle.json",
       "required_capabilities": [
@@ -4803,77 +4837,33 @@
         "Asserts the tab is removed from the UI tree."
       ]
     },
-	    {
-	      "id": "workspace-shell-demo-tab-close-mru-fallback-smoke",
-	      "path": "tools/diag-scripts/workspace/shell-demo/workspace-shell-demo-tab-close-mru-fallback-smoke.json",
-	      "required_capabilities": [
-	        "diag.script_v2"
-	      ],
-	      "suite_memberships": [
-	        "diag-hardening-smoke-workspace"
-	      ],
-	      "tags": [
-	        "close",
-	        "gate",
-	        "smoke",
-	        "tabstrip",
-	        "workspace"
-	      ],
-	      "target_hints": [
-	        "Activates doc-a-1 (pane A) so MRU is deterministic.",
-	        "Closes doc-a-1 via the close button.",
-	        "Asserts doc-a-1 is removed and selection falls back to doc-a-2 (MRU fallback)."
-	      ]
-	    },
-	    {
-	      "id": "workspace-shell-demo-tab-close-others-keeps-pinned-smoke",
-	      "path": "tools/diag-scripts/workspace/shell-demo/workspace-shell-demo-tab-close-others-keeps-pinned-smoke.json",
-	      "required_capabilities": [
-	        "diag.script_v2"
-	      ],
-	      "suite_memberships": [
-	        "workspace-shell-demo"
-	      ],
-	      "tags": [
-	        "close",
-	        "gate",
-	        "pinned",
-	        "smoke",
-	        "tabstrip",
-	        "workspace"
-	      ],
-	      "target_hints": [
-	        "Pins doc-a-0, then runs Close Other Tabs from doc-a-2's context menu.",
-	        "Asserts the pinned tab is kept and only the active unpinned tab remains."
-	      ]
-	    },
-	    {
-	      "id": "workspace-shell-demo-tab-close-left-keeps-pinned-smoke",
-	      "path": "tools/diag-scripts/workspace/shell-demo/workspace-shell-demo-tab-close-left-keeps-pinned-smoke.json",
-	      "required_capabilities": [
-	        "diag.script_v2"
-	      ],
-	      "suite_memberships": [
-	        "workspace-shell-demo"
-	      ],
-	      "tags": [
-	        "close",
-	        "gate",
-	        "pinned",
-	        "smoke",
-	        "tabstrip",
-	        "workspace"
-	      ],
-	      "target_hints": [
-	        "Pins doc-a-0, activates doc-a-2, then runs Close Tabs to the Left.",
-	        "Asserts doc-a-1 is closed but the pinned tab is kept."
-	      ]
-	    },
-	    {
-	      "id": "workspace-shell-demo-tab-cross-pane-move-to-end",
-	      "path": "tools/diag-scripts/workspace/shell-demo/workspace-shell-demo-tab-cross-pane-move-to-end.json",
-	      "required_capabilities": [
-	        "diag.script_v2"
+    {
+      "id": "workspace-shell-demo-tab-close-mru-fallback-smoke",
+      "path": "tools/diag-scripts/workspace/shell-demo/workspace-shell-demo-tab-close-mru-fallback-smoke.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "diag-hardening-smoke-workspace"
+      ],
+      "tags": [
+        "close",
+        "gate",
+        "smoke",
+        "tabstrip",
+        "workspace"
+      ],
+      "target_hints": [
+        "Activates doc-a-1 (pane A) so MRU is deterministic.",
+        "Closes doc-a-1 via the close button.",
+        "Asserts doc-a-1 is removed and selection falls back to doc-a-2 (MRU fallback)."
+      ]
+    },
+    {
+      "id": "workspace-shell-demo-tab-cross-pane-move-to-end",
+      "path": "tools/diag-scripts/workspace/shell-demo/workspace-shell-demo-tab-cross-pane-move-to-end.json",
+      "required_capabilities": [
+        "diag.script_v2"
       ],
       "suite_memberships": [
         "workspace-shell-demo"
@@ -5041,10 +5031,7 @@
         "tabstrip",
         "workspace"
       ],
-      "target_hints": [
-        "Pins doc-a-0 via context menu, then drags it onto the pinned boundary to unpin.",
-        "Asserts the tab's .pinned anchor toggles off after the boundary drop."
-      ]
+      "target_hints": []
     },
     {
       "id": "workspace-shell-demo-tab-pinned-cross-boundary-drop-does-not-pin-smoke",
