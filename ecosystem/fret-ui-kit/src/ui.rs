@@ -1230,6 +1230,7 @@ pub fn raw_text<H: UiHost>(
 mod tests {
     use super::*;
     use crate::UiExt;
+    use crate::declarative::semantics::UiIntoElementTestIdExt as _;
     use crate::{LengthRefinement, MetricRef};
     use fret_app::App;
     use fret_core::{AppWindowId, Point, Rect, Size};
@@ -1242,6 +1243,17 @@ mod tests {
         h_flex(cx, |cx| [text(cx, "a"), text(cx, "b")])
             .gap(Space::N2)
             .into_element(cx)
+    }
+
+    // Compile-only: ensure `UiIntoElement`-level semantics decorators can be applied before
+    // `into_element(cx)` (so callsites can avoid "decorate-only" early landing).
+    #[allow(dead_code)]
+    fn h_flex_accepts_decorated_children<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
+        h_flex(cx, |cx| {
+            [text(cx, "a").test_id("a"), text(cx, "b").test_id("b")]
+        })
+        .gap(Space::N2)
+        .into_element(cx)
     }
 
     #[test]

@@ -63,6 +63,18 @@ Post-merge verification (2026-03-02, after syncing `origin/main` into local `mai
   - overlap z-order switch: run id `1772468892427` (session `1772468392070-85720`)
   - chained tear-off (two tabs): run id `1772468949607` (session `1772468946994-57504`)
 
+Post-merge verification (2026-03-03):
+
+- Prefer running the already-built binaries (instead of `cargo run`) when the workspace may be compiling in another
+  terminal (avoids Cargo build-lock contention during diagnostics authoring):
+  - `target/debug/fretboard.exe ... --launch -- target/debug/docking_arbitration_demo.exe`
+- Chained tear-off (two tabs) is stable again:
+  - `fretboard diag run` PASS with `--timeout-ms 60000`:
+    - run id `1772522076604` (base out dir `target/fret-diag-chained4`, session `1772522070686-66016`)
+  - `fretboard diag repeat` is green 7x with:
+    - `--timeout-ms 60000 --reuse-launch --compare-ignore-bounds --compare-ignore-scene-fingerprint`
+    - summary: `target/fret-diag-chained-repeat1/repeat.summary.json`
+
 Hover peek-behind hardening (2026-03-02):
 
 - Runner hover routing consumes `window_under_moving_window` when transparent payload is requested (or follow is active),

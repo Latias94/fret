@@ -4,6 +4,7 @@ use std::time::Duration;
 use std::sync::Arc;
 
 use fret_render::{ClearColor, WgpuContext};
+use fret_runtime::WindowStyleRequest;
 
 #[cfg(not(target_arch = "wasm32"))]
 use crate::RunnerError;
@@ -12,6 +13,12 @@ pub struct WinitRunnerConfig {
     pub main_window_title: String,
     pub main_window_size: super::WindowLogicalSize,
     pub main_window_position: Option<super::WindowPosition>,
+    /// Create-time style request for the main OS window.
+    ///
+    /// Notes:
+    /// - Some facets are only honored at window creation (e.g. `decorations`, `resizable`).
+    /// - Runners should treat unsupported facets as best-effort and clamp via capabilities.
+    pub main_window_style: WindowStyleRequest,
     pub default_window_title: String,
     pub default_window_size: super::WindowLogicalSize,
     pub default_window_position: Option<super::WindowPosition>,
@@ -103,6 +110,7 @@ impl Default for WinitRunnerConfig {
             main_window_title: "fret".to_string(),
             main_window_size: super::WindowLogicalSize::new(1280.0, 720.0),
             main_window_position: None,
+            main_window_style: WindowStyleRequest::default(),
             default_window_title: "fret".to_string(),
             default_window_size: super::WindowLogicalSize::new(640.0, 480.0),
             default_window_position: None,

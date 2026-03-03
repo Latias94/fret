@@ -129,6 +129,8 @@ fn view_cache_runs_contained_relayout_for_invalidated_boundaries() {
     let mut services = FakeUiServices;
     ui.layout_all(&mut app, &mut services, root_bounds, 1.0);
     assert!(!ui.nodes[boundary].invalidation.layout);
+    assert_eq!(ui.nodes[boundary].subtree_layout_dirty_count, 0);
+    assert_eq!(ui.nodes[root].subtree_layout_dirty_count, 0);
     assert_eq!(ui.debug_stats().view_cache_contained_relayouts, 1);
 }
 

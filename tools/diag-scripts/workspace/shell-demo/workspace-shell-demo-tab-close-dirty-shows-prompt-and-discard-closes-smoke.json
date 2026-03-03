@@ -1,0 +1,61 @@
+{
+  "schema_version": 2,
+  "meta": {
+    "name": "Workspace shell demo: dirty close shows prompt and discard closes (smoke)",
+    "tags": ["workspace", "tabstrip", "dirty", "close", "prompt", "smoke", "gate"],
+    "required_capabilities": ["diag.script_v2"],
+    "env_defaults": {
+      "FRET_WORKSPACE_SHELL_DEBUG_PREVIEW": "1",
+      "FRET_WORKSPACE_SHELL_DEBUG_DIRTY_CLOSE_POLICY": "1"
+    },
+    "target_hints": [
+      "Marks the active tab as dirty via demo debug button.",
+      "Attempts to close the tab via the demo debug Close active (pane-a) button (blocked by policy).",
+      "Asserts a dirty-close prompt is shown, then discards and closes the tab."
+    ]
+  },
+  "steps": [
+    { "type": "set_window_inner_size", "width_px": 1280.0, "height_px": 720.0 },
+    { "type": "wait_frames", "n": 10 },
+
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "workspace-shell-pane-pane-a-debug-mark-dirty" }
+      },
+      "timeout_frames": 240
+    },
+
+    { "type": "click", "target": { "kind": "test_id", "id": "workspace-shell-pane-pane-a-tab-doc-a-2" } },
+    { "type": "wait_frames", "n": 4 },
+
+    { "type": "click", "target": { "kind": "test_id", "id": "workspace-shell-pane-pane-a-debug-mark-dirty" } },
+    { "type": "wait_frames", "n": 6 },
+    {
+      "type": "wait_until",
+      "predicate": { "kind": "exists", "target": { "kind": "test_id", "id": "workspace-shell-pane-pane-a-tab-doc-a-2.dirty" } },
+      "timeout_frames": 240
+    },
+
+    { "type": "click", "target": { "kind": "test_id", "id": "workspace-shell-pane-pane-a-debug-close-active" } },
+    { "type": "wait_frames", "n": 10 },
+
+    {
+      "type": "wait_until",
+      "predicate": { "kind": "exists", "target": { "kind": "test_id", "id": "workspace-shell-dirty-close-prompt" } },
+      "timeout_frames": 240
+    },
+
+    { "type": "click", "target": { "kind": "test_id", "id": "workspace-shell-dirty-close-prompt.discard" } },
+    { "type": "wait_frames", "n": 10 },
+
+    {
+      "type": "wait_until",
+      "predicate": { "kind": "not_exists", "target": { "kind": "test_id", "id": "workspace-shell-pane-pane-a-tab-doc-a-2" } },
+      "timeout_frames": 240
+    },
+
+    { "type": "capture_bundle", "label": "workspace-shell-demo-tab-close-dirty-shows-prompt-and-discard-closes-smoke" }
+  ]
+}

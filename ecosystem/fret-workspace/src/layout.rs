@@ -3,6 +3,9 @@ use std::sync::Arc;
 use fret_core::Axis;
 use fret_runtime::CommandId;
 
+use crate::close_policy::WorkspaceDirtyClosePolicy;
+use crate::tabs::WorkspaceApplyCommandOutcome;
+
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 
@@ -376,6 +379,183 @@ impl WorkspaceWindowLayout {
     pub fn active_pane_mut(&mut self) -> Option<&mut WorkspacePaneLayout> {
         let active = self.active_pane.clone()?;
         self.pane_tree.find_pane_mut(active.as_ref())
+    }
+
+    pub fn apply_command_with_close_policy(
+        &mut self,
+        command: &CommandId,
+        policy: Option<&mut dyn WorkspaceDirtyClosePolicy>,
+    ) -> WorkspaceApplyCommandOutcome {
+        match command.as_str() {
+            crate::commands::CMD_WORKSPACE_PANE_NEXT => {
+                return WorkspaceApplyCommandOutcome::applied(self.focus_next_pane());
+            }
+            crate::commands::CMD_WORKSPACE_PANE_PREV => {
+                return WorkspaceApplyCommandOutcome::applied(self.focus_prev_pane());
+            }
+            crate::commands::CMD_WORKSPACE_PANE_MOVE_ACTIVE_TAB_NEXT => {
+                return WorkspaceApplyCommandOutcome::applied(self.move_active_tab_to_next_pane());
+            }
+            crate::commands::CMD_WORKSPACE_PANE_MOVE_ACTIVE_TAB_PREV => {
+                return WorkspaceApplyCommandOutcome::applied(self.move_active_tab_to_prev_pane());
+            }
+            crate::commands::CMD_WORKSPACE_PANE_RESIZE_RIGHT => {
+                return WorkspaceApplyCommandOutcome::applied(
+                    self.resize_active_pane(Axis::Horizontal, DEFAULT_PANE_RESIZE_STEP_FRACTION),
+                );
+            }
+            crate::commands::CMD_WORKSPACE_PANE_RESIZE_LEFT => {
+                return WorkspaceApplyCommandOutcome::applied(
+                    self.resize_active_pane(Axis::Horizontal, -DEFAULT_PANE_RESIZE_STEP_FRACTION),
+                );
+            }
+            crate::commands::CMD_WORKSPACE_PANE_RESIZE_UP => {
+                return WorkspaceApplyCommandOutcome::applied(
+                    self.resize_active_pane(Axis::Vertical, DEFAULT_PANE_RESIZE_STEP_FRACTION),
+                );
+            }
+            crate::commands::CMD_WORKSPACE_PANE_RESIZE_DOWN => {
+                return WorkspaceApplyCommandOutcome::applied(
+                    self.resize_active_pane(Axis::Vertical, -DEFAULT_PANE_RESIZE_STEP_FRACTION),
+                );
+            }
+            crate::commands::CMD_WORKSPACE_PANE_SPLIT_RIGHT => {
+                return WorkspaceApplyCommandOutcome::applied(self.split_active_pane_auto(
+                    Axis::Horizontal,
+                    SplitSide::Second,
+                    0.5,
+                    SplitMode::CloneActiveTab,
+                ));
+            }
+            crate::commands::CMD_WORKSPACE_PANE_SPLIT_LEFT => {
+                return WorkspaceApplyCommandOutcome::applied(self.split_active_pane_auto(
+                    Axis::Horizontal,
+                    SplitSide::First,
+                    0.5,
+                    SplitMode::CloneActiveTab,
+                ));
+            }
+            crate::commands::CMD_WORKSPACE_PANE_SPLIT_UP => {
+                return WorkspaceApplyCommandOutcome::applied(self.split_active_pane_auto(
+                    Axis::Vertical,
+                    SplitSide::First,
+                    0.5,
+                    SplitMode::CloneActiveTab,
+                ));
+            }
+            crate::commands::CMD_WORKSPACE_PANE_SPLIT_DOWN => {
+                return WorkspaceApplyCommandOutcome::applied(self.split_active_pane_auto(
+                    Axis::Vertical,
+                    SplitSide::Second,
+                    0.5,
+                    SplitMode::CloneActiveTab,
+                ));
+            }
+            crate::commands::CMD_WORKSPACE_PANE_FOCUS_LEFT => {
+                return WorkspaceApplyCommandOutcome::applied(
+                    self.focus_pane_in_direction(PaneDirection::Left),
+                );
+            }
+            crate::commands::CMD_WORKSPACE_PANE_FOCUS_RIGHT => {
+                return WorkspaceApplyCommandOutcome::applied(
+                    self.focus_pane_in_direction(PaneDirection::Right),
+                );
+            }
+            crate::commands::CMD_WORKSPACE_PANE_FOCUS_UP => {
+                return WorkspaceApplyCommandOutcome::applied(
+                    self.focus_pane_in_direction(PaneDirection::Up),
+                );
+            }
+            crate::commands::CMD_WORKSPACE_PANE_FOCUS_DOWN => {
+                return WorkspaceApplyCommandOutcome::applied(
+                    self.focus_pane_in_direction(PaneDirection::Down),
+                );
+            }
+            crate::commands::CMD_WORKSPACE_PANE_MOVE_ACTIVE_TAB_LEFT => {
+                return WorkspaceApplyCommandOutcome::applied(
+                    self.move_active_tab_to_direction(PaneDirection::Left),
+                );
+            }
+            crate::commands::CMD_WORKSPACE_PANE_MOVE_ACTIVE_TAB_RIGHT => {
+                return WorkspaceApplyCommandOutcome::applied(
+                    self.move_active_tab_to_direction(PaneDirection::Right),
+                );
+            }
+            crate::commands::CMD_WORKSPACE_PANE_MOVE_ACTIVE_TAB_UP => {
+                return WorkspaceApplyCommandOutcome::applied(
+                    self.move_active_tab_to_direction(PaneDirection::Up),
+                );
+            }
+            crate::commands::CMD_WORKSPACE_PANE_MOVE_ACTIVE_TAB_DOWN => {
+                return WorkspaceApplyCommandOutcome::applied(
+                    self.move_active_tab_to_direction(PaneDirection::Down),
+                );
+            }
+            _ => {}
+        }
+
+        if let Some(id) = command
+            .as_str()
+            .strip_prefix(crate::commands::CMD_WORKSPACE_PANE_ACTIVATE_PREFIX)
+        {
+            let id = id.trim();
+            if id.is_empty() {
+                return WorkspaceApplyCommandOutcome::applied(false);
+            }
+            return WorkspaceApplyCommandOutcome::applied(self.activate_pane(id));
+        }
+
+        if let Some(pane_id) = command
+            .as_str()
+            .strip_prefix(crate::commands::CMD_WORKSPACE_PANE_MOVE_ACTIVE_TAB_TO_PREFIX)
+        {
+            let pane_id = pane_id.trim();
+            if pane_id.is_empty() {
+                return WorkspaceApplyCommandOutcome::applied(false);
+            }
+            return WorkspaceApplyCommandOutcome::applied(self.move_active_tab_to_pane(pane_id));
+        }
+
+        if let Some(rest) = command
+            .as_str()
+            .strip_prefix(crate::commands::CMD_WORKSPACE_PANE_SPLIT_PREFIX)
+        {
+            let rest = rest.trim();
+            let mut parts = rest.splitn(3, '.');
+            let axis = parts.next().unwrap_or_default();
+            let side = parts.next().unwrap_or_default();
+            let new_pane_id = parts.next().unwrap_or_default().trim();
+            if new_pane_id.is_empty() {
+                return WorkspaceApplyCommandOutcome::applied(false);
+            }
+
+            let axis = match axis {
+                "horizontal" => Axis::Horizontal,
+                "vertical" => Axis::Vertical,
+                _ => return WorkspaceApplyCommandOutcome::applied(false),
+            };
+            let side = match side {
+                "first" => SplitSide::First,
+                "second" => SplitSide::Second,
+                _ => return WorkspaceApplyCommandOutcome::applied(false),
+            };
+
+            return WorkspaceApplyCommandOutcome::applied(self.split_active_pane(
+                axis,
+                side,
+                0.5,
+                Arc::<str>::from(new_pane_id),
+            ));
+        }
+
+        if self.active_pane.is_none() {
+            self.active_pane = self.pane_tree.first_leaf_id().cloned();
+        }
+
+        match self.active_pane_mut() {
+            Some(pane) => pane.tabs.apply_command_with_close_policy(command, policy),
+            None => WorkspaceApplyCommandOutcome::applied(false),
+        }
     }
 
     pub fn apply_command(&mut self, command: &CommandId) -> bool {

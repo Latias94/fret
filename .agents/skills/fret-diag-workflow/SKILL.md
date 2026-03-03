@@ -84,6 +84,8 @@ Use `fret-ui-review` when the goal is an architecture/UX audit rather than produ
       step will never complete, leaving the tooling waiting for `script.result.json` indefinitely.
   - If you need a “settle”, prefer `wait_until` on a semantic predicate (e.g. `dock_graph_canonical_is`,
     `known_window_count_is`) and then `capture_bundle` as the final step.
+  - Treat `known_window_count_*` as **currently open windows** (runner best-effort). Do not overload it as an “ever seen”
+    predicate; add a dedicated gate if you need that semantics.
   - When in doubt: `... -> assert/wait_until -> capture_bundle (last)` (no steps after).
   - Prefer stage-gate bundles for correctness debugging:
     - Capture once at *drop* (immediately after `dock_drop_resolved_*` + `dock_drag_active_is=false`).
@@ -91,6 +93,9 @@ Use `fret-ui-review` when the goal is an architecture/UX audit rather than produ
     - Compare “drop vs after-close” evidence to decide where to refactor:
       - if it is already wrong at drop: likely docking resolve/apply (`fret-docking`),
       - if drop is correct but after-close is wrong: likely window close / cleanup (`fret-core` / lifecycle glue).
+  - When hardening a docking script, use `diag repeat` with stable comparisons to prove it is not timing-flaky:
+    - `--compare-ignore-bounds` (layout/position noise)
+    - `--compare-ignore-scene-fingerprint` (non-deterministic paint output)
 - When triaging: prefer `diag meta/query/slice` over searching JSON.
 - When a script is flaky: replace sleeps with stabilization (`click_stable`, `wait_until`, bounds-stable), and shrink.
 - Always leave behind the 3-pack: repro script + bounded evidence bundle + regression gate (suite/check/test).

@@ -4170,6 +4170,86 @@
       "target_hints": []
     },
     {
+      "id": "ui-gallery-scroll-area-nested-scroll-routing",
+      "path": "tools/diag-scripts/ui-gallery/scroll-area/ui-gallery-scroll-area-nested-scroll-routing.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "diag-hardening-smoke",
+        "ui-gallery-scroll-area"
+      ],
+      "tags": [
+        "nested_scroll",
+        "regression_pack",
+        "scroll",
+        "ui_gallery"
+      ],
+      "target_hints": []
+    },
+    {
+      "id": "ui-gallery-scroll-area-toggle-code-tabs",
+      "path": "tools/diag-scripts/ui-gallery/scroll-area/ui-gallery-scroll-area-toggle-code-tabs.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "ui-gallery-scroll-area"
+      ],
+      "tags": [
+        "regression_pack",
+        "scroll",
+        "ui_gallery"
+      ],
+      "target_hints": []
+    },
+    {
+      "id": "ui-gallery-scroll-area-wheel-scroll",
+      "path": "tools/diag-scripts/ui-gallery/scroll-area/ui-gallery-scroll-area-wheel-scroll.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "ui-gallery-scroll-area"
+      ],
+      "tags": [],
+      "target_hints": []
+    },
+    {
+      "id": "ui-gallery-scroll-area-wheel-torture",
+      "path": "tools/diag-scripts/ui-gallery/scroll-area/ui-gallery-scroll-area-wheel-torture.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "perf-ui-gallery-scroll-area"
+      ],
+      "tags": [
+        "perf",
+        "scroll",
+        "ui_gallery",
+        "wheel"
+      ],
+      "target_hints": []
+    },
+    {
+      "id": "ui-gallery-scrollbar-drag-baseline-content-growth",
+      "path": "tools/diag-scripts/ui-gallery/scroll-area/ui-gallery-scrollbar-drag-baseline-content-growth.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "ui-gallery-scroll-area"
+      ],
+      "tags": [
+        "regression_pack",
+        "scroll",
+        "scrollbar",
+        "ui_gallery"
+      ],
+      "target_hints": []
+    },
+    {
       "id": "ui-gallery-scroll-into-view-padding-is-soft",
       "path": "tools/diag-scripts/ui-gallery/card/ui-gallery-scroll-into-view-padding-is-soft.json",
       "required_capabilities": [],
@@ -4934,6 +5014,25 @@
       "target_hints": []
     },
     {
+      "id": "ui-gallery-virtual-list-wheel-torture",
+      "path": "tools/diag-scripts/ui-gallery/virtual-list/ui-gallery-virtual-list-wheel-torture.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "perf-ui-gallery-virtual-list",
+        "ui-gallery-virtual-list"
+      ],
+      "tags": [
+        "perf",
+        "scroll",
+        "ui_gallery",
+        "virtual_list",
+        "wheel"
+      ],
+      "target_hints": []
+    },
+    {
       "id": "ui-gallery-virtual-list-window-boundary-scroll",
       "path": "tools/diag-scripts/ui-gallery/virtual-list/ui-gallery-virtual-list-window-boundary-scroll.json",
       "required_capabilities": [],
@@ -5015,8 +5114,8 @@
         "workspace"
       ],
       "target_hints": [
-        "Activates a visible tab (pane A, doc-a-0).",
-        "Waits for its close button.",
+        "Resets diagnostics so dispatch trace assertions are deterministic.",
+        "Activates doc-a-0 (pane A) so the close target is in-view.",
         "Clicks the close button.",
         "Asserts a pointer-triggered command dispatch trace entry exists for the close command.",
         "Asserts the tab is removed from the UI tree."
@@ -5045,6 +5144,173 @@
       ]
     },
     {
+      "id": "workspace-shell-demo-tab-close-dirty-is-blocked-smoke",
+      "path": "tools/diag-scripts/workspace/shell-demo/workspace-shell-demo-tab-close-dirty-is-blocked-smoke.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "diag-hardening-smoke-workspace"
+      ],
+      "tags": [
+        "close",
+        "dirty",
+        "gate",
+        "smoke",
+        "tabstrip",
+        "workspace"
+      ],
+      "target_hints": [
+        "Marks doc-a-2 dirty via demo debug button.",
+        "Attempts to close doc-a-2 via the demo debug Close active (pane-a) button.",
+        "Asserts the tab still exists (close blocked by policy)."
+      ]
+    },
+    {
+      "id": "workspace-shell-demo-tab-close-dirty-shows-prompt-and-discard-closes-smoke",
+      "path": "tools/diag-scripts/workspace/shell-demo/workspace-shell-demo-tab-close-dirty-shows-prompt-and-discard-closes-smoke.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "diag-hardening-smoke-workspace"
+      ],
+      "tags": [
+        "close",
+        "dirty",
+        "gate",
+        "prompt",
+        "smoke",
+        "tabstrip",
+        "workspace"
+      ],
+      "target_hints": [
+        "Marks doc-a-2 dirty via demo debug button.",
+        "Attempts to close doc-a-2 via the demo debug Close active (pane-a) button (blocked by policy).",
+        "Asserts the dirty-close prompt is shown, then discards and closes the tab."
+      ]
+    },
+    {
+      "id": "workspace-shell-demo-tabstrip-close-keeps-focus-smoke",
+      "path": "tools/diag-scripts/workspace/shell-demo/workspace-shell-demo-tabstrip-close-keeps-focus-smoke.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "diag-hardening-smoke-workspace"
+      ],
+      "tags": [
+        "close",
+        "focus",
+        "gate",
+        "smoke",
+        "tabstrip",
+        "workspace"
+      ],
+      "target_hints": [
+        "Sets MRU by activating doc-a-2 then doc-a-1.",
+        "Moves focus into pane content so command routing is focus-anchored.",
+        "Moves keyboard focus into the tab strip (Ctrl+F6).",
+        "Closes the active tab via the close button.",
+        "Asserts selection and focus stay within the tab strip (MRU fallback)."
+      ]
+    },
+    {
+      "id": "workspace-shell-demo-tabstrip-escape-restores-content-focus-smoke",
+      "path": "tools/diag-scripts/workspace/shell-demo/workspace-shell-demo-tabstrip-escape-restores-content-focus-smoke.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "diag-hardening-smoke-workspace"
+      ],
+      "tags": [
+        "a11y",
+        "focus",
+        "gate",
+        "keyboard",
+        "smoke",
+        "tabstrip",
+        "workspace"
+      ],
+      "target_hints": [
+        "Enters the tab strip (Ctrl+F6) from pane content.",
+        "Presses Escape to restore focus to pane content.",
+        "Asserts content focus is restored."
+      ]
+    },
+    {
+      "id": "workspace-shell-demo-tabstrip-keyboard-roving-smoke",
+      "path": "tools/diag-scripts/workspace/shell-demo/workspace-shell-demo-tabstrip-keyboard-roving-smoke.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "diag-hardening-smoke-workspace"
+      ],
+      "tags": [
+        "a11y",
+        "gate",
+        "keyboard",
+        "smoke",
+        "tabstrip",
+        "workspace"
+      ],
+      "target_hints": [
+        "Focuses pane A content, then enters the tab strip (Ctrl+F6).",
+        "Uses Arrow keys and Home/End to rove focus and activate tabs.",
+        "Asserts focus and selection track the roving target."
+      ]
+    },
+    {
+      "id": "workspace-shell-demo-tabstrip-keyboard-reveal-hidden-smoke",
+      "path": "tools/diag-scripts/workspace/shell-demo/workspace-shell-demo-tabstrip-keyboard-reveal-hidden-smoke.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "diag-hardening-smoke-workspace"
+      ],
+      "tags": [
+        "gate",
+        "keyboard",
+        "scroll",
+        "smoke",
+        "tabstrip",
+        "workspace"
+      ],
+      "target_hints": [
+        "Shrinks the window to force tab strip overflow.",
+        "Enters the tab strip (Ctrl+F6).",
+        "Uses End to activate an overflowed tab.",
+        "Asserts the active tab is visible and the strip scrolled."
+      ]
+    },
+    {
+      "id": "workspace-shell-demo-tabstrip-keyboard-reveal-home-restores-scroll-smoke",
+      "path": "tools/diag-scripts/workspace/shell-demo/workspace-shell-demo-tabstrip-keyboard-reveal-home-restores-scroll-smoke.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "diag-hardening-smoke-workspace"
+      ],
+      "tags": [
+        "gate",
+        "keyboard",
+        "scroll",
+        "smoke",
+        "tabstrip",
+        "workspace"
+      ],
+      "target_hints": [
+        "Shrinks the window to force tab strip overflow.",
+        "Enters the tab strip (Ctrl+F6).",
+        "Uses End to activate an overflowed tab (scroll right).",
+        "Uses Home to activate the first tab (scroll back left)."
+      ]
+    },
+    {
       "id": "workspace-shell-demo-tab-cross-pane-move-to-end",
       "path": "tools/diag-scripts/workspace/shell-demo/workspace-shell-demo-tab-cross-pane-move-to-end.json",
       "required_capabilities": [
@@ -5070,6 +5336,30 @@
       ],
       "tags": [],
       "target_hints": []
+    },
+    {
+      "id": "workspace-shell-demo-tabstrip-drag-autoscroll-smoke",
+      "path": "tools/diag-scripts/workspace/shell-demo/workspace-shell-demo-tabstrip-drag-autoscroll-smoke.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "diag-hardening-smoke-workspace"
+      ],
+      "tags": [
+        "drag",
+        "gate",
+        "scroll",
+        "smoke",
+        "tabstrip",
+        "workspace"
+      ],
+      "target_hints": [
+        "Shrinks the window to force tab strip overflow.",
+        "Selects the first tab so diagnostics track its active scroll.",
+        "Drags the tab far to the right to trigger horizontal autoscroll.",
+        "Asserts tabstrip scroll_x increased."
+      ]
     },
     {
       "id": "workspace-shell-demo-tab-drag-to-split-right",
@@ -5217,6 +5507,28 @@
         "workspace"
       ],
       "target_hints": []
+    },
+    {
+      "id": "workspace-shell-demo-tab-reorder-within-pinned-smoke",
+      "path": "tools/diag-scripts/workspace/shell-demo/workspace-shell-demo-tab-reorder-within-pinned-smoke.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "diag-hardening-smoke-workspace"
+      ],
+      "tags": [
+        "gate",
+        "pinned",
+        "reorder",
+        "smoke",
+        "tabstrip",
+        "workspace"
+      ],
+      "target_hints": [
+        "Pins doc-a-0 and doc-a-1, then reorders within the pinned group.",
+        "Asserts pos_in_set updates for both tabs."
+      ]
     },
     {
       "id": "workspace-shell-demo-tab-pinned-cross-boundary-drop-does-not-pin-smoke",

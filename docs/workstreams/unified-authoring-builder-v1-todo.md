@@ -20,6 +20,22 @@ This is a tracking document for `docs/workstreams/unified-authoring-builder-v1.m
   - target ergonomics: `*.ui().into_element(cx, |cx| ...)`
   - keep the existing `into_element(cx, children)` signature authoritative
 
+## MVP3 (Semantics Decorators / Late Landing)
+
+Goal:
+
+- Reduce cases where authoring code must call `.into_element(cx)` early purely to attach diagnostics/a11y
+  decorators (`test_id`, role), by allowing those to be expressed on the fluent builder path and applied at the
+  terminal.
+
+Backlog:
+
+- [x] Expose `test_id(...)` on the fluent authoring path (applied during `.into_element(cx)`).
+  - Implemented as `UiIntoElementTestIdExt` (no early landing required for patch targets).
+  - Evidence: `ecosystem/fret-ui-kit/src/declarative/semantics.rs`
+- [ ] Expose a minimal a11y role decorator on the fluent builder path (applied during `.into_element(cx)`).
+- [ ] Add compile-only coverage in `ecosystem/fret-ui-shadcn/tests/ui_builder_smoke.rs` for builder-level decorators.
+
 ## Ongoing (Audit / Guardrails)
 
 - [ ] Expand compile coverage in `ecosystem/fret-ui-shadcn/tests/ui_builder_smoke.rs` as new nested public

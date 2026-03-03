@@ -1,11 +1,12 @@
 # Workspace TabStrip (Fearless Refactor v1) — TODO
 
 Status: Active
-Last updated: 2026-03-02
+Last updated: 2026-03-03
 
 Related:
 
 - Design: `docs/workstreams/workspace-tabstrip-fearless-refactor-v1/DESIGN.md`
+- Zed parity checklist: `docs/workstreams/workspace-tabstrip-fearless-refactor-v1/ZED_PARITY_CHECKLIST.md`
 - Milestones:
   - `docs/workstreams/workspace-tabstrip-fearless-refactor-v1/M1_FOUNDATION.md`
   - `docs/workstreams/workspace-tabstrip-fearless-refactor-v1/M2_DRAG_AND_DROP.md`
@@ -28,24 +29,26 @@ ID format:
 
 ## A. Contract + Boundaries
 
-- [~] WTS-contract-001 Write down the Workspace TabStrip contract surface:
+- [x] WTS-contract-001 Write down the Workspace TabStrip contract surface:
   - Surface classification vocabulary (header space vs tabs viewport vs controls).
   - Hit targets (tab content vs close, overflow menu row content vs close).
   - Insert index semantics (canonical order, under overflow).
-- [ ] WTS-contract-002 Decide how Workspace TabStrip relates to Docking TabBar:
-  - share a single kernel,
-  - share only math helpers, or
-  - keep fully separate.
+- [x] WTS-contract-002 Decide how Workspace TabStrip relates to Docking TabBar:
+  - Shared primitives in `ecosystem/fret-ui-headless` (surface classification, overflow membership,
+    click arbitration, midpoint drop target resolution).
+  - Adapter-specific policy remains separate (workspace pinned/preview, docking float/tear-off).
 - [x] WTS-contract-003 Minimum stable diagnostic anchors exist:
   - end-drop: `{root}.drop_end`
   - overflow button: `{root}.overflow_button`
   - overflow entry + close: `{root}.overflow_entry.{tab_id}[.close]`
+  - per-tab dirty marker: `{tab_test_id}.dirty`
   - pinned boundary: `{root}.drop_pinned_boundary`
 
 ## B. Kernelization (Mechanism vs Policy)
 
 - [x] WTS-kernel-010 Workspace TabStrip uses `fret-ui-headless` for:
   - surface classification (`TabStripSurface`),
+  - midpoint drop target kernel (`compute_tab_strip_drop_target_midpoint`),
   - overflow membership / geometry helpers (if needed).
 - [x] WTS-kernel-011 Click arbitration policy lives in `ecosystem/fret-ui-kit`:
   - Evidence: `ecosystem/fret-ui-headless/src/tab_strip_controller.rs` (re-exported via `ecosystem/fret-ui-kit/src/headless/tab_strip_controller.rs`).
@@ -67,13 +70,19 @@ ID format:
   - `ecosystem/fret-workspace/src/tab_strip/kernel.rs`
   - `ecosystem/fret-workspace/src/tab_strip/utils.rs`
   - `ecosystem/fret-workspace/src/tab_strip/overflow.rs`
+- [x] WTS-gates-023 Drag autoscroll gate exists:
+  - `tools/diag-scripts/workspace/shell-demo/workspace-shell-demo-tabstrip-drag-autoscroll-smoke.json`
+- [x] WTS-gates-024 Drag-to-split preview gate exists:
+  - `tools/diag-scripts/workspace/shell-demo/workspace-shell-demo-tab-drag-to-split-right.json`
+  - `tools/diag-scripts/workspace/shell-demo/workspace-shell-demo-tab-drag-to-split-right-drop-preview-screenshot.json`
 
 ## D. Editor Semantics (Policy Layer)
 
-- [ ] WTS-editor-030 Pinned tabs (policy) in workspace layer:
+- [x] WTS-editor-030 Pinned tabs (policy) in workspace layer:
   - pinned region model, reorder rules, close affordances.
   - Diag gates:
     - `tools/diag-scripts/workspace/shell-demo/workspace-shell-demo-tab-pinned-boundary-toggle-smoke.json`
+    - `tools/diag-scripts/workspace/shell-demo/workspace-shell-demo-tab-reorder-within-pinned-smoke.json`
     - `tools/diag-scripts/workspace/shell-demo/workspace-shell-demo-tab-pinned-cross-boundary-drop-does-not-pin-smoke.json`
     - `tools/diag-scripts/workspace/shell-demo/workspace-shell-demo-tab-pin-commits-preview-smoke.json`
 - [x] WTS-editor-031 Preview tab slot (Zed-style):
@@ -81,15 +90,41 @@ ID format:
   - Diag gates:
     - `tools/diag-scripts/workspace/shell-demo/workspace-shell-demo-tab-preview-replaces-existing-smoke.json`
     - `tools/diag-scripts/workspace/shell-demo/workspace-shell-demo-tab-preview-commit-keeps-old-tab-smoke.json`
-- [~] WTS-editor-033 Bulk-close commands keep pinned tabs:
+- [x] WTS-editor-033 Bulk-close commands keep pinned tabs:
   - Evidence: `ecosystem/fret-workspace/src/tabs.rs` (`close_left_of_active`, `close_right_of_active`, `close_others`)
   - Diag gates:
     - [x] `tools/diag-scripts/workspace/shell-demo/workspace-shell-demo-tab-close-left-keeps-pinned-smoke.json`
     - [x] `tools/diag-scripts/workspace/shell-demo/workspace-shell-demo-tab-close-others-keeps-pinned-smoke.json`
     - [x] `tools/diag-scripts/workspace/shell-demo/workspace-shell-demo-tab-close-right-keeps-pinned-smoke.json`
-- [ ] WTS-editor-032 Dirty close confirmation hooks (workspace-level, not tab mechanism).
+- [x] WTS-editor-032 Dirty close confirmation hooks (workspace-level, not tab mechanism).
+  - Evidence: `ecosystem/fret-workspace/src/close_policy.rs` and `ecosystem/fret-workspace/src/tabs.rs` (`apply_command_with_close_policy`)
+  - Diag gates:
+    - `tools/diag-scripts/workspace/shell-demo/workspace-shell-demo-tab-close-dirty-is-blocked-smoke.json`
+    - `tools/diag-scripts/workspace/shell-demo/workspace-shell-demo-tab-close-dirty-shows-prompt-and-discard-closes-smoke.json`
+- [x] WTS-editor-034 Tabstrip focus restore on close (editor-grade):
+  - Evidence: `ecosystem/fret-workspace/src/tab_strip/utils.rs` (`predict_next_active_tab_after_close`) and `ecosystem/fret-workspace/src/tab_strip/mod.rs` (close-focus hook)
+  - Diag gate: `tools/diag-scripts/workspace/shell-demo/workspace-shell-demo-tabstrip-close-keeps-focus-smoke.json`
 
 ## E. Cleanup + Convergence
 
-- [~] WTS-cleanup-040 Remove legacy ad-hoc hit-tests once kernel is in use.
+- [x] WTS-cleanup-040 Remove legacy ad-hoc hit-tests once kernel is in use:
+  - Evidence: `ecosystem/fret-workspace/src/tab_strip/mod.rs` (cross-pane hover insertion now uses `compute_workspace_tab_strip_drop_target`)
 - [ ] WTS-cleanup-041 Converge styling recipes (shadcn/material) without affecting mechanism tests.
+- [x] WTS-converge-050 Docking TabBar drop excludes the dragged tab from midpoint candidates:
+  - Evidence: `ecosystem/fret-docking/src/dock/space.rs` (passes dragged tab index to the tab-bar kernel)
+  - Coverage: `ecosystem/fret-docking/src/dock/tab_bar_kernel.rs` (`resolve_tab_bar_drop_excludes_dragged_tab_from_candidates`)
+
+## F. Parity tracking
+
+- [x] WTS-parity-060 Add a Zed parity checklist with evidence anchors:
+  - `docs/workstreams/workspace-tabstrip-fearless-refactor-v1/ZED_PARITY_CHECKLIST.md`
+
+## G. Keyboard + A11y
+
+- [x] WTS-a11y-070 Tabstrip keyboard roving and Escape gates exist:
+  - `tools/diag-scripts/workspace/shell-demo/workspace-shell-demo-tabstrip-keyboard-roving-smoke.json`
+  - `tools/diag-scripts/workspace/shell-demo/workspace-shell-demo-tabstrip-escape-restores-content-focus-smoke.json`
+- [x] WTS-a11y-071 Keyboard activation reveals overflowed active tab:
+  - `tools/diag-scripts/workspace/shell-demo/workspace-shell-demo-tabstrip-keyboard-reveal-hidden-smoke.json`
+- [x] WTS-a11y-072 Keyboard Home restores scroll after End reveal:
+  - `tools/diag-scripts/workspace/shell-demo/workspace-shell-demo-tabstrip-keyboard-reveal-home-restores-scroll-smoke.json`

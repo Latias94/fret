@@ -19,11 +19,6 @@ with special focus on multi-window tear-off + drag-back sequences.
   - required env (e.g. `FRET_DOCK_ALLOW_MULTI_WINDOW_TEAR_OFF=1`),
   - recommended tooling flags (e.g. ignore window bounds / scene fingerprint drift),
   - whether `--reuse-launch` is required for stability.
-- Clarify the predicate semantics in docs:
-  - `known_window_count_*` currently reflects **open** OS windows (runner-owned source-of-truth),
-    not “distinct windows ever observed”.
-  - If we need a “monotonic, ever-seen window id count” for loop stress scripts, add an explicit
-    predicate rather than overloading `known_window_count_*`.
 - Convert any remaining schema v1 docking scripts to schema v2.
 - Reduce coupling to layout presets (prefer fingerprints / structural assertions where possible).
 
@@ -78,3 +73,5 @@ with special focus on multi-window tear-off + drag-back sequences.
   of script steps (and fail with `timeout.no_frames`) even if redraw callbacks stop (occlusion/idle).
 - Runtime hardening: allow a small “burst” of frame-independent tail steps so scripts do not require an additional frame
   to run a final `capture_bundle` after the last semantic assertion (reduces tooling timeouts at tight `--timeout-ms`).
+- Docs: clarify window-count and docking drop resolve predicate semantics in the main diagnostics reference:
+  `docs/ui-diagnostics-and-scripted-tests.md`.
