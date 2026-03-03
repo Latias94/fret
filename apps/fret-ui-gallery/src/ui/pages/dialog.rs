@@ -3,9 +3,7 @@ use super::super::*;
 use crate::ui::doc_layout::{self, DocSection};
 use crate::ui::snippets::dialog as snippets;
 
-pub(super) fn preview_dialog(
-    cx: &mut ElementContext<'_, App>,
-) -> Vec<AnyElement> {
+pub(super) fn preview_dialog(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
     let demo = snippets::demo::render(cx);
     let parts = snippets::parts::render(cx);
     let custom_close = snippets::custom_close_button::render(cx);

@@ -3,9 +3,7 @@ use super::super::*;
 use crate::ui::doc_layout::{self, DocSection};
 use crate::ui::snippets::checkbox as snippets;
 
-pub(super) fn preview_checkbox(
-    cx: &mut ElementContext<'_, App>,
-) -> Vec<AnyElement> {
+pub(super) fn preview_checkbox(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
     let demo = snippets::demo::render(cx);
     let checked_state = snippets::checked_state::render(cx);
     let invalid_state = snippets::invalid_state::render(cx);
