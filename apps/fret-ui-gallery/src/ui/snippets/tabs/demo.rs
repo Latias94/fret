@@ -151,8 +151,10 @@ pub fn render(cx: &mut ElementContext<'_, App>) -> AnyElement {
         .list_full_width(true)
         .refine_layout(LayoutRefinement::default().w_full().max_w(Px(460.0)))
         .items([
-            shadcn::TabsItem::new("account", "Account", [account_card]),
-            shadcn::TabsItem::new("password", "Password", [password_card]),
+            shadcn::TabsItem::new("account", "Account", [account_card])
+                .trigger_test_id("ui-gallery-tabs-demo-trigger-account"),
+            shadcn::TabsItem::new("password", "Password", [password_card])
+                .trigger_test_id("ui-gallery-tabs-demo-trigger-password"),
         ])
         .into_element(cx)
         .test_id("ui-gallery-tabs-demo")
