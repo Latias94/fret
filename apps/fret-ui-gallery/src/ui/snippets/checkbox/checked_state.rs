@@ -10,10 +10,13 @@ struct Models {
 }
 
 pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
-    let (checked_controlled, checked_optional) =
-        cx.with_state(Models::default, |st| (st.checked_controlled.clone(), st.checked_optional.clone()));
+    let (checked_controlled, checked_optional) = cx.with_state(Models::default, |st| {
+        (st.checked_controlled.clone(), st.checked_optional.clone())
+    });
     let (checked_controlled, checked_optional) = match (checked_controlled, checked_optional) {
-        (Some(checked_controlled), Some(checked_optional)) => (checked_controlled, checked_optional),
+        (Some(checked_controlled), Some(checked_optional)) => {
+            (checked_controlled, checked_optional)
+        }
         _ => {
             let checked_controlled = cx.app.models_mut().insert(true);
             let checked_optional = cx.app.models_mut().insert(None::<bool>);

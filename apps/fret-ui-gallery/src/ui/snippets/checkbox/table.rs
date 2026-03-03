@@ -12,23 +12,19 @@ struct Models {
 }
 
 pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
-    let (table_all, table_row_1, table_row_2, table_row_3) =
-        cx.with_state(Models::default, |st| {
-            (
-                st.table_all.clone(),
-                st.table_row_1.clone(),
-                st.table_row_2.clone(),
-                st.table_row_3.clone(),
-            )
-        });
+    let (table_all, table_row_1, table_row_2, table_row_3) = cx.with_state(Models::default, |st| {
+        (
+            st.table_all.clone(),
+            st.table_row_1.clone(),
+            st.table_row_2.clone(),
+            st.table_row_3.clone(),
+        )
+    });
     let (table_all, table_row_1, table_row_2, table_row_3) =
         match (table_all, table_row_1, table_row_2, table_row_3) {
-            (
-                Some(table_all),
-                Some(table_row_1),
-                Some(table_row_2),
-                Some(table_row_3),
-            ) => (table_all, table_row_1, table_row_2, table_row_3),
+            (Some(table_all), Some(table_row_1), Some(table_row_2), Some(table_row_3)) => {
+                (table_all, table_row_1, table_row_2, table_row_3)
+            }
             _ => {
                 let table_all = cx.app.models_mut().insert(false);
                 let table_row_1 = cx.app.models_mut().insert(true);
