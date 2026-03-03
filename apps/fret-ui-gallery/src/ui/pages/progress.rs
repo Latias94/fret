@@ -5,7 +5,6 @@ use crate::ui::snippets::progress as snippets;
 
 pub(super) fn preview_progress(
     cx: &mut ElementContext<'_, App>,
-    _progress: Model<f32>,
 ) -> Vec<AnyElement> {
     let demo = snippets::demo::render(cx);
     let rtl = snippets::rtl::render(cx);

@@ -5,7 +5,6 @@ use crate::ui::snippets::textarea as snippets;
 
 pub(super) fn preview_textarea(
     cx: &mut ElementContext<'_, App>,
-    _value: Model<String>,
 ) -> Vec<AnyElement> {
     let demo = snippets::demo::render(cx);
     let field = snippets::field::render(cx);

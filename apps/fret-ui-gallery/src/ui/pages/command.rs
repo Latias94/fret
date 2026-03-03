@@ -5,8 +5,6 @@ use crate::ui::snippets::command as snippets;
 
 pub(super) fn preview_command_palette(
     cx: &mut ElementContext<'_, App>,
-    _open: Model<bool>,
-    _query: Model<String>,
     last_action: Model<Arc<str>>,
 ) -> Vec<AnyElement> {
     let usage_palette = snippets::usage::render(cx, last_action.clone());

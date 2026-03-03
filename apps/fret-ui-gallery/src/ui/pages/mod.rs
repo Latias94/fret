@@ -645,11 +645,9 @@ pub(super) fn preview_combobox(
 
 pub(super) fn preview_command_palette(
     cx: &mut ElementContext<'_, App>,
-    open: Model<bool>,
-    query: Model<String>,
     last_action: Model<Arc<str>>,
 ) -> Vec<AnyElement> {
-    command::preview_command_palette(cx, open, query, last_action)
+    command::preview_command_palette(cx, last_action)
 }
 
 pub(super) fn preview_toast(
@@ -661,10 +659,8 @@ pub(super) fn preview_toast(
 
 pub(super) fn preview_context_menu(
     cx: &mut ElementContext<'_, App>,
-    open: Model<bool>,
-    last_action: Model<Arc<str>>,
 ) -> Vec<AnyElement> {
-    context_menu::preview_context_menu(cx, open, last_action)
+    context_menu::preview_context_menu(cx)
 }
 
 pub(super) fn preview_data_table(
@@ -684,30 +680,26 @@ pub(super) fn preview_date_picker(
 
 pub(super) fn preview_dialog(
     cx: &mut ElementContext<'_, App>,
-    open: Model<bool>,
 ) -> Vec<AnyElement> {
-    dialog::preview_dialog(cx, open)
+    dialog::preview_dialog(cx)
 }
 
 pub(super) fn preview_popover(
     cx: &mut ElementContext<'_, App>,
-    open: Model<bool>,
 ) -> Vec<AnyElement> {
-    popover::preview_popover(cx, open)
+    popover::preview_popover(cx)
 }
 
 pub(super) fn preview_progress(
     cx: &mut ElementContext<'_, App>,
-    progress: Model<f32>,
 ) -> Vec<AnyElement> {
-    progress::preview_progress(cx, progress)
+    progress::preview_progress(cx)
 }
 
 pub(super) fn preview_sheet(
     cx: &mut ElementContext<'_, App>,
-    open: Model<bool>,
 ) -> Vec<AnyElement> {
-    sheet::preview_sheet(cx, open)
+    sheet::preview_sheet(cx)
 }
 
 pub(super) fn preview_field(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
@@ -730,10 +722,8 @@ pub(super) fn preview_hover_card(cx: &mut ElementContext<'_, App>) -> Vec<AnyEle
 
 pub(super) fn preview_input(
     cx: &mut ElementContext<'_, App>,
-    value: Model<String>,
-    file_value: Model<String>,
 ) -> Vec<AnyElement> {
-    input::preview_input(cx, value, file_value)
+    input::preview_input(cx)
 }
 
 pub(super) fn preview_input_group(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
@@ -860,9 +850,8 @@ pub(super) fn preview_switch(
 
 pub(super) fn preview_textarea(
     cx: &mut ElementContext<'_, App>,
-    value: Model<String>,
 ) -> Vec<AnyElement> {
-    textarea::preview_textarea(cx, value)
+    textarea::preview_textarea(cx)
 }
 
 pub(super) fn preview_drawer(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
@@ -871,10 +860,8 @@ pub(super) fn preview_drawer(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement
 
 pub(super) fn preview_dropdown_menu(
     cx: &mut ElementContext<'_, App>,
-    open: Model<bool>,
-    last_action: Model<Arc<str>>,
 ) -> Vec<AnyElement> {
-    dropdown_menu::preview_dropdown_menu(cx, open, last_action)
+    dropdown_menu::preview_dropdown_menu(cx)
 }
 
 pub(super) fn preview_empty(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {

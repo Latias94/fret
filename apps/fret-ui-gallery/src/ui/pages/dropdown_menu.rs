@@ -5,8 +5,6 @@ use crate::ui::snippets::dropdown_menu as snippets;
 
 pub(super) fn preview_dropdown_menu(
     cx: &mut ElementContext<'_, App>,
-    _open: Model<bool>,
-    _last_action: Model<Arc<str>>,
 ) -> Vec<AnyElement> {
     let demo = snippets::demo::render(cx);
     let parts = snippets::parts::render(cx);

@@ -5,8 +5,6 @@ use crate::ui::snippets::input as snippets;
 
 pub(super) fn preview_input(
     cx: &mut ElementContext<'_, App>,
-    _value: Model<String>,
-    _file_value: Model<String>,
 ) -> Vec<AnyElement> {
     let basic = snippets::basic::render(cx);
     let field = snippets::field::render(cx);

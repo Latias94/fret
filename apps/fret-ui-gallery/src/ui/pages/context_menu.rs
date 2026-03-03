@@ -5,8 +5,6 @@ use crate::ui::snippets::context_menu as snippets;
 
 pub(super) fn preview_context_menu(
     cx: &mut ElementContext<'_, App>,
-    _open: Model<bool>,
-    _last_action: Model<Arc<str>>,
 ) -> Vec<AnyElement> {
     let basic = snippets::basic::render(cx);
     let submenu = snippets::submenu::render(cx);

@@ -2,7 +2,6 @@ use super::super::*;
 
 pub(super) fn preview_popover(
     cx: &mut ElementContext<'_, App>,
-    _open: Model<bool>,
 ) -> Vec<AnyElement> {
     use crate::ui::doc_layout::{self, DocSection};
     use crate::ui::snippets::popover as snippets;
