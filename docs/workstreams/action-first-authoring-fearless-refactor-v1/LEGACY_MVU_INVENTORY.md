@@ -25,6 +25,7 @@ Scope:
 - Docs index points to action-first authoring as available now:
   - `docs/README.md`
 - Cookbook example migrated to view runtime + actions:
+  - `apps/fret-cookbook/examples/async_inbox_basics.rs`
   - `apps/fret-cookbook/examples/hello_counter.rs`
   - `apps/fret-cookbook/examples/simple_todo.rs`
   - `apps/fret-cookbook/examples/text_input_basics.rs`
@@ -37,7 +38,6 @@ Scope:
 
 These examples implement `MvuProgram` and/or use `MessageRouter`:
 
-- `apps/fret-cookbook/examples/async_inbox_basics.rs`
 - `apps/fret-cookbook/examples/canvas_pan_zoom_basics.rs`
 - `apps/fret-cookbook/examples/effects_layer_basics.rs`
 - `apps/fret-cookbook/examples/icons_and_assets_basics.rs`

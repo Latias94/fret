@@ -12,6 +12,14 @@ use fret_executor::{
 };
 use fret_runtime::{DispatchPriority, DispatcherHandle, InboxDrainRegistry};
 
+mod act {
+    fret::actions!([
+        Start = "cookbook.async_inbox_basics.start.v1",
+        Cancel = "cookbook.async_inbox_basics.cancel.v1",
+        ClearLog = "cookbook.async_inbox_basics.clear_log.v1"
+    ]);
+}
+
 const TEST_ID_ROOT: &str = "cookbook.async_inbox_basics.root";
 const TEST_ID_START: &str = "cookbook.async_inbox_basics.start";
 const TEST_ID_CANCEL: &str = "cookbook.async_inbox_basics.cancel";
@@ -57,23 +65,15 @@ struct AsyncInboxBasicsState {
 
     // Execution.
     inbox: Inbox<InboxMsg>,
-    task: Option<BackgroundTask>,
+    task: Model<Option<BackgroundTask>>,
 }
 
-#[derive(Debug, Clone, Copy)]
-enum Msg {
-    Start,
-    Cancel,
-    ClearLog,
+struct AsyncInboxBasicsView {
+    st: AsyncInboxBasicsState,
 }
 
-struct AsyncInboxBasicsProgram;
-
-impl MvuProgram for AsyncInboxBasicsProgram {
-    type State = AsyncInboxBasicsState;
-    type Message = Msg;
-
-    fn init(app: &mut App, window: AppWindowId) -> Self::State {
+impl View for AsyncInboxBasicsView {
+    fn init(app: &mut App, window: AppWindowId) -> Self {
         let dispatcher = app.global::<DispatcherHandle>().cloned();
 
         let current_job = Arc::new(AtomicU64::new(0));
@@ -83,6 +83,7 @@ impl MvuProgram for AsyncInboxBasicsProgram {
         let progress = app.models_mut().insert(0.0);
         let log = app.models_mut().insert(String::new());
         let active_job = app.models_mut().insert(0u64);
+        let task = app.models_mut().insert(None::<BackgroundTask>);
 
         let inbox = Inbox::new(InboxConfig {
             capacity: 256,
@@ -179,71 +180,203 @@ impl MvuProgram for AsyncInboxBasicsProgram {
             registry.register(Arc::new(drainer));
         });
 
-        AsyncInboxBasicsState {
-            window,
-            dispatcher,
-            current_job,
-            status,
-            running,
-            progress,
-            log,
-            active_job,
-            inbox,
-            task: None,
+        Self {
+            st: AsyncInboxBasicsState {
+                window,
+                dispatcher,
+                current_job,
+                status,
+                running,
+                progress,
+                log,
+                active_job,
+                inbox,
+                task,
+            },
         }
     }
 
-    fn update(app: &mut App, st: &mut Self::State, msg: Self::Message) {
-        match msg {
-            Msg::ClearLog => {
-                let _ = app.models_mut().update(&st.log, |v| v.clear());
-                app.request_redraw(st.window);
-            }
-            Msg::Cancel => {
-                if let Some(task) = st.task.take() {
-                    task.cancel();
-                }
+    fn render(&mut self, cx: &mut ViewCx<'_, '_, App>) -> Elements {
+        let status = cx
+            .watch_model(&self.st.status)
+            .layout()
+            .read_ref(|v| Arc::clone(v))
+            .ok()
+            .unwrap_or_else(|| Arc::<str>::from("<missing>"));
+        let running = cx.watch_model(&self.st.running).layout().copied_or(false);
+        let progress = cx.watch_model(&self.st.progress).layout().copied_or(0.0);
+        let inbox_stats = self.st.inbox.stats();
 
-                let _ = app.models_mut().update(&st.running, |v| *v = false);
-                let _ = app
-                    .models_mut()
-                    .update(&st.status, |v| *v = Arc::<str>::from("Cancelling…"));
-                app.request_redraw(st.window);
+        let header = shadcn::CardHeader::new([
+            shadcn::CardTitle::new("Async inbox basics").into_element(cx),
+            shadcn::CardDescription::new(
+                "Background work sends data-only messages into an Inbox, drained at a runner boundary (ADR 0175).",
+            )
+            .into_element(cx),
+        ])
+        .into_element(cx);
+
+        let start_button = shadcn::Button::new("Start background job")
+            .variant(shadcn::ButtonVariant::Default)
+            .size(shadcn::ButtonSize::Sm)
+            .icon(IconId::new_static("ui.play"))
+            .disabled(running)
+            .action(act::Start)
+            .into_element(cx)
+            .test_id(TEST_ID_START);
+
+        let cancel_button = shadcn::Button::new("Cancel")
+            .variant(shadcn::ButtonVariant::Outline)
+            .size(shadcn::ButtonSize::Sm)
+            .icon(IconId::new_static("ui.x"))
+            .disabled(!running)
+            .action(act::Cancel)
+            .into_element(cx)
+            .test_id(TEST_ID_CANCEL);
+
+        let clear_log_button = shadcn::Button::new("Clear log")
+            .variant(shadcn::ButtonVariant::Secondary)
+            .size(shadcn::ButtonSize::Sm)
+            .icon(IconId::new_static("ui.trash"))
+            .action(act::ClearLog)
+            .into_element(cx)
+            .test_id(TEST_ID_CLEAR_LOG);
+
+        let status_row = ui::h_flex(cx, |cx| {
+            [
+                shadcn::Label::new("Status:").into_element(cx),
+                shadcn::Badge::new(status.as_ref())
+                    .variant(if running {
+                        shadcn::BadgeVariant::Default
+                    } else {
+                        shadcn::BadgeVariant::Secondary
+                    })
+                    .into_element(cx)
+                    .test_id(TEST_ID_STATUS),
+                shadcn::Badge::new(format!("Dropped oldest: {}", inbox_stats.dropped_oldest))
+                    .variant(shadcn::BadgeVariant::Secondary)
+                    .into_element(cx),
+                shadcn::Badge::new(format!("Dropped newest: {}", inbox_stats.dropped_newest))
+                    .variant(shadcn::BadgeVariant::Secondary)
+                    .into_element(cx),
+            ]
+        })
+        .gap(Space::N2)
+        .items_center()
+        .into_element(cx);
+
+        let progress_el = shadcn::Progress::new(self.st.progress.clone())
+            .a11y_label("Background job progress")
+            .range(0.0, 100.0)
+            .into_element(cx)
+            .test_id(TEST_ID_PROGRESS);
+
+        let progress_label = cx.text(format!("{progress:.0}%"));
+        let progress_row = ui::h_flex(cx, |_cx| [progress_el, progress_label])
+            .gap(Space::N3)
+            .items_center()
+            .into_element(cx);
+
+        let log = shadcn::Textarea::new(self.st.log.clone())
+            .a11y_label("Inbox log")
+            .placeholder("Log…")
+            .disabled(true)
+            .min_height(Px(240.0))
+            .into_element(cx)
+            .test_id(TEST_ID_LOG);
+
+        let controls = ui::v_flex(cx, |_cx| [start_button, cancel_button, clear_log_button])
+            .gap(Space::N2)
+            .into_element(cx);
+
+        let body = ui::v_flex(cx, |_cx| [status_row, progress_row, controls, log])
+            .gap(Space::N3)
+            .into_element(cx);
+
+        let card = shadcn::Card::new([header, shadcn::CardContent::new([body]).into_element(cx)])
+            .ui()
+            .w_full()
+            .max_w(Px(720.0))
+            .into_element(cx);
+
+        cx.on_action::<act::ClearLog>({
+            let log = self.st.log.clone();
+            move |host, acx| {
+                let _ = host.models_mut().update(&log, String::clear);
+                host.request_redraw(acx.window);
+                host.notify(acx);
+                true
             }
-            Msg::Start => {
-                let Some(dispatcher) = st.dispatcher.clone() else {
-                    let _ = app.models_mut().update(&st.status, |v| {
+        });
+
+        cx.on_action::<act::Cancel>({
+            let task = self.st.task.clone();
+            let running = self.st.running.clone();
+            let status = self.st.status.clone();
+            move |host, acx| {
+                let _ = host.models_mut().update(&task, |slot| {
+                    if let Some(task) = slot.take() {
+                        task.cancel();
+                    }
+                });
+
+                let _ = host.models_mut().update(&running, |v| *v = false);
+                let _ = host
+                    .models_mut()
+                    .update(&status, |v| *v = Arc::<str>::from("Cancelling…"));
+
+                host.request_redraw(acx.window);
+                host.notify(acx);
+                true
+            }
+        });
+
+        cx.on_action::<act::Start>({
+            let dispatcher = self.st.dispatcher.clone();
+            let current_job = self.st.current_job.clone();
+            let active_job = self.st.active_job.clone();
+            let running = self.st.running.clone();
+            let progress_model = self.st.progress.clone();
+            let status = self.st.status.clone();
+            let log = self.st.log.clone();
+            let task = self.st.task.clone();
+            let inbox_sender = self.st.inbox.clone().sender();
+            let window = self.st.window;
+
+            move |host, acx| {
+                let Some(dispatcher) = dispatcher.clone() else {
+                    let _ = host.models_mut().update(&status, |v| {
                         *v = Arc::<str>::from("Missing DispatcherHandle global (runner bug?)");
                     });
-                    app.request_redraw(st.window);
-                    return;
+                    host.request_redraw(acx.window);
+                    host.notify(acx);
+                    return true;
                 };
 
-                if let Some(task) = st.task.take() {
-                    task.cancel();
-                }
+                let _ = host.models_mut().update(&task, |slot| {
+                    if let Some(task) = slot.take() {
+                        task.cancel();
+                    }
+                });
 
-                let job = st
-                    .current_job
+                let job = current_job
                     .fetch_add(1, Ordering::Relaxed)
                     .wrapping_add(1)
                     .max(1);
-                let _ = app.models_mut().update(&st.active_job, |v| *v = job);
+                let _ = host.models_mut().update(&active_job, |v| *v = job);
 
-                let _ = app.models_mut().update(&st.running, |v| *v = true);
-                let _ = app.models_mut().update(&st.progress, |v| *v = 0.0);
-                let _ = app
+                let _ = host.models_mut().update(&running, |v| *v = true);
+                let _ = host.models_mut().update(&progress_model, |v| *v = 0.0);
+                let _ = host
                     .models_mut()
-                    .update(&st.status, |v| *v = Arc::<str>::from("Running"));
-                let _ = app.models_mut().update(&st.log, |v| {
+                    .update(&status, |v| *v = Arc::<str>::from("Running"));
+                let _ = host.models_mut().update(&log, |v| {
                     append_log(v, &format!("start job {job}"));
                 });
 
-                let inbox = st.inbox.clone().sender();
-                let window = st.window;
                 let executors = Executors::new(dispatcher.clone());
-
-                st.task = Some(executors.spawn_background(
+                let inbox = inbox_sender.clone();
+                let bg_task = executors.spawn_background(
                     DispatchPriority::Normal,
                     move |token: CancellationToken| {
                         let steps = 48u32;
@@ -276,119 +409,16 @@ impl MvuProgram for AsyncInboxBasicsProgram {
                         });
                         dispatcher.wake(Some(window));
                     },
-                ));
+                );
 
-                app.request_redraw(st.window);
+                let _ = host
+                    .models_mut()
+                    .update(&task, |slot| *slot = Some(bg_task));
+                host.request_redraw(acx.window);
+                host.notify(acx);
+                true
             }
-        }
-    }
-
-    fn view(
-        cx: &mut ElementContext<'_, App>,
-        state: &mut Self::State,
-        msg: &mut MessageRouter<Self::Message>,
-    ) -> Elements {
-        let status = cx
-            .watch_model(&state.status)
-            .layout()
-            .read_ref(|v| Arc::clone(v))
-            .ok()
-            .unwrap_or_else(|| Arc::<str>::from("<missing>"));
-        let running = cx.watch_model(&state.running).layout().copied_or(false);
-        let progress = cx.watch_model(&state.progress).layout().copied_or(0.0);
-        let inbox_stats = state.inbox.stats();
-
-        let header = shadcn::CardHeader::new([
-            shadcn::CardTitle::new("Async inbox basics").into_element(cx),
-            shadcn::CardDescription::new(
-                "Background work sends data-only messages into an Inbox, drained at a runner boundary (ADR 0175).",
-            )
-            .into_element(cx),
-        ])
-        .into_element(cx);
-
-        let start_button = shadcn::Button::new("Start background job")
-            .variant(shadcn::ButtonVariant::Default)
-            .size(shadcn::ButtonSize::Sm)
-            .icon(IconId::new_static("ui.play"))
-            .disabled(running)
-            .on_click(msg.cmd(Msg::Start))
-            .into_element(cx)
-            .test_id(TEST_ID_START);
-
-        let cancel_button = shadcn::Button::new("Cancel")
-            .variant(shadcn::ButtonVariant::Outline)
-            .size(shadcn::ButtonSize::Sm)
-            .icon(IconId::new_static("ui.x"))
-            .disabled(!running)
-            .on_click(msg.cmd(Msg::Cancel))
-            .into_element(cx)
-            .test_id(TEST_ID_CANCEL);
-
-        let clear_log_button = shadcn::Button::new("Clear log")
-            .variant(shadcn::ButtonVariant::Secondary)
-            .size(shadcn::ButtonSize::Sm)
-            .icon(IconId::new_static("ui.trash"))
-            .on_click(msg.cmd(Msg::ClearLog))
-            .into_element(cx)
-            .test_id(TEST_ID_CLEAR_LOG);
-
-        let status_row = ui::h_flex(cx, |cx| {
-            [
-                shadcn::Label::new("Status:").into_element(cx),
-                shadcn::Badge::new(status.as_ref())
-                    .variant(if running {
-                        shadcn::BadgeVariant::Default
-                    } else {
-                        shadcn::BadgeVariant::Secondary
-                    })
-                    .into_element(cx)
-                    .test_id(TEST_ID_STATUS),
-                shadcn::Badge::new(format!("Dropped oldest: {}", inbox_stats.dropped_oldest))
-                    .variant(shadcn::BadgeVariant::Secondary)
-                    .into_element(cx),
-                shadcn::Badge::new(format!("Dropped newest: {}", inbox_stats.dropped_newest))
-                    .variant(shadcn::BadgeVariant::Secondary)
-                    .into_element(cx),
-            ]
-        })
-        .gap(Space::N2)
-        .items_center()
-        .into_element(cx);
-
-        let progress_el = shadcn::Progress::new(state.progress.clone())
-            .a11y_label("Background job progress")
-            .range(0.0, 100.0)
-            .into_element(cx)
-            .test_id(TEST_ID_PROGRESS);
-
-        let progress_label = cx.text(format!("{progress:.0}%"));
-        let progress_row = ui::h_flex(cx, |_cx| [progress_el, progress_label])
-            .gap(Space::N3)
-            .items_center()
-            .into_element(cx);
-
-        let log = shadcn::Textarea::new(state.log.clone())
-            .a11y_label("Inbox log")
-            .placeholder("Log…")
-            .disabled(true)
-            .min_height(Px(240.0))
-            .into_element(cx)
-            .test_id(TEST_ID_LOG);
-
-        let controls = ui::v_flex(cx, |_cx| [start_button, cancel_button, clear_log_button])
-            .gap(Space::N2)
-            .into_element(cx);
-
-        let body = ui::v_flex(cx, |_cx| [status_row, progress_row, controls, log])
-            .gap(Space::N3)
-            .into_element(cx);
-
-        let card = shadcn::Card::new([header, shadcn::CardContent::new([body]).into_element(cx)])
-            .ui()
-            .w_full()
-            .max_w(Px(720.0))
-            .into_element(cx);
+        });
 
         fret_cookbook::scaffold::centered_page_background(cx, TEST_ID_ROOT, card).into()
     }
@@ -399,6 +429,6 @@ fn main() -> anyhow::Result<()> {
         .window("cookbook-async-inbox-basics", (860.0, 680.0))
         .config_files(false)
         .install_app(fret_cookbook::install_cookbook_defaults)
-        .run_mvu::<AsyncInboxBasicsProgram>()
+        .run_view::<AsyncInboxBasicsView>()
         .map_err(anyhow::Error::from)
 }
