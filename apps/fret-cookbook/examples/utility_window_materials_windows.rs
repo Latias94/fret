@@ -4,6 +4,7 @@ use fret::prelude::*;
 use fret_app::{CommandId, CommandMeta, Effect, WindowRequest};
 use fret_bootstrap::ui_app_with_hooks;
 use fret_core::{AppWindowId, Color, Px};
+use fret_render::WgpuAdapterSelectionSnapshot;
 use fret_runtime::{
     PlatformCapabilities, RunnerWindowStyleDiagnosticsStore, WindowBackgroundMaterialRequest,
     WindowDecorationsRequest, WindowStyleRequest,
@@ -95,6 +96,12 @@ fn view(cx: &mut fret_ui::ElementContext<'_, fret_app::App>, st: &mut State) -> 
         None => "caps: <unavailable>".to_string(),
     });
 
+    let wgpu = cx.app.global::<WgpuAdapterSelectionSnapshot>().cloned();
+    let wgpu_text: Arc<str> = Arc::from(match wgpu {
+        Some(s) => format!("wgpu: backend={} adapter={}", s.selected_backend, s.adapter_name),
+        None => "wgpu: <unavailable>".to_string(),
+    });
+
     let effective_style = cx
         .app
         .global::<RunnerWindowStyleDiagnosticsStore>()
@@ -123,6 +130,11 @@ fn view(cx: &mut fret_ui::ElementContext<'_, fret_app::App>, st: &mut State) -> 
             .into_element(cx)
             .test_id(TEST_ID_STYLE_TEXT);
         let caps_line = ui::text(cx, caps_text)
+            .font_monospace()
+            .text_sm()
+            .text_color(ColorRef::Color(color_muted_foreground))
+            .into_element(cx);
+        let wgpu_line = ui::text(cx, wgpu_text)
             .font_monospace()
             .text_sm()
             .text_color(ColorRef::Color(color_muted_foreground))
@@ -162,7 +174,7 @@ fn view(cx: &mut fret_ui::ElementContext<'_, fret_app::App>, st: &mut State) -> 
         .gap(Space::N2)
         .into_element(cx);
 
-        [style_line, caps_line, status_line, buttons]
+        [style_line, caps_line, wgpu_line, status_line, buttons]
     })
     .gap(Space::N3)
     .into_element(cx);
