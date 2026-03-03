@@ -51,7 +51,8 @@ This TODO is organized by milestones (see `MILESTONES.md`). Keep tasks **small a
 ## M4 — Layout performance workflow
 
 - [ ] Standardize perf suite tags for layout-heavy scenarios (UI gallery sweep subset).
-- [ ] Add a “layout hotspots diff summary” in tooling output (bounded).
+- [x] Add a bounded “layout perf summary” viewer (top frame solves + hotspots).
+  - CLI: `fretboard diag layout-perf-summary ...`
 - [ ] Add one CI-friendly perf gate preset (doc + example command).
 
 ## M5 — Frontend UX (optional / later)

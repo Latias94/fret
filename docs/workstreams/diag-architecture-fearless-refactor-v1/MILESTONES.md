@@ -84,6 +84,7 @@ Deliverables:
 
 - A perf suite preset focused on layout-heavy scenarios.
 - A bounded “layout perf summary” report (solve/measure/hotspots deltas).
+  - Tooling contract: `docs/workstreams/diag-architecture-fearless-refactor-v1/LAYOUT_PERF_SUMMARY_V1.md`
 
 Exit criteria:
 
@@ -118,4 +119,3 @@ Deliverables:
 Exit criteria:
 
 - New diagnostics features are added by extension points first, not by widening monoliths.
-
