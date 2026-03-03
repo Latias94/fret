@@ -97,6 +97,7 @@ Dispatch path explainability (diagnostics traces):
 - `ecosystem/fret-bootstrap/src/ui_diagnostics/script_steps_wait.rs` (`handle_wait_command_dispatch_trace_step` gate runner used by scripted diagnostics)
 - `crates/fret-diag-protocol/src/lib.rs` (`UiActionStepV2::WaitCommandDispatchTrace`, `UiCommandDispatchTraceQueryV1`)
 - `tools/diag-scripts/cookbook/imui-action-basics/cookbook-imui-action-basics-cross-frontend.json` (`wait_command_dispatch_trace` gate)
+- `tools/diag-scripts/cookbook/hello/cookbook-hello-click-count.json` (gates `source_test_id` for pointer-triggered dispatch trace)
 
 ---
 
