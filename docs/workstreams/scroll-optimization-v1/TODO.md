@@ -9,8 +9,11 @@ Status: Draft
   - [x] `ui-gallery-scroll-area-wheel-scroll` (bundle: `target/fret-diag/1772468071457-scroll-area-wheel-scroll`, 2026-03-02)
   - [x] `ui-gallery-scrollbar-drag-baseline-content-growth` (bundle: `target/fret-diag/1772498133742-scrollbar-drag-baseline-content-growth`, 2026-03-03)
   - [x] `ui-gallery-scroll-area-wheel-torture` (bundle: `target/fret-diag/1772498149599-scroll-area-wheel-torture`, 2026-03-03)
+  - [x] `ui-gallery-scroll-area-nested-scroll-routing` (bundle: `target/fret-diag-scroll-nested-debug6/sessions/1772508480737-75452/1772508483614-scroll-area-nested-scroll-routing`, 2026-03-03)
+  - [x] `ui-gallery-virtual-list-wheel-torture` (bundle: `target/fret-diag-vlist-wheel/sessions/1772508526189-62940/1772508528623-virtual-list-wheel-torture`, 2026-03-03)
   - [x] `ui-gallery-scroll-area-toggle-code-tabs` (bundle: `target/fret-diag-underflow-check/sessions/1772500876247-61448/1772500879851-scroll-area-toggle-code-tabs`, 2026-03-03)
   - [x] `diag perf perf-ui-gallery-scroll-area` (bundle: `target/fret-perf-scroll-area/sessions/1772501734226-65632/1772501741770`, 2026-03-03)
+  - [x] `diag perf perf-ui-gallery-virtual-list` (bundle: `target/fret-perf-vlist/1772508561962`, 2026-03-03)
 
 ## Mechanism hardening
 
@@ -33,8 +36,8 @@ Status: Draft
   - [x] Native (winit): `FRET_WINIT_COALESCE_WHEEL=1` (coalesce consecutive wheel events).
 - [ ] Add diag evidence:
   - [x] stress wheel in a scroll area (`ui-gallery-scroll-area-wheel-torture`),
-  - [ ] stress wheel in a virtual list,
-  - [ ] nested scrollable case (vlist containing a horizontal scroll surface).
+  - [x] stress wheel in a virtual list (`ui-gallery-virtual-list-wheel-torture`),
+  - [x] nested scrollable case (inner X should not consume Y wheel: `ui-gallery-scroll-area-nested-scroll-routing`).
 
 ## Perf harness plumbing
 
