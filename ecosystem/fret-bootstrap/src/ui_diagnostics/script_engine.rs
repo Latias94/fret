@@ -2213,7 +2213,6 @@ impl UiDiagnosticsService {
         let mut failure_reason: Option<String> = None;
         let mut handoff_to: Option<AppWindowId> = None;
         let anchor_window = active.anchor_window;
-        let element_runtime = app.global::<ElementRuntime>();
 
         let mut prev_next_step = active.next_step;
         let mut step_index = active.next_step;
@@ -2268,29 +2267,32 @@ impl UiDiagnosticsService {
                     debug_assert!(handled);
                     DriveScriptStepDispatchOutcome::Continue
                 }
-                _ => dispatch_drive_script_step(
-                    self,
-                    app,
-                    window,
-                    window_bounds,
-                    anchor_window,
-                    step_index,
-                    step,
-                    scale_factor,
-                    element_runtime,
-                    semantics_snapshot,
-                    &mut ui,
-                    text_font_stack_key_stable_frames,
-                    font_catalog_populated,
-                    system_font_rescan_idle,
-                    &mut active,
-                    &mut output,
-                    &mut force_dump_label,
-                    &mut force_dump_max_snapshots,
-                    &mut handoff_to,
-                    &mut stop_script,
-                    &mut failure_reason,
-                ),
+                _ => {
+                    let element_runtime = app.global::<ElementRuntime>();
+                    dispatch_drive_script_step(
+                        self,
+                        app,
+                        window,
+                        window_bounds,
+                        anchor_window,
+                        step_index,
+                        step,
+                        scale_factor,
+                        element_runtime,
+                        semantics_snapshot,
+                        &mut ui,
+                        text_font_stack_key_stable_frames,
+                        font_catalog_populated,
+                        system_font_rescan_idle,
+                        &mut active,
+                        &mut output,
+                        &mut force_dump_label,
+                        &mut force_dump_max_snapshots,
+                        &mut handoff_to,
+                        &mut stop_script,
+                        &mut failure_reason,
+                    )
+                }
             };
 
             match outcome {
