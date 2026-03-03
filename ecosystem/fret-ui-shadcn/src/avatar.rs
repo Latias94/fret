@@ -748,7 +748,6 @@ impl AvatarFallback {
             };
 
             let bg = theme.color_token("muted");
-            let fg = theme.color_token("muted-foreground");
 
             let base_chrome = ChromeRefinement::default()
                 .rounded(Radius::Full)
@@ -778,8 +777,6 @@ impl AvatarFallback {
             let label = ui::label(cx, self.text)
                 .text_size_px(text_px)
                 .line_height_px(line_height)
-                .font_medium()
-                .text_color(ColorRef::Color(fg))
                 .nowrap()
                 .into_element(cx);
 
