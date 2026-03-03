@@ -744,6 +744,29 @@
       ]
     },
     {
+      "id": "docking-arbitration-demo-multiwindow-title-bar-drag-docks-to-main",
+      "path": "tools/diag-scripts/docking/arbitration/docking-arbitration-demo-multiwindow-title-bar-drag-docks-to-main.json",
+      "required_capabilities": [
+        "diag.multi_window",
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "diag-hardening-smoke-docking",
+        "docking-arbitration"
+      ],
+      "tags": [
+        "docking",
+        "drag",
+        "gate",
+        "multiwindow",
+        "titlebar"
+      ],
+      "target_hints": [
+        "After tear-off, starts a tabs-group drag from empty tab-bar space in a floating OS window (custom chrome title-bar grab).",
+        "Docks back into the main window and asserts the floating window auto-closes after drop."
+      ]
+    },
+    {
       "id": "docking-arbitration-demo-multiwindow-overlap-zorder-switch",
       "path": "tools/diag-scripts/docking/arbitration/docking-arbitration-demo-multiwindow-overlap-zorder-switch.json",
       "required_capabilities": [
@@ -1024,6 +1047,26 @@
       "target_hints": [
         "This script first merges two viewports into a single tab stack, then asserts drop-at-end resolves insert_index == 2.",
         "It cancels the final drag (Escape) to avoid mutating layout beyond the setup step."
+      ]
+    },
+    {
+      "id": "docking-arbitration-demo-tab-reorder-two-tabs",
+      "path": "tools/diag-scripts/docking/arbitration/docking-arbitration-demo-tab-reorder-two-tabs.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "docking-arbitration"
+      ],
+      "tags": [
+        "docking",
+        "drag",
+        "gate",
+        "tabbar"
+      ],
+      "target_hints": [
+        "Merges two viewports into one tab strip, then drags a tab to the end to reorder within the strip.",
+        "Asserts the dock graph reflects the new tab order without floating/tear-off."
       ]
     },
     {

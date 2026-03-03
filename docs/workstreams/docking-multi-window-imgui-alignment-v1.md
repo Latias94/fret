@@ -222,6 +222,8 @@ This is a practical checklist for editor-grade parity. It intentionally mixes UX
 
 - Tab overflow + scrolling: ensure overflow behavior is predictable and stable under resize (and ideally gate it).
 - Tab reordering within a tab strip (and across tab strips) to match common ImGui editor workflows.
+  - Delivered (2026-03-03): reordering within a single tab strip is gated:
+    - `tools/diag-scripts/docking/arbitration/docking-arbitration-demo-tab-reorder-two-tabs.json`
 - “Close” ergonomics: close button hitboxes + middle-click-to-close (policy decision) should live in the ecosystem layer.
 
 ### D. Persistence and correctness
