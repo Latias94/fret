@@ -93,7 +93,8 @@ ID format:
 
 ## E. Cleanup + Convergence
 
-- [~] WTS-cleanup-040 Remove legacy ad-hoc hit-tests once kernel is in use.
+- [x] WTS-cleanup-040 Remove legacy ad-hoc hit-tests once kernel is in use:
+  - Evidence: `ecosystem/fret-workspace/src/tab_strip/mod.rs` (cross-pane hover insertion now uses `compute_workspace_tab_strip_drop_target`)
 - [ ] WTS-cleanup-041 Converge styling recipes (shadcn/material) without affecting mechanism tests.
 - [x] WTS-converge-050 Docking TabBar drop excludes the dragged tab from midpoint candidates:
   - Evidence: `ecosystem/fret-docking/src/dock/space.rs` (passes dragged tab index to the tab-bar kernel)
