@@ -38,6 +38,7 @@ Recommended starting points (action-first + view runtime):
 - `virtual_list_basics` (virtualization + keyed identity + reordering)
 - `icons_and_assets_basics` (semantic icon ids + svg/image loading + reload epoch)
 - `effects_layer_basics` (EffectLayer + EffectChain: pixelate/blur)
+- `markdown_and_code_basics` (markdown preview + fenced code blocks)
 - `commands_keymap_basics`, `overlay_basics`, `text_input_basics`
 - `imui_action_basics` (cross-frontend action dispatch)
 
