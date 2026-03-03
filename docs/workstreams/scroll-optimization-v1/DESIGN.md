@@ -146,6 +146,10 @@ Evidence gate:
   - `tools/diag-scripts/ui-gallery/scroll-area/ui-gallery-scroll-area-wheel-torture.json`
   - Suite: `tools/diag-scripts/suites/perf-ui-gallery-scroll-area/`
 
+Perf entrypoint:
+
+- `fretboard diag perf perf-ui-gallery-scroll-area ...` resolves via `crates/fret-diag/src/perf_seed_policy.rs`.
+
 ### B) Scrollbar drag baseline lock (correctness/UX)
 
 Goal: keep thumb position stable during drag even if content extent changes due to measurement or

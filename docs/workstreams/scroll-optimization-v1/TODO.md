@@ -10,6 +10,7 @@ Status: Draft
   - [x] `ui-gallery-scrollbar-drag-baseline-content-growth` (bundle: `target/fret-diag/1772498133742-scrollbar-drag-baseline-content-growth`, 2026-03-03)
   - [x] `ui-gallery-scroll-area-wheel-torture` (bundle: `target/fret-diag/1772498149599-scroll-area-wheel-torture`, 2026-03-03)
   - [x] `ui-gallery-scroll-area-toggle-code-tabs` (bundle: `target/fret-diag-underflow-check/sessions/1772500876247-61448/1772500879851-scroll-area-toggle-code-tabs`, 2026-03-03)
+  - [x] `diag perf perf-ui-gallery-scroll-area` (bundle: `target/fret-perf-scroll-area/sessions/1772501734226-65632/1772501741770`, 2026-03-03)
 
 ## Mechanism hardening
 
@@ -34,6 +35,11 @@ Status: Draft
   - [x] stress wheel in a scroll area (`ui-gallery-scroll-area-wheel-torture`),
   - [ ] stress wheel in a virtual list,
   - [ ] nested scrollable case (vlist containing a horizontal scroll surface).
+
+## Perf harness plumbing
+
+- [x] Allow `fretboard diag perf perf-ui-gallery-scroll-area` to resolve via the promoted scripts registry:
+  - `crates/fret-diag/src/perf_seed_policy.rs`
 
 ## Scrollbar drag stability
 
