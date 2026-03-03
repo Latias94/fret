@@ -27,6 +27,10 @@ View runtime (v1):
 - `ecosystem/fret/src/view.rs` (`View`, `ViewCx`, `use_state`/`use_state_keyed`/`use_selector`/`use_query`, view-cache reuse + handler keepalive)
 - `ecosystem/fret/src/app_entry.rs` (`App::run_view`)
 
+Legacy MVU quarantine (compat surface):
+
+- `ecosystem/fret/src/legacy.rs` (`fret::legacy::prelude::*`)
+
 UI gallery adoption (v1):
 
 - `apps/fret-ui-gallery/src/ui/snippets/command/action_first_view.rs` (action-first `.action(...)` + `cx.on_action::<...>(...)` via the view runtime)
@@ -176,6 +180,8 @@ Prefer `cargo nextest run` when available.
   - `tools/gates_wasm_smoke.ps1`
 - Run the Action-first authoring diagnostics gate set (commands/keymap + modal barrier + cross-frontend):
   - `pwsh tools/diag_gate_action_first_authoring_v1.ps1`
+- Prevent legacy MVU drift in the cookbook (compile-time grep gate):
+  - `pwsh tools/gate_no_mvu_in_cookbook.ps1`
 
 ---
 

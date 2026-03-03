@@ -18,6 +18,7 @@ Related:
 - **M4**: Met (ui-gallery includes an action-first view runtime snippet; templates + docs converge on View+actions).
 - **M5**: Met (workspace shell demo tab strip uses action-first pointer dispatch hooks; scripted diag gate asserts pointer dispatch trace exists).
 - **M6**: In progress (cookbook is fully migrated to view runtime + typed actions; remaining work is quarantine/delete of legacy MVU surfaces once the broader in-tree adoption is sufficient).
+  - Status (as of 2026-03-03): MVU authoring is quarantined behind `fret::legacy::prelude::*` (golden path prelude no longer re-exports MVU).
 
 ---
 

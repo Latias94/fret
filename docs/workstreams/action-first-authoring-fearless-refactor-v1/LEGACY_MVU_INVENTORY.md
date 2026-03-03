@@ -73,6 +73,8 @@ Recommendation:
 
 - Keep as-is unless we have a specific regression/evidence need; these demos are not the “first-time
   user” entry point after the template convergence.
+- Prefer `use fret::legacy::prelude::*;` in MVU-based demos to make the legacy authoring surface
+  explicit (do not rely on `fret::prelude::*`).
 
 ### 3) UI gallery legacy glue (`mvu_router`)
 

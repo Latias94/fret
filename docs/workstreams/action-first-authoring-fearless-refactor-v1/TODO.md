@@ -245,6 +245,9 @@ ID format:
 - [x] AFA-gates-053 Add a “risk matrix” review pass for M0/M1 (see `RISK_MATRIX.md`).
   - Evidence:
     - `docs/workstreams/action-first-authoring-fearless-refactor-v1/RISK_MATRIX.md` (review pass section)
+- [x] AFA-gates-054 Add a small repo-local gate that prevents legacy MVU from drifting back into the cookbook.
+  - Evidence:
+    - `tools/gate_no_mvu_in_cookbook.ps1`
 
 ---
 
@@ -264,7 +267,15 @@ This phase is intentionally last.
   - Evidence:
     - `docs/README.md`
     - `apps/fretboard/src/scaffold/templates.rs` (`todo_template_main_rs`, `simple_todo_template_main_rs`, `hello_template_main_rs`)
-- [ ] AFA-clean-062 Delete or quarantine redundant APIs/modules once adoption is complete.
+- [x] AFA-clean-062 Delete or quarantine redundant APIs/modules once adoption is complete.
   - Rule: do not delete until all in-tree demos + ecosystem crates have migrated or have explicit “legacy” labeling.
   - Migration inventory:
     - `docs/workstreams/action-first-authoring-fearless-refactor-v1/LEGACY_MVU_INVENTORY.md`
+  - Status (as of 2026-03-03):
+    - Quarantined: `fret::prelude::*` no longer re-exports MVU authoring types (use `fret::legacy::prelude::*` for MVU demos).
+    - Gated: cookbook does not contain MVU usage (`pwsh tools/gate_no_mvu_in_cookbook.ps1`).
+  - Evidence:
+    - `ecosystem/fret/src/lib.rs` (prelude quarantine)
+    - `ecosystem/fret/src/legacy.rs` (explicit legacy prelude)
+    - `apps/fret-examples/src/todo_demo.rs` (example: legacy prelude import)
+    - `tools/gate_no_mvu_in_cookbook.ps1`
