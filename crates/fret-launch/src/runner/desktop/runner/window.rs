@@ -468,56 +468,36 @@ pub(super) fn set_window_background_material(
         // `NSVisualEffectView` as a subview *inside* that view, it will sit above the surface and
         // can cover the UI (manifesting as a solid/blurred "white block").
         //
-        // Therefore we must attach the effect view as a *sibling* below winit's view:
-        // - If `ns_view` already has a superview, use it as the container.
-        // - If `ns_view` is the window's content view, we create a wrapper `NSView` content view,
-        //   move `ns_view` into it, and then attach the effect view to the wrapper.
+        // Therefore we attach the effect view as a sibling below winit's view. We intentionally
+        // do NOT replace the window `contentView` because winit-appkit expects to own it.
         let mut container_view: *mut Object = msg_send![ns_view, superview];
-        let mut wrapped_content_view = false;
         if container_view.is_null() {
-            let is_content_view: bool = ns_view == content_view;
-            if !is_content_view {
-                container_view = content_view;
-            } else {
-                let Some(ns_view_cls) = Class::get("NSView") else {
-                    return false;
-                };
-                let frame: NsRect = msg_send![content_view, bounds];
-
-                let wrapper: *mut Object = msg_send![ns_view_cls, alloc];
-                let wrapper: *mut Object = msg_send![wrapper, initWithFrame: frame];
-                if wrapper.is_null() {
-                    return false;
-                }
-                // NSViewWidthSizable (2) | NSViewHeightSizable (16)
-                let _: () = msg_send![wrapper, setAutoresizingMask: 18u64];
-                wrapped_content_view = true;
-
-                // Retain winit's view across `setContentView:` to avoid any unexpected lifetime
-                // transitions while we reparent it.
-                let retained_ns_view: *mut Object = msg_send![ns_view, retain];
-                let _: () = msg_send![ns_window, setContentView: wrapper];
-
-                let wrapper_bounds: NsRect = msg_send![wrapper, bounds];
-                let _: () = msg_send![retained_ns_view, setFrame: wrapper_bounds];
-                // Keep winit's view resizing with the window.
-                let _: () = msg_send![retained_ns_view, setAutoresizingMask: 18u64];
-                let _: () = msg_send![wrapper, addSubview: retained_ns_view];
-                let _: () = msg_send![retained_ns_view, release];
-
-                container_view = wrapper;
-            }
+            container_view = content_view;
+        }
+        if container_view.is_null() {
+            return false;
         }
 
         super::macos_window_log(format_args!(
-            "[bg-material] winit={:?} material={:?} ns_view={:p} content_view={:p} container_view={:p} wrapped={}",
+            "[bg-material] winit={:?} material={:?} ns_view={:p} content_view={:p} container_view={:p}",
             window.id(),
             material,
             ns_view as *const std::ffi::c_void,
             content_view as *const std::ffi::c_void,
             container_view as *const std::ffi::c_void,
-            wrapped_content_view,
         ));
+
+        // Ensure the window is non-opaque so the compositor can blend the surface alpha and the
+        // behind-window material can show through.
+        let _: () = msg_send![ns_window, setOpaque: false];
+        if let Some(color_cls) = Class::get("NSColor") {
+            // Avoid `clearColor` to preserve window shadow (matches GPUI's behavior).
+            let bg: *mut Object =
+                msg_send![color_cls, colorWithSRGBRed: 0f64 green: 0f64 blue: 0f64 alpha: 0.0001f64];
+            if !bg.is_null() {
+                let _: () = msg_send![ns_window, setBackgroundColor: bg];
+            }
+        }
 
         let subviews: *mut Object = msg_send![container_view, subviews];
         let count: usize = if subviews.is_null() {
@@ -565,6 +545,15 @@ pub(super) fn set_window_background_material(
         }
 
         let container_bounds: NsRect = msg_send![container_view, bounds];
+        let effect_material: u64 = match material {
+            // NSVisualEffectMaterialUnderWindowBackground (17) produces an explicit blurred
+            // "material" under the window content.
+            fret_runtime::WindowBackgroundMaterialRequest::Vibrancy => 17,
+            // NSVisualEffectMaterialWindowBackground (12) is closer to the default background
+            // appearance (best-effort).
+            fret_runtime::WindowBackgroundMaterialRequest::SystemDefault => 12,
+            _ => 12,
+        };
 
         if existing.is_null() {
             let Some(cls) = Class::get("NSVisualEffectView") else {
@@ -590,6 +579,7 @@ pub(super) fn set_window_background_material(
             let _: () = msg_send![view, setBlendingMode: 0u64];
             // NSVisualEffectStateActive (1)
             let _: () = msg_send![view, setState: 1u64];
+            let _: () = msg_send![view, setMaterial: effect_material];
 
             // Insert below winit's view so input continues to flow to the UI.
             //
@@ -621,6 +611,7 @@ pub(super) fn set_window_background_material(
             ];
             let _: () = msg_send![existing, setBlendingMode: 0u64];
             let _: () = msg_send![existing, setState: 1u64];
+            let _: () = msg_send![existing, setMaterial: effect_material];
             super::macos_window_log(format_args!(
                 "[bg-material-attach] winit={:?} effect_view={:p} action=reinsert",
                 window.id(),
