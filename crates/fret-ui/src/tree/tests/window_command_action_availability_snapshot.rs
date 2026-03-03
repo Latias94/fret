@@ -81,7 +81,7 @@ fn publish_snapshot(
 }
 
 #[test]
-fn action_availability_snapshot_skips_unhandled_commands() {
+fn action_availability_snapshot_marks_unhandled_commands_unavailable() {
     let mut app = crate::test_host::TestHost::new();
     app.set_global(PlatformCapabilities::default());
 
@@ -127,7 +127,7 @@ fn action_availability_snapshot_skips_unhandled_commands() {
     );
     assert_eq!(
         svc.available(window, &CommandId::from("test.unhandled")),
-        None
+        Some(false)
     );
 }
 

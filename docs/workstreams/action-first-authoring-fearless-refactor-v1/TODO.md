@@ -59,8 +59,11 @@ ID format:
   - Goal: IR binds `ActionId`; handlers live in view/app layer.
   - Evidence:
     - `ecosystem/fret/src/actions.rs` (`ActionHandlerTable`, `build()` adapters)
-- [ ] AFA-actions-013 Integrate action availability queries with input dispatch v2 semantics.
-  - Evidence: `docs/adr/0218-input-dispatch-phases-prevent-default-and-action-availability-v2.md`
+- [x] AFA-actions-013 Integrate action availability queries with input dispatch v2 semantics.
+  - Evidence:
+    - `docs/adr/0218-input-dispatch-phases-prevent-default-and-action-availability-v2.md`
+    - `crates/fret-ui/src/tree/commands.rs` (`publish_window_command_action_availability_snapshot`)
+    - `crates/fret-ui/src/tree/tests/window_command_action_availability_snapshot.rs`
 - [x] AFA-actions-014 Add diagnostics traces for:
   - keymap resolution → action id,
   - availability gating outcome,
