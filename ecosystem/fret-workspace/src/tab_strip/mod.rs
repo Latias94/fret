@@ -9,8 +9,7 @@ use fret_core::{
 };
 use fret_runtime::{CommandId, Effect, Model};
 use fret_ui::action::{
-    OnActivate, OnInternalDrag, OnPressablePointerMove, OnPressablePointerUp, OnWheel,
-    PressablePointerUpResult,
+    OnInternalDrag, OnPressablePointerMove, OnPressablePointerUp, OnWheel, PressablePointerUpResult,
 };
 use fret_ui::element::ElementKind;
 use fret_ui::element::{
@@ -654,32 +653,12 @@ impl WorkspaceTabStrip {
                                                             );
                                                         }
 
-                                                        let tab_activate_cmd_for_activate =
-                                                            tab_activate_command.clone();
-                                                        let pane_activate_cmd_for_activate_handler =
-                                                            pane_activate_cmd_for_activate.clone();
-                                                        let handler: OnActivate = Arc::new(
-                                                            move |host, acx, _reason| {
-                                                                if let Some(cmd) =
-                                                                    pane_activate_cmd_for_activate_handler
-                                                                        .clone()
-                                                                {
-                                                                    dispatch_intent(
-                                                                        host,
-                                                                        acx.window,
-                                                                        WorkspaceTabStripIntent::Activate(cmd),
-                                                                    );
-                                                                }
-                                                                dispatch_intent(
-                                                                    host,
-                                                                    acx.window,
-                                                                    WorkspaceTabStripIntent::Activate(
-                                                                        tab_activate_cmd_for_activate.clone(),
-                                                                    ),
-                                                                );
-                                                            },
+                                                        cx.pressable_dispatch_action_if_enabled_opt(
+                                                            pane_activate_cmd_for_activate.clone(),
                                                         );
-                                                        cx.pressable_on_activate(handler);
+                                                        cx.pressable_dispatch_action_if_enabled(
+                                                            tab_activate_command.clone(),
+                                                        );
 
                                                         cx.pressable_on_pointer_down(
                                                             tab_pointer_down_handler(

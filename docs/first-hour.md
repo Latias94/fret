@@ -35,7 +35,7 @@ cargo run -p fret-cookbook --example simple_todo
 
 Why `simple-todo`?
 
-- It is **Model + MVU messages + keyed lists** only.
+- It is **Model + view runtime + typed actions + keyed lists** only.
 - It intentionally does **not** pull in `fret-selector` or `fret-query`.
 
 ## 2) Where to edit
@@ -47,8 +47,8 @@ Open:
 The template is intentionally small:
 
 - `TodoState` holds app-owned `Model<T>` state.
-- `Msg` is the typed intent enum (UI → app logic).
-- `TodoProgram` wires MVU (`init`, `update`, `view`).
+- `act::*` are typed unit actions (stable IDs).
+- `TodoView` wires the view runtime (`init`, `render`) and registers action handlers via `cx.on_action`.
 
 ## 3) The three things you should learn first
 
@@ -155,7 +155,7 @@ If you are unsure, start with `Layout` and tighten later.
 ## 4) Next steps (progressive disclosure ladder)
 
 1) **Hello UI** (minimal): `cargo run -p fretboard -- new hello --name hello-world`
-2) **Simple MVU baseline**: `simple-todo` (this guide)
+2) **Simple baseline**: `simple-todo` (this guide)
 3) **Best-practice baseline**: `todo` (selectors + queries)
    - See: `docs/examples/todo-app-golden-path.md`
 4) **Interop (Tier A embedding)**: viewport surfaces + input forwarding
@@ -169,6 +169,6 @@ If you are unsure, start with `Layout` and tighten later.
 
 | Template | Generate | Teaches | Avoids |
 | --- | --- | --- | --- |
-| `hello` | `fretboard new hello` | smallest runnable UI surface | MVU/state patterns |
-| `simple-todo` | `fretboard new simple-todo` | MVU + typed messages + keyed lists | selectors/queries |
+| `hello` | `fretboard new hello` | view runtime + typed actions (smallest runnable UI surface) | selectors/queries |
+| `simple-todo` | `fretboard new simple-todo` | view runtime + typed actions + keyed lists | selectors/queries |
 | `todo` | `fretboard new todo` | “best practice baseline” with selectors/queries | being minimal |

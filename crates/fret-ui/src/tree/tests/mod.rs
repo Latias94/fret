@@ -215,6 +215,7 @@ mod alt_menu_bar_activation;
 mod barrier_subtree_layout_dirty_aggregation;
 mod children;
 mod command_availability;
+mod command_dispatch_source_trace;
 mod command_enabled_service;
 mod cursor_icon_query;
 mod dispatch_phase;

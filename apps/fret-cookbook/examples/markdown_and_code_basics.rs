@@ -37,54 +37,34 @@ fn main() {
 ```
 "#;
 
-#[derive(Debug, Clone, Copy)]
-enum Msg {
-    Reset,
+mod act {
+    fret::actions!([Reset = "cookbook.markdown_and_code_basics.reset.v1"]);
 }
 
-struct MarkdownAndCodeBasicsState {
+struct MarkdownAndCodeBasicsView {
     source: Model<String>,
     wrap: Model<Option<Arc<str>>>,
     cap_height: Model<bool>,
 }
 
-struct MarkdownAndCodeBasicsProgram;
-
-impl MvuProgram for MarkdownAndCodeBasicsProgram {
-    type State = MarkdownAndCodeBasicsState;
-    type Message = Msg;
-
-    fn init(app: &mut App, _window: AppWindowId) -> Self::State {
-        Self::State {
+impl View for MarkdownAndCodeBasicsView {
+    fn init(app: &mut App, _window: AppWindowId) -> Self {
+        Self {
             source: app.models_mut().insert(SAMPLE_MARKDOWN.to_string()),
             wrap: app.models_mut().insert(Some(Arc::from(WRAP_SCROLL_X))),
             cap_height: app.models_mut().insert(true),
         }
     }
 
-    fn update(app: &mut App, state: &mut Self::State, message: Self::Message) {
-        match message {
-            Msg::Reset => {
-                let _ = app
-                    .models_mut()
-                    .update(&state.source, |v| *v = SAMPLE_MARKDOWN.to_string());
-            }
-        }
-    }
-
-    fn view(
-        cx: &mut ElementContext<'_, App>,
-        state: &mut Self::State,
-        msg: &mut MessageRouter<Self::Message>,
-    ) -> Elements {
-        let source = cx.watch_model(&state.source).layout().cloned_or_default();
-        let wrap = state
+    fn render(&mut self, cx: &mut ViewCx<'_, '_, App>) -> Elements {
+        let source = cx.watch_model(&self.source).layout().cloned_or_default();
+        let wrap = self
             .wrap
             .read(&mut *cx.app, |_host, v| v.clone())
             .ok()
             .flatten()
             .unwrap_or_else(|| Arc::from(WRAP_SCROLL_X));
-        let cap_height = cx.watch_model(&state.cap_height).layout().copied_or(true);
+        let cap_height = cx.watch_model(&self.cap_height).layout().copied_or(true);
 
         let wrap_mode = match wrap.as_ref() {
             WRAP_WORD => CodeBlockWrap::Word,
@@ -109,7 +89,7 @@ impl MvuProgram for MarkdownAndCodeBasicsProgram {
         ])
         .into_element(cx);
 
-        let wrap_toggle = shadcn::ToggleGroup::single(state.wrap.clone())
+        let wrap_toggle = shadcn::ToggleGroup::single(self.wrap.clone())
             .items([
                 shadcn::ToggleGroupItem::new(WRAP_SCROLL_X, [cx.text("Scroll X")])
                     .a11y_label("Scroll horizontally")
@@ -122,7 +102,7 @@ impl MvuProgram for MarkdownAndCodeBasicsProgram {
             .into_element(cx)
             .test_id(TEST_ID_WRAP);
 
-        let cap_switch = shadcn::Switch::new(state.cap_height.clone())
+        let cap_switch = shadcn::Switch::new(self.cap_height.clone())
             .test_id(TEST_ID_CAP_HEIGHT)
             .into_element(cx);
 
@@ -130,7 +110,7 @@ impl MvuProgram for MarkdownAndCodeBasicsProgram {
             .variant(shadcn::ButtonVariant::Secondary)
             .size(shadcn::ButtonSize::Sm)
             .icon(IconId::new_static("ui.reset"))
-            .on_click(msg.cmd(Msg::Reset))
+            .action(act::Reset)
             .into_element(cx)
             .test_id(TEST_ID_RESET);
 
@@ -166,7 +146,7 @@ impl MvuProgram for MarkdownAndCodeBasicsProgram {
         .gap(Space::N2)
         .into_element(cx);
 
-        let editor = shadcn::Textarea::new(state.source.clone())
+        let editor = shadcn::Textarea::new(self.source.clone())
             .a11y_label("Markdown source")
             .placeholder("Markdown…")
             .min_height(Px(420.0))
@@ -216,6 +196,18 @@ impl MvuProgram for MarkdownAndCodeBasicsProgram {
             .max_w(Px(980.0))
             .into_element(cx);
 
+        cx.on_action::<act::Reset>({
+            let source = self.source.clone();
+            move |host, acx| {
+                let _ = host
+                    .models_mut()
+                    .update(&source, |v| *v = SAMPLE_MARKDOWN.to_string());
+                host.request_redraw(acx.window);
+                host.notify(acx);
+                true
+            }
+        });
+
         fret_cookbook::scaffold::centered_page_background(cx, TEST_ID_ROOT, card).into()
     }
 }
@@ -225,6 +217,6 @@ fn main() -> anyhow::Result<()> {
         .window("cookbook-markdown-and-code-basics", (1080.0, 820.0))
         .config_files(false)
         .install_app(fret_cookbook::install_cookbook_defaults)
-        .run_mvu::<MarkdownAndCodeBasicsProgram>()
+        .run_view::<MarkdownAndCodeBasicsView>()
         .map_err(anyhow::Error::from)
 }

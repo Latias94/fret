@@ -1,6 +1,14 @@
 use fret::prelude::*;
 use fret_core::scene::{EffectChain, EffectMode, EffectStep};
 
+mod act {
+    fret::actions!([
+        None = "cookbook.effects_layer_basics.effect.none.v1",
+        Pixelate = "cookbook.effects_layer_basics.effect.pixelate.v1",
+        Blur = "cookbook.effects_layer_basics.effect.blur.v1"
+    ]);
+}
+
 const TEST_ID_ROOT: &str = "cookbook.effects_layer_basics.root";
 const TEST_ID_NONE: &str = "cookbook.effects_layer_basics.effect.none";
 const TEST_ID_PIXELATE: &str = "cookbook.effects_layer_basics.effect.pixelate";
@@ -14,55 +22,61 @@ enum EffectKind {
     Blur,
 }
 
-struct EffectsLayerBasicsState {
+struct EffectsLayerBasicsView {
     effect: Model<EffectKind>,
 }
 
-#[derive(Debug, Clone)]
-enum Msg {
-    SetEffect(EffectKind),
-}
-
-struct EffectsLayerBasicsProgram;
-
-impl MvuProgram for EffectsLayerBasicsProgram {
-    type State = EffectsLayerBasicsState;
-    type Message = Msg;
-
-    fn init(app: &mut App, _window: AppWindowId) -> Self::State {
-        Self::State {
+impl View for EffectsLayerBasicsView {
+    fn init(app: &mut App, _window: AppWindowId) -> Self {
+        Self {
             effect: app.models_mut().insert(EffectKind::None),
         }
     }
 
-    fn update(app: &mut App, state: &mut Self::State, message: Self::Message) {
-        match message {
-            Msg::SetEffect(effect) => {
-                let _ = state.effect.update(app, |v, _cx| *v = effect);
-            }
-        }
-    }
-
-    fn view(
-        cx: &mut ElementContext<'_, App>,
-        state: &mut Self::State,
-        msg: &mut MessageRouter<Self::Message>,
-    ) -> Elements {
+    fn render(&mut self, cx: &mut ViewCx<'_, '_, App>) -> Elements {
         let theme = Theme::global(&*cx.app).snapshot();
 
-        let effect_kind = state
-            .effect
-            .read(&mut *cx.app, |_host, v| *v)
-            .unwrap_or(EffectKind::None);
+        let effect_kind = cx
+            .watch_model(&self.effect)
+            .layout()
+            .copied_or(EffectKind::None);
 
-        let cmd_none = msg.cmd(Msg::SetEffect(EffectKind::None));
-        let cmd_pixelate = msg.cmd(Msg::SetEffect(EffectKind::Pixelate));
-        let cmd_blur = msg.cmd(Msg::SetEffect(EffectKind::Blur));
+        cx.on_action::<act::None>({
+            let effect = self.effect.clone();
+            move |host, acx| {
+                let _ = host.models_mut().update(&effect, |v| *v = EffectKind::None);
+                host.request_redraw(acx.window);
+                host.notify(acx);
+                true
+            }
+        });
+
+        cx.on_action::<act::Pixelate>({
+            let effect = self.effect.clone();
+            move |host, acx| {
+                let _ = host
+                    .models_mut()
+                    .update(&effect, |v| *v = EffectKind::Pixelate);
+                host.request_redraw(acx.window);
+                host.notify(acx);
+                true
+            }
+        });
+
+        cx.on_action::<act::Blur>({
+            let effect = self.effect.clone();
+            move |host, acx| {
+                let _ = host.models_mut().update(&effect, |v| *v = EffectKind::Blur);
+                host.request_redraw(acx.window);
+                host.notify(acx);
+                true
+            }
+        });
 
         let button = |cx: &mut ElementContext<'_, App>,
                       label: &'static str,
                       effect: EffectKind,
-                      cmd: CommandId,
+                      action: fret_runtime::ActionId,
                       test_id: &'static str| {
             let selected = effect_kind == effect;
             shadcn::Button::new(label)
@@ -71,7 +85,7 @@ impl MvuProgram for EffectsLayerBasicsProgram {
                 } else {
                     shadcn::ButtonVariant::Outline
                 })
-                .on_click(cmd)
+                .action(action)
                 .into_element(cx)
                 .a11y_role(SemanticsRole::Button)
                 .test_id(test_id)
@@ -152,15 +166,15 @@ impl MvuProgram for EffectsLayerBasicsProgram {
 
         let controls = ui::h_flex(cx, |cx| {
             [
-                button(cx, "None", EffectKind::None, cmd_none.clone(), TEST_ID_NONE),
+                button(cx, "None", EffectKind::None, act::None.into(), TEST_ID_NONE),
                 button(
                     cx,
                     "Pixelate",
                     EffectKind::Pixelate,
-                    cmd_pixelate.clone(),
+                    act::Pixelate.into(),
                     TEST_ID_PIXELATE,
                 ),
-                button(cx, "Blur", EffectKind::Blur, cmd_blur.clone(), TEST_ID_BLUR),
+                button(cx, "Blur", EffectKind::Blur, act::Blur.into(), TEST_ID_BLUR),
             ]
         })
         .gap(Space::N2)
@@ -188,6 +202,6 @@ fn main() -> anyhow::Result<()> {
     FretApp::new("cookbook-effects-layer-basics")
         .window("cookbook-effects-layer-basics", (680.0, 460.0))
         .install_app(fret_cookbook::install_cookbook_defaults)
-        .run_mvu::<EffectsLayerBasicsProgram>()
+        .run_view::<EffectsLayerBasicsView>()
         .map_err(anyhow::Error::from)
 }

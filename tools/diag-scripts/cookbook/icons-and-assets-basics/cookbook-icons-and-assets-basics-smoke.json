@@ -2,7 +2,7 @@
   "schema_version": 2,
   "meta": {
     "name": "cookbook icons+assets: smoke",
-    "tags": ["cookbook", "cookbook.icons_and_assets_basics"],
+    "tags": ["cookbook", "cookbook.icons_and_assets_basics", "actions", "smoke"],
     "required_capabilities": ["diag.script_v2", "diag.screenshot_png"],
     "target_hints": [
       "Validates that icon + asset panels mount and that the reload epoch button is wired."

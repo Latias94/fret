@@ -1,11 +1,44 @@
 # Action-First Authoring + View Runtime (Fearless Refactor v1) — Risk Matrix
 
-Last updated: 2026-03-01
+Last updated: 2026-03-03
 
 This matrix is a planning tool: it enumerates the highest-risk failure modes and the gates that
 keep the refactor safe across native + wasm + future mobile targets.
 
 This is not an ADR. If a mitigation is a hard contract, promote it to an ADR.
+
+---
+
+## Review pass (M0/M1) — 2026-03-03
+
+This section records the current mitigation status and the concrete gates/evidence we rely on today.
+
+- R1: Mostly mitigated (dispatch explainability + cross-trigger parity gates exist).
+  - Evidence/gates:
+    - `apps/fret-cookbook/examples/commands_keymap_basics.rs`
+    - `tools/diag-scripts/cookbook/commands-keymap-basics/cookbook-commands-keymap-basics-shortcut-and-gating.json`
+    - `tools/diag-scripts/workspace/shell-demo/workspace-shell-demo-tab-close-button-closes-tab-smoke.json`
+    - `crates/fret-ui/src/tree/tests/command_dispatch_source_trace.rs`
+- R2: Partially mitigated (modal barrier gate exists; mechanism-level availability tests still thin).
+  - Evidence/gates:
+    - `apps/fret-cookbook/examples/overlay_basics.rs`
+    - `tools/diag-scripts/cookbook/overlay-basics/cookbook-overlay-basics-modal-barrier-shortcut-gating.json`
+- R3: Mostly mitigated (keyed hooks + debug rails exist; still relies on author discipline for complex loops).
+  - Evidence:
+    - `ecosystem/fret/src/view.rs` (hook keying + debug warnings)
+    - `ecosystem/fret-selector/src/ui.rs` (`DepsBuilder` + debug warnings)
+- R4: Partially mitigated (view-cache reuse has keepalive handler install; inspection/picking divergence gates still TODO).
+  - Evidence:
+    - `ecosystem/fret/src/view.rs` (handler keepalive under reuse)
+    - `docs/ui-diagnostics-and-scripted-tests.md`
+- R5: Mitigated (wasm smoke gates exist for the view runtime surface).
+  - Evidence/gates:
+    - `tools/gates_wasm_smoke.ps1`
+- R6: Mostly mitigated (templates + docs converge on one golden path; deletion/quarantine remains for M6).
+  - Evidence:
+    - `apps/fretboard/src/scaffold/templates.rs`
+    - `docs/README.md`
+    - `docs/workstreams/action-first-authoring-fearless-refactor-v1/MILESTONES.md`
 
 ---
 
@@ -103,4 +136,3 @@ Mitigation / gates:
 - treat cleanup as a milestone with exit criteria (M6),
 - update templates/docs early (deprecate in docs first),
 - add CI grep gates for reintroduced stringly routing patterns (keep existing checks, extend if needed).
-

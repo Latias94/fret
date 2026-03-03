@@ -9,7 +9,7 @@
 
 use std::sync::Arc;
 
-use fret::prelude::*;
+use fret::legacy::prelude::*;
 use fret_core::scene::{
     BackdropWarpFieldV2, BackdropWarpKindV1, BackdropWarpV1, BackdropWarpV2,
     CustomEffectImageInputV1, CustomEffectPyramidRequestV1, CustomEffectSourcesV3, DitherMode,

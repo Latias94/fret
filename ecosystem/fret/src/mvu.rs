@@ -1,9 +1,22 @@
-//! MVU-style authoring helpers (inspired by `iced`).
+//! Legacy MVU-style authoring helpers (inspired by `iced`).
 //!
 //! Goals:
 //! - Keep application state local and typed (`struct State`, `enum Message`).
 //! - Avoid stringly `CommandId` parsing in app code.
 //! - Stay ecosystem-level (built on top of `UiAppDriver`), preserving `fret-ui` contract boundaries.
+//!
+//! Current recommendation (v1):
+//!
+//! - Prefer action-first authoring: `View` + `ViewCx` + typed unit actions (`fret::actions!`).
+//! - Keep MVU as a compatibility surface and for specific cases that genuinely benefit from a
+//!   message-driven update loop.
+//!
+//! Why MVU is considered legacy for new templates:
+//!
+//! - Per-frame message routing (`MessageRouter`) relies on rebuilding the view each frame to
+//!   re-install command → message bindings, which interacts poorly with `view_cache(...)` reuse.
+//! - Action-first bindings keep the UI IR more data-like and converge keyboard/palette/pointer
+//!   triggers through the same observable dispatch pipeline (see ADR 0307).
 
 use std::collections::HashMap;
 use std::hash::Hash;

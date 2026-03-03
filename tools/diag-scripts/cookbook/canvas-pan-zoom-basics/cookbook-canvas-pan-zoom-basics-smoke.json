@@ -3,7 +3,7 @@
   "meta": {
     "name": "cookbook-canvas-pan-zoom-basics-smoke",
     "required_capabilities": ["diag.script_v2", "diag.screenshot_png"],
-    "tags": ["cookbook", "canvas", "pan_zoom", "smoke"]
+    "tags": ["cookbook", "canvas", "pan_zoom", "actions", "smoke"]
   },
   "steps": [
     { "type": "reset_diagnostics" },
@@ -47,4 +47,3 @@
     { "type": "capture_bundle", "label": "cookbook-canvas-pan-zoom-basics-smoke" }
   ]
 }
-
