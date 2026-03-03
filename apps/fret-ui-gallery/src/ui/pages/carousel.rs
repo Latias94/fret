@@ -19,6 +19,7 @@ pub(super) fn preview_carousel(cx: &mut ElementContext<'_, App>) -> Vec<AnyEleme
         let api = snippets::api::render(cx);
         let plugin = snippets::plugin_autoplay::render(cx);
         let plugin_controlled = snippets::plugin_autoplay_controlled::render(cx);
+        let plugin_stop_on_focus = snippets::plugin_autoplay_stop_on_focus::render(cx);
         let plugin_stop_on_last_snap = snippets::plugin_autoplay_stop_on_last_snap::render(cx);
         let plugin_delays = snippets::plugin_autoplay_delays::render(cx);
         let plugin_wheel = snippets::plugin_wheel_gestures::render(cx);
@@ -122,6 +123,15 @@ pub(super) fn preview_carousel(cx: &mut ElementContext<'_, App>) -> Vec<AnyEleme
                     .test_id_prefix("ui-gallery-carousel-plugin-controlled")
                     .code_rust_from_file_region(
                         snippets::plugin_autoplay_controlled::SOURCE,
+                        "example",
+                    ),
+                DocSection::new("Plugin (Autoplay, stopOnInteraction via focus)", plugin_stop_on_focus)
+                    .description(
+                        "Autoplay stops when focus enters a slide (`stop_on_interaction=true`, Embla `slidefocus`-style outcome).",
+                    )
+                    .test_id_prefix("ui-gallery-carousel-plugin-stop-on-interaction-focus")
+                    .code_rust_from_file_region(
+                        snippets::plugin_autoplay_stop_on_focus::SOURCE,
                         "example",
                     ),
                 DocSection::new("Plugin (Autoplay, stopOnLastSnap)", plugin_stop_on_last_snap)

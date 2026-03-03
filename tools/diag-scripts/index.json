@@ -2120,6 +2120,29 @@
       ]
     },
     {
+      "id": "ui-gallery-carousel-plugin-autoplay-stop-on-interaction-focus-gate",
+      "path": "tools/diag-scripts/ui-gallery/carousel/ui-gallery-carousel-plugin-autoplay-stop-on-interaction-focus-gate.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "ui-gallery-shadcn-conformance"
+      ],
+      "tags": [
+        "autoplay",
+        "carousel",
+        "focus",
+        "gate",
+        "plugin",
+        "stopOnInteraction",
+        "ui-gallery"
+      ],
+      "target_hints": [
+        "Navigate to the UI gallery Carousel page and Tab focus into a slide button.",
+        "Expected behavior: `stopOnInteraction` stops autoplay when focus enters a slide."
+      ]
+    },
+    {
       "id": "ui-gallery-chart-accessibility-layer-keyboard",
       "path": "tools/diag-scripts/ui-gallery/chart/ui-gallery-chart-accessibility-layer-keyboard.json",
       "required_capabilities": [],
