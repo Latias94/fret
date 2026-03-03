@@ -65,3 +65,4 @@ This TODO is organized by milestones (see `MILESTONES.md`). Keep tasks **small a
 - [ ] Write a short “How to debug layout” cookbook that unifies: inspect → selector → gate → sidecar.
 - [ ] Update `docs/workstreams/diag-devtools-gui-v1.md` to reference the extension contract.
 - [ ] Add a minimal “ecosystem diagnostics authoring guide” with one end-to-end example.
+  - include: how to publish and view `debug.extensions` (`fretboard diag extensions ...`).
