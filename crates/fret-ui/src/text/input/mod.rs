@@ -31,6 +31,8 @@ pub struct TextInput {
     text: String,
     base_text_revision: u64,
     ime_surrounding_text_cache: std::cell::RefCell<ImeSurroundingTextCache>,
+    caret_blink_timer: Option<fret_runtime::TimerToken>,
+    caret_blink_visible: bool,
     caret: usize,
     selection_anchor: usize,
     offset_x: Px,

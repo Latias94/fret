@@ -600,6 +600,8 @@ impl<H: UiHost> Widget<H> for TextArea {
                     return;
                 }
 
+                self.reset_caret_blink(cx);
+
                 let mut anchor = *anchor as usize;
                 let mut focus = *focus as usize;
                 if self.is_ime_composing() {
@@ -644,6 +646,7 @@ impl<H: UiHost> Widget<H> for TextArea {
                         }
 
                         cx.request_focus(cx.node);
+                        self.reset_caret_blink(cx);
                         self.dragging_thumb = false;
 
                         // Avoid mutating selection/caret during IME composition; a context menu
@@ -715,6 +718,7 @@ impl<H: UiHost> Widget<H> for TextArea {
 
                         // Middle-click paste should use the caret under the pointer (editor-grade UX).
                         cx.request_focus(cx.node);
+                        self.reset_caret_blink(cx);
                         self.dragging_thumb = false;
 
                         let inner = self.content_bounds();
@@ -763,6 +767,7 @@ impl<H: UiHost> Widget<H> for TextArea {
                 }
 
                 cx.request_focus(cx.node);
+                self.reset_caret_blink(cx);
                 cx.capture_pointer(cx.node);
                 self.dragging_thumb = false;
                 self.selection_dragging = true;
@@ -968,6 +973,7 @@ impl<H: UiHost> Widget<H> for TextArea {
 
                 match key {
                     fret_core::KeyCode::Enter | fret_core::KeyCode::NumpadEnter => {
+                        self.reset_caret_blink(cx);
                         let changed = self.replace_selection_changed("\n");
                         let outcome = crate::text_edit::commands::Outcome {
                             handled: true,
@@ -980,6 +986,7 @@ impl<H: UiHost> Widget<H> for TextArea {
                         cx.stop_propagation();
                     }
                     fret_core::KeyCode::Tab => {
+                        self.reset_caret_blink(cx);
                         let changed = self.replace_selection_changed("\t");
                         let outcome = crate::text_edit::commands::Outcome {
                             handled: true,
@@ -992,6 +999,7 @@ impl<H: UiHost> Widget<H> for TextArea {
                         cx.stop_propagation();
                     }
                     fret_core::KeyCode::Backspace => {
+                        self.reset_caret_blink(cx);
                         let command = "text.delete_backward";
                         let outcome = self.apply_basic_command(
                             command,
@@ -1004,6 +1012,7 @@ impl<H: UiHost> Widget<H> for TextArea {
                         cx.stop_propagation();
                     }
                     fret_core::KeyCode::Delete => {
+                        self.reset_caret_blink(cx);
                         let command = "text.delete_forward";
                         let outcome = self.apply_basic_command(
                             command,
@@ -1034,6 +1043,7 @@ impl<H: UiHost> Widget<H> for TextArea {
                 }
                 self.ime_deduper.record_text_input(tick, text.as_str());
 
+                self.reset_caret_blink(cx);
                 let changed = self.replace_selection_changed(text.as_str());
                 let outcome = crate::text_edit::commands::Outcome {
                     handled: true,
@@ -1051,6 +1061,8 @@ impl<H: UiHost> Widget<H> for TextArea {
                     return;
                 }
                 self.pending_clipboard_token = None;
+
+                self.reset_caret_blink(cx);
 
                 let had_preedit = self.is_ime_composing();
                 let outcome = crate::text_edit::commands::apply_clipboard_text(
@@ -1089,6 +1101,8 @@ impl<H: UiHost> Widget<H> for TextArea {
                 }
                 self.pending_primary_selection_token = None;
 
+                self.reset_caret_blink(cx);
+
                 let had_preedit = self.is_ime_composing();
                 let outcome = crate::text_edit::commands::apply_clipboard_text(
                     &mut self.edit_state(),
@@ -1120,6 +1134,7 @@ impl<H: UiHost> Widget<H> for TextArea {
                 if cx.focus != Some(cx.node) {
                     return;
                 }
+                self.reset_caret_blink(cx);
                 let tick = cx.app.tick_id();
                 let result = crate::text_edit::ime::apply_event(
                     ime,
@@ -1145,6 +1160,21 @@ impl<H: UiHost> Widget<H> for TextArea {
                 }
             }
             Event::Timer { token } => {
+                if self.caret_blink_timer == Some(*token) {
+                    self.caret_blink_timer = None;
+                    self.caret_blink_visible = !self.caret_blink_visible;
+
+                    if let Some(window) = cx.window {
+                        crate::elements::clear_timer_target(cx.app, window, *token);
+                        cx.app.push_effect(Effect::CancelTimer { token: *token });
+                    }
+
+                    cx.invalidate_self(Invalidation::Paint);
+                    cx.request_redraw();
+
+                    cx.stop_propagation();
+                    return;
+                }
                 if self.selection_autoscroll_timer != Some(*token) {
                     return;
                 }
@@ -1675,7 +1705,46 @@ impl<H: UiHost> Widget<H> for TextArea {
             self.ensure_caret_visible = true;
         }
 
-        if cx.focus == Some(cx.node) {
+        let focused_self = cx.focus == Some(cx.node);
+        let caret_blink_interval = cx
+            .app
+            .global::<fret_runtime::TextInteractionSettings>()
+            .copied()
+            .and_then(|s| {
+                if !s.caret_blink {
+                    return None;
+                }
+                let ms = u64::from(s.caret_blink_interval_ms.max(16));
+                Some(Duration::from_millis(ms))
+            });
+        if focused_self
+            && let Some(interval) = caret_blink_interval
+            && self.caret_blink_timer.is_none()
+        {
+            let Some(window) = cx.window else {
+                return;
+            };
+            let token = cx.app.next_timer_token();
+            self.caret_blink_timer = Some(token);
+            crate::elements::record_timer_target_node(cx.app, window, token, cx.node);
+            cx.app.push_effect(Effect::SetTimer {
+                window: Some(window),
+                token,
+                after: interval,
+                repeat: None,
+            });
+        } else if (!focused_self || caret_blink_interval.is_none())
+            && self.caret_blink_timer.is_some()
+        {
+            if let Some(window) = cx.window {
+                let token = self.caret_blink_timer.take().expect("checked is_some");
+                crate::elements::clear_timer_target(cx.app, window, token);
+                cx.app.push_effect(Effect::CancelTimer { token });
+                self.caret_blink_visible = true;
+            }
+        }
+
+        if focused_self {
             let caret_index = self.caret_display_index();
             let affinity = if self.preedit.is_empty() {
                 self.affinity
@@ -1817,14 +1886,16 @@ impl<H: UiHost> Widget<H> for TextArea {
                 }
             }
 
-            cx.scene.push(SceneOp::Quad {
-                order: DrawOrder(0),
-                rect: caret_rect,
-                background: Paint::Solid(self.style.caret_color).into(),
-                border: Edges::all(Px(0.0)),
-                border_paint: Paint::Solid(Color::TRANSPARENT).into(),
-                corner_radii: Corners::all(Px(0.0)),
-            });
+            if caret_blink_interval.is_none() || self.caret_blink_visible {
+                cx.scene.push(SceneOp::Quad {
+                    order: DrawOrder(0),
+                    rect: caret_rect,
+                    background: Paint::Solid(self.style.caret_color).into(),
+                    border: Edges::all(Px(0.0)),
+                    border_paint: Paint::Solid(Color::TRANSPARENT).into(),
+                    corner_radii: Corners::all(Px(0.0)),
+                });
+            }
         } else {
             self.last_sent_cursor = None;
         }
@@ -1870,6 +1941,39 @@ impl<H: UiHost> Widget<H> for TextArea {
 
 impl TextArea {
     const SELECTION_AUTOSCROLL_TICK: Duration = Duration::from_millis(16);
+
+    fn reset_caret_blink<H: UiHost>(&mut self, cx: &mut EventCx<'_, H>) {
+        self.caret_blink_visible = true;
+        let Some(window) = cx.window else {
+            return;
+        };
+        let Some(settings) = cx
+            .app
+            .global::<fret_runtime::TextInteractionSettings>()
+            .copied()
+        else {
+            return;
+        };
+        if !settings.caret_blink {
+            return;
+        }
+
+        if let Some(token) = self.caret_blink_timer.take() {
+            crate::elements::clear_timer_target(cx.app, window, token);
+            cx.app.push_effect(Effect::CancelTimer { token });
+        }
+
+        let interval = Duration::from_millis(u64::from(settings.caret_blink_interval_ms.max(16)));
+        let token = cx.app.next_timer_token();
+        self.caret_blink_timer = Some(token);
+        crate::elements::record_timer_target_node(cx.app, window, token, cx.node);
+        cx.app.push_effect(Effect::SetTimer {
+            window: Some(window),
+            token,
+            after: interval,
+            repeat: None,
+        });
+    }
 
     fn ensure_selection_autoscroll_timer<H: UiHost>(&mut self, cx: &mut EventCx<'_, H>) {
         if self.selection_autoscroll_timer.is_some() {

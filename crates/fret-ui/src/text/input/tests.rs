@@ -6,7 +6,7 @@ use crate::widget::Widget;
 use fret_core::{
     AppWindowId, Event, ImeEvent, Point, Px, Rect, Size, TextConstraints, TextMetrics, TextService,
 };
-use fret_runtime::{CommandId, Effect, PlatformCapabilities};
+use fret_runtime::{CommandId, Effect, PlatformCapabilities, TextInteractionSettings};
 use std::sync::Arc;
 
 #[derive(Debug, Clone, Copy)]
@@ -544,6 +544,79 @@ fn text_input_draws_caret_when_focused_and_empty() {
         caret_rect.size.height.0 > 0.0,
         "expected caret height to be > 0 (got {:?})",
         caret_rect.size.height
+    );
+}
+
+#[test]
+fn text_input_caret_blinks_when_enabled() {
+    let window = AppWindowId::default();
+    let bounds = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(240.0), Px(80.0)));
+
+    let mut ui = UiTree::new();
+    ui.set_window(window);
+
+    let caret_color = fret_core::Color {
+        r: 0.91,
+        g: 0.23,
+        b: 0.14,
+        a: 1.0,
+    };
+
+    let mut input = TextInput::new();
+    input.set_chrome_style(TextInputStyle {
+        caret_color,
+        ..Default::default()
+    });
+
+    let root = ui.create_node(input);
+    ui.set_root(root);
+    ui.set_focus(Some(root));
+
+    let mut app = TestHost::new();
+    app.set_global(PlatformCapabilities::default());
+    app.set_global(TextInteractionSettings {
+        caret_blink: true,
+        caret_blink_interval_ms: 16,
+        ..Default::default()
+    });
+    let mut text = FakeTextService::default();
+
+    let _ = ui.layout(&mut app, &mut text, root, bounds.size, 1.0);
+
+    let mut scene0 = fret_core::Scene::default();
+    ui.paint(&mut app, &mut text, root, bounds, &mut scene0, 1.0);
+
+    let token0 = app
+        .take_effects()
+        .into_iter()
+        .find_map(|e| match e {
+            Effect::SetTimer { token, .. } => Some(token),
+            _ => None,
+        })
+        .expect("expected caret blink to schedule a timer when focused");
+
+    assert!(
+        scene0.ops().iter().any(|op| matches!(
+            op,
+            fret_core::SceneOp::Quad { background, .. }
+                if *background == fret_core::Paint::Solid(caret_color).into()
+        )),
+        "expected caret to be visible before the blink timer fires"
+    );
+
+    ui.dispatch_event(&mut app, &mut text, &Event::Timer { token: token0 });
+    let _ = app.take_effects();
+
+    let mut scene1 = fret_core::Scene::default();
+    ui.paint(&mut app, &mut text, root, bounds, &mut scene1, 1.0);
+
+    assert!(
+        !scene1.ops().iter().any(|op| matches!(
+            op,
+            fret_core::SceneOp::Quad { background, .. }
+                if *background == fret_core::Paint::Solid(caret_color).into()
+        )),
+        "expected caret to be hidden after the blink timer fires"
     );
 }
 

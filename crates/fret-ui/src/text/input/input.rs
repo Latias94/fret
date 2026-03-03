@@ -17,6 +17,8 @@ impl TextInput {
             text: String::new(),
             base_text_revision: 0,
             ime_surrounding_text_cache: std::cell::RefCell::default(),
+            caret_blink_timer: None,
+            caret_blink_visible: true,
             caret: 0,
             selection_anchor: 0,
             offset_x: Px(0.0),

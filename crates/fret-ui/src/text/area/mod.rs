@@ -156,6 +156,8 @@ pub struct TextArea {
     text: String,
     base_text_revision: u64,
     ime_surrounding_text_cache: std::cell::RefCell<ImeSurroundingTextCache>,
+    caret_blink_timer: Option<fret_runtime::TimerToken>,
+    caret_blink_visible: bool,
     placeholder: Option<std::sync::Arc<str>>,
     text_style: TextStyle,
     wrap: TextWrap,
@@ -216,6 +218,8 @@ impl Default for TextArea {
             text: String::new(),
             base_text_revision: 0,
             ime_surrounding_text_cache: std::cell::RefCell::default(),
+            caret_blink_timer: None,
+            caret_blink_visible: true,
             placeholder: None,
             text_style: TextStyle {
                 font: fret_core::FontId::default(),
