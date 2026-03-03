@@ -19,7 +19,10 @@ Last updated: 2026-03-03.
 - Landed: shadcn extras `Marquee` uses a duration-driven timebase (no `frame_id` delta coupling).
 - Landed: kit `drive_transition_*` does not advance multiple times per frame (prevents call-count-driven transitions).
 - Landed: `Button` hover background transition eases (~150ms, Tailwind default) and has a unit test gate.
-- Gap: common primitives should ease hover/focus style changes (`transition-*` parity), not snap (Badge/Toggle/Input/Textarea/TabsTrigger/Table rows/ScrollArea thumb; requires reusable style transition helpers).
+- Gap: common primitives should ease hover/focus style changes (`transition-*` parity), not snap. Suggested ordering:
+  - P0: Input / Textarea / Toggle / TabsTrigger / SelectTrigger + NativeSelect / Checkbox + RadioGroup / Slider thumb.
+  - P1: Badge / BreadcrumbLink / Table rows / ScrollArea viewport + scrollbar.
+  - P1: Add a gate for Accordion content measured-height motion (`animate-accordion-{down,up}` outcome).
 
 ## P2 (API + token cleanup)
 
