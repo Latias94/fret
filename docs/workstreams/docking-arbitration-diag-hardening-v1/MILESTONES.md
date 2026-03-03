@@ -93,6 +93,12 @@ Stage gates for merge-back correctness (2026-03-03):
   additional rendered frame to execute a final `capture_bundle` after the last semantic assertion (avoids launch-mode
   timeouts under occlusion/idle throttling and tight tooling budgets).
   - implementation: `ecosystem/fret-bootstrap/src/ui_diagnostics/script_engine.rs`
+- Tear-off + drag-back loop script hardening:
+  - `tools/diag-scripts/docking/arbitration/docking-arbitration-demo-multiwindow-tearoff-merge-loop-no-leak.json` now
+    captures stage bundles (`loop-cycle*-drop` and `loop-cycle*-after-merge` after `known_window_count_is n=1`) and uses
+    open-window semantics consistently across cycles.
+  - Repeat check is green 20x with `--reuse-launch --compare-ignore-bounds --compare-ignore-scene-fingerprint`:
+    `target/fret-diag-docking-loop-repeat2`.
 
 ## M1.4 — Rebuild reliability for docking demos (Windows/MSVC)
 
