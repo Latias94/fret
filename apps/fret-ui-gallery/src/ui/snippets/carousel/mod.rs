@@ -2,6 +2,7 @@ pub mod api;
 pub mod basic;
 pub mod demo;
 pub mod duration_embla;
+pub mod events;
 pub mod expandable;
 pub mod focus_watch;
 pub mod loop_carousel;

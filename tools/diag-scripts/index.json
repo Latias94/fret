@@ -2143,6 +2143,27 @@
       ]
     },
     {
+      "id": "ui-gallery-carousel-events-select-gate",
+      "path": "tools/diag-scripts/ui-gallery/carousel/ui-gallery-carousel-events-select-gate.json",
+      "required_capabilities": [
+        "diag.script_v2"
+      ],
+      "suite_memberships": [
+        "ui-gallery-shadcn-conformance"
+      ],
+      "tags": [
+        "carousel",
+        "events",
+        "gate",
+        "select",
+        "ui-gallery"
+      ],
+      "target_hints": [
+        "Navigate to the UI gallery Carousel page and click Next.",
+        "Expected behavior: `CarouselApi::events_since` yields a Select event after navigation."
+      ]
+    },
+    {
       "id": "ui-gallery-chart-accessibility-layer-keyboard",
       "path": "tools/diag-scripts/ui-gallery/chart/ui-gallery-chart-accessibility-layer-keyboard.json",
       "required_capabilities": [],
