@@ -254,6 +254,20 @@ impl<D: WinitAppDriver> WinitRunner<D> {
         available.ui.window_hover_detection = fret_runtime::WindowHoverDetectionQuality::None;
         available.ui.window_set_outer_position = fret_runtime::WindowSetOuterPositionQuality::None;
         available.ui.window_z_level = fret_runtime::WindowZLevelQuality::None;
+        available.ui.window_decorations = false;
+        available.ui.window_resizable = false;
+        available.ui.window_transparent = false;
+        available.ui.window_skip_taskbar = false;
+        available.ui.window_non_activating = false;
+        available.ui.window_mouse_passthrough = false;
+        available.ui.window_set_visible = false;
+        available.ui.window_begin_drag = false;
+        available.ui.window_begin_resize = false;
+        available.ui.window_background_material_system_default = false;
+        available.ui.window_background_material_mica = false;
+        available.ui.window_background_material_acrylic = false;
+        available.ui.window_background_material_vibrancy = false;
+        available.ui.native_window_handle = false;
         available.clipboard.text.read = window_has_web_clipboard_read();
         available.clipboard.text.write = window_has_web_clipboard_write();
         available.clipboard.files = false;
@@ -282,6 +296,23 @@ impl<D: WinitAppDriver> WinitRunner<D> {
         caps.ui.multi_window &= available.ui.multi_window;
         caps.ui.window_tear_off &= available.ui.window_tear_off;
         caps.ui.cursor_icons &= available.ui.cursor_icons;
+        caps.ui.window_decorations &= available.ui.window_decorations;
+        caps.ui.window_resizable &= available.ui.window_resizable;
+        caps.ui.window_transparent &= available.ui.window_transparent;
+        caps.ui.window_skip_taskbar &= available.ui.window_skip_taskbar;
+        caps.ui.window_non_activating &= available.ui.window_non_activating;
+        caps.ui.window_mouse_passthrough &= available.ui.window_mouse_passthrough;
+        caps.ui.window_set_visible &= available.ui.window_set_visible;
+        caps.ui.window_begin_drag &= available.ui.window_begin_drag;
+        caps.ui.window_begin_resize &= available.ui.window_begin_resize;
+        caps.ui.window_background_material_system_default &=
+            available.ui.window_background_material_system_default;
+        caps.ui.window_background_material_mica &= available.ui.window_background_material_mica;
+        caps.ui.window_background_material_acrylic &=
+            available.ui.window_background_material_acrylic;
+        caps.ui.window_background_material_vibrancy &=
+            available.ui.window_background_material_vibrancy;
+        caps.ui.native_window_handle &= available.ui.native_window_handle;
         caps.ui.window_hover_detection = caps
             .ui
             .window_hover_detection

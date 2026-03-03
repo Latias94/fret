@@ -9,6 +9,11 @@ pub enum SemanticsRole {
     Window,
     Panel,
     Group,
+    /// A landmark region.
+    ///
+    /// This is primarily used to model ARIA `role="region"` outcomes in ports of DOM-first
+    /// component libraries (e.g. Radix Accordion content panels).
+    Region,
     Toolbar,
     Heading,
     Dialog,

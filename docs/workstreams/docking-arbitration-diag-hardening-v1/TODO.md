@@ -5,6 +5,9 @@ with special focus on multi-window tear-off + drag-back sequences.
 
 ## Immediate TODOs (next)
 
+- Prioritize “timebase decoupling” so docking scripts cannot hang on occlusion/idle (root cause class):
+  - Workstream: `docs/workstreams/ui-diagnostics-timebase-decoupling-v1/README.md`
+  - Goal: scripted runs always progress or fail with `reason_code=timeout.no_frames` (never a tooling timeout).
 - Turn correctness debugging into stage gates:
   - After each merge-back drop, gate `dock_drop_resolved_is_some` + `dock_drop_resolved_zone_is` and capture one bounded bundle.
   - Prefer inner-hint drops (`dock-arb-hint-inner-*`) over outer-hint drops for idempotence (outer-hint tends to produce `wrap_binary`).
@@ -24,6 +27,9 @@ with special focus on multi-window tear-off + drag-back sequences.
 - Ensure bundle-level evidence is sufficient without logs:
   - `debug.docking_interaction.dock_graph_signature` / `dock_graph_stats` should be present and up-to-date for all frames
     that matter to gates (either by recording every frame, or by an explicit “latest snapshot” contract).
+- Make shutdown failures unambiguous in artifacts:
+  - require `resource.footprint.json` for `--launch` runs,
+  - treat `killed=true` as a “not clean” run that should be investigated (exit trigger not observed / deadlock).
 - “Diag resilience” policy: scripted repros should not be terminated by debug-only internal assertions (e.g. focus
   snapshot invariants) when a safe downgrade is possible and preserves evidence.
   - Prefer fixing the root cause, but allow temporary non-fatal behavior in diag/harness paths if it keeps the repro
@@ -58,3 +64,14 @@ with special focus on multi-window tear-off + drag-back sequences.
 - Chained tear-off (two tabs) now returns to the pre-tearoff fingerprint after two merge-backs (script-level targeting
   fix: avoid hint retargeting to the wrong leaf by explicitly hovering a stable viewport in the destination window).
 - Added the chained tear-off script to `diag-hardening-smoke-docking`.
+
+## Done (2026-03-03)
+
+- Script termination hardening: avoid trailing `wait_frames` after a final `capture_bundle` in multi-window docking
+  scripts, because the last remaining window can be occluded/idle and stop producing redraw callbacks (tooling timeout).
+- Runtime hardening: while a diagnostics script is active, arm a keepalive timer that can advance a conservative subset
+  of script steps (and fail with `timeout.no_frames`) even if redraw callbacks stop (occlusion/idle).
+- Runtime hardening: allow a small “burst” of frame-independent tail steps so scripts do not require an additional frame
+  to run a final `capture_bundle` after the last semantic assertion (reduces tooling timeouts at tight `--timeout-ms`).
+- Docs: clarify window-count and docking drop resolve predicate semantics in the main diagnostics reference:
+  `docs/ui-diagnostics-and-scripted-tests.md`.

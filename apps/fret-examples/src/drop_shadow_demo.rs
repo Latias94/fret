@@ -9,7 +9,7 @@
 
 use std::sync::Arc;
 
-use fret::prelude::*;
+use fret::legacy::prelude::*;
 use fret_core::scene::{Color, DropShadowV1, EffectChain, EffectMode, EffectQuality, EffectStep};
 use fret_core::{Corners, Edges, Point, Px};
 use fret_runtime::Model;

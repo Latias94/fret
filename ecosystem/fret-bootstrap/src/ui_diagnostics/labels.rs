@@ -103,6 +103,7 @@ fn reason_code_for_script_failure(reason: &str) -> Option<&'static str> {
         "no_semantics_snapshot" => Some("semantics.missing"),
         "assert_failed" => Some("assert.failed"),
         "window_target_unresolved" => Some("window.target_unresolved"),
+        "script_stalled_no_frames" => Some("timeout.no_frames"),
         "ensure_visible_impossible_oversized_target" => Some("ensure_visible.impossible_oversized_target"),
         "scroll_into_view_impossible_oversized_target" => {
             Some("scroll_into_view.impossible_oversized_target")

@@ -24,6 +24,10 @@ Active workstreams:
 - `docs/workstreams/action-first-authoring-fearless-refactor-v1/CLEANUP_PLAN.md`
 - `docs/workstreams/action-first-authoring-fearless-refactor-v1/CRATE_PLAN.md`
 - `docs/workstreams/action-first-authoring-fearless-refactor-v1/RISK_MATRIX.md`
+- `docs/workstreams/shadcn-motion-parity-audit-v1/DESIGN.md`
+- `docs/workstreams/shadcn-motion-parity-audit-v1/TODO.md`
+- `docs/workstreams/shadcn-motion-parity-audit-v1/MILESTONES.md`
+- `docs/workstreams/shadcn-motion-parity-audit-v1/PARITY_MATRIX.md`
 - `docs/workstreams/workspace-shell-tabstrip-fearless-refactor-v1/DESIGN.md`
 - `docs/workstreams/workspace-shell-tabstrip-fearless-refactor-v1/TODO.md`
 - `docs/workstreams/workspace-shell-tabstrip-fearless-refactor-v1/MILESTONES.md`

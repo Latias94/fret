@@ -23,4 +23,7 @@ Then review the diff and decide which overrides should be removed or standardize
 - With the new page-level centering (`apps/fret-ui-gallery/src/ui/doc_layout.rs`), max-width
   differences should no longer create inconsistent **left gutters**, but they can still create
   inconsistent **right margins** and perceived “density” across pages.
-
+- The audit defaults to `--scope doc_sections`, which reports `.max_w(Px(..))` usage only in
+  `DocSection::new(...)` builder chains (the doc scaffold surface). Use `--scope all` if you want a
+  full text scan of every `.max_w(Px(..))` in the file (including layout refinements inside the
+  page's preview composition).

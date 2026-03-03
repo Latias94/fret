@@ -48,12 +48,30 @@ Any remaining legacy surfaces that embed raw Rust code strings are tracked via t
 - [x] Migrate Calendar page(s) out of `src/ui/previews/**` so copyable code stays drift-free.
 - [x] Migrate AI Elements gallery demos to snippet-backed pages (see `docs/workstreams/ui-gallery-fearless-refactor/ai-elements-tracker.md`).
 - [x] Ensure Code tabs are vertically scrollable (wheel scrolling over CodeBlock gutters for windowed snippets).
+  - Evidence: `ecosystem/fret-code-view/src/code_block.rs` adds a `WheelRegion` that drives the
+    windowed CodeBlock VirtualList scroll handle even when wrapped by an X-scroll container.
+- [x] Remove unused routed model params from snippet-backed pages (avoid misleading signatures).
+  - Evidence: `apps/fret-ui-gallery/src/ui/pages/mod.rs`, `apps/fret-ui-gallery/src/ui/content.rs`.
+- [x] Simplify debug UI chrome (hide StatusBar by default; compact Debug HUD output).
+  - Evidence: `apps/fret-ui-gallery/src/driver/render_flow.rs`, `apps/fret-ui-gallery/src/driver/status_bar.rs`,
+    `apps/fret-ui-gallery/src/driver/debug_stats.rs`, `apps/fret-ui-gallery/src/driver/debug_hud.rs`.
 - [ ] Normalize DocSection chrome/layout (max widths, padding, “Notes” shell usage) across pages.
   - [x] Remove redundant centering wrappers so Preview/Code tabs share consistent left padding.
   - [x] Center doc pages once (page-level max width) so sections align to the same left gutter.
+  - [x] Ensure Code tabs respect `.no_shell()` sections so Preview/Code padding matches by contract.
+    - Evidence: `apps/fret-ui-gallery/src/ui/doc_layout.rs` passes `shell` through to the CodeBlock wrapper.
+  - [x] Render `Notes` sections without demo shell chrome (no border/padding by default).
+    - Evidence: `apps/fret-ui-gallery/src/ui/doc_layout.rs`.
   - [ ] Audit remaining max-width and padding inconsistencies across pages.
   - [x] Add a coarse `.max_w` audit report: `docs/workstreams/ui-gallery-fearless-refactor/layout-audit.generated.md` (regen via `tools/ui_gallery_layout_audit.py`).
-- [ ] Optional: align page taxonomy + section ordering to upstream shadcn MDX navigation.
+  - [x] Remove redundant `.max_w(Px(820.0))` overrides (default width) in `apps/fret-ui-gallery/src/ui/pages/**` so future diffs stay focused.
+  - [x] Remove redundant `.max_w(Px(980.0))` overrides on non-wide pages (keep 980 only for wide surfaces like Card/Calendar/Sheet/Sidebar where it improves the demo).
+  - [x] Remove ad-hoc narrow `.max_w(...)` overrides (e.g. 480/520/540/560/620/640/720/860) so pages share a consistent density and right margin by default.
+  - [x] Normalize remaining outlier widths (e.g. Data Table from 900 → 980) and regenerate the audit report.
+    - Evidence: `apps/fret-ui-gallery/src/ui/pages/data_table.rs`, `docs/workstreams/ui-gallery-fearless-refactor/layout-audit.generated.md`.
+  - [x] Optional: align page taxonomy + section ordering to upstream shadcn MDX navigation.
+    - Evidence: `apps/fret-ui-gallery/src/spec.rs` Shadcn group ordering matches `repo-ref/ui/apps/v4/content/docs/components/base/*.mdx`
+      (excluding doc-only `direction.mdx`); non-upstream pages moved to `Shadcn (Extras)`.
 
 Notes:
 

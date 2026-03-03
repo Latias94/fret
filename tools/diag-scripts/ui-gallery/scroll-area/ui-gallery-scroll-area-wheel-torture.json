@@ -1,0 +1,72 @@
+{
+  "schema_version": 2,
+  "meta": {
+    "name": "ui-gallery-scroll-area-wheel-torture",
+    "required_capabilities": ["diag.script_v2"],
+    "tags": ["scroll", "wheel", "perf", "ui_gallery"]
+  },
+  "steps": [
+    { "type": "press_key", "key": "escape" },
+    { "type": "wait_frames", "n": 2 },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-nav-search" }
+      },
+      "timeout_frames": 600
+    },
+    { "type": "click", "target": { "kind": "test_id", "id": "ui-gallery-nav-search" } },
+    { "type": "press_key", "key": "a", "modifiers": { "ctrl": true } },
+    { "type": "press_key", "key": "backspace" },
+    { "type": "type_text", "text": "scroll area" },
+    { "type": "wait_frames", "n": 2 },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-nav-scroll-area" }
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "scroll_into_view",
+      "container": { "kind": "test_id", "id": "ui-gallery-nav-scroll" },
+      "target": { "kind": "test_id", "id": "ui-gallery-nav-scroll-area" },
+      "delta_y": -240.0,
+      "timeout_frames": 600
+    },
+    { "type": "click", "target": { "kind": "test_id", "id": "ui-gallery-nav-scroll-area" } },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-page-scroll-area" }
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-scroll-area-demo-viewport" }
+      },
+      "timeout_frames": 600
+    },
+
+    { "type": "wheel", "target": { "kind": "test_id", "id": "ui-gallery-scroll-area-demo-viewport" }, "delta_y": -240.0 },
+    { "type": "wheel", "target": { "kind": "test_id", "id": "ui-gallery-scroll-area-demo-viewport" }, "delta_y": -240.0 },
+    { "type": "wheel", "target": { "kind": "test_id", "id": "ui-gallery-scroll-area-demo-viewport" }, "delta_y": -240.0 },
+    { "type": "wheel", "target": { "kind": "test_id", "id": "ui-gallery-scroll-area-demo-viewport" }, "delta_y": -240.0 },
+    { "type": "wheel", "target": { "kind": "test_id", "id": "ui-gallery-scroll-area-demo-viewport" }, "delta_y": -240.0 },
+    { "type": "wheel", "target": { "kind": "test_id", "id": "ui-gallery-scroll-area-demo-viewport" }, "delta_y": -240.0 },
+    { "type": "wheel", "target": { "kind": "test_id", "id": "ui-gallery-scroll-area-demo-viewport" }, "delta_y": -240.0 },
+    { "type": "wheel", "target": { "kind": "test_id", "id": "ui-gallery-scroll-area-demo-viewport" }, "delta_y": -240.0 },
+    { "type": "wheel", "target": { "kind": "test_id", "id": "ui-gallery-scroll-area-demo-viewport" }, "delta_y": -240.0 },
+    { "type": "wheel", "target": { "kind": "test_id", "id": "ui-gallery-scroll-area-demo-viewport" }, "delta_y": -240.0 },
+
+    { "type": "wait_frames", "n": 2 },
+    { "type": "capture_bundle", "label": "scroll-area-wheel-torture" }
+  ]
+}
+

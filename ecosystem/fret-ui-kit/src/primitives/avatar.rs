@@ -10,6 +10,7 @@
 //! images asynchronously (e.g. decode/upload, network fetch), a common pattern is to store
 //! `Option<ImageId>` (or an enum) in a model and update it when the image becomes available. This
 //! facade provides the Radix-named status enum and a small, frame-based fallback delay helper.
+use std::time::Duration;
 
 /// Radix-like image loading status for avatars.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
@@ -21,35 +22,59 @@ pub enum AvatarImageLoadingStatus {
     Error,
 }
 
-/// A frame-based fallback delay gate (Radix `delayMs` outcome).
+/// A duration-driven fallback delay gate (Radix `delayMs` outcome).
 ///
 /// This is driven by the caller once per frame (no timers). When a delay is configured, the
-/// fallback becomes renderable only after `delay_frames` have elapsed since the first time the
+/// fallback becomes renderable only after the delay duration has elapsed since the first time the
 /// caller requested it.
 #[derive(Debug, Default, Clone, Copy)]
 pub struct AvatarFallbackDelay {
-    start_frame: Option<u64>,
+    start_frame_id: Option<u64>,
+    last_frame_id: Option<u64>,
+    elapsed: Duration,
 }
 
 impl AvatarFallbackDelay {
     /// Drives the delay gate.
     ///
-    /// - `now_frame`: current monotonic frame id (`App::frame_id().0`).
-    /// - `delay_frames`: `None` means render immediately (no delay).
+    /// - `frame_id`: current monotonic frame id (`App::frame_id().0`).
+    /// - `dt`: effective per-frame delta (clamped; recommended: `motion::effective_frame_delta_for_cx`).
+    /// - `delay`: `None` means render immediately (no delay).
     /// - `want_render`: whether fallback would be desired (e.g. image not loaded).
-    pub fn drive(&mut self, now_frame: u64, delay_frames: Option<u64>, want_render: bool) -> bool {
-        let Some(delay_frames) = delay_frames else {
-            self.start_frame = None;
+    pub fn drive(
+        &mut self,
+        frame_id: u64,
+        dt: Duration,
+        delay: Option<Duration>,
+        want_render: bool,
+    ) -> bool {
+        let Some(delay) = delay else {
+            *self = Self::default();
             return want_render;
         };
 
         if !want_render {
-            self.start_frame = None;
+            *self = Self::default();
             return false;
         }
 
-        let start = self.start_frame.get_or_insert(now_frame);
-        now_frame.saturating_sub(*start) >= delay_frames
+        if delay == Duration::ZERO {
+            return true;
+        }
+
+        let _ = self.start_frame_id.get_or_insert(frame_id);
+        match self.last_frame_id {
+            None => {
+                self.last_frame_id = Some(frame_id);
+            }
+            Some(prev) if prev != frame_id => {
+                self.last_frame_id = Some(frame_id);
+                self.elapsed = self.elapsed.saturating_add(dt);
+            }
+            Some(_) => {}
+        }
+
+        self.elapsed >= delay
     }
 }
 
@@ -63,31 +88,33 @@ pub fn fallback_visible(status: AvatarImageLoadingStatus, delay_ready: bool) -> 
 mod tests {
     use super::*;
 
+    const DT_16MS: Duration = Duration::from_millis(16);
+
     #[test]
     fn fallback_delay_gate_renders_immediately_without_delay() {
         let mut gate = AvatarFallbackDelay::default();
-        assert!(!gate.drive(1, None, false));
-        assert!(gate.drive(1, None, true));
+        assert!(!gate.drive(1, DT_16MS, None, false));
+        assert!(gate.drive(1, DT_16MS, None, true));
     }
 
     #[test]
     fn fallback_delay_gate_waits_until_delay_elapses() {
         let mut gate = AvatarFallbackDelay::default();
-        assert!(!gate.drive(10, Some(3), true));
-        assert!(!gate.drive(11, Some(3), true));
-        assert!(!gate.drive(12, Some(3), true));
-        assert!(gate.drive(13, Some(3), true));
+        let delay = Some(Duration::from_millis(32));
+        assert!(!gate.drive(10, DT_16MS, delay, true));
+        assert!(!gate.drive(11, DT_16MS, delay, true));
+        assert!(gate.drive(12, DT_16MS, delay, true));
     }
 
     #[test]
     fn fallback_delay_gate_resets_when_not_wanted() {
         let mut gate = AvatarFallbackDelay::default();
-        assert!(!gate.drive(10, Some(3), true));
-        assert!(!gate.drive(11, Some(3), false));
-        assert!(!gate.drive(12, Some(3), true));
-        assert!(!gate.drive(13, Some(3), true));
-        assert!(!gate.drive(14, Some(3), true));
-        assert!(gate.drive(15, Some(3), true));
+        let delay = Some(Duration::from_millis(32));
+        assert!(!gate.drive(10, DT_16MS, delay, true));
+        assert!(!gate.drive(11, DT_16MS, delay, false));
+        assert!(!gate.drive(12, DT_16MS, delay, true));
+        assert!(!gate.drive(13, DT_16MS, delay, true));
+        assert!(gate.drive(14, DT_16MS, delay, true));
     }
 
     #[test]

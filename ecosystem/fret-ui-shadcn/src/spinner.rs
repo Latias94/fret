@@ -1,12 +1,14 @@
+use std::f32::consts::TAU;
+use std::time::Duration;
+
 use fret_core::{Point, Px, SemanticsLive, SemanticsRole, Transform2D};
 use fret_icons::{IconId, ids};
 use fret_ui::element::{
     AnyElement, LayoutStyle, Length, SemanticsDecoration, SvgIconProps, VisualTransformProps,
 };
-use fret_ui::{ElementContext, Invalidation, SvgSource, Theme, UiHost};
+use fret_ui::{ElementContext, SvgSource, Theme, UiHost};
 use fret_ui_kit::declarative::icon as icon_runtime;
-use fret_ui_kit::declarative::prefers_reduced_motion;
-use fret_ui_kit::declarative::scheduling;
+use fret_ui_kit::declarative::motion;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::{ColorRef, LayoutRefinement};
 
@@ -20,7 +22,10 @@ pub struct Spinner {
     layout: LayoutRefinement,
     color: Option<ColorRef>,
     icon: IconId,
-    /// Rotation speed in radians per frame. (`0.0` disables animation.)
+    /// Rotation speed in radians per 60Hz tick. (`0.0` disables animation.)
+    ///
+    /// This is duration-driven under the hood, so the perceived speed remains stable under
+    /// `--fixed-frame-delta-ms` and across different refresh rates.
     speed: f32,
 }
 
@@ -55,7 +60,7 @@ impl Spinner {
         self
     }
 
-    /// Rotation speed in radians per frame. (`0.0` disables animation.)
+    /// Rotation speed in radians per 60Hz tick. (`0.0` disables animation.)
     pub fn speed(mut self, speed: f32) -> Self {
         self.speed = speed;
         self
@@ -93,10 +98,22 @@ impl Spinner {
             center = Point::new(Px(w.0 * 0.5), Px(h.0 * 0.5));
         }
 
-        let reduced_motion = prefers_reduced_motion(cx, Invalidation::Paint, false);
-        let speed = if reduced_motion { 0.0 } else { self.speed };
-        let angle = cx.app.frame_id().0 as f32 * speed;
-        scheduling::set_continuous_frames(cx, speed != 0.0);
+        let angular_speed = self.speed * 60.0;
+        let period = if angular_speed.abs() > 0.0 {
+            Duration::from_secs_f32((TAU / angular_speed.abs()).max(0.0))
+        } else {
+            Duration::ZERO
+        };
+        let spin = motion::drive_loop_progress_keyed(
+            cx,
+            ("shadcn.spinner.spin", cx.root_id()),
+            angular_speed.abs() > 0.0,
+            period,
+        );
+        let mut angle = TAU * spin.progress;
+        if angular_speed < 0.0 {
+            angle = -angle;
+        }
         let transform = Transform2D::rotation_about_radians(angle, center);
 
         cx.visual_transform_props(VisualTransformProps { layout, transform }, |cx| {
@@ -126,9 +143,12 @@ mod tests {
     use super::*;
 
     use fret_app::App;
-    use fret_core::{AppWindowId, Point, Px, Rect, Size};
+    use fret_core::{AppWindowId, Point, Px, Rect, Size, Transform2D, WindowFrameClockService};
+    use fret_runtime::{FrameId, TickId};
     use fret_ui::element::{ElementKind, Length};
     use fret_ui::elements;
+    use fret_ui::elements::ElementRuntime;
+    use std::time::Duration;
 
     #[test]
     fn spinner_defaults_to_size_4_and_has_loading_semantics() {
@@ -165,5 +185,77 @@ mod tests {
         let ElementKind::SvgIcon(_) = &child.kind else {
             panic!("expected Spinner child to be an SvgIcon");
         };
+    }
+
+    #[test]
+    fn spinner_rotation_advances_with_fixed_delta_and_respects_reduced_motion() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+
+        app.with_global_mut(WindowFrameClockService::default, |svc, _app| {
+            svc.set_fixed_delta(window, Some(Duration::from_millis(16)));
+        });
+
+        let bounds = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(160.0), Px(80.0)));
+
+        app.set_tick_id(TickId(1));
+        app.set_frame_id(FrameId(1));
+        let t0 = elements::with_element_cx(&mut app, window, bounds, "spinner", |cx| {
+            Spinner::new().into_element(cx)
+        });
+        let ElementKind::VisualTransform(p0) = &t0.kind else {
+            panic!("expected Spinner to build a VisualTransform wrapper");
+        };
+        assert_eq!(
+            p0.transform,
+            Transform2D::IDENTITY,
+            "expected initial rotation to start at identity"
+        );
+
+        app.set_tick_id(TickId(2));
+        app.set_frame_id(FrameId(2));
+        let t1 = elements::with_element_cx(&mut app, window, bounds, "spinner", |cx| {
+            Spinner::new().into_element(cx)
+        });
+        let ElementKind::VisualTransform(p1) = &t1.kind else {
+            panic!("expected Spinner to build a VisualTransform wrapper");
+        };
+        assert_ne!(
+            p1.transform,
+            Transform2D::IDENTITY,
+            "expected spinner rotation to advance across frames under fixed delta"
+        );
+
+        app.with_global_mut(ElementRuntime::new, |rt, _app| {
+            rt.set_window_prefers_reduced_motion(window, Some(true));
+        });
+
+        app.set_tick_id(TickId(3));
+        app.set_frame_id(FrameId(3));
+        let r0 = elements::with_element_cx(&mut app, window, bounds, "spinner", |cx| {
+            Spinner::new().into_element(cx)
+        });
+        let ElementKind::VisualTransform(r0p) = &r0.kind else {
+            panic!("expected Spinner to build a VisualTransform wrapper");
+        };
+        assert_eq!(
+            r0p.transform,
+            Transform2D::IDENTITY,
+            "expected reduced motion to stop spinner rotation"
+        );
+
+        app.set_tick_id(TickId(4));
+        app.set_frame_id(FrameId(4));
+        let r1 = elements::with_element_cx(&mut app, window, bounds, "spinner", |cx| {
+            Spinner::new().into_element(cx)
+        });
+        let ElementKind::VisualTransform(r1p) = &r1.kind else {
+            panic!("expected Spinner to build a VisualTransform wrapper");
+        };
+        assert_eq!(
+            r1p.transform,
+            Transform2D::IDENTITY,
+            "expected reduced motion to keep spinner rotation disabled across frames"
+        );
     }
 }

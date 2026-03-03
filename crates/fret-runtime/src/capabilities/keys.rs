@@ -10,6 +10,28 @@ pub const UI_WINDOW_HOVER_DETECTION: &str = "ui.window_hover_detection";
 pub const UI_WINDOW_SET_OUTER_POSITION: &str = "ui.window_set_outer_position";
 pub const UI_WINDOW_Z_LEVEL: &str = "ui.window_z_level";
 
+// Window styles / utility windows (ADR 0139).
+pub const UI_WINDOW_DECORATIONS: &str = "ui.window.decorations";
+pub const UI_WINDOW_RESIZABLE: &str = "ui.window.resizable";
+pub const UI_WINDOW_TRANSPARENT: &str = "ui.window.transparent";
+pub const UI_WINDOW_ALWAYS_ON_TOP: &str = "ui.window.always_on_top";
+pub const UI_WINDOW_SKIP_TASKBAR: &str = "ui.window.skip_taskbar";
+pub const UI_WINDOW_NON_ACTIVATING: &str = "ui.window.non_activating";
+pub const UI_WINDOW_MOUSE_PASSTHROUGH: &str = "ui.window.mouse_passthrough";
+pub const UI_WINDOW_SET_VISIBLE: &str = "ui.window.set_visible";
+pub const UI_WINDOW_BEGIN_DRAG: &str = "ui.window.begin_drag";
+pub const UI_WINDOW_BEGIN_RESIZE: &str = "ui.window.begin_resize";
+
+// Background materials (ADR 0310).
+pub const UI_WINDOW_BACKGROUND_MATERIAL_SYSTEM_DEFAULT: &str =
+    "ui.window.background_material.system_default";
+pub const UI_WINDOW_BACKGROUND_MATERIAL_MICA: &str = "ui.window.background_material.mica";
+pub const UI_WINDOW_BACKGROUND_MATERIAL_ACRYLIC: &str = "ui.window.background_material.acrylic";
+pub const UI_WINDOW_BACKGROUND_MATERIAL_VIBRANCY: &str = "ui.window.background_material.vibrancy";
+
+// Non-portable escape hatch (ADR 0139).
+pub const UI_NATIVE_WINDOW_HANDLE: &str = "ui.native_window_handle";
+
 pub const CLIPBOARD_TEXT: &str = "clipboard.text";
 pub const CLIPBOARD_TEXT_READ: &str = "clipboard.text_read";
 pub const CLIPBOARD_TEXT_WRITE: &str = "clipboard.text_write";

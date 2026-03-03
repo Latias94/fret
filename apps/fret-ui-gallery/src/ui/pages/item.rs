@@ -34,49 +34,39 @@ pub(super) fn preview_item(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> 
         vec![
             DocSection::new("Demo", docs_demo)
                 .no_shell()
-                .max_w(Px(720.0))
                 .code_rust_from_file_region(snippets::demo::SOURCE, "example"),
             DocSection::new("Variants", docs_variants)
                 .description("Default, Outline, and Muted variants (new-york-v4).")
                 .no_shell()
-                .max_w(Px(640.0))
                 .code_rust_from_file_region(snippets::variants::SOURCE, "example"),
             DocSection::new("Size", docs_size)
                 .description("Default vs `sm` item sizing (new-york-v4).")
                 .no_shell()
-                .max_w(Px(640.0))
                 .code_rust_from_file_region(snippets::size::SOURCE, "example"),
             DocSection::new("Icon", docs_icon)
                 .no_shell()
-                .max_w(Px(640.0))
                 .code_rust_from_file_region(snippets::icon::SOURCE, "example"),
             DocSection::new("Avatar", docs_avatar)
                 .no_shell()
-                .max_w(Px(720.0))
                 .code_rust_from_file_region(snippets::avatar::SOURCE, "example"),
             DocSection::new("Image", docs_image)
                 .no_shell()
-                .max_w(Px(640.0))
                 .code_rust_from_file_region(snippets::image::SOURCE, "example"),
             DocSection::new("Group", docs_group)
                 .no_shell()
-                .max_w(Px(640.0))
                 .code_rust_from_file_region(snippets::group::SOURCE, "example"),
             DocSection::new("Header", docs_header)
                 .no_shell()
-                .max_w(Px(820.0))
                 .code_rust_from_file_region(snippets::header::SOURCE, "example"),
             DocSection::new("Link", docs_link)
                 .description(
                     "Links are modeled via `ItemRender::Link` so the root carries link semantics.",
                 )
                 .no_shell()
-                .max_w(Px(640.0))
                 .code_rust_from_file_region(snippets::link::SOURCE, "example"),
             DocSection::new("Dropdown", docs_dropdown)
                 .description("Item composed inside a DropdownMenu row (new-york-v4).")
                 .no_shell()
-                .max_w(Px(720.0))
                 .code_rust_from_file_region(snippets::dropdown::SOURCE, "example"),
             DocSection::new("Gallery", gallery_demo)
                 .description("Extended coverage snapshot: columns + mixed compositions.")
@@ -87,14 +77,12 @@ pub(super) fn preview_item(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> 
                     "Minimal link row with media + chevron (gallery-friendly, deterministic).",
                 )
                 .no_shell()
-                .max_w(Px(640.0))
                 .code_rust_from_file_region(snippets::link_render::SOURCE, "example"),
             DocSection::new("Extras", rtl)
                 .description("RTL smoke check (not present in upstream demo).")
                 .no_shell()
-                .max_w(Px(980.0))
                 .code_rust_from_file_region(snippets::extras_rtl::SOURCE, "example"),
-            DocSection::new("Notes", notes).max_w(Px(820.0)),
+            DocSection::new("Notes", notes),
         ],
     );
 

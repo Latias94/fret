@@ -3,7 +3,19 @@ pub const SOURCE: &str = include_str!("demo.rs");
 // region: example
 use fret_ui_shadcn::{self as shadcn, prelude::*};
 
-pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>, model: Model<bool>) -> AnyElement {
+#[derive(Default)]
+struct Models {
+    model: Option<Model<bool>>,
+}
+
+pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
+    let model = cx.with_state(Models::default, |st| st.model.clone());
+    let model = model.unwrap_or_else(|| {
+        let model = cx.app.models_mut().insert(false);
+        cx.with_state(Models::default, |st| st.model = Some(model.clone()));
+        model
+    });
+
     stack::hstack(
         cx,
         stack::HStackProps::default()

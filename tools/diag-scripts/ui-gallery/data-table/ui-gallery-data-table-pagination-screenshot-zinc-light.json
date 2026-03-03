@@ -77,7 +77,7 @@
     },
     { "type": "wait_frames", "n": 20 },
 
-    { "type": "capture_screenshot", "label": "ui-gallery-data-table-pagination-zinc-light" },
-    { "type": "capture_bundle", "label": "ui-gallery-data-table-pagination-zinc-light" }
+    { "type": "capture_bundle", "label": "ui-gallery-data-table-pagination-zinc-light" },
+    { "type": "capture_screenshot", "label": "ui-gallery-data-table-pagination-zinc-light" }
   ]
 }

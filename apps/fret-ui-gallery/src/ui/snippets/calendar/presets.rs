@@ -149,6 +149,7 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
         cx,
         stack::HStackProps::default()
             .justify_center()
+            .items_start()
             .layout(LayoutRefinement::default().w_full().min_w_0()),
         move |_cx| vec![card],
     )

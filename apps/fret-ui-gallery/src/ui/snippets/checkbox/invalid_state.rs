@@ -3,7 +3,19 @@ pub const SOURCE: &str = include_str!("invalid_state.rs");
 // region: example
 use fret_ui_shadcn::{self as shadcn, prelude::*};
 
-pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>, invalid: Model<bool>) -> AnyElement {
+#[derive(Default)]
+struct Models {
+    invalid: Option<Model<bool>>,
+}
+
+pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
+    let invalid = cx.with_state(Models::default, |st| st.invalid.clone());
+    let invalid = invalid.unwrap_or_else(|| {
+        let model = cx.app.models_mut().insert(false);
+        cx.with_state(Models::default, |st| st.invalid = Some(model.clone()));
+        model
+    });
+
     let invalid_checked = cx
         .get_model_copied(&invalid, Invalidation::Layout)
         .unwrap_or(false);

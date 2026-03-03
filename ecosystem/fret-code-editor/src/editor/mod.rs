@@ -87,6 +87,7 @@ fn platform_replace_and_mark_text_in_range_utf16(
     range: fret_runtime::Utf16Range,
     text: &str,
     marked: Option<fret_runtime::Utf16Range>,
+    selected: Option<fret_runtime::Utf16Range>,
 ) -> bool {
     if !st.interaction.enabled || !st.interaction.editable {
         st.set_preedit(None);
@@ -191,7 +192,8 @@ fn platform_replace_and_mark_text_in_range_utf16(
         return did;
     };
 
-    let (bs, be) = preedit_cursor_bytes_for_marked_range_utf16(range.start, marked, text);
+    let cursor_range = selected.unwrap_or(marked);
+    let (bs, be) = preedit_cursor_bytes_for_marked_range_utf16(range.start, cursor_range, text);
     let next = (!text.is_empty()).then_some(PreeditState {
         text: text.to_string(),
         cursor: Some((bs, be)),
@@ -668,6 +670,7 @@ struct CodeEditorState {
     row_geom_cache_tick: u64,
     row_geom_cache: HashMap<usize, (RowGeom, u64)>,
     row_geom_cache_queue: VecDeque<(usize, u64)>,
+    ime_surrounding_text_cache: Option<ImeSurroundingTextCache>,
     selection_rect_scratch: Vec<Rect>,
     baseline_measure_cache: Option<BaselineMeasureCache>,
     paint_perf_enabled: bool,
@@ -691,6 +694,13 @@ struct CodeEditorState {
     row_rich_cache: HashMap<usize, (RowRichCacheEntry, u64)>,
     #[cfg(feature = "syntax")]
     row_rich_cache_queue: VecDeque<(usize, u64)>,
+}
+
+#[derive(Debug, Clone)]
+struct ImeSurroundingTextCache {
+    revision: fret_code_editor_buffer::Revision,
+    selection: Selection,
+    surrounding: fret_runtime::WindowImeSurroundingText,
 }
 
 #[derive(Debug, Clone)]
@@ -899,6 +909,27 @@ impl CodeEditorState {
             // Keep any timer token so the next timer tick can self-cancel.
         }
     }
+
+    fn ime_surrounding_text_best_effort_cached(
+        &mut self,
+    ) -> fret_runtime::WindowImeSurroundingText {
+        let revision = self.buffer.revision();
+        let selection = self.selection;
+        if let Some(cache) = self.ime_surrounding_text_cache.as_ref()
+            && cache.revision == revision
+            && cache.selection == selection
+        {
+            return cache.surrounding.clone();
+        }
+
+        let surrounding = best_effort_ime_surrounding_text(&self.buffer, selection);
+        self.ime_surrounding_text_cache = Some(ImeSurroundingTextCache {
+            revision,
+            selection,
+            surrounding: surrounding.clone(),
+        });
+        surrounding
+    }
 }
 
 #[derive(Clone)]
@@ -963,6 +994,7 @@ impl CodeEditorHandle {
                 row_geom_cache_tick: 0,
                 row_geom_cache: HashMap::new(),
                 row_geom_cache_queue: VecDeque::new(),
+                ime_surrounding_text_cache: None,
                 selection_rect_scratch: Vec::new(),
                 baseline_measure_cache: None,
                 paint_perf_enabled: paint_perf_enabled_from_env(),
@@ -1121,6 +1153,7 @@ impl CodeEditorHandle {
             range,
             text,
             Some(marked),
+            None,
         );
     }
 
@@ -1161,6 +1194,7 @@ impl CodeEditorHandle {
             range,
             "",
             Some(marked),
+            None,
         );
     }
 
@@ -1636,6 +1670,7 @@ impl CodeEditor {
                 a11y_text_selection,
                 a11y_text_composition,
                 ime_cursor_area,
+                ime_surrounding_text,
             ) = {
                 handle.set_soft_wrap_cols(soft_wrap_cols);
                 if let Some(policy) = code_font_features.clone() {
@@ -1662,6 +1697,7 @@ impl CodeEditor {
                 let boundary_override = st.text_boundary_mode_override;
                 let (value, selection, composition) =
                     a11y_composed_text_window(&mut st, text_cache_max_entries);
+                let ime_surrounding_text = Some(st.ime_surrounding_text_best_effort_cached());
 
                 let cell_w = cell_w.get();
                 let cell_w = if cell_w.0 > 0.0 { cell_w } else { Px(8.0) };
@@ -1674,6 +1710,7 @@ impl CodeEditor {
                     selection,
                     composition,
                     ime_cursor_area,
+                    ime_surrounding_text,
                 )
             };
 
@@ -1693,6 +1730,7 @@ impl CodeEditor {
                 a11y_invalid: None,
                 a11y_text_selection,
                 a11y_text_composition,
+                ime_surrounding_text,
             };
 
             let mut pointer_props = PointerRegionProps::default();
@@ -2080,7 +2118,8 @@ impl CodeEditor {
                               props,
                               range,
                               text,
-                              marked| {
+                              marked,
+                              selected| {
                             let mut st = platform_mark_state.borrow_mut();
                             let Some(value) = props.a11y_value.as_deref() else {
                                 return false;
@@ -2093,6 +2132,7 @@ impl CodeEditor {
                                 range,
                                 text,
                                 marked,
+                                selected,
                             );
 
                             if did {
@@ -2766,4 +2806,58 @@ fn ime_cursor_area_for_text_input_region(
     scroll_handle: &fret_ui::scroll::ScrollHandle,
 ) -> Option<fret_core::Rect> {
     geom::caret_rect_for_selection(st, row_h, cell_w, bounds, scroll_handle)
+}
+
+fn best_effort_ime_surrounding_text(
+    buffer: &TextBuffer,
+    selection: Selection,
+) -> fret_runtime::WindowImeSurroundingText {
+    fn clamp_down_to_char_boundary(buffer: &TextBuffer, idx: usize) -> usize {
+        let mut idx = idx.min(buffer.len_bytes());
+        while idx > 0 && !buffer.is_char_boundary(idx) {
+            idx = idx.saturating_sub(1);
+        }
+        idx
+    }
+
+    let max = fret_runtime::WindowImeSurroundingText::MAX_TEXT_BYTES;
+    let len = buffer.len_bytes();
+
+    let cursor = clamp_down_to_char_boundary(buffer, selection.focus);
+    let mut anchor = clamp_down_to_char_boundary(buffer, selection.anchor);
+
+    let mut low = cursor.min(anchor);
+    let mut high = cursor.max(anchor);
+    if high.saturating_sub(low) > max {
+        anchor = cursor;
+        low = cursor;
+        high = cursor;
+    }
+
+    let (mut start, mut end) = if len <= max {
+        (0, len)
+    } else {
+        let needed = high.saturating_sub(low);
+        let slack = max.saturating_sub(needed);
+        let before = slack / 2;
+        let start = low.saturating_sub(before).min(len.saturating_sub(max));
+        let end = (start + max).min(len);
+        (start, end)
+    };
+
+    start = clamp_down_to_char_boundary(buffer, start);
+    end = clamp_down_to_char_boundary(buffer, end);
+    if end < start {
+        end = start;
+    }
+
+    let text = buffer.slice_to_string(start..end).unwrap_or_default();
+    let cursor_rel = cursor.saturating_sub(start).min(text.len());
+    let anchor_rel = anchor.saturating_sub(start).min(text.len());
+
+    fret_runtime::WindowImeSurroundingText {
+        text: Arc::<str>::from(text),
+        cursor: u32::try_from(cursor_rel).unwrap_or(u32::MAX),
+        anchor: u32::try_from(anchor_rel).unwrap_or(u32::MAX),
+    }
 }

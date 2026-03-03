@@ -1,9 +1,10 @@
-#[cfg(feature = "shadcn-context-menu")]
-use std::collections::HashMap;
 use std::sync::Arc;
+
+use std::collections::HashMap;
 
 use fret_core::Rect;
 use fret_runtime::{Model, TimerToken};
+use fret_ui::action::ActivateReason;
 use fret_ui::scroll::ScrollHandle;
 use fret_ui::{ElementContext, UiHost};
 
@@ -15,6 +16,16 @@ pub(super) struct WorkspaceTabStripState {
     pub(super) last_active: Option<Arc<str>>,
     pub(super) last_tab_rects: Vec<WorkspaceTabHitRect>,
     pub(super) last_scroll_viewport: Option<Rect>,
+}
+
+/// Best-effort hint for how the next selection change should reveal the active tab.
+///
+/// This is a policy-layer helper so pointer selection can avoid scroll-jank (no margin),
+/// while keyboard/programmatic selection keeps comfortable context (margin).
+#[derive(Debug, Default, Clone)]
+pub(super) struct WorkspaceTabStripRevealHint {
+    pub(super) tab_id: Option<Arc<str>>,
+    pub(super) reason: Option<ActivateReason>,
 }
 
 #[derive(Debug, Default, Clone)]
@@ -96,6 +107,36 @@ pub(super) fn get_overflow_menu_open_model<H: UiHost>(
     let model = cx.app.models_mut().insert(false);
     cx.with_state(WorkspaceTabStripOverflowMenuState::default, |st| {
         st.open = Some(model.clone());
+    });
+    model
+}
+
+#[derive(Default)]
+struct WorkspaceTabStripRevealHintState {
+    by_pane: HashMap<Arc<str>, Model<WorkspaceTabStripRevealHint>>,
+}
+
+pub(super) fn get_reveal_hint_model<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    pane_id: Option<&Arc<str>>,
+) -> Model<WorkspaceTabStripRevealHint> {
+    let key: Arc<str> = pane_id
+        .cloned()
+        .unwrap_or_else(|| Arc::<str>::from("workspace-tabstrip-default-pane"));
+
+    let existing = cx.with_state(WorkspaceTabStripRevealHintState::default, |st| {
+        st.by_pane.get(key.as_ref()).cloned()
+    });
+    if let Some(m) = existing {
+        return m;
+    }
+
+    let model = cx
+        .app
+        .models_mut()
+        .insert(WorkspaceTabStripRevealHint::default());
+    cx.with_state(WorkspaceTabStripRevealHintState::default, |st| {
+        st.by_pane.insert(key, model.clone());
     });
     model
 }

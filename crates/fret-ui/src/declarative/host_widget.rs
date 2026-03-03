@@ -728,12 +728,13 @@ impl<H: UiHost> Widget<H> for ElementHostWidget {
         range: fret_runtime::Utf16Range,
         text: &str,
         marked: Option<fret_runtime::Utf16Range>,
+        selected: Option<fret_runtime::Utf16Range>,
     ) -> bool {
         if let Some(input) = self.text_input.as_mut() {
-            return <BoundTextInput as crate::widget::Widget<H>>::platform_text_input_replace_and_mark_text_in_range_utf16(input, cx, range, text, marked);
+            return <BoundTextInput as crate::widget::Widget<H>>::platform_text_input_replace_and_mark_text_in_range_utf16(input, cx, range, text, marked, selected);
         }
         if let Some(area) = self.text_area.as_mut() {
-            return <crate::text_area::BoundTextArea as crate::widget::Widget<H>>::platform_text_input_replace_and_mark_text_in_range_utf16(area, cx, range, text, marked);
+            return <crate::text_area::BoundTextArea as crate::widget::Widget<H>>::platform_text_input_replace_and_mark_text_in_range_utf16(area, cx, range, text, marked, selected);
         }
         false
     }

@@ -19,13 +19,13 @@ pub(super) fn maybe_push_debug_hud(
         let hud_layout = fret_ui::element::LayoutStyle {
             position: fret_ui::element::PositionStyle::Absolute,
             inset: fret_ui::element::InsetStyle {
-                top: Some(Px(8.0)).into(),
+                top: Some(Px(40.0)).into(),
                 right: Some(Px(8.0)).into(),
                 ..Default::default()
             },
             size: fret_ui::element::SizeStyle {
-                width: fret_ui::element::Length::Px(Px(520.0)),
-                height: fret_ui::element::Length::Px(Px(220.0)),
+                width: fret_ui::element::Length::Px(Px(360.0)),
+                height: fret_ui::element::Length::Px(Px(160.0)),
                 ..Default::default()
             },
             ..Default::default()
@@ -44,7 +44,7 @@ pub(super) fn maybe_push_debug_hud(
                     .bg(ColorRef::Color(theme.color_token("background")))
                     .border_1()
                     .rounded(Radius::Md)
-                    .p(Space::N3),
+                    .p(Space::N2),
                 LayoutRefinement::default().w_full().h_full(),
             );
             container_props.layout.size.width = fret_ui::element::Length::Fill;

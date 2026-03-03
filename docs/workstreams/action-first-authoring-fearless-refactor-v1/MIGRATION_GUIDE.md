@@ -1,6 +1,6 @@
 # Action-First Authoring + View Runtime (Fearless Refactor v1) — Migration Guide
 
-Last updated: 2026-03-02
+Last updated: 2026-03-03
 
 This guide is intentionally practical: it describes how to migrate in-tree demos and ecosystem code
 in small, reviewable slices.
@@ -31,9 +31,8 @@ Migration steps:
 1) Introduce action IDs for the existing command IDs (prefer keeping the same string).
 2) Update UI widgets to bind `.action(...)` rather than `.on_click(cmd_id)` where appropriate.
 3) Update handler registration:
-   - v1: keep using the existing command dispatch pipeline (`on_command`) while we land the
-     view/runtime-level handler table work.
-   - later (post-M1/M2): converge toward `on_action` hooks backed by an action handler table.
+   - v1: prefer `on_action` hooks backed by the action handler table (authoring-level).
+   - compat: keep `on_command` for legacy MVU demos while migrating incrementally.
 
 ### 2.1 Typed unit action IDs (recommended v1 authoring style)
 
@@ -111,6 +110,10 @@ Template reference:
 
 - `fretboard new hello` uses this pattern (View runtime + typed unit actions):
   `apps/fretboard/src/scaffold/templates.rs` (`hello_template_main_rs`)
+- `fretboard new todo` extends the same pattern with selector/query hooks:
+  `apps/fretboard/src/scaffold/templates.rs` (`todo_template_main_rs`)
+- `fretboard new simple-todo` provides the smallest View+actions baseline:
+  `apps/fretboard/src/scaffold/templates.rs` (`simple_todo_template_main_rs`)
 
 UI gallery reference:
 
@@ -127,6 +130,32 @@ Migration steps:
 4) Replace manual “force refresh” hacks with:
    - `cx.notify()` and/or
    - selector/query hooks that carry proper dependency observation.
+
+---
+
+## 3.1) When to use MVU vs View (v1 guidance)
+
+Recommended default (new code):
+
+- Use **View runtime + typed actions** for new templates, cookbook examples, and app code.
+
+Keep MVU (compat / legacy) when:
+
+- You need **per-item/payloaded** routing semantics that v1 typed actions do not support yet
+  (v1 is intentionally *unit actions only*; see ADR 0307 “v1 decision snapshot”).
+- You are maintaining an existing MVU-based demo and migration would not add new evidence/gates.
+- You are exploring authoring patterns quickly and want a minimal “single-file loop” while prototyping.
+
+If you choose MVU in 2026:
+
+- Label it explicitly as legacy/compat in docs and avoid copy-pasting it into new templates.
+- Prefer action-first IDs (`ActionId == CommandId` in v1) even inside MVU code where feasible, so
+  keymap/palette/menus/diagnostics stay aligned.
+
+Inventory:
+
+- Track remaining in-tree MVU usage here:
+  `docs/workstreams/action-first-authoring-fearless-refactor-v1/LEGACY_MVU_INVENTORY.md`
 
 ---
 

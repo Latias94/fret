@@ -3,10 +3,7 @@ use super::super::*;
 use crate::ui::doc_layout::DocSection;
 use crate::ui::snippets::toast as snippets;
 
-pub(super) fn preview_toast(
-    cx: &mut ElementContext<'_, App>,
-    _last_action: Model<Arc<str>>,
-) -> Vec<AnyElement> {
+pub(super) fn preview_toast(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
     let deprecated = snippets::deprecated::render(cx);
 
     let body = crate::ui::doc_layout::render_doc_page(
@@ -15,7 +12,6 @@ pub(super) fn preview_toast(
         vec![
             DocSection::new("Deprecated", deprecated)
                 .description("Toast is deprecated in upstream shadcn/ui docs. Prefer Sonner.")
-                .max_w(Px(760.0))
                 .test_id_prefix("ui-gallery-toast-deprecated")
                 .code_rust_from_file_region(snippets::deprecated::SOURCE, "example"),
         ],

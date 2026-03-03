@@ -3,7 +3,7 @@
   "meta": {
     "name": "cookbook-virtual-list-basics-smoke",
     "required_capabilities": ["diag.script_v2", "diag.screenshot_png"],
-    "tags": ["cookbook", "virtual_list", "scroll", "reorder", "smoke"]
+    "tags": ["cookbook", "virtual_list", "actions", "scroll", "reorder", "smoke"]
   },
   "steps": [
     {
@@ -43,4 +43,3 @@
     { "type": "capture_bundle", "label": "cookbook-virtual-list-basics-smoke" }
   ]
 }
-

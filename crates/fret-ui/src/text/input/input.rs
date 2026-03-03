@@ -15,6 +15,10 @@ impl TextInput {
             enabled: true,
             focusable: true,
             text: String::new(),
+            base_text_revision: 0,
+            ime_surrounding_text_cache: std::cell::RefCell::default(),
+            caret_blink_timer: None,
+            caret_blink_visible: true,
             caret: 0,
             selection_anchor: 0,
             offset_x: Px(0.0),
@@ -169,6 +173,7 @@ impl TextInput {
 
     pub fn with_text(mut self, text: impl Into<String>) -> Self {
         self.text = text.into();
+        self.base_text_revision = self.base_text_revision.wrapping_add(1);
         self.caret = self.text.len();
         self.selection_anchor = self.caret;
         self.offset_x = Px(0.0);
@@ -184,6 +189,7 @@ impl TextInput {
     pub fn set_text(&mut self, text: impl Into<String>) {
         self.queue_release_all_text_blobs();
         self.text = text.into();
+        self.base_text_revision = self.base_text_revision.wrapping_add(1);
         self.caret = self.text.len();
         self.selection_anchor = self.caret;
         self.offset_x = Px(0.0);
@@ -201,6 +207,28 @@ impl TextInput {
         self.preedit_metrics = None;
         self.caret_stops.clear();
         self.last_sent_cursor = None;
+    }
+
+    pub(super) fn bump_base_text_revision(&mut self) {
+        self.base_text_revision = self.base_text_revision.wrapping_add(1);
+    }
+
+    pub(super) fn apply_basic_command(
+        &mut self,
+        command: &str,
+        is_ime_composing: bool,
+        boundary_mode: fret_runtime::TextBoundaryMode,
+    ) -> crate::text_edit::commands::Outcome {
+        let outcome = crate::text_edit::commands::apply_basic(
+            &mut self.edit_state(),
+            command,
+            is_ime_composing,
+            boundary_mode,
+        );
+        if outcome.invalidate_layout {
+            self.bump_base_text_revision();
+        }
+        outcome
     }
 
     pub(super) fn is_ime_composing(&self) -> bool {
@@ -311,6 +339,7 @@ impl TextInput {
     pub(super) fn replace_selection(&mut self, insert: &str) {
         if self.edit_state().replace_selection(insert) {
             self.mark_text_blobs_dirty();
+            self.bump_base_text_revision();
         }
     }
 
@@ -318,6 +347,7 @@ impl TextInput {
         let changed = self.edit_state().replace_selection(insert);
         if changed {
             self.mark_text_blobs_dirty();
+            self.bump_base_text_revision();
         }
         changed
     }
@@ -326,6 +356,7 @@ impl TextInput {
         let changed = self.edit_state().delete_selection_if_any();
         if changed {
             self.mark_text_blobs_dirty();
+            self.bump_base_text_revision();
         }
         changed
     }
@@ -334,6 +365,7 @@ impl TextInput {
         let changed = self.edit_state().delete_backward_char();
         if changed {
             self.mark_text_blobs_dirty();
+            self.bump_base_text_revision();
         }
         changed
     }
@@ -342,6 +374,7 @@ impl TextInput {
         let changed = self.edit_state().delete_forward_char();
         if changed {
             self.mark_text_blobs_dirty();
+            self.bump_base_text_revision();
         }
         changed
     }
@@ -350,6 +383,7 @@ impl TextInput {
         let changed = self.edit_state().delete_word_backward();
         if changed {
             self.mark_text_blobs_dirty();
+            self.bump_base_text_revision();
         }
         changed
     }
@@ -358,6 +392,7 @@ impl TextInput {
         let changed = self.edit_state().delete_word_forward();
         if changed {
             self.mark_text_blobs_dirty();
+            self.bump_base_text_revision();
         }
         changed
     }

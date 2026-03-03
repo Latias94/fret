@@ -29,12 +29,10 @@ pub(super) fn preview_accordion(
         vec![
             DocSection::new("Demo", demo)
                 .description("Upstream shadcn AccordionDemo structure.")
-                .max_w(Px(760.0))
                 .test_id_prefix("ui-gallery-accordion-demo")
                 .code_rust_from_file_region(snippets::demo::SOURCE, "example"),
             DocSection::new("Extras", extras)
                 .description("Fret-specific variants + RTL coverage.")
-                .max_w(Px(980.0))
                 .test_id_prefix("ui-gallery-accordion-extras")
                 .code_rust_from_file_region(snippets::extras::SOURCE, "example"),
             DocSection::new("Notes", notes).description("Parity notes and references."),

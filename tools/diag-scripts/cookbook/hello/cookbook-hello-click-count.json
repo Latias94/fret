@@ -33,6 +33,17 @@
       "target": { "kind": "test_id", "id": "cookbook.hello.button" }
     },
     {
+      "type": "wait_command_dispatch_trace",
+      "query": {
+        "command": "cookbook.hello.click.v1",
+        "source_kind": "pointer",
+        "source_test_id": "cookbook.hello.button",
+        "handled": true,
+        "handled_by_scope": "widget"
+      },
+      "timeout_frames": 240
+    },
+    {
       "type": "wait_until",
       "predicate": {
         "kind": "label_contains",
@@ -44,4 +55,3 @@
     { "type": "capture_bundle", "label": "cookbook-hello-click-count" }
   ]
 }
-

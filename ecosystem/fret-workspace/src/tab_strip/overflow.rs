@@ -2,11 +2,13 @@ use std::collections::HashMap;
 use std::sync::Arc;
 
 use fret_core::{Color, Px, Rect, TextStyle};
+use fret_runtime::Model;
 use fret_ui::{ElementContext, UiHost};
 use fret_ui_headless::tab_strip_overflow::compute_overflowed_tab_indices;
 use fret_ui_shadcn::{DropdownMenuEntry, DropdownMenuItem};
 
 use super::WorkspaceTab;
+use super::state::WorkspaceTabStripRevealHint;
 use crate::tab_drag::WorkspaceTabHitRect;
 
 pub(crate) fn compute_overflowed_tab_ids(
@@ -34,6 +36,7 @@ pub(crate) fn compute_overflow_menu_entries<H: UiHost>(
     tab_rects: &[WorkspaceTabHitRect],
     viewport: Option<Rect>,
     is_overflowing: bool,
+    reveal_hint_model: Model<WorkspaceTabStripRevealHint>,
     text_style: TextStyle,
     inactive_fg: Color,
 ) -> (Option<Arc<str>>, Vec<DropdownMenuEntry>) {
@@ -70,6 +73,16 @@ pub(crate) fn compute_overflow_menu_entries<H: UiHost>(
 
             let mut item = DropdownMenuItem::new(tab.title.clone())
                 .close_on_select(true)
+                .on_activate({
+                    let reveal_hint_model = reveal_hint_model.clone();
+                    let tab_id = tab.id.clone();
+                    Arc::new(move |host, _acx, reason| {
+                        let _ = host.models_mut().update(&reveal_hint_model, |st| {
+                            st.tab_id = Some(tab_id.clone());
+                            st.reason = Some(reason);
+                        });
+                    })
+                })
                 .on_select(tab.command.clone());
             if let Some(id) = test_id {
                 item = item.test_id(id);

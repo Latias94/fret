@@ -1,0 +1,176 @@
+{
+  "meta": {
+    "name": "Workspace shell demo: keyboard roving reveals overflowed tab (smoke)",
+    "required_capabilities": [
+      "diag.script_v2"
+    ],
+    "tags": [
+      "workspace",
+      "tabstrip",
+      "keyboard",
+      "scroll",
+      "smoke",
+      "gate"
+    ],
+    "target_hints": [
+      "Shrinks the window to force tab strip overflow.",
+      "Enters the tab strip (Ctrl+F6).",
+      "Uses End to activate an overflowed tab.",
+      "Asserts the active tab is visible and the strip scrolled."
+    ]
+  },
+  "schema_version": 2,
+  "steps": [
+    {
+      "height_px": 720.0,
+      "type": "set_window_inner_size",
+      "width_px": 420.0
+    },
+    {
+      "n": 10,
+      "type": "wait_frames"
+    },
+    {
+      "predicate": {
+        "kind": "exists",
+        "target": {
+          "id": "workspace-shell-pane-pane-a-tab-strip.overflow_button",
+          "kind": "test_id"
+        }
+      },
+      "timeout_frames": 240,
+      "type": "wait_until"
+    },
+    {
+      "target": {
+        "id": "workspace-shell-pane-pane-a-tab-doc-a-0",
+        "kind": "test_id"
+      },
+      "type": "click"
+    },
+    {
+      "n": 6,
+      "type": "wait_frames"
+    },
+    {
+      "predicate": {
+        "kind": "selected_is",
+        "selected": true,
+        "target": {
+          "id": "workspace-shell-pane-pane-a-tab-doc-a-0",
+          "kind": "test_id"
+        }
+      },
+      "timeout_frames": 240,
+      "type": "wait_until"
+    },
+    {
+      "target": {
+        "id": "workspace-shell-pane-pane-a-content",
+        "kind": "test_id"
+      },
+      "type": "click"
+    },
+    {
+      "n": 6,
+      "type": "wait_frames"
+    },
+    {
+      "predicate": {
+        "kind": "focus_is",
+        "target": {
+          "id": "workspace-shell-pane-pane-a-content",
+          "kind": "test_id"
+        }
+      },
+      "timeout_frames": 240,
+      "type": "wait_until"
+    },
+    {
+      "key": "f6",
+      "modifiers": {
+        "ctrl": true
+      },
+      "repeat": false,
+      "type": "press_key"
+    },
+    {
+      "n": 6,
+      "type": "wait_frames"
+    },
+    {
+      "predicate": {
+        "kind": "focus_is",
+        "target": {
+          "id": "workspace-shell-pane-pane-a-tab-doc-a-0",
+          "kind": "test_id"
+        }
+      },
+      "timeout_frames": 240,
+      "type": "wait_until"
+    },
+    {
+      "key": "end",
+      "repeat": false,
+      "type": "press_key"
+    },
+    {
+      "n": 6,
+      "type": "wait_frames"
+    },
+    {
+      "predicate": {
+        "kind": "focus_is",
+        "target": {
+          "id": "workspace-shell-pane-pane-a-tab-doc-a-2",
+          "kind": "test_id"
+        }
+      },
+      "timeout_frames": 240,
+      "type": "wait_until"
+    },
+    {
+      "predicate": {
+        "kind": "selected_is",
+        "selected": true,
+        "target": {
+          "id": "workspace-shell-pane-pane-a-tab-doc-a-2",
+          "kind": "test_id"
+        }
+      },
+      "timeout_frames": 240,
+      "type": "wait_until"
+    },
+    {
+      "predicate": {
+        "kind": "workspace_tab_strip_active_overflow_is",
+        "overflow": true,
+        "pane_id": "pane-a"
+      },
+      "timeout_frames": 240,
+      "type": "wait_until"
+    },
+    {
+      "predicate": {
+        "kind": "workspace_tab_strip_active_visible_is",
+        "pane_id": "pane-a",
+        "visible": true
+      },
+      "timeout_frames": 240,
+      "type": "wait_until"
+    },
+    {
+      "predicate": {
+        "kind": "workspace_tab_strip_active_scroll_px_ge",
+        "pane_id": "pane-a",
+        "px": 1.0
+      },
+      "timeout_frames": 240,
+      "type": "wait_until"
+    },
+    {
+      "label": "workspace-shell-demo-tabstrip-keyboard-reveal-hidden-smoke",
+      "type": "capture_bundle"
+    }
+  ]
+}

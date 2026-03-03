@@ -43,6 +43,8 @@ New to the repo? Start with:
 - Viewport panels (engine/video): `docs/viewport-panels.md`
 - Gizmo + viewport integration: `docs/gizmo-viewport-integration.md`
 - Docking multi-window parity (ImGui-style tear-off): `docs/workstreams/docking-multiwindow-imgui-parity.md` (macOS: `docs/workstreams/macos-docking-multiwindow-imgui-parity.md`)
+- Docking diagnostics hardening (multi-window arbitration scripts + bounded evidence): `docs/workstreams/docking-arbitration-diag-hardening-v1/`
+- UI diagnostics timebase decoupling v1 (no-frame liveness + `reason_code=timeout.no_frames`): `docs/workstreams/ui-diagnostics-timebase-decoupling-v1/README.md`
 - Localization/i18n v1 tracker: `docs/workstreams/localization-i18n-v1.md` and `docs/workstreams/localization-i18n-v1-todo.md`
 - Contracts: `docs/adr/`
 - Audit notes index (non-authoritative): `docs/audits/README.md`
@@ -83,14 +85,16 @@ Portable profiles we treat as regression gates:
 Fret’s kernel primitives are intentionally small (`Model<T>`, explicit invalidation, driver-boundary inbox draining),
 so the default authoring story lives in ecosystem crates.
 
-  - Workstream: `docs/workstreams/state-management-v1.md` and `docs/workstreams/state-management-v1-todo.md`
-  - Planned upgrade (in design): action-first authoring + view runtime:
-    - Workstream: `docs/workstreams/action-first-authoring-fearless-refactor-v1/DESIGN.md`
-    - ADRs: `docs/adr/0307-action-registry-and-typed-action-dispatch-v1.md`, `docs/adr/0308-view-authoring-runtime-and-hooks-v1.md`
-  - Recommended building blocks:
-  - Typed UI → app routing (dynamic per-item actions): `fret::mvu::MessageRouter<M>`
+- Workstream: `docs/workstreams/state-management-v1.md` and `docs/workstreams/state-management-v1-todo.md`
+- Action-first authoring + view runtime (v1, available now):
+  - Workstream: `docs/workstreams/action-first-authoring-fearless-refactor-v1/DESIGN.md`
+  - ADRs: `docs/adr/0307-action-registry-and-typed-action-dispatch-v1.md`, `docs/adr/0308-view-authoring-runtime-and-hooks-v1.md`
+  - Template entry points: `fretboard new hello`, `fretboard new todo`, `fretboard new simple-todo`
+- Recommended building blocks:
+  - View runtime + hooks + typed unit actions (golden path): `ecosystem/fret` (`View`, `ViewCx`, `fret::actions!`)
   - Derived state (selectors/computed): `ecosystem/fret-selector`
   - Async resources (loading/error/cache/invalidation): `ecosystem/fret-query`
+  - Legacy/dynamic routing (per-item payloads): `fret::mvu::MessageRouter<M>` (compat; avoid in new templates)
 - Upgrade guidance (app authors): `docs/fearless-refactoring.md`
 - Integration guidance:
   - Async fetch (tokio/wasm): `docs/integrating-tokio-and-reqwest.md`

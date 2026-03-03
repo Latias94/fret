@@ -4435,7 +4435,23 @@ fn run_script_suite_collect_bundles(
         bundle_paths.push(bundle_path);
     }
 
-    let _ = stop_launched_demo(&mut child, &paths.exit_path, poll_ms);
+    if let Some(footprint) = stop_launched_demo(&mut child, &paths.exit_path, poll_ms) {
+        let killed = footprint
+            .get("killed")
+            .and_then(|v| v.as_bool())
+            .unwrap_or(false);
+        if killed {
+            crate::tooling_failures::mark_existing_script_result_tooling_failure(
+                &paths.out_dir,
+                &paths.script_result_path,
+                "tooling.demo_exit.killed",
+                "tool-launched demo did not exit cleanly (killed=true in resource.footprint.json)",
+                "tooling_error",
+                Some("stop_launched_demo".to_string()),
+            );
+            return Err("tool-launched demo did not exit cleanly (killed=true)".to_string());
+        }
+    }
     Ok(bundle_paths)
 }
 

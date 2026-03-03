@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use fret::dev::{DevStateExport, DevStateHook, DevStateHooks};
-use fret::prelude::*;
+use fret::legacy::prelude::*;
 use fret_core::scene::DashPatternV1;
 use fret_core::{Color, DecorationLineStyle, StrikethroughStyle, TextPaintStyle, TextSpan};
 use fret_icons_lucide::generated_ids::lucide;

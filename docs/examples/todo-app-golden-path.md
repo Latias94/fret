@@ -14,7 +14,7 @@ It is intentionally “golden path”: advanced apps may assemble crates manuall
 Prefer an explicit ladder instead of starting with the full baseline on minute 1:
 
 1. `hello` — the smallest runnable “Hello UI”
-2. `simple-todo` — **Model + MVU messages + keyed lists** (no selectors/queries)
+2. `simple-todo` — **View runtime + typed actions + keyed lists** (no selectors/queries)
 3. `todo` — the best-practice baseline (**selectors + queries**) once you need derived/async state
 
 Templates (in this repository):
@@ -89,6 +89,7 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
+anyhow = "1"
 fret = { path = "../../ecosystem/fret" }
 fret-selector = { path = "../../ecosystem/fret-selector", features = ["ui"] } # optional
 fret-query = { path = "../../ecosystem/fret-query", features = ["ui"] } # optional
@@ -97,11 +98,13 @@ fret-query = { path = "../../ecosystem/fret-query", features = ["ui"] } # option
 ## Minimal startup
 
 ```rust,ignore
-fn main() -> fret::Result<()> {
-    fret::App::new("todo")
+use fret::prelude::*;
+
+fn main() -> anyhow::Result<()> {
+    FretApp::new("todo")
         .window("todo", (560.0, 520.0))
-        .mvu::<TodoProgram>()?
-        .run()
+        .run_view::<TodoView>()
+        .map_err(anyhow::Error::from)
 }
 ```
 
@@ -119,26 +122,24 @@ fn install_app(app: &mut App) {
     // app.set_global(MyService::default());
 }
 
-fn main() -> fret::Result<()> {
-    fret::App::new("todo")
+ fn main() -> anyhow::Result<()> {
+    FretApp::new("todo")
         .window("todo", (560.0, 520.0))
         .install_app(install_app)
         // Disable filesystem config loading for embedding/minimal builds:
         .config_files(false)
         // If you use images/SVG in UI, tune budgets:
         .ui_assets_budgets(64 * 1024 * 1024, 4096, 16 * 1024 * 1024, 4096)
-        .mvu::<TodoProgram>()?
-        .run()
+        .run_view::<TodoView>()
+        .map_err(anyhow::Error::from)
 }
 ```
 
 Notes:
 
-- `FnDriver` is the recommended authoring surface for Subsecond-style hotpatch (ADR 0105).
-- `fret::mvu` provides an MVU-shaped authoring surface (typed messages) while keeping the underlying driver hotpatch-friendly.
-- MVU uses a conservative default invalidation posture: it forces a `Layout` refresh after each handled command by bumping an internal `tick` model (see `ecosystem/fret/src/mvu.rs`).
-  - This is intentional: it makes MVU apps correct-by-default.
-  - If you need tighter invalidation/perf control, drop down to a manual driver (still hotpatch-friendly) and invalidate only what changed.
+- The action-first + view runtime path is the recommended golden path for new apps (ADRs 0307/0308).
+- For dev hotpatch (ADR 0105), keep action IDs stable and treat action hook registries as disposable.
+- Legacy MVU (`fret::mvu`) still exists for compatibility, but new templates/docs avoid teaching it by default.
 
 ## App state (models)
 
@@ -146,20 +147,22 @@ Notes:
 use std::sync::Arc;
 use fret_runtime::Model;
 
+mod act {
+    fret::actions!([
+        Add = "todo.todo.add.v1",
+        ClearDone = "todo.todo.clear_done.v1",
+        RefreshTip = "todo.todo.refresh_tip.v1",
+        FilterAll = "todo.todo.filter_all.v1",
+        FilterActive = "todo.todo.filter_active.v1",
+        FilterCompleted = "todo.todo.filter_completed.v1"
+    ]);
+}
+
 #[derive(Clone)]
 struct TodoItem {
     id: u64,
     done: Model<bool>,
     text: Arc<str>,
-}
-
-#[derive(Debug, Clone)]
-enum Msg {
-    Add,
-    ClearDone,
-    RefreshTip,
-    SetFilter(TodoFilter),
-    Remove(u64),
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -169,22 +172,21 @@ enum TodoFilter {
     Completed,
 }
 
-struct TodoState {
+struct TodoView {
     todos: Model<Vec<TodoItem>>,
     draft: Model<String>,
     filter: Model<TodoFilter>,
-    next_id: u64,
+    next_id: Model<u64>,
+    tip_nonce: Model<u64>,
 }
-
-struct TodoProgram;
 ```
 
 
 ## Three-layer state split (recommended)
 
-This section describes the **best-practice baseline** (`todo`) and `apps/fret-examples/src/todo_demo.rs`.
+This section describes the **best-practice baseline** (`todo`) and the `fretboard new todo` scaffold template.
 
-The `simple-todo` template intentionally stops earlier (Model + MVU only).
+The `simple-todo` template intentionally stops earlier (no selector/query).
 
 The official baseline uses an explicit 3-layer model:
 
@@ -197,78 +199,52 @@ The official baseline uses an explicit 3-layer model:
 
 Boundary rule:
 
-- keep domain mutations in typed command handlers,
+- keep domain mutations in typed action handlers,
 - keep selector/query as read-side helpers,
 - pass plain values/snapshots into components whenever practical.
 
-## Commands (UI -> app logic)
+## Actions (UI -> app logic)
 
-Use typed messages as the default boundary between UI intents and app mutations:
+Use typed unit actions with stable IDs as the default boundary between UI intents and app mutations:
 
-```rust,ignore
-#[derive(Debug, Clone)]
-enum Msg {
-    Add,
-    ClearDone,
-    RefreshTip,
-    Remove(u64),
-}
+- UI binds actions (button clicks, submit, menu items, keymap shortcuts) via `ActionId`.
+- View runtime installs typed action handlers at a chosen root, keeping dispatch explainable and consistent.
 
-impl fret::prelude::MvuProgram for TodoProgram {
-    type State = TodoState;
-    type Message = Msg;
-
-    fn view(
-        cx: &mut fret_ui::ElementContext<'_, fret_app::App>,
-        state: &mut Self::State,
-        msg: &mut fret::prelude::MessageRouter<Self::Message>,
-    ) -> fret_ui::element::Elements {
-        // Allocate command IDs for the current frame.
-        let add_cmd = msg.cmd(Msg::Add);
-        // ...
-        fret_ui::element::Elements::default()
-    }
-}
-```
-
-Recommended pattern:
-
-- Keep app mutations in typed `Msg` variants.
-- Allocate command IDs via the per-frame `MessageRouter<Msg>` passed into `Program::view(...)`:
-  - toolbar intents (`Add`, `ClearDone`, `RefreshTip`),
-  - row intents (`Remove(id)`).
-- Let the MVU driver route `CommandId` back into typed messages and call `Program::update(...)`.
-- Only keep stable literal `CommandId`s when the action must be globally addressable by keymap/menu.
-
-This removes stringly `"prefix.{id}"` parsing and keeps hot reload resets predictable.
-
-## View (build retained UI tree)
-
-This is high-level pseudocode showing the intent; exact component APIs may vary.
+High-level sketch:
 
 ```rust,ignore
 use fret::prelude::*;
 
-fn view(
-    cx: &mut ElementContext<'_, fret_app::App>,
-    st: &mut TodoState,
-    msg: &mut MessageRouter<Msg>,
-) -> Elements {
-    let add_icon = IconId::new("lucide.plus");
-    let trash_icon = IconId::new("lucide.trash-2");
+mod act {
+    fret::actions!([Add = "todo.todo.add.v1"]);
+}
 
-    let add_cmd = msg.cmd(Msg::Add);
-    let remove_cmd = msg.cmd(Msg::Remove(42));
+impl View for TodoView {
+    fn render(&mut self, cx: &mut ViewCx<'_, '_, App>) -> Elements {
+        cx.on_action::<act::Add>(move |host, acx| {
+            // mutate models
+            host.request_redraw(acx.window);
+            host.notify(acx);
+            true
+        });
 
-    // 1) Input row: text field + add button
-    // 2) List: checkbox + label + remove button per item
-    // 3) Footer: “clear done”
-    todo_root(cx, st, add_icon, trash_icon, add_cmd, remove_cmd).into()
+        shadcn::Button::new("Add")
+            .action(act::Add)
+            .into_element(cx)
+            .into()
+    }
 }
 ```
 
-Note: `fret::prelude` includes the shadcn authoring vocabulary (layout/styling + common types) so app code can stay
-on a single dependency for the default story.
+## View (render a retained UI tree)
+
+The view runtime renders the same declarative IR (`Elements`) but provides a cohesive authoring loop:
+
+- view-local “hooks” (`use_selector`, `use_query`, `use_state`),
+- typed action handler registration,
+- `notify → dirty → reuse` semantics via view cache roots.
+
+For the full runnable baseline, see the `fretboard new todo` scaffold template.
 
 ## Derived state (selectors)
 
@@ -281,11 +257,19 @@ memoizing these computations with selectors instead of:
 High-level sketch:
 
 ```rust,ignore
-use fret_selector::ui::SelectorElementContextExt as _;
+use fret_selector::ui::DepsBuilder;
 
-let (done_count, total_count) = cx.use_selector(
-    |cx| { /* observe the models you encode */ },
-    |cx| { /* compute derived values */ },
+let derived = cx.use_selector(
+    |cx| {
+        let mut deps = DepsBuilder::new(cx);
+        deps.model_rev(&self.todos);
+        deps.model_rev(&self.filter);
+        deps.finish()
+    },
+    |cx| {
+        // expensive projection (filtering/counts)
+        compute(cx)
+    },
 );
 ```
 
@@ -307,9 +291,14 @@ let state: QueryState<T> = cx.watch_model(handle.model()).layout().cloned_or_def
 To invalidate/refetch from app logic:
 
 ```rust,ignore
-use fret_query::with_query_client;
+// v1 (view runtime): action handlers only receive `UiFocusActionHost`, so "refetch" is typically
+// modeled as a key change.
+// (have a `Model<u64>` nonce, e.g. `tip_nonce`)
+let _ = host.models_mut().update(&tip_nonce, |v| *v = v.saturating_add(1));
 
-let _ = with_query_client(app, |client, app| client.invalidate(app, key));
+// then include the nonce in the query key:
+let nonce = cx.watch_model(&tip_nonce).paint().copied_or(0);
+let handle = cx.use_query(tip_key(nonce), policy, move |token| fetch(token));
 ```
 
 ## Event pipeline (platform → UI)
@@ -319,21 +308,17 @@ In a typical window driver:
 - deliver `Event` to the UI tree first (focus, text input, overlays, etc),
 - then apply any app-specific event handling.
 
-## Command handler (app logic)
+## Action handlers (logic)
 
-In the MVU shape, `Program::update` is the boundary where you mutate models and emit effects:
+In the view runtime shape, typed action handlers are the boundary where you mutate models and request UI updates:
 
 ```rust,ignore
-impl MvuProgram for TodoProgram {
-    fn update(app: &mut App, state: &mut TodoState, msg: Msg) {
-        match msg {
-            Msg::Add => { /* read draft, push todo, clear draft */ }
-            Msg::ClearDone => { /* retain only !done */ }
-            Msg::RefreshTip => { /* invalidate query key */ }
-            Msg::Remove(id) => { /* remove */ }
-        }
-    }
-}
+cx.on_action::<act::Add>(move |host, acx| {
+    // read draft, push todo, clear draft
+    host.request_redraw(acx.window);
+    host.notify(acx);
+    true
+});
 ```
 
 ## Async / background work (two patterns)
@@ -355,7 +340,7 @@ See ADR 0110 for rationale and constraints.
 
 When using hotpatch (ADR 0105):
 
-- prefer `FnDriver` entry points (function pointers),
+- keep action IDs stable across reloads,
 - treat action hook registries and overlay registries as disposable,
 - use the runner’s hot reload hooks to reset retained UI state on patch applied.
 

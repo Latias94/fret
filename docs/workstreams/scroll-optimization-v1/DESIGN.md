@@ -1,6 +1,6 @@
 # Scroll Optimization Workstream (v1)
 
-Date: 2026-03-02  
+Date: 2026-03-03  
 Status: Draft (planning + gates-first)
 
 ## Motivation
@@ -57,6 +57,27 @@ Diagnostics scripts:
 
 - `tools/diag-scripts/ui-gallery/scroll-area/ui-gallery-scroll-area-wheel-scroll.json`
   - Asserts semantics scroll max is finite and wheel moves offset for both axes.
+  - Self-contained navigation via `ui-gallery-nav-search` -> `ui-gallery-nav-scroll-area`.
+  - Suite: `tools/diag-scripts/suites/ui-gallery-scroll-area/` (run: `cargo run -p fretboard -- diag suite ui-gallery-scroll-area --launch -- cargo run -p fret-ui-gallery --release`).
+- `tools/diag-scripts/ui-gallery/scroll-area/ui-gallery-scrollbar-drag-baseline-content-growth.json`
+  - Starts a scrollbar thumb drag, triggers content growth mid-drag, and asserts scrollbar semantics `y` stays stable.
+  - Harness snippet (keep `test_id`s stable): `apps/fret-ui-gallery/src/ui/snippets/scroll_area/drag_baseline.rs`.
+  - Suite: `tools/diag-scripts/suites/ui-gallery-scroll-area/`.
+- `tools/diag-scripts/ui-gallery/scroll-area/ui-gallery-scroll-area-wheel-torture.json`
+  - Repeated wheel input for perf/robustness evidence (captures a bundle; no perf threshold gate yet).
+  - Suite: `tools/diag-scripts/suites/perf-ui-gallery-scroll-area/`.
+- `tools/diag-scripts/ui-gallery/scroll-area/ui-gallery-scroll-area-nested-scroll-routing.json`
+  - Nested scroll routing: an inner horizontal scroll surface must not consume vertical wheel input.
+  - Harness snippet (keep `test_id`s stable): `apps/fret-ui-gallery/src/ui/snippets/scroll_area/nested_scroll_routing.rs`.
+  - Suite: `tools/diag-scripts/suites/ui-gallery-scroll-area/`.
+- `tools/diag-scripts/ui-gallery/scroll-area/ui-gallery-scroll-area-toggle-code-tabs.json`
+  - Toggles doc section `Preview`/`Code` tabs for the scroll-area page (smoke coverage for subtree bookkeeping).
+  - Suite: `tools/diag-scripts/suites/ui-gallery-scroll-area/`.
+- `tools/diag-scripts/ui-gallery/virtual-list/ui-gallery-virtual-list-wheel-torture.json`
+  - Repeated wheel input against the VirtualList torture harness (captures a bundle for perf attribution).
+  - Suites:
+    - `tools/diag-scripts/suites/ui-gallery-virtual-list/`
+    - `tools/diag-scripts/suites/perf-ui-gallery-virtual-list/`
 
 Unit / integration tests (non-exhaustive):
 
@@ -69,6 +90,8 @@ Unit / integration tests (non-exhaustive):
   - `crates/fret-ui/src/tree/tests/scroll_into_view.rs`
 - Occlusion vs scroll forwarding:
   - `crates/fret-ui/src/tree/tests/pointer_occlusion.rs`
+- Scrollbar thumb drag baseline stability (content growth mid-drag):
+  - `crates/fret-ui/src/declarative/tests/layout/scroll.rs`
 
 ## Known risks / pain points
 
@@ -93,6 +116,9 @@ Currently each wheel event can trigger:
 
 This is correct but can be expensive under trackpads (many events per frame).
 
+Concrete GPUI anchor: `accumulated_scroll_delta = accumulated_scroll_delta.coalesce(event.delta)` in
+`repo-ref/zed/crates/gpui/src/elements/list.rs`.
+
 ### 3) Scrollbar drag stability while content grows/measures
 
 Zed/GPUI’s list state includes an explicit “scrollbar drag started/ended” mode that stabilizes the
@@ -101,6 +127,9 @@ content changes.
 
 Fret’s current scrollbar mechanism tracks `dragging_thumb` but does not explicitly lock a baseline
 for content extent during drag.
+
+Concrete GPUI anchor (for parity): `scrollbar_drag_start_height` + `scrollbar_drag_started/ended` +
+`max_offset_for_scrollbar` in `repo-ref/zed/crates/gpui/src/elements/list.rs`.
 
 ## Proposed work items (mechanism-safe)
 
@@ -115,12 +144,35 @@ Options:
 2. UI-layer coalescing:
    - Maintain a per-window accumulator applied during `layout` or `prepaint`.
 
+Current implementation (native, opt-in):
+
+- Desktop runner buffers wheel deltas and delivers at most one `PointerEvent::Wheel` per frame when
+  `FRET_WINIT_COALESCE_WHEEL=1`:
+  - Buffering/flush: `crates/fret-launch/src/runner/desktop/runner/app_handler.rs`
+  - Per-window storage: `WindowRuntime.pending_wheel` in `crates/fret-launch/src/runner/desktop/runner/window.rs`
+  - Mapping still uses winit semantics (`WindowEvent::MouseWheel` -> `PointerEvent::Wheel`) via
+    `crates/fret-runner-winit/src/state/input/mod.rs`.
+  - Guardrail: cap the absolute delta of a single delivered wheel event, carrying remainder over
+    subsequent frames:
+    - `FRET_WINIT_COALESCE_WHEEL_MAX_ABS_PX` (default: `120`)
+
+Design note (cap sensitivity):
+
+- Under “adjacent event” coalescing (before frame-boundary buffering), repeat=11 perf evidence
+  showed `FRET_WINIT_COALESCE_WHEEL_MAX_ABS_PX` is workload-sensitive: a cap that is “safe” for
+  `ScrollArea` could still cause spikes in `VirtualList`. After switching to frame-boundary buffering,
+  `cap=120` is stable for both scripts in repeat=11 (see `docs/workstreams/scroll-optimization-v1/TODO.md`
+  for the before/after bundles and logs).
+
 Evidence gate:
 
-- Add a perf-oriented diag script that wheels repeatedly and asserts:
-  - no layout solves are forced,
-  - scroll offset changes monotonically,
-  - frame time stays under a target threshold (optional, separate perf gate).
+- A perf-oriented diag script wheels repeatedly and captures a bundle for later perf regression gating:
+  - `tools/diag-scripts/ui-gallery/scroll-area/ui-gallery-scroll-area-wheel-torture.json`
+  - Suite: `tools/diag-scripts/suites/perf-ui-gallery-scroll-area/`
+
+Perf entrypoint:
+
+- `fretboard diag perf perf-ui-gallery-scroll-area ...` resolves via `crates/fret-diag/src/perf_seed_policy.rs`.
 
 ### B) Scrollbar drag baseline lock (correctness/UX)
 
@@ -134,12 +186,20 @@ Mechanism idea:
   - mapping pointer movement -> offset,
   - computing thumb rect while dragging.
 
+Current implementation (mechanism-only):
+
+- `ScrollbarState` stores baseline viewport/content while dragging, so thumb math does not drift if
+  content extents change mid-drag:
+  - `crates/fret-ui/src/element.rs`
+  - `crates/fret-ui/src/declarative/host_widget/event/scrollbar.rs`
+
 Evidence gate:
 
-- Add a diag script that:
+- A diag script that:
   - starts thumb drag,
-  - triggers content growth (e.g. expand a collapsible in a scroll area),
-  - asserts the thumb does not jump away from the pointer beyond an epsilon.
+  - triggers content growth (timer-driven for determinism),
+  - asserts scrollbar semantics remain within an epsilon of the baseline max offset:
+    - `tools/diag-scripts/ui-gallery/scroll-area/ui-gallery-scrollbar-drag-baseline-content-growth.json`
 
 ### C) Consolidate barrier invalidation helpers (hardening)
 
@@ -176,4 +236,3 @@ Keep improving the “avoid pinned extents” behavior:
 - Where should wheel delta coalescing live for Fret (runner vs UI core)?
 - For scrollbar drag baseline: what baseline is sufficient (content height only, or full size)?
 - Should “restrict scroll axis” be a mechanism knob (like GPUI) or remain policy-level?
-

@@ -591,6 +591,10 @@ impl<'a, H: UiHost> UiDragActionHost for UiActionHostAdapter<'a, H> {
 pub struct InternalDragCx {
     pub pointer_id: PointerId,
     pub position: Point,
+    /// Pointer position in window-local logical pixels (pre-mapping).
+    ///
+    /// This is best-effort: events may arrive before the runtime has recorded a window snapshot.
+    pub position_window: Option<Point>,
     pub tick_id: TickId,
     pub kind: InternalDragKind,
     pub modifiers: Modifiers,
@@ -731,6 +735,7 @@ pub type OnTextInputRegionPlatformTextInputReplaceAndMarkTextInRangeUtf16 = Arc<
             &crate::element::TextInputRegionProps,
             Utf16Range,
             &str,
+            Option<Utf16Range>,
             Option<Utf16Range>,
         ) -> bool
         + 'static,

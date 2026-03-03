@@ -58,7 +58,7 @@
     },
     { "type": "pointer_move", "window": { "kind": "current" }, "delta_x": 20.0, "delta_y": 0.0, "steps": 12 },
     { "type": "wait_frames", "n": 2 },
-    { "type": "pointer_move", "window": { "kind": "current" }, "delta_x": 260.0, "delta_y": 0.0, "steps": 64 },
+    { "type": "pointer_move", "window": { "kind": "current" }, "delta_x": 380.0, "delta_y": 0.0, "steps": 64 },
     { "type": "wait_frames", "n": 2 },
     { "type": "pointer_up", "window": { "kind": "current" } },
     { "type": "wait_frames", "n": 12 },

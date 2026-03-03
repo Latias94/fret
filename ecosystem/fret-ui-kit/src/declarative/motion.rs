@@ -1,3 +1,4 @@
+use std::hash::Hash;
 use std::panic::Location;
 use std::time::Duration;
 
@@ -120,7 +121,7 @@ fn clamp_frame_delta(dt: Duration) -> Duration {
     dt.min(MAX_FRAME_DELTA)
 }
 
-pub(crate) fn effective_frame_delta_for_cx<H: UiHost>(cx: &ElementContext<'_, H>) -> Duration {
+pub fn effective_frame_delta_for_cx<H: UiHost>(cx: &ElementContext<'_, H>) -> Duration {
     let Some(svc) = cx.app.global::<WindowFrameClockService>() else {
         return REFERENCE_FRAME_DELTA_60HZ;
     };
@@ -503,6 +504,123 @@ pub fn drive_tween_f32_unclamped<H: UiHost>(
     )
 }
 
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct DrivenLoopProgress {
+    /// Normalized progress within the loop cycle. (`[0.0, 1.0)` while animating.)
+    pub progress: f32,
+    pub animating: bool,
+}
+
+#[derive(Debug, Clone, Copy)]
+struct LoopProgressState {
+    initialized: bool,
+    last_frame_id: u64,
+    elapsed: Duration,
+    period: Duration,
+}
+
+impl Default for LoopProgressState {
+    fn default() -> Self {
+        Self {
+            initialized: false,
+            last_frame_id: 0,
+            elapsed: Duration::ZERO,
+            period: Duration::from_secs(1),
+        }
+    }
+}
+
+fn duration_mod(elapsed: Duration, period: Duration) -> Duration {
+    if period == Duration::ZERO {
+        return Duration::ZERO;
+    }
+    let period_ns = period.as_nanos();
+    if period_ns == 0 {
+        return Duration::ZERO;
+    }
+    let rem_ns = elapsed.as_nanos() % period_ns;
+    Duration::from_nanos(rem_ns.min(u64::MAX as u128) as u64)
+}
+
+#[track_caller]
+pub fn drive_loop_progress<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    enabled: bool,
+    period: Duration,
+) -> DrivenLoopProgress {
+    let loc = Location::caller();
+    drive_loop_progress_keyed(
+        cx,
+        (loc.file(), loc.line(), loc.column(), "drive_loop_progress"),
+        enabled,
+        period,
+    )
+}
+
+pub fn drive_loop_progress_keyed<H: UiHost, K: Hash>(
+    cx: &mut ElementContext<'_, H>,
+    key: K,
+    enabled: bool,
+    period: Duration,
+) -> DrivenLoopProgress {
+    let reduced_motion = super::prefers_reduced_motion(cx, Invalidation::Paint, false);
+    cx.keyed(key, |cx| {
+        let frame_id = cx.frame_id.0;
+        let dt = effective_frame_delta_for_cx(cx);
+
+        let out = cx.with_state(LoopProgressState::default, |st| {
+            if !st.initialized {
+                st.initialized = true;
+                st.last_frame_id = frame_id;
+                st.elapsed = Duration::ZERO;
+                st.period = period;
+            }
+
+            if reduced_motion || !enabled || period == Duration::ZERO {
+                *st = LoopProgressState::default();
+                return DrivenLoopProgress {
+                    progress: 0.0,
+                    animating: false,
+                };
+            }
+
+            if st.period != period {
+                let frac = if st.period == Duration::ZERO {
+                    0.0
+                } else {
+                    (st.elapsed.as_secs_f64() / st.period.as_secs_f64()).clamp(0.0, 1.0)
+                };
+                st.period = period;
+                st.elapsed = Duration::from_secs_f64(frac * period.as_secs_f64());
+            }
+
+            if st.last_frame_id != frame_id {
+                st.last_frame_id = frame_id;
+                st.elapsed = duration_mod(st.elapsed.saturating_add(dt), st.period);
+            } else if st.last_frame_id == 0 {
+                st.last_frame_id = frame_id;
+            }
+
+            let progress = if st.period == Duration::ZERO {
+                0.0
+            } else {
+                (st.elapsed.as_secs_f64() / st.period.as_secs_f64()).clamp(0.0, 1.0) as f32
+            };
+
+            DrivenLoopProgress {
+                progress,
+                animating: true,
+            }
+        });
+
+        set_continuous_frames(cx, out.animating);
+        if out.animating {
+            cx.notify_for_animation_frame();
+        }
+        out
+    })
+}
+
 #[derive(Debug, Clone, Copy)]
 struct InertiaF32State {
     initialized: bool,
@@ -815,6 +933,33 @@ mod tests {
             fret_core::Point::new(fret_core::Px(0.0), fret_core::Px(0.0)),
             fret_core::Size::new(fret_core::Px(800.0), fret_core::Px(600.0)),
         )
+    }
+
+    #[test]
+    fn loop_progress_advances_across_frames() {
+        let window = AppWindowId::default();
+        let mut app = App::new();
+
+        app.set_tick_id(TickId(1));
+        app.set_frame_id(FrameId(1));
+        let p0 = with_element_cx(&mut app, window, bounds(), "loop", |cx| {
+            drive_loop_progress_keyed(cx, "loop_progress", true, Duration::from_secs(2)).progress
+        });
+
+        app.set_tick_id(TickId(2));
+        app.set_frame_id(FrameId(2));
+        let p1 = with_element_cx(&mut app, window, bounds(), "loop", |cx| {
+            drive_loop_progress_keyed(cx, "loop_progress", true, Duration::from_secs(2)).progress
+        });
+
+        assert!(
+            p1 > p0,
+            "expected loop progress to advance (p0={p0} p1={p1})"
+        );
+        assert!(
+            p1 < 1.0,
+            "expected loop progress to remain normalized (p1={p1})"
+        );
     }
 
     #[test]

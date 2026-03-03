@@ -13,8 +13,18 @@ pub(super) fn tab_bar_insert_index_for_drop(
     tab_widths: Option<&Arc<[Px]>>,
     scroll: Px,
     position: Point,
+    dragged_tab_index: Option<usize>,
 ) -> Option<usize> {
-    resolve_tab_bar_drop(theme, tab_bar, tab_count, tab_widths, scroll, position).insert_index
+    resolve_tab_bar_drop(
+        theme,
+        tab_bar,
+        tab_count,
+        tab_widths,
+        scroll,
+        position,
+        dragged_tab_index,
+    )
+    .insert_index
 }
 
 #[cfg(test)]
@@ -89,13 +99,13 @@ mod tests {
             Px(button.origin.y.0 + button.size.height.0 * 0.5),
         );
         assert_eq!(
-            tab_bar_insert_index_for_drop(theme, tab_bar, 3, Some(&widths), Px(0.0), pos),
+            tab_bar_insert_index_for_drop(theme, tab_bar, 3, Some(&widths), Px(0.0), pos, None),
             None
         );
     }
 
     #[test]
-    fn overflow_header_space_is_explicit_end_drop_surface() {
+    fn overflow_header_space_is_drop_surface() {
         let theme = test_theme();
         let tab_bar = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(120.0), Px(24.0)));
         let widths: Arc<[Px]> = Arc::from([Px(80.0), Px(80.0), Px(80.0)].as_slice());
@@ -109,7 +119,7 @@ mod tests {
         let pos = Point::new(x, y);
 
         assert_eq!(
-            tab_bar_insert_index_for_drop(theme, tab_bar, 3, Some(&widths), Px(0.0), pos),
+            tab_bar_insert_index_for_drop(theme, tab_bar, 3, Some(&widths), Px(0.0), pos, None),
             Some(3)
         );
     }

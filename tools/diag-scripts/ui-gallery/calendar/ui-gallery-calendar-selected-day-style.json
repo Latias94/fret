@@ -3,7 +3,10 @@
   "meta": {
     "name": "UI Gallery: Calendar selected day is square and styled",
     "tags": ["ui-gallery", "calendar", "shadcn"],
-    "required_capabilities": ["diag.script_v2", "diag.screenshot_png"]
+    "required_capabilities": ["diag.script_v2", "diag.screenshot_png"],
+    "env_defaults": {
+      "FRET_UI_GALLERY_FIXED_TODAY": "2025-02-12"
+    }
   },
   "steps": [
     { "type": "reset_diagnostics" },

@@ -1576,6 +1576,21 @@ impl<D: super::WinitAppDriver> WinitRunner<D> {
                                         {
                                             state.window.set_window_level(WindowLevel::AlwaysOnTop);
                                             always_on_top_applied = true;
+                                            self.app.with_global_mut(
+                                                fret_runtime::RunnerWindowStyleDiagnosticsStore::default,
+                                                |svc, _app| {
+                                                    svc.apply_style_patch(
+                                                        new_window,
+                                                        fret_runtime::WindowStyleRequest {
+                                                            z_level: Some(
+                                                                fret_runtime::WindowZLevel::AlwaysOnTop,
+                                                            ),
+                                                            ..Default::default()
+                                                        },
+                                                        &caps,
+                                                    );
+                                                },
+                                            );
                                         }
 
                                         self.dock_tearoff_follow = Some(super::DockTearoffFollow {
@@ -1612,15 +1627,31 @@ impl<D: super::WinitAppDriver> WinitRunner<D> {
 
                             self.app.request_redraw(new_window);
                         }
-                        WindowRequest::SetInnerSize { window, size } => {
+                        WindowRequest::SetVisible { window, visible } => {
                             if let Some(state) = self.windows.get(window) {
-                                let _ = state.window.request_surface_size(
-                                    winit::dpi::LogicalSize::new(
-                                        size.width.0 as f64,
-                                        size.height.0 as f64,
-                                    )
-                                    .into(),
+                                state.window.set_visible(visible);
+                                state.window.request_redraw();
+                            }
+                        }
+                        WindowRequest::SetInnerSize { window, size } => {
+                            if let Some(state) = self.windows.get_mut(window) {
+                                let requested = winit::dpi::LogicalSize::new(
+                                    size.width.0 as f64,
+                                    size.height.0 as f64,
                                 );
+                                let applied = state
+                                    .window
+                                    .request_surface_size(requested.into())
+                                    // Some platforms apply the resize without emitting a resize
+                                    // event *and* return `None` here. Fall back to querying the
+                                    // current surface size so scripted diagnostics still converge.
+                                    .unwrap_or_else(|| state.window.surface_size());
+
+                                // If the platform doesn't emit a resize event, queue the applied
+                                // size so the runner still reconfigures the surface and delivers
+                                // metrics updates on the next redraw (critical for scripted
+                                // diagnostics).
+                                state.pending_surface_resize = Some(applied);
                                 state.window.request_redraw();
                             }
                         }
@@ -1675,6 +1706,42 @@ impl<D: super::WinitAppDriver> WinitRunner<D> {
                                 }
                             }
                         }
+                        WindowRequest::BeginDrag { window } => {
+                            if let Some(state) = self.windows.get(window) {
+                                let _ = state.window.drag_window();
+                            }
+                        }
+                        WindowRequest::BeginResize { window, direction } => {
+                            if let Some(state) = self.windows.get(window) {
+                                let direction = match direction {
+                                    fret_runtime::WindowResizeDirection::N => {
+                                        winit::window::ResizeDirection::North
+                                    }
+                                    fret_runtime::WindowResizeDirection::Ne => {
+                                        winit::window::ResizeDirection::NorthEast
+                                    }
+                                    fret_runtime::WindowResizeDirection::E => {
+                                        winit::window::ResizeDirection::East
+                                    }
+                                    fret_runtime::WindowResizeDirection::Se => {
+                                        winit::window::ResizeDirection::SouthEast
+                                    }
+                                    fret_runtime::WindowResizeDirection::S => {
+                                        winit::window::ResizeDirection::South
+                                    }
+                                    fret_runtime::WindowResizeDirection::Sw => {
+                                        winit::window::ResizeDirection::SouthWest
+                                    }
+                                    fret_runtime::WindowResizeDirection::W => {
+                                        winit::window::ResizeDirection::West
+                                    }
+                                    fret_runtime::WindowResizeDirection::Nw => {
+                                        winit::window::ResizeDirection::NorthWest
+                                    }
+                                };
+                                let _ = state.window.drag_resize_window(direction);
+                            }
+                        }
                         WindowRequest::SetStyle { window, style } => {
                             if let Some(state) = self.windows.get(window) {
                                 if let Some(level) = style.z_level {
@@ -1710,6 +1777,17 @@ impl<D: super::WinitAppDriver> WinitRunner<D> {
                                         opacity.as_f32(),
                                     );
                                 }
+                                let caps = self
+                                    .app
+                                    .global::<PlatformCapabilities>()
+                                    .cloned()
+                                    .unwrap_or_default();
+                                self.app.with_global_mut(
+                                    fret_runtime::RunnerWindowStyleDiagnosticsStore::default,
+                                    |svc, _app| {
+                                        svc.apply_style_patch(window, style, &caps);
+                                    },
+                                );
                                 state.window.request_redraw();
                             }
                         }

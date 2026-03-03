@@ -112,11 +112,64 @@ On native filesystem dumps, the runtime also writes bounded sidecars next to the
 
 These sidecars are intended to speed up CLI queries and AI triage without opening or grepping a full `bundle.json`.
 
+## Termination semantics (tool-launched runs)
+
+When using `--launch`, tooling requests the demo to exit by touching `exit.touch` in the session out dir.
+
+Tooling waits for a graceful exit (best effort). If the demo does not exit within a grace window, tooling will
+force-kill the process to avoid leaving orphaned demos behind.
+
+Tooling writes `resource.footprint.json` (in the same out dir) with a `killed: bool` field so you can distinguish:
+
+- the script **finished** (`script.result.json: stage=passed`) but the demo still needed to be killed (`killed=true`), vs
+- the script **never finished** (`script.result.json: stage=running` or missing) and the tool likely timed out or aborted.
+
+If `killed=true`, treat it as a diagnostics/runtime issue (e.g. exit trigger not observed, deadlock, no-frame stall) and
+prefer capturing a bounded failure bundle plus a stable `reason_code` so it can be triaged deterministically.
+
+Tooling note:
+
+- Launch-mode script runs treat `killed=true` as a failure and will report `reason_code=tooling.demo_exit.killed` (even
+  if the script itself reported `stage=passed`).
+
+## No-frame liveness (script keepalive)
+
+Some script steps historically only progressed when a window produced redraw callbacks. In multi-window scenarios
+(especially docking tear-off + overlap + z-order churn), a relevant window can become fully occluded or idle/throttled
+and stop producing redraw callbacks. If your script tail still depends on additional frames (e.g. trailing
+`wait_frames`), this can leave `script.result.json` stuck at `stage=running` and push the failure into tooling timeouts.
+
+Launch-mode tooling mitigations (recommended):
+
+- Tool-launched `--launch` runs write `script_keepalive=true` into the per-run `diag.config.json`.
+- When enabled, the in-app diagnostics runtime arms a repeating timer while scripts are pending/active. On each tick it
+  polls triggers and can advance a conservative subset of steps even if no window is producing redraw callbacks.
+- If the next step cannot safely progress without frames for a bounded wall time, the script fails with
+  `reason_code=timeout.no_frames` (instead of hanging).
+
+Manual runs (escape hatch):
+
+- Set `FRET_DIAG_SCRIPT_KEEPALIVE=1` (or set `script_keepalive=true` in the config file) when authoring/triaging
+  occlusion-heavy scripts that might otherwise hang.
+
+Deterministic repro hook (debug-only):
+
+- Set `FRET_DIAG_SIMULATE_NO_FRAMES=1` to skip snapshot recording and frame-driven script advancement, forcing the
+  keepalive/no-frame path to either make progress or fail with `reason_code=timeout.no_frames`.
+  - Recommended regression script: `tools/diag-scripts/diag/no-frame/diag-no-frame-timeout-no-frames.json`
+
+Important limitation:
+
+- Keepalive ticks are intentionally conservative: pointer-dispatch steps and semantics-dependent selector resolution
+   still require real UI frames/snapshots. Keepalive is a liveness safety net, not a “renderless UI simulator”.
+
 Footgun / recommendation:
 
 - Avoid running `rg`/`grep` directly on `bundle.json` dumps (they can be huge and can easily explode your terminal output).
 - Prefer bounded tooling commands that use sidecars and/or schema2 views:
   - `fretboard diag meta <bundle_dir|bundle.json|bundle.schema2.json> --json`
+  - `fretboard diag dock-graph <bundle_dir|bundle.json|bundle.schema2.json>`
+  - `fretboard diag dock-routing <bundle_dir|bundle.json|bundle.schema2.json>`
   - `fretboard diag query test-id <bundle_dir|bundle.json|bundle.schema2.json> <pattern> --top 50`
   - `fretboard diag slice <bundle_dir|bundle.json|bundle.schema2.json> --test-id <test_id>`
   - `fretboard diag ai-packet <bundle_dir|bundle.json|bundle.schema2.json> --packet-out <dir>`
@@ -853,9 +906,13 @@ Recent additions:
 - `checked_is` / `checked_is_none` (assert `checked` flag state; useful for checkbox/radio menu items)
 - `active_item_is` (assert the active item for composite widgets: matches either container `active_descendant` or roving focus)
 - `dock_drop_preview_kind_is` (assert coarse docking drop preview decision: `wrap_binary` vs `insert_into_split`)
+- `dock_drop_resolve_source_is` (assert which mechanism selected the current docking drop preview)
+- `dock_drop_resolved_is_some` (assert whether the drop preview has a resolved target or stays `None`)
+- `dock_drop_resolved_zone_is` (assert the resolved docking zone: left/right/top/bottom/center)
+- `dock_drop_resolved_insert_index_is` (assert the resolved insert index when dropping into a tab strip)
 - `dock_graph_canonical_is` / `dock_graph_has_nested_same_axis_splits_is` (assert N-ary docking canonical-form invariants via a cheap stats snapshot)
 - `dock_graph_node_count_le` / `dock_graph_max_split_depth_le` (assert dock graph size/depth stays bounded after repeated operations)
-- `known_window_count_ge` / `known_window_count_is` (assert number of currently open windows as best-effort reported by the runner; computed as `max(runner_window_count, diag_known_windows)` to avoid backend lag in multi-window tear-off scripts)
+- `known_window_count_ge` / `known_window_count_is` (assert number of currently open windows as best-effort reported by the runner; backed by the runner-owned window lifecycle diagnostics store when available, falling back to the input context service)
 - `dock_drag_current_window_is` (assert that a dock drag session is active and its `current_window` matches a window target)
 - `dock_drag_moving_window_is` (assert the runner-reported moving window for a dock drag; ImGui-style “follow window”)
 - `dock_drag_window_under_moving_window_is` (assert the best-effort “window under moving window” selection during a dock drag)
@@ -1059,6 +1116,7 @@ Predicates (v1 MVP):
 - `{"kind":"visible_in_window","target":<selector>}` (target exists and intersects the window bounds)
 - `{"kind":"bounds_within_window","target":<selector>,"padding_px":0,"eps_px":0}` (target bounds must be fully contained within the window, optionally padded inward; `eps_px` allows a small tolerance for subpixel rounding at non-1.0 DPI)
 - `{"kind":"text_input_ime_cursor_area_within_window","padding_px":0,"eps_px":0}` (focused text input's IME cursor area must be fully contained within the window, optionally padded inward; intended for keyboard-avoidance / caret-visibility gates; requires `diag.text_input_snapshot`)
+- `{"kind":"ime_surrounding_text_valid"}` (window-level IME surrounding text excerpt must be present and satisfy winit-style constraints: max bytes + UTF-8 char-boundary offsets; requires `diag.text_input_snapshot`)
 
 Note: this list is intentionally incomplete; additional predicate kinds exist for specialized suites.
 The authoritative list lives in `crates/fret-diag-protocol/src/lib.rs` (`UiPredicateV1`).
@@ -1067,6 +1125,10 @@ Docking predicates (require a `WindowInteractionDiagnosticsStore` publisher, typ
 
 - `{"kind":"dock_drop_preview_kind_is","preview_kind":"wrap_binary"}`
 - `{"kind":"dock_drop_preview_kind_is","preview_kind":"insert_into_split"}`
+- `{"kind":"dock_drop_resolve_source_is","source":"tab_bar"}`
+- `{"kind":"dock_drop_resolved_is_some","some":true}`
+- `{"kind":"dock_drop_resolved_zone_is","zone":"right"}`
+- `{"kind":"dock_drop_resolved_insert_index_is","index":0}`
 - `{"kind":"dock_graph_canonical_is","canonical":true}`
 - `{"kind":"dock_graph_has_nested_same_axis_splits_is","has_nested":false}`
 - `{"kind":"known_window_count_ge","n":2}`
@@ -1410,5 +1472,12 @@ Notes:
 
 **Multiple windows**
 
-- bundles are per-window; scripts currently execute against the first window that picks up the pending script.
-- for z-order / overlap cases during cross-window drags, prefer targeting `wait_frames.window` to a window that is actively producing frames (e.g. `first_seen`).
+- Bundles are per-window; scripts currently execute against the first window that picks up the pending script.
+- `known_window_count_*` gates are for **currently open windows** (runner best-effort). Use them to:
+  - wait for tear-off window birth (`known_window_count_ge`),
+  - wait for auto-close after merge-back (`known_window_count_is`).
+  If you need an “ever seen windows” gate, add a dedicated predicate instead of overloading window count.
+- For z-order / overlap cases during cross-window drags:
+  - prefer tool-launched `--launch` (input isolation + keepalive),
+  - seed the target window cursor model with `set_cursor_in_window_logical` before migrating `pointer_move`/`pointer_up`,
+  - if a step exposes a `window` target (e.g. `wait_frames.window`), prefer a window that is actively producing frames (e.g. `first_seen`).

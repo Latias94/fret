@@ -14,7 +14,7 @@ use crate::{ChromeRefinement, LayoutRefinement, Space};
 
 /// Radix-style `AspectRatio` wrapper.
 ///
-/// This applies `layout.aspect_ratio = Some(ratio)` and defaults to `Overflow::Clip`.
+/// This applies `layout.aspect_ratio = Some(ratio)` and preserves the default overflow (`Visible`).
 #[derive(Debug)]
 pub struct AspectRatio {
     ratio: f32,
@@ -31,7 +31,7 @@ impl AspectRatio {
             child,
             chrome: ChromeRefinement::default(),
             layout: LayoutRefinement::default(),
-            overflow: Overflow::Clip,
+            overflow: Overflow::Visible,
         }
     }
 
@@ -104,7 +104,7 @@ mod tests {
                 panic!("expected a container element");
             };
             assert_eq!(props.layout.aspect_ratio, Some(16.0 / 9.0));
-            assert_eq!(props.layout.overflow, Overflow::Clip);
+            assert_eq!(props.layout.overflow, Overflow::Visible);
         });
     }
 }

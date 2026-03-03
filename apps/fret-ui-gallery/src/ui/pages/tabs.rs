@@ -3,10 +3,7 @@ use super::super::*;
 use crate::ui::doc_layout::{self, DocSection};
 use crate::ui::snippets::tabs as snippets;
 
-pub(super) fn preview_tabs(
-    cx: &mut ElementContext<'_, App>,
-    _value: Model<Option<Arc<str>>>,
-) -> Vec<AnyElement> {
+pub(super) fn preview_tabs(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
     let demo = snippets::demo::render(cx);
     let list = snippets::list::render(cx);
     let disabled = snippets::disabled::render(cx);
@@ -31,42 +28,34 @@ pub(super) fn preview_tabs(
         vec![
             DocSection::new("Demo", demo)
                 .description("Account/password card example with inputs and footer actions.")
-                .max_w(Px(760.0))
                 .test_id_prefix("ui-gallery-tabs-demo")
                 .code_rust_from_file_region(snippets::demo::SOURCE, "example"),
             DocSection::new("List", list)
                 .description("Tabs list without any mounted content.")
-                .max_w(Px(760.0))
                 .test_id_prefix("ui-gallery-tabs-list")
                 .code_rust_from_file_region(snippets::list::SOURCE, "example"),
             DocSection::new("Disabled", disabled)
                 .description("Disable individual triggers.")
-                .max_w(Px(760.0))
                 .test_id_prefix("ui-gallery-tabs-disabled")
                 .code_rust_from_file_region(snippets::disabled::SOURCE, "example"),
             DocSection::new("Icons", icons)
                 .description("Compose icons into triggers.")
-                .max_w(Px(760.0))
                 .test_id_prefix("ui-gallery-tabs-icons")
                 .code_rust_from_file_region(snippets::icons::SOURCE, "example"),
             DocSection::new("Line", line)
                 .description("Line-style list with transparent background.")
-                .max_w(Px(760.0))
                 .test_id_prefix("ui-gallery-tabs-line")
                 .code_rust_from_file_region(snippets::line::SOURCE, "example"),
             DocSection::new("Vertical", vertical)
                 .description("Vertical orientation (Radix parity).")
-                .max_w(Px(760.0))
                 .test_id_prefix("ui-gallery-tabs-vertical")
                 .code_rust_from_file_region(snippets::vertical::SOURCE, "example"),
             DocSection::new("Vertical (Line)", vertical_line)
                 .description("Vertical + line style.")
-                .max_w(Px(760.0))
                 .test_id_prefix("ui-gallery-tabs-vertical-line")
                 .code_rust_from_file_region(snippets::vertical_line::SOURCE, "example"),
             DocSection::new("Extras", extras)
                 .description("Fret-specific regression gates (flex-1 triggers + RTL).")
-                .max_w(Px(980.0))
                 .test_id_prefix("ui-gallery-tabs-extras")
                 .code_rust_from_file_region(snippets::extras::SOURCE, "example"),
             DocSection::new("Notes", notes).description("Parity notes and references."),

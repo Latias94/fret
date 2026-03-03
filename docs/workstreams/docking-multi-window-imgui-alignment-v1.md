@@ -111,7 +111,21 @@ These gates assert, at minimum:
     - `ecosystem/fret-bootstrap/src/ui_diagnostics/script_runner.rs`
   - Runner: on mouse-up, cancel the runner-routed cross-window drag using the internal routing pointer id (more robust
     than relying on a specific `PointerId` in the injected event stream).
-    - `crates/fret-launch/src/runner/desktop/runner/app_handler.rs`
+  - `crates/fret-launch/src/runner/desktop/runner/app_handler.rs`
+
+## Status (2026-03-03)
+
+- Launch-mode runs now record a tool-owned shutdown outcome hint (`resource.footprint.json`) with `killed: bool` so we
+  can distinguish “script finished” from “demo was force-killed” (exit trigger not observed / deadlock / no-frame stall).
+- Tool-launched `--launch` runs treat `killed=true` as a tooling failure and will surface it as
+  `reason_code=tooling.demo_exit.killed` (even if the script itself reported `stage=passed`).
+- For correctness debugging, prefer “stage-gate bundles”:
+  - capture at *drop* (immediately after `dock_drop_resolved_*` + `dock_drag_active_is=false`),
+  - capture after auto-close/cleanup (right after `known_window_count_is` falls back to the expected value),
+  - compare “drop vs after-close” to decide whether the bug lives in docking resolve/apply vs window close cleanup.
+- Bounded triage helpers:
+  - `fretboard diag dock-graph <bundle_dir|bundle.schema2.json>` (dock signature + fingerprint summary),
+  - `fretboard diag dock-routing <bundle_dir|bundle.schema2.json>` (hover/drop routing contract for dock drags).
 
 ## Known gaps / next alignment steps
 

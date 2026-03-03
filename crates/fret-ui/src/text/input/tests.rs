@@ -6,7 +6,7 @@ use crate::widget::Widget;
 use fret_core::{
     AppWindowId, Event, ImeEvent, Point, Px, Rect, Size, TextConstraints, TextMetrics, TextService,
 };
-use fret_runtime::{CommandId, Effect, PlatformCapabilities};
+use fret_runtime::{CommandId, Effect, PlatformCapabilities, TextInteractionSettings};
 use std::sync::Arc;
 
 #[derive(Debug, Clone, Copy)]
@@ -548,6 +548,79 @@ fn text_input_draws_caret_when_focused_and_empty() {
 }
 
 #[test]
+fn text_input_caret_blinks_when_enabled() {
+    let window = AppWindowId::default();
+    let bounds = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(240.0), Px(80.0)));
+
+    let mut ui = UiTree::new();
+    ui.set_window(window);
+
+    let caret_color = fret_core::Color {
+        r: 0.91,
+        g: 0.23,
+        b: 0.14,
+        a: 1.0,
+    };
+
+    let mut input = TextInput::new();
+    input.set_chrome_style(TextInputStyle {
+        caret_color,
+        ..Default::default()
+    });
+
+    let root = ui.create_node(input);
+    ui.set_root(root);
+    ui.set_focus(Some(root));
+
+    let mut app = TestHost::new();
+    app.set_global(PlatformCapabilities::default());
+    app.set_global(TextInteractionSettings {
+        caret_blink: true,
+        caret_blink_interval_ms: 16,
+        ..Default::default()
+    });
+    let mut text = FakeTextService::default();
+
+    let _ = ui.layout(&mut app, &mut text, root, bounds.size, 1.0);
+
+    let mut scene0 = fret_core::Scene::default();
+    ui.paint(&mut app, &mut text, root, bounds, &mut scene0, 1.0);
+
+    let token0 = app
+        .take_effects()
+        .into_iter()
+        .find_map(|e| match e {
+            Effect::SetTimer { token, .. } => Some(token),
+            _ => None,
+        })
+        .expect("expected caret blink to schedule a timer when focused");
+
+    assert!(
+        scene0.ops().iter().any(|op| matches!(
+            op,
+            fret_core::SceneOp::Quad { background, .. }
+                if *background == fret_core::Paint::Solid(caret_color).into()
+        )),
+        "expected caret to be visible before the blink timer fires"
+    );
+
+    ui.dispatch_event(&mut app, &mut text, &Event::Timer { token: token0 });
+    let _ = app.take_effects();
+
+    let mut scene1 = fret_core::Scene::default();
+    ui.paint(&mut app, &mut text, root, bounds, &mut scene1, 1.0);
+
+    assert!(
+        !scene1.ops().iter().any(|op| matches!(
+            op,
+            fret_core::SceneOp::Quad { background, .. }
+                if *background == fret_core::Paint::Solid(caret_color).into()
+        )),
+        "expected caret to be hidden after the blink timer fires"
+    );
+}
+
+#[test]
 fn text_input_draws_preedit_underline_when_composing() {
     let window = AppWindowId::default();
     let bounds = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(240.0), Px(80.0)));
@@ -611,6 +684,67 @@ fn text_input_draws_preedit_underline_when_composing() {
         underline_rect.size.width.0 > 0.1,
         "expected underline width to be > 0 (got {:?})",
         underline_rect.size.width
+    );
+}
+
+#[test]
+fn text_input_draws_preedit_background_when_composing() {
+    let window = AppWindowId::default();
+    let bounds = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(240.0), Px(80.0)));
+
+    let mut ui = UiTree::new();
+    ui.set_window(window);
+
+    let bg_color = fret_core::Color {
+        r: 0.9,
+        g: 0.1,
+        b: 0.7,
+        a: 0.5,
+    };
+
+    let mut input = TextInput::new().with_text("hello");
+    input.set_chrome_style(TextInputStyle {
+        preedit_bg_color: bg_color,
+        ..Default::default()
+    });
+
+    let root = ui.create_node(input);
+    ui.set_root(root);
+    ui.set_focus(Some(root));
+
+    let mut app = TestHost::new();
+    app.set_global(PlatformCapabilities::default());
+    let mut text = FakeTextService::default();
+
+    ui.layout_all(&mut app, &mut text, bounds, 1.0);
+    let _ = app.take_effects();
+
+    ui.dispatch_event(
+        &mut app,
+        &mut text,
+        &Event::Ime(ImeEvent::Preedit {
+            text: "yo".to_string(),
+            cursor: Some((2, 2)),
+        }),
+    );
+
+    let mut scene = fret_core::Scene::default();
+    ui.paint(&mut app, &mut text, root, bounds, &mut scene, 1.0);
+
+    let preedit_bg = scene.ops().iter().rev().find_map(|op| match op {
+        fret_core::SceneOp::Quad {
+            rect, background, ..
+        } if *background == fret_core::Paint::Solid(bg_color).into()
+            && rect.size.height.0 > 1.0 =>
+        {
+            Some(*rect)
+        }
+        _ => None,
+    });
+
+    assert!(
+        preedit_bg.is_some(),
+        "expected a preedit background quad to be present in the scene"
     );
 }
 
@@ -693,6 +827,119 @@ fn ime_delete_surrounding_deletes_base_text_without_clearing_preedit() {
     assert_eq!(input.selection_anchor, 1);
     assert_eq!(input.preedit, "X");
     assert_eq!(input.preedit_cursor, Some((0, 1)));
+}
+
+fn varying_ascii_text(len: usize) -> String {
+    let mut out = String::with_capacity(len);
+    for i in 0..len {
+        let b = b'a' + (u8::try_from(i % 26).unwrap_or(0));
+        out.push(b as char);
+    }
+    out
+}
+
+#[test]
+fn surrounding_text_snapshot_is_cached_across_frames() {
+    let mut input = TextInput::new();
+    input.text = varying_ascii_text(5000);
+    input.caret = 2500;
+    input.selection_anchor = 2500;
+
+    let s1 = <TextInput as Widget<TestHost>>::platform_text_input_snapshot(&input)
+        .expect("expected snapshot");
+    let s2 = <TextInput as Widget<TestHost>>::platform_text_input_snapshot(&input)
+        .expect("expected snapshot");
+
+    let t1 = s1
+        .surrounding_text
+        .expect("expected surrounding text to be present");
+    let t2 = s2
+        .surrounding_text
+        .expect("expected surrounding text to be present");
+
+    assert!(Arc::ptr_eq(&t1.text, &t2.text));
+    assert_eq!(t1.cursor, t2.cursor);
+    assert_eq!(t1.anchor, t2.anchor);
+
+    // Changing the caret/anchor should produce a different excerpt (and then cache again).
+    input.caret = 2501;
+    input.selection_anchor = 2501;
+    let s3 = <TextInput as Widget<TestHost>>::platform_text_input_snapshot(&input)
+        .expect("expected snapshot");
+    let s4 = <TextInput as Widget<TestHost>>::platform_text_input_snapshot(&input)
+        .expect("expected snapshot");
+
+    let t3 = s3
+        .surrounding_text
+        .expect("expected surrounding text to be present");
+    let t4 = s4
+        .surrounding_text
+        .expect("expected surrounding text to be present");
+
+    assert_ne!(t1.text.as_ref(), t3.text.as_ref());
+    assert!(Arc::ptr_eq(&t3.text, &t4.text));
+    assert_eq!(t3.cursor, t4.cursor);
+    assert_eq!(t3.anchor, t4.anchor);
+}
+
+#[test]
+fn text_input_selection_highlight_uses_square_corners() {
+    let window = AppWindowId::default();
+    let bounds = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(240.0), Px(80.0)));
+
+    let mut ui = UiTree::new();
+    ui.set_window(window);
+
+    let selection_color = fret_core::Color {
+        r: 0.05,
+        g: 0.95,
+        b: 0.25,
+        a: 0.85,
+    };
+    let chrome = TextInputStyle {
+        corner_radii: fret_core::Corners::all(Px(12.0)),
+        selection_color,
+        ..Default::default()
+    };
+
+    let mut input = TextInput::new().with_text("hello world");
+    input.selection_anchor = 0;
+    input.caret = 5;
+    input.set_chrome_style(chrome);
+
+    let root = ui.create_node(input);
+    ui.set_root(root);
+    ui.set_focus(Some(root));
+
+    let mut app = TestHost::new();
+    app.set_global(PlatformCapabilities::default());
+    let mut text = ImeTextService::default();
+
+    ui.layout_all(&mut app, &mut text, bounds, 1.0);
+
+    let mut scene = fret_core::Scene::default();
+    ui.paint(&mut app, &mut text, root, bounds, &mut scene, 1.0);
+
+    let selection_quad = scene.ops().iter().find_map(|op| match op {
+        fret_core::SceneOp::Quad {
+            background,
+            corner_radii,
+            rect,
+            ..
+        } if *background == fret_core::Paint::Solid(selection_color).into()
+            && rect.size.width.0 > 0.0
+            && rect.size.height.0 > 0.0 =>
+        {
+            Some(*corner_radii)
+        }
+        _ => None,
+    });
+
+    assert_eq!(
+        selection_quad,
+        Some(fret_core::Corners::all(Px(0.0))),
+        "expected selection highlight to not inherit the input corner radius"
+    );
 }
 
 #[derive(Default)]

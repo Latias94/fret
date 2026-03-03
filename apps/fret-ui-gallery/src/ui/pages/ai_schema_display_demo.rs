@@ -14,7 +14,6 @@ pub(super) fn preview_ai_schema_display_demo(
         Some("AI Elements are policy-level compositions built on top of lower-level primitives."),
         vec![
             DocSection::new("SchemaDisplay", demo)
-                .max_w(Px(820.0))
                 .test_id_prefix("ui-gallery-ai-schema-display-demo")
                 .code_rust_from_file_region(snippets::schema_display_demo::SOURCE, "example"),
         ],

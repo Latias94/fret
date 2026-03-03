@@ -59,6 +59,8 @@ Normative fields (v1):
 - `selection_utf16: Option<(u32, u32)>` (anchor/focus, UTF-16)
 - `marked_utf16: Option<(u32, u32)>` (marked/preedit range, UTF-16)
 - `ime_cursor_area: Option<Rect>` (window logical coordinates; ADR 0012)
+- `surrounding_text: Option<WindowImeSurroundingText>` (best-effort base-text excerpt excluding
+  preedit; UTF-8 byte cursor/anchor offsets; bounded)
 
 The runtime also exposes a focused-widget query surface for platform-style requests:
 
@@ -138,7 +140,7 @@ To support platform-native edit application (e.g. Android `InputConnection`, mac
 the runtime provides **range replacement** entry points scoped to the focused text widget:
 
 - `platform_text_input_replace_text_in_range_utf16(range, text) -> bool`
-- `platform_text_input_replace_and_mark_text_in_range_utf16(range, text, marked) -> bool`
+- `platform_text_input_replace_and_mark_text_in_range_utf16(range, text, marked, selected) -> bool`
 
 Contract:
 
@@ -146,7 +148,15 @@ Contract:
 - The widget MUST clamp and normalize inputs deterministically.
 - `replace_and_mark` is used for “set composing text” style operations:
   - the widget updates its preedit state to match `marked`,
+  - and MAY update its selection/caret to match `selected` (if provided),
   - without violating ADR 0071’s “preedit does not permanently mutate the base buffer until commit”.
+
+Notes (v1):
+
+- `selected` is an optional UTF-16 range over the composed view (anchor/focus). It exists to support
+  platforms that can move the caret or selection *within* the composing string during preedit.
+  - If `selected` is `None`, widgets SHOULD fall back to a reasonable default (typically the end of
+    `marked`, or the original caret).
 
 ### D6 — Update timing: publish after paint, consume after render
 
@@ -169,13 +179,16 @@ This avoids stale-caret positioning during scroll/wrap/layout changes.
 
 ## Implementation status (current)
 
-As of 2026-02-12:
+As of 2026-03-03:
 
 Implemented (evidence anchors):
 
 - Snapshot publishing (after paint): `crates/fret-ui/src/tree/paint.rs`
 - Runner consumption (after render): `crates/fret-launch/src/runner/desktop/app_handler.rs`
 - Query + replace entry points: `crates/fret-ui/src/tree/mod.rs`
+- Replace-and-mark supports an optional selected range for preedit cursor/selection movement:
+  `crates/fret-ui/src/widget.rs`, `crates/fret-ui/src/tree/ui_tree_text_input.rs`,
+  `ecosystem/fret-code-editor/src/editor/mod.rs`
 - Query types: `crates/fret-runtime/src/platform_text_input.rs`
 - Mobile-friendly “show keyboard within the input turn” request:
   `crates/fret-ui/src/tree/dispatch.rs` (touch focus → `Effect::ImeRequestVirtualKeyboard`)

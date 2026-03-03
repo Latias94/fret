@@ -27,6 +27,18 @@
     },
     {
       "type": "wait_until",
+      "window": { "kind": "first_seen" },
+      "predicate": { "kind": "exists", "target": { "kind": "test_id", "id": "dock-arb-dock-space" } },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
+      "window": { "kind": "first_seen" },
+      "predicate": { "kind": "exists", "target": { "kind": "test_id", "id": "dock-arb-hint-inner-right" } },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
       "predicate": { "kind": "dock_graph_canonical_is", "canonical": true },
       "timeout_frames": 240
     },
@@ -52,7 +64,7 @@
     { "type": "wait_frames", "n": 10 },
     {
       "type": "wait_until",
-      "window": { "kind": "last_seen_other" },
+      "window": { "kind": "first_seen" },
       "predicate": { "kind": "exists", "target": { "kind": "test_id", "id": "dock-arb-dock-space" } },
       "timeout_frames": 240
     },
@@ -65,27 +77,48 @@
     { "type": "pointer_move", "delta_x": 20.0, "delta_y": 0.0, "steps": 12 },
     { "type": "wait_until", "predicate": { "kind": "dock_drag_active_is", "active": true }, "timeout_frames": 120 },
     { "type": "wait_frames", "n": 2 },
-    { "type": "raise_window", "window": { "kind": "last_seen_other" } },
-    { "type": "set_cursor_in_window", "window": { "kind": "last_seen_other" }, "x_px": 220.0, "y_px": 220.0 },
+    { "type": "raise_window", "window": { "kind": "first_seen" } },
+    { "type": "move_pointer", "window": { "kind": "first_seen" }, "target": { "kind": "test_id", "id": "dock-arb-dock-space" } },
     { "type": "wait_frames", "n": 2 },
-    { "type": "pointer_move", "delta_x": -340.0, "delta_y": 0.0, "steps": 90 },
+    { "type": "move_pointer", "window": { "kind": "first_seen" }, "target": { "kind": "test_id", "id": "dock-arb-hint-inner-right" } },
+    { "type": "wait_frames", "n": 2 },
     {
       "type": "wait_until",
-      "predicate": { "kind": "dock_drag_current_window_is", "window": { "kind": "last_seen_other" } },
+      "predicate": { "kind": "dock_drag_current_window_is", "window": { "kind": "first_seen" } },
       "timeout_frames": 240
     },
-    { "type": "pointer_up" },
+    { "type": "pointer_up", "window": { "kind": "first_seen" } },
+    { "type": "wait_until", "predicate": { "kind": "dock_drop_resolved_is_some", "some": true }, "timeout_frames": 240 },
+    { "type": "assert", "window": { "kind": "first_seen" }, "predicate": { "kind": "dock_drop_resolved_zone_is", "zone": "right" } },
     { "type": "wait_until", "predicate": { "kind": "dock_drag_active_is", "active": false }, "timeout_frames": 240 },
 
-    { "type": "wait_until", "window": { "kind": "first_seen" }, "predicate": { "kind": "dock_graph_canonical_is", "canonical": true }, "timeout_frames": 240 },
     {
-      "type": "assert",
+      "type": "capture_bundle",
+      "label": "loop-cycle1-drop"
+    },
+    { "type": "raise_window", "window": { "kind": "first_seen" } },
+    { "type": "set_cursor_in_window", "window": { "kind": "first_seen" }, "x_px": 320.0, "y_px": 260.0 },
+    { "type": "wait_frames", "n": 2 },
+    {
+      "type": "wait_until",
+      "window": { "kind": "first_seen" },
+      "predicate": {
+        "kind": "dock_graph_canonical_is",
+        "canonical": true
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
       "window": { "kind": "first_seen" },
       "predicate": {
         "kind": "dock_graph_signature_is",
         "signature": "dock(root=split(v,[split(h,[tabs([demo.viewport.left]),tabs([demo.viewport.right])]),tabs([demo.controls])]);floatings=[])"
-      }
+      },
+      "timeout_frames": 240
     },
+    { "type": "wait_until", "predicate": { "kind": "known_window_count_is", "n": 1 }, "timeout_frames": 600 },
+    { "type": "capture_bundle", "label": "loop-cycle1-after-merge" },
 
     {
       "type": "drag_pointer",
@@ -95,13 +128,13 @@
       "delta_y": 0.0,
       "steps": 140
     },
-    { "type": "wait_until", "predicate": { "kind": "known_window_count_ge", "n": 3 }, "timeout_frames": 240 },
+    { "type": "wait_until", "predicate": { "kind": "known_window_count_ge", "n": 2 }, "timeout_frames": 240 },
     { "type": "wait_frames", "n": 30 },
     { "type": "set_window_outer_position", "window": { "kind": "last_seen_other" }, "x_px": 220.0, "y_px": 220.0 },
     { "type": "wait_frames", "n": 10 },
     {
       "type": "wait_until",
-      "window": { "kind": "last_seen_other" },
+      "window": { "kind": "first_seen" },
       "predicate": { "kind": "exists", "target": { "kind": "test_id", "id": "dock-arb-dock-space" } },
       "timeout_frames": 240
     },
@@ -114,27 +147,48 @@
     { "type": "pointer_move", "delta_x": 20.0, "delta_y": 0.0, "steps": 12 },
     { "type": "wait_until", "predicate": { "kind": "dock_drag_active_is", "active": true }, "timeout_frames": 120 },
     { "type": "wait_frames", "n": 2 },
-    { "type": "raise_window", "window": { "kind": "last_seen_other" } },
-    { "type": "set_cursor_in_window", "window": { "kind": "last_seen_other" }, "x_px": 220.0, "y_px": 220.0 },
+    { "type": "raise_window", "window": { "kind": "first_seen" } },
+    { "type": "move_pointer", "window": { "kind": "first_seen" }, "target": { "kind": "test_id", "id": "dock-arb-dock-space" } },
     { "type": "wait_frames", "n": 2 },
-    { "type": "pointer_move", "delta_x": -340.0, "delta_y": 0.0, "steps": 90 },
+    { "type": "move_pointer", "window": { "kind": "first_seen" }, "target": { "kind": "test_id", "id": "dock-arb-hint-inner-right" } },
+    { "type": "wait_frames", "n": 2 },
     {
       "type": "wait_until",
-      "predicate": { "kind": "dock_drag_current_window_is", "window": { "kind": "last_seen_other" } },
+      "predicate": { "kind": "dock_drag_current_window_is", "window": { "kind": "first_seen" } },
       "timeout_frames": 240
     },
-    { "type": "pointer_up" },
+    { "type": "pointer_up", "window": { "kind": "first_seen" } },
+    { "type": "wait_until", "predicate": { "kind": "dock_drop_resolved_is_some", "some": true }, "timeout_frames": 240 },
+    { "type": "assert", "window": { "kind": "first_seen" }, "predicate": { "kind": "dock_drop_resolved_zone_is", "zone": "right" } },
     { "type": "wait_until", "predicate": { "kind": "dock_drag_active_is", "active": false }, "timeout_frames": 240 },
 
-    { "type": "wait_until", "window": { "kind": "first_seen" }, "predicate": { "kind": "dock_graph_canonical_is", "canonical": true }, "timeout_frames": 240 },
     {
-      "type": "assert",
+      "type": "capture_bundle",
+      "label": "loop-cycle2-drop"
+    },
+    { "type": "raise_window", "window": { "kind": "first_seen" } },
+    { "type": "set_cursor_in_window", "window": { "kind": "first_seen" }, "x_px": 320.0, "y_px": 260.0 },
+    { "type": "wait_frames", "n": 2 },
+    {
+      "type": "wait_until",
+      "window": { "kind": "first_seen" },
+      "predicate": {
+        "kind": "dock_graph_canonical_is",
+        "canonical": true
+      },
+      "timeout_frames": 240
+    },
+    {
+      "type": "wait_until",
       "window": { "kind": "first_seen" },
       "predicate": {
         "kind": "dock_graph_signature_is",
         "signature": "dock(root=split(v,[split(h,[tabs([demo.viewport.left]),tabs([demo.viewport.right])]),tabs([demo.controls])]);floatings=[])"
-      }
+      },
+      "timeout_frames": 240
     },
+    { "type": "wait_until", "predicate": { "kind": "known_window_count_is", "n": 1 }, "timeout_frames": 600 },
+    { "type": "capture_bundle", "label": "loop-cycle2-after-merge" },
 
     {
       "type": "drag_pointer",
@@ -144,13 +198,13 @@
       "delta_y": 0.0,
       "steps": 140
     },
-    { "type": "wait_until", "predicate": { "kind": "known_window_count_ge", "n": 4 }, "timeout_frames": 240 },
+    { "type": "wait_until", "predicate": { "kind": "known_window_count_ge", "n": 2 }, "timeout_frames": 240 },
     { "type": "wait_frames", "n": 30 },
     { "type": "set_window_outer_position", "window": { "kind": "last_seen_other" }, "x_px": 260.0, "y_px": 260.0 },
     { "type": "wait_frames", "n": 10 },
     {
       "type": "wait_until",
-      "window": { "kind": "last_seen_other" },
+      "window": { "kind": "first_seen" },
       "predicate": { "kind": "exists", "target": { "kind": "test_id", "id": "dock-arb-dock-space" } },
       "timeout_frames": 240
     },
@@ -163,18 +217,36 @@
     { "type": "pointer_move", "delta_x": 20.0, "delta_y": 0.0, "steps": 12 },
     { "type": "wait_until", "predicate": { "kind": "dock_drag_active_is", "active": true }, "timeout_frames": 120 },
     { "type": "wait_frames", "n": 2 },
-    { "type": "raise_window", "window": { "kind": "last_seen_other" } },
-    { "type": "set_cursor_in_window", "window": { "kind": "last_seen_other" }, "x_px": 220.0, "y_px": 220.0 },
+    { "type": "raise_window", "window": { "kind": "first_seen" } },
+    { "type": "move_pointer", "window": { "kind": "first_seen" }, "target": { "kind": "test_id", "id": "dock-arb-dock-space" } },
     { "type": "wait_frames", "n": 2 },
-    { "type": "pointer_move", "delta_x": -340.0, "delta_y": 0.0, "steps": 90 },
+    { "type": "move_pointer", "window": { "kind": "first_seen" }, "target": { "kind": "test_id", "id": "dock-arb-hint-inner-right" } },
+    { "type": "wait_frames", "n": 2 },
     {
       "type": "wait_until",
-      "predicate": { "kind": "dock_drag_current_window_is", "window": { "kind": "last_seen_other" } },
+      "predicate": { "kind": "dock_drag_current_window_is", "window": { "kind": "first_seen" } },
       "timeout_frames": 240
     },
-    { "type": "pointer_up" },
+    { "type": "pointer_up", "window": { "kind": "first_seen" } },
+    { "type": "wait_until", "predicate": { "kind": "dock_drop_resolved_is_some", "some": true }, "timeout_frames": 240 },
+    { "type": "assert", "window": { "kind": "first_seen" }, "predicate": { "kind": "dock_drop_resolved_zone_is", "zone": "right" } },
     { "type": "wait_until", "predicate": { "kind": "dock_drag_active_is", "active": false }, "timeout_frames": 240 },
 
+    { "type": "capture_bundle", "label": "loop-cycle3-drop" },
+    { "type": "raise_window", "window": { "kind": "first_seen" } },
+    { "type": "set_cursor_in_window", "window": { "kind": "first_seen" }, "x_px": 320.0, "y_px": 260.0 },
+    { "type": "wait_frames", "n": 2 },
+    {
+      "type": "wait_until",
+      "window": { "kind": "first_seen" },
+      "predicate": {
+        "kind": "dock_graph_signature_is",
+        "signature": "dock(root=split(v,[split(h,[tabs([demo.viewport.left]),tabs([demo.viewport.right])]),tabs([demo.controls])]);floatings=[])"
+      },
+      "timeout_frames": 240
+    },
+    { "type": "wait_until", "predicate": { "kind": "known_window_count_is", "n": 1 }, "timeout_frames": 600 },
+    { "type": "capture_bundle", "label": "loop-cycle3-after-merge" },
     {
       "type": "assert",
       "window": { "kind": "first_seen" },

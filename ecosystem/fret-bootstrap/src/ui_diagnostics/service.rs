@@ -26,6 +26,7 @@ pub struct UiDiagnosticsService {
     last_script_run_id: u64,
     clipboard_text_responses: std::collections::VecDeque<DiagClipboardTextResponse>,
     next_clipboard_token: u64,
+    script_keepalive_timer_token: Option<fret_core::TimerToken>,
     app_snapshot_provider:
         Option<Arc<dyn Fn(&App, AppWindowId) -> Option<serde_json::Value> + 'static>>,
     debug_extensions: Option<extensions::DebugExtensionsRegistryV1>,
@@ -340,6 +341,8 @@ impl UiDiagnosticsService {
             UiPredicateV1::KnownWindowCountGe { .. }
                 | UiPredicateV1::KnownWindowCountIs { .. }
                 | UiPredicateV1::PlatformUiWindowHoverDetectionIs { .. }
+                | UiPredicateV1::WindowStyleEffectiveIs { .. }
+                | UiPredicateV1::WindowBackgroundMaterialEffectiveIs { .. }
                 | UiPredicateV1::DockDragCurrentWindowIs { .. }
                 | UiPredicateV1::DockDragMovingWindowIs { .. }
                 | UiPredicateV1::DockDragWindowUnderMovingWindowIs { .. }
@@ -509,6 +512,17 @@ impl UiDiagnosticsService {
                     ..
                 } => return None,
                 _ => {}
+            }
+
+            // `move_pointer` / `move_pointer_sweep` can be executed from any window and may need
+            // to act on occluded targets during cross-window dock drags. Avoid pinning execution
+            // to either `first_seen` or an active pointer-session window; the step handler can
+            // still hand off when it truly needs a live semantics snapshot.
+            if matches!(
+                step,
+                UiActionStepV2::MovePointer { .. } | UiActionStepV2::MovePointerSweep { .. }
+            ) {
+                return None;
             }
 
             // Prefer preserving captured-pointer continuity over window-target pinning. During
@@ -913,6 +927,12 @@ impl UiDiagnosticsService {
         if !self.is_enabled() {
             return;
         }
+        if self.cfg.simulate_no_frames {
+            // Diagnostics-only test hook: keep windows "seen" but do not record per-frame
+            // snapshots. Script liveness should be provided by the keepalive/no-frame path.
+            self.note_window_seen(window);
+            return;
+        }
 
         let extensions = {
             let captured = self.debug_extensions_registry_mut().capture(app, window);
@@ -1009,7 +1029,9 @@ impl UiDiagnosticsService {
                 ring.test_id_bounds_fingerprint = Some(fingerprint);
             }
         } else {
-            ring.test_id_bounds.clear();
+            // Keep the last known `test_id` bounds even when a semantics snapshot is unavailable
+            // (e.g. an occluded window that stops producing frames). Cross-window diagnostics
+            // steps rely on these cached bounds to avoid deadlocking on forced handoffs.
             ring.test_id_bounds_fingerprint = None;
         }
         let viewport_input = std::mem::take(&mut ring.viewport_input_this_frame);
@@ -1243,6 +1265,23 @@ impl UiDiagnosticsService {
             .last_injected_step
             .unwrap_or_else(|| active.next_step.min(u32::MAX as usize) as u32);
 
+        let pointer_source_test_id_for_step: Option<String> = active
+            .last_injected_pointer_source_test_id
+            .clone()
+            .filter(|_| active.last_injected_pointer_source_step == Some(step_index))
+            .or_else(|| {
+                active
+                    .hit_test_trace
+                    .iter()
+                    .rev()
+                    .find(|e| e.step_index == step_index)
+                    .and_then(|e| {
+                        e.hit_semantics_test_id
+                            .clone()
+                            .or_else(|| e.intended_test_id.clone())
+                    })
+            });
+
         let max_entries = MAX_SHORTCUT_ROUTING_TRACE_ENTRIES;
         let decisions =
             store.snapshot_since(window, active.last_command_dispatch_seq, max_entries);
@@ -1262,6 +1301,20 @@ impl UiDiagnosticsService {
                 fret_runtime::CommandDispatchSourceKindV1::Programmatic => "programmatic",
             };
 
+            let source_test_id = match decision.source.kind {
+                fret_runtime::CommandDispatchSourceKindV1::Pointer => {
+                    pointer_source_test_id_for_step.clone()
+                }
+                _ => None,
+            };
+            let handled_by_test_id = if decision.handled_by_element.is_some()
+                && decision.handled_by_element == decision.source.element
+            {
+                source_test_id.clone()
+            } else {
+                None
+            };
+
             push_command_dispatch_trace(
                 &mut active.command_dispatch_trace,
                 UiScriptCommandDispatchTraceEntryV1 {
@@ -1278,7 +1331,9 @@ impl UiDiagnosticsService {
                     stopped: decision.stopped,
                     source_kind: source_kind.to_string(),
                     source_element: decision.source.element,
+                    source_test_id,
                     handled_by_element: decision.handled_by_element,
+                    handled_by_test_id,
                     started_from_focus: decision.started_from_focus,
                     used_default_root_fallback: decision.used_default_root_fallback,
                 },

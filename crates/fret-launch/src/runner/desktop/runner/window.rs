@@ -20,6 +20,12 @@ pub(super) struct WindowRuntime<S> {
     pub(super) surface: Option<SurfaceState<'static>>,
     pub(super) scene: Scene,
     pub(super) platform: fret_runner_winit::WinitPlatform,
+    /// Coalesced wheel delta awaiting delivery at the next frame boundary.
+    ///
+    /// When enabled via `FRET_WINIT_COALESCE_WHEEL=1`, we buffer wheel deltas and deliver at most
+    /// one `PointerEvent::Wheel` per frame, applying a per-axis max-abs cap and carrying any
+    /// remainder over to subsequent frames.
+    pub(super) pending_wheel: Option<PendingWheelEvent>,
     #[cfg(target_os = "android")]
     pub(super) android_bottom_inset_baseline: Option<fret_core::Px>,
     /// Coalesced resizes awaiting application at the next frame boundary.
@@ -39,6 +45,15 @@ pub(super) struct WindowRuntime<S> {
     pub(super) user: S,
     #[cfg(windows)]
     pub(super) os_menu: Option<super::windows_menu::WindowsMenuBar>,
+}
+
+#[derive(Debug, Clone, Copy)]
+pub(super) struct PendingWheelEvent {
+    pub(super) pointer_id: fret_core::PointerId,
+    pub(super) position: Point,
+    pub(super) delta: Point,
+    pub(super) modifiers: fret_core::Modifiers,
+    pub(super) pointer_type: fret_core::PointerType,
 }
 
 #[derive(Debug, Clone)]

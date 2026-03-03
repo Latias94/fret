@@ -47,12 +47,14 @@ pub mod platform_text_input;
 pub mod runner_accessibility_diagnostics;
 pub mod runner_surface_lifecycle_diagnostics;
 pub mod runner_window_lifecycle_diagnostics;
+pub mod runner_window_style_diagnostics;
 pub mod shortcut_routing_diagnostics;
 pub mod strict_runtime;
 pub mod text_interaction_settings;
 pub mod time;
 pub mod ui_host;
 pub mod when_expr;
+pub mod window_chrome;
 pub mod window_command_action_availability;
 pub mod window_command_availability;
 pub mod window_command_enabled;
@@ -61,6 +63,7 @@ pub mod window_input_arbitration;
 pub mod window_input_context;
 pub mod window_menu_bar_focus;
 pub mod window_metrics;
+pub mod window_style;
 pub mod window_text_boundary_mode;
 pub mod window_text_input_snapshot;
 
@@ -91,10 +94,7 @@ pub use drag::{
     WindowUnderCursorSource,
 };
 pub use effect::DiagIncomingOpenItem;
-pub use effect::{
-    ActivationPolicy, CreateWindowKind, CreateWindowRequest, Effect, MousePolicy,
-    TaskbarVisibility, WindowOpacity, WindowRequest, WindowRole, WindowStyleRequest, WindowZLevel,
-};
+pub use effect::{CreateWindowKind, CreateWindowRequest, Effect, WindowRequest};
 pub use execution::{
     DispatchPriority, Dispatcher, DispatcherHandle, InboxDrain, InboxDrainHost, InboxDrainRegistry,
     Runnable,
@@ -158,6 +158,9 @@ pub use runner_surface_lifecycle_diagnostics::{
 pub use runner_window_lifecycle_diagnostics::{
     RunnerWindowLifecycleDiagnosticsStore, RunnerWindowLifecycleSnapshot,
 };
+pub use runner_window_style_diagnostics::{
+    RunnerWindowStyleDiagnosticsStore, RunnerWindowStyleEffectiveSnapshotV1,
+};
 pub use shortcut_routing_diagnostics::{
     ShortcutRoutingDecision, ShortcutRoutingOutcome, ShortcutRoutingPhase,
     WindowShortcutRoutingDiagnosticsStore,
@@ -166,6 +169,7 @@ pub use text_interaction_settings::TextInteractionSettings;
 pub use time::TickId;
 pub use ui_host::{CommandsHost, DragHost, EffectSink, GlobalsHost, ModelsHost, TimeHost, UiHost};
 pub use when_expr::WhenExpr;
+pub use window_chrome::WindowResizeDirection;
 pub use window_command_action_availability::WindowCommandActionAvailabilityService;
 pub use window_command_availability::{
     WindowCommandAvailability, WindowCommandAvailabilityService,
@@ -181,5 +185,11 @@ pub use window_input_arbitration::{WindowInputArbitrationSnapshot, WindowPointer
 pub use window_input_context::WindowInputContextService;
 pub use window_menu_bar_focus::WindowMenuBarFocusService;
 pub use window_metrics::apply_window_metrics_event;
+pub use window_style::{
+    ActivationPolicy, MousePolicy, TaskbarVisibility, WindowBackgroundMaterialRequest,
+    WindowDecorationsRequest, WindowOpacity, WindowRole, WindowStyleRequest, WindowZLevel,
+};
 pub use window_text_boundary_mode::{WindowTextBoundaryModeHandle, WindowTextBoundaryModeService};
-pub use window_text_input_snapshot::{WindowTextInputSnapshot, WindowTextInputSnapshotService};
+pub use window_text_input_snapshot::{
+    WindowImeSurroundingText, WindowTextInputSnapshot, WindowTextInputSnapshotService,
+};
