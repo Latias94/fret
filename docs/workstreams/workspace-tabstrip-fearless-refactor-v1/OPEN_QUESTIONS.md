@@ -32,6 +32,9 @@ Open question (follow-up):
 - "Dragged tab exclusion" semantics are adapter-sensitive. If a UI keeps the dragged tab in the
   layout (no placeholder reflow), excluding it from drop candidates can produce confusing previews.
   Prefer adapter-owned behavior unless we also define a shared placeholder/reflow contract.
+- Update (2026-03-03): docking now excludes the dragged panel index when resolving tab-bar
+  insert targets (still adapter-owned, implemented via the `tab_is_dragged` closure passed into
+  the shared headless kernel).
 
 ## Reference source of truth (Zed vs dockview vs gpui-component)
 
