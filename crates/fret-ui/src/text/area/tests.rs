@@ -6,9 +6,62 @@ use fret_core::{
     AppWindowId, CaretAffinity, Color, Corners, Edges, Event, Paint, Point, Px, Rect, Scene,
     SceneOp, Size, TextConstraints, TextLineMetrics, TextMetrics, TextService,
 };
-use fret_runtime::{Effect, PlatformCapabilities};
+use fret_runtime::{Effect, PlatformCapabilities, TextInteractionSettings};
 use slotmap::KeyData;
 use std::collections::HashMap;
+use std::sync::Arc;
+
+fn varying_ascii_text(len: usize) -> String {
+    let mut out = String::with_capacity(len);
+    for i in 0..len {
+        let b = b'a' + (u8::try_from(i % 26).unwrap_or(0));
+        out.push(b as char);
+    }
+    out
+}
+
+#[test]
+fn surrounding_text_snapshot_is_cached_across_frames() {
+    let mut area = TextArea::default();
+    area.set_text(varying_ascii_text(5000));
+    area.caret = 2500;
+    area.selection_anchor = 2500;
+
+    let s1 = <TextArea as Widget<TestHost>>::platform_text_input_snapshot(&area)
+        .expect("expected snapshot");
+    let s2 = <TextArea as Widget<TestHost>>::platform_text_input_snapshot(&area)
+        .expect("expected snapshot");
+
+    let t1 = s1
+        .surrounding_text
+        .expect("expected surrounding text to be present");
+    let t2 = s2
+        .surrounding_text
+        .expect("expected surrounding text to be present");
+
+    assert!(Arc::ptr_eq(&t1.text, &t2.text));
+    assert_eq!(t1.cursor, t2.cursor);
+    assert_eq!(t1.anchor, t2.anchor);
+
+    area.caret = 2501;
+    area.selection_anchor = 2501;
+    let s3 = <TextArea as Widget<TestHost>>::platform_text_input_snapshot(&area)
+        .expect("expected snapshot");
+    let s4 = <TextArea as Widget<TestHost>>::platform_text_input_snapshot(&area)
+        .expect("expected snapshot");
+
+    let t3 = s3
+        .surrounding_text
+        .expect("expected surrounding text to be present");
+    let t4 = s4
+        .surrounding_text
+        .expect("expected surrounding text to be present");
+
+    assert_ne!(t1.text.as_ref(), t3.text.as_ref());
+    assert!(Arc::ptr_eq(&t3.text, &t4.text));
+    assert_eq!(t3.cursor, t4.cursor);
+    assert_eq!(t3.anchor, t4.anchor);
+}
 
 #[derive(Debug, Clone, Copy)]
 struct RenderTransformWrapper {
@@ -381,6 +434,77 @@ fn caret_is_visible_when_text_area_is_focused_and_empty() {
         caret_rect.size.height.0 > 0.0,
         "expected caret height to be > 0 (got {:?})",
         caret_rect.size.height
+    );
+}
+
+#[test]
+fn text_area_caret_blinks_when_enabled() {
+    let window = AppWindowId::default();
+    let bounds = Rect::new(Point::new(Px(0.0), Px(0.0)), Size::new(Px(240.0), Px(80.0)));
+
+    let mut ui = UiTree::new();
+    ui.set_window(window);
+
+    let caret_color = Color {
+        r: 0.91,
+        g: 0.23,
+        b: 0.14,
+        a: 1.0,
+    };
+    let style = TextAreaStyle {
+        padding_x: Px(0.0),
+        padding_y: Px(0.0),
+        caret_color,
+        ..Default::default()
+    };
+
+    let area = ui.create_node(TextArea::new("").with_style(style));
+    ui.set_root(area);
+    ui.set_focus(Some(area));
+
+    let mut app = TestHost::new();
+    app.set_global(PlatformCapabilities::default());
+    app.set_global(TextInteractionSettings {
+        caret_blink: true,
+        caret_blink_interval_ms: 16,
+        ..Default::default()
+    });
+    let mut text = FakeTextService::default();
+
+    ui.layout_all(&mut app, &mut text, bounds, 1.0);
+
+    let mut scene0 = Scene::default();
+    ui.paint_all(&mut app, &mut text, bounds, &mut scene0, 1.0);
+
+    let token0 = app
+        .take_effects()
+        .into_iter()
+        .find_map(|e| match e {
+            Effect::SetTimer { token, .. } => Some(token),
+            _ => None,
+        })
+        .expect("expected caret blink to schedule a timer when focused");
+
+    assert!(
+        scene0.ops().iter().any(|op| matches!(
+            op,
+            SceneOp::Quad { background, .. } if *background == Paint::Solid(caret_color).into()
+        )),
+        "expected caret to be visible before the blink timer fires"
+    );
+
+    ui.dispatch_event(&mut app, &mut text, &Event::Timer { token: token0 });
+    let _ = app.take_effects();
+
+    let mut scene1 = Scene::default();
+    ui.paint_all(&mut app, &mut text, bounds, &mut scene1, 1.0);
+
+    assert!(
+        !scene1.ops().iter().any(|op| matches!(
+            op,
+            SceneOp::Quad { background, .. } if *background == Paint::Solid(caret_color).into()
+        )),
+        "expected caret to be hidden after the blink timer fires"
     );
 }
 

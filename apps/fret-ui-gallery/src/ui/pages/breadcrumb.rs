@@ -3,10 +3,7 @@ use super::super::*;
 use crate::ui::doc_layout::{self, DocSection};
 use crate::ui::snippets::breadcrumb as snippets;
 
-pub(super) fn preview_breadcrumb(
-    cx: &mut ElementContext<'_, App>,
-    _last_action: Model<Arc<str>>,
-) -> Vec<AnyElement> {
+pub(super) fn preview_breadcrumb(cx: &mut ElementContext<'_, App>) -> Vec<AnyElement> {
     let demo = snippets::demo::render(cx);
     let basic = snippets::basic::render(cx);
     let custom_separator = snippets::custom_separator::render(cx);

@@ -14,8 +14,10 @@ pub(super) fn preview_calendar(
     let basic = snippets::basic::render(cx);
     let range = snippets::range::render(cx);
     let month_year_selector = snippets::month_year_selector::render(cx);
+    let date_of_birth_picker = snippets::date_of_birth_picker::render(cx);
     let presets = snippets::presets::render(cx);
     let date_and_time_picker = snippets::date_and_time_picker::render(cx);
+    let natural_language_picker = snippets::natural_language_picker::render(cx);
     let booked_dates = snippets::booked_dates::render(cx);
     let custom_cell_size = snippets::custom_cell_size::render(cx);
     let week_numbers = snippets::week_numbers::render(cx);
@@ -36,7 +38,7 @@ pub(super) fn preview_calendar(
 
     let body = doc_layout::render_doc_page(
         cx,
-        Some("A calendar component that allows users to select a date or a range of dates."),
+        Some("A date field component that allows users to enter and edit date."),
         vec![
             DocSection::new("Demo", demo)
                 .max_w(Px(980.0))
@@ -54,6 +56,10 @@ pub(super) fn preview_calendar(
                 .max_w(Px(980.0))
                 .test_id_prefix("ui-gallery-calendar-caption")
                 .code_rust_from_file_region(snippets::month_year_selector::SOURCE, "example"),
+            DocSection::new("Date of Birth Picker", date_of_birth_picker)
+                .max_w(Px(980.0))
+                .test_id_prefix("ui-gallery-calendar-dob")
+                .code_rust_from_file_region(snippets::date_of_birth_picker::SOURCE, "example"),
             DocSection::new("Presets", presets)
                 .no_shell()
                 .test_id_prefix("ui-gallery-calendar-presets")
@@ -62,6 +68,10 @@ pub(super) fn preview_calendar(
                 .no_shell()
                 .test_id_prefix("ui-gallery-calendar-time")
                 .code_rust_from_file_region(snippets::date_and_time_picker::SOURCE, "example"),
+            DocSection::new("Natural Language Picker", natural_language_picker)
+                .no_shell()
+                .test_id_prefix("ui-gallery-calendar-natural-language")
+                .code_rust_from_file_region(snippets::natural_language_picker::SOURCE, "example"),
             DocSection::new("Booked dates", booked_dates)
                 .max_w(Px(980.0))
                 .test_id_prefix("ui-gallery-calendar-booked")

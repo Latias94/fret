@@ -8,7 +8,7 @@ use fret_ui::element::{
 use fret_ui::{ElementContext, TextInputStyle, Theme, ThemeSnapshot, UiHost};
 use fret_ui_kit::declarative::icon as decl_icon;
 use fret_ui_kit::declarative::model_watch::ModelWatchExt as _;
-use fret_ui_kit::declarative::scheduling;
+use fret_ui_kit::declarative::motion;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::recipes::input::{InputTokenKeys, resolve_input_chrome};
 use fret_ui_kit::typography;
@@ -16,6 +16,7 @@ use fret_ui_kit::{
     ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, Size as ComponentSize, Space, ui,
 };
 use std::sync::Arc;
+use std::time::Duration;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 enum InputOtpSeparatorMode {
@@ -409,15 +410,14 @@ impl InputOtp {
                 let active_slot_idx = focused.then(|| chars.len().min(length.saturating_sub(1)));
                 let fake_caret_idx = (focused && chars.len() < length).then_some(chars.len());
 
-                scheduling::set_continuous_frames(cx, focused && fake_caret_idx.is_some());
-
-                let caret_blink_visible = if focused && fake_caret_idx.is_some() {
-                    // Approximate shadcn's `animate-caret-blink duration-1000`.
-                    // Full cycle ≈ 60 frames; toggles every ≈ 30 frames.
-                    (cx.frame_id.0 / 30) % 2 == 0
-                } else {
-                    false
-                };
+                let blink = motion::drive_loop_progress_keyed(
+                    cx,
+                    ("shadcn.input_otp.caret_blink", cx.root_id()),
+                    focused && fake_caret_idx.is_some(),
+                    Duration::from_millis(1000),
+                );
+                let caret_blink_visible =
+                    focused && fake_caret_idx.is_some() && blink.progress < 0.5;
 
                 let mut slot_ids: Vec<Option<fret_ui::elements::GlobalElementId>> =
                     vec![None; length];

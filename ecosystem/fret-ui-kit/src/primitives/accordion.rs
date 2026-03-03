@@ -12,7 +12,7 @@ use fret_core::SemanticsRole;
 use fret_runtime::Model;
 use fret_ui::element::{
     AnyElement, LayoutStyle, PressableA11y, PressableProps, RovingFlexProps, RovingFocusProps,
-    SemanticsProps, StackProps,
+    SemanticsDecoration, SemanticsProps, StackProps,
 };
 use fret_ui::elements::GlobalElementId;
 use fret_ui::{ElementContext, UiHost};
@@ -58,6 +58,39 @@ pub fn apply_accordion_trigger_controls(
     content_element: GlobalElementId,
 ) -> AnyElement {
     trigger_a11y::apply_trigger_controls(trigger, Some(content_element))
+}
+
+/// Stamps Radix-like `aria-disabled` behavior on an accordion trigger.
+///
+/// In Radix, the open trigger in a non-collapsible single-select accordion sets `aria-disabled`
+/// while remaining focusable. We model that by marking the node disabled for assistive tech and
+/// suppressing the invoke/click action surface (while keeping pointer behavior as recipe-owned).
+pub fn apply_accordion_trigger_aria_disabled(
+    trigger: AnyElement,
+    aria_disabled: bool,
+) -> AnyElement {
+    if !aria_disabled {
+        return trigger;
+    }
+    trigger.attach_semantics(
+        SemanticsDecoration::default()
+            .disabled(true)
+            .invokable(false),
+    )
+}
+
+/// Stamps Radix-like content semantics:
+/// - `role="region"`
+/// - `aria-labelledby` (modeled via `labelled_by_element`)
+pub fn apply_accordion_content_region_labelled_by(
+    content: AnyElement,
+    trigger_element: GlobalElementId,
+) -> AnyElement {
+    content.attach_semantics(
+        SemanticsDecoration::default()
+            .role(SemanticsRole::Region)
+            .labelled_by_element(trigger_element.0),
+    )
 }
 
 /// Derive the "tab stop" index for a single-select accordion:
@@ -484,15 +517,13 @@ impl AccordionList {
 
         let layout = self.layout;
         let dir = self.root.dir;
-        let root_disabled = self.root.disabled;
 
         if let Some(dir) = dir {
             direction_prim::with_direction_provider(cx, dir, move |cx| {
                 cx.semantics(
                     SemanticsProps {
                         layout,
-                        role: SemanticsRole::List,
-                        disabled: root_disabled,
+                        role: SemanticsRole::Generic,
                         ..Default::default()
                     },
                     move |cx| {
@@ -507,8 +538,7 @@ impl AccordionList {
             cx.semantics(
                 SemanticsProps {
                     layout,
-                    role: SemanticsRole::List,
-                    disabled: root_disabled,
+                    role: SemanticsRole::Generic,
                     ..Default::default()
                 },
                 move |cx| {

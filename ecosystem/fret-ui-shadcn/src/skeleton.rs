@@ -1,7 +1,9 @@
+use std::f32::consts::TAU;
+use std::time::Duration;
+
 use fret_ui::element::AnyElement;
-use fret_ui::{ElementContext, Invalidation, Theme, UiHost};
-use fret_ui_kit::declarative::prefers_reduced_motion;
-use fret_ui_kit::declarative::scheduling;
+use fret_ui::{ElementContext, Theme, UiHost};
+use fret_ui_kit::declarative::motion;
 use fret_ui_kit::declarative::style as decl_style;
 use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, Radius, Space};
 
@@ -12,8 +14,7 @@ use fret_ui_kit::{ChromeRefinement, ColorRef, LayoutRefinement, MetricRef, Radiu
 /// - `rounded-md`
 /// - `animate-pulse`
 ///
-/// In Fret, animation is implemented by requesting animation frames while the skeleton is
-/// rendered, and modulating background alpha as a pure function of `FrameId`.
+/// In Fret, animation is duration-driven (stable across fixed-delta and high refresh rates).
 #[derive(Debug, Clone)]
 pub struct Skeleton {
     chrome: ChromeRefinement,
@@ -67,18 +68,18 @@ impl Skeleton {
             .color_by_key("component.skeleton.bg")
             .unwrap_or_else(|| theme.color_token("accent"));
 
-        let reduced_motion = prefers_reduced_motion(cx, Invalidation::Paint, false);
-        let animate_pulse = self.animate_pulse && !reduced_motion;
-
         let mut alpha_mul = if self.secondary { 0.5 } else { 1.0 };
-        if animate_pulse {
-            // Approximate a 2s pulse cycle without storing state.
-            let t = cx.app.frame_id().0 as f32;
-            let phase = t * 0.12;
+        let pulse = motion::drive_loop_progress_keyed(
+            cx,
+            ("shadcn.skeleton.pulse", cx.root_id()),
+            self.animate_pulse,
+            Duration::from_secs(2),
+        );
+        if pulse.animating {
+            let phase = pulse.progress * TAU;
             let v = 0.75 + 0.25 * phase.sin(); // [0.5, 1.0]
             alpha_mul *= v;
         }
-        scheduling::set_continuous_frames(cx, animate_pulse);
         bg.a = (bg.a * alpha_mul).clamp(0.0, 1.0);
 
         let chrome = ChromeRefinement::default()

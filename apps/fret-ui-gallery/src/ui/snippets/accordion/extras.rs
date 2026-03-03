@@ -72,15 +72,16 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
         let props = cx.with_theme(|theme| {
             decl_style::container_props(
                 theme,
-                ChromeRefinement::default().border_1().rounded(Radius::Lg),
+                ChromeRefinement::default().border_1().rounded(Radius::Md),
                 LayoutRefinement::default()
                     .w_full()
                     .min_w_0()
-                    .overflow_hidden(),
+                    .overflow_visible(),
             )
         });
 
         cx.container(props, move |_cx| [accordion])
+            .test_id("ui-gallery-accordion-extras-borders")
     };
 
     let card = {
@@ -122,6 +123,7 @@ pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
         shadcn::Card::new([header, content])
             .refine_layout(max_w_sm.clone())
             .into_element(cx)
+            .test_id("ui-gallery-accordion-extras-card")
     };
 
     let rtl = fret_ui_kit::primitives::direction::with_direction_provider(

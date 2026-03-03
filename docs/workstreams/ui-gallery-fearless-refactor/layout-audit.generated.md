@@ -7,7 +7,7 @@
 | `apps/fret-ui-gallery/src/ui/pages/calendar.rs` | 980.0 |
 | `apps/fret-ui-gallery/src/ui/pages/card.rs` | 980.0 |
 | `apps/fret-ui-gallery/src/ui/pages/chart.rs` | 1100.0 |
-| `apps/fret-ui-gallery/src/ui/pages/data_table.rs` | 900.0 |
+| `apps/fret-ui-gallery/src/ui/pages/data_table.rs` | 980.0 |
 | `apps/fret-ui-gallery/src/ui/pages/date_picker.rs` | 980.0 |
 | `apps/fret-ui-gallery/src/ui/pages/icons.rs` | 980.0 |
 | `apps/fret-ui-gallery/src/ui/pages/image_object_fit.rs` | 980.0 |

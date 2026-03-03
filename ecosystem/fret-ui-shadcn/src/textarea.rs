@@ -258,7 +258,7 @@ pub fn textarea<H: UiHost>(
     chrome.placeholder_color = theme
         .color_by_key("muted-foreground")
         .unwrap_or(chrome.placeholder_color);
-    chrome.selection_color = alpha_mul(resolved.selection_color, 0.65);
+    chrome.selection_color = resolved.selection_color;
     chrome.caret_color = resolved.text_color;
     chrome.preedit_bg_color = alpha_mul(resolved.selection_color, 0.22);
     chrome.preedit_underline_color = resolved.selection_color;

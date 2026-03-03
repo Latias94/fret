@@ -4,77 +4,76 @@ pub const SOURCE: &str = include_str!("demo.rs");
 use fret_ui::Theme;
 use fret_ui_shadcn::{self as shadcn, prelude::*};
 
-fn ratio_example<H: UiHost>(
-    cx: &mut ElementContext<'_, H>,
-    ratio: f32,
-    max_w: Px,
-    ratio_label: &'static str,
-    caption: &'static str,
-    test_id: &'static str,
-    content_test_id: &'static str,
-) -> AnyElement {
-    fn center_align_text(mut element: AnyElement) -> AnyElement {
-        use fret_ui::element::ElementKind;
-        match &mut element.kind {
-            ElementKind::Text(props) => props.align = fret_core::TextAlign::Center,
-            ElementKind::StyledText(props) => props.align = fret_core::TextAlign::Center,
-            ElementKind::SelectableText(props) => props.align = fret_core::TextAlign::Center,
-            _ => {}
-        }
-        element
-    }
-
-    let text_block = stack::vstack(
-        cx,
-        stack::VStackProps::default()
-            .layout(LayoutRefinement::default().w_full().min_w_0())
-            .gap(Space::N1)
-            .items_center(),
-        move |cx| {
-            vec![
-                center_align_text(shadcn::typography::h4(cx, ratio_label)),
-                center_align_text(shadcn::typography::muted(cx, caption)),
-            ]
-        },
-    )
-    .test_id(content_test_id);
-
-    let content = stack::vstack(
-        cx,
-        stack::VStackProps::default()
-            .layout(LayoutRefinement::default().w_full().h_full())
-            .items_center()
-            .justify_center()
-            .gap(Space::N1),
-        move |_cx| vec![text_block],
-    );
-
+pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
     let theme = Theme::global(&*cx.app);
     let muted_bg = theme.color_token("muted");
-    let border = theme.color_token("border");
 
-    shadcn::AspectRatio::new(ratio, content)
+    let image = shadcn::MediaImage::maybe(None)
+        .loading(true)
+        .fit(fret_core::ViewportFit::Cover)
+        .refine_style(ChromeRefinement::default().rounded(Radius::Lg))
+        .refine_layout(LayoutRefinement::default().w_full().h_full())
+        .into_element(cx)
+        .test_id("ui-gallery-aspect-ratio-demo-content");
+
+    let frame = shadcn::AspectRatio::new(16.0 / 9.0, image)
         .refine_style(
             ChromeRefinement::default()
                 .rounded(Radius::Lg)
-                .border_1()
-                .bg(ColorRef::Color(muted_bg))
-                .border_color(ColorRef::Color(border)),
+                .bg(ColorRef::Color(muted_bg)),
         )
-        .refine_layout(LayoutRefinement::default().w_full().max_w(max_w))
+        .refine_layout(LayoutRefinement::default().w_full().max_w(Px(384.0)))
         .into_element(cx)
-        .test_id(test_id)
-}
+        .test_id("ui-gallery-aspect-ratio-demo");
 
-pub fn render<H: UiHost>(cx: &mut ElementContext<'_, H>) -> AnyElement {
-    ratio_example(
+    stack::hstack(
         cx,
-        16.0 / 9.0,
-        Px(384.0),
-        "16:9",
-        "Landscape media",
-        "ui-gallery-aspect-ratio-demo",
-        "ui-gallery-aspect-ratio-demo-content",
+        stack::HStackProps::default()
+            .layout(LayoutRefinement::default().w_full().min_w_0())
+            .justify_center(),
+        move |_cx| vec![frame],
     )
 }
 // endregion: example
+
+pub fn render_preview<H: UiHost>(
+    cx: &mut ElementContext<'_, H>,
+    demo_image: Option<Model<Option<fret_core::ImageId>>>,
+) -> AnyElement {
+    let theme = Theme::global(&*cx.app);
+    let muted_bg = theme.color_token("muted");
+
+    let image = if let Some(image_id) = super::images::landscape_image_id(cx) {
+        shadcn::MediaImage::maybe(Some(image_id))
+    } else if let Some(demo_image) = demo_image {
+        shadcn::MediaImage::model(demo_image)
+    } else {
+        return render(cx);
+    };
+
+    let image = image
+        .loading(true)
+        .fit(fret_core::ViewportFit::Cover)
+        .refine_style(ChromeRefinement::default().rounded(Radius::Lg))
+        .refine_layout(LayoutRefinement::default().w_full().h_full())
+        .into_element(cx)
+        .test_id("ui-gallery-aspect-ratio-demo-content");
+
+    let frame = shadcn::AspectRatio::new(16.0 / 9.0, image)
+        .refine_style(
+            ChromeRefinement::default()
+                .rounded(Radius::Lg)
+                .bg(ColorRef::Color(muted_bg)),
+        )
+        .refine_layout(LayoutRefinement::default().w_full().max_w(Px(384.0)))
+        .into_element(cx)
+        .test_id("ui-gallery-aspect-ratio-demo");
+
+    stack::hstack(
+        cx,
+        stack::HStackProps::default()
+            .layout(LayoutRefinement::default().w_full().min_w_0())
+            .justify_center(),
+        move |_cx| vec![frame],
+    )
+}
