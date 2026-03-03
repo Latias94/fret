@@ -118,6 +118,8 @@ Recommended starting suites (native):
 Recommended perf gates (native):
 
 - `cargo run -p fretboard -- diag perf ui-gallery --repeat 5 --warmup-frames 5 --sort time --launch -- cargo run -p fret-ui-gallery --release`
+- Layout-heavy preset:
+  - `cargo run -p fretboard -- diag perf ui-gallery-layout-steady --repeat 7 --warmup-frames 5 --sort time --launch -- cargo run -p fret-ui-gallery --release`
 
 ### 4.5 Layout correctness gates (semantics-first)
 

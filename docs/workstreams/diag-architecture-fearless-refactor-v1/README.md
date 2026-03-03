@@ -15,6 +15,7 @@ Start here:
 - Milestones: `docs/workstreams/diag-architecture-fearless-refactor-v1/MILESTONES.md`
 - Task tracker: `docs/workstreams/diag-architecture-fearless-refactor-v1/TODO.md`
 - Evidence + gates: `docs/workstreams/diag-architecture-fearless-refactor-v1/EVIDENCE_AND_GATES.md`
+- How to debug layout (cookbook): `docs/workstreams/diag-architecture-fearless-refactor-v1/HOW_TO_DEBUG_LAYOUT.md`
 - Crate plan: `docs/workstreams/diag-architecture-fearless-refactor-v1/CRATE_PLAN.md`
 - Layout sidecars v1 (design): `docs/workstreams/diag-architecture-fearless-refactor-v1/LAYOUT_SIDECARS_V1.md`
 - Layout perf summary v1 (tooling): `docs/workstreams/diag-architecture-fearless-refactor-v1/LAYOUT_PERF_SUMMARY_V1.md`
