@@ -39,6 +39,7 @@ Recommended starting points (action-first + view runtime):
 - `icons_and_assets_basics` (semantic icon ids + svg/image loading + reload epoch)
 - `effects_layer_basics` (EffectLayer + EffectChain: pixelate/blur)
 - `markdown_and_code_basics` (markdown preview + fenced code blocks)
+- `canvas_pan_zoom_basics` (canvas pan/zoom wiring + pointer capture)
 - `commands_keymap_basics`, `overlay_basics`, `text_input_basics`
 - `imui_action_basics` (cross-frontend action dispatch)
 

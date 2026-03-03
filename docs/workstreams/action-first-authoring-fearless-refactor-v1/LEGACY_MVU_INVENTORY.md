@@ -26,6 +26,7 @@ Scope:
   - `docs/README.md`
 - Cookbook example migrated to view runtime + actions:
   - `apps/fret-cookbook/examples/async_inbox_basics.rs`
+  - `apps/fret-cookbook/examples/canvas_pan_zoom_basics.rs`
   - `apps/fret-cookbook/examples/hello_counter.rs`
   - `apps/fret-cookbook/examples/effects_layer_basics.rs`
   - `apps/fret-cookbook/examples/markdown_and_code_basics.rs`
@@ -42,13 +43,12 @@ Scope:
 
 These examples implement `MvuProgram` and/or use `MessageRouter`:
 
-- `apps/fret-cookbook/examples/canvas_pan_zoom_basics.rs`
+- None (as of 2026-03-03). All cookbook examples now use the view runtime + typed actions.
 
 Recommendation:
 
-- Keep them for now as “legacy MVU” teaching samples.
-- Add explicit “legacy” labeling in cookbook index/docs when we hit M6 cleanup, or migrate the ones
-  that are most commonly copy-pasted.
+- Keep any future MVU cookbook examples explicitly labeled as legacy/compat.
+- Avoid introducing new MVU usage in the cookbook unless we need a specific payload-routing teaching sample.
 
 ### 2) `apps/fret-examples/*` demos (still MVU)
 
