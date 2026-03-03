@@ -134,6 +134,32 @@ Migration steps:
 
 ---
 
+## 3.1) When to use MVU vs View (v1 guidance)
+
+Recommended default (new code):
+
+- Use **View runtime + typed actions** for new templates, cookbook examples, and app code.
+
+Keep MVU (compat / legacy) when:
+
+- You need **per-item/payloaded** routing semantics that v1 typed actions do not support yet
+  (v1 is intentionally *unit actions only*; see ADR 0307 “v1 decision snapshot”).
+- You are maintaining an existing MVU-based demo and migration would not add new evidence/gates.
+- You are exploring authoring patterns quickly and want a minimal “single-file loop” while prototyping.
+
+If you choose MVU in 2026:
+
+- Label it explicitly as legacy/compat in docs and avoid copy-pasting it into new templates.
+- Prefer action-first IDs (`ActionId == CommandId` in v1) even inside MVU code where feasible, so
+  keymap/palette/menus/diagnostics stay aligned.
+
+Inventory:
+
+- Track remaining in-tree MVU usage here:
+  `docs/workstreams/action-first-authoring-fearless-refactor-v1/LEGACY_MVU_INVENTORY.md`
+
+---
+
 ## 4) imui alignment (imui widgets dispatch actions)
 
 Target outcome:

@@ -130,9 +130,11 @@ ID format:
   - Evidence:
     - Helper: `ecosystem/fret-ui-kit/src/declarative/cached_subtree.rs`
     - Reuse gating: `crates/fret-ui/src/tree/ui_tree_view_cache.rs` (`UiTree::view_cache_active`)
-- [ ] AFA-view-024 Provide an adapter path for MVU:
+- [x] AFA-view-024 Provide an adapter path for MVU:
   - keep MVU available while views are adopted,
   - document “when to use MVU vs View” in cookbook guidance.
+  - Evidence:
+    - `docs/workstreams/action-first-authoring-fearless-refactor-v1/MIGRATION_GUIDE.md` (“When to use MVU vs View”)
 - [x] AFA-view-025 Add view-level observability:
   - “why did this view rebuild?”
   - “why was reuse skipped?”
