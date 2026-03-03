@@ -248,3 +248,5 @@ This phase is intentionally last.
     - `apps/fretboard/src/scaffold/templates.rs` (`todo_template_main_rs`, `simple_todo_template_main_rs`, `hello_template_main_rs`)
 - [ ] AFA-clean-062 Delete or quarantine redundant APIs/modules once adoption is complete.
   - Rule: do not delete until all in-tree demos + ecosystem crates have migrated or have explicit “legacy” labeling.
+  - Migration inventory:
+    - `docs/workstreams/action-first-authoring-fearless-refactor-v1/LEGACY_MVU_INVENTORY.md`
