@@ -457,6 +457,7 @@ fn render_section(cx: &mut ElementContext<'_, App>, section: DocSection) -> AnyE
         test_id_prefix
     };
 
+    let shell = shell && title != "Notes";
     let preview_shell = if shell {
         demo_shell(cx, max_w, preview)
     } else {

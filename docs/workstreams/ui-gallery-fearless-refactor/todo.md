@@ -60,6 +60,8 @@ Any remaining legacy surfaces that embed raw Rust code strings are tracked via t
   - [x] Center doc pages once (page-level max width) so sections align to the same left gutter.
   - [x] Ensure Code tabs respect `.no_shell()` sections so Preview/Code padding matches by contract.
     - Evidence: `apps/fret-ui-gallery/src/ui/doc_layout.rs` passes `shell` through to the CodeBlock wrapper.
+  - [x] Render `Notes` sections without demo shell chrome (no border/padding by default).
+    - Evidence: `apps/fret-ui-gallery/src/ui/doc_layout.rs`.
   - [ ] Audit remaining max-width and padding inconsistencies across pages.
   - [x] Add a coarse `.max_w` audit report: `docs/workstreams/ui-gallery-fearless-refactor/layout-audit.generated.md` (regen via `tools/ui_gallery_layout_audit.py`).
   - [x] Remove redundant `.max_w(Px(820.0))` overrides (default width) in `apps/fret-ui-gallery/src/ui/pages/**` so future diffs stay focused.
