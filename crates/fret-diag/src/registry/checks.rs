@@ -76,6 +76,16 @@ const BUILTIN_POST_RUN_CHECKS: &[PostRunCheckEntry] = &[
         should_run: should_run_triage_hint_absent_codes,
         run: run_triage_hint_absent_codes,
     },
+    PostRunCheckEntry {
+        id: "pixels_changed_test_id",
+        should_run: should_run_pixels_changed_test_id,
+        run: run_pixels_changed_test_id,
+    },
+    PostRunCheckEntry {
+        id: "pixels_unchanged_test_id",
+        should_run: should_run_pixels_unchanged_test_id,
+        run: run_pixels_unchanged_test_id,
+    },
 ];
 
 fn should_run_gc_sweep_liveness(checks: &RunChecks) -> bool {
@@ -156,4 +166,32 @@ fn run_triage_hint_absent_codes(
     }
 
     Ok(())
+}
+
+fn should_run_pixels_changed_test_id(checks: &RunChecks) -> bool {
+    checks.check_pixels_changed_test_id.is_some()
+}
+
+fn run_pixels_changed_test_id(
+    ctx: PostRunCheckContext<'_>,
+    checks: &RunChecks,
+) -> Result<(), String> {
+    let Some(test_id) = checks.check_pixels_changed_test_id.as_deref() else {
+        return Ok(());
+    };
+    crate::stats::check_out_dir_for_pixels_changed(ctx.out_dir, test_id, ctx.warmup_frames)
+}
+
+fn should_run_pixels_unchanged_test_id(checks: &RunChecks) -> bool {
+    checks.check_pixels_unchanged_test_id.is_some()
+}
+
+fn run_pixels_unchanged_test_id(
+    ctx: PostRunCheckContext<'_>,
+    checks: &RunChecks,
+) -> Result<(), String> {
+    let Some(test_id) = checks.check_pixels_unchanged_test_id.as_deref() else {
+        return Ok(());
+    };
+    crate::stats::check_out_dir_for_pixels_unchanged(ctx.out_dir, test_id, ctx.warmup_frames)
 }
