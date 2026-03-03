@@ -472,6 +472,7 @@ fn render_section(cx: &mut ElementContext<'_, App>, section: DocSection) -> AnyE
             max_w,
             code,
             tabs_sizing,
+            shell,
         ),
         None => preview,
     };
@@ -605,8 +606,9 @@ fn preview_code_tabs(
     max_w: Px,
     code: DocCodeBlock,
     tabs_sizing: DocTabsSizing,
+    shell: bool,
 ) -> AnyElement {
-    let code_shell = code_block_shell(cx, test_id_prefix, max_w, code);
+    let code_shell = code_block_shell(cx, test_id_prefix, max_w, code, shell);
     let code_el = code_shell;
 
     let base = shadcn::Tabs::uncontrolled(Some("preview"))
@@ -636,6 +638,7 @@ fn code_block_shell(
     test_id_prefix: Option<&str>,
     max_w: Px,
     block: DocCodeBlock,
+    shell: bool,
 ) -> AnyElement {
     let code: Arc<str> = block.code;
     let copy = match test_id_prefix {
@@ -661,17 +664,19 @@ fn code_block_shell(
     }
 
     let props = cx.with_theme(|theme| {
-        decl_style::container_props(
-            theme,
+        let chrome = if shell {
             // Match the Preview tab's comfortable padding so Code tabs don't look "flush-left"
             // compared to the demo shell.
-            ChromeRefinement::default().p(Space::N4),
-            LayoutRefinement::default()
-                .w_full()
-                .min_w_0()
-                .max_w(max_w)
-                .overflow_visible(),
-        )
+            ChromeRefinement::default().p(Space::N4)
+        } else {
+            ChromeRefinement::default()
+        };
+        let layout = LayoutRefinement::default()
+            .w_full()
+            .min_w_0()
+            .max_w(max_w)
+            .overflow_visible();
+        decl_style::container_props(theme, chrome, layout)
     });
     cx.container(props, move |_cx| [code_block])
 }
