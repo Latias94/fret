@@ -38,7 +38,7 @@ Tooling engine (CLI/GUI shared):
 - Artifacts seam: `crates/fret-diag/src/artifact_store.rs`
 - Suite resolution seam: `crates/fret-diag/src/registry/suites.rs`
 - Checks seam (post-run): `crates/fret-diag/src/registry/checks/mod.rs`
-- Builtin post-run checks: `crates/fret-diag/src/registry/checks/builtin_post_run.rs`
+- Builtin post-run checks: `crates/fret-diag/src/registry/checks/builtin_post_run/mod.rs`
 - Builtin suite mapping: `crates/fret-diag/src/diag_suite.rs` (`resolve_builtin_suite_scripts`)
 - CLI wrapper: `apps/fretboard/src/cli.rs`
 
