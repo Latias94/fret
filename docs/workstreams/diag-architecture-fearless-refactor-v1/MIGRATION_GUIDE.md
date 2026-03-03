@@ -1,6 +1,6 @@
 # Diagnostics Architecture (Fearless Refactor v1) — Ecosystem Migration Guide
 
-Last updated: 2026-03-02
+Last updated: 2026-03-03
 
 This guide is for ecosystem crate authors who want to:
 
@@ -66,6 +66,45 @@ If a script depends on your extension:
 
 ---
 
+### 2.4 View extension payloads (tooling)
+
+Once you have a bundle (from a script run or suite run), use the CLI viewer:
+
+- list available keys:
+  - `fretboard diag extensions <bundle_or_out_dir>`
+- print a specific key:
+  - `fretboard diag extensions <bundle_or_out_dir> --key dock.graph.v1 --print`
+- emit structured JSON (useful for CI artifacts):
+  - `fretboard diag extensions <bundle_or_out_dir> --key dock.graph.v1 --json --out exported.dock.graph.v1.json`
+
+Notes:
+
+- prefer `--warmup-frames <n>` when the first frames are noisy or incomplete.
+- values may be clipped (look for `_clipped: true` in the payload).
+
+### 2.5 End-to-end example: `dock.graph.v1`
+
+This is the “golden path” example shipped in-tree:
+
+1) Register the writer (runtime)
+
+- Built-in registration:
+  - `ecosystem/fret-bootstrap/src/ui_diagnostics/extensions.rs` (`default_debug_extensions_registry_v1`)
+- Registering from an ecosystem crate:
+  - call `fret_bootstrap::ui_diagnostics::register_debug_extension_best_effort(app, "my.feature.v1", writer)`
+  - helper lives at: `ecosystem/fret-bootstrap/src/ui_diagnostics.rs`
+
+2) Capture a bundle
+
+- Run a script/suite that exercises docking and produces a bundle.
+- If you need a controlled reproduction, prefer a script that drives the minimal interaction.
+
+3) Inspect the extension
+
+- `fretboard diag extensions <bundle_or_out_dir> --key dock.graph.v1 --print`
+
+---
+
 ## 3) Add regression gates (scripts)
 
 ### 3.1 Add a script
@@ -114,4 +153,3 @@ Optional “explainability”:
 - Relying on labels/value strings for selectors (localization breaks scripts).
 - Writing scripts that use fixed frame delays instead of `wait_until`.
 - Adding new typed fields to the core debug snapshot for ecosystem-only needs (prefer extensions).
-

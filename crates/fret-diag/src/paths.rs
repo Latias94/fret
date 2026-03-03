@@ -24,6 +24,69 @@ pub(crate) fn expand_script_inputs(
     workspace_root: &Path,
     inputs: &[String],
 ) -> Result<Vec<PathBuf>, String> {
+    fn try_expand_suite_manifest(
+        workspace_root: &Path,
+        path: &Path,
+    ) -> Result<Option<Vec<PathBuf>>, String> {
+        let bytes = match std::fs::read(path) {
+            Ok(b) => b,
+            Err(_) => return Ok(None),
+        };
+        let v: serde_json::Value = match serde_json::from_slice(&bytes) {
+            Ok(v) => v,
+            Err(_) => return Ok(None),
+        };
+
+        let kind = v.get("kind").and_then(|v| v.as_str());
+        if kind != Some("diag_script_suite_manifest") {
+            return Ok(None);
+        }
+        let schema_version = v
+            .get("schema_version")
+            .and_then(|v| v.as_u64())
+            .unwrap_or(0);
+        if schema_version != 1 {
+            return Err(format!(
+                "invalid suite manifest schema_version (expected 1): {}",
+                path.display()
+            ));
+        }
+        let scripts = v.get("scripts").and_then(|v| v.as_array()).ok_or_else(|| {
+            format!(
+                "invalid suite manifest (missing array field: scripts): {}",
+                path.display()
+            )
+        })?;
+        if scripts.is_empty() {
+            return Err(format!(
+                "suite manifest contains no scripts: {}",
+                path.display()
+            ));
+        }
+
+        let mut out: Vec<PathBuf> = Vec::with_capacity(scripts.len());
+        for raw in scripts {
+            let Some(p) = raw.as_str().filter(|s| !s.trim().is_empty()) else {
+                return Err(format!(
+                    "invalid suite manifest (scripts entries must be non-empty strings): {}",
+                    path.display()
+                ));
+            };
+            let resolved = resolve_path(workspace_root, PathBuf::from(p));
+            if !resolved.exists() {
+                return Err(format!(
+                    "suite manifest script path does not exist: {} (manifest: {})",
+                    resolved.display(),
+                    path.display()
+                ));
+            }
+            out.push(resolved);
+        }
+        out.sort();
+        out.dedup();
+        Ok(Some(out))
+    }
+
     let mut set: BTreeSet<PathBuf> = BTreeSet::new();
 
     for input in inputs {
@@ -41,7 +104,14 @@ pub(crate) fn expand_script_inputs(
             let mut any = false;
             for entry in glob::glob(&pattern).map_err(|e| e.to_string())? {
                 let path = entry.map_err(|e| e.to_string())?;
-                set.insert(normalize_host_path_separators(path));
+                let path = normalize_host_path_separators(path);
+                if let Some(expanded) = try_expand_suite_manifest(workspace_root, &path)? {
+                    for p in expanded {
+                        set.insert(normalize_host_path_separators(p));
+                    }
+                } else {
+                    set.insert(path);
+                }
                 any = true;
             }
             if !any {
@@ -60,7 +130,14 @@ pub(crate) fn expand_script_inputs(
             let mut any = false;
             for entry in glob::glob(&pattern).map_err(|e| e.to_string())? {
                 let path = entry.map_err(|e| e.to_string())?;
-                set.insert(normalize_host_path_separators(path));
+                let path = normalize_host_path_separators(path);
+                if let Some(expanded) = try_expand_suite_manifest(workspace_root, &path)? {
+                    for p in expanded {
+                        set.insert(normalize_host_path_separators(p));
+                    }
+                } else {
+                    set.insert(path);
+                }
                 any = true;
             }
             if !any {
@@ -71,7 +148,13 @@ pub(crate) fn expand_script_inputs(
             continue;
         }
 
-        set.insert(resolved);
+        if let Some(expanded) = try_expand_suite_manifest(workspace_root, &resolved)? {
+            for p in expanded {
+                set.insert(normalize_host_path_separators(p));
+            }
+        } else {
+            set.insert(resolved);
+        }
     }
 
     Ok(set.into_iter().collect())
@@ -194,7 +277,7 @@ pub(crate) fn resolve_bundle_artifact_path(path: &Path) -> PathBuf {
         return root;
     }
 
-    match crate::run_artifacts::materialize_bundle_json_from_manifest_chunks_if_missing(path) {
+    match crate::artifact_store::materialize_bundle_json_from_manifest_chunks_if_missing(path) {
         Ok(Some(v2)) if v2.is_file() => {
             return v2;
         }
@@ -208,7 +291,7 @@ pub(crate) fn resolve_bundle_artifact_path(path: &Path) -> PathBuf {
     }
 
     if let Some(run_id) = crate::util::read_script_result_run_id(&path.join("script.result.json")) {
-        let run_id_dir = crate::run_artifacts::run_id_artifact_dir(path, run_id);
+        let run_id_dir = crate::artifact_store::run_id_artifact_dir(path, run_id);
         let run_id_schema2 = run_id_dir.join("bundle.schema2.json");
         if run_id_schema2.is_file() {
             return run_id_schema2;
@@ -218,7 +301,7 @@ pub(crate) fn resolve_bundle_artifact_path(path: &Path) -> PathBuf {
         if run_id_bundle.is_file() {
             return run_id_bundle;
         }
-        match crate::run_artifacts::materialize_run_id_bundle_json_from_chunks_if_missing(
+        match crate::artifact_store::materialize_run_id_bundle_json_from_chunks_if_missing(
             path, run_id,
         ) {
             Ok(Some(v2)) if v2.is_file() => {
@@ -227,7 +310,7 @@ pub(crate) fn resolve_bundle_artifact_path(path: &Path) -> PathBuf {
             Ok(_) => {}
             Err(err) => {
                 record_tooling_artifact_integrity_failure_for_dir(
-                    &crate::run_artifacts::run_id_artifact_dir(path, run_id),
+                    &crate::artifact_store::run_id_artifact_dir(path, run_id),
                     &format!("failed to materialize raw bundle.json from chunks: {err}"),
                 );
             }
@@ -356,7 +439,7 @@ pub(crate) fn wait_for_bundle_artifact_from_script_result(
 
     let deadline = Instant::now() + Duration::from_millis(timeout_ms.clamp(250, 5_000));
     while Instant::now() < deadline {
-        let run_id_dir = crate::run_artifacts::run_id_artifact_dir(out_dir, result.run_id);
+        let run_id_dir = crate::artifact_store::run_id_artifact_dir(out_dir, result.run_id);
         let run_id_schema2 = run_id_dir.join("bundle.schema2.json");
         if run_id_schema2.is_file() {
             return Some(run_id_schema2);

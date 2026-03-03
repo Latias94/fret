@@ -64,7 +64,7 @@ This TODO tracks the V3 work as landable steps. It intentionally starts with “
   - optional level-based sampling from `src_pyramid` (when supported).
   - Evidence:
     - `apps/fret-examples/src/custom_effect_v3_web_demo.rs`
-    - `tools/diag-scripts/custom-effect-v3-backdrop-source-group-roi-baseline.json`
+    - `tools/diag-scripts/tooling/custom-effect-v3-backdrop-source-group-roi-baseline.json`
 
 ## Deferred — Group sharing / caching (M2)
 

@@ -1,0 +1,8 @@
+{
+  "schema_version": 1,
+  "kind": "diag_script_suite_manifest",
+  "scripts": [
+    "tools/diag-scripts/docking/arbitration/docking-arbitration-demo-nary-splitter-drag-perf-large-layout-steady.json",
+    "tools/diag-scripts/docking/arbitration/docking-arbitration-demo-nary-tab-drag-hover-perf-large-layout-steady.json"
+  ]
+}

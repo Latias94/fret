@@ -1,0 +1,8 @@
+{
+  "schema_version": 1,
+  "kind": "diag_script_suite_manifest",
+  "scripts": [
+    "tools/diag-scripts/cookbook/overlay-basics/cookbook-overlay-basics-dialog-close.json",
+    "tools/diag-scripts/cookbook/overlay-basics/cookbook-overlay-basics-dialog-open-screenshot.json"
+  ]
+}

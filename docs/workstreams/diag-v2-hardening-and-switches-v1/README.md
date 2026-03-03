@@ -107,8 +107,8 @@ required, inconsistent semantics, or transport divergence). Each item includes e
   A minimal, generated registry exists at `tools/diag-scripts/index.json` (scope: scripts reachable from in-tree suites
   + `_prelude`) and is validated in CI.
 - Evidence:
-  - built-in suites are curated directory inputs via redirect stubs: `tools/diag-scripts/suites/` and
-    `crates/fret-diag/src/diag_suite_scripts.rs`
+  - built-in suites are curated directory inputs via suite manifests: `tools/diag-scripts/suites/` and
+    `crates/fret-diag/src/registry/suites.rs`
   - `diag suite` no longer hard-codes script file lists; specialized harness suites are also directory-driven via
     `tools/diag-scripts/suites/<suite-name>/`: `crates/fret-diag/src/diag_suite.rs`
 
@@ -119,12 +119,13 @@ required, inconsistent semantics, or transport divergence). Each item includes e
 - Status (2026-02-27): **closed**. `diag perf` suite expansion and perf baseline seed scoping are both derived from the
   **promoted script registry** (`tools/diag-scripts/index.json`) via `suite_memberships`.
   - Perf suites are expressed as curated `script_redirect` stubs under `tools/diag-scripts/suites/perf-*/`.
+    (In-tree suites now prefer a single `suite.json` manifest per suite directory.)
   - Tooling resolves redirects and generates the promoted registry; Rust-side suite name expansion reads the registry and
     selects scripts by suite membership, with deterministic ordering.
 - Evidence:
   - perf entrypoint: `crates/fret-diag/src/diag_perf.rs`
   - suite membership resolver: `crates/fret-diag/src/perf_seed_policy.rs`
-  - promoted registry: `tools/diag-scripts/index.json`, `tools/check_diag_scripts_registry.py`
+  - promoted registry: `tools/diag-scripts/index.json`, `fretboard diag registry` (`crates/fret-diag/src/commands/registry.rs`)
   - suites: `tools/diag-scripts/suites/perf-*/`
 
 8) Pointer kind (“mouse/touch/pen”) is supported, but needs a single canonical doc section
@@ -424,7 +425,7 @@ Notes:
 
 `tools/diag-scripts/index.json` is generated (do not edit by hand) via:
 
-- `python tools/check_diag_scripts_registry.py --write`
+- `cargo run -p fretboard -- diag registry write`
 
 Design constraints (v1):
 
@@ -485,7 +486,8 @@ Rules:
 
 - Redirect resolution MUST be loop-safe (depth cap + visited set).
 - Tooling SHOULD normalize the final resolved script JSON before pushing/writing.
-- Script tooling (`diag script validate|lint|normalize`) SHOULD resolve redirect stubs before operating, and `--write` SHOULD
+- Script tooling (`diag script validate|lint|normalize`) resolves redirect stubs before operating, and also expands suite
+  manifests when they appear in script inputs (so `suite.json` is never treated as a script).
   update the resolved target script (not the stub).
 
 Option B: “big bang” path updates

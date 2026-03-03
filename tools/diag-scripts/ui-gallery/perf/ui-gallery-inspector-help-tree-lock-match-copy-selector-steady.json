@@ -1,0 +1,30 @@
+{
+  "schema_version": 2,
+  "meta": {
+    "name": "UI Gallery (overlay steady): inspector help tree lock match + copy selector",
+    "tags": ["ui-gallery", "inspector", "tree", "clipboard", "steady"]
+  },
+  "steps": [
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "ui-gallery-nav-search" }
+      },
+      "timeout_frames": 240
+    },
+    { "type": "set_clipboard_text", "text": "diag-sentinel" },
+    { "type": "wait_frames", "n": 2 },
+    {
+      "type": "inspect_help_tree_lock_best_match_and_copy_selector",
+      "query": "ui-gallery-nav-search",
+      "timeout_frames": 240
+    },
+    {
+      "type": "assert_clipboard_text",
+      "text": "{\"kind\":\"test_id\",\"id\":\"ui-gallery-nav-search\"}",
+      "timeout_frames": 240
+    }
+  ]
+}
+

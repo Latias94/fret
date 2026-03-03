@@ -1,0 +1,11 @@
+{
+  "schema_version": 1,
+  "kind": "diag_script_suite_manifest",
+  "scripts": [
+    "tools/diag-scripts/ui-gallery-carousel-demo-inertia-pixels-changed.json",
+    "tools/diag-scripts/ui-gallery-carousel-demo-inertia-touch-pixels-changed.json",
+    "tools/diag-scripts/ui-gallery-carousel-demo-reinit-resize-gate.json",
+    "tools/diag-scripts/ui-gallery-carousel-loop-continuity-touch-gate.json",
+    "tools/diag-scripts/ui-gallery-carousel-loop-downgrade-cannot-loop-gate.json"
+  ]
+}

@@ -236,4 +236,99 @@ impl<H: UiHost> UiTree<H> {
         std::fs::write(&path, bytes)?;
         Ok(path)
     }
+
+    /// Write a bundle-scoped layout sidecar (Taffy dump) intended for scripted diagnostics runs.
+    ///
+    /// This is a diagnostics-only escape hatch and should remain best-effort. Tooling should treat
+    /// missing sidecars as warnings rather than failures.
+    ///
+    /// The file name is stable: `layout.taffy.v1.json`.
+    #[cfg(not(target_arch = "wasm32"))]
+    #[allow(clippy::too_many_arguments)]
+    pub fn debug_write_layout_sidecar_taffy_v1_json(
+        &self,
+        app: &mut H,
+        window: AppWindowId,
+        root: NodeId,
+        root_bounds: Rect,
+        scale_factor: f32,
+        root_label_filter: Option<&str>,
+        out_dir: impl AsRef<std::path::Path>,
+        captured_at_unix_ms: u64,
+    ) -> std::io::Result<std::path::PathBuf> {
+        let dump_root = if let Some(filter) = root_label_filter {
+            let root_label = crate::declarative::frame::element_record_for_node(app, window, root)
+                .map(|r| format!("{:?}", r.instance))
+                .unwrap_or_default();
+            if root_label.contains(filter) {
+                root
+            } else {
+                let mut stack: Vec<NodeId> = vec![root];
+                let mut visited: std::collections::HashSet<NodeId> =
+                    std::collections::HashSet::new();
+                let mut found: Option<NodeId> = None;
+                while let Some(node) = stack.pop() {
+                    if !visited.insert(node) {
+                        continue;
+                    }
+
+                    let label =
+                        crate::declarative::frame::element_record_for_node(app, window, node)
+                            .map(|r| format!("{:?}", r.instance))
+                            .unwrap_or_default();
+                    if label.contains(filter) {
+                        found = Some(node);
+                        break;
+                    }
+
+                    if let Some(node) = self.nodes.get(node) {
+                        stack.extend(node.children.iter().copied());
+                    }
+                }
+
+                found.unwrap_or(root)
+            }
+        } else {
+            root
+        };
+
+        let dump = self
+            .layout_engine
+            .debug_dump_subtree_json(dump_root, |node| {
+                crate::declarative::frame::element_record_for_node(app, window, node)
+                    .map(|r| format!("{:?}", r.instance))
+            });
+
+        let wrapped = serde_json::json!({
+            "schema_version": "v1",
+            "engine": "taffy",
+            "captured_at_unix_ms": captured_at_unix_ms,
+            "clip": {
+                "max_nodes": 0u64,
+                "max_bytes": 0u64,
+                "clipped_nodes": 0u64,
+                "clipped_bytes": 0u64,
+            },
+            "meta": {
+                "window": format!("{window:?}"),
+                "root_bounds": {
+                    "x": root_bounds.origin.x.0,
+                    "y": root_bounds.origin.y.0,
+                    "w": root_bounds.size.width.0,
+                    "h": root_bounds.size.height.0,
+                },
+                "scale_factor": scale_factor,
+                "root_label_filter": root_label_filter,
+            },
+            "taffy": dump,
+        });
+
+        let out_dir = out_dir.as_ref();
+        std::fs::create_dir_all(out_dir)?;
+        let path = out_dir.join("layout.taffy.v1.json");
+        let bytes = serde_json::to_vec(&wrapped)
+            .map_err(|e| std::io::Error::other(format!("serialize: {e}")))?;
+        std::fs::write(&path, bytes)?;
+        Ok(path)
+    }
 }

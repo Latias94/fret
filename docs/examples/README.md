@@ -50,7 +50,7 @@ Some cookbook examples still use legacy MVU for now. Track remaining in-tree usa
 Diagnostics scripts for cookbook examples live under:
 
 - `tools/diag-scripts/cookbook/*`
-- `tools/diag-scripts/suites/cookbook-*` (redirect stubs)
+- `tools/diag-scripts/suites/cookbook-*` (suite manifests)
 
 Note: cookbook examples are separate binaries today, so scripts are per-example (not one “mega suite”).
 

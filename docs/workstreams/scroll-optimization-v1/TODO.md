@@ -15,7 +15,8 @@ Status: Draft
   - [x] `diag perf perf-ui-gallery-scroll-area` (bundle: `target/fret-perf-scroll-area/sessions/1772501734226-65632/1772501741770`, 2026-03-03)
   - [x] `diag perf perf-ui-gallery-virtual-list` (bundle: `target/fret-perf-vlist/1772508561962`, 2026-03-03)
 - [x] Promote nested scroll routing into `diag-hardening-smoke`:
-  - redirect: `tools/diag-scripts/suites/diag-hardening-smoke/ui-gallery-scroll-area-nested-scroll-routing.json`
+  - suite manifest: `tools/diag-scripts/suites/diag-hardening-smoke/suite.json`
+  - script: `tools/diag-scripts/ui-gallery/scroll-area/ui-gallery-scroll-area-nested-scroll-routing.json`
 
 ## Mechanism hardening
 

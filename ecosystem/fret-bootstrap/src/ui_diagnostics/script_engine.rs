@@ -94,6 +94,7 @@ pub(super) fn active_script_needs_semantics_snapshot(active: &ActiveScript) -> b
         | UiActionStepV2::WaitCommandDispatchTrace { .. }
         | UiActionStepV2::CaptureBundle { .. }
         | UiActionStepV2::CaptureScreenshot { .. }
+        | UiActionStepV2::CaptureLayoutSidecar { .. }
         | UiActionStepV2::SetWindowInnerSize { .. }
         | UiActionStepV2::SetWindowInsets { .. }
         | UiActionStepV2::SetClipboardForceUnavailable { .. }
@@ -140,6 +141,7 @@ pub(super) fn script_step_kind_name(step: &UiActionStepV2) -> &'static str {
         UiActionStepV2::Assert { .. } => "assert",
         UiActionStepV2::CaptureBundle { .. } => "capture_bundle",
         UiActionStepV2::CaptureScreenshot { .. } => "capture_screenshot",
+        UiActionStepV2::CaptureLayoutSidecar { .. } => "capture_layout_sidecar",
         UiActionStepV2::ResetDiagnostics => "reset_diagnostics",
         UiActionStepV2::SetClipboardText { .. } => "set_clipboard_text",
         UiActionStepV2::AssertClipboardText { .. } => "assert_clipboard_text",
@@ -458,6 +460,19 @@ pub(super) fn dispatch_drive_script_step(
                 failure_reason,
             );
             debug_assert!(handled);
+        }
+        UiActionStepV2::CaptureLayoutSidecar { .. } => {
+            // This step requires mutable `App` access to query element runtime labels. It is
+            // handled in `drive_script_for_window` to avoid borrow conflicts for other steps.
+            *force_dump_label = Some(format!(
+                "script-step-{step_index:04}-capture_layout_sidecar-dispatch-unexpected"
+            ));
+            *stop_script = true;
+            *failure_reason = Some("internal_dispatch_unexpected_step".to_string());
+            active.v2_step_state = None;
+            active.wait_until = None;
+            active.screenshot_wait = None;
+            output.request_redraw = true;
         }
         step @ (UiActionStepV2::PressKey { .. }
         | UiActionStepV2::PressShortcut { .. }
@@ -2131,8 +2146,6 @@ impl UiDiagnosticsService {
 
         self.maybe_cancel_pending_cross_window_drag(app, window, &mut active);
 
-        let element_runtime = app.global::<ElementRuntime>();
-
         if active.next_step >= active.steps.len() {
             let passed_step_index = active.steps.len().saturating_sub(1) as u32;
             push_script_event_log(
@@ -2200,6 +2213,7 @@ impl UiDiagnosticsService {
         let mut failure_reason: Option<String> = None;
         let mut handoff_to: Option<AppWindowId> = None;
         let anchor_window = active.anchor_window;
+        let element_runtime = app.global::<ElementRuntime>();
 
         let mut prev_next_step = active.next_step;
         let mut step_index = active.next_step;
@@ -2233,29 +2247,51 @@ impl UiDiagnosticsService {
 
             Self::reset_active_script_state_for_step(&mut active, &step);
 
-            let outcome = dispatch_drive_script_step(
-                self,
-                app,
-                window,
-                window_bounds,
-                anchor_window,
-                step_index,
-                step,
-                scale_factor,
-                element_runtime,
-                semantics_snapshot,
-                &mut ui,
-                text_font_stack_key_stable_frames,
-                font_catalog_populated,
-                system_font_rescan_idle,
-                &mut active,
-                &mut output,
-                &mut force_dump_label,
-                &mut force_dump_max_snapshots,
-                &mut handoff_to,
-                &mut stop_script,
-                &mut failure_reason,
-            );
+            let outcome = match step.clone() {
+                UiActionStepV2::CaptureLayoutSidecar {
+                    label,
+                    root_label_filter,
+                } => {
+                    let handled = script_steps::handle_capture_layout_sidecar_step(
+                        self,
+                        app,
+                        window,
+                        window_bounds,
+                        step_index,
+                        label,
+                        root_label_filter,
+                        scale_factor,
+                        &mut ui,
+                        &mut active,
+                        &mut output,
+                    );
+                    debug_assert!(handled);
+                    DriveScriptStepDispatchOutcome::Continue
+                }
+                _ => dispatch_drive_script_step(
+                    self,
+                    app,
+                    window,
+                    window_bounds,
+                    anchor_window,
+                    step_index,
+                    step,
+                    scale_factor,
+                    element_runtime,
+                    semantics_snapshot,
+                    &mut ui,
+                    text_font_stack_key_stable_frames,
+                    font_catalog_populated,
+                    system_font_rescan_idle,
+                    &mut active,
+                    &mut output,
+                    &mut force_dump_label,
+                    &mut force_dump_max_snapshots,
+                    &mut handoff_to,
+                    &mut stop_script,
+                    &mut failure_reason,
+                ),
+            };
 
             match outcome {
                 DriveScriptStepDispatchOutcome::Continue => {}

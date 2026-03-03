@@ -76,5 +76,5 @@ Add promoted scripts under `tools/diag-scripts/workspace/**`:
 
 ## Tooling checklist
 
-- `python3 tools/check_diag_scripts_registry.py` passes after script registration/promotions.
+- `cargo run -p fretboard -- diag registry check` passes after script registration/promotions.
 - Avoid raw `bundle.json` by default; prefer schema2 + sidecars and `diag query/slice`.

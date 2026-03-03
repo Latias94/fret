@@ -1,6 +1,0 @@
-{
-  "schema_version": 1,
-  "kind": "script_redirect",
-  "to": "tools/diag-scripts/node-graph/node-graph-paint-only-fit-view-to-portals-updates-view.json"
-}
-

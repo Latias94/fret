@@ -1879,6 +1879,28 @@ hint: list promoted scripts via `fretboard diag list scripts --contains {name}`"
         )?;
     }
 
+    let mut layout_perf_summary: Option<serde_json::Value> = None;
+    let mut layout_perf_summary_path: Option<PathBuf> = None;
+    if let Some((_us, _src, bundle_path)) = overall_worst.as_ref() {
+        let bundle_dir = crate::resolve_bundle_root_dir(bundle_path).unwrap_or_else(|_| {
+            bundle_path
+                .parent()
+                .unwrap_or_else(|| Path::new("."))
+                .to_path_buf()
+        });
+        let summary =
+            crate::layout_perf_summary::layout_perf_summary_v1_from_bundle_path_best_effort(
+                bundle_path.as_path(),
+                &bundle_dir,
+                warmup_frames,
+                crate::layout_perf_summary::DEFAULT_LAYOUT_PERF_SUMMARY_TOP,
+            );
+        let out_path = resolved_out_dir.join("layout.perf.summary.v1.json");
+        let _ = crate::util::write_json_value(&out_path, &summary);
+        layout_perf_summary = Some(summary);
+        layout_perf_summary_path = Some(out_path);
+    }
+
     let mut perf_threshold_failure: Option<(usize, PathBuf)> = None;
     if wants_perf_thresholds {
         let baseline_summary = perf_baseline.as_ref().map(|b| {
@@ -1896,6 +1918,10 @@ hint: list promoted scripts via `fretboard diag list scripts --contains {name}`"
             suite_prelude_each_run,
             &cli_thresholds,
             baseline_summary,
+            layout_perf_summary.clone(),
+            layout_perf_summary_path
+                .as_ref()
+                .map(|p| p.display().to_string()),
             &perf_threshold_rows,
             &perf_threshold_failures,
         );
@@ -1910,6 +1936,10 @@ hint: list promoted scripts via `fretboard diag list scripts --contains {name}`"
             &resolved_out_dir,
             warmup_frames,
             &perf_hint_gate_opts,
+            layout_perf_summary.clone(),
+            layout_perf_summary_path
+                .as_ref()
+                .map(|p| p.display().to_string()),
             &perf_hint_rows,
             &perf_hint_failures,
         );

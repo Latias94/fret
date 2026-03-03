@@ -548,6 +548,23 @@ impl<D: fret_launch::WinitAppDriver + 'static> BootstrapBuilder<D> {
         self
     }
 
+    /// Register a best-effort UI diagnostics debug extension writer.
+    ///
+    /// Requires enabling `fret-bootstrap/ui-app-driver` and `fret-bootstrap/diagnostics`.
+    #[cfg(all(feature = "ui-app-driver", feature = "diagnostics"))]
+    pub fn register_diag_debug_extension(
+        mut self,
+        key: impl Into<String>,
+        writer: impl Fn(&App, fret_core::AppWindowId) -> Option<serde_json::Value> + 'static,
+    ) -> Self {
+        let key = key.into();
+        let writer: crate::ui_diagnostics::UiDebugExtensionWriterV1 = Arc::new(writer);
+        self.inner = self.inner.init_app(move |app| {
+            crate::ui_diagnostics::register_debug_extension_best_effort(app, key, writer);
+        });
+        self
+    }
+
     /// Install an ecosystem crate that only needs access to the app state.
     ///
     /// This runs during early initialization (before GPU services exist), which is important for

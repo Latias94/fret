@@ -1,0 +1,60 @@
+{
+  "schema_version": 2,
+  "meta": {
+    "env_defaults": {
+      "FRET_DIAG_RENDERER_PERF": 1
+    }
+  },
+  "steps": [
+    { "type": "set_window_inner_size", "width_px": 1100.0, "height_px": 820.0 },
+    {
+      "type": "wait_until",
+      "predicate": {
+        "kind": "exists",
+        "target": { "kind": "test_id", "id": "custom-effect-v3.reset" }
+      },
+      "timeout_frames": 600
+    },
+    {
+      "type": "click_stable",
+      "target": { "kind": "test_id", "id": "custom-effect-v3.reset" },
+      "stable_frames": 6,
+      "max_move_px": 0.5,
+      "timeout_frames": 600
+    },
+    {
+      "type": "click_stable",
+      "target": { "kind": "test_id", "id": "custom-effect-v3.show-user0-probe" },
+      "stable_frames": 6,
+      "max_move_px": 0.5,
+      "timeout_frames": 600
+    },
+    {
+      "type": "click_stable",
+      "target": { "kind": "test_id", "id": "custom-effect-v3.show-user1-probe" },
+      "stable_frames": 6,
+      "max_move_px": 0.5,
+      "timeout_frames": 600
+    },
+    {
+      "type": "click_stable",
+      "target": { "kind": "test_id", "id": "custom-effect-v3.use-non-filterable-user0" },
+      "stable_frames": 6,
+      "max_move_px": 0.5,
+      "timeout_frames": 600
+    },
+    {
+      "type": "click_stable",
+      "target": { "kind": "test_id", "id": "custom-effect-v3.use-non-filterable-user1" },
+      "stable_frames": 6,
+      "max_move_px": 0.5,
+      "timeout_frames": 600
+    },
+    { "type": "wait_frames", "n": 12 },
+    { "type": "reset_diagnostics" },
+    { "type": "wait_frames", "n": 120 },
+    { "type": "capture_screenshot", "label": "custom-effect-v3-non-filterable-user01-fallback" },
+    { "type": "capture_bundle", "label": "custom-effect-v3-non-filterable-user01-fallback" }
+  ]
+}
+

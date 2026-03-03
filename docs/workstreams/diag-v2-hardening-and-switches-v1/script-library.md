@@ -18,8 +18,8 @@ Built-in `fretboard diag suite <name>` suites are defined by curated directory i
 
 - `tools/diag-scripts/suites/<suite-name>/`
 
-Each entry is a small `script_redirect` stub pointing at a canonical script path. Tooling resolves redirects before
-executing/pushing scripts, so redirects do not reach the runtime contract surface.
+In-tree suites are expressed via a single `suite.json` manifest (tooling-only) that lists canonical script paths.
+Tooling expands suite manifests before pushing scripts, so suite membership does not reach the runtime contract surface.
 
 ### D2: Script paths become taxonomy-based (migrate with redirects)
 
@@ -45,7 +45,7 @@ Today:
 - `diag run` accepts either an explicit script path or a promoted `script_id` (resolved via `tools/diag-scripts/index.json`).
 - `diag list scripts` prints `script_id -> path` for promoted scripts (same registry; intended for discoverability).
 - `diag perf` suite expansion selects scripts by `suite_memberships` in the promoted registry, so perf suite naming stays
-  stable as scripts move (as long as suite memberships are maintained via suite directories/redirect stubs).
+  stable as scripts move (as long as suite memberships are maintained via suite manifests).
 
 Long-term:
 
@@ -74,6 +74,8 @@ Long-term:
 2) Apply moves with redirects (recommended):
 
 - `python tools/diag-scripts/migrate-script-library.py --apply --write-redirects`
+  - Suite manifests (`tools/diag-scripts/suites/**/suite.json`) are rewritten to point at the canonical (post-move)
+    paths.
 
 Tip (maintenance):
 
@@ -100,7 +102,7 @@ Tip (maintenance):
   - `cargo run -p fret-diag-scriptgen -- check-suite ui-gallery-combobox`
   - `cargo run -p fret-diag-scriptgen -- check-suite ui-gallery-text-ime`
 - Registry stays in sync:
-  - `python tools/check_diag_scripts_registry.py`
+  - `cargo run -p fretboard -- diag registry check`
 
 4) Normalize scripts (stable diffs):
 
