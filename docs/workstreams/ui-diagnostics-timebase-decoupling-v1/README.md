@@ -63,19 +63,22 @@ Evidence anchors:
 - Timer event handling: `ecosystem/fret-bootstrap/src/ui_app_driver.rs`
 - Failure mapping: `ecosystem/fret-bootstrap/src/ui_diagnostics/labels.rs`
 
-### M1: start scripts without requiring a render loop
+### M1 (shipped): start scripts without requiring a render loop
 
-Today, “script trigger → script start” is still primarily observed from per-window post-paint hooks. If a launch-mode
-app goes idle at an unlucky time, the script trigger may not be observed promptly.
+Tool-launched filesystem triggers must be observed even when a launch-mode app goes idle and stops producing redraw
+callbacks. The keepalive tick polls triggers and can start pending scripts without requiring a steady render loop.
 
 Deliverables:
 
-- Ensure pending scripts can be started deterministically even when no redraw callbacks are arriving.
-- Define the minimal liveness contract for “tool-launched filesystem-trigger” mode:
-  - what wakes the loop,
-  - which component owns “keep ticking while scripts are pending”.
+- Pending scripts start deterministically even when no redraw callbacks are arriving.
+- The liveness contract is “keepalive owns polling and bounded progress while scripts are pending/active”.
 
-### M2: make “timeout” semantics explicit (frames vs ticks vs ms)
+Evidence anchors:
+
+- Keepalive tick polls triggers + starts pending scripts: `ecosystem/fret-bootstrap/src/ui_diagnostics/script_engine.rs`
+- Deterministic test hook: `FRET_DIAG_SIMULATE_NO_FRAMES=1` (see `ecosystem/fret-bootstrap/src/ui_diagnostics/config.rs`)
+
+### M2 (shipped): make “timeout” semantics explicit (frames vs ticks vs ms)
 
 The current schema uses `timeout_frames`. In no-frame scenarios, “frames” are not observable. We need an explicit
 contract for what happens when frames are not advancing:
@@ -84,7 +87,10 @@ contract for what happens when frames are not advancing:
 - Option B (hybrid): define “script ticks” and allow timeouts to decrement on either a frame or a keepalive tick.
 - Option C (schema evolution): introduce `timeout_ms` / `wait_ms` and de-emphasize `wait_frames` for “settle”.
 
-This workstream should choose one path and lock it with at least one regression script.
+This workstream locks a v1 hybrid contract (bounded keepalive-driven progress + stable `reason_code=timeout.no_frames`)
+with a deterministic regression script:
+
+- `tools/diag-scripts/diag/no-frame/diag-no-frame-timeout-no-frames.json`
 
 ### M3: expand no-frame coverage safely (optional)
 

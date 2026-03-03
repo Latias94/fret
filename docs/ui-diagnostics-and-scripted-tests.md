@@ -152,16 +152,24 @@ Manual runs (escape hatch):
 - Set `FRET_DIAG_SCRIPT_KEEPALIVE=1` (or set `script_keepalive=true` in the config file) when authoring/triaging
   occlusion-heavy scripts that might otherwise hang.
 
+Deterministic repro hook (debug-only):
+
+- Set `FRET_DIAG_SIMULATE_NO_FRAMES=1` to skip snapshot recording and frame-driven script advancement, forcing the
+  keepalive/no-frame path to either make progress or fail with `reason_code=timeout.no_frames`.
+  - Recommended regression script: `tools/diag-scripts/diag/no-frame/diag-no-frame-timeout-no-frames.json`
+
 Important limitation:
 
 - Keepalive ticks are intentionally conservative: pointer-dispatch steps and semantics-dependent selector resolution
-  still require real UI frames/snapshots. Keepalive is a liveness safety net, not a “renderless UI simulator”.
+   still require real UI frames/snapshots. Keepalive is a liveness safety net, not a “renderless UI simulator”.
 
 Footgun / recommendation:
 
 - Avoid running `rg`/`grep` directly on `bundle.json` dumps (they can be huge and can easily explode your terminal output).
 - Prefer bounded tooling commands that use sidecars and/or schema2 views:
   - `fretboard diag meta <bundle_dir|bundle.json|bundle.schema2.json> --json`
+  - `fretboard diag dock-graph <bundle_dir|bundle.json|bundle.schema2.json>`
+  - `fretboard diag dock-routing <bundle_dir|bundle.json|bundle.schema2.json>`
   - `fretboard diag query test-id <bundle_dir|bundle.json|bundle.schema2.json> <pattern> --top 50`
   - `fretboard diag slice <bundle_dir|bundle.json|bundle.schema2.json> --test-id <test_id>`
   - `fretboard diag ai-packet <bundle_dir|bundle.json|bundle.schema2.json> --packet-out <dir>`

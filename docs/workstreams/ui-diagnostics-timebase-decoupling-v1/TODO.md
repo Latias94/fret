@@ -7,17 +7,14 @@ failures, with a focus on multi-window docking and other occlusion-heavy interac
 
 P0 (blocker for docking automation):
 
-- M1 Pending-script liveness: make pending scripts start deterministically even if the app goes idle between runs.
-- M2 Timeout semantics contract: document and lock how `timeout_frames` behaves when frames are not advancing.
+- Adopt at least one no-frame liveness regression gate in a suite/CI-like entrypoint (so we do not regress to tooling
+  timeouts).
+- Audit and document which steps are allowed to advance on the no-frame path (keep it conservative and bounded).
 
 P1:
 
-- Add a small “no-frame liveness” regression suite:
-  - force an occlusion/idle scenario,
-  - verify `timeout.no_frames` appears (not a tooling timeout),
-  - verify at least one bounded evidence bundle is captured.
-  - optional test hook: `FRET_DIAG_SIMULATE_NO_FRAMES=1` to deterministically exercise the keepalive/no-frame path.
-- Persist “shutdown outcome” evidence for tool-launched runs:
+- Improve evidence on no-frame failures (so triage does not require raw bundle inspection).
+- Maintain “shutdown outcome” evidence for tool-launched runs (shipped):
   - write `resource.footprint.json` in the out dir (tooling-owned),
   - use `killed=true` as a first-class triage hint for “exit trigger not observed / deadlock / no-frame stall”.
 
@@ -27,13 +24,11 @@ P2:
 
 ## Immediate TODOs (next)
 
-- Write a short contract note (1–2 pages):
-  - when timers are armed (pending vs active),
-  - which steps are allowed to advance without frames,
-  - and what the expected failure modes are (`timeout.no_frames` vs `timeout`).
-- Decide whether tooling should enable `script_keepalive` in `--launch` config for script-driven runs (if useful for M1).
-- Add a minimal docking-adjacent repro that intentionally occludes the main window for > 1s and still completes or fails
-  deterministically (bundle + `reason_code`).
+- Wire `tools/diag-scripts/diag/no-frame/diag-no-frame-timeout-no-frames.json` into a minimal regression entrypoint
+  (suite/smoke gate) and document how to run it locally.
+- Add a docking-adjacent repro that intentionally occludes a relevant window for > 1s and still completes or fails
+  deterministically (bounded bundle + stable `reason_code`).
+- Update docs when we change the no-frame allowed-step set (to keep the contract honest).
 
 ## Backlog
 
