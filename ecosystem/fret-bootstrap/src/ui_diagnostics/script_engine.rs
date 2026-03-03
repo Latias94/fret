@@ -2213,7 +2213,6 @@ impl UiDiagnosticsService {
         let mut failure_reason: Option<String> = None;
         let mut handoff_to: Option<AppWindowId> = None;
         let anchor_window = active.anchor_window;
-        let element_runtime = app.global::<ElementRuntime>();
 
         let mut prev_next_step = active.next_step;
         let mut step_index = active.next_step;
@@ -2277,7 +2276,7 @@ impl UiDiagnosticsService {
                     step_index,
                     step,
                     scale_factor,
-                    element_runtime,
+                    app.global::<ElementRuntime>(),
                     semantics_snapshot,
                     &mut ui,
                     text_font_stack_key_stable_frames,
