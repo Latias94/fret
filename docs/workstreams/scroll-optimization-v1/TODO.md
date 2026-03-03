@@ -36,6 +36,8 @@ Status: Draft
   - [ ] UI core (fallback).
 - [x] Implement behind a runtime knob (opt-in) with a clear default.
   - [x] Native (winit): `FRET_WINIT_COALESCE_WHEEL=1` (coalesce consecutive wheel events).
+- [x] Add a max-abs delta guardrail for a single coalesced wheel event (still needs perf validation on VirtualList):
+  - `FRET_WINIT_COALESCE_WHEEL_MAX_ABS_PX` (default: `120`)
 - [x] Collect repeatable perf evidence (repeat=11, warmup=10):
   - `perf-ui-gallery-scroll-area` (script: `ui-gallery-scroll-area-wheel-torture`)
     - OFF (`FRET_WINIT_COALESCE_WHEEL=0`):
@@ -55,6 +57,32 @@ Status: Draft
       - p50/p95 `total/layout/solve` us: `11870/18175` / `11185/17468` / `3437/5012`
       - worst bundle: `target/fret-perf-vlist-coalesce-on-r11/1772509420507/bundle.json`
       - log: `target/perf-logs/virtual-list-coalesce-on-r11.log`
+- [ ] Re-run repeat=11 perf after adding the max-abs cap:
+  - Goal: keep `perf-ui-gallery-scroll-area` improved, remove `perf-ui-gallery-virtual-list` p95 regression.
+
+### Rerun (2026-03-03) — max-abs cap default (`120`)
+
+Short rerun (repeat=5, warmup=10) to sanity-check the new default cap behavior:
+
+- `perf-ui-gallery-virtual-list`
+  - OFF (`FRET_WINIT_COALESCE_WHEEL=0`):
+    - p50/p95 `total` us: `10963/11109`
+    - worst bundle: `target/fret-diag/1772514040891/bundle.json`
+    - log: `target/perf-logs/virtual-list-coalesce-off-current-r5.log`
+  - ON (`FRET_WINIT_COALESCE_WHEEL=1`, default cap `120`):
+    - p50/p95 `total` us: `10424/11102`
+    - worst bundle: `target/fret-diag/1772513954382/bundle.json`
+    - log: `target/perf-logs/virtual-list-coalesce-on-cap120-r5.log`
+
+- `perf-ui-gallery-scroll-area`
+  - OFF (`FRET_WINIT_COALESCE_WHEEL=0`):
+    - p50/p95 `total` us: `30567/49376`
+    - worst bundle: `target/fret-diag/1772513830516/bundle.json`
+    - log: `target/perf-logs/scroll-area-coalesce-off-current-r5.log`
+  - ON (`FRET_WINIT_COALESCE_WHEEL=1`, default cap `120`):
+    - p50/p95 `total` us: `28054/29181`
+    - worst bundle: `target/fret-diag/1772513987367/bundle.json`
+    - log: `target/perf-logs/scroll-area-coalesce-on-cap120-r5.log`
 - [ ] Add diag evidence:
   - [x] stress wheel in a scroll area (`ui-gallery-scroll-area-wheel-torture`),
   - [x] stress wheel in a virtual list (`ui-gallery-virtual-list-wheel-torture`),

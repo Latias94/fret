@@ -148,6 +148,9 @@ Current implementation (native, opt-in):
 
 - Winit runner coalesces consecutive wheel events when `FRET_WINIT_COALESCE_WHEEL=1`:
   - `crates/fret-runner-winit/src/state/input/mod.rs`
+  - Guardrail: cap the absolute delta of a single coalesced event to avoid pathological "one huge
+    wheel jump" cases (note: not a complete fix for VirtualList worst-frame regressions):
+    - `FRET_WINIT_COALESCE_WHEEL_MAX_ABS_PX` (default: `120`)
 
 Evidence gate:
 

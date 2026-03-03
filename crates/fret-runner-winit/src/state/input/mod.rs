@@ -20,6 +20,14 @@ fn winit_coalesce_wheel_enabled() -> bool {
     std::env::var_os("FRET_WINIT_COALESCE_WHEEL").is_some_and(|v| !v.is_empty() && v != "0")
 }
 
+fn winit_coalesce_wheel_max_abs_px() -> f32 {
+    std::env::var("FRET_WINIT_COALESCE_WHEEL_MAX_ABS_PX")
+        .ok()
+        .and_then(|v| v.parse::<f32>().ok())
+        .filter(|v| v.is_finite() && *v > 0.0)
+        .unwrap_or(120.0)
+}
+
 #[derive(Debug, Default, Clone)]
 pub struct WinitInputState {
     pub cursor_pos: Point,
@@ -182,11 +190,13 @@ impl WinitInputState {
             && *prev_modifiers == modifiers
             && *prev_pointer_type == pointer_type
         {
-            *prev_delta = Point::new(
-                Px(prev_delta.x.0 + delta.x.0),
-                Px(prev_delta.y.0 + delta.y.0),
-            );
-            return;
+            let next_x = prev_delta.x.0 + delta.x.0;
+            let next_y = prev_delta.y.0 + delta.y.0;
+            let max_abs = winit_coalesce_wheel_max_abs_px();
+            if next_x.abs() <= max_abs && next_y.abs() <= max_abs {
+                *prev_delta = Point::new(Px(next_x), Px(next_y));
+                return;
+            }
         }
 
         out.push(Event::Pointer(evt));
@@ -541,12 +551,50 @@ impl WinitInputState {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::ffi::OsString;
+
+    struct WheelCoalescingEnvGuard {
+        prev_enabled: Option<OsString>,
+        prev_max_abs_px: Option<OsString>,
+    }
+
+    impl WheelCoalescingEnvGuard {
+        fn set(enabled: &str, max_abs_px: Option<&str>) -> Self {
+            let prev_enabled = std::env::var_os("FRET_WINIT_COALESCE_WHEEL");
+            let prev_max_abs_px = std::env::var_os("FRET_WINIT_COALESCE_WHEEL_MAX_ABS_PX");
+            unsafe {
+                std::env::set_var("FRET_WINIT_COALESCE_WHEEL", enabled);
+                if let Some(v) = max_abs_px {
+                    std::env::set_var("FRET_WINIT_COALESCE_WHEEL_MAX_ABS_PX", v);
+                } else {
+                    std::env::remove_var("FRET_WINIT_COALESCE_WHEEL_MAX_ABS_PX");
+                }
+            }
+            Self {
+                prev_enabled,
+                prev_max_abs_px,
+            }
+        }
+    }
+
+    impl Drop for WheelCoalescingEnvGuard {
+        fn drop(&mut self) {
+            unsafe {
+                match self.prev_enabled.take() {
+                    Some(v) => std::env::set_var("FRET_WINIT_COALESCE_WHEEL", v),
+                    None => std::env::remove_var("FRET_WINIT_COALESCE_WHEEL"),
+                }
+                match self.prev_max_abs_px.take() {
+                    Some(v) => std::env::set_var("FRET_WINIT_COALESCE_WHEEL_MAX_ABS_PX", v),
+                    None => std::env::remove_var("FRET_WINIT_COALESCE_WHEEL_MAX_ABS_PX"),
+                }
+            }
+        }
+    }
 
     #[test]
     fn coalesces_consecutive_wheel_events_when_enabled() {
-        unsafe {
-            std::env::set_var("FRET_WINIT_COALESCE_WHEEL", "1");
-        }
+        let _env = WheelCoalescingEnvGuard::set("1", None);
 
         let st = WinitInputState::default();
         let mut out: Vec<Event> = Vec::new();
@@ -578,6 +626,45 @@ mod tests {
         };
         assert!(
             (delta.y.0 - (-15.0)).abs() <= 0.001,
+            "delta_y={:?}",
+            delta.y
+        );
+    }
+
+    #[test]
+    fn wheel_coalescing_respects_max_abs_delta_px() {
+        let _env = WheelCoalescingEnvGuard::set("1", Some("12"));
+
+        let st = WinitInputState::default();
+        let mut out: Vec<Event> = Vec::new();
+
+        st.push_pointer_event_with_coalescing(
+            &mut out,
+            PointerEvent::Wheel {
+                pointer_id: PointerId(0),
+                position: Point::new(Px(10.0), Px(20.0)),
+                delta: Point::new(Px(0.0), Px(-10.0)),
+                modifiers: Modifiers::default(),
+                pointer_type: fret_core::PointerType::Mouse,
+            },
+        );
+        st.push_pointer_event_with_coalescing(
+            &mut out,
+            PointerEvent::Wheel {
+                pointer_id: PointerId(0),
+                position: Point::new(Px(10.0), Px(20.0)),
+                delta: Point::new(Px(0.0), Px(-5.0)),
+                modifiers: Modifiers::default(),
+                pointer_type: fret_core::PointerType::Mouse,
+            },
+        );
+
+        assert_eq!(out.len(), 2);
+        let Event::Pointer(PointerEvent::Wheel { delta, .. }) = out[0].clone() else {
+            panic!("expected a wheel event");
+        };
+        assert!(
+            (delta.y.0 - (-10.0)).abs() <= 0.001,
             "delta_y={:?}",
             delta.y
         );
