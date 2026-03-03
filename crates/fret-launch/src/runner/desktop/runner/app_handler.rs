@@ -412,7 +412,7 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
                 let mut spec = self.config.main_window_spec();
                 #[cfg(feature = "dev-state")]
                 self.dev_state.apply_main_window_spec(&mut spec);
-                let style = fret_runtime::WindowStyleRequest::default();
+                let style = self.config.main_window_style.clone();
                 let window = match self.create_os_window(event_loop, spec, style, None) {
                     Ok(w) => w,
                     Err(e) => {
@@ -670,7 +670,7 @@ impl<D: WinitAppDriver> ApplicationHandler for WinitRunner<D> {
                 );
                 spec
             };
-            let style = fret_runtime::WindowStyleRequest::default();
+            let style = self.config.main_window_style.clone();
             let window = match self.create_os_window(event_loop, spec, style, None) {
                 Ok(w) => w,
                 Err(e) => {
