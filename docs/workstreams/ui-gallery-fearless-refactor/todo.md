@@ -50,6 +50,8 @@ Any remaining legacy surfaces that embed raw Rust code strings are tracked via t
 - [x] Ensure Code tabs are vertically scrollable (wheel scrolling over CodeBlock gutters for windowed snippets).
   - Evidence: `ecosystem/fret-code-view/src/code_block.rs` adds a `WheelRegion` that drives the
     windowed CodeBlock VirtualList scroll handle even when wrapped by an X-scroll container.
+- [x] Remove unused routed model params from snippet-backed pages (avoid misleading signatures).
+  - Evidence: `apps/fret-ui-gallery/src/ui/pages/mod.rs`, `apps/fret-ui-gallery/src/ui/content.rs`.
 - [ ] Normalize DocSection chrome/layout (max widths, padding, “Notes” shell usage) across pages.
   - [x] Remove redundant centering wrappers so Preview/Code tabs share consistent left padding.
   - [x] Center doc pages once (page-level max width) so sections align to the same left gutter.
