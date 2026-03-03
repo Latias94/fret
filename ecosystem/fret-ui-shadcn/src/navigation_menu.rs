@@ -2407,9 +2407,10 @@ mod tests {
 
         app.set_tick_id(TickId(1));
         app.set_frame_id(FrameId(1));
-        let closed = fret_ui::elements::with_element_cx(&mut app, window, bounds, "nav-menu", |cx| {
-            drive_navigation_menu_trigger_chevron_motion(cx, Arc::<str>::from("alpha"), false)
-        });
+        let closed =
+            fret_ui::elements::with_element_cx(&mut app, window, bounds, "nav-menu", |cx| {
+                drive_navigation_menu_trigger_chevron_motion(cx, Arc::<str>::from("alpha"), false)
+            });
         assert!(!closed.present);
         assert_eq!(closed.progress, 0.0);
         assert!(!closed.animating);
@@ -2422,11 +2423,19 @@ mod tests {
             app.set_tick_id(TickId(1 + frames));
             app.set_frame_id(FrameId(1 + frames));
 
-            let out = fret_ui::elements::with_element_cx(&mut app, window, bounds, "nav-menu", |cx| {
-                drive_navigation_menu_trigger_chevron_motion(cx, Arc::<str>::from("alpha"), true)
-            });
+            let out =
+                fret_ui::elements::with_element_cx(&mut app, window, bounds, "nav-menu", |cx| {
+                    drive_navigation_menu_trigger_chevron_motion(
+                        cx,
+                        Arc::<str>::from("alpha"),
+                        true,
+                    )
+                });
 
-            assert!(out.present, "expected chevron transition to be present while open=true");
+            assert!(
+                out.present,
+                "expected chevron transition to be present while open=true"
+            );
             assert!(
                 out.progress + 1e-6 >= last_progress,
                 "expected chevron progress to be monotonic (last={last_progress} now={})",
@@ -2456,9 +2465,14 @@ mod tests {
             app.set_tick_id(TickId(10_000 + frames));
             app.set_frame_id(FrameId(10_000 + frames));
 
-            let out = fret_ui::elements::with_element_cx(&mut app, window, bounds, "nav-menu", |cx| {
-                drive_navigation_menu_trigger_chevron_motion(cx, Arc::<str>::from("alpha"), false)
-            });
+            let out =
+                fret_ui::elements::with_element_cx(&mut app, window, bounds, "nav-menu", |cx| {
+                    drive_navigation_menu_trigger_chevron_motion(
+                        cx,
+                        Arc::<str>::from("alpha"),
+                        false,
+                    )
+                });
 
             if !out.animating {
                 assert!(!out.present);
