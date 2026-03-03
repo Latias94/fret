@@ -64,6 +64,10 @@
     },
     {
       "type": "assert",
+      "predicate": { "kind": "workspace_tab_strip_drag_armed_is", "armed": false, "pane_id": "pane-a" }
+    },
+    {
+      "type": "assert",
       "predicate": {
         "kind": "selected_is",
         "target": { "kind": "test_id", "id": "workspace-shell-pane-pane-a-tab-doc-a-2" },

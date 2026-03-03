@@ -43,6 +43,8 @@ This file is a short, append-only log of landings and decisions for this workstr
   - Protocol predicate: `crates/fret-diag-protocol/src/lib.rs` (`workspace_tab_strip_drag_active_is`)
   - Predicate wiring: `ecosystem/fret-bootstrap/src/ui_diagnostics/predicates.rs`
   - Workspace gate: `tools/diag-scripts/workspace/shell-demo/workspace-shell-demo-tab-close-button-does-not-start-drag.json`
+- Hardened the same gate to assert the tab strip drag session is not even armed (no pointer tracking).
+  - Protocol predicate: `crates/fret-diag-protocol/src/lib.rs` (`workspace_tab_strip_drag_armed_is`)
 - Hardened docking close arbitration gate to assert no dock drag is started while pressing close.
   - Docking gate: `tools/diag-scripts/docking/arbitration/docking-arbitration-demo-tab-close-button-does-not-activate.json`
 - Extracted a shared “tab close pointer-down hit test” helper into `fret-ui-kit` to reduce adapter drift.

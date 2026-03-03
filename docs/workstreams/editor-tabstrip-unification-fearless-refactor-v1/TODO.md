@@ -39,7 +39,9 @@ This workstream is intentionally scoped to “editor-grade tab UX”:
     - `tools/diag-scripts/docking/arbitration/docking-arbitration-demo-tab-close-button-does-not-activate.json`
   - [x] Workspace: close button does not start a tab drag:
     - `tools/diag-scripts/workspace/shell-demo/workspace-shell-demo-tab-close-button-does-not-start-drag.json`
-    - Predicate: `workspace_tab_strip_drag_active_is active=false pane_id=\"pane-a\"`
+    - Predicates:
+      - `workspace_tab_strip_drag_active_is active=false pane_id=\"pane-a\"`
+      - `workspace_tab_strip_drag_armed_is armed=false pane_id=\"pane-a\"`
   - [x] Docking: close button does not start a dock drag:
     - Gate is embedded in `tools/diag-scripts/docking/arbitration/docking-arbitration-demo-tab-close-button-does-not-activate.json`
     - Predicate: `dock_drag_active_is active=false` after a small pointer move while pressed
